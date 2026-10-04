@@ -3,8 +3,8 @@ use crate::support::btech_firing as firing;
 use stompymux_rs::*;
 
 /// Conventional preview rules preserve the water term without weapon arc overrides.
-fn rules() -> BattleAimRules {
-    BattleAimRules {
+fn rules() -> AimRules {
+    AimRules {
         woods_damage: false,
         dig_bonus: 3,
         dig_only_front: false,
@@ -43,7 +43,7 @@ async fn water_modifier_is_attacker_owned_and_shared_by_supported_chassis() {
     for source in firing::templates() {
         let (_dir, config, base, shooter, target, index) = firing::fixture_with_target(
             &source,
-            Some(BattleWeapon::MediumLaser),
+            Some(Weapon::MediumLaser),
             include_str!("../game/mechs/JR7-D.toml"),
         )
         .await;
@@ -62,14 +62,14 @@ async fn water_modifier_is_attacker_owned_and_shared_by_supported_chassis() {
             select_battle_target(&mut world, shooter, ObjectId(1), None).unwrap();
             for id in [shooter, target] {
                 firing::edit(&mut world, id, |state| {
-                    state["power"] = serde_json::to_value(BattlePower::Off).unwrap()
+                    state["power"] = serde_json::to_value(Power::Off).unwrap()
                 });
             }
             place_battle_unit(&mut world, shooter, map, 0, 1).unwrap();
             place_battle_unit(&mut world, target, map, 0, 0).unwrap();
             for id in [shooter, target] {
                 firing::edit(&mut world, id, |state| {
-                    state["power"] = serde_json::to_value(BattlePower::Running).unwrap()
+                    state["power"] = serde_json::to_value(Power::Running).unwrap()
                 });
             }
             refresh_battle_contacts(&mut world, &[shooter]).unwrap();
@@ -113,7 +113,7 @@ async fn deep_water_ranges_are_shared_across_chassis_and_coordinate_aim() {
     for source in firing::templates() {
         let (_dir, config, mut world, shooter, target, index) = firing::fixture_with_target(
             &source,
-            Some(BattleWeapon::MediumLaser),
+            Some(Weapon::MediumLaser),
             include_str!("../game/mechs/JR7-D.toml"),
         )
         .await;
@@ -128,11 +128,11 @@ async fn deep_water_ranges_are_shared_across_chassis_and_coordinate_aim() {
         select_battle_target(&mut world, shooter, ObjectId(1), None).unwrap();
         for (id, y) in [(shooter, 8), (target, 0)] {
             firing::edit(&mut world, id, |state| {
-                state["power"] = serde_json::to_value(BattlePower::Off).unwrap()
+                state["power"] = serde_json::to_value(Power::Off).unwrap()
             });
             place_battle_unit(&mut world, id, map, 0, y).unwrap();
             firing::edit(&mut world, id, |state| {
-                state["power"] = serde_json::to_value(BattlePower::Running).unwrap()
+                state["power"] = serde_json::to_value(Power::Running).unwrap()
             });
         }
         let submerged = battle_unit_elevation(&world, shooter).unwrap().unwrap() < -1;
@@ -153,9 +153,9 @@ async fn deep_water_ranges_are_shared_across_chassis_and_coordinate_aim() {
             .unwrap();
             for aim in [&direct, &coordinate.modifiers] {
                 let expected = if submerged {
-                    BattleWeapon::MediumLaser.water_range_modifier(aim.distance, extended)
+                    Weapon::MediumLaser.water_range_modifier(aim.distance, extended)
                 } else {
-                    BattleWeapon::MediumLaser.range_modifier(aim.distance, extended)
+                    Weapon::MediumLaser.range_modifier(aim.distance, extended)
                 }
                 .unwrap();
                 assert_eq!(aim.range, expected, "{source}: submerged={submerged}");
@@ -200,10 +200,9 @@ async fn shallow_water_aim_uses_mount_anatomy_and_posture() {
                 .unwrap()
                 .weapons
                 .iter()
-                .position(|m| m.weapon == BattleWeapon::SmallLaser)
+                .position(|m| m.weapon == Weapon::SmallLaser)
                 .unwrap();
-            let quad =
-                world.btech.constructed_units()[&shooter].chassis() == BattleMechChassis::Quad;
+            let quad = world.btech.constructed_units()[&shooter].chassis() == MechChassis::Quad;
             let map = world.create(&config, "Shallow water range".into(), Kind::Room);
             create_battle_map(
                 &mut world,
@@ -216,19 +215,19 @@ async fn shallow_water_aim_uses_mount_anatomy_and_posture() {
             select_battle_target(&mut world, shooter, ObjectId(1), None).unwrap();
             for (id, y) in [(shooter, 3), (target, 0)] {
                 firing::edit(&mut world, id, |state| {
-                    state["power"] = serde_json::to_value(BattlePower::Off).unwrap()
+                    state["power"] = serde_json::to_value(Power::Off).unwrap()
                 });
                 place_battle_unit(&mut world, id, map, 0, y).unwrap();
                 firing::edit(&mut world, id, |state| {
-                    state["power"] = serde_json::to_value(BattlePower::Running).unwrap()
+                    state["power"] = serde_json::to_value(Power::Running).unwrap()
                 });
             }
             for prone in [false, true] {
                 firing::edit(&mut world, shooter, |state| {
                     state["posture"] = serde_json::to_value(if prone {
-                        BattlePosture::Prone
+                        Posture::Prone
                     } else {
-                        BattlePosture::Standing
+                        Posture::Standing
                     })
                     .unwrap()
                 });
@@ -254,7 +253,7 @@ async fn shallow_water_aim_uses_mount_anatomy_and_posture() {
 async fn underwater_ppc_keeps_the_enclosing_zero_range_penalty() {
     let (_dir, config, mut world, shooter, target, index) = firing::fixture_with_target(
         include_str!("../game/mechs/JR7-D.toml"),
-        Some(BattleWeapon::Ppc),
+        Some(Weapon::Ppc),
         include_str!("../game/mechs/JR7-D.toml"),
     )
     .await;
@@ -269,11 +268,11 @@ async fn underwater_ppc_keeps_the_enclosing_zero_range_penalty() {
     select_battle_target(&mut world, shooter, ObjectId(1), None).unwrap();
     for id in [shooter, target] {
         firing::edit(&mut world, id, |state| {
-            state["power"] = serde_json::to_value(BattlePower::Off).unwrap()
+            state["power"] = serde_json::to_value(Power::Off).unwrap()
         });
         place_battle_unit(&mut world, id, map, 0, 0).unwrap();
         firing::edit(&mut world, id, |state| {
-            state["power"] = serde_json::to_value(BattlePower::Running).unwrap()
+            state["power"] = serde_json::to_value(Power::Running).unwrap()
         });
     }
     let before = world.btech.clone();

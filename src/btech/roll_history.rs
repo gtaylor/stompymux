@@ -1,11 +1,11 @@
 //! Transactional roll history combines live journals with counts retained when their owners retire.
-use crate::{BattleRollStatistics, ObjectId, World};
+use crate::{ObjectId, RollStatistics, World};
 use anyhow::Result;
 use std::collections::BTreeSet;
 
 impl World {
     /// Read generic roll totals without draining journals, consuming dice or mutating simulation state.
-    pub fn battle_roll_statistics(&self) -> Result<BattleRollStatistics> {
+    pub fn roll_statistics(&self) -> Result<RollStatistics> {
         let mut result = self.btech_retired_rolls.clone();
         for unit in self.btech.constructed_units().values() {
             result.merge(unit.dice.generic_roll_statistics())?;
@@ -65,7 +65,7 @@ impl World {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{BattleTemplate, BattleVehicleTemplate, Config, Kind, MapAsset};
+    use crate::{Config, Kind, MapAsset, MechTemplate, VehicleTemplate};
 
     /// Live streams, map replacement, retirement and a discarded candidate share one exact total.
     #[test]
@@ -81,13 +81,13 @@ mod tests {
         crate::create_battle_unit(
             &mut world,
             mech,
-            BattleTemplate::parse("JR7-D", include_str!("../../game/mechs/JR7-D.toml")).unwrap(),
+            MechTemplate::parse("JR7-D", include_str!("../../game/mechs/JR7-D.toml")).unwrap(),
         )
         .unwrap();
         crate::create_battle_vehicle(
             &mut world,
             vehicle,
-            BattleVehicleTemplate::parse(
+            VehicleTemplate::parse(
                 "Demolisher",
                 include_str!("../../game/mechs/Demolisher.toml"),
             )
@@ -101,7 +101,7 @@ mod tests {
             MapAsset::from_cells("1 1\n.0\n").unwrap(),
         )
         .unwrap();
-        let mut expected = BattleRollStatistics::default();
+        let mut expected = RollStatistics::default();
         for (id, count) in [(mech, 2), (vehicle, 3)] {
             let dice = super::super::dice::unit_dice_mut(&mut world, id).unwrap();
             for _ in 0..count {
@@ -121,7 +121,7 @@ mod tests {
             expected.record(dice.generic_roll()).unwrap();
         }
         let encoded = serde_json::to_value(&world).unwrap();
-        assert_eq!(world.battle_roll_statistics().unwrap(), expected);
+        assert_eq!(world.roll_statistics().unwrap(), expected);
         assert_eq!(serde_json::to_value(&world).unwrap(), encoded);
         super::super::state::replace_map_asset(
             &mut world,
@@ -130,7 +130,7 @@ mod tests {
             MapAsset::from_cells("1 1\n~1\n").unwrap(),
         )
         .unwrap();
-        assert_eq!(world.battle_roll_statistics().unwrap(), expected);
+        assert_eq!(world.roll_statistics().unwrap(), expected);
 
         let mut candidate = world.clone();
         super::super::dice::unit_dice_mut(&mut candidate, mech)
@@ -139,17 +139,17 @@ mod tests {
         candidate
             .retain_battle_rolls(&[mech].into_iter().collect())
             .unwrap();
-        assert_eq!(candidate.battle_roll_statistics().unwrap().total(), 10);
-        assert_eq!(world.battle_roll_statistics().unwrap(), expected);
+        assert_eq!(candidate.roll_statistics().unwrap().total(), 10);
+        assert_eq!(world.roll_statistics().unwrap(), expected);
         let ids = [mech, vehicle, map].into_iter().collect();
         world.retain_battle_rolls(&ids).unwrap();
         world.retain_battle_rolls(&ids).unwrap();
-        assert_eq!(world.battle_roll_statistics().unwrap(), expected);
+        assert_eq!(world.roll_statistics().unwrap(), expected);
         assert_eq!(world.btech_retired_rolls, expected);
         world.btech.purge(&ids);
-        assert_eq!(world.battle_roll_statistics().unwrap(), expected);
+        assert_eq!(world.roll_statistics().unwrap(), expected);
         let restored: World =
             serde_json::from_value(serde_json::to_value(&world).unwrap()).unwrap();
-        assert_eq!(restored.battle_roll_statistics().unwrap().total(), 0);
+        assert_eq!(restored.roll_statistics().unwrap().total(), 0);
     }
 }

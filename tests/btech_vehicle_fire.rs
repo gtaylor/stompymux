@@ -22,7 +22,7 @@ async fn fixture(
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         if index < 2 {
             let mut definition =
-                BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
                     .unwrap();
             definition
                 .attributes
@@ -32,7 +32,7 @@ async fn fixture(
             create_battle_vehicle(
                 &mut world,
                 id,
-                BattleVehicleTemplate::parse("test", vehicle).unwrap(),
+                VehicleTemplate::parse("test", vehicle).unwrap(),
             )
             .unwrap();
         }
@@ -44,15 +44,15 @@ async fn fixture(
 }
 
 /// Assign scenario power without introducing crew actions into sensor tests.
-fn power(world: &mut World, ids: &[ObjectId], value: BattlePower) {
+fn power(world: &mut World, ids: &[ObjectId], value: Power) {
     for id in ids {
         world.btech.set_unit_power(*id, value).unwrap();
     }
 }
 
 /// Ordinary conventional aim without range extensions or arc overrides.
-fn rules() -> BattleAimRules {
-    BattleAimRules {
+fn rules() -> AimRules {
+    AimRules {
         woods_damage: false,
         dig_bonus: 3,
         dig_only_front: false,
@@ -66,16 +66,16 @@ fn rules() -> BattleAimRules {
 }
 
 /// Tactical conventional shot configuration shared by admission cases.
-fn shot_rules() -> BattleShotRules {
-    BattleShotRules {
+fn shot_rules() -> ShotRules {
+    ShotRules {
         range_damage: false,
         tsm_tow_bonus: true,
-        vehicle_impact: stompymux_rs::BattleVehicleImpactRules::STANDARD,
-        stacking: BattleStackingRules::STANDARD,
-        stagger: BattleStaggerMode::Retain,
-        glancing: BattleGlancingMode::Disabled,
+        vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
+        stacking: StackingRules::STANDARD,
+        stagger: StaggerMode::Retain,
+        glancing: GlancingMode::Disabled,
         aim: rules(),
-        hit: BattleHitRules {
+        hit: HitRules {
             inferno_penalty: false,
             exile_stun_mode: 0,
         },
@@ -93,7 +93,7 @@ async fn engagement(template: &str) -> (tempfile::TempDir, Config, World, Object
         place_battle_unit(&mut world, id, map, 0, 0).unwrap();
     }
     place_battle_unit(&mut world, ids[2], map, 0, 1).unwrap();
-    power(&mut world, &ids, BattlePower::Running);
+    power(&mut world, &ids, Power::Running);
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(ids[2]);
     assign_battle_pilot(&mut world, ids[2], ObjectId(1)).unwrap();
     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
@@ -105,17 +105,17 @@ async fn engagement(template: &str) -> (tempfile::TempDir, Config, World, Object
 fn install_test_ams(
     world: &mut stompymux_rs::World,
     id: ObjectId,
-    weapon: stompymux_rs::BattleWeapon,
+    weapon: stompymux_rs::Weapon,
 ) -> (usize, usize) {
-    install_test_ams_at(world, id, weapon, stompymux_rs::BattleSection::LeftArm)
+    install_test_ams_at(world, id, weapon, stompymux_rs::MechSection::LeftArm)
 }
 
 /// Supply one arm-mounted defense for equipment selection scenarios.
 fn install_test_ams_at(
     world: &mut stompymux_rs::World,
     id: ObjectId,
-    weapon: stompymux_rs::BattleWeapon,
-    section: stompymux_rs::BattleSection,
+    weapon: stompymux_rs::Weapon,
+    section: stompymux_rs::MechSection,
 ) -> (usize, usize) {
     use stompymux_rs::*;
     let mut definition = world.btech.constructed_units()[&id].definition().clone();
@@ -126,7 +126,7 @@ fn install_test_ams_at(
     part.equipment = format!("Ammo_{}", weapon.name());
     part.data = weapon.profile().ammunition_per_ton.to_string();
     arm.criticals.insert(5, part);
-    let constructed = BattleUnit::from_template(definition.clone()).unwrap();
+    let constructed = Mech::from_template(definition.clone()).unwrap();
     world
         .btech
         .rewrite_unit_record(id, |record| {
@@ -150,24 +150,24 @@ fn install_test_ams_at(
 }
 
 /// Explicit shooter and victim critical policies for tactical firing tests.
-fn fire_rules() -> BattleVehicleShotRules {
-    let criticals = BattleVehicleCriticalRules {
+fn fire_rules() -> VehicleShotRules {
+    let criticals = VehicleCriticalRules {
         rotor_damage_divisor: 0,
         extended_piloting: false,
         vtol_table: None,
-        table: BattleVehicleCriticalTable::Standard,
+        table: VehicleCriticalTable::Standard,
         enabled: false,
         combat_safe: false,
         toughness: false,
     };
-    BattleVehicleShotRules {
-        shot: BattleShotRules {
+    VehicleShotRules {
+        shot: ShotRules {
             range_damage: false,
             tsm_tow_bonus: true,
-            vehicle_impact: BattleVehicleImpactRules {
+            vehicle_impact: VehicleImpactRules {
                 advanced_fire: false,
                 criticals,
-                hit: BattleVehicleHitRules {
+                hit: VehicleHitRules {
                     critical_mode: 1,
                     critical_level: 40,
                 },
@@ -182,7 +182,7 @@ fn fire_rules() -> BattleVehicleShotRules {
 fn seed(world: &mut World, id: ObjectId, value: u8) {
     world
         .btech
-        .set_unit_dice(id, BattleDice::seeded([value; 32]))
+        .set_unit_dice(id, Dice::seeded([value; 32]))
         .unwrap();
 }
 
@@ -194,7 +194,7 @@ async fn vehicle_shots_commit_hits_misses_and_restart_replay_for_both_target_cla
         for hit in [false, true] {
             let mut world = base.clone();
             let value = (0..=255)
-                .find(|value| BattleDice::seeded([*value; 32]).two_d6() == if hit { 12 } else { 2 })
+                .find(|value| Dice::seeded([*value; 32]).two_d6() == if hit { 12 } else { 2 })
                 .unwrap();
             seed(&mut world, shooter, value);
             let preview =
@@ -236,7 +236,7 @@ async fn vehicle_shots_commit_hits_misses_and_restart_replay_for_both_target_cla
             let readiness = attacker.weapon_readiness(0).unwrap();
             if attacker.is_destroyed() || !readiness.intact {
                 assert!(!readiness.ready);
-                let Some(BattleTargetSalvo::Mech(salvo)) = &report.salvo else {
+                let Some(TargetSalvo::Mech(salvo)) = &report.salvo else {
                     panic!("The return blast must come from the Mech target");
                 };
                 assert!(
@@ -255,7 +255,7 @@ async fn vehicle_shots_commit_hits_misses_and_restart_replay_for_both_target_cla
                     !hit
                 );
                 if hit {
-                    assert!(matches!(report.salvo, Some(BattleTargetSalvo::Mech(_))));
+                    assert!(matches!(report.salvo, Some(TargetSalvo::Mech(_))));
                 }
             } else {
                 assert_eq!(
@@ -263,7 +263,7 @@ async fn vehicle_shots_commit_hits_misses_and_restart_replay_for_both_target_cla
                     !hit
                 );
                 if hit {
-                    assert!(matches!(report.salvo, Some(BattleTargetSalvo::Vehicle(_))));
+                    assert!(matches!(report.salvo, Some(TargetSalvo::Vehicle(_))));
                 }
             }
             let after = world.btech.clone();
@@ -281,7 +281,7 @@ async fn vehicle_shots_commit_hits_misses_and_restart_replay_for_both_target_cla
 async fn vehicle_missiles_use_shooter_dice_for_mech_ams_only_on_admitted_hits() {
     let template = include_str!("../game/mechs/Demolisher.toml").replace("IS.AC/20", "IS.SRM-6");
     let (_dir, config, mut base, _map, [target, _, shooter, _]) = engagement(&template).await;
-    install_test_ams(&mut base, target, BattleWeapon::AntiMissileSystem);
+    install_test_ams(&mut base, target, Weapon::AntiMissileSystem);
     base.btech
         .rewrite_unit_record(target, |record| {
             record["ams_enabled"] = serde_json::json!(true);
@@ -290,10 +290,10 @@ async fn vehicle_missiles_use_shooter_dice_for_mech_ams_only_on_admitted_hits() 
     for hit in [false, true] {
         let mut world = base.clone();
         let value = (0..=255)
-            .find(|value| BattleDice::seeded([*value; 32]).two_d6() == if hit { 12 } else { 2 })
+            .find(|value| Dice::seeded([*value; 32]).two_d6() == if hit { 12 } else { 2 })
             .unwrap();
         seed(&mut world, shooter, value);
-        let mut dice = BattleDice::seeded([value; 32]);
+        let mut dice = Dice::seeded([value; 32]);
         let attack = dice.two_d6();
         let before = world.btech.constructed_units()[&target]
             .ammunition()
@@ -339,7 +339,7 @@ async fn vehicle_shot_failures_and_failed_streak_locks_preserve_target_state() {
         .position(|mount| mount.weapon.is_streak())
         .unwrap();
     let value = (0..=255)
-        .find(|value| BattleDice::seeded([*value; 32]).two_d6() == 2)
+        .find(|value| Dice::seeded([*value; 32]).two_d6() == 2)
         .unwrap();
     seed(&mut base, shooter, value);
     let before_target = base.btech.vehicles()[&target].clone();
@@ -363,9 +363,8 @@ async fn vehicle_shot_failures_and_failed_streak_locks_preserve_target_state() {
         };
         if case == "contact" {
             // Without the sensor band or any sight the target is no longer perceived.
-            set_battle_map_perception(&mut world, map, BattleMapPerceptionFlag::Sensors, false)
-                .unwrap();
-            set_battle_map_visibility(&mut world, map, BattleLight::Day, 0).unwrap();
+            set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, false).unwrap();
+            set_battle_map_visibility(&mut world, map, Light::Day, 0).unwrap();
         }
         if case == "character" {
             world
@@ -401,7 +400,7 @@ async fn vehicle_shots_observe_existing_angel_fields_without_copying_field_rules
         for slot in 2..4 {
             definition
                 .sections
-                .get_mut(&BattleSection::LeftTorso)
+                .get_mut(&MechSection::LeftTorso)
                 .unwrap()
                 .criticals
                 .insert(
@@ -420,7 +419,7 @@ async fn vehicle_shots_observe_existing_angel_fields_without_copying_field_rules
             })
             .unwrap();
         let value = (0..=255)
-            .find(|value| BattleDice::seeded([*value; 32]).two_d6() == 2)
+            .find(|value| Dice::seeded([*value; 32]).two_d6() == 2)
             .unwrap();
         seed(&mut base, shooter, value);
         for active in [false, true] {
@@ -429,9 +428,9 @@ async fn vehicle_shots_observe_existing_angel_fields_without_copying_field_rules
                 .btech
                 .rewrite_unit_record(emitter, |record| {
                     record["electronics"]["angel"] = serde_json::to_value(if active {
-                        BattleElectronicMode::Ecm
+                        ElectronicMode::Ecm
                     } else {
-                        BattleElectronicMode::Off
+                        ElectronicMode::Off
                     })
                     .unwrap();
                 })
@@ -472,7 +471,7 @@ async fn vehicle_native_and_lua_fire_share_state_feedback_and_callback_rollback(
         for hit in [false, true] {
             let mut world = base.clone();
             let value = (0..=255)
-                .find(|value| BattleDice::seeded([*value; 32]).two_d6() == if hit { 12 } else { 2 })
+                .find(|value| Dice::seeded([*value; 32]).two_d6() == if hit { 12 } else { 2 })
                 .unwrap();
             seed(&mut world, shooter, value);
             let native = Scripts::new(
@@ -534,12 +533,12 @@ async fn vehicle_occupied_hex_fire_preserves_selection_and_native_lua_parity() {
     let hex = HexCoordinate { x: 0, y: 0 };
     for target in [mech, vehicle] {
         let mut world = base.clone();
-        power(&mut world, &[mech, other], BattlePower::Off);
+        power(&mut world, &[mech, other], Power::Off);
         place_battle_unit(&mut world, other, map, 0, 4).unwrap();
         if target == vehicle {
             place_battle_unit(&mut world, mech, map, 0, 4).unwrap();
         }
-        power(&mut world, &[mech, other], BattlePower::Running);
+        power(&mut world, &[mech, other], Power::Running);
         refresh_battle_contacts(&mut world, &[shooter]).unwrap();
         assert_eq!(
             battle_hex_occupant(&world, shooter, hex).unwrap(),
@@ -550,12 +549,12 @@ async fn vehicle_occupied_hex_fire_preserves_selection_and_native_lua_parity() {
             shooter,
             ObjectId(1),
             hex,
-            BattleHexTargetMode::UnitAtHex,
+            HexTargetMode::UnitAtHex,
         )
         .unwrap();
         // This case checks coordinate selection and presentation; damage is covered separately.
         let value = (0..=255)
-            .find(|value| BattleDice::seeded([*value; 32]).two_d6() == 2)
+            .find(|value| Dice::seeded([*value; 32]).two_d6() == 2)
             .unwrap();
         seed(&mut world, shooter, value);
         let selection = world.btech.vehicles()[&shooter].target_selection();
@@ -614,7 +613,7 @@ async fn occupied_hex_selection_does_not_skip_hidden_or_forbidden_targets() {
         shooter,
         ObjectId(1),
         hex,
-        BattleHexTargetMode::UnitAtHex,
+        HexTargetMode::UnitAtHex,
     )
     .unwrap();
     for condition in ["hidden", "character", "empty", "terrain"] {
@@ -640,20 +639,14 @@ async fn occupied_hex_selection_does_not_skip_hidden_or_forbidden_targets() {
                     .insert(Flag::InCharacter);
             }
             "empty" => {
-                power(&mut world, &[mech, other, vehicle], BattlePower::Off);
+                power(&mut world, &[mech, other, vehicle], Power::Off);
                 for id in [mech, other, vehicle] {
                     place_battle_unit(&mut world, id, map, 0, 4).unwrap();
                 }
             }
             "terrain" => {
-                select_battle_hex_target(
-                    &mut world,
-                    shooter,
-                    ObjectId(1),
-                    hex,
-                    BattleHexTargetMode::Hex,
-                )
-                .unwrap();
+                select_battle_hex_target(&mut world, shooter, ObjectId(1), hex, HexTargetMode::Hex)
+                    .unwrap();
             }
             _ => unreachable!(),
         }
@@ -716,7 +709,7 @@ async fn occupied_hex_selection_does_not_skip_hidden_or_forbidden_targets() {
 
 /// Replace the target's turret mount and its bin while preserving battlefield membership. Laser
 /// AMS draws no ammunition, so it takes no bin.
-fn install_vehicle_ams(world: &mut World, target: ObjectId, weapon: BattleWeapon) {
+fn install_vehicle_ams(world: &mut World, target: ObjectId, weapon: Weapon) {
     let template = include_str!("../game/mechs/Demolisher.toml");
     let source = if weapon.profile().ammunition_per_ton > 0 {
         template.replace("IS.AC/20", weapon.name())
@@ -728,7 +721,7 @@ fn install_vehicle_ams(world: &mut World, target: ObjectId, weapon: BattleWeapon
             )
             .replace("IS.AC/20", weapon.name())
     };
-    let unit = BattleVehicle::new(BattleVehicleTemplate::parse("test", &source).unwrap()).unwrap();
+    let unit = Vehicle::new(VehicleTemplate::parse("test", &source).unwrap()).unwrap();
     world
         .btech
         .rewrite_unit_record(target, |record| {
@@ -744,19 +737,19 @@ async fn vehicle_ams_shares_interception_dice_supply_limits_and_restart_replay()
     let template = include_str!("../game/mechs/Demolisher.toml").replace("IS.AC/20", "IS.SRM-6");
     let (_dir, config, base, _, [_, _, shooter, target]) = engagement(&template).await;
     for weapon in [
-        BattleWeapon::AntiMissileSystem,
-        BattleWeapon::ClanAntiMissileSystem,
-        BattleWeapon::LaserAms,
-        BattleWeapon::ClanLaserAms,
+        Weapon::AntiMissileSystem,
+        Weapon::ClanAntiMissileSystem,
+        Weapon::LaserAms,
+        Weapon::ClanLaserAms,
     ] {
         for hit in [false, true] {
             let mut world = base.clone();
             install_vehicle_ams(&mut world, target, weapon);
             let value = (0..=255)
-                .find(|value| BattleDice::seeded([*value; 32]).two_d6() == if hit { 12 } else { 2 })
+                .find(|value| Dice::seeded([*value; 32]).two_d6() == if hit { 12 } else { 2 })
                 .unwrap();
             seed(&mut world, shooter, value);
-            let mut dice = BattleDice::seeded([value; 32]);
+            let mut dice = Dice::seeded([value; 32]);
             dice.two_d6();
             let fed = weapon.profile().ammunition_per_ton > 0;
             let rounds = world.btech.vehicles()[&target]
@@ -795,10 +788,8 @@ async fn vehicle_ams_shares_interception_dice_supply_limits_and_restart_replay()
                 world.validate(&config).unwrap();
                 continue;
             }
-            let defense = if matches!(
-                weapon,
-                BattleWeapon::ClanAntiMissileSystem | BattleWeapon::ClanLaserAms
-            ) {
+            let defense = if matches!(weapon, Weapon::ClanAntiMissileSystem | Weapon::ClanLaserAms)
+            {
                 dice.two_d6()
             } else {
                 dice.d6()
@@ -826,7 +817,7 @@ async fn vehicle_ams_shares_interception_dice_supply_limits_and_restart_replay()
                 world.btech.vehicles()[&target].weapon_recycle()[&0],
                 u16::from(weapon.profile().recycle_seconds)
             );
-            let Some(BattleTargetSalvo::Vehicle(salvo)) = &report.salvo else {
+            let Some(TargetSalvo::Vehicle(salvo)) = &report.salvo else {
                 panic!("vehicle salvo missing")
             };
             let missiles = salvo.missiles_before_defense.unwrap();
@@ -847,7 +838,7 @@ async fn vehicle_ams_switch_shares_native_lua_control_and_callback_rollback() {
         engagement(include_str!("../game/mechs/Demolisher.toml")).await;
     assert!(!base.btech.vehicles()[&target].ams_enabled());
     assert!(set_battle_ams(&mut base, shooter, ObjectId(1), true).is_err());
-    install_vehicle_ams(&mut base, target, BattleWeapon::AntiMissileSystem);
+    install_vehicle_ams(&mut base, target, Weapon::AntiMissileSystem);
     release_battle_pilot(&mut base, shooter, ObjectId(1)).unwrap();
     base.objects.get_mut(&ObjectId(1)).unwrap().location = Some(target);
     assign_battle_pilot(&mut base, target, ObjectId(1)).unwrap();
@@ -891,9 +882,9 @@ async fn vehicle_ams_switch_shares_native_lua_control_and_callback_rollback() {
 async fn vehicle_ams_selection_obeys_switch_supply_recycle_and_critical_loss() {
     let template = include_str!("../game/mechs/Demolisher.toml").replace("IS.AC/20", "IS.SRM-6");
     let (_dir, config, mut base, _, [_, _, shooter, target]) = engagement(&template).await;
-    install_vehicle_ams(&mut base, target, BattleWeapon::AntiMissileSystem);
+    install_vehicle_ams(&mut base, target, Weapon::AntiMissileSystem);
     let value = (0..=255)
-        .find(|value| BattleDice::seeded([*value; 32]).two_d6() == 12)
+        .find(|value| Dice::seeded([*value; 32]).two_d6() == 12)
         .unwrap();
     seed(&mut base, shooter, value);
     for condition in [
@@ -913,7 +904,7 @@ async fn vehicle_ams_selection_obeys_switch_supply_recycle_and_critical_loss() {
                 let unit = record;
                 match condition {
                     "disabled" => unit["ams_enabled"] = serde_json::json!(false),
-                    "off" => unit["power"] = serde_json::to_value(BattlePower::Off).unwrap(),
+                    "off" => unit["power"] = serde_json::to_value(Power::Off).unwrap(),
                     "recycling" => unit["weapon_recycle"] = serde_json::json!({"0":1,"1":1}),
                     "empty" => unit["ammunition"] = serde_json::json!([0, 0, 0, 0]),
                     "first_busy" => unit["weapon_recycle"] = serde_json::json!({"0":1}),
@@ -934,7 +925,7 @@ async fn vehicle_ams_selection_obeys_switch_supply_recycle_and_critical_loss() {
             };
             destroy_battle_vehicle_critical(&mut world, target, location).unwrap();
         }
-        let mut dice = BattleDice::seeded([value; 32]);
+        let mut dice = Dice::seeded([value; 32]);
         dice.two_d6();
         let report =
             fire_battle_vehicle_shot(&mut world, shooter, ObjectId(1), target, 0, fire_rules())
@@ -965,9 +956,9 @@ async fn vehicle_ams_selection_obeys_switch_supply_recycle_and_critical_loss() {
 async fn vehicle_ams_expenditure_and_feedback_roll_back_with_host_shots() {
     let template = include_str!("../game/mechs/Demolisher.toml").replace("IS.AC/20", "IS.SRM-6");
     let (_dir, config, mut base, _, [_, _, shooter, target]) = engagement(&template).await;
-    install_vehicle_ams(&mut base, target, BattleWeapon::ClanAntiMissileSystem);
+    install_vehicle_ams(&mut base, target, Weapon::ClanAntiMissileSystem);
     let value = (0..=255)
-        .find(|value| BattleDice::seeded([*value; 32]).two_d6() == 12)
+        .find(|value| Dice::seeded([*value; 32]).two_d6() == 12)
         .unwrap();
     seed(&mut base, shooter, value);
     let native = Scripts::new(
@@ -1006,20 +997,20 @@ async fn vehicle_ams_expenditure_and_feedback_roll_back_with_host_shots() {
 #[tokio::test]
 async fn vehicle_coolant_and_flamer_heat_share_target_effects_and_host_rollback() {
     for weapon in [
-        BattleWeapon::CoolantGun,
-        BattleWeapon::VehicleFlamer,
-        BattleWeapon::VehicleHeavyFlamer,
+        Weapon::CoolantGun,
+        Weapon::VehicleFlamer,
+        Weapon::VehicleHeavyFlamer,
     ] {
         let template =
             include_str!("../game/mechs/Demolisher.toml").replace("IS.AC/20", weapon.name());
         let (_dir, config, base, _, [target, _, shooter, vehicle]) = engagement(&template).await;
         for hit in [false, true] {
             let mut world = base.clone();
-            if weapon != BattleWeapon::CoolantGun {
+            if weapon != Weapon::CoolantGun {
                 toggle_battle_flamer_heat(&mut world, shooter, ObjectId(1), 0).unwrap();
             }
             let value = (0..=255)
-                .find(|value| BattleDice::seeded([*value; 32]).two_d6() == if hit { 12 } else { 2 })
+                .find(|value| Dice::seeded([*value; 32]).two_d6() == if hit { 12 } else { 2 })
                 .unwrap();
             seed(&mut world, shooter, value);
             let original = world.btech.clone();
@@ -1031,7 +1022,7 @@ async fn vehicle_coolant_and_flamer_heat_share_target_effects_and_host_rollback(
             let amount = f64::from(weapon.profile().damage);
             let expected = if !hit {
                 0.0
-            } else if weapon == BattleWeapon::CoolantGun {
+            } else if weapon == Weapon::CoolantGun {
                 -amount
             } else {
                 amount
@@ -1046,11 +1037,11 @@ async fn vehicle_coolant_and_flamer_heat_share_target_effects_and_host_rollback(
             );
             assert_eq!(
                 report.cooling,
-                (hit && weapon == BattleWeapon::CoolantGun).then_some(amount)
+                (hit && weapon == Weapon::CoolantGun).then_some(amount)
             );
             assert_eq!(
                 report.heat_transfer,
-                if hit && weapon != BattleWeapon::CoolantGun {
+                if hit && weapon != Weapon::CoolantGun {
                     weapon.profile().damage
                 } else {
                     0
@@ -1118,34 +1109,34 @@ async fn vehicle_coolant_and_flamer_heat_share_target_effects_and_host_rollback(
 async fn vehicle_beacon_launchers_reuse_attachment_interception_and_replay() {
     for (weapon, mode, flag, kind) in [
         (
-            BattleWeapon::NarcBeacon,
-            BattleAmmunitionMode::Normal,
+            Weapon::NarcBeacon,
+            AmmunitionMode::Normal,
             "-",
-            BattleBeaconKind::Narc,
+            BeaconKind::Narc,
         ),
         (
-            BattleWeapon::ClanNarcBeacon,
-            BattleAmmunitionMode::Normal,
+            Weapon::ClanNarcBeacon,
+            AmmunitionMode::Normal,
             "-",
-            BattleBeaconKind::Narc,
+            BeaconKind::Narc,
         ),
         (
-            BattleWeapon::INarcBeacon,
-            BattleAmmunitionMode::Normal,
+            Weapon::INarcBeacon,
+            AmmunitionMode::Normal,
             "-",
-            BattleBeaconKind::Homing,
+            BeaconKind::Homing,
         ),
         (
-            BattleWeapon::INarcBeacon,
-            BattleAmmunitionMode::INarcHaywire,
+            Weapon::INarcBeacon,
+            AmmunitionMode::INarcHaywire,
             "iNarc_Haywire",
-            BattleBeaconKind::Haywire,
+            BeaconKind::Haywire,
         ),
         (
-            BattleWeapon::INarcBeacon,
-            BattleAmmunitionMode::INarcEcm,
+            Weapon::INarcBeacon,
+            AmmunitionMode::INarcEcm,
             "iNarc_ECM",
-            BattleBeaconKind::Ecm,
+            BeaconKind::Ecm,
         ),
     ] {
         let template = include_str!("../game/mechs/Demolisher.toml")
@@ -1159,13 +1150,13 @@ async fn vehicle_beacon_launchers_reuse_attachment_interception_and_replay() {
                 },
             );
         let (_dir, config, mut base, _, [target, _, shooter, _]) = engagement(&template).await;
-        if weapon == BattleWeapon::INarcBeacon {
+        if weapon == Weapon::INarcBeacon {
             set_battle_inarc_ammunition(&mut base, shooter, ObjectId(1), 0, mode).unwrap();
         }
         for (hit, defense) in [(false, false), (true, false), (false, true), (true, true)] {
             let mut world = base.clone();
             if defense {
-                install_test_ams(&mut world, target, BattleWeapon::AntiMissileSystem);
+                install_test_ams(&mut world, target, Weapon::AntiMissileSystem);
                 world
                     .btech
                     .rewrite_unit_record(target, |record| {
@@ -1174,7 +1165,7 @@ async fn vehicle_beacon_launchers_reuse_attachment_interception_and_replay() {
                     .unwrap();
             }
             let value = (0..=255)
-                .find(|value| BattleDice::seeded([*value; 32]).two_d6() == if hit { 12 } else { 2 })
+                .find(|value| Dice::seeded([*value; 32]).two_d6() == if hit { 12 } else { 2 })
                 .unwrap();
             seed(&mut world, shooter, value);
             let target_before = world.btech.constructed_units()[&target].clone();
@@ -1236,7 +1227,7 @@ async fn clan_plasma_vehicle_shots_use_ordinary_damage_packets() {
         include_str!("../game/mechs/Demolisher.toml").replace("\"IS.AC/20\"", "\"CL.PlasmaRifle\"");
     let (_dir, config, mut world, _, [mech, _, shooter, vehicle]) = engagement(&template).await;
     let value = (0..=255)
-        .find(|value| BattleDice::seeded([*value; 32]).two_d6() == 12)
+        .find(|value| Dice::seeded([*value; 32]).two_d6() == 12)
         .unwrap();
     seed(&mut world, shooter, value);
     for target in [mech, vehicle] {
@@ -1254,12 +1245,12 @@ async fn clan_plasma_vehicle_shots_use_ordinary_damage_packets() {
         assert_eq!(report.heat_transfer, 0);
         assert!(report.narc.is_none() && report.cooling.is_none());
         match report.salvo.unwrap() {
-            BattleTargetSalvo::Swarm(_) => panic!("Direct explosive ammunition cannot retarget"),
-            BattleTargetSalvo::Mech(salvo) => assert_eq!(
+            TargetSalvo::Swarm(_) => panic!("Direct explosive ammunition cannot retarget"),
+            TargetSalvo::Mech(salvo) => assert_eq!(
                 salvo.groups.iter().map(|group| group.damage).sum::<u16>(),
                 10
             ),
-            BattleTargetSalvo::Vehicle(salvo) => assert_eq!(
+            TargetSalvo::Vehicle(salvo) => assert_eq!(
                 salvo.groups.iter().map(|group| group.damage).sum::<u16>(),
                 10
             ),
@@ -1272,22 +1263,17 @@ async fn clan_plasma_vehicle_shots_use_ordinary_damage_packets() {
 async fn vehicle_beacon_controls_share_native_lua_selection_and_rollback() {
     for (weapon, command, call, expected) in [
         (
-            BattleWeapon::NarcBeacon,
+            Weapon::NarcBeacon,
             "explosive 0",
             "explosive",
-            BattleAmmunitionMode::Narc,
+            AmmunitionMode::Narc,
         ),
+        (Weapon::Srm6, "narc 0", "narc", AmmunitionMode::Narc),
         (
-            BattleWeapon::Srm6,
-            "narc 0",
-            "narc",
-            BattleAmmunitionMode::Narc,
-        ),
-        (
-            BattleWeapon::INarcBeacon,
+            Weapon::INarcBeacon,
             "inarc 0 Y",
             "inarc",
-            BattleAmmunitionMode::INarcHaywire,
+            AmmunitionMode::INarcHaywire,
         ),
     ] {
         let template = include_str!("../game/mechs/Demolisher.toml")
@@ -1326,7 +1312,7 @@ async fn vehicle_beacon_controls_share_native_lua_selection_and_rollback() {
             expected
         );
         native.world().validate(&config).unwrap();
-        if weapon == BattleWeapon::INarcBeacon {
+        if weapon == Weapon::INarcBeacon {
             assert!(
                 support::run_text(&native, &config, ObjectId(1), 2, command)
                     .contains("already set")
@@ -1339,28 +1325,28 @@ async fn vehicle_beacon_controls_share_native_lua_selection_and_rollback() {
 async fn vehicle_targets_receive_pods_without_armor_damage_and_replay_interception() {
     for (weapon, mode, flag, kind) in [
         (
-            BattleWeapon::NarcBeacon,
-            BattleAmmunitionMode::Normal,
+            Weapon::NarcBeacon,
+            AmmunitionMode::Normal,
             "-",
-            BattleBeaconKind::Narc,
+            BeaconKind::Narc,
         ),
         (
-            BattleWeapon::INarcBeacon,
-            BattleAmmunitionMode::Normal,
+            Weapon::INarcBeacon,
+            AmmunitionMode::Normal,
             "-",
-            BattleBeaconKind::Homing,
+            BeaconKind::Homing,
         ),
         (
-            BattleWeapon::INarcBeacon,
-            BattleAmmunitionMode::INarcHaywire,
+            Weapon::INarcBeacon,
+            AmmunitionMode::INarcHaywire,
             "iNarc_Haywire",
-            BattleBeaconKind::Haywire,
+            BeaconKind::Haywire,
         ),
         (
-            BattleWeapon::INarcBeacon,
-            BattleAmmunitionMode::INarcEcm,
+            Weapon::INarcBeacon,
+            AmmunitionMode::INarcEcm,
             "iNarc_ECM",
-            BattleBeaconKind::Ecm,
+            BeaconKind::Ecm,
         ),
     ] {
         let template = include_str!("../game/mechs/Demolisher.toml")
@@ -1374,16 +1360,16 @@ async fn vehicle_targets_receive_pods_without_armor_damage_and_replay_intercepti
                 },
             );
         let (_dir, config, mut base, _, [_, _, shooter, target]) = engagement(&template).await;
-        if weapon == BattleWeapon::INarcBeacon {
+        if weapon == Weapon::INarcBeacon {
             set_battle_inarc_ammunition(&mut base, shooter, ObjectId(1), 0, mode).unwrap();
         }
         for (hit, defense) in [(false, false), (true, false), (false, true), (true, true)] {
             let mut world = base.clone();
             if defense {
-                install_vehicle_ams(&mut world, target, BattleWeapon::AntiMissileSystem);
+                install_vehicle_ams(&mut world, target, Weapon::AntiMissileSystem);
             }
             let value = (0..=255)
-                .find(|value| BattleDice::seeded([*value; 32]).two_d6() == if hit { 12 } else { 2 })
+                .find(|value| Dice::seeded([*value; 32]).two_d6() == if hit { 12 } else { 2 })
                 .unwrap();
             seed(&mut world, shooter, value);
             let before = world.btech.vehicles()[&target].clone();
@@ -1420,7 +1406,7 @@ async fn vehicle_targets_receive_pods_without_armor_damage_and_replay_intercepti
                 hit && !defense
             );
             if hit && !defense {
-                assert!(matches!(pod.section, Some(BattleUnitSection::Vehicle(_))));
+                assert!(matches!(pod.section, Some(UnitSection::Vehicle(_))));
             }
             assert_eq!(report.ams.is_some(), defense && hit);
             if defense && hit {
@@ -1454,16 +1440,16 @@ async fn vehicle_beacons_drive_aim_guidance_interference_and_section_loss() {
             .blocks_outgoing_guidance()
     );
     let value = (0..=255)
-        .find(|value| BattleDice::seeded([*value; 32]).two_d6() == 7)
+        .find(|value| Dice::seeded([*value; 32]).two_d6() == 7)
         .unwrap();
     seed(&mut world, target, value);
     let mut blocked = world.clone();
-    let request = BattleVehicleSalvoRequest {
+    let request = VehicleSalvoRequest {
         range_damage: false,
         damage_penalty: 0,
-        weapon: BattleWeapon::Lrm20,
-        ammunition: BattleAmmunitionMode::Narc,
-        fire_mode: BattleFireMode::Normal,
+        weapon: Weapon::Lrm20,
+        ammunition: AmmunitionMode::Narc,
+        fire_mode: FireMode::Normal,
         gatling_damage: None,
         distance: 6.0,
         glancing: false,
@@ -1474,7 +1460,7 @@ async fn vehicle_beacons_drive_aim_guidance_interference_and_section_loss() {
     let enhanced = resolve_battle_vehicle_salvo(
         &mut world,
         target,
-        BattleHitArc::Front,
+        HitArc::Front,
         request,
         fire_rules().shot.vehicle_impact,
     )
@@ -1482,8 +1468,8 @@ async fn vehicle_beacons_drive_aim_guidance_interference_and_section_loss() {
     let ordinary = resolve_battle_vehicle_salvo(
         &mut blocked,
         target,
-        BattleHitArc::Front,
-        BattleVehicleSalvoRequest {
+        HitArc::Front,
+        VehicleSalvoRequest {
             range_damage: false,
             damage_penalty: 0,
             guidance_blocked: true,
@@ -1504,9 +1490,9 @@ async fn vehicle_beacons_drive_aim_guidance_interference_and_section_loss() {
     damage_battle_vehicle_phase(
         &mut world,
         target,
-        BattleVehicleSection::Turret,
+        VehicleSection::Turret,
         100,
-        BattleDamagePhase::Internal,
+        DamagePhase::Internal,
     )
     .unwrap();
     assert!(world.btech.vehicles()[&target].beacons().is_empty());
@@ -1533,7 +1519,7 @@ async fn vehicle_pod_host_action_rolls_back_attachment_and_location_effects() {
         include_str!("../game/mechs/Demolisher.toml").replace("IS.AC/20", "IS.NarcBeacon");
     let (_dir, config, mut world, _, [_, _, shooter, target]) = engagement(&template).await;
     let value = (0..=255)
-        .find(|value| BattleDice::seeded([*value; 32]).two_d6() == 12)
+        .find(|value| Dice::seeded([*value; 32]).two_d6() == 12)
         .unwrap();
     seed(&mut world, shooter, value);
     let native = Scripts::new(
@@ -1596,9 +1582,9 @@ async fn vehicle_pod_inspection_and_removal_share_controls_and_saved_countdown()
     attach_removal_test_pods(&mut world, shooter);
     let rows = inspect_battle_pods(&world, shooter, ObjectId(1)).unwrap();
     assert_eq!(rows.len(), 5);
-    assert!(rows.iter().any(|row| row.section
-        == BattleUnitSection::Vehicle(BattleVehicleSection::Turret)
-        && row.kinds.len() == 4));
+    assert!(rows.iter().any(
+        |row| row.section == UnitSection::Vehicle(VehicleSection::Turret) && row.kinds.len() == 4
+    ));
     let before = world.btech.clone();
     let lua = Scripts::new(
         &config,
@@ -1671,12 +1657,8 @@ async fn vehicle_pod_inspection_and_removal_share_controls_and_saved_countdown()
             .any(|notice| notice.unit == shooter && notice.text.contains("remove all the iNARC"))
     );
     assert_eq!(world.btech.vehicles()[&shooter].pod_removal(), None);
-    assert!(world.btech.vehicles()[&shooter].has_beacon(BattleBeaconKind::Narc));
-    for kind in [
-        BattleBeaconKind::Homing,
-        BattleBeaconKind::Haywire,
-        BattleBeaconKind::Ecm,
-    ] {
+    assert!(world.btech.vehicles()[&shooter].has_beacon(BeaconKind::Narc));
+    for kind in [BeaconKind::Homing, BeaconKind::Haywire, BeaconKind::Ecm] {
         assert!(!world.btech.vehicles()[&shooter].has_beacon(kind));
     }
     assert!(
@@ -1710,7 +1692,7 @@ async fn vehicle_pod_removal_guards_shutdown_and_destruction_preserve_action_bou
             .rewrite_unit_record(shooter, |record| {
                 let unit = record;
                 match condition {
-                    "off" => unit["power"] = serde_json::to_value(BattlePower::Off).unwrap(),
+                    "off" => unit["power"] = serde_json::to_value(Power::Off).unwrap(),
                     "speed" => unit["motion"]["speed"] = 1.0.into(),
                     "desired" => unit["motion"]["desired_speed"] = 1.0.into(),
                     "stun" => unit["crew_stun_remaining"] = 10.into(),
@@ -1749,13 +1731,13 @@ async fn vehicle_pod_removal_guards_shutdown_and_destruction_preserve_action_bou
             damage_battle_vehicle_phase(
                 &mut world,
                 shooter,
-                BattleVehicleSection::Front,
+                VehicleSection::Front,
                 100,
-                BattleDamagePhase::Internal,
+                DamagePhase::Internal,
             )
             .unwrap();
         } else {
-            power(&mut world, &[shooter], BattlePower::Off);
+            power(&mut world, &[shooter], Power::Off);
         }
         world
             .btech
@@ -1772,7 +1754,7 @@ async fn vehicle_pod_removal_guards_shutdown_and_destruction_preserve_action_bou
             !destroyed
         );
         assert_eq!(
-            world.btech.vehicles()[&shooter].has_beacon(BattleBeaconKind::Ecm),
+            world.btech.vehicles()[&shooter].has_beacon(BeaconKind::Ecm),
             destroyed
         );
         world.validate(&config).unwrap();
@@ -1787,7 +1769,7 @@ async fn shutdown_vehicle_pod_expiry_retries_failed_server_commit() {
         let shooter = ids[2];
         attach_removal_test_pods(&mut world, shooter);
         begin_battle_pod_removal(&mut world, shooter, ObjectId(1)).unwrap();
-        power(&mut world, &ids, BattlePower::Off);
+        power(&mut world, &ids, Power::Off);
         world.btech
             .rewrite_unit_record(shooter, |record| {
         record["pod_removal"] = 1.into();
@@ -1801,11 +1783,11 @@ async fn shutdown_vehicle_pod_expiry_retries_failed_server_commit() {
         heartbeats.attempt().await;
         let saved = persistence::load(&config.database()).await.unwrap();
         assert_eq!(saved.btech.vehicles()[&shooter].pod_removal(), Some(1));
-        assert!(saved.btech.vehicles()[&shooter].has_beacon(BattleBeaconKind::Ecm));
+        assert!(saved.btech.vehicles()[&shooter].has_beacon(BeaconKind::Ecm));
         sqlx::raw_sql("DROP TRIGGER deny_pods").execute(&mut sql).await.unwrap();
         let saved = heartbeats.until_saved(&config, 5, |saved| saved.btech.vehicles()[&shooter].pod_removal().is_none()).await;
-        assert!(!saved.btech.vehicles()[&shooter].has_beacon(BattleBeaconKind::Ecm));
-        assert!(saved.btech.vehicles()[&shooter].has_beacon(BattleBeaconKind::Narc));
+        assert!(!saved.btech.vehicles()[&shooter].has_beacon(BeaconKind::Ecm));
+        assert!(saved.btech.vehicles()[&shooter].has_beacon(BeaconKind::Narc));
         shutdown.send(ShutdownRequest::Sigterm).unwrap();
         server.await.unwrap().unwrap();
     }).await;
@@ -1816,9 +1798,9 @@ async fn mech_engagement() -> (tempfile::TempDir, Config, World, ObjectId, Objec
     let (dir, config, mut world, map, [shooter, _, previous, target]) =
         engagement(include_str!("../game/mechs/Demolisher.toml")).await;
     release_battle_pilot(&mut world, previous, ObjectId(1)).unwrap();
-    power(&mut world, &[shooter], BattlePower::Off);
+    power(&mut world, &[shooter], Power::Off);
     place_battle_unit(&mut world, shooter, map, 0, 1).unwrap();
-    power(&mut world, &[shooter], BattlePower::Running);
+    power(&mut world, &[shooter], Power::Running);
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(shooter);
     assign_battle_pilot(&mut world, shooter, ObjectId(1)).unwrap();
     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
@@ -1833,11 +1815,11 @@ async fn mech_vehicle_fire_locks_damage_and_restart_share_existing_resolvers() {
     for hit in [false, true] {
         let mut world = base.clone();
         let value = (0..=255)
-            .find(|value| BattleDice::seeded([*value; 32]).two_d6() == if hit { 12 } else { 2 })
+            .find(|value| Dice::seeded([*value; 32]).two_d6() == if hit { 12 } else { 2 })
             .unwrap();
         world
             .btech
-            .set_unit_dice(shooter, BattleDice::seeded([value; 32]))
+            .set_unit_dice(shooter, Dice::seeded([value; 32]))
             .unwrap();
         select_battle_target(&mut world, shooter, ObjectId(1), Some(target)).unwrap();
         for _ in 0..3 {
@@ -1877,7 +1859,7 @@ async fn mech_vehicle_fire_locks_damage_and_restart_share_existing_resolvers() {
         assert_eq!(report.salvo.is_some(), hit);
         assert_eq!(report.aim.target_lock, 0);
         if hit {
-            let Some(BattleTargetSalvo::Vehicle(salvo)) = report.salvo else {
+            let Some(TargetSalvo::Vehicle(salvo)) = report.salvo else {
                 panic!("Expected vehicle damage")
             };
             assert_eq!(
@@ -1900,20 +1882,20 @@ async fn mech_vehicle_fire_locks_damage_and_restart_share_existing_resolvers() {
 async fn mech_vehicle_native_and_lua_fire_are_atomic_and_use_target_selection() {
     let (_dir, config, mut world, shooter, target) = mech_engagement().await;
     let value = (0..=255)
-        .find(|value| BattleDice::seeded([*value; 32]).two_d6() == 12)
+        .find(|value| Dice::seeded([*value; 32]).two_d6() == 12)
         .unwrap();
     let mut saved = serde_json::to_value(&world.btech).unwrap();
     saved["constructed"][shooter.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded([value; 32])).unwrap();
+        serde_json::to_value(Dice::seeded([value; 32])).unwrap();
     // Keep this command/cooldown fixture independent of random target criticals.
     let target_seed = (0..=255)
         .find(|seed| {
-            let mut dice = BattleDice::seeded([*seed; 32]);
+            let mut dice = Dice::seeded([*seed; 32]);
             dice.two_d6() == 7 && dice.two_d6() == 7
         })
         .unwrap();
     saved["vehicles"][target.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded([target_seed; 32])).unwrap();
+        serde_json::to_value(Dice::seeded([target_seed; 32])).unwrap();
     world.btech = serde_json::from_value(saved).unwrap();
     select_battle_target(&mut world, shooter, ObjectId(1), Some(target)).unwrap();
     let native = Scripts::new(
@@ -1954,15 +1936,15 @@ async fn mech_vehicle_native_and_lua_fire_are_atomic_and_use_target_selection() 
 fn install_mech_launcher(
     world: &mut World,
     shooter: ObjectId,
-    weapon: BattleWeapon,
-    mode: BattleAmmunitionMode,
+    weapon: Weapon,
+    mode: AmmunitionMode,
 ) -> usize {
     let mut definition = world.btech.constructed_units()[&shooter]
         .definition()
         .clone();
     let section = definition
         .sections
-        .get_mut(&BattleSection::LeftTorso)
+        .get_mut(&MechSection::LeftTorso)
         .unwrap();
     for slot in 2..2 + weapon.profile().critical_slots {
         section.criticals.insert(
@@ -1979,14 +1961,14 @@ fn install_mech_launcher(
         CriticalDefinition {
             equipment: format!("Ammo_{}", weapon.name()),
             data: "4".into(),
-            modes: if mode == BattleAmmunitionMode::INarcEcm {
+            modes: if mode == AmmunitionMode::INarcEcm {
                 vec!["iNarc_ECM".into()]
             } else {
                 vec![]
             },
         },
     );
-    let rebuilt = BattleUnit::from_template(definition.clone()).unwrap();
+    let rebuilt = Mech::from_template(definition.clone()).unwrap();
     world
         .btech
         .rewrite_unit_record(shooter, |record| {
@@ -2008,21 +1990,21 @@ fn install_mech_launcher(
 async fn mech_vehicle_missiles_and_beacons_share_defenses_and_target_effects() {
     let (_dir, config, base, shooter, target) = mech_engagement().await;
     for (weapon, mode, kind) in [
-        (BattleWeapon::Srm6, BattleAmmunitionMode::Normal, None),
+        (Weapon::Srm6, AmmunitionMode::Normal, None),
         (
-            BattleWeapon::NarcBeacon,
-            BattleAmmunitionMode::Normal,
-            Some(BattleBeaconKind::Narc),
+            Weapon::NarcBeacon,
+            AmmunitionMode::Normal,
+            Some(BeaconKind::Narc),
         ),
         (
-            BattleWeapon::INarcBeacon,
-            BattleAmmunitionMode::Normal,
-            Some(BattleBeaconKind::Homing),
+            Weapon::INarcBeacon,
+            AmmunitionMode::Normal,
+            Some(BeaconKind::Homing),
         ),
         (
-            BattleWeapon::INarcBeacon,
-            BattleAmmunitionMode::INarcEcm,
-            Some(BattleBeaconKind::Ecm),
+            Weapon::INarcBeacon,
+            AmmunitionMode::INarcEcm,
+            Some(BeaconKind::Ecm),
         ),
     ] {
         for defended in [false, true] {
@@ -2030,19 +2012,16 @@ async fn mech_vehicle_missiles_and_beacons_share_defenses_and_target_effects() {
                 let mut world = base.clone();
                 let index = install_mech_launcher(&mut world, shooter, weapon, mode);
                 if defended {
-                    install_vehicle_ams(&mut world, target, BattleWeapon::AntiMissileSystem);
+                    install_vehicle_ams(&mut world, target, Weapon::AntiMissileSystem);
                 }
                 let value = (0..=255)
-                    .find(|value| {
-                        BattleDice::seeded([*value; 32]).two_d6() == if hit { 12 } else { 2 }
-                    })
+                    .find(|value| Dice::seeded([*value; 32]).two_d6() == if hit { 12 } else { 2 })
                     .unwrap();
                 world
                     .btech
                     .rewrite_unit_record(shooter, |record| {
-                        record["dice"] =
-                            serde_json::to_value(BattleDice::seeded([value; 32])).unwrap();
-                        if mode != BattleAmmunitionMode::Normal {
+                        record["dice"] = serde_json::to_value(Dice::seeded([value; 32])).unwrap();
+                        if mode != AmmunitionMode::Normal {
                             record["ammunition_modes"][index.to_string()] =
                                 serde_json::to_value(mode).unwrap();
                         }
@@ -2076,7 +2055,7 @@ async fn mech_vehicle_missiles_and_beacons_share_defenses_and_target_effects() {
                         before.btech.vehicles()[&target].sections()
                     );
                 } else if hit {
-                    let Some(BattleTargetSalvo::Vehicle(salvo)) = report.salvo else {
+                    let Some(TargetSalvo::Vehicle(salvo)) = report.salvo else {
                         panic!("Expected vehicle salvo")
                     };
                     let intercepted = report.ams.as_ref().map_or(0, |ams| ams.shot_down);
@@ -2106,7 +2085,7 @@ async fn mech_vehicle_admission_hex_selection_and_lock_cleanup() {
             ObjectId(1)
         };
         match case {
-            "off" => power(&mut world, &[shooter], BattlePower::Off),
+            "off" => power(&mut world, &[shooter], Power::Off),
             "character_source" => {
                 world
                     .objects
@@ -2136,14 +2115,14 @@ async fn mech_vehicle_admission_hex_selection_and_lock_cleanup() {
     let mut world = base;
     select_battle_target(&mut world, shooter, ObjectId(1), Some(target)).unwrap();
     let map = world.btech.vehicles()[&target].position().unwrap().map;
-    power(&mut world, &[target], BattlePower::Off);
+    power(&mut world, &[target], Power::Off);
     place_battle_unit(&mut world, target, map, 0, 0).unwrap();
     assert!(
         world.btech.constructed_units()[&shooter]
             .target_lock()
             .is_none()
     );
-    power(&mut world, &[target], BattlePower::Running);
+    power(&mut world, &[target], Power::Running);
     let other: Vec<_> = world
         .btech
         .constructed_units()
@@ -2152,7 +2131,7 @@ async fn mech_vehicle_admission_hex_selection_and_lock_cleanup() {
         .filter(|id| *id != shooter)
         .collect();
     for id in other {
-        power(&mut world, &[id], BattlePower::Off);
+        power(&mut world, &[id], Power::Off);
         place_battle_unit(&mut world, id, map, 0, 4).unwrap();
     }
     refresh_battle_contacts(&mut world, &[shooter]).unwrap();
@@ -2162,15 +2141,15 @@ async fn mech_vehicle_admission_hex_selection_and_lock_cleanup() {
         shooter,
         ObjectId(1),
         hex,
-        BattleHexTargetMode::UnitAtHex,
+        HexTargetMode::UnitAtHex,
     )
     .unwrap();
     let value = (0..=255)
-        .find(|value| BattleDice::seeded([*value; 32]).two_d6() == 2)
+        .find(|value| Dice::seeded([*value; 32]).two_d6() == 2)
         .unwrap();
     world
         .btech
-        .set_unit_dice(shooter, BattleDice::seeded([value; 32]))
+        .set_unit_dice(shooter, Dice::seeded([value; 32]))
         .unwrap();
     let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
     let (recipient, x, y): (i64, i32, i32) = scripts
@@ -2186,7 +2165,7 @@ async fn mech_vehicle_admission_hex_selection_and_lock_cleanup() {
 /// An equipped shooter of either class, sharing the same vehicle recipient geometry.
 async fn weapon_engagement(
     vehicle: bool,
-    weapon: BattleWeapon,
+    weapon: Weapon,
 ) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId, usize) {
     if vehicle {
         let template =
@@ -2195,7 +2174,7 @@ async fn weapon_engagement(
         return (dir, config, world, shooter, target, 0);
     }
     let (dir, config, mut world, shooter, target) = mech_engagement().await;
-    let index = install_mech_launcher(&mut world, shooter, weapon, BattleAmmunitionMode::Normal);
+    let index = install_mech_launcher(&mut world, shooter, weapon, AmmunitionMode::Normal);
     (dir, config, world, shooter, target, index)
 }
 
@@ -2205,7 +2184,7 @@ fn tactical_shot(
     shooter: ObjectId,
     target: ObjectId,
     index: usize,
-    rules: BattleVehicleShotRules,
+    rules: VehicleShotRules,
 ) -> serde_json::Value {
     serde_json::to_value(
         fire_battle_unit_shot(world, shooter, ObjectId(1), target, index, rules).unwrap(),
@@ -2218,14 +2197,14 @@ fn tactical_shot(
 async fn plasma_vehicle_targets_share_damage_glancing_misses_and_replay() {
     for vehicle in [false, true] {
         let (_dir, config, base, shooter, target, index) =
-            weapon_engagement(vehicle, BattleWeapon::PlasmaRifle).await;
+            weapon_engagement(vehicle, Weapon::PlasmaRifle).await;
         for damage in [0u32, 5, 10] {
             let mut world = base.clone();
             let mut rules = fire_rules();
             rules.shot.glancing = if damage == 5 {
-                BattleGlancingMode::AtTarget
+                GlancingMode::AtTarget
             } else {
-                BattleGlancingMode::Disabled
+                GlancingMode::Disabled
             };
             let threshold =
                 battle_pilot_aim_modifiers(&world, shooter, target, index, false, rules.shot.aim)
@@ -2238,19 +2217,19 @@ async fn plasma_vehicle_targets_share_damage_glancing_misses_and_replay() {
                 _ => 12,
             };
             let value = (0..=255)
-                .find(|value| BattleDice::seeded([*value; 32]).two_d6() == roll)
+                .find(|value| Dice::seeded([*value; 32]).two_d6() == roll)
                 .unwrap();
             let mut saved = serde_json::to_value(&world.btech).unwrap();
             saved[if vehicle { "vehicles" } else { "constructed" }][shooter.0.to_string()]["dice"] =
-                serde_json::to_value(BattleDice::seeded([value; 32])).unwrap();
+                serde_json::to_value(Dice::seeded([value; 32])).unwrap();
             saved["vehicles"][target.0.to_string()]["dice"] =
-                serde_json::to_value(BattleDice::seeded([17; 32])).unwrap();
+                serde_json::to_value(Dice::seeded([17; 32])).unwrap();
             world.btech = serde_json::from_value(saved).unwrap();
             let mut expected = world.clone();
             if damage > 0 {
                 let direction = battle_unit_range(&expected, target, shooter).unwrap();
                 let heading = expected.btech.vehicles()[&target].motion().unwrap().heading;
-                let arc = BattleHitArc::from_bearing(
+                let arc = HitArc::from_bearing(
                     direction.bearing.unwrap_or(180.0),
                     heading,
                     rules.shot.hit_arc_mode,
@@ -2298,13 +2277,13 @@ async fn plasma_vehicle_targets_share_damage_glancing_misses_and_replay() {
 async fn plasma_vehicle_targets_share_native_lua_feedback_and_rollback() {
     for vehicle in [false, true] {
         let (_dir, config, mut world, shooter, target, index) =
-            weapon_engagement(vehicle, BattleWeapon::PlasmaRifle).await;
+            weapon_engagement(vehicle, Weapon::PlasmaRifle).await;
         let value = (0..=255)
-            .find(|value| BattleDice::seeded([*value; 32]).two_d6() == 12)
+            .find(|value| Dice::seeded([*value; 32]).two_d6() == 12)
             .unwrap();
         let mut saved = serde_json::to_value(&world.btech).unwrap();
         saved[if vehicle { "vehicles" } else { "constructed" }][shooter.0.to_string()]["dice"] =
-            serde_json::to_value(BattleDice::seeded([value; 32])).unwrap();
+            serde_json::to_value(Dice::seeded([value; 32])).unwrap();
         world.btech = serde_json::from_value(saved).unwrap();
         let native = Scripts::new(
             &config,
@@ -2348,25 +2327,23 @@ async fn plasma_vehicle_targets_share_native_lua_feedback_and_rollback() {
 async fn thermal_vehicle_targets_share_replay_feedback_and_rollback() {
     for carrier in [false, true] {
         for weapon in [
-            BattleWeapon::CoolantGun,
-            BattleWeapon::VehicleFlamer,
-            BattleWeapon::VehicleHeavyFlamer,
+            Weapon::CoolantGun,
+            Weapon::VehicleFlamer,
+            Weapon::VehicleHeavyFlamer,
         ] {
             let (_dir, config, base, shooter, target, index) =
                 weapon_engagement(carrier, weapon).await;
             for hit in [false, true] {
                 let mut world = base.clone();
-                if weapon != BattleWeapon::CoolantGun {
+                if weapon != Weapon::CoolantGun {
                     toggle_battle_flamer_heat(&mut world, shooter, ObjectId(1), index).unwrap();
                 }
                 let seed = (0..=255)
-                    .find(|value| {
-                        BattleDice::seeded([*value; 32]).two_d6() == if hit { 12 } else { 2 }
-                    })
+                    .find(|value| Dice::seeded([*value; 32]).two_d6() == if hit { 12 } else { 2 })
                     .unwrap();
                 let mut saved = serde_json::to_value(&world.btech).unwrap();
                 saved[if carrier { "vehicles" } else { "constructed" }][shooter.0.to_string()]["dice"] =
-                    serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+                    serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
                 saved["vehicles"][target.0.to_string()]["weapon_heat"] = 1.5.into();
                 world.btech = serde_json::from_value(saved).unwrap();
                 persistence::save(&config.database(), &world).await.unwrap();
@@ -2396,7 +2373,7 @@ async fn thermal_vehicle_targets_share_replay_feedback_and_rollback() {
                 assert_eq!(world.btech, replay.btech);
                 let delta = if !hit {
                     0.0
-                } else if weapon == BattleWeapon::CoolantGun {
+                } else if weapon == Weapon::CoolantGun {
                     -f64::from(weapon.profile().damage)
                 } else {
                     f64::from(weapon.profile().damage)
@@ -2404,7 +2381,7 @@ async fn thermal_vehicle_targets_share_replay_feedback_and_rollback() {
                 assert_eq!(world.btech.vehicles()[&target].weapon_heat(), 1.5 + delta);
                 assert_eq!(
                     report["cooling"],
-                    if hit && weapon == BattleWeapon::CoolantGun {
+                    if hit && weapon == Weapon::CoolantGun {
                         serde_json::json!(weapon.profile().damage as f64)
                     } else {
                         serde_json::Value::Null
@@ -2412,7 +2389,7 @@ async fn thermal_vehicle_targets_share_replay_feedback_and_rollback() {
                 );
                 assert_eq!(
                     report["heat_transfer"],
-                    if hit && weapon != BattleWeapon::CoolantGun {
+                    if hit && weapon != Weapon::CoolantGun {
                         weapon.profile().damage
                     } else {
                         0
@@ -2445,10 +2422,10 @@ async fn thermal_vehicle_targets_share_replay_feedback_and_rollback() {
 #[tokio::test]
 async fn vehicle_self_cooling_shares_host_selection_and_atomic_expenditure() {
     let (_dir, config, mut base, shooter, target, index) =
-        weapon_engagement(true, BattleWeapon::CoolantGun).await;
+        weapon_engagement(true, Weapon::CoolantGun).await;
     toggle_battle_flamer_heat(&mut base, shooter, ObjectId(1), index).unwrap();
     let seed_value = (0..=255)
-        .find(|value| BattleDice::seeded([*value; 32]).two_d6() == 12)
+        .find(|value| Dice::seeded([*value; 32]).two_d6() == 12)
         .unwrap();
     seed(&mut base, shooter, seed_value);
     base.btech
@@ -2470,7 +2447,7 @@ async fn vehicle_self_cooling_shares_host_selection_and_atomic_expenditure() {
                 shooter,
                 ObjectId(1),
                 HexCoordinate { x: 0, y: 4 },
-                BattleHexTargetMode::Hex,
+                HexTargetMode::Hex,
             )
             .unwrap();
         }
@@ -2510,10 +2487,7 @@ async fn vehicle_self_cooling_shares_host_selection_and_atomic_expenditure() {
             .eval_callback(&format!("local r={call}; return r.target,r.cooling"))
             .unwrap();
         assert_eq!(actual_recipient, recipient.0);
-        assert_eq!(
-            cooling,
-            f64::from(BattleWeapon::CoolantGun.profile().damage)
-        );
+        assert_eq!(cooling, f64::from(Weapon::CoolantGun.profile().damage));
         let command = if explicit {
             format!("fire {index} #{}", recipient.0)
         } else {
@@ -2579,7 +2553,7 @@ async fn inferno_shots_share_vehicle_burning_defenses_and_host_rollback() {
     for carrier in [false, true] {
         for advanced_fire in [false, true] {
             let (dir, _config, mut base, shooter, target, index) =
-                weapon_engagement(carrier, BattleWeapon::Srm6).await;
+                weapon_engagement(carrier, Weapon::Srm6).await;
             let path = dir.path().join("stompymux.toml");
             let mut settings: toml::Value =
                 toml::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
@@ -2641,22 +2615,18 @@ async fn inferno_shots_share_vehicle_burning_defenses_and_host_rollback() {
                 for defense in [false, true] {
                     let mut world = base.clone();
                     if defense {
-                        install_vehicle_ams(
-                            &mut world,
-                            target,
-                            BattleWeapon::ClanAntiMissileSystem,
-                        );
+                        install_vehicle_ams(&mut world, target, Weapon::ClanAntiMissileSystem);
                     }
                     let value = (0..=255)
                         .find(|value| {
-                            BattleDice::seeded([*value; 32]).two_d6() == if hit { 12 } else { 2 }
+                            Dice::seeded([*value; 32]).two_d6() == if hit { 12 } else { 2 }
                         })
                         .unwrap();
                     let mut saved = serde_json::to_value(&world.btech).unwrap();
                     saved[class][shooter.0.to_string()]["dice"] =
-                        serde_json::to_value(BattleDice::seeded([value; 32])).unwrap();
+                        serde_json::to_value(Dice::seeded([value; 32])).unwrap();
                     saved["vehicles"][target.0.to_string()]["dice"] =
-                        serde_json::to_value(BattleDice::seeded([17; 32])).unwrap();
+                        serde_json::to_value(Dice::seeded([17; 32])).unwrap();
                     world.btech = serde_json::from_value(saved).unwrap();
                     persistence::save(&config.database(), &world).await.unwrap();
                     let mut restored = persistence::load(&config.database()).await.unwrap();
@@ -2754,9 +2724,9 @@ async fn character_direct_fire_shares_native_lua_casualties_for_both_chassis() {
                 let target = if vehicle_target { ids[3] } else { ids[1] };
                 if !vehicle_shooter {
                     release_battle_pilot(&mut world, ids[2], ObjectId(1)).unwrap();
-                    power(&mut world, &[shooter], BattlePower::Off);
+                    power(&mut world, &[shooter], Power::Off);
                     place_battle_unit(&mut world, shooter, map, 0, 1).unwrap();
-                    power(&mut world, &[shooter], BattlePower::Running);
+                    power(&mut world, &[shooter], Power::Running);
                     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(shooter);
                     assign_battle_pilot(&mut world, shooter, ObjectId(1)).unwrap();
                     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
@@ -2779,7 +2749,7 @@ async fn character_direct_fire_shares_native_lua_casualties_for_both_chassis() {
                 set_battle_character(
                     &mut world,
                     ObjectId(2),
-                    BattleCharacter {
+                    Character {
                         build: 5,
                         reflexes: 5,
                         intuition: 5,
@@ -2798,14 +2768,14 @@ async fn character_direct_fire_shares_native_lua_casualties_for_both_chassis() {
                 }
                 let mut saved = serde_json::to_value(&world.btech).unwrap();
                 let hit_seed = (0..=255)
-                    .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 12)
+                    .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
                     .unwrap();
                 saved[if vehicle_shooter {
                     "vehicles"
                 } else {
                     "constructed"
                 }][shooter.0.to_string()]["dice"] =
-                    serde_json::to_value(BattleDice::seeded([hit_seed; 32])).unwrap();
+                    serde_json::to_value(Dice::seeded([hit_seed; 32])).unwrap();
                 if vehicle_target {
                     for section in saved["vehicles"][target.0.to_string()]["sections"]
                         .as_object_mut()
@@ -2818,12 +2788,12 @@ async fn character_direct_fire_shares_native_lua_casualties_for_both_chassis() {
                 if !vehicle_target {
                     let head_seed = (0..=255)
                         .find(|seed| {
-                            let mut dice = BattleDice::seeded([*seed; 32]);
+                            let mut dice = Dice::seeded([*seed; 32]);
                             dice.two_d6() == 12
                         })
                         .unwrap();
                     saved["constructed"][target.0.to_string()]["dice"] =
-                        serde_json::to_value(BattleDice::seeded([head_seed; 32])).unwrap();
+                        serde_json::to_value(Dice::seeded([head_seed; 32])).unwrap();
                     saved["constructed"][target.0.to_string()]["sections"]["Head"]["armor"] =
                         0.into();
                     saved["constructed"][target.0.to_string()]["sections"]["Head"]["internal"] =
@@ -2831,10 +2801,9 @@ async fn character_direct_fire_shares_native_lua_casualties_for_both_chassis() {
                 }
                 world.btech = serde_json::from_value(saved).unwrap();
                 if vehicle_target {
-                    let mut impact_rules = BattleVehicleImpactRules::STANDARD;
-                    impact_rules.criticals.table = BattleVehicleCriticalTable::from_settings(
-                        config.battletech.fasaadvvhlcrit != 0,
-                    );
+                    let mut impact_rules = VehicleImpactRules::STANDARD;
+                    impact_rules.criticals.table =
+                        VehicleCriticalTable::from_settings(config.battletech.fasaadvvhlcrit != 0);
                     impact_rules.hit.critical_mode = config.battletech.vcrit;
                     impact_rules.hit.critical_level = config.battletech.critlevel;
                     let seed = (0..=255)
@@ -2842,12 +2811,12 @@ async fn character_direct_fire_shares_native_lua_casualties_for_both_chassis() {
                             let mut probe = world.clone();
                             probe
                                 .btech
-                                .set_unit_dice(target, BattleDice::seeded([*seed; 32]))
+                                .set_unit_dice(target, Dice::seeded([*seed; 32]))
                                 .unwrap();
                             let _ = resolve_battle_vehicle_impact(
                                 &mut probe,
                                 target,
-                                BattleHitArc::Rear,
+                                HitArc::Rear,
                                 if vehicle_shooter { 20 } else { 5 },
                                 None,
                                 impact_rules,
@@ -2860,7 +2829,7 @@ async fn character_direct_fire_shares_native_lua_casualties_for_both_chassis() {
                         .unwrap();
                     world
                         .btech
-                        .set_unit_dice(target, BattleDice::seeded([seed; 32]))
+                        .set_unit_dice(target, Dice::seeded([seed; 32]))
                         .unwrap();
                 }
                 refresh_battle_contacts(&mut world, &[shooter]).unwrap();
@@ -2868,7 +2837,7 @@ async fn character_direct_fire_shares_native_lua_casualties_for_both_chassis() {
                 set_battle_unit_signature(
                     &mut world,
                     target,
-                    BattleUnitSignature {
+                    UnitSignature {
                         team: 1,
                         ..Default::default()
                     },
@@ -2883,7 +2852,7 @@ async fn character_direct_fire_shares_native_lua_casualties_for_both_chassis() {
                 set_battle_character(
                     &mut world,
                     ObjectId(1),
-                    BattleCharacter {
+                    Character {
                         bruise: 0,
                         lethal: 0,
                         build: 5,
@@ -2900,7 +2869,7 @@ async fn character_direct_fire_shares_native_lua_casualties_for_both_chassis() {
                         &mut world,
                         ObjectId(1),
                         skill,
-                        BattleCharacterValue {
+                        CharacterValue {
                             value: 2,
                             ..Default::default()
                         },
@@ -2911,7 +2880,7 @@ async fn character_direct_fire_shares_native_lua_casualties_for_both_chassis() {
                 set_battle_unit_experience(
                     &mut world,
                     shooter,
-                    BattleUnitExperience {
+                    UnitExperience {
                         multiplier: 100.0,
                         ..Default::default()
                     },
@@ -2992,7 +2961,7 @@ async fn vehicle_missile_packets_award_experience_inside_the_firing_transaction(
     set_battle_unit_signature(
         &mut world,
         target,
-        BattleUnitSignature {
+        UnitSignature {
             team: 1,
             ..Default::default()
         },
@@ -3007,7 +2976,7 @@ async fn vehicle_missile_packets_award_experience_inside_the_firing_transaction(
     set_battle_character(
         &mut world,
         ObjectId(1),
-        BattleCharacter {
+        Character {
             bruise: 0,
             lethal: 0,
             build: 5,
@@ -3028,7 +2997,7 @@ async fn vehicle_missile_packets_award_experience_inside_the_firing_transaction(
             &mut world,
             ObjectId(1),
             skill,
-            BattleCharacterValue {
+            CharacterValue {
                 value: 4,
                 ..Default::default()
             },
@@ -3036,14 +3005,14 @@ async fn vehicle_missile_packets_award_experience_inside_the_firing_transaction(
         .unwrap();
     }
     let seed = (0..=255)
-        .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 12)
+        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
         .unwrap();
     let mut saved = serde_json::to_value(&world.btech).unwrap();
     saved["vehicles"][shooter.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+        serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
     // Clustering uses the victim's stream; fix both rolls for the multi-packet case.
     saved["vehicles"][target.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+        serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
     saved["vehicles"][target.0.to_string()]["definition"]["attributes"]["specials"] =
         "ICEEngine_Tech CritProof_Tech".into();
     world.btech = serde_json::from_value(saved).unwrap();
@@ -3089,7 +3058,7 @@ async fn weapons_hold_vehicle_shooters_warn_on_mech_damage_without_blocking_it()
     ] {
         let (_dir, config, mut base, _, [target, _, shooter, _]) = engagement(&source).await;
         let high = (0..=255)
-            .find(|value| BattleDice::seeded([*value; 32]).two_d6() == 12)
+            .find(|value| Dice::seeded([*value; 32]).two_d6() == 12)
             .unwrap();
         seed(&mut base, shooter, high);
         let mut ordinary = base.clone();
@@ -3140,20 +3109,19 @@ async fn weapons_hold_vehicle_targets_preserve_damage_safety_and_restart() {
                 let shooter = if vehicle_shooter { ids[2] } else { ids[0] };
                 let target = ids[3];
                 release_battle_pilot(&mut base, ids[2], ObjectId(1)).unwrap();
-                power(&mut base, &[shooter], BattlePower::Off);
+                power(&mut base, &[shooter], Power::Off);
                 place_battle_unit(&mut base, shooter, map, 0, 1).unwrap();
-                power(&mut base, &[shooter], BattlePower::Running);
+                power(&mut base, &[shooter], Power::Running);
                 base.objects.get_mut(&ObjectId(1)).unwrap().location = Some(shooter);
                 assign_battle_pilot(&mut base, shooter, ObjectId(1)).unwrap();
                 support::seed_object_dice(&mut base, ObjectId(1), support::FIXTURE_DICE_SEED);
                 refresh_battle_contacts(&mut base, &[shooter]).unwrap();
                 let high = (0..=255)
-                    .find(|value| BattleDice::seeded([*value; 32]).two_d6() == 12)
+                    .find(|value| Dice::seeded([*value; 32]).two_d6() == 12)
                     .unwrap();
                 base.btech
                     .rewrite_unit_record(shooter, |record| {
-                        record["dice"] =
-                            serde_json::to_value(BattleDice::seeded([high; 32])).unwrap();
+                        record["dice"] = serde_json::to_value(Dice::seeded([high; 32])).unwrap();
                     })
                     .unwrap();
                 let mut rules = fire_rules();
@@ -3208,7 +3176,7 @@ async fn weapons_hold_vehicle_critical_cascades_keep_incoming_attacker() {
     let (_dir, config, mut base, _, [_, _, shooter, target]) =
         engagement(include_str!("../game/mechs/Demolisher.toml")).await;
     let high = (0..=255)
-        .find(|value| BattleDice::seeded([*value; 32]).two_d6() == 12)
+        .find(|value| Dice::seeded([*value; 32]).two_d6() == 12)
         .unwrap();
     seed(&mut base, shooter, high);
     base.btech
@@ -3220,7 +3188,7 @@ async fn weapons_hold_vehicle_critical_cascades_keep_incoming_attacker() {
         .unwrap();
     let mut rules = fire_rules();
     rules.shot.vehicle_impact.criticals.enabled = true;
-    rules.shot.vehicle_impact.criticals.table = BattleVehicleCriticalTable::Advanced;
+    rules.shot.vehicle_impact.criticals.table = VehicleCriticalTable::Advanced;
     let mut seen = [false; 2];
     for value in 0..=255 {
         let mut ordinary = base.clone();
@@ -3229,7 +3197,7 @@ async fn weapons_hold_vehicle_critical_cascades_keep_incoming_attacker() {
         let expected =
             fire_battle_vehicle_shot(&mut ordinary, shooter, ObjectId(1), target, 0, rules)
                 .unwrap();
-        let Some(BattleTargetSalvo::Vehicle(salvo)) = &expected.salvo else {
+        let Some(TargetSalvo::Vehicle(salvo)) = &expected.salvo else {
             panic!("Shot must hit the vehicle")
         };
         let damage = salvo.groups[0].impact.damage.as_ref().unwrap();
@@ -3290,7 +3258,7 @@ async fn configured_energy_range_damage_is_shared_by_all_unit_pairings() {
     .await;
 
     let attack_seed = (0..=255)
-        .find(|value| BattleDice::seeded([*value; 32]).two_d6() == 12)
+        .find(|value| Dice::seeded([*value; 32]).two_d6() == 12)
         .unwrap();
     for shooter in [ids[0], ids[2]] {
         for target in [ids[1], ids[3]] {
@@ -3314,14 +3282,14 @@ async fn configured_energy_range_damage_is_shared_by_all_unit_pairings() {
                 let config = Config::load(dir.path()).unwrap();
                 let mut world = base.clone();
                 place_battle_unit(&mut world, shooter, map, 0, 1).unwrap();
-                power(&mut world, &ids, BattlePower::Running);
+                power(&mut world, &ids, Power::Running);
                 world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(shooter);
                 assign_battle_pilot(&mut world, shooter, ObjectId(1)).unwrap();
                 support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
                 refresh_battle_contacts(&mut world, &[shooter]).unwrap();
                 world
                     .btech
-                    .set_unit_dice(shooter, BattleDice::seeded([attack_seed; 32]))
+                    .set_unit_dice(shooter, Dice::seeded([attack_seed; 32]))
                     .unwrap();
                 let native = Scripts::new(
                     &config,
@@ -3358,17 +3326,16 @@ async fn weapon_fire_preserves_target_emergency_feedback() {
             engagement(include_str!("../game/mechs/Demolisher.toml")).await;
         let shooter = ids[if vehicle_shooter { 2 } else { 0 }];
         release_battle_pilot(&mut base, ids[2], ObjectId(1)).unwrap();
-        power(&mut base, &[shooter], BattlePower::Off);
+        power(&mut base, &[shooter], Power::Off);
         place_battle_unit(&mut base, shooter, map, 0, 1).unwrap();
-        power(&mut base, &[shooter], BattlePower::Running);
+        power(&mut base, &[shooter], Power::Running);
         base.objects.get_mut(&ObjectId(1)).unwrap().location = Some(shooter);
         assign_battle_pilot(&mut base, shooter, ObjectId(1)).unwrap();
         support::seed_object_dice(&mut base, ObjectId(1), support::FIXTURE_DICE_SEED);
         let target = base.create(&config, "Emergency target".into(), Kind::Thing);
         base.objects.get_mut(&target).unwrap().home = Some(ObjectId(config.home()));
         let mut template =
-            BattleVehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml"))
-                .unwrap();
+            VehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml")).unwrap();
         for section in template.sections.values_mut() {
             section.internal = 30;
         }
@@ -3391,20 +3358,19 @@ async fn weapon_fire_preserves_target_emergency_feedback() {
             .flags
             .insert(Flag::Connected);
         let high = (0..=255)
-            .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 12)
+            .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
             .unwrap();
         let mut state = serde_json::to_value(&base.btech).unwrap();
         state[if vehicle_shooter {
             "vehicles"
         } else {
             "constructed"
-        }][shooter.0.to_string()]["dice"] =
-            serde_json::to_value(BattleDice::seeded([high; 32])).unwrap();
+        }][shooter.0.to_string()]["dice"] = serde_json::to_value(Dice::seeded([high; 32])).unwrap();
         let aircraft = &mut state["vehicles"][target.0.to_string()];
-        aircraft["power"] = serde_json::to_value(BattlePower::Running).unwrap();
-        aircraft["vtol_flight"] = serde_json::to_value(BattleVtolFlight {
+        aircraft["power"] = serde_json::to_value(Power::Running).unwrap();
+        aircraft["vtol_flight"] = serde_json::to_value(VtolFlight {
             fall: None,
-            phase: BattleVtolFlightPhase::Airborne,
+            phase: VtolFlightPhase::Airborne,
             altitude: 2.0,
             vertical_speed: 0.0,
         })

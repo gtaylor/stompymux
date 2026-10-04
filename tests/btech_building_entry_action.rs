@@ -30,7 +30,7 @@ async fn fixture(
         &mut world,
         exterior,
         0,
-        Some(BattleBuildingEntrance {
+        Some(BuildingEntrance {
             coordinate: HexCoordinate { x: 0, y: 0 },
             interior,
             data_char: 0,
@@ -43,7 +43,7 @@ async fn fixture(
         &mut world,
         interior,
         0,
-        Some(BattleBuildingEntryPoint {
+        Some(BuildingEntryPoint {
             coordinate: HexCoordinate { x: 1, y: 1 },
             direction: b'n',
             object: ObjectId(-1),
@@ -53,7 +53,7 @@ async fn fixture(
     )
     .unwrap();
     let id = world.create(&config, "Traveler".into(), Kind::Thing);
-    BattleUnitTemplate::parse("test", source)
+    UnitTemplate::parse("test", source)
         .unwrap()
         .create(&mut world, id)
         .unwrap();
@@ -230,11 +230,8 @@ async fn entry_feedback_uses_hex_visibility_and_captured_contacts() {
         create_battle_vehicle(
             &mut world,
             observer,
-            BattleVehicleTemplate::parse(
-                "Demolisher",
-                include_str!("../game/mechs/Demolisher.toml"),
-            )
-            .unwrap(),
+            VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+                .unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, observer, support::FIXTURE_DICE_SEED);
@@ -302,11 +299,8 @@ async fn interior_arrival_uses_normal_acquisition_without_extra_dice() {
         create_battle_vehicle(
             &mut world,
             observer,
-            BattleVehicleTemplate::parse(
-                "Demolisher",
-                include_str!("../game/mechs/Demolisher.toml"),
-            )
-            .unwrap(),
+            VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+                .unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, observer, support::FIXTURE_DICE_SEED);
@@ -353,7 +347,7 @@ async fn interior_arrival_uses_normal_acquisition_without_extra_dice() {
         transfer_battle_unit(
             &mut scripts.world_mut(),
             id,
-            BattlePosition {
+            Position {
                 map: exterior,
                 x: 0,
                 y: 0,
@@ -378,7 +372,7 @@ async fn building_exit_shares_placement_and_continues_vtol_flight() {
         transfer_battle_unit(
             &mut world,
             id,
-            BattlePosition {
+            Position {
                 map: interior,
                 x: 1,
                 y: 1,
@@ -396,7 +390,7 @@ async fn building_exit_shares_placement_and_continues_vtol_flight() {
         set_building_state(
             &mut world,
             interior,
-            BattleBuildingState {
+            BuildingState {
                 integrity: 1,
                 maximum_integrity: 100,
                 flags: 0,
@@ -408,8 +402,7 @@ async fn building_exit_shares_placement_and_continues_vtol_flight() {
         create_battle_unit(
             &mut world,
             occupant,
-            BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
-                .unwrap(),
+            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
         )
         .unwrap();
         place_battle_unit(&mut world, occupant, exterior, 1, 0).unwrap();
@@ -422,7 +415,7 @@ async fn building_exit_shares_placement_and_continues_vtol_flight() {
         };
         let maximum = vehicle.map_or_else(
             || world.btech.constructed_units()[&id].definition().max_speed,
-            BattleVehicle::maximum_speed,
+            Vehicle::maximum_speed,
         );
         for airborne in [false, true]
             .into_iter()
@@ -452,7 +445,7 @@ async fn building_exit_shares_placement_and_continues_vtol_flight() {
             let destination = exit_battle_building(&mut candidate, id).unwrap();
             assert_eq!(
                 destination,
-                BattlePosition {
+                Position {
                     map: exterior,
                     x: 0,
                     y: 0
@@ -482,7 +475,7 @@ async fn building_exit_shares_placement_and_continues_vtol_flight() {
             );
             if vtol {
                 let flight = candidate.btech.vehicles()[&id].vtol_flight().unwrap();
-                assert_eq!(flight.phase, BattleVtolFlightPhase::Airborne);
+                assert_eq!(flight.phase, VtolFlightPhase::Airborne);
                 assert_eq!(flight.altitude, 1.0);
                 assert_eq!(flight.vertical_speed, if airborne { 6.0 } else { 0.0 });
             }
@@ -513,7 +506,7 @@ async fn host_exits_share_teleport_policy_and_callback_rollback() {
         set_building_state(
             &mut world,
             interior,
-            BattleBuildingState {
+            BuildingState {
                 integrity: 100,
                 maximum_integrity: 100,
                 flags: 0,
@@ -524,7 +517,7 @@ async fn host_exits_share_teleport_policy_and_callback_rollback() {
         transfer_battle_unit(
             &mut world,
             id,
-            BattlePosition {
+            Position {
                 map: interior,
                 x: 1,
                 y: 1,
@@ -535,11 +528,8 @@ async fn host_exits_share_teleport_policy_and_callback_rollback() {
         create_battle_vehicle(
             &mut world,
             observer,
-            BattleVehicleTemplate::parse(
-                "Demolisher",
-                include_str!("../game/mechs/Demolisher.toml"),
-            )
-            .unwrap(),
+            VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+                .unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, observer, support::FIXTURE_DICE_SEED);
@@ -631,7 +621,7 @@ async fn movement_edges_dispatch_shared_exits_and_keep_blocked_units_stopped() {
             set_building_state(
                 &mut world,
                 interior,
-                BattleBuildingState {
+                BuildingState {
                     integrity: 100,
                     maximum_integrity: 100,
                     flags: 0,
@@ -642,7 +632,7 @@ async fn movement_edges_dispatch_shared_exits_and_keep_blocked_units_stopped() {
             transfer_battle_unit(
                 &mut world,
                 id,
-                BattlePosition {
+                Position {
                     map: interior,
                     x: if heading == 270 { 0 } else { 1 },
                     y: if heading == 0 { 0 } else { 1 },
@@ -667,8 +657,8 @@ async fn movement_edges_dispatch_shared_exits_and_keep_blocked_units_stopped() {
             unit["motion"]["speed"] = 43.into();
             unit["motion"]["desired_speed"] = 43.into();
             if vtol {
-                unit["vtol_flight"] = serde_json::to_value(BattleVtolFlight {
-                    phase: BattleVtolFlightPhase::Airborne,
+                unit["vtol_flight"] = serde_json::to_value(VtolFlight {
+                    phase: VtolFlightPhase::Airborne,
                     altitude: 5.0,
                     vertical_speed: 0.0,
                     fall: None,
@@ -680,8 +670,7 @@ async fn movement_edges_dispatch_shared_exits_and_keep_blocked_units_stopped() {
             let scripts = host(&config, world.clone());
             scripts.inspect_lua().load("_parents['default_thing.lua'].events={on_move=function() error('boundary callback') end}").exec().unwrap();
             assert!(
-                advance_battle_motion_action(&scripts, &config, BattleMovementRules::STANDARD)
-                    .is_err()
+                advance_battle_motion_action(&scripts, &config, MovementRules::STANDARD).is_err()
             );
             assert_eq!(scripts.world().btech, world.btech);
             assert!(scripts.drain_outbox().is_empty());
@@ -691,8 +680,7 @@ async fn movement_edges_dispatch_shared_exits_and_keep_blocked_units_stopped() {
                 .exec()
                 .unwrap();
             let arrivals =
-                advance_battle_motion_action(&scripts, &config, BattleMovementRules::STANDARD)
-                    .unwrap();
+                advance_battle_motion_action(&scripts, &config, MovementRules::STANDARD).unwrap();
             assert_eq!(arrivals.len(), 1, "heading {heading}");
             assert_eq!(scripts.world().objects[&id].location, Some(exterior));
             let result = serde_json::to_value(&scripts.world().btech).unwrap();
@@ -740,7 +728,7 @@ async fn movement_edges_dispatch_shared_exits_and_keep_blocked_units_stopped() {
                 .exec()
                 .unwrap();
             assert!(
-                advance_battle_motion_action(&scripts, &config, BattleMovementRules::STANDARD)
+                advance_battle_motion_action(&scripts, &config, MovementRules::STANDARD)
                     .unwrap()
                     .is_empty()
             );
@@ -767,7 +755,7 @@ async fn movement_edges_dispatch_shared_exits_and_keep_blocked_units_stopped() {
             set_building_state(
                 &mut scripts.world_mut(),
                 interior,
-                BattleBuildingState {
+                BuildingState {
                     integrity: 0,
                     maximum_integrity: 100,
                     flags: 0,
@@ -776,7 +764,7 @@ async fn movement_edges_dispatch_shared_exits_and_keep_blocked_units_stopped() {
             )
             .unwrap();
             assert!(
-                advance_battle_motion_action(&scripts, &config, BattleMovementRules::STANDARD)
+                advance_battle_motion_action(&scripts, &config, MovementRules::STANDARD)
                     .unwrap()
                     .is_empty()
             );
@@ -812,7 +800,7 @@ async fn in_character_unpiloted_exits_warn_without_inventing_destruction() {
                 set_building_state(
                     &mut world,
                     interior,
-                    BattleBuildingState {
+                    BuildingState {
                         integrity: 100,
                         maximum_integrity: 100,
                         flags: 0,
@@ -823,7 +811,7 @@ async fn in_character_unpiloted_exits_warn_without_inventing_destruction() {
                 transfer_battle_unit(
                     &mut world,
                     id,
-                    BattlePosition {
+                    Position {
                         map: interior,
                         x: 1,
                         y: 1,
@@ -889,7 +877,7 @@ async fn in_character_unpiloted_exits_warn_without_inventing_destruction() {
 /// Add a shutdown passenger unit to a carrier's battlefield without pickup gameplay policy.
 fn attach(world: &mut World, config: &Config, carrier: ObjectId, source: &str) -> ObjectId {
     let target = world.create(config, "Tow target".into(), Kind::Thing);
-    BattleUnitTemplate::parse("test", source)
+    UnitTemplate::parse("test", source)
         .unwrap()
         .create(world, target)
         .unwrap();
@@ -934,7 +922,7 @@ async fn towing_pairs_enter_and_exit_together_across_all_chassis_and_restart() {
             set_building_state(
                 &mut world,
                 interior,
-                BattleBuildingState {
+                BuildingState {
                     integrity: 100,
                     maximum_integrity: 100,
                     flags: 0,
@@ -1017,7 +1005,7 @@ async fn tow_transfer_denial_and_either_arrival_callback_restore_the_entire_pair
     set_building_state(
         &mut world,
         interior,
-        BattleBuildingState {
+        BuildingState {
             integrity: 100,
             maximum_integrity: 100,
             flags: 0,
@@ -1034,7 +1022,7 @@ async fn tow_transfer_denial_and_either_arrival_callback_restore_the_entire_pair
     transfer_battle_unit(
         &mut world,
         carrier,
-        BattlePosition {
+        Position {
             map: interior,
             x: 1,
             y: 1,
@@ -1052,7 +1040,7 @@ async fn tow_transfer_denial_and_either_arrival_callback_restore_the_entire_pair
         transfer_battle_unit(
             &mut invalid,
             carrier,
-            BattlePosition {
+            Position {
                 map: exterior,
                 x: 0,
                 y: 0
@@ -1067,7 +1055,7 @@ async fn tow_transfer_denial_and_either_arrival_callback_restore_the_entire_pair
         transfer_battle_unit(
             &mut independent,
             target,
-            BattlePosition {
+            Position {
                 map: exterior,
                 x: 0,
                 y: 0
@@ -1143,7 +1131,7 @@ async fn building_speed_limits_include_tow_load_at_admission_recheck_and_exit() 
         set_building_state(
             &mut world,
             interior,
-            BattleBuildingState {
+            BuildingState {
                 integrity: 100,
                 maximum_integrity: 100,
                 flags: 0,
@@ -1189,7 +1177,7 @@ async fn building_speed_limits_include_tow_load_at_admission_recheck_and_exit() 
         transfer_battle_unit(
             &mut world,
             id,
-            BattlePosition {
+            Position {
                 map: interior,
                 x: 1,
                 y: 1,
@@ -1234,7 +1222,7 @@ async fn building_host_honors_configured_hot_myomer_load_assistance() {
     set_building_state(
         &mut world,
         interior,
-        BattleBuildingState {
+        BuildingState {
             integrity: 100,
             maximum_integrity: 100,
             flags: 0,
@@ -1244,7 +1232,7 @@ async fn building_host_honors_configured_hot_myomer_load_assistance() {
     .unwrap();
     let mut definition = world.btech.constructed_units()[&id].definition().clone();
     let mut remaining = 6;
-    for section in [BattleSection::LeftTorso, BattleSection::RightTorso] {
+    for section in [MechSection::LeftTorso, MechSection::RightTorso] {
         let layout = definition.sections.get_mut(&section).unwrap();
         for slot in 0..12 {
             if remaining == 0 || layout.criticals.contains_key(&slot) {
@@ -1309,7 +1297,7 @@ async fn building_host_honors_configured_hot_myomer_load_assistance() {
             transfer_battle_unit(
                 &mut scripts.world_mut(),
                 id,
-                BattlePosition {
+                Position {
                     map: interior,
                     x: 1,
                     y: 1,
@@ -1386,7 +1374,7 @@ async fn cover_distinguishes_entry_and_tow_mirroring_from_edge_movement() {
             set_building_state(
                 &mut world,
                 interior,
-                BattleBuildingState {
+                BuildingState {
                     integrity: 100,
                     maximum_integrity: 100,
                     flags: 0,
@@ -1424,8 +1412,8 @@ async fn cover_distinguishes_entry_and_tow_mirroring_from_edge_movement() {
                 .get(&carrier)
                 .is_some_and(|u| u.definition().is_vtol())
             {
-                unit["vtol_flight"] = serde_json::to_value(BattleVtolFlight {
-                    phase: BattleVtolFlightPhase::Airborne,
+                unit["vtol_flight"] = serde_json::to_value(VtolFlight {
+                    phase: VtolFlightPhase::Airborne,
                     altitude: 5.0,
                     ..Default::default()
                 })
@@ -1436,7 +1424,7 @@ async fn cover_distinguishes_entry_and_tow_mirroring_from_edge_movement() {
             let before = scripts.world().clone();
             scripts.inspect_lua().load("_parents['default_thing.lua'].events={on_move=function() error('cover rollback') end}").exec().unwrap();
             let attempted =
-                advance_battle_motion_action(&scripts, &config, BattleMovementRules::STANDARD);
+                advance_battle_motion_action(&scripts, &config, MovementRules::STANDARD);
             assert!(
                 attempted.is_err(),
                 "carrier={} target={} result={attempted:?} notices={:?}",
@@ -1460,7 +1448,7 @@ async fn cover_distinguishes_entry_and_tow_mirroring_from_edge_movement() {
             );
             for run in [&scripts, &restart] {
                 assert_eq!(
-                    advance_battle_motion_action(run, &config, BattleMovementRules::STANDARD)
+                    advance_battle_motion_action(run, &config, MovementRules::STANDARD)
                         .unwrap()
                         .len(),
                     1
@@ -1505,7 +1493,7 @@ async fn entry_posture_and_flight_refusals_match_native_and_lua() {
                 world
                     .btech
                     .rewrite_unit_record(id, |record| {
-                        record["posture"] = serde_json::to_value(BattlePosture::Prone).unwrap();
+                        record["posture"] = serde_json::to_value(Posture::Prone).unwrap();
                     })
                     .unwrap();
                 "Crawl inside? I think not. Stand first."

@@ -1,9 +1,9 @@
 //! Shared stock labels, wildcard reports and catalogue-first transfer selection.
-use super::{BattleInventoryEntry, BattlePart, BattlePartForm, part_names, part_short_name};
+use super::{InventoryEntry, Part, PartForm, part_names, part_short_name};
 
 /// Resolve a display name without losing the identity of unrecognized stored rows.
-pub(super) fn name(entry: &BattleInventoryEntry) -> String {
-    let Some(part) = BattlePart::from_id(entry.part_id) else {
+pub(super) fn name(entry: &InventoryEntry) -> String {
+    let Some(part) = Part::from_id(entry.part_id) else {
         return format!("Part #{}", entry.part_id);
     };
     part.name
@@ -43,32 +43,29 @@ fn matches(pattern: &str, text: &str) -> bool {
 }
 
 /// Numeric identifiers select exact records; full and short names share stock filtering.
-pub(super) fn selected(entry: &BattleInventoryEntry, pattern: &str) -> bool {
+pub(super) fn selected(entry: &InventoryEntry, pattern: &str) -> bool {
     if pattern.is_empty() {
         return true;
     }
     if let Ok(id) = pattern.trim_start_matches('#').parse::<i32>() {
         return entry.part_id == id;
     }
-    let Some(part) = BattlePart::from_id(entry.part_id) else {
+    let Some(part) = Part::from_id(entry.part_id) else {
         return matches(pattern, &name(entry));
     };
     matches(pattern, &part.name) || matches(pattern, &part_short_name(&part.name))
 }
 
 /// Inventory selection uses the same identity behind the reported names.
-fn form_entry(form: &BattlePartForm) -> BattleInventoryEntry {
-    BattleInventoryEntry {
+fn form_entry(form: &PartForm) -> InventoryEntry {
+    InventoryEntry {
         part_id: form.part_id,
         quantity: 1,
     }
 }
 
 /// Inspect every catalogue form as a wizard, independently of live stock quantities.
-pub fn part_forms(
-    world: &crate::World,
-    actor: crate::ObjectId,
-) -> anyhow::Result<Vec<BattlePartForm>> {
+pub fn part_forms(world: &crate::World, actor: crate::ObjectId) -> anyhow::Result<Vec<PartForm>> {
     anyhow::ensure!(
         crate::authority::is_wizard(world, actor),
         "Permission denied."
@@ -106,7 +103,7 @@ impl<'a> TransferSelector<'a> {
     }
 
     /// Enumerate catalogue matches even when no corresponding stock currently exists.
-    pub(super) fn catalogue(&self) -> Vec<BattleInventoryEntry> {
+    pub(super) fn catalogue(&self) -> Vec<InventoryEntry> {
         part_names()
             .forms
             .iter()
@@ -116,15 +113,15 @@ impl<'a> TransferSelector<'a> {
     }
 
     /// Exact identity wins; wildcard first-match order follows the long display names.
-    pub(super) fn first(&self) -> Option<BattleInventoryEntry> {
+    pub(super) fn first(&self) -> Option<InventoryEntry> {
         self.catalogue().into_iter().min_by_key(|entry| {
-            let part = BattlePart::from_id(entry.part_id).expect("catalogue stock identity");
+            let part = Part::from_id(entry.part_id).expect("catalogue stock identity");
             part_short_name(&part.name)
         })
     }
 
     /// Exact names select one identity; numeric identifiers and wildcard patterns filter stock.
-    pub(super) fn contains(&self, entry: &BattleInventoryEntry) -> bool {
+    pub(super) fn contains(&self, entry: &InventoryEntry) -> bool {
         self.exact
             .map_or_else(|| selected(entry, self.pattern), |key| key == entry.part_id)
     }
@@ -137,7 +134,7 @@ mod tests {
     /// Exact abbreviations and catalogue names select one identity; numeric ids do not.
     #[test]
     fn exact_names_select_catalogue_identities() {
-        let laser = super::super::BattleWeapon::MediumLaser.part_id();
+        let laser = super::super::Weapon::MediumLaser.part_id();
         assert_eq!(TransferSelector::new("mL").exact, Some(laser));
         assert_eq!(TransferSelector::new("IS.MediumLaser").exact, Some(laser));
         assert_eq!(TransferSelector::new("Steel").exact, Some(535));

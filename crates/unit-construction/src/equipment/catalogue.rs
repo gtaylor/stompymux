@@ -14,9 +14,9 @@ macro_rules! weapon_catalogue {
         /// Catalogue identities with typed rule dispatch; construction validation separately admits live equipment.
         #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
         #[serde(rename_all = "snake_case")]
-        pub enum BattleWeapon { $($variant),+ }
+        pub enum Weapon { $($variant),+ }
 
-        impl BattleWeapon {
+        impl Weapon {
             /// All supported catalog identities in declaration order.
             pub const ALL: &'static [Self] = &[$(Self::$variant),+];
 
@@ -423,12 +423,12 @@ weapon_catalogue! {
 
 #[cfg(test)]
 mod tests {
-    use super::BattleWeapon;
+    use super::Weapon;
 
     /// Recycle feedback follows each canonical equipment label with no namespace leakage.
     #[test]
     fn catalogue_recycle_feedback_matches_weapon_labels() {
-        for &weapon in BattleWeapon::ALL {
+        for &weapon in Weapon::ALL {
             let (_, label) = weapon.name().split_once('.').unwrap();
             assert_eq!(
                 weapon.recycle_notice(),

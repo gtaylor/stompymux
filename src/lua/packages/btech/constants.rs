@@ -1555,7 +1555,7 @@ mod tests {
             .collect();
         assert_eq!(
             values,
-            crate::BattleDetectionChannel::ALL.map(|channel| channel.name())
+            crate::DetectionChannel::ALL.map(|channel| channel.name())
         );
         for entry in DETECTION_CHANNELS.entries {
             assert_eq!(entry.name, entry.value.to_ascii_uppercase());
@@ -1566,13 +1566,13 @@ mod tests {
     #[test]
     fn light_level_catalog_matches_battlefield_light() {
         for entry in LIGHT_LEVELS.entries {
-            let light = crate::BattleLight::from_stored(i64::from(entry.value)).unwrap();
+            let light = crate::Light::from_stored(i64::from(entry.value)).unwrap();
             assert_eq!(light.stored(), i64::from(entry.value));
             assert_eq!(
                 entry
                     .name
                     .to_ascii_lowercase()
-                    .parse::<crate::BattleLight>()
+                    .parse::<crate::Light>()
                     .unwrap(),
                 light
             );
@@ -1636,7 +1636,7 @@ mod tests {
     #[test]
     fn searchlight_mode_catalog_matches_modes() {
         for entry in SEARCHLIGHT_MODES.entries {
-            let mode = crate::BattleSearchlightMode::from_stored(i64::from(entry.value)).unwrap();
+            let mode = crate::SearchlightMode::from_stored(i64::from(entry.value)).unwrap();
             assert_eq!(mode.stored(), i64::from(entry.value));
             assert_eq!(mode.name(), entry.name.to_ascii_lowercase());
         }

@@ -1,5 +1,5 @@
 //! Durable, ordered forward-observer requests and radio maintenance shared by unit families.
-use super::{BattleNotice, Point};
+use super::{Notice, Point};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -16,11 +16,11 @@ struct Event {
 
 /// Pending events retain insertion order independently of the current selected spotter.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
-pub struct BattleSpotterEvents {
+pub struct SpotterEvents {
     events: Vec<Event>,
 }
 
-impl BattleSpotterEvents {
+impl SpotterEvents {
     /// Keep the simulation running even when both participants have stopped their engines.
     pub fn pending(&self) -> bool {
         !self.events.is_empty()
@@ -58,7 +58,7 @@ impl BattleSpotterEvents {
 }
 
 /// Read the queue without caching another unit classification.
-fn events(world: &World, id: ObjectId) -> &BattleSpotterEvents {
+fn events(world: &World, id: ObjectId) -> &SpotterEvents {
     world.btech.vehicles().get(&id).map_or_else(
         || &world.btech.constructed_units()[&id].spotter_events,
         |unit| &unit.spotter_events,
@@ -66,7 +66,7 @@ fn events(world: &World, id: ObjectId) -> &BattleSpotterEvents {
 }
 
 /// Edit the queue on the caller's unpublished world candidate.
-fn events_mut(world: &mut World, id: ObjectId) -> &mut BattleSpotterEvents {
+fn events_mut(world: &mut World, id: ObjectId) -> &mut SpotterEvents {
     crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
         &mut unit.spotter_events
     })
@@ -120,7 +120,7 @@ pub(super) fn connect(
 }
 
 /// Unit destruction cancels the owning events; shutdown deliberately does not.
-pub(super) fn clear(events: &mut BattleSpotterEvents) {
+pub(super) fn clear(events: &mut SpotterEvents) {
     events.events.clear();
 }
 
@@ -172,7 +172,7 @@ fn select(world: &mut World, id: ObjectId, target: Option<ObjectId>) {
 
 /// Advance one committed second and publish due events in original request order.
 /// The caller owns the world transaction and must publish the returned participant notices.
-pub fn advance_spotter_links(world: &mut World) -> Result<Vec<BattleNotice>> {
+pub fn advance_spotter_links(world: &mut World) -> Result<Vec<Notice>> {
     world.attempt(|world| {
         let mut due = Vec::new();
         for id in super::scanner::scanner_ids(world) {
@@ -215,7 +215,7 @@ pub fn advance_spotter_links(world: &mut World) -> Result<Vec<BattleNotice>> {
                 .is_some_and(|object| !object.flags.contains(Flag::Going));
             let Some(observer) = observer.filter(|_| live) else {
                 select(world, id, None);
-                notices.push(BattleNotice {
+                notices.push(Notice {
                     unit: id,
                     text: "You have lost link with your spotter!".into(),
                 });
@@ -227,7 +227,7 @@ pub fn advance_spotter_links(world: &mut World) -> Result<Vec<BattleNotice>> {
                 let (Some(source_point), Some(observer_point)) = (source.point, observer.point)
                 else {
                     select(world, id, None);
-                    notices.push(BattleNotice {
+                    notices.push(Notice {
                         unit: id,
                         text: "You have lost link with your spotter!".into(),
                     });
@@ -236,7 +236,7 @@ pub fn advance_spotter_links(world: &mut World) -> Result<Vec<BattleNotice>> {
                 let points = [source_point, observer_point];
                 if moved(original, points) {
                     for unit in [event.observer, id] {
-                        notices.push(BattleNotice {
+                        notices.push(Notice {
                             unit,
                             text: "The data link was not established due to movement!".into(),
                         });
@@ -244,11 +244,11 @@ pub fn advance_spotter_links(world: &mut World) -> Result<Vec<BattleNotice>> {
                     continue;
                 }
                 let name = identity(world, event.observer, id);
-                notices.push(BattleNotice {
+                notices.push(Notice {
                     unit: event.observer,
                     text: format!("Data link established with {name}."),
                 });
-                notices.push(BattleNotice {
+                notices.push(Notice {
                     unit: id,
                     text: format!(
                         "Data link established with {name}, you now have a forward observer."
@@ -266,7 +266,7 @@ pub fn advance_spotter_links(world: &mut World) -> Result<Vec<BattleNotice>> {
                     || range.is_ok_and(|range| range.spatial > maximum)
                 {
                     select(world, id, None);
-                    notices.push(BattleNotice {
+                    notices.push(Notice {
                         unit: id,
                         text: "You have lost link with your spotter!".into(),
                     });

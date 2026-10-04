@@ -11,22 +11,22 @@ pub(super) struct WeaponLaunchRequest {
     pub distance: f64,
     pub target_number: Option<i32>,
     pub streak_confused: bool,
-    pub glancing: BattleGlancingMode,
-    pub fall: BattleFallRules,
+    pub glancing: GlancingMode,
+    pub fall: FallRules,
     pub character_shooter: bool,
 }
 
 /// The committed candidate's launch, expenditure and immediate loader consequences.
 pub(super) struct WeaponLaunch {
     /// Cocoon opening precedes the shot's target consequences.
-    pub launch_notices: Vec<super::BattleNotice>,
+    pub launch_notices: Vec<super::Notice>,
     pub roll: u8,
     pub launched: bool,
     pub jammed: bool,
     pub loader_destroyed: bool,
     pub propellant_roll: Option<u8>,
-    pub misload: Option<BattleTacticalImpact>,
-    pub expenditure: BattleWeaponUse,
+    pub misload: Option<TacticalImpact>,
+    pub expenditure: WeaponUse,
     pub hit: bool,
     pub glancing: bool,
     pub ammunition_warning: Option<String>,
@@ -143,18 +143,18 @@ pub(super) fn resolve_prepared_launch(
                 .unwrap()
                 .jam_weapon(weapon_index)?;
         }
-        super::BattleWeaponUse {
+        super::WeaponUse {
             weapon,
             ammunition: Vec::new(),
             fire_mode,
             heat: 0,
             critical_failure: if critical_jam {
-                Some(super::BattleWeaponDamageKind::Barrel)
+                Some(super::WeaponDamageKind::Barrel)
             } else if critical_explosion {
                 Some(if weapon.gunnery_skill(true) == "Gunnery-Laser" {
-                    super::BattleWeaponDamageKind::Crystal
+                    super::WeaponDamageKind::Crystal
                 } else {
-                    super::BattleWeaponDamageKind::Feed
+                    super::WeaponDamageKind::Feed
                 })
             } else {
                 None
@@ -237,12 +237,12 @@ pub(super) fn resolve_prepared_launch(
 pub(super) fn resolve_recoil(
     world: &mut World,
     shooter: ObjectId,
-    weapon: BattleWeapon,
-    fall_rules: BattleFallRules,
+    weapon: Weapon,
+    fall_rules: FallRules,
     character_shooter: bool,
-) -> Result<Option<BattleRecoilReport>> {
+) -> Result<Option<RecoilReport>> {
     let shooter_state = &world.btech.constructed_units()[&shooter];
-    if weapon != BattleWeapon::HeavyGaussRifle
+    if weapon != Weapon::HeavyGaussRifle
         || !shooter_state
             .motion()
             .is_some_and(|motion| motion.speed.abs() > 0.0)
@@ -277,7 +277,7 @@ pub(super) fn resolve_recoil(
         };
         Some(resolve(world, shooter, 1, fall_rules)?)
     };
-    Ok(Some(BattleRecoilReport {
+    Ok(Some(RecoilReport {
         pilot,
         experience_messages,
         check,
@@ -285,15 +285,15 @@ pub(super) fn resolve_recoil(
     }))
 }
 
-impl BattleRecoilReport {
+impl RecoilReport {
     /// Share recoil warning, private roll and fall ordering across unit and coordinate shots.
     pub(super) fn append_feedback(
         &self,
         shooter: ObjectId,
-        notices: &mut Vec<super::BattleNotice>,
-        private: &mut Vec<super::BattlePilotNotice>,
+        notices: &mut Vec<super::Notice>,
+        private: &mut Vec<super::PilotNotice>,
     ) {
-        notices.push(super::BattleNotice {
+        notices.push(super::Notice {
             unit: shooter,
             text:
                 "You realize that moving while firing this weapon may not be a good idea after all."
@@ -301,7 +301,7 @@ impl BattleRecoilReport {
         });
         super::piloting::capture_feedback(shooter, self.pilot, &self.check, notices, private);
         if let Some(fall) = &self.fall {
-            notices.push(super::BattleNotice {
+            notices.push(super::Notice {
                 unit: shooter,
                 text: "The weapon's recoil knocks you to the ground!".into(),
             });

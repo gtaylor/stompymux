@@ -133,7 +133,7 @@ fn damage_gyro(world: &mut World, unit: ObjectId) {
         .unwrap()
         .systems
         .iter()
-        .find(|p| p.system == BattleSystem::Gyro)
+        .find(|p| p.system == System::Gyro)
         .unwrap()
         .location;
     destroy_battle_critical(world, unit, part).unwrap();
@@ -142,10 +142,10 @@ fn damage_gyro(world: &mut World, unit: ObjectId) {
 /// Force a first control result while leaving fall or impact draws on the same private stream.
 fn seed(world: &mut World, unit: ObjectId, success: bool) {
     let seed = (0..=255)
-        .find(|&seed| BattleDice::seeded([seed; 32]).two_d6() == if success { 12 } else { 2 })
+        .find(|&seed| Dice::seeded([seed; 32]).two_d6() == if success { 12 } else { 2 })
         .unwrap();
     firing::edit(world, unit, |s| {
-        s["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
+        s["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap()
     });
 }
 
@@ -194,7 +194,7 @@ async fn damaged_running_checks_use_each_heartbeat_and_preserve_reverse_and_walk
                     );
                     assert_eq!(
                         world.btech.constructed_units()[&unit].posture(),
-                        BattlePosture::Prone
+                        Posture::Prone
                     );
                     assert_eq!(
                         world.btech.constructed_units()[&unit]
@@ -225,14 +225,14 @@ async fn gravity_stress_obeys_global_boundary_and_hits_each_chassis_leg_in_order
         let legs = base.btech.constructed_units()[&unit].chassis().legs().len();
         let seed = (0..=255)
             .find(|&seed| {
-                let mut dice = BattleDice::seeded([seed; 32]);
+                let mut dice = Dice::seeded([seed; 32]);
                 dice.two_d6() <= 4 && (0..legs).all(|_| dice.two_d6() < 8)
             })
             .unwrap();
         firing::edit(&mut base, unit, |s| {
             s["motion"]["speed"] = (maximum + 1.0).into();
             s["motion"]["desired_speed"] = (maximum + 1.0).into();
-            s["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+            s["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
         });
         for gravity in [50, 100, 150] {
             for tick in [0, 1, 28, 29] {
@@ -268,13 +268,13 @@ async fn gravity_stress_obeys_global_boundary_and_hits_each_chassis_leg_in_order
                     order,
                     if legs == 4 {
                         vec![
-                            BattleSection::LeftArm,
-                            BattleSection::RightArm,
-                            BattleSection::LeftLeg,
-                            BattleSection::RightLeg,
+                            MechSection::LeftArm,
+                            MechSection::RightArm,
+                            MechSection::LeftLeg,
+                            MechSection::RightLeg,
                         ]
                     } else {
-                        vec![BattleSection::LeftLeg, BattleSection::RightLeg]
+                        vec![MechSection::LeftLeg, MechSection::RightLeg]
                     }
                 );
                 for section in order {
@@ -317,22 +317,16 @@ async fn hot_myomer_turn_threshold_and_shutdown_crew_gates() {
     for template in firing::templates() {
         let (_dir, config, mut base, unit, _, _) =
             firing::fixture_with_target(&template, None, &template).await;
-        stop_battle_unit(
-            &mut base,
-            unit,
-            ObjectId(1),
-            BattleMovementRules::STANDARD.fall,
-        )
-        .unwrap();
+        stop_battle_unit(&mut base, unit, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
         let recovery_seed = (0..=255)
-            .find(|&seed| BattleDice::seeded([seed; 32]).two_d6() < 7)
+            .find(|&seed| Dice::seeded([seed; 32]).two_d6() < 7)
             .unwrap();
         for unconscious in [false, true] {
             let mut ready = base.clone();
             if unconscious {
                 firing::edit(&mut ready, unit, |s| {
                     s["crew_recovery"]["dice"] =
-                        serde_json::to_value(BattleDice::seeded([recovery_seed; 32])).unwrap()
+                        serde_json::to_value(Dice::seeded([recovery_seed; 32])).unwrap()
                 });
                 assert!(
                     !injure_battle_tactical_pilot(&mut ready, unit, 3, false)
@@ -391,7 +385,7 @@ async fn server_clock_and_fall_retry_are_one_transaction() {
         assert!(accepted.contains("You make a piloting skill roll!"));
         assert!(accepted.contains("Modified Pilot Skill:"));
         let loaded = persistence::load(&config.database()).await.unwrap();
-        assert_eq!(loaded.btech.constructed_units()[&unit].posture(),BattlePosture::Prone);
+        assert_eq!(loaded.btech.constructed_units()[&unit].posture(),Posture::Prone);
         assert_eq!(serde_json::to_value(&loaded.btech).unwrap()["turn_clock"],29);
         shutdown.send(ShutdownRequest::Sigterm).unwrap(); task.await.unwrap().unwrap();
     }).await;
@@ -410,7 +404,7 @@ async fn damaged_hips_use_running_threshold_for_both_mech_chassis() {
             .systems
             .iter()
             .find(|p| {
-                p.system == BattleSystem::ShoulderOrHip
+                p.system == System::ShoulderOrHip
                     && mech.chassis().legs().contains(&p.location.section)
             })
             .unwrap()
@@ -506,7 +500,7 @@ async fn idle_clock_wraps_is_stored_at_shutdown_and_resumes_from_saved_phase() {
             for _ in 0..31 {
                 advance_battle_reactor_windows(&mut world);
             }
-            assert!(!battle_reactor_windows_pending(&world));
+            assert!(!reactor_windows_pending(&world));
             phase(&mut world, 29);
             persistence::save(&config.database(), &world).await.unwrap();
             let mut sql = SqliteConnection::connect_with(

@@ -1,12 +1,12 @@
 //! Rotorcraft movement proposals share horizontal geometry and expose altitude consequences.
-use super::{BattleMotion, BattleVehicle, BattleVtolFlightPhase, Hex};
+use super::{Hex, Motion, Vehicle, VtolFlightPhase};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 
 /// Surface decision for the host to resolve before committing aircraft movement.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
-pub enum BattleVtolSurfaceContact {
+pub enum VtolSurfaceContact {
     Clear,
     Water,
     /// A horizontal entry below forest canopy requires a host piloting check.
@@ -22,45 +22,45 @@ pub enum BattleVtolSurfaceContact {
 /// A pure proposal: the host traces crossed hexes before publishing or committing movement.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 #[must_use = "Trace and resolve surface contacts before committing flight movement"]
-pub struct BattleVtolMotionStep {
-    pub motion: BattleMotion,
+pub struct VtolMotionStep {
+    pub motion: Motion,
     /// Continuous altitude in elevation levels, retaining fractions across movement events.
     pub altitude: f64,
     /// Vertical speed after applying the orbit ceiling.
     pub vertical_speed: f64,
     pub ceiling_reached: bool,
     /// Inputs bind a proposal to the material state from which it was calculated.
-    pub(super) origin: (BattleMotion, super::BattleVtolFlight, super::BattlePosition),
+    pub(super) origin: (Motion, super::VtolFlight, super::Position),
     movement_modifier: i64,
 }
 
-impl BattleVtolMotionStep {
+impl VtolMotionStep {
     /// Integer altitude truncates toward zero, including fractional levels below water.
     pub fn elevation(self) -> i32 {
         self.altitude as i32
     }
 
     /// Check the destination surface; horizontal path traversal remains the host's responsibility.
-    pub fn surface_contact(self, hex: Hex) -> BattleVtolSurfaceContact {
+    pub fn surface_contact(self, hex: Hex) -> VtolSurfaceContact {
         let altitude = self.elevation();
         if hex.is_open_water() && altitude < i32::from(hex.water_line()) {
-            return BattleVtolSurfaceContact::Water;
+            return VtolSurfaceContact::Water;
         }
         let surface = i32::from(hex.surface_height());
         if altitude >= surface || (hex.has_bridge() && altitude != surface - 1) {
-            return BattleVtolSurfaceContact::Clear;
+            return VtolSurfaceContact::Clear;
         }
-        BattleVtolSurfaceContact::Ground {
+        VtolSurfaceContact::Ground {
             fall_levels: 1u32.saturating_add((self.vertical_speed.abs() / 10.75) as u32),
         }
     }
 }
 
-impl BattleVehicle {
+impl Vehicle {
     /// Project an airborne movement event after horizontal turning and acceleration.
     /// Uses the saved continuous altitude; commit only after resolving terrain traversal.
     /// Movement modifiers affect horizontal distance only. Falling uses the separate fall event.
-    pub fn vtol_motion_step(&self, movement_modifier: i64) -> Result<BattleVtolMotionStep> {
+    pub fn vtol_motion_step(&self, movement_modifier: i64) -> Result<VtolMotionStep> {
         ensure!(
             self.definition().is_vtol(),
             "Flight movement requires a VTOL"
@@ -69,8 +69,7 @@ impl BattleVehicle {
             .vtol_flight
             .context("Aircraft flight state is unavailable")?;
         ensure!(
-            flight.phase == BattleVtolFlightPhase::Airborne
-                && self.power() == super::BattlePower::Running,
+            flight.phase == VtolFlightPhase::Airborne && self.power() == super::Power::Running,
             "Movement requires a powered airborne aircraft"
         );
         ensure!(
@@ -101,7 +100,7 @@ impl BattleVehicle {
         if ceiling_reached {
             altitude = 299.0;
         }
-        Ok(BattleVtolMotionStep {
+        Ok(VtolMotionStep {
             motion,
             altitude,
             vertical_speed: if ceiling_reached {
@@ -117,14 +116,14 @@ impl BattleVehicle {
 
     /// Commit a still-current movement proposal after the host has resolved its entire path.
     /// This material operation does not authorize map bounds or publish terrain consequences.
-    pub fn commit_vtol_motion(&mut self, step: BattleVtolMotionStep) -> Result<()> {
+    pub fn commit_vtol_motion(&mut self, step: VtolMotionStep) -> Result<()> {
         self.commit_vtol_motion_at(step, step.motion.point)
     }
 
     /// Commit an observed proposal at the map adapter's resolved boundary position.
     pub(super) fn commit_vtol_motion_at(
         &mut self,
-        step: BattleVtolMotionStep,
+        step: VtolMotionStep,
         point: super::Point,
     ) -> Result<()> {
         ensure!(
@@ -132,7 +131,7 @@ impl BattleVehicle {
             "Stale or altered flight proposal"
         );
         let coordinate = point.containing_hex()?;
-        let position = super::BattlePosition {
+        let position = super::Position {
             map: step.origin.2.map,
             x: u16::try_from(coordinate.x)?,
             y: u16::try_from(coordinate.y)?,

@@ -19,23 +19,23 @@ async fn vehicle_mine_queries_use_live_mass_and_preserve_saved_state() {
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+        VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
             .unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, id, map, 1, 1).unwrap();
     for (ordinal, kind, extra) in [
-        (9, BattleMineKind::Standard, 0),
-        (3, BattleMineKind::Vibra, 80),
-        (1, BattleMineKind::Trigger, 0),
-        (5, BattleMineKind::Command, 42),
+        (9, MineKind::Standard, 0),
+        (3, MineKind::Vibra, 80),
+        (1, MineKind::Trigger, 0),
+        (5, MineKind::Command, 42),
     ] {
         set_minefield(
             &mut world,
             map,
             ordinal,
-            Some(BattleMinefield {
+            Some(Minefield {
                 coordinate: HexCoordinate { x: 1, y: 1 },
                 kind,
                 strength: 80,
@@ -46,7 +46,7 @@ async fn vehicle_mine_queries_use_live_mass_and_preserve_saved_state() {
         .unwrap();
     }
     let original = world.btech.clone();
-    let selected = mine_activations(&world, id, BattleMineTriggerReason::Step).unwrap();
+    let selected = mine_activations(&world, id, MineTriggerReason::Step).unwrap();
     assert_eq!(
         selected
             .iter()
@@ -55,7 +55,7 @@ async fn vehicle_mine_queries_use_live_mass_and_preserve_saved_state() {
         [1, 3, 5, 9]
     );
     assert_eq!(
-        mine_activations(&world, id, BattleMineTriggerReason::Fall)
+        mine_activations(&world, id, MineTriggerReason::Fall)
             .unwrap()
             .iter()
             .map(|field| field.ordinal)
@@ -67,7 +67,7 @@ async fn vehicle_mine_queries_use_live_mass_and_preserve_saved_state() {
     let mass = world.btech.vehicles()[&id].mass().unwrap();
     assert_eq!(mass.total / 1024, 79);
     let before = world.btech.clone();
-    let selected = mine_activations(&world, id, BattleMineTriggerReason::Step).unwrap();
+    let selected = mine_activations(&world, id, MineTriggerReason::Step).unwrap();
     assert_eq!(
         selected
             .iter()
@@ -80,7 +80,7 @@ async fn vehicle_mine_queries_use_live_mass_and_preserve_saved_state() {
     let loaded = persistence::load(&config.database()).await.unwrap();
     assert_eq!(loaded.btech.vehicles()[&id].mass().unwrap(), mass);
     assert_eq!(
-        mine_activations(&loaded, id, BattleMineTriggerReason::Step).unwrap(),
+        mine_activations(&loaded, id, MineTriggerReason::Step).unwrap(),
         selected
     );
     let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(loaded))).unwrap();
@@ -98,7 +98,7 @@ async fn vehicle_mine_queries_use_live_mass_and_preserve_saved_state() {
         .unwrap()
         .flags
         .insert(Flag::Going);
-    assert!(mine_activations(&world, id, BattleMineTriggerReason::Step).is_err());
+    assert!(mine_activations(&world, id, MineTriggerReason::Step).is_err());
 }
 
 /// Hovercraft float above submerged mines; surface ice and raised dry ground retain their own heights.
@@ -119,9 +119,9 @@ async fn mine_queries_share_surface_gates_across_ground_vehicle_types() {
             &mut world,
             map,
             x as u32,
-            Some(BattleMinefield {
+            Some(Minefield {
                 coordinate: HexCoordinate { x, y: 0 },
-                kind: BattleMineKind::Standard,
+                kind: MineKind::Standard,
                 strength: 5,
                 extra: 0,
                 owner: ObjectId(1),
@@ -130,25 +130,23 @@ async fn mine_queries_share_surface_gates_across_ground_vehicle_types() {
         .unwrap();
     }
     for movement in [
-        BattleVehicleMovement::Tracked,
-        BattleVehicleMovement::Wheeled,
-        BattleVehicleMovement::Hover,
+        VehicleMovement::Tracked,
+        VehicleMovement::Wheeled,
+        VehicleMovement::Hover,
     ] {
         let id = world.create(&config, "Vehicle".into(), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-        let mut template = BattleVehicleTemplate::parse(
-            "Demolisher",
-            include_str!("../game/mechs/Demolisher.toml"),
-        )
-        .unwrap();
+        let mut template =
+            VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+                .unwrap();
         template.movement = movement;
         create_battle_vehicle(&mut world, id, template).unwrap();
         support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
         for x in 0..3 {
             place_battle_unit(&mut world, id, map, x, 0).unwrap();
             let before = world.btech.clone();
-            let fields = mine_activations(&world, id, BattleMineTriggerReason::Step).unwrap();
-            let above_mines = movement == BattleVehicleMovement::Hover && x == 1;
+            let fields = mine_activations(&world, id, MineTriggerReason::Step).unwrap();
+            let above_mines = movement == VehicleMovement::Hover && x == 1;
             assert_eq!(fields.is_empty(), above_mines, "{movement:?} at {x}");
             assert_eq!(world.btech, before);
         }
@@ -158,7 +156,7 @@ async fn mine_queries_share_surface_gates_across_ground_vehicle_types() {
 
 /// Place a vehicle, a Mech and a second vehicle in stable mixed slot order.
 async fn blast_fixture(
-    movement: BattleVehicleMovement,
+    movement: VehicleMovement,
 ) -> (tempfile::TempDir, Config, World, ObjectId, [ObjectId; 3]) {
     let (dir, config, mut world) = support::isolated_world().await;
     let map = world.create(&config, "Blast field".into(), Kind::Room);
@@ -177,15 +175,13 @@ async fn blast_fixture(
             create_battle_unit(
                 &mut world,
                 id,
-                BattleTemplate::parse("AS7-D", include_str!("../game/mechs/AS7-D.toml")).unwrap(),
+                MechTemplate::parse("AS7-D", include_str!("../game/mechs/AS7-D.toml")).unwrap(),
             )
             .unwrap();
         } else {
-            let mut template = BattleVehicleTemplate::parse(
-                "Demolisher",
-                include_str!("../game/mechs/Demolisher.toml"),
-            )
-            .unwrap();
+            let mut template =
+                VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+                    .unwrap();
             template.movement = movement;
             create_battle_vehicle(&mut world, id, template).unwrap();
         }
@@ -204,8 +200,8 @@ async fn blast_fixture(
 }
 
 /// Keep hit-location diagnostics but exclude critical cascades from packet arithmetic assertions.
-fn blast_rules() -> BattleFallRules {
-    let mut rules = BattleMovementRules::STANDARD.fall;
+fn blast_rules() -> FallRules {
+    let mut rules = MovementRules::STANDARD.fall;
     rules.vehicle_impact.criticals.enabled = false;
     rules.vehicle_impact.hit.critical_mode = 0;
     rules
@@ -213,15 +209,11 @@ fn blast_rules() -> BattleFallRules {
 
 #[tokio::test]
 async fn mixed_mine_blasts_preserve_packets_slots_fields_and_restart() {
-    let (_dir, config, base, map, ids) = blast_fixture(BattleVehicleMovement::Stationary).await;
-    for kind in [
-        BattleMineKind::Standard,
-        BattleMineKind::Command,
-        BattleMineKind::Vibra,
-    ] {
+    let (_dir, config, base, map, ids) = blast_fixture(VehicleMovement::Stationary).await;
+    for kind in [MineKind::Standard, MineKind::Command, MineKind::Vibra] {
         for strength in [4, 11] {
             let mut world = base.clone();
-            let mine = BattleMinefield {
+            let mine = Minefield {
                 coordinate: HexCoordinate { x: 1, y: 1 },
                 kind,
                 strength,
@@ -233,8 +225,8 @@ async fn mixed_mine_blasts_preserve_packets_slots_fields_and_restart() {
                 &mut world,
                 map,
                 1,
-                Some(BattleMinefield {
-                    kind: BattleMineKind::Trigger,
+                Some(Minefield {
+                    kind: MineKind::Trigger,
                     ..mine
                 }),
             )
@@ -246,7 +238,7 @@ async fn mixed_mine_blasts_preserve_packets_slots_fields_and_restart() {
                 .map(|section| section.armor)
                 .sum();
             let report = resolve_mine_blast(&mut world, map, 0, blast_rules()).unwrap();
-            let area = kind != BattleMineKind::Standard;
+            let area = kind != MineKind::Standard;
             assert_eq!(
                 report.hits.iter().map(|hit| hit.unit).collect::<Vec<_>>(),
                 if area {
@@ -261,13 +253,13 @@ async fn mixed_mine_blasts_preserve_packets_slots_fields_and_restart() {
             assert!(
                 hit.impacts
                     .iter()
-                    .all(|impact| matches!(impact, BattleBlastImpact::Vehicle(_)))
+                    .all(|impact| matches!(impact, BlastImpact::Vehicle(_)))
             );
             assert!(
                 report.hits[1]
                     .impacts
                     .iter()
-                    .all(|impact| matches!(impact, BattleBlastImpact::Mech(_)))
+                    .all(|impact| matches!(impact, BlastImpact::Mech(_)))
             );
             let armor: u16 = world.btech.vehicles()[&ids[0]]
                 .sections()
@@ -300,7 +292,7 @@ async fn mixed_mine_blasts_preserve_packets_slots_fields_and_restart() {
 
 #[tokio::test]
 async fn inferno_mine_heat_uses_blast_duration_and_vehicle_fire_policy() {
-    let (_dir, config, base, map, ids) = blast_fixture(BattleVehicleMovement::Tracked).await;
+    let (_dir, config, base, map, ids) = blast_fixture(VehicleMovement::Tracked).await;
     for stationary in [false, true] {
         for advanced in [false, true] {
             for roll in [8, 9] {
@@ -311,7 +303,7 @@ async fn inferno_mine_heat_uses_blast_duration_and_vehicle_fire_policy() {
                     .find_map(|seed| {
                         let mut bytes = [0; 32];
                         bytes[..4].copy_from_slice(&seed.to_le_bytes());
-                        let dice = BattleDice::seeded(bytes);
+                        let dice = Dice::seeded(bytes);
                         (dice.clone().two_d6() == roll).then_some(dice)
                     })
                     .unwrap();
@@ -328,9 +320,9 @@ async fn inferno_mine_heat_uses_blast_duration_and_vehicle_fire_policy() {
                     &mut world,
                     map,
                     0,
-                    Some(BattleMinefield {
+                    Some(Minefield {
                         coordinate: HexCoordinate { x: 1, y: 1 },
-                        kind: BattleMineKind::Inferno,
+                        kind: MineKind::Inferno,
                         strength: 2,
                         extra: 0,
                         owner: ObjectId(1),
@@ -396,11 +388,10 @@ async fn inferno_mine_heat_uses_blast_duration_and_vehicle_fire_policy() {
 
 #[tokio::test]
 async fn vehicle_mine_events_and_command_detonation_are_atomic() {
-    let (_dir, config, mut world, map, ids) =
-        blast_fixture(BattleVehicleMovement::Stationary).await;
-    let mine = BattleMinefield {
+    let (_dir, config, mut world, map, ids) = blast_fixture(VehicleMovement::Stationary).await;
+    let mine = Minefield {
         coordinate: HexCoordinate { x: 1, y: 1 },
-        kind: BattleMineKind::Command,
+        kind: MineKind::Command,
         strength: 4,
         extra: 42,
         owner: ObjectId(1),
@@ -410,8 +401,8 @@ async fn vehicle_mine_events_and_command_detonation_are_atomic() {
         &mut world,
         map,
         1,
-        Some(BattleMinefield {
-            kind: BattleMineKind::Trigger,
+        Some(Minefield {
+            kind: MineKind::Trigger,
             strength: 0,
             extra: 0,
             ..mine
@@ -419,13 +410,7 @@ async fn vehicle_mine_events_and_command_detonation_are_atomic() {
     )
     .unwrap();
     let before = world.btech.clone();
-    let event = activate_mines(
-        &mut world,
-        ids[0],
-        BattleMineTriggerReason::Step,
-        blast_rules(),
-    )
-    .unwrap();
+    let event = activate_mines(&mut world, ids[0], MineTriggerReason::Step, blast_rules()).unwrap();
     assert_eq!(event.triggers, 1);
     assert!(event.blasts.is_empty());
     assert_eq!(event.notices.len(), 1);
@@ -455,10 +440,10 @@ async fn vehicle_mine_events_and_command_detonation_are_atomic() {
 /// Combat-safe blasts preserve materials while consuming the selected hit table's diagnostic stream.
 #[tokio::test]
 async fn mine_vehicle_hit_policy_controls_location_dice_and_safe_damage() {
-    let (_dir, config, base, map, ids) = blast_fixture(BattleVehicleMovement::Stationary).await;
+    let (_dir, config, base, map, ids) = blast_fixture(VehicleMovement::Stationary).await;
     for table in [
-        BattleVehicleCriticalTable::Standard,
-        BattleVehicleCriticalTable::Advanced,
+        VehicleCriticalTable::Standard,
+        VehicleCriticalTable::Advanced,
     ] {
         let mut world = base.clone();
         place_battle_unit(&mut world, ids[1], map, 2, 2).unwrap();
@@ -466,16 +451,16 @@ async fn mine_vehicle_hit_policy_controls_location_dice_and_safe_damage() {
             &mut world,
             map,
             0,
-            Some(BattleMinefield {
+            Some(Minefield {
                 coordinate: HexCoordinate { x: 1, y: 1 },
-                kind: BattleMineKind::Standard,
+                kind: MineKind::Standard,
                 strength: 6,
                 extra: 0,
                 owner: ObjectId(1),
             }),
         )
         .unwrap();
-        let seed = BattleDice::seeded([71; 32]);
+        let seed = Dice::seeded([71; 32]);
         world
             .btech
             .rewrite_unit_record(ids[0], |record| {
@@ -491,11 +476,11 @@ async fn mine_vehicle_hit_policy_controls_location_dice_and_safe_damage() {
         assert_eq!(report.hits[0].impacts.len(), 2);
         let mut dice = seed;
         for impact in &report.hits[0].impacts {
-            let BattleBlastImpact::Vehicle(impact) = impact else {
+            let BlastImpact::Vehicle(impact) = impact else {
                 panic!("Wrong target anatomy");
             };
             let mut rolls = vec![dice.two_d6()];
-            if table != BattleVehicleCriticalTable::Standard {
+            if table != VehicleCriticalTable::Standard {
                 rolls.push(dice.two_d6());
             }
             assert_eq!(impact.rolls, rolls);
@@ -511,7 +496,7 @@ async fn mine_vehicle_hit_policy_controls_location_dice_and_safe_damage() {
 /// A fatal hull packet is followed by a wasted hull hit and a hit on the surviving turret.
 #[tokio::test]
 async fn mine_packets_finish_after_hull_loss_and_retain_wreck_material_damage() {
-    let (_dir, config, base, map, ids) = blast_fixture(BattleVehicleMovement::Stationary).await;
+    let (_dir, config, base, map, ids) = blast_fixture(VehicleMovement::Stationary).await;
     for internal in [false, true] {
         let mut world = base.clone();
         place_battle_unit(&mut world, ids[1], map, 2, 2).unwrap();
@@ -519,7 +504,7 @@ async fn mine_packets_finish_after_hull_loss_and_retain_wreck_material_damage() 
             .find_map(|number| {
                 let mut bytes = [0; 32];
                 bytes[..4].copy_from_slice(&number.to_le_bytes());
-                let initial = BattleDice::seeded(bytes);
+                let initial = Dice::seeded(bytes);
                 let mut dice = initial.clone();
                 if dice.two_d6() != 7 {
                     return None;
@@ -553,9 +538,9 @@ async fn mine_packets_finish_after_hull_loss_and_retain_wreck_material_damage() 
             &mut world,
             map,
             0,
-            Some(BattleMinefield {
+            Some(Minefield {
                 coordinate: HexCoordinate { x: 1, y: 1 },
-                kind: BattleMineKind::Standard,
+                kind: MineKind::Standard,
                 strength: 11,
                 extra: 0,
                 owner: ObjectId(1),
@@ -573,11 +558,11 @@ async fn mine_packets_finish_after_hull_loss_and_retain_wreck_material_damage() 
         assert_eq!(report.hits.len(), 1);
         let packets = &report.hits[0].impacts;
         assert_eq!(packets.len(), 3);
-        let BattleBlastImpact::Vehicle(first) = &packets[0] else {
+        let BlastImpact::Vehicle(first) = &packets[0] else {
             panic!("Wrong anatomy");
         };
         assert!(first.damage.as_ref().unwrap().unit_destroyed);
-        let BattleBlastImpact::Vehicle(wasted) = &packets[1] else {
+        let BlastImpact::Vehicle(wasted) = &packets[1] else {
             panic!("Wrong anatomy");
         };
         let wasted = wasted.damage.as_ref().unwrap();
@@ -586,21 +571,21 @@ async fn mine_packets_finish_after_hull_loss_and_retain_wreck_material_damage() 
         assert!(
             wasted.internal.is_none() && wasted.notices.is_empty() && wasted.criticals.is_empty()
         );
-        let BattleBlastImpact::Vehicle(last) = &packets[2] else {
+        let BlastImpact::Vehicle(last) = &packets[2] else {
             panic!("Wrong anatomy");
         };
         let last = last.damage.as_ref().unwrap();
-        assert_eq!(last.section, BattleVehicleSection::Turret);
+        assert_eq!(last.section, VehicleSection::Turret);
         if internal {
             assert_eq!(last.internal.as_ref().unwrap().absorbed, 1);
             assert_eq!(
-                world.btech.vehicles()[&ids[0]].sections()[&BattleVehicleSection::Turret].internal,
+                world.btech.vehicles()[&ids[0]].sections()[&VehicleSection::Turret].internal,
                 7
             );
         } else {
             assert_eq!(last.absorbed, 1);
             assert_eq!(
-                world.btech.vehicles()[&ids[0]].sections()[&BattleVehicleSection::Turret].armor,
+                world.btech.vehicles()[&ids[0]].sections()[&VehicleSection::Turret].armor,
                 39
             );
         }
@@ -619,7 +604,7 @@ async fn mine_packets_finish_after_hull_loss_and_retain_wreck_material_damage() 
             resolve_battle_vehicle_impact(
                 &mut world,
                 ids[0],
-                BattleHitArc::Front,
+                HitArc::Front,
                 1,
                 None,
                 blast_rules().vehicle_impact
@@ -643,10 +628,10 @@ async fn mine_packets_finish_after_hull_loss_and_retain_wreck_material_damage() 
 /// Every hit table re-evaluates the remaining anatomy between packets, including after destruction.
 #[tokio::test]
 async fn mine_followups_reselect_locations_after_turret_and_hull_loss() {
-    let (_dir, config, base, map, ids) = blast_fixture(BattleVehicleMovement::Stationary).await;
+    let (_dir, config, base, map, ids) = blast_fixture(VehicleMovement::Stationary).await;
     for table in [
-        BattleVehicleCriticalTable::Standard,
-        BattleVehicleCriticalTable::Advanced,
+        VehicleCriticalTable::Standard,
+        VehicleCriticalTable::Advanced,
     ] {
         let mut world = base.clone();
         place_battle_unit(&mut world, ids[1], map, 2, 2).unwrap();
@@ -654,10 +639,10 @@ async fn mine_followups_reselect_locations_after_turret_and_hull_loss() {
             .find_map(|number| {
                 let mut bytes = [0; 32];
                 bytes[..4].copy_from_slice(&number.to_le_bytes());
-                let initial = BattleDice::seeded(bytes);
+                let initial = Dice::seeded(bytes);
                 let mut dice = initial.clone();
                 for (index, wanted) in [10, 7, 7, 7].into_iter().enumerate() {
-                    if table != BattleVehicleCriticalTable::Standard {
+                    if table != VehicleCriticalTable::Standard {
                         dice.two_d6();
                     }
                     if dice.two_d6() != wanted {
@@ -688,9 +673,9 @@ async fn mine_followups_reselect_locations_after_turret_and_hull_loss() {
             &mut world,
             map,
             0,
-            Some(BattleMinefield {
+            Some(Minefield {
                 coordinate: HexCoordinate { x: 1, y: 1 },
-                kind: BattleMineKind::Standard,
+                kind: MineKind::Standard,
                 strength: 16,
                 extra: 0,
                 owner: ObjectId(1),
@@ -704,7 +689,7 @@ async fn mine_followups_reselect_locations_after_turret_and_hull_loss() {
             .impacts
             .iter()
             .map(|impact| {
-                let BattleBlastImpact::Vehicle(impact) = impact else {
+                let BlastImpact::Vehicle(impact) = impact else {
                     panic!("Wrong anatomy");
                 };
                 impact
@@ -717,10 +702,10 @@ async fn mine_followups_reselect_locations_after_turret_and_hull_loss() {
                 .map(|packet| packet.hit.unwrap().section)
                 .collect::<Vec<_>>(),
             [
-                BattleVehicleSection::Turret,
-                BattleVehicleSection::Front,
-                BattleVehicleSection::Front,
-                BattleVehicleSection::Front
+                VehicleSection::Turret,
+                VehicleSection::Front,
+                VehicleSection::Front,
+                VehicleSection::Front
             ]
         );
         assert!(!packets[0].damage.as_ref().unwrap().unit_destroyed);
@@ -736,7 +721,7 @@ async fn mine_followups_reselect_locations_after_turret_and_hull_loss() {
                 .all(|rounds| *rounds == 0)
         );
         let mut dice = seed;
-        for _ in 0..if table == BattleVehicleCriticalTable::Standard {
+        for _ in 0..if table == VehicleCriticalTable::Standard {
             10
         } else {
             14
@@ -751,23 +736,23 @@ async fn mine_followups_reselect_locations_after_turret_and_hull_loss() {
 /// Both ordinary and Inferno blasts run their heat response after material damage on wrecks.
 #[tokio::test]
 async fn mine_heat_explodes_remaining_wreck_sections() {
-    let (_dir, config, base, map, ids) = blast_fixture(BattleVehicleMovement::Tracked).await;
+    let (_dir, config, base, map, ids) = blast_fixture(VehicleMovement::Tracked).await;
     for inferno in [false, true] {
         let mut world = base.clone();
         place_battle_unit(&mut world, ids[1], map, 2, 2).unwrap();
         let _ = damage_battle_vehicle_phase(
             &mut world,
             ids[0],
-            BattleVehicleSection::Front,
+            VehicleSection::Front,
             100,
-            BattleDamagePhase::Internal,
+            DamagePhase::Internal,
         )
         .unwrap();
         let dice = (0u32..100000)
             .find_map(|number| {
                 let mut bytes = [0; 32];
                 bytes[..4].copy_from_slice(&number.to_le_bytes());
-                let initial = BattleDice::seeded(bytes);
+                let initial = Dice::seeded(bytes);
                 let mut dice = initial.clone();
                 if !inferno {
                     dice.two_d6();
@@ -786,12 +771,12 @@ async fn mine_heat_explodes_remaining_wreck_sections() {
             &mut world,
             map,
             0,
-            Some(BattleMinefield {
+            Some(Minefield {
                 coordinate: HexCoordinate { x: 1, y: 1 },
                 kind: if inferno {
-                    BattleMineKind::Inferno
+                    MineKind::Inferno
                 } else {
-                    BattleMineKind::Standard
+                    MineKind::Standard
                 },
                 strength: if inferno { 2 } else { 1 },
                 extra: 0,
@@ -826,7 +811,7 @@ async fn mine_heat_explodes_remaining_wreck_sections() {
 /// Mixed-unit command blasts preserve packet feedback without disclosing pilot rolls to passengers.
 #[tokio::test]
 async fn command_blast_feedback_is_private_ordered_and_replayable() {
-    let (_dir, config, mut world, map, ids) = blast_fixture(BattleVehicleMovement::Tracked).await;
+    let (_dir, config, mut world, map, ids) = blast_fixture(VehicleMovement::Tracked).await;
     let pilot = ObjectId(1);
     world.objects.get_mut(&pilot).unwrap().location = Some(ids[1]);
     world
@@ -853,9 +838,9 @@ async fn command_blast_feedback_is_private_ordered_and_replayable() {
         &mut world,
         map,
         0,
-        Some(BattleMinefield {
+        Some(Minefield {
             coordinate: HexCoordinate { x: 1, y: 1 },
-            kind: BattleMineKind::Command,
+            kind: MineKind::Command,
             strength: 150,
             extra: 42,
             owner: pilot,

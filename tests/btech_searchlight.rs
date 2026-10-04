@@ -26,8 +26,7 @@ async fn fixture() -> (
         let id = world.create(&config, name.into(), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         let mut definition =
-            BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
-                .unwrap();
+            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
         definition
             .attributes
             .insert("specials".into(), "FlipArms Searchlight".into());
@@ -107,13 +106,7 @@ async fn switches_resume_after_restart_and_commands_rollback() {
             .contains("full power")
     );
     toggle_battle_searchlight(&mut world, lamp, ObjectId(1)).unwrap();
-    stop_battle_unit(
-        &mut world,
-        lamp,
-        ObjectId(1),
-        BattleMovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut world, lamp, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
     for _ in 0..5 {
         assert!(advance_battle_searchlights(&mut world).is_empty());
     }
@@ -177,10 +170,10 @@ async fn front_torso_damage_uses_lamp_state_and_exact_dice() {
     let (_dir, _config, baseline, lamp, _, _) = fixture().await;
     for on in [false, true] {
         for section in [
-            BattleSection::LeftTorso,
-            BattleSection::CenterTorso,
-            BattleSection::RightTorso,
-            BattleSection::LeftArm,
+            MechSection::LeftTorso,
+            MechSection::CenterTorso,
+            MechSection::RightTorso,
+            MechSection::LeftArm,
         ] {
             for rear in [false, true] {
                 for seed in 0..32 {
@@ -191,20 +184,20 @@ async fn front_torso_damage_uses_lamp_state_and_exact_dice() {
                         "searchlight",
                         serde_json::json!({"on":on,"destroyed":false,"remaining":3}),
                     );
-                    let mut dice = BattleDice::seeded([seed; 32]);
+                    let mut dice = Dice::seeded([seed; 32]);
                     field(
                         &mut world,
                         lamp,
                         "dice",
                         serde_json::to_value(&dice).unwrap(),
                     );
-                    let exposed = !rear && section != BattleSection::LeftArm;
+                    let exposed = !rear && section != MechSection::LeftArm;
                     dice.two_d6(); // Material entry precedes the searchlight strike.
                     let destroyed = exposed && dice.two_d6() > 6 && (on || dice.two_d6() > 5);
                     let report = resolve_battle_impact(
                         &mut world,
                         lamp,
-                        BattleHit {
+                        Hit {
                             section,
                             rear_armor: rear,
                             through_armor_critical: false,
@@ -247,29 +240,26 @@ async fn front_torso_damage_uses_lamp_state_and_exact_dice() {
 async fn searchlights_extend_night_sight_to_lit_targets() {
     let (_dir, _config, mut world, lamp, target, map) = fixture().await;
     place_battle_unit(&mut world, target, map, 2, 31).unwrap();
-    set_battle_map_visibility(&mut world, map, BattleLight::Night, 3).unwrap();
+    set_battle_map_visibility(&mut world, map, Light::Night, 3).unwrap();
     let perceived = |world: &World| {
         battle_perceive(world, lamp, target)
             .unwrap()
             .map(|perception| (perception.channel, perception.aim_modifier))
     };
-    assert_eq!(
-        perceived(&world),
-        Some((BattleDetectionChannel::Sensors, 0))
-    );
-    set_battle_map_perception(&mut world, map, BattleMapPerceptionFlag::Sensors, false).unwrap();
+    assert_eq!(perceived(&world), Some((DetectionChannel::Sensors, 0)));
+    set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, false).unwrap();
     assert_eq!(perceived(&world), None);
     place_battle_unit(&mut world, target, map, 2, 33).unwrap();
-    assert_eq!(perceived(&world), Some((BattleDetectionChannel::Sight, 1)));
+    assert_eq!(perceived(&world), Some((DetectionChannel::Sight, 1)));
     toggle_battle_searchlight(&mut world, lamp, ObjectId(1)).unwrap();
     for _ in 0..5 {
         advance_battle_searchlights(&mut world);
     }
     assert!(battle_unit_illuminated(&world, target));
-    assert_eq!(perceived(&world), Some((BattleDetectionChannel::Sight, 0)));
+    assert_eq!(perceived(&world), Some((DetectionChannel::Sight, 0)));
     for (y, expected) in [
-        (31, Some((BattleDetectionChannel::Sight, 0))),
-        (26, Some((BattleDetectionChannel::Sight, 0))),
+        (31, Some((DetectionChannel::Sight, 0))),
+        (26, Some((DetectionChannel::Sight, 0))),
         (25, None),
     ] {
         place_battle_unit(&mut world, target, map, 2, y).unwrap();
@@ -343,7 +333,7 @@ async fn illumination_warnings_are_opt_in_transactional_and_restart_safe() {
     let notices = refresh_battle_illumination(&mut world);
     assert_eq!(
         notices,
-        vec![BattleNotice {
+        vec![Notice {
             unit: lamp,
             text: "You are no longer being illuminated.".into()
         }]
@@ -360,7 +350,7 @@ async fn illumination_warnings_are_opt_in_transactional_and_restart_safe() {
     );
     assert_eq!(
         refresh_battle_illumination(&mut world),
-        vec![BattleNotice {
+        vec![Notice {
             unit: lamp,
             text: "You are being illuminated!".into()
         }]
@@ -393,7 +383,7 @@ async fn terrain_beams_reach_beyond_unit_illumination_and_stop_at_obstructions()
     let (_dir, config, mut world, lamp, _, map) = fixture().await;
     let distant = HexCoordinate { x: 2, y: 0 };
     let behind = HexCoordinate { x: 2, y: 36 };
-    set_battle_map_visibility(&mut world, map, BattleLight::Night, 15).unwrap();
+    set_battle_map_visibility(&mut world, map, Light::Night, 15).unwrap();
     assert!(!battle_hex_visible(&world, lamp, distant).unwrap());
     let _ = toggle_battle_searchlight(&mut world, lamp, ObjectId(1)).unwrap();
     for _ in 0..5 {
@@ -411,7 +401,7 @@ async fn terrain_beams_reach_beyond_unit_illumination_and_stop_at_obstructions()
         &mut world,
         map,
         HexCoordinate { x: 2, y: 20 },
-        Some(BattleDecoration::new(DecorationKind::Smoke, 30, None)),
+        Some(Decoration::new(DecorationKind::Smoke, 30, None)),
     )
     .unwrap();
     assert!(!battle_hex_illuminated(&world, map, distant).unwrap());
@@ -426,7 +416,7 @@ async fn terrain_beams_reach_beyond_unit_illumination_and_stop_at_obstructions()
 }
 
 /// Read the lamp's persisted switch state.
-fn lamp_state(world: &World, id: ObjectId) -> BattleSearchlight {
+fn lamp_state(world: &World, id: ObjectId) -> Searchlight {
     world.btech.constructed_units()[&id].searchlight()
 }
 
@@ -434,11 +424,11 @@ fn lamp_state(world: &World, id: ObjectId) -> BattleSearchlight {
 #[tokio::test]
 async fn automatic_lamps_follow_map_light_changes_and_transfers() {
     let (_dir, config, mut world, lamp, _, map) = fixture().await;
-    assert_eq!(lamp_state(&world, lamp).mode, BattleSearchlightMode::Auto);
+    assert_eq!(lamp_state(&world, lamp).mode, SearchlightMode::Auto);
     assert_eq!(lamp_state(&world, lamp).remaining, 0);
-    set_battle_map_visibility(&mut world, map, BattleLight::Twilight, 30).unwrap();
+    set_battle_map_visibility(&mut world, map, Light::Twilight, 30).unwrap();
     assert_eq!(lamp_state(&world, lamp).remaining, 0);
-    set_battle_map_visibility(&mut world, map, BattleLight::Night, 30).unwrap();
+    set_battle_map_visibility(&mut world, map, Light::Night, 30).unwrap();
     assert_eq!(lamp_state(&world, lamp).remaining, 5);
     for _ in 0..4 {
         advance_battle_searchlights(&mut world);
@@ -447,16 +437,16 @@ async fn automatic_lamps_follow_map_light_changes_and_transfers() {
     assert!(notices.iter().any(|n| n.text.contains("full power")));
     assert!(lamp_state(&world, lamp).on);
     // Visibility-only edits leave the lamp alone.
-    set_battle_map_visibility(&mut world, map, BattleLight::Night, 10).unwrap();
+    set_battle_map_visibility(&mut world, map, Light::Night, 10).unwrap();
     assert_eq!(lamp_state(&world, lamp).remaining, 0);
     // Daylight starts a cool-down; nightfall before it expires cancels it.
-    set_battle_map_visibility(&mut world, map, BattleLight::Day, 30).unwrap();
+    set_battle_map_visibility(&mut world, map, Light::Day, 30).unwrap();
     assert_eq!(lamp_state(&world, lamp).remaining, 5);
     advance_battle_searchlights(&mut world);
-    set_battle_map_visibility(&mut world, map, BattleLight::Night, 30).unwrap();
+    set_battle_map_visibility(&mut world, map, Light::Night, 30).unwrap();
     assert_eq!(lamp_state(&world, lamp).remaining, 0);
     assert!(lamp_state(&world, lamp).on);
-    set_battle_map_visibility(&mut world, map, BattleLight::Day, 30).unwrap();
+    set_battle_map_visibility(&mut world, map, Light::Day, 30).unwrap();
     for _ in 0..5 {
         advance_battle_searchlights(&mut world);
     }
@@ -473,11 +463,11 @@ async fn automatic_lamps_follow_map_light_changes_and_transfers() {
     )
     .unwrap();
     support::seed_object_dice(&mut world, dark, support::FIXTURE_DICE_SEED);
-    set_battle_map_visibility(&mut world, dark, BattleLight::Night, 30).unwrap();
+    set_battle_map_visibility(&mut world, dark, Light::Night, 30).unwrap();
     transfer_battle_unit(
         &mut world,
         lamp,
-        BattlePosition {
+        Position {
             map: dark,
             x: 2,
             y: 20,
@@ -491,13 +481,7 @@ async fn automatic_lamps_follow_map_light_changes_and_transfers() {
     assert!(lamp_state(&world, lamp).on);
 
     // Shutdown extinguishes the lamp; completing startup relights it.
-    stop_battle_unit(
-        &mut world,
-        lamp,
-        ObjectId(1),
-        BattleMovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut world, lamp, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
     assert!(!lamp_state(&world, lamp).on);
     assign_battle_pilot(&mut world, lamp, ObjectId(1)).unwrap();
     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
@@ -527,9 +511,9 @@ async fn manual_modes_override_automatic_switching() {
     assert!(support::run_text(&scripts, &config, ObjectId(1), 1, "slite off").contains("stay off"));
     assert_eq!(
         lamp_state(&scripts.world(), lamp).mode,
-        BattleSearchlightMode::Off
+        SearchlightMode::Off
     );
-    set_battle_map_visibility(&mut scripts.world_mut(), map, BattleLight::Night, 30).unwrap();
+    set_battle_map_visibility(&mut scripts.world_mut(), map, Light::Night, 30).unwrap();
     assert_eq!(lamp_state(&scripts.world(), lamp).remaining, 0);
     let text = support::run_text(&scripts, &config, ObjectId(1), 1, "slite auto");
     assert!(
@@ -558,14 +542,11 @@ async fn manual_modes_override_automatic_switching() {
         .unwrap();
     assert_eq!(
         lamp_state(&scripts.world(), lamp).mode,
-        BattleSearchlightMode::Auto
+        SearchlightMode::Auto
     );
     assert_eq!(lamp_state(&scripts.world(), lamp).remaining, 5);
     support::run_text(&scripts, &config, ObjectId(1), 1, "slite");
-    assert_eq!(
-        lamp_state(&scripts.world(), lamp).mode,
-        BattleSearchlightMode::On
-    );
+    assert_eq!(lamp_state(&scripts.world(), lamp).mode, SearchlightMode::On);
     assert!(
         scripts
             .eval_callback::<()>(&format!(

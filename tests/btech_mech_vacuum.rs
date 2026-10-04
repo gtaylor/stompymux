@@ -4,8 +4,8 @@ use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 
 /// A located hit with no additional hit-table effects.
-fn hit(section: BattleSection) -> BattleHit {
-    BattleHit {
+fn hit(section: MechSection) -> Hit {
+    Hit {
         section,
         rear_armor: false,
         through_armor_critical: false,
@@ -14,9 +14,9 @@ fn hit(section: BattleSection) -> BattleHit {
 }
 
 /// Seed a stream whose first material critical roll causes no independent damage.
-fn seed(world: &mut World, id: ObjectId, wanted: u8) -> BattleDice {
+fn seed(world: &mut World, id: ObjectId, wanted: u8) -> Dice {
     let dice = (0..=255)
-        .map(|value| BattleDice::seeded([value; 32]))
+        .map(|value| Dice::seeded([value; 32]))
         .find(|dice| {
             let mut sample = dice.clone();
             sample.two_d6();
@@ -36,7 +36,7 @@ fn environment(world: &mut World, id: ObjectId, gravity: u8, vacuum: bool) {
         world,
         ObjectId(1),
         map,
-        BattleMapEnvironment {
+        MapEnvironment {
             gravity,
             temperature: 20,
             vacuum,
@@ -59,13 +59,13 @@ async fn penetration_shares_mech_equipment_effects_and_restart() {
     for template in firing::templates().into_iter().take(2) {
         let (_dir, config, mut world, id, _, index) = firing::fixture_with_supply(
             &template,
-            Some(BattleWeapon::Lrm5),
+            Some(Weapon::Lrm5),
             include_str!("../game/mechs/AS7-D.toml"),
             false,
             Some(""),
         )
         .await;
-        let section = BattleSection::LeftTorso;
+        let section = MechSection::LeftTorso;
         let before = world.btech.constructed_units()[&id].sections()[&section].clone();
         let mount = world.btech.constructed_units()[&id]
             .loadout()
@@ -76,7 +76,7 @@ async fn penetration_shares_mech_equipment_effects_and_restart() {
         seed(&mut world, id, 4);
         let report = resolve_battle_impact(&mut world, id, hit(section), before.armor + 1).unwrap();
         assert_eq!(report.exposures.len(), 1);
-        assert_eq!(report.exposures[0].cause, BattleSectionExposure::Vacuum);
+        assert_eq!(report.exposures[0].cause, SectionExposure::Vacuum);
         let unit = &world.btech.constructed_units()[&id];
         assert_eq!(unit.sections()[&section].internal, before.internal - 1);
         assert!(unit.breached_sections().contains(&section));
@@ -97,7 +97,7 @@ async fn penetration_shares_mech_equipment_effects_and_restart() {
         }
         assert_eq!(
             battle_weapon_diagnostics(&world, id).unwrap()[index].condition,
-            BattleEquipmentCondition::Disabled
+            EquipmentCondition::Disabled
         );
         environment(&mut world, id, 100, false);
         let mut invalid = serde_json::to_value(&world.btech).unwrap();
@@ -133,7 +133,7 @@ async fn armor_checks_follow_shared_threshold_dice_and_repeat_policy() {
     for template in firing::templates().into_iter().take(2) {
         let (_dir, config, initial, id, _, _) = firing::fixture_with_target(
             &template,
-            Some(BattleWeapon::MediumLaser),
+            Some(Weapon::MediumLaser),
             include_str!("../game/mechs/AS7-D.toml"),
         )
         .await;
@@ -147,7 +147,7 @@ async fn armor_checks_follow_shared_threshold_dice_and_repeat_policy() {
                     dice.two_d6();
                 }
                 let report =
-                    resolve_battle_impact(&mut world, id, hit(BattleSection::LeftArm), 1).unwrap();
+                    resolve_battle_impact(&mut world, id, hit(MechSection::LeftArm), 1).unwrap();
                 assert_eq!(report.exposures.len(), usize::from(vacuum && wanted >= 10));
                 assert_eq!(
                     serde_json::to_value(&world.btech.constructed_units()[&id]).unwrap()["dice"],
@@ -156,7 +156,7 @@ async fn armor_checks_follow_shared_threshold_dice_and_repeat_policy() {
                 if vacuum && wanted >= 10 {
                     seed(&mut world, id, wanted);
                     let report =
-                        resolve_battle_impact(&mut world, id, hit(BattleSection::LeftArm), 1)
+                        resolve_battle_impact(&mut world, id, hit(MechSection::LeftArm), 1)
                             .unwrap();
                     assert!(report.exposures.is_empty());
                 }
@@ -172,14 +172,14 @@ async fn exposed_legs_fall_without_losing_structure() {
     for template in firing::templates().into_iter().take(2) {
         let (_dir, config, mut world, id, _, _) = firing::fixture_with_target(
             &template,
-            Some(BattleWeapon::MediumLaser),
+            Some(Weapon::MediumLaser),
             include_str!("../game/mechs/AS7-D.toml"),
         )
         .await;
-        let section = if world.btech.constructed_units()[&id].chassis() == BattleMechChassis::Quad {
-            BattleSection::LeftArm
+        let section = if world.btech.constructed_units()[&id].chassis() == MechChassis::Quad {
+            MechSection::LeftArm
         } else {
-            BattleSection::LeftLeg
+            MechSection::LeftLeg
         };
         let armor = world.btech.constructed_units()[&id].sections()[&section].armor;
         environment(&mut world, id, 100, true);
@@ -189,7 +189,7 @@ async fn exposed_legs_fall_without_losing_structure() {
             id,
             hit(section),
             armor + 1,
-            BattleMovementRules::STANDARD.fall,
+            MovementRules::STANDARD.fall,
         )
         .unwrap();
         assert!(
@@ -201,7 +201,7 @@ async fn exposed_legs_fall_without_losing_structure() {
         );
         assert_eq!(
             world.btech.constructed_units()[&id].posture(),
-            BattlePosture::Prone
+            Posture::Prone
         );
         world.validate(&config).unwrap();
         persistence::save(&config.database(), &world).await.unwrap();
@@ -217,7 +217,7 @@ async fn exposed_legs_fall_without_losing_structure() {
 async fn cockpit_exposure_rolls_back_failed_evacuation_and_survives_restart() {
     let (_dir, config, mut world, id, _, _) = firing::fixture_with_target(
         include_str!("../game/mechs/JR7-D.toml"),
-        Some(BattleWeapon::MediumLaser),
+        Some(Weapon::MediumLaser),
         include_str!("../game/mechs/AS7-D.toml"),
     )
     .await;
@@ -239,7 +239,7 @@ async fn cockpit_exposure_rolls_back_failed_evacuation_and_survives_restart() {
     set_battle_character(
         &mut world,
         pilot,
-        BattleCharacter {
+        Character {
             build: 5,
             reflexes: 5,
             intuition: 5,
@@ -257,24 +257,22 @@ async fn cockpit_exposure_rolls_back_failed_evacuation_and_survives_restart() {
     let mut mechanical = world.clone();
     seed(&mut mechanical, id, 10);
     let before_mechanical = mechanical.btech.clone();
-    assert!(resolve_battle_impact(&mut mechanical, id, hit(BattleSection::LeftArm), 1).is_err());
+    assert!(resolve_battle_impact(&mut mechanical, id, hit(MechSection::LeftArm), 1).is_err());
     assert_eq!(mechanical.btech, before_mechanical);
     // An armored head checks vacuum after its ordinary nonlethal pilot injury.
     let chosen = (0..=255)
         .find(|value| {
             let mut candidate = world.clone();
             firing::edit(&mut candidate, id, |state| {
-                state["dice"] = serde_json::to_value(BattleDice::seeded([*value; 32])).unwrap()
+                state["dice"] = serde_json::to_value(Dice::seeded([*value; 32])).unwrap()
             });
             let scripts = Scripts::new(&config, Rc::new(RefCell::new(candidate))).unwrap();
-            resolve_battle_impact_action(&scripts, &config, id, hit(BattleSection::Head), 1)
-                .is_ok_and(|report| {
-                    report.crew_casualty() == Some(BattleCrewCasualty::VacuumExposure)
-                })
+            resolve_battle_impact_action(&scripts, &config, id, hit(MechSection::Head), 1)
+                .is_ok_and(|report| report.crew_casualty() == Some(CrewCasualty::VacuumExposure))
         })
         .unwrap();
     firing::edit(&mut world, id, |state| {
-        state["dice"] = serde_json::to_value(BattleDice::seeded([chosen; 32])).unwrap()
+        state["dice"] = serde_json::to_value(Dice::seeded([chosen; 32])).unwrap()
     });
     let before = world.clone();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
@@ -282,21 +280,17 @@ async fn cockpit_exposure_rolls_back_failed_evacuation_and_survives_restart() {
     scripts.world_mut().objects.remove(&afterlife);
     let invalid = scripts.world().clone();
     assert!(
-        resolve_battle_impact_action(&scripts, &config, id, hit(BattleSection::Head), 1).is_err()
+        resolve_battle_impact_action(&scripts, &config, id, hit(MechSection::Head), 1).is_err()
     );
     assert_eq!(scripts.world().btech, invalid.btech);
     assert_eq!(scripts.world().objects[&pilot].location, Some(id));
     *scripts.world_mut() = before;
     let report =
-        resolve_battle_impact_action(&scripts, &config, id, hit(BattleSection::Head), 1).unwrap();
-    assert_eq!(
-        report.crew_casualty(),
-        Some(BattleCrewCasualty::VacuumExposure)
-    );
+        resolve_battle_impact_action(&scripts, &config, id, hit(MechSection::Head), 1).unwrap();
+    assert_eq!(report.crew_casualty(), Some(CrewCasualty::VacuumExposure));
     assert_eq!(scripts.world().objects[&pilot].location, Some(afterlife));
     assert!(
-        scripts.world().btech.constructed_units()[&id].sections()[&BattleSection::Head].internal
-            > 0
+        scripts.world().btech.constructed_units()[&id].sections()[&MechSection::Head].internal > 0
     );
     let saved = scripts.world().clone();
     persistence::save(&config.database(), &saved).await.unwrap();
@@ -315,14 +309,14 @@ async fn vacuum_loss_of_last_jets_interrupts_flight() {
         include_str!("../game/mechs/AS7-D.toml"),
     )
     .await;
-    let section = BattleSection::RightTorso;
+    let section = MechSection::RightTorso;
     let other_jets: Vec<_> = world.btech.constructed_units()[&id]
         .loadout()
         .unwrap()
         .systems
         .iter()
         .filter(|part| {
-            part.system == BattleSystem::JumpJet
+            part.system == System::JumpJet
                 && (part.location.section != section || part.location.slot == 1)
         })
         .map(|part| part.location)
@@ -331,7 +325,7 @@ async fn vacuum_loss_of_last_jets_interrupts_flight() {
         destroy_battle_critical(&mut world, id, location).unwrap();
     }
     launch_battle_jump(&mut world, id, ObjectId(1), 0, 1.0).unwrap();
-    advance_battle_jumps(&mut world, BattleMovementRules::STANDARD).unwrap();
+    advance_battle_jumps(&mut world, MovementRules::STANDARD).unwrap();
     assert!(world.btech.constructed_units()[&id].flight().is_some());
     environment(&mut world, id, 100, true);
     seed(&mut world, id, 4);
@@ -341,7 +335,7 @@ async fn vacuum_loss_of_last_jets_interrupts_flight() {
         id,
         hit(section),
         armor + 1,
-        BattleMovementRules::STANDARD.fall,
+        MovementRules::STANDARD.fall,
     )
     .unwrap();
     assert!(
@@ -352,7 +346,7 @@ async fn vacuum_loss_of_last_jets_interrupts_flight() {
             .any(|exposure| exposure.section == section)
     );
     assert!(report.balance.iter().any(|balance| balance.fall.is_some()));
-    assert!(report.balance.iter().any(|balance| matches!(balance.cause, BattleBalanceCause::Critical { location, system: BattleSystem::JumpJet } if location.section==section && location.slot==2)));
+    assert!(report.balance.iter().any(|balance| matches!(balance.cause, BalanceCause::Critical { location, system: System::JumpJet } if location.section==section && location.slot==2)));
     assert!(world.btech.constructed_units()[&id].flight().is_none());
     world.validate(&config).unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
@@ -367,7 +361,7 @@ async fn vacuum_loss_of_last_jets_interrupts_flight() {
 async fn internal_explosion_can_breach_surviving_armored_section() {
     let (_dir, config, mut initial, id, _, _) = firing::fixture_with_supply(
         include_str!("../game/mechs/JR7-D.toml"),
-        Some(BattleWeapon::Ac2),
+        Some(Weapon::Ac2),
         include_str!("../game/mechs/AS7-D.toml"),
         false,
         Some(""),
@@ -378,7 +372,7 @@ async fn internal_explosion_can_breach_surviving_armored_section() {
         .unwrap()
         .ammunition
         .iter()
-        .position(|bin| bin.location.section == BattleSection::LeftTorso)
+        .position(|bin| bin.location.section == MechSection::LeftTorso)
         .unwrap();
     firing::edit(&mut initial, id, |state| {
         state["ammunition"][bin] = 1.into()
@@ -388,20 +382,18 @@ async fn internal_explosion_can_breach_surviving_armored_section() {
     for value in 0..=255 {
         let mut world = initial.clone();
         firing::edit(&mut world, id, |state| {
-            state["dice"] = serde_json::to_value(BattleDice::seeded([value; 32])).unwrap()
+            state["dice"] = serde_json::to_value(Dice::seeded([value; 32])).unwrap()
         });
         let report =
-            explode_battle_ammunition(&mut world, id, bin, BattleMovementRules::STANDARD.fall)
-                .unwrap();
+            explode_battle_ammunition(&mut world, id, bin, MovementRules::STANDARD.fall).unwrap();
         if report
             .impact
             .exposures
             .iter()
-            .any(|exposure| exposure.section == BattleSection::LeftTorso)
+            .any(|exposure| exposure.section == MechSection::LeftTorso)
         {
             assert!(
-                world.btech.constructed_units()[&id].sections()[&BattleSection::LeftTorso].armor
-                    > 0
+                world.btech.constructed_units()[&id].sections()[&MechSection::LeftTorso].armor > 0
             );
             world.validate(&config).unwrap();
             persistence::save(&config.database(), &world).await.unwrap();
@@ -434,13 +426,13 @@ async fn core_exposure_shares_engine_and_reactor_consequences() {
         environment(&mut world, id, 100, true);
         seed(&mut world, id, 4);
         let before =
-            world.btech.constructed_units()[&id].sections()[&BattleSection::CenterTorso].clone();
+            world.btech.constructed_units()[&id].sections()[&MechSection::CenterTorso].clone();
         let report = resolve_battle_tactical_impact(
             &mut world,
             id,
-            hit(BattleSection::CenterTorso),
+            hit(MechSection::CenterTorso),
             before.armor + 1,
-            BattleMovementRules::STANDARD.fall,
+            MovementRules::STANDARD.fall,
         )
         .unwrap();
         assert!(report.impact.destroyed);
@@ -448,16 +440,16 @@ async fn core_exposure_shares_engine_and_reactor_consequences() {
             .impact
             .exposures
             .iter()
-            .find(|exposure| exposure.section == BattleSection::CenterTorso)
+            .find(|exposure| exposure.section == MechSection::CenterTorso)
             .unwrap();
         assert_eq!(exposure.reactor_explosion.is_some(), enabled);
         let unit = &world.btech.constructed_units()[&id];
         assert_eq!(
-            unit.sections()[&BattleSection::CenterTorso].internal,
+            unit.sections()[&MechSection::CenterTorso].internal,
             if enabled { 0 } else { before.internal - 1 }
         );
-        assert_eq!(unit.power(), BattlePower::Off);
-        assert!(unit.system_hits(BattleSystem::Engine) >= 3);
+        assert_eq!(unit.power(), Power::Off);
+        assert!(unit.system_hits(System::Engine) >= 3);
         world.validate(&config).unwrap();
         persistence::save(&config.database(), &world).await.unwrap();
         let loaded = persistence::load(&config.database()).await.unwrap();
@@ -477,19 +469,19 @@ async fn exposed_support_cancels_prone_stand_recovery() {
             firing::fixture_with_target(&template, None, include_str!("../game/mechs/AS7-D.toml"))
                 .await;
         firing::edit(&mut world, id, |state| {
-            state["posture"] = serde_json::to_value(BattlePosture::Prone).unwrap();
+            state["posture"] = serde_json::to_value(Posture::Prone).unwrap();
             state["stand_timer"] =
-                serde_json::to_value(BattleStandTimer::Recovering { remaining: 10 }).unwrap();
+                serde_json::to_value(StandTimer::Recovering { remaining: 10 }).unwrap();
         });
         environment(&mut world, id, 100, true);
         seed(&mut world, id, 4);
-        let armor = world.btech.constructed_units()[&id].sections()[&BattleSection::LeftLeg].armor;
+        let armor = world.btech.constructed_units()[&id].sections()[&MechSection::LeftLeg].armor;
         let report = resolve_battle_tactical_impact(
             &mut world,
             id,
-            hit(BattleSection::LeftLeg),
+            hit(MechSection::LeftLeg),
             armor + 1,
-            BattleMovementRules::STANDARD.fall,
+            MovementRules::STANDARD.fall,
         )
         .unwrap();
         assert!(
@@ -497,12 +489,12 @@ async fn exposed_support_cancels_prone_stand_recovery() {
                 .impact
                 .exposures
                 .iter()
-                .any(|report| report.section == BattleSection::LeftLeg && report.fall.is_none())
+                .any(|report| report.section == MechSection::LeftLeg && report.fall.is_none())
         );
         assert!(world.btech.constructed_units()[&id].stand_timer().is_none());
         assert_eq!(
             world.btech.constructed_units()[&id].posture(),
-            BattlePosture::Prone
+            Posture::Prone
         );
         world.validate(&config).unwrap();
     }

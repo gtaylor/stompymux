@@ -34,12 +34,12 @@ async fn component_failures_round_trip_without_changing_gameplay_on_any_chassis(
                 let report =
                     battle_critical_report(&world, id, if mech { "LT" } else { "Front" }).unwrap();
                 let expected = match code {
-                    1 => BattleEquipmentCondition::Jammed,
-                    2 => BattleEquipmentCondition::Shorted,
-                    3 => BattleEquipmentCondition::Broken,
-                    4 => BattleEquipmentCondition::Empty,
-                    5 => BattleEquipmentCondition::Destroyed,
-                    _ => BattleEquipmentCondition::AmmoJam,
+                    1 => EquipmentCondition::Jammed,
+                    2 => EquipmentCondition::Shorted,
+                    3 => EquipmentCondition::Broken,
+                    4 => EquipmentCondition::Empty,
+                    5 => EquipmentCondition::Destroyed,
+                    _ => EquipmentCondition::AmmoJam,
                 };
                 assert_eq!(report.slots[11].condition, expected);
                 let collection = if mech { "constructed" } else { "vehicles" };
@@ -115,10 +115,7 @@ async fn component_failures_round_trip_without_changing_gameplay_on_any_chassis(
         let report =
             battle_critical_report(&scripts.world(), id, if mech { "LT" } else { "Front" })
                 .unwrap();
-        assert_eq!(
-            report.slots[11].condition,
-            BattleEquipmentCondition::Destroyed
-        );
+        assert_eq!(report.slots[11].condition, EquipmentCondition::Destroyed);
         let field = battle_unit_damage_field(&scripts.world(), id).unwrap();
         assert!(field.contains("C:2/11"));
         assert!(!field.contains("G:2/11"));

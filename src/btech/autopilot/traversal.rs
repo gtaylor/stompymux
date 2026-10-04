@@ -6,9 +6,7 @@
 //! records, or mutate a unit.  The heartbeat must still revalidate the selected
 //! segment through the ordinary movement transaction before committing it.
 
-use super::super::{
-    BattlePosition, BattleUnit, BattleVehicleMovement, Hex, HexCoordinate, Structure,
-};
+use super::super::{Hex, HexCoordinate, Mech, Position, Structure, VehicleMovement};
 use crate::{ObjectId, World};
 use std::collections::BTreeMap;
 
@@ -77,8 +75,8 @@ impl TraversalAssessment {
 pub fn assess(
     world: &World,
     unit_id: ObjectId,
-    from: BattlePosition,
-    to: BattlePosition,
+    from: Position,
+    to: Position,
 ) -> TraversalAssessment {
     assess_with_occupancy(world, unit_id, from, to, None)
 }
@@ -86,8 +84,8 @@ pub fn assess(
 fn assess_with_occupancy(
     world: &World,
     unit_id: ObjectId,
-    from: BattlePosition,
-    to: BattlePosition,
+    from: Position,
+    to: Position,
     cached_occupancy: Option<&OccupancyCounts>,
 ) -> TraversalAssessment {
     if from.map != to.map {
@@ -222,12 +220,12 @@ impl super::navigation::Traversal for GroundTraversal<'_> {
         let assessment = assess_with_occupancy(
             self.world,
             self.unit_id,
-            BattlePosition {
+            Position {
                 map: self.map,
                 x: from.x,
                 y: from.y,
             },
-            BattlePosition {
+            Position {
                 map: self.map,
                 x: to.x,
                 y: to.y,
@@ -258,19 +256,19 @@ fn unit_kind(world: &World, id: ObjectId) -> Option<GroundUnitKind> {
         return None;
     }
     match vehicle.definition().movement {
-        BattleVehicleMovement::Tracked => Some(GroundUnitKind::Tracked),
-        BattleVehicleMovement::Wheeled => Some(GroundUnitKind::Wheeled),
-        BattleVehicleMovement::Hover => Some(GroundUnitKind::Hover),
-        BattleVehicleMovement::Stationary | BattleVehicleMovement::Vtol => None,
+        VehicleMovement::Tracked => Some(GroundUnitKind::Tracked),
+        VehicleMovement::Wheeled => Some(GroundUnitKind::Wheeled),
+        VehicleMovement::Hover => Some(GroundUnitKind::Hover),
+        VehicleMovement::Stationary | VehicleMovement::Vtol => None,
     }
 }
 
-fn unit_position(world: &World, id: ObjectId) -> Option<BattlePosition> {
+fn unit_position(world: &World, id: ObjectId) -> Option<Position> {
     world
         .btech
         .constructed_units()
         .get(&id)
-        .and_then(BattleUnit::position)
+        .and_then(Mech::position)
         .or_else(|| {
             world
                 .btech
@@ -518,8 +516,8 @@ fn team(world: &World, id: ObjectId) -> Option<i32> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::btech::BattleUnitTemplateExt;
     use crate::btech::Terrain;
+    use crate::btech::UnitTemplateExt;
 
     #[test]
     fn terrain_costs_are_positive_and_walls_are_blocked() {
@@ -590,7 +588,7 @@ mod tests {
 
     #[test]
     fn stale_acquisition_cannot_reveal_hidden_movement_or_destruction() {
-        use crate::{BattleContact, BattlePower, BattleSection, BattleUnitTemplate, Config, Kind};
+        use crate::{Config, Contact, Kind, MechSection, Power, UnitTemplate};
         let config = Config::load("tests/fixtures/game").unwrap();
         let mut world = World::default();
         let map = world.create(&config, "Occupancy map".into(), Kind::Room);
@@ -605,7 +603,7 @@ mod tests {
         let target = world.create(&config, "Enemy".into(), Kind::Thing);
         for (id, y) in [(observer, 0), (target, 2)] {
             world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-            BattleUnitTemplate::parse(
+            UnitTemplate::parse(
                 "JR7-D",
                 include_str!("../../../tests/fixtures/btech/mechs/JR7-D.toml"),
             )
@@ -613,12 +611,12 @@ mod tests {
             .create(&mut world, id)
             .unwrap();
             crate::place_battle_unit(&mut world, id, map, 0, y).unwrap();
-            world.btech.constructed.get_mut(&id).unwrap().power = BattlePower::Running;
+            world.btech.constructed.get_mut(&id).unwrap().power = Power::Running;
         }
         crate::set_battle_unit_signature(
             &mut world,
             target,
-            crate::BattleUnitSignature {
+            crate::UnitSignature {
                 team: 1,
                 ..Default::default()
             },
@@ -630,7 +628,7 @@ mod tests {
             .get_mut(&observer)
             .unwrap()
             .contacts
-            .insert(target, BattleContact { identified: true });
+            .insert(target, Contact { identified: true });
         assert_eq!(
             known_occupancy(&world, observer, map).get(&(0, 2)),
             Some(&(1, 0))
@@ -647,9 +645,9 @@ mod tests {
         assert!(watched_clearance(&world, observer, map, &watched));
         assert!(filtered_occupancy(&world, observer, map, Some(&watched)).is_empty());
         assert!(!known_occupant(&world, observer, target));
-        world.btech.constructed.get_mut(&target).unwrap().power = BattlePower::Off;
+        world.btech.constructed.get_mut(&target).unwrap().power = Power::Off;
         crate::place_battle_unit(&mut world, target, map, 0, 3).unwrap();
-        world.btech.constructed.get_mut(&target).unwrap().power = BattlePower::Running;
+        world.btech.constructed.get_mut(&target).unwrap().power = Power::Running;
         assert!(known_occupancy(&world, observer, map).is_empty());
         let watched = [(0, 2), (0, 3)].into_iter().collect();
         assert!(watched_clearance(&world, observer, map, &watched));
@@ -660,7 +658,7 @@ mod tests {
             .get_mut(&target)
             .unwrap()
             .sections
-            .get_mut(&BattleSection::CenterTorso)
+            .get_mut(&MechSection::CenterTorso)
             .unwrap()
             .internal = 0;
         assert!(known_occupancy(&world, observer, map).is_empty());

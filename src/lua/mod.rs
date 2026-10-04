@@ -36,7 +36,7 @@ use std::collections::BTreeMap;
 /// Lua owner and loaded game modules with runtime-only shared resources.
 pub struct Scripts {
     /// Process-local tick timing shared by reloads of this Lua owner.
-    pub(crate) event_telemetry: std::rc::Rc<std::cell::Cell<crate::BattleEventTelemetry>>,
+    pub(crate) event_telemetry: std::rc::Rc<std::cell::Cell<crate::EventTelemetry>>,
     /// Runtime-only session flows and staged effects.
     pub(crate) flows: flows::Engine,
     /// Source identity and package contents captured when this runtime was built.
@@ -79,7 +79,7 @@ fn err(e: impl std::fmt::Display) -> mlua::Error {
 impl Scripts {
     /// Override process-local event timing for diagnostics and contract tests.
     pub fn configure_battle_event_telemetry(&self, process_start: i64, ticks: u64) {
-        self.event_telemetry.set(crate::BattleEventTelemetry {
+        self.event_telemetry.set(crate::EventTelemetry {
             process_start,
             ticks,
         });

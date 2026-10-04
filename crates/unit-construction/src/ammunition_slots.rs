@@ -1,8 +1,8 @@
 //! Construction-only ammunition sizing and filling; live state loading never uses this normalization.
-use super::{AmmunitionBin, BattleTemplate, BattleWeapon};
+use super::{AmmunitionBin, MechTemplate, Weapon};
 use anyhow::{Context, Result};
 
-impl BattleTemplate {
+impl MechTemplate {
     /// Infer small bins and normalize initial salvo counts using the biped template-loader rules.
     pub fn normalize_ammunition(&mut self) -> Result<()> {
         normalize_with(self, false)
@@ -16,7 +16,7 @@ impl BattleTemplate {
 }
 
 /// Size and fill every ammunition critical, admitting administrator flags when `contract`.
-fn normalize_with(template: &mut BattleTemplate, contract: bool) -> Result<()> {
+fn normalize_with(template: &mut MechTemplate, contract: bool) -> Result<()> {
     for (location, section) in &mut template.sections {
         for (slot, part) in &mut section.criticals {
             let Some(name) = super::equipment::strip_name_prefix(&part.equipment, "Ammo_") else {
@@ -30,12 +30,12 @@ fn normalize_with(template: &mut BattleTemplate, contract: bool) -> Result<()> {
                     part.equipment
                 )
             };
-            let weapon = match BattleWeapon::parse(name) {
+            let weapon = match Weapon::parse(name) {
                 Ok(weapon) => weapon,
                 Err(_)
                     if contract
-                        && super::BattlePart::parse(&part.equipment)
-                            .is_ok_and(|part| part.kind == super::BattlePartKind::Ammunition) =>
+                        && super::Part::parse(&part.equipment)
+                            .is_ok_and(|part| part.kind == super::PartKind::Ammunition) =>
                 {
                     continue;
                 }

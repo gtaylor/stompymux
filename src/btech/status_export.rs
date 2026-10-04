@@ -1,10 +1,10 @@
 //! Compact status export with independent weapon rows and grouped live ammunition columns.
-use super::{BattleAmmunitionMode as Mode, BattleUnit, BattleWeapon};
+use super::{AmmunitionMode as Mode, Mech, Weapon};
 use anyhow::Result;
 use std::fmt::Write;
 
 /// Stable mode letters used by the compact ammunition column.
-pub(super) fn mode_letter(mode: Mode, weapon: BattleWeapon) -> char {
+pub(super) fn mode_letter(mode: Mode, weapon: Weapon) -> char {
     match mode {
         Mode::Normal => ' ',
         Mode::INarcExplosive => 'X',
@@ -51,14 +51,14 @@ pub(super) fn mode_letter(mode: Mode, weapon: BattleWeapon) -> char {
 
 /// One ammunition kind, retaining first-encounter order across sections and slots.
 pub(super) struct Ammunition {
-    pub(super) weapon: BattleWeapon,
+    pub(super) weapon: Weapon,
     pub(super) mode: Mode,
     pub(super) rounds: u16,
     pub(super) capacity: u16,
 }
 
 /// Export chassis and optionally weapons. Armor selections do not change this compact record.
-pub(super) fn render(unit: &BattleUnit, weapons: bool) -> Result<String> {
+pub(super) fn render(unit: &Mech, weapons: bool) -> Result<String> {
     let definition = unit.definition();
     let running = (unit.mobility().maximum_speed / 10.75) as u16;
     let jumping = (unit.jump_capacity(100)?.speed / 10.75) as u16;
@@ -101,7 +101,7 @@ pub(super) fn render(unit: &BattleUnit, weapons: bool) -> Result<String> {
 }
 
 /// Vehicle anatomy supplies rows to the same export grouping and formatting rules.
-pub(super) fn render_vehicle(unit: &super::BattleVehicle, weapons: bool) -> Result<String> {
+pub(super) fn render_vehicle(unit: &super::Vehicle, weapons: bool) -> Result<String> {
     let definition = unit.definition();
     let running = (unit.maximum_speed() / 10.75) as u16;
     let loadout = unit.loadout()?;
@@ -142,7 +142,7 @@ pub(super) fn render_vehicle(unit: &super::BattleVehicle, weapons: bool) -> Resu
 /// Group surviving ammunition in encounter order and pair it with independent weapon rows.
 fn append_equipment<'a>(
     mut record: String,
-    mounts: impl Iterator<Item = (BattleWeapon, &'a str)>,
+    mounts: impl Iterator<Item = (Weapon, &'a str)>,
     bins: impl Iterator<Item = Ammunition>,
 ) -> String {
     let ammunition = group_ammunition(bins);
@@ -213,11 +213,11 @@ mod tests {
     /// Artillery letters distinguish its payloads from the shared conventional catalogue labels.
     #[test]
     fn artillery_payload_letters() {
-        assert_eq!(mode_letter(Mode::Cluster, BattleWeapon::ArrowIv), 'C');
-        assert_eq!(mode_letter(Mode::Cluster, BattleWeapon::Lbx10), 'L');
-        assert_eq!(mode_letter(Mode::Smoke, BattleWeapon::ArrowIv), 'S');
-        assert_eq!(mode_letter(Mode::Mine, BattleWeapon::ArrowIv), 'M');
-        assert_eq!(mode_letter(Mode::Artemis, BattleWeapon::Lrm5), 'A');
-        assert_eq!(mode_letter(Mode::Narc, BattleWeapon::Srm4), 'N');
+        assert_eq!(mode_letter(Mode::Cluster, Weapon::ArrowIv), 'C');
+        assert_eq!(mode_letter(Mode::Cluster, Weapon::Lbx10), 'L');
+        assert_eq!(mode_letter(Mode::Smoke, Weapon::ArrowIv), 'S');
+        assert_eq!(mode_letter(Mode::Mine, Weapon::ArrowIv), 'M');
+        assert_eq!(mode_letter(Mode::Artemis, Weapon::Lrm5), 'A');
+        assert_eq!(mode_letter(Mode::Narc, Weapon::Srm4), 'N');
     }
 }

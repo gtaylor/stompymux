@@ -22,7 +22,7 @@ async fn fixture(
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         if index < 2 {
             let mut definition =
-                BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
                     .unwrap();
             definition
                 .attributes
@@ -32,7 +32,7 @@ async fn fixture(
             create_battle_vehicle(
                 &mut world,
                 id,
-                BattleVehicleTemplate::parse("test", vehicle).unwrap(),
+                VehicleTemplate::parse("test", vehicle).unwrap(),
             )
             .unwrap();
         }
@@ -44,7 +44,7 @@ async fn fixture(
 }
 
 /// Assign scenario power without introducing crew actions into sensor tests.
-fn power(world: &mut World, ids: &[ObjectId], value: BattlePower) {
+fn power(world: &mut World, ids: &[ObjectId], value: Power) {
     for id in ids {
         world.btech.set_unit_power(*id, value).unwrap();
     }
@@ -60,13 +60,13 @@ async fn formation() -> (tempfile::TempDir, Config, World, [ObjectId; 4]) {
     for id in ids {
         place_battle_unit(&mut world, id, map, 0, 0).unwrap();
     }
-    power(&mut world, &ids, BattlePower::Running);
+    power(&mut world, &ids, Power::Running);
     (dir, config, world, ids)
 }
 
 /// Ordinary conventional aim without range extensions or arc overrides.
-fn rules() -> BattleAimRules {
-    BattleAimRules {
+fn rules() -> AimRules {
+    AimRules {
         woods_damage: false,
         dig_bonus: 3,
         dig_only_front: false,
@@ -99,8 +99,8 @@ async fn vehicle_aim_combines_mixed_targets_controls_locks_and_saved_replay() {
         assert_eq!(aim.control_damage, 0);
         assert_eq!(
             aim.perception,
-            Some(BattlePerceptionAim {
-                channel: Some(BattleDetectionChannel::Sensors),
+            Some(PerceptionAim {
+                channel: Some(DetectionChannel::Sensors),
                 direct_fire: true,
                 modifier: 0,
             })
@@ -117,13 +117,12 @@ async fn vehicle_aim_combines_mixed_targets_controls_locks_and_saved_replay() {
             battle_pilot_aim_modifiers(&world, shooter, target, 0, false, rules()).unwrap();
         assert_eq!(settled.target_lock, 0);
         assert_eq!(settled.subtotal(), aim.subtotal().map(|n| n - 2));
-        damage_battle_vehicle_controls(&mut world, shooter, BattleVehicleControlHit::Sensors)
-            .unwrap();
+        damage_battle_vehicle_controls(&mut world, shooter, VehicleControlHit::Sensors).unwrap();
         damage_battle_vehicle_controls(
             &mut world,
             shooter,
-            BattleVehicleControlHit::Stabilizers {
-                section: BattleVehicleSection::Turret,
+            VehicleControlHit::Stabilizers {
+                section: VehicleSection::Turret,
             },
         )
         .unwrap();
@@ -155,9 +154,9 @@ async fn vehicle_aim_combines_mixed_targets_controls_locks_and_saved_replay() {
 async fn vehicle_aim_rechecks_contact_sensors_and_does_not_spend_candidate_dice() {
     let (_dir, _config, mut world, [target, _, shooter, _]) = formation().await;
     let map = world.btech.vehicles()[&shooter].position().unwrap().map;
-    power(&mut world, &[target], BattlePower::Off);
+    power(&mut world, &[target], Power::Off);
     place_battle_unit(&mut world, target, map, 0, 4).unwrap();
-    power(&mut world, &[target], BattlePower::Running);
+    power(&mut world, &[target], Power::Running);
     let before = world.btech.clone();
     assert!(
         battle_aim_modifiers(&world, shooter, target, 0, 6, rules())
@@ -170,19 +169,19 @@ async fn vehicle_aim_rechecks_contact_sensors_and_does_not_spend_candidate_dice(
     let before = world.btech.clone();
     assert!(battle_aim_modifiers(&world, shooter, target, 99, 6, rules()).is_err());
     assert_eq!(world.btech, before);
-    set_battle_map_perception(&mut world, map, BattleMapPerceptionFlag::Sensors, false).unwrap();
-    set_battle_map_visibility(&mut world, map, BattleLight::Day, 0).unwrap();
+    set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, false).unwrap();
+    set_battle_map_visibility(&mut world, map, Light::Day, 0).unwrap();
     let before = world.btech.clone();
     let unseen = battle_aim_modifiers(&world, shooter, target, 0, 6, rules()).unwrap();
     assert!(unseen.perception.is_none() && unseen.subtotal().is_none());
     assert_eq!(world.btech, before);
-    set_battle_map_visibility(&mut world, map, BattleLight::Day, 30).unwrap();
+    set_battle_map_visibility(&mut world, map, Light::Day, 30).unwrap();
     let before = world.btech.clone();
     let aim = battle_aim_modifiers(&world, shooter, target, 0, 6, rules()).unwrap();
     assert_eq!(
         aim.perception,
-        Some(BattlePerceptionAim {
-            channel: Some(BattleDetectionChannel::Sight),
+        Some(PerceptionAim {
+            channel: Some(DetectionChannel::Sight),
             direct_fire: true,
             modifier: 0,
         })
@@ -202,7 +201,7 @@ async fn vehicle_aim_applies_computer_and_ammunition_accuracy_without_fire_admis
     for id in ids {
         place_battle_unit(&mut world, id, map, 0, 0).unwrap();
     }
-    power(&mut world, &ids, BattlePower::Running);
+    power(&mut world, &ids, Power::Running);
     refresh_battle_contacts(&mut world, &[shooter]).unwrap();
     let equipped = battle_aim_modifiers(&world, shooter, target, 0, 6, rules()).unwrap();
     assert_eq!(equipped.targeting_computer, -1);
@@ -210,7 +209,7 @@ async fn vehicle_aim_applies_computer_and_ammunition_accuracy_without_fire_admis
         .btech
         .rewrite_unit_record(shooter, |record| {
             record["ammunition_modes"]["0"] =
-                serde_json::to_value(BattleAmmunitionMode::ArmorPiercing).unwrap();
+                serde_json::to_value(AmmunitionMode::ArmorPiercing).unwrap();
         })
         .unwrap();
     let ap = battle_aim_modifiers(&world, shooter, target, 0, 6, rules()).unwrap();
@@ -232,7 +231,7 @@ async fn vehicle_aim_applies_computer_and_ammunition_accuracy_without_fire_admis
         &mut world,
         shooter,
         VehicleCriticalLocation {
-            section: BattleVehicleSection::Front,
+            section: VehicleSection::Front,
             slot: 0,
         },
     )
@@ -251,24 +250,24 @@ async fn mech_and_vehicle_aim_share_vehicle_target_terms_without_spending_dice()
     for id in ids {
         place_battle_unit(&mut world, id, map, 0, 0).unwrap();
     }
-    power(&mut world, &ids, BattlePower::Running);
+    power(&mut world, &ids, Power::Running);
     refresh_battle_contacts(&mut world, &[mech, vehicle]).unwrap();
     let mech_mount = world.btech.constructed_units()[&mech]
         .loadout()
         .unwrap()
         .weapons
         .iter()
-        .position(|mount| mount.weapon == BattleWeapon::Srm4)
+        .position(|mount| mount.weapon == Weapon::Srm4)
         .unwrap();
     assert_eq!(
         world.btech.vehicles()[&vehicle].loadout().unwrap().weapons[0].weapon,
-        BattleWeapon::Srm4
+        Weapon::Srm4
     );
     for (speed, power, expected_movement) in [
-        (0.0, BattlePower::Running, 0),
-        (43.001, BattlePower::Running, 2),
-        (-21.501, BattlePower::Running, 1),
-        (0.0, BattlePower::Off, -4),
+        (0.0, Power::Running, 0),
+        (43.001, Power::Running, 2),
+        (-21.501, Power::Running, 1),
+        (0.0, Power::Off, -4),
     ] {
         for homing in [false, true] {
             let mut saved = serde_json::to_value(&world.btech).unwrap();
@@ -284,7 +283,7 @@ async fn mech_and_vehicle_aim_share_vehicle_target_terms_without_spending_dice()
                 [("constructed", mech, mech_mount), ("vehicles", vehicle, 0)]
             {
                 saved[class][shooter.0.to_string()]["ammunition_modes"][index.to_string()] =
-                    serde_json::to_value(BattleAmmunitionMode::Narc).unwrap();
+                    serde_json::to_value(AmmunitionMode::Narc).unwrap();
             }
             world.btech = serde_json::from_value(saved).unwrap();
             let before = world.btech.clone();
@@ -319,11 +318,11 @@ async fn mech_and_vehicle_aim_share_vehicle_target_terms_without_spending_dice()
 #[tokio::test]
 async fn explicit_vehicle_links_share_targeting_computer_aim_and_critical_loss() {
     for weapon in [
-        BattleWeapon::HeavyFlamer,
-        BattleWeapon::VehicleFlamer,
-        BattleWeapon::VehicleHeavyFlamer,
-        BattleWeapon::MachineGun,
-        BattleWeapon::ClanMachineGun,
+        Weapon::HeavyFlamer,
+        Weapon::VehicleFlamer,
+        Weapon::VehicleHeavyFlamer,
+        Weapon::MachineGun,
+        Weapon::ClanMachineGun,
     ] {
         let template = include_str!("../game/mechs/Demolisher.toml")
             .replace(
@@ -340,7 +339,7 @@ async fn explicit_vehicle_links_share_targeting_computer_aim_and_critical_loss()
         for id in ids {
             place_battle_unit(&mut world, id, map, 0, 0).unwrap();
         }
-        power(&mut world, &ids, BattlePower::Running);
+        power(&mut world, &ids, Power::Running);
         refresh_battle_contacts(&mut world, &[shooter]).unwrap();
         for target in [ids[0], ids[3]] {
             let before = world.btech.clone();
@@ -352,7 +351,7 @@ async fn explicit_vehicle_links_share_targeting_computer_aim_and_critical_loss()
                 &mut damaged,
                 shooter,
                 VehicleCriticalLocation {
-                    section: BattleVehicleSection::Front,
+                    section: VehicleSection::Front,
                     slot: 0,
                 },
             )

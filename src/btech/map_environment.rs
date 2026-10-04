@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 /// SETCOND values; omitted vacuum and underground arguments are false.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct BattleMapEnvironment {
+pub struct MapEnvironment {
     pub gravity: u8,
     pub temperature: i8,
     #[serde(default)]
@@ -17,8 +17,8 @@ pub struct BattleMapEnvironment {
 
 impl super::StoredMap {
     /// Current environment is read from the shared map, including its durable underground flag.
-    pub fn environment(&self) -> BattleMapEnvironment {
-        BattleMapEnvironment {
+    pub fn environment(&self) -> MapEnvironment {
+        MapEnvironment {
             gravity: self.gravity as u8,
             temperature: self.temperature as i8,
             vacuum: self.has_flag(super::MapFlag::Vacuum),
@@ -33,8 +33,8 @@ pub fn set_map_environment(
     world: &mut World,
     actor: ObjectId,
     id: ObjectId,
-    conditions: BattleMapEnvironment,
-) -> Result<BattleMapEnvironment> {
+    conditions: MapEnvironment,
+) -> Result<MapEnvironment> {
     ensure!(
         crate::authority::is_wizard(world, actor),
         "Permission denied."
@@ -73,7 +73,7 @@ pub fn set_map_environment(
 }
 
 /// Parse the real handler's four fields rather than the catalogue's outdated cloud-base description.
-fn parse(arguments: &str) -> Result<BattleMapEnvironment> {
+fn parse(arguments: &str) -> Result<MapEnvironment> {
     // The reference tokenizer reads at most four space/tab-delimited fields.
     let args: Vec<_> = arguments
         .split([' ', '\t'])
@@ -95,7 +95,7 @@ fn parse(arguments: &str) -> Result<BattleMapEnvironment> {
         ensure!((minimum..=maximum).contains(&value), message);
         Ok(value)
     };
-    Ok(BattleMapEnvironment {
+    Ok(MapEnvironment {
         gravity: field(
             0,
             0,
@@ -123,13 +123,13 @@ pub fn set_map_environment_action(
     scripts: &crate::Scripts,
     actor: ObjectId,
     id: ObjectId,
-    conditions: BattleMapEnvironment,
-) -> Result<BattleMapEnvironment> {
+    conditions: MapEnvironment,
+) -> Result<MapEnvironment> {
     scripts.atomic(|_| {
         let actual = set_map_environment(&mut scripts.world_mut(), actor, id, conditions)?;
         super::notify_message(
             scripts,
-            super::BattleMessageTarget::Player(actor),
+            super::MessageTarget::Player(actor),
             "Conditions set!",
         )?;
         scripts.effects.validate()?;
@@ -165,7 +165,7 @@ mod tests {
         for input in ["-0 +0 -0 +0", "0 0 0 0 ignored arguments", "\t0\t0\t"] {
             assert_eq!(
                 parse(input).unwrap(),
-                BattleMapEnvironment {
+                MapEnvironment {
                     gravity: 0,
                     temperature: 0,
                     vacuum: false,
@@ -175,7 +175,7 @@ mod tests {
         }
         assert_eq!(
             parse("0 -128").unwrap(),
-            BattleMapEnvironment {
+            MapEnvironment {
                 gravity: 0,
                 temperature: -128,
                 vacuum: false,
@@ -184,7 +184,7 @@ mod tests {
         );
         assert_eq!(
             parse("255 127 1 1").unwrap(),
-            BattleMapEnvironment {
+            MapEnvironment {
                 gravity: 255,
                 temperature: 127,
                 vacuum: true,

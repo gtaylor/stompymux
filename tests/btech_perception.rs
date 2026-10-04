@@ -3,7 +3,7 @@ use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 
-use BattleDetectionChannel::{Probe, Sensors, Sight};
+use DetectionChannel::{Probe, Sensors, Sight};
 
 /// Flat grassland rows for a one-hex-wide lane.
 fn grass(length: usize) -> Vec<&'static str> {
@@ -23,9 +23,9 @@ struct Lane {
 impl Lane {
     /// Move the target to row `y` of the lane; administrative placement needs it stopped.
     fn place_target(&mut self, y: i64) {
-        set_power(&mut self.world, self.target, BattlePower::Off);
+        set_power(&mut self.world, self.target, Power::Off);
         place_battle_unit(&mut self.world, self.target, self.map, 0, y).unwrap();
-        set_power(&mut self.world, self.target, BattlePower::Running);
+        set_power(&mut self.world, self.target, Power::Running);
     }
 
     /// Replace the target's scenario signature on the hostile team.
@@ -33,7 +33,7 @@ impl Lane {
         set_battle_unit_signature(
             &mut self.world,
             self.target,
-            BattleUnitSignature {
+            UnitSignature {
                 team: 2,
                 hidden,
                 illuminated,
@@ -43,14 +43,14 @@ impl Lane {
     }
 
     /// Current channel and aim of the observer's view of the target.
-    fn perceived(&self) -> Option<(BattleDetectionChannel, i16)> {
+    fn perceived(&self) -> Option<(DetectionChannel, i16)> {
         battle_perceive(&self.world, self.observer, self.target)
             .unwrap()
             .map(|perception| (perception.channel, perception.aim_modifier))
     }
 
     /// Set battlefield light and weather visibility.
-    fn conditions(&mut self, light: BattleLight, visibility: u8) {
+    fn conditions(&mut self, light: Light, visibility: u8) {
         set_battle_map_visibility(&mut self.world, self.map, light, visibility).unwrap();
     }
 }
@@ -82,12 +82,9 @@ async fn lane(rows: &[&str], observer: Observer<'_>) -> Lane {
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     }
     let vehicle = |source: &str, equipment: Option<&str>| {
-        let mut definition = BattleVehicleTemplate::parse("test", source).unwrap();
+        let mut definition = VehicleTemplate::parse("test", source).unwrap();
         if let Some(equipment) = equipment {
-            let front = definition
-                .sections
-                .get_mut(&BattleVehicleSection::Front)
-                .unwrap();
+            let front = definition.sections.get_mut(&VehicleSection::Front).unwrap();
             front.criticals.clear();
             front.criticals.insert(
                 0,
@@ -116,21 +113,21 @@ async fn lane(rows: &[&str], observer: Observer<'_>) -> Lane {
         Observer::Mech => create_battle_unit(
             &mut world,
             observer_id,
-            BattleTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap(),
+            MechTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap(),
         )
         .unwrap(),
     }
     create_battle_unit(
         &mut world,
         target,
-        BattleTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, observer_id, map, 0, 0).unwrap();
     place_battle_unit(&mut world, target, map, 0, 1).unwrap();
     for id in [observer_id, target] {
-        set_power(&mut world, id, BattlePower::Running);
+        set_power(&mut world, id, Power::Running);
     }
     let mut lane = Lane {
         _dir: dir,
@@ -147,7 +144,7 @@ async fn lane(rows: &[&str], observer: Observer<'_>) -> Lane {
 /// Switch a unit on or off without startup countdowns by editing its saved power state.
 /// This edits the raw record because some lane targets deliberately carry an active null
 /// signature without its equipment, so perception is tested apart from that equipment.
-fn set_power(world: &mut World, id: ObjectId, power: BattlePower) {
+fn set_power(world: &mut World, id: ObjectId, power: Power) {
     world
         .btech
         .rewrite_unit_record(id, |record| {
@@ -162,14 +159,14 @@ fn add_smoke(lane: &mut Lane) {
         &mut lane.world,
         lane.map,
         HexCoordinate { x: 0, y: 2 },
-        Some(BattleDecoration::new(DecorationKind::Smoke, 0, None)),
+        Some(Decoration::new(DecorationKind::Smoke, 0, None)),
     )
     .unwrap();
 }
 
 /// Neutral aim rules for inspecting the perception term of a weapon's aim.
-fn aim_rules() -> BattleAimRules {
-    BattleAimRules {
+fn aim_rules() -> AimRules {
+    AimRules {
         woods_damage: false,
         dig_bonus: 3,
         dig_only_front: false,
@@ -187,7 +184,7 @@ fn aim_rules() -> BattleAimRules {
 #[tokio::test]
 async fn sensor_band_ignores_darkness_and_sight_follows_visibility() {
     let mut lane = lane(&grass(62), Observer::Vehicle(None)).await;
-    lane.conditions(BattleLight::Night, 10);
+    lane.conditions(Light::Night, 10);
     // Night visibility 10 sets a thirty-hex map ceiling.
     for (distance, lit, expected) in [
         (1, false, Some((Sensors, 0))),
@@ -213,13 +210,13 @@ async fn sensor_band_ignores_darkness_and_sight_follows_visibility() {
         assert_eq!(lane.perceived(), Some((Sight, aim)), "lit={lit}");
     }
     // Twilight has no darkness penalty and no lighting bonus.
-    lane.conditions(BattleLight::Twilight, 10);
+    lane.conditions(Light::Twilight, 10);
     lane.target_signature(false, true);
     assert_eq!(lane.perceived(), Some((Sight, 0)));
     lane.place_target(16);
     assert_eq!(lane.perceived(), None);
     // Daylight reaches the full weather visibility.
-    lane.conditions(BattleLight::Day, 30);
+    lane.conditions(Light::Day, 30);
     lane.target_signature(false, false);
     for (distance, expected) in [(30, Some((Sight, 0))), (31, None)] {
         lane.place_target(distance);
@@ -314,16 +311,16 @@ async fn obstacles_block_sensors_and_sight_but_not_probes() {
 async fn damage_installations_and_map_switches_shape_the_band() {
     let mut mech = lane(&grass(4), Observer::Mech).await;
     for (slot, status, range) in [
-        (None, BattlePerceptionStatus::Ready, 15),
-        (Some(1), BattlePerceptionStatus::Degraded, 7),
-        (Some(4), BattlePerceptionStatus::Damaged, 0),
+        (None, PerceptionStatus::Ready, 15),
+        (Some(1), PerceptionStatus::Degraded, 7),
+        (Some(4), PerceptionStatus::Damaged, 0),
     ] {
         if let Some(slot) = slot {
             destroy_battle_critical(
                 &mut mech.world,
                 mech.observer,
                 CriticalLocation {
-                    section: BattleSection::Head,
+                    section: MechSection::Head,
                     slot,
                 },
             )
@@ -342,12 +339,9 @@ async fn damage_installations_and_map_switches_shape_the_band() {
     let profile = battle_perception_profile(&switched.world, switched.observer).unwrap();
     assert_eq!(
         (profile.sensors, profile.probe.unwrap().status),
-        (BattlePerceptionStatus::Ready, BattlePerceptionStatus::Ready)
+        (PerceptionStatus::Ready, PerceptionStatus::Ready)
     );
-    for flag in [
-        BattleMapPerceptionFlag::Sensors,
-        BattleMapPerceptionFlag::Probes,
-    ] {
+    for flag in [MapPerceptionFlag::Sensors, MapPerceptionFlag::Probes] {
         set_battle_map_perception(&mut switched.world, switched.map, flag, false).unwrap();
     }
     let profile = battle_perception_profile(&switched.world, switched.observer).unwrap();
@@ -357,18 +351,14 @@ async fn damage_installations_and_map_switches_shape_the_band() {
             profile.sensor_range,
             profile.probe.unwrap().status
         ),
-        (
-            BattlePerceptionStatus::Disabled,
-            0,
-            BattlePerceptionStatus::Disabled
-        )
+        (PerceptionStatus::Disabled, 0, PerceptionStatus::Disabled)
     );
-    switched.conditions(BattleLight::Night, 1);
+    switched.conditions(Light::Night, 1);
     switched.place_target(3);
     assert_eq!(switched.perceived(), None);
     assert_eq!(
         switched.world.btech.maps()[&switched.map].sensor_flags,
-        BattleMapPerceptionFlag::Sensors.bit() | BattleMapPerceptionFlag::Probes.bit()
+        MapPerceptionFlag::Sensors.bit() | MapPerceptionFlag::Probes.bit()
     );
 }
 
@@ -383,15 +373,15 @@ async fn hostile_ecm_leaves_only_sight() {
     create_battle_unit(
         &mut lane.world,
         jammer,
-        BattleTemplate::parse("RVN-1X", include_str!("../game/mechs/RVN-1X.toml")).unwrap(),
+        MechTemplate::parse("RVN-1X", include_str!("../game/mechs/RVN-1X.toml")).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut lane.world, jammer, lane.map, 0, 6).unwrap();
-    set_power(&mut lane.world, jammer, BattlePower::Running);
+    set_power(&mut lane.world, jammer, Power::Running);
     set_battle_unit_signature(
         &mut lane.world,
         jammer,
-        BattleUnitSignature {
+        UnitSignature {
             team: 2,
             ..Default::default()
         },
@@ -399,15 +389,15 @@ async fn hostile_ecm_leaves_only_sight() {
     .unwrap();
     lane.world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(jammer);
     assign_battle_pilot(&mut lane.world, jammer, ObjectId(2)).unwrap();
-    lane.conditions(BattleLight::Night, 2);
+    lane.conditions(Light::Night, 2);
     lane.place_target(4);
     assert_eq!(lane.perceived(), Some((Sensors, 0)));
     toggle_battle_electronics(
         &mut lane.world,
         jammer,
         ObjectId(2),
-        BattleElectronicSuite::Guardian,
-        BattleElectronicMode::Ecm,
+        ElectronicSuite::Guardian,
+        ElectronicMode::Ecm,
     )
     .unwrap();
     let profile = battle_perception_profile(&lane.world, lane.observer).unwrap();
@@ -417,11 +407,7 @@ async fn hostile_ecm_leaves_only_sight() {
             profile.sensor_range,
             profile.probe.unwrap().status
         ),
-        (
-            BattlePerceptionStatus::Jammed,
-            0,
-            BattlePerceptionStatus::Jammed
-        )
+        (PerceptionStatus::Jammed, 0, PerceptionStatus::Jammed)
     );
     assert_eq!(lane.perceived(), None);
     lane.place_target(2);
@@ -441,10 +427,10 @@ async fn concealed_targets_hide_from_sensors_and_ordinary_probes() {
         let mut state = serde_json::to_value(&lane.world.btech).unwrap();
         state["constructed"][lane.target.0.to_string()]["null_signature"]["enabled"] = true.into();
         lane.world.btech = serde_json::from_value(state).unwrap();
-        lane.conditions(BattleLight::Night, 2);
+        lane.conditions(Light::Night, 2);
         lane.place_target(5);
         assert_eq!(lane.perceived(), expected, "{equipment:?}");
-        lane.conditions(BattleLight::Day, 30);
+        lane.conditions(Light::Day, 30);
         lane.place_target(10);
         assert_eq!(
             lane.perceived(),
@@ -458,7 +444,7 @@ async fn concealed_targets_hide_from_sensors_and_ordinary_probes() {
 /// five hexes, are found automatically inside three, and require a search in between.
 #[tokio::test]
 async fn acquisition_is_instant_except_for_hidden_units() {
-    let rules = BattleContactRules {
+    let rules = ContactRules {
         hostile: true,
         hidden: true,
         perception: 6,
@@ -482,9 +468,9 @@ async fn acquisition_is_instant_except_for_hidden_units() {
             assert_eq!(
                 update.transition,
                 if acquired {
-                    BattleContactTransition::Acquired
+                    ContactTransition::Acquired
                 } else {
-                    BattleContactTransition::Unseen
+                    ContactTransition::Unseen
                 },
                 "distance={distance} equipment={equipment:?}"
             );

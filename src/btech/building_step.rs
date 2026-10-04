@@ -1,5 +1,5 @@
 //! Shared construction-factor feedback when a unit enters a building's surface hex.
-use super::{BattleChannelMessage, BattleNotice, BattlePosition};
+use super::{DiagnosticMessage, Notice, Position};
 use crate::{Flag, ObjectId, World};
 use anyhow::Result;
 
@@ -8,8 +8,8 @@ use anyhow::Result;
 pub(super) fn entered(
     world: &mut World,
     id: ObjectId,
-    previous: BattlePosition,
-) -> Result<(Option<BattleNotice>, Option<BattleChannelMessage>)> {
+    previous: Position,
+) -> Result<(Option<Notice>, Option<DiagnosticMessage>)> {
     let unit = super::network_unit::unit(world, id)?;
     let Some(position) = unit.position() else {
         return Ok((None, None));
@@ -62,7 +62,7 @@ pub(super) fn entered(
     }
     let name = super::building_entrance::structure_name(world, interior)?.to_ascii_uppercase();
     Ok((
-        Some(BattleNotice {
+        Some(Notice {
             unit: id,
             text: format!("{name} has CF of {}.", building.integrity),
         }),

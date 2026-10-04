@@ -8,18 +8,14 @@ pub(super) fn speed_confirmation(speed: f64) -> String {
 }
 
 /// Read actual and requested motion without changing state or requiring assignment to the controls.
-pub fn motion_readout(
-    world: &World,
-    unit: ObjectId,
-    viewer: ObjectId,
-) -> Result<super::BattleMotion> {
+pub fn motion_readout(world: &World, unit: ObjectId, viewer: ObjectId) -> Result<super::Motion> {
     if world.btech.vehicles().contains_key(&unit) {
         return super::vehicle_driving::readout(world, unit, viewer);
     }
     super::brief::cockpit_access(world, unit, viewer)?;
     let record = &world.btech.constructed_units()[&unit];
     ensure!(
-        record.power() == super::BattlePower::Running && !record.is_destroyed(),
+        record.power() == super::Power::Running && !record.is_destroyed(),
         "Start the unit first"
     );
     record.motion().context("Unit is not placed")

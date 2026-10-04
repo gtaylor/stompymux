@@ -3,14 +3,14 @@ use crate::{ObjectId, World};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BattleUnitConfiguration {
+pub struct UnitConfiguration {
     pub preferred_id: Option<String>,
     pub display_name: Option<String>,
     pub markings: Option<String>,
     pub assigned_pilot: Option<ObjectId>,
 }
 
-pub fn unit_configuration(world: &World, id: ObjectId) -> BattleUnitConfiguration {
+pub fn unit_configuration(world: &World, id: ObjectId) -> UnitConfiguration {
     world
         .btech
         .unit_configuration
@@ -22,12 +22,12 @@ pub fn unit_configuration(world: &World, id: ObjectId) -> BattleUnitConfiguratio
 pub fn set_unit_configuration(
     world: &mut World,
     id: ObjectId,
-    update: impl FnOnce(&mut BattleUnitConfiguration),
+    update: impl FnOnce(&mut UnitConfiguration),
 ) {
     let values = &mut world.btech.unit_configuration;
     let entry = values.get_or_default(id);
     update(entry);
-    if *entry == BattleUnitConfiguration::default() {
+    if *entry == UnitConfiguration::default() {
         values.remove(&id);
     }
 }

@@ -7,7 +7,7 @@ use stompymux_rs::*;
 async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId, usize) {
     let (dir, config, mut world, subject, scanner, index) = firing::fixture_with_target(
         template,
-        Some(BattleWeapon::ClanArrowIv),
+        Some(Weapon::ClanArrowIv),
         include_str!("../game/mechs/JR7-D.toml"),
     )
     .await;
@@ -143,15 +143,15 @@ async fn scan_numbers_skip_destroyed_sections_without_reindexing_state() {
         .unwrap()
         .weapons
         .iter()
-        .filter(|mount| mount.criticals[0].section == BattleSection::LeftArm)
+        .filter(|mount| mount.criticals[0].section == MechSection::LeftArm)
         .count();
     assert!(lost > 0 && index >= lost);
     apply_damage_phase(
         &mut world,
         subject,
-        BattleSection::LeftArm,
+        MechSection::LeftArm,
         1000,
-        BattleDamagePhase::Internal,
+        DamagePhase::Internal,
     )
     .unwrap();
     firing::edit(&mut world, subject, |state| {

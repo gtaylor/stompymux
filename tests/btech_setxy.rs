@@ -15,10 +15,11 @@ async fn setxy_native_lua_geometry_guards_and_restart() {
         support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
         refresh_battle_contacts(&mut world, &[other]).unwrap();
         select_battle_target(&mut world, other, ObjectId(2), Some(unit)).unwrap();
-        let fixed =
-            world.btech.vehicles().get(&unit).is_some_and(|unit| {
-                unit.definition().movement == BattleVehicleMovement::Stationary
-            });
+        let fixed = world
+            .btech
+            .vehicles()
+            .get(&unit)
+            .is_some_and(|unit| unit.definition().movement == VehicleMovement::Stationary);
         firing::edit(&mut world, unit, |state| {
             state["motion"]["heading"] = 15.0.into();
             state["motion"]["desired_heading"] = if fixed { 15.0 } else { 45.0 }.into();
@@ -132,7 +133,7 @@ async fn setxy_native_lua_geometry_guards_and_restart() {
                 &config,
                 visitor,
                 unit,
-                BattleScenarioPosition {
+                ScenarioPosition {
                     coordinate: HexCoordinate { x: 0, y: 9 },
                     elevation: None,
                 }
@@ -156,7 +157,7 @@ async fn setxy_preserves_jump_progress_and_forced_descent_clock() {
         &config,
         ObjectId(1),
         unit,
-        BattleScenarioPosition {
+        ScenarioPosition {
             coordinate: HexCoordinate { x: 0, y: 9 },
             elevation: Some(20),
         },
@@ -174,14 +175,14 @@ async fn setxy_preserves_jump_progress_and_forced_descent_clock() {
     let mut restored = persistence::load(&config.database()).await.unwrap();
     assert_eq!(restored.btech, saved.btech);
     let mut original = saved.clone();
-    advance_battle_jumps(&mut original, BattleMovementRules::STANDARD).unwrap();
-    advance_battle_jumps(&mut restored, BattleMovementRules::STANDARD).unwrap();
+    advance_battle_jumps(&mut original, MovementRules::STANDARD).unwrap();
+    advance_battle_jumps(&mut restored, MovementRules::STANDARD).unwrap();
     assert_eq!(original.btech, restored.btech);
     stop_battle_unit(
         &mut restored,
         unit,
         ObjectId(1),
-        BattleMovementRules::STANDARD.fall,
+        MovementRules::STANDARD.fall,
     )
     .unwrap();
     let before = restored.btech.constructed_units()[&unit]
@@ -193,7 +194,7 @@ async fn setxy_preserves_jump_progress_and_forced_descent_clock() {
         &config,
         ObjectId(1),
         unit,
-        BattleScenarioPosition {
+        ScenarioPosition {
             coordinate: HexCoordinate { x: 0, y: 7 },
             elevation: Some(25),
         },
@@ -216,10 +217,10 @@ async fn setxy_vtol_flight_and_atomic_notification_failure() {
     let (dir, config, mut world, unit, other, _) =
         firing::fixture_with_target(source, None, source).await;
     let _ = begin_battle_vtol_takeoff(&mut world, unit, ObjectId(1), 0, false).unwrap();
-    advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
+    advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
     assert_eq!(
         world.btech.vehicles()[&unit].vtol_flight().unwrap().phase,
-        BattleVtolFlightPhase::Airborne
+        VtolFlightPhase::Airborne
     );
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
     set_battle_coordinates_action(
@@ -227,7 +228,7 @@ async fn setxy_vtol_flight_and_atomic_notification_failure() {
         &config,
         ObjectId(1),
         unit,
-        BattleScenarioPosition {
+        ScenarioPosition {
             coordinate: HexCoordinate { x: 0, y: 9 },
             elevation: Some(30),
         },
@@ -236,14 +237,14 @@ async fn setxy_vtol_flight_and_atomic_notification_failure() {
     let flight = scripts.world().btech.vehicles()[&unit]
         .vtol_flight()
         .unwrap();
-    assert_eq!(flight.phase, BattleVtolFlightPhase::Airborne);
+    assert_eq!(flight.phase, VtolFlightPhase::Airborne);
     assert_eq!(flight.altitude, 30.0);
     let mut falling = scripts.world().clone();
     stop_battle_unit(
         &mut falling,
         unit,
         ObjectId(1),
-        BattleMovementRules::STANDARD.fall,
+        MovementRules::STANDARD.fall,
     )
     .unwrap();
     let before_fall = falling.btech.vehicles()[&unit]
@@ -257,7 +258,7 @@ async fn setxy_vtol_flight_and_atomic_notification_failure() {
         &config,
         ObjectId(1),
         unit,
-        BattleScenarioPosition {
+        ScenarioPosition {
             coordinate: HexCoordinate { x: 0, y: 8 },
             elevation: Some(40),
         },
@@ -266,7 +267,7 @@ async fn setxy_vtol_flight_and_atomic_notification_failure() {
     let flight = falling.world().btech.vehicles()[&unit]
         .vtol_flight()
         .unwrap();
-    assert_eq!(flight.phase, BattleVtolFlightPhase::Falling);
+    assert_eq!(flight.phase, VtolFlightPhase::Falling);
     assert_eq!(flight.altitude, 40.0);
     assert_eq!(flight.fall.unwrap().elevation(), 40);
     assert_eq!(
@@ -278,7 +279,7 @@ async fn setxy_vtol_flight_and_atomic_notification_failure() {
         &config,
         ObjectId(1),
         unit,
-        BattleScenarioPosition {
+        ScenarioPosition {
             coordinate: HexCoordinate { x: 0, y: 8 },
             elevation: None,
         },
@@ -287,7 +288,7 @@ async fn setxy_vtol_flight_and_atomic_notification_failure() {
     let flight = scripts.world().btech.vehicles()[&unit]
         .vtol_flight()
         .unwrap();
-    assert_eq!(flight.phase, BattleVtolFlightPhase::Landed);
+    assert_eq!(flight.phase, VtolFlightPhase::Landed);
     assert_eq!(flight.altitude, 0.0);
     // Create an incoming lock so its publication succeeds before the confirmation fails.
     world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(other);
@@ -322,7 +323,7 @@ async fn setxy_vtol_flight_and_atomic_notification_failure() {
         &config,
         ObjectId(1),
         unit,
-        BattleScenarioPosition {
+        ScenarioPosition {
             coordinate: HexCoordinate { x: 0, y: 9 },
             elevation: Some(30),
         },
@@ -352,7 +353,7 @@ async fn setxy_moves_complete_tow_pairs() {
             let b = world.create(&config, "Tow".into(), Kind::Thing);
             for (id, source) in [(a, carrier), (b, target)] {
                 world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-                BattleUnitTemplate::parse("test", source)
+                UnitTemplate::parse("test", source)
                     .unwrap()
                     .create(&mut world, id)
                     .unwrap();
@@ -366,7 +367,7 @@ async fn setxy_moves_complete_tow_pairs() {
                     &config,
                     ObjectId(1),
                     id,
-                    BattleScenarioPosition {
+                    ScenarioPosition {
                         coordinate: HexCoordinate { x: 1, y: 1 },
                         elevation: Some(20),
                     },

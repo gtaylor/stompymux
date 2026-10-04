@@ -1,7 +1,5 @@
 //! Vehicle weapon failures share powered recycle state and the saved critical-selection dice stream.
-use super::{
-    BattleEquipmentFailure, BattleNotice, BattleVehicle, BattleVehicleSection, BattleWeapon,
-};
+use super::{EquipmentFailure, Notice, Vehicle, VehicleSection, Weapon};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
@@ -10,41 +8,41 @@ use std::collections::BTreeMap;
 /// Applied critical failure and its initial recovery duration for caller-owned notification.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[must_use = "Publish the critical notice in the enclosing damage transaction"]
-pub struct BattleVehicleWeaponJam {
+pub struct VehicleWeaponJam {
     pub index: usize,
-    pub weapon: BattleWeapon,
-    pub failure: BattleEquipmentFailure,
+    pub weapon: Weapon,
+    pub failure: EquipmentFailure,
     pub seconds: u16,
 }
 
-impl BattleVehicleWeaponJam {
+impl VehicleWeaponJam {
     /// Feedback for the occupants of the affected vehicle.
-    pub fn notice(&self, unit: ObjectId) -> BattleNotice {
+    pub fn notice(&self, unit: ObjectId) -> Notice {
         let name = self.weapon.name().split_once('.').unwrap().1;
         let text = match self.failure {
-            BattleEquipmentFailure::Jammed => {
+            EquipmentFailure::Jammed => {
                 format!("[fg=red bold]The shot temporarily jams your {name}![reset]")
             }
-            BattleEquipmentFailure::Disabled => {
+            EquipmentFailure::Disabled => {
                 format!("[fg=red bold]Your {name} is jammed![reset]")
             }
-            BattleEquipmentFailure::Shorted => {
+            EquipmentFailure::Shorted => {
                 format!("[fg=red bold]The shot causes your {name} to temporarily short out![reset]")
             }
-            BattleEquipmentFailure::Dud
-            | BattleEquipmentFailure::Empty
-            | BattleEquipmentFailure::AmmunitionJam
-            | BattleEquipmentFailure::CriticalAmmunitionJam => {
+            EquipmentFailure::Dud
+            | EquipmentFailure::Empty
+            | EquipmentFailure::AmmunitionJam
+            | EquipmentFailure::CriticalAmmunitionJam => {
                 format!("[fg=red bold]Your {name} cannot fire![reset]")
             }
         };
-        BattleNotice { unit, text }
+        Notice { unit, text }
     }
 }
 
-impl BattleVehicle {
+impl Vehicle {
     /// Critical failures keyed by weapon index; any active duration is in `weapon_recycle`.
-    pub fn weapon_failures(&self) -> &BTreeMap<usize, BattleEquipmentFailure> {
+    pub fn weapon_failures(&self) -> &BTreeMap<usize, EquipmentFailure> {
         &self.weapon_failures
     }
 }
@@ -54,8 +52,8 @@ impl BattleVehicle {
 pub fn jam_vehicle_weapon(
     world: &mut World,
     id: ObjectId,
-    section: BattleVehicleSection,
-) -> Result<Option<BattleVehicleWeaponJam>> {
+    section: VehicleSection,
+) -> Result<Option<VehicleWeaponJam>> {
     ensure!(
         world
             .objects
@@ -82,12 +80,12 @@ pub fn jam_vehicle_weapon(
     let index = candidates[usize::from(dice.die(count)? - 1)];
     let seconds = dice.die(61)? + 59;
     let weapon = loadout.weapons[index].weapon;
-    let failure = BattleEquipmentFailure::for_weapon(weapon);
+    let failure = EquipmentFailure::for_weapon(weapon);
     let vehicle = world.btech.vehicles.get_mut(&id).unwrap();
     vehicle.weapon_failures.insert(index, failure);
     vehicle.weapon_recycle.insert(index, seconds);
     vehicle.dice = dice;
-    Ok(Some(BattleVehicleWeaponJam {
+    Ok(Some(VehicleWeaponJam {
         index,
         weapon,
         failure,
@@ -98,15 +96,15 @@ pub fn jam_vehicle_weapon(
 /// Main-weapon critical selection; the disabled mount retains any existing recycle timer.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[must_use = "Publish the main-weapon jam notice in the enclosing damage transaction"]
-pub struct BattleVehicleMainWeaponJam {
+pub struct VehicleMainWeaponJam {
     pub index: usize,
-    pub weapon: BattleWeapon,
+    pub weapon: Weapon,
 }
 
-impl BattleVehicleMainWeaponJam {
+impl VehicleMainWeaponJam {
     /// Feedback for occupants without implying that the mount was physically destroyed.
-    pub fn notice(&self, unit: ObjectId) -> BattleNotice {
-        BattleNotice {
+    pub fn notice(&self, unit: ObjectId) -> Notice {
+        Notice {
             unit,
             text: format!(
                 "[fg=red bold]Your {} is jammed![reset]",
@@ -121,7 +119,7 @@ impl BattleVehicleMainWeaponJam {
 pub fn jam_vehicle_main_weapon(
     world: &mut World,
     id: ObjectId,
-) -> Result<Option<BattleVehicleMainWeaponJam>> {
+) -> Result<Option<VehicleMainWeaponJam>> {
     ensure!(
         world
             .objects
@@ -140,24 +138,24 @@ pub fn jam_vehicle_main_weapon(
     let mut dice = vehicle.dice.clone();
     let selected = vehicle
         .rank_main_weapon(&mut dice)?
-        .map(|(index, weapon)| BattleVehicleMainWeaponJam { index, weapon });
+        .map(|(index, weapon)| VehicleMainWeaponJam { index, weapon });
     let vehicle = world.btech.vehicles.get_mut(&id).unwrap();
     vehicle.dice = dice;
     if let Some(jam) = &selected {
         vehicle
             .weapon_failures
-            .insert(jam.index, BattleEquipmentFailure::Disabled);
+            .insert(jam.index, EquipmentFailure::Disabled);
     }
     Ok(selected)
 }
 
-impl super::BattleVehicle {
+impl super::Vehicle {
     /// Rank intact mounts once for either main-weapon jamming or destruction.
     /// Empty ammunition and existing failures retain eligibility; ties keep the first mount.
     pub(super) fn rank_main_weapon(
         &self,
-        dice: &mut super::BattleDice,
-    ) -> Result<Option<(usize, super::BattleWeapon)>> {
+        dice: &mut super::Dice,
+    ) -> Result<Option<(usize, super::Weapon)>> {
         if self.is_destroyed() {
             return Ok(None);
         }

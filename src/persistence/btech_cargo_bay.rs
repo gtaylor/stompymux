@@ -1,6 +1,6 @@
 //! Selective persistence of map cargo locations in the existing game-directory table.
 use super::write::{Cell, Fields, row};
-use crate::{BattleCargoTransferPoint, ObjectId, StoredMap, World};
+use crate::{CargoTransferPoint, ObjectId, StoredMap, World};
 use anyhow::{Context, Result, ensure};
 use sqlx::{Row, SqliteConnection};
 use std::collections::BTreeMap;
@@ -21,7 +21,7 @@ pub(super) async fn load(
             .context("Cargo transfer point references missing map")?;
         let hint: i64 = row.try_get("reveal_hint")?;
         ensure!(matches!(hint, 0 | 1), "Invalid cargo transfer hint flag");
-        let point = BattleCargoTransferPoint {
+        let point = CargoTransferPoint {
             x: i32::try_from(row.try_get::<i64, _>("x")?)?,
             y: i32::try_from(row.try_get::<i64, _>("y")?)?,
             reveal_hint: hint == 1,
@@ -66,7 +66,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
 }
 
 /// Owned point columns use the same representation for inserts and updates.
-fn point_fields(point: BattleCargoTransferPoint) -> super::write::Fields {
+fn point_fields(point: CargoTransferPoint) -> super::write::Fields {
     Fields::from([
         ("x", Cell::Integer(i64::from(point.x))),
         ("y", Cell::Integer(i64::from(point.y))),

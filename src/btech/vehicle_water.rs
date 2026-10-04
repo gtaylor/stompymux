@@ -10,15 +10,15 @@ pub(super) struct WaterEntry {
 }
 
 /// Ground vehicles with waterproof equipment and hovercraft do not need water avoidance.
-pub(super) fn requires_check(unit: &BattleVehicle, tile: Hex, height: i32) -> bool {
-    unit.definition().movement != BattleVehicleMovement::Hover
+pub(super) fn requires_check(unit: &Vehicle, tile: Hex, height: i32) -> bool {
+    unit.definition().movement != VehicleMovement::Hover
         && !unit.definition().has_special("Waterproof_Tech")
         && height < i32::from(tile.water_line())
         && (tile.is_open_water() || tile.has_bridge())
 }
 
 /// Apply the common water destruction consequence without fabricating material damage.
-pub(super) fn flood(world: &mut World, id: ObjectId, character: bool) -> Result<BattleNotice> {
+pub(super) fn flood(world: &mut World, id: ObjectId, character: bool) -> Result<Notice> {
     ensure!(
         character || !world.objects[&id].flags.contains(Flag::InCharacter),
         "Character vehicle flooding requires a host movement transaction"
@@ -29,7 +29,7 @@ pub(super) fn flood(world: &mut World, id: ObjectId, character: bool) -> Result<
         .get_mut(&id)
         .unwrap()
         .destroy_by_flooding();
-    Ok(BattleNotice {
+    Ok(Notice {
         unit: id,
         text: "You drive into the water and your vehicle becomes inoperable.".into(),
     })
@@ -40,7 +40,7 @@ pub(super) fn enter(
     world: &mut World,
     id: ObjectId,
     speed: f64,
-    rules: BattleFallRules,
+    rules: FallRules,
     character: bool,
 ) -> Result<WaterEntry> {
     let control = super::terrain_control::check(
@@ -51,14 +51,14 @@ pub(super) fn enter(
         character,
     )?;
     let success = control.success;
-    let mut notices = vec![BattleNotice {
+    let mut notices = vec![Notice {
         unit: id,
         text: "You notice a body of water in front of you".into(),
     }];
     let mut pilot_notices = Vec::new();
     control.capture_feedback(id, &mut notices, &mut pilot_notices);
     if success {
-        notices.push(BattleNotice {
+        notices.push(Notice {
             unit: id,
             text: "You manage to stop before falling in.".into(),
         });

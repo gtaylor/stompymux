@@ -6,7 +6,7 @@ use anyhow::{Context, Result, ensure};
 /// Release a tow atomically after the caller establishes authority over the carrier.
 /// The same operation serves operator dropoff and pickup of a target that carries a tow.
 /// Returned notices belong to the enclosing publication transaction.
-pub fn release_tow(world: &mut World, carrier: ObjectId) -> Result<Vec<BattleNotice>> {
+pub fn release_tow(world: &mut World, carrier: ObjectId) -> Result<Vec<Notice>> {
     let target = *world
         .btech
         .tows()
@@ -49,7 +49,7 @@ pub fn release_tow(world: &mut World, carrier: ObjectId) -> Result<Vec<BattleNot
             let unit = candidate.btech.vehicles.get_mut(&target).unwrap();
             unit.under_bridge = false;
             if let Some(flight) = &mut unit.vtol_flight {
-                *flight = BattleVtolFlight {
+                *flight = VtolFlight {
                     altitude: f64::from(surface),
                     ..Default::default()
                 };
@@ -66,17 +66,17 @@ pub fn release_tow(world: &mut World, carrier: ObjectId) -> Result<Vec<BattleNot
             .context("Tow target is unavailable")?;
         unit.ground_elevation = (!falling).then_some(f64::from(surface));
         if falling {
-            unit.free_fall = Some(BattleFreeFall::at_altitude(altitude)?);
+            unit.free_fall = Some(FreeFall::at_altitude(altitude)?);
             unit.jump_stabilization = 0;
             unit.stand_timer = None;
         }
     }
     let mut notices = vec![
-        BattleNotice {
+        Notice {
             unit: carrier,
             text: "You drop the unit you were carrying.".into(),
         },
-        BattleNotice {
+        Notice {
             unit: target,
             text: "You have been released from towing.".into(),
         },
@@ -85,11 +85,11 @@ pub fn release_tow(world: &mut World, carrier: ObjectId) -> Result<Vec<BattleNot
         world, carrier, target, "drops",
     ));
     if falling {
-        notices.push(BattleNotice {
+        notices.push(Notice {
             unit: carrier,
             text: "Maybe you should have done this closer to the ground.".into(),
         });
-        notices.push(BattleNotice {
+        notices.push(Notice {
             unit: target,
             text: "You wish they had done that a bit closer to the ground.".into(),
         });

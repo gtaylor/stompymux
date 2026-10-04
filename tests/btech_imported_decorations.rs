@@ -53,7 +53,7 @@ async fn imported_records_preserve_lookup_order_and_share_native_lua_removal() {
     );
     assert!(!map_fire_pending(&world));
     assert!(!map_smoke_pending(&world));
-    for kind in BattleStaticDecorationKind::ALL {
+    for kind in StaticDecorationKind::ALL {
         for record in world.btech.maps()[&map].static_decorations(kind).values() {
             assert_eq!(record.object, ObjectId(1));
             assert_eq!(record.duration, 123);
@@ -69,7 +69,7 @@ async fn imported_records_preserve_lookup_order_and_share_native_lua_removal() {
         &mut world,
         map,
         HexCoordinate { x: 0, y: 0 },
-        Some(BattleDecoration::new(DecorationKind::Fire, 0, None)),
+        Some(Decoration::new(DecorationKind::Fire, 0, None)),
     )
     .unwrap();
     let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
@@ -144,19 +144,16 @@ async fn replacing_imported_effects_preserves_underlying_terrain_and_clears_thei
         &mut world,
         map,
         HexCoordinate { x: 1, y: 1 },
-        Some(BattleDecoration::new(DecorationKind::Smoke, 2, None)),
+        Some(Decoration::new(DecorationKind::Smoke, 2, None)),
     )
     .unwrap();
     // New smoke replaces the stored fire and smoke records but keeps the generic decoration.
-    for kind in [
-        BattleStaticDecorationKind::Fire,
-        BattleStaticDecorationKind::Smoke,
-    ] {
+    for kind in [StaticDecorationKind::Fire, StaticDecorationKind::Smoke] {
         assert!(world.btech.maps()[&map].static_decorations(kind).is_empty());
     }
     assert_eq!(
         world.btech.maps()[&map]
-            .static_decorations(BattleStaticDecorationKind::Decoration)
+            .static_decorations(StaticDecorationKind::Decoration)
             .len(),
         1
     );
@@ -216,7 +213,7 @@ async fn replacing_imported_effects_preserves_underlying_terrain_and_clears_thei
         .is_err()
     );
     // Resizing keeps the fire, its records and the woods under it on a hex still on the map.
-    let before: Vec<_> = BattleStaticDecorationKind::ALL
+    let before: Vec<_> = StaticDecorationKind::ALL
         .map(|kind| {
             scripts.world().btech.maps()[&map]
                 .static_decorations(kind)
@@ -231,7 +228,7 @@ async fn replacing_imported_effects_preserves_underlying_terrain_and_clears_thei
         field.base_hex(1, 1).unwrap().terrain(),
         Terrain::HeavyForest
     );
-    let after: Vec<_> = BattleStaticDecorationKind::ALL
+    let after: Vec<_> = StaticDecorationKind::ALL
         .map(|kind| field.static_decorations(kind).len())
         .into();
     assert_eq!(after, before);

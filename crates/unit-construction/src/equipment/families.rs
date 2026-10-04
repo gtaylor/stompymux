@@ -1,8 +1,8 @@
 //! Weapon families and ammunition-dependent profiles: catalogue facts that template
 //! validation, ammunition compatibility and the server's combat rules all consult.
-use crate::{BattleAmmunitionMode, BattleWeapon, WeaponProfile};
+use crate::{AmmunitionMode, Weapon, WeaponProfile};
 
-impl BattleWeapon {
+impl Weapon {
     /// Long- and short-range torpedo launchers, which fire only from a submerged mount.
     pub fn is_torpedo(self) -> bool {
         matches!(
@@ -45,13 +45,10 @@ impl BattleWeapon {
 
     /// Extended Range missiles trade damage for reach and High Explosive missiles trade reach
     /// for damage; standard ammunition keeps the catalogue profile.
-    pub fn atm_profile(
-        mut profile: WeaponProfile,
-        ammunition: BattleAmmunitionMode,
-    ) -> WeaponProfile {
+    pub fn atm_profile(mut profile: WeaponProfile, ammunition: AmmunitionMode) -> WeaponProfile {
         let (damage, minimum, short, medium, long) = match ammunition {
-            BattleAmmunitionMode::ExtendedRange => (1, 4, 9, 18, 27),
-            BattleAmmunitionMode::HighExplosive => (3, 0, 3, 6, 9),
+            AmmunitionMode::ExtendedRange => (1, 4, 9, 18, 27),
+            AmmunitionMode::HighExplosive => (3, 0, 3, 6, 9),
             _ => return profile,
         };
         profile.damage = damage;
@@ -89,7 +86,7 @@ impl BattleWeapon {
     /// Resolve ballistic facts once for aim, damage, interception and ammunition hazards.
     /// Normal MML ammunition is SRM; MML_LRM bins carry the long-range family. ATM Extended
     /// Range and High Explosive missiles change damage and ranges.
-    pub fn profile_for_ammunition(self, ammunition: BattleAmmunitionMode) -> WeaponProfile {
+    pub fn profile_for_ammunition(self, ammunition: AmmunitionMode) -> WeaponProfile {
         let mut profile = self.profile();
         if self.is_atm() {
             return Self::atm_profile(profile, ammunition);
@@ -106,16 +103,16 @@ impl BattleWeapon {
     }
 
     /// Observer eligibility follows the loaded family, while equipment eligibility stays weapon-based.
-    pub fn supports_indirect_ammunition(self, ammunition: BattleAmmunitionMode) -> bool {
+    pub fn supports_indirect_ammunition(self, ammunition: AmmunitionMode) -> bool {
         self.supports_indirect_fire() && (!self.is_mml() || ammunition.is_mml_lrm())
     }
 
     /// Hotloaded MMLs draw their selected family; other launchers retain ordinary hotload supply.
-    pub fn hotload_supply_mode(self, selected: BattleAmmunitionMode) -> BattleAmmunitionMode {
+    pub fn hotload_supply_mode(self, selected: AmmunitionMode) -> AmmunitionMode {
         if self.is_mml() {
             selected
         } else {
-            BattleAmmunitionMode::Normal
+            AmmunitionMode::Normal
         }
     }
 
@@ -123,7 +120,7 @@ impl BattleWeapon {
     pub fn ammunition_explosion_damage_for_mode(
         self,
         rounds: u16,
-        ammunition: BattleAmmunitionMode,
+        ammunition: AmmunitionMode,
     ) -> u32 {
         if self.weapon_explosion_damage() > 0 || self == Self::PlasmaRifle {
             return 0;

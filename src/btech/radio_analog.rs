@@ -1,6 +1,6 @@
 //! Atomic analog reception with range/ECM interference on each receiver's saved dice stream.
 use super::map_slots::all_unit_order;
-use super::{BattleDice, BattleNotice, BattleRadioReception, electronic_field, unit_range};
+use super::{Dice, Notice, RadioReception, electronic_field, unit_range};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
@@ -8,7 +8,7 @@ use serde::Serialize;
 /// Analog deliveries and the listeners whose reception encountered an interference pass.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[must_use = "Publish receptions and eligible communication experience in the transmission checkpoint"]
-pub struct BattleAnalogRadioReport {
+pub struct AnalogRadioReport {
     /// Originating constructed unit.
     pub sender: ObjectId,
     /// Battlefield containing the broadcast.
@@ -16,18 +16,18 @@ pub struct BattleAnalogRadioReport {
     /// Source channel frequency, including zero.
     pub frequency: u32,
     /// Successful receptions in battlefield membership order.
-    pub receptions: Vec<BattleRadioReception>,
+    pub receptions: Vec<RadioReception>,
     /// Receivers eligible for the enclosing host's communication experience policy.
     pub interfered_receivers: Vec<ObjectId>,
     /// Frequency changes from unmatched analog broadcasts.
-    pub scans: Vec<super::BattleFrequencyScan>,
+    pub scans: Vec<super::FrequencyScan>,
     /// Ordered cockpit publications, including scanning feedback between receptions.
-    pub notifications: Vec<BattleNotice>,
+    pub notifications: Vec<Notice>,
 }
 
-impl BattleAnalogRadioReport {
+impl AnalogRadioReport {
     /// Project the completed receptions into cockpit notifications.
-    pub fn notices(&self) -> Vec<BattleNotice> {
+    pub fn notices(&self) -> Vec<Notice> {
         self.notifications.clone()
     }
 }
@@ -40,7 +40,7 @@ pub fn resolve_analog_radio(
     sender: ObjectId,
     channel: u8,
     message: &str,
-) -> Result<BattleAnalogRadioReport> {
+) -> Result<AnalogRadioReport> {
     use super::radio_delivery::{available, color};
     ensure!(
         message.chars().all(|c| !c.is_control()),
@@ -66,7 +66,7 @@ pub fn resolve_analog_radio(
     let ordered = all_unit_order(world, map)?;
     let source_blocked = electronic_field(world, sender)?.blocks_outgoing_guidance();
     let mut candidate = world.clone();
-    let mut report = BattleAnalogRadioReport {
+    let mut report = AnalogRadioReport {
         sender,
         map,
         frequency: selected.frequency,
@@ -121,7 +121,7 @@ pub fn resolve_analog_radio(
             .is_observer()
             .then(|| super::observer::radio_text(world, sender, index, bearing, &selected, message))
             .transpose()?;
-        report.receptions.push(BattleRadioReception {
+        report.receptions.push(RadioReception {
             receiver,
             channel: index as u8,
             transmitters: vec![sender],
@@ -134,7 +134,7 @@ pub fn resolve_analog_radio(
                 )
             }),
         });
-        report.notifications.push(BattleNotice {
+        report.notifications.push(Notice {
             unit: receiver,
             text: report.receptions.last().unwrap().text.clone(),
         });
@@ -160,7 +160,7 @@ fn range_interference(distance: f64, send: u16, receive: u16) -> Vec<u8> {
 
 /// One interference pass; Latin-1 values use bounded displacement and retain printable output.
 /// Larger Unicode characters stay intact so scrambling cannot create malformed UTF-8.
-fn scramble(dice: &mut BattleDice, text: &str, signal: u8, skill: i16) -> Result<String> {
+fn scramble(dice: &mut Dice, text: &str, signal: u8, skill: i16) -> Result<String> {
     text.chars()
         .map(|c| {
             if u32::from(c) > 255 {
@@ -193,7 +193,7 @@ mod tests {
 
     #[test]
     fn interference_roll_order_and_printable_clamp() {
-        let mut dice = BattleDice::seeded([7; 32]);
+        let mut dice = Dice::seeded([7; 32]);
         let mut expected = dice.clone();
         for _ in 0..3 {
             expected.die(100).unwrap();

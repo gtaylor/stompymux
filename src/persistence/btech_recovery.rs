@@ -4,7 +4,7 @@
 //! unconscious player's row is rewritten only when a check rolls dice or reschedules.
 use super::btech_deadlines::Clock;
 use super::write::{Cell, Fields, purge_rows, sync_rows};
-use crate::{BattleRecovery, BattleRecoveryMode, ObjectId, World};
+use crate::{ObjectId, Recovery, RecoveryMode, World};
 use anyhow::{Context, Result, bail};
 use sqlx::{Row, SqliteConnection, sqlite::SqliteRow};
 use std::collections::{BTreeMap, BTreeSet};
@@ -26,11 +26,11 @@ const COLUMNS: &[&str] = &[
 ];
 
 /// Rebuild one record from its typed columns.
-fn decode(entry: &SqliteRow, clock: Clock) -> Result<BattleRecovery> {
+fn decode(entry: &SqliteRow, clock: Clock) -> Result<Recovery> {
     let mode = match entry.try_get::<i64, _>("mode")? {
-        0 => BattleRecoveryMode::Ready,
-        1 => BattleRecoveryMode::Character,
-        2 => BattleRecoveryMode::Tactical {
+        0 => RecoveryMode::Ready,
+        1 => RecoveryMode::Character,
+        2 => RecoveryMode::Tactical {
             injuries: u8::try_from(
                 entry
                     .try_get::<Option<i64>, _>("tactical_injuries")?
@@ -39,7 +39,7 @@ fn decode(entry: &SqliteRow, clock: Clock) -> Result<BattleRecovery> {
         },
         other => bail!("Unknown recovery mode {other}"),
     };
-    Ok(BattleRecovery::from_saved(
+    Ok(Recovery::from_saved(
         mode,
         clock.optional_remaining(entry.try_get("recovers_at")?, MAX_REMAINING)?,
         entry.try_get("pain_resistance")?,
@@ -49,11 +49,11 @@ fn decode(entry: &SqliteRow, clock: Clock) -> Result<BattleRecovery> {
 }
 
 /// Owned column values for one record, relative to the saved clock.
-fn encode(recovery: &BattleRecovery, clock: Clock) -> Fields {
+fn encode(recovery: &Recovery, clock: Clock) -> Fields {
     let (mode, injuries) = match recovery.mode {
-        BattleRecoveryMode::Ready => (0, Cell::Null),
-        BattleRecoveryMode::Character => (1, Cell::Null),
-        BattleRecoveryMode::Tactical { injuries } => (2, Cell::Integer(i64::from(injuries))),
+        RecoveryMode::Ready => (0, Cell::Null),
+        RecoveryMode::Character => (1, Cell::Null),
+        RecoveryMode::Tactical { injuries } => (2, Cell::Integer(i64::from(injuries))),
     };
     let mut values = Fields::from([
         ("mode", Cell::Integer(mode)),
@@ -73,7 +73,7 @@ fn encode(recovery: &BattleRecovery, clock: Clock) -> Fields {
 pub(super) async fn load(
     c: &mut SqliteConnection,
     clock: Clock,
-) -> Result<BTreeMap<ObjectId, BattleRecovery>> {
+) -> Result<BTreeMap<ObjectId, Recovery>> {
     let mut records = BTreeMap::new();
     let query = format!(
         "SELECT player_dbref,{} FROM btech_character_recovery",

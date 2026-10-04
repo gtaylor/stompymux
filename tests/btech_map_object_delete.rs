@@ -81,7 +81,7 @@ async fn invalid_selectors_leave_definitions_intact() {
             &config,
             ObjectId(2),
             map,
-            Some(BattleMapObjectKind::Mine),
+            Some(MapObjectKind::Mine),
             None
         )
         .is_err()

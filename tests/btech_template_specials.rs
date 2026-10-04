@@ -13,13 +13,13 @@ fn template_specials_merge_canonically_after_construction_flags() {
             "\n[construction]\ngyro = \"heavy_duty\"\n\n[sections.left_arm]",
         )
     );
-    let parsed = BattleTemplate::parse("JR7-D", &source).unwrap();
+    let parsed = MechTemplate::parse("JR7-D", &source).unwrap();
     assert_eq!(
         parsed.attributes["specials"],
         "HDGyro_Tech SearchLight CargoTech FlipArms"
     );
-    let unit = BattleUnit::from_template(parsed).unwrap();
-    assert_eq!(unit.gyro(), BattleGyro::Hardened);
+    let unit = Mech::from_template(parsed).unwrap();
+    assert_eq!(unit.gyro(), Gyro::Hardened);
     for invalid in [
         format!("specials = [\"UnknownTechnology\"]\n{SOURCE}"),
         format!("specials = [\"HDGYRO\"]\n{SOURCE}"),
@@ -27,18 +27,15 @@ fn template_specials_merge_canonically_after_construction_flags() {
         format!("tons = 35\n{SOURCE}"),
         format!("{SOURCE}\n[sections.left_arm]\n"),
     ] {
-        assert!(
-            BattleTemplate::parse("JR7-D", &invalid).is_err(),
-            "{invalid}"
-        );
+        assert!(MechTemplate::parse("JR7-D", &invalid).is_err(), "{invalid}");
     }
 }
 
 /// An empty technology list keeps the ordinary no-specials representation.
 #[test]
 fn only_empty_specials_construct_normally() {
-    let parsed = BattleTemplate::parse("JR7-D", &format!("specials = []\n{SOURCE}")).unwrap();
-    let plain = BattleTemplate::parse("JR7-D", SOURCE).unwrap();
+    let parsed = MechTemplate::parse("JR7-D", &format!("specials = []\n{SOURCE}")).unwrap();
+    let plain = MechTemplate::parse("JR7-D", SOURCE).unwrap();
     assert_eq!(
         parsed.attributes.get("specials"),
         plain.attributes.get("specials")

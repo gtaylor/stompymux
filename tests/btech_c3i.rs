@@ -40,12 +40,11 @@ async fn field_with_equipment(
     let mut units = Vec::new();
     for (i, &master_count) in master_counts.iter().enumerate() {
         let mut template =
-            BattleTemplate::parse("AS7-D", include_str!("fixtures/btech/mechs/AS7-D.toml"))
-                .unwrap();
+            MechTemplate::parse("AS7-D", include_str!("fixtures/btech/mechs/AS7-D.toml")).unwrap();
         for slot in [10, 11] {
             template
                 .sections
-                .get_mut(&BattleSection::CenterTorso)
+                .get_mut(&MechSection::CenterTorso)
                 .unwrap()
                 .criticals
                 .insert(
@@ -60,7 +59,7 @@ async fn field_with_equipment(
         if slaves {
             template
                 .sections
-                .get_mut(&BattleSection::LeftTorso)
+                .get_mut(&MechSection::LeftTorso)
                 .unwrap()
                 .criticals
                 .insert(
@@ -72,7 +71,7 @@ async fn field_with_equipment(
                     },
                 );
         }
-        for section in [BattleSection::LeftArm, BattleSection::RightArm]
+        for section in [MechSection::LeftArm, MechSection::RightArm]
             .into_iter()
             .take(master_count)
         {
@@ -95,7 +94,7 @@ async fn field_with_equipment(
         if probes.contains(&i) {
             template
                 .sections
-                .get_mut(&BattleSection::RightArm)
+                .get_mut(&MechSection::RightArm)
                 .unwrap()
                 .criticals
                 .insert(
@@ -110,7 +109,7 @@ async fn field_with_equipment(
         if i == 6 {
             template
                 .sections
-                .get_mut(&BattleSection::LeftArm)
+                .get_mut(&MechSection::LeftArm)
                 .unwrap()
                 .criticals
                 .insert(
@@ -190,7 +189,7 @@ async fn membership_capacity_shutdown_and_restart_are_shared() {
             .to_string()
             .contains("already")
     );
-    stop_battle_unit(&mut world, first, pilot, BattleMovementRules::STANDARD.fall).unwrap();
+    stop_battle_unit(&mut world, first, pilot, MovementRules::STANDARD.fall).unwrap();
     assert_eq!(battle_c3i_members(&world, first).unwrap(), expected);
     persistence::save(&config.database(), &world).await.unwrap();
     let mut restored = persistence::load(&config.database()).await.unwrap();
@@ -269,7 +268,7 @@ async fn interference_is_temporary_but_hardware_team_and_map_loss_disconnect() {
     set_battle_unit_signature(
         &mut world,
         jammer,
-        BattleUnitSignature {
+        UnitSignature {
             team: 2,
             ..Default::default()
         },
@@ -279,8 +278,8 @@ async fn interference_is_temporary_but_hardware_team_and_map_loss_disconnect() {
         &mut world,
         jammer,
         jammer_pilot,
-        BattleElectronicSuite::Guardian,
-        BattleElectronicMode::Ecm,
+        ElectronicSuite::Guardian,
+        ElectronicMode::Ecm,
     )
     .unwrap();
     assert_eq!(battle_c3i_members(&world, first).unwrap().len(), 2);
@@ -296,8 +295,8 @@ async fn interference_is_temporary_but_hardware_team_and_map_loss_disconnect() {
         &mut world,
         jammer,
         jammer_pilot,
-        BattleElectronicSuite::Guardian,
-        BattleElectronicMode::Ecm,
+        ElectronicSuite::Guardian,
+        ElectronicMode::Ecm,
     )
     .unwrap();
     join_leave_battle_c3i(&mut world, first, pilot, None).unwrap();
@@ -306,7 +305,7 @@ async fn interference_is_temporary_but_hardware_team_and_map_loss_disconnect() {
     let mut world = connected.clone();
     let mut unit = world.btech.constructed_units()[&first].clone();
     unit.destroy_critical(CriticalLocation {
-        section: BattleSection::CenterTorso,
+        section: MechSection::CenterTorso,
         slot: 10,
     })
     .unwrap();
@@ -325,18 +324,18 @@ async fn interference_is_temporary_but_hardware_team_and_map_loss_disconnect() {
     set_battle_unit_signature(
         &mut world,
         first,
-        BattleUnitSignature {
+        UnitSignature {
             team: 1,
             ..Default::default()
         },
     )
     .unwrap();
-    set_battle_unit_signature(&mut world, first, BattleUnitSignature::default()).unwrap();
+    set_battle_unit_signature(&mut world, first, UnitSignature::default()).unwrap();
     assert!(battle_c3i_members(&world, first).unwrap().is_empty());
     world.validate(&config).unwrap();
 
     let mut world = connected;
-    stop_battle_unit(&mut world, first, pilot, BattleMovementRules::STANDARD.fall).unwrap();
+    stop_battle_unit(&mut world, first, pilot, MovementRules::STANDARD.fall).unwrap();
     let map = world.btech.constructed_units()[&first]
         .position()
         .unwrap()
@@ -364,7 +363,7 @@ async fn invalid_saved_networks_and_unfriendly_admission_are_rejected() {
     set_battle_unit_signature(
         &mut world,
         units[1].0,
-        BattleUnitSignature {
+        UnitSignature {
             team: 1,
             ..Default::default()
         },
@@ -412,7 +411,7 @@ async fn unidentified_friendly_contact_can_join_without_disclosing_its_name() {
         .unwrap()
         .unwrap();
     assert!(!contact.identified && !contact.friendly);
-    assert_eq!(contact.detection, Some(BattleDetectionChannel::Probe));
+    assert_eq!(contact.detection, Some(DetectionChannel::Probe));
     assert!(
         contact.short_text.starts_with("p "),
         "{}",
@@ -452,7 +451,7 @@ fn relocate(world: &mut World, id: ObjectId, y: u16) {
 }
 
 /// Locate a surviving fixture weapon without depending on catalogue ordering.
-fn weapon_index(world: &World, id: ObjectId, weapon: BattleWeapon) -> usize {
+fn weapon_index(world: &World, id: ObjectId, weapon: Weapon) -> usize {
     world.btech.constructed_units()[&id]
         .loadout()
         .unwrap()
@@ -463,8 +462,8 @@ fn weapon_index(world: &World, id: ObjectId, weapon: BattleWeapon) -> usize {
 }
 
 /// Conventional aim with strict physical range and ordinary minimum-range penalties.
-fn aim_rules() -> BattleAimRules {
-    BattleAimRules {
+fn aim_rules() -> AimRules {
+    AimRules {
         woods_damage: false,
         dig_bonus: 3,
         dig_only_front: false,
@@ -487,7 +486,7 @@ async fn shared_range_preserves_physical_minimum_maximum_and_extended_rules() {
     set_battle_unit_signature(
         &mut world,
         target,
-        BattleUnitSignature {
+        UnitSignature {
             team: 1,
             ..Default::default()
         },
@@ -496,8 +495,8 @@ async fn shared_range_preserves_physical_minimum_maximum_and_extended_rules() {
     relocate(&mut world, first, 2);
     relocate(&mut world, peer, 17);
     relocate(&mut world, target, 18);
-    let lrm = weapon_index(&world, first, BattleWeapon::Lrm20);
-    let ac = weapon_index(&world, first, BattleWeapon::Ac20);
+    let lrm = weapon_index(&world, first, Weapon::Lrm20);
+    let ac = weapon_index(&world, first, Weapon::Ac20);
     let before = world.btech.clone();
     let aim = battle_aim_modifiers(&world, first, target, lrm, 4, aim_rules()).unwrap();
     assert!((aim.distance - 16.0).abs() < 1e-8);
@@ -546,7 +545,7 @@ async fn shared_range_preserves_physical_minimum_maximum_and_extended_rules() {
             target,
             lrm,
             4,
-            BattleAimRules {
+            AimRules {
                 woods_damage: false,
                 dig_bonus: 3,
                 dig_only_front: false,
@@ -561,7 +560,7 @@ async fn shared_range_preserves_physical_minimum_maximum_and_extended_rules() {
     }
 
     relocate(&mut world, first, 8);
-    let extended = BattleAimRules {
+    let extended = AimRules {
         woods_damage: false,
         dig_bonus: 3,
         dig_only_front: false,
@@ -574,7 +573,7 @@ async fn shared_range_preserves_physical_minimum_maximum_and_extended_rules() {
     assert_eq!(linked.network_range.unwrap().source, Some(peer));
     join_leave_battle_c3i(&mut world, first, pilot, None).unwrap();
     let ordinary = battle_aim_modifiers(&world, first, target, ac, 4, extended).unwrap();
-    assert_eq!(ordinary.range.unwrap().bracket, BattleRangeBracket::Extreme);
+    assert_eq!(ordinary.range.unwrap().bracket, RangeBracket::Extreme);
     world.validate(&config).unwrap();
 }
 
@@ -588,7 +587,7 @@ async fn shared_range_ignores_unavailable_peers_and_does_not_grant_firing_visibi
     set_battle_unit_signature(
         &mut world,
         target,
-        BattleUnitSignature {
+        UnitSignature {
             team: 1,
             ..Default::default()
         },
@@ -597,14 +596,14 @@ async fn shared_range_ignores_unavailable_peers_and_does_not_grant_firing_visibi
     relocate(&mut world, first, 2);
     relocate(&mut world, peer, 17);
     relocate(&mut world, target, 18);
-    let index = weapon_index(&world, first, BattleWeapon::Lrm20);
+    let index = weapon_index(&world, first, Weapon::Lrm20);
     let baseline = world.clone();
     toggle_battle_electronics(
         &mut world,
         target,
         target_pilot,
-        BattleElectronicSuite::Guardian,
-        BattleElectronicMode::Ecm,
+        ElectronicSuite::Guardian,
+        ElectronicMode::Ecm,
     )
     .unwrap();
     // Only the closer peer is in the hostile ECM field.
@@ -616,20 +615,14 @@ async fn shared_range_ignores_unavailable_peers_and_does_not_grant_firing_visibi
         &world,
         first,
         target,
-        weapon_index(&world, first, BattleWeapon::Ac20),
+        weapon_index(&world, first, Weapon::Ac20),
         4,
         aim_rules(),
     )
     .unwrap();
     assert!(jammed_shooter.network_range.is_none());
     let mut world = baseline.clone();
-    stop_battle_unit(
-        &mut world,
-        peer,
-        peer_pilot,
-        BattleMovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut world, peer, peer_pilot, MovementRules::STANDARD.fall).unwrap();
     let stopped = battle_aim_modifiers(&world, first, target, index, 4, aim_rules()).unwrap();
     assert_eq!(stopped.range.unwrap().modifier, 4);
     assert_eq!(stopped.network_range.unwrap().source, None);
@@ -657,7 +650,7 @@ async fn shared_range_applies_to_hex_aim_and_replays_in_actual_shots() {
     set_battle_unit_signature(
         &mut world,
         target,
-        BattleUnitSignature {
+        UnitSignature {
             team: 1,
             ..Default::default()
         },
@@ -666,7 +659,7 @@ async fn shared_range_applies_to_hex_aim_and_replays_in_actual_shots() {
     relocate(&mut world, first, 2);
     relocate(&mut world, peer, 17);
     relocate(&mut world, target, 18);
-    let index = weapon_index(&world, first, BattleWeapon::Lrm20);
+    let index = weapon_index(&world, first, Weapon::Lrm20);
     let aim = battle_hex_aim_modifiers(
         &world,
         first,
@@ -680,15 +673,15 @@ async fn shared_range_applies_to_hex_aim_and_replays_in_actual_shots() {
     assert_eq!(aim.modifiers.network_range.unwrap().source, Some(peer));
     persistence::save(&config.database(), &world).await.unwrap();
     let mut restored = persistence::load(&config.database()).await.unwrap();
-    let rules = BattleShotRules {
+    let rules = ShotRules {
         range_damage: false,
         tsm_tow_bonus: true,
-        vehicle_impact: stompymux_rs::BattleVehicleImpactRules::STANDARD,
-        stacking: BattleStackingRules::STANDARD,
-        stagger: BattleStaggerMode::Retain,
-        glancing: BattleGlancingMode::Disabled,
+        vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
+        stacking: StackingRules::STANDARD,
+        stagger: StaggerMode::Retain,
+        glancing: GlancingMode::Disabled,
         aim: aim_rules(),
-        hit: BattleHitRules {
+        hit: HitRules {
             inferno_penalty: false,
             exile_stun_mode: 0,
         },
@@ -722,13 +715,13 @@ async fn network_messages_filter_receivers_without_changing_membership_or_dice()
         &mut world,
         units[1].0,
         units[1].1,
-        BattleMovementRules::STANDARD.fall,
+        MovementRules::STANDARD.fall,
     )
     .unwrap();
     let mut encoded = serde_json::to_value(&world.btech).unwrap();
     encoded["recoveries"][units[2].1.0.to_string()] = serde_json::json!({
         "mode": {"kind":"tactical", "injuries":1}, "remaining": 10,
-        "pain_resistance":false,"toughness":false,"dice":BattleDice::seeded([42;32])
+        "pain_resistance":false,"toughness":false,"dice":Dice::seeded([42;32])
     });
     // No recipient needs an acquired contact with the speaker.
     for &(id, _) in &units {
@@ -739,7 +732,7 @@ async fn network_messages_filter_receivers_without_changing_membership_or_dice()
     set_battle_unit_signature(
         &mut world,
         jammer,
-        BattleUnitSignature {
+        UnitSignature {
             team: 1,
             ..Default::default()
         },
@@ -749,8 +742,8 @@ async fn network_messages_filter_receivers_without_changing_membership_or_dice()
         &mut world,
         jammer,
         jammer_pilot,
-        BattleElectronicSuite::Guardian,
-        BattleElectronicMode::Ecm,
+        ElectronicSuite::Guardian,
+        ElectronicMode::Ecm,
     )
     .unwrap();
     world.validate(&config).unwrap();
@@ -785,7 +778,7 @@ async fn network_messages_filter_receivers_without_changing_membership_or_dice()
         &mut world,
         units[4].0,
         units[4].1,
-        BattleMovementRules::STANDARD.fall,
+        MovementRules::STANDARD.fall,
     )
     .unwrap();
     assert_eq!(
@@ -873,16 +866,16 @@ async fn status_reports_live_protection_and_motion_privately_after_restart() {
         .values()
         .map(|s| u32::from(s.armor) + u32::from(s.rear))
         .sum();
-    let rear = u32::from(original.sections()[&BattleSection::CenterTorso].rear);
+    let rear = u32::from(original.sections()[&MechSection::CenterTorso].rear);
     let internal: u32 = original
         .sections()
         .values()
         .map(|s| u32::from(s.internal))
         .sum();
-    let arm_internal = original.sections()[&BattleSection::LeftArm].internal;
+    let arm_internal = original.sections()[&MechSection::LeftArm].internal;
     let mut encoded = serde_json::to_value(&world.btech).unwrap();
-    let ct = serde_json::to_value(BattleSection::CenterTorso).unwrap();
-    let la = serde_json::to_value(BattleSection::LeftArm).unwrap();
+    let ct = serde_json::to_value(MechSection::CenterTorso).unwrap();
+    let la = serde_json::to_value(MechSection::LeftArm).unwrap();
     let unit = &mut encoded["constructed"][peer.0.to_string()];
     unit["sections"][ct.as_str().unwrap()]["rear"] = 0.into();
     unit["sections"][la.as_str().unwrap()]["internal"] = (arm_internal - 1).into();
@@ -942,19 +935,19 @@ async fn status_excludes_shutdown_and_jammed_peers_but_reports_unconscious_pilot
         &mut world,
         units[1].0,
         units[1].1,
-        BattleMovementRules::STANDARD.fall,
+        MovementRules::STANDARD.fall,
     )
     .unwrap();
     let mut encoded = serde_json::to_value(&world.btech).unwrap();
     encoded["recoveries"][units[2].1.0.to_string()] = serde_json::json!({
-        "mode":{"kind":"tactical","injuries":1},"remaining":10,"pain_resistance":false,"toughness":false,"dice":BattleDice::seeded([17;32])
+        "mode":{"kind":"tactical","injuries":1},"remaining":10,"pain_resistance":false,"toughness":false,"dice":Dice::seeded([17;32])
     });
     world.btech = serde_json::from_value(encoded).unwrap();
     let (jammer, jammer_pilot) = units[6];
     set_battle_unit_signature(
         &mut world,
         jammer,
-        BattleUnitSignature {
+        UnitSignature {
             team: 1,
             ..Default::default()
         },
@@ -964,8 +957,8 @@ async fn status_excludes_shutdown_and_jammed_peers_but_reports_unconscious_pilot
         &mut world,
         jammer,
         jammer_pilot,
-        BattleElectronicSuite::Guardian,
-        BattleElectronicMode::Ecm,
+        ElectronicSuite::Guardian,
+        ElectronicMode::Ecm,
     )
     .unwrap();
     let before = world.btech.clone();
@@ -983,7 +976,7 @@ async fn status_excludes_shutdown_and_jammed_peers_but_reports_unconscious_pilot
             recovery["remaining"] = 0.into();
         }
         world.btech = serde_json::from_value(encoded).unwrap();
-        stop_battle_unit(&mut world, id, pilot, BattleMovementRules::STANDARD.fall).unwrap();
+        stop_battle_unit(&mut world, id, pilot, MovementRules::STANDARD.fall).unwrap();
     }
     let empty = battle_c3i_status(&world, first, pilot).unwrap();
     assert!(empty.rows.is_empty());
@@ -1008,7 +1001,7 @@ async fn network_targets_share_identification_and_range_without_acquiring_contac
     set_battle_unit_signature(
         &mut world,
         target,
-        BattleUnitSignature {
+        UnitSignature {
             team: 1,
             ..Default::default()
         },
@@ -1058,13 +1051,7 @@ async fn network_targets_share_identification_and_range_without_acquiring_contac
             .contains(&row.short_text)
     );
     assert_eq!(scripts.world().btech, before);
-    stop_battle_unit(
-        &mut world,
-        peer,
-        peer_pilot,
-        BattleMovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut world, peer, peer_pilot, MovementRules::STANDARD.fall).unwrap();
     assert!(displayed_battle_contacts(&world, first).unwrap().is_empty());
 }
 
@@ -1130,11 +1117,11 @@ async fn direct_network_targets_keep_sensor_markers_selection_and_destroyed_firs
         encoded["constructed"][first.0.to_string()]["contacts"][target.0.to_string()] =
             serde_json::json!({"identified":false});
     }
-    let head = serde_json::to_value(BattleSection::Head).unwrap();
+    let head = serde_json::to_value(MechSection::Head).unwrap();
     encoded["constructed"][wreck.0.to_string()]["sections"][head.as_str().unwrap()]["internal"] =
         0.into();
     encoded["constructed"][wreck.0.to_string()]["power"] =
-        serde_json::to_value(BattlePower::Off).unwrap();
+        serde_json::to_value(Power::Off).unwrap();
     encoded["constructed"][wreck.0.to_string()]["pilot"] = serde_json::Value::Null;
     encoded["constructed"][first.0.to_string()]["target_lock"] =
         serde_json::json!({"target":near,"remaining":0});
@@ -1148,7 +1135,7 @@ async fn direct_network_targets_keep_sensor_markers_selection_and_destroyed_firs
     assert!(
         contacts
             .iter()
-            .all(|r| r.detection == Some(BattleDetectionChannel::Sensors))
+            .all(|r| r.detection == Some(DetectionChannel::Sensors))
     );
     assert!(contacts.iter().all(|r| r.short_text.starts_with("S ")));
     // No peer sees closer, so the shared range equals the physical range on every row.
@@ -1240,7 +1227,7 @@ async fn classic_capacity_counts_multiple_computers_and_has_a_twelve_unit_limit(
     assert_eq!(world.btech, before);
     let mut unit = world.btech.constructed_units()[&first].clone();
     unit.destroy_critical(CriticalLocation {
-        section: BattleSection::LeftArm,
+        section: MechSection::LeftArm,
         slot: 2,
     })
     .unwrap();
@@ -1253,7 +1240,7 @@ async fn classic_capacity_counts_multiple_computers_and_has_a_twelve_unit_limit(
         .unwrap();
     assert_eq!(battle_c3_members(&world, first).unwrap().len(), 10);
     unit.destroy_critical(CriticalLocation {
-        section: BattleSection::RightArm,
+        section: MechSection::RightArm,
         slot: 2,
     })
     .unwrap();
@@ -1310,7 +1297,7 @@ async fn classic_native_lua_rollback_and_lifecycle_use_the_shared_membership_eng
         &mut scripts.world_mut(),
         first,
         pilot,
-        BattleMovementRules::STANDARD.fall,
+        MovementRules::STANDARD.fall,
     )
     .unwrap();
     assert_eq!(battle_c3_members(&scripts.world(), first).unwrap().len(), 2);
@@ -1323,7 +1310,7 @@ async fn classic_native_lua_rollback_and_lifecycle_use_the_shared_membership_eng
     set_battle_unit_signature(
         &mut scripts.world_mut(),
         first,
-        BattleUnitSignature {
+        UnitSignature {
             team: 2,
             ..Default::default()
         },
@@ -1354,7 +1341,7 @@ async fn classic_range_has_priority_and_falls_back_to_c3i_only_after_disconnecti
     set_battle_unit_signature(
         &mut world,
         target,
-        BattleUnitSignature {
+        UnitSignature {
             team: 1,
             ..Default::default()
         },
@@ -1364,41 +1351,26 @@ async fn classic_range_has_priority_and_falls_back_to_c3i_only_after_disconnecti
     relocate(&mut world, peer, 10);
     relocate(&mut world, c3i_peer, 17);
     relocate(&mut world, target, 18);
-    let index = weapon_index(&world, first, BattleWeapon::Lrm20);
+    let index = weapon_index(&world, first, Weapon::Lrm20);
     let before = world.clone();
     let classic = battle_aim_modifiers(&world, first, target, index, 4, aim_rules()).unwrap();
-    assert_eq!(
-        classic.network_range.unwrap().kind,
-        BattleCommandNetwork::C3
-    );
+    assert_eq!(classic.network_range.unwrap().kind, CommandNetwork::C3);
     assert_eq!(classic.network_range.unwrap().source, Some(peer));
     assert_eq!(classic.range.unwrap().modifier, 2);
-    stop_battle_unit(
-        &mut world,
-        peer,
-        peer_pilot,
-        BattleMovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut world, peer, peer_pilot, MovementRules::STANDARD.fall).unwrap();
     let stopped = battle_aim_modifiers(&world, first, target, index, 4, aim_rules()).unwrap();
-    assert_eq!(
-        stopped.network_range.unwrap().kind,
-        BattleCommandNetwork::C3
-    );
+    assert_eq!(stopped.network_range.unwrap().kind, CommandNetwork::C3);
     assert_eq!(stopped.network_range.unwrap().source, None);
     assert_eq!(stopped.range.unwrap().modifier, 4);
     join_leave_battle_c3(&mut world, first, pilot, None).unwrap();
     let fallback = battle_aim_modifiers(&world, first, target, index, 4, aim_rules()).unwrap();
-    assert_eq!(
-        fallback.network_range.unwrap().kind,
-        BattleCommandNetwork::C3i
-    );
+    assert_eq!(fallback.network_range.unwrap().kind, CommandNetwork::C3i);
     assert_eq!(fallback.network_range.unwrap().source, Some(c3i_peer));
     assert_eq!(fallback.range.unwrap().modifier, 0);
     let mut world = before;
     let mut unit = world.btech.constructed_units()[&first].clone();
     unit.destroy_critical(CriticalLocation {
-        section: BattleSection::LeftArm,
+        section: MechSection::LeftArm,
         slot: 2,
     })
     .unwrap();
@@ -1409,10 +1381,7 @@ async fn classic_range_has_priority_and_falls_back_to_c3i_only_after_disconnecti
         })
         .unwrap();
     let damaged = battle_aim_modifiers(&world, first, target, index, 4, aim_rules()).unwrap();
-    assert_eq!(
-        damaged.network_range.unwrap().kind,
-        BattleCommandNetwork::C3i
-    );
+    assert_eq!(damaged.network_range.unwrap().kind, CommandNetwork::C3i);
     persistence::save(&config.database(), &world).await.unwrap();
     let restored = persistence::load(&config.database()).await.unwrap();
     assert_eq!(
@@ -1436,20 +1405,20 @@ async fn inactive_master_reduces_temporary_capacity_without_erasing_membership()
     set_battle_unit_signature(
         &mut world,
         target,
-        BattleUnitSignature {
+        UnitSignature {
             team: 1,
             ..Default::default()
         },
     )
     .unwrap();
-    let index = weapon_index(&world, first, BattleWeapon::Lrm20);
+    let index = weapon_index(&world, first, Weapon::Lrm20);
     let active = battle_aim_modifiers(&world, first, target, index, 4, aim_rules()).unwrap();
     assert_eq!(active.network_range.unwrap().source, Some(units[3].0));
     stop_battle_unit(
         &mut world,
         units[5].0,
         units[5].1,
-        BattleMovementRules::STANDARD.fall,
+        MovementRules::STANDARD.fall,
     )
     .unwrap();
     let before = world.btech.clone();
@@ -1470,7 +1439,7 @@ async fn classic_assisted_unit_and_hex_shots_share_limits_and_restart_replay() {
     set_battle_unit_signature(
         &mut world,
         target,
-        BattleUnitSignature {
+        UnitSignature {
             team: 1,
             ..Default::default()
         },
@@ -1479,8 +1448,8 @@ async fn classic_assisted_unit_and_hex_shots_share_limits_and_restart_replay() {
     relocate(&mut world, first, 2);
     relocate(&mut world, peer, 17);
     relocate(&mut world, target, 18);
-    let lrm = weapon_index(&world, first, BattleWeapon::Lrm20);
-    let ac = weapon_index(&world, first, BattleWeapon::Ac20);
+    let lrm = weapon_index(&world, first, Weapon::Lrm20);
+    let ac = weapon_index(&world, first, Weapon::Ac20);
     let hex = battle_hex_aim_modifiers(
         &world,
         first,
@@ -1492,7 +1461,7 @@ async fn classic_assisted_unit_and_hex_shots_share_limits_and_restart_replay() {
     .unwrap();
     assert_eq!(
         hex.modifiers.network_range.unwrap().kind,
-        BattleCommandNetwork::C3
+        CommandNetwork::C3
     );
     assert_eq!(hex.modifiers.range.unwrap().modifier, 0);
     assert!(
@@ -1509,15 +1478,15 @@ async fn classic_assisted_unit_and_hex_shots_share_limits_and_restart_replay() {
     let mut world = distant;
     persistence::save(&config.database(), &world).await.unwrap();
     let mut restored = persistence::load(&config.database()).await.unwrap();
-    let rules = BattleShotRules {
+    let rules = ShotRules {
         range_damage: false,
         tsm_tow_bonus: true,
-        vehicle_impact: stompymux_rs::BattleVehicleImpactRules::STANDARD,
-        stacking: BattleStackingRules::STANDARD,
-        stagger: BattleStaggerMode::Retain,
-        glancing: BattleGlancingMode::Disabled,
+        vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
+        stacking: StackingRules::STANDARD,
+        stagger: StaggerMode::Retain,
+        glancing: GlancingMode::Disabled,
         aim: aim_rules(),
-        hit: BattleHitRules {
+        hit: HitRules {
             inferno_penalty: false,
             exile_stun_mode: 0,
         },
@@ -1527,10 +1496,7 @@ async fn classic_assisted_unit_and_hex_shots_share_limits_and_restart_replay() {
         target_toughness: false,
     };
     let shot = resolve_battle_shot(&mut world, first, pilot, target, lrm, rules).unwrap();
-    assert_eq!(
-        shot.aim.network_range.unwrap().kind,
-        BattleCommandNetwork::C3
-    );
+    assert_eq!(shot.aim.network_range.unwrap().kind, CommandNetwork::C3);
     assert_eq!(shot.aim.range.unwrap().modifier, 0);
     assert_eq!(
         resolve_battle_shot(&mut restored, first, pilot, target, lrm, rules).unwrap(),
@@ -1555,7 +1521,7 @@ async fn classic_messages_recalculate_capacity_for_unconscious_masters_and_keep_
         6
     );
     let mut encoded = serde_json::to_value(&world.btech).unwrap();
-    encoded["recoveries"][units[5].1.0.to_string()] = serde_json::json!({"mode":{"kind":"tactical","injuries":1},"remaining":10,"pain_resistance":false,"toughness":false,"dice":BattleDice::seeded([63;32])});
+    encoded["recoveries"][units[5].1.0.to_string()] = serde_json::json!({"mode":{"kind":"tactical","injuries":1},"remaining":10,"pain_resistance":false,"toughness":false,"dice":Dice::seeded([63;32])});
     for &(id, _) in &units {
         encoded["constructed"][id.0.to_string()]["contacts"] = serde_json::json!({});
     }
@@ -1654,7 +1620,7 @@ async fn classic_reports_apply_active_capacity_and_keep_unconscious_masters() {
     }
     encoded["constructed"][units[4].0.0.to_string()]["contacts"][target.0.to_string()] =
         serde_json::json!({"identified":false});
-    encoded["recoveries"][units[5].1.0.to_string()] = serde_json::json!({"mode":{"kind":"tactical","injuries":1},"remaining":10,"pain_resistance":false,"toughness":false,"dice":BattleDice::seeded([64;32])});
+    encoded["recoveries"][units[5].1.0.to_string()] = serde_json::json!({"mode":{"kind":"tactical","injuries":1},"remaining":10,"pain_resistance":false,"toughness":false,"dice":Dice::seeded([64;32])});
     world.btech = serde_json::from_value(encoded).unwrap();
     let before = world.btech.clone();
     let status = battle_c3_status(&world, first, pilot).unwrap();
@@ -1682,7 +1648,7 @@ async fn classic_reports_apply_active_capacity_and_keep_unconscious_masters() {
         &mut world,
         units[5].0,
         units[5].1,
-        BattleMovementRules::STANDARD.fall,
+        MovementRules::STANDARD.fall,
     )
     .unwrap();
     let before = world.btech.clone();
@@ -1749,12 +1715,9 @@ async fn underwater_network_aim_keeps_the_physical_water_limit() {
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     for (id, y) in [(shooter, 2), (peer, 7), (target, 8)] {
-        world.btech.set_unit_power(id, BattlePower::Off).unwrap();
+        world.btech.set_unit_power(id, Power::Off).unwrap();
         place_battle_unit(&mut world, id, map, 10, y).unwrap();
-        world
-            .btech
-            .set_unit_power(id, BattlePower::Running)
-            .unwrap();
+        world.btech.set_unit_power(id, Power::Running).unwrap();
     }
     // This scenario tests network range after acquisition. Moving to the water map
     // clears the fixture's known contacts; do not replace them with random detection rolls.
@@ -1776,7 +1739,7 @@ async fn underwater_network_aim_keeps_the_physical_water_limit() {
     );
 
     join_leave_battle_c3i(&mut world, shooter, pilot, Some(peer)).unwrap();
-    let index = weapon_index(&world, shooter, BattleWeapon::MediumLaser);
+    let index = weapon_index(&world, shooter, Weapon::MediumLaser);
     let mut rules = aim_rules();
     rules.extended_ranges = true;
     let before = world.btech.clone();

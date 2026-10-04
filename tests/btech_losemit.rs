@@ -9,8 +9,7 @@ use stompymux_rs::*;
 async fn losemit_shares_all_chassis_observers_and_transactions() {
     for template in firing::templates() {
         let (dir, config, mut world, observer, source, _) =
-            firing::fixture_with_target(&template, Some(BattleWeapon::MediumLaser), &template)
-                .await;
+            firing::fixture_with_target(&template, Some(Weapon::MediumLaser), &template).await;
         let actor = world.create(&config, "Announcer".into(), Kind::Player);
         world
             .objects
@@ -82,7 +81,7 @@ async fn losemit_shares_all_chassis_observers_and_transactions() {
         assert_eq!(restarted.drain_outbox().len(), 2);
         // Source power does not suppress an emote, but losing the contact suppresses delivery.
         firing::edit(&mut world, source, |state| {
-            state["power"] = serde_json::to_value(BattlePower::Off).unwrap()
+            state["power"] = serde_json::to_value(Power::Off).unwrap()
         });
         let stopped = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
         assert_eq!(

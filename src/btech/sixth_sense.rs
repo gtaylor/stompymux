@@ -190,7 +190,7 @@ pub fn advance_sixth_sense_action(scripts: &crate::Scripts) -> Result<Vec<(Objec
     scripts.atomic(|_| {
         let notices = advance_sixth_sense(&mut scripts.world_mut());
         for (player, text) in &notices {
-            super::notify_message(scripts, super::BattleMessageTarget::Player(*player), text)?;
+            super::notify_message(scripts, super::MessageTarget::Player(*player), text)?;
         }
         Ok(notices)
     })

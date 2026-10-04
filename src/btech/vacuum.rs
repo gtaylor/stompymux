@@ -1,11 +1,11 @@
 //! Vacuum damage checks use the map environment and the victim's committed random stream.
-use super::{BattleDice, BattleNotice, BattleVehicleSection, StoredMap};
+use super::{Dice, Notice, StoredMap, VehicleSection};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result};
 
 /// Armor penetration breaches directly; other eligible damage events check 10+ on 2d6.
 /// Special conditions consume this roll even when the map is not a vacuum.
-fn trigger(map: &StoredMap, dice: &mut BattleDice, penetrating: bool) -> (Option<u8>, bool) {
+fn trigger(map: &StoredMap, dice: &mut Dice, penetrating: bool) -> (Option<u8>, bool) {
     if !map.uses_special_rules() {
         return (None, false);
     }
@@ -21,9 +21,9 @@ fn trigger(map: &StoredMap, dice: &mut BattleDice, penetrating: bool) -> (Option
 pub(super) fn check_vehicle(
     world: &mut World,
     id: ObjectId,
-    section: BattleVehicleSection,
+    section: VehicleSection,
     penetrating: bool,
-) -> Result<(Option<u8>, Option<BattleNotice>)> {
+) -> Result<(Option<u8>, Option<Notice>)> {
     let vehicle = world
         .btech
         .vehicles()
@@ -68,7 +68,7 @@ pub(super) fn check_vehicle(
     vehicle.reconcile_electronics();
     Ok((
         roll,
-        Some(BattleNotice {
+        Some(Notice {
             unit: id,
             text: format!(
                 "Your {} has been breached!",
@@ -82,7 +82,7 @@ pub(super) fn check_vehicle(
 pub(super) fn check_mech(
     world: &mut World,
     id: ObjectId,
-    section: super::BattleSection,
+    section: super::MechSection,
     penetrating: bool,
 ) -> Result<bool> {
     let unit = world

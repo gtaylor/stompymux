@@ -6,15 +6,15 @@ use serde::Serialize;
 
 /// An optional explicit altitude is clamped to the unit's signed-short coordinate range.
 #[derive(Debug, Clone, Copy)]
-pub struct BattleScenarioPosition {
+pub struct ScenarioPosition {
     pub coordinate: HexCoordinate,
     pub elevation: Option<i32>,
 }
 
 /// Committed position returned by native and Lua scenario positioning.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-pub struct BattleScenarioPositionReport {
-    pub position: BattlePosition,
+pub struct ScenarioPositionReport {
+    pub position: Position,
     pub elevation: i32,
 }
 
@@ -24,8 +24,8 @@ pub fn set_coordinates_action(
     config: &Config,
     actor: ObjectId,
     unit: ObjectId,
-    request: BattleScenarioPosition,
-) -> Result<BattleScenarioPositionReport> {
+    request: ScenarioPosition,
+) -> Result<ScenarioPositionReport> {
     scripts.atomic(|before| {
         ensure!(
             crate::authority::is_wizard(before, actor),
@@ -59,7 +59,7 @@ pub fn set_coordinates_action(
                 i64::from(request.coordinate.x),
                 i64::from(request.coordinate.y),
             )?;
-        let position = BattlePosition {
+        let position = Position {
             map: original.map,
             x: u16::try_from(request.coordinate.x).context("Invalid coordinates!")?,
             y: u16::try_from(request.coordinate.y).context("Invalid coordinates!")?,
@@ -75,14 +75,14 @@ pub fn set_coordinates_action(
         for notice in notices {
             super::notify_unit(scripts, notice)?;
         }
-        let report = BattleScenarioPositionReport {
+        let report = ScenarioPositionReport {
             position,
             elevation: super::unit_elevation(&scripts.world(), unit)?
                 .context("Unit is not placed")?,
         };
         super::notify_message(
             scripts,
-            BattleMessageTarget::Player(actor),
+            MessageTarget::Player(actor),
             &format!(
                 "Pos changed to {},{},{}",
                 position.x, position.y, report.elevation
@@ -111,7 +111,7 @@ pub(super) fn set_field_action(
         let position = super::scanner::scanner_unit(&world, id)
             .and_then(|unit| unit.position)
             .context("Unit is not on a battlefield")?;
-        BattleScenarioPosition {
+        ScenarioPosition {
             coordinate: HexCoordinate {
                 x: i32::from(position.x),
                 y: i32::from(position.y),
@@ -169,7 +169,7 @@ pub(super) fn set_precise_field_action(
             .get(&original.map)
             .context("Map not found")?
             .base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
-        let position = BattlePosition {
+        let position = Position {
             map: original.map,
             x: u16::try_from(coordinate.x).context("Invalid coordinates")?,
             y: u16::try_from(coordinate.y).context("Invalid coordinates")?,
@@ -187,7 +187,7 @@ pub(super) fn set_precise_field_action(
 pub(super) fn relocate(
     world: &mut World,
     id: ObjectId,
-    position: BattlePosition,
+    position: Position,
     tile: Hex,
     elevation: Option<i32>,
 ) -> Result<()> {
@@ -205,7 +205,7 @@ pub(super) fn relocate(
 fn relocate_precise(
     world: &mut World,
     id: ObjectId,
-    position: BattlePosition,
+    position: Position,
     tile: Hex,
     point: Point,
     elevation: Option<f64>,
@@ -214,7 +214,7 @@ fn relocate_precise(
         .btech
         .vehicles()
         .get(&id)
-        .is_some_and(|unit| unit.definition().movement == BattleVehicleMovement::Hover);
+        .is_some_and(|unit| unit.definition().movement == VehicleMovement::Hover);
     let surface = if hover && tile.is_water_surface() {
         tile.water_line()
     } else {
@@ -243,7 +243,7 @@ fn relocate_precise(
         } else if let Some(flight) = &mut unit.vtol_flight {
             flight.altitude = height;
             if elevation.is_none() {
-                flight.phase = BattleVtolFlightPhase::Landed;
+                flight.phase = VtolFlightPhase::Landed;
                 flight.vertical_speed = 0.0;
                 flight.fall = None;
                 unit.free_fall = None;
@@ -322,7 +322,7 @@ pub(crate) fn command(
             ctx.config,
             ctx.player,
             unit,
-            BattleScenarioPosition {
+            ScenarioPosition {
                 coordinate,
                 elevation,
             },
@@ -337,7 +337,7 @@ pub(crate) fn command(
 }
 
 /// Both coordinate routes share tow synchronization and observation publication order.
-fn synchronize_relocation(world: &mut World, carrier: ObjectId) -> Result<Vec<BattleNotice>> {
+fn synchronize_relocation(world: &mut World, carrier: ObjectId) -> Result<Vec<Notice>> {
     let mut notices = super::contacts::relocate_observations(world, carrier);
     if let Some(target) = world.btech.tows().get(&carrier).copied() {
         super::towing::synchronize_pair(world, carrier, target)?;

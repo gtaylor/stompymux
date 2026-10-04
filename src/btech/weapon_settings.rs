@@ -1,5 +1,5 @@
 //! Transactional runtime weapon values shared by firing, defenses, reports and experience.
-use super::BattleWeapon;
+use super::Weapon;
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -10,14 +10,14 @@ pub(super) const MAX_RECYCLE_SECONDS: u16 = 127;
 
 /// Effective weapon values; changing these does not alter an already running countdown.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BattleWeaponValues {
+pub struct WeaponValues {
     pub recycle_seconds: u8,
     pub battle_value: u32,
 }
 
-impl BattleWeaponValues {
+impl WeaponValues {
     /// Initial values for a new runtime, before operator overrides.
-    fn catalogue(weapon: BattleWeapon) -> Self {
+    fn catalogue(weapon: Weapon) -> Self {
         Self {
             recycle_seconds: weapon.profile().recycle_seconds,
             battle_value: u32::from(weapon.battle_value()),
@@ -27,24 +27,24 @@ impl BattleWeaponValues {
 
 /// Sparse runtime overrides participate in world transactions and reset on database reload.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BattleWeaponSettings(Arc<BTreeMap<BattleWeapon, BattleWeaponValues>>);
+pub struct WeaponSettings(Arc<BTreeMap<Weapon, WeaponValues>>);
 
-impl BattleWeaponSettings {
+impl WeaponSettings {
     /// Effective values for one catalogue weapon, independent of its mounting chassis.
-    pub fn get(&self, weapon: BattleWeapon) -> BattleWeaponValues {
+    pub fn get(&self, weapon: Weapon) -> WeaponValues {
         self.0
             .get(&weapon)
             .copied()
-            .unwrap_or_else(|| BattleWeaponValues::catalogue(weapon))
+            .unwrap_or_else(|| WeaponValues::catalogue(weapon))
     }
 
     /// Recycle time reserved by a newly accepted weapon or defensive activation.
-    pub fn recycle_seconds(&self, weapon: BattleWeapon) -> u8 {
+    pub fn recycle_seconds(&self, weapon: Weapon) -> u8 {
         self.get(weapon).recycle_seconds
     }
 
     /// Weapon contribution to valuation and the Battle Value experience formula.
-    pub fn battle_value(&self, weapon: BattleWeapon) -> u32 {
+    pub fn battle_value(&self, weapon: Weapon) -> u32 {
         self.get(weapon).battle_value
     }
 
@@ -73,22 +73,17 @@ fn set(
     name: &str,
     setting: Setting,
     value: i64,
-) -> Result<BattleWeaponValues> {
+) -> Result<WeaponValues> {
     ensure!(
         crate::authority::is_wizard(world, actor),
         "Permission denied."
     );
-    let weapon = BattleWeapon::parse(name)?;
+    let weapon = Weapon::parse(name)?;
     apply(world, weapon, setting, value)
 }
 
 /// Apply validated typed values after the caller has established its command-specific authority.
-fn apply(
-    world: &mut World,
-    weapon: BattleWeapon,
-    setting: Setting,
-    value: i64,
-) -> Result<BattleWeaponValues> {
+fn apply(world: &mut World, weapon: Weapon, setting: Setting, value: i64) -> Result<WeaponValues> {
     let mut values = world.btech.weapon_settings.get(weapon);
     match setting {
         Setting::Recycle => {
@@ -107,7 +102,7 @@ fn apply(
         }
     }
     let overrides = Arc::make_mut(&mut world.btech.weapon_settings.0);
-    if values == BattleWeaponValues::catalogue(weapon) {
+    if values == WeaponValues::catalogue(weapon) {
         overrides.remove(&weapon);
     } else {
         overrides.insert(weapon, values);
@@ -121,7 +116,7 @@ pub fn set_weapon_recycle(
     actor: ObjectId,
     name: &str,
     seconds: i64,
-) -> Result<BattleWeaponValues> {
+) -> Result<WeaponValues> {
     set(world, actor, name, Setting::Recycle, seconds)
 }
 
@@ -131,7 +126,7 @@ pub fn set_weapon_battle_value(
     actor: ObjectId,
     name: &str,
     value: i64,
-) -> Result<BattleWeaponValues> {
+) -> Result<WeaponValues> {
     set(world, actor, name, Setting::BattleValue, value)
 }
 
@@ -142,7 +137,7 @@ pub(crate) fn edit_command(
     value: i64,
     recycle: bool,
 ) -> Result<String> {
-    let weapon = BattleWeapon::parse(name)?;
+    let weapon = Weapon::parse(name)?;
     let values = super::edit_weapon_settings(ctx.scripts, ctx.player, name, value, recycle)?;
     Ok(format!(
         "{} for {} set to {}.",
@@ -216,7 +211,7 @@ pub(crate) fn debug_command(
             ensure!(value >= 0, "BV needs to be >=0");
         }
         let weapon = super::stock_selection::canonical_part(args[0])
-            .and_then(BattleWeapon::from_part_id)
+            .and_then(Weapon::from_part_id)
             .context("That is no weapon!")?;
         if recycle {
             return edit_command(ctx, weapon.name(), i64::from(value), true);

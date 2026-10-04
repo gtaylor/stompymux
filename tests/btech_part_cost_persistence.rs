@@ -9,12 +9,10 @@ async fn part_costs_use_canonical_c_names_and_preserve_unknown_rows() {
     for form in catalogue {
         assert_eq!(
             form.very_long_name,
-            stompymux_rs::BattlePart::from_id(form.part_id)
-                .unwrap()
-                .name
+            stompymux_rs::Part::from_id(form.part_id).unwrap().name
         );
     }
-    let canonical = stompymux_rs::BattlePart::from_id(6).unwrap().name;
+    let canonical = stompymux_rs::Part::from_id(6).unwrap().name;
     let mut connection =
         SqliteConnection::connect(&format!("sqlite://{}", config.database().display()))
             .await

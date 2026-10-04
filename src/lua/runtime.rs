@@ -58,7 +58,7 @@ impl Scripts {
         let (lua, budget) = sandbox::create(config)?;
         lua.set_app_data(std::sync::Arc::new(config.clone()));
         lua.set_app_data(mode);
-        let event_telemetry = std::rc::Rc::new(std::cell::Cell::new(crate::BattleEventTelemetry {
+        let event_telemetry = std::rc::Rc::new(std::cell::Cell::new(crate::EventTelemetry {
             process_start: crate::clock::wall_time(),
             ticks: 0,
         }));

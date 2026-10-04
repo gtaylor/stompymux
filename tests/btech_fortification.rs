@@ -20,7 +20,7 @@ async fn fixture(source: &str) -> (tempfile::TempDir, Config, World, ObjectId) {
     )
     .unwrap();
     let id = world.create(&config, "Unit".into(), Kind::Thing);
-    BattleUnitTemplate::parse("test", source)
+    UnitTemplate::parse("test", source)
         .unwrap()
         .create(&mut world, id)
         .unwrap();
@@ -182,13 +182,7 @@ async fn immobile_target_bonus_and_shutdown_preservation_are_shared() {
             battle_unit_target_movement_modifier(&world, id, 3.0, false).unwrap(),
             before - 4
         );
-        stop_battle_unit(
-            &mut world,
-            id,
-            ObjectId(1),
-            BattleMovementRules::STANDARD.fall,
-        )
-        .unwrap();
+        stop_battle_unit(&mut world, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
         assert!(battle_unit_fortified(&world, id).unwrap());
         assert_eq!(
             battle_unit_target_movement_modifier(&world, id, 3.0, false).unwrap(),
@@ -205,7 +199,7 @@ async fn tow_pairs_reject_either_fortified_endpoint_and_cannot_be_fortified_afte
             let (_dir, config, mut world, id) = fixture(source).await;
             let map = world.objects[&id].location.unwrap();
             let target = world.create(&config, "Target".into(), Kind::Thing);
-            BattleUnitTemplate::parse("test", target_source)
+            UnitTemplate::parse("test", target_source)
                 .unwrap()
                 .create(&mut world, target)
                 .unwrap();
@@ -262,7 +256,7 @@ async fn enabling_requires_settled_motion_and_a_landed_aircraft() {
         .unwrap();
     set_battle_fortified(&mut world, id, true).unwrap();
     for _ in 0..2 {
-        advance_battle_jumps(&mut world, BattleMovementRules::STANDARD).unwrap();
+        advance_battle_jumps(&mut world, MovementRules::STANDARD).unwrap();
     }
     assert_eq!(world.btech.constructed_units()[&id].jump_stabilization(), 0);
     let (_dir, _, mut world, id) = fixture(CHASSIS[3]).await;

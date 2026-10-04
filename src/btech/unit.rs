@@ -1,7 +1,5 @@
 //! Constructed BattleMechs with an owned definition and mutable armor/ammunition state.
-use super::{
-    BattleLoadout, BattleSection, BattleSystem, BattleTemplate, StoredBattleUnit, edit_special,
-};
+use super::{MechLoadout, MechSection, MechTemplate, StoredBattleUnit, System, edit_special};
 use crate::ObjectId;
 use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -9,7 +7,7 @@ use std::collections::BTreeMap;
 
 /// Ground hex occupied by a unit; coordinates are zero-based columns and rows.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BattlePosition {
+pub struct Position {
     pub map: ObjectId,
     pub x: u16,
     pub y: u16,
@@ -17,7 +15,7 @@ pub struct BattlePosition {
 
 /// Remaining protection on one section of a constructed combat unit.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BattleSectionState {
+pub struct SectionState {
     pub armor: u16,
     pub internal: u16,
     pub rear: u16,
@@ -25,7 +23,7 @@ pub struct BattleSectionState {
 
 /// Persistent construction state; movement and combat transitions are added to this domain model.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct BattleUnit {
+pub struct Mech {
     #[serde(default)]
     pub(super) propulsion: super::propulsion::Propulsion,
     #[serde(default)]
@@ -63,7 +61,7 @@ pub struct BattleUnit {
     #[serde(default)]
     pub(super) self_destruct_safe: bool,
     #[serde(default)]
-    pub(super) self_destruct: Option<super::BattleSelfDestruct>,
+    pub(super) self_destruct: Option<super::SelfDestruct>,
     /// Elapsed one-second camouflage preparation checks.
     #[serde(default)]
     pub(super) hide_elapsed: Option<u16>,
@@ -80,15 +78,15 @@ pub struct BattleUnit {
     pub(super) autocon_shutdown: bool,
     /// Contact presentation and routine-notice choices.
     #[serde(default)]
-    pub(super) brief: super::BattleBriefSettings,
+    pub(super) brief: super::BriefSettings,
     #[serde(default)]
-    pub(super) tics: super::BattleTics,
+    pub(super) tics: super::Tics,
     #[serde(default)]
-    pub(super) lateral: super::BattleLateralState,
+    pub(super) lateral: super::LateralState,
     #[serde(default)]
-    pub(super) hull_down: super::BattleHullDownState,
+    pub(super) hull_down: super::HullDownState,
     #[serde(default)]
-    pub(super) masc: super::BattleBoosterState,
+    pub(super) masc: super::BoosterState,
     /// Shared identity of a C3i network; peers are derived from world membership.
     #[serde(default)]
     pub(super) c3i_network: Option<u64>,
@@ -97,15 +95,15 @@ pub struct BattleUnit {
     pub(super) c3_network: Option<u64>,
     /// Which network families the server may link automatically.
     #[serde(default)]
-    pub(super) network_automation: super::BattleNetworkAutomation,
+    pub(super) network_automation: super::NetworkAutomation,
     #[serde(default)]
-    pub(super) supercharger: super::BattleBoosterState,
+    pub(super) supercharger: super::BoosterState,
     /// Resolve simultaneous booster checks in the order their timers were scheduled.
     #[serde(default)]
     pub(super) supercharger_scheduled_last: bool,
     /// Channel slots remain saved independently of active hardware limits.
     #[serde(default)]
-    pub(super) radio: [super::BattleRadioChannel; 16],
+    pub(super) radio: [super::RadioChannel; 16],
     /// Communication target captured when startup completes.
     #[serde(default = "super::radio::default_skill")]
     pub(super) radio_skill: i16,
@@ -123,44 +121,43 @@ pub struct BattleUnit {
     pub(super) combat_safe: bool,
     /// Operator visibility privileges, independent of sensor equipment.
     #[serde(default)]
-    pub(super) visibility: super::BattleVisibility,
+    pub(super) visibility: super::Visibility,
     /// Selected observer, or this unit itself while spotting.
     #[serde(default)]
     pub(super) spotter: Option<crate::ObjectId>,
     #[serde(default)]
-    pub(super) spotter_events: super::BattleSpotterEvents,
+    pub(super) spotter_events: super::SpotterEvents,
     /// Saved correction for the current artillery target.
     #[serde(default)]
     pub(super) artillery_adjustment: u8,
     /// Owned TAG selection and lock/recycle countdown.
     #[serde(default)]
-    pub(super) tag: super::BattleTagState,
+    pub(super) tag: super::TagState,
     /// Recent weapon emission, cleared by the next committed heartbeat.
     #[serde(default)]
     pub(super) fired_recently: bool,
     /// Null signature controls and persisted switch destination.
     #[serde(default)]
-    pub(super) null_signature: super::BattleSignatureState,
+    pub(super) null_signature: super::SignatureState,
     /// Owned stealth armor selection and switch countdown.
     #[serde(default)]
-    pub(super) stealth: super::BattleSignatureState,
+    pub(super) stealth: super::SignatureState,
     /// Exclusive suite controls and committed field observations.
     #[serde(default)]
-    pub(super) electronics: super::BattleElectronics,
+    pub(super) electronics: super::Electronics,
     /// Conventional and iNarc pod effects attached to surviving sections.
     #[serde(default)]
-    pub(super) beacons:
-        BTreeMap<BattleSection, std::collections::BTreeSet<super::BattleBeaconKind>>,
+    pub(super) beacons: BTreeMap<MechSection, std::collections::BTreeSet<super::BeaconKind>>,
     /// Pilot-selected automatic anti-missile defense.
     #[serde(default)]
     pub(super) ams_enabled: bool,
     #[serde(default)]
-    pub(super) flight: Option<super::BattleJumpFlight>,
+    pub(super) flight: Option<super::JumpFlight>,
     #[serde(default)]
-    pub(super) free_fall: Option<super::BattleFreeFall>,
+    pub(super) free_fall: Option<super::FreeFall>,
     /// Cocoon or jump-jet descent owns altitude independently of engine power.
     #[serde(default)]
-    pub(super) orbital_drop: Option<super::BattleOrbitalDrop>,
+    pub(super) orbital_drop: Option<super::OrbitalDrop>,
     /// Explicit altitude retained when the supporting terrain changes.
     #[serde(default)]
     pub(super) ground_elevation: Option<f64>,
@@ -172,13 +169,13 @@ pub struct BattleUnit {
     pub(super) auto_fall: bool,
     /// Remaining committed seconds for physical limb recovery.
     #[serde(default)]
-    pub(super) limb_recycle: BTreeMap<BattleSection, u16>,
+    pub(super) limb_recycle: BTreeMap<MechSection, u16>,
     /// Arm holding a tree for a later two-handed club attack.
     #[serde(default)]
-    pub(super) carried_club: Option<super::BattleArm>,
+    pub(super) carried_club: Option<super::Arm>,
     /// Charge selection and accumulated ground movement.
     #[serde(default)]
-    pub(super) charge: super::BattleChargeState,
+    pub(super) charge: super::ChargeState,
     /// Reject weapon fire on units with the same team identifier.
     #[serde(default)]
     pub(super) friendly_fire_safety: bool,
@@ -196,32 +193,32 @@ pub struct BattleUnit {
     #[serde(default)]
     pub(super) jump_stabilization: u8,
     #[serde(default)]
-    pub(super) flooded_sections: std::collections::BTreeSet<BattleSection>,
+    pub(super) flooded_sections: std::collections::BTreeSet<MechSection>,
     /// Sections disabled by vacuum exposure, independent of flooding.
     #[serde(default)]
-    pub(super) breached_sections: std::collections::BTreeSet<BattleSection>,
+    pub(super) breached_sections: std::collections::BTreeSet<MechSection>,
     #[serde(default)]
-    pub(super) stagger: super::BattleStagger,
+    pub(super) stagger: super::Stagger,
     #[serde(default)]
-    pub(super) posture: super::BattlePosture,
+    pub(super) posture: super::Posture,
     #[serde(default)]
-    pub(super) building_entry: Option<super::BattleBuildingEntry>,
+    pub(super) building_entry: Option<super::BuildingEntry>,
     #[serde(default)]
-    pub(super) stand_timer: Option<super::BattleStandTimer>,
+    pub(super) stand_timer: Option<super::StandTimer>,
     #[serde(default)]
-    pub(super) signature: super::BattleUnitSignature,
+    pub(super) signature: super::UnitSignature,
     #[serde(default = "super::scanner::default_perception")]
     pub(super) scanner_perception: i16,
     #[serde(default)]
-    pub(super) contacts: BTreeMap<ObjectId, super::BattleContact>,
+    pub(super) contacts: BTreeMap<ObjectId, super::Contact>,
     #[serde(default)]
-    pub(super) target_lock: Option<super::BattleTargetSelection>,
+    pub(super) target_lock: Option<super::TargetSelection>,
     #[serde(default)]
-    pub(super) aimed_section: Option<super::BattleAimSelection>,
+    pub(super) aimed_section: Option<super::AimSelection>,
     #[serde(default)]
-    pub(super) searchlight: super::BattleSearchlight,
+    pub(super) searchlight: super::Searchlight,
     #[serde(default)]
-    pub(super) facing: super::BattleFacing,
+    pub(super) facing: super::Facing,
     #[serde(default)]
     pub(super) stun_remaining: u8,
     #[serde(default)]
@@ -230,20 +227,20 @@ pub struct BattleUnit {
     #[serde(default)]
     pub(super) pilot_killed: bool,
     /// Tactical recovery owned by an unoccupied cockpit.
-    pub(super) crew_recovery: super::BattleRecovery,
+    pub(super) crew_recovery: super::Recovery,
     #[serde(default)]
-    pub(super) character_pilot: Option<super::BattleCharacterPilotStatus>,
+    pub(super) character_pilot: Option<super::CharacterPilotStatus>,
     #[serde(default)]
-    pub(super) experience: super::BattleUnitExperience,
+    pub(super) experience: super::UnitExperience,
     /// Committed movement cadence and piloting XP coordinate mark.
     #[serde(default)]
-    pub(super) movement_experience: super::BattleMovementExperience,
+    pub(super) movement_experience: super::MovementExperience,
     #[serde(default)]
-    pub(super) heat: super::BattleHeat,
+    pub(super) heat: super::Heat,
     #[serde(default)]
-    pub(super) heat_sample: super::BattleHeatRates,
+    pub(super) heat_sample: super::HeatRates,
     #[serde(default)]
-    pub(super) heat_cutoff: super::BattleHeatCutoff,
+    pub(super) heat_cutoff: super::HeatCutoff,
     /// Total cooling adopted at the last material reconstruction, before physical sink losses.
     #[serde(default)]
     pub(super) reconstructed_cooling: Option<u16>,
@@ -251,7 +248,7 @@ pub struct BattleUnit {
     #[serde(default)]
     pub(super) inferno_remaining: u32,
     #[serde(default)]
-    pub(super) overheat_clock: super::BattleOverheatClock,
+    pub(super) overheat_clock: super::OverheatClock,
     #[serde(default)]
     pub(super) weapon_recycle: BTreeMap<usize, u16>,
     /// Gauss mounts deliberately powered down; independent of material damage.
@@ -260,39 +257,39 @@ pub struct BattleUnit {
     #[serde(default)]
     pub(super) jammed_weapons: std::collections::BTreeSet<usize>,
     #[serde(default)]
-    pub(super) unjam: Option<super::BattleUnjam>,
+    pub(super) unjam: Option<super::Unjam>,
     #[serde(default)]
-    pub(super) dumping: Option<super::BattleDump>,
+    pub(super) dumping: Option<super::Dump>,
     /// Indices of self-contained launchers whose salvo has been expended.
     #[serde(default)]
     pub(super) spent_launchers: std::collections::BTreeSet<usize>,
     #[serde(default)]
-    pub(super) fire_modes: BTreeMap<usize, super::BattleFireMode>,
+    pub(super) fire_modes: BTreeMap<usize, super::FireMode>,
     #[serde(default)]
-    pub(super) ammunition_modes: BTreeMap<usize, super::BattleAmmunitionMode>,
+    pub(super) ammunition_modes: BTreeMap<usize, super::AmmunitionMode>,
     #[serde(default)]
-    pub(super) ammunition_sections: BTreeMap<usize, BattleSection>,
+    pub(super) ammunition_sections: BTreeMap<usize, MechSection>,
     #[serde(default)]
-    pub(super) weapon_damage: Vec<super::BattleWeaponDamage>,
+    pub(super) weapon_damage: Vec<super::WeaponDamage>,
     /// Inspectable component conditions independent of physical system availability.
     #[serde(default)]
-    pub(super) component_failures: Vec<super::BattleComponentFailure<super::CriticalLocation>>,
+    pub(super) component_failures: Vec<super::ComponentFailure<super::CriticalLocation>>,
     /// Temporary weapon conditions independent of material loss and recovery timers.
     #[serde(default)]
-    pub(super) weapon_failures: BTreeMap<usize, super::BattleEquipmentFailure>,
+    pub(super) weapon_failures: BTreeMap<usize, super::EquipmentFailure>,
     #[serde(default)]
     pub(super) weapon_damage_jams: std::collections::BTreeSet<usize>,
     #[serde(default)]
     pub(super) lost_criticals: std::collections::BTreeSet<super::CriticalLocation>,
-    pub(crate) dice: super::BattleDice,
+    pub(crate) dice: super::Dice,
     #[serde(default)]
-    pub(crate) motion: Option<super::BattleMotion>,
+    pub(crate) motion: Option<super::Motion>,
     #[serde(default)]
-    pub(crate) power: super::BattlePower,
+    pub(crate) power: super::Power,
     #[serde(default)]
     pub(crate) pilot: Option<ObjectId>,
     #[serde(default)]
-    pub(crate) position: Option<BattlePosition>,
+    pub(crate) position: Option<Position>,
     /// Tactical membership may be removed while the last physical pose is retained.
     #[serde(default)]
     pub(super) detached: bool,
@@ -304,19 +301,19 @@ pub struct BattleUnit {
     pub(super) battlefield_label: Option<String>,
     /// Optional configured identity, used only when selecting a new battlefield ID.
     #[serde(default)]
-    pub(super) preferred_id: Option<super::BattlePreferredId>,
+    pub(super) preferred_id: Option<super::PreferredId>,
     #[serde(default)]
     contract_loadout: bool,
     #[serde(default)]
     administrative_raw: Option<super::AdministrativeRawUnit>,
-    definition: BattleTemplate,
-    pub(super) sections: BTreeMap<BattleSection, BattleSectionState>,
+    definition: MechTemplate,
+    pub(super) sections: BTreeMap<MechSection, SectionState>,
     pub(super) ammunition: Vec<u16>,
 }
 
 // Live fields change routinely while a unit moves, heats, fires and recovers; everything
 // else is construction, damage and settings, saved only when it changes.
-super::saved_parts::saved_parts!(BattleUnit {
+super::saved_parts::saved_parts!(Mech {
     core: [
         propulsion,
         live_mass,
@@ -441,9 +438,9 @@ super::saved_parts::saved_parts!(BattleUnit {
     live_always: [dice, ammunition,],
 });
 
-impl BattleUnit {
+impl Mech {
     /// The name this unit's anatomy gives a section; a quad's limbs are all legs.
-    pub fn section_name(&self, section: BattleSection) -> &'static str {
+    pub fn section_name(&self, section: MechSection) -> &'static str {
         self.chassis().section_name(section)
     }
 
@@ -452,7 +449,7 @@ impl BattleUnit {
     pub(super) fn validate_untowed(&self) -> Result<()> {
         if let Some(motion) = self.motion() {
             ensure!(
-                self.power() == super::BattlePower::Running || !motion.translating(),
+                self.power() == super::Power::Running || !motion.translating(),
                 "Unpowered untowed unit cannot move"
             );
             motion.validate(self.motion_speed_limit(self.definition().max_speed))?;
@@ -467,7 +464,7 @@ impl BattleUnit {
     }
 
     /// Replace the construction template in place, for fixtures that edit it.
-    pub(super) fn set_fixture_definition(&mut self, definition: BattleTemplate) {
+    pub(super) fn set_fixture_definition(&mut self, definition: MechTemplate) {
         self.definition = definition;
     }
 
@@ -502,9 +499,9 @@ impl BattleUnit {
             self.lost_criticals.remove(&first);
         }
         let failure = if fire.iter().any(|mode| mode == "Disabled") {
-            Some(super::BattleEquipmentFailure::Disabled)
+            Some(super::EquipmentFailure::Disabled)
         } else if fire.iter().any(|mode| mode == "Broken") {
-            Some(super::BattleEquipmentFailure::Dud)
+            Some(super::EquipmentFailure::Dud)
         } else {
             None
         };
@@ -559,7 +556,7 @@ impl BattleUnit {
 
     pub(super) fn set_administrative_armor(
         &mut self,
-        section: BattleSection,
+        section: MechSection,
         armor: Option<u16>,
         internal: Option<u16>,
         rear: Option<u16>,
@@ -586,7 +583,7 @@ impl BattleUnit {
 
     pub(super) fn apply_immediate_repair(
         &mut self,
-        section: BattleSection,
+        section: MechSection,
         kind: super::AdministrativeRepairKind,
         value: u16,
         hull: super::ReattachHull,
@@ -639,9 +636,9 @@ impl BattleUnit {
             }
         }
         let loadout = if self.contract_loadout {
-            BattleLoadout::resolve_contract(&resolvable)?
+            MechLoadout::resolve_contract(&resolvable)?
         } else {
-            BattleLoadout::resolve(&resolvable)?
+            MechLoadout::resolve(&resolvable)?
         };
         let weapon = loadout
             .weapons
@@ -703,7 +700,7 @@ impl BattleUnit {
 
     pub(super) fn replace_construction_contract(
         &mut self,
-        definition: BattleTemplate,
+        definition: MechTemplate,
         touched: &[super::CriticalLocation],
     ) -> Result<()> {
         self.replace_construction_mode(definition, touched, true)
@@ -711,7 +708,7 @@ impl BattleUnit {
 
     fn replace_construction_mode(
         &mut self,
-        definition: BattleTemplate,
+        definition: MechTemplate,
         touched: &[super::CriticalLocation],
         contract: bool,
     ) -> Result<()> {
@@ -769,12 +766,12 @@ impl BattleUnit {
     }
 
     /// Saved character-mode injury count and fatal status, separate from tactical injury rules.
-    pub fn character_pilot_status(&self) -> Option<super::BattleCharacterPilotStatus> {
+    pub fn character_pilot_status(&self) -> Option<super::CharacterPilotStatus> {
         self.character_pilot
     }
 
     /// Saved virtual-crew recovery; a present pilot owns their personal recovery instead.
-    pub fn crew_recovery(&self) -> &super::BattleRecovery {
+    pub fn crew_recovery(&self) -> &super::Recovery {
         &self.crew_recovery
     }
 
@@ -784,10 +781,10 @@ impl BattleUnit {
     }
 
     /// Continuous motion, defaulting to the placed hex center before its first update.
-    pub fn motion(&self) -> Option<super::BattleMotion> {
+    pub fn motion(&self) -> Option<super::Motion> {
         self.motion.or_else(|| {
             self.position.map(|position| {
-                super::BattleMotion::stationary(
+                super::Motion::stationary(
                     super::HexCoordinate {
                         x: i32::from(position.x),
                         y: i32::from(position.y),
@@ -804,7 +801,7 @@ impl BattleUnit {
     }
 
     /// Current engine state and pending startup countdown.
-    pub fn power(&self) -> super::BattlePower {
+    pub fn power(&self) -> super::Power {
         self.power
     }
 
@@ -824,21 +821,21 @@ impl BattleUnit {
     }
 
     /// Current battlefield coordinates, absent when the unit is off-map.
-    pub fn position(&self) -> Option<BattlePosition> {
+    pub fn position(&self) -> Option<Position> {
         (!self.detached).then_some(self.position).flatten()
     }
 
     /// Construct an undamaged conventional biped from a fully resolved supported definition.
-    pub fn from_template(definition: BattleTemplate) -> Result<Self> {
+    pub fn from_template(definition: MechTemplate) -> Result<Self> {
         Self::from_template_mode(definition, false)
     }
 
     /// Admit the broader raw critical layouts accepted by the canonical C administrator.
-    pub(crate) fn from_contract_template(definition: BattleTemplate) -> Result<Self> {
+    pub(crate) fn from_contract_template(definition: MechTemplate) -> Result<Self> {
         Self::from_template_mode(definition, true)
     }
 
-    fn from_template_mode(mut definition: BattleTemplate, contract_loadout: bool) -> Result<Self> {
+    fn from_template_mode(mut definition: MechTemplate, contract_loadout: bool) -> Result<Self> {
         if contract_loadout {
             definition.normalize_contract_ammunition()?;
         } else {
@@ -851,9 +848,9 @@ impl BattleUnit {
             validate_definition(&definition)?;
         }
         let loadout = if contract_loadout {
-            BattleLoadout::resolve_contract(&definition)?
+            MechLoadout::resolve_contract(&definition)?
         } else {
-            BattleLoadout::resolve(&definition)?
+            MechLoadout::resolve(&definition)?
         };
         let sections = definition
             .sections
@@ -861,7 +858,7 @@ impl BattleUnit {
             .map(|(&section, original)| {
                 (
                     section,
-                    BattleSectionState {
+                    SectionState {
                         armor: original.armor,
                         internal: original.internal,
                         rear: original.rear,
@@ -903,7 +900,7 @@ impl BattleUnit {
             observer: false,
             weapons_hold: false,
             combat_safe: false,
-            visibility: super::BattleVisibility::default(),
+            visibility: super::Visibility::default(),
             fired_recently: false,
             null_signature: Default::default(),
             stealth: Default::default(),
@@ -947,7 +944,7 @@ impl BattleUnit {
             stun_remaining: 0,
             pilot_injuries: 0,
             pilot_killed: false,
-            crew_recovery: super::BattleRecovery::fresh(),
+            crew_recovery: super::Recovery::fresh(),
             character_pilot: None,
             towable: false,
             fortified: false,
@@ -968,16 +965,14 @@ impl BattleUnit {
                 .weapons
                 .iter()
                 .enumerate()
-                .filter(|(_, mount)| mount.initial_fire_mode != super::BattleFireMode::Normal)
+                .filter(|(_, mount)| mount.initial_fire_mode != super::FireMode::Normal)
                 .map(|(index, mount)| (index, mount.initial_fire_mode))
                 .collect(),
             ammunition_modes: loadout
                 .weapons
                 .iter()
                 .enumerate()
-                .filter(|(_, mount)| {
-                    mount.initial_ammunition_mode != super::BattleAmmunitionMode::Normal
-                })
+                .filter(|(_, mount)| mount.initial_ammunition_mode != super::AmmunitionMode::Normal)
                 .map(|(index, mount)| (index, mount.initial_ammunition_mode))
                 .collect(),
             weapon_recycle: BTreeMap::new(),
@@ -996,9 +991,9 @@ impl BattleUnit {
             component_failures: Default::default(),
             weapon_failures: Default::default(),
             weapon_damage_jams: Default::default(),
-            dice: super::BattleDice::fresh(),
+            dice: super::Dice::fresh(),
             motion: None,
-            power: super::BattlePower::Off,
+            power: super::Power::Off,
             pilot: None,
             position: None,
             detached: false,
@@ -1024,7 +1019,7 @@ impl BattleUnit {
     }
 
     /// The persisted definition, independent of subsequent source-asset changes.
-    pub fn definition(&self) -> &BattleTemplate {
+    pub fn definition(&self) -> &MechTemplate {
         &self.definition
     }
 
@@ -1045,10 +1040,10 @@ impl BattleUnit {
     }
 
     /// Change limb roles while retaining their installed equipment and damage.
-    pub(super) fn set_chassis(&mut self, chassis: super::BattleMechChassis) {
+    pub(super) fn set_chassis(&mut self, chassis: super::MechChassis) {
         let name = match chassis {
-            super::BattleMechChassis::Biped => "Biped",
-            super::BattleMechChassis::Quad => "Quad",
+            super::MechChassis::Biped => "Biped",
+            super::MechChassis::Quad => "Quad",
         };
         self.definition
             .attributes
@@ -1085,7 +1080,7 @@ impl BattleUnit {
     }
 
     /// Current section armor and internal structure.
-    pub fn sections(&self) -> &BTreeMap<BattleSection, BattleSectionState> {
+    pub fn sections(&self) -> &BTreeMap<MechSection, SectionState> {
         &self.sections
     }
 
@@ -1095,7 +1090,7 @@ impl BattleUnit {
     }
 
     /// Inspect typed equipment from the owned definition.
-    pub fn loadout(&self) -> Result<BattleLoadout> {
+    pub fn loadout(&self) -> Result<MechLoadout> {
         if let Some(projection) = super::loadout_context::mech(self) {
             return Ok(projection);
         }
@@ -1130,8 +1125,8 @@ impl BattleUnit {
         self.brief.validate()?;
         self.lateral.validate()?;
         ensure!(
-            self.chassis() == super::BattleMechChassis::Quad
-                || self.lateral == super::BattleLateralState::default(),
+            self.chassis() == super::MechChassis::Quad
+                || self.lateral == super::LateralState::default(),
             "Only quads can use lateral movement"
         );
         self.validate_hull_down()?;
@@ -1146,15 +1141,12 @@ impl BattleUnit {
         self.validate_stealth()?;
         self.validate_null_signature()?;
         for (suite, mode) in [
-            (
-                super::BattleElectronicSuite::Guardian,
-                self.electronics.guardian,
-            ),
-            (super::BattleElectronicSuite::Angel, self.electronics.angel),
+            (super::ElectronicSuite::Guardian, self.electronics.guardian),
+            (super::ElectronicSuite::Angel, self.electronics.angel),
         ] {
             ensure!(
-                mode == super::BattleElectronicMode::Off
-                    || (self.power == super::BattlePower::Running
+                mode == super::ElectronicMode::Off
+                    || (self.power == super::Power::Running
                         && self.electronic_suite_available(suite)?),
                 "Active electronic suite requires running, available equipment"
             );
@@ -1202,12 +1194,12 @@ impl BattleUnit {
         ensure!(
             self.limb_recycle.iter().all(|(section, seconds)| matches!(
                 section,
-                BattleSection::LeftArm
-                    | BattleSection::RightArm
-                    | BattleSection::LeftLeg
-                    | BattleSection::RightLeg
-                    | BattleSection::LeftTorso
-                    | BattleSection::RightTorso
+                MechSection::LeftArm
+                    | MechSection::RightArm
+                    | MechSection::LeftLeg
+                    | MechSection::RightLeg
+                    | MechSection::LeftTorso
+                    | MechSection::RightTorso
             ) && (1..=60).contains(seconds)),
             "Invalid physical recovery timer"
         );
@@ -1232,7 +1224,7 @@ impl BattleUnit {
                     && (f64::from(i32::MIN)..=f64::from(i32::MAX)).contains(&height)
                     && !self.airborne()
                     && ((f64::from(i16::MIN)..=f64::from(i16::MAX)).contains(&height)
-                        || self.power == super::BattlePower::Off)),
+                        || self.power == super::Power::Off)),
             "Invalid retained terrain altitude"
         );
         self.validate_orbital_drop()?;
@@ -1253,10 +1245,9 @@ impl BattleUnit {
         if let Some(flight) = self.flight {
             ensure!(
                 self.jump_stabilization == 0
-                    && self.power == super::BattlePower::Running
+                    && self.power == super::Power::Running
                     && !self.is_destroyed()
-                    && (self.posture == super::BattlePosture::Standing
-                        || self.airborne_support_lost())
+                    && (self.posture == super::Posture::Standing || self.airborne_support_lost())
                     && self.stand_timer.is_none(),
                 "Invalid airborne unit state"
             );
@@ -1281,29 +1272,23 @@ impl BattleUnit {
             ensure!(
                 matches!(
                     (timer, self.posture),
-                    (
-                        super::BattleStandTimer::Rising { .. },
-                        super::BattlePosture::Standing
-                    ) | (
-                        super::BattleStandTimer::Recovering { .. },
-                        super::BattlePosture::Prone
-                    )
+                    (super::StandTimer::Rising { .. }, super::Posture::Standing)
+                        | (super::StandTimer::Recovering { .. }, super::Posture::Prone)
                 ),
                 "Stand countdown disagrees with posture"
             );
         }
         ensure!(
-            self.posture != super::BattlePosture::Prone
-                || (self.facing == super::BattleFacing::default()
+            self.posture != super::Posture::Prone
+                || (self.facing == super::Facing::default()
                     && self
                         .motion
                         .is_none_or(|motion| motion.speed == 0.0 && motion.desired_speed == 0.0)),
             "Invalid prone motion or facing"
         );
         ensure!(
-            self.target_lock.is_none_or(
-                |lock| lock.remaining() <= 8 && self.power == super::BattlePower::Running
-            ),
+            self.target_lock
+                .is_none_or(|lock| lock.remaining() <= 8 && self.power == super::Power::Running),
             "Invalid target lock countdown or power state"
         );
         ensure!(self.stun_remaining <= 10, "Invalid crew stun countdown");
@@ -1312,11 +1297,11 @@ impl BattleUnit {
             self.pilot_injuries <= i8::MAX as u8,
             "Invalid tactical pilot injury count"
         );
-        if let super::BattlePower::Starting { remaining } = self.power {
+        if let super::Power::Starting { remaining } = self.power {
             ensure!((1..=30).contains(&remaining), "Invalid startup countdown");
         }
         ensure!(
-            self.power == super::BattlePower::Off || self.position.is_some(),
+            self.power == super::Power::Off || self.position.is_some(),
             "Powered unit must be on a battlefield"
         );
         ensure!(
@@ -1343,8 +1328,7 @@ impl BattleUnit {
                 "Motion and hex position disagree"
             );
             ensure!(
-                self.power == super::BattlePower::Running
-                    || !motion.propelled(self.power)?.translating(),
+                self.power == super::Power::Running || !motion.propelled(self.power)?.translating(),
                 "Unpowered unit cannot propel itself"
             );
         }
@@ -1352,8 +1336,7 @@ impl BattleUnit {
             validate_definition(&self.definition)?;
         }
         self.critical_conditions.validate(
-            (self.gyro() == super::BattleGyro::Hardened)
-                .then(|| self.system_hits(BattleSystem::Gyro)),
+            (self.gyro() == super::Gyro::Hardened).then(|| self.system_hits(System::Gyro)),
         )?;
         if !self.contract_loadout {
             self.jump_capacity(50)?;
@@ -1384,7 +1367,7 @@ impl BattleUnit {
         )?;
         ensure!(
             self.fire_modes.iter().all(|(index, mode)| {
-                *mode != super::BattleFireMode::Normal
+                *mode != super::FireMode::Normal
                     && loadout
                         .weapons
                         .get(*index)
@@ -1396,7 +1379,7 @@ impl BattleUnit {
             self.ammunition_modes.iter().all(|(index, mode)| loadout
                 .weapons
                 .get(*index)
-                .is_some_and(|mount| *mode != super::BattleAmmunitionMode::Normal
+                .is_some_and(|mount| *mode != super::AmmunitionMode::Normal
                     && (self.contract_loadout || mode.supports(mount.weapon)))),
             "Invalid weapon ammunition mode"
         );
@@ -1504,7 +1487,7 @@ impl BattleUnit {
             }
         }
         ensure!(
-            self.power == super::BattlePower::Off || !self.is_destroyed(),
+            self.power == super::Power::Off || !self.is_destroyed(),
             "Destroyed unit cannot remain powered"
         );
 
@@ -1565,8 +1548,8 @@ impl BattleUnit {
             template: self.definition.reference.clone(),
             class_code: 0,
             movement_code: match self.chassis() {
-                super::BattleMechChassis::Biped => 0,
-                super::BattleMechChassis::Quad => 8,
+                super::MechChassis::Biped => 0,
+                super::MechChassis::Quad => 8,
             },
             tons: i64::from(self.definition.tons),
             map: self.position().map(|position| position.map),
@@ -1660,7 +1643,7 @@ pub(super) fn remap_map<T: Clone>(
 /// Refuse technology whose rules stompymux does not model, rather than fielding it as something
 /// else: reactive armor, compact heat sinks, Inner Sphere laser heat sinks, and null signature
 /// systems beside stealth armor.
-fn validate_unsupported_technology(definition: &BattleTemplate) -> Result<()> {
+fn validate_unsupported_technology(definition: &MechTemplate) -> Result<()> {
     ensure!(
         !definition.has_special("ReactiveArmor_Tech"),
         "Reactive armor is unsupported"
@@ -1671,7 +1654,7 @@ fn validate_unsupported_technology(definition: &BattleTemplate) -> Result<()> {
     );
     ensure!(
         definition.has_special("Clan")
-            || !definition.has_technology(super::BattleTechnology::LaserHeatSinks),
+            || !definition.has_technology(super::Technology::LaserHeatSinks),
         "Laser heat sinks are Clan technology"
     );
     let installed = |system| {
@@ -1679,17 +1662,17 @@ fn validate_unsupported_technology(definition: &BattleTemplate) -> Result<()> {
             .sections
             .values()
             .flat_map(|section| section.criticals.values())
-            .any(|critical| BattleSystem::named(&critical.equipment).is_some_and(|s| s == system))
+            .any(|critical| System::named(&critical.equipment).is_some_and(|s| s == system))
     };
     ensure!(
-        !(installed(BattleSystem::NullSignature) && installed(BattleSystem::StealthArmor)),
+        !(installed(System::NullSignature) && installed(System::StealthArmor)),
         "A null signature system cannot be combined with stealth armor"
     );
     Ok(())
 }
 
 /// Gate the initial conventional chassis features without silently discarding unknown fields.
-fn validate_definition(definition: &BattleTemplate) -> Result<()> {
+fn validate_definition(definition: &MechTemplate) -> Result<()> {
     super::validate_unit_metadata(&definition.attributes)?;
     super::read_engine_sink_override(&definition.attributes)?;
     super::read_template_speed(&definition.attributes, definition.max_speed)?;
@@ -1796,7 +1779,7 @@ fn validate_definition(definition: &BattleTemplate) -> Result<()> {
                             || flag.eq_ignore_ascii_case("LightEngine_Tech")
                             || flag.eq_ignore_ascii_case("XXL_Tech")
                             || flag.eq_ignore_ascii_case("CompactEngine_Tech")
-                            || super::BattleTechnology::recognizes(flag)
+                            || super::Technology::recognizes(flag)
                             || (0..=56).any(|code| {
                                 super::administrative_technology(code)
                                     .is_some_and(|(name, _)| flag.eq_ignore_ascii_case(name))
@@ -1831,13 +1814,13 @@ fn validate_definition(definition: &BattleTemplate) -> Result<()> {
         ensure!(
             matches!(
                 section,
-                BattleSection::LeftTorso | BattleSection::RightTorso | BattleSection::CenterTorso
+                MechSection::LeftTorso | MechSection::RightTorso | MechSection::CenterTorso
             ) || layout.rear == 0,
             "Rear armor outside torso"
         );
     }
     let loadout = super::equipment_context::mech(definition, false)?;
-    super::BattleEngine::resolve(&loadout, definition.clan_engine())?;
+    super::Engine::resolve(&loadout, definition.clan_engine())?;
     ensure!(
         ["HDGYRO", "XLGYRO", "CGYRO"]
             .iter()
@@ -1848,15 +1831,15 @@ fn validate_definition(definition: &BattleTemplate) -> Result<()> {
     );
     for (system, count) in [
         (
-            BattleSystem::Gyro,
-            super::BattleGyro::from_definition(definition).critical_slots(),
+            System::Gyro,
+            super::Gyro::from_definition(definition).critical_slots(),
         ),
-        (BattleSystem::Cockpit, 1),
-        (BattleSystem::Sensors, 2),
+        (System::Cockpit, 1),
+        (System::Sensors, 2),
         // A small cockpit fits one life support slot beside its two sensors.
         (
-            BattleSystem::LifeSupport,
-            if definition.has_technology(super::BattleTechnology::SmallCockpit) {
+            System::LifeSupport,
+            if definition.has_technology(super::Technology::SmallCockpit) {
                 1
             } else {
                 2
@@ -1890,7 +1873,7 @@ fn validate_definition(definition: &BattleTemplate) -> Result<()> {
     let sinks = loadout
         .systems
         .iter()
-        .filter(|critical| critical.system == BattleSystem::HeatSink)
+        .filter(|critical| critical.system == System::HeatSink)
         .count();
     ensure!(
         if definition.has_double_heat_sinks() {

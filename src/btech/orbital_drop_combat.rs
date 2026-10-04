@@ -6,7 +6,7 @@ use anyhow::{Context, Result};
 
 /// Breaches compare raw terrain elevation, including the bed below ice and water.
 /// Off-map protection retires at its retained height without scheduling an impossible map fall.
-fn surface(world: &World, id: ObjectId, drop: BattleOrbitalDrop) -> Result<i32> {
+fn surface(world: &World, id: ObjectId, drop: OrbitalDrop) -> Result<i32> {
     let Some(position) = super::scanner::scanner_unit(world, id).and_then(|unit| unit.position)
     else {
         return Ok(drop.elevation());
@@ -29,7 +29,7 @@ pub(super) fn intercept(
     id: ObjectId,
     attacker: Option<ObjectId>,
     amount: u32,
-) -> Result<Option<Vec<BattleNotice>>> {
+) -> Result<Option<Vec<Notice>>> {
     let Some(mut drop) = current(world, id).filter(|drop| drop.protected()) else {
         return Ok(None);
     };
@@ -50,12 +50,12 @@ pub(super) fn intercept(
     )?;
     let mut notices = Vec::new();
     if let Some(attacker) = attacker {
-        notices.push(BattleNotice {
+        notices.push(Notice {
             unit: attacker,
             text: format!("[fg=green]You hit the cocoon for {amount} points of damage![reset]"),
         });
     }
-    notices.push(BattleNotice {
+    notices.push(Notice {
         unit: id,
         text: format!(
             "[fg=yellow bold]Your cocoon has been hit for {amount} points of damage![reset]"
@@ -63,12 +63,12 @@ pub(super) fn intercept(
     });
     continue_after_breach(world, id, drop, result.breach);
     match result.breach {
-        Some(BattleDropBreach::JumpJets) => notices.push(BattleNotice {
+        Some(DropBreach::JumpJets) => notices.push(Notice {
             unit: id,
             text: "You initiate your jumpjets to compensate for the breached cocoon!".into(),
         }),
-        Some(BattleDropBreach::FreeFall) => {
-            notices.push(BattleNotice {
+        Some(DropBreach::FreeFall) => {
+            notices.push(Notice {
                 unit: id,
                 text: "Your cocoon has been destroyed - have a nice fall!".into(),
             });
@@ -85,7 +85,7 @@ pub(super) fn intercept(
 
 /// An admitted firing attempt opens protection even when a Streak launcher fails to lock.
 /// Mechanical failures return before this stage and leave their own internal damage in charge.
-pub(super) fn open_for_fire(world: &mut World, id: ObjectId) -> Result<Vec<BattleNotice>> {
+pub(super) fn open_for_fire(world: &mut World, id: ObjectId) -> Result<Vec<Notice>> {
     let Some(mut drop) = current(world, id) else {
         return Ok(Vec::new());
     };
@@ -97,17 +97,15 @@ pub(super) fn open_for_fire(world: &mut World, id: ObjectId) -> Result<Vec<Battl
     };
     continue_after_breach(world, id, drop, Some(breach));
     let text = match breach {
-        BattleDropBreach::JumpJets => {
-            "You initiate your jumpjets to compensate for the opened cocoon!"
-        }
-        BattleDropBreach::FreeFall => "Your action splits open the cocoon - have a nice fall!",
-        BattleDropBreach::AtSurface => return Ok(Vec::new()),
+        DropBreach::JumpJets => "You initiate your jumpjets to compensate for the opened cocoon!",
+        DropBreach::FreeFall => "Your action splits open the cocoon - have a nice fall!",
+        DropBreach::AtSurface => return Ok(Vec::new()),
     };
-    let mut notices = vec![BattleNotice {
+    let mut notices = vec![Notice {
         unit: id,
         text: text.into(),
     }];
-    if breach == BattleDropBreach::FreeFall {
+    if breach == DropBreach::FreeFall {
         notices.extend(super::broadcast::observer_notices(
             world,
             id,
@@ -122,15 +120,11 @@ pub(super) fn open_for_fire(world: &mut World, id: ObjectId) -> Result<Vec<Battl
 fn continue_after_breach(
     world: &mut World,
     id: ObjectId,
-    drop: BattleOrbitalDrop,
-    breach: Option<BattleDropBreach>,
+    drop: OrbitalDrop,
+    breach: Option<DropBreach>,
 ) {
-    let retired = matches!(
-        breach,
-        Some(BattleDropBreach::FreeFall | BattleDropBreach::AtSurface)
-    );
-    let fall =
-        (breach == Some(BattleDropBreach::FreeFall)).then(|| BattleFreeFall::new(drop.elevation()));
+    let retired = matches!(breach, Some(DropBreach::FreeFall | DropBreach::AtSurface));
+    let fall = (breach == Some(DropBreach::FreeFall)).then(|| FreeFall::new(drop.elevation()));
     if let Some(unit) = world.btech.constructed.get_mut(&id) {
         unit.orbital_drop = (!retired).then_some(drop);
         if let Some(fall) = fall {
@@ -151,7 +145,7 @@ fn continue_after_breach(
         if let Some(fall) = fall {
             unit.free_fall = Some(fall);
             unit.ground_elevation = None;
-            unit.dig = BattleDigState::default();
+            unit.dig = DigState::default();
             unit.building_entry = None;
             unit.halt();
         } else if retired {

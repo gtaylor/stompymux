@@ -1,14 +1,12 @@
 //! Resolve ordered damage descriptions against owned construction before any live-state mutation.
-use super::{
-    AmmunitionBin, BattleDamageRecord, BattleSectionState, SectionDefinition, WeaponMount,
-};
+use super::{AmmunitionBin, DamageRecord, SectionDefinition, SectionState, WeaponMount};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use std::collections::{BTreeMap, BTreeSet};
 
 /// A section/slot identity in the compact damage format, independent of unit anatomy enums.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct BattleDamageSlot {
+pub struct DamageSlot {
     pub section: u8,
     pub slot: u8,
 }
@@ -16,20 +14,20 @@ pub struct BattleDamageSlot {
 /// Desired material and failure assignments; applying runtime consequences is a separate operation.
 /// Omitted records restore protection, ammunition and non-placeholder criticals to construction.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct BattleDamageReplacement {
-    pub sections: BTreeMap<u8, BattleSectionState>,
-    pub destroyed_criticals: BTreeSet<BattleDamageSlot>,
-    pub ammunition: BTreeMap<BattleDamageSlot, u16>,
+pub struct DamageReplacement {
+    pub sections: BTreeMap<u8, SectionState>,
+    pub destroyed_criticals: BTreeSet<DamageSlot>,
+    pub ammunition: BTreeMap<DamageSlot, u16>,
     /// Nonzero failure codes by system slot or weapon primary slot.
-    pub failures: BTreeMap<BattleDamageSlot, u8>,
+    pub failures: BTreeMap<DamageSlot, u8>,
 }
 
 /// Construction facts adapted once so replacement rules do not branch on chassis type.
 struct Material<'a> {
     sections: BTreeMap<u8, &'a SectionDefinition>,
-    ammunition: BTreeMap<BattleDamageSlot, u16>,
-    weapon_heads: BTreeMap<BattleDamageSlot, BattleDamageSlot>,
-    groups: Vec<Vec<BattleDamageSlot>>,
+    ammunition: BTreeMap<DamageSlot, u16>,
+    weapon_heads: BTreeMap<DamageSlot, DamageSlot>,
+    groups: Vec<Vec<DamageSlot>>,
 }
 
 impl<'a> Material<'a> {
@@ -39,8 +37,8 @@ impl<'a> Material<'a> {
         bins: &[AmmunitionBin<L>],
         weapons: &[WeaponMount<L>],
         number: impl Fn(S) -> u8,
-        location: impl Fn(L) -> BattleDamageSlot,
-        groups: Vec<Vec<BattleDamageSlot>>,
+        location: impl Fn(L) -> DamageSlot,
+        groups: Vec<Vec<DamageSlot>>,
     ) -> Self {
         Self {
             sections: sections
@@ -77,7 +75,7 @@ impl<'a> Material<'a> {
     }
 
     /// Resolve real installed equipment rather than accepting vacant or structural filler slots.
-    fn equipment(&self, location: BattleDamageSlot) -> Result<()> {
+    fn equipment(&self, location: DamageSlot) -> Result<()> {
         let part = self
             .section(location.section)?
             .criticals
@@ -91,7 +89,7 @@ impl<'a> Material<'a> {
     }
 
     /// Last assignments win, then all final material values are checked together.
-    fn replace(&self, records: &[BattleDamageRecord]) -> Result<BattleDamageReplacement> {
+    fn replace(&self, records: &[DamageRecord]) -> Result<DamageReplacement> {
         let mut armor = BTreeMap::new();
         let mut internal = BTreeMap::new();
         let mut spent = BTreeMap::new();
@@ -99,7 +97,7 @@ impl<'a> Material<'a> {
         let mut destroyed = BTreeSet::new();
         for &record in records {
             match record {
-                BattleDamageRecord::Armor {
+                DamageRecord::Armor {
                     section,
                     rear,
                     loss,
@@ -107,21 +105,21 @@ impl<'a> Material<'a> {
                     self.section(section)?;
                     armor.insert((section, rear), loss);
                 }
-                BattleDamageRecord::Internal { section, loss } => {
+                DamageRecord::Internal { section, loss } => {
                     self.section(section)?;
                     internal.insert(section, loss);
                 }
-                BattleDamageRecord::Critical { section, slot } => {
-                    let location = BattleDamageSlot { section, slot };
+                DamageRecord::Critical { section, slot } => {
+                    let location = DamageSlot { section, slot };
                     self.equipment(location)?;
                     destroyed.insert(location);
                 }
-                BattleDamageRecord::Ammunition {
+                DamageRecord::Ammunition {
                     section,
                     slot,
                     spent: value,
                 } => {
-                    let location = BattleDamageSlot { section, slot };
+                    let location = DamageSlot { section, slot };
                     self.equipment(location)?;
                     ensure!(
                         self.ammunition.contains_key(&location),
@@ -129,12 +127,12 @@ impl<'a> Material<'a> {
                     );
                     spent.insert(location, value);
                 }
-                BattleDamageRecord::Failure {
+                DamageRecord::Failure {
                     section,
                     slot,
                     failure,
                 } => {
-                    let location = BattleDamageSlot { section, slot };
+                    let location = DamageSlot { section, slot };
                     self.equipment(location)?;
                     ensure!(
                         !self.ammunition.contains_key(&location),
@@ -159,7 +157,7 @@ impl<'a> Material<'a> {
             .sections
             .iter()
             .map(|(&section, original)| {
-                let state = BattleSectionState {
+                let state = SectionState {
                     armor: remaining(
                         original.armor,
                         armor.get(&(section, false)).copied().unwrap_or(0),
@@ -180,9 +178,8 @@ impl<'a> Material<'a> {
                 Ok((section, state))
             })
             .collect::<Result<_>>()?;
-        let unavailable = |slot: &BattleDamageSlot| {
-            destroyed.contains(slot) || sections[&slot.section].internal == 0
-        };
+        let unavailable =
+            |slot: &DamageSlot| destroyed.contains(slot) || sections[&slot.section].internal == 0;
         let ammunition = self
             .ammunition
             .iter()
@@ -201,7 +198,7 @@ impl<'a> Material<'a> {
             .into_iter()
             .filter(|(slot, value)| *value != 0 && !unavailable(slot))
             .collect();
-        Ok(BattleDamageReplacement {
+        Ok(DamageReplacement {
             sections,
             destroyed_criticals: destroyed,
             ammunition,
@@ -222,15 +219,11 @@ fn remaining(original: u16, loss: i32) -> Result<u16> {
 /// Prepare replacement material without changing the world, dice, crew or pending actions.
 /// This validates anatomy and material only; runtime failure effects, lifecycle reconciliation
 /// and conditional Mech system recalculation still belong to the eventual field transaction.
-pub fn prepare_damage_field(
-    world: &World,
-    id: ObjectId,
-    value: &str,
-) -> Result<BattleDamageReplacement> {
+pub fn prepare_damage_field(world: &World, id: ObjectId, value: &str) -> Result<DamageReplacement> {
     let records = super::parse_damage_field(value)?;
     if let Some(unit) = world.btech.constructed_units().get(&id) {
         let loadout = unit.loadout()?;
-        let location = |location: super::CriticalLocation| BattleDamageSlot {
+        let location = |location: super::CriticalLocation| DamageSlot {
             section: super::damage_field::mech_section(location.section),
             slot: location.slot,
         };
@@ -272,7 +265,7 @@ pub fn prepare_damage_field(
         &loadout.ammunition,
         &loadout.weapons,
         super::damage_field::vehicle_section,
-        |location| BattleDamageSlot {
+        |location| DamageSlot {
             section: super::damage_field::vehicle_section(location.section),
             slot: location.slot,
         },
@@ -316,7 +309,7 @@ mod tests {
         };
         assert!(
             material
-                .replace(&[BattleDamageRecord::Critical {
+                .replace(&[DamageRecord::Critical {
                     section: 2,
                     slot: 0
                 }])
@@ -324,21 +317,21 @@ mod tests {
         );
         assert!(
             material
-                .replace(&[BattleDamageRecord::Critical {
+                .replace(&[DamageRecord::Critical {
                     section: 2,
                     slot: 2
                 }])
                 .is_err()
         );
         let replacement = material
-            .replace(&[BattleDamageRecord::Critical {
+            .replace(&[DamageRecord::Critical {
                 section: 2,
                 slot: 1,
             }])
             .unwrap();
         assert_eq!(
             replacement.destroyed_criticals,
-            [BattleDamageSlot {
+            [DamageSlot {
                 section: 2,
                 slot: 1
             }]

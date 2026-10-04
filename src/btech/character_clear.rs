@@ -19,7 +19,7 @@ pub fn clear_character(world: &mut World, actor: ObjectId, player: ObjectId) -> 
         // Removing attributes would invalidate active character recovery in this model.
         world.btech.characters.insert(
             player,
-            super::BattleCharacter {
+            super::Character {
                 build: 1,
                 reflexes: 1,
                 intuition: 1,

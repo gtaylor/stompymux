@@ -1,5 +1,5 @@
 //! Sight and sensor visibility of terrain coordinates without acquiring or identifying their occupants.
-use super::{BattleDetectionChannel, BattlePerceptionProfile, HexCoordinate};
+use super::{DetectionChannel, HexCoordinate, PerceptionProfile};
 use crate::{ObjectId, World};
 use anyhow::Result;
 use std::cell::OnceCell;
@@ -14,7 +14,7 @@ pub fn hex_detection(
     world: &World,
     observer: ObjectId,
     target: HexCoordinate,
-) -> Result<Option<BattleDetectionChannel>> {
+) -> Result<Option<DetectionChannel>> {
     super::hex_perception(world, observer, target)
 }
 
@@ -35,7 +35,7 @@ pub(super) fn observation_visible(
 pub(super) struct HexViewer<'w> {
     world: &'w World,
     observer: ObjectId,
-    profile: OnceCell<BattlePerceptionProfile>,
+    profile: OnceCell<PerceptionProfile>,
 }
 
 impl<'w> HexViewer<'w> {

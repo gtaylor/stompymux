@@ -7,7 +7,7 @@ use std::{collections::BTreeMap, sync::Arc};
 
 /// A circular exclusion; a nonzero exempt team may land within its radius.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BattleLandingExclusion {
+pub struct LandingExclusion {
     pub coordinate: HexCoordinate,
     /// Signed radius; negative values retain an inactive restriction.
     pub radius: i64,
@@ -20,7 +20,7 @@ pub struct BattleLandingExclusion {
 /// First failed strict landing requirement, or a usable landing location.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleLandingSuitability {
+pub enum LandingSuitability {
     Ready,
     ImproperTerrain,
     UnevenGround,
@@ -29,14 +29,12 @@ pub enum BattleLandingSuitability {
 
 impl StoredMap {
     /// Stable restriction slots, including overlapping circles.
-    pub fn landing_exclusions(&self) -> &BTreeMap<u32, BattleLandingExclusion> {
+    pub fn landing_exclusions(&self) -> &BTreeMap<u32, LandingExclusion> {
         &self.landing_exclusions
     }
 
     /// Traverse restrictions in their saved list order without renumbering identities.
-    pub fn ordered_landing_exclusions(
-        &self,
-    ) -> impl Iterator<Item = (&u32, &BattleLandingExclusion)> {
+    pub fn ordered_landing_exclusions(&self) -> impl Iterator<Item = (&u32, &LandingExclusion)> {
         self.landing_exclusion_order
             .iter()
             .map(|slot| (slot, &self.landing_exclusions[slot]))
@@ -49,21 +47,21 @@ impl StoredMap {
         &self,
         coordinate: HexCoordinate,
         team: i32,
-    ) -> Result<BattleLandingSuitability> {
+    ) -> Result<LandingSuitability> {
         let tile = self.hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
         if !tile.is_open_ground() {
-            return Ok(BattleLandingSuitability::ImproperTerrain);
+            return Ok(LandingSuitability::ImproperTerrain);
         }
         for neighbor in self.neighbors(coordinate)? {
             let Some(neighbor) = neighbor else {
-                return Ok(BattleLandingSuitability::UnevenGround);
+                return Ok(LandingSuitability::UnevenGround);
             };
             if self
                 .base_hex(i64::from(neighbor.x), i64::from(neighbor.y))?
                 .surface_height()
                 != tile.surface_height()
             {
-                return Ok(BattleLandingSuitability::UnevenGround);
+                return Ok(LandingSuitability::UnevenGround);
             }
         }
         for zone in self.landing_exclusions.values() {
@@ -71,10 +69,10 @@ impl StoredMap {
                 continue;
             }
             if coordinate.center().range(zone.coordinate.center())? <= zone.radius as f64 {
-                return Ok(BattleLandingSuitability::Blocked);
+                return Ok(LandingSuitability::Blocked);
             }
         }
-        Ok(BattleLandingSuitability::Ready)
+        Ok(LandingSuitability::Ready)
     }
 }
 
@@ -83,7 +81,7 @@ pub fn set_landing_exclusion(
     world: &mut World,
     map: ObjectId,
     ordinal: u32,
-    zone: Option<BattleLandingExclusion>,
+    zone: Option<LandingExclusion>,
 ) -> Result<()> {
     ensure!(
         world

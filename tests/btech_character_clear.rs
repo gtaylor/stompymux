@@ -18,7 +18,7 @@ async fn clear_restores_defaults_preserves_recovery_and_survives_restart() {
     set_battle_character(
         &mut world,
         player,
-        BattleCharacter {
+        Character {
             build: 4,
             reflexes: 5,
             intuition: 6,
@@ -34,7 +34,7 @@ async fn clear_restores_defaults_preserves_recovery_and_survives_restart() {
             &mut world,
             player,
             name,
-            BattleCharacterValue {
+            CharacterValue {
                 value: 1,
                 experience: 123,
                 last_used: 456,
@@ -66,7 +66,7 @@ async fn clear_restores_defaults_preserves_recovery_and_survives_restart() {
     let mut cleared = scripts.world().clone();
     assert_eq!(
         cleared.btech.characters()[&player],
-        BattleCharacter {
+        Character {
             build: 1,
             reflexes: 1,
             intuition: 1,
@@ -94,7 +94,7 @@ async fn clear_restores_defaults_preserves_recovery_and_survives_restart() {
         .unwrap();
     let mut restored = persistence::load(&config.database()).await.unwrap();
     assert_eq!(restored.btech, cleared.btech);
-    let mut dice: BattleDice =
+    let mut dice: Dice =
         serde_json::from_value(serde_json::to_value(&expected).unwrap()["dice"].clone()).unwrap();
     let expected_roll = dice.consciousness_roll(false);
     for _ in 0..12 {
@@ -163,7 +163,7 @@ async fn clear_preserves_mech_and_vehicle_pilot_state() {
         set_battle_character(
             &mut world,
             ObjectId(1),
-            BattleCharacter {
+            Character {
                 build: 3,
                 reflexes: 3,
                 intuition: 3,

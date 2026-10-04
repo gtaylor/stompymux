@@ -18,7 +18,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse("test", template).unwrap(),
+        VehicleTemplate::parse("test", template).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -36,7 +36,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
 fn seed(world: &mut World, id: ObjectId, value: u8) {
     world
         .btech
-        .set_unit_dice(id, BattleDice::seeded([value; 32]))
+        .set_unit_dice(id, Dice::seeded([value; 32]))
         .unwrap();
 }
 
@@ -74,20 +74,20 @@ fn demolisher_with(weapon: &str) -> String {
 }
 
 /// Ordinary admitted direct-shot inputs; the launch stage is independent of target damage.
-fn request(id: ObjectId) -> BattleVehicleLaunchRequest {
-    BattleVehicleLaunchRequest {
+fn request(id: ObjectId) -> VehicleLaunchRequest {
+    VehicleLaunchRequest {
         shooter: id,
         pilot: ObjectId(1),
         weapon_index: 0,
         distance: 1.0,
         target_number: Some(6),
         streak_confused: false,
-        glancing: BattleGlancingMode::Disabled,
-        critical_rules: BattleVehicleCriticalRules {
+        glancing: GlancingMode::Disabled,
+        critical_rules: VehicleCriticalRules {
             rotor_damage_divisor: 0,
             extended_piloting: false,
             vtol_table: None,
-            table: BattleVehicleCriticalTable::Standard,
+            table: VehicleCriticalTable::Standard,
             enabled: false,
             combat_safe: false,
             toughness: false,
@@ -107,7 +107,7 @@ async fn vehicle_launch_glancing_misses_and_out_of_range_attempts_replay_expendi
             "distance" => invalid.distance = f64::NAN,
             "glancing" => {
                 invalid.target_number = Some(i32::MIN);
-                invalid.glancing = BattleGlancingMode::BelowTarget;
+                invalid.glancing = GlancingMode::BelowTarget;
             }
             "pilot" => invalid.pilot = ObjectId(2),
             _ => unreachable!(),
@@ -115,29 +115,19 @@ async fn vehicle_launch_glancing_misses_and_out_of_range_attempts_replay_expendi
         assert!(launch_battle_vehicle_weapon(&mut world, invalid).is_err());
         assert_eq!(world.btech, before);
     }
-    let mut dice = BattleDice::seeded([17; 32]);
+    let mut dice = Dice::seeded([17; 32]);
     let roll = dice.two_d6();
     for (mode, target, hit, glanced) in [
+        (GlancingMode::Disabled, Some(i32::from(roll)), true, false),
+        (GlancingMode::AtTarget, Some(i32::from(roll)), true, true),
         (
-            BattleGlancingMode::Disabled,
-            Some(i32::from(roll)),
-            true,
-            false,
-        ),
-        (
-            BattleGlancingMode::AtTarget,
-            Some(i32::from(roll)),
-            true,
-            true,
-        ),
-        (
-            BattleGlancingMode::BelowTarget,
+            GlancingMode::BelowTarget,
             Some(i32::from(roll) + 1),
             true,
             true,
         ),
-        (BattleGlancingMode::Disabled, Some(13), false, false),
-        (BattleGlancingMode::Disabled, None, false, false),
+        (GlancingMode::Disabled, Some(13), false, false),
+        (GlancingMode::Disabled, None, false, false),
     ] {
         let mut world = base.clone();
         persistence::save(&config.database(), &world).await.unwrap();
@@ -195,7 +185,7 @@ async fn vehicle_streak_failure_recycles_without_ammunition_and_confusion_allows
         .iter()
         .position(|mount| mount.weapon.is_streak())
         .unwrap();
-    let mut dice = BattleDice::seeded([17; 32]);
+    let mut dice = Dice::seeded([17; 32]);
     let roll = dice.two_d6();
     for (target, confused, launched, hit) in [
         (Some(13), false, false, false),
@@ -209,7 +199,7 @@ async fn vehicle_streak_failure_recycles_without_ammunition_and_confusion_allows
         request.weapon_index = index;
         request.target_number = target;
         request.streak_confused = confused;
-        request.glancing = BattleGlancingMode::AtTarget;
+        request.glancing = GlancingMode::AtTarget;
         let report = launch_battle_vehicle_weapon(&mut world, request).unwrap();
         assert_eq!(report.roll, roll);
         assert_eq!(report.hit, hit);
@@ -250,7 +240,7 @@ async fn vehicle_gatling_preparation_precedes_attack_and_burst_supply_falls_back
             record["ammunition"] = serde_json::json!([5, 0, 0, 0]);
         })
         .unwrap();
-    let mut dice = BattleDice::seeded([17; 32]);
+    let mut dice = Dice::seeded([17; 32]);
     dice.d6();
     let expected_roll = dice.two_d6();
     let report = launch_battle_vehicle_weapon(&mut world, request(id)).unwrap();
@@ -282,7 +272,7 @@ async fn vehicle_gatling_preparation_precedes_attack_and_burst_supply_falls_back
         })
         .unwrap();
     let report = launch_battle_vehicle_weapon(&mut world, request(id)).unwrap();
-    assert_eq!(report.expenditure.fire_mode, BattleFireMode::Normal);
+    assert_eq!(report.expenditure.fire_mode, FireMode::Normal);
     assert_eq!(
         report
             .expenditure
@@ -294,7 +284,7 @@ async fn vehicle_gatling_preparation_precedes_attack_and_burst_supply_falls_back
     );
     assert_eq!(
         world.btech.vehicles()[&id].fire_mode(0).unwrap(),
-        BattleFireMode::Normal
+        FireMode::Normal
     );
 }
 
@@ -308,7 +298,7 @@ async fn vehicle_ultra_launches_and_loader_loss_replay_without_affecting_other_m
     let (_dir, config, base, id) = fixture(&template).await;
     let mut covered = std::collections::BTreeSet::new();
     for value in 0..=255 {
-        let mut expected = BattleDice::seeded([value; 32]);
+        let mut expected = Dice::seeded([value; 32]);
         let roll = expected.two_d6();
         if !covered.insert(roll) {
             continue;
@@ -330,7 +320,7 @@ async fn vehicle_ultra_launches_and_loader_loss_replay_without_affecting_other_m
         assert_eq!(report.expenditure.launched, roll != 2);
         assert_eq!(report.hit, roll >= 6);
         assert!(!report.glancing);
-        assert_eq!(report.expenditure.fire_mode, BattleFireMode::Ultra);
+        assert_eq!(report.expenditure.fire_mode, FireMode::Ultra);
         let unit = &world.btech.vehicles()[&id];
         assert!(unit.weapon_readiness(1).unwrap().ready);
         if roll == 2 {
@@ -381,7 +371,7 @@ async fn vehicle_feed_jams_follow_burst_thresholds_and_survive_ticks_and_reload(
         let (_dir, config, base, id) = fixture(&template).await;
         let mut covered = std::collections::BTreeSet::new();
         for value in 0..=255 {
-            let mut dice = BattleDice::seeded([value; 32]);
+            let mut dice = Dice::seeded([value; 32]);
             let roll = dice.two_d6();
             if !covered.insert(roll) {
                 continue;
@@ -471,7 +461,7 @@ async fn vehicle_misloads_and_propellant_checks_replay_damage_supply_and_dice() 
         let (_dir, config, base, id) = fixture(&template).await;
         let mut covered = std::collections::BTreeSet::new();
         for value in 0..=255 {
-            let mut dice = BattleDice::seeded([value; 32]);
+            let mut dice = Dice::seeded([value; 32]);
             let roll = dice.two_d6();
             let propellant = (caseless && roll <= 3).then(|| dice.two_d6());
             if !covered.insert((roll, propellant)) {
@@ -515,9 +505,9 @@ async fn vehicle_misloads_and_propellant_checks_replay_damage_supply_and_dice() 
             if let Some(damage) = report.misload {
                 assert_eq!(damage.rolls, expected_damage_rolls);
                 assert_eq!(damage.absorbed, 2);
-                assert_eq!(damage.section, BattleVehicleSection::Turret);
+                assert_eq!(damage.section, VehicleSection::Turret);
                 assert_eq!(
-                    world.btech.vehicles()[&id].sections()[&BattleVehicleSection::Turret].internal,
+                    world.btech.vehicles()[&id].sections()[&VehicleSection::Turret].internal,
                     6
                 );
             }
@@ -571,7 +561,7 @@ async fn vehicle_misloads_and_propellant_checks_replay_damage_supply_and_dice() 
 #[tokio::test]
 async fn vehicle_misloads_clamp_destroyed_bins_and_spend_surviving_supply_after_hull_loss() {
     let seed_value = (0..=255)
-        .find(|value| BattleDice::seeded([*value; 32]).two_d6() == 2)
+        .find(|value| Dice::seeded([*value; 32]).two_d6() == 2)
         .unwrap();
     for front in [false, true] {
         let mut template = with_modes(
@@ -642,7 +632,7 @@ async fn vehicle_misload_policy_and_caseless_short_supply_are_retained() {
     for ignition in [false, true] {
         let value = (0..=255)
             .find(|value| {
-                let mut dice = BattleDice::seeded([*value; 32]);
+                let mut dice = Dice::seeded([*value; 32]);
                 dice.two_d6() <= 3 && (dice.two_d6() > 7) == ignition
             })
             .unwrap();
@@ -657,10 +647,10 @@ async fn vehicle_misload_policy_and_caseless_short_supply_are_retained() {
         let report = launch_battle_vehicle_weapon(&mut world, request(id)).unwrap();
         assert_eq!(report.loader_destroyed, ignition);
         assert_eq!(report.jammed, !ignition);
-        assert_eq!(report.expenditure.fire_mode, BattleFireMode::Normal);
+        assert_eq!(report.expenditure.fire_mode, FireMode::Normal);
         assert_eq!(
             world.btech.vehicles()[&id].fire_mode(0).unwrap(),
-            BattleFireMode::Normal
+            FireMode::Normal
         );
         assert_eq!(
             world.btech.vehicles()[&id].ammunition()[0],
@@ -672,7 +662,7 @@ async fn vehicle_misload_policy_and_caseless_short_supply_are_retained() {
     let (_dir, _config, mut base, id) = fixture(&template).await;
     let value = (0..=255)
         .find(|value| {
-            let mut dice = BattleDice::seeded([*value; 32]);
+            let mut dice = Dice::seeded([*value; 32]);
             let attack = dice.two_d6();
             dice.two_d6();
             attack == 2 && dice.two_d6() >= 8

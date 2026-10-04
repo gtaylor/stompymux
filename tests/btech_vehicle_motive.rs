@@ -24,7 +24,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse(
+        VehicleTemplate::parse(
             "Flatbed_Truck",
             include_str!("../game/mechs/Flatbed_Truck.toml"),
         )
@@ -48,18 +48,18 @@ async fn motive_speed_loss_clamps_controls_and_replays_damaged_movement() {
         let (_dir, config, mut world, id, _) = fixture().await;
         set_battle_heading(&mut world, id, ObjectId(1), 90.0).unwrap();
         for _ in 0..10 {
-            advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
+            advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
         }
         let desired = if reverse { -86.0 * 2.0 / 3.0 } else { 86.0 };
         set_battle_speed(&mut world, id, ObjectId(1), desired).unwrap();
         for _ in 0..20 {
-            advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
+            advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
         }
         let original = world.btech.vehicles()[&id].clone();
         damage_battle_vehicle_motive(
             &mut world,
             id,
-            BattleVehicleMotiveHit::SpeedLoss { movement_points: 2 },
+            VehicleMotiveHit::SpeedLoss { movement_points: 2 },
         )
         .unwrap();
         let vehicle = &world.btech.vehicles()[&id];
@@ -82,8 +82,8 @@ async fn motive_speed_loss_clamps_controls_and_replays_damaged_movement() {
         let mut loaded = persistence::load(&config.database()).await.unwrap();
         for _ in 0..5 {
             assert_eq!(
-                advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap(),
-                advance_battle_motion(&mut loaded, BattleMovementRules::STANDARD).unwrap()
+                advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap(),
+                advance_battle_motion(&mut loaded, MovementRules::STANDARD).unwrap()
             );
             assert_eq!(loaded.btech, world.btech);
         }
@@ -107,26 +107,26 @@ async fn motive_speed_loss_clamps_controls_and_replays_damaged_movement() {
 #[tokio::test]
 async fn immobilization_and_exhausted_speed_stop_translation_and_turning_after_restart() {
     for hit in [
-        BattleVehicleMotiveHit::Immobilize,
-        BattleVehicleMotiveHit::SpeedLoss {
+        VehicleMotiveHit::Immobilize,
+        VehicleMotiveHit::SpeedLoss {
             movement_points: 255,
         },
     ] {
         let (_dir, config, mut world, id, _) = fixture().await;
         set_battle_speed(&mut world, id, ObjectId(1), 86.0).unwrap();
         set_battle_heading(&mut world, id, ObjectId(1), 90.0).unwrap();
-        advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
+        advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
         damage_battle_vehicle_motive(&mut world, id, hit).unwrap();
         assert_eq!(world.btech.vehicles()[&id].maximum_speed(), 0.0);
         assert_eq!(
             world.btech.vehicles()[&id].immobilized(),
-            matches!(hit, BattleVehicleMotiveHit::Immobilize)
+            matches!(hit, VehicleMotiveHit::Immobilize)
         );
         assert!(!world.btech.vehicles()[&id].motion().unwrap().active());
         assert!(set_battle_speed(&mut world, id, ObjectId(1), 1.0).is_err());
         assert!(set_battle_heading(&mut world, id, ObjectId(1), 180.0).is_err());
         let before = world.btech.clone();
-        advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
+        advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
         assert_eq!(before, world.btech);
         persistence::save(&config.database(), &world).await.unwrap();
         let mut loaded = persistence::load(&config.database()).await.unwrap();
@@ -152,23 +152,23 @@ async fn motive_snapshots_reject_impossible_limits_and_immobile_motion() {
     for loss in [-1.0, 87.0] {
         let mut bad = original.clone();
         bad["motive_speed_loss"] = loss.into();
-        assert!(serde_json::from_value::<BattleVehicle>(bad).is_err());
+        assert!(serde_json::from_value::<Vehicle>(bad).is_err());
     }
     let mut bad = original.clone();
     bad["immobilized"] = true.into();
-    assert!(serde_json::from_value::<BattleVehicle>(bad).is_err());
+    assert!(serde_json::from_value::<Vehicle>(bad).is_err());
     let mut bad = original;
     bad["motive_speed_loss"] = 10.75.into();
     // A saved throttle can retain the prior environmental ceiling until the next tick.
-    let retained = serde_json::from_value::<BattleVehicle>(bad.clone()).unwrap();
+    let retained = serde_json::from_value::<Vehicle>(bad.clone()).unwrap();
     assert_eq!(retained.motion().unwrap().desired_speed, 86.0);
     bad["motion"]["desired_speed"] = 10_000.0.into();
-    assert!(serde_json::from_value::<BattleVehicle>(bad).is_err());
+    assert!(serde_json::from_value::<Vehicle>(bad).is_err());
     let before = world.btech.clone();
     damage_battle_vehicle_motive(
         &mut world,
         id,
-        BattleVehicleMotiveHit::SpeedLoss { movement_points: 0 },
+        VehicleMotiveHit::SpeedLoss { movement_points: 0 },
     )
     .unwrap();
     assert_eq!(world.btech, before);

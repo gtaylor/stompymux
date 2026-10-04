@@ -18,7 +18,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse("test", template).unwrap(),
+        VehicleTemplate::parse("test", template).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -36,7 +36,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
 fn seed(world: &mut World, id: ObjectId, value: u8) {
     world
         .btech
-        .set_unit_dice(id, BattleDice::seeded([value; 32]))
+        .set_unit_dice(id, Dice::seeded([value; 32]))
         .unwrap();
 }
 
@@ -49,7 +49,7 @@ async fn main_jam_ranks_intact_mounts_and_persists_without_a_recycle_timer() {
     let (_dir, config, mut world, id) = fixture(&text).await;
     seed(&mut world, id, 31);
     let loadout = world.btech.vehicles()[&id].loadout().unwrap();
-    let mut dice = BattleDice::seeded([31; 32]);
+    let mut dice = Dice::seeded([31; 32]);
     let mut expected = None;
     let mut highest = 0;
     for index in 0..loadout.weapons.len() {
@@ -66,7 +66,7 @@ async fn main_jam_ranks_intact_mounts_and_persists_without_a_recycle_timer() {
     assert_eq!(Some(jam.index), expected);
     assert_eq!(
         world.btech.vehicles()[&id].weapon_failures()[&jam.index],
-        BattleEquipmentFailure::Disabled
+        EquipmentFailure::Disabled
     );
     assert!(world.btech.vehicles()[&id].weapon_recycle().is_empty());
     assert_eq!(world.btech.vehicles()[&id].ammunition(), ammo);
@@ -105,7 +105,7 @@ async fn main_jam_ranks_intact_mounts_and_persists_without_a_recycle_timer() {
     assert_eq!(world.btech, before);
     let mut bad = serde_json::to_value(&world.btech.vehicles()[&id]).unwrap();
     bad["weapon_failures"] = serde_json::json!({"0":"disabled"});
-    assert!(serde_json::from_value::<BattleVehicle>(bad).is_err());
+    assert!(serde_json::from_value::<Vehicle>(bad).is_err());
 }
 
 #[tokio::test]
@@ -115,12 +115,12 @@ async fn main_jam_recovers_on_next_powered_update_only_when_already_recycling() 
             fixture(include_str!("../game/mechs/Demolisher.toml")).await;
         if temporary_failure {
             assert!(
-                jam_battle_vehicle_weapon(&mut world, id, BattleVehicleSection::Turret)
+                jam_battle_vehicle_weapon(&mut world, id, VehicleSection::Turret)
                     .unwrap()
                     .is_some()
             );
             assert!(
-                jam_battle_vehicle_weapon(&mut world, id, BattleVehicleSection::Turret)
+                jam_battle_vehicle_weapon(&mut world, id, VehicleSection::Turret)
                     .unwrap()
                     .is_some()
             );
@@ -138,13 +138,7 @@ async fn main_jam_recovers_on_next_powered_update_only_when_already_recycling() 
             .unwrap();
         assert_eq!(world.btech.vehicles()[&id].weapon_recycle(), &timers);
         assert_eq!(world.btech.vehicles()[&id].ammunition(), ammo);
-        stop_battle_unit(
-            &mut world,
-            id,
-            ObjectId(1),
-            BattleMovementRules::STANDARD.fall,
-        )
-        .unwrap();
+        stop_battle_unit(&mut world, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
         for _ in 0..120 {
             assert!(advance_battle_recycle(&mut world).is_empty());
         }

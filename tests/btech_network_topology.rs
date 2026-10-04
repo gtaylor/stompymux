@@ -26,11 +26,10 @@ async fn field(
     let mut units = Vec::new();
     for (i, &master_count) in masters.iter().enumerate() {
         let mut template =
-            BattleTemplate::parse("AS7-D", include_str!("fixtures/btech/mechs/AS7-D.toml"))
-                .unwrap();
+            MechTemplate::parse("AS7-D", include_str!("fixtures/btech/mechs/AS7-D.toml")).unwrap();
         let torso = template
             .sections
-            .get_mut(&BattleSection::CenterTorso)
+            .get_mut(&MechSection::CenterTorso)
             .unwrap();
         for slot in [10, 11] {
             torso.criticals.insert(slot, critical("C3i"));
@@ -38,12 +37,12 @@ async fn field(
         if slaves {
             template
                 .sections
-                .get_mut(&BattleSection::LeftTorso)
+                .get_mut(&MechSection::LeftTorso)
                 .unwrap()
                 .criticals
                 .insert(11, critical("C3Slave"));
         }
-        for section in [BattleSection::LeftArm, BattleSection::RightArm]
+        for section in [MechSection::LeftArm, MechSection::RightArm]
             .into_iter()
             .take(master_count)
         {
@@ -117,7 +116,7 @@ async fn c3i_networks_form_per_team_hold_six_and_stay_stable() {
     set_battle_unit_signature(
         &mut world,
         ids[3],
-        BattleUnitSignature {
+        UnitSignature {
             team: 1,
             ..Default::default()
         },
@@ -143,7 +142,7 @@ async fn c3i_networks_form_per_team_hold_six_and_stay_stable() {
     set_battle_unit_signature(
         &mut world,
         ids[4],
-        BattleUnitSignature {
+        UnitSignature {
             team: 1,
             ..Default::default()
         },
@@ -201,8 +200,8 @@ async fn pilots_can_hold_out_of_and_resume_automatic_linking() {
         &mut world,
         first,
         pilot,
-        BattleNetworkRequest::Leave,
-        BattleCommandNetwork::C3i,
+        NetworkRequest::Leave,
+        CommandNetwork::C3i,
     )
     .unwrap();
     assert_eq!(notices[0].text, "You disconnect from the C3i network.");
@@ -230,8 +229,8 @@ async fn pilots_can_hold_out_of_and_resume_automatic_linking() {
         &mut world,
         first,
         pilot,
-        BattleNetworkRequest::Join(ids[1]),
-        BattleCommandNetwork::C3i,
+        NetworkRequest::Join(ids[1]),
+        CommandNetwork::C3i,
     )
     .unwrap();
     assert_eq!(c3i(&world, first), ids);
@@ -239,8 +238,8 @@ async fn pilots_can_hold_out_of_and_resume_automatic_linking() {
         &mut world,
         first,
         pilot,
-        BattleNetworkRequest::Leave,
-        BattleCommandNetwork::C3i,
+        NetworkRequest::Leave,
+        CommandNetwork::C3i,
     )
     .unwrap();
     // Resuming relinks at once and tells the network.
@@ -248,8 +247,8 @@ async fn pilots_can_hold_out_of_and_resume_automatic_linking() {
         &mut world,
         first,
         pilot,
-        BattleNetworkRequest::Automatic,
-        BattleCommandNetwork::C3i,
+        NetworkRequest::Automatic,
+        CommandNetwork::C3i,
     )
     .unwrap();
     assert_eq!(c3i(&world, first), ids);
@@ -295,7 +294,7 @@ async fn autopilot_observation_includes_relayed_network_sightings() {
     set_battle_unit_signature(
         &mut world,
         enemy,
-        BattleUnitSignature {
+        UnitSignature {
             team: 1,
             ..Default::default()
         },
@@ -330,8 +329,8 @@ async fn autopilot_observation_includes_relayed_network_sightings() {
         &mut world,
         observer,
         units[0].1,
-        BattleNetworkRequest::Leave,
-        BattleCommandNetwork::C3i,
+        NetworkRequest::Leave,
+        CommandNetwork::C3i,
     )
     .unwrap();
     assert!(observe(&world).contacts.is_empty());
@@ -339,8 +338,8 @@ async fn autopilot_observation_includes_relayed_network_sightings() {
         &mut world,
         observer,
         units[0].1,
-        BattleNetworkRequest::Automatic,
-        BattleCommandNetwork::C3i,
+        NetworkRequest::Automatic,
+        CommandNetwork::C3i,
     )
     .unwrap();
     // Once the observer acquires the enemy itself, the contact is direct.

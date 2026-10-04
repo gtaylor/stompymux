@@ -33,7 +33,7 @@ pub(super) fn register(lua: &Lua, native: &Table, _world: &SharedWorld) -> mlua:
         let config = crate::lua::configuration(lua);
         let result =
             crate::btech::read_template(&config.path(&config.database.mech_database), &name)
-                .and_then(|template| crate::BattleLoadout::resolve(&template))
+                .and_then(|template| crate::MechLoadout::resolve(&template))
                 .map_err(|e| error::failure("btech.template.invalid", format!("{e:#}")))?;
         detached(lua, &result)
     })?;

@@ -1,8 +1,8 @@
 //! Persistent ammunition-feed jams, separate from critical destruction and recycle clocks.
-use super::BattleUnit;
+use super::Mech;
 use anyhow::{Result, ensure};
 
-impl BattleUnit {
+impl Mech {
     /// Whether a valid mount's feed is jammed; a jam does not destroy its critical slots.
     pub fn weapon_jammed(&self, index: usize) -> Result<bool> {
         ensure!(
@@ -40,7 +40,7 @@ impl BattleUnit {
     }
 }
 
-impl super::BattleVehicle {
+impl super::Vehicle {
     /// Whether a valid mount's feed is jammed; a jam does not destroy its critical slots.
     pub fn weapon_jammed(&self, index: usize) -> Result<bool> {
         ensure!(

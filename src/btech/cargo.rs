@@ -1,5 +1,5 @@
 //! Shared cockpit manifests and atomic loose-stock transfers with operation-specific admission.
-use super::BattlePower;
+use super::Power;
 use super::stock_selection::{TransferSelector, name, selected};
 use crate::{Config, Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 /// Cargo operations retain distinct power, pilot, hangar and movement requirements.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleCargoOperation {
+pub enum CargoOperation {
     Manifest,
     Stores,
     Load,
@@ -17,7 +17,7 @@ pub enum BattleCargoOperation {
 
 /// Detached stock row used by both cockpit and scripted reports.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleCargoRow {
+pub struct CargoRow {
     pub part_id: i32,
     pub quantity: i32,
     pub name: String,
@@ -34,7 +34,7 @@ fn enabled(config: &Config, pattern: &str) -> Result<()> {
 fn admit(
     world: &World,
     actor: ObjectId,
-    operation: BattleCargoOperation,
+    operation: CargoOperation,
 ) -> Result<(ObjectId, ObjectId)> {
     let player = world
         .objects
@@ -54,8 +54,8 @@ fn admit(
             unit.crew_recovery().remaining,
             unit.definition().has_special("CargoTech"),
         ));
-    let running = unit.power == BattlePower::Running;
-    if operation != BattleCargoOperation::Unload {
+    let running = unit.power == Power::Running;
+    if operation != CargoOperation::Unload {
         ensure!(!unit.destroyed, "You are destroyed!");
         ensure!(running, "Reactor is not online!");
     }
@@ -64,7 +64,7 @@ fn admit(
         !unconscious || (running && pilot != Some(actor)),
         "You are unconscious....zzzzzzz"
     );
-    if operation != BattleCargoOperation::Stores
+    if operation != CargoOperation::Stores
         && object.flags.contains(Flag::InCharacter)
         && !crate::authority::is_wizard(world, actor)
     {
@@ -82,13 +82,13 @@ fn admit(
         object.location == Some(position.map),
         "You ain't in hangar!"
     );
-    if operation != BattleCargoOperation::Stores {
+    if operation != CargoOperation::Stores {
         ensure!(cargo, "This unit cannot haul cargo!");
     }
-    if operation == BattleCargoOperation::Load {
+    if operation == CargoOperation::Load {
         ensure!(unit.speed == 0.0, "You're moving too fast!");
     }
-    if operation != BattleCargoOperation::Unload {
+    if operation != CargoOperation::Unload {
         ensure!(
             !map.flags.contains(Flag::InCharacter),
             "You aren't inside a hangar!"
@@ -110,10 +110,10 @@ pub fn cargo_manifest(
     actor: ObjectId,
     stores: bool,
     pattern: &str,
-) -> Result<Vec<BattleCargoRow>> {
+) -> Result<Vec<CargoRow>> {
     enabled(config, pattern)?;
     let holder = if stores {
-        admit(world, actor, BattleCargoOperation::Stores)?.1
+        admit(world, actor, CargoOperation::Stores)?.1
     } else {
         world
             .objects
@@ -125,7 +125,7 @@ pub fn cargo_manifest(
     Ok(super::inventory(world, holder)?
         .iter()
         .filter(|entry| selected(entry, pattern))
-        .map(|entry| BattleCargoRow {
+        .map(|entry| CargoRow {
             part_id: entry.part_id,
             quantity: entry.quantity,
             name: name(entry),
@@ -141,7 +141,7 @@ pub fn transfer_cargo(
     load: bool,
     pattern: &str,
     quantity: i32,
-) -> Result<Vec<BattleCargoRow>> {
+) -> Result<Vec<CargoRow>> {
     enabled(config, pattern)?;
     ensure!(
         !pattern.trim().is_empty() && quantity > 0,
@@ -152,9 +152,9 @@ pub fn transfer_cargo(
         world,
         actor,
         if load {
-            BattleCargoOperation::Load
+            CargoOperation::Load
         } else {
-            BattleCargoOperation::Unload
+            CargoOperation::Unload
         },
     )?;
     let (source, destination) = if load { (map, unit) } else { (unit, map) };
@@ -181,7 +181,7 @@ pub fn transfer_cargo(
                 .context("Destination inventory quantity overflow")?;
             super::inventory::edit_quantity(world, source, entry.part_id, entry.quantity - count)?;
             super::inventory::edit_quantity(world, destination, entry.part_id, next)?;
-            moved.push(BattleCargoRow {
+            moved.push(CargoRow {
                 part_id: entry.part_id,
                 quantity: count,
                 name: name(&entry),
@@ -202,7 +202,7 @@ pub fn transfer_cargo_action(
     load: bool,
     pattern: &str,
     quantity: i32,
-) -> Result<Vec<BattleCargoRow>> {
+) -> Result<Vec<CargoRow>> {
     scripts.atomic(|before| {
         let rows = transfer_cargo(
             &mut scripts.world_mut(),
@@ -242,7 +242,7 @@ pub fn transfer_cargo_action(
 }
 
 /// Plain cockpit output keeps the same rows and transfer counts as Lua.
-fn rows_text(rows: &[BattleCargoRow], verb: Option<&str>) -> String {
+fn rows_text(rows: &[CargoRow], verb: Option<&str>) -> String {
     if rows.is_empty() {
         return "No cargo found.".into();
     }
@@ -264,19 +264,16 @@ fn rows_text(rows: &[BattleCargoRow], verb: Option<&str>) -> String {
 fn command(
     ctx: &crate::CommandContext<'_>,
     input: &crate::CommandInput,
-    operation: BattleCargoOperation,
+    operation: CargoOperation,
 ) -> Result<crate::CommandAction> {
     let result = (|| -> Result<String> {
-        if matches!(
-            operation,
-            BattleCargoOperation::Manifest | BattleCargoOperation::Stores
-        ) {
+        if matches!(operation, CargoOperation::Manifest | CargoOperation::Stores) {
             return Ok(rows_text(
                 &cargo_manifest(
                     &ctx.scripts.world(),
                     ctx.config,
                     ctx.player,
-                    operation == BattleCargoOperation::Stores,
+                    operation == CargoOperation::Stores,
                     input.args.trim(),
                 )?,
                 None,
@@ -287,7 +284,7 @@ fn command(
             .trim()
             .rsplit_once(char::is_whitespace)
             .context("Usage: loadcargo/unloadcargo <part pattern> <quantity>")?;
-        let load = operation == BattleCargoOperation::Load;
+        let load = operation == CargoOperation::Load;
         let rows = transfer_cargo_action(
             ctx.scripts,
             ctx.config,
@@ -311,26 +308,26 @@ pub(crate) fn manifest_command(
     ctx: &crate::CommandContext<'_>,
     input: &crate::CommandInput,
 ) -> Result<crate::CommandAction> {
-    command(ctx, input, BattleCargoOperation::Manifest)
+    command(ctx, input, CargoOperation::Manifest)
 }
 /// List stock at the unit's admitted loading bay.
 pub(crate) fn stores_command(
     ctx: &crate::CommandContext<'_>,
     input: &crate::CommandInput,
 ) -> Result<crate::CommandAction> {
-    command(ctx, input, BattleCargoOperation::Stores)
+    command(ctx, input, CargoOperation::Stores)
 }
 /// Load available stock through the bay and cockpit gates.
 pub(crate) fn load_command(
     ctx: &crate::CommandContext<'_>,
     input: &crate::CommandInput,
 ) -> Result<crate::CommandAction> {
-    command(ctx, input, BattleCargoOperation::Load)
+    command(ctx, input, CargoOperation::Load)
 }
 /// Unload stock without the load-only power and bay-location restrictions.
 pub(crate) fn unload_command(
     ctx: &crate::CommandContext<'_>,
     input: &crate::CommandInput,
 ) -> Result<crate::CommandAction> {
-    command(ctx, input, BattleCargoOperation::Unload)
+    command(ctx, input, CargoOperation::Unload)
 }

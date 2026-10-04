@@ -84,8 +84,8 @@ fn validate_template_reference(lua: &Lua, reference: &[u8]) -> mlua::Result<()> 
 fn equipment(
     table: &Table,
     field: &str,
-    catalogue: &[crate::BattlePartForm],
-) -> mlua::Result<Option<crate::BattlePersonalEquipment>> {
+    catalogue: &[crate::PartForm],
+) -> mlua::Result<Option<crate::PersonalEquipment>> {
     let value = contract::field(table, field)?;
     if value.is_nil() {
         return Ok(None);
@@ -153,13 +153,13 @@ fn equipment(
         .ok_or_else(|| error::failure("mux.internal", "part catalogue mismatch"))?
         .very_long_name
         .clone();
-    Ok(Some(crate::BattlePersonalEquipment { weapon, ammunition }))
+    Ok(Some(crate::PersonalEquipment { weapon, ammunition }))
 }
 
 fn parse_loadout(
     table: Table,
-    catalogue: &[crate::BattlePartForm],
-) -> mlua::Result<crate::BattlePersonalLoadout> {
+    catalogue: &[crate::PartForm],
+) -> mlua::Result<crate::PersonalLoadout> {
     contract::check_options(&table, &["armor", "right", "left"], 2)?;
     let Value::Table(armor) = contract::field(&table, "armor")? else {
         return Err(error::failure_with_detail(
@@ -169,7 +169,7 @@ fn parse_loadout(
         ));
     };
     contract::check_options(&armor, &["head", "torso", "hands", "feet"], 2)?;
-    Ok(crate::BattlePersonalLoadout {
+    Ok(crate::PersonalLoadout {
         armor_head: contract::integer_field(&armor, "head", 0, 2, 2)? as u8,
         armor_torso: contract::integer_field(&armor, "torso", 0, 8, 2)? as u8,
         armor_hands: contract::integer_field(&armor, "hands", 0, 2, 2)? as u8,
@@ -182,8 +182,8 @@ fn parse_loadout(
 fn push_loadout(
     lua: &Lua,
     world: &crate::World,
-    catalogue: &[crate::BattlePartForm],
-    loadout: &crate::BattlePersonalLoadout,
+    catalogue: &[crate::PartForm],
+    loadout: &crate::PersonalLoadout,
 ) -> mlua::Result<Table> {
     let result = lua.create_table()?;
     let armor = lua.create_table()?;
@@ -244,7 +244,7 @@ fn player(
 
 fn preferences_table(
     lua: &Lua,
-    preferences: crate::BattlePlayerPreferences,
+    preferences: crate::PlayerPreferences,
     configured: bool,
 ) -> mlua::Result<Table> {
     let result = lua.create_table()?;
@@ -261,9 +261,9 @@ fn preferences_table(
     result.raw_set(
         "buildings",
         match c.buildings {
-            crate::BattleBuildingContactMode::FollowBrief => "follow_brief",
-            crate::BattleBuildingContactMode::Include => "include",
-            crate::BattleBuildingContactMode::Exclude => "exclude",
+            crate::BuildingContactMode::FollowBrief => "follow_brief",
+            crate::BuildingContactMode::Include => "include",
+            crate::BuildingContactMode::Exclude => "exclude",
         },
     )?;
     result.raw_set("configured", configured)?;
@@ -331,25 +331,25 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                 ],
                 2,
             )?;
-            let dimensions = crate::BattleViewDimensions {
+            let dimensions = crate::ViewDimensions {
                 tactical_height: contract::integer_field(&table, "tactical_height", 5, 24, 2)?
                     as u16,
                 tactical_width: contract::integer_field(&table, "tactical_width", 5, 40, 2)? as u16,
                 long_range_height: contract::integer_field(&table, "lrs_height", 10, 40, 2)? as u16,
             };
-            let booleans = crate::BattleContactPreferences {
+            let booleans = crate::ContactPreferences {
                 include_dead: contract::boolean_field(&table, "include_dead", 2)?,
                 include_shutdown: contract::boolean_field(&table, "include_shutdown", 2)?,
                 include_enemies: contract::boolean_field(&table, "include_enemies", 2)?,
                 include_allies: contract::boolean_field(&table, "include_allies", 2)?,
                 include_target: contract::boolean_field(&table, "include_target", 2)?,
-                buildings: crate::BattleBuildingContactMode::FollowBrief,
+                buildings: crate::BuildingContactMode::FollowBrief,
             };
             let mode = contract::string_field(&table, "buildings", 12, 2)?;
             let buildings = match mode.as_str() {
-                "follow_brief" => crate::BattleBuildingContactMode::FollowBrief,
-                "include" => crate::BattleBuildingContactMode::Include,
-                "exclude" => crate::BattleBuildingContactMode::Exclude,
+                "follow_brief" => crate::BuildingContactMode::FollowBrief,
+                "include" => crate::BuildingContactMode::Include,
+                "exclude" => crate::BuildingContactMode::Exclude,
                 _ => {
                     return Err(argument_failure(
                         2,
@@ -358,13 +358,13 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                     ));
                 }
             };
-            let contacts = crate::BattleContactPreferences {
+            let contacts = crate::ContactPreferences {
                 buildings,
                 ..booleans
             };
             world.btech.player_preferences.insert(
                 player,
-                crate::BattlePlayerPreferences {
+                crate::PlayerPreferences {
                     dimensions,
                     contacts,
                 },

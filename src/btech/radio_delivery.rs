@@ -1,6 +1,6 @@
 //! Digital radio reception and directed relay paths, independent of command admission and publication.
 use super::map_slots::all_unit_order;
-use super::{BattleNotice, BattlePower, electronic_field, unit_range};
+use super::{Notice, Power, electronic_field, unit_range};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
@@ -8,7 +8,7 @@ use std::collections::{BTreeMap, VecDeque};
 
 /// A reception on the listener's first matching unmuted channel.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleRadioReception {
+pub struct RadioReception {
     /// Receiving constructed unit.
     pub receiver: ObjectId,
     /// Zero-based receiving channel, independent of the sender's selected channel.
@@ -24,7 +24,7 @@ pub struct BattleRadioReception {
 /// Ordered digital deliveries computed without changing the world or drawing random numbers.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[must_use = "Publish receptions within the enclosing transmission transaction"]
-pub struct BattleDigitalRadioReport {
+pub struct DigitalRadioReport {
     /// Originating constructed unit.
     pub sender: ObjectId,
     /// Battlefield containing every participant.
@@ -32,15 +32,15 @@ pub struct BattleDigitalRadioReport {
     /// Frequency selected on the source channel.
     pub frequency: u32,
     /// Successful receptions in saved battlefield membership order.
-    pub receptions: Vec<BattleRadioReception>,
+    pub receptions: Vec<RadioReception>,
 }
 
-impl BattleDigitalRadioReport {
+impl DigitalRadioReport {
     /// Cockpit publications retain the battlefield's stable unit order.
-    pub fn notices(&self) -> Vec<BattleNotice> {
+    pub fn notices(&self) -> Vec<Notice> {
         self.receptions
             .iter()
-            .map(|reception| BattleNotice {
+            .map(|reception| Notice {
                 unit: reception.receiver,
                 text: reception.text.clone(),
             })
@@ -57,7 +57,7 @@ pub fn resolve_digital_radio(
     sender: ObjectId,
     channel: u8,
     message: &str,
-) -> Result<BattleDigitalRadioReport> {
+) -> Result<DigitalRadioReport> {
     ensure!(
         message.chars().all(|c| !c.is_control()),
         "Invalid: No control characters in radio messages, please."
@@ -78,7 +78,7 @@ pub fn resolve_digital_radio(
     let map = source.position().context("Sender is not placed")?.map;
     ensure!(available(world, map), "Map is unavailable");
     let ordered = all_unit_order(world, map)?;
-    let mut report = BattleDigitalRadioReport {
+    let mut report = DigitalRadioReport {
         sender,
         map,
         frequency: selected.frequency,
@@ -93,7 +93,7 @@ pub fn resolve_digital_radio(
         }
         let unit = super::radio::unit(world, id)?;
         if unit.is_destroyed()
-            || unit.power() != BattlePower::Running
+            || unit.power() != Power::Running
             || unit.signature().team != source.signature().team
             || !unit.radio_capabilities().digital
             || !unit.radio_capabilities().relay
@@ -138,7 +138,7 @@ pub fn resolve_digital_radio(
         };
         if unit.is_observer() {
             let bearing = unit_range(world, receiver, sender)?.bearing.unwrap_or(0.0) as u16;
-            report.receptions.push(BattleRadioReception {
+            report.receptions.push(RadioReception {
                 receiver,
                 channel: index as u8,
                 transmitters: vec![sender],
@@ -191,7 +191,7 @@ pub fn resolve_digital_radio(
         } else {
             String::new()
         };
-        report.receptions.push(BattleRadioReception {
+        report.receptions.push(RadioReception {
             receiver,
             channel: index as u8,
             transmitters,

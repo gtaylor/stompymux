@@ -4,18 +4,18 @@ use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 
 /// Install independent computers in a turret and surviving hull face.
-fn design() -> BattleVehicleTemplate {
+fn design() -> VehicleTemplate {
     let mut template =
-        BattleVehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+        VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
             .unwrap();
     for section in template.sections.values_mut() {
         section.criticals.clear();
     }
     for (section, slot, equipment) in [
-        (BattleVehicleSection::Turret, 0, "C3Master"),
-        (BattleVehicleSection::Turret, 4, "C3Master"),
-        (BattleVehicleSection::Front, 0, "C3Slave"),
-        (BattleVehicleSection::Front, 1, "C3i"),
+        (VehicleSection::Turret, 0, "C3Master"),
+        (VehicleSection::Turret, 4, "C3Master"),
+        (VehicleSection::Front, 0, "C3Slave"),
+        (VehicleSection::Front, 1, "C3i"),
     ] {
         template
             .sections
@@ -36,11 +36,11 @@ fn design() -> BattleVehicleTemplate {
 
 #[test]
 fn vehicle_computers_use_single_slots_and_independent_master_damage() {
-    let mut vehicle = BattleVehicle::new(design()).unwrap();
+    let mut vehicle = Vehicle::new(design()).unwrap();
     let installed = vehicle.c3_hardware().unwrap();
     assert_eq!(
         installed,
-        BattleC3Hardware {
+        C3Hardware {
             masters: 2,
             working_masters: 2,
             slave_installed: true,
@@ -49,11 +49,11 @@ fn vehicle_computers_use_single_slots_and_independent_master_damage() {
             c3i_operational: true
         }
     );
-    assert_eq!(vehicle.power(), BattlePower::Off);
+    assert_eq!(vehicle.power(), Power::Off);
     assert!(vehicle.c3_operational().unwrap());
     vehicle
         .destroy_critical(VehicleCriticalLocation {
-            section: BattleVehicleSection::Turret,
+            section: VehicleSection::Turret,
             slot: 0,
         })
         .unwrap();
@@ -61,7 +61,7 @@ fn vehicle_computers_use_single_slots_and_independent_master_damage() {
     assert!(vehicle.c3_operational().unwrap());
     vehicle
         .destroy_critical(VehicleCriticalLocation {
-            section: BattleVehicleSection::Turret,
+            section: VehicleSection::Turret,
             slot: 4,
         })
         .unwrap();
@@ -72,13 +72,13 @@ fn vehicle_computers_use_single_slots_and_independent_master_damage() {
     assert!(!vehicle.c3_operational().unwrap());
     vehicle
         .destroy_critical(VehicleCriticalLocation {
-            section: BattleVehicleSection::Front,
+            section: VehicleSection::Front,
             slot: 1,
         })
         .unwrap();
     assert!(vehicle.c3_hardware().unwrap().c3i_installed);
     assert!(!vehicle.c3_hardware().unwrap().c3i_operational);
-    let restored: BattleVehicle =
+    let restored: Vehicle =
         serde_json::from_value(serde_json::to_value(&vehicle).unwrap()).unwrap();
     assert_eq!(
         restored.c3_hardware().unwrap(),
@@ -92,23 +92,15 @@ fn vehicle_computers_use_single_slots_and_independent_master_damage() {
 
 #[test]
 fn section_loss_and_wrecks_disable_computers_without_erasing_installation() {
-    let mut vehicle = BattleVehicle::new(design()).unwrap();
+    let mut vehicle = Vehicle::new(design()).unwrap();
     vehicle
-        .damage_phase(
-            BattleVehicleSection::Turret,
-            u16::MAX,
-            BattleDamagePhase::Internal,
-        )
+        .damage_phase(VehicleSection::Turret, u16::MAX, DamagePhase::Internal)
         .unwrap();
     assert!(!vehicle.is_destroyed());
     assert_eq!(vehicle.c3_hardware().unwrap().working_masters, 0);
     assert!(vehicle.c3_hardware().unwrap().c3i_operational);
     vehicle
-        .damage_phase(
-            BattleVehicleSection::Left,
-            u16::MAX,
-            BattleDamagePhase::Internal,
-        )
+        .damage_phase(VehicleSection::Left, u16::MAX, DamagePhase::Internal)
         .unwrap();
     assert!(vehicle.is_destroyed());
     let hardware = vehicle.c3_hardware().unwrap();
@@ -128,7 +120,7 @@ async fn vehicle_hardware_survives_storage_and_is_exposed_to_lua() {
         &mut world,
         id,
         VehicleCriticalLocation {
-            section: BattleVehicleSection::Turret,
+            section: VehicleSection::Turret,
             slot: 0,
         },
     )
@@ -143,15 +135,14 @@ async fn vehicle_hardware_survives_storage_and_is_exposed_to_lua() {
 
 #[test]
 fn shipped_vehicle_master_and_slave_templates_have_live_hardware() {
-    let master = BattleVehicle::new(
-        BattleVehicleTemplate::parse("Schiltron", include_str!("../game/mechs/Schiltron.toml"))
-            .unwrap(),
+    let master = Vehicle::new(
+        VehicleTemplate::parse("Schiltron", include_str!("../game/mechs/Schiltron.toml")).unwrap(),
     )
     .unwrap();
     assert_eq!(master.c3_hardware().unwrap().working_masters, 1);
     assert!(master.c3_operational().unwrap());
-    let slave = BattleVehicle::new(
-        BattleVehicleTemplate::parse(
+    let slave = Vehicle::new(
+        VehicleTemplate::parse(
             "Demolisher-MRM",
             include_str!("../game/mechs/Demolisher-MRM.toml"),
         )
@@ -160,11 +151,11 @@ fn shipped_vehicle_master_and_slave_templates_have_live_hardware() {
     .unwrap();
     assert!(slave.c3_hardware().unwrap().slave_operational);
     assert!(slave.c3_operational().unwrap());
-    let empty = BattleVehicle::new(
-        BattleVehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+    let empty = Vehicle::new(
+        VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
             .unwrap(),
     )
     .unwrap();
-    assert_eq!(empty.c3_hardware().unwrap(), BattleC3Hardware::default());
+    assert_eq!(empty.c3_hardware().unwrap(), C3Hardware::default());
     assert!(!empty.c3_operational().unwrap());
 }

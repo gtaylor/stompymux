@@ -53,15 +53,15 @@ async fn fixture(
         (if index == 0 {
             launcher(source, "Swarm")
         } else {
-            BattleUnitTemplate::parse("test", source).unwrap()
+            UnitTemplate::parse("test", source).unwrap()
         })
         .create(&mut world, id)
         .unwrap();
         support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut world, id, map, 0, if index == 0 { 3 } else { 0 }).unwrap();
         edit(&mut world, id, |state| {
-            state["power"] = serde_json::to_value(BattlePower::Running).unwrap();
-            state["dice"] = serde_json::to_value(BattleDice::seeded([19; 32])).unwrap();
+            state["power"] = serde_json::to_value(Power::Running).unwrap();
+            state["dice"] = serde_json::to_value(Dice::seeded([19; 32])).unwrap();
         });
         ids.push(id);
     }
@@ -73,8 +73,8 @@ async fn fixture(
 }
 
 /// Deterministic conventional firing policy for shared damage checks.
-fn rules() -> BattleAimRules {
-    BattleAimRules {
+fn rules() -> AimRules {
+    AimRules {
         woods_damage: false,
         dig_bonus: 3,
         dig_only_front: false,
@@ -88,16 +88,16 @@ fn rules() -> BattleAimRules {
 }
 
 /// Tactical conventional shot configuration shared by admission cases.
-fn shot_rules() -> BattleShotRules {
-    BattleShotRules {
+fn shot_rules() -> ShotRules {
+    ShotRules {
         range_damage: false,
         tsm_tow_bonus: true,
-        vehicle_impact: stompymux_rs::BattleVehicleImpactRules::STANDARD,
-        stacking: BattleStackingRules::STANDARD,
-        stagger: BattleStaggerMode::Retain,
-        glancing: BattleGlancingMode::Disabled,
+        vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
+        stacking: StackingRules::STANDARD,
+        stagger: StaggerMode::Retain,
+        glancing: GlancingMode::Disabled,
         aim: rules(),
-        hit: BattleHitRules {
+        hit: HitRules {
             inferno_penalty: false,
             exile_stun_mode: 0,
         },
@@ -109,50 +109,50 @@ fn shot_rules() -> BattleShotRules {
 }
 
 /// Install the same Clan LRM-20 and full Swarm bin in either construction anatomy.
-fn launcher(source: &str, mode: &str) -> BattleUnitTemplate {
-    let mut definition = BattleUnitTemplate::parse("test", source).unwrap();
-    let part = BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+fn launcher(source: &str, mode: &str) -> UnitTemplate {
+    let mut definition = UnitTemplate::parse("test", source).unwrap();
+    let part = MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
         .unwrap()
-        .sections[&BattleSection::LeftArm]
+        .sections[&MechSection::LeftArm]
         .criticals[&2]
         .clone();
     let install = |section: &mut SectionDefinition, mech: bool| {
         let mut mount = part.clone();
-        mount.equipment = BattleWeapon::ClanLrm20.name().into();
+        mount.equipment = Weapon::ClanLrm20.name().into();
         mount.modes = vec![mode.into()];
         mount.data = "-".into();
         for slot in 0..if mech { 4 } else { 1 } {
             section.criticals.insert(slot, mount.clone());
         }
         let mut bin = mount;
-        bin.equipment = format!("Ammo_{}", BattleWeapon::ClanLrm20.name());
+        bin.equipment = format!("Ammo_{}", Weapon::ClanLrm20.name());
         bin.data = "6".into();
         section.criticals.insert(5, bin.clone());
         bin.modes = vec![if mode == "Swarm" { "Swarm1" } else { "Swarm" }.into()];
         section.criticals.insert(6, bin);
     };
     match &mut definition {
-        BattleUnitTemplate::Mech(unit) => {
+        UnitTemplate::Mech(unit) => {
             for section in unit.sections.values_mut() {
                 section.criticals.retain(|_, part| {
                     !part.equipment.starts_with("Ammo_")
-                        && !BattleWeapon::ALL.iter().any(|w| w.name() == part.equipment)
+                        && !Weapon::ALL.iter().any(|w| w.name() == part.equipment)
                 });
             }
             install(
-                unit.sections.get_mut(&BattleSection::RightTorso).unwrap(),
+                unit.sections.get_mut(&MechSection::RightTorso).unwrap(),
                 true,
             );
         }
-        BattleUnitTemplate::Vehicle(unit) => {
+        UnitTemplate::Vehicle(unit) => {
             for section in unit.sections.values_mut() {
                 section.criticals.retain(|_, part| {
                     !part.equipment.starts_with("Ammo_")
-                        && !BattleWeapon::ALL.iter().any(|w| w.name() == part.equipment)
+                        && !Weapon::ALL.iter().any(|w| w.name() == part.equipment)
                 });
             }
             install(
-                unit.sections.get_mut(&BattleVehicleSection::Front).unwrap(),
+                unit.sections.get_mut(&VehicleSection::Front).unwrap(),
                 false,
             );
         }
@@ -163,10 +163,10 @@ fn launcher(source: &str, mode: &str) -> BattleUnitTemplate {
 /// Seed an attack independently from cluster and target damage streams.
 fn dice(world: &mut World, id: ObjectId, total: u8) {
     let seed = (0..=255)
-        .find(|v| BattleDice::seeded([*v; 32]).two_d6() == total)
+        .find(|v| Dice::seeded([*v; 32]).two_d6() == total)
         .unwrap();
     edit(world, id, |unit| {
-        unit["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
+        unit["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap()
     });
 }
 
@@ -174,7 +174,7 @@ fn dice(world: &mut World, id: ObjectId, total: u8) {
 fn acquire(world: &mut World, shooter: ObjectId, target: ObjectId) {
     for seed in 0..=255 {
         edit(world, shooter, |unit| {
-            unit["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
+            unit["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap()
         });
         refresh_battle_contacts(world, &[shooter]).unwrap();
         if visible_battle_contact(world, shooter, target)
@@ -188,7 +188,7 @@ fn acquire(world: &mut World, shooter: ObjectId, target: ObjectId) {
 }
 
 /// Normalize only the report envelope; firing still uses each public launcher API.
-fn fire(world: &mut World, shooter: ObjectId, target: ObjectId) -> Option<BattleSwarmReport> {
+fn fire(world: &mut World, shooter: ObjectId, target: ObjectId) -> Option<SwarmReport> {
     fire_with_rules(world, shooter, target, shot_rules())
 }
 
@@ -197,24 +197,24 @@ fn fire_with_rules(
     world: &mut World,
     shooter: ObjectId,
     target: ObjectId,
-    rules: BattleShotRules,
-) -> Option<BattleSwarmReport> {
+    rules: ShotRules,
+) -> Option<SwarmReport> {
     let report = fire_battle_unit_shot(
         world,
         shooter,
         ObjectId(1),
         target,
         0,
-        BattleVehicleShotRules {
+        VehicleShotRules {
             shot: rules,
-            shooter_criticals: BattleVehicleImpactRules::STANDARD.criticals,
+            shooter_criticals: VehicleImpactRules::STANDARD.criticals,
         },
     )
     .unwrap();
     let (salvo, ams) = stompymux_rs::by_chassis!(report, |report| (report.salvo, report.ams));
     assert!(ams.is_none());
     salvo.map(|salvo| {
-        let BattleTargetSalvo::Swarm(report) = salvo else {
+        let TargetSalvo::Swarm(report) = salvo else {
             panic!("Swarm report missing")
         };
         report
@@ -241,7 +241,7 @@ async fn swarm_woods_absorption_preserves_pre_cover_flight_accounting() {
             set_battle_visibility(
                 &mut world,
                 target,
-                BattleVisibility {
+                Visibility {
                     clairvoyant: true,
                     invisible: false,
                 },
@@ -316,7 +316,7 @@ fn candidate(
     };
     let id = world.create(config, "Retarget candidate".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-    BattleUnitTemplate::parse("test", source)
+    UnitTemplate::parse("test", source)
         .unwrap()
         .create(world, id)
         .unwrap();
@@ -344,7 +344,7 @@ async fn swarm_retarget_selection_caps_hits_and_skips_ineligible_units() {
             if friend_or_foe {
                 assert_eq!(
                     toggle_battle_swarm(&mut initial, shooter, ObjectId(1), 0, true).unwrap(),
-                    BattleAmmunitionMode::Swarm1
+                    AmmunitionMode::Swarm1
                 );
             }
             dice(&mut initial, shooter, 12);
@@ -354,7 +354,7 @@ async fn swarm_retarget_selection_caps_hits_and_skips_ineligible_units() {
             set_battle_visibility(
                 &mut initial,
                 target,
-                BattleVisibility {
+                Visibility {
                     clairvoyant: true,
                     invisible: false,
                 },
@@ -365,12 +365,12 @@ async fn swarm_retarget_selection_caps_hits_and_skips_ineligible_units() {
                 .find_map(|n| {
                     let mut seed = [0; 32];
                     seed[..4].copy_from_slice(&n.to_le_bytes());
-                    let mut dice = BattleDice::seeded(seed);
+                    let mut dice = Dice::seeded(seed);
                     (dice.two_d6() == 12 && dice.two_d6() == 12).then_some(seed)
                 })
                 .unwrap();
             edit(&mut initial, shooter, |unit| {
-                unit["dice"] = serde_json::to_value(BattleDice::seeded(seed)).unwrap()
+                unit["dice"] = serde_json::to_value(Dice::seeded(seed)).unwrap()
             });
             let report = fire(&mut initial, shooter, target).unwrap();
             assert_eq!(report.hops.len(), 2);
@@ -380,7 +380,7 @@ async fn swarm_retarget_selection_caps_hits_and_skips_ineligible_units() {
             );
             assert_eq!(report.hops[1].incoming, 14);
             assert_eq!(report.remaining, 0);
-            let BattleTargetSalvo::Vehicle(salvo) = report.hops[1].salvo.as_ref().unwrap() else {
+            let TargetSalvo::Vehicle(salvo) = report.hops[1].salvo.as_ref().unwrap() else {
                 panic!("Expected vehicle target")
             };
             assert_eq!(salvo.missiles_before_defense, Some(14));
@@ -400,7 +400,7 @@ async fn swarm_secondary_misses_preserve_missiles() {
         set_battle_visibility(
             &mut world,
             id,
-            BattleVisibility {
+            Visibility {
                 clairvoyant: true,
                 invisible: false,
             },
@@ -412,12 +412,12 @@ async fn swarm_secondary_misses_preserve_missiles() {
         .find_map(|n| {
             let mut seed = [0; 32];
             seed[..4].copy_from_slice(&n.to_le_bytes());
-            let mut dice = BattleDice::seeded(seed);
+            let mut dice = Dice::seeded(seed);
             (dice.two_d6() == 12 && dice.two_d6() == 2).then_some(seed)
         })
         .unwrap();
     edit(&mut world, shooter, |unit| {
-        unit["dice"] = serde_json::to_value(BattleDice::seeded(seed)).unwrap()
+        unit["dice"] = serde_json::to_value(Dice::seeded(seed)).unwrap()
     });
     dice(&mut world, target, 2);
     let report = fire(&mut world, shooter, target).unwrap();
@@ -441,7 +441,7 @@ async fn swarm_native_lua_controls_firing_and_rollback() {
         set_battle_visibility(
             &mut world,
             target,
-            BattleVisibility {
+            Visibility {
                 clairvoyant: true,
                 invisible: false,
             },
@@ -452,12 +452,12 @@ async fn swarm_native_lua_controls_firing_and_rollback() {
             .find_map(|n| {
                 let mut seed = [0; 32];
                 seed[..4].copy_from_slice(&n.to_le_bytes());
-                let mut dice = BattleDice::seeded(seed);
+                let mut dice = Dice::seeded(seed);
                 (dice.two_d6() == 12 && dice.two_d6() == 12).then_some(seed)
             })
             .unwrap();
         edit(&mut world, shooter, |unit| {
-            unit["dice"] = serde_json::to_value(BattleDice::seeded(seed)).unwrap()
+            unit["dice"] = serde_json::to_value(Dice::seeded(seed)).unwrap()
         });
         dice(&mut world, target, 2);
         let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
@@ -517,7 +517,7 @@ fn gunnery(world: &mut World, target: u8) {
     set_battle_character(
         world,
         ObjectId(1),
-        BattleCharacter {
+        Character {
             bruise: 0,
             lethal: 0,
             build: 5,
@@ -537,7 +537,7 @@ fn long_flight_seed() -> [u8; 32] {
         .find_map(|n| {
             let mut seed = [0; 32];
             seed[..4].copy_from_slice(&n.to_le_bytes());
-            let mut dice = BattleDice::seeded(seed);
+            let mut dice = Dice::seeded(seed);
             (dice.two_d6() == 12 && (0..10).all(|_| dice.two_d6() < 12)).then_some(seed)
         })
         .unwrap()
@@ -563,7 +563,7 @@ async fn swarm_visited_boundary_allows_exactly_eleven_attacks() {
             set_battle_visibility(
                 &mut world,
                 *id,
-                BattleVisibility {
+                Visibility {
                     clairvoyant: true,
                     invisible: false,
                 },
@@ -574,7 +574,7 @@ async fn swarm_visited_boundary_allows_exactly_eleven_attacks() {
         gunnery(&mut world, 10);
         let seed = long_flight_seed();
         edit(&mut world, shooter, |unit| {
-            unit["dice"] = serde_json::to_value(BattleDice::seeded(seed)).unwrap()
+            unit["dice"] = serde_json::to_value(Dice::seeded(seed)).unwrap()
         });
         dice(&mut world, target, 2);
         let report = fire(&mut world, shooter, target).unwrap();
@@ -584,7 +584,7 @@ async fn swarm_visited_boundary_allows_exactly_eleven_attacks() {
         );
         assert_eq!(report.remaining, 14);
         assert!(report.hops[1..].iter().all(|hop| hop.salvo.is_none()));
-        let mut expected = BattleDice::seeded(seed);
+        let mut expected = Dice::seeded(seed);
         for _ in 0..11 {
             expected.two_d6();
         }
@@ -613,11 +613,11 @@ async fn swarm_cumulative_range_stops_before_spending_another_attack_roll() {
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     for (id, y) in [(shooter, 20), (target, 0)] {
         edit(&mut world, id, |unit| {
-            unit["power"] = serde_json::to_value(BattlePower::Off).unwrap()
+            unit["power"] = serde_json::to_value(Power::Off).unwrap()
         });
         place_battle_unit(&mut world, id, map, 0, y).unwrap();
         edit(&mut world, id, |unit| {
-            unit["power"] = serde_json::to_value(BattlePower::Running).unwrap()
+            unit["power"] = serde_json::to_value(Power::Running).unwrap()
         });
     }
     let second = candidate(&mut world, &config, target, &templates()[2], 1);
@@ -628,7 +628,7 @@ async fn swarm_cumulative_range_stops_before_spending_another_attack_roll() {
         set_battle_visibility(
             &mut world,
             id,
-            BattleVisibility {
+            Visibility {
                 clairvoyant: true,
                 invisible: false,
             },
@@ -638,7 +638,7 @@ async fn swarm_cumulative_range_stops_before_spending_another_attack_roll() {
     acquire(&mut world, shooter, target);
     gunnery(&mut world, 6);
     edit(&mut world, shooter, |unit| {
-        unit["dice"] = serde_json::to_value(BattleDice::seeded(long_flight_seed())).unwrap()
+        unit["dice"] = serde_json::to_value(Dice::seeded(long_flight_seed())).unwrap()
     });
     dice(&mut world, target, 2);
     let report = fire(&mut world, shooter, target).unwrap();
@@ -668,13 +668,13 @@ async fn swarm_can_return_to_its_launcher() {
                 .unwrap()
                 .map;
             edit(&mut world, target, |unit| {
-                unit["power"] = serde_json::to_value(BattlePower::Off).unwrap()
+                unit["power"] = serde_json::to_value(Power::Off).unwrap()
             });
             place_battle_unit(&mut world, target, map, 0, 2).unwrap();
             set_battle_visibility(
                 &mut world,
                 target,
-                BattleVisibility {
+                Visibility {
                     clairvoyant: true,
                     invisible: false,
                 },
@@ -741,10 +741,10 @@ async fn swarm_skips_installed_ams_on_hits_and_misses() {
 /// Swarm ammunition follows the same indirect-launcher eligibility, capacity and saved mode grammar.
 #[test]
 fn swarm_template_modes_cover_compatible_catalogue() {
-    for &weapon in BattleWeapon::ALL {
+    for &weapon in Weapon::ALL {
         for (flag, mode) in [
-            ("Swarm", BattleAmmunitionMode::Swarm),
-            ("Swarm1", BattleAmmunitionMode::Swarm1),
+            ("Swarm", AmmunitionMode::Swarm),
+            ("Swarm1", AmmunitionMode::Swarm1),
         ] {
             let compatible = weapon.supports_semiguided() && !weapon.is_dead_fire();
             assert_eq!(
@@ -758,9 +758,9 @@ fn swarm_template_modes_cover_compatible_catalogue() {
                 continue;
             }
             let mut template =
-                BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
                     .unwrap();
-            let arm = template.sections.get_mut(&BattleSection::LeftArm).unwrap();
+            let arm = template.sections.get_mut(&MechSection::LeftArm).unwrap();
             let mut mount = arm.criticals[&2].clone();
             mount.equipment = weapon.name().into();
             mount.modes = vec![flag.into()];
@@ -769,7 +769,7 @@ fn swarm_template_modes_cover_compatible_catalogue() {
             }
             let bin = template
                 .sections
-                .get_mut(&BattleSection::RightTorso)
+                .get_mut(&MechSection::RightTorso)
                 .unwrap()
                 .criticals
                 .get_mut(&0)
@@ -777,7 +777,7 @@ fn swarm_template_modes_cover_compatible_catalogue() {
             bin.equipment = format!("Ammo_{}", weapon.name());
             bin.data = weapon.profile().ammunition_per_ton.to_string();
             bin.modes = vec![flag.into()];
-            let unit = BattleUnit::from_template(template).unwrap();
+            let unit = Mech::from_template(template).unwrap();
             let loadout = unit.loadout().unwrap();
             let index = loadout
                 .weapons
@@ -790,7 +790,7 @@ fn swarm_template_modes_cover_compatible_catalogue() {
                 loadout.ammunition[0].capacity,
                 u16::from(weapon.profile().ammunition_per_ton)
             );
-            let restored: BattleUnit =
+            let restored: Mech =
                 serde_json::from_value(serde_json::to_value(&unit).unwrap()).unwrap();
             assert_eq!(restored, unit);
         }
@@ -801,12 +801,12 @@ fn swarm_template_modes_cover_compatible_catalogue() {
 fn aimed_swarm_seeds() -> ([u8; 32], [u8; 32], [u8; 32]) {
     static SEEDS: std::sync::OnceLock<([u8; 32], [u8; 32], [u8; 32])> = std::sync::OnceLock::new();
     *SEEDS.get_or_init(|| {
-        let seed_for = |predicate: &dyn Fn(&mut BattleDice) -> bool| {
+        let seed_for = |predicate: &dyn Fn(&mut Dice) -> bool| {
             (0u32..65536)
                 .find_map(|n| {
                     let mut seed = [0; 32];
                     seed[..4].copy_from_slice(&n.to_le_bytes());
-                    predicate(&mut BattleDice::seeded(seed)).then_some(seed)
+                    predicate(&mut Dice::seeded(seed)).then_some(seed)
                 })
                 .unwrap()
         };
@@ -841,7 +841,7 @@ async fn aimed_swarm_matrix(source: &str) {
         );
         for id in [target, second, third] {
             edit(&mut base, id, |state| {
-                state["power"] = serde_json::to_value(BattlePower::Running).unwrap();
+                state["power"] = serde_json::to_value(Power::Running).unwrap();
                 state["fortified"] = true.into();
                 state["ams_enabled"] = true.into();
                 state["motion"]["heading"] = 180.0.into();
@@ -850,7 +850,7 @@ async fn aimed_swarm_matrix(source: &str) {
             set_battle_visibility(
                 &mut base,
                 id,
-                BattleVisibility {
+                Visibility {
                     clairvoyant: true,
                     invisible: false,
                 },
@@ -869,15 +869,12 @@ async fn aimed_swarm_matrix(source: &str) {
                 toggle_battle_swarm(&mut world, shooter, ObjectId(1), 0, true).unwrap();
             }
             edit(&mut world, shooter, |state| {
-                state["dice"] = serde_json::to_value(BattleDice::seeded(if near_miss {
-                    near_attack
-                } else {
-                    attack
-                }))
-                .unwrap()
+                state["dice"] =
+                    serde_json::to_value(Dice::seeded(if near_miss { near_attack } else { attack }))
+                        .unwrap()
             });
             edit(&mut world, target, |state| {
-                state["dice"] = serde_json::to_value(BattleDice::seeded(preparation)).unwrap()
+                state["dice"] = serde_json::to_value(Dice::seeded(preparation)).unwrap()
             });
             dice(&mut world, second, 2);
             dice(&mut world, third, 12);
@@ -891,7 +888,7 @@ async fn aimed_swarm_matrix(source: &str) {
             set_battle_aimed_section(&mut world, shooter, ObjectId(1), Some(section)).unwrap();
             let mut rules = shot_rules();
             if near_miss {
-                rules.glancing = BattleGlancingMode::BelowTarget;
+                rules.glancing = GlancingMode::BelowTarget;
             }
             let report = fire_with_rules(&mut world, shooter, target, rules).unwrap();
             let baseline = fire_with_rules(&mut ordinary, shooter, target, rules).unwrap();
@@ -984,23 +981,23 @@ async fn swarm_secondary_balance_feedback_is_private_and_atomic() {
         assign_battle_pilot(&mut base, secondary, ObjectId(2)).unwrap();
         support::seed_object_dice(&mut base, ObjectId(2), support::FIXTURE_DICE_SEED);
         edit(&mut base, secondary, |unit| {
-            unit["power"] = serde_json::to_value(BattlePower::Running).unwrap()
+            unit["power"] = serde_json::to_value(Power::Running).unwrap()
         });
-        for section in BattleSection::ALL {
+        for section in MechSection::ALL {
             let armor = base.btech.constructed_units()[&secondary].sections()[&section].armor;
             apply_damage_phase(
                 &mut base,
                 secondary,
                 section,
                 armor,
-                BattleDamagePhase::Armor { rear: false },
+                DamagePhase::Armor { rear: false },
             )
             .unwrap();
         }
         set_battle_visibility(
             &mut base,
             target,
-            BattleVisibility {
+            Visibility {
                 clairvoyant: true,
                 invisible: false,
             },
@@ -1011,19 +1008,19 @@ async fn swarm_secondary_balance_feedback_is_private_and_atomic() {
             .find_map(|n| {
                 let mut seed = [0; 32];
                 seed[..4].copy_from_slice(&n.to_le_bytes());
-                let mut dice = BattleDice::seeded(seed);
+                let mut dice = Dice::seeded(seed);
                 (dice.two_d6() == 12 && dice.two_d6() == 12).then_some(seed)
             })
             .unwrap();
         edit(&mut base, shooter, |unit| {
-            unit["dice"] = serde_json::to_value(BattleDice::seeded(launch_seed)).unwrap()
+            unit["dice"] = serde_json::to_value(Dice::seeded(launch_seed)).unwrap()
         });
         dice(&mut base, target, 2);
         let mut exercised = false;
         for seed in 0..=255 {
             let mut before = base.clone();
             edit(&mut before, secondary, |unit| {
-                unit["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
+                unit["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap()
             });
             let scripts = Scripts::new(&config, Rc::new(RefCell::new(before.clone()))).unwrap();
             let call = format!("btech.unit.fire({},1,0,{})", shooter.0, target.0);

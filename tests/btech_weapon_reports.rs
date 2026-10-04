@@ -38,7 +38,7 @@ async fn fixture(
     let (dir, config, mut world) = support::isolated_world().await;
     let id = world.create(&config, "Equipment report".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-    BattleUnitTemplate::parse(reference, source)
+    UnitTemplate::parse(reference, source)
         .unwrap()
         .create(&mut world, id)
         .unwrap();
@@ -78,7 +78,7 @@ async fn reports_share_chassis_state_and_preserve_empty_ammunition() {
         assert!(
             diagnostics
                 .iter()
-                .all(|row| row.condition == BattleEquipmentCondition::Operational)
+                .all(|row| row.condition == EquipmentCondition::Operational)
         );
         let specs =
             battle_weapon_specifications(&scripts.world(), id, config.battletech.erange != 0)
@@ -195,21 +195,19 @@ async fn damage_and_vehicle_failures_are_distinct_from_readiness() {
     let index = loadout
         .weapons
         .iter()
-        .position(|mount| mount.weapon == BattleWeapon::Ppc)
+        .position(|mount| mount.weapon == Weapon::Ppc)
         .unwrap();
     let location = loadout.weapons[index].criticals[0];
     world
         .btech
         .rewrite_unit_record(id, |record| {
-            record["weapon_damage"] = serde_json::json!([BattleWeaponDamage::new(
-                location,
-                BattleWeaponDamageKind::Focus
-            )]);
+            record["weapon_damage"] =
+                serde_json::json!([WeaponDamage::new(location, WeaponDamageKind::Focus)]);
         })
         .unwrap();
     world.validate(&config).unwrap();
     let row = &battle_weapon_diagnostics(&world, id).unwrap()[index];
-    assert_eq!(row.condition, BattleEquipmentCondition::Damaged);
+    assert_eq!(row.condition, EquipmentCondition::Damaged);
     assert_eq!(row.damaged_slots, 1);
     assert_eq!(
         row.effects,
@@ -226,12 +224,12 @@ async fn damage_and_vehicle_failures_are_distinct_from_readiness() {
     destroy_battle_critical(&mut world, id, location).unwrap();
     assert_eq!(
         battle_weapon_diagnostics(&world, id).unwrap()[index].condition,
-        BattleEquipmentCondition::Destroyed
+        EquipmentCondition::Destroyed
     );
     let destroyed = &battle_weapon_diagnostics(&world, id).unwrap()[index];
     assert_eq!(destroyed.damaged_slots, 0);
     assert_eq!(destroyed.destroyed_slots, 1);
-    assert_eq!(destroyed.effects, BattleWeaponDamageEffects::default());
+    assert_eq!(destroyed.effects, WeaponDamageEffects::default());
     assert!(
         !battle_weapon_diagnostic_text(&world, id)
             .unwrap()
@@ -248,13 +246,13 @@ async fn damage_and_vehicle_failures_are_distinct_from_readiness() {
         true,
     )
     .await;
-    let jam = jam_battle_vehicle_weapon(&mut world, id, BattleVehicleSection::Turret)
+    let jam = jam_battle_vehicle_weapon(&mut world, id, VehicleSection::Turret)
         .unwrap()
         .unwrap();
     let row = &battle_weapon_diagnostics(&world, id).unwrap()[jam.index];
-    assert_eq!(row.condition, BattleEquipmentCondition::Jammed);
+    assert_eq!(row.condition, EquipmentCondition::Jammed);
     assert_eq!(row.destroyed_slots, 0);
-    assert_eq!(row.effects, BattleWeaponDamageEffects::default());
+    assert_eq!(row.effects, WeaponDamageEffects::default());
 }
 
 /// Diagnostic observation requires consciousness and vision; catalogue inspection has no such gate.
@@ -265,7 +263,7 @@ async fn report_observation_guards_preserve_state() {
         let mut state = serde_json::to_value(&world.btech).unwrap();
         state["recoveries"]["1"] = serde_json::json!({
             "remaining": 1, "pain_resistance": false, "toughness": false,
-            "dice": BattleDice::seeded([34;32])
+            "dice": Dice::seeded([34;32])
         });
         world.btech = serde_json::from_value(state).unwrap();
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();

@@ -5,18 +5,13 @@ use anyhow::{Result, ensure};
 
 /// Empty crews cannot use character health or coexist with a player's active cockpit state.
 /// A terminal explosion can start a new recovery after ordinary destruction clears the old one.
-pub(super) fn validate(
-    recovery: &BattleRecovery,
-    pilot: Option<ObjectId>,
-    injuries: u8,
-) -> Result<()> {
+pub(super) fn validate(recovery: &Recovery, pilot: Option<ObjectId>, injuries: u8) -> Result<()> {
     recovery.validate()?;
     ensure!(
         match recovery.mode {
-            BattleRecoveryMode::Ready => true,
-            BattleRecoveryMode::Tactical { injuries: stored } =>
-                pilot.is_none() && stored == injuries,
-            BattleRecoveryMode::Character => false,
+            RecoveryMode::Ready => true,
+            RecoveryMode::Tactical { injuries: stored } => pilot.is_none() && stored == injuries,
+            RecoveryMode::Character => false,
         },
         "Invalid unit-owned crew recovery"
     );
@@ -24,7 +19,7 @@ pub(super) fn validate(
 }
 
 /// Mutable storage adapter; all recovery decisions remain in the shared component.
-fn recovery_mut(world: &mut World, id: ObjectId) -> &mut BattleRecovery {
+fn recovery_mut(world: &mut World, id: ObjectId) -> &mut Recovery {
     crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
         &mut unit.crew_recovery
     })
@@ -36,9 +31,9 @@ pub(super) fn check(
     id: ObjectId,
     injuries: u8,
     toughness: bool,
-) -> Result<Option<BattleConsciousnessCheck>> {
+) -> Result<Option<ConsciousnessCheck>> {
     let recovery = recovery_mut(world, id);
-    recovery.mode = BattleRecoveryMode::Tactical { injuries };
+    recovery.mode = RecoveryMode::Tactical { injuries };
     recovery.toughness = toughness;
     recovery.pain_resistance = false;
     let snapshot = recovery.clone();
@@ -49,7 +44,7 @@ pub(super) fn check(
 /// Move the cockpit's pending recovery to the player taking its controls.
 pub(super) fn assign(world: &mut World, id: ObjectId, pilot: ObjectId) {
     let recovery = recovery_mut(world, id);
-    if recovery.mode == BattleRecoveryMode::Ready {
+    if recovery.mode == RecoveryMode::Ready {
         return;
     }
     let owned = recovery.clone();
@@ -65,7 +60,7 @@ pub(super) fn assign(world: &mut World, id: ObjectId, pilot: ObjectId) {
 }
 
 /// Advance saved empty-crew attempts even while a unit is powered down.
-pub(super) fn advance(world: &mut World) -> Vec<BattleNotice> {
+pub(super) fn advance(world: &mut World) -> Vec<Notice> {
     let mut ids: Vec<_> = world
         .btech
         .constructed_units()
@@ -97,7 +92,7 @@ pub(super) fn advance(world: &mut World) -> Vec<BattleNotice> {
         if let Some(check) = recovery_mut(world, id).advance(target)
             && check.conscious
         {
-            notices.push(BattleNotice {
+            notices.push(Notice {
                 unit: id,
                 text: "The pilot regains consciousness!".into(),
             });

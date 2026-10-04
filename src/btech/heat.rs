@@ -1,17 +1,17 @@
 //! Conventional heat accounting at the committed one-second simulation boundary.
-use super::{BattleNotice, BattlePower, BattleSystem, BattleUnit};
+use super::{Mech, Notice, Power, System};
 use crate::{Flag, World};
 use anyhow::{Context, Result, bail, ensure};
 use serde::{Deserialize, Serialize};
 
 /// Weapon heat (including temporary coolant credit) and the last sampled excess.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
-pub struct BattleHeat {
+pub struct Heat {
     pub stored: f64,
     pub excess: f64,
 }
 
-impl BattleHeat {
+impl Heat {
     /// Coolant credit may be negative until the next sample; excess heat remains nonnegative.
     pub(crate) fn validate(self) -> Result<()> {
         ensure!(
@@ -48,7 +48,7 @@ impl BattleHeat {
     }
 
     /// Sample excess before reducing stored heat by one thirtieth of net cooling.
-    fn advance(&mut self, rates: BattleHeatRates) {
+    fn advance(&mut self, rates: HeatRates) {
         self.excess = (self.stored + rates.production - rates.dissipation).max(0.0);
         self.stored = (self.stored - (rates.dissipation - rates.production) / 30.0).max(0.0);
     }
@@ -56,14 +56,14 @@ impl BattleHeat {
 
 /// Continuous production and single-sink cooling, including the current map environment.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
-pub struct BattleHeatRates {
+pub struct HeatRates {
     pub production: f64,
     pub dissipation: f64,
 }
 
-impl BattleUnit {
+impl Mech {
     /// Persisted thermal state; firing adds stored heat and the heartbeat samples excess.
-    pub fn heat(&self) -> BattleHeat {
+    pub fn heat(&self) -> Heat {
         self.heat
     }
 
@@ -91,12 +91,12 @@ impl BattleUnit {
     }
 
     /// Last committed thermal sample, including stored weapon heat in production.
-    pub fn sampled_heat_rates(&self) -> BattleHeatRates {
+    pub fn sampled_heat_rates(&self) -> HeatRates {
         self.heat_sample
     }
 
     /// Derive rates from surviving equipment, motion and the occupied map tile.
-    pub fn heat_rates(&self, world: &World) -> BattleHeatRates {
+    pub fn heat_rates(&self, world: &World) -> HeatRates {
         self.heat_rates_with_disabled(
             world,
             self.heat_cutoff.disabled.min(self.cooling_capacity()),
@@ -107,18 +107,18 @@ impl BattleUnit {
     pub fn cooling_capacity(&self) -> u16 {
         self.reconstructed_cooling
             .unwrap_or(self.definition().heat_sinks)
-            .saturating_sub(u16::from(self.system_hits(BattleSystem::HeatSink)))
+            .saturating_sub(u16::from(self.system_hits(System::HeatSink)))
     }
 
     /// Derive environment cooling from active capacity before applying this sample's regulation.
-    fn heat_rates_with_disabled(&self, world: &World, disabled: u16) -> BattleHeatRates {
+    fn heat_rates_with_disabled(&self, world: &World, disabled: u16) -> HeatRates {
         let mut production = 10.0
             * f64::from(u8::from(self.stealth().enabled) + u8::from(self.null_signature().enabled));
-        if self.power() == BattlePower::Running {
-            production += 5.0 * f64::from(self.system_hits(BattleSystem::Engine));
+        if self.power() == Power::Running {
+            production += 5.0 * f64::from(self.system_hits(System::Engine));
             if self.airborne() {
                 production += ((self.definition().jump_speed
-                    - f64::from(self.system_hits(BattleSystem::JumpJet)) * 10.75)
+                    - f64::from(self.system_hits(System::JumpJet)) * 10.75)
                     .max(0.0)
                     / 10.75)
                     .max(3.0);
@@ -132,11 +132,11 @@ impl BattleUnit {
                     };
             }
         }
-        let mut rates = BattleHeatRates {
+        let mut rates = HeatRates {
             production,
             dissipation: f64::from(self.cooling_capacity().saturating_sub(disabled)),
         };
-        let inferno = |mut rates: BattleHeatRates| {
+        let inferno = |mut rates: HeatRates| {
             if self.inferno_remaining > 0 {
                 rates.dissipation = (rates.dissipation - 6.0).max(0.0);
             }
@@ -157,13 +157,13 @@ impl BattleUnit {
         }
         if tile.immerses(elevation) {
             let wading = elevation == i32::from(tile.water_line()) - 1;
-            let bonus = if wading && self.posture() != super::BattlePosture::Prone {
+            let bonus = if wading && self.posture() != super::Posture::Prone {
                 self.loadout()
                     .expect("validated unit loadout")
                     .systems
                     .iter()
                     .filter(|part| {
-                        part.system == BattleSystem::HeatSink
+                        part.system == System::HeatSink
                             && self.chassis().is_leg(part.location.section)
                             && !self.critical_unavailable(part.location)
                     })
@@ -192,7 +192,7 @@ impl BattleUnit {
     /// water, beneath a bridge deck or flying above the flames is clear of them.
     fn reaches_flames(&self, tile: super::Hex, elevation: i32) -> bool {
         let surface = i32::from(tile.top_height());
-        let height = if self.posture() == super::BattlePosture::Prone {
+        let height = if self.posture() == super::Posture::Prone {
             1
         } else {
             2
@@ -201,10 +201,10 @@ impl BattleUnit {
     }
 
     /// Predict a committed thermal sample without mutating inspection state or consuming dice.
-    fn thermal_sample(&self, world: &World) -> (super::BattleHeatCutoff, Option<BattleHeatRates>) {
+    fn thermal_sample(&self, world: &World) -> (super::HeatCutoff, Option<HeatRates>) {
         let mut cutoff = self.heat_cutoff;
         cutoff.tick();
-        if self.power() != BattlePower::Running && self.heat == BattleHeat::default() {
+        if self.power() != Power::Running && self.heat == Heat::default() {
             return (cutoff, None);
         }
         let capacity = self.cooling_capacity();
@@ -236,7 +236,7 @@ impl BattleUnit {
 
 /// Update thermal accounting, including cooling after shutdown, in the caller's world transaction.
 /// The same transaction must call advance_overheat after this sample to apply due thermal hazards.
-pub fn advance_heat(world: &mut World) -> Vec<BattleNotice> {
+pub fn advance_heat(world: &mut World) -> Vec<Notice> {
     let ids: Vec<_> = world
         .btech
         .constructed_units()
@@ -254,7 +254,7 @@ pub fn advance_heat(world: &mut World) -> Vec<BattleNotice> {
     for (id, (cutoff, rates)) in ids {
         let unit = world.btech.constructed.get_mut(&id).unwrap();
         if cutoff.enabled != unit.heat_cutoff.enabled {
-            notices.push(BattleNotice {
+            notices.push(Notice {
                 unit: id,
                 text: if cutoff.enabled {
                     "[fg=yellow]Heat dissipation cutoff engaged![reset]"
@@ -269,7 +269,7 @@ pub fn advance_heat(world: &mut World) -> Vec<BattleNotice> {
             continue;
         };
         let previous = indicator(unit.heat.excess);
-        unit.heat_sample = BattleHeatRates {
+        unit.heat_sample = HeatRates {
             production: unit.heat.stored + rates.production,
             dissipation: rates.dissipation,
         };
@@ -284,7 +284,7 @@ pub fn advance_heat(world: &mut World) -> Vec<BattleNotice> {
                 1 => "Your Excess Heat indicator turns YELLOW",
                 _ => "Your Excess Heat indicator turns GREEN",
             };
-            notices.push(BattleNotice {
+            notices.push(Notice {
                 unit: id,
                 text: text.to_owned(),
             });
@@ -304,7 +304,7 @@ fn indicator(excess: f64) -> u8 {
     0
 }
 
-impl super::BattleVehicle {
+impl super::Vehicle {
     /// Surviving vehicle cooling capacity, independent of weapon heat eligibility.
     pub fn cooling_capacity(&self) -> Result<u16> {
         let lost = self
@@ -312,7 +312,7 @@ impl super::BattleVehicle {
             .systems
             .iter()
             .filter(|part| {
-                part.system == BattleSystem::HeatSink && self.critical_destroyed(part.location)
+                part.system == System::HeatSink && self.critical_destroyed(part.location)
             })
             .count() as u16;
         Ok(self.definition().heat_sink_capacity().saturating_sub(lost))
@@ -335,20 +335,20 @@ mod tests {
             (25.0, 32.25),
             (100.0, 32.25),
         ] {
-            let heat = BattleHeat {
+            let heat = Heat {
                 stored: 0.0,
                 excess,
             };
             assert!((118.25 * heat.speed_multiplier(118.25) - expected).abs() < 1e-10);
         }
-        let heat = BattleHeat {
+        let heat = Heat {
             stored: 0.0,
             excess: 25.0,
         };
         assert_eq!(heat.speed_multiplier(64.5), 0.0);
         assert_eq!(heat.speed_multiplier(10.75), 0.0);
         assert_eq!(heat.speed_multiplier(0.0), 0.0);
-        let heat = BattleHeat {
+        let heat = Heat {
             stored: 0.0,
             excess: 5.0,
         };
@@ -358,18 +358,18 @@ mod tests {
 
     #[test]
     fn thermal_sample_precedes_fractional_cooling() {
-        let mut heat = BattleHeat {
+        let mut heat = Heat {
             stored: 30.0,
             excess: 0.0,
         };
-        heat.advance(BattleHeatRates {
+        heat.advance(HeatRates {
             production: 2.0,
             dissipation: 10.0,
         });
         assert_eq!(heat.excess, 22.0);
         assert_eq!(heat.stored, 30.0 - 8.0 / 30.0);
         assert_eq!(heat.to_hit_modifier(), 3);
-        heat.advance(BattleHeatRates {
+        heat.advance(HeatRates {
             production: 10.0,
             dissipation: 2.0,
         });
@@ -379,40 +379,40 @@ mod tests {
     /// Coolant affects intervening weapon heat before the heartbeat clears unused credit.
     #[test]
     fn coolant_credit_survives_until_the_next_heat_sample() {
-        let mut heat = BattleHeat {
+        let mut heat = Heat {
             stored: -3.0,
             excess: 0.0,
         };
         heat.validate().unwrap();
         heat.stored += 5.0;
-        heat.advance(BattleHeatRates {
+        heat.advance(HeatRates {
             production: 0.0,
             dissipation: 0.0,
         });
         assert_eq!(heat.stored, 2.0);
         assert_eq!(heat.excess, 2.0);
         heat.stored = -1.5;
-        heat.advance(BattleHeatRates {
+        heat.advance(HeatRates {
             production: 0.0,
             dissipation: 0.0,
         });
-        assert_eq!(heat, BattleHeat::default());
+        assert_eq!(heat, Heat::default());
     }
 
     #[test]
     fn cooling_stops_at_zero_and_corrupt_heat_is_rejected() {
-        let mut heat = BattleHeat {
+        let mut heat = Heat {
             stored: 0.1,
             excess: 3.0,
         };
-        heat.advance(BattleHeatRates {
+        heat.advance(HeatRates {
             production: 0.0,
             dissipation: 10.0,
         });
-        assert_eq!(heat, BattleHeat::default());
+        assert_eq!(heat, Heat::default());
         for stored in [f64::NEG_INFINITY, f64::NAN, f64::INFINITY] {
             assert!(
-                BattleHeat {
+                Heat {
                     stored,
                     excess: 0.0
                 }
@@ -429,7 +429,7 @@ mod tests {
             (24.0, 4),
         ] {
             assert_eq!(
-                BattleHeat {
+                Heat {
                     stored: 0.0,
                     excess
                 }

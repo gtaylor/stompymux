@@ -6,19 +6,19 @@ use serde::{Deserialize, Serialize};
 
 /// A scheduled selection retains its destination through intervening shutdowns.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BattleSignatureTransition {
+pub struct SignatureTransition {
     pub enabled: bool,
     pub remaining: u8,
 }
 
 /// A concealment system's current selection and optional thirty-second transition.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BattleSignatureState {
+pub struct SignatureState {
     pub enabled: bool,
-    pub pending: Option<BattleSignatureTransition>,
+    pub pending: Option<SignatureTransition>,
 }
 
-impl BattleSignatureState {
+impl SignatureState {
     /// Consume an expired switch even when power or hardware prevents its destination.
     pub(super) fn advance(&mut self, available: bool) -> Option<bool> {
         let mut pending = self.pending?;
@@ -32,21 +32,21 @@ impl BattleSignatureState {
     }
 }
 
-impl BattleUnit {
+impl Mech {
     /// Saved null signature selection and countdown.
-    pub fn null_signature(&self) -> BattleSignatureState {
+    pub fn null_signature(&self) -> SignatureState {
         self.null_signature
     }
 
     /// A biped needs one installed device in each section except its head.
     pub fn has_null_signature(&self) -> Result<bool> {
         let loadout = self.loadout()?;
-        Ok(BattleSection::ALL
+        Ok(MechSection::ALL
             .into_iter()
-            .filter(|section| *section != BattleSection::Head)
+            .filter(|section| *section != MechSection::Head)
             .all(|section| {
                 loadout.systems.iter().any(|part| {
-                    part.system == BattleSystem::NullSignature && part.location.section == section
+                    part.system == System::NullSignature && part.location.section == section
                 })
             }))
     }
@@ -58,7 +58,7 @@ impl BattleUnit {
                 .loadout()?
                 .systems
                 .iter()
-                .filter(|part| part.system == BattleSystem::NullSignature)
+                .filter(|part| part.system == System::NullSignature)
                 .all(|part| !self.critical_unavailable(part.location)))
     }
 
@@ -70,8 +70,7 @@ impl BattleUnit {
     /// Clear active concealment on shutdown or device loss, preserving the pending destination.
     pub(super) fn reconcile_null_signature(&mut self) {
         if self.null_signature.enabled
-            && (self.power() != BattlePower::Running
-                || !self.null_signature_available().unwrap_or(false))
+            && (self.power() != Power::Running || !self.null_signature_available().unwrap_or(false))
         {
             self.null_signature.enabled = false;
         }
@@ -80,7 +79,7 @@ impl BattleUnit {
     /// Validate complete equipment, bounded countdowns and availability of active hardware.
     pub(super) fn validate_null_signature(&self) -> Result<()> {
         ensure!(
-            self.null_signature == BattleSignatureState::default() || self.has_null_signature()?,
+            self.null_signature == SignatureState::default() || self.has_null_signature()?,
             "Null signature state requires complete installed equipment"
         );
         ensure!(
@@ -91,7 +90,7 @@ impl BattleUnit {
         );
         ensure!(
             !self.null_signature.enabled
-                || (self.power() == BattlePower::Running && self.null_signature_available()?),
+                || (self.power() == Power::Running && self.null_signature_available()?),
             "Active null signature requires running, working equipment"
         );
         Ok(())
@@ -99,14 +98,10 @@ impl BattleUnit {
 }
 
 /// Request the opposite null signature selection without replacing a pending switch.
-pub fn toggle_null_signature(
-    world: &mut World,
-    id: ObjectId,
-    pilot: ObjectId,
-) -> Result<BattleNotice> {
+pub fn toggle_null_signature(world: &mut World, id: ObjectId, pilot: ObjectId) -> Result<Notice> {
     super::power::controlled_unit(world, id, pilot)?;
     let unit = &world.btech.constructed_units()[&id];
-    ensure!(unit.power() == BattlePower::Running, "Start the unit first");
+    ensure!(unit.power() == Power::Running, "Start the unit first");
     ensure!(unit.position().is_some(), "Unit is not placed");
     ensure!(
         unit.has_null_signature()?,
@@ -127,11 +122,11 @@ pub fn toggle_null_signature(
         .get_mut(&id)
         .unwrap()
         .null_signature
-        .pending = Some(BattleSignatureTransition {
+        .pending = Some(SignatureTransition {
         enabled,
         remaining: 30,
     });
-    Ok(BattleNotice {
+    Ok(Notice {
         unit: id,
         text: if enabled {
             "Your Null Signature System begins to come online."
@@ -143,7 +138,7 @@ pub fn toggle_null_signature(
 }
 
 /// Advance null signature switches within the server's existing rollback-capable heartbeat.
-pub fn advance_null_signature(world: &mut World) -> Vec<BattleNotice> {
+pub fn advance_null_signature(world: &mut World) -> Vec<Notice> {
     if !world
         .btech
         .constructed_units()
@@ -154,10 +149,10 @@ pub fn advance_null_signature(world: &mut World) -> Vec<BattleNotice> {
     }
     let mut notices = Vec::new();
     for (&id, unit) in &mut world.btech.constructed {
-        let available = unit.power() == BattlePower::Running
-            && unit.null_signature_available().unwrap_or(false);
+        let available =
+            unit.power() == Power::Running && unit.null_signature_available().unwrap_or(false);
         if let Some(enabled) = unit.null_signature.advance(available) {
-            notices.push(BattleNotice {
+            notices.push(Notice {
                 unit: id,
                 text: if enabled {
                     "Null Signature System engaged!"

@@ -1,20 +1,20 @@
 //! Gyro construction identity and effective damage derived from installed critical losses.
-use super::{BattleTemplate, BattleUnit};
+use super::{Mech, MechTemplate};
 use serde::Serialize;
 
 /// Gyro families with implemented construction and damage behavior.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleGyro {
+pub enum Gyro {
     Standard,
     Hardened,
     Xl,
     Compact,
 }
 
-impl BattleGyro {
+impl Gyro {
     /// Resolve the explicit construction family; ambiguous technology is rejected at construction.
-    pub(super) fn from_definition(definition: &BattleTemplate) -> Self {
+    pub(super) fn from_definition(definition: &MechTemplate) -> Self {
         if definition.has_special("XLGYRO") || definition.has_special("XLGyro_Tech") {
             return Self::Xl;
         }
@@ -47,10 +47,10 @@ impl BattleGyro {
     }
 }
 
-impl BattleUnit {
+impl Mech {
     /// Installed family, retained after critical and section losses.
-    pub fn gyro(&self) -> BattleGyro {
-        BattleGyro::from_definition(self.definition())
+    pub fn gyro(&self) -> Gyro {
+        Gyro::from_definition(self.definition())
     }
 
     /// Effective gyro damage; the first hardened critical does not impair stability.

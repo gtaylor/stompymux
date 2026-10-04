@@ -4,14 +4,14 @@ use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 
 /// Intact vehicle with a working electronic suite and command computer.
-fn template() -> BattleVehicleTemplate {
+fn template() -> VehicleTemplate {
     let mut template =
-        BattleVehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+        VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
             .unwrap();
     for (slot, equipment) in [(0, "Ecm"), (1, "C3Master")] {
         template
             .sections
-            .get_mut(&BattleVehicleSection::Front)
+            .get_mut(&VehicleSection::Front)
             .unwrap()
             .criticals
             .insert(
@@ -28,7 +28,7 @@ fn template() -> BattleVehicleTemplate {
 
 #[test]
 fn flooding_preserves_armor_ammunition_and_crew_without_reviving_a_wreck() {
-    let mut unit = BattleVehicle::new(template()).unwrap();
+    let mut unit = Vehicle::new(template()).unwrap();
     let before = unit.clone();
     assert!(unit.destroy_by_flooding());
     assert!(unit.flooded() && unit.is_destroyed());
@@ -43,23 +43,14 @@ fn flooding_preserves_armor_ammunition_and_crew_without_reviving_a_wreck() {
     let burning = unit.clone();
     assert!(!unit.destroy_by_flooding());
     assert_eq!(unit, burning);
-    unit.damage_phase(
-        BattleVehicleSection::Front,
-        1,
-        BattleDamagePhase::Armor { rear: false },
-    )
-    .unwrap();
+    unit.damage_phase(VehicleSection::Front, 1, DamagePhase::Armor { rear: false })
+        .unwrap();
     assert_eq!(unit.burning_sections(), burning.burning_sections());
-    let restored: BattleVehicle =
-        serde_json::from_value(serde_json::to_value(&unit).unwrap()).unwrap();
+    let restored: Vehicle = serde_json::from_value(serde_json::to_value(&unit).unwrap()).unwrap();
     assert_eq!(restored, unit);
     let mut hull_wreck = before;
     hull_wreck
-        .damage_phase(
-            BattleVehicleSection::Front,
-            u16::MAX,
-            BattleDamagePhase::Internal,
-        )
+        .damage_phase(VehicleSection::Front, u16::MAX, DamagePhase::Internal)
         .unwrap();
     let snapshot = hull_wreck.clone();
     assert!(!hull_wreck.destroy_by_flooding());
@@ -95,8 +86,8 @@ async fn water_destruction_clears_controls_and_survives_sqlite_and_lua() {
         &mut world,
         id,
         ObjectId(1),
-        BattleElectronicSuite::Guardian,
-        BattleElectronicMode::Ecm,
+        ElectronicSuite::Guardian,
+        ElectronicMode::Ecm,
     )
     .unwrap();
     world
@@ -113,11 +104,11 @@ async fn water_destruction_clears_controls_and_survives_sqlite_and_lua() {
     let mut unit = world.btech.vehicles()[&id].clone();
     let before = unit.clone();
     assert!(unit.destroy_by_flooding());
-    assert_eq!(unit.power(), BattlePower::Off);
+    assert_eq!(unit.power(), Power::Off);
     assert_eq!(unit.pilot(), None);
     assert_eq!(unit.motion().unwrap().speed, 0.0);
     assert_eq!(unit.motion().unwrap().desired_speed, 0.0);
-    assert_eq!(unit.electronics().guardian, BattleElectronicMode::Off);
+    assert_eq!(unit.electronics().guardian, ElectronicMode::Off);
     assert_eq!(unit.inferno_remaining(), 0);
     assert!(unit.burning_sections().is_empty());
     assert_eq!(unit.extinguishing(), None);
@@ -149,6 +140,6 @@ async fn water_destruction_clears_controls_and_survives_sqlite_and_lua() {
     );
     assert_eq!(scripts.world().btech, before);
     let mut invalid = serde_json::to_value(&unit).unwrap();
-    invalid["power"] = serde_json::to_value(BattlePower::Running).unwrap();
-    assert!(serde_json::from_value::<BattleVehicle>(invalid).is_err());
+    invalid["power"] = serde_json::to_value(Power::Running).unwrap();
+    assert!(serde_json::from_value::<Vehicle>(invalid).is_err());
 }

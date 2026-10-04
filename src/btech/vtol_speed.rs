@@ -1,5 +1,5 @@
 //! One velocity budget for rotorcraft horizontal controls, climb/descent and cruise restrictions.
-use super::BattleVehicle;
+use super::Vehicle;
 use anyhow::{Result, ensure};
 
 /// Remaining perpendicular velocity; overspeed after damage leaves no additional capacity.
@@ -15,7 +15,7 @@ pub(super) fn remaining_speed(maximum: f64, component: f64) -> Result<f64> {
     Ok(maximum * ((1.0 - ratio) * (1.0 + ratio)).sqrt())
 }
 
-impl BattleVehicle {
+impl Vehicle {
     /// Change climb or descent within the velocity budget of the current horizontal command.
     /// The enclosing action owns operator authority and flight-event scheduling.
     pub fn set_vtol_vertical_speed(
@@ -40,12 +40,12 @@ impl BattleVehicle {
             "Vertical speed requires a VTOL"
         );
         ensure!(
-            self.power() == super::BattlePower::Running
+            self.power() == super::Power::Running
                 && !self.is_destroyed()
                 && !self.rotor_destroyed()
                 && self
                     .vtol_flight
-                    .is_some_and(|flight| flight.phase == super::BattleVtolFlightPhase::Airborne),
+                    .is_some_and(|flight| flight.phase == super::VtolFlightPhase::Airborne),
             "Vertical control requires an airborne, running VTOL with lift"
         );
         ensure!(

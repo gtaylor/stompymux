@@ -14,7 +14,7 @@ async fn vehicles_save_damage_replay_and_purge_with_their_objects() {
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+        VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
             .unwrap(),
     )
     .unwrap();
@@ -28,11 +28,8 @@ async fn vehicles_save_damage_replay_and_purge_with_their_objects() {
         create_battle_vehicle(
             &mut world,
             id,
-            BattleVehicleTemplate::parse(
-                "Demolisher",
-                include_str!("../game/mechs/Demolisher.toml")
-            )
-            .unwrap()
+            VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+                .unwrap()
         )
         .is_err()
     );
@@ -61,9 +58,9 @@ async fn vehicles_save_damage_replay_and_purge_with_their_objects() {
     damage_battle_vehicle_phase(
         &mut loaded,
         id,
-        BattleVehicleSection::Turret,
+        VehicleSection::Turret,
         8,
-        BattleDamagePhase::Internal,
+        DamagePhase::Internal,
     )
     .unwrap();
     assert_eq!(undamaged.btech.vehicles()[&id].ammunition(), &[5, 5, 5, 5]);
@@ -84,9 +81,9 @@ async fn vehicles_save_damage_replay_and_purge_with_their_objects() {
         damage_battle_vehicle_phase(
             &mut restored,
             id,
-            BattleVehicleSection::Front,
+            VehicleSection::Front,
             8,
-            BattleDamagePhase::Internal
+            DamagePhase::Internal
         )
         .is_err()
     );
@@ -117,7 +114,7 @@ async fn vehicle_storage_rejects_corrupt_and_oversized_records() {
     let id = world.create(&config, "Truck".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().location = Some(ObjectId(config.start()));
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-    let definition = BattleVehicleTemplate::parse(
+    let definition = VehicleTemplate::parse(
         "Flatbed_Truck",
         include_str!("../game/mechs/Flatbed_Truck.toml"),
     )

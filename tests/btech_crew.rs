@@ -1,8 +1,8 @@
 //! Cockpit claims through normal entry/exit, persisted pilots and callback rollback.
 use crate::support;
 use stompymux_rs::{
-    BattleTemplate, Flag, Kind, MapAsset, ObjectId, Scripts, assign_battle_pilot,
-    create_battle_map, create_battle_unit, dbck, persistence, place_battle_unit,
+    Flag, Kind, MapAsset, MechTemplate, ObjectId, Scripts, assign_battle_pilot, create_battle_map,
+    create_battle_unit, dbck, persistence, place_battle_unit,
 };
 const JENNER: &str = include_str!("fixtures/btech/mechs/JR7-D.toml");
 
@@ -31,7 +31,7 @@ async fn enter_pilot_restart_and_leave_preserve_ordinary_movement() {
         create_battle_unit(
             &mut world,
             id,
-            BattleTemplate::parse("JR7-D", JENNER).unwrap(),
+            MechTemplate::parse("JR7-D", JENNER).unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
@@ -108,7 +108,7 @@ async fn cockpit_occupancy_authority_callback_rollback_and_pilot_purge() {
     create_battle_unit(
         &mut world,
         id,
-        BattleTemplate::parse("JR7-D", JENNER).unwrap(),
+        MechTemplate::parse("JR7-D", JENNER).unwrap(),
     )
     .unwrap();
     assert!(assign_battle_pilot(&mut world, id, ObjectId(1)).is_err());
@@ -239,7 +239,7 @@ async fn evacuation_moves_crew_retains_xp_and_rolls_back() {
     create_battle_unit(
         &mut world,
         unit,
-        BattleTemplate::parse("JR7-D", JENNER).unwrap(),
+        MechTemplate::parse("JR7-D", JENNER).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, unit, support::FIXTURE_DICE_SEED);
@@ -261,7 +261,7 @@ async fn evacuation_moves_crew_retains_xp_and_rolls_back() {
     set_battle_character(
         &mut world,
         pilot,
-        BattleCharacter {
+        Character {
             build: 5,
             reflexes: 5,
             intuition: 5,
@@ -277,7 +277,7 @@ async fn evacuation_moves_crew_retains_xp_and_rolls_back() {
         &mut world,
         pilot,
         "Piloting-Biped",
-        BattleCharacterValue {
+        CharacterValue {
             value: 4,
             experience: 16_777_216 + 4000,
             last_used: 123,
@@ -308,7 +308,7 @@ async fn evacuation_moves_crew_retains_xp_and_rolls_back() {
         &mut scripts.world_mut(),
         pilot,
         "Unknown",
-        BattleCharacterValue {
+        CharacterValue {
             experience: 1,
             ..Default::default()
         },
@@ -371,7 +371,7 @@ async fn casualty_impact_action_rolls_back_damage_and_moves() {
     create_battle_unit(
         &mut world,
         unit,
-        BattleTemplate::parse("JR7-D", JENNER).unwrap(),
+        MechTemplate::parse("JR7-D", JENNER).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, unit, support::FIXTURE_DICE_SEED);
@@ -392,7 +392,7 @@ async fn casualty_impact_action_rolls_back_damage_and_moves() {
     set_battle_character(
         &mut world,
         pilot,
-        BattleCharacter {
+        Character {
             build: 5,
             reflexes: 5,
             intuition: 5,
@@ -414,7 +414,7 @@ async fn casualty_impact_action_rolls_back_damage_and_moves() {
             &mut world,
             pilot,
             name,
-            BattleCharacterValue {
+            CharacterValue {
                 value: 0,
                 experience,
                 last_used: 123,
@@ -426,20 +426,15 @@ async fn casualty_impact_action_rolls_back_damage_and_moves() {
     support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
     let baseline = world.clone();
     let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
-    let hit = |section| BattleHit {
+    let hit = |section| Hit {
         section,
         rear_armor: false,
         through_armor_critical: false,
         crew_stun: false,
     };
-    let report = resolve_battle_impact_action(
-        &scripts,
-        &config,
-        unit,
-        hit(BattleSection::CenterTorso),
-        100,
-    )
-    .unwrap();
+    let report =
+        resolve_battle_impact_action(&scripts, &config, unit, hit(MechSection::CenterTorso), 100)
+            .unwrap();
     assert!(report.destroyed);
     assert!(report.crew_casualty().is_none());
     assert_eq!(scripts.world().objects[&pilot].location, Some(unit));
@@ -448,8 +443,7 @@ async fn casualty_impact_action_rolls_back_damage_and_moves() {
     scripts.world_mut().objects.remove(&afterlife);
     let invalid = scripts.world().clone();
     assert!(
-        resolve_battle_impact_action(&scripts, &config, unit, hit(BattleSection::Head), 100)
-            .is_err()
+        resolve_battle_impact_action(&scripts, &config, unit, hit(MechSection::Head), 100).is_err()
     );
     assert_eq!(scripts.world().btech, invalid.btech);
     assert_eq!(scripts.world().objects[&pilot].location, Some(unit));
@@ -472,16 +466,14 @@ async fn casualty_impact_action_rolls_back_damage_and_moves() {
     events.set("on_leave", failure).unwrap();
     parent.set("events", events).unwrap();
     assert!(
-        resolve_battle_impact_action(&scripts, &config, unit, hit(BattleSection::Head), 100)
-            .is_err()
+        resolve_battle_impact_action(&scripts, &config, unit, hit(MechSection::Head), 100).is_err()
     );
     assert_eq!(scripts.world().btech, baseline.btech);
     assert_eq!(scripts.world().objects[&pilot].location, Some(unit));
     parent.set("events", previous).unwrap();
     *scripts.world_mut() = baseline;
     let report =
-        resolve_battle_impact_action(&scripts, &config, unit, hit(BattleSection::Head), 100)
-            .unwrap();
+        resolve_battle_impact_action(&scripts, &config, unit, hit(MechSection::Head), 100).unwrap();
     for (name, experience) in [
         ("Toughness", 5),
         ("Lives", 5),
@@ -492,10 +484,7 @@ async fn casualty_impact_action_rolls_back_damage_and_moves() {
         assert_eq!(value.experience, experience, "{name}");
         assert_eq!(value.last_used, 123);
     }
-    assert_eq!(
-        report.crew_casualty(),
-        Some(BattleCrewCasualty::HeadDestroyed)
-    );
+    assert_eq!(report.crew_casualty(), Some(CrewCasualty::HeadDestroyed));
     assert_eq!(scripts.world().objects[&pilot].location, Some(afterlife));
     assert_eq!(
         scripts.world().btech.constructed_units()[&unit].pilot(),
@@ -520,7 +509,7 @@ async fn character_pilot_health_recovery_and_fatal_evacuation() {
     create_battle_unit(
         &mut world,
         unit,
-        BattleTemplate::parse("JR7-D", JENNER).unwrap(),
+        MechTemplate::parse("JR7-D", JENNER).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, unit, support::FIXTURE_DICE_SEED);
@@ -541,7 +530,7 @@ async fn character_pilot_health_recovery_and_fatal_evacuation() {
     set_battle_character(
         &mut world,
         pilot,
-        BattleCharacter {
+        Character {
             build: 5,
             reflexes: 5,
             intuition: 5,
@@ -554,11 +543,11 @@ async fn character_pilot_health_recovery_and_fatal_evacuation() {
     .unwrap();
     assign_battle_pilot(&mut world, unit, pilot).unwrap();
     let seed = (0..=255)
-        .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 2)
+        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 2)
         .unwrap();
     let mut state = serde_json::to_value(&world.btech).unwrap();
     state["recoveries"][pilot.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+        serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
     world.btech = serde_json::from_value(state).unwrap();
     let before = world.btech.clone();
     injure_battle_character_pilot(&mut world, unit, 0, false).unwrap();
@@ -596,8 +585,8 @@ async fn character_pilot_health_recovery_and_fatal_evacuation() {
         &scripts,
         &config,
         unit,
-        BattleHit {
-            section: BattleSection::Head,
+        Hit {
+            section: MechSection::Head,
             rear_armor: false,
             through_armor_critical: false,
             crew_stun: false,
@@ -605,10 +594,7 @@ async fn character_pilot_health_recovery_and_fatal_evacuation() {
         1,
     )
     .unwrap();
-    assert_eq!(
-        report.crew_casualty(),
-        Some(BattleCrewCasualty::CharacterInjury)
-    );
+    assert_eq!(report.crew_casualty(), Some(CrewCasualty::CharacterInjury));
     assert_eq!(report.character_injuries.len(), 1);
     assert!(report.character_injuries[0].injury.fatal);
     assert_eq!(report.character_injuries[0].consciousness, None);

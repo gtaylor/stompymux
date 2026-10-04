@@ -1,7 +1,7 @@
 //! Advanced Tactical Missiles: Extended Range and High Explosive ammunition profiles, and
 //! ammunition controls that reuse indirect-launcher eligibility, feed selection and
 //! transaction ordering.
-use super::{AmmunitionFeedback, BattleAmmunitionMode};
+use super::{AmmunitionFeedback, AmmunitionMode};
 use crate::{ObjectId, World};
 use anyhow::{Result, ensure};
 
@@ -14,12 +14,12 @@ pub fn toggle_atm_ammunition(
     id: ObjectId,
     pilot: ObjectId,
     index: usize,
-    mode: BattleAmmunitionMode,
-) -> Result<BattleAmmunitionMode> {
+    mode: AmmunitionMode,
+) -> Result<AmmunitionMode> {
     ensure!(
         matches!(
             mode,
-            BattleAmmunitionMode::ExtendedRange | BattleAmmunitionMode::HighExplosive
+            AmmunitionMode::ExtendedRange | AmmunitionMode::HighExplosive
         ),
         "Select Extended Range or High Explosive ammunition"
     );
@@ -39,9 +39,9 @@ pub(crate) fn command(
     input: &crate::CommandInput,
 ) -> Result<crate::CommandAction> {
     let mode = if input.name == "atmrange" {
-        BattleAmmunitionMode::ExtendedRange
+        AmmunitionMode::ExtendedRange
     } else {
-        BattleAmmunitionMode::HighExplosive
+        AmmunitionMode::HighExplosive
     };
     super::fire_mode::selected_command(ctx, input, |world, id, pilot, index| {
         toggle_atm_ammunition(world, id, pilot, index, mode).map(|mode| mode.atm_message(index))

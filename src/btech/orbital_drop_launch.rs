@@ -6,11 +6,11 @@ use serde::Serialize;
 
 /// Committed insertion pose and the owning descent or aircraft state.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct BattleOrbitalInsertion {
-    pub position: BattlePosition,
+pub struct OrbitalInsertion {
+    pub position: Position,
     pub elevation: i32,
-    pub drop: Option<BattleOrbitalDrop>,
-    pub flight: Option<BattleVtolFlight>,
+    pub drop: Option<OrbitalDrop>,
+    pub flight: Option<VtolFlight>,
 }
 
 /// Insert a placed unit at a scenario coordinate; omitted altitude uses the orbital ceiling.
@@ -20,8 +20,8 @@ pub fn initiate_action(
     config: &Config,
     actor: ObjectId,
     id: ObjectId,
-    request: BattleScenarioPosition,
-) -> Result<BattleOrbitalInsertion> {
+    request: ScenarioPosition,
+) -> Result<OrbitalInsertion> {
     scripts.atomic(|before| {
         ensure!(
             crate::authority::is_wizard(before, actor),
@@ -37,13 +37,13 @@ pub fn initiate_action(
             .btech
             .constructed_units()
             .get(&id)
-            .and_then(BattleUnit::orbital_drop)
+            .and_then(Mech::orbital_drop)
             .or_else(|| {
                 before
                     .btech
                     .vehicles()
                     .get(&id)
-                    .and_then(BattleVehicle::orbital_drop)
+                    .and_then(Vehicle::orbital_drop)
             });
         ensure!(existing.is_none(), "OOD already in progress!");
         super::towing::require_detached(before, id)?;
@@ -67,7 +67,7 @@ pub fn initiate_action(
             i64::from(request.coordinate.x),
             i64::from(request.coordinate.y),
         )?;
-        let position = BattlePosition {
+        let position = Position {
             map: original.map,
             x: u16::try_from(request.coordinate.x).context("Invalid co-ordinates!")?,
             y: u16::try_from(request.coordinate.y).context("Invalid co-ordinates!")?,
@@ -78,7 +78,7 @@ pub fn initiate_action(
             .clamp(i32::from(i16::MIN), i32::from(i16::MAX));
         let (mass, vtol) = if let Some(unit) = before.btech.constructed_units().get(&id) {
             ensure!(
-                unit.posture() != BattlePosture::Prone,
+                unit.posture() != Posture::Prone,
                 "You'll have to get up first."
             );
             (unit.effective_mass()?, false)
@@ -88,7 +88,7 @@ pub fn initiate_action(
             (unit.effective_mass()?, unit.definition().is_vtol())
         };
         let drop = (!vtol)
-            .then(|| BattleOrbitalDrop::new(i64::from(mass), elevation))
+            .then(|| OrbitalDrop::new(i64::from(mass), elevation))
             .transpose()?;
         let notices;
         let flight;
@@ -114,12 +114,12 @@ pub fn initiate_action(
                 unit.orbital_drop = drop;
                 if vtol {
                     let maximum = unit.maximum_speed();
-                    let powered = unit.power() == BattlePower::Running;
+                    let powered = unit.power() == Power::Running;
                     let state = unit
                         .vtol_flight
                         .as_mut()
                         .context("Aircraft flight state is unavailable")?;
-                    state.phase = BattleVtolFlightPhase::Airborne;
+                    state.phase = VtolFlightPhase::Airborne;
                     state.fall = None;
                     if !powered {
                         state.vertical_speed = 0.0;
@@ -140,13 +140,9 @@ pub fn initiate_action(
         for notice in notices {
             super::notify_unit(scripts, notice)?;
         }
-        super::notify_message(
-            scripts,
-            BattleMessageTarget::Player(actor),
-            "OOD initiated.",
-        )?;
+        super::notify_message(scripts, MessageTarget::Player(actor), "OOD initiated.")?;
         scripts.world().validate_action(config)?;
-        Ok(BattleOrbitalInsertion {
+        Ok(OrbitalInsertion {
             position,
             elevation,
             drop,
@@ -163,7 +159,7 @@ pub(crate) fn command(
     let result = (|| {
         let args: Vec<_> = input.args.split_whitespace().take(3).collect();
         ensure!(args.len() >= 2, "Invalid attributes!");
-        let request = BattleScenarioPosition {
+        let request = ScenarioPosition {
             coordinate: HexCoordinate {
                 x: args[0].parse().context("Invalid number! (x)")?,
                 y: args[1].parse().context("Invalid number! (y)")?,

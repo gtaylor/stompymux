@@ -19,24 +19,24 @@ pub fn snipe_action(
         );
         super::targeting::controlled(before, shooter, pilot)?;
         let weapons = super::tic::selection(selection, 96)?;
-        let rules = super::BattleMovementRules {
+        let rules = super::MovementRules {
             fasa_turning: config.battletech.fasaturn != 0,
             slowdown: config.battletech.slowdown,
             tsm_tow_bonus: config.battletech.tsm_tow_bonus != 0,
-            ..super::BattleMovementRules::STANDARD
+            ..super::MovementRules::STANDARD
         };
         for weapon in weapons {
             let prediction =
                 super::predict_artillery_target(&scripts.world(), shooter, target, rules)?;
             let selected = super::targeting::selection(&scripts.world(), shooter);
-            if !matches!(selected, Some(super::BattleTargetSelection::Hex(lock)) if lock.hex == prediction.coordinate)
+            if !matches!(selected, Some(super::TargetSelection::Hex(lock)) if lock.hex == prediction.coordinate)
             {
                 let notice = super::select_hex_target(
                     &mut scripts.world_mut(),
                     shooter,
                     pilot,
                     prediction.coordinate,
-                    super::BattleHexTargetMode::UnitAtHex,
+                    super::HexTargetMode::UnitAtHex,
                 )?;
                 super::notify_unit_text(scripts, notice.unit, &notice.text)?;
             }
@@ -46,12 +46,12 @@ pub fn snipe_action(
                 shooter,
                 pilot,
                 weapon,
-                super::fire_target::FireTargetRequest::Target(super::BattleFireTarget::Selected),
+                super::fire_target::FireTargetRequest::Target(super::FireTarget::Selected),
             )?;
             if let Err(message) = attempt {
                 super::notify_message(
                     scripts,
-                    super::BattleMessageTarget::Player(pilot),
+                    super::MessageTarget::Player(pilot),
                     &message,
                 )?;
             }

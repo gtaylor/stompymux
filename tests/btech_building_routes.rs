@@ -6,19 +6,19 @@ use stompymux_rs::*;
 #[tokio::test]
 async fn building_payloads_survive_copy_retarget_and_restart() {
     let (_dir, config, mut world, exterior, interior) = fixture().await;
-    let entrance = BattleBuildingEntrance {
+    let entrance = BuildingEntrance {
         data_char: u8::MAX,
         data_short: i16::MIN,
         data_int: i64::MIN,
         ..world.btech.maps()[&exterior].building_entrances()[&3]
     };
-    let point = BattleBuildingEntryPoint {
+    let point = BuildingEntryPoint {
         object: ObjectId(77),
         data_short: i16::MAX,
         data_int: i64::MAX,
         ..world.btech.maps()[&interior].building_entry_points()[&1]
     };
-    let exit = BattleBuildingExit {
+    let exit = BuildingExit {
         data_char: 87,
         data_short: -23,
         data_int: 91,
@@ -74,7 +74,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {
             &mut world,
             exterior,
             ordinal,
-            Some(BattleBuildingEntrance {
+            Some(BuildingEntrance {
                 coordinate: HexCoordinate { x, y: 0 },
                 interior,
                 data_char: 0,
@@ -89,7 +89,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {
             &mut world,
             interior,
             ordinal,
-            Some(BattleBuildingEntryPoint {
+            Some(BuildingEntryPoint {
                 coordinate: HexCoordinate { x, y },
                 direction,
                 object: ObjectId(-1),
@@ -110,7 +110,7 @@ async fn building_routes_select_first_slots_validate_and_replay() {
     for direction in [None, Some(0), Some(b'n'), Some(b'N')] {
         assert_eq!(
             battle_building_entry_destination(&world, exterior, coordinate, direction).unwrap(),
-            BattlePosition {
+            Position {
                 map: interior,
                 x: 0,
                 y: 0
@@ -119,7 +119,7 @@ async fn building_routes_select_first_slots_validate_and_replay() {
     }
     assert_eq!(
         battle_building_entry_destination(&world, exterior, coordinate, Some(b'e')).unwrap(),
-        BattlePosition {
+        Position {
             map: interior,
             x: 2,
             y: 1
@@ -128,7 +128,7 @@ async fn building_routes_select_first_slots_validate_and_replay() {
     assert!(battle_building_entry_destination(&world, exterior, coordinate, Some(b'w')).is_err());
     assert_eq!(
         battle_building_exit_destination(&world, interior).unwrap(),
-        BattlePosition {
+        Position {
             map: exterior,
             x: 2,
             y: 0
@@ -141,7 +141,7 @@ async fn building_routes_select_first_slots_validate_and_replay() {
             &mut world,
             interior,
             0,
-            Some(BattleBuildingEntryPoint {
+            Some(BuildingEntryPoint {
                 coordinate: HexCoordinate { x: 3, y: 0 },
                 direction: b's',
                 object: ObjectId(-1),
@@ -164,7 +164,7 @@ async fn building_routes_select_first_slots_validate_and_replay() {
     assert_eq!(loaded.btech, world.btech);
     assert_eq!(
         battle_building_exit_destination(&loaded, interior).unwrap(),
-        BattlePosition {
+        Position {
             map: exterior,
             x: 2,
             y: 0
@@ -205,7 +205,7 @@ async fn route_updates_preserve_authored_payloads_and_terrain_reload_keeps_route
         &mut world,
         interior,
         1,
-        Some(BattleBuildingEntryPoint {
+        Some(BuildingEntryPoint {
             coordinate: HexCoordinate { x: 1, y: 0 },
             direction: b's',
             ..retained
@@ -234,7 +234,7 @@ async fn route_updates_preserve_authored_payloads_and_terrain_reload_keeps_route
         &mut world,
         interior,
         4,
-        Some(BattleBuildingExit {
+        Some(BuildingExit {
             coordinate,
             destination: exterior,
             ..retained_exit
@@ -254,7 +254,7 @@ async fn route_updates_preserve_authored_payloads_and_terrain_reload_keeps_route
                 &mut world,
                 interior,
                 4,
-                Some(BattleBuildingExit {
+                Some(BuildingExit {
                     coordinate,
                     destination,
                     data_char: 0,
@@ -268,7 +268,7 @@ async fn route_updates_preserve_authored_payloads_and_terrain_reload_keeps_route
     }
     assert_eq!(
         battle_building_exit_destination(&world, interior).unwrap(),
-        BattlePosition {
+        Position {
             map: exterior,
             x: 2,
             y: 0

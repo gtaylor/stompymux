@@ -9,11 +9,11 @@ struct Facts<'a> {
     name: &'a str,
     reference: &'a str,
     tons: u16,
-    movement: Option<BattleVehicleMovement>,
+    movement: Option<VehicleMovement>,
     pilot: Option<ObjectId>,
     injuries: u16,
-    motion: Option<BattleMotion>,
-    position: Option<BattlePosition>,
+    motion: Option<Motion>,
+    position: Option<Position>,
     z: i32,
     speed_limit: f64,
     jump: u16,
@@ -147,7 +147,7 @@ pub(super) fn render(
                 u32::from(f.sinks) * 10,
                 (f.dissipation * 10.0) as i32
             )
-        } else if f.movement == Some(BattleVehicleMovement::Vtol) {
+        } else if f.movement == Some(VehicleMovement::Vtol) {
             format!(" VSPD: {:3.1} ", f.vertical)
         } else if let Some(turret) = f.turret {
             format!(" TUR: {:3} ", turret as i32)
@@ -171,7 +171,7 @@ pub(super) fn render(
             lines.push(format!("Speed:      [fg=green bold]{:3}[reset] KPH  Heading:      [fg=green bold]{heading:3}[reset] deg     Heat Sinks:       {:3}",speed as i32,f.sinks));
             lines.push(format!("Des. Speed: {:3} KPH  Des. Heading: {desired:3} deg     Heat Dissipation: {:3} deg C.",wanted as i32,(f.dissipation*10.0) as i32));
             let unit = &world.btech.constructed_units()[&id];
-            if unit.lateral().active != BattleLateralMode::None {
+            if unit.lateral().active != LateralMode::None {
                 lines.push(format!(
                     "You are moving laterally {}",
                     unit.lateral().active.description()
@@ -182,7 +182,7 @@ pub(super) fn render(
                 "X, Y, Z:{x:3},{y:3},{:3}  Heat Sinks:          {:3}       ",
                 f.z, f.sinks
             ));
-            if f.movement == Some(BattleVehicleMovement::Vtol) {
+            if f.movement == Some(VehicleMovement::Vtol) {
                 lines.push(format!("Speed:      [fg=green bold]{:3}[reset] KPH  Vertical Speed:      [fg=green bold]{:3}[reset] KPH   Des. Speed {:3} KPH",speed as i32,f.vertical as i32,wanted as i32));
                 let fuel = btech::vtol_fuel_status(world, id)?;
                 let percent = if fuel.capacity > 0 {
@@ -191,7 +191,7 @@ pub(super) fn render(
                     0.0
                 };
                 lines.push(format!("Heading:    [fg=green bold]{heading:3}[reset] deg  Des. Heading:        {desired:3} deg   Fuel: {} ({percent:.2} %)",fuel.remaining.max(0)));
-            } else if f.movement != Some(BattleVehicleMovement::Stationary) {
+            } else if f.movement != Some(VehicleMovement::Stationary) {
                 lines.push(format!("Speed:      [fg=green bold]{:3}[reset] KPH  Heading:      [fg=green bold]{heading:3}[reset] deg",speed as i32));
                 lines.push(format!(
                     "Des. Speed: {:3} KPH  Des. Heading: {desired:3} deg",
@@ -202,7 +202,7 @@ pub(super) fn render(
                 lines.push(turret_line(
                     turret,
                     f64::from(heading),
-                    f.movement == Some(BattleVehicleMovement::Stationary),
+                    f.movement == Some(VehicleMovement::Stationary),
                 ));
             }
         }
@@ -240,7 +240,7 @@ fn header(lines: &mut Vec<String>, world: &World, id: ObjectId, f: &Facts<'_>) -
                 f.tons, f.speed_limit as i32, f.jump
             ));
         }
-        Some(BattleVehicleMovement::Stationary) => lines.push(format!(
+        Some(VehicleMovement::Stationary) => lines.push(format!(
             "Name: {}  ID:[{}]   Reference: {}",
             column(f.name, 15),
             text::escape(&label),
@@ -248,11 +248,11 @@ fn header(lines: &mut Vec<String>, world: &World, id: ObjectId, f: &Facts<'_>) -
         )),
         Some(movement) => {
             let movement = match movement {
-                BattleVehicleMovement::Tracked => "Tracked",
-                BattleVehicleMovement::Wheeled => "Wheeled",
-                BattleVehicleMovement::Hover => "Hover",
-                BattleVehicleMovement::Vtol => "VTOL",
-                BattleVehicleMovement::Stationary => unreachable!(),
+                VehicleMovement::Tracked => "Tracked",
+                VehicleMovement::Wheeled => "Wheeled",
+                VehicleMovement::Hover => "Hover",
+                VehicleMovement::Vtol => "VTOL",
+                VehicleMovement::Stationary => unreachable!(),
             };
             lines.push(format!(
                 "Vehicle Name: {}  ID:[{}]   Vehicle Reference: {}",
@@ -266,7 +266,7 @@ fn header(lines: &mut Vec<String>, world: &World, id: ObjectId, f: &Facts<'_>) -
             ));
         }
     }
-    if f.movement != Some(BattleVehicleMovement::Stationary) {
+    if f.movement != Some(VehicleMovement::Stationary) {
         lines.push(if let Some(pilot) = f.pilot {
             format!(
                 "Pilot Name: {} Pilot Injury: {}",
@@ -300,8 +300,8 @@ fn header(lines: &mut Vec<String>, world: &World, id: ObjectId, f: &Facts<'_>) -
                 ));
             }
             lines.push(line);
-        } else if u.posture() != BattlePosture::Prone
-            && u.power() == BattlePower::Running
+        } else if u.posture() != Posture::Prone
+            && u.power() == Power::Running
             && let Some(target) = u.charge().target
         {
             lines.push(format!("CHARGING --> {}", display_id(world, target)));
@@ -332,7 +332,7 @@ fn targeting(
     new_charge: bool,
 ) -> Result<()> {
     match source.selection(world) {
-        Some(BattleTargetSelection::Unit(lock)) => {
+        Some(TargetSelection::Unit(lock)) => {
             if !btech::visibility::unit_unblocked(world, source.unit, lock.target)? {
                 lines.push("Target: NOT in line of sight!".into());
             } else if let Ok(range) = btech::geometry::unit_range(world, source.unit, lock.target) {
@@ -349,16 +349,16 @@ fn targeting(
                     range.bearing.unwrap_or(0.0),
                 )?;
                 let arc = match arc {
-                    BattleContactArc::Front => "Forward",
-                    BattleContactArc::Rear => "Rear",
-                    BattleContactArc::Left => {
+                    ContactArc::Front => "Forward",
+                    ContactArc::Rear => "Rear",
+                    ContactArc::Left => {
                         if observer.vehicle {
                             "Left Side"
                         } else {
                             "Left Arm"
                         }
                     }
-                    BattleContactArc::Right => {
+                    ContactArc::Right => {
                         if observer.vehicle {
                             "Right Side"
                         } else {
@@ -368,7 +368,7 @@ fn targeting(
                 };
                 let turret = if let Some(u) = world.btech.vehicles().get(&source.unit) {
                     u.loadout()?.weapons.iter().any(|mount| {
-                        mount.criticals[0].section == BattleVehicleSection::Turret
+                        mount.criticals[0].section == VehicleSection::Turret
                             && mount
                                 .bears_on(
                                     observer.heading.unwrap_or(0.0),
@@ -384,8 +384,8 @@ fn targeting(
                 let aim = btech::aimed_target::aimed_section(world, source.unit)?
                     .filter(|a| a.matches(world, lock.target));
                 let location = match aim {
-                    Some(BattleAimSelection::Mech(s)) => s.name().replace('_', " "),
-                    Some(BattleAimSelection::GroundVehicle(s) | BattleAimSelection::Vtol(s)) => {
+                    Some(AimSelection::Mech(s)) => s.name().replace('_', " "),
+                    Some(AimSelection::GroundVehicle(s) | AimSelection::Vtol(s)) => {
                         s.name().replace('_', " ")
                     }
                     None => "None".into(),
@@ -395,11 +395,11 @@ fn targeting(
                 ));
             }
         }
-        Some(BattleTargetSelection::Hex(lock)) => lines.push(format!(
+        Some(TargetSelection::Hex(lock)) => lines.push(format!(
             "Target: {}{} {}",
             match lock.mode {
-                BattleHexTargetMode::Building => "Building at ",
-                BattleHexTargetMode::UnitAtHex => "",
+                HexTargetMode::Building => "Building at ",
+                HexTargetMode::UnitAtHex => "",
                 _ => "Hex ",
             },
             lock.hex.x,
@@ -490,14 +490,14 @@ fn condition_lines(
 ) -> Result<()> {
     let scan = btech::scanner::scanner_unit(world, id).context("Unit is unavailable")?;
     let mut flags: Vec<(&str, &str)> = Vec::new();
-    if btech::battle_combat_safe(world, id)? {
+    if btech::combat_safe(world, id)? {
         flags.push(("COMBAT SAFE", "blue bold"));
     }
     if let Some(u) = world.btech.constructed_units().get(&id) {
         for (enabled, label, color) in [
             (u.fortified, "FORTIFIED", "green bold"),
             (u.weapons_hold, "WEAPONS HOLD", "red bold"),
-            (u.posture() == BattlePosture::Prone, "FALLEN", "red bold"),
+            (u.posture() == Posture::Prone, "FALLEN", "red bold"),
             (u.hull_down().active, "HULLDOWN", "green bold"),
             (u.stagger().action_level() > 0, "STAGGERING", "red bold"),
             (
@@ -524,7 +524,7 @@ fn condition_lines(
         }
         if owned
             && u.vtol_flight()
-                .is_some_and(|f| f.phase == BattleVtolFlightPhase::Landed)
+                .is_some_and(|f| f.phase == VtolFlightPhase::Landed)
         {
             lines.push("LANDED".into());
         }
@@ -535,16 +535,16 @@ fn condition_lines(
                 if u.definition().is_vtol() {
                     u.rotor_destroyed()
                         && u.vtol_flight()
-                            .is_some_and(|f| f.phase == BattleVtolFlightPhase::Landed)
+                            .is_some_and(|f| f.phase == VtolFlightPhase::Landed)
                 } else {
                     u.immobilized()
                 },
                 match u.definition().movement {
-                    BattleVehicleMovement::Tracked => "TRACK DESTROYED",
-                    BattleVehicleMovement::Wheeled => "AXLE DESTROYED",
-                    BattleVehicleMovement::Hover => "LIFT FAN DESTROYED",
-                    BattleVehicleMovement::Vtol => "ROTOR DESTROYED",
-                    BattleVehicleMovement::Stationary => "",
+                    VehicleMovement::Tracked => "TRACK DESTROYED",
+                    VehicleMovement::Wheeled => "AXLE DESTROYED",
+                    VehicleMovement::Hover => "LIFT FAN DESTROYED",
+                    VehicleMovement::Vtol => "ROTOR DESTROYED",
+                    VehicleMovement::Stationary => "",
                 },
                 "red bold",
             ),
@@ -617,10 +617,10 @@ fn condition_lines(
         flags.push(("HIDDEN", "green bold"));
     }
     for (kind, label) in [
-        (BattleBeaconKind::Narc, "NARC POD ATTACHED"),
-        (BattleBeaconKind::Homing, "INARC HOMING POD ATTACHED"),
-        (BattleBeaconKind::Haywire, "INARC HAYWIRE POD ATTACHED"),
-        (BattleBeaconKind::Ecm, "INARC ECM POD ATTACHED"),
+        (BeaconKind::Narc, "NARC POD ATTACHED"),
+        (BeaconKind::Homing, "INARC HOMING POD ATTACHED"),
+        (BeaconKind::Haywire, "INARC HAYWIRE POD ATTACHED"),
+        (BeaconKind::Ecm, "INARC ECM POD ATTACHED"),
     ] {
         if owned && btech::narc::has_beacon(world, id, kind) {
             flags.push((label, "yellow bold"));
@@ -641,13 +641,13 @@ fn condition_lines(
     if scan.destroyed {
         lines.push("DESTROYED".into());
     }
-    if scan.power != BattlePower::Running {
+    if scan.power != Power::Running {
         lines.push("SHUTDOWN".into());
     }
-    if owned && matches!(scan.facing.torso, BattleTorso::Right | BattleTorso::Both) {
+    if owned && matches!(scan.facing.torso, Torso::Right | Torso::Both) {
         lines.push("Torso is 60 degrees right".into());
     }
-    if owned && matches!(scan.facing.torso, BattleTorso::Left | BattleTorso::Both) {
+    if owned && matches!(scan.facing.torso, Torso::Left | Torso::Both) {
         lines.push("Torso is 60 degrees left".into());
     }
     Ok(())
@@ -661,14 +661,14 @@ fn short_flags(world: &World, id: ObjectId) -> Result<String> {
         flags.push('D');
     }
     match s.power {
-        BattlePower::Starting { .. } => flags.push('s'),
-        BattlePower::Off => flags.push('S'),
-        BattlePower::Running => {}
+        Power::Starting { .. } => flags.push('s'),
+        Power::Off => flags.push('S'),
+        Power::Running => {}
     }
     let (lamp, electronics, inferno) = if let Some(u) = world.btech.constructed_units().get(&id) {
         if u.stand_timer().is_some() {
             flags.push('f');
-        } else if u.posture() == BattlePosture::Prone {
+        } else if u.posture() == Posture::Prone {
             flags.push('F');
         }
         if u.hull_down().pending.is_some() {
@@ -720,16 +720,16 @@ fn short_flags(world: &World, id: ObjectId) -> Result<String> {
     {
         flags.push('C');
     }
-    if btech::narc::has_beacon(world, id, BattleBeaconKind::Narc)
-        || btech::narc::has_beacon(world, id, BattleBeaconKind::Homing)
+    if btech::narc::has_beacon(world, id, BeaconKind::Narc)
+        || btech::narc::has_beacon(world, id, BeaconKind::Homing)
     {
         flags.push('n');
     }
     let modes = [electronics.guardian, electronics.angel];
-    if modes.contains(&BattleElectronicMode::Eccm) {
+    if modes.contains(&ElectronicMode::Eccm) {
         flags.push('P');
     }
-    if modes.contains(&BattleElectronicMode::Ecm) {
+    if modes.contains(&ElectronicMode::Ecm) {
         flags.push('E');
     }
     if electronics.field.protected || electronics.field.angel_protected {

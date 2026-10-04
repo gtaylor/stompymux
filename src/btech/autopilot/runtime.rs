@@ -15,7 +15,7 @@ use crate::btech::autopilot::combat_policy::choose_target;
 use crate::btech::autopilot::navigation::{AStarSearch, Goal, GridHex, SearchStatus};
 use crate::btech::autopilot::observations::{self, AutopilotObservation};
 use crate::btech::autopilot::traversal;
-use crate::btech::{BattleNotice, BattlePosition, BattlePower, HexCoordinate};
+use crate::btech::{HexCoordinate, Notice, Position, Power};
 use crate::{Config, ObjectId, World};
 use anyhow::Result;
 use std::sync::Arc;
@@ -131,7 +131,7 @@ pub(crate) struct AutopilotPlan {
     pub(crate) congestion: Congestion,
     pub(crate) steering: super::steering::SteeringState,
     pub(crate) order_id: u64,
-    pub(crate) goal: Option<(BattlePosition, u16)>,
+    pub(crate) goal: Option<(Position, u16)>,
     pub(crate) search: Option<AStarSearch>,
     pub(crate) replacement_pending: bool,
     pub(crate) route: Vec<GridHex>,
@@ -188,7 +188,7 @@ pub(crate) fn advance(
     world: &mut World,
     config: &Config,
     simulation_time: i64,
-) -> Result<Vec<BattleNotice>> {
+) -> Result<Vec<Notice>> {
     advance_inner(world, config, simulation_time, None)
 }
 
@@ -198,7 +198,7 @@ pub(crate) fn advance_with_metrics(
     config: &Config,
     simulation_time: i64,
     metrics: &mut AutopilotRuntimeMetrics,
-) -> Result<Vec<BattleNotice>> {
+) -> Result<Vec<Notice>> {
     advance_inner(world, config, simulation_time, Some(metrics))
 }
 
@@ -207,7 +207,7 @@ fn advance_inner(
     config: &Config,
     simulation_time: i64,
     metrics: Option<&mut AutopilotRuntimeMetrics>,
-) -> Result<Vec<BattleNotice>> {
+) -> Result<Vec<Notice>> {
     advance_budgeted(
         world,
         config,
@@ -226,7 +226,7 @@ fn advance_budgeted(
     metrics: Option<&mut AutopilotRuntimeMetrics>,
     expansion_budget: usize,
     record_limit: usize,
-) -> Result<Vec<BattleNotice>> {
+) -> Result<Vec<Notice>> {
     let diagnostic_scope =
         super::diagnostics::Scope::begin(metrics.as_ref().is_some_and(|m| m.diagnostics_enabled));
     let started = metrics.as_ref().map(|_| Instant::now());
@@ -327,7 +327,7 @@ pub(crate) fn advance_combat(
     world: &mut World,
     config: &Config,
     simulation_time: i64,
-) -> Result<Vec<BattleNotice>> {
+) -> Result<Vec<Notice>> {
     advance_combat_inner(world, config, simulation_time, None)
 }
 
@@ -337,7 +337,7 @@ pub(crate) fn advance_combat_with_metrics(
     config: &Config,
     simulation_time: i64,
     metrics: &mut AutopilotRuntimeMetrics,
-) -> Result<Vec<BattleNotice>> {
+) -> Result<Vec<Notice>> {
     advance_combat_inner(world, config, simulation_time, Some(metrics))
 }
 
@@ -346,7 +346,7 @@ fn advance_combat_inner(
     config: &Config,
     simulation_time: i64,
     mut metrics: Option<&mut AutopilotRuntimeMetrics>,
-) -> Result<Vec<BattleNotice>> {
+) -> Result<Vec<Notice>> {
     let diagnostic_scope =
         super::diagnostics::Scope::begin(metrics.as_ref().is_some_and(|m| m.diagnostics_enabled));
     let started = metrics.as_ref().map(|_| Instant::now());
@@ -466,7 +466,7 @@ fn advance_controller(
     budget: usize,
     record_limit: usize,
     geometry_budget: &mut usize,
-    notices: &mut Vec<BattleNotice>,
+    notices: &mut Vec<Notice>,
     metrics: &mut Option<&mut AutopilotRuntimeMetrics>,
 ) -> Result<usize> {
     let Some(controller) = world.btech.controllers().get(&id) else {
@@ -503,14 +503,14 @@ fn advance_controller(
 
     // Startup is the only automatic lifecycle recovery.  Motion and weapon
     // adapters continue to enforce all ordinary power and damage checks.
-    if unit_power(world, id) == Some(BattlePower::Off) {
+    if unit_power(world, id) == Some(Power::Off) {
         match crate::btech::power::start_unit_autopilot(world, id, false) {
             Ok(notice) => notices.push(notice),
             Err(_) => fail(world, id, simulation_time, AutopilotReason::UnitUnavailable),
         }
         return Ok(0);
     }
-    if unit_power(world, id) != Some(BattlePower::Running) {
+    if unit_power(world, id) != Some(Power::Running) {
         return Ok(0);
     }
 
@@ -529,7 +529,7 @@ fn advance_controller(
     // The stand timer throttles retries; the durable recovery cursor bounds
     // repeated failed checks instead of retrying forever each heartbeat.
     if let Some(unit) = world.btech.constructed_units().get(&id)
-        && unit.posture() == crate::btech::BattlePosture::Prone
+        && unit.posture() == crate::btech::Posture::Prone
     {
         if unit.stand_timer().is_none()
             && active.progress.recovery_attempts >= MAX_RECOVERY_ATTEMPTS
@@ -540,9 +540,9 @@ fn advance_controller(
         let attempt = match crate::btech::stand::begin_stand_autopilot(
             world,
             id,
-            crate::btech::BattleStandMode::Normal,
+            crate::btech::StandMode::Normal,
             false,
-            crate::btech::BattleFallRules::configured(config),
+            crate::btech::FallRules::configured(config),
         ) {
             Ok(attempt) => attempt,
             Err(_) => {
@@ -1306,12 +1306,12 @@ fn advance_controller(
     let assessment = traversal::assess(
         world,
         id,
-        BattlePosition {
+        Position {
             map: goal.map,
             x: current_hex.x,
             y: current_hex.y,
         },
-        BattlePosition {
+        Position {
             map: goal.map,
             x: next.x,
             y: next.y,
@@ -1383,7 +1383,7 @@ fn advance_controller(
 
 #[derive(Debug, Clone, Copy)]
 struct Directive {
-    goal: Option<BattlePosition>,
+    goal: Option<Position>,
     arrival_radius: u16,
     complete_on_arrival: bool,
     next_waypoint: Option<u16>,
@@ -1397,7 +1397,7 @@ fn directive_for_order(
     record: &AutopilotOrderRecord,
     config: &AutopilotConfig,
     observation: Option<&AutopilotObservation>,
-    attack_move_origin: Option<BattlePosition>,
+    attack_move_origin: Option<Position>,
 ) -> std::result::Result<Directive, AutopilotReason> {
     let current = current_position(world, id).ok_or(AutopilotReason::UnitUnavailable)?;
     match &record.order {
@@ -1642,7 +1642,7 @@ fn supported_ground_unit(world: &World, id: ObjectId) -> bool {
         .is_some_and(|vehicle| !vehicle.is_destroyed() && vehicle.position().is_some())
 }
 
-fn current_position(world: &World, id: ObjectId) -> Option<BattlePosition> {
+fn current_position(world: &World, id: ObjectId) -> Option<Position> {
     crate::btech::scanner::scanner_unit(world, id).and_then(|unit| unit.position)
 }
 
@@ -1659,9 +1659,9 @@ fn friendly_target(world: &World, source: ObjectId, target: ObjectId) -> bool {
 fn retreat_position(
     world: &World,
     id: ObjectId,
-    current: BattlePosition,
-    target: BattlePosition,
-) -> Option<BattlePosition> {
+    current: Position,
+    target: Position,
+) -> Option<Position> {
     let map = world.btech.maps().get(&current.map)?;
     let width = u16::try_from(map.width).ok()?;
     let height = u16::try_from(map.height).ok()?;
@@ -1674,7 +1674,7 @@ fn retreat_position(
                 world,
                 id,
                 current,
-                BattlePosition {
+                Position {
                     map: current.map,
                     x: hex.x,
                     y: hex.y,
@@ -1683,7 +1683,7 @@ fn retreat_position(
             .eligible
         })
         .max_by_key(|hex| (hex.distance(target_hex), std::cmp::Reverse((hex.x, hex.y))))
-        .map(|hex| BattlePosition {
+        .map(|hex| Position {
             map: current.map,
             x: hex.x,
             y: hex.y,
@@ -1718,7 +1718,7 @@ fn courtesy_wait(plan: &mut AutopilotPlan, next: GridHex, now: i64) -> bool {
     plan.yielding.is_some_and(|(_, until)| now < until)
 }
 
-fn unit_power(world: &World, id: ObjectId) -> Option<BattlePower> {
+fn unit_power(world: &World, id: ObjectId) -> Option<Power> {
     world
         .btech
         .constructed_units()
@@ -1765,7 +1765,7 @@ fn map_revision(map: &crate::btech::StoredMap) -> usize {
     terrain ^ decorations.rotate_left(17)
 }
 
-fn stop_unit(world: &mut World, id: ObjectId) -> Result<BattleNotice> {
+fn stop_unit(world: &mut World, id: ObjectId) -> Result<Notice> {
     crate::btech::motion::set_speed_autopilot(world, id, 0.0)
 }
 
@@ -1773,7 +1773,7 @@ fn issue_stop(
     world: &mut World,
     id: ObjectId,
     simulation_time: i64,
-    notices: &mut Vec<BattleNotice>,
+    notices: &mut Vec<Notice>,
 ) -> bool {
     match stop_unit(world, id) {
         Ok(notice) => {
@@ -1894,14 +1894,10 @@ fn record_replan(metrics: &mut Option<&mut AutopilotRuntimeMetrics>, id: ObjectI
 
 /// Bound a launch without rolling combat dice, using the same mode heat rule as
 /// expenditure. Gatling fire uses its maximum six-point roll for admission.
-fn projected_launch_heat(
-    weapon: crate::BattleWeapon,
-    mode: crate::BattleFireMode,
-    damage_heat: u8,
-) -> u16 {
+fn projected_launch_heat(weapon: crate::Weapon, mode: crate::FireMode, damage_heat: u8) -> u16 {
     u16::from(mode.launch_heat(
         weapon,
-        (mode == crate::BattleFireMode::Gatling).then_some(6),
+        (mode == crate::FireMode::Gatling).then_some(6),
         true,
     )) + u16::from(damage_heat)
 }
@@ -1912,7 +1908,7 @@ fn fire_target_if_ready(
     shooter: ObjectId,
     target: ObjectId,
     controller_config: &AutopilotConfig,
-    notices: &mut Vec<BattleNotice>,
+    notices: &mut Vec<Notice>,
     metrics: &mut Option<&mut AutopilotRuntimeMetrics>,
 ) {
     let _measurement = crate::btech::autopilot::diagnostics::measure(
@@ -1972,7 +1968,7 @@ fn fire_target_if_ready(
                 shooter,
                 target,
                 index,
-                crate::btech::BattleShotRules::configured(&config.battletech, false),
+                crate::btech::ShotRules::configured(&config.battletech, false),
             ) {
                 notices.extend(report.notices());
                 if let Some(metrics) = metrics.as_deref_mut() {
@@ -1998,9 +1994,9 @@ fn fire_target_if_ready(
                     .collect()
             })
             .unwrap_or_default();
-        let rules = crate::btech::BattleVehicleShotRules {
-            shot: crate::btech::BattleShotRules::configured(&config.battletech, false),
-            shooter_criticals: crate::btech::BattleVehicleImpactRules::configured(
+        let rules = crate::btech::VehicleShotRules {
+            shot: crate::btech::ShotRules::configured(&config.battletech, false),
+            shooter_criticals: crate::btech::VehicleImpactRules::configured(
                 &config.battletech,
                 false,
             )
@@ -2087,7 +2083,7 @@ mod navigation_recovery_tests {
         let mut plan = AutopilotPlan::default();
         for tick in 1..=40 {
             plan.goal = Some((
-                BattlePosition {
+                Position {
                     map: ObjectId(1),
                     x: tick % 2,
                     y: 1,
@@ -2231,7 +2227,7 @@ fn drive_pending(
     observation: Option<&AutopilotObservation>,
     speed_percent: u8,
     now: i64,
-    notices: &mut Vec<BattleNotice>,
+    notices: &mut Vec<Notice>,
 ) {
     let Some(position) = current_position(world, id) else {
         return;

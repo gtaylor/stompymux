@@ -6,9 +6,9 @@ use anyhow::Result;
 /// A terrain control decision and its deferred experience feedback.
 pub(super) struct TerrainControl {
     pub success: bool,
-    pub experience_messages: Vec<BattleChannelMessage>,
+    pub experience_messages: Vec<DiagnosticMessage>,
     pilot: Option<ObjectId>,
-    roll: Option<BattlePilotingCheck>,
+    roll: Option<PilotingCheck>,
 }
 
 impl TerrainControl {
@@ -26,8 +26,8 @@ impl TerrainControl {
     pub fn capture_feedback(
         &self,
         id: ObjectId,
-        notices: &mut Vec<BattleNotice>,
-        private: &mut Vec<BattlePilotNotice>,
+        notices: &mut Vec<Notice>,
+        private: &mut Vec<PilotNotice>,
     ) {
         if let Some(check) = &self.roll {
             super::piloting::capture_feedback(id, self.pilot, check, notices, private);

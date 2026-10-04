@@ -5,14 +5,14 @@ use serde::Serialize;
 
 /// All control checks share power, unit-owned recovery and assigned-pilot recovery gates.
 /// Callers retain their distinct automatic-success rules and destruction policy.
-pub(super) fn controls_blocked(world: &World, unit: ObjectId, power: super::BattlePower) -> bool {
-    power != super::BattlePower::Running || super::crew::unit_unconscious(world, unit)
+pub(super) fn controls_blocked(world: &World, unit: ObjectId, power: super::Power) -> bool {
+    power != super::Power::Running || super::crew::unit_unconscious(world, unit)
 }
 
 /// A control check; prone units succeed automatically, otherwise stopped or unconscious crew fail without dice.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[must_use = "Apply the failed check's movement or fall consequences in the enclosing action"]
-pub struct BattlePilotingCheck {
+pub struct PilotingCheck {
     pub skill: i16,
     pub damage: u8,
     /// Construction penalty from a small cockpit, separate from damage.
@@ -25,18 +25,15 @@ pub struct BattlePilotingCheck {
     pub roll: Option<u8>,
     pub success: bool,
     /// Skill mutation for callers that apply the successful-check XP policy.
-    pub experience: Option<super::BattleExperienceAward>,
+    pub experience: Option<super::ExperienceAward>,
 }
 
-impl BattlePilotingCheck {
+impl PilotingCheck {
     /// Capture the control subtotal for diagnostic subscribers; skipped rolls remain silent.
     /// Awarding checks use the `(noxp)` diagnostic label.
-    pub(super) fn diagnostic(
-        &self,
-        awards_experience: bool,
-    ) -> Option<super::BattleChannelMessage> {
-        self.roll.map(|_| super::BattleChannelMessage::new(
-            super::BattleChannel::Debug,
+    pub(super) fn diagnostic(&self, awards_experience: bool) -> Option<super::DiagnosticMessage> {
+        self.roll.map(|_| super::DiagnosticMessage::new(
+            super::DiagnosticChannel::Debug,
             format!("Attempting to make pilot{} skill roll. SPilot: {}, mods: {}, MechPilot: {}, BTH: {}",
                 if awards_experience { " (noxp)" } else { "" },
                 self.skill, self.situational, self.damage, self.target),
@@ -59,7 +56,7 @@ pub(super) fn roll_messages(target: i32, roll: u8) -> [String; 2] {
 
 /// Private feedback interleaved with an action's ordered cockpit and observer notices.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattlePilotNotice {
+pub struct PilotNotice {
     /// Index of the next ordinary notice; its vector length means after the final notice.
     pub before_notice: usize,
     pub pilot: ObjectId,
@@ -70,30 +67,30 @@ pub struct BattlePilotNotice {
 pub(super) fn capture_feedback(
     unit: ObjectId,
     pilot: Option<ObjectId>,
-    check: &BattlePilotingCheck,
-    notices: &mut Vec<super::BattleNotice>,
-    private: &mut Vec<BattlePilotNotice>,
+    check: &PilotingCheck,
+    notices: &mut Vec<super::Notice>,
+    private: &mut Vec<PilotNotice>,
 ) {
     let Some(messages) = check.messages() else {
         return;
     };
     for text in messages {
         if let Some(pilot) = pilot {
-            private.push(BattlePilotNotice {
+            private.push(PilotNotice {
                 before_notice: notices.len(),
                 pilot,
                 text,
             });
         } else {
-            notices.push(super::BattleNotice { unit, text });
+            notices.push(super::Notice { unit, text });
         }
     }
 }
 
 /// Retain insertion positions when a nested report joins an existing notice stream.
 pub(super) fn append_feedback(
-    destination: &mut Vec<BattlePilotNotice>,
-    incoming: impl IntoIterator<Item = BattlePilotNotice>,
+    destination: &mut Vec<PilotNotice>,
+    incoming: impl IntoIterator<Item = PilotNotice>,
     offset: usize,
 ) {
     destination.extend(incoming.into_iter().map(|mut notice| {
@@ -105,8 +102,8 @@ pub(super) fn append_feedback(
 /// Publish captured pilot feedback at its original position without expanding its audience.
 pub(super) fn publish_ordered_notices(
     scripts: &crate::Scripts,
-    notices: &[super::BattleNotice],
-    private: &[BattlePilotNotice],
+    notices: &[super::Notice],
+    private: &[PilotNotice],
 ) -> Result<()> {
     publish_interleaved(scripts, notices, private, |_| Ok(()))
 }
@@ -116,9 +113,9 @@ pub(super) fn publish_ordered_notices(
 pub(super) fn publish_maneuver_feedback(
     scripts: &crate::Scripts,
     config: &crate::Config,
-    notices: &[super::BattleNotice],
-    private: &[BattlePilotNotice],
-    check: Option<&BattlePilotingCheck>,
+    notices: &[super::Notice],
+    private: &[PilotNotice],
+    check: Option<&PilotingCheck>,
     awards_experience: bool,
 ) -> Result<()> {
     let position = private.first().map_or(0, |notice| notice.before_notice);
@@ -137,9 +134,9 @@ pub(super) fn publish_maneuver_feedback(
 pub(super) fn publish_diagnostic_feedback(
     scripts: &crate::Scripts,
     config: &crate::Config,
-    notices: &[super::BattleNotice],
-    private: &[BattlePilotNotice],
-    diagnostic: Option<(usize, super::BattleChannelMessage)>,
+    notices: &[super::Notice],
+    private: &[PilotNotice],
+    diagnostic: Option<(usize, super::DiagnosticMessage)>,
 ) -> Result<()> {
     publish_interleaved(scripts, notices, private, |index| {
         if let Some((position, diagnostic)) = &diagnostic
@@ -154,8 +151,8 @@ pub(super) fn publish_diagnostic_feedback(
 /// Retain one notification-order implementation for ordinary and diagnostic-bearing reports.
 fn publish_interleaved(
     scripts: &crate::Scripts,
-    notices: &[super::BattleNotice],
-    private: &[BattlePilotNotice],
+    notices: &[super::Notice],
+    private: &[PilotNotice],
     mut before_feedback: impl FnMut(usize) -> Result<()>,
 ) -> Result<()> {
     let mut private = private.iter().peekable();
@@ -168,7 +165,7 @@ fn publish_interleaved(
             let notice = private.next().unwrap();
             super::notify_message(
                 scripts,
-                super::BattleMessageTarget::Player(notice.pilot),
+                super::MessageTarget::Player(notice.pilot),
                 &notice.text,
             )?;
         }
@@ -187,7 +184,7 @@ pub fn roll_piloting(
     unit: ObjectId,
     modifier: i16,
     extended: bool,
-) -> Result<BattlePilotingCheck> {
+) -> Result<PilotingCheck> {
     roll_piloting_i32(world, unit, i32::from(modifier), extended)
 }
 
@@ -197,7 +194,7 @@ pub(super) fn roll_piloting_i32(
     unit: ObjectId,
     modifier: i32,
     extended: bool,
-) -> Result<BattlePilotingCheck> {
+) -> Result<PilotingCheck> {
     if world.btech.vehicles().contains_key(&unit) {
         return super::vehicle_piloting::roll(world, unit, modifier, extended);
     }
@@ -210,7 +207,7 @@ pub(super) fn roll_standing(
     unit: ObjectId,
     modifier: i16,
     extended: bool,
-) -> Result<BattlePilotingCheck> {
+) -> Result<PilotingCheck> {
     let automatic = !world
         .btech
         .constructed_units()
@@ -227,7 +224,7 @@ fn roll_check(
     modifier: i32,
     extended: bool,
     automatic: bool,
-) -> Result<BattlePilotingCheck> {
+) -> Result<PilotingCheck> {
     let object = world.objects.get(&unit).context("Unit is unavailable")?;
     ensure!(!object.flags.contains(Flag::Going), "Unit is unavailable");
     let state = world
@@ -257,7 +254,7 @@ fn roll_check(
         .wrapping_add(modifier)
         .wrapping_add(i32::from(absent_character_pilot));
     let blocked = controls_blocked(world, unit, state.power());
-    let prone = state.posture() == super::BattlePosture::Prone;
+    let prone = state.posture() == super::Posture::Prone;
     let automatic_success = prone || (automatic && !blocked);
     let roll = if blocked || automatic_success {
         None
@@ -272,7 +269,7 @@ fn roll_check(
                 .generic_roll(),
         )
     };
-    Ok(BattlePilotingCheck {
+    Ok(PilotingCheck {
         skill,
         damage,
         cockpit,
@@ -286,18 +283,18 @@ fn roll_check(
     })
 }
 
-impl super::BattleUnit {
+impl super::Mech {
     /// Construction-only control penalty; it does not count as mobility damage.
     pub fn cockpit_piloting_modifier(&self) -> u8 {
         u8::from(
             self.definition()
-                .has_technology(super::BattleTechnology::SmallCockpit),
+                .has_technology(super::Technology::SmallCockpit),
         )
     }
 }
 
 /// Potential XP for an actual successful roll; automatic successes and trivial targets earn none.
-fn experience_amount(check: &BattlePilotingCheck) -> Option<u32> {
+fn experience_amount(check: &PilotingCheck) -> Option<u32> {
     if !check.success || check.roll.is_none() || check.target <= 2 {
         return None;
     }
@@ -309,9 +306,9 @@ fn experience_amount(check: &BattlePilotingCheck) -> Option<u32> {
 pub(super) fn award_control_check(
     world: &mut World,
     id: ObjectId,
-    check: &mut BattlePilotingCheck,
+    check: &mut PilotingCheck,
     extended: bool,
-) -> Result<Option<super::BattleChannelMessage>> {
+) -> Result<Option<super::DiagnosticMessage>> {
     let Some(amount) = experience_amount(check) else {
         return Ok(None);
     };
@@ -328,8 +325,8 @@ pub(super) fn award_reason(
     amount: u32,
     extended: bool,
 ) -> Result<(
-    Option<super::BattleExperienceAward>,
-    Option<super::BattleChannelMessage>,
+    Option<super::ExperienceAward>,
+    Option<super::DiagnosticMessage>,
 )> {
     if world.objects.get(&id).is_none_or(|unit| {
         !unit.flags.contains(Flag::InCharacter) || unit.flags.contains(Flag::Going)
@@ -357,8 +354,8 @@ pub(super) fn award_reason(
         false,
     )?;
     let message = award.accepted.then(|| {
-        super::BattleChannelMessage::new(
-            super::BattleChannel::PilotingExperience,
+        super::DiagnosticMessage::new(
+            super::DiagnosticChannel::PilotingExperience,
             format!("{} gained {amount} {skill} XP", world.objects[&pilot].name),
         )
     });
@@ -372,7 +369,7 @@ mod tests {
     /// Diagnostics expose the subtotal inputs, retain distinct labels, and omit skipped checks.
     #[test]
     fn control_diagnostics_follow_roll_and_award_policy() {
-        let mut check = BattlePilotingCheck {
+        let mut check = PilotingCheck {
             skill: 6,
             damage: 2,
             cockpit: 1,
@@ -386,7 +383,7 @@ mod tests {
         };
         for (awards, label) in [(false, ""), (true, " (noxp)")] {
             let message = check.diagnostic(awards).unwrap();
-            assert_eq!(message.channel, super::super::BattleChannel::Debug);
+            assert_eq!(message.channel, super::super::DiagnosticChannel::Debug);
             assert_eq!(
                 message.text,
                 format!(
@@ -406,19 +403,19 @@ mod tests {
         let config = crate::Config::load("tests/fixtures/game").unwrap();
         let mut world = World::default();
         let id = world.create(&config, "Mech".into(), crate::Kind::Thing);
-        let template = crate::BattleTemplate::parse(
+        let template = crate::MechTemplate::parse(
             "JR7-D",
             include_str!("../../tests/fixtures/btech/mechs/JR7-D.toml"),
         )
         .unwrap();
-        let mut unit = crate::BattleUnit::from_template(template).unwrap();
-        unit.position = Some(crate::BattlePosition {
+        let mut unit = crate::Mech::from_template(template).unwrap();
+        unit.position = Some(crate::Position {
             map: ObjectId(99),
             x: 0,
             y: 0,
         });
         unit.map_slot = Some(0);
-        unit.power = super::super::BattlePower::Running;
+        unit.power = super::super::Power::Running;
         world.btech.constructed.insert(id, unit);
         let before = serde_json::to_value(&world.btech.constructed_units()[&id]).unwrap();
         let check = roll_check(&mut world, id, 20, false, true).unwrap();
@@ -437,7 +434,7 @@ mod tests {
             serde_json::to_value(&world.btech.constructed_units()[&id]).unwrap(),
             before
         );
-        world.btech.constructed.get_mut(&id).unwrap().power = super::super::BattlePower::Off;
+        world.btech.constructed.get_mut(&id).unwrap().power = super::super::Power::Off;
         let check = roll_check(&mut world, id, 0, false, true).unwrap();
         assert!(!check.success);
         assert_eq!(check.roll, None);
@@ -449,7 +446,7 @@ mod tests {
                 .total(),
             0
         );
-        world.btech.constructed.get_mut(&id).unwrap().power = super::super::BattlePower::Running;
+        world.btech.constructed.get_mut(&id).unwrap().power = super::super::Power::Running;
         let mut expected = world.btech.constructed_units()[&id].dice.clone();
         let expected_roll = expected.two_d6();
         let check = roll_check(&mut world, id, 0, false, false).unwrap();
@@ -466,7 +463,7 @@ mod tests {
     /// The situational cap is independent of skill/damage; prone and trivial checks never award XP.
     #[test]
     fn control_experience_uses_success_target_and_modifier() {
-        let mut check = BattlePilotingCheck {
+        let mut check = PilotingCheck {
             skill: 6,
             damage: 0,
             cockpit: 0,

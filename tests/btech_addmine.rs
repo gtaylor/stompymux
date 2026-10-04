@@ -93,9 +93,9 @@ async fn prepending_preserves_auxiliary_columns_and_order_survives_removal() {
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
-    let mine = BattleMinefield {
+    let mine = Minefield {
         coordinate: HexCoordinate { x: 1, y: 1 },
-        kind: BattleMineKind::Standard,
+        kind: MineKind::Standard,
         strength: 10,
         extra: 0,
         owner: ObjectId(1),
@@ -120,8 +120,8 @@ async fn prepending_preserves_auxiliary_columns_and_order_survives_removal() {
     let slot = insert_minefield(
         &mut world,
         map,
-        BattleMinefield {
-            kind: BattleMineKind::Inferno,
+        Minefield {
+            kind: MineKind::Inferno,
             ..mine
         },
     )
@@ -214,9 +214,9 @@ async fn rejected_or_aborted_placement_does_not_change_order_or_publish_output()
     );
     assert_eq!(scripts.world().btech, before);
     assert!(scripts.drain_outbox().is_empty());
-    let placement = BattleMinePlacement {
+    let placement = MinePlacement {
         coordinate: HexCoordinate { x: 0, y: 0 },
-        kind: BattleMineKind::Standard,
+        kind: MineKind::Standard,
         strength: 10,
         extra: 0,
     };
@@ -255,9 +255,9 @@ async fn artillery_mines_precede_existing_records_without_replacing_them() {
         &mut world,
         map,
         9,
-        Some(BattleMinefield {
+        Some(Minefield {
             coordinate: HexCoordinate { x: 1, y: 1 },
-            kind: BattleMineKind::Command,
+            kind: MineKind::Command,
             strength: 20,
             extra: 4,
             owner: ObjectId(1),
@@ -268,14 +268,14 @@ async fn artillery_mines_precede_existing_records_without_replacing_them() {
         &mut world,
         map,
         coordinate,
-        Some(BattleDecoration::new(DecorationKind::Fire, 0, None)),
+        Some(Decoration::new(DecorationKind::Fire, 0, None)),
     )
     .unwrap();
-    let rules = BattleFallRules {
-        vehicle_impact: BattleVehicleImpactRules::STANDARD,
-        stacking: BattleStackingRules::STANDARD,
-        stagger: BattleStaggerMode::Retain,
-        hit: BattleHitRules {
+    let rules = FallRules {
+        vehicle_impact: VehicleImpactRules::STANDARD,
+        stacking: StackingRules::STANDARD,
+        stagger: StaggerMode::Retain,
+        hit: HitRules {
             inferno_penalty: false,
             exile_stun_mode: 0,
         },
@@ -283,11 +283,11 @@ async fn artillery_mines_precede_existing_records_without_replacing_them() {
         toughness: false,
     };
     for repetition in 0..3 {
-        let mut flight = BattleArtilleryFlight::new(
+        let mut flight = ArtilleryFlight::new(
             coordinate,
             coordinate,
-            BattleWeapon::Thumper,
-            BattleArtilleryMode::Mine,
+            Weapon::Thumper,
+            ArtilleryMode::Mine,
             true,
         )
         .unwrap();

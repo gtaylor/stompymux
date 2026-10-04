@@ -10,7 +10,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
     create_battle_unit(
         &mut world,
         id,
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
@@ -31,7 +31,7 @@ fn radio_hardware_quality_and_chassis_defaults() {
             (5, 11, 140),
         ] {
             let mut definition =
-                BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
                     .unwrap();
             definition
                 .attributes
@@ -51,7 +51,7 @@ fn radio_hardware_quality_and_chassis_defaults() {
                 for slot in 2..6 {
                     definition
                         .sections
-                        .get_mut(&BattleSection::LeftTorso)
+                        .get_mut(&MechSection::LeftTorso)
                         .unwrap()
                         .criticals
                         .insert(
@@ -64,10 +64,10 @@ fn radio_hardware_quality_and_chassis_defaults() {
                         );
                 }
             }
-            let unit = BattleUnit::from_template(definition).unwrap();
+            let unit = Mech::from_template(definition).unwrap();
             assert_eq!(
                 unit.radio_capabilities(),
-                BattleRadioCapabilities {
+                RadioCapabilities {
                     channels,
                     range,
                     info: false,
@@ -82,7 +82,7 @@ fn radio_hardware_quality_and_chassis_defaults() {
                 .attributes
                 .insert("radio_range".into(), "0".into());
             assert_eq!(
-                BattleUnit::from_template(explicit_default)
+                Mech::from_template(explicit_default)
                     .unwrap()
                     .radio_capabilities(),
                 unit.radio_capabilities()
@@ -90,19 +90,19 @@ fn radio_hardware_quality_and_chassis_defaults() {
             assert!(
                 unit.radio_channels()
                     .iter()
-                    .all(|c| c == &BattleRadioChannel::default())
+                    .all(|c| c == &RadioChannel::default())
             );
         }
     }
     let mut definition =
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     definition.attributes.insert("radio".into(), "6".into());
-    assert!(BattleUnit::from_template(definition).is_err());
+    assert!(Mech::from_template(definition).is_err());
 }
 
 #[test]
 fn radio_modes_enforce_relay_and_retain_color_parser_order() {
-    let capable = BattleRadioCapabilities {
+    let capable = RadioCapabilities {
         channels: 8,
         range: 120,
         relay: true,
@@ -110,11 +110,11 @@ fn radio_modes_enforce_relay_and_retain_color_parser_order() {
         scan: false,
         digital: true,
     };
-    assert!(BattleRadioMode::parse("E", capable).is_err());
+    assert!(RadioMode::parse("E", capable).is_err());
     assert!(
-        BattleRadioMode::parse(
+        RadioMode::parse(
             "DE",
-            BattleRadioCapabilities {
+            RadioCapabilities {
                 relay: false,
                 ..capable
             }
@@ -122,11 +122,11 @@ fn radio_modes_enforce_relay_and_retain_color_parser_order() {
         .is_err()
     );
     for unsupported in ["DI", "S"] {
-        assert!(BattleRadioMode::parse(unsupported, capable).is_err());
+        assert!(RadioMode::parse(unsupported, capable).is_err());
     }
     assert_eq!(
-        BattleRadioMode::parse("DuErG", capable).unwrap(),
-        BattleRadioMode {
+        RadioMode::parse("DuErG", capable).unwrap(),
+        RadioMode {
             digital: true,
             muted: true,
             relay: true,
@@ -135,16 +135,13 @@ fn radio_modes_enforce_relay_and_retain_color_parser_order() {
         }
     );
     assert_eq!(
-        BattleRadioMode::parse("D?UE", capable).unwrap(),
-        BattleRadioMode {
+        RadioMode::parse("D?UE", capable).unwrap(),
+        RadioMode {
             digital: true,
             ..Default::default()
         }
     );
-    assert_eq!(
-        BattleRadioMode::parse("", capable).unwrap(),
-        BattleRadioMode::default()
-    );
+    assert_eq!(RadioMode::parse("", capable).unwrap(), RadioMode::default());
 }
 
 #[tokio::test]
@@ -245,15 +242,14 @@ async fn relay_fixture() -> (tempfile::TempDir, Config, World, ObjectId, Vec<Obj
         let id = world.create(&config, "Radio unit".into(), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         let mut definition =
-            BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
-                .unwrap();
+            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
         definition
             .attributes
             .insert("radio".into(), quality.to_string());
         for slot in 2..4 {
             definition
                 .sections
-                .get_mut(&BattleSection::LeftTorso)
+                .get_mut(&MechSection::LeftTorso)
                 .unwrap()
                 .criticals
                 .insert(
@@ -270,7 +266,7 @@ async fn relay_fixture() -> (tempfile::TempDir, Config, World, ObjectId, Vec<Obj
         world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
         assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
         set_radio_frequency(&mut world, id, ObjectId(1), 0, 42).unwrap();
-        let mode = BattleRadioMode {
+        let mode = RadioMode {
             digital: true,
             relay: quality == 4,
             ..Default::default()
@@ -302,7 +298,7 @@ async fn digital_radio_directed_relays_channel_selection_and_restart() {
         u["radio"][0]["title"] = "Command".into()
     });
     radio_fact(&mut world, *receiver, |u| {
-        u["power"] = serde_json::to_value(BattlePower::Off).unwrap();
+        u["power"] = serde_json::to_value(Power::Off).unwrap();
         u["radio"][0]["mode"]["muted"] = true.into();
         u["radio"][1]["frequency"] = 42.into();
         u["radio"][1]["mode"]["color"] = "G".into();
@@ -410,7 +406,7 @@ async fn digital_radio_relay_lifecycle_team_and_direction() {
         let mut changed = world.clone();
         match mode {
             "off" => radio_fact(&mut changed, units[3], |u| {
-                u["power"] = serde_json::to_value(BattlePower::Off).unwrap()
+                u["power"] = serde_json::to_value(Power::Off).unwrap()
             }),
             "enemy" => radio_fact(&mut changed, units[3], |u| {
                 u["signature"]["team"] = 17.into()
@@ -504,11 +500,11 @@ fn relocate_radio_unit(
     y: i64,
 ) -> anyhow::Result<()> {
     radio_fact(world, id, |u| {
-        u["power"] = serde_json::to_value(BattlePower::Off).unwrap()
+        u["power"] = serde_json::to_value(Power::Off).unwrap()
     });
     place_battle_unit(world, id, map, x, y)?;
     radio_fact(world, id, |u| {
-        u["power"] = serde_json::to_value(BattlePower::Running).unwrap()
+        u["power"] = serde_json::to_value(Power::Running).unwrap()
     });
     Ok(())
 }
@@ -523,7 +519,7 @@ async fn analog_radio_range_reception_dice_and_restart_are_atomic() {
     });
     for &id in &units {
         radio_fact(&mut world, id, |u| {
-            u["dice"] = serde_json::to_value(BattleDice::seeded([id.0 as u8; 32])).unwrap()
+            u["dice"] = serde_json::to_value(Dice::seeded([id.0 as u8; 32])).unwrap()
         });
     }
     let before = world.clone();
@@ -650,7 +646,7 @@ async fn radio_communication_skill_is_captured_only_on_startup_completion() {
     set_battle_character(
         &mut world,
         ObjectId(1),
-        BattleCharacter {
+        Character {
             bruise: 0,
             lethal: 0,
             build: 3,
@@ -671,7 +667,7 @@ async fn radio_communication_skill_is_captured_only_on_startup_completion() {
         &mut world,
         ObjectId(1),
         "Comm-Conventional",
-        BattleCharacterValue {
+        CharacterValue {
             value: 4,
             ..Default::default()
         },
@@ -683,7 +679,7 @@ async fn radio_communication_skill_is_captured_only_on_startup_completion() {
         &mut world,
         ObjectId(1),
         "Comm-Conventional",
-        BattleCharacterValue {
+        CharacterValue {
             value: 5,
             ..Default::default()
         },
@@ -692,7 +688,7 @@ async fn radio_communication_skill_is_captured_only_on_startup_completion() {
     advance_battle_units(&mut world, 0);
     assert_eq!(world.btech.constructed_units()[&unit].radio_skill(), 8);
     radio_fact(&mut world, unit, |u| {
-        u["power"] = serde_json::to_value(BattlePower::Off).unwrap()
+        u["power"] = serde_json::to_value(Power::Off).unwrap()
     });
     start_battle_unit(&mut world, unit, ObjectId(1), true).unwrap();
     for _ in 0..5 {
@@ -726,15 +722,15 @@ async fn sendchannel_native_lua_modes_and_frequency_mines_share_one_action() {
         radio_sender(&mut world, source);
         radio_fact(&mut world, source, |u| {
             u["radio"][0]["mode"]["digital"] = digital.into();
-            u["power"] = serde_json::to_value(BattlePower::Off).unwrap();
+            u["power"] = serde_json::to_value(Power::Off).unwrap();
         });
         set_minefield(
             &mut world,
             map,
             0,
-            Some(BattleMinefield {
+            Some(Minefield {
                 coordinate: HexCoordinate { x: 1, y: 250 },
-                kind: BattleMineKind::Command,
+                kind: MineKind::Command,
                 strength,
                 extra: 42,
                 owner: ObjectId(1),
@@ -791,9 +787,9 @@ async fn transmission_failure_restores_delivery_dice_mines_and_outbox() {
     radio_fact(&mut world, source, |u| {
         u["radio"][0]["mode"]["digital"] = false.into()
     });
-    let mine = BattleMinefield {
+    let mine = Minefield {
         coordinate: HexCoordinate { x: 1, y: 60 },
-        kind: BattleMineKind::Command,
+        kind: MineKind::Command,
         strength: 0,
         extra: 42,
         owner: ObjectId(1),
@@ -803,7 +799,7 @@ async fn transmission_failure_restores_delivery_dice_mines_and_outbox() {
         &mut world,
         map,
         1,
-        Some(BattleMinefield {
+        Some(Minefield {
             coordinate: HexCoordinate { x: 1, y: 250 },
             strength: 2,
             ..mine
@@ -879,7 +875,7 @@ async fn radio_frequency_audits_match_each_enemy_channel_with_native_lua_parity(
         u["signature"]["team"] = 7.into();
         u["radio"][1]["frequency"] = 42.into();
         u["radio"][1]["mode"]["muted"] = true.into();
-        u["power"] = serde_json::to_value(BattlePower::Off).unwrap();
+        u["power"] = serde_json::to_value(Power::Off).unwrap();
     });
     let native = Scripts::new(
         &config,
@@ -959,7 +955,7 @@ async fn zero_frequency_audits_follow_map_character_flag_and_rollback_with_mines
     assert_eq!(report.audit_messages.len(), 1);
     assert_eq!(
         report.audit_messages[0].channel,
-        BattleChannel::ZeroFrequencies
+        DiagnosticChannel::ZeroFrequencies
     );
     assert_eq!(
         report.audit_messages[0].text,
@@ -999,9 +995,9 @@ async fn zero_frequency_audits_follow_map_character_flag_and_rollback_with_mines
         &mut world,
         map,
         0,
-        Some(BattleMinefield {
+        Some(Minefield {
             coordinate: HexCoordinate { x: 1, y: 250 },
-            kind: BattleMineKind::Command,
+            kind: MineKind::Command,
             strength: 2,
             extra: 0,
             owner: ObjectId(1),
@@ -1064,7 +1060,7 @@ fn radio_xp_crew(world: &mut World, units: &[ObjectId]) {
     set_battle_character(
         world,
         ObjectId(1),
-        BattleCharacter {
+        Character {
             bruise: 0,
             lethal: 0,
             build: 5,
@@ -1091,7 +1087,7 @@ async fn radio_xp_strict_interval_restart_and_shutdown_countdown() {
     radio_xp_crew(&mut world, &units);
     let receiver = units[4];
     radio_fact(&mut world, receiver, |u| {
-        u["power"] = serde_json::to_value(BattlePower::Off).unwrap()
+        u["power"] = serde_json::to_value(Power::Off).unwrap()
     });
     let report = resolve_analog_radio(&mut world, units[0], 0, "distant").unwrap();
     let messages = award_radio_experience(&mut world, &report, 1000).unwrap();
@@ -1261,7 +1257,7 @@ async fn observer_radio_bypasses_tuning_range_and_ecm_with_identified_clear_text
     radio_fact(&mut world, source, |u| u["signature"]["team"] = 17.into());
     set_battle_observer(&mut world, observer, true).unwrap();
     radio_fact(&mut world, observer, |u| {
-        u["power"] = serde_json::to_value(BattlePower::Off).unwrap();
+        u["power"] = serde_json::to_value(Power::Off).unwrap();
         u["radio"][0]["mode"]["muted"] = true.into();
         u["radio"][1]["mode"]["color"] = "R".into();
     });
@@ -1505,7 +1501,7 @@ async fn targeted_radio_power_observer_contact_and_message_guards() {
     assert!(resolve_targeted_radio(&world, source, ObjectId(1), target, "unseen").is_err());
     radio_contact(&mut world, source, target);
     radio_fact(&mut world, target, |u| {
-        u["power"] = serde_json::to_value(BattlePower::Off).unwrap()
+        u["power"] = serde_json::to_value(Power::Off).unwrap()
     });
     let report =
         resolve_targeted_radio(&world, source, ObjectId(1), target, "shutdown target").unwrap();
@@ -1521,7 +1517,7 @@ async fn targeted_radio_power_observer_contact_and_message_guards() {
     assert!(resolve_targeted_radio(&world, source, ObjectId(1), target, "observer").is_err());
     set_battle_observer(&mut world, source, false).unwrap();
     radio_fact(&mut world, source, |u| {
-        u["power"] = serde_json::to_value(BattlePower::Off).unwrap()
+        u["power"] = serde_json::to_value(Power::Off).unwrap()
     });
     assert!(
         resolve_targeted_radio(&world, source, ObjectId(1), target, "shutdown source").is_err()
@@ -1552,8 +1548,8 @@ async fn observer_scans_keep_acquisition_and_lock_loss_without_routine_chatter()
     let _ = select_battle_target(&mut observing, observer, ObjectId(1), Some(target)).unwrap();
     let _ = select_battle_target(&mut normal, observer, ObjectId(1), Some(target)).unwrap();
     for world in [&mut normal, &mut observing] {
-        set_battle_map_visibility(world, map, BattleLight::Day, 0).unwrap();
-        set_battle_map_perception(world, map, BattleMapPerceptionFlag::Sensors, false).unwrap();
+        set_battle_map_visibility(world, map, Light::Day, 0).unwrap();
+        set_battle_map_perception(world, map, MapPerceptionFlag::Sensors, false).unwrap();
     }
     let normal_events = refresh_battle_contacts(&mut normal, &[observer]).unwrap();
     let events = refresh_battle_contacts(&mut observing, &[observer]).unwrap();
@@ -1591,7 +1587,7 @@ async fn observer_scans_keep_acquisition_and_lock_loss_without_routine_chatter()
 async fn observer_contact_notice_policy_preserves_lock_warning_only() {
     let (_dir, _config, mut world, unit) = fixture().await;
     for acquired in [false, true] {
-        let event = BattleContactEvent {
+        let event = ContactEvent {
             experience_message: None,
             identified: true,
             observer: unit,
@@ -1604,7 +1600,7 @@ async fn observer_contact_notice_policy_preserves_lock_warning_only() {
         set_battle_observer(&mut world, unit, true).unwrap();
         assert!(event.notice(&world).is_none());
         assert_eq!(
-            BattleContactEvent {
+            ContactEvent {
                 lock_lost: true,
                 ..event.clone()
             }
@@ -1616,7 +1612,7 @@ async fn observer_contact_notice_policy_preserves_lock_warning_only() {
         set_battle_observer(&mut world, unit, false).unwrap();
     }
     assert!(
-        BattleContactEvent {
+        ContactEvent {
             experience_message: None,
             identified: true,
             observer: ObjectId(-1),
@@ -1640,16 +1636,15 @@ fn radio_type_decodes_capabilities_and_gates_modes() {
         (255, 15, true, true, true, false),
     ] {
         let mut template =
-            BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
-                .unwrap();
+            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
         template
             .attributes
             .insert("radiotype".into(), configuration.to_string());
-        let unit = BattleUnit::from_template(template).unwrap();
+        let unit = Mech::from_template(template).unwrap();
         let capabilities = unit.radio_capabilities();
         assert_eq!(
             capabilities,
-            BattleRadioCapabilities {
+            RadioCapabilities {
                 channels,
                 range: 80,
                 relay,
@@ -1659,20 +1654,19 @@ fn radio_type_decodes_capabilities_and_gates_modes() {
             }
         );
         assert_eq!(unit.radio_channels().len(), usize::from(channels));
-        assert_eq!(BattleRadioMode::parse("D", capabilities).is_ok(), digital);
+        assert_eq!(RadioMode::parse("D", capabilities).is_ok(), digital);
         assert_eq!(
-            BattleRadioMode::parse("DI", capabilities).is_ok(),
+            RadioMode::parse("DI", capabilities).is_ok(),
             digital && info
         );
-        assert_eq!(BattleRadioMode::parse("S", capabilities).is_ok(), scan);
-        assert!(BattleRadioMode::parse("I", capabilities).is_err());
+        assert_eq!(RadioMode::parse("S", capabilities).is_ok(), scan);
+        assert!(RadioMode::parse("I", capabilities).is_err());
     }
     for value in ["-1", "256", "invalid"] {
         let mut template =
-            BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
-                .unwrap();
+            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
         template.attributes.insert("radiotype".into(), value.into());
-        assert!(BattleUnit::from_template(template).is_err());
+        assert!(Mech::from_template(template).is_err());
     }
 }
 
@@ -1740,7 +1734,7 @@ async fn frequency_scanning_replays_and_rolls_back_with_transmission() {
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(source);
     radio_fact(&mut world, receiver, |u| {
         u["definition"]["attributes"]["radiotype"] = "66".into();
-        u["power"] = serde_json::to_value(BattlePower::Off).unwrap();
+        u["power"] = serde_json::to_value(Power::Off).unwrap();
         for (index, frequency) in [(0, 0), (1, 100)] {
             u["radio"][index]["frequency"] = frequency.into();
             u["radio"][index]["mode"]["scan"] = true.into();
@@ -1751,7 +1745,7 @@ async fn frequency_scanning_replays_and_rolls_back_with_transmission() {
     let mut selected = None;
     for seed in 0..=255 {
         radio_fact(&mut world, receiver, |u| {
-            u["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
+            u["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap()
         });
         let mut candidate = world.clone();
         let report = resolve_analog_radio(&mut candidate, source, 0, &message).unwrap();
@@ -1793,7 +1787,7 @@ async fn frequency_scanning_replays_and_rolls_back_with_transmission() {
     assert_eq!(scripts.world().btech, before);
     assert!(scripts.drain_outbox().is_empty());
     let sent = send_radio_action(&scripts, &config, source, ObjectId(1), 0, &message).unwrap();
-    let BattleRadioDelivery::Analog(delivery) = sent.delivery else {
+    let RadioDelivery::Analog(delivery) = sent.delivery else {
         panic!()
     };
     assert_eq!(delivery, report);
@@ -1830,7 +1824,7 @@ async fn extended_radio_modes_native_lua_and_scan_exclusions() {
             id,
             ObjectId(1),
             14,
-            BattleRadioMode::default()
+            RadioMode::default()
         )
         .is_err()
     );

@@ -6,25 +6,25 @@ use serde::Serialize;
 
 /// One blast occupant, retaining each packet's character and material consequences.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleArtilleryHit {
+pub struct ArtilleryHit {
     pub unit: ObjectId,
     pub coordinate: HexCoordinate,
-    pub arc: BattleHitArc,
-    pub impacts: Vec<BattleBlastImpact>,
-    pub vehicle_heat: Option<BattleVehicleHeatExposure>,
+    pub arc: HitArc,
+    pub impacts: Vec<BlastImpact>,
+    pub vehicle_heat: Option<VehicleHeatExposure>,
 }
 
 /// Applied arrival effects; the enclosing host action publishes notices and character consequences.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[must_use = "Publish artillery notices and character consequences in the same transaction"]
-pub struct BattleArtilleryImpactReport {
+pub struct ArtilleryImpactReport {
     pub map: ObjectId,
-    pub pattern: BattleArtilleryImpactPattern,
-    pub hits: Vec<BattleArtilleryHit>,
+    pub pattern: ArtilleryImpactPattern,
+    pub hits: Vec<ArtilleryHit>,
     pub mines: Vec<u32>,
-    pub notices: Vec<BattleNotice>,
+    pub notices: Vec<Notice>,
     /// Pilot-only packet feedback indexed into the arrival notice stream.
-    pub pilot_notices: Vec<BattlePilotNotice>,
+    pub pilot_notices: Vec<PilotNotice>,
 }
 
 /// Advance an admitted flight and atomically apply its arrival to an out-of-character battlefield.
@@ -32,9 +32,9 @@ pub struct BattleArtilleryImpactReport {
 pub fn advance_artillery_flight(
     world: &mut World,
     map: ObjectId,
-    flight: &mut BattleArtilleryFlight,
-    rules: BattleFallRules,
-) -> Result<Option<BattleArtilleryImpactReport>> {
+    flight: &mut ArtilleryFlight,
+    rules: FallRules,
+) -> Result<Option<ArtilleryImpactReport>> {
     advance(world, map, flight, rules, false)
 }
 
@@ -42,10 +42,10 @@ pub fn advance_artillery_flight(
 pub(super) fn advance(
     world: &mut World,
     map: ObjectId,
-    flight: &mut BattleArtilleryFlight,
-    rules: BattleFallRules,
+    flight: &mut ArtilleryFlight,
+    rules: FallRules,
     character: bool,
-) -> Result<Option<BattleArtilleryImpactReport>> {
+) -> Result<Option<ArtilleryImpactReport>> {
     ensure!(
         world
             .objects
@@ -76,7 +76,7 @@ pub(super) fn advance(
         cursor.mode(),
         pattern.impact,
     )?;
-    let mut report = BattleArtilleryImpactReport {
+    let mut report = ArtilleryImpactReport {
         map,
         pattern,
         hits: Vec::new(),
@@ -86,7 +86,7 @@ pub(super) fn advance(
     };
     for cell in report.pattern.cells.clone() {
         match cell.effect {
-            BattleArtilleryEffect::Smoke { seconds } => {
+            ArtilleryEffect::Smoke { seconds } => {
                 super::decorations::raise_smoke(
                     &mut candidate,
                     map,
@@ -94,12 +94,12 @@ pub(super) fn advance(
                     i64::from(seconds),
                 )?;
             }
-            BattleArtilleryEffect::Mine { strength } => {
+            ArtilleryEffect::Mine { strength } => {
                 if let Some(ordinal) = deposit_mine(&mut candidate, map, cell.position, strength)? {
                     report.mines.push(ordinal);
                 }
             }
-            BattleArtilleryEffect::Damage {
+            ArtilleryEffect::Damage {
                 total,
                 packet_size,
                 table,
@@ -139,9 +139,9 @@ fn deposit_mine(
     let ordinal = super::insert_minefield(
         world,
         map,
-        BattleMinefield {
+        Minefield {
             coordinate,
-            kind: BattleMineKind::Standard,
+            kind: MineKind::Standard,
             strength: i16::try_from(strength)?,
             extra: 0,
             owner: ObjectId(0),
@@ -153,10 +153,10 @@ fn deposit_mine(
 /// Freeze each occupant's blast arc before ordered packets; height limits are exclusive.
 fn hit_cell(
     world: &mut World,
-    report: &mut BattleArtilleryImpactReport,
-    cell: &BattleArtilleryCell,
-    (damage, packet_size, table): (u16, u8, BattleHitTable),
-    rules: BattleFallRules,
+    report: &mut ArtilleryImpactReport,
+    cell: &ArtilleryCell,
+    (damage, packet_size, table): (u16, u8, HitTable),
+    rules: FallRules,
     character: bool,
 ) -> Result<()> {
     let coordinate = cell.position;
@@ -181,9 +181,9 @@ fn hit_cell(
             "Artillery impact requires character consequence publication"
         );
         let arc = target.arc;
-        rear |= arc == BattleHitArc::Rear;
+        rear |= arc == HitArc::Rear;
         let rules = target.rules;
-        let (observer, cockpit) = if table == BattleHitTable::Punch {
+        let (observer, cockpit) = if table == HitTable::Punch {
             if damage > 2 {
                 ("is hit by bomblets!", "You are hit by bomblets!")
             } else {
@@ -197,11 +197,11 @@ fn hit_cell(
         report
             .notices
             .extend(super::broadcast::observer_notices(world, id, observer));
-        report.notices.push(BattleNotice {
+        report.notices.push(Notice {
             unit: id,
             text: cockpit.into(),
         });
-        let mut hit = BattleArtilleryHit {
+        let mut hit = ArtilleryHit {
             unit: id,
             coordinate,
             arc,
@@ -218,7 +218,7 @@ fn hit_cell(
                 arc,
                 heat: 0,
                 character: is_character,
-                class: BattleDamageClass::AreaEffect,
+                class: DamageClass::AreaEffect,
             },
             &mut rear,
             rules,

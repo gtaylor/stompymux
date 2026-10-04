@@ -11,7 +11,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
         "event_lag",
         lua.create_function(move |lua, _: mlua::MultiValue| {
             let telemetry = lua
-                .app_data_ref::<std::rc::Rc<std::cell::Cell<crate::BattleEventTelemetry>>>()
+                .app_data_ref::<std::rc::Rc<std::cell::Cell<crate::EventTelemetry>>>()
                 .ok_or_else(|| {
                     error::failure("mux.state.unavailable", "event timing is unavailable")
                 })?

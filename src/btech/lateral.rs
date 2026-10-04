@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 /// Travel direction relative to the chassis, without changing weapon facing.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleLateralMode {
+pub enum LateralMode {
     #[default]
     None,
     FrontLeft,
@@ -15,7 +15,7 @@ pub enum BattleLateralMode {
     RearRight,
 }
 
-impl BattleLateralMode {
+impl LateralMode {
     /// Compass offset used by movement, collisions and contact displays.
     pub fn offset(self) -> u16 {
         match self {
@@ -54,13 +54,13 @@ impl BattleLateralMode {
 /// Durable active direction and optional six-second changeover.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct BattleLateralState {
-    pub active: BattleLateralMode,
-    pub pending: Option<BattleLateralMode>,
+pub struct LateralState {
+    pub active: LateralMode,
+    pub pending: Option<LateralMode>,
     pub remaining: u8,
 }
 
-impl BattleLateralState {
+impl LateralState {
     /// Reject impossible countdowns before admitting saved unit state.
     pub(super) fn validate(self) -> Result<()> {
         ensure!(
@@ -75,9 +75,9 @@ impl BattleLateralState {
     }
 }
 
-impl super::BattleUnit {
+impl super::Mech {
     /// Current direction and pending transition, independent of chassis heading.
-    pub fn lateral(&self) -> BattleLateralState {
+    pub fn lateral(&self) -> LateralState {
         self.lateral
     }
 
@@ -94,16 +94,16 @@ pub fn set_lateral(
     world: &mut World,
     id: ObjectId,
     pilot: ObjectId,
-    mode: BattleLateralMode,
-) -> Result<super::BattleNotice> {
+    mode: LateralMode,
+) -> Result<super::Notice> {
     super::power::controlled_unit(world, id, pilot)?;
     let unit = &world.btech.constructed_units()[&id];
     ensure!(
-        unit.power() == super::BattlePower::Running,
+        unit.power() == super::Power::Running,
         "Start the unit first"
     );
     ensure!(
-        unit.chassis() == super::BattleMechChassis::Quad
+        unit.chassis() == super::MechChassis::Quad
             && unit
                 .chassis()
                 .legs()
@@ -116,7 +116,7 @@ pub fn set_lateral(
     let (next, text) = if mode == state.active {
         ensure!(state.pending.is_some(), "You are going that way already!");
         (
-            BattleLateralState {
+            LateralState {
                 active: state.active,
                 ..Default::default()
             },
@@ -124,7 +124,7 @@ pub fn set_lateral(
         )
     } else {
         (
-            BattleLateralState {
+            LateralState {
                 active: state.active,
                 pending: Some(mode),
                 remaining: 6,
@@ -137,11 +137,11 @@ pub fn set_lateral(
         )
     };
     world.btech.constructed.get_mut(&id).unwrap().lateral = next;
-    Ok(super::BattleNotice { unit: id, text })
+    Ok(super::Notice { unit: id, text })
 }
 
 /// Advance queued changes once per simulation second; stopped units discard the request when its timer expires.
-pub(super) fn advance(world: &mut World) -> Vec<super::BattleNotice> {
+pub(super) fn advance(world: &mut World) -> Vec<super::Notice> {
     let mut notices = Vec::new();
     for (&id, unit) in &mut world.btech.constructed {
         let Some(mode) = unit.lateral.pending else {
@@ -159,11 +159,11 @@ pub(super) fn advance(world: &mut World) -> Vec<super::BattleNotice> {
             continue;
         }
         unit.lateral.pending = None;
-        if unit.power() != super::BattlePower::Running {
+        if unit.power() != super::Power::Running {
             continue;
         }
         unit.lateral.active = mode;
-        notices.push(super::BattleNotice {
+        notices.push(super::Notice {
             unit: id,
             text: format!(
                 "Lateral movement mode change to {} ({} offset) completed.",
@@ -181,13 +181,13 @@ pub fn lateral(
     unit: ObjectId,
     pilot: ObjectId,
     argument: &str,
-) -> Result<super::BattleNotice> {
+) -> Result<super::Notice> {
     scripts.atomic(|_| {
         let notice = set_lateral(
             &mut scripts.world.borrow_mut(),
             unit,
             pilot,
-            BattleLateralMode::parse(argument)?,
+            LateralMode::parse(argument)?,
         )?;
         super::notify_unit_text(scripts, unit, &notice.text)?;
         Ok(notice)

@@ -9,7 +9,7 @@ pub(super) fn check(
     id: ObjectId,
     change: i32,
     speed: f64,
-    rules: BattleMovementRules,
+    rules: MovementRules,
 ) -> Result<(bool, super::movement_report::MovementReport)> {
     let control = super::cliff::avoids(world, id, i16::try_from(change)?, speed, rules)?;
     let success = control.success;
@@ -35,7 +35,7 @@ pub(super) fn check(
     } else {
         ("You smash into a cliff!", "smashes into a cliff!")
     };
-    let mut notices = vec![BattleNotice {
+    let mut notices = vec![Notice {
         unit: id,
         text: if change > 0 {
             "You attempt to climb a hill too steep for you."
@@ -46,7 +46,7 @@ pub(super) fn check(
     }];
     let mut pilot_notices = Vec::new();
     control.capture_feedback(id, &mut notices, &mut pilot_notices);
-    notices.push(BattleNotice {
+    notices.push(Notice {
         unit: id,
         text: text.into(),
     });

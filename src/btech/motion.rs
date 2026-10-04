@@ -1,12 +1,12 @@
 //! Mech ground motion and independent jump facing; unsupported hazards stop before entry.
-use super::{BattleNotice, BattlePower, Point};
+use super::{Notice, Point, Power};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 
 /// Durable sub-hex position and commanded versus actual motion.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-pub struct BattleMotion {
+pub struct Motion {
     pub point: Point,
     pub heading: f64,
     pub desired_heading: f64,
@@ -14,7 +14,7 @@ pub struct BattleMotion {
     pub desired_speed: f64,
 }
 
-impl BattleMotion {
+impl Motion {
     /// A stationary unit facing north at the supplied position.
     pub fn stationary(point: Point) -> Self {
         Self {
@@ -108,9 +108,9 @@ impl BattleMotion {
 
     /// Isolate self-propelled motion for chassis checks. Unpowered units can be moved
     /// externally; the world relationship validator authorizes that actual velocity.
-    pub(super) fn propelled(self, power: BattlePower) -> Result<Self> {
+    pub(super) fn propelled(self, power: Power) -> Result<Self> {
         ensure!(self.speed.is_finite(), "Invalid unit speed");
-        if power != BattlePower::Off {
+        if power != Power::Off {
             return Ok(self);
         }
         Ok(Self { speed: 0.0, ..self })
@@ -139,7 +139,7 @@ impl BattleMotion {
 
 /// Shared ground/jump movement configuration, including charge, terrain and fall rules.
 #[derive(Debug, Clone, Copy)]
-pub struct BattleMovementRules {
+pub struct MovementRules {
     /// Fusion-powered VTOLs may omit fuel consumption when configured by the host.
     pub free_fusion_vtol_fuel: bool,
     /// Enable hot-myomer assistance when calculating towing load.
@@ -148,7 +148,7 @@ pub struct BattleMovementRules {
     pub physical_pilot_skill: bool,
     pub fasa_turning: bool,
     /// Charge tracking and collision options for each committed movement update.
-    pub charge: super::BattleChargePolicy,
+    pub charge: super::ChargePolicy,
     pub slowdown: i64,
     /// Enable tracked/wheeled tree and rock avoidance checks. Hovercraft tree checks always apply.
     pub new_terrain: bool,
@@ -157,18 +157,18 @@ pub struct BattleMovementRules {
     /// Use the skid speed bands for cliff avoidance and a one-level uphill fall.
     pub skid_cliff: bool,
     /// Damage and pilot protection rules for failed movement checks.
-    pub fall: super::BattleFallRules,
+    pub fall: super::FallRules,
 }
 
-impl BattleMovementRules {
+impl MovementRules {
     /// Physical landing policy shares movement, hit arcs and fall settings with the tick.
-    pub(super) fn landing_physical(self) -> super::BattlePhysicalRules {
-        super::BattlePhysicalRules {
+    pub(super) fn landing_physical(self) -> super::PhysicalRules {
+        super::PhysicalRules {
             use_pilot_skill: self.physical_pilot_skill,
             fasa_turning: self.fasa_turning,
             extended_movement: self.charge.extended_movement,
             hit_arc_mode: self.charge.hit_arc_mode,
-            glancing: super::BattleGlancingMode::Disabled,
+            glancing: super::GlancingMode::Disabled,
             fall: self.fall,
         }
     }
@@ -179,16 +179,16 @@ impl BattleMovementRules {
         tsm_tow_bonus: true,
         physical_pilot_skill: true,
         fasa_turning: false,
-        charge: super::BattleChargePolicy::STANDARD,
+        charge: super::ChargePolicy::STANDARD,
         slowdown: 2,
         new_terrain: false,
         roll_on_backwalk: true,
         skid_cliff: false,
-        fall: super::BattleFallRules {
-            vehicle_impact: crate::BattleVehicleImpactRules::STANDARD,
-            stacking: crate::BattleStackingRules::STANDARD,
-            stagger: super::BattleStaggerMode::Retain,
-            hit: super::BattleHitRules {
+        fall: super::FallRules {
+            vehicle_impact: crate::VehicleImpactRules::STANDARD,
+            stacking: crate::StackingRules::STANDARD,
+            stagger: super::StaggerMode::Retain,
+            hit: super::HitRules {
                 inferno_penalty: false,
                 exile_stun_mode: 0,
             },
@@ -202,7 +202,7 @@ impl BattleMovementRules {
 struct GroundStep {
     hex: super::HexCoordinate,
     change: i16,
-    old_position: super::BattlePosition,
+    old_position: super::Position,
     old_point: Point,
     elevation: Option<f64>,
     old_elevation: Option<f64>,
@@ -210,12 +210,7 @@ struct GroundStep {
 }
 
 /// Set desired speed in kilometers per hour with standard enabled myomer towing assistance.
-pub fn set_speed(
-    world: &mut World,
-    id: ObjectId,
-    pilot: ObjectId,
-    speed: f64,
-) -> Result<BattleNotice> {
+pub fn set_speed(world: &mut World, id: ObjectId, pilot: ObjectId, speed: f64) -> Result<Notice> {
     let notice = set_speed_by_actor(
         world,
         id,
@@ -229,11 +224,7 @@ pub fn set_speed(
 }
 
 /// Set speed from the attached autopilot while retaining all ordinary motion checks.
-pub(crate) fn set_speed_autopilot(
-    world: &mut World,
-    id: ObjectId,
-    speed: f64,
-) -> Result<BattleNotice> {
+pub(crate) fn set_speed_autopilot(world: &mut World, id: ObjectId, speed: f64) -> Result<Notice> {
     set_speed_by_actor(
         world,
         id,
@@ -251,7 +242,7 @@ fn set_speed_by_actor(
     speed: f64,
     policy: super::SpeedPolicy,
     free_fusion_fuel: bool,
-) -> Result<BattleNotice> {
+) -> Result<Notice> {
     if world.btech.vehicles().contains_key(&id) {
         return super::vehicle_driving::set_control_by_actor(
             world,
@@ -270,17 +261,14 @@ fn set_speed_by_actor(
         "Land before changing ground speed"
     );
     let unit = &world.btech.constructed_units()[&id];
-    ensure!(unit.power() == BattlePower::Running, "Start the unit first");
+    ensure!(unit.power() == Power::Running, "Start the unit first");
     unit.hull_down.require_mobile()?;
     ensure!(
-        !matches!(
-            unit.stand_timer(),
-            Some(super::BattleStandTimer::Rising { .. })
-        ),
+        !matches!(unit.stand_timer(), Some(super::StandTimer::Rising { .. })),
         "Unit is still standing up"
     );
     ensure!(
-        unit.posture() != super::BattlePosture::Prone,
+        unit.posture() != super::Posture::Prone,
         "Stand the unit up first"
     );
     let maximum = super::motion_controls::throttle_configured(world, id, policy)?;
@@ -312,7 +300,7 @@ fn set_speed_by_actor(
     );
     motion.desired_speed = speed;
     world.btech.constructed.get_mut(&id).unwrap().motion = Some(motion);
-    Ok(BattleNotice {
+    Ok(Notice {
         unit: id,
         text: super::motion_controls::speed_confirmation(speed),
     })
@@ -326,7 +314,7 @@ pub(crate) fn set_speed_configured(
     speed: f64,
     policy: super::SpeedPolicy,
     free_fusion_fuel: bool,
-) -> Result<BattleNotice> {
+) -> Result<Notice> {
     let notice = set_speed_by_actor(
         world,
         id,
@@ -345,7 +333,7 @@ pub fn set_heading(
     id: ObjectId,
     pilot: ObjectId,
     heading: f64,
-) -> Result<BattleNotice> {
+) -> Result<Notice> {
     let notice = set_heading_by_actor(
         world,
         id,
@@ -361,7 +349,7 @@ pub(crate) fn set_heading_autopilot(
     world: &mut World,
     id: ObjectId,
     heading: f64,
-) -> Result<BattleNotice> {
+) -> Result<Notice> {
     set_heading_by_actor(
         world,
         id,
@@ -375,7 +363,7 @@ fn set_heading_by_actor(
     id: ObjectId,
     actor: super::combat_operator::ControlActor,
     heading: f64,
-) -> Result<BattleNotice> {
+) -> Result<Notice> {
     if world.btech.vehicles().contains_key(&id) {
         return super::vehicle_driving::set_control_by_actor(
             world,
@@ -390,7 +378,7 @@ fn set_heading_by_actor(
     super::power::controlled_unit_by_actor(world, id, actor)?;
     super::fortification::require_mobile(world, id)?;
     let unit = &world.btech.constructed_units()[&id];
-    ensure!(unit.power() == BattlePower::Running, "Start the unit first");
+    ensure!(unit.power() == Power::Running, "Start the unit first");
     unit.hull_down.require_mobile()?;
     ensure!(
         unit.flight().is_some() || unit.mobility().maximum_speed > 0.0,
@@ -400,7 +388,7 @@ fn set_heading_by_actor(
     let mut motion = unit.motion().context("Unit is not placed")?;
     motion.desired_heading = heading.rem_euclid(360.0);
     world.btech.constructed.get_mut(&id).unwrap().motion = Some(motion);
-    Ok(BattleNotice {
+    Ok(Notice {
         unit: id,
         text: format!("Desired heading: {:.1} degrees.", motion.desired_heading),
     })
@@ -408,14 +396,14 @@ fn set_heading_by_actor(
 
 /// Traverse one committed second on supported ground, resolving reverse steps and falls atomically.
 /// Errors leave every unit and random stream unchanged; callers stage returned notices after saving.
-pub fn advance_motion(world: &mut World, rules: BattleMovementRules) -> Result<Vec<BattleNotice>> {
+pub fn advance_motion(world: &mut World, rules: MovementRules) -> Result<Vec<Notice>> {
     Ok(advance_motion_candidate(world, rules, false)?.notices)
 }
 
 /// Ground updates whose host can publish character injury and crew movement.
 pub(super) fn advance_motion_in_action(
     world: &mut World,
-    rules: BattleMovementRules,
+    rules: MovementRules,
 ) -> Result<super::movement_report::MovementReport> {
     advance_motion_candidate(world, rules, true)
 }
@@ -423,7 +411,7 @@ pub(super) fn advance_motion_in_action(
 /// Validate the complete ground update before publishing the candidate.
 fn advance_motion_candidate(
     world: &mut World,
-    rules: BattleMovementRules,
+    rules: MovementRules,
     character: bool,
 ) -> Result<super::movement_report::MovementReport> {
     let mut candidate = world.clone();
@@ -444,10 +432,7 @@ fn advance_motion_candidate(
 }
 
 /// Powered facing remains independent of the shared forced-descent cursor.
-fn advance_fall_headings(
-    world: &mut World,
-    rules: BattleMovementRules,
-) -> Result<Vec<BattleNotice>> {
+fn advance_fall_headings(world: &mut World, rules: MovementRules) -> Result<Vec<Notice>> {
     let mut notices = Vec::new();
     let ids: Vec<_> = world
         .btech
@@ -473,7 +458,7 @@ fn advance_fall_headings(
                     unit.motion(),
                 )
             });
-        if fall.is_none() || power != BattlePower::Running || destroyed {
+        if fall.is_none() || power != Power::Running || destroyed {
             continue;
         }
         let Some(mut motion) = motion else {
@@ -499,9 +484,9 @@ fn advance_fall_headings(
                     false,
                     rules.free_fusion_vtol_fuel,
                 )?;
-            if let super::BattleVtolFuelUse::Exhausted { newly } = fuel {
+            if let super::VtolFuelUse::Exhausted { newly } = fuel {
                 if newly {
-                    notices.push(BattleNotice {
+                    notices.push(Notice {
                         unit: id,
                         text: "You run out of fuel and begin to fall!".into(),
                     });
@@ -537,7 +522,7 @@ fn advance_fall_headings(
 /// Resolve the whole tick in the caller's disposable world candidate.
 fn advance_motion_inner(
     world: &mut World,
-    rules: BattleMovementRules,
+    rules: MovementRules,
     character: bool,
 ) -> Result<super::movement_report::MovementReport> {
     let ids: Vec<_> = world
@@ -545,9 +530,9 @@ fn advance_motion_inner(
         .constructed_units()
         .iter()
         .filter_map(|(&id, unit)| {
-            (unit.power() == BattlePower::Running
+            (unit.power() == Power::Running
                 && (!unit.airborne() || unit.flight().is_some())
-                && unit.motion().is_some_and(BattleMotion::active)
+                && unit.motion().is_some_and(Motion::active)
                 && world
                     .objects
                     .get(&id)
@@ -566,9 +551,9 @@ fn advance_motion_inner(
     let mut collisions = super::stacking::StackingEffects::default();
     for id in ids {
         let unit = &world.btech.constructed_units()[&id];
-        if unit.power() != BattlePower::Running
+        if unit.power() != Power::Running
             || (unit.airborne() && unit.flight().is_none())
-            || !unit.motion().is_some_and(BattleMotion::active)
+            || !unit.motion().is_some_and(Motion::active)
         {
             continue;
         }
@@ -644,8 +629,8 @@ fn advance_motion_inner(
         }
         let unit = &world.btech.constructed_units()[&id];
         if !unit.is_destroyed() && unit.position() != Some(position) && !unit.hex_sync_pending() {
-            let input = super::BattleStackingInput {
-                entry: super::BattleStackingEntry::Ground,
+            let input = super::StackingInput {
+                entry: super::StackingEntry::Ground,
                 mass: unit.effective_mass()?,
                 jump_movement_points: 0,
             };
@@ -700,8 +685,8 @@ pub(super) fn finish_interrupted_jump(
     world: &mut World,
     id: ObjectId,
     point: (Point, Point),
-    fall: super::BattleFallRules,
-) -> Result<Vec<BattleNotice>> {
+    fall: super::FallRules,
+) -> Result<Vec<Notice>> {
     finish_interrupted_jump_inner(world, id, point, fall, None).map(|segment| segment.notices)
 }
 
@@ -710,8 +695,8 @@ pub(super) fn finish_interrupted_jump_in_action(
     world: &mut World,
     id: ObjectId,
     point: (Point, Point),
-    fall: super::BattleFallRules,
-    falls: &mut Vec<super::BattleFallReport>,
+    fall: super::FallRules,
+    falls: &mut Vec<super::MechFallReport>,
 ) -> Result<GroundSegmentReport> {
     finish_interrupted_jump_inner(world, id, point, fall, Some(falls))
 }
@@ -721,8 +706,8 @@ fn finish_interrupted_jump_inner(
     world: &mut World,
     id: ObjectId,
     point: (Point, Point),
-    fall: super::BattleFallRules,
-    falls: Option<&mut Vec<super::BattleFallReport>>,
+    fall: super::FallRules,
+    falls: Option<&mut Vec<super::MechFallReport>>,
 ) -> Result<GroundSegmentReport> {
     let motion = world.btech.constructed_units()[&id]
         .motion()
@@ -732,9 +717,9 @@ fn finish_interrupted_jump_inner(
         id,
         motion,
         point,
-        BattleMovementRules {
+        MovementRules {
             fall,
-            ..BattleMovementRules::STANDARD
+            ..MovementRules::STANDARD
         },
         false,
         falls,
@@ -743,23 +728,23 @@ fn finish_interrupted_jump_inner(
 
 /// Segment-local notifications and XP; nested falls retain their own reports.
 pub(super) struct GroundSegmentReport {
-    pub boundary: Option<super::movement_report::BattleBoundaryCrossing>,
-    pub mines: Vec<super::BattleMineEventReport>,
-    pub vehicle_falls: Vec<super::BattleVehicleFallReport>,
-    pub notices: Vec<BattleNotice>,
-    pub pilot_notices: Vec<super::BattlePilotNotice>,
-    pub experience_messages: Vec<super::BattleChannelMessage>,
+    pub boundary: Option<super::movement_report::BoundaryCrossing>,
+    pub mines: Vec<super::MineEventReport>,
+    pub vehicle_falls: Vec<super::VehicleFallReport>,
+    pub notices: Vec<Notice>,
+    pub pilot_notices: Vec<super::PilotNotice>,
+    pub experience_messages: Vec<super::DiagnosticMessage>,
 }
 
 /// Resolve one planned segment without advancing turning, acceleration or the simulation clock.
 fn resolve_ground_segment(
     world: &mut World,
     id: ObjectId,
-    mut motion: BattleMotion,
+    mut motion: Motion,
     (trace_start, mut proposed): (Point, Point),
-    rules: BattleMovementRules,
+    rules: MovementRules,
     settle: bool,
-    mut falls: Option<&mut Vec<super::BattleFallReport>>,
+    mut falls: Option<&mut Vec<super::MechFallReport>>,
 ) -> Result<GroundSegmentReport> {
     let mut notices = Vec::new();
     let mut pilot_notices = Vec::new();
@@ -796,7 +781,7 @@ fn resolve_ground_segment(
         let mut obstruction = None;
         for (hex, _) in traversed {
             let Ok(tile) = map.base_hex(i64::from(hex.x), i64::from(hex.y)) else {
-                boundary = Some(super::movement_report::BattleBoundaryCrossing::new(
+                boundary = Some(super::movement_report::BoundaryCrossing::new(
                     id,
                     position.map,
                     motion,
@@ -880,7 +865,7 @@ fn resolve_ground_segment(
     let mut position = position;
     if let Some(text) = blocked {
         motion.stop_translation();
-        notices.push(BattleNotice {
+        notices.push(Notice {
             unit: id,
             text: text.to_owned(),
         });
@@ -931,7 +916,7 @@ fn resolve_ground_segment(
     } in checked_steps
     {
         let unit = world.btech.constructed.get_mut(&id).unwrap();
-        unit.position = Some(super::BattlePosition {
+        unit.position = Some(super::Position {
             map: position.map,
             x: hex.x as u16,
             y: hex.y as u16,
@@ -962,7 +947,7 @@ fn resolve_ground_segment(
                 falls.extend(fracture.falls.into_iter().map(|(_, fall)| fall));
             }
             motion = world.btech.constructed_units()[&id].motion().unwrap();
-            if world.btech.constructed_units()[&id].posture() == super::BattlePosture::Prone
+            if world.btech.constructed_units()[&id].posture() == super::Posture::Prone
                 || world.btech.constructed_units()[&id].is_destroyed()
             {
                 stopped = true;
@@ -975,7 +960,7 @@ fn resolve_ground_segment(
             if change > 0 {
                 restore_ground_position(unit, old_position, old_point, old_elevation);
             }
-            notices.push(BattleNotice {
+            notices.push(Notice {
                 unit: id,
                 text: (if change > 0 {
                     "You attempt to climb a hill too steep for you."
@@ -988,7 +973,7 @@ fn resolve_ground_segment(
             control.capture_feedback(id, &mut notices, &mut pilot_notices);
             let success = control.success;
             if success {
-                notices.push(BattleNotice {
+                notices.push(Notice {
                     unit: id,
                     text: (if change > 0 {
                         "You manage to stop before crashing."
@@ -1000,7 +985,7 @@ fn resolve_ground_segment(
                 let unit = world.btech.constructed.get_mut(&id).unwrap();
                 restore_ground_position(unit, old_position, old_point, old_elevation);
             } else {
-                notices.push(BattleNotice {
+                notices.push(Notice {
                     unit: id,
                     text: (if change > 0 {
                         "You run headlong into the cliff and fall down!"
@@ -1050,7 +1035,7 @@ fn resolve_ground_segment(
             let event = super::mine_event::resolve(
                 world,
                 id,
-                super::BattleMineTriggerReason::Step,
+                super::MineTriggerReason::Step,
                 fall_rules,
                 falls.is_some(),
             )?;
@@ -1064,8 +1049,8 @@ fn resolve_ground_segment(
             let unit = &world.btech.constructed_units()[&id];
             motion = unit.motion().unwrap();
             if unit.is_destroyed()
-                || unit.posture() == super::BattlePosture::Prone
-                || unit.power() != BattlePower::Running
+                || unit.posture() == super::Posture::Prone
+                || unit.power() != Power::Running
             {
                 stopped = true;
                 break;
@@ -1105,7 +1090,7 @@ fn resolve_ground_segment(
             let event = super::mine_event::resolve(
                 world,
                 id,
-                super::BattleMineTriggerReason::Step,
+                super::MineTriggerReason::Step,
                 fall_rules,
                 falls.is_some(),
             )?;
@@ -1119,8 +1104,8 @@ fn resolve_ground_segment(
             let unit = &world.btech.constructed_units()[&id];
             motion = unit.motion().unwrap();
             if unit.is_destroyed()
-                || unit.posture() == super::BattlePosture::Prone
-                || unit.power() != BattlePower::Running
+                || unit.posture() == super::Posture::Prone
+                || unit.power() != Power::Running
             {
                 stopped = true;
                 break;
@@ -1161,9 +1146,9 @@ fn resolve_segment_fall(
     world: &mut World,
     id: ObjectId,
     levels: i16,
-    rules: super::BattleFallRules,
+    rules: super::FallRules,
     character: bool,
-) -> Result<super::BattleFallReport> {
+) -> Result<super::MechFallReport> {
     if character && world.objects[&id].flags.contains(Flag::InCharacter) {
         return super::fall::resolve_character_signed_fall(world, id, levels, rules);
     }
@@ -1180,8 +1165,8 @@ fn cliff_fall_levels(speed: f64, skid: bool) -> i16 {
 
 /// Rollback can restore an interrupted bridge hex update; retain its explicit marker.
 fn restore_ground_position(
-    unit: &mut super::BattleUnit,
-    position: super::BattlePosition,
+    unit: &mut super::Mech,
+    position: super::Position,
     point: Point,
     elevation: Option<f64>,
 ) {

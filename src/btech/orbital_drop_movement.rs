@@ -4,7 +4,7 @@ use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 
 /// Resolve the upper support, lower bridge surface and chassis-specific touchdown level.
-fn surface(tile: Hex, elevation: i32, hover: bool) -> BattleDropSurface {
+fn surface(tile: Hex, elevation: i32, hover: bool) -> DropSurface {
     let upper = i32::from(tile.standing_height());
     let water_line = i32::from(tile.water_line());
     let lower = if tile.has_bridge() {
@@ -23,7 +23,7 @@ fn surface(tile: Hex, elevation: i32, hover: bool) -> BattleDropSurface {
     } else {
         i32::from(tile.surface_height())
     };
-    BattleDropSurface {
+    DropSurface {
         upper,
         lower,
         landing,
@@ -43,9 +43,9 @@ fn units(world: &World) -> std::collections::BTreeSet<ObjectId> {
 
 /// Current landing inputs, sampled again after a callback can edit or remove the unit.
 struct DropSite {
-    drop: BattleOrbitalDrop,
+    drop: OrbitalDrop,
     tile: Hex,
-    geometry: BattleDropSurface,
+    geometry: DropSurface,
 }
 
 /// Resolve live placement and authority without advancing the descent clock or consuming dice.
@@ -78,7 +78,7 @@ fn site(world: &World, id: ObjectId, character: bool) -> Result<Option<DropSite>
         .btech
         .vehicles()
         .get(&id)
-        .is_some_and(|unit| unit.definition().movement == BattleVehicleMovement::Hover);
+        .is_some_and(|unit| unit.definition().movement == VehicleMovement::Hover);
     Ok(Some(DropSite {
         drop,
         tile,
@@ -92,19 +92,19 @@ fn step(world: &mut World, id: ObjectId, character: bool) -> Result<Option<DropS
         return Ok(None);
     };
     match site.drop.advance(site.geometry)? {
-        BattleOrbitalDropStep::Descending => {
+        OrbitalDropStep::Descending => {
             set_cursor(world, id, Some(site.drop));
             Ok(None)
         }
-        BattleOrbitalDropStep::Touchdown { .. } => Ok(Some(site)),
-        BattleOrbitalDropStep::Inactive => anyhow::bail!("Inactive orbital drop retained by unit"),
+        OrbitalDropStep::Touchdown { .. } => Ok(Some(site)),
+        OrbitalDropStep::Inactive => anyhow::bail!("Inactive orbital drop retained by unit"),
     }
 }
 
 /// Resolve a material-only tick; the enclosing candidate owns rollback and has no Lua callbacks.
 pub(super) fn advance_all(
     world: &mut World,
-    rules: BattleMovementRules,
+    rules: MovementRules,
     character: bool,
 ) -> Result<super::movement_report::MovementReport> {
     let mut report = super::movement_report::MovementReport::default();
@@ -131,7 +131,7 @@ pub(super) fn advance_all(
 pub(super) fn advance_in_action(
     scripts: &crate::Scripts,
     config: &crate::Config,
-    rules: BattleMovementRules,
+    rules: MovementRules,
 ) -> Result<()> {
     let ids = units(&scripts.world());
     for id in ids {
@@ -176,15 +176,15 @@ pub(super) fn advance_in_action(
 }
 
 /// Shared text keeps callback publication and material-only reports identical.
-fn touchdown_notice(id: ObjectId) -> BattleNotice {
-    BattleNotice {
+fn touchdown_notice(id: ObjectId) -> Notice {
+    Notice {
         unit: id,
         text: "Your unit touches down!".into(),
     }
 }
 
 /// Commit only the shared vertical cursor; horizontal controls remain owned by normal movement.
-fn set_cursor(world: &mut World, id: ObjectId, drop: Option<BattleOrbitalDrop>) {
+fn set_cursor(world: &mut World, id: ObjectId, drop: Option<OrbitalDrop>) {
     crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
         unit.orbital_drop = drop;
     })
@@ -196,14 +196,14 @@ fn landing_input(
     id: ObjectId,
     hex: Hex,
     extended: bool,
-) -> Result<(BattleDropLandingInput, Option<ObjectId>)> {
+) -> Result<(DropLandingInput, Option<ObjectId>)> {
     let (mech, pilot, power, prone, safe, damage, cockpit) =
         if let Some(unit) = world.btech.constructed_units().get(&id) {
             (
                 true,
                 unit.pilot(),
                 unit.power(),
-                unit.posture() == BattlePosture::Prone,
+                unit.posture() == Posture::Prone,
                 unit.combat_safe,
                 unit.mobility().piloting_modifier,
                 unit.cockpit_piloting_modifier(),
@@ -219,7 +219,7 @@ fn landing_input(
                 unit.piloting_damage(),
                 u8::from(
                     unit.definition()
-                        .has_technology(super::BattleTechnology::SmallCockpit),
+                        .has_technology(super::Technology::SmallCockpit),
                 ),
             )
         };
@@ -258,11 +258,11 @@ fn landing_input(
         )
     };
     Ok((
-        BattleDropLandingInput {
+        DropLandingInput {
             base_target: target,
             roll,
             hex,
-            running: power == BattlePower::Running,
+            running: power == Power::Running,
             prone,
             incapacitated,
             absent_character_pilot,
@@ -278,10 +278,10 @@ fn landing_input(
 fn touchdown(
     world: &mut World,
     id: ObjectId,
-    mut drop: BattleOrbitalDrop,
+    mut drop: OrbitalDrop,
     tile: Hex,
     level: i32,
-    mut rules: BattleFallRules,
+    mut rules: FallRules,
     character: bool,
     report: &mut super::movement_report::MovementReport,
 ) -> Result<()> {
@@ -290,7 +290,7 @@ fn touchdown(
     rules.toughness |=
         pilot.is_some_and(|pilot| super::skills::boolean_advantage(world, pilot, "Toughness"));
     if let (Some(pilot), Some(roll), Some(target)) = (pilot, landing.roll, landing.target) {
-        report.pilot_notices.push(super::BattlePilotNotice {
+        report.pilot_notices.push(super::PilotNotice {
             before_notice: report.notices.len(),
             pilot,
             text: super::piloting::roll_messages(target, roll).join("\r\n"),
@@ -310,7 +310,7 @@ fn touchdown(
         unit.ground_elevation = Some(f64::from(level));
         unit.under_bridge = tile.has_bridge()
             && level < i32::from(tile.surface_height())
-            && unit.definition().movement == BattleVehicleMovement::Hover;
+            && unit.definition().movement == VehicleMovement::Hover;
     }
     if landing.fall_levels > 0 {
         let (private, observed) = if input.mech {
@@ -324,7 +324,7 @@ fn touchdown(
                 "crashes at the ground!",
             )
         };
-        report.notices.push(BattleNotice {
+        report.notices.push(Notice {
             unit: id,
             text: private.into(),
         });
@@ -395,9 +395,9 @@ fn touchdown(
         }
         if !input.combat_safe
             && input.mech
-            && world.btech.constructed_units()[&id].posture() != BattlePosture::Prone
+            && world.btech.constructed_units()[&id].posture() != Posture::Prone
         {
-            let input = super::stacking::physical_input(world, id, BattleStackingEntry::Fall)?;
+            let input = super::stacking::physical_input(world, id, StackingEntry::Fall)?;
             let notices = if character {
                 super::stacking::resolve_in_action(
                     world,
@@ -422,7 +422,7 @@ fn touchdown(
             && !unit.definition().has_special("Waterproof_Tech")
         {
             super::vehicle_water::flood(world, id, character)?;
-            report.notices.push(BattleNotice {
+            report.notices.push(Notice {
                 unit: id,
                 text: "Water floods your engine and your unit becomes unoperable.".into(),
             });
@@ -454,7 +454,7 @@ mod tests {
         ] {
             assert_eq!(
                 surface(Hex::new(terrain, 3), elevation, hover),
-                BattleDropSurface {
+                DropSurface {
                     upper,
                     lower,
                     landing

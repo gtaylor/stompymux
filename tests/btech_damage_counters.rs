@@ -18,17 +18,17 @@ fn counters(world: &World, id: ObjectId) -> serde_json::Value {
 async fn direct_damage_attribution_replays_and_rolls_back_for_mixed_chassis() {
     let sources = firing::templates();
     let seed = (0..=255)
-        .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 12)
+        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
         .unwrap();
     for (i, source) in sources.iter().enumerate() {
         let (_dir, config, mut world, id, target, index) = firing::fixture_with_target(
             source,
-            Some(BattleWeapon::MediumLaser),
+            Some(Weapon::MediumLaser),
             &sources[(i + 1) % sources.len()],
         )
         .await;
         firing::edit(&mut world, id, |unit| {
-            unit["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
+            unit["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap()
         });
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         let command = format!("btech.unit.fire({},1,{index},{})", id.0, target.0);
@@ -80,14 +80,14 @@ async fn located_packets_count_overflow_once_and_combat_safe_counts_nothing() {
             } else {
                 scripts.world().btech.constructed_units()[&id]
                     .chassis()
-                    .section_name(BattleSection::LeftArm)
+                    .section_name(MechSection::LeftArm)
             };
             battle_damage_section_action(
                 &scripts,
                 &config,
                 ObjectId(1),
                 id,
-                BattleScenarioHit {
+                ScenarioHit {
                     section,
                     damage: 200,
                     rear: false,
@@ -121,18 +121,18 @@ async fn accounting_uses_the_admitted_packet_before_material_reductions() {
         };
         let (_dir, _, mut world, id, _, _) =
             firing::fixture_with_target(&source, None, &source).await;
-        let mut rules = BattleVehicleImpactRules::STANDARD.criticals;
+        let mut rules = VehicleImpactRules::STANDARD.criticals;
         rules.enabled = false;
         rules.rotor_damage_divisor = 3;
         let report = resolve_battle_vehicle_armor_damage(
             &mut world,
             id,
-            BattleVehicleArmorHit {
-                damage_class: BattleDamageClass::Ordinary,
+            VehicleArmorHit {
+                damage_class: DamageClass::Ordinary,
                 section: if rotor {
-                    BattleVehicleSection::Rotor
+                    VehicleSection::Rotor
                 } else {
-                    BattleVehicleSection::Front
+                    VehicleSection::Front
                 },
                 amount: 9,
                 through_armor_critical: false,
@@ -147,14 +147,9 @@ async fn accounting_uses_the_admitted_packet_before_material_reductions() {
             serde_json::json!({"taken":incoming,"inflicted":0})
         );
         assert_eq!(report.armor_damage, if rotor { 3 } else { 5 });
-        let internal = resolve_battle_vehicle_internal_damage(
-            &mut world,
-            id,
-            BattleVehicleSection::Rear,
-            5,
-            rules,
-        )
-        .unwrap();
+        let internal =
+            resolve_battle_vehicle_internal_damage(&mut world, id, VehicleSection::Rear, 5, rules)
+                .unwrap();
         assert_eq!(internal.structural_damage, 3);
         assert_eq!(
             counters(&world, id),
@@ -168,13 +163,13 @@ async fn accounting_uses_the_admitted_packet_before_material_reductions() {
 async fn counter_overflow_rolls_back_the_damage_transaction() {
     for source in firing::templates() {
         let (_dir, config, world, id, target, index) =
-            firing::fixture_with_target(&source, Some(BattleWeapon::MediumLaser), &source).await;
+            firing::fixture_with_target(&source, Some(Weapon::MediumLaser), &source).await;
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         let seed = (0..=255)
-            .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 12)
+            .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
             .unwrap();
         firing::edit(&mut scripts.world_mut(), id, |unit| {
-            unit["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
+            unit["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap()
         });
         set_battle_unit_field_action(
             &scripts,
@@ -207,8 +202,8 @@ async fn destroyed_limb_redirection_does_not_count_a_second_initial_packet() {
             firing::fixture_with_target(&source, None, &source).await;
         let section = world.btech.constructed_units()[&id]
             .chassis()
-            .section_name(BattleSection::LeftArm);
-        let limb = &world.btech.constructed_units()[&id].sections()[&BattleSection::LeftArm];
+            .section_name(MechSection::LeftArm);
+        let limb = &world.btech.constructed_units()[&id].sections()[&MechSection::LeftArm];
         let amount = i32::from(limb.armor) + i32::from(limb.internal);
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         battle_damage_section_action(
@@ -216,7 +211,7 @@ async fn destroyed_limb_redirection_does_not_count_a_second_initial_packet() {
             &config,
             ObjectId(1),
             id,
-            BattleScenarioHit {
+            ScenarioHit {
                 section,
                 damage: amount,
                 rear: false,
@@ -225,20 +220,20 @@ async fn destroyed_limb_redirection_does_not_count_a_second_initial_packet() {
         )
         .unwrap();
         assert_eq!(
-            scripts.world().btech.constructed_units()[&id].sections()[&BattleSection::LeftArm]
+            scripts.world().btech.constructed_units()[&id].sections()[&MechSection::LeftArm]
                 .internal,
             0
         );
         let before = counters(&scripts.world(), id);
         let torso = scripts.world().btech.constructed_units()[&id].sections()
-            [&BattleSection::LeftTorso]
+            [&MechSection::LeftTorso]
             .armor;
         battle_damage_section_action(
             &scripts,
             &config,
             ObjectId(1),
             id,
-            BattleScenarioHit {
+            ScenarioHit {
                 section,
                 damage: 1,
                 rear: false,
@@ -247,7 +242,7 @@ async fn destroyed_limb_redirection_does_not_count_a_second_initial_packet() {
         )
         .unwrap();
         assert_eq!(
-            scripts.world().btech.constructed_units()[&id].sections()[&BattleSection::LeftTorso]
+            scripts.world().btech.constructed_units()[&id].sections()[&MechSection::LeftTorso]
                 .armor,
             torso - 1
         );

@@ -1,5 +1,5 @@
 //! Temporary weapon conditions and recycle policy shared by Mechs and vehicles.
-use super::{BattleEquipmentCondition, BattleWeapon};
+use super::{EquipmentCondition, Weapon};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 /// A named failure code, separate from material loss; weapon mounts also enforce it during firing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleEquipmentFailure {
+pub enum EquipmentFailure {
     Jammed,
     Shorted,
     Dud,
@@ -18,7 +18,7 @@ pub enum BattleEquipmentFailure {
     CriticalAmmunitionJam,
 }
 
-impl BattleEquipmentFailure {
+impl EquipmentFailure {
     /// Stable compact damage-field code.
     pub fn code(self) -> u8 {
         match self {
@@ -48,7 +48,7 @@ impl BattleEquipmentFailure {
     }
 
     /// Ballistic criticals jam mechanisms; other weapon families short out.
-    pub(super) fn for_weapon(weapon: BattleWeapon) -> Self {
+    pub(super) fn for_weapon(weapon: Weapon) -> Self {
         if weapon.gunnery_skill(true) == "Gunnery-Ballistic" {
             Self::Jammed
         } else {
@@ -57,21 +57,21 @@ impl BattleEquipmentFailure {
     }
 
     /// Diagnostic condition shared by whole-weapon reports.
-    pub(super) fn condition(self) -> BattleEquipmentCondition {
+    pub(super) fn condition(self) -> EquipmentCondition {
         match self {
-            Self::Jammed => BattleEquipmentCondition::Jammed,
-            Self::Shorted => BattleEquipmentCondition::Shorted,
-            Self::Dud => BattleEquipmentCondition::Broken,
-            Self::Empty => BattleEquipmentCondition::Empty,
-            Self::Disabled => BattleEquipmentCondition::Destroyed,
-            Self::AmmunitionJam | Self::CriticalAmmunitionJam => BattleEquipmentCondition::AmmoJam,
+            Self::Jammed => EquipmentCondition::Jammed,
+            Self::Shorted => EquipmentCondition::Shorted,
+            Self::Dud => EquipmentCondition::Broken,
+            Self::Empty => EquipmentCondition::Empty,
+            Self::Disabled => EquipmentCondition::Destroyed,
+            Self::AmmunitionJam | Self::CriticalAmmunitionJam => EquipmentCondition::AmmoJam,
         }
     }
 }
 
 /// Advance an existing recycle event; disabled weapons finish on its next powered tick.
-pub(super) fn remaining(failure: Option<BattleEquipmentFailure>, remaining: u16) -> u16 {
-    if failure == Some(BattleEquipmentFailure::Disabled) {
+pub(super) fn remaining(failure: Option<EquipmentFailure>, remaining: u16) -> u16 {
+    if failure == Some(EquipmentFailure::Disabled) {
         0
     } else {
         remaining.saturating_sub(1)
@@ -79,7 +79,7 @@ pub(super) fn remaining(failure: Option<BattleEquipmentFailure>, remaining: u16)
 }
 
 /// Recovery feedback uses the same spelling for every unit type.
-pub(super) fn recovery_notice(weapon: BattleWeapon) -> String {
+pub(super) fn recovery_notice(weapon: Weapon) -> String {
     format!(
         "[fg=green]{} is operational again.[reset]",
         weapon.name().split_once('.').unwrap().1
@@ -88,7 +88,7 @@ pub(super) fn recovery_notice(weapon: BattleWeapon) -> String {
 
 /// Stored conditions reference available mounts; they need not have a recovery event.
 pub(super) fn validate(
-    failures: &BTreeMap<usize, BattleEquipmentFailure>,
+    failures: &BTreeMap<usize, EquipmentFailure>,
     weapons: usize,
     available: impl Fn(usize) -> bool,
 ) -> Result<()> {
@@ -107,7 +107,7 @@ pub fn set_weapon_failure(
     world: &mut World,
     id: ObjectId,
     index: usize,
-    failure: Option<BattleEquipmentFailure>,
+    failure: Option<EquipmentFailure>,
 ) -> Result<()> {
     let failures = super::with_unit_mut!(
         world.btech.unit_mut(id).context("Unit is unavailable")?,
@@ -131,26 +131,20 @@ pub fn set_weapon_failure(
     Ok(())
 }
 
-impl super::BattleUnit {
+impl super::Mech {
     /// Temporary conditions by mount index; existing recycle clocks govern recovery.
-    pub fn weapon_failures(&self) -> &BTreeMap<usize, BattleEquipmentFailure> {
+    pub fn weapon_failures(&self) -> &BTreeMap<usize, EquipmentFailure> {
         &self.weapon_failures
     }
 }
 
 /// Only ordinary ammunition jams can be shaken loose by the crew.
-pub(super) fn feed_jammed(
-    failures: &BTreeMap<usize, BattleEquipmentFailure>,
-    index: usize,
-) -> bool {
-    failures.get(&index) == Some(&BattleEquipmentFailure::AmmunitionJam)
+pub(super) fn feed_jammed(failures: &BTreeMap<usize, EquipmentFailure>, index: usize) -> bool {
+    failures.get(&index) == Some(&EquipmentFailure::AmmunitionJam)
 }
 
 /// Clear a recoverable feed failure without clearing unrelated operational conditions.
-pub(super) fn clear_feed(
-    failures: &mut BTreeMap<usize, BattleEquipmentFailure>,
-    index: usize,
-) -> bool {
+pub(super) fn clear_feed(failures: &mut BTreeMap<usize, EquipmentFailure>, index: usize) -> bool {
     if !feed_jammed(failures, index) {
         return false;
     }
@@ -162,9 +156,9 @@ pub(super) fn clear_feed(
 pub(super) fn explosion_disabled(
     index: usize,
     powered_down: &std::collections::BTreeSet<usize>,
-    failures: &BTreeMap<usize, BattleEquipmentFailure>,
+    failures: &BTreeMap<usize, EquipmentFailure>,
 ) -> bool {
-    powered_down.contains(&index) || failures.get(&index) == Some(&BattleEquipmentFailure::Disabled)
+    powered_down.contains(&index) || failures.get(&index) == Some(&EquipmentFailure::Disabled)
 }
 
 #[cfg(test)]
@@ -173,9 +167,9 @@ mod tests {
 
     #[test]
     fn compact_codes_and_recovery_policy_cover_every_condition() {
-        assert_eq!(BattleEquipmentFailure::from_code(0).unwrap(), None);
+        assert_eq!(EquipmentFailure::from_code(0).unwrap(), None);
         for code in 1..=7 {
-            let failure = BattleEquipmentFailure::from_code(code).unwrap().unwrap();
+            let failure = EquipmentFailure::from_code(code).unwrap().unwrap();
             assert_eq!(failure.code(), code);
             assert_eq!(remaining(Some(failure), 2), if code == 5 { 0 } else { 1 });
             assert_eq!(remaining(Some(failure), 0), 0);
@@ -183,6 +177,6 @@ mod tests {
             assert_eq!(clear_feed(&mut failures, 0), code == 6);
             assert_eq!(failures.is_empty(), code == 6);
         }
-        assert!(BattleEquipmentFailure::from_code(8).is_err());
+        assert!(EquipmentFailure::from_code(8).is_err());
     }
 }

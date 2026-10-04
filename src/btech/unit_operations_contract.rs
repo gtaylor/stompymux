@@ -1,14 +1,13 @@
 //! Trusted unit administration primitives shared by the Lua contract surface.
 
 use super::{
-    BattleAmmunitionMode, BattleFireMode, BattleSection, BattleTemplate, BattleUnit,
-    BattleUnitTemplate, BattleVehicle, BattleVehicleSection, BattleVehicleTemplate,
-    CriticalDefinition,
+    AmmunitionMode, CriticalDefinition, FireMode, Mech, MechSection, MechTemplate, UnitTemplate,
+    Vehicle, VehicleSection, VehicleTemplate,
 };
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 
-fn unit(world: &mut World, id: ObjectId) -> Result<&mut BattleUnit> {
+fn unit(world: &mut World, id: ObjectId) -> Result<&mut Mech> {
     world
         .btech
         .constructed
@@ -49,20 +48,20 @@ pub(crate) fn apply_unit_damage_action(
             let (random, arc, rear) = if request.direction < 16 {
                 (
                     false,
-                    super::BattleHitArc::Front,
+                    super::HitArc::Front,
                     (8..16).contains(&request.direction),
                 )
             } else {
                 let group = ((request.direction - 1) & 3) + 1;
                 let arc = match group {
-                    1 => super::BattleHitArc::Left,
-                    2 => super::BattleHitArc::Right,
-                    3 => super::BattleHitArc::Front,
-                    _ => super::BattleHitArc::Rear,
+                    1 => super::HitArc::Left,
+                    2 => super::HitArc::Right,
+                    3 => super::HitArc::Front,
+                    _ => super::HitArc::Rear,
                 };
                 (true, arc, request.direction > 18)
             };
-            let rules = super::BattleFallRules::configured(config);
+            let rules = super::FallRules::configured(config);
             let (impact, packet_notices) = if random {
                 if before.btech.vehicles().contains_key(&id) {
                     let (impact, notices) = super::blast_damage::resolve_packet(
@@ -70,11 +69,11 @@ pub(crate) fn apply_unit_damage_action(
                         id,
                         super::blast_damage::MaterialPacket {
                             amount,
-                            table: super::BattleHitTable::Weapon,
+                            table: super::HitTable::Weapon,
                             arc,
                             character: before.objects[&id].flags.contains(crate::Flag::InCharacter),
                             attacker: Some(id),
-                            class: super::BattleDamageClass::Ordinary,
+                            class: super::DamageClass::Ordinary,
                         },
                         rear,
                         rules,
@@ -105,17 +104,17 @@ pub(crate) fn apply_unit_damage_action(
                         amount,
                     )?;
                     let notices = report.notices.clone();
-                    (Some(super::BattleBlastImpact::Mech(report)), notices)
+                    (Some(super::BlastImpact::Mech(report)), notices)
                 }
             } else {
                 if before.btech.vehicles().contains_key(&id) {
                     let sections = [
-                        BattleVehicleSection::Left,
-                        BattleVehicleSection::Right,
-                        BattleVehicleSection::Front,
-                        BattleVehicleSection::Rear,
-                        BattleVehicleSection::Turret,
-                        BattleVehicleSection::Rotor,
+                        VehicleSection::Left,
+                        VehicleSection::Right,
+                        VehicleSection::Front,
+                        VehicleSection::Rear,
+                        VehicleSection::Turret,
+                        VehicleSection::Rotor,
                     ];
                     let section = *sections
                         .get(usize::from(request.direction % 8))
@@ -123,8 +122,8 @@ pub(crate) fn apply_unit_damage_action(
                     let report = super::vehicle_armor_damage::resolve_rear_followup_in_candidate(
                         &mut scripts.world_mut(),
                         id,
-                        super::BattleVehicleArmorHit {
-                            damage_class: super::BattleDamageClass::Ordinary,
+                        super::VehicleArmorHit {
+                            damage_class: super::DamageClass::Ordinary,
                             section,
                             amount: u32::from(amount),
                             through_armor_critical: request.critical,
@@ -150,11 +149,11 @@ pub(crate) fn apply_unit_damage_action(
                         .collect();
                     (None, packet_notices)
                 } else {
-                    let section = BattleSection::ALL[usize::from(request.direction % 8)];
+                    let section = MechSection::ALL[usize::from(request.direction % 8)];
                     let report = super::impact::resolve_scenario_impact(
                         &mut scripts.world_mut(),
                         id,
-                        super::BattleHit {
+                        super::Hit {
                             section,
                             rear_armor: rear,
                             through_armor_critical: request.critical,
@@ -163,7 +162,7 @@ pub(crate) fn apply_unit_damage_action(
                         amount,
                     )?;
                     let notices = report.notices.clone();
-                    (Some(super::BattleBlastImpact::Mech(report)), notices)
+                    (Some(super::BlastImpact::Mech(report)), notices)
                 }
             };
             if let Some(impact) = &impact {
@@ -203,14 +202,14 @@ fn edit(
     world: &mut World,
     id: ObjectId,
     touched: Vec<super::CriticalLocation>,
-    change: impl FnOnce(&mut BattleTemplate) -> Result<()>,
+    change: impl FnOnce(&mut MechTemplate) -> Result<()>,
 ) -> Result<()> {
     let mut definition = unit(world, id)?.definition().clone();
     change(&mut definition)?;
     unit(world, id)?.replace_construction_contract(definition, &touched)
 }
 
-fn vehicle(world: &mut World, id: ObjectId) -> Result<&mut BattleVehicle> {
+fn vehicle(world: &mut World, id: ObjectId) -> Result<&mut Vehicle> {
     world
         .btech
         .vehicles
@@ -221,7 +220,7 @@ fn edit_vehicle(
     world: &mut World,
     id: ObjectId,
     touched: Vec<super::VehicleCriticalLocation>,
-    change: impl FnOnce(&mut BattleVehicleTemplate) -> Result<()>,
+    change: impl FnOnce(&mut VehicleTemplate) -> Result<()>,
 ) -> Result<()> {
     let mut definition = vehicle(world, id)?.definition().clone();
     change(&mut definition)?;
@@ -231,9 +230,9 @@ fn edit_vehicle(
 /// Snapshot the reference finalize's geometry-derived technology bits into the
 /// loaded definition: flippable arms follow the arm actuator layout, and a
 /// compact engine is any center-torso installation below four criticals.
-fn finalize_load_specials(mech: &mut BattleTemplate) {
-    use BattleSection::{LeftArm, RightArm};
-    let actuator = |section: BattleSection, slot: u8| {
+fn finalize_load_specials(mech: &mut MechTemplate) {
+    use MechSection::{LeftArm, RightArm};
+    let actuator = |section: MechSection, slot: u8| {
         mech.sections
             .get(&section)
             .and_then(|layout| layout.criticals.get(&slot))
@@ -250,7 +249,7 @@ fn finalize_load_specials(mech: &mut BattleTemplate) {
         && !actuator(RightArm, 3);
     let compact = mech
         .sections
-        .get(&BattleSection::CenterTorso)
+        .get(&MechSection::CenterTorso)
         .is_none_or(|layout| {
             layout
                 .criticals
@@ -269,27 +268,25 @@ pub(crate) fn load_unit_template(
     world: &mut World,
     id: ObjectId,
     requested_reference: &str,
-    definition: BattleUnitTemplate,
+    definition: UnitTemplate,
 ) -> Result<()> {
     // The reference load finalize derives two technology bits from the loaded
     // geometry (FLIPABLE_ARMS reset by actuator layout, CE_TECH for compact
     // engine installations) and stores them until the next template load.
     let mut definition = definition;
-    if let BattleUnitTemplate::Mech(mech) = &mut definition {
+    if let UnitTemplate::Mech(mech) = &mut definition {
         finalize_load_specials(mech);
     }
     let configured = world.btech.constructed_units().contains_key(&id)
         || world.btech.vehicles().contains_key(&id);
     match definition {
-        BattleUnitTemplate::Mech(definition)
-            if world.btech.constructed_units().contains_key(&id) =>
-        {
+        UnitTemplate::Mech(definition) if world.btech.constructed_units().contains_key(&id) => {
             let communications = {
                 let state = unit(world, id)?;
                 (state.definition().reference == requested_reference)
                     .then(|| (state.radio.clone(), state.tics.clone()))
             };
-            let mut replacement = BattleUnit::from_contract_template(definition)?;
+            let mut replacement = Mech::from_contract_template(definition)?;
             if let Some((radio, tics)) = communications {
                 replacement.radio = radio;
                 replacement.tics = tics;
@@ -297,13 +294,13 @@ pub(crate) fn load_unit_template(
             world.btech.units.insert(id, replacement.identity());
             *unit(world, id)? = replacement;
         }
-        BattleUnitTemplate::Vehicle(definition) if world.btech.vehicles().contains_key(&id) => {
+        UnitTemplate::Vehicle(definition) if world.btech.vehicles().contains_key(&id) => {
             let communications = {
                 let state = vehicle(world, id)?;
                 (state.definition().reference == requested_reference)
                     .then(|| (state.radio.clone(), state.tics.clone()))
             };
-            let mut replacement = BattleVehicle::new_contract(definition)?;
+            let mut replacement = Vehicle::new_contract(definition)?;
             if let Some((radio, tics)) = communications {
                 replacement.radio = radio;
                 replacement.tics = tics;
@@ -318,13 +315,13 @@ pub(crate) fn load_unit_template(
             );
             super::inventory_mass(world, id)?;
             match definition {
-                BattleUnitTemplate::Mech(definition) => {
-                    let unit = BattleUnit::from_contract_template(definition)?;
+                UnitTemplate::Mech(definition) => {
+                    let unit = Mech::from_contract_template(definition)?;
                     world.btech.units.insert(id, unit.identity());
                     world.btech.constructed.insert(id, unit);
                 }
-                BattleUnitTemplate::Vehicle(definition) => {
-                    let unit = BattleVehicle::new_contract(definition)?;
+                UnitTemplate::Vehicle(definition) => {
+                    let unit = Vehicle::new_contract(definition)?;
                     world.btech.units.insert(id, unit.identity());
                     world.btech.vehicles.insert(id, unit);
                 }
@@ -357,20 +354,14 @@ pub(crate) fn unit_piloting_check_action(
             .btech
             .constructed_units()
             .get(&id)
-            .and_then(BattleUnit::position)
-            .or_else(|| {
-                world
-                    .btech
-                    .vehicles()
-                    .get(&id)
-                    .and_then(BattleVehicle::position)
-            })
+            .and_then(Mech::position)
+            .or_else(|| world.btech.vehicles().get(&id).and_then(Vehicle::position))
             .is_some()
     };
     if placed {
         broadcast_unit_operation(scripts, id, "falls down!")?;
     }
-    let rules = super::BattleFallRules::configured(config);
+    let rules = super::FallRules::configured(config);
     if scripts.world().btech.vehicles().contains_key(&id) {
         let report = super::evacuation::vehicle_fall_contract_action(
             scripts,
@@ -396,12 +387,12 @@ pub(crate) fn unit_piloting_check_action(
 pub(crate) fn reset_unit_criticals(world: &mut World, id: ObjectId) -> Result<()> {
     if world.btech.vehicles().contains_key(&id) {
         let touched = [
-            BattleVehicleSection::Left,
-            BattleVehicleSection::Right,
-            BattleVehicleSection::Front,
-            BattleVehicleSection::Rear,
-            BattleVehicleSection::Turret,
-            BattleVehicleSection::Rotor,
+            VehicleSection::Left,
+            VehicleSection::Right,
+            VehicleSection::Front,
+            VehicleSection::Rear,
+            VehicleSection::Turret,
+            VehicleSection::Rotor,
         ]
         .into_iter()
         .flat_map(|section| {
@@ -415,13 +406,13 @@ pub(crate) fn reset_unit_criticals(world: &mut World, id: ObjectId) -> Result<()
             Ok(())
         });
     }
-    let touched = BattleSection::ALL
+    let touched = MechSection::ALL
         .into_iter()
         .flat_map(|section| (0..12).map(move |slot| super::CriticalLocation { section, slot }))
         .collect();
     edit(world, id, touched, |definition| {
         let chassis = definition.chassis()?;
-        for section in BattleSection::ALL {
+        for section in MechSection::ALL {
             let criticals = &mut definition
                 .sections
                 .get_mut(&section)
@@ -438,7 +429,7 @@ pub(crate) fn reset_unit_criticals(world: &mut World, id: ObjectId) -> Result<()
                     },
                 );
             };
-            use BattleSection::*;
+            use MechSection::*;
             match section {
                 Head => {
                     for (slot, part) in [
@@ -491,7 +482,7 @@ pub(crate) fn install_vehicle_weapon_named(
     world: &mut World,
     id: ObjectId,
     equipment: &str,
-    section: BattleVehicleSection,
+    section: VehicleSection,
     slot: u8,
     modes: Vec<String>,
 ) -> Result<()> {
@@ -522,7 +513,7 @@ pub(crate) fn install_unit_weapon_named(
     world: &mut World,
     id: ObjectId,
     equipment: &str,
-    section: BattleSection,
+    section: MechSection,
     slots: &[u8],
     modes: Vec<String>,
 ) -> Result<()> {
@@ -550,8 +541,8 @@ pub(crate) fn install_unit_weapon_named(
 pub(crate) fn configure_unit_ammunition(
     world: &mut World,
     id: ObjectId,
-    weapon: super::BattleWeapon,
-    section: BattleSection,
+    weapon: super::Weapon,
+    section: MechSection,
     slot: u8,
     half_ton: bool,
     modes: Vec<String>,
@@ -588,8 +579,8 @@ pub(crate) fn configure_unit_ammunition(
 pub(crate) fn configure_vehicle_ammunition(
     world: &mut World,
     id: ObjectId,
-    weapon: super::BattleWeapon,
-    section: BattleVehicleSection,
+    weapon: super::Weapon,
+    section: VehicleSection,
     slot: u8,
     half_ton: bool,
     modes: Vec<String>,
@@ -626,7 +617,7 @@ pub(crate) fn configure_vehicle_ammunition(
 pub(crate) fn restock_unit_ammunition(
     world: &mut World,
     id: ObjectId,
-    section: BattleSection,
+    section: MechSection,
     slot: u8,
 ) -> Result<()> {
     let state = unit(world, id)?;
@@ -654,7 +645,7 @@ pub(crate) fn restock_unit_ammunition(
 pub(crate) fn restock_vehicle_ammunition(
     world: &mut World,
     id: ObjectId,
-    section: BattleVehicleSection,
+    section: VehicleSection,
     slot: u8,
 ) -> Result<()> {
     let state = vehicle(world, id)?;
@@ -683,8 +674,8 @@ pub(crate) fn set_unit_weapon_modes(
     world: &mut World,
     id: ObjectId,
     number: usize,
-    fire: BattleFireMode,
-    ammunition: BattleAmmunitionMode,
+    fire: FireMode,
+    ammunition: AmmunitionMode,
     fire_names: Vec<String>,
     ammunition_names: Vec<String>,
 ) -> Result<()> {
@@ -698,12 +689,12 @@ pub(crate) fn set_unit_weapon_modes(
             "weapon number is not mounted"
         );
         state.set_contract_weapon_mode_names(number, fire_names, ammunition_names)?;
-        if fire == BattleFireMode::Normal {
+        if fire == FireMode::Normal {
             state.fire_modes.remove(&number);
         } else {
             state.fire_modes.insert(number, fire);
         }
-        if ammunition == BattleAmmunitionMode::Normal {
+        if ammunition == AmmunitionMode::Normal {
             state.ammunition_modes.remove(&number);
         } else {
             state.ammunition_modes.insert(number, ammunition);
@@ -716,7 +707,7 @@ pub(crate) fn install_unit_special(
     world: &mut World,
     id: ObjectId,
     equipment: Option<String>,
-    section: BattleSection,
+    section: MechSection,
     slot: u8,
     data: i32,
 ) -> Result<()> {
@@ -751,7 +742,7 @@ pub(crate) fn install_vehicle_special(
     world: &mut World,
     id: ObjectId,
     equipment: Option<String>,
-    section: BattleVehicleSection,
+    section: VehicleSection,
     slot: u8,
     data: i32,
 ) -> Result<()> {

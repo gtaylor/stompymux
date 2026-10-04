@@ -1,14 +1,14 @@
 //! Derived Artemis links share matching and availability policy across unit anatomies.
 use super::{
-    BattleSection, BattleSystem, BattleUnit, BattleVehicle, BattleVehicleSection, CriticalLocation,
-    SystemCritical, VehicleCriticalLocation, WeaponMount,
+    CriticalLocation, Mech, MechSection, System, SystemCritical, Vehicle, VehicleCriticalLocation,
+    VehicleSection, WeaponMount,
 };
 use anyhow::{Result, ensure};
 use serde::Serialize;
 
 /// Installed controller metadata, without a second copy of link or equipment damage state.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleArtemisController<L = CriticalLocation> {
+pub struct ArtemisController<L = CriticalLocation> {
     pub location: L,
     /// One-based template link, or zero for an unassigned controller.
     pub link: u8,
@@ -20,7 +20,7 @@ pub struct BattleArtemisController<L = CriticalLocation> {
 /// Whether a unit's Artemis controllers are Artemis V, which adds one more to the Artemis
 /// cluster bonus and one to hit. Either unit class reads its chassis technology flag.
 pub(super) fn artemis_v(world: &crate::World, id: crate::ObjectId) -> bool {
-    let technology = super::BattleTechnology::ArtemisV;
+    let technology = super::Technology::ArtemisV;
     world
         .btech
         .constructed_units()
@@ -43,10 +43,10 @@ fn controllers<L: Copy>(
     describe: impl Fn(L) -> Result<(u8, bool)>,
     slot: impl Fn(L) -> u8,
     sections_match: impl Fn(L, L) -> bool,
-) -> Result<Vec<BattleArtemisController<L>>> {
+) -> Result<Vec<ArtemisController<L>>> {
     systems
         .iter()
-        .filter(|part| part.system == BattleSystem::ArtemisIv)
+        .filter(|part| part.system == System::ArtemisIv)
         .map(|part| {
             let (link, operational) = describe(part.location)?;
             let weapon_indices = weapons
@@ -60,7 +60,7 @@ fn controllers<L: Copy>(
                 })
                 .map(|(index, _)| index)
                 .collect();
-            Ok(BattleArtemisController {
+            Ok(ArtemisController {
                 location: part.location,
                 link,
                 weapon_indices,
@@ -79,15 +79,15 @@ fn link(data: &str) -> Result<u8> {
 }
 
 /// A controller must both survive and refer to the requested mount.
-fn operational<L>(controllers: &[BattleArtemisController<L>], index: usize) -> bool {
+fn operational<L>(controllers: &[ArtemisController<L>], index: usize) -> bool {
     controllers
         .iter()
         .any(|controller| controller.operational && controller.weapon_indices.contains(&index))
 }
 
-impl BattleUnit {
+impl Mech {
     /// Mechs permit same-section links and a head controller for a center-torso launcher.
-    pub fn artemis_controllers(&self) -> Result<Vec<BattleArtemisController>> {
+    pub fn artemis_controllers(&self) -> Result<Vec<ArtemisController>> {
         let loadout = self.loadout()?;
         controllers(
             &loadout.weapons,
@@ -99,8 +99,8 @@ impl BattleUnit {
             |location| location.slot,
             |controller, primary| {
                 controller.section == primary.section
-                    || (controller.section == BattleSection::Head
-                        && primary.section == BattleSection::CenterTorso)
+                    || (controller.section == MechSection::Head
+                        && primary.section == MechSection::CenterTorso)
             },
         )
     }
@@ -115,11 +115,9 @@ impl BattleUnit {
     }
 }
 
-impl BattleVehicle {
+impl Vehicle {
     /// Ground turrets can use rear controllers; VTOLs require a same-section controller.
-    pub fn artemis_controllers(
-        &self,
-    ) -> Result<Vec<BattleArtemisController<VehicleCriticalLocation>>> {
+    pub fn artemis_controllers(&self) -> Result<Vec<ArtemisController<VehicleCriticalLocation>>> {
         let loadout = self.loadout()?;
         controllers(
             &loadout.weapons,
@@ -132,8 +130,8 @@ impl BattleVehicle {
             |controller, primary| {
                 controller.section == primary.section
                     || (!self.definition().is_vtol()
-                        && controller.section == BattleVehicleSection::Rear
-                        && primary.section == BattleVehicleSection::Turret)
+                        && controller.section == VehicleSection::Rear
+                        && primary.section == VehicleSection::Turret)
             },
         )
     }

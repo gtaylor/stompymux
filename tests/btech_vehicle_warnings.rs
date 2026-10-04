@@ -5,12 +5,12 @@ use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 
 /// Suppress critical side effects while retaining ordinary armor admission and warning ordering.
-fn rules() -> BattleVehicleCriticalRules {
-    BattleVehicleCriticalRules {
+fn rules() -> VehicleCriticalRules {
+    VehicleCriticalRules {
         rotor_damage_divisor: 0,
         extended_piloting: false,
         vtol_table: None,
-        table: BattleVehicleCriticalTable::Standard,
+        table: VehicleCriticalTable::Standard,
         enabled: false,
         combat_safe: false,
         toughness: false,
@@ -23,7 +23,7 @@ async fn vehicle_armor_warnings_follow_thresholds_preferences_and_restart() {
     for source in firing::templates().into_iter().skip(2) {
         let (_dir, config, mut world, id, _, _) =
             firing::fixture_with_target(&source, None, &source).await;
-        let original = world.btech.vehicles()[&id].sections()[&BattleVehicleSection::Front].armor;
+        let original = world.btech.vehicles()[&id].sections()[&VehicleSection::Front].armor;
         let mut previous = original;
         for (remaining, message) in [
             (original / 2, None),
@@ -32,9 +32,9 @@ async fn vehicle_armor_warnings_follow_thresholds_preferences_and_restart() {
             (original / 4 - 1, Some("critical!")),
             (0, Some("BREACHED!")),
         ] {
-            let hit = BattleVehicleArmorHit {
-                damage_class: BattleDamageClass::Ordinary,
-                section: BattleVehicleSection::Front,
+            let hit = VehicleArmorHit {
+                damage_class: DamageClass::Ordinary,
+                section: VehicleSection::Front,
                 amount: u32::from(previous - remaining),
                 through_armor_critical: false,
                 armor_piercing: None,
@@ -75,21 +75,16 @@ async fn vehicle_armor_warnings_follow_thresholds_preferences_and_restart() {
 #[tokio::test]
 async fn vehicle_ammunition_warnings_match_supply_and_native_lua_controls() {
     for source in firing::templates().into_iter().skip(2) {
-        let (_dir, config, base, id, target, index) = firing::fixture_with_supply(
-            &source,
-            Some(BattleWeapon::Srm4),
-            &source,
-            false,
-            Some(""),
-        )
-        .await;
+        let (_dir, config, base, id, target, index) =
+            firing::fixture_with_supply(&source, Some(Weapon::Srm4), &source, false, Some(""))
+                .await;
         let bins: Vec<_> = base.btech.vehicles()[&id]
             .loadout()
             .unwrap()
             .ammunition
             .iter()
             .enumerate()
-            .filter(|(_, b)| b.weapon == BattleWeapon::Srm4)
+            .filter(|(_, b)| b.weapon == Weapon::Srm4)
             .map(|(i, _)| i)
             .collect();
         assert_eq!(bins.len(), 1);

@@ -3,7 +3,7 @@ use crate::{Flag, Kind, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 
 /// Read the operator-imposed firing restriction independently of mechanical readiness.
-pub fn battle_weapons_hold(world: &World, id: ObjectId) -> Result<bool> {
+pub fn weapons_hold(world: &World, id: ObjectId) -> Result<bool> {
     let unit = world.btech.unit(id).context("Unit is not constructed")?;
     Ok(unit.weapons_hold())
 }
@@ -38,7 +38,7 @@ pub(super) fn admit(world: &World, id: ObjectId, pilot: ObjectId) -> Result<()> 
 /// Apply the physical unit's firing hold after the caller has admitted its operator.
 pub(super) fn check(world: &World, id: ObjectId) -> Result<()> {
     ensure!(
-        !battle_weapons_hold(world, id)?,
+        !weapons_hold(world, id)?,
         "Currently in weapons hold. Unable to fire weapons."
     );
     Ok(())
@@ -50,12 +50,12 @@ pub(super) fn damage_notice(
     world: &World,
     attacker: Option<ObjectId>,
     target: ObjectId,
-) -> Option<super::BattleNotice> {
+) -> Option<super::Notice> {
     let attacker = attacker.filter(|id| *id != target)?;
-    battle_weapons_hold(world, attacker)
+    weapons_hold(world, attacker)
         .ok()
         .filter(|held| *held)
-        .map(|_| super::BattleNotice {
+        .map(|_| super::Notice {
             unit: attacker,
             text: "You are currently in weapons hold!".into(),
         })

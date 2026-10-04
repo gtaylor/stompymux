@@ -71,8 +71,8 @@ async fn melting_matches_combat_fractures_native_lua_and_restart() {
             &config,
             map,
             HexCoordinate { x: 0, y: 11 },
-            BattleSurface::Ice,
-            BattleFallRules::configured(&config),
+            Surface::Ice,
+            FallRules::configured(&config),
         )
         .unwrap();
         assert_eq!(fracture.after.terrain(), Terrain::Water);
@@ -110,7 +110,7 @@ async fn freezing_water_preserves_submerged_mechs() {
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         let before = scripts.world().btech.constructed_units()[&unit].clone();
         let report =
-            change_battle_map_ice_action(&scripts, &config, actor, map, 100, BattleIceChange::Grow)
+            change_battle_map_ice_action(&scripts, &config, actor, map, 100, IceChange::Grow)
                 .unwrap();
         assert_eq!(report.changed, vec![HexCoordinate { x: 0, y: 11 }]);
         assert!(report.fractures.is_empty());
@@ -123,7 +123,7 @@ async fn freezing_water_preserves_submerged_mechs() {
             Terrain::Ice
         );
         let report =
-            change_battle_map_ice_action(&scripts, &config, actor, map, 100, BattleIceChange::Melt)
+            change_battle_map_ice_action(&scripts, &config, actor, map, 100, IceChange::Melt)
                 .unwrap();
         assert!(report.fractures[0].falls.is_empty());
         assert_eq!(scripts.world().btech.constructed_units()[&unit], before);
@@ -152,7 +152,7 @@ async fn ice_thresholds_authority_and_rolls() {
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     for percentage in [i32::MIN, -1, 0] {
         let before = serde_json::to_value(&scripts.world().btech).unwrap();
-        let mut expected: BattleDice =
+        let mut expected: Dice =
             serde_json::from_value(before["maps"][map.0.to_string()]["fire_dice"].clone()).unwrap();
         expected.die(100).unwrap();
         let report = change_battle_map_ice_action(
@@ -161,7 +161,7 @@ async fn ice_thresholds_authority_and_rolls() {
             actor,
             map,
             percentage,
-            BattleIceChange::Grow,
+            IceChange::Grow,
         )
         .unwrap();
         assert!(report.changed.is_empty());
@@ -187,19 +187,11 @@ async fn ice_thresholds_authority_and_rolls() {
         assert_eq!(scripts.world().btech, before, "{command}");
     }
     assert!(
-        change_battle_map_ice_action(
-            &scripts,
-            &config,
-            ObjectId(2),
-            map,
-            100,
-            BattleIceChange::Grow
-        )
-        .is_err()
+        change_battle_map_ice_action(&scripts, &config, ObjectId(2), map, 100, IceChange::Grow)
+            .is_err()
     );
     assert!(
-        change_battle_map_ice_action(&scripts, &config, actor, unit, 100, BattleIceChange::Grow)
-            .is_err()
+        change_battle_map_ice_action(&scripts, &config, actor, unit, 100, IceChange::Grow).is_err()
     );
     assert_eq!(scripts.world().btech, before);
     let call = format!("btech.map.add_ice({},{},{})", actor.0, map.0, i32::MAX);
@@ -227,13 +219,13 @@ async fn shoreline_passes_have_distinct_growth_and_melt_ordering() {
     let mut state = serde_json::to_value(&world.btech).unwrap();
     let seed = (0..=255)
         .find(|seed| {
-            let mut dice = BattleDice::seeded([*seed; 32]);
+            let mut dice = Dice::seeded([*seed; 32]);
             dice.die(100).unwrap();
             dice.d6() == 6
         })
         .unwrap();
     state["maps"][map.0.to_string()]["fire_dice"] =
-        serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+        serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
     state["maps"][map.0.to_string()]["width"] = 3.into();
     state["maps"][map.0.to_string()]["terrain"] = serde_json::json!(vec![
         serde_json::to_value(
@@ -277,7 +269,7 @@ async fn shoreline_passes_have_distinct_growth_and_melt_ordering() {
         tile(&mut world, map, hex.x as usize, hex.y as usize, "ice", 2);
     }
     let encoded = serde_json::to_value(&world.btech).unwrap();
-    let mut expected: BattleDice =
+    let mut expected: Dice =
         serde_json::from_value(encoded["maps"][map.0.to_string()]["fire_dice"].clone()).unwrap();
     // The earlier left-edge melts mean the center no longer needs the enclosed-ice die.
     for _ in 0..7 {
@@ -285,8 +277,7 @@ async fn shoreline_passes_have_distinct_growth_and_melt_ordering() {
     }
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     let report =
-        change_battle_map_ice_action(&scripts, &config, actor, map, 100, BattleIceChange::Melt)
-            .unwrap();
+        change_battle_map_ice_action(&scripts, &config, actor, map, 100, IceChange::Melt).unwrap();
     assert_eq!(report.changed.len(), 7);
     assert!(
         report
@@ -317,9 +308,8 @@ async fn failed_confirmation_restores_ice_and_dice() {
     let config = limited_output_config(dir.path());
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     let before = scripts.world().btech.clone();
-    let error =
-        change_battle_map_ice_action(&scripts, &config, actor, map, 100, BattleIceChange::Grow)
-            .unwrap_err();
+    let error = change_battle_map_ice_action(&scripts, &config, actor, map, 100, IceChange::Grow)
+        .unwrap_err();
     assert!(error.to_string().contains("output limit"), "{error:#}");
     assert_eq!(scripts.world().btech, before);
     assert!(scripts.drain_outbox().is_empty());
@@ -354,7 +344,7 @@ async fn occupied_melting_commits_or_restores_the_whole_map_pass() {
     set_battle_character(
         &mut world,
         pilot,
-        BattleCharacter {
+        Character {
             build: 5,
             reflexes: 5,
             intuition: 5,
@@ -377,16 +367,14 @@ async fn occupied_melting_commits_or_restores_the_whole_map_pass() {
     let limited = limited_output_config(dir.path());
     let scripts = Scripts::new(&limited, Rc::new(RefCell::new(world))).unwrap();
     assert!(
-        change_battle_map_ice_action(&scripts, &config, actor, map, 100, BattleIceChange::Melt)
-            .is_err()
+        change_battle_map_ice_action(&scripts, &config, actor, map, 100, IceChange::Melt).is_err()
     );
     assert_eq!(scripts.world().btech, baseline.btech);
     assert_eq!(scripts.world().objects[&pilot].location, Some(unit));
     assert!(scripts.drain_outbox().is_empty());
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(baseline))).unwrap();
     let report =
-        change_battle_map_ice_action(&scripts, &config, actor, map, 100, BattleIceChange::Melt)
-            .unwrap();
+        change_battle_map_ice_action(&scripts, &config, actor, map, 100, IceChange::Melt).unwrap();
     assert_eq!(report.changed.len(), 2);
     assert!(scripts.world().btech.vehicles()[&unit].is_destroyed());
     let destination = scripts.world().objects[&pilot].location.unwrap();

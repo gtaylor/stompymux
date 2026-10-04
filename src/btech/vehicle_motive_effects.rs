@@ -3,38 +3,32 @@ use super::*;
 use crate::ObjectId;
 
 /// Movement vulnerability used by both advanced motive and fire checks.
-pub(super) fn modifier(movement: BattleVehicleMovement) -> u8 {
+pub(super) fn modifier(movement: VehicleMovement) -> u8 {
     match movement {
-        BattleVehicleMovement::Wheeled => 2,
-        BattleVehicleMovement::Hover => 4,
+        VehicleMovement::Wheeled => 2,
+        VehicleMovement::Hover => 4,
         _ => 0,
     }
 }
 
 /// Resolve an advanced motive roll without changing state or drawing additional dice.
-pub(super) fn outcome(
-    movement: BattleVehicleMovement,
-    roll: u8,
-) -> (Option<BattleVehicleMotiveHit>, u8) {
+pub(super) fn outcome(movement: VehicleMovement, roll: u8) -> (Option<VehicleMotiveHit>, u8) {
     match roll + modifier(movement) {
         8 | 9 => (None, 1),
-        10 | 11 => (
-            Some(BattleVehicleMotiveHit::SpeedLoss { movement_points: 1 }),
-            2,
-        ),
-        12.. => (Some(BattleVehicleMotiveHit::Immobilize), 0),
+        10 | 11 => (Some(VehicleMotiveHit::SpeedLoss { movement_points: 1 }), 2),
+        12.. => (Some(VehicleMotiveHit::Immobilize), 0),
         _ => (None, 0),
     }
 }
 
 /// Commit motive damage and return cockpit notices plus raw visibility-dependent broadcasts.
 pub(super) fn apply(
-    vehicle: &mut BattleVehicle,
+    vehicle: &mut Vehicle,
     id: ObjectId,
-    motive: Option<BattleVehicleMotiveHit>,
+    motive: Option<VehicleMotiveHit>,
     penalty: u8,
     roll: Option<u8>,
-) -> (Vec<BattleNotice>, Vec<BattleNotice>) {
+) -> (Vec<Notice>, Vec<Notice>) {
     let mut notices = Vec::new();
     let mut broadcasts = Vec::new();
     vehicle.piloting_damage = vehicle.piloting_damage.saturating_add(penalty).min(127);
@@ -44,11 +38,11 @@ pub(super) fn apply(
         vehicle.apply_motive_hit(motive);
     }
     if motive.is_some() || penalty > 0 {
-        notices.push(BattleNotice {
+        notices.push(Notice {
             unit: id,
             text: "[fg=yellow bold]CRITICAL HIT![reset]".into(),
         });
-        notices.push(BattleNotice {
+        notices.push(Notice {
             unit: id,
             text: motive_notice(
                 vehicle.definition().movement,
@@ -69,7 +63,7 @@ pub(super) fn apply(
             _ => None,
         };
         if let Some(text) = text {
-            broadcasts.push(BattleNotice {
+            broadcasts.push(Notice {
                 unit: id,
                 text: text.into(),
             });
@@ -80,8 +74,8 @@ pub(super) fn apply(
 
 /// Describe the table's direct motive consequence using the vehicle's movement system.
 fn motive_notice(
-    movement: BattleVehicleMovement,
-    motive: Option<BattleVehicleMotiveHit>,
+    movement: VehicleMovement,
+    motive: Option<VehicleMotiveHit>,
     penalty: u8,
     roll: Option<u8>,
     repeated: bool,
@@ -91,11 +85,11 @@ fn motive_notice(
             return "[fg=red bold]Your destroyed motive system takes another hit![reset]".into();
         }
         let kind = match movement {
-            BattleVehicleMovement::Vtol => "rotorcraft",
-            BattleVehicleMovement::Tracked => "tank",
-            BattleVehicleMovement::Wheeled => "vehicle",
-            BattleVehicleMovement::Hover => "hovercraft",
-            BattleVehicleMovement::Stationary => "weird unidentifiable toy (warn a wizard!)",
+            VehicleMovement::Vtol => "rotorcraft",
+            VehicleMovement::Tracked => "tank",
+            VehicleMovement::Wheeled => "vehicle",
+            VehicleMovement::Hover => "hovercraft",
+            VehicleMovement::Stationary => "weird unidentifiable toy (warn a wizard!)",
         };
         return match penalty {
             1 => format!(
@@ -111,17 +105,17 @@ fn motive_notice(
     }
     let severe = matches!(
         motive,
-        Some(BattleVehicleMotiveHit::SpeedLoss { movement_points: 2 })
+        Some(VehicleMotiveHit::SpeedLoss { movement_points: 2 })
     );
     let part = match movement {
-        BattleVehicleMovement::Vtol => "Your rotor",
-        BattleVehicleMovement::Tracked => "One of your tracks",
-        BattleVehicleMovement::Wheeled => "One of your wheels",
-        BattleVehicleMovement::Hover => "Your air skirt",
-        BattleVehicleMovement::Stationary => "Your motive system",
+        VehicleMovement::Vtol => "Your rotor",
+        VehicleMovement::Tracked => "One of your tracks",
+        VehicleMovement::Wheeled => "One of your wheels",
+        VehicleMovement::Hover => "Your air skirt",
+        VehicleMovement::Stationary => "Your motive system",
     };
-    if motive == Some(BattleVehicleMotiveHit::Immobilize) {
-        if movement == BattleVehicleMovement::Hover {
+    if motive == Some(VehicleMotiveHit::Immobilize) {
+        if movement == VehicleMovement::Hover {
             return "Your lift fan is destroyed, immobilizing your vehicle!".into();
         }
         return format!("{part} is destroyed, immobilizing your vehicle!");

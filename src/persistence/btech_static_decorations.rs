@@ -1,8 +1,7 @@
 //! Stored decoration ownership preserves auxiliary map-object payloads during terrain edits.
 use super::write::{Cell, Fields, row};
 use crate::{
-    BattleStaticDecoration, BattleStaticDecorationKind, HexCoordinate, ObjectId, StoredMap,
-    Terrain, World,
+    HexCoordinate, ObjectId, StaticDecoration, StaticDecorationKind, StoredMap, Terrain, World,
 };
 use anyhow::{Context, Result, ensure};
 use sqlx::{Row, SqliteConnection};
@@ -19,8 +18,8 @@ pub(super) async fn load(
         let map = maps
             .get_mut(&ObjectId(row.try_get("map_dbref")?))
             .context("Stored decoration references missing map")?;
-        let kind = BattleStaticDecorationKind::ALL
-            [usize::try_from(row.try_get::<i64, _>("object_type")?)?];
+        let kind =
+            StaticDecorationKind::ALL[usize::try_from(row.try_get::<i64, _>("object_type")?)?];
         ensure!(
             map.static_decorations(kind).len() < 1_000_000,
             "Too many stored decorations"
@@ -38,9 +37,7 @@ pub(super) async fn load(
         );
         let data_char = u8::try_from(row.try_get::<i64, _>("data_char")?)?;
         let restored_terrain = match kind {
-            BattleStaticDecorationKind::Decoration => {
-                Some(Terrain::from_symbol(char::from(data_char))?)
-            }
+            StaticDecorationKind::Decoration => Some(Terrain::from_symbol(char::from(data_char))?),
             _ => {
                 ensure!(
                     data_char == 0,
@@ -51,7 +48,7 @@ pub(super) async fn load(
         };
         Arc::make_mut(&mut map.static_decorations[kind.index()]).insert(
             u32::try_from(row.try_get::<i64, _>("ordinal")?)?,
-            BattleStaticDecoration {
+            StaticDecoration {
                 coordinate,
                 restored_terrain,
                 object: ObjectId(row.try_get("object_dbref")?),
@@ -67,7 +64,7 @@ pub(super) async fn load(
 pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World) -> Result<bool> {
     let mut changed = false;
     for (&id, map) in after.btech.maps() {
-        for kind in BattleStaticDecorationKind::ALL {
+        for kind in StaticDecorationKind::ALL {
             let records = map.static_decorations(kind);
             let old = before
                 .btech
@@ -110,7 +107,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
 }
 
 /// Persist restoration metadata and the operator-visible record payload together.
-fn decoration_fields(decoration: BattleStaticDecoration) -> super::write::Fields {
+fn decoration_fields(decoration: StaticDecoration) -> super::write::Fields {
     Fields::from([
         ("x", Cell::Integer(i64::from(decoration.coordinate.x))),
         ("y", Cell::Integer(i64::from(decoration.coordinate.y))),

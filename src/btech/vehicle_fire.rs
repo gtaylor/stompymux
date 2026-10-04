@@ -5,15 +5,15 @@ use anyhow::{Context, Result};
 
 /// Host policies for a tactical vehicle shot and each side's anatomy-specific consequences.
 #[derive(Debug, Clone, Copy)]
-pub struct BattleVehicleShotRules {
-    pub shot: BattleShotRules,
-    pub shooter_criticals: BattleVehicleCriticalRules,
+pub struct VehicleShotRules {
+    pub shot: ShotRules,
+    pub shooter_criticals: VehicleCriticalRules,
 }
 
 /// A shot fired by a vehicle: a complete tactical state transition whose feedback the
 /// host must still publish in its transaction.
-pub type BattleVehicleShotReport =
-    super::ShotReport<super::BattleVehicleWeaponUse, super::BattleVehicleInternalDamage>;
+pub type VehicleShotReport =
+    super::ShotReport<super::VehicleWeaponUse, super::VehicleInternalDamage>;
 
 /// Resolve an admitted tactical shot against a Mech or vehicle without publishing partial state.
 /// Shared aim dice precede launch and AMS dice; target-owned cluster and impact dice follow.
@@ -24,8 +24,8 @@ pub fn fire_vehicle_shot(
     pilot: ObjectId,
     target: ObjectId,
     weapon_index: usize,
-    rules: BattleVehicleShotRules,
-) -> Result<BattleVehicleShotReport> {
+    rules: VehicleShotRules,
+) -> Result<VehicleShotReport> {
     anyhow::ensure!(
         !(pilot == shooter && world.btech.controllers().contains_key(&shooter)),
         "Autopilot actor token is internal"
@@ -53,8 +53,8 @@ pub(crate) fn fire_vehicle_shot_autopilot(
     shooter: ObjectId,
     target: ObjectId,
     weapon_index: usize,
-    rules: BattleVehicleShotRules,
-) -> Result<BattleVehicleShotReport> {
+    rules: VehicleShotRules,
+) -> Result<VehicleShotReport> {
     fire_shot(
         world,
         shooter,
@@ -76,9 +76,9 @@ pub(super) fn fire_vehicle_shot_in_action(
     pilot: ObjectId,
     target: super::shot::ShotTarget,
     weapon_index: usize,
-    rules: BattleVehicleShotRules,
+    rules: VehicleShotRules,
     xp: &crate::config::XpConfig,
-) -> Result<BattleVehicleShotReport> {
+) -> Result<VehicleShotReport> {
     anyhow::ensure!(
         !(pilot == shooter && world.btech.controllers().contains_key(&shooter)),
         "Autopilot actor token is internal"
@@ -97,9 +97,9 @@ fn fire_shot(
     pilot: ObjectId,
     target: super::shot::ShotTarget,
     weapon_index: usize,
-    rules: BattleVehicleShotRules,
+    rules: VehicleShotRules,
     xp: Option<&crate::config::XpConfig>,
-) -> Result<BattleVehicleShotReport> {
+) -> Result<VehicleShotReport> {
     let mut attempt = super::autopilot::diagnostics::Attempt::begin();
     let admission = super::autopilot::diagnostics::combat("admission_aim");
     let loadouts =
@@ -160,7 +160,7 @@ fn fire_shot(
     candidate.btech.vehicles.get_mut(&shooter).unwrap().dice = aim_dice;
     let mut launch = super::vehicle_launch::launch_prepared(
         &mut candidate,
-        BattleVehicleLaunchRequest {
+        VehicleLaunchRequest {
             shooter,
             pilot,
             weapon_index,
@@ -235,7 +235,7 @@ fn fire_shot(
     )?;
     let experience = xp.map(|config| super::gunnery_experience::GunneryAwardContext {
         config,
-        request: BattleGunneryAwardRequest {
+        request: GunneryAwardRequest {
             tsm_tow_bonus: rules.shot.tsm_tow_bonus,
             attacker: shooter,
             pilot,
@@ -254,7 +254,7 @@ fn fire_shot(
     drop(launch_measurement);
     let damage_measurement = super::autopilot::diagnostics::combat("damage_recoil");
     let salvo = if resolved.hit && launch.expenditure.launched && ammunition.is_swarm() {
-        Some(super::BattleTargetSalvo::Swarm(super::swarm::resolve(
+        Some(super::TargetSalvo::Swarm(super::swarm::resolve(
             &mut candidate,
             super::swarm::SwarmRequest {
                 shooter,
@@ -276,7 +276,7 @@ fn fire_shot(
             &mut candidate,
             shooter,
             target,
-            BattleVehicleSalvoRequest {
+            VehicleSalvoRequest {
                 range_damage: rules.shot.range_damage,
                 damage_penalty: 0,
                 weapon,
@@ -302,34 +302,32 @@ fn fire_shot(
             },
         )?)
     } else {
-        Some(BattleTargetSalvo::Mech(
-            super::salvo::resolve_salvo_in_candidate(
-                &mut candidate,
-                shooter,
-                target,
-                &launch.expenditure,
-                super::salvo::ShotDamage {
-                    submerged,
-                    woods_damage: rules.shot.aim.woods_damage,
-                    range_damage: rules.shot.range_damage,
-                    aimed,
-                    incoming: None,
-                    rules: BattleFallRules {
-                        vehicle_impact: rules.shot.vehicle_impact,
-                        stacking: rules.shot.stacking,
-                        stagger: rules.shot.stagger,
-                        hit: rules.shot.hit,
-                        extended_piloting: rules.shot.extended_piloting,
-                        toughness: rules.shot.target_toughness,
-                    },
-                    hit_arc_mode: rules.shot.hit_arc_mode,
-                    glancing: resolved.glancing,
-                    character,
-                    intercepted: ams.as_ref().map_or(0, |report| report.shot_down),
-                    experience,
+        Some(TargetSalvo::Mech(super::salvo::resolve_salvo_in_candidate(
+            &mut candidate,
+            shooter,
+            target,
+            &launch.expenditure,
+            super::salvo::ShotDamage {
+                submerged,
+                woods_damage: rules.shot.aim.woods_damage,
+                range_damage: rules.shot.range_damage,
+                aimed,
+                incoming: None,
+                rules: FallRules {
+                    vehicle_impact: rules.shot.vehicle_impact,
+                    stacking: rules.shot.stacking,
+                    stagger: rules.shot.stagger,
+                    hit: rules.shot.hit,
+                    extended_piloting: rules.shot.extended_piloting,
+                    toughness: rules.shot.target_toughness,
                 },
-            )?,
-        ))
+                hit_arc_mode: rules.shot.hit_arc_mode,
+                glancing: resolved.glancing,
+                character,
+                intercepted: ams.as_ref().map_or(0, |report| report.shot_down),
+                experience,
+            },
+        )?))
     };
     if let Some(defense) = &mut ams {
         defense.shot_down = defense.shot_down.min(if let Some(pod) = &narc {
@@ -337,7 +335,7 @@ fn fire_shot(
         } else {
             salvo
                 .as_ref()
-                .and_then(BattleTargetSalvo::missiles_before_defense)
+                .and_then(TargetSalvo::missiles_before_defense)
                 .unwrap_or(0)
         });
     }
@@ -358,7 +356,7 @@ fn fire_shot(
     let _publication = super::autopilot::diagnostics::combat("publication");
     attempt.succeed();
     candidate.commit(world);
-    let BattleVehicleLaunch {
+    let VehicleLaunch {
         ammunition_warning,
         launch_notices,
         roll,
@@ -370,7 +368,7 @@ fn fire_shot(
         glancing,
         expenditure,
     } = launch;
-    Ok(BattleVehicleShotReport {
+    Ok(VehicleShotReport {
         shooter,
         target,
         weapon_index,
@@ -401,17 +399,17 @@ fn fire_shot(
     })
 }
 
-impl BattleVehicleShotReport {
+impl VehicleShotReport {
     /// Collect cockpit consequences in launch, defense, damage and final-outcome order.
-    pub fn notices(&self) -> Vec<BattleNotice> {
+    pub fn notices(&self) -> Vec<Notice> {
         self.notices_with_feedback(&mut Vec::new())
     }
 
     /// Retain private damage rolls alongside their ordered cockpit consequences.
     pub(crate) fn notices_with_feedback(
         &self,
-        private: &mut Vec<super::BattlePilotNotice>,
-    ) -> Vec<BattleNotice> {
+        private: &mut Vec<super::PilotNotice>,
+    ) -> Vec<Notice> {
         if let Some(misload) = &self.misload {
             super::piloting::append_feedback(private, misload.pilot_notices.iter().cloned(), 0);
             return misload.notices.clone();
@@ -426,7 +424,7 @@ impl BattleVehicleShotReport {
         }
         let mut notices = self.launch_notices.clone();
         if let Some(text) = &self.ammunition_warning {
-            notices.push(BattleNotice {
+            notices.push(Notice {
                 unit: self.shooter,
                 text: text.clone(),
             });
@@ -465,7 +463,7 @@ impl BattleVehicleShotReport {
                     self.target,
                     self.salvo
                         .as_ref()
-                        .and_then(BattleTargetSalvo::missiles_before_defense),
+                        .and_then(TargetSalvo::missiles_before_defense),
                 ),
             );
         }

@@ -2,31 +2,27 @@
 use stompymux_rs::*;
 
 /// Install a controller with an explicit reference to the Jenner's center-torso missile mount.
-fn definition(section: BattleSection, link: &str) -> BattleTemplate {
+fn definition(section: MechSection, link: &str) -> MechTemplate {
     let mut template =
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     template
         .sections
         .get_mut(&section)
         .unwrap()
         .criticals
         .insert(
-            if section == BattleSection::Head {
-                3
-            } else {
-                11
-            },
+            if section == MechSection::Head { 3 } else { 11 },
             CriticalDefinition {
                 equipment: "ArtemisIV".into(),
                 data: link.into(),
                 modes: vec![],
             },
         );
-    if section == BattleSection::CenterTorso {
+    if section == MechSection::CenterTorso {
         // Retain the displaced jump jet in a free torso slot.
         template
             .sections
-            .get_mut(&BattleSection::RightTorso)
+            .get_mut(&MechSection::RightTorso)
             .unwrap()
             .criticals
             .insert(
@@ -44,17 +40,14 @@ fn definition(section: BattleSection, link: &str) -> BattleTemplate {
 /// Local and head-to-torso links resolve; loss disables assistance but preserves installed mass.
 #[test]
 fn artemis_links_damage_and_restoration() {
-    for section in [BattleSection::CenterTorso, BattleSection::Head] {
-        let unit = BattleUnit::from_template(definition(section, "11")).unwrap();
+    for section in [MechSection::CenterTorso, MechSection::Head] {
+        let unit = Mech::from_template(definition(section, "11")).unwrap();
         let controllers = unit.artemis_controllers().unwrap();
         assert_eq!(controllers.len(), 1);
         let controller = &controllers[0];
         assert_eq!(controller.weapon_indices.len(), 1);
         let index = controller.weapon_indices[0];
-        assert_eq!(
-            unit.loadout().unwrap().weapons[index].weapon,
-            BattleWeapon::Srm4
-        );
+        assert_eq!(unit.loadout().unwrap().weapons[index].weapon, Weapon::Srm4);
         assert!(unit.artemis_operational(index).unwrap());
         assert!(
             unit.critical_candidates(section)
@@ -63,8 +56,8 @@ fn artemis_links_damage_and_restoration() {
         let mut damaged = unit.clone();
         assert_eq!(
             damaged.destroy_critical(controller.location).unwrap(),
-            Some(BattleCriticalLoss::System {
-                system: BattleSystem::ArtemisIv
+            Some(CriticalLoss::System {
+                system: System::ArtemisIv
             })
         );
         assert!(!damaged.artemis_operational(index).unwrap());
@@ -75,7 +68,7 @@ fn artemis_links_damage_and_restoration() {
                 .unwrap()
                 .is_none()
         );
-        let restored: BattleUnit =
+        let restored: Mech =
             serde_json::from_value(serde_json::to_value(&damaged).unwrap()).unwrap();
         assert_eq!(
             restored.artemis_controllers().unwrap(),
@@ -83,7 +76,7 @@ fn artemis_links_damage_and_restoration() {
         );
         let mut state = serde_json::to_value(&unit).unwrap();
         state["flooded_sections"] = serde_json::json!([section]);
-        let flooded: BattleUnit = serde_json::from_value(state).unwrap();
+        let flooded: Mech = serde_json::from_value(state).unwrap();
         assert!(!flooded.artemis_operational(index).unwrap());
         assert!(unit.artemis_operational(999).is_err());
     }
@@ -92,12 +85,12 @@ fn artemis_links_damage_and_restoration() {
 /// Empty, zero and dangling links remain visible and cannot provide guidance.
 #[test]
 fn artemis_unassigned_links_and_mass() {
-    let standard = BattleUnit::from_template(
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+    let standard = Mech::from_template(
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     for link in ["-", "0", "1", "255"] {
-        let unit = BattleUnit::from_template(definition(BattleSection::CenterTorso, link)).unwrap();
+        let unit = Mech::from_template(definition(MechSection::CenterTorso, link)).unwrap();
         assert_eq!(
             unit.mass().unwrap().equipment,
             standard.mass().unwrap().equipment + 1024
@@ -107,20 +100,20 @@ fn artemis_unassigned_links_and_mass() {
         assert!(controller.weapon_indices.is_empty());
     }
     for link in ["bad", "-1", "256"] {
-        assert!(BattleUnit::from_template(definition(BattleSection::CenterTorso, link)).is_err());
+        assert!(Mech::from_template(definition(MechSection::CenterTorso, link)).is_err());
     }
 }
 
 /// An Artemis V controller weighs a ton and a half, half a ton more than Artemis IV.
 #[test]
 fn artemis_v_controller_mass() {
-    let standard = BattleUnit::from_template(definition(BattleSection::CenterTorso, "11")).unwrap();
+    let standard = Mech::from_template(definition(MechSection::CenterTorso, "11")).unwrap();
     for flag in ["ArtemisV_Tech", "AV"] {
-        let mut template = definition(BattleSection::CenterTorso, "11");
+        let mut template = definition(MechSection::CenterTorso, "11");
         let value = template.attributes.entry("specials".into()).or_default();
         value.push(' ');
         value.push_str(flag);
-        let unit = BattleUnit::from_template(template).unwrap();
+        let unit = Mech::from_template(template).unwrap();
         assert_eq!(
             unit.mass().unwrap().equipment,
             standard.mass().unwrap().equipment + 512,
@@ -132,7 +125,7 @@ fn artemis_v_controller_mass() {
 /// Head lookup does not hide a same-numbered center-torso launcher.
 #[test]
 fn head_controller_reports_both_matching_mounts() {
-    let mut template = definition(BattleSection::Head, "1");
+    let mut template = definition(MechSection::Head, "1");
     let launcher = CriticalDefinition {
         equipment: "IS.SRM-2".into(),
         data: "-".into(),
@@ -140,30 +133,30 @@ fn head_controller_reports_both_matching_mounts() {
     };
     let life_support = template
         .sections
-        .get_mut(&BattleSection::Head)
+        .get_mut(&MechSection::Head)
         .unwrap()
         .criticals
         .insert(0, launcher.clone())
         .unwrap();
     template
         .sections
-        .get_mut(&BattleSection::LeftTorso)
+        .get_mut(&MechSection::LeftTorso)
         .unwrap()
         .criticals
         .insert(8, life_support);
     let center = template
         .sections
-        .get_mut(&BattleSection::CenterTorso)
+        .get_mut(&MechSection::CenterTorso)
         .unwrap();
     let engine = center.criticals.insert(0, launcher).unwrap();
     let jet = center.criticals.insert(11, engine).unwrap();
     template
         .sections
-        .get_mut(&BattleSection::RightTorso)
+        .get_mut(&MechSection::RightTorso)
         .unwrap()
         .criticals
         .insert(6, jet);
-    let unit = BattleUnit::from_template(template).unwrap();
+    let unit = Mech::from_template(template).unwrap();
     let controller = unit.artemis_controllers().unwrap().remove(0);
     assert_eq!(controller.weapon_indices.len(), 2);
     for index in controller.weapon_indices {
@@ -174,14 +167,14 @@ fn head_controller_reports_both_matching_mounts() {
 /// The ammunition bonus shifts the missile table by two, capped at twelve, with ordinary packet grouping.
 #[test]
 fn artemis_missile_tables_and_existing_archer() {
-    for &weapon in BattleWeapon::ALL
+    for &weapon in Weapon::ALL
         .iter()
         .filter(|weapon| weapon.profile().missiles > 0)
     {
         for roll in 2..=12 {
             assert_eq!(
                 weapon
-                    .damage_groups_for_ammunition(BattleAmmunitionMode::Artemis, Some(roll), 8.0)
+                    .damage_groups_for_ammunition(AmmunitionMode::Artemis, Some(roll), 8.0)
                     .unwrap(),
                 weapon
                     .damage_groups_at_range(Some((roll + 2).min(12)), 8.0)
@@ -190,19 +183,19 @@ fn artemis_missile_tables_and_existing_archer() {
         }
     }
     assert!(
-        BattleWeapon::MediumLaser
-            .damage_groups_for_ammunition(BattleAmmunitionMode::Artemis, None, 1.0)
+        Weapon::MediumLaser
+            .damage_groups_for_ammunition(AmmunitionMode::Artemis, None, 1.0)
             .is_err()
     );
     let source =
         std::fs::read_to_string(crate::support::repository_root().join("game/mechs/ARC-5R.toml"))
             .unwrap();
-    let unit = BattleUnit::from_template(BattleTemplate::parse("test", &source).unwrap()).unwrap();
+    let unit = Mech::from_template(MechTemplate::parse("test", &source).unwrap()).unwrap();
     for (index, mount) in unit.loadout().unwrap().weapons.iter().enumerate() {
-        if mount.weapon == BattleWeapon::Lrm15 {
+        if mount.weapon == Weapon::Lrm15 {
             assert_eq!(
                 unit.ammunition_mode(index).unwrap(),
-                BattleAmmunitionMode::Artemis
+                AmmunitionMode::Artemis
             );
             assert!(unit.weapon_readiness(index).unwrap().ammunition > 0);
         }
@@ -221,7 +214,7 @@ fn artemis_missile_tables_and_existing_archer() {
     damaged.destroy_critical(controller.location).unwrap();
     assert_eq!(
         damaged.ammunition_mode(index).unwrap(),
-        BattleAmmunitionMode::Normal
+        AmmunitionMode::Normal
     );
     assert_eq!(damaged.weapon_readiness(index).unwrap().ammunition, 0);
 }

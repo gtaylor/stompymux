@@ -6,37 +6,37 @@ use serde::Serialize;
 
 /// A completed launch attempt; impact effects belong to the persistent queued round.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct BattleArtilleryLaunchReport {
+pub struct ArtilleryLaunchReport {
     pub shooter: ObjectId,
     pub map: ObjectId,
     pub coordinate: HexCoordinate,
     pub weapon_index: usize,
-    pub aim: BattleArtilleryAim,
+    pub aim: ArtilleryAim,
     pub roll: u8,
     pub hit: bool,
     pub launched: bool,
     pub jammed: bool,
     pub loader_destroyed: bool,
     pub propellant_roll: Option<u8>,
-    pub expenditure: BattleWeaponUse,
-    pub misload: Option<BattleLaunchMisload>,
+    pub expenditure: WeaponUse,
+    pub misload: Option<LaunchMisload>,
     pub ammunition_warning: Option<String>,
     /// Cocoon opening feedback from the shared launch stage.
-    pub launch_notices: Vec<BattleNotice>,
+    pub launch_notices: Vec<Notice>,
     pub queued_shot: Option<u32>,
 }
 
-impl BattleArtilleryLaunchReport {
+impl ArtilleryLaunchReport {
     /// Immediate shooter notices, excluding delayed impact feedback.
-    pub fn notices(&self) -> Vec<BattleNotice> {
+    pub fn notices(&self) -> Vec<Notice> {
         let mut notices = self
             .misload
             .as_ref()
-            .map(BattleLaunchMisload::notices)
+            .map(LaunchMisload::notices)
             .unwrap_or_default();
         notices.extend(self.launch_notices.clone());
         if let Some(text) = &self.ammunition_warning {
-            notices.push(BattleNotice {
+            notices.push(Notice {
                 unit: self.shooter,
                 text: text.clone(),
             });
@@ -52,8 +52,8 @@ pub(super) fn resolve_in_action(
     shooter: ObjectId,
     pilot: ObjectId,
     index: usize,
-    requested: BattleFireTarget,
-) -> Result<super::firing::BattleFiringAction> {
+    requested: FireTarget,
+) -> Result<super::firing::FiringAction> {
     super::combat_operator::controlled(world, shooter, pilot)?;
     let PreparedArtillery {
         map,
@@ -64,10 +64,10 @@ pub(super) fn resolve_in_action(
         distance,
         aim,
     } = prepare(world, config, shooter, pilot, index, requested)?;
-    let rules = BattleShotRules::configured(&config.battletech, false);
-    let mode = BattleArtilleryMode::from_ammunition(ammunition)?;
+    let rules = ShotRules::configured(&config.battletech, false);
+    let mode = ArtilleryMode::from_ammunition(ammunition)?;
     let character_shooter = world.objects[&shooter].flags.contains(Flag::InCharacter);
-    let fall = BattleFallRules {
+    let fall = FallRules {
         vehicle_impact: rules.vehicle_impact,
         stacking: rules.stacking,
         stagger: rules.stagger,
@@ -110,7 +110,7 @@ pub(super) fn resolve_in_action(
             distance,
             target_number: Some(aim.target_number),
             streak_confused: false,
-            glancing: BattleGlancingMode::Disabled,
+            glancing: GlancingMode::Disabled,
             fall,
             character_shooter,
         },
@@ -121,12 +121,12 @@ pub(super) fn resolve_in_action(
             &mut candidate,
             map,
             shooter,
-            BattleArtilleryFlight::new(origin, coordinate, weapon, mode, hit)?,
+            ArtilleryFlight::new(origin, coordinate, weapon, mode, hit)?,
         )?)
     } else {
         None
     };
-    let report = BattleArtilleryLaunchReport {
+    let report = ArtilleryLaunchReport {
         shooter,
         map,
         coordinate,
@@ -174,7 +174,7 @@ pub(super) fn resolve_in_action(
     };
     candidate.btech.validate_action(&candidate)?;
     *world = candidate;
-    Ok(super::firing::BattleFiringAction {
+    Ok(super::firing::FiringAction {
         pilot_notices: private,
         report: report.into(),
         messages,
@@ -186,10 +186,10 @@ pub(super) struct PreparedArtillery {
     pub map: ObjectId,
     pub coordinate: HexCoordinate,
     pub origin: HexCoordinate,
-    pub weapon: BattleWeapon,
-    pub ammunition: BattleAmmunitionMode,
+    pub weapon: Weapon,
+    pub ammunition: AmmunitionMode,
     pub distance: f64,
-    pub aim: BattleArtilleryAim,
+    pub aim: ArtilleryAim,
 }
 
 /// Resolve the current observer/coordinate and calculate artillery aim before launch effects.
@@ -199,16 +199,16 @@ pub(super) fn prepare(
     shooter: ObjectId,
     pilot: ObjectId,
     index: usize,
-    requested: BattleFireTarget,
+    requested: FireTarget,
 ) -> Result<PreparedArtillery> {
     let operator = super::combat_operator::controlled(world, shooter, pilot)?;
     let vehicle = world.btech.vehicles().contains_key(&shooter);
     ensure!(
-        !matches!(requested, BattleFireTarget::Unit { .. }),
+        !matches!(requested, FireTarget::Unit { .. }),
         "You can only target hexes with this kind of artillery."
     );
     let explicit_hex = match requested {
-        BattleFireTarget::Hex { coordinate } => Some(coordinate),
+        FireTarget::Hex { coordinate } => Some(coordinate),
         _ => None,
     };
     let (position, motion, weapon, ammunition, spotter, adjustment) = if vehicle {
@@ -239,8 +239,8 @@ pub(super) fn prepare(
         )
     };
     let (target_lock, hex_lock) = match operator.source.selection(world) {
-        Some(BattleTargetSelection::Unit(lock)) => (Some(lock), None),
-        Some(BattleTargetSelection::Hex(lock)) => (None, Some(lock)),
+        Some(TargetSelection::Unit(lock)) => (Some(lock), None),
+        Some(TargetSelection::Hex(lock)) => (None, Some(lock)),
         None => (None, None),
     };
     let position = position.context("Shooter is not placed")?;
@@ -267,12 +267,12 @@ pub(super) fn prepare(
     } else if let Some(id) = observer {
         let selection = super::targeting::selection(world, id);
         ensure!(
-            !matches!(selection, Some(BattleTargetSelection::Unit(_))),
+            !matches!(selection, Some(TargetSelection::Unit(_))),
             "You can only target hexes with this kind of artillery."
         );
         let coordinate = selection
             .and_then(|selection| match selection {
-                BattleTargetSelection::Hex(lock) => Some(lock.hex),
+                TargetSelection::Hex(lock) => Some(lock.hex),
                 _ => None,
             })
             .context("Your spotter has no target set!")?;
@@ -306,7 +306,7 @@ pub(super) fn prepare(
         "That hex target is not in your direct line of sight and you do not have a spotter set!!"
     );
     let bearing = motion.point.bearing(coordinate.center())?.unwrap_or(180.0);
-    let rules = BattleShotRules::configured(&config.battletech, false);
+    let rules = ShotRules::configured(&config.battletech, false);
     ensure!(
         observer.is_some()
             || rules.aim.override_weapon_arcs
@@ -324,9 +324,9 @@ pub(super) fn prepare(
         "Target is outside weapon arc"
     );
     let observer = if let Some(id) = observer {
-        BattleArtilleryObserver::Spotting(super::skills::unit_spotting_target(world, id)?)
+        ArtilleryObserver::Spotting(super::skills::unit_spotting_target(world, id)?)
     } else {
-        BattleArtilleryObserver::Unassisted
+        ArtilleryObserver::Unassisted
     };
     let water_line = i32::from(source_tile.water_line());
     let submerged = if vehicle {
@@ -336,12 +336,12 @@ pub(super) fn prepare(
         let elevation = unit.elevation_level(source_tile);
         elevation < water_line - 1
             || (elevation < water_line
-                && (unit.posture() == BattlePosture::Prone
+                && (unit.posture() == Posture::Prone
                     || unit
                         .chassis()
                         .is_leg(unit.loadout()?.weapons[index].criticals[0].section)))
     };
-    let aim = weapon.artillery_aim(BattleArtilleryAimInput {
+    let aim = weapon.artillery_aim(ArtilleryAimInput {
         distance,
         extended_range: rules.aim.extended_ranges,
         submerged,

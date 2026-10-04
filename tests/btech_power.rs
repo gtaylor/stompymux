@@ -2,7 +2,7 @@
 use crate::support;
 use sqlx::{Connection, SqliteConnection};
 use stompymux_rs::{
-    BattlePower, BattleTemplate, Config, Kind, MapAsset, ObjectId, Scripts, ShutdownRequest, World,
+    Config, Kind, MapAsset, MechTemplate, ObjectId, Power, Scripts, ShutdownRequest, World,
     advance_battle_units, assign_battle_pilot, create_battle_map, create_battle_unit, persistence,
     place_battle_unit, remove_battle_unit, start_battle_unit, stop_battle_unit,
 };
@@ -26,7 +26,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
     create_battle_unit(
         &mut world,
         id,
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
@@ -54,7 +54,7 @@ async fn startup_emits_six_stages_and_resumes_only_committed_seconds() {
             world = persistence::load(&config.database()).await.unwrap();
             assert_eq!(
                 world.btech.constructed_units()[&id].power(),
-                BattlePower::Starting { remaining: 18 }
+                Power::Starting { remaining: 18 }
             );
         }
     }
@@ -69,23 +69,17 @@ async fn startup_emits_six_stages_and_resumes_only_committed_seconds() {
             "All systems operational!"
         ]
     );
-    assert_eq!(
-        world.btech.constructed_units()[&id].power(),
-        BattlePower::Running
-    );
+    assert_eq!(world.btech.constructed_units()[&id].power(), Power::Running);
     assert!(advance_battle_units(&mut world, 0).is_empty());
     assert!(remove_battle_unit(&mut world, id, ObjectId(config.start())).is_err());
     stop_battle_unit(
         &mut world,
         id,
         ObjectId(1),
-        stompymux_rs::BattleMovementRules::STANDARD.fall,
+        stompymux_rs::MovementRules::STANDARD.fall,
     )
     .unwrap();
-    assert_eq!(
-        world.btech.constructed_units()[&id].power(),
-        BattlePower::Off
-    );
+    assert_eq!(world.btech.constructed_units()[&id].power(), Power::Off);
     assert_eq!(world.btech.constructed_units()[&id].pilot(), None);
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
@@ -120,7 +114,7 @@ async fn abort_and_lua_rollback_cancel_pending_startup_and_output() {
     }
     assert_eq!(
         scripts.world().btech.constructed_units()[&id].power(),
-        BattlePower::Off
+        Power::Off
     );
     assert_eq!(scripts.world().btech.constructed_units()[&id].pilot(), None);
 }
@@ -143,7 +137,7 @@ async fn override_requires_wizard_and_corrupt_countdowns_fail_loading() {
     assert!(text.contains("Insufficient access"), "{text}");
     assert_eq!(
         scripts.world().btech.constructed_units()[&id].power(),
-        BattlePower::Off
+        Power::Off
     );
     let text = support::run_text(&scripts, &config, ObjectId(2), 2, "startup");
     assert!(text.contains("Startup Cycle"), "{text}");
@@ -194,7 +188,7 @@ async fn server_tick_retries_failed_countdowns_without_publishing_completion() {
         assert!(!text.contains("All systems operational"));
         sqlx::query("DROP TRIGGER deny_tick").execute(&mut sql).await.unwrap();
         client.until_heartbeats("All systems operational!", &mut heartbeats, 20).await;
-        assert_eq!(persistence::load(&config.database()).await.unwrap().btech.constructed_units()[&id].power(),BattlePower::Running);
+        assert_eq!(persistence::load(&config.database()).await.unwrap().btech.constructed_units()[&id].power(),Power::Running);
         assert_eq!(persistence::load(&config.database()).await.unwrap().btech.constructed_units()[&id].last_startup(), 1);
         let before_motion=persistence::load(&config.database()).await.unwrap().btech.constructed_units()[&id].motion().unwrap();
         client.send("speed 10.75").await;
@@ -206,7 +200,7 @@ async fn server_tick_retries_failed_countdowns_without_publishing_completion() {
         client.send("shutdown").await;
         client.until("All systems shut down.").await;
         let loaded=persistence::load(&config.database()).await.unwrap();
-        assert_eq!(loaded.btech.constructed_units()[&id].power(),BattlePower::Off);
+        assert_eq!(loaded.btech.constructed_units()[&id].power(),Power::Off);
         assert_eq!(loaded.btech.constructed_units()[&id].pilot(),None);
         shutdown.send(ShutdownRequest::Sigterm).unwrap();
         task.await.unwrap().unwrap();
@@ -244,7 +238,7 @@ async fn startup_heat_limit_is_strict_durable_and_cannot_be_overridden() {
             }
             assert_eq!(
                 world.btech.constructed_units()[&id].power(),
-                BattlePower::Starting {
+                Power::Starting {
                     remaining: if fast { 5 } else { 30 }
                 }
             );
@@ -260,16 +254,14 @@ async fn startup_heat_limit_is_strict_durable_and_cannot_be_overridden() {
 
 #[tokio::test]
 async fn idle_map_smoke_ticks_retry_failed_saves_and_expire() {
-    use stompymux_rs::{
-        BattleDecoration, DecorationKind, HexCoordinate, Terrain, set_map_decoration,
-    };
+    use stompymux_rs::{Decoration, DecorationKind, HexCoordinate, Terrain, set_map_decoration};
     tokio::task::LocalSet::new().run_until(async {
         let (_dir, config, mut world) = support::isolated_world().await;
         let map = world.create(&config, "Smoke field".into(), Kind::Room);
         create_battle_map(&mut world, map, "smoke.map", MapAsset::from_cells("1 1\n\"2\n").unwrap()).unwrap();
         support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
         let coordinate = HexCoordinate { x: 0, y: 0 };
-        let smoke = BattleDecoration::new(DecorationKind::Smoke, 2, None);
+        let smoke = Decoration::new(DecorationKind::Smoke, 2, None);
         set_map_decoration(&mut world, map, coordinate, Some(smoke)).unwrap();
         persistence::save(&config.database(), &world).await.unwrap();
         let mut sql = SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database()).foreign_keys(false)).await.unwrap();
@@ -279,7 +271,7 @@ async fn idle_map_smoke_ticks_retry_failed_saves_and_expire() {
         // The first tick only stores the clock, since the smoke's expiry deadline is fixed;
         // the expiry tick that must delete the row keeps failing.
         let loaded = persistence::load(&config.database()).await.unwrap();
-        assert_eq!(loaded.btech.maps()[&map].decoration(coordinate).unwrap(), Some(BattleDecoration { remaining: 1, ..smoke }));
+        assert_eq!(loaded.btech.maps()[&map].decoration(coordinate).unwrap(), Some(Decoration { remaining: 1, ..smoke }));
         sqlx::raw_sql("DROP TRIGGER deny_smoke_update; DROP TRIGGER deny_smoke_delete;").execute(&mut sql).await.unwrap();
         let loaded = heartbeats.until_saved(&config, 20, |loaded| loaded.btech.maps()[&map].decoration(coordinate).unwrap().is_none()).await;
         assert_eq!(loaded.btech.maps()[&map].hex(0, 0).unwrap().terrain(), Terrain::HeavyForest);
@@ -290,16 +282,14 @@ async fn idle_map_smoke_ticks_retry_failed_saves_and_expire() {
 
 #[tokio::test]
 async fn idle_map_fire_burnout_retries_random_state_save_failure() {
-    use stompymux_rs::{
-        BattleDecoration, DecorationKind, HexCoordinate, Terrain, set_map_decoration,
-    };
+    use stompymux_rs::{Decoration, DecorationKind, HexCoordinate, Terrain, set_map_decoration};
     tokio::task::LocalSet::new().run_until(async {
         let (_dir, config, mut world) = support::isolated_world().await;
         let map = world.create(&config, "Burnout field".into(), Kind::Room);
         create_battle_map(&mut world, map, "fire.map", MapAsset::from_cells("1 1\n`2\n").unwrap()).unwrap();
         support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
         let coordinate = HexCoordinate { x: 0, y: 0 };
-        set_map_decoration(&mut world, map, coordinate, Some(BattleDecoration::new(DecorationKind::Fire, 60, None))).unwrap();
+        set_map_decoration(&mut world, map, coordinate, Some(Decoration::new(DecorationKind::Fire, 60, None))).unwrap();
         // Resume the final burnout phase of an already spreading fire.
         world.btech
             .rewrite_map_record(map, |record| {
@@ -324,13 +314,13 @@ async fn idle_map_fire_burnout_retries_random_state_save_failure() {
 
 #[tokio::test]
 async fn idle_building_repair_retries_failed_world_save() {
-    use stompymux_rs::{BattleBuildingState, set_building_state};
+    use stompymux_rs::{BuildingState, set_building_state};
     tokio::task::LocalSet::new().run_until(async {
         let (_dir, config, mut world) = support::isolated_world().await;
         let map = world.create(&config, "Repairing hangar".into(), Kind::Room);
         create_battle_map(&mut world, map, "inside.map", MapAsset::from_cells("1 1\n.0\n").unwrap()).unwrap();
         support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
-        set_building_state(&mut world, map, BattleBuildingState { integrity: 9, maximum_integrity: 10, flags: 0, regeneration: 1 }).unwrap();
+        set_building_state(&mut world, map, BuildingState { integrity: 9, maximum_integrity: 10, flags: 0, regeneration: 1 }).unwrap();
         // Resume one committed second before the final repair of an otherwise idle map.
         world.btech
             .rewrite_map_record(map, |record| {
@@ -357,7 +347,7 @@ async fn shutdown_inferno_expiry_retries_failed_save() {
     use stompymux_rs::apply_inferno_burn;
     tokio::task::LocalSet::new().run_until(async {
         let (_dir,config,mut world,id) = fixture().await;
-        assert_eq!(world.btech.constructed_units()[&id].power(),BattlePower::Off);
+        assert_eq!(world.btech.constructed_units()[&id].power(),Power::Off);
         apply_inferno_burn(&mut world,id,1).unwrap();
         persistence::save(&config.database(),&world).await.unwrap();
         let expected = world.btech.clone();

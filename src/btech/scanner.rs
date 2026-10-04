@@ -1,14 +1,12 @@
 //! Automatic scans: every running unit perceives its map each tick and commits contact changes.
-use super::{
-    BattleContactRules, BattleContactTransition, BattlePerception, BattlePower, BattleUnit,
-};
+use super::{ContactRules, ContactTransition, Mech, Perception, Power};
 use crate::{Flag, Kind, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 
 /// Scenario-owned signature facts: team, hiding and scenario lighting.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BattleUnitSignature {
+pub struct UnitSignature {
     pub team: i32,
     pub hidden: bool,
     pub illuminated: bool,
@@ -16,7 +14,7 @@ pub struct BattleUnitSignature {
 
 /// One acquisition/loss transition, staged for cockpit notification after persistence succeeds.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleContactEvent {
+pub struct ContactEvent {
     /// Identification captured before a lost observation is removed.
     pub identified: bool,
     pub observer: ObjectId,
@@ -25,13 +23,13 @@ pub struct BattleContactEvent {
     /// This contact loss also canceled the observer's selected target.
     pub lock_lost: bool,
     /// Accepted perception award diagnostic, published with the contact transaction.
-    pub experience_message: Option<super::BattleChannelMessage>,
+    pub experience_message: Option<super::DiagnosticMessage>,
 }
 
-impl BattleContactEvent {
+impl ContactEvent {
     /// Capture cockpit feedback without changing acquisition or lock state.
     /// Observer units suppress routine contact chatter but still announce a lost weapon lock.
-    pub fn notice(&self, world: &World) -> Option<super::BattleNotice> {
+    pub fn notice(&self, world: &World) -> Option<super::Notice> {
         let unit = scanner_unit(world, self.observer)?;
         let mut lines = Vec::new();
         if !unit.observer
@@ -45,7 +43,7 @@ impl BattleContactEvent {
         if lines.is_empty() {
             return None;
         }
-        Some(super::BattleNotice {
+        Some(super::Notice {
             unit: self.observer,
             text: lines.join("\r\n"),
         })
@@ -55,7 +53,7 @@ impl BattleContactEvent {
     fn routine_notice(&self, world: &World) -> Option<String> {
         let observer = scanner_unit(world, self.observer)?;
         let target = scanner_unit(world, self.target)?;
-        if target.power != BattlePower::Running && !observer.autocon_shutdown {
+        if target.power != Power::Running && !observer.autocon_shutdown {
             return None;
         }
         let clear = self.identified;
@@ -71,12 +69,12 @@ impl BattleContactEvent {
             .contact_arc(observer.heading?, range.bearing.unwrap_or(180.0))
             .ok()?;
         let arc = match arc {
-            super::BattleContactArc::Front => "Forward",
-            super::BattleContactArc::Right if observer.vehicle => "Right Side",
-            super::BattleContactArc::Right => "Right Arm",
-            super::BattleContactArc::Left if observer.vehicle => "Left Side",
-            super::BattleContactArc::Left => "Left Arm",
-            super::BattleContactArc::Rear => "Rear",
+            super::ContactArc::Front => "Forward",
+            super::ContactArc::Right if observer.vehicle => "Right Side",
+            super::ContactArc::Right => "Right Arm",
+            super::ContactArc::Left if observer.vehicle => "Left Side",
+            super::ContactArc::Left => "Left Arm",
+            super::ContactArc::Rear => "Rear",
         };
         let name = if clear {
             crate::text::plain(target.name)
@@ -112,9 +110,9 @@ pub(super) fn default_perception() -> i16 {
     6
 }
 
-impl BattleUnit {
+impl Mech {
     /// Saved team and target visibility facts.
-    pub fn signature(&self) -> BattleUnitSignature {
+    pub fn signature(&self) -> UnitSignature {
         self.signature
     }
     /// Perception target captured at startup completion, used throughout that engine run.
@@ -123,9 +121,9 @@ impl BattleUnit {
     }
 }
 
-impl super::BattleVehicle {
+impl super::Vehicle {
     /// Saved team, hiding and scenario illumination facts for vehicle observations.
-    pub fn signature(&self) -> BattleUnitSignature {
+    pub fn signature(&self) -> UnitSignature {
         self.signature
     }
 
@@ -136,11 +134,7 @@ impl super::BattleVehicle {
 }
 
 /// Trusted scenario edit; caller owns administrative authority and the commit boundary.
-pub fn set_unit_signature(
-    world: &mut World,
-    id: ObjectId,
-    signature: BattleUnitSignature,
-) -> Result<()> {
+pub fn set_unit_signature(world: &mut World, id: ObjectId, signature: UnitSignature) -> Result<()> {
     ensure!(world.objects.get(&id).is_some_and(|object| object.kind == Kind::Thing && !object.flags.contains(Flag::Going)), "Unit must be a live thing");
     let unit = world
         .btech
@@ -158,20 +152,20 @@ pub fn set_unit_signature(
 
 /// Read-only sensor and display facts shared by the supported construction classes.
 pub(super) struct ScannerUnit<'a> {
-    pub(super) position: Option<super::BattlePosition>,
-    pub(super) power: BattlePower,
-    pub(super) signature: BattleUnitSignature,
+    pub(super) position: Option<super::Position>,
+    pub(super) power: Power,
+    pub(super) signature: UnitSignature,
     pub(super) perception: i16,
     pub(super) fired_recently: bool,
-    pub(super) contacts: &'a std::collections::BTreeMap<ObjectId, super::BattleContact>,
+    pub(super) contacts: &'a std::collections::BTreeMap<ObjectId, super::Contact>,
     pub(super) selected: Option<ObjectId>,
     pub(super) heading: Option<f64>,
-    pub(super) facing: super::BattleFacing,
+    pub(super) facing: super::Facing,
     pub(super) name: &'a str,
     label_override: Option<&'a str>,
-    pub(super) brief: super::BattleBriefSettings,
+    pub(super) brief: super::BriefSettings,
     pub(super) observer: bool,
-    pub(super) visibility: super::BattleVisibility,
+    pub(super) visibility: super::Visibility,
     pub(super) concealed: bool,
     pub(super) radar: bool,
     pub(super) autocon_shutdown: bool,
@@ -298,7 +292,7 @@ pub fn contact_observers(world: &World) -> Vec<ObjectId> {
         .copied()
         .filter(|id| {
             let unit = scanner_unit(world, *id).expect("known construction");
-            unit.power == BattlePower::Running
+            unit.power == Power::Running
                 && available(world, *id)
                 && ids.iter().any(|target| {
                     let other = scanner_unit(world, *target).expect("known construction");
@@ -315,10 +309,7 @@ pub fn contact_observers(world: &World) -> Vec<ObjectId> {
 /// Perception is resolved first against the unchanged world, sharing one observer profile and
 /// lighting cache per observer. Commits follow in the same order; nothing they change (contacts,
 /// locks, dice, experience) feeds back into perception.
-pub fn refresh_contacts(
-    world: &mut World,
-    observers: &[ObjectId],
-) -> Result<Vec<BattleContactEvent>> {
+pub fn refresh_contacts(world: &mut World, observers: &[ObjectId]) -> Result<Vec<ContactEvent>> {
     let observations = observe(world, observers)?;
     world.attempt(|world| {
         let mut events = Vec::new();
@@ -336,7 +327,7 @@ pub fn refresh_contacts(
                     observer,
                     target,
                     perception,
-                    BattleContactRules {
+                    ContactRules {
                         hidden: signature.hidden,
                         hostile: observation.team != signature.team,
                         perception: observation.perception,
@@ -345,26 +336,26 @@ pub fn refresh_contacts(
                 )?;
                 if !matches!(
                     update.transition,
-                    BattleContactTransition::Acquired | BattleContactTransition::Lost
+                    ContactTransition::Acquired | ContactTransition::Lost
                 ) {
                     continue;
                 }
-                let identified = if update.transition == BattleContactTransition::Lost {
+                let identified = if update.transition == ContactTransition::Lost {
                     previously_identified
                 } else {
                     update.contact.is_some_and(|contact| contact.identified)
                 };
-                let experience_message = if update.transition == BattleContactTransition::Acquired {
+                let experience_message = if update.transition == ContactTransition::Acquired {
                     acquisition_experience(world, observer, target)?
                 } else {
                     None
                 };
-                events.push(BattleContactEvent {
+                events.push(ContactEvent {
                     identified,
                     observer,
                     target,
-                    acquired: update.transition == BattleContactTransition::Acquired,
-                    lock_lost: selected && update.transition == BattleContactTransition::Lost,
+                    acquired: update.transition == ContactTransition::Acquired,
+                    lock_lost: selected && update.transition == ContactTransition::Lost,
                     experience_message,
                 });
             }
@@ -378,7 +369,7 @@ struct Observation {
     observer: ObjectId,
     team: i32,
     perception: i16,
-    targets: Vec<(ObjectId, BattleUnitSignature, Option<BattlePerception>)>,
+    targets: Vec<(ObjectId, UnitSignature, Option<Perception>)>,
 }
 
 /// Perceive every same-map target for each running, placed observer in stable object order.
@@ -393,7 +384,7 @@ fn observe(world: &World, observers: &[ObjectId]) -> Result<Vec<Observation>> {
         let Some(unit) = scanner_unit(world, observer) else {
             continue;
         };
-        if unit.power != BattlePower::Running || !available(world, observer) {
+        if unit.power != Power::Running || !available(world, observer) {
             continue;
         }
         let map = unit.position.expect("available observer").map;
@@ -435,7 +426,7 @@ fn acquisition_experience(
     world: &mut World,
     observer: ObjectId,
     target: ObjectId,
-) -> Result<Option<super::BattleChannelMessage>> {
+) -> Result<Option<super::DiagnosticMessage>> {
     if [observer, target]
         .iter()
         .any(|id| !world.objects[id].flags.contains(Flag::InCharacter))
@@ -474,7 +465,7 @@ fn acquisition_experience(
 pub(crate) fn notify_contact(
     scripts: &crate::Scripts,
     config: &crate::Config,
-    event: BattleContactEvent,
+    event: ContactEvent,
 ) -> Result<()> {
     if let Some(message) = &event.experience_message {
         super::channels::publish(scripts, config, std::slice::from_ref(message))?;

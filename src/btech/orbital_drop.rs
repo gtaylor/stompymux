@@ -9,7 +9,7 @@ pub const ORBITAL_DROP_ALTITUDE: i32 = 300;
 /// Positive cocoon integrity shields damage; compensating jets continue the controlled descent.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "state", rename_all = "snake_case")]
-pub enum BattleDropProtection {
+pub enum DropProtection {
     Cocoon { integrity: u32 },
     JumpJets,
     Breached,
@@ -18,9 +18,9 @@ pub enum BattleDropProtection {
 /// Restartable descent data, independent of Mech or vehicle anatomy and horizontal placement.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(try_from = "DropRecord")]
-pub struct BattleOrbitalDrop {
+pub struct OrbitalDrop {
     elevation: i32,
-    protection: BattleDropProtection,
+    protection: DropProtection,
 }
 
 /// Validate positive shielding before a saved drop enters the simulation.
@@ -28,18 +28,15 @@ pub struct BattleOrbitalDrop {
 #[serde(deny_unknown_fields)]
 struct DropRecord {
     elevation: i32,
-    protection: BattleDropProtection,
+    protection: DropProtection,
 }
 
-impl TryFrom<DropRecord> for BattleOrbitalDrop {
+impl TryFrom<DropRecord> for OrbitalDrop {
     type Error = anyhow::Error;
 
     fn try_from(record: DropRecord) -> Result<Self> {
         ensure!(
-            !matches!(
-                record.protection,
-                BattleDropProtection::Cocoon { integrity: 0 }
-            ),
+            !matches!(record.protection, DropProtection::Cocoon { integrity: 0 }),
             "An intact cocoon requires positive integrity"
         );
         Ok(Self {
@@ -51,13 +48,13 @@ impl TryFrom<DropRecord> for BattleOrbitalDrop {
 
 /// Terrain geometry selected by the enclosing unit's bridge, ice and hover rules.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct BattleDropSurface {
+pub struct DropSurface {
     pub upper: i32,
     pub lower: i32,
     pub landing: i32,
 }
 
-impl BattleDropSurface {
+impl DropSurface {
     /// The drop event subtracts the selected support level and then the landing level.
     pub fn height_above_surface(self, elevation: i32) -> i64 {
         i64::from(elevation)
@@ -73,7 +70,7 @@ impl BattleDropSurface {
 /// The host removes a finished cursor and publishes landing or fall effects in the same transaction.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[must_use = "Resolve touchdown or remove an inactive drop in the enclosing transaction"]
-pub enum BattleOrbitalDropStep {
+pub enum OrbitalDropStep {
     Descending,
     Touchdown { surface: i32 },
     Inactive,
@@ -82,7 +79,7 @@ pub enum BattleOrbitalDropStep {
 /// A breached cocoon either yields to jump jets or hands control to the shared forced-descent service.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleDropBreach {
+pub enum DropBreach {
     JumpJets,
     FreeFall,
     AtSurface,
@@ -91,19 +88,19 @@ pub enum BattleDropBreach {
 /// An intercepted packet is absorbed in full, including damage beyond the remaining integrity.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[must_use = "Apply material damage only when the packet was not intercepted"]
-pub struct BattleDropInterception {
+pub struct DropInterception {
     pub intercepted: bool,
-    pub breach: Option<BattleDropBreach>,
+    pub breach: Option<DropBreach>,
 }
 
-impl BattleOrbitalDrop {
+impl OrbitalDrop {
     /// Construction uses current mass in 1/1024-ton units, rounded down to five-ton blocks plus one.
     pub fn new(mass: i64, elevation: i32) -> Result<Self> {
         ensure!(mass >= 0, "Orbital-drop mass cannot be negative");
         let integrity = u32::try_from(mass / 5120 + 1)?;
         Ok(Self {
             elevation,
-            protection: BattleDropProtection::Cocoon { integrity },
+            protection: DropProtection::Cocoon { integrity },
         })
     }
 
@@ -118,13 +115,13 @@ impl BattleOrbitalDrop {
     }
 
     /// Durable protection state; a preference or weapon mode cannot manufacture a cocoon.
-    pub fn protection(self) -> BattleDropProtection {
+    pub fn protection(self) -> DropProtection {
         self.protection
     }
 
     /// Only an intact cocoon receives the target's orbital-drop firing bonus or an interception roll.
     pub fn protected(self) -> bool {
-        matches!(self.protection, BattleDropProtection::Cocoon { .. })
+        matches!(self.protection, DropProtection::Cocoon { .. })
     }
 
     /// An intact cocoon makes its descending target two points easier to hit.
@@ -133,12 +130,12 @@ impl BattleOrbitalDrop {
     }
 
     /// One committed second; geometry is refreshed by the host as altitude changes.
-    pub fn advance(&mut self, surface: BattleDropSurface) -> Result<BattleOrbitalDropStep> {
-        if self.protection == BattleDropProtection::Breached {
-            return Ok(BattleOrbitalDropStep::Inactive);
+    pub fn advance(&mut self, surface: DropSurface) -> Result<OrbitalDropStep> {
+        if self.protection == DropProtection::Breached {
+            return Ok(OrbitalDropStep::Inactive);
         }
         if surface.height_above_surface(self.elevation) <= 2 {
-            return Ok(BattleOrbitalDropStep::Touchdown {
+            return Ok(OrbitalDropStep::Touchdown {
                 surface: surface.landing,
             });
         }
@@ -146,7 +143,7 @@ impl BattleOrbitalDrop {
             .elevation
             .checked_sub(2)
             .ok_or_else(|| anyhow::anyhow!("Drop altitude overflow"))?;
-        Ok(BattleOrbitalDropStep::Descending)
+        Ok(OrbitalDropStep::Descending)
     }
 
     /// A supplied 2d6 roll greater than eight diverts the complete incoming packet into the cocoon.
@@ -157,67 +154,67 @@ impl BattleOrbitalDrop {
         roll: u8,
         surface: i32,
         jump_jets: bool,
-    ) -> Result<BattleDropInterception> {
-        let BattleDropProtection::Cocoon { integrity } = self.protection else {
-            return Ok(BattleDropInterception {
+    ) -> Result<DropInterception> {
+        let DropProtection::Cocoon { integrity } = self.protection else {
+            return Ok(DropInterception {
                 intercepted: false,
                 breach: None,
             });
         };
         ensure!((2..=12).contains(&roll), "Invalid cocoon interception roll");
         if roll <= 8 {
-            return Ok(BattleDropInterception {
+            return Ok(DropInterception {
                 intercepted: false,
                 breach: None,
             });
         }
         let remaining = integrity.saturating_sub(damage);
         let breach = if remaining > 0 {
-            self.protection = BattleDropProtection::Cocoon {
+            self.protection = DropProtection::Cocoon {
                 integrity: remaining,
             };
             None
         } else {
             Some(self.breach(surface, jump_jets))
         };
-        Ok(BattleDropInterception {
+        Ok(DropInterception {
             intercepted: true,
             breach,
         })
     }
 
     /// Firing opens protection while above the surface, including loss of jet compensation later on.
-    pub fn open_for_fire(&mut self, surface: i32, jump_jets: bool) -> Option<BattleDropBreach> {
-        if self.protection == BattleDropProtection::Breached || self.elevation <= surface {
+    pub fn open_for_fire(&mut self, surface: i32, jump_jets: bool) -> Option<DropBreach> {
+        if self.protection == DropProtection::Breached || self.elevation <= surface {
             return None;
         }
         Some(self.breach(surface, jump_jets))
     }
 
     /// Select the shared continuation after interception or firing breaches the cocoon.
-    fn breach(&mut self, surface: i32, jump_jets: bool) -> BattleDropBreach {
+    fn breach(&mut self, surface: i32, jump_jets: bool) -> DropBreach {
         if self.elevation <= surface {
-            self.protection = BattleDropProtection::Breached;
-            return BattleDropBreach::AtSurface;
+            self.protection = DropProtection::Breached;
+            return DropBreach::AtSurface;
         }
         self.protection = if jump_jets {
-            BattleDropProtection::JumpJets
+            DropProtection::JumpJets
         } else {
-            BattleDropProtection::Breached
+            DropProtection::Breached
         };
         if jump_jets {
-            BattleDropBreach::JumpJets
+            DropBreach::JumpJets
         } else {
-            BattleDropBreach::FreeFall
+            DropBreach::FreeFall
         }
     }
 
     /// Resolve the distinct drop landing roll, then clear protection; the host applies returned effects.
-    pub fn land(&mut self, input: BattleDropLandingInput) -> Result<BattleDropLanding> {
-        let parachute = self.protection == BattleDropProtection::Cocoon { integrity: 1 };
+    pub fn land(&mut self, input: DropLandingInput) -> Result<DropLanding> {
+        let parachute = self.protection == DropProtection::Cocoon { integrity: 1 };
         if input.combat_safe {
-            self.protection = BattleDropProtection::Breached;
-            return Ok(BattleDropLanding {
+            self.protection = DropProtection::Breached;
+            return Ok(DropLanding {
                 target: None,
                 roll: None,
                 margin: 0,
@@ -235,8 +232,8 @@ impl BattleOrbitalDrop {
             target += 10;
         }
         target += match self.protection {
-            BattleDropProtection::JumpJets => 4,
-            BattleDropProtection::Breached => 10,
+            DropProtection::JumpJets => 4,
+            DropProtection::Breached => 10,
             _ => 0,
         };
         target += if input.hex.is_open_ground() {
@@ -274,8 +271,8 @@ impl BattleOrbitalDrop {
         } else {
             0
         };
-        self.protection = BattleDropProtection::Breached;
-        Ok(BattleDropLanding {
+        self.protection = DropProtection::Breached;
+        Ok(DropLanding {
             target: Some(target),
             roll: Some(roll),
             margin,
@@ -288,7 +285,7 @@ impl BattleOrbitalDrop {
 
 /// Already-resolved crew/chassis facts; the host reuses existing piloting and character skill services.
 #[derive(Debug, Clone, Copy)]
-pub struct BattleDropLandingInput {
+pub struct DropLandingInput {
     pub base_target: i16,
     pub roll: Option<u8>,
     /// The hex the unit lands in.
@@ -305,7 +302,7 @@ pub struct BattleDropLandingInput {
 /// Landing arithmetic shared by Mechs and vehicles; actual falls, XP and surface effects remain host-owned.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[must_use = "Publish landing and apply fall, experience and surface effects in the enclosing transaction"]
-pub struct BattleDropLanding {
+pub struct DropLanding {
     pub target: Option<i32>,
     pub roll: Option<u8>,
     pub margin: i32,
@@ -323,12 +320,12 @@ mod tests {
     fn mass_and_saved_protection_are_validated() {
         for (mass, integrity) in [(0, 1), (5119, 1), (5120, 2), (102400, 21)] {
             assert_eq!(
-                BattleOrbitalDrop::new(mass, 300).unwrap().protection(),
-                BattleDropProtection::Cocoon { integrity }
+                OrbitalDrop::new(mass, 300).unwrap().protection(),
+                DropProtection::Cocoon { integrity }
             );
         }
-        assert!(BattleOrbitalDrop::new(-1, 300).is_err());
-        assert!(BattleOrbitalDrop::new(i64::MAX, 300).is_err());
-        assert!(serde_json::from_value::<BattleOrbitalDrop>(serde_json::json!({"elevation": 300, "protection": {"state": "cocoon", "integrity": 0}})).is_err());
+        assert!(OrbitalDrop::new(-1, 300).is_err());
+        assert!(OrbitalDrop::new(i64::MAX, 300).is_err());
+        assert!(serde_json::from_value::<OrbitalDrop>(serde_json::json!({"elevation": 300, "protection": {"state": "cocoon", "integrity": 0}})).is_err());
     }
 }

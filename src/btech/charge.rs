@@ -6,63 +6,63 @@ use serde::Serialize;
 
 /// Configuration and accumulated travel supplied by the movement owner at collision time.
 #[derive(Debug, Clone, Copy)]
-pub struct BattleChargeRules {
+pub struct ChargeRules {
     pub distance: f32,
     pub new_rules: bool,
     pub technology_level_three: bool,
-    pub physical: BattlePhysicalRules,
+    pub physical: PhysicalRules,
 }
 
 /// Read-only collision calculation using current mass, velocity and pilot skills.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct BattleChargeProfile {
+pub struct ChargeProfile {
     pub target_number: i32,
     pub inflicted_damage: u16,
     pub received_damage: u16,
-    pub target_arc: BattleHitArc,
-    pub attacker_arc: BattleHitArc,
+    pub target_arc: HitArc,
+    pub attacker_arc: HitArc,
 }
 
 /// One participant's post-collision control check and optional applied fall.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct BattleChargeBalance {
+pub struct ChargeBalance {
     pub unit: ObjectId,
-    pub check: BattlePilotingCheck,
-    pub fall: Option<BattleFallReport>,
+    pub check: PilotingCheck,
+    pub fall: Option<MechFallReport>,
 }
 
 /// Committed charge participant, ordered five-point impacts and control consequences.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct BattleChargeReport {
+pub struct ChargeReport {
     pub attacker: ObjectId,
     pub target: ObjectId,
-    pub profile: BattleChargeProfile,
+    pub profile: ChargeProfile,
     pub roll: u8,
     pub hit: bool,
-    pub target_impacts: Vec<BattleTacticalImpact>,
+    pub target_impacts: Vec<TacticalImpact>,
     /// Eligible per-packet piloting awards; recoil never awards attack XP.
-    pub experience: Vec<BattleExperienceAward>,
+    pub experience: Vec<ExperienceAward>,
     /// Accepted damage and control-check XP diagnostics, in resolution order.
-    pub experience_messages: Vec<super::BattleChannelMessage>,
-    pub attacker_impacts: Vec<BattleTacticalImpact>,
+    pub experience_messages: Vec<super::DiagnosticMessage>,
+    pub attacker_impacts: Vec<TacticalImpact>,
     /// Recoil actually applied after the target damage cascade; zero on a miss.
     pub received_damage: u16,
     /// Recoil direction sampled after the target damage cascade; absent on a miss.
-    pub recoil_arc: Option<BattleHitArc>,
-    pub balance: Vec<BattleChargeBalance>,
+    pub recoil_arc: Option<HitArc>,
+    pub balance: Vec<ChargeBalance>,
     /// Pilot-only checks ordered among the aggregate cockpit notices.
-    pub pilot_notices: Vec<super::BattlePilotNotice>,
-    pub notices: Vec<BattleNotice>,
+    pub pilot_notices: Vec<super::PilotNotice>,
+    pub notices: Vec<Notice>,
 }
 
 /// Charge recovery includes side torsos as well as arms and legs.
-const RECOVERY: [BattleSection; 6] = [
-    BattleSection::LeftArm,
-    BattleSection::RightArm,
-    BattleSection::LeftLeg,
-    BattleSection::RightLeg,
-    BattleSection::LeftTorso,
-    BattleSection::RightTorso,
+const RECOVERY: [MechSection; 6] = [
+    MechSection::LeftArm,
+    MechSection::RightArm,
+    MechSection::LeftLeg,
+    MechSection::RightLeg,
+    MechSection::LeftTorso,
+    MechSection::RightTorso,
 ];
 
 /// Match the collision formula's single-precision arithmetic and truncation toward zero.
@@ -108,8 +108,8 @@ pub fn charge_profile(
     world: &World,
     attacker: ObjectId,
     target: ObjectId,
-    rules: BattleChargeRules,
-) -> Result<BattleChargeProfile> {
+    rules: ChargeRules,
+) -> Result<ChargeProfile> {
     charge_profile_for(world, attacker, target, rules, ChargeRole::OneWay, false)
 }
 
@@ -118,8 +118,8 @@ pub(super) fn charge_profile_in_action(
     world: &World,
     attacker: ObjectId,
     target: ObjectId,
-    rules: BattleChargeRules,
-) -> Result<BattleChargeProfile> {
+    rules: ChargeRules,
+) -> Result<ChargeProfile> {
     charge_profile_for(world, attacker, target, rules, ChargeRole::OneWay, true)
 }
 
@@ -128,10 +128,10 @@ fn charge_profile_for(
     world: &World,
     attacker: ObjectId,
     target: ObjectId,
-    rules: BattleChargeRules,
+    rules: ChargeRules,
     role: ChargeRole,
     character: bool,
-) -> Result<BattleChargeProfile> {
+) -> Result<ChargeProfile> {
     ensure!(attacker != target, "Cannot charge yourself");
     ensure!(
         rules.distance.is_finite() && rules.distance >= 0.0,
@@ -158,19 +158,16 @@ fn charge_profile_for(
     }
     let source = &world.btech.constructed_units()[&attacker];
     let victim = &world.btech.constructed_units()[&target];
+    ensure!(source.power() == Power::Running, "Start the unit first");
     ensure!(
-        source.power() == BattlePower::Running,
-        "Start the unit first"
-    );
-    ensure!(
-        victim.posture() != BattlePosture::Prone,
+        victim.posture() != Posture::Prone,
         "Your target's too low for you to charge it!"
     );
     ensure!(
-        source.limb_recycle().keys().all(|section| matches!(
-            section,
-            BattleSection::LeftTorso | BattleSection::RightTorso
-        )),
+        source
+            .limb_recycle()
+            .keys()
+            .all(|section| matches!(section, MechSection::LeftTorso | MechSection::RightTorso)),
         "Your sections are still recovering from your last attack"
     );
     if role != ChargeRole::OneWay {
@@ -188,12 +185,12 @@ fn charge_profile_for(
         RECOVERY
     } else {
         [
-            BattleSection::LeftArm,
-            BattleSection::RightArm,
-            BattleSection::LeftTorso,
-            BattleSection::RightTorso,
-            BattleSection::CenterTorso,
-            BattleSection::LeftLeg,
+            MechSection::LeftArm,
+            MechSection::RightArm,
+            MechSection::LeftTorso,
+            MechSection::RightTorso,
+            MechSection::CenterTorso,
+            MechSection::LeftLeg,
         ]
     };
     ensure!(
@@ -287,17 +284,17 @@ fn charge_profile_for(
         "Charge: BTH {target_number}\tYou choose not to charge."
     );
     let reverse = unit_range(world, target, attacker)?;
-    Ok(BattleChargeProfile {
+    Ok(ChargeProfile {
         target_number,
         inflicted_damage: u16::try_from(inflicted)
             .context("Charge damage exceeds supported range")?,
         received_damage: received,
-        target_arc: BattleHitArc::from_bearing(
+        target_arc: HitArc::from_bearing(
             reverse.bearing.unwrap_or(180.0),
             opponent.heading,
             rules.physical.hit_arc_mode,
         )?,
-        attacker_arc: BattleHitArc::from_bearing(
+        attacker_arc: HitArc::from_bearing(
             range.bearing.unwrap_or(180.0),
             motion.heading,
             rules.physical.hit_arc_mode,
@@ -306,12 +303,7 @@ fn charge_profile_for(
 }
 
 /// Recoil uses current relative motion with the collision's sampled tonnage.
-fn recoil_damage(
-    source: &BattleUnit,
-    victim: &BattleUnit,
-    mass: u32,
-    rules: BattleChargeRules,
-) -> Result<u16> {
+fn recoil_damage(source: &Mech, victim: &Mech, mass: u32, rules: ChargeRules) -> Result<u16> {
     let damage = if rules.new_rules && rules.technology_level_three {
         let motion = source.motion().context("Unit is not placed")?;
         let opponent = victim.motion().context("Target is not placed")?;
@@ -332,9 +324,9 @@ fn recoil_damage(
 
 /// Applied packets and their pre-damage experience awards.
 struct ChargePackets {
-    impacts: Vec<BattleTacticalImpact>,
-    experience: Vec<BattleExperienceAward>,
-    experience_messages: Vec<super::BattleChannelMessage>,
+    impacts: Vec<TacticalImpact>,
+    experience: Vec<ExperienceAward>,
+    experience_messages: Vec<super::DiagnosticMessage>,
 }
 
 /// Apply independently located packets in order, including normal damage/crew/fall cascades.
@@ -342,8 +334,8 @@ fn packets(
     world: &mut World,
     id: ObjectId,
     mut damage: u16,
-    arc: BattleHitArc,
-    rules: BattleFallRules,
+    arc: HitArc,
+    rules: FallRules,
     attack: (ObjectId, bool),
 ) -> Result<ChargePackets> {
     let (attacker, character) = attack;
@@ -400,8 +392,8 @@ pub fn resolve_charge(
     world: &mut World,
     attacker: ObjectId,
     target: ObjectId,
-    rules: BattleChargeRules,
-) -> Result<BattleChargeReport> {
+    rules: ChargeRules,
+) -> Result<ChargeReport> {
     resolve_charge_inner(world, attacker, target, rules, false)
 }
 
@@ -410,8 +402,8 @@ pub(super) fn resolve_charge_in_action(
     world: &mut World,
     attacker: ObjectId,
     target: ObjectId,
-    rules: BattleChargeRules,
-) -> Result<BattleChargeReport> {
+    rules: ChargeRules,
+) -> Result<ChargeReport> {
     resolve_charge_inner(world, attacker, target, rules, true)
 }
 
@@ -420,9 +412,9 @@ fn resolve_charge_inner(
     world: &mut World,
     attacker: ObjectId,
     target: ObjectId,
-    rules: BattleChargeRules,
+    rules: ChargeRules,
     character: bool,
-) -> Result<BattleChargeReport> {
+) -> Result<ChargeReport> {
     let profile = charge_profile_for(
         world,
         attacker,
@@ -457,8 +449,8 @@ fn resolve_charge_inner(
 struct PreparedCharge {
     attacker: ObjectId,
     target: ObjectId,
-    profile: BattleChargeProfile,
-    rules: BattleChargeRules,
+    profile: ChargeProfile,
+    rules: ChargeRules,
     roll: u8,
     role: ChargeRole,
     recoil_mass: u32,
@@ -466,7 +458,7 @@ struct PreparedCharge {
 }
 
 /// Apply a pre-rolled charge without rechecking eligibility after an earlier collision.
-fn resolve_prepared(world: &mut World, prepared: PreparedCharge) -> Result<BattleChargeReport> {
+fn resolve_prepared(world: &mut World, prepared: PreparedCharge) -> Result<ChargeReport> {
     let PreparedCharge {
         attacker,
         target,
@@ -484,7 +476,7 @@ fn resolve_prepared(world: &mut World, prepared: PreparedCharge) -> Result<Battl
                 .motion()
                 .context("Target is not placed")?
                 .heading;
-            profile.target_arc = BattleHitArc::from_bearing(
+            profile.target_arc = HitArc::from_bearing(
                 range.bearing.unwrap_or(180.0),
                 heading,
                 rules.physical.hit_arc_mode,
@@ -492,7 +484,7 @@ fn resolve_prepared(world: &mut World, prepared: PreparedCharge) -> Result<Battl
         }
         let hit = i32::from(roll) >= profile.target_number;
         let target_number = profile.target_number;
-        let mut report = BattleChargeReport {
+        let mut report = ChargeReport {
             attacker,
             target,
             profile,
@@ -507,7 +499,7 @@ fn resolve_prepared(world: &mut World, prepared: PreparedCharge) -> Result<Battl
             balance: vec![],
             pilot_notices: Vec::new(),
             notices: if role == ChargeRole::OneWay {
-                vec![BattleNotice {
+                vec![Notice {
                     unit: attacker,
                     text: format!("Charge: BTH {}\tRoll: {roll}", target_number),
                 }]
@@ -521,14 +513,14 @@ fn resolve_prepared(world: &mut World, prepared: PreparedCharge) -> Result<Battl
                     world, attacker, target, "charges",
                 ));
             }
-            report.notices.push(BattleNotice {
+            report.notices.push(Notice {
                 unit: attacker,
                 text: "SMASH!!! You crash into your target!".into(),
             });
             if role != ChargeRole::OneWay
-                || world.btech.constructed_units()[&target].power() == BattlePower::Running
+                || world.btech.constructed_units()[&target].power() == Power::Running
             {
-                report.notices.push(BattleNotice {
+                report.notices.push(Notice {
                     unit: target,
                     text: format!("CRASH!!!\n#{} charges into you!", attacker.0),
                 });
@@ -563,7 +555,7 @@ fn resolve_prepared(world: &mut World, prepared: PreparedCharge) -> Result<Battl
                 .motion()
                 .context("Unit is not placed")?
                 .heading;
-            let recoil_arc = BattleHitArc::from_bearing(
+            let recoil_arc = HitArc::from_bearing(
                 range.bearing.unwrap_or(180.0),
                 heading,
                 rules.physical.hit_arc_mode,
@@ -617,9 +609,9 @@ fn resolve_prepared(world: &mut World, prepared: PreparedCharge) -> Result<Battl
                         )?);
                 }
                 let fall = if !check.success
-                    && world.btech.constructed_units()[&id].posture() != BattlePosture::Prone
+                    && world.btech.constructed_units()[&id].posture() != Posture::Prone
                 {
-                    report.notices.push(BattleNotice {
+                    report.notices.push(Notice {
                         unit: id,
                         text: "Your piloting skill fails and you fall over!!".into(),
                     });
@@ -639,7 +631,7 @@ fn resolve_prepared(world: &mut World, prepared: PreparedCharge) -> Result<Battl
                 } else {
                     None
                 };
-                report.balance.push(BattleChargeBalance {
+                report.balance.push(ChargeBalance {
                     unit: id,
                     check,
                     fall,
@@ -676,20 +668,20 @@ fn start_recovery(world: &mut World, id: ObjectId) {
 
 /// One mutual participant, including a pre-collision rejection and its consumed roll.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct BattleMutualChargeAttempt {
+pub struct MutualChargeAttempt {
     pub unit: ObjectId,
     pub rejection: Option<String>,
     pub roll: Option<u8>,
-    pub collision: Option<BattleChargeReport>,
+    pub collision: Option<ChargeReport>,
 }
 
 /// Ordered mutual collision result committed as one world transaction.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct BattleMutualChargeReport {
-    pub attempts: [BattleMutualChargeAttempt; 2],
+pub struct MutualChargeReport {
+    pub attempts: [MutualChargeAttempt; 2],
     /// Pilot-only checks ordered among the aggregate cockpit notices.
-    pub pilot_notices: Vec<super::BattlePilotNotice>,
-    pub notices: Vec<BattleNotice>,
+    pub pilot_notices: Vec<super::PilotNotice>,
+    pub notices: Vec<Notice>,
 }
 
 /// Resolve opposing charges with frozen eligibility and both rolls drawn before either impact.
@@ -698,9 +690,9 @@ pub fn resolve_mutual_charge(
     world: &mut World,
     first: ObjectId,
     second: ObjectId,
-    rules: BattleChargeRules,
+    rules: ChargeRules,
     second_distance: f32,
-) -> Result<BattleMutualChargeReport> {
+) -> Result<MutualChargeReport> {
     resolve_mutual_charge_inner(world, first, second, rules, second_distance, false)
 }
 
@@ -709,9 +701,9 @@ pub(super) fn resolve_mutual_charge_in_action(
     world: &mut World,
     first: ObjectId,
     second: ObjectId,
-    rules: BattleChargeRules,
+    rules: ChargeRules,
     second_distance: f32,
-) -> Result<BattleMutualChargeReport> {
+) -> Result<MutualChargeReport> {
     resolve_mutual_charge_inner(world, first, second, rules, second_distance, true)
 }
 
@@ -720,10 +712,10 @@ fn resolve_mutual_charge_inner(
     world: &mut World,
     first: ObjectId,
     second: ObjectId,
-    rules: BattleChargeRules,
+    rules: ChargeRules,
     second_distance: f32,
     character: bool,
-) -> Result<BattleMutualChargeReport> {
+) -> Result<MutualChargeReport> {
     ensure!(first != second, "Cannot charge yourself");
     ensure!(
         rules.distance.is_finite()
@@ -751,7 +743,7 @@ fn resolve_mutual_charge_inner(
         unit_range(world, first, second)?.spatial < 0.6,
         "Charge target is out of collision range"
     );
-    let second_rules = BattleChargeRules {
+    let second_rules = ChargeRules {
         distance: second_distance,
         ..rules
     };
@@ -766,15 +758,15 @@ fn resolve_mutual_charge_inner(
             character,
         ),
     ];
-    let mut report = BattleMutualChargeReport {
+    let mut report = MutualChargeReport {
         attempts: [
-            BattleMutualChargeAttempt {
+            MutualChargeAttempt {
                 unit: first,
                 rejection: None,
                 roll: None,
                 collision: None,
             },
-            BattleMutualChargeAttempt {
+            MutualChargeAttempt {
                 unit: second,
                 rejection: None,
                 roll: None,
@@ -797,7 +789,7 @@ fn resolve_mutual_charge_inner(
         if let Err(error) = profile {
             let reason = format!("{error:#}");
             report.attempts[index].rejection = Some(reason.clone());
-            report.notices.push(BattleNotice {
+            report.notices.push(Notice {
                 unit: report.attempts[index].unit,
                 text: reason,
             });
@@ -817,7 +809,7 @@ fn resolve_mutual_charge_inner(
         }
         for (index, profile) in profiles.iter().enumerate() {
             if let Ok(profile) = profile {
-                report.notices.push(BattleNotice {
+                report.notices.push(Notice {
                     unit: report.attempts[index].unit,
                     text: format!(
                         "Charge: BTH {}\tRoll: {}",
@@ -883,12 +875,12 @@ mod tests {
     /// Chassis bonuses affect only the defender of a one-way charge, including after serialization.
     #[test]
     fn charge_roles_distinguish_raw_and_control_skill() {
-        let template = BattleTemplate::parse(
+        let template = MechTemplate::parse(
             "JR7-D",
             include_str!("../../tests/fixtures/btech/mechs/JR7-D.toml"),
         )
         .unwrap();
-        let base = BattleUnit::from_template(template).unwrap();
+        let base = Mech::from_template(template).unwrap();
         for attacker in ["Biped", "Quad"] {
             for target in ["Biped", "Quad"] {
                 let mut world = World::default();

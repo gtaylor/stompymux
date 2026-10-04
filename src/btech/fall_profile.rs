@@ -1,5 +1,5 @@
 //! Chassis-independent fall damage, hit direction and heading change.
-use super::{BattleHitArc, Hex};
+use super::{Hex, HitArc};
 use anyhow::{Context, Result, ensure};
 
 /// Select the supporting surface for descent, including ice and passage below a bridge.
@@ -25,13 +25,13 @@ pub(super) fn damage(tons: u32, levels: i32, wet: bool, gravity: Option<i64>) ->
 }
 
 /// One d6 chooses the struck side and rotates heading in sixty-degree steps.
-pub(super) fn direction(roll: u8) -> Result<(BattleHitArc, u16)> {
+pub(super) fn direction(roll: u8) -> Result<(HitArc, u16)> {
     ensure!((1..=6).contains(&roll), "Invalid fall direction roll");
     let arc = match roll {
-        1 => BattleHitArc::Front,
-        2 | 3 => BattleHitArc::Right,
-        4 => BattleHitArc::Rear,
-        _ => BattleHitArc::Left,
+        1 => HitArc::Front,
+        2 | 3 => HitArc::Right,
+        4 => HitArc::Rear,
+        _ => HitArc::Left,
     };
     Ok((arc, u16::from(roll - 1) * 60))
 }

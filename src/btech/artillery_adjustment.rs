@@ -3,14 +3,14 @@ use super::*;
 use crate::{ObjectId, World};
 use anyhow::Result;
 
-impl BattleUnit {
+impl Mech {
     /// Accumulated trajectory correction for the currently selected target.
     pub fn artillery_adjustment(&self) -> u8 {
         self.artillery_adjustment
     }
 }
 
-impl BattleVehicle {
+impl Vehicle {
     /// Accumulated trajectory correction for this vehicle's selected artillery coordinate.
     pub fn artillery_adjustment(&self) -> u8 {
         self.artillery_adjustment
@@ -65,8 +65,8 @@ pub(super) fn observe_miss(
     world: &mut World,
     map: ObjectId,
     source: super::fire_target::TargetSource,
-    pattern: &BattleArtilleryImpactPattern,
-) -> Result<Vec<BattleNotice>> {
+    pattern: &ArtilleryImpactPattern,
+) -> Result<Vec<Notice>> {
     let shooter = source.unit;
     if !pattern.missed {
         return Ok(Vec::new());
@@ -81,7 +81,7 @@ pub(super) fn observe_miss(
         .and_then(|id| super::scanner::scanner_unit(world, id).map(|unit| (id, unit)));
     let targeting = |id| {
         super::targeting::selection(world, id).and_then(|selection| match selection {
-            BattleTargetSelection::Hex(lock) => Some(lock.hex),
+            TargetSelection::Hex(lock) => Some(lock.hex),
             _ => None,
         })
     };
@@ -110,9 +110,9 @@ pub(super) fn observe_miss(
     let Some(observer) = observer else {
         return Ok(Vec::new());
     };
-    if unit.power != BattlePower::Running
+    if unit.power != Power::Running
         || super::scanner::scanner_unit(world, observer)
-            .is_none_or(|observer| observer.power != BattlePower::Running)
+            .is_none_or(|observer| observer.power != Power::Running)
     {
         return Ok(Vec::new());
     }
@@ -122,11 +122,11 @@ pub(super) fn observe_miss(
             .unwrap_or_else(|| format!("#{}", observer.0));
         let shooter_name = unit.label().unwrap_or_else(|| format!("#{}", shooter.0));
         vec![
-            BattleNotice {
+            Notice {
                 unit: source.unit,
                 text: format!("{observer_name} sent you some trajectory-correction data."),
             },
-            BattleNotice {
+            Notice {
                 unit: observer,
                 text: format!("You provide {shooter_name} with information about the miss."),
             },

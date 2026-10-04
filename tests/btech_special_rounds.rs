@@ -46,15 +46,15 @@ async fn fixture(
         (if index == 0 {
             launcher(source, artillery)
         } else {
-            BattleUnitTemplate::parse("test", source).unwrap()
+            UnitTemplate::parse("test", source).unwrap()
         })
         .create(&mut world, id)
         .unwrap();
         support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut world, id, map, 0, if index == 0 { 3 } else { 0 }).unwrap();
         edit(&mut world, id, |state| {
-            state["power"] = serde_json::to_value(BattlePower::Running).unwrap();
-            state["dice"] = serde_json::to_value(BattleDice::seeded([19; 32])).unwrap();
+            state["power"] = serde_json::to_value(Power::Running).unwrap();
+            state["dice"] = serde_json::to_value(Dice::seeded([19; 32])).unwrap();
         });
         ids.push(id);
     }
@@ -66,13 +66,13 @@ async fn fixture(
 }
 
 /// Install one weapon and three distinct bins without copying control or feed behavior.
-fn launcher(source: &str, artillery: bool) -> BattleUnitTemplate {
+fn launcher(source: &str, artillery: bool) -> UnitTemplate {
     let weapon = if artillery {
-        BattleWeapon::ClanArrowIv
+        Weapon::ClanArrowIv
     } else {
-        BattleWeapon::ClanLrm20
+        Weapon::ClanLrm20
     };
-    let mut definition = BattleUnitTemplate::parse("test", source).unwrap();
+    let mut definition = UnitTemplate::parse("test", source).unwrap();
     let part = CriticalDefinition {
         equipment: weapon.name().into(),
         data: "-".into(),
@@ -97,33 +97,33 @@ fn launcher(source: &str, artillery: bool) -> BattleUnitTemplate {
         }
     };
     match &mut definition {
-        BattleUnitTemplate::Mech(unit) => {
+        UnitTemplate::Mech(unit) => {
             for section in unit.sections.values_mut() {
                 section.criticals.retain(|_, p| {
                     !p.equipment.starts_with("Ammo_")
-                        && !BattleWeapon::ALL.iter().any(|w| w.name() == p.equipment)
+                        && !Weapon::ALL.iter().any(|w| w.name() == p.equipment)
                 });
             }
-            let mount = unit.sections.get_mut(&BattleSection::LeftTorso).unwrap();
+            let mount = unit.sections.get_mut(&MechSection::LeftTorso).unwrap();
             mount.criticals.clear();
             for slot in 0..weapon.profile().critical_slots {
                 mount.criticals.insert(slot, part.clone());
             }
-            bins(unit.sections.get_mut(&BattleSection::RightTorso).unwrap());
+            bins(unit.sections.get_mut(&MechSection::RightTorso).unwrap());
         }
-        BattleUnitTemplate::Vehicle(unit) => {
+        UnitTemplate::Vehicle(unit) => {
             for section in unit.sections.values_mut() {
                 section.criticals.retain(|_, p| {
                     !p.equipment.starts_with("Ammo_")
-                        && !BattleWeapon::ALL.iter().any(|w| w.name() == p.equipment)
+                        && !Weapon::ALL.iter().any(|w| w.name() == p.equipment)
                 });
             }
             unit.sections
-                .get_mut(&BattleVehicleSection::Front)
+                .get_mut(&VehicleSection::Front)
                 .unwrap()
                 .criticals
                 .insert(0, part);
-            bins(unit.sections.get_mut(&BattleVehicleSection::Rear).unwrap());
+            bins(unit.sections.get_mut(&VehicleSection::Rear).unwrap());
         }
     }
     definition
@@ -214,10 +214,8 @@ async fn artillery_cluster_controls_feed_real_launches() {
         .unwrap();
         for _ in 0..10 {
             assert_eq!(
-                advance_artillery_action(&scripts, &config, BattleMovementRules::STANDARD.fall)
-                    .unwrap(),
-                advance_artillery_action(&replay, &config, BattleMovementRules::STANDARD.fall)
-                    .unwrap()
+                advance_artillery_action(&scripts, &config, MovementRules::STANDARD.fall).unwrap(),
+                advance_artillery_action(&replay, &config, MovementRules::STANDARD.fall).unwrap()
             );
         }
         assert_eq!(scripts.world().btech, replay.world().btech);
@@ -225,8 +223,8 @@ async fn artillery_cluster_controls_feed_real_launches() {
 }
 
 /// Deterministic conventional firing policy for shared damage checks.
-fn rules() -> BattleAimRules {
-    BattleAimRules {
+fn rules() -> AimRules {
+    AimRules {
         woods_damage: false,
         dig_bonus: 3,
         dig_only_front: false,
@@ -240,16 +238,16 @@ fn rules() -> BattleAimRules {
 }
 
 /// Tactical conventional shot configuration shared by admission cases.
-fn shot_rules() -> BattleShotRules {
-    BattleShotRules {
+fn shot_rules() -> ShotRules {
+    ShotRules {
         range_damage: false,
         tsm_tow_bonus: true,
-        vehicle_impact: stompymux_rs::BattleVehicleImpactRules::STANDARD,
-        stacking: BattleStackingRules::STANDARD,
-        stagger: BattleStaggerMode::Retain,
-        glancing: BattleGlancingMode::Disabled,
+        vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
+        stacking: StackingRules::STANDARD,
+        stagger: StaggerMode::Retain,
+        glancing: GlancingMode::Disabled,
         aim: rules(),
-        hit: BattleHitRules {
+        hit: HitRules {
             inferno_penalty: false,
             exile_stun_mode: 0,
         },
@@ -263,10 +261,10 @@ fn shot_rules() -> BattleShotRules {
 /// Seed an attack independently from cluster and target damage streams.
 fn dice(world: &mut World, id: ObjectId, total: u8) {
     let seed = (0..=255)
-        .find(|v| BattleDice::seeded([*v; 32]).two_d6() == total)
+        .find(|v| Dice::seeded([*v; 32]).two_d6() == total)
         .unwrap();
     edit(world, id, |unit| {
-        unit["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
+        unit["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap()
     });
 }
 
@@ -274,7 +272,7 @@ fn dice(world: &mut World, id: ObjectId, total: u8) {
 fn acquire(world: &mut World, shooter: ObjectId, target: ObjectId) {
     for seed in 0..=255 {
         edit(world, shooter, |unit| {
-            unit["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
+            unit["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap()
         });
         refresh_battle_contacts(world, &[shooter]).unwrap();
         if visible_battle_contact(world, shooter, target)
@@ -301,7 +299,7 @@ async fn missile_special_rounds_use_shared_launch_damage_and_ams_policy() {
                 unit["ams_enabled"] = true.into()
             });
             acquire(&mut initial, shooter, target);
-            for mode in [BattleAmmunitionMode::Smoke, BattleAmmunitionMode::Mine] {
+            for mode in [AmmunitionMode::Smoke, AmmunitionMode::Mine] {
                 let mut world = initial.clone();
                 toggle_battle_missile_rounds(&mut world, shooter, ObjectId(1), 0, mode).unwrap();
                 dice(&mut world, shooter, 12);
@@ -313,9 +311,9 @@ async fn missile_special_rounds_use_shared_launch_damage_and_ams_policy() {
                     ObjectId(1),
                     target,
                     0,
-                    BattleVehicleShotRules {
+                    VehicleShotRules {
                         shot: shot_rules(),
-                        shooter_criticals: BattleVehicleImpactRules::STANDARD.criticals,
+                        shooter_criticals: VehicleImpactRules::STANDARD.criticals,
                     },
                 )
                 .unwrap();
@@ -323,13 +321,13 @@ async fn missile_special_rounds_use_shared_launch_damage_and_ams_policy() {
                     assert_eq!(report.expenditure.ammunition_mode, mode);
                     (report.ams, report.salvo)
                 });
-                assert_eq!(defense.is_some(), mode == BattleAmmunitionMode::Smoke);
+                assert_eq!(defense.is_some(), mode == AmmunitionMode::Smoke);
                 assert!(salvo.is_some());
-                if mode == BattleAmmunitionMode::Mine {
+                if mode == AmmunitionMode::Mine {
                     let hits = match salvo.unwrap() {
-                        BattleTargetSalvo::Mech(report) => report.missiles_before_defense,
-                        BattleTargetSalvo::Vehicle(report) => report.missiles_before_defense,
-                        BattleTargetSalvo::Swarm(_) => panic!("Mine ammunition does not retarget"),
+                        TargetSalvo::Mech(report) => report.missiles_before_defense,
+                        TargetSalvo::Vehicle(report) => report.missiles_before_defense,
+                        TargetSalvo::Swarm(_) => panic!("Mine ammunition does not retarget"),
                     };
                     assert_eq!(hits, Some(6));
                 }
@@ -354,7 +352,7 @@ async fn missile_special_rounds_use_shared_launch_damage_and_ams_policy() {
 async fn artillery_cluster_conflicts_and_control_guards_are_atomic() {
     for source in templates() {
         let (_dir, config, world, shooter, _) = fixture(&source, &templates()[0], true).await;
-        for mode in [BattleAmmunitionMode::Smoke, BattleAmmunitionMode::Mine] {
+        for mode in [AmmunitionMode::Smoke, AmmunitionMode::Mine] {
             let mut special = world.clone();
             edit(&mut special, shooter, |unit| {
                 unit["ammunition_modes"]["0"] = serde_json::to_value(mode).unwrap()
@@ -374,7 +372,7 @@ async fn artillery_cluster_conflicts_and_control_guards_are_atomic() {
             }
             if case == "shutdown" {
                 edit(&mut invalid, shooter, |unit| {
-                    unit["power"] = serde_json::to_value(BattlePower::Off).unwrap()
+                    unit["power"] = serde_json::to_value(Power::Off).unwrap()
                 });
             }
             let before = invalid.clone();

@@ -1,5 +1,5 @@
 //! Shared loose-stock identity and mass lookup, separate from installed equipment admission.
-use super::BattleWeapon;
+use super::Weapon;
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
 use std::ops::RangeInclusive;
@@ -15,7 +15,7 @@ pub const AMMUNITION_PART_OFFSET: i32 = 1024;
 /// Every part identity is below this bound.
 pub const PART_ID_LIMIT: i32 = 2048;
 
-impl BattleWeapon {
+impl Weapon {
     /// Stock identity of this weapon's loose ammunition.
     pub fn ammunition_part_id(self) -> i32 {
         self.part_id() + AMMUNITION_PART_OFFSET
@@ -25,7 +25,7 @@ impl BattleWeapon {
 /// Physical stock category; possessing an item does not enable its combat subsystem.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattlePartKind {
+pub enum PartKind {
     Weapon,
     Ammunition,
     Component,
@@ -35,32 +35,31 @@ pub enum BattlePartKind {
 
 /// Catalogue description of one stable game-directory inventory identifier.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattlePart {
+pub struct Part {
     pub part_id: i32,
     pub name: String,
-    pub kind: BattlePartKind,
+    pub kind: PartKind,
     /// Catalogue mass in 1/1024-ton units; loose bombs use four times this mass.
     pub mass: u32,
 }
 
-impl BattlePart {
+impl Part {
     /// Decode stock without interpreting the Rust weapon enum's declaration order.
     pub fn from_id(id: i32) -> Option<Self> {
-        if let Some(weapon) = BattleWeapon::from_part_id(id) {
+        if let Some(weapon) = Weapon::from_part_id(id) {
             return Some(Self {
                 part_id: id,
                 name: weapon.name().into(),
-                kind: BattlePartKind::Weapon,
+                kind: PartKind::Weapon,
                 mass: weapon.mass(),
             });
         }
         if let Some(weapon) = Self::ammunition_weapon_id(id) {
-            let weapon =
-                Self::from_id(weapon).filter(|part| part.kind == BattlePartKind::Weapon)?;
+            let weapon = Self::from_id(weapon).filter(|part| part.kind == PartKind::Weapon)?;
             return Some(Self {
                 part_id: id,
                 name: format!("Ammo_{}", weapon.name),
-                kind: BattlePartKind::Ammunition,
+                kind: PartKind::Ammunition,
                 mass: 1024,
             });
         }
@@ -102,11 +101,6 @@ impl BattlePart {
 
     /// Effective mass of one loose item, including the distinct bomb inventory multiplier.
     pub fn loose_mass(&self) -> u64 {
-        u64::from(self.mass)
-            * if self.kind == BattlePartKind::Bomb {
-                4
-            } else {
-                1
-            }
+        u64::from(self.mass) * if self.kind == PartKind::Bomb { 4 } else { 1 }
     }
 }

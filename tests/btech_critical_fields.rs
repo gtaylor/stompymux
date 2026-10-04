@@ -142,12 +142,12 @@ async fn vehicle_critical_fields_distinguish_all_six_flags() {
         if index == 2 || index == 3 {
             cases.push((
                 "dig",
-                serde_json::to_value(BattleDigState::covered()).unwrap(),
+                serde_json::to_value(DigState::covered()).unwrap(),
                 "c",
             ));
             cases.push((
                 "dig",
-                serde_json::to_value(BattleDigState::preparing(20)).unwrap(),
+                serde_json::to_value(DigState::preparing(20)).unwrap(),
                 "d",
             ));
         }
@@ -407,7 +407,7 @@ async fn main_status_projects_matrix(index: usize, source: &str) {
             &mut candidate,
             ObjectId(1),
             map,
-            BattleMapEnvironment {
+            MapEnvironment {
                 gravity,
                 temperature,
                 vacuum,
@@ -663,13 +663,11 @@ async fn secondary_critical_edits_preserve_material_and_follow_later_hits() {
                 let unit = &saved.btech.constructed_units()[&id];
                 assert!(unit.lost_criticals().is_empty());
                 assert_eq!(unit.gyro_damage(), 0);
-                unit.active_probe_available(BattleActiveProbe::Light)
-                    .unwrap()
+                unit.active_probe_available(ActiveProbe::Light).unwrap()
             } else {
                 let unit = &saved.btech.vehicles()[&id];
                 assert!(unit.lost_criticals().is_empty());
-                unit.active_probe_available(BattleActiveProbe::Light)
-                    .unwrap()
+                unit.active_probe_available(ActiveProbe::Light).unwrap()
             };
             assert_eq!(available, !bits.contains('b'));
             fields.verify(saved, id, "critstatus2", bits).await;
@@ -691,7 +689,7 @@ async fn secondary_critical_edits_preserve_material_and_follow_later_hits() {
                 .unwrap()
                 .systems
                 .iter()
-                .filter(|part| part.system == BattleSystem::Gyro)
+                .filter(|part| part.system == System::Gyro)
                 .map(|part| part.location)
                 .collect();
             destroy_battle_critical(&mut world, id, slots[0]).unwrap();
@@ -715,7 +713,7 @@ async fn secondary_critical_edits_preserve_material_and_follow_later_hits() {
                     &mut world,
                     id,
                     CriticalLocation {
-                        section: BattleSection::LeftTorso,
+                        section: MechSection::LeftTorso,
                         slot,
                     },
                 )
@@ -725,7 +723,7 @@ async fn secondary_critical_edits_preserve_material_and_follow_later_hits() {
                     &mut world,
                     id,
                     VehicleCriticalLocation {
-                        section: BattleVehicleSection::Front,
+                        section: VehicleSection::Front,
                         slot,
                     },
                 )
@@ -733,11 +731,11 @@ async fn secondary_critical_edits_preserve_material_and_follow_later_hits() {
             }
             let available = if mech {
                 world.btech.constructed_units()[&id]
-                    .active_probe_available(BattleActiveProbe::Light)
+                    .active_probe_available(ActiveProbe::Light)
                     .unwrap()
             } else {
                 world.btech.vehicles()[&id]
-                    .active_probe_available(BattleActiveProbe::Light)
+                    .active_probe_available(ActiveProbe::Light)
                     .unwrap()
             };
             assert!(!available, "a new probe critical must reassert failure");
@@ -749,7 +747,7 @@ async fn secondary_critical_edits_preserve_material_and_follow_later_hits() {
         if mech {
             assert!(
                 saved.btech.constructed_units()[&id]
-                    .active_probe_available(BattleActiveProbe::Light)
+                    .active_probe_available(ActiveProbe::Light)
                     .unwrap()
             );
             assert_eq!(
@@ -759,7 +757,7 @@ async fn secondary_critical_edits_preserve_material_and_follow_later_hits() {
         } else {
             assert!(
                 saved.btech.vehicles()[&id]
-                    .active_probe_available(BattleActiveProbe::Light)
+                    .active_probe_available(ActiveProbe::Light)
                     .unwrap()
             );
             assert_eq!(saved.btech.vehicles()[&id].lost_criticals().len(), 2);
@@ -789,7 +787,7 @@ async fn hardened_gyro_piloting_contribution_survives_restart() {
             .unwrap()
             .systems
             .iter()
-            .filter(|part| part.system == BattleSystem::Gyro)
+            .filter(|part| part.system == System::Gyro)
             .map(|part| part.location)
             .collect();
         let leg = CriticalLocation {
@@ -931,10 +929,10 @@ async fn vehicle_critical_edits_share_conditions_and_preserve_timers() {
         fields
             .verify(world.clone(), id, "tankcritstatus", bits)
             .await;
-        damage_battle_vehicle_controls(&mut world, id, BattleVehicleControlHit::CrewStun).unwrap();
+        damage_battle_vehicle_controls(&mut world, id, VehicleControlHit::CrewStun).unwrap();
         if index == 2 || index == 3 {
             firing::edit(&mut world, id, |unit| {
-                unit["dig"] = serde_json::to_value(BattleDigState::preparing(3)).unwrap()
+                unit["dig"] = serde_json::to_value(DigState::preparing(3)).unwrap()
             });
         }
         firing::edit(&mut world, id, |unit| {
@@ -963,7 +961,7 @@ async fn vehicle_critical_edits_share_conditions_and_preserve_timers() {
         if index == 2 || index == 3 {
             assert_eq!(
                 loaded.btech.vehicles()[&id].dig_state(),
-                BattleDigState::covered()
+                DigState::covered()
             );
         }
     }

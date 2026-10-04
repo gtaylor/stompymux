@@ -1,25 +1,23 @@
 //! Weapon replacement rules shared by Mechs, ground vehicles and VTOLs.
-use super::{
-    BattleDamageReplacement, BattleDamageSlot, BattleEquipmentFailure, BattleUnjam, WeaponMount,
-};
+use super::{DamageReplacement, DamageSlot, EquipmentFailure, Unjam, WeaponMount};
 use anyhow::Result;
 use std::collections::{BTreeMap, BTreeSet};
 
 /// Borrow only the operational state affected by compact weapon replacement.
 pub(super) struct Weapons<'a> {
-    pub failures: &'a mut BTreeMap<usize, BattleEquipmentFailure>,
+    pub failures: &'a mut BTreeMap<usize, EquipmentFailure>,
     pub manual_jams: &'a mut BTreeSet<usize>,
     pub powered_down: &'a mut BTreeSet<usize>,
     pub spent: &'a mut BTreeSet<usize>,
     pub recycle: &'a mut BTreeMap<usize, u16>,
-    pub unjam: &'a mut Option<BattleUnjam>,
+    pub unjam: &'a mut Option<Unjam>,
 }
 
 /// Assign failures, retire unavailable timers and replenish explicitly restored launchers.
 pub(super) fn replace<L: Copy + Ord>(
-    replacement: &BattleDamageReplacement,
+    replacement: &DamageReplacement,
     mounts: &[WeaponMount<L>],
-    slot: impl Fn(L) -> BattleDamageSlot,
+    slot: impl Fn(L) -> DamageSlot,
     available: &BTreeSet<usize>,
     restored: &BTreeSet<L>,
     state: Weapons<'_>,
@@ -30,7 +28,7 @@ pub(super) fn replace<L: Copy + Ord>(
     for (index, mount) in mounts.iter().enumerate() {
         if available.contains(&index) {
             if let Some(&code) = replacement.failures.get(&slot(mount.criticals[0]))
-                && let Some(failure) = BattleEquipmentFailure::from_code(code)?
+                && let Some(failure) = EquipmentFailure::from_code(code)?
             {
                 state.failures.insert(index, failure);
             }

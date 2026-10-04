@@ -1,6 +1,6 @@
 //! Selective persistence of typed minefields in the shared map-object table.
 use super::write::{Cell, Fields, row};
-use crate::{BattleMineKind, BattleMinefield, HexCoordinate, ObjectId, StoredMap, World};
+use crate::{HexCoordinate, MineKind, Minefield, ObjectId, StoredMap, World};
 use anyhow::{Context, Result, ensure};
 use sqlx::{Row, SqliteConnection};
 use std::{collections::BTreeMap, sync::Arc};
@@ -17,13 +17,13 @@ pub(super) async fn load(
             .get_mut(&ObjectId(row.try_get("map_dbref")?))
             .context("Minefield references missing map")?;
         let ordinal = u32::try_from(row.try_get::<i64, _>("ordinal")?)?;
-        let mine = BattleMinefield {
+        let mine = Minefield {
             coordinate: HexCoordinate {
                 x: row.try_get("x")?,
                 y: row.try_get("y")?,
             },
             owner: ObjectId(row.try_get("object_dbref")?),
-            kind: BattleMineKind::from_code(row.try_get("data_char")?)?,
+            kind: MineKind::from_code(row.try_get("data_char")?)?,
             strength: i16::try_from(row.try_get::<i64, _>("data_short")?)?,
             extra: i32::try_from(row.try_get::<i64, _>("data_int")?)?,
         };
@@ -89,7 +89,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
 }
 
 /// Persist the complete mine definition without repurposing other map-object fields.
-fn mine_fields(mine: BattleMinefield) -> super::write::Fields {
+fn mine_fields(mine: Minefield) -> super::write::Fields {
     Fields::from([
         ("x", Cell::Integer(i64::from(mine.coordinate.x))),
         ("y", Cell::Integer(i64::from(mine.coordinate.y))),

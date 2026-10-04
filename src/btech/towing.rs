@@ -21,7 +21,7 @@ impl super::BtechState {
 }
 
 /// Locate a constructed participant; tombstones remain valid until database cleanup.
-fn position(world: &World, id: ObjectId) -> Result<super::BattlePosition> {
+fn position(world: &World, id: ObjectId) -> Result<super::Position> {
     ensure!(
         world
             .objects
@@ -71,7 +71,7 @@ pub fn set_tow(world: &mut World, carrier: ObjectId, target: Option<ObjectId>) -
         "Tow pairs cannot overlap or form chains"
     );
     ensure!(
-        super::scanner::scanner_unit(world, target).unwrap().power == super::BattlePower::Off,
+        super::scanner::scanner_unit(world, target).unwrap().power == super::Power::Off,
         "Power down the tow target first"
     );
     if let Some(unit) = world.btech.constructed_units().get(&target) {
@@ -85,7 +85,7 @@ pub fn set_tow(world: &mut World, carrier: ObjectId, target: Option<ObjectId>) -
             (unit.free_fall().is_none() && unit.orbital_drop().is_none())
                 && unit
                     .vtol_flight()
-                    .is_none_or(|flight| flight.phase == super::BattleVtolFlightPhase::Landed),
+                    .is_none_or(|flight| flight.phase == super::VtolFlightPhase::Landed),
             "Land the tow target first"
         );
     }
@@ -117,7 +117,7 @@ pub(super) fn validate(world: &World) -> Result<()> {
             "Tow participants must share a battlefield"
         );
         ensure!(
-            super::scanner::scanner_unit(world, target).unwrap().power == super::BattlePower::Off,
+            super::scanner::scanner_unit(world, target).unwrap().power == super::Power::Off,
             "Tow target must be powered down"
         );
     }
@@ -176,7 +176,7 @@ pub(super) fn synchronize_pair(
             unit.altitude(tile),
         )
     });
-    let carried = super::BattleMotion {
+    let carried = super::Motion {
         point: motion.point,
         heading: motion.heading,
         desired_heading: motion.heading,

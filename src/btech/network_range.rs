@@ -1,18 +1,15 @@
 //! Shared command-network range selection without changing physical distance or firing permission.
 use super::network_unit::unit as network_unit;
-use super::{
-    BattleAimModifiers, BattlePower, BattleRangeBracket, BattleWeapon, BattleWeaponRange,
-    HexCoordinate,
-};
-use crate::{BattleCommandNetwork, ObjectId, World};
+use super::{AimModifiers, HexCoordinate, Power, RangeBracket, Weapon, WeaponRange};
+use crate::{CommandNetwork, ObjectId, World};
 use anyhow::Result;
 use serde::Serialize;
 
 /// Network-derived aiming distance; physical range remains in the enclosing aim report.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]
-pub struct BattleNetworkRange {
+pub struct NetworkRange {
     /// Network family selected for this calculation; classic C3 takes priority over C3i.
-    pub kind: BattleCommandNetwork,
+    pub kind: CommandNetwork,
     /// Closest usable sighting, or the shooter's physical distance if no peer improves it.
     pub distance: f64,
     /// Peer supplying a strictly shorter sighting; None means the shooter remains closest.
@@ -31,24 +28,24 @@ pub(super) fn apply(
     world: &World,
     shooter: ObjectId,
     target: NetworkTarget,
-    weapon: BattleWeapon,
+    weapon: Weapon,
     submerged: bool,
-    aim: &mut BattleAimModifiers,
+    aim: &mut AimModifiers,
 ) -> Result<()> {
     let unit = network_unit(world, shooter)?;
     let minimum = weapon.profile().minimum_range;
     if (unit.c3i_network.is_none() && unit.c3_network.is_none())
         || aim.range.is_none()
         || (minimum > 0 && aim.distance <= f64::from(minimum))
-        || unit.power() != BattlePower::Running
+        || unit.power() != Power::Running
         || super::electronic_field(world, shooter)?.blocks_outgoing_guidance()
     {
         return Ok(());
     }
     let kind = if !super::command_network::c3_members(world, shooter)?.is_empty() {
-        BattleCommandNetwork::C3
+        CommandNetwork::C3
     } else if !super::command_network::members(world, shooter)?.is_empty() {
-        BattleCommandNetwork::C3i
+        CommandNetwork::C3i
     } else {
         return Ok(());
     };
@@ -60,12 +57,7 @@ pub(super) fn apply(
 }
 
 /// C3 brackets use shared distance, ignore a peer's minimum range, and disable extended range.
-fn bracket(
-    weapon: BattleWeapon,
-    physical: f64,
-    shared: f64,
-    submerged: bool,
-) -> Option<BattleWeaponRange> {
+fn bracket(weapon: Weapon, physical: f64, shared: f64, submerged: bool) -> Option<WeaponRange> {
     let (short, medium, maximum) = if submerged {
         let profile = weapon.water_ranges()?;
         (
@@ -86,13 +78,13 @@ fn bracket(
     }
     let rounded = (shared + 0.95).floor();
     let (bracket, modifier) = if rounded > f64::from(medium) {
-        (BattleRangeBracket::Long, 4)
+        (RangeBracket::Long, 4)
     } else if rounded > f64::from(short) {
-        (BattleRangeBracket::Medium, 2)
+        (RangeBracket::Medium, 2)
     } else {
-        (BattleRangeBracket::Short, 0)
+        (RangeBracket::Short, 0)
     };
-    Some(BattleWeaponRange { bracket, modifier })
+    Some(WeaponRange { bracket, modifier })
 }
 
 /// Closest usable network sighting, shared by weapon aim and network contact displays.
@@ -102,9 +94,9 @@ pub(super) fn select(
     target: NetworkTarget,
     physical: f64,
     members: &[ObjectId],
-    kind: BattleCommandNetwork,
-) -> Result<BattleNetworkRange> {
-    let mut selected = BattleNetworkRange {
+    kind: CommandNetwork,
+) -> Result<NetworkRange> {
+    let mut selected = NetworkRange {
         kind,
         distance: physical,
         source: None,
@@ -114,7 +106,7 @@ pub(super) fn select(
             continue;
         }
         let unit = network_unit(world, peer)?;
-        if unit.power() != BattlePower::Running
+        if unit.power() != Power::Running
             || super::electronic_field(world, peer)?.blocks_outgoing_guidance()
         {
             continue;
@@ -134,7 +126,7 @@ pub(super) fn select(
             }
         };
         if let Some(distance) = distance.filter(|distance| *distance < selected.distance) {
-            selected = BattleNetworkRange {
+            selected = NetworkRange {
                 kind,
                 distance,
                 source: Some(peer),
@@ -153,35 +145,31 @@ mod tests {
     fn water_network_uses_water_bands_and_physical_limit() {
         for (shared, expected) in [(0.0, 0), (4.04, 0), (4.06, 2), (7.04, 2), (7.06, 4)] {
             assert_eq!(
-                bracket(BattleWeapon::Ppc, 10.04, shared, true)
-                    .unwrap()
-                    .modifier,
+                bracket(Weapon::Ppc, 10.04, shared, true).unwrap().modifier,
                 expected
             );
         }
-        assert!(bracket(BattleWeapon::Ppc, 10.06, 0.0, true).is_none());
-        assert!(bracket(BattleWeapon::SmallLaser, 2.04, 0.0, true).is_some());
-        assert!(bracket(BattleWeapon::SmallLaser, 2.06, 0.0, true).is_none());
-        assert!(bracket(BattleWeapon::Lrm20, 1.0, 0.0, true).is_none());
+        assert!(bracket(Weapon::Ppc, 10.06, 0.0, true).is_none());
+        assert!(bracket(Weapon::SmallLaser, 2.04, 0.0, true).is_some());
+        assert!(bracket(Weapon::SmallLaser, 2.06, 0.0, true).is_none());
+        assert!(bracket(Weapon::Lrm20, 1.0, 0.0, true).is_none());
     }
 
     #[test]
     fn brackets_preserve_rounding_and_ignore_peer_minimum_range() {
         for (distance, expected) in [(7.049, 0), (7.051, 2), (14.049, 2), (14.051, 4)] {
             assert_eq!(
-                bracket(BattleWeapon::Lrm20, 20.0, distance, false)
+                bracket(Weapon::Lrm20, 20.0, distance, false)
                     .unwrap()
                     .modifier,
                 expected
             );
         }
         assert_eq!(
-            bracket(BattleWeapon::Lrm20, 20.0, 0.0, false)
-                .unwrap()
-                .modifier,
+            bracket(Weapon::Lrm20, 20.0, 0.0, false).unwrap().modifier,
             0
         );
-        assert!(bracket(BattleWeapon::Lrm20, 21.051, 1.0, false).is_none());
-        assert!(bracket(BattleWeapon::Lrm20, 21.049, 1.0, false).is_some());
+        assert!(bracket(Weapon::Lrm20, 21.051, 1.0, false).is_none());
+        assert!(bracket(Weapon::Lrm20, 21.049, 1.0, false).is_some());
     }
 }

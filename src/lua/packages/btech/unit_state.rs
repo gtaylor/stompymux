@@ -63,16 +63,16 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             "visibility",
             detached(
                 lua,
-                &crate::battle_visibility(&world, ObjectId(id)).map_err(mlua::Error::external)?,
+                &crate::visibility(&world, ObjectId(id)).map_err(mlua::Error::external)?,
             )?,
         )?;
         state.set(
             "weapons_hold",
-            crate::battle_weapons_hold(&world, ObjectId(id)).map_err(mlua::Error::external)?,
+            crate::weapons_hold(&world, ObjectId(id)).map_err(mlua::Error::external)?,
         )?;
         state.set(
             "combat_safe",
-            crate::battle_combat_safe(&world, ObjectId(id)).map_err(mlua::Error::external)?,
+            crate::combat_safe(&world, ObjectId(id)).map_err(mlua::Error::external)?,
         )?;
         state.set(
             "observer",

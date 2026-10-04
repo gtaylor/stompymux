@@ -1,5 +1,5 @@
 //! Data-driven silhouettes with typed armor cells and section-dependent outlines.
-use crate::btech::{BattleMechChassis, BattleVehicleSection};
+use crate::btech::{MechChassis, VehicleSection};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result};
 use serde::Deserialize;
@@ -55,7 +55,7 @@ fn render_mode(world: &World, id: ObjectId, adversarial: bool) -> Result<String>
             current[slot] = [state.armor, state.rear, state.internal];
             original[slot] = [baseline.armor, baseline.rear, baseline.internal];
         }
-        if unit.chassis() == BattleMechChassis::Quad {
+        if unit.chassis() == MechChassis::Quad {
             "quad"
         } else {
             match unit.definition().tons {
@@ -82,7 +82,7 @@ fn render_mode(world: &World, id: ObjectId, adversarial: bool) -> Result<String>
         } else if unit
             .definition()
             .sections
-            .get(&BattleVehicleSection::Turret)
+            .get(&VehicleSection::Turret)
             .is_some_and(|s| s.internal > 0)
         {
             "vehicle"

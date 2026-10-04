@@ -1,5 +1,5 @@
 //! Map-side VIEW reuses tactical terrain rendering and transactional direct publication.
-use super::{BattleTacticalMap, HexCoordinate};
+use super::{HexCoordinate, TacticalMap};
 use crate::{Config, ObjectId, Scripts};
 use anyhow::{Context, Result, ensure};
 
@@ -10,7 +10,7 @@ pub fn view_map_action(
     actor: ObjectId,
     map: ObjectId,
     center: HexCoordinate,
-) -> Result<BattleTacticalMap> {
+) -> Result<TacticalMap> {
     scripts.atomic(|before| {
         ensure!(
             crate::authority::is_wizard(before, actor),
@@ -31,7 +31,7 @@ pub fn view_map_action(
             super::view_dimensions(before, actor)?,
         )?;
         for line in report.text.lines() {
-            super::notify_message(scripts, super::BattleMessageTarget::Player(actor), line)?;
+            super::notify_message(scripts, super::MessageTarget::Player(actor), line)?;
         }
         scripts.world().validate_action(config)?;
         scripts.effects.validate()?;

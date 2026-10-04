@@ -6,14 +6,14 @@ use serde::Serialize;
 
 /// Damage inputs from an already successful attack, after launch expenditure and defense resolution.
 #[derive(Debug, Clone, Copy)]
-pub struct BattleVehicleSalvoRequest {
+pub struct VehicleSalvoRequest {
     /// Apply the configured energy range rule before glancing damage.
     pub range_damage: bool,
     /// Damage lost to the launching weapon’s focusing components.
     pub damage_penalty: u8,
-    pub weapon: BattleWeapon,
-    pub ammunition: BattleAmmunitionMode,
-    pub fire_mode: BattleFireMode,
+    pub weapon: Weapon,
+    pub ammunition: AmmunitionMode,
+    pub fire_mode: FireMode,
     pub gatling_damage: Option<u8>,
     /// Actual spatial range, before aim-bracket rounding.
     pub distance: f64,
@@ -26,15 +26,14 @@ pub struct BattleVehicleSalvoRequest {
 
 /// One independently located packet and its complete vehicle consequences.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleVehicleSalvoGroup {
+pub struct VehicleSalvoGroup {
     pub damage: u16,
-    pub impact: BattleVehicleImpact,
+    pub impact: VehicleImpact,
 }
 
 /// Ordered target effects on a vehicle; the enclosing attack still owns launch,
 /// experience and publication.
-pub type BattleVehicleSalvoReport =
-    super::SalvoReport<BattleVehicleSalvoGroup, BattleVehicleInfernoHit>;
+pub type VehicleSalvoReport = super::SalvoReport<VehicleSalvoGroup, VehicleInfernoHit>;
 
 /// Resolve a successful salvo atomically using only the target's saved dice stream.
 /// Each packet receives its own location and damage entry, including packets following fatal hull loss.
@@ -42,10 +41,10 @@ pub type BattleVehicleSalvoReport =
 pub fn resolve_vehicle_salvo(
     world: &mut World,
     target: ObjectId,
-    arc: BattleHitArc,
-    request: BattleVehicleSalvoRequest,
-    rules: BattleVehicleImpactRules,
-) -> Result<BattleVehicleSalvoReport> {
+    arc: HitArc,
+    request: VehicleSalvoRequest,
+    rules: VehicleImpactRules,
+) -> Result<VehicleSalvoReport> {
     resolve_with_context(
         world,
         target,
@@ -72,10 +71,10 @@ pub(super) fn resolve_with_context(
     world: &mut World,
     target: ObjectId,
     direction: super::hit_direction::HitDirection,
-    request: BattleVehicleSalvoRequest,
-    rules: BattleVehicleImpactRules,
+    request: VehicleSalvoRequest,
+    rules: VehicleImpactRules,
     context: SalvoContext<'_>,
-) -> Result<BattleVehicleSalvoReport> {
+) -> Result<VehicleSalvoReport> {
     world.attempt(|world| {
         resolve_with_context_in_candidate(world, target, direction, request, rules, context)
     })
@@ -86,10 +85,10 @@ pub(super) fn resolve_with_context_in_candidate(
     world: &mut World,
     target: ObjectId,
     direction: super::hit_direction::HitDirection,
-    request: BattleVehicleSalvoRequest,
-    rules: BattleVehicleImpactRules,
+    request: VehicleSalvoRequest,
+    rules: VehicleImpactRules,
     context: SalvoContext<'_>,
-) -> Result<BattleVehicleSalvoReport> {
+) -> Result<VehicleSalvoReport> {
     let SalvoContext {
         woods_damage,
         submerged,
@@ -130,8 +129,8 @@ pub(super) fn resolve_with_context_in_candidate(
     );
     ensure!(
         weapon.beacon_kind(request.ammunition).is_none()
-            && weapon != BattleWeapon::CoolantGun
-            && request.fire_mode != BattleFireMode::Heat,
+            && weapon != Weapon::CoolantGun
+            && request.fire_mode != FireMode::Heat,
         "Vehicle beacon and thermal effects require dedicated target resolution"
     );
     ensure!(
@@ -140,15 +139,15 @@ pub(super) fn resolve_with_context_in_candidate(
     );
     ensure!(
         match (request.fire_mode, request.gatling_damage) {
-            (BattleFireMode::Gatling, Some(damage)) => (1..=6).contains(&damage),
-            (BattleFireMode::Gatling, None) => false,
+            (FireMode::Gatling, Some(damage)) => (1..=6).contains(&damage),
+            (FireMode::Gatling, None) => false,
             (_, None) => true,
             _ => false,
         },
         "Invalid gatling launch damage"
     );
     let target_beacon =
-        vehicle.has_beacon(BattleBeaconKind::Narc) || vehicle.has_beacon(BattleBeaconKind::Homing);
+        vehicle.has_beacon(BeaconKind::Narc) || vehicle.has_beacon(BeaconKind::Homing);
     let artemis_v = attacker.is_some_and(|shooter| super::artemis::artemis_v(world, shooter));
     let initial_woods = if woods_damage && let Some(shooter) = attacker {
         super::woods_absorption::begin_pellets(world, shooter, target, weapon, request.ammunition)?
@@ -179,7 +178,7 @@ pub(super) fn resolve_with_context_in_candidate(
     )?;
     packets.limit_missiles(incoming);
     packets.finish_burst_glancing(request.fire_mode, request.glancing && !shell_woods);
-    let mut report = BattleVehicleSalvoReport {
+    let mut report = VehicleSalvoReport {
         initial_woods,
         woods: None,
         cluster_roll: packets.cluster_roll,
@@ -191,7 +190,7 @@ pub(super) fn resolve_with_context_in_candidate(
     };
     if let Some((hits, surviving)) = packets.intercept(weapon, request.intercepted) {
         report.missiles_before_defense = Some(hits as u8);
-        if request.ammunition == BattleAmmunitionMode::Inferno {
+        if request.ammunition == AmmunitionMode::Inferno {
             if surviving > 0 {
                 report.inferno = Some(super::vehicle_burning::resolve_inferno_from(
                     world, target, surviving, rules, attacker,
@@ -202,7 +201,7 @@ pub(super) fn resolve_with_context_in_candidate(
         }
     }
     if woods_damage
-        && (weapon.profile().missiles > 0 || request.ammunition == BattleAmmunitionMode::Cluster)
+        && (weapon.profile().missiles > 0 || request.ammunition == AmmunitionMode::Cluster)
         && let Some(shooter) = attacker
     {
         report.woods = super::woods_absorption::resolve_projectiles(
@@ -243,7 +242,7 @@ pub(super) fn resolve_with_context_in_candidate(
             .transpose()?
             .flatten();
         let forced = match preferred {
-            Some(BattleUnitSection::Vehicle(section)) => Some(BattleVehicleHit {
+            Some(UnitSection::Vehicle(section)) => Some(VehicleHit {
                 section,
                 through_armor_critical: false,
                 motive: None,
@@ -258,18 +257,16 @@ pub(super) fn resolve_with_context_in_candidate(
             arc,
             super::vehicle_impact::ImpactRequest {
                 amount: u32::from(damage),
-                armor_piercing: (request.ammunition == BattleAmmunitionMode::ArmorPiercing)
+                armor_piercing: (request.ammunition == AmmunitionMode::ArmorPiercing)
                     .then_some(weapon),
-                rear: forced.is_some() && arc == BattleHitArc::Rear,
+                rear: forced.is_some() && arc == HitArc::Rear,
                 attacker,
-                class: BattleDamageClass::of_weapon(weapon),
+                class: DamageClass::of_weapon(weapon),
             },
             rules,
             forced,
         )?;
-        report
-            .groups
-            .push(BattleVehicleSalvoGroup { damage, impact });
+        report.groups.push(VehicleSalvoGroup { damage, impact });
     }
     world.btech.validate_action(world)?;
     Ok(report)

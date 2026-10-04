@@ -6,12 +6,12 @@ use stompymux_rs::*;
 /// Saved scenario setup exercises production deserialization without adding an unguarded launch API.
 fn prepare(world: &mut World, id: ObjectId, elevation: i32, safe: bool, roll: u8) {
     let dice = (0..=255)
-        .map(|seed| BattleDice::seeded([seed; 32]))
+        .map(|seed| Dice::seeded([seed; 32]))
         .find(|dice| dice.clone().two_d6() == roll)
         .unwrap();
     firing::edit(world, id, |state| {
         state["orbital_drop"] =
-            serde_json::to_value(BattleOrbitalDrop::new(35 * 1024, elevation).unwrap()).unwrap();
+            serde_json::to_value(OrbitalDrop::new(35 * 1024, elevation).unwrap()).unwrap();
         state["combat_safe"] = safe.into();
         state["ground_elevation"] = serde_json::Value::Null;
         state["dice"] = serde_json::to_value(dice).unwrap();
@@ -34,19 +34,19 @@ async fn stopped_safe_drops_advance_once_per_airborne_tick_and_land_without_dice
             firing::fixture_with_target(&source, None, &source).await;
         prepare(&mut world, unit, 10, true, 2);
         firing::edit(&mut world, unit, |state| {
-            state["power"] = serde_json::to_value(BattlePower::Off).unwrap();
+            state["power"] = serde_json::to_value(Power::Off).unwrap();
             state["target_lock"] = serde_json::Value::Null;
         });
         let original = saved_unit(&world, unit);
-        advance_battle_jumps(&mut world, BattleMovementRules::STANDARD).unwrap();
+        advance_battle_jumps(&mut world, MovementRules::STANDARD).unwrap();
         assert_eq!(battle_unit_elevation(&world, unit).unwrap(), Some(8));
         persistence::save(&config.database(), &world).await.unwrap();
         let mut restored = persistence::load(&config.database()).await.unwrap();
         for expected in [6, 4, 2, 0] {
-            let notices = advance_battle_jumps(&mut world, BattleMovementRules::STANDARD).unwrap();
+            let notices = advance_battle_jumps(&mut world, MovementRules::STANDARD).unwrap();
             assert_eq!(
                 notices,
-                advance_battle_jumps(&mut restored, BattleMovementRules::STANDARD).unwrap()
+                advance_battle_jumps(&mut restored, MovementRules::STANDARD).unwrap()
             );
             assert_eq!(world.btech, restored.btech);
             assert_eq!(battle_unit_elevation(&world, unit).unwrap(), Some(expected));
@@ -64,7 +64,7 @@ async fn stopped_safe_drops_advance_once_per_airborne_tick_and_land_without_dice
         assert_eq!(landed["sections"], original["sections"]);
         let before = world.btech.clone();
         assert!(
-            advance_battle_jumps(&mut world, BattleMovementRules::STANDARD)
+            advance_battle_jumps(&mut world, MovementRules::STANDARD)
                 .unwrap()
                 .is_empty()
         );
@@ -81,10 +81,10 @@ async fn failed_landings_apply_shared_fall_damage_and_replay() {
         let before = saved_unit(&world, unit);
         persistence::save(&config.database(), &world).await.unwrap();
         let mut restored = persistence::load(&config.database()).await.unwrap();
-        let notices = advance_battle_jumps(&mut world, BattleMovementRules::STANDARD).unwrap();
+        let notices = advance_battle_jumps(&mut world, MovementRules::STANDARD).unwrap();
         assert_eq!(
             notices,
-            advance_battle_jumps(&mut restored, BattleMovementRules::STANDARD).unwrap()
+            advance_battle_jumps(&mut restored, MovementRules::STANDARD).unwrap()
         );
         assert_eq!(world.btech, restored.btech);
         assert!(
@@ -117,9 +117,9 @@ async fn successful_water_landings_use_chassis_support_and_waterproofing() {
                 })
                 .unwrap();
             let before = saved_unit(&world, unit);
-            let notices = advance_battle_jumps(&mut world, BattleMovementRules::STANDARD).unwrap();
+            let notices = advance_battle_jumps(&mut world, MovementRules::STANDARD).unwrap();
             let vehicle = &world.btech.vehicles()[&unit];
-            let hover = vehicle.definition().movement == BattleVehicleMovement::Hover;
+            let hover = vehicle.definition().movement == VehicleMovement::Hover;
             assert_eq!(
                 battle_unit_elevation(&world, unit).unwrap(),
                 Some(if hover { 0 } else { -3 })
@@ -156,7 +156,7 @@ async fn host_landing_publication_failure_restores_drop_damage_dice_and_output()
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     let before = scripts.world().clone();
     let error =
-        advance_battle_jumps_action(&scripts, &config, BattleMovementRules::STANDARD).unwrap_err();
+        advance_battle_jumps_action(&scripts, &config, MovementRules::STANDARD).unwrap_err();
     assert!(error.to_string().contains("output limit"), "{error:#}");
     assert_eq!(scripts.world().btech, before.btech);
     assert_eq!(
@@ -191,7 +191,7 @@ async fn character_landings_award_the_drop_reason_and_publish_the_pilot_roll() {
         set_battle_character(
             &mut world,
             pilot,
-            BattleCharacter {
+            Character {
                 build: 5,
                 reflexes: 5,
                 intuition: 5,
@@ -207,7 +207,7 @@ async fn character_landings_award_the_drop_reason_and_publish_the_pilot_roll() {
             &mut world,
             pilot,
             skill,
-            BattleCharacterValue {
+            CharacterValue {
                 value: 0,
                 experience: 0,
                 last_used: 0,
@@ -217,10 +217,10 @@ async fn character_landings_award_the_drop_reason_and_publish_the_pilot_roll() {
         prepare(&mut world, unit, 2, false, 12);
         assert_eq!(battle_unit_piloting_target(&world, unit, true).unwrap(), 8);
         let before = world.btech.clone();
-        assert!(advance_battle_jumps(&mut world, BattleMovementRules::STANDARD).is_err());
+        assert!(advance_battle_jumps(&mut world, MovementRules::STANDARD).is_err());
         assert_eq!(world.btech, before);
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-        advance_battle_jumps_action(&scripts, &config, BattleMovementRules::STANDARD).unwrap();
+        advance_battle_jumps_action(&scripts, &config, MovementRules::STANDARD).unwrap();
         assert_eq!(
             scripts.world().btech.character_values()[&pilot][skill].experience,
             10
@@ -278,7 +278,7 @@ end}}
         .unwrap();
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         let original = saved_unit(&scripts.world(), unit);
-        advance_battle_jumps_action(&scripts, &config, BattleMovementRules::STANDARD).unwrap();
+        advance_battle_jumps_action(&scripts, &config, MovementRules::STANDARD).unwrap();
         assert_eq!(
             battle_unit_elevation(&scripts.world(), unit).unwrap(),
             Some(2)
@@ -289,8 +289,8 @@ end}}
             .eval_callback::<()>("mux.world.pemit(1,'PRIOR')")
             .unwrap();
         let before = serde_json::to_value(&*scripts.world()).unwrap();
-        let error = advance_battle_jumps_action(&scripts, &config, BattleMovementRules::STANDARD)
-            .unwrap_err();
+        let error =
+            advance_battle_jumps_action(&scripts, &config, MovementRules::STANDARD).unwrap_err();
         assert!(format!("{error:#}").contains("landing callback abort"));
         assert_eq!(serde_json::to_value(&*scripts.world()).unwrap(), before);
         let output = scripts.drain_outbox();
@@ -301,7 +301,7 @@ end}}
             .load("fail_drop=false")
             .exec()
             .unwrap();
-        advance_battle_jumps_action(&scripts, &config, BattleMovementRules::STANDARD).unwrap();
+        advance_battle_jumps_action(&scripts, &config, MovementRules::STANDARD).unwrap();
         let landed = saved_unit(&scripts.world(), unit);
         assert!(landed["orbital_drop"].is_null());
         assert_eq!(landed["dice"], original["dice"]);
@@ -330,7 +330,7 @@ end}}
         persistence::save(&config.database(), &saved).await.unwrap();
         let restored = persistence::load(&config.database()).await.unwrap();
         let restarted = Scripts::new(&config, Rc::new(RefCell::new(restored))).unwrap();
-        advance_battle_jumps_action(&restarted, &config, BattleMovementRules::STANDARD).unwrap();
+        advance_battle_jumps_action(&restarted, &config, MovementRules::STANDARD).unwrap();
         let count: i64 = restarted
             .eval_callback(&format!(
                 "return mux.world.object({}):state('drop'):get('count')",
@@ -369,7 +369,7 @@ end}}}}
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     let before = serde_json::to_value(&*scripts.world()).unwrap();
     let error =
-        advance_battle_jumps_action(&scripts, &config, BattleMovementRules::STANDARD).unwrap_err();
+        advance_battle_jumps_action(&scripts, &config, MovementRules::STANDARD).unwrap_err();
     assert!(format!("{error:#}").contains("second arrival abort"));
     assert_eq!(serde_json::to_value(&*scripts.world()).unwrap(), before);
     assert!(scripts.drain_outbox().is_empty());
@@ -393,7 +393,7 @@ end}}
         )
         .unwrap();
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-        advance_battle_jumps_action(&scripts, &config, BattleMovementRules::STANDARD).unwrap();
+        advance_battle_jumps_action(&scripts, &config, MovementRules::STANDARD).unwrap();
         let after = saved_unit(&scripts.world(), unit);
         assert_eq!(after["orbital_drop"], before["orbital_drop"]);
         assert_eq!(after["dice"], before["dice"]);

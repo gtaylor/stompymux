@@ -32,21 +32,16 @@ async fn cloud_boundary_filters_all_supported_unit_pairs() {
             raised_target(&mut world, map, target);
             // With the band switched off, sight carries the same clear-line rule.
             for sensors in [true, false] {
-                set_battle_map_perception(
-                    &mut world,
-                    map,
-                    BattleMapPerceptionFlag::Sensors,
-                    sensors,
-                )
-                .unwrap();
+                set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, sensors)
+                    .unwrap();
                 set_battle_map_cloud_base(&mut world, ObjectId(1), map, 0).unwrap();
                 let ordinary = battle_perceive(&world, observer, target).unwrap();
                 assert_eq!(
                     ordinary.map(|perception| perception.channel),
                     Some(if sensors {
-                        BattleDetectionChannel::Sensors
+                        DetectionChannel::Sensors
                     } else {
-                        BattleDetectionChannel::Sight
+                        DetectionChannel::Sight
                     })
                 );
                 set_battle_map_cloud_base(&mut world, ObjectId(1), map, 1).unwrap();
@@ -154,7 +149,7 @@ async fn terrain_clouds_follow_level_and_equality_rules_without_consuming_dice()
         let target = HexCoordinate { x: 0, y: 9 };
         set_battle_map_cloud_base(&mut world, ObjectId(1), map, 0).unwrap();
         let ordinary = battle_hex_perception(&world, id, target).unwrap();
-        assert_eq!(ordinary, Some(BattleDetectionChannel::Sensors));
+        assert_eq!(ordinary, Some(DetectionChannel::Sensors));
         for base in [-1, 0, 1, 2, 3] {
             set_battle_map_cloud_base(&mut world, ObjectId(1), map, base).unwrap();
             let before = world.btech.clone();
@@ -183,7 +178,7 @@ async fn terrain_cloud_admission_matches_native_lua_and_preserves_failed_shots()
     for source in firing::templates() {
         let (_dir, config, mut world, id, _, index) = firing::fixture_with_target(
             &source,
-            Some(BattleWeapon::MediumLaser),
+            Some(Weapon::MediumLaser),
             include_str!("../game/mechs/AS7-D.toml"),
         )
         .await;

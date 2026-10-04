@@ -6,7 +6,7 @@ use serde::Serialize;
 
 /// Terrain observations; perception applies range, lighting and equipment to decide visibility.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize)]
-pub struct BattleTerrainLos {
+pub struct TerrainLos {
     pub blocked: bool,
     /// Intervening light woods count once and heavy woods twice; target woods are separate.
     pub woods: u8,
@@ -23,7 +23,7 @@ pub fn ground_terrain_los(
     map: &StoredMap,
     observer: HexCoordinate,
     target: HexCoordinate,
-) -> Result<BattleTerrainLos> {
+) -> Result<TerrainLos> {
     ground_posture_los(map, observer, target, false, false, (None, None))
 }
 
@@ -35,7 +35,7 @@ fn ground_posture_los(
     observer_prone: bool,
     target_prone: bool,
     airborne: (Option<f64>, Option<f64>),
-) -> Result<BattleTerrainLos> {
+) -> Result<TerrainLos> {
     terrain_los_at_heights(
         map,
         observer,
@@ -55,7 +55,7 @@ fn terrain_los_at_heights(
     target: HexCoordinate,
     eyes: (f64, f64),
     airborne: (Option<f64>, Option<f64>),
-) -> Result<BattleTerrainLos> {
+) -> Result<TerrainLos> {
     terrain_los_with_endpoint(map, observer, target, eyes, airborne, false)
 }
 
@@ -67,7 +67,7 @@ fn terrain_los_with_endpoint(
     eyes: (f64, f64),
     airborne: (Option<f64>, Option<f64>),
     ice_surface: bool,
-) -> Result<BattleTerrainLos> {
+) -> Result<TerrainLos> {
     let hex = |point: HexCoordinate| map.hex(i64::from(point.x), i64::from(point.y));
     let base = |point: HexCoordinate| map.base_hex(i64::from(point.x), i64::from(point.y));
     let source = base(observer)?;
@@ -83,9 +83,9 @@ fn terrain_los_with_endpoint(
     let target_underwater = destination.holds_water() && end_height < surface(destination);
     let both_worlds = source.holds_water() && start_ground == surface(source) - 1.0;
     let target_both_worlds = destination.holds_water() && end_ground == surface(destination) - 1.0;
-    let mut report = BattleTerrainLos {
+    let mut report = TerrainLos {
         target_woods: visible_destination.woods_density(),
-        ..BattleTerrainLos::default()
+        ..TerrainLos::default()
     };
     if start_height > 10.0 && end_height > 10.0 {
         return Ok(report);
@@ -157,7 +157,7 @@ fn terrain_los_with_endpoint(
 
 /// Shared placed-unit geometry for terrain and perception queries.
 pub(super) struct UnitSightPoint {
-    pub position: super::BattlePosition,
+    pub position: super::Position,
     pub point: super::Point,
     pub eye: f64,
     /// Explicit altitude preserves flight precision and vehicle bridge/water position.
@@ -195,7 +195,7 @@ pub(super) fn unit_sight_point(world: &World, id: ObjectId) -> Result<UnitSightP
         return Ok(UnitSightPoint {
             position,
             point: vehicle.motion().context("Unit has no motion")?.point,
-            eye: if vehicle.definition().movement == super::BattleVehicleMovement::Stationary {
+            eye: if vehicle.definition().movement == super::VehicleMovement::Stationary {
                 1.5
             } else if vehicle.dig_state().dug_in {
                 0.1
@@ -222,7 +222,7 @@ pub(super) fn unit_sight_point(world: &World, id: ObjectId) -> Result<UnitSightP
     Ok(UnitSightPoint {
         position,
         point: unit.motion().context("Unit has no motion")?.point,
-        eye: if unit.posture() == super::BattlePosture::Prone {
+        eye: if unit.posture() == super::Posture::Prone {
             0.5
         } else {
             1.5
@@ -262,11 +262,7 @@ fn beyond_maximum_range(
 }
 
 /// Inspect terrain and the map's LOS distance ceiling without changing contact state.
-pub fn unit_terrain_los(
-    world: &World,
-    observer: ObjectId,
-    target: ObjectId,
-) -> Result<BattleTerrainLos> {
+pub fn unit_terrain_los(world: &World, observer: ObjectId, target: ObjectId) -> Result<TerrainLos> {
     unit_terrain_geometry(world, observer, target).map(|(terrain, _)| terrain)
 }
 
@@ -276,7 +272,7 @@ pub(super) fn unit_terrain_geometry(
     world: &World,
     observer: ObjectId,
     target: ObjectId,
-) -> Result<(BattleTerrainLos, super::BattleRange)> {
+) -> Result<(TerrainLos, super::Range)> {
     let _measurement = crate::btech::autopilot::diagnostics::measure(
         crate::btech::autopilot::diagnostics::Category::Geometry,
     );
@@ -297,7 +293,7 @@ pub(super) fn unit_terrain_geometry(
         .context("Map not found")?;
     if beyond_maximum_range(world, map, observer_id, Some(target_id), distance) {
         return Ok((
-            BattleTerrainLos {
+            TerrainLos {
                 blocked: true,
                 ..Default::default()
             },
@@ -329,7 +325,7 @@ pub(super) fn unit_hex_los(
     world: &World,
     observer: ObjectId,
     target: HexCoordinate,
-) -> Result<(BattleTerrainLos, f64)> {
+) -> Result<(TerrainLos, f64)> {
     let unit = unit_sight_point(world, observer)?;
     let map = &world.btech.maps()[&unit.position.map];
     let source = HexCoordinate {
@@ -346,7 +342,7 @@ pub(super) fn unit_hex_los(
     let distance = horizontal.hypot((altitude - target_height) / 5.0);
     if beyond_maximum_range(world, map, observer, None, distance) {
         return Ok((
-            BattleTerrainLos {
+            TerrainLos {
                 blocked: true,
                 ..Default::default()
             },
@@ -381,7 +377,7 @@ mod tests {
                 let mut map = lane(&[(Terrain::Grassland, 0); 201]);
                 map.maximum_visibility = maximum;
                 world.btech.maps.insert(ObjectId(99), map);
-                let mut template = crate::BattleTemplate::parse(
+                let mut template = crate::MechTemplate::parse(
                     "JR7-D",
                     include_str!("../../tests/fixtures/btech/mechs/JR7-D.toml"),
                 )
@@ -391,13 +387,13 @@ mod tests {
                         .attributes
                         .insert("specials".into(), "AntiAircraft".into());
                 }
-                let mut unit = crate::BattleUnit::from_template(template).unwrap();
-                unit.position = Some(crate::BattlePosition {
+                let mut unit = crate::Mech::from_template(template).unwrap();
+                unit.position = Some(crate::Position {
                     map: ObjectId(99),
                     x: 0,
                     y: 0,
                 });
-                unit.motion = Some(crate::BattleMotion::stationary(
+                unit.motion = Some(crate::Motion::stationary(
                     HexCoordinate { x: 0, y: 0 }.center(),
                 ));
                 world.btech.constructed.insert(ObjectId(1), unit);
@@ -463,7 +459,7 @@ mod tests {
         map
     }
 
-    fn sight(tiles: &[(Terrain, u8)]) -> BattleTerrainLos {
+    fn sight(tiles: &[(Terrain, u8)]) -> TerrainLos {
         ground_terrain_los(
             &lane(tiles),
             HexCoordinate { x: 1, y: 0 },

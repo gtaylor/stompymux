@@ -6,7 +6,7 @@ use stompymux_rs::*;
 /// A piloted unit faces an occupied and an empty hex, independently of its saved hex lock.
 async fn fixture(
     source: &str,
-    mode: BattleHexTargetMode,
+    mode: HexTargetMode,
 ) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {
     let (dir, config, mut world) = support::isolated_world().await;
     let map = world.create(&config, "Target field".into(), Kind::Room);
@@ -23,7 +23,7 @@ async fn fixture(
     for id in [shooter, target] {
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     }
-    BattleUnitTemplate::parse("test", source)
+    UnitTemplate::parse("test", source)
         .unwrap()
         .create(&mut world, shooter)
         .unwrap();
@@ -31,7 +31,7 @@ async fn fixture(
     create_battle_unit(
         &mut world,
         target,
-        BattleTemplate::parse("AS7-D", include_str!("../game/mechs/AS7-D.toml")).unwrap(),
+        MechTemplate::parse("AS7-D", include_str!("../game/mechs/AS7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
@@ -51,9 +51,9 @@ async fn fixture(
         "constructed"
     };
     saved[class][shooter.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded([42; 32])).unwrap();
+        serde_json::to_value(Dice::seeded([42; 32])).unwrap();
     saved["constructed"][target.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded([42; 32])).unwrap();
+        serde_json::to_value(Dice::seeded([42; 32])).unwrap();
     world.btech = serde_json::from_value(saved).unwrap();
     refresh_battle_contacts(&mut world, &[shooter]).unwrap();
     select_battle_hex_target(
@@ -64,14 +64,7 @@ async fn fixture(
         mode,
     )
     .unwrap();
-    edit_battle_tic(
-        &mut world,
-        shooter,
-        ObjectId(1),
-        0,
-        BattleTicEdit::Add(vec![0]),
-    )
-    .unwrap();
+    edit_battle_tic(&mut world, shooter, ObjectId(1), 0, TicEdit::Add(vec![0])).unwrap();
     world.validate(&config).unwrap();
     (dir, config, world, shooter, target)
 }
@@ -99,7 +92,7 @@ async fn coordinates_share_all_chassis_single_tic_and_restart() {
         stationary.as_str(),
         include_str!("../game/mechs/Kestrel.toml"),
     ] {
-        for mode in [BattleHexTargetMode::UnitAtHex, BattleHexTargetMode::Hex] {
+        for mode in [HexTargetMode::UnitAtHex, HexTargetMode::Hex] {
             let (_dir, config, world, shooter, target) = fixture(source, mode).await;
             persistence::save(&config.database(), &world).await.unwrap();
             let loaded = persistence::load(&config.database()).await.unwrap();
@@ -116,14 +109,7 @@ async fn coordinates_share_all_chassis_single_tic_and_restart() {
                 assert_eq!((x, actual_y), (1, y));
                 assert_eq!(recipient, (y == 1).then_some(target.0));
                 if y == 0 {
-                    assert_eq!(
-                        bonus,
-                        Some(if mode == BattleHexTargetMode::Hex {
-                            -4
-                        } else {
-                            0
-                        })
-                    );
+                    assert_eq!(bonus, Some(if mode == HexTargetMode::Hex { -4 } else { 0 }));
                 }
                 for command in ["fire", "firetic"] {
                     let native = scripts(&config, &world);
@@ -138,7 +124,7 @@ async fn coordinates_share_all_chassis_single_tic_and_restart() {
                     assert_eq!(native.world().btech, lua.world().btech);
                 }
                 let grouped = scripts(&config, &world);
-                let request = BattleFireTarget::Hex {
+                let request = FireTarget::Hex {
                     coordinate: HexCoordinate { x: 1, y },
                 };
                 let reports =
@@ -181,7 +167,7 @@ async fn coordinate_rejections_and_cockpit_admission_preserve_state() {
         include_str!("../game/mechs/JR7-D.toml"),
         include_str!("../game/mechs/Demolisher.toml"),
     ] {
-        let (_dir, config, world, shooter, _) = fixture(source, BattleHexTargetMode::Hex).await;
+        let (_dir, config, world, shooter, _) = fixture(source, HexTargetMode::Hex).await;
         for arguments in ["nope 1", "2147483648 0", "-1 0", "1 999", "1 0 extra"] {
             for command in ["fire", "firetic"] {
                 let native = scripts(&config, &world);
@@ -220,7 +206,7 @@ async fn artillery_coordinates_preserve_locks_and_queue_once() {
         include_str!("../game/mechs/Naga-Prime.toml"),
         include_str!("../game/mechs/Marksman.toml"),
     ] {
-        let (_dir, config, base, shooter, target) = fixture(source, BattleHexTargetMode::Hex).await;
+        let (_dir, config, base, shooter, target) = fixture(source, HexTargetMode::Hex).await;
         for selection in 0..3 {
             let mut world = base.clone();
             if selection < 2 {
@@ -354,8 +340,7 @@ async fn weapon_mechanics_precede_targets_across_chassis_and_restart() {
         include_str!("../game/mechs/Naga-Prime.toml"),
         include_str!("../game/mechs/Marksman.toml"),
     ] {
-        let (_dir, config, world, shooter, _) =
-            fixture(source, BattleHexTargetMode::UnitAtHex).await;
+        let (_dir, config, world, shooter, _) = fixture(source, HexTargetMode::UnitAtHex).await;
         let vehicle = world.btech.vehicles().contains_key(&shooter);
         let readiness = if vehicle {
             world.btech.vehicles()[&shooter]
@@ -459,8 +444,7 @@ async fn empty_ammunition_does_not_hide_native_target_errors() {
         include_str!("../game/mechs/Naga-Prime.toml"),
         include_str!("../game/mechs/Marksman.toml"),
     ] {
-        let (_dir, config, mut world, shooter, _) =
-            fixture(source, BattleHexTargetMode::UnitAtHex).await;
+        let (_dir, config, mut world, shooter, _) = fixture(source, HexTargetMode::UnitAtHex).await;
         edit_shooter(&mut world, shooter, |unit| {
             for rounds in unit["ammunition"].as_array_mut().unwrap() {
                 *rounds = serde_json::json!(0);
@@ -502,7 +486,7 @@ async fn empty_ammunition_does_not_hide_native_target_errors() {
 async fn anatomical_weapon_admission_shares_readiness_and_target_precedence() {
     let (_dir, config, world, shooter, _) = fixture(
         include_str!("../game/mechs/AS7-D.toml"),
-        BattleHexTargetMode::UnitAtHex,
+        HexTargetMode::UnitAtHex,
     )
     .await;
     assert_eq!(
@@ -512,11 +496,11 @@ async fn anatomical_weapon_admission_shares_readiness_and_target_precedence() {
             .weapons[0]
             .criticals[0]
             .section,
-        BattleSection::LeftArm
+        MechSection::LeftArm
     );
     let mut club = world.clone();
     edit_shooter(&mut club, shooter, |unit| {
-        unit["carried_club"] = serde_json::to_value(BattleArm::Left).unwrap()
+        unit["carried_club"] = serde_json::to_value(Arm::Left).unwrap()
     });
     assert!(
         !club.btech.constructed_units()[&shooter]
@@ -528,7 +512,7 @@ async fn anatomical_weapon_admission_shares_readiness_and_target_precedence() {
 
     let mut prone = world.clone();
     edit_shooter(&mut prone, shooter, |unit| {
-        unit["posture"] = serde_json::to_value(BattlePosture::Prone).unwrap();
+        unit["posture"] = serde_json::to_value(Posture::Prone).unwrap();
         unit["limb_recycle"]["RightArm"] = serde_json::json!(5);
     });
     assert_mechanical_rejection(&config, &prone, shooter, "Right Arm to prop yourself up");
@@ -544,15 +528,15 @@ async fn anatomical_weapon_admission_shares_readiness_and_target_precedence() {
 
     let (_dir, config, mut quad, shooter, _) = fixture(
         include_str!("../game/mechs/GOL-1H.toml"),
-        BattleHexTargetMode::UnitAtHex,
+        HexTargetMode::UnitAtHex,
     )
     .await;
     edit_shooter(&mut quad, shooter, |unit| {
-        unit["posture"] = serde_json::to_value(BattlePosture::Prone).unwrap();
+        unit["posture"] = serde_json::to_value(Posture::Prone).unwrap();
         unit["flooded_sections"] = serde_json::to_value([
-            BattleSection::LeftArm,
-            BattleSection::RightArm,
-            BattleSection::LeftLeg,
+            MechSection::LeftArm,
+            MechSection::RightArm,
+            MechSection::LeftLeg,
         ])
         .unwrap();
     });
@@ -560,11 +544,11 @@ async fn anatomical_weapon_admission_shares_readiness_and_target_precedence() {
 
     let (_dir, config, mut covered, shooter, _) = fixture(
         include_str!("../game/mechs/Hunter.toml"),
-        BattleHexTargetMode::UnitAtHex,
+        HexTargetMode::UnitAtHex,
     )
     .await;
     edit_shooter(&mut covered, shooter, |unit| {
-        unit["dig"] = serde_json::to_value(BattleDigState::covered()).unwrap()
+        unit["dig"] = serde_json::to_value(DigState::covered()).unwrap()
     });
     assert_mechanical_rejection(
         &config,
@@ -581,8 +565,7 @@ async fn defensive_weapon_admission_precedes_targets_without_disabling_ams() {
         include_str!("../game/mechs/JR7-D.toml").replace("IS.MediumLaser", "IS.LaserAMS"),
         include_str!("../game/mechs/Demolisher.toml").replace("IS.AC/20", "IS.Anti-MissileSystem"),
     ] {
-        let (_dir, config, world, shooter, _) =
-            fixture(&source, BattleHexTargetMode::UnitAtHex).await;
+        let (_dir, config, world, shooter, _) = fixture(&source, HexTargetMode::UnitAtHex).await;
         let readiness = if let Some(unit) = world.btech.vehicles().get(&shooter) {
             unit.weapon_readiness(0).unwrap()
         } else {

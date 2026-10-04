@@ -9,8 +9,7 @@ use stompymux_rs::*;
 async fn damage_fields_share_material_order_native_lua_and_restart() {
     for source in firing::templates() {
         let (_dir, config, mut world, id, _, weapon) =
-            firing::fixture_with_supply(&source, Some(BattleWeapon::Ac5), &source, false, Some(""))
-                .await;
+            firing::fixture_with_supply(&source, Some(Weapon::Ac5), &source, false, Some("")).await;
         assert_eq!(battle_unit_damage_field(&world, id).unwrap(), "");
         let mech = world.btech.constructed_units().contains_key(&id);
         let section = if mech { "LeftTorso" } else { "front" };
@@ -20,7 +19,7 @@ async fn damage_fields_share_material_order_native_lua_and_restart() {
                 .ammunition
                 .iter()
                 .enumerate()
-                .find(|(_, bin)| bin.weapon == BattleWeapon::Ac5)
+                .find(|(_, bin)| bin.weapon == Weapon::Ac5)
                 .unwrap();
             (index, bin.location.slot, bin.capacity)
         } else {
@@ -29,7 +28,7 @@ async fn damage_fields_share_material_order_native_lua_and_restart() {
                 .ammunition
                 .iter()
                 .enumerate()
-                .find(|(_, bin)| bin.weapon == BattleWeapon::Ac5)
+                .find(|(_, bin)| bin.weapon == Weapon::Ac5)
                 .unwrap();
             (index, bin.location.slot, bin.capacity)
         };
@@ -106,7 +105,7 @@ async fn damage_fields_share_material_order_native_lua_and_restart() {
 async fn damage_field_reports_powered_down_weapons_without_spurious_slot_losses() {
     for source in firing::templates() {
         let (_dir, _config, mut world, id, _, weapon) =
-            firing::fixture_with_target(&source, Some(BattleWeapon::GaussRifle), &source).await;
+            firing::fixture_with_target(&source, Some(Weapon::GaussRifle), &source).await;
         firing::edit(&mut world, id, |unit| {
             unit["powered_down_weapons"] = serde_json::json!([weapon])
         });
@@ -119,7 +118,7 @@ async fn damage_field_reports_powered_down_weapons_without_spurious_slot_losses(
 async fn damage_field_distinguishes_vehicle_and_enhanced_mech_failures() {
     for source in firing::templates() {
         let (_dir, _config, mut world, id, _, weapon) =
-            firing::fixture_with_target(&source, Some(BattleWeapon::Ac5), &source).await;
+            firing::fixture_with_target(&source, Some(Weapon::Ac5), &source).await;
         let mech = world.btech.constructed_units().contains_key(&id);
         firing::edit(&mut world, id, |unit| {
             if mech {

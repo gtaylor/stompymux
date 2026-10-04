@@ -1,5 +1,5 @@
 //! Vehicle turret controls preserve hull-relative facing and respect persistent lock damage.
-use super::BattleNotice;
+use super::Notice;
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 
@@ -40,7 +40,7 @@ pub fn set_turret(
     id: ObjectId,
     pilot: ObjectId,
     heading: f64,
-) -> Result<BattleNotice> {
+) -> Result<Notice> {
     let notice = set_turret_by_actor(
         world,
         id,
@@ -56,7 +56,7 @@ pub(crate) fn set_turret_autopilot(
     world: &mut World,
     id: ObjectId,
     heading: f64,
-) -> Result<BattleNotice> {
+) -> Result<Notice> {
     set_turret_by_actor(
         world,
         id,
@@ -70,7 +70,7 @@ fn set_turret_by_actor(
     id: ObjectId,
     actor: super::combat_operator::ControlActor,
     heading: f64,
-) -> Result<BattleNotice> {
+) -> Result<Notice> {
     turret_readout_by_actor(world, id, actor)?;
     ensure!(
         heading.is_finite()
@@ -84,7 +84,7 @@ fn set_turret_by_actor(
     // Floating-point rem_euclid can round a tiny negative offset up to 360.
     // Canonicalize that endpoint before the ordinary strict facing validator.
     vehicle.turret_offset = (heading - vehicle.motion().unwrap().heading).rem_euclid(360.0) % 360.0;
-    Ok(BattleNotice {
+    Ok(Notice {
         unit: id,
         text: format!("Turret facing changed to {}.", heading as u16),
     })
@@ -108,7 +108,7 @@ pub fn lock_vehicle_turret(world: &mut World, id: ObjectId) -> Result<()> {
     vehicle.lock_turret()
 }
 
-impl super::BattleVehicle {
+impl super::Vehicle {
     /// A recoverable rotation failure; a second hit promotes it to a permanent lock.
     pub fn turret_jammed(&self) -> bool {
         self.turret_jammed
@@ -121,7 +121,7 @@ impl super::BattleVehicle {
 }
 
 /// Apply a turret jam, promoting an existing jam to a lock in the damage transaction.
-pub fn jam_vehicle_turret(world: &mut World, id: ObjectId) -> Result<BattleNotice> {
+pub fn jam_vehicle_turret(world: &mut World, id: ObjectId) -> Result<Notice> {
     ensure!(
         world
             .objects
@@ -145,7 +145,7 @@ pub fn jam_vehicle_turret(world: &mut World, id: ObjectId) -> Result<BattleNotic
         vehicle.turret_jammed = true;
         "[fg=red bold]Your turret gets jammed on its current facing![reset]"
     };
-    Ok(BattleNotice {
+    Ok(Notice {
         unit: id,
         text: text.into(),
     })
@@ -156,7 +156,7 @@ pub fn begin_vehicle_turret_repair(
     world: &mut World,
     id: ObjectId,
     pilot: ObjectId,
-) -> Result<BattleNotice> {
+) -> Result<Notice> {
     super::vehicle_power::controlled(world, id, pilot)?;
     super::vehicle_driving::readout(world, id, pilot)?;
     let vehicle = world.btech.vehicles.get_mut(&id).unwrap();
@@ -170,14 +170,14 @@ pub fn begin_vehicle_turret_repair(
         "Too many pending turret repairs"
     );
     vehicle.turret_repairs.push(60);
-    Ok(BattleNotice {
+    Ok(Notice {
         unit: id,
         text: "You start to repair your jammed turret.".into(),
     })
 }
 
 /// Finish elapsed repair attempts with current power, crew and turret conditions.
-pub(super) fn advance(world: &mut World) -> Vec<BattleNotice> {
+pub(super) fn advance(world: &mut World) -> Vec<Notice> {
     let ids: Vec<_> = world
         .btech
         .vehicles()
@@ -208,7 +208,7 @@ pub(super) fn advance(world: &mut World) -> Vec<BattleNotice> {
         if !conscious
             || vehicle.is_destroyed()
             || vehicle.turret_heading().is_none()
-            || vehicle.power() != super::BattlePower::Running
+            || vehicle.power() != super::Power::Running
         {
             continue;
         }
@@ -219,7 +219,7 @@ pub(super) fn advance(world: &mut World) -> Vec<BattleNotice> {
                 vehicle.turret_jammed = false;
                 "You manage to unjam your turret!"
             };
-            notices.push(BattleNotice {
+            notices.push(Notice {
                 unit: id,
                 text: text.into(),
             });

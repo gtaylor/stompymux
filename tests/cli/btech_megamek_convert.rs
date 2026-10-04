@@ -3,7 +3,7 @@
 use crate::repository_root;
 use std::path::PathBuf;
 use std::process::{Command, Output};
-use stompymux_rs::BattleUnitTemplate;
+use stompymux_rs::UnitTemplate;
 
 /// The hand-written MegaMek fixtures.
 fn fixture(name: &str) -> PathBuf {
@@ -48,10 +48,10 @@ fn units_are_written_as_loadable_templates_and_refusals_write_nothing() {
     for file in &written {
         let source = std::fs::read_to_string(out.path().join(file)).unwrap();
         let reference = file.trim_end_matches(".toml");
-        let template = BattleUnitTemplate::parse(reference, &source).unwrap();
+        let template = UnitTemplate::parse(reference, &source).unwrap();
         match (reference, template) {
-            ("AS7-D", BattleUnitTemplate::Mech(mech)) => assert_eq!(mech.tons, 100),
-            ("Bulldog_Medium_Tank", BattleUnitTemplate::Vehicle(vehicle)) => {
+            ("AS7-D", UnitTemplate::Mech(mech)) => assert_eq!(mech.tons, 100),
+            ("Bulldog_Medium_Tank", UnitTemplate::Vehicle(vehicle)) => {
                 assert_eq!(vehicle.tons, 60)
             }
             (reference, _) => panic!("{reference} has the wrong class"),
@@ -72,7 +72,7 @@ fn a_single_unit_prints_its_template_under_any_reference() {
     assert!(output.status.success());
     let template = String::from_utf8(output.stdout).unwrap();
     assert!(template.starts_with("name = \"Atlas\"\nclass = \"mech\"\n"));
-    assert!(BattleUnitTemplate::parse("Atlas", &template).is_ok());
+    assert!(UnitTemplate::parse("Atlas", &template).is_ok());
 
     let bulldog = fixture("Bulldog Medium Tank.blk");
     let many = convert(&[atlas.as_os_str(), bulldog.as_os_str()]);

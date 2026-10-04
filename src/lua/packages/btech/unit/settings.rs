@@ -89,8 +89,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
         lua.create_function(move |lua, (player, value): (i64, Option<Table>)| {
             crate::lua::transactions::require(lua)?;
             if let Some(table) = value {
-                let preferences: crate::BattleContactPreferences =
-                    lua.from_value(Value::Table(table))?;
+                let preferences: crate::ContactPreferences = lua.from_value(Value::Table(table))?;
                 crate::lua::transactions::run(lua, &shared, || {
                     crate::set_battle_contact_preferences(
                         &mut shared.borrow_mut(),
@@ -113,8 +112,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
         lua.create_function(move |lua, (player, value): (i64, Option<Table>)| {
             crate::lua::transactions::require(lua)?;
             if let Some(table) = value {
-                let dimensions: crate::BattleViewDimensions =
-                    lua.from_value(Value::Table(table))?;
+                let dimensions: crate::ViewDimensions = lua.from_value(Value::Table(table))?;
                 crate::lua::transactions::run(lua, &shared, || {
                     crate::set_battle_view_dimensions(
                         &mut shared.borrow_mut(),

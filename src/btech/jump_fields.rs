@@ -1,5 +1,5 @@
 //! Atomic administrative jump-course edits reuse the saved flight cursor and landing services.
-use super::BattleJumpPath;
+use super::JumpPath;
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 
@@ -57,12 +57,8 @@ pub(super) fn set(world: &mut World, id: ObjectId, heading: bool, value: &str) -
             let elevation = map
                 .base_hex(i64::from(destination.x), i64::from(destination.y))?
                 .standing_height();
-            let path = BattleJumpPath::continuation(
-                origin,
-                end,
-                elevation,
-                cursor.path().movement_points(),
-            )?;
+            let path =
+                JumpPath::continuation(origin, end, elevation, cursor.path().movement_points())?;
             super::jumping::validate_route(map, path)?;
             cursor.redirect(path)?;
         }

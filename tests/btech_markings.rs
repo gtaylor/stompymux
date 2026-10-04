@@ -138,7 +138,7 @@ async fn markings_recheck_visibility_and_running_admission_without_side_effects(
     set_battle_visibility(
         &mut world,
         target,
-        BattleVisibility {
+        Visibility {
             invisible: true,
             clairvoyant: false,
         },
@@ -169,7 +169,7 @@ async fn markings_recheck_visibility_and_running_admission_without_side_effects(
         &mut world,
         observer,
         ObjectId(1),
-        BattleMovementRules::STANDARD.fall,
+        MovementRules::STANDARD.fall,
     )
     .unwrap();
     assert!(view_battle_unit_markings(&world, observer, ObjectId(1), Some(target)).is_err());

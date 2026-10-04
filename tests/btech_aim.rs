@@ -1,5 +1,5 @@
 //! Fractional conventional range brackets and explicit unsupported-range outcomes.
-use stompymux_rs::{BattleRangeBracket as Bracket, BattleWeapon as Weapon};
+use stompymux_rs::{RangeBracket as Bracket, Weapon};
 
 #[test]
 fn fractional_minimum_and_bracket_boundaries_follow_separate_rounding_rules() {

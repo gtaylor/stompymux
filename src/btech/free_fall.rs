@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 /// not the sustained flight system used by aircraft recovery rules.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(try_from = "FreeFallRecord")]
-pub struct BattleFreeFall {
+pub struct FreeFall {
     elevation: f64,
     /// Downward speed; zero retains the scheduled event while aircraft lift arrests descent.
     speed: u16,
@@ -27,7 +27,7 @@ struct FreeFallRecord {
     grounded: bool,
 }
 
-impl TryFrom<FreeFallRecord> for BattleFreeFall {
+impl TryFrom<FreeFallRecord> for FreeFall {
     type Error = anyhow::Error;
 
     fn try_from(record: FreeFallRecord) -> Result<Self> {
@@ -52,7 +52,7 @@ impl TryFrom<FreeFallRecord> for BattleFreeFall {
 /// The enclosing transaction applies impact damage and removes the descent cursor.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[must_use = "Apply impact effects and remove the cursor in the same transaction"]
-pub enum BattleFreeFallStep {
+pub enum FreeFallStep {
     Waiting,
     Descending,
     /// Sustained lift has arrested descent; the caller removes the cursor.
@@ -62,7 +62,7 @@ pub enum BattleFreeFallStep {
     },
 }
 
-impl BattleFreeFall {
+impl FreeFall {
     /// Committed seconds until the next descent event.
     pub(super) fn remaining(self) -> u8 {
         self.remaining
@@ -123,22 +123,18 @@ impl BattleFreeFall {
     /// the pre-contact altitude for damage rules that inspect water or bridges.
     /// Gravity and map movement rates do not change this event's cadence.
     /// Invalid arithmetic and impact outcomes leave the cursor unchanged.
-    pub fn advance(&mut self, surface: i32) -> Result<BattleFreeFallStep> {
+    pub fn advance(&mut self, surface: i32) -> Result<FreeFallStep> {
         self.advance_with_lift(surface, false)
     }
 
     /// Aircraft lift brakes descent on the same clock used by unpowered units.
-    pub(super) fn advance_with_lift(
-        &mut self,
-        surface: i32,
-        lift: bool,
-    ) -> Result<BattleFreeFallStep> {
+    pub(super) fn advance_with_lift(&mut self, surface: i32, lift: bool) -> Result<FreeFallStep> {
         if self.remaining > 1 {
             self.remaining -= 1;
-            return Ok(BattleFreeFallStep::Waiting);
+            return Ok(FreeFallStep::Waiting);
         }
         if lift && self.speed == 0 {
-            return Ok(BattleFreeFallStep::Recovered);
+            return Ok(FreeFallStep::Recovered);
         }
         let speed = if lift {
             self.speed - 1
@@ -150,7 +146,7 @@ impl BattleFreeFall {
         let height = i64::from(self.elevation()) - i64::from(surface);
         if height <= i64::from(speed) {
             let speed = u32::from(speed);
-            return Ok(BattleFreeFallStep::Impact {
+            return Ok(FreeFallStep::Impact {
                 levels: speed * (speed + 1) / 2,
             });
         }
@@ -164,7 +160,7 @@ impl BattleFreeFall {
             remaining: 3,
             grounded: false,
         };
-        Ok(BattleFreeFallStep::Descending)
+        Ok(FreeFallStep::Descending)
     }
 }
 
@@ -172,11 +168,11 @@ impl BattleFreeFall {
 pub(super) fn advance_unit(
     world: &mut crate::World,
     id: crate::ObjectId,
-    mut rules: super::BattleFallRules,
+    mut rules: super::FallRules,
     character: bool,
-    falls: &mut Vec<super::BattleFallReport>,
-    feedback: (&mut Vec<super::BattlePilotNotice>, usize),
-) -> Result<Vec<super::BattleNotice>> {
+    falls: &mut Vec<super::MechFallReport>,
+    feedback: (&mut Vec<super::PilotNotice>, usize),
+) -> Result<Vec<super::Notice>> {
     let unit = &world.btech.constructed_units()[&id];
     let mut fall = unit.free_fall.context("Unit is not free-falling")?;
     let position = unit.position().context("Free-falling unit is not placed")?;
@@ -191,7 +187,7 @@ pub(super) fn advance_unit(
         .and_then(|pilot| world.btech.character_values().get(&pilot))
         .is_some_and(|values| super::advantages::enabled(values, "Toughness"));
     let step = fall.advance(i32::from(surface))?;
-    if let BattleFreeFallStep::Impact { levels } = step {
+    if let FreeFallStep::Impact { levels } = step {
         let levels =
             i16::try_from(levels).context("Free-fall impact exceeds supported severity")?;
         // Capture visibility before impact can destroy the falling unit or alter terrain.
@@ -202,14 +198,14 @@ pub(super) fn advance_unit(
             super::fall::resolve_signed_fall(world, id, levels, rules)?
         };
         world.btech.constructed.get_mut(&id).unwrap().free_fall = None;
-        let mut notices = vec![super::BattleNotice {
+        let mut notices = vec![super::Notice {
             unit: id,
             text: "You hit the ground!".to_owned(),
         }];
         notices.extend(
             observers
                 .into_iter()
-                .map(|(unit, text)| super::BattleNotice { unit, text }),
+                .map(|(unit, text)| super::Notice { unit, text }),
         );
         let mut private = Vec::new();
         report.append_notices(id, &mut notices, &mut private);
@@ -227,21 +223,20 @@ mod tests {
 
     #[test]
     fn descent_waits_accelerates_and_replays_every_saved_second() -> Result<()> {
-        let mut fall = BattleFreeFall::new(10);
+        let mut fall = FreeFall::new(10);
         for (second, elevation) in [10, 10, 8, 8, 8, 5, 5, 5, 1, 1, 1, 1]
             .into_iter()
             .enumerate()
         {
-            let mut restored: BattleFreeFall =
-                serde_json::from_str(&serde_json::to_string(&fall)?)?;
+            let mut restored: FreeFall = serde_json::from_str(&serde_json::to_string(&fall)?)?;
             let result = fall.advance(0)?;
             assert_eq!(restored.advance(0)?, result);
             assert_eq!(restored, fall);
             assert_eq!(fall.elevation(), elevation);
             let expected = match second + 1 {
-                3 | 6 | 9 => BattleFreeFallStep::Descending,
-                12 => BattleFreeFallStep::Impact { levels: 15 },
-                _ => BattleFreeFallStep::Waiting,
+                3 | 6 | 9 => FreeFallStep::Descending,
+                12 => FreeFallStep::Impact { levels: 15 },
+                _ => FreeFallStep::Waiting,
             };
             assert_eq!(result, expected);
         }
@@ -251,20 +246,17 @@ mod tests {
     #[test]
     fn contact_boundary_uses_live_surface_and_preserves_preimpact_height() -> Result<()> {
         for (elevation, surface) in [(2, 0), (0, 0), (-2, -4), (1, 5)] {
-            let mut fall = BattleFreeFall::new(elevation);
+            let mut fall = FreeFall::new(elevation);
             let _ = fall.advance(-9)?;
             let _ = fall.advance(-9)?;
             let before = fall;
-            assert_eq!(
-                fall.advance(surface)?,
-                BattleFreeFallStep::Impact { levels: 3 }
-            );
+            assert_eq!(fall.advance(surface)?, FreeFallStep::Impact { levels: 3 });
             assert_eq!(fall, before);
         }
-        let mut below_deck = BattleFreeFall::new(1);
+        let mut below_deck = FreeFall::new(1);
         let _ = below_deck.advance(-4)?;
         let _ = below_deck.advance(-4)?;
-        assert_eq!(below_deck.advance(-4)?, BattleFreeFallStep::Descending);
+        assert_eq!(below_deck.advance(-4)?, FreeFallStep::Descending);
         assert_eq!(below_deck.elevation(), -1);
         Ok(())
     }
@@ -273,13 +265,13 @@ mod tests {
     fn malformed_saved_events_are_rejected_and_overflow_is_atomic() -> Result<()> {
         for (speed, remaining) in [(1, 0), (1, 4)] {
             assert!(
-                serde_json::from_value::<BattleFreeFall>(serde_json::json!({
+                serde_json::from_value::<FreeFall>(serde_json::json!({
                     "elevation": 5, "speed": speed, "remaining": remaining,
                 }))
                 .is_err()
             );
         }
-        let mut fall: BattleFreeFall = serde_json::from_value(serde_json::json!({
+        let mut fall: FreeFall = serde_json::from_value(serde_json::json!({
             "elevation": 5, "speed": u16::MAX, "remaining": 1,
         }))?;
         let before = fall;

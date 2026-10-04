@@ -3,12 +3,7 @@ use crate::{Config, ObjectId, Scripts, World};
 use anyhow::{Context, Result, bail, ensure};
 
 /// Apply one exact field name; caller supplies authorization and transaction rollback.
-fn edit(
-    world: &mut World,
-    map: ObjectId,
-    field: &str,
-    value: &str,
-) -> Result<Vec<super::BattleNotice>> {
+fn edit(world: &mut World, map: ObjectId, field: &str, value: &str) -> Result<Vec<super::Notice>> {
     let mut record = world
         .btech
         .maps()
@@ -40,7 +35,7 @@ fn edit(
             } else {
                 record.visibility = i64::from(integer()?);
             }
-            let light = super::BattleLight::from_stored(record.light)?;
+            let light = super::Light::from_stored(record.light)?;
             super::set_map_visibility(
                 world,
                 map,

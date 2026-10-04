@@ -2,14 +2,14 @@
 //!
 //! Every countdown and count a heartbeat steps is listed here with the condition under
 //! which it steps, mirroring the advance functions that own it.
-use super::timers::{BattleTimer as T, SavedTimer, SavedTimers, TimerList, TimerMotion::*};
-use super::{BattlePower, BattleVehicle};
+use super::timers::{SavedTimer, SavedTimers, Timer as T, TimerList, TimerMotion::*};
+use super::{Power, Vehicle};
 
-impl SavedTimers for BattleVehicle {
+impl SavedTimers for Vehicle {
     fn saved_timers(&self) -> Vec<SavedTimer> {
         let mut list = TimerList::new();
-        let running = self.power() == BattlePower::Running;
-        if let BattlePower::Starting { remaining } = self.power {
+        let running = self.power() == Power::Running;
+        if let Power::Starting { remaining } = self.power {
             list.add(T::Startup, 0, remaining, Down);
         }
         list.add(T::Inferno, 0, self.inferno_remaining, Down);

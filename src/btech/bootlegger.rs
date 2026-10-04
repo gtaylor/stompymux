@@ -1,21 +1,21 @@
 //! Atomic BattleMech pivot attempts using shared piloting, fall and casualty rules.
-use super::BattleUnit;
+use super::Mech;
 use crate::{Config, ObjectId, Scripts, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
 
 /// Detached maneuver outcome, including any committed fall and skill award.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct BattleBootleggerReport {
+pub struct BootleggerReport {
     pub modifier: i16,
-    pub check: super::BattlePilotingCheck,
-    pub fall: Option<super::BattleFallReport>,
-    pub notices: Vec<super::BattleNotice>,
+    pub check: super::PilotingCheck,
+    pub fall: Option<super::MechFallReport>,
+    pub notices: Vec<super::Notice>,
     /// Pilot-only roll feedback ordered before the maneuver consequences.
-    pub pilot_notices: Vec<super::BattlePilotNotice>,
+    pub pilot_notices: Vec<super::PilotNotice>,
 }
 
-impl BattleUnit {
+impl Mech {
     /// Require available, idle legs and sum their derived weapon-mount actuator penalties.
     pub fn bootlegger_leg_modifier(&self) -> Result<i16> {
         let loadout = self.loadout()?;
@@ -54,7 +54,7 @@ pub fn bootlegger_modifier(world: &World, id: ObjectId, pilot: ObjectId) -> Resu
     super::power::controlled_unit(world, id, pilot)?;
     let unit = &world.btech.constructed_units()[&id];
     ensure!(
-        unit.power() == super::BattlePower::Running,
+        unit.power() == super::Power::Running,
         "Start the unit first"
     );
     let position = unit.position().context("Unit is not on a battlefield")?;
@@ -94,7 +94,7 @@ pub fn bootlegger(
     id: ObjectId,
     pilot: ObjectId,
     direction: &str,
-) -> Result<BattleBootleggerReport> {
+) -> Result<BootleggerReport> {
     scripts.atomic(|before| {
         let words: Vec<_> = direction.split_whitespace().collect();
         ensure!(words.len() == 1, "Invalid number of arguments!");
@@ -105,15 +105,15 @@ pub fn bootlegger(
         };
         let modifier = bootlegger_modifier(&scripts.world(), id, pilot)?;
         let settings = &config.battletech;
-        let rules = super::BattleFallRules {
-            vehicle_impact: crate::BattleVehicleImpactRules::configured(settings, false),
-            stacking: super::BattleStackingRules {
+        let rules = super::FallRules {
+            vehicle_impact: crate::VehicleImpactRules::configured(settings, false),
+            stacking: super::StackingRules {
                 mode: settings.stacking,
                 damage_percent: settings.stackdamage,
                 hit_arcs: settings.hit_arcs,
             },
-            stagger: super::BattleStaggerMode::from_setting(settings.newstagger),
-            hit: super::BattleHitRules {
+            stagger: super::StaggerMode::from_setting(settings.newstagger),
+            hit: super::HitRules {
                 inferno_penalty: settings.inferno_penalty != 0,
                 exile_stun_mode: settings.exile_stun_code.clamp(0, 2) as u8,
             },
@@ -152,7 +152,7 @@ pub fn bootlegger(
             motion.heading = (motion.heading.trunc() + delta).rem_euclid(360.0);
             motion.desired_heading = motion.heading;
             motion.speed *= 0.5;
-            notices.push(super::BattleNotice {
+            notices.push(super::Notice {
                 unit: id,
                 text: format!(
                     "You plant a foot and swivel, changing your heading to {:.0}.",
@@ -164,7 +164,7 @@ pub fn bootlegger(
             }
             None
         } else {
-            notices.push(super::BattleNotice { unit: id, text: "You plant a foot and try to swivel...\r\n... but realize a little late that this is harder than it looks!".into() });
+            notices.push(super::Notice { unit: id, text: "You plant a foot and try to swivel...\r\n... but realize a little late that this is harder than it looks!".into() });
             notices.extend(super::broadcast::observer_notices(
                 &world,
                 id,
@@ -201,7 +201,7 @@ pub fn bootlegger(
         }
         super::evacuation::publish_new_casualties(scripts, config, before)?;
         scripts.world().validate_action(config)?;
-        Ok(BattleBootleggerReport {
+        Ok(BootleggerReport {
             modifier,
             check,
             fall,

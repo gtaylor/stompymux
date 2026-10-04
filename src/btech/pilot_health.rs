@@ -7,7 +7,7 @@ pub(super) fn bounded(count: u16) -> u8 {
 }
 
 /// Health-derived cockpit damage uses the reference fallback for zero or excessive Build.
-fn injuries(profile: Option<super::BattleCharacter>) -> u8 {
+fn injuries(profile: Option<super::Character>) -> u8 {
     let Some(profile) = profile else {
         return 0;
     };
@@ -35,7 +35,7 @@ pub(super) fn set_count(world: &mut World, id: ObjectId, injuries: u8) {
 pub(super) fn synchronize(world: &mut World, id: ObjectId, player: ObjectId) {
     let injuries = injuries(world.btech.characters().get(&player).copied());
     let character = (injuries > 0 && world.objects[&id].flags.contains(Flag::InCharacter))
-        .then_some(super::BattleCharacterPilotStatus {
+        .then_some(super::CharacterPilotStatus {
             injuries: injuries.into(),
             killed: false,
         });
@@ -66,7 +66,7 @@ mod tests {
             (1, 255, 255, 127),
         ] {
             assert_eq!(
-                injuries(Some(super::super::BattleCharacter {
+                injuries(Some(super::super::Character {
                     build,
                     bruise,
                     lethal,

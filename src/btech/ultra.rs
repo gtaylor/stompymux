@@ -1,5 +1,5 @@
 //! Player controls for Ultra autocannon double-shot firing.
-use super::{BattleFireMode, FireModeFeedback};
+use super::{FireMode, FireModeFeedback};
 use crate::{ObjectId, World};
 use anyhow::{Result, ensure};
 
@@ -9,14 +9,14 @@ pub fn toggle_ultra(
     id: ObjectId,
     pilot: ObjectId,
     index: usize,
-) -> Result<BattleFireMode> {
+) -> Result<FireMode> {
     let ready = super::weapon_controls::ready_weapon(world, id, pilot, index)?;
     ensure!(ready.weapon.is_ultra(), "That weapon cannot be set ULTRA!");
     Ok(super::weapon_controls::toggle_fire_mode(
         world,
         id,
         index,
-        BattleFireMode::Ultra,
+        FireMode::Ultra,
     ))
 }
 

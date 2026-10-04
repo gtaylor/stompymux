@@ -18,7 +18,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse("test", template).unwrap(),
+        VehicleTemplate::parse("test", template).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -44,31 +44,26 @@ fn template() -> String {
 async fn cascade_spends_all_explosive_bins_and_preserves_inert_ammunition_on_replay() {
     let (_dir, config, mut world, id) = fixture(&template()).await;
     let vehicle = &world.btech.vehicles()[&id];
-    let expected = vehicle
-        .ammunition_cascade(BattleVehicleSection::Front)
-        .unwrap();
+    let expected = vehicle.ammunition_cascade(VehicleSection::Front).unwrap();
     assert_eq!(expected.damage, 488);
     assert_eq!(expected.ammunition.len(), 8);
-    assert_eq!(BattleWeapon::PlasmaRifle.ammunition_explosion_damage(3), 0);
+    assert_eq!(Weapon::PlasmaRifle.ammunition_explosion_damage(3), 0);
     let sections = vehicle.sections().clone();
     let definition = vehicle.definition().clone();
     let before = world.btech.clone();
     assert_eq!(
-        vehicle
-            .ammunition_cascade(BattleVehicleSection::Front)
-            .unwrap(),
+        vehicle.ammunition_cascade(VehicleSection::Front).unwrap(),
         expected
     );
     assert_eq!(world.btech, before);
     persistence::save(&config.database(), &world).await.unwrap();
     let mut loaded = persistence::load(&config.database()).await.unwrap();
     let report =
-        discharge_battle_vehicle_ammunition_cascade(&mut world, id, BattleVehicleSection::Front)
-            .unwrap();
+        discharge_battle_vehicle_ammunition_cascade(&mut world, id, VehicleSection::Front).unwrap();
     assert_eq!(report, expected);
     assert_eq!(
         report,
-        discharge_battle_vehicle_ammunition_cascade(&mut loaded, id, BattleVehicleSection::Front)
+        discharge_battle_vehicle_ammunition_cascade(&mut loaded, id, VehicleSection::Front)
             .unwrap()
     );
     assert_eq!(world.btech, loaded.btech);
@@ -77,9 +72,7 @@ async fn cascade_spends_all_explosive_bins_and_preserves_inert_ammunition_on_rep
     assert!(vehicle.ammunition()[1..].iter().all(|rounds| *rounds == 0));
     assert_eq!(vehicle.sections(), &sections);
     assert_eq!(vehicle.definition(), &definition);
-    let empty = vehicle
-        .ammunition_cascade(BattleVehicleSection::Front)
-        .unwrap();
+    let empty = vehicle.ammunition_cascade(VehicleSection::Front).unwrap();
     assert_eq!(empty.damage, 0);
     assert!(empty.ammunition.is_empty());
     persistence::save(&config.database(), &world).await.unwrap();
@@ -97,21 +90,21 @@ async fn cascade_ignores_lost_bins_and_rejects_invalid_victims_without_mutation(
     damage_battle_vehicle_phase(
         &mut world,
         id,
-        BattleVehicleSection::Turret,
+        VehicleSection::Turret,
         100,
-        BattleDamagePhase::Internal,
+        DamagePhase::Internal,
     )
     .unwrap();
     assert_eq!(
         world.btech.vehicles()[&id]
-            .ammunition_cascade(BattleVehicleSection::Front)
+            .ammunition_cascade(VehicleSection::Front)
             .unwrap()
             .damage,
         58
     );
     let before = world.btech.clone();
     assert!(
-        discharge_battle_vehicle_ammunition_cascade(&mut world, id, BattleVehicleSection::Turret)
+        discharge_battle_vehicle_ammunition_cascade(&mut world, id, VehicleSection::Turret)
             .is_err()
     );
     assert_eq!(world.btech, before);
@@ -122,15 +115,14 @@ async fn cascade_ignores_lost_bins_and_rejects_invalid_victims_without_mutation(
         .flags
         .insert(Flag::Going);
     assert!(
-        discharge_battle_vehicle_ammunition_cascade(&mut world, id, BattleVehicleSection::Front)
-            .is_err()
+        discharge_battle_vehicle_ammunition_cascade(&mut world, id, VehicleSection::Front).is_err()
     );
     assert_eq!(world.btech, before);
     assert!(
         discharge_battle_vehicle_ammunition_cascade(
             &mut world,
             ObjectId(-1),
-            BattleVehicleSection::Front
+            VehicleSection::Front
         )
         .is_err()
     );

@@ -8,7 +8,7 @@ use std::collections::BTreeSet;
 /// Physical/component condition, independent of ammunition supply, power and recycling.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleEquipmentCondition {
+pub enum EquipmentCondition {
     Empty,
     Operational,
     Damaged,
@@ -20,7 +20,7 @@ pub enum BattleEquipmentCondition {
     AmmoJam,
 }
 
-impl BattleEquipmentCondition {
+impl EquipmentCondition {
     /// Stable cockpit label shared by critical and whole-weapon reports.
     pub(super) fn label(self) -> &'static str {
         match self {
@@ -39,20 +39,20 @@ impl BattleEquipmentCondition {
 
 /// One installed weapon's durable condition and the effects already used by firing.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleWeaponDiagnostic {
+pub struct WeaponDiagnostic {
     pub index: usize,
-    pub weapon: BattleWeapon,
+    pub weapon: Weapon,
     pub section: String,
-    pub condition: BattleEquipmentCondition,
+    pub condition: EquipmentCondition,
     pub damaged_slots: u8,
     pub destroyed_slots: u8,
     pub disabled_slots: u8,
-    pub effects: BattleWeaponDamageEffects,
+    pub effects: WeaponDamageEffects,
     pub preferred_ammunition_section: Option<String>,
 }
 
 /// Return stable mount numbers even for broken weapons; readiness is a separate report.
-pub fn weapon_diagnostics(world: &World, id: ObjectId) -> Result<Vec<BattleWeaponDiagnostic>> {
+pub fn weapon_diagnostics(world: &World, id: ObjectId) -> Result<Vec<WeaponDiagnostic>> {
     if let Some(unit) = world.btech.vehicles().get(&id) {
         return unit
             .loadout()?
@@ -73,17 +73,17 @@ pub fn weapon_diagnostics(world: &World, id: ObjectId) -> Result<Vec<BattleWeapo
                     })
                     .count() as u8;
                 let condition = if destroyed > 0 {
-                    BattleEquipmentCondition::Destroyed
+                    EquipmentCondition::Destroyed
                 } else if disabled > 0 || unit.powered_down_weapons.contains(&index) {
-                    BattleEquipmentCondition::Disabled
+                    EquipmentCondition::Disabled
                 } else if let Some(failure) = unit.weapon_failures().get(&index) {
                     failure.condition()
                 } else if unit.jammed_weapons.contains(&index) {
-                    BattleEquipmentCondition::AmmoJam
+                    EquipmentCondition::AmmoJam
                 } else {
-                    BattleEquipmentCondition::Operational
+                    EquipmentCondition::Operational
                 };
-                Ok(BattleWeaponDiagnostic {
+                Ok(WeaponDiagnostic {
                     index,
                     weapon: mount.weapon,
                     section: mount.criticals[0].section.name().into(),
@@ -127,21 +127,21 @@ pub fn weapon_diagnostics(world: &World, id: ObjectId) -> Result<Vec<BattleWeapo
                 .filter(|damage| mount.criticals.contains(&damage.location))
                 .count() as u8;
             let condition = if destroyed > 0 {
-                BattleEquipmentCondition::Destroyed
+                EquipmentCondition::Destroyed
             } else if disabled > 0 || unit.powered_down_weapons.contains(&index) {
-                BattleEquipmentCondition::Disabled
+                EquipmentCondition::Disabled
             } else if let Some(failure) = unit.weapon_failures.get(&index) {
                 failure.condition()
             } else if unit.jammed_weapons.contains(&index)
                 || unit.weapon_damage_jams.contains(&index)
             {
-                BattleEquipmentCondition::AmmoJam
+                EquipmentCondition::AmmoJam
             } else if damaged > 0 {
-                BattleEquipmentCondition::Damaged
+                EquipmentCondition::Damaged
             } else {
-                BattleEquipmentCondition::Operational
+                EquipmentCondition::Operational
             };
-            Ok(BattleWeaponDiagnostic {
+            Ok(WeaponDiagnostic {
                 index,
                 weapon: mount.weapon,
                 section: unit
@@ -163,10 +163,10 @@ pub fn weapon_diagnostics(world: &World, id: ObjectId) -> Result<Vec<BattleWeapo
 
 /// Immutable statistics for one distinct installed catalogue entry.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleWeaponSpecification {
-    pub weapon: BattleWeapon,
+pub struct WeaponSpecification {
+    pub weapon: Weapon,
     /// Ammunition family for this profile; MMLs expose both SRM and LRM rows.
-    pub ammunition: super::BattleAmmunitionMode,
+    pub ammunition: super::AmmunitionMode,
     pub heat: u8,
     pub damage: u8,
     pub minimum_range: u8,
@@ -182,7 +182,7 @@ pub fn weapon_specifications(
     world: &World,
     id: ObjectId,
     extended: bool,
-) -> Result<Vec<BattleWeaponSpecification>> {
+) -> Result<Vec<WeaponSpecification>> {
     let mut seen = BTreeSet::new();
     let weapons: Vec<_> = crate::btech::with_unit!(
         world
@@ -201,13 +201,10 @@ pub fn weapon_specifications(
         .into_iter()
         .filter(|weapon| seen.insert(weapon.name()))
         .flat_map(|weapon| {
-            let modes: &[super::BattleAmmunitionMode] = if weapon.is_mml() {
-                &[
-                    super::BattleAmmunitionMode::Normal,
-                    super::BattleAmmunitionMode::MmlLrm,
-                ]
+            let modes: &[super::AmmunitionMode] = if weapon.is_mml() {
+                &[super::AmmunitionMode::Normal, super::AmmunitionMode::MmlLrm]
             } else {
-                &[super::BattleAmmunitionMode::Normal]
+                &[super::AmmunitionMode::Normal]
             };
             modes
                 .iter()
@@ -216,7 +213,7 @@ pub fn weapon_specifications(
         })
         .map(|(weapon, ammunition)| {
             let profile = weapon.profile_for_ammunition(ammunition);
-            BattleWeaponSpecification {
+            WeaponSpecification {
                 weapon,
                 ammunition,
                 heat: profile.heat,
@@ -284,7 +281,7 @@ pub fn weapon_diagnostic_text(world: &World, id: ObjectId) -> Result<String> {
                 effect.jam + 1
             ));
         }
-        if row.damaged_slots > 0 && effect == BattleWeaponDamageEffects::default() {
+        if row.damaged_slots > 0 && effect == WeaponDamageEffects::default() {
             lines.push("  Damaged, but fully operational.".into());
         }
         if let Some(section) = row.preferred_ammunition_section {

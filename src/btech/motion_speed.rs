@@ -1,8 +1,8 @@
 //! Chassis and pilot adjustments shared by ground acceleration and lateral travel.
-use super::{BattleLateralMode, BattleMechChassis, BattleUnit};
+use super::{LateralMode, Mech, MechChassis};
 use crate::World;
 
-impl BattleUnit {
+impl Mech {
     /// Per-second speed change in either direction, including the assigned pilot's Speed Demon.
     pub fn ground_acceleration(&self, world: &World) -> f64 {
         self.ground_acceleration_at(world, self.update_maximum_speed())
@@ -10,7 +10,7 @@ impl BattleUnit {
 
     /// Pilot and chassis acceleration applied to a supplied movement ceiling.
     pub(super) fn ground_acceleration_at(&self, world: &World, maximum: f64) -> f64 {
-        let steps = if self.chassis() == BattleMechChassis::Quad {
+        let steps = if self.chassis() == MechChassis::Quad {
             10.0
         } else {
             20.0
@@ -29,9 +29,7 @@ impl BattleUnit {
 
     /// Lateral movement uses the loaded ceiling after equipment bonuses.
     pub(super) fn lateral_speed_at(&self, target: f64, maximum: f64) -> f64 {
-        if self.chassis() != BattleMechChassis::Quad
-            || self.lateral().active == BattleLateralMode::None
-        {
+        if self.chassis() != MechChassis::Quad || self.lateral().active == LateralMode::None {
             return target;
         }
         if maximum <= 10.75 {

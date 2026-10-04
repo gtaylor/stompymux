@@ -1,14 +1,10 @@
 //! Shared read-only SCAN and REPORT information rows with reference disclosure and spacing.
-use super::{BattleContactView, BattleLateralMode, BattleMechChassis, BattleVehicleMovement};
+use super::{ContactView, LateralMode, MechChassis, VehicleMovement};
 use crate::{ObjectId, World, text};
 use anyhow::{Context, Result};
 
 /// Render an already-admitted clear contact without acquiring targets or changing unit state.
-pub(super) fn render(
-    world: &World,
-    observer: ObjectId,
-    view: &BattleContactView,
-) -> Result<String> {
+pub(super) fn render(world: &World, observer: ObjectId, view: &ContactView) -> Result<String> {
     let target = view.target;
     let source = super::scanner::scanner_unit(world, observer).context("Scanner is unavailable")?;
     let unit = super::scanner::scanner_unit(world, target).context("Target is unavailable")?;
@@ -61,7 +57,7 @@ pub(super) fn render(
         super::unit_elevation(world, target)?.unwrap_or(0)
     ));
     if let Some(mech) = mech
-        && mech.lateral().active != BattleLateralMode::None
+        && mech.lateral().active != LateralMode::None
     {
         lines.push(format!(
             "      Mech is moving laterally {}",
@@ -74,13 +70,13 @@ pub(super) fn render(
         lines.push(super::status::turret_line(
             turret,
             heading,
-            vehicle.definition().movement == BattleVehicleMovement::Stationary,
+            vehicle.definition().movement == VehicleMovement::Stationary,
         ));
     }
     let (kind, movement) = if let Some(mech) = mech {
         (
             "MECH",
-            if mech.chassis() == BattleMechChassis::Quad {
+            if mech.chassis() == MechChassis::Quad {
                 "QUAD"
             } else {
                 "BIPED"
@@ -88,11 +84,11 @@ pub(super) fn render(
         )
     } else {
         match vehicle.unwrap().definition().movement {
-            BattleVehicleMovement::Tracked => ("VEHICLE", "TRACKED"),
-            BattleVehicleMovement::Wheeled => ("VEHICLE", "WHEELED"),
-            BattleVehicleMovement::Hover => ("VEHICLE", "HOVER"),
-            BattleVehicleMovement::Stationary => ("INSTALLATION", ""),
-            BattleVehicleMovement::Vtol => ("VTOL", "VTOL"),
+            VehicleMovement::Tracked => ("VEHICLE", "TRACKED"),
+            VehicleMovement::Wheeled => ("VEHICLE", "WHEELED"),
+            VehicleMovement::Hover => ("VEHICLE", "HOVER"),
+            VehicleMovement::Stationary => ("INSTALLATION", ""),
+            VehicleMovement::Vtol => ("VTOL", "VTOL"),
         }
     };
     lines.push(if movement.is_empty() {

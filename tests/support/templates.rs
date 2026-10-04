@@ -1,5 +1,5 @@
 //! Template document edits that scenarios build variants from.
-use stompymux_rs::BattleUnitTemplate;
+use stompymux_rs::UnitTemplate;
 
 /// Re-render a template document with extra chassis flags. Construction choices such as
 /// `HardenedArmor_Tech` land in `[construction]` and features in `specials`, exactly as a
@@ -14,12 +14,12 @@ pub fn with_flags(source: &str, flags: &[&str]) -> String {
             specials.push_str(flag);
         }
     };
-    match BattleUnitTemplate::parse("variant", source).unwrap() {
-        BattleUnitTemplate::Mech(mut template) => {
+    match UnitTemplate::parse("variant", source).unwrap() {
+        UnitTemplate::Mech(mut template) => {
             add(&mut template.attributes);
             template.to_document().unwrap()
         }
-        BattleUnitTemplate::Vehicle(mut template) => {
+        UnitTemplate::Vehicle(mut template) => {
             add(&mut template.attributes);
             template.to_document().unwrap()
         }
@@ -41,12 +41,12 @@ pub fn without_flags(source: &str, flags: &[&str]) -> String {
                 .join(" ");
         }
     };
-    match BattleUnitTemplate::parse("variant", source).unwrap() {
-        BattleUnitTemplate::Mech(mut template) => {
+    match UnitTemplate::parse("variant", source).unwrap() {
+        UnitTemplate::Mech(mut template) => {
             remove(&mut template.attributes);
             template.to_document().unwrap()
         }
-        BattleUnitTemplate::Vehicle(mut template) => {
+        UnitTemplate::Vehicle(mut template) => {
             remove(&mut template.attributes);
             template.to_document().unwrap()
         }
@@ -56,14 +56,14 @@ pub fn without_flags(source: &str, flags: &[&str]) -> String {
 /// Give a mech a small cockpit under `flag` (`SmallCockpit_Tech` or `SMCPIT`), with the head
 /// laid out as one: life support, sensors, cockpit and sensors, then the head's other
 /// equipment in its original order.
-pub fn small_cockpit(template: &mut stompymux_rs::BattleTemplate, flag: &str) {
-    use stompymux_rs::{BattleSection, CriticalDefinition};
+pub fn small_cockpit(template: &mut stompymux_rs::MechTemplate, flag: &str) {
+    use stompymux_rs::{CriticalDefinition, MechSection};
     let specials = template.attributes.entry("specials".into()).or_default();
     if !specials.is_empty() {
         specials.push(' ');
     }
     specials.push_str(flag);
-    let head = template.sections.get_mut(&BattleSection::Head).unwrap();
+    let head = template.sections.get_mut(&MechSection::Head).unwrap();
     let fixed = ["LifeSupport", "Sensors", "Cockpit"];
     let others: Vec<_> = head
         .criticals

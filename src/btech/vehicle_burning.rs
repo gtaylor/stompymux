@@ -7,23 +7,23 @@ use serde::Serialize;
 /// Target-owned inferno outcome after missile clustering and interception.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[must_use = "Publish inferno effects with the enclosing attack"]
-pub struct BattleVehicleInfernoHit {
+pub struct VehicleInfernoHit {
     pub missiles: u16,
     /// Standard mobile-vehicle heat explosion check; advanced and stationary outcomes do not roll it.
     pub explosion_roll: Option<u8>,
     /// Stationary-unit jelly duration added by this exposure.
     pub burn_seconds: u32,
-    pub damage: Vec<BattleVehicleArmorDamage>,
-    pub explosion: Option<BattleVehicleExplosion>,
+    pub damage: Vec<VehicleArmorDamage>,
+    pub explosion: Option<VehicleExplosion>,
     /// Includes visibility-filtered observer notices captured before damage.
-    pub notices: Vec<BattleNotice>,
+    pub notices: Vec<Notice>,
     /// Pilot-only control messages indexed into the ordinary notice stream.
-    pub pilot_notices: Vec<BattlePilotNotice>,
+    pub pilot_notices: Vec<PilotNotice>,
     /// Damage broadcasts whose audiences are resolved by the enclosing host action.
-    pub broadcasts: Vec<BattleNotice>,
+    pub broadcasts: Vec<Notice>,
 }
 
-impl BattleVehicle {
+impl Vehicle {
     /// Destruction cancels all burning and crew fire-suppression events together.
     pub(super) fn clear_fires(&mut self) {
         self.burning_sections.clear();
@@ -32,7 +32,7 @@ impl BattleVehicle {
     }
 
     /// Seconds until each section's next fire pulse, retained even if that section is destroyed.
-    pub fn burning_sections(&self) -> &std::collections::BTreeMap<BattleVehicleSection, u8> {
+    pub fn burning_sections(&self) -> &std::collections::BTreeMap<VehicleSection, u8> {
         &self.burning_sections
     }
 
@@ -52,8 +52,8 @@ pub fn resolve_vehicle_inferno_hit(
     world: &mut World,
     target: ObjectId,
     missiles: u16,
-    rules: BattleVehicleImpactRules,
-) -> Result<BattleVehicleInfernoHit> {
+    rules: VehicleImpactRules,
+) -> Result<VehicleInfernoHit> {
     resolve_inferno_from(world, target, missiles, rules, None)
 }
 
@@ -62,9 +62,9 @@ pub(super) fn resolve_inferno_from(
     world: &mut World,
     target: ObjectId,
     missiles: u16,
-    rules: BattleVehicleImpactRules,
+    rules: VehicleImpactRules,
     attacker: Option<ObjectId>,
-) -> Result<BattleVehicleInfernoHit> {
+) -> Result<VehicleInfernoHit> {
     ensure!(missiles > 0, "Inferno hit requires at least one missile");
     let object = world
         .objects
@@ -80,9 +80,9 @@ pub(super) fn resolve_inferno_from(
         .get(&target)
         .context("Vehicle is unavailable")?;
     ensure!(!unit.is_destroyed(), "Vehicle is destroyed");
-    let stationary = unit.definition().movement == BattleVehicleMovement::Stationary;
+    let stationary = unit.definition().movement == VehicleMovement::Stationary;
     let burning = unit.inferno_remaining > 0 || !unit.burning_sections.is_empty();
-    let mut report = BattleVehicleInfernoHit {
+    let mut report = VehicleInfernoHit {
         missiles,
         explosion_roll: None,
         burn_seconds: 0,
@@ -126,16 +126,16 @@ pub(super) fn resolve_inferno_from(
 /// Vehicle response to blast heat, separate from missile inferno exposure.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[must_use = "Publish heat effects with the enclosing damage transaction"]
-pub struct BattleVehicleHeatExposure {
+pub struct VehicleHeatExposure {
     /// Signed duration adjustment; the resulting timer is bounded to at least one second.
     pub burn_seconds: i64,
-    pub fire: Option<BattleVehicleFireExposure>,
+    pub fire: Option<VehicleFireExposure>,
     pub explosion_roll: Option<u8>,
-    pub explosion: Option<BattleVehicleExplosion>,
-    pub notices: Vec<BattleNotice>,
+    pub explosion: Option<VehicleExplosion>,
+    pub notices: Vec<Notice>,
     /// Pilot-only control messages indexed into the ordinary notice stream.
-    pub pilot_notices: Vec<BattlePilotNotice>,
-    pub broadcasts: Vec<BattleNotice>,
+    pub pilot_notices: Vec<PilotNotice>,
+    pub broadcasts: Vec<Notice>,
 }
 
 /// Apply blast heat through existing fire checks, explosions or stationary jelly duration.
@@ -144,8 +144,8 @@ pub fn resolve_vehicle_heat_exposure(
     world: &mut World,
     target: ObjectId,
     heat: i32,
-    rules: BattleVehicleImpactRules,
-) -> Result<BattleVehicleHeatExposure> {
+    rules: VehicleImpactRules,
+) -> Result<VehicleHeatExposure> {
     let object = world
         .objects
         .get(&target)
@@ -159,9 +159,9 @@ pub fn resolve_vehicle_heat_exposure(
         .vehicles()
         .get(&target)
         .context("Vehicle is unavailable")?;
-    let stationary = unit.definition().movement == BattleVehicleMovement::Stationary;
+    let stationary = unit.definition().movement == VehicleMovement::Stationary;
     world.attempt(|world| {
-        let mut report = BattleVehicleHeatExposure {
+        let mut report = VehicleHeatExposure {
             burn_seconds: 0,
             fire: None,
             explosion_roll: None,
@@ -203,7 +203,7 @@ fn heat_explosion(
     world: &mut World,
     target: ObjectId,
     attacker: Option<ObjectId>,
-) -> Result<BattleVehicleHeatExposure> {
+) -> Result<VehicleHeatExposure> {
     let roll = world
         .btech
         .vehicles
@@ -211,7 +211,7 @@ fn heat_explosion(
         .unwrap()
         .dice
         .generic_roll();
-    let mut report = BattleVehicleHeatExposure {
+    let mut report = VehicleHeatExposure {
         burn_seconds: 0,
         fire: None,
         explosion_roll: Some(roll),
@@ -228,7 +228,7 @@ fn heat_explosion(
         target,
         "explodes!",
     ));
-    report.notices.push(BattleNotice {
+    report.notices.push(Notice {
         unit: target,
         text: "The heat's too much for your vehicle! It blows up!".into(),
     });
@@ -247,16 +247,16 @@ fn heat_explosion(
 fn burn_damage(
     world: &mut World,
     id: ObjectId,
-    section: BattleVehicleSection,
+    section: VehicleSection,
     amount: u8,
-    rules: BattleVehicleCriticalRules,
+    rules: VehicleCriticalRules,
     attacker: Option<ObjectId>,
-) -> Result<BattleVehicleArmorDamage> {
+) -> Result<VehicleArmorDamage> {
     let report = super::vehicle_armor_damage::resolve_rear_followup_in_candidate(
         world,
         id,
-        BattleVehicleArmorHit {
-            damage_class: BattleDamageClass::Ordinary,
+        VehicleArmorHit {
+            damage_class: DamageClass::Ordinary,
             section,
             amount: u32::from(amount),
             through_armor_critical: false,
@@ -275,16 +275,16 @@ fn burn_damage(
 /// Scheduled fire feedback retains character injury outcomes until host publication.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
 #[must_use = "Publish fire notices, character injuries and casualties with the enclosing action"]
-pub struct BattleVehicleFireTick {
-    pub notices: Vec<BattleNotice>,
+pub struct VehicleFireTick {
+    pub notices: Vec<Notice>,
     /// Pilot-only control messages indexed into the ordinary notice stream.
-    pub pilot_notices: Vec<BattlePilotNotice>,
-    pub character_injuries: Vec<BattleCharacterPilotInjury>,
+    pub pilot_notices: Vec<PilotNotice>,
+    pub character_injuries: Vec<CharacterPilotInjury>,
 }
 
 /// Advance all vehicle fires atomically, including shutdown and unplaced units.
 /// Failed nested damage leaves timers and dice untouched for the next server commit attempt.
-pub fn advance_vehicle_fires(world: &mut World, config: &Config) -> Result<BattleVehicleFireTick> {
+pub fn advance_vehicle_fires(world: &mut World, config: &Config) -> Result<VehicleFireTick> {
     let ids: Vec<_> = world
         .btech
         .vehicles()
@@ -309,7 +309,7 @@ pub fn advance_vehicle_fires(world: &mut World, config: &Config) -> Result<Battl
         if unit.inferno_remaining > 0 {
             unit.inferno_remaining -= 1;
             if unit.inferno_remaining == 0 {
-                notices.push(BattleNotice {
+                notices.push(Notice {
                     unit: id,
                     text: "You feel suddenly far cooler as the fires finally die.".into(),
                 });
@@ -330,7 +330,7 @@ pub fn advance_vehicle_fires(world: &mut World, config: &Config) -> Result<Battl
             .pilot()
             .and_then(|pilot| candidate.btech.character_values().get(&pilot))
             .is_some_and(|values| super::advantages::enabled(values, "Toughness"));
-        let rules = BattleVehicleImpactRules::configured(&config.battletech, toughness).criticals;
+        let rules = VehicleImpactRules::configured(&config.battletech, toughness).criticals;
         for section in due {
             let unit = candidate.btech.vehicles.get_mut(&id).unwrap();
             if unit.burning_sections.remove(&section).is_none() {
@@ -341,7 +341,7 @@ pub fn advance_vehicle_fires(world: &mut World, config: &Config) -> Result<Battl
             if unit.sections()[&section].internal == 0 {
                 continue;
             }
-            notices.push(BattleNotice {
+            notices.push(Notice {
                 unit: id,
                 text: format!(
                     "[fg=red bold]Your {} takes damage from the fire![reset]",
@@ -370,7 +370,7 @@ pub fn advance_vehicle_fires(world: &mut World, config: &Config) -> Result<Battl
                 continue;
             }
             if unit.sections()[&section].internal > 0 {
-                notices.push(BattleNotice {
+                notices.push(Notice {
                     unit: id,
                     text: format!(
                         "The fire burning on your {} finally goes out.",
@@ -393,7 +393,7 @@ pub fn advance_vehicle_fires(world: &mut World, config: &Config) -> Result<Battl
                 unit.extinguishing = None;
                 if !unit.burning_sections.is_empty() {
                     unit.burning_sections.clear();
-                    notices.push(BattleNotice {
+                    notices.push(Notice {
                         unit: id,
                         text: "You manage to dowse the fire.".into(),
                     });
@@ -408,7 +408,7 @@ pub fn advance_vehicle_fires(world: &mut World, config: &Config) -> Result<Battl
     }
     candidate.btech.validate_action(&candidate)?;
     *world = candidate;
-    Ok(BattleVehicleFireTick {
+    Ok(VehicleFireTick {
         notices,
         pilot_notices,
         character_injuries,
@@ -420,11 +420,11 @@ pub fn begin_vehicle_extinguishing(
     world: &mut World,
     id: ObjectId,
     pilot: ObjectId,
-) -> Result<BattleNotice> {
+) -> Result<Notice> {
     super::vehicle_power::controlled(world, id, pilot)?;
     let unit = &world.btech.vehicles()[&id];
     ensure!(
-        unit.power() != BattlePower::Running,
+        unit.power() != Power::Running,
         "Your tank is started! You can not extinguish the flames while your tank is started!"
     );
     ensure!(
@@ -436,7 +436,7 @@ pub fn begin_vehicle_extinguishing(
         "You're already trying to put out the fire!"
     );
     world.btech.vehicles.get_mut(&id).unwrap().extinguishing = Some(120);
-    Ok(BattleNotice {
+    Ok(Notice {
         unit: id,
         text: "You begin to extinguish the fires!".into(),
     })
@@ -480,23 +480,23 @@ pub(crate) fn command(
 
 /// Shared section-fire effects independent of whether missiles or terrain caused ignition.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
-pub struct BattleVehicleFireEffects {
-    pub damage: Vec<BattleVehicleArmorDamage>,
-    pub notices: Vec<BattleNotice>,
+pub struct VehicleFireEffects {
+    pub damage: Vec<VehicleArmorDamage>,
+    pub notices: Vec<Notice>,
     /// Pilot-only control messages indexed into the ordinary notice stream.
-    pub pilot_notices: Vec<BattlePilotNotice>,
-    pub broadcasts: Vec<BattleNotice>,
+    pub pilot_notices: Vec<PilotNotice>,
+    pub broadcasts: Vec<Notice>,
 }
 
 /// Ignite only new sections, retaining existing timers and using the common armor resolver.
 fn ignite_sections(
     world: &mut World,
     target: ObjectId,
-    rules: BattleVehicleCriticalRules,
+    rules: VehicleCriticalRules,
     attacker: Option<ObjectId>,
-) -> Result<BattleVehicleFireEffects> {
-    let mut effects = BattleVehicleFireEffects::default();
-    effects.notices.push(BattleNotice {
+) -> Result<VehicleFireEffects> {
+    let mut effects = VehicleFireEffects::default();
+    effects.notices.push(Notice {
         unit: target,
         text: "You catch on fire!".into(),
     });
@@ -516,7 +516,7 @@ fn ignite_sections(
             continue;
         }
         let amount = world.btech.vehicles.get_mut(&target).unwrap().dice.d6();
-        effects.notices.push(BattleNotice {
+        effects.notices.push(Notice {
             unit: target,
             text: format!("Your {} catches on fire!", section.name().replace('_', " ")),
         });
@@ -538,19 +538,19 @@ fn ignite_sections(
 /// Advanced terrain-fire check; the movement caller decides when a new burning hex is entered.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[must_use = "Publish exposure effects within the enclosing movement transaction"]
-pub struct BattleVehicleFireExposure {
+pub struct VehicleFireExposure {
     pub roll: u8,
     pub adjusted: u8,
     pub motive_roll: Option<u8>,
-    pub effects: BattleVehicleFireEffects,
+    pub effects: VehicleFireEffects,
 }
 
 /// Resolve an admitted advanced fire exposure atomically, using the vehicle's saved dice.
 pub fn resolve_vehicle_fire_exposure(
     world: &mut World,
     id: ObjectId,
-    rules: BattleVehicleCriticalRules,
-) -> Result<BattleVehicleFireExposure> {
+    rules: VehicleCriticalRules,
+) -> Result<VehicleFireExposure> {
     ensure!(
         world
             .objects
@@ -567,14 +567,14 @@ pub fn resolve_vehicle_fire_exposure(
         let roll = vehicle.dice.generic_roll();
         let adjusted =
             roll + super::vehicle_motive_effects::modifier(vehicle.definition().movement);
-        let mut report = BattleVehicleFireExposure {
+        let mut report = VehicleFireExposure {
             roll,
             adjusted,
             motive_roll: None,
-            effects: BattleVehicleFireEffects::default(),
+            effects: VehicleFireEffects::default(),
         };
         if adjusted >= 8 {
-            report.effects.notices.push(BattleNotice {
+            report.effects.notices.push(Notice {
                 unit: id,
                 text: "[fg=red bold]You drive through a wall of searing flames![reset]".into(),
             });
@@ -582,7 +582,7 @@ pub fn resolve_vehicle_fire_exposure(
         match adjusted {
             0..=7 => (),
             8 | 9 => {
-                report.effects.notices.push(BattleNotice {
+                report.effects.notices.push(Notice {
                     unit: id,
                     text: "[fg=red bold]The fire damages your motive system![reset]".into(),
                 });
@@ -596,18 +596,18 @@ pub fn resolve_vehicle_fire_exposure(
                 report.effects.broadcasts.extend(broadcasts);
             }
             10 | 11 => {
-                report.effects.notices.push(BattleNotice {
+                report.effects.notices.push(Notice {
                     unit: id,
                     text: "[fg=red bold]The fire sweeps across your unit damaging it![reset]"
                         .into(),
                 });
                 // The reference samples all eight section slots, including absent and destroyed slots.
                 let sections = [
-                    BattleVehicleSection::Left,
-                    BattleVehicleSection::Right,
-                    BattleVehicleSection::Front,
-                    BattleVehicleSection::Rear,
-                    BattleVehicleSection::Turret,
+                    VehicleSection::Left,
+                    VehicleSection::Right,
+                    VehicleSection::Front,
+                    VehicleSection::Rear,
+                    VehicleSection::Turret,
                 ];
                 for index in 0..8 {
                     let unit = world.btech.vehicles.get_mut(&id).unwrap();

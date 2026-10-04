@@ -17,29 +17,21 @@ async fn target_controls_share_anatomy_authority_and_saved_state() {
     let targets = templates();
     for source in templates() {
         for (target_source, section, expected) in [
-            (
-                &targets[0],
-                "h",
-                BattleAimSelection::Mech(BattleSection::Head),
-            ),
-            (
-                &targets[1],
-                "fll",
-                BattleAimSelection::Mech(BattleSection::LeftArm),
-            ),
+            (&targets[0], "h", AimSelection::Mech(MechSection::Head)),
+            (&targets[1], "fll", AimSelection::Mech(MechSection::LeftArm)),
             (
                 &targets[2],
                 "as",
-                BattleAimSelection::GroundVehicle(BattleVehicleSection::Rear),
+                AimSelection::GroundVehicle(VehicleSection::Rear),
             ),
             (
                 &targets[6],
                 "rotor",
-                BattleAimSelection::Vtol(BattleVehicleSection::Rotor),
+                AimSelection::Vtol(VehicleSection::Rotor),
             ),
         ] {
             let (_dir, config, world, shooter, target, _) =
-                fixture_with_target(&source, Some(BattleWeapon::SmallLaser), target_source).await;
+                fixture_with_target(&source, Some(Weapon::SmallLaser), target_source).await;
             let native = scripts(&config, &world);
             let before = native.world().btech.clone();
             for command in ["target", "target h extra", "target --", "target/nope h"] {
@@ -98,7 +90,7 @@ async fn target_controls_share_anatomy_authority_and_saved_state() {
                 &mut world,
                 shooter,
                 ObjectId(1),
-                BattleMovementRules::STANDARD.fall,
+                MovementRules::STANDARD.fall,
             )
             .unwrap();
             assert_eq!(
@@ -118,7 +110,7 @@ async fn ground_target_rejects_rotor_without_changing_selection() {
     for source in templates() {
         let (_dir, config, mut world, shooter, _, _) = fixture_with_target(
             &source,
-            Some(BattleWeapon::SmallLaser),
+            Some(Weapon::SmallLaser),
             include_str!("../game/mechs/Demolisher.toml"),
         )
         .await;
@@ -144,10 +136,8 @@ async fn ground_target_rejects_rotor_without_changing_selection() {
             "constructed"
         };
         let mut state = serde_json::to_value(&world.btech).unwrap();
-        state[key][shooter.0.to_string()]["aimed_section"] = serde_json::to_value(
-            BattleAimSelection::GroundVehicle(BattleVehicleSection::Rotor),
-        )
-        .unwrap();
+        state[key][shooter.0.to_string()]["aimed_section"] =
+            serde_json::to_value(AimSelection::GroundVehicle(VehicleSection::Rotor)).unwrap();
         if let Ok(rebuilt) = serde_json::from_value::<BtechState>(state) {
             world.btech = rebuilt;
             assert!(world.validate(&config).is_err());
@@ -161,11 +151,11 @@ async fn head_aim_penalty_and_sight_feedback_share_all_chassis() {
     for source in templates() {
         let (_dir, config, base, shooter, target, index) = fixture_with_target(
             &source,
-            Some(BattleWeapon::SmallLaser),
+            Some(Weapon::SmallLaser),
             include_str!("../game/mechs/JR7-D.toml"),
         )
         .await;
-        for (power, penalty) in [(BattlePower::Running, 25), (BattlePower::Off, 7)] {
+        for (power, penalty) in [(Power::Running, 25), (Power::Off, 7)] {
             let mut world = base.clone();
             edit(&mut world, target, |state| {
                 state["power"] = serde_json::to_value(power).unwrap()
@@ -196,7 +186,7 @@ async fn head_aim_penalty_and_sight_feedback_share_all_chassis() {
 fn seed_for(predicate: impl Fn(u8) -> bool) -> [u8; 32] {
     for byte in 0..=255 {
         let seed = [byte; 32];
-        if predicate(BattleDice::seeded(seed).two_d6()) {
+        if predicate(Dice::seeded(seed).two_d6()) {
             return seed;
         }
     }
@@ -214,42 +204,42 @@ async fn directed_hits_share_material_resolution_and_exact_dice() {
             (
                 &targets[0],
                 "ct",
-                serde_json::to_value(BattleSection::CenterTorso).unwrap(),
+                serde_json::to_value(MechSection::CenterTorso).unwrap(),
                 false,
             ),
             (
                 &targets[1],
                 "ct",
-                serde_json::to_value(BattleSection::CenterTorso).unwrap(),
+                serde_json::to_value(MechSection::CenterTorso).unwrap(),
                 false,
             ),
             (
                 &targets[2],
                 "as",
-                serde_json::to_value(BattleVehicleSection::Rear).unwrap(),
+                serde_json::to_value(VehicleSection::Rear).unwrap(),
                 false,
             ),
             (
                 &targets[6],
                 "as",
-                serde_json::to_value(BattleVehicleSection::Rear).unwrap(),
+                serde_json::to_value(VehicleSection::Rear).unwrap(),
                 false,
             ),
             (
                 &targets[6],
                 "turret",
-                serde_json::to_value(BattleVehicleSection::Turret).unwrap(),
+                serde_json::to_value(VehicleSection::Turret).unwrap(),
                 true,
             ),
         ] {
             let (_dir, config, mut world, shooter, target, index) =
-                fixture_with_target(&source, Some(BattleWeapon::SmallLaser), target_source).await;
+                fixture_with_target(&source, Some(Weapon::SmallLaser), target_source).await;
             edit(&mut world, shooter, |state| {
-                state["dice"] = serde_json::to_value(BattleDice::seeded(attack_seed)).unwrap()
+                state["dice"] = serde_json::to_value(Dice::seeded(attack_seed)).unwrap()
             });
             edit(&mut world, target, |state| {
-                state["power"] = serde_json::to_value(BattlePower::Off).unwrap();
-                state["dice"] = serde_json::to_value(BattleDice::seeded(target_seed)).unwrap();
+                state["power"] = serde_json::to_value(Power::Off).unwrap();
+                state["dice"] = serde_json::to_value(Dice::seeded(target_seed)).unwrap();
             });
             set_battle_aimed_section(&mut world, shooter, ObjectId(1), Some(section)).unwrap();
             let lua = scripts(&config, &world);
@@ -273,7 +263,7 @@ async fn directed_hits_share_material_resolution_and_exact_dice() {
                 &group["hit"]
             };
             assert_eq!(hit["section"], expected_section, "{report}");
-            let mut dice = BattleDice::seeded(target_seed);
+            let mut dice = Dice::seeded(target_seed);
             dice.two_d6(); // Immobile preference, once per launch.
             if vehicle {
                 assert!(group["impact"]["rolls"].as_array().unwrap().is_empty());
@@ -320,14 +310,14 @@ async fn computer_directed_fire_and_accuracy_share_chassis() {
     let attack_seed = seed_for(|roll| roll == 12);
     let target_seed = (0..=255)
         .map(|byte| [byte; 32])
-        .find(|seed| BattleDice::seeded(*seed).d6() >= 3)
+        .find(|seed| Dice::seeded(*seed).d6() >= 3)
         .unwrap();
     for source in templates() {
         for target_source in [&targets[0], &targets[1], &targets[2], &targets[6]] {
             let (_dir, config, mut world, shooter, target, index) =
                 firing_support::fixture_with_computer(
                     &source,
-                    Some(BattleWeapon::SmallLaser),
+                    Some(Weapon::SmallLaser),
                     target_source,
                     true,
                 )
@@ -336,7 +326,7 @@ async fn computer_directed_fire_and_accuracy_share_chassis() {
             let section = if vehicle { "as" } else { "ct" };
             for id in [shooter, target] {
                 edit(&mut world, id, |state| {
-                    state["dice"] = serde_json::to_value(BattleDice::seeded(if id == shooter {
+                    state["dice"] = serde_json::to_value(Dice::seeded(if id == shooter {
                         attack_seed
                     } else {
                         target_seed
@@ -357,7 +347,7 @@ async fn computer_directed_fire_and_accuracy_share_chassis() {
                 .unwrap();
                 if immobile {
                     edit(&mut candidate, target, |state| {
-                        state["power"] = serde_json::to_value(BattlePower::Off).unwrap()
+                        state["power"] = serde_json::to_value(Power::Off).unwrap()
                     });
                 }
                 let lua = scripts(&config, &candidate);
@@ -375,12 +365,12 @@ async fn computer_directed_fire_and_accuracy_share_chassis() {
                 .unwrap();
             let report = serde_json::to_value(report).unwrap();
             let group = &report["salvo"]["report"]["groups"][0];
-            let mut dice = BattleDice::seeded(target_seed);
+            let mut dice = Dice::seeded(target_seed);
             assert!(dice.d6() >= 3);
             if vehicle {
                 assert_eq!(
                     group["impact"]["hit"]["section"],
-                    serde_json::to_value(BattleVehicleSection::Rear).unwrap(),
+                    serde_json::to_value(VehicleSection::Rear).unwrap(),
                     "{report}"
                 );
                 assert!(group["impact"]["rolls"].as_array().unwrap().is_empty());
@@ -391,7 +381,7 @@ async fn computer_directed_fire_and_accuracy_share_chassis() {
             } else {
                 assert_eq!(
                     group["hit"]["section"],
-                    serde_json::to_value(BattleSection::CenterTorso).unwrap(),
+                    serde_json::to_value(MechSection::CenterTorso).unwrap(),
                     "{report}"
                 );
             }
@@ -411,17 +401,17 @@ async fn unavailable_directed_locations_fall_back_to_normal_hits() {
     for source in templates() {
         for (target_source, section) in [(&targets[2], "fs"), (&targets[6], "rotor")] {
             let (_dir, config, mut world, shooter, target, index) =
-                fixture_with_target(&source, Some(BattleWeapon::SmallLaser), target_source).await;
+                fixture_with_target(&source, Some(Weapon::SmallLaser), target_source).await;
             edit(&mut world, shooter, |state| {
                 state["dice"] =
-                    serde_json::to_value(BattleDice::seeded(seed_for(|roll| roll == 12))).unwrap()
+                    serde_json::to_value(Dice::seeded(seed_for(|roll| roll == 12))).unwrap()
             });
             edit(&mut world, target, |state| {
-                state["power"] = serde_json::to_value(BattlePower::Off).unwrap();
-                state["dice"] = serde_json::to_value(BattleDice::seeded(target_seed)).unwrap();
+                state["power"] = serde_json::to_value(Power::Off).unwrap();
+                state["dice"] = serde_json::to_value(Dice::seeded(target_seed)).unwrap();
             });
             let mut ordinary = world.clone();
-            let mut dice = BattleDice::seeded(target_seed);
+            let mut dice = Dice::seeded(target_seed);
             dice.two_d6();
             edit(&mut ordinary, target, |state| {
                 state["dice"] = serde_json::to_value(dice).unwrap()
@@ -458,44 +448,44 @@ async fn special_weapons_preserve_aim_preparation_and_normal_resolution() {
         for target_source in [&targets[0], &targets[2], &targets[6]] {
             for (weapon, mode, ammunition, flag, miss) in [
                 (
-                    BattleWeapon::UltraAc2,
-                    BattleFireMode::Ultra,
-                    BattleAmmunitionMode::Normal,
+                    Weapon::UltraAc2,
+                    FireMode::Ultra,
+                    AmmunitionMode::Normal,
                     "",
                     false,
                 ),
                 (
-                    BattleWeapon::Lbx2,
-                    BattleFireMode::Normal,
-                    BattleAmmunitionMode::Cluster,
+                    Weapon::Lbx2,
+                    FireMode::Normal,
+                    AmmunitionMode::Cluster,
                     "LBX/Cluster",
                     false,
                 ),
                 (
-                    BattleWeapon::Srm2,
-                    BattleFireMode::Normal,
-                    BattleAmmunitionMode::Normal,
+                    Weapon::Srm2,
+                    FireMode::Normal,
+                    AmmunitionMode::Normal,
                     "",
                     false,
                 ),
                 (
-                    BattleWeapon::Srm2,
-                    BattleFireMode::Normal,
-                    BattleAmmunitionMode::Normal,
+                    Weapon::Srm2,
+                    FireMode::Normal,
+                    AmmunitionMode::Normal,
                     "",
                     true,
                 ),
                 (
-                    BattleWeapon::Flamer,
-                    BattleFireMode::Heat,
-                    BattleAmmunitionMode::Normal,
+                    Weapon::Flamer,
+                    FireMode::Heat,
+                    AmmunitionMode::Normal,
                     "",
                     false,
                 ),
                 (
-                    BattleWeapon::CoolantGun,
-                    BattleFireMode::Normal,
-                    BattleAmmunitionMode::Normal,
+                    Weapon::CoolantGun,
+                    FireMode::Normal,
+                    AmmunitionMode::Normal,
                     "",
                     false,
                 ),
@@ -510,24 +500,21 @@ async fn special_weapons_preserve_aim_preparation_and_normal_resolution() {
                     Some(flag),
                 );
                 edit(&mut world, shooter, |state| {
-                    state["dice"] = serde_json::to_value(BattleDice::seeded(if miss {
-                        miss_seed
-                    } else {
-                        hit_seed
-                    }))
-                    .unwrap();
-                    if mode != BattleFireMode::Normal {
+                    state["dice"] =
+                        serde_json::to_value(Dice::seeded(if miss { miss_seed } else { hit_seed }))
+                            .unwrap();
+                    if mode != FireMode::Normal {
                         state["fire_modes"][index.to_string()] =
                             serde_json::to_value(mode).unwrap();
                     }
-                    if ammunition != BattleAmmunitionMode::Normal {
+                    if ammunition != AmmunitionMode::Normal {
                         state["ammunition_modes"][index.to_string()] =
                             serde_json::to_value(ammunition).unwrap();
                     }
                 });
                 edit(&mut world, target, |state| {
-                    state["power"] = serde_json::to_value(BattlePower::Off).unwrap();
-                    state["dice"] = serde_json::to_value(BattleDice::seeded(target_seed)).unwrap();
+                    state["power"] = serde_json::to_value(Power::Off).unwrap();
+                    state["dice"] = serde_json::to_value(Dice::seeded(target_seed)).unwrap();
                 });
                 if miss {
                     let map = if let Some(unit) = world.btech.vehicles().get(&target) {
@@ -543,15 +530,12 @@ async fn special_weapons_preserve_aim_preparation_and_normal_resolution() {
                     select_battle_target(&mut world, shooter, ObjectId(1), Some(target)).unwrap();
                 }
                 edit(&mut world, shooter, |state| {
-                    state["dice"] = serde_json::to_value(BattleDice::seeded(if miss {
-                        miss_seed
-                    } else {
-                        hit_seed
-                    }))
-                    .unwrap();
+                    state["dice"] =
+                        serde_json::to_value(Dice::seeded(if miss { miss_seed } else { hit_seed }))
+                            .unwrap();
                 });
                 let mut baseline = world.clone();
-                let mut dice = BattleDice::seeded(target_seed);
+                let mut dice = Dice::seeded(target_seed);
                 dice.two_d6();
                 edit(&mut baseline, target, |state| {
                     state["dice"] = serde_json::to_value(dice).unwrap()
@@ -574,7 +558,7 @@ async fn special_weapons_preserve_aim_preparation_and_normal_resolution() {
                 assert_eq!(a, b, "{weapon:?} {mode:?} miss={miss}");
                 if miss {
                     assert!(a["salvo"].is_null(), "{a}");
-                } else if mode != BattleFireMode::Heat && weapon != BattleWeapon::CoolantGun {
+                } else if mode != FireMode::Heat && weapon != Weapon::CoolantGun {
                     assert!(a["salvo"].is_object(), "{a}");
                 }
                 if vehicle {
@@ -601,7 +585,7 @@ async fn changed_target_class_preserves_selection_and_numeric_immobile_hits() {
             let (_dir, config, mut base, shooter, selected, index) =
                 firing_support::fixture_with_computer(
                     &source,
-                    Some(BattleWeapon::SmallLaser),
+                    Some(Weapon::SmallLaser),
                     include_str!("../game/mechs/Demolisher.toml"),
                     computer,
                 )
@@ -609,7 +593,7 @@ async fn changed_target_class_preserves_selection_and_numeric_immobile_hits() {
             let map = base.btech.vehicles()[&selected].position().unwrap().map;
             let actual = base.create(&config, "Alternate Mech".into(), Kind::Thing);
             base.objects.get_mut(&actual).unwrap().home = Some(ObjectId(config.home()));
-            BattleUnitTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml"))
+            UnitTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml"))
                 .unwrap()
                 .create(&mut base, actual)
                 .unwrap();
@@ -617,19 +601,16 @@ async fn changed_target_class_preserves_selection_and_numeric_immobile_hits() {
             place_battle_unit(&mut base, actual, map, 0, 10).unwrap();
             edit(&mut base, shooter, |state| {
                 state["dice"] =
-                    serde_json::to_value(BattleDice::seeded(seed_for(|roll| roll == 12))).unwrap()
+                    serde_json::to_value(Dice::seeded(seed_for(|roll| roll == 12))).unwrap()
             });
-            let preference = BattleAimSelection::GroundVehicle(BattleVehicleSection::Rear);
+            let preference = AimSelection::GroundVehicle(VehicleSection::Rear);
             for immobile in [false, true] {
                 let mut world = base.clone();
                 edit(&mut world, actual, |state| {
-                    state["power"] = serde_json::to_value(if immobile {
-                        BattlePower::Off
-                    } else {
-                        BattlePower::Running
-                    })
-                    .unwrap();
-                    state["dice"] = serde_json::to_value(BattleDice::seeded(seed_for(|roll| {
+                    state["power"] =
+                        serde_json::to_value(if immobile { Power::Off } else { Power::Running })
+                            .unwrap();
+                    state["dice"] = serde_json::to_value(Dice::seeded(seed_for(|roll| {
                         (6..=8).contains(&roll)
                     })))
                     .unwrap();
@@ -637,8 +618,7 @@ async fn changed_target_class_preserves_selection_and_numeric_immobile_hits() {
                 refresh_battle_contacts(&mut world, &[shooter]).unwrap();
                 edit(&mut world, shooter, |state| {
                     state["dice"] =
-                        serde_json::to_value(BattleDice::seeded(seed_for(|roll| roll == 12)))
-                            .unwrap();
+                        serde_json::to_value(Dice::seeded(seed_for(|roll| roll == 12))).unwrap();
                 });
                 let ordinary = scripts(&config, &world);
                 set_battle_aimed_section(&mut world, shooter, ObjectId(1), Some("as")).unwrap();
@@ -653,7 +633,7 @@ async fn changed_target_class_preserves_selection_and_numeric_immobile_hits() {
                 if immobile {
                     assert_eq!(
                         result["salvo"]["report"]["groups"][0]["hit"]["section"],
-                        serde_json::to_value(BattleSection::RightTorso).unwrap()
+                        serde_json::to_value(MechSection::RightTorso).unwrap()
                     );
                 } else {
                     let baseline: mlua::Table = ordinary.eval_callback(&action).unwrap();
@@ -701,7 +681,7 @@ async fn aimed_missiles_share_active_defense_dice_rollback_and_restart() {
                 base_world.clone(),
                 &config,
                 &source,
-                Some(BattleWeapon::ClanLrm20),
+                Some(Weapon::ClanLrm20),
                 &recipient,
                 false,
                 Some(""),
@@ -711,15 +691,12 @@ async fn aimed_missiles_share_active_defense_dice_rollback_and_restart() {
                 edit(&mut world, target, |state| {
                     state["fortified"] = true.into();
                     state["ams_enabled"] = true.into();
-                    state["dice"] = serde_json::to_value(BattleDice::seeded(target_seed)).unwrap();
+                    state["dice"] = serde_json::to_value(Dice::seeded(target_seed)).unwrap();
                 });
                 edit(&mut world, shooter, |state| {
-                    state["dice"] = serde_json::to_value(BattleDice::seeded(if miss {
-                        miss_seed
-                    } else {
-                        hit_seed
-                    }))
-                    .unwrap();
+                    state["dice"] =
+                        serde_json::to_value(Dice::seeded(if miss { miss_seed } else { hit_seed }))
+                            .unwrap();
                 });
                 let mut baseline = world.clone();
                 roll_unit_dice(&mut baseline, target, 2).unwrap();
@@ -804,15 +781,15 @@ async fn missile_base_boundary_controls_ams_swarm_and_cluster_glancing() {
     for source in templates() {
         for recipient in [&defenders[0], &defenders[2], &defenders[6]] {
             for (ammunition, flag) in [
-                (BattleAmmunitionMode::Normal, ""),
-                (BattleAmmunitionMode::Swarm, "Swarm"),
-                (BattleAmmunitionMode::Swarm1, "Swarm1"),
+                (AmmunitionMode::Normal, ""),
+                (AmmunitionMode::Swarm, "Swarm"),
+                (AmmunitionMode::Swarm1, "Swarm1"),
             ] {
                 let (mut base, shooter, target, index) = firing_support::supply_fixture_on(
                     base_world.clone(),
                     &config,
                     &source,
-                    Some(BattleWeapon::ClanLrm20),
+                    Some(Weapon::ClanLrm20),
                     recipient,
                     false,
                     Some(flag),
@@ -820,9 +797,9 @@ async fn missile_base_boundary_controls_ams_swarm_and_cluster_glancing() {
                 edit(&mut base, target, |state| {
                     state["fortified"] = true.into();
                     state["ams_enabled"] = true.into();
-                    state["dice"] = serde_json::to_value(BattleDice::seeded([42; 32])).unwrap();
+                    state["dice"] = serde_json::to_value(Dice::seeded([42; 32])).unwrap();
                 });
-                if ammunition != BattleAmmunitionMode::Normal {
+                if ammunition != AmmunitionMode::Normal {
                     edit(&mut base, shooter, |state| {
                         state["ammunition_modes"][index.to_string()] =
                             serde_json::to_value(ammunition).unwrap()
@@ -844,10 +821,8 @@ async fn missile_base_boundary_controls_ams_swarm_and_cluster_glancing() {
                     let mut world = base.clone();
                     edit(&mut world, shooter, |state| {
                         state["dice"] =
-                            serde_json::to_value(BattleDice::seeded(seed_for(|value| {
-                                value == roll
-                            })))
-                            .unwrap()
+                            serde_json::to_value(Dice::seeded(seed_for(|value| value == roll)))
+                                .unwrap()
                     });
                     support::install(&lua, world.clone());
                     let value: mlua::Table = lua
@@ -858,7 +833,7 @@ async fn missile_base_boundary_controls_ams_swarm_and_cluster_glancing() {
                     assert_eq!(value["salvo"].is_object(), roll >= threshold, "{value}");
                     assert_eq!(
                         value["ams"].is_object(),
-                        roll >= threshold && ammunition == BattleAmmunitionMode::Normal,
+                        roll >= threshold && ammunition == AmmunitionMode::Normal,
                         "{value}"
                     );
                     if roll < threshold {

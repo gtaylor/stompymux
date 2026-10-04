@@ -1,5 +1,5 @@
 //! Vehicle ammunition criticals collect a whole-vehicle cascade before internal damage resolution.
-use super::{BattleAmmunitionDraw, BattleVehicle, BattleVehicleSection};
+use super::{AmmunitionDraw, Vehicle, VehicleSection};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
@@ -8,20 +8,17 @@ use serde::Serialize;
 /// Zero damage requires the weapon-destruction fallback instead of an explosion.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[must_use = "Resolve cascade damage or the weapon-destruction fallback before committing the attack"]
-pub struct BattleVehicleAmmunitionCascade {
-    pub section: BattleVehicleSection,
-    pub ammunition: Vec<BattleAmmunitionDraw>,
+pub struct VehicleAmmunitionCascade {
+    pub section: VehicleSection,
+    pub ammunition: Vec<AmmunitionDraw>,
     pub damage: u32,
 }
 
-impl BattleVehicle {
+impl Vehicle {
     /// Inspect live non-Gauss bins across every section without spending ammunition or dice.
     /// This critical uses the bin projectile damage, independent of launcher selection,
     /// and includes plasma rounds despite their exemption from ordinary bin explosions.
-    pub fn ammunition_cascade(
-        &self,
-        section: BattleVehicleSection,
-    ) -> Result<BattleVehicleAmmunitionCascade> {
+    pub fn ammunition_cascade(&self, section: VehicleSection) -> Result<VehicleAmmunitionCascade> {
         ensure!(!self.is_destroyed(), "Vehicle is destroyed");
         ensure!(
             self.sections()
@@ -30,7 +27,7 @@ impl BattleVehicle {
             "Vehicle section is unavailable"
         );
         let loadout = self.loadout()?;
-        let mut report = BattleVehicleAmmunitionCascade {
+        let mut report = VehicleAmmunitionCascade {
             section,
             ammunition: Vec::new(),
             damage: 0,
@@ -50,7 +47,7 @@ impl BattleVehicle {
                 .damage
                 .checked_add(damage)
                 .context("Vehicle ammunition cascade exceeds damage limit")?;
-            report.ammunition.push(BattleAmmunitionDraw {
+            report.ammunition.push(AmmunitionDraw {
                 bin_index: index,
                 rounds,
             });
@@ -65,8 +62,8 @@ impl BattleVehicle {
 pub fn discharge_vehicle_ammunition_cascade(
     world: &mut World,
     id: ObjectId,
-    section: BattleVehicleSection,
-) -> Result<BattleVehicleAmmunitionCascade> {
+    section: VehicleSection,
+) -> Result<VehicleAmmunitionCascade> {
     ensure!(
         world
             .objects

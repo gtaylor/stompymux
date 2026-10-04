@@ -25,7 +25,7 @@ CREATE TABLE btech_units (
     live TEXT NOT NULL DEFAULT '{}'
 ) STRICT;
 -- One row per counter of a unit record (see src/btech/timers.rs). `timer` is a
--- BattleTimer code and `slot` its weapon index, section slot or queue position, else zero.
+-- Timer code and `slot` its weapon index, section slot or queue position, else zero.
 -- `motion` is 0 (held), 1 (counting down), 2 (counting up) or 3 (wrapping); `anchor` is
 -- the held value, the simulation second a countdown reaches zero, or the second a count
 -- was zero, taken modulo the cycle when wrapping.

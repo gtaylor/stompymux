@@ -1,19 +1,19 @@
 //! Underwater weapon catalogue and rounded range brackets, independent of unit anatomy.
-use crate::BattleWeapon;
-use crate::{BattleRangeBracket, BattleWeaponRange};
+use crate::Weapon;
+use crate::{RangeBracket, WeaponRange};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
 
 /// Water-specific bands. Some small lasers have no long band or extreme extension.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-pub struct BattleWaterRanges {
+pub struct WaterRanges {
     pub minimum_range: u8,
     pub short_range: u8,
     pub medium_range: u8,
     pub long_range: Option<u8>,
 }
 
-impl BattleWaterRanges {
+impl WaterRanges {
     /// Missing long range falls back to medium, without enabling extreme range.
     pub fn effective_range(self, extended: bool) -> u16 {
         match self.long_range {
@@ -24,13 +24,13 @@ impl BattleWaterRanges {
     }
 }
 
-impl BattleWeapon {
+impl Weapon {
     /// Explicit catalogue eligibility; energy classification alone does not permit water fire.
-    pub fn water_ranges(self) -> Option<BattleWaterRanges> {
+    pub fn water_ranges(self) -> Option<WaterRanges> {
         if self.is_torpedo() {
             // Torpedoes are built for water and keep their ordinary reach.
             let profile = self.profile();
-            return Some(BattleWaterRanges {
+            return Some(WaterRanges {
                 minimum_range: profile.minimum_range,
                 short_range: profile.short_range,
                 medium_range: profile.medium_range,
@@ -65,7 +65,7 @@ impl BattleWeapon {
             Self::LightPpc | Self::HeavyPpc => (3, 4, 8, Some(10)),
             _ => return None,
         };
-        Some(BattleWaterRanges {
+        Some(WaterRanges {
             minimum_range,
             short_range,
             medium_range,
@@ -79,7 +79,7 @@ impl BattleWeapon {
         self,
         distance: f64,
         extended: bool,
-    ) -> Result<Option<BattleWeaponRange>> {
+    ) -> Result<Option<WeaponRange>> {
         ensure!(
             distance.is_finite() && distance >= 0.0,
             "Invalid weapon range"
@@ -93,24 +93,24 @@ impl BattleWeapon {
         }
         let range = range as u8;
         let (bracket, modifier) = if u16::from(range) > profile.effective_range(false) {
-            (BattleRangeBracket::Extreme, 8)
+            (RangeBracket::Extreme, 8)
         } else if range > profile.medium_range {
-            (BattleRangeBracket::Long, 4)
+            (RangeBracket::Long, 4)
         } else if range > profile.short_range {
-            (BattleRangeBracket::Medium, 2)
+            (RangeBracket::Medium, 2)
         } else if range > profile.minimum_range {
-            (BattleRangeBracket::Short, 0)
+            (RangeBracket::Short, 0)
         } else if range == 0 {
-            (BattleRangeBracket::Short, profile.minimum_range)
+            (RangeBracket::Short, profile.minimum_range)
         } else {
             // Positive minimum-range water shots fall through to ordinary
             // minimum arithmetic in the reference; keep that catalogue input.
             (
-                BattleRangeBracket::Short,
+                RangeBracket::Short,
                 self.profile().minimum_range.saturating_sub(range) + 1,
             )
         };
-        Ok(Some(BattleWeaponRange { bracket, modifier }))
+        Ok(Some(WeaponRange { bracket, modifier }))
     }
 }
 
@@ -123,18 +123,18 @@ mod tests {
     #[test]
     fn catalogue_admits_only_the_46_water_profiles() {
         assert_eq!(
-            BattleWeapon::ALL
+            Weapon::ALL
                 .iter()
                 .filter(|w| w.water_ranges().is_some())
                 .count(),
             46
         );
         for weapon in [
-            BattleWeapon::Flamer,
-            BattleWeapon::PlasmaRifle,
-            BattleWeapon::XSmallPulseLaser,
-            BattleWeapon::Ac20,
-            BattleWeapon::Srm6,
+            Weapon::Flamer,
+            Weapon::PlasmaRifle,
+            Weapon::XSmallPulseLaser,
+            Weapon::Ac20,
+            Weapon::Srm6,
         ] {
             assert!(weapon.water_ranges().is_none());
             assert_eq!(
@@ -146,7 +146,7 @@ mod tests {
             );
         }
         assert_eq!(
-            BattleWeapon::ClanPlasmaRifle
+            Weapon::ClanPlasmaRifle
                 .water_ranges()
                 .unwrap()
                 .effective_range(true),
@@ -158,9 +158,9 @@ mod tests {
     #[test]
     fn missing_long_band_does_not_create_extreme_range() {
         for weapon in [
-            BattleWeapon::SmallLaser,
-            BattleWeapon::SmallPulseLaser,
-            BattleWeapon::ClanHeavySmallLaser,
+            Weapon::SmallLaser,
+            Weapon::SmallPulseLaser,
+            Weapon::ClanHeavySmallLaser,
         ] {
             for extended in [false, true] {
                 let range = weapon
@@ -169,8 +169,8 @@ mod tests {
                     .unwrap();
                 assert_eq!(
                     range,
-                    BattleWeaponRange {
-                        bracket: BattleRangeBracket::Medium,
+                    WeaponRange {
+                        bracket: RangeBracket::Medium,
                         modifier: 2
                     }
                 );
@@ -188,38 +188,36 @@ mod tests {
     #[test]
     fn rounded_bands_and_ppc_minimum_match_water_rules() {
         for (distance, bracket, modifier) in [
-            (0.0, BattleRangeBracket::Short, 3),
-            (0.04, BattleRangeBracket::Short, 3),
-            (1.0, BattleRangeBracket::Short, 3),
-            (2.0, BattleRangeBracket::Short, 2),
-            (3.04, BattleRangeBracket::Short, 1),
-            (3.06, BattleRangeBracket::Short, 0),
-            (4.06, BattleRangeBracket::Medium, 2),
-            (7.06, BattleRangeBracket::Long, 4),
-            (10.04, BattleRangeBracket::Long, 4),
-            (10.06, BattleRangeBracket::Extreme, 8),
+            (0.0, RangeBracket::Short, 3),
+            (0.04, RangeBracket::Short, 3),
+            (1.0, RangeBracket::Short, 3),
+            (2.0, RangeBracket::Short, 2),
+            (3.04, RangeBracket::Short, 1),
+            (3.06, RangeBracket::Short, 0),
+            (4.06, RangeBracket::Medium, 2),
+            (7.06, RangeBracket::Long, 4),
+            (10.04, RangeBracket::Long, 4),
+            (10.06, RangeBracket::Extreme, 8),
         ] {
             assert_eq!(
-                BattleWeapon::Ppc
-                    .water_range_modifier(distance, true)
-                    .unwrap(),
-                Some(BattleWeaponRange { bracket, modifier })
+                Weapon::Ppc.water_range_modifier(distance, true).unwrap(),
+                Some(WeaponRange { bracket, modifier })
             );
         }
         assert!(
-            BattleWeapon::Ppc
+            Weapon::Ppc
                 .water_range_modifier(10.06, false)
                 .unwrap()
                 .is_none()
         );
         assert!(
-            BattleWeapon::Ppc
+            Weapon::Ppc
                 .water_range_modifier(14.06, true)
                 .unwrap()
                 .is_none()
         );
         assert_eq!(
-            BattleWeapon::MediumLaser
+            Weapon::MediumLaser
                 .water_range_modifier(0.0, false)
                 .unwrap()
                 .unwrap()
@@ -233,13 +231,13 @@ mod tests {
     fn invalid_distances_are_rejected_and_large_distances_miss() {
         for distance in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY, -0.01] {
             assert!(
-                BattleWeapon::MediumLaser
+                Weapon::MediumLaser
                     .water_range_modifier(distance, true)
                     .is_err()
             );
         }
         assert!(
-            BattleWeapon::MediumLaser
+            Weapon::MediumLaser
                 .water_range_modifier(f64::MAX, true)
                 .unwrap()
                 .is_none()

@@ -6,8 +6,8 @@ use serde::Serialize;
 
 /// Assigned position and identity, with the reference's out-of-bounds origin-reset diagnostic.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleMapAssignment {
-    pub position: BattlePosition,
+pub struct MapAssignment {
+    pub position: Position,
     pub label: String,
     pub reset_origin: bool,
 }
@@ -19,7 +19,7 @@ pub fn reassign_map(
     id: ObjectId,
     map: ObjectId,
     preferred: Option<&str>,
-) -> Result<BattleMapAssignment> {
+) -> Result<MapAssignment> {
     world.attempt(|world| {
         let report = reassign_in_candidate(world, id, map, preferred)?;
         world.btech.validate(world)?;
@@ -33,7 +33,7 @@ pub(super) fn reassign_in_candidate(
     id: ObjectId,
     map: ObjectId,
     preferred: Option<&str>,
-) -> Result<BattleMapAssignment> {
+) -> Result<MapAssignment> {
     ensure!(world.objects.get(&id).is_some_and(|object| object.kind == Kind::Thing
         && !object.flags.contains(Flag::Going)), "Unit is unavailable");
     let source = super::scanner::scanner_unit(world, id).context("Unit is not constructed")?;
@@ -41,12 +41,12 @@ pub(super) fn reassign_in_candidate(
         .btech
         .constructed_units()
         .get(&id)
-        .and_then(BattleUnit::flight);
+        .and_then(Mech::flight);
     let original = world
         .btech
         .vehicles()
         .get(&id)
-        .and_then(BattleVehicle::retained_position)
+        .and_then(Vehicle::retained_position)
         .or_else(|| {
             world
                 .btech
@@ -87,7 +87,7 @@ pub(super) fn reassign_in_candidate(
     );
     world.validate_move(id, map)?;
     let slot = super::map_slots::placement_slot(world, id, map)?;
-    let position = BattlePosition { map, x, y };
+    let position = Position { map, x, y };
     let point = HexCoordinate {
         x: i32::from(x),
         y: i32::from(y),
@@ -97,15 +97,15 @@ pub(super) fn reassign_in_candidate(
         .btech
         .vehicles()
         .get(&id)
-        .and_then(BattleVehicle::motion)
+        .and_then(Vehicle::motion)
         .or_else(|| {
             world
                 .btech
                 .constructed_units()
                 .get(&id)
-                .and_then(BattleUnit::motion)
+                .and_then(Mech::motion)
         })
-        .unwrap_or_else(|| BattleMotion::stationary(point));
+        .unwrap_or_else(|| Motion::stationary(point));
     if reset_origin {
         motion.point = point;
     }
@@ -130,7 +130,7 @@ pub(super) fn reassign_in_candidate(
         unit.update_motion(
             motion,
             position,
-            unit.definition().movement == BattleVehicleMovement::Hover
+            unit.definition().movement == VehicleMovement::Hover
                 && tile.has_bridge()
                 && height.is_some_and(|height| height < i32::from(tile.surface_height())),
         );
@@ -166,7 +166,7 @@ pub(super) fn reassign_in_candidate(
         }
     }
     let label = super::battlefield_identity::assign_in_candidate(world, id, preferred)?;
-    Ok(BattleMapAssignment {
+    Ok(MapAssignment {
         position,
         label,
         reset_origin,
@@ -257,19 +257,19 @@ pub fn remove_map_membership(world: &mut World, id: ObjectId) -> Result<()> {
 
 /// Resolve powered off-map state at the next simulation update using normal shutdown cleanup.
 /// There is no destination terrain on which to resolve a fall or landing impact.
-pub(super) fn advance_detached(world: &mut World) -> Vec<BattleNotice> {
+pub(super) fn advance_detached(world: &mut World) -> Vec<Notice> {
     let mut notices = Vec::new();
     let mut dropped_clubs = Vec::new();
     for (&id, unit) in world.btech.constructed.iter_mut() {
         if !unit.detached
-            || (unit.power == BattlePower::Off
+            || (unit.power == Power::Off
                 && unit.flight.is_none()
                 && unit.free_fall.is_none()
                 && unit.orbital_drop.is_none())
         {
             continue;
         }
-        notices.push(BattleNotice {
+        notices.push(Notice {
             unit: id,
             text: "You are on an invalid map! Map index reset!".into(),
         });
@@ -286,20 +286,20 @@ pub(super) fn advance_detached(world: &mut World) -> Vec<BattleNotice> {
         if super::power::finish_shutdown(unit, id, &mut notices) {
             dropped_clubs.push(id);
         }
-        unit.facing.torso = BattleTorso::Center;
+        unit.facing.torso = Torso::Center;
     }
     for (&id, unit) in world.btech.vehicles.iter_mut() {
         if !unit.detached
-            || (unit.power == BattlePower::Off
+            || (unit.power == Power::Off
                 && unit.orbital_drop.is_none()
                 && unit.free_fall().is_none()
                 && unit
                     .vtol_flight()
-                    .is_none_or(|flight| flight.phase == BattleVtolFlightPhase::Landed))
+                    .is_none_or(|flight| flight.phase == VtolFlightPhase::Landed))
         {
             continue;
         }
-        notices.push(BattleNotice {
+        notices.push(Notice {
             unit: id,
             text: "You are on an invalid map! Map index reset!".into(),
         });
@@ -310,7 +310,7 @@ pub(super) fn advance_detached(world: &mut World) -> Vec<BattleNotice> {
             unit.ground_elevation = Some(f64::from(fall.elevation()));
         }
         if let Some(flight) = &mut unit.vtol_flight {
-            flight.phase = BattleVtolFlightPhase::Landed;
+            flight.phase = VtolFlightPhase::Landed;
             flight.vertical_speed = 0.0;
             flight.fall = None;
         }
@@ -324,13 +324,13 @@ pub(super) fn advance_detached(world: &mut World) -> Vec<BattleNotice> {
 }
 
 /// Preserve the ordinary shutdown confirmation for a deferred off-map transition.
-fn shutdown_notice(notices: &mut Vec<BattleNotice>, id: ObjectId, power: BattlePower) {
+fn shutdown_notice(notices: &mut Vec<Notice>, id: ObjectId, power: Power) {
     let text = match power {
-        BattlePower::Off => return,
-        BattlePower::Starting { .. } => "The startup sequence has been aborted.",
-        BattlePower::Running => "All systems shut down.",
+        Power::Off => return,
+        Power::Starting { .. } => "The startup sequence has been aborted.",
+        Power::Running => "All systems shut down.",
     };
-    notices.push(BattleNotice {
+    notices.push(Notice {
         unit: id,
         text: text.into(),
     });
@@ -338,8 +338,8 @@ fn shutdown_notice(notices: &mut Vec<BattleNotice>, id: ObjectId, power: BattleP
 
 /// Native/Lua result distinguishes removal from assignment without inventing a destination.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleMapIndexReport {
-    pub assignment: Option<BattleMapAssignment>,
+pub struct MapIndexReport {
+    pub assignment: Option<MapAssignment>,
 }
 
 /// Wizard SETMAPINDX transaction includes state, durable dice and all private confirmations.
@@ -350,7 +350,7 @@ pub fn set_map_index_action(
     unit: ObjectId,
     map: ObjectId,
     preferred: Option<&str>,
-) -> Result<BattleMapIndexReport> {
+) -> Result<MapIndexReport> {
     scripts.atomic(|before| {
         ensure!(
             crate::authority::is_wizard(before, actor),
@@ -384,10 +384,10 @@ pub fn set_map_index_action(
         };
         scripts.world().validate(config)?;
         for message in messages {
-            super::notify_message(scripts, BattleMessageTarget::Player(actor), &message)?;
+            super::notify_message(scripts, MessageTarget::Player(actor), &message)?;
         }
         scripts.effects.validate()?;
-        Ok(BattleMapIndexReport { assignment })
+        Ok(MapIndexReport { assignment })
     })
 }
 

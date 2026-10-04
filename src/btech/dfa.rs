@@ -6,25 +6,25 @@ use serde::Serialize;
 
 /// A landing attack forecast; the target's posture must be sampled again for each damage packet.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct BattleDfaProfile {
+pub struct DfaProfile {
     pub target_number: i32,
     pub base: i32,
     pub attacker_movement: i32,
     pub target_movement: i32,
     pub inflicted_damage: u16,
     pub received_damage: u16,
-    pub target_arc: BattleHitArc,
-    pub initial_hit_table: BattleHitTable,
+    pub target_arc: HitArc,
+    pub initial_hit_table: HitTable,
 }
 
 /// Recovery-sensitive weapon sections; torso physical recovery does not itself prevent a landing attack.
-pub(super) const SECTIONS: [BattleSection; 6] = [
-    BattleSection::LeftArm,
-    BattleSection::RightArm,
-    BattleSection::LeftLeg,
-    BattleSection::RightLeg,
-    BattleSection::LeftTorso,
-    BattleSection::RightTorso,
+pub(super) const SECTIONS: [MechSection; 6] = [
+    MechSection::LeftArm,
+    MechSection::RightArm,
+    MechSection::LeftLeg,
+    MechSection::RightLeg,
+    MechSection::LeftTorso,
+    MechSection::RightTorso,
 ];
 
 /// Preserve actual-mass impact and nominal-tonnage rounding/recoil as distinct quantities.
@@ -44,8 +44,8 @@ pub fn dfa_profile(
     world: &World,
     attacker: ObjectId,
     target: ObjectId,
-    rules: BattlePhysicalRules,
-) -> Result<BattleDfaProfile> {
+    rules: PhysicalRules,
+) -> Result<DfaProfile> {
     dfa_profile_inner(world, attacker, target, rules, false)
 }
 
@@ -54,8 +54,8 @@ pub(super) fn dfa_profile_in_action(
     world: &World,
     attacker: ObjectId,
     target: ObjectId,
-    rules: BattlePhysicalRules,
-) -> Result<BattleDfaProfile> {
+    rules: PhysicalRules,
+) -> Result<DfaProfile> {
     dfa_profile_inner(world, attacker, target, rules, true)
 }
 
@@ -64,9 +64,9 @@ fn dfa_profile_inner(
     world: &World,
     attacker: ObjectId,
     target: ObjectId,
-    rules: BattlePhysicalRules,
+    rules: PhysicalRules,
     character: bool,
-) -> Result<BattleDfaProfile> {
+) -> Result<DfaProfile> {
     ensure!(attacker != target, "Cannot land on yourself");
     for id in [attacker, target] {
         let object = world.objects.get(&id).context("Unit is unavailable")?;
@@ -111,14 +111,14 @@ fn dfa_profile_inner(
         !source
             .limb_recycle()
             .keys()
-            .any(|section| matches!(section, BattleSection::LeftLeg | BattleSection::RightLeg)),
+            .any(|section| matches!(section, MechSection::LeftLeg | MechSection::RightLeg)),
         "Your legs are still recovering from your last attack."
     );
     ensure!(
         !source
             .limb_recycle()
             .keys()
-            .any(|section| matches!(section, BattleSection::LeftArm | BattleSection::RightArm)),
+            .any(|section| matches!(section, MechSection::LeftArm | MechSection::RightArm)),
         "Your arms are still recovering from your last attack."
     );
     ensure!(
@@ -165,55 +165,55 @@ fn dfa_profile_inner(
         specialist,
     )?;
     let reverse = unit_range(world, target, attacker)?;
-    Ok(BattleDfaProfile {
+    Ok(DfaProfile {
         target_number,
         base,
         attacker_movement,
         target_movement,
         inflicted_damage,
         received_damage,
-        target_arc: BattleHitArc::from_bearing(
+        target_arc: HitArc::from_bearing(
             reverse.bearing.unwrap_or(180.0),
             victim.motion().unwrap().heading,
             rules.hit_arc_mode,
         )?,
-        initial_hit_table: if victim.posture() == BattlePosture::Prone {
-            BattleHitTable::Weapon
+        initial_hit_table: if victim.posture() == Posture::Prone {
+            HitTable::Weapon
         } else {
-            BattleHitTable::Punch
+            HitTable::Punch
         },
     })
 }
 
 /// A landing control check and its optional ordinary fall consequences.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct BattleDfaBalance {
+pub struct DfaBalance {
     pub unit: ObjectId,
-    pub check: BattlePilotingCheck,
-    pub fall: Option<BattleFallReport>,
+    pub check: PilotingCheck,
+    pub fall: Option<MechFallReport>,
 }
 
 /// Atomic landing attack outcome, including damage cascades, control checks and staged notices.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct BattleDfaReport {
+pub struct DfaReport {
     pub attacker: ObjectId,
     pub target: ObjectId,
-    pub profile: BattleDfaProfile,
+    pub profile: DfaProfile,
     pub roll: u8,
     pub hit: bool,
-    pub target_impacts: Vec<BattleTacticalImpact>,
-    pub attacker_impacts: Vec<BattleTacticalImpact>,
-    pub balance: Vec<BattleDfaBalance>,
-    pub pilot_injury: Option<BattlePilotInjury>,
-    pub character_injury: Option<BattleCharacterPilotInjury>,
-    pub experience: Vec<BattleExperienceAward>,
+    pub target_impacts: Vec<TacticalImpact>,
+    pub attacker_impacts: Vec<TacticalImpact>,
+    pub balance: Vec<DfaBalance>,
+    pub pilot_injury: Option<TacticalPilotInjury>,
+    pub character_injury: Option<CharacterPilotInjury>,
+    pub experience: Vec<ExperienceAward>,
     /// Accepted damage and control-check XP diagnostics, in resolution order.
-    pub experience_messages: Vec<super::BattleChannelMessage>,
+    pub experience_messages: Vec<super::DiagnosticMessage>,
     /// Miss immersion can cause further support-loss falls and cockpit casualties.
-    pub flooding: Vec<BattleSectionExposureReport>,
+    pub flooding: Vec<SectionExposureReport>,
     /// Pilot-only checks ordered among the aggregate cockpit notices.
-    pub pilot_notices: Vec<super::BattlePilotNotice>,
-    pub notices: Vec<BattleNotice>,
+    pub pilot_notices: Vec<super::PilotNotice>,
+    pub notices: Vec<Notice>,
 }
 
 /// Which participant and hit distribution owns a DFA damage phase.
@@ -226,9 +226,9 @@ enum DamagePhase {
 
 /// Damage groups and their pre-impact piloting awards.
 struct DfaPackets {
-    impacts: Vec<BattleTacticalImpact>,
-    experience: Vec<BattleExperienceAward>,
-    experience_messages: Vec<super::BattleChannelMessage>,
+    impacts: Vec<TacticalImpact>,
+    experience: Vec<ExperienceAward>,
+    experience_messages: Vec<super::DiagnosticMessage>,
 }
 
 /// Apply five-point groups, resampling posture and preserving location/damage dice order.
@@ -236,9 +236,9 @@ fn packets(
     world: &mut World,
     id: ObjectId,
     mut damage: u16,
-    arc: BattleHitArc,
+    arc: HitArc,
     phase: DamagePhase,
-    rules: BattleFallRules,
+    rules: FallRules,
     attack: (ObjectId, bool),
 ) -> Result<DfaPackets> {
     let (attacker, character) = attack;
@@ -248,18 +248,18 @@ fn packets(
     while damage > 0 {
         let unit = &world.btech.constructed_units()[&id];
         let table = match phase {
-            DamagePhase::Target if unit.posture() != BattlePosture::Prone => BattleHitTable::Punch,
-            DamagePhase::Legs => BattleHitTable::Kick,
-            _ => BattleHitTable::Weapon,
+            DamagePhase::Target if unit.posture() != Posture::Prone => HitTable::Punch,
+            DamagePhase::Legs => HitTable::Kick,
+            _ => HitTable::Weapon,
         };
         let mut dice = unit.dice.clone();
-        let mut hit = if table == BattleHitTable::Weapon {
+        let mut hit = if table == HitTable::Weapon {
             let roll = dice.generic_roll();
             rules.hit.resolve(unit, arc, roll, &mut dice)?
         } else {
-            BattleHit {
+            Hit {
                 section: table.location(unit.chassis(), arc, dice.d6())?,
-                rear_armor: arc == BattleHitArc::Rear,
+                rear_armor: arc == HitArc::Rear,
                 through_armor_critical: false,
                 crew_stun: false,
             }
@@ -313,8 +313,8 @@ pub fn resolve_dfa(
     world: &mut World,
     attacker: ObjectId,
     target: ObjectId,
-    rules: BattlePhysicalRules,
-) -> Result<BattleDfaReport> {
+    rules: PhysicalRules,
+) -> Result<DfaReport> {
     resolve_dfa_inner(world, attacker, target, rules, false)
 }
 
@@ -323,8 +323,8 @@ pub(super) fn resolve_dfa_in_action(
     world: &mut World,
     attacker: ObjectId,
     target: ObjectId,
-    rules: BattlePhysicalRules,
-) -> Result<BattleDfaReport> {
+    rules: PhysicalRules,
+) -> Result<DfaReport> {
     resolve_dfa_inner(world, attacker, target, rules, true)
 }
 
@@ -333,22 +333,22 @@ fn resolve_dfa_inner(
     world: &mut World,
     attacker: ObjectId,
     target: ObjectId,
-    rules: BattlePhysicalRules,
+    rules: PhysicalRules,
     character: bool,
-) -> Result<BattleDfaReport> {
+) -> Result<DfaReport> {
     let profile = dfa_profile_inner(world, attacker, target, rules, character)?;
     world.attempt(|world| {
         let source = world.btech.constructed.get_mut(&attacker).unwrap();
         let roll = source.dice.generic_roll();
         source.flight = None;
         let hit = i32::from(roll) >= profile.target_number;
-        let mut report = BattleDfaReport {
+        let mut report = DfaReport {
             attacker,
             target,
             roll,
             hit,
             pilot_notices: Vec::new(),
-            notices: vec![BattleNotice {
+            notices: vec![Notice {
                 unit: attacker,
                 text: format!("DFA: BTH {}\tRoll: {roll}", profile.target_number),
             }],
@@ -365,12 +365,12 @@ fn resolve_dfa_inner(
         let attacker_rules = super::physical::participant_fall_rules(world, attacker, rules.fall);
         let target_rules = super::physical::participant_fall_rules(world, target, rules.fall);
         if hit {
-            report.notices.push(BattleNotice {
+            report.notices.push(Notice {
                 unit: attacker,
                 text: "You land on your target legs first!".into(),
             });
-            if world.btech.constructed_units()[&target].power() == BattlePower::Running {
-                report.notices.push(BattleNotice {
+            if world.btech.constructed_units()[&target].power() == Power::Running {
+                report.notices.push(Notice {
                     unit: target,
                     text: format!(
                         "DEATH FROM ABOVE!!!\n#{} lands on you from above!",
@@ -397,15 +397,15 @@ fn resolve_dfa_inner(
                 world,
                 attacker,
                 report.profile.received_damage,
-                BattleHitArc::Front,
+                HitArc::Front,
                 DamagePhase::Legs,
                 attacker_rules,
                 (attacker, character),
             )?
             .impacts;
         } else {
-            if world.btech.constructed_units()[&attacker].posture() != BattlePosture::Prone {
-                report.notices.push(BattleNotice {
+            if world.btech.constructed_units()[&attacker].posture() != Posture::Prone {
+                report.notices.push(Notice {
                     unit: attacker,
                     text: "You miss your DFA attack and fall on your back!!".into(),
                 });
@@ -419,7 +419,7 @@ fn resolve_dfa_inner(
                 world,
                 attacker,
                 report.profile.received_damage,
-                BattleHitArc::Rear,
+                HitArc::Rear,
                 DamagePhase::Miss,
                 attacker_rules,
                 (attacker, character),
@@ -434,7 +434,7 @@ fn resolve_dfa_inner(
             );
             report.notices.extend(impact.notices.iter().cloned());
         }
-        if hit && world.btech.constructed_units()[&attacker].posture() != BattlePosture::Prone {
+        if hit && world.btech.constructed_units()[&attacker].posture() != Posture::Prone {
             for (id, modifier, fall_rules) in
                 [(attacker, 4, attacker_rules), (target, 2, target_rules)]
             {
@@ -460,7 +460,7 @@ fn resolve_dfa_inner(
                         )?);
                 }
                 let fall = if !check.success {
-                    report.notices.push(BattleNotice {
+                    report.notices.push(Notice {
                         unit: id,
                         text: "Your piloting skill fails and you fall over!!".into(),
                     });
@@ -480,7 +480,7 @@ fn resolve_dfa_inner(
                 } else {
                     None
                 };
-                report.balance.push(BattleDfaBalance {
+                report.balance.push(DfaBalance {
                     unit: id,
                     check,
                     fall,
@@ -508,7 +508,7 @@ fn resolve_dfa_inner(
                         )?);
                 }
                 if !check.success && world.btech.constructed_units()[&attacker].pilot().is_some() {
-                    report.notices.push(BattleNotice {
+                    report.notices.push(Notice {
                         unit: attacker,
                         text: "You take personal injury from the fall!".into(),
                     });
@@ -530,7 +530,7 @@ fn resolve_dfa_inner(
                         report.pilot_injury = Some(injury);
                     }
                 }
-                report.balance.push(BattleDfaBalance {
+                report.balance.push(DfaBalance {
                     unit: attacker,
                     check,
                     fall: None,
@@ -545,10 +545,10 @@ fn resolve_dfa_inner(
                 (tile.surface_height() != tile.standing_height()).then_some(tile.surface_height());
             let source = world.btech.constructed.get_mut(&attacker).unwrap();
             source.hull_down = Default::default();
-            source.posture = BattlePosture::Prone;
+            source.posture = Posture::Prone;
             source.facing = Default::default();
             source.stand_timer = None;
-            if rules.fall.stagger != BattleStaggerMode::Traditional {
+            if rules.fall.stagger != StaggerMode::Traditional {
                 source.stagger.clear_damage();
             }
             source.ground_elevation = ground.map(f64::from);

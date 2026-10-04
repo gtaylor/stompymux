@@ -1,12 +1,12 @@
 //! Process-local event timing used by the reference lag percentage.
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub struct BattleEventTelemetry {
+pub struct EventTelemetry {
     pub process_start: i64,
     pub ticks: u64,
 }
 
-impl BattleEventTelemetry {
+impl EventTelemetry {
     pub fn lag(self, now: i64) -> i32 {
         if self.ticks == 0 {
             return 0;

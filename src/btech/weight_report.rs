@@ -7,7 +7,7 @@ use std::collections::BTreeMap;
 
 /// One installed component or aggregated equipment family, in 1/1024-ton units.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleWeightEntry {
+pub struct WeightEntry {
     pub name: String,
     pub count: Option<u32>,
     pub mass: i64,
@@ -15,14 +15,14 @@ pub struct BattleWeightEntry {
 
 /// Construction allocation counts original protection and installed bins, including empty bins.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleWeightReport {
+pub struct WeightReport {
     pub name: String,
     pub nominal_tons: u16,
-    pub entries: Vec<BattleWeightEntry>,
+    pub entries: Vec<WeightEntry>,
     pub total: i64,
 }
 
-impl BattleWeightReport {
+impl WeightReport {
     /// Shared fixed-width cockpit layout; equipment names are literal text.
     pub fn render(&self) -> String {
         let line = "-".repeat(64);
@@ -59,23 +59,21 @@ impl BattleWeightReport {
 }
 
 /// Collect repeated installations in one deterministic row without coupling their mass rules.
-fn add(rows: &mut BTreeMap<String, BattleWeightEntry>, name: &str, count: u32, mass: u32) {
+fn add(rows: &mut BTreeMap<String, WeightEntry>, name: &str, count: u32, mass: u32) {
     if mass == 0 {
         return;
     }
-    let row = rows
-        .entry(name.into())
-        .or_insert_with(|| BattleWeightEntry {
-            name: name.into(),
-            count: Some(0),
-            mass: 0,
-        });
+    let row = rows.entry(name.into()).or_insert_with(|| WeightEntry {
+        name: name.into(),
+        count: Some(0),
+        mass: 0,
+    });
     *row.count.as_mut().unwrap() += count;
     row.mass += i64::from(mass);
 }
 
 /// Inspect the intact design without modifying live damage, supplies, dice or crew.
-pub fn weight_report(world: &World, actor: ObjectId, id: ObjectId) -> Result<BattleWeightReport> {
+pub fn weight_report(world: &World, actor: ObjectId, id: ObjectId) -> Result<WeightReport> {
     ensure!(
         crate::authority::is_wizard(world, actor),
         "Permission denied."
@@ -89,7 +87,7 @@ pub fn weight_report(world: &World, actor: ObjectId, id: ObjectId) -> Result<Bat
     let mut entries = Vec::new();
     let mut equipment = BTreeMap::new();
     let mut component = |name: &str, mass: i64| {
-        entries.push(BattleWeightEntry {
+        entries.push(WeightEntry {
             name: name.into(),
             count: None,
             mass,
@@ -112,7 +110,7 @@ pub fn weight_report(world: &World, actor: ObjectId, id: ObjectId) -> Result<Bat
         if mass.cargo > 0 {
             component("CargoSpace", i64::from(mass.cargo));
         }
-        let loadout = BattleVehicleLoadout::resolve(definition)?;
+        let loadout = VehicleLoadout::resolve(definition)?;
         for mount in &loadout.weapons {
             add(&mut equipment, mount.weapon.name(), 1, mount.weapon.mass());
         }
@@ -137,7 +135,7 @@ pub fn weight_report(world: &World, actor: ObjectId, id: ObjectId) -> Result<Bat
             .get(&id)
             .context("Unit construction state is unavailable")?
             .definition();
-        let design = BattleUnit::from_template(definition.clone())?;
+        let design = Mech::from_template(definition.clone())?;
         let mass = design.mass()?;
         component("Engine", i64::from(mass.engine));
         component("Cockpit", i64::from(mass.cockpit));
@@ -176,7 +174,7 @@ pub fn weight_report(world: &World, actor: ObjectId, id: ObjectId) -> Result<Bat
     };
     entries.extend(equipment.into_values());
     let total = entries.iter().map(|entry| entry.mass).sum();
-    Ok(BattleWeightReport {
+    Ok(WeightReport {
         name,
         nominal_tons,
         entries,
@@ -189,7 +187,7 @@ pub fn weight_action(scripts: &Scripts, actor: ObjectId, unit: ObjectId) -> Resu
     let text = weight_report(&scripts.world(), actor, unit)?.render();
     scripts.atomic(|_| {
         for line in text.split("\r\n") {
-            super::notify_message(scripts, BattleMessageTarget::Player(actor), line)?;
+            super::notify_message(scripts, MessageTarget::Player(actor), line)?;
         }
         Ok(text)
     })

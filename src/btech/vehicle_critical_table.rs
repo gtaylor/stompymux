@@ -1,5 +1,5 @@
 //! Ground-vehicle critical tables select typed consequences without partially applying damage.
-use super::{BattleDice, BattleVehicle, BattleVehicleMovement, BattleVehicleSection};
+use super::{Dice, Vehicle, VehicleMovement, VehicleSection};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
@@ -7,12 +7,12 @@ use serde::Serialize;
 /// Available vehicle critical tables.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleVehicleCriticalTable {
+pub enum VehicleCriticalTable {
     Standard,
     Advanced,
 }
 
-impl BattleVehicleCriticalTable {
+impl VehicleCriticalTable {
     /// Select the critical table from the advanced-rules switch.
     pub fn from_settings(advanced: bool) -> Self {
         if advanced {
@@ -24,12 +24,12 @@ impl BattleVehicleCriticalTable {
 
 /// Admission supplied by the surrounding combat action.
 #[derive(Debug, Clone, Copy)]
-pub struct BattleVehicleCriticalRules {
+pub struct VehicleCriticalRules {
     /// Exterior rotor damage divisor; zero disables scaling. Internal damage is unaffected.
     pub rotor_damage_divisor: u32,
-    pub table: BattleVehicleCriticalTable,
+    pub table: VehicleCriticalTable,
     /// Host aircraft policy; None applies the explicit table to either vehicle class.
-    pub vtol_table: Option<BattleVehicleCriticalTable>,
+    pub vtol_table: Option<VehicleCriticalTable>,
     pub enabled: bool,
     pub combat_safe: bool,
     /// Use the toughness consciousness rule when applying crew injuries.
@@ -41,7 +41,7 @@ pub struct BattleVehicleCriticalRules {
 /// Selected consequence; its table and section remain part of the report for application.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleVehicleCriticalEffect {
+pub enum VehicleCriticalEffect {
     CrewHit,
     VtolPilot,
     VtolCopilot,
@@ -65,27 +65,27 @@ pub enum BattleVehicleCriticalEffect {
     TurretJam,
     TurretBlownOff,
     /// Aircraft-specific rotor outcome, applied by the shared critical transaction.
-    Rotor(super::BattleRotorHit),
+    Rotor(super::RotorHit),
 }
 
 /// A table result with its actual random draws, still awaiting damage and notification effects.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[must_use = "Apply the selected critical consequence within the enclosing damage transaction"]
-pub struct BattleVehicleCriticalReport {
-    pub table: BattleVehicleCriticalTable,
-    pub section: BattleVehicleSection,
+pub struct VehicleCriticalReport {
+    pub table: VehicleCriticalTable,
+    pub section: VehicleSection,
     /// Ground standard preliminary die then optional d6; VTOL standard d6; advanced 2d6 total.
     pub rolls: Vec<u8>,
-    pub effect: Option<BattleVehicleCriticalEffect>,
+    pub effect: Option<VehicleCriticalEffect>,
 }
 
 /// Select one critical using the victim's saved dice; no equipment or crew damage is applied here.
 pub fn roll_vehicle_critical(
     world: &mut World,
     id: ObjectId,
-    section: BattleVehicleSection,
-    rules: BattleVehicleCriticalRules,
-) -> Result<BattleVehicleCriticalReport> {
+    section: VehicleSection,
+    rules: VehicleCriticalRules,
+) -> Result<VehicleCriticalReport> {
     ensure!(
         world
             .objects
@@ -114,15 +114,15 @@ pub fn roll_vehicle_critical(
 
 /// Keep early-return rules and die sequencing independent from consequence application.
 fn select(
-    vehicle: &BattleVehicle,
-    section: BattleVehicleSection,
-    rules: BattleVehicleCriticalRules,
-    dice: &mut BattleDice,
-) -> BattleVehicleCriticalReport {
-    use BattleVehicleCriticalEffect as E;
-    use BattleVehicleCriticalTable as T;
+    vehicle: &Vehicle,
+    section: VehicleSection,
+    rules: VehicleCriticalRules,
+    dice: &mut Dice,
+) -> VehicleCriticalReport {
+    use VehicleCriticalEffect as E;
+    use VehicleCriticalTable as T;
     let table = rules.table_for(vehicle);
-    let mut report = BattleVehicleCriticalReport {
+    let mut report = VehicleCriticalReport {
         table,
         section,
         rolls: Vec::new(),
@@ -135,7 +135,7 @@ fn select(
     {
         return report;
     }
-    let stationary = vehicle.definition().movement == BattleVehicleMovement::Stationary;
+    let stationary = vehicle.definition().movement == VehicleMovement::Stationary;
     if table == T::Advanced {
         let roll = dice.generic_roll();
         report.rolls.push(roll);
@@ -165,7 +165,7 @@ fn select(
         return report;
     }
     if table == T::Standard {
-        let turret = section == BattleVehicleSection::Turret;
+        let turret = section == VehicleSection::Turret;
         let roll = dice
             .die(if turret { 3 } else { 10 })
             .expect("nonzero critical die") as u8;
@@ -201,9 +201,9 @@ fn select(
 }
 
 /// Advanced ground-vehicle outcomes depend on the struck face, with rolls below six producing no effect.
-fn advanced(section: BattleVehicleSection, roll: u8) -> Option<BattleVehicleCriticalEffect> {
-    use BattleVehicleCriticalEffect as E;
-    use BattleVehicleSection as S;
+fn advanced(section: VehicleSection, roll: u8) -> Option<VehicleCriticalEffect> {
+    use VehicleCriticalEffect as E;
+    use VehicleSection as S;
     if roll < 6 {
         return None;
     }
@@ -251,11 +251,11 @@ fn advanced(section: BattleVehicleSection, roll: u8) -> Option<BattleVehicleCrit
 }
 
 /// Advanced rotorcraft hull tables share effect application with conventional vehicles.
-fn advanced_vtol(section: BattleVehicleSection, roll: u8) -> Option<BattleVehicleCriticalEffect> {
-    use BattleVehicleCriticalEffect as E;
-    use BattleVehicleSection as S;
+fn advanced_vtol(section: VehicleSection, roll: u8) -> Option<VehicleCriticalEffect> {
+    use VehicleCriticalEffect as E;
+    use VehicleSection as S;
     if section == S::Rotor {
-        return super::BattleRotorHit::from_critical_roll(roll)
+        return super::RotorHit::from_critical_roll(roll)
             .expect("2d6 critical roll")
             .map(E::Rotor);
     }
@@ -295,9 +295,9 @@ fn advanced_vtol(section: BattleVehicleSection, roll: u8) -> Option<BattleVehicl
     Some(row[usize::from(roll - 6)])
 }
 
-impl BattleVehicleCriticalRules {
+impl VehicleCriticalRules {
     /// Select per victim at the common hit/critical boundary, retaining policy for nested effects.
-    pub(crate) fn table_for(self, vehicle: &BattleVehicle) -> BattleVehicleCriticalTable {
+    pub(crate) fn table_for(self, vehicle: &Vehicle) -> VehicleCriticalTable {
         if vehicle.definition().is_vtol() {
             return self.vtol_table.unwrap_or(self.table);
         }

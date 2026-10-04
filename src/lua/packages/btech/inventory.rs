@@ -32,9 +32,9 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                 let scripts = crate::Scripts::services(lua)?;
                 crate::lua::transactions::run(lua, &scripts.world, || {
                     let change = if add {
-                        crate::BattleInventoryChange::Add { pattern, quantity }
+                        crate::InventoryChange::Add { pattern, quantity }
                     } else {
-                        crate::BattleInventoryChange::Remove { pattern, quantity }
+                        crate::InventoryChange::Remove { pattern, quantity }
                     };
                     let rows = crate::change_battle_inventory_action(
                         &scripts,
@@ -77,7 +77,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                 &crate::lua::configuration(lua),
                 ObjectId(actor),
                 ObjectId(object),
-                crate::BattleInventoryChange::Clear,
+                crate::InventoryChange::Clear,
             )
             .map_err(mlua::Error::external)?;
             Ok(())
@@ -171,7 +171,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
     )?;
     let set_point = lua.create_function(|lua, (actor, map, point): (i64, i64, Value)| {
         crate::lua::transactions::require(lua)?;
-        let point: Option<crate::BattleCargoTransferPoint> = lua.from_value(point)?;
+        let point: Option<crate::CargoTransferPoint> = lua.from_value(point)?;
         let scripts = crate::Scripts::services(lua)?;
         crate::lua::transactions::run(lua, &scripts.world, || {
             crate::set_battle_cargo_transfer_point(
@@ -193,10 +193,10 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
         let part = match value {
             Value::Integer(id) => i32::try_from(id)
                 .ok()
-                .and_then(crate::BattlePart::from_id)
+                .and_then(crate::Part::from_id)
                 .ok_or_else(|| mlua::Error::external("Unknown inventory part"))?,
             Value::String(name) => {
-                crate::BattlePart::parse(name.to_str()?.as_ref()).map_err(mlua::Error::external)?
+                crate::Part::parse(name.to_str()?.as_ref()).map_err(mlua::Error::external)?
             }
             _ => return Err(mlua::Error::external("Expected part identifier or name")),
         };
@@ -221,7 +221,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             crate::lua::transactions::require(lua)?;
             let scripts = crate::Scripts::services(lua)?;
             crate::lua::transactions::run(lua, &scripts.world, || {
-                let part = crate::BattlePart::parse(&name).map_err(mlua::Error::external)?;
+                let part = crate::Part::parse(&name).map_err(mlua::Error::external)?;
                 crate::set_battle_inventory_quantity_action(
                     &scripts,
                     &crate::lua::configuration(lua),

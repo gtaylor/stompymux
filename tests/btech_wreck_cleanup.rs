@@ -16,7 +16,7 @@ fn unit(world: &mut World, config: &Config, map: ObjectId, chassis: &str) -> Obj
         create_battle_unit(
             world,
             id,
-            BattleTemplate::parse(
+            MechTemplate::parse(
                 "test",
                 if chassis == "quad" {
                     include_str!("../game/mechs/GOL-1H.toml")
@@ -39,12 +39,7 @@ fn unit(world: &mut World, config: &Config, map: ObjectId, chassis: &str) -> Obj
                 .replace("walk_mp = 5", "walk_mp = 0"),
             _ => include_str!("../game/mechs/Demolisher.toml").to_owned(),
         };
-        create_battle_vehicle(
-            world,
-            id,
-            BattleVehicleTemplate::parse("test", &source).unwrap(),
-        )
-        .unwrap();
+        create_battle_vehicle(world, id, VehicleTemplate::parse("test", &source).unwrap()).unwrap();
     }
     support::seed_object_dice(world, id, support::FIXTURE_DICE_SEED);
     place_battle_unit(world, id, map, 0, 0).unwrap();
@@ -72,13 +67,13 @@ async fn fixture(
         let sections: Vec<_> = vehicle.sections().keys().copied().collect();
         for section in sections {
             let internal = vehicle.sections()[&section].internal;
-            let amount = if section == BattleVehicleSection::Rear {
+            let amount = if section == VehicleSection::Rear {
                 internal.saturating_sub(1)
             } else {
                 internal
             };
             vehicle
-                .damage_phase(section, amount, BattleDamagePhase::Internal)
+                .damage_phase(section, amount, DamagePhase::Internal)
                 .unwrap();
         }
         let mut encoded = serde_json::to_value(&vehicle).unwrap();
@@ -105,9 +100,9 @@ async fn fixture(
         &mut world,
         map,
         42,
-        Some(BattleMinefield {
+        Some(Minefield {
             coordinate: HexCoordinate { x: 0, y: 0 },
-            kind: BattleMineKind::Command,
+            kind: MineKind::Command,
             strength: 5,
             extra: 0,
             owner: id,
@@ -121,7 +116,7 @@ async fn fixture(
             .btech
             .rewrite_unit_record(id, |record| {
                 if source != id {
-                    record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+                    record["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
                 }
             })
             .unwrap();
@@ -162,18 +157,18 @@ async fn wreck_retirement_cross_chassis_and_restart() {
             assert_eq!(remaining(&scripts.world(), id), Some(10 - tick));
         }
         let before = scripts.world().clone();
-        let rolls = before.battle_roll_statistics().unwrap();
+        let rolls = before.roll_statistics().unwrap();
         assert!(rolls.total() > 0);
         let live = Scripts::new(&config, Rc::new(RefCell::new(before.clone()))).unwrap();
         assert_eq!(advance_battle_wrecks_action(&live, &config).unwrap(), [id]);
-        assert_eq!(live.world().battle_roll_statistics().unwrap(), rolls);
+        assert_eq!(live.world().roll_statistics().unwrap(), rolls);
         assert!(live.world().btech_retired_rolls.total() > 0);
         persistence::save(&config.database(), &before)
             .await
             .unwrap();
         let loaded = persistence::load(&config.database()).await.unwrap();
         assert_eq!(loaded.btech, before.btech);
-        assert_eq!(loaded.battle_roll_statistics().unwrap().total(), 0);
+        assert_eq!(loaded.roll_statistics().unwrap().total(), 0);
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(loaded))).unwrap();
         assert_eq!(
             advance_battle_wrecks_action(&scripts, &config).unwrap(),
@@ -182,7 +177,7 @@ async fn wreck_retirement_cross_chassis_and_restart() {
         let after = scripts.world().clone();
         assert!(!after.btech.units().contains_key(&id));
         assert!(!after.btech.registrations().contains_key(&id));
-        assert!(!battle_wrecks_pending(&after));
+        assert!(!wrecks_pending(&after));
         assert_eq!(after.objects[&id].kind, Kind::Thing);
         assert_eq!(
             after.objects[&id].location,
@@ -231,15 +226,15 @@ async fn database_purge_retains_unit_rolls_without_mutating_the_source_world() {
             .unwrap()
             .flags
             .insert(Flag::Going);
-        let rolls = before.battle_roll_statistics().unwrap();
+        let rolls = before.roll_statistics().unwrap();
         assert!(rolls.total() > 0);
         let links = dbck::rebuild_links(&before, &before.links);
         let (after, report) = dbck::plan(&before, &links, &config).unwrap();
         assert!(report.plan.purges.contains(&id));
         assert!(!after.btech.units().contains_key(&id));
-        assert_eq!(after.battle_roll_statistics().unwrap(), rolls);
+        assert_eq!(after.roll_statistics().unwrap(), rolls);
         assert!(after.btech_retired_rolls.total() > 0);
-        assert_eq!(before.battle_roll_statistics().unwrap(), rolls);
+        assert_eq!(before.roll_statistics().unwrap(), rolls);
         assert_eq!(before.btech_retired_rolls.total(), 0);
         before.validate(&config).unwrap();
         let live = Scripts::new(&config, Rc::new(RefCell::new(before.clone()))).unwrap();
@@ -247,12 +242,12 @@ async fn database_purge_retains_unit_rolls_without_mutating_the_source_world() {
             .eval_callback::<()>("mux.check_db(); error('undo cleanup')")
             .unwrap_err();
         assert!(error.to_string().contains("undo cleanup"), "{error}");
-        assert_eq!(live.world().battle_roll_statistics().unwrap(), rolls);
+        assert_eq!(live.world().roll_statistics().unwrap(), rolls);
         assert_eq!(live.world().btech_retired_rolls.total(), 0);
         assert!(live.world().btech.units().contains_key(&id));
         live.eval_callback::<()>("mux.check_db()").unwrap();
         assert!(!live.world().btech.units().contains_key(&id));
-        assert_eq!(live.world().battle_roll_statistics().unwrap(), rolls);
+        assert_eq!(live.world().roll_statistics().unwrap(), rolls);
         assert!(live.world().btech_retired_rolls.total() > 0);
     }
 }
@@ -375,8 +370,8 @@ async fn wreck_callbacks_order_and_failure_rollback() {
         );
         assert!(scripts.outbox().is_empty());
         assert_eq!(
-            scripts.world().battle_roll_statistics().unwrap(),
-            before.battle_roll_statistics().unwrap()
+            scripts.world().roll_statistics().unwrap(),
+            before.roll_statistics().unwrap()
         );
         assert_eq!(
             scripts.world().btech_retired_rolls,
@@ -421,7 +416,7 @@ async fn wreck_idle_server_commit_retry() {
         sqlx::query("DROP TRIGGER deny_wreck").execute(&mut sql).await.unwrap();
         let loaded = heartbeats.until_saved(&config, 4, |loaded| !loaded.btech.units().contains_key(&id)).await;
         assert_eq!(loaded.objects[&id].location, Some(ObjectId(config.battletech.usedmechstore)));
-        assert!(!battle_wrecks_pending(&loaded));
+        assert!(!wrecks_pending(&loaded));
         shutdown.send(ShutdownRequest::Sigterm).unwrap();
         task.await.unwrap().unwrap();
     }).await;
@@ -465,7 +460,7 @@ async fn wreck_timer_validation_and_object_purge() {
     .unwrap();
     let loaded = persistence::load(&config.database()).await.unwrap();
     assert!(!loaded.btech.units().contains_key(&id));
-    assert!(!battle_wrecks_pending(&loaded));
+    assert!(!wrecks_pending(&loaded));
 }
 
 /// Ordinary blast packets skip lost sections; they neither admit old wrecks nor restart an existing timer.

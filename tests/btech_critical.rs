@@ -1,14 +1,13 @@
 //! Slot loss, broken multi-slot weapons, selection depletion, secondary effects and restart.
 use crate::support;
 use stompymux_rs::{
-    BattleCriticalLoss as Loss, BattleSection as Section, BattleSystem as System, BattleTemplate,
-    BattleUnit, CriticalLocation, Kind, ObjectId, create_battle_unit, destroy_battle_critical,
-    persistence,
+    CriticalLocation, CriticalLoss as Loss, Kind, Mech, MechSection as Section, MechTemplate,
+    ObjectId, System, create_battle_unit, destroy_battle_critical, persistence,
 };
 
 /// Independent scenario unit with a conventional supported loadout.
-fn unit(source: &str) -> BattleUnit {
-    BattleUnit::from_template(BattleTemplate::parse("test", source).unwrap()).unwrap()
+fn unit(source: &str) -> Mech {
+    Mech::from_template(MechTemplate::parse("test", source).unwrap()).unwrap()
 }
 const JENNER: &str = include_str!("fixtures/btech/mechs/JR7-D.toml");
 
@@ -91,7 +90,7 @@ async fn engine_and_cockpit_losses_destroy_units_and_slot_state_survives_restart
     create_battle_unit(
         &mut world,
         id,
-        BattleTemplate::parse("JR7-D", JENNER).unwrap(),
+        MechTemplate::parse("JR7-D", JENNER).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);

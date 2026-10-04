@@ -50,7 +50,7 @@ than six water hexes, within the map ceiling (`min(maximum_visibility, 60)`).
 - Sensor band reach: `battletech.sensor_range` (default 15, `DEFAULT_SENSOR_RANGE`).
 - Woods and water limits, partial-cover cost: `perception/sight.rs` constants.
 - Hidden-unit ranges: `perception/acquisition.rs` constants.
-- Probe reaches: `BattleActiveProbe::range`; radar reach: `RADAR_RANGE`.
+- Probe reaches: `ActiveProbe::range`; radar reach: `RADAR_RANGE`.
 
 ## Choices worth revisiting
 

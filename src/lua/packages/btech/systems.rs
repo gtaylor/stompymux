@@ -7,7 +7,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
     let shared = world.clone();
     let settings = lua.create_function(move |lua, name: String| {
         crate::lua::transactions::require(lua)?;
-        let weapon = crate::BattleWeapon::parse(&name).map_err(mlua::Error::external)?;
+        let weapon = crate::Weapon::parse(&name).map_err(mlua::Error::external)?;
         detached(lua, &shared.borrow().btech.weapon_settings().get(weapon))
     })?;
     native.set(

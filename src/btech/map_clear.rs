@@ -49,7 +49,7 @@ fn clear(
         for &id in &units {
             super::notify_message(
                 scripts,
-                super::BattleMessageTarget::Player(recipient),
+                super::MessageTarget::Player(recipient),
                 &format!(
                     "Shutting down Mech #{} and resetting map index to -1....",
                     id.0
@@ -60,12 +60,12 @@ fn clear(
             if super::scanner::scanner_unit(&unit_before, id)
                 .context("Unit is unavailable")?
                 .power
-                != super::BattlePower::Off
+                != super::Power::Off
             {
                 let notices = super::power::stop_admitted_in_action(
                     &mut scripts.world_mut(),
                     id,
-                    super::BattleFallRules::configured(config),
+                    super::FallRules::configured(config),
                     &mut effects,
                 )?;
                 super::piloting::publish_ordered_notices(
@@ -91,7 +91,7 @@ fn clear(
             .membership_extent = 0;
         super::notify_message(
             scripts,
-            super::BattleMessageTarget::Player(recipient),
+            super::MessageTarget::Player(recipient),
             "Map Cleared",
         )?;
         scripts.world().validate(config)?;

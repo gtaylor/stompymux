@@ -1,9 +1,7 @@
 //! C-compatible live-unit and trusted construction operations.
 
 use super::{constants, contract, error, parts_contract};
-use crate::{
-    BattleAmmunitionMode, BattleFireMode, BattleSection, BattleWeapon, ObjectId, SharedWorld,
-};
+use crate::{AmmunitionMode, FireMode, MechSection, ObjectId, SharedWorld, Weapon};
 use mlua::{Lua, MultiValue, Table, Value};
 
 const GROUP: &str = "unit";
@@ -33,8 +31,8 @@ fn materialize(shared: &SharedWorld, id: ObjectId) -> mlua::Result<()> {
 }
 #[derive(Clone, Copy)]
 enum Section {
-    Mech(BattleSection),
-    Vehicle(crate::BattleVehicleSection),
+    Mech(MechSection),
+    Vehicle(crate::VehicleSection),
 }
 fn section(
     value: Value,
@@ -192,33 +190,33 @@ fn c_string(value: &mlua::LuaString) -> String {
         .unwrap_or(bytes.len());
     String::from_utf8_lossy(&bytes[..end]).into_owned()
 }
-fn fire_mode(bits: &[i32]) -> BattleFireMode {
+fn fire_mode(bits: &[i32]) -> FireMode {
     if bits.contains(&65536) {
-        BattleFireMode::Heat
+        FireMode::Heat
     } else if bits.contains(&32768) {
-        BattleFireMode::Rotary6
+        FireMode::Rotary6
     } else if bits.contains(&4194304) {
-        BattleFireMode::Rotary5
+        FireMode::Rotary5
     } else if bits.contains(&16384) {
-        BattleFireMode::Rotary4
+        FireMode::Rotary4
     } else if bits.contains(&2097152) {
-        BattleFireMode::Rotary3
+        FireMode::Rotary3
     } else if bits.contains(&8192) {
-        BattleFireMode::Rotary2
+        FireMode::Rotary2
     } else if bits.contains(&4096) {
-        BattleFireMode::Gatling
+        FireMode::Gatling
     } else if bits.contains(&2048) {
-        BattleFireMode::Rapid
+        FireMode::Rapid
     } else if bits.contains(&1024) {
-        BattleFireMode::Ultra
+        FireMode::Ultra
     } else if bits.contains(&64) {
-        BattleFireMode::Hotload
+        FireMode::Hotload
     } else {
-        BattleFireMode::Normal
+        FireMode::Normal
     }
 }
 /// Project the first round bit; an MML family bit selects the matching long-range supply.
-fn ammo_mode(bits: &[i32]) -> BattleAmmunitionMode {
+fn ammo_mode(bits: &[i32]) -> AmmunitionMode {
     let long_range = bits.contains(&4194304);
     let round = munition_mode(
         bits.iter()
@@ -231,38 +229,38 @@ fn ammo_mode(bits: &[i32]) -> BattleAmmunitionMode {
     }
     round
         .with_mml_family(true)
-        .unwrap_or(BattleAmmunitionMode::MmlLrm)
+        .unwrap_or(AmmunitionMode::MmlLrm)
 }
 
 /// The round selected by one reference ammunition bit, excluding the MML family bit.
-fn munition_mode(bit: i32) -> BattleAmmunitionMode {
+fn munition_mode(bit: i32) -> AmmunitionMode {
     match bit {
-        1 | 8 => BattleAmmunitionMode::Cluster,
+        1 | 8 => AmmunitionMode::Cluster,
         // Shared reference bits resolve as template flags do: Artemis/Mine and Narc/Smoke.
-        2 => BattleAmmunitionMode::Artemis,
-        4 => BattleAmmunitionMode::Narc,
-        16 => BattleAmmunitionMode::Mine,
-        32 => BattleAmmunitionMode::Smoke,
-        64 => BattleAmmunitionMode::Inferno,
-        128 => BattleAmmunitionMode::Swarm,
-        256 => BattleAmmunitionMode::Swarm1,
-        512 => BattleAmmunitionMode::INarcExplosive,
-        1024 => BattleAmmunitionMode::INarcHaywire,
-        2048 => BattleAmmunitionMode::INarcEcm,
-        4096 => BattleAmmunitionMode::INarcNemesis,
-        8192 => BattleAmmunitionMode::ArmorPiercing,
-        16384 => BattleAmmunitionMode::Flechette,
-        32768 => BattleAmmunitionMode::Incendiary,
-        65536 => BattleAmmunitionMode::Precision,
-        131072 => BattleAmmunitionMode::Stinger,
-        262144 => BattleAmmunitionMode::Caseless,
-        524288 => BattleAmmunitionMode::SemiGuided,
-        1048576 => BattleAmmunitionMode::ExtendedRange,
-        2097152 => BattleAmmunitionMode::HighExplosive,
-        8388608 => BattleAmmunitionMode::ThunderAugmented,
-        16777216 => BattleAmmunitionMode::ThunderVibrabomb,
-        33554432 => BattleAmmunitionMode::ThunderActive,
-        _ => BattleAmmunitionMode::Normal,
+        2 => AmmunitionMode::Artemis,
+        4 => AmmunitionMode::Narc,
+        16 => AmmunitionMode::Mine,
+        32 => AmmunitionMode::Smoke,
+        64 => AmmunitionMode::Inferno,
+        128 => AmmunitionMode::Swarm,
+        256 => AmmunitionMode::Swarm1,
+        512 => AmmunitionMode::INarcExplosive,
+        1024 => AmmunitionMode::INarcHaywire,
+        2048 => AmmunitionMode::INarcEcm,
+        4096 => AmmunitionMode::INarcNemesis,
+        8192 => AmmunitionMode::ArmorPiercing,
+        16384 => AmmunitionMode::Flechette,
+        32768 => AmmunitionMode::Incendiary,
+        65536 => AmmunitionMode::Precision,
+        131072 => AmmunitionMode::Stinger,
+        262144 => AmmunitionMode::Caseless,
+        524288 => AmmunitionMode::SemiGuided,
+        1048576 => AmmunitionMode::ExtendedRange,
+        2097152 => AmmunitionMode::HighExplosive,
+        8388608 => AmmunitionMode::ThunderAugmented,
+        16777216 => AmmunitionMode::ThunderVibrabomb,
+        33554432 => AmmunitionMode::ThunderActive,
+        _ => AmmunitionMode::Normal,
     }
 }
 fn mode_names(bits: &[i32]) -> Vec<String> {
@@ -618,7 +616,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             if parts_contract::part_category(part.id) != "weapon" {
                 return Err(failure(2, "btech.part.wrong_kind", "part must be a weapon"));
             }
-            let equipment = crate::BattlePart::from_id(part.id)
+            let equipment = crate::Part::from_id(part.id)
                 .map(|part| part.name)
                 .ok_or_else(|| failure(2, "btech.part.not_found", "part was not found"))?;
             let section = section(contract::field(&request, "section")?, 2, &shared, id)?;
@@ -706,7 +704,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             let part =
                 parts_contract::check_part(contract::field(&request, "weapon")?, 2, records)?
                     .ok_or_else(|| failure(2, "btech.part.not_found", "weapon was not found"))?;
-            let weapon = BattleWeapon::from_part_id(part.id).ok_or_else(|| {
+            let weapon = Weapon::from_part_id(part.id).ok_or_else(|| {
                 failure(2, "btech.part.wrong_kind", "weapon must identify a weapon")
             })?;
             if weapon.profile().ammunition_per_ton == 0 {
@@ -867,7 +865,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             let data = optional_integer(&request, "auxiliary_data", 2)?;
             let equipment = part
                 .map(|p| {
-                    crate::BattlePart::from_id(p.id)
+                    crate::Part::from_id(p.id)
                         .map(|part| part.name)
                         .ok_or_else(|| failure(2, "btech.part.not_found", "part was not found"))
                 })
@@ -906,20 +904,20 @@ mod tests {
     #[test]
     fn mml_family_bit_combines_with_every_long_range_round() {
         for (bit, mode) in [
-            (0, BattleAmmunitionMode::MmlLrm),
-            (2, BattleAmmunitionMode::MmlLrmArtemis),
-            (4, BattleAmmunitionMode::MmlLrmNarc),
-            (128, BattleAmmunitionMode::MmlLrmSwarm),
-            (256, BattleAmmunitionMode::MmlLrmSwarm1),
-            (131072, BattleAmmunitionMode::MmlLrmStinger),
-            (524288, BattleAmmunitionMode::MmlLrmSemiGuided),
+            (0, AmmunitionMode::MmlLrm),
+            (2, AmmunitionMode::MmlLrmArtemis),
+            (4, AmmunitionMode::MmlLrmNarc),
+            (128, AmmunitionMode::MmlLrmSwarm),
+            (256, AmmunitionMode::MmlLrmSwarm1),
+            (131072, AmmunitionMode::MmlLrmStinger),
+            (524288, AmmunitionMode::MmlLrmSemiGuided),
         ] {
             let bits: Vec<i32> = [bit, 4194304].into_iter().filter(|&bit| bit != 0).collect();
             assert_eq!(ammo_mode(&bits), mode, "{bits:?}");
         }
-        assert_eq!(ammo_mode(&[2]), BattleAmmunitionMode::Artemis);
-        assert_eq!(ammo_mode(&[4]), BattleAmmunitionMode::Narc);
+        assert_eq!(ammo_mode(&[2]), AmmunitionMode::Artemis);
+        assert_eq!(ammo_mode(&[4]), AmmunitionMode::Narc);
         // SRM-only rounds fall back to the plain long-range supply.
-        assert_eq!(ammo_mode(&[64, 4194304]), BattleAmmunitionMode::MmlLrm);
+        assert_eq!(ammo_mode(&[64, 4194304]), AmmunitionMode::MmlLrm);
     }
 }

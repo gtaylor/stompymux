@@ -2,7 +2,7 @@
 use super::*;
 #[derive(Clone)]
 struct View {
-    event_telemetry: std::rc::Rc<std::cell::Cell<crate::BattleEventTelemetry>>,
+    event_telemetry: std::rc::Rc<std::cell::Cell<crate::EventTelemetry>>,
     world: SharedWorld,
     outbox: Outbox,
     effects: crate::runtime::Effects,

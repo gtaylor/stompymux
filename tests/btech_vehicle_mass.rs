@@ -2,9 +2,9 @@
 use stompymux_rs::*;
 
 /// The tracked Demolisher supplies a fixed 80-ton chassis and two whole turret weapons.
-fn vehicle(flags: &str) -> BattleVehicleTemplate {
+fn vehicle(flags: &str) -> VehicleTemplate {
     let mut template =
-        BattleVehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+        VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
             .unwrap();
     template.attributes.insert("specials".into(), flags.into());
     template
@@ -31,12 +31,12 @@ fn intact_vehicle_mass_separates_design_bins_from_loaded_rounds() {
     assert_eq!(mass.total, 80 * 1024);
     assert_eq!(mass.total, mass.design_total);
     assert_eq!(template, original);
-    let restored: BattleVehicleTemplate =
+    let restored: VehicleTemplate =
         serde_json::from_value(serde_json::to_value(&template).unwrap()).unwrap();
     assert_eq!(restored.mass().unwrap(), mass);
     template
         .sections
-        .get_mut(&BattleVehicleSection::Turret)
+        .get_mut(&VehicleSection::Turret)
         .unwrap()
         .criticals
         .get_mut(&2)
@@ -47,7 +47,7 @@ fn intact_vehicle_mass_separates_design_bins_from_loaded_rounds() {
     assert_eq!(empty_bin.total, mass.total - 1024);
     let bin = template
         .sections
-        .get_mut(&BattleVehicleSection::Turret)
+        .get_mut(&VehicleSection::Turret)
         .unwrap()
         .criticals
         .get_mut(&2)
@@ -56,7 +56,7 @@ fn intact_vehicle_mass_separates_design_bins_from_loaded_rounds() {
     let half_bin = template.mass().unwrap();
     assert_eq!(half_bin.design_total, mass.design_total - 512);
     assert_eq!(half_bin.total, empty_bin.total);
-    let truck = BattleVehicleTemplate::parse(
+    let truck = VehicleTemplate::parse(
         "Flatbed_Truck",
         include_str!("../game/mechs/Flatbed_Truck.toml"),
     )
@@ -64,7 +64,7 @@ fn intact_vehicle_mass_separates_design_bins_from_loaded_rounds() {
     .mass()
     .unwrap();
     assert_eq!((truck.total, truck.turret), (4 * 1024, 0));
-    let hover = BattleVehicleTemplate::parse("Fulcrum", include_str!("../game/mechs/Fulcrum.toml"))
+    let hover = VehicleTemplate::parse("Fulcrum", include_str!("../game/mechs/Fulcrum.toml"))
         .unwrap()
         .mass()
         .unwrap();
@@ -146,7 +146,7 @@ fn vehicle_systems_use_whole_installation_mass_without_duplicate_sink_weight() {
         }
         template
             .sections
-            .get_mut(&BattleVehicleSection::Front)
+            .get_mut(&VehicleSection::Front)
             .unwrap()
             .criticals
             .insert(
@@ -162,12 +162,12 @@ fn vehicle_systems_use_whole_installation_mass_without_duplicate_sink_weight() {
         assert_eq!((report.turret, report.cooling), (0, 0));
     }
     let mut template = vehicle("ICEEngine_Tech");
-    template.sections.remove(&BattleVehicleSection::Left);
+    template.sections.remove(&VehicleSection::Left);
     assert!(template.mass().is_err());
     let mut template = vehicle("ICEEngine_Tech");
     template
         .sections
-        .get_mut(&BattleVehicleSection::Turret)
+        .get_mut(&VehicleSection::Turret)
         .unwrap()
         .internal = 0;
     let report = template.mass().unwrap();
@@ -182,7 +182,7 @@ fn vehicle_systems_use_whole_installation_mass_without_duplicate_sink_weight() {
 #[test]
 fn stationary_construction_has_no_propulsion_mass() {
     let mut template = vehicle("-");
-    template.movement = BattleVehicleMovement::Stationary;
+    template.movement = VehicleMovement::Stationary;
     template.max_speed = 0.0;
     let before = template.clone();
     let engine = template.engine().unwrap();
@@ -193,19 +193,16 @@ fn stationary_construction_has_no_propulsion_mass() {
     assert_eq!(mass.engine, 0);
     assert!(mass.equipment > 0 && mass.armor > 0 && mass.structure > 0);
     assert_eq!(template, before);
-    for movement in [
-        BattleVehicleMovement::Tracked,
-        BattleVehicleMovement::Wheeled,
-    ] {
+    for movement in [VehicleMovement::Tracked, VehicleMovement::Wheeled] {
         template.movement = movement;
         assert_eq!(template.mass().unwrap().engine, 0);
     }
-    template.movement = BattleVehicleMovement::Hover;
+    template.movement = VehicleMovement::Hover;
     assert_eq!(
         template.mass().unwrap().engine,
         u32::from(template.tons) * 1024 / 5
     );
-    template.movement = BattleVehicleMovement::Stationary;
+    template.movement = VehicleMovement::Stationary;
     template.tons = 11;
     template.max_speed = 16.125;
     assert_eq!(template.mass().unwrap().engine, 0);
@@ -215,19 +212,18 @@ fn stationary_construction_has_no_propulsion_mass() {
 #[test]
 fn hovercraft_missing_catalogue_rating_uses_mass_floor() {
     let template =
-        BattleVehicleTemplate::parse("Shamash", include_str!("../game/mechs/Shamash.toml"))
-            .unwrap();
+        VehicleTemplate::parse("Shamash", include_str!("../game/mechs/Shamash.toml")).unwrap();
     let engine = template.engine().unwrap();
     assert_eq!(engine.weight_rating, 58);
     assert_eq!(engine.standard_mass, None);
     assert_eq!(engine.engine_mass, 0);
     assert_eq!(engine.installed_mass, 11 * 1024 / 5);
-    let vehicle = BattleVehicle::new(template.clone()).unwrap();
+    let vehicle = Vehicle::new(template.clone()).unwrap();
     assert_eq!(
         vehicle.definition().mass().unwrap().engine,
         engine.installed_mass
     );
-    let restored: BattleVehicle =
+    let restored: Vehicle =
         serde_json::from_value(serde_json::to_value(&vehicle).unwrap()).unwrap();
     assert_eq!(restored, vehicle);
     for flags in [
@@ -245,29 +241,29 @@ fn hovercraft_missing_catalogue_rating_uses_mass_floor() {
 /// Physical mass follows material and live inventory while broken mounts retain their metal.
 #[test]
 fn live_vehicle_mass_tracks_ammunition_protection_and_section_loss() {
-    let mut unit = BattleVehicle::new(vehicle("ICEEngine_Tech")).unwrap();
+    let mut unit = Vehicle::new(vehicle("ICEEngine_Tech")).unwrap();
     let intact = unit.mass().unwrap();
     assert_eq!(intact, unit.definition().mass().unwrap());
     unit.expend_ammunition(0, 1).unwrap();
     assert_eq!(unit.mass().unwrap().ammunition, 3 * 1024 + 819);
     assert_eq!(unit.mass().unwrap().design_total, intact.design_total);
     unit.destroy_critical(VehicleCriticalLocation {
-        section: BattleVehicleSection::Turret,
+        section: VehicleSection::Turret,
         slot: 0,
     })
     .unwrap();
     assert_eq!(unit.mass().unwrap().equipment, intact.equipment);
     unit.damage_phase(
-        BattleVehicleSection::Front,
+        VehicleSection::Front,
         16,
-        BattleDamagePhase::Armor { rear: false },
+        DamagePhase::Armor { rear: false },
     )
     .unwrap();
     assert_eq!(unit.mass().unwrap().armor, 9 * 1024);
-    unit.damage_phase(BattleVehicleSection::Front, 4, BattleDamagePhase::Internal)
+    unit.damage_phase(VehicleSection::Front, 4, DamagePhase::Internal)
         .unwrap();
     assert_eq!(unit.mass().unwrap().structure, 15 * 512);
-    unit.damage_phase(BattleVehicleSection::Turret, 8, BattleDamagePhase::Internal)
+    unit.damage_phase(VehicleSection::Turret, 8, DamagePhase::Internal)
         .unwrap();
     let mass = unit.mass().unwrap();
     assert_eq!(
@@ -283,16 +279,15 @@ fn live_vehicle_mass_tracks_ammunition_protection_and_section_loss() {
     assert_eq!(mass.armor, 13 * 512);
     assert!(!unit.is_destroyed());
     assert_eq!(unit.definition().mass().unwrap(), intact);
-    let restored: BattleVehicle =
-        serde_json::from_value(serde_json::to_value(&unit).unwrap()).unwrap();
+    let restored: Vehicle = serde_json::from_value(serde_json::to_value(&unit).unwrap()).unwrap();
     assert_eq!(restored.mass().unwrap(), mass);
     for section in [
-        BattleVehicleSection::Left,
-        BattleVehicleSection::Right,
-        BattleVehicleSection::Front,
-        BattleVehicleSection::Rear,
+        VehicleSection::Left,
+        VehicleSection::Right,
+        VehicleSection::Front,
+        VehicleSection::Rear,
     ] {
-        unit.damage_phase(section, u16::MAX, BattleDamagePhase::Internal)
+        unit.damage_phase(section, u16::MAX, DamagePhase::Internal)
             .unwrap();
     }
     let wreck = unit.mass().unwrap();
@@ -316,12 +311,12 @@ fn live_vehicle_mass_separates_material_loss_from_crew_loss() {
     for layout in template.sections.values_mut() {
         layout.internal = u16::MAX;
     }
-    let unit = BattleVehicle::new(template).unwrap();
+    let unit = Vehicle::new(template).unwrap();
     assert_eq!(unit.mass().unwrap().structure, 8 * 1024);
     let mut saved = serde_json::to_value(&unit).unwrap();
     saved["pilot_injuries"] = 6.into();
     saved["pilot_killed"] = true.into();
-    let dead: BattleVehicle = serde_json::from_value(saved).unwrap();
+    let dead: Vehicle = serde_json::from_value(saved).unwrap();
     assert!(dead.is_destroyed());
     assert_eq!(dead.mass().unwrap(), unit.mass().unwrap());
 }

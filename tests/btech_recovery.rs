@@ -3,7 +3,7 @@ use crate::support;
 use crate::support::btech_firing as firing;
 use sqlx::Connection;
 use stompymux_rs::{
-    BattleCharacter, BattleDice, BattlePower, ObjectId, World, advance_battle_recovery,
+    Character, Dice, ObjectId, Power, World, advance_battle_recovery,
     check_character_consciousness, persistence, set_battle_character,
 };
 
@@ -13,7 +13,7 @@ async fn fixture() -> (tempfile::TempDir, stompymux_rs::Config, World, [u8; 32])
     set_battle_character(
         &mut world,
         ObjectId(1),
-        BattleCharacter {
+        Character {
             bruise: 50,
             lethal: 0,
             build: 5,
@@ -27,14 +27,14 @@ async fn fixture() -> (tempfile::TempDir, stompymux_rs::Config, World, [u8; 32])
     let seed = (0..=255)
         .map(|byte| [byte; 32])
         .find(|seed| {
-            let mut dice = BattleDice::seeded(*seed);
+            let mut dice = Dice::seeded(*seed);
             dice.two_d6() < 11 && dice.two_d6() >= 11
         })
         .unwrap();
     // Seed the same explicit representation validated by the persistence loader.
     let mut state = serde_json::to_value(&world.btech).unwrap();
     state["recoveries"]["1"] = serde_json::json!({
-        "remaining":0,"pain_resistance":false,"toughness":false,"dice":BattleDice::seeded(seed)
+        "remaining":0,"pain_resistance":false,"toughness":false,"dice":Dice::seeded(seed)
     });
     world.btech = serde_json::from_value(state).unwrap();
     (dir, config, world, seed)
@@ -57,11 +57,8 @@ async fn recovery_preserves_dice_and_timer_across_injury_restart_and_cockpit_rel
     stompymux_rs::create_battle_unit(
         &mut world,
         unit,
-        stompymux_rs::BattleTemplate::parse(
-            "JR7-D",
-            include_str!("fixtures/btech/mechs/JR7-D.toml"),
-        )
-        .unwrap(),
+        stompymux_rs::MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+            .unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, unit, support::FIXTURE_DICE_SEED);
@@ -74,7 +71,7 @@ async fn recovery_preserves_dice_and_timer_across_injury_restart_and_cockpit_rel
     }
     assert_eq!(
         world.btech.constructed_units()[&unit].power(),
-        BattlePower::Running
+        Power::Running
     );
     assert!(
         !check_character_consciousness(&mut world, ObjectId(1), false, false)
@@ -149,13 +146,13 @@ async fn failed_recovery_reschedules_and_later_attempts_use_current_health() {
     let seed = (0..=255)
         .map(|byte| [byte; 32])
         .find(|seed| {
-            let mut dice = BattleDice::seeded(*seed);
+            let mut dice = Dice::seeded(*seed);
             dice.two_d6() < 11 && dice.two_d6() >= 3
         })
         .unwrap();
     let mut state = serde_json::to_value(&world.btech).unwrap();
     state["recoveries"]["1"]["remaining"] = 1.into();
-    state["recoveries"]["1"]["dice"] = serde_json::to_value(BattleDice::seeded(seed)).unwrap();
+    state["recoveries"]["1"]["dice"] = serde_json::to_value(Dice::seeded(seed)).unwrap();
     world.btech = serde_json::from_value(state).unwrap();
     let notices = advance_battle_recovery(&mut world);
     assert!(!notices[0].check.conscious);
@@ -185,15 +182,15 @@ async fn recovery_notices_capture_cockpit_check_and_privacy_state() {
         for conscious in [true, false] {
             let seed = (0..=255)
                 .map(|byte| [byte; 32])
-                .find(|seed| (BattleDice::seeded(*seed).two_d6() >= 7) == conscious)
+                .find(|seed| (Dice::seeded(*seed).two_d6() >= 7) == conscious)
                 .unwrap();
-            let mut dice = BattleDice::seeded(seed);
+            let mut dice = Dice::seeded(seed);
             let roll = dice.two_d6();
             let mut world = base.clone();
             let mut state = serde_json::to_value(&world.btech).unwrap();
             state["recoveries"]["1"] = serde_json::json!({
                 "mode":{"kind":"tactical","injuries":3}, "remaining":1,
-                "pain_resistance":false, "toughness":false, "dice":BattleDice::seeded(seed)
+                "pain_resistance":false, "toughness":false, "dice":Dice::seeded(seed)
             });
             world.btech = serde_json::from_value(state).unwrap();
             let mut foot = world.clone();
@@ -202,7 +199,7 @@ async fn recovery_notices_capture_cockpit_check_and_privacy_state() {
             assert_eq!(notice.unit, Some(unit));
             assert_eq!(
                 notice.check,
-                BattleConsciousnessCheck {
+                ConsciousnessCheck {
                     target: 7,
                     roll,
                     conscious

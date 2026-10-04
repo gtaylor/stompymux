@@ -14,7 +14,7 @@ async fn fixture(weapon: &str) -> (tempfile::TempDir, Config, World, ObjectId) {
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse("test", &text).unwrap(),
+        VehicleTemplate::parse("test", &text).unwrap(),
     )
     .unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
@@ -48,7 +48,7 @@ async fn vehicle_gunnery_selects_class_or_weapon_family_with_saved_earned_levels
         set_battle_character(
             &mut world,
             ObjectId(1),
-            BattleCharacter {
+            Character {
                 build: 5,
                 reflexes: 4,
                 intuition: 3,
@@ -68,7 +68,7 @@ async fn vehicle_gunnery_selects_class_or_weapon_family_with_saved_earned_levels
                 &mut world,
                 ObjectId(1),
                 name,
-                BattleCharacterValue {
+                CharacterValue {
                     value,
                     experience: 16_777_216 + 20,
                     last_used: 123,
@@ -97,9 +97,9 @@ async fn vehicle_gunnery_selects_class_or_weapon_family_with_saved_earned_levels
             &mut loaded,
             ObjectId(1),
             skill,
-            BattleCharacterValue {
+            CharacterValue {
                 value: 20,
-                ..BattleCharacterValue::default()
+                ..CharacterValue::default()
             },
         )
         .unwrap();

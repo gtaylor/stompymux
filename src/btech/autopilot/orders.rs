@@ -4,7 +4,7 @@
 //! later tactical director can therefore replace the planner without changing the
 //! Lua or persistence contract.
 
-use crate::{ObjectId, btech::BattlePosition};
+use crate::{ObjectId, btech::Position};
 use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
 
@@ -30,7 +30,7 @@ impl AutopilotRangeBand {
 #[serde(rename_all = "snake_case", tag = "kind")]
 pub enum AutopilotOrder {
     Move {
-        destination: BattlePosition,
+        destination: Position,
         #[serde(default)]
         arrival_radius: u16,
     },
@@ -41,7 +41,7 @@ pub enum AutopilotOrder {
         separation: u16,
     },
     Patrol {
-        waypoints: Vec<BattlePosition>,
+        waypoints: Vec<Position>,
     },
     Attack {
         target: ObjectId,
@@ -49,7 +49,7 @@ pub enum AutopilotOrder {
         range: Option<AutopilotRangeBand>,
     },
     AttackMove {
-        destination: BattlePosition,
+        destination: Position,
         #[serde(default)]
         arrival_radius: u16,
     },
@@ -62,7 +62,7 @@ const fn default_follow_separation() -> u16 {
 impl AutopilotOrder {
     /// Validate structural limits that do not require looking up a unit or map.
     pub fn validate(&self) -> Result<()> {
-        let valid_position = |position: &BattlePosition| {
+        let valid_position = |position: &Position| {
             ensure!(
                 position.map.0 >= 0,
                 "Autopilot order references an invalid map"
@@ -152,7 +152,7 @@ pub struct AutopilotOrderProgress {
     #[serde(default)]
     pub stagnant_ticks: u16,
     #[serde(default)]
-    pub attack_move_origin: Option<BattlePosition>,
+    pub attack_move_origin: Option<Position>,
     /// A contact already reached during this attack-move, so resuming the
     /// destination does not immediately restart the same diversion.
     #[serde(default)]
@@ -217,7 +217,7 @@ pub fn validate_for_unit(
     let position = own
         .position
         .ok_or_else(|| anyhow::anyhow!("Unit is not on a battlefield"))?;
-    let destination = |destination: &BattlePosition| -> Result<()> {
+    let destination = |destination: &Position| -> Result<()> {
         ensure!(
             destination.map == position.map,
             "Order destination must be on the unit's map"

@@ -7,14 +7,14 @@ use serde::Serialize;
 /// Anatomy-specific consequences retained for blast reports and character publication.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", content = "report", rename_all = "snake_case")]
-pub enum BattleBlastImpact {
-    Mech(BattleTacticalImpact),
-    Vehicle(BattleVehicleImpact),
+pub enum BlastImpact {
+    Mech(TacticalImpact),
+    Vehicle(VehicleImpact),
 }
 
-impl BattleBlastImpact {
+impl BlastImpact {
     /// Preserve packet-local pilot messages when a caller joins material reports.
-    pub(super) fn append_feedback(&self, private: &mut Vec<BattlePilotNotice>, offset: usize) {
+    pub(super) fn append_feedback(&self, private: &mut Vec<PilotNotice>, offset: usize) {
         let notices = match self {
             Self::Mech(impact) => &impact.pilot_notices,
             Self::Vehicle(impact) => &impact.pilot_notices,
@@ -34,9 +34,9 @@ pub(super) struct BlastCell {
 
 /// Live target facts sampled immediately before its packets, after earlier targets' effects.
 pub(super) struct BlastTarget {
-    pub arc: BattleHitArc,
+    pub arc: HitArc,
     pub character: bool,
-    pub rules: BattleFallRules,
+    pub rules: FallRules,
 }
 
 impl BlastCell {
@@ -45,7 +45,7 @@ impl BlastCell {
         &self,
         world: &World,
         id: ObjectId,
-        mut rules: BattleFallRules,
+        mut rules: FallRules,
     ) -> Result<Option<BlastTarget>> {
         let Some(object) = world
             .objects
@@ -86,22 +86,22 @@ impl BlastCell {
 pub(super) struct BlastDamage {
     pub damage: u16,
     pub packet_size: u8,
-    pub table: BattleHitTable,
-    pub arc: BattleHitArc,
+    pub table: HitTable,
+    pub arc: HitArc,
     pub heat: i32,
     pub character: bool,
     /// Artillery is area-effect damage; mines and reactor blasts are ordinary.
-    pub class: BattleDamageClass,
+    pub class: DamageClass,
 }
 
 /// Ordered material and thermal effects from one admitted occupant.
 pub(super) struct BlastEffects {
-    pub impacts: Vec<BattleBlastImpact>,
-    pub vehicle_heat: Option<BattleVehicleHeatExposure>,
+    pub impacts: Vec<BlastImpact>,
+    pub vehicle_heat: Option<VehicleHeatExposure>,
     pub burn_seconds: i64,
-    pub notices: Vec<BattleNotice>,
+    pub notices: Vec<Notice>,
     /// Packet-local private messages offset into this occupant's notice stream.
-    pub pilot_notices: Vec<BattlePilotNotice>,
+    pub pilot_notices: Vec<PilotNotice>,
 }
 
 /// Finish every packet before heat, preserving the blast cell's rear-armor selector.
@@ -110,7 +110,7 @@ pub(super) fn resolve(
     id: ObjectId,
     request: BlastDamage,
     rear: &mut bool,
-    rules: BattleFallRules,
+    rules: FallRules,
 ) -> Result<BlastEffects> {
     ensure!(
         request.packet_size > 0,
@@ -168,11 +168,11 @@ pub(super) fn resolve(
 /// One admitted material packet; its owner supplies geometry, attribution and crew policy.
 pub(super) struct MaterialPacket {
     pub amount: u16,
-    pub table: BattleHitTable,
-    pub arc: BattleHitArc,
+    pub table: HitTable,
+    pub arc: HitArc,
     pub character: bool,
     pub attacker: Option<ObjectId>,
-    pub class: BattleDamageClass,
+    pub class: DamageClass,
 }
 
 /// Shared location and impact resolution for blast and wizard packets, including post-destruction rolls.
@@ -181,8 +181,8 @@ pub(super) fn resolve_packet(
     id: ObjectId,
     request: MaterialPacket,
     rear: bool,
-    rules: BattleFallRules,
-) -> Result<(BattleBlastImpact, Vec<BattleNotice>)> {
+    rules: FallRules,
+) -> Result<(BlastImpact, Vec<Notice>)> {
     let vehicle = world.btech.vehicles().contains_key(&id);
     if vehicle {
         let before = world.clone();
@@ -201,17 +201,17 @@ pub(super) fn resolve_packet(
         )?;
         let mut notices = impact.notices.clone();
         append_broadcasts(&before, &mut notices, &impact.broadcasts);
-        return Ok((BattleBlastImpact::Vehicle(impact), notices));
+        return Ok((BlastImpact::Vehicle(impact), notices));
     }
     let unit = &world.btech.constructed_units()[&id];
     let mut dice = unit.dice.clone();
-    let location = if request.table == BattleHitTable::Weapon {
+    let location = if request.table == HitTable::Weapon {
         let roll = dice.generic_roll();
         let mut location = rules.hit.resolve(unit, request.arc, roll, &mut dice)?;
         location.rear_armor = rear;
         location
     } else {
-        BattleHit {
+        Hit {
             section: request
                 .table
                 .location(unit.chassis(), request.arc, dice.d6())?,
@@ -234,18 +234,18 @@ pub(super) fn resolve_packet(
         environment,
         super::impact::AttackImpact {
             attacker: request.attacker,
-            weapon_effect: (request.class == BattleDamageClass::AreaEffect)
+            weapon_effect: (request.class == DamageClass::AreaEffect)
                 .then_some(super::impact::WeaponEffect::AreaEffect),
             character: request.character,
             followup: true,
         },
     )?;
     let notices = impact.notices.clone();
-    Ok((BattleBlastImpact::Mech(impact), notices))
+    Ok((BlastImpact::Mech(impact), notices))
 }
 
 /// Resolve visibility against the state immediately before each material or thermal effect.
-fn append_broadcasts(world: &World, notices: &mut Vec<BattleNotice>, broadcasts: &[BattleNotice]) {
+fn append_broadcasts(world: &World, notices: &mut Vec<Notice>, broadcasts: &[Notice]) {
     for notice in broadcasts {
         notices.extend(super::broadcast::observer_notices(
             world,
@@ -256,18 +256,18 @@ fn append_broadcasts(world: &World, notices: &mut Vec<BattleNotice>, broadcasts:
 }
 
 /// Area blast arcs use strict 60/120-degree boundaries independent of weapon arc configuration.
-fn blast_arc(bearing: f64, heading: f64) -> BattleHitArc {
+fn blast_arc(bearing: f64, heading: f64) -> HitArc {
     let angle = (bearing - heading).rem_euclid(360.0);
     if angle > 120.0 && angle < 240.0 {
-        return BattleHitArc::Rear;
+        return HitArc::Rear;
     }
     if !(60.0..=300.0).contains(&angle) {
-        return BattleHitArc::Front;
+        return HitArc::Front;
     }
     if angle > 180.0 {
-        return BattleHitArc::Left;
+        return HitArc::Left;
     }
-    BattleHitArc::Right
+    HitArc::Right
 }
 
 /// Neighboring blast cells ignite undecorated woods using the map's durable random stream.
@@ -294,7 +294,7 @@ pub(super) fn ignite_forest(
         world,
         map,
         coordinate,
-        Some(BattleDecoration::new(
+        Some(Decoration::new(
             DecorationKind::Fire,
             i64::from(remaining),
             None,

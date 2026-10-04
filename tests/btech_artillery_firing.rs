@@ -21,45 +21,39 @@ async fn fixture_source(
         MapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
-    let mut template = BattleTemplate::parse("test", source).unwrap();
+    let mut template = MechTemplate::parse("test", source).unwrap();
     for section in template.sections.values_mut() {
         section
             .criticals
             .retain(|_, part| part.equipment != "JumpJet");
     }
     template.jump_speed = 0.0;
-    let section = template
-        .sections
-        .get_mut(&BattleSection::LeftTorso)
-        .unwrap();
+    let section = template.sections.get_mut(&MechSection::LeftTorso).unwrap();
     section.criticals.clear();
     for slot in 0..12 {
         section.criticals.insert(
             slot,
             CriticalDefinition {
-                equipment: BattleWeapon::ClanArrowIv.name().into(),
+                equipment: Weapon::ClanArrowIv.name().into(),
                 data: "-".into(),
                 modes: flags.iter().map(|flag| (*flag).into()).collect(),
             },
         );
     }
     // Replacing a multi-slot weapon must remove its other slots as one installation.
-    let section = template
-        .sections
-        .get_mut(&BattleSection::RightTorso)
-        .unwrap();
+    let section = template.sections.get_mut(&MechSection::RightTorso).unwrap();
     let replaced = section.criticals[&0].equipment.clone();
     section
         .criticals
         .retain(|slot, part| *slot == 0 || part.equipment != replaced);
     let bin = template
         .sections
-        .get_mut(&BattleSection::RightTorso)
+        .get_mut(&MechSection::RightTorso)
         .unwrap()
         .criticals
         .get_mut(&0)
         .unwrap();
-    bin.equipment = format!("Ammo_{}", BattleWeapon::ClanArrowIv.name());
+    bin.equipment = format!("Ammo_{}", Weapon::ClanArrowIv.name());
     bin.data = "5".into();
     bin.modes = flags.iter().map(|flag| (*flag).into()).collect();
     let mut ids = Vec::new();
@@ -84,7 +78,7 @@ async fn fixture_source(
         shooter,
         ObjectId(1),
         HexCoordinate { x: 1, y: 0 },
-        BattleHexTargetMode::Hex,
+        HexTargetMode::Hex,
     )
     .unwrap();
     let index = world.btech.constructed_units()[&shooter]
@@ -98,12 +92,12 @@ async fn fixture_source(
 }
 
 /// Arrival uses the same configured tactical fall policy as a server tick.
-fn rules() -> BattleFallRules {
-    BattleFallRules {
-        vehicle_impact: stompymux_rs::BattleVehicleImpactRules::STANDARD,
-        stacking: BattleStackingRules::STANDARD,
-        stagger: BattleStaggerMode::Retain,
-        hit: BattleHitRules {
+fn rules() -> FallRules {
+    FallRules {
+        vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
+        stacking: StackingRules::STANDARD,
+        stagger: StaggerMode::Retain,
+        hit: HitRules {
             inferno_penalty: false,
             exile_stun_mode: 0,
         },
@@ -206,7 +200,7 @@ async fn artillery_native_lua_launch_and_restart() {
         shooter,
         ObjectId(1),
         HexCoordinate { x: 2, y: 0 },
-        BattleHexTargetMode::Hex,
+        HexTargetMode::Hex,
     )
     .unwrap();
     assert_eq!(
@@ -220,10 +214,10 @@ async fn artillery_native_lua_launch_and_restart() {
 #[tokio::test]
 async fn artillery_live_payloads_hit_without_glancing() {
     for (flags, mode) in [
-        (vec![], BattleArtilleryMode::Standard),
-        (vec!["Cluster"], BattleArtilleryMode::Cluster),
-        (vec!["Smoke"], BattleArtilleryMode::Smoke),
-        (vec!["Mine"], BattleArtilleryMode::Mine),
+        (vec![], ArtilleryMode::Standard),
+        (vec!["Cluster"], ArtilleryMode::Cluster),
+        (vec!["Smoke"], ArtilleryMode::Smoke),
+        (vec!["Mine"], ArtilleryMode::Mine),
     ] {
         let (_dir, config, mut world, map, shooter, index) = fixture(&flags).await;
         world
@@ -235,7 +229,7 @@ async fn artillery_live_payloads_hit_without_glancing() {
         set_battle_character(
             &mut world,
             ObjectId(1),
-            BattleCharacter {
+            Character {
                 build: 5,
                 reflexes: 4,
                 intuition: 3,
@@ -251,7 +245,7 @@ async fn artillery_live_payloads_hit_without_glancing() {
             &mut world,
             ObjectId(1),
             "Gunnery-Artillery",
-            BattleCharacterValue {
+            CharacterValue {
                 value: 20,
                 experience: 0,
                 last_used: 0,
@@ -280,16 +274,12 @@ async fn artillery_live_payloads_hit_without_glancing() {
         assert!(!report.pattern.missed);
         assert_eq!(report.pattern.impact, HexCoordinate { x: 1, y: 0 });
         let expected = match mode {
-            BattleArtilleryMode::Standard => "ArrowIVSystem fire hits [fg=yellow bold]1,0[reset]!",
-            BattleArtilleryMode::Cluster => {
+            ArtilleryMode::Standard => "ArrowIVSystem fire hits [fg=yellow bold]1,0[reset]!",
+            ArtilleryMode::Cluster => {
                 "A rain of small bomblets hits [fg=yellow bold]1,0[reset]'s surroundings!"
             }
-            BattleArtilleryMode::Mine => {
-                "A rain of small bomblets hits [fg=yellow bold]1,0[reset]!"
-            }
-            BattleArtilleryMode::Smoke => {
-                "A ArrowIVSystem missile hits 1,0, and smoke starts to billow!"
-            }
+            ArtilleryMode::Mine => "A rain of small bomblets hits [fg=yellow bold]1,0[reset]!",
+            ArtilleryMode::Smoke => "A ArrowIVSystem missile hits 1,0, and smoke starts to billow!",
         };
         assert_eq!(
             report
@@ -302,21 +292,21 @@ async fn artillery_live_payloads_hit_without_glancing() {
             report.notices
         );
         match mode {
-            BattleArtilleryMode::Standard => assert!(matches!(
+            ArtilleryMode::Standard => assert!(matches!(
                 report.pattern.cells[0].effect,
-                BattleArtilleryEffect::Damage {
+                ArtilleryEffect::Damage {
                     total: 20,
                     packet_size: 5,
                     ..
                 }
             )),
-            BattleArtilleryMode::Cluster => {
+            ArtilleryMode::Cluster => {
                 let total: u16 = report
                     .pattern
                     .cells
                     .iter()
                     .map(|cell| match cell.effect {
-                        BattleArtilleryEffect::Damage {
+                        ArtilleryEffect::Damage {
                             total,
                             packet_size: 2,
                             ..
@@ -326,13 +316,13 @@ async fn artillery_live_payloads_hit_without_glancing() {
                     .sum();
                 assert_eq!(total, 40);
             }
-            BattleArtilleryMode::Smoke => assert!(matches!(
+            ArtilleryMode::Smoke => assert!(matches!(
                 report.pattern.cells[0].effect,
-                BattleArtilleryEffect::Smoke { .. }
+                ArtilleryEffect::Smoke { .. }
             )),
-            BattleArtilleryMode::Mine => assert!(matches!(
+            ArtilleryMode::Mine => assert!(matches!(
                 report.pattern.cells[0].effect,
-                BattleArtilleryEffect::Mine { strength: 20 }
+                ArtilleryEffect::Mine { strength: 20 }
             )),
         }
         assert!(
@@ -428,10 +418,13 @@ async fn artillery_cluster_controls_and_live_launch() {
         );
     }
     let arrivals = advance_artillery_action(&lua, &config, rules()).unwrap();
-    assert!(arrivals[0].pattern.cells.iter().all(|cell| matches!(
-        cell.effect,
-        BattleArtilleryEffect::Damage { packet_size: 2, .. }
-    )));
+    assert!(
+        arrivals[0]
+            .pattern
+            .cells
+            .iter()
+            .all(|cell| matches!(cell.effect, ArtilleryEffect::Damage { packet_size: 2, .. }))
+    );
 }
 
 /// Other payload selections and conventional weapons cannot be changed by the artillery control.
@@ -452,7 +445,7 @@ async fn artillery_cluster_rejects_other_payloads_and_weapons() {
             .unwrap()
             .weapons
             .iter()
-            .position(|mount| mount.weapon == BattleWeapon::MediumLaser)
+            .position(|mount| mount.weapon == Weapon::MediumLaser)
             .unwrap();
         assert!(
             toggle_battle_cluster(&mut world, shooter, ObjectId(1), laser)
@@ -474,11 +467,11 @@ async fn artillery_arrival_feedback_survives_shooter_removal_and_restart() {
         &mut world,
         map,
         shooter,
-        BattleArtilleryFlight::new(
+        ArtilleryFlight::new(
             center,
             center,
-            BattleWeapon::ThumperCannon,
-            BattleArtilleryMode::Smoke,
+            Weapon::ThumperCannon,
+            ArtilleryMode::Smoke,
             true,
         )
         .unwrap(),
@@ -505,7 +498,7 @@ async fn artillery_arrival_feedback_survives_shooter_removal_and_restart() {
         restored.btech.maps()[&map].artillery_shots()[&0]
             .flight
             .weapon(),
-        BattleWeapon::ThumperCannon
+        Weapon::ThumperCannon
     );
     let replay = Scripts::new(
         &config,
@@ -547,7 +540,7 @@ async fn artillery_observed_launch_and_link_revalidation() {
         observer,
         ObjectId(2),
         target,
-        BattleHexTargetMode::Hex,
+        HexTargetMode::Hex,
     )
     .unwrap();
     select_battle_spotter(&mut world, observer, ObjectId(2), Some(observer)).unwrap();
@@ -573,7 +566,7 @@ async fn artillery_observed_launch_and_link_revalidation() {
                 .is_empty()
         );
         let mut expected = serde_json::to_value(&before).unwrap();
-        let mut dice: BattleDice =
+        let mut dice: Dice =
             serde_json::from_value(expected["constructed"][shooter.0.to_string()]["dice"].clone())
                 .unwrap();
         dice.two_d6();
@@ -683,7 +676,7 @@ async fn artillery_observed_launch_and_link_revalidation() {
                     observer,
                     ObjectId(2),
                     target,
-                    BattleHexTargetMode::Hex,
+                    HexTargetMode::Hex,
                 )
                 .unwrap();
                 assert!(!battle_hex_visible(&world, observer, target).unwrap());
@@ -734,7 +727,7 @@ async fn artillery_observed_launch_and_link_revalidation() {
         observer,
         ObjectId(2),
         HexCoordinate { x: 2, y: 2 },
-        BattleHexTargetMode::Hex,
+        HexTargetMode::Hex,
     )
     .unwrap();
     assert_eq!(
@@ -753,11 +746,11 @@ async fn artillery_hotload_launch_and_jam() {
     for jam in [true, false] {
         let (_dir, config, mut world, map, shooter, index) = fixture(&[]).await;
         let seed = (0..=255)
-            .find(|seed| (BattleDice::seeded([*seed; 32]).two_d6() <= 3) == jam)
+            .find(|seed| (Dice::seeded([*seed; 32]).two_d6() <= 3) == jam)
             .unwrap();
         world
             .btech
-            .set_unit_dice(shooter, BattleDice::seeded([seed; 32]))
+            .set_unit_dice(shooter, Dice::seeded([seed; 32]))
             .unwrap();
         let lua = Scripts::new(
             &config,
@@ -818,11 +811,11 @@ async fn artillery_hotloaded_critical_uses_base_damage() {
         for rounds in [0, 5] {
             let mut state = serde_json::to_value(&unit).unwrap();
             state["ammunition"][0] = rounds.into();
-            let mut unit: BattleUnit = serde_json::from_value(state).unwrap();
+            let mut unit: Mech = serde_json::from_value(state).unwrap();
             let location = unit.loadout().unwrap().weapons[index].criticals[0];
             assert_eq!(
                 unit.destroy_critical(location).unwrap(),
-                Some(BattleCriticalLoss::Weapon {
+                Some(CriticalLoss::Weapon {
                     index,
                     explosion_damage: if flags.is_empty() && rounds > 0 {
                         20
@@ -858,11 +851,8 @@ async fn mech_artillery_uses_vehicle_observers_in_slot_order() {
         create_battle_vehicle(
             &mut world,
             observer,
-            BattleVehicleTemplate::parse(
-                "Demolisher",
-                include_str!("../game/mechs/Demolisher.toml"),
-            )
-            .unwrap(),
+            VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+                .unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, observer, support::FIXTURE_DICE_SEED);
@@ -910,7 +900,7 @@ async fn artillery_fires_after_radio_observer_connection() {
             observer,
             ObjectId(2),
             HexCoordinate { x: 1, y: 0 },
-            BattleHexTargetMode::Hex,
+            HexTargetMode::Hex,
         )
         .unwrap();
         select_battle_spotter(&mut world, observer, ObjectId(2), Some(observer)).unwrap();

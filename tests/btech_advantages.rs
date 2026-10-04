@@ -5,8 +5,8 @@ use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 
 /// Ordinary character health; three cockpit hits reach the seven-point consciousness threshold.
-fn profile() -> BattleCharacter {
-    BattleCharacter {
+fn profile() -> Character {
+    Character {
         bruise: 0,
         lethal: 0,
         build: 5,
@@ -23,7 +23,7 @@ fn value(world: &mut World, name: &str, raw: u8) {
         world,
         ObjectId(1),
         name,
-        BattleCharacterValue {
+        CharacterValue {
             value: raw,
             experience: 123,
             last_used: 456,
@@ -58,19 +58,19 @@ async fn advantage_catalog_is_complete_case_insensitive_and_detached_in_lua() {
     ] {
         assert_eq!(
             battle_advantage_definition(name).unwrap().kind,
-            BattleAdvantageKind::Ranked
+            AdvantageKind::Ranked
         );
     }
     assert_eq!(
         battle_advantage_definition("Exceptional_Attribute")
             .unwrap()
             .kind,
-        BattleAdvantageKind::AttributeMask
+        AdvantageKind::AttributeMask
     );
     assert_eq!(
         BATTLE_ADVANTAGES
             .iter()
-            .filter(|entry| entry.kind == BattleAdvantageKind::Boolean)
+            .filter(|entry| entry.kind == AdvantageKind::Boolean)
             .count(),
         11
     );
@@ -146,10 +146,10 @@ async fn toughness_shutdown_rules_agree_across_mechs_and_vehicles() {
         set_battle_character(&mut base, ObjectId(1), profile()).unwrap();
         support::seed_object_dice(&mut base, ObjectId(1), support::FIXTURE_DICE_SEED);
         let seed = (0..=255)
-            .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 2)
+            .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 2)
             .unwrap();
         firing::edit(&mut base, id, |unit| {
-            unit["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+            unit["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
             unit["motion"]["speed"] = 43.0.into();
             unit["motion"]["desired_speed"] = 43.0.into();
         });
@@ -163,13 +163,9 @@ async fn toughness_shutdown_rules_agree_across_mechs_and_vehicles() {
         ] {
             let mut world = base.clone();
             value(&mut world, name, raw);
-            let notices = stop_battle_unit(
-                &mut world,
-                id,
-                ObjectId(1),
-                BattleFallRules::configured(&config),
-            )
-            .unwrap();
+            let notices =
+                stop_battle_unit(&mut world, id, ObjectId(1), FallRules::configured(&config))
+                    .unwrap();
             world.validate(&config).unwrap();
             let mut encoded = serde_json::to_value(&world.btech).unwrap();
             // Only the deliberately varied advantage input differs between equivalent cases.

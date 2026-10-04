@@ -2,17 +2,16 @@
 use stompymux_rs::*;
 
 /// Place and power a material aircraft without admitting it to the ground simulation.
-fn aircraft() -> BattleVehicle {
-    let unit = BattleVehicle::new(
-        BattleVehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml"))
-            .unwrap(),
+fn aircraft() -> Vehicle {
+    let unit = Vehicle::new(
+        VehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml")).unwrap(),
     )
     .unwrap();
     let mut saved = serde_json::to_value(unit).unwrap();
     saved["position"] = serde_json::json!({"map":0,"x":0,"y":0});
     saved["map_slot"] = 0.into();
-    saved["power"] = serde_json::to_value(BattlePower::Running).unwrap();
-    let mut motion = BattleMotion::stationary(HexCoordinate { x: 0, y: 0 }.center());
+    saved["power"] = serde_json::to_value(Power::Running).unwrap();
+    let mut motion = Motion::stationary(HexCoordinate { x: 0, y: 0 }.center());
     motion.speed = 21.5;
     motion.desired_speed = 21.5;
     saved["motion"] = serde_json::to_value(motion).unwrap();
@@ -20,7 +19,7 @@ fn aircraft() -> BattleVehicle {
 }
 
 /// Exercise exactly the same public save/load path as persisted material snapshots.
-fn restored(unit: &BattleVehicle) -> BattleVehicle {
+fn restored(unit: &Vehicle) -> Vehicle {
     serde_json::from_value(serde_json::to_value(unit).unwrap()).unwrap()
 }
 
@@ -38,7 +37,7 @@ fn launch_countdown_replays_and_liftoff_stops_horizontal_motion_without_spending
         if delay == u16::MAX {
             assert_eq!(
                 unit.vtol_flight().unwrap().phase,
-                BattleVtolFlightPhase::Launching { remaining: 65536 }
+                VtolFlightPhase::Launching { remaining: 65536 }
             );
             assert!(unit.cancel_vtol_takeoff());
             assert!(!unit.cancel_vtol_takeoff());
@@ -46,26 +45,26 @@ fn launch_countdown_replays_and_liftoff_stops_horizontal_motion_without_spending
         }
         for remaining in (1..=u32::from(delay)).rev() {
             let report = unit.advance_vtol_takeoff(false, false).unwrap();
-            assert_eq!(report, BattleVtolTakeoff::Waiting { remaining });
+            assert_eq!(report, VtolTakeoff::Waiting { remaining });
             assert_eq!(replay.advance_vtol_takeoff(false, false).unwrap(), report);
             assert_eq!(unit, replay);
             replay = restored(&replay);
         }
         assert_eq!(
             unit.advance_vtol_takeoff(false, false).unwrap(),
-            BattleVtolTakeoff::LiftedOff
+            VtolTakeoff::LiftedOff
         );
         assert_eq!(
             replay.advance_vtol_takeoff(false, false).unwrap(),
-            BattleVtolTakeoff::LiftedOff
+            VtolTakeoff::LiftedOff
         );
         assert_eq!(unit, replay);
         assert_eq!(
             unit.vtol_flight().unwrap(),
-            BattleVtolFlight {
+            VtolFlight {
                 fall: None,
                 altitude: 0.0,
-                phase: BattleVtolFlightPhase::Airborne,
+                phase: VtolFlightPhase::Airborne,
                 vertical_speed: 60.0
             }
         );
@@ -73,7 +72,7 @@ fn launch_countdown_replays_and_liftoff_stops_horizontal_motion_without_spending
         assert!(!unit.cancel_vtol_takeoff());
         assert_eq!(
             unit.advance_vtol_takeoff(false, false).unwrap(),
-            BattleVtolTakeoff::Idle
+            VtolTakeoff::Idle
         );
         let after = serde_json::to_value(&unit).unwrap();
         assert_eq!(before["dice"], after["dice"]);
@@ -91,21 +90,20 @@ fn takeoff_guards_are_atomic_and_rechecked_before_liftoff() {
     unit.begin_vtol_takeoff(false, false, 0).unwrap();
     assert!(matches!(
         unit.advance_vtol_takeoff(true, false).unwrap(),
-        BattleVtolTakeoff::Aborted { .. }
+        VtolTakeoff::Aborted { .. }
     ));
     assert_eq!(unit, base);
     for change in ["fuel", "power", "speed"] {
         let mut saved = serde_json::to_value(&base).unwrap();
-        saved["motion"] = serde_json::to_value(BattleMotion::stationary(
-            HexCoordinate { x: 0, y: 0 }.center(),
-        ))
-        .unwrap();
+        saved["motion"] =
+            serde_json::to_value(Motion::stationary(HexCoordinate { x: 0, y: 0 }.center()))
+                .unwrap();
         match change {
             "fuel" => saved["vtol_fuel"]["remaining"] = 0.into(),
-            "power" => saved["power"] = serde_json::to_value(BattlePower::Off).unwrap(),
+            "power" => saved["power"] = serde_json::to_value(Power::Off).unwrap(),
             _ => saved["motive_speed_loss"] = 182.75.into(),
         }
-        let mut unit: BattleVehicle = serde_json::from_value(saved).unwrap();
+        let mut unit: Vehicle = serde_json::from_value(saved).unwrap();
         let before = unit.clone();
         assert!(
             unit.begin_vtol_takeoff(false, false, 0).is_err(),
@@ -118,8 +116,7 @@ fn takeoff_guards_are_atomic_and_rechecked_before_liftoff() {
         include_str!("../game/mechs/ObservationVTOL.toml"),
         include_str!("../game/mechs/Kestrel.toml"),
     ] {
-        let mut unit =
-            BattleVehicle::new(BattleVehicleTemplate::parse("test", source).unwrap()).unwrap();
+        let mut unit = Vehicle::new(VehicleTemplate::parse("test", source).unwrap()).unwrap();
         let before = unit.clone();
         assert!(unit.begin_vtol_takeoff(false, false, 0).is_err());
         assert_eq!(unit, before);
@@ -129,23 +126,23 @@ fn takeoff_guards_are_atomic_and_rechecked_before_liftoff() {
 #[test]
 fn shared_damage_cancels_launch_or_starts_one_fall_without_fabricating_crew_damage() {
     for airborne in [false, true] {
-        for section in [BattleVehicleSection::Rotor, BattleVehicleSection::Front] {
+        for section in [VehicleSection::Rotor, VehicleSection::Front] {
             let mut unit = aircraft();
             unit.begin_vtol_takeoff(false, false, 0).unwrap();
             if airborne {
                 assert_eq!(
                     unit.advance_vtol_takeoff(false, false).unwrap(),
-                    BattleVtolTakeoff::LiftedOff
+                    VtolTakeoff::LiftedOff
                 );
             }
-            unit.damage_phase(section, u16::MAX, BattleDamagePhase::Internal)
+            unit.damage_phase(section, u16::MAX, DamagePhase::Internal)
                 .unwrap();
             assert_eq!(
                 unit.vtol_flight().unwrap().phase,
                 if airborne {
-                    BattleVtolFlightPhase::Falling
+                    VtolFlightPhase::Falling
                 } else {
-                    BattleVtolFlightPhase::Landed
+                    VtolFlightPhase::Landed
                 }
             );
             assert!(!unit.crew_killed());
@@ -153,10 +150,8 @@ fn shared_damage_cancels_launch_or_starts_one_fall_without_fabricating_crew_dama
             if airborne {
                 // A further rotor hit leaves the fall already in progress untouched.
                 let falling = unit.vtol_flight();
-                let report = unit
-                    .apply_rotor_hit(BattleRotorHit::Destroy, false)
-                    .unwrap();
-                assert_eq!(report.effect, BattleRotorHit::Destroy);
+                let report = unit.apply_rotor_hit(RotorHit::Destroy, false).unwrap();
+                assert_eq!(report.effect, RotorHit::Destroy);
                 assert_eq!(unit.vtol_flight(), falling);
             }
         }
@@ -167,38 +162,32 @@ fn shared_damage_cancels_launch_or_starts_one_fall_without_fabricating_crew_dama
 fn fuel_exhaustion_starts_a_fall_and_fusion_exemption_permits_empty_takeoff() {
     let mut saved = serde_json::to_value(aircraft()).unwrap();
     saved["vtol_fuel"]["remaining"] = 1.into();
-    let mut unit: BattleVehicle = serde_json::from_value(saved).unwrap();
+    let mut unit: Vehicle = serde_json::from_value(saved).unwrap();
     unit.begin_vtol_takeoff(false, false, 0).unwrap();
     assert_eq!(
         unit.advance_vtol_takeoff(false, false).unwrap(),
-        BattleVtolTakeoff::LiftedOff
+        VtolTakeoff::LiftedOff
     );
     assert!(matches!(
         unit.consume_vtol_fuel(60.0, 1, false, false).unwrap(),
-        BattleVtolFuelUse::Consumed { remaining: 0, .. }
+        VtolFuelUse::Consumed { remaining: 0, .. }
     ));
-    assert_eq!(
-        unit.vtol_flight().unwrap().phase,
-        BattleVtolFlightPhase::Airborne
-    );
+    assert_eq!(unit.vtol_flight().unwrap().phase, VtolFlightPhase::Airborne);
     assert_eq!(
         unit.consume_vtol_fuel(60.0, 1, false, false).unwrap(),
-        BattleVtolFuelUse::Exhausted { newly: true }
+        VtolFuelUse::Exhausted { newly: true }
     );
-    assert_eq!(
-        unit.vtol_flight().unwrap().phase,
-        BattleVtolFlightPhase::Falling
-    );
+    assert_eq!(unit.vtol_flight().unwrap().phase, VtolFlightPhase::Falling);
     let mut saved = serde_json::to_value(aircraft()).unwrap();
     saved["vtol_fuel"]["remaining"] = 0.into();
-    let mut combustion: BattleVehicle = serde_json::from_value(saved.clone()).unwrap();
+    let mut combustion: Vehicle = serde_json::from_value(saved.clone()).unwrap();
     assert!(combustion.begin_vtol_takeoff(false, true, 0).is_err());
     saved["definition"]["attributes"]["specials"] = "CargoTech".into();
-    let mut fusion: BattleVehicle = serde_json::from_value(saved).unwrap();
+    let mut fusion: Vehicle = serde_json::from_value(saved).unwrap();
     fusion.begin_vtol_takeoff(false, true, 0).unwrap();
     assert_eq!(
         fusion.advance_vtol_takeoff(false, true).unwrap(),
-        BattleVtolTakeoff::LiftedOff
+        VtolTakeoff::LiftedOff
     );
 }
 
@@ -216,27 +205,27 @@ fn saved_flight_rejects_invalid_timers_and_surface_motion() {
         if saved["vtol_flight"].is_object() {
             saved["vtol_flight"]["altitude"] = 0.0.into();
         }
-        assert!(serde_json::from_value::<BattleVehicle>(saved).is_err());
+        assert!(serde_json::from_value::<Vehicle>(saved).is_err());
     }
-    let ground = BattleVehicle::new(
-        BattleVehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+    let ground = Vehicle::new(
+        VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
             .unwrap(),
     )
     .unwrap();
     let mut saved = serde_json::to_value(ground).unwrap();
-    saved["vtol_flight"] = serde_json::to_value(BattleVtolFlight::default()).unwrap();
-    assert!(serde_json::from_value::<BattleVehicle>(saved).is_err());
+    saved["vtol_flight"] = serde_json::to_value(VtolFlight::default()).unwrap();
+    assert!(serde_json::from_value::<Vehicle>(saved).is_err());
 }
 
 /// A descending aircraft with independent actual and commanded horizontal speeds.
-fn landing_aircraft(speed: f64, desired: f64, vertical: f64) -> BattleVehicle {
+fn landing_aircraft(speed: f64, desired: f64, vertical: f64) -> Vehicle {
     let mut saved = serde_json::to_value(aircraft()).unwrap();
     saved["motion"]["speed"] = speed.into();
     saved["motion"]["desired_speed"] = desired.into();
-    saved["vtol_flight"] = serde_json::to_value(BattleVtolFlight {
+    saved["vtol_flight"] = serde_json::to_value(VtolFlight {
         fall: None,
         altitude: 0.0,
-        phase: BattleVtolFlightPhase::Airborne,
+        phase: VtolFlightPhase::Airborne,
         vertical_speed: vertical,
     })
     .unwrap();
@@ -251,14 +240,14 @@ fn touchdown_replays_on_supported_surfaces_and_preserves_command_fuel_and_dice()
         let before = serde_json::to_value(&unit).unwrap();
         let hex = Hex::new(terrain, 5);
         let report = unit.land_vtol(hex, false).unwrap();
-        assert_eq!(report, BattleVtolLanding::Touchdown { elevation: 5 });
+        assert_eq!(report, VtolLanding::Touchdown { elevation: 5 });
         assert_eq!(replay.land_vtol(hex, false).unwrap(), report);
         assert_eq!(unit, replay);
         assert_eq!(
             unit.vtol_flight().unwrap(),
-            BattleVtolFlight {
+            VtolFlight {
                 altitude: 5.0,
-                ..BattleVtolFlight::default()
+                ..VtolFlight::default()
             }
         );
         assert_eq!(unit.motion().unwrap().speed, 0.0);
@@ -366,13 +355,11 @@ fn landing_cancels_launch_but_cannot_recover_lost_lift_or_empty_fuel() {
     unit.begin_vtol_takeoff(false, false, 4).unwrap();
     assert_eq!(
         unit.land_vtol(hex, false).unwrap(),
-        BattleVtolLanding::LaunchCancelled
+        VtolLanding::LaunchCancelled
     );
     assert_eq!(unit, before);
     let mut unit = landing_aircraft(0.0, 0.0, 0.0);
-    let report = unit
-        .apply_rotor_hit(BattleRotorHit::Destroy, false)
-        .unwrap();
+    let report = unit.apply_rotor_hit(RotorHit::Destroy, false).unwrap();
     assert!(report.lost_rotor);
     let before = unit.clone();
     assert_eq!(
@@ -382,7 +369,7 @@ fn landing_cancels_launch_but_cannot_recover_lost_lift_or_empty_fuel() {
     assert_eq!(unit, before);
     let mut empty = serde_json::to_value(&unit).unwrap();
     empty["vtol_fuel"]["remaining"] = 0.into();
-    let mut empty: BattleVehicle = serde_json::from_value(empty).unwrap();
+    let mut empty: Vehicle = serde_json::from_value(empty).unwrap();
     let before = empty.clone();
     assert_eq!(
         empty.land_vtol(hex, false).unwrap_err().to_string(),
@@ -391,7 +378,7 @@ fn landing_cancels_launch_but_cannot_recover_lost_lift_or_empty_fuel() {
     assert_eq!(empty, before);
     let mut saved = serde_json::to_value(landing_aircraft(0.0, 0.0, 0.0)).unwrap();
     saved["vtol_fuel"]["remaining"] = 0.into();
-    let mut unit: BattleVehicle = serde_json::from_value(saved.clone()).unwrap();
+    let mut unit: Vehicle = serde_json::from_value(saved.clone()).unwrap();
     let before = unit.clone();
     assert_eq!(
         unit.land_vtol(hex, true).unwrap_err().to_string(),
@@ -399,10 +386,10 @@ fn landing_cancels_launch_but_cannot_recover_lost_lift_or_empty_fuel() {
     );
     assert_eq!(unit, before);
     saved["definition"]["attributes"]["specials"] = "CargoTech".into();
-    let mut fusion: BattleVehicle = serde_json::from_value(saved).unwrap();
+    let mut fusion: Vehicle = serde_json::from_value(saved).unwrap();
     assert_eq!(
         fusion.land_vtol(hex, true).unwrap(),
-        BattleVtolLanding::Touchdown { elevation: 0 }
+        VtolLanding::Touchdown { elevation: 0 }
     );
 }
 
@@ -415,7 +402,7 @@ fn public_takeoff_vertical_control_and_landing_form_a_replayable_sequence() {
     unit.begin_vtol_takeoff(false, false, 0).unwrap();
     assert_eq!(
         unit.advance_vtol_takeoff(false, false).unwrap(),
-        BattleVtolTakeoff::LiftedOff
+        VtolTakeoff::LiftedOff
     );
     let before = unit.clone();
     for request in [f64::NAN, f64::INFINITY, unit.maximum_speed() + 0.1] {
@@ -428,11 +415,11 @@ fn public_takeoff_vertical_control_and_landing_form_a_replayable_sequence() {
     let hex = Hex::new(Terrain::Road, 1);
     assert_eq!(
         unit.land_vtol(hex, false).unwrap(),
-        BattleVtolLanding::Touchdown { elevation: 1 }
+        VtolLanding::Touchdown { elevation: 1 }
     );
     assert_eq!(
         replay.land_vtol(hex, false).unwrap(),
-        BattleVtolLanding::Touchdown { elevation: 1 }
+        VtolLanding::Touchdown { elevation: 1 }
     );
     assert_eq!(unit, replay);
     assert_eq!(restored(&unit), unit);
@@ -481,7 +468,7 @@ fn flight_projection_preserves_fractional_altitude_and_shared_reverse_geometry()
     ] {
         let mut saved = serde_json::to_value(&unit).unwrap();
         saved["vtol_flight"]["altitude"] = serde_json::json!(altitude);
-        assert!(serde_json::from_value::<BattleVehicle>(saved).is_err());
+        assert!(serde_json::from_value::<Vehicle>(saved).is_err());
     }
     let grounded = aircraft();
     assert!(grounded.vtol_motion_step(100).is_err());
@@ -492,28 +479,28 @@ fn flight_surface_contact_distinguishes_water_bridge_clearance_and_ground_impact
     let unit = landing_aircraft(0.0, 0.0, -21.5);
     // Back out this event's vertical increment to inspect exact destination altitudes.
     for (altitude, terrain, elevation, contact) in [
-        (0.0, Terrain::Grassland, 0, BattleVtolSurfaceContact::Clear),
+        (0.0, Terrain::Grassland, 0, VtolSurfaceContact::Clear),
         (
             -1.0,
             Terrain::Grassland,
             0,
-            BattleVtolSurfaceContact::Ground { fall_levels: 3 },
+            VtolSurfaceContact::Ground { fall_levels: 3 },
         ),
-        (-0.99, Terrain::Water, 5, BattleVtolSurfaceContact::Clear),
-        (-1.0, Terrain::Water, 5, BattleVtolSurfaceContact::Water),
-        (5.0, Terrain::Bridge, 5, BattleVtolSurfaceContact::Clear),
+        (-0.99, Terrain::Water, 5, VtolSurfaceContact::Clear),
+        (-1.0, Terrain::Water, 5, VtolSurfaceContact::Water),
+        (5.0, Terrain::Bridge, 5, VtolSurfaceContact::Clear),
         (
             4.0,
             Terrain::Bridge,
             5,
-            BattleVtolSurfaceContact::Ground { fall_levels: 3 },
+            VtolSurfaceContact::Ground { fall_levels: 3 },
         ),
-        (3.0, Terrain::Bridge, 5, BattleVtolSurfaceContact::Clear),
+        (3.0, Terrain::Bridge, 5, VtolSurfaceContact::Clear),
         (
             4.0,
             Terrain::Building,
             5,
-            BattleVtolSurfaceContact::Ground { fall_levels: 3 },
+            VtolSurfaceContact::Ground { fall_levels: 3 },
         ),
     ] {
         let step = at_altitude(unit.clone(), altitude + 21.5 / 129.0)
@@ -528,7 +515,7 @@ fn flight_surface_contact_distinguishes_water_bridge_clearance_and_ground_impact
 }
 
 /// Put a valid material fixture at a continuous altitude through its save schema.
-fn at_altitude(unit: BattleVehicle, altitude: f64) -> BattleVehicle {
+fn at_altitude(unit: Vehicle, altitude: f64) -> Vehicle {
     let mut saved = serde_json::to_value(unit).unwrap();
     saved["vtol_flight"]["altitude"] = altitude.into();
     serde_json::from_value(saved).unwrap()
@@ -550,9 +537,7 @@ fn altitude_commits_reject_stale_or_altered_proposals_and_preserve_height_on_lif
     let advanced = unit.clone();
     assert!(unit.commit_vtol_motion(step).is_err());
     assert_eq!(unit, advanced);
-    let report = unit
-        .apply_rotor_hit(BattleRotorHit::Destroy, false)
-        .unwrap();
+    let report = unit.apply_rotor_hit(RotorHit::Destroy, false).unwrap();
     assert!(report.lost_rotor);
     assert_eq!(unit.vtol_flight().unwrap().altitude, 12.75);
     assert_eq!(restored(&unit), unit);
@@ -563,7 +548,7 @@ fn altitude_commits_reject_stale_or_altered_proposals_and_preserve_height_on_lif
     launch.begin_vtol_takeoff(false, false, 0).unwrap();
     assert_eq!(
         launch.advance_vtol_takeoff(false, false).unwrap(),
-        BattleVtolTakeoff::LiftedOff
+        VtolTakeoff::LiftedOff
     );
     assert_eq!(launch.vtol_flight().unwrap().altitude, 15.0);
 }
@@ -580,14 +565,14 @@ fn forest_entry_checks_canopy_only_when_crossing_hexes() {
             saved["position"]["y"] = 2.into();
             saved["motion"]["point"] =
                 serde_json::to_value(HexCoordinate { x: 0, y: 2 }.center()).unwrap();
-            let mut unit: BattleVehicle = serde_json::from_value(saved).unwrap();
+            let mut unit: Vehicle = serde_json::from_value(saved).unwrap();
             let before = unit.clone();
             let outcome = unit.advance_vtol_clear_path(&map, 1000).unwrap();
             assert_eq!(
                 matches!(
                     outcome,
-                    BattleVtolPath::Contact {
-                        contact: BattleVtolSurfaceContact::Forest,
+                    VtolPath::Contact {
+                        contact: VtolSurfaceContact::Forest,
                         ..
                     }
                 ),
@@ -597,7 +582,7 @@ fn forest_entry_checks_canopy_only_when_crossing_hexes() {
                 assert_eq!(unit, before);
                 assert!(matches!(
                     unit.advance_vtol_environment(&map, 1000, false).unwrap(),
-                    BattleVtolEnvironment::ObstacleRequired { .. }
+                    VtolEnvironment::ObstacleRequired { .. }
                 ));
                 assert_eq!(unit, before);
             }
@@ -606,7 +591,7 @@ fn forest_entry_checks_canopy_only_when_crossing_hexes() {
         let mut hover = landing_aircraft(0.0, 0.0, 0.0);
         assert!(matches!(
             hover.advance_vtol_clear_path(&forest, 100).unwrap(),
-            BattleVtolPath::Advanced { .. }
+            VtolPath::Advanced { .. }
         ));
     }
 }
@@ -619,14 +604,14 @@ fn flight_path_cannot_skip_intermediate_hills_and_map_edges_are_atomic() {
         serde_json::to_value(at_altitude(landing_aircraft(129.0, 129.0, 0.0), 5.0)).unwrap();
     saved["position"]["y"] = 2.into();
     saved["motion"]["point"] = serde_json::to_value(HexCoordinate { x: 0, y: 2 }.center()).unwrap();
-    let mut unit: BattleVehicle = serde_json::from_value(saved).unwrap();
+    let mut unit: Vehicle = serde_json::from_value(saved).unwrap();
     let before = unit.clone();
     let result = unit.advance_vtol_clear_path(&map, 1000).unwrap();
     assert!(matches!(
         result,
-        BattleVtolPath::Contact {
+        VtolPath::Contact {
             hex: HexCoordinate { x: 0, y: 1 },
-            contact: BattleVtolSurfaceContact::Elevation,
+            contact: VtolSurfaceContact::Elevation,
             ..
         }
     ));
@@ -634,7 +619,7 @@ fn flight_path_cannot_skip_intermediate_hills_and_map_edges_are_atomic() {
     let clear = MapAsset::from_cells("1 3\n.0\n.0\n.0\n").unwrap();
     let mut replay = restored(&unit);
     let result = unit.advance_vtol_clear_path(&clear, 1000).unwrap();
-    assert!(matches!(result, BattleVtolPath::Advanced { .. }));
+    assert!(matches!(result, VtolPath::Advanced { .. }));
     assert_eq!(
         replay.advance_vtol_clear_path(&clear, 1000).unwrap(),
         result
@@ -645,7 +630,7 @@ fn flight_path_cannot_skip_intermediate_hills_and_map_edges_are_atomic() {
     let before = unit.clone();
     assert!(matches!(
         unit.advance_vtol_clear_path(&clear, 1000).unwrap(),
-        BattleVtolPath::MapEdge { .. }
+        VtolPath::MapEdge { .. }
     ));
     assert_eq!(unit, before);
 }
@@ -658,21 +643,21 @@ fn vertical_path_detects_bridge_bands_and_water_without_committing_hazardous_mot
     let before = unit.clone();
     let result = unit.advance_vtol_clear_path(&bridge, 100).unwrap();
     assert!(
-        matches!(result, BattleVtolPath::Contact { contact: BattleVtolSurfaceContact::Ground { .. }, altitude, .. } if (4.0..5.0).contains(&altitude))
+        matches!(result, VtolPath::Contact { contact: VtolSurfaceContact::Ground { .. }, altitude, .. } if (4.0..5.0).contains(&altitude))
     );
     assert_eq!(unit, before);
     let mut under = at_altitude(landing_aircraft(0.0, 0.0, 0.0), 3.0);
     assert!(matches!(
         under.advance_vtol_clear_path(&bridge, 100).unwrap(),
-        BattleVtolPath::Advanced { .. }
+        VtolPath::Advanced { .. }
     ));
     let water = MapAsset::from_cells("1 1\n~5\n").unwrap();
     let mut unit = at_altitude(landing_aircraft(0.0, 0.0, -129.0), -0.5);
     let before = unit.clone();
     assert!(matches!(
         unit.advance_vtol_clear_path(&water, 100).unwrap(),
-        BattleVtolPath::Contact {
-            contact: BattleVtolSurfaceContact::Water,
+        VtolPath::Contact {
+            contact: VtolSurfaceContact::Water,
             ..
         }
     ));
@@ -687,8 +672,8 @@ fn surface_resolution_shares_landing_and_flooding_and_defers_crashes_atomically(
     let result = unit.advance_vtol_environment(&ground, 100, false).unwrap();
     assert!(matches!(
         result,
-        BattleVtolEnvironment::Landed {
-            landing: BattleVtolLanding::Touchdown { elevation: 1 },
+        VtolEnvironment::Landed {
+            landing: VtolLanding::Touchdown { elevation: 1 },
             ..
         }
     ));
@@ -700,16 +685,13 @@ fn surface_resolution_shares_landing_and_flooding_and_defers_crashes_atomically(
     );
     assert_eq!(unit, replay);
     assert_eq!(unit.vtol_flight().unwrap().altitude, 1.0);
-    assert_eq!(
-        unit.vtol_flight().unwrap().phase,
-        BattleVtolFlightPhase::Landed
-    );
+    assert_eq!(unit.vtol_flight().unwrap().phase, VtolFlightPhase::Landed);
     assert_eq!(restored(&unit), unit);
     let mut crash = at_altitude(landing_aircraft(0.0, 0.0, -129.0), 1.5);
     let before = crash.clone();
     assert!(matches!(
         crash.advance_vtol_environment(&ground, 100, false).unwrap(),
-        BattleVtolEnvironment::CrashRequired { levels: 13, .. }
+        VtolEnvironment::CrashRequired { levels: 13, .. }
     ));
     assert_eq!(crash, before);
     let water = MapAsset::from_cells("1 1\n~5\n").unwrap();
@@ -717,16 +699,13 @@ fn surface_resolution_shares_landing_and_flooding_and_defers_crashes_atomically(
     let before = unit.clone();
     assert!(matches!(
         unit.advance_vtol_environment(&water, 100, false).unwrap(),
-        BattleVtolEnvironment::Flooded { newly: true, .. }
+        VtolEnvironment::Flooded { newly: true, .. }
     ));
     assert!(unit.flooded() && unit.is_destroyed());
     assert!(!unit.crew_killed());
     assert_eq!(unit.sections(), before.sections());
-    assert_eq!(unit.power(), BattlePower::Off);
-    assert_eq!(
-        unit.vtol_flight().unwrap().phase,
-        BattleVtolFlightPhase::Landed
-    );
+    assert_eq!(unit.power(), Power::Off);
+    assert_eq!(unit.vtol_flight().unwrap().phase, VtolFlightPhase::Landed);
     assert!(unit.vtol_flight().unwrap().fall.is_none());
     assert_eq!(restored(&unit), unit);
 }
@@ -735,13 +714,13 @@ fn surface_resolution_shares_landing_and_flooding_and_defers_crashes_atomically(
 #[test]
 fn horizontal_flight_entry_distinguishes_bridge_clearance_ice_and_water() {
     for (tile, altitude, expected) in [
-        ("/3", -1.0, Some(BattleVtolSurfaceContact::Elevation)),
+        ("/3", -1.0, Some(VtolSurfaceContact::Elevation)),
         ("/3", 1.0, None),
-        ("/3", 2.0, Some(BattleVtolSurfaceContact::Elevation)),
+        ("/3", 2.0, Some(VtolSurfaceContact::Elevation)),
         ("/3", 3.0, None),
-        ("-3", -1.0, Some(BattleVtolSurfaceContact::Elevation)),
+        ("-3", -1.0, Some(VtolSurfaceContact::Elevation)),
         ("-3", 0.0, None),
-        ("~3", -1.0, Some(BattleVtolSurfaceContact::Water)),
+        ("~3", -1.0, Some(VtolSurfaceContact::Water)),
     ] {
         let map = MapAsset::from_cells(&format!("1 3\n.0\n{tile}\n/6\n")).unwrap();
         let mut saved =
@@ -750,11 +729,11 @@ fn horizontal_flight_entry_distinguishes_bridge_clearance_ice_and_water() {
         saved["position"]["y"] = 2.into();
         saved["motion"]["point"] =
             serde_json::to_value(HexCoordinate { x: 0, y: 2 }.center()).unwrap();
-        let mut unit: BattleVehicle = serde_json::from_value(saved).unwrap();
+        let mut unit: Vehicle = serde_json::from_value(saved).unwrap();
         let before = unit.clone();
         let path = unit.advance_vtol_clear_path(&map, 1000).unwrap();
         let actual = match path {
-            BattleVtolPath::Contact { contact, hex, .. } => {
+            VtolPath::Contact { contact, hex, .. } => {
                 assert_eq!(hex, HexCoordinate { x: 0, y: 1 });
                 Some(contact)
             }
@@ -775,11 +754,11 @@ fn slow_hill_entry_defers_landing_and_keeps_continuous_and_hex_positions_consist
         serde_json::to_value(at_altitude(landing_aircraft(10.0, 10.0, 0.0), 1.0)).unwrap();
     saved["position"]["y"] = 1.into();
     saved["motion"]["point"] = serde_json::to_value(HexCoordinate { x: 0, y: 1 }.center()).unwrap();
-    let mut unit: BattleVehicle = serde_json::from_value(saved).unwrap();
+    let mut unit: Vehicle = serde_json::from_value(saved).unwrap();
     let before = unit.clone();
     assert!(matches!(
         unit.advance_vtol_environment(&map, 6450, false).unwrap(),
-        BattleVtolEnvironment::ObstacleRequired { .. }
+        VtolEnvironment::ObstacleRequired { .. }
     ));
     assert_eq!(unit, before);
     assert_eq!(unit.position().unwrap().y, 1);
@@ -794,12 +773,10 @@ fn slow_hill_entry_defers_landing_and_keeps_continuous_and_hex_positions_consist
 #[test]
 fn forced_aircraft_descent_reuses_the_shared_clock_and_retains_impact_for_atomic_damage() {
     let mut unit = at_altitude(landing_aircraft(0.0, 0.0, 0.0), 5.75);
-    let report = unit
-        .apply_rotor_hit(BattleRotorHit::Destroy, false)
-        .unwrap();
+    let report = unit.apply_rotor_hit(RotorHit::Destroy, false).unwrap();
     assert!(report.lost_rotor);
     let dice = serde_json::to_value(&unit).unwrap()["dice"].clone();
-    let mut reference = BattleFreeFall::new(5);
+    let mut reference = FreeFall::new(5);
     for tick in 1..=6 {
         let before = unit.clone();
         let expected = reference.advance(0).unwrap();
@@ -813,7 +790,7 @@ fn forced_aircraft_descent_reuses_the_shared_clock_and_retains_impact_for_atomic
             assert_eq!(unit.vtol_flight().unwrap().altitude, 3.0);
         }
         if tick == 6 {
-            assert_eq!(step, BattleFreeFallStep::Impact { levels: 6 });
+            assert_eq!(step, FreeFallStep::Impact { levels: 6 });
             assert_eq!(unit, before);
             assert_eq!(unit.advance_vtol_fall(0, false).unwrap(), step);
             assert_eq!(unit, before);
@@ -823,10 +800,10 @@ fn forced_aircraft_descent_reuses_the_shared_clock_and_retains_impact_for_atomic
     }
     let mut saved = serde_json::to_value(&unit).unwrap();
     saved["vtol_flight"]["fall"] = serde_json::Value::Null;
-    assert!(serde_json::from_value::<BattleVehicle>(saved).is_err());
+    assert!(serde_json::from_value::<Vehicle>(saved).is_err());
     let mut saved = serde_json::to_value(&unit).unwrap();
     saved["vtol_flight"]["fall"]["elevation"] = 99.into();
-    assert!(serde_json::from_value::<BattleVehicle>(saved).is_err());
+    assert!(serde_json::from_value::<Vehicle>(saved).is_err());
 }
 
 /// A powered aircraft brakes on the shared descent clock, including a saved zero-speed event.
@@ -835,9 +812,9 @@ fn powered_recovery_brakes_gradually_and_replays_before_returning_to_flight() {
     let mut saved =
         serde_json::to_value(at_altitude(landing_aircraft(0.0, 0.0, 0.0), 20.0)).unwrap();
     // Use the enum serializer so this test follows the public persistence representation.
-    saved["vtol_flight"]["phase"] = serde_json::to_value(BattleVtolFlightPhase::Falling).unwrap();
+    saved["vtol_flight"]["phase"] = serde_json::to_value(VtolFlightPhase::Falling).unwrap();
     saved["vtol_flight"]["fall"] = serde_json::json!({"elevation":20,"speed":3,"remaining":1});
-    let mut unit: BattleVehicle = serde_json::from_value(saved).unwrap();
+    let mut unit: Vehicle = serde_json::from_value(saved).unwrap();
     let before = serde_json::to_value(&unit).unwrap();
     for tick in 0..=9 {
         let mut replay = restored(&unit);
@@ -845,17 +822,11 @@ fn powered_recovery_brakes_gradually_and_replays_before_returning_to_flight() {
         assert_eq!(replay.advance_vtol_fall(0, false).unwrap(), event);
         assert_eq!(unit, replay);
         if tick == 9 {
-            assert_eq!(event, BattleFreeFallStep::Recovered);
-            assert_eq!(
-                unit.vtol_flight().unwrap().phase,
-                BattleVtolFlightPhase::Airborne
-            );
+            assert_eq!(event, FreeFallStep::Recovered);
+            assert_eq!(unit.vtol_flight().unwrap().phase, VtolFlightPhase::Airborne);
             assert!(unit.vtol_flight().unwrap().fall.is_none());
         } else {
-            assert_eq!(
-                unit.vtol_flight().unwrap().phase,
-                BattleVtolFlightPhase::Falling
-            );
+            assert_eq!(unit.vtol_flight().unwrap().phase, VtolFlightPhase::Falling);
         }
         unit = restored(&unit);
     }
@@ -869,12 +840,8 @@ fn powered_recovery_brakes_gradually_and_replays_before_returning_to_flight() {
 #[test]
 fn loss_of_power_during_arrest_resumes_descent_and_braking_can_still_hit_ground() {
     for (power, altitude, expected) in [
-        (BattlePower::Off, 5, BattleFreeFallStep::Descending),
-        (
-            BattlePower::Running,
-            0,
-            BattleFreeFallStep::Impact { levels: 0 },
-        ),
+        (Power::Off, 5, FreeFallStep::Descending),
+        (Power::Running, 0, FreeFallStep::Impact { levels: 0 }),
     ] {
         let mut saved = serde_json::to_value(at_altitude(
             landing_aircraft(0.0, 0.0, 0.0),
@@ -882,13 +849,12 @@ fn loss_of_power_during_arrest_resumes_descent_and_braking_can_still_hit_ground(
         ))
         .unwrap();
         saved["power"] = serde_json::to_value(power).unwrap();
-        saved["vtol_flight"]["phase"] =
-            serde_json::to_value(BattleVtolFlightPhase::Falling).unwrap();
-        saved["vtol_flight"]["fall"] = serde_json::json!({"elevation":altitude,"speed":if power == BattlePower::Off {0} else {1},"remaining":1});
-        let mut unit: BattleVehicle = serde_json::from_value(saved).unwrap();
+        saved["vtol_flight"]["phase"] = serde_json::to_value(VtolFlightPhase::Falling).unwrap();
+        saved["vtol_flight"]["fall"] = serde_json::json!({"elevation":altitude,"speed":if power == Power::Off {0} else {1},"remaining":1});
+        let mut unit: Vehicle = serde_json::from_value(saved).unwrap();
         let before = unit.clone();
         assert_eq!(unit.advance_vtol_fall(0, false).unwrap(), expected);
-        if power == BattlePower::Off {
+        if power == Power::Off {
             assert_eq!(unit.vtol_flight().unwrap().altitude, 4.0);
             assert_eq!(restored(&unit), unit);
         } else {
@@ -909,31 +875,24 @@ fn recovery_requires_lift_and_honors_the_fusion_fuel_exemption() {
     ] {
         let mut unit = at_altitude(landing_aircraft(0.0, 0.0, 0.0), 20.0);
         if !rotor {
-            let _ = unit
-                .apply_rotor_hit(BattleRotorHit::Destroy, false)
-                .unwrap();
+            let _ = unit.apply_rotor_hit(RotorHit::Destroy, false).unwrap();
         }
         let mut saved = serde_json::to_value(unit).unwrap();
         if fusion {
             saved["definition"]["attributes"]["specials"] = "CargoTech".into();
         }
         saved["vtol_fuel"]["remaining"] = fuel.into();
-        saved["power"] = serde_json::to_value(if powered {
-            BattlePower::Running
-        } else {
-            BattlePower::Off
-        })
-        .unwrap();
-        saved["vtol_flight"]["phase"] =
-            serde_json::to_value(BattleVtolFlightPhase::Falling).unwrap();
+        saved["power"] =
+            serde_json::to_value(if powered { Power::Running } else { Power::Off }).unwrap();
+        saved["vtol_flight"]["phase"] = serde_json::to_value(VtolFlightPhase::Falling).unwrap();
         saved["vtol_flight"]["fall"] = serde_json::json!({"elevation":20,"speed":0,"remaining":1});
-        let mut unit: BattleVehicle = serde_json::from_value(saved).unwrap();
+        let mut unit: Vehicle = serde_json::from_value(saved).unwrap();
         assert_eq!(
             unit.advance_vtol_fall(0, free).unwrap(),
             if recovers {
-                BattleFreeFallStep::Recovered
+                FreeFallStep::Recovered
             } else {
-                BattleFreeFallStep::Descending
+                FreeFallStep::Descending
             }
         );
         assert_eq!(restored(&unit), unit);

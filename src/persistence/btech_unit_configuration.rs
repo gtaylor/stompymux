@@ -1,20 +1,20 @@
-use crate::{BattleUnitConfiguration, ObjectId, World};
+use crate::{ObjectId, UnitConfiguration, World};
 use anyhow::Result;
 use sqlx::{Row, SqliteConnection};
 use std::collections::{BTreeMap, BTreeSet};
 
 pub(super) async fn load(
     c: &mut SqliteConnection,
-) -> Result<BTreeMap<ObjectId, BattleUnitConfiguration>> {
+) -> Result<BTreeMap<ObjectId, UnitConfiguration>> {
     let mut result = BTreeMap::new();
     for row in sqlx::query("SELECT object_dbref,preferred_id,display_name,markings,assigned_pilot FROM btech_unit_configuration ORDER BY object_dbref").fetch_all(c).await? {
-        let configuration = BattleUnitConfiguration {
+        let configuration = UnitConfiguration {
             preferred_id: row.try_get("preferred_id")?,
             display_name: row.try_get("display_name")?,
             markings: row.try_get("markings")?,
             assigned_pilot: row.try_get::<Option<i64>, _>("assigned_pilot")?.map(ObjectId),
         };
-        if configuration != BattleUnitConfiguration::default() {
+        if configuration != UnitConfiguration::default() {
             result.insert(ObjectId(row.try_get("object_dbref")?), configuration);
         }
     }
@@ -66,7 +66,7 @@ pub(super) fn normalize(world: &mut World) {
         }) {
             value.assigned_pilot = None;
         }
-        *value != BattleUnitConfiguration::default()
+        *value != UnitConfiguration::default()
     });
 }
 

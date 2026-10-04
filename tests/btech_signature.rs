@@ -2,27 +2,27 @@
 use stompymux_rs::*;
 
 /// Use one slot per non-head section; retain all existing weapons and relocate a jump jet.
-fn equipped() -> BattleTemplate {
+fn equipped() -> MechTemplate {
     let mut template =
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     let jet = template
         .sections
-        .get_mut(&BattleSection::CenterTorso)
+        .get_mut(&MechSection::CenterTorso)
         .unwrap()
         .criticals
         .remove(&11)
         .unwrap();
     template
         .sections
-        .get_mut(&BattleSection::LeftTorso)
+        .get_mut(&MechSection::LeftTorso)
         .unwrap()
         .criticals
         .insert(8, jet);
-    for section in BattleSection::ALL
+    for section in MechSection::ALL
         .into_iter()
-        .filter(|section| *section != BattleSection::Head)
+        .filter(|section| *section != MechSection::Head)
     {
-        let slot = if section == BattleSection::CenterTorso {
+        let slot = if section == MechSection::CenterTorso {
             11
         } else {
             4
@@ -48,16 +48,16 @@ fn equipped() -> BattleTemplate {
 #[test]
 fn nss_construction_completeness_and_critical_loss() {
     let definition = equipped();
-    for section in BattleSection::ALL
+    for section in MechSection::ALL
         .into_iter()
-        .filter(|section| *section != BattleSection::Head)
+        .filter(|section| *section != MechSection::Head)
     {
-        let slot = if section == BattleSection::CenterTorso {
+        let slot = if section == MechSection::CenterTorso {
             11
         } else {
             4
         };
-        let mut unit = BattleUnit::from_template(definition.clone()).unwrap();
+        let mut unit = Mech::from_template(definition.clone()).unwrap();
         assert!(unit.null_signature_available().unwrap());
         let location = CriticalLocation { section, slot };
         assert!(unit.critical_candidates(section).contains(&location));
@@ -75,7 +75,7 @@ fn nss_construction_completeness_and_critical_loss() {
             .criticals
             .remove(&slot);
         assert!(
-            !BattleUnit::from_template(incomplete)
+            !Mech::from_template(incomplete)
                 .unwrap()
                 .has_null_signature()
                 .unwrap()

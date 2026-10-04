@@ -24,7 +24,7 @@ async fn cargo_point_bounds_authority_and_hints_are_enforced() {
     let (_dir, config, mut world, map) = fixture().await;
     check_battle_cargo_transfer_point(&world, map, 0, 0).unwrap();
     for reveal_hint in [false, true] {
-        let point = BattleCargoTransferPoint {
+        let point = CargoTransferPoint {
             x: 2,
             y: 1,
             reveal_hint,
@@ -48,7 +48,7 @@ async fn cargo_point_bounds_authority_and_hints_are_enforced() {
                     &mut world,
                     ObjectId(actor),
                     target,
-                    Some(BattleCargoTransferPoint { x, y, reveal_hint })
+                    Some(CargoTransferPoint { x, y, reveal_hint })
                 )
                 .is_err()
             );
@@ -148,13 +148,13 @@ async fn cargo_points_load_save_reload_and_purge_with_the_map() {
     world = persistence::load(&config.database()).await.unwrap();
     assert_eq!(
         world.btech.maps()[&map].cargo_transfer_point(),
-        Some(BattleCargoTransferPoint {
+        Some(CargoTransferPoint {
             x: 1,
             y: 1,
             reveal_hint: true
         })
     );
-    let point = BattleCargoTransferPoint {
+    let point = CargoTransferPoint {
         x: 2,
         y: 0,
         reveal_hint: false,

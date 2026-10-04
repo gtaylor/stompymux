@@ -1,8 +1,8 @@
 //! Automatic command-network formation: eligible units are linked into same-map, same-team
 //! networks each tick, so pilots and autopilots never manage membership by hand.
-use super::command_network::BattleCommandNetwork;
+use super::command_network::CommandNetwork;
 use super::network_unit::{set_link, units as network_units};
-use super::{BattleNotice, BattlePower};
+use super::{Notice, Power};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
@@ -11,12 +11,12 @@ use std::collections::BTreeMap;
 /// Per-unit opt-out from automatic linking, one flag per network family.
 /// Both default to enabled; `c3 -` or `c3i -` disables a family until `c3 +` or `c3i +`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BattleNetworkAutomation {
+pub struct NetworkAutomation {
     pub c3: bool,
     pub c3i: bool,
 }
 
-impl Default for BattleNetworkAutomation {
+impl Default for NetworkAutomation {
     fn default() -> Self {
         Self {
             c3: true,
@@ -25,12 +25,12 @@ impl Default for BattleNetworkAutomation {
     }
 }
 
-impl BattleNetworkAutomation {
+impl NetworkAutomation {
     /// Whether the given family may be managed automatically.
-    pub fn allows(self, kind: BattleCommandNetwork) -> bool {
+    pub fn allows(self, kind: CommandNetwork) -> bool {
         match kind {
-            BattleCommandNetwork::C3 => self.c3,
-            BattleCommandNetwork::C3i => self.c3i,
+            CommandNetwork::C3 => self.c3,
+            CommandNetwork::C3i => self.c3i,
         }
     }
 }
@@ -60,39 +60,36 @@ struct Group {
 
 impl Group {
     /// Seats the family allows given the masters present.
-    fn limit(kind: BattleCommandNetwork, working_masters: usize) -> usize {
+    fn limit(kind: CommandNetwork, working_masters: usize) -> usize {
         match kind {
-            BattleCommandNetwork::C3 => (1 + 3 * working_masters).min(12),
-            BattleCommandNetwork::C3i => 6,
+            CommandNetwork::C3 => (1 + 3 * working_masters).min(12),
+            CommandNetwork::C3i => 6,
         }
     }
 
     /// Whether `candidate` fits under the family rules after joining.
-    fn admits(&self, kind: BattleCommandNetwork, candidate: &Candidate) -> bool {
+    fn admits(&self, kind: CommandNetwork, candidate: &Candidate) -> bool {
         self.members.len() < Self::limit(kind, self.working_masters + candidate.working_masters)
     }
 
     /// Spare seats, used to fill the roomiest network first.
-    fn room(&self, kind: BattleCommandNetwork) -> usize {
+    fn room(&self, kind: CommandNetwork) -> usize {
         Self::limit(kind, self.working_masters).saturating_sub(self.members.len())
     }
 }
 
 /// Bring both families up to date: drop dead or singleton links, then link every joinable unit.
 /// Existing memberships are never rearranged, so manual joins survive the pass.
-pub fn reconcile(world: &mut World) -> Result<Vec<BattleNotice>> {
+pub fn reconcile(world: &mut World) -> Result<Vec<Notice>> {
     let mut notices = Vec::new();
-    for kind in [BattleCommandNetwork::C3, BattleCommandNetwork::C3i] {
+    for kind in [CommandNetwork::C3, CommandNetwork::C3i] {
         notices.extend(reconcile_for(world, kind)?);
     }
     Ok(notices)
 }
 
 /// Reconcile one family; see [`reconcile`].
-pub(super) fn reconcile_for(
-    world: &mut World,
-    kind: BattleCommandNetwork,
-) -> Result<Vec<BattleNotice>> {
+pub(super) fn reconcile_for(world: &mut World, kind: CommandNetwork) -> Result<Vec<Notice>> {
     let mut candidates = candidates(world, kind)?;
     if candidates.is_empty() {
         return Ok(Vec::new());
@@ -140,7 +137,7 @@ pub(super) fn reconcile_for(
             let link = match target {
                 Some(link) => link,
                 // A lone unit only seeds a network when the family lets it carry peers.
-                None if kind == BattleCommandNetwork::C3 && candidate.working_masters == 0 => {
+                None if kind == CommandNetwork::C3 && candidate.working_masters == 0 => {
                     continue;
                 }
                 None => {
@@ -198,7 +195,7 @@ fn pools(candidates: &[Candidate]) -> BTreeMap<(ObjectId, i32), Vec<&Candidate>>
 
 /// Links that no longer connect their unit to anyone: ineligible units, networks left with
 /// one member, and classic members beyond what the surviving masters can carry.
-fn stale_links(candidates: &[Candidate], kind: BattleCommandNetwork) -> Vec<ObjectId> {
+fn stale_links(candidates: &[Candidate], kind: CommandNetwork) -> Vec<ObjectId> {
     let mut stale: Vec<_> = candidates
         .iter()
         .filter(|c| c.link.is_some() && !c.eligible)
@@ -232,23 +229,23 @@ fn stale_links(candidates: &[Candidate], kind: BattleCommandNetwork) -> Vec<Obje
 /// Describe a network change to its members: newcomers learn the size, veterans learn who joined.
 fn announce(
     world: &World,
-    kind: BattleCommandNetwork,
+    kind: CommandNetwork,
     group: &Group,
     newcomers: &[ObjectId],
-) -> Result<Vec<BattleNotice>> {
+) -> Result<Vec<Notice>> {
     let name = kind.name();
     let size = group.members.len();
     let mut notices = Vec::new();
     for &member in &group.members {
         if group.fresh || newcomers.contains(&member) {
-            notices.push(BattleNotice {
+            notices.push(Notice {
                 unit: member,
                 text: format!("{name} network established with {size} units."),
             });
             continue;
         }
         for &newcomer in newcomers {
-            notices.push(BattleNotice {
+            notices.push(Notice {
                 unit: member,
                 text: format!(
                     "{} connects to your {name} network.",
@@ -261,7 +258,7 @@ fn announce(
 }
 
 /// Gather facts for every placed unit carrying this family's hardware.
-fn candidates(world: &World, kind: BattleCommandNetwork) -> Result<Vec<Candidate>> {
+fn candidates(world: &World, kind: CommandNetwork) -> Result<Vec<Candidate>> {
     let mut result = Vec::new();
     for (id, unit) in network_units(world)? {
         let Some(position) = unit.position() else {
@@ -269,11 +266,11 @@ fn candidates(world: &World, kind: BattleCommandNetwork) -> Result<Vec<Candidate
         };
         let hardware = unit.c3_hardware()?;
         let (installed, operational) = match kind {
-            BattleCommandNetwork::C3 => (
+            CommandNetwork::C3 => (
                 hardware.masters > 0 || hardware.slave_installed,
                 unit.c3_operational()?,
             ),
-            BattleCommandNetwork::C3i => (hardware.c3i_installed, hardware.c3i_operational),
+            CommandNetwork::C3i => (hardware.c3i_installed, hardware.c3i_operational),
         };
         if !installed {
             continue;
@@ -289,9 +286,7 @@ fn candidates(world: &World, kind: BattleCommandNetwork) -> Result<Vec<Candidate
             team: unit.signature().team,
             link: kind.link(&unit),
             eligible,
-            joinable: eligible
-                && unit.power() == BattlePower::Running
-                && unit.automation.allows(kind),
+            joinable: eligible && unit.power() == Power::Running && unit.automation.allows(kind),
             working_masters: hardware.working_masters,
         });
     }
@@ -327,12 +322,12 @@ mod tests {
         ];
         // One master carries three slaves: the lone unit, the dead one and the fifth slave go.
         assert_eq!(
-            stale_links(&candidates, BattleCommandNetwork::C3),
+            stale_links(&candidates, CommandNetwork::C3),
             vec![ObjectId(1), ObjectId(6), ObjectId(9)]
         );
         // C3i ignores masters and only drops the singleton and the dead unit.
         assert_eq!(
-            stale_links(&candidates, BattleCommandNetwork::C3i),
+            stale_links(&candidates, CommandNetwork::C3i),
             vec![ObjectId(1), ObjectId(9)]
         );
     }
@@ -344,10 +339,10 @@ mod tests {
             candidate(2, Some(3), 0, true),
         ];
         assert_eq!(
-            stale_links(&candidates, BattleCommandNetwork::C3),
+            stale_links(&candidates, CommandNetwork::C3),
             vec![ObjectId(1), ObjectId(2)]
         );
-        assert!(stale_links(&candidates, BattleCommandNetwork::C3i).is_empty());
+        assert!(stale_links(&candidates, CommandNetwork::C3i).is_empty());
     }
 
     #[test]
@@ -360,10 +355,10 @@ mod tests {
         };
         let slave = candidate(5, None, 0, true);
         let master = candidate(6, None, 1, true);
-        assert!(!group.admits(BattleCommandNetwork::C3, &slave));
-        assert!(group.admits(BattleCommandNetwork::C3, &master));
-        assert!(group.admits(BattleCommandNetwork::C3i, &slave));
-        assert_eq!(group.room(BattleCommandNetwork::C3), 0);
-        assert_eq!(group.room(BattleCommandNetwork::C3i), 2);
+        assert!(!group.admits(CommandNetwork::C3, &slave));
+        assert!(group.admits(CommandNetwork::C3, &master));
+        assert!(group.admits(CommandNetwork::C3i, &slave));
+        assert_eq!(group.room(CommandNetwork::C3), 0);
+        assert_eq!(group.room(CommandNetwork::C3i), 2);
     }
 }

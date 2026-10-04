@@ -6,14 +6,14 @@ use serde::{Deserialize, Serialize};
 
 /// Cover and preparation are independent of scheduled completion events.
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BattleDigState {
+pub struct DigState {
     pub dug_in: bool,
     pub digging: bool,
     /// Distinct pending completion deadlines; raw flags do not create or cancel these events.
     pub completion: std::collections::BTreeSet<u8>,
 }
 
-impl BattleDigState {
+impl DigState {
     /// Begin ordinary timed preparation without existing cover.
     pub fn preparing(remaining: u8) -> Self {
         Self {
@@ -42,9 +42,9 @@ impl BattleDigState {
     }
 }
 
-impl BattleVehicle {
+impl Vehicle {
     /// Current digging preparation or established cover.
-    pub fn dig_state(&self) -> BattleDigState {
+    pub fn dig_state(&self) -> DigState {
         self.dig.clone()
     }
 
@@ -67,7 +67,7 @@ impl BattleVehicle {
             (self.dig.exposed() && self.dig.completion.is_empty())
                 || (matches!(
                     self.definition().movement,
-                    BattleVehicleMovement::Tracked | BattleVehicleMovement::Wheeled
+                    VehicleMovement::Tracked | VehicleMovement::Wheeled
                 ) && self.position().is_some()),
             "Digging requires a placed tracked or wheeled vehicle"
         );
@@ -76,7 +76,7 @@ impl BattleVehicle {
 }
 
 /// Begin cover preparation for a stationary, conscious operator on a diggable surface.
-pub fn dig_unit(world: &mut World, id: ObjectId, pilot: ObjectId) -> Result<BattleNotice> {
+pub fn dig_unit(world: &mut World, id: ObjectId, pilot: ObjectId) -> Result<Notice> {
     super::targeting::controlled(world, id, pilot)?;
     super::fortification::require_mobile(world, id)?;
     let unit = world
@@ -87,7 +87,7 @@ pub fn dig_unit(world: &mut World, id: ObjectId, pilot: ObjectId) -> Result<Batt
     ensure!(
         matches!(
             unit.definition().movement,
-            BattleVehicleMovement::Tracked | BattleVehicleMovement::Wheeled
+            VehicleMovement::Tracked | VehicleMovement::Wheeled
         ),
         "Only tracked and wheeled vehicles can dig in"
     );
@@ -108,14 +108,14 @@ pub fn dig_unit(world: &mut World, id: ObjectId, pilot: ObjectId) -> Result<Batt
     unit.dig.dug_in = false;
     unit.dig.digging = true;
     unit.dig.completion.insert(20);
-    Ok(BattleNotice {
+    Ok(Notice {
         unit: id,
         text: "You start digging yourself in a nice hole..".into(),
     })
 }
 
 /// The ordinary heartbeat owns countdown advancement and persistence; no private timer is scheduled.
-pub(super) fn advance(world: &mut World) -> Vec<BattleNotice> {
+pub(super) fn advance(world: &mut World) -> Vec<Notice> {
     let mut notices = Vec::new();
     for (&id, unit) in world.btech.vehicles.iter_mut() {
         if unit.dig.completion.is_empty()
@@ -135,7 +135,7 @@ pub(super) fn advance(world: &mut World) -> Vec<BattleNotice> {
             .collect();
         if !due
             || !unit.dig.digging
-            || unit.power() != BattlePower::Running
+            || unit.power() != Power::Running
             || unit.is_destroyed()
             || unit.free_fall().is_some()
         {
@@ -143,7 +143,7 @@ pub(super) fn advance(world: &mut World) -> Vec<BattleNotice> {
         }
         unit.dig.digging = false;
         unit.dig.dug_in = true;
-        notices.push(BattleNotice {
+        notices.push(Notice {
             unit: id,
             text: "You finish burrowing for cover - only turret weapons are available now.".into(),
         });
@@ -156,7 +156,7 @@ pub(super) fn cover_modifier(
     world: &World,
     shooter: ObjectId,
     target: ObjectId,
-    rules: BattleAimRules,
+    rules: AimRules,
 ) -> Result<i16> {
     if !world
         .btech
@@ -177,14 +177,14 @@ pub(super) fn cover_modifier(
             mode: rules.hit_arc_mode,
         })
         .current(world, target)?
-            != BattleHitArc::Front
+            != HitArc::Front
     {
         return Ok(0);
     }
     Ok(rules.dig_bonus)
 }
 
-impl BattleVehicle {
+impl Vehicle {
     /// Cancel preparation without removing cover already completed before shutdown or destruction.
     pub(super) fn cancel_digging(&mut self) -> bool {
         let was_digging = self.dig.digging;

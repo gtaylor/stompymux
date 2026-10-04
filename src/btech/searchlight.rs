@@ -1,32 +1,32 @@
 //! Owned searchlight switching and damage state, with illumination derived from current geometry.
-use super::{BattleNotice, BattlePower, BattleUnit};
+use super::{Mech, Notice, Power};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 
 /// Durable hardware state; pending transitions invert the current setting after five seconds.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BattleSearchlight {
+pub struct Searchlight {
     pub on: bool,
     pub destroyed: bool,
     pub remaining: u8,
     /// Occupant-selected switching policy; automatic lamps follow battlefield darkness.
     #[serde(default)]
-    pub mode: BattleSearchlightMode,
+    pub mode: SearchlightMode,
 }
 
 /// How the lamp chooses its state. Automatic lamps switch on at night and off otherwise,
 /// re-evaluated only when map light changes, the carrier changes maps or finishes starting up.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleSearchlightMode {
+pub enum SearchlightMode {
     #[default]
     Auto,
     On,
     Off,
 }
 
-impl BattleSearchlightMode {
+impl SearchlightMode {
     /// Decode the Lua constant value, where zero is automatic.
     pub fn from_stored(value: i64) -> Result<Self> {
         Ok(match value {
@@ -56,7 +56,7 @@ impl BattleSearchlightMode {
     }
 }
 
-impl std::str::FromStr for BattleSearchlightMode {
+impl std::str::FromStr for SearchlightMode {
     type Err = anyhow::Error;
 
     /// Parse the `slite` command argument.
@@ -70,7 +70,7 @@ impl std::str::FromStr for BattleSearchlightMode {
     }
 }
 
-impl BattleSearchlight {
+impl Searchlight {
     /// Reject impossible hardware or countdown combinations at the ownership boundary.
     pub(super) fn validate(self, installed: bool) -> Result<()> {
         ensure!(
@@ -86,27 +86,27 @@ impl BattleSearchlight {
     }
 }
 
-impl BattleUnit {
+impl Mech {
     /// Persisted lamp and switch state, independent of the unit's current illumination.
-    pub fn searchlight(&self) -> BattleSearchlight {
+    pub fn searchlight(&self) -> Searchlight {
         self.searchlight
     }
 }
 
-impl super::BattleVehicle {
+impl super::Vehicle {
     /// Saved searchlight hardware and pending switch state.
-    pub fn searchlight(&self) -> BattleSearchlight {
+    pub fn searchlight(&self) -> Searchlight {
         self.searchlight
     }
 }
 
 /// Read live lamp state without resolving static equipment flags.
-fn lamp_state(world: &World, id: ObjectId) -> Option<BattleSearchlight> {
+fn lamp_state(world: &World, id: ObjectId) -> Option<Searchlight> {
     world.btech.unit(id).map(|unit| unit.searchlight())
 }
 
 /// Read installed hardware independently of anatomy and cockpit admission.
-fn hardware(world: &World, id: ObjectId) -> Option<(BattleSearchlight, bool)> {
+fn hardware(world: &World, id: ObjectId) -> Option<(Searchlight, bool)> {
     let unit = world.btech.unit(id)?;
     Some(super::with_unit!(unit, |unit| (
         unit.searchlight,
@@ -115,7 +115,7 @@ fn hardware(world: &World, id: ObjectId) -> Option<(BattleSearchlight, bool)> {
 }
 
 /// Borrow admitted hardware without duplicating switch or damage rules.
-fn hardware_mut(world: &mut World, id: ObjectId) -> &mut BattleSearchlight {
+fn hardware_mut(world: &mut World, id: ObjectId) -> &mut Searchlight {
     super::with_unit_mut!(world.btech.unit_mut(id).expect("admitted lamp"), |unit| {
         &mut unit.searchlight
     })
@@ -132,10 +132,7 @@ pub(super) fn emitter_ids(world: &World) -> impl Iterator<Item = ObjectId> + '_ 
 }
 
 /// Current emitter state shared by unit and terrain illumination.
-pub(super) fn beam(
-    world: &World,
-    id: ObjectId,
-) -> Option<(super::BattlePosition, super::Point, f64)> {
+pub(super) fn beam(world: &World, id: ObjectId) -> Option<(super::Position, super::Point, f64)> {
     let lamp = lamp_state(world, id)?;
     // Most battlefield units have no active beam. Reject them before building
     // a full scanner view; illumination is queried for every observed pair.
@@ -174,11 +171,7 @@ fn inferno(world: &World, id: ObjectId) -> u32 {
 
 /// Request a guarded toggle; repeated requests preserve the existing transition.
 /// Toggling is a manual choice, so the lamp leaves automatic mode and holds the new target.
-pub fn toggle_searchlight(
-    world: &mut World,
-    id: ObjectId,
-    pilot: ObjectId,
-) -> Result<BattleNotice> {
+pub fn toggle_searchlight(world: &mut World, id: ObjectId, pilot: ObjectId) -> Result<Notice> {
     super::power::controlled(world, id, pilot)?;
     super::power::require_running_unit(world, id)?;
     let (lamp, installed) = hardware(world, id).context("Unit is unavailable")?;
@@ -190,9 +183,9 @@ pub fn toggle_searchlight(
     let on = lamp.on;
     // Both a fresh and an already pending switch end with the lamp inverted.
     hardware_mut(world, id).mode = if on {
-        BattleSearchlightMode::Off
+        SearchlightMode::Off
     } else {
-        BattleSearchlightMode::On
+        SearchlightMode::On
     };
     let text = if lamp.remaining > 0 {
         if on {
@@ -208,7 +201,7 @@ pub fn toggle_searchlight(
             "Your searchlight starts to warm up."
         }
     };
-    let notice = BattleNotice {
+    let notice = Notice {
         unit: id,
         text: text.into(),
     };
@@ -222,8 +215,8 @@ pub fn set_searchlight_mode(
     world: &mut World,
     id: ObjectId,
     pilot: ObjectId,
-    mode: BattleSearchlightMode,
-) -> Result<BattleNotice> {
+    mode: SearchlightMode,
+) -> Result<Notice> {
     super::power::controlled(world, id, pilot)?;
     let (lamp, installed) = hardware(world, id).context("Unit is unavailable")?;
     ensure!(installed, "Your 'mech isn't equipped with searchlight!");
@@ -233,11 +226,11 @@ pub fn set_searchlight_mode(
     );
     hardware_mut(world, id).mode = mode;
     let mut text = match mode {
-        BattleSearchlightMode::Auto => {
+        SearchlightMode::Auto => {
             "Your searchlight will now switch on at night and off otherwise.".to_owned()
         }
-        BattleSearchlightMode::On => "Your searchlight is now set to stay on.".to_owned(),
-        BattleSearchlightMode::Off => "Your searchlight is now set to stay off.".to_owned(),
+        SearchlightMode::On => "Your searchlight is now set to stay on.".to_owned(),
+        SearchlightMode::Off => "Your searchlight is now set to stay off.".to_owned(),
     };
     match reconcile(world, id) {
         Some(SearchlightAdjustment::WarmUp) => text.push_str(" It starts to warm up."),
@@ -248,7 +241,7 @@ pub fn set_searchlight_mode(
         None => {}
     }
     let _ = super::autopilot::manual_takeover(world, id);
-    Ok(BattleNotice { unit: id, text })
+    Ok(Notice { unit: id, text })
 }
 
 /// How [`reconcile`] steered a lamp toward its mode.
@@ -260,14 +253,14 @@ pub(super) enum SearchlightAdjustment {
 }
 
 /// The state a lamp's mode asks for, or `None` when automatic mode has no battlefield to read.
-fn desired(world: &World, id: ObjectId, mode: BattleSearchlightMode) -> Option<bool> {
+fn desired(world: &World, id: ObjectId, mode: SearchlightMode) -> Option<bool> {
     match mode {
-        BattleSearchlightMode::On => Some(true),
-        BattleSearchlightMode::Off => Some(false),
-        BattleSearchlightMode::Auto => {
+        SearchlightMode::On => Some(true),
+        SearchlightMode::Off => Some(false),
+        SearchlightMode::Auto => {
             let position = super::scanner::scanner_unit(world, id)?.position?;
             let light = world.btech.maps().get(&position.map)?.light_level().ok()?;
-            Some(light == super::BattleLight::Night)
+            Some(light == super::Light::Night)
         }
     }
 }
@@ -281,7 +274,7 @@ pub(super) fn reconcile(world: &mut World, id: ObjectId) -> Option<SearchlightAd
         return None;
     }
     let scanner = super::scanner::scanner_unit(world, id)?;
-    if scanner.power != BattlePower::Running
+    if scanner.power != Power::Running
         || scanner.destroyed
         || world
             .objects
@@ -324,14 +317,14 @@ pub(super) fn reconcile_map(world: &mut World, map: ObjectId) {
 }
 
 /// Advance switches atomically with the server tick; an unpowered expiry leaves the lamp unchanged.
-pub fn advance_searchlights(world: &mut World) -> Vec<BattleNotice> {
+pub fn advance_searchlights(world: &mut World) -> Vec<Notice> {
     let ids: Vec<_> = emitter_ids(world)
         .filter(|&id| hardware(world, id).is_some_and(|(lamp, _)| lamp.remaining > 0))
         .collect();
     let mut notices = Vec::new();
     for id in ids {
         let scanner = super::scanner::scanner_unit(world, id).expect("constructed emitter");
-        let running = scanner.power == BattlePower::Running && !scanner.destroyed;
+        let running = scanner.power == Power::Running && !scanner.destroyed;
         let lamp = hardware_mut(world, id);
         lamp.remaining -= 1;
         if lamp.remaining > 0 || !running {
@@ -339,7 +332,7 @@ pub fn advance_searchlights(world: &mut World) -> Vec<BattleNotice> {
         }
         lamp.on = !lamp.on;
         let on = lamp.on;
-        notices.push(BattleNotice {
+        notices.push(Notice {
             unit: id,
             text: if on {
                 "Your searchlight comes on to full power."
@@ -383,19 +376,18 @@ pub fn unit_illuminated(world: &World, target: ObjectId) -> bool {
 
 /// Running laser heat sinks glow, so the unit counts as illuminated in darkness.
 fn laser_heat_sink_glow(world: &World, target: ObjectId) -> bool {
-    let technology = super::BattleTechnology::LaserHeatSinks;
+    let technology = super::Technology::LaserHeatSinks;
     world
         .btech
         .constructed_units()
         .get(&target)
         .map(|unit| {
-            unit.definition().has_technology(technology)
-                && unit.power() == super::BattlePower::Running
+            unit.definition().has_technology(technology) && unit.power() == super::Power::Running
         })
         .or_else(|| {
             world.btech.vehicles().get(&target).map(|unit| {
                 unit.definition().has_technology(technology)
-                    && unit.power() == super::BattlePower::Running
+                    && unit.power() == super::Power::Running
             })
         })
         .unwrap_or(false)
@@ -461,7 +453,7 @@ fn illumination_sources(world: &World) -> impl Iterator<Item = (ObjectId, bool)>
 fn external_sources_illuminate(
     world: &World,
     target: ObjectId,
-    position: super::BattlePosition,
+    position: super::Position,
     emitters: impl Iterator<Item = (ObjectId, bool)>,
 ) -> bool {
     emitters.into_iter().any(|(source, burning)| {
@@ -504,7 +496,7 @@ fn external_sources_illuminate(
     })
 }
 
-impl BattleUnit {
+impl Mech {
     /// Whether changes in external illumination notify the occupants.
     pub fn searchlight_warning(&self) -> bool {
         self.searchlight_warning
@@ -535,7 +527,7 @@ pub fn illumination_pending(world: &World) -> bool {
 
 /// Commit illumination observations and emit each opted-in transition once.
 /// Notification cursors share the world transaction; they never decide visibility.
-pub fn refresh_illumination(world: &mut World) -> Vec<BattleNotice> {
+pub fn refresh_illumination(world: &mut World) -> Vec<Notice> {
     let changes: Vec<_> = illumination_observations(world)
         .filter_map(|(id, observed)| {
             let lit = externally_illuminated(world, id);
@@ -557,7 +549,7 @@ pub fn refresh_illumination(world: &mut World) -> Vec<BattleNotice> {
                 .get(&id)
                 .is_some_and(|o| !o.flags.contains(crate::Flag::Going))
         {
-            notices.push(BattleNotice {
+            notices.push(Notice {
                 unit: id,
                 text: if lit {
                     "You are being illuminated!"
@@ -573,10 +565,7 @@ pub fn refresh_illumination(world: &mut World) -> Vec<BattleNotice> {
 
 /// Resolve an exposed lamp's common destruction rolls before the caller applies armor damage.
 /// Return notices separately so material-only callers can discard publication.
-pub(super) fn strike(
-    world: &mut World,
-    id: ObjectId,
-) -> Option<(Vec<BattleNotice>, Vec<BattleNotice>)> {
+pub(super) fn strike(world: &mut World, id: ObjectId) -> Option<(Vec<Notice>, Vec<Notice>)> {
     let (lamp, installed) = hardware(world, id)?;
     if !installed || lamp.destroyed {
         return None;
@@ -587,13 +576,13 @@ pub(super) fn strike(
     }
     let broadcasts =
         super::broadcast::observer_notices(world, id, "'s searchlight is blown apart!");
-    *hardware_mut(world, id) = BattleSearchlight {
+    *hardware_mut(world, id) = Searchlight {
         destroyed: true,
         mode: lamp.mode,
         ..Default::default()
     };
     Some((
-        vec![BattleNotice {
+        vec![Notice {
             unit: id,
             text: "[fg=yellow bold]Your searchlight is destroyed![reset]".into(),
         }],
@@ -601,7 +590,7 @@ pub(super) fn strike(
     ))
 }
 
-impl BattleSearchlight {
+impl Searchlight {
     /// Cut lamp power during shutdown; any pending countdown can expire without switching on.
     pub(super) fn shutdown(&mut self) -> bool {
         std::mem::take(&mut self.on)

@@ -63,7 +63,7 @@ async fn shared_lamps_switch_light_units_and_terrain_and_resume_after_restart() 
             .btech
             .vehicles()
             .get(&id)
-            .is_none_or(|unit| unit.definition().movement != BattleVehicleMovement::Stationary)
+            .is_none_or(|unit| unit.definition().movement != VehicleMovement::Stationary)
         {
             firing::edit(&mut world, id, |unit| {
                 unit["motion"]["heading"] = serde_json::json!(180.0)
@@ -71,13 +71,8 @@ async fn shared_lamps_switch_light_units_and_terrain_and_resume_after_restart() 
             assert!(!battle_unit_illuminated(&world, target));
             assert!(!battle_hex_illuminated(&world, map, HexCoordinate { x: 0, y: 9 }).unwrap());
         }
-        let notices = stop_battle_unit(
-            &mut world,
-            id,
-            ObjectId(1),
-            BattleMovementRules::STANDARD.fall,
-        )
-        .unwrap();
+        let notices =
+            stop_battle_unit(&mut world, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
         assert!(
             notices
                 .iter()
@@ -107,18 +102,18 @@ async fn vehicle_lamp_damage_shares_rolls_and_cancels_pending_switches() {
         firing::edit(&mut world, id, |unit| {
             unit["searchlight"] = serde_json::json!({"on":true,"destroyed":false,"remaining":3})
         });
-        let rules = BattleVehicleCriticalRules {
+        let rules = VehicleCriticalRules {
             rotor_damage_divisor: 0,
             extended_piloting: false,
             vtol_table: None,
-            table: BattleVehicleCriticalTable::Advanced,
+            table: VehicleCriticalTable::Advanced,
             enabled: false,
             combat_safe: false,
             toughness: false,
         };
-        let hit = BattleVehicleArmorHit {
-            damage_class: BattleDamageClass::Ordinary,
-            section: BattleVehicleSection::Front,
+        let hit = VehicleArmorHit {
+            damage_class: DamageClass::Ordinary,
+            section: VehicleSection::Front,
             amount: 1,
             through_armor_critical: false,
             armor_piercing: None,
@@ -128,7 +123,7 @@ async fn vehicle_lamp_damage_shares_rolls_and_cancels_pending_switches() {
         for seed in 0..32 {
             let mut candidate = world.clone();
             firing::edit(&mut candidate, id, |unit| {
-                unit["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
+                unit["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap()
             });
             let mut replay = candidate.clone();
             let report =
@@ -147,11 +142,11 @@ async fn vehicle_lamp_damage_shares_rolls_and_cancels_pending_switches() {
         if let Some(mut destroyed) = destroyed {
             assert_eq!(
                 destroyed.btech.vehicles()[&id].searchlight(),
-                BattleSearchlight {
+                Searchlight {
                     destroyed: true,
                     on: false,
                     remaining: 0,
-                    mode: BattleSearchlightMode::Auto,
+                    mode: SearchlightMode::Auto,
                 }
             );
             assert!(toggle_battle_searchlight(&mut destroyed, id, ObjectId(1)).is_err());
@@ -164,16 +159,13 @@ async fn vehicle_lamp_damage_shares_rolls_and_cancels_pending_switches() {
                 destroyed.btech
             );
         }
-        for (section, safe) in [
-            (BattleVehicleSection::Left, false),
-            (BattleVehicleSection::Front, true),
-        ] {
+        for (section, safe) in [(VehicleSection::Left, false), (VehicleSection::Front, true)] {
             let mut candidate = world.clone();
             let report = resolve_battle_vehicle_armor_damage(
                 &mut candidate,
                 id,
-                BattleVehicleArmorHit { section, ..hit },
-                BattleVehicleCriticalRules {
+                VehicleArmorHit { section, ..hit },
+                VehicleCriticalRules {
                     combat_safe: safe,
                     ..rules
                 },

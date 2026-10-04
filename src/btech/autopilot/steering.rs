@@ -1,8 +1,6 @@
 //! Deterministic ground steering with route lookahead and ordinary motion forecasts.
 use super::{navigation::GridHex, observations::AutopilotObservation};
-use crate::{
-    BattleMotion, BattleNotice, BattlePosition, Config, HexCoordinate, ObjectId, Point, World,
-};
+use crate::{Config, HexCoordinate, Motion, Notice, ObjectId, Point, Position, World};
 use anyhow::{Context, Result};
 
 /// Transient direction latch and measurable control progress, never serialized.
@@ -25,7 +23,7 @@ impl Default for SteeringState {
     }
 }
 
-pub(crate) fn motion(world: &World, id: ObjectId) -> Option<BattleMotion> {
+pub(crate) fn motion(world: &World, id: ObjectId) -> Option<Motion> {
     world
         .btech
         .constructed_units()
@@ -50,15 +48,15 @@ fn project(
     world: &World,
     config: &Config,
     id: ObjectId,
-    mut motion: BattleMotion,
+    mut motion: Motion,
     _map: crate::ObjectId,
-) -> Result<BattleMotion> {
+) -> Result<Motion> {
     let coordinate = motion.point.containing_hex()?;
-    let rules = crate::BattleMovementRules {
+    let rules = crate::MovementRules {
         fasa_turning: config.battletech.fasaturn != 0,
         slowdown: config.battletech.slowdown,
         tsm_tow_bonus: config.battletech.tsm_tow_bonus != 0,
-        ..crate::BattleMovementRules::STANDARD
+        ..crate::MovementRules::STANDARD
     };
     if world.btech.constructed_units().contains_key(&id) {
         let proposal =
@@ -92,8 +90,8 @@ fn safe_segment(world: &World, id: ObjectId, map: ObjectId, start: Point, end: P
             && !super::traversal::assess(
                 world,
                 id,
-                BattlePosition { map, x: px, y: py },
-                BattlePosition { map, x, y },
+                Position { map, x: px, y: py },
+                Position { map, x, y },
             )
             .eligible
         {
@@ -139,9 +137,9 @@ fn lookahead(
 fn direction(
     world: &World,
     id: ObjectId,
-    current: BattleMotion,
+    current: Motion,
     bearing: f64,
-    combat: Option<(&AutopilotObservation, BattlePosition)>,
+    combat: Option<(&AutopilotObservation, Position)>,
     pursuit: Option<((f64, f64), f64)>,
     state: &SteeringState,
     time: i64,
@@ -162,7 +160,7 @@ fn direction(
             .btech
             .constructed_units()
             .get(&id)
-            .map_or(crate::BattleTorso::Center, |u| u.facing().torso);
+            .map_or(crate::Torso::Center, |u| u.facing().torso);
         let turret = world
             .btech
             .vehicles()
@@ -232,7 +230,7 @@ pub(crate) fn actual_arc(
     world: &World,
     id: ObjectId,
     observation: &AutopilotObservation,
-    motion: BattleMotion,
+    motion: Motion,
     target: Point,
 ) -> bool {
     let Ok(range) = motion.point.range(target) else {
@@ -245,7 +243,7 @@ pub(crate) fn actual_arc(
         .btech
         .constructed_units()
         .get(&id)
-        .map_or(crate::BattleTorso::Center, |u| u.facing().torso);
+        .map_or(crate::Torso::Center, |u| u.facing().torso);
     let turret = world.btech.vehicles().get(&id).and_then(|u| {
         u.turret_heading().map(|heading| {
             if u.turret_locked() || u.turret_jammed() {
@@ -277,12 +275,12 @@ pub(crate) fn drive(
     route: &[GridHex],
     index: usize,
     cap: f64,
-    combat: Option<(&AutopilotObservation, BattlePosition)>,
+    combat: Option<(&AutopilotObservation, Position)>,
     smooth_route: bool,
     pursuit: Option<((f64, f64), f64)>,
     state: &mut SteeringState,
     time: i64,
-    notices: &mut Vec<BattleNotice>,
+    notices: &mut Vec<Notice>,
 ) -> Result<bool> {
     let current = motion(world, id).context("Missing steering motion")?;
     let map = crate::btech::scanner::scanner_unit(world, id)
@@ -423,8 +421,8 @@ pub(crate) fn pursuit_score(
     world: &World,
     config: &Config,
     id: ObjectId,
-    aim: BattlePosition,
-    observed: BattlePosition,
+    aim: Position,
+    observed: Position,
     velocity: (f64, f64),
     uncertainty: f64,
     cap: f64,
@@ -517,7 +515,7 @@ pub(crate) fn pursuit_score(
             world,
             id,
             observation,
-            BattleMotion {
+            Motion {
                 point: terminal,
                 ..simulated
             },
@@ -641,7 +639,7 @@ mod pursuit_estimate_tests {
                 &world,
                 id,
                 &observation,
-                BattleMotion {
+                Motion {
                     heading: heading as f64,
                     ..motion
                 },
@@ -660,7 +658,7 @@ mod pursuit_estimate_tests {
                     &world,
                     id,
                     &observation,
-                    BattleMotion {
+                    Motion {
                         heading: heading as f64,
                         ..motion
                     },

@@ -1,15 +1,15 @@
 //! Transient "fired this heartbeat" marks used by status bits and the simulation scheduler.
-use super::{BattleUnit, BattleVehicle};
+use super::{Mech, Vehicle};
 use crate::{Flag, World};
 
-impl BattleUnit {
+impl Mech {
     /// A completed launch marks this unit until the next committed heartbeat, including launches that miss.
     pub fn fired_recently(&self) -> bool {
         self.fired_recently
     }
 }
 
-impl BattleVehicle {
+impl Vehicle {
     /// A completed launch marks this vehicle until the next committed heartbeat, including misses.
     pub fn fired_recently(&self) -> bool {
         self.fired_recently

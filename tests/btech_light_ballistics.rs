@@ -2,10 +2,10 @@
 use stompymux_rs::*;
 
 /// Replace one conventional mount and its bin with the requested ballistic weapon.
-fn definition(weapon: BattleWeapon) -> BattleTemplate {
+fn definition(weapon: Weapon) -> MechTemplate {
     let mut template =
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
-    let arm = template.sections.get_mut(&BattleSection::LeftArm).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+    let arm = template.sections.get_mut(&MechSection::LeftArm).unwrap();
     let mut part = arm.criticals[&2].clone();
     part.equipment = weapon.name().into();
     for slot in 2..2 + weapon.profile().critical_slots {
@@ -26,51 +26,15 @@ fn definition(weapon: BattleWeapon) -> BattleTemplate {
 #[test]
 fn light_ballistic_catalog_ranges_and_critical_ammunition() {
     for (weapon, heat, damage, slots, rounds, mass, recycle, ranges) in [
-        (
-            BattleWeapon::ClanMachineGun,
-            0,
-            2,
-            1,
-            200,
-            256,
-            7,
-            [1, 2, 3],
-        ),
-        (
-            BattleWeapon::ClanLightMachineGun,
-            0,
-            1,
-            1,
-            200,
-            256,
-            7,
-            [2, 4, 6],
-        ),
-        (
-            BattleWeapon::ClanHeavyMachineGun,
-            0,
-            3,
-            1,
-            100,
-            512,
-            7,
-            [1, 2, 2],
-        ),
-        (BattleWeapon::AcidThrower, 3, 3, 2, 10, 1536, 25, [1, 2, 3]),
-        (BattleWeapon::LightAc2, 1, 2, 1, 45, 4096, 12, [6, 12, 18]),
-        (BattleWeapon::LightAc5, 1, 5, 2, 20, 5120, 20, [5, 10, 15]),
-        (
-            BattleWeapon::HeavyMachineGun,
-            0,
-            3,
-            1,
-            100,
-            1024,
-            7,
-            [1, 2, 2],
-        ),
+        (Weapon::ClanMachineGun, 0, 2, 1, 200, 256, 7, [1, 2, 3]),
+        (Weapon::ClanLightMachineGun, 0, 1, 1, 200, 256, 7, [2, 4, 6]),
+        (Weapon::ClanHeavyMachineGun, 0, 3, 1, 100, 512, 7, [1, 2, 2]),
+        (Weapon::AcidThrower, 3, 3, 2, 10, 1536, 25, [1, 2, 3]),
+        (Weapon::LightAc2, 1, 2, 1, 45, 4096, 12, [6, 12, 18]),
+        (Weapon::LightAc5, 1, 5, 2, 20, 5120, 20, [5, 10, 15]),
+        (Weapon::HeavyMachineGun, 0, 3, 1, 100, 1024, 7, [1, 2, 2]),
     ] {
-        assert_eq!(BattleWeapon::parse(weapon.name()).unwrap(), weapon);
+        assert_eq!(Weapon::parse(weapon.name()).unwrap(), weapon);
         let p = weapon.profile();
         assert_eq!(
             (
@@ -124,7 +88,7 @@ fn light_ballistic_catalog_ranges_and_critical_ammunition() {
                 .modifier,
             8
         );
-        let unit = BattleUnit::from_template(definition(weapon)).unwrap();
+        let unit = Mech::from_template(definition(weapon)).unwrap();
         let loadout = unit.loadout().unwrap();
         let (index, mount) = loadout
             .weapons
@@ -140,7 +104,7 @@ fn light_ballistic_catalog_ranges_and_critical_ammunition() {
             let mut broken = unit.clone();
             assert_eq!(
                 broken.destroy_critical(*slot).unwrap(),
-                Some(BattleCriticalLoss::Weapon {
+                Some(CriticalLoss::Weapon {
                     index,
                     explosion_damage: 0
                 })
@@ -153,7 +117,7 @@ fn light_ballistic_catalog_ranges_and_critical_ammunition() {
             exploded
                 .destroy_critical(loadout.ammunition[0].location)
                 .unwrap(),
-            Some(BattleCriticalLoss::Ammunition {
+            Some(CriticalLoss::Ammunition {
                 index: 0,
                 rounds: u16::from(rounds),
                 explosion_damage: u32::from(rounds) * u32::from(damage)
@@ -168,16 +132,16 @@ fn light_ballistic_catalog_ranges_and_critical_ammunition() {
             .flat_map(|s| s.criticals.values_mut())
             .find(|p| p.equipment.starts_with("Ammo_"))
             .unwrap();
-        let other = if weapon == BattleWeapon::HeavyMachineGun {
-            BattleWeapon::MachineGun
-        } else if weapon == BattleWeapon::LightAc2 {
-            BattleWeapon::Ac2
+        let other = if weapon == Weapon::HeavyMachineGun {
+            Weapon::MachineGun
+        } else if weapon == Weapon::LightAc2 {
+            Weapon::Ac2
         } else {
-            BattleWeapon::Ac5
+            Weapon::Ac5
         };
         bin.equipment = format!("Ammo_{}", other.name());
         assert_eq!(
-            BattleUnit::from_template(wrong_bin)
+            Mech::from_template(wrong_bin)
                 .unwrap()
                 .weapon_readiness(index)
                 .unwrap()
@@ -190,7 +154,7 @@ fn light_ballistic_catalog_ranges_and_critical_ammunition() {
 /// Acid throwers require a complete mount and cannot select a flamer's thermal effect.
 #[test]
 fn acid_thrower_requires_two_slots_and_rejects_heat_mode() {
-    let weapon = BattleWeapon::AcidThrower;
+    let weapon = Weapon::AcidThrower;
     assert!(!weapon.is_flamer());
     assert!(!weapon.supports_heat_mode());
     assert!(!weapon.supports_rapid_fire());
@@ -201,11 +165,11 @@ fn acid_thrower_requires_two_slots_and_rejects_heat_mode() {
         let mut incomplete = template.clone();
         incomplete
             .sections
-            .get_mut(&BattleSection::LeftArm)
+            .get_mut(&MechSection::LeftArm)
             .unwrap()
             .criticals
             .remove(&missing);
-        assert!(BattleUnit::from_template(incomplete).is_err());
+        assert!(Mech::from_template(incomplete).is_err());
     }
     let mut thermal = template;
     for part in thermal
@@ -217,16 +181,16 @@ fn acid_thrower_requires_two_slots_and_rejects_heat_mode() {
             part.modes.push("Heat".into());
         }
     }
-    assert!(BattleUnit::from_template(thermal).is_err());
+    assert!(Mech::from_template(thermal).is_err());
 }
 
 /// Hyper autocannons retain ordinary direct damage and reject RFAC-specific firing/ammunition modes.
 #[test]
 fn hyper_ac_construction_ranges_and_critical_supply() {
     for (weapon, minimum, ranges, rounds, mass) in [
-        (BattleWeapon::HyperAc2, 3, [10, 20, 35], 30, 8192),
-        (BattleWeapon::HyperAc5, 0, [8, 16, 28], 15, 12288),
-        (BattleWeapon::HyperAc10, 0, [6, 12, 20], 8, 14336),
+        (Weapon::HyperAc2, 3, [10, 20, 35], 30, 8192),
+        (Weapon::HyperAc5, 0, [8, 16, 28], 15, 12288),
+        (Weapon::HyperAc10, 0, [6, 12, 20], 8, 14336),
     ] {
         let p = weapon.profile();
         assert_eq!(weapon.mass(), mass);
@@ -279,12 +243,9 @@ fn hyper_ac_construction_ranges_and_critical_supply() {
                     part.modes.push(flag.into());
                 }
             }
-            assert!(
-                BattleUnit::from_template(flagged).is_err(),
-                "{weapon:?} {flag}"
-            );
+            assert!(Mech::from_template(flagged).is_err(), "{weapon:?} {flag}");
         }
-        let unit = BattleUnit::from_template(template).unwrap();
+        let unit = Mech::from_template(template).unwrap();
         let loadout = unit.loadout().unwrap();
         let (index, mount) = loadout
             .weapons
@@ -295,7 +256,7 @@ fn hyper_ac_construction_ranges_and_critical_supply() {
         for remaining in [0, 1, rounds] {
             let mut state = serde_json::to_value(&unit).unwrap();
             state["ammunition"][0] = remaining.into();
-            let supplied: BattleUnit = serde_json::from_value(state).unwrap();
+            let supplied: Mech = serde_json::from_value(state).unwrap();
             assert_eq!(
                 supplied.weapon_readiness(index).unwrap().ammunition,
                 remaining
@@ -304,7 +265,7 @@ fn hyper_ac_construction_ranges_and_critical_supply() {
                 let mut damaged = supplied.clone();
                 assert_eq!(
                     damaged.destroy_critical(*location).unwrap(),
-                    Some(BattleCriticalLoss::Weapon {
+                    Some(CriticalLoss::Weapon {
                         index,
                         explosion_damage: 0
                     })
@@ -316,7 +277,7 @@ fn hyper_ac_construction_ranges_and_critical_supply() {
                 damaged
                     .destroy_critical(loadout.ammunition[0].location)
                     .unwrap(),
-                Some(BattleCriticalLoss::Ammunition {
+                Some(CriticalLoss::Ammunition {
                     index: 0,
                     rounds: remaining as u16,
                     explosion_damage: remaining * u32::from(p.damage)

@@ -6,12 +6,12 @@ use stompymux_rs::*;
 fn unconscious_crew(world: &mut World, unit: ObjectId) {
     let seed = (0..=255)
         .find(|&seed| {
-            let mut dice = BattleDice::seeded([seed; 32]);
+            let mut dice = Dice::seeded([seed; 32]);
             dice.two_d6() < 7 && dice.two_d6() >= 10
         })
         .unwrap();
     firing::edit(world, unit, |s| {
-        s["crew_recovery"]["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
+        s["crew_recovery"]["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap()
     });
     let injury = injure_battle_tactical_pilot(world, unit, 3, false).unwrap();
     assert!(!injury.consciousness.unwrap().conscious);
@@ -64,7 +64,7 @@ async fn prone_mech_success_precedes_unconsciousness() {
         release_battle_pilot(&mut world, unit, ObjectId(1)).unwrap();
         unconscious_crew(&mut world, unit);
         firing::edit(&mut world, unit, |s| {
-            s["posture"] = serde_json::to_value(BattlePosture::Prone).unwrap();
+            s["posture"] = serde_json::to_value(Posture::Prone).unwrap();
         });
         let before = world.btech.clone();
         let check = roll_battle_piloting(&mut world, unit, 100, false).unwrap();

@@ -1,19 +1,19 @@
 //! Inspectable nonweapon failure codes retain slot identity without changing physical system damage.
-use super::{BattleDamageSlot, BattleEquipmentFailure, SectionDefinition};
+use super::{DamageSlot, EquipmentFailure, SectionDefinition};
 use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 
 /// A nonweapon component's diagnostic condition, independent of its material availability.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BattleComponentFailure<L> {
+pub struct ComponentFailure<L> {
     pub location: L,
-    pub failure: BattleEquipmentFailure,
+    pub failure: EquipmentFailure,
 }
 
 /// Validate unique, real nonweapon and nonammunition slots against their owned construction.
 pub(super) fn validate<L: Copy + Ord>(
-    failures: &[BattleComponentFailure<L>],
+    failures: &[ComponentFailure<L>],
     installed: impl Fn(L) -> bool,
 ) -> Result<()> {
     let mut seen = BTreeSet::new();
@@ -29,23 +29,23 @@ pub(super) fn validate<L: Copy + Ord>(
 /// Build diagnostic assignments for real system slots; weapons have their separate operational owner.
 pub(super) fn replacement<S: Copy + Ord, L: Copy>(
     definitions: &std::collections::BTreeMap<S, SectionDefinition>,
-    failures: &std::collections::BTreeMap<BattleDamageSlot, u8>,
+    failures: &std::collections::BTreeMap<DamageSlot, u8>,
     number: impl Fn(S) -> u8,
     location: impl Fn(S, u8) -> L,
     is_component: impl Fn(L) -> bool,
-) -> Result<Vec<BattleComponentFailure<L>>> {
+) -> Result<Vec<ComponentFailure<L>>> {
     let mut result = Vec::new();
     for (&section, definition) in definitions {
         for &critical in definition.criticals.keys() {
             let place = location(section, critical);
             if is_component(place)
-                && let Some(&code) = failures.get(&BattleDamageSlot {
+                && let Some(&code) = failures.get(&DamageSlot {
                     section: number(section),
                     slot: critical,
                 })
-                && let Some(failure) = BattleEquipmentFailure::from_code(code)?
+                && let Some(failure) = EquipmentFailure::from_code(code)?
             {
-                result.push(BattleComponentFailure {
+                result.push(ComponentFailure {
                     location: place,
                     failure,
                 });
@@ -57,25 +57,25 @@ pub(super) fn replacement<S: Copy + Ord, L: Copy>(
 
 /// Find the condition of one installed component without interpreting it as material loss.
 pub(super) fn at<L: Copy + PartialEq>(
-    failures: &[BattleComponentFailure<L>],
+    failures: &[ComponentFailure<L>],
     location: L,
-) -> Option<BattleEquipmentFailure> {
+) -> Option<EquipmentFailure> {
     failures
         .iter()
         .find(|failure| failure.location == location)
         .map(|failure| failure.failure)
 }
 
-impl super::BattleUnit {
+impl super::Mech {
     /// Nonweapon diagnostic failures, independent of system operation and material loss.
-    pub fn component_failures(&self) -> &[BattleComponentFailure<super::CriticalLocation>] {
+    pub fn component_failures(&self) -> &[ComponentFailure<super::CriticalLocation>] {
         &self.component_failures
     }
 }
 
-impl super::BattleVehicle {
+impl super::Vehicle {
     /// Nonweapon diagnostic failures, independent of system operation and material loss.
-    pub fn component_failures(&self) -> &[BattleComponentFailure<super::VehicleCriticalLocation>] {
+    pub fn component_failures(&self) -> &[ComponentFailure<super::VehicleCriticalLocation>] {
         &self.component_failures
     }
 }

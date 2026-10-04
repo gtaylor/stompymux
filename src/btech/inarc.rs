@@ -1,5 +1,5 @@
 //! iNarc ammunition selection shared by native and Lua weapon controls.
-use super::{BattleAmmunitionMode as Mode, BattleWeapon};
+use super::{AmmunitionMode as Mode, Weapon};
 use crate::{ObjectId, World};
 use anyhow::{Result, ensure};
 
@@ -27,7 +27,7 @@ pub fn set_inarc_ammunition(
 ) -> Result<()> {
     let ready = super::weapon_controls::ready_weapon(world, id, pilot, index)?;
     ensure!(
-        ready.weapon == BattleWeapon::INarcBeacon,
+        ready.weapon == Weapon::INarcBeacon,
         "That weapon is not an INARC launcher!"
     );
     ensure!(

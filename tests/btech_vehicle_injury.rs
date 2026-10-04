@@ -18,7 +18,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse("test", template).unwrap(),
+        VehicleTemplate::parse("test", template).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -38,10 +38,9 @@ async fn vehicle_injury_recovery_and_scenario_death_replay_without_material_dama
         fixture(include_str!("../game/mechs/Demolisher.toml")).await;
     let mut state = serde_json::to_value(&world.btech).unwrap();
     let value = (0..=255)
-        .find(|value| BattleDice::seeded([*value; 32]).two_d6() < 11)
+        .find(|value| Dice::seeded([*value; 32]).two_d6() < 11)
         .unwrap();
-    state["recoveries"]["1"]["dice"] =
-        serde_json::to_value(BattleDice::seeded([value; 32])).unwrap();
+    state["recoveries"]["1"]["dice"] = serde_json::to_value(Dice::seeded([value; 32])).unwrap();
     world.btech = serde_json::from_value(state).unwrap();
     let definition = world.btech.vehicles()[&id].definition().clone();
     let sections = world.btech.vehicles()[&id].sections().clone();
@@ -64,7 +63,7 @@ async fn vehicle_injury_recovery_and_scenario_death_replay_without_material_dama
     assert!(injury.killed && injury.consciousness.is_none());
     let vehicle = &world.btech.vehicles()[&id];
     assert!(vehicle.is_destroyed());
-    assert_eq!(vehicle.power(), BattlePower::Off);
+    assert_eq!(vehicle.power(), Power::Off);
     assert!(vehicle.pilot().is_none());
     assert_eq!(vehicle.sections(), &sections);
     assert_eq!(vehicle.definition(), &definition);
@@ -78,24 +77,24 @@ async fn vehicle_injury_recovery_and_scenario_death_replay_without_material_dama
     );
     let mut bad = serde_json::to_value(&world.btech.vehicles()[&id]).unwrap();
     bad["pilot_injuries"] = 128.into();
-    assert!(serde_json::from_value::<BattleVehicle>(bad).is_err());
+    assert!(serde_json::from_value::<Vehicle>(bad).is_err());
 }
 
 #[tokio::test]
 async fn vehicle_injury_guards_and_critical_casualties_are_atomic() {
     let (_dir, _config, base, id) = fixture(include_str!("../game/mechs/Demolisher.toml")).await;
-    let rules = BattleVehicleCriticalRules {
+    let rules = VehicleCriticalRules {
         rotor_damage_divisor: 0,
         extended_piloting: false,
         vtol_table: None,
-        table: BattleVehicleCriticalTable::Standard,
+        table: VehicleCriticalTable::Standard,
         enabled: true,
         combat_safe: false,
         toughness: true,
     };
     let seed = (0..=255)
         .find(|value| {
-            let mut dice = BattleDice::seeded([*value; 32]);
+            let mut dice = Dice::seeded([*value; 32]);
             dice.die(10).unwrap() > 5 && dice.d6() == 1
         })
         .unwrap();
@@ -103,7 +102,7 @@ async fn vehicle_injury_guards_and_critical_casualties_are_atomic() {
         let mut world = base.clone();
         world
             .btech
-            .set_unit_dice(id, BattleDice::seeded([seed; 32]))
+            .set_unit_dice(id, Dice::seeded([seed; 32]))
             .unwrap();
         if absent {
             release_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
@@ -116,8 +115,7 @@ async fn vehicle_injury_guards_and_critical_casualties_are_atomic() {
                 .insert(Flag::InCharacter);
         }
         let before = world.btech.clone();
-        let result =
-            resolve_battle_vehicle_critical(&mut world, id, BattleVehicleSection::Front, rules);
+        let result = resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Front, rules);
         if absent {
             let report = result.unwrap();
             assert_eq!(report.pilot_injury.unwrap().injuries, 1);
@@ -129,7 +127,7 @@ async fn vehicle_injury_guards_and_critical_casualties_are_atomic() {
         }
     }
     let mut world = base;
-    damage_battle_vehicle_controls(&mut world, id, BattleVehicleControlHit::CrewStun).unwrap();
+    damage_battle_vehicle_controls(&mut world, id, VehicleControlHit::CrewStun).unwrap();
     jam_battle_vehicle_turret(&mut world, id).unwrap();
     begin_battle_turret_repair(&mut world, id, ObjectId(1)).unwrap();
     let injury = injure_battle_tactical_pilot(&mut world, id, 6, true).unwrap();

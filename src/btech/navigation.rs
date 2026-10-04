@@ -5,7 +5,7 @@ use serde::Serialize;
 
 /// Read-only navigation display and its requested local map center.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct BattleNavigationReport {
+pub struct NavigationReport {
     pub center: super::HexCoordinate,
     pub text: String,
 }
@@ -16,7 +16,7 @@ pub fn navigate(
     observer: ObjectId,
     pilot: ObjectId,
     arguments: &str,
-) -> Result<BattleNavigationReport> {
+) -> Result<NavigationReport> {
     let local = super::tactical_map::navigation_hex_map(world, observer, pilot, arguments)?;
     let observer = super::combat_operator::for_owner(world, observer, pilot)?
         .source
@@ -118,7 +118,7 @@ pub fn navigate(
             .to_owned(),
         );
     }
-    Ok(BattleNavigationReport {
+    Ok(NavigationReport {
         center,
         text: lines.join("\n"),
     })

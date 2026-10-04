@@ -11,7 +11,7 @@ pub(super) fn resolve_in_action(
     pilot: ObjectId,
     index: usize,
     request: super::shot::ShotTarget,
-) -> Result<super::firing::BattleFiringAction> {
+) -> Result<super::firing::FiringAction> {
     let unit = world
         .btech
         .vehicles()
@@ -20,8 +20,8 @@ pub(super) fn resolve_in_action(
     let weapon = unit.weapon_readiness(index)?.weapon;
     let target = request.unit;
     let coordinate = request.coordinate;
-    let mut observers = if unit.fire_mode(index)? == BattleFireMode::Rapid
-        || unit.ammunition_mode(index)? == BattleAmmunitionMode::Caseless
+    let mut observers = if unit.fire_mode(index)? == FireMode::Rapid
+        || unit.ammunition_mode(index)? == AmmunitionMode::Caseless
     {
         observer_messages(world, shooter, "shudders from an internal explosion!")
     } else {
@@ -53,9 +53,9 @@ pub(super) fn resolve_in_action(
             .is_some_and(|values| super::advantages::enabled(values, "Toughness"))
     };
     let cfg = &config.battletech;
-    let rules = BattleVehicleShotRules {
-        shot: BattleShotRules::configured(cfg, toughness(target)),
-        shooter_criticals: BattleVehicleImpactRules::configured(cfg, toughness(shooter)).criticals,
+    let rules = VehicleShotRules {
+        shot: ShotRules::configured(cfg, toughness(target)),
+        shooter_criticals: VehicleImpactRules::configured(cfg, toughness(shooter)).criticals,
     };
     let before = world.clone();
     let mut report = super::vehicle_fire::fire_vehicle_shot_in_action(
@@ -77,7 +77,7 @@ pub(super) fn resolve_in_action(
     if let Some(messages) =
         super::launch_feedback::failure_messages((&report).into(), observers, &mut failure_private)
     {
-        return Ok(super::firing::BattleFiringAction {
+        return Ok(super::firing::FiringAction {
             pilot_notices: failure_private,
             report: report.into(),
             messages,
@@ -121,7 +121,7 @@ pub(super) fn resolve_in_action(
             messages.extend(observer_messages(&before, notice.unit, &notice.text));
         }
     }
-    Ok(super::firing::BattleFiringAction {
+    Ok(super::firing::FiringAction {
         pilot_notices: private,
         report: report.into(),
         messages,

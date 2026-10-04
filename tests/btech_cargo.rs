@@ -34,7 +34,7 @@ async fn fixture(source: &str) -> (tempfile::TempDir, Config, World, ObjectId, O
         &mut world,
         ObjectId(1),
         map,
-        Some(BattleCargoTransferPoint {
+        Some(CargoTransferPoint {
             x: 0,
             y: 0,
             reveal_hint: false,
@@ -42,10 +42,10 @@ async fn fixture(source: &str) -> (tempfile::TempDir, Config, World, ObjectId, O
     )
     .unwrap();
     let unit = world.create(&config, "Carrier".into(), Kind::Thing);
-    let mut template = BattleUnitTemplate::parse("test", source).unwrap();
+    let mut template = UnitTemplate::parse("test", source).unwrap();
     let attributes = match &mut template {
-        BattleUnitTemplate::Mech(unit) => &mut unit.attributes,
-        BattleUnitTemplate::Vehicle(unit) => &mut unit.attributes,
+        UnitTemplate::Mech(unit) => &mut unit.attributes,
+        UnitTemplate::Vehicle(unit) => &mut unit.attributes,
     };
     let flags = attributes.entry("specials".into()).or_default();
     if flags == "-" {
@@ -105,7 +105,7 @@ async fn all_chassis_share_load_unload_gates_and_restart() {
             &mut world,
             unit,
             ObjectId(1),
-            BattleFallRules::configured(&config),
+            FallRules::configured(&config),
         )
         .unwrap();
         world
@@ -118,7 +118,7 @@ async fn all_chassis_share_load_unload_gates_and_restart() {
             &mut world,
             ObjectId(1),
             map,
-            Some(BattleCargoTransferPoint {
+            Some(CargoTransferPoint {
                 x: 2,
                 y: 1,
                 reveal_hint: false,
@@ -212,7 +212,7 @@ async fn cargo_authority_and_location_gates_match_the_operation() {
         &mut world,
         ObjectId(1),
         map,
-        Some(BattleCargoTransferPoint {
+        Some(CargoTransferPoint {
             x: 2,
             y: 1,
             reveal_hint: false,
@@ -312,12 +312,12 @@ async fn cargo_patterns_select_multiple_part_types() {
         transfer_battle_cargo(&mut world, &config, ObjectId(1), true, "IS.MediumLaser", 1).unwrap();
     assert_eq!(
         (rows.len(), rows[0].part_id, rows[0].quantity),
-        (1, BattleWeapon::MediumLaser.part_id(), 1)
+        (1, Weapon::MediumLaser.part_id(), 1)
     );
     let rows =
         transfer_battle_cargo(&mut world, &config, ObjectId(1), true, "MediumLas?r", 20).unwrap();
     assert_eq!(rows.iter().map(|row| row.quantity).sum::<i32>(), 4);
-    assert_eq!(count(&world, unit, BattleWeapon::MediumLaser.part_id()), 5);
+    assert_eq!(count(&world, unit, Weapon::MediumLaser.part_id()), 5);
     assert!(
         battle_cargo_manifest(&world, &config, ObjectId(1), false, "Gold\\*")
             .unwrap()
@@ -376,7 +376,7 @@ async fn moving_load_is_rejected_and_loading_clamps_pending_throttle() {
 async fn cargo_abbreviations_resolve_before_stock() {
     for source in templates() {
         let (_dir, config, mut world, map, unit) = fixture(&source).await;
-        let laser = BattleWeapon::MediumLaser.part_id();
+        let laser = Weapon::MediumLaser.part_id();
         set_battle_inventory_quantity(&mut world, ObjectId(1), map, laser, 3).unwrap();
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         let output = support::run_text(&scripts, &config, ObjectId(1), 1, "loadcargo ml 1");
@@ -603,14 +603,13 @@ async fn vtol_auxiliary_tanks_share_capacity_mass_and_saved_surplus_fuel() {
     let mut aircraft = loaded.btech.vehicles()[&unit].clone();
     assert_eq!(
         aircraft.consume_vtol_fuel(21.5, 1, false, false).unwrap(),
-        BattleVtolFuelUse::Consumed {
+        VtolFuelUse::Consumed {
             amount: 1,
             remaining: 8999
         }
     );
     assert_eq!(aircraft.vtol_fuel().unwrap().excess_mass(), 4999);
-    let replay: BattleVehicle =
-        serde_json::from_value(serde_json::to_value(&aircraft).unwrap()).unwrap();
+    let replay: Vehicle = serde_json::from_value(serde_json::to_value(&aircraft).unwrap()).unwrap();
     assert_eq!(replay, aircraft);
     set_battle_vtol_fuel(&mut world, &config, ObjectId(1), unit, 4000).unwrap();
     assert_eq!(
@@ -836,7 +835,7 @@ async fn operator_stock_commands_and_lua_share_catalogue_edits() {
             battle_inventory(&lua.world(), unit)
                 .unwrap()
                 .iter()
-                .any(|row| row.part_id == BattleWeapon::MediumLaser.part_id() && row.quantity == 2)
+                .any(|row| row.part_id == Weapon::MediumLaser.part_id() && row.quantity == 2)
         );
         assert!(
             lua.world().channels["MechEconInfo"].history[0]
@@ -901,7 +900,7 @@ async fn operator_stock_limits_and_batch_rollback_are_shared() {
                 &config,
                 actor,
                 unit,
-                BattleInventoryChange::Add {
+                InventoryChange::Add {
                     pattern: pattern.into(),
                     quantity
                 }
@@ -959,7 +958,7 @@ async fn operator_stock_limits_and_batch_rollback_are_shared() {
         &config,
         ObjectId(1),
         map,
-        BattleInventoryChange::Add {
+        InventoryChange::Add {
             pattern: "IS.*Laser".into(),
             quantity: 1,
         },
@@ -986,7 +985,7 @@ async fn scripted_add_stores_uses_first_match_signed_counts_and_atomic_logging()
         let rows = battle_inventory(&scripts.world(), unit).unwrap().to_vec();
         let lasers: Vec<_> = rows
             .iter()
-            .filter(|row| row.part_id == BattleWeapon::MediumLaser.part_id())
+            .filter(|row| row.part_id == Weapon::MediumLaser.part_id())
             .collect();
         assert_eq!(lasers.len(), 1);
         assert_eq!(lasers[0].quantity, 50000);

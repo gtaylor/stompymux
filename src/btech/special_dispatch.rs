@@ -1,5 +1,5 @@
 //! Object-scoped BattleTech help and restricted-command admission before general lookup.
-use super::{BattleCommandClass as Class, BattleSpecialType as Special};
+use super::{CommandClass as Class, SpecialType as Special};
 use crate::{CommandAction, CommandContext, CommandInput, CommandReport, Flag, Kind, ObjectId};
 use anyhow::{Context, Result};
 

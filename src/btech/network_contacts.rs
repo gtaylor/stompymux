@@ -1,9 +1,9 @@
 //! Peer sightings folded into the ordinary contact display and the autopilot's tactical
 //! picture: what the active command network sees, and the shared aiming range it supplies.
-use super::contacts::{BattleContactFacts, ContactReader};
+use super::contacts::{ContactFacts, ContactReader};
 use super::network_unit::unit as network_unit;
-use super::{BattleNetworkRange, BattlePower};
-use crate::{BattleCommandNetwork, ObjectId, World};
+use super::{NetworkRange, Power};
+use crate::{CommandNetwork, ObjectId, World};
 use anyhow::{Context, Result};
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -13,7 +13,7 @@ pub(super) struct NetworkSightings<'w> {
     world: &'w World,
     observer: ObjectId,
     /// Active peers per family; the first entry decides the shared aiming distance.
-    families: Vec<(BattleCommandNetwork, Vec<ObjectId>)>,
+    families: Vec<(CommandNetwork, Vec<ObjectId>)>,
     readers: BTreeMap<ObjectId, ContactReader<'w>>,
 }
 
@@ -23,13 +23,13 @@ impl<'w> NetworkSightings<'w> {
     pub(super) fn new(world: &'w World, observer: ObjectId) -> Result<Option<Self>> {
         let unit = network_unit(world, observer)?;
         if (unit.c3_network.is_none() && unit.c3i_network.is_none())
-            || unit.power() != BattlePower::Running
+            || unit.power() != Power::Running
             || super::electronic_field(world, observer)?.blocks_outgoing_guidance()
         {
             return Ok(None);
         }
         let mut families = Vec::new();
-        for kind in [BattleCommandNetwork::C3, BattleCommandNetwork::C3i] {
+        for kind in [CommandNetwork::C3, CommandNetwork::C3i] {
             if super::command_network::members_for(world, observer, kind)?.is_empty() {
                 continue;
             }
@@ -81,7 +81,7 @@ impl<'w> NetworkSightings<'w> {
 
     /// Shared aiming distance for `target` from the priority family, given the observer's
     /// own physical distance.
-    pub(super) fn range(&self, target: ObjectId, physical: f64) -> Result<BattleNetworkRange> {
+    pub(super) fn range(&self, target: ObjectId, physical: f64) -> Result<NetworkRange> {
         let (kind, peers) = &self.families[0];
         super::network_range::select(
             self.world,
@@ -97,7 +97,7 @@ impl<'w> NetworkSightings<'w> {
 /// One contact in a networked unit's tactical picture.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) struct NetworkedContactFacts {
-    pub(crate) facts: BattleContactFacts,
+    pub(crate) facts: ContactFacts,
     /// Held only by network peers; the observer cannot lock or fire on it directly.
     pub(crate) relayed: bool,
     /// Shared aiming distance, when the observer has an active network.

@@ -1,5 +1,5 @@
 //! Restartable artillery flight and impact patterns, independent of weapon admission and damage application.
-use super::{BattleAmmunitionMode, BattleDice, BattleHitTable, BattleWeapon, HexCoordinate};
+use super::{AmmunitionMode, Dice, HexCoordinate, HitTable, Weapon};
 use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -7,21 +7,21 @@ use std::collections::BTreeMap;
 /// Mutually exclusive artillery payloads; launcher controls resolve ammunition into this value.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleArtilleryMode {
+pub enum ArtilleryMode {
     Standard,
     Cluster,
     Smoke,
     Mine,
 }
 
-impl BattleArtilleryMode {
+impl ArtilleryMode {
     /// Resolve a selected artillery ammunition type into its delayed arrival effect.
-    pub fn from_ammunition(ammunition: BattleAmmunitionMode) -> Result<Self> {
+    pub fn from_ammunition(ammunition: AmmunitionMode) -> Result<Self> {
         Ok(match ammunition {
-            BattleAmmunitionMode::Normal => Self::Standard,
-            BattleAmmunitionMode::Cluster => Self::Cluster,
-            BattleAmmunitionMode::Smoke => Self::Smoke,
-            BattleAmmunitionMode::Mine => Self::Mine,
+            AmmunitionMode::Normal => Self::Standard,
+            AmmunitionMode::Cluster => Self::Cluster,
+            AmmunitionMode::Smoke => Self::Smoke,
+            AmmunitionMode::Mine => Self::Mine,
             _ => anyhow::bail!("Ammunition is not an artillery payload"),
         })
     }
@@ -30,11 +30,11 @@ impl BattleArtilleryMode {
 /// Owned launch facts and a committed-second countdown. Impact randomness is drawn only on arrival.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(try_from = "FlightRecord")]
-pub struct BattleArtilleryFlight {
+pub struct ArtilleryFlight {
     origin: HexCoordinate,
     target: HexCoordinate,
-    weapon: BattleWeapon,
-    mode: BattleArtilleryMode,
+    weapon: Weapon,
+    mode: ArtilleryMode,
     hit: bool,
     remaining: u16,
 }
@@ -45,13 +45,13 @@ pub struct BattleArtilleryFlight {
 struct FlightRecord {
     origin: HexCoordinate,
     target: HexCoordinate,
-    weapon: BattleWeapon,
-    mode: BattleArtilleryMode,
+    weapon: Weapon,
+    mode: ArtilleryMode,
     hit: bool,
     remaining: u16,
 }
 
-impl TryFrom<FlightRecord> for BattleArtilleryFlight {
+impl TryFrom<FlightRecord> for ArtilleryFlight {
     type Error = anyhow::Error;
 
     fn try_from(record: FlightRecord) -> Result<Self> {
@@ -69,11 +69,11 @@ impl TryFrom<FlightRecord> for BattleArtilleryFlight {
 /// One cell's effect. The enclosing world action applies damage, decorations or minefield changes.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
-pub enum BattleArtilleryEffect {
+pub enum ArtilleryEffect {
     Damage {
         total: u16,
         packet_size: u8,
-        table: BattleHitTable,
+        table: HitTable,
     },
     Smoke {
         seconds: u16,
@@ -85,21 +85,21 @@ pub enum BattleArtilleryEffect {
 
 /// Ordered impact cell; direct distinguishes the center from ordinary fragments.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleArtilleryCell {
+pub struct ArtilleryCell {
     pub position: HexCoordinate,
     pub direct: bool,
-    pub effect: BattleArtilleryEffect,
+    pub effect: ArtilleryEffect,
 }
 
 /// An arrival plan, including the original aim point needed for friendly fire adjustment.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[must_use = "Apply impact effects and publish feedback in the same transaction as the flight and dice"]
-pub struct BattleArtilleryImpactPattern {
+pub struct ArtilleryImpactPattern {
     pub target: HexCoordinate,
     pub impact: HexCoordinate,
     /// A failed attack can scatter back into its original target hex and still permits adjustment.
     pub missed: bool,
-    pub cells: Vec<BattleArtilleryCell>,
+    pub cells: Vec<ArtilleryCell>,
 }
 
 /// Check coordinates against the supported maximum map dimensions before computing flight time.
@@ -111,13 +111,13 @@ fn validate_coordinate(position: HexCoordinate) -> Result<()> {
     Ok(())
 }
 
-impl BattleArtilleryFlight {
+impl ArtilleryFlight {
     /// Capture launch facts; rounds fly five hexes per second with a ten-second minimum.
     pub fn new(
         origin: HexCoordinate,
         target: HexCoordinate,
-        weapon: BattleWeapon,
-        mode: BattleArtilleryMode,
+        weapon: Weapon,
+        mode: ArtilleryMode,
         hit: bool,
     ) -> Result<Self> {
         validate_coordinate(origin)?;
@@ -138,8 +138,8 @@ impl BattleArtilleryFlight {
     pub(crate) fn from_saved(
         origin: HexCoordinate,
         target: HexCoordinate,
-        weapon: BattleWeapon,
-        mode: BattleArtilleryMode,
+        weapon: Weapon,
+        mode: ArtilleryMode,
         hit: bool,
         remaining: u16,
     ) -> Result<Self> {
@@ -155,12 +155,12 @@ impl BattleArtilleryFlight {
     }
 
     /// Weapon identity is retained through arrival and supplies catalogue damage.
-    pub fn weapon(&self) -> BattleWeapon {
+    pub fn weapon(&self) -> Weapon {
         self.weapon
     }
 
     /// Selected payload is fixed at launch, independent of later ammunition controls.
-    pub fn mode(&self) -> BattleArtilleryMode {
+    pub fn mode(&self) -> ArtilleryMode {
         self.mode
     }
 
@@ -185,8 +185,8 @@ impl BattleArtilleryFlight {
         &mut self,
         dimensions: (u16, u16),
         wind_speed: u16,
-        dice: &mut BattleDice,
-    ) -> Result<Option<BattleArtilleryImpactPattern>> {
+        dice: &mut Dice,
+    ) -> Result<Option<ArtilleryImpactPattern>> {
         ensure!(self.remaining > 0, "Artillery flight has already arrived");
         let (width, height) = dimensions;
         ensure!(
@@ -217,8 +217,8 @@ impl BattleArtilleryFlight {
         &self,
         dimensions: (u16, u16),
         wind_speed: u16,
-        dice: &mut BattleDice,
-    ) -> Result<BattleArtilleryImpactPattern> {
+        dice: &mut Dice,
+    ) -> Result<ArtilleryImpactPattern> {
         let mut impact = self.target;
         if !self.hit {
             let angle = f32::from(dice.die(360)? - 1) * std::f32::consts::PI / 180.0;
@@ -232,7 +232,7 @@ impl BattleArtilleryFlight {
                 (impact.y + (distance * angle.sin()) as i32).clamp(0, i32::from(dimensions.1) - 1);
         }
         let mut cells = Vec::new();
-        if self.mode == BattleArtilleryMode::Cluster {
+        if self.mode == ArtilleryMode::Cluster {
             let mut totals = BTreeMap::<(i32, i32), u16>::new();
             // The reference emits damage-count bomblets of two points each, despite its dam/2 comment.
             for _ in 0..self.weapon.profile().damage {
@@ -241,19 +241,19 @@ impl BattleArtilleryFlight {
                 *totals.entry((x, y)).or_default() += 2;
             }
             for ((x, y), total) in totals {
-                cells.push(BattleArtilleryCell {
+                cells.push(ArtilleryCell {
                     position: HexCoordinate { x, y },
                     direct: true,
-                    effect: BattleArtilleryEffect::Damage {
+                    effect: ArtilleryEffect::Damage {
                         total,
                         packet_size: 2,
-                        table: BattleHitTable::Punch,
+                        table: HitTable::Punch,
                     },
                 });
             }
         } else {
             let mut positions = vec![(impact, true, u16::from(self.weapon.profile().damage))];
-            if self.mode != BattleArtilleryMode::Mine {
+            if self.mode != ArtilleryMode::Mine {
                 positions.extend(
                     impact
                         .neighbors_within(dimensions.0, dimensions.1)
@@ -264,24 +264,24 @@ impl BattleArtilleryFlight {
             }
             for (position, direct, total) in positions {
                 let effect = match self.mode {
-                    BattleArtilleryMode::Smoke => BattleArtilleryEffect::Smoke {
+                    ArtilleryMode::Smoke => ArtilleryEffect::Smoke {
                         seconds: 89 + dice.die(61)?,
                     },
-                    BattleArtilleryMode::Mine => BattleArtilleryEffect::Mine { strength: total },
-                    _ => BattleArtilleryEffect::Damage {
+                    ArtilleryMode::Mine => ArtilleryEffect::Mine { strength: total },
+                    _ => ArtilleryEffect::Damage {
                         total,
                         packet_size: 5,
-                        table: BattleHitTable::Weapon,
+                        table: HitTable::Weapon,
                     },
                 };
-                cells.push(BattleArtilleryCell {
+                cells.push(ArtilleryCell {
                     position,
                     direct,
                     effect,
                 });
             }
         }
-        Ok(BattleArtilleryImpactPattern {
+        Ok(ArtilleryImpactPattern {
             target: self.target,
             impact,
             missed: !self.hit,
@@ -296,7 +296,7 @@ fn contains((width, height): (u16, u16), position: HexCoordinate) -> bool {
 }
 
 /// Sample the reference triangular scatter conditioned on map bounds, without an unbounded retry loop.
-fn cluster_axis(center: i32, size: u16, dice: &mut BattleDice) -> Result<i32> {
+fn cluster_axis(center: i32, size: u16, dice: &mut Dice) -> Result<i32> {
     let candidates: Vec<_> = (-2_i32..=2)
         .filter_map(|offset| {
             let value = center + offset;
@@ -329,7 +329,7 @@ mod tests {
     #[test]
     fn cluster_axis_weighting_survives_edge_conditioning() {
         for (center, size, expected) in [(2, 5, vec![1, 2, 3, 2, 1]), (0, 3, vec![3, 2, 1])] {
-            let mut dice = BattleDice::seeded([42; 32]);
+            let mut dice = Dice::seeded([42; 32]);
             let mut counts = vec![0_u32; usize::from(size)];
             let trials = 30_000;
             for _ in 0..trials {

@@ -1,13 +1,12 @@
 //! Detached, read-only BattleTech inspection records shared by host adapters.
 
 use super::{
-    BattleLoadout, BattlePart, BattlePartKind, BattleSection, BattleTemplate, BattleUnit,
-    CriticalLocation, InspectionArmor, InspectionCritical, InspectionPart, InspectionWeapon,
-    SectionDefinition, inspect_raw_template_armor, inspect_raw_template_weapons,
-    inspection_ammunition_modes, inspection_canonical_mech_internal,
-    inspection_compatible_template, inspection_compatible_vehicle_template,
-    inspection_configured_technology, inspection_configured_technology_attributes,
-    inspection_fire_modes, inspection_raw_part,
+    CriticalLocation, InspectionArmor, InspectionCritical, InspectionPart, InspectionWeapon, Mech,
+    MechLoadout, MechSection, MechTemplate, Part, PartKind, SectionDefinition,
+    inspect_raw_template_armor, inspect_raw_template_weapons, inspection_ammunition_modes,
+    inspection_canonical_mech_internal, inspection_compatible_template,
+    inspection_compatible_vehicle_template, inspection_configured_technology,
+    inspection_configured_technology_attributes, inspection_fire_modes, inspection_raw_part,
 };
 use anyhow::{Context, Result};
 use std::collections::BTreeMap;
@@ -31,9 +30,9 @@ pub fn inspection_battle_value(
 }
 
 /// Pristine BattleMech value after normalizing C weapon names.
-pub fn inspection_template_battle_value(template: &BattleTemplate) -> Result<super::BattleValue> {
+pub fn inspection_template_battle_value(template: &MechTemplate) -> Result<super::BattleValue> {
     let compatible = inspection_compatible_template(template);
-    let loadout = BattleLoadout::resolve(&compatible)?;
+    let loadout = MechLoadout::resolve(&compatible)?;
     let flag = |name: &str| {
         ["specials", "specials2"]
             .iter()
@@ -57,7 +56,7 @@ pub fn inspection_template_battle_value(template: &BattleTemplate) -> Result<sup
         .values()
         .map(|section| u32::from(section.armor) + u32::from(section.rear))
         .sum();
-    let structure: u32 = BattleSection::ALL
+    let structure: u32 = MechSection::ALL
         .into_iter()
         .map(|section| {
             inspection_canonical_mech_internal(template, section).unwrap_or_else(|| {
@@ -77,51 +76,48 @@ pub fn inspection_template_battle_value(template: &BattleTemplate) -> Result<sup
         } else {
             0.5
         };
-    let settings = super::BattleWeaponSettings::default();
+    let settings = super::WeaponSettings::default();
     let has_case_ii = |section| {
-        loadout.systems.iter().any(|part| {
-            part.system == super::BattleSystem::CaseIi && part.location.section == section
-        })
+        loadout
+            .systems
+            .iter()
+            .any(|part| part.system == super::System::CaseIi && part.location.section == section)
     };
     let ecm = loadout
         .systems
         .iter()
-        .filter(|part| part.system == super::BattleSystem::Ecm)
+        .filter(|part| part.system == super::System::Ecm)
         .count()
         >= if clan { 1 } else { 2 };
     let probe = loadout
         .systems
         .iter()
-        .filter(|part| part.system == super::BattleSystem::BeagleProbe)
+        .filter(|part| part.system == super::System::BeagleProbe)
         .count()
         >= if clan { 1 } else { 2 };
     defense += if ecm { 61.0 } else { 0.0 } + if probe { 10.0 } else { 0.0 };
     for mount in &loadout.weapons {
         if mount.weapon.is_ams()
-            || matches!(
-                mount.weapon,
-                super::BattleWeapon::APod | super::BattleWeapon::ClanAPod
-            )
+            || matches!(mount.weapon, super::Weapon::APod | super::Weapon::ClanAPod)
         {
             defense += settings.battle_value(mount.weapon) as f32;
         }
     }
     for bin in &loadout.ammunition {
         defense += match bin.weapon {
-            super::BattleWeapon::AntiMissileSystem => 11.0,
-            super::BattleWeapon::ClanAntiMissileSystem => 21.0,
+            super::Weapon::AntiMissileSystem => 11.0,
+            super::Weapon::ClanAntiMissileSystem => 21.0,
             _ => 0.0,
         };
         let vulnerable = matches!(
             bin.location.section,
-            BattleSection::CenterTorso
-                | BattleSection::Head
-                | BattleSection::LeftLeg
-                | BattleSection::RightLeg
+            MechSection::CenterTorso
+                | MechSection::Head
+                | MechSection::LeftLeg
+                | MechSection::RightLeg
         );
         let has_case = loadout.systems.iter().any(|part| {
-            part.system == super::BattleSystem::Case
-                && part.location.section == bin.location.section
+            part.system == super::System::Case && part.location.section == bin.location.section
         });
         if !has_case_ii(bin.location.section)
             && (vulnerable || flag("XLEngine_Tech") || flag("XXL_Tech") || !has_case)
@@ -132,10 +128,10 @@ pub fn inspection_template_battle_value(template: &BattleTemplate) -> Result<sup
     let vulnerable_core = |section| {
         matches!(
             section,
-            BattleSection::CenterTorso
-                | BattleSection::Head
-                | BattleSection::LeftLeg
-                | BattleSection::RightLeg
+            MechSection::CenterTorso
+                | MechSection::Head
+                | MechSection::LeftLeg
+                | MechSection::RightLeg
         )
     };
     let xl = flag("XLEngine_Tech") || flag("XXL_Tech");
@@ -156,8 +152,8 @@ pub fn inspection_template_battle_value(template: &BattleTemplate) -> Result<sup
             !has_case(section)
         } else {
             match section {
-                BattleSection::LeftArm => !has_case(BattleSection::LeftTorso),
-                BattleSection::RightArm => !has_case(BattleSection::RightTorso),
+                MechSection::LeftArm => !has_case(MechSection::LeftTorso),
+                MechSection::RightArm => !has_case(MechSection::RightTorso),
                 _ => false,
             }
         };
@@ -166,7 +162,7 @@ pub fn inspection_template_battle_value(template: &BattleTemplate) -> Result<sup
                 .criticals
                 .values()
                 .filter(|critical| {
-                    super::BattleWeapon::parse(&critical.equipment)
+                    super::Weapon::parse(&critical.equipment)
                         .is_ok_and(|weapon| weapon.weapon_explosion_damage() > 0)
                 })
                 .count() as f32;
@@ -208,15 +204,15 @@ pub fn inspection_template_battle_value(template: &BattleTemplate) -> Result<sup
 
 /// Pristine vehicle value after normalizing C weapon names.
 pub fn inspection_vehicle_template_battle_value(
-    template: &super::BattleVehicleTemplate,
+    template: &super::VehicleTemplate,
 ) -> Result<super::BattleValue> {
-    super::BattleVehicle::new(inspection_compatible_vehicle_template(template))?.battle_value()
+    super::Vehicle::new(inspection_compatible_vehicle_template(template))?.battle_value()
 }
 
 /// Stable C-facing section identity for a supported BattleMech.
-pub fn inspection_section_code(template: &BattleTemplate, section: BattleSection) -> Result<i32> {
-    use BattleSection::*;
-    let quad = template.chassis()? == super::BattleMechChassis::Quad;
+pub fn inspection_section_code(template: &MechTemplate, section: MechSection) -> Result<i32> {
+    use MechSection::*;
+    let quad = template.chassis()? == super::MechChassis::Quad;
     Ok(match (quad, section) {
         (true, LeftArm) => 0,
         (true, RightArm) => 1,
@@ -234,18 +230,15 @@ pub fn inspection_section_code(template: &BattleTemplate, section: BattleSection
 }
 
 /// Decode a stable C-facing section identity for a supported BattleMech.
-pub fn inspection_section(template: &BattleTemplate, code: i32) -> Result<BattleSection> {
-    BattleSection::ALL
+pub fn inspection_section(template: &MechTemplate, code: i32) -> Result<MechSection> {
+    MechSection::ALL
         .into_iter()
         .find(|section| inspection_section_code(template, *section).ok() == Some(code))
         .context("section is not valid for this unit")
 }
 
 /// Inspect current live protection, aggregating when `section` is absent.
-pub fn inspect_unit_armor(
-    unit: &BattleUnit,
-    section: Option<BattleSection>,
-) -> Result<InspectionArmor> {
+pub fn inspect_unit_armor(unit: &Mech, section: Option<MechSection>) -> Result<InspectionArmor> {
     let mut row = InspectionArmor {
         section: section
             .map(|value| inspection_section_code(unit.definition(), value))
@@ -254,7 +247,7 @@ pub fn inspect_unit_armor(
         internal: (0, 0),
         rear_armor: (0, 0),
     };
-    for current_section in BattleSection::ALL {
+    for current_section in MechSection::ALL {
         if section.is_some_and(|selected| selected != current_section) {
             continue;
         }
@@ -279,8 +272,8 @@ pub fn inspect_unit_armor(
 
 /// Inspect pristine template protection.
 pub fn inspect_template_armor(
-    template: &BattleTemplate,
-    section: Option<BattleSection>,
+    template: &MechTemplate,
+    section: Option<MechSection>,
 ) -> Result<InspectionArmor> {
     let mut row = InspectionArmor {
         section: section
@@ -290,7 +283,7 @@ pub fn inspect_template_armor(
         internal: (0, 0),
         rear_armor: (0, 0),
     };
-    for current_section in BattleSection::ALL {
+    for current_section in MechSection::ALL {
         if section.is_some_and(|selected| selected != current_section) {
             continue;
         }
@@ -311,12 +304,12 @@ pub fn inspect_template_armor(
 }
 
 fn critical_rows(
-    template: &BattleTemplate,
-    live: Option<&BattleUnit>,
-    section: BattleSection,
+    template: &MechTemplate,
+    live: Option<&Mech>,
+    section: MechSection,
 ) -> Result<Vec<InspectionCritical>> {
     let compatible = inspection_compatible_template(template);
-    let loadout = BattleLoadout::resolve(&compatible).ok();
+    let loadout = MechLoadout::resolve(&compatible).ok();
     let definition = &template.sections[&section];
     let section_code = inspection_section_code(template, section)?;
     let mut rows = Vec::with_capacity(12);
@@ -353,7 +346,7 @@ fn critical_rows(
             })
         } else if system.is_some() {
             critical
-                .and_then(|raw| BattlePart::parse(&raw.equipment).ok())
+                .and_then(|raw| Part::parse(&raw.equipment).ok())
                 .map(|part| InspectionPart { id: part.part_id })
         } else {
             raw_identity.map(|value| value.0)
@@ -369,9 +362,8 @@ fn critical_rows(
                 raw_identity
                     .filter(|(_, _, payload)| {
                         *payload
-                            && part.is_some_and(|part| {
-                                BattlePart::ammunition_weapon_id(part.id).is_some()
-                            })
+                            && part
+                                .is_some_and(|part| Part::ammunition_weapon_id(part.id).is_some())
                     })
                     .map(|_| {
                         let capacity = critical
@@ -412,10 +404,10 @@ fn critical_rows(
                 "weapon"
             } else if ammunition.is_some() || rounds.is_some() {
                 "ammunition"
-            } else if let Some(part) = part.and_then(|p| BattlePart::from_id(p.id)) {
+            } else if let Some(part) = part.and_then(|p| Part::from_id(p.id)) {
                 match part.kind {
-                    BattlePartKind::Bomb => "bomb",
-                    BattlePartKind::Commodity => "cargo",
+                    PartKind::Bomb => "bomb",
+                    PartKind::Commodity => "cargo",
                     _ => "special",
                 }
             } else {
@@ -442,26 +434,23 @@ fn critical_rows(
     Ok(rows)
 }
 
-fn live_fire_mode(mode: super::BattleFireMode) -> Option<i32> {
+fn live_fire_mode(mode: super::FireMode) -> Option<i32> {
     Some(match mode {
-        super::BattleFireMode::Normal => return None,
-        super::BattleFireMode::Heat => 65536,
-        super::BattleFireMode::Hotload => 64,
-        super::BattleFireMode::Ultra => 1024,
-        super::BattleFireMode::Rapid => 2048,
-        super::BattleFireMode::Rotary2 => 8192,
-        super::BattleFireMode::Rotary3 => 2097152,
-        super::BattleFireMode::Rotary4 => 16384,
-        super::BattleFireMode::Rotary5 => 4194304,
-        super::BattleFireMode::Rotary6 => 32768,
-        super::BattleFireMode::Gatling => 4096,
+        super::FireMode::Normal => return None,
+        super::FireMode::Heat => 65536,
+        super::FireMode::Hotload => 64,
+        super::FireMode::Ultra => 1024,
+        super::FireMode::Rapid => 2048,
+        super::FireMode::Rotary2 => 8192,
+        super::FireMode::Rotary3 => 2097152,
+        super::FireMode::Rotary4 => 16384,
+        super::FireMode::Rotary5 => 4194304,
+        super::FireMode::Rotary6 => 32768,
+        super::FireMode::Gatling => 4096,
     })
 }
 /// Live selection bits; MML long-range special rounds report both the round and family bits.
-fn live_ammunition_mode(
-    mode: super::BattleAmmunitionMode,
-    weapon: super::BattleWeapon,
-) -> Vec<i32> {
+fn live_ammunition_mode(mode: super::AmmunitionMode, weapon: super::Weapon) -> Vec<i32> {
     let mut bits: Vec<i32> = live_munition_bit(mode.munition(), weapon)
         .into_iter()
         .collect();
@@ -472,72 +461,66 @@ fn live_ammunition_mode(
 }
 
 /// The single reference bit for a round, excluding the MML family bit.
-fn live_munition_bit(
-    mode: super::BattleAmmunitionMode,
-    weapon: super::BattleWeapon,
-) -> Option<i32> {
+fn live_munition_bit(mode: super::AmmunitionMode, weapon: super::Weapon) -> Option<i32> {
     Some(match mode {
-        super::BattleAmmunitionMode::Normal
-        | super::BattleAmmunitionMode::MmlLrm
-        | super::BattleAmmunitionMode::MmlLrmArtemis
-        | super::BattleAmmunitionMode::MmlLrmNarc
-        | super::BattleAmmunitionMode::MmlLrmSwarm
-        | super::BattleAmmunitionMode::MmlLrmSwarm1
-        | super::BattleAmmunitionMode::MmlLrmSemiGuided
-        | super::BattleAmmunitionMode::MmlLrmStinger => return None,
-        super::BattleAmmunitionMode::Cluster => {
+        super::AmmunitionMode::Normal
+        | super::AmmunitionMode::MmlLrm
+        | super::AmmunitionMode::MmlLrmArtemis
+        | super::AmmunitionMode::MmlLrmNarc
+        | super::AmmunitionMode::MmlLrmSwarm
+        | super::AmmunitionMode::MmlLrmSwarm1
+        | super::AmmunitionMode::MmlLrmSemiGuided
+        | super::AmmunitionMode::MmlLrmStinger => return None,
+        super::AmmunitionMode::Cluster => {
             if weapon.is_lbx() {
                 1
             } else {
                 8
             }
         }
-        super::BattleAmmunitionMode::Smoke => 32,
-        super::BattleAmmunitionMode::Mine => 16,
-        super::BattleAmmunitionMode::Artemis => 2,
-        super::BattleAmmunitionMode::Narc => 4,
-        super::BattleAmmunitionMode::SemiGuided => 524288,
-        super::BattleAmmunitionMode::Swarm => 128,
-        super::BattleAmmunitionMode::Swarm1 => 256,
-        super::BattleAmmunitionMode::Stinger => 131072,
-        super::BattleAmmunitionMode::ExtendedRange => 1048576,
-        super::BattleAmmunitionMode::HighExplosive => 2097152,
-        super::BattleAmmunitionMode::INarcExplosive => 512,
-        super::BattleAmmunitionMode::INarcHaywire => 1024,
-        super::BattleAmmunitionMode::INarcEcm => 2048,
-        super::BattleAmmunitionMode::INarcNemesis => 4096,
-        super::BattleAmmunitionMode::Precision => 65536,
-        super::BattleAmmunitionMode::Flechette => 16384,
-        super::BattleAmmunitionMode::ArmorPiercing => 8192,
-        super::BattleAmmunitionMode::Caseless => 262144,
-        super::BattleAmmunitionMode::Incendiary => 32768,
-        super::BattleAmmunitionMode::Inferno => 64,
-        super::BattleAmmunitionMode::ThunderAugmented => 8388608,
-        super::BattleAmmunitionMode::ThunderVibrabomb => 16777216,
-        super::BattleAmmunitionMode::ThunderActive => 33554432,
+        super::AmmunitionMode::Smoke => 32,
+        super::AmmunitionMode::Mine => 16,
+        super::AmmunitionMode::Artemis => 2,
+        super::AmmunitionMode::Narc => 4,
+        super::AmmunitionMode::SemiGuided => 524288,
+        super::AmmunitionMode::Swarm => 128,
+        super::AmmunitionMode::Swarm1 => 256,
+        super::AmmunitionMode::Stinger => 131072,
+        super::AmmunitionMode::ExtendedRange => 1048576,
+        super::AmmunitionMode::HighExplosive => 2097152,
+        super::AmmunitionMode::INarcExplosive => 512,
+        super::AmmunitionMode::INarcHaywire => 1024,
+        super::AmmunitionMode::INarcEcm => 2048,
+        super::AmmunitionMode::INarcNemesis => 4096,
+        super::AmmunitionMode::Precision => 65536,
+        super::AmmunitionMode::Flechette => 16384,
+        super::AmmunitionMode::ArmorPiercing => 8192,
+        super::AmmunitionMode::Caseless => 262144,
+        super::AmmunitionMode::Incendiary => 32768,
+        super::AmmunitionMode::Inferno => 64,
+        super::AmmunitionMode::ThunderAugmented => 8388608,
+        super::AmmunitionMode::ThunderVibrabomb => 16777216,
+        super::AmmunitionMode::ThunderActive => 33554432,
     })
 }
 
 /// Inspect all twelve slots of a pristine template section.
 pub fn inspect_template_criticals(
-    template: &BattleTemplate,
-    section: BattleSection,
+    template: &MechTemplate,
+    section: MechSection,
 ) -> Result<Vec<InspectionCritical>> {
     critical_rows(template, None, section)
 }
 
 /// Inspect all twelve slots of a live unit section.
 pub fn inspect_unit_criticals(
-    unit: &BattleUnit,
-    section: BattleSection,
+    unit: &Mech,
+    section: MechSection,
 ) -> Result<Vec<InspectionCritical>> {
     critical_rows(unit.definition(), Some(unit), section)
 }
 
-fn weapon_rows(
-    template: &BattleTemplate,
-    loadout: &BattleLoadout,
-) -> Result<Vec<InspectionWeapon>> {
+fn weapon_rows(template: &MechTemplate, loadout: &MechLoadout) -> Result<Vec<InspectionWeapon>> {
     loadout
         .weapons
         .iter()
@@ -564,9 +547,9 @@ fn weapon_rows(
 }
 
 /// Inspect pristine template weapons in game-number order.
-pub fn inspect_template_weapons(template: &BattleTemplate) -> Result<Vec<InspectionWeapon>> {
+pub fn inspect_template_weapons(template: &MechTemplate) -> Result<Vec<InspectionWeapon>> {
     let compatible = inspection_compatible_template(template);
-    if let Ok(loadout) = BattleLoadout::resolve(&compatible) {
+    if let Ok(loadout) = MechLoadout::resolve(&compatible) {
         return weapon_rows(template, &loadout);
     }
     let mut sections: Vec<_> = template.sections.keys().copied().collect();
@@ -579,7 +562,7 @@ pub fn inspect_template_weapons(template: &BattleTemplate) -> Result<Vec<Inspect
             if consumed.contains(&slot) {
                 continue;
             }
-            let Ok(weapon) = super::BattleWeapon::parse(&raw.equipment) else {
+            let Ok(weapon) = super::Weapon::parse(&raw.equipment) else {
                 continue;
             };
             let slots = weapon.profile().critical_slots;
@@ -609,7 +592,7 @@ pub fn inspect_template_weapons(template: &BattleTemplate) -> Result<Vec<Inspect
 }
 
 /// Inspect live mounted weapons in game-number order.
-pub fn inspect_unit_weapons(unit: &BattleUnit) -> Result<Vec<InspectionWeapon>> {
+pub fn inspect_unit_weapons(unit: &Mech) -> Result<Vec<InspectionWeapon>> {
     let mut rows = weapon_rows(unit.definition(), &unit.loadout()?)?;
     for row in &mut rows {
         row.recycle = unit.weapon_recycle().get(&row.number).copied().unwrap_or(0);
@@ -620,7 +603,7 @@ pub fn inspect_unit_weapons(unit: &BattleUnit) -> Result<Vec<InspectionWeapon>> 
 
 /// Count installed parts in catalogue identity order.
 pub fn inspect_template_inventory(
-    template: &BattleTemplate,
+    template: &MechTemplate,
     payload_only: bool,
 ) -> Result<Vec<(InspectionPart, u32)>> {
     inventory_rows(template, None, payload_only)
@@ -671,19 +654,19 @@ pub fn inspect_raw_template_inventory(
 
 /// Count surviving live parts in catalogue identity order.
 pub fn inspect_unit_inventory(
-    unit: &BattleUnit,
+    unit: &Mech,
     payload_only: bool,
 ) -> Result<Vec<(InspectionPart, u32)>> {
     inventory_rows(unit.definition(), Some(unit), payload_only)
 }
 
 fn inventory_rows(
-    template: &BattleTemplate,
-    live: Option<&BattleUnit>,
+    template: &MechTemplate,
+    live: Option<&Mech>,
     payload_only: bool,
 ) -> Result<Vec<(InspectionPart, u32)>> {
     let mut quantities = BTreeMap::<InspectionPart, u32>::new();
-    for section in BattleSection::ALL {
+    for section in MechSection::ALL {
         let mut previous = None;
         for slot in 0..12_u8 {
             let location = CriticalLocation { section, slot };
@@ -716,7 +699,7 @@ fn inventory_rows(
 }
 
 /// Ordered TIC membership without requiring cockpit authority.
-pub fn inspect_unit_tic(unit: &BattleUnit, group: usize) -> Result<Vec<usize>> {
+pub fn inspect_unit_tic(unit: &Mech, group: usize) -> Result<Vec<usize>> {
     unit.tics
         .0
         .get(group)
@@ -725,7 +708,7 @@ pub fn inspect_unit_tic(unit: &BattleUnit, group: usize) -> Result<Vec<usize>> {
 }
 
 /// Current section material condition.
-pub fn inspect_section_condition(unit: &BattleUnit, section: BattleSection) -> &'static str {
+pub fn inspect_section_condition(unit: &Mech, section: MechSection) -> &'static str {
     if unit
         .sections()
         .get(&section)
@@ -771,7 +754,7 @@ fn raw_normalized_jump_speed(
 }
 
 fn raw_weapon_heat_and_value(part_id: i32) -> Option<(i32, i32)> {
-    if let Some(weapon) = super::BattleWeapon::from_part_id(part_id) {
+    if let Some(weapon) = super::Weapon::from_part_id(part_id) {
         return Some((
             i32::from(weapon.profile().heat),
             i32::from(weapon.battle_value()),
@@ -915,7 +898,7 @@ fn compose_raw_template(
 }
 
 /// Compose the current physical Mech definition with its class-neutral administrative overlay.
-pub fn compose_unit_raw_inspection(unit: &BattleUnit) -> super::RawTemplate {
+pub fn compose_unit_raw_inspection(unit: &Mech) -> super::RawTemplate {
     let base = super::RawTemplate::from(unit.definition());
     let overlay = unit.administrative_raw();
     let class = overlay.map_or(base.class, |raw| raw.class);
@@ -924,7 +907,7 @@ pub fn compose_unit_raw_inspection(unit: &BattleUnit) -> super::RawTemplate {
         base,
         class,
         movement,
-        BattleSection::ALL
+        MechSection::ALL
             .into_iter()
             .enumerate()
             .map(|(ordinal, section)| (ordinal, unit.definition().sections[&section].clone())),
@@ -933,18 +916,18 @@ pub fn compose_unit_raw_inspection(unit: &BattleUnit) -> super::RawTemplate {
 }
 
 /// Compose the current physical vehicle definition with its class-neutral administrative overlay.
-pub fn compose_vehicle_raw_inspection(unit: &super::BattleVehicle) -> super::RawTemplate {
+pub fn compose_vehicle_raw_inspection(unit: &super::Vehicle) -> super::RawTemplate {
     let base = super::RawTemplate::from(unit.definition());
     let overlay = unit.administrative_raw();
     let class = overlay.map_or(base.class, |raw| raw.class);
     let movement = overlay.map_or(base.movement, |raw| raw.movement);
-    const PHYSICAL: [super::BattleVehicleSection; 6] = [
-        super::BattleVehicleSection::Left,
-        super::BattleVehicleSection::Right,
-        super::BattleVehicleSection::Front,
-        super::BattleVehicleSection::Rear,
-        super::BattleVehicleSection::Turret,
-        super::BattleVehicleSection::Rotor,
+    const PHYSICAL: [super::VehicleSection; 6] = [
+        super::VehicleSection::Left,
+        super::VehicleSection::Right,
+        super::VehicleSection::Front,
+        super::VehicleSection::Rear,
+        super::VehicleSection::Turret,
+        super::VehicleSection::Rotor,
     ];
     compose_raw_template(
         base,
@@ -996,7 +979,7 @@ fn extra_armor(
 
 /// Inspect live protection through the administrative class's physical ordinals.
 pub fn inspect_composed_unit_armor(
-    unit: &BattleUnit,
+    unit: &Mech,
     selected: Option<super::RawSectionCode>,
 ) -> Result<InspectionArmor> {
     let raw = compose_unit_raw_inspection(unit);
@@ -1014,7 +997,7 @@ pub fn inspect_composed_unit_armor(
         if selected.is_some_and(|selected| selected != code) {
             continue;
         }
-        if let Some(section) = BattleSection::ALL.get(ordinal).copied() {
+        if let Some(section) = MechSection::ALL.get(ordinal).copied() {
             let mut row = inspect_unit_armor(unit, Some(section))?;
             row.section = Some(code as i32);
             accumulate_armor(&mut result, row);
@@ -1028,18 +1011,18 @@ pub fn inspect_composed_unit_armor(
     Ok(result)
 }
 
-const VEHICLE_PHYSICAL: [super::BattleVehicleSection; 6] = [
-    super::BattleVehicleSection::Left,
-    super::BattleVehicleSection::Right,
-    super::BattleVehicleSection::Front,
-    super::BattleVehicleSection::Rear,
-    super::BattleVehicleSection::Turret,
-    super::BattleVehicleSection::Rotor,
+const VEHICLE_PHYSICAL: [super::VehicleSection; 6] = [
+    super::VehicleSection::Left,
+    super::VehicleSection::Right,
+    super::VehicleSection::Front,
+    super::VehicleSection::Rear,
+    super::VehicleSection::Turret,
+    super::VehicleSection::Rotor,
 ];
 
 /// Inspect live vehicle protection through the administrative class's physical ordinals.
 pub fn inspect_composed_vehicle_armor(
-    unit: &super::BattleVehicle,
+    unit: &super::Vehicle,
     selected: Option<super::RawSectionCode>,
 ) -> Result<InspectionArmor> {
     let raw = compose_vehicle_raw_inspection(unit);
@@ -1076,26 +1059,26 @@ pub fn inspect_composed_vehicle_armor(
 }
 
 /// Stable C-facing section identity for a ground vehicle or VTOL.
-pub fn inspection_vehicle_section_code(section: super::BattleVehicleSection) -> i32 {
+pub fn inspection_vehicle_section_code(section: super::VehicleSection) -> i32 {
     match section {
-        super::BattleVehicleSection::Left => 20,
-        super::BattleVehicleSection::Right => 21,
-        super::BattleVehicleSection::Front => 22,
-        super::BattleVehicleSection::Rear => 23,
-        super::BattleVehicleSection::Turret => 24,
-        super::BattleVehicleSection::Rotor => 25,
+        super::VehicleSection::Left => 20,
+        super::VehicleSection::Right => 21,
+        super::VehicleSection::Front => 22,
+        super::VehicleSection::Rear => 23,
+        super::VehicleSection::Turret => 24,
+        super::VehicleSection::Rotor => 25,
     }
 }
 
 /// Decode a C-facing vehicle section identity.
-pub fn inspection_vehicle_section(code: i32) -> Result<super::BattleVehicleSection> {
+pub fn inspection_vehicle_section(code: i32) -> Result<super::VehicleSection> {
     [
-        super::BattleVehicleSection::Left,
-        super::BattleVehicleSection::Right,
-        super::BattleVehicleSection::Front,
-        super::BattleVehicleSection::Rear,
-        super::BattleVehicleSection::Turret,
-        super::BattleVehicleSection::Rotor,
+        super::VehicleSection::Left,
+        super::VehicleSection::Right,
+        super::VehicleSection::Front,
+        super::VehicleSection::Rear,
+        super::VehicleSection::Turret,
+        super::VehicleSection::Rotor,
     ]
     .into_iter()
     .find(|section| inspection_vehicle_section_code(*section) == code)
@@ -1106,13 +1089,13 @@ pub fn inspection_vehicle_section(code: i32) -> Result<super::BattleVehicleSecti
 /// Ground vehicles expose five faces and VTOLs expose all six even when an
 /// omitted template face contains only the native zero/default state.
 pub fn inspection_vehicle_section_for(
-    template: &super::BattleVehicleTemplate,
+    template: &super::VehicleTemplate,
     code: i32,
-) -> Result<super::BattleVehicleSection> {
+) -> Result<super::VehicleSection> {
     let section = inspection_vehicle_section(code)?;
     anyhow::ensure!(
-        section != super::BattleVehicleSection::Rotor
-            || template.movement == super::BattleVehicleMovement::Vtol,
+        section != super::VehicleSection::Rotor
+            || template.movement == super::VehicleMovement::Vtol,
         "section is not valid for this unit"
     );
     Ok(section)
@@ -1120,8 +1103,8 @@ pub fn inspection_vehicle_section_for(
 
 /// Inspect current vehicle protection.
 pub fn inspect_vehicle_armor(
-    unit: &super::BattleVehicle,
-    section: Option<super::BattleVehicleSection>,
+    unit: &super::Vehicle,
+    section: Option<super::VehicleSection>,
 ) -> Result<InspectionArmor> {
     let mut row = InspectionArmor {
         section: section.map(inspection_vehicle_section_code),
@@ -1146,8 +1129,8 @@ pub fn inspect_vehicle_armor(
 
 /// Inspect pristine vehicle or VTOL protection.
 pub fn inspect_vehicle_template_armor(
-    template: &super::BattleVehicleTemplate,
-    section: Option<super::BattleVehicleSection>,
+    template: &super::VehicleTemplate,
+    section: Option<super::VehicleSection>,
 ) -> Result<InspectionArmor> {
     let mut row = InspectionArmor {
         section: section.map(inspection_vehicle_section_code),
@@ -1171,10 +1154,10 @@ pub fn inspect_vehicle_template_armor(
 
 /// Inspect pristine vehicle weapons in game-number order.
 pub fn inspect_vehicle_template_weapons(
-    template: &super::BattleVehicleTemplate,
+    template: &super::VehicleTemplate,
 ) -> Result<Vec<InspectionWeapon>> {
     let compatible = inspection_compatible_vehicle_template(template);
-    let loadout = super::BattleVehicleLoadout::resolve(&compatible)?;
+    let loadout = super::VehicleLoadout::resolve(&compatible)?;
     loadout
         .weapons
         .iter()
@@ -1199,24 +1182,24 @@ pub fn inspect_vehicle_template_weapons(
 
 /// Inspect pristine vehicle critical slots through an isolated constructed vehicle.
 pub fn inspect_vehicle_template_criticals(
-    template: &super::BattleVehicleTemplate,
-    section: super::BattleVehicleSection,
+    template: &super::VehicleTemplate,
+    section: super::VehicleSection,
 ) -> Result<Vec<InspectionCritical>> {
-    let unit = super::BattleVehicle::new(inspection_compatible_vehicle_template(template))?;
+    let unit = super::Vehicle::new(inspection_compatible_vehicle_template(template))?;
     inspect_vehicle_criticals(&unit, section)
 }
 
 /// Count pristine installed vehicle parts.
 pub fn inspect_vehicle_template_inventory(
-    template: &super::BattleVehicleTemplate,
+    template: &super::VehicleTemplate,
     payload_only: bool,
 ) -> Result<Vec<(InspectionPart, u32)>> {
-    let unit = super::BattleVehicle::new(inspection_compatible_vehicle_template(template))?;
+    let unit = super::Vehicle::new(inspection_compatible_vehicle_template(template))?;
     inspect_vehicle_inventory(&unit, payload_only)
 }
 
 /// Inspect vehicle weapons in game-number order.
-pub fn inspect_vehicle_weapons(unit: &super::BattleVehicle) -> Result<Vec<InspectionWeapon>> {
+pub fn inspect_vehicle_weapons(unit: &super::Vehicle) -> Result<Vec<InspectionWeapon>> {
     let loadout = unit.loadout()?;
     loadout
         .weapons
@@ -1242,8 +1225,8 @@ pub fn inspect_vehicle_weapons(unit: &super::BattleVehicle) -> Result<Vec<Inspec
 
 /// Inspect all twelve slots of a live vehicle section.
 pub fn inspect_vehicle_criticals(
-    unit: &super::BattleVehicle,
-    section: super::BattleVehicleSection,
+    unit: &super::Vehicle,
+    section: super::VehicleSection,
 ) -> Result<Vec<InspectionCritical>> {
     let loadout = unit.loadout()?;
     let code = inspection_vehicle_section_code(section);
@@ -1290,7 +1273,7 @@ pub fn inspect_vehicle_criticals(
                 id: bin.weapon.ammunition_part_id(),
             })
         } else if system.is_some() {
-            raw.and_then(|raw| BattlePart::parse(&raw.equipment).ok())
+            raw.and_then(|raw| Part::parse(&raw.equipment).ok())
                 .map(|part| InspectionPart { id: part.part_id })
         } else {
             None
@@ -1343,17 +1326,17 @@ pub fn inspect_vehicle_criticals(
 
 /// Count surviving installed vehicle parts in catalogue identity order.
 pub fn inspect_vehicle_inventory(
-    unit: &super::BattleVehicle,
+    unit: &super::Vehicle,
     payload_only: bool,
 ) -> Result<Vec<(InspectionPart, u32)>> {
     let mut quantities = BTreeMap::new();
     for section in [
-        super::BattleVehicleSection::Left,
-        super::BattleVehicleSection::Right,
-        super::BattleVehicleSection::Front,
-        super::BattleVehicleSection::Rear,
-        super::BattleVehicleSection::Turret,
-        super::BattleVehicleSection::Rotor,
+        super::VehicleSection::Left,
+        super::VehicleSection::Right,
+        super::VehicleSection::Front,
+        super::VehicleSection::Rear,
+        super::VehicleSection::Turret,
+        super::VehicleSection::Rotor,
     ] {
         let Some(definition) = unit.definition().sections.get(&section) else {
             continue;
@@ -1390,7 +1373,7 @@ pub fn inspect_vehicle_inventory(
 }
 
 /// Ordered vehicle TIC membership without cockpit authority.
-pub fn inspect_vehicle_tic(unit: &super::BattleVehicle, group: usize) -> Result<Vec<usize>> {
+pub fn inspect_vehicle_tic(unit: &super::Vehicle, group: usize) -> Result<Vec<usize>> {
     unit.tics
         .0
         .get(group)
@@ -1400,8 +1383,8 @@ pub fn inspect_vehicle_tic(unit: &super::BattleVehicle, group: usize) -> Result<
 
 /// Current vehicle section material condition.
 pub fn inspect_vehicle_section_condition(
-    unit: &super::BattleVehicle,
-    section: super::BattleVehicleSection,
+    unit: &super::Vehicle,
+    section: super::VehicleSection,
 ) -> &'static str {
     if unit
         .sections()
@@ -1426,7 +1409,7 @@ pub struct InspectionTechnology {
 }
 
 /// Resolve the supported primary technology flags from authored features and installed systems.
-pub fn inspect_technologies(template: &BattleTemplate) -> Result<Vec<InspectionTechnology>> {
+pub fn inspect_technologies(template: &MechTemplate) -> Result<Vec<InspectionTechnology>> {
     let mut rows = Vec::new();
     for code in 0..=66 {
         let (flag, group) =
@@ -1444,24 +1427,20 @@ pub fn inspect_technologies(template: &BattleTemplate) -> Result<Vec<InspectionT
             });
         }
     }
-    let loadout = BattleLoadout::resolve(&inspection_compatible_template(template))?;
+    let loadout = MechLoadout::resolve(&inspection_compatible_template(template))?;
     for (system, code, name) in [
-        (super::BattleSystem::Masc, 4, "Masc"),
-        (super::BattleSystem::C3Master, 7, "C3MasterTech"),
-        (super::BattleSystem::C3Slave, 8, "C3SlaveTech"),
-        (super::BattleSystem::ArtemisIv, 9, "ArtemisIV"),
-        (super::BattleSystem::Ecm, 10, "ECM"),
-        (super::BattleSystem::BeagleProbe, 11, "BeagleProbe"),
-        (super::BattleSystem::LightProbe, 15, "LightBAP"),
-        (super::BattleSystem::Supercharger, 37, "SuperCharger_Tech"),
-        (
-            super::BattleSystem::BloodhoundProbe,
-            42,
-            "BloodhoundProbe_Tech",
-        ),
-        (super::BattleSystem::AngelEcm, 43, "AngelECM_Tech"),
-        (super::BattleSystem::Tag, 46, "TAG_Tech"),
-        (super::BattleSystem::TargetingComputer, 55, "TargComp_Tech"),
+        (super::System::Masc, 4, "Masc"),
+        (super::System::C3Master, 7, "C3MasterTech"),
+        (super::System::C3Slave, 8, "C3SlaveTech"),
+        (super::System::ArtemisIv, 9, "ArtemisIV"),
+        (super::System::Ecm, 10, "ECM"),
+        (super::System::BeagleProbe, 11, "BeagleProbe"),
+        (super::System::LightProbe, 15, "LightBAP"),
+        (super::System::Supercharger, 37, "SuperCharger_Tech"),
+        (super::System::BloodhoundProbe, 42, "BloodhoundProbe_Tech"),
+        (super::System::AngelEcm, 43, "AngelECM_Tech"),
+        (super::System::Tag, 46, "TAG_Tech"),
+        (super::System::TargetingComputer, 55, "TargComp_Tech"),
     ] {
         if loadout.systems.iter().any(|part| part.system == system)
             && !rows.iter().any(|row| row.code == code)
@@ -1520,25 +1499,21 @@ pub fn inspect_raw_template_technologies(
         .sections
         .values()
         .flat_map(|section| section.criticals.values())
-        .filter_map(|critical| super::BattleSystem::named(&critical.equipment))
+        .filter_map(|critical| super::System::named(&critical.equipment))
         .collect();
     for (system, code, name) in [
-        (super::BattleSystem::Masc, 4, "Masc"),
-        (super::BattleSystem::C3Master, 7, "C3MasterTech"),
-        (super::BattleSystem::C3Slave, 8, "C3SlaveTech"),
-        (super::BattleSystem::ArtemisIv, 9, "ArtemisIV"),
-        (super::BattleSystem::Ecm, 10, "ECM"),
-        (super::BattleSystem::BeagleProbe, 11, "BeagleProbe"),
-        (super::BattleSystem::LightProbe, 15, "LightBAP"),
-        (super::BattleSystem::Supercharger, 37, "SuperCharger_Tech"),
-        (
-            super::BattleSystem::BloodhoundProbe,
-            42,
-            "BloodhoundProbe_Tech",
-        ),
-        (super::BattleSystem::AngelEcm, 43, "AngelECM_Tech"),
-        (super::BattleSystem::Tag, 46, "TAG_Tech"),
-        (super::BattleSystem::TargetingComputer, 55, "TargComp_Tech"),
+        (super::System::Masc, 4, "Masc"),
+        (super::System::C3Master, 7, "C3MasterTech"),
+        (super::System::C3Slave, 8, "C3SlaveTech"),
+        (super::System::ArtemisIv, 9, "ArtemisIV"),
+        (super::System::Ecm, 10, "ECM"),
+        (super::System::BeagleProbe, 11, "BeagleProbe"),
+        (super::System::LightProbe, 15, "LightBAP"),
+        (super::System::Supercharger, 37, "SuperCharger_Tech"),
+        (super::System::BloodhoundProbe, 42, "BloodhoundProbe_Tech"),
+        (super::System::AngelEcm, 43, "AngelECM_Tech"),
+        (super::System::Tag, 46, "TAG_Tech"),
+        (super::System::TargetingComputer, 55, "TargComp_Tech"),
     ] {
         if systems.contains(&system) && !rows.iter().any(|row| row.code == code) {
             rows.push(InspectionTechnology {
@@ -1555,7 +1530,7 @@ pub fn inspect_raw_template_technologies(
 
 /// Resolve configured and equipment-inferred technology flags for vehicles and VTOLs.
 pub fn inspect_vehicle_technologies(
-    template: &super::BattleVehicleTemplate,
+    template: &super::VehicleTemplate,
 ) -> Result<Vec<InspectionTechnology>> {
     let specials = template
         .attributes
@@ -1579,19 +1554,15 @@ pub fn inspect_vehicle_technologies(
         }
     }
     let compatible = inspection_compatible_vehicle_template(template);
-    let loadout = super::BattleVehicleLoadout::resolve(&compatible)?;
+    let loadout = super::VehicleLoadout::resolve(&compatible)?;
     for (system, code, name) in [
-        (super::BattleSystem::C3i, 36, "C3I_Tech"),
-        (super::BattleSystem::Ecm, 10, "ECM"),
-        (super::BattleSystem::BeagleProbe, 11, "BeagleProbe"),
-        (
-            super::BattleSystem::BloodhoundProbe,
-            42,
-            "BloodhoundProbe_Tech",
-        ),
-        (super::BattleSystem::AngelEcm, 43, "AngelECM_Tech"),
-        (super::BattleSystem::Tag, 46, "TAG_Tech"),
-        (super::BattleSystem::TargetingComputer, 55, "TargComp_Tech"),
+        (super::System::C3i, 36, "C3I_Tech"),
+        (super::System::Ecm, 10, "ECM"),
+        (super::System::BeagleProbe, 11, "BeagleProbe"),
+        (super::System::BloodhoundProbe, 42, "BloodhoundProbe_Tech"),
+        (super::System::AngelEcm, 43, "AngelECM_Tech"),
+        (super::System::Tag, 46, "TAG_Tech"),
+        (super::System::TargetingComputer, 55, "TargComp_Tech"),
     ] {
         if loadout.systems.iter().any(|part| part.system == system)
             && !rows.iter().any(|row| row.code == code)
@@ -1610,11 +1581,11 @@ pub fn inspect_vehicle_technologies(
 
 fn detached_template_world(
     world: &crate::World,
-    template: &BattleTemplate,
+    template: &MechTemplate,
 ) -> Result<(crate::World, crate::ObjectId)> {
     let mut detached = world.clone();
     let id = insert_detached_object(&mut detached, template.name.clone())?;
-    let unit = super::BattleUnit::from_contract_template(inspection_compatible_template(template))?;
+    let unit = super::Mech::from_contract_template(inspection_compatible_template(template))?;
     detached.btech.units.insert(id, unit.identity());
     detached.btech.constructed.insert(id, unit);
     std::sync::Arc::make_mut(&mut detached.btech.registrations).insert(id, "MECH".into());
@@ -1624,7 +1595,7 @@ fn detached_template_world(
 /// Render an immutable template status through isolated contract construction.
 pub fn inspect_template_status_text(
     world: &crate::World,
-    template: &BattleTemplate,
+    template: &MechTemplate,
 ) -> Result<String> {
     let (detached, id) = detached_template_world(world, template)?;
     Ok(native_status_controls(
@@ -1635,7 +1606,7 @@ pub fn inspect_template_status_text(
 /// Render immutable weapon specifications through isolated contract construction.
 pub fn inspect_template_weapon_text(
     world: &crate::World,
-    template: &BattleTemplate,
+    template: &MechTemplate,
     extended: bool,
 ) -> Result<String> {
     let (detached, id) = detached_template_world(world, template)?;
@@ -1645,16 +1616,16 @@ pub fn inspect_template_weapon_text(
 /// Render immutable critical status through isolated contract construction.
 pub fn inspect_template_critical_text(
     world: &crate::World,
-    template: &BattleTemplate,
-    section: BattleSection,
+    template: &MechTemplate,
+    section: MechSection,
 ) -> Result<String> {
     let (detached, id) = detached_template_world(world, template)?;
     // The C binding converts the typed section back through the command's
     // whitespace parser. Its `Left Arm`/`Right Arm` labels consequently select
     // the corresponding leg, an observable compatibility quirk.
     let command_section = match section {
-        BattleSection::LeftArm => BattleSection::LeftLeg,
-        BattleSection::RightArm => BattleSection::RightLeg,
+        MechSection::LeftArm => MechSection::LeftLeg,
+        MechSection::RightArm => MechSection::RightLeg,
         section => section,
     };
     decorated_critical_status(&detached, id, command_section.name()).map(native_menu_controls)
@@ -1730,7 +1701,7 @@ fn decorated_critical_status(
 
 fn detached_vehicle_world(
     world: &crate::World,
-    template: &super::BattleVehicleTemplate,
+    template: &super::VehicleTemplate,
 ) -> Result<(crate::World, crate::ObjectId)> {
     let mut detached = world.clone();
     let id = insert_detached_object(&mut detached, template.name.clone())?;
@@ -1781,7 +1752,7 @@ fn insert_detached_object(world: &mut crate::World, name: String) -> Result<crat
 /// Render a vehicle template status through isolated temporary state.
 pub fn inspect_vehicle_template_status_text(
     world: &crate::World,
-    template: &super::BattleVehicleTemplate,
+    template: &super::VehicleTemplate,
 ) -> Result<String> {
     let (detached, id) = detached_vehicle_world(world, template)?;
     Ok(native_status_controls(
@@ -1793,7 +1764,7 @@ pub fn inspect_vehicle_template_status_text(
 /// Render vehicle weapon specifications through isolated temporary state.
 pub fn inspect_vehicle_template_weapon_text(
     world: &crate::World,
-    template: &super::BattleVehicleTemplate,
+    template: &super::VehicleTemplate,
     extended: bool,
 ) -> Result<String> {
     let (detached, id) = detached_vehicle_world(world, template)?;
@@ -1802,8 +1773,8 @@ pub fn inspect_vehicle_template_weapon_text(
 /// Render vehicle critical status through isolated temporary state.
 pub fn inspect_vehicle_template_critical_text(
     world: &crate::World,
-    template: &super::BattleVehicleTemplate,
-    section: super::BattleVehicleSection,
+    template: &super::VehicleTemplate,
+    section: super::VehicleSection,
 ) -> Result<String> {
     let (detached, id) = detached_vehicle_world(world, template)?;
     decorated_critical_status(&detached, id, section.name()).map(native_menu_controls)

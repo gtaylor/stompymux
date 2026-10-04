@@ -1,5 +1,5 @@
 //! Engine-loss emergency landing uses shared pilot checks and vehicle propulsion damage.
-use super::{BattlePilotingCheck, BattleVtolFlight, BattleVtolFlightPhase};
+use super::{PilotingCheck, VtolFlight, VtolFlightPhase};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result};
 
@@ -10,7 +10,7 @@ pub(super) fn engine_landing(
     id: ObjectId,
     extended: bool,
     advanced: bool,
-) -> Result<Option<BattlePilotingCheck>> {
+) -> Result<Option<PilotingCheck>> {
     let unit = &world.btech.vehicles()[&id];
     let position = unit
         .position()
@@ -41,9 +41,9 @@ pub(super) fn engine_landing(
         return Ok(check);
     }
 
-    unit.vtol_flight = Some(BattleVtolFlight {
+    unit.vtol_flight = Some(VtolFlight {
         fall: None,
-        phase: BattleVtolFlightPhase::Landed,
+        phase: VtolFlightPhase::Landed,
         altitude: f64::from(height),
         vertical_speed: 0.0,
     });

@@ -7,7 +7,7 @@ use serde::Serialize;
 
 /// Geometric measurement between placed units; it does not imply visibility or weapon reach.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]
-pub struct BattleRange {
+pub struct Range {
     pub horizontal: f64,
     pub spatial: f64,
     pub bearing: Option<f64>,
@@ -15,7 +15,7 @@ pub struct BattleRange {
 }
 
 /// Measure continuous unit positions on the same battlefield, including signed ground elevation.
-pub fn unit_range(world: &World, first: ObjectId, second: ObjectId) -> Result<BattleRange> {
+pub fn unit_range(world: &World, first: ObjectId, second: ObjectId) -> Result<Range> {
     let sample = |id| -> Result<_> {
         if let Some(vehicle) = world.btech.vehicles().get(&id) {
             let position = vehicle.position().context("Unit is not on a battlefield")?;
@@ -66,7 +66,7 @@ pub fn unit_range(world: &World, first: ObjectId, second: ObjectId) -> Result<Ba
     let horizontal = first_point.range(second_point)?;
     let dz = first_height.unwrap_or(height(first.x, first.y)?)
         - second_height.unwrap_or(height(second.x, second.y)?);
-    Ok(BattleRange {
+    Ok(Range {
         horizontal,
         // Horizontal range is finite and nonnegative: hypot(horizontal, ±0) is exact.
         spatial: if dz == 0.0 {
@@ -118,7 +118,7 @@ pub(super) fn unit_submerged(world: &World, id: ObjectId) -> Result<bool> {
     Ok(tile.immerses(elevation))
 }
 
-impl super::BattleUnit {
+impl super::Mech {
     /// Continuous altitude for geometry and external transport; terrain effects retain their integer resolver.
     pub(super) fn altitude(&self, tile: super::Hex) -> f64 {
         self.retained_altitude()
@@ -139,7 +139,7 @@ impl super::BattleUnit {
     }
 }
 
-impl super::BattleVehicle {
+impl super::Vehicle {
     /// Continuous aircraft or carried height, falling back to the chassis-specific terrain support.
     pub(super) fn altitude(&self, tile: super::Hex) -> f64 {
         self.vtol_flight()

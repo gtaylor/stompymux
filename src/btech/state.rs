@@ -1,5 +1,5 @@
 //! Transactional maps and saved special-object identities, with shared immutable terrain.
-use super::{BattleTemplate, BattleUnit, Hex, HexCoordinate, MapAsset};
+use super::{Hex, HexCoordinate, MapAsset, Mech, MechTemplate};
 use crate::{Kind, ObjectId, SharedMap, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -16,10 +16,10 @@ pub struct StoredMap {
     pub(crate) membership_extent: u32,
     /// Optional loading location and its coordinate disclosure policy.
     #[serde(default)]
-    pub(crate) cargo_transfer_point: Option<super::BattleCargoTransferPoint>,
+    pub(crate) cargo_transfer_point: Option<super::CargoTransferPoint>,
     /// Admitted rounds in stable launch order.
     #[serde(default)]
-    pub(crate) artillery_shots: Arc<BTreeMap<u32, super::BattleArtilleryShot>>,
+    pub(crate) artillery_shots: Arc<BTreeMap<u32, super::ArtilleryShot>>,
     /// Parent recorded by link rebuilding; zero means cleared. Independent of return routes.
     #[serde(default)]
     pub building_parent: i64,
@@ -32,34 +32,34 @@ pub struct StoredMap {
     pub flags: i64,
     /// Construction integrity and policy belong to this interior map.
     #[serde(default)]
-    pub building: super::BattleBuildingState,
+    pub building: super::BuildingState,
     /// Committed seconds until the next construction repair event.
     #[serde(default)]
     pub building_repair: Option<u16>,
     /// Stable mine definitions, separate from visual terrain overlays.
     #[serde(default)]
-    pub(crate) minefields: Arc<BTreeMap<u32, super::BattleMinefield>>,
+    pub(crate) minefields: Arc<BTreeMap<u32, super::Minefield>>,
     /// Traversal order is independent of the persistent record identifiers.
     #[serde(default)]
     pub(crate) minefield_order: Arc<Vec<u32>>,
     /// Circular team-aware landing restrictions.
     #[serde(default)]
-    pub(crate) landing_exclusions: Arc<BTreeMap<u32, super::BattleLandingExclusion>>,
+    pub(crate) landing_exclusions: Arc<BTreeMap<u32, super::LandingExclusion>>,
     /// Display and deletion traversal, independent of persistent restriction identities.
     #[serde(default)]
     pub(crate) landing_exclusion_order: Arc<Vec<u32>>,
     /// Ordered entrances pointing to interior maps.
     #[serde(default)]
-    pub(crate) building_entrances: Arc<BTreeMap<u32, super::BattleBuildingEntrance>>,
+    pub(crate) building_entrances: Arc<BTreeMap<u32, super::BuildingEntrance>>,
     /// Ordered interior arrival points selected by a direction code.
     #[serde(default)]
-    pub(crate) building_entry_points: Arc<BTreeMap<u32, super::BattleBuildingEntryPoint>>,
+    pub(crate) building_entry_points: Arc<BTreeMap<u32, super::BuildingEntryPoint>>,
     /// Ordered return-map links; the first link is the active exit.
     #[serde(default)]
-    pub(crate) building_exits: Arc<BTreeMap<u32, super::BattleBuildingExit>>,
+    pub(crate) building_exits: Arc<BTreeMap<u32, super::BuildingExit>>,
     /// Authored configuration used to rebuild runtime routes.
     #[serde(default)]
-    pub(crate) authored_link: Option<super::BattleMapLink>,
+    pub(crate) authored_link: Option<super::MapLink>,
     /// Saved map movement percentage; zero or negative uses the standard rate.
     #[serde(default)]
     pub movement_modifier: i64,
@@ -69,7 +69,7 @@ pub struct StoredMap {
     pub maximum_visibility: i64,
     /// Cloud boundary in elevation levels; zero disables cloud obstruction.
     pub cloud_base: i16,
-    /// Perception channels switched off for this battlefield; see `BattleMapPerceptionFlag`.
+    /// Perception channels switched off for this battlefield; see `MapPerceptionFlag`.
     pub sensor_flags: i64,
     /// Persisted wind bearing in degrees and strength used by terrain effects.
     #[serde(default)]
@@ -78,17 +78,17 @@ pub struct StoredMap {
     pub wind_speed: i64,
     /// Map-owned replayable stream established with decoded map creation.
     #[serde(default)]
-    pub(crate) fire_dice: Option<super::BattleDice>,
+    pub(crate) fire_dice: Option<super::Dice>,
 
     /// Absent until the terrain dictionary has been explicitly established.
     #[serde(default)]
     pub(crate) terrain: Option<Arc<Vec<Hex>>>,
     /// Sparse overlays indexed by row-major tile position, independent of source terrain.
     #[serde(default)]
-    pub(crate) decorations: Arc<BTreeMap<u32, super::BattleDecoration>>,
+    pub(crate) decorations: Arc<BTreeMap<u32, super::Decoration>>,
     /// Generic saved records carry restoration terrain but no autonomous timers.
     #[serde(default)]
-    pub(crate) static_decorations: [Arc<BTreeMap<u32, super::BattleStaticDecoration>>; 3],
+    pub(crate) static_decorations: [Arc<BTreeMap<u32, super::StaticDecoration>>; 3],
     /// Scripted points of interest from the map file, in file order. Never shown to units.
     #[serde(default)]
     pub(crate) points_of_interest: Arc<Vec<super::MapPointOfInterest>>,
@@ -140,7 +140,7 @@ impl StoredMap {
                 .values()
                 .filter(|effect| effect.kind == kind)
                 .count();
-            let mut effect = super::BattleDecoration::new(kind, 0, None);
+            let mut effect = super::Decoration::new(kind, 0, None);
             effect.order = -1 - i64::try_from(order)?;
             Arc::make_mut(&mut self.decorations).insert(index, effect);
         }
@@ -264,14 +264,13 @@ impl StoredMap {
                 .all(|records| records.len() <= 1_000_000),
             "Too many generic decorations"
         );
-        for (kind, decoration) in
-            super::BattleStaticDecorationKind::ALL
-                .into_iter()
-                .flat_map(|kind| {
-                    self.static_decorations(kind)
-                        .values()
-                        .map(move |d| (kind, d))
-                })
+        for (kind, decoration) in super::StaticDecorationKind::ALL
+            .into_iter()
+            .flat_map(|kind| {
+                self.static_decorations(kind)
+                    .values()
+                    .map(move |d| (kind, d))
+            })
         {
             decoration.validate(kind)?;
             ensure!(
@@ -388,46 +387,46 @@ pub struct BtechState {
     pub(crate) autopilot_plans: SharedMap<ObjectId, super::autopilot::runtime::AutopilotPlan>,
     /// Loose parts shared by rooms, units and other game objects.
     #[serde(default)]
-    pub(crate) inventories: SharedMap<ObjectId, Vec<super::BattleInventoryEntry>>,
+    pub(crate) inventories: SharedMap<ObjectId, Vec<super::InventoryEntry>>,
     #[serde(default)]
     pub(crate) part_costs: Arc<BTreeMap<i32, u64>>,
     /// Runtime catalogue overrides reset on reload; saved countdowns retain their remaining time.
     #[serde(default)]
-    pub(crate) weapon_settings: super::BattleWeaponSettings,
+    pub(crate) weapon_settings: super::WeaponSettings,
     /// Seconds until a fully destroyed native unit retires from the battlefield.
     #[serde(default)]
     pub(crate) wrecks: Arc<BTreeMap<ObjectId, u8>>,
     #[serde(default)]
-    pub(crate) reactor: super::reactor_instability::BattleReactorState,
+    pub(crate) reactor: super::reactor_instability::ReactorState,
     /// External towing is one chassis-independent carrier-to-target relationship.
     #[serde(default)]
     pub(crate) tows: Arc<BTreeMap<ObjectId, ObjectId>>,
     /// Saved player map dimensions and contact-list categories.
     #[serde(default)]
-    pub(crate) player_preferences: SharedMap<ObjectId, super::BattlePlayerPreferences>,
+    pub(crate) player_preferences: SharedMap<ObjectId, super::PlayerPreferences>,
     /// Player-owned template and personal-combat configuration; UI configuration is tracked
     /// independently by presence in `player_preferences`.
     #[serde(default)]
-    pub(crate) player_configuration: SharedMap<ObjectId, super::BattlePlayerConfiguration>,
+    pub(crate) player_configuration: SharedMap<ObjectId, super::PlayerConfiguration>,
     #[serde(default)]
-    pub(crate) unit_configuration: SharedMap<ObjectId, super::BattleUnitConfiguration>,
+    pub(crate) unit_configuration: SharedMap<ObjectId, super::UnitConfiguration>,
     /// Runtime sensor band reach supplied by the host configuration; not stored in database tables.
     #[serde(default)]
-    pub(crate) sensor_range: super::BattleSensorRange,
+    pub(crate) sensor_range: super::SensorRange,
     /// Runtime skill threshold overrides; database reload starts with catalog defaults.
     #[serde(default)]
     pub(crate) skill_thresholds: Arc<BTreeMap<String, u32>>,
     #[serde(default)]
-    pub(crate) character_values: SharedMap<ObjectId, BTreeMap<String, super::BattleCharacterValue>>,
+    pub(crate) character_values: SharedMap<ObjectId, BTreeMap<String, super::CharacterValue>>,
     #[serde(default)]
-    pub(crate) recoveries: SharedMap<ObjectId, super::BattleRecovery>,
+    pub(crate) recoveries: SharedMap<ObjectId, super::Recovery>,
     #[serde(default)]
-    pub(crate) characters: SharedMap<ObjectId, super::BattleCharacter>,
+    pub(crate) characters: SharedMap<ObjectId, super::Character>,
     #[serde(default)]
-    pub(crate) constructed: SharedMap<ObjectId, BattleUnit>,
+    pub(crate) constructed: SharedMap<ObjectId, Mech>,
     /// Owned ground-vehicle state, awaiting battlefield admission.
     #[serde(default)]
-    pub(crate) vehicles: SharedMap<ObjectId, super::BattleVehicle>,
+    pub(crate) vehicles: SharedMap<ObjectId, super::Vehicle>,
     pub(crate) registrations: Arc<BTreeMap<ObjectId, String>>,
     pub(crate) maps: SharedMap<ObjectId, StoredMap>,
     pub(crate) units: SharedMap<ObjectId, StoredBattleUnit>,
@@ -440,7 +439,7 @@ impl BtechState {
     }
 
     /// Shared effective weapon values for the current runtime.
-    pub fn weapon_settings(&self) -> &super::BattleWeaponSettings {
+    pub fn weapon_settings(&self) -> &super::WeaponSettings {
         &self.weapon_settings
     }
 
@@ -451,12 +450,12 @@ impl BtechState {
     /// Exact named skill/advantage records, separate from fixed health and attributes.
     pub fn character_values(
         &self,
-    ) -> &SharedMap<ObjectId, BTreeMap<String, super::BattleCharacterValue>> {
+    ) -> &SharedMap<ObjectId, BTreeMap<String, super::CharacterValue>> {
         &self.character_values
     }
 
     /// Recovery state follows the player across cockpit changes; random streams are private to Rust.
-    pub fn recoveries(&self) -> &SharedMap<ObjectId, super::BattleRecovery> {
+    pub fn recoveries(&self) -> &SharedMap<ObjectId, super::Recovery> {
         &self.recoveries
     }
 
@@ -468,17 +467,17 @@ impl BtechState {
     }
 
     /// Persisted character attributes and health, separate from cockpit occupancy.
-    pub fn characters(&self) -> &SharedMap<ObjectId, super::BattleCharacter> {
+    pub fn characters(&self) -> &SharedMap<ObjectId, super::Character> {
         &self.characters
     }
 
     /// Units with complete Rust-owned construction state.
-    pub fn constructed_units(&self) -> &SharedMap<ObjectId, BattleUnit> {
+    pub fn constructed_units(&self) -> &SharedMap<ObjectId, Mech> {
         &self.constructed
     }
 
     /// Ground vehicles with owned material state, separate from live Mech simulation.
-    pub fn vehicles(&self) -> &SharedMap<ObjectId, super::BattleVehicle> {
+    pub fn vehicles(&self) -> &SharedMap<ObjectId, super::Vehicle> {
         &self.vehicles
     }
 
@@ -511,12 +510,12 @@ impl BtechState {
         if let Some(unit) = self.constructed.get(&id) {
             let mut record = serde_json::to_value(unit)?;
             edit(&mut record);
-            let unit: BattleUnit = serde_json::from_value(record)?;
+            let unit: Mech = serde_json::from_value(record)?;
             self.constructed.insert(id, unit);
         } else if let Some(vehicle) = self.vehicles.get(&id) {
             let mut record = serde_json::to_value(vehicle)?;
             edit(&mut record);
-            let vehicle: super::BattleVehicle = serde_json::from_value(record)?;
+            let vehicle: super::Vehicle = serde_json::from_value(record)?;
             self.vehicles.insert(id, vehicle);
         } else {
             anyhow::bail!("#{} has no unit or vehicle record", id.0);
@@ -565,7 +564,7 @@ impl BtechState {
             .with_context(|| format!("#{} has no recovery record", player.0))?;
         let mut record = serde_json::to_value(recovery)?;
         edit(&mut record);
-        let recovery: super::BattleRecovery = serde_json::from_value(record)?;
+        let recovery: super::Recovery = serde_json::from_value(record)?;
         self.recoveries.insert(player, recovery);
         self.clear_runtime_state();
         Ok(())
@@ -688,7 +687,7 @@ impl BtechState {
             self.validate_unit(
                 world,
                 *id,
-                super::BattleUnitRef::Vehicle(vehicle),
+                super::UnitRef::Vehicle(vehicle),
                 tow_targets.contains(id),
                 &mut roster,
                 contact_positions.as_ref(),
@@ -700,7 +699,7 @@ impl BtechState {
             self.validate_unit(
                 world,
                 *id,
-                super::BattleUnitRef::Mech(unit),
+                super::UnitRef::Mech(unit),
                 tow_targets.contains(id),
                 &mut roster,
                 contact_positions.as_ref(),
@@ -748,8 +747,8 @@ impl BtechState {
                     link.coordinate.x >= 0
                         && link.coordinate.y >= 0
                         && link.entrances.iter().all(|entrance| match entrance {
-                            super::BattleMapEntrance::Offset { distance } => *distance >= 0,
-                            super::BattleMapEntrance::Exact { coordinate } =>
+                            super::MapEntrance::Offset { distance } => *distance >= 0,
+                            super::MapEntrance::Exact { coordinate } =>
                                 coordinate.x >= 0 && coordinate.y >= 0,
                             _ => true,
                         }),
@@ -778,8 +777,8 @@ impl BtechState {
     pub(super) fn validate_target_lock(
         &self,
         id: ObjectId,
-        position: Option<super::BattlePosition>,
-        lock: super::BattleTargetLock,
+        position: Option<super::Position>,
+        lock: super::TargetLock,
     ) -> Result<()> {
         let target = self
             .constructed
@@ -802,8 +801,8 @@ impl BtechState {
     pub(super) fn validate_contacts(
         &self,
         observer: ObjectId,
-        position: Option<super::BattlePosition>,
-        contacts: &BTreeMap<ObjectId, super::BattleContact>,
+        position: Option<super::Position>,
+        contacts: &BTreeMap<ObjectId, super::Contact>,
         positions: Option<&super::validation_contacts::Positions>,
     ) -> Result<()> {
         for target in contacts.keys() {
@@ -895,7 +894,7 @@ impl BtechState {
                 vehicle.contacts.clear();
                 vehicle.target_lock = None;
                 vehicle.set_placement(None);
-                vehicle.power = super::BattlePower::Off;
+                vehicle.power = super::Power::Off;
             }
         }
         let constructed = &mut self.constructed;
@@ -931,7 +930,7 @@ impl BtechState {
                 unit.hex_sync_pending = false;
                 unit.ground_elevation = None;
                 unit.motion = None;
-                unit.power = super::BattlePower::Off;
+                unit.power = super::Power::Off;
                 unit.masc.shutdown();
                 unit.supercharger.shutdown();
                 unit.charge.target = None;
@@ -1096,7 +1095,7 @@ pub(super) fn map_from_asset(name: &str, asset: MapAsset) -> Result<StoredMap> {
         sensor_flags: 0,
         wind_direction: 0,
         wind_speed: 0,
-        fire_dice: Some(super::BattleDice::fresh()),
+        fire_dice: Some(super::Dice::fresh()),
         terrain: None,
         decorations: Default::default(),
         static_decorations: Default::default(),
@@ -1108,7 +1107,7 @@ pub(super) fn map_from_asset(name: &str, asset: MapAsset) -> Result<StoredMap> {
 }
 
 /// Construct a BattleMech on an unused live thing, publishing only a checked candidate.
-pub fn create_unit(world: &mut World, id: ObjectId, definition: BattleTemplate) -> Result<()> {
+pub fn create_unit(world: &mut World, id: ObjectId, definition: MechTemplate) -> Result<()> {
     ensure!(
         world.objects.get(&id).is_some_and(
             |object| object.kind == Kind::Thing && !object.flags.contains(crate::Flag::Going)
@@ -1122,7 +1121,7 @@ pub fn create_unit(world: &mut World, id: ObjectId, definition: BattleTemplate) 
         "Object already has BattleTech state"
     );
     super::inventory_mass(world, id)?;
-    let unit = BattleUnit::from_template(definition)?;
+    let unit = Mech::from_template(definition)?;
     world.btech.units.insert(id, unit.identity());
     world.btech.constructed.insert(id, unit);
     Arc::make_mut(&mut world.btech.registrations).insert(id, "MECH".into());
@@ -1158,7 +1157,7 @@ pub fn register_empty_battle_unit(world: &mut World, id: ObjectId) -> Result<()>
 pub fn set_map_visibility(
     world: &mut World,
     id: ObjectId,
-    light: super::BattleLight,
+    light: super::Light,
     visibility: u8,
 ) -> Result<()> {
     map_target(world, id)?;
@@ -1182,7 +1181,7 @@ pub fn set_map_visibility(
 #[cfg(test)]
 mod rewrite_tests {
     use super::*;
-    use crate::{BattleVehicleTemplate, Config};
+    use crate::{Config, VehicleTemplate};
 
     /// Rewriting one record matches a whole-state serialize, edit, deserialize.
     #[test]
@@ -1198,13 +1197,13 @@ mod rewrite_tests {
         create_unit(
             &mut world,
             mech,
-            BattleTemplate::parse("JR7-D", include_str!("../../game/mechs/JR7-D.toml")).unwrap(),
+            MechTemplate::parse("JR7-D", include_str!("../../game/mechs/JR7-D.toml")).unwrap(),
         )
         .unwrap();
         crate::create_battle_vehicle(
             &mut world,
             vehicle,
-            BattleVehicleTemplate::parse(
+            VehicleTemplate::parse(
                 "Demolisher",
                 include_str!("../../game/mechs/Demolisher.toml"),
             )
@@ -1251,7 +1250,7 @@ mod rewrite_tests {
         .unwrap();
         super::super::prepare_recovery(&mut world, player).unwrap();
         world.btech.retire_sanctions.borrow_mut().insert(map);
-        let dice = serde_json::to_value(super::super::BattleDice::seeded([7; 32])).unwrap();
+        let dice = serde_json::to_value(super::super::Dice::seeded([7; 32])).unwrap();
         let edit = |record: &mut serde_json::Value| record["fire_dice"] = dice.clone();
         let mut rewritten = world.btech.clone();
         rewritten.rewrite_map_record(map, edit).unwrap();

@@ -1,11 +1,11 @@
 //! Woodland attack outcomes, independent of map storage and command publication.
-use super::{BattleAmmunitionMode, BattleDice, BattleWeapon, Ground, Hex, Woods};
+use super::{AmmunitionMode, Dice, Ground, Hex, Weapon, Woods};
 use serde::{Deserialize, Serialize};
 
 /// Purpose of a terrain effect; incidental effects use the lower accidental ignition chance.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleWoodlandIntent {
+pub enum WoodlandIntent {
     Ignite,
     Clear,
     Incidental,
@@ -14,7 +14,7 @@ pub enum BattleWoodlandIntent {
 /// Detached effect to apply inside the enclosing attack transaction.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "effect", rename_all = "snake_case")]
-pub enum BattleWoodlandEffect {
+pub enum WoodlandEffect {
     None,
     /// Temporary fire must retain the underlying woodland tile.
     Ignite {
@@ -22,14 +22,14 @@ pub enum BattleWoodlandEffect {
     },
     /// Woods cut back, keeping the hex's height.
     Clear {
-        clearing: BattleWoodlandClearing,
+        clearing: WoodlandClearing,
     },
 }
 
 /// How clearing changes a wooded hex.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleWoodlandClearing {
+pub enum WoodlandClearing {
     /// Heavy woods thin to light woods.
     ThinToLight,
     /// Light woods are cut down to clear ground.
@@ -38,7 +38,7 @@ pub enum BattleWoodlandClearing {
     CutToRough,
 }
 
-impl BattleWoodlandClearing {
+impl WoodlandClearing {
     /// The hex after clearing, or `None` when its woods cannot be cleared this way.
     pub fn apply(self, hex: Hex) -> Option<Hex> {
         Some(match (self, hex.woods()?) {
@@ -51,20 +51,20 @@ impl BattleWoodlandClearing {
 }
 
 /// The roll a weapon needs to ignite woodland.
-pub trait BattleTerrainIgnition {
+pub trait TerrainIgnition {
     /// Required ignition roll. Ammunition overrides precede ordinary weapon exclusions.
-    fn terrain_ignition_target(self, ammunition: BattleAmmunitionMode) -> Option<u8>;
+    fn terrain_ignition_target(self, ammunition: AmmunitionMode) -> Option<u8>;
 }
 
-impl BattleTerrainIgnition for BattleWeapon {
-    fn terrain_ignition_target(self, ammunition: BattleAmmunitionMode) -> Option<u8> {
+impl TerrainIgnition for Weapon {
+    fn terrain_ignition_target(self, ammunition: AmmunitionMode) -> Option<u8> {
         if matches!(self, Self::Flamer | Self::ClanFlamer | Self::HeavyFlamer) {
             return Some(4);
         }
-        if ammunition == BattleAmmunitionMode::Inferno && self.profile().missiles > 0 {
+        if ammunition == AmmunitionMode::Inferno && self.profile().missiles > 0 {
             return Some(5);
         }
-        if ammunition == BattleAmmunitionMode::Flechette
+        if ammunition == AmmunitionMode::Flechette
             && self.gunnery_skill(true) == "Gunnery-Ballistic"
         {
             return Some(5);
@@ -87,33 +87,33 @@ impl BattleTerrainIgnition for BattleWeapon {
 /// for light woods. Fire duration is inclusive 60–180.
 pub fn resolve_woodland_effect(
     hex: Hex,
-    weapon: BattleWeapon,
-    ammunition: BattleAmmunitionMode,
+    weapon: Weapon,
+    ammunition: AmmunitionMode,
     damage: u16,
-    intent: BattleWoodlandIntent,
-    dice: &mut BattleDice,
-) -> BattleWoodlandEffect {
+    intent: WoodlandIntent,
+    dice: &mut Dice,
+) -> WoodlandEffect {
     let woods = hex.is_woods() && !hex.is_burning();
-    if intent != BattleWoodlandIntent::Ignite {
+    if intent != WoodlandIntent::Ignite {
         let ignition_roll = dice.generic_roll();
         let clearing_roll = dice.generic_roll();
-        let threshold = if intent == BattleWoodlandIntent::Clear {
+        let threshold = if intent == WoodlandIntent::Clear {
             5
         } else {
             3
         };
         if ignition_roll > threshold {
             if !woods || !weapon.can_clear_terrain() || u16::from(clearing_roll) > damage {
-                return BattleWoodlandEffect::None;
+                return WoodlandEffect::None;
             }
             let clearing = if hex.woods() == Some(Woods::Heavy) {
-                BattleWoodlandClearing::ThinToLight
+                WoodlandClearing::ThinToLight
             } else if dice.die(2).expect("nonzero die") == 1 {
-                BattleWoodlandClearing::CutToRough
+                WoodlandClearing::CutToRough
             } else {
-                BattleWoodlandClearing::CutToClear
+                WoodlandClearing::CutToClear
             };
-            return BattleWoodlandEffect::Clear { clearing };
+            return WoodlandEffect::Clear { clearing };
         }
     }
     let roll = dice.generic_roll();
@@ -122,9 +122,9 @@ pub fn resolve_woodland_effect(
             .terrain_ignition_target(ammunition)
             .is_none_or(|target| roll < target)
     {
-        return BattleWoodlandEffect::None;
+        return WoodlandEffect::None;
     }
-    BattleWoodlandEffect::Ignite {
+    WoodlandEffect::Ignite {
         seconds: 59 + dice.die(121).expect("nonzero die"),
     }
 }
@@ -145,21 +145,21 @@ mod tests {
                 Terrain::HeavyForest,
             ] {
                 for intent in [
-                    BattleWoodlandIntent::Ignite,
-                    BattleWoodlandIntent::Clear,
-                    BattleWoodlandIntent::Incidental,
+                    WoodlandIntent::Ignite,
+                    WoodlandIntent::Clear,
+                    WoodlandIntent::Incidental,
                 ] {
-                    let mut actual = BattleDice::seeded([seed; 32]);
+                    let mut actual = Dice::seeded([seed; 32]);
                     let mut expected = actual.clone();
-                    let mut histogram = crate::BattleRollStatistics::default();
-                    let ignition = if intent == BattleWoodlandIntent::Ignite {
+                    let mut histogram = crate::RollStatistics::default();
+                    let ignition = if intent == WoodlandIntent::Ignite {
                         true
                     } else {
                         let first = expected.two_d6();
                         histogram.record(first).unwrap();
                         histogram.record(expected.two_d6()).unwrap();
                         first
-                            <= if intent == BattleWoodlandIntent::Clear {
+                            <= if intent == WoodlandIntent::Clear {
                                 5
                             } else {
                                 3
@@ -176,8 +176,8 @@ mod tests {
                     }
                     resolve_woodland_effect(
                         Hex::new(terrain, 0),
-                        BattleWeapon::MediumLaser,
-                        BattleAmmunitionMode::Normal,
+                        Weapon::MediumLaser,
+                        AmmunitionMode::Normal,
                         100,
                         intent,
                         &mut actual,
@@ -197,40 +197,36 @@ mod tests {
 
     #[test]
     fn weapon_capabilities_distinguish_ignition_from_clearing() {
-        for weapon in [BattleWeapon::GaussRifle, BattleWeapon::ClanGaussRifle] {
+        for weapon in [Weapon::GaussRifle, Weapon::ClanGaussRifle] {
             assert!(!weapon.can_ignite_terrain());
             assert!(weapon.can_clear_terrain());
         }
-        for weapon in [BattleWeapon::Ac2, BattleWeapon::Ac5, BattleWeapon::ClanLbx5] {
+        for weapon in [Weapon::Ac2, Weapon::Ac5, Weapon::ClanLbx5] {
             assert!(weapon.can_ignite_terrain());
             assert!(!weapon.can_clear_terrain());
         }
-        for weapon in [
-            BattleWeapon::SmallLaser,
-            BattleWeapon::ClanErSmallLaser,
-            BattleWeapon::Srm2,
-        ] {
+        for weapon in [Weapon::SmallLaser, Weapon::ClanErSmallLaser, Weapon::Srm2] {
             assert!(!weapon.can_ignite_terrain());
             assert!(!weapon.can_clear_terrain());
         }
         for (weapon, target) in [
-            (BattleWeapon::Flamer, 4),
-            (BattleWeapon::HeavyFlamer, 4),
-            (BattleWeapon::MediumLaser, 5),
-            (BattleWeapon::Ac10, 9),
-            (BattleWeapon::VehicleFlamer, 9),
+            (Weapon::Flamer, 4),
+            (Weapon::HeavyFlamer, 4),
+            (Weapon::MediumLaser, 5),
+            (Weapon::Ac10, 9),
+            (Weapon::VehicleFlamer, 9),
         ] {
             assert_eq!(
-                weapon.terrain_ignition_target(BattleAmmunitionMode::Normal),
+                weapon.terrain_ignition_target(AmmunitionMode::Normal),
                 Some(target)
             );
         }
         assert_eq!(
-            BattleWeapon::Ac10.terrain_ignition_target(BattleAmmunitionMode::Flechette),
+            Weapon::Ac10.terrain_ignition_target(AmmunitionMode::Flechette),
             Some(5)
         );
         assert_eq!(
-            BattleWeapon::Ac10.terrain_ignition_target(BattleAmmunitionMode::Incendiary),
+            Weapon::Ac10.terrain_ignition_target(AmmunitionMode::Incendiary),
             Some(9)
         );
     }
@@ -239,25 +235,25 @@ mod tests {
     fn ignition_preserves_replay_and_only_affects_woods() {
         let mut fires = 0;
         for seed in 0..=255 {
-            let original = BattleDice::seeded([seed; 32]);
+            let original = Dice::seeded([seed; 32]);
             let mut dice = original.clone();
             let mut expected = original.clone();
             let roll = expected.two_d6();
             let result = resolve_woodland_effect(
                 Hex::new(Terrain::HeavyForest, 0),
-                BattleWeapon::MediumLaser,
-                BattleAmmunitionMode::Normal,
+                Weapon::MediumLaser,
+                AmmunitionMode::Normal,
                 5,
-                BattleWoodlandIntent::Ignite,
+                WoodlandIntent::Ignite,
                 &mut dice,
             );
             if roll >= 5 {
                 let seconds = 59 + expected.die(121).unwrap();
-                assert_eq!(result, BattleWoodlandEffect::Ignite { seconds });
+                assert_eq!(result, WoodlandEffect::Ignite { seconds });
                 assert!((60..=180).contains(&seconds));
                 fires += 1;
             } else {
-                assert_eq!(result, BattleWoodlandEffect::None);
+                assert_eq!(result, WoodlandEffect::None);
             }
             assert_eq!(dice, expected);
             for terrain in [
@@ -272,13 +268,13 @@ mod tests {
                 assert_eq!(
                     resolve_woodland_effect(
                         Hex::new(terrain, 0),
-                        BattleWeapon::Flamer,
-                        BattleAmmunitionMode::Normal,
+                        Weapon::Flamer,
+                        AmmunitionMode::Normal,
                         100,
-                        BattleWoodlandIntent::Ignite,
+                        WoodlandIntent::Ignite,
                         &mut dice
                     ),
-                    BattleWoodlandEffect::None
+                    WoodlandEffect::None
                 );
                 assert_eq!(dice, expected);
             }
@@ -292,36 +288,33 @@ mod tests {
         let mut cleared = false;
         let mut surfaces = std::collections::BTreeSet::new();
         for seed in 0..=255 {
-            let original = BattleDice::seeded([seed; 32]);
+            let original = Dice::seeded([seed; 32]);
             let mut preview = original.clone();
             let ignition_roll = preview.two_d6();
-            for intent in [
-                BattleWoodlandIntent::Clear,
-                BattleWoodlandIntent::Incidental,
-            ] {
+            for intent in [WoodlandIntent::Clear, WoodlandIntent::Incidental] {
                 let mut dice = original.clone();
                 // Gauss can clear woods but cannot ignite them, even on the ignition branch.
                 let effect = resolve_woodland_effect(
                     Hex::new(Terrain::HeavyForest, 0),
-                    BattleWeapon::GaussRifle,
-                    BattleAmmunitionMode::Normal,
+                    Weapon::GaussRifle,
+                    AmmunitionMode::Normal,
                     15,
                     intent,
                     &mut dice,
                 );
-                let threshold = if intent == BattleWoodlandIntent::Clear {
+                let threshold = if intent == WoodlandIntent::Clear {
                     5
                 } else {
                     3
                 };
                 if ignition_roll <= threshold {
-                    assert_eq!(effect, BattleWoodlandEffect::None);
+                    assert_eq!(effect, WoodlandEffect::None);
                     preempted = true;
                 } else {
                     assert_eq!(
                         effect,
-                        BattleWoodlandEffect::Clear {
-                            clearing: BattleWoodlandClearing::ThinToLight
+                        WoodlandEffect::Clear {
+                            clearing: WoodlandClearing::ThinToLight
                         }
                     );
                     cleared = true;
@@ -331,8 +324,8 @@ mod tests {
                     effect,
                     resolve_woodland_effect(
                         Hex::new(Terrain::HeavyForest, 0),
-                        BattleWeapon::GaussRifle,
-                        BattleAmmunitionMode::Normal,
+                        Weapon::GaussRifle,
+                        AmmunitionMode::Normal,
                         15,
                         intent,
                         &mut replay
@@ -341,13 +334,13 @@ mod tests {
                 assert_eq!(dice, replay);
                 let light = resolve_woodland_effect(
                     Hex::new(Terrain::LightForest, 0),
-                    BattleWeapon::GaussRifle,
-                    BattleAmmunitionMode::Normal,
+                    Weapon::GaussRifle,
+                    AmmunitionMode::Normal,
                     15,
                     intent,
                     &mut original.clone(),
                 );
-                if let BattleWoodlandEffect::Clear { clearing } = light {
+                if let WoodlandEffect::Clear { clearing } = light {
                     surfaces.insert(clearing);
                 }
             }
@@ -355,12 +348,9 @@ mod tests {
         assert!(preempted && cleared);
         assert_eq!(
             surfaces,
-            [
-                BattleWoodlandClearing::CutToClear,
-                BattleWoodlandClearing::CutToRough
-            ]
-            .into_iter()
-            .collect()
+            [WoodlandClearing::CutToClear, WoodlandClearing::CutToRough]
+                .into_iter()
+                .collect()
         );
     }
 }

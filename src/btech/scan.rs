@@ -1,12 +1,12 @@
 //! Detailed unit scans with hardware limits and separate ordinary/observer information disclosure.
-use super::{BattlePower, BattleSystem, BattleUnit};
+use super::{Mech, Power, System};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, bail, ensure};
 use serde::Serialize;
 
 /// Installed or administratively assigned view ranges, including sensor critical losses.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-pub struct BattleSensorRanges {
+pub struct SensorRanges {
     /// Tactical display radius in hexes.
     pub tactical: u8,
     /// Long-range display radius in hexes.
@@ -15,22 +15,22 @@ pub struct BattleSensorRanges {
     pub scan: u8,
 }
 
-impl BattleUnit {
+impl Mech {
     /// Nonzero template ranges override technology-base defaults independently.
     /// Template zero selects defaults; runtime zero remains zero. Subsequent sensor hits degrade ranges.
-    pub fn sensor_ranges(&self) -> BattleSensorRanges {
+    pub fn sensor_ranges(&self) -> SensorRanges {
         configured_ranges(
             &self.definition().attributes,
             self.definition().has_special("Clan"),
-            self.system_hits(BattleSystem::Sensors),
+            self.system_hits(System::Sensors),
             self.hardware,
         )
     }
 }
 
-impl super::BattleVehicle {
+impl super::Vehicle {
     /// Vehicle computer ranges use template overrides; vehicle sensor damage affects gunnery.
-    pub fn sensor_ranges(&self) -> BattleSensorRanges {
+    pub fn sensor_ranges(&self) -> SensorRanges {
         configured_ranges(
             &self.definition().attributes,
             self.definition().has_special("Clan"),
@@ -46,7 +46,7 @@ fn configured_ranges(
     clan: bool,
     hits: u8,
     hardware: super::hardware_settings::HardwareSettings,
-) -> BattleSensorRanges {
+) -> SensorRanges {
     let base = if clan { 35 } else { 25 };
     let range = |field: &str, default, explicit: Option<super::hardware_settings::RangeSetting>| {
         if let Some(value) = explicit {
@@ -63,7 +63,7 @@ fn configured_ranges(
             _ => 0,
         }
     };
-    BattleSensorRanges {
+    SensorRanges {
         tactical: range("tac_range", base, hardware.tactical),
         long_range: range("lrs_range", base * 2, hardware.long_range),
         scan: range("scan_range", base, hardware.scan),
@@ -159,14 +159,11 @@ fn scan_unit_configured(
         if let Some(unit) = world.btech.constructed_units().get(&target) {
             if matches!(
                 unit.facing().torso,
-                super::BattleTorso::Right | super::BattleTorso::Both
+                super::Torso::Right | super::Torso::Both
             ) {
                 text.push_str("\nTorso is 60 degrees right");
             }
-            if matches!(
-                unit.facing().torso,
-                super::BattleTorso::Left | super::BattleTorso::Both
-            ) {
+            if matches!(unit.facing().torso, super::Torso::Left | super::Torso::Both) {
                 text.push_str("\nTorso is 60 degrees left");
             }
         }
@@ -256,7 +253,7 @@ pub fn scan_unit_action(
                 super::scanner::scanner_unit(&world, observer).context("Scanner is unavailable")?;
             let scanned =
                 super::scanner::scanner_unit(&world, target).context("Target is unavailable")?;
-            let notice = if source.observer || scanned.power != BattlePower::Running {
+            let notice = if source.observer || scanned.power != Power::Running {
                 None
             } else {
                 let seen = super::visible_contact(&world, target, observer)?;
@@ -265,7 +262,7 @@ pub fn scan_unit_action(
                     label.make_ascii_lowercase();
                 }
                 let name = seen.as_ref().map_or("something", |view| view.name.as_str());
-                Some(super::BattleNotice {
+                Some(super::Notice {
                     unit: target,
                     text: format!("You are being scanned by {name} [{label}]"),
                 })
@@ -331,7 +328,7 @@ fn scanner(
     super::combat_operator::controlled(world, observer, pilot)?;
     let source = super::scanner::scanner_unit(world, observer).context("Scanner is unavailable")?;
     ensure!(
-        source.power == BattlePower::Running && !source.destroyed,
+        source.power == Power::Running && !source.destroyed,
         "Start the unit first"
     );
     let maximum = world.btech.vehicles().get(&observer).map_or_else(
@@ -429,7 +426,7 @@ pub(crate) fn command(
                     ctx.player,
                     option,
                 )? {
-                    super::BattleSelectedScan::Unit(text) => text,
+                    super::SelectedScan::Unit(text) => text,
                     _ => String::new(),
                 },
             );

@@ -1,5 +1,5 @@
 //! Shared booster controls and committed overload checks with distinct mechanical failures.
-use super::{BattleNotice, BattlePower};
+use super::{Notice, Power};
 use crate::{Config, ObjectId, Scripts, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 /// Durable overload history and next check; hardware failure survives shutdown.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct BattleBoosterState {
+pub struct BoosterState {
     /// Pilot-selected operating mode.
     pub enabled: bool,
     /// Overload checks made, less completed recovery intervals.
@@ -18,7 +18,7 @@ pub struct BattleBoosterState {
     pub failed: bool,
 }
 
-impl BattleBoosterState {
+impl BoosterState {
     /// Reject impossible timer or overload combinations on load.
     pub(super) fn validate(self) -> Result<()> {
         ensure!(
@@ -37,25 +37,25 @@ impl BattleBoosterState {
     }
 }
 
-impl super::BattleUnit {
+impl super::Mech {
     /// Owned activation and overload state; hardware inspection remains separate.
-    pub fn masc(&self) -> BattleBoosterState {
+    pub fn masc(&self) -> BoosterState {
         self.masc
     }
 
     /// A working powered booster contributes to the current movement ceiling.
     pub fn masc_active(&self) -> bool {
         self.masc.enabled
-            && self.power() == BattlePower::Running
+            && self.power() == Power::Running
             && self.masc_operational().unwrap_or(false)
     }
 }
 
 /// Toggle MASC and proportionally adjust the signed desired throttle.
-fn toggle(world: &mut World, id: ObjectId, pilot: ObjectId, kind: Booster) -> Result<BattleNotice> {
+fn toggle(world: &mut World, id: ObjectId, pilot: ObjectId, kind: Booster) -> Result<Notice> {
     super::power::controlled_unit(world, id, pilot)?;
     let unit = &world.btech.constructed_units()[&id];
-    ensure!(unit.power() == BattlePower::Running, "Start the unit first");
+    ensure!(unit.power() == Power::Running, "Start the unit first");
     ensure!(
         kind.operational(unit)?,
         "Your toy ain't prepared for what you're askin' it!"
@@ -76,7 +76,7 @@ fn toggle(world: &mut World, id: ObjectId, pilot: ObjectId, kind: Booster) -> Re
     kind.state_mut(unit).remaining = if enabled { 1 } else { 60 };
     unit.supercharger_scheduled_last = kind == Booster::Supercharger;
     unit.motion.as_mut().unwrap().desired_speed *= if enabled { 4.0 / 3.0 } else { 3.0 / 4.0 };
-    Ok(BattleNotice {
+    Ok(Notice {
         unit: id,
         text: format!(
             "{} has been turned {}.",
@@ -87,12 +87,7 @@ fn toggle(world: &mut World, id: ObjectId, pilot: ObjectId, kind: Booster) -> Re
 }
 
 /// Cockpit activation shares notification rollback with other Lua/native controls.
-fn control(
-    scripts: &Scripts,
-    id: ObjectId,
-    pilot: ObjectId,
-    kind: Booster,
-) -> Result<BattleNotice> {
+fn control(scripts: &Scripts, id: ObjectId, pilot: ObjectId, kind: Booster) -> Result<Notice> {
     scripts.atomic(|_| {
         let notice = toggle(&mut scripts.world_mut(), id, pilot, kind)?;
         super::notify_unit(scripts, notice.clone())?;
@@ -101,7 +96,7 @@ fn control(
 }
 
 /// Advance overload or recovery and publish all falls inside a single host transaction.
-pub fn advance_boosters_action(scripts: &Scripts, config: &Config) -> Result<Vec<BattleNotice>> {
+pub fn advance_boosters_action(scripts: &Scripts, config: &Config) -> Result<Vec<Notice>> {
     let ids: Vec<_> = scripts
         .world()
         .btech
@@ -133,7 +128,7 @@ pub fn advance_boosters_action(scripts: &Scripts, config: &Config) -> Result<Vec
                 .get(&id)
                 .is_some_and(|object| !object.flags.contains(crate::Flag::Going));
             let unit = &world.btech.constructed_units()[&id];
-            if !available || unit.power() != BattlePower::Running || unit.is_destroyed() {
+            if !available || unit.power() != Power::Running || unit.is_destroyed() {
                 kind.state_mut(world.btech.constructed.get_mut(&id).unwrap())
                     .shutdown();
                 continue;
@@ -175,7 +170,7 @@ pub fn advance_boosters_action(scripts: &Scripts, config: &Config) -> Result<Vec
             if wizard && needed < 10 {
                 roll = needed + unit.dice.die(u16::from(12 - needed))? as u8;
             }
-            notices.push(BattleNotice {
+            notices.push(Notice {
                 unit: id,
                 text: format!(
                     "{}: BTH {}{}, Roll: {roll}",
@@ -197,7 +192,7 @@ pub fn advance_boosters_action(scripts: &Scripts, config: &Config) -> Result<Vec
             }
             let speed = unit.motion().map_or(0.0, |motion| motion.speed);
             let falling = speed.abs() > 10.75;
-            notices.push(BattleNotice {
+            notices.push(Notice {
                 unit: id,
                 text: if falling {
                     "Your leg actuators freeze suddenly, and you fall!"
@@ -218,15 +213,15 @@ pub fn advance_boosters_action(scripts: &Scripts, config: &Config) -> Result<Vec
                 ));
             }
             let settings = &config.battletech;
-            let rules = super::BattleFallRules {
-                vehicle_impact: crate::BattleVehicleImpactRules::configured(settings, false),
-                stacking: super::BattleStackingRules {
+            let rules = super::FallRules {
+                vehicle_impact: crate::VehicleImpactRules::configured(settings, false),
+                stacking: super::StackingRules {
                     mode: settings.stacking,
                     damage_percent: settings.stackdamage,
                     hit_arcs: settings.hit_arcs,
                 },
-                stagger: super::BattleStaggerMode::from_setting(settings.newstagger),
-                hit: super::BattleHitRules {
+                stagger: super::StaggerMode::from_setting(settings.newstagger),
+                hit: super::HitRules {
                     inferno_penalty: settings.inferno_penalty != 0,
                     exile_stun_mode: settings.exile_stun_code.clamp(0, 2) as u8,
                 },
@@ -284,23 +279,19 @@ fn command_for(ctx: &crate::CommandContext<'_>, kind: Booster) -> Result<crate::
 }
 
 /// Toggle MASC through the pure world control.
-pub fn toggle_masc(world: &mut World, id: ObjectId, pilot: ObjectId) -> Result<BattleNotice> {
+pub fn toggle_masc(world: &mut World, id: ObjectId, pilot: ObjectId) -> Result<Notice> {
     toggle(world, id, pilot, Booster::Masc)
 }
 /// Toggle a supercharger through the pure world control.
-pub fn toggle_supercharger(
-    world: &mut World,
-    id: ObjectId,
-    pilot: ObjectId,
-) -> Result<BattleNotice> {
+pub fn toggle_supercharger(world: &mut World, id: ObjectId, pilot: ObjectId) -> Result<Notice> {
     toggle(world, id, pilot, Booster::Supercharger)
 }
 /// Toggle and publish MASC atomically.
-pub fn masc(scripts: &Scripts, id: ObjectId, pilot: ObjectId) -> Result<BattleNotice> {
+pub fn masc(scripts: &Scripts, id: ObjectId, pilot: ObjectId) -> Result<Notice> {
     control(scripts, id, pilot, Booster::Masc)
 }
 /// Toggle and publish the supercharger atomically.
-pub fn supercharger(scripts: &Scripts, id: ObjectId, pilot: ObjectId) -> Result<BattleNotice> {
+pub fn supercharger(scripts: &Scripts, id: ObjectId, pilot: ObjectId) -> Result<Notice> {
     control(scripts, id, pilot, Booster::Supercharger)
 }
 /// Native MASC control.
@@ -331,25 +322,25 @@ impl Booster {
             Self::Supercharger => "Supercharger",
         }
     }
-    fn state(self, unit: &super::BattleUnit) -> &BattleBoosterState {
+    fn state(self, unit: &super::Mech) -> &BoosterState {
         match self {
             Self::Masc => &unit.masc,
             Self::Supercharger => &unit.supercharger,
         }
     }
-    fn state_mut(self, unit: &mut super::BattleUnit) -> &mut BattleBoosterState {
+    fn state_mut(self, unit: &mut super::Mech) -> &mut BoosterState {
         match self {
             Self::Masc => &mut unit.masc,
             Self::Supercharger => &mut unit.supercharger,
         }
     }
-    fn operational(self, unit: &super::BattleUnit) -> Result<bool> {
+    fn operational(self, unit: &super::Mech) -> Result<bool> {
         match self {
             Self::Masc => unit.masc_operational(),
             Self::Supercharger => Ok(unit.supercharger_operational()),
         }
     }
-    fn other_active(self, unit: &super::BattleUnit) -> bool {
+    fn other_active(self, unit: &super::Mech) -> bool {
         match self {
             Self::Masc => unit.supercharger_active(),
             Self::Supercharger => unit.masc_active(),
@@ -358,21 +349,16 @@ impl Booster {
 }
 
 /// Destroy the compressor and one to four surviving center-torso engine slots in order.
-fn fail_supercharger(
-    world: &mut World,
-    id: ObjectId,
-    notices: &mut Vec<BattleNotice>,
-) -> Result<()> {
-    use super::{BattleSection, BattleSystem};
-    notices.push(BattleNotice {
+fn fail_supercharger(world: &mut World, id: ObjectId, notices: &mut Vec<Notice>) -> Result<()> {
+    use super::{MechSection, System};
+    notices.push(Notice {
         unit: id,
         text: "Your supercharger overloads and explodes!".into(),
     });
     let unit = world.btech.constructed.get_mut(&id).unwrap();
     let loadout = unit.loadout()?;
     for part in loadout.systems.iter().filter(|part| {
-        part.location.section == BattleSection::CenterTorso
-            && part.system == BattleSystem::Supercharger
+        part.location.section == MechSection::CenterTorso && part.system == System::Supercharger
     }) {
         unit.destroy_critical(part.location)?;
     }
@@ -381,8 +367,8 @@ fn fail_supercharger(
         .systems
         .iter()
         .filter(|part| {
-            part.location.section == BattleSection::CenterTorso
-                && part.system == BattleSystem::Engine
+            part.location.section == MechSection::CenterTorso
+                && part.system == System::Engine
                 && !unit.critical_destroyed(part.location)
         })
         .take(count)
@@ -390,8 +376,8 @@ fn fail_supercharger(
         .collect();
     for location in engines {
         let unit = &world.btech.constructed_units()[&id];
-        let hits = unit.system_hits(BattleSystem::Engine);
-        if !unit.is_destroyed() && unit.power() == BattlePower::Running {
+        let hits = unit.system_hits(System::Engine);
+        if !unit.is_destroyed() && unit.power() == Power::Running {
             notices.extend(super::broadcast::observer_notices(
                 world,
                 id,
@@ -405,12 +391,12 @@ fn fail_supercharger(
             .unwrap()
             .destroy_critical(location)?;
         if hits < 2 {
-            notices.push(BattleNotice {
+            notices.push(Notice {
                 unit: id,
                 text: "Your engine shielding takes a hit!  It's getting hotter in here!!".into(),
             });
         } else if hits < 3 {
-            notices.push(BattleNotice {
+            notices.push(Notice {
                 unit: id,
                 text: "Your engine is destroyed!!".into(),
             });

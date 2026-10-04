@@ -7,23 +7,23 @@ pub(super) fn register(lua: &Lua, native: &Table, _world: &SharedWorld) -> mlua:
     for (name, suite, mode) in [
         (
             "unit_ecm",
-            crate::BattleElectronicSuite::Guardian,
-            crate::BattleElectronicMode::Ecm,
+            crate::ElectronicSuite::Guardian,
+            crate::ElectronicMode::Ecm,
         ),
         (
             "unit_eccm",
-            crate::BattleElectronicSuite::Guardian,
-            crate::BattleElectronicMode::Eccm,
+            crate::ElectronicSuite::Guardian,
+            crate::ElectronicMode::Eccm,
         ),
         (
             "unit_angelecm",
-            crate::BattleElectronicSuite::Angel,
-            crate::BattleElectronicMode::Ecm,
+            crate::ElectronicSuite::Angel,
+            crate::ElectronicMode::Ecm,
         ),
         (
             "unit_angeleccm",
-            crate::BattleElectronicSuite::Angel,
-            crate::BattleElectronicMode::Eccm,
+            crate::ElectronicSuite::Angel,
+            crate::ElectronicMode::Eccm,
         ),
     ] {
         let callback = lua.create_function(move |lua, (unit, pilot): (i64, i64)| {
@@ -223,7 +223,7 @@ pub(super) fn register(lua: &Lua, native: &Table, _world: &SharedWorld) -> mlua:
         let mode = match mode {
             Value::Nil => None,
             mode => Some(
-                crate::BattleSearchlightMode::from_stored(i64::from(constants::require(
+                crate::SearchlightMode::from_stored(i64::from(constants::require(
                     mode,
                     3,
                     "mode",

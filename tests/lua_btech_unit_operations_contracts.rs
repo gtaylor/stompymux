@@ -91,7 +91,7 @@ async fn critical_weapon_ammunition_modes_and_special_edits_are_strict() {
     create_battle_unit(
         &mut world,
         id,
-        BattleTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
@@ -155,15 +155,15 @@ async fn critical_weapon_ammunition_modes_and_special_edits_are_strict() {
         ok,err=mux.error.pcall(btech.unit.install_special,unit,{part='IS.MediumLaser',section=btech.unit.sections.HEAD,slot=4})
         assert(not ok and err.code=='btech.part.wrong_kind' and err.message:find("bad argument #2 to '?' (part must be special equipment)",1,true))
     "#).unwrap();
-    let saved = BattleUnitTemplate::parse(
+    let saved = UnitTemplate::parse(
         "mode-contract",
         &std::fs::read_to_string(root.join("mode-contract.toml")).unwrap(),
     )
     .unwrap();
-    let BattleUnitTemplate::Mech(saved) = saved else {
+    let UnitTemplate::Mech(saved) = saved else {
         panic!("expected Mech template")
     };
-    let modes = &saved.sections[&BattleSection::LeftTorso].criticals[&0].modes;
+    let modes = &saved.sections[&MechSection::LeftTorso].criticals[&0].modes;
     assert_eq!(modes.len(), 46);
 }
 
@@ -176,7 +176,7 @@ async fn unit_operation_boundaries_reject_going_objects() {
     create_battle_unit(
         &mut world,
         id,
-        BattleTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
@@ -320,7 +320,7 @@ async fn off_map_vehicle_piloting_failure_still_applies_fall_damage() {
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+        VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
             .unwrap(),
     )
     .unwrap();
@@ -339,7 +339,7 @@ async fn off_map_vehicle_piloting_failure_still_applies_fall_damage() {
     // off-map fall through a critical or injury path, breaking the exact
     // eight-point full-damage contract asserted below.
     firing::edit(&mut world, id, |state| {
-        state["dice"] = serde_json::to_value(BattleDice::seeded([42; 32])).unwrap();
+        state["dice"] = serde_json::to_value(Dice::seeded([42; 32])).unwrap();
     });
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     scripts
@@ -416,7 +416,7 @@ async fn mech_slot_edit_preserves_unrelated_live_weapon_and_ammunition_state() {
     create_battle_unit(
         &mut world,
         id,
-        BattleTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     world
@@ -507,7 +507,7 @@ async fn signed_integer_boundaries_and_array_holes_follow_c_contracts() {
     create_battle_unit(
         &mut world,
         id,
-        BattleTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
@@ -515,7 +515,7 @@ async fn signed_integer_boundaries_and_array_holes_follow_c_contracts() {
     // routes a five-point fall group into a through-armor critical (hit roll 2
     // with a d12 confirmation), breaking the exact tonnage contract below.
     firing::edit(&mut world, id, |state| {
-        state["dice"] = serde_json::to_value(BattleDice::seeded([42; 32])).unwrap();
+        state["dice"] = serde_json::to_value(Dice::seeded([42; 32])).unwrap();
     });
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     scripts
@@ -545,7 +545,7 @@ async fn signed_integer_boundaries_and_array_holes_follow_c_contracts() {
         .unwrap();
     assert_eq!(
         scripts.world().btech.constructed_units()[&id].posture(),
-        BattlePosture::Prone
+        Posture::Prone
     );
 }
 
@@ -556,29 +556,29 @@ async fn weapon_install_accepts_native_slot_layouts() {
     create_battle_unit(
         &mut world,
         id,
-        BattleTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     let paired = stompymux_rs::btech::part_catalogue()
         .iter()
         .find(|part| {
-            BattleWeapon::from_part_id(part.part_id)
+            Weapon::from_part_id(part.part_id)
                 .is_some_and(|weapon| weapon.profile().critical_slots == 2)
         })
         .unwrap();
-    let paired_slots = BattleWeapon::from_part_id(paired.part_id)
+    let paired_slots = Weapon::from_part_id(paired.part_id)
         .unwrap()
         .profile()
         .critical_slots;
     let partial = stompymux_rs::btech::part_catalogue()
         .iter()
         .find(|part| {
-            BattleWeapon::from_part_id(part.part_id)
+            Weapon::from_part_id(part.part_id)
                 .is_some_and(|weapon| weapon.profile().critical_slots >= 9)
         })
         .unwrap();
-    let partial_slots = BattleWeapon::from_part_id(partial.part_id)
+    let partial_slots = Weapon::from_part_id(partial.part_id)
         .unwrap()
         .profile()
         .critical_slots;
@@ -645,7 +645,7 @@ async fn raw_registered_criticals_survive_restart() {
     create_battle_unit(
         &mut world,
         id,
-        BattleTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
@@ -902,7 +902,7 @@ async fn every_unit_operation_is_unavailable_while_checking() {
     create_battle_unit(
         &mut world,
         id,
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);

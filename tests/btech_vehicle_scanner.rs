@@ -22,7 +22,7 @@ async fn fixture(
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         if index < 2 {
             let mut definition =
-                BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
                     .unwrap();
             definition
                 .attributes
@@ -32,7 +32,7 @@ async fn fixture(
             create_battle_vehicle(
                 &mut world,
                 id,
-                BattleVehicleTemplate::parse("test", vehicle).unwrap(),
+                VehicleTemplate::parse("test", vehicle).unwrap(),
             )
             .unwrap();
         }
@@ -44,7 +44,7 @@ async fn fixture(
 }
 
 /// Assign scenario power without introducing crew actions into sensor tests.
-fn power(world: &mut World, ids: &[ObjectId], value: BattlePower) {
+fn power(world: &mut World, ids: &[ObjectId], value: Power) {
     for id in ids {
         world.btech.set_unit_power(*id, value).unwrap();
     }
@@ -60,7 +60,7 @@ async fn formation() -> (tempfile::TempDir, Config, World, [ObjectId; 4]) {
     for id in ids {
         place_battle_unit(&mut world, id, map, 0, 0).unwrap();
     }
-    power(&mut world, &ids, BattlePower::Running);
+    power(&mut world, &ids, Power::Running);
     (dir, config, world, ids)
 }
 
@@ -75,14 +75,14 @@ async fn spread() -> (tempfile::TempDir, Config, World, ObjectId, [ObjectId; 4])
     for (y, id) in ids.into_iter().enumerate() {
         place_battle_unit(&mut world, id, map, 0, y as i64).unwrap();
     }
-    power(&mut world, &ids, BattlePower::Running);
+    power(&mut world, &ids, Power::Running);
     (dir, config, world, map, ids)
 }
 
 /// Silence the sensor band and drop weather visibility so no unit perceives another.
 fn blind_map(world: &mut World, map: ObjectId) {
-    set_battle_map_perception(world, map, BattleMapPerceptionFlag::Sensors, false).unwrap();
-    set_battle_map_visibility(world, map, BattleLight::Day, 0).unwrap();
+    set_battle_map_perception(world, map, MapPerceptionFlag::Sensors, false).unwrap();
+    set_battle_map_visibility(world, map, Light::Day, 0).unwrap();
 }
 
 /// Mixed scans acquire every unit at once, retain contacts, lose them together when no channel
@@ -94,7 +94,7 @@ async fn mixed_automatic_scans_retain_contacts_and_share_brief_notifications() {
     set_battle_unit_signature(
         &mut world,
         d,
-        BattleUnitSignature {
+        UnitSignature {
             team: 4,
             ..Default::default()
         },
@@ -209,7 +209,7 @@ async fn mixed_automatic_scans_retain_contacts_and_share_brief_notifications() {
 #[tokio::test]
 async fn vehicle_scan_admission_skips_startup_and_acquires_mixed_contacts() {
     let (_dir, config, mut world, [a, b, c, d]) = formation().await;
-    power(&mut world, &[c], BattlePower::Starting { remaining: 1 });
+    power(&mut world, &[c], Power::Starting { remaining: 1 });
     world
         .objects
         .get_mut(&d)
@@ -271,7 +271,7 @@ async fn character_scanners_share_cached_perception_and_durable_contact_transiti
         let class = if index < 2 { "constructed" } else { "vehicles" };
         state[class][id.0.to_string()]["scanner_perception"] = serde_json::json!(8);
         state[class][id.0.to_string()]["dice"] =
-            serde_json::to_value(BattleDice::seeded([index as u8; 32])).unwrap();
+            serde_json::to_value(Dice::seeded([index as u8; 32])).unwrap();
     }
     tactical.btech = serde_json::from_value(state).unwrap();
     let mut character = tactical.clone();
@@ -325,7 +325,7 @@ async fn hostile_character_acquisition_shares_perception_awards_and_exact_dice()
             set_battle_unit_signature(
                 &mut world,
                 target,
-                BattleUnitSignature {
+                UnitSignature {
                     team: 1,
                     ..Default::default()
                 },
@@ -352,7 +352,7 @@ async fn hostile_character_acquisition_shares_perception_awards_and_exact_dice()
             set_battle_character(
                 &mut world,
                 ObjectId(1),
-                BattleCharacter {
+                Character {
                     bruise: 0,
                     lethal: 0,
                     build: 5,
@@ -369,7 +369,7 @@ async fn hostile_character_acquisition_shares_perception_awards_and_exact_dice()
                     &mut world,
                     ObjectId(1),
                     "Perception",
-                    BattleCharacterValue {
+                    CharacterValue {
                         last_used: i64::MAX,
                         ..Default::default()
                     },
@@ -378,7 +378,7 @@ async fn hostile_character_acquisition_shares_perception_awards_and_exact_dice()
             }
             let seed = (0..=255)
                 .find(|seed| {
-                    let mut dice = BattleDice::seeded([*seed; 32]);
+                    let mut dice = Dice::seeded([*seed; 32]);
                     let gate = dice.die(6).unwrap();
                     if case == "gate" {
                         return gate != 1;
@@ -386,7 +386,7 @@ async fn hostile_character_acquisition_shares_perception_awards_and_exact_dice()
                     gate == 1 && (dice.two_d6() >= 4) == (case != "skill")
                 })
                 .unwrap();
-            let mut expected = BattleDice::seeded([seed; 32]);
+            let mut expected = Dice::seeded([seed; 32]);
             assert_eq!(expected.die(6).unwrap() == 1, case != "gate");
             if eligible && case != "gate" {
                 assert_eq!(expected.two_d6() >= 4, case != "skill");
@@ -394,7 +394,7 @@ async fn hostile_character_acquisition_shares_perception_awards_and_exact_dice()
             let mut state = serde_json::to_value(&world.btech).unwrap();
             let class = if vehicle { "vehicles" } else { "constructed" };
             state[class][observer.0.to_string()]["dice"] =
-                serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+                serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
             state[class][observer.0.to_string()]["scanner_perception"] = serde_json::json!(6);
             world.btech = serde_json::from_value(state).unwrap();
             let events = refresh_battle_contacts(&mut world, &[observer]).unwrap();
@@ -405,7 +405,7 @@ async fn hostile_character_acquisition_shares_perception_awards_and_exact_dice()
                 .collect();
             assert_eq!(messages.len(), usize::from(awarded), "{case}");
             if awarded {
-                assert_eq!(messages[0].channel, BattleChannel::Experience);
+                assert_eq!(messages[0].channel, DiagnosticChannel::Experience);
                 assert!(messages[0].text.contains("gained 1 perception XP"));
                 assert_eq!(
                     world.btech.character_values()[&ObjectId(1)]["Perception"].experience_balance(),

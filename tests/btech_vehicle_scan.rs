@@ -22,7 +22,7 @@ async fn fixture(
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         if index < 2 {
             let mut definition =
-                BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
                     .unwrap();
             definition
                 .attributes
@@ -32,7 +32,7 @@ async fn fixture(
             create_battle_vehicle(
                 &mut world,
                 id,
-                BattleVehicleTemplate::parse("test", vehicle).unwrap(),
+                VehicleTemplate::parse("test", vehicle).unwrap(),
             )
             .unwrap();
         }
@@ -44,7 +44,7 @@ async fn fixture(
 }
 
 /// Assign scenario power without introducing crew actions into sensor tests.
-fn power(world: &mut World, ids: &[ObjectId], value: BattlePower) {
+fn power(world: &mut World, ids: &[ObjectId], value: Power) {
     for id in ids {
         world.btech.set_unit_power(*id, value).unwrap();
     }
@@ -60,7 +60,7 @@ async fn formation() -> (tempfile::TempDir, Config, World, [ObjectId; 4]) {
     for id in ids {
         place_battle_unit(&mut world, id, map, 0, 0).unwrap();
     }
-    power(&mut world, &ids, BattlePower::Running);
+    power(&mut world, &ids, Power::Running);
     (dir, config, world, ids)
 }
 
@@ -171,8 +171,8 @@ async fn vehicle_scan_ranges_and_observer_disclosure_follow_current_state() {
         include_str!("../game/mechs/Demolisher.toml"),
     )
     .await;
-    power(&mut world, &[a, b, c, d], BattlePower::Running);
-    set_battle_map_visibility(&mut world, map, BattleLight::Day, 30).unwrap();
+    power(&mut world, &[a, b, c, d], Power::Running);
+    set_battle_map_visibility(&mut world, map, Light::Day, 30).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(c);
     assign_battle_pilot(&mut world, c, ObjectId(1)).unwrap();
     refresh_battle_contacts(&mut world, &[c]).unwrap();
@@ -283,7 +283,7 @@ fn terrain_targets(world: &mut World, config: &Config, map: ObjectId) -> ObjectI
     set_building_state(
         world,
         interior,
-        BattleBuildingState {
+        BuildingState {
             integrity: 31,
             maximum_integrity: 50,
             flags: 0,
@@ -296,7 +296,7 @@ fn terrain_targets(world: &mut World, config: &Config, map: ObjectId) -> ObjectI
         world,
         map,
         0,
-        Some(BattleBuildingEntrance {
+        Some(BuildingEntrance {
             coordinate,
             interior,
             data_char: 0,
@@ -309,9 +309,9 @@ fn terrain_targets(world: &mut World, config: &Config, map: ObjectId) -> ObjectI
         world,
         map,
         0,
-        Some(BattleMinefield {
+        Some(Minefield {
             coordinate,
-            kind: BattleMineKind::Command,
+            kind: MineKind::Command,
             strength: 12,
             extra: 123,
             owner: ObjectId(1),
@@ -391,12 +391,12 @@ async fn vehicle_coordinate_and_structure_scans_share_native_lua_admission() {
     );
     assert_eq!(world.btech, limited);
     // The sensor band sees the adjacent hex in any weather until the battlefield disables it.
-    set_battle_map_visibility(&mut world, map, BattleLight::Day, 0).unwrap();
+    set_battle_map_visibility(&mut world, map, Light::Day, 0).unwrap();
     assert_eq!(
         battle_hex_detection(&world, observer, coordinate).unwrap(),
-        Some(BattleDetectionChannel::Sensors)
+        Some(DetectionChannel::Sensors)
     );
-    set_battle_map_perception(&mut world, map, BattleMapPerceptionFlag::Sensors, false).unwrap();
+    set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, false).unwrap();
     assert!(!battle_hex_visible(&world, observer, coordinate).unwrap());
     let disabled = world.btech.clone();
     assert!(scan_battle_mines(&mut world, observer, ObjectId(1), coordinate, 1000).is_err());
@@ -424,7 +424,7 @@ async fn vehicle_terrain_perception_owns_dice_and_rolls_back_experience() {
     );
     assert_eq!(world.btech, before);
     let mut saved = serde_json::to_value(&world.btech).unwrap();
-    let mut dice: BattleDice =
+    let mut dice: Dice =
         serde_json::from_value(saved["vehicles"][observer.0.to_string()]["dice"].clone()).unwrap();
     dice.die(8).unwrap();
     saved["vehicles"][observer.0.to_string()]["dice"] = serde_json::to_value(dice).unwrap();
@@ -449,7 +449,7 @@ async fn vehicle_terrain_perception_owns_dice_and_rolls_back_experience() {
     set_battle_character(
         &mut world,
         ObjectId(1),
-        BattleCharacter {
+        Character {
             bruise: 0,
             lethal: 0,
             build: 5,
@@ -554,7 +554,7 @@ async fn vehicle_building_contacts_honor_passengers_preferences_and_identificati
         (contacts[0].integrity, contacts[0].maximum_integrity),
         (31, 50)
     );
-    assert_eq!(contacts[0].weapon_arc, BattleContactArc::Rear);
+    assert_eq!(contacts[0].weapon_arc, ContactArc::Rear);
     assert_eq!(contacts[0].elevation, 1);
     assert!(contacts[0].identified);
     for command in ["contacts", "contacts b"] {
@@ -580,8 +580,8 @@ async fn vehicle_building_contacts_honor_passengers_preferences_and_identificati
     set_battle_contact_preferences(
         &mut shared.borrow_mut(),
         ObjectId(1),
-        BattleContactPreferences {
-            buildings: BattleBuildingContactMode::FollowBrief,
+        ContactPreferences {
+            buildings: BuildingContactMode::FollowBrief,
             ..Default::default()
         },
     )
@@ -651,7 +651,7 @@ async fn vehicle_building_contacts_honor_passengers_preferences_and_identificati
     set_battle_map_perception(
         &mut shared.borrow_mut(),
         map,
-        BattleMapPerceptionFlag::Sensors,
+        MapPerceptionFlag::Sensors,
         false,
     )
     .unwrap();
@@ -665,7 +665,7 @@ async fn vehicle_building_contacts_honor_passengers_preferences_and_identificati
     );
     assert_eq!(scripts.world().btech.maps()[&map].visibility, 0);
     scripts.eval_callback::<()>("_parents['default_room.lua'].locks.identify_building=function(ctx) error('must not run') end").unwrap();
-    set_battle_map_visibility(&mut shared.borrow_mut(), map, BattleLight::Day, 0).unwrap();
+    set_battle_map_visibility(&mut shared.borrow_mut(), map, Light::Day, 0).unwrap();
     // No visible candidate means the deliberately failing lock must not run.
     assert!(
         battle_building_contacts(&scripts, observer, ObjectId(1))

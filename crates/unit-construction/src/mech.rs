@@ -7,7 +7,7 @@ use std::collections::BTreeMap;
 /// Stable BattleMech attachment identity in persisted order.
 /// Limb identifiers use biped names; use the chassis for quad names and leg roles.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-pub enum BattleSection {
+pub enum MechSection {
     LeftArm,
     RightArm,
     LeftTorso,
@@ -18,7 +18,7 @@ pub enum BattleSection {
     Head,
 }
 
-impl BattleSection {
+impl MechSection {
     /// All eight sections in storage order.
     pub const ALL: [Self; 8] = [
         Self::LeftArm,
@@ -75,19 +75,19 @@ pub struct SectionDefinition {
 
 /// A decoded BattleMech asset; successful parsing does not imply simulation support.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct BattleTemplate {
+pub struct MechTemplate {
     pub name: String,
     pub reference: String,
     pub tons: u16,
     pub max_speed: f64,
     pub jump_speed: f64,
     pub heat_sinks: u16,
-    pub sections: BTreeMap<BattleSection, SectionDefinition>,
+    pub sections: BTreeMap<MechSection, SectionDefinition>,
     /// All unit-level fields, including features awaiting domain implementation.
     pub attributes: BTreeMap<String, String>,
 }
 
-impl BattleTemplate {
+impl MechTemplate {
     /// Clan chassis always use double-efficiency heat sinks.
     pub fn has_double_heat_sinks(&self) -> bool {
         self.has_special("Clan") || self.has_special("DoubleHS")
@@ -129,7 +129,7 @@ impl BattleTemplate {
 
     /// Test a chassis technology by its full name or the reference's abbreviation, which
     /// templates use interchangeably.
-    pub fn has_technology(&self, technology: super::BattleTechnology) -> bool {
+    pub fn has_technology(&self, technology: super::Technology) -> bool {
         let (name, abbreviation) = technology.names();
         self.has_special(name) || self.has_special(abbreviation)
     }
@@ -162,7 +162,7 @@ impl BattleTemplate {
             required("type")?.eq_ignore_ascii_case("Mech"),
             "only BattleMech templates are supported"
         );
-        let chassis = super::BattleMechChassis::parse(&required("move_type")?)?;
+        let chassis = super::MechChassis::parse(&required("move_type")?)?;
         let sections: BTreeMap<_, _> = sections
             .into_iter()
             .map(|(name, layout)| Ok((chassis.parse_section(&name)?, layout)))
@@ -203,8 +203,8 @@ impl BattleTemplate {
         // Internals lines for both the original and the live value. Keeping the
         // rewrite here, where C's parse and finalize are one operation, leaves
         // saved definitions and later construction edits restored verbatim.
-        let quad = chassis == super::BattleMechChassis::Quad;
-        for section in BattleSection::ALL {
+        let quad = chassis == super::MechChassis::Quad;
+        for section in MechSection::ALL {
             if let Some(expected) = super::construction::mech_internal(template.tons, section, quad)
                 && let Some(layout) = template.sections.get_mut(&section)
             {
@@ -215,10 +215,10 @@ impl BattleTemplate {
     }
 }
 
-impl BattleSection {
+impl MechSection {
     /// Destination of excess biped damage; head and center torso have no transfer destination.
     pub fn damage_transfer(self) -> Option<Self> {
-        use BattleSection::*;
+        use MechSection::*;
         match self {
             LeftArm | LeftLeg => Some(LeftTorso),
             RightArm | RightLeg => Some(RightTorso),
@@ -228,7 +228,7 @@ impl BattleSection {
     }
 }
 
-impl BattleTemplate {
+impl MechTemplate {
     /// Installed slots determine TSM technology; loss or flooding does not remove passive myomer.
     pub fn has_triple_myomer(&self) -> bool {
         self.sections

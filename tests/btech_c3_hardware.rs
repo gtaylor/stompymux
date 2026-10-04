@@ -2,14 +2,14 @@
 use stompymux_rs::*;
 
 /// Replace arm equipment with explicitly positioned computer slots.
-fn design(parts: &[(BattleSection, u8, &str)]) -> BattleUnit {
+fn design(parts: &[(MechSection, u8, &str)]) -> Mech {
     let mut template =
-        BattleTemplate::parse("AS7-D", include_str!("fixtures/btech/mechs/AS7-D.toml")).unwrap();
+        MechTemplate::parse("AS7-D", include_str!("fixtures/btech/mechs/AS7-D.toml")).unwrap();
     template.attributes.insert(
         "specials".into(),
         "C3MasterTech C3SlaveTech C3I_Tech".into(),
     );
-    for section in [BattleSection::LeftArm, BattleSection::RightArm] {
+    for section in [MechSection::LeftArm, MechSection::RightArm] {
         template
             .sections
             .get_mut(&section)
@@ -32,13 +32,13 @@ fn design(parts: &[(BattleSection, u8, &str)]) -> BattleUnit {
                 },
             );
     }
-    BattleUnit::from_template(template).unwrap()
+    Mech::from_template(template).unwrap()
 }
 
 #[test]
 fn masters_group_within_sections_and_damage_does_not_cross_groups() {
-    let left = BattleSection::LeftArm;
-    let right = BattleSection::RightArm;
+    let left = MechSection::LeftArm;
+    let right = MechSection::RightArm;
     let mut parts: Vec<_> = (0..10).map(|slot| (left, slot, "C3Master")).collect();
     parts.extend((0..4).map(|slot| (right, slot, "C3Master")));
     let mut unit = design(&parts);
@@ -63,7 +63,7 @@ fn masters_group_within_sections_and_damage_does_not_cross_groups() {
     assert_eq!(unit.c3_hardware().unwrap().working_masters, 0);
     assert_eq!(unit.c3_hardware().unwrap().masters, 2);
     assert_eq!(unit.mass().unwrap(), mass);
-    let loaded: BattleUnit = serde_json::from_value(serde_json::to_value(&unit).unwrap()).unwrap();
+    let loaded: Mech = serde_json::from_value(serde_json::to_value(&unit).unwrap()).unwrap();
     assert_eq!(loaded.c3_hardware().unwrap(), unit.c3_hardware().unwrap());
     // Five master slots may have intervening empty slots, but cannot span sections.
     let spaced: Vec<_> = [0, 2, 4, 6, 8]
@@ -88,12 +88,9 @@ fn masters_group_within_sections_and_damage_does_not_cross_groups() {
 
 #[test]
 fn slaves_and_c3i_use_live_slot_thresholds_without_trusting_flags() {
-    let left = BattleSection::LeftArm;
-    let right = BattleSection::RightArm;
-    assert_eq!(
-        design(&[]).c3_hardware().unwrap(),
-        BattleC3Hardware::default()
-    );
+    let left = MechSection::LeftArm;
+    let right = MechSection::RightArm;
+    assert_eq!(design(&[]).c3_hardware().unwrap(), C3Hardware::default());
     let mut unit = design(&[
         (left, 0, "C3Slave"),
         (left, 1, "C3i"),

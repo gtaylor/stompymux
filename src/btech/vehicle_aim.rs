@@ -1,5 +1,5 @@
 //! Vehicle direct-weapon aim composes shared range, target, perception and lock rules with vehicle controls.
-use super::{BattleAimModifiers, BattleAimRules, BattleStealthRange, BattleSystem};
+use super::{AimModifiers, AimRules, StealthRange, System};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 
@@ -10,8 +10,8 @@ pub(super) fn modifiers(
     target: ObjectId,
     weapon_index: usize,
     gunnery: i16,
-    rules: BattleAimRules,
-) -> Result<BattleAimModifiers> {
+    rules: AimRules,
+) -> Result<AimModifiers> {
     let shooter = source.unit;
     for id in [shooter, target] {
         ensure!(
@@ -48,7 +48,7 @@ pub(super) fn modifiers(
     let mut aim = weapon_modifiers(attacker, weapon_index, distance, gunnery, rules)?;
     super::aimed_target::apply_aim(world, shooter, target, mount.weapon, &mut aim)?;
     aim.attacker_water = super::aim::water_modifier(world, shooter)?;
-    aim.self_target = shooter == target && mount.weapon == super::BattleWeapon::CoolantGun;
+    aim.self_target = shooter == target && mount.weapon == super::Weapon::CoolantGun;
     aim.indirect = indirect;
     aim.ammunition_accuracy += target_terms.ammunition_accuracy;
     aim.target_movement = target_terms.movement;
@@ -99,12 +99,12 @@ pub(super) fn modifiers(
 
 /// Vehicle movement and equipment contributions used for both unit and coordinate targets.
 pub(super) fn weapon_modifiers(
-    attacker: &super::BattleVehicle,
+    attacker: &super::Vehicle,
     weapon_index: usize,
     distance: f64,
     gunnery: i16,
-    rules: BattleAimRules,
-) -> Result<BattleAimModifiers> {
+    rules: AimRules,
+) -> Result<AimModifiers> {
     let loadout = attacker.loadout()?;
     let weapon = loadout
         .weapons
@@ -122,13 +122,13 @@ pub(super) fn weapon_modifiers(
     )?;
     aim.attacker_movement = attacker.weapon_movement_modifier(weapon_index, rules.fasa_turning)?;
     aim.control_damage = attacker.gunnery_damage();
-    aim.beacon_accuracy = i8::from(attacker.has_beacon(super::BattleBeaconKind::Haywire));
+    aim.beacon_accuracy = i8::from(attacker.has_beacon(super::BeaconKind::Haywire));
     if loadout.weapons[weapon_index].computer_assists(
         ammunition,
         loadout
             .systems
             .iter()
-            .filter(|part| part.system == BattleSystem::TargetingComputer)
+            .filter(|part| part.system == System::TargetingComputer)
             .map(|part| !attacker.critical_unavailable(part.location)),
     ) {
         aim.targeting_computer = -1;

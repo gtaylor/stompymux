@@ -1,6 +1,6 @@
 //! Opt-in long-distance pursuit experiments with legally driven, reproducible opponents.
 use super::*;
-use crate::{BattlePosition, Config, HeartbeatHarness, HexCoordinate, ObjectId};
+use crate::{Config, HeartbeatHarness, HexCoordinate, ObjectId, Position};
 use anyhow::{Result, ensure};
 use serde::Serialize;
 use std::{io::Write, path::Path};
@@ -107,7 +107,7 @@ fn impair(world: &mut crate::World, unit: ObjectId, chassis: &str) -> Result<()>
             world,
             unit,
             crate::btech::CriticalLocation {
-                section: crate::BattleSection::LeftLeg,
+                section: crate::MechSection::LeftLeg,
                 slot: 2,
             },
         )?;
@@ -115,7 +115,7 @@ fn impair(world: &mut crate::World, unit: ObjectId, chassis: &str) -> Result<()>
         crate::btech::damage_vehicle_motive(
             world,
             unit,
-            crate::btech::BattleVehicleMotiveHit::SpeedLoss { movement_points: 1 },
+            crate::btech::VehicleMotiveHit::SpeedLoss { movement_points: 1 },
         )?;
     }
     Ok(())
@@ -157,7 +157,7 @@ fn drive(
 fn shortest_firing_route(
     world: &crate::World,
     id: ObjectId,
-    target: BattlePosition,
+    target: Position,
     maximum: u8,
 ) -> Option<f64> {
     use std::collections::{BTreeSet, VecDeque};
@@ -191,12 +191,12 @@ fn shortest_firing_route(
             if traversal::assess(
                 world,
                 id,
-                BattlePosition {
+                Position {
                     map: own.map,
                     x: h.x,
                     y: h.y,
                 },
-                BattlePosition {
+                Position {
                     map: own.map,
                     x: next.x,
                     y: next.y,
@@ -354,7 +354,7 @@ pub async fn run(
                     };
                     let order = if name == "intercept_move" {
                         AutopilotOrder::AttackMove {
-                            destination: BattlePosition { map, x: 40, y: 22 },
+                            destination: Position { map, x: 40, y: 22 },
                             arrival_radius: 0,
                         }
                     } else {
@@ -484,7 +484,7 @@ pub async fn run(
                                     (21, 10),
                                 ]
                                 .into_iter()
-                                .map(|(x, y)| BattlePosition { map, x, y })
+                                .map(|(x, y)| Position { map, x, y })
                                 .collect(),
                             };
                             orders::validate_for_unit(&world, target, &order)?;

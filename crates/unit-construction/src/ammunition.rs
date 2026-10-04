@@ -1,12 +1,12 @@
 //! Typed ammunition selection, separate from live weapon firing modes and ammunition quantities.
-use super::BattleWeapon;
+use super::Weapon;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
 /// Ammunition types understood by the supported weapons; normal is implicit in live state.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleAmmunitionMode {
+pub enum AmmunitionMode {
     #[default]
     Normal,
     Cluster,
@@ -53,10 +53,10 @@ pub enum BattleAmmunitionMode {
     ThunderActive,
 }
 
-impl BattleAmmunitionMode {
+impl AmmunitionMode {
     /// Equipment compatibility, shared by templates, saved units, controls and damage grouping.
     /// Installed controllers and disposable-weapon restrictions belong to live controls.
-    pub fn supports(self, weapon: BattleWeapon) -> bool {
+    pub fn supports(self, weapon: Weapon) -> bool {
         // Torpedo launchers carry ordinary or Artemis-guided torpedoes only.
         if weapon.is_torpedo() {
             return matches!(self, Self::Normal | Self::Artemis);
@@ -75,7 +75,7 @@ impl BattleAmmunitionMode {
             Self::SemiGuided | Self::Stinger => weapon.supports_semiguided(),
             Self::Swarm | Self::Swarm1 => weapon.supports_semiguided() && !weapon.is_dead_fire(),
             Self::INarcExplosive | Self::INarcHaywire | Self::INarcEcm | Self::INarcNemesis => {
-                weapon == BattleWeapon::INarcBeacon
+                weapon == Weapon::INarcBeacon
             }
             Self::Cluster => weapon.is_lbx() || weapon.is_artillery(),
             Self::Smoke | Self::Mine => weapon.is_artillery() || weapon.profile().missiles > 0,
@@ -87,7 +87,7 @@ impl BattleAmmunitionMode {
                 weapon.profile().missiles > 0
                     || matches!(
                         weapon,
-                        BattleWeapon::AntiMissileSystem | BattleWeapon::ClanAntiMissileSystem
+                        Weapon::AntiMissileSystem | Weapon::ClanAntiMissileSystem
                     )
             }
             Self::Precision
@@ -99,7 +99,7 @@ impl BattleAmmunitionMode {
     }
 
     /// Decode a single ammunition flag without interpreting firing or mounting flags.
-    pub fn from_flag(weapon: BattleWeapon, flag: &str) -> Option<Self> {
+    pub fn from_flag(weapon: Weapon, flag: &str) -> Option<Self> {
         match flag {
             "LBX/Cluster" if !weapon.is_artillery() => Some(Self::Cluster),
             "Cluster" if weapon.is_artillery() => Some(Self::Cluster),
@@ -132,7 +132,7 @@ impl BattleAmmunitionMode {
     }
 
     /// Mounted weapons may carry several mode bits; preserve their ammunition precedence.
-    pub fn initial_selection(weapon: BattleWeapon, flags: &[String]) -> Self {
+    pub fn initial_selection(weapon: Weapon, flags: &[String]) -> Self {
         let mode = [
             "AP",
             "Precision",
@@ -177,7 +177,7 @@ impl BattleAmmunitionMode {
     }
 
     /// Read a bin's single ammunition type; conflicting or unrelated flags are invalid.
-    pub fn from_flags(weapon: BattleWeapon, flags: &[String]) -> Result<Self> {
+    pub fn from_flags(weapon: Weapon, flags: &[String]) -> Result<Self> {
         if flags.is_empty() {
             return Ok(Self::Normal);
         }
@@ -205,7 +205,7 @@ impl BattleAmmunitionMode {
     }
 }
 
-impl BattleAmmunitionMode {
+impl AmmunitionMode {
     /// These missile supplies do not trigger automatic defensive interception.
     pub fn bypasses_ams(self) -> bool {
         matches!(
@@ -220,7 +220,7 @@ impl BattleAmmunitionMode {
     }
 }
 
-impl BattleAmmunitionMode {
+impl AmmunitionMode {
     /// Whether this supply belongs to the MML long-range family, with or without a special round.
     pub fn is_mml_lrm(self) -> bool {
         matches!(
@@ -259,7 +259,7 @@ impl BattleAmmunitionMode {
             return (!matches!(
                 munition,
                 Self::Swarm | Self::Swarm1 | Self::SemiGuided | Self::Stinger
-            ) && munition.supports(BattleWeapon::Mml3))
+            ) && munition.supports(Weapon::Mml3))
             .then_some(munition);
         }
         Some(match munition {
@@ -306,20 +306,20 @@ mod tests {
     #[test]
     fn bins_reject_conflicting_types_while_mounts_retain_selection_precedence() {
         let flags = vec!["Flechette".into(), "Precision".into()];
-        assert!(BattleAmmunitionMode::from_flags(BattleWeapon::Ac5, &flags).is_err());
+        assert!(AmmunitionMode::from_flags(Weapon::Ac5, &flags).is_err());
         assert_eq!(
-            BattleAmmunitionMode::initial_selection(BattleWeapon::Ac5, &flags),
-            BattleAmmunitionMode::Precision
+            AmmunitionMode::initial_selection(Weapon::Ac5, &flags),
+            AmmunitionMode::Precision
         );
         let mounted = vec!["RapidFire".into(), "Flechette".into(), "RearMount".into()];
         assert_eq!(
-            BattleAmmunitionMode::initial_selection(BattleWeapon::Ac5, &mounted),
-            BattleAmmunitionMode::Flechette
+            AmmunitionMode::initial_selection(Weapon::Ac5, &mounted),
+            AmmunitionMode::Flechette
         );
-        assert!(BattleAmmunitionMode::from_flags(BattleWeapon::Ac5, &mounted).is_err());
+        assert!(AmmunitionMode::from_flags(Weapon::Ac5, &mounted).is_err());
         assert_eq!(
-            BattleAmmunitionMode::initial_selection(BattleWeapon::Ac5, &["RearMount".into()]),
-            BattleAmmunitionMode::Normal
+            AmmunitionMode::initial_selection(Weapon::Ac5, &["RearMount".into()]),
+            AmmunitionMode::Normal
         );
     }
 }

@@ -4,8 +4,8 @@
 //! [`ByChassis`]. Only actions whose inputs are the same for both chassis have an entry
 //! point here; critical hits and impacts take chassis-specific locations and rules.
 use super::{
-    BattleFallReport, BattleFallRules, BattleShotReport, BattleVehicleFallReport,
-    BattleVehicleShotReport, BattleVehicleShotRules,
+    FallRules, MechFallReport, MechShotReport, VehicleFallReport, VehicleShotReport,
+    VehicleShotRules,
 };
 use crate::{ObjectId, World};
 use anyhow::Result;
@@ -57,13 +57,13 @@ macro_rules! by_chassis {
 }
 
 /// A shot fired by either chassis.
-pub type BattleUnitShotReport = ByChassis<BattleShotReport, BattleVehicleShotReport>;
+pub type UnitShotReport = ByChassis<MechShotReport, VehicleShotReport>;
 
 /// A fall by either chassis.
-pub type BattleUnitFallReport = ByChassis<BattleFallReport, BattleVehicleFallReport>;
+pub type UnitFallReport = ByChassis<MechFallReport, VehicleFallReport>;
 
-impl From<BattleUnitShotReport> for super::BattleFireReport {
-    fn from(report: BattleUnitShotReport) -> Self {
+impl From<UnitShotReport> for super::FireReport {
+    fn from(report: UnitShotReport) -> Self {
         match report {
             ByChassis::Mech(report) => report.into(),
             ByChassis::Vehicle(report) => report.into(),
@@ -80,8 +80,8 @@ pub fn fire_unit_shot(
     pilot: ObjectId,
     target: ObjectId,
     weapon_index: usize,
-    rules: BattleVehicleShotRules,
-) -> Result<BattleUnitShotReport> {
+    rules: VehicleShotRules,
+) -> Result<UnitShotReport> {
     if world.btech.vehicles().contains_key(&shooter) {
         return super::fire_vehicle_shot(world, shooter, pilot, target, weapon_index, rules)
             .map(ByChassis::Vehicle);
@@ -95,8 +95,8 @@ pub fn resolve_unit_fall(
     world: &mut World,
     id: ObjectId,
     levels: u8,
-    rules: BattleFallRules,
-) -> Result<BattleUnitFallReport> {
+    rules: FallRules,
+) -> Result<UnitFallReport> {
     if world.btech.vehicles().contains_key(&id) {
         return super::resolve_vehicle_fall(world, id, levels, rules).map(ByChassis::Vehicle);
     }

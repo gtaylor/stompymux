@@ -44,7 +44,7 @@ async fn map_views_clip_both_parities_and_preserve_terrain_cells_and_preferences
         set_battle_view_dimensions(
             &mut world,
             ObjectId(1),
-            BattleViewDimensions {
+            ViewDimensions {
                 tactical_width: 5,
                 tactical_height: 5,
                 long_range_height: 11,
@@ -170,7 +170,7 @@ async fn map_views_ignore_unit_markers_and_leave_all_supported_chassis_unchanged
             &mut world,
             map,
             HexCoordinate { x: 0, y: 0 },
-            Some(BattleDecoration::new(DecorationKind::Fire, 0, None)),
+            Some(Decoration::new(DecorationKind::Fire, 0, None)),
         )
         .unwrap();
         let before = world.btech.clone();

@@ -6,13 +6,12 @@ pub(crate) fn pending(world: &World, config: &Config, has_scanner_observers: boo
     super::autopilot::runtime::pending(world)
         || super::sixth_sense::pending(world)
         || world.btech.vehicles().values().any(|unit| {
-            (unit.detached && unit.power() != crate::BattlePower::Off)
+            (unit.detached && unit.power() != crate::Power::Off)
                 || unit.vtol_flight().is_some_and(|flight| {
                     matches!(
                         flight.phase,
-                        crate::BattleVtolFlightPhase::Falling
-                            | crate::BattleVtolFlightPhase::Launching { .. }
-                    ) || flight.phase == crate::BattleVtolFlightPhase::Airborne
+                        crate::VtolFlightPhase::Falling | crate::VtolFlightPhase::Launching { .. }
+                    ) || flight.phase == crate::VtolFlightPhase::Airborne
                         && flight.vertical_speed != 0.0
                 })
                 || unit.orbital_drop().is_some()
@@ -33,16 +32,16 @@ pub(crate) fn pending(world: &World, config: &Config, has_scanner_observers: boo
                 || !unit.turret_repairs().is_empty()
                 || unit.dig_state().remaining() > 0
                 || unit.crew_stun_remaining() > 0
-                || matches!(unit.power(), crate::BattlePower::Starting { .. })
-                || unit.power() == crate::BattlePower::Running
-                    && (unit.motion().is_some_and(crate::BattleMotion::active)
+                || matches!(unit.power(), crate::Power::Starting { .. })
+                || unit.power() == crate::Power::Running
+                    && (unit.motion().is_some_and(crate::Motion::active)
                         || !unit.weapon_recycle().is_empty())
         })
-        || crate::battle_automatic_turrets_pending(world)
-        || crate::battle_hiding_pending(world)
-        || crate::battle_self_destructs_pending(world)
-        || crate::battle_reactor_windows_pending(world)
-        || crate::battle_wrecks_pending(world)
+        || crate::automatic_turrets_pending(world)
+        || crate::hiding_pending(world)
+        || crate::self_destructs_pending(world)
+        || crate::reactor_windows_pending(world)
+        || crate::wrecks_pending(world)
         || has_scanner_observers
         || crate::battle_building_entries_pending(world)
         || crate::building_repair_pending(world)
@@ -63,8 +62,8 @@ pub(crate) fn pending(world: &World, config: &Config, has_scanner_observers: boo
                 || unit.tag().target.is_some()
                 || unit.tag().remaining > 0
                 || unit.fired_recently()
-                || unit.power() == crate::BattlePower::Running
-                || unit.stagger_active(crate::BattleStaggerMode::from_setting(
+                || unit.power() == crate::Power::Running
+                || unit.stagger_active(crate::StaggerMode::from_setting(
                     config.battletech.newstagger,
                 ))
                 || unit.stand_timer().is_some()
@@ -86,10 +85,10 @@ pub(crate) fn pending(world: &World, config: &Config, has_scanner_observers: boo
                 || unit.stun_remaining() > 0
                 || unit.heat_active(world)
                 || unit.overheat_active()
-                || matches!(unit.power(), crate::BattlePower::Starting { .. })
+                || matches!(unit.power(), crate::Power::Starting { .. })
                 || (unit.fired_recently()
-                    || unit.power() == crate::BattlePower::Running
-                        && (unit.motion().is_some_and(crate::BattleMotion::active)
+                    || unit.power() == crate::Power::Running
+                        && (unit.motion().is_some_and(crate::Motion::active)
                             || !unit.weapon_recycle().is_empty()
                             || !unit.limb_recycle().is_empty()))
         })

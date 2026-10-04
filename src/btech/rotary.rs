@@ -1,48 +1,38 @@
 //! Rotary autocannon burst selection and full-damage shell grouping.
-use super::{BattleFireMode, BattleWeapon, BattleWeaponSalvo};
+use super::{FireMode, Weapon, WeaponSalvo};
 use crate::{ObjectId, World};
 use anyhow::{Result, bail, ensure};
 
 /// Validate an explicit burst length independently of weapon selection or mutation.
-fn burst_mode(rounds: u8) -> Result<BattleFireMode> {
+fn burst_mode(rounds: u8) -> Result<FireMode> {
     Ok(match rounds {
-        1 => BattleFireMode::Normal,
-        2 => BattleFireMode::Rotary2,
-        3 => BattleFireMode::Rotary3,
-        4 => BattleFireMode::Rotary4,
-        5 => BattleFireMode::Rotary5,
-        6 => BattleFireMode::Rotary6,
+        1 => FireMode::Normal,
+        2 => FireMode::Rotary2,
+        3 => FireMode::Rotary3,
+        4 => FireMode::Rotary4,
+        5 => FireMode::Rotary5,
+        6 => FireMode::Rotary6,
         _ => bail!("Rotary autocannons fire one to six rounds"),
     })
 }
 
 /// Rotary autocannon burst damage grouping.
-pub(crate) trait BattleRotaryDamage {
+pub(crate) trait RotaryDamage {
     /// Rotary shell counts follow the cluster hits table column for the burst length; glancing
     /// shifts its roll down four.
-    fn rotary_damage_groups(
-        self,
-        mode: BattleFireMode,
-        roll: u8,
-        glancing: bool,
-    ) -> Result<Vec<u16>>;
+    fn rotary_damage_groups(self, mode: FireMode, roll: u8, glancing: bool) -> Result<Vec<u16>>;
 }
 
-impl BattleRotaryDamage for BattleWeapon {
-    fn rotary_damage_groups(
-        self,
-        mode: BattleFireMode,
-        roll: u8,
-        glancing: bool,
-    ) -> Result<Vec<u16>> {
+impl RotaryDamage for Weapon {
+    fn rotary_damage_groups(self, mode: FireMode, roll: u8, glancing: bool) -> Result<Vec<u16>> {
         ensure!(self.is_rotary(), "Weapon is not a rotary autocannon");
         ensure!((2..=12).contains(&roll), "Invalid rotary cluster roll");
         let table = match mode {
-            BattleFireMode::Rotary2 => Self::Srm2,
-            BattleFireMode::Rotary3 => Self::Mml3,
-            BattleFireMode::Rotary4 => Self::Srm4,
-            BattleFireMode::Rotary5 => Self::Lrm5,
-            BattleFireMode::Rotary6 => Self::Srm6,
+            FireMode::Rotary2 => Self::Srm2,
+            FireMode::Rotary3 => Self::Mml3,
+            FireMode::Rotary4 => Self::Srm4,
+            FireMode::Rotary5 => Self::Lrm5,
+            FireMode::Rotary6 => Self::Srm6,
             _ => bail!("Rotary burst mode is required"),
         };
         let adjusted = roll.saturating_sub(if glancing { 4 } else { 0 });
@@ -124,11 +114,11 @@ mod tests {
     #[test]
     fn rotary_shell_tables_and_glancing() {
         for weapon in [
-            BattleWeapon::RotaryAc2,
-            BattleWeapon::RotaryAc5,
-            BattleWeapon::ClanRotaryAc2,
-            BattleWeapon::ClanRotaryAc5,
-            BattleWeapon::ClanRotaryAc10,
+            Weapon::RotaryAc2,
+            Weapon::RotaryAc5,
+            Weapon::ClanRotaryAc2,
+            Weapon::ClanRotaryAc5,
+            Weapon::ClanRotaryAc10,
         ] {
             for (rounds, counts) in [
                 (2, [1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2]),

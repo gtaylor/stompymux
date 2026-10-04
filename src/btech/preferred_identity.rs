@@ -6,9 +6,9 @@ use serde::{Deserialize, Serialize};
 /// Exactly two uppercase ASCII letters; deserialization and configuration share normalization.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(try_from = "String", into = "String")]
-pub struct BattlePreferredId(String);
+pub struct PreferredId(String);
 
-impl TryFrom<String> for BattlePreferredId {
+impl TryFrom<String> for PreferredId {
     type Error = anyhow::Error;
 
     fn try_from(value: String) -> Result<Self> {
@@ -20,13 +20,13 @@ impl TryFrom<String> for BattlePreferredId {
     }
 }
 
-impl From<BattlePreferredId> for String {
-    fn from(value: BattlePreferredId) -> Self {
+impl From<PreferredId> for String {
+    fn from(value: PreferredId) -> Self {
         value.0
     }
 }
 
-impl AsRef<str> for BattlePreferredId {
+impl AsRef<str> for PreferredId {
     fn as_ref(&self) -> &str {
         &self.0
     }
@@ -58,7 +58,7 @@ pub fn set_preferred_id(
         && !object.flags.contains(Flag::Going)), "Unit is unavailable");
     let value = value
         .filter(|value| !value.is_empty())
-        .map(|value| BattlePreferredId::try_from(value.to_owned()))
+        .map(|value| PreferredId::try_from(value.to_owned()))
         .transpose()?;
     let result = value.as_ref().map(|value| value.as_ref().to_owned());
     let configured = result.clone();
@@ -96,15 +96,15 @@ mod tests {
     /// Configuration and saved values cannot bypass the common two-letter grammar.
     #[test]
     fn preferred_ids_normalize_and_reject_malformed_saved_values() {
-        let id: BattlePreferredId = serde_json::from_str("\"qX\"").unwrap();
+        let id: PreferredId = serde_json::from_str("\"qX\"").unwrap();
         assert_eq!(id.as_ref(), "QX");
         assert_eq!(serde_json::to_string(&id).unwrap(), "\"QX\"");
         for value in ["", "A", "ABC", "A1", " A", "é", "ß", "A\n"] {
             assert!(
-                BattlePreferredId::try_from(value.to_owned()).is_err(),
+                PreferredId::try_from(value.to_owned()).is_err(),
                 "{value:?}"
             );
-            assert!(serde_json::from_value::<BattlePreferredId>(serde_json::json!(value)).is_err());
+            assert!(serde_json::from_value::<PreferredId>(serde_json::json!(value)).is_err());
         }
     }
 }

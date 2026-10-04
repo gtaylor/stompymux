@@ -5,7 +5,7 @@ use crate::btech::autopilot::{
     AutopilotConfig, AutopilotConfigPatch, AutopilotController, AutopilotFireMode, AutopilotOrder,
     AutopilotRangeBand, AutopilotSubmissionMode,
 };
-use crate::{ObjectId, SharedWorld, btech::BattlePosition};
+use crate::{ObjectId, SharedWorld, btech::Position};
 use mlua::{Lua, LuaSerdeExt, MultiValue, Table, Value};
 
 fn arg(args: &MultiValue, index: usize) -> Value {
@@ -32,9 +32,9 @@ fn ground_unit(lua: &Lua, shared: &SharedWorld, value: Value) -> mlua::Result<Ob
     if world.btech.vehicles().get(&id).is_some_and(|vehicle| {
         matches!(
             vehicle.definition().movement,
-            crate::btech::BattleVehicleMovement::Tracked
-                | crate::btech::BattleVehicleMovement::Wheeled
-                | crate::btech::BattleVehicleMovement::Hover
+            crate::btech::VehicleMovement::Tracked
+                | crate::btech::VehicleMovement::Wheeled
+                | crate::btech::VehicleMovement::Hover
         )
     }) {
         return Ok(id);
@@ -82,8 +82,8 @@ fn revision(value: Value) -> mlua::Result<Option<u64>> {
     }
 }
 
-fn position(lua: &Lua, world: &crate::World, value: Value) -> mlua::Result<BattlePosition> {
-    let position: BattlePosition = lua.from_value(value).map_err(mlua::Error::external)?;
+fn position(lua: &Lua, world: &crate::World, value: Value) -> mlua::Result<Position> {
+    let position: Position = lua.from_value(value).map_err(mlua::Error::external)?;
     let map = world
         .btech
         .maps()

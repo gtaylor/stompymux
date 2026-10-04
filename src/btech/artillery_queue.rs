@@ -8,14 +8,14 @@ use std::{collections::BTreeMap, sync::Arc};
 /// An admitted launch. Shooter identity is historical and does not keep that object alive.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct BattleArtilleryShot {
+pub struct ArtilleryShot {
     pub shooter: ObjectId,
-    pub flight: BattleArtilleryFlight,
+    pub flight: ArtilleryFlight,
 }
 
 impl StoredMap {
     /// Stable launch order; shot identifiers remain fixed until their arrival.
-    pub fn artillery_shots(&self) -> &BTreeMap<u32, BattleArtilleryShot> {
+    pub fn artillery_shots(&self) -> &BTreeMap<u32, ArtilleryShot> {
         &self.artillery_shots
     }
 
@@ -58,7 +58,7 @@ pub fn enqueue_artillery(
     world: &mut World,
     map: ObjectId,
     shooter: ObjectId,
-    flight: BattleArtilleryFlight,
+    flight: ArtilleryFlight,
 ) -> Result<u32> {
     ensure!(
         world
@@ -102,7 +102,7 @@ pub fn enqueue_artillery(
     world.attempt(|world| {
         let record = world.btech.maps.get_mut(&map).unwrap();
         Arc::make_mut(&mut record.artillery_shots)
-            .insert(ordinal, BattleArtilleryShot { shooter, flight });
+            .insert(ordinal, ArtilleryShot { shooter, flight });
         record.validate_artillery()?;
         Ok(ordinal)
     })
@@ -123,8 +123,8 @@ pub fn artillery_pending(world: &World) -> bool {
 pub fn advance_artillery_action(
     scripts: &Scripts,
     config: &Config,
-    rules: BattleFallRules,
-) -> Result<Vec<BattleArtilleryImpactReport>> {
+    rules: FallRules,
+) -> Result<Vec<ArtilleryImpactReport>> {
     if !artillery_pending(&scripts.world.borrow()) {
         return Ok(Vec::new());
     }

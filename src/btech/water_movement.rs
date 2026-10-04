@@ -1,14 +1,14 @@
 //! Water hex-entry control checks and immersion effects inside a movement transaction.
-use super::{BattleFallRules, BattleNotice, BattlePosture};
+use super::{FallRules, Notice, Posture};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result};
 
 /// Water-entry messages and whether immersion interrupted further travel.
 #[derive(Default)]
 pub(super) struct WaterEntryReport {
-    pub pilot_notices: Vec<super::BattlePilotNotice>,
-    pub notices: Vec<BattleNotice>,
-    pub experience_messages: Vec<super::BattleChannelMessage>,
+    pub pilot_notices: Vec<super::PilotNotice>,
+    pub notices: Vec<Notice>,
+    pub experience_messages: Vec<super::DiagnosticMessage>,
     pub stopped: bool,
 }
 
@@ -17,8 +17,8 @@ pub(super) fn enter_water(
     world: &mut World,
     id: ObjectId,
     check: bool,
-    rules: BattleFallRules,
-    mut falls: Option<&mut Vec<super::BattleFallReport>>,
+    rules: FallRules,
+    mut falls: Option<&mut Vec<super::MechFallReport>>,
 ) -> Result<WaterEntryReport> {
     let unit = &world.btech.constructed_units()[&id];
     let position = unit.position().context("Water entry requires placement")?;
@@ -43,7 +43,7 @@ pub(super) fn enter_water(
             .context("Water entry requires motion")?;
         motion.desired_speed = motion.desired_speed.min(walking);
         let running = motion.speed > walking + 0.1;
-        notices.push(BattleNotice {
+        notices.push(Notice {
             unit: id,
             text: (if running {
                 "You struggle to keep control as you run into the water!"
@@ -65,7 +65,7 @@ pub(super) fn enter_water(
             )?);
         }
         if !control.success {
-            notices.push(BattleNotice {
+            notices.push(Notice {
                 unit: id,
                 text: "You slip in the water and fall down".to_owned(),
             });
@@ -101,7 +101,7 @@ pub(super) fn enter_water(
         notices,
         pilot_notices,
         experience_messages,
-        stopped: unit.posture() == BattlePosture::Prone
+        stopped: unit.posture() == Posture::Prone
             || unit.is_destroyed()
             || unit.movement_maximum_speed() == 0.0,
     })

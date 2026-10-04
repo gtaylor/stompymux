@@ -1,15 +1,14 @@
 //! Current conventional biped mass derived from durable construction and damage facts.
 use super::{
-    BattleEngine, BattleSection, BattleSystem, BattleTechnology, BattleUnit, armor_mass,
-    cargo_space_mass, engine_mass, half_ton, one_shot_mass, power_amplifier_mass, rated_output,
-    structure_mass, system_slot_mass,
+    Engine, Mech, MechSection, System, Technology, armor_mass, cargo_space_mass, engine_mass,
+    half_ton, one_shot_mass, power_amplifier_mass, rated_output, structure_mass, system_slot_mass,
 };
 use anyhow::{Context, Result};
 use serde::Serialize;
 
 /// Mass components in 1/1024-ton units. Gyro accounting is signed for a destroyed center torso.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-pub struct BattleMass {
+pub struct Mass {
     pub engine: u32,
     pub cockpit: u32,
     pub gyro: i32,
@@ -22,10 +21,10 @@ pub struct BattleMass {
     pub total: u32,
 }
 
-impl BattleUnit {
+impl Mech {
     /// Recalculate physical mass without caching derived values or substituting nominal tonnage.
     /// Damaged weapon criticals retain mass until their section is lost; ammunition uses live rounds.
-    pub fn mass(&self) -> Result<BattleMass> {
+    pub fn mass(&self) -> Result<Mass> {
         let definition = self.definition();
         let loadout = self.loadout()?;
         let survives = |section| self.sections()[&section].internal > 0;
@@ -33,8 +32,8 @@ impl BattleUnit {
         // C derives the engine mass family from technology flags alone; reference
         // builds without engine criticals still carry a nominal engine mass.
         let engine_family = || {
-            BattleEngine::resolve(&loadout, definition.clan_engine()).unwrap_or_else(|_| {
-                BattleEngine::display_from_flags(
+            Engine::resolve(&loadout, definition.clan_engine()).unwrap_or_else(|_| {
+                Engine::display_from_flags(
                     definition.has_special("LightEngine_Tech"),
                     definition.has_special("CompactEngine_Tech"),
                     definition.has_special("XXL_Tech"),
@@ -49,19 +48,19 @@ impl BattleUnit {
         } else {
             half_ton(engine_family().unrounded_mass(engine_mass(rating)))
         };
-        let engine = if survives(BattleSection::CenterTorso) {
+        let engine = if survives(MechSection::CenterTorso) {
             installed_engine
         } else {
             0
         };
-        let gyro = if survives(BattleSection::CenterTorso) {
+        let gyro = if survives(MechSection::CenterTorso) {
             rating.div_ceil(100) as i32 * 1024
         } else {
             -1024
         };
         let gyro = self.gyro().mass(gyro);
-        let cockpit = if survives(BattleSection::Head) {
-            if definition.has_technology(BattleTechnology::SmallCockpit) {
+        let cockpit = if survives(MechSection::Head) {
+            if definition.has_technology(Technology::SmallCockpit) {
                 2 * 1024
             } else {
                 3 * 1024
@@ -88,12 +87,10 @@ impl BattleUnit {
                 .count()
         };
         let material_slots = |clan| if clan { 7 } else { 14 };
-        let structure_divisor = if definition.has_technology(BattleTechnology::ReinforcedStructure)
-        {
+        let structure_divisor = if definition.has_technology(Technology::ReinforcedStructure) {
             1
-        } else if material_count(BattleSystem::EndoSteel)
-            >= material_slots(definition.clan_structure())
-            || definition.has_technology(BattleTechnology::CompositeStructure)
+        } else if material_count(System::EndoSteel) >= material_slots(definition.clan_structure())
+            || definition.has_technology(Technology::CompositeStructure)
         {
             4
         } else {
@@ -105,20 +102,19 @@ impl BattleUnit {
             .values()
             .map(|section| u32::from(section.armor) + u32::from(section.rear))
             .sum();
-        let armor_denominator = if material_count(BattleSystem::FerroFibrous)
-            >= material_slots(definition.clan_armor())
-        {
-            if definition.clan_armor() { 60 } else { 56 }
-        } else if material_count(BattleSystem::HeavyFerroFibrous) >= 21 {
-            62
-        } else if material_count(BattleSystem::LightFerroFibrous) >= 7 {
-            53
-        } else if definition.has_technology(BattleTechnology::HardenedArmor) {
-            // Hardened armor provides eight points per ton instead of sixteen.
-            25
-        } else {
-            50
-        };
+        let armor_denominator =
+            if material_count(System::FerroFibrous) >= material_slots(definition.clan_armor()) {
+                if definition.clan_armor() { 60 } else { 56 }
+            } else if material_count(System::HeavyFerroFibrous) >= 21 {
+                62
+            } else if material_count(System::LightFerroFibrous) >= 7 {
+                53
+            } else if definition.has_technology(Technology::HardenedArmor) {
+                // Hardened armor provides eight points per ton instead of sixteen.
+                25
+            } else {
+                50
+            };
         let armor = armor_mass(protection, armor_denominator);
         let mut equipment = loadout
             .systems
@@ -143,9 +139,11 @@ impl BattleUnit {
         if ice {
             equipment += power_amplifier_mass(&loadout.weapons, survives);
         }
-        if loadout.systems.iter().any(|part| {
-            part.system == BattleSystem::Supercharger && survives(part.location.section)
-        }) {
+        if loadout
+            .systems
+            .iter()
+            .any(|part| part.system == System::Supercharger && survives(part.location.section))
+        {
             // A supercharger weighs a tenth of the engine, rounded up to the half ton.
             equipment += half_ton(installed_engine.div_ceil(10));
         }
@@ -178,7 +176,7 @@ impl BattleUnit {
             + i64::from(cargo))
         .max(1);
         let total = u32::try_from(total).context("Mech mass overflow")?;
-        Ok(BattleMass {
+        Ok(Mass {
             engine,
             cockpit,
             gyro,
@@ -198,7 +196,7 @@ impl BattleUnit {
         let survives = |section| self.sections()[&section].internal > 0;
         let sinks = definition
             .heat_sinks
-            .saturating_sub(u16::from(self.system_hits(BattleSystem::HeatSink)));
+            .saturating_sub(u16::from(self.system_hits(System::HeatSink)));
         let sink_slots = definition.heat_sink_slots() as u32;
         let sink_efficiency = if definition.has_double_heat_sinks() {
             2
@@ -220,9 +218,7 @@ impl BattleUnit {
             loadout
                 .systems
                 .iter()
-                .filter(|slot| {
-                    slot.system == BattleSystem::HeatSink && survives(slot.location.section)
-                })
+                .filter(|slot| slot.system == System::HeatSink && survives(slot.location.section))
                 .count() as u32
                 * slot_mass
         })

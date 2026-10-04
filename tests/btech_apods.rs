@@ -8,12 +8,12 @@ fn apod_assets_construct_and_round_trip() {
         let template =
             read_battle_template(&crate::support::repository_root().join("game/mechs"), asset)
                 .unwrap();
-        let unit = BattleUnit::from_template(template).unwrap();
+        let unit = Mech::from_template(template).unwrap();
         let loadout = unit.loadout().unwrap();
         let pods: Vec<_> = loadout
             .weapons
             .iter()
-            .filter(|mount| matches!(mount.weapon, BattleWeapon::APod | BattleWeapon::ClanAPod))
+            .filter(|mount| matches!(mount.weapon, Weapon::APod | Weapon::ClanAPod))
             .collect();
         assert!(!pods.is_empty(), "{asset}");
         for pod in pods {
@@ -22,8 +22,7 @@ fn apod_assets_construct_and_round_trip() {
             assert_eq!(pod.weapon.profile().heat, 0);
             assert_eq!(pod.weapon.profile().recycle_seconds, 30);
         }
-        let restored: BattleUnit =
-            serde_json::from_value(serde_json::to_value(&unit).unwrap()).unwrap();
+        let restored: Mech = serde_json::from_value(serde_json::to_value(&unit).unwrap()).unwrap();
         assert_eq!(restored, unit);
         assert_eq!(restored.mass().unwrap(), unit.mass().unwrap());
         assert_eq!(
@@ -37,17 +36,17 @@ fn apod_assets_construct_and_round_trip() {
 #[test]
 fn apod_mass_and_battle_value() {
     let mut template =
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     for section in template.sections.values_mut() {
         section.criticals.retain(|_, part| {
-            BattleWeapon::parse(&part.equipment).is_err() && !part.equipment.starts_with("Ammo_")
+            Weapon::parse(&part.equipment).is_err() && !part.equipment.starts_with("Ammo_")
         });
     }
-    let baseline = BattleUnit::from_template(template.clone()).unwrap();
-    for weapon in [BattleWeapon::APod, BattleWeapon::ClanAPod] {
+    let baseline = Mech::from_template(template.clone()).unwrap();
+    for weapon in [Weapon::APod, Weapon::ClanAPod] {
         template
             .sections
-            .get_mut(&BattleSection::LeftArm)
+            .get_mut(&MechSection::LeftArm)
             .unwrap()
             .criticals
             .insert(
@@ -58,7 +57,7 @@ fn apod_mass_and_battle_value() {
                     modes: vec![],
                 },
             );
-        let unit = BattleUnit::from_template(template.clone()).unwrap();
+        let unit = Mech::from_template(template.clone()).unwrap();
         assert_eq!(
             unit.mass().unwrap().equipment,
             baseline.mass().unwrap().equipment + 512

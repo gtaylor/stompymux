@@ -46,7 +46,7 @@ async fn single_sink_reconstruction_preserves_samples_and_applies_later_damage()
             assert_eq!(unit.cooling_capacity(), external + 2);
             assert_eq!(
                 unit.sampled_heat_rates(),
-                BattleHeatRates {
+                HeatRates {
                     production: 7.0,
                     dissipation: 3.0
                 }
@@ -58,7 +58,7 @@ async fn single_sink_reconstruction_preserves_samples_and_applies_later_damage()
             .unwrap()
             .systems
             .into_iter()
-            .find(|part| part.system == BattleSystem::HeatSink)
+            .find(|part| part.system == System::HeatSink)
             .unwrap()
             .location;
         destroy_battle_critical(&mut scripts.world_mut(), id, sink).unwrap();
@@ -94,7 +94,7 @@ async fn double_sinks_count_complete_installations_and_two_points_per_internal_s
     for clan in [false, true] {
         let (_dir, config, mut world) = support::isolated_world().await;
         let mut definition =
-            BattleTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap();
+            MechTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap();
         definition.heat_sinks = 20;
         definition.attributes.insert(
             "specials".into(),
@@ -108,7 +108,7 @@ async fn double_sinks_count_complete_installations_and_two_points_per_internal_s
         for slot in 6..if clan { 8 } else { 9 } {
             definition
                 .sections
-                .get_mut(&BattleSection::RightArm)
+                .get_mut(&MechSection::RightArm)
                 .unwrap()
                 .criticals
                 .insert(

@@ -17,17 +17,13 @@ async fn tic_membership_native_lua_and_persistence() {
             create_battle_vehicle(
                 &mut world,
                 id,
-                BattleVehicleTemplate::parse("test", source).unwrap(),
+                VehicleTemplate::parse("test", source).unwrap(),
             )
             .unwrap();
             support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
         } else {
-            create_battle_unit(
-                &mut world,
-                id,
-                BattleTemplate::parse("test", source).unwrap(),
-            )
-            .unwrap();
+            create_battle_unit(&mut world, id, MechTemplate::parse("test", source).unwrap())
+                .unwrap();
             support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
         }
         world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
@@ -61,12 +57,9 @@ async fn tic_membership_native_lua_and_persistence() {
                 id.0
             ))
             .unwrap();
-        assert_eq!(
-            battle_tic(&scripts.world(), id, ObjectId(1), 1).unwrap(),
-            [0, 1]
-        );
-        assert!(battle_tic(&scripts.world(), id, ObjectId(2), 1).is_err());
-        assert!(battle_tic(&scripts.world(), id, ObjectId(1), 4).is_err());
+        assert_eq!(tic(&scripts.world(), id, ObjectId(1), 1).unwrap(), [0, 1]);
+        assert!(tic(&scripts.world(), id, ObjectId(2), 1).is_err());
+        assert!(tic(&scripts.world(), id, ObjectId(1), 4).is_err());
         if scripts.world().btech.vehicles().contains_key(&id) {
             let slot = scripts.world().btech.vehicles()[&id]
                 .loadout()
@@ -82,10 +75,7 @@ async fn tic_membership_native_lua_and_persistence() {
                 .criticals[0];
             destroy_battle_critical(&mut scripts.world_mut(), id, slot).unwrap();
         }
-        assert_eq!(
-            battle_tic(&scripts.world(), id, ObjectId(1), 0).unwrap(),
-            [0, 1]
-        );
+        assert_eq!(tic(&scripts.world(), id, ObjectId(1), 0).unwrap(), [0, 1]);
         let text = support::run_text(&scripts, &config, ObjectId(1), 1, "listtic 0");
         assert!(text.contains("disabled"), "{text}");
 
@@ -111,7 +101,7 @@ async fn tic_membership_native_lua_and_persistence() {
         assert!(text.contains("cleared"), "{text}");
         for group in 0..4 {
             assert!(
-                battle_tic(&scripts.world(), id, ObjectId(1), group)
+                tic(&scripts.world(), id, ObjectId(1), group)
                     .unwrap()
                     .is_empty()
             );
@@ -156,7 +146,7 @@ async fn tic_firing_reuses_shots_and_rolls_back_callbacks() {
             create_battle_vehicle(
                 &mut world,
                 shooter,
-                BattleVehicleTemplate::parse("test", source).unwrap(),
+                VehicleTemplate::parse("test", source).unwrap(),
             )
             .unwrap();
             support::seed_object_dice(&mut world, shooter, support::FIXTURE_DICE_SEED);
@@ -164,7 +154,7 @@ async fn tic_firing_reuses_shots_and_rolls_back_callbacks() {
             create_battle_unit(
                 &mut world,
                 shooter,
-                BattleTemplate::parse("test", source).unwrap(),
+                MechTemplate::parse("test", source).unwrap(),
             )
             .unwrap();
             support::seed_object_dice(&mut world, shooter, support::FIXTURE_DICE_SEED);
@@ -172,7 +162,7 @@ async fn tic_firing_reuses_shots_and_rolls_back_callbacks() {
         create_battle_unit(
             &mut world,
             target,
-            BattleTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap(),
+            MechTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
@@ -183,11 +173,11 @@ async fn tic_firing_reuses_shots_and_rolls_back_callbacks() {
         support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         let mut saved = serde_json::to_value(&world.btech).unwrap();
         saved[if vehicle { "vehicles" } else { "constructed" }][shooter.0.to_string()]["power"] =
-            serde_json::to_value(BattlePower::Running).unwrap();
+            serde_json::to_value(Power::Running).unwrap();
         saved["constructed"][target.0.to_string()]["power"] =
-            serde_json::to_value(BattlePower::Running).unwrap();
+            serde_json::to_value(Power::Running).unwrap();
         saved[if vehicle { "vehicles" } else { "constructed" }][shooter.0.to_string()]["dice"] =
-            serde_json::to_value(BattleDice::seeded([42; 32])).unwrap();
+            serde_json::to_value(Dice::seeded([42; 32])).unwrap();
         world.btech = serde_json::from_value(saved).unwrap();
         refresh_battle_contacts(&mut world, &[shooter]).unwrap();
         edit_battle_tic(
@@ -195,17 +185,10 @@ async fn tic_firing_reuses_shots_and_rolls_back_callbacks() {
             shooter,
             ObjectId(1),
             0,
-            BattleTicEdit::Add(vec![1, 0]),
+            TicEdit::Add(vec![1, 0]),
         )
         .unwrap();
-        edit_battle_tic(
-            &mut world,
-            shooter,
-            ObjectId(1),
-            1,
-            BattleTicEdit::Add(vec![1]),
-        )
-        .unwrap();
+        edit_battle_tic(&mut world, shooter, ObjectId(1), 1, TicEdit::Add(vec![1])).unwrap();
         if vehicle {
             let slot = world.btech.vehicles()[&shooter].loadout().unwrap().weapons[0].criticals[0];
             destroy_battle_vehicle_critical(&mut world, shooter, slot).unwrap();

@@ -19,14 +19,14 @@ async fn prelaunch_stagger_shares_native_lua_and_saved_attempts() {
                     let mut world = base.clone();
                     let seed = (0..=255)
                         .find(|&seed| {
-                            BattleDice::seeded([seed; 32]).two_d6() == if success { 12 } else { 2 }
+                            Dice::seeded([seed; 32]).two_d6() == if success { 12 } else { 2 }
                         })
                         .unwrap();
                     firing::edit(&mut world, unit, |s| {
                         s["stagger"]["action_damage"] = scalar.into();
                         s["stagger"]["hits"] =
                             serde_json::json!([{"damage":60,"remaining":60,"counted":false}]);
-                        s["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+                        s["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
                     });
                     persistence::save(&config.database(), &world).await.unwrap();
                     let restored = persistence::load(&config.database()).await.unwrap();
@@ -98,12 +98,12 @@ async fn prelaunch_stagger_shares_native_lua_and_saved_attempts() {
                     let state = native.world();
                     let mech = &state.btech.constructed_units()[&unit];
                     assert_eq!(mech.flight().is_some(), !failed);
-                    assert_eq!(mech.posture() == BattlePosture::Prone, failed);
+                    assert_eq!(mech.posture() == Posture::Prone, failed);
                     assert_eq!(mech.jump_stabilization(), 0);
                     if failed {
                         assert!(!native_text.contains("You engage your jump jets"));
                     } else {
-                        let mut dice = BattleDice::seeded([seed; 32]);
+                        let mut dice = Dice::seeded([seed; 32]);
                         if checked {
                             dice.two_d6();
                         }
@@ -140,13 +140,11 @@ async fn rejected_native_requests_preserve_roll_and_private_rejection() {
             for success in [false, true] {
                 let mut world = base.clone();
                 let seed = (0..=255)
-                    .find(|&seed| {
-                        BattleDice::seeded([seed; 32]).two_d6() == if success { 12 } else { 2 }
-                    })
+                    .find(|&seed| Dice::seeded([seed; 32]).two_d6() == if success { 12 } else { 2 })
                     .unwrap();
                 firing::edit(&mut world, unit, |s| {
                     s["stagger"]["action_damage"] = 20.into();
-                    s["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+                    s["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
                 });
                 let scripts = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
                 assert!(matches!(
@@ -177,11 +175,11 @@ async fn rejected_native_requests_preserve_roll_and_private_rejection() {
                 let after = scripts.world();
                 assert!(after.btech.constructed_units()[&unit].flight().is_none());
                 assert_eq!(
-                    after.btech.constructed_units()[&unit].posture() == BattlePosture::Prone,
+                    after.btech.constructed_units()[&unit].posture() == Posture::Prone,
                     !success
                 );
                 if success {
-                    let mut dice = BattleDice::seeded([seed; 32]);
+                    let mut dice = Dice::seeded([seed; 32]);
                     dice.two_d6();
                     firing::edit(&mut world, unit, |s| {
                         s["dice"] = serde_json::to_value(dice).unwrap()
@@ -201,11 +199,11 @@ async fn rejected_lua_requests_and_early_admission_keep_transaction_boundaries()
         firing::fixture_with_target(template, None, template).await;
     select_battle_target(&mut base, unit, ObjectId(1), None).unwrap();
     let seed = (0..=255)
-        .find(|&seed| BattleDice::seeded([seed; 32]).two_d6() == 12)
+        .find(|&seed| Dice::seeded([seed; 32]).two_d6() == 12)
         .unwrap();
     firing::edit(&mut base, unit, |s| {
         s["stagger"]["action_damage"] = 20.into();
-        s["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+        s["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
     });
     for expression in [
         format!("btech.unit.jump({},1,0,999)", unit.0),
@@ -226,7 +224,7 @@ async fn rejected_lua_requests_and_early_admission_keep_transaction_boundaries()
                 .unwrap()
         );
         let mut expected = base.clone();
-        let mut dice = BattleDice::seeded([seed; 32]);
+        let mut dice = Dice::seeded([seed; 32]);
         dice.two_d6();
         firing::edit(&mut expected, unit, |s| {
             s["dice"] = serde_json::to_value(dice).unwrap()

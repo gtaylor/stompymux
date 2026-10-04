@@ -1,6 +1,6 @@
 //! Bounded, observation-only motion assessment and interception candidate selection.
 use super::interception::PursuitEvidence;
-use crate::{BattlePosition, Point};
+use crate::{Point, Position};
 
 const WINDOWS: [i64; 2] = [16, 64];
 const OFFSETS: [i64; 3] = [6, 12, 24];
@@ -14,7 +14,7 @@ struct Fit {
     velocity: (f64, f64),
 }
 
-fn center(p: BattlePosition) -> Point {
+fn center(p: Position) -> Point {
     crate::HexCoordinate {
         x: i32::from(p.x),
         y: i32::from(p.y),
@@ -26,7 +26,7 @@ fn distance(a: Point, b: Point) -> f64 {
 }
 
 /// A retained lead becomes stale when the observed target has passed it.
-fn ahead(aim: BattlePosition, observed: BattlePosition, velocity: (f64, f64)) -> bool {
+fn ahead(aim: Position, observed: Position, velocity: (f64, f64)) -> bool {
     let a = center(aim);
     let b = center(observed);
     (a.x - b.x) * velocity.0 + (a.y - b.y) * velocity.1 >= -1e-12
@@ -42,7 +42,7 @@ struct Model {
 }
 
 /// Fit only observations at or before the requested cutoff.
-fn fit(samples: &[(i64, BattlePosition)], cutoff: i64, window: i64) -> Option<Fit> {
+fn fit(samples: &[(i64, Position)], cutoff: i64, window: i64) -> Option<Fit> {
     let _timing = super::diagnostics::pursuit("fit");
     let points: Vec<_> = samples
         .iter()
@@ -75,11 +75,7 @@ fn fit(samples: &[(i64, BattlePosition)], cutoff: i64, window: i64) -> Option<Fi
     Some(Fit { position, velocity })
 }
 
-fn assess(
-    samples: &[(i64, BattlePosition)],
-    forecasts: &[HistoricalFit],
-    now: i64,
-) -> Option<Model> {
+fn assess(samples: &[(i64, Position)], forecasts: &[HistoricalFit], now: i64) -> Option<Model> {
     let mut best: Option<Model> = None;
     for (index, window) in WINDOWS.into_iter().enumerate() {
         let Some(current) = forecasts
@@ -149,24 +145,24 @@ fn assess(
 /// Transient confidence episode and selected goal, always rolled back with its controller.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub(crate) struct AdaptivePursuit {
-    samples: Vec<(i64, BattlePosition)>,
+    samples: Vec<(i64, Position)>,
     forecasts: Vec<HistoricalFit>,
     vector: Option<(f64, f64)>,
     last_motion: Option<i64>,
     cadence: Option<i64>,
     transitions: u8,
     reconsider_at: i64,
-    aim: Option<BattlePosition>,
-    rejected: Option<BattlePosition>,
+    aim: Option<Position>,
+    rejected: Option<Position>,
     /// Useful actual geometry suspends scoring until the normal reconsideration boundary.
     engaged: bool,
     /// This tick's occupied region, only when observed positional geometry is ineffective.
-    ineffective: Option<(BattlePosition, u16, u16)>,
+    ineffective: Option<(Position, u16, u16)>,
     pub evidence: PursuitEvidence,
 }
 impl AdaptivePursuit {
     /// Retain one visible hex per second; a reversal begins a new confidence episode.
-    pub fn sample(&mut self, now: i64, position: BattlePosition) {
+    pub fn sample(&mut self, now: i64, position: Position) {
         if self
             .samples
             .last()
@@ -238,7 +234,7 @@ impl AdaptivePursuit {
     pub fn geometry(
         &mut self,
         now: i64,
-        own: BattlePosition,
+        own: Position,
         minimum: u16,
         maximum: u16,
         positional: bool,
@@ -259,7 +255,7 @@ impl AdaptivePursuit {
             self.evidence.reason = "engagement_lost";
         }
     }
-    pub fn reject(&mut self, target: BattlePosition) {
+    pub fn reject(&mut self, target: Position) {
         self.rejected = Some(target);
         self.aim = None;
     }
@@ -268,17 +264,17 @@ impl AdaptivePursuit {
     pub fn choose(
         &mut self,
         now: i64,
-        own: BattlePosition,
+        own: Position,
         speed: f64,
         radius: u16,
         width: i64,
         height: i64,
-        leash: Option<BattlePosition>,
-        mut score: impl FnMut(BattlePosition, (f64, f64), f64) -> Option<(f64, f64)>,
-    ) -> Option<BattlePosition> {
+        leash: Option<Position>,
+        mut score: impl FnMut(Position, (f64, f64), f64) -> Option<(f64, f64)>,
+    ) -> Option<Position> {
         let _timing = super::diagnostics::pursuit("choose");
         let &(time, last) = self.samples.last()?;
-        let legal = |p: BattlePosition| {
+        let legal = |p: Position| {
             p.map == own.map
                 && i64::from(p.x) < width
                 && i64::from(p.y) < height
@@ -363,7 +359,7 @@ impl AdaptivePursuit {
             let (Ok(x), Ok(y)) = (u16::try_from(hex.x), u16::try_from(hex.y)) else {
                 break;
             };
-            let aim = BattlePosition {
+            let aim = Position {
                 map: last.map,
                 x,
                 y,
@@ -385,7 +381,7 @@ impl AdaptivePursuit {
         .containing_hex()
         .ok()
         .and_then(|h| {
-            Some(BattlePosition {
+            Some(Position {
                 map: last.map,
                 x: u16::try_from(h.x).ok()?,
                 y: u16::try_from(h.y).ok()?,
@@ -503,8 +499,8 @@ mod tests {
         assert_eq!(p.rejected, None);
         assert_eq!(p.reconsider_at, 13);
     }
-    fn pos(x: u16) -> BattlePosition {
-        BattlePosition {
+    fn pos(x: u16) -> Position {
+        Position {
             map: crate::ObjectId(1),
             x,
             y: 10,

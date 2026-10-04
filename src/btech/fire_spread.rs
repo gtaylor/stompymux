@@ -1,5 +1,5 @@
 //! Autonomous fire spreading, smoke creation and woodland burnout on candidate map state.
-use super::{BattleDecoration, DecorationKind, HexCoordinate, StoredMap};
+use super::{Decoration, DecorationKind, HexCoordinate, StoredMap};
 use crate::World;
 use anyhow::Result;
 use std::{collections::BTreeSet, sync::Arc};
@@ -87,7 +87,7 @@ fn advance_fire(map: &mut StoredMap) -> Result<()> {
 /// The hex left when a fire over it burns out, if the fire changed it. Heavy woods thin to
 /// light woods, and light woods burn away. Clear ground beneath is left rough two times in
 /// three; any other ground, such as a road or sand, keeps its own kind.
-fn burn_out(tile: super::Hex, dice: &mut super::BattleDice) -> Option<super::Hex> {
+fn burn_out(tile: super::Hex, dice: &mut super::Dice) -> Option<super::Hex> {
     match tile.woods()? {
         super::Woods::Heavy => Some(tile.with_woods(Some(super::Woods::Light))),
         super::Woods::Light => {
@@ -121,7 +121,7 @@ fn spread(map: &mut StoredMap, index: u32, replaced: &mut BTreeSet<u32>) -> Resu
         super::decorations::install_decoration(
             map,
             index,
-            BattleDecoration::new(DecorationKind::Smoke, i64::from(remaining), None),
+            Decoration::new(DecorationKind::Smoke, i64::from(remaining), None),
         )?;
         replaced.insert(index);
     }
@@ -145,7 +145,7 @@ fn spread(map: &mut StoredMap, index: u32, replaced: &mut BTreeSet<u32>) -> Resu
         super::decorations::install_decoration(
             map,
             index,
-            BattleDecoration::new(DecorationKind::Fire, i64::from(remaining), next_spread),
+            Decoration::new(DecorationKind::Fire, i64::from(remaining), next_spread),
         )?;
         replaced.insert(index);
     }
@@ -224,7 +224,7 @@ mod tests {
     #[test]
     fn burnout_thins_heavy_woods_and_keeps_the_ground_under_light_woods() {
         use crate::btech::{Ground, Hex, Terrain, Woods};
-        let mut dice = crate::btech::BattleDice::seeded([7; 32]);
+        let mut dice = crate::btech::Dice::seeded([7; 32]);
         let heavy = Hex::new(Terrain::HeavyForest, 3);
         assert_eq!(
             burn_out(heavy, &mut dice),

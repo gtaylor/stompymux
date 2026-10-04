@@ -3,13 +3,13 @@ use crate::support;
 use stompymux_rs::*;
 
 /// Install one supported Gauss mount and matching inert ammunition in an isolated biped template.
-fn definition(weapon: BattleWeapon, case: bool) -> BattleTemplate {
+fn definition(weapon: Weapon, case: bool) -> MechTemplate {
     let mut definition =
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
-    let (section, first) = if weapon == BattleWeapon::HeavyGaussRifle {
-        (BattleSection::LeftTorso, 0)
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+    let (section, first) = if weapon == Weapon::HeavyGaussRifle {
+        (MechSection::LeftTorso, 0)
     } else {
-        (BattleSection::LeftArm, 2)
+        (MechSection::LeftArm, 2)
     };
     let arm = definition.sections.get_mut(&section).unwrap();
     let mut part = arm.criticals[&first].clone();
@@ -38,7 +38,7 @@ fn definition(weapon: BattleWeapon, case: bool) -> BattleTemplate {
 fn gauss_catalog_inert_bins_and_mount_destruction() {
     for (weapon, heat, damage, slots, capacity, mass, recycle, minimum, ranges, explosion) in [
         (
-            BattleWeapon::ClanGaussRifle,
+            Weapon::ClanGaussRifle,
             1,
             15,
             6,
@@ -50,7 +50,7 @@ fn gauss_catalog_inert_bins_and_mount_destruction() {
             20,
         ),
         (
-            BattleWeapon::GaussRifle,
+            Weapon::GaussRifle,
             1,
             15,
             7,
@@ -62,7 +62,7 @@ fn gauss_catalog_inert_bins_and_mount_destruction() {
             20,
         ),
         (
-            BattleWeapon::LightGaussRifle,
+            Weapon::LightGaussRifle,
             1,
             8,
             5,
@@ -74,7 +74,7 @@ fn gauss_catalog_inert_bins_and_mount_destruction() {
             16,
         ),
         (
-            BattleWeapon::MagshotGaussRifle,
+            Weapon::MagshotGaussRifle,
             1,
             2,
             2,
@@ -87,7 +87,7 @@ fn gauss_catalog_inert_bins_and_mount_destruction() {
         ),
     ] {
         let profile = weapon.profile();
-        assert_eq!(BattleWeapon::parse(weapon.name()).unwrap(), weapon);
+        assert_eq!(Weapon::parse(weapon.name()).unwrap(), weapon);
         assert_eq!(
             (
                 profile.heat,
@@ -112,14 +112,14 @@ fn gauss_catalog_inert_bins_and_mount_destruction() {
         assert_eq!(weapon.damage_groups(None).unwrap(), [u16::from(damage)]);
         assert_eq!(weapon.weapon_explosion_damage(), explosion);
         assert_eq!(weapon.ammunition_explosion_damage(u16::MAX), 0);
-        let intact = BattleUnit::from_template(definition(weapon, false)).unwrap();
+        let intact = Mech::from_template(definition(weapon, false)).unwrap();
         assert!(intact.ammunition_hazard_maximum().unwrap().is_none());
         let loadout = intact.loadout().unwrap();
         let bin = loadout.ammunition[0].location;
         let mut empty = intact.clone();
         assert_eq!(
             empty.destroy_critical(bin).unwrap(),
-            Some(BattleCriticalLoss::Ammunition {
+            Some(CriticalLoss::Ammunition {
                 index: 0,
                 rounds: u16::from(capacity),
                 explosion_damage: 0,
@@ -136,7 +136,7 @@ fn gauss_catalog_inert_bins_and_mount_destruction() {
             let mut unit = intact.clone();
             assert_eq!(
                 unit.destroy_critical(*location).unwrap(),
-                Some(BattleCriticalLoss::Weapon {
+                Some(CriticalLoss::Weapon {
                     index,
                     explosion_damage: explosion
                 })
@@ -149,8 +149,8 @@ fn gauss_catalog_inert_bins_and_mount_destruction() {
             assert_eq!(unit.ammunition(), intact.ammunition());
         }
     }
-    let highlander = BattleUnit::from_template(
-        BattleTemplate::parse("HGN-732", include_str!("../game/mechs/HGN-732.toml")).unwrap(),
+    let highlander = Mech::from_template(
+        MechTemplate::parse("HGN-732", include_str!("../game/mechs/HGN-732.toml")).unwrap(),
     )
     .unwrap();
     assert!(
@@ -159,7 +159,7 @@ fn gauss_catalog_inert_bins_and_mount_destruction() {
             .unwrap()
             .weapons
             .iter()
-            .any(|mount| mount.weapon == BattleWeapon::GaussRifle)
+            .any(|mount| mount.weapon == Weapon::GaussRifle)
     );
 }
 
@@ -167,9 +167,9 @@ fn gauss_catalog_inert_bins_and_mount_destruction() {
 #[tokio::test]
 async fn gauss_explosion_cascades_case_and_restart() {
     for weapon in [
-        BattleWeapon::GaussRifle,
-        BattleWeapon::LightGaussRifle,
-        BattleWeapon::MagshotGaussRifle,
+        Weapon::GaussRifle,
+        Weapon::LightGaussRifle,
+        Weapon::MagshotGaussRifle,
     ] {
         for case in [false, true] {
             let (_dir, config, mut base) = support::isolated_world().await;
@@ -177,8 +177,8 @@ async fn gauss_explosion_cascades_case_and_restart() {
             base.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
             create_battle_unit(&mut base, id, definition(weapon, case)).unwrap();
             support::seed_object_dice(&mut base, id, support::FIXTURE_DICE_SEED);
-            let hit = BattleHit {
-                section: BattleSection::LeftArm,
+            let hit = Hit {
+                section: MechSection::LeftArm,
                 rear_armor: false,
                 through_armor_critical: true,
                 crew_stun: false,
@@ -186,16 +186,16 @@ async fn gauss_explosion_cascades_case_and_restart() {
             let mut found = false;
             for seed in 0..=255 {
                 base.btech
-                    .set_unit_dice(id, BattleDice::seeded([seed; 32]))
+                    .set_unit_dice(id, Dice::seeded([seed; 32]))
                     .unwrap();
                 let mut fired = base.clone();
                 let report = resolve_battle_impact(&mut fired, id, hit, 1).unwrap();
-                if !report.criticals.iter().any(|(_, loss)| matches!(loss, BattleCriticalLoss::Weapon { explosion_damage, .. } if *explosion_damage > 0)) { continue; }
+                if !report.criticals.iter().any(|(_, loss)| matches!(loss, CriticalLoss::Weapon { explosion_damage, .. } if *explosion_damage > 0)) { continue; }
                 assert_eq!(
                     report
                         .pending_effects
                         .iter()
-                        .filter(|effect| **effect == BattleImpactEffect::ExplosionInjury)
+                        .filter(|effect| **effect == ImpactEffect::ExplosionInjury)
                         .count(),
                     1
                 );
@@ -215,13 +215,13 @@ async fn gauss_explosion_cascades_case_and_restart() {
                     })
                 );
                 assert_eq!(
-                    after.sections()[&BattleSection::CenterTorso].armor,
-                    before.sections()[&BattleSection::CenterTorso].armor
+                    after.sections()[&MechSection::CenterTorso].armor,
+                    before.sections()[&MechSection::CenterTorso].armor
                 );
                 if case {
                     assert_eq!(
-                        after.sections()[&BattleSection::LeftTorso],
-                        before.sections()[&BattleSection::LeftTorso]
+                        after.sections()[&MechSection::LeftTorso],
+                        before.sections()[&MechSection::LeftTorso]
                     );
                 }
                 persistence::save(&config.database(), &base).await.unwrap();
@@ -235,7 +235,7 @@ async fn gauss_explosion_cascades_case_and_restart() {
                 assert!(
                     !repeated
                         .pending_effects
-                        .contains(&BattleImpactEffect::ExplosionInjury)
+                        .contains(&ImpactEffect::ExplosionInjury)
                 );
                 found = true;
                 break;
@@ -248,9 +248,9 @@ async fn gauss_explosion_cascades_case_and_restart() {
 /// The Heavy Gauss catalog uses an eleven-slot torso mount and a larger weapon explosion.
 #[test]
 fn heavy_gauss_catalog_and_mount_destruction() {
-    let weapon = BattleWeapon::HeavyGaussRifle;
+    let weapon = Weapon::HeavyGaussRifle;
     let profile = weapon.profile();
-    assert_eq!(BattleWeapon::parse(weapon.name()).unwrap(), weapon);
+    assert_eq!(Weapon::parse(weapon.name()).unwrap(), weapon);
     assert_eq!(
         (
             profile.heat,
@@ -272,7 +272,7 @@ fn heavy_gauss_catalog_and_mount_destruction() {
     );
     assert_eq!(weapon.mass(), 18432);
     assert_eq!(weapon.ammunition_explosion_damage(4), 0);
-    let original = BattleUnit::from_template(definition(weapon, false)).unwrap();
+    let original = Mech::from_template(definition(weapon, false)).unwrap();
     let loadout = original.loadout().unwrap();
     let (index, mount) = loadout
         .weapons
@@ -284,7 +284,7 @@ fn heavy_gauss_catalog_and_mount_destruction() {
         let mut unit = original.clone();
         assert_eq!(
             unit.destroy_critical(*location).unwrap(),
-            Some(BattleCriticalLoss::Weapon {
+            Some(CriticalLoss::Weapon {
                 index,
                 explosion_damage: 25
             })

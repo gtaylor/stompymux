@@ -1,6 +1,6 @@
 //! Captured radio audit diagnostics and atomic frequency-setting publication.
 use super::map_slots::all_unit_order;
-use super::{BattleChannel, BattleChannelMessage};
+use super::{DiagnosticChannel, DiagnosticMessage};
 use crate::{Config, Flag, ObjectId, Scripts, World};
 use anyhow::{Context, Result};
 
@@ -13,7 +13,7 @@ pub fn set_radio_frequency_action(
     pilot: ObjectId,
     channel: u8,
     frequency: u32,
-) -> Result<Vec<BattleChannelMessage>> {
+) -> Result<Vec<DiagnosticMessage>> {
     scripts.atomic(|_| {
         super::set_radio_frequency(
             &mut scripts.world.borrow_mut(),
@@ -33,7 +33,7 @@ fn frequency_matches(
     world: &World,
     sender: ObjectId,
     frequency: u32,
-) -> Result<Vec<BattleChannelMessage>> {
+) -> Result<Vec<DiagnosticMessage>> {
     let source = super::radio::unit(world, sender)?;
     let Some(position) = source.position() else {
         return Ok(Vec::new());
@@ -62,7 +62,7 @@ fn frequency_matches(
             .iter()
             .filter(|c| c.frequency == frequency && !c.mode.scan)
         {
-            messages.push(BattleChannelMessage::new(BattleChannel::Frequencies,
+            messages.push(DiagnosticMessage::new(DiagnosticChannel::Frequencies,
                 format!("ALERT: Possible abuse by #{} (Team {team}) setting freq {frequency} matching #{} (Team {other_team})!", sender.0, id.0)));
         }
     }
@@ -77,7 +77,7 @@ pub(super) fn transmission(
     channel: u8,
     frequency: u32,
     message: &str,
-) -> Result<Vec<BattleChannelMessage>> {
+) -> Result<Vec<DiagnosticMessage>> {
     if frequency != 0 {
         return Ok(Vec::new());
     }
@@ -91,8 +91,8 @@ pub(super) fn transmission(
         return Ok(Vec::new());
     }
     let player = world.objects.get(&pilot).context("Pilot is unavailable")?;
-    Ok(vec![BattleChannelMessage::new(
-        BattleChannel::ZeroFrequencies,
+    Ok(vec![DiagnosticMessage::new(
+        DiagnosticChannel::ZeroFrequencies,
         format!(
             "Player #{} ({}) in mech #{} (channel {}) on map #{} 0-freqs \"{message}\"",
             pilot.0,

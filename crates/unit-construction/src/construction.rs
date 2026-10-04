@@ -2,7 +2,7 @@
 //! derived data: technology types that map to chassis flags, the fixed equipment those
 //! types place in mech critical slots, and the internal structure and speeds that follow
 //! from tonnage and movement points.
-use super::{BattleMechChassis, BattleSection, RawUnitClass, SectionDefinition};
+use super::{MechChassis, MechSection, RawUnitClass, SectionDefinition};
 use anyhow::{Context, Result, bail, ensure};
 use serde::Deserialize;
 use std::collections::BTreeMap;
@@ -469,13 +469,13 @@ pub fn canonical_special(flag: &str) -> Result<&'static str> {
     );
     technology_names(0..=56)
         .chain(
-            super::BattleTechnology::ALL
+            super::Technology::ALL
                 .iter()
                 .map(|technology| technology.names().0),
         )
         .find(|known| known.eq_ignore_ascii_case(flag))
         .or_else(|| {
-            super::BattleTechnology::ALL
+            super::Technology::ALL
                 .iter()
                 .find(|technology| technology.names().1.eq_ignore_ascii_case(flag))
                 .map(|technology| technology.names().0)
@@ -547,11 +547,11 @@ pub struct SectionPlan<'a> {
 /// Fixed equipment construction places in one mech section, by zero-based slot.
 pub fn fixed_equipment(
     construction: &Construction,
-    chassis: BattleMechChassis,
-    section: BattleSection,
+    chassis: MechChassis,
+    section: MechSection,
     plan: SectionPlan<'_>,
 ) -> Result<BTreeMap<u8, &'static str>> {
-    use BattleSection::*;
+    use MechSection::*;
     let mut items = BTreeMap::new();
     let limb = |items: &mut BTreeMap<u8, &'static str>, last: &'static str, omit_last: Omission| {
         if !plan.omit.contains(&Omission::Shoulder) {
@@ -567,7 +567,7 @@ pub fn fixed_equipment(
             items.insert(3, last);
         }
     };
-    let arm = chassis == BattleMechChassis::Biped && matches!(section, LeftArm | RightArm);
+    let arm = chassis == MechChassis::Biped && matches!(section, LeftArm | RightArm);
     let allowed: &[Omission] = match section {
         LeftArm | RightArm if arm => &[
             Omission::Shoulder,
@@ -679,7 +679,7 @@ pub fn arms_flip(arms: [&SectionDefinition; 2]) -> bool {
 /// Rows are `[tons, center torso, side torsos, arms, legs]`; quad chassis
 /// use the leg column for arms. Head structure is always three and unknown
 /// tonnage has no chart value, matching mech_int_check.
-pub fn mech_internal(tons: u16, section: BattleSection, quad: bool) -> Option<u16> {
+pub fn mech_internal(tons: u16, section: MechSection, quad: bool) -> Option<u16> {
     const STRUCTURE: [[u16; 5]; 19] = [
         [10, 4, 3, 1, 2],
         [15, 5, 4, 2, 3],
@@ -703,12 +703,12 @@ pub fn mech_internal(tons: u16, section: BattleSection, quad: bool) -> Option<u1
     ];
     let row = STRUCTURE.iter().find(|row| row[0] == tons)?;
     Some(match section {
-        BattleSection::Head => 3,
-        BattleSection::CenterTorso => row[1],
-        BattleSection::LeftTorso | BattleSection::RightTorso => row[2],
-        BattleSection::LeftArm | BattleSection::RightArm if quad => row[4],
-        BattleSection::LeftArm | BattleSection::RightArm => row[3],
-        BattleSection::LeftLeg | BattleSection::RightLeg => row[4],
+        MechSection::Head => 3,
+        MechSection::CenterTorso => row[1],
+        MechSection::LeftTorso | MechSection::RightTorso => row[2],
+        MechSection::LeftArm | MechSection::RightArm if quad => row[4],
+        MechSection::LeftArm | MechSection::RightArm => row[3],
+        MechSection::LeftLeg | MechSection::RightLeg => row[4],
     })
 }
 
@@ -821,9 +821,9 @@ mod tests {
 
     #[test]
     fn fixed_equipment_follows_engine_gyro_cockpit_and_actuators() {
-        use BattleSection::*;
+        use MechSection::*;
         let place = |construction: &Construction, section, plan| {
-            fixed_equipment(construction, BattleMechChassis::Biped, section, plan).unwrap()
+            fixed_equipment(construction, MechChassis::Biped, section, plan).unwrap()
         };
         let standard = Construction::default();
         let center = place(&standard, CenterTorso, SectionPlan::default());
@@ -861,7 +861,7 @@ mod tests {
         assert_eq!(place(&small, Head, SectionPlan::default())[&3], SENSORS);
         let quad = fixed_equipment(
             &standard,
-            BattleMechChassis::Quad,
+            MechChassis::Quad,
             LeftArm,
             SectionPlan::default(),
         )
@@ -870,7 +870,7 @@ mod tests {
         assert!(
             fixed_equipment(
                 &standard,
-                BattleMechChassis::Quad,
+                MechChassis::Quad,
                 LeftArm,
                 SectionPlan {
                     omit: &[Omission::Hand],
@@ -882,7 +882,7 @@ mod tests {
         assert!(
             fixed_equipment(
                 &standard,
-                BattleMechChassis::Biped,
+                MechChassis::Biped,
                 LeftTorso,
                 SectionPlan {
                     engine_at: Some(2),
@@ -906,8 +906,8 @@ mod tests {
                 "\n[construction]\ncockpit = \"small\"\n\n[sections.",
                 1,
             );
-        let template = crate::BattleTemplate::parse("JR7-D", &small).unwrap();
-        let head = &template.sections[&BattleSection::Head];
+        let template = crate::MechTemplate::parse("JR7-D", &small).unwrap();
+        let head = &template.sections[&MechSection::Head];
         assert_eq!(
             head.criticals
                 .values()
@@ -919,12 +919,9 @@ mod tests {
 
     #[test]
     fn derived_numbers_follow_tonnage_and_movement_points() {
-        assert_eq!(
-            mech_internal(80, BattleSection::CenterTorso, false),
-            Some(25)
-        );
-        assert_eq!(mech_internal(80, BattleSection::LeftArm, true), Some(17));
-        assert_eq!(mech_internal(82, BattleSection::Head, false), None);
+        assert_eq!(mech_internal(80, MechSection::CenterTorso, false), Some(25));
+        assert_eq!(mech_internal(80, MechSection::LeftArm, true), Some(17));
+        assert_eq!(mech_internal(82, MechSection::Head, false), None);
         assert_eq!(vehicle_internal(80), 8);
         assert_eq!(vehicle_internal(5), 1);
         assert_eq!(movement_points(64.5), Some(6));

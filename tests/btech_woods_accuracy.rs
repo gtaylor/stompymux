@@ -4,8 +4,8 @@ use crate::support::btech_firing as firing;
 use stompymux_rs::*;
 
 /// Standard aim policy with an explicit woods-damage switch.
-fn rules(enabled: bool) -> BattleAimRules {
-    BattleAimRules {
+fn rules(enabled: bool) -> AimRules {
+    AimRules {
         woods_damage: enabled,
         dig_bonus: 3,
         dig_only_front: false,
@@ -34,12 +34,9 @@ fn terrain(world: &mut World, target: ObjectId, terrain: Terrain) {
 async fn occupied_woods_accuracy_is_shared_across_shooter_and_target_chassis() {
     for source in firing::templates() {
         for target_source in firing::templates() {
-            let (_dir, config, base, shooter, target, index) = firing::fixture_with_target(
-                &source,
-                Some(BattleWeapon::MediumLaser),
-                &target_source,
-            )
-            .await;
+            let (_dir, config, base, shooter, target, index) =
+                firing::fixture_with_target(&source, Some(Weapon::MediumLaser), &target_source)
+                    .await;
             for (kind, expected) in [
                 (Terrain::Grassland, 0),
                 (Terrain::LightForest, -1),
@@ -73,7 +70,7 @@ async fn occupied_woods_accuracy_is_shared_across_shooter_and_target_chassis() {
 async fn woods_canopy_boundary_overlays_and_restart() {
     let (_dir, config, base, shooter, target, index) = firing::fixture_with_target(
         include_str!("../game/mechs/JR7-D.toml"),
-        Some(BattleWeapon::MediumLaser),
+        Some(Weapon::MediumLaser),
         include_str!("../game/mechs/Kestrel.toml"),
     )
     .await;
@@ -95,7 +92,7 @@ async fn woods_canopy_boundary_overlays_and_restart() {
                     &mut world,
                     map,
                     HexCoordinate { x: 0, y: 10 },
-                    Some(BattleDecoration::new(kind, 30, None)),
+                    Some(Decoration::new(kind, 30, None)),
                 )
                 .unwrap();
             }
@@ -122,7 +119,7 @@ async fn configured_sighting_uses_woods_accuracy_for_every_shooter() {
     for source in firing::templates() {
         let (dir, _initial, mut world, shooter, target, index) = firing::fixture_with_target(
             &source,
-            Some(BattleWeapon::MediumLaser),
+            Some(Weapon::MediumLaser),
             include_str!("../game/mechs/JR7-D.toml"),
         )
         .await;

@@ -108,7 +108,7 @@ dispatch and registration lifecycle integration remain unfinished.
 
 ## Shared help renderer
 
-`BattleSpecialType::help` now renders catalogue-derived menus without world
+`SpecialType::help` now renders catalogue-derived menus without world
 mutation. It applies the shared class and privilege filters, preserves category
 order, supplies four-column listings and handles named categories and ALL with
 the reference error messages. Detailed syntax uses a colored initial command

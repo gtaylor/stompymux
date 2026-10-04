@@ -6,34 +6,34 @@ use serde::Serialize;
 
 /// One already located hit, after weapon-specific damage adjustments by the enclosing attack.
 #[derive(Debug, Clone, Copy)]
-pub struct BattleVehicleArmorHit {
-    pub section: BattleVehicleSection,
+pub struct VehicleArmorHit {
+    pub section: VehicleSection,
     pub amount: u32,
     pub through_armor_critical: bool,
     /// AP ammunition's weapon family, when applicable; ordinary hits use None.
-    pub armor_piercing: Option<BattleWeapon>,
+    pub armor_piercing: Option<Weapon>,
     /// Energy and area-effect hits interact with reflective armor.
-    pub damage_class: BattleDamageClass,
+    pub damage_class: DamageClass,
 }
 
 /// Ordered protection changes and critical effects; visibility and attack publication remain external.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[must_use = "Publish damage notices with the enclosing attack transaction"]
-pub struct BattleVehicleArmorDamage {
-    pub section: BattleVehicleSection,
+pub struct VehicleArmorDamage {
+    pub section: VehicleSection,
     pub incoming: u32,
     pub armor_damage: u32,
     pub absorbed: u16,
     pub overflow: u32,
     /// Damage-entry roll, optional rear-hit diagnostic, then any through-armor critical roll.
     pub rolls: Vec<u8>,
-    pub criticals: Vec<BattleVehicleCriticalResolution>,
-    pub internal: Option<BattleVehicleInternalDamage>,
+    pub criticals: Vec<VehicleCriticalResolution>,
+    pub internal: Option<VehicleInternalDamage>,
     pub unit_destroyed: bool,
-    pub notices: Vec<BattleNotice>,
+    pub notices: Vec<Notice>,
     /// Pilot-only control feedback indexed into the damage notice stream.
-    pub pilot_notices: Vec<BattlePilotNotice>,
-    pub broadcasts: Vec<BattleNotice>,
+    pub pilot_notices: Vec<PilotNotice>,
+    pub broadcasts: Vec<Notice>,
 }
 
 /// Apply armor, through-armor criticals and internal overflow atomically.
@@ -41,9 +41,9 @@ pub struct BattleVehicleArmorDamage {
 pub fn resolve_vehicle_armor_damage(
     world: &mut World,
     id: ObjectId,
-    hit: BattleVehicleArmorHit,
-    rules: BattleVehicleCriticalRules,
-) -> Result<BattleVehicleArmorDamage> {
+    hit: VehicleArmorHit,
+    rules: VehicleCriticalRules,
+) -> Result<VehicleArmorDamage> {
     world.attempt(|world| {
         let result = resolve_in_candidate(world, id, hit, rules)?;
         Ok(result)
@@ -54,9 +54,9 @@ pub fn resolve_vehicle_armor_damage(
 pub(super) fn resolve_in_candidate(
     world: &mut World,
     id: ObjectId,
-    hit: BattleVehicleArmorHit,
-    rules: BattleVehicleCriticalRules,
-) -> Result<BattleVehicleArmorDamage> {
+    hit: VehicleArmorHit,
+    rules: VehicleCriticalRules,
+) -> Result<VehicleArmorDamage> {
     let vehicle = world
         .btech
         .vehicles()
@@ -78,9 +78,9 @@ pub(super) fn resolve_in_candidate(
 pub(super) fn resolve_followup_in_candidate(
     world: &mut World,
     id: ObjectId,
-    hit: BattleVehicleArmorHit,
-    rules: BattleVehicleCriticalRules,
-) -> Result<BattleVehicleArmorDamage> {
+    hit: VehicleArmorHit,
+    rules: VehicleCriticalRules,
+) -> Result<VehicleArmorDamage> {
     resolve_rear_followup_in_candidate(world, id, hit, false, rules, Default::default())
 }
 
@@ -88,13 +88,13 @@ pub(super) fn resolve_followup_in_candidate(
 pub(super) fn resolve_rear_followup_in_candidate(
     world: &mut World,
     id: ObjectId,
-    mut hit: BattleVehicleArmorHit,
+    mut hit: VehicleArmorHit,
     rear: bool,
-    rules: BattleVehicleCriticalRules,
+    rules: VehicleCriticalRules,
     context: super::vehicle_internal_damage::DamageContext,
-) -> Result<BattleVehicleArmorDamage> {
-    if rear && hit.section == BattleVehicleSection::Front {
-        hit.section = BattleVehicleSection::Rear;
+) -> Result<VehicleArmorDamage> {
+    if rear && hit.section == VehicleSection::Front {
+        hit.section = VehicleSection::Rear;
     }
     ensure!(
         world
@@ -116,7 +116,7 @@ pub(super) fn resolve_rear_followup_in_candidate(
         .is_none_or(|section| section.internal == 0);
     if let Some(weapon) = hit.armor_piercing {
         ensure!(
-            BattleAmmunitionMode::ArmorPiercing.supports(weapon),
+            AmmunitionMode::ArmorPiercing.supports(weapon),
             "Weapon cannot fire armor-piercing ammunition"
         );
     }
@@ -127,7 +127,7 @@ pub(super) fn resolve_rear_followup_in_candidate(
         .map_or(0, |section| section.armor);
     let incoming = hit.amount;
     if hit.amount > 0
-        && hit.section == BattleVehicleSection::Rotor
+        && hit.section == VehicleSection::Rotor
         && vehicle.definition().is_vtol()
         && rules.rotor_damage_divisor > 0
     {
@@ -135,23 +135,23 @@ pub(super) fn resolve_rear_followup_in_candidate(
     }
     let hardened = vehicle
         .definition()
-        .has_technology(super::BattleTechnology::HardenedArmor);
+        .has_technology(super::Technology::HardenedArmor);
     let reflective = !hardened
         && vehicle
             .definition()
-            .has_technology(super::BattleTechnology::LaserReflectiveArmor)
-        && hit.damage_class != BattleDamageClass::Ordinary;
+            .has_technology(super::Technology::LaserReflectiveArmor)
+        && hit.damage_class != DamageClass::Ordinary;
     // Hardened armor records the armor it could remove: half the hit, rounding up.
     // Reflective armor halves energy hits, rounding down, and doubles area-effect hits.
     let amount = if hardened {
         hit.amount.div_ceil(2)
     } else if reflective {
-        super::BattleTechnology::reflective_hit(hit.damage_class, hit.amount, u16::MAX)
+        super::Technology::reflective_hit(hit.damage_class, hit.amount, u16::MAX)
             .map_or(hit.amount, |(removed, _)| u32::from(removed))
     } else {
         hit.amount
     };
-    let mut result = BattleVehicleArmorDamage {
+    let mut result = VehicleArmorDamage {
         section: hit.section,
         incoming,
         armor_damage: amount,
@@ -198,7 +198,7 @@ pub(super) fn resolve_rear_followup_in_candidate(
     super::damage_counters::record(world, id, context.attacker, hit.amount)?;
     result.notices.extend(super::hiding::damage(world, id));
     if !rear
-        && hit.section == BattleVehicleSection::Front
+        && hit.section == VehicleSection::Front
         && !world.btech.vehicles()[&id].definition().is_vtol()
         && let Some((notices, broadcasts)) = super::searchlight::strike(world, id)
     {
@@ -207,7 +207,7 @@ pub(super) fn resolve_rear_followup_in_candidate(
     }
 
     let vehicle = world.btech.vehicles.get_mut(&id).unwrap();
-    result.notices.push(BattleNotice {
+    result.notices.push(Notice {
         unit: id,
         text: format!(
             "[fg=yellow bold]You have been hit for {} points of damage in the {} [reset]",
@@ -219,14 +219,12 @@ pub(super) fn resolve_rear_followup_in_candidate(
         super::combat_warnings::armor_severity(original, vehicle.sections()[&hit.section].armor);
     // Each hardened armor point stops two damage; overflow passes at full value.
     let (armor_damage, hardened_overflow) = if hardened {
-        let (removed, overflow) = super::BattleTechnology::hardened_hit(
-            hit.amount,
-            vehicle.sections()[&hit.section].armor,
-        );
+        let (removed, overflow) =
+            super::Technology::hardened_hit(hit.amount, vehicle.sections()[&hit.section].armor);
         (u32::from(removed), Some(overflow))
     } else if let Some((removed, overflow)) = reflective
         .then(|| {
-            super::BattleTechnology::reflective_hit(
+            super::Technology::reflective_hit(
                 hit.damage_class,
                 hit.amount,
                 vehicle.sections()[&hit.section].armor,
@@ -242,7 +240,7 @@ pub(super) fn resolve_rear_followup_in_candidate(
         .damage_phase(
             hit.section,
             armor_damage.min(u32::from(u16::MAX)) as u16,
-            BattleDamagePhase::Armor { rear: false },
+            DamagePhase::Armor { rear: false },
         )?
         .absorbed;
     result.overflow = hardened_overflow.unwrap_or(amount - u32::from(result.absorbed));
@@ -293,7 +291,7 @@ pub(super) fn resolve_rear_followup_in_candidate(
     }
     let vehicle = &world.btech.vehicles()[&id];
     if warning > previous_warning && vehicle.armor_warning() {
-        result.notices.push(BattleNotice {
+        result.notices.push(Notice {
             unit: id,
             text: super::combat_warnings::vehicle_armor_message(hit.section, warning),
         });

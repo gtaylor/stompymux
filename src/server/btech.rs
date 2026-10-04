@@ -34,10 +34,10 @@ impl Server {
                 .constructed_units()
                 .iter()
                 .filter_map(|(&id, unit)| {
-                    matches!(unit.power(), crate::BattlePower::Starting { .. }).then_some(id)
+                    matches!(unit.power(), crate::Power::Starting { .. }).then_some(id)
                 })
                 .chain(world.btech.vehicles().iter().filter_map(|(&id, unit)| {
-                    matches!(unit.power(), crate::BattlePower::Starting { .. }).then_some(id)
+                    matches!(unit.power(), crate::Power::Starting { .. }).then_some(id)
                 }))
                 .collect()
         };
@@ -91,18 +91,18 @@ impl Server {
         if let Err(error) = crate::advance_artillery_action(
             &self.scripts,
             &self.config,
-            crate::BattleFallRules {
-                vehicle_impact: crate::BattleVehicleImpactRules::configured(
+            crate::FallRules {
+                vehicle_impact: crate::VehicleImpactRules::configured(
                     &self.config.battletech,
                     false,
                 ),
-                stacking: crate::BattleStackingRules {
+                stacking: crate::StackingRules {
                     mode: self.config.battletech.stacking,
                     damage_percent: self.config.battletech.stackdamage,
                     hit_arcs: self.config.battletech.hit_arcs,
                 },
-                stagger: crate::BattleStaggerMode::from_setting(self.config.battletech.newstagger),
-                hit: crate::BattleHitRules {
+                stagger: crate::StaggerMode::from_setting(self.config.battletech.newstagger),
+                hit: crate::HitRules {
                     inferno_penalty: self.config.battletech.inferno_penalty != 0,
                     exile_stun_mode: self.config.battletech.exile_stun_code.clamp(0, 2) as u8,
                 },
@@ -206,12 +206,12 @@ impl Server {
         match crate::advance_battle_motion_action(
             &self.scripts,
             &self.config,
-            crate::BattleMovementRules {
+            crate::MovementRules {
                 free_fusion_vtol_fuel: self.config.battletech.nofusionvtolfuel != 0,
                 tsm_tow_bonus: self.config.battletech.tsm_tow_bonus != 0,
                 physical_pilot_skill: self.config.battletech.phys_use_pskill != 0,
                 new_terrain: self.config.battletech.newterrain != 0,
-                charge: crate::BattleChargePolicy {
+                charge: crate::ChargePolicy {
                     new_rules: self.config.battletech.newcharge != 0,
                     technology_level_three: self.config.battletech.tl3_charge != 0,
                     extended_movement: self.config.battletech.extendedmovemod != 0,
@@ -221,20 +221,18 @@ impl Server {
                 slowdown: self.config.battletech.slowdown,
                 roll_on_backwalk: self.config.battletech.roll_on_backwalk != 0,
                 skid_cliff: self.config.battletech.skidcliff != 0,
-                fall: crate::BattleFallRules {
-                    vehicle_impact: crate::BattleVehicleImpactRules::configured(
+                fall: crate::FallRules {
+                    vehicle_impact: crate::VehicleImpactRules::configured(
                         &self.config.battletech,
                         false,
                     ),
-                    stacking: crate::BattleStackingRules {
+                    stacking: crate::StackingRules {
                         mode: self.config.battletech.stacking,
                         damage_percent: self.config.battletech.stackdamage,
                         hit_arcs: self.config.battletech.hit_arcs,
                     },
-                    stagger: crate::BattleStaggerMode::from_setting(
-                        self.config.battletech.newstagger,
-                    ),
-                    hit: crate::BattleHitRules {
+                    stagger: crate::StaggerMode::from_setting(self.config.battletech.newstagger),
+                    hit: crate::HitRules {
                         inferno_penalty: self.config.battletech.inferno_penalty != 0,
                         exile_stun_mode: self.config.battletech.exile_stun_code.clamp(0, 2) as u8,
                     },
@@ -351,39 +349,37 @@ impl Server {
         match crate::advance_battle_jumps_action(
             &self.scripts,
             &self.config,
-            crate::BattleMovementRules {
+            crate::MovementRules {
                 free_fusion_vtol_fuel: self.config.battletech.nofusionvtolfuel != 0,
                 tsm_tow_bonus: self.config.battletech.tsm_tow_bonus != 0,
                 physical_pilot_skill: self.config.battletech.phys_use_pskill != 0,
                 new_terrain: self.config.battletech.newterrain != 0,
-                fall: crate::BattleFallRules {
-                    vehicle_impact: crate::BattleVehicleImpactRules::configured(
+                fall: crate::FallRules {
+                    vehicle_impact: crate::VehicleImpactRules::configured(
                         &self.config.battletech,
                         false,
                     ),
-                    stacking: crate::BattleStackingRules {
+                    stacking: crate::StackingRules {
                         mode: self.config.battletech.stacking,
                         damage_percent: self.config.battletech.stackdamage,
                         hit_arcs: self.config.battletech.hit_arcs,
                     },
-                    stagger: crate::BattleStaggerMode::from_setting(
-                        self.config.battletech.newstagger,
-                    ),
-                    hit: crate::BattleHitRules {
+                    stagger: crate::StaggerMode::from_setting(self.config.battletech.newstagger),
+                    hit: crate::HitRules {
                         inferno_penalty: self.config.battletech.inferno_penalty != 0,
                         exile_stun_mode: self.config.battletech.exile_stun_code.clamp(0, 2) as u8,
                     },
                     extended_piloting: self.config.battletech.extended_piloting != 0,
                     toughness: false,
                 },
-                charge: crate::BattleChargePolicy {
+                charge: crate::ChargePolicy {
                     new_rules: self.config.battletech.newcharge != 0,
                     technology_level_three: self.config.battletech.tl3_charge != 0,
                     extended_movement: self.config.battletech.extendedmovemod != 0,
                     hit_arc_mode: self.config.battletech.hit_arcs,
                 },
                 fasa_turning: self.config.battletech.fasaturn != 0,
-                ..crate::BattleMovementRules::STANDARD
+                ..crate::MovementRules::STANDARD
             },
         ) {
             Ok(arrivals) => {
@@ -416,7 +412,7 @@ impl Server {
         // Stage earlier cockpit and unjam feedback before thermal consequences; output remains uncommitted.
         for (target, text) in notices
             .drain(..)
-            .map(|notice| (crate::BattleMessageTarget::Unit(notice.unit), notice.text))
+            .map(|notice| (crate::MessageTarget::Unit(notice.unit), notice.text))
         {
             if let Err(error) = crate::btech::notify_message(&self.scripts, target, &text) {
                 tracing::error!(error = %format_args!("{error:#}"), "BattleTech update failed");
@@ -449,19 +445,19 @@ impl Server {
         let thermal = crate::advance_battle_overheat_action(
             &self.scripts,
             &self.config,
-            crate::BattleOverheatRules {
-                vehicle_impact: crate::BattleVehicleImpactRules::configured(settings, false),
-                stacking: crate::BattleStackingRules {
+            crate::OverheatRules {
+                vehicle_impact: crate::VehicleImpactRules::configured(settings, false),
+                stacking: crate::StackingRules {
                     mode: settings.stacking,
                     damage_percent: settings.stackdamage,
                     hit_arcs: settings.hit_arcs,
                 },
-                hit: crate::BattleHitRules {
+                hit: crate::HitRules {
                     inferno_penalty: settings.inferno_penalty != 0,
                     exile_stun_mode: settings.exile_stun_code.clamp(0, 2) as u8,
                 },
                 extended_piloting: settings.extended_piloting != 0,
-                stagger: crate::BattleStaggerMode::from_setting(settings.newstagger),
+                stagger: crate::StaggerMode::from_setting(settings.newstagger),
             },
         );
         match thermal {
@@ -482,12 +478,12 @@ impl Server {
         let stagger = crate::advance_battle_stagger_action(
             &self.scripts,
             &self.config,
-            crate::BattleStaggerRules {
-                vehicle_impact: crate::BattleVehicleImpactRules::configured(settings, false),
-                mode: crate::BattleStaggerMode::from_setting(settings.newstagger),
+            crate::StaggerRules {
+                vehicle_impact: crate::VehicleImpactRules::configured(settings, false),
+                mode: crate::StaggerMode::from_setting(settings.newstagger),
                 interval: settings.newstaggertime.max(1) as u64,
                 tonnage: settings.newstaggertons != 0,
-                hit: crate::BattleHitRules {
+                hit: crate::HitRules {
                     inferno_penalty: settings.inferno_penalty != 0,
                     exile_stun_mode: settings.exile_stun_code.clamp(0, 2) as u8,
                 },
@@ -691,7 +687,7 @@ impl Server {
         }
         let messages = notices
             .into_iter()
-            .map(|notice| (crate::BattleMessageTarget::Unit(notice.unit), notice.text));
+            .map(|notice| (crate::MessageTarget::Unit(notice.unit), notice.text));
         for (unit, text) in messages {
             if let Err(error) = crate::btech::notify_message(&self.scripts, unit, &text) {
                 tracing::error!(error = %format_args!("{error:#}"), "BattleTech update failed");

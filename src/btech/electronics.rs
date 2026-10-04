@@ -1,7 +1,6 @@
 //! Installed electronic suites, cockpit controls and committed map-field observations.
 use super::{
-    BattleElectronicField, BattleElectronicMode as Mode, BattleElectronicSource, BattleNotice,
-    BattlePower, BattleSystem, BattleUnit,
+    ElectronicField, ElectronicMode as Mode, ElectronicSource, Mech, Notice, Power, System,
 };
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
@@ -10,45 +9,45 @@ use serde::{Deserialize, Serialize};
 /// Independently controlled electronic-warfare suite families.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleElectronicSuite {
+pub enum ElectronicSuite {
     Guardian,
     Angel,
 }
 
 /// Selected modes and the last committed field observation; emissions are derived from equipment.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BattleElectronics {
+pub struct Electronics {
     pub guardian: Mode,
     pub angel: Mode,
-    pub field: BattleElectronicField,
+    pub field: ElectronicField,
 }
 
-impl BattleElectronicSuite {
+impl ElectronicSuite {
     /// Critical identity implementing this suite.
-    fn system(self) -> BattleSystem {
+    fn system(self) -> System {
         match self {
-            Self::Guardian => BattleSystem::Ecm,
-            Self::Angel => BattleSystem::AngelEcm,
+            Self::Guardian => System::Ecm,
+            Self::Angel => System::AngelEcm,
         }
     }
 }
 
-impl BattleUnit {
+impl Mech {
     /// Saved electronic controls and last committed field observation.
-    pub fn electronics(&self) -> BattleElectronics {
+    pub fn electronics(&self) -> Electronics {
         self.electronics
     }
 
     /// Guardian presence is sufficient; a biped Angel suite needs two surviving slots.
     /// A destroyed or flooded part disables the whole corresponding suite family.
-    pub fn electronic_suite_available(&self, suite: BattleElectronicSuite) -> Result<bool> {
+    pub fn electronic_suite_available(&self, suite: ElectronicSuite) -> Result<bool> {
         let loadout = self.loadout()?;
         let parts: Vec<_> = loadout
             .systems
             .iter()
             .filter(|part| part.system == suite.system())
             .collect();
-        let minimum = if suite == BattleElectronicSuite::Angel {
+        let minimum = if suite == ElectronicSuite::Angel {
             2
         } else {
             1
@@ -64,17 +63,17 @@ impl BattleUnit {
         self.reconcile_stealth();
         self.reconcile_null_signature();
         let guardian = self
-            .electronic_suite_available(BattleElectronicSuite::Guardian)
+            .electronic_suite_available(ElectronicSuite::Guardian)
             .unwrap_or(false);
         let angel = self
-            .electronic_suite_available(BattleElectronicSuite::Angel)
+            .electronic_suite_available(ElectronicSuite::Angel)
             .unwrap_or(false);
         self.electronics
-            .reconcile(self.power == BattlePower::Running, guardian, angel);
+            .reconcile(self.power == Power::Running, guardian, angel);
     }
 }
 
-impl BattleElectronics {
+impl Electronics {
     /// Clear emissions when power or the corresponding equipment is lost.
     fn reconcile(&mut self, running: bool, guardian: bool, angel: bool) {
         if !running || !guardian {
@@ -86,14 +85,14 @@ impl BattleElectronics {
     }
 }
 
-impl super::BattleVehicle {
+impl super::Vehicle {
     /// Saved electronic controls and last committed field observation.
-    pub fn electronics(&self) -> BattleElectronics {
+    pub fn electronics(&self) -> Electronics {
         self.electronics
     }
 
     /// Vehicle electronic suites occupy independent equipment slots.
-    pub fn electronic_suite_available(&self, suite: BattleElectronicSuite) -> Result<bool> {
+    pub fn electronic_suite_available(&self, suite: ElectronicSuite) -> Result<bool> {
         let loadout = self.loadout()?;
         let parts: Vec<_> = loadout
             .systems
@@ -123,15 +122,15 @@ impl super::BattleVehicle {
     }
 
     /// Emission controls after power or equipment loss switches off what cannot run.
-    fn settled_electronics(&self) -> BattleElectronics {
+    fn settled_electronics(&self) -> Electronics {
         let guardian = self
-            .electronic_suite_available(BattleElectronicSuite::Guardian)
+            .electronic_suite_available(ElectronicSuite::Guardian)
             .unwrap_or(false);
         let angel = self
-            .electronic_suite_available(BattleElectronicSuite::Angel)
+            .electronic_suite_available(ElectronicSuite::Angel)
             .unwrap_or(false);
         let mut electronics = self.electronics;
-        electronics.reconcile(self.power == BattlePower::Running, guardian, angel);
+        electronics.reconcile(self.power == Power::Running, guardian, angel);
         electronics
     }
 
@@ -142,7 +141,7 @@ impl super::BattleVehicle {
 }
 
 /// Borrow the common electronic state from either construction store.
-fn state(world: &World, id: ObjectId) -> Result<BattleElectronics> {
+fn state(world: &World, id: ObjectId) -> Result<Electronics> {
     let unit = world
         .btech
         .unit(id)
@@ -151,14 +150,14 @@ fn state(world: &World, id: ObjectId) -> Result<BattleElectronics> {
 }
 
 /// Borrow common controls while keeping construction-specific storage private.
-fn state_mut(world: &mut World, id: ObjectId) -> &mut BattleElectronics {
+fn state_mut(world: &mut World, id: ObjectId) -> &mut Electronics {
     crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
         &mut unit.electronics
     })
 }
 
 /// Query construction-specific equipment availability for a common suite.
-fn available(world: &World, id: ObjectId, suite: BattleElectronicSuite) -> Result<bool> {
+fn available(world: &World, id: ObjectId, suite: ElectronicSuite) -> Result<bool> {
     let unit = world
         .btech
         .unit(id)
@@ -181,13 +180,13 @@ pub fn toggle_electronics(
     world: &mut World,
     id: ObjectId,
     pilot: ObjectId,
-    suite: BattleElectronicSuite,
+    suite: ElectronicSuite,
     requested: Mode,
 ) -> Result<Mode> {
     super::power::controlled(world, id, pilot)?;
     let unit = super::scanner::scanner_unit(world, id)
         .context("Unit construction state is unavailable")?;
-    ensure!(unit.power == BattlePower::Running, "Start the unit first");
+    ensure!(unit.power == Power::Running, "Start the unit first");
     ensure!(unit.position.is_some(), "Unit is not placed");
     ensure!(
         available(world, id, suite)?,
@@ -196,8 +195,8 @@ pub fn toggle_electronics(
     let mode = {
         let electronics = state_mut(world, id);
         let mode = match suite {
-            BattleElectronicSuite::Guardian => &mut electronics.guardian,
-            BattleElectronicSuite::Angel => &mut electronics.angel,
+            ElectronicSuite::Guardian => &mut electronics.guardian,
+            ElectronicSuite::Angel => &mut electronics.angel,
         };
         *mode = mode.toggle(requested);
         *mode
@@ -207,14 +206,14 @@ pub fn toggle_electronics(
 }
 
 /// Compute current effects from same-map emitters without consuming dice or changing observations.
-pub fn electronic_field(world: &World, id: ObjectId) -> Result<BattleElectronicField> {
+pub fn electronic_field(world: &World, id: ObjectId) -> Result<ElectronicField> {
     let (position, previous, team, self_interference) =
         if let Some(vehicle) = world.btech.vehicles().get(&id) {
             (
                 vehicle.position(),
                 vehicle.electronics.field,
                 vehicle.signature().team,
-                vehicle.has_beacon(super::BattleBeaconKind::Ecm),
+                vehicle.has_beacon(super::BeaconKind::Ecm),
             )
         } else {
             let unit = world
@@ -226,11 +225,11 @@ pub fn electronic_field(world: &World, id: ObjectId) -> Result<BattleElectronicF
                 unit.position(),
                 unit.electronics.field,
                 unit.signature().team,
-                unit.stealth().enabled || unit.has_beacon(super::BattleBeaconKind::Ecm),
+                unit.stealth().enabled || unit.has_beacon(super::BeaconKind::Ecm),
             )
         };
     let Some(position) = position else {
-        return Ok(BattleElectronicField::default());
+        return Ok(ElectronicField::default());
     };
     let mut sources = Vec::new();
     for other in identities(world) {
@@ -241,7 +240,7 @@ pub fn electronic_field(world: &World, id: ObjectId) -> Result<BattleElectronicF
         }
         let emitter = super::scanner::scanner_unit(world, other).unwrap();
         if emitter.position.is_none_or(|p| p.map != position.map)
-            || emitter.power != BattlePower::Running
+            || emitter.power != Power::Running
             || emitter.destroyed
             || world
                 .objects
@@ -254,15 +253,15 @@ pub fn electronic_field(world: &World, id: ObjectId) -> Result<BattleElectronicF
         if distance > 6.0 {
             continue;
         }
-        sources.push(BattleElectronicSource {
+        sources.push(ElectronicSource {
             team: emitter.signature.team,
             distance,
-            guardian: if available(world, other, BattleElectronicSuite::Guardian)? {
+            guardian: if available(world, other, ElectronicSuite::Guardian)? {
                 state.guardian
             } else {
                 Mode::Off
             },
-            angel: if available(world, other, BattleElectronicSuite::Angel)? {
+            angel: if available(world, other, ElectronicSuite::Angel)? {
                 state.angel
             } else {
                 Mode::Off
@@ -274,7 +273,7 @@ pub fn electronic_field(world: &World, id: ObjectId) -> Result<BattleElectronicF
 }
 
 /// Recompute every observation from one world snapshot, then publish changes together.
-pub fn refresh_electronic_fields(world: &mut World) -> Result<Vec<BattleNotice>> {
+pub fn refresh_electronic_fields(world: &mut World) -> Result<Vec<Notice>> {
     if !electronic_fields_pending(world) {
         return Ok(Vec::new());
     }
@@ -287,8 +286,8 @@ pub fn refresh_electronic_fields(world: &mut World) -> Result<Vec<BattleNotice>>
         })
         .map(|id| {
             let field = electronic_field(world, id)?;
-            let working = available(world, id, BattleElectronicSuite::Guardian)?
-                || available(world, id, BattleElectronicSuite::Angel)?;
+            let working = available(world, id, ElectronicSuite::Guardian)?
+                || available(world, id, ElectronicSuite::Angel)?;
             Ok((
                 id,
                 field,
@@ -305,10 +304,10 @@ pub fn refresh_electronic_fields(world: &mut World) -> Result<Vec<BattleNotice>>
 }
 
 /// Commit one receiver after a local pod effect without refreshing unrelated units.
-pub(super) fn refresh_receiver(world: &mut World, id: ObjectId) -> Result<Vec<BattleNotice>> {
+pub(super) fn refresh_receiver(world: &mut World, id: ObjectId) -> Result<Vec<Notice>> {
     let field = electronic_field(world, id)?;
-    let working = available(world, id, BattleElectronicSuite::Guardian)?
-        || available(world, id, BattleElectronicSuite::Angel)?;
+    let working = available(world, id, ElectronicSuite::Guardian)?
+        || available(world, id, ElectronicSuite::Angel)?;
     let notices = field.notices(state(world, id)?.field, id, working);
     state_mut(world, id).field = field;
     Ok(notices)
@@ -321,19 +320,19 @@ pub fn electronic_fields_pending(world: &World) -> bool {
             .objects
             .get(&id)
             .is_some_and(|object| !object.flags.contains(Flag::Going))
-            && (state(world, id).is_ok_and(|state| state != BattleElectronics::default())
+            && (state(world, id).is_ok_and(|state| state != Electronics::default())
                 || world
                     .btech
                     .constructed_units()
                     .get(&id)
                     .is_some_and(|unit| {
-                        unit.stealth().enabled || unit.has_beacon(super::BattleBeaconKind::Ecm)
+                        unit.stealth().enabled || unit.has_beacon(super::BeaconKind::Ecm)
                     })
                 || world
                     .btech
                     .vehicles()
                     .get(&id)
-                    .is_some_and(|unit| unit.has_beacon(super::BattleBeaconKind::Ecm)))
+                    .is_some_and(|unit| unit.has_beacon(super::BeaconKind::Ecm)))
     })
 }
 
@@ -342,13 +341,13 @@ pub(crate) fn configure(
     scripts: &crate::Scripts,
     id: ObjectId,
     pilot: ObjectId,
-    suite: BattleElectronicSuite,
+    suite: ElectronicSuite,
     requested: Mode,
 ) -> Result<Mode> {
     scripts.atomic(|_| {
         let mode =
             toggle_electronics(&mut scripts.world.borrow_mut(), id, pilot, suite, requested)?;
-        let name = if suite == BattleElectronicSuite::Angel {
+        let name = if suite == ElectronicSuite::Angel {
             "Angel ECM"
         } else {
             "ECM"
@@ -373,9 +372,9 @@ pub(crate) fn command(
     input: &crate::CommandInput,
 ) -> Result<crate::CommandAction> {
     let suite = if input.name.starts_with('a') {
-        BattleElectronicSuite::Angel
+        ElectronicSuite::Angel
     } else {
-        BattleElectronicSuite::Guardian
+        ElectronicSuite::Guardian
     };
     let mode = if input.name.ends_with("eccm") {
         Mode::Eccm

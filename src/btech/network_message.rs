@@ -1,7 +1,7 @@
 //! Command-network communication, independent of radio channels and contact visibility.
-use super::BattleNotice;
+use super::Notice;
 use super::network_unit::unit as network_unit;
-use crate::BattleCommandNetwork;
+use crate::CommandNetwork;
 use crate::{ObjectId, Scripts, World};
 use anyhow::{Context, Result, ensure};
 
@@ -12,8 +12,8 @@ fn message_for(
     id: ObjectId,
     pilot: ObjectId,
     text: &str,
-    kind: BattleCommandNetwork,
-) -> Result<Vec<BattleNotice>> {
+    kind: CommandNetwork,
+) -> Result<Vec<Notice>> {
     super::command_network::ready_for(world, id, pilot, kind)?;
     let name = kind.name();
     let members = super::command_network::members_for(world, id, kind)?;
@@ -45,12 +45,12 @@ fn message_for(
         if peer == id {
             continue;
         }
-        notices.push(BattleNotice {
+        notices.push(Notice {
             unit: peer,
             text: line(&identity),
         });
     }
-    notices.push(BattleNotice {
+    notices.push(Notice {
         unit: id,
         text: line("You"),
     });
@@ -63,8 +63,8 @@ fn send_for(
     id: ObjectId,
     pilot: ObjectId,
     text: &str,
-    kind: BattleCommandNetwork,
-) -> Result<Vec<BattleNotice>> {
+    kind: CommandNetwork,
+) -> Result<Vec<Notice>> {
     scripts.atomic(|_| {
         let notices = message_for(&scripts.world(), id, pilot, text, kind)?;
         for notice in &notices {
@@ -78,7 +78,7 @@ fn send_for(
 fn command_for(
     ctx: &crate::CommandContext<'_>,
     input: &crate::CommandInput,
-    kind: BattleCommandNetwork,
+    kind: CommandNetwork,
 ) -> Result<crate::CommandAction> {
     let result = (|| {
         let id = ctx
@@ -99,31 +99,16 @@ fn command_for(
 }
 
 /// Prepare C3i recipient notices without publishing output.
-pub fn message(
-    world: &World,
-    id: ObjectId,
-    pilot: ObjectId,
-    text: &str,
-) -> Result<Vec<BattleNotice>> {
-    message_for(world, id, pilot, text, BattleCommandNetwork::C3i)
+pub fn message(world: &World, id: ObjectId, pilot: ObjectId, text: &str) -> Result<Vec<Notice>> {
+    message_for(world, id, pilot, text, CommandNetwork::C3i)
 }
 /// Prepare classic C3 notices using available master capacity.
-pub fn c3_message(
-    world: &World,
-    id: ObjectId,
-    pilot: ObjectId,
-    text: &str,
-) -> Result<Vec<BattleNotice>> {
-    message_for(world, id, pilot, text, BattleCommandNetwork::C3)
+pub fn c3_message(world: &World, id: ObjectId, pilot: ObjectId, text: &str) -> Result<Vec<Notice>> {
+    message_for(world, id, pilot, text, CommandNetwork::C3)
 }
 /// Publish C3i messages under a host checkpoint.
-pub fn send(
-    scripts: &Scripts,
-    id: ObjectId,
-    pilot: ObjectId,
-    text: &str,
-) -> Result<Vec<BattleNotice>> {
-    send_for(scripts, id, pilot, text, BattleCommandNetwork::C3i)
+pub fn send(scripts: &Scripts, id: ObjectId, pilot: ObjectId, text: &str) -> Result<Vec<Notice>> {
+    send_for(scripts, id, pilot, text, CommandNetwork::C3i)
 }
 /// Publish classic C3 messages under a host checkpoint.
 pub fn send_c3(
@@ -131,20 +116,20 @@ pub fn send_c3(
     id: ObjectId,
     pilot: ObjectId,
     text: &str,
-) -> Result<Vec<BattleNotice>> {
-    send_for(scripts, id, pilot, text, BattleCommandNetwork::C3)
+) -> Result<Vec<Notice>> {
+    send_for(scripts, id, pilot, text, CommandNetwork::C3)
 }
 /// Native C3i message dispatch.
 pub(crate) fn command(
     ctx: &crate::CommandContext<'_>,
     input: &crate::CommandInput,
 ) -> Result<crate::CommandAction> {
-    command_for(ctx, input, BattleCommandNetwork::C3i)
+    command_for(ctx, input, CommandNetwork::C3i)
 }
 /// Native classic C3 message dispatch.
 pub(crate) fn c3_command(
     ctx: &crate::CommandContext<'_>,
     input: &crate::CommandInput,
 ) -> Result<crate::CommandAction> {
-    command_for(ctx, input, BattleCommandNetwork::C3)
+    command_for(ctx, input, CommandNetwork::C3)
 }

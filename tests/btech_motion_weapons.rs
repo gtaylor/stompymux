@@ -12,10 +12,10 @@ use crate::btech_motion_common::{
 };
 use crate::support;
 use crate::support::{install, restore_database, snapshot_database};
-use stompymux_rs::{BattleTemplate, ObjectId, persistence};
+use stompymux_rs::{MechTemplate, ObjectId, persistence};
 
 /// LB-X mode selection chooses matching bins and commits pellet damage and recycle across both adapters.
-async fn lbx_modes_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
+async fn lbx_modes_matrix(weapons: &[stompymux_rs::Weapon]) {
     use stompymux_rs::*;
     let (_dir, config, mut pristine, id, target) = shot_fixture().await;
     shot_skill(&mut pristine, 30);
@@ -23,7 +23,7 @@ async fn lbx_modes_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
         &mut pristine,
         ObjectId(1),
         "Gunnery-Ballistic",
-        BattleCharacterValue {
+        CharacterValue {
             value: 30,
             experience: 0,
             last_used: 0,
@@ -47,19 +47,19 @@ async fn lbx_modes_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
     for weapon in weapons.iter().copied() {
         let mut base = pristine.clone();
         let mut definition = base.btech.constructed_units()[&id].definition().clone();
-        let mut part = definition.sections[&BattleSection::LeftArm].criticals[&2].clone();
+        let mut part = definition.sections[&MechSection::LeftArm].criticals[&2].clone();
         part.equipment = weapon.name().into();
         for slot in 0..weapon.profile().critical_slots {
             definition
                 .sections
-                .get_mut(&BattleSection::LeftTorso)
+                .get_mut(&MechSection::LeftTorso)
                 .unwrap()
                 .criticals
                 .insert(slot, part.clone());
         }
         let torso = definition
             .sections
-            .get_mut(&BattleSection::RightTorso)
+            .get_mut(&MechSection::RightTorso)
             .unwrap();
         let mut bin = torso.criticals[&0].clone();
         let capacity = weapon.profile().ammunition_per_ton;
@@ -84,11 +84,11 @@ async fn lbx_modes_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
             .unwrap();
         let normal_aim =
             battle_aim_modifiers(&base, id, target, index, 4, optical_aim_rules()).unwrap();
-        for mode in [BattleAmmunitionMode::Normal, BattleAmmunitionMode::Cluster] {
+        for mode in [AmmunitionMode::Normal, AmmunitionMode::Cluster] {
             restore_database(&config, &pristine_db);
             install(&native, base.clone());
             install(&lua, base.clone());
-            if mode == BattleAmmunitionMode::Cluster {
+            if mode == AmmunitionMode::Cluster {
                 assert!(
                     lua.eval_callback::<()>(&format!(
                         "btech.unit.lbx({},1,{index}); error('abort')",
@@ -113,7 +113,7 @@ async fn lbx_modes_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
             let before = lua.world().clone();
             let aim =
                 battle_aim_modifiers(&before, id, target, index, 4, optical_aim_rules()).unwrap();
-            let accuracy = if mode == BattleAmmunitionMode::Cluster {
+            let accuracy = if mode == AmmunitionMode::Cluster {
                 -1
             } else {
                 0
@@ -125,7 +125,7 @@ async fn lbx_modes_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
                     .subtotal()
                     .map(|value| value + i32::from(accuracy))
             );
-            let selected = usize::from(mode == BattleAmmunitionMode::Cluster);
+            let selected = usize::from(mode == AmmunitionMode::Cluster);
             let mut empty = before.clone();
             empty
                 .btech
@@ -174,7 +174,7 @@ async fn lbx_modes_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
                 .get("report")
                 .unwrap();
             let roll: Option<u8> = salvo.get("cluster_roll").unwrap();
-            assert_eq!(roll.is_some(), mode == BattleAmmunitionMode::Cluster);
+            assert_eq!(roll.is_some(), mode == AmmunitionMode::Cluster);
             let groups: mlua::Table = salvo.get("groups").unwrap();
             let expected = weapon
                 .damage_groups_for_ammunition(mode, roll, aim.distance)
@@ -225,57 +225,57 @@ async fn lbx_modes_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
 
 #[tokio::test]
 async fn lbx_modes_ammunition_accuracy_native_lua_rollback_and_restart_clanlbx2() {
-    use stompymux_rs::BattleWeapon;
-    lbx_modes_matrix(&[BattleWeapon::ClanLbx2]).await;
+    use stompymux_rs::Weapon;
+    lbx_modes_matrix(&[Weapon::ClanLbx2]).await;
 }
 
 #[tokio::test]
 async fn lbx_modes_ammunition_accuracy_native_lua_rollback_and_restart_clanlbx5() {
-    use stompymux_rs::BattleWeapon;
-    lbx_modes_matrix(&[BattleWeapon::ClanLbx5]).await;
+    use stompymux_rs::Weapon;
+    lbx_modes_matrix(&[Weapon::ClanLbx5]).await;
 }
 
 #[tokio::test]
 async fn lbx_modes_ammunition_accuracy_native_lua_rollback_and_restart_clanlbx10() {
-    use stompymux_rs::BattleWeapon;
-    lbx_modes_matrix(&[BattleWeapon::ClanLbx10]).await;
+    use stompymux_rs::Weapon;
+    lbx_modes_matrix(&[Weapon::ClanLbx10]).await;
 }
 
 #[tokio::test]
 async fn lbx_modes_ammunition_accuracy_native_lua_rollback_and_restart_clanlbx20() {
-    use stompymux_rs::BattleWeapon;
-    lbx_modes_matrix(&[BattleWeapon::ClanLbx20]).await;
+    use stompymux_rs::Weapon;
+    lbx_modes_matrix(&[Weapon::ClanLbx20]).await;
 }
 
 #[tokio::test]
 async fn lbx_modes_ammunition_accuracy_native_lua_rollback_and_restart_lbx2() {
-    use stompymux_rs::BattleWeapon;
-    lbx_modes_matrix(&[BattleWeapon::Lbx2]).await;
+    use stompymux_rs::Weapon;
+    lbx_modes_matrix(&[Weapon::Lbx2]).await;
 }
 
 #[tokio::test]
 async fn lbx_modes_ammunition_accuracy_native_lua_rollback_and_restart_lbx5() {
-    use stompymux_rs::BattleWeapon;
-    lbx_modes_matrix(&[BattleWeapon::Lbx5]).await;
+    use stompymux_rs::Weapon;
+    lbx_modes_matrix(&[Weapon::Lbx5]).await;
 }
 
 #[tokio::test]
 async fn lbx_modes_ammunition_accuracy_native_lua_rollback_and_restart_lbx10() {
-    use stompymux_rs::BattleWeapon;
-    lbx_modes_matrix(&[BattleWeapon::Lbx10]).await;
+    use stompymux_rs::Weapon;
+    lbx_modes_matrix(&[Weapon::Lbx10]).await;
 }
 
 #[tokio::test]
 async fn lbx_modes_ammunition_accuracy_native_lua_rollback_and_restart_lbx20() {
-    use stompymux_rs::BattleWeapon;
-    lbx_modes_matrix(&[BattleWeapon::Lbx20]).await;
+    use stompymux_rs::Weapon;
+    lbx_modes_matrix(&[Weapon::Lbx20]).await;
 }
 
 /// Self-contained launchers spend on hits and misses, retain failed Streak locks, and never reload on restart.
-async fn rocket_and_one_shot_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
+async fn rocket_and_one_shot_matrix(weapons: &[stompymux_rs::Weapon]) {
     use stompymux_rs::*;
     let miss_seed = (0..=255)
-        .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 2)
+        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 2)
         .unwrap();
     let (_dir, config, mut pristine, id, target) = shot_fixture().await;
     shot_seed(&mut pristine, target, 1);
@@ -300,7 +300,7 @@ async fn rocket_and_one_shot_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
                 &mut base,
                 ObjectId(1),
                 "Gunnery-Missile",
-                BattleCharacterValue {
+                CharacterValue {
                     value: skill,
                     experience: 0,
                     last_used: 0,
@@ -309,13 +309,13 @@ async fn rocket_and_one_shot_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
             .unwrap();
             shot_seed(&mut base, id, if skill == 0 { miss_seed } else { 1 });
             let mut definition = base.btech.constructed_units()[&id].definition().clone();
-            let mut part = definition.sections[&BattleSection::LeftArm].criticals[&2].clone();
+            let mut part = definition.sections[&MechSection::LeftArm].criticals[&2].clone();
             part.equipment = weapon.name().into();
             part.modes = vec!["OneShot".into()];
             for slot in 0..weapon.profile().critical_slots {
                 definition
                     .sections
-                    .get_mut(&BattleSection::LeftTorso)
+                    .get_mut(&MechSection::LeftTorso)
                     .unwrap()
                     .criticals
                     .insert(slot, part.clone());
@@ -323,7 +323,7 @@ async fn rocket_and_one_shot_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
             for slot in 6..6 + weapon.profile().critical_slots {
                 definition
                     .sections
-                    .get_mut(&BattleSection::LeftTorso)
+                    .get_mut(&MechSection::LeftTorso)
                     .unwrap()
                     .criticals
                     .insert(slot, part.clone());
@@ -454,7 +454,7 @@ async fn rocket_and_one_shot_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
                         &mut restored,
                         ObjectId(1),
                         "Gunnery-Missile",
-                        BattleCharacterValue {
+                        CharacterValue {
                             value: 30,
                             experience: 0,
                             last_used: 0,
@@ -485,55 +485,35 @@ async fn rocket_and_one_shot_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
 
 #[tokio::test(flavor = "current_thread")]
 async fn rocket_and_one_shot_native_lua_expenditure_rollback_restart_01() {
-    use stompymux_rs::BattleWeapon;
-    rocket_and_one_shot_matrix(&[
-        BattleWeapon::Rocket10,
-        BattleWeapon::Rocket15,
-        BattleWeapon::Rocket20,
-    ])
-    .await;
+    use stompymux_rs::Weapon;
+    rocket_and_one_shot_matrix(&[Weapon::Rocket10, Weapon::Rocket15, Weapon::Rocket20]).await;
 }
 
 #[tokio::test(flavor = "current_thread")]
 async fn rocket_and_one_shot_native_lua_expenditure_rollback_restart_02() {
-    use stompymux_rs::BattleWeapon;
-    rocket_and_one_shot_matrix(&[
-        BattleWeapon::Srm4,
-        BattleWeapon::ClanLrm5,
-        BattleWeapon::ClanLrm10,
-    ])
-    .await;
+    use stompymux_rs::Weapon;
+    rocket_and_one_shot_matrix(&[Weapon::Srm4, Weapon::ClanLrm5, Weapon::ClanLrm10]).await;
 }
 
 #[tokio::test(flavor = "current_thread")]
 async fn rocket_and_one_shot_native_lua_expenditure_rollback_restart_03() {
-    use stompymux_rs::BattleWeapon;
-    rocket_and_one_shot_matrix(&[
-        BattleWeapon::ClanLrm15,
-        BattleWeapon::ClanLrm20,
-        BattleWeapon::ClanSrm2,
-    ])
-    .await;
+    use stompymux_rs::Weapon;
+    rocket_and_one_shot_matrix(&[Weapon::ClanLrm15, Weapon::ClanLrm20, Weapon::ClanSrm2]).await;
 }
 
 #[tokio::test(flavor = "current_thread")]
 async fn rocket_and_one_shot_native_lua_expenditure_rollback_restart_04() {
-    use stompymux_rs::BattleWeapon;
-    rocket_and_one_shot_matrix(&[
-        BattleWeapon::ClanSrm4,
-        BattleWeapon::ClanSrm6,
-        BattleWeapon::ClanStreakSrm2,
-    ])
-    .await;
+    use stompymux_rs::Weapon;
+    rocket_and_one_shot_matrix(&[Weapon::ClanSrm4, Weapon::ClanSrm6, Weapon::ClanStreakSrm2]).await;
 }
 
 #[tokio::test(flavor = "current_thread")]
 async fn rocket_and_one_shot_native_lua_expenditure_rollback_restart_05() {
-    use stompymux_rs::BattleWeapon;
+    use stompymux_rs::Weapon;
     rocket_and_one_shot_matrix(&[
-        BattleWeapon::ClanStreakSrm4,
-        BattleWeapon::ClanStreakSrm6,
-        BattleWeapon::StreakSrm2,
+        Weapon::ClanStreakSrm4,
+        Weapon::ClanStreakSrm6,
+        Weapon::StreakSrm2,
     ])
     .await;
 }
@@ -557,14 +537,14 @@ async fn targeting_computer_aim_native_lua_damage_and_restart() {
     .unwrap();
     let pristine_db = snapshot_database(&config);
     for weapon in [
-        BattleWeapon::MediumPulseLaser,
-        BattleWeapon::Lbx10,
-        BattleWeapon::Flamer,
-        BattleWeapon::HeavyFlamer,
-        BattleWeapon::VehicleFlamer,
-        BattleWeapon::VehicleHeavyFlamer,
-        BattleWeapon::HeavyMachineGun,
-        BattleWeapon::Srm4,
+        Weapon::MediumPulseLaser,
+        Weapon::Lbx10,
+        Weapon::Flamer,
+        Weapon::HeavyFlamer,
+        Weapon::VehicleFlamer,
+        Weapon::VehicleHeavyFlamer,
+        Weapon::HeavyMachineGun,
+        Weapon::Srm4,
     ] {
         let mut base = pristine.clone();
         shot_skill(&mut base, 30);
@@ -572,7 +552,7 @@ async fn targeting_computer_aim_native_lua_damage_and_restart() {
             &mut base,
             ObjectId(1),
             weapon.gunnery_skill(true),
-            BattleCharacterValue {
+            CharacterValue {
                 value: 30,
                 experience: 0,
                 last_used: 0,
@@ -580,12 +560,12 @@ async fn targeting_computer_aim_native_lua_damage_and_restart() {
         )
         .unwrap();
         let mut template = base.btech.constructed_units()[&id].definition().clone();
-        let mut part = template.sections[&BattleSection::LeftArm].criticals[&2].clone();
+        let mut part = template.sections[&MechSection::LeftArm].criticals[&2].clone();
         part.equipment = weapon.name().into();
         for slot in 2..2 + weapon.profile().critical_slots {
             template
                 .sections
-                .get_mut(&BattleSection::LeftArm)
+                .get_mut(&MechSection::LeftArm)
                 .unwrap()
                 .criticals
                 .insert(slot, part.clone());
@@ -593,7 +573,7 @@ async fn targeting_computer_aim_native_lua_damage_and_restart() {
         if weapon.profile().ammunition_per_ton > 0 {
             let bin = template
                 .sections
-                .get_mut(&BattleSection::RightTorso)
+                .get_mut(&MechSection::RightTorso)
                 .unwrap()
                 .criticals
                 .get_mut(&0)
@@ -622,7 +602,7 @@ async fn targeting_computer_aim_native_lua_damage_and_restart() {
         for slot in 4..6 {
             template
                 .sections
-                .get_mut(&BattleSection::RightTorso)
+                .get_mut(&MechSection::RightTorso)
                 .unwrap()
                 .criticals
                 .insert(slot, part.clone());
@@ -656,7 +636,7 @@ async fn targeting_computer_aim_native_lua_damage_and_restart() {
             if damaged {
                 let mut unit = world.btech.constructed_units()[&id].clone();
                 unit.destroy_critical(CriticalLocation {
-                    section: BattleSection::RightTorso,
+                    section: MechSection::RightTorso,
                     slot: 5,
                 })
                 .unwrap();
@@ -720,19 +700,19 @@ async fn targeting_computer_combat_critical_notice_and_section_loss() {
     use stompymux_rs::*;
     let (_dir, config, mut base, id, _target) = shot_fixture().await;
     let mut template = base.btech.constructed_units()[&id].definition().clone();
-    let mut part = template.sections[&BattleSection::RightTorso].criticals[&1].clone();
+    let mut part = template.sections[&MechSection::RightTorso].criticals[&1].clone();
     part.equipment = "TargetingComputer".into();
     for slot in 4..6 {
         template
             .sections
-            .get_mut(&BattleSection::RightTorso)
+            .get_mut(&MechSection::RightTorso)
             .unwrap()
             .criticals
             .insert(slot, part.clone());
     }
     base.btech.set_unit_definition(id, template).unwrap();
-    let hit = BattleHit {
-        section: BattleSection::RightTorso,
+    let hit = Hit {
+        section: MechSection::RightTorso,
         rear_armor: false,
         through_armor_critical: true,
         crew_stun: false,
@@ -746,8 +726,8 @@ async fn targeting_computer_combat_critical_notice_and_section_loss() {
             || !report.impact.criticals.iter().any(|(_, loss)| {
                 matches!(
                     loss,
-                    BattleCriticalLoss::System {
-                        system: BattleSystem::TargetingComputer
+                    CriticalLoss::System {
+                        system: System::TargetingComputer
                     }
                 )
             })
@@ -801,14 +781,7 @@ async fn targeting_computer_combat_critical_notice_and_section_loss() {
         2048
     );
     for world in [&mut base, &mut ordinary] {
-        apply_damage_phase(
-            world,
-            id,
-            BattleSection::RightTorso,
-            8,
-            BattleDamagePhase::Internal,
-        )
-        .unwrap();
+        apply_damage_phase(world, id, MechSection::RightTorso, 8, DamagePhase::Internal).unwrap();
     }
     assert!(
         !base.btech.constructed_units()[&id]
@@ -828,9 +801,9 @@ async fn targeting_computer_environment_failure_feedback_replays() {
     for flooding in [false, true] {
         let (_dir, config, mut base, id) = water_fixture(if flooding { 2 } else { 0 }).await;
         let mut template = base.btech.constructed_units()[&id].definition().clone();
-        let mut part = template.sections[&BattleSection::RightTorso].criticals[&1].clone();
+        let mut part = template.sections[&MechSection::RightTorso].criticals[&1].clone();
         part.equipment = "TargetingComputer".into();
-        for section in [BattleSection::LeftTorso, BattleSection::RightTorso] {
+        for section in [MechSection::LeftTorso, MechSection::RightTorso] {
             template
                 .sections
                 .get_mut(&section)
@@ -840,12 +813,12 @@ async fn targeting_computer_environment_failure_feedback_replays() {
         }
         base.btech.set_unit_definition(id, template).unwrap();
         let seed = (0..=255)
-            .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() < 8)
+            .find(|seed| Dice::seeded([*seed; 32]).two_d6() < 8)
             .unwrap();
-        for section in [BattleSection::RightTorso, BattleSection::LeftTorso] {
+        for section in [MechSection::RightTorso, MechSection::LeftTorso] {
             shot_seed(&mut base, id, seed);
             let before = base.btech.constructed_units()[&id].sections()[&section].clone();
-            let hit = BattleHit {
+            let hit = Hit {
                 section,
                 rear_armor: flooding,
                 through_armor_critical: false,
@@ -872,7 +845,7 @@ async fn targeting_computer_environment_failure_feedback_replays() {
                     .iter()
                     .filter(|n| n.text == "Your Targeting Computer is Destroyed")
                     .count(),
-                usize::from(section == BattleSection::RightTorso)
+                usize::from(section == MechSection::RightTorso)
             );
             assert!(
                 !base.btech.constructed_units()[&id]
@@ -911,7 +884,7 @@ async fn hardened_gyro_critical_checks_and_restart() {
         .unwrap()
         .systems
         .iter()
-        .filter(|p| p.system == BattleSystem::Gyro)
+        .filter(|p| p.system == System::Gyro)
         .map(|p| p.location)
         .collect();
     for prior in 0..3 {
@@ -926,7 +899,7 @@ async fn hardened_gyro_critical_checks_and_restart() {
             let report = resolve_battle_tactical_impact(
                 &mut world,
                 id,
-                balance_hit(BattleSection::CenterTorso, true),
+                balance_hit(MechSection::CenterTorso, true),
                 1,
                 fall_rules(),
             )
@@ -938,8 +911,8 @@ async fn hardened_gyro_critical_checks_and_restart() {
                 .filter(|(_, loss)| {
                     matches!(
                         loss,
-                        BattleCriticalLoss::System {
-                            system: BattleSystem::Gyro
+                        CriticalLoss::System {
+                            system: System::Gyro
                         }
                     )
                 })
@@ -960,8 +933,8 @@ async fn hardened_gyro_critical_checks_and_restart() {
                 .filter(|b| {
                     matches!(
                         b.cause,
-                        BattleBalanceCause::Critical {
-                            system: BattleSystem::Gyro,
+                        BalanceCause::Critical {
+                            system: System::Gyro,
                             ..
                         }
                     )
@@ -984,7 +957,7 @@ async fn hardened_gyro_critical_checks_and_restart() {
                     &mut world,
                     id,
                     ObjectId(1),
-                    BattleStandMode::Normal,
+                    StandMode::Normal,
                     false,
                     fall_rules(),
                 )
@@ -1006,7 +979,7 @@ async fn hardened_gyro_critical_checks_and_restart() {
                 resolve_battle_tactical_impact(
                     &mut restored,
                     id,
-                    balance_hit(BattleSection::CenterTorso, true),
+                    balance_hit(MechSection::CenterTorso, true),
                     1,
                     fall_rules()
                 )
@@ -1032,14 +1005,14 @@ async fn hardened_gyro_critical_checks_and_restart() {
 #[tokio::test(flavor = "current_thread")]
 async fn half_ton_native_lua_fire_capacity_and_restart() {
     use stompymux_rs::*;
-    for weapon in [BattleWeapon::MachineGun, BattleWeapon::Lbx2] {
+    for weapon in [Weapon::MachineGun, Weapon::Lbx2] {
         let (_dir, config, mut base, id, target) = shot_fixture().await;
         shot_skill(&mut base, 30);
         set_battle_character_value(
             &mut base,
             ObjectId(1),
             "Gunnery-Ballistic",
-            BattleCharacterValue {
+            CharacterValue {
                 value: 30,
                 experience: 0,
                 last_used: 0,
@@ -1050,19 +1023,19 @@ async fn half_ton_native_lua_fire_capacity_and_restart() {
         shot_seed(&mut base, target, 1);
         let capacity = weapon.profile().ammunition_per_ton / 2;
         let mut template = base.btech.constructed_units()[&id].definition().clone();
-        let mut part = template.sections[&BattleSection::LeftArm].criticals[&2].clone();
+        let mut part = template.sections[&MechSection::LeftArm].criticals[&2].clone();
         part.equipment = weapon.name().into();
         for slot in 2..2 + weapon.profile().critical_slots {
             template
                 .sections
-                .get_mut(&BattleSection::LeftArm)
+                .get_mut(&MechSection::LeftArm)
                 .unwrap()
                 .criticals
                 .insert(slot, part.clone());
         }
         let bin = template
             .sections
-            .get_mut(&BattleSection::RightTorso)
+            .get_mut(&MechSection::RightTorso)
             .unwrap()
             .criticals
             .get_mut(&0)
@@ -1153,10 +1126,10 @@ async fn half_ton_native_lua_fire_capacity_and_restart() {
 /// Small cockpit construction affects control targets without pretending the unit is damaged.
 #[tokio::test]
 async fn small_cockpit_piloting_mass_and_restart() {
-    use stompymux_rs::{BattleSection, CriticalLocation, roll_battle_piloting};
+    use stompymux_rs::{CriticalLocation, MechSection, roll_battle_piloting};
     let mut template =
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
-    let standard = stompymux_rs::BattleUnit::from_template(template.clone()).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+    let standard = stompymux_rs::Mech::from_template(template.clone()).unwrap();
     support::templates::small_cockpit(&mut template, "SMCPIT");
     let (_dir, config, mut world, id) = fixture_assets(
         &format!("12 12\n{}", format!("{}\n", ".0".repeat(12)).repeat(12)),
@@ -1176,7 +1149,7 @@ async fn small_cockpit_piloting_mass_and_restart() {
                 &mut world,
                 id,
                 CriticalLocation {
-                    section: BattleSection::CenterTorso,
+                    section: MechSection::CenterTorso,
                     slot: 3,
                 },
             )
@@ -1252,7 +1225,7 @@ async fn artemis_v_guidance_improves_aim() {
         let mut template = world.btech.constructed_units()[&id].definition().clone();
         template
             .sections
-            .get_mut(&BattleSection::Head)
+            .get_mut(&MechSection::Head)
             .unwrap()
             .criticals
             .insert(
@@ -1265,7 +1238,7 @@ async fn artemis_v_guidance_improves_aim() {
             );
         template
             .sections
-            .get_mut(&BattleSection::RightTorso)
+            .get_mut(&MechSection::RightTorso)
             .unwrap()
             .criticals
             .get_mut(&0)
@@ -1282,14 +1255,14 @@ async fn artemis_v_guidance_improves_aim() {
             .unwrap()
             .weapons
             .iter()
-            .position(|m| m.weapon == BattleWeapon::Srm4)
+            .position(|m| m.weapon == Weapon::Srm4)
             .unwrap();
         let before = battle_aim_modifiers(&world, id, target, srm, 4, shot_rules().aim)
             .unwrap()
             .beacon_accuracy;
         assert_eq!(
             toggle_battle_artemis(&mut world, id, ObjectId(1), srm).unwrap(),
-            BattleAmmunitionMode::Artemis
+            AmmunitionMode::Artemis
         );
         assert_eq!(
             battle_aim_modifiers(&world, id, target, srm, 4, shot_rules().aim)
@@ -1309,7 +1282,7 @@ async fn artemis_native_lua_ammunition_fire_and_restart() {
     let mut template = base.btech.constructed_units()[&id].definition().clone();
     template
         .sections
-        .get_mut(&BattleSection::Head)
+        .get_mut(&MechSection::Head)
         .unwrap()
         .criticals
         .insert(
@@ -1322,7 +1295,7 @@ async fn artemis_native_lua_ammunition_fire_and_restart() {
         );
     template
         .sections
-        .get_mut(&BattleSection::RightTorso)
+        .get_mut(&MechSection::RightTorso)
         .unwrap()
         .criticals
         .get_mut(&0)
@@ -1334,7 +1307,7 @@ async fn artemis_native_lua_ammunition_fire_and_restart() {
         &mut base,
         ObjectId(1),
         "Gunnery-Missile",
-        BattleCharacterValue {
+        CharacterValue {
             value: 30,
             experience: 0,
             last_used: 0,
@@ -1348,7 +1321,7 @@ async fn artemis_native_lua_ammunition_fire_and_restart() {
         .unwrap()
         .weapons
         .iter()
-        .position(|m| m.weapon == BattleWeapon::Srm4)
+        .position(|m| m.weapon == Weapon::Srm4)
         .unwrap();
     assert_eq!(
         base.btech.constructed_units()[&id]
@@ -1438,7 +1411,7 @@ async fn weapon_feed_jam_readiness_controls_and_persistence() {
         .unwrap()
         .weapons
         .iter()
-        .position(|m| m.weapon == BattleWeapon::Srm4)
+        .position(|m| m.weapon == Weapon::Srm4)
         .unwrap();
     assert!(original.weapon_readiness(index).unwrap().ready);
     let mut unit = original.clone();
@@ -1518,7 +1491,7 @@ async fn unjam_native_lua_countdown_outcomes_and_restart() {
             .unwrap()
             .weapons
             .iter()
-            .position(|m| m.weapon == BattleWeapon::Srm4)
+            .position(|m| m.weapon == Weapon::Srm4)
             .unwrap();
         unit.jam_weapon(index).unwrap();
         base.btech
@@ -1528,7 +1501,7 @@ async fn unjam_native_lua_countdown_outcomes_and_restart() {
             .unwrap();
         let seed = (0..=255)
             .find(|seed| {
-                let roll = BattleDice::seeded([*seed; 32]).two_d6();
+                let roll = Dice::seeded([*seed; 32]).two_d6();
                 if outcome == "failure" {
                     roll < 6
                 } else {
@@ -1624,7 +1597,7 @@ async fn unjam_native_lua_countdown_outcomes_and_restart() {
             }
         );
         if matches!(outcome, "success" | "failure") {
-            assert_eq!(messages[0].0, BattleMessageTarget::Player(ObjectId(1)));
+            assert_eq!(messages[0].0, MessageTarget::Player(ObjectId(1)));
             assert!(messages[1].1.starts_with("Modified Pilot Skill: BTH "));
         }
         assert!(
@@ -1639,17 +1612,13 @@ async fn unjam_native_lua_countdown_outcomes_and_restart() {
 #[tokio::test]
 async fn hotload_native_lua_shots_jams_and_recovery() {
     use stompymux_rs::*;
-    for weapon in [
-        BattleWeapon::Lrm5,
-        BattleWeapon::Elrm5,
-        BattleWeapon::LrDfm5,
-    ] {
+    for weapon in [Weapon::Lrm5, Weapon::Elrm5, Weapon::LrDfm5] {
         for jam in [false, true] {
             let (_dir, config, mut base, id, target) = shot_fixture().await;
             let mut template = base.btech.constructed_units()[&id].definition().clone();
             template
                 .sections
-                .get_mut(&BattleSection::CenterTorso)
+                .get_mut(&MechSection::CenterTorso)
                 .unwrap()
                 .criticals
                 .get_mut(&10)
@@ -1657,7 +1626,7 @@ async fn hotload_native_lua_shots_jams_and_recovery() {
                 .equipment = weapon.name().into();
             let bin = template
                 .sections
-                .get_mut(&BattleSection::RightTorso)
+                .get_mut(&MechSection::RightTorso)
                 .unwrap()
                 .criticals
                 .get_mut(&0)
@@ -1675,7 +1644,7 @@ async fn hotload_native_lua_shots_jams_and_recovery() {
                 &mut base,
                 ObjectId(1),
                 "Gunnery-Missile",
-                BattleCharacterValue {
+                CharacterValue {
                     value: 30,
                     experience: 0,
                     last_used: 0,
@@ -1684,10 +1653,10 @@ async fn hotload_native_lua_shots_jams_and_recovery() {
             .unwrap();
             let seed = (0..=255)
                 .find(|seed| {
-                    let mut dice = BattleDice::seeded([*seed; 32]);
+                    let mut dice = Dice::seeded([*seed; 32]);
                     let a = dice.d6();
                     let b = dice.d6();
-                    let roll = if weapon == BattleWeapon::Lrm5 {
+                    let roll = if weapon == Weapon::Lrm5 {
                         a + b
                     } else {
                         let c = dice.d6();
@@ -1788,7 +1757,7 @@ async fn hotload_native_lua_shots_jams_and_recovery() {
                     .unwrap()
                     .get("report")
                     .unwrap();
-                let mut dice = BattleDice::seeded([1; 32]);
+                let mut dice = Dice::seeded([1; 32]);
                 let a = dice.d6();
                 let b = dice.d6();
                 let c = dice.d6();
@@ -1807,7 +1776,7 @@ async fn hotload_native_lua_shots_jams_and_recovery() {
                 begin_battle_unjam(&mut restored, id, ObjectId(1), index).unwrap();
                 // A disconnected pilot uses target six; force a successful recovery roll.
                 let seed = (0..=255)
-                    .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() >= 6)
+                    .find(|seed| Dice::seeded([*seed; 32]).two_d6() >= 6)
                     .unwrap();
                 shot_seed(&mut restored, id, seed);
                 for _ in 0..60 {
@@ -1831,7 +1800,7 @@ async fn hotloaded_launcher_tactical_explosion_replays() {
     let mut template = base.btech.constructed_units()[&id].definition().clone();
     let launcher = template
         .sections
-        .get_mut(&BattleSection::CenterTorso)
+        .get_mut(&MechSection::CenterTorso)
         .unwrap()
         .criticals
         .get_mut(&10)
@@ -1840,7 +1809,7 @@ async fn hotloaded_launcher_tactical_explosion_replays() {
     launcher.modes = vec!["Hotload".into()];
     let bin = template
         .sections
-        .get_mut(&BattleSection::RightTorso)
+        .get_mut(&MechSection::RightTorso)
         .unwrap()
         .criticals
         .get_mut(&0)
@@ -1861,7 +1830,7 @@ async fn hotloaded_launcher_tactical_explosion_replays() {
         let report = resolve_battle_tactical_impact(
             &mut world,
             id,
-            balance_hit(BattleSection::CenterTorso, true),
+            balance_hit(MechSection::CenterTorso, true),
             1,
             fall_rules(),
         )
@@ -1880,8 +1849,8 @@ async fn hotloaded_launcher_tactical_explosion_replays() {
                 .any(|notice| notice.text.contains("personal injury from the weapon"))
         );
         assert!(
-            world.btech.constructed_units()[&id].sections()[&BattleSection::CenterTorso].internal
-                <= base.btech.constructed_units()[&id].sections()[&BattleSection::CenterTorso]
+            world.btech.constructed_units()[&id].sections()[&MechSection::CenterTorso].internal
+                <= base.btech.constructed_units()[&id].sections()[&MechSection::CenterTorso]
                     .internal
                     - 5
         );
@@ -1891,7 +1860,7 @@ async fn hotloaded_launcher_tactical_explosion_replays() {
             resolve_battle_tactical_impact(
                 &mut restored,
                 id,
-                balance_hit(BattleSection::CenterTorso, true),
+                balance_hit(MechSection::CenterTorso, true),
                 1,
                 fall_rules()
             )
@@ -1916,7 +1885,7 @@ async fn unjam_deletion_corruption_and_weapon_loss_are_atomic() {
         .unwrap()
         .weapons
         .iter()
-        .position(|m| m.weapon == BattleWeapon::Srm4)
+        .position(|m| m.weapon == Weapon::Srm4)
         .unwrap();
     let mut state = serde_json::to_value(&base.btech).unwrap();
     for (unit, remaining) in [(id, 1), (other, 2)] {
@@ -1968,7 +1937,7 @@ async fn unjam_deletion_corruption_and_weapon_loss_are_atomic() {
         &mut lost,
         id,
         CriticalLocation {
-            section: BattleSection::CenterTorso,
+            section: MechSection::CenterTorso,
             slot: 10,
         },
     )
@@ -1995,7 +1964,7 @@ async fn unjam_deletion_corruption_and_weapon_loss_are_atomic() {
 }
 
 /// Ultra fire shares native/Lua transactions, uses both bins, and replays permanent failures and fallback.
-async fn ultra_double_shots_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
+async fn ultra_double_shots_matrix(weapons: &[stompymux_rs::Weapon]) {
     use stompymux_rs::*;
     let (_dir, config, mut pristine, id, target) = shot_fixture().await;
     shot_seed(&mut pristine, target, 1);
@@ -2029,7 +1998,7 @@ async fn ultra_double_shots_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
                 &mut base,
                 ObjectId(1),
                 "Gunnery-Ballistic",
-                BattleCharacterValue {
+                CharacterValue {
                     value: skill,
                     experience: 0,
                     last_used: 0,
@@ -2037,34 +2006,34 @@ async fn ultra_double_shots_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
             )
             .unwrap();
             let mut definition = base.btech.constructed_units()[&id].definition().clone();
-            let mut part = definition.sections[&BattleSection::LeftArm].criticals[&2].clone();
+            let mut part = definition.sections[&MechSection::LeftArm].criticals[&2].clone();
             part.equipment = weapon.name().into();
             part.modes = vec!["UltraMode".into()];
             for slot in 2..2 + weapon.profile().critical_slots {
                 definition
                     .sections
-                    .get_mut(&BattleSection::LeftArm)
+                    .get_mut(&MechSection::LeftArm)
                     .unwrap()
                     .criticals
                     .insert(slot, part.clone());
             }
-            let mut bin = definition.sections[&BattleSection::RightTorso].criticals[&0].clone();
+            let mut bin = definition.sections[&MechSection::RightTorso].criticals[&0].clone();
             bin.equipment = format!("Ammo_{}", weapon.name());
             bin.data = weapon.profile().ammunition_per_ton.to_string();
             definition
                 .sections
-                .get_mut(&BattleSection::RightTorso)
+                .get_mut(&MechSection::RightTorso)
                 .unwrap()
                 .criticals
                 .insert(0, bin.clone());
             definition
                 .sections
-                .get_mut(&BattleSection::RightTorso)
+                .get_mut(&MechSection::RightTorso)
                 .unwrap()
                 .criticals
                 .insert(4, bin);
             // Factory flags initialize Ultra, while live ammunition is deliberately almost depleted.
-            let factory = BattleUnit::from_template(definition.clone()).unwrap();
+            let factory = Mech::from_template(definition.clone()).unwrap();
             let index = factory
                 .loadout()
                 .unwrap()
@@ -2072,7 +2041,7 @@ async fn ultra_double_shots_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
                 .iter()
                 .position(|mount| mount.weapon == weapon)
                 .unwrap();
-            assert_eq!(factory.fire_mode(index).unwrap(), BattleFireMode::Ultra);
+            assert_eq!(factory.fire_mode(index).unwrap(), FireMode::Ultra);
             base.btech
                 .rewrite_unit_record(id, |record| {
                     record["definition"] = serde_json::to_value(definition).unwrap();
@@ -2081,7 +2050,7 @@ async fn ultra_double_shots_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
                 .unwrap();
             base.validate(&config).unwrap();
             let seed = (0..=255)
-                .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == attack)
+                .find(|seed| Dice::seeded([*seed; 32]).two_d6() == attack)
                 .unwrap();
             shot_seed(&mut base, id, seed);
             install(&native, base.clone());
@@ -2153,9 +2122,9 @@ async fn ultra_double_shots_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
             assert_eq!(
                 report.expenditure.fire_mode,
                 if double {
-                    BattleFireMode::Ultra
+                    FireMode::Ultra
                 } else {
-                    BattleFireMode::Normal
+                    FireMode::Normal
                 }
             );
             let spent = if destroyed {
@@ -2259,54 +2228,54 @@ async fn ultra_double_shots_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
 
 #[tokio::test(flavor = "current_thread")]
 async fn ultra_double_shots_supply_loader_failure_and_restart_clan_ultra_ac2() {
-    use stompymux_rs::BattleWeapon;
-    ultra_double_shots_matrix(&[BattleWeapon::ClanUltraAc2]).await;
+    use stompymux_rs::Weapon;
+    ultra_double_shots_matrix(&[Weapon::ClanUltraAc2]).await;
 }
 
 #[tokio::test(flavor = "current_thread")]
 async fn ultra_double_shots_supply_loader_failure_and_restart_clan_ultra_ac5() {
-    use stompymux_rs::BattleWeapon;
-    ultra_double_shots_matrix(&[BattleWeapon::ClanUltraAc5]).await;
+    use stompymux_rs::Weapon;
+    ultra_double_shots_matrix(&[Weapon::ClanUltraAc5]).await;
 }
 
 #[tokio::test(flavor = "current_thread")]
 async fn ultra_double_shots_supply_loader_failure_and_restart_clan_ultra_ac10() {
-    use stompymux_rs::BattleWeapon;
-    ultra_double_shots_matrix(&[BattleWeapon::ClanUltraAc10]).await;
+    use stompymux_rs::Weapon;
+    ultra_double_shots_matrix(&[Weapon::ClanUltraAc10]).await;
 }
 
 #[tokio::test(flavor = "current_thread")]
 async fn ultra_double_shots_supply_loader_failure_and_restart_clan_ultra_ac20() {
-    use stompymux_rs::BattleWeapon;
-    ultra_double_shots_matrix(&[BattleWeapon::ClanUltraAc20]).await;
+    use stompymux_rs::Weapon;
+    ultra_double_shots_matrix(&[Weapon::ClanUltraAc20]).await;
 }
 
 #[tokio::test(flavor = "current_thread")]
 async fn ultra_double_shots_supply_loader_failure_and_restart_ultra_ac2() {
-    use stompymux_rs::BattleWeapon;
-    ultra_double_shots_matrix(&[BattleWeapon::UltraAc2]).await;
+    use stompymux_rs::Weapon;
+    ultra_double_shots_matrix(&[Weapon::UltraAc2]).await;
 }
 
 #[tokio::test(flavor = "current_thread")]
 async fn ultra_double_shots_supply_loader_failure_and_restart_ultra_ac5() {
-    use stompymux_rs::BattleWeapon;
-    ultra_double_shots_matrix(&[BattleWeapon::UltraAc5]).await;
+    use stompymux_rs::Weapon;
+    ultra_double_shots_matrix(&[Weapon::UltraAc5]).await;
 }
 
 #[tokio::test(flavor = "current_thread")]
 async fn ultra_double_shots_supply_loader_failure_and_restart_ultra_ac10() {
-    use stompymux_rs::BattleWeapon;
-    ultra_double_shots_matrix(&[BattleWeapon::UltraAc10]).await;
+    use stompymux_rs::Weapon;
+    ultra_double_shots_matrix(&[Weapon::UltraAc10]).await;
 }
 
 #[tokio::test(flavor = "current_thread")]
 async fn ultra_double_shots_supply_loader_failure_and_restart_ultra_ac20() {
-    use stompymux_rs::BattleWeapon;
-    ultra_double_shots_matrix(&[BattleWeapon::UltraAc20]).await;
+    use stompymux_rs::Weapon;
+    ultra_double_shots_matrix(&[Weapon::UltraAc20]).await;
 }
 
 /// Rapid fire shares native/Lua transactions, uses both bins, and replays permanent failures and fallback.
-async fn rapid_double_shots_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
+async fn rapid_double_shots_matrix(weapons: &[stompymux_rs::Weapon]) {
     use stompymux_rs::*;
     let (_dir, config, mut pristine, id, target) = shot_fixture().await;
     shot_seed(&mut pristine, target, 1);
@@ -2343,7 +2312,7 @@ async fn rapid_double_shots_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
                 &mut base,
                 ObjectId(1),
                 "Gunnery-Ballistic",
-                BattleCharacterValue {
+                CharacterValue {
                     value: skill,
                     experience: 0,
                     last_used: 0,
@@ -2351,34 +2320,34 @@ async fn rapid_double_shots_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
             )
             .unwrap();
             let mut definition = base.btech.constructed_units()[&id].definition().clone();
-            let mut part = definition.sections[&BattleSection::LeftArm].criticals[&2].clone();
+            let mut part = definition.sections[&MechSection::LeftArm].criticals[&2].clone();
             part.equipment = weapon.name().into();
             part.modes = vec!["RapidFire".into()];
             for slot in 2..2 + weapon.profile().critical_slots {
                 definition
                     .sections
-                    .get_mut(&BattleSection::LeftArm)
+                    .get_mut(&MechSection::LeftArm)
                     .unwrap()
                     .criticals
                     .insert(slot, part.clone());
             }
-            let mut bin = definition.sections[&BattleSection::RightTorso].criticals[&0].clone();
+            let mut bin = definition.sections[&MechSection::RightTorso].criticals[&0].clone();
             bin.equipment = format!("Ammo_{}", weapon.name());
             bin.data = weapon.profile().ammunition_per_ton.to_string();
             definition
                 .sections
-                .get_mut(&BattleSection::RightTorso)
+                .get_mut(&MechSection::RightTorso)
                 .unwrap()
                 .criticals
                 .insert(0, bin.clone());
             definition
                 .sections
-                .get_mut(&BattleSection::RightTorso)
+                .get_mut(&MechSection::RightTorso)
                 .unwrap()
                 .criticals
                 .insert(4, bin);
             // Factory flags initialize Rapid, while live ammunition is deliberately almost depleted.
-            let factory = BattleUnit::from_template(definition.clone()).unwrap();
+            let factory = Mech::from_template(definition.clone()).unwrap();
             let index = factory
                 .loadout()
                 .unwrap()
@@ -2386,7 +2355,7 @@ async fn rapid_double_shots_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
                 .iter()
                 .position(|mount| mount.weapon == weapon)
                 .unwrap();
-            assert_eq!(factory.fire_mode(index).unwrap(), BattleFireMode::Rapid);
+            assert_eq!(factory.fire_mode(index).unwrap(), FireMode::Rapid);
             base.btech
                 .rewrite_unit_record(id, |record| {
                     record["definition"] = serde_json::to_value(definition).unwrap();
@@ -2395,7 +2364,7 @@ async fn rapid_double_shots_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
                 .unwrap();
             base.validate(&config).unwrap();
             let seed = (0..=255)
-                .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == attack)
+                .find(|seed| Dice::seeded([*seed; 32]).two_d6() == attack)
                 .unwrap();
             shot_seed(&mut base, id, seed);
             install(&native, base.clone());
@@ -2474,9 +2443,9 @@ async fn rapid_double_shots_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
             assert_eq!(
                 report.expenditure.fire_mode,
                 if double {
-                    BattleFireMode::Rapid
+                    FireMode::Rapid
                 } else {
-                    BattleFireMode::Normal
+                    FireMode::Normal
                 }
             );
             let spent = if jammed {
@@ -2514,24 +2483,24 @@ async fn rapid_double_shots_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
                 assert!(!explosion.impact.phases.is_empty());
                 let before_unit = &before.btech.constructed_units()[&id];
                 assert_eq!(
-                    unit.sections()[&BattleSection::LeftArm].armor,
-                    if unit.sections()[&BattleSection::LeftArm].internal == 0 {
+                    unit.sections()[&MechSection::LeftArm].armor,
+                    if unit.sections()[&MechSection::LeftArm].internal == 0 {
                         0 // Losing the complete arm also removes its armor.
                     } else {
-                        before_unit.sections()[&BattleSection::LeftArm].armor
+                        before_unit.sections()[&MechSection::LeftArm].armor
                     }
                 );
                 assert_eq!(
-                    unit.sections()[&BattleSection::LeftTorso],
-                    before_unit.sections()[&BattleSection::LeftTorso]
+                    unit.sections()[&MechSection::LeftTorso],
+                    before_unit.sections()[&MechSection::LeftTorso]
                 );
                 assert_eq!(
-                    unit.sections()[&BattleSection::CenterTorso],
-                    before_unit.sections()[&BattleSection::CenterTorso]
+                    unit.sections()[&MechSection::CenterTorso],
+                    before_unit.sections()[&MechSection::CenterTorso]
                 );
                 assert!(
-                    unit.sections()[&BattleSection::LeftArm].internal
-                        < before_unit.sections()[&BattleSection::LeftArm].internal
+                    unit.sections()[&MechSection::LeftArm].internal
+                        < before_unit.sections()[&MechSection::LeftArm].internal
                 );
                 assert!(
                     unit.loadout().unwrap().weapons[index]
@@ -2626,7 +2595,7 @@ async fn rapid_double_shots_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
                         .unwrap();
                     let mut recovery = persistence::load(&config.database()).await.unwrap();
                     let seed = (0..=255)
-                        .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() >= 6)
+                        .find(|seed| Dice::seeded([*seed; 32]).two_d6() >= 6)
                         .unwrap();
                     shot_seed(&mut recovery, id, seed);
                     begin_battle_unjam(&mut recovery, id, ObjectId(1), index).unwrap();
@@ -2649,7 +2618,7 @@ async fn rapid_double_shots_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
                         recovery.btech.constructed_units()[&id]
                             .fire_mode(index)
                             .unwrap(),
-                        BattleFireMode::Rapid
+                        FireMode::Rapid
                     );
                 }
             }
@@ -2659,30 +2628,30 @@ async fn rapid_double_shots_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
 
 #[tokio::test(flavor = "current_thread")]
 async fn rapid_double_shots_supply_loader_failure_and_restart_ac2() {
-    use stompymux_rs::BattleWeapon;
-    rapid_double_shots_matrix(&[BattleWeapon::Ac2]).await;
+    use stompymux_rs::Weapon;
+    rapid_double_shots_matrix(&[Weapon::Ac2]).await;
 }
 
 #[tokio::test(flavor = "current_thread")]
 async fn rapid_double_shots_supply_loader_failure_and_restart_ac5() {
-    use stompymux_rs::BattleWeapon;
-    rapid_double_shots_matrix(&[BattleWeapon::Ac5]).await;
+    use stompymux_rs::Weapon;
+    rapid_double_shots_matrix(&[Weapon::Ac5]).await;
 }
 
 #[tokio::test(flavor = "current_thread")]
 async fn rapid_double_shots_supply_loader_failure_and_restart_ac10() {
-    use stompymux_rs::BattleWeapon;
-    rapid_double_shots_matrix(&[BattleWeapon::Ac10]).await;
+    use stompymux_rs::Weapon;
+    rapid_double_shots_matrix(&[Weapon::Ac10]).await;
 }
 
 #[tokio::test(flavor = "current_thread")]
 async fn rapid_double_shots_supply_loader_failure_and_restart_ac20() {
-    use stompymux_rs::BattleWeapon;
-    rapid_double_shots_matrix(&[BattleWeapon::Ac20]).await;
+    use stompymux_rs::Weapon;
+    rapid_double_shots_matrix(&[Weapon::Ac20]).await;
 }
 
 /// Rotary feed recovery uses gunnery plus three even while prone, with exact saved dice and skill selection.
-async fn rotary_unjam_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
+async fn rotary_unjam_matrix(weapons: &[stompymux_rs::Weapon]) {
     use stompymux_rs::*;
     let (_dir, config, pristine, _id, _unused) = shot_fixture().await;
     let pristine_db = snapshot_database(&config);
@@ -2696,7 +2665,7 @@ async fn rotary_unjam_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
                 &mut base,
                 ObjectId(1),
                 skill,
-                BattleCharacterValue {
+                CharacterValue {
                     value,
                     experience: 0,
                     last_used: 0,
@@ -2717,19 +2686,19 @@ async fn rotary_unjam_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
             }
         }
 
-        let mut part = definition.sections[&BattleSection::LeftArm].criticals[&2].clone();
+        let mut part = definition.sections[&MechSection::LeftArm].criticals[&2].clone();
         part.equipment = weapon.name().into();
         for slot in 2..2 + weapon.profile().critical_slots {
             definition
                 .sections
-                .get_mut(&BattleSection::LeftArm)
+                .get_mut(&MechSection::LeftArm)
                 .unwrap()
                 .criticals
                 .insert(slot, part.clone());
         }
         let bin = definition
             .sections
-            .get_mut(&BattleSection::RightTorso)
+            .get_mut(&MechSection::RightTorso)
             .unwrap()
             .criticals
             .get_mut(&0)
@@ -2786,7 +2755,7 @@ async fn rotary_unjam_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
                     };
                     let roll = target - u8::from(!success);
                     let seed = (0..=255)
-                        .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == roll)
+                        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == roll)
                         .unwrap();
                     shot_seed(&mut world, id, seed);
                     let dice_before = serde_json::to_value(&world.btech.constructed_units()[&id])
@@ -2844,7 +2813,7 @@ async fn rotary_unjam_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
                         assert_eq!(
                             messages[0],
                             (
-                                BattleMessageTarget::Player(ObjectId(1)),
+                                MessageTarget::Player(ObjectId(1)),
                                 "You make a roll to unjam the weapon!".into()
                             )
                         );
@@ -2873,36 +2842,36 @@ async fn rotary_unjam_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
 
 #[tokio::test(flavor = "current_thread")]
 async fn rotary_unjam_gunnery_thresholds_and_restart_rotaryac2() {
-    use stompymux_rs::BattleWeapon;
-    rotary_unjam_matrix(&[BattleWeapon::RotaryAc2]).await;
+    use stompymux_rs::Weapon;
+    rotary_unjam_matrix(&[Weapon::RotaryAc2]).await;
 }
 
 #[tokio::test(flavor = "current_thread")]
 async fn rotary_unjam_gunnery_thresholds_and_restart_rotaryac5() {
-    use stompymux_rs::BattleWeapon;
-    rotary_unjam_matrix(&[BattleWeapon::RotaryAc5]).await;
+    use stompymux_rs::Weapon;
+    rotary_unjam_matrix(&[Weapon::RotaryAc5]).await;
 }
 
 #[tokio::test(flavor = "current_thread")]
 async fn rotary_unjam_gunnery_thresholds_and_restart_clanrotaryac2() {
-    use stompymux_rs::BattleWeapon;
-    rotary_unjam_matrix(&[BattleWeapon::ClanRotaryAc2]).await;
+    use stompymux_rs::Weapon;
+    rotary_unjam_matrix(&[Weapon::ClanRotaryAc2]).await;
 }
 
 #[tokio::test(flavor = "current_thread")]
 async fn rotary_unjam_gunnery_thresholds_and_restart_clanrotaryac5() {
-    use stompymux_rs::BattleWeapon;
-    rotary_unjam_matrix(&[BattleWeapon::ClanRotaryAc5]).await;
+    use stompymux_rs::Weapon;
+    rotary_unjam_matrix(&[Weapon::ClanRotaryAc5]).await;
 }
 
 #[tokio::test(flavor = "current_thread")]
 async fn rotary_unjam_gunnery_thresholds_and_restart_clanrotaryac10() {
-    use stompymux_rs::BattleWeapon;
-    rotary_unjam_matrix(&[BattleWeapon::ClanRotaryAc10]).await;
+    use stompymux_rs::Weapon;
+    rotary_unjam_matrix(&[Weapon::ClanRotaryAc10]).await;
 }
 
 /// Rotary burst controls and firing agree across native/Lua, supply fallback, jams and restart.
-async fn rotary_burst_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
+async fn rotary_burst_matrix(weapons: &[stompymux_rs::Weapon]) {
     use stompymux_rs::*;
     let (_dir, config, mut pristine, id, target) = shot_fixture().await;
     shot_seed(&mut pristine, target, 1);
@@ -2921,11 +2890,11 @@ async fn rotary_burst_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
     let mut probed_fire = false;
     for weapon in weapons.iter().copied() {
         for (rounds, mode, flag, jam_limit) in [
-            (2_u8, BattleFireMode::Rotary2, "Rotary_TwoShot", 2_u8),
-            (3, BattleFireMode::Rotary3, "Rotary_ThreeShot", 2),
-            (4, BattleFireMode::Rotary4, "Rotary_FourShot", 3),
-            (5, BattleFireMode::Rotary5, "Rotary_FiveShot", 3),
-            (6, BattleFireMode::Rotary6, "Rotary_SixShot", 4),
+            (2_u8, FireMode::Rotary2, "Rotary_TwoShot", 2_u8),
+            (3, FireMode::Rotary3, "Rotary_ThreeShot", 2),
+            (4, FireMode::Rotary4, "Rotary_FourShot", 3),
+            (5, FireMode::Rotary5, "Rotary_FiveShot", 3),
+            (6, FireMode::Rotary6, "Rotary_SixShot", 4),
         ] {
             for (supply, attack, skill) in [
                 (rounds, jam_limit, 30),
@@ -2941,7 +2910,7 @@ async fn rotary_burst_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
                     &mut base,
                     ObjectId(1),
                     "Gunnery-Ballistic",
-                    BattleCharacterValue {
+                    CharacterValue {
                         value: skill,
                         experience: 0,
                         last_used: 0,
@@ -2961,33 +2930,33 @@ async fn rotary_burst_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
                     }
                 }
 
-                let mut part = definition.sections[&BattleSection::LeftArm].criticals[&2].clone();
+                let mut part = definition.sections[&MechSection::LeftArm].criticals[&2].clone();
                 part.equipment = weapon.name().into();
                 part.modes = vec![flag.into()];
                 for slot in 2..2 + weapon.profile().critical_slots {
                     definition
                         .sections
-                        .get_mut(&BattleSection::LeftArm)
+                        .get_mut(&MechSection::LeftArm)
                         .unwrap()
                         .criticals
                         .insert(slot, part.clone());
                 }
-                let mut bin = definition.sections[&BattleSection::RightTorso].criticals[&0].clone();
+                let mut bin = definition.sections[&MechSection::RightTorso].criticals[&0].clone();
                 bin.equipment = format!("Ammo_{}", weapon.name());
                 bin.data = weapon.profile().ammunition_per_ton.to_string();
                 definition
                     .sections
-                    .get_mut(&BattleSection::RightTorso)
+                    .get_mut(&MechSection::RightTorso)
                     .unwrap()
                     .criticals
                     .insert(0, bin.clone());
                 definition
                     .sections
-                    .get_mut(&BattleSection::RightTorso)
+                    .get_mut(&MechSection::RightTorso)
                     .unwrap()
                     .criticals
                     .insert(4, bin);
-                let factory = BattleUnit::from_template(definition.clone()).unwrap();
+                let factory = Mech::from_template(definition.clone()).unwrap();
                 let index = factory
                     .loadout()
                     .unwrap()
@@ -3005,7 +2974,7 @@ async fn rotary_burst_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
                     .unwrap();
                 base.validate(&config).unwrap();
                 let seed = (0..=255)
-                    .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == attack)
+                    .find(|seed| Dice::seeded([*seed; 32]).two_d6() == attack)
                     .unwrap();
                 shot_seed(&mut base, id, seed);
                 install(&native, base.clone());
@@ -3110,7 +3079,7 @@ async fn rotary_burst_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
                 assert!(report.misload.is_none());
                 assert_eq!(
                     report.expenditure.fire_mode,
-                    if burst { mode } else { BattleFireMode::Normal }
+                    if burst { mode } else { FireMode::Normal }
                 );
                 let spent = if jammed {
                     0
@@ -3149,7 +3118,7 @@ async fn rotary_burst_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
                         u16::from(weapon.profile().recycle_seconds)
                     );
                     assert_eq!(report.salvo.is_some(), skill == 30);
-                    if let Some(stompymux_rs::BattleTargetSalvo::Mech(salvo)) = &report.salvo {
+                    if let Some(stompymux_rs::TargetSalvo::Mech(salvo)) = &report.salvo {
                         assert_eq!(salvo.cluster_roll.is_some(), burst);
                         assert!(
                             salvo
@@ -3206,43 +3175,43 @@ async fn rotary_burst_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
 
 #[tokio::test(flavor = "current_thread")]
 async fn rotary_burst_native_lua_supply_jams_and_restart_rotary_ac2() {
-    use stompymux_rs::BattleWeapon;
-    rotary_burst_matrix(&[BattleWeapon::RotaryAc2]).await;
+    use stompymux_rs::Weapon;
+    rotary_burst_matrix(&[Weapon::RotaryAc2]).await;
 }
 
 #[tokio::test(flavor = "current_thread")]
 async fn rotary_burst_native_lua_supply_jams_and_restart_rotary_ac5() {
-    use stompymux_rs::BattleWeapon;
-    rotary_burst_matrix(&[BattleWeapon::RotaryAc5]).await;
+    use stompymux_rs::Weapon;
+    rotary_burst_matrix(&[Weapon::RotaryAc5]).await;
 }
 
 #[tokio::test(flavor = "current_thread")]
 async fn rotary_burst_native_lua_supply_jams_and_restart_clan_rotary_ac2() {
-    use stompymux_rs::BattleWeapon;
-    rotary_burst_matrix(&[BattleWeapon::ClanRotaryAc2]).await;
+    use stompymux_rs::Weapon;
+    rotary_burst_matrix(&[Weapon::ClanRotaryAc2]).await;
 }
 
 #[tokio::test(flavor = "current_thread")]
 async fn rotary_burst_native_lua_supply_jams_and_restart_clan_rotary_ac5() {
-    use stompymux_rs::BattleWeapon;
-    rotary_burst_matrix(&[BattleWeapon::ClanRotaryAc5]).await;
+    use stompymux_rs::Weapon;
+    rotary_burst_matrix(&[Weapon::ClanRotaryAc5]).await;
 }
 
 #[tokio::test(flavor = "current_thread")]
 async fn rotary_burst_native_lua_supply_jams_and_restart_clan_rotary_ac10() {
-    use stompymux_rs::BattleWeapon;
-    rotary_burst_matrix(&[BattleWeapon::ClanRotaryAc10]).await;
+    use stompymux_rs::Weapon;
+    rotary_burst_matrix(&[Weapon::ClanRotaryAc10]).await;
 }
 
 /// Gatling fire shares a single supply-limited die across damage/heat/expenditure and replays both interfaces.
-async fn gatling_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
+async fn gatling_matrix(weapons: &[stompymux_rs::Weapon]) {
     use stompymux_rs::*;
     let (_dir, config, mut pristine, id, target) = shot_fixture().await;
     shot_seed(&mut pristine, target, 1);
     // The first die determines firing intensity; the next pair determines accuracy.
     let seed = (0..=255)
         .find(|seed| {
-            let mut dice = BattleDice::seeded([*seed; 32]);
+            let mut dice = Dice::seeded([*seed; 32]);
             dice.d6() == 6 && dice.two_d6() == 6
         })
         .unwrap();
@@ -3270,7 +3239,7 @@ async fn gatling_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
                     &mut base,
                     ObjectId(1),
                     "Gunnery-Ballistic",
-                    BattleCharacterValue {
+                    CharacterValue {
                         value: skill,
                         experience: 0,
                         last_used: 0,
@@ -3280,29 +3249,29 @@ async fn gatling_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
                 let mut definition = base.btech.constructed_units()[&id].definition().clone();
                 let part = definition
                     .sections
-                    .get_mut(&BattleSection::LeftArm)
+                    .get_mut(&MechSection::LeftArm)
                     .unwrap()
                     .criticals
                     .get_mut(&2)
                     .unwrap();
                 part.equipment = weapon.name().into();
                 part.modes = vec!["Gattling".into()];
-                let mut bin = definition.sections[&BattleSection::RightTorso].criticals[&0].clone();
+                let mut bin = definition.sections[&MechSection::RightTorso].criticals[&0].clone();
                 bin.equipment = format!("Ammo_{}", weapon.name());
                 bin.data = weapon.profile().ammunition_per_ton.to_string();
                 definition
                     .sections
-                    .get_mut(&BattleSection::RightTorso)
+                    .get_mut(&MechSection::RightTorso)
                     .unwrap()
                     .criticals
                     .insert(0, bin.clone());
                 definition
                     .sections
-                    .get_mut(&BattleSection::RightTorso)
+                    .get_mut(&MechSection::RightTorso)
                     .unwrap()
                     .criticals
                     .insert(4, bin);
-                let factory = BattleUnit::from_template(definition.clone()).unwrap();
+                let factory = Mech::from_template(definition.clone()).unwrap();
                 let index = factory
                     .loadout()
                     .unwrap()
@@ -3310,7 +3279,7 @@ async fn gatling_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
                     .iter()
                     .position(|mount| mount.weapon == weapon)
                     .unwrap();
-                assert_eq!(factory.fire_mode(index).unwrap(), BattleFireMode::Gatling);
+                assert_eq!(factory.fire_mode(index).unwrap(), FireMode::Gatling);
                 base.btech
                     .rewrite_unit_record(id, |record| {
                         record["definition"] = serde_json::to_value(definition).unwrap();
@@ -3421,7 +3390,7 @@ async fn gatling_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
                     spent
                 );
                 assert_eq!(report.salvo.is_some(), skill == 30);
-                if let Some(stompymux_rs::BattleTargetSalvo::Mech(salvo)) = &report.salvo {
+                if let Some(stompymux_rs::TargetSalvo::Mech(salvo)) = &report.salvo {
                     assert!(salvo.cluster_roll.is_none());
                     assert_eq!(salvo.groups.len(), 1);
                     assert_eq!(salvo.groups[0].damage, u16::from(damage));
@@ -3435,7 +3404,7 @@ async fn gatling_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
                         &mut glancing_world,
                         ObjectId(1),
                         "Gunnery-Ballistic",
-                        BattleCharacterValue {
+                        CharacterValue {
                             value: level,
                             experience: 0,
                             last_used: 0,
@@ -3443,7 +3412,7 @@ async fn gatling_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
                     )
                     .unwrap();
                     let mut rules = configured_shot_rules(&config);
-                    rules.glancing = BattleGlancingMode::AtTarget;
+                    rules.glancing = GlancingMode::AtTarget;
                     let glanced = resolve_battle_shot(
                         &mut glancing_world,
                         id,
@@ -3463,7 +3432,7 @@ async fn gatling_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
                 let unit = &expected.btech.constructed_units()[&id];
                 assert_eq!(unit.ammunition().iter().sum::<u16>(), supply - spent);
                 assert_eq!(unit.heat().stored, f64::from(damage));
-                assert_eq!(unit.fire_mode(index).unwrap(), BattleFireMode::Gatling);
+                assert_eq!(unit.fire_mode(index).unwrap(), FireMode::Gatling);
                 let mut spent_world = before.clone();
                 assert_eq!(
                     spend_battle_weapon(&mut spent_world, id, ObjectId(1), index).unwrap(),
@@ -3536,38 +3505,38 @@ async fn gatling_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
 
 #[tokio::test(flavor = "current_thread")]
 async fn gatling_native_lua_low_supply_dice_and_restart_machine_gun() {
-    use stompymux_rs::BattleWeapon;
-    gatling_matrix(&[BattleWeapon::MachineGun]).await;
+    use stompymux_rs::Weapon;
+    gatling_matrix(&[Weapon::MachineGun]).await;
 }
 
 #[tokio::test(flavor = "current_thread")]
 async fn gatling_native_lua_low_supply_dice_and_restart_heavy_machine_gun() {
-    use stompymux_rs::BattleWeapon;
-    gatling_matrix(&[BattleWeapon::HeavyMachineGun]).await;
+    use stompymux_rs::Weapon;
+    gatling_matrix(&[Weapon::HeavyMachineGun]).await;
 }
 
 #[tokio::test(flavor = "current_thread")]
 async fn gatling_native_lua_low_supply_dice_and_restart_clan_machine_gun() {
-    use stompymux_rs::BattleWeapon;
-    gatling_matrix(&[BattleWeapon::ClanMachineGun]).await;
+    use stompymux_rs::Weapon;
+    gatling_matrix(&[Weapon::ClanMachineGun]).await;
 }
 
 #[tokio::test(flavor = "current_thread")]
 async fn gatling_native_lua_low_supply_dice_and_restart_clan_light_machine_gun() {
-    use stompymux_rs::BattleWeapon;
-    gatling_matrix(&[BattleWeapon::ClanLightMachineGun]).await;
+    use stompymux_rs::Weapon;
+    gatling_matrix(&[Weapon::ClanLightMachineGun]).await;
 }
 
 #[tokio::test(flavor = "current_thread")]
 async fn gatling_native_lua_low_supply_dice_and_restart_clan_heavy_machine_gun() {
-    use stompymux_rs::BattleWeapon;
-    gatling_matrix(&[BattleWeapon::ClanHeavyMachineGun]).await;
+    use stompymux_rs::Weapon;
+    gatling_matrix(&[Weapon::ClanHeavyMachineGun]).await;
 }
 
 /// Special autocannon ammunition keeps its own supply, composes with rapid fire, and replays both interfaces.
 /// Sharded one weapon per test so the ammunition x rapid grid runs in parallel; restart probes
 /// fire once per shard, per the pellet-family probe latching convention.
-async fn special_autocannon_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
+async fn special_autocannon_matrix(weapons: &[stompymux_rs::Weapon]) {
     use stompymux_rs::*;
     let (_dir, config, mut pristine, id, target) = shot_fixture().await;
     shot_skill(&mut pristine, 30);
@@ -3575,7 +3544,7 @@ async fn special_autocannon_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
         &mut pristine,
         ObjectId(1),
         "Gunnery-Ballistic",
-        BattleCharacterValue {
+        CharacterValue {
             value: 30,
             experience: 0,
             last_used: 0,
@@ -3589,7 +3558,7 @@ async fn special_autocannon_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
     pristine.btech = serde_json::from_value(state).unwrap();
     pristine.validate(&config).unwrap();
     let seed = (0..=255)
-        .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 8)
+        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 8)
         .unwrap();
     shot_seed(&mut pristine, id, seed);
     shot_seed(&mut pristine, target, 1);
@@ -3606,55 +3575,45 @@ async fn special_autocannon_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
     let pristine_db = snapshot_database(&config);
     let mut probed = false;
     let mut replayed: Vec<(bool, bool, bool)> = Vec::new();
-    let mut toggled: Vec<BattleAmmunitionMode> = Vec::new();
+    let mut toggled: Vec<AmmunitionMode> = Vec::new();
     for (ammunition, label, command, divisor) in [
-        (
-            BattleAmmunitionMode::ArmorPiercing,
-            "AP",
-            "armorpiercing",
-            2,
-        ),
-        (BattleAmmunitionMode::Precision, "Precision", "precision", 2),
-        (BattleAmmunitionMode::Flechette, "Flechette", "flechette", 1),
-        (BattleAmmunitionMode::Caseless, "CASELESS", "caseless", 1),
-        (
-            BattleAmmunitionMode::Incendiary,
-            "Incendiary",
-            "incendiary",
-            1,
-        ),
+        (AmmunitionMode::ArmorPiercing, "AP", "armorpiercing", 2),
+        (AmmunitionMode::Precision, "Precision", "precision", 2),
+        (AmmunitionMode::Flechette, "Flechette", "flechette", 1),
+        (AmmunitionMode::Caseless, "CASELESS", "caseless", 1),
+        (AmmunitionMode::Incendiary, "Incendiary", "incendiary", 1),
     ] {
         for weapon in weapons.iter().copied() {
             for rapid in [false, true] {
                 restore_database(&config, &pristine_db);
                 let mut base = pristine.clone();
                 let mut definition = base.btech.constructed_units()[&id].definition().clone();
-                let mut part = definition.sections[&BattleSection::LeftArm].criticals[&2].clone();
+                let mut part = definition.sections[&MechSection::LeftArm].criticals[&2].clone();
                 part.equipment = weapon.name().into();
                 for slot in 2..2 + weapon.profile().critical_slots {
                     definition
                         .sections
-                        .get_mut(&BattleSection::LeftArm)
+                        .get_mut(&MechSection::LeftArm)
                         .unwrap()
                         .criticals
                         .insert(slot, part.clone());
                 }
-                let mut bin = definition.sections[&BattleSection::RightTorso].criticals[&0].clone();
+                let mut bin = definition.sections[&MechSection::RightTorso].criticals[&0].clone();
                 bin.equipment = format!("Ammo_{}", weapon.name());
                 bin.data = weapon.profile().ammunition_per_ton.to_string();
                 definition
                     .sections
-                    .get_mut(&BattleSection::RightTorso)
+                    .get_mut(&MechSection::RightTorso)
                     .unwrap()
                     .criticals
                     .insert(4, bin.clone());
-                let multiplier = if ammunition == BattleAmmunitionMode::Caseless {
+                let multiplier = if ammunition == AmmunitionMode::Caseless {
                     2
                 } else {
                     1
                 };
                 bin.modes = vec![
-                    if ammunition == BattleAmmunitionMode::Caseless {
+                    if ammunition == AmmunitionMode::Caseless {
                         "Caseless"
                     } else {
                         label
@@ -3664,7 +3623,7 @@ async fn special_autocannon_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
                 bin.data = (weapon.profile().ammunition_per_ton * multiplier / divisor).to_string();
                 definition
                     .sections
-                    .get_mut(&BattleSection::RightTorso)
+                    .get_mut(&MechSection::RightTorso)
                     .unwrap()
                     .criticals
                     .insert(0, bin);
@@ -3688,10 +3647,10 @@ async fn special_autocannon_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
                 if rapid {
                     toggle_battle_rapid(&mut base, id, ObjectId(1), index).unwrap();
                 }
-                if ammunition == BattleAmmunitionMode::ArmorPiercing && !rapid {
+                if ammunition == AmmunitionMode::ArmorPiercing && !rapid {
                     check_armor_piercing_thresholds(&base, &config, id, target, index, weapon);
                 }
-                if ammunition == BattleAmmunitionMode::Caseless {
+                if ammunition == AmmunitionMode::Caseless {
                     let spectator = base.create(&config, "Explosion witness".into(), Kind::Player);
                     let object = base.objects.get_mut(&spectator).unwrap();
                     object.location = Some(target);
@@ -3744,7 +3703,7 @@ async fn special_autocannon_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
                         id.0
                     ))
                     .unwrap(),
-                    if ammunition == BattleAmmunitionMode::ArmorPiercing {
+                    if ammunition == AmmunitionMode::ArmorPiercing {
                         "armor_piercing"
                     } else {
                         command
@@ -3760,7 +3719,7 @@ async fn special_autocannon_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
                 } else {
                     "precision"
                 };
-                let armor_piercing = if ammunition == BattleAmmunitionMode::ArmorPiercing {
+                let armor_piercing = if ammunition == AmmunitionMode::ArmorPiercing {
                     "armor_piercing"
                 } else {
                     command
@@ -3843,12 +3802,12 @@ async fn special_autocannon_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
                     );
                     assert_eq!(restored.btech, expected.btech);
                 }
-                if ammunition == BattleAmmunitionMode::Incendiary {
+                if ammunition == AmmunitionMode::Incendiary {
                     check_incendiary_impact(&expected, id, index, weapon);
                 }
 
                 let shell_damage = u16::from(weapon.profile().damage)
-                    / if ammunition == BattleAmmunitionMode::Flechette {
+                    / if ammunition == AmmunitionMode::Flechette {
                         2
                     } else {
                         1
@@ -3867,7 +3826,7 @@ async fn special_autocannon_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
 
                 assert_eq!(
                     report.aim.target_movement,
-                    if ammunition == BattleAmmunitionMode::Precision {
+                    if ammunition == AmmunitionMode::Precision {
                         (normal_report.aim.target_movement - 2).max(0)
                     } else {
                         normal_report.aim.target_movement
@@ -3875,7 +3834,7 @@ async fn special_autocannon_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
                 );
                 assert_eq!(
                     report.aim.ammunition_accuracy,
-                    if ammunition == BattleAmmunitionMode::ArmorPiercing {
+                    if ammunition == AmmunitionMode::ArmorPiercing {
                         1
                     } else {
                         0
@@ -3931,38 +3890,38 @@ async fn special_autocannon_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
 
 #[tokio::test(flavor = "current_thread")]
 async fn special_autocannon_native_lua_supply_aim_and_restart_ac2() {
-    use stompymux_rs::BattleWeapon;
-    special_autocannon_matrix(&[BattleWeapon::Ac2]).await;
+    use stompymux_rs::Weapon;
+    special_autocannon_matrix(&[Weapon::Ac2]).await;
 }
 
 #[tokio::test(flavor = "current_thread")]
 async fn special_autocannon_native_lua_supply_aim_and_restart_ac5() {
-    use stompymux_rs::BattleWeapon;
-    special_autocannon_matrix(&[BattleWeapon::Ac5]).await;
+    use stompymux_rs::Weapon;
+    special_autocannon_matrix(&[Weapon::Ac5]).await;
 }
 
 #[tokio::test(flavor = "current_thread")]
 async fn special_autocannon_native_lua_supply_aim_and_restart_ac10() {
-    use stompymux_rs::BattleWeapon;
-    special_autocannon_matrix(&[BattleWeapon::Ac10]).await;
+    use stompymux_rs::Weapon;
+    special_autocannon_matrix(&[Weapon::Ac10]).await;
 }
 
 #[tokio::test(flavor = "current_thread")]
 async fn special_autocannon_native_lua_supply_aim_and_restart_ac20() {
-    use stompymux_rs::BattleWeapon;
-    special_autocannon_matrix(&[BattleWeapon::Ac20]).await;
+    use stompymux_rs::Weapon;
+    special_autocannon_matrix(&[Weapon::Ac20]).await;
 }
 
 #[tokio::test(flavor = "current_thread")]
 async fn special_autocannon_native_lua_supply_aim_and_restart_light_ac2() {
-    use stompymux_rs::BattleWeapon;
-    special_autocannon_matrix(&[BattleWeapon::LightAc2]).await;
+    use stompymux_rs::Weapon;
+    special_autocannon_matrix(&[Weapon::LightAc2]).await;
 }
 
 #[tokio::test(flavor = "current_thread")]
 async fn special_autocannon_native_lua_supply_aim_and_restart_light_ac5() {
-    use stompymux_rs::BattleWeapon;
-    special_autocannon_matrix(&[BattleWeapon::LightAc5]).await;
+    use stompymux_rs::Weapon;
+    special_autocannon_matrix(&[Weapon::LightAc5]).await;
 }
 
 /// Deterministic caseless-failure seed searches shared across shards, keyed by roll pair.
@@ -3974,7 +3933,7 @@ fn caseless_seed_bytes(attack: u8, propellant: u8) -> [u8; 32] {
             .map(|value| {
                 let mut bytes = [0; 32];
                 bytes[..4].copy_from_slice(&value.to_le_bytes());
-                let mut dice = stompymux_rs::BattleDice::seeded(bytes);
+                let mut dice = stompymux_rs::Dice::seeded(bytes);
                 let first = dice.two_d6();
                 ((first, dice.two_d6()), value)
             })
@@ -3987,7 +3946,7 @@ fn caseless_seed_bytes(attack: u8, propellant: u8) -> [u8; 32] {
 
 /// AP threshold seed searches shared across shards; the first hit matching the target's
 /// armor layout is cached per facing.
-fn armor_piercing_seed_bytes(rear: bool, target: &stompymux_rs::BattleUnit) -> [u8; 32] {
+fn armor_piercing_seed_bytes(rear: bool, target: &stompymux_rs::Mech) -> [u8; 32] {
     static SEEDS: std::sync::OnceLock<[u32; 2]> = std::sync::OnceLock::new();
     let slot = usize::from(rear);
     let value = SEEDS.get_or_init(|| {
@@ -3996,9 +3955,9 @@ fn armor_piercing_seed_bytes(rear: bool, target: &stompymux_rs::BattleUnit) -> [
             (
                 i,
                 if *r {
-                    stompymux_rs::BattleHitArc::Rear
+                    stompymux_rs::HitArc::Rear
                 } else {
-                    stompymux_rs::BattleHitArc::Front
+                    stompymux_rs::HitArc::Front
                 },
             )
         }) {
@@ -4006,7 +3965,7 @@ fn armor_piercing_seed_bytes(rear: bool, target: &stompymux_rs::BattleUnit) -> [
                 .find(|&value| {
                     let mut seed = [0; 32];
                     seed[..4].copy_from_slice(&value.to_le_bytes());
-                    let initial = stompymux_rs::BattleDice::seeded(seed);
+                    let initial = stompymux_rs::Dice::seeded(seed);
                     let mut dice = initial.clone();
                     let roll = dice.two_d6();
                     let hit = shot_rules()
@@ -4014,7 +3973,7 @@ fn armor_piercing_seed_bytes(rear: bool, target: &stompymux_rs::BattleUnit) -> [
                         .resolve(target, arc, roll, &mut dice)
                         .unwrap();
                     dice.two_d6(); // Material entry.
-                    hit.section == stompymux_rs::BattleSection::LeftTorso
+                    hit.section == stompymux_rs::MechSection::LeftTorso
                         && !hit.through_armor_critical
                         && dice.two_d6() == 12
                 })
@@ -4034,16 +3993,12 @@ fn check_armor_piercing_thresholds(
     id: ObjectId,
     target: ObjectId,
     index: usize,
-    weapon: stompymux_rs::BattleWeapon,
+    weapon: stompymux_rs::Weapon,
 ) {
     use stompymux_rs::*;
     for rear in [false, true] {
-        let _arc = if rear {
-            BattleHitArc::Rear
-        } else {
-            BattleHitArc::Front
-        };
-        let seed = BattleDice::seeded(armor_piercing_seed_bytes(
+        let _arc = if rear { HitArc::Rear } else { HitArc::Front };
+        let seed = Dice::seeded(armor_piercing_seed_bytes(
             rear,
             &base.btech.constructed_units()[&target],
         ));
@@ -4075,7 +4030,7 @@ fn check_armor_piercing_thresholds(
                 report.salvo.as_ref().unwrap().as_mech().unwrap().groups[0]
                     .hit
                     .section,
-                BattleSection::LeftTorso
+                MechSection::LeftTorso
             );
             if remaining == 50 || remaining == -1 {
                 assert_eq!(
@@ -4095,7 +4050,7 @@ fn check_armor_piercing_thresholds(
                 );
                 continue;
             }
-            let count = if matches!(weapon, BattleWeapon::Ac10 | BattleWeapon::Ac20) {
+            let count = if matches!(weapon, Weapon::Ac10 | Weapon::Ac20) {
                 2
             } else {
                 1
@@ -4106,9 +4061,8 @@ fn check_armor_piercing_thresholds(
                 "{weapon:?}, rear={rear}, remaining={remaining}"
             );
             assert_eq!(
-                ap.btech.constructed_units()[&target].sections()[&BattleSection::LeftTorso]
-                    .internal,
-                base.btech.constructed_units()[&target].sections()[&BattleSection::LeftTorso]
+                ap.btech.constructed_units()[&target].sections()[&MechSection::LeftTorso].internal,
+                base.btech.constructed_units()[&target].sections()[&MechSection::LeftTorso]
                     .internal
             );
             let mut expected_dice = seed.clone();
@@ -4158,7 +4112,7 @@ async fn check_caseless_failures(
             }
             let mut before = shared.clone();
             toggle_battle_caseless(&mut before, id, ObjectId(1), index).unwrap();
-            let seed = stompymux_rs::BattleDice::seeded(caseless_seed_bytes(attack, propellant));
+            let seed = stompymux_rs::Dice::seeded(caseless_seed_bytes(attack, propellant));
             before
                 .btech
                 .rewrite_unit_record(id, |record| {
@@ -4178,9 +4132,9 @@ async fn check_caseless_failures(
             assert_eq!(
                 report.expenditure.fire_mode,
                 if rapid && !short {
-                    BattleFireMode::Rapid
+                    FireMode::Rapid
                 } else {
-                    BattleFireMode::Normal
+                    FireMode::Normal
                 }
             );
             assert_eq!(
@@ -4315,7 +4269,7 @@ async fn check_caseless_failures(
             assert!(toggle_battle_caseless(&mut recovery, id, ObjectId(1), index).is_err());
             assert_eq!(recovery.btech, frozen);
             let seed = (0..=255)
-                .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() >= 6)
+                .find(|seed| Dice::seeded([*seed; 32]).two_d6() >= 6)
                 .unwrap();
             shot_seed(&mut recovery, id, seed);
             begin_battle_unjam(&mut recovery, id, ObjectId(1), index).unwrap();
@@ -4335,7 +4289,7 @@ async fn check_caseless_failures(
                 recovery.btech.constructed_units()[&id]
                     .ammunition_mode(index)
                     .unwrap(),
-                BattleAmmunitionMode::Caseless
+                AmmunitionMode::Caseless
             );
         }
     }
@@ -4346,7 +4300,7 @@ fn check_incendiary_impact(
     base: &stompymux_rs::World,
     id: ObjectId,
     index: usize,
-    weapon: stompymux_rs::BattleWeapon,
+    weapon: stompymux_rs::Weapon,
 ) {
     use stompymux_rs::*;
     let unit = &base.btech.constructed_units()[&id];
@@ -4358,7 +4312,7 @@ fn check_incendiary_impact(
         .find_map(|value| {
             let mut bytes = [0; 32];
             bytes[..4].copy_from_slice(&value.to_le_bytes());
-            let initial = BattleDice::seeded(bytes);
+            let initial = Dice::seeded(bytes);
             let mut dice = initial.clone();
             dice.two_d6(); // Material entry before the selected weapon critical.
             (dice.two_d6() == 8
@@ -4378,7 +4332,7 @@ fn check_incendiary_impact(
     // Use an intact observer independently of damage to the previous shot's target.
     let mut state = serde_json::to_value(&world.btech).unwrap();
     let previous = state["constructed"][observer.0.to_string()].clone();
-    let fresh = BattleUnit::from_template(
+    let fresh = Mech::from_template(
         world.btech.constructed_units()[&observer]
             .definition()
             .clone(),
@@ -4406,15 +4360,15 @@ fn check_incendiary_impact(
     let report = resolve_battle_tactical_impact(
         &mut world,
         id,
-        BattleHit {
+        Hit {
             section,
             rear_armor: false,
             through_armor_critical: true,
             crew_stun: false,
         },
         1,
-        BattleFallRules {
-            vehicle_impact: stompymux_rs::BattleVehicleImpactRules::STANDARD,
+        FallRules {
+            vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
             stacking: rules.stacking,
             stagger: rules.stagger,
             hit: rules.hit,
@@ -4425,7 +4379,7 @@ fn check_incendiary_impact(
     .unwrap();
     assert_eq!(
         report.impact.criticals[0].1,
-        BattleCriticalLoss::Weapon {
+        CriticalLoss::Weapon {
             index,
             explosion_damage: weapon.profile().damage
         }
@@ -4531,9 +4485,9 @@ async fn observer_broadcasts_use_current_acquired_contacts_without_mutation() {
                 .position()
                 .unwrap()
                 .map;
-            set_battle_map_perception(&mut altered, map, BattleMapPerceptionFlag::Sensors, false)
+            set_battle_map_perception(&mut altered, map, MapPerceptionFlag::Sensors, false)
                 .unwrap();
-            set_battle_map_visibility(&mut altered, map, BattleLight::Day, 0).unwrap();
+            set_battle_map_visibility(&mut altered, map, Light::Day, 0).unwrap();
         }
         if case == "shutdown" {
             assert!(visible_battle_contact(&altered, observer, subject).is_err());
@@ -4557,8 +4511,8 @@ async fn ammunition_explosion_observers_survive_damage_and_restart() {
     use stompymux_rs::*;
     let (_dir, config, mut world, observer, subject) = lock_fixture().await;
     let rules = shot_rules();
-    let rules = BattleFallRules {
-        vehicle_impact: stompymux_rs::BattleVehicleImpactRules::STANDARD,
+    let rules = FallRules {
+        vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
         stacking: rules.stacking,
         stagger: rules.stagger,
         hit: rules.hit,
@@ -4619,7 +4573,7 @@ async fn unjam_feedback_separates_pilot_cockpit_and_observers() {
             .unwrap()
             .weapons
             .iter()
-            .position(|mount| mount.weapon == BattleWeapon::Srm4)
+            .position(|mount| mount.weapon == Weapon::Srm4)
             .unwrap();
         unit.jam_weapon(index).unwrap();
         world
@@ -4630,7 +4584,7 @@ async fn unjam_feedback_separates_pilot_cockpit_and_observers() {
             .unwrap();
         begin_battle_unjam(&mut world, subject, ObjectId(1), index).unwrap();
         let seed = (0..=255)
-            .find(|seed| (BattleDice::seeded([*seed; 32]).two_d6() >= 6) == (outcome != "failure"))
+            .find(|seed| (Dice::seeded([*seed; 32]).two_d6() >= 6) == (outcome != "failure"))
             .unwrap();
         shot_seed(&mut world, subject, seed);
         world
@@ -4667,15 +4621,15 @@ async fn unjam_feedback_separates_pilot_cockpit_and_observers() {
         } else {
             assert_eq!(rolls.len(), 2);
             let recipient = if outcome == "no_pilot" {
-                BattleMessageTarget::Unit(subject)
+                MessageTarget::Unit(subject)
             } else {
-                BattleMessageTarget::Player(ObjectId(1))
+                MessageTarget::Player(ObjectId(1))
             };
             assert!(rolls.iter().all(|(target, _)| *target == recipient));
         }
         let witnessed: Vec<_> = messages
             .iter()
-            .filter(|(target, _)| *target == BattleMessageTarget::Unit(observer))
+            .filter(|(target, _)| *target == MessageTarget::Unit(observer))
             .collect();
         if matches!(outcome, "failure" | "empty") {
             assert!(witnessed.is_empty());
@@ -4690,10 +4644,10 @@ async fn unjam_feedback_separates_pilot_cockpit_and_observers() {
 async fn firing_observers_hide_unseen_participants_and_replay_transactionally() {
     use stompymux_rs::*;
     let seed = (0..=255)
-        .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 8)
+        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 8)
         .unwrap();
     let target_seed = (0..=255)
-        .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 7)
+        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 7)
         .unwrap();
     let (_dir, config, pristine, shooter, target) = shot_fixture().await;
     let native = Scripts::new(
@@ -4728,7 +4682,7 @@ async fn firing_observers_hide_unseen_participants_and_replay_transactionally() 
                 create_battle_unit(
                     &mut world,
                     observer,
-                    BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                    MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
                         .unwrap(),
                 )
                 .unwrap();
@@ -5046,9 +5000,9 @@ async fn free_fall_observers_replay_contact_without_early_or_duplicate_messages(
                 assert!(
                     advance_battle_jumps(
                         &mut world,
-                        stompymux_rs::BattleMovementRules {
+                        stompymux_rs::MovementRules {
                             fall: fall_rules(),
-                            ..stompymux_rs::BattleMovementRules::STANDARD
+                            ..stompymux_rs::MovementRules::STANDARD
                         }
                     )
                     .unwrap()
@@ -5067,9 +5021,9 @@ async fn free_fall_observers_replay_contact_without_early_or_duplicate_messages(
             assert!(
                 advance_battle_jumps(
                     &mut rejected,
-                    stompymux_rs::BattleMovementRules {
+                    stompymux_rs::MovementRules {
                         fall: fall_rules(),
-                        ..stompymux_rs::BattleMovementRules::STANDARD
+                        ..stompymux_rs::MovementRules::STANDARD
                     }
                 )
                 .is_err()
@@ -5079,18 +5033,18 @@ async fn free_fall_observers_replay_contact_without_early_or_duplicate_messages(
             let mut restored = persistence::load(&config.database()).await.unwrap();
             let notices = advance_battle_jumps(
                 &mut world,
-                stompymux_rs::BattleMovementRules {
+                stompymux_rs::MovementRules {
                     fall: fall_rules(),
-                    ..stompymux_rs::BattleMovementRules::STANDARD
+                    ..stompymux_rs::MovementRules::STANDARD
                 },
             )
             .unwrap();
             assert_eq!(
                 advance_battle_jumps(
                     &mut restored,
-                    stompymux_rs::BattleMovementRules {
+                    stompymux_rs::MovementRules {
                         fall: fall_rules(),
-                        ..stompymux_rs::BattleMovementRules::STANDARD
+                        ..stompymux_rs::MovementRules::STANDARD
                     }
                 )
                 .unwrap(),
@@ -5118,9 +5072,9 @@ async fn free_fall_observers_replay_contact_without_early_or_duplicate_messages(
             assert!(
                 advance_battle_jumps(
                     &mut world,
-                    stompymux_rs::BattleMovementRules {
+                    stompymux_rs::MovementRules {
                         fall: fall_rules(),
-                        ..stompymux_rs::BattleMovementRules::STANDARD
+                        ..stompymux_rs::MovementRules::STANDARD
                     }
                 )
                 .unwrap()
@@ -5139,7 +5093,7 @@ async fn stand_attempt_observers_share_native_lua_order_and_saved_replay() {
     create_battle_unit(
         &mut base,
         observer,
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut base, observer, support::FIXTURE_DICE_SEED);
@@ -5180,7 +5134,7 @@ async fn stand_attempt_observers_share_native_lua_order_and_saved_replay() {
             for visible in [false, true] {
                 let mut world = base.clone();
                 let seed = (0..=255)
-                    .find(|seed| (BattleDice::seeded([*seed; 32]).two_d6() >= target) == success)
+                    .find(|seed| (Dice::seeded([*seed; 32]).two_d6() >= target) == success)
                     .unwrap();
                 shot_seed(&mut world, subject, seed);
                 if !visible {
@@ -5236,7 +5190,7 @@ async fn stand_attempt_observers_share_native_lua_order_and_saved_replay() {
                     pilot_output[1],
                     format!(
                         "Modified Pilot Skill: BTH {target}\tRoll: {}",
-                        BattleDice::seeded([seed; 32]).two_d6()
+                        Dice::seeded([seed; 32]).two_d6()
                     )
                 );
                 let witnessed: Vec<_> = output
@@ -5289,7 +5243,7 @@ async fn thermal_shutdown_observers_cover_speed_overrides_visibility_and_replay(
     );
     let seed = (0..=255)
         .find(|seed| {
-            let mut dice = BattleDice::seeded([*seed; 32]);
+            let mut dice = Dice::seeded([*seed; 32]);
             for _ in 0..3 {
                 dice.d6();
             }
@@ -5404,43 +5358,25 @@ async fn facing_native_lua_controls_replay_without_observer_messages() {
             .collect::<Vec<_>>()
     };
     for (command, method, argument, torso, flipped) in [
-        (
-            "rottorso left",
-            "rottorso",
-            ",' LEFT '",
-            BattleTorso::Left,
-            false,
-        ),
-        (
-            "rottorso right",
-            "rottorso",
-            ",'r'",
-            BattleTorso::Center,
-            false,
-        ),
+        ("rottorso left", "rottorso", ",' LEFT '", Torso::Left, false),
+        ("rottorso right", "rottorso", ",'r'", Torso::Center, false),
         (
             "rottorso right",
             "rottorso",
             ",'RIGHT'",
-            BattleTorso::Right,
+            Torso::Right,
             false,
         ),
-        ("fliparms", "fliparms", "", BattleTorso::Right, true),
-        (
-            "rottorso center",
-            "rottorso",
-            ",'c'",
-            BattleTorso::Center,
-            true,
-        ),
+        ("fliparms", "fliparms", "", Torso::Right, true),
+        ("rottorso center", "rottorso", ",'c'", Torso::Center, true),
         (
             "rottorso center",
             "rottorso",
             ",'center'",
-            BattleTorso::Center,
+            Torso::Center,
             true,
         ),
-        ("fliparms", "fliparms", "", BattleTorso::Center, false),
+        ("fliparms", "fliparms", "", Torso::Center, false),
     ] {
         persistence::save(&config.database(), &world).await.unwrap();
         let mut restored = persistence::load(&config.database()).await.unwrap();
@@ -5487,14 +5423,14 @@ async fn facing_native_lua_controls_replay_without_observer_messages() {
         assert_eq!(native.world().btech, lua.world().btech);
         assert_eq!(
             lua.world().btech.constructed_units()[&subject].facing(),
-            BattleFacing {
+            Facing {
                 torso,
                 arms_flipped: flipped
             }
         );
         world = native.world().clone();
-        if torso != BattleTorso::Center {
-            let direction = if torso == BattleTorso::Left {
+        if torso != Torso::Center {
+            let direction = if torso == Torso::Left {
                 "left"
             } else {
                 "right"
@@ -5695,7 +5631,7 @@ async fn movement_control_feedback_routes_cockpit_and_replays_transactionally() 
 }
 
 /// Stagger severity and falling feedback distinguish configured modes and survive saved cadence replay.
-async fn stagger_observers_matrix(modes: &[stompymux_rs::BattleStaggerMode]) {
+async fn stagger_observers_matrix(modes: &[stompymux_rs::StaggerMode]) {
     use stompymux_rs::*;
     let (_dir, config, mut base, subject, observer) = lock_fixture().await;
     let mut state = serde_json::to_value(&base.btech).unwrap();
@@ -5714,7 +5650,7 @@ async fn stagger_observers_matrix(modes: &[stompymux_rs::BattleStaggerMode]) {
                     let mut world = base.clone();
                     let mut state = serde_json::to_value(&world.btech).unwrap();
                     let history = &mut state["constructed"][subject.0.to_string()]["stagger"];
-                    if mode == BattleStaggerMode::Traditional {
+                    if mode == StaggerMode::Traditional {
                         history["turn_damage"] = (level * 20).into();
                     } else {
                         history["hits"] = serde_json::json!([{"damage":level * 20,"remaining":60,"counted":false}]);
@@ -5725,7 +5661,7 @@ async fn stagger_observers_matrix(modes: &[stompymux_rs::BattleStaggerMode]) {
                     }
                     world.btech = serde_json::from_value(state).unwrap();
                     let rules = stagger_rules(mode);
-                    if mode != BattleStaggerMode::Traditional {
+                    if mode != StaggerMode::Traditional {
                         for _ in 0..4 {
                             assert!(
                                 advance_battle_stagger(&mut world, rules)
@@ -5736,12 +5672,12 @@ async fn stagger_observers_matrix(modes: &[stompymux_rs::BattleStaggerMode]) {
                     }
                     let seed = (0..=255)
                         .find(|seed| {
-                            BattleDice::seeded([*seed; 32]).two_d6() == if success { 12 } else { 2 }
+                            Dice::seeded([*seed; 32]).two_d6() == if success { 12 } else { 2 }
                         })
                         .unwrap();
                     shot_seed(&mut world, subject, seed);
                     let mut expected = Vec::new();
-                    if mode != BattleStaggerMode::Traditional {
+                    if mode != StaggerMode::Traditional {
                         expected.extend(battle_observer_messages(
                             &world,
                             subject,
@@ -5756,7 +5692,7 @@ async fn stagger_observers_matrix(modes: &[stompymux_rs::BattleStaggerMode]) {
                         expected.extend(battle_observer_messages(
                             &world,
                             subject,
-                            if mode == BattleStaggerMode::Traditional {
+                            if mode == StaggerMode::Traditional {
                                 "falls down, staggered by the damage!"
                             } else {
                                 "tumbles over, staggered by the damage!"
@@ -5775,7 +5711,7 @@ async fn stagger_observers_matrix(modes: &[stompymux_rs::BattleStaggerMode]) {
                     let report = &reports[0];
                     assert_eq!(
                         report.level,
-                        if mode == BattleStaggerMode::Traditional {
+                        if mode == StaggerMode::Traditional {
                             1
                         } else {
                             level
@@ -5791,7 +5727,7 @@ async fn stagger_observers_matrix(modes: &[stompymux_rs::BattleStaggerMode]) {
                         .collect();
                     assert_eq!(observed, expected);
                     assert_eq!(report.notices[0].unit, subject);
-                    if mode == BattleStaggerMode::Traditional {
+                    if mode == StaggerMode::Traditional {
                         assert_eq!(report.notices[0].text, "You stagger from the damage!");
                     } else {
                         assert!(
@@ -5813,20 +5749,20 @@ async fn stagger_observers_matrix(modes: &[stompymux_rs::BattleStaggerMode]) {
 
 #[tokio::test]
 async fn stagger_observers_cover_severity_modes_success_and_saved_replay_traditional() {
-    use stompymux_rs::BattleStaggerMode;
-    stagger_observers_matrix(&[BattleStaggerMode::Traditional]).await;
+    use stompymux_rs::StaggerMode;
+    stagger_observers_matrix(&[StaggerMode::Traditional]).await;
 }
 
 #[tokio::test]
 async fn stagger_observers_cover_severity_modes_success_and_saved_replay_retain() {
-    use stompymux_rs::BattleStaggerMode;
-    stagger_observers_matrix(&[BattleStaggerMode::Retain]).await;
+    use stompymux_rs::StaggerMode;
+    stagger_observers_matrix(&[StaggerMode::Retain]).await;
 }
 
 #[tokio::test]
 async fn stagger_observers_cover_severity_modes_success_and_saved_replay_consume() {
-    use stompymux_rs::BattleStaggerMode;
-    stagger_observers_matrix(&[BattleStaggerMode::Consume]).await;
+    use stompymux_rs::StaggerMode;
+    stagger_observers_matrix(&[StaggerMode::Consume]).await;
 }
 
 /// Immediate balance losses report their cause once, before fall damage changes visibility.
@@ -5860,7 +5796,7 @@ async fn critical_balance_observers_cover_ground_causes_and_saved_replay() {
                         &mut world,
                         subject,
                         CriticalLocation {
-                            section: BattleSection::CenterTorso,
+                            section: MechSection::CenterTorso,
                             slot: 3,
                         },
                     )
@@ -5875,14 +5811,14 @@ async fn critical_balance_observers_cover_ground_causes_and_saved_replay() {
                 let gyro = matches!(cause, "gyro" | "destroyed_gyro");
                 let forced = matches!(cause, "leg" | "destroyed_gyro");
                 let section = if gyro {
-                    BattleSection::CenterTorso
+                    MechSection::CenterTorso
                 } else {
-                    BattleSection::LeftLeg
+                    MechSection::LeftLeg
                 };
                 let slots = world.btech.constructed_units()[&subject].critical_candidates(section);
                 let seed = (0..=255)
                     .find(|seed| {
-                        let mut dice = BattleDice::seeded([*seed; 32]);
+                        let mut dice = Dice::seeded([*seed; 32]);
                         dice.two_d6(); // Material entry.
                         if cause == "leg" {
                             return dice.two_d6() < 8;
@@ -6047,7 +5983,7 @@ async fn engine_smoke_observers_preserve_fatal_hit_visibility_and_replay() {
                         &mut world,
                         subject,
                         CriticalLocation {
-                            section: BattleSection::CenterTorso,
+                            section: MechSection::CenterTorso,
                             slot,
                         },
                     )
@@ -6064,18 +6000,18 @@ async fn engine_smoke_observers_preserve_fatal_hit_visibility_and_replay() {
                 }
                 world.btech = serde_json::from_value(state).unwrap();
                 let slots = world.btech.constructed_units()[&subject]
-                    .critical_candidates(BattleSection::CenterTorso);
+                    .critical_candidates(MechSection::CenterTorso);
                 let engines: Vec<_> = world.btech.constructed_units()[&subject]
                     .loadout()
                     .unwrap()
                     .systems
                     .into_iter()
-                    .filter(|part| part.system == BattleSystem::Engine)
+                    .filter(|part| part.system == System::Engine)
                     .map(|part| part.location)
                     .collect();
                 let seed = (0..=255)
                     .find(|seed| {
-                        let mut dice = BattleDice::seeded([*seed; 32]);
+                        let mut dice = Dice::seeded([*seed; 32]);
                         dice.two_d6(); // Material entry.
                         matches!(dice.two_d6(), 8 | 9)
                             && engines.contains(
@@ -6091,7 +6027,7 @@ async fn engine_smoke_observers_preserve_fatal_hit_visibility_and_replay() {
                 };
                 persistence::save(&config.database(), &world).await.unwrap();
                 let mut restored = persistence::load(&config.database()).await.unwrap();
-                let hit = balance_hit(BattleSection::CenterTorso, true);
+                let hit = balance_hit(MechSection::CenterTorso, true);
                 let report =
                     resolve_battle_tactical_impact(&mut world, subject, hit, 1, fall_rules())
                         .unwrap();
@@ -6126,7 +6062,7 @@ async fn engine_smoke_observers_preserve_fatal_hit_visibility_and_replay() {
 }
 
 /// Mechanical damage broadcasts depend on power, limb type and the original hip's availability.
-async fn actuator_observers_matrix(sections: &[stompymux_rs::BattleSection]) {
+async fn actuator_observers_matrix(sections: &[stompymux_rs::MechSection]) {
     use stompymux_rs::*;
     let (_dir, config, mut base, subject, observer) = lock_fixture().await;
     balance_skill(&mut base);
@@ -6154,7 +6090,7 @@ async fn actuator_observers_matrix(sections: &[stompymux_rs::BattleSection]) {
             for hip_lost in [false, true] {
                 if hip_lost
                     && (slot == 0
-                        || matches!(section, BattleSection::LeftArm | BattleSection::RightArm))
+                        || matches!(section, MechSection::LeftArm | MechSection::RightArm))
                 {
                     continue;
                 }
@@ -6190,7 +6126,7 @@ async fn actuator_observers_matrix(sections: &[stompymux_rs::BattleSection]) {
                         single_critical_seed(candidates.len() as u16, (selected + 1) as u16),
                     );
                     let expected = if running
-                        && !matches!(section, BattleSection::LeftArm | BattleSection::RightArm)
+                        && !matches!(section, MechSection::LeftArm | MechSection::RightArm)
                         && !hip_lost
                     {
                         battle_observer_messages(
@@ -6233,13 +6169,13 @@ async fn actuator_observers_matrix(sections: &[stompymux_rs::BattleSection]) {
                     );
                     assert_eq!(world.btech, restored.btech);
                     assert_eq!(report.impact.criticals[0].0, location);
-                    let leg = matches!(section, BattleSection::LeftLeg | BattleSection::RightLeg);
+                    let leg = matches!(section, MechSection::LeftLeg | MechSection::RightLeg);
                     let cockpit = match (leg, slot) {
                         (true, 0) => "Your hip takes a direct hit and freezes up!".to_owned(),
                         (true, _) => "One of your leg actuators is destroyed!".to_owned(),
                         (false, 0) => "Your shoulder joint takes a hit and is frozen!".to_owned(),
                         (false, _) => {
-                            let side = if section == BattleSection::LeftArm {
+                            let side = if section == MechSection::LeftArm {
                                 "left"
                             } else {
                                 "right"
@@ -6302,26 +6238,26 @@ async fn actuator_observers_matrix(sections: &[stompymux_rs::BattleSection]) {
 
 #[tokio::test]
 async fn actuator_observers_cover_limb_power_hip_guards_and_saved_replay_left_leg() {
-    use stompymux_rs::BattleSection;
-    actuator_observers_matrix(&[BattleSection::LeftLeg]).await;
+    use stompymux_rs::MechSection;
+    actuator_observers_matrix(&[MechSection::LeftLeg]).await;
 }
 
 #[tokio::test]
 async fn actuator_observers_cover_limb_power_hip_guards_and_saved_replay_right_leg() {
-    use stompymux_rs::BattleSection;
-    actuator_observers_matrix(&[BattleSection::RightLeg]).await;
+    use stompymux_rs::MechSection;
+    actuator_observers_matrix(&[MechSection::RightLeg]).await;
 }
 
 #[tokio::test]
 async fn actuator_observers_cover_limb_power_hip_guards_and_saved_replay_left_arm() {
-    use stompymux_rs::BattleSection;
-    actuator_observers_matrix(&[BattleSection::LeftArm]).await;
+    use stompymux_rs::MechSection;
+    actuator_observers_matrix(&[MechSection::LeftArm]).await;
 }
 
 #[tokio::test]
 async fn actuator_observers_cover_limb_power_hip_guards_and_saved_replay_right_arm() {
-    use stompymux_rs::BattleSection;
-    actuator_observers_matrix(&[BattleSection::RightArm]).await;
+    use stompymux_rs::MechSection;
+    actuator_observers_matrix(&[MechSection::RightArm]).await;
 }
 
 /// Core component messages follow effective damage stages even without engine power.
@@ -6332,7 +6268,7 @@ async fn core_critical_cockpit_feedback_stages_and_saved_replay() {
     balance_skill(&mut base);
     for (system, messages) in [
         (
-            BattleSystem::Engine,
+            System::Engine,
             vec![
                 "Your engine shielding takes a hit! It's getting hotter in here!",
                 "Your engine shielding takes a hit! It's getting hotter in here!",
@@ -6340,7 +6276,7 @@ async fn core_critical_cockpit_feedback_stages_and_saved_replay() {
             ],
         ),
         (
-            BattleSystem::Gyro,
+            System::Gyro,
             vec![
                 "Your Gyro has been damaged!",
                 "Your Gyro has been destroyed!",
@@ -6349,14 +6285,14 @@ async fn core_critical_cockpit_feedback_stages_and_saved_replay() {
             ],
         ),
         (
-            BattleSystem::Sensors,
+            System::Sensors,
             vec![
                 "Your sensors have been damaged!",
                 "Your sensors have been destroyed!",
             ],
         ),
         (
-            BattleSystem::LifeSupport,
+            System::LifeSupport,
             vec![
                 "Your life support has been destroyed!",
                 "Your life support has been destroyed!",
@@ -6457,7 +6393,7 @@ async fn gyro_observers_cover_protection_power_and_saved_replay() {
         .unwrap()
         .systems
         .iter()
-        .filter(|part| part.system == BattleSystem::Gyro)
+        .filter(|part| part.system == System::Gyro)
         .map(|part| part.location)
         .collect();
     for hardened in [false, true] {
@@ -6575,7 +6511,7 @@ async fn cockpit_destruction_feedback_power_visibility_and_saved_replay() {
         .unwrap()
         .systems
         .iter()
-        .find(|part| part.system == BattleSystem::Cockpit)
+        .find(|part| part.system == System::Cockpit)
         .unwrap()
         .location;
     for running in [false, true] {
@@ -6657,7 +6593,7 @@ async fn cockpit_destruction_feedback_power_visibility_and_saved_replay() {
             }
             let unit = &world.btech.constructed_units()[&subject];
             assert!(unit.is_destroyed());
-            assert_eq!(unit.power(), BattlePower::Off);
+            assert_eq!(unit.power(), Power::Off);
             assert_eq!(unit.pilot(), None);
             assert!(world.objects.contains_key(&ObjectId(1)));
             let before = world.btech.clone();
@@ -6689,10 +6625,7 @@ async fn equipment_loss_feedback_and_saved_replay() {
                     .definition()
                     .clone();
                 if case.contains("weapon") {
-                    let arm = definition
-                        .sections
-                        .get_mut(&BattleSection::LeftArm)
-                        .unwrap();
+                    let arm = definition.sections.get_mut(&MechSection::LeftArm).unwrap();
                     for slot in [2, 3] {
                         arm.criticals.get_mut(&slot).unwrap().equipment = "IS.LargeLaser".into();
                     }
@@ -6700,7 +6633,7 @@ async fn equipment_loss_feedback_and_saved_replay() {
                 if case == "double_sink" {
                     let sink = definition
                         .sections
-                        .get_mut(&BattleSection::Head)
+                        .get_mut(&MechSection::Head)
                         .unwrap()
                         .criticals
                         .remove(&3)
@@ -6712,7 +6645,7 @@ async fn equipment_loss_feedback_and_saved_replay() {
                     for slot in 2..8 {
                         definition
                             .sections
-                            .get_mut(&BattleSection::LeftTorso)
+                            .get_mut(&MechSection::LeftTorso)
                             .unwrap()
                             .criticals
                             .insert(slot, sink.clone());
@@ -6759,9 +6692,9 @@ async fn equipment_loss_feedback_and_saved_replay() {
                         .find(|part| {
                             part.system
                                 == if case == "jet" {
-                                    BattleSystem::JumpJet
+                                    System::JumpJet
                                 } else {
-                                    BattleSystem::HeatSink
+                                    System::HeatSink
                                 }
                         })
                         .unwrap()
@@ -6769,7 +6702,7 @@ async fn equipment_loss_feedback_and_saved_replay() {
                     let group = if case == "double_sink" {
                         (2..5)
                             .map(|slot| CriticalLocation {
-                                section: BattleSection::LeftTorso,
+                                section: MechSection::LeftTorso,
                                 slot,
                             })
                             .collect()
@@ -6799,7 +6732,7 @@ async fn equipment_loss_feedback_and_saved_replay() {
                         .find_map(|value| {
                             let mut bytes = [0; 32];
                             bytes[..4].copy_from_slice(&value.to_le_bytes());
-                            let mut dice = stompymux_rs::BattleDice::seeded(bytes);
+                            let mut dice = stompymux_rs::Dice::seeded(bytes);
                             dice.two_d6(); // Material entry.
                             (matches!(dice.two_d6(), 8 | 9)
                                 && dice.die(candidates.len() as u16).unwrap()
@@ -6810,7 +6743,7 @@ async fn equipment_loss_feedback_and_saved_replay() {
                         .expect("one selected critical with a destructive weapon result");
                     world
                         .btech
-                        .set_unit_dice(subject, BattleDice::seeded(seed))
+                        .set_unit_dice(subject, Dice::seeded(seed))
                         .unwrap();
                 } else {
                     shot_seed(
@@ -6899,7 +6832,7 @@ async fn fueled_flamer_modes_native_lua_and_saved_replay() {
         &mut base,
         ObjectId(1),
         "Gunnery-Ballistic",
-        BattleCharacterValue {
+        CharacterValue {
             value: 30,
             experience: 0,
             last_used: 0,
@@ -6918,15 +6851,15 @@ async fn fueled_flamer_modes_native_lua_and_saved_replay() {
     .unwrap();
     let pristine_db = snapshot_database(&config);
     for (weapon, mass, ranges) in [
-        (BattleWeapon::HeavyFlamer, 1536, (2, 3, 4)),
-        (BattleWeapon::VehicleFlamer, 512, (1, 2, 3)),
-        (BattleWeapon::VehicleHeavyFlamer, 1024, (2, 4, 6)),
+        (Weapon::HeavyFlamer, 1536, (2, 3, 4)),
+        (Weapon::VehicleFlamer, 512, (1, 2, 3)),
+        (Weapon::VehicleHeavyFlamer, 1024, (2, 4, 6)),
     ] {
         let profile = weapon.profile();
         let mut definition = base.btech.constructed_units()[&id].definition().clone();
         definition
             .sections
-            .get_mut(&BattleSection::LeftArm)
+            .get_mut(&MechSection::LeftArm)
             .unwrap()
             .criticals
             .get_mut(&2)
@@ -6934,7 +6867,7 @@ async fn fueled_flamer_modes_native_lua_and_saved_replay() {
             .equipment = weapon.name().into();
         let bin = definition
             .sections
-            .get_mut(&BattleSection::RightTorso)
+            .get_mut(&MechSection::RightTorso)
             .unwrap()
             .criticals
             .get_mut(&0)
@@ -6963,7 +6896,7 @@ async fn fueled_flamer_modes_native_lua_and_saved_replay() {
                 if heat {
                     definition
                         .sections
-                        .get_mut(&BattleSection::LeftArm)
+                        .get_mut(&MechSection::LeftArm)
                         .unwrap()
                         .criticals
                         .get_mut(&2)
@@ -6977,15 +6910,15 @@ async fn fueled_flamer_modes_native_lua_and_saved_replay() {
                         record["definition"] = serde_json::to_value(definition.clone()).unwrap();
                         record["ammunition"][0] = rounds.into();
                         // The constructed template initializes fire modes; the live scenario uses the same mode.
-                        let fresh = BattleUnit::from_template(definition).unwrap();
+                        let fresh = Mech::from_template(definition).unwrap();
                         record["fire_modes"] =
                             serde_json::to_value(fresh).unwrap()["fire_modes"].clone();
                     })
                     .unwrap();
                 let mode = if heat {
-                    BattleFireMode::Heat
+                    FireMode::Heat
                 } else {
-                    BattleFireMode::Normal
+                    FireMode::Normal
                 };
                 assert_eq!(
                     world.btech.constructed_units()[&id].fire_mode(0).unwrap(),
@@ -7078,7 +7011,7 @@ async fn coolant_modes_fuel_native_lua_and_saved_replay() {
         &mut base,
         ObjectId(1),
         "Gunnery-Ballistic",
-        BattleCharacterValue {
+        CharacterValue {
             value: 4,
             experience: 0,
             last_used: 0,
@@ -7089,7 +7022,7 @@ async fn coolant_modes_fuel_native_lua_and_saved_replay() {
     let mut definition = base.btech.constructed_units()[&id].definition().clone();
     definition
         .sections
-        .get_mut(&BattleSection::LeftArm)
+        .get_mut(&MechSection::LeftArm)
         .unwrap()
         .criticals
         .get_mut(&2)
@@ -7097,7 +7030,7 @@ async fn coolant_modes_fuel_native_lua_and_saved_replay() {
         .equipment = "IS.CoolantGun".into();
     let bin = definition
         .sections
-        .get_mut(&BattleSection::RightTorso)
+        .get_mut(&MechSection::RightTorso)
         .unwrap()
         .criticals
         .get_mut(&0)
@@ -7113,7 +7046,7 @@ async fn coolant_modes_fuel_native_lua_and_saved_replay() {
     state["constructed"][id.0.to_string()]["ammunition"][0] = 25.into();
     base.btech = serde_json::from_value(state).unwrap();
     let seed = (0..=255)
-        .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 12)
+        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
         .unwrap();
     let native = Scripts::new(
         &config,
@@ -7135,7 +7068,7 @@ async fn coolant_modes_fuel_native_lua_and_saved_replay() {
         id,
         ObjectId(1),
         0,
-        BattleTicEdit::Add(vec![0]),
+        TicEdit::Add(vec![0]),
     )
     .unwrap();
     shot_seed(&mut explicit_world, id, seed);
@@ -7286,10 +7219,10 @@ async fn coolant_modes_fuel_native_lua_and_saved_replay() {
             state["constructed"][unit.0.to_string()]["heat"]["stored"] = 9.0.into();
         }
         before.btech = serde_json::from_value(state).unwrap();
-        let rules = BattleShotRules {
+        let rules = ShotRules {
             range_damage: false,
             tsm_tow_bonus: true,
-            glancing: BattleGlancingMode::AtTarget,
+            glancing: GlancingMode::AtTarget,
             ..shot_rules()
         };
         let mut probe = before.clone();
@@ -7301,7 +7234,7 @@ async fn coolant_modes_fuel_native_lua_and_saved_replay() {
         for roll in [number - 1, number, number + 1] {
             let mut world = before.clone();
             let seed = (0..=255)
-                .find(|seed| i32::from(BattleDice::seeded([*seed; 32]).two_d6()) == roll)
+                .find(|seed| i32::from(Dice::seeded([*seed; 32]).two_d6()) == roll)
                 .unwrap();
             shot_seed(&mut world, id, seed);
             let report =
@@ -7328,7 +7261,7 @@ async fn plasma_hit_boundaries_keep_heat_separate_from_material_damage() {
         &mut base,
         ObjectId(1),
         "Gunnery-Ballistic",
-        BattleCharacterValue {
+        CharacterValue {
             value: 4,
             experience: 0,
             last_used: 0,
@@ -7339,7 +7272,7 @@ async fn plasma_hit_boundaries_keep_heat_separate_from_material_damage() {
     for slot in [2, 3] {
         definition
             .sections
-            .get_mut(&BattleSection::LeftArm)
+            .get_mut(&MechSection::LeftArm)
             .unwrap()
             .criticals
             .get_mut(&slot)
@@ -7348,7 +7281,7 @@ async fn plasma_hit_boundaries_keep_heat_separate_from_material_damage() {
     }
     let bin = definition
         .sections
-        .get_mut(&BattleSection::RightTorso)
+        .get_mut(&MechSection::RightTorso)
         .unwrap()
         .criticals
         .get_mut(&0)
@@ -7362,10 +7295,10 @@ async fn plasma_hit_boundaries_keep_heat_separate_from_material_damage() {
         })
         .unwrap();
     shot_seed(&mut base, target, 1);
-    let rules = BattleShotRules {
+    let rules = ShotRules {
         range_damage: false,
         tsm_tow_bonus: true,
-        glancing: BattleGlancingMode::AtTarget,
+        glancing: GlancingMode::AtTarget,
         ..shot_rules()
     };
     let mut probe = base.clone();
@@ -7377,7 +7310,7 @@ async fn plasma_hit_boundaries_keep_heat_separate_from_material_damage() {
     for roll in [number - 1, number, number + 1] {
         let mut world = base.clone();
         let seed = (0..=u8::MAX)
-            .find(|seed| i32::from(BattleDice::seeded([*seed; 32]).two_d6()) == roll)
+            .find(|seed| i32::from(Dice::seeded([*seed; 32]).two_d6()) == roll)
             .unwrap();
         shot_seed(&mut world, id, seed);
         let report = resolve_battle_shot(&mut world, id, ObjectId(1), target, 0, rules).unwrap();
@@ -7419,8 +7352,8 @@ async fn armor_warning_thresholds_preferences_and_restart() {
     let (_dir, config, mut base, id) = fixture('.').await;
     assert!(base.btech.constructed_units()[&id].armor_warning());
     for (section, rear) in [
-        (BattleSection::LeftArm, false),
-        (BattleSection::CenterTorso, true),
+        (MechSection::LeftArm, false),
+        (MechSection::CenterTorso, true),
     ] {
         let original = &base.btech.constructed_units()[&id].definition().sections[&section];
         let total = if rear { original.rear } else { original.armor };
@@ -7428,7 +7361,7 @@ async fn armor_warning_thresholds_preferences_and_restart() {
             let mut enabled = base.clone();
             let mut muted = base.clone();
             set_battle_armor_warning(&mut muted, id, ObjectId(1), false).unwrap();
-            let hit = BattleHit {
+            let hit = Hit {
                 section,
                 rear_armor: rear,
                 through_armor_critical: false,
@@ -7503,7 +7436,7 @@ async fn ammunition_warning_native_lua_thresholds_and_rollback() {
             .unwrap()
             .weapons
             .iter()
-            .position(|m| m.weapon == BattleWeapon::Srm4)
+            .position(|m| m.weapon == Weapon::Srm4)
             .unwrap();
         base.btech
             .rewrite_unit_record(id, |record| {
@@ -7711,12 +7644,12 @@ async fn cockpit_status_native_lua_sections_damage_and_restart() {
         support::run_text(&scripts, &config, ObjectId(1), 1, "status/quiet")
             .contains("no switches")
     );
-    let section = BattleSection::LeftArm;
+    let section = MechSection::LeftArm;
     let old = world.btech.constructed_units()[&id].sections()[&section].armor;
     resolve_battle_impact(
         &mut world,
         id,
-        BattleHit {
+        Hit {
             section,
             rear_armor: false,
             through_armor_critical: false,
@@ -7822,9 +7755,9 @@ async fn cockpit_status_reports_airborne_and_pending_state_without_advancing() {
     launch_battle_jump(&mut world, id, ObjectId(1), 0, 4.0).unwrap();
     advance_battle_jumps(
         &mut world,
-        stompymux_rs::BattleMovementRules {
+        stompymux_rs::MovementRules {
             fall: fall_rules(),
-            ..stompymux_rs::BattleMovementRules::STANDARD
+            ..stompymux_rs::MovementRules::STANDARD
         },
     )
     .unwrap();
@@ -7850,7 +7783,7 @@ async fn cockpit_status_reports_airborne_and_pending_state_without_advancing() {
 async fn kick_mechanics_actuators_profiles_and_rejection_preserve_state() {
     use stompymux_rs::*;
     let (_dir, config, base, id, target) = kick_fixture().await;
-    for leg in [BattleLeg::Left, BattleLeg::Right] {
+    for leg in [Leg::Left, Leg::Right] {
         for slots in [vec![], vec![1], vec![2], vec![3], vec![1, 2], vec![1, 2, 3]] {
             let mut world = base.clone();
             for &slot in &slots {
@@ -7858,7 +7791,7 @@ async fn kick_mechanics_actuators_profiles_and_rejection_preserve_state() {
                     &mut world,
                     id,
                     CriticalLocation {
-                        section: leg.section(BattleMechChassis::Biped),
+                        section: leg.section(MechChassis::Biped),
                         slot,
                     },
                 )
@@ -7877,7 +7810,7 @@ async fn kick_mechanics_actuators_profiles_and_rejection_preserve_state() {
                     .sum::<u8>()
             );
             assert_eq!(profile.target_number, 3 + i32::from(profile.actuators) - 4);
-            assert_eq!(profile.hit_table, BattleHitTable::Kick);
+            assert_eq!(profile.hit_table, HitTable::Kick);
             assert_eq!(world.btech, before);
         }
     }
@@ -7904,7 +7837,7 @@ async fn kick_mechanics_actuators_profiles_and_rejection_preserve_state() {
                 id,
                 ObjectId(1),
                 target,
-                BattleLeg::Right,
+                Leg::Right,
                 kick_rules()
             )
             .is_err()
@@ -7914,15 +7847,7 @@ async fn kick_mechanics_actuators_profiles_and_rejection_preserve_state() {
     let mut world = base.clone();
     set_battle_friendly_fire_safety(&mut world, id, ObjectId(1), true).unwrap();
     assert!(
-        battle_kick_profile(
-            &world,
-            id,
-            ObjectId(1),
-            target,
-            BattleLeg::Right,
-            kick_rules()
-        )
-        .is_err()
+        battle_kick_profile(&world, id, ObjectId(1), target, Leg::Right, kick_rules()).is_err()
     );
     world.validate(&config).unwrap();
 }
@@ -7964,20 +7889,13 @@ async fn kick_native_lua_hit_miss_rollback_and_saved_recovery() {
         assert_eq!(native.world().btech, lua.world().btech);
         let mut world = lua.world().clone();
         assert_eq!(
-            world.btech.constructed_units()[&id].limb_recycle()[&BattleSection::RightLeg],
+            world.btech.constructed_units()[&id].limb_recycle()[&MechSection::RightLeg],
             60
         );
         let before = world.btech.clone();
         assert!(
-            resolve_battle_kick(
-                &mut world,
-                id,
-                ObjectId(1),
-                target,
-                BattleLeg::Left,
-                kick_rules()
-            )
-            .is_err()
+            resolve_battle_kick(&mut world, id, ObjectId(1), target, Leg::Left, kick_rules())
+                .is_err()
         );
         assert_eq!(world.btech, before);
         for _ in 0..17 {
@@ -7986,7 +7904,7 @@ async fn kick_native_lua_hit_miss_rollback_and_saved_recovery() {
         persistence::save(&config.database(), &world).await.unwrap();
         let mut loaded = persistence::load(&config.database()).await.unwrap();
         assert_eq!(
-            loaded.btech.constructed_units()[&id].limb_recycle()[&BattleSection::RightLeg],
+            loaded.btech.constructed_units()[&id].limb_recycle()[&MechSection::RightLeg],
             43
         );
         for _ in 0..42 {
@@ -8010,21 +7928,19 @@ async fn kick_roll_matrix(target_seeds: std::ops::Range<u8>) {
     use stompymux_rs::*;
     let (_dir, config, mut base, id, target) = kick_fixture().await;
     // A standing running target has no immobility discount: the fixed base target is three.
-    base.btech
-        .set_unit_power(target, BattlePower::Running)
-        .unwrap();
+    base.btech.set_unit_power(target, Power::Running).unwrap();
     base.validate(&config).unwrap();
     let mut saw_critical_fall = false;
     for target_seed in target_seeds {
         for (mode, roll, hit, glancing) in [
-            (BattleGlancingMode::Disabled, 2, false, false),
-            (BattleGlancingMode::Disabled, 3, true, false),
-            (BattleGlancingMode::AtTarget, 3, true, true),
-            (BattleGlancingMode::AtTarget, 4, true, false),
-            (BattleGlancingMode::BelowTarget, 2, true, true),
+            (GlancingMode::Disabled, 2, false, false),
+            (GlancingMode::Disabled, 3, true, false),
+            (GlancingMode::AtTarget, 3, true, true),
+            (GlancingMode::AtTarget, 4, true, false),
+            (GlancingMode::BelowTarget, 2, true, true),
         ] {
             let seed = (0..=255)
-                .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == roll)
+                .find(|seed| Dice::seeded([*seed; 32]).two_d6() == roll)
                 .unwrap();
             let mut world = base.clone();
             shot_seed(&mut world, id, seed);
@@ -8033,17 +7949,11 @@ async fn kick_roll_matrix(target_seeds: std::ops::Range<u8>) {
             rules.glancing = mode;
             let mut replay = world.clone();
             let report =
-                resolve_battle_kick(&mut world, id, ObjectId(1), target, BattleLeg::Right, rules)
+                resolve_battle_kick(&mut world, id, ObjectId(1), target, Leg::Right, rules)
                     .unwrap();
-            let repeated = resolve_battle_kick(
-                &mut replay,
-                id,
-                ObjectId(1),
-                target,
-                BattleLeg::Right,
-                rules,
-            )
-            .unwrap();
+            let repeated =
+                resolve_battle_kick(&mut replay, id, ObjectId(1), target, Leg::Right, rules)
+                    .unwrap();
             assert_eq!(report, repeated);
             assert_eq!(world.btech, replay.btech);
             assert_eq!(report.profile.target_number, 3);
@@ -8094,7 +8004,7 @@ async fn kick_roll_matrix(target_seeds: std::ops::Range<u8>) {
                     advance_battle_recycle(&mut world);
                 }
                 assert_eq!(
-                    world.btech.constructed_units()[&id].limb_recycle()[&BattleSection::RightLeg],
+                    world.btech.constructed_units()[&id].limb_recycle()[&MechSection::RightLeg],
                     60
                 );
                 assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
@@ -8139,17 +8049,17 @@ async fn kick_roll_boundaries_replay_and_shutdown_recovery_seeds_24_32() {
 async fn kick_recovery_blocks_leg_weapons_until_expiry() {
     use stompymux_rs::*;
     let mut template =
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     let weapon = template
         .sections
-        .get_mut(&BattleSection::LeftArm)
+        .get_mut(&MechSection::LeftArm)
         .unwrap()
         .criticals
         .remove(&2)
         .unwrap();
     template
         .sections
-        .get_mut(&BattleSection::RightLeg)
+        .get_mut(&MechSection::RightLeg)
         .unwrap()
         .criticals
         .insert(4, weapon);
@@ -8160,7 +8070,7 @@ async fn kick_recovery_blocks_leg_weapons_until_expiry() {
         .unwrap()
         .weapons
         .iter()
-        .position(|mount| mount.criticals[0].section == BattleSection::RightLeg)
+        .position(|mount| mount.criticals[0].section == MechSection::RightLeg)
         .unwrap();
     assert!(
         world.btech.constructed_units()[&id]
@@ -8202,7 +8112,7 @@ async fn punch_profiles_boundaries_and_independent_arms() {
     use stompymux_rs::*;
     let (_dir, config, base, id, target) = kick_fixture().await;
     let rules = kick_rules();
-    for arm in [BattleArm::Left, BattleArm::Right] {
+    for arm in [Arm::Left, Arm::Right] {
         let profile = battle_punch_profile(&base, id, ObjectId(1), target, arm, rules).unwrap();
         // Jenner arm weapons replace lower-arm and hand actuators.
         assert_eq!(
@@ -8214,28 +8124,28 @@ async fn punch_profiles_boundaries_and_independent_arms() {
             ),
             (4, 3, 2, 3)
         );
-        assert_eq!(profile.hit_table, BattleHitTable::Punch);
+        assert_eq!(profile.hit_table, HitTable::Punch);
     }
     for (roll, mode, hit, glance) in [
-        (2, BattleGlancingMode::Disabled, false, false),
-        (3, BattleGlancingMode::Disabled, true, false),
-        (3, BattleGlancingMode::AtTarget, true, true),
-        (2, BattleGlancingMode::BelowTarget, true, true),
+        (2, GlancingMode::Disabled, false, false),
+        (3, GlancingMode::Disabled, true, false),
+        (3, GlancingMode::AtTarget, true, true),
+        (2, GlancingMode::BelowTarget, true, true),
     ] {
         let mut world = base.clone();
         let seed = (0..=255)
-            .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == roll)
+            .find(|seed| Dice::seeded([*seed; 32]).two_d6() == roll)
             .unwrap();
         shot_seed(&mut world, id, seed);
-        let mut expected_dice = BattleDice::seeded([seed; 32]);
+        let mut expected_dice = Dice::seeded([seed; 32]);
         assert_eq!(expected_dice.two_d6(), roll);
         let result = resolve_battle_punch(
             &mut world,
             id,
             ObjectId(1),
             target,
-            BattleArmSelection::Left,
-            BattlePhysicalRules {
+            ArmSelection::Left,
+            PhysicalRules {
                 glancing: mode,
                 ..rules
             },
@@ -8253,7 +8163,7 @@ async fn punch_profiles_boundaries_and_independent_arms() {
         );
         assert_eq!(
             world.btech.constructed_units()[&target].posture(),
-            BattlePosture::Standing
+            Posture::Standing
         );
         world.validate(&config).unwrap();
     }
@@ -8263,25 +8173,19 @@ async fn punch_profiles_boundaries_and_independent_arms() {
         id,
         ObjectId(1),
         target,
-        BattleArmSelection::Both,
+        ArmSelection::Both,
         rules,
     )
     .unwrap();
     assert_eq!(report.attacks.len(), 2);
     assert!(report.rejections.is_empty());
     assert_eq!(
-        report.attacks[0]
-            .profile
-            .attack
-            .section(BattleMechChassis::Biped),
-        BattleSection::LeftArm
+        report.attacks[0].profile.attack.section(MechChassis::Biped),
+        MechSection::LeftArm
     );
     assert_eq!(
-        report.attacks[1]
-            .profile
-            .attack
-            .section(BattleMechChassis::Biped),
-        BattleSection::RightArm
+        report.attacks[1].profile.attack.section(MechChassis::Biped),
+        MechSection::RightArm
     );
     assert_eq!(world.btech.constructed_units()[&id].limb_recycle().len(), 2);
     let before = world.btech.clone();
@@ -8291,7 +8195,7 @@ async fn punch_profiles_boundaries_and_independent_arms() {
             id,
             ObjectId(1),
             target,
-            BattleArmSelection::Both,
+            ArmSelection::Both,
             rules
         )
         .is_err()
@@ -8307,10 +8211,10 @@ async fn punch_profiles_boundaries_and_independent_arms() {
         })
         .unwrap();
     let attack_seed = (0..=255)
-        .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 12)
+        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
         .unwrap();
     let location_seed = (0..=255)
-        .find(|seed| BattleDice::seeded([*seed; 32]).d6() == 6)
+        .find(|seed| Dice::seeded([*seed; 32]).d6() == 6)
         .unwrap();
     shot_seed(&mut world, id, attack_seed);
     shot_seed(&mut world, target, location_seed);
@@ -8319,17 +8223,17 @@ async fn punch_profiles_boundaries_and_independent_arms() {
         id,
         ObjectId(1),
         target,
-        BattleArmSelection::Both,
+        ArmSelection::Both,
         rules,
     )
     .unwrap();
     assert!(world.btech.constructed_units()[&target].is_destroyed());
     assert_eq!((result.attacks.len(), result.rejections.len()), (1, 1));
-    assert_eq!(result.rejections[0].arm, BattleArm::Right);
+    assert_eq!(result.rejections[0].arm, Arm::Right);
     assert!(
         !world.btech.constructed_units()[&id]
             .limb_recycle()
-            .contains_key(&BattleSection::RightArm)
+            .contains_key(&MechSection::RightArm)
     );
     world.validate(&config).unwrap();
     for busy in [false, true] {
@@ -8341,7 +8245,7 @@ async fn punch_profiles_boundaries_and_independent_arms() {
                 &mut world,
                 id,
                 CriticalLocation {
-                    section: BattleSection::LeftArm,
+                    section: MechSection::LeftArm,
                     slot: 0,
                 },
             )
@@ -8352,24 +8256,21 @@ async fn punch_profiles_boundaries_and_independent_arms() {
             id,
             ObjectId(1),
             target,
-            BattleArmSelection::Both,
+            ArmSelection::Both,
             rules,
         )
         .unwrap();
         assert_eq!(report.attacks.len(), 1);
         assert_eq!(report.rejections.len(), 1);
-        assert_eq!(report.rejections[0].arm, BattleArm::Left);
+        assert_eq!(report.rejections[0].arm, Arm::Left);
         assert_eq!(
-            report.attacks[0]
-                .profile
-                .attack
-                .section(BattleMechChassis::Biped),
-            BattleSection::RightArm
+            report.attacks[0].profile.attack.section(MechChassis::Biped),
+            MechSection::RightArm
         );
         assert!(
             !world.btech.constructed_units()[&id]
                 .limb_recycle()
-                .contains_key(&BattleSection::LeftArm)
+                .contains_key(&MechSection::LeftArm)
         );
         world.validate(&config).unwrap();
     }
@@ -8440,7 +8341,7 @@ async fn punch_native_lua_rollback_messages_and_restart() {
         id,
         ObjectId(1),
         target,
-        BattleArmSelection::Both,
+        ArmSelection::Both,
         kick_rules(),
     )
     .unwrap();
@@ -8449,7 +8350,7 @@ async fn punch_native_lua_rollback_messages_and_restart() {
         id,
         ObjectId(1),
         target,
-        BattleArmSelection::Both,
+        ArmSelection::Both,
         kick_rules(),
     )
     .unwrap();
@@ -8463,9 +8364,9 @@ async fn punch_arm_arcs_and_elevation_tables() {
     use stompymux_rs::*;
     let (_dir, config, base, id, target) = kick_fixture().await;
     for (twist, left, right) in [
-        (BattleTorso::Center, false, true),
-        (BattleTorso::Right, true, true),
-        (BattleTorso::Left, false, false),
+        (Torso::Center, false, true),
+        (Torso::Right, true, true),
+        (Torso::Left, false, false),
     ] {
         for flipped in [false, true] {
             let mut world = base.clone();
@@ -8476,14 +8377,14 @@ async fn punch_arm_arcs_and_elevation_tables() {
                 .point
                 .x;
             state["constructed"][target.0.to_string()]["motion"]["point"]["x"] = (x + 0.25).into();
-            state["constructed"][id.0.to_string()]["facing"] = serde_json::to_value(BattleFacing {
+            state["constructed"][id.0.to_string()]["facing"] = serde_json::to_value(Facing {
                 torso: twist,
                 arms_flipped: flipped,
             })
             .unwrap();
             world.btech = serde_json::from_value(state).unwrap();
             world.validate(&config).unwrap();
-            for (arm, allowed) in [(BattleArm::Left, left), (BattleArm::Right, right)] {
+            for (arm, allowed) in [(Arm::Left, left), (Arm::Right, right)] {
                 assert_eq!(
                     battle_punch_profile(&world, id, ObjectId(1), target, arm, kick_rules())
                         .is_ok(),
@@ -8493,11 +8394,11 @@ async fn punch_arm_arcs_and_elevation_tables() {
         }
     }
     for (height, posture, expected) in [
-        (0, BattlePosture::Standing, Some(BattleHitTable::Punch)),
-        (1, BattlePosture::Standing, Some(BattleHitTable::Kick)),
-        (1, BattlePosture::Prone, Some(BattleHitTable::Weapon)),
-        (0, BattlePosture::Prone, None),
-        (-1, BattlePosture::Standing, None),
+        (0, Posture::Standing, Some(HitTable::Punch)),
+        (1, Posture::Standing, Some(HitTable::Kick)),
+        (1, Posture::Prone, Some(HitTable::Weapon)),
+        (0, Posture::Prone, None),
+        (-1, Posture::Standing, None),
     ] {
         let mut world = base.clone();
         world
@@ -8509,14 +8410,8 @@ async fn punch_arm_arcs_and_elevation_tables() {
             .unwrap();
         world.validate(&config).unwrap();
         let before = world.btech.clone();
-        let profile = battle_punch_profile(
-            &world,
-            id,
-            ObjectId(1),
-            target,
-            BattleArm::Right,
-            kick_rules(),
-        );
+        let profile =
+            battle_punch_profile(&world, id, ObjectId(1), target, Arm::Right, kick_rules());
         assert_eq!(profile.ok().map(|p| p.hit_table), expected);
         assert_eq!(world.btech, before);
     }
@@ -8527,14 +8422,14 @@ async fn punch_arm_arcs_and_elevation_tables() {
 async fn trip_profile_actuators_and_target_guards() {
     use stompymux_rs::*;
     let (_dir, config, base, id, target) = kick_fixture().await;
-    for leg in [BattleLeg::Left, BattleLeg::Right] {
+    for leg in [Leg::Left, Leg::Right] {
         let mut world = base.clone();
         for slot in [1, 2, 3] {
             destroy_battle_critical(
                 &mut world,
                 id,
                 CriticalLocation {
-                    section: leg.section(BattleMechChassis::Biped),
+                    section: leg.section(MechChassis::Biped),
                     slot,
                 },
             )
@@ -8550,13 +8445,13 @@ async fn trip_profile_actuators_and_target_guards() {
                 ),
                 (3, 0, 0, -1)
             );
-            assert!(matches!(profile.attack, BattlePhysicalAttack::Trip { .. }));
+            assert!(matches!(profile.attack, PhysicalAttack::Trip { .. }));
         }
         destroy_battle_critical(
             &mut world,
             id,
             CriticalLocation {
-                section: leg.section(BattleMechChassis::Biped),
+                section: leg.section(MechChassis::Biped),
                 slot: 0,
             },
         )
@@ -8573,10 +8468,10 @@ async fn trip_profile_actuators_and_target_guards() {
         let mut state = serde_json::to_value(&world.btech).unwrap();
         let victim = &mut state["constructed"][target.0.to_string()];
         if rising {
-            victim["power"] = serde_json::to_value(BattlePower::Running).unwrap();
+            victim["power"] = serde_json::to_value(Power::Running).unwrap();
             victim["stand_timer"] = serde_json::json!({"state":"rising","remaining":5});
         } else {
-            victim["posture"] = serde_json::to_value(BattlePosture::Prone).unwrap();
+            victim["posture"] = serde_json::to_value(Posture::Prone).unwrap();
         }
         world.btech = serde_json::from_value(state).unwrap();
         world.validate(&config).unwrap();
@@ -8587,7 +8482,7 @@ async fn trip_profile_actuators_and_target_guards() {
                 id,
                 ObjectId(1),
                 target,
-                BattleLeg::Right,
+                Leg::Right,
                 kick_rules()
             )
             .is_err()
@@ -8601,21 +8496,19 @@ async fn trip_profile_actuators_and_target_guards() {
 async fn trip_rolls_balance_and_glancing_have_no_direct_impact() {
     use stompymux_rs::*;
     let (_dir, config, mut base, id, target) = kick_fixture().await;
-    base.btech
-        .set_unit_power(target, BattlePower::Running)
-        .unwrap();
+    base.btech.set_unit_power(target, Power::Running).unwrap();
     for (roll, mode, hit, glancing, target_roll) in [
-        (2, BattleGlancingMode::Disabled, false, false, 12),
-        (3, BattleGlancingMode::Disabled, true, false, 12),
-        (3, BattleGlancingMode::AtTarget, true, true, 12),
-        (2, BattleGlancingMode::BelowTarget, true, true, 12),
-        (3, BattleGlancingMode::Disabled, true, false, 2),
+        (2, GlancingMode::Disabled, false, false, 12),
+        (3, GlancingMode::Disabled, true, false, 12),
+        (3, GlancingMode::AtTarget, true, true, 12),
+        (2, GlancingMode::BelowTarget, true, true, 12),
+        (3, GlancingMode::Disabled, true, false, 2),
     ] {
         let attack_seed = (0..=255)
-            .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == roll)
+            .find(|seed| Dice::seeded([*seed; 32]).two_d6() == roll)
             .unwrap();
         let target_seed = (0..=255)
-            .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == target_roll)
+            .find(|seed| Dice::seeded([*seed; 32]).two_d6() == target_roll)
             .unwrap();
         let mut world = base.clone();
         shot_seed(&mut world, id, attack_seed);
@@ -8627,8 +8520,8 @@ async fn trip_rolls_balance_and_glancing_have_no_direct_impact() {
             id,
             ObjectId(1),
             target,
-            BattleLeg::Left,
-            BattlePhysicalRules {
+            Leg::Left,
+            PhysicalRules {
                 glancing: mode,
                 ..kick_rules()
             },
@@ -8647,7 +8540,7 @@ async fn trip_rolls_balance_and_glancing_have_no_direct_impact() {
             world.btech.constructed_units()[&id].sections(),
             &source_sections
         );
-        let mut expected_source = BattleDice::seeded([attack_seed; 32]);
+        let mut expected_source = Dice::seeded([attack_seed; 32]);
         expected_source.two_d6();
         assert_eq!(
             serde_json::to_value(&world.btech.constructed_units()[&id]).unwrap()["dice"],
@@ -8658,7 +8551,7 @@ async fn trip_rolls_balance_and_glancing_have_no_direct_impact() {
                 world.btech.constructed_units()[&target].sections(),
                 &target_sections
             );
-            let mut expected_target = BattleDice::seeded([target_seed; 32]);
+            let mut expected_target = Dice::seeded([target_seed; 32]);
             if hit {
                 assert_eq!(expected_target.two_d6(), target_roll);
             }
@@ -8669,7 +8562,7 @@ async fn trip_rolls_balance_and_glancing_have_no_direct_impact() {
         } else {
             assert_eq!(
                 world.btech.constructed_units()[&target].posture(),
-                BattlePosture::Prone
+                Posture::Prone
             );
             assert!(
                 report
@@ -8679,7 +8572,7 @@ async fn trip_rolls_balance_and_glancing_have_no_direct_impact() {
             );
         }
         assert_eq!(
-            world.btech.constructed_units()[&id].limb_recycle()[&BattleSection::LeftLeg],
+            world.btech.constructed_units()[&id].limb_recycle()[&MechSection::LeftLeg],
             60
         );
         world.validate(&config).unwrap();
@@ -8692,7 +8585,7 @@ async fn trip_native_lua_rollback_and_saved_fall() {
     use stompymux_rs::*;
     let (_dir, config, mut base, id, target) = kick_fixture().await;
     let seed = (0..=255)
-        .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 12)
+        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
         .unwrap();
     shot_seed(&mut base, id, seed);
     shot_seed(&mut base, target, 19);
@@ -8734,7 +8627,7 @@ async fn trip_native_lua_rollback_and_saved_fall() {
     let mut world = lua.world().clone();
     assert_eq!(
         world.btech.constructed_units()[&target].posture(),
-        BattlePosture::Prone
+        Posture::Prone
     );
     assert!(messages(&lua).is_empty());
     persistence::save(&config.database(), &world).await.unwrap();
@@ -8755,11 +8648,11 @@ async fn status_rendering_preserves_literal_fields_and_ammunition_colors() {
     use stompymux_rs::*;
     let label = "[fg=red]Jenner[/]";
     let mut template =
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     template.name = label.into();
     template
         .sections
-        .get_mut(&BattleSection::CenterTorso)
+        .get_mut(&MechSection::CenterTorso)
         .unwrap()
         .criticals
         .get_mut(&10)
@@ -8767,7 +8660,7 @@ async fn status_rendering_preserves_literal_fields_and_ammunition_colors() {
         .modes = vec!["OneShot".into()];
     template
         .sections
-        .get_mut(&BattleSection::LeftArm)
+        .get_mut(&MechSection::LeftArm)
         .unwrap()
         .criticals
         .remove(&2);

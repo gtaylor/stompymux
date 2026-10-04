@@ -6,15 +6,15 @@
 
 use crate::support;
 use stompymux_rs::{
-    BattleMovementRules, BattleTemplate, Kind, MapAsset, ObjectId, advance_battle_units,
+    Kind, MapAsset, MechTemplate, MovementRules, ObjectId, advance_battle_units,
     assign_battle_pilot, create_battle_map, create_battle_unit, place_battle_unit,
     start_battle_unit,
 };
 
-pub(crate) const RULES: BattleMovementRules = BattleMovementRules {
+pub(crate) const RULES: MovementRules = MovementRules {
     fasa_turning: false,
     slowdown: 2,
-    ..stompymux_rs::BattleMovementRules::STANDARD
+    ..stompymux_rs::MovementRules::STANDARD
 };
 
 /// Seed for the main fixture unit's own stream. The fixture seeds every other stream it
@@ -47,7 +47,7 @@ pub(crate) async fn fixture_source(
 ) {
     fixture_assets(
         source,
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .await
 }
@@ -55,7 +55,7 @@ pub(crate) async fn fixture_source(
 /// Supply equipment as well as terrain for environmental heat scenarios.
 pub(crate) async fn fixture_assets(
     source: &str,
-    template: BattleTemplate,
+    template: MechTemplate,
 ) -> (
     tempfile::TempDir,
     stompymux_rs::Config,
@@ -100,7 +100,7 @@ pub(crate) async fn lock_fixture() -> (
     create_battle_unit(
         &mut world,
         target,
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
@@ -110,8 +110,8 @@ pub(crate) async fn lock_fixture() -> (
 }
 
 /// Conventional aim configuration with no optional rule overrides.
-pub(crate) fn optical_aim_rules() -> stompymux_rs::BattleAimRules {
-    stompymux_rs::BattleAimRules {
+pub(crate) fn optical_aim_rules() -> stompymux_rs::AimRules {
+    stompymux_rs::AimRules {
         woods_damage: false,
         dig_bonus: 3,
         dig_only_front: false,
@@ -125,16 +125,16 @@ pub(crate) fn optical_aim_rules() -> stompymux_rs::BattleAimRules {
 }
 
 /// Current conventional direct-shot rules, excluding unsupported game variants.
-pub(crate) fn shot_rules() -> stompymux_rs::BattleShotRules {
-    stompymux_rs::BattleShotRules {
+pub(crate) fn shot_rules() -> stompymux_rs::ShotRules {
+    stompymux_rs::ShotRules {
         range_damage: false,
         tsm_tow_bonus: true,
-        vehicle_impact: stompymux_rs::BattleVehicleImpactRules::STANDARD,
-        stacking: stompymux_rs::BattleStackingRules::STANDARD,
-        glancing: stompymux_rs::BattleGlancingMode::Disabled,
-        stagger: stompymux_rs::BattleStaggerMode::Retain,
+        vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
+        stacking: stompymux_rs::StackingRules::STANDARD,
+        glancing: stompymux_rs::GlancingMode::Disabled,
+        stagger: stompymux_rs::StaggerMode::Retain,
         aim: optical_aim_rules(),
-        hit: stompymux_rs::BattleHitRules {
+        hit: stompymux_rs::HitRules {
             inferno_penalty: false,
             exile_stun_mode: 0,
         },
@@ -146,12 +146,10 @@ pub(crate) fn shot_rules() -> stompymux_rs::BattleShotRules {
 }
 
 /// Match host-selected hit routing when comparing direct predictions with native/Lua actions.
-pub(crate) fn configured_shot_rules(
-    config: &stompymux_rs::Config,
-) -> stompymux_rs::BattleShotRules {
+pub(crate) fn configured_shot_rules(config: &stompymux_rs::Config) -> stompymux_rs::ShotRules {
     let mut rules = shot_rules();
     rules.range_damage = config.battletech.moddamagewithrange != 0;
-    rules.hit = stompymux_rs::BattleFallRules::configured(config).hit;
+    rules.hit = stompymux_rs::FallRules::configured(config).hit;
     rules
 }
 
@@ -190,7 +188,7 @@ pub(crate) fn expected_grass_miss_rolls(mut roll: impl FnMut() -> u8) {
 pub(crate) fn shot_seed(world: &mut stompymux_rs::World, id: ObjectId, seed: u8) {
     world
         .btech
-        .set_unit_dice(id, stompymux_rs::BattleDice::seeded([seed; 32]))
+        .set_unit_dice(id, stompymux_rs::Dice::seeded([seed; 32]))
         .unwrap();
 }
 
@@ -199,7 +197,7 @@ pub(crate) fn shot_skill(world: &mut stompymux_rs::World, level: u8) {
     stompymux_rs::set_battle_character(
         world,
         ObjectId(1),
-        stompymux_rs::BattleCharacter {
+        stompymux_rs::Character {
             build: 5,
             reflexes: 4,
             intuition: 3,
@@ -215,7 +213,7 @@ pub(crate) fn shot_skill(world: &mut stompymux_rs::World, level: u8) {
         world,
         ObjectId(1),
         "Gunnery-Laser",
-        stompymux_rs::BattleCharacterValue {
+        stompymux_rs::CharacterValue {
             value: level,
             experience: 0,
             last_used: 0,
@@ -224,11 +222,11 @@ pub(crate) fn shot_skill(world: &mut stompymux_rs::World, level: u8) {
     .unwrap();
 }
 
-pub(crate) fn fall_rules() -> stompymux_rs::BattleFallRules {
-    stompymux_rs::BattleFallRules {
-        vehicle_impact: stompymux_rs::BattleVehicleImpactRules::STANDARD,
-        stacking: stompymux_rs::BattleStackingRules::STANDARD,
-        stagger: stompymux_rs::BattleStaggerMode::Retain,
+pub(crate) fn fall_rules() -> stompymux_rs::FallRules {
+    stompymux_rs::FallRules {
+        vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
+        stacking: stompymux_rs::StackingRules::STANDARD,
+        stagger: stompymux_rs::StaggerMode::Retain,
         hit: shot_rules().hit,
         extended_piloting: true,
         toughness: false,
@@ -244,7 +242,7 @@ pub(crate) async fn stand_fixture() -> (
 ) {
     let (dir, config, mut world, id) = fixture('.').await;
     let seed = (0..=255)
-        .find(|seed| stompymux_rs::BattleDice::seeded([*seed; 32]).two_d6() >= 7)
+        .find(|seed| stompymux_rs::Dice::seeded([*seed; 32]).two_d6() >= 7)
         .unwrap();
     shot_seed(&mut world, id, seed);
     let _fall = stompymux_rs::resolve_battle_fall(&mut world, id, 1, fall_rules()).unwrap();
@@ -259,7 +257,7 @@ pub(crate) async fn stand_fixture() -> (
         &mut world,
         ObjectId(1),
         "Piloting-Biped",
-        stompymux_rs::BattleCharacterValue {
+        stompymux_rs::CharacterValue {
             value: 5,
             experience: 0,
             last_used: 0,
@@ -273,7 +271,7 @@ pub(crate) async fn stand_fixture() -> (
 pub(crate) fn single_critical_seed(candidates: u16, selected: u16) -> u8 {
     (0..=255)
         .find(|seed| {
-            let mut dice = stompymux_rs::BattleDice::seeded([*seed; 32]);
+            let mut dice = stompymux_rs::Dice::seeded([*seed; 32]);
             dice.two_d6(); // Material entry.
             matches!(dice.two_d6(), 8 | 9) && dice.die(candidates).unwrap() == selected
         })
@@ -293,7 +291,7 @@ pub(crate) fn balance_skill(world: &mut stompymux_rs::World) {
         world,
         ObjectId(1),
         "Piloting-Biped",
-        stompymux_rs::BattleCharacterValue {
+        stompymux_rs::CharacterValue {
             value: 30,
             experience: 0,
             last_used: 0,
@@ -303,11 +301,8 @@ pub(crate) fn balance_skill(world: &mut stompymux_rs::World) {
 }
 
 /// A selected hit used to isolate consequences from hit-location selection.
-pub(crate) fn balance_hit(
-    section: stompymux_rs::BattleSection,
-    tac: bool,
-) -> stompymux_rs::BattleHit {
-    stompymux_rs::BattleHit {
+pub(crate) fn balance_hit(section: stompymux_rs::MechSection, tac: bool) -> stompymux_rs::Hit {
+    stompymux_rs::Hit {
         section,
         rear_armor: false,
         through_armor_critical: tac,
@@ -325,7 +320,7 @@ pub(crate) async fn stagger_fixture() -> (
     let source = format!("12 12\n{}", format!("{}\n", ".0".repeat(12)).repeat(12));
     let (dir, config, mut world, id) = fixture_assets(
         &source,
-        BattleTemplate::parse("AS7-D", include_str!("fixtures/btech/mechs/AS7-D.toml")).unwrap(),
+        MechTemplate::parse("AS7-D", include_str!("fixtures/btech/mechs/AS7-D.toml")).unwrap(),
     )
     .await;
     balance_skill(&mut world);
@@ -333,11 +328,9 @@ pub(crate) async fn stagger_fixture() -> (
 }
 
 /// Explicit native stagger configuration used by boundary tests.
-pub(crate) fn stagger_rules(
-    mode: stompymux_rs::BattleStaggerMode,
-) -> stompymux_rs::BattleStaggerRules {
-    stompymux_rs::BattleStaggerRules {
-        vehicle_impact: stompymux_rs::BattleVehicleImpactRules::STANDARD,
+pub(crate) fn stagger_rules(mode: stompymux_rs::StaggerMode) -> stompymux_rs::StaggerRules {
+    stompymux_rs::StaggerRules {
+        vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
         mode,
         interval: 5,
         tonnage: true,
@@ -350,16 +343,16 @@ pub(crate) fn stagger_rules(
 pub(crate) fn stagger_hit(
     world: &mut stompymux_rs::World,
     id: ObjectId,
-    section: stompymux_rs::BattleSection,
+    section: stompymux_rs::MechSection,
     damage: u16,
-    mode: stompymux_rs::BattleStaggerMode,
+    mode: stompymux_rs::StaggerMode,
 ) {
     let _impact = stompymux_rs::resolve_battle_tactical_impact(
         world,
         id,
         balance_hit(section, false),
         damage,
-        stompymux_rs::BattleFallRules {
+        stompymux_rs::FallRules {
             stagger: mode,
             ..fall_rules()
         },
@@ -371,7 +364,7 @@ pub(crate) fn stagger_hit(
 pub(crate) fn water_fall_seed(material: bool) -> u8 {
     (0..=255)
         .find(|seed| {
-            let mut dice = stompymux_rs::BattleDice::seeded([*seed; 32]);
+            let mut dice = stompymux_rs::Dice::seeded([*seed; 32]);
             if material {
                 dice.two_d6();
             }
@@ -401,11 +394,11 @@ pub(crate) async fn water_fixture(
 }
 
 /// Supported rules for the thermal consequence pass after heat accounting.
-pub(crate) fn overheat_rules() -> stompymux_rs::BattleOverheatRules {
+pub(crate) fn overheat_rules() -> stompymux_rs::OverheatRules {
     let rules = fall_rules();
-    stompymux_rs::BattleOverheatRules {
-        vehicle_impact: stompymux_rs::BattleVehicleImpactRules::STANDARD,
-        stacking: stompymux_rs::BattleStackingRules::STANDARD,
+    stompymux_rs::OverheatRules {
+        vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
+        stacking: stompymux_rs::StackingRules::STANDARD,
         hit: rules.hit,
         extended_piloting: rules.extended_piloting,
         stagger: rules.stagger,
@@ -431,7 +424,7 @@ pub(crate) fn computer_skill(world: &mut stompymux_rs::World, level: u8) {
         world,
         ObjectId(1),
         "Computer",
-        stompymux_rs::BattleCharacterValue {
+        stompymux_rs::CharacterValue {
             value: level,
             experience: 0,
             last_used: 0,
@@ -457,13 +450,13 @@ pub(crate) async fn kick_fixture() -> (
 }
 
 /// Explicit physical rules keep direct tests independent of local configuration defaults.
-pub(crate) fn kick_rules() -> stompymux_rs::BattlePhysicalRules {
-    stompymux_rs::BattlePhysicalRules {
+pub(crate) fn kick_rules() -> stompymux_rs::PhysicalRules {
+    stompymux_rs::PhysicalRules {
         use_pilot_skill: false,
         fasa_turning: false,
         extended_movement: false,
         hit_arc_mode: 0,
-        glancing: stompymux_rs::BattleGlancingMode::Disabled,
+        glancing: stompymux_rs::GlancingMode::Disabled,
         fall: fall_rules(),
     }
 }
@@ -475,7 +468,7 @@ pub(crate) fn prepare_test_charge(world: &mut stompymux_rs::World, id: ObjectId)
         world,
         ObjectId(1),
         "Piloting-Biped",
-        BattleCharacterValue {
+        CharacterValue {
             value: 5,
             experience: 0,
             last_used: 0,

@@ -2,16 +2,12 @@
 
 use super::{contract, error};
 use crate::btech::{
-    BattleMapEmitAudience, BattleMapLos, BattleMapSpatialPoint, battle_map_hex_los,
-    battle_map_hex_point, battle_map_members, battle_map_spatial_range, battle_map_unit_by_label,
-    battle_map_unit_los, battle_map_unit_map, battle_map_unit_point,
-    emit_battle_map_trusted_action, load_battle_map_trusted_action, place_battle_map_unit,
+    MapEmitAudience, MapLos, MapSpatialPoint, emit_battle_map_trusted_action,
+    load_battle_map_trusted_action, map_hex_los, map_hex_point, map_members, map_spatial_range,
+    map_unit_by_label, map_unit_los, map_unit_map, map_unit_point, place_battle_map_unit,
     set_cargo_transfer_point, set_map_link, update_battle_map_links_trusted_action,
 };
-use crate::{
-    BattleCargoTransferPoint, BattleMapEntrance, BattleMapLink, HexCoordinate, ObjectId,
-    SharedWorld,
-};
+use crate::{CargoTransferPoint, HexCoordinate, MapEntrance, MapLink, ObjectId, SharedWorld};
 use mlua::{Function, Lua, MultiValue, Table, Value};
 
 const GROUP: &str = "map";
@@ -219,8 +215,8 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                 serde_json::json!({ "argument": 1 }),
             ));
         }
-        let found = battle_map_unit_by_label(&shared.borrow(), origin, &label)
-            .map_err(mlua::Error::external)?;
+        let found =
+            map_unit_by_label(&shared.borrow(), origin, &label).map_err(mlua::Error::external)?;
         contract::push_optional_object(lua, &shared, found)
     })?;
     contract::bind(
@@ -250,11 +246,11 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
         };
         let output = lua.create_table()?;
         let world = shared.borrow();
-        for member in battle_map_members(&world, map).map_err(mlua::Error::external)? {
+        for member in map_members(&world, map).map_err(mlua::Error::external)? {
             if filter.is_some_and(|(origin, range)| {
-                battle_map_spatial_range(
-                    battle_map_hex_point(origin, 0.0),
-                    BattleMapSpatialPoint {
+                map_spatial_range(
+                    map_hex_point(origin, 0.0),
+                    MapSpatialPoint {
                         x: (member.point.x * 322.5) as f32,
                         y: (member.point.y * 322.5) as f32,
                         z: 0.0,
@@ -323,9 +319,9 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             .ordered_landing_exclusions()
             .any(|(_, zone)| {
                 zone.radius >= 0
-                    && battle_map_spatial_range(
-                        battle_map_hex_point(point, 0.0),
-                        battle_map_hex_point(zone.coordinate, 0.0),
+                    && map_spatial_range(
+                        map_hex_point(point, 0.0),
+                        map_hex_point(zone.coordinate, 0.0),
                     )
                     .is_ok_and(|distance| distance <= zone.radius as f64)
             }))
@@ -342,23 +338,23 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
     let shared = world.clone();
     let range = lua.create_function(move |lua, arguments: MultiValue| {
         let map = map_id(lua, &shared, arg(&arguments, 0), 1)?;
-        let endpoint = |value: Value, argument| -> mlua::Result<BattleMapSpatialPoint> {
+        let endpoint = |value: Value, argument| -> mlua::Result<MapSpatialPoint> {
             if matches!(value, Value::Table(_)) {
                 let (hex, z) = coordinate(&shared, map, value, argument, true)?;
                 let terrain = shared.borrow().btech.maps()[&map]
                     .base_hex(i64::from(hex.x), i64::from(hex.y))
                     .map_err(mlua::Error::external)?;
-                Ok(battle_map_hex_point(
+                Ok(map_hex_point(
                     hex,
                     z.unwrap_or(f64::from(terrain.standing_height())),
                 ))
             } else {
                 let id = unit_id(lua, &shared, value, argument, "range endpoint")?;
-                battle_map_unit_point(&shared.borrow(), map, id)
+                map_unit_point(&shared.borrow(), map, id)
                     .map_err(|error| argument_failure(argument, error))
             }
         };
-        battle_map_spatial_range(
+        map_spatial_range(
             endpoint(arg(&arguments, 1), 2)?,
             endpoint(arg(&arguments, 2), 3)?,
         )
@@ -442,7 +438,7 @@ fn register_emit(lua: &Lua, native: &Table) -> mlua::Result<()> {
         let message = contract::string(arg(&arguments, 1), "message", 8191, 2)?;
         let options = arguments.get(2).cloned().unwrap_or(Value::Nil);
         let audience = if options == Value::Nil {
-            BattleMapEmitAudience::All
+            MapEmitAudience::All
         } else {
             let options = table(options, 3, "options")?;
             contract::check_options(&options, &["audience", "origin", "range"], 3)?;
@@ -457,7 +453,7 @@ fn register_emit(lua: &Lua, native: &Table) -> mlua::Result<()> {
                     if origin != Value::Nil || range != Value::Nil {
                         return Err(argument_failure(3, "all audience forbids origin and range"));
                     }
-                    BattleMapEmitAudience::All
+                    MapEmitAudience::All
                 }
                 "range" => {
                     if origin == Value::Nil {
@@ -481,7 +477,7 @@ fn register_emit(lua: &Lua, native: &Table) -> mlua::Result<()> {
                         }
                         _ => return Err(argument_failure(3, "range must be a finite number")),
                     };
-                    BattleMapEmitAudience::Range {
+                    MapEmitAudience::Range {
                         origin: hex.center(),
                         z,
                         range,
@@ -495,7 +491,7 @@ fn register_emit(lua: &Lua, native: &Table) -> mlua::Result<()> {
                     if z.is_some() || range != Value::Nil {
                         return Err(argument_failure(3, "line_of_sight forbids z and range"));
                     }
-                    BattleMapEmitAudience::LineOfSight { origin }
+                    MapEmitAudience::LineOfSight { origin }
                 }
                 _ => return Err(argument_failure(3, "unknown audience")),
             }
@@ -545,7 +541,7 @@ fn register_cargo(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::Resul
                     .map_err(|_| {
                         argument_failure(2, "cargo-transfer coordinates are outside the map")
                     })?;
-                Some(BattleCargoTransferPoint { x, y, reveal_hint })
+                Some(CargoTransferPoint { x, y, reveal_hint })
             }
         };
         crate::lua::transactions::require(lua)?;
@@ -575,7 +571,7 @@ fn register_cargo(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::Resul
     )
 }
 
-fn push_link(lua: &Lua, shared: &SharedWorld, link: BattleMapLink) -> mlua::Result<Value> {
+fn push_link(lua: &Lua, shared: &SharedWorld, link: MapLink) -> mlua::Result<Value> {
     let output = lua.create_table()?;
     output.raw_set("parent", contract::push_object(lua, shared, link.parent)?)?;
     output.raw_set("x", link.coordinate.x)?;
@@ -583,14 +579,14 @@ fn push_link(lua: &Lua, shared: &SharedWorld, link: BattleMapLink) -> mlua::Resu
     let entrances = lua.create_table()?;
     for (index, name) in ["north", "east", "south", "west"].into_iter().enumerate() {
         let value = match link.entrances[index] {
-            BattleMapEntrance::None => continue,
-            BattleMapEntrance::Offset { distance } => {
+            MapEntrance::None => continue,
+            MapEntrance::Offset { distance } => {
                 let value = lua.create_table()?;
                 value.raw_set("mode", "offset")?;
                 value.raw_set("offset", distance)?;
                 value
             }
-            BattleMapEntrance::Exact { coordinate } => {
+            MapEntrance::Exact { coordinate } => {
                 let value = lua.create_table()?;
                 value.raw_set("mode", "exact")?;
                 value.raw_set("x", coordinate.x)?;
@@ -609,9 +605,9 @@ fn parse_entrance(
     child: ObjectId,
     value: Value,
     direction: &str,
-) -> mlua::Result<BattleMapEntrance> {
+) -> mlua::Result<MapEntrance> {
     if value == Value::Nil {
-        return Ok(BattleMapEntrance::None);
+        return Ok(MapEntrance::None);
     }
     let value = table(value, 2, direction)?;
     let mode = contract::string(contract::field(&value, "mode")?, "mode", 16, 2)
@@ -619,7 +615,7 @@ fn parse_entrance(
     match mode.as_str() {
         "offset" => {
             contract::check_options(&value, &["mode", "offset"], 2)?;
-            Ok(BattleMapEntrance::Offset {
+            Ok(MapEntrance::Offset {
                 distance: contract::integer_field(&value, "offset", 0, MAX_INT, 2)? as i32,
             })
         }
@@ -632,7 +628,7 @@ fn parse_entrance(
                 .map_err(|_| {
                     argument_failure(2, "exact entrance coordinates are outside the child map")
                 })?;
-            Ok(BattleMapEntrance::Exact {
+            Ok(MapEntrance::Exact {
                 coordinate: HexCoordinate {
                     x: x as i32,
                     y: y as i32,
@@ -688,7 +684,7 @@ fn register_links(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::Resul
                         argument_failure(2, "parent coordinates are outside the parent map")
                     })?;
                 let entrances_value = contract::field(&value, "entrances")?;
-                let mut entrances = [BattleMapEntrance::None; 4];
+                let mut entrances = [MapEntrance::None; 4];
                 if entrances_value != Value::Nil {
                     let source = table(entrances_value, 2, "entrances")?;
                     contract::check_options(&source, &["north", "east", "south", "west"], 2)?;
@@ -703,7 +699,7 @@ fn register_links(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::Resul
                         )?;
                     }
                 }
-                Some(BattleMapLink {
+                Some(MapLink {
                     parent,
                     coordinate: HexCoordinate {
                         x: x as i32,
@@ -729,19 +725,18 @@ fn register_los(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::Result<
         let observer = unit_id(lua, &shared, arg(&arguments, 0), 1, "observer")?;
         let target_value = arg(&arguments, 1);
         let result = if matches!(&target_value, Value::Table(_)) {
-            let observer_map = battle_map_unit_map(&shared.borrow(), observer)
+            let observer_map = map_unit_map(&shared.borrow(), observer)
                 .map_err(|error| contract::operation_failure("observer_not_on_map", error))?;
             let (target, _) = coordinate(&shared, observer_map, target_value, 2, false)?;
-            battle_map_hex_los(&shared.borrow(), observer, target).map_err(mlua::Error::external)?
+            map_hex_los(&shared.borrow(), observer, target).map_err(mlua::Error::external)?
         } else {
             let target = unit_id(lua, &shared, target_value, 2, "target")?;
-            battle_map_unit_los(&shared.borrow(), observer, target)
-                .map_err(mlua::Error::external)?
+            map_unit_los(&shared.borrow(), observer, target).map_err(mlua::Error::external)?
         };
         Ok(match result {
-            BattleMapLos::Clear => "clear",
-            BattleMapLos::Blocked => "blocked",
-            BattleMapLos::None => "none",
+            MapLos::Clear => "clear",
+            MapLos::Blocked => "blocked",
+            MapLos::None => "none",
         })
     })?;
     contract::bind(

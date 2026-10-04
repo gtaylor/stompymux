@@ -107,22 +107,22 @@ fn construction_dispatch_uses_declared_class_and_confines_assets() {
     let mech = include_str!("fixtures/btech/mechs/JR7-D.toml");
     let vehicle = include_str!("../game/mechs/Demolisher.toml");
     assert!(matches!(
-        BattleUnitTemplate::parse("JR7-D", mech).unwrap(),
-        BattleUnitTemplate::Mech(_)
+        UnitTemplate::parse("JR7-D", mech).unwrap(),
+        UnitTemplate::Mech(_)
     ));
     assert!(matches!(
-        BattleUnitTemplate::parse("Demolisher", vehicle).unwrap(),
-        BattleUnitTemplate::Vehicle(_)
+        UnitTemplate::parse("Demolisher", vehicle).unwrap(),
+        UnitTemplate::Vehicle(_)
     ));
     assert!(
-        BattleUnitTemplate::parse(
+        UnitTemplate::parse(
             "test",
             &vehicle.replace("class = \"vehicle\"", "class = \"vtol\"")
         )
         .is_err()
     );
     assert!(
-        BattleUnitTemplate::parse(
+        UnitTemplate::parse(
             "test",
             &vehicle.replace("class = \"vehicle\"", "class = \"mech\"")
         )
@@ -132,7 +132,7 @@ fn construction_dispatch_uses_declared_class_and_confines_assets() {
     std::fs::write(dir.path().join("vehicle.toml"), vehicle).unwrap();
     assert!(matches!(
         read_battle_unit_template(dir.path(), "vehicle").unwrap(),
-        BattleUnitTemplate::Vehicle(_)
+        UnitTemplate::Vehicle(_)
     ));
     assert!(read_battle_unit_template(dir.path(), "../vehicle").is_err());
     assert!(read_battle_unit_template(dir.path(), "/etc/passwd").is_err());
@@ -162,17 +162,13 @@ async fn operator_inspection_reports_mech_ground_and_vtol_state_without_mutation
             create_battle_vehicle(
                 &mut world,
                 id,
-                BattleVehicleTemplate::parse("test", asset).unwrap(),
+                VehicleTemplate::parse("test", asset).unwrap(),
             )
             .unwrap();
             support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
         } else {
-            create_battle_unit(
-                &mut world,
-                id,
-                BattleTemplate::parse("test", asset).unwrap(),
-            )
-            .unwrap();
+            create_battle_unit(&mut world, id, MechTemplate::parse("test", asset).unwrap())
+                .unwrap();
             support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
         }
         place_battle_unit(&mut world, id, map, 1, 0).unwrap();

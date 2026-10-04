@@ -34,7 +34,7 @@ pub(super) fn avoids(
     id: crate::ObjectId,
     change: i16,
     speed: f64,
-    rules: super::BattleMovementRules,
+    rules: super::MovementRules,
 ) -> anyhow::Result<super::terrain_control::TerrainControl> {
     let (pilot, auto_fall) = crate::btech::with_unit!(world.btech.unit(id).unwrap(), |unit| {
         (unit.pilot(), unit.auto_fall())

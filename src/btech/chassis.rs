@@ -1,9 +1,9 @@
 //! Anatomy of a constructed Mech, read from its validated template.
-use super::{BattleMechChassis, BattleUnit};
+use super::{Mech, MechChassis};
 
-impl BattleUnit {
+impl Mech {
     /// Anatomy of a validated constructed definition.
-    pub fn chassis(&self) -> BattleMechChassis {
+    pub fn chassis(&self) -> MechChassis {
         self.definition().chassis().expect("validated chassis")
     }
 }

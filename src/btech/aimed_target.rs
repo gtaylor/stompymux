@@ -7,17 +7,17 @@ use serde::{Deserialize, Serialize};
 /// Anatomical preference retains its selected target class across subsequent lock changes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "class", content = "section", rename_all = "snake_case")]
-pub enum BattleAimSelection {
-    Mech(BattleSection),
-    GroundVehicle(BattleVehicleSection),
-    Vtol(BattleVehicleSection),
+pub enum AimSelection {
+    Mech(MechSection),
+    GroundVehicle(VehicleSection),
+    Vtol(VehicleSection),
 }
 
-impl BattleAimSelection {
+impl AimSelection {
     /// Ground anatomy has no rotor slot; saved preferences must remain selectable.
     pub(super) fn validate(self) -> Result<()> {
         anyhow::ensure!(
-            self != Self::GroundVehicle(BattleVehicleSection::Rotor),
+            self != Self::GroundVehicle(VehicleSection::Rotor),
             "Invalid aimed section for ground vehicle"
         );
         Ok(())
@@ -26,17 +26,17 @@ impl BattleAimSelection {
     /// Numeric anatomical identity used when an immobile target has a different class from the saved preference.
     pub(super) fn slot(self) -> usize {
         match self {
-            Self::Mech(section) => BattleSection::ALL
+            Self::Mech(section) => MechSection::ALL
                 .iter()
                 .position(|value| *value == section)
                 .unwrap(),
             Self::GroundVehicle(section) | Self::Vtol(section) => match section {
-                BattleVehicleSection::Left => 0,
-                BattleVehicleSection::Right => 1,
-                BattleVehicleSection::Front => 2,
-                BattleVehicleSection::Rear => 3,
-                BattleVehicleSection::Turret => 4,
-                BattleVehicleSection::Rotor => 5,
+                VehicleSection::Left => 0,
+                VehicleSection::Right => 1,
+                VehicleSection::Front => 2,
+                VehicleSection::Rear => 3,
+                VehicleSection::Turret => 4,
+                VehicleSection::Rotor => 5,
             },
         }
     }
@@ -49,18 +49,18 @@ impl BattleAimSelection {
                 .btech
                 .vehicles()
                 .get(&target)
-                .is_some_and(|unit| unit.definition().movement != BattleVehicleMovement::Vtol),
+                .is_some_and(|unit| unit.definition().movement != VehicleMovement::Vtol),
             Self::Vtol(_) => world
                 .btech
                 .vehicles()
                 .get(&target)
-                .is_some_and(|unit| unit.definition().movement == BattleVehicleMovement::Vtol),
+                .is_some_and(|unit| unit.definition().movement == VehicleMovement::Vtol),
         }
     }
 }
 
 /// Read the saved selection without requiring a current lock or a running unit.
-pub fn aimed_section(world: &World, id: ObjectId) -> Result<Option<BattleAimSelection>> {
+pub fn aimed_section(world: &World, id: ObjectId) -> Result<Option<AimSelection>> {
     let unit = world
         .btech
         .unit(id)
@@ -74,20 +74,20 @@ pub fn set_aimed_section(
     id: ObjectId,
     pilot: ObjectId,
     section: Option<&str>,
-) -> Result<BattleNotice> {
+) -> Result<Notice> {
     super::power::controlled_running_unit(world, id, pilot)?;
     let (selection, text) = if let Some(section) = section {
         let target = super::scanner::scanner_unit(world, id)
             .and_then(|unit| unit.selected)
             .context("Error: You need to be locked onto something to target its part!")?;
         if let Some(unit) = world.btech.vehicles().get(&target) {
-            let section = BattleVehicleSection::parse_location(section)
+            let section = VehicleSection::parse_location(section)
                 .map_err(|_| anyhow::anyhow!("Invalid location!"))?;
-            let selection = if unit.definition().movement == BattleVehicleMovement::Vtol {
-                BattleAimSelection::Vtol(section)
+            let selection = if unit.definition().movement == VehicleMovement::Vtol {
+                AimSelection::Vtol(section)
             } else {
-                anyhow::ensure!(section != BattleVehicleSection::Rotor, "Invalid location!");
-                BattleAimSelection::GroundVehicle(section)
+                anyhow::ensure!(section != VehicleSection::Rotor, "Invalid location!");
+                AimSelection::GroundVehicle(section)
             };
             (
                 Some(selection),
@@ -104,7 +104,7 @@ pub fn set_aimed_section(
                 .parse_location(section)
                 .map_err(|_| anyhow::anyhow!("Invalid location!"))?;
             (
-                Some(BattleAimSelection::Mech(section)),
+                Some(AimSelection::Mech(section)),
                 format!(
                     "{} targetted.",
                     unit.chassis().section_name(section).replace('_', " ")
@@ -123,14 +123,14 @@ pub fn set_aimed_section(
             unit.aimed_section = selection;
         }
     );
-    Ok(BattleNotice { unit: id, text })
+    Ok(Notice { unit: id, text })
 }
 
 /// Mech immobility is distinct from standing still, falling or losing a leg.
-pub(super) fn mech_immobile(world: &World, unit: &BattleUnit) -> bool {
+pub(super) fn mech_immobile(world: &World, unit: &Mech) -> bool {
     unit.fortified
         || unit.crew_recovery().remaining > 0
-        || unit.power() != BattlePower::Running
+        || unit.power() != Power::Running
         || unit
             .pilot()
             .is_some_and(|pilot| world.btech.unconscious(pilot))
@@ -141,9 +141,9 @@ pub(super) fn immobile(world: &World, target: ObjectId) -> Result<bool> {
     if let Some(unit) = world.btech.vehicles().get(&target) {
         return Ok(unit.fortified
             || unit.crew_recovery().remaining > 0
-            || unit.power() != BattlePower::Running
+            || unit.power() != Power::Running
             || unit.immobilized()
-            || unit.definition().movement == BattleVehicleMovement::Stationary
+            || unit.definition().movement == VehicleMovement::Stationary
             || unit
                 .pilot()
                 .is_some_and(|pilot| world.btech.unconscious(pilot)));
@@ -163,8 +163,8 @@ pub(super) fn apply_aim(
     world: &World,
     shooter: ObjectId,
     target: ObjectId,
-    weapon: BattleWeapon,
-    aim: &mut BattleAimModifiers,
+    weapon: Weapon,
+    aim: &mut AimModifiers,
 ) -> Result<()> {
     let Some(selection) = aimed_section(world, shooter)? else {
         return Ok(());
@@ -189,7 +189,7 @@ pub(crate) fn action(
     id: ObjectId,
     pilot: ObjectId,
     section: Option<&str>,
-) -> Result<Option<BattleAimSelection>> {
+) -> Result<Option<AimSelection>> {
     scripts.atomic(|_| {
         let notice = set_aimed_section(&mut scripts.world.borrow_mut(), id, pilot, section)?;
         scripts.world.borrow().validate_action(config)?;
@@ -237,7 +237,7 @@ pub(super) fn suffix(
     world: &World,
     shooter: ObjectId,
     target: ObjectId,
-    weapon: BattleWeapon,
+    weapon: Weapon,
 ) -> Result<String> {
     if weapon.gunnery_skill(true) == "Gunnery-Missile" {
         return Ok(String::new());
@@ -248,12 +248,10 @@ pub(super) fn suffix(
         return Ok(String::new());
     };
     let name = match selection {
-        BattleAimSelection::Mech(section) => world.btech.constructed_units()[&target]
+        AimSelection::Mech(section) => world.btech.constructed_units()[&target]
             .chassis()
             .section_name(section),
-        BattleAimSelection::GroundVehicle(section) | BattleAimSelection::Vtol(section) => {
-            section.name()
-        }
+        AimSelection::GroundVehicle(section) | AimSelection::Vtol(section) => section.name(),
     };
     Ok(format!("'s {}", name.replace('_', " ")))
 }

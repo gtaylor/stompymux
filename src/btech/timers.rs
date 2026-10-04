@@ -1,7 +1,7 @@
 //! Per-second counters of a saved unit or vehicle record, declared so that persistence can
 //! store them as typed timer rows and leave the record's JSON parts unchanged while they run.
 //!
-//! Each counter is a [`BattleTimer`] with a slot (a weapon index, section code or queue
+//! Each counter is a [`Timer`] with a slot (a weapon index, section code or queue
 //! position, or zero), the JSON pointer of the value it stands for in the record's saved
 //! parts, and how it moves with the simulation clock at the moment of saving: counting
 //! down, counting up, wrapping around a fixed cycle, or held still. The record decides the
@@ -9,7 +9,7 @@
 //! held while the unit is off. A wrong motion never loses a value: a held counter is
 //! stored as it is, and a moving one is stored as the second it reaches or was zero, so
 //! the only cost of a misjudged motion is a row rewrite on the next save.
-use super::{BattleSection, BattleVehicleSection};
+use super::{MechSection, VehicleSection};
 use anyhow::{Context, Result, ensure};
 use serde_json::Value;
 
@@ -29,7 +29,7 @@ pub(crate) enum TimerMotion {
 /// One counter of a record: which timer, which slot, its value and its motion.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) struct SavedTimer {
-    pub timer: BattleTimer,
+    pub timer: Timer,
     pub slot: i64,
     pub value: i64,
     pub motion: TimerMotion,
@@ -52,7 +52,7 @@ impl TimerList {
     /// Add one counter.
     pub(crate) fn add(
         &mut self,
-        timer: BattleTimer,
+        timer: Timer,
         slot: i64,
         value: impl Into<i64>,
         motion: TimerMotion,
@@ -79,7 +79,7 @@ impl TimerList {
 /// Every stored counter, with the code that names it in a timer row.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(i64)]
-pub(crate) enum BattleTimer {
+pub(crate) enum Timer {
     /// Engine startup, `power.remaining`.
     Startup = 1,
     /// `overheat_clock.elapsed`, rising until it saturates at thirty.
@@ -98,7 +98,7 @@ pub(crate) enum BattleTimer {
     Stand = 8,
     /// `weapon_recycle[slot]`, keyed by weapon index.
     WeaponRecycle = 9,
-    /// `limb_recycle[slot]`, keyed by the section's position in [`BattleSection::ALL`].
+    /// `limb_recycle[slot]`, keyed by the section's position in [`MechSection::ALL`].
     LimbRecycle = 10,
     /// `reactor_instability_remaining`.
     ReactorInstability = 11,
@@ -161,16 +161,16 @@ pub(crate) enum BattleTimer {
 }
 
 /// Vehicle sections in slot order.
-pub(crate) const VEHICLE_SECTIONS: [BattleVehicleSection; 6] = [
-    BattleVehicleSection::Left,
-    BattleVehicleSection::Right,
-    BattleVehicleSection::Front,
-    BattleVehicleSection::Rear,
-    BattleVehicleSection::Turret,
-    BattleVehicleSection::Rotor,
+pub(crate) const VEHICLE_SECTIONS: [VehicleSection; 6] = [
+    VehicleSection::Left,
+    VehicleSection::Right,
+    VehicleSection::Front,
+    VehicleSection::Rear,
+    VehicleSection::Turret,
+    VehicleSection::Rotor,
 ];
 
-impl BattleTimer {
+impl Timer {
     /// Every timer, in code order.
     pub(crate) const ALL: [Self; 39] = [
         Self::Startup,
@@ -236,15 +236,15 @@ impl BattleTimer {
     }
 
     /// The slot of a BattleMech section.
-    pub(crate) fn section_slot(section: BattleSection) -> i64 {
-        BattleSection::ALL
+    pub(crate) fn section_slot(section: MechSection) -> i64 {
+        MechSection::ALL
             .iter()
             .position(|candidate| *candidate == section)
             .expect("every section is listed") as i64
     }
 
     /// The slot of a vehicle section.
-    pub(crate) fn vehicle_section_slot(section: BattleVehicleSection) -> i64 {
+    pub(crate) fn vehicle_section_slot(section: VehicleSection) -> i64 {
         VEHICLE_SECTIONS
             .iter()
             .position(|candidate| *candidate == section)
@@ -267,7 +267,7 @@ impl BattleTimer {
             Self::LimbRecycle => {
                 let section = usize::try_from(slot)
                     .ok()
-                    .and_then(|slot| BattleSection::ALL.get(slot))
+                    .and_then(|slot| MechSection::ALL.get(slot))
                     .with_context(|| format!("unknown section slot {slot}"))?;
                 Ok(format!("/limb_recycle/{}", key(&serde_name(section)?)))
             }
@@ -361,42 +361,37 @@ mod tests {
     /// Codes round-trip and the wrapping timers are the only ones with a cycle.
     #[test]
     fn codes_and_cycles() {
-        for timer in BattleTimer::ALL {
-            assert_eq!(BattleTimer::from_code(timer.code()).unwrap(), timer);
+        for timer in Timer::ALL {
+            assert_eq!(Timer::from_code(timer.code()).unwrap(), timer);
             assert_eq!(
                 timer.cycle().is_ok(),
-                matches!(
-                    timer,
-                    BattleTimer::OverheatPhase | BattleTimer::StaggerPhase
-                )
+                matches!(timer, Timer::OverheatPhase | Timer::StaggerPhase)
             );
         }
-        assert!(BattleTimer::from_code(0).is_err());
+        assert!(Timer::from_code(0).is_err());
     }
 
     /// Section slots name the serialized map keys, and blanking touches only present values.
     #[test]
     fn pointers_blank_and_restore() {
-        let pointer = BattleTimer::LimbRecycle
-            .pointer(BattleTimer::section_slot(BattleSection::LeftArm))
+        let pointer = Timer::LimbRecycle
+            .pointer(Timer::section_slot(MechSection::LeftArm))
             .unwrap();
         assert_eq!(pointer, "/limb_recycle/LeftArm");
-        let pointer = BattleTimer::BurningSection
-            .pointer(BattleTimer::vehicle_section_slot(
-                BattleVehicleSection::Rear,
-            ))
+        let pointer = Timer::BurningSection
+            .pointer(Timer::vehicle_section_slot(VehicleSection::Rear))
             .unwrap();
         assert_eq!(pointer, "/burning_sections/rear");
         let mut part = serde_json::json!({"stun_remaining": 7, "limb_recycle": {"LeftArm": 12}});
         let timers = [
             SavedTimer {
-                timer: BattleTimer::Stun,
+                timer: Timer::Stun,
                 slot: 0,
                 value: 7,
                 motion: TimerMotion::Down,
             },
             SavedTimer {
-                timer: BattleTimer::Inferno,
+                timer: Timer::Inferno,
                 slot: 0,
                 value: 3,
                 motion: TimerMotion::Down,
@@ -418,8 +413,8 @@ mod tests {
     #[test]
     fn zero_countdowns_are_held() {
         let mut list = TimerList::new();
-        list.add(BattleTimer::Stun, 0, 0u8, TimerMotion::Down);
-        list.add(BattleTimer::Hide, 0, 0u16, TimerMotion::Up);
+        list.add(Timer::Stun, 0, 0u8, TimerMotion::Down);
+        list.add(Timer::Hide, 0, 0u16, TimerMotion::Up);
         let timers = list.finish();
         assert_eq!(timers[0].motion, TimerMotion::Held);
         assert_eq!(timers[1].motion, TimerMotion::Up);

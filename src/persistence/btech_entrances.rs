@@ -1,6 +1,6 @@
 //! Selective ownership of building entrance rows in the shared map-object table.
 use super::write::{Cell, Fields, row};
-use crate::{BattleBuildingEntrance, HexCoordinate, ObjectId, StoredMap, World};
+use crate::{BuildingEntrance, HexCoordinate, ObjectId, StoredMap, World};
 use anyhow::{Context, Result, ensure};
 use sqlx::{Row, SqliteConnection};
 use std::{
@@ -39,7 +39,7 @@ pub(super) async fn load(
         );
         Arc::make_mut(&mut map.building_entrances).insert(
             ordinal,
-            BattleBuildingEntrance {
+            BuildingEntrance {
                 coordinate,
                 interior,
                 data_char: u8::try_from(row.try_get::<i64, _>("data_char")?)?,
@@ -98,7 +98,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
 }
 
 /// Columns describing the entrance itself, separate from movement-specific auxiliary data.
-fn entrance_fields(entrance: BattleBuildingEntrance) -> super::write::Fields {
+fn entrance_fields(entrance: BuildingEntrance) -> super::write::Fields {
     Fields::from([
         ("x", Cell::Integer(i64::from(entrance.coordinate.x))),
         ("y", Cell::Integer(i64::from(entrance.coordinate.y))),

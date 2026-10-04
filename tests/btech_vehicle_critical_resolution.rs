@@ -18,7 +18,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse("Demolisher", template).unwrap(),
+        VehicleTemplate::parse("Demolisher", template).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -36,15 +36,15 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
 fn seed(world: &mut World, id: ObjectId, value: u8) {
     world
         .btech
-        .set_unit_dice(id, BattleDice::seeded([value; 32]))
+        .set_unit_dice(id, Dice::seeded([value; 32]))
         .unwrap();
 }
 
 #[tokio::test]
 async fn critical_resolution_applies_all_tables_for_tactical_crews() {
-    use BattleVehicleCriticalEffect as E;
-    use BattleVehicleCriticalTable as T;
-    use BattleVehicleSection as S;
+    use VehicleCriticalEffect as E;
+    use VehicleCriticalTable as T;
+    use VehicleSection as S;
     let fusion = support::templates::without_flags(
         include_str!("../game/mechs/Demolisher.toml"),
         &["ICEEngine_Tech"],
@@ -54,7 +54,7 @@ async fn critical_resolution_applies_all_tables_for_tactical_crews() {
     let mut seen = std::collections::BTreeSet::new();
     let mut saved = None;
     for table in [T::Standard, T::Advanced] {
-        let rules = BattleVehicleCriticalRules {
+        let rules = VehicleCriticalRules {
             rotor_damage_divisor: 0,
             extended_piloting: false,
             vtol_table: None,
@@ -93,7 +93,7 @@ async fn critical_resolution_applies_all_tables_for_tactical_crews() {
                         assert!(vehicle.is_destroyed());
                         assert_eq!(vehicle.pilot_injuries(), 0);
                         assert!(vehicle.crew_killed());
-                        assert_eq!(vehicle.power(), BattlePower::Off);
+                        assert_eq!(vehicle.power(), Power::Off);
                         assert!(result.pilot_injury.is_none());
                     }
                     E::PowerPlant => {
@@ -141,7 +141,7 @@ async fn critical_resolution_applies_all_tables_for_tactical_crews() {
                             vehicle
                                 .weapon_failures()
                                 .values()
-                                .all(|failure| *failure == BattleEquipmentFailure::Disabled)
+                                .all(|failure| *failure == EquipmentFailure::Disabled)
                         );
                         assert!(vehicle.weapon_recycle().is_empty());
                     }
@@ -174,25 +174,24 @@ async fn critical_resolution_applies_all_tables_for_tactical_crews() {
 async fn critical_resolution_suppression_and_replay_preserve_world_boundaries() {
     let (_dir, config, mut world, id) =
         fixture(include_str!("../game/mechs/Demolisher.toml")).await;
-    let mut rules = BattleVehicleCriticalRules {
+    let mut rules = VehicleCriticalRules {
         rotor_damage_divisor: 0,
         extended_piloting: false,
         vtol_table: None,
         toughness: false,
-        table: BattleVehicleCriticalTable::Advanced,
+        table: VehicleCriticalTable::Advanced,
         enabled: false,
         combat_safe: false,
     };
     let before = world.btech.clone();
     let result =
-        resolve_battle_vehicle_critical(&mut world, id, BattleVehicleSection::Front, rules)
-            .unwrap();
+        resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Front, rules).unwrap();
     assert!(result.notices.is_empty());
     assert_eq!(world.btech, before);
     rules.enabled = true;
     rules.combat_safe = true;
     assert!(
-        resolve_battle_vehicle_critical(&mut world, id, BattleVehicleSection::Turret, rules)
+        resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Turret, rules)
             .unwrap()
             .selection
             .effect
@@ -203,10 +202,9 @@ async fn critical_resolution_suppression_and_replay_preserve_world_boundaries() 
     persistence::save(&config.database(), &world).await.unwrap();
     let mut loaded = persistence::load(&config.database()).await.unwrap();
     for _ in 0..30 {
-        let result =
-            resolve_battle_vehicle_critical(&mut world, id, BattleVehicleSection::Turret, rules);
+        let result = resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Turret, rules);
         let replay =
-            resolve_battle_vehicle_critical(&mut loaded, id, BattleVehicleSection::Turret, rules);
+            resolve_battle_vehicle_critical(&mut loaded, id, VehicleSection::Turret, rules);
         match (result, replay) {
             (Ok(a), Ok(b)) => assert_eq!(a, b),
             (Err(a), Err(b)) => {
@@ -225,8 +223,7 @@ async fn critical_resolution_suppression_and_replay_preserve_world_boundaries() 
         .insert(Flag::Going);
     let before = world.btech.clone();
     assert!(
-        resolve_battle_vehicle_critical(&mut world, id, BattleVehicleSection::Turret, rules)
-            .is_err()
+        resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Turret, rules).is_err()
     );
     assert_eq!(world.btech, before);
 }
@@ -236,21 +233,21 @@ async fn combustion_fuel_critical_destroys_the_vehicle_instead_of_only_its_engin
     let (_dir, _config, mut world, id) =
         fixture(include_str!("../game/mechs/Demolisher.toml")).await;
     let value = (0..=255)
-        .find(|value| BattleDice::seeded([*value; 32]).two_d6() == 12)
+        .find(|value| Dice::seeded([*value; 32]).two_d6() == 12)
         .unwrap();
     seed(&mut world, id, value);
     let before = world.btech.clone();
-    let rules = BattleVehicleCriticalRules {
+    let rules = VehicleCriticalRules {
         rotor_damage_divisor: 0,
         extended_piloting: false,
         vtol_table: None,
         toughness: false,
-        table: BattleVehicleCriticalTable::Advanced,
+        table: VehicleCriticalTable::Advanced,
         enabled: true,
         combat_safe: false,
     };
     let result =
-        resolve_battle_vehicle_critical(&mut world, id, BattleVehicleSection::Left, rules).unwrap();
+        resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Left, rules).unwrap();
     assert!(result.explosion.is_some());
     assert!(world.btech.vehicles()[&id].is_destroyed());
     assert_ne!(world.btech, before);

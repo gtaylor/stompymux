@@ -93,7 +93,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                 crate::HexCoordinate { x, y },
                 weapon,
                 config.battletech.extended_gunnery != 0,
-                crate::BattleAimRules::configured(&config.battletech),
+                crate::AimRules::configured(&config.battletech),
             )
             .map_err(mlua::Error::external)?;
             let result = detached(lua, &report)?;
@@ -134,7 +134,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                         .map(str::parse)
                         .transpose()
                         .map_err(mlua::Error::external)?
-                        .unwrap_or(crate::BattleHexTargetMode::UnitAtHex);
+                        .unwrap_or(crate::HexTargetMode::UnitAtHex);
                     let notice = crate::select_battle_hex_target(
                         &mut scripts.world.borrow_mut(),
                         ObjectId(unit),

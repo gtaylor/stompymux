@@ -5,7 +5,7 @@ use std::{fmt, str::FromStr};
 /// A format-level record; anatomy, installed equipment and resulting material need separate validation.
 /// Signed losses retain the text contract without implying that an increased material value is valid.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum BattleDamageRecord {
+pub enum DamageRecord {
     /// Loss from original armor on the indicated face.
     Armor { section: u8, rear: bool, loss: i32 },
     /// Loss from original internal structure.
@@ -18,7 +18,7 @@ pub enum BattleDamageRecord {
     Failure { section: u8, slot: u8, failure: i32 },
 }
 
-impl fmt::Display for BattleDamageRecord {
+impl fmt::Display for DamageRecord {
     /// Use the same canonical record spelling as the inspection field.
     fn fmt(&self, out: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
@@ -52,7 +52,7 @@ fn index(value: &str, limit: u8, name: &str) -> Result<u8> {
     Ok(value)
 }
 
-impl FromStr for BattleDamageRecord {
+impl FromStr for DamageRecord {
     type Err = anyhow::Error;
 
     /// Parse exactly one record; unrecognized keywords and trailing input are errors.
@@ -111,7 +111,7 @@ impl FromStr for BattleDamageRecord {
 /// Parse the full replacement description without sorting or discarding repeated assignments.
 /// An empty description is valid; the eventual replacement owner decides what omitted records restore.
 /// This function does not mutate units or apply damage, repairs, failures or ammunition changes.
-pub fn parse_damage_field(value: &str) -> Result<Vec<BattleDamageRecord>> {
+pub fn parse_damage_field(value: &str) -> Result<Vec<DamageRecord>> {
     value
         .split(|character: char| character == ',' || character.is_ascii_whitespace())
         .filter(|record| !record.is_empty())
@@ -149,7 +149,7 @@ mod tests {
         );
         assert_eq!(
             records[0],
-            BattleDamageRecord::Armor {
+            DamageRecord::Armor {
                 section: 0,
                 rear: false,
                 loss: 8
@@ -157,7 +157,7 @@ mod tests {
         );
         assert_eq!(
             records[6],
-            BattleDamageRecord::Armor {
+            DamageRecord::Armor {
                 section: 0,
                 rear: false,
                 loss: 2
@@ -175,7 +175,7 @@ mod tests {
                 format!("R:3/11({value})"),
                 format!("G:7/0({value})"),
             ] {
-                let record: BattleDamageRecord = text.parse().unwrap();
+                let record: DamageRecord = text.parse().unwrap();
                 assert_eq!(record.to_string(), text);
             }
         }
@@ -204,7 +204,7 @@ mod tests {
             "A:0/NaN",
             "I:0/1.5",
         ] {
-            assert!(record.parse::<BattleDamageRecord>().is_err(), "{record}");
+            assert!(record.parse::<DamageRecord>().is_err(), "{record}");
             assert!(
                 parse_damage_field(&format!("A:0/1,{record},I:0/1")).is_err(),
                 "{record}"

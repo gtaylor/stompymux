@@ -6,13 +6,13 @@ use std::collections::BTreeMap;
 /// Stored restoration record kind, in map-object lookup order.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleStaticDecorationKind {
+pub enum StaticDecorationKind {
     Fire,
     Smoke,
     Decoration,
 }
 
-impl BattleStaticDecorationKind {
+impl StaticDecorationKind {
     /// Stable storage and lookup order.
     pub const ALL: [Self; 3] = [Self::Fire, Self::Smoke, Self::Decoration];
 
@@ -28,7 +28,7 @@ impl BattleStaticDecorationKind {
 
 /// A stored map-object record without a scheduled event.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BattleStaticDecoration {
+pub struct StaticDecoration {
     pub coordinate: HexCoordinate,
     /// Terrain a generic decoration restores when it is deleted. Fire and smoke records have
     /// none, since fire and smoke never change the terrain they cover.
@@ -41,16 +41,16 @@ pub struct BattleStaticDecoration {
     pub scalar: i64,
 }
 
-impl BattleStaticDecoration {
+impl StaticDecoration {
     /// Check the record suits its kind: generic decorations restore real terrain, while fire
     /// and smoke records restore nothing.
-    pub(crate) fn validate(self, kind: BattleStaticDecorationKind) -> anyhow::Result<()> {
+    pub(crate) fn validate(self, kind: StaticDecorationKind) -> anyhow::Result<()> {
         match (kind, self.restored_terrain) {
-            (BattleStaticDecorationKind::Decoration, Some(terrain)) => anyhow::ensure!(
+            (StaticDecorationKind::Decoration, Some(terrain)) => anyhow::ensure!(
                 !matches!(terrain, Terrain::Fire | Terrain::Smoke),
                 "Decorations cannot restore fire or smoke"
             ),
-            (BattleStaticDecorationKind::Decoration, None) => {
+            (StaticDecorationKind::Decoration, None) => {
                 anyhow::bail!("Decorations need terrain to restore")
             }
             (_, Some(_)) => anyhow::bail!("Fire and smoke records do not restore terrain"),
@@ -64,8 +64,8 @@ impl StoredMap {
     /// Ordered stored decoration slots, independently of active fire/smoke overlays.
     pub fn static_decorations(
         &self,
-        kind: BattleStaticDecorationKind,
-    ) -> &BTreeMap<u32, BattleStaticDecoration> {
+        kind: StaticDecorationKind,
+    ) -> &BTreeMap<u32, StaticDecoration> {
         &self.static_decorations[kind.index()]
     }
 }
@@ -74,9 +74,9 @@ impl StoredMap {
 pub fn set_static_decoration(
     world: &mut crate::World,
     map: crate::ObjectId,
-    kind: BattleStaticDecorationKind,
+    kind: StaticDecorationKind,
     ordinal: u32,
-    decoration: Option<BattleStaticDecoration>,
+    decoration: Option<StaticDecoration>,
 ) -> anyhow::Result<()> {
     use anyhow::{Context, ensure};
     use std::sync::Arc;

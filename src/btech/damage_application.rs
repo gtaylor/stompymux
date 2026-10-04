@@ -1,11 +1,11 @@
 //! Commit prepared replacement material through each chassis's equipment and lifecycle owners.
-use super::{BattleDamageSlot, VehicleCriticalLocation};
+use super::{DamageSlot, VehicleCriticalLocation};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result};
 
 /// Convert a vehicle slot to the common compact representation.
-fn slot(location: VehicleCriticalLocation) -> BattleDamageSlot {
-    BattleDamageSlot {
+fn slot(location: VehicleCriticalLocation) -> DamageSlot {
+    DamageSlot {
         section: super::damage_field::vehicle_section(location.section),
         slot: location.slot,
     }
@@ -24,7 +24,7 @@ pub(super) fn set(world: &mut World, id: ObjectId, value: &str, tsm_bonus: bool)
         .get_mut(&id)
         .context("Unit construction is unavailable")?;
     let loadout = unit.loadout()?;
-    let light_probe = super::BattleActiveProbe::Light;
+    let light_probe = super::ActiveProbe::Light;
     let previous_probe_failure = if unit.has_active_probe(light_probe)? {
         Some(!unit.active_probe_available(light_probe)?)
     } else {
@@ -113,7 +113,7 @@ fn set_mech(world: &mut World, id: ObjectId, value: &str) -> Result<()> {
     let replacement = super::prepare_damage_field(world, id, value)?;
     let unit = world.btech.constructed.get_mut(&id).unwrap();
     let loadout = unit.loadout()?;
-    let light_probe = super::BattleActiveProbe::Light;
+    let light_probe = super::ActiveProbe::Light;
     let previous_probe_failure = if unit.has_active_probe(light_probe)? {
         Some(!unit.active_probe_available(light_probe)?)
     } else {
@@ -121,7 +121,7 @@ fn set_mech(world: &mut World, id: ObjectId, value: &str) -> Result<()> {
     };
 
     let gyro_protection_used = unit.gyro_condition().1;
-    let slot = |location: super::CriticalLocation| BattleDamageSlot {
+    let slot = |location: super::CriticalLocation| DamageSlot {
         section: super::damage_field::mech_section(location.section),
         slot: location.slot,
     };

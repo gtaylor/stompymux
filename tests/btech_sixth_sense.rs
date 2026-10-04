@@ -14,9 +14,9 @@ fn state(world: &World, id: ObjectId) -> serde_json::Value {
 }
 
 /// Select a deterministic successful roll with each possible delay, or a failed warning roll.
-fn dice(delay: Option<u16>) -> (BattleDice, BattleDice) {
+fn dice(delay: Option<u16>) -> (Dice, Dice) {
     for seed in 0..=255 {
-        let initial = BattleDice::seeded([seed; 32]);
+        let initial = Dice::seeded([seed; 32]);
         let mut after = initial.clone();
         let success = after.two_d6() <= 8;
         if match delay {
@@ -166,7 +166,7 @@ async fn delivery_checks_current_active_pilot() {
         set_battle_character(
             &mut unconscious,
             pilot,
-            BattleCharacter {
+            Character {
                 bruise: 0,
                 lethal: 0,
                 build: 5,
@@ -178,11 +178,11 @@ async fn delivery_checks_current_active_pilot() {
         )
         .unwrap();
         let seed = (0..=255)
-            .find(|&seed| BattleDice::seeded([seed; 32]).two_d6() == 2)
+            .find(|&seed| Dice::seeded([seed; 32]).two_d6() == 2)
             .unwrap();
         let mut saved = serde_json::to_value(&unconscious.btech).unwrap();
         saved["recoveries"][pilot.0.to_string()]["dice"] =
-            serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+            serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
         unconscious.btech = serde_json::from_value(saved).unwrap();
         injure_battle_character_pilot(&mut unconscious, target, 6, false).unwrap();
         assert!(unconscious.btech.unconscious(pilot));
@@ -219,7 +219,7 @@ async fn startup_captures_the_current_pilots_advantage() {
         set_battle_character(
             &mut world,
             ObjectId(1),
-            BattleCharacter {
+            Character {
                 bruise: 0,
                 lethal: 0,
                 build: 5,
@@ -235,7 +235,7 @@ async fn startup_captures_the_current_pilots_advantage() {
             &mut world,
             ObjectId(1),
             "Sixth_Sense",
-            BattleCharacterValue {
+            CharacterValue {
                 value: 1,
                 experience: 0,
                 last_used: 0,
@@ -247,7 +247,7 @@ async fn startup_captures_the_current_pilots_advantage() {
             &mut world,
             source,
             ObjectId(1),
-            BattleMovementRules::STANDARD.fall,
+            MovementRules::STANDARD.fall,
         )
         .unwrap();
         assign_battle_pilot(&mut world, source, ObjectId(1)).unwrap();
@@ -263,7 +263,7 @@ async fn startup_captures_the_current_pilots_advantage() {
             &mut world,
             ObjectId(1),
             "Sixth_Sense",
-            BattleCharacterValue {
+            CharacterValue {
                 value: 0,
                 experience: 0,
                 last_used: 0,
@@ -276,7 +276,7 @@ async fn startup_captures_the_current_pilots_advantage() {
             &mut world,
             source,
             ObjectId(1),
-            BattleMovementRules::STANDARD.fall,
+            MovementRules::STANDARD.fall,
         )
         .unwrap();
         assign_battle_pilot(&mut world, source, ObjectId(1)).unwrap();
@@ -359,7 +359,7 @@ async fn server_retries_warning_delivery_after_failed_commit() {
                 world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
                 assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
                 support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
-                stop_battle_unit(&mut world, id, ObjectId(1), BattleMovementRules::STANDARD.fall).unwrap();
+                stop_battle_unit(&mut world, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
             }
             world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(source);
             assign_battle_pilot(&mut world, source, ObjectId(1)).unwrap();

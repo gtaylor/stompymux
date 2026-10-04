@@ -32,7 +32,7 @@ pub fn set_searchlight_warning(
     Ok(())
 }
 
-impl super::BattleUnit {
+impl super::Mech {
     /// Whether armor threshold changes notify the occupants.
     pub fn armor_warning(&self) -> bool {
         !self.no_armor_warning
@@ -65,14 +65,14 @@ pub fn set_ammunition_warning(
     Ok(())
 }
 
-impl super::BattleUnit {
+impl super::Mech {
     /// Whether the pilot has enabled friendly-fire protection.
     pub fn friendly_fire_safety(&self) -> bool {
         self.friendly_fire_safety
     }
 }
 
-impl super::BattleVehicle {
+impl super::Vehicle {
     /// Whether a piloted vehicle skips downhill cliff avoidance.
     pub fn auto_fall(&self) -> bool {
         self.auto_fall
@@ -85,7 +85,7 @@ impl super::BattleVehicle {
 }
 
 /// Vehicle preferences with implemented movement and firing consumers.
-pub(crate) fn vehicle_catalog(unit: &super::BattleVehicle) -> Vec<Preference> {
+pub(crate) fn vehicle_catalog(unit: &super::Vehicle) -> Vec<Preference> {
     vec![
         mw_safety_preference(unit.mw_safety()),
         bth_debug_preference(unit.bth_debug()),
@@ -120,7 +120,7 @@ pub(crate) struct Preference {
 }
 
 /// Keep preference listing, toggling and explicit settings on one command path.
-pub(crate) fn catalog(unit: &super::BattleUnit) -> [Preference; 8] {
+pub(crate) fn catalog(unit: &super::Mech) -> [Preference; 8] {
     [
         mw_safety_preference(unit.mw_safety()),
         bth_debug_preference(unit.bth_debug()),
@@ -133,7 +133,7 @@ pub(crate) fn catalog(unit: &super::BattleUnit) -> [Preference; 8] {
     ]
 }
 
-impl super::BattleUnit {
+impl super::Mech {
     /// Whether routine contact notices include targets whose reactors are not running.
     pub fn autocon_shutdown(&self) -> bool {
         self.autocon_shutdown
@@ -180,7 +180,7 @@ fn notice_preferences(world: &mut World, id: ObjectId) -> (&mut bool, &mut bool)
     )
 }
 
-impl super::BattleVehicle {
+impl super::Vehicle {
     /// Whether external illumination transitions notify the cockpit.
     pub fn searchlight_warning(&self) -> bool {
         self.searchlight_warning
@@ -220,7 +220,7 @@ fn combat_preferences(world: &mut World, id: ObjectId) -> (&mut bool, &mut bool)
     )
 }
 
-impl super::BattleVehicle {
+impl super::Vehicle {
     /// Whether armor severity transitions notify the cockpit.
     pub fn armor_warning(&self) -> bool {
         !self.no_armor_warning

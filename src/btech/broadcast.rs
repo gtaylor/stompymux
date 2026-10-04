@@ -3,20 +3,16 @@ use crate::{Flag, ObjectId, World};
 
 /// A direct player message or a message addressed to the occupants of a unit.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
-pub enum BattleMessageTarget {
+pub enum MessageTarget {
     Unit(ObjectId),
     Player(ObjectId),
 }
 
 /// Convert observer messages into the domain notice stream used by movement transactions.
-pub(super) fn observer_notices(
-    world: &World,
-    subject: ObjectId,
-    text: &str,
-) -> Vec<super::BattleNotice> {
+pub(super) fn observer_notices(world: &World, subject: ObjectId, text: &str) -> Vec<super::Notice> {
     observer_messages(world, subject, text)
         .into_iter()
-        .map(|(unit, text)| super::BattleNotice { unit, text })
+        .map(|(unit, text)| super::Notice { unit, text })
         .collect()
 }
 
@@ -69,17 +65,17 @@ pub(super) struct InteractionObserver {
 
 impl InteractionObserver {
     /// Physical interactions disclose only the participants currently visible to this observer.
-    fn physical_notice(self, action: &str) -> super::BattleNotice {
+    fn physical_notice(self, action: &str) -> super::Notice {
         let actor = self.actor.as_deref().unwrap_or("Someone");
         let target = self.target.as_deref().unwrap_or("someone");
-        super::BattleNotice {
+        super::Notice {
             unit: self.unit,
             text: format!("{actor} {action} {target}!"),
         }
     }
 
     /// Render only facts available to this observer; seeing the actor alone does not reveal a hit.
-    pub(super) fn fire_message(self, weapon: super::BattleWeapon, hit: bool) -> (ObjectId, String) {
+    pub(super) fn fire_message(self, weapon: super::Weapon, hit: bool) -> (ObjectId, String) {
         let weapon = weapon.name().split_once('.').expect("catalog namespace").1;
         let outcome = if hit { "hits" } else { "misses" };
         let text = match (self.actor, self.target) {
@@ -142,7 +138,7 @@ pub(super) fn interaction_notices(
     actor: ObjectId,
     target: ObjectId,
     action: &str,
-) -> Vec<super::BattleNotice> {
+) -> Vec<super::Notice> {
     interaction_observers(world, actor, target)
         .into_iter()
         .map(|observer| observer.physical_notice(action))
@@ -154,7 +150,7 @@ pub(super) fn hex_fire_messages(
     world: &World,
     actor: ObjectId,
     target: super::HexCoordinate,
-    weapon: super::BattleWeapon,
+    weapon: super::Weapon,
 ) -> Vec<(ObjectId, String)> {
     let Some(position) = super::scanner::scanner_unit(world, actor).and_then(|unit| unit.position)
     else {
@@ -166,7 +162,7 @@ pub(super) fn hex_fire_messages(
         .filter_map(|id| {
             let unit = super::scanner::scanner_unit(world, id)?;
             if id == actor
-                || unit.power != super::BattlePower::Running
+                || unit.power != super::Power::Running
                 || unit.position.is_none_or(|p| p.map != position.map)
             {
                 return None;
@@ -197,13 +193,13 @@ pub(super) fn hex_notices(
     coordinate: super::HexCoordinate,
     alarming: bool,
     message: impl Fn(&str) -> String,
-) -> anyhow::Result<Vec<super::BattleNotice>> {
+) -> anyhow::Result<Vec<super::Notice>> {
     let mut notices = Vec::new();
     for id in super::map_slots::all_unit_order(world, map)? {
         let Some(unit) = super::scanner::scanner_unit(world, id) else {
             continue;
         };
-        if unit.power != super::BattlePower::Running
+        if unit.power != super::Power::Running
             || world
                 .objects
                 .get(&id)
@@ -221,7 +217,7 @@ pub(super) fn hex_notices(
             (false, true) => format!("[fg=yellow bold]{},{}[reset]", coordinate.x, coordinate.y),
             (false, false) => format!("{},{}", coordinate.x, coordinate.y),
         };
-        notices.push(super::BattleNotice {
+        notices.push(super::Notice {
             unit: id,
             text: message(&location),
         });
@@ -234,10 +230,10 @@ pub(super) fn swarm_notices(
     world: &World,
     actor: ObjectId,
     target: ObjectId,
-) -> Vec<super::BattleNotice> {
+) -> Vec<super::Notice> {
     interaction_observers(world, actor, target)
         .into_iter()
-        .map(|observer| super::BattleNotice {
+        .map(|observer| super::Notice {
             unit: observer.unit,
             text: format!(
                 "{}'s missile-swarm targets {}!",

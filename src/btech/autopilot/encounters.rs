@@ -1,9 +1,8 @@
 //! Small seeded production-heartbeat encounters for comparing movement policies.
 use super::*;
-use crate::btech::BattleUnitTemplateExt;
+use crate::btech::UnitTemplateExt;
 use crate::{
-    BattlePower, BattleUnitTemplate, Config, HeartbeatHarness, Kind, MapAsset, ObjectId, World,
-    persistence,
+    Config, HeartbeatHarness, Kind, MapAsset, ObjectId, Power, UnitTemplate, World, persistence,
 };
 use anyhow::{Result, ensure};
 use serde::Serialize;
@@ -136,7 +135,7 @@ pub async fn run_policy(
                         settled = false;
                         stable = 0;
                         let mut world = harness.scripts().world_mut();
-                        world.btech.constructed.get_mut(&target).unwrap().power = BattlePower::Off;
+                        world.btech.constructed.get_mut(&target).unwrap().power = Power::Off;
                         crate::btech::place_unit(
                             &mut world,
                             target,
@@ -148,8 +147,7 @@ pub async fn run_policy(
                             },
                             if name == "attack_move" { 0 } else { 3 },
                         )?;
-                        world.btech.constructed.get_mut(&target).unwrap().power =
-                            BattlePower::Running;
+                        world.btech.constructed.get_mut(&target).unwrap().power = Power::Running;
                     }
                     let before = harness.world();
                     let point = crate::btech::scanner::scanner_unit(&before, shooter)
@@ -338,12 +336,12 @@ pub(crate) fn opportunity(
                 };
             let projected = u16::from(mode.launch_heat(
                 weapon.weapon,
-                (mode == crate::BattleFireMode::Gatling).then_some(6),
+                (mode == crate::FireMode::Gatling).then_some(6),
                 true,
             )) + u16::from(damage_heat);
             let ceiling = world.btech.controllers()[&shooter].config().heat_ceiling;
             ready |= weapon.ready
-                && observation.own.power == BattlePower::Running
+                && observation.own.power == Power::Running
                 && stored + f64::from(projected) <= f64::from(ceiling);
         }
     }
@@ -404,7 +402,7 @@ pub(super) fn fixture_with_target(
         "encounter",
         MapAsset::from_cells(&terrain)?,
     )?;
-    world.btech.maps.get_mut(&map).unwrap().fire_dice = Some(crate::BattleDice::seeded([seed; 32]));
+    world.btech.maps.get_mut(&map).unwrap().fire_dice = Some(crate::Dice::seeded([seed; 32]));
     let shooter = world.create(config, "shooter".into(), Kind::Thing);
     let target = world.create(config, "target".into(), Kind::Thing);
     let start = match scenario {
@@ -432,16 +430,16 @@ pub(super) fn fixture_with_target(
             2,
         ),
     ] {
-        BattleUnitTemplate::parse("encounter", template)?
+        UnitTemplate::parse("encounter", template)?
             .create(&mut world, id)
             .map_err(|e| anyhow::anyhow!("{scenario} {id:?} construction: {e:#}"))?;
         crate::btech::place_unit(&mut world, id, map, x, y)?;
         crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
-            unit.power = BattlePower::Running;
-            unit.dice = crate::BattleDice::seeded([seed; 32]);
+            unit.power = Power::Running;
+            unit.dice = crate::Dice::seeded([seed; 32]);
             unit.signature.team = team;
             let mut recovery = serde_json::to_value(&unit.crew_recovery)?;
-            recovery["dice"] = serde_json::to_value(crate::BattleDice::seeded([seed; 32]))?;
+            recovery["dice"] = serde_json::to_value(crate::Dice::seeded([seed; 32]))?;
             unit.crew_recovery = serde_json::from_value(recovery)?;
         })
     }
@@ -484,7 +482,7 @@ pub(super) fn fixture_with_target(
     controller.submit(
         vec![if scenario == "attack_move" {
             AutopilotOrder::AttackMove {
-                destination: crate::BattlePosition { map, x: 6, y: 1 },
+                destination: crate::Position { map, x: 6, y: 1 },
                 arrival_radius: 0,
             }
         } else {

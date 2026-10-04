@@ -24,7 +24,7 @@ async fn fixture(quad: bool, tile: &str) -> (tempfile::TempDir, Config, World, O
     create_battle_unit(
         &mut world,
         id,
-        BattleTemplate::parse(
+        MechTemplate::parse(
             "test",
             if quad {
                 include_str!("../game/mechs/SCP-1N.toml")
@@ -70,7 +70,7 @@ async fn prone_speed_boundaries_and_replay() {
                 for success in [false, true] {
                     let seed = (0..=255)
                         .find(|seed| {
-                            BattleDice::seeded([*seed; 32]).two_d6() == if success { 12 } else { 2 }
+                            Dice::seeded([*seed; 32]).two_d6() == if success { 12 } else { 2 }
                         })
                         .unwrap();
                     let mut world = base.clone();
@@ -85,8 +85,7 @@ async fn prone_speed_boundaries_and_replay() {
                         unit["motion"]["speed"] = (if reverse { -speed } else { speed }).into();
                         unit["motion"]["desired_speed"] = unit["motion"]["speed"].clone();
                         unit["motion"]["desired_heading"] = 90.0.into();
-                        unit["dice"] =
-                            serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+                        unit["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
                     });
                     let scripts =
                         Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
@@ -127,7 +126,7 @@ async fn prone_speed_boundaries_and_replay() {
                     let after = scripts.world().clone();
                     assert_eq!(
                         after.btech.constructed_units()[&id].posture(),
-                        BattlePosture::Prone
+                        Posture::Prone
                     );
                     assert_eq!(
                         after.btech.constructed_units()[&id].motion().unwrap().speed,
@@ -173,7 +172,7 @@ async fn prone_native_lua_and_restart() {
         let (_dir, config, mut world, id, _) = fixture(quad, ".0").await;
         if quad {
             edit(&mut world, id, |unit| {
-                unit["hull_down"] = serde_json::to_value(BattleHullDownState {
+                unit["hull_down"] = serde_json::to_value(HullDownState {
                     active: true,
                     pending: Some(false),
                     remaining: 3,
@@ -213,11 +212,11 @@ async fn prone_native_lua_and_restart() {
         );
         assert_eq!(
             expected.btech.constructed_units()[&id].facing(),
-            BattleFacing::default()
+            Facing::default()
         );
         assert_eq!(
             expected.btech.constructed_units()[&id].hull_down(),
-            BattleHullDownState::default()
+            HullDownState::default()
         );
         *scripts.world_mut() = world;
         support::run_text(
@@ -259,21 +258,21 @@ async fn prone_water_and_mine_callback_rollback() {
             report
                 .flooding
                 .iter()
-                .any(|flood| flood.section == BattleSection::LeftArm)
+                .any(|flood| flood.section == MechSection::LeftArm)
         );
         assert_eq!(
             scripts.world().btech.constructed_units()[&id].inferno_remaining(),
             0
         );
-        assert_eq!(report.mines.reason, BattleMineTriggerReason::Step);
+        assert_eq!(report.mines.reason, MineTriggerReason::Step);
         let (_dir, config, mut world, id, map) = fixture(quad, ".0").await;
         set_minefield(
             &mut world,
             map,
             1,
-            Some(BattleMinefield {
+            Some(Minefield {
                 coordinate: HexCoordinate { x: 0, y: 0 },
-                kind: BattleMineKind::Trigger,
+                kind: MineKind::Trigger,
                 strength: 1,
                 extra: 0,
                 owner: ObjectId(1),
@@ -326,12 +325,12 @@ async fn prone_admission_rejects_without_mutation() {
     for case in ["off", "standing", "falling", "pilot"] {
         let mut world = base.clone();
         edit(&mut world, id, |unit| match case {
-            "off" => unit["power"] = serde_json::to_value(BattlePower::Off).unwrap(),
+            "off" => unit["power"] = serde_json::to_value(Power::Off).unwrap(),
             "standing" => {
                 unit["stand_timer"] =
-                    serde_json::to_value(BattleStandTimer::Rising { remaining: 5 }).unwrap()
+                    serde_json::to_value(StandTimer::Rising { remaining: 5 }).unwrap()
             }
-            "falling" => unit["free_fall"] = serde_json::to_value(BattleFreeFall::new(10)).unwrap(),
+            "falling" => unit["free_fall"] = serde_json::to_value(FreeFall::new(10)).unwrap(),
             _ => unit["pilot"] = serde_json::Value::Null,
         });
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
@@ -369,7 +368,7 @@ async fn prone_flooded_cockpit_evacuates_contents() {
         report
             .flooding
             .iter()
-            .any(|flood| flood.section == BattleSection::Head)
+            .any(|flood| flood.section == MechSection::Head)
     );
     assert_eq!(
         scripts.world().objects[&ObjectId(2)].location,
@@ -408,7 +407,7 @@ async fn prone_rejects_vehicle_chassis() {
         create_battle_vehicle(
             &mut world,
             id,
-            BattleVehicleTemplate::parse("test", &text).unwrap(),
+            VehicleTemplate::parse("test", &text).unwrap(),
         )
         .unwrap();
         let before = world.btech.clone();
@@ -438,7 +437,7 @@ async fn restored_stagger_controls_drop_levels_and_survives_replay() {
                     let mut world = base.clone();
                     let seed = (0..=255)
                         .find(|&seed| {
-                            BattleDice::seeded([seed; 32]).two_d6() == if success { 12 } else { 2 }
+                            Dice::seeded([seed; 32]).two_d6() == if success { 12 } else { 2 }
                         })
                         .unwrap();
                     edit(&mut world, id, |u| {
@@ -448,7 +447,7 @@ async fn restored_stagger_controls_drop_levels_and_survives_replay() {
                             serde_json::json!([{"damage":60,"remaining":60,"counted":false}]);
                         u["motion"]["speed"] = speed.into();
                         u["motion"]["desired_speed"] = speed.into();
-                        u["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+                        u["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
                     });
                     persistence::save(&config.database(), &world).await.unwrap();
                     let restored = persistence::load(&config.database()).await.unwrap();

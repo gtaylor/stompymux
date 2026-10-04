@@ -22,7 +22,7 @@ async fn fixture(
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         if index < 2 {
             let mut definition =
-                BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
                     .unwrap();
             definition
                 .attributes
@@ -32,7 +32,7 @@ async fn fixture(
             create_battle_vehicle(
                 &mut world,
                 id,
-                BattleVehicleTemplate::parse("test", vehicle).unwrap(),
+                VehicleTemplate::parse("test", vehicle).unwrap(),
             )
             .unwrap();
         }
@@ -44,7 +44,7 @@ async fn fixture(
 }
 
 /// Assign scenario power without introducing crew actions into sensor tests.
-fn power(world: &mut World, ids: &[ObjectId], value: BattlePower) {
+fn power(world: &mut World, ids: &[ObjectId], value: Power) {
     for id in ids {
         world.btech.set_unit_power(*id, value).unwrap();
     }
@@ -60,7 +60,7 @@ async fn formation() -> (tempfile::TempDir, Config, World, [ObjectId; 4]) {
     for id in ids {
         place_battle_unit(&mut world, id, map, 0, 0).unwrap();
     }
-    power(&mut world, &ids, BattlePower::Running);
+    power(&mut world, &ids, Power::Running);
     (dir, config, world, ids)
 }
 
@@ -178,17 +178,17 @@ async fn vehicle_locks_clear_on_visibility_sensor_placement_and_power_changes() 
     let (_dir, config, mut initial, [mech, _, observer, vehicle]) = formation().await;
     let map = initial.btech.vehicles()[&observer].position().unwrap().map;
     // Sight still reaches a target sharing the observer's hex, so hold this one four hexes off.
-    power(&mut initial, &[vehicle], BattlePower::Off);
+    power(&mut initial, &[vehicle], Power::Off);
     place_battle_unit(&mut initial, vehicle, map, 0, 4).unwrap();
-    power(&mut initial, &[vehicle], BattlePower::Running);
+    power(&mut initial, &[vehicle], Power::Running);
     initial.objects.get_mut(&ObjectId(1)).unwrap().location = Some(observer);
     assign_battle_pilot(&mut initial, observer, ObjectId(1)).unwrap();
     support::seed_object_dice(&mut initial, ObjectId(1), support::FIXTURE_DICE_SEED);
     refresh_battle_contacts(&mut initial, &[observer]).unwrap();
     select_battle_target(&mut initial, observer, ObjectId(1), Some(vehicle)).unwrap();
     let mut world = initial.clone();
-    set_battle_map_perception(&mut world, map, BattleMapPerceptionFlag::Sensors, false).unwrap();
-    set_battle_map_visibility(&mut world, map, BattleLight::Day, 0).unwrap();
+    set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, false).unwrap();
+    set_battle_map_visibility(&mut world, map, Light::Day, 0).unwrap();
     let events = refresh_battle_contacts(&mut world, &[observer]).unwrap();
     assert!(
         events
@@ -201,7 +201,7 @@ async fn vehicle_locks_clear_on_visibility_sensor_placement_and_power_changes() 
             .is_none()
     );
     let mut world = initial.clone();
-    power(&mut world, &[vehicle], BattlePower::Off);
+    power(&mut world, &[vehicle], Power::Off);
     place_battle_unit(&mut world, vehicle, map, 0, 1).unwrap();
     assert!(
         world.btech.vehicles()[&observer]
@@ -210,7 +210,7 @@ async fn vehicle_locks_clear_on_visibility_sensor_placement_and_power_changes() 
     );
     let mut world = initial.clone();
     select_battle_target(&mut world, observer, ObjectId(1), Some(mech)).unwrap();
-    power(&mut world, &[mech], BattlePower::Off);
+    power(&mut world, &[mech], Power::Off);
     remove_battle_unit(&mut world, mech, ObjectId(config.home())).unwrap();
     assert!(
         world.btech.vehicles()[&observer]
@@ -222,7 +222,7 @@ async fn vehicle_locks_clear_on_visibility_sensor_placement_and_power_changes() 
         &mut world,
         observer,
         ObjectId(1),
-        BattleMovementRules::STANDARD.fall,
+        MovementRules::STANDARD.fall,
     )
     .unwrap();
     assert!(
@@ -232,7 +232,7 @@ async fn vehicle_locks_clear_on_visibility_sensor_placement_and_power_changes() 
     );
     let mut world = initial.clone();
     // Light changes wait for the next scan, where the sensor band still reaches the target.
-    set_battle_map_visibility(&mut world, map, BattleLight::Night, 30).unwrap();
+    set_battle_map_visibility(&mut world, map, Light::Night, 30).unwrap();
     assert!(world.btech.vehicles()[&observer].target_lock().is_some());
     refresh_battle_contacts(&mut world, &[observer]).unwrap();
     assert!(world.btech.vehicles()[&observer].target_lock().is_some());
@@ -241,11 +241,11 @@ async fn vehicle_locks_clear_on_visibility_sensor_placement_and_power_changes() 
         observer,
         ObjectId(1),
         HexCoordinate { x: 0, y: 1 },
-        BattleHexTargetMode::Building,
+        HexTargetMode::Building,
     )
     .unwrap();
     let coordinate_target = world.btech.vehicles()[&observer].target_selection();
-    set_battle_map_visibility(&mut world, map, BattleLight::Day, 30).unwrap();
+    set_battle_map_visibility(&mut world, map, Light::Day, 30).unwrap();
     refresh_battle_contacts(&mut world, &[observer]).unwrap();
     assert_eq!(
         world.btech.vehicles()[&observer].target_selection(),
@@ -299,7 +299,7 @@ async fn vehicle_lock_snapshots_reject_invalid_countdowns_targets_and_coordinate
                 serde_json::json!(9);
         } else {
             saved["vehicles"][observer.0.to_string()]["power"] =
-                serde_json::to_value(BattlePower::Off).unwrap();
+                serde_json::to_value(Power::Off).unwrap();
         }
         assert!(serde_json::from_value::<BtechState>(saved).is_err());
     }
@@ -310,12 +310,12 @@ async fn idle_vehicle_lock_countdown_retries_failed_server_commits() {
     tokio::task::LocalSet::new().run_until(async {
         use sqlx::Connection;
         let (_dir, config, mut world, [a, b, observer, other]) = formation().await;
-        power(&mut world, &[a, b, other], BattlePower::Off);
+        power(&mut world, &[a, b, other], Power::Off);
         for id in [a, b, other] { remove_battle_unit(&mut world, id, ObjectId(config.home())).unwrap(); }
         world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(observer);
         assign_battle_pilot(&mut world, observer, ObjectId(1)).unwrap();
         support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
-        select_battle_hex_target(&mut world, observer, ObjectId(1), HexCoordinate { x: 0, y: 1 }, BattleHexTargetMode::Hex).unwrap();
+        select_battle_hex_target(&mut world, observer, ObjectId(1), HexCoordinate { x: 0, y: 1 }, HexTargetMode::Hex).unwrap();
         assert!(battle_contact_observers(&world).is_empty());
         persistence::save(&config.database(), &world).await.unwrap();
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();

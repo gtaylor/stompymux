@@ -18,7 +18,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse("test", template).unwrap(),
+        VehicleTemplate::parse("test", template).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -36,20 +36,20 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
 fn seed(world: &mut World, id: ObjectId, value: u8) {
     world
         .btech
-        .set_unit_dice(id, BattleDice::seeded([value; 32]))
+        .set_unit_dice(id, Dice::seeded([value; 32]))
         .unwrap();
 }
 
 #[tokio::test]
 async fn advanced_ground_tables_cover_every_face_and_roll() {
-    use BattleVehicleSection as S;
+    use VehicleSection as S;
     let (_dir, _config, base, id) = fixture(include_str!("../game/mechs/Demolisher.toml")).await;
-    let rules = BattleVehicleCriticalRules {
+    let rules = VehicleCriticalRules {
         rotor_damage_divisor: 0,
         extended_piloting: false,
         vtol_table: None,
         toughness: false,
-        table: BattleVehicleCriticalTable::Advanced,
+        table: VehicleCriticalTable::Advanced,
         enabled: true,
         combat_safe: false,
     };
@@ -80,7 +80,7 @@ async fn advanced_ground_tables_cover_every_face_and_roll() {
         for value in 0..=255 {
             let mut world = base.clone();
             seed(&mut world, id, value);
-            let mut dice = BattleDice::seeded([value; 32]);
+            let mut dice = Dice::seeded([value; 32]);
             let roll = dice.two_d6();
             seen.insert(roll);
             let report = roll_battle_vehicle_critical(&mut world, id, section, rules).unwrap();
@@ -111,25 +111,21 @@ async fn advanced_ground_tables_cover_every_face_and_roll() {
 
 #[tokio::test]
 async fn standard_branches_preserve_suppression_and_replay() {
-    use BattleVehicleCriticalEffect as E;
-    use BattleVehicleCriticalTable as T;
+    use VehicleCriticalEffect as E;
+    use VehicleCriticalTable as T;
     let (_dir, config, base, id) = fixture(include_str!("../game/mechs/Demolisher.toml")).await;
     for table in [T::Standard] {
-        for section in [BattleVehicleSection::Front, BattleVehicleSection::Turret] {
+        for section in [VehicleSection::Front, VehicleSection::Turret] {
             for damaged in [false, true] {
                 for value in 0..32 {
                     let mut world = base.clone();
                     if damaged {
-                        damage_battle_vehicle_motive(
-                            &mut world,
-                            id,
-                            BattleVehicleMotiveHit::Immobilize,
-                        )
-                        .unwrap();
+                        damage_battle_vehicle_motive(&mut world, id, VehicleMotiveHit::Immobilize)
+                            .unwrap();
                         lock_battle_vehicle_turret(&mut world, id).unwrap();
                     }
                     seed(&mut world, id, value);
-                    let rules = BattleVehicleCriticalRules {
+                    let rules = VehicleCriticalRules {
                         rotor_damage_divisor: 0,
                         extended_piloting: false,
                         vtol_table: None,
@@ -138,10 +134,10 @@ async fn standard_branches_preserve_suppression_and_replay() {
                         enabled: true,
                         combat_safe: false,
                     };
-                    let mut dice = BattleDice::seeded([value; 32]);
+                    let mut dice = Dice::seeded([value; 32]);
                     let mut draws = Vec::new();
                     let early = if table == T::Standard {
-                        let turret = section == BattleVehicleSection::Turret;
+                        let turret = section == VehicleSection::Turret;
                         let roll = dice.die(if turret { 3 } else { 10 }).unwrap() as u8;
                         draws.push(roll);
                         if turret && roll == 2 {
@@ -185,7 +181,7 @@ async fn standard_branches_preserve_suppression_and_replay() {
         }
     }
     let mut world = base;
-    let rules = BattleVehicleCriticalRules {
+    let rules = VehicleCriticalRules {
         rotor_damage_divisor: 0,
         extended_piloting: false,
         vtol_table: None,
@@ -198,10 +194,8 @@ async fn standard_branches_preserve_suppression_and_replay() {
     let mut loaded = persistence::load(&config.database()).await.unwrap();
     for _ in 0..5 {
         assert_eq!(
-            roll_battle_vehicle_critical(&mut world, id, BattleVehicleSection::Rear, rules)
-                .unwrap(),
-            roll_battle_vehicle_critical(&mut loaded, id, BattleVehicleSection::Rear, rules)
-                .unwrap()
+            roll_battle_vehicle_critical(&mut world, id, VehicleSection::Rear, rules).unwrap(),
+            roll_battle_vehicle_critical(&mut loaded, id, VehicleSection::Rear, rules).unwrap()
         );
         assert_eq!(loaded.btech, world.btech);
     }
@@ -209,7 +203,7 @@ async fn standard_branches_preserve_suppression_and_replay() {
 
 #[tokio::test]
 async fn disabled_safe_critproof_and_stationary_criticals_preserve_draw_order() {
-    use BattleVehicleCriticalTable as T;
+    use VehicleCriticalTable as T;
     assert_eq!(T::from_settings(true), T::Advanced);
     assert_eq!(T::from_settings(false), T::Standard);
     for (template, critproof, stationary) in [
@@ -243,7 +237,7 @@ async fn disabled_safe_critproof_and_stationary_criticals_preserve_draw_order() 
                 let mut world = base.clone();
                 seed(&mut world, id, 0);
                 let before = world.btech.clone();
-                let mut dice = BattleDice::seeded([0; 32]);
+                let mut dice = Dice::seeded([0; 32]);
                 let rolls = if stationary
                     && !critproof
                     && enabled
@@ -257,8 +251,8 @@ async fn disabled_safe_critproof_and_stationary_criticals_preserve_draw_order() 
                 let report = roll_battle_vehicle_critical(
                     &mut world,
                     id,
-                    BattleVehicleSection::Front,
-                    BattleVehicleCriticalRules {
+                    VehicleSection::Front,
+                    VehicleCriticalRules {
                         rotor_damage_divisor: 0,
                         extended_piloting: false,
                         vtol_table: None,

@@ -2,16 +2,16 @@
 use stompymux_rs::*;
 
 /// Put one launcher in a conventional torso while retaining the fixture's external ammunition.
-fn definition(weapon: BattleWeapon, modes: &[&str]) -> BattleTemplate {
+fn definition(weapon: Weapon, modes: &[&str]) -> MechTemplate {
     let mut template =
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
-    let mut part = template.sections[&BattleSection::LeftArm].criticals[&2].clone();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+    let mut part = template.sections[&MechSection::LeftArm].criticals[&2].clone();
     part.equipment = weapon.name().into();
     part.modes = modes.iter().map(|s| s.to_string()).collect();
     for slot in 0..weapon.profile().critical_slots {
         template
             .sections
-            .get_mut(&BattleSection::LeftTorso)
+            .get_mut(&MechSection::LeftTorso)
             .unwrap()
             .criticals
             .insert(slot, part.clone());
@@ -23,29 +23,11 @@ fn definition(weapon: BattleWeapon, modes: &[&str]) -> BattleTemplate {
 #[test]
 fn rocket_catalog_clusters_and_one_shot_templates() {
     for (weapon, counterpart, heat, slots, ranges) in [
-        (
-            BattleWeapon::Rocket10,
-            BattleWeapon::Lrm10,
-            3,
-            1,
-            [5, 11, 18],
-        ),
-        (
-            BattleWeapon::Rocket15,
-            BattleWeapon::Lrm15,
-            4,
-            2,
-            [4, 9, 15],
-        ),
-        (
-            BattleWeapon::Rocket20,
-            BattleWeapon::Lrm20,
-            5,
-            3,
-            [3, 7, 12],
-        ),
+        (Weapon::Rocket10, Weapon::Lrm10, 3, 1, [5, 11, 18]),
+        (Weapon::Rocket15, Weapon::Lrm15, 4, 2, [4, 9, 15]),
+        (Weapon::Rocket20, Weapon::Lrm20, 5, 3, [3, 7, 12]),
     ] {
-        assert_eq!(BattleWeapon::parse(weapon.name()).unwrap(), weapon);
+        assert_eq!(Weapon::parse(weapon.name()).unwrap(), weapon);
         let p = weapon.profile();
         assert_eq!(
             (
@@ -70,7 +52,7 @@ fn rocket_catalog_clusters_and_one_shot_templates() {
                 );
             }
         }
-        assert!(BattleLoadout::resolve(&definition(weapon, &[])).is_err());
+        assert!(MechLoadout::resolve(&definition(weapon, &[])).is_err());
         for spent in [false, true] {
             let modes = if spent {
                 vec!["OneShot", "OneShot_Used"]
@@ -78,7 +60,7 @@ fn rocket_catalog_clusters_and_one_shot_templates() {
                 vec!["OneShot"]
             };
             let template = definition(weapon, &modes);
-            let unit = BattleUnit::from_template(template).unwrap();
+            let unit = Mech::from_template(template).unwrap();
             let loadout = unit.loadout().unwrap();
             let (index, mount) = loadout
                 .weapons
@@ -94,12 +76,12 @@ fn rocket_catalog_clusters_and_one_shot_templates() {
         }
     }
     for (weapon, modes) in [
-        (BattleWeapon::Srm4, vec!["OneShot_Used"]),
-        (BattleWeapon::Srm4, vec!["OneShot", "OneShot"]),
-        (BattleWeapon::MediumLaser, vec!["OneShot"]),
-        (BattleWeapon::Ac2, vec!["OneShot"]),
+        (Weapon::Srm4, vec!["OneShot_Used"]),
+        (Weapon::Srm4, vec!["OneShot", "OneShot"]),
+        (Weapon::MediumLaser, vec!["OneShot"]),
+        (Weapon::Ac2, vec!["OneShot"]),
     ] {
-        assert!(BattleLoadout::resolve(&definition(weapon, &modes)).is_err());
+        assert!(MechLoadout::resolve(&definition(weapon, &modes)).is_err());
     }
 }
 
@@ -109,14 +91,14 @@ fn rocket_commando_constructs_unchanged() {
     let source =
         std::fs::read_to_string(crate::support::repository_root().join("game/mechs/COM-4H.toml"))
             .unwrap();
-    let unit = BattleUnit::from_template(BattleTemplate::parse("test", &source).unwrap()).unwrap();
+    let unit = Mech::from_template(MechTemplate::parse("test", &source).unwrap()).unwrap();
     let loadout = unit.loadout().unwrap();
     assert!(loadout.ammunition.is_empty());
     assert_eq!(
         loadout
             .weapons
             .iter()
-            .filter(|m| m.weapon == BattleWeapon::Rocket15 && m.one_shot)
+            .filter(|m| m.weapon == Weapon::Rocket15 && m.one_shot)
             .count(),
         6
     );

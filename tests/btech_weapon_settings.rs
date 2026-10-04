@@ -22,12 +22,12 @@ fn recycle(world: &World, id: ObjectId, index: usize) -> Option<u16> {
 fn hit_seed(world: &mut World, id: ObjectId) {
     let seed = (0..=255)
         .find(|value| {
-            let mut dice = BattleDice::seeded([*value; 32]);
+            let mut dice = Dice::seeded([*value; 32]);
             dice.two_d6() == 12 && dice.d6() >= 2
         })
         .unwrap();
     firing::edit(world, id, |state| {
-        state["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
+        state["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap()
     });
 }
 
@@ -100,7 +100,7 @@ async fn recycle_overrides_apply_across_chassis_and_preserve_existing_timers() {
     for source in firing::templates() {
         let (_dir, config, mut world, shooter, target, index) = firing::fixture_with_target(
             &source,
-            Some(BattleWeapon::SmallLaser),
+            Some(Weapon::SmallLaser),
             include_str!("../game/mechs/AS7-D.toml"),
         )
         .await;
@@ -112,7 +112,7 @@ async fn recycle_overrides_apply_across_chassis_and_preserve_existing_timers() {
         assert_eq!(
             specification
                 .iter()
-                .find(|row| row.weapon == BattleWeapon::SmallLaser)
+                .find(|row| row.weapon == Weapon::SmallLaser)
                 .unwrap()
                 .recycle_seconds,
             127
@@ -137,10 +137,7 @@ async fn recycle_overrides_apply_across_chassis_and_preserve_existing_timers() {
         world.validate(&config).unwrap();
         persistence::save(&config.database(), &world).await.unwrap();
         let mut loaded = persistence::load(&config.database()).await.unwrap();
-        assert_eq!(
-            loaded.btech.weapon_settings(),
-            &BattleWeaponSettings::default()
-        );
+        assert_eq!(loaded.btech.weapon_settings(), &WeaponSettings::default());
         assert_eq!(recycle(&loaded, shooter, index), Some(127));
         set_battle_weapon_recycle(&mut loaded, ObjectId(1), "IS.SmallLaser", 1).unwrap();
         assert_eq!(loaded.btech, world.btech);
@@ -163,13 +160,10 @@ async fn recycle_overrides_apply_across_chassis_and_preserve_existing_timers() {
             &mut world,
             ObjectId(1),
             "IS.SmallLaser",
-            i64::from(BattleWeapon::SmallLaser.profile().recycle_seconds),
+            i64::from(Weapon::SmallLaser.profile().recycle_seconds),
         )
         .unwrap();
-        assert_eq!(
-            world.btech.weapon_settings(),
-            &BattleWeaponSettings::default()
-        );
+        assert_eq!(world.btech.weapon_settings(), &WeaponSettings::default());
         world.validate(&config).unwrap();
         for remaining in [0, 128] {
             let mut state = serde_json::to_value(&world.btech).unwrap();
@@ -196,7 +190,7 @@ async fn defensive_recycle_and_battle_value_use_shared_settings() {
         for target_source in defense::templates() {
             let (_dir, config, mut world, shooter, target, index) = firing::fixture_with_supply(
                 &source,
-                Some(BattleWeapon::Srm2),
+                Some(Weapon::Srm2),
                 &target_source,
                 false,
                 Some(""),
@@ -246,7 +240,7 @@ async fn offensive_value_and_experience_follow_runtime_overrides() {
     for source in firing::templates() {
         let (_dir, config, mut world, shooter, target, _) = firing::fixture_with_target(
             &source,
-            Some(BattleWeapon::SmallLaser),
+            Some(Weapon::SmallLaser),
             include_str!("../game/mechs/AS7-D.toml"),
         )
         .await;
@@ -263,7 +257,7 @@ async fn offensive_value_and_experience_follow_runtime_overrides() {
             target_speed: 64.5,
             attacker_pilot_modifier: 1.0,
             target_pilot_modifier: 1.0,
-            weapon: BattleWeapon::SmallLaser,
+            weapon: Weapon::SmallLaser,
             damage: 3,
             base_to_hit: 7,
             unit_modifier: 1.0,
@@ -315,7 +309,7 @@ async fn offensive_value_and_experience_follow_runtime_overrides() {
         set_battle_character(
             &mut world,
             ObjectId(1),
-            BattleCharacter {
+            Character {
                 build: 5,
                 reflexes: 5,
                 intuition: 5,
@@ -332,13 +326,13 @@ async fn offensive_value_and_experience_follow_runtime_overrides() {
         });
         set_battle_weapon_battle_value(&mut world, ObjectId(1), "IS.SmallLaser", 100).unwrap();
         set_battle_weapon_recycle(&mut world, ObjectId(1), "IS.SmallLaser", 30).unwrap();
-        let request = BattleGunneryAwardRequest {
+        let request = GunneryAwardRequest {
             tsm_tow_bonus: true,
 
             attacker: shooter,
             pilot: ObjectId(1),
             target,
-            weapon: BattleWeapon::SmallLaser,
+            weapon: Weapon::SmallLaser,
             damage: 3,
             base_to_hit: 7,
             extended_gunnery: true,

@@ -5,13 +5,13 @@ use serde::{Deserialize, Serialize};
 /// Battlefield illumination levels used by sight range and darkness aim rules.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleLight {
+pub enum Light {
     Night,
     Twilight,
     Day,
 }
 
-impl BattleLight {
+impl Light {
     /// Decode the persisted map column, where zero is night and two is full daylight.
     pub fn from_stored(value: i64) -> Result<Self> {
         Ok(match value {
@@ -32,7 +32,7 @@ impl BattleLight {
     }
 }
 
-impl std::str::FromStr for BattleLight {
+impl std::str::FromStr for Light {
     type Err = anyhow::Error;
 
     /// Parse named light levels used by operator commands and Lua.
@@ -48,8 +48,8 @@ impl std::str::FromStr for BattleLight {
 
 impl super::StoredMap {
     /// Current battlefield light level, rejecting corrupt persisted values.
-    pub fn light_level(&self) -> Result<BattleLight> {
-        BattleLight::from_stored(self.light)
+    pub fn light_level(&self) -> Result<Light> {
+        Light::from_stored(self.light)
     }
 }
 
@@ -61,14 +61,14 @@ mod tests {
     #[test]
     fn light_levels_round_trip_through_storage_and_names() {
         for (light, name) in [
-            (BattleLight::Night, "night"),
-            (BattleLight::Twilight, "Twilight"),
-            (BattleLight::Day, " DAY "),
+            (Light::Night, "night"),
+            (Light::Twilight, "Twilight"),
+            (Light::Day, " DAY "),
         ] {
-            assert_eq!(BattleLight::from_stored(light.stored()).unwrap(), light);
-            assert_eq!(name.parse::<BattleLight>().unwrap(), light);
+            assert_eq!(Light::from_stored(light.stored()).unwrap(), light);
+            assert_eq!(name.parse::<Light>().unwrap(), light);
         }
-        assert!(BattleLight::from_stored(3).is_err());
-        assert!("dusk".parse::<BattleLight>().is_err());
+        assert!(Light::from_stored(3).is_err());
+        assert!("dusk".parse::<Light>().is_err());
     }
 }

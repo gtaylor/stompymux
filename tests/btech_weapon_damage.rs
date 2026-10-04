@@ -3,16 +3,13 @@ use crate::support;
 use stompymux_rs::*;
 
 /// A weapon-only torso isolates random critical selection while retaining a viable chassis.
-async fn fixture(weapon: BattleWeapon) -> (tempfile::TempDir, Config, World, ObjectId, usize) {
+async fn fixture(weapon: Weapon) -> (tempfile::TempDir, Config, World, ObjectId, usize) {
     let (dir, config, mut world) = support::isolated_world().await;
     let id = world.create(&config, "Weapon damage".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     let mut template =
-        BattleTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap();
-    let section = template
-        .sections
-        .get_mut(&BattleSection::LeftTorso)
-        .unwrap();
+        MechTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap();
+    let section = template.sections.get_mut(&MechSection::LeftTorso).unwrap();
     section.criticals.clear();
     for slot in 0..weapon.profile().critical_slots {
         section.criticals.insert(
@@ -31,7 +28,7 @@ async fn fixture(weapon: BattleWeapon) -> (tempfile::TempDir, Config, World, Obj
         .unwrap()
         .weapons
         .iter()
-        .position(|mount| mount.criticals[0].section == BattleSection::LeftTorso)
+        .position(|mount| mount.criticals[0].section == MechSection::LeftTorso)
         .unwrap();
     (dir, config, world, id, index)
 }
@@ -40,9 +37,9 @@ async fn fixture(weapon: BattleWeapon) -> (tempfile::TempDir, Config, World, Obj
 #[tokio::test]
 async fn critical_degradation_replays_and_survives_database_restart() {
     for (weapon, expected) in [
-        (BattleWeapon::Ppc, BattleWeaponDamageKind::Focus),
-        (BattleWeapon::Lrm20, BattleWeaponDamageKind::Feed),
-        (BattleWeapon::Ac10, BattleWeaponDamageKind::Barrel),
+        (Weapon::Ppc, WeaponDamageKind::Focus),
+        (Weapon::Lrm20, WeaponDamageKind::Feed),
+        (Weapon::Ac10, WeaponDamageKind::Barrel),
     ] {
         let (_dir, config, base, id, index) = fixture(weapon).await;
         let mut found = None;
@@ -50,18 +47,18 @@ async fn critical_degradation_replays_and_survives_database_restart() {
             let mut world = base.clone();
             world
                 .btech
-                .set_unit_dice(id, BattleDice::seeded([value; 32]))
+                .set_unit_dice(id, Dice::seeded([value; 32]))
                 .unwrap();
             let before = world.clone();
-            let hit = BattleHit {
-                section: BattleSection::LeftTorso,
+            let hit = Hit {
+                section: MechSection::LeftTorso,
                 rear_armor: false,
                 through_armor_critical: true,
                 crew_stun: false,
             };
             let report = resolve_battle_impact(&mut world, id, hit, 1).unwrap();
             if report.criticals.len() != 1
-                || !matches!(report.criticals[0].1, BattleCriticalLoss::WeaponDamage { damage, .. } if damage == expected)
+                || !matches!(report.criticals[0].1, CriticalLoss::WeaponDamage { damage, .. } if damage == expected)
             {
                 continue;
             }
@@ -76,7 +73,7 @@ async fn critical_degradation_replays_and_survives_database_restart() {
             );
             assert!(
                 !world.btech.constructed_units()[&id]
-                    .critical_candidates(BattleSection::LeftTorso)
+                    .critical_candidates(MechSection::LeftTorso)
                     .contains(&report.criticals[0].0)
             );
             let mut replay = before;
@@ -102,10 +99,10 @@ async fn critical_degradation_replays_and_survives_database_restart() {
 #[tokio::test]
 async fn damaged_weapon_controls_and_reservations_share_saved_state() {
     for (weapon, kind) in [
-        (BattleWeapon::Ppc, BattleWeaponDamageKind::Crystal),
-        (BattleWeapon::Ppc, BattleWeaponDamageKind::Focus),
-        (BattleWeapon::Lrm20, BattleWeaponDamageKind::Feed),
-        (BattleWeapon::Ac10, BattleWeaponDamageKind::Barrel),
+        (Weapon::Ppc, WeaponDamageKind::Crystal),
+        (Weapon::Ppc, WeaponDamageKind::Focus),
+        (Weapon::Lrm20, WeaponDamageKind::Feed),
+        (Weapon::Ac10, WeaponDamageKind::Barrel),
     ] {
         let (_dir, config, mut world, id, index) = fixture(weapon).await;
         let map = world.create(&config, "Field".into(), Kind::Room);
@@ -129,10 +126,9 @@ async fn damaged_weapon_controls_and_reservations_share_saved_state() {
         world
             .btech
             .rewrite_unit_record(id, |record| {
-                record["power"] = serde_json::to_value(BattlePower::Running).unwrap();
-                record["weapon_damage"] =
-                    serde_json::json!([BattleWeaponDamage::new(location, kind)]);
-                if kind == BattleWeaponDamageKind::Barrel {
+                record["power"] = serde_json::to_value(Power::Running).unwrap();
+                record["weapon_damage"] = serde_json::json!([WeaponDamage::new(location, kind)]);
+                if kind == WeaponDamageKind::Barrel {
                     record["weapon_damage_jams"] = serde_json::json!([index]);
                 }
             })
@@ -151,19 +147,19 @@ async fn damaged_weapon_controls_and_reservations_share_saved_state() {
         );
         let before = scripts.world().btech.clone();
         match kind {
-            BattleWeaponDamageKind::Crystal | BattleWeaponDamageKind::Focus => {
+            WeaponDamageKind::Crystal | WeaponDamageKind::Focus => {
                 let launch =
                     spend_battle_weapon(&mut scripts.world_mut(), id, ObjectId(1), index).unwrap();
                 assert_eq!(
                     launch.heat,
-                    weapon.profile().heat + u8::from(kind == BattleWeaponDamageKind::Crystal)
+                    weapon.profile().heat + u8::from(kind == WeaponDamageKind::Crystal)
                 );
                 assert_eq!(
                     launch.damage_penalty,
-                    u8::from(kind == BattleWeaponDamageKind::Focus)
+                    u8::from(kind == WeaponDamageKind::Focus)
                 );
             }
-            BattleWeaponDamageKind::Feed => {
+            WeaponDamageKind::Feed => {
                 let error = scripts
                     .eval_callback::<mlua::Value>(&format!(
                         "btech.unit.hotload({},1,{index})",
@@ -177,7 +173,7 @@ async fn damaged_weapon_controls_and_reservations_share_saved_state() {
                 assert_eq!(scripts.world().btech, before);
                 assert!(scripts.drain_outbox().is_empty());
             }
-            BattleWeaponDamageKind::Barrel => {
+            WeaponDamageKind::Barrel => {
                 assert!(
                     spend_battle_weapon(&mut scripts.world_mut(), id, ObjectId(1), index).is_err()
                 );
@@ -216,10 +212,10 @@ async fn damaged_weapon_controls_and_reservations_share_saved_state() {
 #[tokio::test]
 async fn critical_launch_failures_are_atomic_and_distinguish_permanent_jams() {
     for (weapon, kind, one_shot) in [
-        (BattleWeapon::Ppc, BattleWeaponDamageKind::Crystal, false),
-        (BattleWeapon::Lrm20, BattleWeaponDamageKind::Feed, false),
-        (BattleWeapon::Lrm20, BattleWeaponDamageKind::Feed, true),
-        (BattleWeapon::Ac10, BattleWeaponDamageKind::Barrel, false),
+        (Weapon::Ppc, WeaponDamageKind::Crystal, false),
+        (Weapon::Lrm20, WeaponDamageKind::Feed, false),
+        (Weapon::Lrm20, WeaponDamageKind::Feed, true),
+        (Weapon::Ac10, WeaponDamageKind::Barrel, false),
     ] {
         let (_dir, config, mut world, id, index) = fixture(weapon).await;
         // Supply the added launcher through the authored definition before reconstructing it.
@@ -227,7 +223,7 @@ async fn critical_launch_failures_are_atomic_and_distinguish_permanent_jams() {
         if one_shot {
             for part in template
                 .sections
-                .get_mut(&BattleSection::LeftTorso)
+                .get_mut(&MechSection::LeftTorso)
                 .unwrap()
                 .criticals
                 .values_mut()
@@ -238,7 +234,7 @@ async fn critical_launch_failures_are_atomic_and_distinguish_permanent_jams() {
         if weapon.profile().ammunition_per_ton > 0 {
             template
                 .sections
-                .get_mut(&BattleSection::RightTorso)
+                .get_mut(&MechSection::RightTorso)
                 .unwrap()
                 .criticals
                 .insert(
@@ -253,8 +249,7 @@ async fn critical_launch_failures_are_atomic_and_distinguish_permanent_jams() {
         world
             .btech
             .rewrite_unit_record(id, |record| {
-                *record =
-                    serde_json::to_value(BattleUnit::from_template(template).unwrap()).unwrap();
+                *record = serde_json::to_value(Mech::from_template(template).unwrap()).unwrap();
             })
             .unwrap();
         let map = world.create(&config, "Firing field".into(), Kind::Room);
@@ -271,7 +266,7 @@ async fn critical_launch_failures_are_atomic_and_distinguish_permanent_jams() {
         assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
         support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         let seed = (0..=255)
-            .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 2)
+            .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 2)
             .unwrap();
         let location = world.btech.constructed_units()[&id]
             .loadout()
@@ -281,10 +276,9 @@ async fn critical_launch_failures_are_atomic_and_distinguish_permanent_jams() {
         world
             .btech
             .rewrite_unit_record(id, |record| {
-                record["power"] = serde_json::to_value(BattlePower::Running).unwrap();
-                record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-                record["weapon_damage"] =
-                    serde_json::json!([BattleWeaponDamage::new(location, kind)]);
+                record["power"] = serde_json::to_value(Power::Running).unwrap();
+                record["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
+                record["weapon_damage"] = serde_json::json!([WeaponDamage::new(location, kind)]);
             })
             .unwrap();
         let scripts =
@@ -300,8 +294,8 @@ async fn critical_launch_failures_are_atomic_and_distinguish_permanent_jams() {
         assert!(scripts.drain_outbox().is_empty());
         let result: (bool, bool, bool, String, u8) = scripts.eval_callback(&format!("local shot={command}; return shot.launched,shot.jammed,shot.loader_destroyed,shot.expenditure.critical_failure,shot.roll")).unwrap();
         assert!(!result.0);
-        assert_eq!(result.1, kind == BattleWeaponDamageKind::Barrel);
-        assert_eq!(result.2, kind != BattleWeaponDamageKind::Barrel);
+        assert_eq!(result.1, kind == WeaponDamageKind::Barrel);
+        assert_eq!(result.2, kind != WeaponDamageKind::Barrel);
         assert_eq!(
             result.3,
             serde_json::to_value(kind).unwrap().as_str().unwrap()
@@ -319,7 +313,7 @@ async fn critical_launch_failures_are_atomic_and_distinguish_permanent_jams() {
                 before.constructed_units()[&id].ammunition()
             );
         }
-        if kind == BattleWeaponDamageKind::Barrel {
+        if kind == WeaponDamageKind::Barrel {
             assert!(
                 scripts.world().btech.constructed_units()[&id]
                     .weapon_readiness(index)

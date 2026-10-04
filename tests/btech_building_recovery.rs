@@ -23,7 +23,7 @@ async fn fixture(integrity: i64) -> (tempfile::TempDir, Config, World, ObjectId,
         set_building_state(
             &mut world,
             id,
-            BattleBuildingState {
+            BuildingState {
                 integrity,
                 maximum_integrity: 10,
                 regeneration: 2,
@@ -37,7 +37,7 @@ async fn fixture(integrity: i64) -> (tempfile::TempDir, Config, World, ObjectId,
             &mut world,
             exterior,
             ordinal,
-            Some(BattleBuildingEntrance {
+            Some(BuildingEntrance {
                 coordinate: HexCoordinate { x, y: 0 },
                 interior,
                 data_char: 0,

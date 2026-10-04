@@ -1,5 +1,5 @@
 //! Critical-slot outcomes and derived equipment availability for supported Mech chassis.
-use super::{BattlePower, BattleSection, BattleSystem, BattleUnit, CriticalLocation};
+use super::{CriticalLocation, Mech, MechSection, Power, System};
 use anyhow::{Context, Result};
 use serde::Serialize;
 use std::collections::BTreeSet;
@@ -7,10 +7,10 @@ use std::collections::BTreeSet;
 /// The equipment affected by a critical hit; combat resolution owns its secondary effects.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
-pub enum BattleCriticalLoss {
+pub enum CriticalLoss {
     WeaponDamage {
         index: usize,
-        damage: super::BattleWeaponDamageKind,
+        damage: super::WeaponDamageKind,
     },
     Weapon {
         index: usize,
@@ -23,19 +23,19 @@ pub enum BattleCriticalLoss {
         explosion_damage: u32,
     },
     System {
-        system: BattleSystem,
+        system: System,
     },
 }
 
 /// An available bin's full internal explosion potential, measured in damage points.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-pub struct BattleAmmunitionHazard {
+pub struct AmmunitionHazard {
     pub index: usize,
     pub location: CriticalLocation,
     pub damage: u32,
 }
 
-impl BattleUnit {
+impl Mech {
     /// A shared targeting computer needs installed slots with no critical, section or flood losses.
     pub fn targeting_computer_operational(&self) -> Result<bool> {
         let loadout = self.loadout()?;
@@ -43,7 +43,7 @@ impl BattleUnit {
         for part in loadout
             .systems
             .iter()
-            .filter(|part| part.system == BattleSystem::TargetingComputer)
+            .filter(|part| part.system == System::TargetingComputer)
         {
             installed = true;
             if self.critical_unavailable(part.location) {
@@ -55,7 +55,7 @@ impl BattleUnit {
 
     /// Installed CASE, CASE II or Clan containment stops internal explosions from transferring,
     /// including after section loss.
-    pub fn has_case(&self, section: BattleSection) -> bool {
+    pub fn has_case(&self, section: MechSection) -> bool {
         if self.definition().has_special("Clan") || self.has_case_ii(section) {
             return true;
         }
@@ -66,12 +66,12 @@ impl BattleUnit {
                 layout
                     .criticals
                     .values()
-                    .any(|part| BattleSystem::named(&part.equipment) == Some(BattleSystem::Case))
+                    .any(|part| System::named(&part.equipment) == Some(System::Case))
             })
     }
 
     /// Installed CASE II vents a local explosion through armor after one internal point.
-    pub fn has_case_ii(&self, section: BattleSection) -> bool {
+    pub fn has_case_ii(&self, section: MechSection) -> bool {
         self.definition()
             .sections
             .get(&section)
@@ -79,13 +79,13 @@ impl BattleUnit {
                 layout
                     .criticals
                     .values()
-                    .any(|part| BattleSystem::named(&part.equipment) == Some(BattleSystem::CaseIi))
+                    .any(|part| System::named(&part.equipment) == Some(System::CaseIi))
             })
     }
 
     /// Select the most destructive remaining bin; equal hazards retain the first section/slot.
     /// No dice are consumed, and unavailable or empty bins cannot become heat hazards.
-    pub fn ammunition_hazard_maximum(&self) -> Result<Option<BattleAmmunitionHazard>> {
+    pub fn ammunition_hazard_maximum(&self) -> Result<Option<AmmunitionHazard>> {
         self.maximum_ammunition_hazard(false)
     }
 
@@ -95,21 +95,16 @@ impl BattleUnit {
     }
 
     /// Inferno penalties select the largest available inferno bin before other ammunition.
-    pub(super) fn inferno_ammunition_hazard(&self) -> Result<Option<BattleAmmunitionHazard>> {
+    pub(super) fn inferno_ammunition_hazard(&self) -> Result<Option<AmmunitionHazard>> {
         self.maximum_ammunition_hazard(true)
     }
 
     /// Shared stable hazard ordering, optionally restricted to inferno ammunition.
-    fn maximum_ammunition_hazard(
-        &self,
-        inferno_only: bool,
-    ) -> Result<Option<BattleAmmunitionHazard>> {
+    fn maximum_ammunition_hazard(&self, inferno_only: bool) -> Result<Option<AmmunitionHazard>> {
         let loadout = self.loadout()?;
-        let mut maximum: Option<BattleAmmunitionHazard> = None;
+        let mut maximum: Option<AmmunitionHazard> = None;
         for index in 0..loadout.ammunition.len() {
-            if inferno_only
-                && loadout.ammunition[index].mode != super::BattleAmmunitionMode::Inferno
-            {
+            if inferno_only && loadout.ammunition[index].mode != super::AmmunitionMode::Inferno {
                 continue;
             }
             let hazard = self.ammunition_hazard(index)?;
@@ -124,13 +119,13 @@ impl BattleUnit {
     }
 
     /// Calculate one bin's potential from its live salvo count and conventional weapon profile.
-    pub(super) fn ammunition_hazard(&self, index: usize) -> Result<BattleAmmunitionHazard> {
+    pub(super) fn ammunition_hazard(&self, index: usize) -> Result<AmmunitionHazard> {
         let loadout = self.loadout()?;
         let bin = loadout
             .ammunition
             .get(index)
             .context("Ammunition index out of bounds")?;
-        Ok(BattleAmmunitionHazard {
+        Ok(AmmunitionHazard {
             index,
             location: bin.location,
             damage: bin.weapon.ammunition_explosion_damage_for_mode(
@@ -159,13 +154,11 @@ impl BattleUnit {
 
     /// Installed slots still eligible for conventional random critical selection.
     /// Surviving slots of a broken multi-slot weapon remain eligible for subsequent hits.
-    pub fn critical_candidates(&self, section: BattleSection) -> Vec<CriticalLocation> {
+    pub fn critical_candidates(&self, section: MechSection) -> Vec<CriticalLocation> {
         self.definition().sections[&section]
             .criticals
             .iter()
-            .filter(|(_, part)| {
-                !BattleSystem::named(&part.equipment).is_some_and(BattleSystem::is_noncritical)
-            })
+            .filter(|(_, part)| !System::named(&part.equipment).is_some_and(System::is_noncritical))
             .map(|(&slot, _)| CriticalLocation { section, slot })
             .filter(|location| {
                 !self.critical_destroyed(*location)
@@ -178,7 +171,7 @@ impl BattleUnit {
     }
 
     /// Choose uniformly from installed slots; immune units and empty sections consume no dice.
-    pub fn choose_critical(&mut self, section: BattleSection) -> Option<CriticalLocation> {
+    pub fn choose_critical(&mut self, section: MechSection) -> Option<CriticalLocation> {
         if self.combat_safe || self.definition().has_special("CritProof_Tech") {
             return None;
         }
@@ -225,11 +218,11 @@ impl BattleUnit {
 
     /// Count effective losses: sink cooling capacity and jump jets, rather than their grouped slots.
     /// Flooded and vacuum-exposed engines, heat sinks and jump jets also count.
-    pub fn system_hits(&self, system: BattleSystem) -> u8 {
+    pub fn system_hits(&self, system: System) -> u8 {
         if self.systems_intact() {
             return 0;
         }
-        if system == BattleSystem::JumpJet && self.definition().has_special("ImprovedJJ_Tech") {
+        if system == System::JumpJet && self.definition().has_special("ImprovedJJ_Tech") {
             return self
                 .loadout()
                 .expect("validated loadout")
@@ -243,7 +236,7 @@ impl BattleUnit {
                 })
                 .count() as u8;
         }
-        if system == BattleSystem::HeatSink && self.definition().has_double_heat_sinks() {
+        if system == System::HeatSink && self.definition().has_double_heat_sinks() {
             return (self
                 .loadout()
                 .expect("validated loadout")
@@ -271,27 +264,22 @@ impl BattleUnit {
                 // Destruction checks run for every sensor snapshot. Most slots are
                 // intact: inspect their live condition before parsing equipment names.
                 (self.critical_destroyed(*location)
-                    || (matches!(
-                        system,
-                        BattleSystem::Engine | BattleSystem::HeatSink | BattleSystem::JumpJet
-                    ) && self.section_disabled(location.section)))
-                    && BattleSystem::named(&part.equipment) == Some(system)
+                    || (matches!(system, System::Engine | System::HeatSink | System::JumpJet)
+                        && self.section_disabled(location.section)))
+                    && System::named(&part.equipment) == Some(system)
             })
             .count() as u8
     }
 
     /// Inspect a pending critical loss so combat can choose degradation before material destruction.
-    pub(super) fn critical_loss(
-        &self,
-        location: CriticalLocation,
-    ) -> Result<Option<BattleCriticalLoss>> {
+    pub(super) fn critical_loss(&self, location: CriticalLocation) -> Result<Option<CriticalLoss>> {
         let loadout = self.loadout()?;
         let loss = if let Some(index) = loadout
             .weapons
             .iter()
             .position(|mount| mount.criticals.contains(&location))
         {
-            BattleCriticalLoss::Weapon {
+            CriticalLoss::Weapon {
                 index,
                 explosion_damage: if self.weapon_intact(index)?
                     && !super::weapon_failure::explosion_disabled(
@@ -301,7 +289,7 @@ impl BattleUnit {
                     ) {
                     let weapon = loadout.weapons[index].weapon;
                     let hotload_supply = weapon.hotload_supply_mode(self.ammunition_mode(index)?);
-                    if self.fire_mode(index)? == super::BattleFireMode::Hotload
+                    if self.fire_mode(index)? == super::FireMode::Hotload
                         && loadout.ammunition.iter().enumerate().any(|(i, bin)| {
                             bin.weapon == weapon
                                 && bin.mode == hotload_supply
@@ -311,15 +299,14 @@ impl BattleUnit {
                     {
                         weapon.profile_for_ammunition(hotload_supply).damage
                             * weapon.profile().missiles.max(1)
-                    } else if self.ammunition_mode(index)?
-                        == super::BattleAmmunitionMode::Incendiary
+                    } else if self.ammunition_mode(index)? == super::AmmunitionMode::Incendiary
                         && self
                             .weapon_recycle
                             .get(&index)
                             .is_some_and(|remaining| *remaining > 0)
                         && loadout.ammunition.iter().enumerate().any(|(i, bin)| {
                             bin.weapon == weapon
-                                && bin.mode == super::BattleAmmunitionMode::Incendiary
+                                && bin.mode == super::AmmunitionMode::Incendiary
                                 && self.ammunition[i] > 0
                                 && !self.critical_unavailable(bin.location)
                         })
@@ -340,7 +327,7 @@ impl BattleUnit {
             .position(|bin| bin.location == location)
         {
             let rounds = self.ammunition[index];
-            BattleCriticalLoss::Ammunition {
+            CriticalLoss::Ammunition {
                 index,
                 rounds,
                 explosion_damage: loadout.ammunition[index]
@@ -353,7 +340,7 @@ impl BattleUnit {
                 .iter()
                 .find(|part| part.location == location)
                 .context("Critical slot is not installed")?;
-            BattleCriticalLoss::System {
+            CriticalLoss::System {
                 system: part.system,
             }
         };
@@ -365,10 +352,7 @@ impl BattleUnit {
 
     /// Mark one occupied slot lost and return any effect still needed by the enclosing action.
     /// Invalid/repeated requests change nothing. Ammunition contents are captured before clearing.
-    pub fn destroy_critical(
-        &mut self,
-        location: CriticalLocation,
-    ) -> Result<Option<BattleCriticalLoss>> {
+    pub fn destroy_critical(&mut self, location: CriticalLocation) -> Result<Option<CriticalLoss>> {
         let Some(loss) = self.critical_loss(location)? else {
             return Ok(None);
         };
@@ -376,8 +360,8 @@ impl BattleUnit {
         let recalculate_propulsion = self.chassis().is_leg(location.section)
             && matches!(
                 loss,
-                BattleCriticalLoss::System {
-                    system: BattleSystem::ShoulderOrHip
+                CriticalLoss::System {
+                    system: System::ShoulderOrHip
                 }
             )
             || self.chassis().is_leg(location.section)
@@ -387,16 +371,16 @@ impl BattleUnit {
                 })
                 && matches!(
                     loss,
-                    BattleCriticalLoss::System {
-                        system: BattleSystem::UpperActuator
-                            | BattleSystem::LowerActuator
-                            | BattleSystem::HandOrFootActuator
+                    CriticalLoss::System {
+                        system: System::UpperActuator
+                            | System::LowerActuator
+                            | System::HandOrFootActuator
                     }
                 );
         let gyro_before = if matches!(
             loss,
-            BattleCriticalLoss::System {
-                system: BattleSystem::Gyro
+            CriticalLoss::System {
+                system: System::Gyro
             }
         ) {
             Some((self.gyro_damage(), self.gyro_piloting_modifier()))
@@ -410,15 +394,15 @@ impl BattleUnit {
         if recalculate_propulsion {
             self.recalculate_actuators();
         }
-        if let BattleCriticalLoss::Weapon { index, .. } = loss {
+        if let CriticalLoss::Weapon { index, .. } = loss {
             self.weapon_damage_jams.remove(&index);
             self.weapon_failures.remove(&index);
         }
-        if self.carried_club.map(super::BattleArm::section) == Some(location.section)
+        if self.carried_club.map(super::Arm::section) == Some(location.section)
             && matches!(
                 loss,
-                BattleCriticalLoss::System {
-                    system: BattleSystem::HandOrFootActuator
+                CriticalLoss::System {
+                    system: System::HandOrFootActuator
                 }
             )
         {
@@ -426,8 +410,8 @@ impl BattleUnit {
         }
         if matches!(
             loss,
-            BattleCriticalLoss::System {
-                system: BattleSystem::ArtemisIv
+            CriticalLoss::System {
+                system: System::ArtemisIv
             }
         ) {
             // The reference critical handler uses the raw value as a same-section zero-based slot.
@@ -441,11 +425,11 @@ impl BattleUnit {
                         slot,
                     })
                     && let Some(&mode) = self.ammunition_modes.get(&index)
-                    && mode.munition() == super::BattleAmmunitionMode::Artemis
+                    && mode.munition() == super::AmmunitionMode::Artemis
                 {
                     // Losing the controller keeps an MML's long-range family selected.
-                    let mode = mode.with_munition(super::BattleAmmunitionMode::Normal);
-                    if mode == super::BattleAmmunitionMode::Normal {
+                    let mode = mode.with_munition(super::AmmunitionMode::Normal);
+                    if mode == super::AmmunitionMode::Normal {
                         self.ammunition_modes.remove(&index);
                     } else {
                         self.ammunition_modes.insert(index, mode);
@@ -453,12 +437,12 @@ impl BattleUnit {
                 }
             }
         }
-        if let BattleCriticalLoss::Weapon { index, .. } = loss
+        if let CriticalLoss::Weapon { index, .. } = loss
             && loadout.weapons[index].weapon.is_ams()
         {
             self.ams_enabled = false;
         }
-        if let BattleCriticalLoss::Weapon {
+        if let CriticalLoss::Weapon {
             index,
             explosion_damage,
         } = loss
@@ -469,8 +453,8 @@ impl BattleUnit {
         }
         if matches!(
             loss,
-            BattleCriticalLoss::System {
-                system: BattleSystem::HeatSink
+            CriticalLoss::System {
+                system: System::HeatSink
             }
         ) && self.definition().has_double_heat_sinks()
         {
@@ -483,8 +467,8 @@ impl BattleUnit {
         }
         if matches!(
             loss,
-            BattleCriticalLoss::System {
-                system: BattleSystem::JumpJet
+            CriticalLoss::System {
+                system: System::JumpJet
             }
         ) && self.definition().has_special("ImprovedJJ_Tech")
         {
@@ -495,14 +479,14 @@ impl BattleUnit {
                 .expect("installed jet group");
             self.lost_criticals.extend(group.iter().copied());
         }
-        if let BattleCriticalLoss::Ammunition { index, .. } = loss {
+        if let CriticalLoss::Ammunition { index, .. } = loss {
             self.ammunition[index] = 0;
             self.live_mass.invalidate();
         }
         if matches!(
             loss,
-            BattleCriticalLoss::System {
-                system: BattleSystem::LightProbe
+            CriticalLoss::System {
+                system: System::LightProbe
             }
         ) {
             self.critical_conditions.lose_light_probe();
@@ -555,7 +539,7 @@ impl BattleUnit {
             self.crew_recovery.clear();
             self.stagger = Default::default();
             self.overheat_clock = Default::default();
-            self.power = BattlePower::Off;
+            self.power = Power::Off;
             self.hide_elapsed = None;
             self.masc.shutdown();
             self.supercharger.shutdown();
@@ -587,7 +571,7 @@ pub fn destroy_unit_critical(
     world: &mut crate::World,
     id: crate::ObjectId,
     location: CriticalLocation,
-) -> Result<Option<BattleCriticalLoss>> {
+) -> Result<Option<CriticalLoss>> {
     anyhow::ensure!(
         world
             .objects
@@ -614,7 +598,7 @@ mod tests {
     use super::*;
 
     /// The test Atlas with its AC/20 swapped for `item` and a bin of its ammunition.
-    fn atlas(item: &str, slots: &str, rounds: u16) -> BattleUnit {
+    fn atlas(item: &str, slots: &str, rounds: u16) -> Mech {
         let source = include_str!("../../tests/fixtures/btech/mechs/AS7-D.toml")
             .replace(
                 "{ at = \"1-10\", item = \"IS.AC/20\" }",
@@ -624,18 +608,17 @@ mod tests {
                 "{ at = \"11-12\", item = \"Ammo_IS.AC/20\", rounds = 5 }",
                 &format!("{{ at = 11, item = \"Ammo_{item}\", rounds = {rounds} }}"),
             );
-        BattleUnit::from_template(super::super::BattleTemplate::parse("AS7-D", &source).unwrap())
-            .unwrap()
+        Mech::from_template(super::super::MechTemplate::parse("AS7-D", &source).unwrap()).unwrap()
     }
 
     /// The explosion a critical hit on the right torso's first slot would release.
-    fn explosion(unit: &BattleUnit) -> u8 {
+    fn explosion(unit: &Mech) -> u8 {
         let location = CriticalLocation {
-            section: BattleSection::RightTorso,
+            section: MechSection::RightTorso,
             slot: 0,
         };
         match unit.critical_loss(location).unwrap() {
-            Some(BattleCriticalLoss::Weapon {
+            Some(CriticalLoss::Weapon {
                 explosion_damage, ..
             }) => explosion_damage,
             other => panic!("expected a weapon loss, got {other:?}"),
@@ -650,7 +633,7 @@ mod tests {
             .unwrap()
             .weapons
             .iter()
-            .position(|mount| mount.weapon == super::super::BattleWeapon::RotaryAc5)
+            .position(|mount| mount.weapon == super::super::Weapon::RotaryAc5)
             .unwrap();
         assert_eq!(explosion(&unit), 0);
         assert!(unit.jam_weapon(index).unwrap());
@@ -663,7 +646,7 @@ mod tests {
             .unwrap()
             .weapons
             .iter()
-            .position(|mount| mount.weapon == super::super::BattleWeapon::GaussRifle)
+            .position(|mount| mount.weapon == super::super::Weapon::GaussRifle)
             .unwrap();
         gauss.jam_weapon(index).unwrap();
         assert_eq!(explosion(&gauss), 20);

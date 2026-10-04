@@ -13,20 +13,20 @@ fn edit(world: &mut World, id: ObjectId, change: impl FnOnce(&mut serde_json::Va
 
 /// A Jenner whose only weapon is an IS SRT-6 in its left leg, fed by two torpedo bins. A leg
 /// launcher is submerged even in shallow water.
-fn launcher() -> BattleUnitTemplate {
-    let weapon = BattleWeapon::Srt6;
+fn launcher() -> UnitTemplate {
+    let weapon = Weapon::Srt6;
     let mut definition =
-        BattleUnitTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap();
-    let BattleUnitTemplate::Mech(unit) = &mut definition else {
+        UnitTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap();
+    let UnitTemplate::Mech(unit) = &mut definition else {
         panic!("The Jenner is a Mech");
     };
     for section in unit.sections.values_mut() {
         section.criticals.retain(|_, part| {
             !part.equipment.starts_with("Ammo_")
-                && !BattleWeapon::ALL.iter().any(|w| w.name() == part.equipment)
+                && !Weapon::ALL.iter().any(|w| w.name() == part.equipment)
         });
     }
-    let mount = unit.sections.get_mut(&BattleSection::LeftLeg).unwrap();
+    let mount = unit.sections.get_mut(&MechSection::LeftLeg).unwrap();
     mount.criticals.retain(|slot, _| *slot < 4);
     for slot in 0..weapon.profile().critical_slots {
         mount.criticals.insert(
@@ -38,7 +38,7 @@ fn launcher() -> BattleUnitTemplate {
             },
         );
     }
-    let bins = unit.sections.get_mut(&BattleSection::RightTorso).unwrap();
+    let bins = unit.sections.get_mut(&MechSection::RightTorso).unwrap();
     bins.criticals.clear();
     for slot in 0..2 {
         bins.criticals.insert(
@@ -85,15 +85,15 @@ async fn fixture(
         if index == 0 {
             launcher()
         } else {
-            BattleUnitTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap()
+            UnitTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap()
         }
         .create(&mut world, id)
         .unwrap();
         support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut world, id, map, 0, row).unwrap();
         edit(&mut world, id, |state| {
-            state["power"] = serde_json::to_value(BattlePower::Running).unwrap();
-            state["dice"] = serde_json::to_value(BattleDice::seeded([19; 32])).unwrap();
+            state["power"] = serde_json::to_value(Power::Running).unwrap();
+            state["dice"] = serde_json::to_value(Dice::seeded([19; 32])).unwrap();
         });
         ids.push(id);
     }
@@ -105,15 +105,15 @@ async fn fixture(
 }
 
 /// Deterministic conventional firing policy.
-fn shot_rules() -> BattleShotRules {
-    BattleShotRules {
+fn shot_rules() -> ShotRules {
+    ShotRules {
         range_damage: false,
         tsm_tow_bonus: true,
-        vehicle_impact: BattleVehicleImpactRules::STANDARD,
-        stacking: BattleStackingRules::STANDARD,
-        stagger: BattleStaggerMode::Retain,
-        glancing: BattleGlancingMode::Disabled,
-        aim: BattleAimRules {
+        vehicle_impact: VehicleImpactRules::STANDARD,
+        stacking: StackingRules::STANDARD,
+        stagger: StaggerMode::Retain,
+        glancing: GlancingMode::Disabled,
+        aim: AimRules {
             woods_damage: false,
             dig_bonus: 3,
             dig_only_front: false,
@@ -124,7 +124,7 @@ fn shot_rules() -> BattleShotRules {
             hotload_half_minimum: false,
             override_weapon_arcs: true,
         },
-        hit: BattleHitRules {
+        hit: HitRules {
             inferno_penalty: false,
             exile_stun_mode: 0,
         },
@@ -147,7 +147,7 @@ fn acquire(world: &mut World, shooter: ObjectId, target: ObjectId) {
 fn try_acquire(world: &mut World, shooter: ObjectId, target: ObjectId) -> Option<u8> {
     for seed in 0..=255 {
         edit(world, shooter, |unit| {
-            unit["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
+            unit["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap()
         });
         refresh_battle_contacts(world, &[shooter]).unwrap();
         if visible_battle_contact(world, shooter, target)
@@ -161,11 +161,7 @@ fn try_acquire(world: &mut World, shooter: ObjectId, target: ObjectId) -> Option
 }
 
 /// Fire the SRT at the target and describe any refusal.
-fn fire(
-    world: &mut World,
-    shooter: ObjectId,
-    target: ObjectId,
-) -> Result<BattleShotReport, String> {
+fn fire(world: &mut World, shooter: ObjectId, target: ObjectId) -> Result<MechShotReport, String> {
     resolve_battle_shot(world, shooter, ObjectId(1), target, 0, shot_rules())
         .map_err(|error| error.to_string())
 }
@@ -230,16 +226,13 @@ async fn lifting_the_lake_leaves_torpedo_duels_unchanged() {
 /// Torpedo launchers are their own catalogue weapons with part identities above the old limit.
 #[test]
 fn torpedo_launchers_are_catalogue_weapons() {
-    for (name, torpedo) in [
-        ("IS.LRT-20", BattleWeapon::Lrt20),
-        ("CL.SRT-2", BattleWeapon::ClanSrt2),
-    ] {
-        assert_eq!(BattleWeapon::parse(name).unwrap(), torpedo);
+    for (name, torpedo) in [("IS.LRT-20", Weapon::Lrt20), ("CL.SRT-2", Weapon::ClanSrt2)] {
+        assert_eq!(Weapon::parse(name).unwrap(), torpedo);
         assert!(torpedo.is_torpedo());
-        let ammunition = BattlePart::from_id(torpedo.ammunition_part_id()).unwrap();
+        let ammunition = Part::from_id(torpedo.ammunition_part_id()).unwrap();
         assert_eq!(ammunition.name, format!("Ammo_{name}"));
-        assert_eq!(ammunition.kind, BattlePartKind::Ammunition);
+        assert_eq!(ammunition.kind, PartKind::Ammunition);
     }
-    assert!(BattleWeapon::ClanSrt6.part_id() > 192);
-    assert!(!BattleWeapon::Srm6.is_torpedo());
+    assert!(Weapon::ClanSrt6.part_id() > 192);
+    assert!(!Weapon::Srm6.is_torpedo());
 }

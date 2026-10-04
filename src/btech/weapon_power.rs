@@ -1,5 +1,5 @@
 //! Persistent Gauss power-down state with shared cockpit admission and selection behavior.
-use super::{BattleNotice, WeaponMount};
+use super::{Notice, WeaponMount};
 use crate::{ObjectId, World};
 use anyhow::{Result, ensure};
 use std::collections::BTreeSet;
@@ -25,7 +25,7 @@ pub fn disable_gauss_weapon(
     id: ObjectId,
     pilot: ObjectId,
     index: usize,
-) -> Result<BattleNotice> {
+) -> Result<Notice> {
     super::power::controlled_running_unit(world, id, pilot)?;
     let (ready, intact) = super::with_unit!(world.btech.unit(id).expect("admitted unit"), |unit| {
         (unit.weapon_readiness(index)?, unit.weapon_intact(index)?)
@@ -42,7 +42,7 @@ pub fn disable_gauss_weapon(
     crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
         unit.powered_down_weapons.insert(index);
     });
-    Ok(BattleNotice {
+    Ok(Notice {
         unit: id,
         text: format!("You power down weapon {index}."),
     })

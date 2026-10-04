@@ -11,10 +11,10 @@ async fn notice_preferences_share_delivery_and_persistence_across_chassis() {
         let (_dir, config, mut world, id, target, _) =
             firing::fixture_with_target(&source, None, &source).await;
         firing::edit(&mut world, target, |unit| {
-            unit["power"] = serde_json::to_value(BattlePower::Off).unwrap();
+            unit["power"] = serde_json::to_value(Power::Off).unwrap();
             unit["signature"]["team"] = serde_json::json!(2);
         });
-        let event = BattleContactEvent {
+        let event = ContactEvent {
             experience_message: None,
             identified: true,
             observer: id,
@@ -24,7 +24,7 @@ async fn notice_preferences_share_delivery_and_persistence_across_chassis() {
         };
         assert!(event.notice(&world).is_none());
         assert!(
-            BattleContactEvent {
+            ContactEvent {
                 lock_lost: true,
                 ..event.clone()
             }
@@ -68,7 +68,7 @@ async fn notice_preferences_share_delivery_and_persistence_across_chassis() {
         assert!(battle_illumination_pending(&world));
         assert_eq!(
             refresh_battle_illumination(&mut world),
-            vec![BattleNotice {
+            vec![Notice {
                 unit: id,
                 text: "You are being illuminated!".into()
             }]
@@ -85,7 +85,7 @@ async fn notice_preferences_share_delivery_and_persistence_across_chassis() {
         });
         assert_eq!(
             refresh_battle_illumination(&mut loaded),
-            vec![BattleNotice {
+            vec![Notice {
                 unit: id,
                 text: "You are no longer being illuminated.".into()
             }]

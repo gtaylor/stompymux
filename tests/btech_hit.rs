@@ -1,13 +1,12 @@
 //! Biped location probabilities, arc boundaries, critical gating and head-hit variants.
 use stompymux_rs::{
-    BattleDice, BattleHitArc as Arc, BattleHitRules, BattleHitTable as Table,
-    BattleSection as Section, BattleTemplate, BattleUnit,
+    Dice, HitArc as Arc, HitRules, HitTable as Table, Mech, MechSection as Section, MechTemplate,
 };
 
 /// Build an undamaged conventional biped; owned JSON permits isolated damaged-state fixtures.
-fn unit(armor: u16) -> BattleUnit {
-    let unit = BattleUnit::from_template(
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+fn unit(armor: u16) -> Mech {
+    let unit = Mech::from_template(
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     let mut state = serde_json::to_value(unit).unwrap();
@@ -54,7 +53,7 @@ fn biped_arc_boundaries_wrap_and_follow_all_three_configured_modes() {
 #[test]
 fn weapon_distribution_and_physical_tables_preserve_location_and_transfer_rules() {
     use Section::*;
-    // Counts across the 36 equally likely die pairs, in BattleSection::ALL order.
+    // Counts across the 36 equally likely die pairs, in MechSection::ALL order.
     for (arc, expected) in [
         (Arc::Front, [5, 5, 5, 5, 7, 4, 4, 1]),
         (Arc::Rear, [5, 5, 5, 5, 7, 4, 4, 1]),
@@ -65,7 +64,7 @@ fn weapon_distribution_and_physical_tables_preserve_location_and_transfer_rules(
         for a in 1..=6 {
             for b in 1..=6 {
                 let section = Table::Weapon
-                    .location(stompymux_rs::BattleMechChassis::Biped, arc, a + b)
+                    .location(stompymux_rs::MechChassis::Biped, arc, a + b)
                     .unwrap();
                 counts[Section::ALL.iter().position(|s| *s == section).unwrap()] += 1;
             }
@@ -74,19 +73,19 @@ fn weapon_distribution_and_physical_tables_preserve_location_and_transfer_rules(
         for roll in 1..=6 {
             assert_ne!(
                 Table::Punch
-                    .location(stompymux_rs::BattleMechChassis::Biped, arc, roll)
+                    .location(stompymux_rs::MechChassis::Biped, arc, roll)
                     .unwrap(),
                 LeftLeg
             );
             assert_ne!(
                 Table::Punch
-                    .location(stompymux_rs::BattleMechChassis::Biped, arc, roll)
+                    .location(stompymux_rs::MechChassis::Biped, arc, roll)
                     .unwrap(),
                 RightLeg
             );
             assert!(matches!(
                 Table::Kick
-                    .location(stompymux_rs::BattleMechChassis::Biped, arc, roll)
+                    .location(stompymux_rs::MechChassis::Biped, arc, roll)
                     .unwrap(),
                 LeftLeg | RightLeg
             ));
@@ -106,35 +105,35 @@ fn weapon_distribution_and_physical_tables_preserve_location_and_transfer_rules(
     }
     assert_eq!(
         Table::Punch
-            .location(stompymux_rs::BattleMechChassis::Biped, Arc::Rear, 1)
+            .location(stompymux_rs::MechChassis::Biped, Arc::Rear, 1)
             .unwrap(),
         LeftArm
     );
     assert_eq!(
         Table::Kick
-            .location(stompymux_rs::BattleMechChassis::Biped, Arc::Front, 1)
+            .location(stompymux_rs::MechChassis::Biped, Arc::Front, 1)
             .unwrap(),
         RightLeg
     );
     assert!(
         Table::Weapon
-            .location(stompymux_rs::BattleMechChassis::Biped, Arc::Front, 1)
+            .location(stompymux_rs::MechChassis::Biped, Arc::Front, 1)
             .is_err()
     );
     assert!(
         Table::Punch
-            .location(stompymux_rs::BattleMechChassis::Biped, Arc::Front, 7)
+            .location(stompymux_rs::MechChassis::Biped, Arc::Front, 7)
             .is_err()
     );
 }
 
 #[test]
 fn conditional_critical_rolls_and_head_grazes_consume_only_required_dice() {
-    let standard = BattleHitRules {
+    let standard = HitRules {
         inferno_penalty: false,
         exile_stun_mode: 0,
     };
-    let mut dice = BattleDice::seeded([42; 32]);
+    let mut dice = Dice::seeded([42; 32]);
     let before = dice.clone();
     assert!(dice.die(0).is_err());
     assert!(
@@ -169,7 +168,7 @@ fn conditional_critical_rolls_and_head_grazes_consume_only_required_dice() {
         }
     }
     for mode in [0, 1, 2] {
-        let rules = BattleHitRules {
+        let rules = HitRules {
             exile_stun_mode: mode,
             ..standard
         };
@@ -180,11 +179,7 @@ fn conditional_critical_rolls_and_head_grazes_consume_only_required_dice() {
                 Section::Head
             } else {
                 Table::Punch
-                    .location(
-                        stompymux_rs::BattleMechChassis::Biped,
-                        Arc::Rear,
-                        expected.d6(),
-                    )
+                    .location(stompymux_rs::MechChassis::Biped, Arc::Rear, expected.d6())
                     .unwrap()
             };
             let hit = rules.resolve(&target, Arc::Rear, 12, &mut dice).unwrap();
@@ -206,7 +201,7 @@ fn conditional_critical_rolls_and_head_grazes_consume_only_required_dice() {
 #[test]
 fn quad_tables_cover_all_rolls_and_preserve_shared_weapon_distribution() {
     use Section::*;
-    use stompymux_rs::BattleMechChassis::{Biped, Quad};
+    use stompymux_rs::MechChassis::{Biped, Quad};
     for (arc, punch, kick) in [
         (
             Arc::Front,
@@ -263,26 +258,26 @@ fn quad_tables_cover_all_rolls_and_preserve_shared_weapon_distribution() {
 /// Head grazes use the target's anatomy and consume exactly one secondary die after restart.
 #[test]
 fn quad_head_rerolls_follow_chassis_and_preserve_dice_replay() {
-    use stompymux_rs::BattleMechChassis::Quad;
+    use stompymux_rs::MechChassis::Quad;
     let mut encoded = serde_json::to_value(unit(10)).unwrap();
     // Component fixture isolates hit-table behavior from world registration.
     encoded["definition"]["attributes"]["move_type"] = "Quad".into();
-    let target: BattleUnit = serde_json::from_value(encoded).unwrap();
+    let target: Mech = serde_json::from_value(encoded).unwrap();
     for arc in [Arc::Front, Arc::Rear, Arc::Left, Arc::Right] {
         for mode in [0, 1, 2] {
             for seed in 0..32 {
-                let rules = BattleHitRules {
+                let rules = HitRules {
                     inferno_penalty: false,
                     exile_stun_mode: mode,
                 };
-                let mut dice = BattleDice::seeded([seed; 32]);
+                let mut dice = Dice::seeded([seed; 32]);
                 let mut expected = dice.clone();
                 let section = if mode == 0 {
                     Section::Head
                 } else {
                     Table::Punch.location(Quad, arc, expected.d6()).unwrap()
                 };
-                let mut restored: BattleDice =
+                let mut restored: Dice =
                     serde_json::from_value(serde_json::to_value(&dice).unwrap()).unwrap();
                 let hit = rules.resolve(&target, arc, 12, &mut dice).unwrap();
                 assert_eq!(hit.section, section);
@@ -296,9 +291,9 @@ fn quad_head_rerolls_follow_chassis_and_preserve_dice_replay() {
 }
 
 /// Seed a delegated table roll without consuming the caller's entry roll.
-fn seed_for_location(roll: u8) -> BattleDice {
+fn seed_for_location(roll: u8) -> Dice {
     (0..=255)
-        .map(|seed| BattleDice::seeded([seed; 32]))
+        .map(|seed| Dice::seeded([seed; 32]))
         .find(|dice| dice.clone().two_d6() == roll)
         .expect("seed for each 2d6 total")
 }
@@ -306,14 +301,14 @@ fn seed_for_location(roll: u8) -> BattleDice {
 /// Standard and critical-proof routing share rows but preserve distinct roll and TAC contracts.
 #[test]
 fn delegated_mech_tables_cover_anatomy_precedence_immunity_and_replay() {
-    use stompymux_rs::BattleMechChassis;
-    for chassis in [BattleMechChassis::Biped, BattleMechChassis::Quad] {
+    use stompymux_rs::MechChassis;
+    for chassis in [MechChassis::Biped, MechChassis::Quad] {
         for proof in [false, true] {
             for safe in [false, true] {
                 let mut state = serde_json::to_value(unit(10)).unwrap();
                 state["definition"]["attributes"]["move_type"] = match chassis {
-                    BattleMechChassis::Biped => "Biped",
-                    BattleMechChassis::Quad => "Quad",
+                    MechChassis::Biped => "Biped",
+                    MechChassis::Quad => "Quad",
                 }
                 .into();
                 if proof {
@@ -324,10 +319,10 @@ fn delegated_mech_tables_cover_anatomy_precedence_immunity_and_replay() {
                 for section in state["sections"].as_object_mut().unwrap().values_mut() {
                     section["armor"] = (section["armor"].as_u64().unwrap() * 3 / 4).into();
                 }
-                let target: BattleUnit = serde_json::from_value(state).unwrap();
+                let target: Mech = serde_json::from_value(state).unwrap();
 
                 for mode in [0, 1, 2] {
-                    let rules = BattleHitRules {
+                    let rules = HitRules {
                         inferno_penalty: false,
                         exile_stun_mode: mode,
                     };
@@ -348,7 +343,7 @@ fn delegated_mech_tables_cover_anatomy_precedence_immunity_and_replay() {
                             } else {
                                 Table::Weapon.location(chassis, arc, selected).unwrap()
                             };
-                            let mut replay: BattleDice =
+                            let mut replay: Dice =
                                 serde_json::from_value(serde_json::to_value(&dice).unwrap())
                                     .unwrap();
                             let hit = rules.resolve(&target, arc, entry, &mut dice).unwrap();

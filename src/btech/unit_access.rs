@@ -1,6 +1,6 @@
 //! Chassis-neutral reads and validated edits of BattleTech Mechs and vehicles.
 //!
-//! [`BattleUnitRef`] reads the state both chassis share without branching on which store
+//! [`UnitRef`] reads the state both chassis share without branching on which store
 //! holds a unit. [`BtechState::edit_unit`] applies a batch of edits to a draft copy of
 //! either chassis, validates the result once, and commits it only when it is valid, so a
 //! sequence of changes may pass through states that would be invalid on their own. The
@@ -12,26 +12,26 @@ use crate::ObjectId;
 use anyhow::{Context, Result, anyhow, bail};
 use std::collections::BTreeMap;
 
-/// Run one body against whichever chassis a [`BattleUnitRef`] holds.
+/// Run one body against whichever chassis a [`UnitRef`] holds.
 ///
 /// The body is compiled once per chassis, so it may use any field or method both define
 /// under the same name, including those whose section or loadout types differ.
 macro_rules! with_unit {
     ($unit:expr, |$name:ident| $body:expr) => {
         match $unit {
-            $crate::btech::BattleUnitRef::Mech($name) => $body,
-            $crate::btech::BattleUnitRef::Vehicle($name) => $body,
+            $crate::btech::UnitRef::Mech($name) => $body,
+            $crate::btech::UnitRef::Vehicle($name) => $body,
         }
     };
 }
 pub(crate) use with_unit;
 
-/// Run one body against whichever chassis a [`BattleUnitMut`] holds; see [`with_unit`].
+/// Run one body against whichever chassis a [`UnitMut`] holds; see [`with_unit`].
 macro_rules! with_unit_mut {
     ($unit:expr, |$name:ident| $body:expr) => {
         match $unit {
-            $crate::btech::BattleUnitMut::Mech($name) => $body,
-            $crate::btech::BattleUnitMut::Vehicle($name) => $body,
+            $crate::btech::UnitMut::Mech($name) => $body,
+            $crate::btech::UnitMut::Vehicle($name) => $body,
         }
     };
 }
@@ -39,21 +39,21 @@ pub(crate) use with_unit_mut;
 
 /// Read access to a Mech or vehicle through the state both chassis share.
 #[derive(Debug, Clone, Copy)]
-pub enum BattleUnitRef<'a> {
+pub enum UnitRef<'a> {
     /// A constructed BattleMech.
-    Mech(&'a BattleUnit),
+    Mech(&'a Mech),
     /// A combat vehicle.
-    Vehicle(&'a BattleVehicle),
+    Vehicle(&'a Vehicle),
 }
 
-impl<'a> From<&'a BattleUnit> for BattleUnitRef<'a> {
-    fn from(unit: &'a BattleUnit) -> Self {
+impl<'a> From<&'a Mech> for UnitRef<'a> {
+    fn from(unit: &'a Mech) -> Self {
         Self::Mech(unit)
     }
 }
 
-impl<'a> From<&'a BattleVehicle> for BattleUnitRef<'a> {
-    fn from(vehicle: &'a BattleVehicle) -> Self {
+impl<'a> From<&'a Vehicle> for UnitRef<'a> {
+    fn from(vehicle: &'a Vehicle) -> Self {
         Self::Vehicle(vehicle)
     }
 }
@@ -99,7 +99,7 @@ macro_rules! shared_fields {
     };
 }
 
-impl<'a> BattleUnitRef<'a> {
+impl<'a> UnitRef<'a> {
     /// The pilot skill this chassis tests, or `None` for a chassis nobody steers.
     pub(super) fn piloting_skill(&self, extended: bool) -> Option<&'static str> {
         match *self {
@@ -131,9 +131,9 @@ impl<'a> BattleUnitRef<'a> {
         /// Plan up to `rounds` compatible rounds without changing inventory, mode, heat or dice.
         /// Prefer the selected section, then the mount and canonical section/slot order; empty or unavailable bins are skipped.
         /// A short plan exposes shortage so a firing mode can choose its specified fallback atomically.
-        pub fn ammunition_feed(&self, index: usize, rounds: u16) -> Result<Vec<BattleAmmunitionDraw>>;
+        pub fn ammunition_feed(&self, index: usize, rounds: u16) -> Result<Vec<AmmunitionDraw>>;
         /// Current selected ammunition type; independent of bin inventory and recycle readiness.
-        pub fn ammunition_mode(&self, index: usize) -> Result<BattleAmmunitionMode>;
+        pub fn ammunition_mode(&self, index: usize) -> Result<AmmunitionMode>;
         /// Whether low ammunition notifies the occupants.
         pub fn ammunition_warning(&self) -> bool;
         /// Pilot-selected automatic defense state, initially disabled.
@@ -153,40 +153,40 @@ impl<'a> BattleUnitRef<'a> {
         /// Scenario identity or a stable base-36 label derived from the saved membership slot.
         pub fn battlefield_id(&self) -> Option<String>;
         /// The unit's durable display choices.
-        pub fn brief_settings(&self) -> BattleBriefSettings;
+        pub fn brief_settings(&self) -> BriefSettings;
         /// Current BTHDebug configuration; attack reports do not consume this flag.
         pub fn bth_debug(&self) -> bool;
         /// Derive computer capabilities without trusting template flags or caching damage.
-        pub fn c3_hardware(&self) -> Result<BattleC3Hardware>;
+        pub fn c3_hardware(&self) -> Result<C3Hardware>;
         /// Classic C3 requires a live computer; losing every installed master disables its unit's C3.
         pub fn c3_operational(&self) -> Result<bool>;
         /// Saved character-mode injury count and fatal status, separate from tactical injury rules.
-        pub fn character_pilot_status(&self) -> Option<super::BattleCharacterPilotStatus>;
+        pub fn character_pilot_status(&self) -> Option<super::CharacterPilotStatus>;
         /// Last observed contacts, which must be refreshed before being used as current visibility.
-        pub fn contacts(&self) -> &'a BTreeMap<ObjectId, BattleContact>;
+        pub fn contacts(&self) -> &'a BTreeMap<ObjectId, Contact>;
         /// Saved virtual-crew recovery; a present pilot owns their personal recovery instead.
-        pub fn crew_recovery(&self) -> &'a super::BattleRecovery;
+        pub fn crew_recovery(&self) -> &'a super::Recovery;
         /// Current gameplay mass in 1/1024 tons, including an administrative correction.
         pub fn effective_mass(&self) -> Result<u32>;
         /// Guardian presence is sufficient; a biped Angel suite needs two surviving slots.
         /// A destroyed or flooded part disables the whole corresponding suite family.
-        pub fn electronic_suite_available(&self, suite: BattleElectronicSuite) -> Result<bool>;
+        pub fn electronic_suite_available(&self, suite: ElectronicSuite) -> Result<bool>;
         /// Saved electronic controls and last committed field observation.
-        pub fn electronics(&self) -> BattleElectronics;
+        pub fn electronics(&self) -> Electronics;
         /// Current persisted shooting-XP policy for this unit.
-        pub fn experience_settings(&self) -> BattleUnitExperience;
+        pub fn experience_settings(&self) -> UnitExperience;
         /// Current firing mode, distinct from the template's initial equipment flags.
-        pub fn fire_mode(&self, index: usize) -> Result<BattleFireMode>;
+        pub fn fire_mode(&self, index: usize) -> Result<FireMode>;
         /// A completed launch marks this unit until the next committed heartbeat, including launches that miss.
         pub fn fired_recently(&self) -> bool;
         /// Pending unpowered vertical descent, including its durable event countdown.
-        pub fn free_fall(&self) -> Option<super::BattleFreeFall>;
+        pub fn free_fall(&self) -> Option<super::FreeFall>;
         /// Whether the pilot has enabled friendly-fire protection.
         pub fn friendly_fire_safety(&self) -> bool;
         /// Any surviving section carrying this pod effect.
-        pub fn has_beacon(&self, kind: BattleBeaconKind) -> bool;
+        pub fn has_beacon(&self, kind: BeaconKind) -> bool;
         /// Current coordinate target, independent of visibility or an occupying unit.
-        pub fn hex_lock(&self) -> Option<BattleHexLock>;
+        pub fn hex_lock(&self) -> Option<HexLock>;
         /// Elapsed committed hide checks; zero is the initial scheduled event.
         pub fn hide_elapsed(&self) -> Option<u16>;
         /// Remaining inferno seconds; positive duration suppresses six points of heat dissipation.
@@ -200,23 +200,23 @@ impl<'a> BattleUnitRef<'a> {
         /// The unit's position in its current battlefield membership list.
         pub fn map_slot(&self) -> Option<u32>;
         /// Continuous motion, defaulting to the placed hex center before its first update.
-        pub fn motion(&self) -> Option<super::BattleMotion>;
+        pub fn motion(&self) -> Option<super::Motion>;
         /// Whether the MechWarrior weapon-safety preference is enabled.
         pub fn mw_safety(&self) -> bool;
         /// Current cocoon or jump-jet descent, independent of ordinary jump flight.
-        pub fn orbital_drop(&self) -> Option<BattleOrbitalDrop>;
+        pub fn orbital_drop(&self) -> Option<OrbitalDrop>;
         /// Player currently occupying the cockpit, independent of passengers inside the unit.
         pub fn pilot(&self) -> Option<ObjectId>;
         /// Current cockpit injury count; confirmed pilot death is an independent event.
         pub fn pilot_injuries(&self) -> u8;
         /// Current battlefield coordinates, absent when the unit is off-map.
-        pub fn position(&self) -> Option<BattlePosition>;
+        pub fn position(&self) -> Option<Position>;
         /// Current engine state and pending startup countdown.
-        pub fn power(&self) -> super::BattlePower;
+        pub fn power(&self) -> super::Power;
         /// Quality zero uses the chassis default; nonzero radio range overrides its derived reach.
-        pub fn radio_capabilities(&self) -> BattleRadioCapabilities;
+        pub fn radio_capabilities(&self) -> RadioCapabilities;
         /// Active channel settings in letter order, starting with channel A.
-        pub fn radio_channels(&self) -> &'a [BattleRadioChannel];
+        pub fn radio_channels(&self) -> &'a [RadioChannel];
         /// Simulation seconds until another interfered reception can attempt communication XP.
         pub fn radio_experience_remaining(&self) -> u8;
         /// Saved communication target used by reception interference until the next startup.
@@ -224,40 +224,40 @@ impl<'a> BattleUnitRef<'a> {
         /// Perception target captured at startup completion, used throughout that engine run.
         pub fn scanner_perception(&self) -> i16;
         /// Persisted lamp and switch state, independent of the unit's current illumination.
-        pub fn searchlight(&self) -> BattleSearchlight;
+        pub fn searchlight(&self) -> Searchlight;
         /// Whether changes in external illumination notify the occupants.
         pub fn searchlight_warning(&self) -> bool;
         /// Current admitted self-destruct sequence, independent of pilot reassignment.
-        pub fn self_destruct(&self) -> Option<BattleSelfDestruct>;
+        pub fn self_destruct(&self) -> Option<SelfDestruct>;
         /// Scenario protection from ammunition self-destruct admission.
         pub fn self_destruct_safe(&self) -> bool;
         /// Nonzero template ranges override technology-base defaults independently.
         /// Template zero selects defaults; runtime zero remains zero. Subsequent sensor hits degrade ranges.
-        pub fn sensor_ranges(&self) -> BattleSensorRanges;
+        pub fn sensor_ranges(&self) -> SensorRanges;
         /// Saved team and target visibility facts.
-        pub fn signature(&self) -> BattleUnitSignature;
+        pub fn signature(&self) -> UnitSignature;
         /// Self-selection declares this unit a spotter; another ID selects a forward observer.
         pub fn spotter(&self) -> Option<ObjectId>;
         /// Read pending radio connections and periodic checks without advancing their clocks.
-        pub fn spotter_events(&self) -> &'a super::BattleSpotterEvents;
+        pub fn spotter_events(&self) -> &'a super::SpotterEvents;
         /// Saved TAG selection and countdown; current geometry is checked separately.
-        pub fn tag(&self) -> BattleTagState;
+        pub fn tag(&self) -> TagState;
         /// Standalone TAG and integrated C3 master equipment share their live damage gate.
         pub fn tag_available(&self) -> Result<bool>;
         /// Historical selection; callers must separately check current visibility before firing.
-        pub fn target_lock(&self) -> Option<BattleTargetLock>;
+        pub fn target_lock(&self) -> Option<TargetLock>;
         /// Inspect the single selected target without projecting it to a particular target kind.
-        pub fn target_selection(&self) -> Option<BattleTargetSelection>;
+        pub fn target_selection(&self) -> Option<TargetSelection>;
         /// Construction baseline used by the shared attacker movement calculation.
         pub fn template_speed(&self) -> f64;
         /// Pending recovery, including its saved countdown.
-        pub fn unjam(&self) -> Option<BattleUnjam>;
+        pub fn unjam(&self) -> Option<Unjam>;
         /// Temporary conditions by mount index; existing recycle clocks govern recovery.
-        pub fn weapon_failures(&self) -> &'a BTreeMap<usize, BattleEquipmentFailure>;
+        pub fn weapon_failures(&self) -> &'a BTreeMap<usize, EquipmentFailure>;
         /// Whether a valid mount's feed is jammed; a jam does not destroy its critical slots.
         pub fn weapon_jammed(&self, index: usize) -> Result<bool>;
         /// Inspect functioning equipment, remaining matching salvos and recycle time.
-        pub fn weapon_readiness(&self, index: usize) -> Result<BattleWeaponReadiness>;
+        pub fn weapon_readiness(&self, index: usize) -> Result<WeaponReadiness>;
         /// Active recycle countdowns keyed by zero-based resolved weapon index.
         pub fn weapon_recycle(&self) -> &'a BTreeMap<usize, u16>;
     }
@@ -270,11 +270,11 @@ impl<'a> BattleUnitRef<'a> {
         /// Whether the unit is holding fire.
         weapons_hold: bool;
         /// Who the unit is shown to.
-        visibility: BattleVisibility;
+        visibility: Visibility;
         /// Whether the unit is exempt from combat.
         combat_safe: bool;
         /// The section the unit is aiming at, if any.
-        aimed_section: Option<BattleAimSelection>;
+        aimed_section: Option<AimSelection>;
         /// Saved auxiliary cockpit preferences.
         auxiliary_preferences: auxiliary_preferences::AuxiliaryPreferences;
         /// Saved base movement overrides.
@@ -288,7 +288,7 @@ impl<'a> BattleUnitRef<'a> {
     }
 
     /// The identifier the unit's owner prefers on the battlefield.
-    pub(super) fn preferred_id(&self) -> Option<&'a BattlePreferredId> {
+    pub(super) fn preferred_id(&self) -> Option<&'a PreferredId> {
         match *self {
             Self::Mech(unit) => unit.preferred_id.as_ref(),
             Self::Vehicle(vehicle) => vehicle.preferred_id.as_ref(),
@@ -330,19 +330,19 @@ impl<'a> BattleUnitRef<'a> {
 
 /// Mutable access to a Mech or vehicle through the operations both chassis share.
 #[derive(Debug)]
-pub enum BattleUnitMut<'a> {
+pub enum UnitMut<'a> {
     /// A constructed BattleMech.
-    Mech(&'a mut BattleUnit),
+    Mech(&'a mut Mech),
     /// A combat vehicle.
-    Vehicle(&'a mut BattleVehicle),
+    Vehicle(&'a mut Vehicle),
 }
 
-impl BattleUnitMut<'_> {
+impl UnitMut<'_> {
     /// Read the same unit through its shared getters.
-    pub fn as_ref(&self) -> BattleUnitRef<'_> {
+    pub fn as_ref(&self) -> UnitRef<'_> {
         match self {
-            Self::Mech(unit) => BattleUnitRef::Mech(unit),
-            Self::Vehicle(vehicle) => BattleUnitRef::Vehicle(vehicle),
+            Self::Mech(unit) => UnitRef::Mech(unit),
+            Self::Vehicle(vehicle) => UnitRef::Vehicle(vehicle),
         }
     }
 
@@ -359,48 +359,48 @@ impl BattleUnitMut<'_> {
 
 /// A replacement construction template for either chassis.
 #[derive(Debug, Clone)]
-pub enum BattleUnitDefinition {
+pub enum UnitDefinition {
     /// A BattleMech template.
-    Mech(BattleTemplate),
+    Mech(MechTemplate),
     /// A combat vehicle template.
-    Vehicle(BattleVehicleTemplate),
+    Vehicle(VehicleTemplate),
 }
 
-impl From<BattleTemplate> for BattleUnitDefinition {
-    fn from(definition: BattleTemplate) -> Self {
+impl From<MechTemplate> for UnitDefinition {
+    fn from(definition: MechTemplate) -> Self {
         Self::Mech(definition)
     }
 }
 
-impl From<BattleVehicleTemplate> for BattleUnitDefinition {
-    fn from(definition: BattleVehicleTemplate) -> Self {
+impl From<VehicleTemplate> for UnitDefinition {
+    fn from(definition: VehicleTemplate) -> Self {
         Self::Vehicle(definition)
     }
 }
 
 /// The draft copy an edit changes.
 enum Draft {
-    Mech(Box<BattleUnit>),
-    Vehicle(Box<BattleVehicle>),
+    Mech(Box<Mech>),
+    Vehicle(Box<Vehicle>),
 }
 
 /// A batch of edits to one unit's draft, validated together when the batch ends.
 ///
 /// Edits that cannot apply, such as a bin the unit lacks, are reported by
 /// [`BtechState::edit_unit`] and abandon the whole batch.
-pub struct BattleUnitEdit {
+pub struct UnitEdit {
     draft: Draft,
     error: Option<anyhow::Error>,
 }
 
-impl BattleUnitEdit {
+impl UnitEdit {
     /// Record the first edit that could not apply.
     fn fail(&mut self, error: anyhow::Error) {
         self.error.get_or_insert(error);
     }
 
-    /// Replace the unit's dice stream, for example with [`BattleDice::seeded`].
-    pub fn set_dice(&mut self, dice: BattleDice) {
+    /// Replace the unit's dice stream, for example with [`Dice::seeded`].
+    pub fn set_dice(&mut self, dice: Dice) {
         match &mut self.draft {
             Draft::Mech(unit) => unit.dice = dice,
             Draft::Vehicle(vehicle) => vehicle.dice = dice,
@@ -408,7 +408,7 @@ impl BattleUnitEdit {
     }
 
     /// Replace the dice stream the unit's empty cockpit uses for crew recovery.
-    pub fn set_crew_recovery_dice(&mut self, dice: BattleDice) {
+    pub fn set_crew_recovery_dice(&mut self, dice: Dice) {
         match &mut self.draft {
             Draft::Mech(unit) => unit.crew_recovery.set_dice(dice),
             Draft::Vehicle(vehicle) => vehicle.crew_recovery.set_dice(dice),
@@ -416,7 +416,7 @@ impl BattleUnitEdit {
     }
 
     /// Set the power state without running a startup or shutdown sequence.
-    pub fn set_power(&mut self, power: BattlePower) {
+    pub fn set_power(&mut self, power: Power) {
         match &mut self.draft {
             Draft::Mech(unit) => unit.power = power,
             Draft::Vehicle(vehicle) => vehicle.power = power,
@@ -424,12 +424,12 @@ impl BattleUnitEdit {
     }
 
     /// Replace the construction template. It must match the unit's chassis.
-    pub fn set_definition(&mut self, definition: impl Into<BattleUnitDefinition>) {
+    pub fn set_definition(&mut self, definition: impl Into<UnitDefinition>) {
         match (&mut self.draft, definition.into()) {
-            (Draft::Mech(unit), BattleUnitDefinition::Mech(definition)) => {
+            (Draft::Mech(unit), UnitDefinition::Mech(definition)) => {
                 unit.set_fixture_definition(definition)
             }
-            (Draft::Vehicle(vehicle), BattleUnitDefinition::Vehicle(definition)) => {
+            (Draft::Vehicle(vehicle), UnitDefinition::Vehicle(definition)) => {
                 vehicle.set_fixture_definition(definition)
             }
             _ => self.fail(anyhow!("the template is for a different chassis")),
@@ -457,7 +457,7 @@ impl BattleUnitEdit {
     }
 
     /// Edit a placed unit's motion, such as its speed or heading.
-    pub fn edit_motion(&mut self, edit: impl FnOnce(&mut BattleMotion)) {
+    pub fn edit_motion(&mut self, edit: impl FnOnce(&mut Motion)) {
         let motion = match &mut self.draft {
             Draft::Mech(unit) => unit.motion.as_mut(),
             Draft::Vehicle(vehicle) => vehicle.motion.as_mut(),
@@ -471,19 +471,19 @@ impl BattleUnitEdit {
 
 impl BtechState {
     /// Read a Mech or vehicle through the state both chassis share.
-    pub fn unit(&self, id: ObjectId) -> Option<BattleUnitRef<'_>> {
+    pub fn unit(&self, id: ObjectId) -> Option<UnitRef<'_>> {
         if let Some(unit) = self.constructed.get(&id) {
-            return Some(BattleUnitRef::Mech(unit));
+            return Some(UnitRef::Mech(unit));
         }
-        self.vehicles.get(&id).map(BattleUnitRef::Vehicle)
+        self.vehicles.get(&id).map(UnitRef::Vehicle)
     }
 
     /// Borrow a Mech or vehicle mutably through the operations both chassis share.
-    pub fn unit_mut(&mut self, id: ObjectId) -> Option<BattleUnitMut<'_>> {
+    pub fn unit_mut(&mut self, id: ObjectId) -> Option<UnitMut<'_>> {
         if self.constructed.contains_key(&id) {
-            return self.constructed.get_mut(&id).map(BattleUnitMut::Mech);
+            return self.constructed.get_mut(&id).map(UnitMut::Mech);
         }
-        self.vehicles.get_mut(&id).map(BattleUnitMut::Vehicle)
+        self.vehicles.get_mut(&id).map(UnitMut::Vehicle)
     }
 
     /// Apply a batch of edits to one Mech or vehicle and validate the result once.
@@ -494,11 +494,7 @@ impl BtechState {
     /// validation a saved record must pass when the server loads it; otherwise the
     /// state is unchanged. Like a record rewrite, a committed edit clears the runtime-only
     /// state a serialization round trip drops.
-    pub fn edit_unit(
-        &mut self,
-        id: ObjectId,
-        edit: impl FnOnce(&mut BattleUnitEdit),
-    ) -> Result<()> {
+    pub fn edit_unit(&mut self, id: ObjectId, edit: impl FnOnce(&mut UnitEdit)) -> Result<()> {
         let draft = if let Some(unit) = self.constructed.get(&id) {
             Draft::Mech(Box::new(unit.clone()))
         } else if let Some(vehicle) = self.vehicles.get(&id) {
@@ -506,7 +502,7 @@ impl BtechState {
         } else {
             bail!("#{} has no unit or vehicle record", id.0);
         };
-        let mut batch = BattleUnitEdit { draft, error: None };
+        let mut batch = UnitEdit { draft, error: None };
         edit(&mut batch);
         if let Some(error) = batch.error {
             return Err(error.context(format!("editing #{}", id.0)));
@@ -528,51 +524,47 @@ impl BtechState {
         Ok(())
     }
 
-    /// Replace a unit's dice stream. See [`BattleUnitEdit::set_dice`].
-    pub fn set_unit_dice(&mut self, id: ObjectId, dice: BattleDice) -> Result<()> {
+    /// Replace a unit's dice stream. See [`UnitEdit::set_dice`].
+    pub fn set_unit_dice(&mut self, id: ObjectId, dice: Dice) -> Result<()> {
         self.edit_unit(id, |unit| unit.set_dice(dice))
     }
 
-    /// Replace a unit's crew recovery dice. See [`BattleUnitEdit::set_crew_recovery_dice`].
-    pub fn set_unit_crew_recovery_dice(&mut self, id: ObjectId, dice: BattleDice) -> Result<()> {
+    /// Replace a unit's crew recovery dice. See [`UnitEdit::set_crew_recovery_dice`].
+    pub fn set_unit_crew_recovery_dice(&mut self, id: ObjectId, dice: Dice) -> Result<()> {
         self.edit_unit(id, |unit| unit.set_crew_recovery_dice(dice))
     }
 
-    /// Set a unit's power state. See [`BattleUnitEdit::set_power`].
-    pub fn set_unit_power(&mut self, id: ObjectId, power: BattlePower) -> Result<()> {
+    /// Set a unit's power state. See [`UnitEdit::set_power`].
+    pub fn set_unit_power(&mut self, id: ObjectId, power: Power) -> Result<()> {
         self.edit_unit(id, |unit| unit.set_power(power))
     }
 
-    /// Replace a unit's construction template. See [`BattleUnitEdit::set_definition`].
+    /// Replace a unit's construction template. See [`UnitEdit::set_definition`].
     pub fn set_unit_definition(
         &mut self,
         id: ObjectId,
-        definition: impl Into<BattleUnitDefinition>,
+        definition: impl Into<UnitDefinition>,
     ) -> Result<()> {
         self.edit_unit(id, |unit| unit.set_definition(definition))
     }
 
-    /// Replace a unit's ammunition. See [`BattleUnitEdit::set_ammunition`].
+    /// Replace a unit's ammunition. See [`UnitEdit::set_ammunition`].
     pub fn set_unit_ammunition(&mut self, id: ObjectId, rounds: Vec<u16>) -> Result<()> {
         self.edit_unit(id, |unit| unit.set_ammunition(rounds))
     }
 
-    /// Set one bin's rounds. See [`BattleUnitEdit::set_ammunition_bin`].
+    /// Set one bin's rounds. See [`UnitEdit::set_ammunition_bin`].
     pub fn set_unit_ammunition_bin(&mut self, id: ObjectId, bin: usize, rounds: u16) -> Result<()> {
         self.edit_unit(id, |unit| unit.set_ammunition_bin(bin, rounds))
     }
 
-    /// Edit a placed unit's motion. See [`BattleUnitEdit::edit_motion`].
-    pub fn edit_unit_motion(
-        &mut self,
-        id: ObjectId,
-        edit: impl FnOnce(&mut BattleMotion),
-    ) -> Result<()> {
+    /// Edit a placed unit's motion. See [`UnitEdit::edit_motion`].
+    pub fn edit_unit_motion(&mut self, id: ObjectId, edit: impl FnOnce(&mut Motion)) -> Result<()> {
         self.edit_unit(id, |unit| unit.edit_motion(edit))
     }
 
     /// Replace a player's consciousness recovery dice stream.
-    pub fn set_recovery_dice(&mut self, player: ObjectId, dice: BattleDice) -> Result<()> {
+    pub fn set_recovery_dice(&mut self, player: ObjectId, dice: Dice) -> Result<()> {
         self.recoveries
             .get_mut(&player)
             .with_context(|| format!("#{} has no recovery record", player.0))?
@@ -583,7 +575,7 @@ impl BtechState {
 
     /// Replace a map's fire spread dice stream if it has one, reporting whether it did.
     /// A map without a stream keeps none, because whether one exists changes ignition.
-    pub fn replace_map_fire_dice(&mut self, map: ObjectId, dice: BattleDice) -> Result<bool> {
+    pub fn replace_map_fire_dice(&mut self, map: ObjectId, dice: Dice) -> Result<bool> {
         let stream = self
             .maps
             .get_mut(&map)
@@ -617,13 +609,13 @@ mod tests {
         super::super::create_unit(
             &mut world,
             mech,
-            BattleTemplate::parse("JR7-D", include_str!("../../game/mechs/JR7-D.toml")).unwrap(),
+            MechTemplate::parse("JR7-D", include_str!("../../game/mechs/JR7-D.toml")).unwrap(),
         )
         .unwrap();
         crate::create_battle_vehicle(
             &mut world,
             vehicle,
-            BattleVehicleTemplate::parse(
+            VehicleTemplate::parse(
                 "Demolisher",
                 include_str!("../../game/mechs/Demolisher.toml"),
             )
@@ -655,7 +647,7 @@ mod tests {
                 json.rewrite_unit_record(id, edit).unwrap();
                 assert_eq!(typed, json);
             };
-            let dice = BattleDice::seeded([7; 32]);
+            let dice = Dice::seeded([7; 32]);
             check(
                 &|state| state.set_unit_dice(id, dice.clone()).unwrap(),
                 &|record| record["dice"] = serde_json::to_value(&dice).unwrap(),
@@ -665,9 +657,9 @@ mod tests {
                 &|record| record["crew_recovery"]["dice"] = serde_json::to_value(&dice).unwrap(),
             );
             check(
-                &|state| state.set_unit_power(id, BattlePower::Running).unwrap(),
+                &|state| state.set_unit_power(id, Power::Running).unwrap(),
                 &|record| {
-                    record["power"] = serde_json::to_value(BattlePower::Running).unwrap();
+                    record["power"] = serde_json::to_value(Power::Running).unwrap();
                 },
             );
             check(
@@ -734,13 +726,8 @@ mod tests {
         }
         let template = world.btech.constructed_units()[&mech].definition().clone();
         assert!(world.btech.set_unit_definition(vehicle, template).is_err());
-        assert!(world.btech.set_unit_power(map, BattlePower::Off).is_err());
-        assert!(
-            world
-                .btech
-                .set_recovery_dice(mech, BattleDice::fresh())
-                .is_err()
-        );
+        assert!(world.btech.set_unit_power(map, Power::Off).is_err());
+        assert!(world.btech.set_recovery_dice(mech, Dice::fresh()).is_err());
         assert_eq!(world.btech, before);
     }
 
@@ -751,22 +738,22 @@ mod tests {
         world
             .btech
             .edit_unit(vehicle, |unit| {
-                unit.set_power(BattlePower::Running);
+                unit.set_power(Power::Running);
                 unit.edit_motion(|motion| motion.desired_speed = 10.0);
             })
             .unwrap();
         // Cutting power first leaves a throttle on an inactive vehicle, which is invalid.
         let mut stepwise = world.btech.clone();
-        assert!(stepwise.set_unit_power(vehicle, BattlePower::Off).is_err());
+        assert!(stepwise.set_unit_power(vehicle, Power::Off).is_err());
         world
             .btech
             .edit_unit(vehicle, |unit| {
-                unit.set_power(BattlePower::Off);
+                unit.set_power(Power::Off);
                 unit.edit_motion(|motion| motion.desired_speed = 0.0);
             })
             .unwrap();
         let unit = world.btech.unit(vehicle).unwrap();
-        assert_eq!(unit.power(), BattlePower::Off);
+        assert_eq!(unit.power(), Power::Off);
         assert_eq!(unit.motion().unwrap().desired_speed, 0.0);
     }
 
@@ -780,7 +767,7 @@ mod tests {
                 .edit_unit_motion(id, |motion| motion.desired_heading = 90.0)
                 .unwrap();
             let unit = world.btech.unit(id).unwrap();
-            assert_eq!(unit.power(), BattlePower::Off);
+            assert_eq!(unit.power(), Power::Off);
             assert_eq!(unit.motion().unwrap().desired_heading, 90.0);
             assert!(
                 world

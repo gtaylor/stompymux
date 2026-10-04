@@ -3,22 +3,22 @@ use super::*;
 use anyhow::{Context, Result, bail, ensure};
 
 /// A zero-based equipment slot in a vehicle hull face or turret.
-pub type VehicleCriticalLocation = CriticalLocation<BattleVehicleSection>;
+pub type VehicleCriticalLocation = CriticalLocation<VehicleSection>;
 
 /// Resolved equipment only; construction, mass, systems and live vehicle simulation require further validation.
-pub type BattleVehicleLoadout = ResolvedLoadout<VehicleCriticalLocation>;
+pub type VehicleLoadout = ResolvedLoadout<VehicleCriticalLocation>;
 
-impl BattleVehicleLoadout {
+impl VehicleLoadout {
     /// Resolve each vehicle slot independently in hull-face and slot order.
-    pub fn resolve(template: &BattleVehicleTemplate) -> Result<Self> {
+    pub fn resolve(template: &VehicleTemplate) -> Result<Self> {
         Self::resolve_with(template, false)
     }
 
-    pub fn resolve_contract(template: &BattleVehicleTemplate) -> Result<Self> {
+    pub fn resolve_contract(template: &VehicleTemplate) -> Result<Self> {
         Self::resolve_with(template, true)
     }
 
-    fn resolve_with(template: &BattleVehicleTemplate, contract: bool) -> Result<Self> {
+    fn resolve_with(template: &VehicleTemplate, contract: bool) -> Result<Self> {
         let mut loadout = Self {
             weapons: Vec::new(),
             ammunition: Vec::new(),
@@ -36,9 +36,8 @@ impl BattleVehicleLoadout {
                             match AmmunitionBin::from_critical_contract(name, critical, location) {
                                 Ok(bin) => Some(bin),
                                 Err(_)
-                                    if BattlePart::parse(&critical.equipment).is_ok_and(
-                                        |part| part.kind == BattlePartKind::Ammunition,
-                                    ) =>
+                                    if Part::parse(&critical.equipment)
+                                        .is_ok_and(|part| part.kind == PartKind::Ammunition) =>
                                 {
                                     None
                                 }
@@ -65,14 +64,14 @@ impl BattleVehicleLoadout {
                     if super::equipment::strip_name_prefix(&equipment, "IS.").is_some()
                         || super::equipment::strip_name_prefix(&equipment, "CL.").is_some()
                     {
-                        let weapon = match BattleWeapon::parse(&equipment) {
+                        let weapon = match Weapon::parse(&equipment) {
                             Ok(weapon) => weapon,
                             Err(_)
                                 if contract
                                     && (super::loadout::contract_raw_weapon(
                                         &critical.equipment,
-                                    ) || BattlePart::parse(&critical.equipment)
-                                        .is_ok_and(|part| part.kind == BattlePartKind::Weapon)) =>
+                                    ) || Part::parse(&critical.equipment)
+                                        .is_ok_and(|part| part.kind == PartKind::Weapon)) =>
                             {
                                 return Ok(());
                             }
@@ -85,14 +84,11 @@ impl BattleVehicleLoadout {
                         });
                         return Ok(());
                     }
-                    let system = match BattleSystem::named(&critical.equipment) {
+                    let system = match System::named(&critical.equipment) {
                         Some(system) => system,
                         None if contract
-                            && BattlePart::parse(&critical.equipment).is_ok_and(|part| {
-                                matches!(
-                                    part.kind,
-                                    BattlePartKind::Component | BattlePartKind::Bomb
-                                )
+                            && Part::parse(&critical.equipment).is_ok_and(|part| {
+                                matches!(part.kind, PartKind::Component | PartKind::Bomb)
                             }) =>
                         {
                             return Ok(());

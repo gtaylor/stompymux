@@ -1,11 +1,11 @@
 //! Catalogue-based Wizard stock additions, removals and clearing share atomic inventory edits.
-use super::{BattleCargoRow, BattleChannel, BattleChannelMessage};
+use super::{CargoRow, DiagnosticChannel, DiagnosticMessage};
 use crate::{Config, ObjectId, Scripts};
 use anyhow::{Context, Result, ensure};
 
 /// A complete operator stock request; quantities apply independently to each catalogue match.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum BattleInventoryChange {
+pub enum InventoryChange {
     Add { pattern: String, quantity: i32 },
     Remove { pattern: String, quantity: i32 },
     Clear,
@@ -17,8 +17,8 @@ pub fn change_inventory_action(
     config: &Config,
     actor: ObjectId,
     object: ObjectId,
-    change: BattleInventoryChange,
-) -> Result<Vec<BattleCargoRow>> {
+    change: InventoryChange,
+) -> Result<Vec<CargoRow>> {
     ensure!(
         crate::authority::is_wizard(&scripts.world(), actor),
         "Permission denied."
@@ -28,17 +28,17 @@ pub fn change_inventory_action(
         let mut candidate = before.clone();
         let mut rows = Vec::new();
         let mut messages = Vec::new();
-        if change == BattleInventoryChange::Clear {
+        if change == InventoryChange::Clear {
             candidate.btech.inventories.remove(&object);
-            messages.push(BattleChannelMessage::new(
-                BattleChannel::Economy,
+            messages.push(DiagnosticMessage::new(
+                DiagnosticChannel::Economy,
                 format!("#{} reset #{}'s stuff.", actor.0, object.0),
             ));
         } else {
             let (pattern, quantity, add) = match &change {
-                BattleInventoryChange::Add { pattern, quantity } => (pattern, *quantity, true),
-                BattleInventoryChange::Remove { pattern, quantity } => (pattern, *quantity, false),
-                BattleInventoryChange::Clear => unreachable!(),
+                InventoryChange::Add { pattern, quantity } => (pattern, *quantity, true),
+                InventoryChange::Remove { pattern, quantity } => (pattern, *quantity, false),
+                InventoryChange::Clear => unreachable!(),
             };
             ensure!(
                 !pattern.is_empty() && pattern.len() <= 1024,
@@ -66,7 +66,7 @@ pub fn change_inventory_action(
                     &name,
                     if add { quantity } else { -quantity },
                 ));
-                rows.push(BattleCargoRow {
+                rows.push(CargoRow {
                     quantity,
                     name,
                     part_id: entry.part_id,
@@ -109,12 +109,12 @@ fn command(
             let pattern = pattern.trim().to_owned();
             let quantity = quantity.trim().parse()?;
             if add {
-                BattleInventoryChange::Add { pattern, quantity }
+                InventoryChange::Add { pattern, quantity }
             } else {
-                BattleInventoryChange::Remove { pattern, quantity }
+                InventoryChange::Remove { pattern, quantity }
             }
         } else {
-            BattleInventoryChange::Clear
+            InventoryChange::Clear
         };
         let rows = change_inventory_action(ctx.scripts, ctx.config, ctx.player, object, change)?;
         let Some(add) = add else {
@@ -199,8 +199,8 @@ pub fn add_stores_action(
         }
         candidate.btech.validate(&candidate)?;
         *scripts.world_mut() = candidate;
-        let message = BattleChannelMessage::new(
-            BattleChannel::Economy,
+        let message = DiagnosticMessage::new(
+            DiagnosticChannel::Economy,
             format!(
                 "#{} added {} {} to #{}",
                 actor.0,

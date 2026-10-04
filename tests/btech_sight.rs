@@ -9,7 +9,7 @@ use firing_support::{edit, fixture_with_target, templates};
 /// Build an equipped shooter facing a visible target, with a selected unit lock.
 async fn fixture(
     source: &str,
-    weapon: Option<BattleWeapon>,
+    weapon: Option<Weapon>,
 ) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId, usize) {
     fixture_with_target(source, weapon, include_str!("../game/mechs/JR7-D.toml")).await
 }
@@ -70,7 +70,7 @@ async fn sight_all_chassis_targets_preserve_state_and_replay() {
                 let actual: (u8, Option<i64>) = lua
                     .eval_callback(&format!("local r={command}; return r.roll,r.target"))
                     .unwrap();
-                let mut dice = BattleDice::seeded([42; 32]);
+                let mut dice = Dice::seeded([42; 32]);
                 assert_eq!(
                     actual,
                     (dice.two_d6(), recipient),
@@ -103,24 +103,24 @@ async fn sight_special_rolls_do_not_launch_or_spend() {
         include_str!("../game/mechs/Demolisher.toml"),
     ] {
         for weapon in [
-            BattleWeapon::MachineGun,
-            BattleWeapon::LrDfm5,
-            BattleWeapon::Elrm5,
-            BattleWeapon::ClanArrowIv,
-            BattleWeapon::CoolantGun,
+            Weapon::MachineGun,
+            Weapon::LrDfm5,
+            Weapon::Elrm5,
+            Weapon::ClanArrowIv,
+            Weapon::CoolantGun,
         ] {
             let (_dir, config, mut world, shooter, _, index) = fixture(source, Some(weapon)).await;
             edit(&mut world, shooter, |state| {
                 for count in state["ammunition"].as_array_mut().unwrap() {
                     *count = 0.into();
                 }
-                if weapon == BattleWeapon::CoolantGun {
+                if weapon == Weapon::CoolantGun {
                     state["fire_modes"][index.to_string()] =
-                        serde_json::to_value(BattleFireMode::Heat).unwrap();
+                        serde_json::to_value(FireMode::Heat).unwrap();
                 }
-                if weapon == BattleWeapon::MachineGun {
+                if weapon == Weapon::MachineGun {
                     state["fire_modes"][index.to_string()] =
-                        serde_json::to_value(BattleFireMode::Gatling).unwrap();
+                        serde_json::to_value(FireMode::Gatling).unwrap();
                 }
             });
             let scripts = scripts(&config, &world);
@@ -134,9 +134,9 @@ async fn sight_special_rolls_do_not_launch_or_spend() {
             let actual: (u8, Option<u8>) = scripts
                 .eval_callback(&format!("local r={command}; return r.roll,r.gatling_roll"))
                 .unwrap();
-            let mut dice = BattleDice::seeded([42; 32]);
-            let gatling = (weapon == BattleWeapon::MachineGun).then(|| dice.d6());
-            let roll = if matches!(weapon, BattleWeapon::LrDfm5 | BattleWeapon::Elrm5) {
+            let mut dice = Dice::seeded([42; 32]);
+            let gatling = (weapon == Weapon::MachineGun).then(|| dice.d6());
+            let roll = if matches!(weapon, Weapon::LrDfm5 | Weapon::Elrm5) {
                 let mut rolls = [dice.d6(), dice.d6(), dice.d6()];
                 rolls.sort();
                 rolls[0] + rolls[1]
@@ -197,7 +197,7 @@ async fn sight_rejections_are_atomic_across_chassis() {
                     "unpiloted" => state["pilot"] = serde_json::Value::Null,
                     "stopped" => {
                         state["target_lock"] = serde_json::Value::Null;
-                        state["power"] = serde_json::to_value(BattlePower::Off).unwrap();
+                        state["power"] = serde_json::to_value(Power::Off).unwrap();
                     }
                     "disabled" => {
                         state["weapon_failures"][index.to_string()] = serde_json::json!("disabled")
@@ -228,7 +228,7 @@ async fn sight_rejections_are_atomic_across_chassis() {
         include_str!("../game/mechs/Demolisher.toml"),
     ] {
         let (_dir, config, world, shooter, _, index) =
-            fixture(source, Some(BattleWeapon::LaserAms)).await;
+            fixture(source, Some(Weapon::LaserAms)).await;
         let scripts = scripts(&config, &world);
         let result = scripts.eval_callback::<mlua::Table>(&format!(
             "return btech.unit.sight({},1,{index})",
@@ -247,7 +247,7 @@ async fn stinger_sight_and_fire_share_vtol_admission() {
     ] {
         let (_dir, config, base, shooter, target, index) = fixture_with_target(
             source,
-            Some(BattleWeapon::Lrm5),
+            Some(Weapon::Lrm5),
             include_str!("../game/mechs/Kestrel.toml"),
         )
         .await;
@@ -255,12 +255,12 @@ async fn stinger_sight_and_fire_share_vtol_admission() {
             let mut world = base.clone();
             edit(&mut world, shooter, |state| {
                 state["ammunition_modes"][index.to_string()] =
-                    serde_json::to_value(BattleAmmunitionMode::Stinger).unwrap()
+                    serde_json::to_value(AmmunitionMode::Stinger).unwrap()
             });
             if airborne {
                 edit(&mut world, target, |state| {
-                    state["vtol_flight"] = serde_json::to_value(BattleVtolFlight {
-                        phase: BattleVtolFlightPhase::Airborne,
+                    state["vtol_flight"] = serde_json::to_value(VtolFlight {
+                        phase: VtolFlightPhase::Airborne,
                         altitude: 1.0,
                         ..Default::default()
                     })

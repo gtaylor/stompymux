@@ -2,7 +2,7 @@
 use crate::{CommandAction, CommandContext, CommandInput, CommandReport, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 
-impl super::BattleVehicle {
+impl super::Vehicle {
     /// Selected automatic tracking mode, independent of current power and mechanical availability.
     pub fn automatic_turret(&self) -> bool {
         self.automatic_turret
@@ -14,7 +14,7 @@ pub fn toggle_battle_automatic_turret(
     world: &mut World,
     id: ObjectId,
     pilot: ObjectId,
-) -> Result<super::BattleNotice> {
+) -> Result<super::Notice> {
     super::vehicle_power::controlled(world, id, pilot)?;
     let unit = &world.btech.vehicles()[&id];
     ensure!(unit.position().is_some(), "Unit must be on a map");
@@ -24,7 +24,7 @@ pub fn toggle_battle_automatic_turret(
     );
     let enabled = !unit.automatic_turret;
     world.btech.vehicles.get_mut(&id).unwrap().automatic_turret = enabled;
-    Ok(super::BattleNotice {
+    Ok(super::Notice {
         unit: id,
         text: format!(
             "Automatic turret turning is now {}",
@@ -37,7 +37,7 @@ pub fn toggle_battle_automatic_turret(
 fn desired(world: &World, id: ObjectId) -> Option<f64> {
     let unit = world.btech.vehicles().get(&id)?;
     if !unit.automatic_turret
-        || unit.power() != super::BattlePower::Running
+        || unit.power() != super::Power::Running
         || unit.is_destroyed()
         || unit.turret_locked()
         || unit.turret_jammed()
@@ -54,7 +54,7 @@ fn desired(world: &World, id: ObjectId) -> Option<f64> {
     let position = unit.position()?;
     let motion = unit.motion()?;
     let point = match unit.target_selection()? {
-        super::BattleTargetSelection::Unit(lock) => {
+        super::TargetSelection::Unit(lock) => {
             if world
                 .objects
                 .get(&lock.target)
@@ -68,7 +68,7 @@ fn desired(world: &World, id: ObjectId) -> Option<f64> {
             }
             target.point?
         }
-        super::BattleTargetSelection::Hex(lock) => {
+        super::TargetSelection::Hex(lock) => {
             world
                 .btech
                 .maps()
@@ -92,7 +92,7 @@ fn integer_bearing(start: super::Point, end: super::Point) -> Option<f64> {
 }
 
 /// A moving target or hull can wake tracking even after the selection countdown settles.
-pub fn battle_automatic_turrets_pending(world: &World) -> bool {
+pub fn automatic_turrets_pending(world: &World) -> bool {
     world
         .btech
         .vehicles()

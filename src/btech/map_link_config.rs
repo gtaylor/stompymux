@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 /// Cardinal arrival configuration, ordered north, east, south, west.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
-pub enum BattleMapEntrance {
+pub enum MapEntrance {
     #[default]
     None,
     Offset {
@@ -18,7 +18,7 @@ pub enum BattleMapEntrance {
     },
 }
 
-impl BattleMapEntrance {
+impl MapEntrance {
     /// Resolve an arrival on current dimensions; stale exact coordinates are skipped.
     pub fn coordinate(self, map: &StoredMap, direction: usize) -> Option<HexCoordinate> {
         if map.width <= 0 || map.height <= 0 || direction >= 4 {
@@ -51,22 +51,22 @@ impl BattleMapEntrance {
 
 /// Parent placement and four cardinal arrival definitions for a child map.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BattleMapLink {
+pub struct MapLink {
     pub parent: ObjectId,
     pub coordinate: HexCoordinate,
     #[serde(default)]
-    pub entrances: [BattleMapEntrance; 4],
+    pub entrances: [MapEntrance; 4],
 }
 
 impl StoredMap {
     /// Inspect authored configuration without rebuilding live entrances or return links.
-    pub fn authored_link(&self) -> Option<BattleMapLink> {
+    pub fn authored_link(&self) -> Option<MapLink> {
         self.authored_link
     }
 }
 
 /// Configure or remove a child link; rebuilding its runtime routes is a separate operation.
-pub fn set_map_link(world: &mut World, child: ObjectId, link: Option<BattleMapLink>) -> Result<()> {
+pub fn set_map_link(world: &mut World, child: ObjectId, link: Option<MapLink>) -> Result<()> {
     ensure!(
         world
             .objects
@@ -96,7 +96,7 @@ pub fn set_map_link(world: &mut World, child: ObjectId, link: Option<BattleMapLi
         parent.base_hex(i64::from(link.coordinate.x), i64::from(link.coordinate.y))?;
         for (direction, entrance) in link.entrances.into_iter().enumerate() {
             ensure!(
-                entrance == BattleMapEntrance::None
+                entrance == MapEntrance::None
                     || entrance.coordinate(child_map, direction).is_some(),
                 "Invalid map entrance"
             );

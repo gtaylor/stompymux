@@ -1,5 +1,5 @@
 //! Ammunition expenditure and committed-second recycle timers for conventional weapons.
-use super::{BattleNotice, BattlePower, BattleUnit, BattleWeapon};
+use super::{Mech, Notice, Power, Weapon};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
@@ -7,8 +7,8 @@ use std::collections::BTreeMap;
 
 /// Mechanical readiness; authorization and target-dependent firing checks remain separate.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleWeaponReadiness {
-    pub weapon: BattleWeapon,
+pub struct WeaponReadiness {
+    pub weapon: Weapon,
     pub intact: bool,
     pub ammunition: u32,
     pub recycle_remaining: u16,
@@ -23,30 +23,30 @@ pub struct BattleWeaponReadiness {
 
 /// Expenditure that must accompany the attack, including misses; heat has already been added to the unit.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleWeaponUse {
-    pub weapon: BattleWeapon,
+pub struct WeaponUse {
+    pub weapon: Weapon,
     /// Actual draws from live bins; empty for energy, self-contained or unlaunched shots.
-    pub ammunition: Vec<super::BattleAmmunitionDraw>,
+    pub ammunition: Vec<super::AmmunitionDraw>,
     /// Effective mode after supply-dependent fallback.
-    pub fire_mode: super::BattleFireMode,
+    pub fire_mode: super::FireMode,
     pub heat: u8,
     /// Energy damage lost to the firing mount’s damaged focusing components.
     pub damage_penalty: u8,
     /// Enhanced critical component responsible for a terminal launch failure.
-    pub critical_failure: Option<super::BattleWeaponDamageKind>,
+    pub critical_failure: Option<super::WeaponDamageKind>,
     /// Supply-limited gatling roll, used for both heat and pre-glancing damage.
     pub gatling_damage: Option<u8>,
-    pub ammunition_mode: super::BattleAmmunitionMode,
+    pub ammunition_mode: super::AmmunitionMode,
 }
 
-impl BattleUnit {
+impl Mech {
     /// Active recycle countdowns keyed by zero-based resolved weapon index.
     pub fn weapon_recycle(&self) -> &BTreeMap<usize, u16> {
         &self.weapon_recycle
     }
 
     /// Inspect functioning equipment, remaining matching salvos and recycle time.
-    pub fn weapon_readiness(&self, index: usize) -> Result<BattleWeaponReadiness> {
+    pub fn weapon_readiness(&self, index: usize) -> Result<WeaponReadiness> {
         let _measurement = crate::btech::autopilot::diagnostics::measure(
             crate::btech::autopilot::diagnostics::Category::Readiness,
         );
@@ -55,7 +55,7 @@ impl BattleUnit {
     }
 
     /// Inspect every resolved mount while sharing one immutable equipment projection.
-    pub(crate) fn weapon_readiness_batch(&self) -> Result<Vec<BattleWeaponReadiness>> {
+    pub(crate) fn weapon_readiness_batch(&self) -> Result<Vec<WeaponReadiness>> {
         let _measurement = crate::btech::autopilot::diagnostics::measure(
             crate::btech::autopilot::diagnostics::Category::Readiness,
         );
@@ -71,9 +71,9 @@ impl BattleUnit {
     /// Inspect live state against an equipment projection from the same immutable unit.
     pub(crate) fn weapon_readiness_with_loadout(
         &self,
-        loadout: &super::BattleLoadout,
+        loadout: &super::MechLoadout,
         index: usize,
-    ) -> Result<BattleWeaponReadiness> {
+    ) -> Result<WeaponReadiness> {
         let weapon = loadout
             .weapons
             .get(index)
@@ -105,7 +105,7 @@ impl BattleUnit {
         };
         let recycle_remaining = self.weapon_recycle.get(&index).copied().unwrap_or(0);
         let posture_ready = mechanics.posture_failure.is_none();
-        Ok(BattleWeaponReadiness {
+        Ok(WeaponReadiness {
             weapon,
             intact,
             ammunition,
@@ -115,7 +115,7 @@ impl BattleUnit {
             jammed: self.jammed_weapons.contains(&index)
                 || self.weapon_damage_jams.contains(&index)
                 || self.weapon_failures.contains_key(&index),
-            ready: self.power() == BattlePower::Running
+            ready: self.power() == Power::Running
                 && !self.is_destroyed()
                 && mechanics.admits()
                 && !spent
@@ -136,7 +136,7 @@ impl BattleUnit {
 
     fn weapon_mechanics_with_loadout(
         &self,
-        loadout: &super::BattleLoadout,
+        loadout: &super::MechLoadout,
         index: usize,
     ) -> Result<super::weapon_admission::WeaponMechanics> {
         let mount = loadout
@@ -170,14 +170,14 @@ impl BattleUnit {
     /// A prone arm weapon needs the opposite arm; other non-leg mounts can use either arm.
     fn prone_support_failure(
         &self,
-        loadout: &super::BattleLoadout,
-        section: super::BattleSection,
+        loadout: &super::MechLoadout,
+        section: super::MechSection,
     ) -> Option<&'static str> {
-        use super::BattleSection::*;
-        if self.posture() != super::BattlePosture::Prone {
+        use super::MechSection::*;
+        if self.posture() != super::Posture::Prone {
             return None;
         }
-        if self.chassis() == super::BattleMechChassis::Quad {
+        if self.chassis() == super::MechChassis::Quad {
             match self.unavailable_legs() {
                 0 => return None,
                 3.. => return Some("Quads need at least 3 legs to fire while prone."),
@@ -219,7 +219,7 @@ pub fn spend_weapon(
     id: ObjectId,
     pilot: ObjectId,
     index: usize,
-) -> Result<BattleWeaponUse> {
+) -> Result<WeaponUse> {
     world.attempt(|world| {
         super::combat_operator::controlled_mech(world, id, pilot)?;
         let unit = world.btech.constructed.get_mut(&id).unwrap();
@@ -240,7 +240,7 @@ pub(super) fn use_weapon(
     index: usize,
     launched: bool,
     gatling_damage: Option<u8>,
-) -> Result<BattleWeaponUse> {
+) -> Result<WeaponUse> {
     super::combat_operator::controlled_mech(world, id, pilot)?;
     let unit = &world.btech.constructed_units()[&id];
     ensure!(unit.weapon_readiness(index)?.ready, "Weapon is not ready");
@@ -256,7 +256,7 @@ pub(super) fn use_weapon(
     );
     let fire_mode = unit.effective_fire_mode(index)?;
     ensure!(
-        gatling_damage.is_some() == (fire_mode == super::BattleFireMode::Gatling),
+        gatling_damage.is_some() == (fire_mode == super::FireMode::Gatling),
         "Invalid gatling firing cycle"
     );
     let rounds = if let Some(damage) = gatling_damage {
@@ -286,7 +286,7 @@ pub(super) fn use_weapon(
     };
     let recycle = world.btech.weapon_settings.recycle_seconds(weapon);
     let unit = world.btech.constructed.get_mut(&id).unwrap();
-    if fire_mode == super::BattleFireMode::Normal {
+    if fire_mode == super::FireMode::Normal {
         unit.fire_modes.remove(&index);
     }
     for draw in &ammunition {
@@ -299,7 +299,7 @@ pub(super) fn use_weapon(
     unit.fired_recently |= launched;
     unit.heat.stored += f64::from(heat);
     unit.weapon_recycle.insert(index, u16::from(recycle));
-    Ok(BattleWeaponUse {
+    Ok(WeaponUse {
         weapon,
         ammunition,
         fire_mode,
@@ -312,13 +312,13 @@ pub(super) fn use_weapon(
 }
 
 /// Advance active, powered weapon timers by one committed second; shutdown pauses their countdown.
-pub fn advance_recycle(world: &mut World) -> Vec<BattleNotice> {
+pub fn advance_recycle(world: &mut World) -> Vec<Notice> {
     let ids: Vec<_> = world
         .btech
         .constructed_units()
         .iter()
         .filter(|(id, unit)| {
-            unit.power() == BattlePower::Running
+            unit.power() == Power::Running
                 && (!unit.weapon_recycle.is_empty() || !unit.limb_recycle.is_empty())
                 && world
                     .objects
@@ -351,7 +351,7 @@ pub fn advance_recycle(world: &mut World) -> Vec<BattleNotice> {
             } else {
                 loadout.weapons[index].weapon.recycle_notice().to_owned()
             };
-            notices.push(BattleNotice { unit: id, text });
+            notices.push(Notice { unit: id, text });
         }
         for section in unit.limb_recycle.keys().copied().collect::<Vec<_>>() {
             if unit.sections()[&section].internal == 0 {
@@ -364,7 +364,7 @@ pub fn advance_recycle(world: &mut World) -> Vec<BattleNotice> {
                 continue;
             }
             unit.limb_recycle.remove(&section);
-            notices.push(BattleNotice {
+            notices.push(Notice {
                 unit: id,
                 text: format!(
                     "[fg=green]Your {} has finished its previous action.[reset]",
@@ -379,8 +379,8 @@ pub fn advance_recycle(world: &mut World) -> Vec<BattleNotice> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::btech::BattleUnitTemplateExt;
-    use crate::{BattleUnitTemplate, Config, Kind, ObjectId, World};
+    use crate::btech::UnitTemplateExt;
+    use crate::{Config, Kind, ObjectId, UnitTemplate, World};
 
     #[test]
     fn batch_readiness_matches_each_mount_after_live_changes() {
@@ -388,7 +388,7 @@ mod tests {
         let mut world = World::default();
         let id = world.create(&config, "Readiness batch test".into(), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-        BattleUnitTemplate::parse(
+        UnitTemplate::parse(
             "JR7-D",
             include_str!("../../tests/fixtures/btech/mechs/JR7-D.toml"),
         )
@@ -417,7 +417,7 @@ mod tests {
                 loadout.weapons.len(),
             )
         };
-        world.btech.constructed.get_mut(&id).unwrap().power = BattlePower::Running;
+        world.btech.constructed.get_mut(&id).unwrap().power = Power::Running;
         let unit = world.btech.constructed.get_mut(&id).unwrap();
         unit.ammunition[ammo_bin] = 0;
         unit.weapon_recycle.insert(ammo_index, 3);

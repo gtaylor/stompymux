@@ -23,7 +23,7 @@ impl LiveMass {
     }
 }
 
-impl super::BattleUnit {
+impl super::Mech {
     /// Current gameplay mass in 1/1024 tons, including an administrative correction.
     pub fn effective_mass(&self) -> Result<u32> {
         self.live_mass
@@ -32,7 +32,7 @@ impl super::BattleUnit {
     }
 }
 
-impl super::BattleVehicle {
+impl super::Vehicle {
     /// Current gameplay mass in 1/1024 tons, including an administrative correction.
     pub fn effective_mass(&self) -> Result<u32> {
         self.live_mass

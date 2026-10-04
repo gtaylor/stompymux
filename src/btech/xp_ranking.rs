@@ -5,7 +5,7 @@ use serde::Serialize;
 
 /// One ranked player and their share of all counted balances.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct BattleXpRank {
+pub struct XpRank {
     pub player: ObjectId,
     pub name: String,
     pub experience: u32,
@@ -14,11 +14,11 @@ pub struct BattleXpRank {
 
 /// Bounded leaderboard; the total includes counted players outside the displayed top sixteen.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct BattleXpRanking {
+pub struct XpRanking {
     pub skill: String,
     pub counted: usize,
     pub total: u64,
-    pub entries: Vec<BattleXpRank>,
+    pub entries: Vec<XpRank>,
     pub text: String,
 }
 
@@ -28,7 +28,7 @@ pub fn xp_ranking_action(
     config: &Config,
     actor: ObjectId,
     skill: &str,
-) -> Result<BattleXpRanking> {
+) -> Result<XpRanking> {
     scripts.atomic(|_| {
         let world = scripts.world();
         ensure!(
@@ -51,7 +51,7 @@ pub fn xp_ranking_action(
             if value.experience == 0 {
                 continue;
             }
-            entries.push(BattleXpRank {
+            entries.push(XpRank {
                 player: id,
                 name: object.name.clone(),
                 experience: value.experience_balance(),
@@ -92,7 +92,7 @@ pub fn xp_ranking_action(
             }),
             (total > 0).then(|| format!("Grand total: {total} points")),
         );
-        let report = BattleXpRanking {
+        let report = XpRanking {
             skill: skill.name.into(),
             counted,
             total,
@@ -101,7 +101,7 @@ pub fn xp_ranking_action(
         };
         drop(world);
         for line in display.lines() {
-            super::notify_message(scripts, super::BattleMessageTarget::Player(actor), line)?;
+            super::notify_message(scripts, super::MessageTarget::Player(actor), line)?;
         }
         scripts.world().validate_action(config)?;
         scripts.effects.validate()?;

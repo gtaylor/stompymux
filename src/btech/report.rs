@@ -16,8 +16,8 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
         let args: Vec<_> = input.args.split_whitespace().collect();
         let target = match args.as_slice() {
             [] => match owner.selection(&world).context("No default target set!")? {
-                super::BattleTargetSelection::Unit(lock) => lock.target,
-                super::BattleTargetSelection::Hex(lock) => {
+                super::TargetSelection::Unit(lock) => lock.target,
+                super::TargetSelection::Hex(lock) => {
                     let map =
                         super::scan::check_coordinate(&world, source, ctx.player, lock.hex, true)?;
                     super::scan::occupant(&world, source, map, lock.hex)?

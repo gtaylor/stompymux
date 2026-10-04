@@ -22,9 +22,9 @@ pub(super) fn apply(
     world: &World,
     source: super::fire_target::TargetSource,
     target: Option<ObjectId>,
-    weapon: BattleWeapon,
-    ammunition: BattleAmmunitionMode,
-    aim: &mut BattleAimModifiers,
+    weapon: Weapon,
+    ammunition: AmmunitionMode,
+    aim: &mut AimModifiers,
 ) -> Result<()> {
     aim.targeting_mode = match mode(world, source.unit) {
         selected @ (1 | 2) => range_bias(
@@ -45,11 +45,11 @@ pub(super) fn apply(
                     .btech
                     .vehicles()
                     .get(&target)
-                    .and_then(BattleVehicle::vtol_flight)
+                    .and_then(Vehicle::vtol_flight)
                     .is_some_and(|flight| {
                         matches!(
                             flight.phase,
-                            BattleVtolFlightPhase::Airborne | BattleVtolFlightPhase::Falling
+                            VtolFlightPhase::Airborne | VtolFlightPhase::Falling
                         )
                     });
             if airborne {

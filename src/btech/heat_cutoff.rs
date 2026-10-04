@@ -5,14 +5,14 @@ use serde::{Deserialize, Serialize};
 
 /// Disabled cooling is measured in heat points, independently of physical heat sink damage.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BattleHeatCutoff {
+pub struct HeatCutoff {
     pub enabled: bool,
     pub disabled: u16,
     /// Committed seconds until the current setting flips; further toggles are rejected meanwhile.
     pub remaining: Option<u8>,
 }
 
-impl BattleHeatCutoff {
+impl HeatCutoff {
     /// Damage can reduce usable capacity before the next sample clamps disabled cooling.
     pub(super) fn validate(self, installed: u16) -> Result<()> {
         ensure!(
@@ -65,7 +65,7 @@ pub fn toggle_battle_heat_cutoff(
     id: ObjectId,
     pilot: ObjectId,
     allowed: bool,
-) -> Result<super::BattleNotice> {
+) -> Result<super::Notice> {
     ensure!(allowed, "This command has been disabled.");
     super::power::controlled_unit(world, id, pilot)?;
     let unit = world
@@ -78,7 +78,7 @@ pub fn toggle_battle_heat_cutoff(
         "You are already toggling heat cutoff status. Please be patient."
     );
     unit.heat_cutoff.remaining = Some(4);
-    Ok(super::BattleNotice {
+    Ok(super::Notice {
         unit: id,
         text: if unit.heat_cutoff.enabled {
             "Disengaging heat dissipation cutoff..."
@@ -89,9 +89,9 @@ pub fn toggle_battle_heat_cutoff(
     })
 }
 
-impl super::BattleUnit {
+impl super::Mech {
     /// Current regulation and transition state, including intentionally disabled cooling points.
-    pub fn heat_cutoff(&self) -> BattleHeatCutoff {
+    pub fn heat_cutoff(&self) -> HeatCutoff {
         self.heat_cutoff
     }
 }
@@ -134,14 +134,14 @@ mod tests {
                 (10.0, 1.0),
                 (11.0, 2.0),
             ] {
-                let mut state = BattleHeatCutoff {
+                let mut state = HeatCutoff {
                     enabled: true,
                     disabled: 5,
                     remaining: None,
                 };
                 assert_eq!(state.regulate(excess, 10, maximum), delta);
             }
-            let mut state = BattleHeatCutoff {
+            let mut state = HeatCutoff {
                 enabled: true,
                 disabled: 0,
                 remaining: None,

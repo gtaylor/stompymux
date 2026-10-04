@@ -7,20 +7,20 @@ use serde::Serialize;
 /// Delivery modes retain their distinct interference and relay diagnostics.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(tag = "mode", content = "report", rename_all = "snake_case")]
-pub enum BattleRadioDelivery {
-    Analog(BattleAnalogRadioReport),
-    Digital(BattleDigitalRadioReport),
+pub enum RadioDelivery {
+    Analog(AnalogRadioReport),
+    Digital(DigitalRadioReport),
 }
 
 /// One accepted transmission, including the subsequent frequency-matched mine phase.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleRadioTransmission {
-    pub delivery: BattleRadioDelivery,
-    pub mines: BattleCommandMineReport,
+pub struct RadioTransmission {
+    pub delivery: RadioDelivery,
+    pub mines: CommandMineReport,
     /// Administrative diagnostics captured before delivery and committed with the transmission.
-    pub audit_messages: Vec<BattleChannelMessage>,
+    pub audit_messages: Vec<DiagnosticMessage>,
     /// Accepted communication XP diagnostics committed with delivery.
-    pub experience_messages: Vec<BattleChannelMessage>,
+    pub experience_messages: Vec<DiagnosticMessage>,
 }
 
 /// Send from a conscious assigned cockpit pilot, publishing delivery before mine consequences.
@@ -34,7 +34,7 @@ pub fn send_radio_action(
     pilot: ObjectId,
     channel: u8,
     message: &str,
-) -> Result<BattleRadioTransmission> {
+) -> Result<RadioTransmission> {
     scripts.atomic(|_| {
         let (digital, frequency) = {
             let world = scripts.world.borrow();
@@ -66,36 +66,36 @@ pub fn send_radio_action(
         let (delivery, notices) = if digital {
             let report = resolve_digital_radio(&scripts.world.borrow(), sender, channel, message)?;
             let notices = report.notices();
-            (BattleRadioDelivery::Digital(report), notices)
+            (RadioDelivery::Digital(report), notices)
         } else {
             let report =
                 resolve_analog_radio(&mut scripts.world.borrow_mut(), sender, channel, message)?;
             let notices = report.notices();
-            (BattleRadioDelivery::Analog(report), notices)
+            (RadioDelivery::Analog(report), notices)
         };
         super::channels::publish(scripts, config, &audit_messages)?;
         for notice in notices {
             super::notify_unit(scripts, notice)?;
         }
         let experience_messages = match &delivery {
-            BattleRadioDelivery::Analog(report) => super::award_radio_experience(
+            RadioDelivery::Analog(report) => super::award_radio_experience(
                 &mut scripts.world.borrow_mut(),
                 report,
                 crate::clock::wall_time(),
             )?,
-            BattleRadioDelivery::Digital(_) => Vec::new(),
+            RadioDelivery::Digital(_) => Vec::new(),
         };
         super::channels::publish(scripts, config, &experience_messages)?;
         let settings = &config.battletech;
-        let rules = BattleFallRules {
-            vehicle_impact: crate::BattleVehicleImpactRules::configured(settings, false),
-            stacking: BattleStackingRules {
+        let rules = FallRules {
+            vehicle_impact: crate::VehicleImpactRules::configured(settings, false),
+            stacking: StackingRules {
                 mode: settings.stacking,
                 damage_percent: settings.stackdamage,
                 hit_arcs: settings.hit_arcs,
             },
-            stagger: BattleStaggerMode::from_setting(settings.newstagger),
-            hit: BattleHitRules {
+            stagger: StaggerMode::from_setting(settings.newstagger),
+            hit: HitRules {
                 inferno_penalty: settings.inferno_penalty != 0,
                 exile_stun_mode: settings.exile_stun_code.clamp(0, 2) as u8,
             },
@@ -109,7 +109,7 @@ pub fn send_radio_action(
             frequency as i32,
             rules,
         )?;
-        Ok(BattleRadioTransmission {
+        Ok(RadioTransmission {
             delivery,
             mines,
             audit_messages,

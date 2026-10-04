@@ -32,14 +32,13 @@ async fn transfer_preserves_running_controls_and_crew_across_all_admitted_chassi
         create_battle_unit(
             &mut world,
             occupant,
-            BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
-                .unwrap(),
+            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, occupant, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut world, occupant, interior, 0, 0).unwrap();
         let id = world.create(&config, "Traveler".into(), Kind::Thing);
-        BattleUnitTemplate::parse("test", source)
+        UnitTemplate::parse("test", source)
             .unwrap()
             .create(&mut world, id)
             .unwrap();
@@ -57,7 +56,7 @@ async fn transfer_preserves_running_controls_and_crew_across_all_admitted_chassi
             id,
             ObjectId(1),
             HexCoordinate { x: 2, y: 2 },
-            BattleHexTargetMode::Hex,
+            HexTargetMode::Hex,
         )
         .unwrap();
         let key = if world.btech.vehicles().contains_key(&id) {
@@ -94,7 +93,7 @@ async fn transfer_preserves_running_controls_and_crew_across_all_admitted_chassi
                 transfer_battle_unit(
                     &mut airborne,
                     id,
-                    BattlePosition {
+                    Position {
                         map: interior,
                         x: 1,
                         y: 1
@@ -109,7 +108,7 @@ async fn transfer_preserves_running_controls_and_crew_across_all_admitted_chassi
         let mut saved = serde_json::to_value(&falling.btech).unwrap();
         let unit = &mut saved[key][id.0.to_string()];
         if key == "constructed" {
-            unit["free_fall"] = serde_json::to_value(BattleFreeFall::new(5)).unwrap();
+            unit["free_fall"] = serde_json::to_value(FreeFall::new(5)).unwrap();
             unit["motion"]["speed"] = 0.into();
             unit["motion"]["desired_speed"] = 0.into();
             unit["motion"]["desired_heading"] = unit["motion"]["heading"].clone();
@@ -132,7 +131,7 @@ async fn transfer_preserves_running_controls_and_crew_across_all_admitted_chassi
             transfer_battle_unit(
                 &mut falling,
                 id,
-                BattlePosition {
+                Position {
                     map: interior,
                     x: 1,
                     y: 1,
@@ -156,7 +155,7 @@ async fn transfer_preserves_running_controls_and_crew_across_all_admitted_chassi
             assert_eq!(falling.objects[&id].location, Some(exterior));
         }
         let before = serde_json::to_value(&world.btech).unwrap()[key][id.0.to_string()].clone();
-        let destination = BattlePosition {
+        let destination = Position {
             map: interior,
             x: 1,
             y: 1,
@@ -178,7 +177,7 @@ async fn transfer_preserves_running_controls_and_crew_across_all_admitted_chassi
             administrative
                 .btech
                 .rewrite_unit_record(id, |record| {
-                    record["power"] = serde_json::to_value(BattlePower::Off).unwrap();
+                    record["power"] = serde_json::to_value(Power::Off).unwrap();
                 })
                 .unwrap();
             place_battle_unit(&mut administrative, id, exterior, 0, 0).unwrap();
@@ -201,7 +200,7 @@ async fn transfer_preserves_running_controls_and_crew_across_all_admitted_chassi
         if let Some(unit) = world.btech.vehicles().get(&id)
             && let Some(flight) = unit.vtol_flight()
         {
-            assert_eq!(flight.phase, BattleVtolFlightPhase::Landed);
+            assert_eq!(flight.phase, VtolFlightPhase::Landed);
             assert_eq!(flight.altitude, 3.0);
         }
         world.validate(&config).unwrap();
@@ -212,12 +211,12 @@ async fn transfer_preserves_running_controls_and_crew_across_all_admitted_chassi
         );
         let settled = world.clone();
         for destination in [
-            BattlePosition {
+            Position {
                 map: interior,
                 x: 2,
                 y: 0,
             },
-            BattlePosition {
+            Position {
                 map: ObjectId(99999),
                 x: 0,
                 y: 0,

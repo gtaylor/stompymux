@@ -5,22 +5,16 @@ use stompymux_rs::*;
 #[test]
 fn clan_missile_tables_groups_and_mounts() {
     for (weapon, hits) in [
-        (BattleWeapon::ClanLrm5, [1, 2, 2, 3, 3, 3, 3, 4, 4, 5, 5]),
-        (BattleWeapon::ClanLrm10, [3, 3, 4, 6, 6, 6, 6, 8, 8, 10, 10]),
-        (
-            BattleWeapon::ClanLrm15,
-            [5, 5, 6, 9, 9, 9, 9, 12, 12, 15, 15],
-        ),
-        (
-            BattleWeapon::ClanLrm20,
-            [6, 6, 9, 12, 12, 12, 12, 16, 16, 20, 20],
-        ),
-        (BattleWeapon::ClanSrm2, [1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2]),
-        (BattleWeapon::ClanSrm4, [1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4]),
-        (BattleWeapon::ClanSrm6, [2, 2, 3, 3, 4, 4, 4, 5, 5, 6, 6]),
-        (BattleWeapon::ClanStreakSrm2, [2; 11]),
-        (BattleWeapon::ClanStreakSrm4, [4; 11]),
-        (BattleWeapon::ClanStreakSrm6, [6; 11]),
+        (Weapon::ClanLrm5, [1, 2, 2, 3, 3, 3, 3, 4, 4, 5, 5]),
+        (Weapon::ClanLrm10, [3, 3, 4, 6, 6, 6, 6, 8, 8, 10, 10]),
+        (Weapon::ClanLrm15, [5, 5, 6, 9, 9, 9, 9, 12, 12, 15, 15]),
+        (Weapon::ClanLrm20, [6, 6, 9, 12, 12, 12, 12, 16, 16, 20, 20]),
+        (Weapon::ClanSrm2, [1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2]),
+        (Weapon::ClanSrm4, [1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4]),
+        (Weapon::ClanSrm6, [2, 2, 3, 3, 4, 4, 4, 5, 5, 6, 6]),
+        (Weapon::ClanStreakSrm2, [2; 11]),
+        (Weapon::ClanStreakSrm4, [4; 11]),
+        (Weapon::ClanStreakSrm6, [6; 11]),
     ] {
         let p = weapon.profile();
         assert_eq!(p.minimum_range, 0);
@@ -42,9 +36,8 @@ fn clan_missile_tables_groups_and_mounts() {
             }
         }
         let mut template =
-            BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
-                .unwrap();
-        let arm = template.sections.get_mut(&BattleSection::LeftArm).unwrap();
+            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        let arm = template.sections.get_mut(&MechSection::LeftArm).unwrap();
         let mut part = arm.criticals[&2].clone();
         part.equipment = weapon.name().into();
         for slot in 2..2 + p.critical_slots {
@@ -52,14 +45,14 @@ fn clan_missile_tables_groups_and_mounts() {
         }
         let bin = template
             .sections
-            .get_mut(&BattleSection::RightTorso)
+            .get_mut(&MechSection::RightTorso)
             .unwrap()
             .criticals
             .get_mut(&0)
             .unwrap();
         bin.equipment = format!("Ammo_{}", weapon.name());
         bin.data = p.ammunition_per_ton.to_string();
-        let unit = BattleUnit::from_template(template).unwrap();
+        let unit = Mech::from_template(template).unwrap();
         let loadout = unit.loadout().unwrap();
         let (index, mount) = loadout
             .weapons
@@ -71,7 +64,7 @@ fn clan_missile_tables_groups_and_mounts() {
             let mut damaged = unit.clone();
             assert_eq!(
                 damaged.destroy_critical(*location).unwrap(),
-                Some(BattleCriticalLoss::Weapon {
+                Some(CriticalLoss::Weapon {
                     index,
                     explosion_damage: 0
                 })
@@ -83,7 +76,7 @@ fn clan_missile_tables_groups_and_mounts() {
             damaged
                 .destroy_critical(loadout.ammunition[0].location)
                 .unwrap(),
-            Some(BattleCriticalLoss::Ammunition {
+            Some(CriticalLoss::Ammunition {
                 index: 0,
                 rounds: u16::from(p.ammunition_per_ton),
                 explosion_damage: u32::from(p.ammunition_per_ton)

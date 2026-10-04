@@ -3,8 +3,8 @@ use crate::support;
 use sqlx::{Connection, Row, SqliteConnection};
 use std::path::Path;
 use stompymux_rs::{
-    BattleSection, BattleTemplate, BtechState, Flag, Kind, MapAsset, ObjectId, Scripts, Terrain,
-    dbck, persistence, read_battle_map, read_battle_template,
+    BtechState, Flag, Kind, MapAsset, MechSection, MechTemplate, ObjectId, Scripts, Terrain, dbck,
+    persistence, read_battle_map, read_battle_template,
 };
 
 /// Install only isolated BattleTech fixture assets into a temporary game directory.
@@ -30,14 +30,14 @@ fn supplied_templates_and_maps_decode_without_asset_conversion() {
         ),
         ("Jenner", 35, 118.25, 53.75, 10)
     );
-    let torso = &jenner.sections[&BattleSection::CenterTorso];
+    let torso = &jenner.sections[&MechSection::CenterTorso];
     assert_eq!((torso.armor, torso.internal, torso.rear), (10, 11, 3));
     assert_eq!(torso.criticals[&10].equipment, "IS.SRM-4");
     assert_eq!(torso.criticals[&0].equipment, "Engine");
     assert_eq!(torso.criticals[&2].equipment, "Engine");
     let atlas = read_battle_template(&dir.path().join("mechs"), "AS7-D").unwrap();
     assert_eq!(
-        atlas.sections[&BattleSection::CenterTorso].criticals[&10].modes,
+        atlas.sections[&MechSection::CenterTorso].criticals[&10].modes,
         ["RearMount"]
     );
     let map = read_battle_map(&dir.path().join("maps"), "test.map").unwrap();
@@ -76,13 +76,13 @@ fn malformed_templates_do_not_become_partially_supported_units() {
     ] {
         assert_ne!(malformed, source);
         assert!(
-            BattleTemplate::parse("JR7-D", &malformed).is_err(),
+            MechTemplate::parse("JR7-D", &malformed).is_err(),
             "unexpectedly parsed {malformed}"
         );
     }
     let multiline = source.replace("name = \"Jenner\"", "name = \"\"\"\nJenner\"\"\"");
     assert_eq!(
-        BattleTemplate::parse("JR7-D", &multiline).unwrap().name,
+        MechTemplate::parse("JR7-D", &multiline).unwrap().name,
         "Jenner"
     );
     // A malformed settings line rejects the map instead of being ignored.

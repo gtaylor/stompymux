@@ -102,9 +102,9 @@ pub fn resolve_impact_action(
     scripts: &Scripts,
     config: &Config,
     unit: ObjectId,
-    hit: super::BattleHit,
+    hit: super::Hit,
     damage: u16,
-) -> Result<super::BattleImpactReport> {
+) -> Result<super::ImpactReport> {
     impact_action(scripts, config, unit, hit, damage, false)
 }
 
@@ -113,9 +113,9 @@ pub(super) fn scenario_impact_action(
     scripts: &Scripts,
     config: &Config,
     unit: ObjectId,
-    hit: super::BattleHit,
+    hit: super::Hit,
     damage: u16,
-) -> Result<super::BattleImpactReport> {
+) -> Result<super::ImpactReport> {
     impact_action(scripts, config, unit, hit, damage, true)
 }
 
@@ -124,10 +124,10 @@ fn impact_action(
     scripts: &Scripts,
     config: &Config,
     unit: ObjectId,
-    hit: super::BattleHit,
+    hit: super::Hit,
     damage: u16,
     scenario: bool,
-) -> Result<super::BattleImpactReport> {
+) -> Result<super::ImpactReport> {
     scripts.atomic(|before| {
         let character = scripts
             .world
@@ -171,7 +171,7 @@ pub fn injure_character_pilot_action(
     unit: ObjectId,
     hits: u8,
     toughness: bool,
-) -> Result<super::BattleCharacterPilotInjury> {
+) -> Result<super::CharacterPilotInjury> {
     scripts.atomic(|before| {
         let report =
             super::injure_character_pilot(&mut scripts.world.borrow_mut(), unit, hits, toughness)?;
@@ -187,9 +187,9 @@ pub fn resolve_vehicle_critical_action(
     scripts: &Scripts,
     config: &Config,
     unit: ObjectId,
-    section: super::BattleVehicleSection,
-    rules: super::BattleVehicleCriticalRules,
-) -> Result<super::BattleVehicleCriticalResolution> {
+    section: super::VehicleSection,
+    rules: super::VehicleCriticalRules,
+) -> Result<super::VehicleCriticalResolution> {
     vehicle_damage_action(scripts, config, |world| {
         let report = super::resolve_vehicle_critical(world, unit, section, rules)?;
         let mut effects = VehicleDamageEffects {
@@ -208,9 +208,9 @@ pub fn resolve_vehicle_armor_damage_action(
     scripts: &Scripts,
     config: &Config,
     unit: ObjectId,
-    hit: super::BattleVehicleArmorHit,
-    rules: super::BattleVehicleCriticalRules,
-) -> Result<super::BattleVehicleArmorDamage> {
+    hit: super::VehicleArmorHit,
+    rules: super::VehicleCriticalRules,
+) -> Result<super::VehicleArmorDamage> {
     vehicle_armor_action(scripts, config, |world| {
         super::resolve_vehicle_armor_damage(world, unit, hit, rules)
     })
@@ -221,10 +221,10 @@ pub(super) fn directed_vehicle_damage_action(
     scripts: &Scripts,
     config: &Config,
     unit: ObjectId,
-    hit: super::BattleVehicleArmorHit,
+    hit: super::VehicleArmorHit,
     rear: bool,
-    rules: super::BattleVehicleCriticalRules,
-) -> Result<super::BattleVehicleArmorDamage> {
+    rules: super::VehicleCriticalRules,
+) -> Result<super::VehicleArmorDamage> {
     vehicle_armor_action(scripts, config, |world| {
         super::vehicle_armor_damage::resolve_rear_followup_in_candidate(
             world,
@@ -244,8 +244,8 @@ pub(super) fn directed_vehicle_damage_action(
 fn vehicle_armor_action(
     scripts: &Scripts,
     config: &Config,
-    resolve: impl FnOnce(&mut crate::World) -> Result<super::BattleVehicleArmorDamage>,
-) -> Result<super::BattleVehicleArmorDamage> {
+    resolve: impl FnOnce(&mut crate::World) -> Result<super::VehicleArmorDamage>,
+) -> Result<super::VehicleArmorDamage> {
     vehicle_damage_action(scripts, config, |world| {
         let report = resolve(world)?;
         let mut effects = VehicleDamageEffects {
@@ -263,7 +263,7 @@ fn vehicle_armor_action(
 pub fn advance_vehicle_fires_action(
     scripts: &Scripts,
     config: &Config,
-) -> Result<super::BattleVehicleFireTick> {
+) -> Result<super::VehicleFireTick> {
     vehicle_damage_action(scripts, config, |world| {
         let report = super::advance_vehicle_fires(world, config)?;
         let effects = VehicleDamageEffects {
@@ -281,8 +281,8 @@ pub fn resolve_vehicle_fire_exposure_action(
     scripts: &Scripts,
     config: &Config,
     unit: ObjectId,
-    rules: super::BattleVehicleCriticalRules,
-) -> Result<super::BattleVehicleFireExposure> {
+    rules: super::VehicleCriticalRules,
+) -> Result<super::VehicleFireExposure> {
     vehicle_damage_action(scripts, config, |world| {
         let report = super::resolve_vehicle_fire_exposure(world, unit, rules)?;
         let mut effects = VehicleDamageEffects {
@@ -304,8 +304,8 @@ pub fn resolve_vehicle_inferno_hit_action(
     config: &Config,
     unit: ObjectId,
     missiles: u16,
-    rules: super::BattleVehicleImpactRules,
-) -> Result<super::BattleVehicleInfernoHit> {
+    rules: super::VehicleImpactRules,
+) -> Result<super::VehicleInfernoHit> {
     vehicle_damage_action(scripts, config, |world| {
         let report = super::resolve_vehicle_inferno_hit(world, unit, missiles, rules)?;
         let mut effects = VehicleDamageEffects {
@@ -327,8 +327,8 @@ pub fn resolve_vehicle_heat_exposure_action(
     config: &Config,
     unit: ObjectId,
     heat: i32,
-    rules: super::BattleVehicleImpactRules,
-) -> Result<super::BattleVehicleHeatExposure> {
+    rules: super::VehicleImpactRules,
+) -> Result<super::VehicleHeatExposure> {
     vehicle_damage_action(scripts, config, |world| {
         let report = super::resolve_vehicle_heat_exposure(world, unit, heat, rules)?;
         let mut effects = VehicleDamageEffects {
@@ -344,10 +344,10 @@ pub fn resolve_vehicle_heat_exposure_action(
 
 /// Detached feedback lets every vehicle damage entry share publication and rollback.
 struct VehicleDamageEffects {
-    notices: Vec<super::BattleNotice>,
-    pilot_notices: Vec<super::BattlePilotNotice>,
-    broadcasts: Vec<super::BattleNotice>,
-    injuries: Vec<super::BattleCharacterPilotInjury>,
+    notices: Vec<super::Notice>,
+    pilot_notices: Vec<super::PilotNotice>,
+    broadcasts: Vec<super::Notice>,
+    injuries: Vec<super::CharacterPilotInjury>,
 }
 
 /// Publish vehicle damage once after resolution, including all nested casualties.
@@ -385,8 +385,8 @@ pub fn flood_unit_action(
     scripts: &Scripts,
     config: &Config,
     unit: ObjectId,
-    rules: super::BattleFallRules,
-) -> Result<Vec<super::BattleSectionExposureReport>> {
+    rules: super::FallRules,
+) -> Result<Vec<super::SectionExposureReport>> {
     scripts.atomic(|before| {
         let reports =
             super::flooding::flood_unit_in_action(&mut scripts.world.borrow_mut(), unit, rules)?;
@@ -413,12 +413,12 @@ pub(super) fn publish_new_casualties(
     before: &crate::World,
 ) -> Result<()> {
     super::transport_loss::publish(scripts, config, before)?;
-    let lethal = |unit: &super::BattleUnit| {
+    let lethal = |unit: &super::Mech| {
         unit.character_pilot_status()
             .is_some_and(|status| status.killed)
-            || unit.section_disabled(super::BattleSection::Head)
-            || unit.sections()[&super::BattleSection::Head].internal == 0
-            || unit.system_hits(super::BattleSystem::Cockpit) > 0
+            || unit.section_disabled(super::MechSection::Head)
+            || unit.sections()[&super::MechSection::Head].internal == 0
+            || unit.system_hits(super::System::Cockpit) > 0
     };
     let mut casualties: std::collections::BTreeSet<_> = scripts
         .world
@@ -437,7 +437,7 @@ pub(super) fn publish_new_casualties(
         .map(|(id, _)| *id)
         .collect();
     for (&id, unit) in scripts.world.borrow().btech.vehicles() {
-        let killed = |unit: &super::BattleVehicle| {
+        let killed = |unit: &super::Vehicle| {
             unit.crew_killed()
                 || unit
                     .character_pilot_status()
@@ -499,7 +499,7 @@ pub fn land_action(
     config: &Config,
     unit: ObjectId,
     pilot: ObjectId,
-    rules: super::BattleMovementRules,
+    rules: super::MovementRules,
 ) -> Result<()> {
     scripts.atomic(|before| {
         let report =
@@ -515,7 +515,7 @@ pub fn land_action(
 fn publish_balance_consequences(
     scripts: &Scripts,
     config: &Config,
-    report: &super::BattleBalanceReport,
+    report: &super::BalanceReport,
 ) -> Result<()> {
     super::channels::publish(scripts, config, &report.experience_messages)?;
     if let Some(fall) = &report.fall {
@@ -534,7 +534,7 @@ fn publish_balance_consequences(
 pub(super) fn publish_fall_consequences(
     scripts: &Scripts,
     config: &Config,
-    report: &super::BattleFallReport,
+    report: &super::MechFallReport,
 ) -> Result<()> {
     super::channels::publish(scripts, config, &report.experience_messages)?;
     if let Some(injury) = &report.character_injury {
@@ -571,7 +571,7 @@ pub(super) fn publish_fall_consequences(
 pub(super) fn publish_surface_consequences(
     scripts: &Scripts,
     config: &Config,
-    report: &super::BattleSurfaceBreak,
+    report: &super::SurfaceBreak,
 ) -> Result<()> {
     for (_, fall) in &report.falls {
         publish_fall_consequences(scripts, config, fall)?;
@@ -588,8 +588,8 @@ pub fn fall_unit_action(
     config: &Config,
     unit: ObjectId,
     levels: u8,
-    rules: super::BattleFallRules,
-) -> Result<super::BattleFallReport> {
+    rules: super::FallRules,
+) -> Result<super::MechFallReport> {
     ensure!(levels > 0, "Fall multiplier must be positive");
     fall_unit_contract_action(scripts, config, unit, i32::from(levels), rules)
 }
@@ -600,8 +600,8 @@ pub(super) fn fall_unit_contract_action(
     config: &Config,
     unit: ObjectId,
     levels: i32,
-    rules: super::BattleFallRules,
-) -> Result<super::BattleFallReport> {
+    rules: super::FallRules,
+) -> Result<super::MechFallReport> {
     scripts.atomic(|before| {
         let tons = super::administrative_unit_tonnage(before, unit)
             .context("unit tonnage is unavailable")?;
@@ -634,9 +634,9 @@ pub fn break_surface_action(
     config: &Config,
     map: ObjectId,
     coordinate: super::HexCoordinate,
-    surface: super::BattleSurface,
-    rules: super::BattleFallRules,
-) -> Result<super::BattleSurfaceBreak> {
+    surface: super::Surface,
+    rules: super::FallRules,
+) -> Result<super::SurfaceBreak> {
     scripts.atomic(|before| {
         let report = super::surface_break::break_surface_in_action(
             &mut scripts.world.borrow_mut(),
@@ -661,8 +661,8 @@ pub fn break_ice_upward_action(
     map: ObjectId,
     coordinate: super::HexCoordinate,
     unit: ObjectId,
-    rules: super::BattleFallRules,
-) -> Result<super::BattleSurfaceBreak> {
+    rules: super::FallRules,
+) -> Result<super::SurfaceBreak> {
     scripts.atomic(|before| {
         let report = super::surface_break::break_ice_upward_in_action(
             &mut scripts.world.borrow_mut(),
@@ -684,8 +684,8 @@ pub fn break_ice_upward_action(
 pub fn advance_jumps_action(
     scripts: &Scripts,
     config: &Config,
-    rules: super::BattleMovementRules,
-) -> Result<Vec<super::BattleBuildingArrival>> {
+    rules: super::MovementRules,
+) -> Result<Vec<super::BuildingArrival>> {
     movement_action(
         scripts,
         config,
@@ -700,8 +700,8 @@ pub fn advance_jumps_action(
 pub fn advance_motion_action(
     scripts: &Scripts,
     config: &Config,
-    rules: super::BattleMovementRules,
-) -> Result<Vec<super::BattleBuildingArrival>> {
+    rules: super::MovementRules,
+) -> Result<Vec<super::BuildingArrival>> {
     movement_action(
         scripts,
         config,
@@ -715,13 +715,13 @@ pub fn advance_motion_action(
 fn movement_action(
     scripts: &Scripts,
     config: &Config,
-    rules: super::BattleMovementRules,
+    rules: super::MovementRules,
     advance: fn(
         &mut crate::World,
-        super::BattleMovementRules,
+        super::MovementRules,
     ) -> Result<super::movement_report::MovementReport>,
     orbital: bool,
-) -> Result<Vec<super::BattleBuildingArrival>> {
+) -> Result<Vec<super::BuildingArrival>> {
     scripts.atomic(|before| {
         let mut report = advance(&mut scripts.world.borrow_mut(), rules)?;
         let arrivals = super::building_actions::dispatch_boundary_exits(scripts, &mut report)?;
@@ -760,10 +760,10 @@ pub fn stacking_action(
     scripts: &Scripts,
     config: &Config,
     unit: ObjectId,
-    input: super::BattleStackingInput,
-    rules: super::BattleStackingRules,
-    fall: super::BattleFallRules,
-) -> Result<Vec<super::BattleNotice>> {
+    input: super::StackingInput,
+    rules: super::StackingRules,
+    fall: super::FallRules,
+) -> Result<Vec<super::Notice>> {
     scripts.atomic(|before| {
         let mut effects = super::stacking::StackingEffects::default();
         let mut private = Vec::new();
@@ -788,7 +788,7 @@ pub fn stacking_action(
 pub(super) fn publish_impact_consequences(
     scripts: &Scripts,
     config: &Config,
-    report: &super::BattleTacticalImpact,
+    report: &super::TacticalImpact,
 ) -> Result<()> {
     for exposure in &report.impact.exposures {
         publish_section_exposure_consequences(scripts, config, exposure)?;
@@ -816,9 +816,9 @@ pub fn physical_attack_action(
     attacker: ObjectId,
     pilot: ObjectId,
     target: ObjectId,
-    attack: super::BattlePhysicalAttack,
-    rules: super::BattlePhysicalRules,
-) -> Result<super::BattlePhysicalReport> {
+    attack: super::PhysicalAttack,
+    rules: super::PhysicalRules,
+) -> Result<super::PhysicalReport> {
     scripts.atomic(|before| {
         let report = super::physical::resolve_attack_in_action(
             &mut scripts.world.borrow_mut(),
@@ -840,7 +840,7 @@ pub fn physical_attack_action(
 fn publish_physical_consequences(
     scripts: &Scripts,
     config: &Config,
-    report: &super::BattlePhysicalReport,
+    report: &super::PhysicalReport,
 ) -> Result<()> {
     super::channels::publish(scripts, config, &report.experience_messages)?;
     if let Some(impact) = &report.impact {
@@ -859,9 +859,9 @@ pub fn arm_attack_action(
     attacker: ObjectId,
     pilot: ObjectId,
     target: ObjectId,
-    choice: super::BattleArmAttackChoice,
-    rules: super::BattlePhysicalRules,
-) -> Result<super::BattleArmAttackReport> {
+    choice: super::ArmAttackChoice,
+    rules: super::PhysicalRules,
+) -> Result<super::ArmAttackReport> {
     scripts.atomic(|before| {
         let report = super::physical::resolve_arm_attack_in_action(
             &mut scripts.world.borrow_mut(),
@@ -888,8 +888,8 @@ pub fn charge_action(
     config: &Config,
     attacker: ObjectId,
     target: ObjectId,
-    rules: super::BattleChargeRules,
-) -> Result<super::BattleChargeReport> {
+    rules: super::ChargeRules,
+) -> Result<super::ChargeReport> {
     scripts.atomic(|before| {
         let report = super::charge::resolve_charge_in_action(
             &mut scripts.world.borrow_mut(),
@@ -909,7 +909,7 @@ pub fn charge_action(
 fn publish_charge_consequences(
     scripts: &Scripts,
     config: &Config,
-    report: &super::BattleChargeReport,
+    report: &super::ChargeReport,
 ) -> Result<()> {
     super::channels::publish(scripts, config, &report.experience_messages)?;
     for impact in report.target_impacts.iter().chain(&report.attacker_impacts) {
@@ -929,9 +929,9 @@ pub fn mutual_charge_action(
     config: &Config,
     first: ObjectId,
     second: ObjectId,
-    rules: super::BattleChargeRules,
+    rules: super::ChargeRules,
     second_distance: f32,
-) -> Result<super::BattleMutualChargeReport> {
+) -> Result<super::MutualChargeReport> {
     scripts.atomic(|before| {
         let report = super::charge::resolve_mutual_charge_in_action(
             &mut scripts.world.borrow_mut(),
@@ -958,8 +958,8 @@ pub fn dfa_action(
     config: &Config,
     attacker: ObjectId,
     target: ObjectId,
-    rules: super::BattlePhysicalRules,
-) -> Result<super::BattleDfaReport> {
+    rules: super::PhysicalRules,
+) -> Result<super::DfaReport> {
     scripts.atomic(|before| {
         let report = super::dfa::resolve_dfa_in_action(
             &mut scripts.world.borrow_mut(),
@@ -979,7 +979,7 @@ pub fn dfa_action(
 fn publish_dfa_consequences(
     scripts: &Scripts,
     config: &Config,
-    report: &super::BattleDfaReport,
+    report: &super::DfaReport,
 ) -> Result<()> {
     super::channels::publish(scripts, config, &report.experience_messages)?;
     if let Some(injury) = &report.character_injury {
@@ -1005,10 +1005,10 @@ pub fn stand_action(
     config: &Config,
     id: ObjectId,
     pilot: ObjectId,
-    mode: super::BattleStandMode,
+    mode: super::StandMode,
     careful_enabled: bool,
-    rules: super::BattleFallRules,
-) -> Result<super::BattleStandAttempt> {
+    rules: super::FallRules,
+) -> Result<super::StandAttempt> {
     scripts.atomic(|before| {
         let report = super::stand::begin_stand_in_action(
             &mut scripts.world.borrow_mut(),
@@ -1039,8 +1039,8 @@ pub fn stand_action(
 pub fn stagger_action(
     scripts: &Scripts,
     config: &Config,
-    rules: super::BattleStaggerRules,
-) -> Result<Vec<super::BattleStaggerReport>> {
+    rules: super::StaggerRules,
+) -> Result<Vec<super::StaggerReport>> {
     scripts.atomic(|before| {
         let reports =
             super::stagger::advance_stagger_in_action(&mut scripts.world.borrow_mut(), rules)?;
@@ -1072,8 +1072,8 @@ pub fn ammunition_explosion_action(
     config: &Config,
     id: ObjectId,
     index: usize,
-    rules: super::BattleFallRules,
-) -> Result<super::BattleTacticalImpact> {
+    rules: super::FallRules,
+) -> Result<super::TacticalImpact> {
     scripts.atomic(|before| {
         let report = super::impact::explode_ammunition_in_action(
             &mut scripts.world.borrow_mut(),
@@ -1093,8 +1093,8 @@ pub fn ammunition_explosion_action(
 pub fn overheat_action(
     scripts: &Scripts,
     config: &Config,
-    rules: super::BattleOverheatRules,
-) -> Result<Vec<super::BattleOverheatReport>> {
+    rules: super::OverheatRules,
+) -> Result<Vec<super::OverheatReport>> {
     scripts.atomic(|before| {
         let reports =
             super::overheat::advance_overheat_in_action(&mut scripts.world.borrow_mut(), rules)?;
@@ -1104,7 +1104,7 @@ pub fn overheat_action(
             let notices: Vec<_> = report
                 .messages_with_feedback(&mut private)
                 .into_iter()
-                .map(|(unit, text)| super::BattleNotice { unit, text })
+                .map(|(unit, text)| super::Notice { unit, text })
                 .collect();
             super::piloting::publish_ordered_notices(scripts, &notices, &private)?;
             if let Some(injury) = &report.character_injury {
@@ -1135,10 +1135,10 @@ pub fn salvo_action(
     scripts: &Scripts,
     config: &Config,
     target: ObjectId,
-    weapon: super::BattleWeapon,
-    arc: super::BattleHitArc,
-    rules: super::BattleFallRules,
-) -> Result<super::BattleSalvoReport> {
+    weapon: super::Weapon,
+    arc: super::HitArc,
+    rules: super::FallRules,
+) -> Result<super::MechSalvoReport> {
     scripts.atomic(|before| {
         let report = super::salvo::resolve_salvo_in_action(
             &mut scripts.world.borrow_mut(),
@@ -1158,7 +1158,7 @@ pub fn salvo_action(
 fn publish_salvo_consequences(
     scripts: &Scripts,
     config: &Config,
-    report: &super::BattleSalvoReport,
+    report: &super::MechSalvoReport,
     notices: bool,
 ) -> Result<()> {
     for group in &report.groups {
@@ -1196,8 +1196,8 @@ pub fn shot_action(
     pilot: ObjectId,
     target: ObjectId,
     index: usize,
-    rules: super::BattleShotRules,
-) -> Result<super::BattleShotReport> {
+    rules: super::ShotRules,
+) -> Result<super::MechShotReport> {
     scripts.atomic(|before| {
         let report = super::shot::resolve_shot_in_action(
             &mut scripts.world.borrow_mut(),
@@ -1226,7 +1226,7 @@ pub fn shot_action(
 fn publish_shot_consequences(
     scripts: &Scripts,
     config: &Config,
-    report: &super::BattleShotReport,
+    report: &super::MechShotReport,
 ) -> Result<()> {
     if let Some(salvo) = &report.salvo {
         publish_target_salvo(scripts, config, salvo)?;
@@ -1247,10 +1247,10 @@ fn publish_shot_consequences(
 fn publish_target_salvo(
     scripts: &Scripts,
     config: &Config,
-    salvo: &super::BattleTargetSalvo,
+    salvo: &super::TargetSalvo,
 ) -> Result<()> {
     match salvo {
-        super::BattleTargetSalvo::Swarm(report) => {
+        super::TargetSalvo::Swarm(report) => {
             for hop in &report.hops {
                 if let Some(salvo) = &hop.salvo {
                     publish_target_salvo(scripts, config, salvo)?;
@@ -1258,11 +1258,11 @@ fn publish_target_salvo(
             }
             Ok(())
         }
-        super::BattleTargetSalvo::Mech(salvo) => {
+        super::TargetSalvo::Mech(salvo) => {
             super::channels::publish(scripts, config, &salvo.experience_messages)?;
             publish_salvo_consequences(scripts, config, salvo, false)
         }
-        super::BattleTargetSalvo::Vehicle(salvo) => {
+        super::TargetSalvo::Vehicle(salvo) => {
             super::channels::publish(scripts, config, &salvo.experience_messages)?;
             let mut injuries = Vec::new();
             super::vehicle_injuries::collect_salvo(salvo, &mut injuries);
@@ -1277,7 +1277,7 @@ fn publish_target_salvo(
 /// Publish internal injuries identically for direct and coordinate launch failures.
 fn publish_vehicle_internal_injuries(
     scripts: &Scripts,
-    report: &super::BattleVehicleInternalDamage,
+    report: &super::VehicleInternalDamage,
 ) -> Result<()> {
     let mut injuries = Vec::new();
     super::vehicle_injuries::collect_internal(report, &mut injuries);
@@ -1291,15 +1291,11 @@ fn publish_vehicle_internal_injuries(
 fn publish_launch_misload(
     scripts: &Scripts,
     config: &Config,
-    report: &super::BattleLaunchMisload,
+    report: &super::LaunchMisload,
 ) -> Result<()> {
     match report {
-        super::BattleLaunchMisload::Mech(impact) => {
-            publish_impact_consequences(scripts, config, impact)
-        }
-        super::BattleLaunchMisload::Vehicle(impact) => {
-            publish_vehicle_internal_injuries(scripts, impact)
-        }
+        super::LaunchMisload::Mech(impact) => publish_impact_consequences(scripts, config, impact),
+        super::LaunchMisload::Vehicle(impact) => publish_vehicle_internal_injuries(scripts, impact),
     }
 }
 
@@ -1311,7 +1307,7 @@ pub(super) fn configured_firing_action(
     pilot: ObjectId,
     index: usize,
     request: super::fire_target::FireTargetRequest<'_>,
-) -> Result<super::BattleFireReport> {
+) -> Result<super::FireReport> {
     attempt_configured_firing_action(scripts, config, shooter, pilot, index, request)?
         .map_err(anyhow::Error::msg)
 }
@@ -1325,7 +1321,7 @@ pub(super) fn attempt_configured_firing_action(
     pilot: ObjectId,
     index: usize,
     request: super::fire_target::FireTargetRequest<'_>,
-) -> Result<std::result::Result<super::BattleFireReport, String>> {
+) -> Result<std::result::Result<super::FireReport, String>> {
     scripts.atomic(|before| {
         let operator = super::combat_operator::admit(&scripts.world.borrow(), shooter, pilot)?;
         let shooter = operator.source.unit;
@@ -1350,15 +1346,15 @@ pub(super) fn attempt_configured_firing_action(
         let notices: Vec<_> = action
             .messages
             .into_iter()
-            .map(|(unit, text)| super::BattleNotice { unit, text })
+            .map(|(unit, text)| super::Notice { unit, text })
             .collect();
         super::piloting::publish_ordered_notices(scripts, &notices, &action.pilot_notices)?;
         match &action.report {
-            super::BattleFireReport::Unit(report) => {
+            super::FireReport::Unit(report) => {
                 super::channels::publish_shot(scripts, config, report)?;
                 publish_shot_consequences(scripts, config, report)?;
             }
-            super::BattleFireReport::Vehicle(report) => {
+            super::FireReport::Vehicle(report) => {
                 super::channels::publish(scripts, config, &report.experience_messages)?;
                 if let Some(salvo) = &report.salvo {
                     publish_target_salvo(scripts, config, salvo)?;
@@ -1367,12 +1363,12 @@ pub(super) fn attempt_configured_firing_action(
                     publish_vehicle_internal_injuries(scripts, misload)?;
                 }
             }
-            super::BattleFireReport::Artillery(report) => {
+            super::FireReport::Artillery(report) => {
                 if let Some(misload) = &report.misload {
                     publish_launch_misload(scripts, config, misload)?;
                 }
             }
-            super::BattleFireReport::Hex(report) => {
+            super::FireReport::Hex(report) => {
                 for impact in &report.surfaces {
                     if let Some(fracture) = &impact.fracture {
                         publish_surface_consequences(scripts, config, fracture)?;
@@ -1401,9 +1397,9 @@ pub fn advance_artillery_flight_action(
     scripts: &Scripts,
     config: &Config,
     map: ObjectId,
-    flight: &mut super::BattleArtilleryFlight,
-    rules: super::BattleFallRules,
-) -> Result<Option<super::BattleArtilleryImpactReport>> {
+    flight: &mut super::ArtilleryFlight,
+    rules: super::FallRules,
+) -> Result<Option<super::ArtilleryImpactReport>> {
     let mut cursor = flight.clone();
     let report = scripts.atomic(|before| {
         let report = super::artillery_impact::advance(
@@ -1442,8 +1438,8 @@ pub fn resolve_mine_blast_action(
     config: &Config,
     map: ObjectId,
     ordinal: u32,
-    rules: super::BattleFallRules,
-) -> Result<super::BattleMineBlastReport> {
+    rules: super::FallRules,
+) -> Result<super::MineBlastReport> {
     scripts.atomic(|before| {
         let report = super::mine_blast::resolve_in_action(
             &mut scripts.world.borrow_mut(),
@@ -1463,7 +1459,7 @@ pub fn resolve_mine_blast_action(
 pub(super) fn publish_mine_consequences(
     scripts: &Scripts,
     config: &Config,
-    report: &super::BattleMineEventReport,
+    report: &super::MineEventReport,
 ) -> Result<()> {
     for blast in &report.blasts {
         publish_mine_blast_consequences(scripts, config, blast)?;
@@ -1490,7 +1486,7 @@ pub(super) fn publish_mine_consequences(
 fn publish_mine_blast_consequences(
     scripts: &Scripts,
     config: &Config,
-    report: &super::BattleMineBlastReport,
+    report: &super::MineBlastReport,
 ) -> Result<()> {
     for hit in &report.hits {
         publish_blast_consequences(scripts, config, &hit.impacts, hit.vehicle_heat.as_ref())?;
@@ -1502,15 +1498,15 @@ fn publish_mine_blast_consequences(
 pub(super) fn publish_blast_consequences(
     scripts: &Scripts,
     config: &Config,
-    impacts: &[super::BattleBlastImpact],
-    heat: Option<&super::BattleVehicleHeatExposure>,
+    impacts: &[super::BlastImpact],
+    heat: Option<&super::VehicleHeatExposure>,
 ) -> Result<()> {
     for impact in impacts {
         match impact {
-            super::BattleBlastImpact::Mech(impact) => {
+            super::BlastImpact::Mech(impact) => {
                 publish_impact_consequences(scripts, config, impact)?
             }
-            super::BattleBlastImpact::Vehicle(impact) => {
+            super::BlastImpact::Vehicle(impact) => {
                 let mut injuries = Vec::new();
                 if let Some(damage) = &impact.damage {
                     super::vehicle_injuries::collect_armor(damage, &mut injuries);
@@ -1537,8 +1533,8 @@ pub fn detonate_command_mines_action(
     config: &Config,
     sender: ObjectId,
     frequency: i32,
-    rules: super::BattleFallRules,
-) -> Result<super::BattleCommandMineReport> {
+    rules: super::FallRules,
+) -> Result<super::CommandMineReport> {
     scripts.atomic(|before| {
         let report = super::command_mines::resolve(
             &mut scripts.world.borrow_mut(),
@@ -1563,8 +1559,8 @@ pub fn vehicle_fall_action(
     config: &Config,
     unit: ObjectId,
     levels: u8,
-    rules: super::BattleFallRules,
-) -> Result<super::BattleVehicleFallReport> {
+    rules: super::FallRules,
+) -> Result<super::VehicleFallReport> {
     vehicle_fall_action_inner(scripts, config, unit, i32::from(levels), rules, true)
 }
 
@@ -1573,8 +1569,8 @@ pub(super) fn vehicle_fall_contract_action(
     config: &Config,
     unit: ObjectId,
     levels: i32,
-    rules: super::BattleFallRules,
-) -> Result<super::BattleVehicleFallReport> {
+    rules: super::FallRules,
+) -> Result<super::VehicleFallReport> {
     let character = scripts
         .world()
         .objects
@@ -1588,9 +1584,9 @@ fn vehicle_fall_action_inner(
     config: &Config,
     unit: ObjectId,
     levels: i32,
-    rules: super::BattleFallRules,
+    rules: super::FallRules,
     character: bool,
-) -> Result<super::BattleVehicleFallReport> {
+) -> Result<super::VehicleFallReport> {
     vehicle_fall_action_inner_with_tonnage(scripts, config, unit, levels, rules, character, false)
 }
 
@@ -1599,10 +1595,10 @@ fn vehicle_fall_action_inner_with_tonnage(
     config: &Config,
     unit: ObjectId,
     levels: i32,
-    rules: super::BattleFallRules,
+    rules: super::FallRules,
     character: bool,
     administrative_tonnage: bool,
-) -> Result<super::BattleVehicleFallReport> {
+) -> Result<super::VehicleFallReport> {
     scripts.atomic(|before| {
         let tons = administrative_tonnage
             .then(|| super::administrative_unit_tonnage(before, unit))
@@ -1631,7 +1627,7 @@ fn vehicle_fall_action_inner_with_tonnage(
 pub(super) fn publish_vehicle_fall_consequences(
     scripts: &Scripts,
     config: &Config,
-    report: &super::BattleVehicleFallReport,
+    report: &super::VehicleFallReport,
 ) -> Result<()> {
     super::channels::publish(scripts, config, &report.experience_messages)?;
     if let Some(injury) = &report.character_injury {
@@ -1656,7 +1652,7 @@ pub(super) fn publish_vehicle_fall_consequences(
 pub(super) fn publish_reactor_consequences(
     scripts: &Scripts,
     config: &Config,
-    blast: &super::BattleReactorExplosion,
+    blast: &super::ReactorExplosion,
 ) -> Result<()> {
     if let Some(nested) = &blast.section_explosion {
         publish_reactor_consequences(scripts, config, nested)?;
@@ -1671,7 +1667,7 @@ pub(super) fn publish_reactor_consequences(
 pub(super) fn publish_section_exposure_consequences(
     scripts: &Scripts,
     config: &Config,
-    flood: &super::BattleSectionExposureReport,
+    flood: &super::SectionExposureReport,
 ) -> Result<()> {
     if let Some(blast) = &flood.reactor_explosion {
         publish_reactor_consequences(scripts, config, blast)?;

@@ -1,5 +1,5 @@
 //! Skill experience awards and earned-level arithmetic; action-specific eligibility belongs to callers.
-use super::{BattleCharacter, BattleCharacterValue, BattleSkillCategory};
+use super::{Character, CharacterValue, SkillCategory};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
@@ -9,8 +9,8 @@ const BALANCE_MODULUS: u64 = 16_777_216;
 
 /// Skill-catalog policy for experience growth and repeated awards.
 #[derive(Debug, Clone, Copy)]
-pub struct BattleExperienceRules {
-    pub category: BattleSkillCategory,
+pub struct ExperienceRules {
+    pub category: SkillCategory,
     pub threshold: u32,
     /// Catalog skills marked for continuous XP bypass the ordinary thirty-second interval.
     pub continuous: bool,
@@ -18,19 +18,15 @@ pub struct BattleExperienceRules {
 
 /// A committed or rate-limited skill award, including the exact stored values.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-pub struct BattleExperienceAward {
+pub struct ExperienceAward {
     pub accepted: bool,
-    pub before: BattleCharacterValue,
-    pub after: BattleCharacterValue,
+    pub before: CharacterValue,
+    pub after: CharacterValue,
 }
 
 /// Compute the first earned-level cost from the raw skill target, excluding existing earned levels.
-fn initial_cost(
-    character: BattleCharacter,
-    skill: BattleCharacterValue,
-    rules: BattleExperienceRules,
-) -> u64 {
-    let raw = BattleCharacterValue {
+fn initial_cost(character: Character, skill: CharacterValue, rules: ExperienceRules) -> u64 {
+    let raw = CharacterValue {
         experience: 0,
         ..skill
     };
@@ -48,13 +44,13 @@ fn initial_cost(
     cost.max(1)
 }
 
-impl BattleCharacterValue {
+impl CharacterValue {
     /// Retain a per-thousand fraction of XP and recalculate earned levels without an award or timestamp change.
     pub fn retain_experience(
         self,
-        character: BattleCharacter,
+        character: Character,
         per_mille: u16,
-        rules: BattleExperienceRules,
+        rules: ExperienceRules,
     ) -> Result<Self> {
         ensure!(
             per_mille <= 1000,
@@ -72,11 +68,7 @@ impl BattleCharacterValue {
 
     /// Total XP needed for the next stored earned level, including the strict boundary.
     /// Zero thresholds disable progression. Totals beyond u64 saturate; balances only hold 24 bits.
-    pub fn next_level_balance(
-        self,
-        character: BattleCharacter,
-        rules: BattleExperienceRules,
-    ) -> Option<u64> {
+    pub fn next_level_balance(self, character: Character, rules: ExperienceRules) -> Option<u64> {
         if rules.threshold == 0 {
             return None;
         }
@@ -93,17 +85,17 @@ impl BattleCharacterValue {
     /// Explicit interval override is intended for authorized character-generation operations.
     pub fn with_experience(
         self,
-        character: BattleCharacter,
+        character: Character,
         amount: u32,
         now: i64,
-        rules: BattleExperienceRules,
+        rules: ExperienceRules,
         override_interval: bool,
-    ) -> BattleExperienceAward {
+    ) -> ExperienceAward {
         if !override_interval
             && !rules.continuous
             && i128::from(now) <= i128::from(self.last_used) + 30
         {
-            return BattleExperienceAward {
+            return ExperienceAward {
                 accepted: false,
                 before: self,
                 after: self,
@@ -126,7 +118,7 @@ impl BattleCharacterValue {
             last_used: now,
             ..self
         };
-        BattleExperienceAward {
+        ExperienceAward {
             accepted: true,
             before: self,
             after,
@@ -141,9 +133,9 @@ pub fn award_character_experience(
     name: &str,
     amount: u32,
     now: i64,
-    rules: BattleExperienceRules,
+    rules: ExperienceRules,
     override_interval: bool,
-) -> Result<BattleExperienceAward> {
+) -> Result<ExperienceAward> {
     let character = *world
         .btech
         .characters()
@@ -166,8 +158,8 @@ pub fn award_character_experience(
 #[cfg(test)]
 mod tests {
     use super::*;
-    fn character() -> BattleCharacter {
-        BattleCharacter {
+    fn character() -> Character {
+        Character {
             build: 5,
             reflexes: 5,
             intuition: 5,
@@ -177,8 +169,8 @@ mod tests {
             lethal: 0,
         }
     }
-    const RULES: BattleExperienceRules = BattleExperienceRules {
-        category: BattleSkillCategory::Physical,
+    const RULES: ExperienceRules = ExperienceRules {
+        category: SkillCategory::Physical,
         threshold: 3000,
         continuous: false,
     };
@@ -186,7 +178,7 @@ mod tests {
     /// A raw target of four has a 3000-point first cost, with strict cumulative boundaries.
     #[test]
     fn earned_levels_have_strict_boundaries() {
-        let skill = BattleCharacterValue {
+        let skill = CharacterValue {
             value: 4,
             ..Default::default()
         };
@@ -208,7 +200,7 @@ mod tests {
     /// Ordinary awards use a strict interval; catalog bypass, explicit override and extreme clocks remain defined.
     #[test]
     fn award_interval_and_override() {
-        let skill = BattleCharacterValue {
+        let skill = CharacterValue {
             last_used: 100,
             ..Default::default()
         };
@@ -228,7 +220,7 @@ mod tests {
                     character(),
                     1,
                     100,
-                    BattleExperienceRules {
+                    ExperienceRules {
                         continuous: true,
                         ..RULES
                     },
@@ -241,7 +233,7 @@ mod tests {
                 .with_experience(character(), 1, 100, RULES, true)
                 .accepted
         );
-        let future = BattleCharacterValue {
+        let future = CharacterValue {
             last_used: i64::MAX,
             ..skill
         };
@@ -255,7 +247,7 @@ mod tests {
     /// Recalculation excludes previous earned levels, preserves the low-bit balance, and bounds extreme costs.
     #[test]
     fn balance_wrapping_and_raw_skill_scaling() {
-        let skill = BattleCharacterValue {
+        let skill = CharacterValue {
             value: 4,
             experience: 16_777_216 + 3001,
             last_used: 0,
@@ -264,10 +256,9 @@ mod tests {
         assert_eq!(report.after.experience, skill.experience);
         let wrapped = skill.with_experience(character(), 16_777_216 - 3000, 31, RULES, false);
         assert_eq!(wrapped.after.experience, 1);
-        let easy =
-            BattleCharacterValue::default().with_experience(character(), 38, 31, RULES, false);
+        let easy = CharacterValue::default().with_experience(character(), 38, 31, RULES, false);
         assert_eq!(easy.after.effective_skill(), 1); // 3000 / 3 / 3 / 3 / 3 = 37
-        let hard = BattleCharacterValue {
+        let hard = CharacterValue {
             value: 255,
             ..Default::default()
         }
@@ -279,7 +270,7 @@ mod tests {
                     character(),
                     0,
                     31,
-                    BattleExperienceRules {
+                    ExperienceRules {
                         threshold: 0,
                         ..RULES
                     },

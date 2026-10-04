@@ -5,7 +5,7 @@ use serde::Serialize;
 
 /// Detached compass measurement with the same text used by the native command.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct BattleBearingReport {
+pub struct BearingReport {
     pub origin: super::Point,
     pub destination: super::Point,
     pub bearing: u16,
@@ -18,7 +18,7 @@ pub fn bearing(
     unit: ObjectId,
     viewer: ObjectId,
     arguments: &str,
-) -> Result<BattleBearingReport> {
+) -> Result<BearingReport> {
     let segment =
         super::navigation_measurement::resolve(world, unit, viewer, arguments, "Bearing")?;
     let origin = segment.origin.point;
@@ -29,7 +29,7 @@ pub fn bearing(
         .unwrap_or(180.0)
         .round()
         .rem_euclid(360.0) as u16;
-    Ok(BattleBearingReport {
+    Ok(BearingReport {
         origin,
         destination,
         bearing,

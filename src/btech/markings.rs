@@ -80,7 +80,7 @@ pub fn view_unit_markings(
     let selected = target.is_none();
     let target = target
         .or_else(|| match operator.source.selection(world) {
-            Some(super::BattleTargetSelection::Unit(lock)) => Some(lock.target),
+            Some(super::TargetSelection::Unit(lock)) => Some(lock.target),
             _ => None,
         })
         .context("You do not have a default target set!")?;

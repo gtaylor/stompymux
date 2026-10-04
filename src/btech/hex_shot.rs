@@ -7,12 +7,12 @@ use serde::Serialize;
 /// A shot aimed at a coordinate, with no fabricated unit damage recipient.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[must_use = "Publish shooter consequences and terrain notices with the enclosing shot"]
-pub struct BattleHexShotReport {
+pub struct HexShotReport {
     pub shooter: ObjectId,
     pub map: ObjectId,
     pub coordinate: HexCoordinate,
     pub weapon_index: usize,
-    pub aim: BattleHexAimModifiers,
+    pub aim: HexAimModifiers,
     pub target_number: Option<i32>,
     pub roll: u8,
     pub hit: bool,
@@ -20,18 +20,18 @@ pub struct BattleHexShotReport {
     pub jammed: bool,
     pub loader_destroyed: bool,
     pub propellant_roll: Option<u8>,
-    pub expenditure: BattleWeaponUse,
-    pub misload: Option<BattleLaunchMisload>,
+    pub expenditure: WeaponUse,
+    pub misload: Option<LaunchMisload>,
     pub ammunition_warning: Option<String>,
     /// Cocoon opening feedback from the shared launch stage.
-    pub launch_notices: Vec<BattleNotice>,
+    pub launch_notices: Vec<Notice>,
     pub cluster_roll: Option<u8>,
-    pub terrain: Vec<BattleWoodlandImpact>,
-    pub recoil: Option<BattleRecoilReport>,
-    pub surfaces: Vec<BattleSurfaceWeaponImpact>,
-    pub buildings: Vec<BattleBuildingImpact>,
+    pub terrain: Vec<WoodlandImpact>,
+    pub recoil: Option<RecoilReport>,
+    pub surfaces: Vec<SurfaceWeaponImpact>,
+    pub buildings: Vec<BuildingImpact>,
     /// Minefields a Thunder salvo laid in place of terrain damage.
-    pub thunder: BattleThunderReport,
+    pub thunder: ThunderReport,
 }
 
 /// Resolve a direct non-character terrain shot atomically.
@@ -43,8 +43,8 @@ pub fn resolve_hex_shot(
     pilot: ObjectId,
     coordinate: HexCoordinate,
     weapon_index: usize,
-    rules: BattleShotRules,
-) -> Result<BattleHexShotReport> {
+    rules: ShotRules,
+) -> Result<HexShotReport> {
     resolve_hex_shot_inner(
         world,
         shooter,
@@ -63,8 +63,8 @@ pub(super) fn resolve_hex_shot_in_action(
     pilot: ObjectId,
     coordinate: HexCoordinate,
     weapon_index: usize,
-    rules: BattleShotRules,
-) -> Result<BattleHexShotReport> {
+    rules: ShotRules,
+) -> Result<HexShotReport> {
     resolve_hex_shot_inner(world, shooter, pilot, coordinate, weapon_index, rules, true)
 }
 
@@ -75,9 +75,9 @@ fn resolve_hex_shot_inner(
     pilot: ObjectId,
     coordinate: HexCoordinate,
     weapon_index: usize,
-    rules: BattleShotRules,
+    rules: ShotRules,
     character: bool,
-) -> Result<BattleHexShotReport> {
+) -> Result<HexShotReport> {
     let operator = super::combat_operator::controlled(world, shooter, pilot)?;
     let vehicle = world.btech.vehicles().contains_key(&shooter);
     let object = world
@@ -162,7 +162,7 @@ fn resolve_hex_shot_inner(
         rules.aim,
     )?;
     ensure!(aim.visible, "Target hex is not visible");
-    if aim.mode == BattleHexTargetMode::UnitAtHex {
+    if aim.mode == HexTargetMode::UnitAtHex {
         ensure!(
             hex_occupant(world, shooter, coordinate)?.is_none(),
             "Occupied coordinate requires a unit shot"
@@ -173,7 +173,7 @@ fn resolve_hex_shot_inner(
         "Target is outside weapon arc"
     );
     let field = electronic_field(world, shooter)?;
-    let fall = BattleFallRules {
+    let fall = FallRules {
         vehicle_impact: rules.vehicle_impact,
         stacking: rules.stacking,
         stagger: rules.stagger,
@@ -199,15 +199,15 @@ fn resolve_hex_shot_inner(
             false,
         )?;
         let intent = match aim.mode {
-            BattleHexTargetMode::Ignite => BattleWoodlandIntent::Ignite,
-            BattleHexTargetMode::Clear => BattleWoodlandIntent::Clear,
-            _ => BattleWoodlandIntent::Incidental,
+            HexTargetMode::Ignite => WoodlandIntent::Ignite,
+            HexTargetMode::Clear => WoodlandIntent::Clear,
+            _ => WoodlandIntent::Incidental,
         };
         let mut cluster_roll = None;
         let mut terrain = Vec::new();
         let mut surfaces = Vec::new();
         let mut buildings = Vec::new();
-        let mut thunder = BattleThunderReport::default();
+        let mut thunder = ThunderReport::default();
         if launch.launched && target_number.is_some() {
             if launch.hit {
                 let packets = super::weapon_groups::roll_weapon_groups(
@@ -217,9 +217,9 @@ fn resolve_hex_shot_inner(
                         damage_penalty: launch.expenditure.damage_penalty,
                         weapon,
                         ammunition: if launch.expenditure.ammunition_mode
-                            == BattleAmmunitionMode::Flechette
+                            == AmmunitionMode::Flechette
                         {
-                            BattleAmmunitionMode::Normal
+                            AmmunitionMode::Normal
                         } else {
                             launch.expenditure.ammunition_mode
                         },
@@ -235,7 +235,7 @@ fn resolve_hex_shot_inner(
                     super::dice::unit_dice_mut(world, shooter)?,
                 )?;
                 cluster_roll = packets.cluster_roll;
-                if aim.mode == BattleHexTargetMode::Hex
+                if aim.mode == HexTargetMode::Hex
                     && launch.expenditure.ammunition_mode.is_thunder()
                     && weapon.profile().missiles > 0
                 {
@@ -248,16 +248,15 @@ fn resolve_hex_shot_inner(
                         launch.expenditure.ammunition_mode,
                         packets.damage.iter().sum(),
                     )?;
-                } else if aim.mode != BattleHexTargetMode::UnitAtHex {
-                    let damage =
-                        if launch.expenditure.ammunition_mode == BattleAmmunitionMode::Inferno {
-                            // Inferno terrain exposure occurs once with no clearing or building damage.
-                            vec![0]
-                        } else {
-                            packets.damage
-                        };
+                } else if aim.mode != HexTargetMode::UnitAtHex {
+                    let damage = if launch.expenditure.ammunition_mode == AmmunitionMode::Inferno {
+                        // Inferno terrain exposure occurs once with no clearing or building damage.
+                        vec![0]
+                    } else {
+                        packets.damage
+                    };
                     for damage in damage {
-                        if aim.mode == BattleHexTargetMode::Building {
+                        if aim.mode == HexTargetMode::Building {
                             if let Some(impact) =
                                 super::building_damage::resolve(world, shooter, coordinate, damage)?
                             {
@@ -267,7 +266,7 @@ fn resolve_hex_shot_inner(
                         }
                         terrain.push(resolve_woodland_attack(
                             world,
-                            BattleWoodlandAttack {
+                            WoodlandAttack {
                                 shooter,
                                 coordinate,
                                 weapon,
@@ -276,7 +275,7 @@ fn resolve_hex_shot_inner(
                                 intent,
                             },
                         )?);
-                        if aim.mode == BattleHexTargetMode::Hex
+                        if aim.mode == HexTargetMode::Hex
                             && let Some(impact) = super::surface_weapon::resolve(
                                 world,
                                 shooter,
@@ -301,7 +300,7 @@ fn resolve_hex_shot_inner(
                 };
                 terrain.push(resolve_woodland_attack(
                     world,
-                    BattleWoodlandAttack {
+                    WoodlandAttack {
                         shooter,
                         coordinate,
                         weapon,
@@ -318,7 +317,7 @@ fn resolve_hex_shot_inner(
             super::weapon_launch::resolve_recoil(world, shooter, weapon, fall, character_shooter)?
         };
         world.btech.validate_action(world)?;
-        Ok(BattleHexShotReport {
+        Ok(HexShotReport {
             shooter,
             map,
             coordinate,
@@ -345,17 +344,17 @@ fn resolve_hex_shot_inner(
     })
 }
 
-impl BattleHexShotReport {
+impl HexShotReport {
     /// Mechanical and terrain notices; no unit hit/miss or target identity is fabricated.
-    pub fn notices(&self) -> Vec<BattleNotice> {
+    pub fn notices(&self) -> Vec<Notice> {
         self.notices_with_feedback(&mut Vec::new())
     }
 
     /// Retain private checks at their original positions for host publication.
     pub(crate) fn notices_with_feedback(
         &self,
-        private: &mut Vec<super::BattlePilotNotice>,
-    ) -> Vec<BattleNotice> {
+        private: &mut Vec<super::PilotNotice>,
+    ) -> Vec<Notice> {
         if let Some(misload) = &self.misload {
             super::piloting::append_feedback(private, misload.pilot_notices().to_vec(), 0);
             return misload.notices();
@@ -365,7 +364,7 @@ impl BattleHexShotReport {
         }
         if !self.launched {
             let mut notices = self.launch_notices.clone();
-            notices.push(BattleNotice {
+            notices.push(Notice {
                 unit: self.shooter,
                 text: "Your streak fails to lock on.".into(),
             });
@@ -373,7 +372,7 @@ impl BattleHexShotReport {
         }
         let mut notices = self.launch_notices.clone();
         if let Some(text) = &self.ammunition_warning {
-            notices.push(BattleNotice {
+            notices.push(Notice {
                 unit: self.shooter,
                 text: text.clone(),
             });

@@ -503,7 +503,7 @@ async fn unit_unregister_extension_matches_native_teardown_contract() {
     assert!(!after.btech.vehicles().contains_key(&unit));
     assert_eq!(
         stompymux_rs::btech::unit_configuration(&after, unit),
-        stompymux_rs::BattleUnitConfiguration::default()
+        stompymux_rs::UnitConfiguration::default()
     );
     assert!(!after.btech.registrations().contains_key(&deferred_unit(&s)));
     assert_eq!(after.objects[&unit].kind, stompymux_rs::Kind::Thing);
@@ -519,7 +519,7 @@ async fn unit_unregister_extension_matches_native_teardown_contract() {
     assert!(!restored.btech.constructed_units().contains_key(&unit));
     assert_eq!(
         stompymux_rs::btech::unit_configuration(&restored, unit),
-        stompymux_rs::BattleUnitConfiguration::default()
+        stompymux_rs::UnitConfiguration::default()
     );
     assert_eq!(restored.objects[&unit].kind, stompymux_rs::Kind::Thing);
     // The deleted roles agree at the row level with the native command's saves
@@ -580,11 +580,9 @@ fn deferred_unit(s: &Scripts) -> stompymux_rs::ObjectId {
 #[tokio::test(flavor = "current_thread")]
 async fn c_schema_unit_configuration_normalizes_empty_invalid_and_stale_rows() {
     let (_d, config, s) = isolated_scripts().await;
-    let template = stompymux_rs::BattleTemplate::parse(
-        "JR7-D",
-        include_str!("fixtures/btech/mechs/JR7-D.toml"),
-    )
-    .unwrap();
+    let template =
+        stompymux_rs::MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+            .unwrap();
     stompymux_rs::create_battle_unit(&mut s.world_mut(), stompymux_rs::ObjectId(14), template)
         .unwrap();
     stompymux_rs::btech::set_administrative_scalar(
@@ -679,7 +677,7 @@ async fn c_schema_unit_configuration_normalizes_empty_invalid_and_stale_rows() {
         .unwrap();
     assert_eq!(
         stompymux_rs::btech::unit_configuration(&loaded, stompymux_rs::ObjectId(14)),
-        stompymux_rs::BattleUnitConfiguration::default()
+        stompymux_rs::UnitConfiguration::default()
     );
     sqlx::query("UPDATE btech_unit_configuration SET preferred_id='xy',display_name='',markings='',assigned_pilot=999 WHERE object_dbref=14")
         .execute(&mut db).await.unwrap();

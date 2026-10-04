@@ -23,7 +23,7 @@ async fn inferno_initial_effects_credit_the_shooter_and_replay() {
             for advanced in [false, true] {
                 let (dir, _, mut base, id, target, index) = firing::fixture_with_supply(
                     shooter,
-                    Some(BattleWeapon::Srm2),
+                    Some(Weapon::Srm2),
                     target_source,
                     false,
                     Some("Inferno"),
@@ -40,24 +40,24 @@ async fn inferno_initial_effects_credit_the_shooter_and_replay() {
                 let config = Config::load(dir.path()).unwrap();
                 toggle_battle_inferno(&mut base, id, ObjectId(1), index).unwrap();
                 let seed = (0..=255)
-                    .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 12)
+                    .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
                     .unwrap();
                 firing::edit(&mut base, id, |unit| {
-                    unit["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
+                    unit["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap()
                 });
                 let seed = (0..=255)
                     .find(|seed| {
-                        let mut dice = BattleDice::seeded([*seed; 32]);
+                        let mut dice = Dice::seeded([*seed; 32]);
                         dice.two_d6();
                         dice.two_d6() == 9
                     })
                     .unwrap();
                 firing::edit(&mut base, target, |unit| {
-                    unit["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
+                    unit["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap()
                 });
                 let vtol = base.btech.vehicles()[&target].definition().is_vtol();
                 let stationary = base.btech.vehicles()[&target].definition().movement
-                    == BattleVehicleMovement::Stationary;
+                    == VehicleMovement::Stationary;
                 let command = format!("btech.unit.fire({},1,{index},{})", id.0, target.0);
                 let lua = Scripts::new(&config, Rc::new(RefCell::new(base.clone()))).unwrap();
                 assert!(

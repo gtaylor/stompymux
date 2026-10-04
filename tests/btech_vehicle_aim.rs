@@ -18,7 +18,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse("test", template).unwrap(),
+        VehicleTemplate::parse("test", template).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -90,7 +90,7 @@ async fn vehicle_attack_and_target_movement_follow_speed_turning_and_replay() {
     damage_battle_vehicle_motive(
         &mut world,
         id,
-        BattleVehicleMotiveHit::SpeedLoss { movement_points: 3 },
+        VehicleMotiveHit::SpeedLoss { movement_points: 3 },
     )
     .unwrap();
     // Damage lowers the throttle limit, while the firing threshold remains construction-based.
@@ -121,7 +121,7 @@ async fn vehicle_immobility_stacks_with_speed_without_treating_stopped_as_disabl
     let mut state = serde_json::to_value(&world.btech).unwrap();
     state["recoveries"]["1"] = serde_json::json!({
         "mode":{"kind":"tactical","injuries":4},"remaining":30,
-        "pain_resistance":false,"toughness":false,"dice":BattleDice::seeded([0;32])
+        "pain_resistance":false,"toughness":false,"dice":Dice::seeded([0;32])
     });
     world.btech = serde_json::from_value(state).unwrap();
     assert_eq!(
@@ -129,7 +129,7 @@ async fn vehicle_immobility_stacks_with_speed_without_treating_stopped_as_disabl
         -3
     );
     world = moving.clone();
-    damage_battle_vehicle_motive(&mut world, id, BattleVehicleMotiveHit::Immobilize).unwrap();
+    damage_battle_vehicle_motive(&mut world, id, VehicleMotiveHit::Immobilize).unwrap();
     assert_eq!(
         battle_unit_target_movement_modifier(&world, id, 10.0, false).unwrap(),
         -4
@@ -138,7 +138,7 @@ async fn vehicle_immobility_stacks_with_speed_without_treating_stopped_as_disabl
     damage_battle_vehicle_motive(
         &mut world,
         id,
-        BattleVehicleMotiveHit::SpeedLoss {
+        VehicleMotiveHit::SpeedLoss {
             movement_points: 255,
         },
     )
@@ -148,13 +148,7 @@ async fn vehicle_immobility_stacks_with_speed_without_treating_stopped_as_disabl
         0
     );
     world = moving;
-    stop_battle_unit(
-        &mut world,
-        id,
-        ObjectId(1),
-        BattleMovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut world, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
     assert_eq!(
         battle_unit_target_movement_modifier(&world, id, 10.0, false).unwrap(),
         -4
@@ -178,7 +172,7 @@ async fn vehicle_immobility_stacks_with_speed_without_treating_stopped_as_disabl
 async fn stationary_construction_and_turret_rotation_use_distinct_modifiers() {
     let (_dir, config, mut world, id) =
         fixture(include_str!("../game/mechs/RadioTower.toml")).await;
-    assert_eq!(world.btech.vehicles()[&id].power(), BattlePower::Running);
+    assert_eq!(world.btech.vehicles()[&id].power(), Power::Running);
     assert_eq!(
         battle_unit_target_movement_modifier(&world, id, 2.0, false).unwrap(),
         -4

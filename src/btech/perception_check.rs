@@ -1,5 +1,5 @@
 //! Shared in-character perception attempts and accepted experience diagnostics for scan actions.
-use super::{BattleChannel, BattleChannelMessage};
+use super::{DiagnosticChannel, DiagnosticMessage};
 use crate::{Flag, Kind, ObjectId, World};
 use anyhow::{Context, Result};
 
@@ -11,7 +11,7 @@ pub(super) fn attempt(
     pilot: ObjectId,
     modifier: i64,
     now: i64,
-) -> Result<(bool, Option<BattleChannelMessage>)> {
+) -> Result<(bool, Option<DiagnosticMessage>)> {
     if !world.objects[&unit].flags.contains(Flag::InCharacter)
         || world.objects.get(&pilot).is_none_or(|p| {
             p.kind != Kind::Player
@@ -32,8 +32,8 @@ pub(super) fn attempt(
     }
     let award = super::award_skill_experience(world, pilot, "Perception", 1, now, false)?;
     let message = award.accepted.then(|| {
-        BattleChannelMessage::new(
-            BattleChannel::Experience,
+        DiagnosticMessage::new(
+            DiagnosticChannel::Experience,
             format!("{} gained 1 perception XP", world.objects[&pilot].name),
         )
     });

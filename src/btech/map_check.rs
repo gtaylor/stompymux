@@ -5,7 +5,7 @@ use serde::Serialize;
 
 /// Checked members in persisted map-slot order, including destroyed units.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleMapCheck {
+pub struct MapCheck {
     pub map: ObjectId,
     pub units: Vec<ObjectId>,
 }
@@ -17,7 +17,7 @@ pub fn check_map_action(
     config: &Config,
     actor: ObjectId,
     map: ObjectId,
-) -> Result<BattleMapCheck> {
+) -> Result<MapCheck> {
     scripts.atomic(|_| {
         let world = scripts.world();
         ensure!(
@@ -34,13 +34,13 @@ pub fn check_map_action(
         world.validate(config)?;
         drop(world);
         let span = super::map_slots::extent(&scripts.world().btech, map);
-        let report = BattleMapCheck { map, units };
+        let report = MapCheck { map, units };
         super::notify_message(
             scripts,
-            super::BattleMessageTarget::Player(actor),
+            super::MessageTarget::Player(actor),
             &format!("Checking {span} entries.."),
         )?;
-        super::notify_message(scripts, super::BattleMessageTarget::Player(actor), "Done.")?;
+        super::notify_message(scripts, super::MessageTarget::Player(actor), "Done.")?;
         scripts.effects.validate()?;
         Ok(report)
     })

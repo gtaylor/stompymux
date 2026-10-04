@@ -2,24 +2,22 @@
 use stompymux_rs::*;
 
 /// Build one multi-slot installation without conflating repeated critical records with weapons.
-fn template(weapon: BattleWeapon, modes: &[&str]) -> BattleTemplate {
+fn template(weapon: Weapon, modes: &[&str]) -> MechTemplate {
     let mut template =
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
-    let jets = template.sections[&BattleSection::LeftTorso]
-        .criticals
-        .clone();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+    let jets = template.sections[&MechSection::LeftTorso].criticals.clone();
     for (slot, part) in jets {
         template
             .sections
-            .get_mut(&BattleSection::RightTorso)
+            .get_mut(&MechSection::RightTorso)
             .unwrap()
             .criticals
             .insert(slot + 6, part);
     }
-    if weapon == BattleWeapon::Lbx10 {
+    if weapon == Weapon::Lbx10 {
         let bin = template
             .sections
-            .get_mut(&BattleSection::RightTorso)
+            .get_mut(&MechSection::RightTorso)
             .unwrap()
             .criticals
             .get_mut(&0)
@@ -28,10 +26,7 @@ fn template(weapon: BattleWeapon, modes: &[&str]) -> BattleTemplate {
         bin.data = "10".into();
         bin.modes = vec!["LBX/Cluster".into()];
     }
-    let section = template
-        .sections
-        .get_mut(&BattleSection::LeftTorso)
-        .unwrap();
+    let section = template.sections.get_mut(&MechSection::LeftTorso).unwrap();
     section.criticals.clear();
     for slot in 0..weapon.profile().critical_slots {
         section.criticals.insert(
@@ -54,55 +49,54 @@ fn template(weapon: BattleWeapon, modes: &[&str]) -> BattleTemplate {
 #[test]
 fn primary_only_modes_resolve_like_repeated_modes() {
     for (weapon, modes) in [
-        (BattleWeapon::Lbx10, vec!["LBX/Cluster", "RearMount"]),
-        (BattleWeapon::Rocket20, vec!["OneShot", "OneShot_Used"]),
-        (BattleWeapon::Lrm20, vec!["OneShot"]),
-        (BattleWeapon::LargeLaser, vec!["OnTC"]),
+        (Weapon::Lbx10, vec!["LBX/Cluster", "RearMount"]),
+        (Weapon::Rocket20, vec!["OneShot", "OneShot_Used"]),
+        (Weapon::Lrm20, vec!["OneShot"]),
+        (Weapon::LargeLaser, vec!["OnTC"]),
     ] {
         let source = template(weapon, &modes);
-        let loadout = BattleLoadout::resolve(&source).unwrap();
+        let loadout = MechLoadout::resolve(&source).unwrap();
         let mount = loadout.weapons.iter().find(|m| m.weapon == weapon).unwrap();
         assert_eq!(
             mount.criticals.len(),
             usize::from(weapon.profile().critical_slots)
         );
-        let unit = BattleUnit::from_template(source.clone()).unwrap();
+        let unit = Mech::from_template(source.clone()).unwrap();
         let index = loadout
             .weapons
             .iter()
             .position(|m| m.weapon == weapon)
             .unwrap();
         let readiness = unit.weapon_readiness(index).unwrap();
-        let restored: BattleUnit =
-            serde_json::from_value(serde_json::to_value(&unit).unwrap()).unwrap();
+        let restored: Mech = serde_json::from_value(serde_json::to_value(&unit).unwrap()).unwrap();
         assert_eq!(restored.weapon_readiness(index).unwrap(), readiness);
-        if weapon == BattleWeapon::Lbx10 {
+        if weapon == Weapon::Lbx10 {
             assert_eq!(readiness.ammunition, 10);
             assert_eq!(
                 restored.ammunition_mode(index).unwrap(),
-                BattleAmmunitionMode::Cluster
+                AmmunitionMode::Cluster
             );
         }
-        if weapon == BattleWeapon::Rocket20 {
+        if weapon == Weapon::Rocket20 {
             assert!(readiness.spent);
             assert_eq!(readiness.ammunition, 0);
         }
         let mut repeated = source.clone();
         for part in repeated
             .sections
-            .get_mut(&BattleSection::LeftTorso)
+            .get_mut(&MechSection::LeftTorso)
             .unwrap()
             .criticals
             .values_mut()
         {
             part.modes = modes.iter().map(|s| (*s).into()).collect();
         }
-        assert_eq!(loadout, BattleLoadout::resolve(&repeated).unwrap());
-        if weapon == BattleWeapon::Lbx10 {
-            assert_eq!(mount.initial_ammunition_mode, BattleAmmunitionMode::Cluster);
+        assert_eq!(loadout, MechLoadout::resolve(&repeated).unwrap());
+        if weapon == Weapon::Lbx10 {
+            assert_eq!(mount.initial_ammunition_mode, AmmunitionMode::Cluster);
             assert!(mount.rear_mount);
         }
-        if weapon == BattleWeapon::Rocket20 {
+        if weapon == Weapon::Rocket20 {
             assert!(mount.one_shot && mount.initially_spent);
         }
         // Continuations still cannot change the primary's identity, data or modes.
@@ -110,7 +104,7 @@ fn primary_only_modes_resolve_like_repeated_modes() {
             let mut invalid = source.clone();
             let part = invalid
                 .sections
-                .get_mut(&BattleSection::LeftTorso)
+                .get_mut(&MechSection::LeftTorso)
                 .unwrap()
                 .criticals
                 .get_mut(&1)
@@ -120,7 +114,7 @@ fn primary_only_modes_resolve_like_repeated_modes() {
                 1 => part.data = "1".into(),
                 _ => part.modes = vec!["Heat".into()],
             }
-            assert!(BattleLoadout::resolve(&invalid).is_err());
+            assert!(MechLoadout::resolve(&invalid).is_err());
         }
     }
 }

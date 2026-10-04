@@ -21,14 +21,14 @@ async fn direct_shots_count_the_launch_result_for_every_chassis() {
     for source in firing::templates() {
         let (_dir, config, world, id, target, index) = firing::fixture_with_target(
             &source,
-            Some(BattleWeapon::MediumLaser),
+            Some(Weapon::MediumLaser),
             include_str!("../game/mechs/AS7-D.toml"),
         )
         .await;
         for seed in 0..6 {
             let mut candidate = world.clone();
             firing::edit(&mut candidate, id, |unit| {
-                unit["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
+                unit["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap()
             });
             let before = serde_json::to_value(&candidate.btech).unwrap();
             let native = Scripts::new(&config, Rc::new(RefCell::new(candidate.clone()))).unwrap();
@@ -130,7 +130,7 @@ async fn coordinate_fire_and_counter_overflow_keep_their_transaction_boundaries(
     for source in firing::templates() {
         let (_dir, config, mut world, id, target, index) = firing::fixture_with_target(
             &source,
-            Some(BattleWeapon::MediumLaser),
+            Some(Weapon::MediumLaser),
             include_str!("../game/mechs/AS7-D.toml"),
         )
         .await;
@@ -160,7 +160,7 @@ async fn coordinate_fire_and_counter_overflow_keep_their_transaction_boundaries(
             id,
             ObjectId(1),
             HexCoordinate { x: 0, y: 10 },
-            BattleHexTargetMode::UnitAtHex,
+            HexTargetMode::UnitAtHex,
         )
         .unwrap();
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
@@ -182,19 +182,19 @@ async fn coordinate_fire_and_counter_overflow_keep_their_transaction_boundaries(
 #[tokio::test]
 async fn failed_streak_locks_do_not_count_as_misses() {
     let seed = (0..=255)
-        .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 2)
+        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 2)
         .unwrap();
     for source in firing::templates() {
         let (_dir, config, mut world, id, target, index) = firing::fixture_with_supply(
             &source,
-            Some(BattleWeapon::StreakSrm2),
+            Some(Weapon::StreakSrm2),
             include_str!("../game/mechs/AS7-D.toml"),
             false,
             Some(""),
         )
         .await;
         firing::edit(&mut world, id, |unit| {
-            unit["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
+            unit["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap()
         });
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         let launched: bool = scripts
@@ -217,7 +217,7 @@ async fn out_of_range_direct_attempts_count_once() {
     for source in firing::templates() {
         let (_dir, config, mut world, id, target, index) = firing::fixture_with_target(
             &source,
-            Some(BattleWeapon::MediumLaser),
+            Some(Weapon::MediumLaser),
             include_str!("../game/mechs/AS7-D.toml"),
         )
         .await;

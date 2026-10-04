@@ -1,5 +1,5 @@
 //! Atomic woodland reductions on occupied maps, with terrain-only result data.
-use super::{BattleWoodlandClearing, Hex, HexCoordinate};
+use super::{Hex, HexCoordinate, WoodlandClearing};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
@@ -7,7 +7,7 @@ use serde::Serialize;
 /// A committed woodland reduction; the enclosing attack owns notifications.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[must_use = "Publish terrain and enclosing attack consequences together"]
-pub struct BattleWoodlandChange {
+pub struct WoodlandChange {
     pub map: ObjectId,
     pub coordinate: HexCoordinate,
     pub before: Hex,
@@ -22,8 +22,8 @@ pub fn apply_woodland_clearing(
     map: ObjectId,
     coordinate: HexCoordinate,
     expected: Hex,
-    clearing: BattleWoodlandClearing,
-) -> Result<BattleWoodlandChange> {
+    clearing: WoodlandClearing,
+) -> Result<WoodlandChange> {
     ensure!(
         world
             .objects
@@ -49,7 +49,7 @@ pub fn apply_woodland_clearing(
             after,
         )?;
         world.btech.validate(world)?;
-        Ok(BattleWoodlandChange {
+        Ok(WoodlandChange {
             map,
             coordinate,
             before,

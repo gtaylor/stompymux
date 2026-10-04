@@ -24,12 +24,11 @@ async fn field_with_classic(
     let mut units = Vec::new();
     for (i, &master_count) in master_counts.iter().enumerate() {
         let mut template =
-            BattleTemplate::parse("AS7-D", include_str!("fixtures/btech/mechs/AS7-D.toml"))
-                .unwrap();
+            MechTemplate::parse("AS7-D", include_str!("fixtures/btech/mechs/AS7-D.toml")).unwrap();
         for slot in [10, 11] {
             template
                 .sections
-                .get_mut(&BattleSection::CenterTorso)
+                .get_mut(&MechSection::CenterTorso)
                 .unwrap()
                 .criticals
                 .insert(
@@ -44,7 +43,7 @@ async fn field_with_classic(
         if slaves {
             template
                 .sections
-                .get_mut(&BattleSection::LeftTorso)
+                .get_mut(&MechSection::LeftTorso)
                 .unwrap()
                 .criticals
                 .insert(
@@ -56,7 +55,7 @@ async fn field_with_classic(
                     },
                 );
         }
-        for section in [BattleSection::LeftArm, BattleSection::RightArm]
+        for section in [MechSection::LeftArm, MechSection::RightArm]
             .into_iter()
             .take(master_count)
         {
@@ -79,7 +78,7 @@ async fn field_with_classic(
         if i == 6 {
             template
                 .sections
-                .get_mut(&BattleSection::LeftArm)
+                .get_mut(&MechSection::LeftArm)
                 .unwrap()
                 .criticals
                 .insert(
@@ -95,11 +94,11 @@ async fn field_with_classic(
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         if i % 2 == 0 {
             let mut vehicle =
-                BattleVehicleTemplate::parse("Hunter", include_str!("../game/mechs/Hunter.toml"))
+                VehicleTemplate::parse("Hunter", include_str!("../game/mechs/Hunter.toml"))
                     .unwrap();
             let parts = &mut vehicle
                 .sections
-                .get_mut(&BattleVehicleSection::Front)
+                .get_mut(&VehicleSection::Front)
                 .unwrap()
                 .criticals;
             parts.insert(
@@ -208,7 +207,7 @@ async fn mixed_membership_capacity_and_sqlite_replay() {
             candidate,
             units[0].0,
             units[0].1,
-            BattleMovementRules::STANDARD.fall,
+            MovementRules::STANDARD.fall,
         )
         .unwrap();
         assert_eq!(battle_c3_members(candidate, units[0].0).unwrap().len(), 4);
@@ -217,7 +216,7 @@ async fn mixed_membership_capacity_and_sqlite_replay() {
             candidate,
             units[0].0,
             VehicleCriticalLocation {
-                section: BattleVehicleSection::Front,
+                section: VehicleSection::Front,
                 slot: 7,
             },
         )
@@ -266,17 +265,14 @@ async fn mixed_network_reports_messages_and_range_share_one_path() {
                 .map(|m| m.weapon)
                 .collect()
         };
-        let index = loadout
-            .iter()
-            .position(|w| *w == BattleWeapon::Lrm20)
-            .unwrap();
+        let index = loadout.iter().position(|w| *w == Weapon::Lrm20).unwrap();
         let aim = battle_aim_modifiers(
             &world,
             id,
             units[6].0,
             index,
             4,
-            BattleAimRules {
+            AimRules {
                 woods_damage: false,
                 dig_bonus: 3,
                 dig_only_front: false,
@@ -363,7 +359,7 @@ async fn vehicle_network_native_lua_controls_and_lifecycle_agree() {
         assert_eq!(count, 2);
         let connected = lua.world().clone();
         let mut moved = connected.clone();
-        stop_battle_unit(&mut moved, id, pilot, BattleMovementRules::STANDARD.fall).unwrap();
+        stop_battle_unit(&mut moved, id, pilot, MovementRules::STANDARD.fall).unwrap();
         remove_battle_unit(&mut moved, id, ObjectId(config.home())).unwrap();
         assert!(battle_c3_members(&moved, id).unwrap().is_empty());
         assert!(battle_c3i_members(&moved, id).unwrap().is_empty());
@@ -372,7 +368,7 @@ async fn vehicle_network_native_lua_controls_and_lifecycle_agree() {
         set_battle_unit_signature(
             &mut changed,
             id,
-            BattleUnitSignature {
+            UnitSignature {
                 team: 99,
                 ..Default::default()
             },
@@ -394,7 +390,7 @@ async fn vehicle_ecm_temporarily_blocks_mixed_network_without_erasing_links() {
     set_battle_unit_signature(
         &mut world,
         jammer,
-        BattleUnitSignature {
+        UnitSignature {
             team: 99,
             ..Default::default()
         },
@@ -404,8 +400,8 @@ async fn vehicle_ecm_temporarily_blocks_mixed_network_without_erasing_links() {
         &mut world,
         jammer,
         operator,
-        BattleElectronicSuite::Guardian,
-        BattleElectronicMode::Ecm,
+        ElectronicSuite::Guardian,
+        ElectronicMode::Ecm,
     )
     .unwrap();
     assert!(
@@ -417,13 +413,7 @@ async fn vehicle_ecm_temporarily_blocks_mixed_network_without_erasing_links() {
     assert_eq!(battle_c3_members(&world, first).unwrap().len(), 2);
     assert!(prepare_battle_c3i_message(&world, first, pilot, "Jammed").is_err());
     assert!(battle_c3_status(&world, first, pilot).is_err());
-    stop_battle_unit(
-        &mut world,
-        jammer,
-        operator,
-        BattleMovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut world, jammer, operator, MovementRules::STANDARD.fall).unwrap();
     assert_eq!(
         prepare_battle_c3i_message(&world, first, pilot, "Clear")
             .unwrap()
@@ -453,9 +443,9 @@ async fn vehicle_hex_aim_reuses_weapon_terms_modes_and_read_only_lua() {
         .unwrap()
         .weapons
         .iter()
-        .position(|mount| mount.weapon == BattleWeapon::Lrm20)
+        .position(|mount| mount.weapon == Weapon::Lrm20)
         .unwrap();
-    let rules = BattleAimRules {
+    let rules = AimRules {
         woods_damage: false,
         dig_bonus: 3,
         dig_only_front: false,
@@ -476,11 +466,11 @@ async fn vehicle_hex_aim_reuses_weapon_terms_modes_and_read_only_lua() {
         .unwrap();
     let unit = battle_aim_modifiers(&world, shooter, target, index, 4, rules).unwrap();
     for mode in [
-        BattleHexTargetMode::UnitAtHex,
-        BattleHexTargetMode::Hex,
-        BattleHexTargetMode::Building,
-        BattleHexTargetMode::Clear,
-        BattleHexTargetMode::Ignite,
+        HexTargetMode::UnitAtHex,
+        HexTargetMode::Hex,
+        HexTargetMode::Building,
+        HexTargetMode::Clear,
+        HexTargetMode::Ignite,
     ] {
         select_battle_hex_target(&mut world, shooter, pilot, hex, mode).unwrap();
         let before = world.btech.clone();
@@ -489,7 +479,7 @@ async fn vehicle_hex_aim_reuses_weapon_terms_modes_and_read_only_lua() {
         assert_eq!(aim.mode, mode);
         assert_eq!(
             aim.hex_bonus,
-            if mode == BattleHexTargetMode::UnitAtHex {
+            if mode == HexTargetMode::UnitAtHex {
                 0
             } else {
                 -4
@@ -548,9 +538,9 @@ async fn vehicle_hex_aim_shares_mixed_network_range_and_rejects_stinger() {
         .unwrap()
         .weapons
         .iter()
-        .position(|mount| mount.weapon == BattleWeapon::Lrm20)
+        .position(|mount| mount.weapon == Weapon::Lrm20)
         .unwrap();
-    let rules = BattleAimRules {
+    let rules = AimRules {
         woods_damage: false,
         dig_bonus: 3,
         dig_only_front: false,

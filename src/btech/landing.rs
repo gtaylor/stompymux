@@ -1,5 +1,5 @@
 //! Pilot-requested early landing through the same atomic landing and fall rules as jump completion.
-use super::{BattleMovementRules, BattleNotice};
+use super::{MovementRules, Notice};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 
@@ -9,8 +9,8 @@ pub fn land_jump(
     world: &mut World,
     id: ObjectId,
     pilot: ObjectId,
-    movement: BattleMovementRules,
-) -> Result<Vec<BattleNotice>> {
+    movement: MovementRules,
+) -> Result<Vec<Notice>> {
     ensure!(
         !world
             .objects
@@ -26,7 +26,7 @@ pub(super) fn land_in_action(
     world: &mut World,
     id: ObjectId,
     pilot: ObjectId,
-    movement: BattleMovementRules,
+    movement: MovementRules,
 ) -> Result<super::movement_report::MovementReport> {
     land_inner(world, id, pilot, movement, true)
 }
@@ -36,7 +36,7 @@ fn land_inner(
     world: &mut World,
     id: ObjectId,
     pilot: ObjectId,
-    movement: BattleMovementRules,
+    movement: MovementRules,
     character: bool,
 ) -> Result<super::movement_report::MovementReport> {
     if world.btech.vehicles().contains_key(&id) {
@@ -47,7 +47,7 @@ fn land_inner(
     unit.validate()?;
     ensure!(unit.airborne(), "You're not jumping!");
     ensure!(
-        unit.power() == super::BattlePower::Running,
+        unit.power() == super::Power::Running,
         "Start the unit first"
     );
     let mut rules = movement.fall;
@@ -58,7 +58,7 @@ fn land_inner(
         .is_some_and(|values| super::advantages::enabled(values, "Toughness"));
     world.attempt(|world| {
         let mut report = super::movement_report::MovementReport::default();
-        report.notices.push(BattleNotice {
+        report.notices.push(Notice {
             unit: id,
             text: "You abort your full jump and attempt to land early".to_owned(),
         });
@@ -81,7 +81,7 @@ fn land_inner(
                 )?);
         }
         if check.success {
-            report.notices.push(BattleNotice {
+            report.notices.push(Notice {
                 unit: id,
                 text: "You are able to abort the jump.".to_owned(),
             });
@@ -89,7 +89,7 @@ fn land_inner(
                 super::jumping::finish_landing_in_action(
                     world,
                     id,
-                    BattleMovementRules {
+                    MovementRules {
                         fall: rules,
                         ..movement
                     },
@@ -100,14 +100,14 @@ fn land_inner(
                     world,
                     id,
                     false,
-                    BattleMovementRules {
+                    MovementRules {
                         fall: rules,
                         ..movement
                     },
                 )?);
             }
         } else {
-            report.notices.push(BattleNotice {
+            report.notices.push(Notice {
                 unit: id,
                 text: "You don't quite make it.".to_owned(),
             });
@@ -142,18 +142,18 @@ pub(crate) fn configured_land(
         config,
         id,
         pilot,
-        BattleMovementRules {
+        MovementRules {
             free_fusion_vtol_fuel: settings.nofusionvtolfuel != 0,
             tsm_tow_bonus: settings.tsm_tow_bonus != 0,
             physical_pilot_skill: settings.phys_use_pskill != 0,
             fasa_turning: settings.fasaturn != 0,
-            charge: super::BattleChargePolicy {
+            charge: super::ChargePolicy {
                 extended_movement: settings.extendedmovemod != 0,
                 hit_arc_mode: settings.hit_arcs,
-                ..super::BattleChargePolicy::STANDARD
+                ..super::ChargePolicy::STANDARD
             },
-            fall: super::BattleFallRules::configured(config),
-            ..BattleMovementRules::STANDARD
+            fall: super::FallRules::configured(config),
+            ..MovementRules::STANDARD
         },
     )
 }

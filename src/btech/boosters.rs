@@ -1,8 +1,8 @@
 //! Booster installation facts derived from live critical slots, without cached technology flags.
-use super::{BattleSystem, BattleUnit};
+use super::{Mech, System};
 use anyhow::Result;
 
-impl BattleUnit {
+impl Mech {
     /// MASC requires at least one slot, then one per twenty tons (twenty-five for Clan designs).
     /// The reference uses integer division, so surplus installed slots can tolerate a loss.
     pub fn masc_required_slots(&self) -> usize {
@@ -39,7 +39,7 @@ impl BattleUnit {
             .loadout()?
             .systems
             .iter()
-            .filter(|part| part.system == BattleSystem::Masc)
+            .filter(|part| part.system == System::Masc)
             .count()
             >= self.masc_required_slots())
     }
@@ -53,14 +53,14 @@ impl BattleUnit {
                 .systems
                 .iter()
                 .filter(|part| {
-                    part.system == BattleSystem::Masc && !self.critical_unavailable(part.location)
+                    part.system == System::Masc && !self.critical_unavailable(part.location)
                 })
                 .count()
                 >= self.masc_required_slots())
     }
 }
 
-impl BattleUnit {
+impl Mech {
     /// The template technology flag controls supercharger installation independently of its critical slot.
     pub fn supercharger_installed(&self) -> bool {
         self.definition().has_special("SuperCharger_Tech")
@@ -70,13 +70,13 @@ impl BattleUnit {
         self.supercharger_installed() && !self.supercharger.failed && !self.is_destroyed()
     }
     /// Saved compressor activation and overload/recovery history.
-    pub fn supercharger(&self) -> super::BattleBoosterState {
+    pub fn supercharger(&self) -> super::BoosterState {
         self.supercharger
     }
     /// Whether the compressor currently contributes to powered movement.
     pub fn supercharger_active(&self) -> bool {
         self.supercharger.enabled
-            && self.power() == super::BattlePower::Running
+            && self.power() == super::Power::Running
             && self.supercharger_operational()
     }
     /// Each active device adds one third of the unboosted running speed.
@@ -98,8 +98,8 @@ mod tests {
     /// Ordinary quad hip loss retains slow movement; MASC seizure immobilizes and prevents upright landing.
     #[test]
     fn masc_seizes_all_chassis_hips_and_survives_serialization() {
-        let biped = BattleUnit::from_template(
-            super::super::BattleTemplate::parse(
+        let biped = Mech::from_template(
+            super::super::MechTemplate::parse(
                 "JR7-D",
                 include_str!("../../tests/fixtures/btech/mechs/JR7-D.toml"),
             )
@@ -110,7 +110,7 @@ mod tests {
             let mut encoded = serde_json::to_value(&biped).unwrap();
             if chassis == "Quad" {
                 encoded["definition"] = serde_json::to_value(
-                    super::super::BattleTemplate::parse(
+                    super::super::MechTemplate::parse(
                         "SCP-1N",
                         include_str!("../../game/mechs/SCP-1N.toml"),
                     )
@@ -118,7 +118,7 @@ mod tests {
                 )
                 .unwrap();
             }
-            let mut unit: BattleUnit = serde_json::from_value(encoded).unwrap();
+            let mut unit: Mech = serde_json::from_value(encoded).unwrap();
             // The enclosing fall still uses pre-seizure support and movement.
             unit.masc.failed = true;
             assert!(unit.mobility().maximum_speed > 0.0);
@@ -138,7 +138,7 @@ mod tests {
             assert_eq!(unit.mobility().maximum_speed, 0.0);
             assert!(unit.airborne_support_lost());
             unit.masc.shutdown();
-            let restored: BattleUnit =
+            let restored: Mech =
                 serde_json::from_value(serde_json::to_value(&unit).unwrap()).unwrap();
             assert_eq!(restored.mobility(), unit.mobility());
             assert!(restored.airborne_support_lost());

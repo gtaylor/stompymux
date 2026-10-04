@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 /// Existing character state; skill/advantage values remain in their separate table.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BattleCharacter {
+pub struct Character {
     pub bruise: u8,
     pub lethal: u8,
     pub build: u8,
@@ -17,7 +17,7 @@ pub struct BattleCharacter {
 
 /// Health changes from cockpit injury; the combat caller must handle a fatal result.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-pub struct BattleCharacterInjury {
+pub struct CharacterInjury {
     pub bruise_added: u8,
     pub lethal_added: u8,
     pub fatal: bool,
@@ -25,23 +25,23 @@ pub struct BattleCharacterInjury {
 
 /// A resolved consciousness check; its caller applies loss/recovery and schedules future attempts.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-pub struct BattleConsciousnessCheck {
+pub struct ConsciousnessCheck {
     pub target: u8,
     pub roll: u8,
     pub conscious: bool,
 }
 
-impl BattleCharacter {
+impl Character {
     /// Check current health with explicit advantages, rejecting invalid health before consuming dice.
     pub fn check_consciousness(
         &self,
-        dice: &mut super::BattleDice,
+        dice: &mut super::Dice,
         pain_resistance: bool,
         toughness: bool,
-    ) -> Result<BattleConsciousnessCheck> {
+    ) -> Result<ConsciousnessCheck> {
         let target = self.consciousness_target(pain_resistance)?;
         let roll = dice.consciousness_roll(toughness);
-        Ok(BattleConsciousnessCheck {
+        Ok(ConsciousnessCheck {
             target,
             roll,
             conscious: roll >= target,
@@ -50,7 +50,7 @@ impl BattleCharacter {
 
     /// Apply build-scaled bruising, spilling damage above the bruise capacity into lethal injury.
     /// Operational builds must fit the existing byte-sized health storage without truncation.
-    pub fn injure(&mut self, hits: u8) -> Result<BattleCharacterInjury> {
+    pub fn injure(&mut self, hits: u8) -> Result<CharacterInjury> {
         ensure!(
             (1..=25).contains(&self.build),
             "Unsupported character build for injury"
@@ -65,7 +65,7 @@ impl BattleCharacter {
         let fatal = lethal >= capacity;
         let remaining_bruise = bruise.min(capacity) as u8;
         let remaining_lethal = lethal.min(capacity - 1) as u8;
-        let report = BattleCharacterInjury {
+        let report = CharacterInjury {
             bruise_added: remaining_bruise - self.bruise,
             lethal_added: remaining_lethal - self.lethal,
             fatal,
@@ -101,7 +101,7 @@ impl BattleCharacter {
 
 /// Set an explicitly supplied character profile in the enclosing trusted world transaction.
 /// This domain API does not authorize player-facing character creation or stat editing.
-pub fn set_character(world: &mut World, player: ObjectId, profile: BattleCharacter) -> Result<()> {
+pub fn set_character(world: &mut World, player: ObjectId, profile: Character) -> Result<()> {
     ensure!(
         world.objects.get(&player).is_some_and(
             |object| object.kind == Kind::Player && !object.flags.contains(Flag::Going)
@@ -109,7 +109,7 @@ pub fn set_character(world: &mut World, player: ObjectId, profile: BattleCharact
         "Character must be a live player"
     );
     if let Some(recovery) = world.btech.recoveries().get(&player)
-        && recovery.mode == super::BattleRecoveryMode::Character
+        && recovery.mode == super::RecoveryMode::Character
     {
         profile.consciousness_target(recovery.pain_resistance)?;
     }
@@ -119,11 +119,7 @@ pub fn set_character(world: &mut World, player: ObjectId, profile: BattleCharact
 }
 
 /// Apply health changes atomically; death, consciousness and unit effects belong to the enclosing attack.
-pub fn injure_character(
-    world: &mut World,
-    player: ObjectId,
-    hits: u8,
-) -> Result<BattleCharacterInjury> {
+pub fn injure_character(world: &mut World, player: ObjectId, hits: u8) -> Result<CharacterInjury> {
     let mut profile = *world
         .btech
         .characters()

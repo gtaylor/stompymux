@@ -1,5 +1,5 @@
 //! Anti-aircraft radar: long-range tracking of airborne targets using absolute altitude.
-use crate::btech::{BattleTerrainLos, BattleUnit, BattleVehicle, Hex};
+use crate::btech::{Hex, Mech, TerrainLos, Vehicle};
 use anyhow::{Result, ensure};
 
 /// Radar reach on every chassis; the line-of-sight trace caps radar-equipped pairs here too.
@@ -7,25 +7,20 @@ pub const RADAR_RANGE: u16 = 180;
 
 /// Integer target heights used by radar across supported chassis.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct BattleRadarTarget {
+pub struct RadarTarget {
     /// Flying chassis receive the tracking bonus even below altitude ten.
     pub flying_type: bool,
     pub elevation: i32,
     pub height_above_surface: i64,
 }
 
-impl BattleRadarTarget {
+impl RadarTarget {
     /// Aim contribution when radar reaches the target, or `None` when it cannot.
     ///
     /// Radar ignores darkness, smoke, fire and electronic interference but needs clear terrain.
     /// Targets at or below altitude two, or within one level of the surface, are invisible to
     /// it, and below altitude ten the range must be strictly less than altitude squared.
-    pub fn evaluate(
-        self,
-        terrain: BattleTerrainLos,
-        distance: f64,
-        maximum: u16,
-    ) -> Result<Option<i16>> {
+    pub fn evaluate(self, terrain: TerrainLos, distance: f64, maximum: u16) -> Result<Option<i16>> {
         ensure!(
             distance.is_finite() && distance >= 0.0,
             "Invalid radar distance"
@@ -78,14 +73,14 @@ fn surface_datum(tile: Hex) -> i32 {
     i32::from(tile.surface_height())
 }
 
-impl BattleUnit {
+impl Mech {
     /// Radar is available only on a chassis carrying the AntiAircraft technology flag.
     pub fn has_radar(&self) -> bool {
         self.definition().has_special("AntiAircraft")
     }
 }
 
-impl BattleVehicle {
+impl Vehicle {
     /// Radar is available only on a chassis carrying the AntiAircraft technology flag.
     pub fn has_radar(&self) -> bool {
         self.definition().has_special("AntiAircraft")
@@ -110,7 +105,7 @@ mod tests {
             (Terrain::Bridge, -5, -4),
         ] {
             assert_eq!(
-                BattleRadarTarget::above_tile(elevation, Hex::new(terrain, 4), false)
+                RadarTarget::above_tile(elevation, Hex::new(terrain, 4), false)
                     .height_above_surface,
                 expected
             );
@@ -120,8 +115,8 @@ mod tests {
     /// Altitude gates reach, and high or flying targets receive the tracking bonus.
     #[test]
     fn altitude_gates_reach_and_tracking() {
-        let clear = BattleTerrainLos::default();
-        let target = |elevation, flying_type| BattleRadarTarget {
+        let clear = TerrainLos::default();
+        let target = |elevation, flying_type| RadarTarget {
             flying_type,
             elevation,
             height_above_surface: i64::from(elevation),
@@ -141,12 +136,12 @@ mod tests {
             Some(-3)
         );
         assert_eq!(target(10, false).evaluate(clear, 180.1, 180).unwrap(), None);
-        let blocked = BattleTerrainLos {
+        let blocked = TerrainLos {
             blocked: true,
             ..Default::default()
         };
         assert_eq!(target(20, true).evaluate(blocked, 1.0, 180).unwrap(), None);
-        let covered = BattleTerrainLos {
+        let covered = TerrainLos {
             woods: 1,
             target_woods: 2,
             partial_cover: true,

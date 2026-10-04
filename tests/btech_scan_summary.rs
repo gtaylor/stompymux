@@ -111,8 +111,8 @@ async fn turret_summary_uses_absolute_bearing_and_signed_offset() {
         let (_dir, _, world, scanner, target, _) =
             firing::fixture_with_target(include_str!("../game/mechs/JR7-D.toml"), None, &template)
                 .await;
-        let fixed = world.btech.vehicles()[&target].definition().movement
-            == BattleVehicleMovement::Stationary;
+        let fixed =
+            world.btech.vehicles()[&target].definition().movement == VehicleMovement::Stationary;
         for (offset, absolute, signed) in [
             (0, 100, 0),
             (180, 280, 180),
@@ -154,7 +154,7 @@ async fn scan_conditions_share_state_without_cockpit_only_flags() {
             state["fortified"] = true.into();
             state["weapons_hold"] = true.into();
             state["electronics"]["field"]["protected"] = true.into();
-            state["power"] = serde_json::to_value(BattlePower::Off).unwrap();
+            state["power"] = serde_json::to_value(Power::Off).unwrap();
         });
         let before = serde_json::to_value(&world.btech).unwrap();
         let report = report_battle_unit(&world, scanner, ObjectId(1), target).unwrap();
@@ -203,7 +203,7 @@ async fn report_shows_live_jump_heading_without_advancing_flight() {
         include_str!("../game/mechs/JR7-D.toml"),
     )
     .await;
-    let path = BattleJumpPath::new(
+    let path = JumpPath::new(
         HexCoordinate { x: 0, y: 10 }.center(),
         HexCoordinate { x: 0, y: 8 }.center(),
         0,
@@ -212,7 +212,7 @@ async fn report_shows_live_jump_heading_without_advancing_flight() {
     )
     .unwrap();
     firing::edit(&mut world, target, |state| {
-        state["flight"] = serde_json::to_value(BattleJumpFlight::new(path)).unwrap()
+        state["flight"] = serde_json::to_value(JumpFlight::new(path)).unwrap()
     });
     let before = serde_json::to_value(&world.btech).unwrap();
     let report = report_battle_unit(&world, scanner, ObjectId(1), target).unwrap();
@@ -240,7 +240,7 @@ async fn scan_info_towing_uses_shared_relationship_and_literal_names() {
                 .await;
         let tow = world.create(&config, "Tow".into(), Kind::Thing);
         world.objects.get_mut(&tow).unwrap().home = Some(ObjectId(config.home()));
-        BattleUnitTemplate::parse("test", towed_template)
+        UnitTemplate::parse("test", towed_template)
             .unwrap()
             .create(&mut world, tow)
             .unwrap();

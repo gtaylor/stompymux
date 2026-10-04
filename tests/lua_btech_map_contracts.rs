@@ -30,7 +30,7 @@ async fn terrain_zones_cargo_links_and_strict_errors_match_c_shapes() {
         &mut world,
         map,
         0,
-        Some(BattleLandingExclusion {
+        Some(LandingExclusion {
             coordinate: HexCoordinate { x: 1, y: 0 },
             radius: 2,
             exempt_team: 0,
@@ -211,7 +211,7 @@ async fn mixed_membership_range_lookup_los_and_exact_placement_are_canonical() {
     set_battle_visibility(
         &mut scripts.world_mut(),
         mech,
-        BattleVisibility {
+        Visibility {
             invisible: true,
             clairvoyant: false,
         },

@@ -3,7 +3,7 @@ use crate::{Flag, Kind, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 
 /// Read the operator-imposed immunity independently of construction and cockpit power.
-pub fn battle_combat_safe(world: &World, id: ObjectId) -> Result<bool> {
+pub fn combat_safe(world: &World, id: ObjectId) -> Result<bool> {
     let unit = world.btech.unit(id).context("Unit is not constructed")?;
     Ok(unit.combat_safe())
 }
@@ -31,7 +31,7 @@ pub fn set_battle_combat_safe(world: &mut World, id: ObjectId, enabled: bool) ->
 
 /// Damage uses the source map; unattributed environmental entries originate at the target.
 pub(super) fn protects(world: &World, attacker: Option<ObjectId>, target: ObjectId) -> bool {
-    if battle_combat_safe(world, target).unwrap_or(false) {
+    if combat_safe(world, target).unwrap_or(false) {
         return true;
     }
     let source = attacker.unwrap_or(target);
@@ -53,10 +53,10 @@ pub(super) fn protects(world: &World, attacker: Option<ObjectId>, target: Object
 }
 
 /// Suppressed incoming damage informs only a distinct attacking cockpit.
-pub(super) fn notice(attacker: Option<ObjectId>, target: ObjectId) -> Option<super::BattleNotice> {
+pub(super) fn notice(attacker: Option<ObjectId>, target: ObjectId) -> Option<super::Notice> {
     attacker
         .filter(|id| *id != target)
-        .map(|unit| super::BattleNotice {
+        .map(|unit| super::Notice {
             unit,
             text: "Your efforts only scratch the paint!".into(),
         })
@@ -65,7 +65,7 @@ pub(super) fn notice(attacker: Option<ObjectId>, target: ObjectId) -> Option<sup
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::btech::BattleUnitTemplateExt;
+    use crate::btech::UnitTemplateExt;
 
     /// Damage attribution uses the source map even when the target occupies a different battlefield.
     #[test]
@@ -90,7 +90,7 @@ mod tests {
                     )
                     .unwrap();
                     let id = world.create(&config, "Unit".into(), Kind::Thing);
-                    crate::BattleUnitTemplate::parse("unit", template)
+                    crate::UnitTemplate::parse("unit", template)
                         .unwrap()
                         .create(&mut world, id)
                         .unwrap();

@@ -43,8 +43,8 @@ pub(super) fn register(lua: &Lua, native: &Table, _world: &SharedWorld) -> mlua:
     })?;
     native.set("unit_lbx", error::wrap(lua, lbx, "btech.operation.failed")?)?;
     for (name, mode) in [
-        ("unit_firesmoke", crate::BattleAmmunitionMode::Smoke),
-        ("unit_firemine", crate::BattleAmmunitionMode::Mine),
+        ("unit_firesmoke", crate::AmmunitionMode::Smoke),
+        ("unit_firemine", crate::AmmunitionMode::Mine),
     ] {
         let action = lua.create_function(move |lua, (unit, pilot, index): (i64, i64, usize)| {
             crate::lua::transactions::require(lua)?;
@@ -72,16 +72,13 @@ pub(super) fn register(lua: &Lua, native: &Table, _world: &SharedWorld) -> mlua:
     for (name, mode) in [
         (
             "unit_fireaugmented",
-            crate::BattleAmmunitionMode::ThunderAugmented,
+            crate::AmmunitionMode::ThunderAugmented,
         ),
         (
             "unit_firevibrabomb",
-            crate::BattleAmmunitionMode::ThunderVibrabomb,
+            crate::AmmunitionMode::ThunderVibrabomb,
         ),
-        (
-            "unit_fireactive",
-            crate::BattleAmmunitionMode::ThunderActive,
-        ),
+        ("unit_fireactive", crate::AmmunitionMode::ThunderActive),
     ] {
         let action = lua.create_function(move |lua, (unit, pilot, index): (i64, i64, usize)| {
             crate::lua::transactions::require(lua)?;

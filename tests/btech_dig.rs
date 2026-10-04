@@ -21,7 +21,7 @@ async fn fixture(
     let target = world.create(&config, "Defender".into(), Kind::Thing);
     let shooter = world.create(&config, "Shooter".into(), Kind::Thing);
     for (id, source, y) in [(target, target_source, 1), (shooter, shooter_source, 0)] {
-        BattleUnitTemplate::parse("test", source)
+        UnitTemplate::parse("test", source)
             .unwrap()
             .create(&mut world, id)
             .unwrap();
@@ -49,14 +49,11 @@ fn complete(world: &mut World, id: ObjectId) {
     for _ in 0..20 {
         advance_battle_units(world, 0);
     }
-    assert_eq!(
-        world.btech.vehicles()[&id].dig_state(),
-        BattleDigState::covered()
-    );
+    assert_eq!(world.btech.vehicles()[&id].dig_state(), DigState::covered());
 }
 
-fn aim_rules() -> BattleAimRules {
-    BattleAimRules {
+fn aim_rules() -> AimRules {
+    AimRules {
         woods_damage: false,
         dig_bonus: 3,
         dig_only_front: false,
@@ -92,7 +89,7 @@ async fn dig_timer_native_lua_controls_shutdown_and_persistence_share_state() {
         }
         assert_eq!(
             lua.world().btech.vehicles()[&id].dig_state(),
-            BattleDigState::preparing(1)
+            DigState::preparing(1)
         );
         let snapshot = lua.world().clone();
         persistence::save(&config.database(), &snapshot)
@@ -119,13 +116,13 @@ async fn dig_timer_native_lua_controls_shutdown_and_persistence_share_state() {
             .unwrap();
         assert_eq!(
             lua.world().btech.vehicles()[&id].dig_state(),
-            BattleDigState::covered()
+            DigState::covered()
         );
         lua.eval_callback::<()>(&format!("btech.unit.speed({},1,1)", id.0))
             .unwrap();
         assert_eq!(
             lua.world().btech.vehicles()[&id].dig_state(),
-            BattleDigState::default()
+            DigState::default()
         );
         lua.eval_callback::<()>(&format!(
             "btech.unit.speed({},1,'stop'); btech.unit.dig({},1)",
@@ -136,7 +133,7 @@ async fn dig_timer_native_lua_controls_shutdown_and_persistence_share_state() {
             .unwrap();
         assert_eq!(
             lua.world().btech.vehicles()[&id].dig_state(),
-            BattleDigState::default()
+            DigState::default()
         );
         lua.eval_callback::<()>(&format!(
             "btech.unit.heading({},1,0); btech.unit.dig({},1); btech.unit.stop({},1)",
@@ -145,7 +142,7 @@ async fn dig_timer_native_lua_controls_shutdown_and_persistence_share_state() {
         .unwrap();
         assert_eq!(
             lua.world().btech.vehicles()[&id].dig_state(),
-            BattleDigState::default()
+            DigState::default()
         );
         lua.world().validate(&config).unwrap();
     }
@@ -160,7 +157,7 @@ async fn dug_in_cover_is_shared_by_mech_and_vehicle_aim_with_arc_and_height_gate
         let aim = battle_aim_modifiers(&world, shooter, target, 0, 4, aim_rules()).unwrap();
         assert_eq!(aim.dug_in, 3);
         assert_eq!(aim.subtotal().unwrap(), baseline.subtotal().unwrap() + 3);
-        let rules = BattleAimRules {
+        let rules = AimRules {
             woods_damage: false,
             dig_bonus: 7,
             dig_only_front: true,
@@ -198,7 +195,7 @@ async fn dug_in_cover_is_shared_by_mech_and_vehicle_aim_with_arc_and_height_gate
                     target,
                     0,
                     4,
-                    BattleAimRules {
+                    AimRules {
                         hit_arc_mode: mode,
                         ..rules
                     }
@@ -249,12 +246,12 @@ async fn cover_blocks_hull_weapons_at_the_shared_reservation_boundary() {
     let hull = loadout
         .weapons
         .iter()
-        .position(|mount| mount.criticals[0].section == BattleVehicleSection::Front)
+        .position(|mount| mount.criticals[0].section == VehicleSection::Front)
         .unwrap();
     let turret = loadout
         .weapons
         .iter()
-        .position(|mount| mount.criticals[0].section == BattleVehicleSection::Turret)
+        .position(|mount| mount.criticals[0].section == VehicleSection::Turret)
         .unwrap();
     complete(&mut world, id);
     assert!(
@@ -278,8 +275,8 @@ async fn cover_blocks_hull_weapons_at_the_shared_reservation_boundary() {
 #[tokio::test]
 async fn dug_in_turret_routing_uses_the_41_42_boundary_for_each_hit_table() {
     for table in [
-        BattleVehicleCriticalTable::Standard,
-        BattleVehicleCriticalTable::Advanced,
+        VehicleCriticalTable::Standard,
+        VehicleCriticalTable::Advanced,
     ] {
         for percentage in [41, 42] {
             let (_dir, _, mut world, id, _) = fixture(VEHICLE, MECH).await;
@@ -288,35 +285,32 @@ async fn dug_in_turret_routing_uses_the_41_42_boundary_for_each_hit_table() {
                 .find_map(|n| {
                     let mut seed = [0; 32];
                     seed[..4].copy_from_slice(&n.to_le_bytes());
-                    let mut dice = BattleDice::seeded(seed);
+                    let mut dice = Dice::seeded(seed);
                     let mut roll = dice.two_d6();
-                    if table != BattleVehicleCriticalTable::Standard {
+                    if table != VehicleCriticalTable::Standard {
                         roll = dice.two_d6();
                     }
                     (roll == 7 && dice.die(100).unwrap() == percentage).then_some(seed)
                 })
                 .unwrap();
-            world
-                .btech
-                .set_unit_dice(id, BattleDice::seeded(seed))
-                .unwrap();
+            world.btech.set_unit_dice(id, Dice::seeded(seed)).unwrap();
             let mut replay = world.clone();
-            let mut rules = BattleVehicleImpactRules::STANDARD;
+            let mut rules = VehicleImpactRules::STANDARD;
             rules.criticals.table = table;
             let report =
-                resolve_battle_vehicle_impact(&mut world, id, BattleHitArc::Front, 1, None, rules)
+                resolve_battle_vehicle_impact(&mut world, id, HitArc::Front, 1, None, rules)
                     .unwrap();
             assert_eq!(
                 report,
-                resolve_battle_vehicle_impact(&mut replay, id, BattleHitArc::Front, 1, None, rules)
+                resolve_battle_vehicle_impact(&mut replay, id, HitArc::Front, 1, None, rules)
                     .unwrap()
             );
             assert_eq!(
                 report.hit.unwrap().section,
                 if percentage == 42 {
-                    BattleVehicleSection::Turret
+                    VehicleSection::Turret
                 } else {
-                    BattleVehicleSection::Front
+                    VehicleSection::Front
                 }
             );
             assert_eq!(world.btech, replay.btech);
@@ -368,12 +362,12 @@ async fn pickup_clears_completed_cover_but_shutdown_preserves_it() {
         &mut world,
         target,
         ObjectId(1),
-        BattleMovementRules::STANDARD.fall,
+        MovementRules::STANDARD.fall,
     )
     .unwrap();
     assert_eq!(
         world.btech.vehicles()[&target].dig_state(),
-        BattleDigState::covered()
+        DigState::covered()
     );
     let position = world.btech.vehicles()[&target].position().unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(carrier);
@@ -383,7 +377,7 @@ async fn pickup_clears_completed_cover_but_shutdown_preserves_it() {
         &mut world,
         carrier,
         ObjectId(1),
-        BattleMovementRules::STANDARD.fall,
+        MovementRules::STANDARD.fall,
     )
     .unwrap();
     place_battle_unit(
@@ -417,13 +411,13 @@ async fn pickup_clears_completed_cover_but_shutdown_preserves_it() {
         carrier,
         ObjectId(1),
         target,
-        BattleMovementRules::STANDARD.fall,
+        MovementRules::STANDARD.fall,
         true,
     )
     .unwrap();
     assert_eq!(
         world.btech.vehicles()[&target].dig_state(),
-        BattleDigState::default()
+        DigState::default()
     );
     world.validate(&config).unwrap();
 }
@@ -454,7 +448,7 @@ async fn digging_checks_the_current_surface_before_starting() {
             result.unwrap();
             assert_eq!(
                 world.btech.vehicles()[&id].dig_state(),
-                BattleDigState::preparing(20)
+                DigState::preparing(20)
             );
         } else {
             assert!(result.is_err(), "{terrain:?}");
@@ -508,7 +502,7 @@ async fn raw_dig_flags_preserve_overlapping_completion_deadlines() {
         }
         assert_eq!(
             scripts.world().btech.vehicles()[&id].dig_state(),
-            BattleDigState::covered()
+            DigState::covered()
         );
     }
 }

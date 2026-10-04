@@ -5,7 +5,7 @@ use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 
 /// Find a full field name independently of the selected display width.
-fn field<'a>(report: &'a BattleUnitFieldReport, name: &str) -> Option<&'a str> {
+fn field<'a>(report: &'a UnitFieldReport, name: &str) -> Option<&'a str> {
     report
         .fields
         .iter()
@@ -66,7 +66,7 @@ impl UnitFields {
     fn supply(
         &self,
         source: &str,
-        weapon: Option<BattleWeapon>,
+        weapon: Option<Weapon>,
         target_source: &str,
         ammunition_flag: Option<&str>,
     ) -> (World, ObjectId, ObjectId, usize) {
@@ -95,7 +95,7 @@ async fn all_chassis_field_reports_scenario(f: &UnitFields) {
         set_battle_unit_experience(
             &mut world,
             id,
-            BattleUnitExperience {
+            UnitExperience {
                 multiplier: 2.5,
                 suppress_gunnery: false,
             },
@@ -320,13 +320,7 @@ async fn special_field_commands_scenario(f: &UnitFields) {
         .position()
         .unwrap()
         .map;
-    stop_battle_unit(
-        &mut world,
-        unit,
-        ObjectId(1),
-        BattleMovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut world, unit, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
     for (id, set, view, assignment) in [
         (map, "@setmap", "@viewmap", "mapname A field with spaces"),
         (unit, "@setmech", "@viewmech", "team 7"),
@@ -378,17 +372,13 @@ async fn hardware_fields_share_gameplay_ranges_and_vtol_fuel_edits_are_atomic_sc
         let (world, id, _, _) = f.pair(&source, &source);
         let ranges = world.btech.constructed_units().get(&id).map_or_else(
             || world.btech.vehicles()[&id].sensor_ranges(),
-            BattleUnit::sensor_ranges,
+            Mech::sensor_ranges,
         );
         let radio = world.btech.constructed_units().get(&id).map_or_else(
             || world.btech.vehicles()[&id].radio_capabilities(),
-            BattleUnit::radio_capabilities,
+            Mech::radio_capabilities,
         );
-        let fuel = world
-            .btech
-            .vehicles()
-            .get(&id)
-            .and_then(BattleVehicle::vtol_fuel);
+        let fuel = world.btech.vehicles().get(&id).and_then(Vehicle::vtol_fuel);
         let scripts = &f.native;
         support::install(scripts, world.clone());
         let report = view_battle_unit_fields_action(scripts, config, ObjectId(1), id, "").unwrap();
@@ -1137,13 +1127,7 @@ async fn startup_history_uses_supplied_completion_time_and_preserves_aborted_his
                 .as_i64()
                 .unwrap()
         };
-        stop_battle_unit(
-            &mut world,
-            id,
-            ObjectId(1),
-            BattleMovementRules::STANDARD.fall,
-        )
-        .unwrap();
+        stop_battle_unit(&mut world, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
         assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
         support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
@@ -1151,13 +1135,7 @@ async fn startup_history_uses_supplied_completion_time_and_preserves_aborted_his
             advance_battle_units(&mut world, now);
         }
         assert_eq!(history(&world), -50);
-        stop_battle_unit(
-            &mut world,
-            id,
-            ObjectId(1),
-            BattleMovementRules::STANDARD.fall,
-        )
-        .unwrap();
+        stop_battle_unit(&mut world, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
         advance_battle_units(&mut world, 102);
         assert_eq!(history(&world), -50);
         for (fast, duration, start) in [(true, 5, 1_800_000_000_i64), (false, 30, 1_900_000_000)] {
@@ -1184,13 +1162,7 @@ async fn startup_history_uses_supplied_completion_time_and_preserves_aborted_his
             }
             advance_battle_units(&mut world, start + 100);
             assert_eq!(history(&world), start + duration);
-            stop_battle_unit(
-                &mut world,
-                id,
-                ObjectId(1),
-                BattleMovementRules::STANDARD.fall,
-            )
-            .unwrap();
+            stop_battle_unit(&mut world, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
         }
         let scripts = &f.native;
         support::install(scripts, world.clone());
@@ -1294,8 +1266,7 @@ async fn preference_fields_share_cockpit_state_validation_and_restart_scenario(f
 async fn battle_value_field_tracks_live_damage_and_weapon_configuration_scenario(f: &UnitFields) {
     let config = &f.config;
     for source in firing::templates() {
-        let (mut world, id, _, _) =
-            f.supply(&source, Some(BattleWeapon::MediumLaser), &source, None);
+        let (mut world, id, _, _) = f.supply(&source, Some(Weapon::MediumLaser), &source, None);
         let baseline = battle_unit_value(&world, id, config.battletech.tsm_tow_bonus != 0)
             .unwrap()
             .total;
@@ -1449,10 +1420,8 @@ async fn engine_sink_override_validates_authored_values_across_chassis_scenario(
         let before = world.btech.clone();
         // Typed TOML values reject non-integers and values outside a signed 32-bit range.
         for value in ["\"no\"", "2147483648", "-2147483649", "1.5"] {
-            let template = BattleUnitTemplate::parse(
-                "test",
-                &format!("hs_engine_override = {value}\n{source}"),
-            );
+            let template =
+                UnitTemplate::parse("test", &format!("hs_engine_override = {value}\n{source}"));
             let result = template.and_then(|template| template.create(&mut world, candidate));
             let error = format!("{:#}", result.unwrap_err());
             assert!(error.contains("hs_engine_override"), "{error}");
@@ -1551,7 +1520,7 @@ async fn crew_and_target_fields_share_native_lua_validation_and_restart_scenario
         support::seed_object_dice(&mut world, replacement, support::FIXTURE_DICE_SEED);
         let unplaced = world.create(config, "Unplaced unit".into(), Kind::Thing);
         world.objects.get_mut(&unplaced).unwrap().home = Some(ObjectId(config.home()));
-        BattleUnitTemplate::parse("test", &source)
+        UnitTemplate::parse("test", &source)
             .unwrap()
             .create(&mut world, unplaced)
             .unwrap();
@@ -1603,13 +1572,13 @@ async fn crew_and_target_fields_share_native_lua_validation_and_restart_scenario
             .btech
             .constructed_units()
             .get(&id)
-            .and_then(BattleUnit::target_selection)
+            .and_then(Mech::target_selection)
             .or_else(|| {
                 lua.world()
                     .btech
                     .vehicles()
                     .get(&id)
-                    .and_then(BattleVehicle::target_selection)
+                    .and_then(Vehicle::target_selection)
             })
             .unwrap();
         assert_eq!(selected.remaining(), 8);
@@ -1896,14 +1865,8 @@ async fn cargo_field_edits_share_load_rules_and_atomic_publication_scenario(f: &
                     .btech
                     .constructed_units()
                     .get(&id)
-                    .and_then(BattleUnit::motion)
-                    .or_else(|| {
-                        world
-                            .btech
-                            .vehicles()
-                            .get(&id)
-                            .and_then(BattleVehicle::motion)
-                    })
+                    .and_then(Mech::motion)
+                    .or_else(|| world.btech.vehicles().get(&id).and_then(Vehicle::motion))
                     .unwrap();
                 assert_eq!(motion.speed, 0.0);
                 assert_eq!(motion.desired_speed, 0.0);
@@ -2044,14 +2007,8 @@ async fn motion_fields_edit_actual_state_without_advancing_controls_scenario(f: 
             .btech
             .constructed_units()
             .get(&id)
-            .and_then(BattleUnit::motion)
-            .or_else(|| {
-                world
-                    .btech
-                    .vehicles()
-                    .get(&id)
-                    .and_then(BattleVehicle::motion)
-            })
+            .and_then(Mech::motion)
+            .or_else(|| world.btech.vehicles().get(&id).and_then(Vehicle::motion))
             .unwrap();
         let native = &f.native;
         let lua = &f.lua;
@@ -2102,14 +2059,8 @@ async fn motion_fields_edit_actual_state_without_advancing_controls_scenario(f: 
                     .btech
                     .constructed_units()
                     .get(&id)
-                    .and_then(BattleUnit::motion)
-                    .or_else(|| {
-                        world
-                            .btech
-                            .vehicles()
-                            .get(&id)
-                            .and_then(BattleVehicle::motion)
-                    })
+                    .and_then(Mech::motion)
+                    .or_else(|| world.btech.vehicles().get(&id).and_then(Vehicle::motion))
                     .unwrap();
                 assert_eq!(motion.point, initial_motion.point);
                 assert_eq!(motion.desired_speed, initial_motion.desired_speed);
@@ -2189,7 +2140,7 @@ async fn coordinate_fields_share_scenario_placement_and_rollback_scenario(f: &Un
                 config,
                 ObjectId(1),
                 id,
-                BattleScenarioPosition {
+                ScenarioPosition {
                     coordinate: HexCoordinate { x, y },
                     elevation: Some(z),
                 },
@@ -2258,14 +2209,8 @@ async fn precise_coordinate_fields_preserve_fractional_position_and_restart_scen
             .btech
             .constructed_units()
             .get(&id)
-            .and_then(BattleUnit::motion)
-            .or_else(|| {
-                world
-                    .btech
-                    .vehicles()
-                    .get(&id)
-                    .and_then(BattleVehicle::motion)
-            })
+            .and_then(Mech::motion)
+            .or_else(|| world.btech.vehicles().get(&id).and_then(Vehicle::motion))
             .unwrap();
         let native = &f.native;
         let lua = &f.lua;
@@ -2313,18 +2258,12 @@ async fn precise_coordinate_fields_preserve_fractional_position_and_restart_scen
                 .btech
                 .constructed_units()
                 .get(&id)
-                .and_then(BattleUnit::motion)
-                .or_else(|| {
-                    saved
-                        .btech
-                        .vehicles()
-                        .get(&id)
-                        .and_then(BattleVehicle::motion)
-                })
+                .and_then(Mech::motion)
+                .or_else(|| saved.btech.vehicles().get(&id).and_then(Vehicle::motion))
                 .unwrap();
             assert_eq!(
                 motion,
-                BattleMotion {
+                Motion {
                     point: expected,
                     ..initial
                 }
@@ -2339,14 +2278,8 @@ async fn precise_coordinate_fields_preserve_fractional_position_and_restart_scen
                 .btech
                 .constructed_units()
                 .get(&id)
-                .and_then(BattleUnit::position)
-                .or_else(|| {
-                    saved
-                        .btech
-                        .vehicles()
-                        .get(&id)
-                        .and_then(BattleVehicle::position)
-                })
+                .and_then(Mech::position)
+                .or_else(|| saved.btech.vehicles().get(&id).and_then(Vehicle::position))
                 .unwrap();
             let coordinate = expected.containing_hex().unwrap();
             assert_eq!(
@@ -2529,7 +2462,7 @@ async fn maximum_speed_fields_preserve_mass_and_recalculate_from_the_correct_bas
                 &mut loaded,
                 id,
                 CriticalLocation {
-                    section: BattleSection::Head,
+                    section: MechSection::Head,
                     slot: 0,
                 },
             )
@@ -2544,7 +2477,7 @@ async fn maximum_speed_fields_preserve_mass_and_recalculate_from_the_correct_bas
                 &mut loaded,
                 id,
                 CriticalLocation {
-                    section: BattleSection::LeftLeg,
+                    section: MechSection::LeftLeg,
                     slot: 1,
                 },
             )
@@ -2552,7 +2485,7 @@ async fn maximum_speed_fields_preserve_mass_and_recalculate_from_the_correct_bas
             80.0 - 10.75
         } else {
             let mut unit = loaded.btech.vehicles()[&id].clone();
-            unit.apply_motive_hit(BattleVehicleMotiveHit::SpeedLoss { movement_points: 1 });
+            unit.apply_motive_hit(VehicleMotiveHit::SpeedLoss { movement_points: 1 });
             let value = serde_json::to_value(unit).unwrap();
             firing::edit(&mut loaded, id, |unit| *unit = value);
             40.0 - 10.75
@@ -2595,7 +2528,7 @@ async fn jump_speed_fields_share_thrust_without_rebuilding_equipment_scenario(f:
                     .unwrap()
                     .systems
                     .into_iter()
-                    .filter(|part| part.system == BattleSystem::JumpJet)
+                    .filter(|part| part.system == System::JumpJet)
                     .map(|part| part.location)
                     .collect()
             })
@@ -2790,7 +2723,7 @@ async fn pilot_damage_fields_share_recovery_and_fatal_cleanup_scenario(f: &UnitF
                 let unit = &saved.btech.vehicles()[&id];
                 (unit.is_destroyed(), unit.pilot(), unit.power())
             };
-            assert_eq!(state, (true, None, BattlePower::Off));
+            assert_eq!(state, (true, None, Power::Off));
             assert!(
                 set_battle_unit_field_action(lua, config, ObjectId(1), id, "pilotdam", "0")
                     .is_err()
@@ -2815,7 +2748,7 @@ async fn saved_jump_override_rejects_capacity_overflow_before_runtime_scenario(f
         .unwrap()
         .systems
         .into_iter()
-        .find(|part| part.system == BattleSystem::JumpJet)
+        .find(|part| part.system == System::JumpJet)
         .unwrap()
         .location;
     destroy_battle_critical(&mut world, id, location).unwrap();
@@ -2856,7 +2789,7 @@ async fn secondary_status_edits_preserve_observations_and_validate_controls_scen
                     .unwrap();
             assert_eq!(field(&report, "status2"), Some(value));
             assert_eq!(
-                battle_weapons_hold(&scripts.world(), id).unwrap(),
+                weapons_hold(&scripts.world(), id).unwrap(),
                 value.contains('x')
             );
         }
@@ -2887,7 +2820,7 @@ async fn live_mass_fields_share_load_and_expire_on_material_changes_scenario(f: 
     for source in firing::templates() {
         let (world, id, target, index) = f.supply(
             &source,
-            Some(BattleWeapon::Mml3),
+            Some(Weapon::Mml3),
             include_str!("../game/mechs/AS7-D.toml"),
             Some(""),
         );
@@ -2937,15 +2870,15 @@ async fn live_mass_fields_share_load_and_expire_on_material_changes_scenario(f: 
                 assert_eq!(unit.mass().unwrap().total, original.material_mass);
                 let mut damaged = unit.clone();
                 damaged.damage_phase(
-                    BattleSection::CenterTorso,
+                    MechSection::CenterTorso,
                     0,
-                    BattleDamagePhase::Armor { rear: false },
+                    DamagePhase::Armor { rear: false },
                 );
                 assert_eq!(damaged.effective_mass().unwrap(), mass as u32);
                 damaged.damage_phase(
-                    BattleSection::CenterTorso,
+                    MechSection::CenterTorso,
                     1,
-                    BattleDamagePhase::Armor { rear: false },
+                    DamagePhase::Armor { rear: false },
                 );
                 assert_eq!(
                     damaged.effective_mass().unwrap(),
@@ -2956,19 +2889,11 @@ async fn live_mass_fields_share_load_and_expire_on_material_changes_scenario(f: 
                 assert_eq!(unit.mass().unwrap().total, original.material_mass);
                 let mut damaged = unit.clone();
                 damaged
-                    .damage_phase(
-                        BattleVehicleSection::Front,
-                        0,
-                        BattleDamagePhase::Armor { rear: false },
-                    )
+                    .damage_phase(VehicleSection::Front, 0, DamagePhase::Armor { rear: false })
                     .unwrap();
                 assert_eq!(damaged.effective_mass().unwrap(), mass as u32);
                 damaged
-                    .damage_phase(
-                        BattleVehicleSection::Front,
-                        1,
-                        BattleDamagePhase::Armor { rear: false },
-                    )
+                    .damage_phase(VehicleSection::Front, 1, DamagePhase::Armor { rear: false })
                     .unwrap();
                 assert_eq!(
                     damaged.effective_mass().unwrap(),
@@ -3113,7 +3038,7 @@ async fn tonnage_fields_preserve_equipment_damage_and_live_corrections_scenario(
         } else {
             let mut corrupt = serde_json::to_value(&lua.world().btech.vehicles()[&id]).unwrap();
             corrupt["definition"]["tons"] = 0.into();
-            assert!(serde_json::from_value::<BattleVehicle>(corrupt).is_err());
+            assert!(serde_json::from_value::<Vehicle>(corrupt).is_err());
         }
     }
 }
@@ -3252,7 +3177,7 @@ async fn movement_field_rejects_incompatible_live_conditions_scenario(f: &UnitFi
                     "active": false, "pending": true, "remaining": 7
                 });
             } else {
-                state["dig"] = serde_json::to_value(BattleDigState::preparing(7)).unwrap();
+                state["dig"] = serde_json::to_value(DigState::preparing(7)).unwrap();
             }
         });
         world.validate(config).unwrap();
@@ -3330,12 +3255,12 @@ async fn compact_damage_reports_round_trip_through_the_shared_codec_scenario(f: 
         assert!(
             records
                 .iter()
-                .any(|record| matches!(record, BattleDamageRecord::Armor { loss: 1, .. }))
+                .any(|record| matches!(record, DamageRecord::Armor { loss: 1, .. }))
         );
         assert!(
             records
                 .iter()
-                .any(|record| matches!(record, BattleDamageRecord::Internal { loss: 1, .. }))
+                .any(|record| matches!(record, DamageRecord::Internal { loss: 1, .. }))
         );
         assert_eq!(
             records

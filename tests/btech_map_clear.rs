@@ -41,9 +41,9 @@ async fn clear_map_units_shares_chassis_shutdown_and_restart() {
                 unit["map_slot"] = 1.into();
                 unit["target_lock"] = serde_json::Value::Null;
                 unit["power"] = serde_json::to_value(match mode {
-                    "off" => BattlePower::Off,
-                    "starting" => BattlePower::Starting { remaining: 10 },
-                    _ => BattlePower::Running,
+                    "off" => Power::Off,
+                    "starting" => Power::Starting { remaining: 10 },
+                    _ => Power::Running,
                 })
                 .unwrap();
                 if mode == "moving" {
@@ -152,7 +152,7 @@ async fn clear_map_units_authority_empty_map_and_output_rollback() {
     // Off units produce only operator reports, so the second report exceeds the limit.
     for unit in [id, target] {
         firing::edit(&mut world, unit, |unit| {
-            unit["power"] = serde_json::to_value(BattlePower::Off).unwrap();
+            unit["power"] = serde_json::to_value(Power::Off).unwrap();
             unit["target_lock"] = serde_json::Value::Null;
         });
     }
@@ -234,7 +234,7 @@ async fn clear_map_tows_in_either_slot_order() {
             let map = world.btech.units()[&id].map.unwrap();
             let actor = operator(&mut world, &config, map);
             firing::edit(&mut world, target, |unit| {
-                unit["power"] = serde_json::to_value(BattlePower::Off).unwrap();
+                unit["power"] = serde_json::to_value(Power::Off).unwrap();
                 unit["target_lock"] = serde_json::Value::Null;
             });
             place_battle_unit(&mut world, target, map, 0, 11).unwrap();
@@ -309,7 +309,7 @@ async fn selected_map_shutdown_is_guarded_and_bare_shutdown_remains_local() {
     assert_eq!(scripts.world().btech.units()[&target].map, Some(map));
     assert_eq!(
         scripts.world().btech.constructed_units()[&source].power(),
-        BattlePower::Off
+        Power::Off
     );
     assert_eq!(
         scripts.world().btech.constructed_units()[&target],

@@ -18,7 +18,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse("test", template).unwrap(),
+        VehicleTemplate::parse("test", template).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -36,17 +36,17 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
 fn seed(world: &mut World, id: ObjectId, value: u8) {
     world
         .btech
-        .set_unit_dice(id, BattleDice::seeded([value; 32]))
+        .set_unit_dice(id, Dice::seeded([value; 32]))
         .unwrap();
 }
 
 /// Isolated internal damage with criticals disabled still consumes its two diagnostic rolls.
-fn rules() -> BattleVehicleCriticalRules {
-    BattleVehicleCriticalRules {
+fn rules() -> VehicleCriticalRules {
+    VehicleCriticalRules {
         rotor_damage_divisor: 0,
         extended_piloting: false,
         vtol_table: None,
-        table: BattleVehicleCriticalTable::Advanced,
+        table: VehicleCriticalTable::Advanced,
         enabled: false,
         combat_safe: false,
         toughness: false,
@@ -66,12 +66,12 @@ async fn internal_damage_handles_structure_rounding_and_vehicle_local_overflow()
         );
         let (_dir, config, mut world, id) = fixture(&text).await;
         seed(&mut world, id, 31);
-        let mut dice = BattleDice::seeded([31; 32]);
+        let mut dice = Dice::seeded([31; 32]);
         let expected = vec![dice.two_d6(), dice.two_d6()];
         let report = resolve_battle_vehicle_internal_damage(
             &mut world,
             id,
-            BattleVehicleSection::Turret,
+            VehicleSection::Turret,
             5,
             rules(),
         )
@@ -82,7 +82,7 @@ async fn internal_damage_handles_structure_rounding_and_vehicle_local_overflow()
         assert_eq!(report.discarded, structural - u32::from(absorbed));
         assert!(!world.btech.vehicles()[&id].is_destroyed());
         assert_eq!(
-            world.btech.vehicles()[&id].sections()[&BattleVehicleSection::Front].armor,
+            world.btech.vehicles()[&id].sections()[&VehicleSection::Front].armor,
             40
         );
         assert_eq!(roll_unit_dice(&mut world, id, 1).unwrap(), vec![dice.d6()]);
@@ -100,7 +100,7 @@ async fn internal_criticals_precede_structure_and_nested_errors_roll_back_all_da
         fixture(include_str!("../game/mechs/Demolisher.toml")).await;
     let value = (0..=255)
         .find(|value| {
-            let mut dice = BattleDice::seeded([*value; 32]);
+            let mut dice = Dice::seeded([*value; 32]);
             dice.two_d6();
             matches!(dice.two_d6(), 8 | 9) && dice.two_d6() == 6
         })
@@ -111,7 +111,7 @@ async fn internal_criticals_precede_structure_and_nested_errors_roll_back_all_da
     let result = resolve_battle_vehicle_internal_damage(
         &mut world,
         id,
-        BattleVehicleSection::Front,
+        VehicleSection::Front,
         8,
         critical_rules,
     )
@@ -119,7 +119,7 @@ async fn internal_criticals_precede_structure_and_nested_errors_roll_back_all_da
     assert_eq!(result.criticals.len(), 1);
     assert_eq!(
         result.criticals[0].selection.effect,
-        Some(BattleVehicleCriticalEffect::Driver)
+        Some(VehicleCriticalEffect::Driver)
     );
     assert_eq!(world.btech.vehicles()[&id].piloting_damage(), 2);
     assert!(result.unit_destroyed);
@@ -135,13 +135,13 @@ async fn internal_criticals_precede_structure_and_nested_errors_roll_back_all_da
         fixture(include_str!("../game/mechs/Demolisher.toml")).await;
     let value = (0..=255)
         .find(|value| {
-            let mut dice = BattleDice::seeded([*value; 32]);
+            let mut dice = Dice::seeded([*value; 32]);
             dice.two_d6();
             dice.two_d6() >= 8 && dice.die(3).unwrap() != 2 && dice.d6() >= 5
         })
         .unwrap();
     seed(&mut world, id, value);
-    critical_rules.table = BattleVehicleCriticalTable::Standard;
+    critical_rules.table = VehicleCriticalTable::Standard;
     world
         .objects
         .get_mut(&id)
@@ -151,7 +151,7 @@ async fn internal_criticals_precede_structure_and_nested_errors_roll_back_all_da
     let report = resolve_battle_vehicle_internal_damage(
         &mut world,
         id,
-        BattleVehicleSection::Turret,
+        VehicleSection::Turret,
         400,
         critical_rules,
     )
@@ -175,7 +175,7 @@ async fn weapon_explosions_disable_mount_before_damage_and_injure_surviving_crew
     let (_dir, config, base, id) = fixture(&text).await;
     let value = (0..=255)
         .find(|value| {
-            let mut dice = BattleDice::seeded([*value; 32]);
+            let mut dice = Dice::seeded([*value; 32]);
             if dice.two_d6() != 11 {
                 return false;
             }
@@ -197,16 +197,12 @@ async fn weapon_explosions_disable_mount_before_damage_and_injure_surviving_crew
         }
         let mut critical_rules = rules();
         critical_rules.enabled = true;
-        let result = resolve_battle_vehicle_critical(
-            &mut world,
-            id,
-            BattleVehicleSection::Front,
-            critical_rules,
-        )
-        .unwrap();
+        let result =
+            resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Front, critical_rules)
+                .unwrap();
         assert_eq!(
             result.selection.effect,
-            Some(BattleVehicleCriticalEffect::WeaponDestroyed)
+            Some(VehicleCriticalEffect::WeaponDestroyed)
         );
         assert_eq!(world.btech.vehicles()[&id].lost_criticals().len(), 1);
         assert_eq!(result.internal_damage.len(), usize::from(!disabled));
@@ -215,7 +211,7 @@ async fn weapon_explosions_disable_mount_before_damage_and_injure_surviving_crew
             if disabled { 0 } else { 2 }
         );
         assert_eq!(
-            world.btech.vehicles()[&id].sections()[&BattleVehicleSection::Front].internal,
+            world.btech.vehicles()[&id].sections()[&VehicleSection::Front].internal,
             if disabled { 8 } else { 5 }
         );
         persistence::save(&config.database(), &world).await.unwrap();
@@ -227,11 +223,11 @@ async fn weapon_explosions_disable_mount_before_damage_and_injure_surviving_crew
 }
 
 /// Find a deterministic stream for a specific multi-stage explosion path.
-fn matching_seed(predicate: impl Fn(&mut BattleDice) -> bool) -> [u8; 32] {
+fn matching_seed(predicate: impl Fn(&mut Dice) -> bool) -> [u8; 32] {
     for value in 0u32..100000 {
         let mut seed = [0; 32];
         seed[..4].copy_from_slice(&value.to_le_bytes());
-        if predicate(&mut BattleDice::seeded(seed)) {
+        if predicate(&mut Dice::seeded(seed)) {
             return seed;
         }
     }
@@ -240,10 +236,7 @@ fn matching_seed(predicate: impl Fn(&mut BattleDice) -> bool) -> [u8; 32] {
 
 /// Change only the victim's random stream.
 fn set_seed(world: &mut World, id: ObjectId, seed: [u8; 32]) {
-    world
-        .btech
-        .set_unit_dice(id, BattleDice::seeded(seed))
-        .unwrap();
+    world.btech.set_unit_dice(id, Dice::seeded(seed)).unwrap();
 }
 
 #[tokio::test]
@@ -263,12 +256,10 @@ async fn ammunition_cascade_commits_complete_damage_or_rolls_back_spent_bins() {
     persistence::save(&config.database(), &world).await.unwrap();
     let mut loaded = persistence::load(&config.database()).await.unwrap();
     let result =
-        resolve_battle_vehicle_critical(&mut world, id, BattleVehicleSection::Turret, rules)
-            .unwrap();
+        resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Turret, rules).unwrap();
     assert_eq!(
         result,
-        resolve_battle_vehicle_critical(&mut loaded, id, BattleVehicleSection::Turret, rules)
-            .unwrap()
+        resolve_battle_vehicle_critical(&mut loaded, id, VehicleSection::Turret, rules).unwrap()
     );
     assert_eq!(world.btech, loaded.btech);
     assert_eq!(result.ammunition_cascade.as_ref().unwrap().damage, 400);
@@ -276,7 +267,7 @@ async fn ammunition_cascade_commits_complete_damage_or_rolls_back_spent_bins() {
     assert_eq!(result.internal_damage[0].discarded, 392);
     assert!(!world.btech.vehicles()[&id].is_destroyed());
     assert_eq!(
-        world.btech.vehicles()[&id].sections()[&BattleVehicleSection::Rear].armor,
+        world.btech.vehicles()[&id].sections()[&VehicleSection::Rear].armor,
         20
     );
     assert!(
@@ -302,7 +293,7 @@ async fn ammunition_cascade_commits_complete_damage_or_rolls_back_spent_bins() {
         .insert(Flag::InCharacter);
     let before = world.btech.clone();
     let report =
-        resolve_battle_vehicle_critical(&mut world, id, BattleVehicleSection::Rear, rules).unwrap();
+        resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Rear, rules).unwrap();
     assert!(
         report
             .internal_damage
@@ -312,14 +303,9 @@ async fn ammunition_cascade_commits_complete_damage_or_rolls_back_spent_bins() {
     assert!(world.btech.vehicles()[&id].crew_killed());
     world.btech = before;
     rules.enabled = false;
-    let report = resolve_battle_vehicle_internal_damage(
-        &mut world,
-        id,
-        BattleVehicleSection::Front,
-        100,
-        rules,
-    )
-    .unwrap();
+    let report =
+        resolve_battle_vehicle_internal_damage(&mut world, id, VehicleSection::Front, 100, rules)
+            .unwrap();
     assert!(report.unit_destroyed);
     assert!(!world.btech.vehicles()[&id].crew_killed());
     assert_eq!(world.objects[&ObjectId(1)].location, Some(id));
@@ -359,14 +345,14 @@ async fn hotloaded_vehicle_criticals_require_usable_normal_ammunition() {
             .unwrap()
             .weapons
             .iter()
-            .position(|mount| mount.weapon == BattleWeapon::Lrm5)
+            .position(|mount| mount.weapon == Weapon::Lrm5)
             .unwrap();
         if lost_bin {
             destroy_battle_vehicle_critical(
                 &mut world,
                 id,
                 VehicleCriticalLocation {
-                    section: BattleVehicleSection::Left,
+                    section: VehicleSection::Left,
                     slot: 0,
                 },
             )
@@ -387,23 +373,22 @@ async fn hotloaded_vehicle_criticals_require_usable_normal_ammunition() {
         let mut rules = rules();
         rules.enabled = true;
         let report =
-            resolve_battle_vehicle_critical(&mut world, id, BattleVehicleSection::Front, rules)
-                .unwrap();
+            resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Front, rules).unwrap();
         assert_eq!(
             report,
-            resolve_battle_vehicle_critical(&mut restored, id, BattleVehicleSection::Front, rules)
+            resolve_battle_vehicle_critical(&mut restored, id, VehicleSection::Front, rules)
                 .unwrap()
         );
         assert_eq!(world.btech, restored.btech);
         let vehicle = &world.btech.vehicles()[&id];
         assert_eq!(
-            vehicle.sections()[&BattleVehicleSection::Front].internal,
+            vehicle.sections()[&VehicleSection::Front].internal,
             8 - expected
         );
         assert_eq!(vehicle.pilot_injuries(), 0);
         assert_eq!(vehicle.ammunition(), ammo);
         assert!(vehicle.critical_destroyed(VehicleCriticalLocation {
-            section: BattleVehicleSection::Front,
+            section: VehicleSection::Front,
             slot: 0
         }));
         assert_eq!(report.internal_damage.len(), usize::from(expected > 0));
@@ -414,7 +399,7 @@ async fn hotloaded_vehicle_criticals_require_usable_normal_ammunition() {
                 .any(|notice| notice.text.contains("hotloaded launcher explodes")),
             expected > 0
         );
-        let mut dice = BattleDice::seeded(stream);
+        let mut dice = Dice::seeded(stream);
         dice.two_d6();
         dice.die(1).unwrap();
         if expected > 0 {
@@ -458,7 +443,7 @@ async fn incendiary_vehicle_criticals_require_recycling_and_matching_supply() {
             .unwrap()
             .weapons
             .iter()
-            .position(|mount| mount.weapon == BattleWeapon::Ac2)
+            .position(|mount| mount.weapon == Weapon::Ac2)
             .unwrap();
         if recycling {
             world
@@ -473,11 +458,10 @@ async fn incendiary_vehicle_criticals_require_recycling_and_matching_supply() {
         let mut rules = rules();
         rules.enabled = true;
         let report =
-            resolve_battle_vehicle_critical(&mut world, id, BattleVehicleSection::Front, rules)
-                .unwrap();
+            resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Front, rules).unwrap();
         let vehicle = &world.btech.vehicles()[&id];
         assert_eq!(
-            vehicle.sections()[&BattleVehicleSection::Front].internal,
+            vehicle.sections()[&VehicleSection::Front].internal,
             8 - expected
         );
         assert_eq!(vehicle.pilot_injuries(), 0);
@@ -529,12 +513,11 @@ async fn hotloaded_nested_crew_and_hull_loss_preserves_surviving_ammunition() {
     let mut rules = rules();
     rules.enabled = true;
     let report =
-        resolve_battle_vehicle_critical(&mut world, id, BattleVehicleSection::Front, rules)
-            .unwrap();
+        resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Front, rules).unwrap();
     assert!(report.internal_damage[0].unit_destroyed);
     assert!(world.btech.vehicles()[&id].crew_killed());
     assert_eq!(
-        world.btech.vehicles()[&id].sections()[&BattleVehicleSection::Front].internal,
+        world.btech.vehicles()[&id].sections()[&VehicleSection::Front].internal,
         0
     );
     assert_eq!(world.btech.vehicles()[&id].ammunition(), ammo);
@@ -556,18 +539,17 @@ async fn nonexplosive_vehicle_firing_modes_allow_weapon_destruction() {
         let mut rules = rules();
         rules.enabled = true;
         let report =
-            resolve_battle_vehicle_critical(&mut world, id, BattleVehicleSection::Front, rules)
-                .unwrap();
+            resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Front, rules).unwrap();
         assert!(report.internal_damage.is_empty());
         assert!(report.pilot_injury.is_none());
         assert!(
             world.btech.vehicles()[&id].critical_destroyed(VehicleCriticalLocation {
-                section: BattleVehicleSection::Front,
+                section: VehicleSection::Front,
                 slot: 0
             })
         );
         assert_eq!(
-            world.btech.vehicles()[&id].sections()[&BattleVehicleSection::Front].internal,
+            world.btech.vehicles()[&id].sections()[&VehicleSection::Front].internal,
             8
         );
     }

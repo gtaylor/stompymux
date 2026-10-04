@@ -7,12 +7,12 @@ use std::sync::Arc;
 /// Stable game-directory part identifier with a positive stored quantity.
 /// These identify loose inventory; they never create or modify an installed critical slot.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BattleInventoryEntry {
+pub struct InventoryEntry {
     pub part_id: i32,
     pub quantity: i32,
 }
 
-impl BattleInventoryEntry {
+impl InventoryEntry {
     /// Stable ordering keeps snapshots and persisted manifests deterministic.
     pub(crate) fn key(self) -> i32 {
         self.part_id
@@ -27,7 +27,7 @@ impl BattleInventoryEntry {
 }
 
 /// Inspect one object's detached-compatible ordered inventory without requiring a unit chassis.
-pub fn inventory(world: &World, object: ObjectId) -> Result<&[BattleInventoryEntry]> {
+pub fn inventory(world: &World, object: ObjectId) -> Result<&[InventoryEntry]> {
     ensure!(
         world
             .objects
@@ -73,7 +73,7 @@ pub fn part_cost(world: &World, part_id: i32) -> Result<u64> {
 
 pub fn set_part_cost(world: &mut World, part_id: i32, cost: u64) -> Result<()> {
     ensure!(
-        super::BattlePart::from_id(part_id).is_some(),
+        super::Part::from_id(part_id).is_some(),
         "Unknown inventory part"
     );
     let costs = Arc::make_mut(&mut world.btech.part_costs);
@@ -113,7 +113,7 @@ pub fn set_inventory_quantity_action(
                 config.battletech.tsm_tow_bonus != 0,
             )?;
         }
-        let name = super::stock_selection::name(&BattleInventoryEntry {
+        let name = super::stock_selection::name(&InventoryEntry {
             part_id,
             quantity: 1,
         });
@@ -133,7 +133,7 @@ pub(super) fn edit_quantity(
 ) -> Result<()> {
     inventory(world, object)?;
     ensure!(quantity >= 0, "Inventory quantity cannot be negative");
-    let entry = BattleInventoryEntry {
+    let entry = InventoryEntry {
         part_id,
         quantity: quantity.max(1),
     };
@@ -165,7 +165,7 @@ pub(super) fn edit_quantity(
 pub(super) fn change_quantity(
     world: &mut World,
     object: ObjectId,
-    entry: BattleInventoryEntry,
+    entry: InventoryEntry,
     change: i32,
 ) -> Result<()> {
     let old = inventory(world, object)?

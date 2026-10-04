@@ -36,7 +36,7 @@ async fn export_terrain_effects_and_metadata_match_asset_contract() {
                 &mut candidate,
                 map,
                 HexCoordinate { x, y: 0 },
-                Some(BattleDecoration::new(kind, remaining, None)),
+                Some(Decoration::new(kind, remaining, None)),
             )
             .unwrap();
         }
@@ -95,11 +95,7 @@ async fn export_base_smoke_and_all_canonical_tiles() {
             &mut world,
             map,
             HexCoordinate { x, y: 0 },
-            Some(BattleDecoration::new(
-                DecorationKind::Smoke,
-                remaining,
-                None,
-            )),
+            Some(Decoration::new(DecorationKind::Smoke, remaining, None)),
         )
         .unwrap();
     }

@@ -23,7 +23,7 @@ async fn jump_heading_rates_preserve_trajectory_and_replay_across_chassis() {
                 .unwrap();
                 support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
                 let id = world.create(&config, "Jumper".into(), Kind::Thing);
-                let mut definition = BattleTemplate::parse(
+                let mut definition = MechTemplate::parse(
                     "test",
                     if quad {
                         include_str!("../game/mechs/SCP-1N.toml")
@@ -89,9 +89,9 @@ async fn jump_heading_rates_preserve_trajectory_and_replay_across_chassis() {
                     .await
                     .unwrap();
                 let mut replay = persistence::load(&config.database()).await.unwrap();
-                let rules = BattleMovementRules {
+                let rules = MovementRules {
                     fasa_turning: fasa,
-                    ..BattleMovementRules::STANDARD
+                    ..MovementRules::STANDARD
                 };
                 for tick in 1..=4 {
                     let before = turning.btech.constructed_units()[&id].clone();
@@ -122,7 +122,7 @@ async fn jump_heading_rates_preserve_trajectory_and_replay_across_chassis() {
                         .unwrap()
                         .systems
                         .iter()
-                        .find(|part| part.system == BattleSystem::JumpJet)
+                        .find(|part| part.system == System::JumpJet)
                         .unwrap()
                         .location;
                     destroy_battle_critical(&mut damaged, id, jet).unwrap();

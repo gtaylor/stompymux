@@ -1,7 +1,6 @@
 //! Immediate ground and airborne balance consequences of BattleMech damage.
 use super::{
-    BattleFallReport, BattleFallRules, BattlePilotingCheck, BattlePosture, BattleSection,
-    BattleSystem, CriticalLocation,
+    CriticalLocation, FallRules, MechFallReport, MechSection, PilotingCheck, Posture, System,
 };
 use crate::{ObjectId, World};
 use anyhow::Result;
@@ -9,40 +8,40 @@ use serde::Serialize;
 
 /// Damage event evaluated with the unit's condition at that exact point in the cascade.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-pub enum BattleBalanceCause {
+pub enum BalanceCause {
     Critical {
         location: CriticalLocation,
-        system: BattleSystem,
+        system: System,
     },
-    SectionLost(BattleSection),
+    SectionLost(MechSection),
 }
 
 /// A balance attempt or forced fall, including its separately rolled pilot protection check.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleBalanceReport {
+pub struct BalanceReport {
     /// Assigned pilot captured before a fall can change crew state.
     pub pilot: Option<ObjectId>,
-    pub cause: BattleBalanceCause,
+    pub cause: BalanceCause,
     /// Forced falls do not roll to remain upright.
-    pub check: Option<BattlePilotingCheck>,
+    pub check: Option<PilotingCheck>,
     /// Accepted balance-check XP captured before any subsequent fall.
-    pub experience_messages: Vec<super::BattleChannelMessage>,
-    pub fall: Option<BattleFallReport>,
+    pub experience_messages: Vec<super::DiagnosticMessage>,
+    pub fall: Option<MechFallReport>,
     /// Observer feedback captured before the fall changes posture, visibility or power.
-    pub observer_notices: Vec<super::BattleNotice>,
+    pub observer_notices: Vec<super::Notice>,
     /// Impacts caused by landing among other units after this balance failure.
-    pub collision_impacts: Vec<super::BattleTacticalImpact>,
+    pub collision_impacts: Vec<super::TacticalImpact>,
     /// Additional avoidance falls caused by the landing collision.
-    pub collision_falls: Vec<BattleFallReport>,
+    pub collision_falls: Vec<MechFallReport>,
 }
 
 /// Apply a newly recorded loss exactly once; the enclosing damage action owns rollback.
 pub(super) fn resolve_balance(
     world: &mut World,
     id: ObjectId,
-    cause: BattleBalanceCause,
-    rules: BattleFallRules,
-) -> Result<Option<BattleBalanceReport>> {
+    cause: BalanceCause,
+    rules: FallRules,
+) -> Result<Option<BalanceReport>> {
     let unit = &world.btech.constructed_units()[&id];
     if unit.is_destroyed() {
         return Ok(None);
@@ -53,8 +52,8 @@ pub(super) fn resolve_balance(
     let airborne = unit.airborne();
     let gyro = matches!(
         cause,
-        BattleBalanceCause::Critical {
-            system: BattleSystem::Gyro,
+        BalanceCause::Critical {
+            system: System::Gyro,
             ..
         }
     );
@@ -64,13 +63,13 @@ pub(super) fn resolve_balance(
     let thrust_loss = airborne
         && matches!(
             cause,
-            BattleBalanceCause::Critical {
-                system: BattleSystem::JumpJet,
+            BalanceCause::Critical {
+                system: System::JumpJet,
                 ..
-            } | BattleBalanceCause::SectionLost(_)
+            } | BalanceCause::SectionLost(_)
         )
         && unit.jump_capacity(100)?.speed < 10.75;
-    if unit.posture() == BattlePosture::Prone && !thrust_loss {
+    if unit.posture() == Posture::Prone && !thrust_loss {
         return Ok(None);
     }
     if airborne && !gyro && !thrust_loss {
@@ -78,9 +77,9 @@ pub(super) fn resolve_balance(
             // Structural collapse changes posture while the jets continue the same trajectory.
             let unit = world.btech.constructed.get_mut(&id).unwrap();
             unit.hull_down = Default::default();
-            unit.posture = BattlePosture::Prone;
+            unit.posture = Posture::Prone;
             unit.facing = Default::default();
-            if rules.stagger != super::BattleStaggerMode::Traditional {
+            if rules.stagger != super::StaggerMode::Traditional {
                 unit.stagger.clear_damage();
             }
         }
@@ -96,34 +95,30 @@ pub(super) fn resolve_balance(
         true
     } else {
         match cause {
-            BattleBalanceCause::SectionLost(section) if leg(section) => true,
-            BattleBalanceCause::Critical {
-                system: BattleSystem::Gyro,
+            BalanceCause::SectionLost(section) if leg(section) => true,
+            BalanceCause::Critical {
+                system: System::Gyro,
                 ..
             } => match unit.gyro_damage() {
                 1 => false,
                 2 => true,
                 _ => return Ok(None),
             },
-            BattleBalanceCause::Critical { location, system } if leg(location.section) => {
-                match system {
-                    BattleSystem::ShoulderOrHip => false,
-                    BattleSystem::UpperActuator
-                    | BattleSystem::LowerActuator
-                    | BattleSystem::HandOrFootActuator => {
-                        let hip_lost = unit.loadout()?.systems.iter().any(|part| {
-                            part.location.section == location.section
-                                && part.system == BattleSystem::ShoulderOrHip
-                                && unit.critical_unavailable(part.location)
-                        });
-                        if hip_lost {
-                            return Ok(None);
-                        }
-                        false
+            BalanceCause::Critical { location, system } if leg(location.section) => match system {
+                System::ShoulderOrHip => false,
+                System::UpperActuator | System::LowerActuator | System::HandOrFootActuator => {
+                    let hip_lost = unit.loadout()?.systems.iter().any(|part| {
+                        part.location.section == location.section
+                            && part.system == System::ShoulderOrHip
+                            && unit.critical_unavailable(part.location)
+                    });
+                    if hip_lost {
+                        return Ok(None);
                     }
-                    _ => return Ok(None),
+                    false
                 }
-            }
+                _ => return Ok(None),
+            },
             _ => return Ok(None),
         }
     };
@@ -143,7 +138,7 @@ pub(super) fn resolve_balance(
     let fall = if check.is_none_or(|check| !check.success) {
         let text = if airborne {
             "falls from the sky!"
-        } else if matches!(cause, BattleBalanceCause::SectionLost(_)) {
+        } else if matches!(cause, BalanceCause::SectionLost(_)) {
             "crashes to the ground!"
         } else if gyro && forced {
             "is knocked over!"
@@ -165,7 +160,7 @@ pub(super) fn resolve_balance(
     } else {
         None
     };
-    Ok(Some(BattleBalanceReport {
+    Ok(Some(BalanceReport {
         experience_messages,
         pilot,
         cause,

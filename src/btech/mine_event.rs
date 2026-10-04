@@ -7,24 +7,24 @@ use serde::Serialize;
 /// Applied mine effects and queued callbacks for one physical event.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[must_use = "Publish mine notices, character consequences and callbacks in the enclosing action"]
-pub struct BattleMineEventReport {
+pub struct MineEventReport {
     pub unit: ObjectId,
-    pub reason: BattleMineTriggerReason,
-    pub blasts: Vec<BattleMineBlastReport>,
+    pub reason: MineTriggerReason,
+    pub blasts: Vec<MineBlastReport>,
     /// Each selected scripted field queues one callback on the triggering unit.
     pub triggers: usize,
-    pub notices: Vec<BattleNotice>,
+    pub notices: Vec<Notice>,
     /// Pilot-only messages indexed into the enclosing notice stream.
-    pub pilot_notices: Vec<BattlePilotNotice>,
+    pub pilot_notices: Vec<PilotNotice>,
 }
 
 /// Resolve a physical mine event; callers own movement admission and publication.
 pub fn activate_mines(
     world: &mut World,
     unit: ObjectId,
-    reason: BattleMineTriggerReason,
-    rules: BattleFallRules,
-) -> Result<BattleMineEventReport> {
+    reason: MineTriggerReason,
+    rules: FallRules,
+) -> Result<MineEventReport> {
     resolve(world, unit, reason, rules, false)
 }
 
@@ -32,16 +32,16 @@ pub fn activate_mines(
 pub(super) fn resolve(
     world: &mut World,
     unit: ObjectId,
-    reason: BattleMineTriggerReason,
-    rules: BattleFallRules,
+    reason: MineTriggerReason,
+    rules: FallRules,
     character: bool,
-) -> Result<BattleMineEventReport> {
+) -> Result<MineEventReport> {
     let position = super::scanner::scanner_unit(world, unit)
         .context("Unit is not constructed")?
         .position
         .context("Unit is not placed")?;
     let selected = mine_activations(world, unit, reason)?;
-    let mut report = BattleMineEventReport {
+    let mut report = MineEventReport {
         unit,
         reason,
         blasts: Vec::new(),
@@ -63,13 +63,13 @@ pub(super) fn resolve(
                 continue;
             }
             match activation.response {
-                BattleMineResponse::Spotted => report.notices.push(BattleNotice {
+                MineResponse::Spotted => report.notices.push(Notice {
                     unit,
                     text: "You spot small bomblets lying on the ground here..".into(),
                 }),
-                BattleMineResponse::Trigger => report.triggers += 1,
-                BattleMineResponse::Explode => {
-                    let (cockpit, observed) = if reason == BattleMineTriggerReason::Step {
+                MineResponse::Trigger => report.triggers += 1,
+                MineResponse::Explode => {
+                    let (cockpit, observed) = if reason == MineTriggerReason::Step {
                         (
                             format!(
                                 "As you move to {},{}, you trigger a mine!",
@@ -86,11 +86,11 @@ pub(super) fn resolve(
                     report
                         .notices
                         .extend(super::broadcast::observer_notices(world, unit, &observed));
-                    report.notices.push(BattleNotice {
+                    report.notices.push(Notice {
                         unit,
                         text: cockpit,
                     });
-                    if activation.mine.kind == BattleMineKind::Vibra
+                    if activation.mine.kind == MineKind::Vibra
                         && activation.mine.coordinate
                             != (HexCoordinate {
                                 x: i32::from(position.x),
@@ -129,7 +129,7 @@ pub(super) fn explosion_notices(
     world: &World,
     map: ObjectId,
     coordinate: HexCoordinate,
-) -> Result<Vec<BattleNotice>> {
+) -> Result<Vec<Notice>> {
     super::broadcast::hex_notices(world, map, coordinate, true, |location| {
         format!("A mine explodes in {location}!")
     })

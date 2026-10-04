@@ -1,13 +1,12 @@
 //! Derived damage limits and their application to current movement and persistent controls.
 use stompymux_rs::{
-    BattleDamagePhase as Phase, BattleSection as Section, BattleTemplate, BattleUnit,
-    CriticalLocation,
+    CriticalLocation, DamagePhase as Phase, Mech, MechSection as Section, MechTemplate,
 };
 
 /// Reference Jenner with intact conventional biped equipment.
-fn unit() -> BattleUnit {
-    BattleUnit::from_template(
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+fn unit() -> Mech {
+    Mech::from_template(
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap()
 }
@@ -76,9 +75,9 @@ fn missing_legs_and_gyro_losses_have_distinct_mobility_and_piloting_effects() {
 }
 
 /// Construct the unchanged Scorpion asset for chassis-specific scenarios.
-fn quad() -> BattleUnit {
-    BattleUnit::from_template(
-        BattleTemplate::parse("SCP-1N", include_str!("../game/mechs/SCP-1N.toml")).unwrap(),
+fn quad() -> Mech {
+    Mech::from_template(
+        MechTemplate::parse("SCP-1N", include_str!("../game/mechs/SCP-1N.toml")).unwrap(),
     )
     .unwrap()
 }
@@ -105,7 +104,7 @@ fn quad_leg_loss_patterns_and_flooded_support_have_distinct_limits() {
                 }
             }
             encoded["flooded_sections"] = serde_json::to_value(floods).unwrap();
-            let damaged: BattleUnit = serde_json::from_value(encoded).unwrap();
+            let damaged: Mech = serde_json::from_value(encoded).unwrap();
             assert_eq!(damaged.validate_charge_support().is_ok(), missing <= 1);
             assert_eq!(damaged.unavailable_legs(), missing as usize);
             assert_eq!(damaged.airborne_support_lost(), missing >= 3);
@@ -155,13 +154,13 @@ fn quad_actuators_hips_and_gyro_preserve_order_and_restart_calculation() {
             })
             .collect();
         encoded["lost_criticals"] = serde_json::to_value(losses).unwrap();
-        let damaged: BattleUnit = serde_json::from_value(encoded.clone()).unwrap();
+        let damaged: Mech = serde_json::from_value(encoded.clone()).unwrap();
         assert_eq!(
             damaged.mobility().maximum_speed,
             96.75 / 2f64.powi(count as i32)
         );
         assert_eq!(damaged.mobility().piloting_modifier, count as u8 * 2);
-        let restored: BattleUnit =
+        let restored: Mech =
             serde_json::from_value(serde_json::to_value(&damaged).unwrap()).unwrap();
         assert_eq!(restored.mobility(), damaged.mobility());
         assert!(!restored.airborne_support_lost());
@@ -178,7 +177,7 @@ fn quad_actuators_hips_and_gyro_preserve_order_and_restart_calculation() {
             })
             .unwrap(),
         ]);
-        let disabled: BattleUnit = serde_json::from_value(encoded).unwrap();
+        let disabled: Mech = serde_json::from_value(encoded).unwrap();
         assert_eq!(disabled.mobility().maximum_speed, 0.0);
         assert!(disabled.stand_requires_roll().is_err());
     }
@@ -186,7 +185,7 @@ fn quad_actuators_hips_and_gyro_preserve_order_and_restart_calculation() {
         let mut encoded = serde_json::to_value(&quad).unwrap();
         encoded["lost_criticals"] =
             serde_json::to_value([1, 2, 3].map(|slot| CriticalLocation { section, slot })).unwrap();
-        let damaged: BattleUnit = serde_json::from_value(encoded).unwrap();
+        let damaged: Mech = serde_json::from_value(encoded).unwrap();
         assert_eq!(
             (
                 damaged.mobility().maximum_speed,
@@ -217,7 +216,7 @@ async fn quad_shallow_water_counts_front_leg_sinks_and_excludes_flooded_equipmen
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let mut encoded = serde_json::to_value(quad()).unwrap();
-    encoded["position"] = serde_json::to_value(BattlePosition { map, x: 0, y: 0 }).unwrap();
+    encoded["position"] = serde_json::to_value(Position { map, x: 0, y: 0 }).unwrap();
     encoded["ground_elevation"] = (-1).into();
     for section in [Section::LeftArm, Section::RightArm] {
         let key = serde_json::to_value(section).unwrap();
@@ -231,10 +230,10 @@ async fn quad_shallow_water_counts_front_leg_sinks_and_excludes_flooded_equipmen
             .unwrap();
         }
     }
-    let full: BattleUnit = serde_json::from_value(encoded.clone()).unwrap();
+    let full: Mech = serde_json::from_value(encoded.clone()).unwrap();
     assert_eq!(full.heat_rates(&world).dissipation, 14.0);
     encoded["flooded_sections"] = serde_json::to_value([Section::LeftArm]).unwrap();
-    let flooded: BattleUnit = serde_json::from_value(encoded).unwrap();
+    let flooded: Mech = serde_json::from_value(encoded).unwrap();
     // Flooding removes two base cooling points as well as their immersion bonus.
     assert_eq!(flooded.heat_rates(&world).dissipation, 10.0);
     assert_eq!(flooded.mobility().maximum_speed, 86.0);
@@ -249,35 +248,30 @@ fn quad_acceleration_lateral_speed_and_leg_loss_cancel_active_offset() {
     assert_eq!(base.ground_acceleration(&world), 9.675);
     assert_eq!(unit().ground_acceleration(&world), 5.9125);
     let mut encoded = serde_json::to_value(&base).unwrap();
-    encoded["lateral"] = serde_json::to_value(BattleLateralState {
-        active: BattleLateralMode::FrontLeft,
+    encoded["lateral"] = serde_json::to_value(LateralState {
+        active: LateralMode::FrontLeft,
         ..Default::default()
     })
     .unwrap();
-    let moving: BattleUnit = serde_json::from_value(encoded.clone()).unwrap();
+    let moving: Mech = serde_json::from_value(encoded.clone()).unwrap();
     assert_eq!(moving.lateral_speed(96.75), 86.0);
     assert!((moving.lateral_speed(-64.5) + 64.5 * 86.0 / 96.75).abs() < 1e-10);
     assert_eq!(unit().lateral_speed(-64.5), -64.5);
-    for pending in [
-        None,
-        Some(BattleLateralMode::None),
-        Some(BattleLateralMode::FrontRight),
-    ] {
-        encoded["lateral"] = serde_json::to_value(BattleLateralState {
-            active: BattleLateralMode::FrontLeft,
+    for pending in [None, Some(LateralMode::None), Some(LateralMode::FrontRight)] {
+        encoded["lateral"] = serde_json::to_value(LateralState {
+            active: LateralMode::FrontLeft,
             pending,
             remaining: if pending.is_some() { 3 } else { 0 },
         })
         .unwrap();
-        let mut damaged: BattleUnit = serde_json::from_value(encoded.clone()).unwrap();
+        let mut damaged: Mech = serde_json::from_value(encoded.clone()).unwrap();
         damaged.damage_phase(Section::LeftArm, 100, Phase::Internal);
-        assert_eq!(damaged.lateral().active, BattleLateralMode::None);
+        assert_eq!(damaged.lateral().active, LateralMode::None);
         assert_eq!(
             damaged.lateral().pending,
-            pending.filter(|mode| *mode != BattleLateralMode::None)
+            pending.filter(|mode| *mode != LateralMode::None)
         );
-        let saved: BattleUnit =
-            serde_json::from_value(serde_json::to_value(&damaged).unwrap()).unwrap();
+        let saved: Mech = serde_json::from_value(serde_json::to_value(&damaged).unwrap()).unwrap();
         assert_eq!(saved.lateral(), damaged.lateral());
     }
 }
@@ -307,18 +301,18 @@ fn biped_support_and_quad_gyro_standing_rules() {
         slot: 3,
     }])
     .unwrap();
-    let damaged: BattleUnit = serde_json::from_value(encoded).unwrap();
+    let damaged: Mech = serde_json::from_value(encoded).unwrap();
     assert!(!damaged.stand_requires_roll().unwrap());
 }
 
 /// Quad kicks use front legs, allow one missing support and reject hip damage or arm attacks.
 #[test]
 fn quad_physical_support_uses_selected_front_leg_and_surviving_hips() {
-    use stompymux_rs::{BattleArm, BattleArmAttack, BattleLeg, BattlePhysicalAttack as Attack};
+    use stompymux_rs::{Arm, ArmAttack, Leg, PhysicalAttack as Attack};
     let base = quad();
     for (leg, section) in [
-        (BattleLeg::Left, Section::LeftArm),
-        (BattleLeg::Right, Section::RightArm),
+        (Leg::Left, Section::LeftArm),
+        (Leg::Right, Section::RightArm),
     ] {
         for attack in [Attack::Kick { leg }, Attack::Trip { leg }] {
             assert_eq!(attack.section(base.chassis()), section);
@@ -335,7 +329,7 @@ fn quad_physical_support_uses_selected_front_leg_and_surviving_hips() {
                     .collect();
                 let expected = floods.len() <= 1 && !floods.contains(&section);
                 encoded["flooded_sections"] = serde_json::to_value(&floods).unwrap();
-                let damaged: BattleUnit = serde_json::from_value(encoded).unwrap();
+                let damaged: Mech = serde_json::from_value(encoded).unwrap();
                 assert_eq!(attack.validate_chassis_support(&damaged).is_ok(), expected);
             }
             for &hip in base.chassis().legs() {
@@ -345,21 +339,21 @@ fn quad_physical_support_uses_selected_front_leg_and_surviving_hips() {
                     slot: 0,
                 }])
                 .unwrap();
-                let damaged: BattleUnit = serde_json::from_value(encoded).unwrap();
+                let damaged: Mech = serde_json::from_value(encoded).unwrap();
                 assert!(attack.validate_chassis_support(&damaged).is_err());
             }
         }
     }
-    for arm in [BattleArm::Left, BattleArm::Right] {
+    for arm in [Arm::Left, Arm::Right] {
         for attack in [
             Attack::Punch { arm },
             Attack::Weapon {
                 arm,
-                weapon: BattleArmAttack::Axe,
+                weapon: ArmAttack::Axe,
             },
             Attack::Weapon {
                 arm,
-                weapon: BattleArmAttack::Flail,
+                weapon: ArmAttack::Flail,
             },
             Attack::Club,
         ] {
@@ -388,7 +382,7 @@ fn quad_mounting_modifiers_use_all_four_leg_roles() {
                     .collect::<Vec<_>>(),
             )
             .unwrap();
-            let damaged: BattleUnit = serde_json::from_value(encoded).unwrap();
+            let damaged: Mech = serde_json::from_value(encoded).unwrap();
             assert_eq!(damaged.mounting_modifier(section), expected);
         }
     }
@@ -398,7 +392,7 @@ fn quad_mounting_modifiers_use_all_four_leg_roles() {
 #[test]
 fn quad_prone_mount_support_covers_all_sections_and_loss_patterns() {
     let mut encoded = serde_json::to_value(quad()).unwrap();
-    encoded["posture"] = serde_json::to_value(stompymux_rs::BattlePosture::Prone).unwrap();
+    encoded["posture"] = serde_json::to_value(stompymux_rs::Posture::Prone).unwrap();
     for section in Section::ALL {
         let key = serde_json::to_value(section).unwrap();
         let mut part = encoded["definition"]["sections"]["LeftArm"]["criticals"]["0"].clone();
@@ -413,7 +407,7 @@ fn quad_prone_mount_support_covers_all_sections_and_loss_patterns() {
                 state["sections"][key.as_str().unwrap()]["internal"] = 0.into();
             }
         }
-        let unit: BattleUnit = serde_json::from_value(state).unwrap();
+        let unit: Mech = serde_json::from_value(state).unwrap();
         for (index, mount) in unit.loadout().unwrap().weapons.iter().enumerate() {
             let section = mount.criticals[0].section;
             let expected = match mask.count_ones() {
@@ -475,7 +469,7 @@ fn quad_bootlegger_uses_four_legs_for_damage_and_recovery() {
                     .collect::<Vec<_>>(),
             )
             .unwrap();
-            let unit: BattleUnit = serde_json::from_value(encoded).unwrap();
+            let unit: Mech = serde_json::from_value(encoded).unwrap();
             assert_eq!(
                 unit.bootlegger_leg_modifier().unwrap(),
                 if slots.contains(&0) { 0 } else { 3 }
@@ -489,7 +483,7 @@ fn quad_bootlegger_uses_four_legs_for_damage_and_recovery() {
                 "destroyed" => encoded["sections"][key.as_str().unwrap()]["internal"] = 0.into(),
                 _ => encoded["limb_recycle"][key.as_str().unwrap()] = 30.into(),
             }
-            let unit: BattleUnit = serde_json::from_value(encoded).unwrap();
+            let unit: Mech = serde_json::from_value(encoded).unwrap();
             assert!(
                 unit.bootlegger_leg_modifier().is_err(),
                 "{section:?} {reason}"

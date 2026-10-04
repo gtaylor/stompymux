@@ -18,7 +18,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+        VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
             .unwrap(),
     )
     .unwrap();
@@ -35,35 +35,35 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
 
 #[test]
 fn vehicle_mount_arcs_partition_hull_and_keep_turret_narrow() {
-    let target = BattleVehicle::new(
-        BattleVehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+    let target = Vehicle::new(
+        VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
             .unwrap(),
     )
     .unwrap();
     let mut mount = target.loadout().unwrap().weapons[0].clone();
     for (section, inside, outside) in [
         (
-            BattleVehicleSection::Front,
+            VehicleSection::Front,
             vec![0.0, 60.0, 300.0, 359.0],
             vec![61.0, 180.0, 299.0],
         ),
         (
-            BattleVehicleSection::Rear,
+            VehicleSection::Rear,
             vec![121.0, 180.0, 239.0],
             vec![120.0, 240.0, 0.0],
         ),
         (
-            BattleVehicleSection::Left,
+            VehicleSection::Left,
             vec![240.0, 270.0, 299.0],
             vec![239.0, 300.0, 90.0],
         ),
         (
-            BattleVehicleSection::Right,
+            VehicleSection::Right,
             vec![61.0, 90.0, 120.0],
             vec![60.0, 121.0, 270.0],
         ),
         (
-            BattleVehicleSection::Turret,
+            VehicleSection::Turret,
             vec![330.0, 0.0, 30.0],
             vec![329.0, 31.0, 180.0],
         ),
@@ -116,7 +116,7 @@ async fn vehicle_weapon_geometry_uses_saved_locked_turret_and_section_survival()
     lock_battle_vehicle_turret(&mut world, id).unwrap();
     set_battle_heading(&mut world, id, ObjectId(1), 90.0).unwrap();
     for _ in 0..20 {
-        advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
+        advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
     }
     assert!(
         world.btech.vehicles()[&id]
@@ -143,9 +143,9 @@ async fn vehicle_weapon_geometry_uses_saved_locked_turret_and_section_survival()
     damage_battle_vehicle_phase(
         &mut loaded,
         id,
-        BattleVehicleSection::Turret,
+        VehicleSection::Turret,
         100,
-        BattleDamagePhase::Internal,
+        DamagePhase::Internal,
     )
     .unwrap();
     assert!(
@@ -153,6 +153,6 @@ async fn vehicle_weapon_geometry_uses_saved_locked_turret_and_section_survival()
             .weapon_bears_on(0, 180.0)
             .unwrap()
     );
-    let unplaced = BattleVehicle::new(loaded.btech.vehicles()[&id].definition().clone()).unwrap();
+    let unplaced = Vehicle::new(loaded.btech.vehicles()[&id].definition().clone()).unwrap();
     assert!(unplaced.weapon_bears_on(0, 0.0).is_err());
 }

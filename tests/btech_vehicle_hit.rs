@@ -1,13 +1,10 @@
 //! Standard vehicle hit tables, turret loss, and armor-dependent critical dice boundaries.
-use stompymux_rs::{
-    BattleDice, BattleHitArc as Arc, BattleVehicle, BattleVehicleSection as S,
-    BattleVehicleTemplate,
-};
+use stompymux_rs::{Dice, HitArc as Arc, Vehicle, VehicleSection as S, VehicleTemplate};
 
 /// Normalize armor to percentages while preserving valid vehicle anatomy and equipment.
-fn vehicle(armor: u16) -> BattleVehicle {
-    let vehicle = BattleVehicle::new(
-        BattleVehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+fn vehicle(armor: u16) -> Vehicle {
+    let vehicle = Vehicle::new(
+        VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
             .unwrap(),
     )
     .unwrap();
@@ -23,10 +20,10 @@ fn vehicle(armor: u16) -> BattleVehicle {
 fn standard_vehicle_locations_cover_every_arc_roll_and_turret_state() {
     let intact = vehicle(70);
     let mut lost = intact.clone();
-    lost.damage_phase(S::Turret, 100, stompymux_rs::BattleDamagePhase::Internal)
+    lost.damage_phase(S::Turret, 100, stompymux_rs::DamagePhase::Internal)
         .unwrap();
-    let turretless = BattleVehicle::new(
-        BattleVehicleTemplate::parse(
+    let turretless = Vehicle::new(
+        VehicleTemplate::parse(
             "Flatbed_Truck",
             include_str!("../game/mechs/Flatbed_Truck.toml"),
         )
@@ -104,7 +101,7 @@ fn standard_vehicle_locations_cover_every_arc_roll_and_turret_state() {
         ),
     ] {
         for roll in 2..=12 {
-            let mut dice = BattleDice::seeded([3; 32]);
+            let mut dice = Dice::seeded([3; 32]);
             let before = dice.clone();
             let hit = intact.standard_hit(arc, roll, 2, &mut dice).unwrap();
             assert_eq!(hit.section, row[usize::from(roll - 2)]);
@@ -121,7 +118,7 @@ fn standard_vehicle_locations_cover_every_arc_roll_and_turret_state() {
             }
         }
     }
-    let mut dice = BattleDice::seeded([4; 32]);
+    let mut dice = Dice::seeded([4; 32]);
     let before = dice.clone();
     for roll in [0, 1, 13, 255] {
         assert!(intact.standard_hit(Arc::Front, roll, 2, &mut dice).is_err());
@@ -143,7 +140,7 @@ fn critical_thresholds_and_modes_preserve_secondary_dice_order() {
     ] {
         let vehicle = vehicle(armor);
         for seed in 0..=255 {
-            let mut dice = BattleDice::seeded([seed; 32]);
+            let mut dice = Dice::seeded([seed; 32]);
             let mut expected = dice.clone();
             let critical = sides.is_some_and(|sides| {
                 expected.die(sides).unwrap() == if sides == 12 { 6 } else { 23 }
@@ -157,7 +154,7 @@ fn critical_thresholds_and_modes_preserve_secondary_dice_order() {
             );
             assert_eq!(dice, expected);
         }
-        let mut dice = BattleDice::seeded([3; 32]);
+        let mut dice = Dice::seeded([3; 32]);
         let before = dice.clone();
         for mode in [-1, 0, 1] {
             assert!(
@@ -175,8 +172,8 @@ fn critical_thresholds_and_modes_preserve_secondary_dice_order() {
 fn unarmored_faces_crit_without_dice_unless_stationary_or_critproof() {
     let mut state = serde_json::to_value(vehicle(0)).unwrap();
     state["definition"]["sections"]["front"]["armor"] = 0.into();
-    let unarmored: BattleVehicle = serde_json::from_value(state.clone()).unwrap();
-    let mut dice = BattleDice::seeded([5; 32]);
+    let unarmored: Vehicle = serde_json::from_value(state.clone()).unwrap();
+    let mut dice = Dice::seeded([5; 32]);
     let before = dice.clone();
     assert!(
         unarmored
@@ -186,7 +183,7 @@ fn unarmored_faces_crit_without_dice_unless_stationary_or_critproof() {
     );
     assert_eq!(dice, before);
     state["definition"]["attributes"]["specials"] = "CritProof_Tech".into();
-    let proof: BattleVehicle = serde_json::from_value(state.clone()).unwrap();
+    let proof: Vehicle = serde_json::from_value(state.clone()).unwrap();
     assert!(
         !proof
             .standard_hit(Arc::Front, 2, 2, &mut dice)
@@ -195,7 +192,7 @@ fn unarmored_faces_crit_without_dice_unless_stationary_or_critproof() {
     );
     state["definition"]["attributes"]["specials"] = "".into();
     state["definition"]["movement"] = "stationary".into();
-    let fixed: BattleVehicle = serde_json::from_value(state).unwrap();
+    let fixed: Vehicle = serde_json::from_value(state).unwrap();
     assert!(
         !fixed
             .standard_hit(Arc::Front, 2, 2, &mut dice)

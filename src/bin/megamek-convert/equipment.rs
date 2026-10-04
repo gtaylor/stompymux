@@ -7,7 +7,7 @@
 //! technology prefix. MegaMek writes Clan equipment with a `CL` or `Clan` prefix; unprefixed
 //! weapons are its Inner Sphere (or shared) versions.
 use anyhow::{Context, Result, bail, ensure};
-use stompymux_rs::{BattleAmmunitionMode, BattleWeapon};
+use stompymux_rs::{AmmunitionMode, Weapon};
 
 /// Technology base of a chassis or a piece of equipment.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -51,13 +51,13 @@ pub enum Critical {
     Fixed(&'static str),
     HeatSink(HeatSinkKind),
     Weapon {
-        weapon: BattleWeapon,
+        weapon: Weapon,
         rear: bool,
         one_shot: bool,
     },
     /// One bin holding a ton (or half a ton) of ammunition.
     Ammo {
-        weapon: BattleWeapon,
+        weapon: Weapon,
         modes: Vec<&'static str>,
         rounds: u16,
     },
@@ -249,23 +249,19 @@ const WEAPON_ALIASES: &[(&str, &str)] = &[
 
 /// Munition phrases MegaMek writes into ammunition names, and the stompymux bin mode each sets.
 /// Longer phrases come first so `swarm-i` is not read as `swarm`.
-const MUNITIONS: &[(&str, &str, BattleAmmunitionMode)] = &[
-    (
-        "artemis-capable",
-        "Artemis/Mine",
-        BattleAmmunitionMode::Artemis,
-    ),
-    ("narc-capable", "Narc/Smoke", BattleAmmunitionMode::Narc),
-    ("swarm-i", "Swarm1", BattleAmmunitionMode::Swarm1),
-    ("swarm", "Swarm", BattleAmmunitionMode::Swarm),
-    ("inferno", "Inferno", BattleAmmunitionMode::Inferno),
-    ("precision", "Precision", BattleAmmunitionMode::Precision),
-    ("armor-piercing", "AP", BattleAmmunitionMode::ArmorPiercing),
-    ("flechette", "Flechette", BattleAmmunitionMode::Flechette),
-    ("incendiary", "Incendiary", BattleAmmunitionMode::Incendiary),
-    ("caseless", "Caseless", BattleAmmunitionMode::Caseless),
-    ("semi-guided", "Sguided", BattleAmmunitionMode::SemiGuided),
-    ("smoke", "Smoke", BattleAmmunitionMode::Smoke),
+const MUNITIONS: &[(&str, &str, AmmunitionMode)] = &[
+    ("artemis-capable", "Artemis/Mine", AmmunitionMode::Artemis),
+    ("narc-capable", "Narc/Smoke", AmmunitionMode::Narc),
+    ("swarm-i", "Swarm1", AmmunitionMode::Swarm1),
+    ("swarm", "Swarm", AmmunitionMode::Swarm),
+    ("inferno", "Inferno", AmmunitionMode::Inferno),
+    ("precision", "Precision", AmmunitionMode::Precision),
+    ("armor-piercing", "AP", AmmunitionMode::ArmorPiercing),
+    ("flechette", "Flechette", AmmunitionMode::Flechette),
+    ("incendiary", "Incendiary", AmmunitionMode::Incendiary),
+    ("caseless", "Caseless", AmmunitionMode::Caseless),
+    ("semi-guided", "Sguided", AmmunitionMode::SemiGuided),
+    ("smoke", "Smoke", AmmunitionMode::Smoke),
 ];
 
 /// MegaMek munitions stompymux has no equivalent for, checked before [`MUNITIONS`] so that
@@ -459,8 +455,8 @@ fn parse_ammo(name: &str) -> Result<Critical> {
     let atm = lower.contains("atm");
     let mml = lower.contains("mml");
     let atm_mode = match last {
-        "er" if atm => Some(("ExtendedRange", BattleAmmunitionMode::ExtendedRange)),
-        "he" if atm => Some(("HighExplosive", BattleAmmunitionMode::HighExplosive)),
+        "er" if atm => Some(("ExtendedRange", AmmunitionMode::ExtendedRange)),
+        "he" if atm => Some(("HighExplosive", AmmunitionMode::HighExplosive)),
         _ => None,
     };
     let mml_lrm = mml && last == "lrm";
@@ -487,7 +483,7 @@ fn parse_ammo(name: &str) -> Result<Critical> {
         weapon.name()
     );
     let mut modes = Vec::new();
-    let mut mode = BattleAmmunitionMode::Normal;
+    let mut mode = AmmunitionMode::Normal;
     if cluster {
         ensure!(munition.is_none(), "conflicting munitions in {name}");
         let flag = if weapon.is_artillery() {
@@ -495,17 +491,17 @@ fn parse_ammo(name: &str) -> Result<Critical> {
         } else {
             "LBX/Cluster"
         };
-        munition = Some((flag, BattleAmmunitionMode::Cluster));
+        munition = Some((flag, AmmunitionMode::Cluster));
     }
     if mml_lrm {
         modes.push("MML_LRM");
         mode = match munition.map(|(_, mode)| mode) {
-            None => BattleAmmunitionMode::MmlLrm,
-            Some(BattleAmmunitionMode::Artemis) => BattleAmmunitionMode::MmlLrmArtemis,
-            Some(BattleAmmunitionMode::Narc) => BattleAmmunitionMode::MmlLrmNarc,
-            Some(BattleAmmunitionMode::Swarm) => BattleAmmunitionMode::MmlLrmSwarm,
-            Some(BattleAmmunitionMode::Swarm1) => BattleAmmunitionMode::MmlLrmSwarm1,
-            Some(BattleAmmunitionMode::SemiGuided) => BattleAmmunitionMode::MmlLrmSemiGuided,
+            None => AmmunitionMode::MmlLrm,
+            Some(AmmunitionMode::Artemis) => AmmunitionMode::MmlLrmArtemis,
+            Some(AmmunitionMode::Narc) => AmmunitionMode::MmlLrmNarc,
+            Some(AmmunitionMode::Swarm) => AmmunitionMode::MmlLrmSwarm,
+            Some(AmmunitionMode::Swarm1) => AmmunitionMode::MmlLrmSwarm1,
+            Some(AmmunitionMode::SemiGuided) => AmmunitionMode::MmlLrmSemiGuided,
             Some(_) => bail!("unsupported MML munition {name}"),
         };
         modes.extend(munition.map(|(flag, _)| flag));
@@ -522,10 +518,10 @@ fn parse_ammo(name: &str) -> Result<Critical> {
     let rounds = if half_ton
         || matches!(
             mode,
-            BattleAmmunitionMode::Precision | BattleAmmunitionMode::ArmorPiercing
+            AmmunitionMode::Precision | AmmunitionMode::ArmorPiercing
         ) {
         per_ton / 2
-    } else if mode == BattleAmmunitionMode::Caseless {
+    } else if mode == AmmunitionMode::Caseless {
         per_ton * 2
     } else {
         per_ton
@@ -539,7 +535,7 @@ fn parse_ammo(name: &str) -> Result<Critical> {
 
 /// Resolve a weapon from its key readings, returning whether its spelling marked a one-shot
 /// launcher (`ISLRM20OS`).
-fn resolve_weapon(readings: &[(Option<TechBase>, &str)]) -> Result<Option<(BattleWeapon, bool)>> {
+fn resolve_weapon(readings: &[(Option<TechBase>, &str)]) -> Result<Option<(Weapon, bool)>> {
     if let Some(weapon) = first_weapon(readings.iter().copied())? {
         return Ok(Some((weapon, false)));
     }
@@ -559,7 +555,7 @@ fn resolve_weapon(readings: &[(Option<TechBase>, &str)]) -> Result<Option<(Battl
 /// reported when no other reading resolves.
 fn first_weapon<'a>(
     readings: impl Iterator<Item = (Option<TechBase>, &'a str)>,
-) -> Result<Option<BattleWeapon>> {
+) -> Result<Option<Weapon>> {
     let mut mismatch = None;
     for (tech, base) in readings {
         match pick_weapon(tech, base) {
@@ -575,13 +571,13 @@ fn first_weapon<'a>(
 ///
 /// Unprefixed MegaMek weapons are its Inner Sphere versions; a Clan-only weapon written without
 /// a prefix still resolves to the Clan one.
-fn pick_weapon(tech: Option<TechBase>, base: &str) -> Result<Option<BattleWeapon>> {
+fn pick_weapon(tech: Option<TechBase>, base: &str) -> Result<Option<Weapon>> {
     let base = WEAPON_ALIASES
         .iter()
         .find(|(alias, _)| *alias == base)
         .map_or(base, |(_, target)| *target);
     let lookup = |tech: TechBase| {
-        BattleWeapon::ALL.iter().copied().find(|weapon| {
+        Weapon::ALL.iter().copied().find(|weapon| {
             let (namespace, label) = weapon.name().split_once('.').unwrap_or_default();
             namespace == tech.namespace() && key(label) == base
         })
@@ -637,7 +633,7 @@ mod tests {
     use super::*;
 
     /// Resolve a name that must be a weapon.
-    fn weapon(name: &str) -> (BattleWeapon, bool, bool) {
+    fn weapon(name: &str) -> (Weapon, bool, bool) {
         match parse(name).unwrap() {
             Critical::Weapon {
                 weapon,
@@ -684,7 +680,7 @@ mod tests {
         }
         assert_eq!(
             weapon("Medium Laser (R)"),
-            (BattleWeapon::parse("IS.MediumLaser").unwrap(), true, false)
+            (Weapon::parse("IS.MediumLaser").unwrap(), true, false)
         );
         assert!(
             weapon("CLERMediumLaser (omnipod)")

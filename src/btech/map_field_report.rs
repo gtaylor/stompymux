@@ -5,22 +5,22 @@ use serde::Serialize;
 
 /// One named field; unavailable implementation-specific diagnostics have no value.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleMapField {
+pub struct MapField {
     pub name: &'static str,
     pub value: Option<String>,
 }
 
 /// Detached map inspection data plus literal, unstyled publication text.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleMapFieldReport {
+pub struct MapFieldReport {
     pub map: ObjectId,
     pub columns: usize,
-    pub fields: Vec<BattleMapField>,
+    pub fields: Vec<MapField>,
     pub text: String,
 }
 
 /// Construct all fields independently of filtering so native and Lua expose the same values.
-fn fields(map: &super::StoredMap) -> Vec<BattleMapField> {
+fn fields(map: &super::StoredMap) -> Vec<MapField> {
     [
         ("buildonmap", Some(map.building_parent.to_string())),
         ("cf", Some(map.building.integrity.to_string())),
@@ -45,7 +45,7 @@ fn fields(map: &super::StoredMap) -> Vec<BattleMapField> {
         ("regen_factor", Some(map.building.regeneration.to_string())),
     ]
     .into_iter()
-    .map(|(name, value)| BattleMapField { name, value })
+    .map(|(name, value)| MapField { name, value })
     .collect()
 }
 
@@ -56,7 +56,7 @@ pub fn view_map_fields_action(
     actor: ObjectId,
     map: ObjectId,
     arguments: &str,
-) -> Result<BattleMapFieldReport> {
+) -> Result<MapFieldReport> {
     scripts.atomic(|_| {
         let world = scripts.world();
         ensure!(
@@ -83,7 +83,7 @@ pub fn view_map_fields_action(
                 .iter()
                 .map(|field| (field.name, field.value.as_deref())),
         );
-        let report = BattleMapFieldReport {
+        let report = MapFieldReport {
             map,
             columns,
             fields,
@@ -93,7 +93,7 @@ pub fn view_map_fields_action(
         for line in report.text.lines() {
             super::notify_message(
                 scripts,
-                super::BattleMessageTarget::Player(actor),
+                super::MessageTarget::Player(actor),
                 &crate::text::escape(line),
             )?;
         }

@@ -7,58 +7,54 @@ async fn advanced_rotor_criticals_commit_saved_dice_and_material_effects_togethe
     let (_dir, config, mut world) = support::isolated_world().await;
     let id = world.create(&config, "Rotor critical fixture".into(), Kind::Thing);
     // Install material directly for the critical transaction; this does not admit a live VTOL.
-    let aircraft = BattleVehicle::new(
-        BattleVehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml"))
-            .unwrap(),
+    let aircraft = Vehicle::new(
+        VehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml")).unwrap(),
     )
     .unwrap();
-    let rules = BattleVehicleCriticalRules {
+    let rules = VehicleCriticalRules {
         rotor_damage_divisor: 0,
         extended_piloting: false,
         vtol_table: None,
-        table: BattleVehicleCriticalTable::Advanced,
+        table: VehicleCriticalTable::Advanced,
         enabled: true,
         combat_safe: false,
         toughness: false,
     };
     for roll in 2..=12 {
         let seed = (0..=255)
-            .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == roll)
+            .find(|seed| Dice::seeded([*seed; 32]).two_d6() == roll)
             .unwrap();
         let mut saved = serde_json::to_value(&aircraft).unwrap();
         saved["position"] = serde_json::json!({"map":0,"x":0,"y":0});
         saved["map_slot"] = 0.into();
-        saved["power"] = serde_json::to_value(BattlePower::Running).unwrap();
-        saved["motion"] = serde_json::to_value(BattleMotion::stationary(
-            HexCoordinate { x: 0, y: 0 }.center(),
-        ))
-        .unwrap();
-        saved["vtol_flight"] = serde_json::to_value(BattleVtolFlight {
+        saved["power"] = serde_json::to_value(Power::Running).unwrap();
+        saved["motion"] =
+            serde_json::to_value(Motion::stationary(HexCoordinate { x: 0, y: 0 }.center()))
+                .unwrap();
+        saved["vtol_flight"] = serde_json::to_value(VtolFlight {
             fall: None,
-            phase: BattleVtolFlightPhase::Airborne,
+            phase: VtolFlightPhase::Airborne,
             vertical_speed: 60.0,
             altitude: 10.0,
         })
         .unwrap();
 
-        saved["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+        saved["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
         let mut state = serde_json::to_value(&world.btech).unwrap();
         state["vehicles"][id.0.to_string()] = saved;
         world.btech = serde_json::from_value(state).unwrap();
         let mut replay = world.clone();
         let report =
-            resolve_battle_vehicle_critical(&mut world, id, BattleVehicleSection::Rotor, rules)
-                .unwrap();
+            resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Rotor, rules).unwrap();
         assert_eq!(report.selection.rolls, [roll]);
         assert_eq!(
             report.selection.effect,
-            BattleRotorHit::from_critical_roll(roll)
+            RotorHit::from_critical_roll(roll)
                 .unwrap()
-                .map(BattleVehicleCriticalEffect::Rotor)
+                .map(VehicleCriticalEffect::Rotor)
         );
         assert_eq!(
-            resolve_battle_vehicle_critical(&mut replay, id, BattleVehicleSection::Rotor, rules)
-                .unwrap(),
+            resolve_battle_vehicle_critical(&mut replay, id, VehicleSection::Rotor, rules).unwrap(),
             report
         );
         assert_eq!(world.btech, replay.btech);
@@ -80,17 +76,17 @@ async fn advanced_rotor_criticals_commit_saved_dice_and_material_effects_togethe
         assert_eq!(
             unit.vtol_flight().unwrap().phase,
             if roll >= 11 {
-                BattleVtolFlightPhase::Falling
+                VtolFlightPhase::Falling
             } else {
-                BattleVtolFlightPhase::Airborne
+                VtolFlightPhase::Airborne
             }
         );
 
         assert_eq!(
-            serde_json::from_value::<BattleVehicle>(serde_json::to_value(unit).unwrap()).unwrap(),
+            serde_json::from_value::<Vehicle>(serde_json::to_value(unit).unwrap()).unwrap(),
             *unit
         );
-        let mut dice = BattleDice::seeded([seed; 32]);
+        let mut dice = Dice::seeded([seed; 32]);
         dice.two_d6();
         assert_eq!(
             serde_json::to_value(unit).unwrap()["dice"],
@@ -99,7 +95,7 @@ async fn advanced_rotor_criticals_commit_saved_dice_and_material_effects_togethe
         if roll >= 11 {
             let before = world.btech.clone();
             assert!(
-                resolve_battle_vehicle_critical(&mut world, id, BattleVehicleSection::Rotor, rules)
+                resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Rotor, rules)
                     .is_err()
             );
             assert_eq!(world.btech, before);
@@ -118,8 +114,7 @@ async fn suppressed_rotor_criticals_do_not_draw_dice_or_change_material() {
         } else {
             include_str!("../game/mechs/Kestrel.toml").into()
         };
-        let aircraft =
-            BattleVehicle::new(BattleVehicleTemplate::parse("Kestrel", &source).unwrap()).unwrap();
+        let aircraft = Vehicle::new(VehicleTemplate::parse("Kestrel", &source).unwrap()).unwrap();
         let mut state = serde_json::to_value(&world.btech).unwrap();
         state["vehicles"][id.0.to_string()] = serde_json::to_value(aircraft).unwrap();
         world.btech = serde_json::from_value(state).unwrap();
@@ -127,12 +122,12 @@ async fn suppressed_rotor_criticals_do_not_draw_dice_or_change_material() {
         let report = resolve_battle_vehicle_critical(
             &mut world,
             id,
-            BattleVehicleSection::Rotor,
-            BattleVehicleCriticalRules {
+            VehicleSection::Rotor,
+            VehicleCriticalRules {
                 rotor_damage_divisor: 0,
                 extended_piloting: false,
                 vtol_table: None,
-                table: BattleVehicleCriticalTable::Advanced,
+                table: VehicleCriticalTable::Advanced,
                 enabled: suppression != "disabled",
                 combat_safe: suppression == "safe",
                 toughness: false,
@@ -149,8 +144,8 @@ async fn suppressed_rotor_criticals_do_not_draw_dice_or_change_material() {
 async fn stationary_observation_aircraft_still_use_the_rotor_critical_table() {
     let (_dir, config, mut world) = support::isolated_world().await;
     let id = world.create(&config, "Observation rotor".into(), Kind::Thing);
-    let unit = BattleVehicle::new(
-        BattleVehicleTemplate::parse(
+    let unit = Vehicle::new(
+        VehicleTemplate::parse(
             "ObservationVTOL",
             include_str!("../game/mechs/ObservationVTOL.toml"),
         )
@@ -158,22 +153,22 @@ async fn stationary_observation_aircraft_still_use_the_rotor_critical_table() {
     )
     .unwrap();
     let seed = (0..=255)
-        .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 9)
+        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 9)
         .unwrap();
     let mut saved = serde_json::to_value(unit).unwrap();
-    saved["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+    saved["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
     let mut state = serde_json::to_value(&world.btech).unwrap();
     state["vehicles"][id.0.to_string()] = saved;
     world.btech = serde_json::from_value(state).unwrap();
     let report = resolve_battle_vehicle_critical(
         &mut world,
         id,
-        BattleVehicleSection::Rotor,
-        BattleVehicleCriticalRules {
+        VehicleSection::Rotor,
+        VehicleCriticalRules {
             rotor_damage_divisor: 0,
             extended_piloting: false,
             vtol_table: None,
-            table: BattleVehicleCriticalTable::Advanced,
+            table: VehicleCriticalTable::Advanced,
             enabled: true,
             combat_safe: false,
             toughness: false,
@@ -182,24 +177,22 @@ async fn stationary_observation_aircraft_still_use_the_rotor_critical_table() {
     .unwrap();
     assert_eq!(
         report.selection.effect,
-        Some(BattleVehicleCriticalEffect::Rotor(
-            BattleRotorHit::TailRotor
-        ))
+        Some(VehicleCriticalEffect::Rotor(RotorHit::TailRotor))
     );
     assert!(world.btech.vehicles()[&id].tail_rotor_destroyed());
 }
 
 #[tokio::test]
 async fn advanced_aircraft_hull_rows_share_selection_dice_and_control_effects() {
-    use BattleVehicleCriticalEffect as E;
-    use BattleVehicleSection as S;
+    use VehicleCriticalEffect as E;
+    use VehicleSection as S;
     let (_dir, config, mut world) = support::isolated_world().await;
     let id = world.create(&config, "Hull critical fixture".into(), Kind::Thing);
-    let rules = BattleVehicleCriticalRules {
+    let rules = VehicleCriticalRules {
         rotor_damage_divisor: 0,
         extended_piloting: false,
         vtol_table: None,
-        table: BattleVehicleCriticalTable::Advanced,
+        table: VehicleCriticalTable::Advanced,
         enabled: true,
         combat_safe: false,
         toughness: false,
@@ -258,15 +251,14 @@ async fn advanced_aircraft_hull_rows_share_selection_dice_and_control_effects() 
         include_str!("../game/mechs/Kestrel.toml"),
         include_str!("../game/mechs/ObservationVTOL.toml"),
     ] {
-        let unit =
-            BattleVehicle::new(BattleVehicleTemplate::parse("test", source).unwrap()).unwrap();
+        let unit = Vehicle::new(VehicleTemplate::parse("test", source).unwrap()).unwrap();
         for (section, row) in rows {
             for roll in 2..=12 {
                 let seed = (0..=255)
-                    .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == roll)
+                    .find(|seed| Dice::seeded([*seed; 32]).two_d6() == roll)
                     .unwrap();
                 let mut saved = serde_json::to_value(&unit).unwrap();
-                saved["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+                saved["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
                 let mut state = serde_json::to_value(&world.btech).unwrap();
                 state["vehicles"][id.0.to_string()] = saved;
                 world.btech = serde_json::from_value(state).unwrap();
@@ -298,10 +290,8 @@ async fn advanced_aircraft_hull_rows_share_selection_dice_and_control_effects() 
                     assert_eq!(changed.pilot_injuries(), 0);
                     assert_eq!(changed.crew_stun_remaining(), 0);
                     assert_eq!(
-                        serde_json::from_value::<BattleVehicle>(
-                            serde_json::to_value(changed).unwrap()
-                        )
-                        .unwrap(),
+                        serde_json::from_value::<Vehicle>(serde_json::to_value(changed).unwrap())
+                            .unwrap(),
                         *changed
                     );
                 }
@@ -314,26 +304,23 @@ async fn advanced_aircraft_hull_rows_share_selection_dice_and_control_effects() 
 async fn airborne_engine_critical_requires_emergency_resolution_without_partial_changes() {
     let (_dir, config, mut world) = support::isolated_world().await;
     let id = world.create(&config, "Airborne engine".into(), Kind::Thing);
-    let unit = BattleVehicle::new(
-        BattleVehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml"))
-            .unwrap(),
+    let unit = Vehicle::new(
+        VehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml")).unwrap(),
     )
     .unwrap();
     let seed = (0..=255)
-        .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 10)
+        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 10)
         .unwrap();
     let mut saved = serde_json::to_value(unit).unwrap();
-    saved["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+    saved["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
     saved["position"] = serde_json::json!({"map":0,"x":0,"y":0});
     saved["map_slot"] = 0.into();
-    saved["power"] = serde_json::to_value(BattlePower::Running).unwrap();
-    saved["motion"] = serde_json::to_value(BattleMotion::stationary(
-        HexCoordinate { x: 0, y: 0 }.center(),
-    ))
-    .unwrap();
-    saved["vtol_flight"] = serde_json::to_value(BattleVtolFlight {
+    saved["power"] = serde_json::to_value(Power::Running).unwrap();
+    saved["motion"] =
+        serde_json::to_value(Motion::stationary(HexCoordinate { x: 0, y: 0 }.center())).unwrap();
+    saved["vtol_flight"] = serde_json::to_value(VtolFlight {
         fall: None,
-        phase: BattleVtolFlightPhase::Airborne,
+        phase: VtolFlightPhase::Airborne,
         altitude: 5.0,
         vertical_speed: 0.0,
     })
@@ -345,12 +332,12 @@ async fn airborne_engine_critical_requires_emergency_resolution_without_partial_
     let error = resolve_battle_vehicle_critical(
         &mut world,
         id,
-        BattleVehicleSection::Left,
-        BattleVehicleCriticalRules {
+        VehicleSection::Left,
+        VehicleCriticalRules {
             rotor_damage_divisor: 0,
             extended_piloting: false,
             vtol_table: None,
-            table: BattleVehicleCriticalTable::Advanced,
+            table: VehicleCriticalTable::Advanced,
             enabled: true,
             combat_safe: false,
             toughness: false,
@@ -363,16 +350,15 @@ async fn airborne_engine_critical_requires_emergency_resolution_without_partial_
 
 #[tokio::test]
 async fn standard_vtol_criticals_share_common_effects_without_ground_preliminary_rolls() {
-    use BattleVehicleCriticalEffect as E;
+    use VehicleCriticalEffect as E;
     let (_dir, config, mut world) = support::isolated_world().await;
     let id = world.create(&config, "Standard aircraft criticals".into(), Kind::Thing);
     for source in [
         include_str!("../game/mechs/Kestrel.toml"),
         include_str!("../game/mechs/ObservationVTOL.toml"),
     ] {
-        let aircraft =
-            BattleVehicle::new(BattleVehicleTemplate::parse("test", source).unwrap()).unwrap();
-        for table in [BattleVehicleCriticalTable::Standard] {
+        let aircraft = Vehicle::new(VehicleTemplate::parse("test", source).unwrap()).unwrap();
+        for table in [VehicleCriticalTable::Standard] {
             for (index, effect) in [
                 E::CrewKilled,
                 E::MainWeaponJam,
@@ -386,15 +372,15 @@ async fn standard_vtol_criticals_share_common_effects_without_ground_preliminary
             {
                 let roll = index as u8 + 1;
                 let seed = (0..=255)
-                    .find(|seed| BattleDice::seeded([*seed; 32]).d6() == roll)
+                    .find(|seed| Dice::seeded([*seed; 32]).d6() == roll)
                     .unwrap();
                 let mut saved = serde_json::to_value(&aircraft).unwrap();
-                saved["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+                saved["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
                 let mut state = serde_json::to_value(&world.btech).unwrap();
                 state["vehicles"][id.0.to_string()] = saved;
                 world.btech = serde_json::from_value(state).unwrap();
                 let mut replay = world.clone();
-                let rules = BattleVehicleCriticalRules {
+                let rules = VehicleCriticalRules {
                     rotor_damage_divisor: 0,
                     extended_piloting: false,
                     vtol_table: None,
@@ -403,24 +389,15 @@ async fn standard_vtol_criticals_share_common_effects_without_ground_preliminary
                     combat_safe: false,
                     toughness: false,
                 };
-                let report = resolve_battle_vehicle_critical(
-                    &mut world,
-                    id,
-                    BattleVehicleSection::Front,
-                    rules,
-                )
-                .unwrap();
+                let report =
+                    resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Front, rules)
+                        .unwrap();
                 assert_eq!(report.selection.rolls, [roll]);
                 assert_eq!(report.selection.effect, Some(effect));
-                assert_eq!(report.selection.table, BattleVehicleCriticalTable::Standard);
+                assert_eq!(report.selection.table, VehicleCriticalTable::Standard);
                 assert_eq!(
-                    resolve_battle_vehicle_critical(
-                        &mut replay,
-                        id,
-                        BattleVehicleSection::Front,
-                        rules
-                    )
-                    .unwrap(),
+                    resolve_battle_vehicle_critical(&mut replay, id, VehicleSection::Front, rules)
+                        .unwrap(),
                     report
                 );
                 assert_eq!(world.btech, replay.btech);
@@ -433,8 +410,7 @@ async fn standard_vtol_criticals_share_common_effects_without_ground_preliminary
                     assert!(report.explosion.is_some());
                 }
                 assert_eq!(
-                    serde_json::from_value::<BattleVehicle>(serde_json::to_value(unit).unwrap())
-                        .unwrap(),
+                    serde_json::from_value::<Vehicle>(serde_json::to_value(unit).unwrap()).unwrap(),
                     *unit
                 );
             }
@@ -456,13 +432,13 @@ async fn aircraft_explosions_settle_at_surface_and_share_case_containment_atomic
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let id = world.create(&config, "Exploding aircraft".into(), Kind::Thing);
     let seed = (0..=255)
-        .find(|seed| BattleDice::seeded([*seed; 32]).d6() == 6)
+        .find(|seed| Dice::seeded([*seed; 32]).d6() == 6)
         .unwrap();
-    let rules = BattleVehicleCriticalRules {
+    let rules = VehicleCriticalRules {
         rotor_damage_divisor: 0,
         extended_piloting: false,
         vtol_table: None,
-        table: BattleVehicleCriticalTable::Standard,
+        table: VehicleCriticalTable::Standard,
         enabled: true,
         combat_safe: false,
         toughness: false,
@@ -476,50 +452,46 @@ async fn aircraft_explosions_settle_at_surface_and_share_case_containment_atomic
         } else {
             include_str!("../game/mechs/Kestrel.toml").into()
         };
-        let unit =
-            BattleVehicle::new(BattleVehicleTemplate::parse("Kestrel", &source).unwrap()).unwrap();
+        let unit = Vehicle::new(VehicleTemplate::parse("Kestrel", &source).unwrap()).unwrap();
         assert_eq!(unit.has_powerplant_containment(), case);
         let mut saved = serde_json::to_value(unit).unwrap();
         saved["position"] = serde_json::json!({"map":map.0,"x":0,"y":0});
         saved["map_slot"] = 0.into();
-        saved["power"] = serde_json::to_value(BattlePower::Running).unwrap();
-        saved["motion"] = serde_json::to_value(BattleMotion::stationary(
-            HexCoordinate { x: 0, y: 0 }.center(),
-        ))
-        .unwrap();
-        saved["vtol_flight"] = serde_json::to_value(BattleVtolFlight {
+        saved["power"] = serde_json::to_value(Power::Running).unwrap();
+        saved["motion"] =
+            serde_json::to_value(Motion::stationary(HexCoordinate { x: 0, y: 0 }.center()))
+                .unwrap();
+        saved["vtol_flight"] = serde_json::to_value(VtolFlight {
             fall: None,
-            phase: BattleVtolFlightPhase::Airborne,
+            phase: VtolFlightPhase::Airborne,
             altitude: 20.0,
             vertical_speed: 60.0,
         })
         .unwrap();
-        saved["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+        saved["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
         let mut state = serde_json::to_value(&world.btech).unwrap();
         state["vehicles"][id.0.to_string()] = saved.clone();
         world.btech = serde_json::from_value(state.clone()).unwrap();
         let mut replay = world.clone();
         let report =
-            resolve_battle_vehicle_critical(&mut world, id, BattleVehicleSection::Front, rules)
-                .unwrap();
+            resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Front, rules).unwrap();
         assert_eq!(report.explosion.as_ref().unwrap().contained, case);
         if case {
             assert_eq!(
                 report.explosion.as_ref().unwrap().destroyed_sections,
-                [BattleVehicleSection::Rear]
+                [VehicleSection::Rear]
             );
         }
         let unit = &world.btech.vehicles()[&id];
         assert_eq!(unit.vtol_flight().unwrap().altitude, 3.0);
         assert_eq!(unit.vtol_flight().unwrap().vertical_speed, 0.0);
         assert_eq!(
-            resolve_battle_vehicle_critical(&mut replay, id, BattleVehicleSection::Front, rules)
-                .unwrap(),
+            resolve_battle_vehicle_critical(&mut replay, id, VehicleSection::Front, rules).unwrap(),
             report
         );
         assert_eq!(replay.btech, world.btech);
         assert_eq!(
-            serde_json::from_value::<BattleVehicle>(serde_json::to_value(unit).unwrap()).unwrap(),
+            serde_json::from_value::<Vehicle>(serde_json::to_value(unit).unwrap()).unwrap(),
             *unit
         );
         saved["position"]["map"] = 999999.into();
@@ -527,8 +499,7 @@ async fn aircraft_explosions_settle_at_surface_and_share_case_containment_atomic
         world.btech = serde_json::from_value(state).unwrap();
         let before = world.btech.clone();
         assert!(
-            resolve_battle_vehicle_critical(&mut world, id, BattleVehicleSection::Front, rules)
-                .is_err()
+            resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Front, rules).is_err()
         );
         assert_eq!(world.btech, before);
     }
@@ -547,16 +518,15 @@ async fn engine_emergency_landings_use_shared_checks_and_commit_failed_attempts_
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let id = world.create(&config, "Emergency aircraft".into(), Kind::Thing);
-    let unit = BattleVehicle::new(
-        BattleVehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml"))
-            .unwrap(),
+    let unit = Vehicle::new(
+        VehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml")).unwrap(),
     )
     .unwrap();
     for advanced in [false, true] {
         for success in [false, true] {
             let seed = (0..=255)
                 .find(|seed| {
-                    let mut dice = BattleDice::seeded([*seed; 32]);
+                    let mut dice = Dice::seeded([*seed; 32]);
                     let engine = if advanced {
                         dice.two_d6() == 10
                     } else {
@@ -568,51 +538,45 @@ async fn engine_emergency_landings_use_shared_checks_and_commit_failed_attempts_
             let mut saved = serde_json::to_value(&unit).unwrap();
             saved["position"] = serde_json::json!({"map":map.0,"x":0,"y":0});
             saved["map_slot"] = 0.into();
-            saved["power"] = serde_json::to_value(BattlePower::Running).unwrap();
-            saved["motion"] = serde_json::to_value(BattleMotion::stationary(
-                HexCoordinate { x: 0, y: 0 }.center(),
-            ))
-            .unwrap();
-            saved["vtol_flight"] = serde_json::to_value(BattleVtolFlight {
+            saved["power"] = serde_json::to_value(Power::Running).unwrap();
+            saved["motion"] =
+                serde_json::to_value(Motion::stationary(HexCoordinate { x: 0, y: 0 }.center()))
+                    .unwrap();
+            saved["vtol_flight"] = serde_json::to_value(VtolFlight {
                 fall: None,
-                phase: BattleVtolFlightPhase::Airborne,
+                phase: VtolFlightPhase::Airborne,
                 altitude: 5.0,
                 vertical_speed: 60.0,
             })
             .unwrap();
-            saved["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+            saved["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
             let mut state = serde_json::to_value(&world.btech).unwrap();
             state["vehicles"][id.0.to_string()] = saved;
             world.btech = serde_json::from_value(state).unwrap();
             let before = world.btech.clone();
             let mut replay = world.clone();
-            let rules = BattleVehicleCriticalRules {
+            let rules = VehicleCriticalRules {
                 rotor_damage_divisor: 0,
                 extended_piloting: true,
                 vtol_table: None,
                 table: if advanced {
-                    BattleVehicleCriticalTable::Advanced
+                    VehicleCriticalTable::Advanced
                 } else {
-                    BattleVehicleCriticalTable::Standard
+                    VehicleCriticalTable::Standard
                 },
                 enabled: true,
                 combat_safe: false,
                 toughness: false,
             };
             let report =
-                resolve_battle_vehicle_critical(&mut world, id, BattleVehicleSection::Left, rules);
+                resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Left, rules);
             if !success {
                 let report = report.unwrap();
                 assert!(!report.emergency_landing.as_ref().unwrap().success);
                 assert_ne!(world.btech, before);
                 assert_eq!(
-                    resolve_battle_vehicle_critical(
-                        &mut replay,
-                        id,
-                        BattleVehicleSection::Left,
-                        rules
-                    )
-                    .unwrap(),
+                    resolve_battle_vehicle_critical(&mut replay, id, VehicleSection::Left, rules)
+                        .unwrap(),
                     report
                 );
                 assert_eq!(replay.btech, world.btech);
@@ -620,27 +584,23 @@ async fn engine_emergency_landings_use_shared_checks_and_commit_failed_attempts_
                 assert_eq!(changed.maximum_speed(), 0.0);
                 assert_eq!(
                     changed.vtol_flight().unwrap().phase,
-                    BattleVtolFlightPhase::Falling
+                    VtolFlightPhase::Falling
                 );
                 assert_eq!(changed.vtol_flight().unwrap().altitude, 5.0);
                 assert!(changed.vtol_flight().unwrap().fall.is_some());
                 assert_eq!(
-                    serde_json::from_value::<BattleVehicle>(serde_json::to_value(changed).unwrap())
+                    serde_json::from_value::<Vehicle>(serde_json::to_value(changed).unwrap())
                         .unwrap(),
                     *changed
                 );
                 world
                     .btech
-                    .set_unit_dice(id, BattleDice::seeded([seed; 32]))
+                    .set_unit_dice(id, Dice::seeded([seed; 32]))
                     .unwrap();
                 let cursor = world.btech.vehicles()[&id].vtol_flight().unwrap().fall;
-                let repeated = resolve_battle_vehicle_critical(
-                    &mut world,
-                    id,
-                    BattleVehicleSection::Left,
-                    rules,
-                )
-                .unwrap();
+                let repeated =
+                    resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Left, rules)
+                        .unwrap();
                 assert!(repeated.emergency_landing.is_none());
                 assert_eq!(
                     world.btech.vehicles()[&id].vtol_flight().unwrap().fall,
@@ -655,7 +615,7 @@ async fn engine_emergency_landings_use_shared_checks_and_commit_failed_attempts_
             assert_eq!(check.situational, 2);
             assert_eq!(check.target, 8);
             assert_eq!(
-                resolve_battle_vehicle_critical(&mut replay, id, BattleVehicleSection::Left, rules)
+                resolve_battle_vehicle_critical(&mut replay, id, VehicleSection::Left, rules)
                     .unwrap(),
                 report
             );
@@ -664,9 +624,9 @@ async fn engine_emergency_landings_use_shared_checks_and_commit_failed_attempts_
             assert_eq!(changed.maximum_speed(), 0.0);
             assert_eq!(
                 changed.vtol_flight().unwrap(),
-                BattleVtolFlight {
+                VtolFlight {
                     fall: None,
-                    phase: BattleVtolFlightPhase::Landed,
+                    phase: VtolFlightPhase::Landed,
                     altitude: 3.0,
                     vertical_speed: 0.0
                 }
@@ -674,8 +634,7 @@ async fn engine_emergency_landings_use_shared_checks_and_commit_failed_attempts_
             assert_eq!(changed.sections(), unit.sections());
             assert!(!changed.is_destroyed());
             assert_eq!(
-                serde_json::from_value::<BattleVehicle>(serde_json::to_value(changed).unwrap())
-                    .unwrap(),
+                serde_json::from_value::<Vehicle>(serde_json::to_value(changed).unwrap()).unwrap(),
                 *changed
             );
         }
@@ -695,42 +654,39 @@ async fn engine_loss_over_water_starts_falling_without_a_landing_roll() {
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let id = world.create(&config, "Aircraft".into(), Kind::Thing);
-    let unit = BattleVehicle::new(
-        BattleVehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml"))
-            .unwrap(),
+    let unit = Vehicle::new(
+        VehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml")).unwrap(),
     )
     .unwrap();
     let seed = (0..=255)
-        .find(|seed| BattleDice::seeded([*seed; 32]).d6() == 3)
+        .find(|seed| Dice::seeded([*seed; 32]).d6() == 3)
         .unwrap();
     let mut saved = serde_json::to_value(unit).unwrap();
     saved["position"] = serde_json::json!({"map":map.0,"x":0,"y":0});
     saved["map_slot"] = 0.into();
-    saved["power"] = serde_json::to_value(BattlePower::Running).unwrap();
-    saved["motion"] = serde_json::to_value(BattleMotion::stationary(
-        HexCoordinate { x: 0, y: 0 }.center(),
-    ))
-    .unwrap();
-    saved["vtol_flight"] = serde_json::to_value(BattleVtolFlight {
+    saved["power"] = serde_json::to_value(Power::Running).unwrap();
+    saved["motion"] =
+        serde_json::to_value(Motion::stationary(HexCoordinate { x: 0, y: 0 }.center())).unwrap();
+    saved["vtol_flight"] = serde_json::to_value(VtolFlight {
         fall: None,
-        phase: BattleVtolFlightPhase::Airborne,
+        phase: VtolFlightPhase::Airborne,
         altitude: 5.0,
         vertical_speed: 60.0,
     })
     .unwrap();
-    saved["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+    saved["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
     let mut state = serde_json::to_value(&world.btech).unwrap();
     state["vehicles"][id.0.to_string()] = saved;
     world.btech = serde_json::from_value(state).unwrap();
     let report = resolve_battle_vehicle_critical(
         &mut world,
         id,
-        BattleVehicleSection::Front,
-        BattleVehicleCriticalRules {
+        VehicleSection::Front,
+        VehicleCriticalRules {
             rotor_damage_divisor: 0,
             extended_piloting: false,
             vtol_table: None,
-            table: BattleVehicleCriticalTable::Standard,
+            table: VehicleCriticalTable::Standard,
             enabled: true,
             combat_safe: false,
             toughness: false,
@@ -739,11 +695,8 @@ async fn engine_loss_over_water_starts_falling_without_a_landing_roll() {
     .unwrap();
     assert!(report.emergency_landing.is_none());
     let unit = &world.btech.vehicles()[&id];
-    assert_eq!(
-        unit.vtol_flight().unwrap().phase,
-        BattleVtolFlightPhase::Falling
-    );
-    let mut dice = BattleDice::seeded([seed; 32]);
+    assert_eq!(unit.vtol_flight().unwrap().phase, VtolFlightPhase::Falling);
+    let mut dice = Dice::seeded([seed; 32]);
     dice.d6();
     assert_eq!(
         serde_json::to_value(unit).unwrap()["dice"],
@@ -769,8 +722,7 @@ async fn emergency_landing_feedback_is_private_and_replayable() {
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml"))
-            .unwrap(),
+        VehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
@@ -795,7 +747,7 @@ async fn emergency_landing_feedback_is_private_and_replayable() {
     set_battle_character(
         &mut world,
         ObjectId(1),
-        BattleCharacter {
+        Character {
             build: 5,
             reflexes: 5,
             intuition: 5,
@@ -811,7 +763,7 @@ async fn emergency_landing_feedback_is_private_and_replayable() {
         &mut world,
         ObjectId(1),
         "Piloting-Aerospace",
-        BattleCharacterValue {
+        CharacterValue {
             value: 2,
             experience: 0,
             last_used: 0,
@@ -822,7 +774,7 @@ async fn emergency_landing_feedback_is_private_and_replayable() {
     for success in [false, true] {
         let seed = (0..=255)
             .find(|seed| {
-                let mut dice = BattleDice::seeded([*seed; 32]);
+                let mut dice = Dice::seeded([*seed; 32]);
                 dice.d6() == 3 && (i16::from(dice.two_d6()) >= target) == success
             })
             .unwrap();
@@ -831,15 +783,15 @@ async fn emergency_landing_feedback_is_private_and_replayable() {
             .btech
             .rewrite_unit_record(id, |record| {
                 let aircraft = record;
-                aircraft["power"] = serde_json::to_value(BattlePower::Running).unwrap();
-                aircraft["vtol_flight"] = serde_json::to_value(BattleVtolFlight {
+                aircraft["power"] = serde_json::to_value(Power::Running).unwrap();
+                aircraft["vtol_flight"] = serde_json::to_value(VtolFlight {
                     fall: None,
-                    phase: BattleVtolFlightPhase::Airborne,
+                    phase: VtolFlightPhase::Airborne,
                     altitude: 2.0,
                     vertical_speed: 0.0,
                 })
                 .unwrap();
-                aircraft["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+                aircraft["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
             })
             .unwrap();
         persistence::save(&config.database(), &candidate)
@@ -861,9 +813,9 @@ async fn emergency_landing_feedback_is_private_and_replayable() {
         .unwrap();
         let replay =
             Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(restored))).unwrap();
-        let rules = BattleVehicleCriticalRules {
+        let rules = VehicleCriticalRules {
             extended_piloting: true,
-            table: BattleVehicleCriticalTable::Standard,
+            table: VehicleCriticalTable::Standard,
             rotor_damage_divisor: 0,
             vtol_table: None,
             enabled: true,
@@ -874,7 +826,7 @@ async fn emergency_landing_feedback_is_private_and_replayable() {
             &scripts,
             &config,
             id,
-            BattleVehicleSection::Left,
+            VehicleSection::Left,
             rules,
         )
         .unwrap();
@@ -908,7 +860,7 @@ async fn emergency_landing_feedback_is_private_and_replayable() {
             &replay,
             &config,
             id,
-            BattleVehicleSection::Left,
+            VehicleSection::Left,
             rules,
         )
         .unwrap();

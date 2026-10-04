@@ -18,7 +18,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse("test", template).unwrap(),
+        VehicleTemplate::parse("test", template).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -36,13 +36,13 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
 fn seed(world: &mut World, id: ObjectId, value: u8) {
     world
         .btech
-        .set_unit_dice(id, BattleDice::seeded([value; 32]))
+        .set_unit_dice(id, Dice::seeded([value; 32]))
         .unwrap();
 }
 
 /// Select a deterministic critical stream without consuming the live victim's dice.
-fn rules(table: BattleVehicleCriticalTable) -> BattleVehicleCriticalRules {
-    BattleVehicleCriticalRules {
+fn rules(table: VehicleCriticalTable) -> VehicleCriticalRules {
+    VehicleCriticalRules {
         rotor_damage_divisor: 0,
         extended_piloting: false,
         vtol_table: None,
@@ -55,7 +55,7 @@ fn rules(table: BattleVehicleCriticalTable) -> BattleVehicleCriticalRules {
 
 #[tokio::test]
 async fn ground_powerplant_explosions_ignore_case_and_persist() {
-    use BattleVehicleCriticalTable as T;
+    use VehicleCriticalTable as T;
     for case in [false, true] {
         let text = if case {
             include_str!("../game/mechs/Demolisher.toml").replace(
@@ -68,7 +68,7 @@ async fn ground_powerplant_explosions_ignore_case_and_persist() {
         let (_dir, config, mut world, id) = fixture(&text).await;
         let value = (0..=255)
             .find(|value| {
-                let mut dice = BattleDice::seeded([*value; 32]);
+                let mut dice = Dice::seeded([*value; 32]);
                 if dice.die(3).unwrap() == 2 {
                     return false;
                 }
@@ -76,13 +76,13 @@ async fn ground_powerplant_explosions_ignore_case_and_persist() {
             })
             .unwrap();
         seed(&mut world, id, value);
-        let mut dice = BattleDice::seeded([value; 32]);
+        let mut dice = Dice::seeded([value; 32]);
         dice.die(3).unwrap();
         dice.d6();
         let result = resolve_battle_vehicle_critical(
             &mut world,
             id,
-            BattleVehicleSection::Turret,
+            VehicleSection::Turret,
             rules(T::Standard),
         )
         .unwrap();
@@ -91,7 +91,7 @@ async fn ground_powerplant_explosions_ignore_case_and_persist() {
         assert_eq!(explosion.destroyed_sections.len(), 5);
         let vehicle = &world.btech.vehicles()[&id];
         assert!(vehicle.is_destroyed());
-        assert_eq!(vehicle.power(), BattlePower::Off);
+        assert_eq!(vehicle.power(), Power::Off);
         assert!(vehicle.pilot().is_none());
         for state in vehicle.sections().values() {
             assert_eq!(state.internal, 0);
@@ -120,7 +120,7 @@ async fn fuel_explosions_ignore_case_and_do_not_damage_nearby_units() {
     create_battle_vehicle(
         &mut world,
         neighbor,
-        BattleVehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+        VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
             .unwrap(),
     )
     .unwrap();
@@ -129,7 +129,7 @@ async fn fuel_explosions_ignore_case_and_do_not_damage_nearby_units() {
     let before = world.btech.vehicles()[&neighbor].clone();
     let value = (0..=255)
         .find(|value| {
-            let mut dice = BattleDice::seeded([*value; 32]);
+            let mut dice = Dice::seeded([*value; 32]);
             dice.die(10).unwrap() > 5 && dice.d6() == 5
         })
         .unwrap();
@@ -137,8 +137,8 @@ async fn fuel_explosions_ignore_case_and_do_not_damage_nearby_units() {
     let result = resolve_battle_vehicle_critical(
         &mut world,
         id,
-        BattleVehicleSection::Front,
-        rules(BattleVehicleCriticalTable::Standard),
+        VehicleSection::Front,
+        rules(VehicleCriticalTable::Standard),
     )
     .unwrap();
     assert!(!result.explosion.unwrap().contained);
@@ -167,7 +167,7 @@ async fn case_requires_installed_equipment_and_character_explosions_record_crew_
         fixture(include_str!("../game/mechs/Demolisher.toml")).await;
     let value = (0..=255)
         .find(|value| {
-            let mut dice = BattleDice::seeded([*value; 32]);
+            let mut dice = Dice::seeded([*value; 32]);
             dice.die(10).unwrap() > 5 && dice.d6() == 6
         })
         .unwrap();
@@ -181,8 +181,8 @@ async fn case_requires_installed_equipment_and_character_explosions_record_crew_
     let report = resolve_battle_vehicle_critical(
         &mut world,
         id,
-        BattleVehicleSection::Front,
-        rules(BattleVehicleCriticalTable::Standard),
+        VehicleSection::Front,
+        rules(VehicleCriticalTable::Standard),
     )
     .unwrap();
     assert!(!report.explosion.unwrap().contained);
@@ -216,7 +216,7 @@ async fn carried_battlesuits_require_casualty_handling_before_explosion_commit()
     world.btech = serde_json::from_value(state).unwrap();
     let value = (0..=255)
         .find(|value| {
-            let mut dice = BattleDice::seeded([*value; 32]);
+            let mut dice = Dice::seeded([*value; 32]);
             dice.die(10).unwrap() > 5 && dice.d6() == 5
         })
         .unwrap();
@@ -225,8 +225,8 @@ async fn carried_battlesuits_require_casualty_handling_before_explosion_commit()
     let error = resolve_battle_vehicle_critical(
         &mut world,
         id,
-        BattleVehicleSection::Front,
-        rules(BattleVehicleCriticalTable::Standard),
+        VehicleSection::Front,
+        rules(VehicleCriticalTable::Standard),
     )
     .unwrap_err();
     assert!(error.to_string().contains("battlesuit"));

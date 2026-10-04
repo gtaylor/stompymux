@@ -8,12 +8,12 @@ use std::collections::{BTreeMap, BTreeSet};
 /// Reserved firing cycle; attack effects still belong to the enclosing transaction.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[must_use = "Apply attack effects before publishing the enclosing firing transaction"]
-pub struct BattleVehicleWeaponUse {
-    pub weapon: BattleWeapon,
-    pub ammunition: Vec<BattleAmmunitionDraw>,
-    pub ammunition_mode: BattleAmmunitionMode,
+pub struct VehicleWeaponUse {
+    pub weapon: Weapon,
+    pub ammunition: Vec<AmmunitionDraw>,
+    pub ammunition_mode: AmmunitionMode,
     /// Effective behavior after supply fallback, required when resolving this attack.
-    pub fire_mode: BattleFireMode,
+    pub fire_mode: FireMode,
     /// Supply-limited gatling damage rolled before the enclosing attack's hit dice.
     pub gatling_damage: Option<u8>,
     /// False for a failed Streak lock or a loader failure; the launch result describes consequences.
@@ -22,9 +22,9 @@ pub struct BattleVehicleWeaponUse {
     pub heat: u8,
 }
 
-impl From<BattleVehicleWeaponUse> for BattleWeaponUse {
+impl From<VehicleWeaponUse> for WeaponUse {
     /// Common expenditure facts are independent of the shooter's heat storage or anatomy.
-    fn from(value: BattleVehicleWeaponUse) -> Self {
+    fn from(value: VehicleWeaponUse) -> Self {
         Self {
             weapon: value.weapon,
             ammunition: value.ammunition,
@@ -38,9 +38,9 @@ impl From<BattleVehicleWeaponUse> for BattleWeaponUse {
     }
 }
 
-impl BattleVehicle {
+impl Vehicle {
     /// Resolve burst fallback with the common firing rule and this vehicle's ammunition feed.
-    pub(super) fn effective_fire_mode(&self, index: usize) -> Result<BattleFireMode> {
+    pub(super) fn effective_fire_mode(&self, index: usize) -> Result<FireMode> {
         let loadout = self.loadout()?;
         self.effective_fire_mode_with_loadout(&loadout, index)
     }
@@ -48,9 +48,9 @@ impl BattleVehicle {
     /// Preserve live supply fallback while sharing this immutable equipment projection.
     pub(crate) fn effective_fire_mode_with_loadout(
         &self,
-        loadout: &super::BattleVehicleLoadout,
+        loadout: &super::VehicleLoadout,
         index: usize,
-    ) -> Result<BattleFireMode> {
+    ) -> Result<FireMode> {
         ensure!(index < loadout.weapons.len(), "Weapon index out of bounds");
         super::fire_mode::effective_mode(
             self.fire_modes.get(&index).copied().unwrap_or_default(),
@@ -59,12 +59,12 @@ impl BattleVehicle {
     }
 
     /// Non-normal firing selections keyed by zero-based weapon index.
-    pub fn fire_modes(&self) -> &BTreeMap<usize, BattleFireMode> {
+    pub fn fire_modes(&self) -> &BTreeMap<usize, FireMode> {
         &self.fire_modes
     }
 
     /// Current firing behavior, initialized from the template only at construction.
-    pub fn fire_mode(&self, index: usize) -> Result<BattleFireMode> {
+    pub fn fire_mode(&self, index: usize) -> Result<FireMode> {
         ensure!(
             index < self.loadout()?.weapons.len(),
             "Weapon index out of bounds"
@@ -73,12 +73,12 @@ impl BattleVehicle {
     }
 
     /// Non-normal selections, keyed by zero-based weapon index.
-    pub fn ammunition_modes(&self) -> &BTreeMap<usize, BattleAmmunitionMode> {
+    pub fn ammunition_modes(&self) -> &BTreeMap<usize, AmmunitionMode> {
         &self.ammunition_modes
     }
 
     /// Current ammunition selection, independent of matching supply.
-    pub fn ammunition_mode(&self, index: usize) -> Result<BattleAmmunitionMode> {
+    pub fn ammunition_mode(&self, index: usize) -> Result<AmmunitionMode> {
         ensure!(
             index < self.loadout()?.weapons.len(),
             "Weapon index out of bounds"
@@ -101,7 +101,7 @@ impl BattleVehicle {
     }
 
     /// Mechanical readiness; full firing authority and targeting remain separate.
-    pub fn weapon_readiness(&self, index: usize) -> Result<BattleWeaponReadiness> {
+    pub fn weapon_readiness(&self, index: usize) -> Result<WeaponReadiness> {
         let _measurement = crate::btech::autopilot::diagnostics::measure(
             crate::btech::autopilot::diagnostics::Category::Readiness,
         );
@@ -110,7 +110,7 @@ impl BattleVehicle {
     }
 
     /// Inspect every resolved mount while sharing one immutable equipment projection.
-    pub(crate) fn weapon_readiness_batch(&self) -> Result<Vec<BattleWeaponReadiness>> {
+    pub(crate) fn weapon_readiness_batch(&self) -> Result<Vec<WeaponReadiness>> {
         let _measurement = crate::btech::autopilot::diagnostics::measure(
             crate::btech::autopilot::diagnostics::Category::Readiness,
         );
@@ -126,9 +126,9 @@ impl BattleVehicle {
     /// Inspect live state against an equipment projection from the same immutable unit.
     pub(crate) fn weapon_readiness_with_loadout(
         &self,
-        loadout: &BattleVehicleLoadout,
+        loadout: &VehicleLoadout,
         index: usize,
-    ) -> Result<BattleWeaponReadiness> {
+    ) -> Result<WeaponReadiness> {
         let mount = loadout
             .weapons
             .get(index)
@@ -158,7 +158,7 @@ impl BattleVehicle {
         };
         let recycle_remaining = self.weapon_recycle.get(&index).copied().unwrap_or(0);
         let posture_ready = !mechanics.covered;
-        Ok(BattleWeaponReadiness {
+        Ok(WeaponReadiness {
             weapon: mount.weapon,
             intact,
             ammunition,
@@ -168,7 +168,7 @@ impl BattleVehicle {
             jammed: self.weapon_failures.contains_key(&index)
                 || self.jammed_weapons.contains(&index),
             ready: mechanics.admits()
-                && self.power() == BattlePower::Running
+                && self.power() == Power::Running
                 && !self.is_destroyed()
                 && self.turret_repairs().is_empty()
                 && self.pod_removal().is_none()
@@ -189,7 +189,7 @@ impl BattleVehicle {
 
     fn weapon_mechanics_with_loadout(
         &self,
-        loadout: &BattleVehicleLoadout,
+        loadout: &VehicleLoadout,
         index: usize,
     ) -> Result<super::weapon_admission::WeaponMechanics> {
         let mount = loadout
@@ -206,7 +206,7 @@ impl BattleVehicle {
             section_recycle: None,
             carried_club: false,
             posture_failure: None,
-            covered: self.dig.dug_in && mount.criticals[0].section != BattleVehicleSection::Turret,
+            covered: self.dig.dug_in && mount.criticals[0].section != VehicleSection::Turret,
         })
     }
 }
@@ -222,7 +222,7 @@ pub fn reserve_vehicle_weapon(
     pilot: ObjectId,
     index: usize,
     launched: bool,
-) -> Result<BattleVehicleWeaponUse> {
+) -> Result<VehicleWeaponUse> {
     reserve_prepared_weapon(world, id, pilot, index, launched, None)
 }
 
@@ -234,7 +234,7 @@ pub(super) fn reserve_prepared_weapon(
     index: usize,
     launched: bool,
     prepared: Option<super::gatling::GatlingPreparation>,
-) -> Result<BattleVehicleWeaponUse> {
+) -> Result<VehicleWeaponUse> {
     super::combat_operator::controlled(world, id, pilot)?;
     let vehicle = world
         .btech
@@ -250,7 +250,7 @@ pub(super) fn reserve_prepared_weapon(
         "You are too busy unjamming your turret!"
     );
     ensure!(
-        vehicle.weapon_failures().get(&index) != Some(&BattleEquipmentFailure::Disabled),
+        vehicle.weapon_failures().get(&index) != Some(&EquipmentFailure::Disabled),
         "The weapons system chirps: 'That weapon has been destroyed!'"
     );
     ensure!(
@@ -300,14 +300,14 @@ pub(super) fn reserve_prepared_weapon(
             .expect("validated ammunition draw");
     }
     vehicle.dice = dice;
-    if fire_mode == BattleFireMode::Normal {
+    if fire_mode == FireMode::Normal {
         vehicle.fire_modes.remove(&index);
     }
     if launched && mount.one_shot {
         vehicle.spent_launchers.insert(index);
     }
     vehicle.weapon_recycle.insert(index, timer);
-    Ok(BattleVehicleWeaponUse {
+    Ok(VehicleWeaponUse {
         weapon: mount.weapon,
         ammunition,
         fire_mode,
@@ -319,13 +319,13 @@ pub(super) fn reserve_prepared_weapon(
 }
 
 /// Advance powered vehicle weapon timers inside the ordinary server tick candidate.
-pub(super) fn advance(world: &mut World) -> Vec<BattleNotice> {
+pub(super) fn advance(world: &mut World) -> Vec<Notice> {
     let ids: Vec<_> = world
         .btech
         .vehicles()
         .iter()
         .filter(|(id, vehicle)| {
-            vehicle.power() == BattlePower::Running
+            vehicle.power() == Power::Running
                 && !vehicle.weapon_recycle.is_empty()
                 && world
                     .objects
@@ -346,7 +346,7 @@ pub(super) fn advance(world: &mut World) -> Vec<BattleNotice> {
             if *remaining > 0 {
                 return true;
             }
-            notices.push(BattleNotice {
+            notices.push(Notice {
                 unit: id,
                 text: if vehicle.weapon_failures.remove(index).is_some() {
                     super::weapon_failure::recovery_notice(loadout.weapons[*index].weapon)

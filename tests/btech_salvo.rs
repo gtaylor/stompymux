@@ -1,9 +1,9 @@
 //! Conventional cluster probabilities, packet boundaries and atomic multi-location salvos.
 use crate::support;
-use stompymux_rs::BattleWeaponSalvo;
+use stompymux_rs::WeaponSalvo;
 use stompymux_rs::{
-    BattleDice, BattleHitArc, BattleHitRules, BattleTemplate, BattleWeapon as Weapon, Kind,
-    ObjectId, create_battle_unit, persistence, resolve_battle_salvo,
+    Dice, HitArc, HitRules, Kind, MechTemplate, ObjectId, Weapon, create_battle_unit, persistence,
+    resolve_battle_salvo,
 };
 
 #[test]
@@ -84,33 +84,25 @@ async fn salvo_locations_replay_and_restart_preserves_every_group_and_roll() {
     create_battle_unit(
         &mut world,
         id,
-        BattleTemplate::parse("AS7-D", include_str!("fixtures/btech/mechs/AS7-D.toml")).unwrap(),
+        MechTemplate::parse("AS7-D", include_str!("fixtures/btech/mechs/AS7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     world
         .btech
-        .set_unit_dice(id, BattleDice::seeded([0; 32]))
+        .set_unit_dice(id, Dice::seeded([0; 32]))
         .unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
     let before = world.clone();
-    let rules = BattleHitRules {
+    let rules = HitRules {
         inferno_penalty: false,
         exile_stun_mode: 0,
     };
     assert!(
-        resolve_battle_salvo(
-            &mut world,
-            ObjectId(-1),
-            Weapon::Srm6,
-            BattleHitArc::Front,
-            rules
-        )
-        .is_err()
+        resolve_battle_salvo(&mut world, ObjectId(-1), Weapon::Srm6, HitArc::Front, rules).is_err()
     );
     assert_eq!(world.btech, before.btech);
-    let report =
-        resolve_battle_salvo(&mut world, id, Weapon::Srm6, BattleHitArc::Front, rules).unwrap();
+    let report = resolve_battle_salvo(&mut world, id, Weapon::Srm6, HitArc::Front, rules).unwrap();
     assert_eq!(
         report.groups.len(),
         usize::from(
@@ -131,7 +123,7 @@ async fn salvo_locations_replay_and_restart_preserves_every_group_and_roll() {
     );
     let mut repeated = before.clone();
     assert_eq!(
-        resolve_battle_salvo(&mut repeated, id, Weapon::Srm6, BattleHitArc::Front, rules).unwrap(),
+        resolve_battle_salvo(&mut repeated, id, Weapon::Srm6, HitArc::Front, rules).unwrap(),
         report
     );
     assert_eq!(repeated.btech, world.btech);
@@ -154,22 +146,8 @@ async fn salvo_locations_replay_and_restart_preserves_every_group_and_roll() {
     let mut loaded = persistence::load(&config.database()).await.unwrap();
     assert_eq!(loaded.btech, world.btech);
     assert_eq!(
-        resolve_battle_salvo(
-            &mut loaded,
-            id,
-            Weapon::MediumLaser,
-            BattleHitArc::Rear,
-            rules
-        )
-        .unwrap(),
-        resolve_battle_salvo(
-            &mut world,
-            id,
-            Weapon::MediumLaser,
-            BattleHitArc::Rear,
-            rules
-        )
-        .unwrap()
+        resolve_battle_salvo(&mut loaded, id, Weapon::MediumLaser, HitArc::Rear, rules).unwrap(),
+        resolve_battle_salvo(&mut world, id, Weapon::MediumLaser, HitArc::Rear, rules).unwrap()
     );
 }
 
@@ -188,7 +166,7 @@ async fn tactical_fixture() -> (
     create_battle_unit(
         &mut world,
         id,
-        BattleTemplate::parse("AS7-D", include_str!("fixtures/btech/mechs/AS7-D.toml")).unwrap(),
+        MechTemplate::parse("AS7-D", include_str!("fixtures/btech/mechs/AS7-D.toml")).unwrap(),
     )
     .unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
@@ -202,16 +180,16 @@ fn seeded_target(world: &stompymux_rs::World, id: ObjectId, seed: u8) -> stompym
     let mut trial = world.clone();
     trial
         .btech
-        .set_unit_dice(id, BattleDice::seeded([seed; 32]))
+        .set_unit_dice(id, Dice::seeded([seed; 32]))
         .unwrap();
     trial
 }
 
 #[tokio::test]
 async fn tactical_salvo_applies_later_head_injury_and_rolls_back_an_entire_failed_cascade() {
-    use stompymux_rs::{BattleSection, resolve_battle_tactical_salvo};
+    use stompymux_rs::{MechSection, resolve_battle_tactical_salvo};
     let (_dir, config, world, id) = tactical_fixture().await;
-    let rules = BattleHitRules {
+    let rules = HitRules {
         inferno_penalty: false,
         exile_stun_mode: 0,
     };
@@ -220,10 +198,10 @@ async fn tactical_salvo_applies_later_head_injury_and_rolls_back_an_entire_faile
         let original = seeded_target(&world, id, seed);
         let mut trial = original.clone();
         let material =
-            resolve_battle_salvo(&mut trial, id, Weapon::Srm6, BattleHitArc::Front, rules).unwrap();
+            resolve_battle_salvo(&mut trial, id, Weapon::Srm6, HitArc::Front, rules).unwrap();
         if material.groups.len() >= 2
-            && material.groups[0].hit.section != BattleSection::Head
-            && material.groups[1].hit.section == BattleSection::Head
+            && material.groups[0].hit.section != MechSection::Head
+            && material.groups[1].hit.section == MechSection::Head
         {
             selected = Some((original, material));
             break;
@@ -238,11 +216,11 @@ async fn tactical_salvo_applies_later_head_injury_and_rolls_back_an_entire_faile
             &mut invalid,
             id,
             Weapon::Srm6,
-            BattleHitArc::Front,
-            stompymux_rs::BattleFallRules {
-                vehicle_impact: stompymux_rs::BattleVehicleImpactRules::STANDARD,
-                stacking: stompymux_rs::BattleStackingRules::STANDARD,
-                stagger: stompymux_rs::BattleStaggerMode::Retain,
+            HitArc::Front,
+            stompymux_rs::FallRules {
+                vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
+                stacking: stompymux_rs::StackingRules::STANDARD,
+                stagger: stompymux_rs::StaggerMode::Retain,
                 hit: rules,
                 extended_piloting: true,
                 toughness: false
@@ -255,11 +233,11 @@ async fn tactical_salvo_applies_later_head_injury_and_rolls_back_an_entire_faile
         &mut world,
         id,
         Weapon::Srm6,
-        BattleHitArc::Front,
-        stompymux_rs::BattleFallRules {
-            vehicle_impact: stompymux_rs::BattleVehicleImpactRules::STANDARD,
-            stacking: stompymux_rs::BattleStackingRules::STANDARD,
-            stagger: stompymux_rs::BattleStaggerMode::Retain,
+        HitArc::Front,
+        stompymux_rs::FallRules {
+            vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
+            stacking: stompymux_rs::StackingRules::STANDARD,
+            stagger: stompymux_rs::StaggerMode::Retain,
             hit: rules,
             extended_piloting: true,
             toughness: false,
@@ -276,7 +254,7 @@ async fn tactical_salvo_applies_later_head_injury_and_rolls_back_an_entire_faile
             !actual
                 .impact
                 .pending_effects
-                .contains(&stompymux_rs::BattleImpactEffect::HeadInjury)
+                .contains(&stompymux_rs::ImpactEffect::HeadInjury)
         );
     }
     assert_eq!(report.groups[1].pilot_injuries.len(), 1);
@@ -290,9 +268,9 @@ async fn tactical_salvo_applies_later_head_injury_and_rolls_back_an_entire_faile
 
 #[tokio::test]
 async fn pilot_loss_stops_remaining_missile_groups_without_rolling_them() {
-    use stompymux_rs::{BattleSection, resolve_battle_tactical_salvo};
+    use stompymux_rs::{MechSection, resolve_battle_tactical_salvo};
     let (_dir, config, mut world, id) = tactical_fixture().await;
-    let rules = BattleHitRules {
+    let rules = HitRules {
         inferno_penalty: false,
         exile_stun_mode: 0,
     };
@@ -304,7 +282,7 @@ async fn pilot_loss_stops_remaining_missile_groups_without_rolling_them() {
         .unwrap();
     for seed in 0..=255 {
         let mut trial = seeded_target(&world, id, seed);
-        let mut dice = BattleDice::seeded([seed; 32]);
+        let mut dice = Dice::seeded([seed; 32]);
         let cluster = dice.two_d6();
         if Weapon::Srm6.missile_hits(cluster).unwrap() < 2 || dice.two_d6() != 12 {
             continue;
@@ -313,11 +291,11 @@ async fn pilot_loss_stops_remaining_missile_groups_without_rolling_them() {
             &mut trial,
             id,
             Weapon::Srm6,
-            BattleHitArc::Front,
-            stompymux_rs::BattleFallRules {
-                vehicle_impact: stompymux_rs::BattleVehicleImpactRules::STANDARD,
-                stacking: stompymux_rs::BattleStackingRules::STANDARD,
-                stagger: stompymux_rs::BattleStaggerMode::Retain,
+            HitArc::Front,
+            stompymux_rs::FallRules {
+                vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
+                stacking: stompymux_rs::StackingRules::STANDARD,
+                stagger: stompymux_rs::StaggerMode::Retain,
                 hit: rules,
                 extended_piloting: true,
                 toughness: false,
@@ -325,7 +303,7 @@ async fn pilot_loss_stops_remaining_missile_groups_without_rolling_them() {
         )
         .unwrap();
         assert_eq!(report.groups.len(), 1);
-        assert_eq!(report.groups[0].hit.section, BattleSection::Head);
+        assert_eq!(report.groups[0].hit.section, MechSection::Head);
         assert!(report.groups[0].pilot_injuries[0].killed);
         assert!(report.groups[0].impact.destroyed);
         dice.two_d6(); // Material entry precedes the fatal head injury.
@@ -364,31 +342,26 @@ async fn rear_weapon_hits_ignite_one_dumped_salvo_and_replay_after_restart() {
         .find(|(_, bin)| bin.weapon == Weapon::Srm6)
         .unwrap();
     let initial = world.btech.constructed_units()[&id].ammunition()[bin_index];
-    let rules = BattleMovementRules::STANDARD.fall;
+    let rules = MovementRules::STANDARD.fall;
     let mut selected = None;
     for seed in 0..=255 {
         let mut trial = seeded_target(&world, id, seed);
         trial
             .btech
             .rewrite_unit_record(id, |record| {
-                record["dumping"] = serde_json::to_value(BattleDump {
-                    selection: BattleDumpSelection::Slot(bin.location),
+                record["dumping"] = serde_json::to_value(Dump {
+                    selection: DumpSelection::Slot(bin.location),
                     phase: 4,
                 })
                 .unwrap();
             })
             .unwrap();
         let before = trial.clone();
-        let report = resolve_battle_tactical_salvo(
-            &mut trial,
-            id,
-            Weapon::MediumLaser,
-            BattleHitArc::Rear,
-            rules,
-        )
-        .unwrap();
+        let report =
+            resolve_battle_tactical_salvo(&mut trial, id, Weapon::MediumLaser, HitArc::Rear, rules)
+                .unwrap();
         let group = &report.groups[0];
-        if group.hit.section == BattleSection::CenterTorso
+        if group.hit.section == MechSection::CenterTorso
             && !group.hit.through_armor_critical
             && group.impact.phases.len() == 3
             && group.impact.criticals.is_empty()
@@ -402,20 +375,20 @@ async fn rear_weapon_hits_ignite_one_dumped_salvo_and_replay_after_restart() {
     assert_eq!(ignition.len(), 1);
     assert_eq!(ignition[0].damage, 12);
     assert_eq!(ignition[0].bin_index, bin_index);
-    assert_eq!(ignition[0].section, BattleSection::CenterTorso);
+    assert_eq!(ignition[0].section, MechSection::CenterTorso);
     assert_eq!(
         after.btech.constructed_units()[&id].ammunition()[bin_index],
         initial - 1
     );
     assert!(after.btech.constructed_units()[&id].dumping().is_none());
     assert_eq!(
-        before.btech.constructed_units()[&id].sections()[&BattleSection::CenterTorso].rear
-            - after.btech.constructed_units()[&id].sections()[&BattleSection::CenterTorso].rear,
+        before.btech.constructed_units()[&id].sections()[&MechSection::CenterTorso].rear
+            - after.btech.constructed_units()[&id].sections()[&MechSection::CenterTorso].rear,
         14
     );
     assert_eq!(
-        before.btech.constructed_units()[&id].sections()[&BattleSection::CenterTorso].internal
-            - after.btech.constructed_units()[&id].sections()[&BattleSection::CenterTorso].internal,
+        before.btech.constructed_units()[&id].sections()[&MechSection::CenterTorso].internal
+            - after.btech.constructed_units()[&id].sections()[&MechSection::CenterTorso].internal,
         3
     );
     assert!(
@@ -429,14 +402,8 @@ async fn rear_weapon_hits_ignite_one_dumped_salvo_and_replay_after_restart() {
         .unwrap();
     let mut restored = persistence::load(&config.database()).await.unwrap();
     assert_eq!(
-        resolve_battle_tactical_salvo(
-            &mut restored,
-            id,
-            Weapon::MediumLaser,
-            BattleHitArc::Rear,
-            rules
-        )
-        .unwrap(),
+        resolve_battle_tactical_salvo(&mut restored, id, Weapon::MediumLaser, HitArc::Rear, rules)
+            .unwrap(),
         report
     );
     assert_eq!(restored.btech, after.btech);
@@ -450,14 +417,9 @@ async fn rear_weapon_hits_ignite_one_dumped_salvo_and_replay_after_restart() {
     );
     assert!(ordinary.btech.constructed_units()[&id].dumping().is_some());
     let mut front = before;
-    let report = resolve_battle_tactical_salvo(
-        &mut front,
-        id,
-        Weapon::MediumLaser,
-        BattleHitArc::Front,
-        rules,
-    )
-    .unwrap();
+    let report =
+        resolve_battle_tactical_salvo(&mut front, id, Weapon::MediumLaser, HitArc::Front, rules)
+            .unwrap();
     assert!(
         report
             .groups

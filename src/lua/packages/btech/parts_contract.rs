@@ -1,7 +1,7 @@
 //! C-compatible loose-part catalogue, lookup, store, and cost bindings.
 
 use super::{contract, error};
-use crate::{BattlePart, BattlePartForm, SharedWorld, World};
+use crate::{Part, PartForm, SharedWorld, World};
 use mlua::{Lua, LuaString, MultiValue, Table, Value};
 
 const GROUP: &str = "parts";
@@ -22,7 +22,7 @@ fn value(arguments: &MultiValue, index: usize) -> Value {
     arguments.get(index).cloned().unwrap_or(Value::Nil)
 }
 
-fn form_for(catalogue: &[BattlePartForm], part: PartReference) -> Option<&BattlePartForm> {
+fn form_for(catalogue: &[PartForm], part: PartReference) -> Option<&PartForm> {
     catalogue.iter().find(|form| form.part_id == part.id)
 }
 
@@ -43,7 +43,7 @@ fn c_bytes(value: &LuaString) -> Vec<u8> {
 pub(super) fn check_part(
     value: Value,
     argument: usize,
-    catalogue: &[BattlePartForm],
+    catalogue: &[PartForm],
 ) -> mlua::Result<Option<PartReference>> {
     let part = match value {
         Value::Integer(id) => {
@@ -103,7 +103,7 @@ pub(super) fn check_part(
 fn require_part(
     value: Value,
     argument: usize,
-    catalogue: &[BattlePartForm],
+    catalogue: &[PartForm],
 ) -> mlua::Result<PartReference> {
     check_part(value, argument, catalogue)?
         .ok_or_else(|| argument_failure(argument, "btech.part.not_found", "part is not registered"))
@@ -113,7 +113,7 @@ pub(super) fn part_category(id: i32) -> &'static str {
     if crate::btech::WEAPON_PART_IDS.contains(&id) {
         return "weapon";
     }
-    if crate::btech::BattlePart::ammunition_weapon_id(id).is_some() {
+    if crate::btech::Part::ammunition_weapon_id(id).is_some() {
         return "ammunition";
     }
     match id {
@@ -145,14 +145,14 @@ pub(super) fn normalize_raw_template_parts(template: &mut crate::RawTemplate) ->
         }) else {
             return false;
         };
-        critical.equipment = crate::btech::BattlePart::from_id(form.part_id)
+        critical.equipment = crate::btech::Part::from_id(form.part_id)
             .map_or_else(|| critical.equipment.clone(), |part| part.name);
     }
     true
 }
 
 /// Whether every critical names a known part, rejecting the whole template when one does not.
-pub(super) fn unit_template_parts_known(template: &crate::BattleUnitTemplate) -> bool {
+pub(super) fn unit_template_parts_known(template: &crate::UnitTemplate) -> bool {
     let catalogue = crate::btech::part_catalogue();
     let known = |critical: &crate::CriticalDefinition| {
         catalogue.iter().any(|form| {
@@ -161,12 +161,12 @@ pub(super) fn unit_template_parts_known(template: &crate::BattleUnitTemplate) ->
         })
     };
     match template {
-        crate::BattleUnitTemplate::Mech(mech) => mech
+        crate::UnitTemplate::Mech(mech) => mech
             .sections
             .values()
             .flat_map(|layout| layout.criticals.values())
             .all(known),
-        crate::BattleUnitTemplate::Vehicle(vehicle) => vehicle
+        crate::UnitTemplate::Vehicle(vehicle) => vehicle
             .sections
             .values()
             .flat_map(|layout| layout.criticals.values())
@@ -475,11 +475,11 @@ fn push_weapon(lua: &Lua, id: i32) -> mlua::Result<Table> {
 pub(super) fn push_part(
     lua: &Lua,
     world: &World,
-    catalogue: &[BattlePartForm],
+    catalogue: &[PartForm],
     part: PartReference,
 ) -> mlua::Result<Table> {
     let form = form_for(catalogue, part);
-    let native = BattlePart::from_id(part.id)
+    let native = Part::from_id(part.id)
         .ok_or_else(|| error::failure("mux.internal", "part catalogue mismatch"))?;
     let cost = crate::btech::part_cost(world, part.id)
         .map_err(|failure| error::failure("mux.internal", failure))?;
@@ -528,7 +528,7 @@ fn categories(lua: &Lua) -> mlua::Result<Table> {
 }
 
 /// The part-name registry Lua resolves names against.
-pub(super) fn registered_catalogue() -> &'static [BattlePartForm] {
+pub(super) fn registered_catalogue() -> &'static [PartForm] {
     crate::btech::part_catalogue()
 }
 

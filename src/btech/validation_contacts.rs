@@ -2,7 +2,7 @@
 //!
 //! Compact identities use bounded direct addressing. Sparse or extreme ranges
 //! keep the ordinary tree lookup; neither path persists beyond the immutable read.
-use super::{BattlePosition, BtechState};
+use super::{BtechState, Position};
 use crate::ObjectId;
 
 const MAX_DENSE_SPAN: usize = 65_536;
@@ -10,7 +10,7 @@ const MAX_DENSE_SPAN: usize = 65_536;
 pub(super) struct Positions {
     base: i64,
     /// Outer None means absent; Some(None) means a present but unplaced unit.
-    entries: Vec<Option<Option<BattlePosition>>>,
+    entries: Vec<Option<Option<Position>>>,
 }
 impl Positions {
     /// Prefer vehicle records on malformed duplicate identities, as the native
@@ -60,7 +60,7 @@ impl Positions {
     }
 
     /// Preserve the distinction between missing records and unplaced units.
-    pub(super) fn get(&self, id: ObjectId) -> Option<Option<BattlePosition>> {
+    pub(super) fn get(&self, id: ObjectId) -> Option<Option<Position>> {
         let index = usize::try_from(id.0.checked_sub(self.base)?).ok()?;
         self.entries.get(index).copied().flatten()
     }

@@ -8,14 +8,14 @@ use serde::Serialize;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 #[must_use = "Publish crash consequences in the enclosing flight action"]
-pub enum BattleVehicleDescentEvent {
+pub enum VehicleDescentEvent {
     Waiting,
     Descending,
     /// Powered flight has arrested descent without impact.
     Recovered,
     Impact {
         levels: u32,
-        fall: Box<BattleVehicleFallReport>,
+        fall: Box<VehicleFallReport>,
     },
 }
 
@@ -25,8 +25,8 @@ pub enum BattleVehicleDescentEvent {
 pub fn advance_vtol_fall(
     world: &mut World,
     id: ObjectId,
-    rules: BattleFallRules,
-) -> Result<BattleVehicleDescentEvent> {
+    rules: FallRules,
+) -> Result<VehicleDescentEvent> {
     ensure!(
         world
             .btech
@@ -42,8 +42,8 @@ pub fn advance_vtol_fall(
 pub fn advance_vehicle_descent(
     world: &mut World,
     id: ObjectId,
-    rules: BattleFallRules,
-) -> Result<BattleVehicleDescentEvent> {
+    rules: FallRules,
+) -> Result<VehicleDescentEvent> {
     advance_in_candidate(world, id, rules, false, false)
 }
 
@@ -51,10 +51,10 @@ pub fn advance_vehicle_descent(
 fn advance_in_candidate(
     world: &mut World,
     id: ObjectId,
-    rules: BattleFallRules,
+    rules: FallRules,
     character: bool,
     free_fusion_fuel: bool,
-) -> Result<BattleVehicleDescentEvent> {
+) -> Result<VehicleDescentEvent> {
     let object = world.objects.get(&id).context("Aircraft is unavailable")?;
     ensure!(
         !object.flags.contains(crate::Flag::Going)
@@ -83,10 +83,10 @@ fn advance_in_candidate(
             fall.advance(i32::from(surface))?
         };
         let event = match step {
-            BattleFreeFallStep::Recovered => BattleVehicleDescentEvent::Recovered,
-            BattleFreeFallStep::Waiting => BattleVehicleDescentEvent::Waiting,
-            BattleFreeFallStep::Descending => BattleVehicleDescentEvent::Descending,
-            BattleFreeFallStep::Impact { levels } => BattleVehicleDescentEvent::Impact {
+            FreeFallStep::Recovered => VehicleDescentEvent::Recovered,
+            FreeFallStep::Waiting => VehicleDescentEvent::Waiting,
+            FreeFallStep::Descending => VehicleDescentEvent::Descending,
+            FreeFallStep::Impact { levels } => VehicleDescentEvent::Impact {
                 levels,
                 fall: Box::new(if world.btech.vehicles()[&id].vtol_flight().is_some() {
                     resolve_in_candidate(world, id, levels, rules, character)?
@@ -112,8 +112,8 @@ pub fn resolve_vtol_crash(
     world: &mut World,
     id: ObjectId,
     levels: u32,
-    rules: BattleFallRules,
-) -> Result<BattleVehicleFallReport> {
+    rules: FallRules,
+) -> Result<VehicleFallReport> {
     resolve_in_candidate(world, id, levels, rules, false)
 }
 
@@ -122,9 +122,9 @@ pub(super) fn resolve_in_candidate(
     world: &mut World,
     id: ObjectId,
     levels: u32,
-    rules: BattleFallRules,
+    rules: FallRules,
     character: bool,
-) -> Result<BattleVehicleFallReport> {
+) -> Result<VehicleFallReport> {
     let levels = i16::try_from(levels).context("Fall severity exceeds pilot-check range")?;
     resolve_signed_in_candidate(world, id, levels, rules, character)
 }
@@ -134,9 +134,9 @@ pub(super) fn resolve_signed_in_candidate(
     world: &mut World,
     id: ObjectId,
     levels: i16,
-    rules: BattleFallRules,
+    rules: FallRules,
     character: bool,
-) -> Result<BattleVehicleFallReport> {
+) -> Result<VehicleFallReport> {
     let unit = world
         .btech
         .vehicles()
@@ -146,7 +146,7 @@ pub(super) fn resolve_signed_in_candidate(
     ensure!(
         matches!(
             flight.phase,
-            BattleVtolFlightPhase::Airborne | BattleVtolFlightPhase::Falling
+            VtolFlightPhase::Airborne | VtolFlightPhase::Falling
         ),
         "Crash requires an airborne aircraft"
     );
@@ -161,8 +161,8 @@ pub(super) fn resolve_signed_in_candidate(
     world.attempt(|world| {
         let unit = world.btech.vehicles.get_mut(&id).unwrap();
         // Clear descent before impact criticals can remove lift again.
-        unit.vtol_flight = Some(BattleVtolFlight {
-            phase: BattleVtolFlightPhase::Landed,
+        unit.vtol_flight = Some(VtolFlight {
+            phase: VtolFlightPhase::Landed,
             altitude: f64::from(height),
             vertical_speed: 0.0,
             fall: None,
@@ -174,14 +174,14 @@ pub(super) fn resolve_signed_in_candidate(
             rules,
             character,
         )?;
-        if !rules.vehicle_impact.criticals.combat_safe && !super::battle_combat_safe(world, id)? {
+        if !rules.vehicle_impact.criticals.combat_safe && !super::combat_safe(world, id)? {
             world
                 .btech
                 .vehicles
                 .get_mut(&id)
                 .unwrap()
-                .apply_motive_hit(BattleVehicleMotiveHit::Immobilize);
-            report.feedback.notices.push(BattleNotice {
+                .apply_motive_hit(VehicleMotiveHit::Immobilize);
+            report.feedback.notices.push(Notice {
                 unit: id,
                 text: "Your rotor has been destroyed!".into(),
             });
@@ -194,7 +194,7 @@ pub(super) fn resolve_signed_in_candidate(
 /// Reports use the same host publication path as ground-vehicle falls.
 pub(super) fn advance_all(
     world: &mut World,
-    rules: BattleMovementRules,
+    rules: MovementRules,
     character: bool,
 ) -> Result<super::movement_report::MovementReport> {
     let ids: Vec<_> = world
@@ -229,8 +229,8 @@ pub(super) fn advance_all(
             character,
             rules.free_fusion_vtol_fuel,
         )?;
-        if let BattleVehicleDescentEvent::Impact { fall, .. } = event {
-            report.notices.push(BattleNotice {
+        if let VehicleDescentEvent::Impact { fall, .. } = event {
+            report.notices.push(Notice {
                 unit: id,
                 text: "You hit the ground!".into(),
             });
@@ -291,16 +291,16 @@ pub(super) fn begin_descent(world: &mut World, id: ObjectId) -> Result<()> {
     world.attempt(|world| {
         let unit = world.btech.vehicles.get_mut(&id).unwrap();
         unit.halt();
-        unit.dig = super::BattleDigState::default();
+        unit.dig = super::DigState::default();
         unit.building_entry = None;
         unit.ground_elevation = None;
         unit.orbital_drop = None;
         if let Some(flight) = &mut unit.vtol_flight {
-            flight.phase = BattleVtolFlightPhase::Falling;
+            flight.phase = VtolFlightPhase::Falling;
             flight.vertical_speed = 0.0;
-            flight.fall = Some(BattleFreeFall::at_altitude(altitude)?);
+            flight.fall = Some(FreeFall::at_altitude(altitude)?);
         } else {
-            unit.free_fall = Some(BattleFreeFall::at_altitude(altitude)?);
+            unit.free_fall = Some(FreeFall::at_altitude(altitude)?);
         }
         world.btech.validate_action(world)?;
         Ok(())

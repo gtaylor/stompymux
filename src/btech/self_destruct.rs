@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 /// An admitted sequence; advertised intent is separate from the event's actual detonation mode.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BattleSelfDestruct {
+pub struct SelfDestruct {
     pub remaining: u16,
     /// Mech detonation mode and the shared ammunition-presence cancellation condition.
     pub ammunition: bool,
@@ -18,7 +18,7 @@ pub struct BattleSelfDestruct {
     order: u64,
 }
 
-impl BattleSelfDestruct {
+impl SelfDestruct {
     /// The event expires at the next lower 256-second boundary, including nonpositive settings.
     fn scheduled(delay: i64, order: u64) -> Self {
         let remaining = delay.rem_euclid(256) as u16;
@@ -44,10 +44,10 @@ impl BattleSelfDestruct {
     }
 
     /// Feedback reflects the signed countdown while admission bounds the actual duration.
-    fn notice(self, unit: ObjectId) -> BattleNotice {
+    fn notice(self, unit: ObjectId) -> Notice {
         let seconds = i32::from(self.remaining) - if self.negative { 256 } else { 0 };
         let plural = self.ammunition || (!self.negative && self.remaining > 1);
-        BattleNotice {
+        Notice {
             unit,
             text: format!(
                 "Self-destruction in {seconds} second{}..",
@@ -57,9 +57,9 @@ impl BattleSelfDestruct {
     }
 }
 
-impl BattleUnit {
+impl Mech {
     /// Current admitted self-destruct sequence, independent of pilot reassignment.
-    pub fn self_destruct(&self) -> Option<BattleSelfDestruct> {
+    pub fn self_destruct(&self) -> Option<SelfDestruct> {
         self.self_destruct
     }
 
@@ -69,9 +69,9 @@ impl BattleUnit {
     }
 }
 
-impl BattleVehicle {
+impl Vehicle {
     /// The same sequence drives ground-vehicle and rotorcraft immolation.
-    pub fn self_destruct(&self) -> Option<BattleSelfDestruct> {
+    pub fn self_destruct(&self) -> Option<SelfDestruct> {
         self.self_destruct
     }
 
@@ -100,7 +100,7 @@ pub fn set_battle_self_destruct_safe(world: &mut World, id: ObjectId, safe: bool
 }
 
 /// Active sequences retain command order even when their unit identifiers differ.
-fn pending(state: &BtechState) -> Vec<(ObjectId, BattleSelfDestruct)> {
+fn pending(state: &BtechState) -> Vec<(ObjectId, SelfDestruct)> {
     let mut timers: Vec<_> = state
         .constructed_units()
         .iter()
@@ -130,7 +130,7 @@ pub(super) fn validate(state: &BtechState) -> Result<()> {
 }
 
 /// Mutable anatomy adapter; no countdown or detonation decisions are duplicated here.
-fn timer_mut(world: &mut World, id: ObjectId) -> &mut Option<BattleSelfDestruct> {
+fn timer_mut(world: &mut World, id: ObjectId) -> &mut Option<SelfDestruct> {
     crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
         &mut unit.self_destruct
     })
@@ -147,7 +147,7 @@ fn ammunition(world: &World, id: ObjectId) -> Result<Option<usize>> {
 
 /// Ordered cockpit/observer feedback and diagnostic-channel records from admission.
 enum Feedback {
-    Notice(BattleNotice),
+    Notice(Notice),
     Debug(String),
 }
 
@@ -156,7 +156,7 @@ fn debug(scripts: &Scripts, config: &Config, text: String) -> Result<()> {
     super::channels::publish(
         scripts,
         config,
-        &[BattleChannelMessage::new(BattleChannel::Debug, text)],
+        &[DiagnosticMessage::new(DiagnosticChannel::Debug, text)],
     )
 }
 
@@ -171,7 +171,7 @@ fn control(
     let vehicle = world.btech.vehicles().contains_key(&id);
     let unit = super::scanner::scanner_unit(world, id).context("Unit is unavailable")?;
     ensure!(!unit.destroyed, "You are destroyed!");
-    ensure!(unit.power == BattlePower::Running, "Reactor is not online!");
+    ensure!(unit.power == Power::Running, "Reactor is not online!");
     super::brief::display_access(world, id, pilot, true)?;
     let assigned = if vehicle {
         world.btech.vehicles()[&id].pilot()
@@ -222,7 +222,7 @@ fn control(
             "Your mech isn't undergoing a self-destruct sequence!"
         );
         *timer_mut(world, id) = None;
-        let mut notices = vec![BattleNotice {
+        let mut notices = vec![Notice {
             unit: id,
             text: "Self-destruction sequence aborted.".into(),
         }];
@@ -281,7 +281,7 @@ fn control(
             .checked_add(1)
             .context("Self-destruct event order is exhausted")
     })?;
-    *timer_mut(world, id) = Some(BattleSelfDestruct::scheduled(delay, order));
+    *timer_mut(world, id) = Some(SelfDestruct::scheduled(delay, order));
     if let Some(assigned) = assigned {
         super::crew::release_pilot(world, id, assigned)?;
     }
@@ -294,11 +294,11 @@ fn control(
             "loses reactions containment!"
         },
     );
-    notices.push(BattleNotice {
+    notices.push(Notice {
         unit: id,
         text: "Self-destruction sequence engaged ; please stand by.".into(),
     });
-    notices.push(BattleNotice {
+    notices.push(Notice {
         unit: id,
         text: format!(
             "{} in {delay} seconds.",
@@ -347,14 +347,14 @@ pub fn self_destruct_action(
 }
 
 /// Idle shutdown cancellation must be processed even with no other battlefield activity.
-pub fn battle_self_destructs_pending(world: &World) -> bool {
+pub fn self_destructs_pending(world: &World) -> bool {
     !pending(&world.btech).is_empty()
 }
 
 /// One committed timer outcome, retaining nested damage for trusted callers.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
-pub enum BattleSelfDestructOutcome {
+pub enum SelfDestructOutcome {
     Cancelled {
         unit: ObjectId,
     },
@@ -363,16 +363,16 @@ pub enum BattleSelfDestructOutcome {
         remaining: u16,
     },
     Reactor {
-        report: Box<BattleReactorExplosion>,
+        report: Box<ReactorExplosion>,
     },
     Ammunition {
         unit: ObjectId,
-        impacts: Vec<BattleTacticalImpact>,
+        impacts: Vec<TacticalImpact>,
     },
     Vehicle {
         unit: ObjectId,
-        damage: BattleDamageResult<BattleVehicleSection>,
-        crew_injury: BattlePilotInjury,
+        damage: DamageResult<VehicleSection>,
+        crew_injury: TacticalPilotInjury,
     },
 }
 
@@ -380,7 +380,7 @@ pub enum BattleSelfDestructOutcome {
 pub fn advance_battle_self_destructs_action(
     scripts: &Scripts,
     config: &Config,
-) -> Result<Vec<BattleSelfDestructOutcome>> {
+) -> Result<Vec<SelfDestructOutcome>> {
     scripts.atomic(|before| {
         let mut reports = Vec::new();
         for (id, _) in pending(&before.btech) {
@@ -390,13 +390,13 @@ pub fn advance_battle_self_destructs_action(
                     .btech
                     .constructed_units()
                     .get(&id)
-                    .and_then(BattleUnit::self_destruct)
+                    .and_then(Mech::self_destruct)
                     .or_else(|| {
                         world
                             .btech
                             .vehicles()
                             .get(&id)
-                            .and_then(BattleVehicle::self_destruct)
+                            .and_then(Vehicle::self_destruct)
                     })
             };
             let Some(mut timer) = current else {
@@ -407,7 +407,7 @@ pub fn advance_battle_self_destructs_action(
                 let unit =
                     super::scanner::scanner_unit(&world, id).context("Unit is unavailable")?;
                 unit.destroyed
-                    || unit.power != BattlePower::Running
+                    || unit.power != Power::Running
                     || world
                         .objects
                         .get(&id)
@@ -416,14 +416,14 @@ pub fn advance_battle_self_destructs_action(
             };
             if cancel {
                 *timer_mut(&mut scripts.world.borrow_mut(), id) = None;
-                reports.push(BattleSelfDestructOutcome::Cancelled { unit: id });
+                reports.push(SelfDestructOutcome::Cancelled { unit: id });
                 continue;
             }
             timer.remaining -= 1;
             if timer.remaining > 0 {
                 *timer_mut(&mut scripts.world.borrow_mut(), id) = Some(timer);
                 super::notify_unit(scripts, timer.notice(id))?;
-                reports.push(BattleSelfDestructOutcome::Countdown {
+                reports.push(SelfDestructOutcome::Countdown {
                     unit: id,
                     remaining: timer.remaining,
                 });
@@ -437,7 +437,7 @@ pub fn advance_battle_self_destructs_action(
                 debug(scripts, config, format!("#{} explodes [ammo]", id.0))?;
                 super::notify_unit(
                     scripts,
-                    BattleNotice {
+                    Notice {
                         unit: id,
                         text: "All your ammo explodes!".into(),
                     },
@@ -453,13 +453,13 @@ pub fn advance_battle_self_destructs_action(
                         config,
                         id,
                         index,
-                        BattleFallRules::configured(config),
+                        FallRules::configured(config),
                     )?);
                 }
-                reports.push(BattleSelfDestructOutcome::Ammunition { unit: id, impacts });
+                reports.push(SelfDestructOutcome::Ammunition { unit: id, impacts });
             } else {
                 debug(scripts, config, format!("#{} explodes [reactor]", id.0))?;
-                reports.push(BattleSelfDestructOutcome::Reactor {
+                reports.push(SelfDestructOutcome::Reactor {
                     report: Box::new(super::reactor_explosion_action(scripts, config, id)?),
                 });
             }
@@ -471,13 +471,13 @@ pub fn advance_battle_self_destructs_action(
 }
 
 /// Ground vehicles and rotorcraft lose their rear section and receive the shared terminal injury.
-fn immolate(scripts: &Scripts, id: ObjectId) -> Result<BattleSelfDestructOutcome> {
+fn immolate(scripts: &Scripts, id: ObjectId) -> Result<SelfDestructOutcome> {
     let notices =
         super::broadcast::observer_notices(&scripts.world.borrow(), id, "suddenly explodes!");
     for notice in notices {
         super::notify_unit(scripts, notice)?;
     }
-    super::notify_unit(scripts,BattleNotice{unit:id,text:"Your life flashes before your eyes as your vehicle immolates itself... you faint.. (and die)".into()})?;
+    super::notify_unit(scripts,Notice{unit:id,text:"Your life flashes before your eyes as your vehicle immolates itself... you faint.. (and die)".into()})?;
     let mut world = scripts.world.borrow_mut();
     let unit = &world.btech.vehicles()[&id];
     let position = unit.position().context("Unit must be on a map")?;
@@ -498,25 +498,21 @@ fn immolate(scripts: &Scripts, id: ObjectId) -> Result<BattleSelfDestructOutcome
         .checked_add(6)
         .context("Explosion altitude overflow")?;
     let unit = world.btech.vehicles.get_mut(&id).unwrap();
-    let amount = unit.sections()[&BattleVehicleSection::Rear].internal;
-    let damage = unit.damage_phase(
-        BattleVehicleSection::Rear,
-        amount,
-        BattleDamagePhase::Internal,
-    )?;
+    let amount = unit.sections()[&VehicleSection::Rear].internal;
+    let damage = unit.damage_phase(VehicleSection::Rear, amount, DamagePhase::Internal)?;
     if let Some(flight) = &mut unit.vtol_flight {
         flight.altitude = f64::from(height);
         flight.vertical_speed = 0.0;
-        flight.fall = falling.then(|| BattleFreeFall::new(height));
+        flight.fall = falling.then(|| FreeFall::new(height));
         flight.phase = if falling {
-            super::BattleVtolFlightPhase::Falling
+            super::VtolFlightPhase::Falling
         } else {
-            super::BattleVtolFlightPhase::Landed
+            super::VtolFlightPhase::Landed
         };
     } else if falling {
         unit.orbital_drop = None;
         unit.ground_elevation = None;
-        unit.free_fall = Some(BattleFreeFall::new(height));
+        unit.free_fall = Some(FreeFall::new(height));
     } else {
         unit.orbital_drop = None;
         unit.free_fall = None;
@@ -527,7 +523,7 @@ fn immolate(scripts: &Scripts, id: ObjectId) -> Result<BattleSelfDestructOutcome
     if let Some(notice) = crew_injury.notice(id) {
         super::notify_unit(scripts, notice)?;
     }
-    Ok(BattleSelfDestructOutcome::Vehicle {
+    Ok(SelfDestructOutcome::Vehicle {
         unit: id,
         damage,
         crew_injury,
@@ -573,7 +569,7 @@ mod tests {
             (513, 1, true, false),
             (1000, 232, true, false),
         ] {
-            let timer = BattleSelfDestruct::scheduled(delay, 7);
+            let timer = SelfDestruct::scheduled(delay, 7);
             assert_eq!(
                 (timer.remaining, timer.ammunition, timer.negative),
                 (remaining, ammunition, negative)
@@ -581,19 +577,15 @@ mod tests {
             timer.validate().unwrap();
         }
         assert_eq!(
-            BattleSelfDestruct::scheduled(-1, 0)
-                .notice(ObjectId(1))
-                .text,
+            SelfDestruct::scheduled(-1, 0).notice(ObjectId(1)).text,
             "Self-destruction in -1 second.."
         );
         assert_eq!(
-            BattleSelfDestruct::scheduled(257, 0)
-                .notice(ObjectId(1))
-                .text,
+            SelfDestruct::scheduled(257, 0).notice(ObjectId(1)).text,
             "Self-destruction in 1 seconds.."
         );
         assert_eq!(
-            BattleSelfDestruct::scheduled(1, 0).notice(ObjectId(1)).text,
+            SelfDestruct::scheduled(1, 0).notice(ObjectId(1)).text,
             "Self-destruction in 1 second.."
         );
     }

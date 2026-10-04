@@ -1,8 +1,5 @@
 //! Narc beacon attachment, surviving-section transfer and compatible missile controls.
-use super::{
-    BattleAmmunitionMode, BattleHitArc, BattleHitRules, BattleHitTable, BattleNotice,
-    BattleSection, BattleUnit, BattleWeapon,
-};
+use super::{AmmunitionMode, HitArc, HitRules, HitTable, Mech, MechSection, Notice, Weapon};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -11,7 +8,7 @@ use std::collections::{BTreeMap, BTreeSet};
 /// Persistent pod effects; several kinds can coexist on one surviving section.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleBeaconKind {
+pub enum BeaconKind {
     Narc,
     Homing,
     Haywire,
@@ -20,66 +17,65 @@ pub enum BattleBeaconKind {
 
 /// Launch facts shared by all non-explosive pod variants.
 pub(super) struct PodShot {
-    pub kind: BattleBeaconKind,
+    pub kind: BeaconKind,
     pub hit: bool,
     pub intercepted: bool,
 }
 
 /// A launched beacon's outcome; attachment does not apply weapon damage or damage XP.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleNarcReport<S = BattleSection> {
-    pub kind: BattleBeaconKind,
+pub struct NarcReport<S = MechSection> {
+    pub kind: BeaconKind,
     pub hit: bool,
     pub intercepted: bool,
     pub section: Option<S>,
     pub rear: bool,
     /// Cockpit effects caused by the location roll, without armor damage.
-    pub notices: Vec<BattleNotice>,
+    pub notices: Vec<Notice>,
     /// Raw location-event broadcasts, resolved against the pre-shot audience by the host.
-    pub broadcasts: Vec<BattleNotice>,
+    pub broadcasts: Vec<Notice>,
 }
 
-impl BattleUnit {
+impl Mech {
     /// Attached pod kinds grouped by surviving section, with no team or expiry ownership.
-    pub fn beacons(&self) -> &BTreeMap<BattleSection, BTreeSet<BattleBeaconKind>> {
+    pub fn beacons(&self) -> &BTreeMap<MechSection, BTreeSet<BeaconKind>> {
         &self.beacons
     }
 
     /// Sections carrying conventional Narc beacons.
-    pub fn narc_sections(&self) -> BTreeSet<BattleSection> {
+    pub fn narc_sections(&self) -> BTreeSet<MechSection> {
         self.beacons
             .iter()
-            .filter(|(_, kinds)| kinds.contains(&BattleBeaconKind::Narc))
+            .filter(|(_, kinds)| kinds.contains(&BeaconKind::Narc))
             .map(|(&section, _)| section)
             .collect()
     }
 
     /// Any surviving section carrying this pod effect.
-    pub fn has_beacon(&self, kind: BattleBeaconKind) -> bool {
+    pub fn has_beacon(&self, kind: BeaconKind) -> bool {
         self.beacons.values().any(|kinds| kinds.contains(&kind))
     }
 }
 
 /// Beacon effects that Narc and iNarc launchers attach on a hit.
-pub(crate) trait BattleBeaconLaunch {
+pub(crate) trait BeaconLaunch {
     /// Select the attached effect; explosive ammunition uses ordinary salvo damage instead.
-    fn beacon_kind(self, mode: BattleAmmunitionMode) -> Option<BattleBeaconKind>;
+    fn beacon_kind(self, mode: AmmunitionMode) -> Option<BeaconKind>;
 }
 
-impl BattleBeaconLaunch for BattleWeapon {
-    fn beacon_kind(self, mode: BattleAmmunitionMode) -> Option<BattleBeaconKind> {
+impl BeaconLaunch for Weapon {
+    fn beacon_kind(self, mode: AmmunitionMode) -> Option<BeaconKind> {
         if self.is_narc() {
-            return (mode.munition() != BattleAmmunitionMode::Narc)
-                .then_some(BattleBeaconKind::Narc);
+            return (mode.munition() != AmmunitionMode::Narc).then_some(BeaconKind::Narc);
         }
         if self != Self::INarcBeacon {
             return None;
         }
         match mode {
-            BattleAmmunitionMode::INarcExplosive => None,
-            BattleAmmunitionMode::INarcHaywire => Some(BattleBeaconKind::Haywire),
-            BattleAmmunitionMode::INarcEcm => Some(BattleBeaconKind::Ecm),
-            _ => Some(BattleBeaconKind::Homing),
+            AmmunitionMode::INarcExplosive => None,
+            AmmunitionMode::INarcHaywire => Some(BeaconKind::Haywire),
+            AmmunitionMode::INarcEcm => Some(BeaconKind::Ecm),
+            _ => Some(BeaconKind::Homing),
         }
     }
 }
@@ -90,15 +86,15 @@ pub(super) fn attach(
     shooter: ObjectId,
     target: ObjectId,
     shot: PodShot,
-    rules: BattleHitRules,
+    rules: HitRules,
     hit_arc_mode: i64,
-) -> Result<BattleNarcReport> {
+) -> Result<NarcReport> {
     let PodShot {
         kind,
         hit,
         intercepted,
     } = shot;
-    let mut report = BattleNarcReport {
+    let mut report = NarcReport {
         kind,
         hit,
         intercepted,
@@ -112,7 +108,7 @@ pub(super) fn attach(
     }
     let range = super::unit_range(world, target, shooter)?;
     let unit = &world.btech.constructed_units()[&target];
-    let arc = BattleHitArc::from_bearing(
+    let arc = HitArc::from_bearing(
         range.bearing.unwrap_or(180.0),
         unit.motion().context("Target is not placed")?.heading,
         hit_arc_mode,
@@ -121,7 +117,7 @@ pub(super) fn attach(
     let mut dice = unit.dice.clone();
     let (location, crew_stun) = if partial_cover {
         (
-            BattleHitTable::Punch.location(unit.chassis(), arc, dice.d6())?,
+            HitTable::Punch.location(unit.chassis(), arc, dice.d6())?,
             false,
         )
     } else {
@@ -144,43 +140,38 @@ pub(super) fn attach(
     if crew_stun {
         report.notices.push(super::stun_unit(world, target)?);
     }
-    if section.is_some() && kind == BattleBeaconKind::Haywire {
-        report.notices.push(BattleNotice {
+    if section.is_some() && kind == BeaconKind::Haywire {
+        report.notices.push(Notice {
             unit: target,
             text: "Your targetting system goes a bit haywire!".into(),
         });
     }
-    if section.is_some() && kind == BattleBeaconKind::Ecm {
+    if section.is_some() && kind == BeaconKind::Ecm {
         report
             .notices
             .extend(super::electronics::refresh_receiver(world, target)?);
     }
     report.section = section;
-    report.rear = arc == BattleHitArc::Rear;
+    report.rear = arc == HitArc::Rear;
     Ok(report)
 }
 
-impl<S> BattleNarcReport<S> {
+impl<S> NarcReport<S> {
     /// Pod-specific cockpit feedback, including successful interception and absent attachment locations.
-    fn messages(
-        &self,
-        shooter: ObjectId,
-        target: ObjectId,
-        section: Option<&str>,
-    ) -> Vec<BattleNotice> {
+    fn messages(&self, shooter: ObjectId, target: ObjectId, section: Option<&str>) -> Vec<Notice> {
         if !self.hit {
-            return vec![BattleNotice {
+            return vec![Notice {
                 unit: shooter,
                 text: "Your NARC Beacon flies off into the distance.".into(),
             }];
         }
         if self.intercepted {
             return vec![
-                BattleNotice {
+                Notice {
                     unit: shooter,
                     text: "The pod is shot down by the target!".into(),
                 },
-                BattleNotice {
+                Notice {
                     unit: target,
                     text: "Your Anti-Missile System activates and shoots down the incoming pod!"
                         .into(),
@@ -188,21 +179,21 @@ impl<S> BattleNarcReport<S> {
             ];
         }
         let Some(section) = section else {
-            return vec![BattleNotice {
+            return vec![Notice {
                 unit: shooter,
                 text: "Your NARC Beacon attaches to the target!".into(),
             }];
         };
         let rear = if self.rear { " (Rear)" } else { "" };
         vec![
-            BattleNotice {
+            Notice {
                 unit: target,
                 text: format!(
                     "A NARC Beacon has been attached to your {}{rear}!",
                     section.replace('_', " ")
                 ),
             },
-            BattleNotice {
+            Notice {
                 unit: shooter,
                 text: format!(
                     "Your NARC Beacon attaches to the target's {}{rear}!",
@@ -219,17 +210,17 @@ pub fn toggle_narc(
     id: ObjectId,
     pilot: ObjectId,
     index: usize,
-) -> Result<BattleAmmunitionMode> {
+) -> Result<AmmunitionMode> {
     super::weapon_controls::ready_weapon(world, id, pilot, index)?;
     ensure!(
-        super::weapon_controls::selectable_munition(world, id, index, BattleAmmunitionMode::Narc),
+        super::weapon_controls::selectable_munition(world, id, index, AmmunitionMode::Narc),
         "That weapon cannot be set NARC!"
     );
     Ok(super::weapon_controls::toggle_ammunition_mode(
         world,
         id,
         index,
-        BattleAmmunitionMode::Narc,
+        AmmunitionMode::Narc,
     ))
 }
 
@@ -239,7 +230,7 @@ pub fn toggle_explosive(
     id: ObjectId,
     pilot: ObjectId,
     index: usize,
-) -> Result<BattleAmmunitionMode> {
+) -> Result<AmmunitionMode> {
     let ready = super::weapon_controls::ready_weapon(world, id, pilot, index)?;
     ensure!(
         ready.weapon.is_narc(),
@@ -249,8 +240,8 @@ pub fn toggle_explosive(
 }
 
 /// Shared mode descriptions for native and Lua controls.
-pub(crate) fn message(mode: BattleAmmunitionMode, index: usize, explosive: bool) -> String {
-    let text = match (explosive, mode.munition() == BattleAmmunitionMode::Narc) {
+pub(crate) fn message(mode: AmmunitionMode, index: usize, explosive: bool) -> String {
+    let text = match (explosive, mode.munition() == AmmunitionMode::Narc) {
         (true, true) => "explosive rounds",
         (true, false) => "NARC beacons",
         (false, true) => "Narc Beacon compatible missiles.",
@@ -278,12 +269,12 @@ pub(crate) fn command(
 /// A typed section from either construction class, retaining native serialization for Lua reports.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(untagged)]
-pub enum BattleUnitSection {
-    Mech(BattleSection),
-    Vehicle(super::BattleVehicleSection),
+pub enum UnitSection {
+    Mech(MechSection),
+    Vehicle(super::VehicleSection),
 }
 
-impl BattleUnitSection {
+impl UnitSection {
     /// Human-readable section heading supplied by its own construction type.
     pub fn name(self) -> &'static str {
         match self {
@@ -293,17 +284,17 @@ impl BattleUnitSection {
     }
 }
 
-impl BattleNarcReport<BattleUnitSection> {
+impl NarcReport<UnitSection> {
     /// Mixed target reports use the same wording and their own section names.
-    pub(super) fn notices(&self, shooter: ObjectId, target: ObjectId) -> Vec<BattleNotice> {
-        self.messages(shooter, target, self.section.map(BattleUnitSection::name))
+    pub(super) fn notices(&self, shooter: ObjectId, target: ObjectId) -> Vec<Notice> {
+        self.messages(shooter, target, self.section.map(UnitSection::name))
     }
 }
 
-impl<S> BattleNarcReport<S> {
+impl<S> NarcReport<S> {
     /// Adapt only section identity while preserving every resolved consequence.
-    pub(super) fn map_section<T>(self, map: impl FnOnce(S) -> T) -> BattleNarcReport<T> {
-        BattleNarcReport {
+    pub(super) fn map_section<T>(self, map: impl FnOnce(S) -> T) -> NarcReport<T> {
+        NarcReport {
             kind: self.kind,
             hit: self.hit,
             intercepted: self.intercepted,
@@ -316,7 +307,7 @@ impl<S> BattleNarcReport<S> {
 }
 
 /// Query attached effects through the same construction boundary used by targeting.
-pub(super) fn has_beacon(world: &World, id: ObjectId, kind: BattleBeaconKind) -> bool {
+pub(super) fn has_beacon(world: &World, id: ObjectId, kind: BeaconKind) -> bool {
     world
         .btech
         .unit(id)

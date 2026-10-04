@@ -1,7 +1,7 @@
 //! Atomic conventional hit resolution, including immediate critical and ammunition damage cascades.
 use super::{
-    BattleArmorPiercing, BattleCriticalLoss, BattleDamagePhase, BattleDamageResult, BattleHit,
-    BattleSection, BattleUnit, CriticalLocation,
+    ArmorPiercing, CriticalLocation, CriticalLoss, DamagePhase, DamageResult, Hit, Mech,
+    MechSection,
 };
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
@@ -9,20 +9,20 @@ use serde::Serialize;
 
 /// Effects the enclosing combat action must handle alongside material/equipment damage.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub enum BattleImpactEffect {
+pub enum ImpactEffect {
     HeadInjury,
     ExplosionInjury,
     /// An explosion vented by CASE II injures the pilot once instead of twice.
     VentedExplosionInjury,
     CrewStun,
-    SectionLost(BattleSection),
+    SectionLost(MechSection),
 }
 
 /// Weapon-specific effects carried only by the original damage path, never nested explosions.
 #[derive(Clone, Copy)]
 pub(super) enum WeaponEffect {
     Conventional,
-    ArmorPiercing(super::BattleWeapon),
+    ArmorPiercing(super::Weapon),
     Plasma,
     /// Lasers, PPCs and flamers, which reflective armor partly deflects.
     Energy,
@@ -32,32 +32,32 @@ pub(super) enum WeaponEffect {
 
 impl WeaponEffect {
     /// How this hit interacts with specialized armor.
-    fn damage_class(self) -> super::BattleDamageClass {
+    fn damage_class(self) -> super::DamageClass {
         match self {
-            Self::Plasma | Self::Energy => super::BattleDamageClass::Energy,
-            Self::AreaEffect => super::BattleDamageClass::AreaEffect,
-            Self::Conventional | Self::ArmorPiercing(_) => super::BattleDamageClass::Ordinary,
+            Self::Plasma | Self::Energy => super::DamageClass::Energy,
+            Self::AreaEffect => super::DamageClass::AreaEffect,
+            Self::Conventional | Self::ArmorPiercing(_) => super::DamageClass::Ordinary,
         }
     }
 }
 
 /// Ordered material phases and critical losses from one hit, including nested explosions.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
-pub struct BattleImpactReport {
+pub struct ImpactReport {
     /// Section-loss reactor blasts retain secondary consequences through grouped damage reports.
-    pub reactor_explosions: Vec<super::BattleReactorExplosion>,
+    pub reactor_explosions: Vec<super::ReactorExplosion>,
     /// Newly breached sections, including any immediate secondary falls or reactor blast.
-    pub exposures: Vec<super::BattleSectionExposureReport>,
-    pub phases: Vec<BattleDamageResult>,
-    pub criticals: Vec<(CriticalLocation, BattleCriticalLoss)>,
-    pub pending_effects: Vec<BattleImpactEffect>,
+    pub exposures: Vec<super::SectionExposureReport>,
+    pub phases: Vec<DamageResult>,
+    pub criticals: Vec<(CriticalLocation, CriticalLoss)>,
+    pub pending_effects: Vec<ImpactEffect>,
     /// Character injuries applied at their event positions in an in-character action.
-    pub character_injuries: Vec<super::BattleCharacterPilotInjury>,
+    pub character_injuries: Vec<super::CharacterPilotInjury>,
     pub destroyed: bool,
     /// Plasma heat rolls after the primary damage path, in transfer-unwind order.
     pub plasma_heat: Vec<u8>,
     /// Dumped salvo ignition, distinct from an internal ammunition-bin explosion.
-    pub dump_ignitions: Vec<super::BattleDumpIgnition>,
+    pub dump_ignitions: Vec<super::DumpIgnition>,
     /// This hit destroyed the unit's searchlight.
     pub searchlight_destroyed: bool,
 }
@@ -65,47 +65,47 @@ pub struct BattleImpactReport {
 /// Material damage that kills conventional biped crew, distinct from ordinary unit destruction.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleCrewCasualty {
+pub enum CrewCasualty {
     HeadDestroyed,
     CockpitDestroyed,
     CharacterInjury,
     VacuumExposure,
 }
 
-impl BattleImpactReport {
+impl ImpactReport {
     /// Identify lethal crew damage in this cascade; the adapter still owns IC policy and evacuation.
     /// Head destruction takes precedence when the same cascade also loses cockpit equipment.
-    pub fn crew_casualty(&self) -> Option<BattleCrewCasualty> {
+    pub fn crew_casualty(&self) -> Option<CrewCasualty> {
         if self
             .phases
             .iter()
-            .any(|phase| phase.destroyed_sections.contains(&BattleSection::Head))
+            .any(|phase| phase.destroyed_sections.contains(&MechSection::Head))
         {
-            return Some(BattleCrewCasualty::HeadDestroyed);
+            return Some(CrewCasualty::HeadDestroyed);
         }
         if self.criticals.iter().any(|(_, loss)| {
             matches!(
                 loss,
-                BattleCriticalLoss::System {
-                    system: super::BattleSystem::Cockpit
+                CriticalLoss::System {
+                    system: super::System::Cockpit
                 }
             )
         }) {
-            return Some(BattleCrewCasualty::CockpitDestroyed);
+            return Some(CrewCasualty::CockpitDestroyed);
         }
         if self
             .character_injuries
             .iter()
             .any(|report| report.injury.fatal)
         {
-            return Some(BattleCrewCasualty::CharacterInjury);
+            return Some(CrewCasualty::CharacterInjury);
         }
         if self
             .exposures
             .iter()
-            .any(|report| report.section == BattleSection::Head)
+            .any(|report| report.section == MechSection::Head)
         {
-            return Some(BattleCrewCasualty::VacuumExposure);
+            return Some(CrewCasualty::VacuumExposure);
         }
         None
     }
@@ -116,9 +116,9 @@ impl BattleImpactReport {
 pub fn resolve_impact(
     world: &mut World,
     id: ObjectId,
-    hit: BattleHit,
+    hit: Hit,
     damage: u16,
-) -> Result<BattleImpactReport> {
+) -> Result<ImpactReport> {
     ensure!(
         world
             .objects
@@ -136,9 +136,9 @@ pub fn resolve_impact(
 pub(super) fn resolve_character_impact(
     world: &mut World,
     id: ObjectId,
-    hit: BattleHit,
+    hit: Hit,
     damage: u16,
-) -> Result<super::BattleTacticalImpact> {
+) -> Result<super::TacticalImpact> {
     resolve_character_impact_with_rules(world, id, hit, damage, None)
 }
 
@@ -146,10 +146,10 @@ pub(super) fn resolve_character_impact(
 pub(super) fn resolve_character_impact_with_rules(
     world: &mut World,
     id: ObjectId,
-    hit: BattleHit,
+    hit: Hit,
     damage: u16,
-    rules: Option<super::BattleFallRules>,
-) -> Result<super::BattleTacticalImpact> {
+    rules: Option<super::FallRules>,
+) -> Result<super::TacticalImpact> {
     ensure!(
         world
             .objects
@@ -176,9 +176,9 @@ pub(super) fn resolve_character_impact_with_rules(
 pub(super) fn resolve_scenario_impact(
     world: &mut World,
     id: ObjectId,
-    hit: BattleHit,
+    hit: Hit,
     damage: u16,
-) -> Result<super::BattleTacticalImpact> {
+) -> Result<super::TacticalImpact> {
     let character = world
         .objects
         .get(&id)
@@ -204,8 +204,8 @@ pub fn explode_ammunition(
     world: &mut World,
     id: ObjectId,
     index: usize,
-    rules: super::BattleFallRules,
-) -> Result<super::BattleTacticalImpact> {
+    rules: super::FallRules,
+) -> Result<super::TacticalImpact> {
     explode_ammunition_inner(world, id, index, rules, false)
 }
 
@@ -214,8 +214,8 @@ pub(super) fn explode_ammunition_in_action(
     world: &mut World,
     id: ObjectId,
     index: usize,
-    rules: super::BattleFallRules,
-) -> Result<super::BattleTacticalImpact> {
+    rules: super::FallRules,
+) -> Result<super::TacticalImpact> {
     explode_ammunition_inner(world, id, index, rules, true)
 }
 
@@ -224,9 +224,9 @@ fn explode_ammunition_inner(
     world: &mut World,
     id: ObjectId,
     index: usize,
-    rules: super::BattleFallRules,
+    rules: super::FallRules,
     character: bool,
-) -> Result<super::BattleTacticalImpact> {
+) -> Result<super::TacticalImpact> {
     let object = world.objects.get(&id).context("Unit is unavailable")?;
     ensure!(
         !object.flags.contains(Flag::Going)
@@ -262,11 +262,11 @@ fn explode_ammunition_inner(
 pub(super) fn resolve_in_candidate(
     world: &mut World,
     id: ObjectId,
-    hit: BattleHit,
+    hit: Hit,
     damage: u16,
-    rules: Option<super::BattleFallRules>,
+    rules: Option<super::FallRules>,
     weapon_effect: Option<WeaponEffect>,
-) -> Result<super::BattleTacticalImpact> {
+) -> Result<super::TacticalImpact> {
     let context = ImpactContext::new(world, id, rules)?;
     resolve_packet(context, hit, damage, weapon_effect)
 }
@@ -285,11 +285,11 @@ pub(super) struct AttackImpact {
 pub(super) fn resolve_attack_in_candidate(
     world: &mut World,
     id: ObjectId,
-    hit: BattleHit,
+    hit: Hit,
     damage: u16,
-    rules: impl Into<Option<super::BattleFallRules>>,
+    rules: impl Into<Option<super::FallRules>>,
     attack: AttackImpact,
-) -> Result<super::BattleTacticalImpact> {
+) -> Result<super::TacticalImpact> {
     let context = attack_context(world, id, rules.into(), &attack)?;
     resolve_packet(context, hit, damage, attack.weapon_effect)
 }
@@ -298,7 +298,7 @@ pub(super) fn resolve_attack_in_candidate(
 fn attack_context<'a>(
     world: &'a mut World,
     id: ObjectId,
-    rules: Option<super::BattleFallRules>,
+    rules: Option<super::FallRules>,
     attack: &AttackImpact,
 ) -> Result<ImpactContext<'a>> {
     let toughness = rules.map(|rules| rules.toughness).unwrap_or_else(|| {
@@ -328,12 +328,12 @@ fn attack_context<'a>(
 pub(super) fn resolve_penetration_in_candidate(
     world: &mut World,
     id: ObjectId,
-    section: BattleSection,
+    section: MechSection,
     damage: u16,
-    rules: super::BattleFallRules,
+    rules: super::FallRules,
     attack: AttackImpact,
     critical_penalty: u8,
-) -> Result<super::BattleTacticalImpact> {
+) -> Result<super::TacticalImpact> {
     let mut context = attack_context(world, id, Some(rules), &attack)?;
     if context.enter_damage() {
         context.report.impact.destroyed = context.unit().is_destroyed();
@@ -363,10 +363,10 @@ pub(super) fn resolve_penetration_in_candidate(
 /// Traverse one packet with the admission policy already selected by its attack owner.
 fn resolve_packet(
     mut context: ImpactContext<'_>,
-    hit: BattleHit,
+    hit: Hit,
     damage: u16,
     weapon_effect: Option<WeaponEffect>,
-) -> Result<super::BattleTacticalImpact> {
+) -> Result<super::TacticalImpact> {
     if context.enter_damage() {
         context.report.impact.destroyed = context.unit().is_destroyed();
         return Ok(context.report);
@@ -375,7 +375,7 @@ fn resolve_packet(
     if damage > 0 {
         // Hit-table stun precedes material interception, like vehicle routing effects.
         if hit.crew_stun {
-            context.effect(BattleImpactEffect::CrewStun)?;
+            context.effect(ImpactEffect::CrewStun)?;
         }
         resolve_path(
             &mut context,
@@ -402,10 +402,10 @@ fn resolve_packet(
 pub(super) fn resolve_internal_stress(
     world: &mut World,
     id: ObjectId,
-    section: BattleSection,
+    section: MechSection,
     damage: u16,
-    rules: super::BattleFallRules,
-) -> Result<super::BattleTacticalImpact> {
+    rules: super::FallRules,
+) -> Result<super::TacticalImpact> {
     let character = world.objects[&id].flags.contains(Flag::InCharacter);
     let mut context = ImpactContext::new(world, id, Some(rules))?;
     context.character_effects = true;
@@ -436,10 +436,10 @@ pub(super) fn resolve_internal_stress(
 pub(super) fn resolve_misload_in_candidate(
     world: &mut World,
     id: ObjectId,
-    section: BattleSection,
+    section: MechSection,
     damage: u16,
-    rules: super::BattleFallRules,
-) -> Result<super::BattleTacticalImpact> {
+    rules: super::FallRules,
+) -> Result<super::TacticalImpact> {
     resolve_misload_inner(world, id, section, damage, rules, false)
 }
 
@@ -447,10 +447,10 @@ pub(super) fn resolve_misload_in_candidate(
 pub(super) fn resolve_character_misload_in_candidate(
     world: &mut World,
     id: ObjectId,
-    section: BattleSection,
+    section: MechSection,
     damage: u16,
-    rules: super::BattleFallRules,
-) -> Result<super::BattleTacticalImpact> {
+    rules: super::FallRules,
+) -> Result<super::TacticalImpact> {
     resolve_misload_inner(world, id, section, damage, rules, true)
 }
 
@@ -458,11 +458,11 @@ pub(super) fn resolve_character_misload_in_candidate(
 fn resolve_misload_inner(
     world: &mut World,
     id: ObjectId,
-    section: BattleSection,
+    section: MechSection,
     damage: u16,
-    rules: super::BattleFallRules,
+    rules: super::FallRules,
     character: bool,
-) -> Result<super::BattleTacticalImpact> {
+) -> Result<super::TacticalImpact> {
     let mut context = ImpactContext::new(world, id, Some(rules))?;
     context.character_effects = character;
     context.character_toughness = character.then_some(rules.toughness);
@@ -491,21 +491,17 @@ struct ImpactContext<'a> {
     attacker: Option<ObjectId>,
     world: &'a mut World,
     id: ObjectId,
-    rules: Option<super::BattleFallRules>,
+    rules: Option<super::FallRules>,
     work: u16,
     character_toughness: Option<bool>,
     /// The enclosing host can publish injuries and evacuate nested collision casualties.
     character_effects: bool,
-    report: super::BattleTacticalImpact,
+    report: super::TacticalImpact,
 }
 
 impl<'a> ImpactContext<'a> {
     /// Start an ordered cascade inside a world whose transaction is owned by the caller.
-    fn new(
-        world: &'a mut World,
-        id: ObjectId,
-        rules: Option<super::BattleFallRules>,
-    ) -> Result<Self> {
+    fn new(world: &'a mut World, id: ObjectId, rules: Option<super::FallRules>) -> Result<Self> {
         let unit = world
             .btech
             .constructed_units()
@@ -520,7 +516,7 @@ impl<'a> ImpactContext<'a> {
     fn continuation(
         world: &'a mut World,
         id: ObjectId,
-        rules: Option<super::BattleFallRules>,
+        rules: Option<super::FallRules>,
     ) -> Result<Self> {
         world
             .btech
@@ -536,8 +532,8 @@ impl<'a> ImpactContext<'a> {
             work: 4096,
             character_toughness: None,
             character_effects: false,
-            report: super::BattleTacticalImpact {
-                impact: BattleImpactReport::default(),
+            report: super::TacticalImpact {
+                impact: ImpactReport::default(),
                 pilot_injuries: Vec::new(),
                 pilot_notices: Vec::new(),
                 notices: Vec::new(),
@@ -572,8 +568,8 @@ impl<'a> ImpactContext<'a> {
     }
 
     /// Snapshot visible mechanical damage while the original power and geometry still apply.
-    fn component_observers(&self, location: CriticalLocation) -> Result<Vec<super::BattleNotice>> {
-        use super::BattleSystem as System;
+    fn component_observers(&self, location: CriticalLocation) -> Result<Vec<super::Notice>> {
+        use super::System;
         let unit = self.unit();
         if self.rules.is_none() || unit.is_destroyed() {
             return Ok(Vec::new());
@@ -587,9 +583,9 @@ impl<'a> ImpactContext<'a> {
             return Ok(Vec::new());
         };
         let protected_gyro = part.system == System::Gyro
-            && unit.gyro() == super::BattleGyro::Hardened
+            && unit.gyro() == super::Gyro::Hardened
             && !unit.gyro_condition().1;
-        if unit.power() != super::BattlePower::Running
+        if unit.power() != super::Power::Running
             && !protected_gyro
             && !matches!(part.system, System::Cockpit | System::HeatSink)
         {
@@ -633,15 +629,15 @@ impl<'a> ImpactContext<'a> {
     fn occupant_component_notice(
         &self,
         location: CriticalLocation,
-        system: super::BattleSystem,
-    ) -> Option<super::BattleNotice> {
-        use super::BattleSystem as System;
+        system: super::System,
+    ) -> Option<super::Notice> {
+        use super::System;
         self.rules?;
         let leg = self.unit().chassis().is_leg(location.section);
         let arm = !leg
             && matches!(
                 location.section,
-                BattleSection::LeftArm | BattleSection::RightArm
+                MechSection::LeftArm | MechSection::RightArm
             );
         let text = match system {
             System::HeatSink => "You lost a heat sink!".to_owned(),
@@ -656,7 +652,7 @@ impl<'a> ImpactContext<'a> {
                 "One of your leg actuators is destroyed!".to_owned()
             }
             System::UpperActuator | System::LowerActuator | System::HandOrFootActuator if arm => {
-                let side = if location.section == BattleSection::LeftArm {
+                let side = if location.section == MechSection::LeftArm {
                     "left"
                 } else {
                     "right"
@@ -670,7 +666,7 @@ impl<'a> ImpactContext<'a> {
             }
             _ => return None,
         };
-        Some(super::BattleNotice {
+        Some(super::Notice {
             unit: self.id,
             text,
         })
@@ -697,7 +693,7 @@ impl<'a> ImpactContext<'a> {
             None
         };
         let mut destructive_table = None;
-        if let Some(BattleCriticalLoss::Weapon {
+        if let Some(CriticalLoss::Weapon {
             index,
             explosion_damage: 0,
         }) = self.unit().critical_loss(location)?
@@ -716,28 +712,26 @@ impl<'a> ImpactContext<'a> {
                 let weapon = self.unit().loadout()?.weapons[index].weapon;
                 let name = weapon.name().split_once('.').expect("catalog namespace").1;
                 let detail = match damage {
-                    super::BattleWeaponDamageKind::Superficial => {
+                    super::WeaponDamageKind::Superficial => {
                         "takes a hit but suffers no noticeable damage!!"
                     }
-                    super::BattleWeaponDamageKind::Moderate => {
-                        "takes a hit but continues working!!"
-                    }
-                    super::BattleWeaponDamageKind::Focus => {
+                    super::WeaponDamageKind::Moderate => "takes a hit but continues working!!",
+                    super::WeaponDamageKind::Focus => {
                         "has its focusing mechanism knocked out of alignment!!"
                     }
-                    super::BattleWeaponDamageKind::Crystal => "has its charging crystal damaged!!",
-                    super::BattleWeaponDamageKind::Ranging => "has its ranging system damaged!!",
-                    super::BattleWeaponDamageKind::Barrel => "has its barrel warped!!",
-                    super::BattleWeaponDamageKind::Feed => "has its ammunition feed damaged!!",
+                    super::WeaponDamageKind::Crystal => "has its charging crystal damaged!!",
+                    super::WeaponDamageKind::Ranging => "has its ranging system damaged!!",
+                    super::WeaponDamageKind::Barrel => "has its barrel warped!!",
+                    super::WeaponDamageKind::Feed => "has its ammunition feed damaged!!",
                 };
-                self.report.notices.push(super::BattleNotice {
+                self.report.notices.push(super::Notice {
                     unit: self.id,
                     text: format!("Your {name} {detail}"),
                 });
                 self.report
                     .impact
                     .criticals
-                    .push((location, BattleCriticalLoss::WeaponDamage { index, damage }));
+                    .push((location, CriticalLoss::WeaponDamage { index, damage }));
                 return Ok(());
             }
             destructive_table = Some(index);
@@ -761,13 +755,13 @@ impl<'a> ImpactContext<'a> {
             destroyed,
         )?;
         if null_signature_was_enabled && !self.unit().null_signature().enabled {
-            self.report.notices.push(super::BattleNotice {
+            self.report.notices.push(super::Notice {
                 unit: self.id,
                 text: "Your Null Signature System shuts down!".into(),
             });
         }
         if stealth_was_enabled && !self.unit().stealth().enabled {
-            self.report.notices.push(super::BattleNotice {
+            self.report.notices.push(super::Notice {
                 unit: self.id,
                 text: "Your stealth armor system shuts down!".into(),
             });
@@ -778,15 +772,15 @@ impl<'a> ImpactContext<'a> {
                 .extend(super::club::dropped_notices(self.world, self.id));
         }
         let mut explosion = match &loss {
-            BattleCriticalLoss::Ammunition {
+            CriticalLoss::Ammunition {
                 explosion_damage, ..
             } => *explosion_damage,
-            BattleCriticalLoss::Weapon {
+            CriticalLoss::Weapon {
                 explosion_damage, ..
             } => u32::from(*explosion_damage),
             _ => 0,
         };
-        let explosion_section = if let BattleCriticalLoss::Weapon { index, .. } = loss {
+        let explosion_section = if let CriticalLoss::Weapon { index, .. } = loss {
             self.unit().loadout()?.weapons[index].criticals[0].section
         } else {
             location.section
@@ -795,7 +789,7 @@ impl<'a> ImpactContext<'a> {
             && let Some((intact, weapon)) = weapon_before
         {
             let name = weapon.name().split_once('.').expect("catalog namespace").1;
-            self.report.notices.push(super::BattleNotice {
+            self.report.notices.push(super::Notice {
                 unit: self.id,
                 text: if intact {
                     format!("Your {name} has been destroyed!!")
@@ -805,9 +799,9 @@ impl<'a> ImpactContext<'a> {
             });
         }
         self.report.impact.criticals.push((location, loss.clone()));
-        if let BattleCriticalLoss::System { system } = loss {
+        if let CriticalLoss::System { system } = loss {
             let occupant_notice = self.occupant_component_notice(location, system);
-            if system == super::BattleSystem::ShoulderOrHip {
+            if system == super::System::ShoulderOrHip {
                 self.report.notices.extend(component_observers);
                 self.report.notices.extend(occupant_notice);
             } else {
@@ -815,7 +809,7 @@ impl<'a> ImpactContext<'a> {
                 self.report.notices.extend(component_observers);
             }
             if self.rules.is_some() {
-                use super::BattleSystem as System;
+                use super::System;
                 let hits = self.unit().system_hits(system);
                 let text = match system {
                     System::Engine => match hits {
@@ -868,34 +862,34 @@ impl<'a> ImpactContext<'a> {
                     _ => None,
                 };
                 if let Some(text) = text {
-                    self.report.notices.push(super::BattleNotice {
+                    self.report.notices.push(super::Notice {
                         unit: self.id,
                         text: text.to_owned(),
                     });
                 }
             }
-            self.balance(super::BattleBalanceCause::Critical { location, system })?;
+            self.balance(super::BalanceCause::Critical { location, system })?;
         }
         if self.rules.is_some()
-            && let BattleCriticalLoss::Ammunition { index, .. } = loss
+            && let CriticalLoss::Ammunition { index, .. } = loss
             && self.unit().loadout()?.ammunition[index]
                 .weapon
                 .weapon_explosion_damage()
                 > 0
         {
-            self.report.notices.push(super::BattleNotice {
+            self.report.notices.push(super::Notice {
                 unit: self.id,
                 text: "One of your Gauss Rifle ammo feeds is destroyed".to_owned(),
             });
         }
-        let inferno = if let BattleCriticalLoss::Ammunition { index, .. } = &loss {
-            self.unit().loadout()?.ammunition[*index].mode == super::BattleAmmunitionMode::Inferno
+        let inferno = if let CriticalLoss::Ammunition { index, .. } = &loss {
+            self.unit().loadout()?.ammunition[*index].mode == super::AmmunitionMode::Inferno
         } else {
             false
         };
         if explosion > 0 {
             if self.rules.is_some() {
-                if let BattleCriticalLoss::Weapon { index, .. } = loss {
+                if let CriticalLoss::Weapon { index, .. } = loss {
                     let weapon = self.unit().loadout()?.weapons[index].weapon;
                     let name = weapon.name().split_once('.').expect("catalog namespace").1;
                     let detail = if weapon.weapon_explosion_damage() > 0 {
@@ -915,19 +909,19 @@ impl<'a> ImpactContext<'a> {
                     };
                     let notices = [format!("Your {name} has been destroyed!"), detail];
                     for text in notices {
-                        self.report.notices.push(super::BattleNotice {
+                        self.report.notices.push(super::Notice {
                             unit: self.id,
                             text,
                         });
                     }
                 } else {
-                    self.report.notices.push(super::BattleNotice {
+                    self.report.notices.push(super::Notice {
                         unit: self.id,
                         text: "Ammunition explosion!".to_owned(),
                     });
                 }
                 let broadcast = match loss {
-                    BattleCriticalLoss::Ammunition { .. } => Some(
+                    CriticalLoss::Ammunition { .. } => Some(
                         if inferno {
                             "is suddenly enveloped by a brilliant fireball!"
                         } else {
@@ -935,7 +929,7 @@ impl<'a> ImpactContext<'a> {
                         }
                         .to_owned(),
                     ),
-                    BattleCriticalLoss::Weapon { index, .. } if !self.unit().is_destroyed() => {
+                    CriticalLoss::Weapon { index, .. } if !self.unit().is_destroyed() => {
                         let weapon = self.unit().loadout()?.weapons[index].weapon;
                         let section = self
                             .unit()
@@ -958,7 +952,7 @@ impl<'a> ImpactContext<'a> {
                     self.report.notices.extend(
                         super::observer_messages(self.world, self.id, &text)
                             .into_iter()
-                            .map(|(unit, text)| super::BattleNotice { unit, text }),
+                            .map(|(unit, text)| super::Notice { unit, text }),
                     );
                 }
             }
@@ -993,25 +987,24 @@ impl<'a> ImpactContext<'a> {
                     },
                 )?;
             }
-            let hotload = if let BattleCriticalLoss::Weapon { index, .. } = loss {
+            let hotload = if let CriticalLoss::Weapon { index, .. } = loss {
                 self.unit().loadout()?.weapons[index]
                     .weapon
                     .supports_hotload()
             } else {
                 false
             };
-            if self.rules.is_some() && matches!(loss, BattleCriticalLoss::Weapon { .. }) && !hotload
-            {
-                self.report.notices.push(super::BattleNotice {
+            if self.rules.is_some() && matches!(loss, CriticalLoss::Weapon { .. }) && !hotload {
+                self.report.notices.push(super::Notice {
                     unit: self.id,
                     text: "You take personal injury from the weapon's explosion!".to_owned(),
                 });
             }
             if !hotload {
                 self.effect(if vented {
-                    BattleImpactEffect::VentedExplosionInjury
+                    ImpactEffect::VentedExplosionInjury
                 } else {
-                    BattleImpactEffect::ExplosionInjury
+                    ImpactEffect::ExplosionInjury
                 })?;
             }
         }
@@ -1021,7 +1014,7 @@ impl<'a> ImpactContext<'a> {
     /// CASE II: the section takes one internal point, with its normal critical roll, and the
     /// rest of the blast is vented through its armor (rear armor on torsos). Damage beyond that
     /// armor is lost and never transfers to another section.
-    fn vent_explosion(&mut self, section: BattleSection, damage: u16) -> Result<()> {
+    fn vent_explosion(&mut self, section: MechSection, damage: u16) -> Result<()> {
         resolve_path(
             self,
             DamagePacket {
@@ -1045,10 +1038,10 @@ impl<'a> ImpactContext<'a> {
             .unit()
             .hardened_hit(section, true, vented)
             .map_or(vented, |(removed, _)| removed);
-        let armor = self.damage_phase(section, vented, BattleDamagePhase::Armor { rear: true })?;
+        let armor = self.damage_phase(section, vented, DamagePhase::Armor { rear: true })?;
         self.record_phase(armor)?;
         if self.rules.is_some() {
-            self.report.notices.push(super::BattleNotice {
+            self.report.notices.push(super::Notice {
                 unit: self.id,
                 text: "Your CASE II vents the explosion!".to_owned(),
             });
@@ -1059,12 +1052,12 @@ impl<'a> ImpactContext<'a> {
     /// Announce computer loss caused by section destruction at the material-damage event.
     fn damage_phase(
         &mut self,
-        section: BattleSection,
+        section: MechSection,
         damage: u16,
-        phase: BattleDamagePhase,
-    ) -> Result<BattleDamageResult> {
+        phase: DamagePhase,
+    ) -> Result<DamageResult> {
         let power_before = self.unit().power();
-        let engine_hits_before = self.unit().system_hits(super::BattleSystem::Engine);
+        let engine_hits_before = self.unit().system_hits(super::System::Engine);
         let assisted = self.unit().targeting_computer_operational()?;
         let was_destroyed = self.unit().is_destroyed();
         let result = self.unit_mut().damage_phase(section, damage, phase);
@@ -1096,7 +1089,7 @@ impl<'a> ImpactContext<'a> {
         }
 
         if assisted && !self.unit().targeting_computer_operational()? && self.rules.is_some() {
-            self.report.notices.push(super::BattleNotice {
+            self.report.notices.push(super::Notice {
                 unit: self.id,
                 text: "Your Targeting Computer is Destroyed".to_owned(),
             });
@@ -1105,16 +1098,16 @@ impl<'a> ImpactContext<'a> {
     }
 
     /// Borrow the latest unit, including any intervening fall damage.
-    fn unit(&self) -> &BattleUnit {
+    fn unit(&self) -> &Mech {
         &self.world.btech.constructed_units()[&self.id]
     }
 
     /// Front torso armor hits expose an installed lamp before armor and critical resolution.
-    fn strike_searchlight(&mut self, section: BattleSection, rear: bool) {
+    fn strike_searchlight(&mut self, section: MechSection, rear: bool) {
         if rear
             || !matches!(
                 section,
-                BattleSection::LeftTorso | BattleSection::CenterTorso | BattleSection::RightTorso
+                MechSection::LeftTorso | MechSection::CenterTorso | MechSection::RightTorso
             )
         {
             return;
@@ -1129,7 +1122,7 @@ impl<'a> ImpactContext<'a> {
     }
 
     /// Mutate only the unit owned by this cascade.
-    fn unit_mut(&mut self) -> &mut BattleUnit {
+    fn unit_mut(&mut self) -> &mut Mech {
         self.world.btech.constructed.get_mut(&self.id).unwrap()
     }
 
@@ -1141,8 +1134,8 @@ impl<'a> ImpactContext<'a> {
     }
 
     /// Tactical crew consequences occur at their damage event, before subsequent criticals.
-    fn effect(&mut self, effect: BattleImpactEffect) -> Result<()> {
-        if effect == BattleImpactEffect::CrewStun
+    fn effect(&mut self, effect: ImpactEffect) -> Result<()> {
+        if effect == ImpactEffect::CrewStun
             && (self.character_toughness.is_some() || self.rules.is_some())
         {
             self.report
@@ -1153,9 +1146,9 @@ impl<'a> ImpactContext<'a> {
         if let Some(toughness) = self.character_toughness
             && matches!(
                 effect,
-                BattleImpactEffect::HeadInjury
-                    | BattleImpactEffect::ExplosionInjury
-                    | BattleImpactEffect::VentedExplosionInjury
+                ImpactEffect::HeadInjury
+                    | ImpactEffect::ExplosionInjury
+                    | ImpactEffect::VentedExplosionInjury
             )
             && !self.unit().is_destroyed()
             && self.unit().pilot().is_some()
@@ -1165,7 +1158,7 @@ impl<'a> ImpactContext<'a> {
                 .pilot()
                 .and_then(|pilot| self.world.btech.character_values().get(&pilot))
                 .is_some_and(|values| super::advantages::enabled(values, "Pain_Resistance"));
-            let hits = if effect == BattleImpactEffect::ExplosionInjury && !resistant {
+            let hits = if effect == ImpactEffect::ExplosionInjury && !resistant {
                 2
             } else {
                 1
@@ -1182,8 +1175,8 @@ impl<'a> ImpactContext<'a> {
             return Ok(());
         };
         let hits = match effect {
-            BattleImpactEffect::HeadInjury => Some(1),
-            BattleImpactEffect::ExplosionInjury => {
+            ImpactEffect::HeadInjury => Some(1),
+            ImpactEffect::ExplosionInjury => {
                 let resistant = self
                     .unit()
                     .pilot()
@@ -1191,15 +1184,15 @@ impl<'a> ImpactContext<'a> {
                     .is_some_and(|values| super::advantages::enabled(values, "Pain_Resistance"));
                 Some(if resistant { 1 } else { 2 })
             }
-            BattleImpactEffect::VentedExplosionInjury => Some(1),
+            ImpactEffect::VentedExplosionInjury => Some(1),
             _ => None,
         };
         if let Some(hits) = hits.filter(|_| !self.unit().is_destroyed()) {
             if matches!(
                 effect,
-                BattleImpactEffect::ExplosionInjury | BattleImpactEffect::VentedExplosionInjury
+                ImpactEffect::ExplosionInjury | ImpactEffect::VentedExplosionInjury
             ) {
-                self.report.notices.push(super::BattleNotice {
+                self.report.notices.push(super::Notice {
                     unit: self.id,
                     text: "You take personal injury from the ammunition explosion!".to_owned(),
                 });
@@ -1235,7 +1228,7 @@ impl<'a> ImpactContext<'a> {
     }
 
     /// Complete each new balance consequence before the next critical or transfer phase.
-    fn balance(&mut self, cause: super::BattleBalanceCause) -> Result<()> {
+    fn balance(&mut self, cause: super::BalanceCause) -> Result<()> {
         let Some(rules) = self.rules else {
             return Ok(());
         };
@@ -1253,15 +1246,15 @@ impl<'a> ImpactContext<'a> {
                 );
             }
             if let Some(fall) = &report.fall {
-                self.report.notices.push(super::BattleNotice {
+                self.report.notices.push(super::Notice {
                     unit: self.id,
                     text: (if airborne {
                         if matches!(
                             cause,
-                            super::BattleBalanceCause::Critical {
-                                system: super::BattleSystem::JumpJet,
+                            super::BalanceCause::Critical {
+                                system: super::System::JumpJet,
                                 ..
-                            } | super::BattleBalanceCause::SectionLost(_)
+                            } | super::BalanceCause::SectionLost(_)
                         ) {
                             "Losing your last jump jet, you fall from the sky!"
                         } else {
@@ -1284,7 +1277,7 @@ impl<'a> ImpactContext<'a> {
                     let input = super::stacking::physical_input(
                         self.world,
                         self.id,
-                        super::BattleStackingEntry::Fall,
+                        super::StackingEntry::Fall,
                     )?;
                     let offset = self.report.notices.len();
                     let notices = if self.character_effects {
@@ -1324,7 +1317,7 @@ impl<'a> ImpactContext<'a> {
     }
 
     /// Check vacuum at the end of this section's material path, before damage transfers.
-    fn check_vacuum(&mut self, section: BattleSection, penetrating: bool) -> Result<()> {
+    fn check_vacuum(&mut self, section: MechSection, penetrating: bool) -> Result<()> {
         if !super::vacuum::check_mech(self.world, self.id, section, penetrating)? {
             return Ok(());
         }
@@ -1337,7 +1330,7 @@ impl<'a> ImpactContext<'a> {
             .iter()
             .find(|part| {
                 part.location.section == section
-                    && part.system == super::BattleSystem::JumpJet
+                    && part.system == super::System::JumpJet
                     && !self.unit().critical_unavailable(part.location)
             })
             .map(|part| part.location);
@@ -1352,12 +1345,12 @@ impl<'a> ImpactContext<'a> {
             self.world,
             self.id,
             section,
-            super::BattleSectionExposure::Vacuum,
+            super::SectionExposure::Vacuum,
             self.rules,
             self.attacker,
         )?;
         if assisted && !self.unit().targeting_computer_operational()? {
-            report.notices.push(super::BattleNotice {
+            report.notices.push(super::Notice {
                 unit: self.id,
                 text: "Your Targeting Computer is Destroyed".into(),
             });
@@ -1374,22 +1367,22 @@ impl<'a> ImpactContext<'a> {
             && self.unit().jump_capacity(100)?.speed < 10.75
             && let Some(location) = jet_location
         {
-            self.balance(super::BattleBalanceCause::Critical {
+            self.balance(super::BalanceCause::Critical {
                 location,
-                system: super::BattleSystem::JumpJet,
+                system: super::System::JumpJet,
             })?;
         }
         Ok(())
     }
 
     /// Preserve section notices while immediately applying any forced leg-loss fall.
-    fn record_phase(&mut self, phase: BattleDamageResult) -> Result<()> {
+    fn record_phase(&mut self, phase: DamageResult) -> Result<()> {
         let section = phase.section;
         let destroyed = phase.destroyed_sections.clone();
         self.report.impact.phases.push(phase);
         for section in destroyed {
-            self.effect(BattleImpactEffect::SectionLost(section))?;
-            self.balance(super::BattleBalanceCause::SectionLost(section))?;
+            self.effect(ImpactEffect::SectionLost(section))?;
+            self.balance(super::BalanceCause::SectionLost(section))?;
         }
         let assisted = self.unit().targeting_computer_operational()?;
         let flood = if let Some(rules) = self.rules {
@@ -1403,7 +1396,7 @@ impl<'a> ImpactContext<'a> {
         };
         if let Some(mut report) = flood {
             if assisted && !self.unit().targeting_computer_operational()? {
-                report.notices.push(super::BattleNotice {
+                report.notices.push(super::Notice {
                     unit: self.id,
                     text: "Your Targeting Computer is Destroyed".to_owned(),
                 });
@@ -1425,7 +1418,7 @@ struct DamagePacket {
     announced: bool,
     /// Initial weapon-hit effects wait until cocoon interception has allowed material damage.
     direct_hit: bool,
-    section: BattleSection,
+    section: MechSection,
     damage: u16,
     internal_only: bool,
     transfer: bool,
@@ -1450,10 +1443,8 @@ fn resolve_path(context: &mut ImpactContext<'_>, packet: DamagePacket) -> Result
         weapon_effect,
         critical_penalty,
     } = packet;
-    let damage_class = weapon_effect.map_or(
-        super::BattleDamageClass::Ordinary,
-        WeaponEffect::damage_class,
-    );
+    let damage_class =
+        weapon_effect.map_or(super::DamageClass::Ordinary, WeaponEffect::damage_class);
     let mut initial_packet = true;
     let mut plasma_returns = 0;
     let mut ignition_section = None;
@@ -1503,7 +1494,7 @@ fn resolve_path(context: &mut ImpactContext<'_>, packet: DamagePacket) -> Result
                 .extend(super::hiding::damage(context.world, context.id));
             if let Some(rules) = context
                 .rules
-                .filter(|_| context.unit().posture() != super::BattlePosture::Prone)
+                .filter(|_| context.unit().posture() != super::Posture::Prone)
             {
                 // Errata: each hardened armor point lost counts as one damage toward the
                 // twenty-damage piloting check; damage beyond the armor counts in full.
@@ -1520,14 +1511,14 @@ fn resolve_path(context: &mut ImpactContext<'_>, packet: DamagePacket) -> Result
             && weapon_effect.is_some_and(|effect| !matches!(effect, WeaponEffect::AreaEffect))
             && matches!(
                 section,
-                BattleSection::LeftTorso | BattleSection::RightTorso | BattleSection::CenterTorso
+                MechSection::LeftTorso | MechSection::RightTorso | MechSection::CenterTorso
             )
         {
             ignition_section = Some(section);
         }
 
-        if section == BattleSection::Head {
-            context.effect(BattleImpactEffect::HeadInjury)?;
+        if section == MechSection::Head {
+            context.effect(ImpactEffect::HeadInjury)?;
         }
         let mut tac_criticals = 0;
         if !internal_only {
@@ -1542,7 +1533,7 @@ fn resolve_path(context: &mut ImpactContext<'_>, packet: DamagePacket) -> Result
             let armor = context.damage_phase(
                 section,
                 special.map_or(damage, |(removed, _)| removed),
-                BattleDamagePhase::Armor { rear },
+                DamagePhase::Armor { rear },
             )?;
             let warning = super::combat_warnings::armor_level(context.unit(), section, rear);
             damage = special.map_or(armor.remaining, |(_, overflow)| overflow);
@@ -1562,9 +1553,7 @@ fn resolve_path(context: &mut ImpactContext<'_>, packet: DamagePacket) -> Result
                 let (remaining, original) = if rear
                     && matches!(
                         section,
-                        BattleSection::LeftTorso
-                            | BattleSection::RightTorso
-                            | BattleSection::CenterTorso
+                        MechSection::LeftTorso | MechSection::RightTorso | MechSection::CenterTorso
                     ) {
                     (state.rear, original.rear)
                 } else {
@@ -1576,7 +1565,7 @@ fn resolve_path(context: &mut ImpactContext<'_>, packet: DamagePacket) -> Result
             if tac || ap.is_some() {
                 let roll = context.unit_mut().dice.generic_roll();
                 let adjusted =
-                    roll.saturating_sub(ap.map_or(0, super::BattleWeapon::armor_piercing_penalty));
+                    roll.saturating_sub(ap.map_or(0, super::Weapon::armor_piercing_penalty));
                 tac_criticals = critical_count(adjusted);
                 resolve_criticals(context, section, tac_criticals)?;
             }
@@ -1584,7 +1573,7 @@ fn resolve_path(context: &mut ImpactContext<'_>, packet: DamagePacket) -> Result
                 && context.rules.is_some()
                 && context.unit().armor_warning()
             {
-                context.report.notices.push(super::BattleNotice {
+                context.report.notices.push(super::Notice {
                     unit: context.id,
                     text: super::combat_warnings::armor_message(section, rear, warning),
                 });
@@ -1595,7 +1584,7 @@ fn resolve_path(context: &mut ImpactContext<'_>, packet: DamagePacket) -> Result
             // The reference consumes this roll even when a TAC already supplied criticals.
             // Damage that penetrated hardened armor rolls two lower.
             let penalty = if !internal_only && context.unit().hardened_armor() {
-                super::BattleTechnology::HARDENED_CRITICAL_PENALTY
+                super::Technology::HARDENED_CRITICAL_PENALTY
             } else {
                 0
             };
@@ -1608,22 +1597,21 @@ fn resolve_path(context: &mut ImpactContext<'_>, packet: DamagePacket) -> Result
                 if roll == 12
                     && matches!(
                         section,
-                        BattleSection::LeftArm
-                            | BattleSection::RightArm
-                            | BattleSection::LeftLeg
-                            | BattleSection::RightLeg
-                            | BattleSection::Head
+                        MechSection::LeftArm
+                            | MechSection::RightArm
+                            | MechSection::LeftLeg
+                            | MechSection::RightLeg
+                            | MechSection::Head
                     )
                 {
                     let remaining = context.unit().sections()[&section].internal;
-                    let phase =
-                        context.damage_phase(section, remaining, BattleDamagePhase::Internal)?;
+                    let phase = context.damage_phase(section, remaining, DamagePhase::Internal)?;
                     context.record_phase(phase)?;
                     break;
                 }
                 resolve_criticals(context, section, critical_count(roll))?;
             }
-            if section == BattleSection::CenterTorso
+            if section == MechSection::CenterTorso
                 && damage > 0
                 && context.unit().sections()[&section].internal
                     == context.unit().definition().sections[&section].internal
@@ -1633,7 +1621,7 @@ fn resolve_path(context: &mut ImpactContext<'_>, packet: DamagePacket) -> Result
             // Reinforced structure halves and composite structure doubles internal damage,
             // including any overflow that transfers onward.
             let structural = context.unit().structure_damage(damage);
-            let phase = context.damage_phase(section, structural, BattleDamagePhase::Internal)?;
+            let phase = context.damage_phase(section, structural, DamagePhase::Internal)?;
             damage = phase.remaining;
             context.record_phase(phase)?;
         }
@@ -1671,7 +1659,7 @@ fn resolve_path(context: &mut ImpactContext<'_>, packet: DamagePacket) -> Result
 }
 
 /// Ejected ammunition strikes rear armor and uses the same ordered damage/crew cascade.
-fn resolve_dump_ignition(context: &mut ImpactContext<'_>, section: BattleSection) -> Result<()> {
+fn resolve_dump_ignition(context: &mut ImpactContext<'_>, section: MechSection) -> Result<()> {
     let Some(ignition) = super::dumping::ignition(context.unit_mut(), section)? else {
         return Ok(());
     };
@@ -1684,7 +1672,7 @@ fn resolve_dump_ignition(context: &mut ImpactContext<'_>, section: BattleSection
                 context.id,
                 "'s rear armor lights up as ammo being dumped ignites!",
             ));
-        context.report.notices.push(super::BattleNotice {
+        context.report.notices.push(super::Notice {
             unit: context.id,
             text: format!(
                 "[fg=red bold]Some of the {} ammo dumping out of your mech ignites![reset]",
@@ -1715,7 +1703,7 @@ fn resolve_dump_ignition(context: &mut ImpactContext<'_>, section: BattleSection
     unit.live_mass.invalidate();
     unit.dumping = None;
     if context.rules.is_some() {
-        context.report.notices.push(super::BattleNotice {
+        context.report.notices.push(super::Notice {
             unit: context.id,
             text: "[fg=red bold]All ammo dumping operations have stopped![reset]".into(),
         });
@@ -1737,7 +1725,7 @@ fn critical_count(roll: u8) -> u8 {
 /// Select critical outcomes from current eligible slots; linked extensions can select their primary repeatedly.
 fn resolve_criticals(
     context: &mut ImpactContext<'_>,
-    section: BattleSection,
+    section: MechSection,
     count: u8,
 ) -> Result<()> {
     for _ in 0..count {
@@ -1761,7 +1749,7 @@ mod tests {
 
     /// A Jenner with an extra chassis special, seeded for a deterministic damage stream.
     fn armored_world(special: &str, seed: u8) -> (World, ObjectId) {
-        let mut template = super::super::BattleTemplate::parse(
+        let mut template = super::super::MechTemplate::parse(
             "JR7-D",
             include_str!("../../tests/fixtures/btech/mechs/JR7-D.toml"),
         )
@@ -1773,10 +1761,7 @@ mod tests {
         }
         if special == "LaserRefArmor_Tech" {
             // Inner Sphere reflective armor fills the Jenner's ten free left torso slots.
-            let torso = template
-                .sections
-                .get_mut(&BattleSection::LeftTorso)
-                .unwrap();
+            let torso = template.sections.get_mut(&MechSection::LeftTorso).unwrap();
             for slot in 2..12 {
                 torso.criticals.insert(
                     slot,
@@ -1788,8 +1773,8 @@ mod tests {
                 );
             }
         }
-        let mut unit = BattleUnit::from_template(template).unwrap();
-        unit.dice = super::super::BattleDice::seeded([seed; 32]);
+        let mut unit = Mech::from_template(template).unwrap();
+        unit.dice = super::super::Dice::seeded([seed; 32]);
         let mut world = World::default();
         let id = ObjectId(41);
         world.btech.constructed.insert(id, unit);
@@ -1801,8 +1786,8 @@ mod tests {
         resolve_attack_in_candidate(
             world,
             id,
-            BattleHit {
-                section: BattleSection::LeftArm,
+            Hit {
+                section: MechSection::LeftArm,
                 rear_armor: false,
                 through_armor_critical: false,
                 crew_stun: false,
@@ -1823,7 +1808,7 @@ mod tests {
     /// exactly the dice of an ordinary round. Against standard armor the check still rolls.
     #[test]
     fn hardened_armor_negates_armor_piercing_criticals() {
-        let ap = WeaponEffect::ArmorPiercing(super::super::BattleWeapon::Ac10);
+        let ap = WeaponEffect::ArmorPiercing(super::super::Weapon::Ac10);
         // Six hardened damage leaves one of four armor points: exposed but not breached.
         let (mut piercing, id) = world(true, 3);
         let (mut conventional, _) = world(true, 3);
@@ -1851,7 +1836,7 @@ mod tests {
     fn hardened_armor_lowers_penetrating_critical_rolls() {
         let mut exercised = [false, false];
         for seed in 0..=63 {
-            let mut dice = super::super::BattleDice::seeded([seed; 32]);
+            let mut dice = super::super::Dice::seeded([seed; 32]);
             dice.two_d6();
             let roll = dice.two_d6();
             // Twelve damage strips four hardened points and puts four into the structure.
@@ -1859,7 +1844,7 @@ mod tests {
             let before = world.btech.constructed_units()[&id].lost_criticals().len();
             strike(&mut world, id, 12, WeaponEffect::Conventional);
             let unit = &world.btech.constructed_units()[&id];
-            assert_eq!(unit.sections()[&BattleSection::LeftArm].internal, 2);
+            assert_eq!(unit.sections()[&MechSection::LeftArm].internal, 2);
             let critical = unit.lost_criticals().len() > before;
             assert_eq!(critical, roll >= 10, "seed {seed} roll {roll}");
             if (8..10).contains(&roll) {
@@ -1878,7 +1863,7 @@ mod tests {
         let arm = |effect, damage| {
             let (mut world, id) = armored_world("LaserRefArmor_Tech", 5);
             strike(&mut world, id, damage, effect);
-            let state = &world.btech.constructed_units()[&id].sections()[&BattleSection::LeftArm];
+            let state = &world.btech.constructed_units()[&id].sections()[&MechSection::LeftArm];
             (state.armor, state.internal)
         };
         // The Jenner's left arm carries four armor points over six internal.

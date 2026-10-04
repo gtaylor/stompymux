@@ -32,7 +32,7 @@ async fn fixture_sources(
             .unwrap()
             .flags
             .insert(Flag::InCharacter);
-        BattleUnitTemplate::parse("test", source)
+        UnitTemplate::parse("test", source)
             .unwrap()
             .create(&mut world, id)
             .unwrap();
@@ -50,7 +50,7 @@ async fn fixture_sources(
     set_battle_character(
         &mut world,
         ObjectId(1),
-        BattleCharacter {
+        Character {
             bruise: 0,
             lethal: 0,
             build: 5,
@@ -65,7 +65,7 @@ async fn fixture_sources(
     set_battle_unit_signature(
         &mut world,
         target,
-        BattleUnitSignature {
+        UnitSignature {
             team: 1,
             ..Default::default()
         },
@@ -80,19 +80,19 @@ async fn classic_awards_share_the_formula_for_every_attacker_target_pair() {
         for vehicle_target in [false, true] {
             let (_dir, config, mut world, attacker, target) =
                 fixture(vehicle_attacker, vehicle_target).await;
-            let policy = BattleUnitExperience {
+            let policy = UnitExperience {
                 multiplier: 2.0,
                 suppress_gunnery: true,
             };
             set_battle_unit_experience(&mut world, attacker, policy).unwrap();
             set_battle_unit_experience(&mut world, target, policy).unwrap();
-            let request = BattleGunneryAwardRequest {
+            let request = GunneryAwardRequest {
                 tsm_tow_bonus: true,
 
                 attacker,
                 pilot: ObjectId(1),
                 target,
-                weapon: BattleWeapon::MediumLaser,
+                weapon: Weapon::MediumLaser,
                 damage: 20,
                 base_to_hit: 7,
                 extended_gunnery: true,
@@ -100,7 +100,7 @@ async fn classic_awards_share_the_formula_for_every_attacker_target_pair() {
                 use_unit_modifier: true,
                 now: 100,
             };
-            let expected = BattleGunneryExperienceInput {
+            let expected = GunneryExperienceInput {
                 attacker_tons: if vehicle_attacker { 80 } else { 35 },
                 target_tons: if vehicle_target { 80 } else { 35 },
                 attacker_speed: if vehicle_attacker {
@@ -151,7 +151,7 @@ async fn classic_awards_share_the_formula_for_every_attacker_target_pair() {
                     set_battle_unit_experience(
                         &mut world,
                         attacker,
-                        BattleUnitExperience {
+                        UnitExperience {
                             multiplier,
                             ..Default::default()
                         }
@@ -181,12 +181,10 @@ async fn classic_awards_share_the_formula_for_every_attacker_target_pair() {
                 let mut rejected = world.clone();
                 let mut request = request;
                 match case {
-                    "friendly" => set_battle_unit_signature(
-                        &mut rejected,
-                        target,
-                        BattleUnitSignature::default(),
-                    )
-                    .unwrap(),
+                    "friendly" => {
+                        set_battle_unit_signature(&mut rejected, target, UnitSignature::default())
+                            .unwrap()
+                    }
                     "tactical" => {
                         rejected
                             .objects
@@ -226,13 +224,13 @@ async fn classic_awards_share_the_formula_for_every_attacker_target_pair() {
 #[tokio::test]
 async fn classic_vehicle_difficulty_uses_current_motive_damage() {
     let (_dir, _config, mut world, attacker, target) = fixture(true, true).await;
-    let request = BattleGunneryAwardRequest {
+    let request = GunneryAwardRequest {
         tsm_tow_bonus: true,
 
         attacker,
         pilot: ObjectId(1),
         target,
-        weapon: BattleWeapon::MediumLaser,
+        weapon: Weapon::MediumLaser,
         damage: 6,
         base_to_hit: 7,
         extended_gunnery: true,
@@ -249,7 +247,7 @@ async fn classic_vehicle_difficulty_uses_current_motive_damage() {
             record["immobilized"] = true.into();
         })
         .unwrap();
-    let expected = BattleGunneryExperienceInput {
+    let expected = GunneryExperienceInput {
         attacker_tons: 80,
         target_tons: 80,
         attacker_speed: world.btech.vehicles()[&attacker].maximum_speed(),
@@ -286,20 +284,20 @@ async fn battle_value_awards_share_mixed_participants_and_preserve_dice() {
                         &mut world,
                         ObjectId(1),
                         skill,
-                        BattleCharacterValue {
+                        CharacterValue {
                             value: 5,
                             ..Default::default()
                         },
                     )
                     .unwrap();
                 }
-                let request = BattleGunneryAwardRequest {
+                let request = GunneryAwardRequest {
                     tsm_tow_bonus: true,
 
                     attacker,
                     pilot: ObjectId(1),
                     target,
-                    weapon: BattleWeapon::MediumLaser,
+                    weapon: Weapon::MediumLaser,
                     damage: 5,
                     base_to_hit: 7,
                     extended_gunnery: true,
@@ -316,7 +314,7 @@ async fn battle_value_awards_share_mixed_participants_and_preserve_dice() {
                 let report = award_battle_gunnery_experience(&mut world, request, &xp)
                     .unwrap()
                     .unwrap();
-                let BattleShotExperienceAward::BattleValue(report) = report else {
+                let ShotExperienceAward::BattleValue(report) = report else {
                     panic!("wrong formula")
                 };
                 assert!(report.award.accepted);
@@ -343,7 +341,7 @@ async fn battle_value_awards_share_mixed_participants_and_preserve_dice() {
                 set_battle_unit_experience(
                     &mut world,
                     target,
-                    BattleUnitExperience {
+                    UnitExperience {
                         suppress_gunnery: true,
                         ..Default::default()
                     },
@@ -370,7 +368,7 @@ async fn vehicle_battle_value_uses_live_protection_and_installed_weapons() {
     // Combustion cooling is zero; both installed AC/20s exceed heat capacity.
     assert_eq!(
         value.offensive,
-        80.0 + f64::from(BattleWeapon::parse("IS.AC/20").unwrap().battle_value() / 2) * 2.0
+        80.0 + f64::from(Weapon::parse("IS.AC/20").unwrap().battle_value() / 2) * 2.0
     );
     world
         .btech
@@ -387,18 +385,16 @@ async fn vehicle_battle_value_uses_live_protection_and_installed_weapons() {
 #[test]
 fn vehicle_battle_value_applies_each_ground_movement_discount() {
     for (movement, defensive) in [
-        (BattleVehicleMovement::Tracked, 496.8_f32),
-        (BattleVehicleMovement::Wheeled, 441.6_f32),
-        (BattleVehicleMovement::Hover, 386.4_f32),
-        (BattleVehicleMovement::Stationary, 460.0_f32),
+        (VehicleMovement::Tracked, 496.8_f32),
+        (VehicleMovement::Wheeled, 441.6_f32),
+        (VehicleMovement::Hover, 386.4_f32),
+        (VehicleMovement::Stationary, 460.0_f32),
     ] {
-        let mut definition = BattleVehicleTemplate::parse(
-            "Demolisher",
-            include_str!("../game/mechs/Demolisher.toml"),
-        )
-        .unwrap();
+        let mut definition =
+            VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+                .unwrap();
         definition.movement = movement;
-        let unit = BattleVehicle::new(definition).unwrap();
+        let unit = Vehicle::new(definition).unwrap();
         assert_eq!(unit.battle_value().unwrap().defensive, f64::from(defensive));
     }
 }
@@ -415,12 +411,12 @@ fn shipped_vehicles_and_vtols_have_finite_battle_values() {
         let Ok(text) = std::fs::read_to_string(&path) else {
             continue;
         };
-        let Ok(definition) = BattleVehicleTemplate::parse("test", &text) else {
+        let Ok(definition) = VehicleTemplate::parse("test", &text) else {
             continue;
         };
         rotorcraft += usize::from(definition.is_vtol());
-        let unit = BattleVehicle::new(definition)
-            .unwrap_or_else(|error| panic!("{}: {error}", path.display()));
+        let unit =
+            Vehicle::new(definition).unwrap_or_else(|error| panic!("{}: {error}", path.display()));
         let value = unit
             .battle_value()
             .unwrap_or_else(|error| panic!("{}: {error}", path.display()));
@@ -462,7 +458,7 @@ fn tow_fixture(
     create_battle_vehicle(
         world,
         load,
-        BattleVehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+        VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
             .unwrap(),
     )
     .unwrap();
@@ -478,13 +474,13 @@ async fn experience_and_battle_value_use_live_load_for_either_participant() {
             for load_attacker in [false, true] {
                 let (_dir, config, mut world, attacker, target) =
                     fixture(vehicle_attacker, vehicle_target).await;
-                let request = BattleGunneryAwardRequest {
+                let request = GunneryAwardRequest {
                     tsm_tow_bonus: true,
 
                     attacker,
                     pilot: ObjectId(1),
                     target,
-                    weapon: BattleWeapon::MediumLaser,
+                    weapon: Weapon::MediumLaser,
                     damage: 6,
                     base_to_hit: 7,
                     extended_gunnery: true,
@@ -567,7 +563,7 @@ async fn experience_load_queries_honor_hot_myomer_configuration() {
         .definition()
         .clone();
     let mut remaining = 6;
-    for section in [BattleSection::LeftTorso, BattleSection::RightTorso] {
+    for section in [MechSection::LeftTorso, MechSection::RightTorso] {
         let layout = definition.sections.get_mut(&section).unwrap();
         for slot in 0..12 {
             if remaining == 0 || layout.criticals.contains_key(&slot) {
@@ -603,19 +599,19 @@ async fn experience_load_queries_honor_hot_myomer_configuration() {
     create_battle_unit(
         &mut world,
         lighter,
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, lighter, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, lighter, map, 0, 0).unwrap();
     set_battle_tow(&mut world, attacker, Some(lighter)).unwrap();
-    let request = BattleGunneryAwardRequest {
+    let request = GunneryAwardRequest {
         tsm_tow_bonus: false,
 
         attacker,
         pilot: ObjectId(1),
         target,
-        weapon: BattleWeapon::MediumLaser,
+        weapon: Weapon::MediumLaser,
         damage: 6,
         base_to_hit: 7,
         extended_gunnery: true,
@@ -628,7 +624,7 @@ async fn experience_load_queries_honor_hot_myomer_configuration() {
         .unwrap();
     let enabled = award_battle_classic_gunnery_experience(
         &mut world.clone(),
-        BattleGunneryAwardRequest {
+        GunneryAwardRequest {
             tsm_tow_bonus: true,
 
             ..request
@@ -653,7 +649,7 @@ async fn experience_load_queries_honor_hot_myomer_configuration() {
         .unwrap();
     let enabled = award_battle_value_gunnery_experience(
         &mut world.clone(),
-        BattleGunneryAwardRequest {
+        GunneryAwardRequest {
             tsm_tow_bonus: true,
 
             ..request
@@ -675,7 +671,7 @@ async fn vtol_value_shares_vehicle_accounting_and_has_its_class_movement_bonus()
     assert_eq!(initial.defensive, f64::from(92.4_f32));
     assert_eq!(
         initial.offensive,
-        25.0 + 2.0 * f64::from(BattleWeapon::MachineGun.battle_value())
+        25.0 + 2.0 * f64::from(Weapon::MachineGun.battle_value())
     );
     assert_eq!(world.btech, before);
     world
@@ -725,13 +721,13 @@ async fn vtol_battle_value_experience_supports_mixed_pairs_load_and_replay() {
             }
             let (_dir, config, mut world, attacker, target) =
                 fixture_sources([attacker_source, target_source]).await;
-            let request = BattleGunneryAwardRequest {
+            let request = GunneryAwardRequest {
                 tsm_tow_bonus: true,
 
                 attacker,
                 pilot: ObjectId(1),
                 target,
-                weapon: BattleWeapon::MachineGun,
+                weapon: Weapon::MachineGun,
                 damage: 2,
                 base_to_hit: 7,
                 extended_gunnery: true,
@@ -747,10 +743,7 @@ async fn vtol_battle_value_experience_supports_mixed_pairs_load_and_replay() {
             let unloaded = award_battle_gunnery_experience(&mut world.clone(), request, &xp)
                 .unwrap()
                 .unwrap();
-            assert!(matches!(
-                unloaded,
-                BattleShotExperienceAward::BattleValue(_)
-            ));
+            assert!(matches!(unloaded, ShotExperienceAward::BattleValue(_)));
             let with_pilot = config::XpConfig {
                 use_pilot_bv_mod: 1,
                 ..xp.clone()

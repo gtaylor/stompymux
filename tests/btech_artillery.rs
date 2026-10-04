@@ -3,11 +3,11 @@ use stompymux_rs::*;
 
 /// Advance an isolated shot to arrival without applying its effects to a live world.
 fn arrive(
-    flight: &mut BattleArtilleryFlight,
+    flight: &mut ArtilleryFlight,
     dimensions: (u16, u16),
     wind: u16,
-    dice: &mut BattleDice,
-) -> BattleArtilleryImpactPattern {
+    dice: &mut Dice,
+) -> ArtilleryImpactPattern {
     loop {
         if let Some(pattern) = flight.advance(dimensions, wind, dice).unwrap() {
             return pattern;
@@ -21,16 +21,16 @@ fn artillery_flight_timing_and_saved_cursor_validation() {
     let origin = HexCoordinate { x: 0, y: 0 };
     for (distance, delay) in [(0, 10), (49, 10), (50, 10), (54, 10), (55, 11), (999, 199)] {
         let target = HexCoordinate { x: 0, y: distance };
-        let mut flight = BattleArtilleryFlight::new(
+        let mut flight = ArtilleryFlight::new(
             origin,
             target,
-            BattleWeapon::LongTom,
-            BattleArtilleryMode::Standard,
+            Weapon::LongTom,
+            ArtilleryMode::Standard,
             true,
         )
         .unwrap();
         assert_eq!(flight.remaining(), delay);
-        let mut dice = BattleDice::seeded([1; 32]);
+        let mut dice = Dice::seeded([1; 32]);
         let untouched = dice.clone();
         for _ in 1..delay {
             assert!(
@@ -40,7 +40,7 @@ fn artillery_flight_timing_and_saved_cursor_validation() {
                     .is_none()
             );
             assert_eq!(dice, untouched);
-            let restored: BattleArtilleryFlight =
+            let restored: ArtilleryFlight =
                 serde_json::from_value(serde_json::to_value(&flight).unwrap()).unwrap();
             assert_eq!(restored, flight);
         }
@@ -57,32 +57,25 @@ fn artillery_flight_timing_and_saved_cursor_validation() {
         assert_eq!(flight, done);
         assert_eq!(dice, untouched);
     }
-    let flight = BattleArtilleryFlight::new(
-        origin,
-        origin,
-        BattleWeapon::LongTom,
-        BattleArtilleryMode::Mine,
-        false,
-    )
-    .unwrap();
+    let flight =
+        ArtilleryFlight::new(origin, origin, Weapon::LongTom, ArtilleryMode::Mine, false).unwrap();
     let data = serde_json::to_value(&flight).unwrap();
     for (field, invalid) in [("remaining", 11), ("weapon", 0)] {
         let mut corrupt = data.clone();
         corrupt[field] = invalid.into();
-        assert!(serde_json::from_value::<BattleArtilleryFlight>(corrupt).is_err());
+        assert!(serde_json::from_value::<ArtilleryFlight>(corrupt).is_err());
     }
-    for weapon in [BattleWeapon::MediumLaser, BattleWeapon::Srm4] {
+    for weapon in [Weapon::MediumLaser, Weapon::Srm4] {
         assert!(
-            BattleArtilleryFlight::new(origin, origin, weapon, BattleArtilleryMode::Standard, true)
-                .is_err()
+            ArtilleryFlight::new(origin, origin, weapon, ArtilleryMode::Standard, true).is_err()
         );
         let mut corrupt = data.clone();
         corrupt["weapon"] = serde_json::to_value(weapon).unwrap();
-        assert!(serde_json::from_value::<BattleArtilleryFlight>(corrupt).is_err());
+        assert!(serde_json::from_value::<ArtilleryFlight>(corrupt).is_err());
     }
     let mut corrupt = data;
     corrupt["target"]["x"] = (-1).into();
-    assert!(serde_json::from_value::<BattleArtilleryFlight>(corrupt).is_err());
+    assert!(serde_json::from_value::<ArtilleryFlight>(corrupt).is_err());
 }
 
 /// Ordinary blasts cover the center and six neighbors; smoke draws one duration per cell and mines stay local.
@@ -90,24 +83,23 @@ fn artillery_flight_timing_and_saved_cursor_validation() {
 fn artillery_standard_smoke_and_mine_patterns() {
     let center = HexCoordinate { x: 5, y: 5 };
     for mode in [
-        BattleArtilleryMode::Standard,
-        BattleArtilleryMode::Smoke,
-        BattleArtilleryMode::Mine,
+        ArtilleryMode::Standard,
+        ArtilleryMode::Smoke,
+        ArtilleryMode::Mine,
     ] {
-        let mut flight =
-            BattleArtilleryFlight::new(center, center, BattleWeapon::Thumper, mode, true).unwrap();
-        let mut dice = BattleDice::seeded([7; 32]);
+        let mut flight = ArtilleryFlight::new(center, center, Weapon::Thumper, mode, true).unwrap();
+        let mut dice = Dice::seeded([7; 32]);
         let mut expected_dice = dice.clone();
         let pattern = arrive(&mut flight, (12, 12), 32767, &mut dice);
         assert_eq!(pattern.impact, center);
         assert!(!pattern.missed);
         assert!(pattern.cells[0].direct);
         assert_eq!(pattern.cells[0].position, center);
-        if mode == BattleArtilleryMode::Mine {
+        if mode == ArtilleryMode::Mine {
             assert_eq!(pattern.cells.len(), 1);
             assert_eq!(
                 pattern.cells[0].effect,
-                BattleArtilleryEffect::Mine { strength: 5 }
+                ArtilleryEffect::Mine { strength: 5 }
             );
         } else {
             assert_eq!(pattern.cells.len(), 7);
@@ -120,20 +112,20 @@ fn artillery_standard_smoke_and_mine_patterns() {
             );
             for (index, cell) in pattern.cells.iter().enumerate() {
                 assert_eq!(cell.direct, index == 0);
-                if mode == BattleArtilleryMode::Smoke {
+                if mode == ArtilleryMode::Smoke {
                     assert_eq!(
                         cell.effect,
-                        BattleArtilleryEffect::Smoke {
+                        ArtilleryEffect::Smoke {
                             seconds: 89 + expected_dice.die(61).unwrap()
                         }
                     );
                 } else {
                     assert_eq!(
                         cell.effect,
-                        BattleArtilleryEffect::Damage {
+                        ArtilleryEffect::Damage {
                             total: if index == 0 { 5 } else { 2 },
                             packet_size: 5,
-                            table: BattleHitTable::Weapon
+                            table: HitTable::Weapon
                         }
                     );
                 }
@@ -155,15 +147,15 @@ fn artillery_cluster_conservation_bounds_and_replay() {
             },
         ] {
             for seed in 0..32 {
-                let mut flight = BattleArtilleryFlight::new(
+                let mut flight = ArtilleryFlight::new(
                     center,
                     center,
-                    BattleWeapon::LongTom,
-                    BattleArtilleryMode::Cluster,
+                    Weapon::LongTom,
+                    ArtilleryMode::Cluster,
                     true,
                 )
                 .unwrap();
-                let mut dice = BattleDice::seeded([seed; 32]);
+                let mut dice = Dice::seeded([seed; 32]);
                 for _ in 0..5 {
                     assert!(flight.advance(dimensions, 0, &mut dice).unwrap().is_none());
                 }
@@ -184,10 +176,10 @@ fn artillery_cluster_conservation_bounds_and_replay() {
                     assert!((0..i32::from(dimensions.1)).contains(&cell.position.y));
                     assert!((cell.position.x - center.x).abs() <= 2);
                     assert!((cell.position.y - center.y).abs() <= 2);
-                    let BattleArtilleryEffect::Damage {
+                    let ArtilleryEffect::Damage {
                         total,
                         packet_size: 2,
-                        table: BattleHitTable::Punch,
+                        table: HitTable::Punch,
                     } = cell.effect
                     else {
                         panic!("Unexpected cluster effect")
@@ -206,15 +198,15 @@ fn artillery_cluster_conservation_bounds_and_replay() {
 fn artillery_scatter_and_atomic_invalid_arrival() {
     let center = HexCoordinate { x: 10, y: 10 };
     for seed in 0..32 {
-        let mut flight = BattleArtilleryFlight::new(
+        let mut flight = ArtilleryFlight::new(
             center,
             center,
-            BattleWeapon::LongTom,
-            BattleArtilleryMode::Standard,
+            Weapon::LongTom,
+            ArtilleryMode::Standard,
             false,
         )
         .unwrap();
-        let mut dice = BattleDice::seeded([seed; 32]);
+        let mut dice = Dice::seeded([seed; 32]);
         for _ in 0..9 {
             assert!(flight.advance((20, 20), 0, &mut dice).unwrap().is_none());
         }
@@ -243,15 +235,15 @@ fn artillery_scatter_and_atomic_invalid_arrival() {
         assert_eq!(dice, windy_dice);
     }
     let center = HexCoordinate { x: 0, y: 0 };
-    let mut flight = BattleArtilleryFlight::new(
+    let mut flight = ArtilleryFlight::new(
         center,
         center,
-        BattleWeapon::Thumper,
-        BattleArtilleryMode::Standard,
+        Weapon::Thumper,
+        ArtilleryMode::Standard,
         false,
     )
     .unwrap();
-    let pattern = arrive(&mut flight, (1, 1), 0, &mut BattleDice::seeded([3; 32]));
+    let pattern = arrive(&mut flight, (1, 1), 0, &mut Dice::seeded([3; 32]));
     assert!(pattern.missed);
     assert_eq!(pattern.impact, pattern.target);
     assert_eq!(pattern.cells.len(), 1);
@@ -261,48 +253,48 @@ fn artillery_scatter_and_atomic_invalid_arrival() {
 #[test]
 fn artillery_aim_ranges_observers_and_corrections() {
     let weapons = [
-        (BattleWeapon::ArrowIv, 100),
-        (BattleWeapon::ClanArrowIv, 120),
-        (BattleWeapon::LongTom, 400),
-        (BattleWeapon::Sniper, 240),
-        (BattleWeapon::Thumper, 280),
-        (BattleWeapon::LongTomCannon, 400),
-        (BattleWeapon::SniperCannon, 240),
-        (BattleWeapon::ThumperCannon, 280),
+        (Weapon::ArrowIv, 100),
+        (Weapon::ClanArrowIv, 120),
+        (Weapon::LongTom, 400),
+        (Weapon::Sniper, 240),
+        (Weapon::Thumper, 280),
+        (Weapon::LongTomCannon, 400),
+        (Weapon::SniperCannon, 240),
+        (Weapon::ThumperCannon, 280),
     ];
     for (weapon, maximum) in weapons {
         for extended_range in [false, true] {
-            let base = BattleArtilleryAimInput {
+            let base = ArtilleryAimInput {
                 distance: f64::from(maximum),
                 extended_range,
                 submerged: false,
                 visible: false,
                 gunnery: 4,
-                observer: BattleArtilleryObserver::Unassisted,
+                observer: ArtilleryObserver::Unassisted,
                 adjustment: 0,
             };
             assert_eq!(
                 weapon.artillery_aim(base).unwrap(),
-                BattleArtilleryAim {
+                ArtilleryAim {
                     target_number: 12,
                     maximum_range: maximum,
-                    range: BattleArtilleryRange::InRange
+                    range: ArtilleryRange::InRange
                 }
             );
             for (observer, indirect) in [
-                (BattleArtilleryObserver::Unassisted, 12),
-                (BattleArtilleryObserver::Unavailable, 11),
-                (BattleArtilleryObserver::Spotting(0), 9),
-                (BattleArtilleryObserver::Spotting(1), 10),
-                (BattleArtilleryObserver::Spotting(3), 11),
-                (BattleArtilleryObserver::Spotting(5), 11),
-                (BattleArtilleryObserver::Spotting(7), 12),
-                (BattleArtilleryObserver::Spotting(8), 13),
+                (ArtilleryObserver::Unassisted, 12),
+                (ArtilleryObserver::Unavailable, 11),
+                (ArtilleryObserver::Spotting(0), 9),
+                (ArtilleryObserver::Spotting(1), 10),
+                (ArtilleryObserver::Spotting(3), 11),
+                (ArtilleryObserver::Spotting(5), 11),
+                (ArtilleryObserver::Spotting(7), 12),
+                (ArtilleryObserver::Spotting(8), 13),
             ] {
                 for adjustment in [0, 1, 255] {
                     for visible in [false, true] {
                         let result = weapon
-                            .artillery_aim(BattleArtilleryAimInput {
+                            .artillery_aim(ArtilleryAimInput {
                                 observer,
                                 adjustment,
                                 visible,
@@ -317,31 +309,31 @@ fn artillery_aim_ranges_observers_and_corrections() {
                 }
             }
             let out = weapon
-                .artillery_aim(BattleArtilleryAimInput {
+                .artillery_aim(ArtilleryAimInput {
                     distance: f64::from(maximum) + 0.001,
                     adjustment: 255,
                     ..base
                 })
                 .unwrap();
-            assert_eq!(out.range, BattleArtilleryRange::OutOfRange);
+            assert_eq!(out.range, ArtilleryRange::OutOfRange);
             assert_eq!(out.target_number, 1000);
             let submerged = weapon
-                .artillery_aim(BattleArtilleryAimInput {
+                .artillery_aim(ArtilleryAimInput {
                     submerged: true,
                     distance: 2000.0,
                     ..base
                 })
                 .unwrap();
-            assert_eq!(submerged.range, BattleArtilleryRange::Underwater);
+            assert_eq!(submerged.range, ArtilleryRange::Underwater);
             assert_eq!(submerged.target_number, 5000);
             for distance in [f64::NAN, f64::INFINITY, -1.0] {
                 assert!(
                     weapon
-                        .artillery_aim(BattleArtilleryAimInput { distance, ..base })
+                        .artillery_aim(ArtilleryAimInput { distance, ..base })
                         .is_err()
                 );
             }
-            assert!(BattleWeapon::MediumLaser.artillery_aim(base).is_err());
+            assert!(Weapon::MediumLaser.artillery_aim(base).is_err());
         }
         assert!(weapon.range_modifier(1.0, false).is_err());
         assert!(weapon.damage_groups(None).is_err());
@@ -353,28 +345,25 @@ fn artillery_aim_ranges_observers_and_corrections() {
 #[test]
 fn artillery_catalogue_admits_delayed_launchers() {
     let mut template =
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
-    let section = template
-        .sections
-        .get_mut(&BattleSection::LeftTorso)
-        .unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+    let section = template.sections.get_mut(&MechSection::LeftTorso).unwrap();
     section.criticals.clear();
     for slot in 0..12 {
         section.criticals.insert(
             slot,
             CriticalDefinition {
-                equipment: BattleWeapon::ClanArrowIv.name().into(),
+                equipment: Weapon::ClanArrowIv.name().into(),
                 data: "-".into(),
                 modes: vec![],
             },
         );
     }
-    let loadout = BattleLoadout::resolve(&template).unwrap();
+    let loadout = MechLoadout::resolve(&template).unwrap();
     assert!(
         loadout
             .weapons
             .iter()
-            .any(|mount| mount.weapon == BattleWeapon::ClanArrowIv)
+            .any(|mount| mount.weapon == Weapon::ClanArrowIv)
     );
     for section in template.sections.values_mut() {
         section
@@ -382,5 +371,5 @@ fn artillery_catalogue_admits_delayed_launchers() {
             .retain(|_, part| part.equipment != "JumpJet");
     }
     template.jump_speed = 0.0;
-    assert!(BattleUnit::from_template(template.clone()).is_ok());
+    assert!(Mech::from_template(template.clone()).is_ok());
 }

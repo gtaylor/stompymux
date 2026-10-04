@@ -152,7 +152,7 @@ Configured native/Lua speed requests, Lua state readouts and cockpit status now
 share a sprint-aware throttle function. Ground proposals, turning and VTOL
 updates use the same world-aware bonus inputs, including current pilot advantage
 and environmental gravity. Mech movement and turning retain their distinct
-post-effective-speed conversions from the reference. `BattleMovementRules` now
+post-effective-speed conversions from the reference. `MovementRules` now
 carries the configured TSM sprint switch from the server heartbeat.
 
 Saved sprint motion limits cover the legal retained pilot/gravity/equipment

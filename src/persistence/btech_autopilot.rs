@@ -6,7 +6,7 @@
 //! only its changed progress columns.
 
 use super::write::{Cell, Fields, sync_rows};
-use crate::btech::BattlePosition;
+use crate::btech::Position;
 use crate::btech::autopilot::{
     AutopilotConfig, AutopilotController, AutopilotFeedback, AutopilotFeedbackEvent,
     AutopilotFireMode, AutopilotOrder, AutopilotOrderProgress, AutopilotOrderRecord,
@@ -191,12 +191,12 @@ fn get_range(row: &SqliteRow) -> Result<Option<AutopilotRangeBand>> {
 }
 
 /// Read a position stored as nullable map, x and y columns with a shared prefix.
-fn get_position(row: &SqliteRow, prefix: &str) -> Result<Option<BattlePosition>> {
+fn get_position(row: &SqliteRow, prefix: &str) -> Result<Option<Position>> {
     let map: Option<i64> = row.try_get(format!("{prefix}_map").as_str())?;
     let Some(map) = map else {
         return Ok(None);
     };
-    Ok(Some(BattlePosition {
+    Ok(Some(Position {
         map: ObjectId(map),
         x: get(row, &format!("{prefix}_x"))?,
         y: get(row, &format!("{prefix}_y"))?,
@@ -339,7 +339,7 @@ fn encode_feedback(record: &AutopilotFeedback) -> Result<Fields> {
 }
 
 /// Rebuild one order from its row and its patrol waypoints.
-fn decode_order(row: &SqliteRow, waypoints: Vec<BattlePosition>) -> Result<AutopilotOrderRecord> {
+fn decode_order(row: &SqliteRow, waypoints: Vec<Position>) -> Result<AutopilotOrderRecord> {
     let destination =
         || get_position(row, "destination")?.context("Autopilot order lacks a destination");
     let target = || -> Result<ObjectId> {
@@ -397,7 +397,7 @@ fn decode_order(row: &SqliteRow, waypoints: Vec<BattlePosition>) -> Result<Autop
 pub(super) async fn load(
     c: &mut SqliteConnection,
 ) -> Result<BTreeMap<ObjectId, AutopilotController>> {
-    let mut waypoints: BTreeMap<(i64, i64), Vec<BattlePosition>> = BTreeMap::new();
+    let mut waypoints: BTreeMap<(i64, i64), Vec<Position>> = BTreeMap::new();
     for row in sqlx::query(
         "SELECT unit_dbref,order_id,map_dbref,x,y FROM btech_autopilot_controller_waypoints
          ORDER BY unit_dbref,order_id,position",
@@ -408,7 +408,7 @@ pub(super) async fn load(
         waypoints
             .entry((row.try_get("unit_dbref")?, row.try_get("order_id")?))
             .or_default()
-            .push(BattlePosition {
+            .push(Position {
                 map: ObjectId(row.try_get("map_dbref")?),
                 x: get(&row, "x")?,
                 y: get(&row, "y")?,

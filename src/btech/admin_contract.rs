@@ -63,13 +63,13 @@ pub fn apply_administrative_repair(
         let unit = vehicles
             .get_mut(&id)
             .context("Unit runtime state is unavailable")?;
-        const PHYSICAL: [BattleVehicleSection; 6] = [
-            BattleVehicleSection::Left,
-            BattleVehicleSection::Right,
-            BattleVehicleSection::Front,
-            BattleVehicleSection::Rear,
-            BattleVehicleSection::Turret,
-            BattleVehicleSection::Rotor,
+        const PHYSICAL: [VehicleSection; 6] = [
+            VehicleSection::Left,
+            VehicleSection::Right,
+            VehicleSection::Front,
+            VehicleSection::Rear,
+            VehicleSection::Turret,
+            VehicleSection::Rotor,
         ];
         if let Some(section) = PHYSICAL
             .get(ordinal)
@@ -177,13 +177,13 @@ pub fn set_administrative_armor(
         let unit = vehicles
             .get_mut(&id)
             .context("Unit runtime state is unavailable")?;
-        const PHYSICAL: [BattleVehicleSection; 6] = [
-            BattleVehicleSection::Left,
-            BattleVehicleSection::Right,
-            BattleVehicleSection::Front,
-            BattleVehicleSection::Rear,
-            BattleVehicleSection::Turret,
-            BattleVehicleSection::Rotor,
+        const PHYSICAL: [VehicleSection; 6] = [
+            VehicleSection::Left,
+            VehicleSection::Right,
+            VehicleSection::Front,
+            VehicleSection::Rear,
+            VehicleSection::Turret,
+            VehicleSection::Rotor,
         ];
         if let Some(section) = PHYSICAL
             .get(ordinal)
@@ -211,7 +211,7 @@ pub fn set_administrative_armor(
     Ok(())
 }
 
-fn administrative_mech_section(unit: &BattleUnit, code: i32) -> Result<BattleSection> {
+fn administrative_mech_section(unit: &Mech, code: i32) -> Result<MechSection> {
     let class = unit
         .administrative_attribute("administrative_unit_type")
         .unwrap_or("Mech");
@@ -240,28 +240,28 @@ fn administrative_mech_section(unit: &BattleUnit, code: i32) -> Result<BattleSec
         .iter()
         .position(|candidate| *candidate == code)
         .context("Section is not valid for this unit")?;
-    const RAW: [BattleSection; 8] = [
-        BattleSection::LeftArm,
-        BattleSection::RightArm,
-        BattleSection::LeftTorso,
-        BattleSection::RightTorso,
-        BattleSection::CenterTorso,
-        BattleSection::LeftLeg,
-        BattleSection::RightLeg,
-        BattleSection::Head,
+    const RAW: [MechSection; 8] = [
+        MechSection::LeftArm,
+        MechSection::RightArm,
+        MechSection::LeftTorso,
+        MechSection::RightTorso,
+        MechSection::CenterTorso,
+        MechSection::LeftLeg,
+        MechSection::RightLeg,
+        MechSection::Head,
     ];
     RAW.get(index).copied().context("Section is unavailable")
 }
 
 /// Borrow either chassis for an administrative edit.
-fn storage(world: &mut World, id: ObjectId) -> Result<BattleUnitMut<'_>> {
+fn storage(world: &mut World, id: ObjectId) -> Result<UnitMut<'_>> {
     world
         .btech
         .unit_mut(id)
         .context("Unit runtime state is unavailable")
 }
 
-impl BattleUnitMut<'_> {
+impl UnitMut<'_> {
     /// Record the raw class and movement an administrator assigned, resizing the raw
     /// section list to match.
     fn raw_identity(&mut self, class: RawUnitClass, movement: RawMovement) {
@@ -277,13 +277,13 @@ impl BattleUnitMut<'_> {
                 }
             }
             Self::Vehicle(unit) => {
-                const PHYSICAL: [BattleVehicleSection; 6] = [
-                    BattleVehicleSection::Left,
-                    BattleVehicleSection::Right,
-                    BattleVehicleSection::Front,
-                    BattleVehicleSection::Rear,
-                    BattleVehicleSection::Turret,
-                    BattleVehicleSection::Rotor,
+                const PHYSICAL: [VehicleSection; 6] = [
+                    VehicleSection::Left,
+                    VehicleSection::Right,
+                    VehicleSection::Front,
+                    VehicleSection::Rear,
+                    VehicleSection::Turret,
+                    VehicleSection::Rotor,
                 ];
                 let unrepresented: Vec<usize> = (0..8)
                     .filter(|index| {
@@ -379,8 +379,8 @@ pub fn administrative_unit_movement(world: &World, id: ObjectId) -> Option<Strin
         return Some(
             unit.administrative_attribute("administrative_movement_type")
                 .unwrap_or_else(|| match unit.chassis() {
-                    BattleMechChassis::Biped => "Biped",
-                    BattleMechChassis::Quad => "Quad",
+                    MechChassis::Biped => "Biped",
+                    MechChassis::Quad => "Quad",
                 })
                 .to_owned(),
         );
@@ -465,15 +465,15 @@ pub fn administrative_is_fixable(world: &World, id: ObjectId) -> Option<bool> {
         _ => return Some(true),
     };
     if let Some(unit) = world.btech.constructed_units().get(&id) {
-        const PHYSICAL: [BattleSection; 8] = [
-            BattleSection::LeftArm,
-            BattleSection::RightArm,
-            BattleSection::LeftTorso,
-            BattleSection::RightTorso,
-            BattleSection::CenterTorso,
-            BattleSection::LeftLeg,
-            BattleSection::RightLeg,
-            BattleSection::Head,
+        const PHYSICAL: [MechSection; 8] = [
+            MechSection::LeftArm,
+            MechSection::RightArm,
+            MechSection::LeftTorso,
+            MechSection::RightTorso,
+            MechSection::CenterTorso,
+            MechSection::LeftLeg,
+            MechSection::RightLeg,
+            MechSection::Head,
         ];
         return Some(!forbidden.iter().copied().any(|index| {
             let Some(section) = PHYSICAL.get(index).copied() else {
@@ -490,13 +490,13 @@ pub fn administrative_is_fixable(world: &World, id: ObjectId) -> Option<bool> {
         }));
     }
     if let Some(unit) = world.btech.vehicles().get(&id) {
-        const PHYSICAL: [BattleVehicleSection; 6] = [
-            BattleVehicleSection::Left,
-            BattleVehicleSection::Right,
-            BattleVehicleSection::Front,
-            BattleVehicleSection::Rear,
-            BattleVehicleSection::Turret,
-            BattleVehicleSection::Rotor,
+        const PHYSICAL: [VehicleSection; 6] = [
+            VehicleSection::Left,
+            VehicleSection::Right,
+            VehicleSection::Front,
+            VehicleSection::Rear,
+            VehicleSection::Turret,
+            VehicleSection::Rotor,
         ];
         return Some(!forbidden.iter().copied().any(|index| {
             if let Some(section) = PHYSICAL.get(index).copied() {
@@ -533,16 +533,16 @@ pub fn set_administrative_scalar(
     super::ensure_registered_unit_runtime(world, id)?;
     let mut storage = storage(world, id)?;
     match (&mut storage, field) {
-        (BattleUnitMut::Mech(unit), "maxspeed") => {
+        (UnitMut::Mech(unit), "maxspeed") => {
             unit.propulsion.set(f64::from(value as f32 * 10.75_f32))
         }
-        (BattleUnitMut::Vehicle(unit), "maxspeed") => {
+        (UnitMut::Vehicle(unit), "maxspeed") => {
             unit.propulsion.set(f64::from(value as f32 * 10.75_f32))
         }
-        (BattleUnitMut::Mech(unit), "maxjumpspeed") => unit
+        (UnitMut::Mech(unit), "maxjumpspeed") => unit
             .propulsion
             .set_jump_raw(f64::from(value as f32 * 10.75_f32)),
-        (BattleUnitMut::Vehicle(unit), "maxjumpspeed") => {
+        (UnitMut::Vehicle(unit), "maxjumpspeed") => {
             unit.propulsion
                 .set_jump_raw(f64::from(value as f32 * 10.75_f32));
         }
@@ -550,10 +550,8 @@ pub fn set_administrative_scalar(
         (_, "lrsrange") => storage.set_administrative_attribute("lrs_range", value as u8),
         (_, "tacrange") => storage.set_administrative_attribute("tac_range", value as u8),
         (_, "scanrange") => storage.set_administrative_attribute("scan_range", value as u8),
-        (BattleUnitMut::Mech(unit), "radiorange") => unit.hardware.radio_range = Some(value as u16),
-        (BattleUnitMut::Vehicle(unit), "radiorange") => {
-            unit.hardware.radio_range = Some(value as u16)
-        }
+        (UnitMut::Mech(unit), "radiorange") => unit.hardware.radio_range = Some(value as u16),
+        (UnitMut::Vehicle(unit), "radiorange") => unit.hardware.radio_range = Some(value as u16),
         _ => anyhow::bail!("Unknown administrative scalar"),
     }
     Ok(())
@@ -583,12 +581,12 @@ pub fn set_administrative_radio_quality(
     };
     let mut storage = storage(world, id)?;
     match &mut storage {
-        BattleUnitMut::Mech(unit) => {
+        UnitMut::Mech(unit) => {
             unit.set_administrative_attribute("radio", quality);
             unit.hardware.radio_configuration = Some(configuration);
             unit.hardware.radio_range = Some(range);
         }
-        BattleUnitMut::Vehicle(unit) => {
+        UnitMut::Vehicle(unit) => {
             unit.set_administrative_attribute("radio", quality);
             unit.hardware.radio_configuration = Some(configuration);
             unit.hardware.radio_range = Some(range);
@@ -698,9 +696,9 @@ pub fn set_administrative_technology(
             world,
             id,
             &[if code == 0 {
-                BattleSystem::TripleStrengthMyomer
+                System::TripleStrengthMyomer
             } else {
-                BattleSystem::Masc
+                System::Masc
             }],
             false,
         )?;
@@ -731,10 +729,10 @@ pub fn clear_administrative_technologies(
             world,
             id,
             &[
-                BattleSystem::TripleStrengthMyomer,
-                BattleSystem::Masc,
-                BattleSystem::Case,
-                BattleSystem::CaseIi,
+                System::TripleStrengthMyomer,
+                System::Masc,
+                System::Case,
+                System::CaseIi,
             ],
             true,
         )?;
@@ -750,7 +748,7 @@ pub fn clear_administrative_technologies(
 fn remove_administrative_systems(
     world: &mut World,
     id: ObjectId,
-    systems: &[BattleSystem],
+    systems: &[System],
     clear_case: bool,
 ) -> Result<()> {
     crate::btech::with_unit_mut!(
@@ -771,7 +769,7 @@ fn remove_administrative_systems(
                     layout.configuration = None;
                 }
                 layout.criticals.retain(|&slot, critical| {
-                    let remove = BattleSystem::named(&critical.equipment)
+                    let remove = System::named(&critical.equipment)
                         .is_some_and(|system| systems.contains(&system));
                     if remove {
                         touched.push(CriticalLocation { section, slot });

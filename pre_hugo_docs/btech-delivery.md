@@ -473,7 +473,7 @@ Integration is not complete.
 Native `fire <weapon> <x> <y>` and `firetic <groups> <x> <y>` use the same
 per-weapon request dispatcher as unit IDs and dbrefs. Lua `btech.unit.fire` and
 `btech.unit.tic_fire` accept an `{x, y}` target table. Rust TIC callers can pass
-`BattleFireTarget::Hex`; optional unit arguments still express omitted or explicit
+`FireTarget::Hex`; optional unit arguments still express omitted or explicit
 unit selection. No request changes the saved unit or hex lock.
 
 Conventional coordinate requests select the first eligible occupant in shared
@@ -504,7 +504,7 @@ Mechanical-order evidence: `mech_fire_command.c` checks stun, temporary weapon
 failure, recycling, prone support, cover restrictions, destroyed mounts and
 defensive-only weapons before target argument resolution. Ammunition checks
 occur later in fire preparation. The shared admission implementation below
-separates those phases without moving the whole `BattleWeaponReadiness::ready`
+separates those phases without moving the whole `WeaponReadiness::ready`
 boolean before target decoding.
 
 The source also distinguishes self-spotter rejection before weapon lookup from
@@ -812,7 +812,7 @@ work; the scope exclusions at the top remain unchanged.
 
 ### Operator visibility across sensors, terrain and hiding
 
-`BattleVisibility` stores independent invisible/clairvoyant flags on both anatomy
+`Visibility` stores independent invisible/clairvoyant flags on both anatomy
 records. Native `@btech unit-visibility` presets and trusted Lua
 `btech.unit.visibility` share the same setter and persistence representation;
 `@btech inspect` and Lua unit state expose the flags. Native authority, invalid
@@ -953,7 +953,7 @@ behavior acceptance audit; this milestone does not establish complete parity.
 Hit-table follow-up also remains: reference `mech_hit_location` consumes its
 initial 2d6 before delegating to FASA or critical-proof routing, and the delegated
 handler consumes another 2d6 before its combat-safe return. Vehicle routing
-already models both draws. Mech `BattleHitRules::resolve` currently uses the
+already models both draws. Mech `HitRules::resolve` currently uses the
 caller's roll directly, including when `fasa_criticals` is enabled. Audit that
 mode's table distribution and saved random stream against the reference for
 both ordinary and immune targets; the new standard-mode immunity checks do not
@@ -974,7 +974,7 @@ missile gaps above and the broader acceptance work at the start of this file.
 
 ### Mech delegated hit-location routing
 
-The hit-table follow-up above is implemented. `BattleHitRules::resolve` treats
+The hit-table follow-up above is implemented. `HitRules::resolve` treats
 the supplied roll as the entry to routing. FASA and `CritProof_Tech` consume one
 additional 2d6 before selecting from shared rows or returning for combat safety.
 Critical-proof precedence suppresses TACs and random component selection while
@@ -1529,7 +1529,7 @@ The overall integration goal remains active.
 
 ## Shared runtime weapon settings
 
-One transactional `BattleWeaponSettings` source supplies recycle times and Battle
+One transactional `WeaponSettings` source supplies recycle times and Battle
 Values to Mech and vehicle firing, AMS activation, weapon specifications, unit
 valuation and the Battle Value experience formula. The immutable catalogue keeps
 the initial values; overrides reset when the database is reloaded, matching the
@@ -1727,7 +1727,7 @@ integration goal remains active.
 
 ## Saved cargo transfer points
 
-Maps now own an optional `BattleCargoTransferPoint` restored from the existing
+Maps now own an optional `CargoTransferPoint` restored from the existing
 `btech_map_cargo_configuration` table. Coordinates are validated against the
 owning map. Missing owners, out-of-range coordinates and malformed hint flags
 are rejected during load. Selective updates retain unrelated table columns;
@@ -2290,7 +2290,7 @@ An `MML_LRM` bin may also carry one LRM-compatible special round: Artemis IV
 Each pairing is its own ammunition mode (`mml_lrm_artemis`, `mml_lrm_narc`,
 `mml_lrm_swarm`, `mml_lrm_swarm1`, `mml_lrm_semi_guided`, `mml_lrm_stinger`), so
 bin matching, persistence, inspection bits and Lua projection work exactly as
-they do for other modes. `BattleAmmunitionMode::munition` gives the round for
+they do for other modes. `AmmunitionMode::munition` gives the round for
 rules that key on it, and `is_mml_lrm` gives the family for range, damage,
 five-point grouping, indirect fire and ammunition hazards.
 
@@ -2448,10 +2448,10 @@ on all special-condition maps. Checks occur before transfer to the next section.
 Previously disabled sections do not repeat their exposure effects.
 
 Water and vacuum share `section_exposure::disable_section` and the public
-`BattleSectionExposureReport`, with an explicit water/vacuum cause. This replaces
+`SectionExposureReport`, with an explicit water/vacuum cause. This replaces
 the water-specific report type without a compatibility alias. Flooding admission
 and its existing report collections remain separate; vacuum consequences travel
-with `BattleImpactReport.exposures` through direct and grouped damage. Their falls
+with `ImpactReport.exposures` through direct and grouped damage. Their falls
 and reactor effects use the same recursive casualty-publication functions.
 
 Mech vacuum state is distinct from flooding but shares equipment availability,
@@ -3253,7 +3253,7 @@ diff, Lua declaration mirrors and unchanged-reference checks pass.
 
 ### Return-link coordinate ownership
 
-Building exits now use `BattleBuildingExit`, containing both selection coordinates
+Building exits now use `BuildingExit`, containing both selection coordinates
 and the destination map. Imported coordinates are loaded and persisted rather
 than assumed to be the origin. The existing destination-only setter preserves
 coordinates; the full-record setter validates destinations through the same
@@ -3284,7 +3284,7 @@ unchanged-reference checks pass.
 
 The reference audit found no active authoring path for TYPE_DEC; its saved records
 carry terrain to restore during explicit deletion and no automatic timer. Rust now
-owns those records as `BattleStaticDecoration` rather than silently leaving them
+owns those records as `StaticDecoration` rather than silently leaving them
 outside map state. The shared setter validates coordinates, metadata remains
 separate from visible terrain and thermal overlays, and selective persistence
 preserves unrelated payload columns. Explicit fixed-size asset reload retains the
@@ -4770,7 +4770,7 @@ host/removal implementation slice, not the remaining parity or integration audit
 
 ## Configured preferred battlefield identities
 
-`BattlePreferredId` is a validated two-letter configuration value shared by
+`PreferredId` is a validated two-letter configuration value shared by
 Mechs and vehicles. Setters and deserialization normalize ASCII letters to
 uppercase; malformed saved values are rejected. Each owned unit snapshot keeps
 its preference separately from its currently assigned battlefield label. Empty
@@ -4838,7 +4838,7 @@ and read-only reference-tree checks. The full integration goal remains open.
 
 ## Shared orbital-drop rules (host integration pending)
 
-`BattleOrbitalDrop` provides one restartable rules model for Mechs and ground
+`OrbitalDrop` provides one restartable rules model for Mechs and ground
 vehicles. It covers one-second descent steps, mass-based cocoon integrity,
 whole-packet damage interception, firing-induced breaches, jump-jet compensation,
 the protected target modifier, and landing damage/experience arithmetic. The

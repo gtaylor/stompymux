@@ -5,7 +5,7 @@ use std::{collections::BTreeMap, sync::LazyLock};
 /// Registered BattleTech object families, including command-only operator objects.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
-pub enum BattleSpecialType {
+pub enum SpecialType {
     Mech,
     Debug,
     Map,
@@ -15,7 +15,7 @@ pub enum BattleSpecialType {
 /// Unit classes accepted by the reference's signed command masks.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(i16)]
-pub enum BattleCommandClass {
+pub enum CommandClass {
     Unknown = 0,
     Mech = 1,
     Ground = 2,
@@ -30,7 +30,7 @@ pub enum BattleCommandClass {
 /// Observable command definition; executable handlers remain in the native registry.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct BattleSpecialCommand {
+pub struct SpecialCommand {
     class_mask: i16,
     pub syntax: String,
     pub description: String,
@@ -39,20 +39,19 @@ pub struct BattleSpecialCommand {
 }
 
 /// One immutable catalogue preserves the same order for command lookup and help.
-static CATALOGUE: LazyLock<BTreeMap<BattleSpecialType, Vec<BattleSpecialCommand>>> =
-    LazyLock::new(|| {
-        serde_json::from_str(include_str!("special_commands.json"))
-            .expect("validated special-object command catalogue")
-    });
+static CATALOGUE: LazyLock<BTreeMap<SpecialType, Vec<SpecialCommand>>> = LazyLock::new(|| {
+    serde_json::from_str(include_str!("special_commands.json"))
+        .expect("validated special-object command catalogue")
+});
 
-impl BattleSpecialCommand {
+impl SpecialCommand {
     /// Bare command word, retaining the catalogue's display casing.
     pub fn name(&self) -> &str {
         self.syntax.split(' ').next().unwrap_or("")
     }
 
     /// A missing Mech record cannot admit commands, even ones without a class restriction.
-    pub fn allows_class(&self, class: Option<BattleCommandClass>) -> bool {
+    pub fn allows_class(&self, class: Option<CommandClass>) -> bool {
         let Some(class) = class else {
             return false;
         };
@@ -75,9 +74,9 @@ impl BattleSpecialCommand {
     }
 }
 
-impl BattleSpecialType {
+impl SpecialType {
     /// All entries, including category separators, in authored order.
-    pub fn commands(self) -> &'static [BattleSpecialCommand] {
+    pub fn commands(self) -> &'static [SpecialCommand] {
         &CATALOGUE[&self]
     }
 
@@ -86,8 +85,8 @@ impl BattleSpecialType {
     pub fn find_command(
         self,
         input: &str,
-        class: Option<BattleCommandClass>,
-    ) -> Option<(&'static BattleSpecialCommand, &str)> {
+        class: Option<CommandClass>,
+    ) -> Option<(&'static SpecialCommand, &str)> {
         let (word, arguments) = input.split_once(' ').unwrap_or((input, ""));
         let command = self.commands().iter().find(|entry| {
             !entry.category
@@ -100,9 +99,9 @@ impl BattleSpecialType {
     /// Shared class and authority filtering for ordered help construction.
     pub fn visible_commands(
         self,
-        class: Option<BattleCommandClass>,
+        class: Option<CommandClass>,
         privileged: bool,
-    ) -> impl Iterator<Item = &'static BattleSpecialCommand> {
+    ) -> impl Iterator<Item = &'static SpecialCommand> {
         self.commands().iter().filter(move |entry| {
             entry.visible(privileged) && (self != Self::Mech || entry.allows_class(class))
         })
@@ -117,10 +116,10 @@ mod tests {
     #[test]
     fn catalogue_order_restrictions_and_dispatch_are_shared() {
         for (kind, count) in [
-            (BattleSpecialType::Mech, 194),
-            (BattleSpecialType::Debug, 9),
-            (BattleSpecialType::Map, 25),
-            (BattleSpecialType::Autopilot, 7),
+            (SpecialType::Mech, 194),
+            (SpecialType::Debug, 9),
+            (SpecialType::Map, 25),
+            (SpecialType::Autopilot, 7),
         ] {
             assert_eq!(kind.commands().len(), count);
             let mut names = std::collections::BTreeSet::new();
@@ -131,31 +130,31 @@ mod tests {
                 }
             }
         }
-        let public: Vec<_> = BattleSpecialType::Map
+        let public: Vec<_> = SpecialType::Map
             .visible_commands(None, false)
-            .map(BattleSpecialCommand::name)
+            .map(SpecialCommand::name)
             .collect();
         assert_eq!(public, ["STORES"]);
-        let (command, arguments) = BattleSpecialType::Map
+        let (command, arguments) = SpecialType::Map
             .find_command("LoAdMaP   arena  ", None)
             .unwrap();
         assert!(command.restricted && !command.visible(false));
         assert_eq!(arguments, "arena  ");
         assert!(
-            BattleSpecialType::Map
+            SpecialType::Map
                 .find_command("LOADMAP\tarena", None)
                 .is_none()
         );
         assert!(
-            BattleSpecialType::Debug
+            SpecialType::Debug
                 .find_command("setwbv", None)
                 .unwrap()
                 .0
                 .visible(false)
         );
         assert!(
-            BattleSpecialType::Mech
-                .find_command("Movement", Some(BattleCommandClass::Mech))
+            SpecialType::Mech
+                .find_command("Movement", Some(CommandClass::Mech))
                 .is_none()
         );
     }
@@ -164,7 +163,7 @@ mod tests {
     #[test]
     fn signed_masks_match_all_eight_classes() {
         for mask in -255_i16..=255 {
-            let command = BattleSpecialCommand {
+            let command = SpecialCommand {
                 class_mask: mask,
                 syntax: "TEST".into(),
                 description: "Test".into(),
@@ -172,19 +171,16 @@ mod tests {
                 category: false,
             };
             assert!(!command.allows_class(None));
-            assert_eq!(
-                command.allows_class(Some(BattleCommandClass::Unknown)),
-                mask == 0
-            );
+            assert_eq!(command.allows_class(Some(CommandClass::Unknown)), mask == 0);
             for class in [
-                BattleCommandClass::Mech,
-                BattleCommandClass::Ground,
-                BattleCommandClass::Aero,
-                BattleCommandClass::Dropship,
-                BattleCommandClass::Vtol,
-                BattleCommandClass::Naval,
-                BattleCommandClass::BattleSuit,
-                BattleCommandClass::MechWarrior,
+                CommandClass::Mech,
+                CommandClass::Ground,
+                CommandClass::Aero,
+                CommandClass::Dropship,
+                CommandClass::Vtol,
+                CommandClass::Naval,
+                CommandClass::BattleSuit,
+                CommandClass::MechWarrior,
             ] {
                 let listed = mask.unsigned_abs() & class as u16 != 0;
                 assert_eq!(
@@ -194,13 +190,13 @@ mod tests {
             }
         }
         assert!(
-            BattleSpecialType::Mech
-                .find_command("STAND", Some(BattleCommandClass::Mech))
+            SpecialType::Mech
+                .find_command("STAND", Some(CommandClass::Mech))
                 .is_some()
         );
         assert!(
-            BattleSpecialType::Mech
-                .find_command("STAND", Some(BattleCommandClass::Ground))
+            SpecialType::Mech
+                .find_command("STAND", Some(CommandClass::Ground))
                 .is_none()
         );
     }

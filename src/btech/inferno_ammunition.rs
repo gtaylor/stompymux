@@ -1,5 +1,5 @@
 //! Inferno ammunition controls share ordinary readiness and exclusive ammunition selection.
-use super::{AmmunitionFeedback, BattleAmmunitionMode};
+use super::{AmmunitionFeedback, AmmunitionMode};
 use crate::{ObjectId, World};
 use anyhow::{Result, ensure};
 
@@ -9,22 +9,17 @@ pub fn toggle_inferno(
     id: ObjectId,
     pilot: ObjectId,
     index: usize,
-) -> Result<BattleAmmunitionMode> {
+) -> Result<AmmunitionMode> {
     super::weapon_controls::ready_weapon(world, id, pilot, index)?;
     ensure!(
-        super::weapon_controls::selectable_munition(
-            world,
-            id,
-            index,
-            BattleAmmunitionMode::Inferno
-        ),
+        super::weapon_controls::selectable_munition(world, id, index, AmmunitionMode::Inferno),
         "That weapon cannot be set to fire Inferno missiles!"
     );
     Ok(super::weapon_controls::toggle_ammunition_mode(
         world,
         id,
         index,
-        BattleAmmunitionMode::Inferno,
+        AmmunitionMode::Inferno,
     ))
 }
 

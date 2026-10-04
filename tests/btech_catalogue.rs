@@ -1,13 +1,13 @@
 //! Preserve established weapon catalog facts and validate public identity discovery.
 use std::collections::BTreeSet;
-use stompymux_rs::BattleWeapon;
+use stompymux_rs::Weapon;
 
 /// The established public-API snapshot guards catalog facts across source reorganization.
 #[test]
 fn weapon_catalogue_preserves_all_public_facts() {
     let expected: serde_json::Value =
         serde_json::from_str(include_str!("fixtures/btech/weapon-catalog.json")).unwrap();
-    let actual: Vec<_> = BattleWeapon::ALL
+    let actual: Vec<_> = Weapon::ALL
         .iter()
         .map(|&weapon| {
             serde_json::json!({
@@ -28,17 +28,14 @@ fn weapon_catalogue_preserves_all_public_facts() {
 fn weapon_catalogue_identities_are_unique_and_case_insensitive() {
     let mut names = BTreeSet::new();
     let mut persisted = BTreeSet::new();
-    for &weapon in BattleWeapon::ALL {
+    for &weapon in Weapon::ALL {
         assert!(names.insert(weapon.name().to_ascii_lowercase()));
         let encoded = serde_json::to_string(&weapon).unwrap();
         assert!(persisted.insert(encoded.clone()));
+        assert_eq!(serde_json::from_str::<Weapon>(&encoded).unwrap(), weapon);
+        assert_eq!(Weapon::parse(weapon.name()).unwrap(), weapon);
         assert_eq!(
-            serde_json::from_str::<BattleWeapon>(&encoded).unwrap(),
-            weapon
-        );
-        assert_eq!(BattleWeapon::parse(weapon.name()).unwrap(), weapon);
-        assert_eq!(
-            BattleWeapon::parse(&weapon.name().to_ascii_lowercase()).unwrap(),
+            Weapon::parse(&weapon.name().to_ascii_lowercase()).unwrap(),
             weapon
         );
         assert_eq!(
@@ -59,14 +56,14 @@ fn weapon_catalogue_identities_are_unique_and_case_insensitive() {
         "IS..MediumLaser",
         "CL.MediumLaser",
     ] {
-        assert!(BattleWeapon::parse(unknown).is_err());
+        assert!(Weapon::parse(unknown).is_err());
     }
 }
 
 /// Detached Lua weapon values must have an annotation for every supported persisted identity.
 #[test]
 fn lua_weapon_annotations_cover_the_catalogue() {
-    let expected: BTreeSet<_> = BattleWeapon::ALL
+    let expected: BTreeSet<_> = Weapon::ALL
         .iter()
         .map(|weapon| serde_json::to_string(weapon).unwrap())
         .collect();

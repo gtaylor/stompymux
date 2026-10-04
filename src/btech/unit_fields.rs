@@ -7,7 +7,7 @@ use serde::Serialize;
 
 /// One inspected field; absent values distinguish unavailable projections from a numeric zero.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleUnitField {
+pub struct UnitField {
     pub name: &'static str,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub value: Option<String>,
@@ -15,10 +15,10 @@ pub struct BattleUnitField {
 
 /// Detached wizard inspection, retaining full field names independently of display width.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleUnitFieldReport {
+pub struct UnitFieldReport {
     pub unit: ObjectId,
     pub columns: usize,
-    pub fields: Vec<BattleUnitField>,
+    pub fields: Vec<UnitField>,
     pub text: String,
 }
 
@@ -147,7 +147,7 @@ fn value(world: &World, config: &Config, id: ObjectId, field: &str) -> Result<Op
         };
     let position = mech
         .and_then(|unit| unit.position)
-        .or_else(|| vehicle.and_then(BattleVehicle::retained_position));
+        .or_else(|| vehicle.and_then(Vehicle::retained_position));
     let altitude = position.and_then(|position| {
         let tile = world
             .btech
@@ -295,10 +295,7 @@ fn value(world: &World, config: &Config, id: ObjectId, field: &str) -> Result<Op
         }
         "targcomp" => integer(i64::from(super::targeting_mode::mode(world, id))),
         "lrsrange" | "scanrange" | "tacrange" => {
-            let ranges = mech.map_or_else(
-                || vehicle.unwrap().sensor_ranges(),
-                BattleUnit::sensor_ranges,
-            );
+            let ranges = mech.map_or_else(|| vehicle.unwrap().sensor_ranges(), Mech::sensor_ranges);
             integer(i64::from(match field {
                 "lrsrange" => ranges.long_range,
                 "scanrange" => ranges.scan,
@@ -313,7 +310,7 @@ fn value(world: &World, config: &Config, id: ObjectId, field: &str) -> Result<Op
                 i64::from(radio.configuration())
             })
         }
-        "fuel" | "fuel_orig" => vehicle.and_then(BattleVehicle::vtol_fuel).and_then(|fuel| {
+        "fuel" | "fuel_orig" => vehicle.and_then(Vehicle::vtol_fuel).and_then(|fuel| {
             integer(if field == "fuel" {
                 fuel.remaining()
             } else {
@@ -322,8 +319,8 @@ fn value(world: &World, config: &Config, id: ObjectId, field: &str) -> Result<Op
         }),
         "cocoon" => integer(
             match super::orbital_drop_state::current(world, id).map(|drop| drop.protection()) {
-                Some(BattleDropProtection::Cocoon { integrity }) => i64::from(integrity),
-                Some(BattleDropProtection::JumpJets) => -1,
+                Some(DropProtection::Cocoon { integrity }) => i64::from(integrity),
+                Some(DropProtection::JumpJets) => -1,
                 _ => 0,
             },
         ),
@@ -357,18 +354,18 @@ fn value(world: &World, config: &Config, id: ObjectId, field: &str) -> Result<Op
             {
                 value
             } else if let Some(unit) = mech {
-                if unit.chassis() == BattleMechChassis::Quad {
+                if unit.chassis() == MechChassis::Quad {
                     "Quad"
                 } else {
                     "Biped"
                 }
             } else {
                 match vehicle.unwrap().definition().movement {
-                    BattleVehicleMovement::Tracked => "Track",
-                    BattleVehicleMovement::Wheeled => "Wheel",
-                    BattleVehicleMovement::Hover => "Hover",
-                    BattleVehicleMovement::Stationary => "None",
-                    BattleVehicleMovement::Vtol => "VTOL",
+                    VehicleMovement::Tracked => "Track",
+                    VehicleMovement::Wheeled => "Wheel",
+                    VehicleMovement::Hover => "Hover",
+                    VehicleMovement::Stationary => "None",
+                    VehicleMovement::Vtol => "VTOL",
                 }
             }
             .into(),
@@ -384,7 +381,7 @@ pub fn view_unit_fields_action(
     actor: ObjectId,
     id: ObjectId,
     arguments: &str,
-) -> Result<BattleUnitFieldReport> {
+) -> Result<UnitFieldReport> {
     scripts.atomic(|_| {
         let world = scripts.world();
         admission(&world, actor, id)?;
@@ -394,7 +391,7 @@ pub fn view_unit_fields_action(
             .copied()
             .filter(|name| name.to_ascii_lowercase().starts_with(&filter))
             .map(|name| {
-                Ok(BattleUnitField {
+                Ok(UnitField {
                     name,
                     value: value(&world, config, id, name)?,
                 })
@@ -408,7 +405,7 @@ pub fn view_unit_fields_action(
                 .iter()
                 .map(|field| (field.name, field.value.as_deref())),
         );
-        let report = BattleUnitFieldReport {
+        let report = UnitFieldReport {
             unit: id,
             columns,
             fields,
@@ -418,7 +415,7 @@ pub fn view_unit_fields_action(
         for line in report.text.lines() {
             super::notify_message(
                 scripts,
-                BattleMessageTarget::Player(actor),
+                MessageTarget::Player(actor),
                 &crate::text::escape(line),
             )?;
         }
@@ -677,7 +674,7 @@ pub fn set_unit_field_action(
                     .btech
                     .constructed_units()
                     .get(&id)
-                    .map_or(0, |unit| unit.system_hits(BattleSystem::Sensors));
+                    .map_or(0, |unit| unit.system_hits(System::Sensors));
                 let mut world = scripts.world_mut();
                 let hardware =
                     crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
@@ -724,13 +721,13 @@ pub fn set_unit_field_action(
                     .btech
                     .constructed_units()
                     .get(&id)
-                    .map(BattleUnit::experience_settings)
+                    .map(Mech::experience_settings)
                     .or_else(|| {
                         before
                             .btech
                             .vehicles()
                             .get(&id)
-                            .map(BattleVehicle::experience_settings)
+                            .map(Vehicle::experience_settings)
                     })
                     .unwrap();
                 let multiplier = value

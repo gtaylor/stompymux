@@ -1,5 +1,5 @@
 //! Configured coordinate-fire resolution and pre-impact observer feedback.
-use super::{BattleShotRules, HexCoordinate};
+use super::{HexCoordinate, ShotRules};
 use crate::{Config, ObjectId, World};
 use anyhow::{Context, Result};
 
@@ -11,7 +11,7 @@ pub(super) fn resolve_in_action(
     pilot: ObjectId,
     index: usize,
     coordinate: HexCoordinate,
-) -> Result<super::firing::BattleFiringAction> {
+) -> Result<super::firing::FiringAction> {
     let weapon = crate::btech::with_unit!(
         world
             .btech
@@ -28,13 +28,13 @@ pub(super) fn resolve_in_action(
         pilot,
         coordinate,
         index,
-        BattleShotRules::configured(&config.battletech, false),
+        ShotRules::configured(&config.battletech, false),
     )?;
     let mut failure_private = Vec::new();
     if let Some(messages) =
         super::launch_feedback::failure_messages((&report).into(), explosions, &mut failure_private)
     {
-        return Ok(super::firing::BattleFiringAction {
+        return Ok(super::firing::FiringAction {
             pilot_notices: failure_private,
             report: report.into(),
             messages,
@@ -57,7 +57,7 @@ pub(super) fn resolve_in_action(
     let mut pilot_notices = Vec::new();
     super::piloting::append_feedback(&mut pilot_notices, private, messages.len());
     messages.extend(notices.into_iter().map(|notice| (notice.unit, notice.text)));
-    Ok(super::firing::BattleFiringAction {
+    Ok(super::firing::FiringAction {
         pilot_notices,
         report: report.into(),
         messages,

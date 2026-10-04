@@ -3,10 +3,9 @@ use crate::support;
 use sqlx::Connection;
 use std::{cell::Cell, rc::Rc};
 use stompymux_rs::{
-    BattleCharacter, BattleCharacterValue, BattleDice, BattlePower, BattleTemplate, BattleUnit,
-    Config, Kind, MapAsset, ObjectId, ShutdownRequest, World, create_battle_map,
-    create_battle_unit, persistence, place_battle_unit, set_battle_character,
-    set_battle_character_value,
+    Character, CharacterValue, Config, Dice, Kind, MapAsset, Mech, MechTemplate, ObjectId, Power,
+    ShutdownRequest, World, create_battle_map, create_battle_unit, persistence, place_battle_unit,
+    set_battle_character, set_battle_character_value,
 };
 
 /// Set up ordinary, fully armored opposing units; gameplay starts with both reactors off.
@@ -41,7 +40,7 @@ async fn battlefield() -> (tempfile::TempDir, Config, [ObjectId; 2]) {
         create_battle_unit(
             &mut world,
             id,
-            BattleTemplate::parse("test", template).unwrap(),
+            MechTemplate::parse("test", template).unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
@@ -50,7 +49,7 @@ async fn battlefield() -> (tempfile::TempDir, Config, [ObjectId; 2]) {
         set_battle_character(
             &mut world,
             player,
-            BattleCharacter {
+            Character {
                 build: 5,
                 reflexes: 4,
                 intuition: 3,
@@ -73,7 +72,7 @@ async fn battlefield() -> (tempfile::TempDir, Config, [ObjectId; 2]) {
                 &mut world,
                 player,
                 skill,
-                BattleCharacterValue {
+                CharacterValue {
                     value: 8,
                     experience: 0,
                     last_used: 0,
@@ -83,16 +82,16 @@ async fn battlefield() -> (tempfile::TempDir, Config, [ObjectId; 2]) {
         }
         let mut state = serde_json::to_value(&world.btech).unwrap();
         let unit = &mut state["constructed"][id.0.to_string()];
-        unit["dice"] = serde_json::to_value(BattleDice::seeded([player.0 as u8; 32])).unwrap();
+        unit["dice"] = serde_json::to_value(Dice::seeded([player.0 as u8; 32])).unwrap();
         // A terminal hit can injure the empty cockpit, whose recovery later transfers to its pilot.
         unit["crew_recovery"]["dice"] =
-            serde_json::to_value(BattleDice::seeded([player.0 as u8 + 20; 32])).unwrap();
+            serde_json::to_value(Dice::seeded([player.0 as u8 + 20; 32])).unwrap();
         unit["signature"]["team"] = player.0.into();
         let heading = if player.0 == 1 { 0.0 } else { 180.0 };
         unit["motion"]["heading"] = heading.into();
         unit["motion"]["desired_heading"] = heading.into();
         state["recoveries"][player.0.to_string()]["dice"] =
-            serde_json::to_value(BattleDice::seeded([player.0 as u8 + 10; 32])).unwrap();
+            serde_json::to_value(Dice::seeded([player.0 as u8 + 10; 32])).unwrap();
         world.btech = serde_json::from_value(state).unwrap();
         units.push(id);
     }
@@ -184,7 +183,7 @@ async fn two_clients_acquire_lock_fire_destroy_and_restart() {
             for _ in 0..40 {
                 if units
                     .iter()
-                    .all(|id| world.btech.constructed_units()[id].power() == BattlePower::Running)
+                    .all(|id| world.btech.constructed_units()[id].power() == Power::Running)
                 {
                     break;
                 }
@@ -193,7 +192,7 @@ async fn two_clients_acquire_lock_fire_destroy_and_restart() {
             assert!(
                 units
                     .iter()
-                    .all(|id| world.btech.constructed_units()[id].power() == BattlePower::Running)
+                    .all(|id| world.btech.constructed_units()[id].power() == Power::Running)
             );
             // Startup completion enables scanning on the following heartbeat.
             for _ in 0..30 {
@@ -293,7 +292,7 @@ async fn two_clients_acquire_lock_fire_destroy_and_restart() {
                 );
             }
             let dead = &world.btech.constructed_units()[&units[loser]];
-            assert_eq!(dead.power(), BattlePower::Off);
+            assert_eq!(dead.power(), Power::Off);
             assert_eq!(dead.pilot(), None);
             assert_eq!(dead.target_lock(), None);
             assert!(dead.weapon_recycle().is_empty());
@@ -374,7 +373,7 @@ async fn two_clients_acquire_lock_fire_destroy_and_restart() {
 }
 
 /// Rejected controls preserve the wreck while heat and reactor windows continue advancing.
-fn assert_wreck_unchanged(after: &BattleUnit, before: &BattleUnit) {
+fn assert_wreck_unchanged(after: &Mech, before: &Mech) {
     assert!(after.heat().stored <= before.heat().stored);
     // Excess is sampled on the heartbeat; a post-shot sample may rise even
     // while stored heat cools. It cannot exceed the earlier thermal energy.

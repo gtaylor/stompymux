@@ -64,7 +64,7 @@ pub(super) fn saved_limit(base: f64, masc: bool, supercharger: bool, myomer: boo
 /// Apply enabled map gravity after chassis bonuses, preserving ordinary-map precision.
 pub(super) fn on_map(
     world: &crate::World,
-    position: Option<super::BattlePosition>,
+    position: Option<super::Position>,
     speed: f64,
 ) -> Result<f64> {
     ensure!(speed.is_finite() && speed >= 0.0, "Invalid effective speed");

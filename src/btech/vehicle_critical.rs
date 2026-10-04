@@ -1,10 +1,10 @@
 //! Vehicle equipment losses preserve construction while disabling individual installed slots.
-use super::{BattleVehicle, VehicleCriticalLocation};
+use super::{Vehicle, VehicleCriticalLocation};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use std::collections::BTreeSet;
 
-impl BattleVehicle {
+impl Vehicle {
     /// Explicit equipment losses; section destruction also makes all its slots unavailable.
     pub fn lost_criticals(&self) -> &BTreeSet<VehicleCriticalLocation> {
         &self.lost_criticals
@@ -56,7 +56,7 @@ impl BattleVehicle {
     }
 
     /// Persisted vacuum breaches, independent of later map conditions.
-    pub fn breached_sections(&self) -> &BTreeSet<super::BattleVehicleSection> {
+    pub fn breached_sections(&self) -> &BTreeSet<super::VehicleSection> {
         &self.breached_sections
     }
 
@@ -96,7 +96,7 @@ impl BattleVehicle {
         if loadout
             .systems
             .iter()
-            .any(|part| part.location == location && part.system == super::BattleSystem::LightProbe)
+            .any(|part| part.location == location && part.system == super::System::LightProbe)
         {
             self.critical_conditions.lose_light_probe();
         }
@@ -127,13 +127,10 @@ pub fn destroy_vehicle_critical(
     vehicle.destroy_critical(location)
 }
 
-impl BattleVehicle {
+impl Vehicle {
     /// Surviving weapons in slot order for a section-local weapon critical.
     /// Empty ammunition, expenditure and recycling do not protect an intact weapon.
-    pub fn weapon_critical_candidates(
-        &self,
-        section: super::BattleVehicleSection,
-    ) -> Result<Vec<usize>> {
+    pub fn weapon_critical_candidates(&self, section: super::VehicleSection) -> Result<Vec<usize>> {
         if self.is_destroyed() {
             return Ok(Vec::new());
         }
@@ -158,7 +155,7 @@ impl BattleVehicle {
 pub fn select_vehicle_weapon_critical(
     world: &mut World,
     id: ObjectId,
-    section: super::BattleVehicleSection,
+    section: super::VehicleSection,
 ) -> Result<Option<usize>> {
     ensure!(
         world

@@ -91,7 +91,7 @@ pub(super) fn register(lua: &Lua, native: &Table, _world: &SharedWorld) -> mlua:
             let mut world = scripts.world.borrow_mut();
             let capabilities = crate::unit_radio_capabilities(&world, ObjectId(unit))
                 .map_err(|e| error::failure("btech.operation.failed", format!("{e:#}")))?;
-            let mode = crate::BattleRadioMode::parse(&mode, capabilities)
+            let mode = crate::RadioMode::parse(&mode, capabilities)
                 .map_err(|e| error::failure("btech.operation.failed", format!("{e:#}")))?;
             crate::set_radio_mode(&mut world, ObjectId(unit), ObjectId(pilot), channel, mode)
                 .map_err(|e| error::failure("btech.operation.failed", format!("{e:#}")))?;

@@ -2,12 +2,12 @@
 use crate::support;
 use sqlx::Connection;
 use stompymux_rs::{
-    BattleCharacter, ObjectId, injure_battle_character, persistence, set_battle_character,
+    Character, ObjectId, injure_battle_character, persistence, set_battle_character,
 };
 
 /// Explicit ordinary character profile; no implicit character creation is assumed.
-fn profile() -> BattleCharacter {
-    BattleCharacter {
+fn profile() -> Character {
+    Character {
         bruise: 0,
         lethal: 0,
         build: 5,
@@ -52,18 +52,18 @@ fn cockpit_injuries_spill_into_lethal_damage_and_report_fatal_overflow() {
 #[test]
 fn unsupported_health_is_rejected_before_mutation_and_large_hits_do_not_overflow() {
     for build in [0, 26, 255] {
-        let mut character = BattleCharacter { build, ..profile() };
+        let mut character = Character { build, ..profile() };
         let before = character;
         assert!(character.injure(1).is_err());
         assert_eq!(character, before);
     }
-    let mut character = BattleCharacter {
+    let mut character = Character {
         build: 25,
         ..profile()
     };
     assert!(character.injure(255).unwrap().fatal);
     assert_eq!((character.bruise, character.lethal), (250, 249));
-    let mut character = BattleCharacter {
+    let mut character = Character {
         bruise: 51,
         ..profile()
     };
@@ -135,7 +135,7 @@ async fn character_inspection_is_detached_and_purge_removes_owned_state() {
         &mut world,
         player,
         "Perception",
-        stompymux_rs::BattleCharacterValue {
+        stompymux_rs::CharacterValue {
             value: 4,
             ..Default::default()
         },
@@ -182,10 +182,10 @@ async fn character_inspection_is_detached_and_purge_removes_owned_state() {
 
 #[test]
 fn consciousness_uses_exact_advantage_dice_and_invalid_health_preserves_stream() {
-    use stompymux_rs::BattleDice;
+    use stompymux_rs::Dice;
     for seed in 0..64 {
         for toughness in [false, true] {
-            let mut dice = BattleDice::seeded([seed; 32]);
+            let mut dice = Dice::seeded([seed; 32]);
             let mut expected = dice.clone();
             let first = expected.d6();
             let second = expected.d6();
@@ -195,7 +195,7 @@ fn consciousness_uses_exact_advantage_dice_and_invalid_health_preserves_stream()
             } else {
                 first + second
             };
-            let character = BattleCharacter {
+            let character = Character {
                 bruise: 30,
                 ..profile()
             };
@@ -208,11 +208,11 @@ fn consciousness_uses_exact_advantage_dice_and_invalid_health_preserves_stream()
             assert_eq!(dice, expected);
         }
     }
-    let invalid = BattleCharacter {
+    let invalid = Character {
         build: 0,
         ..profile()
     };
-    let mut dice = BattleDice::seeded([9; 32]);
+    let mut dice = Dice::seeded([9; 32]);
     let before = dice.clone();
     assert!(invalid.check_consciousness(&mut dice, false, true).is_err());
     assert_eq!(dice, before);
@@ -220,8 +220,8 @@ fn consciousness_uses_exact_advantage_dice_and_invalid_health_preserves_stream()
 
 #[test]
 fn skill_targets_use_attribute_pairs_and_persisted_experience_levels_without_overflow() {
-    use stompymux_rs::{BattleCharacterValue, BattleSkillCategory as Category};
-    let value = BattleCharacterValue {
+    use stompymux_rs::{CharacterValue, SkillCategory as Category};
+    let value = CharacterValue {
         value: 4,
         experience: 2 * 16_777_216 + 150,
         last_used: 123,
@@ -239,7 +239,7 @@ fn skill_targets_use_attribute_pairs_and_persisted_experience_levels_without_ove
     assert_eq!(
         maximum.skill_target(
             Category::Mental,
-            BattleCharacterValue {
+            CharacterValue {
                 value: 255,
                 experience: u32::MAX,
                 last_used: 0
@@ -251,15 +251,13 @@ fn skill_targets_use_attribute_pairs_and_persisted_experience_levels_without_ove
 
 #[tokio::test]
 async fn perception_reads_saved_values_and_value_writes_are_selective_and_transactional() {
-    use stompymux_rs::{
-        BattleCharacterValue, battle_perception_target, set_battle_character_value,
-    };
+    use stompymux_rs::{CharacterValue, battle_perception_target, set_battle_character_value};
     let (_dir, config, mut world) = support::isolated_world().await;
     let player = ObjectId(1);
     assert_eq!(battle_perception_target(&world, player).unwrap(), 18);
     set_battle_character(&mut world, player, profile()).unwrap();
     assert_eq!(battle_perception_target(&world, player).unwrap(), 13);
-    let skill = BattleCharacterValue {
+    let skill = CharacterValue {
         value: 4,
         experience: 2 * 16_777_216 + 150,
         last_used: 123,
@@ -269,7 +267,7 @@ async fn perception_reads_saved_values_and_value_writes_are_selective_and_transa
         &mut world,
         player,
         "Future-Skill",
-        BattleCharacterValue { value: 2, ..skill },
+        CharacterValue { value: 2, ..skill },
     )
     .unwrap();
     assert_eq!(battle_perception_target(&world, player).unwrap(), 7);
@@ -286,7 +284,7 @@ async fn perception_reads_saved_values_and_value_writes_are_selective_and_transa
         &mut world,
         player,
         "Perception",
-        BattleCharacterValue { value: 5, ..skill },
+        CharacterValue { value: 5, ..skill },
     )
     .unwrap();
     assert!(persistence::save(&config.database(), &world).await.is_err());
@@ -321,7 +319,7 @@ async fn initial_character_recovery_is_prepared_once_and_first_roll_replays() {
     set_battle_character(&mut world, player, profile()).unwrap();
     assert_eq!(
         world.btech.recoveries()[&player].mode,
-        stompymux_rs::BattleRecoveryMode::Ready
+        stompymux_rs::RecoveryMode::Ready
     );
     let mut corrupt = world.clone();
     let mut encoded = serde_json::to_value(&corrupt.btech).unwrap();
@@ -366,14 +364,14 @@ async fn experience_awards_persist_and_reject_without_mutation() {
         &mut world,
         ObjectId(1),
         "Piloting-Biped",
-        BattleCharacterValue {
+        CharacterValue {
             value: 7,
             ..Default::default()
         },
     )
     .unwrap();
-    let rules = BattleExperienceRules {
-        category: BattleSkillCategory::Physical,
+    let rules = ExperienceRules {
+        category: SkillCategory::Physical,
         threshold: 3000,
         continuous: false,
     };
@@ -538,7 +536,7 @@ async fn runtime_skill_thresholds_control_awards_and_roll_back() {
         &mut world,
         ObjectId(1),
         "Piloting-Biped",
-        BattleCharacterValue {
+        CharacterValue {
             value: 7,
             ..Default::default()
         },
@@ -636,7 +634,7 @@ async fn skill_progress_tracks_thresholds_without_mutation() {
         &mut world,
         ObjectId(1),
         "Piloting-Biped",
-        BattleCharacterValue {
+        CharacterValue {
             value: 7,
             ..Default::default()
         },
@@ -677,7 +675,7 @@ async fn skill_progress_tracks_thresholds_without_mutation() {
     let target: i16 = scripts.eval_callback("local p=btech.character.progress(1,'PilBip'); assert(p.next_level_balance==nil and p.remaining==nil); p.target=99; return btech.character.progress(1,'Piloting-Biped').target").unwrap();
     assert_eq!(target, 2);
     assert_eq!(before, shared.borrow().btech);
-    let raw = BattleCharacterValue {
+    let raw = CharacterValue {
         value: 255,
         experience: u32::MAX,
         last_used: 0,
@@ -685,8 +683,8 @@ async fn skill_progress_tracks_thresholds_without_mutation() {
     assert_eq!(
         raw.next_level_balance(
             profile(),
-            BattleExperienceRules {
-                category: BattleSkillCategory::Physical,
+            ExperienceRules {
+                category: SkillCategory::Physical,
                 threshold: u32::MAX,
                 continuous: true
             }
@@ -707,7 +705,7 @@ async fn retained_experience_is_atomic_and_persistent() {
             &mut world,
             ObjectId(1),
             name,
-            BattleCharacterValue {
+            CharacterValue {
                 value: 7,
                 experience: 2 * 16_777_216 + 12001,
                 last_used: 123,
@@ -719,7 +717,7 @@ async fn retained_experience_is_atomic_and_persistent() {
         &mut world,
         ObjectId(1),
         "Melee_Specialist",
-        BattleCharacterValue {
+        CharacterValue {
             value: 1,
             ..Default::default()
         },
@@ -751,7 +749,7 @@ async fn retained_experience_is_atomic_and_persistent() {
         &mut world,
         ObjectId(1),
         "Unknown",
-        BattleCharacterValue {
+        CharacterValue {
             experience: 1,
             ..Default::default()
         },
@@ -764,7 +762,7 @@ async fn retained_experience_is_atomic_and_persistent() {
         &mut world,
         ObjectId(1),
         "Unknown",
-        BattleCharacterValue::default(),
+        CharacterValue::default(),
     )
     .unwrap();
     retain_battle_character_experience(&mut world, ObjectId(1), 0).unwrap();
@@ -837,7 +835,7 @@ async fn retention_handles_every_advantage_and_signed_experience() {
             &mut base,
             ObjectId(1),
             name,
-            BattleCharacterValue {
+            CharacterValue {
                 value: 2,
                 experience: 16_777_227,
                 last_used: 987,
@@ -850,7 +848,7 @@ async fn retention_handles_every_advantage_and_signed_experience() {
             &mut base,
             ObjectId(1),
             name,
-            BattleCharacterValue {
+            CharacterValue {
                 value: 7,
                 experience: 17,
                 last_used: 456,
@@ -868,7 +866,7 @@ async fn retention_handles_every_advantage_and_signed_experience() {
         {
             assert_eq!(
                 world.btech.character_values()[&ObjectId(1)][name],
-                BattleCharacterValue {
+                CharacterValue {
                     value: 2,
                     experience: balance,
                     last_used: 987,
@@ -895,7 +893,7 @@ async fn retention_handles_every_advantage_and_signed_experience() {
                 &mut world,
                 ObjectId(1),
                 name,
-                BattleCharacterValue {
+                CharacterValue {
                     value: 1,
                     experience,
                     last_used: 987,

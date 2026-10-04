@@ -5,14 +5,14 @@ use serde::{Deserialize, Serialize};
 /// A suite emits either interference or counter-interference; selecting its current mode switches it off.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleElectronicMode {
+pub enum ElectronicMode {
     #[default]
     Off,
     Ecm,
     Eccm,
 }
 
-impl BattleElectronicMode {
+impl ElectronicMode {
     /// Select the requested operating mode, or disable a suite already in that mode.
     pub fn toggle(self, requested: Self) -> Self {
         if self == requested {
@@ -26,17 +26,17 @@ impl BattleElectronicMode {
 /// Emissions of one unit on the subject's map, with its actual three-dimensional range.
 /// Equipment availability and lifecycle changes must be applied before building this input.
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct BattleElectronicSource {
+pub struct ElectronicSource {
     pub team: i32,
     pub distance: f64,
-    pub guardian: BattleElectronicMode,
-    pub angel: BattleElectronicMode,
-    pub personal: BattleElectronicMode,
+    pub guardian: ElectronicMode,
+    pub angel: ElectronicMode,
+    pub personal: ElectronicMode,
 }
 
 /// Observed ECM effects at one unit, retained between electronic-warfare checks.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BattleElectronicField {
+pub struct ElectronicField {
     pub protected: bool,
     pub angel_protected: bool,
     pub disturbed: bool,
@@ -44,17 +44,17 @@ pub struct BattleElectronicField {
     pub countered: bool,
 }
 
-impl BattleElectronicField {
+impl ElectronicField {
     /// Announce changes once per check; countermeasure lamp feedback requires a working electronic-warfare suite.
     pub fn notices(
         self,
         previous: Self,
         unit: crate::ObjectId,
         working_suite: bool,
-    ) -> Vec<super::BattleNotice> {
+    ) -> Vec<super::Notice> {
         let mut notices = Vec::new();
         if working_suite && self.countered != previous.countered {
-            notices.push(super::BattleNotice {
+            notices.push(super::Notice {
                 unit,
                 text: if self.countered {
                     "Your ECM suite's ready light turns red, countered by enemy ECCM!"
@@ -65,7 +65,7 @@ impl BattleElectronicField {
             });
         }
         if self.blocks_outgoing_guidance() != previous.blocks_outgoing_guidance() {
-            notices.push(super::BattleNotice {
+            notices.push(super::Notice {
                 unit,
                 text: if self.blocks_outgoing_guidance() {
                     "Half your screens are suddenly filled with static!"
@@ -121,12 +121,12 @@ impl Strength {
 /// Self-interference adds 1,000 hostile ordinary ECM contributions, as used by stealth and iNarc.
 /// A disturbance retains its ordinary/Angel classification until countered or out of range.
 pub fn resolve_electronic_field(
-    previous: BattleElectronicField,
+    previous: ElectronicField,
     team: i32,
-    sources: impl IntoIterator<Item = BattleElectronicSource>,
+    sources: impl IntoIterator<Item = ElectronicSource>,
     self_interference: bool,
-) -> Result<BattleElectronicField> {
-    use BattleElectronicMode::{Eccm, Ecm, Off};
+) -> Result<ElectronicField> {
+    use ElectronicMode::{Eccm, Ecm, Off};
     let mut friendly_ecm = Strength::default();
     let mut friendly_eccm = Strength::default();
     let mut hostile_ecm = Strength::default();
@@ -177,7 +177,7 @@ pub fn resolve_electronic_field(
     } else {
         (hostile_ecm.ordinary > 0, hostile_ecm.angel > 0)
     };
-    Ok(BattleElectronicField {
+    Ok(ElectronicField {
         protected: protected && friendly_ecm.ordinary > 0,
         angel_protected: protected && friendly_ecm.angel > 0,
         disturbed: ordinary_disturbance,

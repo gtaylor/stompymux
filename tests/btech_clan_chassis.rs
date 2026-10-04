@@ -3,9 +3,9 @@ use crate::support;
 use stompymux_rs::*;
 
 /// A complete Clan biped with two external double sinks and ordinary fusion construction.
-fn definition() -> BattleTemplate {
+fn definition() -> MechTemplate {
     let mut template =
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     template
         .attributes
         .insert("specials".into(), "Clan FlipArms".into());
@@ -16,7 +16,7 @@ fn definition() -> BattleTemplate {
     for slot in 2..6 {
         template
             .sections
-            .get_mut(&BattleSection::LeftTorso)
+            .get_mut(&MechSection::LeftTorso)
             .unwrap()
             .criticals
             .insert(
@@ -37,18 +37,18 @@ fn clan_sink_groups_containment_and_material_mass() {
     let template = definition();
     assert!(template.has_double_heat_sinks());
     assert_eq!(template.heat_sink_slots(), 2);
-    let original = BattleUnit::from_template(template.clone()).unwrap();
+    let original = Mech::from_template(template.clone()).unwrap();
     for section in original.sections().keys() {
         assert!(original.has_case(*section));
     }
     for slot in 2..6 {
         let mut unit = original.clone();
         unit.destroy_critical(CriticalLocation {
-            section: BattleSection::LeftTorso,
+            section: MechSection::LeftTorso,
             slot,
         })
         .unwrap();
-        assert_eq!(unit.system_hits(BattleSystem::HeatSink), 2);
+        assert_eq!(unit.system_hits(System::HeatSink), 2);
         assert_eq!(unit.heat_rates(&World::default()).dissipation, 22.0);
         assert_eq!(
             unit.mass().unwrap().equipment,
@@ -57,7 +57,7 @@ fn clan_sink_groups_containment_and_material_mass() {
         let pair = if slot < 4 { [2, 3] } else { [4, 5] };
         for slot in pair {
             assert!(unit.lost_criticals().contains(&CriticalLocation {
-                section: BattleSection::LeftTorso,
+                section: MechSection::LeftTorso,
                 slot
             }));
         }
@@ -65,16 +65,16 @@ fn clan_sink_groups_containment_and_material_mass() {
     let mut incomplete = template.clone();
     incomplete
         .sections
-        .get_mut(&BattleSection::LeftTorso)
+        .get_mut(&MechSection::LeftTorso)
         .unwrap()
         .criticals
         .remove(&3);
-    assert!(BattleUnit::from_template(incomplete).is_err());
+    assert!(Mech::from_template(incomplete).is_err());
     for count in [6, 7] {
         let mut advanced = template.clone();
         for (section, name, start) in [
-            (BattleSection::RightTorso, "EndoSteel", 3),
-            (BattleSection::LeftArm, "FerroFibrous", 4),
+            (MechSection::RightTorso, "EndoSteel", 3),
+            (MechSection::LeftArm, "FerroFibrous", 4),
         ] {
             for slot in start..start + count {
                 advanced
@@ -92,7 +92,7 @@ fn clan_sink_groups_containment_and_material_mass() {
                     );
             }
         }
-        let unit = BattleUnit::from_template(advanced).unwrap();
+        let unit = Mech::from_template(advanced).unwrap();
         assert_eq!(
             unit.mass().unwrap().structure,
             if count == 7 { 2048 } else { 3584 }
@@ -124,7 +124,7 @@ async fn clan_ammunition_containment_and_sink_losses_survive_restart() {
         &mut base,
         id,
         CriticalLocation {
-            section: BattleSection::LeftTorso,
+            section: MechSection::LeftTorso,
             slot: 3,
         },
     )
@@ -132,10 +132,10 @@ async fn clan_ammunition_containment_and_sink_losses_survive_restart() {
     let mut found = false;
     for seed in 0..=u8::MAX {
         base.btech
-            .set_unit_dice(id, BattleDice::seeded([seed; 32]))
+            .set_unit_dice(id, Dice::seeded([seed; 32]))
             .unwrap();
-        let hit = BattleHit {
-            section: BattleSection::RightTorso,
+        let hit = Hit {
+            section: MechSection::RightTorso,
             rear_armor: false,
             through_armor_critical: true,
             crew_stun: false,
@@ -145,7 +145,7 @@ async fn clan_ammunition_containment_and_sink_losses_survive_restart() {
         if !report.criticals.iter().any(|(_, loss)| {
             matches!(
                 loss,
-                BattleCriticalLoss::Ammunition {
+                CriticalLoss::Ammunition {
                     explosion_damage: 200,
                     ..
                 }
@@ -155,10 +155,10 @@ async fn clan_ammunition_containment_and_sink_losses_survive_restart() {
         }
         let before = &base.btech.constructed_units()[&id];
         let after = &damaged.btech.constructed_units()[&id];
-        assert_eq!(after.sections()[&BattleSection::RightTorso].internal, 0);
+        assert_eq!(after.sections()[&MechSection::RightTorso].internal, 0);
         assert_eq!(
-            after.sections()[&BattleSection::CenterTorso],
-            before.sections()[&BattleSection::CenterTorso]
+            after.sections()[&MechSection::CenterTorso],
+            before.sections()[&MechSection::CenterTorso]
         );
         assert!(!after.is_destroyed());
         persistence::save(&config.database(), &base).await.unwrap();
@@ -182,9 +182,8 @@ fn clan_game_assets_construct_without_rewriting_templates() {
         (include_str!("../game/mechs/Vulture-C.toml"), 24.0),
         (include_str!("../game/mechs/Vixen-1.toml"), 20.0),
     ] {
-        let unit =
-            BattleUnit::from_template(BattleTemplate::parse("test", source).unwrap()).unwrap();
-        assert_eq!(unit.engine().unwrap(), BattleEngine::Xl);
+        let unit = Mech::from_template(MechTemplate::parse("test", source).unwrap()).unwrap();
+        assert_eq!(unit.engine().unwrap(), Engine::Xl);
         assert_eq!(unit.heat_rates(&World::default()).dissipation, cooling);
         assert!(
             unit.sections()
@@ -192,8 +191,7 @@ fn clan_game_assets_construct_without_rewriting_templates() {
                 .all(|&section| unit.has_case(section))
         );
         assert!(unit.mass().unwrap().total > 0);
-        let restored: BattleUnit =
-            serde_json::from_value(serde_json::to_value(&unit).unwrap()).unwrap();
+        let restored: Mech = serde_json::from_value(serde_json::to_value(&unit).unwrap()).unwrap();
         assert_eq!(restored, unit);
     }
 }
@@ -203,7 +201,7 @@ fn clan_game_assets_construct_without_rewriting_templates() {
 #[test]
 fn laser_sink_designation_preserves_double_sink_behavior() {
     let mut inner_sphere =
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     let specials = inner_sphere
         .attributes
         .entry("specials".into())
@@ -213,17 +211,17 @@ fn laser_sink_designation_preserves_double_sink_behavior() {
     }
     specials.push_str(" LaserHS_Tech");
     assert!(
-        BattleUnit::from_template(inner_sphere)
+        Mech::from_template(inner_sphere)
             .unwrap_err()
             .to_string()
             .contains("Laser heat sinks are Clan technology")
     );
     {
         let mut template = definition();
-        let baseline = BattleUnit::from_template(template.clone()).unwrap();
+        let baseline = Mech::from_template(template.clone()).unwrap();
         let specials = template.attributes.entry("specials".into()).or_default();
         specials.push_str(" LaserHS_Tech");
-        let mut unit = BattleUnit::from_template(template).unwrap();
+        let mut unit = Mech::from_template(template).unwrap();
         assert_eq!(unit.mass().unwrap(), baseline.mass().unwrap());
         assert_eq!(
             unit.heat_rates(&World::default()),
@@ -238,7 +236,7 @@ fn laser_sink_designation_preserves_double_sink_behavior() {
             .unwrap()
             .systems
             .iter()
-            .find(|part| part.system == BattleSystem::HeatSink)
+            .find(|part| part.system == System::HeatSink)
             .unwrap()
             .location;
         let mut ordinary = baseline;
@@ -250,8 +248,7 @@ fn laser_sink_designation_preserves_double_sink_behavior() {
             unit.heat_rates(&World::default()),
             ordinary.heat_rates(&World::default())
         );
-        let restored: BattleUnit =
-            serde_json::from_value(serde_json::to_value(&unit).unwrap()).unwrap();
+        let restored: Mech = serde_json::from_value(serde_json::to_value(&unit).unwrap()).unwrap();
         assert_eq!(restored, unit);
         assert!(restored.definition().attributes["specials"].contains("LaserHS_Tech"));
     }
@@ -267,7 +264,7 @@ async fn night_gyr_laser_sink_assets_construct_and_replay_damage() {
         include_str!("../game/mechs/NightGyr-C.toml"),
         include_str!("../game/mechs/NightGyr-D.toml"),
     ] {
-        let template = BattleTemplate::parse("test", source).unwrap();
+        let template = MechTemplate::parse("test", source).unwrap();
         let cooling = f64::from(template.heat_sinks);
         let id = world.create(&config, template.name.clone(), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
@@ -280,12 +277,12 @@ async fn night_gyr_laser_sink_assets_construct_and_replay_damage() {
             .unwrap()
             .systems
             .iter()
-            .find(|part| part.system == BattleSystem::HeatSink)
+            .find(|part| part.system == System::HeatSink)
             .map(|part| part.location)
         {
             destroy_battle_critical(&mut world, id, sink).unwrap();
             let unit = &world.btech.constructed_units()[&id];
-            assert_eq!(unit.system_hits(BattleSystem::HeatSink), 2);
+            assert_eq!(unit.system_hits(System::HeatSink), 2);
             assert_eq!(unit.heat_rates(&world).dissipation, cooling - 2.0);
         }
     }
@@ -300,16 +297,16 @@ async fn night_gyr_laser_sink_assets_construct_and_replay_damage() {
 #[test]
 fn laser_sink_designation_does_not_accept_incomplete_clan_sinks() {
     let mut template =
-        BattleTemplate::parse("NightGyr-B", include_str!("../game/mechs/NightGyr-B.toml")).unwrap();
-    assert!(BattleUnit::from_template(template.clone()).is_ok());
+        MechTemplate::parse("NightGyr-B", include_str!("../game/mechs/NightGyr-B.toml")).unwrap();
+    assert!(Mech::from_template(template.clone()).is_ok());
     template
         .sections
-        .get_mut(&BattleSection::LeftArm)
+        .get_mut(&MechSection::LeftArm)
         .unwrap()
         .criticals
         .remove(&8);
     assert!(
-        BattleUnit::from_template(template)
+        Mech::from_template(template)
             .unwrap_err()
             .to_string()
             .contains("Incomplete heat sink installation")
@@ -323,17 +320,17 @@ fn low_capacity_clan_cooling_constructs_and_replays() {
         include_str!("../game/mechs/SnowFox-1.toml"),
         include_str!("../game/mechs/SnowFox-2.toml"),
     ] {
-        let template = BattleTemplate::parse("test", source).unwrap();
+        let template = MechTemplate::parse("test", source).unwrap();
         for capacity in [10, 12, 14, 16, 18, 20] {
             let mut adjusted = template.clone();
             adjusted.heat_sinks = capacity;
-            let unit = BattleUnit::from_template(adjusted).unwrap();
+            let unit = Mech::from_template(adjusted).unwrap();
             assert!(unit.definition().has_double_heat_sinks());
             assert_eq!(
                 unit.heat_rates(&World::default()).dissipation,
                 f64::from(capacity)
             );
-            let restored: BattleUnit =
+            let restored: Mech =
                 serde_json::from_value(serde_json::to_value(&unit).unwrap()).unwrap();
             assert_eq!(restored.mass().unwrap(), unit.mass().unwrap());
             assert_eq!(
@@ -343,9 +340,9 @@ fn low_capacity_clan_cooling_constructs_and_replays() {
         }
         let mut invalid = template.clone();
         invalid.heat_sinks = 11;
-        assert!(BattleUnit::from_template(invalid).is_err());
+        assert!(Mech::from_template(invalid).is_err());
         let mut invalid = template;
         invalid.heat_sinks = 8;
-        assert!(BattleUnit::from_template(invalid).is_err());
+        assert!(Mech::from_template(invalid).is_err());
     }
 }

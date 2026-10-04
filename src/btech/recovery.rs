@@ -1,5 +1,5 @@
 //! Shared consciousness checks and player-owned recovery scheduling.
-use super::{BattleConsciousnessCheck, BattleDice};
+use super::{ConsciousnessCheck, Dice};
 use crate::{Flag, Kind, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 /// Health source used by subsequent recovery attempts.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
-pub enum BattleRecoveryMode {
+pub enum RecoveryMode {
     /// Seeded before injury; no health source or active recovery is required yet.
     Ready,
     #[default]
@@ -19,34 +19,34 @@ pub enum BattleRecoveryMode {
 
 /// Durable recovery state and its private random stream. Zero remaining means conscious.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct BattleRecovery {
+pub struct Recovery {
     #[serde(default)]
-    pub mode: BattleRecoveryMode,
+    pub mode: RecoveryMode,
     pub remaining: u8,
     pub pain_resistance: bool,
     pub toughness: bool,
-    dice: BattleDice,
+    dice: Dice,
 }
 
-impl BattleRecovery {
+impl Recovery {
     /// Replace the private random stream, for fixtures that need exact rolls.
-    pub(super) fn set_dice(&mut self, dice: BattleDice) {
+    pub(super) fn set_dice(&mut self, dice: Dice) {
         self.dice = dice;
     }
 
     /// Correct a tactical injury counter without rolling dice or rescheduling recovery.
     pub(super) fn edit_tactical_injuries(&mut self, injuries: u8) {
-        if matches!(self.mode, BattleRecoveryMode::Tactical { .. }) {
-            self.mode = BattleRecoveryMode::Tactical { injuries };
+        if matches!(self.mode, RecoveryMode::Tactical { .. }) {
+            self.mode = RecoveryMode::Tactical { injuries };
         }
     }
     /// Rebuild saved state from its stored parts; callers validate the result.
     pub(crate) fn from_saved(
-        mode: BattleRecoveryMode,
+        mode: RecoveryMode,
         remaining: u8,
         pain_resistance: bool,
         toughness: bool,
-        dice: BattleDice,
+        dice: Dice,
     ) -> Self {
         Self {
             mode,
@@ -58,28 +58,28 @@ impl BattleRecovery {
     }
 
     /// The private random stream, exposed for storage.
-    pub(crate) fn dice(&self) -> &BattleDice {
+    pub(crate) fn dice(&self) -> &Dice {
         &self.dice
     }
 
     /// Establish a private replayable stream before any injury transaction.
     pub(super) fn fresh() -> Self {
         Self {
-            mode: BattleRecoveryMode::Ready,
+            mode: RecoveryMode::Ready,
             remaining: 0,
             pain_resistance: false,
             toughness: false,
-            dice: BattleDice::fresh(),
+            dice: Dice::fresh(),
         }
     }
 
     /// Resolve an initial check without postponing an existing recovery attempt.
-    pub(super) fn check(&mut self, target: u8) -> Option<BattleConsciousnessCheck> {
+    pub(super) fn check(&mut self, target: u8) -> Option<ConsciousnessCheck> {
         if self.remaining > 0 {
             return None;
         }
         let roll = self.dice.consciousness_roll(self.toughness);
-        let check = BattleConsciousnessCheck {
+        let check = ConsciousnessCheck {
             target,
             roll,
             conscious: roll >= target,
@@ -91,7 +91,7 @@ impl BattleRecovery {
     }
 
     /// Advance one second, returning a result only when a recovery attempt is due.
-    pub(super) fn advance(&mut self, target: u8) -> Option<BattleConsciousnessCheck> {
+    pub(super) fn advance(&mut self, target: u8) -> Option<ConsciousnessCheck> {
         if self.remaining == 0 {
             return None;
         }
@@ -104,14 +104,14 @@ impl BattleRecovery {
 
     /// Stop an owned attempt without replacing its random stream.
     pub(super) fn clear(&mut self) {
-        self.mode = BattleRecoveryMode::Ready;
+        self.mode = RecoveryMode::Ready;
         self.remaining = 0;
     }
 
     /// Check persisted timer bounds before running a recovery event.
     pub(crate) fn validate(&self) -> Result<()> {
         ensure!(
-            self.mode != BattleRecoveryMode::Ready || self.remaining == 0,
+            self.mode != RecoveryMode::Ready || self.remaining == 0,
             "Ready recovery state cannot have a countdown"
         );
         ensure!(
@@ -128,27 +128,25 @@ impl BattleRecovery {
 }
 
 /// The reference tactical table caps the consciousness lookup at four injuries.
-fn target(world: &World, player: ObjectId, mode: BattleRecoveryMode, pain: bool) -> Result<u8> {
+fn target(world: &World, player: ObjectId, mode: RecoveryMode, pain: bool) -> Result<u8> {
     match mode {
-        BattleRecoveryMode::Ready => Ok(0),
-        BattleRecoveryMode::Character => world
+        RecoveryMode::Ready => Ok(0),
+        RecoveryMode::Character => world
             .btech
             .characters()
             .get(&player)
             .context("Character state is unavailable")?
             .consciousness_target(pain),
-        BattleRecoveryMode::Tactical { injuries } => {
-            Ok([0, 3, 5, 7, 10][usize::from(injuries.min(4))])
-        }
+        RecoveryMode::Tactical { injuries } => Ok([0, 3, 5, 7, 10][usize::from(injuries.min(4))]),
     }
 }
 
 /// A committed recovery notification addressed to the player, wherever they are located.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct BattleCharacterNotice {
+pub struct CharacterNotice {
     pub player: ObjectId,
     /// The single check already consumed by the recovery event.
-    pub check: BattleConsciousnessCheck,
+    pub check: ConsciousnessCheck,
     /// Occupied, living cockpit at the time of the recovery check.
     pub unit: Option<ObjectId>,
 }
@@ -165,10 +163,7 @@ pub fn prepare_recovery(world: &mut World, player: ObjectId) -> Result<()> {
     if world.btech.recoveries().contains_key(&player) {
         return Ok(());
     }
-    world
-        .btech
-        .recoveries
-        .insert(player, BattleRecovery::fresh());
+    world.btech.recoveries.insert(player, Recovery::fresh());
     Ok(())
 }
 
@@ -179,11 +174,11 @@ pub fn check_character_consciousness(
     player: ObjectId,
     pain_resistance: bool,
     toughness: bool,
-) -> Result<Option<BattleConsciousnessCheck>> {
+) -> Result<Option<ConsciousnessCheck>> {
     check_consciousness(
         world,
         player,
-        BattleRecoveryMode::Character,
+        RecoveryMode::Character,
         pain_resistance,
         toughness,
     )
@@ -195,11 +190,11 @@ pub(super) fn check_tactical_consciousness(
     player: ObjectId,
     injuries: u8,
     toughness: bool,
-) -> Result<Option<BattleConsciousnessCheck>> {
+) -> Result<Option<ConsciousnessCheck>> {
     check_consciousness(
         world,
         player,
-        BattleRecoveryMode::Tactical { injuries },
+        RecoveryMode::Tactical { injuries },
         false,
         toughness,
     )
@@ -209,10 +204,10 @@ pub(super) fn check_tactical_consciousness(
 fn check_consciousness(
     world: &mut World,
     player: ObjectId,
-    mode: BattleRecoveryMode,
+    mode: RecoveryMode,
     pain_resistance: bool,
     toughness: bool,
-) -> Result<Option<BattleConsciousnessCheck>> {
+) -> Result<Option<ConsciousnessCheck>> {
     ensure!(
         world.objects.get(&player).is_some_and(
             |object| object.kind == Kind::Player && !object.flags.contains(Flag::Going)
@@ -235,7 +230,7 @@ fn check_consciousness(
 }
 
 /// Advance one committed second, retrying failed recovery every thirty seconds using current health.
-pub fn advance_recovery(world: &mut World) -> Vec<BattleCharacterNotice> {
+pub fn advance_recovery(world: &mut World) -> Vec<CharacterNotice> {
     let ids: Vec<_> = world
         .btech
         .recoveries()
@@ -272,7 +267,7 @@ pub fn advance_recovery(world: &mut World) -> Vec<BattleCharacterNotice> {
                     .get(id)
                     .is_some_and(|object| !object.flags.contains(Flag::Going))
         });
-        notices.push(BattleCharacterNotice {
+        notices.push(CharacterNotice {
             player,
             check,
             unit,

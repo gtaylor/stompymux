@@ -7,7 +7,7 @@ fn land(
     world: &mut World,
     replay: &mut World,
     unit: ObjectId,
-    rules: BattleMovementRules,
+    rules: MovementRules,
 ) -> Vec<String> {
     let mut messages = Vec::new();
     for _ in 0..60 {
@@ -41,17 +41,17 @@ async fn restored_landing_scalar_matrix(template: &str, weight_modifier: i32) {
             let mut world = base.clone();
             launch_battle_jump(&mut world, unit, ObjectId(1), 0, 2.0).unwrap();
             let seed = (0..=255)
-                .find(|&seed| BattleDice::seeded([seed; 32]).two_d6() == roll)
+                .find(|&seed| Dice::seeded([seed; 32]).two_d6() == roll)
                 .unwrap();
             firing::edit(&mut world, unit, |s| {
                 s["stagger"]["action_damage"] = scalar.into();
                 s["stagger"]["hits"] =
                     serde_json::json!([{"damage":60,"remaining":60,"counted":false}]);
-                s["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+                s["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
             });
             persistence::save(&config.database(), &world).await.unwrap();
             let mut replay = persistence::load(&config.database()).await.unwrap();
-            let messages = land(&mut world, &mut replay, unit, BattleMovementRules::STANDARD);
+            let messages = land(&mut world, &mut replay, unit, MovementRules::STANDARD);
             let checked = scalar >= 20;
             let failed = checked && i32::from(roll) < base_target + scalar / 20 + weight_modifier;
             assert_eq!(
@@ -67,10 +67,10 @@ async fn restored_landing_scalar_matrix(template: &str, weight_modifier: i32) {
                 failed
             );
             let mech = &world.btech.constructed_units()[&unit];
-            assert_eq!(mech.posture() == BattlePosture::Prone, failed);
+            assert_eq!(mech.posture() == Posture::Prone, failed);
             assert_eq!(mech.jump_stabilization(), 12);
             if !failed {
-                let mut expected = BattleDice::seeded([seed; 32]);
+                let mut expected = Dice::seeded([seed; 32]);
                 if checked {
                     expected.two_d6();
                 }
@@ -129,23 +129,23 @@ async fn stagger_landing_roll_precedes_damaged_gyro_roll() {
             .unwrap()
             .systems
             .iter()
-            .find(|p| p.system == BattleSystem::Gyro)
+            .find(|p| p.system == System::Gyro)
             .unwrap()
             .location;
         destroy_battle_critical(&mut world, unit, gyro).unwrap();
         let seed = (0..=255)
             .find(|&seed| {
-                let mut dice = BattleDice::seeded([seed; 32]);
+                let mut dice = Dice::seeded([seed; 32]);
                 dice.two_d6() == if stagger_passes { 12 } else { 2 }
                     && (!stagger_passes || dice.two_d6() <= 4)
             })
             .unwrap();
         firing::edit(&mut world, unit, |s| {
             s["stagger"]["action_damage"] = 20.into();
-            s["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+            s["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
         });
         let mut replay = world.clone();
-        let messages = land(&mut world, &mut replay, unit, BattleMovementRules::STANDARD);
+        let messages = land(&mut world, &mut replay, unit, MovementRules::STANDARD);
         assert_eq!(
             messages
                 .iter()
@@ -160,13 +160,13 @@ async fn stagger_landing_roll_precedes_damaged_gyro_roll() {
         );
         assert_eq!(
             world.btech.constructed_units()[&unit].posture(),
-            BattlePosture::Prone
+            Posture::Prone
         );
     }
 }
 
 /// Traditional completion resets only the action scalar; early stagger falls retain it in every mode.
-async fn landing_scalar_reset_matrix(template: &str, mode: BattleStaggerMode) {
+async fn landing_scalar_reset_matrix(template: &str, mode: StaggerMode) {
     let (_dir, config, base, unit, _, _) =
         firing::fixture_with_target(template, None, template).await;
     let mut probed_fidelity = [false; 2];
@@ -175,33 +175,31 @@ async fn landing_scalar_reset_matrix(template: &str, mode: BattleStaggerMode) {
             let mut world = base.clone();
             launch_battle_jump(&mut world, unit, ObjectId(1), 0, 2.0).unwrap();
             let seed = (0..=255)
-                .find(|&seed| {
-                    BattleDice::seeded([seed; 32]).two_d6() == if success { 12 } else { 2 }
-                })
+                .find(|&seed| Dice::seeded([seed; 32]).two_d6() == if success { 12 } else { 2 })
                 .unwrap();
             firing::edit(&mut world, unit, |s| {
                 s["stagger"]["action_damage"] = scalar.into();
                 s["stagger"]["hits"] =
                     serde_json::json!([{"damage":40,"remaining":60,"counted":false}]);
-                s["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+                s["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
             });
             persistence::save(&config.database(), &world).await.unwrap();
             let mut replay = persistence::load(&config.database()).await.unwrap();
-            let mut rules = BattleMovementRules::STANDARD;
+            let mut rules = MovementRules::STANDARD;
             rules.fall.stagger = mode;
             land(&mut world, &mut replay, unit, rules);
             let failed = scalar >= 20 && !success;
             let state = world.btech.constructed_units()[&unit].stagger();
             assert_eq!(
                 state.action_damage,
-                if mode == BattleStaggerMode::Traditional && !failed {
+                if mode == StaggerMode::Traditional && !failed {
                     0
                 } else {
                     scalar
                 }
             );
             assert_eq!(
-                world.btech.constructed_units()[&unit].posture() == BattlePosture::Prone,
+                world.btech.constructed_units()[&unit].posture() == Posture::Prone,
                 failed
             );
             // Successful completion does not erase the independent damage window.
@@ -227,7 +225,7 @@ async fn landing_scalar_reset_matrix(template: &str, mode: BattleStaggerMode) {
 async fn landing_scalar_reset_distinguishes_completion_from_stagger_failure_jr7d_traditional() {
     landing_scalar_reset_matrix(
         include_str!("../game/mechs/JR7-D.toml"),
-        BattleStaggerMode::Traditional,
+        StaggerMode::Traditional,
     )
     .await;
 }
@@ -236,7 +234,7 @@ async fn landing_scalar_reset_distinguishes_completion_from_stagger_failure_jr7d
 async fn landing_scalar_reset_distinguishes_completion_from_stagger_failure_jr7d_retain() {
     landing_scalar_reset_matrix(
         include_str!("../game/mechs/JR7-D.toml"),
-        BattleStaggerMode::Retain,
+        StaggerMode::Retain,
     )
     .await;
 }
@@ -245,7 +243,7 @@ async fn landing_scalar_reset_distinguishes_completion_from_stagger_failure_jr7d
 async fn landing_scalar_reset_distinguishes_completion_from_stagger_failure_jr7d_consume() {
     landing_scalar_reset_matrix(
         include_str!("../game/mechs/JR7-D.toml"),
-        BattleStaggerMode::Consume,
+        StaggerMode::Consume,
     )
     .await;
 }
@@ -254,7 +252,7 @@ async fn landing_scalar_reset_distinguishes_completion_from_stagger_failure_jr7d
 async fn landing_scalar_reset_distinguishes_completion_from_stagger_failure_spider_traditional() {
     landing_scalar_reset_matrix(
         include_str!("../game/mechs/StalkingSpider-1.toml"),
-        BattleStaggerMode::Traditional,
+        StaggerMode::Traditional,
     )
     .await;
 }
@@ -263,7 +261,7 @@ async fn landing_scalar_reset_distinguishes_completion_from_stagger_failure_spid
 async fn landing_scalar_reset_distinguishes_completion_from_stagger_failure_spider_retain() {
     landing_scalar_reset_matrix(
         include_str!("../game/mechs/StalkingSpider-1.toml"),
-        BattleStaggerMode::Retain,
+        StaggerMode::Retain,
     )
     .await;
 }
@@ -272,7 +270,7 @@ async fn landing_scalar_reset_distinguishes_completion_from_stagger_failure_spid
 async fn landing_scalar_reset_distinguishes_completion_from_stagger_failure_spider_consume() {
     landing_scalar_reset_matrix(
         include_str!("../game/mechs/StalkingSpider-1.toml"),
-        BattleStaggerMode::Consume,
+        StaggerMode::Consume,
     )
     .await;
 }
@@ -312,14 +310,14 @@ async fn map_reassignment_preserves_scalar_and_core_destruction_clears_it() {
                 world.btech
             );
             let internal = world.btech.constructed_units()[&unit].sections()
-                [&BattleSection::CenterTorso]
+                [&MechSection::CenterTorso]
                 .internal;
             apply_damage_phase(
                 &mut world,
                 unit,
-                BattleSection::CenterTorso,
+                MechSection::CenterTorso,
                 internal,
-                BattleDamagePhase::Internal,
+                DamagePhase::Internal,
             )
             .unwrap();
             assert!(world.btech.constructed_units()[&unit].is_destroyed());

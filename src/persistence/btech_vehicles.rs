@@ -1,5 +1,5 @@
 //! Transactional storage for owned ground-vehicle state and its common unit identity.
-use crate::{BattleVehicle, BtechState, ObjectId, World};
+use crate::{BtechState, ObjectId, Vehicle, World};
 use anyhow::{Result, ensure};
 use sqlx::SqliteConnection;
 use std::{
@@ -21,8 +21,7 @@ pub(super) async fn load(
     clock: super::btech_deadlines::Clock,
 ) -> Result<()> {
     let mut units = BTreeMap::new();
-    for (id, unit) in super::btech_unit_rows::load::<BattleVehicle>(c, TABLE, TIMERS, clock).await?
-    {
+    for (id, unit) in super::btech_unit_rows::load::<Vehicle>(c, TABLE, TIMERS, clock).await? {
         ensure!(
             !state.units.contains_key(&id) && !state.maps.contains_key(&id),
             "Conflicting unit records for #{}",

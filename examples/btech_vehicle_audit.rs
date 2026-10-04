@@ -1,7 +1,7 @@
 //! Inspect named ground-vehicle assets with equipment diagnostics, without claiming live simulation support.
 use anyhow::{Context, Result};
 use std::{collections::BTreeMap, path::PathBuf};
-use stompymux_rs::{BattleVehicle, BattleVehicleLoadout, read_battle_vehicle_template};
+use stompymux_rs::{Vehicle, VehicleLoadout, read_battle_vehicle_template};
 
 /// Print typed definitions or diagnostics for explicitly selected assets in the configured directory.
 fn main() -> Result<()> {
@@ -15,7 +15,7 @@ fn main() -> Result<()> {
     for name in arguments {
         let result = match read_battle_vehicle_template(&root, &name) {
             Ok(definition) => {
-                let construction = match BattleVehicle::new(definition.clone()) {
+                let construction = match Vehicle::new(definition.clone()) {
                     Ok(_) => serde_json::json!({"constructed": true}),
                     Err(error) => {
                         serde_json::json!({"constructed": false, "error": format!("{error:#}")})
@@ -29,7 +29,7 @@ fn main() -> Result<()> {
                     Ok(report) => serde_json::json!({"report": report}),
                     Err(error) => serde_json::json!({"error": format!("{error:#}")}),
                 };
-                let equipment = match BattleVehicleLoadout::resolve(&definition) {
+                let equipment = match VehicleLoadout::resolve(&definition) {
                     Ok(loadout) => serde_json::json!({"resolved": true, "loadout": loadout}),
                     Err(error) => {
                         serde_json::json!({"resolved": false, "error": format!("{error:#}")})

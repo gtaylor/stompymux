@@ -5,9 +5,9 @@ use anyhow::Result;
 /// Secondary shutdown consequences retained until the enclosing host action can publish them.
 #[derive(Default)]
 pub(super) struct ShutdownEffects {
-    pub pilot_notices: Vec<super::BattlePilotNotice>,
-    pub falls: Vec<super::BattleFallReport>,
-    pub vehicle_falls: Vec<super::BattleVehicleFallReport>,
+    pub pilot_notices: Vec<super::PilotNotice>,
+    pub falls: Vec<super::MechFallReport>,
+    pub vehicle_falls: Vec<super::VehicleFallReport>,
     pub stacking: super::stacking::StackingEffects,
 }
 
@@ -28,14 +28,14 @@ pub fn stop_unit_action(
     config: &Config,
     id: ObjectId,
     pilot: ObjectId,
-) -> Result<Vec<super::BattleNotice>> {
+) -> Result<Vec<super::Notice>> {
     scripts.atomic(|before| {
         super::power::check_shutdown_control(before, id, pilot)?;
         let mut effects = ShutdownEffects::default();
         let notices = super::power::stop_admitted_in_action(
             &mut scripts.world_mut(),
             id,
-            super::BattleFallRules::configured(config),
+            super::FallRules::configured(config),
             &mut effects,
         )?;
         super::piloting::publish_ordered_notices(scripts, &notices, &effects.pilot_notices)?;

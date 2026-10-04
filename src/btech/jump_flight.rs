@@ -1,16 +1,16 @@
 //! Restartable committed-second jump progression; the enclosing action owns collisions and landing.
-use super::{BattleJumpCapacity, BattleJumpPath, BattleJumpSample};
+use super::{JumpCapacity, JumpPath, JumpSample};
 use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
 
 /// A flight cursor retaining the last sampled thrust, so damage between ticks does not move it.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(try_from = "JumpFlightRecord")]
-pub struct BattleJumpFlight {
-    path: BattleJumpPath,
+pub struct JumpFlight {
+    path: JumpPath,
     /// Explicit scenario position retained until the next committed flight sample.
     #[serde(default)]
-    relocated: Option<BattleJumpSample>,
+    relocated: Option<JumpSample>,
     travelled: f64,
     /// Horizontal distance completed on earlier segments of this same flight.
     #[serde(default)]
@@ -30,10 +30,10 @@ pub struct BattleJumpFlight {
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct JumpFlightRecord {
-    path: BattleJumpPath,
+    path: JumpPath,
     /// Explicit scenario position retained until the next committed flight sample.
     #[serde(default)]
-    relocated: Option<BattleJumpSample>,
+    relocated: Option<JumpSample>,
     travelled: f64,
     /// Horizontal distance completed on earlier segments of this same flight.
     #[serde(default)]
@@ -49,7 +49,7 @@ struct JumpFlightRecord {
     reassigned: bool,
 }
 
-impl TryFrom<JumpFlightRecord> for BattleJumpFlight {
+impl TryFrom<JumpFlightRecord> for JumpFlight {
     type Error = anyhow::Error;
 
     fn try_from(record: JumpFlightRecord) -> Result<Self> {
@@ -88,7 +88,7 @@ impl TryFrom<JumpFlightRecord> for BattleJumpFlight {
 /// The enclosing game transaction must handle these outcomes before committing the cursor.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleJumpOutcome {
+pub enum JumpOutcome {
     Airborne,
     Landing,
     LostThrust,
@@ -97,15 +97,15 @@ pub enum BattleJumpOutcome {
 /// Segment traversed during one tick, available for collision checks before committing movement.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 #[must_use = "Resolve collisions, landing or lost thrust in the same transaction as this step"]
-pub struct BattleJumpStep {
-    pub from: BattleJumpSample,
-    pub to: BattleJumpSample,
-    pub outcome: BattleJumpOutcome,
+pub struct JumpStep {
+    pub from: JumpSample,
+    pub to: JumpSample,
+    pub outcome: JumpOutcome,
 }
 
-impl BattleJumpFlight {
+impl JumpFlight {
     /// Begin at the validated takeoff point without consuming time or altering the launch geometry.
-    pub fn new(path: BattleJumpPath) -> Self {
+    pub fn new(path: JumpPath) -> Self {
         Self {
             path,
             relocated: None,
@@ -130,7 +130,7 @@ impl BattleJumpFlight {
     }
 
     /// Immutable path shared by flight progression and prospective collision checks.
-    pub fn path(self) -> BattleJumpPath {
+    pub fn path(self) -> JumpPath {
         self.path
     }
 
@@ -151,7 +151,7 @@ impl BattleJumpFlight {
 
     /// Replace only the remaining route, preserving the committed sample, progress and DFA intent.
     /// The caller must admit the new route on the current map before publishing this cursor.
-    pub fn redirect(&mut self, path: BattleJumpPath) -> Result<()> {
+    pub fn redirect(&mut self, path: JumpPath) -> Result<()> {
         ensure!(
             !self.arrived(),
             "Jump flight has already reached its destination"
@@ -185,7 +185,7 @@ impl BattleJumpFlight {
     }
 
     /// Last committed airborne point and height; inspecting it never advances the flight.
-    pub fn sample(self) -> BattleJumpSample {
+    pub fn sample(self) -> JumpSample {
         if let Some(sample) = self.relocated {
             return sample;
         }
@@ -199,7 +199,7 @@ impl BattleJumpFlight {
 
     /// Administrative relocation preserves the jump path, thrust sample and progress.
     pub(super) fn relocate(&mut self, point: super::Point, elevation: f64) {
-        self.relocated = Some(BattleJumpSample { point, elevation });
+        self.relocated = Some(JumpSample { point, elevation });
     }
 
     /// Rebind a scenario-transferred route while preserving its exact sampled altitude and progress.
@@ -209,7 +209,7 @@ impl BattleJumpFlight {
             return Ok(false);
         }
         let elevation = self.sample().elevation;
-        self.relocated = Some(BattleJumpSample { point, elevation });
+        self.relocated = Some(JumpSample { point, elevation });
         self.reassigned = true;
         Ok(true)
     }
@@ -232,11 +232,7 @@ impl BattleJumpFlight {
     /// A requested landing returns the current sample for ordinary landing resolution.
     /// Invalid inputs and complete flights leave the cursor unchanged; absent thrust returns
     /// a stationary segment so the caller can apply a fall at the last airborne position.
-    pub fn advance(
-        &mut self,
-        capacity: BattleJumpCapacity,
-        movement_modifier: i64,
-    ) -> Result<BattleJumpStep> {
+    pub fn advance(&mut self, capacity: JumpCapacity, movement_modifier: i64) -> Result<JumpStep> {
         ensure!(
             !self.arrived(),
             "Jump flight has already reached its destination"
@@ -244,17 +240,17 @@ impl BattleJumpFlight {
         capacity.validate()?;
         let from = self.sample();
         if self.landing_requested {
-            return Ok(BattleJumpStep {
+            return Ok(JumpStep {
                 from,
                 to: from,
-                outcome: BattleJumpOutcome::Landing,
+                outcome: JumpOutcome::Landing,
             });
         }
         if capacity.speed == 0.0 {
-            return Ok(BattleJumpStep {
+            return Ok(JumpStep {
                 from,
                 to: from,
-                outcome: BattleJumpOutcome::LostThrust,
+                outcome: JumpOutcome::LostThrust,
             });
         }
         let rate = if movement_modifier > 0 {
@@ -281,13 +277,13 @@ impl BattleJumpFlight {
             dfa_target: self.dfa_target,
             reassigned: self.reassigned,
         };
-        let step = BattleJumpStep {
+        let step = JumpStep {
             from,
             to: candidate.sample(),
             outcome: if arrived {
-                BattleJumpOutcome::Landing
+                JumpOutcome::Landing
             } else {
-                BattleJumpOutcome::Airborne
+                JumpOutcome::Airborne
             },
         };
         *self = candidate;
@@ -304,18 +300,18 @@ mod tests {
     #[test]
     fn redirect_retains_progress_and_replays_the_shared_integrator() {
         let start = Point { x: 4.0, y: 4.0 };
-        let path = BattleJumpPath::new(start, start.project(0.0, 3.0).unwrap(), 0, 0, 4).unwrap();
-        let capacity = BattleJumpCapacity::from_speed(43.0).unwrap();
-        let mut flight = BattleJumpFlight::new(path).with_dfa_target(crate::ObjectId(99));
+        let path = JumpPath::new(start, start.project(0.0, 3.0).unwrap(), 0, 0, 4).unwrap();
+        let capacity = JumpCapacity::from_speed(43.0).unwrap();
+        let mut flight = JumpFlight::new(path).with_dfa_target(crate::ObjectId(99));
         for _ in 0..12 {
             let step = flight.advance(capacity, 100).unwrap();
-            assert_ne!(step.outcome, BattleJumpOutcome::LostThrust);
+            assert_ne!(step.outcome, JumpOutcome::LostThrust);
         }
         for heading in [90.0, 180.0] {
             let before = flight;
             let origin = before.sample();
             let end = origin.point.project(heading, 2.0).unwrap();
-            let path = BattleJumpPath::continuation(origin, end, 0, 4).unwrap();
+            let path = JumpPath::continuation(origin, end, 0, 4).unwrap();
             flight.redirect(path).unwrap();
             assert_eq!(flight.sample(), origin);
             assert_eq!(flight.total_travelled(), before.total_travelled());
@@ -328,7 +324,7 @@ mod tests {
                 flight.sampled_movement_points,
                 before.sampled_movement_points
             );
-            let mut restored: BattleJumpFlight =
+            let mut restored: JumpFlight =
                 serde_json::from_value(serde_json::to_value(flight).unwrap()).unwrap();
             let next = flight.advance(capacity, 100).unwrap();
             assert_eq!(next.from, origin);
@@ -341,7 +337,7 @@ mod tests {
                 break;
             }
             let step = flight.advance(capacity, 100).unwrap();
-            assert_ne!(step.outcome, BattleJumpOutcome::LostThrust);
+            assert_ne!(step.outcome, JumpOutcome::LostThrust);
         }
         assert!(flight.arrived());
         assert_eq!(flight.total_travelled(), flight.total_distance());
@@ -352,17 +348,17 @@ mod tests {
     #[test]
     fn redirect_rejects_discontinuous_start_and_invalid_saved_progress() {
         let start = Point { x: 4.0, y: 4.0 };
-        let path = BattleJumpPath::new(start, start.project(0.0, 3.0).unwrap(), 0, 0, 4).unwrap();
-        let mut flight = BattleJumpFlight::new(path);
+        let path = JumpPath::new(start, start.project(0.0, 3.0).unwrap(), 0, 0, 4).unwrap();
+        let mut flight = JumpFlight::new(path);
         let step = flight
-            .advance(BattleJumpCapacity::from_speed(43.0).unwrap(), 100)
+            .advance(JumpCapacity::from_speed(43.0).unwrap(), 100)
             .unwrap();
-        assert_eq!(step.outcome, BattleJumpOutcome::Airborne);
+        assert_eq!(step.outcome, JumpOutcome::Airborne);
         let before = flight;
         assert!(flight.redirect(path).is_err());
         assert_eq!(flight, before);
         let mut saved = serde_json::to_value(flight).unwrap();
         saved["completed_distance"] = (-1).into();
-        assert!(serde_json::from_value::<BattleJumpFlight>(saved).is_err());
+        assert!(serde_json::from_value::<JumpFlight>(saved).is_err());
     }
 }

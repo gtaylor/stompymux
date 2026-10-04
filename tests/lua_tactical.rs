@@ -18,7 +18,7 @@ async fn fixture() -> (tempfile::TempDir, Config, Scripts, Vec<ObjectId>, Object
     for index in 0..3 {
         let id = world.create(&config, format!("Tactical {index}"), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-        BattleUnitTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml"))
+        UnitTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml"))
             .unwrap()
             .create(&mut world, id)
             .unwrap();
@@ -37,7 +37,7 @@ async fn fixture() -> (tempfile::TempDir, Config, Scripts, Vec<ObjectId>, Object
     state["simulation_seconds"] = 42.into();
     for unit in &units {
         state["constructed"][unit.0.to_string()]["power"] =
-            serde_json::to_value(BattlePower::Running).unwrap();
+            serde_json::to_value(Power::Running).unwrap();
     }
     world.btech = serde_json::from_value(state).unwrap();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
@@ -141,7 +141,7 @@ async fn shared_sightings_do_not_grant_attack_acquisition_or_leak_hidden_changes
         set_battle_unit_signature(
             &mut world,
             units[2],
-            BattleUnitSignature {
+            UnitSignature {
                 team: 1,
                 hidden: false,
                 illuminated: false,
@@ -174,14 +174,14 @@ async fn shared_sightings_do_not_grant_attack_acquisition_or_leak_hidden_changes
         world
             .btech
             .rewrite_unit_record(units[2], |record| {
-                record["power"] = serde_json::to_value(BattlePower::Off).unwrap();
+                record["power"] = serde_json::to_value(Power::Off).unwrap();
             })
             .unwrap();
         place_battle_unit(&mut world, units[2], map, 0, 11).unwrap();
         world
             .btech
             .rewrite_unit_record(units[2], |record| {
-                record["power"] = serde_json::to_value(BattlePower::Running).unwrap();
+                record["power"] = serde_json::to_value(Power::Running).unwrap();
             })
             .unwrap();
     }

@@ -10,7 +10,7 @@ pub fn begin_vtol_takeoff(
     pilot: ObjectId,
     delay: u16,
     free_fusion_fuel: bool,
-) -> Result<BattleNotice> {
+) -> Result<Notice> {
     super::vehicle_power::controlled(world, id, pilot)?;
     super::fortification::require_mobile(world, id)?;
     super::vehicle_driving::readout(world, id, pilot)?;
@@ -41,7 +41,7 @@ pub fn begin_vtol_takeoff(
         .get_mut(&id)
         .unwrap()
         .begin_vtol_takeoff(underground, free_fusion_fuel, delay)?;
-    Ok(BattleNotice {
+    Ok(Notice {
         unit: id,
         text: "You begin the takeoff sequence.".into(),
     })
@@ -77,7 +77,7 @@ pub fn set_vtol_vertical_speed(
     pilot: ObjectId,
     speed: f64,
     free_fusion_fuel: bool,
-) -> Result<BattleNotice> {
+) -> Result<Notice> {
     super::vehicle_power::controlled(world, id, pilot)?;
     super::fortification::require_mobile(world, id)?;
     let maximum = super::motion_controls::throttle_maximum(world, id, true)?;
@@ -87,7 +87,7 @@ pub fn set_vtol_vertical_speed(
         .get_mut(&id)
         .unwrap()
         .set_vtol_vertical_at(speed, free_fusion_fuel, maximum)?;
-    Ok(BattleNotice {
+    Ok(Notice {
         unit: id,
         text: format!("Vertical speed set to {speed:.2} KPH."),
     })
@@ -98,7 +98,7 @@ pub(super) fn land_in_candidate(
     world: &mut World,
     id: ObjectId,
     pilot: ObjectId,
-    movement: BattleMovementRules,
+    movement: MovementRules,
     character: bool,
 ) -> Result<super::movement_report::MovementReport> {
     super::vehicle_power::controlled(world, id, pilot)?;
@@ -127,37 +127,32 @@ pub(super) fn land_in_candidate(
 pub(super) fn landing_consequences(
     world: &mut World,
     id: ObjectId,
-    outcome: BattleVtolLanding,
-    rules: BattleFallRules,
+    outcome: VtolLanding,
+    rules: FallRules,
     character: bool,
 ) -> Result<super::movement_report::MovementReport> {
     let mut report = super::movement_report::MovementReport::default();
     match outcome {
-        BattleVtolLanding::LaunchCancelled => {
+        VtolLanding::LaunchCancelled => {
             let pilot = world.btech.vehicles()[&id]
                 .pilot()
                 .and_then(|pilot| world.objects.get(&pilot))
                 .context("Pilot is unavailable")?;
-            report.notices.push(BattleNotice {
+            report.notices.push(Notice {
                 unit: id,
                 text: format!("Launch aborted by {}.", crate::text::escape(&pilot.name)),
             });
         }
-        BattleVtolLanding::Touchdown { .. } => {
-            report.notices.push(BattleNotice {
+        VtolLanding::Touchdown { .. } => {
+            report.notices.push(Notice {
                 unit: id,
                 text: "You bring your VTOL to a safe landing.".into(),
             });
             report
                 .notices
                 .extend(super::broadcast::observer_notices(world, id, "lands."));
-            let mines = super::mine_event::resolve(
-                world,
-                id,
-                BattleMineTriggerReason::Land,
-                rules,
-                character,
-            )?;
+            let mines =
+                super::mine_event::resolve(world, id, MineTriggerReason::Land, rules, character)?;
             super::piloting::append_feedback(
                 &mut report.pilot_notices,
                 mines.pilot_notices.iter().cloned(),

@@ -6,14 +6,14 @@ use serde::Serialize;
 
 /// What a vehicle's fall reports beyond its damage groups.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleVehicleFallFeedback {
+pub struct VehicleFallFeedback {
     /// Private protection and neighboring fall checks ordered among notices.
-    pub pilot_notices: Vec<BattlePilotNotice>,
-    pub notices: Vec<BattleNotice>,
+    pub pilot_notices: Vec<PilotNotice>,
+    pub notices: Vec<Notice>,
 }
 
 /// A completed vehicle fall, before any caller-specific drowning or crash consequence.
-pub type BattleVehicleFallReport = FallReport<BattleVehicleImpact, BattleVehicleFallFeedback>;
+pub type VehicleFallReport = FallReport<VehicleImpact, VehicleFallFeedback>;
 
 /// Resolve a tactical vehicle fall atomically; the environmental caller owns immersion eligibility.
 /// Zero severity still checks personal injury, changes heading and activates fall-sensitive mines.
@@ -21,8 +21,8 @@ pub fn resolve_vehicle_fall(
     world: &mut World,
     id: ObjectId,
     levels: u8,
-    rules: BattleFallRules,
-) -> Result<BattleVehicleFallReport> {
+    rules: FallRules,
+) -> Result<VehicleFallReport> {
     resolve_in_candidate(world, id, levels, rules, false)
 }
 
@@ -31,9 +31,9 @@ pub(super) fn resolve_in_candidate(
     world: &mut World,
     id: ObjectId,
     levels: u8,
-    rules: BattleFallRules,
+    rules: FallRules,
     character: bool,
-) -> Result<BattleVehicleFallReport> {
+) -> Result<VehicleFallReport> {
     ensure!(
         !world
             .btech
@@ -57,9 +57,9 @@ pub(super) fn resolve_material(
     world: &mut World,
     id: ObjectId,
     levels: u32,
-    rules: BattleFallRules,
+    rules: FallRules,
     character: bool,
-) -> Result<BattleVehicleFallReport> {
+) -> Result<VehicleFallReport> {
     let levels = i32::try_from(levels).context("Fall severity exceeds pilot-check range")?;
     resolve_material_signed(world, id, levels, rules, character)
 }
@@ -69,9 +69,9 @@ pub(super) fn resolve_material_signed(
     world: &mut World,
     id: ObjectId,
     levels: i32,
-    rules: BattleFallRules,
+    rules: FallRules,
     character: bool,
-) -> Result<BattleVehicleFallReport> {
+) -> Result<VehicleFallReport> {
     resolve_material_signed_with_tonnage(world, id, levels, rules, character, None)
 }
 
@@ -79,10 +79,10 @@ pub(super) fn resolve_material_signed_with_tonnage(
     world: &mut World,
     id: ObjectId,
     levels: i32,
-    rules: BattleFallRules,
+    rules: FallRules,
     character: bool,
     tonnage: Option<u32>,
-) -> Result<BattleVehicleFallReport> {
+) -> Result<VehicleFallReport> {
     let object = world.objects.get(&id).context("Vehicle is unavailable")?;
     ensure!(
         !object.flags.contains(Flag::Going)
@@ -121,7 +121,7 @@ pub(super) fn resolve_material_signed_with_tonnage(
         let mut avoidance = if safe {
             None
         } else {
-            notices.push(BattleNotice {
+            notices.push(Notice {
                 unit: id,
                 text: "You try to avoid taking personal damage.".into(),
             });
@@ -144,7 +144,7 @@ pub(super) fn resolve_material_signed_with_tonnage(
         };
         let mut character_injury = None;
         let pilot_injury = if avoidance.as_ref().is_some_and(|check| !check.success) && has_pilot {
-            notices.push(BattleNotice {
+            notices.push(Notice {
                 unit: id,
                 text: "You take personal injury!".into(),
             });
@@ -220,9 +220,9 @@ pub(super) fn resolve_material_signed_with_tonnage(
                 super::vehicle_impact::ImpactRequest {
                     amount,
                     armor_piercing: None,
-                    rear: arc == BattleHitArc::Rear,
+                    rear: arc == HitArc::Rear,
                     attacker: None,
-                    class: BattleDamageClass::Ordinary,
+                    class: DamageClass::Ordinary,
                 },
                 rules.vehicle_impact,
             )?;
@@ -238,11 +238,11 @@ pub(super) fn resolve_material_signed_with_tonnage(
             }
         }
         let mines = if position.is_some() {
-            super::mine_event::resolve(world, id, BattleMineTriggerReason::Fall, rules, character)?
+            super::mine_event::resolve(world, id, MineTriggerReason::Fall, rules, character)?
         } else {
-            super::BattleMineEventReport {
+            super::MineEventReport {
                 unit: id,
-                reason: BattleMineTriggerReason::Fall,
+                reason: MineTriggerReason::Fall,
                 blasts: Vec::new(),
                 triggers: 0,
                 notices: Vec::new(),
@@ -255,7 +255,7 @@ pub(super) fn resolve_material_signed_with_tonnage(
             notices.len(),
         );
         notices.extend(mines.notices.iter().cloned());
-        Ok(BattleVehicleFallReport {
+        Ok(VehicleFallReport {
             ice_break,
             avoidance,
             experience_messages,
@@ -267,7 +267,7 @@ pub(super) fn resolve_material_signed_with_tonnage(
             groups: impacts,
             pilot,
             mines,
-            feedback: BattleVehicleFallFeedback {
+            feedback: VehicleFallFeedback {
                 pilot_notices,
                 notices,
             },

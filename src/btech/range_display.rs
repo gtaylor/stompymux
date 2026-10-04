@@ -6,7 +6,7 @@ use serde::Serialize;
 
 /// Detached spatial and horizontal measurements in hex units.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct BattleRangeReport {
+pub struct RangeReport {
     pub horizontal: f64,
     pub spatial: f64,
     pub text: String,
@@ -19,7 +19,7 @@ pub fn range_display(
     unit: ObjectId,
     viewer: ObjectId,
     arguments: &str,
-) -> Result<BattleRangeReport> {
+) -> Result<RangeReport> {
     let segment = super::navigation_measurement::resolve(world, unit, viewer, arguments, "Range")?;
     let horizontal = segment.origin.point.range(segment.destination.point)?;
     let dark = world.btech.maps()[&segment.map].has_flag(super::MapFlag::Dark);
@@ -40,7 +40,7 @@ pub fn range_display(
     };
     let spatial = horizontal.hypot((destination_height - origin_height) / 5.0);
     let suffix = super::navigation_measurement::range_text(spatial, horizontal);
-    Ok(BattleRangeReport {
+    Ok(RangeReport {
         horizontal,
         spatial,
         text: format!("{}{suffix}.", segment.prefix),

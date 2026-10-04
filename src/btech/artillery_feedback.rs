@@ -4,8 +4,8 @@ use crate::{ObjectId, World};
 use anyhow::Result;
 
 /// Arrow launchers send missiles; other artillery fires rounds.
-fn projectile(weapon: BattleWeapon) -> &'static str {
-    if matches!(weapon, BattleWeapon::ArrowIv | BattleWeapon::ClanArrowIv) {
+fn projectile(weapon: Weapon) -> &'static str {
+    if matches!(weapon, Weapon::ArrowIv | Weapon::ClanArrowIv) {
         "missile"
     } else {
         "round"
@@ -32,7 +32,7 @@ fn direction(bearing: i32) -> &'static str {
 
 /// Launch direction uses captured hex centers, not the shooter's later continuous position.
 pub(super) fn launch_text(
-    weapon: BattleWeapon,
+    weapon: Weapon,
     origin: HexCoordinate,
     target: HexCoordinate,
 ) -> Result<String> {
@@ -55,23 +55,23 @@ pub(super) fn launch_text(
 pub(super) fn arrival_notices(
     world: &World,
     map: ObjectId,
-    weapon: BattleWeapon,
-    mode: BattleArtilleryMode,
+    weapon: Weapon,
+    mode: ArtilleryMode,
     coordinate: HexCoordinate,
-) -> Result<Vec<BattleNotice>> {
+) -> Result<Vec<Notice>> {
     let name = weapon.name().split_once('.').expect("catalog namespace").1;
     super::broadcast::hex_notices(
         world,
         map,
         coordinate,
-        mode != BattleArtilleryMode::Smoke,
+        mode != ArtilleryMode::Smoke,
         |location| match mode {
-            BattleArtilleryMode::Standard => format!("{name} fire hits {location}!"),
-            BattleArtilleryMode::Cluster => {
+            ArtilleryMode::Standard => format!("{name} fire hits {location}!"),
+            ArtilleryMode::Cluster => {
                 format!("A rain of small bomblets hits {location}'s surroundings!")
             }
-            BattleArtilleryMode::Mine => format!("A rain of small bomblets hits {location}!"),
-            BattleArtilleryMode::Smoke => format!(
+            ArtilleryMode::Mine => format!("A rain of small bomblets hits {location}!"),
+            ArtilleryMode::Smoke => format!(
                 "A {name} {} hits {location}, and smoke starts to billow!",
                 projectile(weapon)
             ),
@@ -107,16 +107,11 @@ mod tests {
         }
         let origin = HexCoordinate { x: 1, y: 1 };
         assert_eq!(
-            launch_text(
-                BattleWeapon::ClanArrowIv,
-                origin,
-                HexCoordinate { x: 1, y: 0 }
-            )
-            .unwrap(),
+            launch_text(Weapon::ClanArrowIv, origin, HexCoordinate { x: 1, y: 0 }).unwrap(),
             "shoots a missile towards the north!"
         );
         assert_eq!(
-            launch_text(BattleWeapon::LongTom, origin, origin).unwrap(),
+            launch_text(Weapon::LongTom, origin, origin).unwrap(),
             "shoots a round towards the south!"
         );
     }

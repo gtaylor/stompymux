@@ -1,7 +1,7 @@
 //! Reference coordinate anchors and range adapters on signed-elevation battlefields.
 use crate::support;
 use stompymux_rs::{
-    BattleTemplate, Flag, HexCoordinate, Kind, MapAsset, ObjectId, Scripts, battle_unit_range,
+    Flag, HexCoordinate, Kind, MapAsset, MechTemplate, ObjectId, Scripts, battle_unit_range,
     create_battle_map, create_battle_unit, place_battle_unit,
 };
 
@@ -38,8 +38,7 @@ async fn ranges_include_depth_and_elevation_and_reject_different_maps() {
         create_battle_unit(
             &mut world,
             id,
-            BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
-                .unwrap(),
+            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
         )
         .unwrap();
         place_battle_unit(&mut world, id, map, x, 0).unwrap();

@@ -11,7 +11,7 @@ async fn predictive_fire_shares_launching_and_callback_rollback_across_chassis()
         let target_source = include_str!("../game/mechs/JR7-D.toml");
         let (_dir, config, mut world, shooter, target, weapon) = firing::fixture_with_supply(
             &source,
-            Some(BattleWeapon::ThumperCannon),
+            Some(Weapon::ThumperCannon),
             target_source,
             false,
             Some(""),
@@ -23,7 +23,7 @@ async fn predictive_fire_shares_launching_and_callback_rollback_across_chassis()
         });
         let before = world.btech.clone();
         let prediction =
-            predict_battle_artillery_target(&world, shooter, target, BattleMovementRules::STANDARD)
+            predict_battle_artillery_target(&world, shooter, target, MovementRules::STANDARD)
                 .unwrap();
         assert_eq!(prediction.seconds, 10);
         assert!(prediction.coordinate.y < 10);
@@ -109,8 +109,7 @@ async fn prediction_stops_at_map_edge_without_consuming_live_state() {
     });
     let before = world.btech.clone();
     let prediction =
-        predict_battle_artillery_target(&world, shooter, target, BattleMovementRules::STANDARD)
-            .unwrap();
+        predict_battle_artillery_target(&world, shooter, target, MovementRules::STANDARD).unwrap();
     assert!(prediction.stopped);
     assert_eq!(prediction.coordinate, HexCoordinate { x: 0, y: 11 });
     assert_eq!(
@@ -119,13 +118,8 @@ async fn prediction_stops_at_map_edge_without_consuming_live_state() {
     );
     assert_eq!(world.btech, before);
     assert!(
-        predict_battle_artillery_target(
-            &world,
-            shooter,
-            ObjectId(-1),
-            BattleMovementRules::STANDARD
-        )
-        .is_err()
+        predict_battle_artillery_target(&world, shooter, ObjectId(-1), MovementRules::STANDARD)
+            .is_err()
     );
 }
 
@@ -140,7 +134,7 @@ async fn prediction_handles_vehicle_targets_and_blocking_terrain() {
             .btech
             .vehicles()
             .get(&target)
-            .is_some_and(|v| v.definition().movement == BattleVehicleMovement::Stationary);
+            .is_some_and(|v| v.definition().movement == VehicleMovement::Stationary);
         if !stationary {
             firing::edit(&mut world, target, |unit| {
                 unit["motion"]["speed"] = 40.0.into();
@@ -161,14 +155,14 @@ async fn prediction_handles_vehicle_targets_and_blocking_terrain() {
         let world = scripts.world();
         let before = world.btech.clone();
         let prediction =
-            predict_battle_artillery_target(&world, shooter, target, BattleMovementRules::STANDARD)
+            predict_battle_artillery_target(&world, shooter, target, MovementRules::STANDARD)
                 .unwrap();
         // A sheer cliff stops every ground target; aircraft fly over it.
         let vtol = world
             .btech
             .vehicles()
             .get(&target)
-            .is_some_and(|v| v.definition().movement == BattleVehicleMovement::Vtol);
+            .is_some_and(|v| v.definition().movement == VehicleMovement::Vtol);
         assert_eq!(prediction.stopped, !vtol);
         if !vtol {
             assert_eq!(prediction.coordinate.y, if stationary { 10 } else { 9 });
@@ -194,14 +188,14 @@ async fn distant_prediction_matches_live_motion_until_shell_catches_up() {
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     for id in [shooter, target] {
         firing::edit(&mut world, id, |unit| {
-            unit["power"] = serde_json::to_value(BattlePower::Off).unwrap()
+            unit["power"] = serde_json::to_value(Power::Off).unwrap()
         });
     }
     place_battle_unit(&mut world, shooter, map, 0, 99).unwrap();
     place_battle_unit(&mut world, target, map, 0, 10).unwrap();
     for id in [shooter, target] {
         firing::edit(&mut world, id, |unit| {
-            unit["power"] = serde_json::to_value(BattlePower::Running).unwrap()
+            unit["power"] = serde_json::to_value(Power::Running).unwrap()
         });
     }
 
@@ -210,12 +204,11 @@ async fn distant_prediction_matches_live_motion_until_shell_catches_up() {
         unit["motion"]["desired_speed"] = 107.5.into();
     });
     let prediction =
-        predict_battle_artillery_target(&world, shooter, target, BattleMovementRules::STANDARD)
-            .unwrap();
+        predict_battle_artillery_target(&world, shooter, target, MovementRules::STANDARD).unwrap();
     assert_eq!(prediction.seconds, 18);
     assert!(!prediction.stopped);
     for _ in 0..prediction.seconds {
-        let _ = advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
+        let _ = advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
     }
     assert_eq!(
         world.btech.constructed_units()[&target]

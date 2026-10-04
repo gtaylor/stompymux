@@ -5,14 +5,14 @@ use serde::{Deserialize, Serialize};
 
 /// Optional loading location; hints are only revealed when explicitly configured.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BattleCargoTransferPoint {
+pub struct CargoTransferPoint {
     pub x: i32,
     pub y: i32,
     #[serde(default)]
     pub reveal_hint: bool,
 }
 
-impl BattleCargoTransferPoint {
+impl CargoTransferPoint {
     /// A transfer point must name a hex inside its owning map.
     pub(crate) fn validate(self, map: &StoredMap) -> Result<()> {
         ensure!(
@@ -28,7 +28,7 @@ impl BattleCargoTransferPoint {
 
 impl StoredMap {
     /// Saved cargo location, independent of the map's terrain and unit occupancy.
-    pub fn cargo_transfer_point(&self) -> Option<BattleCargoTransferPoint> {
+    pub fn cargo_transfer_point(&self) -> Option<CargoTransferPoint> {
         self.cargo_transfer_point
     }
 }
@@ -38,7 +38,7 @@ pub fn set_cargo_transfer_point(
     world: &mut World,
     actor: ObjectId,
     map: ObjectId,
-    point: Option<BattleCargoTransferPoint>,
+    point: Option<CargoTransferPoint>,
 ) -> Result<()> {
     ensure!(
         crate::authority::is_wizard(world, actor),

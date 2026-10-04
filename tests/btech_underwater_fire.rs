@@ -8,7 +8,7 @@ use stompymux_rs::*;
 async fn field(
     source: &str,
     target_source: &str,
-    weapon: BattleWeapon,
+    weapon: Weapon,
 ) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId, usize) {
     let (dir, config, mut world, shooter, target, index) =
         firing::fixture_with_target(source, Some(weapon), target_source).await;
@@ -24,11 +24,11 @@ async fn field(
     select_battle_target(&mut world, shooter, ObjectId(1), None).unwrap();
     for (id, y) in [(shooter, 2), (target, 0)] {
         firing::edit(&mut world, id, |state| {
-            state["power"] = serde_json::to_value(BattlePower::Off).unwrap()
+            state["power"] = serde_json::to_value(Power::Off).unwrap()
         });
         place_battle_unit(&mut world, id, map, 0, y).unwrap();
         firing::edit(&mut world, id, |state| {
-            state["power"] = serde_json::to_value(BattlePower::Running).unwrap()
+            state["power"] = serde_json::to_value(Power::Running).unwrap()
         });
     }
     assign_battle_pilot(&mut world, shooter, ObjectId(1)).unwrap();
@@ -36,10 +36,10 @@ async fn field(
     refresh_battle_contacts(&mut world, &[shooter]).unwrap();
     select_battle_target(&mut world, shooter, ObjectId(1), Some(target)).unwrap();
     let seed = (0..=255)
-        .find(|n| BattleDice::seeded([*n; 32]).two_d6() == 12)
+        .find(|n| Dice::seeded([*n; 32]).two_d6() == 12)
         .unwrap();
     firing::edit(&mut world, shooter, |state| {
-        state["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
+        state["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap()
     });
     (dir, config, world, shooter, target, index)
 }
@@ -68,7 +68,7 @@ async fn submerged_shots_share_damage_native_lua_rollback_and_restart() {
             include_str!("../game/mechs/Demolisher.toml"),
         ] {
             let (dir, _, base, shooter, target, index) =
-                field(&source, recipient, BattleWeapon::SmallLaser).await;
+                field(&source, recipient, Weapon::SmallLaser).await;
             for enabled in [false, true] {
                 let config = configured(&dir, enabled);
                 let scripts = Scripts::new(&config, Rc::new(RefCell::new(base.clone()))).unwrap();
@@ -121,7 +121,7 @@ async fn submerged_ineligible_weapons_fail_before_launch() {
         let (_dir, config, world, shooter, target, index) = field(
             source,
             include_str!("../game/mechs/JR7-D.toml"),
-            BattleWeapon::Flamer,
+            Weapon::Flamer,
         )
         .await;
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
@@ -164,7 +164,7 @@ async fn underwater_coordinate_fire_matches_native_and_lua() {
         let (dir, _, world, shooter, _, index) = field(
             source,
             include_str!("../game/mechs/JR7-D.toml"),
-            BattleWeapon::SmallLaser,
+            Weapon::SmallLaser,
         )
         .await;
         let config = configured(&dir, true);
@@ -202,7 +202,7 @@ async fn underwater_fire_does_not_bypass_waterline_visibility() {
     let (_dir, config, mut world, shooter, target, index) = field(
         include_str!("../game/mechs/JR7-D.toml"),
         include_str!("../game/mechs/JR7-D.toml"),
-        BattleWeapon::SmallLaser,
+        Weapon::SmallLaser,
     )
     .await;
     let map = world.btech.units()[&target].map.unwrap();

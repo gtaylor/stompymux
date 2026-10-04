@@ -51,18 +51,15 @@ async fn fixture_with_mml(
             create_battle_vehicle(
                 &mut world,
                 id,
-                BattleVehicleTemplate::parse(
-                    "test",
-                    &source(include_str!("../game/mechs/Hunter.toml")),
-                )
-                .unwrap(),
+                VehicleTemplate::parse("test", &source(include_str!("../game/mechs/Hunter.toml")))
+                    .unwrap(),
             )
             .unwrap();
         } else {
             create_battle_unit(
                 &mut world,
                 id,
-                BattleTemplate::parse("test", &source(include_str!("../game/mechs/AS7-D.toml")))
+                MechTemplate::parse("test", &source(include_str!("../game/mechs/AS7-D.toml")))
                     .unwrap(),
             )
             .unwrap();
@@ -91,11 +88,7 @@ async fn fixture_with_mml(
         refresh_battle_contacts(&mut world, &[ids[0], ids[1]]).unwrap();
     }
     select_battle_target(&mut world, ids[1], ObjectId(2), Some(ids[2])).unwrap();
-    let weapon = if mml {
-        BattleWeapon::Mml9
-    } else {
-        BattleWeapon::Lrm20
-    };
+    let weapon = if mml { Weapon::Mml9 } else { Weapon::Lrm20 };
     let index = if vehicle_shooter {
         world.btech.vehicles()[&ids[0]]
             .loadout()
@@ -246,7 +239,7 @@ async fn mixed_spotters_share_native_lua_links_and_indirect_fire() {
             ids[0],
             ObjectId(1),
             0,
-            BattleTicEdit::Add(vec![index, other]),
+            TicEdit::Add(vec![index, other]),
         )
         .unwrap();
         let expected = Scripts::new(&config, Rc::new(RefCell::new(grouped_world.clone()))).unwrap();
@@ -345,7 +338,7 @@ async fn occupied_spotter_hexes_share_mixed_firing_without_sensor_aim_dice() {
             observer,
             ObjectId(2),
             HexCoordinate { x: 1, y: 0 },
-            BattleHexTargetMode::Hex,
+            HexTargetMode::Hex,
         )
         .unwrap();
         world
@@ -353,7 +346,7 @@ async fn occupied_spotter_hexes_share_mixed_firing_without_sensor_aim_dice() {
             .rewrite_unit_record(shooter, |record| {
                 record["contacts"] = serde_json::json!({});
                 record["motion"]["heading"] = serde_json::json!(180.0);
-                record["dice"] = serde_json::to_value(BattleDice::seeded([42; 32])).unwrap();
+                record["dice"] = serde_json::to_value(Dice::seeded([42; 32])).unwrap();
             })
             .unwrap();
         let before = world.btech.clone();
@@ -400,12 +393,7 @@ async fn occupied_spotter_hexes_share_mixed_firing_without_sensor_aim_dice() {
         let report: (i64, i16, i64, u8) = scripts.eval_callback(&code).unwrap();
         assert_eq!(
             report,
-            (
-                target.0,
-                0,
-                observer.0,
-                BattleDice::seeded([42; 32]).two_d6()
-            )
+            (target.0, 0, observer.0, Dice::seeded([42; 32]).two_d6())
         );
         assert_eq!(
             report,
@@ -436,7 +424,7 @@ async fn empty_spotter_hexes_fire_through_blocked_firer_sightlines() {
         world
             .btech
             .rewrite_unit_record(observer, |record| {
-                record["power"] = serde_json::to_value(BattlePower::Off).unwrap();
+                record["power"] = serde_json::to_value(Power::Off).unwrap();
             })
             .unwrap();
         place_battle_unit(&mut world, observer, map, 2, 0).unwrap();
@@ -445,7 +433,7 @@ async fn empty_spotter_hexes_fire_through_blocked_firer_sightlines() {
         world
             .btech
             .rewrite_unit_record(observer, |record| {
-                record["power"] = serde_json::to_value(BattlePower::Running).unwrap();
+                record["power"] = serde_json::to_value(Power::Running).unwrap();
             })
             .unwrap();
         for _ in 0..10 {
@@ -455,27 +443,15 @@ async fn empty_spotter_hexes_fire_through_blocked_firer_sightlines() {
         let hex = HexCoordinate { x: 1, y: 0 };
         select_battle_spotter(&mut world, observer, ObjectId(2), Some(observer)).unwrap();
         select_battle_spotter(&mut world, shooter, ObjectId(1), Some(observer)).unwrap();
-        select_battle_hex_target(
-            &mut world,
-            observer,
-            ObjectId(2),
-            hex,
-            BattleHexTargetMode::Hex,
-        )
-        .unwrap();
-        select_battle_hex_target(
-            &mut world,
-            shooter,
-            ObjectId(1),
-            hex,
-            BattleHexTargetMode::Clear,
-        )
-        .unwrap();
+        select_battle_hex_target(&mut world, observer, ObjectId(2), hex, HexTargetMode::Hex)
+            .unwrap();
+        select_battle_hex_target(&mut world, shooter, ObjectId(1), hex, HexTargetMode::Clear)
+            .unwrap();
         for _ in 0..8 {
             advance_battle_target_locks(&mut world);
         }
         let seed = (0..=255)
-            .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 12)
+            .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
             .unwrap();
         let class = if vehicle_shooter {
             "vehicles"
@@ -491,7 +467,7 @@ async fn empty_spotter_hexes_fire_through_blocked_firer_sightlines() {
         saved[class][shooter.0.to_string()]["contacts"] = serde_json::json!({});
         saved[class][shooter.0.to_string()]["motion"]["heading"] = serde_json::json!(180.0);
         saved[class][shooter.0.to_string()]["dice"] =
-            serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+            serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
         world.btech = serde_json::from_value(saved).unwrap();
         assert!(!battle_hex_visible(&world, shooter, hex).unwrap());
         assert!(battle_hex_visible(&world, observer, hex).unwrap());
@@ -551,11 +527,11 @@ async fn empty_spotter_hexes_fire_through_blocked_firer_sightlines() {
         assert_eq!(result, (true, 1, 0));
         let blind = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         // The observer's sensor band reaches the adjacent hex in any weather, so silence it too.
-        set_battle_map_visibility(&mut blind.world_mut(), map, BattleLight::Day, 0).unwrap();
+        set_battle_map_visibility(&mut blind.world_mut(), map, Light::Day, 0).unwrap();
         set_battle_map_perception(
             &mut blind.world_mut(),
             map,
-            BattleMapPerceptionFlag::Sensors,
+            MapPerceptionFlag::Sensors,
             false,
         )
         .unwrap();
@@ -595,7 +571,7 @@ async fn mixed_indirect_experience_shares_eligibility_levels_and_rollback() {
             set_battle_character(
                 &mut world,
                 pilot,
-                BattleCharacter {
+                Character {
                     build: 5,
                     reflexes: 5,
                     intuition: 5,
@@ -615,12 +591,12 @@ async fn mixed_indirect_experience_shares_eligibility_levels_and_rollback() {
             .flags
             .remove(Flag::Wizard);
         let seed = (0..=255)
-            .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 2)
+            .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 2)
             .unwrap();
         world
             .btech
             .rewrite_unit_record(shooter, |record| {
-                record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+                record["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
             })
             .unwrap();
         for case in [
@@ -639,7 +615,7 @@ async fn mixed_indirect_experience_shares_eligibility_levels_and_rollback() {
                     &mut trial,
                     ObjectId(2),
                     "Gunnery-Spotting",
-                    BattleCharacterValue {
+                    CharacterValue {
                         experience: 1,
                         ..Default::default()
                     },
@@ -649,7 +625,7 @@ async fn mixed_indirect_experience_shares_eligibility_levels_and_rollback() {
                     &mut trial,
                     ObjectId(2),
                     "Gunnery-Spotting",
-                    BattleCharacterValue {
+                    CharacterValue {
                         last_used: i64::MAX,
                         ..Default::default()
                     },
@@ -661,7 +637,7 @@ async fn mixed_indirect_experience_shares_eligibility_levels_and_rollback() {
                         observer,
                         ObjectId(2),
                         HexCoordinate { x: 1, y: 0 },
-                        BattleHexTargetMode::Hex,
+                        HexTargetMode::Hex,
                     )
                     .unwrap();
                 }

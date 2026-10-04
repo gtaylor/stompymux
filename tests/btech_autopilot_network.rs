@@ -8,13 +8,10 @@ use stompymux_rs::*;
 const REACH: u8 = 5;
 
 /// A JR7-D carrying a C3i computer in its otherwise empty left-torso slots.
-fn networked_jenner() -> BattleTemplate {
+fn networked_jenner() -> MechTemplate {
     let mut template =
-        BattleTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap();
-    let torso = template
-        .sections
-        .get_mut(&BattleSection::LeftTorso)
-        .unwrap();
+        MechTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap();
+    let torso = template.sections.get_mut(&MechSection::LeftTorso).unwrap();
     for slot in [4, 5] {
         torso.criticals.insert(
             slot,
@@ -34,7 +31,7 @@ fn place(
     config: &Config,
     map: ObjectId,
     name: &str,
-    template: BattleTemplate,
+    template: MechTemplate,
     (x, y): (i64, i64),
     pilot: Option<ObjectId>,
 ) -> ObjectId {
@@ -49,10 +46,7 @@ fn place(
         support::seed_object_dice(world, pilot, support::FIXTURE_DICE_SEED);
     }
     // Start directly in Running; the startup state machine has its own scenarios.
-    world
-        .btech
-        .set_unit_power(id, BattlePower::Running)
-        .unwrap();
+    world.btech.set_unit_power(id, Power::Running).unwrap();
     id
 }
 
@@ -79,7 +73,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, [ObjectId; 3]) {
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
-    set_battle_map_visibility(&mut world, map, BattleLight::Day, REACH).unwrap();
+    set_battle_map_visibility(&mut world, map, Light::Day, REACH).unwrap();
     let hunter = place(
         &mut world,
         &config,
@@ -104,14 +98,14 @@ async fn fixture() -> (tempfile::TempDir, Config, World, [ObjectId; 3]) {
         &config,
         map,
         "Enemy",
-        BattleTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap(),
         (3, 20),
         None,
     );
     set_battle_unit_signature(
         &mut world,
         enemy,
-        BattleUnitSignature {
+        UnitSignature {
             team: 1,
             ..Default::default()
         },

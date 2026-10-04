@@ -2,8 +2,8 @@
 use stompymux_rs::*;
 
 /// A supported standard-fusion fixture, independent of map state.
-fn unit(source: &str) -> BattleUnit {
-    BattleUnit::from_template(BattleTemplate::parse("test", source).unwrap()).unwrap()
+fn unit(source: &str) -> Mech {
+    Mech::from_template(MechTemplate::parse("test", source).unwrap()).unwrap()
 }
 const JENNER: &str = include_str!("fixtures/btech/mechs/JR7-D.toml");
 const ATLAS: &str = include_str!("fixtures/btech/mechs/AS7-D.toml");
@@ -13,7 +13,7 @@ fn intact_mass_uses_catalog_components_and_per_slot_weapon_rounding() {
     let jenner = unit(JENNER).mass().unwrap();
     assert_eq!(
         jenner,
-        BattleMass {
+        Mass {
             engine: 12 * 1024,
             cockpit: 3 * 1024,
             gyro: 3 * 1024,
@@ -37,14 +37,14 @@ fn current_mass_tracks_armor_structure_ammunition_and_missing_sections() {
     let base = original.mass().unwrap();
     let mut state = serde_json::to_value(&original).unwrap();
     state["ammunition"][0] = 24.into();
-    let changed: BattleUnit = serde_json::from_value(state.clone()).unwrap();
+    let changed: Mech = serde_json::from_value(state.clone()).unwrap();
     assert_eq!(changed.mass().unwrap().ammunition, 983);
     state["sections"]["CenterTorso"]["armor"] = 2.into();
-    let changed: BattleUnit = serde_json::from_value(state.clone()).unwrap();
+    let changed: Mech = serde_json::from_value(state.clone()).unwrap();
     assert_eq!(changed.mass().unwrap().armor, 3584);
     state["sections"]["LeftArm"]["internal"] = 0.into();
     state["sections"]["LeftArm"]["armor"] = 0.into();
-    let changed: BattleUnit = serde_json::from_value(state).unwrap();
+    let changed: Mech = serde_json::from_value(state).unwrap();
     assert_eq!(changed.mass().unwrap().equipment, base.equipment - 2048);
     assert!(changed.mass().unwrap().total < base.total);
 }
@@ -54,7 +54,7 @@ fn destroyed_weapon_slots_retain_mass_but_missing_sections_do_not() {
     let original = unit(JENNER);
     let mut state = serde_json::to_value(&original).unwrap();
     state["lost_criticals"] = serde_json::json!([{"section":"LeftArm","slot":2}]);
-    let damaged: BattleUnit = serde_json::from_value(state).unwrap();
+    let damaged: Mech = serde_json::from_value(state).unwrap();
     assert_eq!(damaged.mass().unwrap(), original.mass().unwrap());
 }
 
@@ -63,14 +63,14 @@ fn sink_losses_and_destroyed_core_preserve_component_accounting() {
     let atlas = unit(ATLAS);
     let mut state = serde_json::to_value(&atlas).unwrap();
     state["lost_criticals"] = serde_json::json!([{"section":"LeftArm","slot":5}]);
-    let damaged: BattleUnit = serde_json::from_value(state).unwrap();
+    let damaged: Mech = serde_json::from_value(state).unwrap();
     assert_eq!(
         damaged.mass().unwrap().equipment,
         atlas.mass().unwrap().equipment - 1024
     );
     let mut state = serde_json::to_value(unit(JENNER)).unwrap();
     state["sections"]["CenterTorso"] = serde_json::json!({"armor":0,"internal":0,"rear":0});
-    let core: BattleUnit = serde_json::from_value(state).unwrap();
+    let core: Mech = serde_json::from_value(state).unwrap();
     let mass = core.mass().unwrap();
     assert_eq!(mass.engine, 0);
     assert_eq!(mass.gyro, -1024);
@@ -79,14 +79,14 @@ fn sink_losses_and_destroyed_core_preserve_component_accounting() {
 }
 
 /// Add distributed construction slots without replacing weapons or conventional systems.
-fn with_material(name: &str, count: usize) -> BattleUnit {
-    let mut template = BattleTemplate::parse("JR7-D", JENNER).unwrap();
-    let mut part = template.sections[&BattleSection::Head].criticals[&3].clone();
+fn with_material(name: &str, count: usize) -> Mech {
+    let mut template = MechTemplate::parse("JR7-D", JENNER).unwrap();
+    let mut part = template.sections[&MechSection::Head].criticals[&3].clone();
     part.equipment = name.into();
     let mut remaining = count;
     for (&section, layout) in &mut template.sections {
         let size = match section {
-            BattleSection::Head | BattleSection::LeftLeg | BattleSection::RightLeg => 6,
+            MechSection::Head | MechSection::LeftLeg | MechSection::RightLeg => 6,
             _ => 12,
         };
         for slot in 0..size {
@@ -101,7 +101,7 @@ fn with_material(name: &str, count: usize) -> BattleUnit {
         }
     }
     assert_eq!(remaining, 0);
-    BattleUnit::from_template(template).unwrap()
+    Mech::from_template(template).unwrap()
 }
 
 #[test]
@@ -130,11 +130,7 @@ fn structural_material_thresholds_mass_rounding_and_critical_exclusion() {
                 standard.critical_candidates(section)
             );
         }
-        enhanced.damage_phase(
-            BattleSection::Head,
-            7,
-            BattleDamagePhase::Armor { rear: false },
-        );
+        enhanced.damage_phase(MechSection::Head, 7, DamagePhase::Armor { rear: false });
         assert_eq!(enhanced.mass().unwrap().armor, damaged_armor, "{name}");
         let before = enhanced.mass().unwrap();
         let material = enhanced
@@ -152,7 +148,7 @@ fn structural_material_thresholds_mass_rounding_and_critical_exclusion() {
         assert_eq!(enhanced.mass().unwrap(), before, "{name}");
     }
     let mut endo = with_material("EndoSteel", 14);
-    endo.damage_phase(BattleSection::CenterTorso, 10, BattleDamagePhase::Internal);
+    endo.damage_phase(MechSection::CenterTorso, 10, DamagePhase::Internal);
     assert_eq!(endo.mass().unwrap().structure, 1536);
 }
 
@@ -164,13 +160,13 @@ fn material_flags_alone_do_not_replace_required_slots() {
         "specials".into(),
         "FlipArms FerroFibrous_Tech EndoSteel_Tech HvyFerroFibrous_Tech LtFerroFibrous_Tech".into(),
     );
-    let declared = BattleUnit::from_template(template).unwrap();
+    let declared = Mech::from_template(template).unwrap();
     assert_eq!(declared.mass().unwrap(), standard.mass().unwrap());
 }
 
 /// The Jenner with empty side torsos for engine slots, no jump jets, and a `[construction]`
 /// table.
-fn jenner_with(construction: &str, slots: &str) -> BattleUnit {
+fn jenner_with(construction: &str, slots: &str) -> Mech {
     let source = JENNER
         .replace("jump_mp = 5\n", "")
         .replace("slots = [\n    { at = \"1-2\", item = \"JumpJet\" },\n]\n", "")
@@ -193,20 +189,20 @@ fn mixed_technology_engines_use_their_own_base() {
     let standard = jenner_with("", SRM).mass().unwrap().engine;
     assert_eq!(standard, 12 * 1024);
     for (construction, engine, mass) in [
-        ("engine = \"xl\"", BattleEngine::Xl, 6 * 1024),
+        ("engine = \"xl\"", Engine::Xl, 6 * 1024),
         (
             "engine = \"xl\"\nengine_tech = \"clan\"",
-            BattleEngine::Xl,
+            Engine::Xl,
             6 * 1024,
         ),
-        ("engine = \"light\"", BattleEngine::Light, 9 * 1024),
+        ("engine = \"light\"", Engine::Light, 9 * 1024),
     ] {
         let unit = jenner_with(construction, SRM);
         assert_eq!(unit.engine().unwrap(), engine, "{construction}");
         assert_eq!(unit.mass().unwrap().engine, mass, "{construction}");
     }
     let clan = jenner_with("engine = \"xl\"\nengine_tech = \"clan\"", SRM);
-    let side = clan.definition().sections[&BattleSection::LeftTorso]
+    let side = clan.definition().sections[&MechSection::LeftTorso]
         .criticals
         .values()
         .filter(|critical| critical.equipment == "Engine")

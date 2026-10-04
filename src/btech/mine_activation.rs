@@ -1,5 +1,5 @@
 //! Read-only mine coverage and ordered activation selection for movement and landing callers.
-use super::{BattleMineKind, BattleMinefield, HexCoordinate, StoredMap};
+use super::{HexCoordinate, MineKind, Minefield, StoredMap};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
@@ -7,7 +7,7 @@ use serde::Serialize;
 /// Physical event at the unit's current coordinate; command detonation is a separate radio action.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleMineTriggerReason {
+pub enum MineTriggerReason {
     Step,
     Land,
     Drop,
@@ -17,7 +17,7 @@ pub enum BattleMineTriggerReason {
 /// Command mines are noticed locally, while trigger fields enqueue script behavior without a blast.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleMineResponse {
+pub enum MineResponse {
     Explode,
     Trigger,
     Spotted,
@@ -25,18 +25,18 @@ pub enum BattleMineResponse {
 
 /// Stable field identity and the pre-event definition, owned by the eventual detonation transaction.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-pub struct BattleMineActivation {
+pub struct MineActivation {
     pub ordinal: u32,
-    pub mine: BattleMinefield,
-    pub response: BattleMineResponse,
+    pub mine: Minefield,
+    pub response: MineResponse,
 }
 
-impl BattleMinefield {
+impl Minefield {
     /// Bound iteration for cache rebuilding with the same radius used by coverage geometry.
     pub(super) fn coverage_radius(self) -> i64 {
         match self.kind {
-            BattleMineKind::Trigger => i64::from(self.extra),
-            BattleMineKind::Vibra => (100 - i64::from(self.extra)) / 10,
+            MineKind::Trigger => i64::from(self.extra),
+            MineKind::Vibra => (100 - i64::from(self.extra)) / 10,
             _ => 0,
         }
     }
@@ -45,7 +45,7 @@ impl BattleMinefield {
     pub(super) fn covers(self, coordinate: HexCoordinate) -> Result<bool> {
         let dx = (i64::from(self.coordinate.x) - i64::from(coordinate.x)).abs();
         let dy = (i64::from(self.coordinate.y) - i64::from(coordinate.y)).abs();
-        if self.kind == BattleMineKind::Trigger {
+        if self.kind == MineKind::Trigger {
             let radius = self.coverage_radius();
             return Ok(dx <= radius
                 && dy <= radius
@@ -56,7 +56,7 @@ impl BattleMinefield {
                     .round_ties_even()
                     <= self.extra as f64);
         }
-        if self.kind != BattleMineKind::Vibra {
+        if self.kind != MineKind::Vibra {
             return Ok(self.coordinate == coordinate);
         }
         let radius = self.coverage_radius();
@@ -71,13 +71,11 @@ impl BattleMinefield {
         self,
         coordinate: HexCoordinate,
         tons: i64,
-        reason: BattleMineTriggerReason,
-    ) -> Result<Option<BattleMineResponse>> {
-        if self.kind == BattleMineKind::Trigger {
-            if !matches!(
-                reason,
-                BattleMineTriggerReason::Step | BattleMineTriggerReason::Land
-            ) || i64::from(self.strength) > tons
+        reason: MineTriggerReason,
+    ) -> Result<Option<MineResponse>> {
+        if self.kind == MineKind::Trigger {
+            if !matches!(reason, MineTriggerReason::Step | MineTriggerReason::Land)
+                || i64::from(self.strength) > tons
             {
                 return Ok(None);
             }
@@ -89,16 +87,16 @@ impl BattleMinefield {
                     .range(coordinate.center())?
                     .round_ties_even()
                     <= self.extra as f64)
-                .then_some(BattleMineResponse::Trigger));
+                .then_some(MineResponse::Trigger));
         }
         if self.coordinate == coordinate {
             return Ok(match self.kind {
-                BattleMineKind::Command => Some(BattleMineResponse::Spotted),
-                BattleMineKind::Vibra if i64::from(self.extra) > tons => None,
-                _ => Some(BattleMineResponse::Explode),
+                MineKind::Command => Some(MineResponse::Spotted),
+                MineKind::Vibra if i64::from(self.extra) > tons => None,
+                _ => Some(MineResponse::Explode),
             });
         }
-        if self.kind != BattleMineKind::Vibra || i64::from(self.extra) >= tons {
+        if self.kind != MineKind::Vibra || i64::from(self.extra) >= tons {
             return Ok(None);
         }
         let radius = (tons - 20) / 10;
@@ -107,7 +105,7 @@ impl BattleMinefield {
         let range = self.coordinate.center().range(coordinate.center())?;
         Ok(
             (dx <= radius && dy <= radius && range <= ((tons - i64::from(self.extra)) / 10) as f64)
-                .then_some(BattleMineResponse::Explode),
+                .then_some(MineResponse::Explode),
         )
     }
 }
@@ -138,8 +136,8 @@ impl StoredMap {
 pub fn mine_activations(
     world: &World,
     id: ObjectId,
-    reason: BattleMineTriggerReason,
-) -> Result<Vec<BattleMineActivation>> {
+    reason: MineTriggerReason,
+) -> Result<Vec<MineActivation>> {
     ensure!(
         world
             .objects
@@ -183,11 +181,11 @@ pub fn mine_activations(
     let tons = i64::from(mass / 1024);
     let mut activations = Vec::new();
     for (&ordinal, &mine) in map.ordered_minefields() {
-        if airborne && mine.kind != BattleMineKind::Active {
+        if airborne && mine.kind != MineKind::Active {
             continue;
         }
         if let Some(response) = mine.response(coordinate, tons, reason)? {
-            activations.push(BattleMineActivation {
+            activations.push(MineActivation {
                 ordinal,
                 mine,
                 response,
@@ -202,8 +200,8 @@ mod tests {
     use super::*;
 
     /// Isolated definitions keep geometry and reaction boundaries independent of unit construction.
-    fn field(kind: BattleMineKind, extra: i32) -> BattleMinefield {
-        BattleMinefield {
+    fn field(kind: MineKind, extra: i32) -> Minefield {
+        Minefield {
             coordinate: HexCoordinate { x: 2, y: 2 },
             kind,
             strength: 30,
@@ -214,31 +212,31 @@ mod tests {
 
     #[test]
     fn coverage_preserves_diamond_radius_and_trigger_rounding() {
-        let vibra = field(BattleMineKind::Vibra, 80);
+        let vibra = field(MineKind::Vibra, 80);
         assert!(vibra.covers(HexCoordinate { x: 4, y: 3 }).unwrap());
         assert!(!vibra.covers(HexCoordinate { x: 4, y: 4 }).unwrap());
         assert!(
-            !field(BattleMineKind::Vibra, 110)
+            !field(MineKind::Vibra, 110)
                 .covers(vibra.coordinate)
                 .unwrap()
         );
         assert!(
-            field(BattleMineKind::Vibra, 100)
+            field(MineKind::Vibra, 100)
                 .covers(vibra.coordinate)
                 .unwrap()
         );
-        let trigger = field(BattleMineKind::Trigger, 1);
+        let trigger = field(MineKind::Trigger, 1);
         for adjacent in trigger.coordinate.neighbors().unwrap() {
             assert!(trigger.covers(adjacent).unwrap());
         }
         assert!(!trigger.covers(HexCoordinate { x: 2, y: 4 }).unwrap());
         assert!(
-            !field(BattleMineKind::Trigger, -1)
+            !field(MineKind::Trigger, -1)
                 .covers(trigger.coordinate)
                 .unwrap()
         );
         assert!(
-            !field(BattleMineKind::Standard, 100)
+            !field(MineKind::Standard, 100)
                 .covers(HexCoordinate { x: 2, y: 3 })
                 .unwrap()
         );
@@ -247,58 +245,48 @@ mod tests {
     #[test]
     fn activation_distinguishes_weight_reason_and_remote_fields() {
         let point = HexCoordinate { x: 2, y: 2 };
-        let trigger = field(BattleMineKind::Trigger, 2);
+        let trigger = field(MineKind::Trigger, 2);
         assert_eq!(
             trigger
-                .response(point, 29, BattleMineTriggerReason::Step)
+                .response(point, 29, MineTriggerReason::Step)
                 .unwrap(),
             None
         );
         assert_eq!(
             trigger
-                .response(point, 30, BattleMineTriggerReason::Land)
+                .response(point, 30, MineTriggerReason::Land)
                 .unwrap(),
-            Some(BattleMineResponse::Trigger)
+            Some(MineResponse::Trigger)
         );
-        for reason in [BattleMineTriggerReason::Drop, BattleMineTriggerReason::Fall] {
+        for reason in [MineTriggerReason::Drop, MineTriggerReason::Fall] {
             assert_eq!(trigger.response(point, 100, reason).unwrap(), None);
         }
-        let command = field(BattleMineKind::Command, 99);
+        let command = field(MineKind::Command, 99);
         assert_eq!(
-            command
-                .response(point, 0, BattleMineTriggerReason::Fall)
-                .unwrap(),
-            Some(BattleMineResponse::Spotted)
+            command.response(point, 0, MineTriggerReason::Fall).unwrap(),
+            Some(MineResponse::Spotted)
         );
-        let vibra = field(BattleMineKind::Vibra, 30);
+        let vibra = field(MineKind::Vibra, 30);
         assert_eq!(
-            vibra
-                .response(point, 29, BattleMineTriggerReason::Step)
-                .unwrap(),
+            vibra.response(point, 29, MineTriggerReason::Step).unwrap(),
             None
         );
         assert_eq!(
-            vibra
-                .response(point, 30, BattleMineTriggerReason::Step)
-                .unwrap(),
-            Some(BattleMineResponse::Explode)
+            vibra.response(point, 30, MineTriggerReason::Step).unwrap(),
+            Some(MineResponse::Explode)
         );
         let north = HexCoordinate { x: 2, y: 1 };
         assert_eq!(
-            vibra
-                .response(north, 39, BattleMineTriggerReason::Step)
-                .unwrap(),
+            vibra.response(north, 39, MineTriggerReason::Step).unwrap(),
             None
         );
         assert_eq!(
-            vibra
-                .response(north, 40, BattleMineTriggerReason::Step)
-                .unwrap(),
-            Some(BattleMineResponse::Explode)
+            vibra.response(north, 40, MineTriggerReason::Step).unwrap(),
+            Some(MineResponse::Explode)
         );
         assert_eq!(
-            field(BattleMineKind::Inferno, 0)
-                .response(north, 100, BattleMineTriggerReason::Land)
+            field(MineKind::Inferno, 0)
+                .response(north, 100, MineTriggerReason::Land)
                 .unwrap(),
             None
         );

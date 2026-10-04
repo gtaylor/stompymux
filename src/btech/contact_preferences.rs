@@ -6,14 +6,14 @@ use serde::{Deserialize, Serialize};
 /// Saved building inclusion; follow-brief uses the caller's current display policy.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleBuildingContactMode {
+pub enum BuildingContactMode {
     FollowBrief,
     Include,
     #[default]
     Exclude,
 }
 
-impl BattleBuildingContactMode {
+impl BuildingContactMode {
     /// Resolve this preference against whether the current brief mode includes structures.
     pub fn includes(self, brief_buildings: bool) -> bool {
         match self {
@@ -27,16 +27,16 @@ impl BattleBuildingContactMode {
 /// Saved contact-list categories; selected targets may bypass categories but never visibility.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
-pub struct BattleContactPreferences {
+pub struct ContactPreferences {
     pub include_dead: bool,
     pub include_shutdown: bool,
     pub include_enemies: bool,
     pub include_allies: bool,
     pub include_target: bool,
-    pub buildings: BattleBuildingContactMode,
+    pub buildings: BuildingContactMode,
 }
 
-impl Default for BattleContactPreferences {
+impl Default for ContactPreferences {
     fn default() -> Self {
         Self {
             include_dead: false,
@@ -44,13 +44,13 @@ impl Default for BattleContactPreferences {
             include_enemies: true,
             include_allies: true,
             include_target: true,
-            buildings: BattleBuildingContactMode::Exclude,
+            buildings: BuildingContactMode::Exclude,
         }
     }
 }
 
 /// Read saved contact inclusion settings for a live player.
-pub fn contact_preferences(world: &World, player: ObjectId) -> Result<BattleContactPreferences> {
+pub fn contact_preferences(world: &World, player: ObjectId) -> Result<ContactPreferences> {
     super::view_dimensions(world, player)?;
     Ok(world
         .btech
@@ -65,7 +65,7 @@ pub fn contact_preferences(world: &World, player: ObjectId) -> Result<BattleCont
 pub fn set_contact_preferences(
     world: &mut World,
     player: ObjectId,
-    preferences: BattleContactPreferences,
+    preferences: ContactPreferences,
 ) -> Result<()> {
     super::view_dimensions(world, player)?;
     world
@@ -80,8 +80,8 @@ pub fn set_contact_preferences(
 pub fn filtered_contacts(
     world: &World,
     observer: ObjectId,
-    preferences: BattleContactPreferences,
-) -> Result<Vec<super::BattleContactView>> {
+    preferences: ContactPreferences,
+) -> Result<Vec<super::ContactView>> {
     filtered_for_source(world, observer.into(), preferences)
 }
 
@@ -89,14 +89,14 @@ pub fn filtered_contacts(
 pub(super) fn filtered_for_source(
     world: &World,
     source: super::fire_target::TargetSource,
-    preferences: BattleContactPreferences,
-) -> Result<Vec<super::BattleContactView>> {
+    preferences: ContactPreferences,
+) -> Result<Vec<super::ContactView>> {
     let contacts = super::displayed_contacts(world, source.unit)?;
     let selected = source
         .selection(world)
         .and_then(|selection| match selection {
-            super::BattleTargetSelection::Unit(lock) => Some(lock.target),
-            super::BattleTargetSelection::Hex(_) => None,
+            super::TargetSelection::Unit(lock) => Some(lock.target),
+            super::TargetSelection::Hex(_) => None,
         });
     Ok(contacts
         .into_iter()
@@ -113,22 +113,22 @@ pub(super) fn filtered_for_source(
             if unit.destroyed {
                 return preferences.include_dead;
             }
-            preferences.include_shutdown || unit.power == super::BattlePower::Running
+            preferences.include_shutdown || unit.power == super::Power::Running
         })
         .collect())
 }
 
 /// Decoded per-call unit options and diagnostics; these never update saved preferences.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleContactOptions {
+pub struct ContactOptions {
     pub buildings: bool,
-    pub preferences: BattleContactPreferences,
+    pub preferences: ContactPreferences,
     pub ignored: Vec<char>,
 }
 
 /// Decode up to fifty option characters. `!` resets all unit categories on and
 /// makes following category letters exclusions until another reset; unknowns do not change mode.
-pub fn parse_contact_options(options: &str) -> Result<BattleContactOptions> {
+pub fn parse_contact_options(options: &str) -> Result<ContactOptions> {
     parse_contact_options_for_display(options, false)
 }
 
@@ -136,25 +136,25 @@ pub fn parse_contact_options(options: &str) -> Result<BattleContactOptions> {
 pub fn parse_contact_options_for_display(
     options: &str,
     brief_buildings: bool,
-) -> Result<BattleContactOptions> {
+) -> Result<ContactOptions> {
     anyhow::ensure!(
         !options.chars().any(char::is_whitespace),
         "Contact options must be one word"
     );
-    let mut preferences = BattleContactPreferences {
+    let mut preferences = ContactPreferences {
         include_dead: false,
         include_shutdown: false,
         include_enemies: false,
         include_allies: false,
         include_target: false,
-        buildings: BattleBuildingContactMode::Exclude,
+        buildings: BuildingContactMode::Exclude,
     };
     let mut buildings = brief_buildings;
     let mut excluded = false;
     let mut ignored = Vec::new();
     for option in options.chars().take(50) {
         if option == '!' {
-            preferences = BattleContactPreferences {
+            preferences = ContactPreferences {
                 include_dead: true,
                 ..Default::default()
             };
@@ -176,7 +176,7 @@ pub fn parse_contact_options_for_display(
         };
         *category = !excluded;
     }
-    Ok(BattleContactOptions {
+    Ok(ContactOptions {
         buildings,
         preferences,
         ignored,
@@ -189,12 +189,9 @@ mod tests {
     #[test]
     fn building_policy_resolves_brief_and_explicit_modes() {
         for brief in [false, true] {
-            assert_eq!(
-                BattleBuildingContactMode::FollowBrief.includes(brief),
-                brief
-            );
-            assert!(BattleBuildingContactMode::Include.includes(brief));
-            assert!(!BattleBuildingContactMode::Exclude.includes(brief));
+            assert_eq!(BuildingContactMode::FollowBrief.includes(brief), brief);
+            assert!(BuildingContactMode::Include.includes(brief));
+            assert!(!BuildingContactMode::Exclude.includes(brief));
         }
     }
 

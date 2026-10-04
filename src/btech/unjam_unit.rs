@@ -1,20 +1,20 @@
 //! Unit-state adapters for the shared feed-clearing workflow; no recovery rules live here.
-use super::{BattlePower, BattleUnjam, BattleWeaponReadiness};
+use super::{Power, Unjam, WeaponReadiness};
 use crate::{ObjectId, World};
 use anyhow::Result;
 
 /// Current cockpit, mount and feed facts used by common admission and expiry rules.
 pub(super) struct FeedState {
-    pub power: BattlePower,
+    pub power: Power,
     pub destroyed: bool,
-    pub ready: BattleWeaponReadiness,
+    pub ready: WeaponReadiness,
     pub jammed: bool,
     pub pilot: Option<ObjectId>,
     pub jumping: bool,
     pub desired_speed: f64,
     pub cruise_speed: f64,
     pub recycling: bool,
-    pub pending: Option<BattleUnjam>,
+    pub pending: Option<Unjam>,
     pub bin: Option<usize>,
 }
 
@@ -58,7 +58,7 @@ pub(super) fn state(world: &World, id: ObjectId, index: usize) -> Result<FeedSta
 }
 
 /// Borrow the owned countdown under the enclosing world transaction.
-pub(super) fn pending(world: &mut World, id: ObjectId) -> Result<&mut Option<BattleUnjam>> {
+pub(super) fn pending(world: &mut World, id: ObjectId) -> Result<&mut Option<Unjam>> {
     super::with_unit_mut!(world.btech.unit_mut(id).expect("admitted unit"), |unit| {
         unit.validate()?;
         Ok(&mut unit.unjam)

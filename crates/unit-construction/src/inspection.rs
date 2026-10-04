@@ -1,10 +1,10 @@
 //! Template inspection records: armor, criticals, weapons, engine ratings and configured
 //! technologies read from a template alone, in the shapes the native inspection commands report.
 use super::{
-    BattlePart, BattlePartKind, BattleSection, BattleTemplate, BattleVehicleMovement,
-    BattleVehicleTemplate, BattleWeapon, CriticalDefinition, RawMovement, RawSectionCode,
-    RawTemplate, RawUnitClass, administrative_template_movement, administrative_template_tonnage,
-    part_catalogue, strip_name_prefix,
+    CriticalDefinition, MechSection, MechTemplate, Part, PartKind, RawMovement, RawSectionCode,
+    RawTemplate, RawUnitClass, VehicleMovement, VehicleTemplate, Weapon,
+    administrative_template_movement, administrative_template_tonnage, part_catalogue,
+    strip_name_prefix,
 };
 use anyhow::{Context, Result};
 use std::collections::BTreeMap;
@@ -108,8 +108,8 @@ fn raw_canonical_mech_internal(template: &RawTemplate, section: RawSectionCode) 
 
 /// Return the post-load internal structure enforced by the native template checker.
 pub fn inspection_canonical_mech_internal(
-    template: &BattleTemplate,
-    section: BattleSection,
+    template: &MechTemplate,
+    section: MechSection,
 ) -> Option<u16> {
     // A freshly registered native MECH has cleared zero-ton construction state.
     // Structure normalization begins only after a nonzero template is loaded.
@@ -137,7 +137,7 @@ pub fn inspection_canonical_mech_internal(
         [30, 20, 16, 20],
         [31, 21, 17, 21],
     ];
-    if section == BattleSection::Head {
+    if section == MechSection::Head {
         return Some(3);
     }
     let tons = usize::from(template.tons);
@@ -147,12 +147,12 @@ pub fn inspection_canonical_mech_internal(
     let values = STRUCTURE[(tons - 10) / 5];
     let quad = template.chassis().ok()?.is_leg(section);
     Some(match section {
-        BattleSection::CenterTorso => values[0],
-        BattleSection::LeftTorso | BattleSection::RightTorso => values[1],
-        BattleSection::LeftArm | BattleSection::RightArm if quad => values[3],
-        BattleSection::LeftArm | BattleSection::RightArm => values[2],
-        BattleSection::LeftLeg | BattleSection::RightLeg => values[3],
-        BattleSection::Head => unreachable!(),
+        MechSection::CenterTorso => values[0],
+        MechSection::LeftTorso | MechSection::RightTorso => values[1],
+        MechSection::LeftArm | MechSection::RightArm if quad => values[3],
+        MechSection::LeftArm | MechSection::RightArm => values[2],
+        MechSection::LeftLeg | MechSection::RightLeg => values[3],
+        MechSection::Head => unreachable!(),
     })
 }
 
@@ -168,7 +168,7 @@ pub struct InspectionPart {
 /// particular `CASE-II` means component 427 in a critical slot, while loose cargo
 /// 562 deliberately has the same display name.
 pub fn inspection_template_part(name: &str) -> Option<(InspectionPart, bool, bool)> {
-    if let Ok(weapon) = BattleWeapon::parse(name) {
+    if let Ok(weapon) = Weapon::parse(name) {
         return Some((
             InspectionPart {
                 id: weapon.part_id(),
@@ -178,7 +178,7 @@ pub fn inspection_template_part(name: &str) -> Option<(InspectionPart, bool, boo
         ));
     }
     if let Some(name) = strip_name_prefix(name, "Ammo_") {
-        let weapon = BattleWeapon::parse(name).ok()?;
+        let weapon = Weapon::parse(name).ok()?;
         return Some((
             InspectionPart {
                 id: weapon.ammunition_part_id(),
@@ -192,27 +192,27 @@ pub fn inspection_template_part(name: &str) -> Option<(InspectionPart, bool, boo
             || form.long_name.eq_ignore_ascii_case(name)
             || form.short_name.eq_ignore_ascii_case(name)
     }) {
-        let part = BattlePart::from_id(form.part_id)?;
-        let is_weapon = part.kind == BattlePartKind::Weapon;
+        let part = Part::from_id(form.part_id)?;
+        let is_weapon = part.kind == PartKind::Weapon;
         return Some((
             InspectionPart { id: form.part_id },
             is_weapon,
-            is_weapon || part.kind == BattlePartKind::Ammunition,
+            is_weapon || part.kind == PartKind::Ammunition,
         ));
     }
     let internal = (394..=445)
-        .filter_map(BattlePart::from_id)
+        .filter_map(Part::from_id)
         .find(|part| part.name.eq_ignore_ascii_case(name));
     let part =
-        internal.or_else(|| BattlePart::all().find(|part| part.name.eq_ignore_ascii_case(name)))?;
-    let weapon = part.kind == BattlePartKind::Weapon;
+        internal.or_else(|| Part::all().find(|part| part.name.eq_ignore_ascii_case(name)))?;
+    let weapon = part.kind == PartKind::Weapon;
     Some((InspectionPart { id: part.part_id }, weapon, weapon))
 }
 
 /// Normalize native weapon names and mech internals for the combat catalogue.
-pub fn inspection_compatible_template(template: &BattleTemplate) -> BattleTemplate {
+pub fn inspection_compatible_template(template: &MechTemplate) -> MechTemplate {
     let mut compatible = template.clone();
-    for section in BattleSection::ALL {
+    for section in MechSection::ALL {
         if let Some(internal) = inspection_canonical_mech_internal(template, section)
             && let Some(definition) = compatible.sections.get_mut(&section)
         {
@@ -222,7 +222,7 @@ pub fn inspection_compatible_template(template: &BattleTemplate) -> BattleTempla
     compatible.jump_speed = inspection_normalized_jump_speed(template);
     for definition in compatible.sections.values_mut() {
         for critical in definition.criticals.values_mut() {
-            if let Ok(weapon) = BattleWeapon::parse(&critical.equipment) {
+            if let Ok(weapon) = Weapon::parse(&critical.equipment) {
                 critical.equipment = weapon.name().to_owned();
             }
         }
@@ -231,7 +231,7 @@ pub fn inspection_compatible_template(template: &BattleTemplate) -> BattleTempla
 }
 
 /// Jump speed after C's `do_sub_magic` reconciles authored speed with installed jets.
-pub fn inspection_normalized_jump_speed(template: &BattleTemplate) -> f64 {
+pub fn inspection_normalized_jump_speed(template: &MechTemplate) -> f64 {
     let improved = inspection_configured_technology(template, "ImprovedJJ_Tech", "secondary");
     let mut criticals = template
         .sections
@@ -250,13 +250,11 @@ pub fn inspection_normalized_jump_speed(template: &BattleTemplate) -> f64 {
 }
 
 /// Normalize native vehicle weapon names for the combat catalogue.
-pub fn inspection_compatible_vehicle_template(
-    template: &BattleVehicleTemplate,
-) -> BattleVehicleTemplate {
+pub fn inspection_compatible_vehicle_template(template: &VehicleTemplate) -> VehicleTemplate {
     let mut compatible = template.clone();
     for definition in compatible.sections.values_mut() {
         for critical in definition.criticals.values_mut() {
-            if let Ok(weapon) = BattleWeapon::parse(&critical.equipment) {
+            if let Ok(weapon) = Weapon::parse(&critical.equipment) {
                 critical.equipment = weapon.name().to_owned();
             }
         }
@@ -384,7 +382,7 @@ pub fn inspect_raw_template_criticals(
         ammunition_modes.sort_unstable();
         ammunition_modes.dedup();
         let ammunition = identity
-            .filter(|(part, _, _)| BattlePart::ammunition_weapon_id(part.id).is_some())
+            .filter(|(part, _, _)| Part::ammunition_weapon_id(part.id).is_some())
             .map(|_| {
                 let rounds = critical
                     .and_then(|raw| raw.data.parse::<i32>().ok())
@@ -406,13 +404,11 @@ pub fn inspect_raw_template_criticals(
             slot: slot + 1,
             kind: match identity {
                 Some((_, true, _)) => "weapon",
-                Some((part, _, _)) if BattlePart::ammunition_weapon_id(part.id).is_some() => {
-                    "ammunition"
-                }
-                Some((part, _, _)) => match BattlePart::from_id(part.id).map(|part| part.kind) {
-                    Some(BattlePartKind::Bomb) => "bomb",
-                    Some(BattlePartKind::Commodity) => "cargo",
-                    Some(BattlePartKind::Weapon) => "weapon",
+                Some((part, _, _)) if Part::ammunition_weapon_id(part.id).is_some() => "ammunition",
+                Some((part, _, _)) => match Part::from_id(part.id).map(|part| part.kind) {
+                    Some(PartKind::Bomb) => "bomb",
+                    Some(PartKind::Commodity) => "cargo",
+                    Some(PartKind::Weapon) => "weapon",
                     _ => "special",
                 },
                 None => "empty",
@@ -447,8 +443,8 @@ pub fn inspect_raw_template_weapons(template: &RawTemplate) -> Result<Vec<Inspec
                 slot += 1;
                 continue;
             };
-            let profile_slots = BattleWeapon::from_part_id(part.id)
-                .map_or(1, |weapon| weapon.profile().critical_slots);
+            let profile_slots =
+                Weapon::from_part_id(part.id).map_or(1, |weapon| weapon.profile().critical_slots);
             let slot_count = if template.class == RawUnitClass::Mech {
                 profile_slots
             } else {
@@ -473,7 +469,7 @@ pub fn inspect_raw_template_weapons(template: &RawTemplate) -> Result<Vec<Inspec
 }
 
 fn raw_weapon_recycle_time(part_id: i32) -> u8 {
-    BattleWeapon::from_part_id(part_id).map_or_else(
+    Weapon::from_part_id(part_id).map_or_else(
         || match part_id {
             171 => 7,
             172 => 10,
@@ -492,7 +488,7 @@ pub fn inspection_raw_part(raw: &CriticalDefinition) -> Option<(InspectionPart, 
 }
 
 /// C-compatible nominal engine output for a template.
-pub fn inspection_engine_rating(template: &BattleTemplate) -> Result<u32> {
+pub fn inspection_engine_rating(template: &MechTemplate) -> Result<u32> {
     let tons = administrative_template_tonnage(&template.attributes, template.tons);
     anyhow::ensure!(
         template.max_speed.is_finite() && template.max_speed >= 0.0,
@@ -511,7 +507,7 @@ pub fn inspection_engine_rating(template: &BattleTemplate) -> Result<u32> {
 }
 
 /// C-facing vehicle rating and suspension using the effective wide tonnage.
-pub fn inspection_vehicle_engine_rating(template: &BattleVehicleTemplate) -> Result<(u32, u16)> {
+pub fn inspection_vehicle_engine_rating(template: &VehicleTemplate) -> Result<(u32, u16)> {
     let tons = administrative_template_tonnage(&template.attributes, template.tons);
     let movement = administrative_template_movement(&template.attributes, template.movement);
     inspection_vehicle_engine_values(tons, movement, template.max_speed)
@@ -562,7 +558,7 @@ pub fn inspect_raw_template_engine(template: &RawTemplate) -> (i32, i32) {
 /// Calculate the vehicle engine projection from already-resolved administrative fields.
 pub fn inspection_vehicle_engine_values(
     tons: u32,
-    movement: BattleVehicleMovement,
+    movement: VehicleMovement,
     maximum_speed: f64,
 ) -> Result<(u32, u16)> {
     anyhow::ensure!(
@@ -576,14 +572,14 @@ pub fn inspection_vehicle_engine_values(
         "Engine rating is out of bounds"
     );
     let suspension = match movement {
-        BattleVehicleMovement::Tracked | BattleVehicleMovement::Stationary => 0,
-        BattleVehicleMovement::Wheeled => 20,
-        BattleVehicleMovement::Vtol => match tons {
+        VehicleMovement::Tracked | VehicleMovement::Stationary => 0,
+        VehicleMovement::Wheeled => 20,
+        VehicleMovement::Vtol => match tons {
             0..=10 => 50,
             11..=20 => 95,
             _ => 140,
         },
-        BattleVehicleMovement::Hover => match tons {
+        VehicleMovement::Hover => match tons {
             0..=10 => 40,
             11..=20 => 85,
             21..=30 => 130,
@@ -594,11 +590,7 @@ pub fn inspection_vehicle_engine_values(
     Ok((rating as u32, suspension))
 }
 
-pub fn inspection_configured_technology(
-    template: &BattleTemplate,
-    name: &str,
-    group: &str,
-) -> bool {
+pub fn inspection_configured_technology(template: &MechTemplate, name: &str, group: &str) -> bool {
     inspection_configured_technology_attributes(&template.attributes, name, group)
 }
 

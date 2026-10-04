@@ -31,7 +31,7 @@ async fn rolls_command_admission_and_empty_report() {
                 .contains("Permission denied")
         );
     }
-    assert_eq!(scripts.world().battle_roll_statistics().unwrap().total(), 0);
+    assert_eq!(scripts.world().roll_statistics().unwrap().total(), 0);
 }
 
 /// Actual piloting checks appear once; direct dice and repeated report reads cannot change the histogram.
@@ -43,7 +43,7 @@ async fn rolls_command_reports_live_checks_and_resets_on_restart() {
     ] {
         let (_dir, config, mut world, unit, target, index) =
             firing::fixture_with_target(source, None, source).await;
-        let mut expected = world.battle_roll_statistics().unwrap();
+        let mut expected = world.roll_statistics().unwrap();
         for _ in 0..16 {
             let check = roll_battle_piloting(&mut world, unit, 0, false).unwrap();
             expected
@@ -51,7 +51,7 @@ async fn rolls_command_reports_live_checks_and_resets_on_restart() {
                 .unwrap();
         }
         roll_unit_dice(&mut world, unit, 20).unwrap();
-        assert_eq!(world.battle_roll_statistics().unwrap(), expected);
+        assert_eq!(world.roll_statistics().unwrap(), expected);
         let before_preview = serde_json::to_value(&world).unwrap();
         battle_pilot_aim_modifiers(
             &world,
@@ -59,7 +59,7 @@ async fn rolls_command_reports_live_checks_and_resets_on_restart() {
             target,
             index,
             false,
-            BattleAimRules {
+            AimRules {
                 woods_damage: false,
                 dig_bonus: 2,
                 dig_only_front: true,
@@ -72,7 +72,7 @@ async fn rolls_command_reports_live_checks_and_resets_on_restart() {
             },
         )
         .unwrap();
-        assert_eq!(world.battle_roll_statistics().unwrap(), expected);
+        assert_eq!(world.roll_statistics().unwrap(), expected);
         assert_eq!(serde_json::to_value(&world).unwrap(), before_preview);
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         let before = serde_json::to_value(&*scripts.world()).unwrap();
@@ -83,7 +83,7 @@ async fn rolls_command_reports_live_checks_and_resets_on_restart() {
             };
             assert_eq!(report, expected.render());
             assert_eq!(report.lines().count(), 13);
-            assert_eq!(scripts.world().battle_roll_statistics().unwrap(), expected);
+            assert_eq!(scripts.world().roll_statistics().unwrap(), expected);
             assert_eq!(serde_json::to_value(&*scripts.world()).unwrap(), before);
             assert!(scripts.outbox().is_empty());
         }
@@ -92,7 +92,7 @@ async fn rolls_command_reports_live_checks_and_resets_on_restart() {
             .await
             .unwrap();
         let loaded = persistence::load(&config.database()).await.unwrap();
-        assert_eq!(loaded.battle_roll_statistics().unwrap().total(), 0);
+        assert_eq!(loaded.roll_statistics().unwrap().total(), 0);
         let restarted = Scripts::new(&config, Rc::new(RefCell::new(loaded))).unwrap();
         assert_eq!(
             support::run_text(&restarted, &config, ObjectId(1), 1, "+rolls"),

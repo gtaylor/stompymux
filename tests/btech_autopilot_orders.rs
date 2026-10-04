@@ -8,12 +8,12 @@ use crate::{
     support::autopilot::{heartbeat_snapshots, heartbeat_snapshots_until},
 };
 use std::{cell::RefCell, rc::Rc};
-use stompymux_rs::BattleUnitTemplateExt;
+use stompymux_rs::UnitTemplateExt;
 use stompymux_rs::btech::{AutopilotOrder, AutopilotOrderState, AutopilotReason, AutopilotState};
 use stompymux_rs::{
-    BattlePower, BattleUnitSignature, BattleUnitTemplate, BattleVehicleTemplate, Config, Kind,
-    MapAsset, ObjectId, Scripts, World, assign_battle_pilot, create_battle_map,
-    create_battle_vehicle, place_battle_unit, refresh_battle_contacts, set_battle_unit_signature,
+    Config, Kind, MapAsset, ObjectId, Power, Scripts, UnitSignature, UnitTemplate, VehicleTemplate,
+    World, assign_battle_pilot, create_battle_map, create_battle_vehicle, place_battle_unit,
+    refresh_battle_contacts, set_battle_unit_signature,
 };
 
 struct GroundFixture {
@@ -51,7 +51,7 @@ async fn tracked_wheeled_and_hover_vehicles_accept_and_drive_move_orders() {
                 create_battle_vehicle(
                     &mut world,
                     id,
-                    BattleVehicleTemplate::parse("test",template).unwrap(),
+                    VehicleTemplate::parse("test",template).unwrap(),
                 )
                 .unwrap();
                 crate::support::seed_object_dice(&mut world, id, crate::support::FIXTURE_DICE_SEED);
@@ -61,7 +61,7 @@ async fn tracked_wheeled_and_hover_vehicles_accept_and_drive_move_orders() {
             let mut state = serde_json::to_value(&world.btech).unwrap();
             for id in &units {
                 state["vehicles"][id.0.to_string()]["power"] =
-                    serde_json::to_value(BattlePower::Running).unwrap();
+                    serde_json::to_value(Power::Running).unwrap();
             }
             world.btech = serde_json::from_value(state).unwrap();
             world.validate(&config).unwrap();
@@ -114,7 +114,7 @@ async fn ground_fixture(positions: &[(u16, u16)], pilot_first: bool) -> GroundFi
     for (index, &(x, y)) in positions.iter().enumerate() {
         let id = world.create(&config, format!("Autopilot unit {index}"), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-        BattleUnitTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml"))
+        UnitTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml"))
             .unwrap()
             .create(&mut world, id)
             .unwrap();
@@ -133,7 +133,7 @@ async fn ground_fixture(positions: &[(u16, u16)], pilot_first: bool) -> GroundFi
     let mut state = serde_json::to_value(&world.btech).unwrap();
     for id in &units {
         state["constructed"][id.0.to_string()]["power"] =
-            serde_json::to_value(BattlePower::Running).unwrap();
+            serde_json::to_value(Power::Running).unwrap();
     }
     world.btech = serde_json::from_value(state).unwrap();
     world.validate(&config).unwrap();
@@ -147,7 +147,7 @@ async fn ground_fixture(positions: &[(u16, u16)], pilot_first: bool) -> GroundFi
     }
 }
 
-fn hex_distance(a: stompymux_rs::BattlePosition, b: stompymux_rs::BattlePosition) -> u32 {
+fn hex_distance(a: stompymux_rs::Position, b: stompymux_rs::Position) -> u32 {
     stompymux_rs::btech::autopilot::navigation::GridHex::new(a.x, a.y).distance(
         stompymux_rs::btech::autopilot::navigation::GridHex::new(b.x, b.y),
     )
@@ -257,7 +257,7 @@ async fn patrol_order_cycles_through_waypoints() {
                     .is_some_and(|position| {
                         hex_distance(
                             position,
-                            stompymux_rs::BattlePosition {
+                            stompymux_rs::Position {
                                 map: fixture.map,
                                 x: 0,
                                 y: 14,
@@ -271,7 +271,7 @@ async fn patrol_order_cycles_through_waypoints() {
                     .is_some_and(|position| {
                         hex_distance(
                             position,
-                            stompymux_rs::BattlePosition {
+                            stompymux_rs::Position {
                                 map: fixture.map,
                                 x: 1,
                                 y: 13,
@@ -311,7 +311,7 @@ async fn attack_move_pursues_a_visible_contact_then_resumes_destination() {
             set_battle_unit_signature(
                 &mut fixture.world,
                 target,
-                BattleUnitSignature {
+                UnitSignature {
                     team: 1,
                     hidden: false,
                     illuminated: false,
@@ -347,12 +347,12 @@ async fn attack_move_pursues_a_visible_contact_then_resumes_destination() {
                 (2..=3).contains(&hex_distance(own,enemy))
             }).await;
             let mut resumed_world=snapshots.last().unwrap().clone();
-            stompymux_rs::transfer_battle_unit(&mut resumed_world,target,stompymux_rs::BattlePosition{map:fixture.map,x:2,y:0}).unwrap();
+            stompymux_rs::transfer_battle_unit(&mut resumed_world,target,stompymux_rs::Position{map:fixture.map,x:2,y:0}).unwrap();
             refresh_battle_contacts(&mut resumed_world,&[shooter]).unwrap();
             snapshots.extend(heartbeat_snapshots_until(&fixture.config,&resumed_world,200,|world| {
                 world.btech.controllers()[&shooter].feedback_records().iter().any(|feedback|feedback.event==stompymux_rs::btech::AutopilotFeedbackEvent::OrderSucceeded)
             }).await);
-            let destination = stompymux_rs::BattlePosition {
+            let destination = stompymux_rs::Position {
                 map: fixture.map,
                 x: 0,
                 y: 9,
@@ -422,7 +422,7 @@ async fn wrong_map_destination_blocks_the_active_order() {
             stompymux_rs::transfer_battle_unit(
                 &mut world,
                 unit,
-                stompymux_rs::BattlePosition {
+                stompymux_rs::Position {
                     map: other_map,
                     x: 0,
                     y: 0,
@@ -453,7 +453,7 @@ async fn opportunistic_fire_changes_hostile_target_armor() {
             set_battle_unit_signature(
                 &mut fixture.world,
                 target,
-                BattleUnitSignature {
+                UnitSignature {
                     team: 1,
                     hidden: false,
                     illuminated: false,

@@ -7,14 +7,9 @@ use stompymux_rs::*;
 #[tokio::test]
 async fn vehicle_material_replacement_matches_native_lua_and_restart() {
     for source in firing::templates().into_iter().skip(2) {
-        let (_dir, config, world, id, _, index) = firing::fixture_with_supply(
-            &source,
-            Some(BattleWeapon::Mml3),
-            &source,
-            false,
-            Some(""),
-        )
-        .await;
+        let (_dir, config, world, id, _, index) =
+            firing::fixture_with_supply(&source, Some(Weapon::Mml3), &source, false, Some(""))
+                .await;
         let original = world.btech.vehicles()[&id].clone();
         let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
         let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
@@ -37,12 +32,12 @@ async fn vehicle_material_replacement_matches_native_lua_and_restart() {
             let world = lua.world();
             let unit = &world.btech.vehicles()[&id];
             assert_eq!(
-                unit.sections()[&BattleVehicleSection::Front].armor,
-                original.sections()[&BattleVehicleSection::Front].armor - 1
+                unit.sections()[&VehicleSection::Front].armor,
+                original.sections()[&VehicleSection::Front].armor - 1
             );
             assert_eq!(
                 unit.weapon_failures()[&index],
-                BattleEquipmentFailure::AmmunitionJam
+                EquipmentFailure::AmmunitionJam
             );
             assert_eq!(
                 unit.ammunition().iter().sum::<u16>(),
@@ -87,7 +82,7 @@ async fn vehicle_section_loss_and_restoration_use_material_lifecycle_without_com
     for source in firing::templates().into_iter().skip(2) {
         let (_dir, config, world, id, _, _) =
             firing::fixture_with_target(&source, None, &source).await;
-        let original = world.btech.vehicles()[&id].sections()[&BattleVehicleSection::Front].clone();
+        let original = world.btech.vehicles()[&id].sections()[&VehicleSection::Front].clone();
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         let description = format!("A:2/{},I:2/{}", original.armor, original.internal);
         set_battle_unit_field_action(
@@ -103,7 +98,7 @@ async fn vehicle_section_loss_and_restoration_use_material_lifecycle_without_com
             let world = scripts.world();
             let unit = &world.btech.vehicles()[&id];
             assert!(unit.is_destroyed());
-            assert_eq!(unit.power(), BattlePower::Off);
+            assert_eq!(unit.power(), Power::Off);
             assert!(unit.pilot().is_none());
             world.validate(&config).unwrap();
         }
@@ -111,9 +106,9 @@ async fn vehicle_section_loss_and_restoration_use_material_lifecycle_without_com
         let world = scripts.world();
         let unit = &world.btech.vehicles()[&id];
         assert!(!unit.is_destroyed());
-        assert_eq!(unit.power(), BattlePower::Off);
+        assert_eq!(unit.power(), Power::Off);
         assert!(unit.pilot().is_none());
-        assert_eq!(unit.sections()[&BattleVehicleSection::Front], original);
+        assert_eq!(unit.sections()[&VehicleSection::Front], original);
         world.validate(&config).unwrap();
     }
 }
@@ -121,14 +116,9 @@ async fn vehicle_section_loss_and_restoration_use_material_lifecycle_without_com
 #[tokio::test]
 async fn restoring_a_launcher_clears_its_spent_state_without_resetting_vehicle_corrections() {
     for source in firing::templates().into_iter().skip(2) {
-        let (_dir, config, mut world, id, _, index) = firing::fixture_with_supply(
-            &source,
-            Some(BattleWeapon::Mml3),
-            &source,
-            false,
-            Some(""),
-        )
-        .await;
+        let (_dir, config, mut world, id, _, index) =
+            firing::fixture_with_supply(&source, Some(Weapon::Mml3), &source, false, Some(""))
+                .await;
         firing::edit(&mut world, id, |state| {
             state["definition"]["sections"]["front"]["criticals"]["0"]["modes"] =
                 serde_json::json!(["OneShot"]);
@@ -179,14 +169,9 @@ async fn restoring_a_launcher_clears_its_spent_state_without_resetting_vehicle_c
 #[tokio::test]
 async fn mech_replacement_recalculates_only_after_critical_changes() {
     for (chassis, source) in firing::templates().into_iter().take(2).enumerate() {
-        let (_dir, config, world, id, _, index) = firing::fixture_with_supply(
-            &source,
-            Some(BattleWeapon::Mml3),
-            &source,
-            false,
-            Some(""),
-        )
-        .await;
+        let (_dir, config, world, id, _, index) =
+            firing::fixture_with_supply(&source, Some(Weapon::Mml3), &source, false, Some(""))
+                .await;
         let original = world.btech.constructed_units()[&id].clone();
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         for (field, value) in [
@@ -212,11 +197,11 @@ async fn mech_replacement_recalculates_only_after_critical_changes() {
             let unit = &world.btech.constructed_units()[&id];
             assert_eq!(
                 unit.weapon_failures()[&index],
-                BattleEquipmentFailure::AmmunitionJam
+                EquipmentFailure::AmmunitionJam
             );
             assert_eq!(
-                unit.sections()[&BattleSection::LeftTorso].armor,
-                original.sections()[&BattleSection::LeftTorso].armor - 1
+                unit.sections()[&MechSection::LeftTorso].armor,
+                original.sections()[&MechSection::LeftTorso].armor - 1
             );
             let saved = serde_json::to_value(unit).unwrap();
             for field in [
@@ -270,7 +255,7 @@ async fn mech_native_lua_replacement_and_hull_lifecycle_agree() {
     for source in firing::templates().into_iter().take(2) {
         let (_dir, config, world, id, _, _) =
             firing::fixture_with_target(&source, None, &source).await;
-        let head = world.btech.constructed_units()[&id].sections()[&BattleSection::Head].clone();
+        let head = world.btech.constructed_units()[&id].sections()[&MechSection::Head].clone();
         let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
         let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         for value in [
@@ -296,7 +281,7 @@ async fn mech_native_lua_replacement_and_hull_lifecycle_agree() {
             let world = lua.world();
             let unit = &world.btech.constructed_units()[&id];
             assert!(unit.is_destroyed());
-            assert_eq!(unit.power(), BattlePower::Off);
+            assert_eq!(unit.power(), Power::Off);
             assert!(unit.pilot().is_none());
             world.validate(&config).unwrap();
         }
@@ -320,9 +305,9 @@ async fn mech_native_lua_replacement_and_hull_lifecycle_agree() {
         let saved = lua.world().clone();
         let unit = &saved.btech.constructed_units()[&id];
         assert!(!unit.is_destroyed());
-        assert_eq!(unit.power(), BattlePower::Off);
+        assert_eq!(unit.power(), Power::Off);
         assert!(unit.pilot().is_none());
-        assert_eq!(unit.sections()[&BattleSection::Head], head);
+        assert_eq!(unit.sections()[&MechSection::Head], head);
         saved.validate(&config).unwrap();
         persistence::save(&config.database(), &saved).await.unwrap();
         assert_eq!(
@@ -433,7 +418,7 @@ async fn gyro_reconstruction_preserves_secondary_protection_and_future_hit_behav
             replay.btech =
                 serde_json::from_value(serde_json::to_value(&replay.btech).unwrap()).unwrap();
             let location = CriticalLocation {
-                section: BattleSection::CenterTorso,
+                section: MechSection::CenterTorso,
                 slot: 3,
             };
             let outcome = destroy_battle_critical(&mut scripts.world_mut(), id, location).unwrap();
@@ -508,11 +493,11 @@ async fn material_replacement_preserves_light_probe_conditions_across_chassis() 
                 let world = scripts.world();
                 let available = if mech {
                     world.btech.constructed_units()[&id]
-                        .active_probe_available(BattleActiveProbe::Light)
+                        .active_probe_available(ActiveProbe::Light)
                         .unwrap()
                 } else {
                     world.btech.vehicles()[&id]
-                        .active_probe_available(BattleActiveProbe::Light)
+                        .active_probe_available(ActiveProbe::Light)
                         .unwrap()
                 };
                 assert_eq!(available, !failed);
@@ -528,7 +513,7 @@ async fn material_replacement_preserves_light_probe_conditions_across_chassis() 
                     &mut scripts.world_mut(),
                     id,
                     CriticalLocation {
-                        section: BattleSection::LeftTorso,
+                        section: MechSection::LeftTorso,
                         slot: 10,
                     },
                 )
@@ -538,7 +523,7 @@ async fn material_replacement_preserves_light_probe_conditions_across_chassis() 
                     &mut scripts.world_mut(),
                     id,
                     VehicleCriticalLocation {
-                        section: BattleVehicleSection::Front,
+                        section: VehicleSection::Front,
                         slot: 10,
                     },
                 )
@@ -567,14 +552,9 @@ async fn material_replacement_preserves_light_probe_conditions_across_chassis() 
 #[tokio::test]
 async fn replacement_retains_exposure_and_keeps_breached_equipment_unavailable() {
     for source in firing::templates() {
-        let (_dir, config, mut world, id, _, index) = firing::fixture_with_supply(
-            &source,
-            Some(BattleWeapon::Mml3),
-            &source,
-            false,
-            Some(""),
-        )
-        .await;
+        let (_dir, config, mut world, id, _, index) =
+            firing::fixture_with_supply(&source, Some(Weapon::Mml3), &source, false, Some(""))
+                .await;
         let mech = world.btech.constructed_units().contains_key(&id);
         let bins: Vec<_> = world
             .btech
@@ -586,7 +566,7 @@ async fn replacement_retains_exposure_and_keeps_breached_equipment_unavailable()
                     .ammunition
                     .iter()
                     .enumerate()
-                    .filter(|(_, bin)| bin.location.section == BattleSection::LeftTorso)
+                    .filter(|(_, bin)| bin.location.section == MechSection::LeftTorso)
                     .map(|(index, _)| index)
                     .collect()
             })
@@ -616,16 +596,13 @@ async fn replacement_retains_exposure_and_keeps_breached_equipment_unavailable()
             let world = scripts.world();
             if mech {
                 let unit = &world.btech.constructed_units()[&id];
-                assert!(unit.breached_sections().contains(&BattleSection::LeftTorso));
+                assert!(unit.breached_sections().contains(&MechSection::LeftTorso));
                 assert!(!unit.weapon_readiness(index).unwrap().intact);
                 assert!(bins.iter().all(|&bin| unit.ammunition()[bin] == 0));
                 assert!(unit.weapon_failures().is_empty());
             } else {
                 let unit = &world.btech.vehicles()[&id];
-                assert!(
-                    unit.breached_sections()
-                        .contains(&BattleVehicleSection::Front)
-                );
+                assert!(unit.breached_sections().contains(&VehicleSection::Front));
                 assert!(!unit.weapon_readiness(index).unwrap().intact);
                 assert!(unit.weapon_failures().is_empty());
             }
@@ -644,27 +621,17 @@ async fn replacement_retains_exposure_and_keeps_breached_equipment_unavailable()
 #[tokio::test]
 async fn replacement_reconciles_active_feed_recovery_without_consuming_early_rolls() {
     for source in firing::templates() {
-        let (_dir, config, mut world, id, _, index) = firing::fixture_with_supply(
-            &source,
-            Some(BattleWeapon::Mml3),
-            &source,
-            false,
-            Some(""),
-        )
-        .await;
+        let (_dir, config, mut world, id, _, index) =
+            firing::fixture_with_supply(&source, Some(Weapon::Mml3), &source, false, Some(""))
+                .await;
         let seed = (0..=255)
-            .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 12)
+            .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
             .unwrap();
         firing::edit(&mut world, id, |unit| {
-            unit["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
+            unit["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap()
         });
-        set_battle_weapon_failure(
-            &mut world,
-            id,
-            index,
-            Some(BattleEquipmentFailure::AmmunitionJam),
-        )
-        .unwrap();
+        set_battle_weapon_failure(&mut world, id, index, Some(EquipmentFailure::AmmunitionJam))
+            .unwrap();
         begin_battle_unjam(&mut world, id, ObjectId(1), index).unwrap();
         for _ in 0..10 {
             assert!(
@@ -734,7 +701,7 @@ async fn critical_replacement_preserves_dump_cadence_and_defers_empty_bin_comple
     for source in firing::templates().into_iter().take(2) {
         let (_dir, config, mut world, id, _, _) = firing::fixture_with_supply(
             &source,
-            Some(BattleWeapon::GaussRifle),
+            Some(Weapon::GaussRifle),
             &source,
             false,
             Some(""),
@@ -746,7 +713,7 @@ async fn critical_replacement_preserves_dump_cadence_and_defers_empty_bin_comple
             .ammunition
             .iter()
             .enumerate()
-            .find(|(_, bin)| bin.weapon == BattleWeapon::GaussRifle)
+            .find(|(_, bin)| bin.weapon == Weapon::GaussRifle)
             .map(|(index, bin)| (index, bin.location, bin.capacity))
             .unwrap();
         begin_battle_dump(

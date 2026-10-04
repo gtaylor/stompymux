@@ -1,25 +1,25 @@
 //! BattleMech attack directions and hit-location rules, separate from damage application.
-use super::{BattleDice, BattleMechChassis, BattleSection, BattleUnit};
+use super::{Dice, Mech, MechChassis, MechSection};
 use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
 
 /// Direction from which an attack reaches the target, independent of weapon firing arcs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum BattleHitArc {
+pub enum HitArc {
     Front,
     Rear,
     Left,
     Right,
 }
 
-impl BattleHitArc {
+impl HitArc {
     /// Hull face seen from an incoming attack, shared by ground vehicles and rotorcraft.
-    pub fn vehicle_section(self) -> super::BattleVehicleSection {
+    pub fn vehicle_section(self) -> super::VehicleSection {
         match self {
-            Self::Front => super::BattleVehicleSection::Front,
-            Self::Rear => super::BattleVehicleSection::Rear,
-            Self::Left => super::BattleVehicleSection::Left,
-            Self::Right => super::BattleVehicleSection::Right,
+            Self::Front => super::VehicleSection::Front,
+            Self::Rear => super::VehicleSection::Rear,
+            Self::Left => super::VehicleSection::Left,
+            Self::Right => super::VehicleSection::Right,
         }
     }
 
@@ -66,29 +66,24 @@ impl BattleHitArc {
 
 /// Hit-location distribution selected by a weapon hit, punch, or kick.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-pub enum BattleHitTable {
+pub enum HitTable {
     Weapon,
     Punch,
     Kick,
 }
 
-impl BattleHitTable {
+impl HitTable {
     /// Resolve a supplied 2d6 weapon roll or d6 physical roll without consuming random state.
-    pub fn location(
-        self,
-        chassis: BattleMechChassis,
-        arc: BattleHitArc,
-        roll: u8,
-    ) -> Result<BattleSection> {
-        use BattleHitArc::*;
-        use BattleSection::*;
+    pub fn location(self, chassis: MechChassis, arc: HitArc, roll: u8) -> Result<MechSection> {
+        use HitArc::*;
+        use MechSection::*;
         let (low, high) = if self == Self::Weapon {
             (2, 12)
         } else {
             (1, 6)
         };
         ensure!((low..=high).contains(&roll), "Invalid hit-location roll");
-        if chassis == BattleMechChassis::Quad && self != Self::Weapon {
+        if chassis == MechChassis::Quad && self != Self::Weapon {
             let row = match (self, arc) {
                 (Self::Punch, Front) => {
                     [LeftArm, LeftTorso, CenterTorso, RightTorso, RightArm, Head]
@@ -113,7 +108,7 @@ impl BattleHitTable {
             };
             return Ok(row[usize::from(roll - low)]);
         }
-        let row: &[BattleSection] = match (self, arc) {
+        let row: &[MechSection] = match (self, arc) {
             (Self::Weapon, Front | Rear) => &[
                 CenterTorso,
                 RightArm,
@@ -177,8 +172,8 @@ impl BattleHitTable {
 
 /// Effects a damage handler must apply together; a critical candidate is not a destroyed component.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-pub struct BattleHit {
-    pub section: BattleSection,
+pub struct Hit {
+    pub section: MechSection,
     pub rear_armor: bool,
     pub through_armor_critical: bool,
     pub crew_stun: bool,
@@ -186,25 +181,19 @@ pub struct BattleHit {
 
 /// Conventional biped hit variants selected by game configuration.
 #[derive(Debug, Clone, Copy)]
-pub struct BattleHitRules {
+pub struct HitRules {
     /// Add thirty stored heat when an inferno ammunition bin explodes.
     pub inferno_penalty: bool,
     /// Zero preserves head hits; one rerolls and stuns on a graze; larger values only reroll.
     pub exile_stun_mode: u8,
 }
 
-impl BattleHitRules {
+impl HitRules {
     /// Resolve an already successful weapon hit, including conditional secondary rolls.
     /// The caller supplies the routing-entry roll; critical-proof tables draw
     /// their own location roll. All returned effects and dice commit together.
-    pub fn resolve(
-        self,
-        target: &BattleUnit,
-        arc: BattleHitArc,
-        roll: u8,
-        dice: &mut BattleDice,
-    ) -> Result<BattleHit> {
-        use BattleSection::*;
+    pub fn resolve(self, target: &Mech, arc: HitArc, roll: u8, dice: &mut Dice) -> Result<Hit> {
+        use MechSection::*;
         ensure!((2..=12).contains(&roll), "Invalid hit-location roll");
         let critical_proof = target.definition().has_special("CritProof_Tech");
         let roll = if critical_proof {
@@ -212,9 +201,9 @@ impl BattleHitRules {
         } else {
             roll
         };
-        let mut section = BattleHitTable::Weapon.location(target.chassis(), arc, roll)?;
+        let mut section = HitTable::Weapon.location(target.chassis(), arc, roll)?;
         if target.combat_safe {
-            return Ok(BattleHit {
+            return Ok(Hit {
                 section: LeftArm,
                 rear_armor: false,
                 through_armor_critical: false,
@@ -238,12 +227,12 @@ impl BattleHitRules {
         }
         let mut crew_stun = false;
         if roll == 12 && self.exile_stun_mode != 0 {
-            section = BattleHitTable::Punch.location(target.chassis(), arc, dice.d6())?;
+            section = HitTable::Punch.location(target.chassis(), arc, dice.d6())?;
             crew_stun = self.exile_stun_mode == 1 && section != Head;
         }
-        Ok(BattleHit {
+        Ok(Hit {
             section,
-            rear_armor: arc == BattleHitArc::Rear
+            rear_armor: arc == HitArc::Rear
                 && matches!(section, LeftTorso | RightTorso | CenterTorso),
             through_armor_critical: critical,
             crew_stun,

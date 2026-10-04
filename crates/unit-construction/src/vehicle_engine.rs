@@ -1,20 +1,20 @@
 //! Vehicle and rotorcraft engine diagnostics share catalogue mass and suspension arithmetic.
-use super::{BattleEngine, BattleVehicleMovement, BattleVehicleTemplate};
+use super::{Engine, VehicleMovement, VehicleTemplate};
 use anyhow::Result;
 use serde::Serialize;
 
 /// Vehicle engines derive their technology from chassis flags rather than Mech critical allocation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", content = "family", rename_all = "snake_case")]
-pub enum BattleVehiclePowerplant {
+pub enum VehiclePowerplant {
     Combustion,
-    Fusion(BattleEngine),
+    Fusion(Engine),
 }
 
 /// Intact engine mass in 1/1024-ton units; this is not a complete vehicle construction check.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-pub struct BattleVehicleEngine {
-    pub powerplant: BattleVehiclePowerplant,
+pub struct VehicleEngine {
+    pub powerplant: VehiclePowerplant,
     /// Rounded walking movement points multiplied by nominal tonnage.
     pub nominal_rating: u32,
     pub suspension: u16,
@@ -29,7 +29,7 @@ pub struct BattleVehicleEngine {
     pub installed_mass: u32,
 }
 
-impl BattleVehicleMovement {
+impl VehicleMovement {
     /// Suspension reduces the mass rating without changing the effective movement rating.
     pub fn suspension(self, tons: u16) -> u16 {
         match self {
@@ -51,9 +51,9 @@ impl BattleVehicleMovement {
     }
 }
 
-impl BattleVehicleTemplate {
+impl VehicleTemplate {
     /// Test a chassis technology by its full name or the reference's abbreviation.
-    pub fn has_technology(&self, technology: super::BattleTechnology) -> bool {
+    pub fn has_technology(&self, technology: super::Technology) -> bool {
         let (name, abbreviation) = technology.names();
         self.has_special(name) || self.has_special(abbreviation)
     }
@@ -68,7 +68,7 @@ impl BattleVehicleTemplate {
     }
 
     /// Calculate engine mass, including the hover minimum when no catalogue entry exists.
-    pub fn engine(&self) -> Result<BattleVehicleEngine> {
+    pub fn engine(&self) -> Result<VehicleEngine> {
         let nominal_rating = super::engine::rated_output(self.tons, self.max_speed)?;
         let suspension = self.movement.suspension(self.tons);
         let weight_rating = nominal_rating as i32 - i32::from(suspension);
@@ -77,35 +77,35 @@ impl BattleVehicleTemplate {
             .map(super::mass::engine_mass)
             .filter(|mass| *mass > 0);
         let powerplant = if self.has_special("ICEEngine_Tech") {
-            BattleVehiclePowerplant::Combustion
+            VehiclePowerplant::Combustion
         } else {
             let family = if self.has_special("XLEngine_Tech") {
-                BattleEngine::Xl
+                Engine::Xl
             } else if self.has_special("XXL_Tech") {
-                BattleEngine::Xxl
+                Engine::Xxl
             } else if self.has_special("LightEngine_Tech") {
-                BattleEngine::Light
+                Engine::Light
             } else if self.has_special("CompactEngine_Tech") {
-                BattleEngine::Compact
+                Engine::Compact
             } else {
-                BattleEngine::Standard
+                Engine::Standard
             };
-            BattleVehiclePowerplant::Fusion(family)
+            VehiclePowerplant::Fusion(family)
         };
         let base = standard_mass.unwrap_or(0);
         let engine_mass = match powerplant {
-            BattleVehiclePowerplant::Combustion => base * 2,
-            BattleVehiclePowerplant::Fusion(family) => {
+            VehiclePowerplant::Combustion => base * 2,
+            VehiclePowerplant::Fusion(family) => {
                 let shielded = super::mass::half_ton(base + base / 2);
                 super::mass::half_ton(family.unrounded_mass(shielded))
             }
         };
-        let hover_minimum = if self.movement == BattleVehicleMovement::Hover {
+        let hover_minimum = if self.movement == VehicleMovement::Hover {
             u32::from(self.tons) * 1024 / 5
         } else {
             0
         };
-        Ok(BattleVehicleEngine {
+        Ok(VehicleEngine {
             powerplant,
             nominal_rating,
             suspension,

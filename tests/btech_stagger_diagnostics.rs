@@ -8,9 +8,9 @@ use stompymux_rs::*;
 async fn stagger_diagnostic_order_audience_and_rollback() {
     for template in firing::templates().into_iter().take(2) {
         for mode in [
-            BattleStaggerMode::Traditional,
-            BattleStaggerMode::Retain,
-            BattleStaggerMode::Consume,
+            StaggerMode::Traditional,
+            StaggerMode::Retain,
+            StaggerMode::Consume,
         ] {
             for assigned in [false, true] {
                 let (_dir, config, mut world, unit, _, _) =
@@ -40,12 +40,12 @@ async fn stagger_diagnostic_order_audience_and_rollback() {
                 world.channels.insert("MechDebugInfo".into(), channel);
                 let before = world.clone();
                 let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-                let rules = BattleStaggerRules {
-                    vehicle_impact: BattleMovementRules::STANDARD.fall.vehicle_impact,
+                let rules = StaggerRules {
+                    vehicle_impact: MovementRules::STANDARD.fall.vehicle_impact,
                     mode,
                     interval: 1,
                     tonnage: true,
-                    hit: BattleMovementRules::STANDARD.fall.hit,
+                    hit: MovementRules::STANDARD.fall.hit,
                     extended_piloting: false,
                 };
                 let reports = advance_battle_stagger_action(&scripts, &config, rules).unwrap();

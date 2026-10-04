@@ -1,17 +1,17 @@
 //! BattleMech anatomy over stable section identities, separate from simulation readiness.
-use super::{BattleSection, BattleTemplate};
+use super::{MechSection, MechTemplate};
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 
 /// Limb arrangement determines section names, leg roles and critical capacity.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleMechChassis {
+pub enum MechChassis {
     Biped,
     Quad,
 }
 
-impl BattleMechChassis {
+impl MechChassis {
     /// Quad ground and non-FASA jump turns use twice the ordinary angular rate.
     pub fn turn_multiplier(self) -> f64 {
         if self == Self::Quad { 2.0 } else { 1.0 }
@@ -45,8 +45,8 @@ impl BattleMechChassis {
     }
 
     /// Load-bearing limbs in stable section order; a quad's front attachments are legs.
-    pub fn legs(self) -> &'static [BattleSection] {
-        use BattleSection::*;
+    pub fn legs(self) -> &'static [MechSection] {
+        use MechSection::*;
         match self {
             Self::Biped => &[LeftLeg, RightLeg],
             Self::Quad => &[LeftArm, RightArm, LeftLeg, RightLeg],
@@ -54,21 +54,21 @@ impl BattleMechChassis {
     }
 
     /// Whether the attachment is a leg for this chassis.
-    pub fn is_leg(self, section: BattleSection) -> bool {
+    pub fn is_leg(self, section: MechSection) -> bool {
         self.legs().contains(&section)
     }
 
     /// Critical capacity of one section, independent of installed equipment or damage.
-    pub fn critical_slots(self, section: BattleSection) -> u8 {
-        if section == BattleSection::Head || self.is_leg(section) {
+    pub fn critical_slots(self, section: MechSection) -> u8 {
+        if section == MechSection::Head || self.is_leg(section) {
             return 6;
         }
         12
     }
 
     /// Asset spelling for a stable section identity under this chassis arrangement.
-    pub fn section_name(self, section: BattleSection) -> &'static str {
-        use BattleSection::*;
+    pub fn section_name(self, section: MechSection) -> &'static str {
+        use MechSection::*;
         if self == Self::Biped {
             return section.name();
         }
@@ -82,13 +82,13 @@ impl BattleMechChassis {
     }
 
     /// Decode player-facing section names or compact labels for this chassis.
-    pub fn parse_location(self, value: &str) -> Result<BattleSection> {
+    pub fn parse_location(self, value: &str) -> Result<MechSection> {
         let normalized = value.to_ascii_lowercase().replace(['_', ' '], "");
         let short = match self {
             Self::Biped => ["la", "ra", "lt", "rt", "ct", "ll", "rl", "h"],
             Self::Quad => ["fll", "frl", "lt", "rt", "ct", "rll", "rrl", "h"],
         };
-        BattleSection::ALL
+        MechSection::ALL
             .into_iter()
             .zip(short)
             .find(|(section, short)| {
@@ -98,13 +98,13 @@ impl BattleMechChassis {
                             .section_name(*section)
                             .to_ascii_lowercase()
                             .replace('_', "")
-                    || (*section == BattleSection::Head && normalized == "hd")
+                    || (*section == MechSection::Head && normalized == "hd")
                     || (self == Self::Quad
                         && match section {
-                            BattleSection::LeftArm => normalized == "flleg",
-                            BattleSection::RightArm => normalized == "frleg",
-                            BattleSection::LeftLeg => normalized == "rlleg",
-                            BattleSection::RightLeg => normalized == "rrleg",
+                            MechSection::LeftArm => normalized == "flleg",
+                            MechSection::RightArm => normalized == "frleg",
+                            MechSection::LeftLeg => normalized == "rlleg",
+                            MechSection::RightLeg => normalized == "rrleg",
                             _ => false,
                         })
             })
@@ -113,18 +113,18 @@ impl BattleMechChassis {
     }
 
     /// Decode only headings belonging to this anatomy, rejecting mixed limb arrangements.
-    pub fn parse_section(self, name: &str) -> Result<BattleSection> {
-        BattleSection::ALL
+    pub fn parse_section(self, name: &str) -> Result<MechSection> {
+        MechSection::ALL
             .into_iter()
             .find(|section| self.section_name(*section).eq_ignore_ascii_case(name))
             .with_context(|| format!("unsupported section {name} for {self:?}"))
     }
 }
 
-impl BattleTemplate {
+impl MechTemplate {
     /// Derive anatomy from the retained asset fields without storing a duplicate class value.
-    pub fn chassis(&self) -> Result<BattleMechChassis> {
-        BattleMechChassis::parse(
+    pub fn chassis(&self) -> Result<MechChassis> {
+        MechChassis::parse(
             self.attributes
                 .get("move_type")
                 .context("Missing movement type")?,

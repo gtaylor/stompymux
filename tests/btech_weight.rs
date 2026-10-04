@@ -9,13 +9,11 @@ use stompymux_rs::*;
 async fn weight_reports_share_design_accounting_and_survive_damage_and_restart() {
     for (index, source) in firing::templates().iter().enumerate() {
         let (_dir, config, world, unit, _, _) =
-            firing::fixture_with_supply(source, Some(BattleWeapon::Srm2), source, false, Some(""))
-                .await;
+            firing::fixture_with_supply(source, Some(Weapon::Srm2), source, false, Some("")).await;
         let expected = if index < 2 {
-            let design = BattleUnit::from_template(
-                world.btech.constructed_units()[&unit].definition().clone(),
-            )
-            .unwrap();
+            let design =
+                Mech::from_template(world.btech.constructed_units()[&unit].definition().clone())
+                    .unwrap();
             let mass = design.mass().unwrap();
             let bins: u32 = design
                 .loadout()
@@ -44,7 +42,7 @@ async fn weight_reports_share_design_accounting_and_survive_damage_and_restart()
             report
                 .entries
                 .iter()
-                .any(|entry| entry.name == BattleWeapon::Srm2.name() && entry.mass > 0)
+                .any(|entry| entry.name == Weapon::Srm2.name() && entry.mass > 0)
         );
         assert!(
             report
@@ -86,7 +84,7 @@ async fn weight_reports_share_design_accounting_and_survive_damage_and_restart()
             &config,
             ObjectId(1),
             unit,
-            BattleScenarioSalvo {
+            ScenarioSalvo {
                 damage: 1000,
                 clusters: 4,
                 rear: false,
@@ -115,14 +113,14 @@ async fn weight_report_permissions_literal_names_and_output_rollback() {
         let (dir, config, mut world) = support::isolated_world().await;
         let unit = world.create(&config, "Unit".into(), Kind::Thing);
         world.objects.get_mut(&unit).unwrap().home = Some(ObjectId(config.home()));
-        let mut template = BattleUnitTemplate::parse("test", &source).unwrap();
+        let mut template = UnitTemplate::parse("test", &source).unwrap();
         let criticals: Vec<_> = match &mut template {
-            BattleUnitTemplate::Mech(definition) => definition
+            UnitTemplate::Mech(definition) => definition
                 .sections
                 .values_mut()
                 .flat_map(|section| section.criticals.values_mut())
                 .collect(),
-            BattleUnitTemplate::Vehicle(definition) => definition
+            UnitTemplate::Vehicle(definition) => definition
                 .sections
                 .values_mut()
                 .flat_map(|section| section.criticals.values_mut())
@@ -163,10 +161,10 @@ async fn weight_report_permissions_literal_names_and_output_rollback() {
         );
         assert!(scripts.drain_outbox().is_empty());
         assert_eq!(scripts.world().btech, world.btech);
-        let report = BattleWeightReport {
+        let report = WeightReport {
             name: "[fg=red]Literal".into(),
             nominal_tons: 1,
-            entries: vec![BattleWeightEntry {
+            entries: vec![WeightEntry {
                 name: "[bold]Part".into(),
                 count: Some(2),
                 mass: 2048,

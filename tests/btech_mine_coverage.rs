@@ -20,10 +20,10 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
 }
 
 /// Common authored mine in the field's far corner.
-fn mine() -> BattleMinefield {
-    BattleMinefield {
+fn mine() -> Minefield {
+    Minefield {
         coordinate: HexCoordinate { x: 4, y: 2 },
-        kind: BattleMineKind::Standard,
+        kind: MineKind::Standard,
         strength: 10,
         extra: 0,
         owner: ObjectId(1),
@@ -32,19 +32,12 @@ fn mine() -> BattleMinefield {
 
 /// Fire one mine-laying artillery shell at `center` and return the deposited field slots.
 fn shell(world: &mut World, map: ObjectId, center: HexCoordinate) -> Vec<u32> {
-    let mut flight = BattleArtilleryFlight::new(
-        center,
-        center,
-        BattleWeapon::LongTom,
-        BattleArtilleryMode::Mine,
-        true,
-    )
-    .unwrap();
+    let mut flight =
+        ArtilleryFlight::new(center, center, Weapon::LongTom, ArtilleryMode::Mine, true).unwrap();
     let mut result = None;
     for _ in 0..10 {
-        result =
-            advance_artillery_flight(world, map, &mut flight, BattleMovementRules::STANDARD.fall)
-                .unwrap();
+        result = advance_artillery_flight(world, map, &mut flight, MovementRules::STANDARD.fall)
+            .unwrap();
     }
     result.unwrap().mines
 }
@@ -95,7 +88,7 @@ async fn coverage_follows_records_through_edits_persistence_and_deletion() {
         &config,
         ObjectId(1),
         map,
-        Some(BattleMapObjectKind::Mine),
+        Some(MapObjectKind::Mine),
         None,
     )
     .unwrap();

@@ -1,14 +1,14 @@
 //! Shared vehicle and rotorcraft mass over intact construction or surviving material.
 use super::{
-    BattleSystem, BattleVehicleLoadout, BattleVehicleMovement, BattleVehiclePowerplant,
-    BattleVehicleSection, BattleVehicleTemplate, mass::half_ton,
+    System, VehicleLoadout, VehicleMovement, VehiclePowerplant, VehicleSection, VehicleTemplate,
+    mass::half_ton,
 };
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
 
 /// Component masses in 1/1024-ton units. Neither total certifies a legal construction.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-pub struct BattleVehicleMass {
+pub struct VehicleMass {
     pub engine: u32,
     pub cockpit: u32,
     pub components: u32,
@@ -31,24 +31,24 @@ pub struct BattleVehicleMass {
 
 /// Surviving material a vehicle mass calculation reads. A template reports its intact
 /// construction; a live vehicle reports current structure, protection and loaded rounds.
-pub trait BattleVehicleMaterial {
+pub trait VehicleMaterial {
     /// Internal structure points remaining in a hull face, turret or rotor.
-    fn internal(&self, section: BattleVehicleSection) -> u16;
+    fn internal(&self, section: VehicleSection) -> u16;
 
     /// Front and rear armor points remaining in a section.
-    fn protection(&self, section: BattleVehicleSection) -> u32;
+    fn protection(&self, section: VehicleSection) -> u32;
 
     /// Rounds loaded in the ammunition bin at `bin`, in resolved loadout order. `listed` is
     /// the bin's capacity as the template records it.
     fn rounds(&self, bin: usize, listed: u16) -> u16;
 }
 
-impl BattleVehicleMaterial for BattleVehicleTemplate {
-    fn internal(&self, section: BattleVehicleSection) -> u16 {
+impl VehicleMaterial for VehicleTemplate {
+    fn internal(&self, section: VehicleSection) -> u16 {
         self.sections[&section].internal
     }
 
-    fn protection(&self, section: BattleVehicleSection) -> u32 {
+    fn protection(&self, section: VehicleSection) -> u32 {
         let layout = &self.sections[&section];
         u32::from(layout.armor) + u32::from(layout.rear)
     }
@@ -58,22 +58,22 @@ impl BattleVehicleMaterial for BattleVehicleTemplate {
     }
 }
 
-impl BattleVehicleTemplate {
+impl VehicleTemplate {
     /// Resolve equipment and calculate intact mass, retaining zero engine mass for uncatalogued ratings.
     /// The engine query exposes missing catalogue entries separately from material accounting.
-    pub fn mass(&self) -> Result<BattleVehicleMass> {
+    pub fn mass(&self) -> Result<VehicleMass> {
         self.mass_of(self)
     }
 
     /// Share construction arithmetic while reading intact or live material through `material`.
     /// Broken equipment retains mass until its section is lost; crew loss does not remove material.
-    pub fn mass_of(&self, material: &impl BattleVehicleMaterial) -> Result<BattleVehicleMass> {
+    pub fn mass_of(&self, material: &impl VehicleMaterial) -> Result<VehicleMass> {
         let engine = self.engine()?;
         for section in [
-            BattleVehicleSection::Left,
-            BattleVehicleSection::Right,
-            BattleVehicleSection::Front,
-            BattleVehicleSection::Rear,
+            VehicleSection::Left,
+            VehicleSection::Right,
+            VehicleSection::Front,
+            VehicleSection::Rear,
         ] {
             ensure!(
                 self.sections
@@ -83,7 +83,7 @@ impl BattleVehicleTemplate {
                 section.name()
             );
         }
-        let loadout = BattleVehicleLoadout::resolve(self)?;
+        let loadout = VehicleLoadout::resolve(self)?;
         let tons = u32::from(self.tons);
         let internal = |section| material.internal(section);
         let present = |section| internal(section) > 0;
@@ -99,7 +99,7 @@ impl BattleVehicleTemplate {
             0
         };
         let components =
-            if has_structure && (self.is_vtol() || self.movement == BattleVehicleMovement::Hover) {
+            if has_structure && (self.is_vtol() || self.movement == VehicleMovement::Hover) {
                 half_ton(tons * 1024 / 10)
             } else {
                 0
@@ -108,17 +108,16 @@ impl BattleVehicleTemplate {
             .weapons
             .iter()
             .filter(|mount| {
-                mount.criticals[0].section == BattleVehicleSection::Turret
-                    && present(BattleVehicleSection::Turret)
+                mount.criticals[0].section == VehicleSection::Turret
+                    && present(VehicleSection::Turret)
             })
             .map(|mount| mount.weapon.mass())
             .sum();
         let turret = quarter_ton(turret_weapons / 10);
-        let structure_divisor = if self.has_technology(super::BattleTechnology::ReinforcedStructure)
-        {
+        let structure_divisor = if self.has_technology(super::Technology::ReinforcedStructure) {
             1
         } else if self.has_special("EndoSteel_Tech")
-            || self.has_technology(super::BattleTechnology::CompositeStructure)
+            || self.has_technology(super::Technology::CompositeStructure)
         {
             4
         } else {
@@ -149,7 +148,7 @@ impl BattleVehicleTemplate {
             62
         } else if self.has_special("LtFerroFibrous_Tech") {
             53
-        } else if self.has_technology(super::BattleTechnology::HardenedArmor) {
+        } else if self.has_technology(super::Technology::HardenedArmor) {
             25
         } else {
             50
@@ -167,7 +166,7 @@ impl BattleVehicleTemplate {
                 .filter(|part| present(part.location.section))
                 .map(|part| self.system_mass(part.system))
                 .sum::<u32>();
-        let combustion = engine.powerplant == BattleVehiclePowerplant::Combustion;
+        let combustion = engine.powerplant == VehiclePowerplant::Combustion;
         let sinks = u32::from(self.heat_sink_capacity());
         let efficiency = if self.has_special("Clan") || self.has_special("DoubleHS") {
             2
@@ -224,7 +223,7 @@ impl BattleVehicleTemplate {
             .checked_add(ammunition_capacity)
             .context("vehicle mass overflow")?
             .max(1);
-        Ok(BattleVehicleMass {
+        Ok(VehicleMass {
             engine: engine_mass,
             cockpit,
             components,
@@ -242,87 +241,85 @@ impl BattleVehicleTemplate {
     }
 
     /// Whole vehicle systems have their own mass, independent of Mech multi-critical installation sizes.
-    pub fn system_mass(&self, system: BattleSystem) -> u32 {
+    pub fn system_mass(&self, system: System) -> u32 {
         match system {
-            BattleSystem::TargetingComputer
-            | BattleSystem::Axe
-            | BattleSystem::Claw
-            | BattleSystem::Mace
-            | BattleSystem::DualSaw
-            | BattleSystem::Masc
-            | BattleSystem::C3Slave
-            | BattleSystem::Tag => 1024,
-            BattleSystem::C3i => 2560,
-            BattleSystem::AngelEcm | BattleSystem::BloodhoundProbe => 2048,
-            BattleSystem::C3Master => 5120,
-            BattleSystem::Sword => {
+            System::TargetingComputer
+            | System::Axe
+            | System::Claw
+            | System::Mace
+            | System::DualSaw
+            | System::Masc
+            | System::C3Slave
+            | System::Tag => 1024,
+            System::C3i => 2560,
+            System::AngelEcm | System::BloodhoundProbe => 2048,
+            System::C3Master => 5120,
+            System::Sword => {
                 u32::from(self.tons.div_ceil(10)) * 512 / u32::from(self.tons.div_ceil(15))
             }
             // A Clan active probe weighs a ton; the Beagle a ton and a half.
-            BattleSystem::BeagleProbe => {
+            System::BeagleProbe => {
                 if self.has_special("Clan") {
                     1024
                 } else {
                     1536
                 }
             }
-            BattleSystem::ArtemisIv => {
-                if self.has_technology(super::BattleTechnology::ArtemisV) {
+            System::ArtemisIv => {
+                if self.has_technology(super::Technology::ArtemisV) {
                     1536
                 } else {
                     1024
                 }
             }
-            BattleSystem::RetractableBlade => {
+            System::RetractableBlade => {
                 512 + super::mass::half_ton((u32::from(self.tons) * 1024).div_ceil(20))
             }
-            BattleSystem::Lance => u32::from(self.tons.div_ceil(20)) * 1024,
-            BattleSystem::WreckingBall => 4096,
-            BattleSystem::ChainWhip | BattleSystem::SmallVibroblade => 3072,
-            BattleSystem::Flail | BattleSystem::MediumVibroblade => 5120,
-            BattleSystem::LargeVibroblade => 7168,
-            BattleSystem::Ecm => {
-                if self.has_special("Clan")
-                    && !self.has_technology(super::BattleTechnology::Watchdog)
-                {
+            System::Lance => u32::from(self.tons.div_ceil(20)) * 1024,
+            System::WreckingBall => 4096,
+            System::ChainWhip | System::SmallVibroblade => 3072,
+            System::Flail | System::MediumVibroblade => 5120,
+            System::LargeVibroblade => 7168,
+            System::Ecm => {
+                if self.has_special("Clan") && !self.has_technology(super::Technology::Watchdog) {
                     1024
                 } else {
                     1536
                 }
             }
-            BattleSystem::Case | BattleSystem::LightProbe => 512,
-            BattleSystem::CaseIi => {
+            System::Case | System::LightProbe => 512,
+            System::CaseIi => {
                 if self.has_special("Clan") {
                     512
                 } else {
                     1024
                 }
             }
-            BattleSystem::JumpJet => match self.tons {
+            System::JumpJet => match self.tons {
                 0..=55 => 512,
                 56..=85 => 1024,
                 _ => 2048,
             },
-            BattleSystem::ShoulderOrHip
-            | BattleSystem::UpperActuator
-            | BattleSystem::LowerActuator
-            | BattleSystem::HandOrFootActuator
-            | BattleSystem::Engine
-            | BattleSystem::Gyro
-            | BattleSystem::Cockpit
-            | BattleSystem::LifeSupport
-            | BattleSystem::Sensors
-            | BattleSystem::HeatSink
-            | BattleSystem::FuelTank
-            | BattleSystem::FerroFibrous
-            | BattleSystem::EndoSteel
-            | BattleSystem::TripleStrengthMyomer
-            | BattleSystem::Supercharger
-            | BattleSystem::HeavyFerroFibrous
-            | BattleSystem::LightFerroFibrous
-            | BattleSystem::StealthArmor
-            | BattleSystem::LaserReflective
-            | BattleSystem::NullSignature => 0,
+            System::ShoulderOrHip
+            | System::UpperActuator
+            | System::LowerActuator
+            | System::HandOrFootActuator
+            | System::Engine
+            | System::Gyro
+            | System::Cockpit
+            | System::LifeSupport
+            | System::Sensors
+            | System::HeatSink
+            | System::FuelTank
+            | System::FerroFibrous
+            | System::EndoSteel
+            | System::TripleStrengthMyomer
+            | System::Supercharger
+            | System::HeavyFerroFibrous
+            | System::LightFerroFibrous
+            | System::StealthArmor
+            | System::LaserReflective
+            | System::NullSignature => 0,
         }
     }
 }

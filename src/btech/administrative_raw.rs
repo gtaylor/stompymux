@@ -1,5 +1,5 @@
 //! Persisted class-neutral state for native administration fields that do not fit combat enums.
-use super::{BattleSectionState, RawMovement, RawUnitClass, SectionDefinition};
+use super::{RawMovement, RawUnitClass, SectionDefinition, SectionState};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -7,14 +7,14 @@ use std::collections::BTreeMap;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AdministrativeRawSection {
     pub definition: SectionDefinition,
-    pub current: BattleSectionState,
+    pub current: SectionState,
 }
 
 impl Default for AdministrativeRawSection {
     fn default() -> Self {
         Self {
             definition: SectionDefinition::default(),
-            current: BattleSectionState {
+            current: SectionState {
                 armor: 0,
                 internal: 0,
                 rear: 0,

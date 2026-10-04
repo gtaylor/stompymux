@@ -1,5 +1,5 @@
 //! Targeted line-of-sight radio with independent sender and recipient identity visibility.
-use super::{BattleNotice, BattlePower, visible_contact};
+use super::{Notice, Power, visible_contact};
 use crate::{ObjectId, Scripts, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
@@ -7,13 +7,13 @@ use serde::Serialize;
 /// Captured cockpit notices for a targeted message; no channel, mine or experience phase is involved.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[must_use = "Publish targeted radio notices through the enclosing host action"]
-pub struct BattleTargetedRadioReport {
+pub struct TargetedRadioReport {
     /// Powered sending unit.
     pub sender: ObjectId,
     /// Visible acquired recipient.
     pub target: ObjectId,
     /// Sender echo followed by the target notice when its power is running.
-    pub notices: Vec<BattleNotice>,
+    pub notices: Vec<Notice>,
 }
 
 /// Resolve a powered pilot's targeted radio without spending dice or changing contact state.
@@ -23,7 +23,7 @@ pub fn resolve_targeted_radio(
     pilot: ObjectId,
     target: ObjectId,
     message: &str,
-) -> Result<BattleTargetedRadioReport> {
+) -> Result<TargetedRadioReport> {
     super::targeting::controlled(world, sender, pilot)?;
     let source = super::scanner::scanner_unit(world, sender).context("Sender is unavailable")?;
     ensure!(!source.observer, "You can't radio anyone.");
@@ -38,23 +38,23 @@ pub fn resolve_targeted_radio(
     if visible.friendly {
         id.make_ascii_lowercase();
     }
-    let mut notices = vec![BattleNotice {
+    let mut notices = vec![Notice {
         unit: sender,
         text: format!("You radio {} [{id}] with, '{message}'", visible.name),
     }];
-    if other.power == BattlePower::Running {
+    if other.power == Power::Running {
         let seen = visible_contact(world, target, sender)?;
         let mut source_id = source.label().context("Sender is not placed")?;
         if seen.as_ref().is_some_and(|v| v.friendly) {
             source_id.make_ascii_lowercase();
         }
         let name = seen.as_ref().map_or("something", |v| v.name.as_str());
-        notices.push(BattleNotice {
+        notices.push(Notice {
             unit: target,
             text: format!("{name} [{source_id}] radios you with, '{message}'"),
         });
     }
-    Ok(BattleTargetedRadioReport {
+    Ok(TargetedRadioReport {
         sender,
         target,
         notices,
@@ -68,7 +68,7 @@ pub fn send_targeted_radio_action(
     pilot: ObjectId,
     target: ObjectId,
     message: &str,
-) -> Result<BattleTargetedRadioReport> {
+) -> Result<TargetedRadioReport> {
     scripts.atomic(|_| {
         let report =
             resolve_targeted_radio(&scripts.world.borrow(), sender, pilot, target, message)?;

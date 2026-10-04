@@ -1,35 +1,35 @@
 //! Durable ammunition dumping, shared by cockpit controls and committed simulation steps.
-use super::{BattleNotice, BattlePower, BattleSection, BattleUnit, BattleWeapon};
+use super::{Mech, MechSection, Notice, Power, Weapon};
 use crate::{ObjectId, Scripts, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 
 /// Bins selected by physical location or weapon family; ammunition modes remain independent.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum BattleDumpSelection {
+pub enum DumpSelection {
     All,
-    Weapon(BattleWeapon),
-    Section(BattleSection),
+    Weapon(Weapon),
+    Section(MechSection),
     Slot(super::CriticalLocation),
 }
 
 /// Saved cadence for an active dumping attempt.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct BattleDump {
-    pub selection: BattleDumpSelection,
+pub struct Dump {
+    pub selection: DumpSelection,
     /// Committed seconds since this attempt began, for rate scheduling.
     pub phase: u64,
 }
 
-impl BattleUnit {
+impl Mech {
     /// Active ammunition ejection, including its durable cadence.
-    pub fn dumping(&self) -> Option<BattleDump> {
+    pub fn dumping(&self) -> Option<Dump> {
         self.dumping
     }
 }
 
-impl BattleDumpSelection {
+impl DumpSelection {
     pub(super) fn matches(self, bin: &super::AmmunitionBin) -> bool {
         match self {
             Self::All => true,
@@ -71,7 +71,7 @@ impl BattleDumpSelection {
 }
 
 /// Check persisted selections without requiring that any selected ammunition remains usable.
-pub(super) fn validate(unit: &BattleUnit) -> Result<()> {
+pub(super) fn validate(unit: &Mech) -> Result<()> {
     let Some(dump) = unit.dumping else {
         return Ok(());
     };
@@ -88,14 +88,14 @@ pub(super) fn validate(unit: &BattleUnit) -> Result<()> {
 }
 
 /// Resolve user-facing selectors without storing command strings in simulation state.
-fn selection(unit: &BattleUnit, words: &[&str]) -> Result<BattleDumpSelection> {
+fn selection(unit: &Mech, words: &[&str]) -> Result<DumpSelection> {
     ensure!(
         !words.is_empty() && words.len() <= 2,
         "Specify all, stop, a weapon number, or a section and optional slot"
     );
     if words[0].eq_ignore_ascii_case("all") {
         ensure!(words.len() == 1, "All takes no slot");
-        return Ok(BattleDumpSelection::All);
+        return Ok(DumpSelection::All);
     }
     if let Ok(index) = words[0].parse::<usize>() {
         ensure!(words.len() == 1, "Weapon number takes no slot");
@@ -108,18 +108,18 @@ fn selection(unit: &BattleUnit, words: &[&str]) -> Result<BattleDumpSelection> {
             mount.weapon.profile().ammunition_per_ton > 0,
             "That weapon doesn't use ammunition!"
         );
-        return Ok(BattleDumpSelection::Weapon(mount.weapon));
+        return Ok(DumpSelection::Weapon(mount.weapon));
     }
     let section = unit.chassis().parse_location(words[0])?;
     if words.len() == 1 {
-        return Ok(BattleDumpSelection::Section(section));
+        return Ok(DumpSelection::Section(section));
     }
     let slot = words[1].parse::<u8>().context("Invalid ammunition slot!")?;
     ensure!(
         (1..=unit.chassis().critical_slots(section)).contains(&slot),
         "Invalid ammunition slot!"
     );
-    Ok(BattleDumpSelection::Slot(super::CriticalLocation {
+    Ok(DumpSelection::Slot(super::CriticalLocation {
         section,
         slot: slot - 1,
     }))
@@ -131,10 +131,10 @@ pub fn begin_dump(
     id: ObjectId,
     pilot: ObjectId,
     argument: &str,
-) -> Result<Vec<BattleNotice>> {
+) -> Result<Vec<Notice>> {
     super::power::controlled_unit(world, id, pilot)?;
     let unit = &world.btech.constructed_units()[&id];
-    ensure!(unit.power() == BattlePower::Running, "Start the unit first");
+    ensure!(unit.power() == Power::Running, "Start the unit first");
     ensure!(!unit.airborne(), "You can't dump ammo while jumping!");
     ensure!(
         unit.motion().is_some_and(
@@ -154,8 +154,7 @@ pub fn begin_dump(
         let selected = selection(unit, &words)?;
         ensure!(
             unit.dumping.is_none()
-                || (selected == BattleDumpSelection::All
-                    && unit.dumping.unwrap().selection != selected),
+                || (selected == DumpSelection::All && unit.dumping.unwrap().selection != selected),
             "You're already dumping some ammo!"
         );
         ensure!(
@@ -169,12 +168,12 @@ pub fn begin_dump(
             "You have no ammo to dump!"
         );
         (
-            Some(BattleDump {
+            Some(Dump {
                 selection: selected,
                 phase: 0,
             }),
             match selected {
-                BattleDumpSelection::Weapon(_) => {
+                DumpSelection::Weapon(_) => {
                     format!("Starting dumping {}..", selected.description())
                 }
                 _ => format!("Starting dumping of {}..", selected.description()),
@@ -183,13 +182,13 @@ pub fn begin_dump(
         )
     };
     world.btech.constructed.get_mut(&id).unwrap().dumping = dump;
-    let mut notices = vec![BattleNotice { unit: id, text }];
+    let mut notices = vec![Notice { unit: id, text }];
     notices.extend(super::broadcast::observer_notices(world, id, observer));
     Ok(notices)
 }
 
 /// Advance all attempts atomically; unavailable bins never eject ammunition.
-pub fn advance_dumping(world: &mut World) -> Result<Vec<BattleNotice>> {
+pub fn advance_dumping(world: &mut World) -> Result<Vec<Notice>> {
     world.attempt(|world| {
         let ids: Vec<_> = world
             .btech
@@ -206,7 +205,7 @@ pub fn advance_dumping(world: &mut World) -> Result<Vec<BattleNotice>> {
             let unit = world.btech.constructed.get_mut(&id).unwrap();
             validate(unit)?;
             let mut dump = unit.dumping.unwrap();
-            if !available || unit.power() != BattlePower::Running || unit.is_destroyed() {
+            if !available || unit.power() != Power::Running || unit.is_destroyed() {
                 unit.dumping = None;
                 continue;
             }
@@ -235,7 +234,7 @@ pub fn advance_dumping(world: &mut World) -> Result<Vec<BattleNotice>> {
                 if let Some(text) =
                     super::combat_warnings::dumping_message(unit, bin.weapon, amount)
                 {
-                    notices.push(BattleNotice { unit: id, text });
+                    notices.push(Notice { unit: id, text });
                 }
                 unit.ammunition[index] -= amount;
                 unit.live_mass.invalidate();
@@ -243,7 +242,7 @@ pub fn advance_dumping(world: &mut World) -> Result<Vec<BattleNotice>> {
             }
             unit.dumping = remaining.then_some(dump);
             if !remaining {
-                notices.push(BattleNotice {
+                notices.push(Notice {
                     unit: id,
                     text: dump.selection.completion(),
                 });
@@ -264,7 +263,7 @@ pub fn dump(
     id: ObjectId,
     pilot: ObjectId,
     argument: &str,
-) -> Result<Vec<BattleNotice>> {
+) -> Result<Vec<Notice>> {
     scripts.atomic(|_| {
         let notices = begin_dump(&mut scripts.world_mut(), id, pilot, argument)?;
         for notice in &notices {
@@ -299,18 +298,15 @@ pub(crate) fn command(
 
 /// A single dumped salvo ignited against rear armor during a weapon hit.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleDumpIgnition {
+pub struct DumpIgnition {
     pub bin_index: usize,
-    pub weapon: BattleWeapon,
-    pub section: BattleSection,
+    pub weapon: Weapon,
+    pub section: MechSection,
     pub damage: u16,
 }
 
 /// Select an available round from the active operation using the unit's saved combat dice.
-pub(super) fn ignition(
-    unit: &mut BattleUnit,
-    section: BattleSection,
-) -> Result<Option<BattleDumpIgnition>> {
+pub(super) fn ignition(unit: &mut Mech, section: MechSection) -> Result<Option<DumpIgnition>> {
     let Some(dump) = unit.dumping else {
         return Ok(None);
     };
@@ -328,7 +324,7 @@ pub(super) fn ignition(
     // Whole-unit and weapon requests traverse sections and slots from the rear of storage order.
     if matches!(
         dump.selection,
-        BattleDumpSelection::All | BattleDumpSelection::Weapon(_)
+        DumpSelection::All | DumpSelection::Weapon(_)
     ) {
         bins.sort_by_key(|(_, bin)| std::cmp::Reverse(bin.location));
     }
@@ -342,7 +338,7 @@ pub(super) fn ignition(
     if damage == 0 {
         return Ok(None);
     }
-    Ok(Some(BattleDumpIgnition {
+    Ok(Some(DumpIgnition {
         bin_index,
         weapon: bin.weapon,
         section,
@@ -356,8 +352,8 @@ mod tests {
 
     #[test]
     fn ignition_selects_only_live_requested_bins_without_rolling_for_empty_requests() {
-        let mut unit = BattleUnit::from_template(
-            super::super::BattleTemplate::parse(
+        let mut unit = Mech::from_template(
+            super::super::MechTemplate::parse(
                 "AS7-D",
                 include_str!("../../tests/fixtures/btech/mechs/AS7-D.toml"),
             )
@@ -369,34 +365,34 @@ mod tests {
             .ammunition
             .iter()
             .enumerate()
-            .find(|(_, bin)| bin.weapon == BattleWeapon::Srm6)
+            .find(|(_, bin)| bin.weapon == Weapon::Srm6)
             .unwrap();
         for selection in [
-            BattleDumpSelection::Weapon(bin.weapon),
-            BattleDumpSelection::Section(bin.location.section),
-            BattleDumpSelection::Slot(bin.location),
+            DumpSelection::Weapon(bin.weapon),
+            DumpSelection::Section(bin.location.section),
+            DumpSelection::Slot(bin.location),
         ] {
-            unit.dumping = Some(BattleDump {
+            unit.dumping = Some(Dump {
                 selection,
                 phase: 0,
             });
             for _ in 0..20 {
-                let hit = ignition(&mut unit, BattleSection::CenterTorso)
+                let hit = ignition(&mut unit, MechSection::CenterTorso)
                     .unwrap()
                     .unwrap();
                 assert!(selection.matches(&loadout.ammunition[hit.bin_index]));
                 assert!(hit.damage > 0);
             }
         }
-        unit.dumping = Some(BattleDump {
-            selection: BattleDumpSelection::Slot(bin.location),
+        unit.dumping = Some(Dump {
+            selection: DumpSelection::Slot(bin.location),
             phase: 0,
         });
         let remaining = unit.ammunition[index];
         unit.ammunition[index] = 0;
         let dice = unit.dice.clone();
         assert!(
-            ignition(&mut unit, BattleSection::CenterTorso)
+            ignition(&mut unit, MechSection::CenterTorso)
                 .unwrap()
                 .is_none()
         );
@@ -404,7 +400,7 @@ mod tests {
         unit.ammunition[index] = remaining;
         unit.lost_criticals.insert(bin.location);
         assert!(
-            ignition(&mut unit, BattleSection::CenterTorso)
+            ignition(&mut unit, MechSection::CenterTorso)
                 .unwrap()
                 .is_none()
         );

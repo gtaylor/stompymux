@@ -3,15 +3,15 @@ use crate::support;
 use stompymux_rs::*;
 
 /// Ordinary blast rules, with both mobile-vehicle fire policies exercised below.
-fn rules(advanced_fire: bool) -> BattleFallRules {
-    BattleFallRules {
-        vehicle_impact: BattleVehicleImpactRules {
+fn rules(advanced_fire: bool) -> FallRules {
+    FallRules {
+        vehicle_impact: VehicleImpactRules {
             advanced_fire,
-            ..BattleVehicleImpactRules::STANDARD
+            ..VehicleImpactRules::STANDARD
         },
-        stacking: BattleStackingRules::STANDARD,
-        stagger: BattleStaggerMode::Retain,
-        hit: BattleHitRules {
+        stacking: StackingRules::STANDARD,
+        stagger: StaggerMode::Retain,
+        hit: HitRules {
             inferno_penalty: false,
             exile_stun_mode: 0,
         },
@@ -48,7 +48,7 @@ async fn signed_mines_share_burn_adjustments_neighbor_effects_and_restart() {
             create_battle_unit(
                 &mut base,
                 id,
-                BattleTemplate::parse(
+                MechTemplate::parse(
                     "test",
                     if chassis == "quad" {
                         include_str!("../game/mechs/SCP-1N.toml")
@@ -75,17 +75,17 @@ async fn signed_mines_share_burn_adjustments_neighbor_effects_and_restart() {
             create_battle_vehicle(
                 &mut base,
                 id,
-                BattleVehicleTemplate::parse("test", &text).unwrap(),
+                VehicleTemplate::parse("test", &text).unwrap(),
             )
             .unwrap();
             support::seed_object_dice(&mut base, id, support::FIXTURE_DICE_SEED);
         }
         place_battle_unit(&mut base, id, map, 1, 1).unwrap();
         for kind in [
-            BattleMineKind::Standard,
-            BattleMineKind::Inferno,
-            BattleMineKind::Command,
-            BattleMineKind::Vibra,
+            MineKind::Standard,
+            MineKind::Inferno,
+            MineKind::Command,
+            MineKind::Vibra,
         ] {
             for strength in [i16::MIN, -2, -1, 0] {
                 for initial in [0_u32, 60] {
@@ -95,7 +95,7 @@ async fn signed_mines_share_burn_adjustments_neighbor_effects_and_restart() {
                         let key = if mech { "constructed" } else { "vehicles" };
                         state[key][id.0.to_string()]["inferno_remaining"] = initial.into();
                         world.btech = serde_json::from_value(state).unwrap();
-                        let mine = BattleMinefield {
+                        let mine = Minefield {
                             coordinate: HexCoordinate { x: 1, y: 1 },
                             kind,
                             strength,
@@ -112,8 +112,7 @@ async fn signed_mines_share_burn_adjustments_neighbor_effects_and_restart() {
                         assert!(hit.impacts.is_empty());
                         assert_eq!(report.removed, [0]);
                         let neighbors =
-                            matches!(kind, BattleMineKind::Command | BattleMineKind::Vibra)
-                                && strength <= -2;
+                            matches!(kind, MineKind::Command | MineKind::Vibra) && strength <= -2;
                         assert_eq!(
                             report.ignited,
                             if neighbors {
@@ -123,7 +122,7 @@ async fn signed_mines_share_burn_adjustments_neighbor_effects_and_restart() {
                             }
                         );
                         if mech || chassis == "stationary" {
-                            let adjustment = if kind == BattleMineKind::Inferno {
+                            let adjustment = if kind == MineKind::Inferno {
                                 i64::from(strength) * 6
                             } else {
                                 0
@@ -162,7 +161,7 @@ async fn signed_mines_share_burn_adjustments_neighbor_effects_and_restart() {
                         );
                         assert_eq!(replay.btech, world.btech);
                         world.validate(&config).unwrap();
-                        if kind == BattleMineKind::Inferno && strength == -2 && !advanced {
+                        if kind == MineKind::Inferno && strength == -2 && !advanced {
                             persistence::save(&config.database(), &world).await.unwrap();
                             let restored = persistence::load(&config.database()).await.unwrap();
                             assert_eq!(restored.btech, world.btech);

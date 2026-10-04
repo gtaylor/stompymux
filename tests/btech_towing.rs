@@ -23,7 +23,7 @@ async fn fixture(sources: &[&str]) -> (tempfile::TempDir, Config, World, ObjectI
     let mut units = Vec::new();
     for source in sources {
         let id = world.create(&config, "Unit".into(), Kind::Thing);
-        BattleUnitTemplate::parse("test", source)
+        UnitTemplate::parse("test", source)
             .unwrap()
             .create(&mut world, id)
             .unwrap();
@@ -237,7 +237,7 @@ async fn towing_follows_position_facing_and_height_for_every_chassis_pair() {
                 .maximum_speed(unloaded)
                 .unwrap();
             for _ in 0..5 {
-                advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
+                advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
                 let source = state(&world, a);
                 let target = state(&world, b);
                 assert!(source["motion"]["speed"].as_f64().unwrap().abs() <= maximum);
@@ -309,14 +309,14 @@ async fn external_speed_exceeds_disabled_target_limits_but_requires_a_tow() {
             .maximum_speed(world.btech.vehicles()[&a].maximum_speed())
             .unwrap();
         let expected = speed.clamp(-maximum * 2.0 / 3.0, maximum);
-        advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
+        advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
         assert_eq!(world.btech.vehicles()[&b].maximum_speed(), 0.0);
         assert_eq!(world.btech.vehicles()[&b].motion().unwrap().speed, expected);
         world.validate(&config).unwrap();
         persistence::save(&config.database(), &world).await.unwrap();
         let mut replay = persistence::load(&config.database()).await.unwrap();
-        advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
-        advance_battle_motion(&mut replay, BattleMovementRules::STANDARD).unwrap();
+        advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
+        advance_battle_motion(&mut replay, MovementRules::STANDARD).unwrap();
         assert_eq!(world.btech, replay.btech);
         let mut invalid = world.clone();
         let mut encoded = serde_json::to_value(&invalid.btech).unwrap();
@@ -375,9 +375,9 @@ async fn towing_load_shares_equipment_discounts_and_live_mass_across_chassis() {
 #[tokio::test]
 async fn hot_myomer_tow_discount_requires_hardware_heat_and_configuration() {
     let (_dir, config, mut world, map, ids) = fixture(&CHASSIS[..1]).await;
-    let mut template = BattleTemplate::parse("test", CHASSIS[0]).unwrap();
+    let mut template = MechTemplate::parse("test", CHASSIS[0]).unwrap();
     let mut remaining = 6;
-    for location in [BattleSection::LeftTorso, BattleSection::RightTorso] {
+    for location in [MechSection::LeftTorso, MechSection::RightTorso] {
         let section = template.sections.get_mut(&location).unwrap();
         for slot in 0..12 {
             if remaining == 0 || section.criticals.contains_key(&slot) {
@@ -415,7 +415,7 @@ async fn hot_myomer_tow_discount_requires_hardware_heat_and_configuration() {
     create_battle_unit(
         &mut world,
         observer,
-        BattleTemplate::parse("test", CHASSIS[0]).unwrap(),
+        MechTemplate::parse("test", CHASSIS[0]).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, observer, support::FIXTURE_DICE_SEED);
@@ -559,7 +559,7 @@ async fn loaded_acceleration_and_reverse_motion_use_the_same_ceiling_for_all_cha
                 .maximum_speed(unloaded)
                 .unwrap();
             assert!(maximum > 0.0 && maximum < unloaded);
-            advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
+            advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
             let actual = state(&world, a)["motion"]["speed"].as_f64().unwrap();
             let expected = maximum / 20.0 * if reverse { -1.0 } else { 1.0 };
             assert!(
@@ -573,8 +573,8 @@ async fn loaded_acceleration_and_reverse_motion_use_the_same_ceiling_for_all_cha
             world.validate(&config).unwrap();
             persistence::save(&config.database(), &world).await.unwrap();
             let mut replay = persistence::load(&config.database()).await.unwrap();
-            advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
-            advance_battle_motion(&mut replay, BattleMovementRules::STANDARD).unwrap();
+            advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
+            advance_battle_motion(&mut replay, MovementRules::STANDARD).unwrap();
             assert_eq!(world.btech, replay.btech);
         }
     }
@@ -888,8 +888,8 @@ async fn vertical_commands_share_loaded_budget_and_atomic_native_lua_behavior() 
             let mut moved = native.world().clone();
             persistence::save(&config.database(), &moved).await.unwrap();
             let mut replay = persistence::load(&config.database()).await.unwrap();
-            advance_battle_motion(&mut moved, BattleMovementRules::STANDARD).unwrap();
-            advance_battle_motion(&mut replay, BattleMovementRules::STANDARD).unwrap();
+            advance_battle_motion(&mut moved, MovementRules::STANDARD).unwrap();
+            advance_battle_motion(&mut replay, MovementRules::STANDARD).unwrap();
             assert_eq!(moved.btech, replay.btech);
             moved.validate(&config).unwrap();
         }
@@ -1031,7 +1031,7 @@ async fn pickup_admission_rejects_motion_hidden_targets_enemies_and_overlap_with
         set_battle_unit_signature(
             &mut hidden,
             target,
-            BattleUnitSignature {
+            UnitSignature {
                 hidden: true,
                 ..Default::default()
             },
@@ -1041,7 +1041,7 @@ async fn pickup_admission_rejects_motion_hidden_targets_enemies_and_overlap_with
         set_battle_unit_signature(
             &mut hidden,
             target,
-            BattleUnitSignature {
+            UnitSignature {
                 team: 1,
                 ..Default::default()
             },
@@ -1067,7 +1067,7 @@ async fn pickup_equipment_requires_both_arms_and_one_working_shoulder_hand_pair(
         &mut world,
         carrier,
         CriticalLocation {
-            section: BattleSection::LeftArm,
+            section: MechSection::LeftArm,
             slot: 3,
         },
     )
@@ -1083,7 +1083,7 @@ async fn pickup_equipment_requires_both_arms_and_one_working_shoulder_hand_pair(
         &mut world,
         carrier,
         CriticalLocation {
-            section: BattleSection::RightArm,
+            section: MechSection::RightArm,
             slot: 0,
         },
     )
@@ -1188,7 +1188,7 @@ async fn pickup_preparation_shares_shutdown_for_all_chassis_without_target_pilot
                     carrier,
                     ObjectId(1),
                     target,
-                    BattleMovementRules::STANDARD.fall,
+                    MovementRules::STANDARD.fall,
                 )
                 .unwrap();
                 let after = state(&world, target);
@@ -1204,7 +1204,7 @@ async fn pickup_preparation_shares_shutdown_for_all_chassis_without_target_pilot
                 if collection == "constructed" {
                     assert_eq!(
                         world.btech.constructed_units()[&target].posture(),
-                        BattlePosture::Prone
+                        Posture::Prone
                     );
                     assert!(
                         world.btech.constructed_units()[&target]
@@ -1244,7 +1244,7 @@ async fn rejected_pickup_preparation_preserves_motion_power_and_relationships() 
                 carrier,
                 ObjectId(1),
                 target,
-                BattleMovementRules::STANDARD.fall
+                MovementRules::STANDARD.fall
             )
             .is_err()
         );
@@ -1270,12 +1270,12 @@ async fn vehicle_descent_shares_timing_and_persistence_across_ground_and_rotorcr
         assert!(begin_battle_vehicle_descent(&mut world, id).is_err());
         assert_eq!(world.btech, before);
         for expected in [
-            BattleVehicleDescentEvent::Waiting,
-            BattleVehicleDescentEvent::Waiting,
-            BattleVehicleDescentEvent::Descending,
+            VehicleDescentEvent::Waiting,
+            VehicleDescentEvent::Waiting,
+            VehicleDescentEvent::Descending,
         ] {
             assert_eq!(
-                advance_battle_vehicle_descent(&mut world, id, BattleMovementRules::STANDARD.fall)
+                advance_battle_vehicle_descent(&mut world, id, MovementRules::STANDARD.fall)
                     .unwrap(),
                 expected
             );
@@ -1290,14 +1290,14 @@ async fn vehicle_descent_shares_timing_and_persistence_across_ground_and_rotorcr
         assert_eq!(loaded.btech, world.btech);
         for _ in 0..3 {
             let event =
-                advance_battle_vehicle_descent(&mut world, id, BattleMovementRules::STANDARD.fall)
+                advance_battle_vehicle_descent(&mut world, id, MovementRules::STANDARD.fall)
                     .unwrap();
             assert_eq!(
                 event,
-                advance_battle_vehicle_descent(&mut loaded, id, BattleMovementRules::STANDARD.fall)
+                advance_battle_vehicle_descent(&mut loaded, id, MovementRules::STANDARD.fall)
                     .unwrap()
             );
-            if let BattleVehicleDescentEvent::Impact { levels, .. } = event {
+            if let VehicleDescentEvent::Impact { levels, .. } = event {
                 assert_eq!(levels, 6);
             }
         }
@@ -1332,7 +1332,7 @@ async fn ground_descent_rejects_conflicting_state_and_advances_on_the_shared_hea
         assert!(serde_json::from_value::<BtechState>(invalid).is_err());
     }
     for _ in 0..3 {
-        advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
+        advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
     }
     assert_eq!(
         world.btech.vehicles()[&id].free_fall().unwrap().elevation(),
@@ -1364,11 +1364,11 @@ fn tow_height(world: &mut World, target: ObjectId, height: i16) {
 }
 
 /// The two established tick adapters share descent clocks and return unit-addressed feedback.
-fn tick_descent(world: &mut World, target: ObjectId) -> Vec<BattleNotice> {
+fn tick_descent(world: &mut World, target: ObjectId) -> Vec<Notice> {
     if world.btech.vehicles().contains_key(&target) {
-        advance_battle_motion(world, BattleMovementRules::STANDARD).unwrap()
+        advance_battle_motion(world, MovementRules::STANDARD).unwrap()
     } else {
-        advance_battle_jumps(world, BattleMovementRules::STANDARD).unwrap()
+        advance_battle_jumps(world, MovementRules::STANDARD).unwrap()
     }
 }
 
@@ -1438,9 +1438,9 @@ async fn released_mech_wrecks_finish_descent_before_and_after_destruction() {
             apply_damage_phase(
                 &mut world,
                 target,
-                BattleSection::CenterTorso,
+                MechSection::CenterTorso,
                 100,
-                BattleDamagePhase::Internal,
+                DamagePhase::Internal,
             )
             .unwrap();
         }
@@ -1451,9 +1451,9 @@ async fn released_mech_wrecks_finish_descent_before_and_after_destruction() {
             apply_damage_phase(
                 &mut world,
                 target,
-                BattleSection::CenterTorso,
+                MechSection::CenterTorso,
                 100,
-                BattleDamagePhase::Internal,
+                DamagePhase::Internal,
             )
             .unwrap();
         }
@@ -1505,7 +1505,7 @@ async fn pickup_composes_prior_tow_release_attachment_and_replay_for_all_chassis
                 carrier,
                 ObjectId(1),
                 target,
-                BattleMovementRules::STANDARD.fall,
+                MovementRules::STANDARD.fall,
                 true,
             )
             .unwrap();
@@ -1647,7 +1647,7 @@ async fn pickup_through_ice_uses_shared_breakage_for_ground_and_airborne_carrier
             carrier,
             ObjectId(1),
             target,
-            BattleMovementRules::STANDARD.fall,
+            MovementRules::STANDARD.fall,
             true,
         )
         .unwrap();
@@ -1748,7 +1748,7 @@ async fn pickup_ice_failure_restores_the_previous_tow_and_all_material_state() {
         carrier,
         ObjectId(1),
         target,
-        BattleMovementRules::STANDARD.fall,
+        MovementRules::STANDARD.fall,
         true,
     )
     .unwrap_err();
@@ -1918,7 +1918,7 @@ async fn fractional_tow_height_and_range_survive_persistence_for_all_pairs() {
                 record["ground_elevation"] = 3.75.into();
             }
             world.btech = serde_json::from_value(saved).unwrap();
-            advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
+            advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
             assert_eq!(battle_unit_altitude(&world, carrier).unwrap(), Some(3.75));
             assert_eq!(battle_unit_altitude(&world, target).unwrap(), Some(3.75));
             assert_eq!(battle_unit_elevation(&world, target).unwrap(), Some(3));
@@ -1936,8 +1936,8 @@ async fn fractional_tow_height_and_range_survive_persistence_for_all_pairs() {
             assert_eq!(world.btech, replay.btech);
             for _ in 0..3 {
                 assert_eq!(
-                    advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap(),
-                    advance_battle_motion(&mut replay, BattleMovementRules::STANDARD).unwrap()
+                    advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap(),
+                    advance_battle_motion(&mut replay, MovementRules::STANDARD).unwrap()
                 );
                 assert_eq!(world.btech, replay.btech);
                 assert_eq!(battle_unit_altitude(&world, target).unwrap(), Some(3.75));
@@ -1973,7 +1973,7 @@ async fn fractional_release_threshold_and_descent_clock_are_shared_and_restartab
                     record["vtol_flight"]["altitude"] = height.into();
                 })
                 .unwrap();
-            advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
+            advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
             release_battle_tow(&mut world, carrier).unwrap();
             assert_eq!(
                 battle_unit_altitude(&world, target).unwrap(),
@@ -2011,7 +2011,7 @@ async fn retained_and_falling_altitudes_reject_nonfinite_or_out_of_range_values(
         f64::from(i32::MAX) + 1.0,
         f64::from(i32::MIN) - 1.0,
     ] {
-        assert!(BattleFreeFall::at_altitude(altitude).is_err());
+        assert!(FreeFall::at_altitude(altitude).is_err());
     }
     for source in [CHASSIS[0], CHASSIS[1]] {
         let (_dir, config, world, _, ids) = fixture(&[source]).await;
@@ -2060,7 +2060,7 @@ async fn vtol_vertical_towing_preserves_continuous_height_each_tick() {
         set_battle_tow(&mut world, carrier, Some(target)).unwrap();
         let mut previous = 5.25;
         for _ in 0..5 {
-            advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
+            advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
             let height = battle_unit_altitude(&world, carrier).unwrap().unwrap();
             assert!(height > previous && height.fract() > 0.0);
             assert_eq!(battle_unit_altitude(&world, target).unwrap(), Some(height));
@@ -2075,8 +2075,8 @@ async fn vtol_vertical_towing_preserves_continuous_height_each_tick() {
         let mut replay = persistence::load(&config.database()).await.unwrap();
         assert_eq!(world.btech, replay.btech);
         assert_eq!(
-            advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap(),
-            advance_battle_motion(&mut replay, BattleMovementRules::STANDARD).unwrap()
+            advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap(),
+            advance_battle_motion(&mut replay, MovementRules::STANDARD).unwrap()
         );
         assert_eq!(world.btech, replay.btech);
     }
@@ -2097,7 +2097,7 @@ async fn airborne_carrier_shutdown_retains_tow_and_saved_descent() {
             .btech
             .rewrite_unit_record(carrier, |record| {
                 let unit = record;
-                unit["power"] = serde_json::to_value(BattlePower::Running).unwrap();
+                unit["power"] = serde_json::to_value(Power::Running).unwrap();
                 unit["vtol_flight"]["phase"] = serde_json::json!({"kind":"airborne"});
                 unit["vtol_flight"]["altitude"] = 5.5.into();
             })
@@ -2110,14 +2110,14 @@ async fn airborne_carrier_shutdown_retains_tow_and_saved_descent() {
         let mut saved = scripts.world().clone();
         assert_eq!(saved.btech.tows().get(&carrier), Some(&load));
         let flight = saved.btech.vehicles()[&carrier].vtol_flight().unwrap();
-        assert_eq!(flight.phase, BattleVtolFlightPhase::Falling);
-        assert_eq!(flight.fall, Some(BattleFreeFall::at_altitude(5.5).unwrap()));
+        assert_eq!(flight.phase, VtolFlightPhase::Falling);
+        assert_eq!(flight.fall, Some(FreeFall::at_altitude(5.5).unwrap()));
         persistence::save(&config.database(), &saved).await.unwrap();
         let mut replay = persistence::load(&config.database()).await.unwrap();
         assert_eq!(replay.btech, saved.btech);
         for _ in 0..8 {
-            advance_battle_motion(&mut saved, BattleMovementRules::STANDARD).unwrap();
-            advance_battle_motion(&mut replay, BattleMovementRules::STANDARD).unwrap();
+            advance_battle_motion(&mut saved, MovementRules::STANDARD).unwrap();
+            advance_battle_motion(&mut replay, MovementRules::STANDARD).unwrap();
             assert_eq!(saved.btech, replay.btech);
             saved.validate(&config).unwrap();
         }

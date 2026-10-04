@@ -1,18 +1,18 @@
 //! Saved thermal-check cadence and atomic heat injuries, ammunition hazards and shutdowns.
-use super::{BattleNotice, BattlePower, BattleUnit};
+use super::{Mech, Notice, Power};
 use crate::{Flag, Kind, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 
 /// Unit-local committed-second timing; elapsed saturates until heat reaches a checkable level.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BattleOverheatClock {
+pub struct OverheatClock {
     pub elapsed: u8,
     pub phase: u8,
     pub injury_due: bool,
 }
 
-impl BattleOverheatClock {
+impl OverheatClock {
     /// Validate saved counters and the once-per-turn injury marker.
     pub(super) fn validate(self) -> Result<()> {
         ensure!(
@@ -30,32 +30,32 @@ impl BattleOverheatClock {
     }
 }
 
-impl BattleUnit {
+impl Mech {
     /// Inspect timing without scheduling or consuming a check.
-    pub fn overheat_clock(&self) -> BattleOverheatClock {
+    pub fn overheat_clock(&self) -> OverheatClock {
         self.overheat_clock
     }
 
     /// Stable hot units still need checks even when another thermal sample changes no heat.
     pub fn overheat_active(&self) -> bool {
-        !self.is_destroyed() && (self.power() == BattlePower::Running || self.heat().excess >= 10.0)
+        !self.is_destroyed() && (self.power() == Power::Running || self.heat().excess >= 10.0)
     }
 }
 
 /// Rules required by immediate thermal damage and shutdown falls.
 #[derive(Debug, Clone, Copy)]
-pub struct BattleOverheatRules {
+pub struct OverheatRules {
     /// Vehicle damage policy for mines reached by this consequence chain.
-    pub vehicle_impact: super::BattleVehicleImpactRules,
-    pub stacking: super::BattleStackingRules,
-    pub hit: super::BattleHitRules,
+    pub vehicle_impact: super::VehicleImpactRules,
+    pub stacking: super::StackingRules,
+    pub hit: super::HitRules,
     pub extended_piloting: bool,
-    pub stagger: super::BattleStaggerMode,
+    pub stagger: super::StaggerMode,
 }
 
 /// An avoidance roll, or an automatic result without RNG; Computer rolls may use unskilled dice.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-pub struct BattleHeatCheck {
+pub struct HeatCheck {
     pub target: i16,
     pub roll: Option<u8>,
     pub success: bool,
@@ -65,31 +65,31 @@ pub struct BattleHeatCheck {
 /// A due thermal event; all effects have been applied and notices await the enclosing commit.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[must_use = "Publish thermal notices after the enclosing world transaction succeeds"]
-pub struct BattleOverheatReport {
+pub struct OverheatReport {
     pub unit: ObjectId,
-    pub injury: Option<super::BattlePilotInjury>,
-    pub character_injury: Option<super::BattleCharacterPilotInjury>,
-    pub stacking_impacts: Vec<super::BattleTacticalImpact>,
-    pub stacking_falls: Vec<super::BattleFallReport>,
-    pub ammunition_check: Option<BattleHeatCheck>,
-    pub explosion: Option<super::BattleTacticalImpact>,
-    pub shutdown_check: Option<BattleHeatCheck>,
+    pub injury: Option<super::TacticalPilotInjury>,
+    pub character_injury: Option<super::CharacterPilotInjury>,
+    pub stacking_impacts: Vec<super::TacticalImpact>,
+    pub stacking_falls: Vec<super::MechFallReport>,
+    pub ammunition_check: Option<HeatCheck>,
+    pub explosion: Option<super::TacticalImpact>,
+    pub shutdown_check: Option<HeatCheck>,
     /// Normal Computer skill award after a successful in-character shutdown override.
-    pub computer_experience: Option<super::BattleExperienceAward>,
+    pub computer_experience: Option<super::ExperienceAward>,
     pub shutdown: bool,
-    pub balance: Option<super::BattlePilotingCheck>,
+    pub balance: Option<super::PilotingCheck>,
     /// Accepted Computer and shutdown balance XP captured before publication.
-    pub experience_messages: Vec<super::BattleChannelMessage>,
-    pub fall: Option<super::BattleFallReport>,
+    pub experience_messages: Vec<super::DiagnosticMessage>,
+    pub fall: Option<super::MechFallReport>,
     /// Private control rolls indexed within the unformatted notice stream.
-    pub pilot_notices: Vec<super::BattlePilotNotice>,
-    pub notices: Vec<BattleNotice>,
+    pub pilot_notices: Vec<super::PilotNotice>,
+    pub notices: Vec<Notice>,
 }
 
 /// Shared marker keeps the formatted Computer roll adjacent to its override notice.
 const COMPUTER_OVERRIDE_NOTICE: &str = "You frantically attempt to override the shutdown process!";
 
-impl BattleOverheatReport {
+impl OverheatReport {
     /// Render ordered cockpit messages, including the target and result of a Computer override.
     pub fn messages(&self) -> Vec<(ObjectId, String)> {
         self.messages_with_feedback(&mut Vec::new())
@@ -98,7 +98,7 @@ impl BattleOverheatReport {
     /// Account for inserted Computer diagnostics when carrying private notice positions.
     pub(crate) fn messages_with_feedback(
         &self,
-        private: &mut Vec<super::BattlePilotNotice>,
+        private: &mut Vec<super::PilotNotice>,
     ) -> Vec<(ObjectId, String)> {
         let mut messages = Vec::new();
         let mut offsets = Vec::with_capacity(self.notices.len() + 1);
@@ -128,27 +128,24 @@ impl BattleOverheatReport {
 }
 
 /// Consume due markers after advance_heat, preserving timing, RNG and all damage on any failure.
-pub fn advance_overheat(
-    world: &mut World,
-    rules: BattleOverheatRules,
-) -> Result<Vec<BattleOverheatReport>> {
+pub fn advance_overheat(world: &mut World, rules: OverheatRules) -> Result<Vec<OverheatReport>> {
     advance_overheat_inner(world, rules, false)
 }
 
 /// Resolve due thermal checks inside a host action that publishes character consequences.
 pub(super) fn advance_overheat_in_action(
     world: &mut World,
-    rules: BattleOverheatRules,
-) -> Result<Vec<BattleOverheatReport>> {
+    rules: OverheatRules,
+) -> Result<Vec<OverheatReport>> {
     advance_overheat_inner(world, rules, true)
 }
 
 /// Shared heat injury, ammunition and shutdown sequence for either publication mode.
 fn advance_overheat_inner(
     world: &mut World,
-    rules: BattleOverheatRules,
+    rules: OverheatRules,
     character: bool,
-) -> Result<Vec<BattleOverheatReport>> {
+) -> Result<Vec<OverheatReport>> {
     world.attempt(|world| {
         let ids: Vec<_> = world
             .btech
@@ -170,7 +167,7 @@ fn advance_overheat_inner(
             let character_unit = character && world.objects[&id].flags.contains(Flag::InCharacter);
             world.btech.constructed_units()[&id].validate()?;
             let toughness = advantage(world, id, "Toughness");
-            let fall_rules = super::BattleFallRules {
+            let fall_rules = super::FallRules {
                 vehicle_impact: rules.vehicle_impact,
                 stacking: rules.stacking,
                 hit: rules.hit,
@@ -178,7 +175,7 @@ fn advance_overheat_inner(
                 stagger: rules.stagger,
                 toughness,
             };
-            let mut report = BattleOverheatReport {
+            let mut report = OverheatReport {
                 unit: id,
                 injury: None,
                 character_injury: None,
@@ -199,7 +196,7 @@ fn advance_overheat_inner(
             let heat = unit.heat().excess;
             let injury_due = std::mem::take(&mut unit.overheat_clock.injury_due);
             if injury_due {
-                let failed_support = unit.system_hits(super::BattleSystem::LifeSupport) > 0;
+                let failed_support = unit.system_hits(super::System::LifeSupport) > 0;
                 let exposed = failed_support || (heat > 30.0 && unit.dice.die(2)? == 1);
                 let hits = if exposed && heat > 25.0 {
                     if failed_support { 2 } else { 1 }
@@ -209,7 +206,7 @@ fn advance_overheat_inner(
                     0
                 };
                 if hits > 0 && unit.pilot().is_some() {
-                    report.notices.push(BattleNotice {
+                    report.notices.push(Notice {
                         unit: id,
                         text: "You take personal injury from heat!".to_owned(),
                     });
@@ -235,7 +232,7 @@ fn advance_overheat_inner(
                 };
                 if let Some(target) = ammunition_target(heat, inferno.is_some()) {
                     let roll = unit_mut(world, id).dice.generic_roll();
-                    let check = BattleHeatCheck {
+                    let check = HeatCheck {
                         target,
                         roll: Some(roll),
                         success: i16::from(roll) >= target,
@@ -264,7 +261,7 @@ fn advance_overheat_inner(
                             report.notices.extend(explosion.notices.iter().cloned());
                             report.explosion = Some(explosion);
                         } else {
-                            report.notices.push(BattleNotice {
+                            report.notices.push(Notice {
                                 unit: id,
                                 text: "You have no ammunition, lucky you!".to_owned(),
                             });
@@ -274,7 +271,7 @@ fn advance_overheat_inner(
                 if !world.btech.constructed_units()[&id].is_destroyed() {
                     let check = shutdown_check(world, id, heat)?;
                     if check.computer {
-                        report.notices.push(BattleNotice {
+                        report.notices.push(Notice {
                             unit: id,
                             text: COMPUTER_OVERRIDE_NOTICE.to_owned(),
                         });
@@ -289,15 +286,15 @@ fn advance_overheat_inner(
                         .then_some(check)
                         .or_else(|| (heat >= 14.0 || !check.success).then_some(check));
                     if !check.success
-                        && world.btech.constructed_units()[&id].power() == BattlePower::Running
+                        && world.btech.constructed_units()[&id].power() == Power::Running
                     {
-                        report.notices.push(BattleNotice {
+                        report.notices.push(Notice {
                             unit: id,
                             text: "Reactor shutting down...".to_owned(),
                         });
                         let airborne = world.btech.constructed_units()[&id].airborne();
                         if airborne {
-                            report.notices.push(BattleNotice {
+                            report.notices.push(Notice {
                                 unit: id,
                                 text: "Reactor shutdown cuts your jump short!".to_owned(),
                             });
@@ -315,7 +312,7 @@ fn advance_overheat_inner(
                             let input = super::stacking::physical_input(
                                 world,
                                 id,
-                                super::BattleStackingEntry::Fall,
+                                super::StackingEntry::Fall,
                             )?;
                             let resolve = if character_unit {
                                 super::fall::resolve_character_signed_fall
@@ -334,7 +331,7 @@ fn advance_overheat_inner(
                             let input = super::stacking::physical_input(
                                 world,
                                 id,
-                                super::BattleStackingEntry::Fall,
+                                super::StackingEntry::Fall,
                             )?;
                             if character {
                                 let mut effects = super::stacking::StackingEffects::default();
@@ -363,7 +360,7 @@ fn advance_overheat_inner(
                             }
                         }
                         let unit = &world.btech.constructed_units()[&id];
-                        if unit.posture() != super::BattlePosture::Prone
+                        if unit.posture() != super::Posture::Prone
                             && unit
                                 .motion()
                                 .is_some_and(|motion| motion.speed.abs() > 10.75)
@@ -398,7 +395,7 @@ fn advance_overheat_inner(
                                 } else {
                                     super::fall::resolve_zero_fall(world, id, fall_rules)?
                                 };
-                                report.notices.push(BattleNotice {
+                                report.notices.push(Notice {
                                     unit: id,
                                     text: "You lose your balance and fall down!".to_owned(),
                                 });
@@ -413,7 +410,7 @@ fn advance_overheat_inner(
                         }
                         let unit = unit_mut(world, id);
                         let dropped = unit.carried_club.take().is_some();
-                        unit.power = BattlePower::Off;
+                        unit.power = Power::Off;
                         unit.hide_elapsed = None;
                         unit.masc.shutdown();
                         unit.supercharger.shutdown();
@@ -459,7 +456,7 @@ fn advantage(world: &World, id: ObjectId, name: &str) -> bool {
 }
 
 /// Borrow one unit in the enclosing private candidate.
-fn unit_mut(world: &mut World, id: ObjectId) -> &mut BattleUnit {
+fn unit_mut(world: &mut World, id: ObjectId) -> &mut Mech {
     world.btech.constructed.get_mut(&id).unwrap()
 }
 
@@ -496,10 +493,7 @@ fn ammunition_target(heat: f64, inferno: bool) -> Option<i16> {
 fn award_computer_override(
     world: &mut World,
     id: ObjectId,
-) -> Result<(
-    super::BattleExperienceAward,
-    Option<super::BattleChannelMessage>,
-)> {
+) -> Result<(super::ExperienceAward, Option<super::DiagnosticMessage>)> {
     let pilot = world.btech.constructed_units()[&id]
         .pilot()
         .context("Computer override has no pilot")?;
@@ -512,8 +506,8 @@ fn award_computer_override(
         false,
     )?;
     let message = award.accepted.then(|| {
-        super::BattleChannelMessage::new(
-            super::BattleChannel::Experience,
+        super::DiagnosticMessage::new(
+            super::DiagnosticChannel::Experience,
             format!(
                 "{} gained 1 computer XP (mech #{})",
                 world.objects[&pilot].name, id.0
@@ -524,7 +518,7 @@ fn award_computer_override(
 }
 
 /// Player Computer overrides and unpiloted reactor thresholds use separate reference rules.
-fn shutdown_check(world: &mut World, id: ObjectId, heat: f64) -> Result<BattleHeatCheck> {
+fn shutdown_check(world: &mut World, id: ObjectId, heat: f64) -> Result<HeatCheck> {
     let pilot = world.btech.constructed_units()[&id]
         .pilot()
         .filter(|pilot| {
@@ -535,7 +529,7 @@ fn shutdown_check(world: &mut World, id: ObjectId, heat: f64) -> Result<BattleHe
         });
     if let Some(pilot) = pilot {
         if heat < 14.0 {
-            return Ok(BattleHeatCheck {
+            return Ok(HeatCheck {
                 target: 0,
                 roll: None,
                 success: true,
@@ -557,7 +551,7 @@ fn shutdown_check(world: &mut World, id: ObjectId, heat: f64) -> Result<BattleHe
             world,
             pilot,
             "Computer",
-            super::BattleSkillCategory::Mental,
+            super::SkillCategory::Mental,
         )? + modifier;
         let skilled = world
             .btech
@@ -572,7 +566,7 @@ fn shutdown_check(world: &mut World, id: ObjectId, heat: f64) -> Result<BattleHe
             let rolls = [dice.d6(), dice.d6(), dice.d6()];
             rolls.iter().sum::<u8>() - rolls.iter().max().unwrap()
         };
-        return Ok(BattleHeatCheck {
+        return Ok(HeatCheck {
             target,
             roll: Some(roll),
             success: i16::from(roll) >= target,
@@ -591,7 +585,7 @@ fn shutdown_check(world: &mut World, id: ObjectId, heat: f64) -> Result<BattleHe
         4
     };
     let roll = (target != 13).then(|| unit_mut(world, id).dice.generic_roll());
-    Ok(BattleHeatCheck {
+    Ok(HeatCheck {
         target,
         roll,
         success: roll.is_some_and(|roll| i16::from(roll) >= target),

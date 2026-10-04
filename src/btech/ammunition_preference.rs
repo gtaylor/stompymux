@@ -1,5 +1,5 @@
 //! Preferred ammunition sections share admission and feed priority across unit anatomies.
-use super::{BattleNotice, BattleSectionState, BattleWeaponReadiness, WeaponMount};
+use super::{Notice, SectionState, WeaponMount, WeaponReadiness};
 use crate::{CommandAction, CommandContext, CommandInput, CommandReport, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use std::collections::BTreeMap;
@@ -16,7 +16,7 @@ pub(super) fn priority<S: Eq>(preferred: Option<S>, mount: S, bin: S) -> u8 {
 }
 
 /// Only weapons fed by ammunition bins carry a preferred feed section.
-fn supports(weapon: super::BattleWeapon) -> bool {
+fn supports(weapon: super::Weapon) -> bool {
     weapon.profile().ammunition_per_ton > 0
 }
 
@@ -34,23 +34,23 @@ pub(super) fn validate<S: Copy, L>(
     Ok(())
 }
 
-impl super::BattleUnit {
+impl super::Mech {
     /// Pilot preference is independent of bin availability and remains set after depletion.
-    pub fn ammunition_section(&self, index: usize) -> Option<super::BattleSection> {
+    pub fn ammunition_section(&self, index: usize) -> Option<super::MechSection> {
         self.ammunition_sections.get(&index).copied()
     }
 }
-impl super::BattleVehicle {
+impl super::Vehicle {
     /// Pilot preference is independent of bin availability and remains set after depletion.
-    pub fn ammunition_section(&self, index: usize) -> Option<super::BattleVehicleSection> {
+    pub fn ammunition_section(&self, index: usize) -> Option<super::VehicleSection> {
         self.ammunition_sections.get(&index).copied()
     }
 }
 
 /// Apply the same equipment and section admission without requiring ammunition or reactor power.
 fn admit<S: Ord>(
-    state: &BattleWeaponReadiness,
-    sections: &BTreeMap<S, BattleSectionState>,
+    state: &WeaponReadiness,
+    sections: &BTreeMap<S, SectionState>,
     section: Option<&S>,
 ) -> Result<()> {
     ensure!(state.intact, "That weapon has been destroyed");
@@ -75,12 +75,12 @@ pub fn set_battle_ammunition_section(
     pilot: ObjectId,
     index: usize,
     section: Option<&str>,
-) -> Result<BattleNotice> {
+) -> Result<Notice> {
     let (name, already) = if let Some(unit) = world.btech.vehicles().get(&id) {
         super::vehicle_power::controlled(world, id, pilot)?;
         ensure!(unit.position().is_some(), "Unit must be on a map");
         let section = section
-            .map(super::BattleVehicleSection::parse_location)
+            .map(super::VehicleSection::parse_location)
             .transpose()?;
         admit(
             &unit.weapon_readiness(index)?,
@@ -126,7 +126,7 @@ pub fn set_battle_ammunition_section(
         );
         (name, already)
     };
-    Ok(BattleNotice {
+    Ok(Notice {
         unit: id,
         text: name.map_or_else(
             || format!("Preferred ammo source reset for weapon #{index}"),

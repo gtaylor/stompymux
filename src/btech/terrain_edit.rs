@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 /// A base-terrain edit; temporary overlays and map objects remain independently owned.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-pub struct BattleMapHexChange {
+pub struct MapHexChange {
     pub map: ObjectId,
     pub coordinate: HexCoordinate,
     pub before: Hex,
@@ -40,7 +40,7 @@ pub(super) fn replace_hex(
     map: ObjectId,
     coordinate: HexCoordinate,
     after: Hex,
-) -> Result<BattleMapHexChange> {
+) -> Result<MapHexChange> {
     after.validate()?;
     ensure!(
         after.overlay().is_none(),
@@ -52,7 +52,7 @@ pub(super) fn replace_hex(
         .get(&map)
         .context("Map not found")?
         .base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
-    let report = BattleMapHexChange {
+    let report = MapHexChange {
         map,
         coordinate,
         before,
@@ -62,7 +62,7 @@ pub(super) fn replace_hex(
     {
         return Ok(report);
     }
-    let on_tile = |position: Option<super::BattlePosition>| {
+    let on_tile = |position: Option<super::Position>| {
         position.is_some_and(|position| {
             position.map == map
                 && i32::from(position.x) == coordinate.x
@@ -107,7 +107,7 @@ pub fn set_map_hex_action(
     map: ObjectId,
     coordinate: HexCoordinate,
     hex: Hex,
-) -> Result<BattleMapHexChange> {
+) -> Result<MapHexChange> {
     ensure!(
         hex.overlay().is_none(),
         "Fire and smoke are not terrain; use ADDFIRE or ADDSMOKE"
@@ -126,11 +126,7 @@ pub fn set_map_hex_action(
             "Map is unavailable"
         );
         let report = replace_hex(&mut scripts.world_mut(), map, coordinate, hex)?;
-        super::notify_message(
-            scripts,
-            super::BattleMessageTarget::Player(actor),
-            "Hex set!",
-        )?;
+        super::notify_message(scripts, super::MessageTarget::Player(actor), "Hex set!")?;
         scripts.world().validate(config)?;
         scripts.effects.validate()?;
         Ok(report)

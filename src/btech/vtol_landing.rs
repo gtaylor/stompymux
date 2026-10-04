@@ -1,5 +1,5 @@
 //! Deliberate rotorcraft landing checks and material touchdown, separate from crash damage.
-use super::{BattleVehicle, BattleVtolFlight, BattleVtolFlightPhase, Hex, Structure};
+use super::{Hex, Structure, Vehicle, VtolFlight, VtolFlightPhase};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
 
@@ -7,16 +7,16 @@ use serde::Serialize;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 #[must_use = "Apply touchdown elevation and publish landing effects in the enclosing action"]
-pub enum BattleVtolLanding {
+pub enum VtolLanding {
     LaunchCancelled,
     Touchdown { elevation: i16 },
 }
 
-impl BattleVehicle {
+impl Vehicle {
     /// Land on the supplied current map surface, or cancel an outstanding launch.
     /// The host owns map lookup, cockpit authority, messages, callbacks and landing mines.
     /// Failed admission does not spend fuel, draw dice, or alter motion.
-    pub fn land_vtol(&mut self, hex: Hex, free_fusion_fuel: bool) -> Result<BattleVtolLanding> {
+    pub fn land_vtol(&mut self, hex: Hex, free_fusion_fuel: bool) -> Result<VtolLanding> {
         ensure!(self.definition().is_vtol(), "Landing requires a VTOL");
         ensure!(
             self.has_vtol_fuel(free_fusion_fuel),
@@ -27,14 +27,14 @@ impl BattleVehicle {
             .context("Aircraft flight state is unavailable")?;
         ensure!(!self.rotor_destroyed(), "The rotor's dead!");
         ensure!(
-            !self.is_destroyed() && flight.phase != BattleVtolFlightPhase::Falling,
+            !self.is_destroyed() && flight.phase != VtolFlightPhase::Falling,
             "The rotor cannot provide controlled landing"
         );
         if self.cancel_vtol_takeoff() {
-            return Ok(BattleVtolLanding::LaunchCancelled);
+            return Ok(VtolLanding::LaunchCancelled);
         }
         ensure!(
-            flight.phase == BattleVtolFlightPhase::Airborne,
+            flight.phase == VtolFlightPhase::Airborne,
             "You're already landed!"
         );
         let motion = self
@@ -62,13 +62,13 @@ impl BattleVehicle {
         );
         // Touchdown stops actual movement but retains the operator's horizontal command.
         self.motion.as_mut().unwrap().speed = 0.0;
-        self.vtol_flight = Some(BattleVtolFlight {
+        self.vtol_flight = Some(VtolFlight {
             altitude: f64::from(elevation),
-            ..BattleVtolFlight::default()
+            ..VtolFlight::default()
         });
         self.ground_elevation = None;
         self.under_bridge = false;
-        Ok(BattleVtolLanding::Touchdown { elevation })
+        Ok(VtolLanding::Touchdown { elevation })
     }
 }
 

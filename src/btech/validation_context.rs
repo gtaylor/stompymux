@@ -1,22 +1,22 @@
 //! Bounded, synchronous reuse of successful local validation by exact value.
 //!
-//! BattleUnit, BattleVehicle and StoredMap derive value equality and own
+//! Mech, Vehicle and StoredMap derive value equality and own
 //! their inputs (map Arc contents are immutable). No local validator reads
 //! external world state. Dice equality omits only generic-roll diagnostics, which these
 //! validators never inspect. Cross-object validation is never memoized here.
-use super::{BattleUnit, BattleVehicle, BtechState, StoredMap};
+use super::{BtechState, Mech, StoredMap, Vehicle};
 use crate::ObjectId;
 use anyhow::Result;
 use std::{cell::RefCell, collections::BTreeMap, marker::PhantomData, rc::Rc};
 
 struct ValidatedUnit {
-    unit: BattleUnit,
-    loadout: super::BattleLoadout,
+    unit: Mech,
+    loadout: super::MechLoadout,
 }
 
 struct Cache {
     units: BTreeMap<ObjectId, Option<ValidatedUnit>>,
-    vehicles: BTreeMap<ObjectId, Option<BattleVehicle>>,
+    vehicles: BTreeMap<ObjectId, Option<Vehicle>>,
     maps: BTreeMap<ObjectId, Option<StoredMap>>,
 }
 thread_local! { static ACTIVE: RefCell<Option<Cache>> = const { RefCell::new(None) }; }
@@ -67,7 +67,7 @@ pub(super) fn invalidate() {
 
 /// Reuse equipment only when every saved unit input still matches. This query
 /// never validates a new value or changes the order of admission failures.
-pub(super) fn cached_loadout(id: ObjectId, unit: &BattleUnit) -> Option<super::BattleLoadout> {
+pub(super) fn cached_loadout(id: ObjectId, unit: &Mech) -> Option<super::MechLoadout> {
     let result = ACTIVE.with(|active| {
         let cache = active.borrow();
         let saved = cache.as_ref()?.units.get(&id)?.as_ref()?;
@@ -81,12 +81,12 @@ pub(super) fn cached_loadout(id: ObjectId, unit: &BattleUnit) -> Option<super::B
 
 /// Mount preparation has no immutable admission scope yet, but can share an
 /// exact-value projection produced by an earlier successful local validation.
-pub(super) fn loadout(id: ObjectId, unit: &BattleUnit) -> Result<super::BattleLoadout> {
+pub(super) fn loadout(id: ObjectId, unit: &Mech) -> Result<super::MechLoadout> {
     cached_loadout(id, unit).map_or_else(|| unit.loadout(), Ok)
 }
 
 /// Validate all local Mech inputs unless the exact value already passed.
-pub(super) fn unit(id: ObjectId, unit: &BattleUnit) -> Result<()> {
+pub(super) fn unit(id: ObjectId, unit: &Mech) -> Result<()> {
     let same = ACTIVE.with(|active| {
         active
             .borrow()
@@ -136,7 +136,7 @@ pub(super) fn unit(id: ObjectId, unit: &BattleUnit) -> Result<()> {
 }
 
 /// Validate all local vehicle inputs unless the exact value already passed.
-pub(super) fn vehicle(id: ObjectId, vehicle: &BattleVehicle) -> Result<()> {
+pub(super) fn vehicle(id: ObjectId, vehicle: &Vehicle) -> Result<()> {
     let same = ACTIVE.with(|active| {
         active
             .borrow()

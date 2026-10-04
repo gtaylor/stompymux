@@ -33,10 +33,10 @@ async fn fixture(
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let id = world.create(&config, "Carrier".into(), Kind::Thing);
-    let mut template = BattleUnitTemplate::parse("test", source).unwrap();
+    let mut template = UnitTemplate::parse("test", source).unwrap();
     let attributes = match &mut template {
-        BattleUnitTemplate::Mech(unit) => &mut unit.attributes,
-        BattleUnitTemplate::Vehicle(unit) => &mut unit.attributes,
+        UnitTemplate::Mech(unit) => &mut unit.attributes,
+        UnitTemplate::Vehicle(unit) => &mut unit.attributes,
     };
     let mut flags = attributes
         .get("specials")
@@ -66,18 +66,15 @@ async fn fixture(
 #[test]
 fn stock_identities_and_reference_mass_facts_are_stable() {
     let mut ids = BTreeSet::new();
-    for &weapon in BattleWeapon::ALL {
+    for &weapon in Weapon::ALL {
         assert!(ids.insert(weapon.part_id()));
-        assert_eq!(BattleWeapon::from_part_id(weapon.part_id()), Some(weapon));
-        let part = BattlePart::from_id(weapon.part_id()).unwrap();
+        assert_eq!(Weapon::from_part_id(weapon.part_id()), Some(weapon));
+        let part = Part::from_id(weapon.part_id()).unwrap();
         assert_eq!(part.name, weapon.name());
         assert_eq!(part.mass, weapon.mass());
-        assert_eq!(
-            BattlePart::parse(&part.name.to_ascii_lowercase()).unwrap(),
-            part
-        );
-        let ammunition = BattlePart::from_id(weapon.ammunition_part_id()).unwrap();
-        assert_eq!(ammunition.kind, BattlePartKind::Ammunition);
+        assert_eq!(Part::parse(&part.name.to_ascii_lowercase()).unwrap(), part);
+        let ammunition = Part::from_id(weapon.ammunition_part_id()).unwrap();
+        assert_eq!(ammunition.kind, PartKind::Ammunition);
         assert_eq!(ammunition.mass, 1024);
     }
     for (id, name, mass) in [
@@ -96,12 +93,12 @@ fn stock_identities_and_reference_mass_facts_are_stable() {
         (537, "Medical_Supplies", 8),
         (669, "SearchLight", 204),
     ] {
-        let part = BattlePart::from_id(id).unwrap();
+        let part = Part::from_id(id).unwrap();
         assert_eq!((part.name.as_str(), part.mass), (name, mass));
-        assert_eq!(BattlePart::parse(name).unwrap().part_id, id);
+        assert_eq!(Part::parse(name).unwrap().part_id, id);
     }
     let mut names = BTreeSet::new();
-    let parts: Vec<_> = BattlePart::all().collect();
+    let parts: Vec<_> = Part::all().collect();
     assert_eq!(parts.len(), 618);
     let mut duplicates = BTreeSet::new();
     for part in parts {
@@ -115,16 +112,16 @@ fn stock_identities_and_reference_mass_facts_are_stable() {
     );
     for name in duplicates {
         assert!(
-            BattlePart::parse(&name)
+            Part::parse(&name)
                 .unwrap_err()
                 .to_string()
                 .contains("Ambiguous")
         );
     }
     for id in [-1, 0, 197, 384, 511, 670, 1024, 1408, i32::MAX] {
-        assert!(BattlePart::from_id(id).is_none());
+        assert!(Part::from_id(id).is_none());
     }
-    assert!(BattlePart::parse("Gold*").is_err());
+    assert!(Part::parse("Gold*").is_err());
 }
 
 /// Round once after summing stock and applying the chassis cargo factor; saved replay retains stock.
@@ -236,7 +233,7 @@ async fn carried_stock_affects_live_movement_and_adds_to_tow_load() {
         let (_dir, config, mut world, map, id) = fixture(&source, false).await;
         let unloaded = battle_throttle_maximum(&world, id, true).unwrap();
         let target = world.create(&config, "Tow target".into(), Kind::Thing);
-        BattleUnitTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml"))
+        UnitTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml"))
             .unwrap()
             .create(&mut world, target)
             .unwrap();
@@ -270,7 +267,7 @@ async fn carried_stock_affects_live_movement_and_adds_to_tow_load() {
             unit["vtol_flight"]["altitude"] = 20.0.into();
         }
         world.btech = serde_json::from_value(encoded).unwrap();
-        advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
+        advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
         let actual = if mech {
             world.btech.constructed_units()[&id].motion().unwrap()
         } else {
@@ -285,8 +282,8 @@ async fn carried_stock_affects_live_movement_and_adds_to_tow_load() {
         persistence::save(&config.database(), &world).await.unwrap();
         let mut replay = persistence::load(&config.database()).await.unwrap();
         assert_eq!(
-            advance_battle_motion(&mut replay, BattleMovementRules::STANDARD).unwrap(),
-            advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap()
+            advance_battle_motion(&mut replay, MovementRules::STANDARD).unwrap(),
+            advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap()
         );
         assert_eq!(world.btech, replay.btech);
     }
@@ -301,7 +298,7 @@ async fn construction_rejects_unknown_stock_before_mutation() {
         set_battle_inventory_quantity(&mut world, ObjectId(1), id, 384, 1).unwrap();
         let before = world.btech.clone();
         assert!(
-            BattleUnitTemplate::parse("test", &source)
+            UnitTemplate::parse("test", &source)
                 .unwrap()
                 .create(&mut world, id)
                 .is_err()
@@ -309,7 +306,7 @@ async fn construction_rejects_unknown_stock_before_mutation() {
         assert_eq!(world.btech, before);
         set_battle_inventory_quantity(&mut world, ObjectId(1), id, 384, 0).unwrap();
         set_battle_inventory_named(&mut world, ObjectId(1), id, "Gold", 1).unwrap();
-        BattleUnitTemplate::parse("test", &source)
+        UnitTemplate::parse("test", &source)
             .unwrap()
             .create(&mut world, id)
             .unwrap();

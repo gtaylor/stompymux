@@ -1,9 +1,9 @@
 //! Persisted inferno duration, extended by hits and aged only by committed simulation ticks.
-use super::{BattleNotice, BattleUnit};
+use super::{Mech, Notice};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 
-impl BattleUnit {
+impl Mech {
     /// Remaining inferno seconds; positive duration suppresses six points of heat dissipation.
     pub fn inferno_remaining(&self) -> u32 {
         self.inferno_remaining
@@ -55,7 +55,7 @@ pub(super) fn adjust_burn(world: &mut World, id: ObjectId, seconds: i64) -> Resu
 }
 
 /// Advance after the thermal sample so every saved burn second supplies its cooling penalty.
-pub fn advance_inferno_burns(world: &mut World) -> Vec<BattleNotice> {
+pub fn advance_inferno_burns(world: &mut World) -> Vec<Notice> {
     let ids: Vec<_> = world
         .btech
         .constructed_units()
@@ -74,7 +74,7 @@ pub fn advance_inferno_burns(world: &mut World) -> Vec<BattleNotice> {
         let unit = world.btech.constructed.get_mut(&id).unwrap();
         unit.inferno_remaining -= 1;
         if unit.inferno_remaining == 0 {
-            notices.push(BattleNotice {
+            notices.push(Notice {
                 unit: id,
                 text: "You feel suddenly far cooler as the fires finally die.".into(),
             });
@@ -85,7 +85,7 @@ pub fn advance_inferno_burns(world: &mut World) -> Vec<BattleNotice> {
 
 /// Extinguish during an immersion event, replacing surface decoration with two minutes of steam.
 /// A standing unit in depth-one water remains burning; the movement/fall caller owns event admission.
-pub fn extinguish_inferno_in_water(world: &mut World, id: ObjectId) -> Result<Vec<BattleNotice>> {
+pub fn extinguish_inferno_in_water(world: &mut World, id: ObjectId) -> Result<Vec<Notice>> {
     let unit = world
         .btech
         .constructed_units()
@@ -105,11 +105,11 @@ pub fn extinguish_inferno_in_water(world: &mut World, id: ObjectId) -> Result<Ve
     let tile = map.base_hex(i64::from(position.x), i64::from(position.y))?;
     if !tile.is_open_water()
         || (unit.elevation_level(tile) == i32::from(tile.water_line()) - 1
-            && unit.posture() != super::BattlePosture::Prone)
+            && unit.posture() != super::Posture::Prone)
     {
         return Ok(Vec::new());
     }
-    let mut notices = vec![BattleNotice {
+    let mut notices = vec![Notice {
         unit: id,
         text: "The flames extinguish in a roar of steam!".into(),
     }];

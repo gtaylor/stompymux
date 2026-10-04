@@ -1,5 +1,5 @@
 //! Resolve template critical slots into distinct weapons, ammunition bins and systems.
-use super::{BattleSection, BattleSystem, BattleTemplate, BattleWeapon};
+use super::{MechSection, MechTemplate, System, Weapon};
 use anyhow::{Context, Result, bail, ensure};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
@@ -7,7 +7,7 @@ use std::collections::{BTreeMap, BTreeSet};
 /// A zero-based slot in a named section: a BattleMech section unless another
 /// section type is given, as [`super::VehicleCriticalLocation`] does for vehicles.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-pub struct CriticalLocation<S = BattleSection> {
+pub struct CriticalLocation<S = MechSection> {
     pub section: S,
     pub slot: u8,
 }
@@ -15,7 +15,7 @@ pub struct CriticalLocation<S = BattleSection> {
 /// One installed weapon, even when it occupies several critical slots.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct WeaponMount<L = CriticalLocation> {
-    pub weapon: BattleWeapon,
+    pub weapon: Weapon,
     /// Primary-section slots come first, followed by any linked extension slots.
     pub criticals: Vec<L>,
     pub rear_mount: bool,
@@ -25,30 +25,30 @@ pub struct WeaponMount<L = CriticalLocation> {
     pub one_shot: bool,
     /// Templates may explicitly represent an already expended launcher.
     pub initially_spent: bool,
-    pub initial_fire_mode: super::BattleFireMode,
-    pub initial_ammunition_mode: super::BattleAmmunitionMode,
+    pub initial_fire_mode: super::FireMode,
+    pub initial_ammunition_mode: super::AmmunitionMode,
 }
 
 /// One independent ammunition bin; rounds count complete weapon salvos.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct AmmunitionBin<L = CriticalLocation> {
     pub location: L,
-    pub weapon: BattleWeapon,
+    pub weapon: Weapon,
     pub rounds: u16,
     /// Maximum salvos in this installed bin, independent of its initial contents.
     pub capacity: u16,
     pub half_ton: bool,
     /// Retained bin fire flag; launcher hotloading is selected on the weapon, not its supply.
     pub hotload: bool,
-    pub mode: super::BattleAmmunitionMode,
+    pub mode: super::AmmunitionMode,
 }
 
 impl AmmunitionBin {
     /// Validate supported bin flags and derive capacity without inspecting live contents.
     pub fn configuration(
-        weapon: BattleWeapon,
+        weapon: Weapon,
         flags: &[String],
-    ) -> Result<(u16, bool, super::BattleAmmunitionMode)> {
+    ) -> Result<(u16, bool, super::AmmunitionMode)> {
         let full_capacity = weapon.profile().ammunition_per_ton;
         ensure!(full_capacity > 0, "Weapon does not use ammunition");
         ensure!(
@@ -61,20 +61,20 @@ impl AmmunitionBin {
             .filter(|mode| !matches!(mode.as_str(), "Halfton" | "Hotload" | "OnTC"))
             .cloned()
             .collect();
-        let mode = super::BattleAmmunitionMode::from_flags(weapon, &ammunition_flags)?;
+        let mode = super::AmmunitionMode::from_flags(weapon, &ammunition_flags)?;
         let full_capacity = weapon.profile_for_ammunition(mode).ammunition_per_ton;
         let capacity = u16::from(
             if half_ton
                 || matches!(
                     mode,
-                    super::BattleAmmunitionMode::Precision
-                        | super::BattleAmmunitionMode::ArmorPiercing
-                        | super::BattleAmmunitionMode::ThunderAugmented
-                        | super::BattleAmmunitionMode::ThunderActive
+                    super::AmmunitionMode::Precision
+                        | super::AmmunitionMode::ArmorPiercing
+                        | super::AmmunitionMode::ThunderAugmented
+                        | super::AmmunitionMode::ThunderActive
                 )
             {
                 full_capacity / 2
-            } else if mode == super::BattleAmmunitionMode::Caseless {
+            } else if mode == super::AmmunitionMode::Caseless {
                 full_capacity * 2
             } else {
                 full_capacity
@@ -84,9 +84,9 @@ impl AmmunitionBin {
     }
 
     pub fn configuration_contract(
-        weapon: BattleWeapon,
+        weapon: Weapon,
         flags: &[String],
-    ) -> Result<(u16, bool, super::BattleAmmunitionMode)> {
+    ) -> Result<(u16, bool, super::AmmunitionMode)> {
         let full_capacity = weapon.profile().ammunition_per_ton;
         ensure!(full_capacity > 0, "Weapon does not use ammunition");
         ensure!(
@@ -109,20 +109,20 @@ impl AmmunitionBin {
         );
         // The native administrator stores an unrestricted ammunition bit mask. The combat
         // projection uses its normal precedence while the critical retains every bit.
-        let mode = super::BattleAmmunitionMode::initial_selection(weapon, &ammunition_flags);
+        let mode = super::AmmunitionMode::initial_selection(weapon, &ammunition_flags);
         let full_capacity = weapon.profile_for_ammunition(mode).ammunition_per_ton;
         let capacity = u16::from(
             if half_ton
                 || matches!(
                     mode,
-                    super::BattleAmmunitionMode::Precision
-                        | super::BattleAmmunitionMode::ArmorPiercing
-                        | super::BattleAmmunitionMode::ThunderAugmented
-                        | super::BattleAmmunitionMode::ThunderActive
+                    super::AmmunitionMode::Precision
+                        | super::AmmunitionMode::ArmorPiercing
+                        | super::AmmunitionMode::ThunderAugmented
+                        | super::AmmunitionMode::ThunderActive
                 )
             {
                 full_capacity / 2
-            } else if mode == super::BattleAmmunitionMode::Caseless {
+            } else if mode == super::AmmunitionMode::Caseless {
                 full_capacity * 2
             } else {
                 full_capacity
@@ -136,7 +136,7 @@ impl AmmunitionBin {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct SystemCritical<L = CriticalLocation> {
     pub location: L,
-    pub system: BattleSystem,
+    pub system: System,
 }
 
 impl<L> WeaponMount<L> {
@@ -144,10 +144,10 @@ impl<L> WeaponMount<L> {
     /// Any unavailable computer slot disables assistance, and cluster ammunition never benefits.
     pub fn computer_assists(
         &self,
-        ammunition: super::BattleAmmunitionMode,
+        ammunition: super::AmmunitionMode,
         available_slots: impl Iterator<Item = bool>,
     ) -> bool {
-        if ammunition == super::BattleAmmunitionMode::Cluster {
+        if ammunition == super::AmmunitionMode::Cluster {
             return false;
         }
         let mut installed = false;
@@ -162,7 +162,7 @@ impl<L> WeaponMount<L> {
 
     /// Validate shared weapon flags independently of chassis-specific slot allocation.
     pub fn from_critical(
-        weapon: BattleWeapon,
+        weapon: Weapon,
         critical: &super::CriticalDefinition,
         criticals: Vec<L>,
     ) -> Result<Self> {
@@ -183,7 +183,7 @@ impl<L> WeaponMount<L> {
                     || (mode == "Hotload" && weapon.supports_hotload())
                     || (mode == "UltraMode" && weapon.is_ultra())
                     || (mode == "RapidFire" && weapon.supports_rapid_fire())
-                    || super::BattleAmmunitionMode::from_flag(weapon, mode)
+                    || super::AmmunitionMode::from_flag(weapon, mode)
                         .is_some_and(|mode| mode.supports(weapon))
                     || (mode == "Gattling" && weapon.supports_gatling())
                     || (matches!(
@@ -214,7 +214,7 @@ impl<L> WeaponMount<L> {
     }
 
     pub fn from_critical_contract(
-        weapon: BattleWeapon,
+        weapon: Weapon,
         critical: &super::CriticalDefinition,
         criticals: Vec<L>,
     ) -> Result<Self> {
@@ -227,11 +227,7 @@ impl<L> WeaponMount<L> {
         Ok(Self::project(weapon, critical, criticals))
     }
 
-    fn project(
-        weapon: BattleWeapon,
-        critical: &super::CriticalDefinition,
-        criticals: Vec<L>,
-    ) -> Self {
+    fn project(weapon: Weapon, critical: &super::CriticalDefinition, criticals: Vec<L>) -> Self {
         let one_shot = critical.modes.iter().any(|mode| mode == "OneShot");
         let initially_spent = critical.modes.iter().any(|mode| mode == "OneShot_Used");
         Self {
@@ -242,29 +238,29 @@ impl<L> WeaponMount<L> {
             rear_mount: critical.modes.iter().any(|mode| mode == "RearMount"),
             on_targeting_computer: critical.modes.iter().any(|mode| mode == "OnTC"),
             initial_fire_mode: if critical.modes.iter().any(|mode| mode == "Heat") {
-                super::BattleFireMode::Heat
+                super::FireMode::Heat
             } else if critical.modes.iter().any(|mode| mode == "Hotload") {
-                super::BattleFireMode::Hotload
+                super::FireMode::Hotload
             } else if critical.modes.iter().any(|mode| mode == "UltraMode") {
-                super::BattleFireMode::Ultra
+                super::FireMode::Ultra
             } else if critical.modes.iter().any(|mode| mode == "RapidFire") {
-                super::BattleFireMode::Rapid
+                super::FireMode::Rapid
             } else if critical.modes.iter().any(|mode| mode == "Gattling") {
-                super::BattleFireMode::Gatling
+                super::FireMode::Gatling
             } else if critical.modes.iter().any(|mode| mode == "Rotary_TwoShot") {
-                super::BattleFireMode::Rotary2
+                super::FireMode::Rotary2
             } else if critical.modes.iter().any(|mode| mode == "Rotary_ThreeShot") {
-                super::BattleFireMode::Rotary3
+                super::FireMode::Rotary3
             } else if critical.modes.iter().any(|mode| mode == "Rotary_FourShot") {
-                super::BattleFireMode::Rotary4
+                super::FireMode::Rotary4
             } else if critical.modes.iter().any(|mode| mode == "Rotary_FiveShot") {
-                super::BattleFireMode::Rotary5
+                super::FireMode::Rotary5
             } else if critical.modes.iter().any(|mode| mode == "Rotary_SixShot") {
-                super::BattleFireMode::Rotary6
+                super::FireMode::Rotary6
             } else {
-                super::BattleFireMode::Normal
+                super::FireMode::Normal
             },
-            initial_ammunition_mode: super::BattleAmmunitionMode::initial_selection(
+            initial_ammunition_mode: super::AmmunitionMode::initial_selection(
                 weapon,
                 &critical.modes,
             ),
@@ -344,7 +340,7 @@ impl<L> AmmunitionBin<L> {
         critical: &super::CriticalDefinition,
         location: L,
     ) -> Result<Self> {
-        let weapon = BattleWeapon::parse(name)?;
+        let weapon = Weapon::parse(name)?;
         let (capacity, half_ton, mode) = AmmunitionBin::configuration(weapon, &critical.modes)?;
         let rounds: u16 = critical.data.parse().context("Invalid ammunition count")?;
         ensure!(rounds <= capacity, "Ammunition exceeds bin capacity");
@@ -364,7 +360,7 @@ impl<L> AmmunitionBin<L> {
         critical: &super::CriticalDefinition,
         location: L,
     ) -> Result<Self> {
-        let weapon = BattleWeapon::parse(name)?;
+        let weapon = Weapon::parse(name)?;
         let (capacity, half_ton, mode) =
             AmmunitionBin::configuration_contract(weapon, &critical.modes)?;
         let rounds: u16 = critical.data.parse().context("Invalid ammunition count")?;
@@ -382,7 +378,7 @@ impl<L> AmmunitionBin<L> {
 }
 
 /// Catalog-resolved equipment at locations of type `L`; this describes equipment, not
-/// a running combat unit. [`BattleLoadout`] and [`super::BattleVehicleLoadout`] name it
+/// a running combat unit. [`MechLoadout`] and [`super::VehicleLoadout`] name it
 /// for each chassis, and code written against this type serves both.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct ResolvedLoadout<L> {
@@ -392,27 +388,23 @@ pub struct ResolvedLoadout<L> {
 }
 
 /// A BattleMech's resolved equipment.
-pub type BattleLoadout = ResolvedLoadout<CriticalLocation>;
+pub type MechLoadout = ResolvedLoadout<CriticalLocation>;
 
-impl BattleLoadout {
+impl MechLoadout {
     /// Group complete contiguous sink installations using the chassis slot count.
     pub fn heat_sink_groups(&self, slots: usize) -> Result<Vec<Vec<CriticalLocation>>> {
-        self.system_groups(BattleSystem::HeatSink, slots, "heat sink")
+        self.system_groups(System::HeatSink, slots, "heat sink")
     }
 
     /// Improved jump jets occupy two contiguous, matching slots per unit of thrust.
     pub fn jump_jet_groups(&self, improved: bool) -> Result<Vec<Vec<CriticalLocation>>> {
-        self.system_groups(
-            BattleSystem::JumpJet,
-            if improved { 2 } else { 1 },
-            "jump jet",
-        )
+        self.system_groups(System::JumpJet, if improved { 2 } else { 1 }, "jump jet")
     }
 
     /// Resolve complete same-section installations without joining separate pieces of equipment.
     fn system_groups(
         &self,
-        system: BattleSystem,
+        system: System,
         size: usize,
         label: &str,
     ) -> Result<Vec<Vec<CriticalLocation>>> {
@@ -447,7 +439,7 @@ impl BattleLoadout {
 
     /// Resolve every occupied slot, failing on unknown equipment or unsupported modes.
     /// Slots form complete contiguous runs, with explicit links for supported split mounts.
-    pub fn resolve(template: &BattleTemplate) -> Result<Self> {
+    pub fn resolve(template: &MechTemplate) -> Result<Self> {
         let chassis = template.chassis()?;
         let mut loadout = Self {
             weapons: Vec::new(),
@@ -485,7 +477,7 @@ impl BattleLoadout {
                     if super::equipment::strip_name_prefix(&equipment, "IS.").is_some()
                         || super::equipment::strip_name_prefix(&equipment, "CL.").is_some()
                     {
-                        let weapon = BattleWeapon::parse(&equipment)?;
+                        let weapon = Weapon::parse(&equipment)?;
                         let mut mount = WeaponMount::from_critical(weapon, critical, Vec::new())?;
                         let count = weapon.profile().critical_slots;
                         let extension = split.remove(&location).unwrap_or_default();
@@ -527,7 +519,7 @@ impl BattleLoadout {
                         return Ok(());
                     }
                     ensure!(critical.modes.is_empty(), "Unsupported system mode");
-                    let system = BattleSystem::parse(&critical.equipment)?;
+                    let system = System::parse(&critical.equipment)?;
                     loadout.systems.push(SystemCritical { location, system });
                     Ok(())
                 })()
@@ -548,7 +540,7 @@ impl BattleLoadout {
         let myomer_slots = loadout
             .systems
             .iter()
-            .filter(|part| part.system == BattleSystem::TripleStrengthMyomer)
+            .filter(|part| part.system == System::TripleStrengthMyomer)
             .count();
         ensure!(
             myomer_slots == 0 || myomer_slots >= 6,
@@ -563,7 +555,7 @@ impl BattleLoadout {
         Ok(loadout)
     }
 
-    pub fn resolve_contract(template: &BattleTemplate) -> Result<Self> {
+    pub fn resolve_contract(template: &MechTemplate) -> Result<Self> {
         let chassis = template.chassis()?;
         let mut loadout = Self {
             weapons: Vec::new(),
@@ -588,9 +580,9 @@ impl BattleLoadout {
                         match AmmunitionBin::from_critical_contract(name, critical, location) {
                             Ok(bin) => loadout.ammunition.push(bin),
                             Err(_)
-                                if super::BattlePart::parse(&critical.equipment).is_ok_and(
-                                    |part| part.kind == super::BattlePartKind::Ammunition,
-                                ) => {}
+                                if super::Part::parse(&critical.equipment)
+                                    .is_ok_and(|part| part.kind == super::PartKind::Ammunition) => {
+                            }
                             Err(error) => return Err(error),
                         }
                         return Ok(());
@@ -607,13 +599,12 @@ impl BattleLoadout {
                     if super::equipment::strip_name_prefix(&equipment, "IS.").is_some()
                         || super::equipment::strip_name_prefix(&equipment, "CL.").is_some()
                     {
-                        let weapon = match BattleWeapon::parse(&equipment) {
+                        let weapon = match Weapon::parse(&equipment) {
                             Ok(weapon) => weapon,
                             Err(_)
                                 if contract_raw_weapon(&critical.equipment)
-                                    || super::BattlePart::parse(&critical.equipment).is_ok_and(
-                                        |part| part.kind == super::BattlePartKind::Weapon,
-                                    ) =>
+                                    || super::Part::parse(&critical.equipment)
+                                        .is_ok_and(|part| part.kind == super::PartKind::Weapon) =>
                             {
                                 return Ok(());
                             }
@@ -669,16 +660,14 @@ impl BattleLoadout {
                         loadout.weapons.push(mount);
                         return Ok(());
                     }
-                    let system = match BattleSystem::named(&critical.equipment) {
+                    let system = match System::named(&critical.equipment) {
                         Some(system) => system,
-                        None if super::BattlePart::parse(&critical.equipment).is_ok_and(
-                            |part| {
-                                matches!(
-                                    part.kind,
-                                    super::BattlePartKind::Component | super::BattlePartKind::Bomb
-                                )
-                            },
-                        ) =>
+                        None if super::Part::parse(&critical.equipment).is_ok_and(|part| {
+                            matches!(
+                                part.kind,
+                                super::PartKind::Component | super::PartKind::Bomb
+                            )
+                        }) =>
                         {
                             return Ok(());
                         }
@@ -730,7 +719,7 @@ pub fn contract_raw_weapon(name: &str) -> bool {
 /// Resolve each extension marker's explicit primary section and zero-based slot
 /// without turning the markers into equipment.
 fn split_criticals(
-    template: &BattleTemplate,
+    template: &MechTemplate,
 ) -> Result<BTreeMap<CriticalLocation, Vec<CriticalLocation>>> {
     use super::document::{is_split_proxy, parse_split_link, split_adjacent, split_proxy_name};
     let mut links: BTreeMap<CriticalLocation, Vec<CriticalLocation>> = BTreeMap::new();
@@ -756,7 +745,7 @@ fn split_criticals(
                 .get(&parent.section)
                 .and_then(|layout| layout.criticals.get(&parent.slot))
                 .context("Split critical parent is not installed")?;
-            let weapon = BattleWeapon::parse(&primary.equipment)?;
+            let weapon = Weapon::parse(&primary.equipment)?;
             ensure!(
                 weapon.supports_split_mount(),
                 "Weapon does not support split criticals"
@@ -792,11 +781,7 @@ mod tests {
     /// Automatic eligibility, explicit links, hardware loss and cluster exclusion compose independently.
     #[test]
     fn computer_links_share_hardware_and_ammunition_rules() {
-        for weapon in [
-            BattleWeapon::MediumLaser,
-            BattleWeapon::MachineGun,
-            BattleWeapon::Lbx10,
-        ] {
+        for weapon in [Weapon::MediumLaser, Weapon::MachineGun, Weapon::Lbx10] {
             for linked in [false, true] {
                 let critical = super::super::CriticalDefinition {
                     equipment: weapon.name().into(),
@@ -820,16 +805,16 @@ mod tests {
                     let expected = slots.iter().all(|&available| available)
                         && (linked || (!slots.is_empty() && weapon.supports_targeting_computer()));
                     assert_eq!(
-                        mount.computer_assists(
-                            crate::BattleAmmunitionMode::Normal,
-                            slots.iter().copied()
-                        ),
+                        mount
+                            .computer_assists(crate::AmmunitionMode::Normal, slots.iter().copied()),
                         expected
                     );
-                    assert!(!mount.computer_assists(
-                        crate::BattleAmmunitionMode::Cluster,
-                        slots.iter().copied()
-                    ));
+                    assert!(
+                        !mount.computer_assists(
+                            crate::AmmunitionMode::Cluster,
+                            slots.iter().copied()
+                        )
+                    );
                 }
             }
         }

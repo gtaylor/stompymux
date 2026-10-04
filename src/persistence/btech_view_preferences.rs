@@ -1,7 +1,6 @@
 //! Selective persistence of player map dimensions and unit-list inclusion policy.
 use crate::{
-    BattleBuildingContactMode, BattleContactPreferences, BattlePlayerPreferences,
-    BattleViewDimensions, ObjectId, World,
+    BuildingContactMode, ContactPreferences, ObjectId, PlayerPreferences, ViewDimensions, World,
 };
 use anyhow::{Result, ensure};
 use sqlx::{Row, SqliteConnection};
@@ -10,10 +9,7 @@ use std::collections::{BTreeMap, BTreeSet};
 /// Active UI records must contain valid dimensions and boolean category flags.
 pub(super) async fn load(
     c: &mut SqliteConnection,
-) -> Result<(
-    BTreeMap<ObjectId, BattlePlayerPreferences>,
-    BTreeSet<ObjectId>,
-)> {
+) -> Result<(BTreeMap<ObjectId, PlayerPreferences>, BTreeSet<ObjectId>)> {
     let mut result = BTreeMap::new();
     let invalid = BTreeSet::new();
     for row in sqlx::query("SELECT player_dbref,tactical_width,tactical_height,lrs_height,include_dead,include_shutdown,include_enemies,include_allies,include_target,buildings FROM btech_player_configuration WHERE has_ui=1 ORDER BY player_dbref").fetch_all(c).await? {
@@ -26,8 +22,8 @@ pub(super) async fn load(
             .into_iter()
             .collect::<std::result::Result<Vec<_>, _>>()?;
         let buildings: i64 = row.try_get("buildings")?;
-        let dimensions = (|| -> Result<BattleViewDimensions> {
-            let dimensions = BattleViewDimensions {
+        let dimensions = (|| -> Result<ViewDimensions> {
+            let dimensions = ViewDimensions {
                 tactical_width: width.try_into()?, tactical_height: height.try_into()?,
                 long_range_height: lrs.try_into()?,
             };
@@ -36,13 +32,13 @@ pub(super) async fn load(
         })()?;
         ensure!(flags.iter().all(|value| (0..=1).contains(value)), "Invalid contact inclusion flag");
         ensure!((0..=2).contains(&buildings), "Invalid building contact mode");
-        let contacts = BattleContactPreferences {
+        let contacts = ContactPreferences {
             include_dead: flags[0] == 1, include_shutdown: flags[1] == 1,
             include_enemies: flags[2] == 1, include_allies: flags[3] == 1,
             include_target: flags[4] == 1,
-            buildings: match buildings { 0 => BattleBuildingContactMode::FollowBrief, 1 => BattleBuildingContactMode::Include, _ => BattleBuildingContactMode::Exclude },
+            buildings: match buildings { 0 => BuildingContactMode::FollowBrief, 1 => BuildingContactMode::Include, _ => BuildingContactMode::Exclude },
         };
-        result.insert(player, BattlePlayerPreferences { dimensions, contacts });
+        result.insert(player, PlayerPreferences { dimensions, contacts });
     }
     Ok((result, invalid))
 }
@@ -78,7 +74,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
         }
         if previous.is_none_or(|old| old.contacts != preferences.contacts) {
             let contacts = preferences.contacts;
-            sqlx::query("UPDATE btech_player_configuration SET include_dead=?,include_shutdown=?,include_enemies=?,include_allies=?,include_target=?,buildings=? WHERE player_dbref=?").bind(contacts.include_dead).bind(contacts.include_shutdown).bind(contacts.include_enemies).bind(contacts.include_allies).bind(contacts.include_target).bind(match contacts.buildings { BattleBuildingContactMode::FollowBrief => 0, BattleBuildingContactMode::Include => 1, BattleBuildingContactMode::Exclude => 2 }).bind(player.0).execute(&mut *c).await?;
+            sqlx::query("UPDATE btech_player_configuration SET include_dead=?,include_shutdown=?,include_enemies=?,include_allies=?,include_target=?,buildings=? WHERE player_dbref=?").bind(contacts.include_dead).bind(contacts.include_shutdown).bind(contacts.include_enemies).bind(contacts.include_allies).bind(contacts.include_target).bind(match contacts.buildings { BuildingContactMode::FollowBrief => 0, BuildingContactMode::Include => 1, BuildingContactMode::Exclude => 2 }).bind(player.0).execute(&mut *c).await?;
         }
         sqlx::query("UPDATE btech_player_configuration SET has_ui=1 WHERE player_dbref=?")
             .bind(player.0)

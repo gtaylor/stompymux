@@ -1,14 +1,12 @@
 //! Atomic direct tactical shots, glancing hits and immediate damage consequences.
-use super::{
-    BattleAimModifiers, BattleAimRules, BattleBeaconLaunch, BattleHitRules, BattleWeaponUse,
-};
+use super::{AimModifiers, AimRules, BeaconLaunch, HitRules, WeaponUse};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
 
 /// How the configured glancing rule treats the boundary of a successful shot.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum BattleGlancingMode {
+pub enum GlancingMode {
     Disabled,
     /// Meeting the ordinary target number produces reduced damage.
     AtTarget,
@@ -16,7 +14,7 @@ pub enum BattleGlancingMode {
     BelowTarget,
 }
 
-impl BattleGlancingMode {
+impl GlancingMode {
     /// The game treats every nonzero setting except two as the ordinary glancing rule.
     pub fn from_setting(setting: i64) -> Self {
         match setting {
@@ -34,18 +32,18 @@ impl BattleGlancingMode {
 
 /// Supported conventional shot rules, supplied explicitly by the enclosing game action.
 #[derive(Debug, Clone, Copy)]
-pub struct BattleShotRules {
+pub struct ShotRules {
     /// Apply configured energy damage changes at actual attack range.
     pub range_damage: bool,
     /// Shared load configuration used by pre-impact experience calculations.
     pub tsm_tow_bonus: bool,
-    pub stacking: super::BattleStackingRules,
-    pub stagger: super::BattleStaggerMode,
-    pub glancing: BattleGlancingMode,
-    pub aim: BattleAimRules,
-    pub hit: BattleHitRules,
+    pub stacking: super::StackingRules,
+    pub stagger: super::StaggerMode,
+    pub glancing: GlancingMode,
+    pub aim: AimRules,
+    pub hit: HitRules,
     /// Vehicle target hit-table and critical policy, independent of the shooter anatomy.
-    pub vehicle_impact: super::BattleVehicleImpactRules,
+    pub vehicle_impact: super::VehicleImpactRules,
     pub hit_arc_mode: i64,
     pub extended_gunnery: bool,
     pub extended_piloting: bool,
@@ -54,31 +52,31 @@ pub struct BattleShotRules {
 
 /// A moving Heavy Gauss shooter's control check and any resulting fall.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct BattleRecoilReport {
+pub struct RecoilReport {
     /// Pilot captured before recoil consequences can change crew assignment.
     pub pilot: Option<ObjectId>,
-    pub experience_messages: Vec<super::BattleChannelMessage>,
-    pub check: super::BattlePilotingCheck,
-    pub fall: Option<super::BattleFallReport>,
+    pub experience_messages: Vec<super::DiagnosticMessage>,
+    pub check: super::PilotingCheck,
+    pub fall: Option<super::MechFallReport>,
 }
 
 /// One resolved shot; ammunition, heat, dice and damage are already in the candidate world.
 /// Falls are applied; publishing the report notices remains caller-owned.
 ///
 /// Both chassis report the same fields. `U` is the shooter's weapon expenditure and `M`
-/// the damage a misload did to it; [`BattleShotReport`] and
-/// [`super::BattleVehicleShotReport`] name the report for each shooter.
+/// the damage a misload did to it; [`MechShotReport`] and
+/// [`super::VehicleShotReport`] name the report for each shooter.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[must_use = "Apply pending salvo effects and publish notices before committing the enclosing action"]
 pub struct ShotReport<U, M> {
     /// Accepted observer and artillery skill award diagnostics, including missed shots.
-    pub experience_messages: Vec<super::BattleChannelMessage>,
+    pub experience_messages: Vec<super::DiagnosticMessage>,
     pub shooter: ObjectId,
     pub target: ObjectId,
     /// Coordinate-directed fire, including observer-directed shots; the occupant remains the damage target.
     pub coordinate: Option<super::HexCoordinate>,
     pub weapon_index: usize,
-    pub aim: BattleAimModifiers,
+    pub aim: AimModifiers,
     /// None represents a physically out-of-range attempt; ordinary weapons still spend a salvo.
     pub target_number: Option<i32>,
     /// Attack result, including dead-fire and close-range extended-LRM dice rules.
@@ -101,41 +99,41 @@ pub struct ShotReport<U, M> {
     /// Optional pre-expenditure ammunition threshold warning.
     pub ammunition_warning: Option<String>,
     /// Cocoon opening feedback from the shared launch stage.
-    pub launch_notices: Vec<super::BattleNotice>,
+    pub launch_notices: Vec<super::Notice>,
     /// Present only on a hit; a miss consumes no target damage dice.
-    pub salvo: Option<super::BattleTargetSalvo>,
+    pub salvo: Option<super::TargetSalvo>,
     /// Heat transferred to the target in place of material damage.
     pub heat_transfer: u8,
     /// Woods feedback and terrain effects preceding an unchanged thermal transfer.
-    pub thermal_woods: Option<super::BattleWoodsAbsorption>,
+    pub thermal_woods: Option<super::WoodsAbsorption>,
     /// Incidental terrain check from a launched non-missile miss.
-    pub missed_terrain: Option<super::BattleWoodlandImpact>,
+    pub missed_terrain: Option<super::WoodlandImpact>,
     /// Coolant reduction applied to stored heat, including temporary negative credit.
     pub cooling: Option<f64>,
     /// Present when Heavy Gauss firing required a moving-shooter control check.
-    pub recoil: Option<BattleRecoilReport>,
+    pub recoil: Option<RecoilReport>,
     /// Defensive activation after the missile reaches its base target number.
-    pub ams: Option<super::BattleAmsReport>,
+    pub ams: Option<super::AmsReport>,
     /// Angel interference disables Streak lock protection and guaranteed cluster hits.
     pub streak_confused: bool,
     /// Normal Narc beacon outcome; explosive rounds use ordinary damage groups.
-    pub narc: Option<super::BattleNarcReport<super::BattleUnitSection>>,
+    pub narc: Option<super::NarcReport<super::UnitSection>>,
 }
 
 /// A shot fired by a BattleMech.
-pub type BattleShotReport = ShotReport<BattleWeaponUse, super::BattleTacticalImpact>;
+pub type MechShotReport = ShotReport<WeaponUse, super::TacticalImpact>;
 
-impl BattleShotReport {
+impl MechShotReport {
     /// Glancing feedback precedes damage consequences; a lethal salvo concludes both cockpits' feedback.
-    pub fn notices(&self) -> Vec<super::BattleNotice> {
+    pub fn notices(&self) -> Vec<super::Notice> {
         self.notices_with_feedback(&mut Vec::new())
     }
 
     /// Retain private damage rolls alongside their ordered cockpit consequences.
     pub(crate) fn notices_with_feedback(
         &self,
-        private: &mut Vec<super::BattlePilotNotice>,
-    ) -> Vec<super::BattleNotice> {
+        private: &mut Vec<super::PilotNotice>,
+    ) -> Vec<super::Notice> {
         if let Some(misload) = &self.misload {
             super::piloting::append_feedback(private, misload.pilot_notices.clone(), 0);
             return misload.notices.clone();
@@ -150,7 +148,7 @@ impl BattleShotReport {
         }
         let mut notices = self.launch_notices.clone();
         if let Some(text) = &self.ammunition_warning {
-            notices.push(super::BattleNotice {
+            notices.push(super::Notice {
                 unit: self.shooter,
                 text: text.clone(),
             });
@@ -189,7 +187,7 @@ impl BattleShotReport {
                     self.target,
                     self.salvo
                         .as_ref()
-                        .and_then(super::BattleTargetSalvo::missiles_before_defense),
+                        .and_then(super::TargetSalvo::missiles_before_defense),
                 ),
             );
         }
@@ -214,8 +212,8 @@ pub fn resolve_shot(
     pilot: ObjectId,
     target: ObjectId,
     weapon_index: usize,
-    rules: BattleShotRules,
-) -> Result<BattleShotReport> {
+    rules: ShotRules,
+) -> Result<MechShotReport> {
     ensure!(
         !(pilot == shooter && world.btech.controllers().contains_key(&shooter)),
         "Autopilot actor token is internal"
@@ -241,8 +239,8 @@ pub(crate) fn resolve_shot_autopilot(
     shooter: ObjectId,
     target: ObjectId,
     weapon_index: usize,
-    rules: BattleShotRules,
-) -> Result<BattleShotReport> {
+    rules: ShotRules,
+) -> Result<MechShotReport> {
     resolve_shot_inner(
         world,
         shooter,
@@ -269,9 +267,9 @@ pub(super) fn resolve_shot_in_action(
     pilot: ObjectId,
     target: ShotTarget,
     weapon_index: usize,
-    rules: BattleShotRules,
+    rules: ShotRules,
     xp: &crate::config::XpConfig,
-) -> Result<BattleShotReport> {
+) -> Result<MechShotReport> {
     ensure!(
         !(pilot == shooter && world.btech.controllers().contains_key(&shooter)),
         "Autopilot actor token is internal"
@@ -313,9 +311,9 @@ fn resolve_shot_inner(
     pilot: ObjectId,
     target: ObjectId,
     weapon_index: usize,
-    rules: BattleShotRules,
+    rules: ShotRules,
     effects: ShotEffects<'_>,
-) -> Result<BattleShotReport> {
+) -> Result<MechShotReport> {
     let mut attempt = super::autopilot::diagnostics::Attempt::begin();
     let admission = super::autopilot::diagnostics::combat("admission_aim");
     let loadouts =
@@ -343,7 +341,7 @@ fn resolve_shot_inner(
         super::spotter::indirect_target_for_source(world, operator.source, weapon_index)?;
 
     let target = indirect.map_or(target, |link| link.target);
-    let coolant = selected_weapon == super::BattleWeapon::CoolantGun;
+    let coolant = selected_weapon == super::Weapon::CoolantGun;
     let coordinate = if indirect.is_some() {
         let position = super::scanner::scanner_unit(world, target)
             .and_then(|unit| unit.position)
@@ -355,7 +353,7 @@ fn resolve_shot_inner(
     } else {
         effects.coordinate
     };
-    if attacker.ammunition_mode(weapon_index)?.munition() == super::BattleAmmunitionMode::Stinger {
+    if attacker.ammunition_mode(weapon_index)?.munition() == super::AmmunitionMode::Stinger {
         ensure!(coordinate.is_none(), "Stinger missiles cannot shoot hexes!");
         ensure!(
             super::stinger::target_airborne(world, target),
@@ -455,7 +453,7 @@ fn resolve_shot_inner(
     let streak_confused = weapon.is_streak()
         && (super::electronic_field(world, shooter)?.angel_disturbed
             || super::electronic_field(world, target)?.angel_protected);
-    let launch_fall = super::BattleFallRules {
+    let launch_fall = super::FallRules {
         vehicle_impact: rules.vehicle_impact,
         stacking: rules.stacking,
         stagger: rules.stagger,
@@ -555,7 +553,7 @@ fn resolve_shot_inner(
         .xp
         .map(|config| super::gunnery_experience::GunneryAwardContext {
             config,
-            request: super::BattleGunneryAwardRequest {
+            request: super::GunneryAwardRequest {
                 tsm_tow_bonus: rules.tsm_tow_bonus,
                 attacker: shooter,
                 pilot,
@@ -574,7 +572,7 @@ fn resolve_shot_inner(
     drop(launch_measurement);
     let damage_measurement = super::autopilot::diagnostics::combat("damage_recoil");
     let salvo = if resolved.hit && launched && expenditure.ammunition_mode.is_swarm() {
-        Some(super::BattleTargetSalvo::Swarm(super::swarm::resolve(
+        Some(super::TargetSalvo::Swarm(super::swarm::resolve(
             &mut candidate,
             super::swarm::SwarmRequest {
                 shooter,
@@ -594,7 +592,7 @@ fn resolve_shot_inner(
             &mut candidate,
             shooter,
             target,
-            super::BattleVehicleSalvoRequest {
+            super::VehicleSalvoRequest {
                 range_damage: rules.range_damage,
                 damage_penalty: expenditure.damage_penalty,
                 weapon,
@@ -619,7 +617,7 @@ fn resolve_shot_inner(
             },
         )?)
     } else if resolved.hit && !pod && heat_transfer == 0 && cooling.is_none() {
-        Some(super::BattleTargetSalvo::Mech(
+        Some(super::TargetSalvo::Mech(
             super::salvo::resolve_salvo_in_candidate(
                 &mut candidate,
                 shooter,
@@ -631,7 +629,7 @@ fn resolve_shot_inner(
                     range_damage: rules.range_damage,
                     aimed,
                     incoming: None,
-                    rules: super::BattleFallRules {
+                    rules: super::FallRules {
                         vehicle_impact: rules.vehicle_impact,
                         stacking: rules.stacking,
                         stagger: rules.stagger,
@@ -656,7 +654,7 @@ fn resolve_shot_inner(
         } else {
             salvo
                 .as_ref()
-                .and_then(super::BattleTargetSalvo::missiles_before_defense)
+                .and_then(super::TargetSalvo::missiles_before_defense)
                 .unwrap_or(0)
         });
     }
@@ -683,7 +681,7 @@ fn resolve_shot_inner(
     let _publication = super::autopilot::diagnostics::combat("publication");
     attempt.succeed();
     candidate.commit(world);
-    Ok(BattleShotReport {
+    Ok(MechShotReport {
         experience_messages,
         shooter,
         target,
@@ -714,25 +712,25 @@ fn resolve_shot_inner(
     })
 }
 
-impl BattleShotRules {
+impl ShotRules {
     /// Translate server configuration once for unit and coordinate firing adapters.
     pub(super) fn configured(config: &crate::config::BattleTechConfig, toughness: bool) -> Self {
         Self {
             range_damage: config.moddamagewithrange != 0,
             tsm_tow_bonus: config.tsm_tow_bonus != 0,
-            stacking: crate::BattleStackingRules {
+            stacking: crate::StackingRules {
                 mode: config.stacking,
                 damage_percent: config.stackdamage,
                 hit_arcs: config.hit_arcs,
             },
-            stagger: super::BattleStaggerMode::from_setting(config.newstagger),
-            glancing: super::BattleGlancingMode::from_setting(config.glancing_blows),
-            aim: super::BattleAimRules::configured(config),
-            hit: super::BattleHitRules {
+            stagger: super::StaggerMode::from_setting(config.newstagger),
+            glancing: super::GlancingMode::from_setting(config.glancing_blows),
+            aim: super::AimRules::configured(config),
+            hit: super::HitRules {
                 inferno_penalty: config.inferno_penalty != 0,
                 exile_stun_mode: config.exile_stun_code.clamp(0, 2) as u8,
             },
-            vehicle_impact: super::BattleVehicleImpactRules::configured(config, toughness),
+            vehicle_impact: super::VehicleImpactRules::configured(config, toughness),
             hit_arc_mode: config.hit_arcs,
             extended_gunnery: config.extended_gunnery != 0,
             extended_piloting: config.extended_piloting != 0,

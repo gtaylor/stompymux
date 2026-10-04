@@ -7,25 +7,20 @@ use stompymux_rs::*;
 #[tokio::test]
 async fn replacement_material_is_shared_across_all_chassis() {
     for source in firing::templates() {
-        let (_dir, config, mut world, id, _, _) = firing::fixture_with_supply(
-            &source,
-            Some(BattleWeapon::Mml3),
-            &source,
-            false,
-            Some(""),
-        )
-        .await;
+        let (_dir, config, mut world, id, _, _) =
+            firing::fixture_with_supply(&source, Some(Weapon::Mml3), &source, false, Some(""))
+                .await;
         let mech = world.btech.constructed_units().contains_key(&id);
         let ammo_slot = if mech {
-            BattleWeapon::Mml3.profile().critical_slots
+            Weapon::Mml3.profile().critical_slots
         } else {
             1
         };
-        let bin = BattleDamageSlot {
+        let bin = DamageSlot {
             section: 2,
             slot: ammo_slot,
         };
-        let weapon = BattleDamageSlot {
+        let weapon = DamageSlot {
             section: 2,
             slot: 0,
         };
@@ -104,7 +99,7 @@ async fn replacement_material_is_shared_across_all_chassis() {
 async fn replacement_critical_groups_and_weapon_failures_resolve_installed_slots() {
     let (_dir, config, mut world) = support::isolated_world().await;
     let mut template =
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     for section in template.sections.values_mut() {
         section
             .criticals
@@ -117,7 +112,7 @@ async fn replacement_critical_groups_and_weapon_failures_resolve_installed_slots
     for slot in 0..10 {
         template
             .sections
-            .get_mut(&BattleSection::LeftTorso)
+            .get_mut(&MechSection::LeftTorso)
             .unwrap()
             .criticals
             .insert(
@@ -132,7 +127,7 @@ async fn replacement_critical_groups_and_weapon_failures_resolve_installed_slots
     for slot in 6..9 {
         template
             .sections
-            .get_mut(&BattleSection::RightArm)
+            .get_mut(&MechSection::RightArm)
             .unwrap()
             .criticals
             .insert(
@@ -152,23 +147,23 @@ async fn replacement_critical_groups_and_weapon_failures_resolve_installed_slots
     assert_eq!(
         replacement.destroyed_criticals,
         [
-            BattleDamageSlot {
+            DamageSlot {
                 section: 2,
                 slot: 0
             },
-            BattleDamageSlot {
+            DamageSlot {
                 section: 2,
                 slot: 1
             },
-            BattleDamageSlot {
+            DamageSlot {
                 section: 1,
                 slot: 6
             },
-            BattleDamageSlot {
+            DamageSlot {
                 section: 1,
                 slot: 7
             },
-            BattleDamageSlot {
+            DamageSlot {
                 section: 1,
                 slot: 8
             },
@@ -218,7 +213,7 @@ async fn preparing_current_reports_recovers_current_material() {
         let before = world.btech.clone();
         let text = battle_unit_damage_field(&world, id).unwrap();
         let replacement = prepare_battle_damage_field(&world, id, &text).unwrap();
-        let totals = |sections: Vec<BattleSectionState>| {
+        let totals = |sections: Vec<SectionState>| {
             sections
                 .into_iter()
                 .fold((0u32, 0u32, 0u32), |total, section| {

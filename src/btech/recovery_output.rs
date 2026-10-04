@@ -1,18 +1,18 @@
 //! Recovery feedback uses the committed check, keeping private rolls out of cockpit broadcasts.
-use super::{BattleCharacterNotice, BattleMessageTarget};
+use super::{CharacterNotice, MessageTarget};
 use crate::Scripts;
 use anyhow::Result;
 
 /// Publish the complete recovery result; a failure rolls back the enclosing heartbeat transaction.
-pub(super) fn publish(scripts: &Scripts, notice: BattleCharacterNotice) -> Result<()> {
+pub(super) fn publish(scripts: &Scripts, notice: CharacterNotice) -> Result<()> {
     messages(notice)
         .into_iter()
         .try_for_each(|(recipient, text)| super::notify_message(scripts, recipient, &text))
 }
 
 /// Build pilot and cockpit feedback from the resolved recovery check.
-fn messages(notice: BattleCharacterNotice) -> Vec<(BattleMessageTarget, String)> {
-    let pilot = BattleMessageTarget::Player(notice.player);
+fn messages(notice: CharacterNotice) -> Vec<(MessageTarget, String)> {
+    let pilot = MessageTarget::Player(notice.player);
     let mut messages = vec![
         (pilot, "You attempt to regain consciousness!".into()),
         (
@@ -26,7 +26,7 @@ fn messages(notice: BattleCharacterNotice) -> Vec<(BattleMessageTarget, String)>
     if let Some(unit) = notice.unit {
         if notice.check.conscious {
             messages.push((
-                BattleMessageTarget::Unit(unit),
+                MessageTarget::Unit(unit),
                 "The pilot regains consciousness!".into(),
             ));
         }
@@ -47,15 +47,15 @@ fn messages(notice: BattleCharacterNotice) -> Vec<(BattleMessageTarget, String)>
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{BattleConsciousnessCheck, ObjectId};
+    use crate::{ConsciousnessCheck, ObjectId};
 
     /// Literal reference strings and audiences distinguish private checks from public recovery.
     #[test]
     fn recovery_feedback_preserves_privacy_and_failure_silence() {
-        let notice = BattleCharacterNotice {
+        let notice = CharacterNotice {
             player: ObjectId(1),
             unit: Some(ObjectId(9)),
-            check: BattleConsciousnessCheck {
+            check: ConsciousnessCheck {
                 target: 7,
                 roll: 8,
                 conscious: true,
@@ -65,15 +65,15 @@ mod tests {
             messages(notice.clone()),
             vec![
                 (
-                    BattleMessageTarget::Player(ObjectId(1)),
+                    MessageTarget::Player(ObjectId(1)),
                     "You attempt to regain consciousness!".into()
                 ),
                 (
-                    BattleMessageTarget::Player(ObjectId(1)),
+                    MessageTarget::Player(ObjectId(1)),
                     "Regain Consciousness on: 7  \tRoll: 8".into()
                 ),
                 (
-                    BattleMessageTarget::Unit(ObjectId(9)),
+                    MessageTarget::Unit(ObjectId(9)),
                     "The pilot regains consciousness!".into()
                 ),
             ]
@@ -86,7 +86,7 @@ mod tests {
         assert!(
             feedback
                 .iter()
-                .all(|(target, _)| *target == BattleMessageTarget::Player(ObjectId(1)))
+                .all(|(target, _)| *target == MessageTarget::Player(ObjectId(1)))
         );
         assert_eq!(feedback[1].1, "Regain Consciousness on: 7  \tRoll: 6");
         failed.unit = None;
@@ -100,7 +100,7 @@ mod tests {
 #[cfg(test)]
 mod delivery_tests {
     use super::*;
-    use crate::{BattleConsciousnessCheck, Config, Kind, ObjectId, persistence};
+    use crate::{Config, ConsciousnessCheck, Kind, ObjectId, persistence};
     use std::{cell::RefCell, rc::Rc};
 
     /// Real notification fan-out delivers the roll only to the pilot and success to both occupants.
@@ -118,10 +118,10 @@ mod delivery_tests {
         }
         let before = world.btech.clone();
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-        let notice = BattleCharacterNotice {
+        let notice = CharacterNotice {
             player: ObjectId(1),
             unit: Some(unit),
-            check: BattleConsciousnessCheck {
+            check: ConsciousnessCheck {
                 target: 7,
                 roll: 8,
                 conscious: true,

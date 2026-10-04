@@ -2,11 +2,11 @@
 use stompymux_rs::*;
 
 /// Armor uses two passive slots in each limb and side torso, plus a Guardian suite.
-fn template() -> BattleTemplate {
+fn template() -> MechTemplate {
     let mut template =
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
-    for section in BattleSection::ALL {
-        if matches!(section, BattleSection::Head | BattleSection::CenterTorso) {
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+    for section in MechSection::ALL {
+        if matches!(section, MechSection::Head | MechSection::CenterTorso) {
             continue;
         }
         for slot in [4, 5] {
@@ -28,7 +28,7 @@ fn template() -> BattleTemplate {
     for slot in [6, 7] {
         template
             .sections
-            .get_mut(&BattleSection::LeftTorso)
+            .get_mut(&MechSection::LeftTorso)
             .unwrap()
             .criticals
             .insert(
@@ -47,27 +47,27 @@ fn template() -> BattleTemplate {
 #[test]
 fn stealth_equipment_layout_and_accounting() {
     let complete = template();
-    let unit = BattleUnit::from_template(complete.clone()).unwrap();
+    let unit = Mech::from_template(complete.clone()).unwrap();
     assert!(unit.has_stealth_armor().unwrap());
-    assert_eq!(unit.stealth(), BattleSignatureState::default());
+    assert_eq!(unit.stealth(), SignatureState::default());
     let mut stripped = complete.clone();
     for section in stripped.sections.values_mut() {
         section
             .criticals
             .retain(|_, part| part.equipment != "StealthArmor");
     }
-    let base = BattleUnit::from_template(stripped).unwrap();
+    let base = Mech::from_template(stripped).unwrap();
     assert_eq!(unit.mass().unwrap(), base.mass().unwrap());
     assert_eq!(
         unit.battle_value(None).unwrap(),
         base.battle_value(None).unwrap()
     );
-    for section in BattleSection::ALL {
+    for section in MechSection::ALL {
         assert!(unit.critical_candidates(section).iter().all(|location| {
             unit.definition().sections[&section].criticals[&location.slot].equipment
                 != "StealthArmor"
         }));
-        if matches!(section, BattleSection::Head | BattleSection::CenterTorso) {
+        if matches!(section, MechSection::Head | MechSection::CenterTorso) {
             continue;
         }
         let mut incomplete = complete.clone();
@@ -78,7 +78,7 @@ fn stealth_equipment_layout_and_accounting() {
             .criticals
             .remove(&5);
         assert!(
-            !BattleUnit::from_template(incomplete)
+            !Mech::from_template(incomplete)
                 .unwrap()
                 .has_stealth_armor()
                 .unwrap()
@@ -87,7 +87,7 @@ fn stealth_equipment_layout_and_accounting() {
     let mut angel_only = complete;
     for part in angel_only
         .sections
-        .get_mut(&BattleSection::LeftTorso)
+        .get_mut(&MechSection::LeftTorso)
         .unwrap()
         .criticals
         .values_mut()
@@ -98,7 +98,7 @@ fn stealth_equipment_layout_and_accounting() {
     }
     // Any ECM suite powers stealth armor, the Angel as well as the Guardian.
     assert!(
-        BattleUnit::from_template(angel_only)
+        Mech::from_template(angel_only)
             .unwrap()
             .has_stealth_armor()
             .unwrap()
@@ -115,7 +115,7 @@ fn stealth_range_brackets_and_limits() {
         (6.1, 4, 6),
         (9.1, 8, 12),
     ] {
-        let range = BattleWeapon::MediumLaser
+        let range = Weapon::MediumLaser
             .range_modifier(distance, true)
             .unwrap()
             .unwrap();
@@ -124,14 +124,11 @@ fn stealth_range_brackets_and_limits() {
         assert_eq!(range.against_stealth(false), range);
     }
     assert!(
-        BattleWeapon::MediumLaser
+        Weapon::MediumLaser
             .range_modifier(12.1, true)
             .unwrap()
             .is_none()
     );
-    let minimum = BattleWeapon::Ppc
-        .range_modifier(1.0, false)
-        .unwrap()
-        .unwrap();
+    let minimum = Weapon::Ppc.range_modifier(1.0, false).unwrap().unwrap();
     assert_eq!(minimum.against_stealth(true), minimum);
 }

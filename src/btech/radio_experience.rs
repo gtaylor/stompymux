@@ -1,9 +1,9 @@
 //! Saved reception cadence and communication skill awards within radio transactions.
-use super::{BattleAnalogRadioReport, BattleChannel, BattleChannelMessage};
+use super::{AnalogRadioReport, DiagnosticChannel, DiagnosticMessage};
 use crate::{Flag, ObjectId, World};
 use anyhow::Result;
 
-impl super::BattleUnit {
+impl super::Mech {
     /// Simulation seconds until another interfered reception can attempt communication XP.
     pub fn radio_experience_remaining(&self) -> u8 {
         self.radio_experience_remaining
@@ -15,9 +15,9 @@ impl super::BattleUnit {
 /// The shared skill interval still applies independently; receiving itself requires no XP success.
 pub fn award_radio_experience(
     world: &mut World,
-    report: &BattleAnalogRadioReport,
+    report: &AnalogRadioReport,
     now: i64,
-) -> Result<Vec<BattleChannelMessage>> {
+) -> Result<Vec<DiagnosticMessage>> {
     world.attempt(|world| {
         let mut messages = Vec::new();
         for &receiver in &report.interfered_receivers {
@@ -30,11 +30,7 @@ pub fn award_radio_experience(
 }
 
 /// Capture a due attempt before checking active-pilot eligibility, matching the unit-level gate.
-fn attempt(
-    world: &mut World,
-    receiver: ObjectId,
-    now: i64,
-) -> Result<Option<BattleChannelMessage>> {
+fn attempt(world: &mut World, receiver: ObjectId, now: i64) -> Result<Option<DiagnosticMessage>> {
     if world
         .objects
         .get(&receiver)
@@ -59,8 +55,8 @@ fn attempt(
     }
     let award = super::award_skill_experience(world, pilot, "Comm-Conventional", 1, now, false)?;
     Ok(award.accepted.then(|| {
-        BattleChannelMessage::new(
-            BattleChannel::Experience,
+        DiagnosticMessage::new(
+            DiagnosticChannel::Experience,
             format!(
                 "{} gained 1 Comm-Conventional XP (in #{})",
                 world.objects[&pilot].name, receiver.0

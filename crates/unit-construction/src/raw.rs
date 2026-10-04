@@ -1,8 +1,8 @@
 //! Class-neutral BattleTech template state used by administrative and inspection contracts.
 use super::document::ParsedTemplate;
 use super::{
-    BattleSection, BattleTemplate, BattleVehicleMovement, BattleVehicleSection,
-    BattleVehicleTemplate, CriticalDefinition, SectionDefinition,
+    CriticalDefinition, MechSection, MechTemplate, SectionDefinition, VehicleMovement,
+    VehicleSection, VehicleTemplate,
 };
 use anyhow::{Context, Result, bail};
 use serde::{Deserialize, Serialize};
@@ -424,8 +424,8 @@ fn parse_f32_field(fields: &BTreeMap<String, String>, name: &str) -> Result<f64>
     Ok(f64::from(value))
 }
 
-impl From<&BattleTemplate> for RawTemplate {
-    fn from(template: &BattleTemplate) -> Self {
+impl From<&MechTemplate> for RawTemplate {
+    fn from(template: &MechTemplate) -> Self {
         let movement = template
             .attributes
             .get("move_type")
@@ -441,26 +441,26 @@ impl From<&BattleTemplate> for RawTemplate {
         raw.attributes = template.attributes.clone();
         for (section, definition) in &template.sections {
             let code = match section {
-                BattleSection::LeftArm if movement == RawMovement::Quad => {
+                MechSection::LeftArm if movement == RawMovement::Quad => {
                     RawSectionCode::FrontLeftLeg
                 }
-                BattleSection::RightArm if movement == RawMovement::Quad => {
+                MechSection::RightArm if movement == RawMovement::Quad => {
                     RawSectionCode::FrontRightLeg
                 }
-                BattleSection::LeftLeg if movement == RawMovement::Quad => {
+                MechSection::LeftLeg if movement == RawMovement::Quad => {
                     RawSectionCode::RearLeftLeg
                 }
-                BattleSection::RightLeg if movement == RawMovement::Quad => {
+                MechSection::RightLeg if movement == RawMovement::Quad => {
                     RawSectionCode::RearRightLeg
                 }
-                BattleSection::LeftArm => RawSectionCode::LeftArm,
-                BattleSection::RightArm => RawSectionCode::RightArm,
-                BattleSection::LeftTorso => RawSectionCode::LeftTorso,
-                BattleSection::RightTorso => RawSectionCode::RightTorso,
-                BattleSection::CenterTorso => RawSectionCode::CenterTorso,
-                BattleSection::LeftLeg => RawSectionCode::LeftLeg,
-                BattleSection::RightLeg => RawSectionCode::RightLeg,
-                BattleSection::Head => RawSectionCode::Head,
+                MechSection::LeftArm => RawSectionCode::LeftArm,
+                MechSection::RightArm => RawSectionCode::RightArm,
+                MechSection::LeftTorso => RawSectionCode::LeftTorso,
+                MechSection::RightTorso => RawSectionCode::RightTorso,
+                MechSection::CenterTorso => RawSectionCode::CenterTorso,
+                MechSection::LeftLeg => RawSectionCode::LeftLeg,
+                MechSection::RightLeg => RawSectionCode::RightLeg,
+                MechSection::Head => RawSectionCode::Head,
             };
             raw.sections.insert(code, definition.clone());
         }
@@ -468,19 +468,19 @@ impl From<&BattleTemplate> for RawTemplate {
     }
 }
 
-impl From<&BattleVehicleTemplate> for RawTemplate {
-    fn from(template: &BattleVehicleTemplate) -> Self {
+impl From<&VehicleTemplate> for RawTemplate {
+    fn from(template: &VehicleTemplate) -> Self {
         let class = if template.is_vtol() {
             RawUnitClass::Vtol
         } else {
             RawUnitClass::Vehicle
         };
         let movement = match template.movement {
-            BattleVehicleMovement::Tracked => RawMovement::Tracked,
-            BattleVehicleMovement::Wheeled => RawMovement::Wheeled,
-            BattleVehicleMovement::Hover => RawMovement::Hover,
-            BattleVehicleMovement::Stationary => RawMovement::Stationary,
-            BattleVehicleMovement::Vtol => RawMovement::Vtol,
+            VehicleMovement::Tracked => RawMovement::Tracked,
+            VehicleMovement::Wheeled => RawMovement::Wheeled,
+            VehicleMovement::Hover => RawMovement::Hover,
+            VehicleMovement::Stationary => RawMovement::Stationary,
+            VehicleMovement::Vtol => RawMovement::Vtol,
         };
         let mut raw = Self::empty(class, movement);
         raw.name = template.name.clone();
@@ -491,12 +491,12 @@ impl From<&BattleVehicleTemplate> for RawTemplate {
         raw.attributes = template.attributes.clone();
         for (section, definition) in &template.sections {
             let code = match section {
-                BattleVehicleSection::Left => RawSectionCode::LeftSide,
-                BattleVehicleSection::Right => RawSectionCode::RightSide,
-                BattleVehicleSection::Front => RawSectionCode::FrontSide,
-                BattleVehicleSection::Rear => RawSectionCode::AftSide,
-                BattleVehicleSection::Turret => RawSectionCode::Turret,
-                BattleVehicleSection::Rotor => RawSectionCode::Rotor,
+                VehicleSection::Left => RawSectionCode::LeftSide,
+                VehicleSection::Right => RawSectionCode::RightSide,
+                VehicleSection::Front => RawSectionCode::FrontSide,
+                VehicleSection::Rear => RawSectionCode::AftSide,
+                VehicleSection::Turret => RawSectionCode::Turret,
+                VehicleSection::Rotor => RawSectionCode::Rotor,
             };
             raw.sections.insert(code, definition.clone());
         }

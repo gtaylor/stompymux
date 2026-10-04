@@ -13,7 +13,7 @@ pub(super) enum PlacementMode {
 /// Move a running, grounded unit between battlefields without consuming dice or changing its crew.
 /// The host owns route selection, locks, movement callbacks and publication.
 /// Invalid placement or resulting world state leaves the original world unchanged.
-pub fn transfer_unit(world: &mut World, id: ObjectId, position: BattlePosition) -> Result<()> {
+pub fn transfer_unit(world: &mut World, id: ObjectId, position: Position) -> Result<()> {
     validate_transfer(world, id, false)?;
     world.attempt(|world| {
         place_transfer(world, id, position)?;
@@ -23,11 +23,7 @@ pub fn transfer_unit(world: &mut World, id: ObjectId, position: BattlePosition) 
 }
 
 /// Move every member before checking relationship invariants; caller owns rollback.
-pub(super) fn place_transfer(
-    world: &mut World,
-    id: ObjectId,
-    position: BattlePosition,
-) -> Result<()> {
+pub(super) fn place_transfer(world: &mut World, id: ObjectId, position: Position) -> Result<()> {
     ensure!(
         world.btech.towed_by(id).is_none(),
         "A towed unit cannot transfer independently"
@@ -46,7 +42,7 @@ pub(super) fn validate_transfer(world: &World, id: ObjectId, airborne_vtol: bool
     require_transfer_motion(world, id, airborne_vtol)?;
     if let Some(unit) = world.btech.vehicles().get(&id) {
         ensure!(
-            unit.power() == BattlePower::Running && !unit.is_destroyed(),
+            unit.power() == Power::Running && !unit.is_destroyed(),
             "Transfer requires a running unit"
         );
         ensure!(
@@ -60,7 +56,7 @@ pub(super) fn validate_transfer(world: &World, id: ObjectId, airborne_vtol: bool
             .get(&id)
             .context("Unit is not constructed")?;
         ensure!(
-            unit.power() == BattlePower::Running && !unit.is_destroyed(),
+            unit.power() == Power::Running && !unit.is_destroyed(),
             "Transfer requires a running unit"
         );
         ensure!(
@@ -110,8 +106,8 @@ pub(super) fn transfer_motion_blockage(
         return Ok(unit
             .vtol_flight()
             .filter(|flight| {
-                flight.phase != BattleVtolFlightPhase::Landed
-                    && !(airborne_vtol && flight.phase == BattleVtolFlightPhase::Airborne)
+                flight.phase != VtolFlightPhase::Landed
+                    && !(airborne_vtol && flight.phase == VtolFlightPhase::Airborne)
             })
             .map(|_| TransferMotionBlockage::AirborneVtol));
     }
@@ -133,20 +129,20 @@ pub(super) fn transfer_motion_blockage(
 pub(super) fn place(
     world: &mut World,
     id: ObjectId,
-    position: BattlePosition,
+    position: Position,
     mode: PlacementMode,
 ) -> Result<()> {
     ensure!(world.objects.get(&id).is_some_and(|object| object.kind == Kind::Thing && !object.flags.contains(Flag::Going)), "Unit target must be a live thing");
     let vehicle = world.btech.vehicles().get(&id);
     let mech = world.btech.constructed_units().get(&id);
     let power = vehicle
-        .map(BattleVehicle::power)
-        .or_else(|| mech.map(BattleUnit::power))
+        .map(Vehicle::power)
+        .or_else(|| mech.map(Mech::power))
         .context("Unit construction state is unavailable")?;
     if mode == PlacementMode::Administrative {
         super::towing::require_detached(world, id)?;
         ensure!(
-            power == BattlePower::Off,
+            power == Power::Off,
             "Shut down the unit before administrative placement"
         );
     }
@@ -174,11 +170,11 @@ pub(super) fn place(
     .center();
     let mut motion = if mode == PlacementMode::Transfer {
         vehicle
-            .and_then(BattleVehicle::motion)
-            .or_else(|| mech.and_then(BattleUnit::motion))
+            .and_then(Vehicle::motion)
+            .or_else(|| mech.and_then(Mech::motion))
             .context("Placed unit has no motion")?
     } else {
-        BattleMotion::stationary(point)
+        Motion::stationary(point)
     };
     motion.point = point;
     super::map_slots::arrive(&mut world.btech, id, position.map, slot);

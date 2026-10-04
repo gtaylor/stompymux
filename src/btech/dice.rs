@@ -16,38 +16,38 @@ enum Generator {
 /// Replayable generator plus an uncommitted, process-local journal of explicitly generic checks.
 /// Journals clone with candidate worlds, but are neither persisted nor part of generator identity.
 #[derive(Clone)]
-pub struct BattleDice {
+pub struct Dice {
     generator: Generator,
-    generic_rolls: super::BattleRollStatistics,
+    generic_rolls: super::RollStatistics,
 }
 
-impl Serialize for BattleDice {
+impl Serialize for Dice {
     /// Persist only the generator, directly supporting its full-width stream position.
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         self.generator.serialize(serializer)
     }
 }
 
-impl<'de> Deserialize<'de> for BattleDice {
+impl<'de> Deserialize<'de> for Dice {
     /// A restored generator begins a fresh process-local diagnostic journal.
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         Ok(Self {
             generator: Generator::deserialize(deserializer)?,
-            generic_rolls: super::BattleRollStatistics::default(),
+            generic_rolls: super::RollStatistics::default(),
         })
     }
 }
 
-impl PartialEq for BattleDice {
+impl PartialEq for Dice {
     fn eq(&self, other: &Self) -> bool {
         self.generator == other.generator
     }
 }
 
-impl std::fmt::Debug for BattleDice {
+impl std::fmt::Debug for Dice {
     /// Diagnostics must not disclose the stream used for future game outcomes.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("BattleDice(chacha8-v1)")
+        f.write_str("Dice(chacha8-v1)")
     }
 }
 
@@ -56,7 +56,7 @@ impl std::fmt::Debug for BattleDice {
 /// The stream offset is split into a 64-bit block counter and a word within that
 /// sixteen-word block, so every part fits a native SQLite integer.
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub(crate) struct BattleDiceState {
+pub(crate) struct DiceState {
     /// ChaCha key.
     pub seed: [u8; 32],
     /// ChaCha nonce selecting one of the key's independent streams.
@@ -67,12 +67,12 @@ pub(crate) struct BattleDiceState {
     pub word: u8,
 }
 
-impl BattleDice {
+impl Dice {
     /// Capture the generator position for typed storage.
-    pub(crate) fn saved_state(&self) -> BattleDiceState {
+    pub(crate) fn saved_state(&self) -> DiceState {
         let Generator::ChaCha8(rng) = &self.generator;
         let position = rng.get_word_pos();
-        BattleDiceState {
+        DiceState {
             seed: rng.get_seed(),
             stream: rng.get_stream(),
             block: (position / 16) as u64,
@@ -81,14 +81,14 @@ impl BattleDice {
     }
 
     /// Restore a generator from typed storage, beginning a fresh diagnostic journal.
-    pub(crate) fn from_saved_state(state: BattleDiceState) -> Result<Self> {
+    pub(crate) fn from_saved_state(state: DiceState) -> Result<Self> {
         ensure!(state.word < 16, "Dice word offset is out of range");
         let mut rng = ChaCha8Rng::from_seed(state.seed);
         rng.set_stream(state.stream);
         rng.set_word_pos(u128::from(state.block) * 16 + u128::from(state.word));
         Ok(Self {
             generator: Generator::ChaCha8(Box::new(rng)),
-            generic_rolls: super::BattleRollStatistics::default(),
+            generic_rolls: super::RollStatistics::default(),
         })
     }
 
@@ -96,7 +96,7 @@ impl BattleDice {
     pub fn seeded(seed: [u8; 32]) -> Self {
         Self {
             generator: Generator::ChaCha8(Box::new(ChaCha8Rng::from_seed(seed))),
-            generic_rolls: super::BattleRollStatistics::default(),
+            generic_rolls: super::RollStatistics::default(),
         }
     }
 
@@ -150,12 +150,12 @@ impl BattleDice {
     }
 
     /// Inspect pending diagnostics separately from generator/gameplay equality.
-    pub fn generic_roll_statistics(&self) -> &super::BattleRollStatistics {
+    pub fn generic_roll_statistics(&self) -> &super::RollStatistics {
         &self.generic_rolls
     }
 
     /// Transfer a committed stream journal to the simulation-owned history without drawing dice.
-    pub fn take_generic_roll_statistics(&mut self) -> super::BattleRollStatistics {
+    pub fn take_generic_roll_statistics(&mut self) -> super::RollStatistics {
         std::mem::take(&mut self.generic_rolls)
     }
 
@@ -178,7 +178,7 @@ pub fn roll_unit_dice(world: &mut World, id: ObjectId, count: u8) -> Result<Vec<
 }
 
 /// Borrow the owning unit's stream inside an already validated candidate transaction.
-pub(super) fn unit_dice_mut(world: &mut World, id: ObjectId) -> Result<&mut BattleDice> {
+pub(super) fn unit_dice_mut(world: &mut World, id: ObjectId) -> Result<&mut Dice> {
     let unit = world
         .btech
         .unit_mut(id)
@@ -193,7 +193,7 @@ mod statistics_tests {
     /// Classification changes neither random words nor persistence; discarded candidates keep independent journals.
     #[test]
     fn generic_journal_is_explicit_transactional_and_not_persisted() {
-        let mut counted = BattleDice::seeded([37; 32]);
+        let mut counted = Dice::seeded([37; 32]);
         let mut direct = counted.clone();
         for _ in 0..16 {
             assert_eq!(counted.generic_roll(), direct.two_d6());
@@ -209,7 +209,7 @@ mod statistics_tests {
             serde_json::to_value(&counted).unwrap(),
             serde_json::to_value(&direct).unwrap()
         );
-        let mut restored: BattleDice =
+        let mut restored: Dice =
             serde_json::from_value(serde_json::to_value(&counted).unwrap()).unwrap();
         assert_eq!(restored.generic_roll_statistics().total(), 0);
         let history = counted.take_generic_roll_statistics();
@@ -226,17 +226,17 @@ mod statistics_tests {
     /// Typed storage restores the exact stream position, including mid-block offsets.
     #[test]
     fn saved_state_round_trips_stream_position() {
-        let mut dice = BattleDice::seeded([11; 32]);
+        let mut dice = Dice::seeded([11; 32]);
         for _ in 0..21 {
             dice.two_d6();
         }
         let state = dice.saved_state();
         assert!(state.word < 16);
-        let mut restored = BattleDice::from_saved_state(state).unwrap();
+        let mut restored = Dice::from_saved_state(state).unwrap();
         assert_eq!(restored, dice);
         for _ in 0..40 {
             assert_eq!(restored.two_d6(), dice.two_d6());
         }
-        assert!(BattleDice::from_saved_state(BattleDiceState { word: 16, ..state }).is_err());
+        assert!(Dice::from_saved_state(DiceState { word: 16, ..state }).is_err());
     }
 }

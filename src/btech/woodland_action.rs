@@ -1,7 +1,7 @@
 //! Transactional woodland impact resolution shared by terrain shots and stray weapon impacts.
 use super::{
-    BattleAmmunitionMode, BattleDecoration, BattleNotice, BattleWeapon, BattleWoodlandEffect,
-    BattleWoodlandIntent, DecorationKind, HexCoordinate,
+    AmmunitionMode, Decoration, DecorationKind, HexCoordinate, Notice, Weapon, WoodlandEffect,
+    WoodlandIntent,
 };
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
@@ -9,23 +9,23 @@ use serde::Serialize;
 
 /// One weapon damage group reaching a terrain cell after the caller's firing checks.
 #[derive(Debug, Clone, Copy)]
-pub struct BattleWoodlandAttack {
+pub struct WoodlandAttack {
     pub shooter: ObjectId,
     pub coordinate: HexCoordinate,
-    pub weapon: BattleWeapon,
-    pub ammunition: BattleAmmunitionMode,
+    pub weapon: Weapon,
+    pub ammunition: AmmunitionMode,
     pub damage: u16,
-    pub intent: BattleWoodlandIntent,
+    pub intent: WoodlandIntent,
 }
 
 /// Terrain consequence and messages owned by the surrounding attack transaction.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[must_use = "Commit the enclosing attack and publish terrain notices together"]
-pub struct BattleWoodlandImpact {
+pub struct WoodlandImpact {
     pub map: ObjectId,
     pub coordinate: HexCoordinate,
-    pub effect: BattleWoodlandEffect,
-    pub notices: Vec<BattleNotice>,
+    pub effect: WoodlandEffect,
+    pub notices: Vec<Notice>,
 }
 
 /// Resolve and apply woodland checks atomically, without authorizing or expending a weapon.
@@ -33,9 +33,9 @@ pub struct BattleWoodlandImpact {
 /// Weapon fire leaves minefields intact; admission and structural impacts belong to the caller.
 pub fn resolve_woodland_attack(
     world: &mut World,
-    attack: BattleWoodlandAttack,
-) -> Result<BattleWoodlandImpact> {
-    let BattleWoodlandAttack {
+    attack: WoodlandAttack,
+) -> Result<WoodlandImpact> {
+    let WoodlandAttack {
         shooter,
         coordinate,
         weapon,
@@ -68,13 +68,13 @@ pub fn resolve_woodland_attack(
     let dice = super::dice::unit_dice_mut(&mut candidate, shooter)?;
     let effect = super::resolve_woodland_effect(tile, weapon, ammunition, damage, intent, dice);
     let verb = match effect {
-        BattleWoodlandEffect::None => None,
-        BattleWoodlandEffect::Clear { clearing } => {
+        WoodlandEffect::None => None,
+        WoodlandEffect::Clear { clearing } => {
             let _change =
                 super::apply_woodland_clearing(&mut candidate, map, coordinate, tile, clearing)?;
             Some("clear")
         }
-        BattleWoodlandEffect::Ignite { seconds } => {
+        WoodlandEffect::Ignite { seconds } => {
             // Establish map randomness before attacks so replays never create a fresh event stream.
             ensure!(
                 record.fire_dice.is_some(),
@@ -84,7 +84,7 @@ pub fn resolve_woodland_attack(
                 &mut candidate,
                 map,
                 coordinate,
-                Some(BattleDecoration::new(
+                Some(Decoration::new(
                     DecorationKind::Fire,
                     i64::from(seconds),
                     None,
@@ -95,8 +95,8 @@ pub fn resolve_woodland_attack(
     };
     let mut notices = Vec::new();
     if let Some(verb) = verb {
-        let intentional = intent != BattleWoodlandIntent::Incidental;
-        notices.push(BattleNotice {
+        let intentional = intent != WoodlandIntent::Incidental;
+        notices.push(Notice {
             unit: shooter,
             text: format!(
                 "You {}{verb} {},{}{}",
@@ -116,7 +116,7 @@ pub fn resolve_woodland_attack(
     }
     candidate.btech.validate_action(&candidate)?;
     *world = candidate;
-    Ok(BattleWoodlandImpact {
+    Ok(WoodlandImpact {
         map,
         coordinate,
         effect,

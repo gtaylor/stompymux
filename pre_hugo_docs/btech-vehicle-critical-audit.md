@@ -10,7 +10,7 @@ The reference tree is read-only. The setter now uses independent conditions and 
 | Condition | Existing Rust owner | Requirement before raw writes |
 | --- | --- | --- |
 | Turret lock/jam | Vehicle lock/jam booleans and repair countdowns | Preserve heading and pending repair work. Respect the existing surviving-turret constraint; do not turn a field write into material damage. Simultaneous lock and jam are accepted; existing rotation and repair gates still apply. |
-| Dug in/digging | `BattleDigState` flags and completion deadlines | Both conditions are separate from pending completion events. Reference bits are independent, including simultaneous `c` and `d`. Raw writes do not schedule a completion event. |
+| Dug in/digging | `DigState` flags and completion deadlines | Both conditions are separate from pending completion events. Reference bits are independent, including simultaneous `c` and `d`. Raw writes do not schedule a completion event. |
 | Crew stunned | Recovery countdown plus effective stun condition | Effective stun is separate from its recovery timer. A raw stun can be indefinite; clearing the condition must not manufacture a new timer or silently cancel an existing one. |
 | Tail rotor destroyed | Existing tail-rotor condition, separate from main-rotor material | Change the condition without destroying the main rotor or running the damage notification path. Verify new throttle admission and retained current flight controls. |
 
@@ -57,7 +57,7 @@ startup window, proves the baseline is idle, and requires pending work for all
 This fix is required independently of the remaining field setter.
 
 
-`BattleDigState` now stores both flags and distinct completion deadlines. Native
+`DigState` now stores both flags and distinct completion deadlines. Native
 preparation adds a 20-second deadline; raw edits leave all deadlines intact.
 Expiry checks current preparation and power, just as the reference callback does.
 Crew stun uses an optional explicit condition over the ordinary timed effect;

@@ -1,7 +1,7 @@
 //! Shared fixed-column weapon and ammunition display; combat diagnostics remain authoritative.
 use crate::btech::{
     self,
-    firing::BattleWeaponInspection,
+    firing::WeaponInspection,
     status_export::{Ammunition, group_ammunition, mode_letter},
     *,
 };
@@ -13,13 +13,13 @@ pub(super) fn render(world: &World, id: ObjectId) -> Result<String> {
     let diagnostics = btech::weapon_reports::weapon_diagnostics(world, id)?;
     let mut lines = super::technology::lines(world, id)?;
     let (rows, bins, ams) = if let Some(u) = world.btech.constructed_units().get(&id) {
-        let quad = u.chassis() == BattleMechChassis::Quad;
+        let quad = u.chassis() == MechChassis::Quad;
         let mut limbs = Vec::new();
         for (section, label) in [
-            (BattleSection::LeftArm, if quad { "FLLEG" } else { "LARM" }),
-            (BattleSection::RightArm, if quad { "FRLEG" } else { "RARM" }),
-            (BattleSection::LeftLeg, if quad { "RLLEG" } else { "LLEG" }),
-            (BattleSection::RightLeg, if quad { "RRLEG" } else { "RLEG" }),
+            (MechSection::LeftArm, if quad { "FLLEG" } else { "LARM" }),
+            (MechSection::RightArm, if quad { "FRLEG" } else { "RARM" }),
+            (MechSection::LeftLeg, if quad { "RLLEG" } else { "LLEG" }),
+            (MechSection::RightLeg, if quad { "RRLEG" } else { "RLEG" }),
         ] {
             let value = if u.sections()[&section].internal == 0 {
                 "[fg=black bold]*****[reset]".into()
@@ -104,8 +104,7 @@ pub(super) fn render(world: &World, id: ObjectId) -> Result<String> {
         let linked = crate::btech::with_unit!(world.btech.unit(id).unwrap(), |unit| {
             unit.loadout()?.weapons[i].on_targeting_computer
         });
-        let computer =
-            linked && super::technology::device(world, id, BattleSystem::TargetingComputer)?.1;
+        let computer = linked && super::technology::device(world, id, System::TargetingComputer)?.1;
         let modes = if weapon.is_ams() {
             if ams { "  ON ".into() } else { " OFF ".into() }
         } else {
@@ -126,18 +125,18 @@ pub(super) fn render(world: &World, id: ObjectId) -> Result<String> {
         };
         let condition = diagnostics[i].condition;
         let status = match condition {
-            BattleEquipmentCondition::Destroyed => "[fg=black bold]*****[reset]  ".into(),
-            BattleEquipmentCondition::Disabled => "[fg=red]DISABLE[reset]".into(),
-            BattleEquipmentCondition::Jammed => "[fg=red]JAMMED[reset] ".into(),
-            BattleEquipmentCondition::Shorted => "[fg=red]SHORTED[reset]".into(),
-            BattleEquipmentCondition::Broken => "[fg=red]DUD[reset]    ".into(),
-            BattleEquipmentCondition::Empty => " [fg=red]EMPTY[reset] ".into(),
-            BattleEquipmentCondition::AmmoJam => "[fg=red]AMMOJAM[reset]".into(),
+            EquipmentCondition::Destroyed => "[fg=black bold]*****[reset]  ".into(),
+            EquipmentCondition::Disabled => "[fg=red]DISABLE[reset]".into(),
+            EquipmentCondition::Jammed => "[fg=red]JAMMED[reset] ".into(),
+            EquipmentCondition::Shorted => "[fg=red]SHORTED[reset]".into(),
+            EquipmentCondition::Broken => "[fg=red]DUD[reset]    ".into(),
+            EquipmentCondition::Empty => " [fg=red]EMPTY[reset] ".into(),
+            EquipmentCondition::AmmoJam => "[fg=red]AMMOJAM[reset]".into(),
             _ if row.readiness.spent => "[fg=black bold]Empty[reset]  ".into(),
             _ if row.readiness.recycle_remaining > 0 => {
                 format!(" {:2}    ", row.readiness.recycle_remaining.div_ceil(2))
             }
-            BattleEquipmentCondition::Damaged => "[fg=red]DAMAGED[reset]".into(),
+            EquipmentCondition::Damaged => "[fg=red]DAMAGED[reset]".into(),
             _ => "[fg=green]Ready[reset]  ".into(),
         };
         let supply = ammo.get(i).map_or_else(|| "   ".into(), ammunition_column);
@@ -159,41 +158,35 @@ pub(super) fn render(world: &World, id: ObjectId) -> Result<String> {
 
 /// The cockpit lists installed physical weapons even when their limb is unusable.
 /// Availability here describes the limb, independently of attack admission and part damage.
-fn physical_readiness(unit: &BattleUnit) -> Result<Vec<String>> {
+fn physical_readiness(unit: &Mech) -> Result<Vec<String>> {
     let loadout = unit.loadout()?;
     let mut entries = Vec::new();
     let tons = unit.definition().tons;
     for (weapon, name) in [
-        (BattleArmAttack::Axe, "Axe"),
-        (BattleArmAttack::Sword, "Sword"),
-        (BattleArmAttack::Claw, "Claw"),
-        (BattleArmAttack::Mace, "Mace"),
-        (BattleArmAttack::Saw, "Saw"),
-        (BattleArmAttack::RetractableBlade, "RBlade"),
-        (BattleArmAttack::Lance, "Lance"),
-        (BattleArmAttack::Flail, "Flail"),
-        (BattleArmAttack::WreckingBall, "WBall"),
-        (BattleArmAttack::ChainWhip, "Whip"),
-        (BattleArmAttack::SmallVibroblade, "SVibro"),
-        (BattleArmAttack::MediumVibroblade, "MVibro"),
-        (BattleArmAttack::LargeVibroblade, "LVibro"),
+        (ArmAttack::Axe, "Axe"),
+        (ArmAttack::Sword, "Sword"),
+        (ArmAttack::Claw, "Claw"),
+        (ArmAttack::Mace, "Mace"),
+        (ArmAttack::Saw, "Saw"),
+        (ArmAttack::RetractableBlade, "RBlade"),
+        (ArmAttack::Lance, "Lance"),
+        (ArmAttack::Flail, "Flail"),
+        (ArmAttack::WreckingBall, "WBall"),
+        (ArmAttack::ChainWhip, "Whip"),
+        (ArmAttack::SmallVibroblade, "SVibro"),
+        (ArmAttack::MediumVibroblade, "MVibro"),
+        (ArmAttack::LargeVibroblade, "LVibro"),
     ] {
         let Some(system) = weapon.system() else {
             continue;
         };
         // The reference game lists its original weapons from a lighter, shared threshold.
         let minimum = match weapon {
-            BattleArmAttack::Saw => 7,
-            BattleArmAttack::Axe
-            | BattleArmAttack::Sword
-            | BattleArmAttack::Claw
-            | BattleArmAttack::Mace => tons / 15,
+            ArmAttack::Saw => 7,
+            ArmAttack::Axe | ArmAttack::Sword | ArmAttack::Claw | ArmAttack::Mace => tons / 15,
             weapon => weapon.minimum_slots(tons),
         };
-        for (section, arm) in [
-            (BattleSection::LeftArm, "LA"),
-            (BattleSection::RightArm, "RA"),
-        ] {
+        for (section, arm) in [(MechSection::LeftArm, "LA"), (MechSection::RightArm, "RA")] {
             let count = loadout
                 .systems
                 .iter()
@@ -202,12 +195,10 @@ fn physical_readiness(unit: &BattleUnit) -> Result<Vec<String>> {
             if count < usize::from(minimum) {
                 continue;
             }
-            let shoulder =
-                btech::physical::actuator(unit, section, 0, BattleSystem::ShoulderOrHip)?;
-            let hand =
-                btech::physical::actuator(unit, section, 3, BattleSystem::HandOrFootActuator)?;
+            let shoulder = btech::physical::actuator(unit, section, 0, System::ShoulderOrHip)?;
+            let hand = btech::physical::actuator(unit, section, 3, System::HandOrFootActuator)?;
             let usable = unit.sections()[&section].internal > 0
-                && (weapon == BattleArmAttack::Claw || shoulder)
+                && (weapon == ArmAttack::Claw || shoulder)
                 && (!weapon.needs_hand() || hand);
             let status = if !usable {
                 "[fg=red bold]XX[reset]".into()
@@ -223,8 +214,8 @@ fn physical_readiness(unit: &BattleUnit) -> Result<Vec<String>> {
 }
 
 /// Discard anatomy after its location label has been projected.
-fn normalize<S>(row: BattleWeaponInspection<S>) -> BattleWeaponInspection<()> {
-    BattleWeaponInspection {
+fn normalize<S>(row: WeaponInspection<S>) -> WeaponInspection<()> {
+    WeaponInspection {
         index: row.index,
         name: row.name,
         section: (),
@@ -257,19 +248,19 @@ fn ammunition_column(bin: &Ammunition) -> String {
 }
 
 /// Single-character fire-mode indicators occupy one column in every weapon row.
-fn fire_letter(mode: BattleFireMode) -> char {
+fn fire_letter(mode: FireMode) -> char {
     match mode {
-        BattleFireMode::Normal => ' ',
-        BattleFireMode::Heat => 'H',
-        BattleFireMode::Hotload => 'H',
-        BattleFireMode::Ultra => 'U',
-        BattleFireMode::Rapid => 'F',
-        BattleFireMode::Rotary2 => '2',
-        BattleFireMode::Rotary3 => '3',
-        BattleFireMode::Rotary4 => '4',
-        BattleFireMode::Rotary5 => '5',
-        BattleFireMode::Rotary6 => '6',
-        BattleFireMode::Gatling => 'G',
+        FireMode::Normal => ' ',
+        FireMode::Heat => 'H',
+        FireMode::Hotload => 'H',
+        FireMode::Ultra => 'U',
+        FireMode::Rapid => 'F',
+        FireMode::Rotary2 => '2',
+        FireMode::Rotary3 => '3',
+        FireMode::Rotary4 => '4',
+        FireMode::Rotary5 => '5',
+        FireMode::Rotary6 => '6',
+        FireMode::Gatling => 'G',
     }
 }
 
@@ -303,8 +294,8 @@ mod tests {
                     &format!("{{ at = \"5-12\", item = \"{equipment}\""),
                 );
             assert!(!source.contains("IS.MediumLaser") && source.contains("\"5-12\""));
-            let unit = BattleUnit::from_template(BattleTemplate::parse("AXM-2N", &source).unwrap())
-                .unwrap();
+            let unit =
+                Mech::from_template(MechTemplate::parse("AXM-2N", &source).unwrap()).unwrap();
             assert_eq!(
                 text::plain(&physical_readiness(&unit).unwrap().join("")),
                 format!("{label}[RA]: Rdy")
@@ -313,7 +304,7 @@ mod tests {
                 let mut damaged = unit.clone();
                 damaged
                     .destroy_critical(CriticalLocation {
-                        section: BattleSection::RightArm,
+                        section: MechSection::RightArm,
                         slot,
                     })
                     .unwrap();
@@ -325,7 +316,7 @@ mod tests {
                 assert_eq!(damaged, before);
             }
             let mut recycling = unit.clone();
-            recycling.limb_recycle.insert(BattleSection::RightArm, 3);
+            recycling.limb_recycle.insert(MechSection::RightArm, 3);
             assert_eq!(
                 text::plain(&physical_readiness(&recycling).unwrap().join("")),
                 format!("{label}[RA]: 2  ")

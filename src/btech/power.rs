@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 /// Engine lifecycle stored with the unit; countdowns measure committed simulation seconds.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "state", rename_all = "snake_case")]
-pub enum BattlePower {
+pub enum Power {
     #[default]
     Off,
     Starting {
@@ -15,7 +15,7 @@ pub enum BattlePower {
     Running,
 }
 
-impl BattlePower {
+impl Power {
     /// Commit one startup second and record the supplied Unix time only on completion.
     pub(super) fn advance_startup(
         &mut self,
@@ -40,18 +40,13 @@ impl BattlePower {
 
 /// Domain notification addressed to the occupants of one unit.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleNotice {
+pub struct Notice {
     pub unit: ObjectId,
     pub text: String,
 }
 
 /// Begin normal startup, or the five-second operator override authorized by the adapter.
-pub fn start_unit(
-    world: &mut World,
-    id: ObjectId,
-    pilot: ObjectId,
-    fast: bool,
-) -> Result<BattleNotice> {
+pub fn start_unit(world: &mut World, id: ObjectId, pilot: ObjectId, fast: bool) -> Result<Notice> {
     start_unit_by_actor(
         world,
         id,
@@ -62,11 +57,7 @@ pub fn start_unit(
 
 /// Start a unit through an attached autopilot.  Startup still uses the ordinary
 /// map, heat, damage, and lifecycle checks; only cockpit ownership is replaced.
-pub(crate) fn start_unit_autopilot(
-    world: &mut World,
-    id: ObjectId,
-    fast: bool,
-) -> Result<BattleNotice> {
+pub(crate) fn start_unit_autopilot(world: &mut World, id: ObjectId, fast: bool) -> Result<Notice> {
     start_unit_by_actor(
         world,
         id,
@@ -80,7 +71,7 @@ fn start_unit_by_actor(
     id: ObjectId,
     actor: super::combat_operator::ControlActor,
     fast: bool,
-) -> Result<BattleNotice> {
+) -> Result<Notice> {
     ensure!(
         world.btech.towed_by(id).is_none(),
         "Detach tow cables before starting"
@@ -91,7 +82,7 @@ fn start_unit_by_actor(
     controlled_unit_by_actor(world, id, actor)?;
     let unit = &world.btech.constructed_units()[&id];
     ensure!(
-        unit.power == BattlePower::Off,
+        unit.power == Power::Off,
         "Unit is already running or starting"
     );
     let position = unit
@@ -115,7 +106,7 @@ fn start_unit_by_actor(
         unit.heat().excess <= 30.0,
         "This 'Mech is too hot to start back up!"
     );
-    world.btech.constructed.get_mut(&id).unwrap().power = BattlePower::Starting {
+    world.btech.constructed.get_mut(&id).unwrap().power = Power::Starting {
         remaining: if fast { 5 } else { 30 },
     };
     world
@@ -128,7 +119,7 @@ fn start_unit_by_actor(
     if let super::combat_operator::ControlActor::Player(pilot) = actor {
         super::pilot_health::synchronize(world, id, pilot);
     }
-    Ok(BattleNotice {
+    Ok(Notice {
         unit: id,
         text: "Startup Cycle commencing...".to_owned(),
     })
@@ -139,8 +130,8 @@ pub fn stop_unit(
     world: &mut World,
     id: ObjectId,
     pilot: ObjectId,
-    rules: super::BattleFallRules,
-) -> Result<Vec<BattleNotice>> {
+    rules: super::FallRules,
+) -> Result<Vec<Notice>> {
     check_shutdown_control(world, id, pilot)?;
     stop_admitted(world, id, rules)
 }
@@ -155,8 +146,8 @@ pub(super) fn check_shutdown_control(world: &World, id: ObjectId, pilot: ObjectI
 pub(super) fn stop_admitted(
     world: &mut World,
     id: ObjectId,
-    rules: super::BattleFallRules,
-) -> Result<Vec<BattleNotice>> {
+    rules: super::FallRules,
+) -> Result<Vec<Notice>> {
     stop_inner(world, id, rules, None)
 }
 
@@ -164,9 +155,9 @@ pub(super) fn stop_admitted(
 pub(super) fn stop_admitted_in_action(
     world: &mut World,
     id: ObjectId,
-    rules: super::BattleFallRules,
+    rules: super::FallRules,
     effects: &mut super::shutdown::ShutdownEffects,
-) -> Result<Vec<BattleNotice>> {
+) -> Result<Vec<Notice>> {
     stop_inner(world, id, rules, Some(effects))
 }
 
@@ -174,9 +165,9 @@ pub(super) fn stop_admitted_in_action(
 fn stop_inner(
     world: &mut World,
     id: ObjectId,
-    mut rules: super::BattleFallRules,
+    mut rules: super::FallRules,
     mut effects: Option<&mut super::shutdown::ShutdownEffects>,
-) -> Result<Vec<BattleNotice>> {
+) -> Result<Vec<Notice>> {
     if world.btech.vehicles().contains_key(&id) {
         return super::vehicle_power::stop_admitted(world, id, rules, effects);
     }
@@ -189,23 +180,23 @@ fn stop_inner(
         let position = unit.position().context("Airborne unit is not placed")?;
         let tile = world.btech.maps()[&position.map]
             .base_hex(i64::from(position.x), i64::from(position.y))?;
-        Some(super::BattleFreeFall::new(unit.elevation_level(tile)))
+        Some(super::FreeFall::new(unit.elevation_level(tile)))
     } else {
         None
     };
     ensure!(
-        unit.power != BattlePower::Off,
+        unit.power != Power::Off,
         "The unit has not been started yet"
     );
-    let starting = matches!(unit.power, BattlePower::Starting { .. });
+    let starting = matches!(unit.power, Power::Starting { .. });
     let moving = unit.motion().is_some_and(|motion| motion.speed > 10.75);
-    let twisted = unit.facing().torso != super::BattleTorso::Center;
+    let twisted = unit.facing().torso != super::Torso::Center;
     rules.toughness = unit
         .pilot()
         .and_then(|pilot| world.btech.character_values().get(&pilot))
         .is_some_and(|values| super::advantages::enabled(values, "Toughness"));
     world.attempt(|world| {
-        let mut notices = vec![BattleNotice {
+        let mut notices = vec![Notice {
             unit: id,
             text: (if starting {
                 "The startup sequence has been aborted."
@@ -215,9 +206,9 @@ fn stop_inner(
             .to_owned(),
         }];
         if !starting {
-            world.btech.constructed.get_mut(&id).unwrap().facing.torso = super::BattleTorso::Center;
+            world.btech.constructed.get_mut(&id).unwrap().facing.torso = super::Torso::Center;
             if twisted {
-                notices.push(BattleNotice {
+                notices.push(Notice {
                     unit: id,
                     text: "Torso rotated back to center for shutdown".to_owned(),
                 });
@@ -226,19 +217,19 @@ fn stop_inner(
                 let unit = world.btech.constructed.get_mut(&id).unwrap();
                 unit.flight = None;
                 unit.free_fall = Some(fall);
-                notices.push(BattleNotice {
+                notices.push(Notice {
                     unit: id,
                     text: "You start free-fall.. Enjoy the ride!".to_owned(),
                 });
             } else if moving {
-                notices.push(BattleNotice {
+                notices.push(Notice {
                     unit: id,
                     text: "Your systems stop in mid-motion!".to_owned(),
                 });
                 notices.extend(
                     super::observer_messages(world, id, "stops in mid-motion, and falls!")
                         .into_iter()
-                        .map(|(unit, text)| BattleNotice { unit, text }),
+                        .map(|(unit, text)| Notice { unit, text }),
                 );
                 let fall = if effects.is_some()
                     && world.objects[&id].flags.contains(crate::Flag::InCharacter)
@@ -255,8 +246,7 @@ fn stop_inner(
                 if let Some(effects) = effects.as_deref_mut() {
                     effects.falls.push(fall);
                 }
-                let input =
-                    super::stacking::physical_input(world, id, super::BattleStackingEntry::Fall)?;
+                let input = super::stacking::physical_input(world, id, super::StackingEntry::Fall)?;
                 let collisions = if let Some(effects) = effects {
                     super::stacking::resolve_in_action(
                         world,
@@ -285,9 +275,9 @@ fn stop_inner(
 
 /// Shared control cleanup after the caller has resolved any location-dependent consequences.
 pub(super) fn finish_shutdown(
-    unit: &mut super::BattleUnit,
+    unit: &mut super::Mech,
     id: ObjectId,
-    notices: &mut Vec<BattleNotice>,
+    notices: &mut Vec<Notice>,
 ) -> bool {
     if let Some(motion) = &mut unit.motion {
         motion.speed = 0.0;
@@ -295,9 +285,9 @@ pub(super) fn finish_shutdown(
         motion.desired_heading = motion.heading;
     }
     let dropped = unit.carried_club.take().is_some();
-    unit.power = BattlePower::Off;
+    unit.power = Power::Off;
     if unit.searchlight.shutdown() {
-        notices.push(BattleNotice {
+        notices.push(Notice {
             unit: id,
             text: "Your searchlight shuts off.".into(),
         });
@@ -306,7 +296,7 @@ pub(super) fn finish_shutdown(
     unit.masc.shutdown();
     unit.supercharger.shutdown();
     if unit.tag.stop() {
-        notices.push(BattleNotice {
+        notices.push(Notice {
             unit: id,
             text: "Your TAG connection has been broken.".into(),
         });
@@ -322,7 +312,7 @@ pub(super) fn finish_shutdown(
 }
 
 /// Advance one simulation second at the supplied Unix time. The caller commits state and notices atomically.
-pub fn advance_units(world: &mut World, now: i64) -> Vec<BattleNotice> {
+pub fn advance_units(world: &mut World, now: i64) -> Vec<Notice> {
     super::radio_experience::advance(world);
     let mut notices = super::scenario_map::advance_detached(world);
     notices.extend(super::vehicle_power::advance(world, now));
@@ -338,7 +328,7 @@ pub fn advance_units(world: &mut World, now: i64) -> Vec<BattleNotice> {
         .constructed_units()
         .iter()
         .filter_map(|(&id, unit)| {
-            let BattlePower::Starting { .. } = unit.power else {
+            let Power::Starting { .. } = unit.power else {
                 return None;
             };
             world
@@ -394,7 +384,7 @@ pub fn advance_units(world: &mut World, now: i64) -> Vec<BattleNotice> {
             0 => "All systems operational!",
             _ => continue,
         };
-        notices.push(BattleNotice {
+        notices.push(Notice {
             unit: id,
             text: text.to_owned(),
         });
@@ -402,7 +392,7 @@ pub fn advance_units(world: &mut World, now: i64) -> Vec<BattleNotice> {
             notices.extend(
                 super::observer_messages(world, id, "powers up!")
                     .into_iter()
-                    .map(|(unit, text)| BattleNotice { unit, text }),
+                    .map(|(unit, text)| Notice { unit, text }),
             );
             // Shutdown extinguishes the lamp; restore whatever its mode asks for.
             super::searchlight::reconcile(world, id);
@@ -568,10 +558,7 @@ pub(super) fn controlled_running_unit(
 pub(super) fn require_running_unit(world: &World, shooter: ObjectId) -> Result<()> {
     let unit = super::scanner::scanner_unit(world, shooter).context("Unit is unavailable")?;
     ensure!(!unit.destroyed, "Unit is destroyed");
-    ensure!(
-        unit.power == super::BattlePower::Running,
-        "Unit must be started"
-    );
+    ensure!(unit.power == super::Power::Running, "Unit must be started");
     ensure!(unit.position.is_some(), "Unit must be on a map");
     Ok(())
 }
@@ -579,8 +566,8 @@ pub(super) fn require_running_unit(world: &World, shooter: ObjectId) -> Result<(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::btech::BattleUnitTemplateExt;
-    use crate::{BattleRecovery, BattleUnitTemplate, Config, Kind};
+    use crate::btech::UnitTemplateExt;
+    use crate::{Config, Kind, Recovery, UnitTemplate};
 
     fn config() -> Config {
         Config::load(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/game"))
@@ -596,7 +583,7 @@ mod tests {
 
     fn unconscious_pilot(world: &mut World, config: &Config) -> ObjectId {
         let pilot = world.create(config, "Unconscious autopilot pilot".into(), Kind::Player);
-        let mut recovery = BattleRecovery::fresh();
+        let mut recovery = Recovery::fresh();
         recovery.remaining = 1;
         world.btech.recoveries.insert(pilot, recovery);
         pilot
@@ -607,7 +594,7 @@ mod tests {
         let config = config();
         let mut world = World::default();
         let unit = world.create(&config, "Autopilot health mech".into(), Kind::Thing);
-        BattleUnitTemplate::parse("JR7-D", include_str!("../../game/mechs/JR7-D.toml"))
+        UnitTemplate::parse("JR7-D", include_str!("../../game/mechs/JR7-D.toml"))
             .unwrap()
             .create(&mut world, unit)
             .unwrap();
@@ -627,7 +614,7 @@ mod tests {
         let config = config();
         let mut world = World::default();
         let unit = world.create(&config, "Autopilot health vehicle".into(), Kind::Thing);
-        BattleUnitTemplate::parse(
+        UnitTemplate::parse(
             "Demolisher",
             include_str!("../../game/mechs/Demolisher.toml"),
         )

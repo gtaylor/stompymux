@@ -5,7 +5,7 @@ use serde::Serialize;
 
 /// A derived load snapshot in 1/1024-ton mass units; never stored or cached in the world.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-pub struct BattleUnitLoad {
+pub struct UnitLoad {
     pub nominal_tons: u16,
     /// Current gameplay mass, including any temporary administrative correction.
     pub material_mass: u32,
@@ -14,7 +14,7 @@ pub struct BattleUnitLoad {
     pub destroyed: bool,
 }
 
-impl BattleUnitLoad {
+impl UnitLoad {
     /// Apply load and construction-weight penalties before boosters and environmental rules.
     /// Underweight material cannot increase speed; more than three adjusted nominal masses stops motion.
     pub fn maximum_speed(self, maximum: f64) -> Result<f64> {
@@ -52,7 +52,7 @@ impl BattleUnitLoad {
 /// Resolve current mass, ownership and towing discounts for any admitted chassis.
 /// Loose stock and external towing share this projection without sharing their equipment discounts.
 /// The flag supplies the world's configured hot-myomer towing bonus.
-pub fn unit_load(world: &World, id: ObjectId, tsm_tow_bonus: bool) -> Result<BattleUnitLoad> {
+pub fn unit_load(world: &World, id: ObjectId, tsm_tow_bonus: bool) -> Result<UnitLoad> {
     let (nominal_tons, material_mass, destroyed, salvage, carrier, hot_myomer, cargo_multiplier) =
         if let Some(unit) = world.btech.vehicles().get(&id) {
             (
@@ -117,7 +117,7 @@ pub fn unit_load(world: &World, id: ObjectId, tsm_tow_bonus: bool) -> Result<Bat
     let carried_mass = carried_mass
         .checked_add(cargo)
         .context("Unit load overflow")?;
-    Ok(BattleUnitLoad {
+    Ok(UnitLoad {
         nominal_tons,
         material_mass,
         carried_mass,
@@ -188,9 +188,9 @@ pub(super) fn carries_load(world: &World, id: ObjectId) -> bool {
             .is_some_and(|unit| unit.auxiliary_fuel_mass() > 0)
         || world.btech.tows().contains_key(&id)
         || world.btech.inventories.get(&id).is_some_and(|entries| {
-            entries.iter().any(|entry| {
-                super::BattlePart::from_id(entry.part_id).is_some_and(|part| part.mass > 0)
-            })
+            entries
+                .iter()
+                .any(|entry| super::Part::from_id(entry.part_id).is_some_and(|part| part.mass > 0))
         })
 }
 
@@ -270,7 +270,7 @@ mod tests {
 
     #[test]
     fn carried_load_uses_both_denominator_floors_and_exact_overload_boundary() {
-        let mut load = BattleUnitLoad {
+        let mut load = UnitLoad {
             nominal_tons: 3,
             material_mass: 3 * 1024,
             carried_mass: 6 * 1024,

@@ -1,6 +1,6 @@
 //! Confined, bounded template lookup: `<reference>.toml` documents anywhere under a unit root.
 
-use super::{BattleUnitTemplate, RawTemplate};
+use super::{RawTemplate, UnitTemplate};
 use anyhow::{Context, Result, ensure};
 use std::{
     collections::{BTreeMap, HashMap},
@@ -143,9 +143,9 @@ pub fn read_template_document(root: &Path, reference: &str) -> Result<(String, S
 }
 
 /// Read one already-resolved template with confinement and the shared size bound.
-pub fn read_resolved_template(root: &Path, path: &Path) -> Result<BattleUnitTemplate> {
+pub fn read_resolved_template(root: &Path, path: &Path) -> Result<UnitTemplate> {
     let (reference, source) = read_confined(root, path)?;
-    BattleUnitTemplate::parse(&reference, &source)
+    UnitTemplate::parse(&reference, &source)
 }
 
 /// Read one resolved template into class-neutral contract state, applying the
