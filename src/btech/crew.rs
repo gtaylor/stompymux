@@ -15,17 +15,12 @@ pub fn assign_pilot(world: &mut World, unit: ObjectId, pilot: ObjectId) -> Resul
         "Enter the unit before taking the cockpit"
     );
     ensure!(world.objects.get(&unit).is_some_and(|object| object.kind == Kind::Thing && !object.flags.contains(Flag::Going)), "Unit must be a live thing");
-    let assigned = if let Some(vehicle) = world.btech.vehicles().get(&unit) {
-        ensure!(!vehicle.is_destroyed(), "Vehicle is destroyed");
-        vehicle.pilot()
-    } else {
-        world
-            .btech
-            .constructed_units()
-            .get(&unit)
-            .context("Unit construction state is unavailable")?
-            .pilot()
-    };
+    let record = world
+        .btech
+        .unit(unit)
+        .context("Unit construction state is unavailable")?;
+    ensure!(!record.is_destroyed(), "Unit is destroyed");
+    let assigned = record.pilot();
     ensure!(
         assigned.is_none() || assigned == Some(pilot),
         "Cockpit is occupied"

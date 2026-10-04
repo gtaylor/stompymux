@@ -765,7 +765,9 @@ async fn tactical_injuries_recover_without_profiles_and_sixth_hit_ends_the_unit(
     assert!(unit.weapon_recycle().is_empty());
     assert!(!world.btech.unconscious(ObjectId(1)));
     assert!(world.btech.characters().is_empty());
-    assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+    // The wreck's cockpit cannot be claimed again, so it cannot be restarted.
+    let error = assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap_err();
+    assert_eq!(error.to_string(), "Unit is destroyed");
     assert!(start_battle_unit(&mut world, id, ObjectId(1), true).is_err());
     persistence::save(&config.database(), &world).await.unwrap();
     assert_eq!(
