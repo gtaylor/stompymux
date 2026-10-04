@@ -21,4 +21,4 @@ btech.map.inspect_file(name)
 
 ## Returns
 
-- `BattleMapAssetSummary`
+- `MapAssetSummary`

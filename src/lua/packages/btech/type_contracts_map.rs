@@ -19,7 +19,7 @@
 // lua-types-begin btech 00026
 //|---Read source-map metadata without decoding saved terrain or applying overlays.
 //|---@param name string Relative name under database.map_database.
-//|---@return BattleMapAssetSummary
+//|---@return MapAssetSummary
 //|function btech_map.inspect_file(name) end
 // lua-types-end
 
@@ -35,7 +35,7 @@
 //|---@param dbref integer
 //|---@param x integer Zero-based column.
 //|---@param y integer Zero-based row.
-//|---@return BattleHex
+//|---@return Hex
 //|function btech_map.hex(dbref, x, y) end
 // lua-types-end
 
@@ -275,7 +275,7 @@
 //|---@param dbref integer
 //|---@param x integer
 //|---@param y integer
-//|---@param hex BattleHex
+//|---@param hex Hex
 //|---@return BattleMapHexChange
 //|function btech_map.set_hex(actor, dbref, x, y, hex) end
 // lua-types-end
@@ -347,7 +347,7 @@
 // lua-types-begin btech 00141
 //|---Read one hex's ground height. Water depth, structure heights and bridge decks are in btech.map.hex.
 //|---@param map DbRef|Object
-//|---@param hex BattleHexCoordinate
+//|---@param hex HexCoordinate
 //|---@return integer elevation
 //|function btech_map.elevation(map, hex) end
 // lua-types-end
@@ -355,7 +355,7 @@
 // lua-types-begin btech 00143
 //|---Read the one terrain feature a map shows for a hex: fire or smoke, then a structure, water, woods or the ground. Use btech.map.hex for every layer, including the terrain beneath fire or smoke.
 //|---@param map DbRef|Object
-//|---@param hex BattleHexCoordinate
+//|---@param hex HexCoordinate
 //|---@return BattleTerrainName terrain
 //|function btech_map.terrain(map, hex) end
 // lua-types-end
@@ -363,7 +363,7 @@
 // lua-types-begin btech 00144
 //|---Report whether a coordinate lies inside a saved blast zone.
 //|---@param map DbRef|Object
-//|---@param hex BattleHexCoordinate
+//|---@param hex HexCoordinate
 //|---@return boolean inside
 //|function btech_map.in_blast_zone(map, hex) end
 // lua-types-end
@@ -371,7 +371,7 @@
 // lua-types-begin btech 00146
 //|---Report line of sight from one placed unit toward a unit or hex.
 //|---@param observer DbRef|Object
-//|---@param target DbRef|Object|BattleHexCoordinate
+//|---@param target DbRef|Object|HexCoordinate
 //|---@return BattleLineOfSight state
 //|function btech_map.line_of_sight(observer, target) end
 // lua-types-end
@@ -429,7 +429,7 @@
 // lua-types-begin btech 00552
 //|---Whether a map has one rule switch enabled.
 //|---@param dbref integer Map object dbref.
-//|---@param flag BattleMapFlag Typed constant from btech.map.flags.
+//|---@param flag MapFlag Typed constant from btech.map.flags.
 //|---@return boolean
 //|function btech_map.has_flag(dbref, flag) end
 // lua-types-end
@@ -438,7 +438,7 @@
 //|---Wizard-only switch of one map rule flag, leaving the others unchanged.
 //|---@param actor integer
 //|---@param map integer
-//|---@param flag BattleMapFlag Typed constant from btech.map.flags.
+//|---@param flag MapFlag Typed constant from btech.map.flags.
 //|---@param enabled boolean
 //|function btech_map.set_flag(actor, map, flag, enabled) end
 // lua-types-end

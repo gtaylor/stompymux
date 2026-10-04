@@ -19,7 +19,7 @@ btech.map.set_flag(actor, map, flag, enabled)
 | --- | --- | --- |
 | `actor` | `integer` |  |
 | `map` | `integer` |  |
-| `flag` | `BattleMapFlag` | Typed constant from btech.map.flags. |
+| `flag` | `MapFlag` | Typed constant from btech.map.flags. |
 | `enabled` | `boolean` |  |
 
 ## Returns

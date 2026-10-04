@@ -18,7 +18,7 @@ btech.map.line_of_sight(observer, target)
 | Name | Type | Description |
 | --- | --- | --- |
 | `observer` | `DbRef\|Object` |  |
-| `target` | `DbRef\|Object\|BattleHexCoordinate` |  |
+| `target` | `DbRef\|Object\|HexCoordinate` |  |
 
 ## Returns
 

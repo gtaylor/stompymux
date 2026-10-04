@@ -503,7 +503,7 @@
 //|---@param dbref integer
 //|---@param pilot integer
 //|---@param weapon integer Zero-based weapon index.
-//|---@param target integer|BattleHexCoordinate|nil Omitted target uses cockpit selection.
+//|---@param target integer|HexCoordinate|nil Omitted target uses cockpit selection.
 //|---@return BattleSightReport
 //|function btech_unit.sight(dbref, pilot, weapon, target) end
 // lua-types-end

@@ -33,18 +33,18 @@
 ---@field sections table<BattleSectionName, BattleSectionDefinition>
 ---@field attributes table<string, string> Unit-level source fields; not validated simulation capabilities.
 
----@class BattleMapAssetSummary
+---@class MapAssetSummary
 ---@field width integer
 ---@field height integer
 ---@field gravity integer
 ---@field temperature integer
----@field flags BattleMapFlag[] Map flags the asset enables.
+---@field flags MapFlag[] Map flags the asset enables.
 ---@field points_of_interest BattleMapPointOfInterest[] Scripted points of interest in file order.
 
----@class BattleHex
+---@class Hex
 ---@field level integer Ground height in levels; any water surface sits at this height.
----@field ground BattleGroundName What the ground is made of; see btech.map.ground_types.
----@field woods? BattleWoodsName Forest covering the ground; see btech.map.woods_types.
+---@field ground GroundName What the ground is made of; see btech.map.ground_types.
+---@field woods? WoodsName Forest covering the ground; see btech.map.woods_types.
 ---@field water? {depth: integer, frozen: boolean} Standing water whose surface is at the ground level.
 ---@field structure? {kind: "building"|"wall", height: integer}|{kind: "bridge", deck: integer} Built feature; heights are above the ground level. Kinds are in btech.map.structure_kinds.
 ---@field overlay? "fire"|"smoke" Fire or smoke over the hex; base tiles never have one.
@@ -52,15 +52,15 @@
 ---@class StoredBattleMap
 ---@field cargo_transfer_point BattleCargoTransferPoint|nil Saved cargo location and hint policy.
 ---@field wrapping boolean Opposite-edge wrapping is enabled.
----@field linked_markers table<integer, {coordinate: BattleHexCoordinate, object: integer, data_char: integer, data_short: integer, data_int: integer}> Complete authored linked marker records.
----@field building_exits table<integer, {coordinate: BattleHexCoordinate, destination: integer, data_char: integer, data_short: integer, data_int: integer}> Return-link slots; coordinates are selection metadata.
+---@field linked_markers table<integer, {coordinate: HexCoordinate, object: integer, data_char: integer, data_short: integer, data_int: integer}> Complete authored linked marker records.
+---@field building_exits table<integer, {coordinate: HexCoordinate, destination: integer, data_char: integer, data_short: integer, data_int: integer}> Return-link slots; coordinates are selection metadata.
 ---@field name string
 ---@field width integer
 ---@field height integer
 ---@field gravity integer
 ---@field temperature integer
 
----@field flags BattleMapFlag[] Enabled map flags.
+---@field flags MapFlag[] Enabled map flags.
 ---@field light integer 0 night, 1 twilight, 2 day
 ---@field visibility integer Weather range in hexes
 ---@field sensor_flags integer Disabled perception channels: sensor band bit 0 (1), radar bit 5 (32), probes bit 6 (64).
@@ -135,13 +135,13 @@ local btech_map = {}
 ---@type BattleTerrainTypes
 btech_map.terrain_types = {}
 ---Ground names for a hex's ground field.
----@type BattleGroundTypes
+---@type GroundTypes
 btech_map.ground_types = {}
 ---Woods densities for a hex's woods field.
----@type BattleWoodsTypes
+---@type WoodsTypes
 btech_map.woods_types = {}
 ---Structure kinds for the kind field of a hex's structure.
----@type BattleStructureKinds
+---@type StructureKinds
 btech_map.structure_kinds = {}
 
 ---Read the detached saved cargo location, or nil when the map has no location restriction.
@@ -157,7 +157,7 @@ function btech_map.set_cargo_point(actor, map, point) end
 
 ---Read source-map metadata without decoding saved terrain or applying overlays.
 ---@param name string Relative name under database.map_database.
----@return BattleMapAssetSummary
+---@return MapAssetSummary
 function btech_map.inspect_file(name) end
 
 ---Inspect a saved map identity without activating simulation.
@@ -169,7 +169,7 @@ function btech_map.inspect(dbref) end
 ---@param dbref integer
 ---@param x integer Zero-based column.
 ---@param y integer Zero-based row.
----@return BattleHex
+---@return Hex
 function btech_map.hex(dbref, x, y) end
 
 ---Register an existing room or thing using a source asset. Transactional.
@@ -232,7 +232,7 @@ function btech_unit.inspect(dbref) end
 ---@field state "off"|"starting"|"running"
 ---@field remaining integer|nil Remaining committed seconds during startup.
 
----@class BattlePoint
+---@class Point
 ---@field x number
 ---@field y number
 
@@ -395,8 +395,8 @@ function btech_unit.inspect(dbref) end
 ---@field gyro_damage integer Effective gyro damage after hardened protection.
 ---@field mobility BattleMobility
 ---@field jump_capacity {speed: number, movement_points: integer} Damage/gravity-adjusted capacity; does not authorize flight. Unplaced units use 100% gravity.
----@field flight {path: {start: BattlePoint, end: BattlePoint, start_elevation: number, end_elevation: integer, movement_points: integer, continuation: boolean, projection: {bearing: integer, range: number}|nil, target_range: number|nil}, travelled: number, completed_distance: number, landing_requested: boolean, sampled_movement_points: integer, dfa_target: integer|nil}|nil
----@field airborne {point: BattlePoint, elevation: number}|nil Last committed airborne sample.
+---@field flight {path: {start: Point, end: Point, start_elevation: number, end_elevation: integer, movement_points: integer, continuation: boolean, projection: {bearing: integer, range: number}|nil, target_range: number|nil}, travelled: number, completed_distance: number, landing_requested: boolean, sampled_movement_points: integer, dfa_target: integer|nil}|nil
+---@field airborne {point: Point, elevation: number}|nil Last committed airborne sample.
 ---@field jump_stabilization integer Remaining seconds, zero through twelve.
 ---@field engine "standard"|"light"|"xl"|"xxl"|"compact" Installed fusion-engine family.
 ---@field destroyed boolean Core structure, cockpit or engine is destroyed.
@@ -815,15 +815,15 @@ function btech_map.conditions(dbref, light, visibility) end
 ---@return integer altitude
 function btech_map.cloud_base(actor, dbref, altitude) end
 
----@class BattleHexCoordinate
+---@class HexCoordinate
 ---@field x integer
 ---@field y integer
 
 ---@class BattleSurfaceBreak
 ---@field map integer
----@field coordinate BattleHexCoordinate
----@field before BattleHex
----@field after BattleHex
+---@field coordinate HexCoordinate
+---@field before Hex
+---@field after Hex
 ---@field fall_levels integer
 ---@field falls table[] Ordered pairs of unit dbref and Mech fall report.
 ---@field vehicle_falls table[] Ordered pairs of unit dbref and vehicle fall report.
@@ -841,7 +841,7 @@ function btech_map.emit_as(actor, dbref, text) end
 
 ---@class BattleMapEmitOptions
 ---@field audience? "all"|"range"|"line_of_sight" Recipient selection; defaults to all.
----@field origin? BattleHexCoordinate Required anchor for range and line_of_sight audiences.
+---@field origin? HexCoordinate Required anchor for range and line_of_sight audiences.
 ---@field range? number Nonnegative hex radius; required with the range audience.
 
 ---Deliver a cockpit message to occupants of running units using the shared transactional emitter.
@@ -930,7 +930,7 @@ function btech_map.add_smoke(actor, dbref, x, y, duration) end
 
 ---@class BattleAuthoredMapLink
 ---@field parent integer Parent map.
----@field coordinate BattleHexCoordinate Placement on the parent.
+---@field coordinate HexCoordinate Placement on the parent.
 ---@field entrances? table[] Four cardinal modes, north/east/south/west: {kind="none"}, {kind="offset",distance=N}, or {kind="exact",coordinate={x=X,y=Y}}.
 
 ---Read the authored link configuration saved by the wizard editor. Rust extension retained
@@ -1009,22 +1009,22 @@ function btech_map.add_block(actor, dbref, x, y, radius, team) end
 
 ---@class BattleMapHexChange
 ---@field map integer
----@field coordinate BattleHexCoordinate
----@field before BattleHex
----@field after BattleHex
+---@field coordinate HexCoordinate
+---@field before Hex
+---@field after Hex
 
 ---Wizard live base-terrain edit replacing one hex's layers, in the shape btech.map.hex returns. Retains unit altitude and fire and smoke; does not cause combat falls. A hex with an overlay is rejected; use add_fire and add_smoke.
 ---@param actor integer
 ---@param dbref integer
 ---@param x integer
 ---@param y integer
----@param hex BattleHex
+---@param hex Hex
 ---@return BattleMapHexChange
 function btech_map.set_hex(actor, dbref, x, y, hex) end
 
 ---@class BattleMapIceReport
 ---@field map integer
----@field changed BattleHexCoordinate[] Coordinates in column-major processing order.
+---@field changed HexCoordinate[] Coordinates in column-major processing order.
 ---@field fractures BattleSurfaceBreak[] Melting consequences, including affected occupants.
 
 ---Wizard seasonal growth. Only water can freeze; new ice does not extend this pass's shoreline.
@@ -1082,7 +1082,7 @@ function btech_map.set_cargo_transfer_point(map, point) end
 
 ---Read one hex's ground height. Water depth, structure heights and bridge decks are in btech.map.hex.
 ---@param map DbRef|Object
----@param hex BattleHexCoordinate
+---@param hex HexCoordinate
 ---@return integer elevation
 function btech_map.elevation(map, hex) end
 
@@ -1103,33 +1103,33 @@ function btech_map.elevation(map, hex) end
 ---@field BUILDING "building"
 ---@field WALL "wall"
 ---@field SAND "sand"
----@alias BattleGroundName "clear"|"road"|"rough"|"mountains"|"snow"|"sand"
----@class BattleGroundTypes
+---@alias GroundName "clear"|"road"|"rough"|"mountains"|"snow"|"sand"
+---@class GroundTypes
 ---@field CLEAR "clear"
 ---@field ROAD "road"
 ---@field ROUGH "rough"
 ---@field MOUNTAINS "mountains"
 ---@field SNOW "snow"
 ---@field SAND "sand"
----@alias BattleWoodsName "light"|"heavy"
----@class BattleWoodsTypes
+---@alias WoodsName "light"|"heavy"
+---@class WoodsTypes
 ---@field LIGHT "light"
 ---@field HEAVY "heavy"
----@alias BattleStructureKind "building"|"wall"|"bridge"
----@class BattleStructureKinds
+---@alias StructureKind "building"|"wall"|"bridge"
+---@class StructureKinds
 ---@field BUILDING "building"
 ---@field WALL "wall"
 ---@field BRIDGE "bridge"
 
 ---Read the one terrain feature a map shows for a hex: fire or smoke, then a structure, water, woods or the ground. Use btech.map.hex for every layer, including the terrain beneath fire or smoke.
 ---@param map DbRef|Object
----@param hex BattleHexCoordinate
+---@param hex HexCoordinate
 ---@return BattleTerrainName terrain
 function btech_map.terrain(map, hex) end
 
 ---Report whether a coordinate lies inside a saved blast zone.
 ---@param map DbRef|Object
----@param hex BattleHexCoordinate
+---@param hex HexCoordinate
 ---@return boolean inside
 function btech_map.in_blast_zone(map, hex) end
 
@@ -1137,7 +1137,7 @@ function btech_map.in_blast_zone(map, hex) end
 
 ---Report line of sight from one placed unit toward a unit or hex.
 ---@param observer DbRef|Object
----@param target DbRef|Object|BattleHexCoordinate
+---@param target DbRef|Object|HexCoordinate
 ---@return BattleLineOfSight state
 function btech_map.line_of_sight(observer, target) end
 
@@ -1163,7 +1163,7 @@ function btech_map.range(map, from, to) end
 function btech_map.unit_by_id(origin, id) end
 
 ---@class BattleMapUnitFilter
----@field origin BattleHexCoordinate Filter anchor.
+---@field origin HexCoordinate Filter anchor.
 ---@field range number Nonnegative hex radius.
 
 ---List units placed on a map in saved slot order; an optional filter omits distant units.
@@ -1194,7 +1194,7 @@ function btech_unit.perception(dbref) end
 
 ---@class BattleContactView
 ---@field label string Battlefield label, lowercase for identified allies.
----@field coordinate BattleHexCoordinate
+---@field coordinate HexCoordinate
 ---@field elevation integer Current elevation.
 ---@field short_text string Plain compact biped contact row.
 ---@field verbose_text string Plain multiline C0 contact report.
@@ -1230,7 +1230,7 @@ function btech_unit.lock(dbref, pilot, target) end
 ---@field order integer Global order among active events.
 ---@field remaining integer Seconds until connection completion or maintenance.
 ---@field observer integer Observer unit dbref.
----@field positions BattlePoint[]? Captured shooter and observer coordinates during setup; nil for maintenance.
+---@field positions Point[]? Captured shooter and observer coordinates during setup; nil for maintenance.
 
 ---@class BattleTagState
 ---@field target integer? Selected target; nil during recycle.
@@ -1437,7 +1437,7 @@ function btech_unit.autoturret(dbref, pilot) end
 
 ---@class BattleWoodlandImpact
 ---@field map integer
----@field coordinate BattleHexCoordinate
+---@field coordinate HexCoordinate
 ---@field effect {effect: "none"}|{effect: "ignite", seconds: integer}|{effect: "clear", clearing: "thin_to_light"|"cut_to_clear"|"cut_to_rough"} What the attack did to the woods.
 ---@field notices BattleNotice[]
 
@@ -1651,7 +1651,7 @@ function btech_unit.aimed_section(dbref) end
 ---@field weapon_index integer
 ---@field weapon string
 ---@field target integer|nil
----@field coordinate BattleHexCoordinate|nil
+---@field coordinate HexCoordinate|nil
 ---@field aim BattleAimModifiers|BattleHexAimModifiers|BattleArtilleryAim
 ---@field target_number integer|nil Nil when out of range.
 ---@field roll integer Attack dice consumed without launching.
@@ -1664,7 +1664,7 @@ function btech_unit.aimed_section(dbref) end
 ---@param dbref integer
 ---@param pilot integer
 ---@param weapon integer Zero-based weapon index.
----@param target integer|BattleHexCoordinate|nil Omitted target uses cockpit selection.
+---@param target integer|HexCoordinate|nil Omitted target uses cockpit selection.
 ---@return BattleSightReport
 function btech_unit.sight(dbref, pilot, weapon, target) end
 
@@ -2677,7 +2677,7 @@ function btech_unit.lrsmap(dbref, pilot, mode, arguments) end
 function btech_unit.tactical(dbref, pilot, arguments) end
 
 ---@class BattleHexCenterReport
----@field coordinate BattleHexCoordinate
+---@field coordinate HexCoordinate
 ---@field elevation integer
 ---@field range number Horizontal range to the current hex center.
 ---@field bearing integer Clockwise degrees; 180 at the exact center.
@@ -2690,7 +2690,7 @@ function btech_unit.tactical(dbref, pilot, arguments) end
 function btech_unit.findcenter(dbref, pilot) end
 
 ---@class BattleNavigationReport
----@field center BattleHexCoordinate Requested local map center.
+---@field center HexCoordinate Requested local map center.
 ---@field text string Styled local map, continuous-position plot and live readouts.
 
 ---Show the radius-two local map and units within the selected center hex.
@@ -2742,7 +2742,7 @@ function btech_player.contact_options(options, brief_buildings) end
 ---@field short_text string Plain compact row after identification locks.
 ---@field weapon_arc BattleContactArc Observer torso direction toward entrance.
 ---@field interior integer
----@field coordinate BattleHexCoordinate
+---@field coordinate HexCoordinate
 ---@field elevation integer
 ---@field name string Plain structure name.
 ---@field range number
@@ -2804,7 +2804,7 @@ function btech_unit.lateral(dbref, player, direction) end
 function btech_unit.bootlegger(dbref, player, direction) end
 
 ---@class BattleEtaReport
----@field coordinate BattleHexCoordinate
+---@field coordinate HexCoordinate
 ---@field range number Horizontal range.
 ---@field minutes integer? Whole minutes, absent when effectively stationary.
 ---@field text string
@@ -2817,8 +2817,8 @@ function btech_unit.bootlegger(dbref, player, direction) end
 function btech_unit.eta(dbref, player, coordinates) end
 
 ---@class BattleBearingReport
----@field origin BattlePoint
----@field destination BattlePoint
+---@field origin Point
+---@field destination Point
 ---@field bearing integer Clockwise compass degrees, 180 for coincident points.
 ---@field text string
 
@@ -2900,7 +2900,7 @@ function btech_unit.c3i_message(dbref, pilot, message) end
 ---@field unit integer
 ---@field label string
 ---@field name string
----@field coordinate BattleHexCoordinate
+---@field coordinate HexCoordinate
 ---@field elevation integer
 ---@field range number
 ---@field bearing integer
@@ -3203,7 +3203,7 @@ function btech_unit.set_field(actor, unit, field, value) end
 ---Typed battlefield light constant from btech.map.light_levels.
 ---@class BattleLightLevel
 ---Typed battlefield rule switch from btech.map.flags.
----@class BattleMapFlag
+---@class MapFlag
 ---Typed searchlight switching policy from btech.unit.searchlight_modes.
 ---@class BattleSearchlightMode
 
@@ -4062,14 +4062,14 @@ function btech_unit.fireactive(dbref, pilot, weapon) end
 
 ---Whether a map has one rule switch enabled.
 ---@param dbref integer Map object dbref.
----@param flag BattleMapFlag Typed constant from btech.map.flags.
+---@param flag MapFlag Typed constant from btech.map.flags.
 ---@return boolean
 function btech_map.has_flag(dbref, flag) end
 
 ---Wizard-only switch of one map rule flag, leaving the others unchanged.
 ---@param actor integer
 ---@param map integer
----@param flag BattleMapFlag Typed constant from btech.map.flags.
+---@param flag MapFlag Typed constant from btech.map.flags.
 ---@param enabled boolean
 function btech_map.set_flag(actor, map, flag, enabled) end
 
