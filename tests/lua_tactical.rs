@@ -171,15 +171,19 @@ async fn shared_sightings_do_not_grant_attack_acquisition_or_leak_hidden_changes
     .unwrap();
     {
         let mut world = scripts.world_mut();
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["constructed"][units[2].0.to_string()]["power"] =
-            serde_json::to_value(BattlePower::Off).unwrap();
-        world.btech = serde_json::from_value(state).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(units[2], |record| {
+                record["power"] = serde_json::to_value(BattlePower::Off).unwrap();
+            })
+            .unwrap();
         place_battle_unit(&mut world, units[2], map, 0, 11).unwrap();
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["constructed"][units[2].0.to_string()]["power"] =
-            serde_json::to_value(BattlePower::Running).unwrap();
-        world.btech = serde_json::from_value(state).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(units[2], |record| {
+                record["power"] = serde_json::to_value(BattlePower::Running).unwrap();
+            })
+            .unwrap();
     }
     let after = serde_json::to_value(
         observe_tactical(&scripts.world(), &[units[1]], &Default::default()).unwrap(),

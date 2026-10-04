@@ -116,9 +116,12 @@ async fn shallow_ice_changes_terrain_without_falls_or_flooding() {
 #[tokio::test]
 async fn bridge_collapse_drops_deck_vehicles_and_clears_under_span_state() {
     let (_dir, config, mut world, map, ids) = fixture(Terrain::Bridge, 3).await;
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["vehicles"][ids[2].0.to_string()]["under_bridge"] = true.into();
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(ids[2], |record| {
+            record["under_bridge"] = true.into();
+        })
+        .unwrap();
     let report = break_battle_bridge(
         &mut world,
         map,

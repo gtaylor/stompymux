@@ -148,9 +148,12 @@ async fn mech_searchlights_illuminate_vehicle_targets_and_replay_perception() {
         include_str!("../game/mechs/Demolisher.toml"),
     )
     .await;
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["maps"][map.0.to_string()]["light"] = 0.into();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_map_record(map, |record| {
+            record["light"] = 0.into();
+        })
+        .unwrap();
     // Without the all-conditions band, only sight reaches the target four hexes away.
     set_battle_map_perception(&mut world, map, BattleMapPerceptionFlag::Sensors, false).unwrap();
     let before = world.btech.clone();

@@ -1238,14 +1238,12 @@ async fn transport_loss_shares_nested_chassis_destruction_and_transactional_dise
                     parent = id;
                 }
                 if wreck_first {
-                    let mut saved = serde_json::to_value(&world.btech).unwrap();
-                    let collection = if vehicle_first {
-                        "vehicles"
-                    } else {
-                        "constructed"
-                    };
-                    saved[collection][cargo[0].0.to_string()]["transport_destroyed"] = true.into();
-                    world.btech = serde_json::from_value(saved).unwrap();
+                    world
+                        .btech
+                        .rewrite_unit_record(cargo[0], |record| {
+                            record["transport_destroyed"] = true.into();
+                        })
+                        .unwrap();
                 }
                 world.validate(&config).unwrap();
                 let scripts = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();

@@ -2059,9 +2059,12 @@ async fn tactical_maps_mask_unseen_hexes_and_reuse_display_admission() {
         )
         .is_err()
     );
-    let mut value = serde_json::to_value(&world.btech).unwrap();
-    value["maps"][map.0.to_string()]["flags"] = serde_json::json!(32);
-    world.btech = serde_json::from_value(value).unwrap();
+    world
+        .btech
+        .rewrite_map_record(map, |record| {
+            record["flags"] = serde_json::json!(32);
+        })
+        .unwrap();
     assert_eq!(
         battle_tactical_map(
             &world,
@@ -2280,9 +2283,12 @@ async fn tactical_cliffs_use_signed_depth_thresholds_and_share_native_lua_output
         &text::plain(&colored.text).lines().nth(6).unwrap()[8..11],
         "__/"
     );
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["maps"][map.0.to_string()]["flags"] = 32.into();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_map_record(map, |record| {
+            record["flags"] = 32.into();
+        })
+        .unwrap();
     for flag in ["C", "T"] {
         let error = battle_tactical_map(
             &world,
@@ -2430,9 +2436,12 @@ async fn landing_overlays_honor_saved_team_exclusions_and_terrain() {
     persistence::save(&config.database(), &world).await.unwrap();
     let restored = persistence::load(&config.database()).await.unwrap();
     assert!(restored.btech.maps()[&map].landing_exclusions().is_empty());
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["maps"][map.0.to_string()]["flags"] = 32.into();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_map_record(map, |record| {
+            record["flags"] = 32.into();
+        })
+        .unwrap();
     assert!(
         battle_tactical_map(
             &world,
@@ -2595,9 +2604,12 @@ async fn tactical_mines_filter_trigger_fields_and_visibility_without_recognition
     )
     .unwrap();
     assert!(!text::plain(&hidden.text).contains("<>"));
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["maps"][map.0.to_string()]["flags"] = 32.into();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_map_record(map, |record| {
+            record["flags"] = 32.into();
+        })
+        .unwrap();
     let dark = battle_tactical_map(
         &world,
         source,

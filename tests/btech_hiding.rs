@@ -559,13 +559,16 @@ async fn hiding_aircraft_crash_orders_crossing_before_damage_and_replays() {
     for crossed in [false, true] {
         let (_dir, config, mut world, map, id) =
             fixture(include_str!("../game/mechs/Kestrel.toml"), false).await;
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["maps"][map.0.to_string()]["movement_modifier"] = 10000.into();
-        state["maps"][map.0.to_string()]["terrain"][4] =
-            serde_json::to_value(Hex::new(Terrain::LightForest, 0)).unwrap();
-        state["maps"][map.0.to_string()]["terrain"][7] =
-            serde_json::to_value(Hex::new(Terrain::Grassland, 1)).unwrap();
-        world.btech = serde_json::from_value(state).unwrap();
+        world
+            .btech
+            .rewrite_map_record(map, |record| {
+                record["movement_modifier"] = 10000.into();
+                record["terrain"][4] =
+                    serde_json::to_value(Hex::new(Terrain::LightForest, 0)).unwrap();
+                record["terrain"][7] =
+                    serde_json::to_value(Hex::new(Terrain::Grassland, 1)).unwrap();
+            })
+            .unwrap();
         edit(&mut world, id, |unit| {
             unit["signature"]["hidden"] = true.into();
             unit["hide_elapsed"] = 7.into();

@@ -1788,12 +1788,12 @@ async fn club_carry_lifecycle_and_guards() {
     let position = outside.btech.constructed_units()[&id].position().unwrap();
     let index = usize::from(position.y) * outside.btech.maps()[&position.map].width as usize
         + usize::from(position.x);
-    let mut state = serde_json::to_value(&outside.btech).unwrap();
-    crate::support::set_hex_terrain(
-        &mut state["maps"][position.map.0.to_string()]["terrain"][index],
-        Terrain::Grassland,
-    );
-    outside.btech = serde_json::from_value(state).unwrap();
+    outside
+        .btech
+        .rewrite_map_record(position.map, |record| {
+            crate::support::set_hex_terrain(&mut record["terrain"][index], Terrain::Grassland);
+        })
+        .unwrap();
     assert!(battle_club_profile(&outside, id, ObjectId(1), target, kick_rules()).is_ok());
     grab_battle_club(&mut outside, id, ObjectId(1), Some("-")).unwrap();
     let before = outside.btech.clone();
@@ -3212,10 +3212,12 @@ async fn dfa_damage_miss_ice_settles_below_surface() {
     let position = world.btech.constructed_units()[&id].position().unwrap();
     let index = usize::from(position.y) * world.btech.maps()[&position.map].width as usize
         + usize::from(position.x);
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["maps"][position.map.0.to_string()]["terrain"][index] =
-        serde_json::to_value(Hex::new(Terrain::Ice, 1)).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_map_record(position.map, |record| {
+            record["terrain"][index] = serde_json::to_value(Hex::new(Terrain::Ice, 1)).unwrap();
+        })
+        .unwrap();
     let seed = (0..=255)
         .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 2)
         .unwrap();
@@ -7124,10 +7126,13 @@ async fn effective_speed_tracks_mass_myomer_and_map_conditions() {
         (8.999, 2, 200, 59.125),
     ] {
         myomer_test_heat(&mut world, id, 30.0, heat);
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["maps"][map_id.0.to_string()]["flags"] = flags.into();
-        state["maps"][map_id.0.to_string()]["gravity"] = gravity.into();
-        world.btech = serde_json::from_value(state).unwrap();
+        world
+            .btech
+            .rewrite_map_record(map_id, |record| {
+                record["flags"] = flags.into();
+                record["gravity"] = gravity.into();
+            })
+            .unwrap();
         let before = world.btech.clone();
         let unit = &world.btech.constructed_units()[&id];
         assert_eq!(

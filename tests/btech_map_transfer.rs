@@ -175,9 +175,12 @@ async fn transfer_preserves_running_controls_and_crew_across_all_admitted_chassi
         if key == "constructed" {
             assert_eq!(after["stagger"], before["stagger"]);
             let mut administrative = world.clone();
-            let mut saved = serde_json::to_value(&administrative.btech).unwrap();
-            saved[key][id.0.to_string()]["power"] = serde_json::to_value(BattlePower::Off).unwrap();
-            administrative.btech = serde_json::from_value(saved).unwrap();
+            administrative
+                .btech
+                .rewrite_unit_record(id, |record| {
+                    record["power"] = serde_json::to_value(BattlePower::Off).unwrap();
+                })
+                .unwrap();
             place_battle_unit(&mut administrative, id, exterior, 0, 0).unwrap();
             assert!(
                 administrative.btech.constructed_units()[&id]

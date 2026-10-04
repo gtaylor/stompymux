@@ -2590,22 +2590,24 @@ async fn inferno_shots_share_vehicle_burning_defenses_and_host_rollback() {
             std::fs::write(path, toml::to_string(&settings).unwrap()).unwrap();
             let config = Config::load(dir.path()).unwrap();
             let class = if carrier { "vehicles" } else { "constructed" };
-            let mut saved = serde_json::to_value(&base.btech).unwrap();
-            for section in saved[class][shooter.0.to_string()]["definition"]["sections"]
-                .as_object_mut()
-                .unwrap()
-                .values_mut()
-            {
-                for critical in section["criticals"].as_object_mut().unwrap().values_mut() {
-                    if critical["equipment"]
-                        .as_str()
-                        .is_some_and(|name| name == "Ammo_IS.SRM-6")
+            base.btech
+                .rewrite_unit_record(shooter, |record| {
+                    for section in record["definition"]["sections"]
+                        .as_object_mut()
+                        .unwrap()
+                        .values_mut()
                     {
-                        critical["modes"] = serde_json::json!(["Inferno"]);
+                        for critical in section["criticals"].as_object_mut().unwrap().values_mut() {
+                            if critical["equipment"]
+                                .as_str()
+                                .is_some_and(|name| name == "Ammo_IS.SRM-6")
+                            {
+                                critical["modes"] = serde_json::json!(["Inferno"]);
+                            }
+                        }
                     }
-                }
-            }
-            base.btech = serde_json::from_value(saved).unwrap();
+                })
+                .unwrap();
             let native_mode = Scripts::new(
                 &config,
                 std::rc::Rc::new(std::cell::RefCell::new(base.clone())),
@@ -3148,15 +3150,12 @@ async fn weapons_hold_vehicle_targets_preserve_damage_safety_and_restart() {
                 let high = (0..=255)
                     .find(|value| BattleDice::seeded([*value; 32]).two_d6() == 12)
                     .unwrap();
-                let mut saved = serde_json::to_value(&base.btech).unwrap();
-                let collection = if vehicle_shooter {
-                    "vehicles"
-                } else {
-                    "constructed"
-                };
-                saved[collection][shooter.0.to_string()]["dice"] =
-                    serde_json::to_value(BattleDice::seeded([high; 32])).unwrap();
-                base.btech = serde_json::from_value(saved).unwrap();
+                base.btech
+                    .rewrite_unit_record(shooter, |record| {
+                        record["dice"] =
+                            serde_json::to_value(BattleDice::seeded([high; 32])).unwrap();
+                    })
+                    .unwrap();
                 let mut rules = fire_rules();
                 rules.shot.vehicle_impact.criticals.combat_safe = safe;
                 let fire = |world: &mut World| {

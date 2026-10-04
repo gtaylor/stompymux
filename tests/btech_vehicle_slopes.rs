@@ -228,14 +228,14 @@ async fn disabled_reverse_checks_cross_slopes_without_control_dice() {
 async fn two_level_vehicle_cliffs_stop_before_entry() {
     let (_dir, _config, mut world, id) = fixture(BattleVehicleMovement::Tracked, false).await;
     let map = world.btech.vehicles()[&id].position().unwrap().map;
-    let mut encoded = serde_json::to_value(&world.btech).unwrap();
-    for row in 0..3 {
-        crate::support::set_hex_elevation(
-            &mut encoded["maps"][map.0.to_string()]["terrain"][row * 12 + 3],
-            2,
-        );
-    }
-    world.btech = serde_json::from_value(encoded).unwrap();
+    world
+        .btech
+        .rewrite_map_record(map, |record| {
+            for row in 0..3 {
+                crate::support::set_hex_elevation(&mut record["terrain"][row * 12 + 3], 2);
+            }
+        })
+        .unwrap();
     let mut stopped = false;
     for _ in 0..100 {
         let old = world.btech.vehicles()[&id].motion().unwrap().point;

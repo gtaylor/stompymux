@@ -133,9 +133,12 @@ async fn cloud_controls_persist_and_roll_back() {
 
 /// Raise one empty terrain hex a level above the flat lane.
 fn raised_hex(world: &mut World, map: ObjectId, index: usize) {
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    crate::support::set_hex_elevation(&mut state["maps"][map.0.to_string()]["terrain"][index], 1);
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_map_record(map, |record| {
+            crate::support::set_hex_elevation(&mut record["terrain"][index], 1);
+        })
+        .unwrap();
 }
 
 /// Terrain visibility is cut only when the boundary separates the observer and hex levels.

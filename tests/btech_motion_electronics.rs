@@ -3469,10 +3469,14 @@ async fn active_probe_contacts_behind_walls_lock_but_refuse_direct_fire() {
         install_test_probe(&mut world, id, probe);
         let map = world.btech.constructed_units()[&id].position().unwrap().map;
         place_battle_unit(&mut world, target, map, 5, 2).unwrap();
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["maps"][map.0.to_string()]["terrain"][3 * 12 + 5] =
-            serde_json::to_value(stompymux_rs::Hex::new(stompymux_rs::Terrain::Wall, 5)).unwrap();
-        world.btech = serde_json::from_value(state).unwrap();
+        world
+            .btech
+            .rewrite_map_record(map, |record| {
+                record["terrain"][3 * 12 + 5] =
+                    serde_json::to_value(stompymux_rs::Hex::new(stompymux_rs::Terrain::Wall, 5))
+                        .unwrap();
+            })
+            .unwrap();
         assert!(battle_unit_terrain_los(&world, id, target).unwrap().blocked);
         shot_skill(&mut world, 30);
         shot_seed(&mut world, id, 7);
@@ -3752,11 +3756,15 @@ async fn tag_loss_geometry_damage_shutdown_and_validation() {
             _ => {
                 let map = world.btech.constructed_units()[&id].position().unwrap().map;
                 place_battle_unit(&mut world, target, map, 5, 2).unwrap();
-                let mut state = serde_json::to_value(&world.btech).unwrap();
-                state["maps"][map.0.to_string()]["terrain"][3 * 12 + 5] =
-                    serde_json::to_value(stompymux_rs::Hex::new(stompymux_rs::Terrain::Wall, 5))
+                world
+                    .btech
+                    .rewrite_map_record(map, |record| {
+                        record["terrain"][3 * 12 + 5] = serde_json::to_value(
+                            stompymux_rs::Hex::new(stompymux_rs::Terrain::Wall, 5),
+                        )
                         .unwrap();
-                world.btech = serde_json::from_value(state).unwrap();
+                    })
+                    .unwrap();
             }
         }
         assert_eq!(battle_tagged_by(&world, target), None, "{reason}");
@@ -4648,10 +4656,13 @@ async fn indirect_hex_visibility_uses_terrain_and_perception_rules() {
         );
         assert_eq!(world.btech, before);
         let mut blocked = world.clone();
-        let mut state = serde_json::to_value(&blocked.btech).unwrap();
-        state["maps"][map.0.to_string()]["terrain"][3 * 200 + 5] =
-            serde_json::to_value(Hex::new(Terrain::Wall, 8)).unwrap();
-        blocked.btech = serde_json::from_value(state).unwrap();
+        blocked
+            .btech
+            .rewrite_map_record(map, |record| {
+                record["terrain"][3 * 200 + 5] =
+                    serde_json::to_value(Hex::new(Terrain::Wall, 8)).unwrap();
+            })
+            .unwrap();
         assert!(!battle_hex_visible(&blocked, id, point).unwrap());
         world.validate(&config).unwrap();
     }
@@ -4755,10 +4766,13 @@ async fn hex_target_selection_lifecycle_and_validation() {
     let (_dir, config, mut world, id, target) = shot_fixture().await;
     let map = world.btech.constructed_units()[&id].position().unwrap().map;
     let point = HexCoordinate { x: 9, y: 9 };
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["maps"][map.0.to_string()]["sensor_flags"] = 511.into();
-    state["maps"][map.0.to_string()]["visibility"] = 0.into();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_map_record(map, |record| {
+            record["sensor_flags"] = 511.into();
+            record["visibility"] = 0.into();
+        })
+        .unwrap();
     assert!(!battle_hex_visible(&world, id, point).unwrap());
     for mode in [
         BattleHexTargetMode::UnitAtHex,
@@ -5088,10 +5102,13 @@ async fn hex_aim_modes_visibility_and_neutral_target_terms() {
     }
     let visible =
         battle_hex_aim_modifiers(&world, shooter, point, 0, 6, optical_aim_rules()).unwrap();
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["maps"][map.0.to_string()]["sensor_flags"] = 511.into();
-    state["maps"][map.0.to_string()]["visibility"] = 0.into();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_map_record(map, |record| {
+            record["sensor_flags"] = 511.into();
+            record["visibility"] = 0.into();
+        })
+        .unwrap();
     let hidden =
         battle_hex_aim_modifiers(&world, shooter, point, 0, 6, optical_aim_rules()).unwrap();
     assert!(!hidden.visible);
@@ -6142,10 +6159,13 @@ async fn building_fire_damage_policies_and_committed_repair() {
         assert!(!miss_report.hit && miss_report.buildings.is_empty());
         assert_eq!(missed.btech.maps()[&interior].building.integrity, initial);
         let mut pending = before.clone();
-        let mut encoded = serde_json::to_value(&pending.btech).unwrap();
-        encoded["maps"][interior.0.to_string()]["building"]["integrity"] = (initial - 1).into();
-        encoded["maps"][interior.0.to_string()]["building_repair"] = 60.into();
-        pending.btech = serde_json::from_value(encoded).unwrap();
+        pending
+            .btech
+            .rewrite_map_record(interior, |record| {
+                record["building"]["integrity"] = (initial - 1).into();
+                record["building_repair"] = 60.into();
+            })
+            .unwrap();
         let _report = resolve_battle_hex_shot(
             &mut pending,
             shooter,
@@ -6674,10 +6694,12 @@ async fn inferno_ammunition_hex_hits_apply_one_zero_damage_terrain_exposure() {
     let map = base.btech.constructed_units()[&id].position().unwrap().map;
     let coordinate = HexCoordinate { x: 5, y: 4 };
     let width = base.btech.maps()[&map].width as usize;
-    let mut encoded = serde_json::to_value(&base.btech).unwrap();
-    encoded["maps"][map.0.to_string()]["terrain"][4 * width + 5] =
-        serde_json::to_value(stompymux_rs::Hex::new(Terrain::HeavyForest, 0)).unwrap();
-    base.btech = serde_json::from_value(encoded).unwrap();
+    base.btech
+        .rewrite_map_record(map, |record| {
+            record["terrain"][4 * width + 5] =
+                serde_json::to_value(stompymux_rs::Hex::new(Terrain::HeavyForest, 0)).unwrap();
+        })
+        .unwrap();
     for mode in [
         BattleHexTargetMode::Ignite,
         BattleHexTargetMode::Clear,

@@ -396,12 +396,15 @@ async fn unidentified_friendly_contact_can_join_without_disclosing_its_name() {
         .position()
         .unwrap()
         .map;
-    let mut encoded = serde_json::to_value(&world.btech).unwrap();
-    for x in 0..20 {
-        encoded["maps"][map.0.to_string()]["terrain"][11 * 20 + x] =
-            serde_json::to_value(Hex::new(Terrain::Grassland, 9)).unwrap();
-    }
-    world.btech = serde_json::from_value(encoded).unwrap();
+    world
+        .btech
+        .rewrite_map_record(map, |record| {
+            for x in 0..20 {
+                record["terrain"][11 * 20 + x] =
+                    serde_json::to_value(Hex::new(Terrain::Grassland, 9)).unwrap();
+            }
+        })
+        .unwrap();
     let contact = visible_battle_contact(&world, first, target)
         .unwrap()
         .unwrap();

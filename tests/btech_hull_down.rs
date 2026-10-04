@@ -227,22 +227,25 @@ async fn hull_down_cover_is_shared_between_attackers_by_sensors_and_sight() {
         let (_dir, config, mut world, id, shooter) = fixture(QUAD, shooter_source).await;
         // Shallow water supplies cover visible from both tall Mechs and low vehicles.
         let map = world.btech.constructed_units()[&id].position().unwrap().map;
-        let mut saved = serde_json::to_value(&world.btech).unwrap();
-        for index in 0..9 {
-            crate::support::set_hex_terrain(
-                &mut saved["maps"][map.0.to_string()]["terrain"][index],
-                if index == 3 {
-                    stompymux_rs::Terrain::Grassland
-                } else {
-                    stompymux_rs::Terrain::Water
-                },
-            );
-            crate::support::set_hex_elevation(
-                &mut saved["maps"][map.0.to_string()]["terrain"][index],
-                if index == 3 { 0 } else { 1 },
-            );
-        }
-        world.btech = serde_json::from_value(saved).unwrap();
+        world
+            .btech
+            .rewrite_map_record(map, |record| {
+                for index in 0..9 {
+                    crate::support::set_hex_terrain(
+                        &mut record["terrain"][index],
+                        if index == 3 {
+                            stompymux_rs::Terrain::Grassland
+                        } else {
+                            stompymux_rs::Terrain::Water
+                        },
+                    );
+                    crate::support::set_hex_elevation(
+                        &mut record["terrain"][index],
+                        if index == 3 { 0 } else { 1 },
+                    );
+                }
+            })
+            .unwrap();
         let terrain = battle_unit_terrain_los(&world, shooter, id).unwrap();
         assert!(terrain.partial_cover);
         let cover = i16::from(terrain.woods) + i16::from(terrain.target_woods) + 3;
@@ -269,18 +272,18 @@ async fn hull_down_cover_is_shared_between_attackers_by_sensors_and_sight() {
         }
         set_battle_map_perception(&mut world, map, BattleMapPerceptionFlag::Sensors, true).unwrap();
         // Open ground removes the bonus, even though the unit remains lowered.
-        let mut saved = serde_json::to_value(&world.btech).unwrap();
-        for index in 0..9 {
-            crate::support::set_hex_terrain(
-                &mut saved["maps"][map.0.to_string()]["terrain"][index],
-                stompymux_rs::Terrain::Grassland,
-            );
-            crate::support::set_hex_elevation(
-                &mut saved["maps"][map.0.to_string()]["terrain"][index],
-                0,
-            );
-        }
-        world.btech = serde_json::from_value(saved).unwrap();
+        world
+            .btech
+            .rewrite_map_record(map, |record| {
+                for index in 0..9 {
+                    crate::support::set_hex_terrain(
+                        &mut record["terrain"][index],
+                        stompymux_rs::Terrain::Grassland,
+                    );
+                    crate::support::set_hex_elevation(&mut record["terrain"][index], 0);
+                }
+            })
+            .unwrap();
         assert!(
             !battle_unit_terrain_los(&world, shooter, id)
                 .unwrap()

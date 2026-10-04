@@ -5,7 +5,7 @@ use stompymux_rs::*;
 /// Guardian and Angel status lamps use the committed countermeasure field on both chassis stores.
 #[tokio::test]
 async fn electronic_status_colors_follow_countering_without_refreshing_the_field() {
-    for (store, source) in [
+    for (_, source) in [
         (
             "constructed",
             include_str!("../game/mechs/JR7-D.toml").replace(
@@ -46,12 +46,14 @@ async fn electronic_status_colors_follow_countering_without_refreshing_the_field
                 "[fg=green bold]ECCM[reset]",
             ),
         ] {
-            let mut saved = serde_json::to_value(&world.btech).unwrap();
-            let electronics = &mut saved[store][id.0.to_string()]["electronics"];
+            world.btech
+                .rewrite_unit_record(id, |record| {
+            let electronics = &mut record["electronics"];
             electronics["guardian"] = serde_json::to_value(mode).unwrap();
             electronics["angel"] = serde_json::to_value(mode).unwrap();
             electronics["field"]["countered"] = countered.into();
-            world.btech = serde_json::from_value(saved).unwrap();
+            })
+                .unwrap();
             let before = world.btech.clone();
             let report = battle_unit_status(&world, id, "W").unwrap();
             let expected = format!("AdvTech: ECM({expected})  AngelECM({expected})  ");

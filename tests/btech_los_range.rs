@@ -139,9 +139,12 @@ async fn spatial_height_and_live_map_ceiling_apply_before_the_high_altitude_shor
         unit["ground_elevation"] = 20.0.into()
     });
     for maximum in [11, 10] {
-        let mut encoded = serde_json::to_value(&world.btech).unwrap();
-        encoded["maps"][map.0.to_string()]["maximum_visibility"] = maximum.into();
-        world.btech = serde_json::from_value(encoded).unwrap();
+        world
+            .btech
+            .rewrite_map_record(map, |record| {
+                record["maximum_visibility"] = maximum.into();
+            })
+            .unwrap();
         assert_eq!(
             battle_unit_terrain_los(&world, observer, target)
                 .unwrap()

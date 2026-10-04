@@ -55,16 +55,19 @@ async fn vehicles_cross_decks_and_hover_under_spans_without_changing_water_heigh
     for (hover, ice) in [(false, false), (true, false), (true, true)] {
         let (_dir, config, mut world, id, map) = fixture(hover).await;
         if ice {
-            let mut encoded = serde_json::to_value(&world.btech).unwrap();
-            for row in 0..3 {
-                for column in [2, 8] {
-                    crate::support::set_hex_terrain(
-                        &mut encoded["maps"][map.0.to_string()]["terrain"][row * 12 + column],
-                        Terrain::Ice,
-                    );
-                }
-            }
-            world.btech = serde_json::from_value(encoded).unwrap();
+            world
+                .btech
+                .rewrite_map_record(map, |record| {
+                    for row in 0..3 {
+                        for column in [2, 8] {
+                            crate::support::set_hex_terrain(
+                                &mut record["terrain"][row * 12 + column],
+                                Terrain::Ice,
+                            );
+                        }
+                    }
+                })
+                .unwrap();
         }
         let mut on_bridge = false;
         let mut exited = false;
@@ -108,14 +111,14 @@ async fn vehicles_cross_decks_and_hover_under_spans_without_changing_water_heigh
 #[tokio::test]
 async fn low_spans_stop_hovercraft_and_inconsistent_saved_underpass_state_is_rejected() {
     let (_dir, config, mut world, id, map) = fixture(true).await;
-    let mut encoded = serde_json::to_value(&world.btech).unwrap();
-    for row in 0..3 {
-        crate::support::set_hex_elevation(
-            &mut encoded["maps"][map.0.to_string()]["terrain"][row * 12 + 5],
-            1,
-        );
-    }
-    world.btech = serde_json::from_value(encoded).unwrap();
+    world
+        .btech
+        .rewrite_map_record(map, |record| {
+            for row in 0..3 {
+                crate::support::set_hex_elevation(&mut record["terrain"][row * 12 + 5], 1);
+            }
+        })
+        .unwrap();
     let mut stopped = false;
     for _ in 0..100 {
         let notices = advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
@@ -132,13 +135,15 @@ async fn low_spans_stop_hovercraft_and_inconsistent_saved_underpass_state_is_rej
     assert!(!world.btech.vehicles()[&id].motion().unwrap().active());
     persistence::save(&config.database(), &world).await.unwrap();
     let position = world.btech.vehicles()[&id].position().unwrap();
-    let mut encoded = serde_json::to_value(&world.btech).unwrap();
-    crate::support::set_hex_terrain(
-        &mut encoded["maps"][map.0.to_string()]["terrain"]
-            [usize::from(position.y) * 12 + usize::from(position.x)],
-        Terrain::Grassland,
-    );
-    world.btech = serde_json::from_value(encoded).unwrap();
+    world
+        .btech
+        .rewrite_map_record(map, |record| {
+            crate::support::set_hex_terrain(
+                &mut record["terrain"][usize::from(position.y) * 12 + usize::from(position.x)],
+                Terrain::Grassland,
+            );
+        })
+        .unwrap();
     assert!(persistence::save(&config.database(), &world).await.is_err());
     assert!(
         persistence::load(&config.database())

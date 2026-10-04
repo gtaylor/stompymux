@@ -379,9 +379,12 @@ async fn fire_exposure_requires_entry_and_hull_loss_preserves_occupants() {
 #[tokio::test]
 async fn every_crossed_fire_hex_checks_once_without_adding_stationary_exposure() {
     let (_dir, config, mut world, id, map) = burning_corridor().await;
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    saved["maps"][map.0.to_string()]["movement_modifier"] = 2000.into();
-    world.btech = serde_json::from_value(saved).unwrap();
+    world
+        .btech
+        .rewrite_map_record(map, |record| {
+            record["movement_modifier"] = 2000.into();
+        })
+        .unwrap();
     let start = world.btech.vehicles()[&id].motion().unwrap().point;
     let mut ordinary = world.clone();
     advance_battle_motion(&mut ordinary, BattleMovementRules::STANDARD).unwrap();

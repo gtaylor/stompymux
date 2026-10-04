@@ -3195,10 +3195,13 @@ async fn fall_gravity_only_reduces_damage_under_special_map_rules() {
     let map = base.btech.constructed_units()[&id].position().unwrap().map;
     for (flags, gravity, expected) in [(0, 50, 4), (2, 50, 2), (2, 200, 4)] {
         let mut world = base.clone();
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["maps"][map.0.to_string()]["flags"] = serde_json::json!(flags);
-        state["maps"][map.0.to_string()]["gravity"] = serde_json::json!(gravity);
-        world.btech = serde_json::from_value(state).unwrap();
+        world
+            .btech
+            .rewrite_map_record(map, |record| {
+                record["flags"] = serde_json::json!(flags);
+                record["gravity"] = serde_json::json!(gravity);
+            })
+            .unwrap();
         shot_seed(&mut world, id, 17);
         let fall = stompymux_rs::resolve_battle_fall(&mut world, id, 1, fall_rules()).unwrap();
         assert_eq!(fall.damage, expected);

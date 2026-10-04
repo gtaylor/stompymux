@@ -234,9 +234,11 @@ async fn rejected_lua_requests_and_early_admission_keep_transaction_boundaries()
         assert_eq!(scripts.world().btech, expected.btech);
     }
     let map = base.btech.units()[&unit].map.unwrap();
-    let mut saved = serde_json::to_value(&base.btech).unwrap();
-    saved["maps"][map.0.to_string()]["flags"] = 16.into();
-    base.btech = serde_json::from_value(saved).unwrap();
+    base.btech
+        .rewrite_map_record(map, |record| {
+            record["flags"] = 16.into();
+        })
+        .unwrap();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(base.clone()))).unwrap();
     let response = support::run_text(
         &scripts,

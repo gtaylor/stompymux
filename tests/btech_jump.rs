@@ -1156,9 +1156,12 @@ async fn airborne_gyro_falls_use_gravity_adjusted_capacity_and_replay_after_rest
     for (gravity, damage) in [(100, 20), (200, 8)] {
         let mut world = base.clone();
         let map = world.btech.constructed_units()[&id].position().unwrap().map;
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["maps"][map.0.to_string()]["gravity"] = gravity.into();
-        world.btech = serde_json::from_value(state).unwrap();
+        world
+            .btech
+            .rewrite_map_record(map, |record| {
+                record["gravity"] = gravity.into();
+            })
+            .unwrap();
         launch_battle_jump(&mut world, id, ObjectId(1), 0, 2.0).unwrap();
         advance_battle_jumps(
             &mut world,
@@ -1249,9 +1252,12 @@ async fn airborne_target_modifier_uses_current_thrust_and_gravity_without_consum
     place_battle_unit(&mut world, observer, map, 5, 8).unwrap();
     launch_battle_jump(&mut world, id, ObjectId(1), 0, 2.0).unwrap();
     for (gravity, modifier) in [(50, 5), (100, 3), (200, 2)] {
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["maps"][map.0.to_string()]["gravity"] = gravity.into();
-        world.btech = serde_json::from_value(state).unwrap();
+        world
+            .btech
+            .rewrite_map_record(map, |record| {
+                record["gravity"] = gravity.into();
+            })
+            .unwrap();
         let before = world.btech.clone();
         let aim = battle_aim_modifiers(
             &world,
@@ -1385,9 +1391,12 @@ async fn second_airborne_gyro_forces_a_fall_even_with_zero_whole_jump_points() {
         destroy_battle_critical(&mut world, id, jet).unwrap();
     }
     let map = world.btech.constructed_units()[&id].position().unwrap().map;
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["maps"][map.0.to_string()]["gravity"] = 200.into();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_map_record(map, |record| {
+            record["gravity"] = 200.into();
+        })
+        .unwrap();
     seed_airborne_critical(
         &mut world,
         id,
