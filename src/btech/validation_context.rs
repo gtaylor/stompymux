@@ -1,10 +1,10 @@
 //! Bounded, synchronous reuse of successful local validation by exact value.
 //!
-//! BattleUnit and StoredMap derive value equality and own their inputs
-//! (map Arc contents are immutable). Neither local validator reads external
-//! world state. Dice equality omits only generic-roll diagnostics, which these
+//! BattleUnit, BattleVehicle and StoredMap derive value equality and own
+//! their inputs (map Arc contents are immutable). No local validator reads
+//! external world state. Dice equality omits only generic-roll diagnostics, which these
 //! validators never inspect. Cross-object validation is never memoized here.
-use super::{BattleUnit, BtechState, StoredMap};
+use super::{BattleUnit, BattleVehicle, BtechState, StoredMap};
 use crate::ObjectId;
 use anyhow::Result;
 use std::{cell::RefCell, collections::BTreeMap, marker::PhantomData, rc::Rc};
@@ -16,6 +16,7 @@ struct ValidatedUnit {
 
 struct Cache {
     units: BTreeMap<ObjectId, Option<ValidatedUnit>>,
+    vehicles: BTreeMap<ObjectId, Option<BattleVehicle>>,
     maps: BTreeMap<ObjectId, Option<StoredMap>>,
 }
 thread_local! { static ACTIVE: RefCell<Option<Cache>> = const { RefCell::new(None) }; }
@@ -38,6 +39,7 @@ impl Scope {
     pub(super) fn begin(state: &BtechState) -> Self {
         let cache = Cache {
             units: state.constructed.keys().map(|&id| (id, None)).collect(),
+            vehicles: state.vehicles.keys().map(|&id| (id, None)).collect(),
             maps: state.maps.keys().map(|&id| (id, None)).collect(),
         };
         Self {
@@ -57,6 +59,7 @@ pub(super) fn invalidate() {
     ACTIVE.with(|active| {
         if let Some(cache) = active.borrow_mut().as_mut() {
             cache.units.values_mut().for_each(|entry| *entry = None);
+            cache.vehicles.values_mut().for_each(|entry| *entry = None);
             cache.maps.values_mut().for_each(|entry| *entry = None);
         }
     });
@@ -127,6 +130,33 @@ pub(super) fn unit(id: ObjectId, unit: &BattleUnit) -> Result<()> {
                 unit: unit.clone(),
                 loadout,
             });
+        }
+    });
+    Ok(())
+}
+
+/// Validate all local vehicle inputs unless the exact value already passed.
+pub(super) fn vehicle(id: ObjectId, vehicle: &BattleVehicle) -> Result<()> {
+    let same = ACTIVE.with(|active| {
+        active
+            .borrow()
+            .as_ref()
+            .and_then(|cache| cache.vehicles.get(&id))
+            .and_then(Option::as_ref)
+            .is_some_and(|saved| saved == vehicle)
+    });
+    if same {
+        super::autopilot::diagnostics::count("validation_unit_reused");
+        return Ok(());
+    }
+    vehicle.validate()?;
+    ACTIVE.with(|active| {
+        if let Some(entry) = active
+            .borrow_mut()
+            .as_mut()
+            .and_then(|cache| cache.vehicles.get_mut(&id))
+        {
+            *entry = Some(vehicle.clone());
         }
     });
     Ok(())

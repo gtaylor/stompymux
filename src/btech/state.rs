@@ -686,18 +686,7 @@ impl BtechState {
         let mut pilots = BTreeSet::new();
         let mut map_slots = BTreeSet::new();
         for (id, vehicle) in self.vehicles.iter() {
-            let local_validation = super::autopilot::diagnostics::combat("validation_unit");
-            vehicle.hardware.validate()?;
-            vehicle.validate_flight_state()?;
-            vehicle.validate_orbital_drop()?;
-            vehicle.validate_dig()?;
-            super::radio::validate_channels(&vehicle.radio)?;
-            super::radio::validate_attributes(&vehicle.definition().attributes)?;
-            ensure!(
-                vehicle.radio_experience_remaining <= 61,
-                "Invalid radio experience countdown"
-            );
-            drop(local_validation);
+            super::validation_context::vehicle(*id, vehicle)?;
             if !tow_targets.contains(id)
                 && let Some(motion) = vehicle.motion()
             {

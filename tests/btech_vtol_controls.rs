@@ -837,24 +837,16 @@ async fn live_validation_rejects_impossible_flight_lifecycle_combinations() {
     advance_battle_motion(&mut waiting, BattleMovementRules::STANDARD).unwrap();
     assert_eq!(waiting.btech, before);
     assert!(waiting.btech.vehicles()[&id].vtol_motion_step(0).is_err());
-    // Powered vertical travel cannot remain active after power is removed.
+    // Powered vertical travel cannot remain active after power is removed; such a
+    // vehicle is refused as it loads.
     let mut powered_vertical = base.clone();
     powered_vertical["vehicles"][id.0.to_string()]["power"] =
         serde_json::to_value(BattlePower::Off).unwrap();
-    let mut invalid = world.clone();
-    invalid.btech = serde_json::from_value(powered_vertical).unwrap();
-    assert!(
-        invalid
-            .validate(&config)
-            .unwrap_err()
-            .to_string()
-            .contains("requires power")
-    );
+    let error = serde_json::from_value::<BtechState>(powered_vertical).unwrap_err();
+    assert!(error.to_string().contains("requires power"), "{error}");
     let mut saved = base.clone();
     saved["vehicles"][id.0.to_string()]["ground_elevation"] = serde_json::json!(0);
-    let mut invalid = world.clone();
-    invalid.btech = serde_json::from_value(saved).unwrap();
-    let error = invalid.validate(&config).unwrap_err();
+    let error = serde_json::from_value::<BtechState>(saved).unwrap_err();
     assert!(
         error.to_string().contains("ground-vehicle elevation"),
         "{error}"

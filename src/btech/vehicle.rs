@@ -790,26 +790,7 @@ impl BattleVehicle {
             .is_vtol()
             .then(|| super::BattleVtolFuel::from_template(&definition))
             .transpose()?;
-        let sections = definition
-            .sections
-            .iter()
-            .map(|(&section, layout)| {
-                let state = if layout.internal == 0 {
-                    BattleSectionState {
-                        armor: 0,
-                        internal: 0,
-                        rear: 0,
-                    }
-                } else {
-                    BattleSectionState {
-                        armor: layout.armor,
-                        internal: layout.internal,
-                        rear: layout.rear,
-                    }
-                };
-                (section, state)
-            })
-            .collect();
+        let sections = Self::pristine_sections(&definition);
         let ammunition = loadout
             .ammunition
             .iter()
@@ -1577,63 +1558,222 @@ impl TryFrom<VehicleRecord> for BattleVehicle {
 
     /// Reject snapshots whose protection or ammunition cannot belong to the supplied construction.
     fn try_from(record: VehicleRecord) -> Result<Self> {
-        let mut vehicle = if record.contract_loadout {
-            Self::new_contract(record.definition)?
-        } else {
-            Self::new(record.definition)?
-        };
+        Self::from_record(record).restored()
+    }
+}
+
+impl BattleVehicle {
+    /// Take every field from a saved record without checking it.
+    fn from_record(record: VehicleRecord) -> Self {
+        Self {
+            contract_loadout: record.contract_loadout,
+            administrative_raw: record.administrative_raw,
+            auxiliary_preferences: record.auxiliary_preferences,
+            base_movement_fields: record.base_movement_fields,
+            shot_counters: record.shot_counters,
+            damage_counters: record.damage_counters,
+            units_killed: record.units_killed,
+            no_armor_warning: record.no_armor_warning,
+            no_ammunition_warning: record.no_ammunition_warning,
+            searchlight: record.searchlight,
+            autocon_shutdown: record.autocon_shutdown,
+            searchlight_warning: record.searchlight_warning,
+            illumination_observed: record.illumination_observed,
+            display_name: record.display_name,
+            markings: record.markings,
+            sixth_sense: record.sixth_sense,
+            last_startup: record.last_startup,
+            cockpit_links: record.cockpit_links,
+            hardware: record.hardware,
+            self_destruct_safe: record.self_destruct_safe,
+            self_destruct: record.self_destruct,
+            hide_elapsed: record.hide_elapsed,
+            towable: record.towable,
+            fortified: record.fortified,
+            observer: record.observer,
+            weapons_hold: record.weapons_hold,
+            combat_safe: record.combat_safe,
+            visibility: record.visibility,
+            dig: record.dig,
+            definition: record.definition,
+            sections: record.sections,
+            ammunition: record.ammunition,
+            position: record.position,
+            detached: record.detached,
+            map_slot: record.map_slot,
+            battlefield_label: record.battlefield_label,
+            preferred_id: record.preferred_id,
+            pilot: record.pilot,
+            power: record.power,
+            motion: record.motion,
+            detached_heading: record.detached_heading,
+            under_bridge: record.under_bridge,
+            ground_elevation: record.ground_elevation,
+            free_fall: record.free_fall,
+            orbital_drop: record.orbital_drop,
+            propulsion: record.propulsion,
+            live_mass: record.live_mass,
+            critical_conditions: record.critical_conditions,
+            motive_speed_loss: record.motive_speed_loss,
+            immobilized: record.immobilized,
+            turret_offset: record.turret_offset,
+            automatic_turret: record.automatic_turret,
+            turret_locked: record.turret_locked,
+            turret_jammed: record.turret_jammed,
+            turret_repairs: record.turret_repairs,
+            crew_stun_remaining: record.crew_stun_remaining,
+            crew_stun_condition: record.crew_stun_condition,
+            pilot_injuries: record.pilot_injuries,
+            pilot_killed: record.pilot_killed,
+            character_pilot: record.character_pilot,
+            flooded: record.flooded,
+            breached_sections: record.breached_sections,
+            transport_destroyed: record.transport_destroyed,
+            tail_rotor_destroyed: record.tail_rotor_destroyed,
+            vtol_fuel: record.vtol_fuel,
+            vtol_flight: record.vtol_flight,
+            crew_killed: record.crew_killed,
+            crew_recovery: record.crew_recovery,
+            piloting_damage: record.piloting_damage,
+            gunnery_damage: record.gunnery_damage,
+            lost_stabilizers: record.lost_stabilizers,
+            lost_criticals: record.lost_criticals,
+            brief: record.brief,
+            tics: record.tics,
+            signature: record.signature,
+            scanner_perception: record.scanner_perception,
+            radio: record.radio,
+            radio_skill: record.radio_skill,
+            fired_recently: record.fired_recently,
+            radio_experience_remaining: record.radio_experience_remaining,
+            experience: record.experience,
+            friendly_fire_safety: record.friendly_fire_safety,
+            auto_fall: record.auto_fall,
+            ams_enabled: record.ams_enabled,
+            weapon_heat: record.weapon_heat,
+            inferno_remaining: record.inferno_remaining,
+            burning_sections: record.burning_sections,
+            extinguishing: record.extinguishing,
+            building_entry: record.building_entry,
+            beacons: record.beacons,
+            target_lock: record.target_lock,
+            aimed_section: record.aimed_section,
+            artillery_adjustment: record.artillery_adjustment,
+            c3_network: record.c3_network,
+            c3i_network: record.c3i_network,
+            network_automation: record.network_automation,
+            electronics: record.electronics,
+            spotter: record.spotter,
+            spotter_events: record.spotter_events,
+            tag: record.tag,
+            contacts: record.contacts,
+            fire_modes: record.fire_modes,
+            ammunition_modes: record.ammunition_modes,
+            ammunition_sections: record.ammunition_sections,
+            unjam: record.unjam,
+            pod_removal: record.pod_removal,
+            jammed_weapons: record.jammed_weapons,
+            component_failures: record.component_failures,
+            weapon_failures: record.weapon_failures,
+            weapon_recycle: record.weapon_recycle,
+            powered_down_weapons: record.powered_down_weapons,
+            spent_launchers: record.spent_launchers,
+            dice: record.dice,
+        }
+    }
+
+    /// Accept a vehicle taken from a saved record or a fixture edit: validate it as
+    /// given, then leave any command network its computers can no longer hold.
+    pub(super) fn restored(mut self) -> Result<Self> {
+        self.validate()?;
+        self.settle_command_networks();
+        Ok(self)
+    }
+
+    /// Section protection as built, before any damage.
+    fn pristine_sections(
+        definition: &BattleVehicleTemplate,
+    ) -> BTreeMap<BattleVehicleSection, BattleSectionState> {
+        definition
+            .sections
+            .iter()
+            .map(|(&section, layout)| {
+                let state = if layout.internal == 0 {
+                    BattleSectionState {
+                        armor: 0,
+                        internal: 0,
+                        rear: 0,
+                    }
+                } else {
+                    BattleSectionState {
+                        armor: layout.armor,
+                        internal: layout.internal,
+                        rear: layout.rear,
+                    }
+                };
+                (section, state)
+            })
+            .collect()
+    }
+
+    /// Reject a vehicle whose state cannot belong to its construction template.
+    ///
+    /// Loading a saved record, fixture edits and the world's own checks all use this, so a
+    /// vehicle that passes here is one a restart would accept.
+    pub(crate) fn validate(&self) -> Result<()> {
+        let _measurement = super::autopilot::diagnostics::combat("validation_unit");
+        self.definition.validate_anatomy()?;
+        super::radio::validate_attributes(&self.definition.attributes)?;
+        if !self.contract_loadout {
+            self.definition.mass()?;
+        }
+        self.loadout()?;
+        if self.definition.is_vtol() {
+            super::BattleVtolFuel::from_template(&self.definition)?;
+        }
+        let pristine = Self::pristine_sections(&self.definition);
         ensure!(
-            record.vtol_fuel.is_some() == vehicle.definition.is_vtol(),
+            self.vtol_fuel.is_some() == self.definition.is_vtol(),
             "Fuel state does not match vehicle class"
         );
-        if let Some(fuel) = record.vtol_fuel {
-            fuel.validate(&vehicle.definition)?;
+        if let Some(fuel) = self.vtol_fuel {
+            fuel.validate(&self.definition)?;
         }
-        vehicle.vtol_fuel = record.vtol_fuel;
         ensure!(
-            record.vtol_flight.is_some() == vehicle.definition.is_vtol(),
+            self.vtol_flight.is_some() == self.definition.is_vtol(),
             "Flight state does not match vehicle class"
         );
-        if let Some(flight) = record.vtol_flight {
+        if let Some(flight) = self.vtol_flight {
             flight.validate()?;
         }
-        vehicle.vtol_flight = record.vtol_flight;
         ensure!(
-            record.pilot_injuries <= i8::MAX as u8,
+            self.pilot_injuries <= i8::MAX as u8,
             "Invalid vehicle pilot injury count"
         );
-        vehicle.pilot_injuries = record.pilot_injuries;
-        vehicle.pilot_killed = record.pilot_killed;
-        vehicle.character_pilot = record.character_pilot;
-        if let Some(timer) = record.self_destruct {
+        if let Some(timer) = self.self_destruct {
             timer.validate()?;
         }
-        vehicle.self_destruct = record.self_destruct;
-        vehicle.self_destruct_safe = record.self_destruct_safe;
         ensure!(
-            record.hide_elapsed.is_none_or(|elapsed| elapsed <= 100),
+            self.hide_elapsed.is_none_or(|elapsed| elapsed <= 100),
             "Invalid hiding timer"
         );
-        vehicle.hide_elapsed = record.hide_elapsed;
-        vehicle.crew_killed = record.crew_killed;
-        vehicle.crew_recovery = record.crew_recovery;
         ensure!(
-            (!record.crew_killed
-                && !record.pilot_killed
-                && !record.character_pilot.is_some_and(|status| status.killed))
-                || (record.pilot.is_none()
-                    && record.crew_stun_remaining == 0
-                    && record.crew_stun_condition != Some(true)),
+            (!self.crew_killed
+                && !self.pilot_killed
+                && !self.character_pilot.is_some_and(|status| status.killed))
+                || (self.pilot.is_none()
+                    && self.crew_stun_remaining == 0
+                    && self.crew_stun_condition != Some(true)),
             "Dead vehicle crew retains pilot or stun"
         );
         ensure!(
-            record.sections.keys().eq(vehicle.sections.keys()),
+            self.sections.keys().eq(pristine.keys()),
             "Vehicle snapshot sections do not match definition"
         );
-        for (&section, state) in &record.sections {
-            let original = &vehicle.sections[&section];
+        for (&section, state) in &self.sections {
+            let original = &pristine[&section];
             ensure!(
-                record.contract_loadout
+                self.contract_loadout
                     || (state.armor <= original.armor
                         && state.internal <= original.internal
                         && state.rear <= original.rear),
@@ -1641,14 +1781,14 @@ impl TryFrom<VehicleRecord> for BattleVehicle {
                 section.name()
             );
             ensure!(
-                record.contract_loadout
+                self.contract_loadout
                     || state.internal > 0
                     || (state.armor == 0 && state.rear == 0),
                 "Destroyed vehicle section retains armor"
             );
         }
         ensure!(
-            record.lost_criticals.iter().all(|location| vehicle
+            self.lost_criticals.iter().all(|location| self
                 .definition
                 .sections
                 .get(&location.section)
@@ -1656,240 +1796,191 @@ impl TryFrom<VehicleRecord> for BattleVehicle {
             "Invalid destroyed vehicle equipment slot"
         );
         ensure!(
-            record.piloting_damage <= 127 && record.gunnery_damage <= 127,
+            self.piloting_damage <= 127 && self.gunnery_damage <= 127,
             "Invalid vehicle control penalty"
         );
         ensure!(
-            record
-                .lost_stabilizers
+            self.lost_stabilizers
                 .iter()
-                .all(|section| vehicle.sections.contains_key(section)),
+                .all(|section| self.sections.contains_key(section)),
             "Invalid vehicle stabilizer section"
         );
         ensure!(
-            record.crew_stun_remaining <= 60
-                && (!record
+            self.crew_stun_remaining <= 60
+                && (!self
                     .sections
                     .iter()
                     .any(|(section, state)| *section != BattleVehicleSection::Turret
                         && state.internal == 0)
-                    || (record.crew_stun_remaining == 0
-                        && record.crew_stun_condition != Some(true))),
+                    || (self.crew_stun_remaining == 0 && self.crew_stun_condition != Some(true))),
             "Invalid vehicle crew stun countdown"
         );
-        vehicle.crew_stun_remaining = record.crew_stun_remaining;
-        vehicle.crew_stun_condition = record.crew_stun_condition;
-        vehicle.piloting_damage = record.piloting_damage;
-        vehicle.gunnery_damage = record.gunnery_damage;
-        vehicle.lost_stabilizers = record.lost_stabilizers;
         ensure!(
-            record
-                .breached_sections
+            self.breached_sections
                 .iter()
-                .all(|section| record.sections.contains_key(section)),
+                .all(|section| self.sections.contains_key(section)),
             "Invalid breached vehicle section"
         );
-        vehicle.breached_sections = record.breached_sections;
-        vehicle.lost_criticals = record.lost_criticals;
-        let loadout = vehicle.loadout()?;
-        record.tics.validate(loadout.weapons.len())?;
+        let loadout = self.loadout()?;
+        self.tics.validate(loadout.weapons.len())?;
         ensure!(
-            record.ammunition.len() == loadout.ammunition.len(),
+            self.ammunition.len() == loadout.ammunition.len(),
             "Vehicle snapshot ammunition bins do not match definition"
         );
-        for (bin, &rounds) in loadout.ammunition.iter().zip(&record.ammunition) {
+        for (bin, &rounds) in loadout.ammunition.iter().zip(&self.ammunition) {
             ensure!(
                 rounds <= bin.capacity,
                 "Vehicle snapshot ammunition exceeds capacity"
             );
             ensure!(
-                (record.sections[&bin.location.section].internal > 0
-                    && !vehicle.critical_destroyed(bin.location))
+                (self.sections[&bin.location.section].internal > 0
+                    && !self.critical_destroyed(bin.location))
                     || rounds == 0,
                 "Destroyed vehicle section retains ammunition"
             );
         }
         ensure!(
-            (!record.detached && record.position.is_some()) == record.map_slot.is_some(),
+            (!self.detached && self.position.is_some()) == self.map_slot.is_some(),
             "Vehicle position and battlefield slot must agree"
         );
         ensure!(
-            !record.detached || record.position.is_some(),
+            !self.detached || self.position.is_some(),
             "Detached vehicle lacks retained coordinates"
         );
-        if let Some(position) = record.position {
+        if let Some(position) = self.position {
             ensure!(
                 position.map.0 >= 0 && position.x <= 999 && position.y <= 999,
                 "Invalid vehicle battlefield coordinates"
             );
         }
-        if let super::BattlePower::Starting { remaining } = record.power {
+        if let super::BattlePower::Starting { remaining } = self.power {
             ensure!(
                 (1..=30).contains(&remaining),
                 "Invalid vehicle startup countdown"
             );
         }
         ensure!(
-            record.power == super::BattlePower::Off || record.position.is_some(),
+            self.power == super::BattlePower::Off || self.position.is_some(),
             "Powered vehicle requires a battlefield"
         );
         ensure!(
-            record.motion.is_some() == record.position.is_some(),
+            self.motion.is_some() == self.position.is_some(),
             "Vehicle motion and position must agree"
         );
         ensure!(
-            record.motive_speed_loss.is_finite()
-                && record.motive_speed_loss >= 0.0
-                && record.motive_speed_loss <= vehicle.definition.max_speed,
+            self.motive_speed_loss.is_finite()
+                && self.motive_speed_loss >= 0.0
+                && self.motive_speed_loss <= self.definition.max_speed,
             "Invalid vehicle motive speed loss"
         );
-        record.critical_conditions.validate(None)?;
-        vehicle.critical_conditions = record.critical_conditions;
-        record.live_mass.validate()?;
-        vehicle.live_mass = record.live_mass;
-        record.propulsion.validate()?;
-        vehicle.propulsion = record.propulsion;
-        vehicle.motive_speed_loss = record.motive_speed_loss;
-        vehicle.immobilized = record.immobilized;
-        let maximum = super::speed_bonus::saved_limit(vehicle.maximum_speed(), false, false, false);
-        if let Some(motion) = record.motion {
-            let propelled = motion.propelled(record.power)?;
+        self.critical_conditions.validate(None)?;
+        self.live_mass.validate()?;
+        self.propulsion.validate()?;
+        ensure!(
+            !self.rotor_destroyed()
+                || self
+                    .motion
+                    .map(|motion| motion.propelled(self.power))
+                    .transpose()?
+                    .is_none_or(|motion| !motion.active()),
+            "Rotorless aircraft retains horizontal motion"
+        );
+        let maximum = super::speed_bonus::saved_limit(self.maximum_speed(), false, false, false);
+        if let Some(motion) = self.motion {
+            let propelled = motion.propelled(self.power)?;
             propelled.validate(maximum + 10.75)?;
             ensure!(
-                vehicle.maximum_speed() > 0.0 || !propelled.active(),
+                self.maximum_speed() > 0.0 || !propelled.active(),
                 "Immobile vehicle retains motion"
             );
             ensure!(
                 motion.desired_speed >= -maximum * 2.0 / 3.0 && motion.desired_speed <= maximum,
                 "Invalid vehicle throttle"
             );
-            let position = record.position.expect("validated placement");
+            let position = self.position.expect("validated placement");
             let coordinate = motion.point.containing_hex()?;
             ensure!(
                 coordinate.x == i32::from(position.x) && coordinate.y == i32::from(position.y),
                 "Vehicle continuous position differs from hex"
             );
             ensure!(
-                record.power == super::BattlePower::Running
+                self.power == super::BattlePower::Running
                     || !propelled.active()
-                    || super::vtol_flight::idle_controls(
-                        record.power,
-                        record.vtol_flight,
-                        record.motion
-                    ),
+                    || super::vtol_flight::idle_controls(self.power, self.vtol_flight, self.motion),
                 "Inactive vehicle retains motion"
             );
         }
         ensure!(
-            !record.under_bridge
-                || (record.position.is_some()
-                    && vehicle.definition.movement == super::BattleVehicleMovement::Hover),
+            !self.under_bridge
+                || (self.position.is_some()
+                    && self.definition.movement == super::BattleVehicleMovement::Hover),
             "Invalid vehicle under-bridge state"
         );
         ensure!(
-            record
-                .ground_elevation
-                .is_none_or(|height| record.position.is_some()
+            self.ground_elevation
+                .is_none_or(|height| self.position.is_some()
                     && height.is_finite()
                     && (f64::from(i32::MIN)..=f64::from(i32::MAX)).contains(&height)),
             "Retained elevation requires placement"
         );
-        vehicle.free_fall = record.free_fall;
-        vehicle.orbital_drop = record.orbital_drop;
-        vehicle.ground_elevation = record.ground_elevation;
-        vehicle.under_bridge = record.under_bridge;
-        vehicle.dice = record.dice;
         ensure!(
-            record.detached_heading.is_finite() && (0.0..360.0).contains(&record.detached_heading),
+            self.detached_heading.is_finite() && (0.0..360.0).contains(&self.detached_heading),
             "Invalid retained vehicle heading"
         );
-        vehicle.detached_heading = record.detached_heading;
-        vehicle.administrative_raw = record.administrative_raw;
-        vehicle.motion = record.motion;
-        vehicle.pilot = record.pilot;
-        vehicle.flooded = record.flooded;
-        vehicle.transport_destroyed = record.transport_destroyed;
         ensure!(
-            !record.tail_rotor_destroyed || vehicle.definition.is_vtol(),
+            !self.tail_rotor_destroyed || self.definition.is_vtol(),
             "Ground vehicle retains tail rotor damage"
         );
-        vehicle.tail_rotor_destroyed = record.tail_rotor_destroyed;
-        vehicle.power = record.power;
-        vehicle.battlefield_label = record.battlefield_label;
-        vehicle.preferred_id = record.preferred_id;
-        vehicle.position = record.position;
-        vehicle.detached = record.detached;
-        vehicle.map_slot = record.map_slot;
-        vehicle.sections = record.sections;
         ensure!(
-            !vehicle.rotor_destroyed()
-                || vehicle
-                    .motion
-                    .map(|motion| motion.propelled(vehicle.power))
-                    .transpose()?
-                    .is_none_or(|motion| !motion.active()),
-            "Rotorless aircraft retains horizontal motion"
-        );
-        ensure!(
-            record.turret_offset.is_finite() && (0.0..360.0).contains(&record.turret_offset),
+            self.turret_offset.is_finite() && (0.0..360.0).contains(&self.turret_offset),
             "Invalid vehicle turret facing"
         );
         ensure!(
-            vehicle.turret_heading().is_some()
-                || (!record.turret_locked && record.turret_offset == 0.0),
+            self.turret_heading().is_some() || (!self.turret_locked && self.turret_offset == 0.0),
             "Missing turret retains facing or lock"
         );
-        vehicle.turret_offset = record.turret_offset;
-        vehicle.turret_locked = record.turret_locked;
         ensure!(
-            !record.turret_jammed || vehicle.turret_heading().is_some(),
+            !self.turret_jammed || self.turret_heading().is_some(),
             "Invalid vehicle turret jam"
         );
         ensure!(
-            record.turret_repairs.len() <= 256
-                && record
+            self.turret_repairs.len() <= 256
+                && self
                     .turret_repairs
                     .iter()
                     .all(|remaining| (1..=60).contains(remaining))
-                && (record.turret_repairs.is_empty()
-                    || (!vehicle.is_destroyed() && vehicle.turret_heading().is_some())),
+                && (self.turret_repairs.is_empty()
+                    || (!self.is_destroyed() && self.turret_heading().is_some())),
             "Invalid vehicle turret repair countdown"
         );
         ensure!(
-            !record.automatic_turret
-                || vehicle
+            !self.automatic_turret
+                || self
                     .definition
                     .sections
                     .contains_key(&BattleVehicleSection::Turret),
             "Automatic tracking without an authored turret"
         );
-        vehicle.automatic_turret = record.automatic_turret;
-        vehicle.turret_jammed = record.turret_jammed;
-        vehicle.turret_repairs = record.turret_repairs;
 
         ensure!(
-            record
-                .weapon_recycle
-                .iter()
-                .all(
-                    |(index, remaining)| loadout.weapons.get(*index).is_some_and(
-                        |mount| *remaining > 0
-                            && *remaining
-                                <= if record.weapon_failures.contains_key(index) {
-                                    120
-                                } else {
-                                    super::weapon_settings::MAX_RECYCLE_SECONDS
-                                }
-                            && !vehicle.critical_unavailable(mount.criticals[0])
-                    )
-                ),
+            self.weapon_recycle.iter().all(|(index, remaining)| loadout
+                .weapons
+                .get(*index)
+                .is_some_and(|mount| *remaining > 0
+                    && *remaining
+                        <= if self.weapon_failures.contains_key(index) {
+                            120
+                        } else {
+                            super::weapon_settings::MAX_RECYCLE_SECONDS
+                        }
+                    && !self.critical_unavailable(mount.criticals[0]))),
             "Invalid vehicle weapon recycle timer"
         );
         ensure!(
-            record.spent_launchers.iter().all(|index| loadout
+            self.spent_launchers.iter().all(|index| loadout
                 .weapons
                 .get(*index)
-                .is_some_and(|mount| record.contract_loadout || mount.one_shot)),
+                .is_some_and(|mount| self.contract_loadout || mount.one_shot)),
             "Invalid spent vehicle launcher"
         );
         ensure!(
@@ -1897,52 +1988,50 @@ impl TryFrom<VehicleRecord> for BattleVehicle {
                 .weapons
                 .iter()
                 .enumerate()
-                .all(|(index, mount)| record.contract_loadout
+                .all(|(index, mount)| self.contract_loadout
                     || !mount.initially_spent
-                    || record.spent_launchers.contains(&index)),
+                    || self.spent_launchers.contains(&index)),
             "Initially spent vehicle launcher was reloaded"
         );
         ensure!(
-            record
-                .fire_modes
+            self.fire_modes
                 .iter()
                 .all(|(index, mode)| *mode != super::BattleFireMode::Normal
-                    && loadout.weapons.get(*index).is_some_and(
-                        |mount| record.contract_loadout || mode.supports(mount.weapon)
-                    )),
+                    && loadout
+                        .weapons
+                        .get(*index)
+                        .is_some_and(|mount| self.contract_loadout || mode.supports(mount.weapon))),
             "Invalid vehicle firing mode"
         );
         ensure!(
-            record.ammunition_modes.iter().all(|(index, mode)| *mode
+            self.ammunition_modes.iter().all(|(index, mode)| *mode
                 != super::BattleAmmunitionMode::Normal
                 && loadout
                     .weapons
                     .get(*index)
-                    .is_some_and(|mount| record.contract_loadout || mode.supports(mount.weapon))),
+                    .is_some_and(|mount| self.contract_loadout || mode.supports(mount.weapon))),
             "Invalid vehicle ammunition selection"
         );
-        super::component_failure::validate(&record.component_failures, |location| {
+        super::component_failure::validate(&self.component_failures, |location| {
             loadout.systems.iter().any(|part| part.location == location)
                 && !super::damage_field::placeholder(
-                    &vehicle.definition().sections[&location.section].criticals[&location.slot]
+                    &self.definition().sections[&location.section].criticals[&location.slot]
                         .equipment,
                 )
         })?;
-        vehicle.component_failures = record.component_failures;
-        super::weapon_failure::validate(&record.weapon_failures, loadout.weapons.len(), |index| {
-            !vehicle.critical_unavailable(loadout.weapons[index].criticals[0])
+        super::weapon_failure::validate(&self.weapon_failures, loadout.weapons.len(), |index| {
+            !self.critical_unavailable(loadout.weapons[index].criticals[0])
         })?;
         ensure!(
-            record.jammed_weapons.iter().all(|index| loadout
+            self.jammed_weapons.iter().all(|index| loadout
                 .weapons
                 .get(*index)
                 .is_some_and(|mount| mount.weapon.profile().ammunition_per_ton > 0
-                    && !vehicle.critical_unavailable(mount.criticals[0]))),
+                    && !self.critical_unavailable(mount.criticals[0]))),
             "Invalid vehicle ammunition-feed jam"
         );
         ensure!(
-            record
-                .unjam
+            self.unjam
                 .is_none_or(|attempt| (1..=60).contains(&attempt.remaining)
                     && loadout
                         .weapons
@@ -1950,175 +2039,93 @@ impl TryFrom<VehicleRecord> for BattleVehicle {
                         .is_some_and(|mount| mount.weapon.profile().ammunition_per_ton > 0)),
             "Invalid vehicle unjam attempt"
         );
-        vehicle.unjam = record.unjam;
-        vehicle.jammed_weapons = record.jammed_weapons;
-        super::weapon_power::validate(&record.powered_down_weapons, &loadout.weapons)?;
-        vehicle.powered_down_weapons = record.powered_down_weapons;
-        vehicle.weapon_failures = record.weapon_failures;
+        super::weapon_power::validate(&self.powered_down_weapons, &loadout.weapons)?;
         ensure!(
-            record.target_lock.is_none_or(
-                |lock| lock.remaining() <= 8 && vehicle.power == super::BattlePower::Running
+            self.target_lock.is_none_or(
+                |lock| lock.remaining() <= 8 && self.power == super::BattlePower::Running
             ),
             "Invalid vehicle target lock countdown or power state"
         );
-        vehicle.friendly_fire_safety = record.friendly_fire_safety;
-        vehicle.auto_fall = record.auto_fall;
-        vehicle.target_lock = record.target_lock;
-        if let Some(selection) = record.aimed_section {
+        if let Some(selection) = self.aimed_section {
             selection.validate()?;
         }
-        vehicle.aimed_section = record.aimed_section;
-        vehicle.artillery_adjustment = record.artillery_adjustment;
         ensure!(
-            record.spotter.is_none_or(|id| id.0 > 0),
+            self.spotter.is_none_or(|id| id.0 > 0),
             "Invalid spotter identity"
         );
-        vehicle.spotter = record.spotter;
-        record.spotter_events.validate()?;
-        vehicle.spotter_events = record.spotter_events;
-        record.tag.validate()?;
-        vehicle.tag = record.tag;
+        self.spotter_events.validate()?;
+        self.tag.validate()?;
         ensure!(
-            record.c3_network != Some(0) && record.c3i_network != Some(0),
+            self.c3_network != Some(0) && self.c3i_network != Some(0),
             "Invalid vehicle command-network identity"
         );
-        vehicle.c3_network = record.c3_network;
-        vehicle.c3i_network = record.c3i_network;
-        vehicle.network_automation = record.network_automation;
-        vehicle.electronics = record.electronics;
-        vehicle.reconcile_electronics();
         ensure!(
-            vehicle.electronics == record.electronics,
+            self.electronics_settled(),
             "Invalid vehicle electronic emission state"
         );
-        vehicle.contacts = record.contacts;
-        record.brief.validate()?;
-        vehicle.brief = record.brief;
-        vehicle.tics = record.tics;
-        vehicle.signature = record.signature;
-        vehicle.scanner_perception = record.scanner_perception;
-        super::radio::validate_channels(&record.radio)?;
-        super::radio::validate_attributes(&vehicle.definition().attributes)?;
+        self.brief.validate()?;
+        super::radio::validate_channels(&self.radio)?;
+        super::radio::validate_attributes(&self.definition().attributes)?;
         ensure!(
-            record.radio_experience_remaining <= 61,
+            self.radio_experience_remaining <= 61,
             "Invalid radio experience countdown"
         );
-        record.hardware.validate()?;
-        vehicle.hardware = record.hardware;
-        vehicle.cockpit_links = record.cockpit_links;
-        vehicle.display_name = record.display_name;
-        vehicle.markings = record.markings;
-        vehicle.sixth_sense = record.sixth_sense;
-        vehicle.last_startup = record.last_startup;
-        vehicle.auxiliary_preferences = record.auxiliary_preferences;
-        vehicle.base_movement_fields = record.base_movement_fields;
-        vehicle.shot_counters = record.shot_counters;
-        vehicle.damage_counters = record.damage_counters;
-        vehicle.units_killed = record.units_killed;
-        record
-            .searchlight
-            .validate(vehicle.definition().has_special("Searchlight"))?;
-        vehicle.searchlight = record.searchlight;
-        vehicle.no_armor_warning = record.no_armor_warning;
-        vehicle.no_ammunition_warning = record.no_ammunition_warning;
-        vehicle.autocon_shutdown = record.autocon_shutdown;
-        vehicle.searchlight_warning = record.searchlight_warning;
-        vehicle.illumination_observed = record.illumination_observed;
-        vehicle.radio = record.radio;
-        vehicle.radio_skill = record.radio_skill;
-        vehicle.fired_recently = record.fired_recently;
-        vehicle.radio_experience_remaining = record.radio_experience_remaining;
-        record.experience.validate()?;
-        vehicle.experience = record.experience;
-        vehicle.towable = record.towable;
-        vehicle.fortified = record.fortified;
-        vehicle.observer = record.observer;
-        vehicle.weapons_hold = record.weapons_hold;
-        vehicle.combat_safe = record.combat_safe;
-        vehicle.visibility = record.visibility;
-        vehicle.dig = record.dig;
+        self.hardware.validate()?;
+        self.searchlight
+            .validate(self.definition().has_special("Searchlight"))?;
+        self.experience.validate()?;
         ensure!(
-            record
-                .beacons
-                .iter()
-                .all(|(section, kinds)| !kinds.is_empty()
-                    && vehicle
-                        .sections
-                        .get(section)
-                        .is_some_and(|state| state.internal > 0)),
+            self.beacons.iter().all(|(section, kinds)| !kinds.is_empty()
+                && self
+                    .sections
+                    .get(section)
+                    .is_some_and(|state| state.internal > 0)),
             "Vehicle beacon requires a surviving section and a nonempty effect set"
         );
-        vehicle.beacons = record.beacons;
         ensure!(
-            record
-                .pod_removal
+            self.pod_removal
                 .is_none_or(|remaining| (1..=60).contains(&remaining)),
             "Invalid vehicle pod-removal countdown"
         );
-        vehicle.pod_removal = record.pod_removal;
-        vehicle.ams_enabled = record.ams_enabled;
+        ensure!(self.weapon_heat.is_finite(), "Invalid vehicle weapon heat");
         ensure!(
-            record.weapon_heat.is_finite(),
-            "Invalid vehicle weapon heat"
-        );
-        vehicle.weapon_heat = record.weapon_heat;
-        ensure!(
-            record.inferno_remaining <= i32::MAX as u32,
+            self.inferno_remaining <= i32::MAX as u32,
             "Invalid inferno duration"
         );
         ensure!(
-            record
-                .burning_sections
+            self.burning_sections
                 .iter()
-                .all(
-                    |(section, remaining)| vehicle.sections.contains_key(section)
-                        && (1..=60).contains(remaining)
-                ),
+                .all(|(section, remaining)| self.sections.contains_key(section)
+                    && (1..=60).contains(remaining)),
             "Invalid vehicle section fire"
         );
         ensure!(
-            record
-                .extinguishing
+            self.extinguishing
                 .is_none_or(|remaining| (1..=120).contains(&remaining)),
             "Invalid vehicle extinguishing countdown"
         );
-        vehicle.inferno_remaining = record.inferno_remaining;
-        vehicle.burning_sections = record.burning_sections;
-        vehicle.extinguishing = record.extinguishing;
-        if let Some(entry) = record.building_entry {
+        if let Some(entry) = self.building_entry {
             entry.validate()?;
         }
-        vehicle.building_entry = record.building_entry;
-        vehicle.fire_modes = record.fire_modes;
         super::ammunition_preference::validate(
-            &record.ammunition_sections,
+            &self.ammunition_sections,
             &loadout.weapons,
             |section| {
-                vehicle
-                    .definition
+                self.definition
                     .sections
                     .get(&section)
                     .is_some_and(|s| s.internal > 0)
             },
         )?;
-        vehicle.ammunition_sections = record.ammunition_sections;
-        vehicle.ammunition_modes = record.ammunition_modes;
-        vehicle.weapon_recycle = record.weapon_recycle;
-        vehicle.spent_launchers = record.spent_launchers;
-        vehicle.ammunition = record.ammunition;
         ensure!(
-            !vehicle.is_destroyed() || vehicle.power == super::BattlePower::Off,
+            !self.is_destroyed() || self.power == super::BattlePower::Off,
             "Destroyed vehicle must be shut down"
         );
-        super::crew_recovery::validate(
-            &vehicle.crew_recovery,
-            vehicle.pilot(),
-            vehicle.pilot_injuries(),
-        )?;
-        vehicle.validate_ground_descent()?;
-        vehicle.validate_orbital_drop()?;
-        vehicle.validate_dig()?;
-        Ok(vehicle)
+        super::crew_recovery::validate(&self.crew_recovery, self.pilot(), self.pilot_injuries())?;
+        self.validate_flight_state()?;
+        self.validate_orbital_drop()?;
+        self.validate_dig()?;
+        Ok(())
     }
 }
 

@@ -108,20 +108,36 @@ impl super::BattleVehicle {
 
     /// Reconcile equipment-dependent controls after damage or shutdown.
     pub(super) fn reconcile_electronics(&mut self) {
+        self.settle_command_networks();
+        self.electronics = self.settled_electronics();
+    }
+
+    /// Leave command networks whose computers no longer work.
+    pub(super) fn settle_command_networks(&mut self) {
         if !self.c3_operational().unwrap_or(false) {
             self.c3_network = None;
         }
         if !self.c3_hardware().is_ok_and(|h| h.c3i_operational) {
             self.c3i_network = None;
         }
+    }
+
+    /// Emission controls after power or equipment loss switches off what cannot run.
+    fn settled_electronics(&self) -> BattleElectronics {
         let guardian = self
             .electronic_suite_available(BattleElectronicSuite::Guardian)
             .unwrap_or(false);
         let angel = self
             .electronic_suite_available(BattleElectronicSuite::Angel)
             .unwrap_or(false);
-        self.electronics
-            .reconcile(self.power == BattlePower::Running, guardian, angel);
+        let mut electronics = self.electronics;
+        electronics.reconcile(self.power == BattlePower::Running, guardian, angel);
+        electronics
+    }
+
+    /// Whether the emission controls already agree with power and surviving equipment.
+    pub(super) fn electronics_settled(&self) -> bool {
+        self.settled_electronics() == self.electronics
     }
 }
 

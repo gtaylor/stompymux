@@ -229,7 +229,8 @@ impl BtechState {
     ///
     /// The edits change a draft copy, so the batch may pass through states that would be
     /// invalid on their own, such as cutting power before clearing the throttle. The draft
-    /// replaces the unit only if every edit applied and the result validates; otherwise the
+    /// replaces the unit only if every edit applied and the result passes the same
+    /// validation a saved record must pass when the server loads it; otherwise the
     /// state is unchanged. Like a record rewrite, a committed edit clears the runtime-only
     /// state a serialization round trip drops.
     pub fn edit_unit(
@@ -256,11 +257,9 @@ impl BtechState {
                 self.constructed.insert(id, *unit);
             }
             Draft::Vehicle(vehicle) => {
-                // A vehicle validates as it decodes from its record, which also re-derives
-                // its construction from the template.
-                let vehicle: BattleVehicle =
-                    serde_json::from_value(serde_json::to_value(&*vehicle)?)
-                        .with_context(|| format!("editing #{}", id.0))?;
+                let vehicle = vehicle
+                    .restored()
+                    .with_context(|| format!("editing #{}", id.0))?;
                 self.vehicles.insert(id, vehicle);
             }
         }
