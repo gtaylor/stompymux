@@ -492,6 +492,28 @@ super::saved_parts::saved_parts!(BattleVehicle {
 });
 
 impl BattleVehicle {
+    /// World-level rules for a vehicle nothing is towing: it moves only under power and
+    /// only while it still can.
+    pub(super) fn validate_untowed(&self) -> Result<()> {
+        let Some(motion) = self.motion() else {
+            return Ok(());
+        };
+        motion.validate(
+            super::speed_bonus::saved_limit(self.maximum_speed(), false, false, false) + 10.75,
+        )?;
+        ensure!(
+            self.power() == super::BattlePower::Running
+                || !motion.active()
+                || self.idle_flight_controls(),
+            "Inactive untowed vehicle retains motion"
+        );
+        ensure!(
+            (self.maximum_speed() > 0.0 && !self.rotor_destroyed()) || !motion.active(),
+            "Immobile untowed vehicle retains motion"
+        );
+        Ok(())
+    }
+
     /// Replace the construction template in place, for fixtures that edit it.
     pub(super) fn set_fixture_definition(&mut self, definition: BattleVehicleTemplate) {
         self.definition = definition;

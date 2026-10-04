@@ -9,8 +9,9 @@
 //! deliberately invalid unit through [`BtechState::rewrite_unit_record`] instead.
 use super::{
     BattleCharacterPilotStatus, BattleContact, BattleDice, BattleFireMode, BattleFreeFall,
-    BattleMotion, BattlePosition, BattlePower, BattleTargetLock, BattleTemplate, BattleUnit,
-    BattleUnitSignature, BattleVehicle, BattleVehicleTemplate, BattleWeaponReadiness, BtechState,
+    BattleHexLock, BattleMotion, BattlePosition, BattlePower, BattleTargetLock, BattleTemplate,
+    BattleUnit, BattleUnitSignature, BattleVehicle, BattleVehicleTemplate, BattleWeaponReadiness,
+    BtechState, StoredBattleUnit,
 };
 use crate::ObjectId;
 use anyhow::{Context, Result, anyhow, bail};
@@ -101,6 +102,40 @@ impl<'a> BattleUnitRef<'a> {
         fn weapon_readiness(&self, index: usize) -> Result<BattleWeaponReadiness>;
         /// One weapon's selected fire mode.
         fn fire_mode(&self, index: usize) -> Result<BattleFireMode>;
+        /// The hex the unit has locked, if its lock is on terrain.
+        fn hex_lock(&self) -> Option<BattleHexLock>;
+    }
+
+    /// Capitalized and lowercase words naming the chassis in messages.
+    pub(super) fn nouns(&self) -> (&'static str, &'static str) {
+        match self {
+            Self::Mech(_) => ("Unit", "unit"),
+            Self::Vehicle(_) => ("Vehicle", "vehicle"),
+        }
+    }
+
+    /// Run the unit's own validation, reusing a result for an unchanged unit.
+    pub(super) fn validate_local(&self, id: ObjectId) -> Result<()> {
+        match self {
+            Self::Mech(unit) => super::validation_context::unit(id, unit),
+            Self::Vehicle(vehicle) => super::validation_context::vehicle(id, vehicle),
+        }
+    }
+
+    /// Apply the rules for a unit moving under its own power.
+    pub(super) fn validate_untowed(&self) -> Result<()> {
+        match self {
+            Self::Mech(unit) => unit.validate_untowed(),
+            Self::Vehicle(vehicle) => vehicle.validate_untowed(),
+        }
+    }
+
+    /// The identity summary the world keeps for the unit.
+    pub(super) fn identity(&self) -> StoredBattleUnit {
+        match self {
+            Self::Mech(unit) => unit.identity(),
+            Self::Vehicle(vehicle) => vehicle.identity(),
+        }
     }
 }
 
