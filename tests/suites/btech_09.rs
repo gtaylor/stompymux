@@ -26,9 +26,6 @@ mod btech_map_ice;
 #[path = "../btech_map_teardown.rs"]
 mod btech_map_teardown;
 
-#[path = "../btech_map_wrapping.rs"]
-mod btech_map_wrapping;
-
 #[path = "../btech_preferred_identity.rs"]
 mod btech_preferred_identity;
 

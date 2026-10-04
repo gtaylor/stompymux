@@ -110,7 +110,7 @@ async fn object_table_reports_saved_payloads_and_retained_duration() {
     )
     .await
     .unwrap();
-    sqlx::query("UPDATE btech_map_objects SET data_char=87,data_short=-23,data_int=91 WHERE map_dbref=? AND object_type IN (4,7)")
+    sqlx::query("UPDATE btech_map_objects SET data_char=87,data_short=-23,data_int=91 WHERE map_dbref=? AND object_type=4")
         .bind(map.0).execute(&mut sql).await.unwrap();
     sqlx::query(
         "UPDATE btech_map_objects SET data_short=-32768 WHERE map_dbref=? AND object_type=9",
@@ -138,7 +138,6 @@ async fn object_table_reports_saved_payloads_and_retained_duration() {
             "91"
         ]
     );
-    assert!(rows.contains(&"1   1   LINKED 0     87   -23    91".into()));
     assert!(rows.contains(&"1   1   BLZ   1     0    -32768 1".into()));
     assert!(rows.contains(&"2   2   SMOKE 0     32   20     0".into()));
     assert_eq!(scripts.world().btech, before);
@@ -222,25 +221,24 @@ async fn object_listing_shares_native_lua_order_and_owned_details() {
             .unwrap()
     );
     let lines = output(&lua);
-    assert_eq!(lines.len(), 15);
+    assert_eq!(lines.len(), 13);
     assert_eq!(lines[0], "X   Y   Type  obj   dc   ds     di");
     assert_eq!(lines[1], "--------------------------------------------");
-    assert_eq!(lines[14], lines[1]);
-    let kinds: Vec<_> = lines[2..14]
+    assert_eq!(lines[12], lines[1]);
+    let kinds: Vec<_> = lines[2..12]
         .iter()
         .map(|line| line.split_whitespace().nth(2).unwrap())
         .collect();
     assert_eq!(
         kinds,
         vec![
-            "FIRE", "SMOKE", "DECO", "MINE", "MINE", "BUILDING", "LEAVE", "ENTRA", "LINKED",
-            "LINKED", "BLZ", "BLZ"
+            "FIRE", "SMOKE", "DECO", "MINE", "MINE", "BUILDING", "LEAVE", "ENTRA", "BLZ", "BLZ"
         ]
     );
     assert_eq!(lines[2], "1   1   FIRE  0     32   0      0");
     assert_eq!(lines[3], "2   2   SMOKE 0     32   20     0");
     assert_eq!(lines[4], "1   1   DECO  0     126  0      0");
-    assert_eq!(lines[13], "1   1   BLZ   1     0    0      1");
+    assert_eq!(lines[11], "1   1   BLZ   1     0    0      1");
     let text = support::run_text(&native, &config, ObjectId(1), 1, "list objs");
     for line in lines {
         assert!(text.contains(&line), "Missing {line:?}");

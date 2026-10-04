@@ -21,8 +21,6 @@ pub struct BattleJumpFlight {
     sampled_movement_points: u16,
     #[serde(default)]
     dfa_target: Option<crate::ObjectId>,
-    #[serde(default)]
-    wrapping: Option<super::map_boundary::MapWrapping>,
     /// This route was admitted on another map; subsequent steps use current boundary rules.
     #[serde(default)]
     reassigned: bool,
@@ -46,8 +44,6 @@ struct JumpFlightRecord {
     sampled_movement_points: u16,
     #[serde(default)]
     dfa_target: Option<crate::ObjectId>,
-    #[serde(default)]
-    wrapping: Option<super::map_boundary::MapWrapping>,
     /// This route was admitted on another map; subsequent steps use current boundary rules.
     #[serde(default)]
     reassigned: bool,
@@ -84,7 +80,6 @@ impl TryFrom<JumpFlightRecord> for BattleJumpFlight {
             landing_requested: record.landing_requested,
             sampled_movement_points: record.sampled_movement_points,
             dfa_target: record.dfa_target,
-            wrapping: record.wrapping,
             reassigned: record.reassigned,
         })
     }
@@ -119,7 +114,6 @@ impl BattleJumpFlight {
             landing_requested: false,
             sampled_movement_points: path.movement_points(),
             dfa_target: None,
-            wrapping: None,
             reassigned: false,
         }
     }
@@ -192,17 +186,6 @@ impl BattleJumpFlight {
 
     /// Last committed airborne point and height; inspecting it never advances the flight.
     pub fn sample(self) -> BattleJumpSample {
-        let mut sample = self.virtual_sample();
-        if let Some(wrapping) = self.wrapping {
-            sample.point = wrapping
-                .point(sample.point)
-                .expect("validated flight geometry");
-        }
-        sample
-    }
-
-    /// Unwrapped geometric sample for tracing interrupted movement across a seam.
-    pub(super) fn virtual_sample(self) -> BattleJumpSample {
         if let Some(sample) = self.relocated {
             return sample;
         }
@@ -219,30 +202,13 @@ impl BattleJumpFlight {
         self.relocated = Some(BattleJumpSample { point, elevation });
     }
 
-    /// Refresh boundary policy before advancing without changing the launch path or distance.
-    pub(super) fn set_wrapping(&mut self, map: &super::StoredMap) -> Result<()> {
-        self.wrapping = map.wrapping_dimensions()?;
-        Ok(())
-    }
-
-    /// Validate the dimensions used by the last saved sample, including a pending policy change.
-    pub(super) fn validate_wrapping(self, map: &super::StoredMap) -> Result<()> {
-        ensure!(
-            self.wrapping.is_none_or(|wrapping| wrapping.matches(map)),
-            "Jump wrapping dimensions differ from map"
-        );
-        Ok(())
-    }
-
     /// Rebind a scenario-transferred route while preserving its exact sampled altitude and progress.
     /// Compatible routes need no override; incompatible routes settle boundaries during movement.
     pub(super) fn rebind(&mut self, map: &super::StoredMap, point: super::Point) -> Result<bool> {
-        let wrapping = map.wrapping_dimensions()?;
-        if self.wrapping == wrapping && super::jumping::validate_route(map, self.path).is_ok() {
+        if super::jumping::validate_route(map, self.path).is_ok() {
             return Ok(false);
         }
         let elevation = self.sample().elevation;
-        self.wrapping = wrapping;
         self.relocated = Some(BattleJumpSample { point, elevation });
         self.reassigned = true;
         Ok(true)
@@ -250,7 +216,6 @@ impl BattleJumpFlight {
 
     /// Ordinary routes retain launch admission checks; reassigned routes resolve edges during updates.
     pub(super) fn validate_on_map(self, map: &super::StoredMap) -> Result<()> {
-        self.validate_wrapping(map)?;
         if !self.reassigned {
             super::jumping::validate_route(map, self.path)?;
         }
@@ -314,7 +279,6 @@ impl BattleJumpFlight {
             landing_requested: self.landing_requested,
             sampled_movement_points: capacity.movement_points,
             dfa_target: self.dfa_target,
-            wrapping: self.wrapping,
             reassigned: self.reassigned,
         };
         let step = BattleJumpStep {

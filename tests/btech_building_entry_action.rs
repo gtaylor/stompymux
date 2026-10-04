@@ -763,15 +763,6 @@ async fn movement_edges_dispatch_shared_exits_and_keep_blocked_units_stopped() {
                 .load("_parents['default_room.lua'].locks={}")
                 .exec()
                 .unwrap();
-            *scripts.world_mut() = world.clone();
-            set_battle_map_wrapping(&mut scripts.world_mut(), interior, true).unwrap();
-            assert!(
-                advance_battle_motion_action(&scripts, &config, BattleMovementRules::STANDARD)
-                    .unwrap()
-                    .is_empty()
-            );
-            assert_eq!(scripts.world().objects[&id].location, Some(interior));
-            scripts.drain_outbox();
             *scripts.world_mut() = world;
             set_building_state(
                 &mut scripts.world_mut(),

@@ -87,7 +87,6 @@ pub(super) fn validate_route(map: &super::StoredMap, path: BattleJumpPath) -> Re
     );
     // Endpoint heights are launch-time facts; ice may break beneath a saved destination.
     for coordinate in start.point.trace(end.point)? {
-        let coordinate = map.motion_hex(coordinate)?;
         map.base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
     }
     Ok(())
@@ -506,12 +505,8 @@ fn prepare_jump(world: &World, id: ObjectId, request: JumpRequest<'_>) -> Result
         elevation >= launch.water_line() - 1,
         "Cannot launch from more than one level underwater"
     );
-    let resolved_destination = map.motion_hex(destination)?;
     let destination_elevation = map
-        .base_hex(
-            i64::from(resolved_destination.x),
-            i64::from(resolved_destination.y),
-        )?
+        .base_hex(i64::from(destination.x), i64::from(destination.y))?
         .standing_height();
     let path = match request {
         JumpDestination::Projected { bearing, range } => BattleJumpPath::projected(
@@ -639,8 +634,7 @@ fn advance_jumps_inner(
             .is_some_and(|values| super::advantages::enabled(values, "Toughness"));
         let mut position = unit.position().context("Airborne unit is not placed")?;
         let map = &candidate.btech.maps()[&position.map];
-        flight.set_wrapping(map)?;
-        let virtual_from = flight.virtual_sample().point;
+        let from = flight.sample().point;
         let step = flight.advance(unit.jump_capacity(map.gravity)?, map.movement_modifier)?;
         if step.outcome == BattleJumpOutcome::LostThrust {
             notices.push(BattleNotice {
@@ -821,7 +815,7 @@ fn advance_jumps_inner(
                     let segment = super::motion::finish_interrupted_jump_in_action(
                         &mut candidate,
                         id,
-                        (virtual_from, flight.virtual_sample().point),
+                        (from, flight.sample().point),
                         rules,
                         &mut falls,
                     )?;
@@ -838,7 +832,7 @@ fn advance_jumps_inner(
                     super::motion::finish_interrupted_jump(
                         &mut candidate,
                         id,
-                        (virtual_from, flight.virtual_sample().point),
+                        (from, flight.sample().point),
                         rules,
                     )?
                 };

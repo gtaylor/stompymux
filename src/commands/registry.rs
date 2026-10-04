@@ -571,8 +571,6 @@ impl CommandRegistry {
                 .policy(SwitchPolicy::Reject("ADDMINE takes no switches."), false),
             CommandDefinition::native("addblock", P::WIZARD, crate::btech::map_block::command)
                 .policy(SwitchPolicy::Reject("ADDBLOCK takes no switches."), false),
-            CommandDefinition::native("setlinked", P::WIZARD, crate::btech::map_link::command)
-                .policy(SwitchPolicy::Reject("SETLINKED takes no switches."), false),
             CommandDefinition::native("loadmap", P::WIZARD, crate::btech::map_load::command)
                 .policy(SwitchPolicy::Reject("LOADMAP takes no switches."), false),
             CommandDefinition::native("savemap", P::WIZARD, crate::btech::map_save::command)

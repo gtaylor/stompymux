@@ -1068,9 +1068,6 @@ pub use vtol_crash::{BattleVehicleDescentEvent, advance_vtol_fall, resolve_vtol_
 
 mod vtol_emergency;
 
-mod map_boundary;
-pub use map_boundary::{BattleLinkedMarker, set_linked_marker, set_map_wrapping};
-
 mod building_routes;
 pub use building_routes::{
     BattleBuildingEntryPoint, BattleBuildingExit, building_entry_destination,
@@ -1287,7 +1284,6 @@ pub use terrain_edit::{BattleMapHexChange, set_map_hex_action};
 
 pub(crate) mod map_block;
 pub use map_block::add_landing_exclusion_action;
-pub(crate) mod map_link;
 pub(crate) mod map_load;
 mod map_objects;
 pub use map_load::load_map_action;

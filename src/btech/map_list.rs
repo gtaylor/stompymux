@@ -150,15 +150,6 @@ fn object_fields(
                 record.data_int,
             ]
         }
-        BattleMapObjectKind::Linked => {
-            let record = map.linked_markers[&slot];
-            [
-                record.object.0,
-                i64::from(record.data_char),
-                i64::from(record.data_short),
-                record.data_int,
-            ]
-        }
         BattleMapObjectKind::LandingBlock => {
             let zone = map.landing_exclusions[&slot];
             [

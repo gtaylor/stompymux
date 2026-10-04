@@ -27,6 +27,5 @@ pub(super) fn clear(world: &mut World, id: ObjectId) -> Result<()> {
     map.building_entrances = Default::default();
     map.building_entry_points = Default::default();
     map.building_exits = Default::default();
-    map.linked_markers = Default::default();
     Ok(())
 }

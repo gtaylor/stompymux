@@ -63,9 +63,6 @@ pub struct StoredMap {
     /// Saved map movement percentage; zero or negative uses the standard rate.
     #[serde(default)]
     pub movement_modifier: i64,
-    /// Linked-map marker coordinates; any marker enables opposite-edge wrapping.
-    #[serde(default)]
-    pub(crate) linked_markers: Arc<BTreeMap<u32, super::BattleLinkedMarker>>,
     /// Battlefield illumination, weather visibility and saved sensor range ceiling.
     pub light: i64,
     pub visibility: i64,
@@ -261,10 +258,6 @@ impl StoredMap {
                 "Invalid building entry point"
             );
         }
-        ensure!(
-            self.linked_markers.len() <= 1_000_000,
-            "Too many linked markers"
-        );
         ensure!(
             self.static_decorations
                 .iter()
@@ -1210,7 +1203,6 @@ pub(super) fn replace_map_asset(
     let modifier = old.movement_modifier;
     let mut map = map_from_asset(name, asset)?;
     map.movement_modifier = modifier;
-    map.linked_markers = old.linked_markers.clone();
     map.cargo_transfer_point = old.cargo_transfer_point;
     map.light = old.light;
     map.visibility = old.visibility;
@@ -1280,7 +1272,6 @@ pub(super) fn map_from_asset(name: &str, asset: MapAsset) -> Result<StoredMap> {
         building_exits: Default::default(),
         authored_link: None,
         movement_modifier: 0,
-        linked_markers: Default::default(),
         light: 2,
         visibility: 30,
         maximum_visibility: 60,

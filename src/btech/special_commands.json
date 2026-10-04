@@ -1490,13 +1490,6 @@
     },
     {
       "class_mask": 0,
-      "syntax": "SETLINKED",
-      "description": "Sets the map linked",
-      "restricted": true,
-      "category": false
-    },
-    {
-      "class_mask": 0,
       "syntax": "@MAPEMIT <MESSAGE>",
       "description": "Emits stuff to the map",
       "restricted": true,

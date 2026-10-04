@@ -250,7 +250,7 @@
 //|---Delete map objects by type, coordinate, or both. At least one selector is required.
 //|---@param actor integer
 //|---@param dbref integer
-//|---@param kind? string FIRE, SMOKE, DECO, MINE, BUILDING, LEAVE, ENTRA, LINKED, or BLZ; prefixes accepted.
+//|---@param kind? string FIRE, SMOKE, DECO, MINE, BUILDING, LEAVE, ENTRA, or BLZ; prefixes accepted.
 //|---@param x? integer Must be paired with y.
 //|---@param y? integer Must be paired with x.
 //|---@return integer Number of selected records deleted; reciprocal cleanup is not counted.
@@ -307,22 +307,14 @@
 //|function btech_map.environment(actor, dbref, conditions) end
 // lua-types-end
 
-// lua-types-begin btech 00136
-//|---Enable or disable saved opposite-edge wrapping.
-//|---@param dbref integer
-//|---@param enabled boolean
-//|---@return boolean
-//|function btech_map.wrapping(dbref, enabled) end
-// lua-types-end
-
-// lua-types-begin btech 00138
+// lua-types-begin btech 00137
 //|---List saved artillery blast zones in saved order.
 //|---@param map DbRef|Object
 //|---@return BattleBlastZone[]
 //|function btech_map.blast_zones(map) end
 // lua-types-end
 
-// lua-types-begin btech 00555
+// lua-types-begin btech 00554
 //|---List the map's scripted points of interest in file order. Units never see them.
 //|---@param map DbRef|Object
 //|---@param type? string Keep only points whose type matches exactly (case-sensitive).
@@ -330,21 +322,21 @@
 //|function btech_map.points_of_interest(map, type) end
 // lua-types-end
 
-// lua-types-begin btech 00139
+// lua-types-begin btech 00138
 //|---Read the saved cargo transfer point, or nil when the map has no location restriction.
 //|---@param map DbRef|Object
 //|---@return BattleCargoTransferPoint|nil
 //|function btech_map.cargo_transfer_point(map) end
 // lua-types-end
 
-// lua-types-begin btech 00140
+// lua-types-begin btech 00139
 //|---Replace the saved cargo transfer point; nil clears the restriction.
 //|---@param map DbRef|Object
 //|---@param point BattleCargoTransferPoint|nil
 //|function btech_map.set_cargo_transfer_point(map, point) end
 // lua-types-end
 
-// lua-types-begin btech 00141
+// lua-types-begin btech 00140
 //|---Read one hex's ground height. Water depth, structure heights and bridge decks are in btech.map.hex.
 //|---@param map DbRef|Object
 //|---@param hex HexCoordinate
@@ -352,7 +344,7 @@
 //|function btech_map.elevation(map, hex) end
 // lua-types-end
 
-// lua-types-begin btech 00143
+// lua-types-begin btech 00142
 //|---Read the one terrain feature a map shows for a hex: fire or smoke, then a structure, water, woods or the ground. Use btech.map.hex for every layer, including the terrain beneath fire or smoke.
 //|---@param map DbRef|Object
 //|---@param hex HexCoordinate
@@ -360,7 +352,7 @@
 //|function btech_map.terrain(map, hex) end
 // lua-types-end
 
-// lua-types-begin btech 00144
+// lua-types-begin btech 00143
 //|---Report whether a coordinate lies inside a saved blast zone.
 //|---@param map DbRef|Object
 //|---@param hex HexCoordinate
@@ -368,7 +360,7 @@
 //|function btech_map.in_blast_zone(map, hex) end
 // lua-types-end
 
-// lua-types-begin btech 00146
+// lua-types-begin btech 00145
 //|---Report line of sight from one placed unit toward a unit or hex.
 //|---@param observer DbRef|Object
 //|---@param target DbRef|Object|HexCoordinate
@@ -376,7 +368,7 @@
 //|function btech_map.line_of_sight(observer, target) end
 // lua-types-end
 
-// lua-types-begin btech 00148
+// lua-types-begin btech 00147
 //|---Place a unit on decoded terrain using the shared placement rules.
 //|---@param unit DbRef|Object
 //|---@param map DbRef|Object
@@ -384,7 +376,7 @@
 //|function btech_map.place_unit(unit, map, position) end
 // lua-types-end
 
-// lua-types-begin btech 00149
+// lua-types-begin btech 00148
 //|---Measure the spatial range between two units or positions on one map. A position without z stands on the hex's surface.
 //|---@param map DbRef|Object
 //|---@param from DbRef|Object|BattlePlacement
@@ -393,7 +385,7 @@
 //|function btech_map.range(map, from, to) end
 // lua-types-end
 
-// lua-types-begin btech 00150
+// lua-types-begin btech 00149
 //|---Resolve the first unit matching a two-character battlefield ID from a unit or map origin.
 //|---@param origin DbRef|Object Registered unit or map.
 //|---@param id string Exactly two ASCII characters.
@@ -401,7 +393,7 @@
 //|function btech_map.unit_by_id(origin, id) end
 // lua-types-end
 
-// lua-types-begin btech 00152
+// lua-types-begin btech 00151
 //|---List units placed on a map in saved slot order; an optional filter omits distant units.
 //|---@param map DbRef|Object
 //|---@param filter? BattleMapUnitFilter
@@ -409,7 +401,7 @@
 //|function btech_map.units(map, filter) end
 // lua-types-end
 
-// lua-types-begin btech 00412
+// lua-types-begin btech 00411
 //|---Check map membership and world invariants without changing placements or unit state.
 //|---@param actor integer Wizard performing the check.
 //|---@param map integer
@@ -417,7 +409,7 @@
 //|function btech_map.check(actor, map) end
 // lua-types-end
 
-// lua-types-begin btech 00413
+// lua-types-begin btech 00412
 //|---Publish and return a wizard's map field report in catalogue order.
 //|---@param actor integer
 //|---@param map integer
@@ -426,7 +418,7 @@
 //|function btech_map.fields(actor, map, arguments) end
 // lua-types-end
 
-// lua-types-begin btech 00552
+// lua-types-begin btech 00551
 //|---Whether a map has one rule switch enabled.
 //|---@param dbref integer Map object dbref.
 //|---@param flag MapFlag Typed constant from btech.map.flags.
@@ -434,7 +426,7 @@
 //|function btech_map.has_flag(dbref, flag) end
 // lua-types-end
 
-// lua-types-begin btech 00553
+// lua-types-begin btech 00552
 //|---Wizard-only switch of one map rule flag, leaving the others unchanged.
 //|---@param actor integer
 //|---@param map integer

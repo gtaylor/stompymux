@@ -15,13 +15,12 @@ pub enum BattleMapObjectKind {
     Building,
     Leave,
     Entrance,
-    Linked,
     LandingBlock,
 }
 
 impl BattleMapObjectKind {
     /// Stable operator spellings; prefix matching follows this order.
-    pub const ALL: [Self; 9] = [
+    pub const ALL: [Self; 8] = [
         Self::Fire,
         Self::Smoke,
         Self::Decoration,
@@ -29,7 +28,6 @@ impl BattleMapObjectKind {
         Self::Building,
         Self::Leave,
         Self::Entrance,
-        Self::Linked,
         Self::LandingBlock,
     ];
     /// Canonical spelling used in operator confirmations.
@@ -42,7 +40,6 @@ impl BattleMapObjectKind {
             Self::Building => "BUILDING",
             Self::Leave => "LEAVE",
             Self::Entrance => "ENTRA",
-            Self::Linked => "LINKED",
             Self::LandingBlock => "BLZ",
         }
     }
@@ -209,7 +206,6 @@ fn remove_kind(
             BattleMapObjectKind::Entrance => {
                 super::set_building_entry_point(world, map, slot, None)?
             }
-            BattleMapObjectKind::Linked => super::set_linked_marker(world, map, slot, None)?,
             BattleMapObjectKind::LandingBlock => {
                 super::set_landing_exclusion(world, map, slot, None)?
             }
@@ -302,11 +298,6 @@ pub(super) fn object_positions(
             .building_entry_points
             .iter()
             .map(|(&slot, d)| (MapObjectSlot::Stored(slot), d.coordinate))
-            .collect(),
-        BattleMapObjectKind::Linked => record
-            .linked_markers
-            .iter()
-            .map(|(&slot, marker)| (MapObjectSlot::Stored(slot), marker.coordinate))
             .collect(),
         BattleMapObjectKind::LandingBlock => record
             .ordered_landing_exclusions()

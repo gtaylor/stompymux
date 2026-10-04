@@ -1,7 +1,7 @@
 //! LuaLS contract blocks for the btech weapon surface.
 // This file is read by lua-type-updater. Keep declarations next to the bindings.
 
-// lua-types-begin btech 00222
+// lua-types-begin btech 00221
 //|---Read detached effective values using a canonical weapon name.
 //|---Examples: IS.MediumLaser or CL.LRM-20; exact names ignore ASCII case.
 //|---@param name string
@@ -9,7 +9,7 @@
 //|function btech_weapon.settings(name) end
 // lua-types-end
 
-// lua-types-begin btech 00223
+// lua-types-begin btech 00222
 //|---Wizard-only runtime override. Existing countdowns are unchanged; restart restores catalogue defaults.
 //|---@param actor integer
 //|---@param name string
@@ -18,7 +18,7 @@
 //|function btech_weapon.set_recycle(actor, name, seconds) end
 // lua-types-end
 
-// lua-types-begin btech 00224
+// lua-types-begin btech 00223
 //|---Wizard-only runtime override used by valuation and Battle Value XP. Restart restores catalogue defaults.
 //|---@param actor integer
 //|---@param name string

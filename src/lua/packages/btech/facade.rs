@@ -266,7 +266,6 @@ pub(in crate::lua::packages) fn install(lua: &Lua, api: &Table, mux: &Table) -> 
         ("map", "map_environment", "environment"),
         ("map", "map_add_ice", "add_ice"),
         ("map", "map_remove_ice", "remove_ice"),
-        ("map", "map_wrapping", "wrapping"),
     ] {
         let table = match package.get::<Value>(group)? {
             Value::Table(table) => table,

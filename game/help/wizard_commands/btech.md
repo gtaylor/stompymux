@@ -1,7 +1,7 @@
 +++
 title = "@btech"
 description = "Manage BattleTech assets, maps, runtime settings and inventory"
-keywords = ["snipe", "@setmech", "@viewmech", "@setspecial", "@viewspecial", "@ood", "setmapindx", "setxy", "@weight", "@damage", "@damagesection", "@losemit", "setteam", "eventstats", "memstats", "listforms", "savedb", "xptop", "setxplevel", "@viewmap", "fixmap", "@setmap", "addmine", "list", "delobj", "addfire", "addsmoke", "addblock", "setlinked", "loadmap", "savemap", "setmapsize", "clearmechs", "@mapemit", "addhex", "addice", "delice", "setcond", "addstuff", "removestuff", "clearstuff", "@btech", "btech inspection", "setvrt", "setwbv", "cargo-point"]
+keywords = ["snipe", "@setmech", "@viewmech", "@setspecial", "@viewspecial", "@ood", "setmapindx", "setxy", "@weight", "@damage", "@damagesection", "@losemit", "setteam", "eventstats", "memstats", "listforms", "savedb", "xptop", "setxplevel", "@viewmap", "fixmap", "@setmap", "addmine", "list", "delobj", "addfire", "addsmoke", "addblock", "loadmap", "savemap", "setmapsize", "clearmechs", "@mapemit", "addhex", "addice", "delice", "setcond", "addstuff", "removestuff", "clearstuff", "@btech", "btech inspection", "setvrt", "setwbv", "cargo-point"]
 article_tags = ["wizard_commands"]
 wizard_only = true
 +++
@@ -211,14 +211,6 @@ artillery aim. Selecting a new target clears that correction. Vehicles also use
 `spot #your-unit` to declare spotting, `spot #observer` to select a friendly acquired
 observer, and `spot -` to clear either role. A spotter cannot fire. Linked missiles
 use the observer's acquired unit target; artillery uses its visible selected hex.
-
-`map-wrapping <map>=<on|off>` enables or disables opposite-edge wrapping. For
-example, `@btech map-wrapping #43=on`. This requires Wizard authority and control
-of the map. The setting is saved across restarts and applies to ordinary Mech,
-ground-vehicle and VTOL movement. It does not link two different maps.
-
-Wrapping also applies to projected jumps. You cannot disable it while an active
-jump needs to cross a map edge; let the jump finish before changing the setting.
 
 Use `@btech unit-towable <unit>=on|off` to set scenario permission for towing an
 out-of-character unit. This works for Mechs, ground vehicles, and VTOLs. It does
@@ -539,8 +531,8 @@ numbers in map-slot order. The actor must be a wizard.
 
 `SETMAPSIZE <width> <height>` resizes your current map to dimensions from 1 through
 1000. It copies overlapping terrain and fills new cells with level grass.
-Fire, smoke and decorations on hexes that remain stay where they are. Other map objects,
-wrapping and building return links are cleared. Units keep their coordinates; a resize that would leave a unit or active
+Fire, smoke and decorations on hexes that remain stay where they are. Other map objects
+and building return links are cleared. Units keep their coordinates; a resize that would leave a unit or active
 map event outside the new bounds fails without changes. Clear or move units first
 when shrinking past them. Lua uses `btech.map.resize(actor, map, width, height)`.
 
@@ -566,13 +558,6 @@ therefore use the newly loaded terrain and conditions. Units keep their physical
 altitude until movement resolves it. Other map settings, including cloud base,
 remain intact. Invalid assets or crops that exclude placed units fail atomically;
 use `CLEARMECHS` first for such crops. Lua uses `btech.map.load_as(actor, map, name)`.
-
-## Link opposite map edges
-
-`SETLINKED` enables wrapping on your current map. It preserves terrain, units and
-other map objects. Each call adds a linked marker and keeps wrapping enabled. The optional argument is
-ignored. Use `@btech map-wrapping <map>=off` to disable wrapping; trusted Lua uses
-the existing `btech.map.wrapping(map, enabled)` operation.
 
 ## Restrict landing
 
@@ -601,10 +586,10 @@ replace those records.
 ## Delete map objects
 
 `DELOBJ <type>`, `DELOBJ <x> <y>`, or `DELOBJ <type> <x> <y>` removes matching
-map records. Types are FIRE, SMOKE, DECO, MINE, BUILDING, LEAVE, ENTRA, LINKED and
+map records. Types are FIRE, SMOKE, DECO, MINE, BUILDING, LEAVE, ENTRA and
 BLZ. Case-insensitive prefixes are accepted in that order. Generic decorations
 restore their recorded terrain; removing a building entrance clears its interior
-return links. Removing one linked marker leaves wrapping enabled if another remains.
+return links.
 The reported count covers selected records, excluding reciprocal cleanup.
 
 Lua uses `btech.map.delete_objects(actor, map, type, x, y)`; omit type to select all
@@ -879,9 +864,9 @@ changes the assigned ID without changing the saved preference.
 
 
 An active jump keeps its planned route and progress when reassigned. Its current
-position follows the map-assignment coordinate rules. Later movement uses the
-new map's wrapping; on an ordinary non-wrapping edge the unit stops at the edge
-and lands using the normal landing rules. Saving and reloading preserves that
+position follows the map-assignment coordinate rules. When later movement
+reaches the new map's edge, the unit stops at the edge and lands using the
+normal landing rules. Saving and reloading preserves that
 continuation.
 
 

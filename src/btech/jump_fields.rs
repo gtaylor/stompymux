@@ -53,7 +53,7 @@ pub(super) fn set(world: &mut World, id: ObjectId, heading: bool, value: &str) -
                 .context("Jump map is unavailable")?;
             let origin = cursor.sample();
             let end = origin.point.project(f64::from(course.heading), remaining)?;
-            let destination = map.motion_hex(end.containing_hex()?)?;
+            let destination = end.containing_hex()?;
             let elevation = map
                 .base_hex(i64::from(destination.x), i64::from(destination.y))?
                 .standing_height();

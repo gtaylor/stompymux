@@ -566,7 +566,7 @@ pub use btech::hex_illuminated as battle_hex_illuminated;
 pub use btech::{BattleTacticalMap, tactical_map as battle_tactical_map};
 
 pub use btech::{
-    BattleLandingExclusion, BattleLandingSuitability, BattleLinkedMarker,
+    BattleLandingExclusion, BattleLandingSuitability,
     set_landing_exclusion as set_battle_landing_exclusion,
 };
 
@@ -854,8 +854,6 @@ pub use btech::BattleVtolPath;
 
 pub use btech::BattleVtolEnvironment;
 
-pub use btech::set_map_wrapping as set_battle_map_wrapping;
-
 pub use btech::{
     BattleBuildingEntryPoint, building_entry_destination as battle_building_entry_destination,
     building_exit_destination as battle_building_exit_destination,
@@ -1078,8 +1076,6 @@ pub use runtime::MapAssetWrite;
 pub use btech::stop_unit_action as stop_battle_unit_action;
 
 pub use btech::add_map_decoration_action as add_battle_map_decoration_action;
-
-pub use btech::set_linked_marker as set_battle_linked_marker;
 
 pub use btech::{BattleBuildingExit, set_building_return_link as set_battle_building_return_link};
 

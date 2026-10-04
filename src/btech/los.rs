@@ -422,7 +422,6 @@ mod tests {
             membership_extent: 0,
             building_parent: 0,
             cargo_transfer_point: None,
-            linked_markers: Default::default(),
             artillery_shots: Default::default(),
             name: "LOS lane".into(),
             width: 3,

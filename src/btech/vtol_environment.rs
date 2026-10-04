@@ -62,7 +62,6 @@ impl BattleVehicle {
             &|hex| Ok(map.hex(hex.x, hex.y)),
             movement_modifier,
             free_fusion_fuel,
-            None,
         )
     }
 
@@ -72,10 +71,9 @@ impl BattleVehicle {
         lookup: &impl Fn(super::HexCoordinate) -> Result<Option<super::Hex>>,
         movement_modifier: i64,
         free_fusion_fuel: bool,
-        boundary: Option<&super::StoredMap>,
     ) -> Result<BattleVtolEnvironment> {
         let mut candidate = self.clone();
-        let path = candidate.advance_vtol_clear_path_with(lookup, movement_modifier, boundary)?;
+        let path = candidate.advance_vtol_clear_path_with(lookup, movement_modifier)?;
         if let BattleVtolPath::MapEdge { last, altitude, .. } = path {
             candidate.place_at(last, last.center(), altitude)?;
             candidate.motion.as_mut().unwrap().stop_translation();
@@ -208,7 +206,6 @@ pub(super) fn advance_in_candidate(
         .get(&position.map)
         .context("Aircraft map is unavailable")?;
     let lookup = |hex: super::HexCoordinate| {
-        let hex = map.motion_hex(hex)?;
         let (x, y) = (i64::from(hex.x), i64::from(hex.y));
         if x < 0 || y < 0 || x >= map.width || y >= map.height {
             return Ok(None);
@@ -217,12 +214,8 @@ pub(super) fn advance_in_candidate(
     };
     let mut candidate = world.clone();
     let unit = candidate.btech.vehicles.get_mut(&id).unwrap();
-    let mut outcome = unit.advance_environment_with(
-        &lookup,
-        map.movement_modifier,
-        free_fusion_fuel,
-        map.wrapping().then_some(map),
-    )?;
+    let mut outcome =
+        unit.advance_environment_with(&lookup, map.movement_modifier, free_fusion_fuel)?;
     if let BattleVtolEnvironment::CrashRequired { path, levels } = outcome {
         unit.place_contact(path)?;
         // Crossing exposes the aircraft before armor damage can ruin its cover.

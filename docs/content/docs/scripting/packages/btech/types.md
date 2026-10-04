@@ -60,8 +60,6 @@ Alias: `"LeftArm"|"RightArm"|"LeftTorso"|"RightTorso"|"CenterTorso"|"LeftLeg"|"R
 ## StoredMap
 
 - `cargo_transfer_point`: `BattleCargoTransferPoint|nil` — Saved cargo location and hint policy.
-- `wrapping`: `boolean` — Opposite-edge wrapping is enabled.
-- `linked_markers`: `table<integer, {coordinate: HexCoordinate, object: integer, data_char: integer, data_short: integer, data_int: integer}>` — Complete authored linked marker records.
 - `building_exits`: `table<integer, {coordinate: HexCoordinate, destination: integer, data_char: integer, data_short: integer, data_int: integer}>` — Return-link slots; coordinates are selection metadata.
 - `name`: `string`
 - `width`: `integer`
