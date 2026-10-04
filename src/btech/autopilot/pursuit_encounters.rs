@@ -164,7 +164,7 @@ fn shortest_firing_route(
     let own = observations::observe(world, id, world.btech.simulation_time())
         .ok()?
         .position?;
-    let start = navigation::Hex::new(own.x, own.y);
+    let start = navigation::GridHex::new(own.x, own.y);
     let mut queue = VecDeque::from([(start, 0_u32)]);
     let mut seen = BTreeSet::from([start]);
     let map = &world.btech.maps()[&own.map];

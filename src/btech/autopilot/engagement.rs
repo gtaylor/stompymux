@@ -1,7 +1,7 @@
 //! Stable engagement regions derived only from own weapons and observed contacts.
 use super::{
     AutopilotRangeBand, alignment,
-    navigation::{Goal, Hex},
+    navigation::{Goal, GridHex},
     observations::AutopilotObservation,
 };
 use crate::{BattlePosition, HexCoordinate, ObjectId, World};
@@ -78,7 +78,7 @@ impl Engagement {
 
     pub fn goal(self, fallback: bool) -> Goal {
         Goal::annulus(
-            Hex::new(self.aim.x, self.aim.y),
+            GridHex::new(self.aim.x, self.aim.y),
             if fallback {
                 1
             } else {
@@ -111,7 +111,7 @@ impl Engagement {
         self,
         world: &World,
         observation: &AutopilotObservation,
-        hex: Hex,
+        hex: GridHex,
     ) -> bool {
         Self {
             target: self.aim,
@@ -119,12 +119,12 @@ impl Engagement {
         }
         .usable(world, observation, hex)
     }
-    pub fn permits(self, hex: Hex) -> bool {
+    pub fn permits(self, hex: GridHex) -> bool {
         self.leash
-            .is_none_or(|origin| Hex::new(origin.x, origin.y).distance(hex) <= 6)
+            .is_none_or(|origin| GridHex::new(origin.x, origin.y).distance(hex) <= 6)
     }
     /// Prospective geometry reads public terrain and own weapon capability only.
-    pub fn usable(self, world: &World, observation: &AutopilotObservation, hex: Hex) -> bool {
+    pub fn usable(self, world: &World, observation: &AutopilotObservation, hex: GridHex) -> bool {
         if !self.permits(hex) {
             return false;
         }
@@ -189,8 +189,8 @@ pub(crate) fn resolve(
         .find(|c| c.unit == target && c.identified && !c.friendly && !c.known_destroyed)?;
     if leash.is_some_and(|origin| {
         origin.map != contact.position.map
-            || Hex::new(origin.x, origin.y)
-                .distance(Hex::new(contact.position.x, contact.position.y))
+            || GridHex::new(origin.x, origin.y)
+                .distance(GridHex::new(contact.position.x, contact.position.y))
                 > 6
     }) {
         return None;

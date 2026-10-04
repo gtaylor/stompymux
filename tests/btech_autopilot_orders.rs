@@ -147,8 +147,8 @@ async fn ground_fixture(positions: &[(u16, u16)], pilot_first: bool) -> GroundFi
 }
 
 fn hex_distance(a: stompymux_rs::BattlePosition, b: stompymux_rs::BattlePosition) -> u32 {
-    stompymux_rs::btech::autopilot::navigation::Hex::new(a.x, a.y).distance(
-        stompymux_rs::btech::autopilot::navigation::Hex::new(b.x, b.y),
+    stompymux_rs::btech::autopilot::navigation::GridHex::new(a.x, a.y).distance(
+        stompymux_rs::btech::autopilot::navigation::GridHex::new(b.x, b.y),
     )
 }
 

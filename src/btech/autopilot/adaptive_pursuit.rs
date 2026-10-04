@@ -282,19 +282,19 @@ impl AdaptivePursuit {
             p.map == own.map
                 && i64::from(p.x) < width
                 && i64::from(p.y) < height
-                && super::navigation::Hex::new(last.x, last.y)
-                    .distance(super::navigation::Hex::new(p.x, p.y))
+                && super::navigation::GridHex::new(last.x, last.y)
+                    .distance(super::navigation::GridHex::new(p.x, p.y))
                     <= 8
                 && leash.is_none_or(|o| {
                     o.map == p.map
-                        && super::navigation::Hex::new(o.x, o.y)
-                            .distance(super::navigation::Hex::new(p.x, p.y))
+                        && super::navigation::GridHex::new(o.x, o.y)
+                            .distance(super::navigation::GridHex::new(p.x, p.y))
                             <= 6
                 })
                 && (p == last
                     || self.ineffective.is_none_or(|(own, minimum, maximum)| {
-                        let distance = super::navigation::Hex::new(own.x, own.y)
-                            .distance(super::navigation::Hex::new(p.x, p.y));
+                        let distance = super::navigation::GridHex::new(own.x, own.y)
+                            .distance(super::navigation::GridHex::new(p.x, p.y));
                         distance < u32::from(minimum) || distance > u32::from(maximum)
                     }))
         };
@@ -601,8 +601,8 @@ mod tests {
         let choice = p.choose(64, pos(2), 0.4, 3, 48, 48, None, |aim, _, _| {
             calls += 1;
             assert!(
-                super::super::navigation::Hex::new(26, 10)
-                    .distance(super::super::navigation::Hex::new(aim.x, aim.y))
+                super::super::navigation::GridHex::new(26, 10)
+                    .distance(super::super::navigation::GridHex::new(aim.x, aim.y))
                     <= 8
             );
             Some((10.0, 10.0))

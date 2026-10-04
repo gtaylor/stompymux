@@ -198,8 +198,8 @@ pub async fn run_policy(
                                 .map(|c| c.position),
                         )
                         .is_some_and(|(own, target)| {
-                            let distance = navigation::Hex::new(own.x, own.y)
-                                .distance(navigation::Hex::new(target.x, target.y));
+                            let distance = navigation::GridHex::new(own.x, own.y)
+                                .distance(navigation::GridHex::new(target.x, target.y));
                             distance >= u32::from(band.minimum)
                                 && distance <= u32::from(band.maximum)
                         });
@@ -597,7 +597,7 @@ mod tests {
             &mut world,
             &config,
             id,
-            &[navigation::Hex::new(3, 5)],
+            &[navigation::GridHex::new(3, 5)],
             0,
             maximum,
             None,
@@ -618,7 +618,7 @@ mod tests {
             &mut world,
             &config,
             id,
-            &[navigation::Hex::new(3, 2)],
+            &[navigation::GridHex::new(3, 2)],
             0,
             maximum,
             None,

@@ -408,9 +408,12 @@ async fn production_heartbeat_completes_opt_in_director_encounter() {
                     .expect("friendly remains placed after encounter");
                 assert_eq!(position.map, map);
                 assert!(
-                    stompymux_rs::btech::autopilot::navigation::Hex::new(position.x, position.y)
-                        .distance(stompymux_rs::btech::autopilot::navigation::Hex::new(5, 3))
-                        <= 2
+                    stompymux_rs::btech::autopilot::navigation::GridHex::new(
+                        position.x, position.y
+                    )
+                    .distance(
+                        stompymux_rs::btech::autopilot::navigation::GridHex::new(5, 3)
+                    ) <= 2
                 );
             }
             return;

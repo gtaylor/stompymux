@@ -1,5 +1,5 @@
 //! Bounded motion estimates from visible hex-center samples only; no world or dice access.
-use super::navigation::Hex;
+use super::navigation::GridHex;
 use crate::{BattlePosition, HexCoordinate, ObjectId, Point};
 
 /// Fixed, bounded policies for isolated pursuit comparisons; not a game setting.
@@ -216,7 +216,7 @@ impl Pursuit {
                 && i64::from(p.x) < width
                 && i64::from(p.y) < height
                 && leash.is_none_or(|o| {
-                    o.map == p.map && Hex::new(o.x, o.y).distance(Hex::new(p.x, p.y)) <= 6
+                    o.map == p.map && GridHex::new(o.x, o.y).distance(GridHex::new(p.x, p.y)) <= 6
                 })
         };
         if !legal(last) {
@@ -225,7 +225,8 @@ impl Pursuit {
         }
         if now < self.reconsider_at {
             self.aim = self.aim.filter(|p| {
-                legal(*p) && Hex::new(last.x, last.y).distance(Hex::new(p.x, p.y)) <= lead_limit
+                legal(*p)
+                    && GridHex::new(last.x, last.y).distance(GridHex::new(p.x, p.y)) <= lead_limit
             });
             return self.aim;
         }
@@ -292,7 +293,7 @@ impl Pursuit {
                 self.evidence.reason = "boundary";
                 return None;
             }
-            if Hex::new(last.x, last.y).distance(Hex::new(x, y)) > lead_limit {
+            if GridHex::new(last.x, last.y).distance(GridHex::new(x, y)) > lead_limit {
                 self.evidence.reason = "boundary";
                 return None;
             }
@@ -369,7 +370,7 @@ mod tests {
                 assert!(a.samples.len() <= policy.limits().1);
                 if let Some(aim) = aim {
                     assert!(
-                        Hex::new(observed.x, observed.y).distance(Hex::new(aim.x, aim.y))
+                        GridHex::new(observed.x, observed.y).distance(GridHex::new(aim.x, aim.y))
                             <= policy.limits().3
                     );
                 }
@@ -395,7 +396,7 @@ mod tests {
             p.sample(1, ObjectId(2), pos(10, 10 + t as u16), t);
         }
         let lead = prediction(&mut p, 2).unwrap();
-        assert!(Hex::new(10, 12).distance(Hex::new(lead.x, lead.y)) <= 3);
+        assert!(GridHex::new(10, 12).distance(GridHex::new(lead.x, lead.y)) <= 3);
         p.sample(1, ObjectId(2), pos(10, 11), 3);
         assert_eq!(prediction(&mut p, 3), None);
         assert_eq!(p.samples.len(), 1);

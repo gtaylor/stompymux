@@ -195,8 +195,8 @@ fn script(world: &mut World, id: ObjectId, tick: usize, cap: f64) -> Result<bool
 
 /// Shortest geometric route uses authoritative eligibility, not Euclidean distance through walls.
 fn shortest(world: &World, id: ObjectId, from: BattlePosition, to: BattlePosition) -> Option<f64> {
-    let start = navigation::Hex::new(from.x, from.y);
-    let goal = navigation::Hex::new(to.x, to.y);
+    let start = navigation::GridHex::new(from.x, from.y);
+    let goal = navigation::GridHex::new(to.x, to.y);
     let mut distances = BTreeMap::from([(start, 0_u32)]);
     let mut queue = std::collections::VecDeque::from([start]);
     while let Some(h) = queue.pop_front() {
@@ -206,7 +206,7 @@ fn shortest(world: &World, id: ObjectId, from: BattlePosition, to: BattlePositio
         }
         for y in h.y.saturating_sub(1)..=h.y.saturating_add(1) {
             for x in h.x.saturating_sub(1)..=h.x.saturating_add(1) {
-                let next = navigation::Hex::new(x, y);
+                let next = navigation::GridHex::new(x, y);
                 if h.distance(next) != 1 || distances.contains_key(&next) {
                     continue;
                 }

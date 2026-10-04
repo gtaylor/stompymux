@@ -1,5 +1,5 @@
 //! Deterministic ground steering with route lookahead and ordinary motion forecasts.
-use super::{navigation::Hex, observations::AutopilotObservation};
+use super::{navigation::GridHex, observations::AutopilotObservation};
 use crate::{
     BattleMotion, BattleNotice, BattlePosition, Config, HexCoordinate, ObjectId, Point, World,
 };
@@ -37,7 +37,7 @@ pub(crate) fn motion(world: &World, id: ObjectId) -> Option<BattleMotion> {
 fn angle(left: f64, right: f64) -> f64 {
     ((left - right + 180.0).rem_euclid(360.0) - 180.0).abs()
 }
-fn center(hex: Hex) -> Point {
+fn center(hex: GridHex) -> Point {
     HexCoordinate {
         x: i32::from(hex.x),
         y: i32::from(hex.y),
@@ -106,7 +106,7 @@ fn safe_segment(world: &World, id: ObjectId, map: ObjectId, start: Point, end: P
 
 /// Select a bounded lookahead without leaving the planned route corridor.
 fn lookahead(
-    route: &[Hex],
+    route: &[GridHex],
     index: usize,
     point: Point,
     heading: f64,
@@ -274,7 +274,7 @@ pub(crate) fn drive(
     world: &mut World,
     config: &Config,
     id: ObjectId,
-    route: &[Hex],
+    route: &[GridHex],
     index: usize,
     cap: f64,
     combat: Option<(&AutopilotObservation, BattlePosition)>,
@@ -377,13 +377,13 @@ mod tests {
 
     #[test]
     fn smoothing_follows_a_staircase_without_leaving_its_cells() {
-        let start = center(Hex::new(2, 10));
-        let end = center(Hex::new(8, 6));
+        let start = center(GridHex::new(2, 10));
+        let end = center(GridHex::new(8, 6));
         let route: Vec<_> = start
             .trace(end)
             .unwrap()
             .into_iter()
-            .map(|cell| Hex::new(cell.x as u16, cell.y as u16))
+            .map(|cell| GridHex::new(cell.x as u16, cell.y as u16))
             .collect();
         assert!(route.len() <= 10);
         assert_eq!(lookahead(&route, 1, start, 0.0, true).unwrap(), end);
@@ -393,25 +393,25 @@ mod tests {
     #[test]
     fn smoothing_cannot_cut_across_cells_outside_the_route() {
         let route = [
-            Hex::new(2, 10),
-            Hex::new(2, 9),
-            Hex::new(2, 8),
-            Hex::new(2, 7),
-            Hex::new(3, 7),
-            Hex::new(4, 7),
-            Hex::new(5, 7),
+            GridHex::new(2, 10),
+            GridHex::new(2, 9),
+            GridHex::new(2, 8),
+            GridHex::new(2, 7),
+            GridHex::new(3, 7),
+            GridHex::new(4, 7),
+            GridHex::new(5, 7),
         ];
         let start = center(route[0]);
         let goal = lookahead(&route, 1, start, 0.0, true).unwrap();
         assert_ne!(goal, center(*route.last().unwrap()));
         for cell in start.trace(goal).unwrap() {
-            assert!(route.contains(&Hex::new(cell.x as u16, cell.y as u16)));
+            assert!(route.contains(&GridHex::new(cell.x as u16, cell.y as u16)));
         }
     }
 
     #[test]
     fn smoothing_inspects_at_most_eight_additional_waypoints() {
-        let route: Vec<_> = (0..40).map(|x| Hex::new(x, 10)).collect();
+        let route: Vec<_> = (0..40).map(|x| GridHex::new(x, 10)).collect();
         let goal = lookahead(&route, 1, center(route[0]), 90.0, true).unwrap();
         assert!(goal.containing_hex().unwrap().x <= 9);
     }
@@ -438,8 +438,8 @@ pub(crate) fn pursuit_score(
     }
     let mut simulated = motion(world, id)?;
     let mut state = context.map_or_else(SteeringState::default, |c| c.1.clone());
-    let goal = center(Hex::new(aim.x, aim.y));
-    let target = center(Hex::new(observed.x, observed.y));
+    let goal = center(GridHex::new(aim.x, aim.y));
+    let target = center(GridHex::new(observed.x, observed.y));
     let mut elapsed = 0.0;
     let mut turning: f64 = 0.0;
     for _ in 0..16 {
@@ -629,7 +629,7 @@ mod pursuit_estimate_tests {
                 <= 16
         );
         assert_eq!(world.btech, before);
-        let point = center(Hex::new(own.x, own.y));
+        let point = center(GridHex::new(own.x, own.y));
         let motion = motion(&world, id).unwrap();
         let target_point = Point {
             x: point.x,

@@ -216,8 +216,8 @@ impl<'a> GroundTraversal<'a> {
 impl super::navigation::Traversal for GroundTraversal<'_> {
     fn traversal_cost(
         &self,
-        from: super::navigation::Hex,
-        to: super::navigation::Hex,
+        from: super::navigation::GridHex,
+        to: super::navigation::GridHex,
     ) -> Option<u32> {
         let assessment = assess_with_occupancy(
             self.world,
