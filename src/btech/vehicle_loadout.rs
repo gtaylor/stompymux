@@ -1,22 +1,12 @@
 //! Vehicle slots resolve complete weapons and independent bins using shared equipment validation.
 use super::*;
 use anyhow::{Context, Result, bail, ensure};
-use serde::{Deserialize, Serialize};
 
 /// A zero-based equipment slot in a vehicle hull face or turret.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-pub struct VehicleCriticalLocation {
-    pub section: BattleVehicleSection,
-    pub slot: u8,
-}
+pub type VehicleCriticalLocation = CriticalLocation<BattleVehicleSection>;
 
 /// Resolved equipment only; construction, mass, systems and live vehicle simulation require further validation.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleVehicleLoadout {
-    pub weapons: Vec<WeaponMount<VehicleCriticalLocation>>,
-    pub ammunition: Vec<AmmunitionBin<VehicleCriticalLocation>>,
-    pub systems: Vec<SystemCritical<VehicleCriticalLocation>>,
-}
+pub type BattleVehicleLoadout = ResolvedLoadout<VehicleCriticalLocation>;
 
 impl BattleVehicleLoadout {
     /// Resolve each vehicle slot independently in hull-face and slot order.

@@ -182,7 +182,9 @@ pub use readiness::{BattleWeaponReadiness, BattleWeaponUse, advance_recycle, spe
 mod salvo;
 mod state;
 mod stun;
-pub use salvo::{BattleSalvoGroup, BattleSalvoReport, resolve_salvo, resolve_tactical_salvo};
+pub use salvo::{
+    BattleSalvoGroup, BattleSalvoReport, SalvoReport, resolve_salvo, resolve_tactical_salvo,
+};
 pub use stun::{advance_stun, stun_unit};
 mod template;
 mod template_construction;
@@ -221,7 +223,9 @@ pub use vehicle_loadout::{BattleVehicleLoadout, VehicleCriticalLocation};
 pub use vehicle_template::{BattleVehicleMovement, BattleVehicleSection, BattleVehicleTemplate};
 
 pub use equipment::{BattleSystem, BattleWaterRanges, BattleWeapon, WeaponProfile};
-pub use loadout::{AmmunitionBin, BattleLoadout, CriticalLocation, SystemCritical, WeaponMount};
+pub use loadout::{
+    AmmunitionBin, BattleLoadout, CriticalLocation, ResolvedLoadout, SystemCritical, WeaponMount,
+};
 
 pub use placement::{place_unit, remove_unit};
 pub use unit::{BattlePosition, BattleSectionState, BattleUnit};

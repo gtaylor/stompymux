@@ -31,22 +31,10 @@ pub struct BattleVehicleSalvoGroup {
     pub impact: BattleVehicleImpact,
 }
 
-/// Ordered target effects; the enclosing attack still owns launch, experience and publication.
-#[derive(Debug, Clone, PartialEq, Serialize)]
-#[must_use = "Publish salvo notices and broadcasts with the enclosing attack transaction"]
-pub struct BattleVehicleSalvoReport {
-    /// Nominal LBX damage terrain check, before pellet counting and cover absorption.
-    pub initial_woods: Option<BattleWoodsAbsorption>,
-    pub woods: Option<BattleWoodsAbsorption>,
-    pub cluster_roll: Option<u8>,
-    pub missiles_before_defense: Option<u8>,
-    pub groups: Vec<BattleVehicleSalvoGroup>,
-    pub inferno: Option<BattleVehicleInfernoHit>,
-    /// Per-packet pre-impact award evidence, including ineligible packets.
-    pub experience: Vec<Option<BattleShotExperienceAward>>,
-    /// Ordered award diagnostics for the enclosing host transaction.
-    pub experience_messages: Vec<BattleChannelMessage>,
-}
+/// Ordered target effects on a vehicle; the enclosing attack still owns launch,
+/// experience and publication.
+pub type BattleVehicleSalvoReport =
+    super::SalvoReport<BattleVehicleSalvoGroup, BattleVehicleInfernoHit>;
 
 /// Resolve a successful salvo atomically using only the target's saved dice stream.
 /// Each packet receives its own location and damage entry, including packets following fatal hull loss.
