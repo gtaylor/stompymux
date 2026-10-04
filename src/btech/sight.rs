@@ -150,22 +150,14 @@ fn resolve(
     let operator = super::combat_operator::admit_running(world, shooter, pilot)?;
     super::spotter::check_firing_role(world, shooter)?;
     let (mechanics, disabled, mode, mut dice) =
-        if let Some(unit) = world.btech.vehicles().get(&shooter) {
+        super::with_unit!(world.btech.unit(shooter).expect("admitted unit"), |unit| {
             (
                 unit.weapon_mechanics(index)?,
-                unit.weapon_failures().get(&index) == Some(&BattleEquipmentFailure::Disabled),
+                unit.weapon_failures.get(&index) == Some(&BattleEquipmentFailure::Disabled),
                 unit.fire_mode(index)?,
                 unit.dice.clone(),
             )
-        } else {
-            let unit = &world.btech.constructed_units()[&shooter];
-            (
-                unit.weapon_mechanics(index)?,
-                false,
-                unit.fire_mode(index)?,
-                unit.dice.clone(),
-            )
-        };
+        });
     let weapon = mechanics.check_sight(disabled)?;
     let requested = request.resolve_for_source(world, operator.source, index)?;
     let target = if weapon.is_artillery() {

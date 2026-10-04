@@ -160,6 +160,7 @@ async fn sight_rejections_are_atomic_across_chassis() {
         let (_dir, config, base, shooter, target, index) = fixture(&source, None).await;
         for condition in [
             "destroyed",
+            "disabled",
             "stunned",
             "unpiloted",
             "stopped",
@@ -198,6 +199,9 @@ async fn sight_rejections_are_atomic_across_chassis() {
                         state["target_lock"] = serde_json::Value::Null;
                         state["power"] = serde_json::to_value(BattlePower::Off).unwrap();
                     }
+                    "disabled" => {
+                        state["weapon_failures"][index.to_string()] = serde_json::json!("disabled")
+                    }
                     "friendly" => state["friendly_fire_safety"] = true.into(),
                     "spotting" => state["spotter"] = shooter.0.into(),
                     _ => (),
@@ -211,7 +215,10 @@ async fn sight_rejections_are_atomic_across_chassis() {
                 "return btech.unit.sight({},1,{selected_index},{selected_target})",
                 shooter.0
             ));
-            assert!(result.is_err(), "{condition}");
+            let error = result.expect_err(condition).to_string();
+            if matches!(condition, "destroyed" | "disabled") {
+                assert!(error.contains("has been destroyed"), "{condition}: {error}");
+            }
             assert_eq!(scripts.world().btech, before, "{condition}");
             assert!(scripts.drain_outbox().is_empty());
         }
