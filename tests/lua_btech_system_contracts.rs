@@ -91,6 +91,8 @@ async fn event_lag_process_state_survives_check_successful_and_failed_reload() {
             let address = listener.local_addr().unwrap();
             let (shutdown, request) = oneshot::channel();
             let server_config = config.clone();
+            // The lag readings come from the configured telemetry, so no heartbeat runs.
+            let (driver, _) = stompymux_rs::HeartbeatDriver::manual();
             let task = tokio::task::spawn_local(async move {
                 stompymux_rs::run_with_schedule_clock(
                     server_config,
@@ -102,6 +104,7 @@ async fn event_lag_process_state_survives_check_successful_and_failed_reload() {
                             .unwrap_or(stompymux_rs::ShutdownRequest::Sigterm)
                     },
                     || 0,
+                    driver,
                 )
                 .await
             });

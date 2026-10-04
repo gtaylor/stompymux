@@ -9476,7 +9476,8 @@ async fn unjam_character_server_tick_retries_failed_commit() {
         persistence::save(&config.database(), &world).await.unwrap();
         let shared = std::rc::Rc::new(std::cell::RefCell::new(world));
         let scripts = Scripts::new(&config, shared.clone()).unwrap();
-        let mut heartbeats = support::Heartbeats::new(scripts.progress(), &config);
+        let (driver, trigger) = HeartbeatDriver::manual();
+        let mut heartbeats = support::Heartbeats::new(trigger, scripts.progress(), &config);
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         // Reject completion before the server starts, while allowing login and countdown saves.
         sqlx::raw_sql("CREATE TRIGGER deny_unjam BEFORE UPDATE ON btech_units WHEN json_extract(OLD.live, '$.unjam') IS NOT NULL AND json_extract(NEW.live, '$.unjam') IS NULL BEGIN SELECT RAISE(ABORT,'unjam failure'); END;").execute(&mut sql).await.unwrap();
@@ -9485,7 +9486,7 @@ async fn unjam_character_server_tick_retries_failed_commit() {
         let (shutdown, request) = tokio::sync::oneshot::channel();
         let server_config = config.clone();
         let task = tokio::task::spawn_local(async move {
-            run_with_schedule_clock(server_config, scripts, listener, async { request.await.unwrap() }, || 1).await
+            run_with_schedule_clock(server_config, scripts, listener, async { request.await.unwrap() }, || 1, driver).await
         });
         let mut client = support::Client { socket: tokio::net::TcpStream::connect(address).await.unwrap(), pending: Vec::new() };
         client.until("Who are you? ").await;

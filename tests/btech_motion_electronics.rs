@@ -1726,7 +1726,8 @@ async fn electronics_server_heartbeat_persists_field() {
             let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
             let (shutdown, request) = tokio::sync::oneshot::channel();
             let server_config = config.clone();
-            let mut heartbeats = support::Heartbeats::new(scripts.progress(), &config);
+            let (driver, trigger) = HeartbeatDriver::manual();
+            let mut heartbeats = support::Heartbeats::new(trigger, scripts.progress(), &config);
             let task = tokio::task::spawn_local(async move {
                 run_with_schedule_clock(
                     server_config,
@@ -1734,6 +1735,7 @@ async fn electronics_server_heartbeat_persists_field() {
                     listener,
                     async { request.await.unwrap() },
                     || 1,
+                    driver,
                 )
                 .await
             });
@@ -2624,7 +2626,8 @@ async fn stealth_server_switch_persists_field() {
             let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
             let (shutdown, request) = tokio::sync::oneshot::channel();
             let server_config = config.clone();
-            let mut heartbeats = support::Heartbeats::new(scripts.progress(), &config);
+            let (driver, trigger) = HeartbeatDriver::manual();
+            let mut heartbeats = support::Heartbeats::new(trigger, scripts.progress(), &config);
             let task = tokio::task::spawn_local(async move {
                 run_with_schedule_clock(
                     server_config,
@@ -2632,6 +2635,7 @@ async fn stealth_server_switch_persists_field() {
                     listener,
                     async { request.await.unwrap() },
                     || 1,
+                    driver,
                 )
                 .await
             });
@@ -2967,7 +2971,8 @@ async fn nss_server_switch_persists_state() {
             let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
             let (shutdown, request) = tokio::sync::oneshot::channel();
             let server_config = config.clone();
-            let mut heartbeats = support::Heartbeats::new(scripts.progress(), &config);
+            let (driver, trigger) = HeartbeatDriver::manual();
+            let mut heartbeats = support::Heartbeats::new(trigger, scripts.progress(), &config);
             let task = tokio::task::spawn_local(async move {
                 run_with_schedule_clock(
                     server_config,
@@ -2975,6 +2980,7 @@ async fn nss_server_switch_persists_state() {
                     listener,
                     async { request.await.unwrap() },
                     || 1,
+                    driver,
                 )
                 .await
             });

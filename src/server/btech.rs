@@ -14,10 +14,9 @@ impl Server {
         now: i64,
         metrics: Option<&mut super::heartbeat_harness::HeartbeatMetrics>,
     ) {
-        let started = tokio::time::Instant::now();
         let committed = self.btech_step(now, metrics).await;
         self.scripts
-            .record_progress(|progress| progress.record_heartbeat(started, committed));
+            .record_progress(|progress| progress.record_heartbeat(committed));
     }
 
     /// Run one simulation step and report whether its world commit succeeded.

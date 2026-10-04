@@ -70,7 +70,7 @@ async fn running_units_standing_still_write_nothing_per_tick() {
     }
 }
 
-/// Every harness heartbeat publishes its attempt and when it began; only a successful
+/// Every harness heartbeat publishes its attempt; only a successful
 /// commit counts as committed, so a refused save leaves the committed count alone.
 #[tokio::test(flavor = "current_thread")]
 async fn heartbeat_progress_counts_attempts_and_commits() {
@@ -82,14 +82,12 @@ async fn heartbeat_progress_counts_attempts_and_commits() {
     let mut harness = HeartbeatHarness::new(config.clone(), world).unwrap();
     let progress = harness.scripts().progress();
     assert_eq!(*progress.borrow(), RuntimeProgress::default());
-    let started = tokio::time::Instant::now();
     assert!(harness.step(1).await.committed);
     let first = *progress.borrow();
     assert_eq!(
         (first.heartbeats_attempted, first.heartbeats_committed),
         (1, 1)
     );
-    assert!(first.heartbeat_started.is_some_and(|at| at >= started));
     let mut db = <sqlx::SqliteConnection as sqlx::Connection>::connect_with(
         &sqlx::sqlite::SqliteConnectOptions::new().filename(config.database()),
     )

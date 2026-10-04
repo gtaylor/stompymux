@@ -6,6 +6,8 @@ mod configuration;
 mod connection;
 mod diagnostics;
 mod execution;
+mod heartbeat_driver;
+pub use heartbeat_driver::{HeartbeatDriver, HeartbeatTrigger};
 mod heartbeat_harness;
 mod help;
 pub use heartbeat_harness::{HeartbeatHarness, HeartbeatMetrics};

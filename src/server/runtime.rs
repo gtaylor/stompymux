@@ -1,23 +1,34 @@
 //! Serialized server event loop and runtime task coordination.
 use super::*;
 
+/// Run the server loop with production clocks and a heartbeat every second.
 pub async fn run(
     c: Config,
     scripts: Scripts,
     listener: TcpListener,
     shutdown: impl Future<Output = ShutdownRequest>,
 ) -> Result<()> {
-    run_with_schedule_clock(c, scripts, listener, shutdown, crate::clock::wall_time).await
+    run_with_schedule_clock(
+        c,
+        scripts,
+        listener,
+        shutdown,
+        crate::clock::wall_time,
+        HeartbeatDriver::interval(),
+    )
+    .await
 }
 
-/// Run with an injected schedule-only UTC clock for deterministic embedding and TCP tests.
-/// Connection timeouts and authentication continue to use their normal clocks.
+/// Run with an injected schedule-only UTC clock and a chosen heartbeat driver, for
+/// deterministic embedding and TCP tests. Connection timeouts and authentication continue
+/// to use their normal clocks.
 pub async fn run_with_schedule_clock(
     c: Config,
     scripts: Scripts,
     listener: TcpListener,
     shutdown: impl Future<Output = ShutdownRequest>,
     schedule_now: impl Fn() -> i64,
+    heartbeats: HeartbeatDriver,
 ) -> Result<()> {
     run_with_clocks(
         c,
@@ -26,11 +37,13 @@ pub async fn run_with_schedule_clock(
         shutdown,
         schedule_now,
         tokio::time::Instant::now,
+        heartbeats,
     )
     .await
 }
 
-/// Inject independent UTC schedule and monotonic cleaning clocks; socket clocks stay real.
+/// Inject independent UTC schedule and monotonic cleaning clocks and a heartbeat driver;
+/// socket clocks stay real.
 pub async fn run_with_clocks(
     c: Config,
     scripts: Scripts,
@@ -38,6 +51,7 @@ pub async fn run_with_clocks(
     shutdown: impl Future<Output = ShutdownRequest>,
     schedule_now: impl Fn() -> i64,
     cleaning_now: impl Fn() -> tokio::time::Instant,
+    heartbeats: HeartbeatDriver,
 ) -> Result<()> {
     c.validate_for_serve()?;
     c.site_policy
@@ -75,11 +89,7 @@ pub async fn run_with_clocks(
     let mut tick = tokio::time::interval(Duration::from_millis(
         server.config.runtime.maintenance_interval_ms,
     ));
-    let mut btech_tick = tokio::time::interval_at(
-        tokio::time::Instant::now() + Duration::from_secs(1),
-        Duration::from_secs(1),
-    );
-    btech_tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+    let mut heartbeats = heartbeats.start();
     let mut tasks = tokio::task::JoinSet::new();
     let mut idle_deadline = tokio::time::Instant::now();
     tokio::pin!(shutdown);
@@ -166,7 +176,7 @@ pub async fn run_with_clocks(
                     }
                 }}
             },
-            _ = btech_tick.tick(), if server.shutdown.is_none() => { server.btech_tick(schedule_now()).await; },
+            _ = heartbeats.due(), if server.shutdown.is_none() => { server.btech_tick(schedule_now()).await; },
             _ = tick.tick() => {
                 queue_credit = server.config.mux.command_queue_idle_chunk as usize;
                 if server.shutdown.is_none() && server.cleaning.take_due(cleaning_now()) { server.dbck(crate::cleaning::CheckOrigin::Automatic).await; }

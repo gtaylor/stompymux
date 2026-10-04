@@ -199,6 +199,8 @@ async fn start(
     let address = listener.local_addr().unwrap();
     let (tx, rx) = oneshot::channel();
     let config = c.clone();
+    // These scenarios fire no heartbeats, so none runs at all.
+    let (driver, _) = stompymux_rs::HeartbeatDriver::manual();
     let task = tokio::task::spawn_local(async move {
         server::run_with_schedule_clock(
             config,
@@ -206,6 +208,7 @@ async fn start(
             listener,
             async { rx.await.unwrap_or(ShutdownRequest::Sigterm) },
             move || clock.get(),
+            driver,
         )
         .await
     });

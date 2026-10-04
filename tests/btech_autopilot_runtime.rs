@@ -72,14 +72,12 @@ async fn move_order_reaches_destination_and_starts_hold_order() {
                 .unwrap();
             drop(scripts);
 
-            tokio::time::pause();
-            let (_address, shutdown, task, _lua, _heartbeats) =
+            let (_address, shutdown, task, _lua, mut heartbeats) =
                 support::start(&config, Rc::new(std::cell::Cell::new(1))).await;
             let mut hold_started = false;
             let mut latest = None;
             for _ in 0..96 {
-                tokio::time::advance(std::time::Duration::from_secs(1)).await;
-                tokio::task::yield_now().await;
+                heartbeats.attempt().await;
                 let loaded = persistence::load(&config.database()).await.unwrap();
                 if let Some(controller) = loaded.btech.controllers().get(&unit) {
                     hold_started = controller
@@ -107,7 +105,6 @@ async fn move_order_reaches_destination_and_starts_hold_order() {
             shutdown
                 .send(stompymux_rs::ShutdownRequest::Sigterm)
                 .unwrap();
-            tokio::time::resume();
             task.await.unwrap().unwrap();
         })
         .await;

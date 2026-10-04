@@ -1,8 +1,9 @@
-//! Drive the embedded server's heartbeat and maintenance tick on the paused tokio clock,
-//! waiting on the progress the server publishes instead of on real time.
+//! Drive the embedded server's heartbeat through its manual trigger and its maintenance
+//! tick on the paused tokio clock, waiting on the progress the server publishes instead
+//! of on real time.
 
 use std::time::Duration;
-use stompymux_rs::{Config, RuntimeProgress, World, persistence};
+use stompymux_rs::{Config, HeartbeatTrigger, RuntimeProgress, World, persistence};
 use tokio::sync::watch;
 
 /// Real time any single wait may take before the test fails instead of hanging.
@@ -12,23 +13,31 @@ const STEP_LIMIT: Duration = Duration::from_secs(30);
 /// refusal can only come from a commit that started before the test lifted its fault.
 const COMMIT_ATTEMPTS: usize = 3;
 
-/// Handle on one embedded server's published progress, returned by [`crate::start`].
+/// Handle on one embedded server's heartbeat trigger and published progress, returned by
+/// [`crate::start`]. The server runs a heartbeat only when this handle fires one.
 pub struct Heartbeats {
+    trigger: HeartbeatTrigger,
     progress: watch::Receiver<RuntimeProgress>,
     maintenance_interval: Duration,
 }
 
 impl Heartbeats {
-    /// Watch `progress` from a server running with `config`.
-    pub fn new(progress: watch::Receiver<RuntimeProgress>, config: &Config) -> Self {
+    /// Fire heartbeats through `trigger` and watch `progress` from a server running with
+    /// `config`.
+    pub fn new(
+        trigger: HeartbeatTrigger,
+        progress: watch::Receiver<RuntimeProgress>,
+        config: &Config,
+    ) -> Self {
         Self {
+            trigger,
             progress,
             maintenance_interval: Duration::from_millis(config.runtime.maintenance_interval_ms),
         }
     }
 
-    /// Wait until the server loop has started, so its heartbeat interval is armed and a
-    /// clock advance fires it. A server that fails to start closes the channel instead.
+    /// Wait until the server loop has started and run its first maintenance tick. A server
+    /// that fails to start closes the channel instead.
     pub async fn ready(&mut self) {
         let started = self
             .progress
@@ -38,15 +47,17 @@ impl Heartbeats {
             .expect("server loop did not start");
     }
 
-    /// Fire one heartbeat by advancing the clock a second, then wait until the server has
-    /// finished that heartbeat, whether or not its commit succeeded. A heartbeat already
-    /// running when the clock moved does not count. Tests that refuse commits use this.
+    /// Advance the clock a second, as one heartbeat's worth of game time, then fire one
+    /// heartbeat and wait until the server has finished it, whether or not its commit
+    /// succeeded. Tests that refuse commits use this.
     pub async fn attempt(&mut self) -> RuntimeProgress {
-        let fired = advance(Duration::from_secs(1)).await;
+        let before = self.progress.borrow().heartbeats_attempted;
+        advance(Duration::from_secs(1)).await;
+        if self.trigger.fire().await.is_err() {
+            panic!("server stopped before its next heartbeat");
+        }
         self.wait("heartbeat", |progress| {
-            progress
-                .heartbeat_started
-                .is_some_and(|started| started >= fired)
+            progress.heartbeats_attempted > before
         })
         .await
     }
@@ -119,13 +130,10 @@ impl Heartbeats {
     }
 }
 
-/// Move the runtime clock forward without waiting out real time, returning the advanced
-/// instant. The clock resumes afterwards so SQLite work on other threads never lets
-/// paused timers run ahead.
-async fn advance(by: Duration) -> tokio::time::Instant {
+/// Move the runtime clock forward without waiting out real time. The clock resumes
+/// afterwards so SQLite work on other threads never lets paused timers run ahead.
+async fn advance(by: Duration) {
     tokio::time::pause();
     tokio::time::advance(by).await;
-    let advanced = tokio::time::Instant::now();
     tokio::time::resume();
-    advanced
 }

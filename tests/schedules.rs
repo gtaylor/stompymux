@@ -509,7 +509,8 @@ async fn tcp_cleaning_controls_purge_failure_and_connected_players() {
         persistence::save(&c.database(), &world).await.unwrap();
         let scripts = server::prepare(&c).await.unwrap();
         let shared = scripts.inspect_world();
-        let mut heartbeats = support::Heartbeats::new(scripts.progress(), &c);
+        let (driver, trigger) = stompymux_rs::HeartbeatDriver::manual();
+        let mut heartbeats = support::Heartbeats::new(trigger, scripts.progress(), &c);
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let address = listener.local_addr().unwrap();
         let now = tokio::time::Instant::now();
@@ -517,7 +518,7 @@ async fn tcp_cleaning_controls_purge_failure_and_connected_players() {
         let ticking = clock.clone();
         let config = c.clone();
         let (tx, rx) = oneshot::channel();
-        let task = tokio::task::spawn_local(async move { server::run_with_clocks(config, scripts, listener, async { rx.await.unwrap() }, stompymux_rs::clock::wall_time, move || ticking.get()).await });
+        let task = tokio::task::spawn_local(async move { server::run_with_clocks(config, scripts, listener, async { rx.await.unwrap() }, stompymux_rs::clock::wall_time, move || ticking.get(), driver).await });
         let mut god = Client::connect(address, 1).await;
         let mut player = Client::connect(address, 2).await;
         let mut second = Client::connect(address, 2).await;
