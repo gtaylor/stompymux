@@ -23,6 +23,7 @@ async fn cross_surface(row: &str) {
         BattleMapAsset::from_cells(&format!("20 3\n{row}\n{row}\n{row}\n")).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let id = world.create(&config, "Hovercraft".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     create_battle_vehicle(
@@ -32,9 +33,11 @@ async fn cross_surface(row: &str) {
             .unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, id, map, 2, 1).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
         advance_battle_units(&mut world, 0);
@@ -58,6 +61,7 @@ async fn cross_surface(row: &str) {
         BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, mech, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, mech, map, 6, 2).unwrap();
     let terrain_before =
         serde_json::to_value(&world.btech.maps()[&map]).unwrap()["terrain"].clone();

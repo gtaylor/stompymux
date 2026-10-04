@@ -186,7 +186,7 @@ fn tracked_transport_asset_has_only_ground_sections() {
 #[test]
 fn vtol_assets_share_vehicle_anatomy_and_equipment_without_ground_admission() {
     let mut count = 0;
-    for entry in std::fs::read_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/game/mechs")).unwrap() {
+    for entry in std::fs::read_dir(crate::support::repository_root().join("game/mechs")).unwrap() {
         let path = entry.unwrap().path();
         if !path.is_file() {
             continue;

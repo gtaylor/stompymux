@@ -51,6 +51,7 @@ async fn recovery_preserves_dice_and_timer_across_injury_restart_and_cockpit_rel
         stompymux_rs::BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let unit = world.create(&config, "Cockpit".into(), stompymux_rs::Kind::Thing);
     world.objects.get_mut(&unit).unwrap().home = Some(ObjectId(config.home()));
     stompymux_rs::create_battle_unit(
@@ -63,6 +64,7 @@ async fn recovery_preserves_dice_and_timer_across_injury_restart_and_cockpit_rel
         .unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, unit, support::FIXTURE_DICE_SEED);
     stompymux_rs::place_battle_unit(&mut world, unit, map, 0, 0).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(unit);
     stompymux_rs::assign_battle_pilot(&mut world, unit, ObjectId(1)).unwrap();
@@ -130,20 +132,12 @@ async fn recovery_ticks_without_a_unit_and_failed_save_replays_the_same_roll() {
         expected.btech = serde_json::from_value(phase_state).unwrap();
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         sqlx::raw_sql("CREATE TRIGGER deny_recovery BEFORE UPDATE ON btech_character_recovery BEGIN SELECT RAISE(ABORT,'recovery failure'); END;").execute(&mut sql).await.unwrap();
-        let (_address, shutdown, task, _lua) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
-        support::attempt_heartbeat().await;
+        let (_address, shutdown, task, _lua, mut heartbeats) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
+        heartbeats.attempt().await;
         assert_eq!(persistence::load(&config.database()).await.unwrap().btech, before);
         sqlx::query("DROP TRIGGER deny_recovery").execute(&mut sql).await.unwrap();
-        tokio::time::timeout(std::time::Duration::from_secs(5), async {
-            loop {
-                let loaded = persistence::load(&config.database()).await.unwrap();
-                if !loaded.btech.unconscious(ObjectId(1)) {
-                    assert_eq!(loaded.btech, expected.btech);
-                    break;
-                }
-                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-            }
-        }).await.unwrap();
+        let loaded = heartbeats.until_saved(&config, 5, |loaded| !loaded.btech.unconscious(ObjectId(1))).await;
+        assert_eq!(loaded.btech, expected.btech);
         shutdown.send(stompymux_rs::ShutdownRequest::Sigterm).unwrap();
         task.await.unwrap().unwrap();
     }).await;

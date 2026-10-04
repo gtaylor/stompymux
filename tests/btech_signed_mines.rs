@@ -40,6 +40,7 @@ async fn signed_mines_share_burn_adjustments_neighbor_effects_and_restart() {
             BattleMapAsset::from_cells("3 3\n.0.0.0\n\"0.0.0\n.0.0.0\n").unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut base, map, support::FIXTURE_DICE_SEED);
         let id = base.create(&config, "Blast target".into(), Kind::Thing);
         base.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         let mech = matches!(chassis, "biped" | "quad");
@@ -58,6 +59,7 @@ async fn signed_mines_share_burn_adjustments_neighbor_effects_and_restart() {
                 .unwrap(),
             )
             .unwrap();
+            support::seed_object_dice(&mut base, id, support::FIXTURE_DICE_SEED);
         } else {
             let text = match chassis {
                 "vtol" => include_str!("../game/mechs/Kestrel.toml").to_owned(),
@@ -76,6 +78,7 @@ async fn signed_mines_share_burn_adjustments_neighbor_effects_and_restart() {
                 BattleVehicleTemplate::parse("test", &text).unwrap(),
             )
             .unwrap();
+            support::seed_object_dice(&mut base, id, support::FIXTURE_DICE_SEED);
         }
         place_battle_unit(&mut base, id, map, 1, 1).unwrap();
         for kind in [

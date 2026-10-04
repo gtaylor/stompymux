@@ -98,7 +98,7 @@ fn actuator(unit: &BattleUnit, section: BattleSection, slot: u8, system: BattleS
         && unit.definition().sections[&section]
             .criticals
             .get(&slot)
-            .is_some_and(|part| BattleSystem::parse(&part.equipment).ok() == Some(system))
+            .is_some_and(|part| BattleSystem::named(&part.equipment) == Some(system))
 }
 
 /// Return the arm's aiming penalty and halved damage, or reject unavailable/recycling arms.

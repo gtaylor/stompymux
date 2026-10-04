@@ -123,6 +123,7 @@ async fn runtime_fixture() -> (
     place_battle_unit(&mut world, id, map, 5, 5).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
         advance_battle_units(&mut world, 0);
@@ -248,34 +249,23 @@ async fn jump_client(address: std::net::SocketAddr) -> support::Client {
     client
 }
 
-/// Advance the ordinary server clock and wait for its committed unit update.
+/// Run committed heartbeats until one changes the unit, and return the saved world.
 async fn jump_tick(
     config: &stompymux_rs::Config,
     id: stompymux_rs::ObjectId,
+    heartbeats: &mut support::Heartbeats,
 ) -> stompymux_rs::World {
-    use std::time::Duration;
     let before = stompymux_rs::persistence::load(&config.database())
         .await
         .unwrap()
         .btech
         .constructed_units()[&id]
         .clone();
-    tokio::time::pause();
-    tokio::time::advance(Duration::from_secs(1)).await;
-    tokio::time::resume();
-    tokio::time::timeout(Duration::from_secs(5), async {
-        loop {
-            let world = stompymux_rs::persistence::load(&config.database())
-                .await
-                .unwrap();
-            if world.btech.constructed_units()[&id] != before {
-                return world;
-            }
-            tokio::time::sleep(Duration::from_millis(5)).await;
-        }
-    })
-    .await
-    .expect("jump heartbeat did not commit")
+    heartbeats
+        .until_saved(config, 5, |world| {
+            world.btech.constructed_units()[&id] != before
+        })
+        .await
 }
 
 #[tokio::test]
@@ -287,7 +277,7 @@ async fn tcp_jump_retries_failed_launch_and_flight_saves_then_resumes_after_rest
         persistence::save(&config.database(), &world).await.unwrap();
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         sqlx::query("UPDATE player_state SET password_hash=? WHERE object_dbref=1").bind(accounts::hash("secret", &config).unwrap()).execute(&mut sql).await.unwrap();
-        let (address, shutdown, task, _lua) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
+        let (address, shutdown, task, _lua, mut heartbeats) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
         let mut client = jump_client(address).await;
         sqlx::query(sqlx::AssertSqlSafe(format!("CREATE TRIGGER reject_launch BEFORE UPDATE ON btech_units WHEN NEW.dbref={} AND json_extract(NEW.live,'$.flight.travelled')=0 BEGIN SELECT RAISE(ABORT,'launch failure'); END",id.0))).execute(&mut sql).await.unwrap();
         client.send("jump 0 2").await;
@@ -299,11 +289,11 @@ async fn tcp_jump_retries_failed_launch_and_flight_saves_then_resumes_after_rest
         client.send("jump 0 2").await;
         client.until("You engage your jump jets.").await;
         let launched = persistence::load(&config.database()).await.unwrap();
-        support::attempt_heartbeat().await;
+        heartbeats.attempt().await;
         let failed = persistence::load(&config.database()).await.unwrap();
         assert_eq!(failed.btech.constructed_units()[&id], launched.btech.constructed_units()[&id]);
         sqlx::query("DROP TRIGGER reject_flight").execute(&mut sql).await.unwrap();
-        for _ in 0..10 { jump_tick(&config, id).await; }
+        for _ in 0..10 { jump_tick(&config, id, &mut heartbeats).await; }
         shutdown.send(ShutdownRequest::Sigterm).unwrap();
         task.await.unwrap().unwrap();
         let saved = persistence::load(&config.database()).await.unwrap();
@@ -311,19 +301,19 @@ async fn tcp_jump_retries_failed_launch_and_flight_saves_then_resumes_after_rest
         assert!(cursor.travelled() > 0.0 && !cursor.arrived());
         // Hold the restored cursor while login runs; real heartbeat time can advance during I/O.
         sqlx::query(sqlx::AssertSqlSafe(format!("CREATE TRIGGER hold_resume BEFORE UPDATE ON btech_units WHEN NEW.dbref={} AND json_extract(NEW.live,'$.flight') IS NOT json_extract(OLD.live,'$.flight') BEGIN SELECT RAISE(ABORT,'resume held'); END",id.0))).execute(&mut sql).await.unwrap();
-        let (address, shutdown, task, _lua) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
+        let (address, shutdown, task, _lua, mut heartbeats) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
         let mut client = jump_client(address).await;
         let mut world = persistence::load(&config.database()).await.unwrap();
         assert_eq!(world.btech.constructed_units()[&id].flight(), Some(cursor));
         sqlx::query("DROP TRIGGER hold_resume").execute(&mut sql).await.unwrap();
         for _ in 0..30 {
             if world.btech.constructed_units()[&id].flight().is_none() { break; }
-            world = jump_tick(&config, id).await;
+            world = jump_tick(&config, id, &mut heartbeats).await;
         }
         assert!(world.btech.constructed_units()[&id].flight().is_none());
         assert_eq!(world.btech.constructed_units()[&id].position().unwrap().y, 3);
         client.until("You finish your jump.").await;
-        for _ in 0..12 { world = jump_tick(&config, id).await; }
+        for _ in 0..12 { world = jump_tick(&config, id, &mut heartbeats).await; }
         assert_eq!(world.btech.constructed_units()[&id].jump_stabilization(), 0);
         client.until("You have finally stabilized after your jump.").await;
         shutdown.send(ShutdownRequest::Sigterm).unwrap();
@@ -344,6 +334,7 @@ async fn connected_jump_domain_updates_height_heat_landing_and_stabilization_aft
         BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, observer, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, observer, map, 3, 4).unwrap();
     set_battle_speed(&mut world, id, ObjectId(1), 32.25).unwrap();
     launch_battle_jump(&mut world, id, ObjectId(1), 0, 2.0).unwrap();
@@ -928,6 +919,7 @@ async fn flooded_capacity_and_lua_inspection_survive_restart_without_mutation() 
         BattleMapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let id = world.create(&config, "Jump Jenner".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     create_battle_unit(
@@ -936,6 +928,7 @@ async fn flooded_capacity_and_lua_inspection_survive_restart_without_mutation() 
         BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
     // Flooding a previously damaged jet must not subtract its thrust a second time.
     stompymux_rs::destroy_battle_critical(
@@ -1355,6 +1348,7 @@ async fn second_airborne_gyro_forces_a_fall_even_with_zero_whole_jump_points() {
         },
     )
     .unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     set_battle_character_value(
         &mut world,
         ObjectId(1),
@@ -1583,9 +1577,11 @@ async fn airborne_fire_uses_shared_native_lua_transactions_and_saved_trajectorie
         BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut base, target, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut base, target, map, 5, 3).unwrap();
     base.objects.get_mut(&ObjectId(2)).unwrap().location = Some(target);
     assign_battle_pilot(&mut base, target, ObjectId(2)).unwrap();
+    support::seed_object_dice(&mut base, ObjectId(2), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut base, target, ObjectId(2), true).unwrap();
     for _ in 0..5 {
         advance_battle_units(&mut base, 0);
@@ -1609,6 +1605,7 @@ async fn airborne_fire_uses_shared_native_lua_transactions_and_saved_trajectorie
         },
     )
     .unwrap();
+    support::seed_object_dice(&mut base, ObjectId(1), support::FIXTURE_DICE_SEED);
     set_battle_character_value(
         &mut base,
         ObjectId(1),
@@ -1724,6 +1721,7 @@ async fn early_landing_native_lua_success_failure_and_rollback_share_current_poi
             },
         )
         .unwrap();
+        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         set_battle_character_value(
             &mut world,
             ObjectId(1),
@@ -1888,6 +1886,7 @@ async fn tcp_early_landing_save_failure_restores_flight_and_dice_before_retry() 
     tokio::task::LocalSet::new().run_until(async {
         let (_dir, config, mut world, id) = runtime_fixture().await;
         set_battle_character(&mut world, ObjectId(1), BattleCharacter { build: 5, reflexes: 4, intuition: 3, learn: 2, charisma: 1, bruise: 0, lethal: 0 }).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         set_battle_character_value(&mut world, ObjectId(1), "Piloting-Biped", BattleCharacterValue { value: 30, experience: 0, last_used: 0 }).unwrap();
         launch_battle_jump(&mut world, id, ObjectId(1), 0, 2.0).unwrap();
         for _ in 0..6 { advance_battle_jumps(&mut world, stompymux_rs::BattleMovementRules {fall: stompymux_rs::BattleFallRules { stacking: stompymux_rs::BattleStackingRules::STANDARD, ..jump_rules() },  ..stompymux_rs::BattleMovementRules::STANDARD }).unwrap(); }
@@ -1896,7 +1895,7 @@ async fn tcp_early_landing_save_failure_restores_flight_and_dice_before_retry() 
         sqlx::query("UPDATE player_state SET password_hash=? WHERE object_dbref=1").bind(accounts::hash("secret", &config).unwrap()).execute(&mut sql).await.unwrap();
         // Also freeze flight ticks so a rejected action can be compared with the exact saved cursor.
         sqlx::query(sqlx::AssertSqlSafe(format!("CREATE TRIGGER reject_landing BEFORE UPDATE ON btech_units WHEN NEW.dbref={} BEGIN SELECT RAISE(ABORT,'landing failure'); END",id.0))).execute(&mut sql).await.unwrap();
-        let (address, shutdown, task, _lua) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
+        let (address, shutdown, task, _lua, _heartbeats) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
         let mut client = jump_client(address).await;
         let before = persistence::load(&config.database()).await.unwrap().btech.constructed_units()[&id].clone();
         client.send("land").await;
@@ -2078,6 +2077,7 @@ fn jump_hills(
     .unwrap();
     place_battle_unit(world, id, map, 5, 5).unwrap();
     assign_battle_pilot(world, id, ObjectId(1)).unwrap();
+    support::seed_object_dice(world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(world, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
         advance_battle_units(world, 0);
@@ -2169,6 +2169,7 @@ async fn hill_collision_rolls_back_the_transition_then_lands_or_falls() {
                 },
             )
             .unwrap();
+            support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
             set_battle_character_value(
                 &mut world,
                 ObjectId(1),
@@ -2287,6 +2288,7 @@ async fn dry_terrain_jump_routes_share_adapters_heat_and_restartable_landing() {
         .unwrap();
         place_battle_unit(&mut world, id, map, 5, 5).unwrap();
         assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
         for _ in 0..5 {
             advance_battle_units(&mut world, 0);
@@ -2414,6 +2416,7 @@ async fn water_jump_fixture(
     .unwrap();
     place_battle_unit(&mut world, id, map, 5, 5).unwrap();
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
         advance_battle_units(&mut world, 0);
@@ -2529,6 +2532,7 @@ async fn shallow_water_launches_and_airborne_fire_above_deep_water_are_supported
         BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, target, map, 6, 2).unwrap();
     launch_battle_jump(&mut world, id, ObjectId(1), 0, 3.0).unwrap();
     for _ in 0..12 {
@@ -2797,6 +2801,7 @@ async fn free_fall_surface_contact_and_engine_restart_keep_the_event_cadence() {
         }
         world.btech = serde_json::from_value(state).unwrap();
         assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
         for second in 1..=impact_second {
             advance_battle_units(&mut world, 0);
@@ -2858,6 +2863,7 @@ async fn restarted_free_fall_can_land_and_retains_its_pending_impact() {
             })
             .unwrap();
         assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         let before = world.btech.clone();
         assert!(
             land_battle_jump(
@@ -3017,6 +3023,7 @@ async fn powered_off_free_fall_stabilization_counts_down_through_restart() {
     world = persistence::load(&config.database()).await.unwrap();
     assert_eq!(world.btech.constructed_units()[&id].jump_stabilization(), 7);
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
         advance_battle_units(&mut world, 0);
@@ -3077,7 +3084,7 @@ async fn tcp_free_fall_retries_shutdown_and_impact_saves_across_restart() {
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         sqlx::query("UPDATE player_state SET password_hash=? WHERE object_dbref=1").bind(accounts::hash("secret", &config).unwrap()).execute(&mut sql).await.unwrap();
         sqlx::query(sqlx::AssertSqlSafe(format!("CREATE TRIGGER reject_shutdown BEFORE UPDATE ON btech_units WHEN NEW.dbref={} BEGIN SELECT RAISE(ABORT,'shutdown failure'); END",id.0))).execute(&mut sql).await.unwrap();
-        let (address, shutdown, task, _lua) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
+        let (address, shutdown, task, _lua, _heartbeats) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
         let mut client = jump_client(address).await;
         let before = persistence::load(&config.database()).await.unwrap().btech.constructed_units()[&id].clone();
         client.send("shutdown").await;
@@ -3099,17 +3106,17 @@ async fn tcp_free_fall_retries_shutdown_and_impact_saves_across_restart() {
         assert!(saved.btech.constructed_units()[&id].pilot().is_none());
         // Hold the resumed timer through login so a live tick cannot outrun the restart assertion.
         sqlx::query(sqlx::AssertSqlSafe(format!("CREATE TRIGGER hold_restart BEFORE UPDATE ON btech_units WHEN NEW.dbref={} BEGIN SELECT RAISE(ABORT,'restart checkpoint'); END",id.0))).execute(&mut sql).await.unwrap();
-        let (address, shutdown, task, _lua) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
+        let (address, shutdown, task, _lua, mut heartbeats) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
         let mut client = jump_client(address).await;
         let mut saved = persistence::load(&config.database()).await.unwrap();
         assert_eq!(saved.btech.constructed_units()[&id].free_fall(), Some(cursor));
         sqlx::query("DROP TRIGGER hold_restart").execute(&mut sql).await.unwrap();
         for _ in 0..3 {
             if serde_json::to_value(saved.btech.constructed_units()[&id].free_fall()).unwrap()["remaining"] == 1 { break; }
-            saved = jump_tick(&config, id).await;
+            saved = jump_tick(&config, id, &mut heartbeats).await;
         }
         let before = saved.btech.constructed_units()[&id].clone();
-        support::attempt_heartbeat().await;
+        heartbeats.attempt().await;
         client.send("say impact-fence").await;
         let output = client.until("You say \"impact-fence\"").await;
         assert!(!output.contains("You hit the ground!"), "{output}");
@@ -3119,7 +3126,7 @@ async fn tcp_free_fall_retries_shutdown_and_impact_saves_across_restart() {
         expected_fall.hit = stompymux_rs::BattleFallRules::configured(&config).hit;
         advance_battle_jumps(&mut expected, stompymux_rs::BattleMovementRules {fall: expected_fall,  ..stompymux_rs::BattleMovementRules::STANDARD }).unwrap();
         sqlx::query("DROP TRIGGER reject_impact").execute(&mut sql).await.unwrap();
-        let landed = jump_tick(&config, id).await;
+        let landed = jump_tick(&config, id, &mut heartbeats).await;
         client.until("You hit the ground!").await;
         let unit = &landed.btech.constructed_units()[&id];
         assert!(unit.free_fall().is_none());
@@ -3224,6 +3231,7 @@ fn jump_observer(
         BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(world, observer, support::FIXTURE_DICE_SEED);
     let map = world.btech.constructed_units()[&subject]
         .position()
         .unwrap()
@@ -4051,6 +4059,7 @@ async fn dfa_landing_dispatch_and_saved_replay() {
         },
     )
     .unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     set_battle_character_value(
         &mut world,
         ObjectId(1),
@@ -4275,6 +4284,7 @@ async fn dfa_landing_early_attack_uses_shared_policy() {
         },
     )
     .unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     set_battle_character_value(
         &mut world,
         ObjectId(1),
@@ -4345,6 +4355,7 @@ async fn character_free_fall_action_replays_and_rolls_back_casualties() {
             .remove(Flag::Wizard);
         world.objects.get_mut(&pilot).unwrap().location = Some(id);
         assign_battle_pilot(&mut world, id, pilot).unwrap();
+        support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
         set_battle_character(
             &mut world,
             pilot,
@@ -4359,6 +4370,7 @@ async fn character_free_fall_action_replays_and_rolls_back_casualties() {
             },
         )
         .unwrap();
+        support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
         world
             .objects
             .get_mut(&id)
@@ -4458,6 +4470,7 @@ async fn character_water_landing_evacuates_and_retries() {
         .remove(Flag::Wizard);
     world.objects.get_mut(&pilot).unwrap().location = Some(id);
     assign_battle_pilot(&mut world, id, pilot).unwrap();
+    support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
     world
         .objects
         .get_mut(&id)
@@ -4478,6 +4491,7 @@ async fn character_water_landing_evacuates_and_retries() {
         },
     )
     .unwrap();
+    support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
     let baseline = world.clone();
     assert!(advance_battle_jumps(&mut world, movement).is_err());
     assert_eq!(world.btech, baseline.btech);
@@ -4545,6 +4559,7 @@ async fn character_dfa_landing_dispatch_rolls_back_and_replays() {
         },
     )
     .unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     set_battle_character_value(
         &mut world,
         ObjectId(1),
@@ -4596,6 +4611,7 @@ async fn character_dfa_landing_dispatch_rolls_back_and_replays() {
         .insert(Flag::Connected);
     world.objects.get_mut(&pilot).unwrap().location = Some(target);
     assign_battle_pilot(&mut world, target, pilot).unwrap();
+    support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
     world
         .objects
         .get_mut(&target)
@@ -4616,6 +4632,7 @@ async fn character_dfa_landing_dispatch_rolls_back_and_replays() {
         },
     )
     .unwrap();
+    support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
     let mut state = serde_json::to_value(&world.btech).unwrap();
     for unit in [id, target] {
         let seed = (0..=255)
@@ -4702,6 +4719,7 @@ async fn character_jump_commands_land_and_rollback() {
             .insert(Flag::Connected);
         base.objects.get_mut(&pilot).unwrap().location = Some(unit);
         assign_battle_pilot(&mut base, unit, pilot).unwrap();
+        support::seed_object_dice(&mut base, pilot, support::FIXTURE_DICE_SEED);
         set_battle_character(
             &mut base,
             pilot,
@@ -4716,6 +4734,7 @@ async fn character_jump_commands_land_and_rollback() {
             },
         )
         .unwrap();
+        support::seed_object_dice(&mut base, pilot, support::FIXTURE_DICE_SEED);
         for name in ["Piloting-Biped", "Piloting-Battlemech"] {
             set_battle_character_value(
                 &mut base,
@@ -4862,6 +4881,7 @@ async fn character_landing_control_experience_and_restart() {
                     },
                 )
                 .unwrap();
+                support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
                 let skill = if extended {
                     "Piloting-Biped"
                 } else {
@@ -5076,6 +5096,7 @@ async fn character_manual_landing_adapters_and_casualty_rollback() {
                 .remove(Flag::Wizard);
             release_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
             assign_battle_pilot(&mut world, id, pilot).unwrap();
+            support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
             world
                 .objects
                 .get_mut(&id)
@@ -5097,6 +5118,7 @@ async fn character_manual_landing_adapters_and_casualty_rollback() {
                 },
             )
             .unwrap();
+            support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
             launch_battle_jump(&mut world, id, pilot, 0, 2.0).unwrap();
             if case == "gear" {
                 destroy_battle_critical(
@@ -5560,6 +5582,7 @@ async fn jump_fields_cross_wrapping_seams_and_restart() {
                 BattleMapAsset::from_cells(&asset).unwrap(),
             )
             .unwrap();
+            support::seed_object_dice(&mut world, other, support::FIXTURE_DICE_SEED);
             reassign_battle_map(&mut world, id, other, None).unwrap();
             let edit = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
             let before = edit.world().btech.constructed_units()[&id]

@@ -169,6 +169,7 @@ async fn environment_validation_and_authority_are_atomic() {
         BattleMapAsset::from_cells("1 1\n.0\n272: 100 20\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(map);
     let ordinary = world.create(&config, "Ordinary".into(), Kind::Player);
     let before = world.btech.clone();
@@ -329,6 +330,7 @@ async fn environment_confirmation_failure_restores_shared_state() {
         BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(map);
     let path = dir.path().join("stompymux.toml");
     let mut table: toml::Table = std::fs::read_to_string(&path).unwrap().parse().unwrap();

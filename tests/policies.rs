@@ -2,7 +2,6 @@
 use crate::support;
 use std::{
     cell::{Cell, RefCell},
-    path::Path,
     rc::Rc,
     time::Duration,
 };
@@ -15,7 +14,7 @@ use tokio::{io::AsyncReadExt, net::TcpStream};
 async fn fixture(retries: i64, zone: i64) -> (tempfile::TempDir, Config) {
     let d = tempfile::tempdir().unwrap();
     copy(
-        &Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/game"),
+        &support::repository_root().join("tests/fixtures/game"),
         d.path(),
     );
     let path = d.path().join("stompymux.toml");
@@ -63,7 +62,7 @@ async fn tcp_retry_limits_and_reconnect() {
         .run_until(async {
             for limit in [1, 3, 0, -1] {
                 let (_d, c) = fixture(limit, 0).await;
-                let (addr, shutdown, task, _) = start(&c, Rc::new(Cell::new(0))).await;
+                let (addr, shutdown, task, _, _heartbeats) = start(&c, Rc::new(Cell::new(0))).await;
                 let mut client = Client {
                     socket: TcpStream::connect(addr).await.unwrap(),
                     pending: Vec::new(),
@@ -104,7 +103,7 @@ async fn live_edits_and_creation_zones() {
     tokio::task::LocalSet::new()
         .run_until(async {
             let (_d, c) = fixture(3, 0).await;
-            let (addr, shutdown, task, _) = start(&c, Rc::new(Cell::new(0))).await;
+            let (addr, shutdown, task, _, _heartbeats) = start(&c, Rc::new(Cell::new(0))).await;
             let mut old = Client {
                 socket: TcpStream::connect(addr).await.unwrap(),
                 pending: Vec::new(),

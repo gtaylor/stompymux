@@ -132,6 +132,7 @@ async fn fixture(
     }
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(ids[0]);
     assign_battle_pilot(&mut world, ids[0], ObjectId(1)).unwrap();
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     world.validate(&config).unwrap();
     (dir, config, world, ids[0], ids[1])
 }

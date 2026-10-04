@@ -39,6 +39,7 @@ async fn fixture(
         place_battle_unit(&mut world, id, map, 0, if index % 2 == 0 { 4 } else { 0 }).unwrap();
         ids.push(id);
     }
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     (dir, config, world, map, ids.try_into().unwrap())
 }
 
@@ -102,6 +103,7 @@ async fn engagement(template: &str) -> (tempfile::TempDir, Config, World, Object
     power(&mut world, &ids, BattlePower::Running);
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(ids[2]);
     assign_battle_pilot(&mut world, ids[2], ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     refresh_battle_contacts(&mut world, &[ids[2]]).unwrap();
     (dir, config, world, map, ids)
 }
@@ -860,6 +862,7 @@ async fn vehicle_ams_switch_shares_native_lua_control_and_callback_rollback() {
     release_battle_pilot(&mut base, shooter, ObjectId(1)).unwrap();
     base.objects.get_mut(&ObjectId(1)).unwrap().location = Some(target);
     assign_battle_pilot(&mut base, target, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut base, ObjectId(1), support::FIXTURE_DICE_SEED);
     assert!(set_battle_ams(&mut base, target, ObjectId(2), true).is_err());
     set_battle_ams(&mut base, target, ObjectId(1), false).unwrap();
     let scripts = Scripts::new(
@@ -1805,23 +1808,15 @@ async fn shutdown_vehicle_pod_expiry_retries_failed_server_commit() {
         persistence::save(&config.database(), &world).await.unwrap();
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         sqlx::raw_sql("CREATE TRIGGER deny_pods BEFORE UPDATE ON btech_vehicles BEGIN SELECT RAISE(ABORT,'pod removal failure'); END;").execute(&mut sql).await.unwrap();
-        let (_address, shutdown, server, _lua) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
-        support::attempt_heartbeat().await;
+        let (_address, shutdown, server, _lua, mut heartbeats) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
+        heartbeats.attempt().await;
         let saved = persistence::load(&config.database()).await.unwrap();
         assert_eq!(saved.btech.vehicles()[&shooter].pod_removal(), Some(1));
         assert!(saved.btech.vehicles()[&shooter].has_beacon(BattleBeaconKind::Ecm));
         sqlx::raw_sql("DROP TRIGGER deny_pods").execute(&mut sql).await.unwrap();
-        tokio::time::timeout(std::time::Duration::from_secs(5), async {
-            loop {
-                let saved = persistence::load(&config.database()).await.unwrap();
-                if saved.btech.vehicles()[&shooter].pod_removal().is_none() {
-                    assert!(!saved.btech.vehicles()[&shooter].has_beacon(BattleBeaconKind::Ecm));
-                    assert!(saved.btech.vehicles()[&shooter].has_beacon(BattleBeaconKind::Narc));
-                    break;
-                }
-                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-            }
-        }).await.unwrap();
+        let saved = heartbeats.until_saved(&config, 5, |saved| saved.btech.vehicles()[&shooter].pod_removal().is_none()).await;
+        assert!(!saved.btech.vehicles()[&shooter].has_beacon(BattleBeaconKind::Ecm));
+        assert!(saved.btech.vehicles()[&shooter].has_beacon(BattleBeaconKind::Narc));
         shutdown.send(ShutdownRequest::Sigterm).unwrap();
         server.await.unwrap().unwrap();
     }).await;
@@ -1837,6 +1832,7 @@ async fn mech_engagement() -> (tempfile::TempDir, Config, World, ObjectId, Objec
     power(&mut world, &[shooter], BattlePower::Running);
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(shooter);
     assign_battle_pilot(&mut world, shooter, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     refresh_battle_contacts(&mut world, &[shooter, target]).unwrap();
     (dir, config, world, shooter, target)
 }
@@ -2782,6 +2778,7 @@ async fn character_direct_fire_shares_native_lua_casualties_for_both_chassis() {
                     power(&mut world, &[shooter], BattlePower::Running);
                     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(shooter);
                     assign_battle_pilot(&mut world, shooter, ObjectId(1)).unwrap();
+                    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
                 }
                 for id in [shooter, target] {
                     world
@@ -2812,7 +2809,9 @@ async fn character_direct_fire_shares_native_lua_casualties_for_both_chassis() {
                     },
                 )
                 .unwrap();
+                support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
                 assign_battle_pilot(&mut world, target, ObjectId(2)).unwrap();
+                support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
                 if vehicle_target {
                     injure_battle_character_pilot(&mut world, target, 9, false).unwrap();
                 }
@@ -2921,6 +2920,7 @@ async fn character_direct_fire_shares_native_lua_casualties_for_both_chassis() {
                     },
                 )
                 .unwrap();
+                support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
                 for skill in ["Gunnery-Laser", "Gunnery-Ballistic", "Gunnery-Battlemech"] {
                     set_battle_character_value(
                         &mut world,
@@ -3044,6 +3044,7 @@ async fn vehicle_missile_packets_award_experience_inside_the_firing_transaction(
         },
     )
     .unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     for skill in [
         "Gunnery-Missile",
         "Gunnery-Battlemech",
@@ -3170,6 +3171,7 @@ async fn weapons_hold_vehicle_targets_preserve_damage_safety_and_restart() {
                 power(&mut base, &[shooter], BattlePower::Running);
                 base.objects.get_mut(&ObjectId(1)).unwrap().location = Some(shooter);
                 assign_battle_pilot(&mut base, shooter, ObjectId(1)).unwrap();
+                support::seed_object_dice(&mut base, ObjectId(1), support::FIXTURE_DICE_SEED);
                 refresh_battle_contacts(&mut base, &[shooter]).unwrap();
                 let high = (0..=255)
                     .find(|value| BattleDice::seeded([*value; 32]).two_d6() == 12)
@@ -3344,6 +3346,7 @@ async fn configured_energy_range_damage_is_shared_by_all_unit_pairings() {
                 power(&mut world, &ids, BattlePower::Running);
                 world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(shooter);
                 assign_battle_pilot(&mut world, shooter, ObjectId(1)).unwrap();
+                support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
                 refresh_battle_contacts(&mut world, &[shooter]).unwrap();
                 world
                     .btech
@@ -3392,6 +3395,7 @@ async fn weapon_fire_preserves_target_emergency_feedback() {
         power(&mut base, &[shooter], BattlePower::Running);
         base.objects.get_mut(&ObjectId(1)).unwrap().location = Some(shooter);
         assign_battle_pilot(&mut base, shooter, ObjectId(1)).unwrap();
+        support::seed_object_dice(&mut base, ObjectId(1), support::FIXTURE_DICE_SEED);
         let target = base.create(&config, "Emergency target".into(), Kind::Thing);
         base.objects.get_mut(&target).unwrap().home = Some(ObjectId(config.home()));
         let mut template =
@@ -3401,6 +3405,7 @@ async fn weapon_fire_preserves_target_emergency_feedback() {
             section.internal = 30;
         }
         create_battle_vehicle(&mut base, target, template).unwrap();
+        support::seed_object_dice(&mut base, target, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut base, target, map, 0, 0).unwrap();
         base.objects.get_mut(&ObjectId(2)).unwrap().location = Some(target);
         base.objects
@@ -3409,6 +3414,7 @@ async fn weapon_fire_preserves_target_emergency_feedback() {
             .flags
             .insert(Flag::Connected);
         assign_battle_pilot(&mut base, target, ObjectId(2)).unwrap();
+        support::seed_object_dice(&mut base, ObjectId(2), support::FIXTURE_DICE_SEED);
         let passenger = base.create(&config, "Passenger".into(), Kind::Player);
         base.objects.get_mut(&passenger).unwrap().location = Some(target);
         base.objects

@@ -85,6 +85,7 @@ async fn invalid_fields_and_callback_failure_restore_state_without_output() {
         BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(map);
     let before = world.btech.clone();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();

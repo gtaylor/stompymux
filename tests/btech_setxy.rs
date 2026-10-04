@@ -12,6 +12,7 @@ async fn setxy_native_lua_geometry_guards_and_restart() {
             firing::fixture_with_target(&source, None, &source).await;
         world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(other);
         assign_battle_pilot(&mut world, other, ObjectId(2)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
         refresh_battle_contacts(&mut world, &[other]).unwrap();
         select_battle_target(&mut world, other, ObjectId(2), Some(unit)).unwrap();
         let fixed =
@@ -294,6 +295,7 @@ async fn setxy_vtol_flight_and_atomic_notification_failure() {
     // Create an incoming lock so its publication succeeds before the confirmation fails.
     world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(other);
     assign_battle_pilot(&mut world, other, ObjectId(2)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
     refresh_battle_contacts(&mut world, &[other]).unwrap();
     select_battle_target(&mut world, other, ObjectId(2), Some(unit)).unwrap();
     let path = dir.path().join("stompymux.toml");

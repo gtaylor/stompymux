@@ -38,6 +38,7 @@ async fn fixture(
         place_battle_unit(&mut world, id, map, 1, if index == 2 { 0 } else { 1 }).unwrap();
         ids.push(id);
     }
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     // Face the blast source in packet-arithmetic fixtures; rear selection has separate coverage.
     let mut saved = serde_json::to_value(&world.btech).unwrap();
     for index in [0, 2] {
@@ -214,6 +215,7 @@ async fn vehicle_observers_receive_visible_artillery_arrival_notices() {
     let (_dir, config, mut world, map, ids) = fixture(BattleVehicleMovement::Stationary).await;
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(ids[0]);
     assign_battle_pilot(&mut world, ids[0], ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, ids[0], ObjectId(1), true).unwrap();
     for _ in 0..5 {
         advance_battle_units(&mut world, 0);
@@ -248,6 +250,7 @@ async fn artillery_water_depth_excludes_submerged_hulls_but_not_hovercraft() {
             BattleMapAsset::from_cells(&format!("3 3\n{}", row.repeat(3))).unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
         let hover = world.create(&config, "Hover target".into(), Kind::Thing);
         world.objects.get_mut(&hover).unwrap().home = Some(ObjectId(config.home()));
         let mut template = BattleVehicleTemplate::parse(
@@ -257,6 +260,7 @@ async fn artillery_water_depth_excludes_submerged_hulls_but_not_hovercraft() {
         .unwrap();
         template.movement = BattleVehicleMovement::Hover;
         create_battle_vehicle(&mut world, hover, template).unwrap();
+        support::seed_object_dice(&mut world, hover, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut world, ids[0], map, 1, 1).unwrap();
         place_battle_unit(&mut world, hover, map, 1, 1).unwrap();
         let original = world.btech.vehicles()[&ids[0]].clone();

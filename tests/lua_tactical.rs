@@ -13,6 +13,7 @@ async fn fixture() -> (tempfile::TempDir, Config, Scripts, Vec<ObjectId>, Object
         BattleMapAsset::from_cells(&format!("1 12\n{}", ".0\n".repeat(12))).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let mut units = Vec::new();
     for index in 0..3 {
         let id = world.create(&config, format!("Tactical {index}"), Kind::Thing);
@@ -21,6 +22,7 @@ async fn fixture() -> (tempfile::TempDir, Config, Scripts, Vec<ObjectId>, Object
             .unwrap()
             .create(&mut world, id)
             .unwrap();
+        support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
         place_battle_unit(
             &mut world,
             id,

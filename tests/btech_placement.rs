@@ -108,6 +108,7 @@ async fn placement_callbacks_roll_back_and_native_commands_report_coordinates() 
         BattleMapAsset::from_cells(MAP).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let id = world.create(&config, "Jenner".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().location = Some(ObjectId(config.start()));
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
@@ -117,6 +118,7 @@ async fn placement_callbacks_roll_back_and_native_commands_report_coordinates() 
         BattleTemplate::parse("JR7-D", JENNER).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
     let before = scripts.world().clone();
     assert!(

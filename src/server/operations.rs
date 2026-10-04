@@ -119,7 +119,7 @@ mod tests {
             database: None,
         };
         let (output, mut received) = mpsc::channel(128);
-        let now = Instant::now();
+        let now = tokio::time::Instant::now();
         let old = now - Duration::from_secs(20);
         server.sessions.insert(
             SessionId(1),
@@ -188,7 +188,7 @@ mod tests {
         );
         let session = server.sessions.get_mut(&SessionId(1)).unwrap();
         session.quota = 10;
-        session.quota_at = Instant::now();
+        session.quota_at = tokio::time::Instant::now();
         session.stats.commands.store(u64::MAX, Relaxed);
         server.input(SessionId(1), b"version\r\n").await.unwrap();
         assert_eq!(

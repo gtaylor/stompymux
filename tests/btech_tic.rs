@@ -20,6 +20,7 @@ async fn tic_membership_native_lua_and_persistence() {
                 BattleVehicleTemplate::parse("test", source).unwrap(),
             )
             .unwrap();
+            support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
         } else {
             create_battle_unit(
                 &mut world,
@@ -27,9 +28,11 @@ async fn tic_membership_native_lua_and_persistence() {
                 BattleTemplate::parse("test", source).unwrap(),
             )
             .unwrap();
+            support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
         }
         world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
         assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         let scripts =
             Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
         assert!(fire_battle_tics(&scripts, &config, id, ObjectId(1), vec![2], None).is_err());
@@ -143,6 +146,7 @@ async fn tic_firing_reuses_shots_and_rolls_back_callbacks() {
             BattleMapAsset::from_cells("1 3\n.0\n.0\n.0\n").unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
         let shooter = world.create(&config, "Shooter".into(), Kind::Thing);
         let target = world.create(&config, "Target".into(), Kind::Thing);
         for id in [shooter, target] {
@@ -155,6 +159,7 @@ async fn tic_firing_reuses_shots_and_rolls_back_callbacks() {
                 BattleVehicleTemplate::parse("test", source).unwrap(),
             )
             .unwrap();
+            support::seed_object_dice(&mut world, shooter, support::FIXTURE_DICE_SEED);
         } else {
             create_battle_unit(
                 &mut world,
@@ -162,6 +167,7 @@ async fn tic_firing_reuses_shots_and_rolls_back_callbacks() {
                 BattleTemplate::parse("test", source).unwrap(),
             )
             .unwrap();
+            support::seed_object_dice(&mut world, shooter, support::FIXTURE_DICE_SEED);
         }
         create_battle_unit(
             &mut world,
@@ -169,10 +175,12 @@ async fn tic_firing_reuses_shots_and_rolls_back_callbacks() {
             BattleTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut world, shooter, map, 0, 1).unwrap();
         place_battle_unit(&mut world, target, map, 0, 0).unwrap();
         world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(shooter);
         assign_battle_pilot(&mut world, shooter, ObjectId(1)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         let mut saved = serde_json::to_value(&world.btech).unwrap();
         saved[if vehicle { "vehicles" } else { "constructed" }][shooter.0.to_string()]["power"] =
             serde_json::to_value(BattlePower::Running).unwrap();

@@ -164,6 +164,7 @@ async fn resize_keeps_effects_on_remaining_hexes_and_clears_building_routes() {
             BattleMapAsset::from_cells("2 2\n`2#1\n.0.0\n").unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     }
     let actor = operator(&mut world, &config, map);
     set_building_entrance(

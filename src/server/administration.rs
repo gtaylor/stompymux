@@ -308,7 +308,7 @@ mod tests {
     }
     fn session(player: Option<ObjectId>) -> (Session, mpsc::Receiver<Output>) {
         let (output, rx) = mpsc::channel(128);
-        let now = Instant::now();
+        let now = tokio::time::Instant::now();
         (
             Session {
                 retry_remaining: 3,

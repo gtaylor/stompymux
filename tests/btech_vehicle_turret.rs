@@ -25,6 +25,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
         advance_battle_units(&mut world, 0);
@@ -213,6 +214,7 @@ async fn turret_repair_expires_offline_and_cannot_clear_a_second_hit_lock() {
     assert!(world.btech.vehicles()[&id].turret_jammed());
     assert!(world.btech.vehicles()[&id].turret_repairs().is_empty());
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
         advance_battle_units(&mut world, 0);
@@ -306,16 +308,11 @@ async fn powered_off_turret_repair_retries_failed_server_ticks() {
         let mut sql=sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         // A running countdown keeps its timer row still; refuse the commit at the snapshot stamp.
         sqlx::raw_sql("CREATE TRIGGER deny_turret BEFORE UPDATE ON snapshot BEGIN SELECT RAISE(ABORT,'turret failure'); END;").execute(&mut sql).await.unwrap();
-        let (_address,shutdown,task,_lua)=support::start(&config,std::rc::Rc::new(std::cell::Cell::new(1))).await;
-        support::attempt_heartbeat().await;
+        let (_address,shutdown,task,_lua,mut heartbeats)=support::start(&config,std::rc::Rc::new(std::cell::Cell::new(1))).await;
+        heartbeats.attempt().await;
         assert_eq!(persistence::load(&config.database()).await.unwrap().btech.vehicles()[&id].turret_repairs(), &[2]);
         sqlx::query("DROP TRIGGER deny_turret").execute(&mut sql).await.unwrap();
-        tokio::time::timeout(std::time::Duration::from_secs(5),async {
-            loop {
-                if persistence::load(&config.database()).await.unwrap().btech.vehicles()[&id].turret_repairs().is_empty(){break;}
-                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-            }
-        }).await.unwrap();
+        heartbeats.until_saved(&config, 5, |saved| saved.btech.vehicles()[&id].turret_repairs().is_empty()).await;
         shutdown.send(ShutdownRequest::Sigterm).unwrap();
         task.await.unwrap().unwrap();
     }).await;
@@ -452,6 +449,7 @@ async fn automatic_turret_tracks_moving_units_and_hexes() {
         BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     stop_battle_unit(
         &mut world,
         id,
@@ -461,6 +459,7 @@ async fn automatic_turret_tracks_moving_units_and_hexes() {
     .unwrap();
     place_battle_unit(&mut world, id, map, 1, 1).unwrap();
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
         advance_battle_units(&mut world, 0);
@@ -473,6 +472,7 @@ async fn automatic_turret_tracks_moving_units_and_hexes() {
         BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, target, map, 1, 0).unwrap();
     refresh_battle_contacts(&mut world, &[id]).unwrap();
     select_battle_target(&mut world, id, ObjectId(1), Some(target)).unwrap();
@@ -499,6 +499,7 @@ async fn automatic_turret_tracks_moving_units_and_hexes() {
         BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, elsewhere, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, target, elsewhere, 0, 0).unwrap();
     assert!(!battle_automatic_turrets_pending(&world));
     advance_battle_automatic_turrets(&mut world);
@@ -539,6 +540,7 @@ async fn automatic_tracking_is_shared_by_ground_and_rotorcraft() {
             BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
         let id = world.create(&config, "Tracking carrier".into(), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         create_battle_vehicle(
@@ -547,9 +549,11 @@ async fn automatic_tracking_is_shared_by_ground_and_rotorcraft() {
             BattleVehicleTemplate::parse("test", &source).unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut world, id, map, 0, 0).unwrap();
         world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
         assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         if world.btech.vehicles()[&id].turret_heading().is_none() {
             assert!(toggle_battle_automatic_turret(&mut world, id, ObjectId(1)).is_err());
             let mut invalid = serde_json::to_value(&world.btech).unwrap();
@@ -614,19 +618,13 @@ async fn automatic_turret_runs_after_restart() {
                 advance_battle_target_locks(&mut world);
             }
             persistence::save(&config.database(), &world).await.unwrap();
-            let (_address, shutdown, task, _lua) =
+            let (_address, shutdown, task, _lua, mut heartbeats) =
                 support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
-            tokio::time::timeout(std::time::Duration::from_secs(5), async {
-                loop {
-                    let saved = persistence::load(&config.database()).await.unwrap();
-                    if saved.btech.vehicles()[&id].turret_heading() == Some(180.0) {
-                        break;
-                    }
-                    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-                }
-            })
-            .await
-            .unwrap();
+            heartbeats
+                .until_saved(&config, 5, |saved| {
+                    saved.btech.vehicles()[&id].turret_heading() == Some(180.0)
+                })
+                .await;
             shutdown.send(ShutdownRequest::Sigterm).unwrap();
             task.await.unwrap().unwrap();
         })

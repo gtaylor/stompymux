@@ -1,6 +1,6 @@
 //! C speech command and notification graph compatibility, on isolated worlds.
 use crate::support;
-use std::{cell::RefCell, path::Path, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::{
     Account, Config, Flag, Kind, ObjectId, Scripts, World,
     commands::{self, Action},
@@ -33,7 +33,7 @@ struct Ids {
 async fn fixture(settings: &str) -> (tempfile::TempDir, Config, Scripts, Ids) {
     let d = tempfile::tempdir().unwrap();
     copy(
-        &Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/game"),
+        &support::repository_root().join("tests/fixtures/game"),
         d.path(),
     );
     let path = d.path().join("stompymux.toml");

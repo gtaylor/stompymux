@@ -37,6 +37,7 @@ async fn startup_health_replays_without_premature_crew_death() {
                 },
             )
             .unwrap();
+            support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
             let before = world.clone();
             let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
             assert!(

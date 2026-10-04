@@ -32,6 +32,7 @@ async fn fixture(teams: &[i32]) -> (tempfile::TempDir, Config, World, Vec<Object
     }
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(ids[0]);
     assign_battle_pilot(&mut world, ids[0], ObjectId(1)).unwrap();
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, ids[0], ObjectId(1), true).unwrap();
     for _ in 0..5 {
         advance_battle_units(&mut world, 0);
@@ -1403,6 +1404,7 @@ async fn character_collision_action_replays_injury_and_evacuation() {
             .remove(Flag::Wizard);
         world.objects.get_mut(&pilot).unwrap().location = Some(target);
         assign_battle_pilot(&mut world, target, pilot).unwrap();
+        support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
         set_battle_character(
             &mut world,
             pilot,
@@ -1417,6 +1419,7 @@ async fn character_collision_action_replays_injury_and_evacuation() {
             },
         )
         .unwrap();
+        support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
         let chosen = (0..=255)
             .find(|byte| BattleDice::seeded([*byte; 32]).d6() == 6)
             .unwrap();
@@ -1549,6 +1552,7 @@ async fn character_collision_avoidance_falls_and_replays() {
         },
     )
     .unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     seed(&mut world, mover, 3, 1, Some(2));
     let rules = BattleStackingRules {
         mode: 1,
@@ -1652,6 +1656,7 @@ async fn character_crowding_experience_and_delivery_rollback() {
                 },
             )
             .unwrap();
+            support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
             let skill = if extended {
                 "Piloting-Biped"
             } else {
@@ -1869,6 +1874,7 @@ async fn collision_damage_preserves_target_balance_feedback() {
     let target = ids[1];
     base.objects.get_mut(&ObjectId(2)).unwrap().location = Some(target);
     assign_battle_pilot(&mut base, target, ObjectId(2)).unwrap();
+    support::seed_object_dice(&mut base, ObjectId(2), support::FIXTURE_DICE_SEED);
     for pilot in [ObjectId(1), ObjectId(2)] {
         base.objects
             .get_mut(&pilot)
@@ -1982,6 +1988,7 @@ async fn airborne_critical_collision_publishes_secondary_character_effects() {
         .flags
         .insert(Flag::InCharacter);
     assign_battle_pilot(&mut base, neighbor, pilot).unwrap();
+    support::seed_object_dice(&mut base, pilot, support::FIXTURE_DICE_SEED);
     set_battle_character(
         &mut base,
         pilot,
@@ -1996,6 +2003,7 @@ async fn airborne_critical_collision_publishes_secondary_character_effects() {
         },
     )
     .unwrap();
+    support::seed_object_dice(&mut base, pilot, support::FIXTURE_DICE_SEED);
     destroy_battle_critical(
         &mut base,
         airborne,
@@ -2116,6 +2124,7 @@ async fn airborne_critical_collision_publishes_secondary_character_effects() {
             },
         )
         .unwrap();
+        support::seed_object_dice(&mut scripts.world_mut(), pilot, support::FIXTURE_DICE_SEED);
         let fatal_before = scripts.world().clone();
         scripts
             .world_mut()

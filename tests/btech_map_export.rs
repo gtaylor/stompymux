@@ -16,6 +16,7 @@ async fn export_terrain_effects_and_metadata_match_asset_contract() {
         BattleMapAsset::from_cells("5 1\n.0#1`2&3.4\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     for flags in [0, 1, 2, 4, 5, 6] {
         let mut candidate = world.clone();
         let mut state = serde_json::to_value(&candidate.btech).unwrap();

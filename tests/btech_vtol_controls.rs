@@ -28,6 +28,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
     assign_battle_pilot(&mut world, id, ObjectId(2)).unwrap();
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(2), false).unwrap();
     for _ in 0..30 {
         advance_battle_units(&mut world, 0);
@@ -50,9 +51,11 @@ async fn obstacle_fixture(source: &str) -> (tempfile::TempDir, Config, World, Ob
         BattleMapAsset::from_cells(source).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut base, map, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut base, id, map, 0, 2).unwrap();
     base.objects.get_mut(&id).unwrap().location = Some(map);
     assign_battle_pilot(&mut base, id, ObjectId(2)).unwrap();
+    support::seed_object_dice(&mut base, ObjectId(2), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut base, id, ObjectId(2), false).unwrap();
     for _ in 0..30 {
         advance_battle_units(&mut base, 0);
@@ -73,6 +76,7 @@ async fn obstacle_fixture(source: &str) -> (tempfile::TempDir, Config, World, Ob
         },
     )
     .unwrap();
+    support::seed_object_dice(&mut base, ObjectId(2), support::FIXTURE_DICE_SEED);
     set_battle_character_value(
         &mut base,
         ObjectId(2),
@@ -880,6 +884,7 @@ async fn live_character_crash_publishes_shared_crew_injury() {
         },
     )
     .unwrap();
+    support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
     let _ = begin_battle_vtol_takeoff(&mut world, id, ObjectId(2), 0, false).unwrap();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     for _ in 0..12 {
@@ -924,7 +929,7 @@ async fn native_and_lua_asset_loading_admit_flying_and_stationary_aircraft() {
     let mut ids = Vec::new();
     for name in ["Kestrel", "ObservationVTOL"] {
         std::fs::copy(
-            format!("game/mechs/{name}.toml"),
+            support::repository_root().join(format!("game/mechs/{name}.toml")),
             dir.path().join("mechs").join(format!("{name}.toml")),
         )
         .unwrap();

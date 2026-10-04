@@ -34,6 +34,7 @@ async fn fixture_with_ranges(
         BattleMapAsset::from_cells(&format!("3 60\n{}", ".0.0.0\n".repeat(60))).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let mut units = Vec::new();
     for y in [1, 2] {
         let id = world.create(&config, "Scan unit".into(), Kind::Thing);
@@ -45,6 +46,7 @@ async fn fixture_with_ranges(
             template.attributes.insert(field.into(), value.into());
         }
         create_battle_unit(&mut world, id, template).unwrap();
+        support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut world, id, map, 1, y).unwrap();
         units.push(id);
     }
@@ -52,6 +54,7 @@ async fn fixture_with_ranges(
     let target = units[1];
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(source);
     assign_battle_pilot(&mut world, source, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, source, ObjectId(1), true).unwrap();
     for _ in 0..5 {
         advance_battle_units(&mut world, 0);
@@ -246,6 +249,7 @@ async fn scan_warnings_follow_target_visibility_and_rollback_with_lua() {
         .flags
         .insert(Flag::Connected);
     assign_battle_pilot(&mut world, target, ObjectId(2)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, target, ObjectId(2), true).unwrap();
     for _ in 0..5 {
         advance_battle_units(&mut world, 0);
@@ -316,6 +320,7 @@ async fn coordinate_scan_selects_visible_occupants_in_saved_order() {
         BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, other, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, other, map, 1, 2).unwrap();
     acquire(&mut world, source, other);
     let shared = std::rc::Rc::new(std::cell::RefCell::new(world));
@@ -405,6 +410,7 @@ fn scan_structure(world: &mut World, config: &Config, map: ObjectId) -> ObjectId
         BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(world, interior, support::FIXTURE_DICE_SEED);
     set_building_state(
         world,
         interior,
@@ -543,6 +549,7 @@ async fn concealed_building_rolls_awards_and_callback_rollback_replay() {
         },
     )
     .unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     let coordinate = BattleHexCoordinate { x: 1, y: 2 };
     // The startup-captured target of 18 cannot succeed, but an eligible attempt spends two dice.
     let mut expected = world.clone();
@@ -659,6 +666,7 @@ fn scan_perception(world: &mut World, source: ObjectId) {
         },
     )
     .unwrap();
+    support::seed_object_dice(world, ObjectId(1), support::FIXTURE_DICE_SEED);
     world
         .btech
         .rewrite_unit_record(source, |record| {
@@ -935,6 +943,7 @@ async fn brief_reports_are_silent_and_do_not_use_detailed_scan_range() {
         .flags
         .insert(Flag::Connected);
     assign_battle_pilot(&mut world, target, ObjectId(2)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, target, ObjectId(2), true).unwrap();
     for _ in 0..5 {
         advance_battle_units(&mut world, 0);
@@ -1422,6 +1431,7 @@ async fn long_range_stacked_markers_share_native_lua_and_restart_order() {
         .unwrap();
         place_battle_unit(&mut world, source, map, 1, 20).unwrap();
         assign_battle_pilot(&mut world, source, ObjectId(1)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, source, ObjectId(1), true).unwrap();
         for _ in 0..5 {
             advance_battle_units(&mut world, 0);
@@ -1436,6 +1446,7 @@ async fn long_range_stacked_markers_share_native_lua_and_restart_order() {
                 .unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, earlier, support::FIXTURE_DICE_SEED);
         place_battle_unit(
             &mut world,
             earlier,
@@ -1584,6 +1595,7 @@ async fn long_range_elevation_rows_preserve_zero_space_and_water_depth() {
         BattleMapAsset::from_cells("3 2\n.0#3~2\n.0.0.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     world
         .btech
         .rewrite_unit_record(source, |record| {
@@ -2088,6 +2100,7 @@ async fn tactical_clipping_preserves_global_hex_parity_and_elevation() {
             .unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     world
         .btech
         .rewrite_unit_record(source, |record| {
@@ -2156,6 +2169,7 @@ async fn tactical_cliffs_use_signed_depth_thresholds_and_share_native_lua_output
         BattleMapAsset::from_cells("3 3\n.0.3.0\n.0.0~2\n.0-3.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     world
         .btech
         .rewrite_unit_record(source, |record| {
@@ -2473,6 +2487,7 @@ async fn landing_suitability_checks_full_hex_neighborhood_terrain_and_fire() {
             BattleMapAsset::from_cells(&format!("3 3\n{tiles}{flags}: 100 20\n")).unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
         assert_eq!(
             world.btech.maps()[&map]
                 .landing_suitability(center, 0)
@@ -2765,6 +2780,7 @@ async fn navigation_keeps_even_center_on_single_hex_maps_with_off_map_surroundin
         BattleMapAsset::from_cells("1 1\n#3\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     world
         .btech
         .rewrite_unit_record(source, |record| {
@@ -3649,6 +3665,7 @@ async fn contact_modes_order_buildings_wrecks_and_units_without_changing_lua_que
         BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, near, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, near, map, 1, 2).unwrap();
     acquire(&mut world, source, near);
     let building = scan_structure(&mut world, &config, map);
@@ -4102,6 +4119,7 @@ async fn probe_contacts_through_terrain_hide_identity_and_friendly_categories() 
         BattleMapAsset::from_cells("3 5\n.0.0.0\n.0.0.0\n.9.9.9\n.0.0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let _ = stop_battle_unit(
         &mut world,
         source,
@@ -4111,10 +4129,12 @@ async fn probe_contacts_through_terrain_hide_identity_and_friendly_categories() 
     .unwrap();
     place_battle_unit(&mut world, source, map, 1, 1).unwrap();
     assign_battle_pilot(&mut world, source, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, source, ObjectId(1), true).unwrap();
     place_battle_unit(&mut world, target, map, 1, 3).unwrap();
     world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(target);
     assign_battle_pilot(&mut world, target, ObjectId(2)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, target, ObjectId(2), true).unwrap();
     for _ in 0..5 {
         let _ = advance_battle_units(&mut world, 0);
@@ -5022,6 +5042,7 @@ async fn bootlegger_character_checks_award_xp_and_preserve_failed_action_rollbac
         },
     )
     .unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     for skill in ["Piloting-Biped", "Piloting-Battlemech"] {
         set_battle_character_value(
             &mut world,
@@ -5825,9 +5846,11 @@ async fn ammunition_dump_low_capacity_bins_preserve_cadence_and_shutdown_cancels
         BattleTemplate::parse("AS7-D", include_str!("fixtures/btech/mechs/AS7-D.toml")).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, id, map, 1, 3).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
         advance_battle_units(&mut world, 0);
@@ -5888,20 +5911,12 @@ async fn ammunition_dump_server_retries_failed_commits_without_losing_rounds() {
         let before = world.btech.clone();
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         sqlx::raw_sql("CREATE TRIGGER deny_dump BEFORE UPDATE ON btech_units BEGIN SELECT RAISE(ABORT,'dump failure'); END;").execute(&mut sql).await.unwrap();
-        let (_address, shutdown, task, _lua) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
-        support::attempt_heartbeat().await;
+        let (_address, shutdown, task, _lua, mut heartbeats) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
+        heartbeats.attempt().await;
         assert_eq!(persistence::load(&config.database()).await.unwrap().btech, before);
         sqlx::query("DROP TRIGGER deny_dump").execute(&mut sql).await.unwrap();
-        tokio::time::timeout(std::time::Duration::from_secs(5), async {
-            loop {
-                let restored = persistence::load(&config.database()).await.unwrap();
-                if restored.btech.constructed_units()[&id].dumping().is_none() {
-                    assert_eq!(restored.btech.constructed_units()[&id].ammunition(), &[0]);
-                    break;
-                }
-                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-            }
-        }).await.unwrap();
+        let restored = heartbeats.until_saved(&config, 5, |restored| restored.btech.constructed_units()[&id].dumping().is_none()).await;
+        assert_eq!(restored.btech.constructed_units()[&id].ammunition(), &[0]);
         shutdown.send(ShutdownRequest::Sigterm).unwrap();
         task.await.unwrap().unwrap();
     }).await;

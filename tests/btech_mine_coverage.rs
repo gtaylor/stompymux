@@ -14,6 +14,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
         BattleMapAsset::from_cells("5 3\n.0.0.0.0.0\n.0.0.0.0.0\n.0.0.0.0.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(map);
     (dir, config, world, map)
 }

@@ -22,6 +22,7 @@ fn add_map(
         BattleMapAsset::from_cells(&source).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(world, id, support::FIXTURE_DICE_SEED);
     id
 }
 

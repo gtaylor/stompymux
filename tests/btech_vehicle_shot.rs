@@ -39,6 +39,7 @@ async fn fixture(
         place_battle_unit(&mut world, id, map, 0, if index % 2 == 0 { 4 } else { 0 }).unwrap();
         ids.push(id);
     }
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     (dir, config, world, map, ids.try_into().unwrap())
 }
 
@@ -106,6 +107,7 @@ async fn engagement() -> (tempfile::TempDir, Config, World, ObjectId, [ObjectId;
     power(&mut world, &ids, BattlePower::Running);
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(ids[2]);
     assign_battle_pilot(&mut world, ids[2], ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     refresh_battle_contacts(&mut world, &[ids[2]]).unwrap();
     (dir, config, world, map, ids)
 }
@@ -322,6 +324,7 @@ async fn vehicle_shot_checks_reject_submerged_weapons_and_depleted_ammunition() 
     .await;
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(shooter);
     assign_battle_pilot(&mut world, shooter, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     power(&mut world, &[shooter, target], BattlePower::Running);
     let before = world.btech.clone();
     assert!(

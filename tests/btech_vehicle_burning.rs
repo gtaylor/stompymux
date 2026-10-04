@@ -56,6 +56,7 @@ async fn fixture_movement(
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     (dir, config, world, id)
 }
 
@@ -416,21 +417,13 @@ async fn shutdown_vehicle_fire_retries_failed_server_commit() {
         persistence::save(&config.database(), &world).await.unwrap();
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         sqlx::raw_sql("CREATE TRIGGER deny_fire BEFORE UPDATE ON btech_vehicles BEGIN SELECT RAISE(ABORT,'vehicle fire failure'); END;").execute(&mut sql).await.unwrap();
-        let (_address, shutdown, server, _lua) = support::start(&config, Rc::new(std::cell::Cell::new(1))).await;
-        support::attempt_heartbeat().await;
+        let (_address, shutdown, server, _lua, mut heartbeats) = support::start(&config, Rc::new(std::cell::Cell::new(1))).await;
+        heartbeats.attempt().await;
         let failed = persistence::load(&config.database()).await.unwrap();
         assert_eq!(failed.btech.vehicles()[&id], world.btech.vehicles()[&id]);
         sqlx::raw_sql("DROP TRIGGER deny_fire;").execute(&mut sql).await.unwrap();
-        tokio::time::timeout(std::time::Duration::from_secs(5), async {
-            loop {
-                let committed = persistence::load(&config.database()).await.unwrap();
-                if committed.btech.vehicles()[&id].burning_sections().is_empty() {
-                    assert_eq!(committed.btech.vehicles()[&id], expected.btech.vehicles()[&id]);
-                    break;
-                }
-                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-            }
-        }).await.unwrap();
+        let committed = heartbeats.until_saved(&config, 5, |committed| committed.btech.vehicles()[&id].burning_sections().is_empty()).await;
+        assert_eq!(committed.btech.vehicles()[&id], expected.btech.vehicles()[&id]);
         shutdown.send(ShutdownRequest::Sigterm).unwrap();
         server.await.unwrap().unwrap();
     }).await;

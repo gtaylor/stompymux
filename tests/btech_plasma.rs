@@ -16,6 +16,7 @@ async fn plasma_heat_transfer_unwind_and_saved_dice_replay() {
         BattleTemplate::parse("AS7-D", include_str!("fixtures/btech/mechs/AS7-D.toml")).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut base, id, support::FIXTURE_DICE_SEED);
     let rules = BattleHitRules {
         inferno_penalty: false,
         exile_stun_mode: 0,

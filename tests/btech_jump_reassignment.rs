@@ -34,6 +34,7 @@ async fn transferred_jumps_rebind_boundaries_and_replay_to_landing() {
                         .unwrap(),
                     )
                     .unwrap();
+                    support::seed_object_dice(&mut world, destination, support::FIXTURE_DICE_SEED);
                     set_battle_map_wrapping(&mut world, destination, destination_wrap).unwrap();
                     let report =
                         reassign_battle_map(&mut world, unit, destination, Some("XY")).unwrap();
@@ -105,6 +106,7 @@ async fn rebound_jump_assignment_uses_host_rollback() {
         BattleMapAsset::from_cells("1 2\n.0\n.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
     let lua = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
     assert!(

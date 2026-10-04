@@ -170,7 +170,7 @@ pub use lua::schedules::{
     Catalog as ScheduleCatalog, Cron, Definition as ScheduleDefinition, Job as ScheduledJob,
     Queue as ScheduleQueue, jitter as schedule_jitter,
 };
-/// Embedded server entry point with a schedule-only test clock.
+/// Embedded server entry point with a schedule-only test clock and a chosen heartbeat driver.
 pub use server::run_with_schedule_clock;
 
 /// Player-defined command templates and shared macro sets.
@@ -1237,7 +1237,9 @@ pub use btech::{
     TacticalSubmitResult, TacticalUnitSnapshot, observe_tactical, submit_tactical,
 };
 
-pub use server::{HeartbeatHarness, HeartbeatMetrics};
+pub use server::{
+    HeartbeatDriver, HeartbeatHarness, HeartbeatMetrics, HeartbeatTrigger, RuntimeProgress,
+};
 
 /// Isolated production-heartbeat performance diagnostics for ground controllers.
 pub use btech::autopilot::benchmark::{

@@ -1,5 +1,5 @@
 //! Typed Lua objects, isolated validation and snapshot-based module administration.
-use std::{cell::RefCell, path::Path, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::{
     Config, Flag, Kind, ObjectId, Scripts, World,
     commands::{self, Action},
@@ -286,7 +286,7 @@ async fn testing_vm(source: &str) -> (tempfile::TempDir, Config, Scripts) {
     persistence::save(&c.database(), &w).await.unwrap();
     std::fs::create_dir_all(d.path().join("lua/tests/unit")).unwrap();
     std::fs::copy(
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("game/lua/packages/testing.lua"),
+        support::repository_root().join("game/lua/packages/testing.lua"),
         d.path().join("lua/packages/testing.lua"),
     )
     .unwrap();

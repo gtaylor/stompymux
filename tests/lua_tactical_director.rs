@@ -2,9 +2,9 @@
 use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::{
-    BattleMapAsset, BattlePower, BattleUnitSignature, BattleUnitTemplate, Config, HeartbeatHarness,
-    Kind, ObjectId, Scripts, World, assign_battle_pilot, create_battle_map, persistence,
-    place_battle_unit, refresh_battle_contacts, set_battle_unit_signature,
+    BattleDice, BattleMapAsset, BattlePower, BattleUnitSignature, BattleUnitTemplate, Config,
+    HeartbeatHarness, Kind, ObjectId, Scripts, World, assign_battle_pilot, create_battle_map,
+    persistence, place_battle_unit, refresh_battle_contacts, set_battle_unit_signature,
 };
 
 fn install_tactical_packages(config: &Config) {
@@ -186,8 +186,14 @@ async fn encounter_fixture() -> EncounterFixture {
         },
     )
     .unwrap();
+    // New holders draw their dice from OS entropy. Seed every map, crew and pilot stream, then
+    // give each unit the fixed stream the encounter was tuned against, so every run rolls the
+    // same opportunistic shots and the encounter ends on the same heartbeat.
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     let mut state = serde_json::to_value(&world.btech).unwrap();
-    for unit in units.into_iter().chain([enemy]) {
+    for (index, unit) in units.into_iter().chain([enemy]).enumerate() {
+        state["constructed"][unit.0.to_string()]["dice"] =
+            serde_json::to_value(BattleDice::seeded([index as u8 + 1; 32])).unwrap();
         state["constructed"][unit.0.to_string()]["power"] =
             serde_json::to_value(BattlePower::Running).unwrap();
     }

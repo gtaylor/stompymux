@@ -1,6 +1,5 @@
 //! C-compatible state syntax, immutable Lua handles, atomic quotas and relational round trips.
 use sqlx::{Connection, Row};
-use std::path::Path;
 use stompymux_rs::{
     Config, Kind, ObjectId, Scripts,
     commands::{self, Action},
@@ -261,7 +260,7 @@ async fn binary_storage_preserves_types_unchanged_storage_classes_and_unknown_co
 #[tokio::test(flavor = "current_thread")]
 async fn unchanged_default_exit_policy_handles_all_predicates_and_fails_closed() {
     let (_d, c, s) = fixture().await;
-    let source = Path::new(env!("CARGO_MANIFEST_DIR")).join("game/lua");
+    let source = support::repository_root().join("game/lua");
     for file in [
         "object_logic/default_exit.lua",
         "packages/access_policy.lua",

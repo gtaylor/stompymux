@@ -175,6 +175,7 @@ async fn membership_span_survives_holes_reuse_and_restart() {
             .unwrap()
             .create(&mut world, last)
             .unwrap();
+        support::seed_object_dice(&mut world, last, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut world, last, map, 0, 0).unwrap();
         release_battle_pilot(&mut world, first, ObjectId(1)).unwrap();
         world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(map);

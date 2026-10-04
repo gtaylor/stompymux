@@ -15,6 +15,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
     .unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     (dir, config, world, id)
 }
 
@@ -282,6 +283,7 @@ async fn relay_fixture() -> (tempfile::TempDir, Config, World, ObjectId, Vec<Obj
         radio_fact(&mut world, id, |u| u["pilot"] = serde_json::Value::Null);
         units.push(id);
     }
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     (dir, config, world, map, units)
 }
 
@@ -642,6 +644,7 @@ async fn radio_communication_skill_is_captured_only_on_startup_completion() {
         BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, unit, map, 1, 1).unwrap();
     assert_eq!(world.btech.constructed_units()[&unit].radio_skill(), 6);
     set_battle_character(
@@ -658,6 +661,7 @@ async fn radio_communication_skill_is_captured_only_on_startup_completion() {
         },
     )
     .unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, unit, ObjectId(1), true).unwrap();
     for _ in 0..4 {
         advance_battle_units(&mut world, 0);
@@ -707,6 +711,7 @@ fn radio_sender(world: &mut World, source: ObjectId) {
         .flags
         .insert(Flag::Connected);
     assign_battle_pilot(world, source, ObjectId(1)).unwrap();
+    support::seed_object_dice(world, ObjectId(1), support::FIXTURE_DICE_SEED);
 }
 
 #[tokio::test]
@@ -1072,6 +1077,9 @@ fn radio_xp_crew(world: &mut World, units: &[ObjectId]) {
     .unwrap();
     world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(units[0]);
     assign_battle_pilot(world, units[0], ObjectId(2)).unwrap();
+    for pilot in [ObjectId(1), ObjectId(2)] {
+        support::seed_object_dice(world, pilot, support::FIXTURE_DICE_SEED);
+    }
     radio_fact(world, units[0], |u| {
         u["radio"][0]["mode"]["digital"] = false.into()
     });
@@ -1417,6 +1425,7 @@ async fn targeted_radio_identity_visibility_native_lua_and_callback_rollback() {
         .flags
         .insert(Flag::Connected);
     assign_battle_pilot(&mut world, target, ObjectId(2)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
     radio_contact(&mut world, source, target);
     let before = world.btech.clone();
     let report = resolve_targeted_radio(&world, source, ObjectId(1), target, "Hello").unwrap();

@@ -19,6 +19,7 @@ async fn fixture(sources: &[&str]) -> (tempfile::TempDir, Config, World, ObjectI
         BattleMapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let mut units = Vec::new();
     for source in sources {
         let id = world.create(&config, "Unit".into(), Kind::Thing);
@@ -26,6 +27,7 @@ async fn fixture(sources: &[&str]) -> (tempfile::TempDir, Config, World, ObjectI
             .unwrap()
             .create(&mut world, id)
             .unwrap();
+        support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut world, id, map, 0, 0).unwrap();
         units.push(id);
     }
@@ -53,6 +55,7 @@ async fn tow_pairs_share_all_chassis_and_reject_overlap_without_mutation() {
             }
             world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(b);
             assign_battle_pilot(&mut world, b, ObjectId(1)).unwrap();
+            support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
             let before = world.btech.clone();
             assert!(
                 start_battle_unit(&mut world, b, ObjectId(1), true)
@@ -201,6 +204,7 @@ async fn towing_follows_position_facing_and_height_for_every_chassis_pair() {
             let [a, b] = ids[..] else { unreachable!() };
             world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(a);
             assign_battle_pilot(&mut world, a, ObjectId(1)).unwrap();
+            support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
             start_battle_unit(&mut world, a, ObjectId(1), true).unwrap();
             for _ in 0..5 {
                 advance_battle_units(&mut world, 0);
@@ -283,6 +287,7 @@ async fn external_speed_exceeds_disabled_target_limits_but_requires_a_tow() {
         let [a, b] = ids[..] else { unreachable!() };
         world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(a);
         assign_battle_pilot(&mut world, a, ObjectId(1)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, a, ObjectId(1), true).unwrap();
         for _ in 0..5 {
             advance_battle_units(&mut world, 0);
@@ -397,6 +402,7 @@ async fn hot_myomer_tow_discount_requires_hardware_heat_and_configuration() {
     assert_eq!(remaining, 0);
     let carrier = world.create(&config, "Myomer carrier".into(), Kind::Thing);
     create_battle_unit(&mut world, carrier, template).unwrap();
+    support::seed_object_dice(&mut world, carrier, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, carrier, map, 0, 0).unwrap();
     set_battle_tow(&mut world, carrier, Some(ids[0])).unwrap();
     let undiscounted = battle_unit_load(&world, carrier, false)
@@ -404,6 +410,7 @@ async fn hot_myomer_tow_discount_requires_hardware_heat_and_configuration() {
         .carried_mass;
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(carrier);
     assign_battle_pilot(&mut world, carrier, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, carrier, ObjectId(1), true).unwrap();
     for _ in 0..5 {
         advance_battle_units(&mut world, 0);
@@ -416,9 +423,11 @@ async fn hot_myomer_tow_discount_requires_hardware_heat_and_configuration() {
         BattleTemplate::parse("test", CHASSIS[0]).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, observer, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, observer, map, 0, 0).unwrap();
     world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(observer);
     assign_battle_pilot(&mut world, observer, ObjectId(2)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, observer, ObjectId(2), true).unwrap();
     for _ in 0..5 {
         advance_battle_units(&mut world, 0);
@@ -520,6 +529,7 @@ async fn loaded_acceleration_and_reverse_motion_use_the_same_ceiling_for_all_cha
             let [a, b] = ids[..] else { unreachable!() };
             world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(a);
             assign_battle_pilot(&mut world, a, ObjectId(1)).unwrap();
+            support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
             start_battle_unit(&mut world, a, ObjectId(1), true).unwrap();
             for _ in 0..5 {
                 advance_battle_units(&mut world, 0);
@@ -598,6 +608,7 @@ async fn native_and_lua_tow_speed_limits_and_reports_agree() {
         world.btech = serde_json::from_value(encoded).unwrap();
         world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(a);
         assign_battle_pilot(&mut world, a, ObjectId(1)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, a, ObjectId(1), true).unwrap();
         for _ in 0..5 {
             advance_battle_units(&mut world, 0);
@@ -705,6 +716,7 @@ async fn reverse_towing_guard_is_shared_by_native_lua_and_direct_controls() {
         };
         world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(carrier);
         assign_battle_pilot(&mut world, carrier, ObjectId(1)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, carrier, ObjectId(1), true).unwrap();
         for _ in 0..5 {
             advance_battle_units(&mut world, 0);
@@ -807,6 +819,7 @@ async fn vertical_commands_share_loaded_budget_and_atomic_native_lua_behavior() 
         let [a, b] = ids[..] else { unreachable!() };
         world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(a);
         assign_battle_pilot(&mut world, a, ObjectId(1)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, a, ObjectId(1), true).unwrap();
         for _ in 0..5 {
             advance_battle_units(&mut world, 0);
@@ -929,6 +942,7 @@ async fn conventional_carrier_status_reports_loaded_and_mechanical_limits_separa
 fn prepare_pickup(world: &mut World, carrier: ObjectId, target: ObjectId) {
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(carrier);
     assign_battle_pilot(world, carrier, ObjectId(1)).unwrap();
+    support::seed_object_dice(world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(world, carrier, ObjectId(1), true).unwrap();
     for _ in 0..5 {
         advance_battle_units(world, 0);
@@ -1623,6 +1637,7 @@ async fn pickup_through_ice_uses_shared_breakage_for_ground_and_airborne_carrier
             BattleMapAsset::from_cells(&format!("1 1\n{}1\n", Terrain::Ice.symbol())).unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
         for id in [carrier, target] {
             place_battle_unit(&mut world, id, map, 0, 0).unwrap();
         }
@@ -1726,6 +1741,7 @@ async fn pickup_ice_failure_restores_the_previous_tow_and_all_material_state() {
         BattleMapAsset::from_cells(&format!("1 1\n{}1\n", Terrain::Ice.symbol())).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     for id in ids {
         place_battle_unit(&mut world, id, map, 0, 0).unwrap();
     }
@@ -2039,6 +2055,7 @@ async fn vtol_vertical_towing_preserves_continuous_height_each_tick() {
         };
         world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(carrier);
         assign_battle_pilot(&mut world, carrier, ObjectId(1)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, carrier, ObjectId(1), true).unwrap();
         for _ in 0..5 {
             advance_battle_units(&mut world, 0);
@@ -2087,6 +2104,7 @@ async fn airborne_carrier_shutdown_retains_tow_and_saved_descent() {
         };
         world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(carrier);
         assign_battle_pilot(&mut world, carrier, ObjectId(1)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         world
             .btech
             .rewrite_unit_record(carrier, |record| {

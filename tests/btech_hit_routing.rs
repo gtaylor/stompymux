@@ -34,6 +34,7 @@ async fn fixture(
         BattleMapAsset::from_cells("1 4\n.0\n.0\n.0\n.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let shooter = world.create(&config, "Shooter".into(), Kind::Thing);
     let target = world.create(&config, "Target".into(), Kind::Thing);
     for id in [shooter, target] {
@@ -50,6 +51,7 @@ async fn fixture(
     .unwrap()
     .create(&mut world, shooter)
     .unwrap();
+    support::seed_object_dice(&mut world, shooter, support::FIXTURE_DICE_SEED);
     let mut template = BattleTemplate::parse(
         "test",
         if quad {
@@ -68,6 +70,7 @@ async fn fixture(
     }
     assert!(check_battle_template(&template).constructible);
     create_battle_unit(&mut world, target, template).unwrap();
+    support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, shooter, map, 0, 3).unwrap();
     place_battle_unit(&mut world, target, map, 0, 0).unwrap();
     for id in [shooter, target] {
@@ -77,6 +80,7 @@ async fn fixture(
     }
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(shooter);
     assign_battle_pilot(&mut world, shooter, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     for seed in 0..=255 {
         edit(&mut world, shooter, |state| {
             state["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()

@@ -176,6 +176,7 @@ async fn gauss_explosion_cascades_case_and_restart() {
             let id = base.create(&config, "Gauss target".into(), Kind::Thing);
             base.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
             create_battle_unit(&mut base, id, definition(weapon, case)).unwrap();
+            support::seed_object_dice(&mut base, id, support::FIXTURE_DICE_SEED);
             let hit = BattleHit {
                 section: BattleSection::LeftArm,
                 rear_armor: false,

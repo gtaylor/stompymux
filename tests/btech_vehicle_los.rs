@@ -39,6 +39,7 @@ async fn fixture(
         place_battle_unit(&mut world, id, map, 0, if index % 2 == 0 { 4 } else { 0 }).unwrap();
         ids.push(id);
     }
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     (dir, config, world, map, ids.try_into().unwrap())
 }
 
@@ -169,6 +170,7 @@ async fn mech_searchlights_illuminate_vehicle_targets_and_replay_perception() {
     assert_eq!(world.btech, before);
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(lamp);
     assign_battle_pilot(&mut world, lamp, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, lamp, ObjectId(1), true).unwrap();
     for _ in 0..5 {
         advance_battle_units(&mut world, 0);
@@ -196,6 +198,7 @@ async fn mech_searchlights_illuminate_vehicle_targets_and_replay_perception() {
         BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, other, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, target, other, 0, 0).unwrap();
     assert!(battle_unit_terrain_los(&world, observer, target).is_err());
     assert!(!battle_unit_illuminated(&world, target));

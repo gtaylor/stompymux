@@ -17,6 +17,7 @@ async fn enter_pilot_restart_and_leave_preserve_ordinary_movement() {
         BattleMapAsset::from_cells("2 1\n.0.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     world
         .objects
         .get_mut(&ObjectId(2))
@@ -33,6 +34,7 @@ async fn enter_pilot_restart_and_leave_preserve_ordinary_movement() {
             BattleTemplate::parse("JR7-D", JENNER).unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut world, id, map, x, 0).unwrap();
         world.objects.get_mut(&player).unwrap().location = Some(map);
         ids.push(id);
@@ -240,6 +242,7 @@ async fn evacuation_moves_crew_retains_xp_and_rolls_back() {
         BattleTemplate::parse("JR7-D", JENNER).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, unit, support::FIXTURE_DICE_SEED);
     world
         .objects
         .get_mut(&unit)
@@ -269,6 +272,7 @@ async fn evacuation_moves_crew_retains_xp_and_rolls_back() {
         },
     )
     .unwrap();
+    support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
     set_battle_character_value(
         &mut world,
         pilot,
@@ -281,6 +285,7 @@ async fn evacuation_moves_crew_retains_xp_and_rolls_back() {
     )
     .unwrap();
     assign_battle_pilot(&mut world, unit, pilot).unwrap();
+    support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
     let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
     let before = scripts.world().clone();
     assert!(
@@ -369,6 +374,7 @@ async fn casualty_impact_action_rolls_back_damage_and_moves() {
         BattleTemplate::parse("JR7-D", JENNER).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, unit, support::FIXTURE_DICE_SEED);
     world
         .objects
         .get_mut(&unit)
@@ -397,6 +403,7 @@ async fn casualty_impact_action_rolls_back_damage_and_moves() {
         },
     )
     .unwrap();
+    support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
     for (name, experience) in [
         ("Toughness", 16_777_227),
         ("Lives", 11),
@@ -416,6 +423,7 @@ async fn casualty_impact_action_rolls_back_damage_and_moves() {
         .unwrap();
     }
     assign_battle_pilot(&mut world, unit, pilot).unwrap();
+    support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
     let baseline = world.clone();
     let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
     let hit = |section| BattleHit {
@@ -515,6 +523,7 @@ async fn character_pilot_health_recovery_and_fatal_evacuation() {
         BattleTemplate::parse("JR7-D", JENNER).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, unit, support::FIXTURE_DICE_SEED);
     world
         .objects
         .get_mut(&unit)

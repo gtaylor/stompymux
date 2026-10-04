@@ -215,6 +215,7 @@ async fn split_gauss_explosion_origin_case_and_restart() {
         .unwrap()
         .equipment = "CASE".into();
     create_battle_unit(&mut base, id, template).unwrap();
+    support::seed_object_dice(&mut base, id, support::FIXTURE_DICE_SEED);
     let hit = BattleHit {
         section: LeftTorso,
         rear_armor: false,
@@ -285,6 +286,7 @@ async fn split_section_loss_preserves_remaining_slot_mass() {
             definition(BattleWeapon::Ac20, parent, extension),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
         let before = &world.btech.constructed_units()[&id];
         let mass = before.mass().unwrap().equipment;
         let index = before
@@ -454,6 +456,7 @@ async fn repeated_split_proxy_criticals_accumulate_once_and_replay() {
             let id = world.create(&config, "Split damage".into(), Kind::Thing);
             world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
             create_battle_unit(&mut world, id, definition(weapon, parent, extension)).unwrap();
+            support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
             let loadout = world.btech.constructed_units()[&id].loadout().unwrap();
             let index = loadout
                 .weapons

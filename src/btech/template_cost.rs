@@ -135,7 +135,7 @@ fn raw_equipment_cost(world: &World, template: &RawTemplate) -> Result<f64> {
             ) {
                 continue;
             }
-            total += if let Ok(system) = BattleSystem::parse(&critical.equipment) {
+            total += if let Some(system) = BattleSystem::named(&critical.equipment) {
                 match system {
                     BattleSystem::Case => 50000.0,
                     BattleSystem::CaseIi => 175000.0,
@@ -371,7 +371,7 @@ fn inspection_loadout(template: &BattleTemplate) -> Result<(BattleLoadout, Vec<I
         definition.criticals.retain(|_, critical| {
             if critical.equipment.eq_ignore_ascii_case("SplitCrit_Left")
                 || critical.equipment.eq_ignore_ascii_case("SplitCrit_Right")
-                || BattleSystem::parse(&critical.equipment).is_ok()
+                || BattleSystem::named(&critical.equipment).is_some()
                 || BattleWeapon::parse(&critical.equipment).is_ok()
                 || super::equipment::strip_name_prefix(&critical.equipment, "Ammo_")
                     .is_some_and(|name| BattleWeapon::parse(name).is_ok())

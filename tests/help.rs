@@ -38,7 +38,7 @@ fn visible(spans: &[Span]) -> String {
 /// Every supplied keyword resolves, including privileged references for implemented/deferred commands.
 #[test]
 fn supplied_corpus_is_reachable_and_renderable() {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("game");
+    let root = crate::support::repository_root().join("game");
     let config = Config::load(&root).unwrap();
     let index = HelpIndex::load(&config).unwrap();
     assert!(matches!(
@@ -399,7 +399,7 @@ async fn slow_help_queue_obeys_deadline_and_counters() {
     .unwrap();
     let config = Config::load(dir.path()).unwrap();
     let (output, _receiver) = tokio::sync::mpsc::channel(1);
-    let now = std::time::Instant::now();
+    let now = tokio::time::Instant::now();
     let session = Session {
         retry_remaining: 3,
         site: Default::default(),

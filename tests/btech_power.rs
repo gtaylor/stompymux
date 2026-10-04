@@ -20,6 +20,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
         BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let id = world.create(&config, "Engine lab".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     create_battle_unit(
@@ -28,9 +29,11 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
         BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     persistence::save(&config.database(), &world).await.unwrap();
     (dir, config, world, id)
 }
@@ -85,6 +88,7 @@ async fn startup_emits_six_stages_and_resumes_only_committed_seconds() {
     );
     assert_eq!(world.btech.constructed_units()[&id].pilot(), None);
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..4 {
         assert!(advance_battle_units(&mut world, 0).is_empty());
@@ -133,6 +137,7 @@ async fn override_requires_wizard_and_corrupt_countdowns_fail_loading() {
         .flags
         .remove(stompymux_rs::Flag::Wizard);
     assign_battle_pilot(&mut world, id, ObjectId(2)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
     let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
     let text = support::run_text(&scripts, &config, ObjectId(2), 2, "startup override");
     assert!(text.contains("Insufficient access"), "{text}");
@@ -167,7 +172,7 @@ async fn override_requires_wizard_and_corrupt_countdowns_fail_loading() {
 async fn server_tick_retries_failed_countdowns_without_publishing_completion() {
     tokio::task::LocalSet::new().run_until(async {
         let (_dir,config,_world,id)=fixture().await;
-        let (addr,shutdown,task,_lua)=support::start(&config,std::rc::Rc::new(std::cell::Cell::new(1))).await;
+        let (addr,shutdown,task,_lua,mut heartbeats)=support::start(&config,std::rc::Rc::new(std::cell::Cell::new(1))).await;
         let mut client=support::Client { socket:tokio::net::TcpStream::connect(addr).await.unwrap(),pending:Vec::new() };
         client.until("Who are you? ").await;
         client.send("#1").await;
@@ -181,34 +186,23 @@ async fn server_tick_retries_failed_countdowns_without_publishing_completion() {
         // every save leaves its mark: the snapshot stamp.
         sqlx::query("CREATE TRIGGER deny_tick BEFORE UPDATE ON snapshot BEGIN SELECT RAISE(ABORT,'tick failure'); END").execute(&mut sql).await.unwrap();
         let initial=persistence::load(&config.database()).await.unwrap().btech.constructed_units()[&id].power();
-        support::attempt_heartbeat().await;
+        heartbeats.attempt().await;
         assert_eq!(persistence::load(&config.database()).await.unwrap().btech.constructed_units()[&id].power(),initial);
         assert_eq!(persistence::load(&config.database()).await.unwrap().btech.constructed_units()[&id].last_startup(), 0);
         client.send(&format!("@btech inspect #{}",id.0)).await;
         let text=client.until("Power: Starting").await;
         assert!(!text.contains("All systems operational"));
         sqlx::query("DROP TRIGGER deny_tick").execute(&mut sql).await.unwrap();
-        client.until("All systems operational!").await;
+        client.until_heartbeats("All systems operational!", &mut heartbeats, 20).await;
         assert_eq!(persistence::load(&config.database()).await.unwrap().btech.constructed_units()[&id].power(),BattlePower::Running);
         assert_eq!(persistence::load(&config.database()).await.unwrap().btech.constructed_units()[&id].last_startup(), 1);
         let before_motion=persistence::load(&config.database()).await.unwrap().btech.constructed_units()[&id].motion().unwrap();
         client.send("speed 10.75").await;
         client.until("Desired speed changed to 10 KPH.").await;
-        tokio::time::timeout(std::time::Duration::from_secs(6),async {
-            loop {
-                let motion=persistence::load(&config.database()).await.unwrap().btech.constructed_units()[&id].motion().unwrap();
-                if motion.point!=before_motion.point {break;}
-                support::attempt_heartbeat().await;
-            }
-        }).await.unwrap();
+        heartbeats.until_saved(&config,20,|saved| saved.btech.constructed_units()[&id].motion().unwrap().point!=before_motion.point).await;
         client.send("speed stop").await;
         client.until("Desired speed changed to 0 KPH.").await;
-        tokio::time::timeout(std::time::Duration::from_secs(6),async {
-            loop {
-                if persistence::load(&config.database()).await.unwrap().btech.constructed_units()[&id].motion().unwrap().speed==0.0 {break;}
-                support::attempt_heartbeat().await;
-            }
-        }).await.unwrap();
+        heartbeats.until_saved(&config,20,|saved| saved.btech.constructed_units()[&id].motion().unwrap().speed==0.0).await;
         client.send("shutdown").await;
         client.until("All systems shut down.").await;
         let loaded=persistence::load(&config.database()).await.unwrap();
@@ -273,29 +267,22 @@ async fn idle_map_smoke_ticks_retry_failed_saves_and_expire() {
         let (_dir, config, mut world) = support::isolated_world().await;
         let map = world.create(&config, "Smoke field".into(), Kind::Room);
         create_battle_map(&mut world, map, "smoke.map", BattleMapAsset::from_cells("1 1\n\"2\n").unwrap()).unwrap();
+        support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
         let coordinate = BattleHexCoordinate { x: 0, y: 0 };
         let smoke = BattleDecoration::new(BattleDecorationKind::Smoke, 2, None);
         set_map_decoration(&mut world, map, coordinate, Some(smoke)).unwrap();
         persistence::save(&config.database(), &world).await.unwrap();
         let mut sql = SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database()).foreign_keys(false)).await.unwrap();
         sqlx::raw_sql("CREATE TRIGGER deny_smoke_update BEFORE UPDATE ON btech_map_decorations BEGIN SELECT RAISE(ABORT,'smoke update failure'); END; CREATE TRIGGER deny_smoke_delete BEFORE DELETE ON btech_map_decorations BEGIN SELECT RAISE(ABORT,'smoke delete failure'); END;").execute(&mut sql).await.unwrap();
-        let (_addr, shutdown, task, _lua) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
-        support::attempt_heartbeat().await; support::attempt_heartbeat().await;
+        let (_addr, shutdown, task, _lua, mut heartbeats) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
+        heartbeats.attempt().await; heartbeats.attempt().await;
         // The first tick only stores the clock, since the smoke's expiry deadline is fixed;
         // the expiry tick that must delete the row keeps failing.
         let loaded = persistence::load(&config.database()).await.unwrap();
         assert_eq!(loaded.btech.maps()[&map].decoration(coordinate).unwrap(), Some(BattleDecoration { remaining: 1, ..smoke }));
         sqlx::raw_sql("DROP TRIGGER deny_smoke_update; DROP TRIGGER deny_smoke_delete;").execute(&mut sql).await.unwrap();
-        tokio::time::timeout(std::time::Duration::from_secs(6), async {
-            loop {
-                let loaded = persistence::load(&config.database()).await.unwrap();
-                if loaded.btech.maps()[&map].decoration(coordinate).unwrap().is_none() {
-                    assert_eq!(loaded.btech.maps()[&map].hex(0, 0).unwrap().terrain(), Terrain::HeavyForest);
-                    break;
-                }
-                support::attempt_heartbeat().await;
-            }
-        }).await.unwrap();
+        let loaded = heartbeats.until_saved(&config, 20, |loaded| loaded.btech.maps()[&map].decoration(coordinate).unwrap().is_none()).await;
+        assert_eq!(loaded.btech.maps()[&map].hex(0, 0).unwrap().terrain(), Terrain::HeavyForest);
         shutdown.send(ShutdownRequest::Sigterm).unwrap();
         task.await.unwrap().unwrap();
     }).await;
@@ -310,6 +297,7 @@ async fn idle_map_fire_burnout_retries_random_state_save_failure() {
         let (_dir, config, mut world) = support::isolated_world().await;
         let map = world.create(&config, "Burnout field".into(), Kind::Room);
         create_battle_map(&mut world, map, "fire.map", BattleMapAsset::from_cells("1 1\n`2\n").unwrap()).unwrap();
+        support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
         let coordinate = BattleHexCoordinate { x: 0, y: 0 };
         set_map_decoration(&mut world, map, coordinate, Some(BattleDecoration::new(BattleDecorationKind::Fire, 60, None))).unwrap();
         // Resume the final burnout phase of an already spreading fire.
@@ -321,20 +309,12 @@ async fn idle_map_fire_burnout_retries_random_state_save_failure() {
         let expected = world.btech.clone();
         let mut sql = SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database()).foreign_keys(false)).await.unwrap();
         sqlx::raw_sql("CREATE TRIGGER deny_fire_random BEFORE UPDATE ON btech_map_random BEGIN SELECT RAISE(ABORT,'fire random failure'); END;").execute(&mut sql).await.unwrap();
-        let (_addr, shutdown, task, _lua) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
-        support::attempt_heartbeat().await; support::attempt_heartbeat().await;
+        let (_addr, shutdown, task, _lua, mut heartbeats) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
+        heartbeats.attempt().await; heartbeats.attempt().await;
         assert_eq!(persistence::load(&config.database()).await.unwrap().btech, expected);
         sqlx::query("DROP TRIGGER deny_fire_random").execute(&mut sql).await.unwrap();
-        tokio::time::timeout(std::time::Duration::from_secs(6), async {
-            loop {
-                let loaded = persistence::load(&config.database()).await.unwrap();
-                if loaded.btech.maps()[&map].decoration(coordinate).unwrap().is_none() {
-                    assert!(matches!(loaded.btech.maps()[&map].hex(0, 0).unwrap().terrain(), Terrain::Rough | Terrain::Grassland));
-                    break;
-                }
-                support::attempt_heartbeat().await;
-            }
-        }).await.unwrap();
+        let loaded = heartbeats.until_saved(&config, 20, |loaded| loaded.btech.maps()[&map].decoration(coordinate).unwrap().is_none()).await;
+        assert!(matches!(loaded.btech.maps()[&map].hex(0, 0).unwrap().terrain(), Terrain::Rough | Terrain::Grassland));
         shutdown.send(ShutdownRequest::Sigterm).unwrap();
         task.await.unwrap().unwrap();
     }).await;
@@ -347,6 +327,7 @@ async fn idle_building_repair_retries_failed_world_save() {
         let (_dir, config, mut world) = support::isolated_world().await;
         let map = world.create(&config, "Repairing hangar".into(), Kind::Room);
         create_battle_map(&mut world, map, "inside.map", BattleMapAsset::from_cells("1 1\n.0\n").unwrap()).unwrap();
+        support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
         set_building_state(&mut world, map, BattleBuildingState { integrity: 9, maximum_integrity: 10, flags: 0, regeneration: 1 }).unwrap();
         // Resume one committed second before the final repair of an otherwise idle map.
         let mut encoded = serde_json::to_value(&world.btech).unwrap();
@@ -356,20 +337,12 @@ async fn idle_building_repair_retries_failed_world_save() {
         let expected = world.btech.clone();
         let mut sql = SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         sqlx::query("CREATE TRIGGER deny_repair BEFORE DELETE ON btech_building_repair BEGIN SELECT RAISE(ABORT,'repair failure'); END").execute(&mut sql).await.unwrap();
-        let (_addr, shutdown, task, _lua) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
-        support::attempt_heartbeat().await; support::attempt_heartbeat().await;
+        let (_addr, shutdown, task, _lua, mut heartbeats) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
+        heartbeats.attempt().await; heartbeats.attempt().await;
         assert_eq!(persistence::load(&config.database()).await.unwrap().btech, expected);
         sqlx::query("DROP TRIGGER deny_repair").execute(&mut sql).await.unwrap();
-        tokio::time::timeout(std::time::Duration::from_secs(6), async {
-            loop {
-                let loaded = persistence::load(&config.database()).await.unwrap();
-                if loaded.btech.maps()[&map].building_repair.is_none() {
-                    assert_eq!(loaded.btech.maps()[&map].building.integrity, 10);
-                    break;
-                }
-                support::attempt_heartbeat().await;
-            }
-        }).await.unwrap();
+        let loaded = heartbeats.until_saved(&config, 20, |loaded| loaded.btech.maps()[&map].building_repair.is_none()).await;
+        assert_eq!(loaded.btech.maps()[&map].building.integrity, 10);
         shutdown.send(ShutdownRequest::Sigterm).unwrap();
         task.await.unwrap().unwrap();
     }).await;
@@ -386,17 +359,11 @@ async fn shutdown_inferno_expiry_retries_failed_save() {
         let expected = world.btech.clone();
         let mut sql = SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         sqlx::query("CREATE TRIGGER deny_inferno BEFORE UPDATE ON btech_units BEGIN SELECT RAISE(ABORT,'inferno failure'); END").execute(&mut sql).await.unwrap();
-        let (_addr,shutdown,task,_lua) = support::start(&config,std::rc::Rc::new(std::cell::Cell::new(1))).await;
-        support::attempt_heartbeat().await; support::attempt_heartbeat().await;
+        let (_addr,shutdown,task,_lua,mut heartbeats) = support::start(&config,std::rc::Rc::new(std::cell::Cell::new(1))).await;
+        heartbeats.attempt().await; heartbeats.attempt().await;
         assert_eq!(persistence::load(&config.database()).await.unwrap().btech,expected);
         sqlx::query("DROP TRIGGER deny_inferno").execute(&mut sql).await.unwrap();
-        tokio::time::timeout(std::time::Duration::from_secs(6),async {
-            loop {
-                let loaded = persistence::load(&config.database()).await.unwrap();
-                if loaded.btech.constructed_units()[&id].inferno_remaining()==0 { break; }
-                support::attempt_heartbeat().await;
-            }
-        }).await.unwrap();
+        heartbeats.until_saved(&config,20,|loaded| loaded.btech.constructed_units()[&id].inferno_remaining()==0).await;
         shutdown.send(ShutdownRequest::Sigterm).unwrap();
         task.await.unwrap().unwrap();
     }).await;
@@ -417,17 +384,11 @@ async fn shutdown_radio_xp_gate_retries_failed_save() {
         let mut sql = SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         // The gate expiring removes a timer row; refuse the commit at the snapshot stamp.
         sqlx::query("CREATE TRIGGER deny_radio_xp BEFORE UPDATE ON snapshot BEGIN SELECT RAISE(ABORT,'radio XP failure'); END").execute(&mut sql).await.unwrap();
-        let (_addr, shutdown, task, _lua) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
-        support::attempt_heartbeat().await; support::attempt_heartbeat().await;
+        let (_addr, shutdown, task, _lua, mut heartbeats) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
+        heartbeats.attempt().await; heartbeats.attempt().await;
         assert_eq!(persistence::load(&config.database()).await.unwrap().btech, expected);
         sqlx::query("DROP TRIGGER deny_radio_xp").execute(&mut sql).await.unwrap();
-        tokio::time::timeout(std::time::Duration::from_secs(6), async {
-            loop {
-                let loaded = persistence::load(&config.database()).await.unwrap();
-                if loaded.btech.constructed_units()[&id].radio_experience_remaining() == 0 { break; }
-                support::attempt_heartbeat().await;
-            }
-        }).await.unwrap();
+        heartbeats.until_saved(&config, 20, |loaded| loaded.btech.constructed_units()[&id].radio_experience_remaining() == 0).await;
         shutdown.send(ShutdownRequest::Sigterm).unwrap();
         task.await.unwrap().unwrap();
     }).await;

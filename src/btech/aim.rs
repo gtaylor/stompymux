@@ -312,7 +312,7 @@ impl BattleUnit {
                     slot: **slot,
                 })
             })
-            .filter_map(|(_, critical)| BattleSystem::parse(&critical.equipment).ok())
+            .filter_map(|(_, critical)| BattleSystem::named(&critical.equipment))
             .collect();
         if damaged.contains(&BattleSystem::ShoulderOrHip) {
             return if arm { 4 } else { 0 };

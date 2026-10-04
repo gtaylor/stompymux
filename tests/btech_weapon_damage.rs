@@ -25,6 +25,7 @@ async fn fixture(weapon: BattleWeapon) -> (tempfile::TempDir, Config, World, Obj
         );
     }
     create_battle_unit(&mut world, id, template).unwrap();
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     let index = world.btech.constructed_units()[&id]
         .loadout()
         .unwrap()
@@ -117,9 +118,11 @@ async fn damaged_weapon_controls_and_reservations_share_saved_state() {
             BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut world, id, map, 0, 0).unwrap();
         world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
         assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         let location = world.btech.constructed_units()[&id]
             .loadout()
             .unwrap()
@@ -261,9 +264,11 @@ async fn critical_launch_failures_are_atomic_and_distinguish_permanent_jams() {
             BattleMapAsset::from_cells("1 3\n.0\n.0\n.0\n").unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut world, id, map, 0, 2).unwrap();
         world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
         assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         let seed = (0..=255)
             .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 2)
             .unwrap();

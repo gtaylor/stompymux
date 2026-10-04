@@ -336,7 +336,7 @@ async fn tcp_log_commands_commit_and_rollback() {
  {name='logmut',permission='everyone',pattern='^logmut$',handler=function(ctx) assert(mux.log('test.log','durable log'));mux.world.object(1):state('logtest'):set('written',1);return true end},
  {name='logfail',permission='everyone',pattern='^logfail$',handler=function(ctx) assert(mux.log('test.log','discarded'));error('rollback probe') end}
  }}"#).unwrap();
- let (address,shutdown,task,_)=start(&c,Rc::new(Cell::new(120))).await;
+ let (address,shutdown,task,_,_heartbeats)=start(&c,Rc::new(Cell::new(120))).await;
  let mut wizard=Client::connect(address,1).await;
  let mut player=Client::connect(address,2).await;
  let before=stable_world(&c.database()).await;

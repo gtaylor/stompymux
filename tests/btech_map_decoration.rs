@@ -15,6 +15,7 @@ async fn operator_decoration_reference_argument_replies() {
         BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(map);
     for command in ["addfire", "addsmoke"] {
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
@@ -89,6 +90,7 @@ async fn operator_decoration_duration_and_restart() {
                 BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
             )
             .unwrap();
+            support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
             world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(map);
             persistence::save(&config.database(), &world).await.unwrap();
             let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
@@ -207,6 +209,7 @@ async fn operator_decoration_replacement_and_admission() {
         BattleMapAsset::from_cells("1 1\n~2\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(map);
     world
         .objects
@@ -265,6 +268,7 @@ async fn changing_wind_preserves_pending_deadlines_and_restart() {
             BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
         set_map_wind(&mut world, map, 0, initial_speed).unwrap();
         let coordinate = BattleHexCoordinate { x: 0, y: 0 };
         set_map_decoration(
@@ -336,6 +340,7 @@ async fn extreme_negative_fire_budgets_use_the_current_wind_interval() {
             BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         let coordinate = BattleHexCoordinate { x: 0, y: 0 };
         add_battle_map_decoration_action(

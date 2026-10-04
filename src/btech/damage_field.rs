@@ -23,14 +23,16 @@ pub(super) fn placeholder(name: &str) -> bool {
     name.eq_ignore_ascii_case("SplitCrit_Left")
         || name.eq_ignore_ascii_case("SplitCrit_Right")
         || matches!(
-            BattleSystem::parse(name),
-            Ok(BattleSystem::EndoSteel
-                | BattleSystem::FerroFibrous
-                | BattleSystem::HeavyFerroFibrous
-                | BattleSystem::LightFerroFibrous
-                | BattleSystem::TripleStrengthMyomer
-                | BattleSystem::StealthArmor
-                | BattleSystem::LaserReflective)
+            BattleSystem::named(name),
+            Some(
+                BattleSystem::EndoSteel
+                    | BattleSystem::FerroFibrous
+                    | BattleSystem::HeavyFerroFibrous
+                    | BattleSystem::LightFerroFibrous
+                    | BattleSystem::TripleStrengthMyomer
+                    | BattleSystem::StealthArmor
+                    | BattleSystem::LaserReflective
+            )
         )
 }
 

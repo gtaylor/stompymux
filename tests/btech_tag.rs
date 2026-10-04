@@ -209,9 +209,11 @@ async fn tag_range_visibility_and_syntax_fail_without_mutation() {
             BattleMapAsset::from_cells(&format!("1 20\n{}", ".0\n".repeat(20))).unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
         relocate(&mut world, id, map, 17);
         relocate(&mut world, target, map, 1);
         assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         // Isolate the TAG range gate from the observer's perception reach.
         edit(&mut world, id, |state| {
             state["visibility"]["clairvoyant"] = true.into()

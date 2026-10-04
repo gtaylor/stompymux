@@ -54,6 +54,7 @@ async fn reactor_shot_and_neighbor_death_have_distinct_attribution() {
                 .unwrap(),
             )
             .unwrap();
+            support::seed_object_dice(&mut base, neighbor, support::FIXTURE_DICE_SEED);
             place_battle_unit(
                 &mut base,
                 neighbor,

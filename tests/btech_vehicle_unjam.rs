@@ -24,6 +24,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
         advance_battle_units(&mut world, 0);
@@ -207,6 +208,7 @@ async fn vehicle_feed_clearing_character_xp_and_output_roll_back_together() {
         },
     )
     .unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     set_battle_character_value(
         &mut world,
         ObjectId(1),
@@ -269,18 +271,12 @@ async fn idle_vehicle_feed_countdown_retries_failed_server_commits() {
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         // A running countdown keeps its timer row still; refuse the commit at the snapshot stamp.
         sqlx::raw_sql("CREATE TRIGGER deny_unjam BEFORE UPDATE ON snapshot BEGIN SELECT RAISE(ABORT,'unjam failure'); END;").execute(&mut sql).await.unwrap();
-        let (_address, shutdown, server, _lua) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
-        support::attempt_heartbeat().await;
+        let (_address, shutdown, server, _lua, mut heartbeats) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
+        heartbeats.attempt().await;
         let saved = persistence::load(&config.database()).await.unwrap();
         assert_eq!(saved.btech.vehicles()[&id].unjam().unwrap().remaining, 60);
         sqlx::raw_sql("DROP TRIGGER deny_unjam").execute(&mut sql).await.unwrap();
-        tokio::time::timeout(std::time::Duration::from_secs(5), async {
-            loop {
-                let saved = persistence::load(&config.database()).await.unwrap();
-                if saved.btech.vehicles()[&id].unjam().unwrap().remaining < 60 { break; }
-                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-            }
-        }).await.unwrap();
+        heartbeats.until_saved(&config, 5, |saved| saved.btech.vehicles()[&id].unjam().unwrap().remaining < 60).await;
         shutdown.send(ShutdownRequest::Sigterm).unwrap();
         server.await.unwrap().unwrap();
     }).await;
@@ -300,6 +296,7 @@ async fn vehicle_feed_clearing_broadcasts_only_to_current_contacts() {
             .unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, observer, support::FIXTURE_DICE_SEED);
     let map = world.btech.vehicles()[&id].position().unwrap().map;
     place_battle_unit(&mut world, observer, map, 0, 0).unwrap();
     world

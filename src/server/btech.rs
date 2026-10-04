@@ -8,11 +8,23 @@ impl Server {
     }
 
     /// The production step with optional diagnostic timings; scheduling semantics are identical.
+    /// Publishes the finished attempt to [`Scripts::progress`] receivers.
     pub(super) async fn btech_tick_measured(
         &mut self,
         now: i64,
-        mut metrics: Option<&mut super::heartbeat_harness::HeartbeatMetrics>,
+        metrics: Option<&mut super::heartbeat_harness::HeartbeatMetrics>,
     ) {
+        let committed = self.btech_step(now, metrics).await;
+        self.scripts
+            .record_progress(|progress| progress.record_heartbeat(committed));
+    }
+
+    /// Run one simulation step and report whether its world commit succeeded.
+    async fn btech_step(
+        &mut self,
+        now: i64,
+        mut metrics: Option<&mut super::heartbeat_harness::HeartbeatMetrics>,
+    ) -> bool {
         self.scripts.record_battle_event_tick();
         let mut scanner_observers = crate::battle_contact_observers(&self.scripts.world.borrow());
         let starting_scanners: std::collections::BTreeSet<_> = {
@@ -42,10 +54,11 @@ impl Server {
             world.btech.simulation_time()
         };
         if !active {
-            if self.commit_heartbeat(before, metrics.as_deref_mut()).await {
+            let committed = self.commit_heartbeat(before, metrics.as_deref_mut()).await;
+            if committed {
                 self.flush();
             }
-            return;
+            return committed;
         }
         if let Err(error) = crate::advance_battle_wrecks_action(&self.scripts, &self.config) {
             tracing::error!(error = %format_args!("{error:#}"), "BattleTech update failed");
@@ -57,7 +70,7 @@ impl Server {
                 .autopilot_plans
                 .clear();
             self.scripts.effects.rollback();
-            return;
+            return false;
         }
         crate::advance_battle_reactor_windows(&mut self.scripts.world.borrow_mut());
         crate::advance_building_repairs(&mut self.scripts.world.borrow_mut());
@@ -73,7 +86,7 @@ impl Server {
                 .autopilot_plans
                 .clear();
             self.scripts.effects.rollback();
-            return;
+            return false;
         }
         if let Err(error) = crate::advance_artillery_action(
             &self.scripts,
@@ -106,7 +119,7 @@ impl Server {
                 .autopilot_plans
                 .clear();
             self.scripts.effects.rollback();
-            return;
+            return false;
         }
         let mut building_arrivals = match crate::advance_battle_building_entries_action(
             &self.scripts,
@@ -122,7 +135,7 @@ impl Server {
                     .autopilot_plans
                     .clear();
                 self.scripts.effects.rollback();
-                return;
+                return false;
             }
         };
         if !building_arrivals.is_empty() {
@@ -141,7 +154,7 @@ impl Server {
                 .autopilot_plans
                 .clear();
             self.scripts.effects.rollback();
-            return;
+            return false;
         }
         if let Err(error) =
             crate::advance_battle_periodic_piloting_action(&self.scripts, &self.config)
@@ -155,7 +168,7 @@ impl Server {
                 .autopilot_plans
                 .clear();
             self.scripts.effects.rollback();
-            return;
+            return false;
         }
         crate::clear_battle_recent_fire(&mut self.scripts.world.borrow_mut());
         let mut notices = crate::advance_battle_units(&mut self.scripts.world.borrow_mut(), now);
@@ -187,7 +200,7 @@ impl Server {
                     .autopilot_plans
                     .clear();
                 self.scripts.effects.rollback();
-                return;
+                return false;
             }
         }
         match crate::advance_battle_motion_action(
@@ -250,7 +263,7 @@ impl Server {
                     .autopilot_plans
                     .clear();
                 self.scripts.effects.rollback();
-                return;
+                return false;
             }
         }
         notices.extend(crate::advance_battle_null_signature(
@@ -275,7 +288,7 @@ impl Server {
                 .autopilot_plans
                 .clear();
             self.scripts.effects.rollback();
-            return;
+            return false;
         }
         let dump_result = crate::advance_battle_dumping(&mut self.scripts.world.borrow_mut());
         match dump_result {
@@ -290,7 +303,7 @@ impl Server {
                     .autopilot_plans
                     .clear();
                 self.scripts.effects.rollback();
-                return;
+                return false;
             }
         }
         let unjam_result = crate::btech::unjam::advance_unjamming_in_action(
@@ -310,7 +323,7 @@ impl Server {
                     .autopilot_plans
                     .clear();
                 self.scripts.effects.rollback();
-                return;
+                return false;
             }
         };
         notices.extend(crate::advance_battle_heat(
@@ -329,7 +342,7 @@ impl Server {
                     .autopilot_plans
                     .clear();
                 self.scripts.effects.rollback();
-                return;
+                return false;
             }
         }
         notices.extend(crate::advance_inferno_burns(
@@ -393,7 +406,7 @@ impl Server {
                     .autopilot_plans
                     .clear();
                 self.scripts.effects.rollback();
-                return;
+                return false;
             }
         }
         notices.extend(crate::advance_battle_stun(
@@ -415,7 +428,7 @@ impl Server {
                     .autopilot_plans
                     .clear();
                 self.scripts.effects.rollback();
-                return;
+                return false;
             }
         }
         if let Err(error) =
@@ -430,7 +443,7 @@ impl Server {
                 .autopilot_plans
                 .clear();
             self.scripts.effects.rollback();
-            return;
+            return false;
         }
         let settings = &self.config.battletech;
         let thermal = crate::advance_battle_overheat_action(
@@ -463,7 +476,7 @@ impl Server {
                     .autopilot_plans
                     .clear();
                 self.scripts.effects.rollback();
-                return;
+                return false;
             }
         };
         let stagger = crate::advance_battle_stagger_action(
@@ -493,7 +506,7 @@ impl Server {
                     .autopilot_plans
                     .clear();
                 self.scripts.effects.rollback();
-                return;
+                return false;
             }
         }
         let electronic_changes =
@@ -510,7 +523,7 @@ impl Server {
                     .autopilot_plans
                     .clear();
                 self.scripts.effects.rollback();
-                return;
+                return false;
             }
         }
         let networks =
@@ -527,7 +540,7 @@ impl Server {
                     .autopilot_plans
                     .clear();
                 self.scripts.effects.rollback();
-                return;
+                return false;
             }
         }
         let links = crate::advance_battle_spotter_links(&mut self.scripts.world.borrow_mut());
@@ -543,7 +556,7 @@ impl Server {
                     .autopilot_plans
                     .clear();
                 self.scripts.effects.rollback();
-                return;
+                return false;
             }
         }
         notices.extend(crate::advance_battle_tags(
@@ -566,7 +579,7 @@ impl Server {
                 .autopilot_plans
                 .clear();
             self.scripts.effects.rollback();
-            return;
+            return false;
         }
         crate::advance_battle_automatic_turrets(&mut self.scripts.world.borrow_mut());
         let contact_events = crate::refresh_battle_contacts(
@@ -585,7 +598,7 @@ impl Server {
                     .autopilot_plans
                     .clear();
                 self.scripts.effects.rollback();
-                return;
+                return false;
             }
         };
         match crate::advance_battle_hiding(&mut self.scripts.world.borrow_mut()) {
@@ -600,7 +613,7 @@ impl Server {
                     .autopilot_plans
                     .clear();
                 self.scripts.effects.rollback();
-                return;
+                return false;
             }
         }
         notices.extend(crate::advance_battle_target_locks(
@@ -631,7 +644,7 @@ impl Server {
                     .autopilot_plans
                     .clear();
                 self.scripts.effects.rollback();
-                return;
+                return false;
             }
         }
         for event in contact_events {
@@ -645,7 +658,7 @@ impl Server {
                     .autopilot_plans
                     .clear();
                 self.scripts.effects.rollback();
-                return;
+                return false;
             }
         }
         if let Err(error) =
@@ -660,7 +673,7 @@ impl Server {
                 .autopilot_plans
                 .clear();
             self.scripts.effects.rollback();
-            return;
+            return false;
         }
         for notice in recovery_notices {
             if let Err(error) = crate::btech::notify_character(&self.scripts, notice) {
@@ -673,7 +686,7 @@ impl Server {
                     .autopilot_plans
                     .clear();
                 self.scripts.effects.rollback();
-                return;
+                return false;
             }
         }
         let messages = notices
@@ -690,13 +703,16 @@ impl Server {
                     .autopilot_plans
                     .clear();
                 self.scripts.effects.rollback();
-                return;
+                return false;
             }
         }
-        if self.commit_heartbeat(before, metrics).await {
+        let committed = self.commit_heartbeat(before, metrics).await;
+        if committed {
             self.flush();
         }
+        committed
     }
+
     /// Measure the actual validated database commit, with no benchmark substitute.
     async fn commit_heartbeat(
         &mut self,

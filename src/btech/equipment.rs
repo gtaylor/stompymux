@@ -400,58 +400,72 @@ impl BattleSystem {
 
     /// Resolve only systems whose slot identity is represented by the Rust domain.
     pub fn parse(name: &str) -> Result<Self> {
+        let Some(system) = Self::named(name) else {
+            bail!("Unsupported equipment {name}");
+        };
+        Ok(system)
+    }
+
+    /// Look up a system slot name, or `None` for weapons, ammunition and unknown parts.
+    ///
+    /// Validation and critical-slot scans ask this of every slot on a unit, most of which
+    /// are not systems, so the miss returns no error: building one per slot would format a
+    /// message and, when backtraces are enabled, capture a stack trace each time.
+    pub fn named(name: &str) -> Option<Self> {
         match name {
-            name if name.eq_ignore_ascii_case("ShoulderOrHip") => Ok(Self::ShoulderOrHip),
-            name if name.eq_ignore_ascii_case("UpperActuator") => Ok(Self::UpperActuator),
-            name if name.eq_ignore_ascii_case("LowerActuator") => Ok(Self::LowerActuator),
-            name if name.eq_ignore_ascii_case("HandOrFootActuator") => Ok(Self::HandOrFootActuator),
-            name if name.eq_ignore_ascii_case("Engine") => Ok(Self::Engine),
-            name if name.eq_ignore_ascii_case("Gyro") => Ok(Self::Gyro),
-            name if name.eq_ignore_ascii_case("Cockpit") => Ok(Self::Cockpit),
-            name if name.eq_ignore_ascii_case("LifeSupport") => Ok(Self::LifeSupport),
-            name if name.eq_ignore_ascii_case("Sensors") => Ok(Self::Sensors),
-            name if name.eq_ignore_ascii_case("HeatSink") => Ok(Self::HeatSink),
-            name if name.eq_ignore_ascii_case("Fuel_Tank") => Ok(Self::FuelTank),
-            name if name.eq_ignore_ascii_case("JumpJet") => Ok(Self::JumpJet),
-            name if name.eq_ignore_ascii_case("TargetingComputer") => Ok(Self::TargetingComputer),
-            name if name.eq_ignore_ascii_case("ArtemisIV") => Ok(Self::ArtemisIv),
-            name if name.eq_ignore_ascii_case("Ecm") => Ok(Self::Ecm),
-            name if name.eq_ignore_ascii_case("AngelEcm") => Ok(Self::AngelEcm),
-            name if name.eq_ignore_ascii_case("StealthArmor") => Ok(Self::StealthArmor),
-            name if name.eq_ignore_ascii_case("LaserReflective") => Ok(Self::LaserReflective),
-            name if name.eq_ignore_ascii_case("NullSig_Device") => Ok(Self::NullSignature),
-            name if name.eq_ignore_ascii_case("TAG") => Ok(Self::Tag),
-            name if name.eq_ignore_ascii_case("BeagleProbe") => Ok(Self::BeagleProbe),
-            name if name.eq_ignore_ascii_case("Light_BAP") => Ok(Self::LightProbe),
-            name if name.eq_ignore_ascii_case("BloodhoundProbe") => Ok(Self::BloodhoundProbe),
-            name if name.eq_ignore_ascii_case("Axe") => Ok(Self::Axe),
-            name if name.eq_ignore_ascii_case("Sword") => Ok(Self::Sword),
-            name if name.eq_ignore_ascii_case("Mace") => Ok(Self::Mace),
-            name if name.eq_ignore_ascii_case("Dual_Saw") => Ok(Self::DualSaw),
-            name if name.eq_ignore_ascii_case("Claw") => Ok(Self::Claw),
-            name if name.eq_ignore_ascii_case("Retractable_Blade") => Ok(Self::RetractableBlade),
-            name if name.eq_ignore_ascii_case("Lance") => Ok(Self::Lance),
-            name if name.eq_ignore_ascii_case("Flail") => Ok(Self::Flail),
-            name if name.eq_ignore_ascii_case("Wrecking_Ball") => Ok(Self::WreckingBall),
-            name if name.eq_ignore_ascii_case("Chain_Whip") => Ok(Self::ChainWhip),
-            name if name.eq_ignore_ascii_case("Small_Vibroblade") => Ok(Self::SmallVibroblade),
-            name if name.eq_ignore_ascii_case("Medium_Vibroblade") => Ok(Self::MediumVibroblade),
-            name if name.eq_ignore_ascii_case("Large_Vibroblade") => Ok(Self::LargeVibroblade),
-            name if name.eq_ignore_ascii_case("FerroFibrous") => Ok(Self::FerroFibrous),
-            name if name.eq_ignore_ascii_case("EndoSteel") => Ok(Self::EndoSteel),
-            name if name.eq_ignore_ascii_case("TripleStrengthMyomer") => {
-                Ok(Self::TripleStrengthMyomer)
+            name if name.eq_ignore_ascii_case("ShoulderOrHip") => Some(Self::ShoulderOrHip),
+            name if name.eq_ignore_ascii_case("UpperActuator") => Some(Self::UpperActuator),
+            name if name.eq_ignore_ascii_case("LowerActuator") => Some(Self::LowerActuator),
+            name if name.eq_ignore_ascii_case("HandOrFootActuator") => {
+                Some(Self::HandOrFootActuator)
             }
-            name if name.eq_ignore_ascii_case("Masc") => Ok(Self::Masc),
-            name if name.eq_ignore_ascii_case("SuperCharger") => Ok(Self::Supercharger),
-            name if name.eq_ignore_ascii_case("C3Master") => Ok(Self::C3Master),
-            name if name.eq_ignore_ascii_case("C3Slave") => Ok(Self::C3Slave),
-            name if name.eq_ignore_ascii_case("C3i") => Ok(Self::C3i),
-            name if name.eq_ignore_ascii_case("HvyFerroFibrous") => Ok(Self::HeavyFerroFibrous),
-            name if name.eq_ignore_ascii_case("LtFerroFibrous") => Ok(Self::LightFerroFibrous),
-            name if name.eq_ignore_ascii_case("CASE") => Ok(Self::Case),
-            name if name.eq_ignore_ascii_case("CASE-II") => Ok(Self::CaseIi),
-            _ => bail!("Unsupported equipment {name}"),
+            name if name.eq_ignore_ascii_case("Engine") => Some(Self::Engine),
+            name if name.eq_ignore_ascii_case("Gyro") => Some(Self::Gyro),
+            name if name.eq_ignore_ascii_case("Cockpit") => Some(Self::Cockpit),
+            name if name.eq_ignore_ascii_case("LifeSupport") => Some(Self::LifeSupport),
+            name if name.eq_ignore_ascii_case("Sensors") => Some(Self::Sensors),
+            name if name.eq_ignore_ascii_case("HeatSink") => Some(Self::HeatSink),
+            name if name.eq_ignore_ascii_case("Fuel_Tank") => Some(Self::FuelTank),
+            name if name.eq_ignore_ascii_case("JumpJet") => Some(Self::JumpJet),
+            name if name.eq_ignore_ascii_case("TargetingComputer") => Some(Self::TargetingComputer),
+            name if name.eq_ignore_ascii_case("ArtemisIV") => Some(Self::ArtemisIv),
+            name if name.eq_ignore_ascii_case("Ecm") => Some(Self::Ecm),
+            name if name.eq_ignore_ascii_case("AngelEcm") => Some(Self::AngelEcm),
+            name if name.eq_ignore_ascii_case("StealthArmor") => Some(Self::StealthArmor),
+            name if name.eq_ignore_ascii_case("LaserReflective") => Some(Self::LaserReflective),
+            name if name.eq_ignore_ascii_case("NullSig_Device") => Some(Self::NullSignature),
+            name if name.eq_ignore_ascii_case("TAG") => Some(Self::Tag),
+            name if name.eq_ignore_ascii_case("BeagleProbe") => Some(Self::BeagleProbe),
+            name if name.eq_ignore_ascii_case("Light_BAP") => Some(Self::LightProbe),
+            name if name.eq_ignore_ascii_case("BloodhoundProbe") => Some(Self::BloodhoundProbe),
+            name if name.eq_ignore_ascii_case("Axe") => Some(Self::Axe),
+            name if name.eq_ignore_ascii_case("Sword") => Some(Self::Sword),
+            name if name.eq_ignore_ascii_case("Mace") => Some(Self::Mace),
+            name if name.eq_ignore_ascii_case("Dual_Saw") => Some(Self::DualSaw),
+            name if name.eq_ignore_ascii_case("Claw") => Some(Self::Claw),
+            name if name.eq_ignore_ascii_case("Retractable_Blade") => Some(Self::RetractableBlade),
+            name if name.eq_ignore_ascii_case("Lance") => Some(Self::Lance),
+            name if name.eq_ignore_ascii_case("Flail") => Some(Self::Flail),
+            name if name.eq_ignore_ascii_case("Wrecking_Ball") => Some(Self::WreckingBall),
+            name if name.eq_ignore_ascii_case("Chain_Whip") => Some(Self::ChainWhip),
+            name if name.eq_ignore_ascii_case("Small_Vibroblade") => Some(Self::SmallVibroblade),
+            name if name.eq_ignore_ascii_case("Medium_Vibroblade") => Some(Self::MediumVibroblade),
+            name if name.eq_ignore_ascii_case("Large_Vibroblade") => Some(Self::LargeVibroblade),
+            name if name.eq_ignore_ascii_case("FerroFibrous") => Some(Self::FerroFibrous),
+            name if name.eq_ignore_ascii_case("EndoSteel") => Some(Self::EndoSteel),
+            name if name.eq_ignore_ascii_case("TripleStrengthMyomer") => {
+                Some(Self::TripleStrengthMyomer)
+            }
+            name if name.eq_ignore_ascii_case("Masc") => Some(Self::Masc),
+            name if name.eq_ignore_ascii_case("SuperCharger") => Some(Self::Supercharger),
+            name if name.eq_ignore_ascii_case("C3Master") => Some(Self::C3Master),
+            name if name.eq_ignore_ascii_case("C3Slave") => Some(Self::C3Slave),
+            name if name.eq_ignore_ascii_case("C3i") => Some(Self::C3i),
+            name if name.eq_ignore_ascii_case("HvyFerroFibrous") => Some(Self::HeavyFerroFibrous),
+            name if name.eq_ignore_ascii_case("LtFerroFibrous") => Some(Self::LightFerroFibrous),
+            name if name.eq_ignore_ascii_case("CASE") => Some(Self::Case),
+            name if name.eq_ignore_ascii_case("CASE-II") => Some(Self::CaseIi),
+            _ => None,
         }
     }
 }

@@ -1,7 +1,7 @@
 //! Two real cockpit clients fight through the committed server heartbeat and restart.
 use crate::support;
 use sqlx::Connection;
-use std::{cell::Cell, rc::Rc, time::Duration};
+use std::{cell::Cell, rc::Rc};
 use stompymux_rs::{
     BattleCharacter, BattleCharacterValue, BattleDice, BattleMapAsset, BattlePower, BattleTemplate,
     BattleUnit, Config, Kind, ObjectId, ShutdownRequest, World, create_battle_map,
@@ -21,6 +21,7 @@ async fn battlefield() -> (tempfile::TempDir, Config, [ObjectId; 2]) {
             .unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let mut units = Vec::new();
     for (player, name, template, y) in [
         (
@@ -44,6 +45,7 @@ async fn battlefield() -> (tempfile::TempDir, Config, [ObjectId; 2]) {
             BattleTemplate::parse("test", template).unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut world, id, map, 10, y).unwrap();
         world.objects.get_mut(&player).unwrap().location = Some(map);
         set_battle_character(
@@ -132,28 +134,16 @@ async fn command(client: &mut support::Client, sequence: &mut u32, input: &str) 
     client.until(&marker).await
 }
 
-/// Advance one ordinary heartbeat and wait for its durable state change.
-/// Resume time before socket/SQLite work, avoiding paused-clock timeout auto-advancement.
-async fn tick(config: &Config) -> World {
+/// Run committed heartbeats until the durable state changes, and return the saved world.
+async fn tick(config: &Config, heartbeats: &mut support::Heartbeats) -> World {
     let before = persistence::load(&config.database()).await.unwrap().btech;
-    tokio::time::pause();
-    tokio::time::advance(Duration::from_secs(1)).await;
-    tokio::time::resume();
-    tokio::time::timeout(Duration::from_secs(5), async {
-        loop {
-            let world = persistence::load(&config.database()).await.unwrap();
-            if world.btech != before {
-                return world;
-            }
-            tokio::time::sleep(Duration::from_millis(5)).await;
-        }
-    })
-    .await
-    .expect("heartbeat must commit before the next simulated second")
+    heartbeats
+        .until_saved(config, 5, |world| world.btech != before)
+        .await
 }
 
 /// Cockpit assignment can transfer a pending empty-crew recovery to its player.
-async fn await_recovery(config: &Config, player: ObjectId) {
+async fn await_recovery(config: &Config, heartbeats: &mut support::Heartbeats, player: ObjectId) {
     for _ in 0..300 {
         if !persistence::load(&config.database())
             .await
@@ -163,7 +153,7 @@ async fn await_recovery(config: &Config, player: ObjectId) {
         {
             return;
         }
-        tick(config).await;
+        tick(config, heartbeats).await;
     }
     let world = persistence::load(&config.database()).await.unwrap();
     panic!(
@@ -177,7 +167,7 @@ async fn two_clients_acquire_lock_fire_destroy_and_restart() {
     tokio::task::LocalSet::new()
         .run_until(async {
             let (_dir, config, units) = battlefield().await;
-            let (address, shutdown, task, _lua) =
+            let (address, shutdown, task, _lua, mut heartbeats) =
                 support::start(&config, Rc::new(Cell::new(1))).await;
             let mut clients = [
                 login(address, 1, "Duel field").await,
@@ -199,7 +189,7 @@ async fn two_clients_acquire_lock_fire_destroy_and_restart() {
                 {
                     break;
                 }
-                world = tick(&config).await;
+                world = tick(&config, &mut heartbeats).await;
             }
             assert!(
                 units
@@ -215,7 +205,7 @@ async fn two_clients_acquire_lock_fire_destroy_and_restart() {
                 }) {
                     break;
                 }
-                world = tick(&config).await;
+                world = tick(&config, &mut heartbeats).await;
             }
             for (side, client) in clients.iter_mut().enumerate() {
                 let output = command(client, &mut sequence, "contacts").await;
@@ -237,7 +227,7 @@ async fn two_clients_acquire_lock_fire_destroy_and_restart() {
                 assert!(output.contains("Target set"), "{output}");
             }
             for _ in 0..8 {
-                world = tick(&config).await;
+                world = tick(&config, &mut heartbeats).await;
             }
             for id in units {
                 assert_eq!(
@@ -287,7 +277,7 @@ async fn two_clients_acquire_lock_fire_destroy_and_restart() {
                         world = persistence::load(&config.database()).await.unwrap();
                     }
                 }
-                world = tick(&config).await;
+                world = tick(&config, &mut heartbeats).await;
             }
             assert!(
                 shots.iter().all(|n| *n > 0),
@@ -343,7 +333,7 @@ async fn two_clients_acquire_lock_fire_destroy_and_restart() {
             task.await.unwrap().unwrap();
             let saved = persistence::load(&config.database()).await.unwrap();
             let dead = saved.btech.constructed_units()[&units[loser]].clone();
-            let (address, shutdown, task, _lua) =
+            let (address, shutdown, task, _lua, mut heartbeats) =
                 support::start(&config, Rc::new(Cell::new(1))).await;
             let name = if loser == 0 {
                 "Alpha Atlas"
@@ -361,11 +351,11 @@ async fn two_clients_acquire_lock_fire_destroy_and_restart() {
             assert_wreck_unchanged(&loaded.btech.constructed_units()[&units[loser]], &dead);
             // A surviving pilot can still be recovering from the final hit after restart.
             let player = ObjectId(loser as i64 + 1);
-            await_recovery(&config, player).await;
+            await_recovery(&config, &mut heartbeats, player).await;
             // An explicit new cockpit claim must not make a wreck operational again.
             let output = command(&mut client, &mut sequence, "pilot").await;
             assert!(output.contains("take the cockpit"), "{output}");
-            await_recovery(&config, player).await;
+            await_recovery(&config, &mut heartbeats, player).await;
             let claimed = persistence::load(&config.database()).await.unwrap();
             let output = command(&mut client, &mut sequence, "startup").await;
             assert!(output.contains("Destroyed unit cannot start"), "{output}");

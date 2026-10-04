@@ -26,6 +26,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
         advance_battle_units(&mut world, 0);
@@ -46,6 +47,7 @@ async fn vehicle_perception_captures_completion_and_replays_until_next_startup()
     )
     .unwrap();
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..4 {
         advance_battle_units(&mut world, 0);
@@ -64,6 +66,7 @@ async fn vehicle_perception_captures_completion_and_replays_until_next_startup()
         },
     )
     .unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     let expected = battle_perception_target(&world, ObjectId(1)).unwrap();
     assert_eq!(expected, 8);
     assert_eq!(world.btech.vehicles()[&id].scanner_perception(), 18);
@@ -93,6 +96,7 @@ async fn vehicle_perception_captures_completion_and_replays_until_next_startup()
     )
     .unwrap();
     assign_battle_pilot(&mut restored, id, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut restored, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut restored, id, ObjectId(1), true).unwrap();
     advance_battle_units(&mut restored, 0);
     stop_battle_unit(
@@ -107,6 +111,7 @@ async fn vehicle_perception_captures_completion_and_replays_until_next_startup()
         expected
     );
     assign_battle_pilot(&mut restored, id, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut restored, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut restored, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
         advance_battle_units(&mut restored, 0);

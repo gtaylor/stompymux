@@ -36,12 +36,14 @@ async fn mech_fixture(
         BattleMapAsset::from_cells(asset).unwrap(),
     )
     .unwrap();
+    crate::support::seed_object_dice(&mut world, map, crate::support::FIXTURE_DICE_SEED);
     let unit = world.create(&config, "Autopilot audit mech".into(), Kind::Thing);
     world.objects.get_mut(&unit).unwrap().home = Some(ObjectId(config.home()));
     BattleUnitTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml"))
         .unwrap()
         .create(&mut world, unit)
         .unwrap();
+    crate::support::seed_object_dice(&mut world, unit, crate::support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, unit, map, start.0, start.1).unwrap();
 
     world
@@ -145,6 +147,7 @@ async fn vehicle_ground_classes_are_admitted_on_water_and_bridge_maps() {
         BattleMapAsset::from_cells("3 4\n.0.0.0\n~0/0.0\n.0~0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
+    crate::support::seed_object_dice(&mut world, map, crate::support::FIXTURE_DICE_SEED);
     let templates = [
         include_str!("../game/mechs/Demolisher.toml"),
         include_str!("../game/mechs/Flatbed_Truck.toml"),
@@ -165,6 +168,7 @@ async fn vehicle_ground_classes_are_admitted_on_water_and_bridge_maps() {
             BattleVehicleTemplate::parse("test", template).unwrap(),
         )
         .unwrap();
+        crate::support::seed_object_dice(&mut world, id, crate::support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut world, id, map, starts[index].0, starts[index].1).unwrap();
         units.push(id);
     }
@@ -240,6 +244,7 @@ async fn competing_routes_make_progress_without_permanent_congestion_block() {
         .unwrap()
         .create(&mut world, second)
         .unwrap();
+    crate::support::seed_object_dice(&mut world, second, crate::support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, second, map, 5, 6).unwrap();
     world
         .btech

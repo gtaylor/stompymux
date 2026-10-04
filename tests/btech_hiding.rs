@@ -32,6 +32,7 @@ async fn fixture(
         BattleMapAsset::from_cells(&format!("3 3\n{}", row.repeat(3))).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let id = world.create(&config, "Hiding unit".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     let source = match (camouflage, source.contains("specials = [")) {
@@ -43,9 +44,11 @@ async fn fixture(
         .unwrap()
         .create(&mut world, id)
         .unwrap();
+    support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, id, map, 1, 2).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
         advance_battle_units(&mut world, 0);
@@ -166,6 +169,7 @@ async fn hiding_authority_and_cached_observer_rules() {
                 .remove(Flag::Wizard);
             world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(id);
             assign_battle_pilot(&mut world, id, ObjectId(2)).unwrap();
+            support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
             let before = world.btech.clone();
             let result = begin_battle_hiding(&mut world, id, ObjectId(2));
             if !camouflage {
@@ -180,9 +184,11 @@ async fn hiding_authority_and_cached_observer_rules() {
                 .unwrap()
                 .create(&mut world, observer)
                 .unwrap();
+            support::seed_object_dice(&mut world, observer, support::FIXTURE_DICE_SEED);
             place_battle_unit(&mut world, observer, map, 1, 0).unwrap();
             world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(observer);
             assign_battle_pilot(&mut world, observer, ObjectId(1)).unwrap();
+            support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
             start_battle_unit(&mut world, observer, ObjectId(1), true).unwrap();
             for _ in 0..5 {
                 advance_battle_units(&mut world, 0);
@@ -399,7 +405,7 @@ async fn hiding_movement_waits_for_a_hex_crossing() {
 /// An idle vehicle keeps its hide event alive through the real persisted server heartbeat.
 #[tokio::test(flavor = "current_thread")]
 async fn hiding_idle_server_heartbeat_finishes_saved_event() {
-    use std::{cell::Cell, time::Duration};
+    use std::cell::Cell;
     tokio::task::LocalSet::new()
         .run_until(async {
             let (_dir, config, mut world, _, id) =
@@ -409,19 +415,11 @@ async fn hiding_idle_server_heartbeat_finishes_saved_event() {
                 unit["hide_elapsed"] = serde_json::json!(49)
             });
             persistence::save(&config.database(), &world).await.unwrap();
-            let (_address, shutdown, task, _) =
+            let (_address, shutdown, task, _, mut heartbeats) =
                 support::start(&config, Rc::new(Cell::new(1))).await;
-            tokio::time::timeout(Duration::from_secs(8), async {
-                loop {
-                    let saved = persistence::load(&config.database()).await.unwrap();
-                    if hiding(&saved, id) == (None, true) {
-                        break;
-                    }
-                    tokio::time::sleep(Duration::from_millis(50)).await;
-                }
-            })
-            .await
-            .unwrap();
+            heartbeats
+                .until_saved(&config, 8, |saved| hiding(saved, id) == (None, true))
+                .await;
             shutdown.send(ShutdownRequest::Sigterm).unwrap();
             task.await.unwrap().unwrap();
         })
@@ -841,6 +839,11 @@ async fn weapons_hold_authority_and_rejected_edits_are_atomic() {
         )
         .unwrap();
         assign_battle_pilot(&mut scripts.world_mut(), id, ObjectId(1)).unwrap();
+        support::seed_object_dice(
+            &mut scripts.world_mut(),
+            ObjectId(1),
+            support::FIXTURE_DICE_SEED,
+        );
         let stopped = scripts.world().btech.clone();
         for command in ["fire nonsense", "firetic nonsense"] {
             let text = support::run_text(&scripts, &config, ObjectId(1), 1, command);

@@ -67,6 +67,7 @@ async fn linked_confirmation_failure_restores_state() {
         BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(map);
     let path = dir.path().join("stompymux.toml");
     let mut table: toml::Table = std::fs::read_to_string(&path).unwrap().parse().unwrap();

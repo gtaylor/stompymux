@@ -56,6 +56,8 @@ impl Scripts {
             budget: v.budget,
             commands: crate::commands::CommandRegistry::new(),
             queue_enabled: std::cell::Cell::new(true),
+            // Callback views never run heartbeats or maintenance, so nothing listens here.
+            progress: tokio::sync::watch::Sender::new(Default::default()),
             schedules: Default::default(),
             warnings: Vec::new(),
         })

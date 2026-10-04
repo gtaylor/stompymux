@@ -572,6 +572,7 @@ async fn locust_machine_guns_and_case_insensitive_arm_flipping_survive_restart()
         BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let id = world.create(&config, "Locust".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     create_battle_unit(
@@ -580,9 +581,11 @@ async fn locust_machine_guns_and_case_insensitive_arm_flipping_survive_restart()
         BattleTemplate::parse("LCT-1V", include_str!("../game/mechs/LCT-1V.toml")).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
         advance_battle_units(&mut world, 0);
@@ -751,6 +754,7 @@ async fn ferro_fibrous_asset_mass_and_critical_candidates_survive_restart() {
     let id = world.create(&config, "Ferro Crab".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     create_battle_unit(&mut world, id, template).unwrap();
+    support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     let unit = &world.btech.constructed_units()[&id];
     let loadout = unit.loadout().unwrap();
     let material: Vec<_> = loadout
@@ -796,6 +800,7 @@ async fn existing_arctic_fox_xl_engine_constructs() {
     let id = world.create(&config, "Arctic Fox".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     create_battle_unit(&mut world, id, template).unwrap();
+    support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     let unit = &world.btech.constructed_units()[&id];
     assert_eq!(unit.engine().unwrap(), BattleEngine::Xl);
     assert_eq!(unit.mass().unwrap().engine, 3584);
@@ -823,6 +828,7 @@ async fn existing_case_hunchback_constructs() {
     let id = world.create(&config, "CASE Hunchback".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     create_battle_unit(&mut world, id, template).unwrap();
+    support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     let unit = &world.btech.constructed_units()[&id];
     assert!(unit.has_case(BattleSection::LeftTorso));
     let case = unit

@@ -60,6 +60,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, [ObjectId; 3]) {
         }
         ids.push(id);
     }
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     let mut saved = serde_json::to_value(&world.btech).unwrap();
     saved["constructed"][ids[1].0.to_string()]["signature"]["team"] = 99.into();
     saved["vehicles"][ids[2].0.to_string()]["signature"]["team"] = 99.into();

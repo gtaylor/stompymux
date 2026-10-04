@@ -1,6 +1,6 @@
 //! C/Rust audit evidence: unresolved characterizations and resolved parity regressions.
 //! C results are captured by the optional TCP probe; cargo test needs no C build.
-use std::{cell::RefCell, path::Path, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::{
     Config, Flag, Kind, ObjectId, Scripts, StateValue as Scalar,
     commands::{self, Action},
@@ -306,7 +306,7 @@ fn audit_fixture_references_and_transcripts_are_consistent() {
             "duplicate matrix ID"
         );
     }
-    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let root = support::repository_root();
     let tests = include_str!("behavioral_audit.rs");
     let findings = audit["findings"].as_array().unwrap();
     assert_eq!(findings.len(), 7);

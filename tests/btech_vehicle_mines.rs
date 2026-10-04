@@ -13,6 +13,7 @@ async fn vehicle_mine_queries_use_live_mass_and_preserve_saved_state() {
         BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let id = world.create(&config, "Demolisher".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     create_battle_vehicle(
@@ -22,6 +23,7 @@ async fn vehicle_mine_queries_use_live_mass_and_preserve_saved_state() {
             .unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, id, map, 1, 1).unwrap();
     for (ordinal, kind, extra) in [
         (9, BattleMineKind::Standard, 0),
@@ -116,6 +118,7 @@ async fn mine_queries_share_surface_gates_across_ground_vehicle_types() {
         BattleMapAsset::from_cells("3 1\n.2~2-2\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     for x in 0..3 {
         set_minefield(
             &mut world,
@@ -145,6 +148,7 @@ async fn mine_queries_share_surface_gates_across_ground_vehicle_types() {
         .unwrap();
         template.movement = movement;
         create_battle_vehicle(&mut world, id, template).unwrap();
+        support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
         for x in 0..3 {
             place_battle_unit(&mut world, id, map, x, 0).unwrap();
             let before = world.btech.clone();
@@ -193,6 +197,7 @@ async fn blast_fixture(
         place_battle_unit(&mut world, id, map, 1, if index == 2 { 0 } else { 1 }).unwrap();
         ids.push(id);
     }
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     // Face the blast source in packet-arithmetic fixtures; rear selection has separate coverage.
     let mut saved = serde_json::to_value(&world.btech).unwrap();
     for index in [0, 2] {
@@ -822,6 +827,7 @@ async fn command_blast_feedback_is_private_ordered_and_replayable() {
         .flags
         .insert(Flag::Connected);
     assign_battle_pilot(&mut world, ids[1], pilot).unwrap();
+    support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, ids[1], pilot, true).unwrap();
     for _ in 0..30 {
         advance_battle_units(&mut world, 0);

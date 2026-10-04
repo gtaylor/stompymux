@@ -55,8 +55,8 @@ asserts the independent numeric total of five laser damage plus a 200-point
 ammunition explosion, preserving the shooter attribution through that cascade.
 The reactor blast matrix checks every supported chassis, excluded recipients,
 callback rollback and restart: the common blast path credits no other unit with
-damage inflicted. These checks are in `tests/btech_motion.rs` and
-`tests/btech_reactor_explosion.rs`.
+damage inflicted. These checks are in `tests/btech_motion_core.rs`,
+`tests/btech_motion_weapons.rs` and `tests/btech_reactor_explosion.rs`.
 
 `units_killed` now has shared signed storage and field controls for both unit
 stores. Material destruction and lethal critical/crew events increment the

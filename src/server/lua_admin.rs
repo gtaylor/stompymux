@@ -126,8 +126,9 @@ impl Server {
                 self.inspection_report(id, "All Lua module checks passed.".into())
                     .await
             }
-            Ok(Some(candidate)) => {
+            Ok(Some(mut candidate)) => {
                 candidate.effects.inherit(&self.scripts.effects);
+                candidate.progress = self.scripts.progress.clone();
                 self.scripts = candidate;
                 self.finish_maintenance();
                 self.reconcile_connections();

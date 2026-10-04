@@ -63,9 +63,10 @@ impl BattleUnit {
             .sections
             .get(&section)
             .is_some_and(|layout| {
-                layout.criticals.values().any(|part| {
-                    BattleSystem::parse(&part.equipment).ok() == Some(BattleSystem::Case)
-                })
+                layout
+                    .criticals
+                    .values()
+                    .any(|part| BattleSystem::named(&part.equipment) == Some(BattleSystem::Case))
             })
     }
 
@@ -75,9 +76,10 @@ impl BattleUnit {
             .sections
             .get(&section)
             .is_some_and(|layout| {
-                layout.criticals.values().any(|part| {
-                    BattleSystem::parse(&part.equipment).ok() == Some(BattleSystem::CaseIi)
-                })
+                layout
+                    .criticals
+                    .values()
+                    .any(|part| BattleSystem::named(&part.equipment) == Some(BattleSystem::CaseIi))
             })
     }
 
@@ -157,7 +159,7 @@ impl BattleUnit {
             .criticals
             .iter()
             .filter(|(_, part)| {
-                !BattleSystem::parse(&part.equipment).is_ok_and(BattleSystem::is_noncritical)
+                !BattleSystem::named(&part.equipment).is_some_and(BattleSystem::is_noncritical)
             })
             .map(|(&slot, _)| CriticalLocation { section, slot })
             .filter(|location| {
@@ -200,12 +202,13 @@ impl BattleUnit {
             .all(|location| !self.critical_unavailable(*location)))
     }
 
-    /// Count effective losses: sink cooling capacity and jump jets, rather than their grouped slots.
-    /// Flooded and vacuum-exposed engines, heat sinks and jump jets also count.
-    pub fn system_hits(&self, system: BattleSystem) -> u8 {
-        // Undamaged units are the common case in scanner and movement queries.
-        // No installed system can be lost without one of these live conditions.
-        if self.lost_criticals.is_empty()
+    /// Whether no installed system can have been lost: no destroyed slot, no flooded or
+    /// breached section and no section without internal structure.
+    ///
+    /// Undamaged units are the common case in scanner and movement queries, so
+    /// [`Self::system_hits`] and [`Self::is_destroyed`] answer them from this check alone.
+    pub(super) fn systems_intact(&self) -> bool {
+        self.lost_criticals.is_empty()
             && self.flooded_sections.is_empty()
             && self.breached_sections.is_empty()
             && self.definition().sections.keys().all(|section| {
@@ -213,7 +216,12 @@ impl BattleUnit {
                     .get(section)
                     .is_some_and(|state| state.internal > 0)
             })
-        {
+    }
+
+    /// Count effective losses: sink cooling capacity and jump jets, rather than their grouped slots.
+    /// Flooded and vacuum-exposed engines, heat sinks and jump jets also count.
+    pub fn system_hits(&self, system: BattleSystem) -> u8 {
+        if self.systems_intact() {
             return 0;
         }
         if system == BattleSystem::JumpJet && self.definition().has_special("ImprovedJJ_Tech") {
@@ -262,7 +270,7 @@ impl BattleUnit {
                         system,
                         BattleSystem::Engine | BattleSystem::HeatSink | BattleSystem::JumpJet
                     ) && self.section_disabled(location.section)))
-                    && BattleSystem::parse(&part.equipment).ok() == Some(system)
+                    && BattleSystem::named(&part.equipment) == Some(system)
             })
             .count() as u8
     }

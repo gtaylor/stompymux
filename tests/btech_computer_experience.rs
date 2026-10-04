@@ -45,6 +45,7 @@ async fn fixture(source: &str) -> (tempfile::TempDir, Config, World, ObjectId) {
         },
     )
     .unwrap();
+    crate::support::seed_object_dice(&mut world, ObjectId(1), crate::support::FIXTURE_DICE_SEED);
     set_battle_character_value(
         &mut world,
         ObjectId(1),

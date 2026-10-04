@@ -1,20 +1,30 @@
 //! Integration suite for core 01 scenarios.
 
-/// Every top-level scenario must be compiled by exactly one explicit suite.
+/// Every top-level scenario must be compiled by exactly one explicit suite. A shared
+/// helper module, which holds no tests of its own, may be included by several suites but
+/// must still be included by at least one.
 #[test]
 fn every_scenario_is_in_one_suite() {
-    use std::{fs, path::Path};
+    use std::collections::BTreeMap;
+    use std::fs;
 
-    let tests = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests");
-    let mut scenarios: Vec<_> = fs::read_dir(&tests)
-        .unwrap()
-        .map(|entry| entry.unwrap().path())
-        .filter(|path| path.extension().is_some_and(|extension| extension == "rs"))
-        .map(|path| path.file_name().unwrap().to_str().unwrap().to_owned())
-        .collect();
-    scenarios.sort();
+    let tests = support::repository_root().join("tests");
+    let mut expected = BTreeMap::new();
+    for entry in fs::read_dir(&tests).unwrap() {
+        let path = entry.unwrap().path();
+        if path.extension().is_none_or(|extension| extension != "rs") {
+            continue;
+        }
+        let source = fs::read_to_string(&path).unwrap();
+        let has_tests = source.lines().any(|line| {
+            let line = line.trim_start();
+            line.starts_with("#[test]") || line.starts_with("#[tokio::test")
+        });
+        let name = path.file_name().unwrap().to_str().unwrap().to_owned();
+        expected.insert(name, has_tests);
+    }
 
-    let mut assigned = Vec::new();
+    let mut included: BTreeMap<String, usize> = BTreeMap::new();
     for suite in fs::read_dir(tests.join("suites")).unwrap() {
         let path = suite.unwrap().path();
         if path.extension().is_none_or(|extension| extension != "rs") {
@@ -29,12 +39,26 @@ fn every_scenario_is_in_one_suite() {
                 continue;
             };
             if !scenario.contains('/') {
-                assigned.push(scenario.to_owned());
+                *included.entry(scenario.to_owned()).or_default() += 1;
             }
         }
     }
-    assigned.sort();
-    assert_eq!(assigned, scenarios);
+
+    let mut problems = Vec::new();
+    for (name, has_tests) in &expected {
+        match (included.get(name).copied().unwrap_or(0), has_tests) {
+            (1, _) => {}
+            (0, _) => problems.push(format!("{name} is not included by any suite")),
+            (count, true) => problems.push(format!("{name} is included by {count} suites")),
+            (_, false) => {}
+        }
+    }
+    for name in included.keys() {
+        if !expected.contains_key(name) {
+            problems.push(format!("{name} is included but does not exist"));
+        }
+    }
+    assert!(problems.is_empty(), "{}", problems.join("\n"));
 }
 
 use stompymux_test_support as support;

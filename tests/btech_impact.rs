@@ -33,6 +33,7 @@ async fn fixture() -> (
         BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     seed(&mut world, id, 0);
     (dir, config, world, id)
 }
@@ -248,7 +249,9 @@ async fn character_explosion_injuries_are_applied_once() {
         },
     )
     .unwrap();
+    support::seed_object_dice(&mut base, ObjectId(1), support::FIXTURE_DICE_SEED);
     assign_battle_pilot(&mut base, id, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut base, ObjectId(1), support::FIXTURE_DICE_SEED);
     base.btech
         .rewrite_unit_record(id, |record| {
             record["ammunition"] = serde_json::json!([1]);
@@ -419,6 +422,7 @@ async fn case_ii_vents_ammunition_explosion_through_local_armor() {
             .any(|part| part.equipment == "CASE-II")
     );
     create_battle_unit(&mut baseline, id, template).unwrap();
+    support::seed_object_dice(&mut baseline, id, support::FIXTURE_DICE_SEED);
     assert!(baseline.btech.constructed_units()[&id].has_case_ii(Section::RightTorso));
     for slot in [1, 2] {
         stompymux_rs::destroy_battle_critical(
@@ -500,6 +504,7 @@ async fn technology_fixture(
         BattleTemplate::parse("JR7-D", &source).unwrap()
     };
     create_battle_unit(&mut world, id, template).unwrap();
+    support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     seed(&mut world, id, 0);
     (dir, config, world, id)
 }

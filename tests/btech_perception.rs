@@ -126,6 +126,7 @@ async fn lane(rows: &[&str], observer: Observer<'_>) -> Lane {
         BattleTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, observer_id, map, 0, 0).unwrap();
     place_battle_unit(&mut world, target, map, 0, 1).unwrap();
     for id in [observer_id, target] {

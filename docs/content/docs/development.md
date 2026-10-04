@@ -73,7 +73,10 @@ are shortcuts; the last command uses the default `game/` directory.
 
 Unit tests live beside their implementations. Integration scenarios and
 fixtures live in `tests/`; the scenarios are grouped into sixteen consolidated
-suites under `tests/suites/`, and each suite is its own test binary. Tests run
+suites in the `stompymux-suites` package under `tests/suites/`, and each suite
+is its own test binary. Tests that run the server's own executables live in
+the server package's `cli` target under `tests/cli/`, because cargo only
+exposes `CARGO_BIN_EXE_*` paths to that package's integration tests. Tests run
 under [cargo-nextest](https://nexte.st/), which runs every test in its own
 process and schedules all suites together. While iterating, build and run only
 what your change touches:
@@ -86,15 +89,18 @@ just test-suite btech_08 status     # one suite, filtered by test name
 just list-scenarios                 # which suite includes which scenario
 ```
 
-`just test-scenario` finds the suite that includes the scenario module and
-runs `cargo nextest run --test <suite> <scenario>::`, so only that suite's
-binary is built. Run the whole suite with `just test` before handing work back.
+`just test-scenario` finds the suites that include the scenario module and
+runs `cargo nextest run --test <suite> <scenario>::`, so only those suites'
+binaries are built. Run the whole suite with `just test` before handing work back.
 
 Workspace crates compile unoptimized and incrementally while dependencies are
 fully optimized, so after the first build a small edit rebuilds everything in
 well under a minute. The `dev` and `test` profiles are identical on purpose:
 `cargo build`, `cargo run`, and `cargo test` then share one set of artifacts,
-so switching between them never recompiles the server crate. Avoid
+so switching between them never recompiles the server crate. For the same
+reason the shared test helpers in `tests/support/` are a dependency of the
+suites package, not a dev-dependency of the server: the server library's
+unit-test build then compiles alongside the library instead of after it. Avoid
 `cargo clean` unless the target directory is corrupt; it throws away the
 optimized dependencies along with the incremental caches.
 

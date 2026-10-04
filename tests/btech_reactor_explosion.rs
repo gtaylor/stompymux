@@ -57,6 +57,7 @@ fn unit(
             .unwrap();
         }
     };
+    support::seed_object_dice(world, id, support::FIXTURE_DICE_SEED);
     place_battle_unit(world, id, map, i64::from(x), i64::from(y)).unwrap();
     edit(world, id, |state| {
         state["dice"] = serde_json::to_value(BattleDice::seeded([17; 32])).unwrap()
@@ -77,6 +78,7 @@ async fn reactor_blast_cross_chassis_and_atomic_replay() {
             .unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let source = unit(&mut world, &config, map, "biped", 3, 3);
     let mut targets = Vec::new();
     for chassis in [
@@ -204,6 +206,7 @@ async fn reactor_casualties_and_callback_failure_are_atomic() {
         BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let source = unit(&mut world, &config, map, "quad", 0, 0);
     unit(&mut world, &config, map, "track", 0, 0);
     world
@@ -234,7 +237,9 @@ async fn reactor_casualties_and_callback_failure_are_atomic() {
         },
     )
     .unwrap();
+    support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
     assign_battle_pilot(&mut world, source, pilot).unwrap();
+    support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
     injure_battle_character_pilot(&mut world, source, 2, false).unwrap();
     let before = world.clone();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
@@ -298,6 +303,7 @@ async fn chain_fixture() -> (
         BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let first = unit(&mut world, &config, map, "biped", 0, 0);
     let second = unit(&mut world, &config, map, "biped", 0, 0);
     let vehicle = unit(&mut world, &config, map, "track", 0, 0);
@@ -503,6 +509,7 @@ async fn reactor_chain_preserves_private_packet_feedback() {
         .flags
         .insert(Flag::Connected);
     assign_battle_pilot(&mut baseline, target, pilot).unwrap();
+    support::seed_object_dice(&mut baseline, pilot, support::FIXTURE_DICE_SEED);
     let passenger = baseline.create(&config, "Passenger".into(), Kind::Player);
     baseline.objects.get_mut(&passenger).unwrap().location = Some(target);
     baseline

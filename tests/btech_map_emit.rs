@@ -179,6 +179,7 @@ async fn map_emit_authority_empty_maps_and_all_occupants() {
         BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, empty, support::FIXTURE_DICE_SEED);
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     for (who, where_, text) in [
         (ObjectId(2), map, "hello"),

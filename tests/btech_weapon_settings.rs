@@ -326,6 +326,7 @@ async fn offensive_value_and_experience_follow_runtime_overrides() {
             },
         )
         .unwrap();
+        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         firing::edit(&mut world, target, |state| {
             state["signature"]["team"] = 1.into()
         });

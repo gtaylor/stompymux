@@ -45,6 +45,7 @@ async fn create(config: &Config, world: &mut World, id: ObjectId) {
         BattleMapAsset::from_cells(SOURCE).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(world, id, support::FIXTURE_DICE_SEED);
     persistence::save(&config.database(), world).await.unwrap();
 }
 
@@ -403,7 +404,7 @@ async fn server_rolls_back_schema_and_output_on_failed_creation_then_recovers() 
     tokio::task::LocalSet::new().run_until(async {
         let (_dir,config,_world,id,mut sql)=fixture().await;
         sqlx::raw_sql("CREATE TRIGGER reject_tiles BEFORE INSERT ON btech_map_hexes BEGIN SELECT RAISE(ABORT,'tile failure'); END;").execute(&mut sql).await.unwrap();
-        let (address,shutdown,task,_lua)=support::start(&config,Rc::new(Cell::new(0))).await;
+        let (address,shutdown,task,_lua,_heartbeats)=support::start(&config,Rc::new(Cell::new(0))).await;
         let mut client=support::Client::connect(address,1).await;
         client.send(&format!("@btech map-create #{}=asymmetric.map",id.0)).await;
         let text=client.until("Unable to save your changes.").await;

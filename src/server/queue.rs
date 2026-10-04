@@ -238,7 +238,7 @@ mod tests {
 
     fn attach(s: &mut Server) -> mpsc::Receiver<Output> {
         let (output, receiver) = mpsc::channel(128);
-        let now = Instant::now();
+        let now = tokio::time::Instant::now();
         s.sessions.insert(
             SessionId(1),
             Session {

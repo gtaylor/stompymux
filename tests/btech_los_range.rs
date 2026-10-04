@@ -22,16 +22,19 @@ async fn fixture(
         BattleMapAsset::from_cells(&format!("1 201\n{}", ".0\n".repeat(201))).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let observer = world.create(&config, "Observer".into(), Kind::Thing);
     let target = world.create(&config, "Target".into(), Kind::Thing);
     BattleUnitTemplate::parse("test", source)
         .unwrap()
         .create(&mut world, observer)
         .unwrap();
+    support::seed_object_dice(&mut world, observer, support::FIXTURE_DICE_SEED);
     BattleUnitTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml"))
         .unwrap()
         .create(&mut world, target)
         .unwrap();
+    support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, observer, map, 0, 0).unwrap();
     place_battle_unit(&mut world, target, map, 0, 60).unwrap();
     (dir, config, world, map, observer, target)

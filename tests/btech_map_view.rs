@@ -33,6 +33,7 @@ async fn map_views_clip_both_parities_and_preserve_terrain_cells_and_preferences
             .unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
         world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(map);
         world
             .objects
@@ -200,6 +201,7 @@ async fn view_rejection_callback_and_partial_publication_leave_no_effects() {
         BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(map);
     let before = world.btech.clone();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();

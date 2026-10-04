@@ -39,6 +39,7 @@ async fn fixture(
         place_battle_unit(&mut world, id, map, 0, if index % 2 == 0 { 4 } else { 0 }).unwrap();
         ids.push(id);
     }
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     (dir, config, world, map, ids.try_into().unwrap())
 }
 
@@ -78,6 +79,7 @@ async fn mixed_unit_scans_match_native_lua_and_preserve_ordinary_disclosure() {
         refresh_battle_contacts(&mut world, &[a, b, c, d]).unwrap();
         world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(observer);
         assign_battle_pilot(&mut world, observer, ObjectId(1)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         let before = world.btech.clone();
         let text = scan_battle_unit(&world, observer, ObjectId(1), target, "").unwrap();
         assert!(text.contains(&format!("Type: {kind}")));
@@ -222,6 +224,7 @@ async fn coordinate_scans_choose_visible_mixed_occupants_in_battlefield_order() 
     initial.btech = serde_json::from_value(saved).unwrap();
     initial.objects.get_mut(&ObjectId(1)).unwrap().location = Some(observer);
     assign_battle_pilot(&mut initial, observer, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut initial, ObjectId(1), support::FIXTURE_DICE_SEED);
     refresh_battle_contacts(&mut initial, &[observer]).unwrap();
     initial.validate(&config).unwrap();
     for selected in [Some(vehicle), Some(mech), None] {
@@ -283,6 +286,7 @@ fn terrain_targets(world: &mut World, config: &Config, map: ObjectId) -> ObjectI
         BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(world, interior, support::FIXTURE_DICE_SEED);
     set_building_state(
         world,
         interior,
@@ -333,6 +337,7 @@ async fn vehicle_coordinate_and_structure_scans_share_native_lua_admission() {
     terrain_targets(&mut world, &config, map);
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(observer);
     assign_battle_pilot(&mut world, observer, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     refresh_battle_contacts(&mut world, &[observer]).unwrap();
     let coordinate = BattleHexCoordinate { x: 0, y: 1 };
     assert!(battle_hex_visible(&world, observer, coordinate).unwrap());
@@ -415,6 +420,7 @@ async fn vehicle_terrain_perception_owns_dice_and_rolls_back_experience() {
     set_building_state(&mut world, interior, building).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(observer);
     assign_battle_pilot(&mut world, observer, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     let coordinate = BattleHexCoordinate { x: 0, y: 1 };
     let before = world.btech.clone();
     assert!(
@@ -461,6 +467,7 @@ async fn vehicle_terrain_perception_owns_dice_and_rolls_back_experience() {
         },
     )
     .unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     world
         .btech
         .rewrite_unit_record(observer, |record| {

@@ -39,6 +39,7 @@ async fn fixture_on(chassis: &str, tile: &str) -> (tempfile::TempDir, Config, Wo
         BattleMapAsset::from_cells(&format!("1 1\n{tile}\n")).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let id = world.create(&config, chassis.into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     match chassis {
@@ -76,6 +77,7 @@ async fn fixture_on(chassis: &str, tile: &str) -> (tempfile::TempDir, Config, Wo
             .unwrap();
         }
     }
+    support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
@@ -320,6 +322,11 @@ async fn self_destruct_admission_stop_and_atomic_cancel() {
     assert!(self_destruct_action(&scripts, &config, id, ObjectId(2), "stop override").is_err());
     assert_eq!(scripts.world().btech, pending);
     assign_battle_pilot(&mut scripts.world_mut(), id, ObjectId(1)).unwrap();
+    support::seed_object_dice(
+        &mut scripts.world_mut(),
+        ObjectId(1),
+        support::FIXTURE_DICE_SEED,
+    );
     assert!(self_destruct_action(&scripts, &config, id, ObjectId(1), "stop").is_err());
     let assigned = scripts.world().btech.clone();
     assert!(
@@ -352,9 +359,19 @@ async fn self_destruct_admission_stop_and_atomic_cancel() {
     );
     self_destruct_action(&scripts, &enabled, id, ObjectId(1), "reactor").unwrap();
     assign_battle_pilot(&mut scripts.world_mut(), id, ObjectId(1)).unwrap();
+    support::seed_object_dice(
+        &mut scripts.world_mut(),
+        ObjectId(1),
+        support::FIXTURE_DICE_SEED,
+    );
     self_destruct_action(&scripts, &enabled, id, ObjectId(1), "stop").unwrap();
     self_destruct_action(&scripts, &enabled, id, ObjectId(1), "reactor").unwrap();
     assign_battle_pilot(&mut scripts.world_mut(), id, ObjectId(1)).unwrap();
+    support::seed_object_dice(
+        &mut scripts.world_mut(),
+        ObjectId(1),
+        support::FIXTURE_DICE_SEED,
+    );
     stop_battle_unit(
         &mut scripts.world_mut(),
         id,
@@ -417,10 +434,12 @@ async fn self_destruct_order_and_failed_tick_replay() {
         BattleTemplate::parse("Daishi-H", include_str!("../game/mechs/Daishi-H.toml")).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, second, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, second, map, 0, 0).unwrap();
     let pilot = ObjectId(2);
     world.objects.get_mut(&pilot).unwrap().location = Some(second);
     assign_battle_pilot(&mut world, second, pilot).unwrap();
+    support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, second, pilot, true).unwrap();
     for _ in 0..5 {
         advance_battle_units(&mut world, 0);
@@ -513,7 +532,7 @@ async fn self_destruct_server_restart_retries_failed_commit() {
         self_destruct_action(&scripts,&config,id,ObjectId(1),"reactor").unwrap();
         let saved=scripts.world().clone();
         persistence::save(&config.database(),&saved).await.unwrap();
-        let (address,shutdown,task,_lua)=support::start(&config,Rc::new(std::cell::Cell::new(1))).await;
+        let (address,shutdown,task,_lua,mut heartbeats)=support::start(&config,Rc::new(std::cell::Cell::new(1))).await;
         let mut client=support::Client {socket:tokio::net::TcpStream::connect(address).await.unwrap(),pending:Vec::new()};
         client.until("Who are you? ").await;
         client.send("#1").await;
@@ -522,27 +541,18 @@ async fn self_destruct_server_restart_retries_failed_commit() {
         client.until("biped").await;
         let mut sql=sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         sqlx::query("CREATE TRIGGER deny_self_destruct BEFORE UPDATE ON btech_units BEGIN SELECT RAISE(ABORT,'self-destruct commit failure'); END").execute(&mut sql).await.unwrap();
-        support::attempt_heartbeat().await;
+        heartbeats.attempt().await;
         let persisted=persistence::load(&config.database()).await.unwrap();
         assert_eq!(persisted.btech.constructed_units()[&id].self_destruct().unwrap().remaining,2);
         client.send("status").await;
         let output=client.until("Self-destruction: 2s remaining").await;
         assert!(!output.contains("Self-destruction in 1 second"));
         sqlx::query("DROP TRIGGER deny_self_destruct").execute(&mut sql).await.unwrap();
-        let finished=tokio::time::timeout(std::time::Duration::from_secs(6),async {
-            loop {
-                let loaded=persistence::load(&config.database()).await.unwrap();
-                if loaded.btech.constructed_units()[&id].is_destroyed() {
-                    assert!(loaded.btech.constructed_units()[&id].self_destruct().is_none());
-                    assert_eq!(loaded.btech.constructed_units()[&id].pilot_injuries(),4);
-                    break;
-                }
-                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-            }
-        }).await;
+        let loaded=heartbeats.until_saved(&config,6,|loaded| loaded.btech.constructed_units()[&id].is_destroyed()).await;
+        assert!(loaded.btech.constructed_units()[&id].self_destruct().is_none());
+        assert_eq!(loaded.btech.constructed_units()[&id].pilot_injuries(),4);
         shutdown.send(ShutdownRequest::Sigterm).unwrap();
         task.await.unwrap().unwrap();
-        finished.unwrap();
     }).await;
 }
 
@@ -614,26 +624,19 @@ async fn self_destruct_ground_wreck_descends_after_restart() {
             assert_eq!(unit.crew_recovery().remaining, 0);
             assert_eq!(unit.free_fall(), Some(BattleFreeFall::new(6)));
             persistence::save(&config.database(), &saved).await.unwrap();
-            let (_, shutdown, task, _) =
+            let (_, shutdown, task, _, mut heartbeats) =
                 support::start(&config, Rc::new(std::cell::Cell::new(1))).await;
-            let result = tokio::time::timeout(std::time::Duration::from_secs(15), async {
-                loop {
-                    let loaded = persistence::load(&config.database()).await.unwrap();
-                    let unit = &loaded.btech.vehicles()[&id];
-                    if unit.free_fall().is_none() {
-                        assert_eq!(
-                            unit.elevation_level(BattleHex::new(Terrain::Grassland, 0)),
-                            0
-                        );
-                        break;
-                    }
-                    support::attempt_heartbeat().await;
-                }
-            })
-            .await;
+            let loaded = heartbeats
+                .until_saved(&config, 30, |loaded| {
+                    loaded.btech.vehicles()[&id].free_fall().is_none()
+                })
+                .await;
+            assert_eq!(
+                loaded.btech.vehicles()[&id].elevation_level(BattleHex::new(Terrain::Grassland, 0)),
+                0
+            );
             shutdown.send(ShutdownRequest::Sigterm).unwrap();
             task.await.unwrap().unwrap();
-            result.unwrap();
         })
         .await;
 }

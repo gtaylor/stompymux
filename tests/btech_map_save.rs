@@ -19,6 +19,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
         BattleMapAsset::from_cells("2 1\n&2#1\n0: 100 20\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     set_map_decoration(
         &mut world,
         map,
@@ -157,7 +158,8 @@ async fn server_map_save_reports_completion() {
                 .path(&config.database.map_database)
                 .join("server.map.toml");
             std::fs::write(&path, "original").unwrap();
-            let (addr, shutdown, task, _) = support::start(&config, Rc::new(Cell::new(1))).await;
+            let (addr, shutdown, task, _, _heartbeats) =
+                support::start(&config, Rc::new(Cell::new(1))).await;
             let mut client = support::Client {
                 socket: tokio::net::TcpStream::connect(addr).await.unwrap(),
                 pending: Vec::new(),

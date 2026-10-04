@@ -1,5 +1,5 @@
 //! Effective access policy, reload compilation, source diagnostics and C catalog compatibility.
-use std::{cell::RefCell, path::Path, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::{
     Config, Flag, Kind, ObjectId, Scripts,
     access::Permissions as P,
@@ -13,7 +13,7 @@ use support::copy;
 fn game(policy: &str) -> tempfile::TempDir {
     let d = tempfile::tempdir().unwrap();
     copy(
-        &Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/game"),
+        &support::repository_root().join("tests/fixtures/game"),
         d.path(),
     );
     std::fs::rename(d.path().join("stompymux.toml"), d.path().join("base.toml")).unwrap();

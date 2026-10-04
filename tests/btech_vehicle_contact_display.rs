@@ -39,6 +39,7 @@ async fn fixture(
         place_battle_unit(&mut world, id, map, 0, if index % 2 == 0 { 4 } else { 0 }).unwrap();
         ids.push(id);
     }
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     (dir, config, world, map, ids.try_into().unwrap())
 }
 
@@ -238,6 +239,7 @@ async fn newly_visible_vehicle_targets_do_not_panic_in_mech_consumers() {
     refresh_battle_contacts(&mut world, &ids).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(a);
     assign_battle_pilot(&mut world, a, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     let before = world.btech.clone();
     assert!(
         scan_battle_unit(&world, a, ObjectId(1), c, "")

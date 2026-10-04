@@ -60,6 +60,7 @@ async fn fixture(
     place_battle_unit(&mut world, id, exterior, 0, 0).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
         advance_battle_units(&mut world, 0);
@@ -236,9 +237,11 @@ async fn entry_feedback_uses_hex_visibility_and_captured_contacts() {
             .unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, observer, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut world, observer, exterior, 1, 0).unwrap();
         world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(observer);
         assign_battle_pilot(&mut world, observer, ObjectId(2)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, observer, ObjectId(2), true).unwrap();
         for _ in 0..5 {
             advance_battle_units(&mut world, 0);
@@ -306,9 +309,11 @@ async fn interior_arrival_uses_normal_acquisition_without_extra_dice() {
             .unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, observer, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut world, observer, interior, 0, 0).unwrap();
         world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(observer);
         assign_battle_pilot(&mut world, observer, ObjectId(2)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, observer, ObjectId(2), true).unwrap();
         for _ in 0..5 {
             advance_battle_units(&mut world, 0);
@@ -537,9 +542,11 @@ async fn host_exits_share_teleport_policy_and_callback_rollback() {
             .unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, observer, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut world, observer, exterior, 1, 0).unwrap();
         world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(observer);
         assign_battle_pilot(&mut world, observer, ObjectId(2)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, observer, ObjectId(2), true).unwrap();
         for _ in 0..5 {
             advance_battle_units(&mut world, 0);
@@ -895,6 +902,7 @@ fn attach(world: &mut World, config: &Config, carrier: ObjectId, source: &str) -
         .unwrap()
         .create(world, target)
         .unwrap();
+    support::seed_object_dice(world, target, support::FIXTURE_DICE_SEED);
     let position = world
         .btech
         .vehicles()

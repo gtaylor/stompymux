@@ -59,6 +59,7 @@ async fn water_modifier_is_attacker_owned_and_shared_by_supported_chassis() {
                     .unwrap(),
             )
             .unwrap();
+            crate::support::seed_object_dice(&mut world, map, crate::support::FIXTURE_DICE_SEED);
             select_battle_target(&mut world, shooter, ObjectId(1), None).unwrap();
             for id in [shooter, target] {
                 firing::edit(&mut world, id, |state| {
@@ -212,6 +213,7 @@ async fn shallow_water_aim_uses_mount_anatomy_and_posture() {
                 BattleMapAsset::from_cells("1 4\n~1\n~1\n~1\n~1\n").unwrap(),
             )
             .unwrap();
+            crate::support::seed_object_dice(&mut world, map, crate::support::FIXTURE_DICE_SEED);
             select_battle_target(&mut world, shooter, ObjectId(1), None).unwrap();
             for (id, y) in [(shooter, 3), (target, 0)] {
                 firing::edit(&mut world, id, |state| {

@@ -1,5 +1,5 @@
 //! Built-in package initialization and sandbox ordering across editable game modules.
-use std::{cell::RefCell, path::Path, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::{Config, Scripts, persistence};
 
 use crate::support;
@@ -10,7 +10,7 @@ use support::copy;
 async fn builtins_and_sandbox_precede_lexical_game_loading() {
     let temp = tempfile::tempdir().unwrap();
     copy(
-        &Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/game"),
+        &support::repository_root().join("tests/fixtures/game"),
         temp.path(),
     );
     let config = Config::load(temp.path()).unwrap();

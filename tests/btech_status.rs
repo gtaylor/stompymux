@@ -350,6 +350,7 @@ async fn named_fixture(
     place_battle_unit(&mut world, observer, map, 0, 0).unwrap();
     world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(observer);
     assign_battle_pilot(&mut world, observer, ObjectId(2)).unwrap();
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, observer, ObjectId(2), true).unwrap();
     for _ in 0..5 {
         advance_battle_units(&mut world, 0);
@@ -488,6 +489,7 @@ async fn vehicle_status_tracks_live_load_damage_ammunition_and_flight() {
     .unwrap()
     .create(&mut world, target)
     .unwrap();
+    support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
     let position = world.btech.vehicles()[&id].position().unwrap();
     place_battle_unit(
         &mut world,
@@ -581,8 +583,8 @@ async fn status_layout_snapshots_cover_every_diagram() {
         let before = world.btech.clone();
         let rendered = battle_unit_status(&world, id, "").unwrap();
         let plain = text::plain(&rendered).replace("\r\n", "\n");
-        let file = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join(format!("tests/fixtures/btech/status/{name}.txt"));
+        let file =
+            support::repository_root().join(format!("tests/fixtures/btech/status/{name}.txt"));
         if std::env::var_os("UPDATE_STATUS_SNAPSHOTS").is_some() {
             std::fs::create_dir_all(file.parent().unwrap()).unwrap();
             std::fs::write(&file, &plain).unwrap();

@@ -215,6 +215,7 @@ async fn quad_shallow_water_counts_front_leg_sinks_and_excludes_flooded_equipmen
         BattleMapAsset::from_cells("1 1\n~1\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let mut encoded = serde_json::to_value(quad()).unwrap();
     encoded["position"] = serde_json::to_value(BattlePosition { map, x: 0, y: 0 }).unwrap();
     encoded["ground_elevation"] = (-1).into();

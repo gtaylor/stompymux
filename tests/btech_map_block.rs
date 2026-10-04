@@ -147,6 +147,7 @@ async fn addblock_native_argument_boundaries_and_replies() {
         BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(map);
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
     for (arguments, expected) in [
@@ -212,6 +213,7 @@ async fn addblock_radius_team_and_restart() {
                 BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
             )
             .unwrap();
+            support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
             world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(map);
             persistence::save(&config.database(), &world).await.unwrap();
             let before = world.btech.clone();
@@ -285,6 +287,7 @@ async fn addblock_validation_and_full_width_saved_radii() {
         BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(map);
     world
         .objects

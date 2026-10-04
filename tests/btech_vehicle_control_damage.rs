@@ -24,6 +24,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
         advance_battle_units(&mut world, 0);
@@ -245,16 +246,11 @@ async fn powered_off_crew_recovery_retries_failed_server_ticks() {
         let mut sql=sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         // A running countdown keeps its timer row still; refuse the commit at the snapshot stamp.
         sqlx::raw_sql("CREATE TRIGGER deny_stun BEFORE UPDATE ON snapshot BEGIN SELECT RAISE(ABORT,'stun failure'); END;").execute(&mut sql).await.unwrap();
-        let (_address,shutdown,task,_lua)=support::start(&config,std::rc::Rc::new(std::cell::Cell::new(1))).await;
-        support::attempt_heartbeat().await;
+        let (_address,shutdown,task,_lua,mut heartbeats)=support::start(&config,std::rc::Rc::new(std::cell::Cell::new(1))).await;
+        heartbeats.attempt().await;
         assert_eq!(persistence::load(&config.database()).await.unwrap().btech.vehicles()[&id].crew_stun_remaining(),2);
         sqlx::query("DROP TRIGGER deny_stun").execute(&mut sql).await.unwrap();
-        tokio::time::timeout(std::time::Duration::from_secs(5),async {
-            loop {
-                if persistence::load(&config.database()).await.unwrap().btech.vehicles()[&id].crew_stun_remaining() == 0{break;}
-                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-            }
-        }).await.unwrap();
+        heartbeats.until_saved(&config, 5, |saved| saved.btech.vehicles()[&id].crew_stun_remaining() == 0).await;
         shutdown.send(ShutdownRequest::Sigterm).unwrap();
         task.await.unwrap().unwrap();
     }).await;

@@ -509,7 +509,7 @@ impl Server {
         );
         let session = self.sessions.get_mut(&id).unwrap();
         session.player = Some(p);
-        session.connected = Instant::now();
+        session.connected = tokio::time::Instant::now();
         session.flow = LoginFlow::Name;
         self.reconcile_connections();
         let before = self.scripts.world.borrow().clone();
@@ -639,7 +639,7 @@ mod tests {
             database: None,
         };
         let (output, mut receiver) = mpsc::channel(16);
-        let now = Instant::now();
+        let now = tokio::time::Instant::now();
         server.sessions.insert(
             SessionId(1),
             Session {
@@ -763,7 +763,7 @@ mod tests {
                 database: None,
             };
             let (output, _receiver) = mpsc::channel(16);
-            let now = Instant::now();
+            let now = tokio::time::Instant::now();
             server.sessions.insert(
                 SessionId(1),
                 Session {

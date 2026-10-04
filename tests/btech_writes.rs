@@ -69,3 +69,40 @@ async fn running_units_standing_still_write_nothing_per_tick() {
         sqlx::Connection::close(db).await.unwrap();
     }
 }
+
+/// Every harness heartbeat publishes its attempt; only a successful
+/// commit counts as committed, so a refused save leaves the committed count alone.
+#[tokio::test(flavor = "current_thread")]
+async fn heartbeat_progress_counts_attempts_and_commits() {
+    let templates = firing::templates();
+    // The fixture stores the clock every tick, so the refused tick reaches the database.
+    let (_dir, config, world, _, _, _) =
+        firing::fixture_with_target(&templates[0], None, &templates[0]).await;
+    persistence::save(&config.database(), &world).await.unwrap();
+    let mut harness = HeartbeatHarness::new(config.clone(), world).unwrap();
+    let progress = harness.scripts().progress();
+    assert_eq!(*progress.borrow(), RuntimeProgress::default());
+    assert!(harness.step(1).await.committed);
+    let first = *progress.borrow();
+    assert_eq!(
+        (first.heartbeats_attempted, first.heartbeats_committed),
+        (1, 1)
+    );
+    let mut db = <sqlx::SqliteConnection as sqlx::Connection>::connect_with(
+        &sqlx::sqlite::SqliteConnectOptions::new().filename(config.database()),
+    )
+    .await
+    .unwrap();
+    sqlx::raw_sql("CREATE TRIGGER deny_progress BEFORE UPDATE ON snapshot BEGIN SELECT RAISE(ABORT,'progress failure'); END;")
+        .execute(&mut db)
+        .await
+        .unwrap();
+    assert!(!harness.step(2).await.committed);
+    let refused = *progress.borrow();
+    assert_eq!(
+        (refused.heartbeats_attempted, refused.heartbeats_committed),
+        (2, 1)
+    );
+    assert_eq!(refused.maintenance_ticks, 0);
+    sqlx::Connection::close(db).await.unwrap();
+}

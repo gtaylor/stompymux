@@ -41,6 +41,7 @@ async fn fixture_movement(
     place_battle_unit(&mut world, id, map, 2, 1).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
         advance_battle_units(&mut world, 0);
@@ -792,6 +793,7 @@ async fn mine_blast_disables_a_later_vehicle_before_its_scheduled_movement() {
         .unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, other, support::FIXTURE_DICE_SEED);
     place_battle_unit(
         &mut world,
         other,
@@ -909,25 +911,17 @@ async fn vehicle_mine_movement_retries_a_failed_server_save() {
         persistence::save(&config.database(), &world).await.unwrap();
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         sqlx::raw_sql("CREATE TRIGGER deny_vehicle_mine_delete BEFORE DELETE ON btech_map_objects WHEN OLD.object_type=3 BEGIN SELECT RAISE(ABORT,'vehicle mine save failure'); END;").execute(&mut sql).await.unwrap();
-        let (_address, shutdown, server, _lua) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
-        support::attempt_heartbeat().await;
+        let (_address, shutdown, server, _lua, mut heartbeats) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
+        heartbeats.attempt().await;
         let failed = persistence::load(&config.database()).await.unwrap();
         assert_eq!(failed.btech.vehicles()[&id], world.btech.vehicles()[&id]);
         assert_eq!(failed.btech.maps()[&map].minefields(), world.btech.maps()[&map].minefields());
         sqlx::raw_sql("DROP TRIGGER deny_vehicle_mine_delete;").execute(&mut sql).await.unwrap();
-        tokio::time::timeout(std::time::Duration::from_secs(5), async {
-            loop {
-                let committed = persistence::load(&config.database()).await.unwrap();
-                if committed.btech.maps()[&map].minefields().is_empty() {
-                    let unit = &committed.btech.vehicles()[&id];
-                    assert!(unit.is_destroyed());
-                    assert_eq!(unit.motion().unwrap().point.containing_hex().unwrap(), first);
-                    assert_eq!(unit.motion().unwrap().speed, 0.0);
-                    break;
-                }
-                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-            }
-        }).await.unwrap();
+        let committed = heartbeats.until_saved(&config, 5, |committed| committed.btech.maps()[&map].minefields().is_empty()).await;
+        let unit = &committed.btech.vehicles()[&id];
+        assert!(unit.is_destroyed());
+        assert_eq!(unit.motion().unwrap().point.containing_hex().unwrap(), first);
+        assert_eq!(unit.motion().unwrap().speed, 0.0);
         shutdown.send(ShutdownRequest::Sigterm).unwrap();
         server.await.unwrap().unwrap();
     }).await;
@@ -1031,6 +1025,7 @@ async fn ground_vehicles_cross_crowded_hexes_without_stacking_effects() {
                 .unwrap(),
             )
             .unwrap();
+            support::seed_object_dice(&mut world, other, support::FIXTURE_DICE_SEED);
         } else {
             create_battle_unit(
                 &mut world,
@@ -1039,6 +1034,7 @@ async fn ground_vehicles_cross_crowded_hexes_without_stacking_effects() {
                     .unwrap(),
             )
             .unwrap();
+            support::seed_object_dice(&mut world, other, support::FIXTURE_DICE_SEED);
         }
         place_battle_unit(&mut world, other, map, 3, 1).unwrap();
         occupants.push(other);
@@ -1361,6 +1357,7 @@ async fn tracked_and_wheeled_ice_entry_replays_shared_fracture_and_waterproof_ro
             .attributes
             .insert("specials".into(), "Waterproof_Tech".into());
         create_battle_vehicle(&mut world, neighbor, template).unwrap();
+        support::seed_object_dice(&mut world, neighbor, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut world, neighbor, map, 3, 2).unwrap();
         let mech = world.create(&config, "Neighbor Mech".into(), Kind::Thing);
         world.objects.get_mut(&mech).unwrap().home = Some(ObjectId(config.home()));
@@ -1371,6 +1368,7 @@ async fn tracked_and_wheeled_ice_entry_replays_shared_fracture_and_waterproof_ro
                 .unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, mech, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut world, mech, map, 3, 2).unwrap();
         let mut saved = serde_json::to_value(&world.btech).unwrap();
         let unit = &mut saved["vehicles"][id.0.to_string()];
@@ -1644,7 +1642,9 @@ async fn character_movement_collisions_publish_falls_and_rollback_casualties() {
                 },
             )
             .unwrap();
+            support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
             assign_battle_pilot(&mut world, id, ObjectId(2)).unwrap();
+            support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
             if initial > 0 {
                 injure_battle_character_pilot(&mut world, id, initial, false).unwrap();
             }
@@ -1826,7 +1826,9 @@ async fn character_water_entry_preserves_occupants_and_replays_flooding() {
                 },
             )
             .unwrap();
+            support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
             assign_battle_pilot(&mut world, id, ObjectId(2)).unwrap();
+            support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
             let seed = (0..=255)
                 .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 12)
                 .unwrap();

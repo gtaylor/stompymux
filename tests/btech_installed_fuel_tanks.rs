@@ -49,6 +49,7 @@ async fn installed_and_carried_tanks_share_capacity_load_and_restart() {
         BattleUnitTemplate::Vehicle(template)
             .create(&mut world, id)
             .unwrap();
+        support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
         let fuel = battle_vtol_fuel_status(&world, id).unwrap();
         assert_eq!(
             (

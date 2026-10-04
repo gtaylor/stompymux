@@ -37,6 +37,7 @@ async fn fixture() -> (
     }
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(ids[0]);
     assign_battle_pilot(&mut world, ids[0], ObjectId(1)).unwrap();
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, ids[0], ObjectId(1), true).unwrap();
     for _ in 0..5 {
         advance_battle_units(&mut world, 0);
@@ -471,6 +472,7 @@ async fn automatic_lamps_follow_map_light_changes_and_transfers() {
         BattleMapAsset::from_cells(&terrain).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, dark, support::FIXTURE_DICE_SEED);
     set_battle_map_visibility(&mut world, dark, BattleLight::Night, 30).unwrap();
     transfer_battle_unit(
         &mut world,
@@ -498,6 +500,7 @@ async fn automatic_lamps_follow_map_light_changes_and_transfers() {
     .unwrap();
     assert!(!lamp_state(&world, lamp).on);
     assign_battle_pilot(&mut world, lamp, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, lamp, ObjectId(1), true).unwrap();
     for _ in 0..4 {
         advance_battle_units(&mut world, 0);

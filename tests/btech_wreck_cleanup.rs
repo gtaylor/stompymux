@@ -46,6 +46,7 @@ fn unit(world: &mut World, config: &Config, map: ObjectId, chassis: &str) -> Obj
         )
         .unwrap();
     }
+    support::seed_object_dice(world, id, support::FIXTURE_DICE_SEED);
     place_battle_unit(world, id, map, 0, 0).unwrap();
     id
 }
@@ -64,6 +65,7 @@ async fn fixture(
         BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let id = unit(&mut world, &config, map, chassis);
     let source = if world.btech.vehicles().contains_key(&id) {
         let mut vehicle = world.btech.vehicles()[&id].clone();
@@ -407,27 +409,18 @@ async fn wreck_idle_server_commit_retry() {
         persistence::save(&config.database(), &world).await.unwrap();
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         sqlx::query("CREATE TRIGGER deny_wreck BEFORE DELETE ON btech_units BEGIN SELECT RAISE(ABORT,'wreck commit failure'); END").execute(&mut sql).await.unwrap();
-        let (_, shutdown, task, _) = support::start(&config, Rc::new(Cell::new(1))).await;
-        support::attempt_heartbeat().await;
+        let (_, shutdown, task, _, mut heartbeats) = support::start(&config, Rc::new(Cell::new(1))).await;
+        heartbeats.attempt().await;
         let loaded = persistence::load(&config.database()).await.unwrap();
         assert_eq!(loaded.btech, world.btech);
         assert_eq!(loaded.objects[&id].location, world.objects[&id].location);
         assert!(!loaded.objects[&id].flags.contains(Flag::Going));
         sqlx::query("DROP TRIGGER deny_wreck").execute(&mut sql).await.unwrap();
-        let result = tokio::time::timeout(std::time::Duration::from_secs(4), async {
-            loop {
-                let loaded = persistence::load(&config.database()).await.unwrap();
-                if !loaded.btech.units().contains_key(&id) {
-                    assert_eq!(loaded.objects[&id].location, Some(ObjectId(config.battletech.usedmechstore)));
-                    assert!(!battle_wrecks_pending(&loaded));
-                    break;
-                }
-                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-            }
-        }).await;
+        let loaded = heartbeats.until_saved(&config, 4, |loaded| !loaded.btech.units().contains_key(&id)).await;
+        assert_eq!(loaded.objects[&id].location, Some(ObjectId(config.battletech.usedmechstore)));
+        assert!(!battle_wrecks_pending(&loaded));
         shutdown.send(ShutdownRequest::Sigterm).unwrap();
         task.await.unwrap().unwrap();
-        result.unwrap();
     }).await;
 }
 

@@ -86,6 +86,7 @@ async fn salvo_locations_replay_and_restart_preserves_every_group_and_roll() {
         BattleTemplate::parse("AS7-D", include_str!("fixtures/btech/mechs/AS7-D.toml")).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     world
         .btech
         .rewrite_unit_record(id, |record| {
@@ -193,6 +194,7 @@ async fn tactical_fixture() -> (
     .unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
     stompymux_rs::assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     (dir, config, world, id)
 }
 
@@ -355,6 +357,7 @@ async fn rear_weapon_hits_ignite_one_dumped_salvo_and_replay_after_restart() {
         BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, id, map, 1, 1).unwrap();
     let loadout = world.btech.constructed_units()[&id].loadout().unwrap();
     let (bin_index, bin) = loadout

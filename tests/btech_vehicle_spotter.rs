@@ -80,6 +80,7 @@ async fn fixture_with_mml(
         }
         ids.push(id);
     }
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     let mut saved = serde_json::to_value(&world.btech).unwrap();
     saved["constructed"][ids[2].0.to_string()]["signature"]["team"] = 99.into();
     world.btech = serde_json::from_value(saved).unwrap();
@@ -441,6 +442,7 @@ async fn empty_spotter_hexes_fire_through_blocked_firer_sightlines() {
         world.btech = serde_json::from_value(saved).unwrap();
         place_battle_unit(&mut world, observer, map, 2, 0).unwrap();
         assign_battle_pilot(&mut world, observer, ObjectId(2)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
         let mut saved = serde_json::to_value(&world.btech).unwrap();
         saved[observer_class][observer.0.to_string()]["power"] =
             serde_json::to_value(BattlePower::Running).unwrap();
@@ -603,6 +605,7 @@ async fn mixed_indirect_experience_shares_eligibility_levels_and_rollback() {
                 },
             )
             .unwrap();
+            support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
         }
         world
             .objects

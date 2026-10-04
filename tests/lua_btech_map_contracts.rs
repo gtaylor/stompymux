@@ -17,6 +17,7 @@ async fn terrain_zones_cargo_links_and_strict_errors_match_c_shapes() {
         BattleMapAsset::from_cells("3 2\n.0~1^2\n@3#4+5\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     create_battle_map(
         &mut world,
         parent,
@@ -24,6 +25,7 @@ async fn terrain_zones_cargo_links_and_strict_errors_match_c_shapes() {
         BattleMapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, parent, support::FIXTURE_DICE_SEED);
     set_battle_landing_exclusion(
         &mut world,
         map,
@@ -138,6 +140,7 @@ async fn mixed_membership_range_lookup_los_and_exact_placement_are_canonical() {
     let second_pilot = world.create(&config, "Second pilot".into(), Kind::Player);
     world.objects.get_mut(&second_pilot).unwrap().location = Some(mech);
     assign_battle_pilot(&mut world, mech, second_pilot).unwrap();
+    support::seed_object_dice(&mut world, second_pilot, support::FIXTURE_DICE_SEED);
     let map_root = config.path(&config.database.map_database);
     support::write_map(
         &map_root,

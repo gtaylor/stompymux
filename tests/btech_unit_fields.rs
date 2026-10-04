@@ -1145,6 +1145,7 @@ async fn startup_history_uses_supplied_completion_time_and_preserves_aborted_his
         )
         .unwrap();
         assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
         for now in [100, 101] {
             advance_battle_units(&mut world, now);
@@ -1161,6 +1162,7 @@ async fn startup_history_uses_supplied_completion_time_and_preserves_aborted_his
         assert_eq!(history(&world), -50);
         for (fast, duration, start) in [(true, 5, 1_800_000_000_i64), (false, 30, 1_900_000_000)] {
             assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+            support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
             start_battle_unit(&mut world, id, ObjectId(1), fast).unwrap();
             let previous = history(&world);
             for second in 1..=duration {
@@ -1546,12 +1548,14 @@ async fn crew_and_target_fields_share_native_lua_validation_and_restart_scenario
         world.objects.get_mut(&replacement).unwrap().home = Some(ObjectId(config.home()));
         // Both interface runs start with the same private recovery random stream.
         prepare_battle_recovery(&mut world, replacement).unwrap();
+        support::seed_object_dice(&mut world, replacement, support::FIXTURE_DICE_SEED);
         let unplaced = world.create(config, "Unplaced unit".into(), Kind::Thing);
         world.objects.get_mut(&unplaced).unwrap().home = Some(ObjectId(config.home()));
         BattleUnitTemplate::parse("test", &source)
             .unwrap()
             .create(&mut world, unplaced)
             .unwrap();
+        support::seed_object_dice(&mut world, unplaced, support::FIXTURE_DICE_SEED);
         firing::edit(&mut world, id, |unit| {
             unit["contacts"] = serde_json::json!({})
         });

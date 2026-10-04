@@ -41,10 +41,12 @@ fn place(
     let id = world.create(config, name.into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     create_battle_unit(world, id, template).unwrap();
+    support::seed_object_dice(world, id, support::FIXTURE_DICE_SEED);
     place_battle_unit(world, id, map, x, y).unwrap();
     if let Some(pilot) = pilot {
         world.objects.get_mut(&pilot).unwrap().location = Some(id);
         assign_battle_pilot(world, id, pilot).unwrap();
+        support::seed_object_dice(world, pilot, support::FIXTURE_DICE_SEED);
     }
     // Start directly in Running; the startup state machine has its own scenarios.
     world
@@ -79,6 +81,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, [ObjectId; 3]) {
             .unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     set_battle_map_visibility(&mut world, map, BattleLight::Day, REACH).unwrap();
     let hunter = place(
         &mut world,

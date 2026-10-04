@@ -210,7 +210,7 @@ fn oversized_environment_drains_without_replacing_state() {
 fn queue_counters_and_starting_compression_are_observable() {
     use stompymux_rs::sessions::{LoginFlow, Output, Session};
     let (output, mut rx) = tokio::sync::mpsc::channel(1);
-    let now = std::time::Instant::now();
+    let now = tokio::time::Instant::now();
     let s = Session {
         retry_remaining: 3,
         output,

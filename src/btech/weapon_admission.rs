@@ -60,6 +60,21 @@ impl WeaponMechanics {
         Ok(())
     }
 
+    /// Whether [`Self::check`] admits the mount, without building its rejection message.
+    ///
+    /// Readiness reports ask this of every weapon on every unit, and most rejections there
+    /// are ordinary recycling; an error per weapon would format a message and, when
+    /// backtraces are enabled, capture a stack trace each time.
+    pub fn admits(&self) -> bool {
+        !self.stunned
+            && !self.temporary_failure
+            && !(self.intact && (self.recycle_remaining > 0 || self.section_recycle.is_some()))
+            && !self.carried_club
+            && self.posture_failure.is_none()
+            && !self.covered
+            && self.intact
+    }
+
     /// Sighting ignores recycling, posture and feed failures, but requires a usable offensive mount.
     pub fn check_sight(&self, disabled: bool) -> Result<BattleWeapon> {
         ensure!(
@@ -79,5 +94,30 @@ impl WeaponMechanics {
         self.check()?;
         ensure!(!self.weapon.is_ams(), "That weapon is defensive only!");
         Ok(self.weapon)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The message-free admission answers exactly as the ordered check over every combination.
+    #[test]
+    fn admits_matches_check() {
+        for bits in 0u32..256 {
+            let bit = |n: u32| bits & (1 << n) != 0;
+            let mechanics = WeaponMechanics {
+                weapon: BattleWeapon::MediumLaser,
+                intact: bit(0),
+                stunned: bit(1),
+                temporary_failure: bit(2),
+                recycle_remaining: u16::from(bit(3)),
+                section_recycle: bit(4).then_some("left_arm"),
+                carried_club: bit(5),
+                posture_failure: bit(6).then_some("Your leg cannot support the shot."),
+                covered: bit(7),
+            };
+            assert_eq!(mechanics.admits(), mechanics.check().is_ok(), "{bits:08b}");
+        }
     }
 }

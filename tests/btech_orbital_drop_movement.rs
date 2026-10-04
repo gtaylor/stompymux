@@ -199,6 +199,7 @@ async fn character_landings_award_the_drop_reason_and_publish_the_pilot_roll() {
             },
         )
         .unwrap();
+        crate::support::seed_object_dice(&mut world, pilot, crate::support::FIXTURE_DICE_SEED);
         set_battle_character_value(
             &mut world,
             pilot,

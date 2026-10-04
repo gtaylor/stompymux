@@ -531,7 +531,7 @@ unknown-data preservation, atomic save rejection, and map destruction with a
 surviving unit. Unit tests exercise coordinate boundaries, depth, rectangular
 maps, input limits, critical ranges and path confinement.
 
-`tests/btech_motion.rs` verifies acceleration/displacement, fractional restart,
+`tests/btech_motion_core.rs` verifies acceleration/displacement, fractional restart,
 turning modes, terrain speed, invalid controls, rollback and edge stops. The TCP
 power scenario also checks live server motion and braking before shutdown.
 
@@ -550,7 +550,7 @@ callback rollback and pilot/unit destruction.
 `tests/btech_placement.rs` covers independent placement, restart, coordinate and
 containment rejection, callback rollback, occupancy and map destruction.
 
-The weapon scenarios in `tests/btech_motion.rs` cover independent countdowns,
+The weapon scenarios in `tests/btech_motion_core.rs` cover independent countdowns,
 invalid expenditure, ammo exhaustion, shutdown/restart and a stationary live-server
 timer that recovers from forced save failures.
 

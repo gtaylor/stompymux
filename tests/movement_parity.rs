@@ -1,5 +1,5 @@
 //! C-grounded movement action order, contexts, suppression and nested rollback.
-use std::{cell::RefCell, path::Path, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::{Config, Flag, Kind, ObjectId, Scripts, commands};
 
 use crate::support;
@@ -398,7 +398,7 @@ fn audit_matrix_has_evidence_and_all_requested_areas() {
         );
         for path in std::iter::once(&row["rust_source"]).chain(row["tests"].as_array().unwrap()) {
             assert!(
-                Path::new(env!("CARGO_MANIFEST_DIR"))
+                support::repository_root()
                     .join(path.as_str().unwrap())
                     .is_file(),
                 "{path}"

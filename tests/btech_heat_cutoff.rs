@@ -3,7 +3,6 @@ use crate::support;
 use std::{
     cell::{Cell, RefCell},
     rc::Rc,
-    time::Duration,
 };
 use stompymux_rs::*;
 
@@ -44,6 +43,7 @@ async fn fixture(
     }
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     (dir, config, world, id)
 }
 
@@ -130,8 +130,10 @@ async fn cutoff_cockpit_transition_and_restart() {
             BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut restored, map, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut restored, id, map, 0, 0).unwrap();
         assign_battle_pilot(&mut restored, id, ObjectId(1)).unwrap();
+        support::seed_object_dice(&mut restored, ObjectId(1), support::FIXTURE_DICE_SEED);
         restored
             .btech
             .rewrite_unit_record(id, |record| {
@@ -297,26 +299,21 @@ async fn idle_cutoff_transition_runs_on_server_heartbeat() {
             );
             assert_eq!(scripts.world().btech, world.btech);
             persistence::save(&config.database(), &world).await.unwrap();
-            let (_address, shutdown, task, _lua) =
+            let (_address, shutdown, task, _lua, mut heartbeats) =
                 support::start(&config, Rc::new(Cell::new(1))).await;
-            tokio::time::timeout(Duration::from_secs(9), async {
-                loop {
-                    let saved = persistence::load(&config.database()).await.unwrap();
+            let saved = heartbeats
+                .until_saved(&config, 30, |saved| {
                     let unit = &saved.btech.constructed_units()[&id];
                     assert_eq!(unit.power(), BattlePower::Off);
-                    if unit.heat_cutoff().enabled {
-                        assert_eq!(unit.heat_cutoff().disabled, 0);
-                        assert_eq!(
-                            unit.overheat_clock(),
-                            world.btech.constructed_units()[&id].overheat_clock()
-                        );
-                        break;
-                    }
-                    tokio::time::sleep(Duration::from_millis(50)).await;
-                }
-            })
-            .await
-            .unwrap();
+                    unit.heat_cutoff().enabled
+                })
+                .await;
+            let unit = &saved.btech.constructed_units()[&id];
+            assert_eq!(unit.heat_cutoff().disabled, 0);
+            assert_eq!(
+                unit.overheat_clock(),
+                world.btech.constructed_units()[&id].overheat_clock()
+            );
             shutdown.send(ShutdownRequest::Sigterm).unwrap();
             task.await.unwrap().unwrap();
         })

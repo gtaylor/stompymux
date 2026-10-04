@@ -20,6 +20,7 @@ async fn vehicle_commands_and_lua_share_creation_placement_and_snapshot_state() 
         BattleMapAsset::from_cells("2 1\n.0.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let first = world.create(&config, "First".into(), Kind::Thing);
     let second = world.create(&config, "Second".into(), Kind::Thing);
     for id in [first, second] {
@@ -154,6 +155,7 @@ async fn operator_inspection_reports_mech_ground_and_vtol_state_without_mutation
             BattleMapAsset::from_cells("2 1\n.0.0\n").unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
         let id = world.create(&config, "Inspected unit".into(), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         if vehicle {
@@ -163,6 +165,7 @@ async fn operator_inspection_reports_mech_ground_and_vtol_state_without_mutation
                 BattleVehicleTemplate::parse("test", asset).unwrap(),
             )
             .unwrap();
+            support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
         } else {
             create_battle_unit(
                 &mut world,
@@ -170,10 +173,12 @@ async fn operator_inspection_reports_mech_ground_and_vtol_state_without_mutation
                 BattleTemplate::parse("test", asset).unwrap(),
             )
             .unwrap();
+            support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
         }
         place_battle_unit(&mut world, id, map, 1, 0).unwrap();
         world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(id);
         assign_battle_pilot(&mut world, id, ObjectId(2)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, id, ObjectId(2), false).unwrap();
         for _ in 0..30 {
             advance_battle_units(&mut world, 0);

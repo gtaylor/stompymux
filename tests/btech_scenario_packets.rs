@@ -178,6 +178,7 @@ async fn scenario_packets_work_without_placement_and_preserve_safe_material() {
             .unwrap()
             .create(&mut world, unit)
             .unwrap();
+        support::seed_object_dice(&mut world, unit, support::FIXTURE_DICE_SEED);
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         let report = battle_damage_action(
             &scripts,

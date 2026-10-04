@@ -100,7 +100,9 @@ async fn pain_resistance_applies_only_for_one_and_survives_restart() {
         let (_dir, config, mut base, id, _, _) =
             firing::fixture_with_target(&source, None, &firing::templates()[0]).await;
         set_battle_character(&mut base, ObjectId(1), profile()).unwrap();
+        support::seed_object_dice(&mut base, ObjectId(1), support::FIXTURE_DICE_SEED);
         prepare_battle_recovery(&mut base, ObjectId(1)).unwrap();
+        support::seed_object_dice(&mut base, ObjectId(1), support::FIXTURE_DICE_SEED);
         base.objects
             .get_mut(&id)
             .unwrap()
@@ -142,6 +144,7 @@ async fn toughness_shutdown_rules_agree_across_mechs_and_vehicles() {
         let (_dir, config, mut base, id, _, _) =
             firing::fixture_with_target(source, None, &sources[0]).await;
         set_battle_character(&mut base, ObjectId(1), profile()).unwrap();
+        support::seed_object_dice(&mut base, ObjectId(1), support::FIXTURE_DICE_SEED);
         let seed = (0..=255)
             .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 2)
             .unwrap();

@@ -75,6 +75,7 @@ async fn core_damage_survives_restart_and_rejects_invalid_phase_targets_atomical
         BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     let map = world.create(&config, "Damage field".into(), Kind::Room);
     stompymux_rs::create_battle_map(
         &mut world,
@@ -83,9 +84,11 @@ async fn core_damage_survives_restart_and_rejects_invalid_phase_targets_atomical
         stompymux_rs::BattleMapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     stompymux_rs::place_battle_unit(&mut world, id, map, 0, 1).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
     stompymux_rs::assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     stompymux_rs::start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
         stompymux_rs::advance_battle_units(&mut world, 0);

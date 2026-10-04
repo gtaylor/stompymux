@@ -92,6 +92,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {
         },
     )
     .unwrap();
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     set_battle_character_value(
         &mut world,
         ObjectId(1),
@@ -301,6 +302,7 @@ async fn active_mines_catch_hovercraft_over_water() {
         BattleMapAsset::from_cells("3 3\n.0.0.0\n.0~1.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let id = world.create(&config, "Hover".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     create_battle_vehicle(
@@ -314,6 +316,7 @@ async fn active_mines_catch_hovercraft_over_water() {
         .unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, id, map, 1, 1).unwrap();
     let coordinate = BattleHexCoordinate { x: 1, y: 1 };
     for (ordinal, kind) in [(0, BattleMineKind::Standard), (1, BattleMineKind::Active)] {

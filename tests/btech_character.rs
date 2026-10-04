@@ -130,6 +130,7 @@ async fn character_inspection_is_detached_and_purge_removes_owned_state() {
     world.objects.get_mut(&player).unwrap().home = Some(ObjectId(config.home()));
     world.objects.get_mut(&player).unwrap().location = Some(ObjectId(config.start()));
     set_battle_character(&mut world, player, profile()).unwrap();
+    support::seed_object_dice(&mut world, player, support::FIXTURE_DICE_SEED);
     stompymux_rs::set_battle_character_value(
         &mut world,
         player,
@@ -360,6 +361,7 @@ async fn experience_awards_persist_and_reject_without_mutation() {
     use stompymux_rs::*;
     let (_dir, config, mut world) = support::isolated_world().await;
     set_battle_character(&mut world, ObjectId(1), profile()).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     set_battle_character_value(
         &mut world,
         ObjectId(1),
@@ -460,6 +462,7 @@ async fn catalog_awards_and_detached_lua_skills() {
     use stompymux_rs::*;
     let (_dir, config, mut world) = support::isolated_world().await;
     set_battle_character(&mut world, ObjectId(1), profile()).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     for name in ["PilBip", "piloting-biped", "PILBIP"] {
         assert!(
             award_battle_skill_experience(&mut world, ObjectId(1), name, 1, 100, false)
@@ -530,6 +533,7 @@ async fn runtime_skill_thresholds_control_awards_and_roll_back() {
         .flags
         .remove(Flag::Wizard);
     set_battle_character(&mut world, ObjectId(1), profile()).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     set_battle_character_value(
         &mut world,
         ObjectId(1),
@@ -627,6 +631,7 @@ async fn skill_progress_tracks_thresholds_without_mutation() {
     use stompymux_rs::*;
     let (_dir, config, mut world) = support::isolated_world().await;
     set_battle_character(&mut world, ObjectId(1), profile()).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     set_battle_character_value(
         &mut world,
         ObjectId(1),
@@ -696,6 +701,7 @@ async fn retained_experience_is_atomic_and_persistent() {
     use stompymux_rs::*;
     let (_dir, config, mut world) = support::isolated_world().await;
     set_battle_character(&mut world, ObjectId(1), profile()).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     for name in ["Piloting-Biped", "Gunnery-Ballistic"] {
         set_battle_character_value(
             &mut world,
@@ -821,6 +827,7 @@ async fn retention_handles_every_advantage_and_signed_experience() {
     use stompymux_rs::*;
     let (_dir, config, mut base) = support::isolated_world().await;
     set_battle_character(&mut base, ObjectId(1), profile()).unwrap();
+    support::seed_object_dice(&mut base, ObjectId(1), support::FIXTURE_DICE_SEED);
     for name in BATTLE_ADVANTAGES
         .iter()
         .map(|entry| entry.name)

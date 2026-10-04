@@ -270,7 +270,7 @@ impl Server {
                             && !self.scripts.flows.active(id.0)
                             && line.eq_ignore_ascii_case("IDLE");
                         if !keepalive {
-                            s.active = Instant::now();
+                            s.active = tokio::time::Instant::now();
                         }
                         let elapsed = s.quota_at.elapsed().as_millis();
                         let interval = u128::from(self.config.mux.command_quota_interval);
@@ -282,8 +282,8 @@ impl Server {
                                 .min(self.config.mux.command_quota_max as u128)
                                 as usize;
                             // Preserve the partial refill interval between commands.
-                            s.quota_at =
-                                Instant::now() - Duration::from_millis((elapsed % interval) as u64);
+                            s.quota_at = tokio::time::Instant::now()
+                                - Duration::from_millis((elapsed % interval) as u64);
                         }
                         if s.quota == 0 {
                             s.stats
@@ -449,7 +449,7 @@ mod tests {
             for id in [1, 2] {
                 let (output, receiver) = mpsc::channel(16);
                 receivers.push(receiver);
-                let now = Instant::now();
+                let now = tokio::time::Instant::now();
                 server.sessions.insert(
                     SessionId(id),
                     Session {

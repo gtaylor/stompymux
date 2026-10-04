@@ -29,6 +29,7 @@ async fn fixture_on_surface(
         BattleMapAsset::from_cells(&format!("1 1\n{tile}\n")).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let id = world.create(&config, "Character vehicle".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     create_battle_vehicle(
@@ -37,6 +38,7 @@ async fn fixture_on_surface(
         BattleVehicleTemplate::parse("Demolisher", template).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
     world
         .objects
@@ -1217,6 +1219,7 @@ async fn transport_loss_shares_nested_chassis_destruction_and_transactional_dise
                             .unwrap(),
                         )
                         .unwrap();
+                        support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
                     } else {
                         create_battle_unit(
                             &mut world,
@@ -1228,6 +1231,7 @@ async fn transport_loss_shares_nested_chassis_destruction_and_transactional_dise
                             .unwrap(),
                         )
                         .unwrap();
+                        support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
                     }
                     world
                         .objects

@@ -61,6 +61,7 @@ async fn fixture_sources(
         },
     )
     .unwrap();
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     set_battle_unit_signature(
         &mut world,
         target,
@@ -406,7 +407,7 @@ fn vehicle_battle_value_applies_each_ground_movement_discount() {
 fn shipped_vehicles_and_vtols_have_finite_battle_values() {
     let mut count = 0;
     let mut rotorcraft = 0;
-    for entry in std::fs::read_dir("game/mechs").unwrap() {
+    for entry in std::fs::read_dir(support::repository_root().join("game/mechs")).unwrap() {
         let path = entry.unwrap().path();
         if !path.is_file() {
             continue;
@@ -451,10 +452,12 @@ fn tow_fixture(
         BattleMapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(world, map, support::FIXTURE_DICE_SEED);
     for id in [attacker, target] {
         place_battle_unit(world, id, map, 0, 0).unwrap();
     }
     assign_battle_pilot(world, attacker, ObjectId(1)).unwrap();
+    support::seed_object_dice(world, ObjectId(1), support::FIXTURE_DICE_SEED);
     let load = world.create(config, "Tow load".into(), Kind::Thing);
     create_battle_vehicle(
         world,
@@ -463,6 +466,7 @@ fn tow_fixture(
             .unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(world, load, support::FIXTURE_DICE_SEED);
     place_battle_unit(world, load, map, 0, 0).unwrap();
     set_battle_tow(world, carrier, Some(load)).unwrap();
 }
@@ -602,6 +606,7 @@ async fn experience_load_queries_honor_hot_myomer_configuration() {
         BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, lighter, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, lighter, map, 0, 0).unwrap();
     set_battle_tow(&mut world, attacker, Some(lighter)).unwrap();
     let request = BattleGunneryAwardRequest {

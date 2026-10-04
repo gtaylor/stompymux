@@ -20,6 +20,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {
             .unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     }
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(room);
     world.objects.get_mut(&carried).unwrap().location = Some(ObjectId(1));

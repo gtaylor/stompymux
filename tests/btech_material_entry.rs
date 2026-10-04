@@ -28,6 +28,7 @@ async fn biped_and_quad_material_entries_consume_exact_dice_and_replay() {
             BattleTemplate::parse("test", source).unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut base, id, support::FIXTURE_DICE_SEED);
         for scenario in ["zero", "armor", "internal", "missing_sections", "overflow"] {
             let mut before = base.clone();
             let section = BattleSection::LeftArm;

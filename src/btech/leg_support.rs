@@ -56,7 +56,7 @@ impl BattleUnit {
                 .criticals
                 .iter()
                 .any(|(&slot, part)| {
-                    BattleSystem::parse(&part.equipment).ok() == Some(BattleSystem::ShoulderOrHip)
+                    BattleSystem::named(&part.equipment) == Some(BattleSystem::ShoulderOrHip)
                         && self.critical_destroyed(CriticalLocation {
                             section: *section,
                             slot,

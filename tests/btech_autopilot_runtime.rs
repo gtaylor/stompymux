@@ -29,6 +29,7 @@ async fn ground_fixture() -> (tempfile::TempDir, Config, World, ObjectId, Object
     place_battle_unit(&mut world, unit, map, 0, 7).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(unit);
     assign_battle_pilot(&mut world, unit, ObjectId(1)).unwrap();
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
 
     // Starting directly in Running keeps this fixture focused on controller behavior;
     // the ordinary startup state machine is covered by the BTech power scenarios.
@@ -72,14 +73,12 @@ async fn move_order_reaches_destination_and_starts_hold_order() {
                 .unwrap();
             drop(scripts);
 
-            tokio::time::pause();
-            let (_address, shutdown, task, _lua) =
+            let (_address, shutdown, task, _lua, mut heartbeats) =
                 support::start(&config, Rc::new(std::cell::Cell::new(1))).await;
             let mut hold_started = false;
             let mut latest = None;
             for _ in 0..96 {
-                tokio::time::advance(std::time::Duration::from_secs(1)).await;
-                tokio::task::yield_now().await;
+                heartbeats.attempt().await;
                 let loaded = persistence::load(&config.database()).await.unwrap();
                 if let Some(controller) = loaded.btech.controllers().get(&unit) {
                     hold_started = controller
@@ -107,7 +106,6 @@ async fn move_order_reaches_destination_and_starts_hold_order() {
             shutdown
                 .send(stompymux_rs::ShutdownRequest::Sigterm)
                 .unwrap();
-            tokio::time::resume();
             task.await.unwrap().unwrap();
         })
         .await;

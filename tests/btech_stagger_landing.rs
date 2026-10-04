@@ -303,6 +303,7 @@ async fn map_reassignment_preserves_scalar_and_core_destruction_clears_it() {
                     .unwrap(),
             )
             .unwrap();
+            crate::support::seed_object_dice(&mut world, map, crate::support::FIXTURE_DICE_SEED);
             let moved = reassign_battle_map(&mut world, unit, map, None).unwrap();
             assert_eq!(moved.reset_origin, height == 2);
             assert_eq!(world.btech.constructed_units()[&unit].stagger(), &before);

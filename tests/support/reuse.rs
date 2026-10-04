@@ -1,4 +1,4 @@
-//! Sandbox and clock reuse so scenario matrices share one fixture copy and VM pair.
+//! Sandbox reuse so scenario matrices share one fixture copy and VM pair.
 use stompymux_rs::{Config, Scripts, World};
 
 /// Replace a reused VM's scenario world and drop notices left by earlier bodies.
@@ -24,14 +24,4 @@ pub fn restore_database(config: &Config, pristine: &std::path::Path) {
         let _ = std::fs::remove_file(database.with_file_name(format!("{name}{suffix}")));
     }
     std::fs::copy(pristine, &database).unwrap();
-}
-
-/// Advance the shared runtime clock past one heartbeat instead of waiting out a
-/// real second. Denied commits leave no observable database change, so the
-/// settle only bounds the attempt; the following retry polls stay the oracle.
-pub async fn attempt_heartbeat() {
-    tokio::time::pause();
-    tokio::time::advance(std::time::Duration::from_secs(1)).await;
-    tokio::time::resume();
-    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
 }

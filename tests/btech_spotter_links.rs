@@ -12,6 +12,7 @@ async fn fixture(
         firing::fixture_with_target(source, Some(BattleWeapon::ClanArrowIv), observer).await;
     world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(observer);
     assign_battle_pilot(&mut world, observer, ObjectId(2)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
     select_battle_spotter(&mut world, observer, ObjectId(2), Some(observer)).unwrap();
     firing::edit(&mut world, source, |state| {
         state["contacts"] = serde_json::json!({})
@@ -416,6 +417,7 @@ async fn simultaneous_requests_keep_insertion_order() {
             .unwrap()
             .create(&mut world, second)
             .unwrap();
+        support::seed_object_dice(&mut world, second, support::FIXTURE_DICE_SEED);
         let map = world.btech.units()[&source].map.unwrap();
         place_battle_unit(&mut world, second, map, 0, 10).unwrap();
         firing::edit(&mut world, second, |state| {
@@ -449,6 +451,7 @@ async fn server_retries_connection_after_failed_commit() {
             stop_battle_unit(&mut world, source, ObjectId(1), BattleFallRules::configured(&config)).unwrap();
             stop_battle_unit(&mut world, observer, ObjectId(2), BattleFallRules::configured(&config)).unwrap();
             assign_battle_pilot(&mut world, source, ObjectId(1)).unwrap();
+            support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
             firing::edit(&mut world, source, |state| state["spotter_events"]["events"][0]["remaining"] = 1.into());
             world.accounts.get_mut(&ObjectId(1)).unwrap().hash = Some(accounts::hash("secret", &config).unwrap());
             persistence::save(&config.database(), &world).await.unwrap();
@@ -459,14 +462,14 @@ async fn server_retries_connection_after_failed_commit() {
                 "CREATE TRIGGER deny_spotter BEFORE UPDATE ON btech_units BEGIN SELECT RAISE(ABORT,'spotter failure'); END"
             };
             sqlx::query(trigger).execute(&mut sql).await.unwrap();
-            let (addr, shutdown, task, _) = support::start(&config, Rc::new(Cell::new(1))).await;
+            let (addr, shutdown, task, _, mut heartbeats) = support::start(&config, Rc::new(Cell::new(1))).await;
             let mut client = support::Client { socket:tokio::net::TcpStream::connect(addr).await.unwrap(), pending:Vec::new() };
             client.until("Who are you? ").await;
             client.send("#1").await;
             client.until("Password: ").await;
             client.send("secret").await;
             client.until("Sighter").await;
-            support::attempt_heartbeat().await;
+            heartbeats.attempt().await;
             let saved = persistence::load(&config.database()).await.unwrap();
             assert_eq!(selected(&saved, source), None);
             assert!(pending(&saved, source));
@@ -474,7 +477,7 @@ async fn server_retries_connection_after_failed_commit() {
             let output = client.until("Sighter").await;
             assert!(!output.contains("Data link established with"));
             sqlx::query("DROP TRIGGER deny_spotter").execute(&mut sql).await.unwrap();
-            client.until(", you now have a forward observer.").await;
+            client.until_heartbeats(", you now have a forward observer.", &mut heartbeats, 3).await;
             let saved = persistence::load(&config.database()).await.unwrap();
             assert_eq!(selected(&saved, source), Some(observer));
             shutdown.send(ShutdownRequest::Sigterm).unwrap();

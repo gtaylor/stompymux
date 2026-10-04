@@ -13,6 +13,7 @@ async fn fixture(vehicle: bool) -> (tempfile::TempDir, Config, World, ObjectId, 
         BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let id = world.create(&config, "Empty unit".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     if vehicle {
@@ -26,6 +27,7 @@ async fn fixture(vehicle: bool) -> (tempfile::TempDir, Config, World, ObjectId, 
             .unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     } else {
         create_battle_unit(
             &mut world,
@@ -34,6 +36,7 @@ async fn fixture(vehicle: bool) -> (tempfile::TempDir, Config, World, ObjectId, 
                 .unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     }
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
     let value = (0..=255)
@@ -126,6 +129,7 @@ async fn cockpit_assignment_transfers_pending_recovery_and_death_clears_empty_cr
         destroyed.validate(&config).unwrap();
         let owned = recovery(&world, id).clone();
         prepare_battle_recovery(&mut world, ObjectId(1)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         let parked =
             serde_json::to_value(&world.btech.recoveries()[&ObjectId(1)]).unwrap()["dice"].clone();
         world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
@@ -211,21 +215,13 @@ async fn empty_crew_server_recovery_retries_without_spending_unsaved_dice() {
         persistence::save(&config.database(), &world).await.unwrap();
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         sqlx::raw_sql("CREATE TRIGGER deny_crew BEFORE UPDATE ON btech_vehicles BEGIN SELECT RAISE(ABORT,'crew recovery failure'); END;").execute(&mut sql).await.unwrap();
-        let (_address, shutdown, server, _lua) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
-        support::attempt_heartbeat().await;
+        let (_address, shutdown, server, _lua, mut heartbeats) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
+        heartbeats.attempt().await;
         let saved = persistence::load(&config.database()).await.unwrap();
         assert_eq!(recovery(&saved,id), &before);
         sqlx::raw_sql("DROP TRIGGER deny_crew").execute(&mut sql).await.unwrap();
-        tokio::time::timeout(std::time::Duration::from_secs(5), async {
-            loop {
-                let saved = persistence::load(&config.database()).await.unwrap();
-                if recovery(&saved,id).remaining == 0 {
-                    assert_eq!(recovery(&saved,id), recovery(&expected,id));
-                    break;
-                }
-                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-            }
-        }).await.unwrap();
+        let saved = heartbeats.until_saved(&config, 5, |saved| recovery(saved,id).remaining == 0).await;
+        assert_eq!(recovery(&saved,id), recovery(&expected,id));
         shutdown.send(ShutdownRequest::Sigterm).unwrap();
         server.await.unwrap().unwrap();
     }).await;

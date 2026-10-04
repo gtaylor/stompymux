@@ -46,35 +46,42 @@ lint:
 test-unit *filter:
     cargo nextest run --lib {{filter}}
 
-# Only that suite's binary is built, not the other fifteen.
+# Only that suite's binary is built, not the others.
 
-# Run one integration suite from tests/suites/, e.g. `just test-suite btech_08 status`.
+# Run one integration suite, e.g. `just test-suite btech_08 status`. Suites live in
+# tests/suites/ (package stompymux-suites); `cli` is the server package's binary-driven target.
 test-suite suite *filter:
     cargo nextest run --test {{suite}} {{filter}}
 
-# Finds the suite in tests/suites/ that includes the scenario module so only
-# that suite is built, then filters the run to the scenario's tests.
+# Finds every suite that includes the scenario module, in tests/suites/ or the cli target in
+# tests/cli/, so only those suites are built, then filters the run to the scenario's tests.
 
-# Run one scenario file from tests/ by module name, e.g. `just test-scenario btech_status`.
+# Run one scenario file by module name, e.g. `just test-scenario btech_status`.
 test-scenario scenario *filter:
     #!/usr/bin/env bash
     set -euo pipefail
-    suite="$(grep -l -E '^mod {{scenario}};$' tests/suites/*.rs | head -n 1 || true)"
-    if [[ -z "$suite" ]]; then
-        echo "error: no suite in tests/suites/ includes scenario '{{scenario}}'" >&2
+    targets=()
+    for suite in $(grep -l -E '^mod {{scenario}};$' tests/suites/*.rs tests/cli/main.rs || true); do
+        name="$(basename "$suite" .rs)"
+        [[ "$name" == main ]] && name=cli
+        targets+=(--test "$name")
+    done
+    if [[ ${#targets[@]} -eq 0 ]]; then
+        echo "error: no suite includes scenario '{{scenario}}'" >&2
         echo "hint: run 'just list-scenarios' to see scenario names" >&2
         exit 2
     fi
-    name="$(basename "$suite" .rs)"
-    echo "==> {{scenario}} lives in suite $name"
-    cargo nextest run --test "$name" "{{scenario}}::{{filter}}"
+    echo "==> {{scenario}} lives in: ${targets[*]}"
+    cargo nextest run "${targets[@]}" "{{scenario}}::{{filter}}"
 
-# List every consolidated suite and the scenario files it includes.
+# List every integration suite and the scenario files it includes.
 list-scenarios:
     #!/usr/bin/env bash
     set -euo pipefail
-    for suite in tests/suites/*.rs; do
-        echo "$(basename "$suite" .rs):"
+    for suite in tests/suites/*.rs tests/cli/main.rs; do
+        name="$(basename "$suite" .rs)"
+        [[ "$name" == main ]] && name=cli
+        echo "$name:"
         grep -E '^mod [a-z0-9_]+;$' "$suite" | sed -E 's/^mod ([a-z0-9_]+);$/  \1/'
     done
 
