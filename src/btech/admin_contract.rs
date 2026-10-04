@@ -859,61 +859,36 @@ fn remove_administrative_systems(
     systems: &[BattleSystem],
     clear_case: bool,
 ) -> Result<()> {
-    if let Some(unit) = world.btech.constructed.get_mut(&id) {
-        let mut definition = unit.definition().clone();
-        let mut touched = Vec::new();
-        for (&section, layout) in &mut definition.sections {
-            if clear_case
-                && layout
-                    .configuration
-                    .as_deref()
-                    .is_some_and(|value| value.eq_ignore_ascii_case("Case"))
-            {
-                layout.configuration = None;
-            }
-            layout.criticals.retain(|&slot, critical| {
-                let remove = BattleSystem::named(&critical.equipment)
-                    .is_some_and(|system| systems.contains(&system));
-                if remove {
-                    touched.push(CriticalLocation { section, slot });
+    crate::btech::with_unit_mut!(
+        world
+            .btech
+            .unit_mut(id)
+            .context("Unit runtime state is unavailable")?,
+        |unit| {
+            let mut definition = unit.definition().clone();
+            let mut touched = Vec::new();
+            for (&section, layout) in &mut definition.sections {
+                if clear_case
+                    && layout
+                        .configuration
+                        .as_deref()
+                        .is_some_and(|value| value.eq_ignore_ascii_case("Case"))
+                {
+                    layout.configuration = None;
                 }
-                !remove
-            });
-        }
-        if !touched.is_empty() || clear_case {
-            // Administrative clears follow the C administrator's leniency:
-            // units admitted through the contract loader keep that loader.
-            unit.replace_construction_contract(definition, &touched)?;
-        }
-        return Ok(());
-    }
-    let unit = world
-        .btech
-        .vehicles
-        .get_mut(&id)
-        .context("Unit runtime state is unavailable")?;
-    let mut definition = unit.definition().clone();
-    let mut touched = Vec::new();
-    for (&section, layout) in &mut definition.sections {
-        if clear_case
-            && layout
-                .configuration
-                .as_deref()
-                .is_some_and(|value| value.eq_ignore_ascii_case("Case"))
-        {
-            layout.configuration = None;
-        }
-        layout.criticals.retain(|&slot, critical| {
-            let remove = BattleSystem::named(&critical.equipment)
-                .is_some_and(|system| systems.contains(&system));
-            if remove {
-                touched.push(VehicleCriticalLocation { section, slot });
+                layout.criticals.retain(|&slot, critical| {
+                    let remove = BattleSystem::named(&critical.equipment)
+                        .is_some_and(|system| systems.contains(&system));
+                    if remove {
+                        touched.push(CriticalLocation { section, slot });
+                    }
+                    !remove
+                });
             }
-            !remove
-        });
-    }
-    if !touched.is_empty() || clear_case {
-        unit.replace_construction_contract(definition, &touched)?;
-    }
-    Ok(())
+            if !touched.is_empty() || clear_case {
+                unit.replace_construction_contract(definition, &touched)?;
+            }
+            Ok(())
+        }
+    )
 }

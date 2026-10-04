@@ -143,11 +143,7 @@ fn controlled_by_actor(
     unit: ObjectId,
     actor: super::combat_operator::ControlActor,
 ) -> Result<()> {
-    if world.btech.vehicles().contains_key(&unit) {
-        super::vehicle_power::controlled_by_actor(world, unit, actor)?;
-    } else {
-        super::power::controlled_unit_by_actor(world, unit, actor)?;
-    }
+    super::power::controlled_by_actor(world, unit, actor)?;
     let state = super::scanner::scanner_unit(world, unit).context("Unit is unavailable")?;
     ensure!(
         state.power == BattlePower::Running && !state.destroyed,

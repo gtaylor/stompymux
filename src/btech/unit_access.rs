@@ -46,6 +46,18 @@ pub enum BattleUnitRef<'a> {
     Vehicle(&'a BattleVehicle),
 }
 
+impl<'a> From<&'a BattleUnit> for BattleUnitRef<'a> {
+    fn from(unit: &'a BattleUnit) -> Self {
+        Self::Mech(unit)
+    }
+}
+
+impl<'a> From<&'a BattleVehicle> for BattleUnitRef<'a> {
+    fn from(vehicle: &'a BattleVehicle) -> Self {
+        Self::Vehicle(vehicle)
+    }
+}
+
 /// Forward methods both chassis define identically to whichever one a reference holds.
 macro_rules! forward {
     (ref: $($(#[$doc:meta])* $vis:vis fn $name:ident(&self $(, $arg:ident: $ty:ty)*) $(-> $ret:ty)?;)*) => {

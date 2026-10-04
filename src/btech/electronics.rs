@@ -184,11 +184,7 @@ pub fn toggle_electronics(
     suite: BattleElectronicSuite,
     requested: Mode,
 ) -> Result<Mode> {
-    if world.btech.vehicles().contains_key(&id) {
-        super::vehicle_power::controlled(world, id, pilot)?;
-    } else {
-        super::power::controlled_unit(world, id, pilot)?;
-    }
+    super::power::controlled(world, id, pilot)?;
     let unit = super::scanner::scanner_unit(world, id)
         .context("Unit construction state is unavailable")?;
     ensure!(unit.power == BattlePower::Running, "Start the unit first");

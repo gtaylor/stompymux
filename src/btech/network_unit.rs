@@ -59,34 +59,20 @@ impl NetworkUnit<'_> {
 pub(super) fn unit(world: &World, id: ObjectId) -> Result<NetworkUnit<'_>> {
     let scanner = super::scanner::scanner_unit(world, id).context("Unit not found")?;
     let (c3_network, c3i_network, automation, pilot, motion, computer, protection) =
-        if let Some(unit) = world.btech.vehicles().get(&id) {
+        crate::btech::with_unit!(world.btech.unit(id).unwrap(), |unit| {
             (
                 unit.c3_network,
                 unit.c3i_network,
                 unit.network_automation,
                 unit.pilot(),
                 unit.motion(),
-                BattleUnitRef::Vehicle(unit),
+                BattleUnitRef::from(unit),
                 totals(
                     unit.sections().values(),
                     unit.definition().sections.values(),
                 ),
             )
-        } else {
-            let unit = &world.btech.constructed_units()[&id];
-            (
-                unit.c3_network,
-                unit.c3i_network,
-                unit.network_automation,
-                unit.pilot(),
-                unit.motion(),
-                BattleUnitRef::Mech(unit),
-                totals(
-                    unit.sections().values(),
-                    unit.definition().sections.values(),
-                ),
-            )
-        };
+        });
     Ok(NetworkUnit {
         c3_network,
         c3i_network,

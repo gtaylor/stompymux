@@ -147,10 +147,7 @@ pub fn stop_unit(
 
 /// Shared cockpit authority for mechanical and host shutdown entry points.
 pub(super) fn check_shutdown_control(world: &World, id: ObjectId, pilot: ObjectId) -> Result<()> {
-    if world.btech.vehicles().contains_key(&id) {
-        return super::vehicle_power::controlled(world, id, pilot);
-    }
-    controlled_unit(world, id, pilot)
+    controlled(world, id, pilot)
 }
 
 /// Apply shutdown after the enclosing action establishes authority over the unit.
@@ -424,6 +421,18 @@ pub(super) fn controlled(world: &World, id: ObjectId, pilot: ObjectId) -> Result
     controlled_unit(world, id, pilot)
 }
 
+/// Admit a cockpit operator or the autopilot to either chassis.
+pub(super) fn controlled_by_actor(
+    world: &World,
+    id: ObjectId,
+    actor: super::combat_operator::ControlActor,
+) -> Result<()> {
+    if world.btech.vehicles().contains_key(&id) {
+        return super::vehicle_power::controlled_by_actor(world, id, actor);
+    }
+    controlled_unit_by_actor(world, id, actor)
+}
+
 /// Admit either chassis while the ground autopilot holds it.
 pub(super) fn autopilot_controlled(world: &World, id: ObjectId) -> Result<()> {
     if world.btech.vehicles().contains_key(&id) {
@@ -551,11 +560,7 @@ pub(super) fn controlled_running_unit(
     shooter: ObjectId,
     pilot: ObjectId,
 ) -> Result<()> {
-    if world.btech.vehicles().contains_key(&shooter) {
-        super::vehicle_power::controlled(world, shooter, pilot)?;
-    } else {
-        super::power::controlled_unit(world, shooter, pilot)?;
-    }
+    controlled(world, shooter, pilot)?;
     require_running_unit(world, shooter)
 }
 
