@@ -492,6 +492,11 @@ super::saved_parts::saved_parts!(BattleVehicle {
 });
 
 impl BattleVehicle {
+    /// The name of one of this vehicle's sections.
+    pub fn section_name(&self, section: BattleVehicleSection) -> &'static str {
+        section.name()
+    }
+
     /// World-level rules for a vehicle nothing is towing: it moves only under power and
     /// only while it still can.
     pub(super) fn validate_untowed(&self) -> Result<()> {

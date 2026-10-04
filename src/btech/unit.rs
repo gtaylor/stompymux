@@ -468,6 +468,11 @@ super::saved_parts::saved_parts!(BattleUnit {
 });
 
 impl BattleUnit {
+    /// The name this unit's anatomy gives a section; a quad's limbs are all legs.
+    pub fn section_name(&self, section: BattleSection) -> &'static str {
+        self.chassis().section_name(section)
+    }
+
     /// World-level rules for a Mech nothing is towing: without power it is at rest, and
     /// its speed and height stay within what it can reach on its own.
     pub(super) fn validate_untowed(&self) -> Result<()> {
