@@ -12,15 +12,8 @@ pub(super) struct Defense {
 
 /// Inspect the saved whole-unit switch without requiring a specific construction class.
 pub(super) fn enabled(world: &World, id: ObjectId) -> Result<bool> {
-    if let Some(unit) = world.btech.vehicles().get(&id) {
-        return Ok(unit.ams_enabled());
-    }
-    Ok(world
-        .btech
-        .constructed_units()
-        .get(&id)
-        .context("Unit is unavailable")?
-        .ams_enabled())
+    let unit = world.btech.unit(id).context("Unit is unavailable")?;
+    Ok(unit.ams_enabled())
 }
 
 /// Store a switch after the caller has checked cockpit authority and installation.

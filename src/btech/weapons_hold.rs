@@ -4,15 +4,8 @@ use anyhow::{Context, Result, ensure};
 
 /// Read the operator-imposed firing restriction independently of mechanical readiness.
 pub fn battle_weapons_hold(world: &World, id: ObjectId) -> Result<bool> {
-    if let Some(unit) = world.btech.vehicles().get(&id) {
-        return Ok(unit.weapons_hold);
-    }
-    Ok(world
-        .btech
-        .constructed_units()
-        .get(&id)
-        .context("Unit is not constructed")?
-        .weapons_hold)
+    let unit = world.btech.unit(id).context("Unit is not constructed")?;
+    Ok(unit.weapons_hold())
 }
 
 /// Trusted scenario edit; the caller owns administrative authority and transaction publication.

@@ -12,15 +12,8 @@ pub(super) struct BaseMovementFields {
 
 /// Read the same field storage for Mechs and vehicles without altering simulation state.
 pub(super) fn read(world: &World, id: ObjectId) -> Result<BaseMovementFields> {
-    if let Some(unit) = world.btech.constructed_units().get(&id) {
-        return Ok(unit.base_movement_fields);
-    }
-    Ok(world
-        .btech
-        .vehicles()
-        .get(&id)
-        .context("Unit is unavailable")?
-        .base_movement_fields)
+    let unit = world.btech.unit(id).context("Unit is unavailable")?;
+    Ok(unit.base_movement_fields())
 }
 
 /// Validate before selecting storage; the caller owns authorization and transaction publication.

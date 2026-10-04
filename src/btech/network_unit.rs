@@ -11,14 +11,9 @@ pub(super) struct NetworkUnit<'a> {
     scanner: super::scanner::ScannerUnit<'a>,
     pilot: Option<ObjectId>,
     motion: Option<BattleMotion>,
-    computer: ComputerSource<'a>,
+    /// Borrowed so equipment is scanned only when a network rule needs hardware.
+    computer: BattleUnitRef<'a>,
     pub protection: (u32, u32, u32, u32),
-}
-
-/// Borrow equipment only when a network rule needs hardware, avoiding eager inventory scans.
-enum ComputerSource<'a> {
-    Mech(&'a BattleUnit),
-    Vehicle(&'a BattleVehicle),
 }
 
 impl NetworkUnit<'_> {
@@ -44,17 +39,11 @@ impl NetworkUnit<'_> {
     }
     /// Physical and working computer counts.
     pub fn c3_hardware(&self) -> Result<BattleC3Hardware> {
-        match self.computer {
-            ComputerSource::Mech(unit) => unit.c3_hardware(),
-            ComputerSource::Vehicle(unit) => unit.c3_hardware(),
-        }
+        self.computer.c3_hardware()
     }
     /// Classic computer eligibility before power and interference checks.
     pub fn c3_operational(&self) -> Result<bool> {
-        match self.computer {
-            ComputerSource::Mech(unit) => unit.c3_operational(),
-            ComputerSource::Vehicle(unit) => unit.c3_operational(),
-        }
+        self.computer.c3_operational()
     }
     /// Tactical label independent of the construction store.
     pub fn battlefield_id(&self) -> Option<String> {
@@ -77,7 +66,7 @@ pub(super) fn unit(world: &World, id: ObjectId) -> Result<NetworkUnit<'_>> {
                 unit.network_automation,
                 unit.pilot(),
                 unit.motion(),
-                ComputerSource::Vehicle(unit),
+                BattleUnitRef::Vehicle(unit),
                 totals(
                     unit.sections().values(),
                     unit.definition().sections.values(),
@@ -91,7 +80,7 @@ pub(super) fn unit(world: &World, id: ObjectId) -> Result<NetworkUnit<'_>> {
                 unit.network_automation,
                 unit.pilot(),
                 unit.motion(),
-                ComputerSource::Mech(unit),
+                BattleUnitRef::Mech(unit),
                 totals(
                     unit.sections().values(),
                     unit.definition().sections.values(),

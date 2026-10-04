@@ -44,7 +44,7 @@ impl BattleUnit {
     }
 
     /// Installation and operation are separate so absent equipment has its own cockpit reply.
-    fn tag_hardware(&self) -> Result<(bool, bool)> {
+    pub(super) fn tag_hardware(&self) -> Result<(bool, bool)> {
         Ok(hardware(
             self.loadout()?
                 .systems
@@ -68,7 +68,7 @@ impl BattleVehicle {
     }
 
     /// Adapt vehicle slots to the shared TAG equipment rule.
-    fn tag_hardware(&self) -> Result<(bool, bool)> {
+    pub(super) fn tag_hardware(&self) -> Result<(bool, bool)> {
         Ok(hardware(
             self.loadout()?
                 .systems
@@ -93,15 +93,8 @@ fn hardware(parts: impl Iterator<Item = bool>, computers: BattleC3Hardware) -> (
 
 /// Read installation and damage facts through either chassis adapter.
 pub(super) fn unit_hardware(world: &World, id: ObjectId) -> Result<(bool, bool)> {
-    if let Some(unit) = world.btech.vehicles().get(&id) {
-        return unit.tag_hardware();
-    }
-    world
-        .btech
-        .constructed_units()
-        .get(&id)
-        .context("Unit is unavailable")?
-        .tag_hardware()
+    let unit = world.btech.unit(id).context("Unit is unavailable")?;
+    unit.tag_hardware()
 }
 
 /// Read a shared TAG selection without maintaining another owner index.

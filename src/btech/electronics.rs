@@ -143,15 +143,11 @@ impl super::BattleVehicle {
 
 /// Borrow the common electronic state from either construction store.
 fn state(world: &World, id: ObjectId) -> Result<BattleElectronics> {
-    if let Some(vehicle) = world.btech.vehicles().get(&id) {
-        return Ok(vehicle.electronics());
-    }
-    Ok(world
+    let unit = world
         .btech
-        .constructed_units()
-        .get(&id)
-        .context("Unit construction state is unavailable")?
-        .electronics())
+        .unit(id)
+        .context("Unit construction state is unavailable")?;
+    Ok(unit.electronics())
 }
 
 /// Borrow common controls while keeping construction-specific storage private.
@@ -164,15 +160,11 @@ fn state_mut(world: &mut World, id: ObjectId) -> &mut BattleElectronics {
 
 /// Query construction-specific equipment availability for a common suite.
 fn available(world: &World, id: ObjectId, suite: BattleElectronicSuite) -> Result<bool> {
-    if let Some(vehicle) = world.btech.vehicles().get(&id) {
-        return vehicle.electronic_suite_available(suite);
-    }
-    world
+    let unit = world
         .btech
-        .constructed_units()
-        .get(&id)
-        .context("Unit construction state is unavailable")?
-        .electronic_suite_available(suite)
+        .unit(id)
+        .context("Unit construction state is unavailable")?;
+    unit.electronic_suite_available(suite)
 }
 
 /// Visit both stores in a stable order for field snapshots.

@@ -15,15 +15,8 @@ pub struct BattleVisibility {
 
 /// Inspect operator visibility state without requiring a running cockpit.
 pub fn battle_visibility(world: &World, id: ObjectId) -> Result<BattleVisibility> {
-    if let Some(unit) = world.btech.vehicles().get(&id) {
-        return Ok(unit.visibility);
-    }
-    Ok(world
-        .btech
-        .constructed_units()
-        .get(&id)
-        .context("Unit is not constructed")?
-        .visibility)
+    let unit = world.btech.unit(id).context("Unit is not constructed")?;
+    Ok(unit.visibility())
 }
 
 /// Replace the scenario's visibility flags; the caller owns authority and transaction publication.

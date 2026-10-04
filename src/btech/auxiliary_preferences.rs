@@ -17,15 +17,8 @@ pub(super) const MASK: u32 = 1 | 32 | 512;
 
 /// Read configuration without borrowing mutable unit state or consuming random numbers.
 fn read(world: &World, id: ObjectId) -> Result<AuxiliaryPreferences> {
-    if let Some(unit) = world.btech.constructed_units().get(&id) {
-        return Ok(unit.auxiliary_preferences);
-    }
-    Ok(world
-        .btech
-        .vehicles()
-        .get(&id)
-        .context("Unit is unavailable")?
-        .auxiliary_preferences)
+    let unit = world.btech.unit(id).context("Unit is unavailable")?;
+    Ok(unit.auxiliary_preferences())
 }
 
 /// Select the existing unit-owned preference storage after caller admission.

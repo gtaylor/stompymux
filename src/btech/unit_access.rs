@@ -7,12 +7,7 @@
 //! single-field setters wrap one-edit batches. Scenario fixtures use these to put units
 //! into exact states, such as a seeded dice stream or a hand-edited template; build a
 //! deliberately invalid unit through [`BtechState::rewrite_unit_record`] instead.
-use super::{
-    BattleCharacterPilotStatus, BattleContact, BattleDice, BattleFireMode, BattleFreeFall,
-    BattleHexLock, BattleMotion, BattlePosition, BattlePower, BattleTargetLock, BattleTemplate,
-    BattleUnit, BattleUnitSignature, BattleVehicle, BattleVehicleTemplate, BattleWeaponReadiness,
-    BtechState, StoredBattleUnit,
-};
+use super::*;
 use crate::ObjectId;
 use anyhow::{Context, Result, anyhow, bail};
 use std::collections::BTreeMap;
@@ -26,15 +21,41 @@ pub enum BattleUnitRef<'a> {
     Vehicle(&'a BattleVehicle),
 }
 
-/// Forward shared getters to whichever chassis the reference holds.
-macro_rules! shared_getters {
-    ($($(#[$doc:meta])* fn $name:ident(&self $(, $arg:ident: $ty:ty)*) -> $ret:ty;)*) => {
+/// Forward methods both chassis define identically to whichever one a reference holds.
+macro_rules! forward {
+    (ref: $($(#[$doc:meta])* $vis:vis fn $name:ident(&self $(, $arg:ident: $ty:ty)*) $(-> $ret:ty)?;)*) => {
         $(
             $(#[$doc])*
-            pub fn $name(&self $(, $arg: $ty)*) -> $ret {
+            $vis fn $name(&self $(, $arg: $ty)*) $(-> $ret)? {
+                match *self {
+                    Self::Mech(unit) => unit.$name($($arg),*),
+                    Self::Vehicle(vehicle) => vehicle.$name($($arg),*),
+                }
+            }
+        )*
+    };
+    (mut: $($(#[$doc:meta])* $vis:vis fn $name:ident(&mut self $(, $arg:ident: $ty:ty)*) $(-> $ret:ty)?;)*) => {
+        $(
+            $(#[$doc])*
+            $vis fn $name(&mut self $(, $arg: $ty)*) $(-> $ret)? {
                 match self {
                     Self::Mech(unit) => unit.$name($($arg),*),
                     Self::Vehicle(vehicle) => vehicle.$name($($arg),*),
+                }
+            }
+        )*
+    };
+}
+
+/// Read fields both chassis store under the same name and type.
+macro_rules! shared_fields {
+    ($($(#[$doc:meta])* $name:ident: $ty:ty;)*) => {
+        $(
+            $(#[$doc])*
+            pub(super) fn $name(&self) -> $ty {
+                match *self {
+                    Self::Mech(unit) => unit.$name,
+                    Self::Vehicle(vehicle) => vehicle.$name,
                 }
             }
         )*
@@ -47,63 +68,176 @@ impl<'a> BattleUnitRef<'a> {
         matches!(self, Self::Mech(_))
     }
 
-    /// Rounds remaining in each ammunition bin.
-    pub fn ammunition(&self) -> &'a [u16] {
-        match *self {
-            Self::Mech(unit) => unit.ammunition(),
-            Self::Vehicle(vehicle) => vehicle.ammunition(),
-        }
+    forward! { ref:
+        /// Whether TAG is installed, and whether it still works.
+        pub(super) fn tag_hardware(&self) -> Result<(bool, bool)>;
+        /// Remaining complete salvos, ordered by the resolved ammunition bins.
+        pub fn ammunition(&self) -> &'a [u16];
+        /// Plan up to `rounds` compatible rounds without changing inventory, mode, heat or dice.
+        /// Prefer the selected section, then the mount and canonical section/slot order; empty or unavailable bins are skipped.
+        /// A short plan exposes shortage so a firing mode can choose its specified fallback atomically.
+        pub fn ammunition_feed(&self, index: usize, rounds: u16) -> Result<Vec<BattleAmmunitionDraw>>;
+        /// Current selected ammunition type; independent of bin inventory and recycle readiness.
+        pub fn ammunition_mode(&self, index: usize) -> Result<BattleAmmunitionMode>;
+        /// Whether low ammunition notifies the occupants.
+        pub fn ammunition_warning(&self) -> bool;
+        /// Pilot-selected automatic defense state, initially disabled.
+        pub fn ams_enabled(&self) -> bool;
+        /// Whether armor threshold changes notify the occupants.
+        pub fn armor_warning(&self) -> bool;
+        /// Inspect a linked, live controller without altering the selected ammunition mode.
+        pub fn artemis_operational(&self, index: usize) -> Result<bool>;
+        /// Accumulated trajectory correction for the currently selected target.
+        pub fn artillery_adjustment(&self) -> u8;
+        /// Jumping and stabilization precede ground speed and the template's walking threshold.
+        pub fn attacker_movement_modifier(&self, fasa_turning: bool) -> u8;
+        /// Whether the pilot has opted to fall off cliffs without an avoidance check.
+        pub fn auto_fall(&self) -> bool;
+        /// Whether routine contact notices include targets whose reactors are not running.
+        pub fn autocon_shutdown(&self) -> bool;
+        /// Scenario identity or a stable base-36 label derived from the saved membership slot.
+        pub fn battlefield_id(&self) -> Option<String>;
+        /// The unit's durable display choices.
+        pub fn brief_settings(&self) -> BattleBriefSettings;
+        /// Current BTHDebug configuration; attack reports do not consume this flag.
+        pub fn bth_debug(&self) -> bool;
+        /// Derive computer capabilities without trusting template flags or caching damage.
+        pub fn c3_hardware(&self) -> Result<BattleC3Hardware>;
+        /// Classic C3 requires a live computer; losing every installed master disables its unit's C3.
+        pub fn c3_operational(&self) -> Result<bool>;
+        /// Saved character-mode injury count and fatal status, separate from tactical injury rules.
+        pub fn character_pilot_status(&self) -> Option<super::BattleCharacterPilotStatus>;
+        /// Last observed contacts, which must be refreshed before being used as current visibility.
+        pub fn contacts(&self) -> &'a BTreeMap<ObjectId, BattleContact>;
+        /// Saved virtual-crew recovery; a present pilot owns their personal recovery instead.
+        pub fn crew_recovery(&self) -> &'a super::BattleRecovery;
+        /// Current gameplay mass in 1/1024 tons, including an administrative correction.
+        pub fn effective_mass(&self) -> Result<u32>;
+        /// Guardian presence is sufficient; a biped Angel suite needs two surviving slots.
+        /// A destroyed or flooded part disables the whole corresponding suite family.
+        pub fn electronic_suite_available(&self, suite: BattleElectronicSuite) -> Result<bool>;
+        /// Saved electronic controls and last committed field observation.
+        pub fn electronics(&self) -> BattleElectronics;
+        /// Current persisted shooting-XP policy for this unit.
+        pub fn experience_settings(&self) -> BattleUnitExperience;
+        /// Current firing mode, distinct from the template's initial equipment flags.
+        pub fn fire_mode(&self, index: usize) -> Result<BattleFireMode>;
+        /// A completed launch marks this unit until the next committed heartbeat, including launches that miss.
+        pub fn fired_recently(&self) -> bool;
+        /// Pending unpowered vertical descent, including its durable event countdown.
+        pub fn free_fall(&self) -> Option<super::BattleFreeFall>;
+        /// Whether the pilot has enabled friendly-fire protection.
+        pub fn friendly_fire_safety(&self) -> bool;
+        /// Any surviving section carrying this pod effect.
+        pub fn has_beacon(&self, kind: BattleBeaconKind) -> bool;
+        /// Current coordinate target, independent of visibility or an occupying unit.
+        pub fn hex_lock(&self) -> Option<BattleHexLock>;
+        /// Elapsed committed hide checks; zero is the initial scheduled event.
+        pub fn hide_elapsed(&self) -> Option<u16>;
+        /// Remaining inferno seconds; positive duration suppresses six points of heat dissipation.
+        pub fn inferno_remaining(&self) -> u32;
+        /// Core structure, cockpit loss or three engine hits destroy the unit, not its MUX object.
+        pub fn is_destroyed(&self) -> bool;
+        /// Administrator-controlled observer mode; cockpit pilots cannot enable it through radio settings.
+        pub fn is_observer(&self) -> bool;
+        /// Unix time supplied at the most recent completed startup, initially zero.
+        pub fn last_startup(&self) -> i64;
+        /// The unit's position in its current battlefield membership list.
+        pub fn map_slot(&self) -> Option<u32>;
+        /// Continuous motion, defaulting to the placed hex center before its first update.
+        pub fn motion(&self) -> Option<super::BattleMotion>;
+        /// Whether the MechWarrior weapon-safety preference is enabled.
+        pub fn mw_safety(&self) -> bool;
+        /// Current cocoon or jump-jet descent, independent of ordinary jump flight.
+        pub fn orbital_drop(&self) -> Option<BattleOrbitalDrop>;
+        /// Player currently occupying the cockpit, independent of passengers inside the unit.
+        pub fn pilot(&self) -> Option<ObjectId>;
+        /// Current cockpit injury count; confirmed pilot death is an independent event.
+        pub fn pilot_injuries(&self) -> u8;
+        /// Current battlefield coordinates, absent when the unit is off-map.
+        pub fn position(&self) -> Option<BattlePosition>;
+        /// Current engine state and pending startup countdown.
+        pub fn power(&self) -> super::BattlePower;
+        /// Quality zero uses the chassis default; nonzero radio range overrides its derived reach.
+        pub fn radio_capabilities(&self) -> BattleRadioCapabilities;
+        /// Active channel settings in letter order, starting with channel A.
+        pub fn radio_channels(&self) -> &'a [BattleRadioChannel];
+        /// Simulation seconds until another interfered reception can attempt communication XP.
+        pub fn radio_experience_remaining(&self) -> u8;
+        /// Saved communication target used by reception interference until the next startup.
+        pub fn radio_skill(&self) -> i16;
+        /// Perception target captured at startup completion, used throughout that engine run.
+        pub fn scanner_perception(&self) -> i16;
+        /// Persisted lamp and switch state, independent of the unit's current illumination.
+        pub fn searchlight(&self) -> BattleSearchlight;
+        /// Whether changes in external illumination notify the occupants.
+        pub fn searchlight_warning(&self) -> bool;
+        /// Current admitted self-destruct sequence, independent of pilot reassignment.
+        pub fn self_destruct(&self) -> Option<BattleSelfDestruct>;
+        /// Scenario protection from ammunition self-destruct admission.
+        pub fn self_destruct_safe(&self) -> bool;
+        /// Nonzero template ranges override technology-base defaults independently.
+        /// Template zero selects defaults; runtime zero remains zero. Subsequent sensor hits degrade ranges.
+        pub fn sensor_ranges(&self) -> BattleSensorRanges;
+        /// Saved team and target visibility facts.
+        pub fn signature(&self) -> BattleUnitSignature;
+        /// Self-selection declares this unit a spotter; another ID selects a forward observer.
+        pub fn spotter(&self) -> Option<ObjectId>;
+        /// Read pending radio connections and periodic checks without advancing their clocks.
+        pub fn spotter_events(&self) -> &'a super::BattleSpotterEvents;
+        /// Saved TAG selection and countdown; current geometry is checked separately.
+        pub fn tag(&self) -> BattleTagState;
+        /// Standalone TAG and integrated C3 master equipment share their live damage gate.
+        pub fn tag_available(&self) -> Result<bool>;
+        /// Historical selection; callers must separately check current visibility before firing.
+        pub fn target_lock(&self) -> Option<BattleTargetLock>;
+        /// Inspect the single selected target without projecting it to a particular target kind.
+        pub fn target_selection(&self) -> Option<BattleTargetSelection>;
+        /// Construction baseline used by the shared attacker movement calculation.
+        pub fn template_speed(&self) -> f64;
+        /// Pending recovery, including its saved countdown.
+        pub fn unjam(&self) -> Option<BattleUnjam>;
+        /// Temporary conditions by mount index; existing recycle clocks govern recovery.
+        pub fn weapon_failures(&self) -> &'a BTreeMap<usize, BattleEquipmentFailure>;
+        /// Whether a valid mount's feed is jammed; a jam does not destroy its critical slots.
+        pub fn weapon_jammed(&self, index: usize) -> Result<bool>;
+        /// Inspect functioning equipment, remaining matching salvos and recycle time.
+        pub fn weapon_readiness(&self, index: usize) -> Result<BattleWeaponReadiness>;
+        /// Active recycle countdowns keyed by zero-based resolved weapon index.
+        pub fn weapon_recycle(&self) -> &'a BTreeMap<usize, u16>;
     }
 
-    /// Weapons still recycling, by weapon index, with seconds remaining.
-    pub fn weapon_recycle(&self) -> &'a BTreeMap<usize, u16> {
-        match *self {
-            Self::Mech(unit) => unit.weapon_recycle(),
-            Self::Vehicle(vehicle) => vehicle.weapon_recycle(),
-        }
+    shared_fields! {
+        /// Whether another unit may tow this one.
+        towable: bool;
+        /// Whether the unit is dug in as a fortification.
+        fortified: bool;
+        /// Whether the unit is holding fire.
+        weapons_hold: bool;
+        /// Who the unit is shown to.
+        visibility: BattleVisibility;
+        /// Whether the unit is exempt from combat.
+        combat_safe: bool;
+        /// The section the unit is aiming at, if any.
+        aimed_section: Option<BattleAimSelection>;
+        /// Saved auxiliary cockpit preferences.
+        auxiliary_preferences: auxiliary_preferences::AuxiliaryPreferences;
+        /// Saved base movement overrides.
+        base_movement_fields: base_movement_fields::BaseMovementFields;
+        /// Shots fired and hits scored.
+        shot_counters: shot_counters::ShotCounters;
+        /// Damage dealt and taken.
+        damage_counters: damage_counters::DamageCounters;
+        /// Units this one has destroyed.
+        units_killed: i32;
     }
 
-    /// Contacts the unit's sensors currently hold.
-    pub fn contacts(&self) -> &'a BTreeMap<ObjectId, BattleContact> {
+    /// The identifier the unit's owner prefers on the battlefield.
+    pub(super) fn preferred_id(&self) -> Option<&'a BattlePreferredId> {
         match *self {
-            Self::Mech(unit) => unit.contacts(),
-            Self::Vehicle(vehicle) => vehicle.contacts(),
+            Self::Mech(unit) => unit.preferred_id.as_ref(),
+            Self::Vehicle(vehicle) => vehicle.preferred_id.as_ref(),
         }
-    }
-
-    shared_getters! {
-        /// Map placement, if the unit is on a battlefield.
-        fn position(&self) -> Option<BattlePosition>;
-        /// Continuous movement state of a placed unit.
-        fn motion(&self) -> Option<BattleMotion>;
-        /// Reactor or engine state.
-        fn power(&self) -> BattlePower;
-        /// Whether the unit has been destroyed.
-        fn is_destroyed(&self) -> bool;
-        /// The player piloting the unit.
-        fn pilot(&self) -> Option<ObjectId>;
-        /// Injuries the pilot has taken.
-        fn pilot_injuries(&self) -> u8;
-        /// Character-system pilot condition, when one is tracked.
-        fn character_pilot_status(&self) -> Option<BattleCharacterPilotStatus>;
-        /// An active fall, if the unit is falling.
-        fn free_fall(&self) -> Option<BattleFreeFall>;
-        /// Seconds of inferno burning left.
-        fn inferno_remaining(&self) -> u32;
-        /// The unit's battlefield slot.
-        fn map_slot(&self) -> Option<u32>;
-        /// Team and optical signature.
-        fn signature(&self) -> BattleUnitSignature;
-        /// Tactical label shown to other units.
-        fn battlefield_id(&self) -> Option<String>;
-        /// The target the unit has locked, if any.
-        fn target_lock(&self) -> Option<BattleTargetLock>;
-        /// Whether one weapon can fire now, and why not if it cannot.
-        fn weapon_readiness(&self, index: usize) -> Result<BattleWeaponReadiness>;
-        /// One weapon's selected fire mode.
-        fn fire_mode(&self, index: usize) -> Result<BattleFireMode>;
-        /// The hex the unit has locked, if its lock is on terrain.
-        fn hex_lock(&self) -> Option<BattleHexLock>;
     }
 
     /// Capitalized and lowercase words naming the chassis in messages.
@@ -136,6 +270,35 @@ impl<'a> BattleUnitRef<'a> {
             Self::Mech(unit) => unit.identity(),
             Self::Vehicle(vehicle) => vehicle.identity(),
         }
+    }
+}
+
+/// Mutable access to a Mech or vehicle through the operations both chassis share.
+#[derive(Debug)]
+pub enum BattleUnitMut<'a> {
+    /// A constructed BattleMech.
+    Mech(&'a mut BattleUnit),
+    /// A combat vehicle.
+    Vehicle(&'a mut BattleVehicle),
+}
+
+impl BattleUnitMut<'_> {
+    /// Read the same unit through its shared getters.
+    pub fn as_ref(&self) -> BattleUnitRef<'_> {
+        match self {
+            Self::Mech(unit) => BattleUnitRef::Mech(unit),
+            Self::Vehicle(vehicle) => BattleUnitRef::Vehicle(vehicle),
+        }
+    }
+
+    forward! { mut:
+        /// Clear a feed jam after the caller has resolved recovery or repair; no automatic recovery is implied.
+        pub fn clear_weapon_jam(&mut self, index: usize) -> Result<bool>;
+        /// Record a feed jam inside the enclosing attack transaction without spending supply or heat.
+        /// Returns whether this call introduced the jam.
+        pub fn jam_weapon(&mut self, index: usize) -> Result<bool>;
+        /// Forwards to the chassis's `set_administrative_attribute`.
+        pub(super) fn set_administrative_attribute(&mut self, name: &str, value: impl ToString);
     }
 }
 
@@ -258,6 +421,14 @@ impl BtechState {
             return Some(BattleUnitRef::Mech(unit));
         }
         self.vehicles.get(&id).map(BattleUnitRef::Vehicle)
+    }
+
+    /// Borrow a Mech or vehicle mutably through the operations both chassis share.
+    pub fn unit_mut(&mut self, id: ObjectId) -> Option<BattleUnitMut<'_>> {
+        if self.constructed.contains_key(&id) {
+            return self.constructed.get_mut(&id).map(BattleUnitMut::Mech);
+        }
+        self.vehicles.get_mut(&id).map(BattleUnitMut::Vehicle)
     }
 
     /// Apply a batch of edits to one Mech or vehicle and validate the result once.

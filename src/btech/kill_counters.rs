@@ -4,15 +4,8 @@ use anyhow::{Context, Result};
 
 /// Inspect the unit-owned signed total without changing combat state.
 pub(super) fn read(world: &World, id: ObjectId) -> Result<i32> {
-    if let Some(unit) = world.btech.constructed_units().get(&id) {
-        return Ok(unit.units_killed);
-    }
-    Ok(world
-        .btech
-        .vehicles()
-        .get(&id)
-        .context("Unit is unavailable")?
-        .units_killed)
+    let unit = world.btech.unit(id).context("Unit is unavailable")?;
+    Ok(unit.units_killed())
 }
 
 /// Select the owning chassis store, without keeping a second attribution ledger.

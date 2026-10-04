@@ -8,15 +8,11 @@ use anyhow::{Context, Result, ensure};
 
 /// Read the explicit scenario permission for towing an out-of-character target.
 pub fn unit_towable(world: &World, id: ObjectId) -> Result<bool> {
-    if let Some(unit) = world.btech.vehicles().get(&id) {
-        return Ok(unit.towable);
-    }
-    Ok(world
+    let unit = world
         .btech
-        .constructed_units()
-        .get(&id)
-        .context("Unit construction is unavailable")?
-        .towable)
+        .unit(id)
+        .context("Unit construction is unavailable")?;
+    Ok(unit.towable())
 }
 
 /// Trusted scenario edit; the caller owns administrative authority and persistence.

@@ -190,7 +190,7 @@ mod template_document;
 mod unit;
 mod unit_access;
 mod unit_validation;
-pub use unit_access::{BattleUnitDefinition, BattleUnitEdit, BattleUnitRef};
+pub use unit_access::{BattleUnitDefinition, BattleUnitEdit, BattleUnitMut, BattleUnitRef};
 
 pub use assets::{read_map, read_template, read_unit_template, read_vehicle_template};
 mod unit_template;

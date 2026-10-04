@@ -4,15 +4,8 @@ use anyhow::{Context, Result, ensure};
 
 /// Read the operator-imposed immunity independently of construction and cockpit power.
 pub fn battle_combat_safe(world: &World, id: ObjectId) -> Result<bool> {
-    if let Some(unit) = world.btech.vehicles().get(&id) {
-        return Ok(unit.combat_safe);
-    }
-    Ok(world
-        .btech
-        .constructed_units()
-        .get(&id)
-        .context("Unit is not constructed")?
-        .combat_safe)
+    let unit = world.btech.unit(id).context("Unit is not constructed")?;
+    Ok(unit.combat_safe())
 }
 
 /// Trusted scenario edit; the caller owns administrative authority and transaction publication.

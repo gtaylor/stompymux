@@ -443,17 +443,7 @@ pub(super) fn installation(
     id: ObjectId,
     index: usize,
 ) -> Result<(BattleWeapon, BattleAmmunitionMode)> {
-    if let Some(unit) = world.btech.vehicles().get(&id) {
-        return Ok((
-            unit.weapon_readiness(index)?.weapon,
-            unit.ammunition_mode(index)?,
-        ));
-    }
-    let unit = world
-        .btech
-        .constructed_units()
-        .get(&id)
-        .context("Unit is not constructed")?;
+    let unit = world.btech.unit(id).context("Unit is not constructed")?;
     Ok((
         unit.weapon_readiness(index)?.weapon,
         unit.ammunition_mode(index)?,

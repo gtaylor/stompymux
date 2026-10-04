@@ -4,15 +4,11 @@ use anyhow::{Context, Result, ensure};
 
 /// Inspect the scenario flag independently of cockpit authority and power state.
 pub fn unit_fortified(world: &World, id: ObjectId) -> Result<bool> {
-    if let Some(unit) = world.btech.vehicles().get(&id) {
-        return Ok(unit.fortified);
-    }
-    Ok(world
+    let unit = world
         .btech
-        .constructed_units()
-        .get(&id)
-        .context("Unit construction is unavailable")?
-        .fortified)
+        .unit(id)
+        .context("Unit construction is unavailable")?;
+    Ok(unit.fortified())
 }
 
 /// Trusted scenario edit; enable only on a settled, detached unit so no queued travel escapes the gate.

@@ -43,15 +43,8 @@ pub fn preferred_id(world: &World, id: ObjectId) -> Result<Option<&str>> {
     {
         return Ok(Some(value));
     }
-    if let Some(unit) = world.btech.vehicles().get(&id) {
-        return Ok(unit.preferred_id.as_ref().map(AsRef::as_ref));
-    }
-    let unit = world
-        .btech
-        .constructed_units()
-        .get(&id)
-        .context("Unit is not constructed")?;
-    Ok(unit.preferred_id.as_ref().map(AsRef::as_ref))
+    let unit = world.btech.unit(id).context("Unit is not constructed")?;
+    Ok(unit.preferred_id().map(AsRef::as_ref))
 }
 
 /// Trusted configuration edit; empty or absent values clear the preference.

@@ -83,15 +83,8 @@ fn state_mut(world: &mut World, id: ObjectId) -> &mut SixthSense {
 
 /// Current material mass includes the same cargo and damage adjustments as movement.
 fn mass(world: &World, id: ObjectId) -> Result<u32> {
-    if let Some(unit) = world.btech.constructed_units().get(&id) {
-        return unit.effective_mass();
-    }
-    world
-        .btech
-        .vehicles()
-        .get(&id)
-        .context("Unit is unavailable")?
-        .effective_mass()
+    let unit = world.btech.unit(id).context("Unit is unavailable")?;
+    unit.effective_mass()
 }
 
 /// Range and current material tonnage select one of nine reference warning strengths.

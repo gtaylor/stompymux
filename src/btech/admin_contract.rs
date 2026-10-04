@@ -254,34 +254,17 @@ fn administrative_mech_section(unit: &BattleUnit, code: i32) -> Result<BattleSec
     RAW.get(index).copied().context("Section is unavailable")
 }
 
-fn storage(world: &mut World, id: ObjectId) -> Result<AdministrativeStorage<'_>> {
-    if world.btech.constructed.contains_key(&id) {
-        return Ok(AdministrativeStorage::Mech(
-            world.btech.constructed.get_mut(&id).expect("checked unit"),
-        ));
-    }
-    Ok(AdministrativeStorage::Vehicle(
-        world
-            .btech
-            .vehicles
-            .get_mut(&id)
-            .context("Unit runtime state is unavailable")?,
-    ))
+/// Borrow either chassis for an administrative edit.
+fn storage(world: &mut World, id: ObjectId) -> Result<BattleUnitMut<'_>> {
+    world
+        .btech
+        .unit_mut(id)
+        .context("Unit runtime state is unavailable")
 }
 
-enum AdministrativeStorage<'a> {
-    Mech(&'a mut BattleUnit),
-    Vehicle(&'a mut BattleVehicle),
-}
-
-impl AdministrativeStorage<'_> {
-    fn attribute(&mut self, name: &str, value: impl ToString) {
-        match self {
-            Self::Mech(unit) => unit.set_administrative_attribute(name, value),
-            Self::Vehicle(unit) => unit.set_administrative_attribute(name, value),
-        }
-    }
-
+impl BattleUnitMut<'_> {
+    /// Record the raw class and movement an administrator assigned, resizing the raw
+    /// section list to match.
     fn raw_identity(&mut self, class: RawUnitClass, movement: RawMovement) {
         let count = RawSectionCode::for_unit(class, movement).len();
         match self {
@@ -576,27 +559,25 @@ pub fn set_administrative_scalar(
     super::ensure_registered_unit_runtime(world, id)?;
     let mut storage = storage(world, id)?;
     match (&mut storage, field) {
-        (AdministrativeStorage::Mech(unit), "maxspeed") => {
+        (BattleUnitMut::Mech(unit), "maxspeed") => {
             unit.propulsion.set(f64::from(value as f32 * 10.75_f32))
         }
-        (AdministrativeStorage::Vehicle(unit), "maxspeed") => {
+        (BattleUnitMut::Vehicle(unit), "maxspeed") => {
             unit.propulsion.set(f64::from(value as f32 * 10.75_f32))
         }
-        (AdministrativeStorage::Mech(unit), "maxjumpspeed") => unit
+        (BattleUnitMut::Mech(unit), "maxjumpspeed") => unit
             .propulsion
             .set_jump_raw(f64::from(value as f32 * 10.75_f32)),
-        (AdministrativeStorage::Vehicle(unit), "maxjumpspeed") => {
+        (BattleUnitMut::Vehicle(unit), "maxjumpspeed") => {
             unit.propulsion
                 .set_jump_raw(f64::from(value as f32 * 10.75_f32));
         }
-        (_, "tons") => storage.attribute("administrative_tonnage", value as u32),
-        (_, "lrsrange") => storage.attribute("lrs_range", value as u8),
-        (_, "tacrange") => storage.attribute("tac_range", value as u8),
-        (_, "scanrange") => storage.attribute("scan_range", value as u8),
-        (AdministrativeStorage::Mech(unit), "radiorange") => {
-            unit.hardware.radio_range = Some(value as u16)
-        }
-        (AdministrativeStorage::Vehicle(unit), "radiorange") => {
+        (_, "tons") => storage.set_administrative_attribute("administrative_tonnage", value as u32),
+        (_, "lrsrange") => storage.set_administrative_attribute("lrs_range", value as u8),
+        (_, "tacrange") => storage.set_administrative_attribute("tac_range", value as u8),
+        (_, "scanrange") => storage.set_administrative_attribute("scan_range", value as u8),
+        (BattleUnitMut::Mech(unit), "radiorange") => unit.hardware.radio_range = Some(value as u16),
+        (BattleUnitMut::Vehicle(unit), "radiorange") => {
             unit.hardware.radio_range = Some(value as u16)
         }
         _ => anyhow::bail!("Unknown administrative scalar"),
@@ -628,12 +609,12 @@ pub fn set_administrative_radio_quality(
     };
     let mut storage = storage(world, id)?;
     match &mut storage {
-        AdministrativeStorage::Mech(unit) => {
+        BattleUnitMut::Mech(unit) => {
             unit.set_administrative_attribute("radio", quality);
             unit.hardware.radio_configuration = Some(configuration);
             unit.hardware.radio_range = Some(range);
         }
-        AdministrativeStorage::Vehicle(unit) => {
+        BattleUnitMut::Vehicle(unit) => {
             unit.set_administrative_attribute("radio", quality);
             unit.hardware.radio_configuration = Some(configuration);
             unit.hardware.radio_range = Some(range);
@@ -650,8 +631,8 @@ pub fn set_administrative_cargo(
 ) -> Result<()> {
     super::ensure_registered_unit_runtime(world, id)?;
     let mut storage = storage(world, id)?;
-    storage.attribute("cargo_space", space.saturating_mul(50));
-    storage.attribute("carrier_maximum_tonnage", maximum_tons);
+    storage.set_administrative_attribute("cargo_space", space.saturating_mul(50));
+    storage.set_administrative_attribute("carrier_maximum_tonnage", maximum_tons);
     Ok(())
 }
 
@@ -673,7 +654,7 @@ pub fn set_administrative_unit_type(world: &mut World, id: ObjectId, code: i32) 
         .and_then(|value| RawMovement::parse(&value).ok())
         .unwrap_or(RawMovement::Biped);
     let mut storage = storage(world, id)?;
-    storage.attribute("administrative_unit_type", class.name());
+    storage.set_administrative_attribute("administrative_unit_type", class.name());
     let movement = match code {
         0 | 8 => Some("Biped"),
         2 => Some("VTOL"),
@@ -683,7 +664,7 @@ pub fn set_administrative_unit_type(world: &mut World, id: ObjectId, code: i32) 
     let movement = movement
         .and_then(|value| RawMovement::parse(value).ok())
         .unwrap_or(current_movement);
-    storage.attribute("administrative_movement_type", movement.name());
+    storage.set_administrative_attribute("administrative_movement_type", movement.name());
     storage.raw_identity(class, movement);
     Ok(())
 }
@@ -698,7 +679,7 @@ pub fn set_administrative_movement_type(world: &mut World, id: ObjectId, code: i
         .unwrap_or(RawUnitClass::Mech);
     let movement = RawMovement::parse(MOVEMENT[code as usize])?;
     let mut storage = storage(world, id)?;
-    storage.attribute("administrative_movement_type", movement.name());
+    storage.set_administrative_attribute("administrative_movement_type", movement.name());
     storage.raw_identity(class, movement);
     Ok(())
 }

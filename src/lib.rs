@@ -48,7 +48,7 @@ pub use btech::{
     BattleStaggerReport, BattleStaggerRules, BattleStandAttempt, BattleStandMode, BattleStandTimer,
     BattleSurface, BattleSurfaceBreak, BattleSystem, BattleTacticalImpact, BattleTargetLock,
     BattleTemplate, BattleTemplateCheck, BattleTerrainLos, BattleTorso, BattleUnit,
-    BattleUnitConfiguration, BattleUnitDefinition, BattleUnitEdit, BattleUnitRef,
+    BattleUnitConfiguration, BattleUnitDefinition, BattleUnitEdit, BattleUnitMut, BattleUnitRef,
     BattleUnitSignature, BattleUnjam, BattleVehicleHit, BattleVehicleHitRules,
     BattleVehicleMotiveHit, BattleWaterRanges, BattleWeapon, BattleWeaponDamage,
     BattleWeaponDamageEffects, BattleWeaponDamageKind, BattleWeaponRange, BattleWeaponReadiness,
