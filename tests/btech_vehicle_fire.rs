@@ -2207,14 +2207,8 @@ fn tactical_shot(
     index: usize,
     rules: BattleVehicleShotRules,
 ) -> serde_json::Value {
-    if world.btech.vehicles().contains_key(&shooter) {
-        return serde_json::to_value(
-            fire_battle_vehicle_shot(world, shooter, ObjectId(1), target, index, rules).unwrap(),
-        )
-        .unwrap();
-    }
     serde_json::to_value(
-        resolve_battle_shot(world, shooter, ObjectId(1), target, index, rules.shot).unwrap(),
+        fire_battle_unit_shot(world, shooter, ObjectId(1), target, index, rules).unwrap(),
     )
     .unwrap()
 }

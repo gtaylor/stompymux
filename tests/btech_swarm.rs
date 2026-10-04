@@ -199,24 +199,19 @@ fn fire_with_rules(
     target: ObjectId,
     rules: BattleShotRules,
 ) -> Option<BattleSwarmReport> {
-    let (salvo, ams) = if world.btech.vehicles().contains_key(&shooter) {
-        let r = fire_battle_vehicle_shot(
-            world,
-            shooter,
-            ObjectId(1),
-            target,
-            0,
-            BattleVehicleShotRules {
-                shot: rules,
-                shooter_criticals: BattleVehicleImpactRules::STANDARD.criticals,
-            },
-        )
-        .unwrap();
-        (r.salvo, r.ams)
-    } else {
-        let r = resolve_battle_shot(world, shooter, ObjectId(1), target, 0, rules).unwrap();
-        (r.salvo, r.ams)
-    };
+    let report = fire_battle_unit_shot(
+        world,
+        shooter,
+        ObjectId(1),
+        target,
+        0,
+        BattleVehicleShotRules {
+            shot: rules,
+            shooter_criticals: BattleVehicleImpactRules::STANDARD.criticals,
+        },
+    )
+    .unwrap();
+    let (salvo, ams) = stompymux_rs::by_chassis!(report, |report| (report.salvo, report.ams));
     assert!(ams.is_none());
     salvo.map(|salvo| {
         let BattleTargetSalvo::Swarm(report) = salvo else {

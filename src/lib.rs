@@ -820,6 +820,10 @@ pub use btech::{
     BattleFallFeedback, BattleVehicleFallFeedback, BattleVehicleFallReport, FallReport,
     resolve_vehicle_fall as resolve_battle_vehicle_fall,
 };
+pub use btech::{
+    BattleUnitFallReport, BattleUnitShotReport, ByChassis, fire_unit_shot as fire_battle_unit_shot,
+    resolve_unit_fall as resolve_battle_unit_fall,
+};
 pub use btech::{BattleVehicleDescentEvent, advance_vtol_fall as advance_battle_vtol_fall};
 pub use btech::{
     begin_vtol_takeoff as begin_battle_vtol_takeoff,

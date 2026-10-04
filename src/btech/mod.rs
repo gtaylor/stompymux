@@ -186,10 +186,14 @@ pub use salvo::{
     BattleSalvoGroup, BattleSalvoReport, SalvoReport, resolve_salvo, resolve_tactical_salvo,
 };
 pub use stun::{advance_stun, stun_unit};
+mod chassis_actions;
 mod template;
 mod template_construction;
 mod template_document;
 mod unit;
+pub use chassis_actions::{
+    BattleUnitFallReport, BattleUnitShotReport, ByChassis, fire_unit_shot, resolve_unit_fall,
+};
 mod unit_access;
 pub(crate) use unit_access::{with_unit, with_unit_mut};
 mod unit_validation;
