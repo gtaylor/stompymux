@@ -193,6 +193,7 @@ async fn tactical_fixture() -> (
     .unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
     stompymux_rs::assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     (dir, config, world, id)
 }
 

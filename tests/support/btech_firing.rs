@@ -80,6 +80,7 @@ pub fn supply_fixture_on(
         BattleMapAsset::from_cells(&format!("1 12\n{}", ".0\n".repeat(12))).unwrap(),
     )
     .unwrap();
+    crate::seed_object_dice(&mut world, map, crate::FIXTURE_DICE_SEED);
     let mut template = BattleUnitTemplate::parse("shooter", source).unwrap();
     if let Some(weapon) = weapon {
         let (section, count) = match &mut template {
@@ -145,6 +146,9 @@ pub fn supply_fixture_on(
         .unwrap()
         .create(&mut world, target)
         .unwrap();
+    for id in [shooter, target] {
+        crate::seed_object_dice(&mut world, id, crate::FIXTURE_DICE_SEED);
+    }
     place_battle_unit(&mut world, shooter, map, 0, 11).unwrap();
     place_battle_unit(&mut world, target, map, 0, 10).unwrap();
     for id in [shooter, target] {
@@ -155,6 +159,7 @@ pub fn supply_fixture_on(
     }
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(shooter);
     assign_battle_pilot(&mut world, shooter, ObjectId(1)).unwrap();
+    crate::seed_object_dice(&mut world, ObjectId(1), crate::FIXTURE_DICE_SEED);
     refresh_battle_contacts(&mut world, &[shooter]).unwrap();
     select_battle_target(&mut world, shooter, ObjectId(1), Some(target)).unwrap();
     let index = if let Some(weapon) = weapon {

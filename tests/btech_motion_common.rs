@@ -17,9 +17,10 @@ pub(crate) const RULES: BattleMovementRules = BattleMovementRules {
     ..stompymux_rs::BattleMovementRules::STANDARD
 };
 
-/// Seed for the dice stream of every fixture unit. A new unit draws its stream from OS
-/// entropy, so an unseeded fixture would roll differently in every test process.
-pub(crate) const FIXTURE_DICE_SEED: u8 = 0;
+/// Seed for the main fixture unit's own stream. The fixture seeds every other stream it
+/// creates through [`support::seed_world_dice`] and then gives this unit the fixed stream its
+/// scenarios were written against.
+pub(crate) const FIXTURE_UNIT_SEED: u8 = 0;
 
 /// A running, piloted Jenner in the middle of a uniform test battlefield.
 pub(crate) async fn fixture(
@@ -73,10 +74,11 @@ pub(crate) async fn fixture_assets(
     let id = world.create(&config, "Jenner".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     create_battle_unit(&mut world, id, template).unwrap();
-    shot_seed(&mut world, id, FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, id, map, 5, 5).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
+    shot_seed(&mut world, id, FIXTURE_UNIT_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
         advance_battle_units(&mut world, 0);
@@ -101,6 +103,7 @@ pub(crate) async fn lock_fixture() -> (
         BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, target, map, 5, 6).unwrap();
     stompymux_rs::refresh_battle_contacts(&mut world, &[id]).unwrap();
     (dir, config, world, id, target)

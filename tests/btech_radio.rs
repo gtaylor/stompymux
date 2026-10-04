@@ -15,6 +15,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
     .unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     (dir, config, world, id)
 }
 
@@ -282,6 +283,7 @@ async fn relay_fixture() -> (tempfile::TempDir, Config, World, ObjectId, Vec<Obj
         radio_fact(&mut world, id, |u| u["pilot"] = serde_json::Value::Null);
         units.push(id);
     }
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     (dir, config, world, map, units)
 }
 

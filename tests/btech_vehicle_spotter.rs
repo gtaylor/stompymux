@@ -80,6 +80,7 @@ async fn fixture_with_mml(
         }
         ids.push(id);
     }
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     let mut saved = serde_json::to_value(&world.btech).unwrap();
     saved["constructed"][ids[2].0.to_string()]["signature"]["team"] = 99.into();
     world.btech = serde_json::from_value(saved).unwrap();

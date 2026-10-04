@@ -25,6 +25,7 @@ async fn fixture(weapon: BattleWeapon) -> (tempfile::TempDir, Config, World, Obj
         );
     }
     create_battle_unit(&mut world, id, template).unwrap();
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     let index = world.btech.constructed_units()[&id]
         .loadout()
         .unwrap()

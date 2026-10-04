@@ -29,7 +29,8 @@ pub fn copy(source: &Path, target: &Path) {
     }
 }
 
-/// Copy and load the unchanged relational game fixture.
+/// Copy and load the unchanged relational game fixture, with every saved dice stream reseeded
+/// from [`crate::FIXTURE_DICE_SEED`].
 pub async fn isolated_world() -> (tempfile::TempDir, Config, World) {
     crate::init_logging();
     let directory = tempfile::tempdir().unwrap();
@@ -38,7 +39,8 @@ pub async fn isolated_world() -> (tempfile::TempDir, Config, World) {
         directory.path(),
     );
     let config = Config::load(directory.path()).unwrap();
-    let world = persistence::load(&config.database()).await.unwrap();
+    let mut world = persistence::load(&config.database()).await.unwrap();
+    crate::seed_world_dice(&mut world, crate::FIXTURE_DICE_SEED);
     (directory, config, world)
 }
 
@@ -56,9 +58,11 @@ pub fn with_clock_save_interval(directory: &Path, seconds: u64) -> Config {
     Config::load(directory).unwrap()
 }
 
-/// Copy the unchanged relational game fixture and initialize its Lua runtime.
+/// Copy the unchanged relational game fixture and initialize its Lua runtime, reseeding any
+/// dice stream its startup scripts created.
 pub async fn isolated_scripts() -> (tempfile::TempDir, Config, Scripts) {
     let (directory, config, world) = isolated_world().await;
     let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
+    crate::seed_world_dice(&mut scripts.world_mut(), crate::FIXTURE_DICE_SEED);
     (directory, config, scripts)
 }

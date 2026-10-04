@@ -21,6 +21,7 @@ async fn lane(rows: &[&str]) -> (tempfile::TempDir, Config, World, ObjectId) {
         BattleMapAsset::from_cells(&format!("1 {}\n{}\n", rows.len(), rows.join("\n"))).unwrap(),
     )
     .unwrap();
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     (dir, config, world, map)
 }
 

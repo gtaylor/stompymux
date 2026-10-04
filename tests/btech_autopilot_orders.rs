@@ -123,6 +123,7 @@ async fn ground_fixture(positions: &[(u16, u16)], pilot_first: bool) -> GroundFi
         world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
         assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
     }
+    crate::support::seed_world_dice(&mut world, crate::support::FIXTURE_DICE_SEED);
 
     // Starting powered units keeps each test focused on the order being checked while
     // preserving the ordinary movement and combat admission path.

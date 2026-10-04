@@ -3943,6 +3943,7 @@ async fn semiguided_fixture() -> (
     torso.criticals.insert(3, ordinary);
     let shooter = world.create(&config, "Semi-guided shooter".into(), Kind::Thing);
     create_battle_unit(&mut world, shooter, definition).unwrap();
+    support::seed_object_dice(&mut world, shooter, support::FIXTURE_DICE_SEED);
     let map = world.btech.constructed_units()[&tagger]
         .position()
         .unwrap()

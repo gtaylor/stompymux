@@ -29,6 +29,7 @@ async fn ground_fixture() -> (tempfile::TempDir, Config, World, ObjectId, Object
     place_battle_unit(&mut world, unit, map, 0, 7).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(unit);
     assign_battle_pilot(&mut world, unit, ObjectId(1)).unwrap();
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
 
     // Starting directly in Running keeps this fixture focused on controller behavior;
     // the ordinary startup state machine is covered by the BTech power scenarios.

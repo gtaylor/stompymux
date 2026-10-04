@@ -67,6 +67,7 @@ async fn field(
         start_battle_unit(&mut world, id, pilot, true).unwrap();
         units.push((id, pilot));
     }
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     for _ in 0..5 {
         advance_battle_units(&mut world, 0);
     }

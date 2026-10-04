@@ -29,6 +29,7 @@ async fn fixture(
     }
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(target);
     assign_battle_pilot(&mut world, target, ObjectId(1)).unwrap();
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, target, ObjectId(1), true).unwrap();
     for _ in 0..5 {
         advance_battle_units(&mut world, 0);

@@ -44,6 +44,7 @@ async fn fixture(
         .unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let mut ids = Vec::new();
     for (index, source) in [observer, target].into_iter().enumerate() {
         let id = world.create(&config, format!("Unit {index}"), Kind::Thing);
@@ -52,6 +53,7 @@ async fn fixture(
             .unwrap()
             .create(&mut world, id)
             .unwrap();
+        support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut world, id, map, 0, if index == 0 { 3 } else { 0 }).unwrap();
         edit(&mut world, id, |state| {
             state["power"] = serde_json::to_value(BattlePower::Running).unwrap();
@@ -61,6 +63,7 @@ async fn fixture(
     }
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(ids[0]);
     assign_battle_pilot(&mut world, ids[0], ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     world.validate(&config).unwrap();
     (dir, config, world, ids[0], ids[1])
 }

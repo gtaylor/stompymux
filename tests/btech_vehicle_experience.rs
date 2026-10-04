@@ -61,6 +61,7 @@ async fn fixture_sources(
         },
     )
     .unwrap();
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     set_battle_unit_signature(
         &mut world,
         target,

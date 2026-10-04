@@ -47,6 +47,7 @@ async fn fixture(
         place_battle_unit(&mut world, id, map, 0, 0).unwrap();
         ids.push(id);
     }
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     (dir, config, world, map, [ids[0], ids[1], ids[2]])
 }
 

@@ -193,6 +193,7 @@ async fn blast_fixture(
         place_battle_unit(&mut world, id, map, 1, if index == 2 { 0 } else { 1 }).unwrap();
         ids.push(id);
     }
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     // Face the blast source in packet-arithmetic fixtures; rear selection has separate coverage.
     let mut saved = serde_json::to_value(&world.btech).unwrap();
     for index in [0, 2] {

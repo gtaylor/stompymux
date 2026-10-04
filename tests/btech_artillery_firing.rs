@@ -76,6 +76,7 @@ async fn fixture_source(
         }
         ids.push(id);
     }
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     refresh_battle_contacts(&mut world, &ids).unwrap();
     let shooter = ids[0];
     select_battle_hex_target(
