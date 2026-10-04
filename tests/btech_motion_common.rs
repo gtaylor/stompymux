@@ -17,6 +17,10 @@ pub(crate) const RULES: BattleMovementRules = BattleMovementRules {
     ..stompymux_rs::BattleMovementRules::STANDARD
 };
 
+/// Seed for the dice stream of every fixture unit. A new unit draws its stream from OS
+/// entropy, so an unseeded fixture would roll differently in every test process.
+pub(crate) const FIXTURE_DICE_SEED: u8 = 0;
+
 /// A running, piloted Jenner in the middle of a uniform test battlefield.
 pub(crate) async fn fixture(
     terrain: char,
@@ -69,6 +73,7 @@ pub(crate) async fn fixture_assets(
     let id = world.create(&config, "Jenner".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     create_battle_unit(&mut world, id, template).unwrap();
+    shot_seed(&mut world, id, FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, id, map, 5, 5).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
