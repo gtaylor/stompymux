@@ -1,5 +1,5 @@
 //! Ordered battlefield entrances referencing shared interior-map construction state.
-use super::{HexCoordinate, StoredBattleMap};
+use super::{HexCoordinate, StoredMap};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -18,7 +18,7 @@ pub struct BattleBuildingEntrance {
     pub data_int: i64,
 }
 
-impl StoredBattleMap {
+impl StoredMap {
     /// Stable entrance order; duplicate coordinates retain first-entry selection semantics.
     pub fn building_entrances(&self) -> &BTreeMap<u32, BattleBuildingEntrance> {
         &self.building_entrances

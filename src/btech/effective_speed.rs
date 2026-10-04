@@ -1,5 +1,5 @@
 //! Effective speed from shared load accounting and chassis-specific propulsion and map rules.
-use super::{BattleUnit, StoredBattleMap};
+use super::{BattleUnit, StoredMap};
 use anyhow::Result;
 
 impl BattleUnit {
@@ -7,7 +7,7 @@ impl BattleUnit {
     /// This unit-local query excludes external load; world load queries include towing.
     /// Damage-only mobility and throttle limits remain separate.
     /// Gravity applies only on maps enabling special environmental rules.
-    pub fn effective_maximum_speed(&self, map: Option<&StoredBattleMap>) -> Result<f64> {
+    pub fn effective_maximum_speed(&self, map: Option<&StoredMap>) -> Result<f64> {
         self.effective_speed_with_load(
             map,
             super::BattleUnitLoad {
@@ -23,7 +23,7 @@ impl BattleUnit {
     /// Apply the same myomer, booster and map rules to either local or world-owned load.
     pub(super) fn effective_speed_with_load(
         &self,
-        map: Option<&StoredBattleMap>,
+        map: Option<&StoredMap>,
         load: super::BattleUnitLoad,
         maximum: f64,
     ) -> Result<f64> {

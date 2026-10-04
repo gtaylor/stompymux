@@ -1,11 +1,11 @@
 //! Vacuum damage checks use the map environment and the victim's committed random stream.
-use super::{BattleDice, BattleNotice, BattleVehicleSection, StoredBattleMap};
+use super::{BattleDice, BattleNotice, BattleVehicleSection, StoredMap};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result};
 
 /// Armor penetration breaches directly; other eligible damage events check 10+ on 2d6.
 /// Special conditions consume this roll even when the map is not a vacuum.
-fn trigger(map: &StoredBattleMap, dice: &mut BattleDice, penetrating: bool) -> (Option<u8>, bool) {
+fn trigger(map: &StoredMap, dice: &mut BattleDice, penetrating: bool) -> (Option<u8>, bool) {
     if !map.uses_special_rules() {
         return (None, false);
     }

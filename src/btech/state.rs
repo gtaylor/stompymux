@@ -10,7 +10,7 @@ use std::{
 
 /// Identity and dimensions of a saved map. Encoded tiles are not interpreted without a dictionary.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct StoredBattleMap {
+pub struct StoredMap {
     /// Allocated membership span, including holes retained after removal.
     #[serde(default)]
     pub(crate) membership_extent: u32,
@@ -97,7 +97,7 @@ pub struct StoredBattleMap {
     pub(crate) points_of_interest: Arc<Vec<super::MapPointOfInterest>>,
 }
 
-impl StoredBattleMap {
+impl StoredMap {
     /// The saved map restriction blocks non-coolant fire between teammates.
     pub fn blocks_friendly_fire(&self) -> bool {
         self.has_flag(super::MapFlag::NoFriendlyFire)
@@ -436,7 +436,7 @@ pub struct BtechState {
     #[serde(default)]
     pub(crate) vehicles: SharedMap<ObjectId, super::BattleVehicle>,
     pub(crate) registrations: Arc<BTreeMap<ObjectId, String>>,
-    pub(crate) maps: SharedMap<ObjectId, StoredBattleMap>,
+    pub(crate) maps: SharedMap<ObjectId, StoredMap>,
     pub(crate) units: SharedMap<ObjectId, StoredBattleUnit>,
 }
 
@@ -495,7 +495,7 @@ impl BtechState {
     }
 
     /// Inspect saved map metadata without guessing at terrain codes.
-    pub fn maps(&self) -> &SharedMap<ObjectId, StoredBattleMap> {
+    pub fn maps(&self) -> &SharedMap<ObjectId, StoredMap> {
         &self.maps
     }
 
@@ -549,7 +549,7 @@ impl BtechState {
             .with_context(|| format!("#{} has no map record", id.0))?;
         let mut record = serde_json::to_value(map)?;
         edit(&mut record);
-        let map: StoredBattleMap = serde_json::from_value(record)?;
+        let map: StoredMap = serde_json::from_value(record)?;
         self.maps.insert(id, map);
         self.clear_runtime_state();
         Ok(())
@@ -1253,12 +1253,12 @@ fn map_target(world: &World, id: ObjectId) -> Result<()> {
 }
 
 /// Turn a parsed source into a checked persistent domain record.
-pub(super) fn map_from_asset(name: &str, asset: MapAsset) -> Result<StoredBattleMap> {
+pub(super) fn map_from_asset(name: &str, asset: MapAsset) -> Result<StoredMap> {
     ensure!(
         !name.is_empty() && name.len() <= 1024 && !name.contains('\0'),
         "Invalid map asset name"
     );
-    let mut map = StoredBattleMap {
+    let mut map = StoredMap {
         membership_extent: 0,
         building_parent: 0,
         artillery_shots: Default::default(),

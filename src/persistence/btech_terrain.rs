@@ -3,7 +3,7 @@
 //! Each map keeps a dictionary from small integer codes to the distinct hexes it uses, stored as
 //! the JSON of their layers, and a grid of codes.
 use super::write::{Cell, Fields, purge_rows, row};
-use crate::{Hex, ObjectId, StoredBattleMap};
+use crate::{Hex, ObjectId, StoredMap};
 use anyhow::{Context, Result, ensure};
 use futures_util::TryStreamExt;
 use sqlx::{Row, SqliteConnection};
@@ -18,7 +18,7 @@ const MAX_CODE: i64 = 65_535;
 /// Decode only maps marked as dictionary-backed; ambiguous maps retain their opaque rows.
 pub(super) async fn load(
     c: &mut SqliteConnection,
-    maps: &mut BTreeMap<ObjectId, StoredBattleMap>,
+    maps: &mut BTreeMap<ObjectId, StoredMap>,
 ) -> Result<()> {
     let orphans: i64 = sqlx::query_scalar("SELECT count(*) FROM btech_map_terrain_codes AS c LEFT JOIN btech_map_terrain AS t ON t.map_dbref=c.map_dbref WHERE t.map_dbref IS NULL")
         .fetch_one(&mut *c).await?;
@@ -97,11 +97,7 @@ pub(super) async fn load(
 }
 
 /// Write a complete terrain interpretation inside the caller's world transaction.
-pub(super) async fn save(
-    c: &mut SqliteConnection,
-    id: ObjectId,
-    map: &StoredBattleMap,
-) -> Result<()> {
+pub(super) async fn save(c: &mut SqliteConnection, id: ObjectId, map: &StoredMap) -> Result<()> {
     let tiles = map
         .terrain
         .as_ref()

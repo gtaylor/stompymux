@@ -1,7 +1,7 @@
 //! Stored decoration ownership preserves auxiliary map-object payloads during terrain edits.
 use super::write::{Cell, Fields, row};
 use crate::{
-    BattleStaticDecoration, BattleStaticDecorationKind, HexCoordinate, ObjectId, StoredBattleMap,
+    BattleStaticDecoration, BattleStaticDecorationKind, HexCoordinate, ObjectId, StoredMap,
     Terrain, World,
 };
 use anyhow::{Context, Result, ensure};
@@ -11,7 +11,7 @@ use std::{collections::BTreeMap, sync::Arc};
 /// Restore unscheduled fire, smoke, and generic decorations without inventing a timer or repainting the saved terrain.
 pub(super) async fn load(
     c: &mut SqliteConnection,
-    maps: &mut BTreeMap<ObjectId, StoredBattleMap>,
+    maps: &mut BTreeMap<ObjectId, StoredMap>,
 ) -> Result<()> {
     use futures_util::TryStreamExt;
     let mut rows = sqlx::query("SELECT map_dbref,object_type,ordinal,x,y,data_char,object_dbref,data_short,data_int FROM btech_map_objects WHERE object_type IN (0,1,2) ORDER BY map_dbref,object_type,ordinal").fetch(c);

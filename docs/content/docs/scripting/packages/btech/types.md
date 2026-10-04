@@ -57,7 +57,7 @@ Alias: `"LeftArm"|"RightArm"|"LeftTorso"|"RightTorso"|"CenterTorso"|"LeftLeg"|"R
 - `structure`: `{kind: "building"|"wall", height: integer}|{kind: "bridge", deck: integer}` — Built feature; heights are above the ground level. Kinds are in btech.map.structure_kinds.
 - `overlay`: `"fire"|"smoke"` — Fire or smoke over the hex; base tiles never have one.
 
-## StoredBattleMap
+## StoredMap
 
 - `cargo_transfer_point`: `BattleCargoTransferPoint|nil` — Saved cargo location and hint policy.
 - `wrapping`: `boolean` — Opposite-edge wrapping is enabled.

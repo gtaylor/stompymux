@@ -1,5 +1,5 @@
 //! Authored child-to-parent map links remain separate from rebuilt traversal objects.
-use super::{HexCoordinate, StoredBattleMap};
+use super::{HexCoordinate, StoredMap};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -20,7 +20,7 @@ pub enum BattleMapEntrance {
 
 impl BattleMapEntrance {
     /// Resolve an arrival on current dimensions; stale exact coordinates are skipped.
-    pub fn coordinate(self, map: &StoredBattleMap, direction: usize) -> Option<HexCoordinate> {
+    pub fn coordinate(self, map: &StoredMap, direction: usize) -> Option<HexCoordinate> {
         if map.width <= 0 || map.height <= 0 || direction >= 4 {
             return None;
         }
@@ -58,7 +58,7 @@ pub struct BattleMapLink {
     pub entrances: [BattleMapEntrance; 4],
 }
 
-impl StoredBattleMap {
+impl StoredMap {
     /// Inspect authored configuration without rebuilding live entrances or return links.
     pub fn authored_link(&self) -> Option<BattleMapLink> {
         self.authored_link

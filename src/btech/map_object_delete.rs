@@ -258,7 +258,7 @@ pub(crate) fn command(
 
 /// Stable typed record coordinates shared by operator listing and deletion.
 pub(super) fn object_positions(
-    record: &super::StoredBattleMap,
+    record: &super::StoredMap,
     kind: BattleMapObjectKind,
 ) -> Vec<(MapObjectSlot, HexCoordinate)> {
     let mut positions: Vec<_> = match kind {

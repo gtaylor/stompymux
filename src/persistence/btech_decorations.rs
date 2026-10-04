@@ -4,7 +4,7 @@
 //! smoking tiles cause no writes between spread, burnout and expiry events.
 use super::btech_deadlines::Clock;
 use super::write::{Cell, Fields, purge_rows, row};
-use crate::{BattleDecoration, DecorationKind, ObjectId, StoredBattleMap, World};
+use crate::{BattleDecoration, DecorationKind, ObjectId, StoredMap, World};
 use anyhow::{Context, Result, bail, ensure};
 use sqlx::{Row, SqliteConnection};
 use std::{
@@ -15,7 +15,7 @@ use std::{
 /// Load bounded markers after terrain decoding, rejecting orphaned or invalid positions.
 pub(super) async fn load(
     c: &mut SqliteConnection,
-    maps: &mut BTreeMap<ObjectId, StoredBattleMap>,
+    maps: &mut BTreeMap<ObjectId, StoredMap>,
     clock: Clock,
 ) -> Result<()> {
     use futures_util::TryStreamExt;

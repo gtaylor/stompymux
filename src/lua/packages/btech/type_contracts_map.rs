@@ -26,7 +26,7 @@
 // lua-types-begin btech 00027
 //|---Inspect a saved map identity without activating simulation.
 //|---@param dbref integer
-//|---@return StoredBattleMap
+//|---@return StoredMap
 //|function btech_map.inspect(dbref) end
 // lua-types-end
 

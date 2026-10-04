@@ -53,7 +53,7 @@ pub use btech::{
     BattleWeaponDamage, BattleWeaponDamageEffects, BattleWeaponDamageKind, BattleWeaponRange,
     BattleWeaponReadiness, BattleWeaponUse, BtechState, CriticalDefinition, CriticalLocation, Hex,
     HexCoordinate, MapAsset, MapPointOfInterest, Point, RawMovement, RawSectionCode, RawTemplate,
-    RawUnitClass, SectionDefinition, StoredBattleMap, StoredBattleUnit, SystemCritical, Terrain,
+    RawUnitClass, SectionDefinition, StoredBattleUnit, StoredMap, SystemCritical, Terrain,
     WeaponMount, WeaponProfile, advance_heat as advance_battle_heat,
     advance_jumps as advance_battle_jumps, advance_motion as advance_battle_motion,
     advance_overheat as advance_battle_overheat, advance_recovery as advance_battle_recovery,

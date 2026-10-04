@@ -1,5 +1,5 @@
 //! Stored decoration records retain restoration terrain and the complete operator-visible payload.
-use super::{HexCoordinate, StoredBattleMap, Terrain};
+use super::{HexCoordinate, StoredMap, Terrain};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -60,7 +60,7 @@ impl BattleStaticDecoration {
     }
 }
 
-impl StoredBattleMap {
+impl StoredMap {
     /// Ordered stored decoration slots, independently of active fire/smoke overlays.
     pub fn static_decorations(
         &self,

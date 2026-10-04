@@ -1755,7 +1755,7 @@ fn unit_mobility_revision(world: &World, id: ObjectId) -> u64 {
             .map_or(0, |scanner| u64::from(scanner.vehicle))
 }
 
-fn map_revision(map: &crate::btech::StoredBattleMap) -> usize {
+fn map_revision(map: &crate::btech::StoredMap) -> usize {
     let terrain = map
         .terrain
         .as_ref()

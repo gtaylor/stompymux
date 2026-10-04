@@ -380,7 +380,7 @@ fn render_local(viewport: BattleViewport, canvas: &[Vec<Pixel>]) -> String {
 fn draw_mines(
     world: &World,
     observer: ObjectId,
-    map: &super::StoredBattleMap,
+    map: &super::StoredMap,
     viewport: BattleViewport,
     canvas: &mut [Vec<Pixel>],
 ) -> Result<()> {
@@ -423,7 +423,7 @@ fn draw_mines(
 /// Draw each shared southern edge once; only adjacent tiles inside the viewport participate.
 /// Water and ice depths are negative, independent of temporary surface decorations.
 fn draw_cliffs(
-    map: &super::StoredBattleMap,
+    map: &super::StoredMap,
     viewport: BattleViewport,
     canvas: &mut [Vec<Pixel>],
     threshold: i16,

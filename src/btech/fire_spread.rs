@@ -1,5 +1,5 @@
 //! Autonomous fire spreading, smoke creation and woodland burnout on candidate map state.
-use super::{BattleDecoration, DecorationKind, HexCoordinate, StoredBattleMap};
+use super::{BattleDecoration, DecorationKind, HexCoordinate, StoredMap};
 use crate::World;
 use anyhow::Result;
 use std::{collections::BTreeSet, sync::Arc};
@@ -28,7 +28,7 @@ pub fn advance_map_fire(world: &mut World) -> Result<()> {
 }
 
 /// Step existing clocks before processing events, so new markers receive their full lifetime.
-fn advance_fire(map: &mut StoredBattleMap) -> Result<()> {
+fn advance_fire(map: &mut StoredMap) -> Result<()> {
     if !map
         .decorations
         .values()
@@ -101,7 +101,7 @@ fn burn_out(tile: super::Hex, dice: &mut super::BattleDice) -> Option<super::Hex
 }
 
 /// Resolve all spread checks before smoke/fire duration draws; fire replaces smoke at shared tiles.
-fn spread(map: &mut StoredBattleMap, index: u32, replaced: &mut BTreeSet<u32>) -> Result<()> {
+fn spread(map: &mut StoredMap, index: u32, replaced: &mut BTreeSet<u32>) -> Result<()> {
     let origin = HexCoordinate {
         x: (i64::from(index) % map.width) as i32,
         y: (i64::from(index) / map.width) as i32,
@@ -155,11 +155,11 @@ fn spread(map: &mut StoredBattleMap, index: u32, replaced: &mut BTreeSet<u32>) -
 /// Wind-relative candidate cells, including the second cell directly downwind.
 ///
 /// Each row lists, for one wind bearing, the direction of the downwind cell and then the two
-/// side branches, as indexes into [`StoredBattleMap::neighbors`] (clockwise from north). The
+/// side branches, as indexes into [`StoredMap::neighbors`] (clockwise from north). The
 /// rows follow the reference spread table, irregular rows included: north and north-west winds
 /// order their side branches differently on even and odd columns, and a south-west wind's second
 /// side branch is north-east rather than north-west.
-fn spread_hexes(map: &StoredBattleMap, origin: HexCoordinate) -> Result<[Option<u32>; 4]> {
+fn spread_hexes(map: &StoredMap, origin: HexCoordinate) -> Result<[Option<u32>; 4]> {
     const EVEN: [[usize; 3]; 6] = [
         [0, 5, 1],
         [1, 0, 2],
@@ -200,7 +200,7 @@ mod tests {
 
     #[test]
     fn wind_targets_follow_parity_rounding_and_map_bounds() {
-        let mut map: StoredBattleMap = serde_json::from_value(serde_json::json!({
+        let mut map: StoredMap = serde_json::from_value(serde_json::json!({
             "name":"wind", "width":6, "height":6, "gravity":100, "temperature":20,
             "flags":0, "light":2, "visibility":30, "maximum_visibility":60, "cloud_base":200, "sensor_flags":0
         }))

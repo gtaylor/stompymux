@@ -15,7 +15,7 @@ pub struct BattleMapEnvironment {
     pub underground: bool,
 }
 
-impl super::StoredBattleMap {
+impl super::StoredMap {
     /// Current environment is read from the shared map, including its durable underground flag.
     pub fn environment(&self) -> BattleMapEnvironment {
         BattleMapEnvironment {

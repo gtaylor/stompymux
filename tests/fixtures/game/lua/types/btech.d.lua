@@ -49,7 +49,7 @@
 ---@field structure? {kind: "building"|"wall", height: integer}|{kind: "bridge", deck: integer} Built feature; heights are above the ground level. Kinds are in btech.map.structure_kinds.
 ---@field overlay? "fire"|"smoke" Fire or smoke over the hex; base tiles never have one.
 
----@class StoredBattleMap
+---@class StoredMap
 ---@field cargo_transfer_point BattleCargoTransferPoint|nil Saved cargo location and hint policy.
 ---@field wrapping boolean Opposite-edge wrapping is enabled.
 ---@field linked_markers table<integer, {coordinate: HexCoordinate, object: integer, data_char: integer, data_short: integer, data_int: integer}> Complete authored linked marker records.
@@ -162,7 +162,7 @@ function btech_map.inspect_file(name) end
 
 ---Inspect a saved map identity without activating simulation.
 ---@param dbref integer
----@return StoredBattleMap
+---@return StoredMap
 function btech_map.inspect(dbref) end
 
 ---Read a decoded tile; ambiguous maps and invalid coordinates raise an error.

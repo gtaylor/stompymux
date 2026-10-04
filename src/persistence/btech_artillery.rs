@@ -6,7 +6,7 @@ use super::btech_deadlines::Clock;
 use super::write::{Cell, Fields, Rows, purge_rows, sync_changed_rows};
 use crate::{
     BattleArtilleryFlight, BattleArtilleryMode, BattleArtilleryShot, BattleWeapon, HexCoordinate,
-    ObjectId, StoredBattleMap, World,
+    ObjectId, StoredMap, World,
 };
 use anyhow::{Context, Result, bail};
 use sqlx::{Row, SqliteConnection, sqlite::SqliteRow};
@@ -94,7 +94,7 @@ fn decode(entry: &SqliteRow, clock: Clock) -> Result<BattleArtilleryShot> {
 /// Decode queues and reject orphan records.
 pub(super) async fn load(
     c: &mut SqliteConnection,
-    maps: &mut BTreeMap<ObjectId, StoredBattleMap>,
+    maps: &mut BTreeMap<ObjectId, StoredMap>,
     clock: Clock,
 ) -> Result<()> {
     let query = format!(

@@ -1,5 +1,5 @@
 //! Ordered minefield definitions; triggering and blast resolution consume these records separately.
-use super::{HexCoordinate, StoredBattleMap};
+use super::{HexCoordinate, StoredMap};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, bail, ensure};
 use serde::{Deserialize, Serialize};
@@ -68,7 +68,7 @@ pub struct BattleMinefield {
     pub owner: ObjectId,
 }
 
-impl StoredBattleMap {
+impl StoredMap {
     /// Persistent record identities, including multiple fields at the same coordinate.
     pub fn minefields(&self) -> &BTreeMap<u32, BattleMinefield> {
         &self.minefields

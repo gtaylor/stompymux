@@ -1,9 +1,9 @@
 //! Map-file export encodes a live map's terrain and permanent fire and smoke as a map file.
-use super::StoredBattleMap;
+use super::StoredMap;
 use anyhow::Result;
 use std::sync::Arc;
 
-impl StoredBattleMap {
+impl StoredMap {
     /// Encode this map as map-file text without writing files or changing the map.
     /// Each hex saves its terrain, and permanent fire and smoke save in the overlay grid. Fire
     /// and smoke that will burn out or drift away are left out. Points of interest are saved;
@@ -42,7 +42,7 @@ mod tests {
     };
 
     /// Load map-file text as a live map, requiring it to validate.
-    fn stored(source: &str) -> super::StoredBattleMap {
+    fn stored(source: &str) -> super::StoredMap {
         let map = map_from_asset("test", MapAsset::parse(source).unwrap()).unwrap();
         map.validate().unwrap();
         map

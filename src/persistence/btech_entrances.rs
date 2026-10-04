@@ -1,6 +1,6 @@
 //! Selective ownership of building entrance rows in the shared map-object table.
 use super::write::{Cell, Fields, row};
-use crate::{BattleBuildingEntrance, HexCoordinate, ObjectId, StoredBattleMap, World};
+use crate::{BattleBuildingEntrance, HexCoordinate, ObjectId, StoredMap, World};
 use anyhow::{Context, Result, ensure};
 use sqlx::{Row, SqliteConnection};
 use std::{
@@ -11,7 +11,7 @@ use std::{
 /// Read entrance order and identity while leaving other map-object kinds uninterpreted.
 pub(super) async fn load(
     c: &mut SqliteConnection,
-    maps: &mut BTreeMap<ObjectId, StoredBattleMap>,
+    maps: &mut BTreeMap<ObjectId, StoredMap>,
 ) -> Result<()> {
     use futures_util::TryStreamExt;
     let mut rows = sqlx::query("SELECT map_dbref,ordinal,x,y,object_dbref,data_char,data_short,data_int FROM btech_map_objects WHERE object_type=4 ORDER BY map_dbref,ordinal").fetch(c);

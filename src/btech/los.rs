@@ -1,5 +1,5 @@
 //! Terrain line-of-sight reports at live unit eye heights, independent of sensor acquisition.
-use super::{HexCoordinate, StoredBattleMap};
+use super::{HexCoordinate, StoredMap};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
@@ -20,7 +20,7 @@ pub struct BattleTerrainLos {
 /// Trace hex centers at standing-mech eye height, excluding the observer's own hex.
 /// Intact ice endpoints use zero; bridge endpoints use deck height.
 pub fn ground_terrain_los(
-    map: &StoredBattleMap,
+    map: &StoredMap,
     observer: HexCoordinate,
     target: HexCoordinate,
 ) -> Result<BattleTerrainLos> {
@@ -29,7 +29,7 @@ pub fn ground_terrain_los(
 
 /// Shared terrain trace at the units' current standing or prone eye heights.
 fn ground_posture_los(
-    map: &StoredBattleMap,
+    map: &StoredMap,
     observer: HexCoordinate,
     target: HexCoordinate,
     observer_prone: bool,
@@ -50,7 +50,7 @@ fn ground_posture_los(
 
 /// Trace with explicit eye offsets so empty hexes do not acquire a standing unit's height.
 fn terrain_los_at_heights(
-    map: &StoredBattleMap,
+    map: &StoredMap,
     observer: HexCoordinate,
     target: HexCoordinate,
     eyes: (f64, f64),
@@ -61,7 +61,7 @@ fn terrain_los_at_heights(
 
 /// Coordinate fire at the ice surface permits the final cell to meet the sightline.
 fn terrain_los_with_endpoint(
-    map: &StoredBattleMap,
+    map: &StoredMap,
     observer: HexCoordinate,
     target: HexCoordinate,
     eyes: (f64, f64),
@@ -236,7 +236,7 @@ pub(super) fn unit_sight_point(world: &World, id: ObjectId) -> Result<UnitSightP
 /// The worst-case LOS range precedes terrain tracing and is symmetric for unit endpoints.
 fn beyond_maximum_range(
     world: &World,
-    map: &StoredBattleMap,
+    map: &StoredMap,
     observer: ObjectId,
     target: Option<ObjectId>,
     distance: f64,
@@ -417,8 +417,8 @@ mod tests {
     }
 
     /// A north/south lane avoids ambiguous hex-edge crossings in terrain rule fixtures.
-    fn lane(tiles: &[(Terrain, u8)]) -> StoredBattleMap {
-        let mut map = StoredBattleMap {
+    fn lane(tiles: &[(Terrain, u8)]) -> StoredMap {
+        let mut map = StoredMap {
             membership_extent: 0,
             building_parent: 0,
             cargo_transfer_point: None,

@@ -4,7 +4,7 @@
 //! clock causes no writes between steps.
 use super::btech_deadlines::Clock;
 use super::write::{Fields, Rows, purge_rows, sync_rows};
-use crate::{ObjectId, StoredBattleMap, World};
+use crate::{ObjectId, StoredMap, World};
 use anyhow::{Context, Result};
 use sqlx::{Row, SqliteConnection};
 use std::collections::{BTreeMap, BTreeSet};
@@ -33,7 +33,7 @@ async fn records(c: &mut SqliteConnection, clock: Clock) -> Result<BTreeMap<Obje
 /// Reading a database never writes a clock or consumes elapsed offline time.
 pub(super) async fn load(
     c: &mut SqliteConnection,
-    maps: &mut BTreeMap<ObjectId, StoredBattleMap>,
+    maps: &mut BTreeMap<ObjectId, StoredMap>,
     clock: Clock,
 ) -> Result<()> {
     for (id, remaining) in records(c, clock).await? {

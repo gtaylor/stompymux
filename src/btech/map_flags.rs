@@ -1,8 +1,8 @@
 //! Map rule flags on live battlefield maps. The flags themselves, their bits and their names
 //! live in `stompymux-map` as [`MapFlag`].
-use super::{MapFlag, StoredBattleMap};
+use super::{MapFlag, StoredMap};
 
-impl StoredBattleMap {
+impl StoredMap {
     /// Whether this map has `flag` switched on.
     pub fn has_flag(&self, flag: MapFlag) -> bool {
         flag.is_set(self.flags)

@@ -33,7 +33,7 @@ pub use report::{BattlePerceptionReport, perception_report};
 
 use crate::btech::{
     BattleLight, BattlePower, BattleRange, BattleSystem, BattleTerrainLos, BattleVehicleMovement,
-    HexCoordinate, StoredBattleMap,
+    HexCoordinate, StoredMap,
 };
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
@@ -295,7 +295,7 @@ pub fn format_perception_flags(flags: i64) -> String {
     names.join(" ")
 }
 
-impl StoredBattleMap {
+impl StoredMap {
     /// Whether operators switched this perception channel off for the battlefield.
     pub fn perception_disabled(&self, flag: BattleMapPerceptionFlag) -> bool {
         self.sensor_flags & flag.bit() != 0
@@ -373,7 +373,7 @@ pub fn perception_profile(world: &World, observer: ObjectId) -> Result<BattlePer
 fn sensor_band(
     world: &World,
     observer: ObjectId,
-    map: &StoredBattleMap,
+    map: &StoredMap,
     jammed: bool,
 ) -> Result<(BattlePerceptionStatus, u16)> {
     let mech = world.btech.constructed_units().get(&observer);
@@ -406,7 +406,7 @@ fn sensor_band(
 fn probe_profile(
     world: &World,
     observer: ObjectId,
-    map: &StoredBattleMap,
+    map: &StoredMap,
     jammed: bool,
 ) -> Result<Option<BattleProbeProfile>> {
     // Build the equipment projection once and check every family against it.
@@ -658,7 +658,7 @@ mod tests {
     /// Map switches use the reference bit positions and leave other bits alone.
     #[test]
     fn map_flags_use_reference_bits() {
-        let mut map: StoredBattleMap = serde_json::from_value(serde_json::json!({
+        let mut map: StoredMap = serde_json::from_value(serde_json::json!({
             "name": "flags", "width": 1, "height": 1, "gravity": 100, "temperature": 20,
             "flags": 0, "light": 2, "visibility": 30, "maximum_visibility": 60,
             "cloud_base": 0, "sensor_flags": 2

@@ -192,8 +192,8 @@ mod unit;
 pub use assets::{read_map, read_template, read_unit_template, read_vehicle_template};
 mod unit_template;
 pub use state::{
-    BtechState, StoredBattleMap, StoredBattleUnit, create_map, create_unit,
-    register_empty_battle_unit, reload_map, set_map_visibility,
+    BtechState, StoredBattleUnit, StoredMap, create_map, create_unit, register_empty_battle_unit,
+    reload_map, set_map_visibility,
 };
 pub use stompymux_map::{
     DecorationKind, Ground, Hex, MAX_DEPTH, MAX_HEIGHT, MapAsset, MapPointOfInterest, Structure,

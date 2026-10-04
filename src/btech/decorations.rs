@@ -1,5 +1,5 @@
 //! Map-owned fire and smoke overlays; source terrain stays in the terrain dictionary.
-use super::{DecorationKind, HexCoordinate, StoredBattleMap};
+use super::{DecorationKind, HexCoordinate, StoredMap};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -25,7 +25,7 @@ pub struct BattleDecoration {
     pub next_spread: Option<u16>,
 }
 
-impl StoredBattleMap {
+impl StoredMap {
     /// Inspect an overlay independently of the underlying tile.
     pub fn decoration(&self, coordinate: HexCoordinate) -> Result<Option<BattleDecoration>> {
         self.base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
@@ -110,7 +110,7 @@ pub(super) fn raise_smoke(
 /// Install an overlay, replacing any stored fire or smoke records at its hex. Generic
 /// decorations there stay, with the terrain they restore.
 pub(super) fn install_decoration(
-    map: &mut StoredBattleMap,
+    map: &mut StoredMap,
     index: u32,
     mut effect: BattleDecoration,
 ) -> Result<()> {

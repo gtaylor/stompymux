@@ -74,7 +74,7 @@
 // lua-types-end
 
 // lua-types-begin btech 00008
-//|---@class StoredBattleMap
+//|---@class StoredMap
 //|---@field cargo_transfer_point BattleCargoTransferPoint|nil Saved cargo location and hint policy.
 //|---@field wrapping boolean Opposite-edge wrapping is enabled.
 //|---@field linked_markers table<integer, {coordinate: HexCoordinate, object: integer, data_char: integer, data_short: integer, data_int: integer}> Complete authored linked marker records.

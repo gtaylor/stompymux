@@ -1,5 +1,5 @@
 //! Shared building destinations independent of chassis, entry timers and host movement publication.
-use super::{BattlePosition, HexCoordinate, StoredBattleMap};
+use super::{BattlePosition, HexCoordinate, StoredMap};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -31,7 +31,7 @@ pub struct BattleBuildingExit {
     pub data_int: i64,
 }
 
-impl StoredBattleMap {
+impl StoredMap {
     /// Inspect authored arrival points in stable selection order.
     pub fn building_entry_points(&self) -> &BTreeMap<u32, BattleBuildingEntryPoint> {
         &self.building_entry_points
@@ -44,7 +44,7 @@ impl StoredBattleMap {
 }
 
 /// Validate map identity once for route administration and traversal lookup.
-fn map(world: &World, id: ObjectId) -> Result<&StoredBattleMap> {
+fn map(world: &World, id: ObjectId) -> Result<&StoredMap> {
     ensure!(
         world
             .objects

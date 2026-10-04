@@ -1,5 +1,5 @@
 //! Terrain suitability and saved circular landing exclusions, independent of aircraft movement.
-use super::{HexCoordinate, StoredBattleMap};
+use super::{HexCoordinate, StoredMap};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -27,7 +27,7 @@ pub enum BattleLandingSuitability {
     Blocked,
 }
 
-impl StoredBattleMap {
+impl StoredMap {
     /// Stable restriction slots, including overlapping circles.
     pub fn landing_exclusions(&self) -> &BTreeMap<u32, BattleLandingExclusion> {
         &self.landing_exclusions

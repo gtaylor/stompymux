@@ -14,7 +14,7 @@ pub struct BattleMapHexChange {
     pub after: Hex,
 }
 
-impl super::StoredBattleMap {
+impl super::StoredMap {
     /// The single write path for base terrain: checks bounds and elevation, then stores `hex`.
     /// Unit altitude, overlays and map objects stay with the caller; see [`replace_hex`].
     pub(crate) fn write_hex(&mut self, x: i64, y: i64, hex: Hex) -> Result<()> {

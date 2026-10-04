@@ -1,5 +1,5 @@
 //! Read-only operator listings share battlefield slot order and typed map-object selection.
-use super::{BattleMapObjectKind, StoredBattleMap};
+use super::{BattleMapObjectKind, StoredMap};
 use crate::{Config, ObjectId, Scripts};
 use anyhow::{Context, Result, bail, ensure};
 
@@ -77,7 +77,7 @@ pub fn list_map_action(
 /// Project each typed record into the reference's object, byte, short and scalar columns.
 /// Unused fields of newly created effects are zero; imported restoration payloads remain intact.
 fn object_fields(
-    map: &StoredBattleMap,
+    map: &StoredMap,
     kind: BattleMapObjectKind,
     slot: super::map_object_delete::MapObjectSlot,
     coordinate: super::HexCoordinate,

@@ -1,5 +1,5 @@
 //! Shared opposite-edge coordinate resolution preserves traversal order across map seams.
-use super::{HexCoordinate, Point, StoredBattleMap};
+use super::{HexCoordinate, Point, StoredMap};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use std::sync::Arc;
@@ -27,7 +27,7 @@ impl BattleLinkedMarker {
     }
 }
 
-impl StoredBattleMap {
+impl StoredMap {
     /// Any linked marker enables wrapping; positions are retained for map-object selection.
     pub fn wrapping(&self) -> bool {
         !self.linked_markers.is_empty()
@@ -145,7 +145,7 @@ pub fn set_linked_marker(
 }
 
 /// Preserve active jump admission when a marker edit changes boundary behavior.
-fn install_markers(world: &mut World, id: ObjectId, candidate: StoredBattleMap) -> Result<()> {
+fn install_markers(world: &mut World, id: ObjectId, candidate: StoredMap) -> Result<()> {
     candidate.validate()?;
     for unit in world.btech.constructed_units().values() {
         if unit.position().is_some_and(|position| position.map == id)
@@ -216,7 +216,7 @@ impl MapWrapping {
     }
 
     /// A saved sample must use its actual battlefield dimensions.
-    pub(super) fn matches(self, map: &StoredBattleMap) -> bool {
+    pub(super) fn matches(self, map: &StoredMap) -> bool {
         i64::from(self.width) == map.width && i64::from(self.height) == map.height
     }
 }

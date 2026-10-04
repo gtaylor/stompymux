@@ -1,6 +1,6 @@
 //! Persistence of a map's scripted points of interest, rewritten as a whole when they change.
 use super::write::purge_rows;
-use crate::{MapPointOfInterest, ObjectId, StoredBattleMap, World};
+use crate::{MapPointOfInterest, ObjectId, StoredMap, World};
 use anyhow::{Context, Result};
 use futures_util::TryStreamExt;
 use sqlx::{Row, SqliteConnection};
@@ -12,7 +12,7 @@ use std::{
 /// Restore every map's points of interest in their saved order.
 pub(super) async fn load(
     c: &mut SqliteConnection,
-    maps: &mut BTreeMap<ObjectId, StoredBattleMap>,
+    maps: &mut BTreeMap<ObjectId, StoredMap>,
 ) -> Result<()> {
     let mut rows = sqlx::query(
         "SELECT map_dbref,type,name,x,y,elevation FROM btech_map_points_of_interest \

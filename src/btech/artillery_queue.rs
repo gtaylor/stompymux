@@ -13,7 +13,7 @@ pub struct BattleArtilleryShot {
     pub flight: BattleArtilleryFlight,
 }
 
-impl StoredBattleMap {
+impl StoredMap {
     /// Stable launch order; shot identifiers remain fixed until their arrival.
     pub fn artillery_shots(&self) -> &BTreeMap<u32, BattleArtilleryShot> {
         &self.artillery_shots

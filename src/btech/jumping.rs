@@ -74,7 +74,7 @@ impl BattleUnit {
 }
 
 /// Validate the currently supported route on launch and persisted-world loading.
-pub(super) fn validate_route(map: &super::StoredBattleMap, path: BattleJumpPath) -> Result<()> {
+pub(super) fn validate_route(map: &super::StoredMap, path: BattleJumpPath) -> Result<()> {
     ensure!(
         !map.has_flag(super::MapFlag::Underground),
         "The underground ceiling prevents jumping"

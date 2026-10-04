@@ -147,7 +147,7 @@ impl BattleVehicle {
         &mut self,
         lookup: &impl Fn(HexCoordinate) -> Result<Option<super::Hex>>,
         movement_modifier: i64,
-        boundary: Option<&super::StoredBattleMap>,
+        boundary: Option<&super::StoredMap>,
     ) -> Result<BattleVtolPath> {
         let step = self.vtol_motion_step(movement_modifier)?;
         if let Some(mut obstruction) = step.first_obstruction(lookup)? {

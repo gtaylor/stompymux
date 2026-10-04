@@ -145,7 +145,7 @@ fn clip_rectangle(
 /// Resolve a map-side viewport from player preferences; zero range denotes no scanner.
 pub(super) fn map_viewport(
     map: ObjectId,
-    record: &super::StoredBattleMap,
+    record: &super::StoredMap,
     center: HexCoordinate,
     dimensions: BattleViewDimensions,
 ) -> Result<BattleViewport> {

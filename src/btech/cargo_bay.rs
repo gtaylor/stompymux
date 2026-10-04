@@ -1,5 +1,5 @@
 //! Map-owned cargo transfer points shared by every carrying chassis.
-use crate::{ObjectId, StoredBattleMap, World};
+use crate::{ObjectId, StoredMap, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 
@@ -14,7 +14,7 @@ pub struct BattleCargoTransferPoint {
 
 impl BattleCargoTransferPoint {
     /// A transfer point must name a hex inside its owning map.
-    pub(crate) fn validate(self, map: &StoredBattleMap) -> Result<()> {
+    pub(crate) fn validate(self, map: &StoredMap) -> Result<()> {
         ensure!(
             self.x >= 0
                 && self.y >= 0
@@ -26,7 +26,7 @@ impl BattleCargoTransferPoint {
     }
 }
 
-impl StoredBattleMap {
+impl StoredMap {
     /// Saved cargo location, independent of the map's terrain and unit occupancy.
     pub fn cargo_transfer_point(&self) -> Option<BattleCargoTransferPoint> {
         self.cargo_transfer_point

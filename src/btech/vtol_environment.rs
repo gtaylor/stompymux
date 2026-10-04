@@ -72,7 +72,7 @@ impl BattleVehicle {
         lookup: &impl Fn(super::HexCoordinate) -> Result<Option<super::Hex>>,
         movement_modifier: i64,
         free_fusion_fuel: bool,
-        boundary: Option<&super::StoredBattleMap>,
+        boundary: Option<&super::StoredMap>,
     ) -> Result<BattleVtolEnvironment> {
         let mut candidate = self.clone();
         let path = candidate.advance_vtol_clear_path_with(lookup, movement_modifier, boundary)?;

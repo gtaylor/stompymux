@@ -1,5 +1,5 @@
 //! Read-only mine coverage and ordered activation selection for movement and landing callers.
-use super::{BattleMineKind, BattleMinefield, HexCoordinate, StoredBattleMap};
+use super::{BattleMineKind, BattleMinefield, HexCoordinate, StoredMap};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
@@ -112,7 +112,7 @@ impl BattleMinefield {
     }
 }
 
-impl StoredBattleMap {
+impl StoredMap {
     /// Whether any committed minefield covers `coordinate`, rejecting coordinates outside
     /// decoded terrain. Coverage is derived from the minefield records on every query.
     pub fn mine_coverage(&self, coordinate: HexCoordinate) -> Result<bool> {

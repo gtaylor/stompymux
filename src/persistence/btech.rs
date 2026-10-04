@@ -1,5 +1,5 @@
 //! Selective BattleTech map persistence and read-only identities for deferred unit simulation.
-use crate::{BtechState, ObjectId, StoredBattleMap, StoredBattleUnit, World};
+use crate::{BtechState, ObjectId, StoredBattleUnit, StoredMap, World};
 use anyhow::{Result, ensure};
 use sqlx::{Row, SqliteConnection};
 use std::collections::{BTreeMap, BTreeSet};
@@ -27,7 +27,7 @@ pub(super) async fn load(c: &mut SqliteConnection) -> Result<BtechState> {
     {
         maps.insert(
             ObjectId(row.try_get("dbref")?),
-            StoredBattleMap {
+            StoredMap {
                 membership_extent: row.try_get("first_free")?,
                 building_parent: row.try_get("on_map")?,
                 artillery_shots: Default::default(),                name: row.try_get("map_name")?,
@@ -469,7 +469,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
 }
 
 /// The explicitly owned columns of a map identity.
-fn map_fields(map: &StoredBattleMap) -> super::write::Fields {
+fn map_fields(map: &StoredMap) -> super::write::Fields {
     use super::write::{Cell, Fields};
     Fields::from([
         (

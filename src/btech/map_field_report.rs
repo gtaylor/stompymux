@@ -20,7 +20,7 @@ pub struct BattleMapFieldReport {
 }
 
 /// Construct all fields independently of filtering so native and Lua expose the same values.
-fn fields(map: &super::StoredBattleMap) -> Vec<BattleMapField> {
+fn fields(map: &super::StoredMap) -> Vec<BattleMapField> {
     [
         ("buildonmap", Some(map.building_parent.to_string())),
         ("cf", Some(map.building.integrity.to_string())),
