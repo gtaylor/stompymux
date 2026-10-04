@@ -7,30 +7,19 @@ const MASKS: [u32; 6] = [2, 4, 8, 16, 64, 128];
 
 /// Project the same booleans read by cockpit controls and combat services.
 pub(super) fn read(world: &World, id: ObjectId) -> Result<u32> {
-    let values = if let Some(unit) = world.btech.constructed_units().get(&id) {
-        [
-            unit.searchlight_warning(),
-            unit.auto_fall(),
-            !unit.armor_warning(),
-            !unit.ammunition_warning(),
-            unit.autocon_shutdown(),
-            unit.friendly_fire_safety(),
-        ]
-    } else {
-        let unit = world
-            .btech
-            .vehicles()
-            .get(&id)
-            .context("Unit is unavailable")?;
-        [
-            unit.searchlight_warning(),
-            unit.auto_fall(),
-            !unit.armor_warning(),
-            !unit.ammunition_warning(),
-            unit.autocon_shutdown(),
-            unit.friendly_fire_safety(),
-        ]
-    };
+    let values = super::with_unit!(
+        world.btech.unit(id).context("Unit is unavailable")?,
+        |unit| {
+            [
+                unit.searchlight_warning(),
+                unit.auto_fall(),
+                !unit.armor_warning(),
+                !unit.ammunition_warning(),
+                unit.autocon_shutdown(),
+                unit.friendly_fire_safety(),
+            ]
+        }
+    );
     Ok(values.into_iter().zip(MASKS).fold(
         super::auxiliary_preferences::bits(world, id)?,
         |bits, (enabled, mask)| bits | if enabled { mask } else { 0 },
@@ -47,30 +36,19 @@ pub(super) fn set(world: &mut World, id: ObjectId, bits: u32) -> Result<()> {
         "Preference bitvector includes settings not implemented for this chassis"
     );
     super::auxiliary_preferences::set_bits(world, id, bits)?;
-    let fields = if let Some(unit) = world.btech.constructed.get_mut(&id) {
-        [
-            &mut unit.searchlight_warning,
-            &mut unit.auto_fall,
-            &mut unit.no_armor_warning,
-            &mut unit.no_ammunition_warning,
-            &mut unit.autocon_shutdown,
-            &mut unit.friendly_fire_safety,
-        ]
-    } else {
-        let unit = world
-            .btech
-            .vehicles
-            .get_mut(&id)
-            .context("Unit is unavailable")?;
-        [
-            &mut unit.searchlight_warning,
-            &mut unit.auto_fall,
-            &mut unit.no_armor_warning,
-            &mut unit.no_ammunition_warning,
-            &mut unit.autocon_shutdown,
-            &mut unit.friendly_fire_safety,
-        ]
-    };
+    let fields = super::with_unit_mut!(
+        world.btech.unit_mut(id).context("Unit is unavailable")?,
+        |unit| {
+            [
+                &mut unit.searchlight_warning,
+                &mut unit.auto_fall,
+                &mut unit.no_armor_warning,
+                &mut unit.no_ammunition_warning,
+                &mut unit.autocon_shutdown,
+                &mut unit.friendly_fire_safety,
+            ]
+        }
+    );
     for (field, mask) in fields.into_iter().zip(MASKS) {
         *field = bits & mask != 0;
     }

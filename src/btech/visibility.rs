@@ -32,17 +32,16 @@ pub fn set_battle_visibility(
             .is_some_and(|o| o.kind == Kind::Thing && !o.flags.contains(Flag::Going)),
         "Unit must be a live thing"
     );
-    if let Some(unit) = world.btech.vehicles.get_mut(&id) {
-        unit.visibility = visibility;
-        return Ok(());
-    }
-    world
-        .btech
-        .constructed
-        .get_mut(&id)
-        .context("Unit is not constructed")?
-        .visibility = visibility;
-    Ok(())
+    super::with_unit_mut!(
+        world
+            .btech
+            .unit_mut(id)
+            .context("Unit is not constructed")?,
+        |unit| {
+            unit.visibility = visibility;
+            Ok(())
+        }
+    )
 }
 
 /// Unblocked unit visibility honors clairvoyance while preserving physical geometry reports.

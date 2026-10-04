@@ -22,16 +22,11 @@ fn fixture(source: &str, recipient: &str, seed: u8) -> (Config, World, ObjectId,
             .create(&mut world, id)
             .unwrap();
         crate::place_battle_unit(&mut world, id, map, 0, y).unwrap();
-        if let Some(unit) = world.btech.constructed.get_mut(&id) {
+        crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
             unit.power = BattlePower::Running;
             unit.dice = BattleDice::seeded([seed; 32]);
             unit.signature.team = team;
-        } else {
-            let vehicle = world.btech.vehicles.get_mut(&id).unwrap();
-            vehicle.power = BattlePower::Running;
-            vehicle.dice = BattleDice::seeded([seed; 32]);
-            vehicle.signature.team = team;
-        }
+        })
     }
     world
         .btech

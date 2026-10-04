@@ -152,20 +152,13 @@ pub(super) fn selectable_munition(
 
 /// The mounted weapon at `index` for either unit class.
 fn weapon(world: &World, id: ObjectId, index: usize) -> Option<super::BattleWeapon> {
-    if let Some(vehicle) = world.btech.vehicles().get(&id) {
-        return vehicle
-            .loadout()
+    super::with_unit!(world.btech.unit(id)?, |unit| {
+        unit.loadout()
             .ok()?
             .weapons
             .get(index)
-            .map(|mount| mount.weapon);
-    }
-    let unit = world.btech.constructed_units().get(&id)?;
-    unit.loadout()
-        .ok()?
-        .weapons
-        .get(index)
-        .map(|mount| mount.weapon)
+            .map(|mount| mount.weapon)
+    })
 }
 
 /// Select the owning class's firing-mode storage after authorization.

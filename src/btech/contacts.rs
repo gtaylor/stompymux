@@ -101,16 +101,13 @@ pub(super) fn apply_contact(
     rules: BattleContactRules,
 ) -> Result<BattleContactUpdate> {
     ensure!(observer != target, "A unit cannot acquire itself");
-    let (power, known) = if let Some(vehicle) = world.btech.vehicles().get(&observer) {
-        (vehicle.power(), vehicle.contacts.contains_key(&target))
-    } else {
-        let unit = world
+    let (power, known) = super::with_unit!(
+        world
             .btech
-            .constructed_units()
-            .get(&observer)
-            .context("Unit construction state is unavailable")?;
-        (unit.power(), unit.contacts.contains_key(&target))
-    };
+            .unit(observer)
+            .context("Unit construction state is unavailable")?,
+        |unit| { (unit.power(), unit.contacts.contains_key(&target)) }
+    );
     ensure!(power == super::BattlePower::Running, "Start the unit first");
     let mut contact = perception.map(|perception| BattleContact {
         identified: perception.identified,
@@ -916,14 +913,10 @@ mod tests {
                 .unwrap();
             place_battle_unit(&mut world, observer, map, 0, 0).unwrap();
             let contact = BattleContact { identified: true };
-            if let Some(unit) = world.btech.constructed.get_mut(&observer) {
+            crate::btech::with_unit_mut!(world.btech.unit_mut(observer).unwrap(), |unit| {
                 unit.power = BattlePower::Running;
                 unit.contacts.insert(target, contact);
-            } else {
-                let unit = world.btech.vehicles.get_mut(&observer).unwrap();
-                unit.power = BattlePower::Running;
-                unit.contacts.insert(target, contact);
-            }
+            });
             for light in 0..=2 {
                 for visibility in [0, 10, 60] {
                     let map = world.btech.maps.get_mut(&map).unwrap();

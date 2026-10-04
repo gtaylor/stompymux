@@ -18,17 +18,13 @@ pub(super) fn enabled(world: &World, id: ObjectId) -> Result<bool> {
 
 /// Store a switch after the caller has checked cockpit authority and installation.
 pub(super) fn set_enabled(world: &mut World, id: ObjectId, enabled: bool) -> Result<()> {
-    if let Some(unit) = world.btech.vehicles.get_mut(&id) {
-        unit.ams_enabled = enabled;
-        return Ok(());
-    }
-    world
-        .btech
-        .constructed
-        .get_mut(&id)
-        .context("Unit is unavailable")?
-        .ams_enabled = enabled;
-    Ok(())
+    super::with_unit_mut!(
+        world.btech.unit_mut(id).context("Unit is unavailable")?,
+        |unit| {
+            unit.ams_enabled = enabled;
+            Ok(())
+        }
+    )
 }
 
 /// Critical loss of any installed AMS disables the whole capability for either construction class.

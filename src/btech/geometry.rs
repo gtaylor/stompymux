@@ -82,33 +82,24 @@ pub fn unit_range(world: &World, first: ObjectId, second: ObjectId) -> Result<Ba
 /// Current signed integer altitude used by terrain effects, or None when unplaced.
 /// Ice surfaces, retained terrain-break heights and committed jump rounding share one resolver.
 pub fn unit_elevation(world: &World, id: ObjectId) -> Result<Option<i32>> {
-    if let Some(vehicle) = world.btech.vehicles().get(&id) {
-        let Some(position) = vehicle.position() else {
-            return Ok(None);
-        };
-        let map = world
+    super::with_unit!(
+        world
             .btech
-            .maps()
-            .get(&position.map)
-            .context("Map not found")?;
-        let tile = map.base_hex(i64::from(position.x), i64::from(position.y))?;
-        return Ok(Some(vehicle.elevation_level(tile)));
-    }
-    let unit = world
-        .btech
-        .constructed_units()
-        .get(&id)
-        .context("Unit construction state is unavailable")?;
-    let Some(position) = unit.position() else {
-        return Ok(None);
-    };
-    let map = world
-        .btech
-        .maps()
-        .get(&position.map)
-        .context("Map not found")?;
-    let tile = map.base_hex(i64::from(position.x), i64::from(position.y))?;
-    Ok(Some(unit.elevation_level(tile)))
+            .unit(id)
+            .context("Unit construction state is unavailable")?,
+        |unit| {
+            let Some(position) = unit.position() else {
+                return Ok(None);
+            };
+            let map = world
+                .btech
+                .maps()
+                .get(&position.map)
+                .context("Map not found")?;
+            let tile = map.base_hex(i64::from(position.x), i64::from(position.y))?;
+            Ok(Some(unit.elevation_level(tile)))
+        }
+    )
 }
 
 /// Whether a placed unit is below the water surface of its hex.

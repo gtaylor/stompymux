@@ -90,17 +90,13 @@ pub fn set_battle_self_destruct_safe(world: &mut World, id: ObjectId, safe: bool
             .is_some_and(|o| !o.flags.contains(crate::Flag::Going)),
         "Unit is unavailable"
     );
-    if let Some(unit) = world.btech.vehicles.get_mut(&id) {
-        unit.self_destruct_safe = safe;
-        return Ok(());
-    }
-    world
-        .btech
-        .constructed
-        .get_mut(&id)
-        .context("Unit is unavailable")?
-        .self_destruct_safe = safe;
-    Ok(())
+    super::with_unit_mut!(
+        world.btech.unit_mut(id).context("Unit is unavailable")?,
+        |unit| {
+            unit.self_destruct_safe = safe;
+            Ok(())
+        }
+    )
 }
 
 /// Active sequences retain command order even when their unit identifiers differ.

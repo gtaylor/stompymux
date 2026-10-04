@@ -435,22 +435,14 @@ pub(super) fn fixture_with_target(
             .create(&mut world, id)
             .map_err(|e| anyhow::anyhow!("{scenario} {id:?} construction: {e:#}"))?;
         crate::btech::place_unit(&mut world, id, map, x, y)?;
-        if let Some(unit) = world.btech.constructed.get_mut(&id) {
+        crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
             unit.power = BattlePower::Running;
             unit.dice = crate::BattleDice::seeded([seed; 32]);
             unit.signature.team = team;
             let mut recovery = serde_json::to_value(&unit.crew_recovery)?;
             recovery["dice"] = serde_json::to_value(crate::BattleDice::seeded([seed; 32]))?;
             unit.crew_recovery = serde_json::from_value(recovery)?;
-        } else {
-            let unit = world.btech.vehicles.get_mut(&id).unwrap();
-            unit.power = BattlePower::Running;
-            unit.dice = crate::BattleDice::seeded([seed; 32]);
-            unit.signature.team = team;
-            let mut recovery = serde_json::to_value(&unit.crew_recovery)?;
-            recovery["dice"] = serde_json::to_value(crate::BattleDice::seeded([seed; 32]))?;
-            unit.crew_recovery = serde_json::from_value(recovery)?;
-        }
+        })
     }
     if matches!(scenario, "behind" | "jammed") {
         if let Some(unit) = world.btech.constructed.get_mut(&shooter) {

@@ -18,17 +18,16 @@ pub fn unit_towable(world: &World, id: ObjectId) -> Result<bool> {
 /// Trusted scenario edit; the caller owns administrative authority and persistence.
 pub fn set_towable(world: &mut World, id: ObjectId, enabled: bool) -> Result<()> {
     live(world, id)?;
-    if let Some(unit) = world.btech.vehicles.get_mut(&id) {
-        unit.towable = enabled;
-        return Ok(());
-    }
-    world
-        .btech
-        .constructed
-        .get_mut(&id)
-        .context("Unit construction is unavailable")?
-        .towable = enabled;
-    Ok(())
+    super::with_unit_mut!(
+        world
+            .btech
+            .unit_mut(id)
+            .context("Unit construction is unavailable")?,
+        |unit| {
+            unit.towable = enabled;
+            Ok(())
+        }
+    )
 }
 
 /// Pickup accepts only live object identities; destroyed material remains a tow candidate.

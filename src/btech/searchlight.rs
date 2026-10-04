@@ -562,14 +562,13 @@ pub fn refresh_illumination(world: &mut World) -> Vec<BattleNotice> {
         .collect();
     let mut notices = Vec::new();
     for (id, lit) in changes {
-        let warning = if let Some(unit) = world.btech.constructed.get_mut(&id) {
-            unit.illumination_observed = lit;
-            unit.searchlight_warning
-        } else {
-            let unit = world.btech.vehicles.get_mut(&id).expect("observed vehicle");
-            unit.illumination_observed = lit;
-            unit.searchlight_warning
-        };
+        let warning = super::with_unit_mut!(
+            world.btech.unit_mut(id).expect("observed vehicle"),
+            |unit| {
+                unit.illumination_observed = lit;
+                unit.searchlight_warning
+            }
+        );
         if warning
             && world
                 .objects

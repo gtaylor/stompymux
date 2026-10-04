@@ -17,17 +17,16 @@ pub fn set_battle_weapons_hold(world: &mut World, id: ObjectId, enabled: bool) -
             .is_some_and(|o| o.kind == Kind::Thing && !o.flags.contains(Flag::Going)),
         "Unit must be a live thing"
     );
-    if let Some(unit) = world.btech.vehicles.get_mut(&id) {
-        unit.weapons_hold = enabled;
-        return Ok(());
-    }
-    world
-        .btech
-        .constructed
-        .get_mut(&id)
-        .context("Unit is not constructed")?
-        .weapons_hold = enabled;
-    Ok(())
+    super::with_unit_mut!(
+        world
+            .btech
+            .unit_mut(id)
+            .context("Unit is not constructed")?,
+        |unit| {
+            unit.weapons_hold = enabled;
+            Ok(())
+        }
+    )
 }
 
 /// Running cockpit authority precedes hold; hold precedes argument decoding and cover loss.

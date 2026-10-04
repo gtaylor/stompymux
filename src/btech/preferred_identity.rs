@@ -62,16 +62,15 @@ pub fn set_preferred_id(
         .transpose()?;
     let result = value.as_ref().map(|value| value.as_ref().to_owned());
     let configured = result.clone();
-    if let Some(unit) = world.btech.vehicles.get_mut(&id) {
-        unit.preferred_id = value;
-    } else {
-        let unit = world
+    super::with_unit_mut!(
+        world
             .btech
-            .constructed
-            .get_mut(&id)
-            .context("Unit is not constructed")?;
-        unit.preferred_id = value;
-    }
+            .unit_mut(id)
+            .context("Unit is not constructed")?,
+        |unit| {
+            unit.preferred_id = value;
+        }
+    );
     super::set_unit_identity_configuration(world, id, "preferred_id", configured);
     Ok(result)
 }

@@ -69,14 +69,10 @@ pub(super) fn assign_in_candidate(
     let label = label
         .filter(|label| !used.contains(label))
         .unwrap_or(available);
-    if let Some(unit) = world.btech.vehicles.get_mut(&id) {
+    super::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
         unit.battlefield_label = Some(label.clone());
         unit.dice = dice;
-    } else {
-        let unit = world.btech.constructed.get_mut(&id).unwrap();
-        unit.battlefield_label = Some(label.clone());
-        unit.dice = dice;
-    }
+    });
     Ok(label)
 }
 

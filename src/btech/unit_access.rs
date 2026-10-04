@@ -12,6 +12,31 @@ use crate::ObjectId;
 use anyhow::{Context, Result, anyhow, bail};
 use std::collections::BTreeMap;
 
+/// Run one body against whichever chassis a [`BattleUnitRef`] holds.
+///
+/// The body is compiled once per chassis, so it may use any field or method both define
+/// under the same name, including those whose section or loadout types differ.
+macro_rules! with_unit {
+    ($unit:expr, |$name:ident| $body:expr) => {
+        match $unit {
+            $crate::btech::BattleUnitRef::Mech($name) => $body,
+            $crate::btech::BattleUnitRef::Vehicle($name) => $body,
+        }
+    };
+}
+pub(crate) use with_unit;
+
+/// Run one body against whichever chassis a [`BattleUnitMut`] holds; see [`with_unit`].
+macro_rules! with_unit_mut {
+    ($unit:expr, |$name:ident| $body:expr) => {
+        match $unit {
+            $crate::btech::BattleUnitMut::Mech($name) => $body,
+            $crate::btech::BattleUnitMut::Vehicle($name) => $body,
+        }
+    };
+}
+pub(crate) use with_unit_mut;
+
 /// Read access to a Mech or vehicle through the state both chassis share.
 #[derive(Debug, Clone, Copy)]
 pub enum BattleUnitRef<'a> {

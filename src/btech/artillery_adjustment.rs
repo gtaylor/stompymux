@@ -134,11 +134,8 @@ pub(super) fn observe_miss(
     } else {
         Vec::new()
     };
-    if let Some(unit) = world.btech.vehicles.get_mut(&shooter) {
+    super::with_unit_mut!(world.btech.unit_mut(shooter).unwrap(), |unit| {
         unit.artillery_adjustment = unit.artillery_adjustment.wrapping_add(1);
-    } else {
-        let unit = world.btech.constructed.get_mut(&shooter).unwrap();
-        unit.artillery_adjustment = unit.artillery_adjustment.wrapping_add(1);
-    }
+    });
     Ok(notices)
 }

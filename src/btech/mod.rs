@@ -191,6 +191,7 @@ mod template_construction;
 mod template_document;
 mod unit;
 mod unit_access;
+pub(crate) use unit_access::{with_unit, with_unit_mut};
 mod unit_validation;
 pub use unit_access::{BattleUnitDefinition, BattleUnitEdit, BattleUnitMut, BattleUnitRef};
 

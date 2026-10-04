@@ -22,12 +22,9 @@ fn injuries(profile: Option<super::BattleCharacter>) -> u8 {
 
 /// Keep the cockpit scalar and optional character report in agreement for every injury source.
 pub(super) fn set_count(world: &mut World, id: ObjectId, injuries: u8) {
-    let (count, character) = if let Some(unit) = world.btech.vehicles.get_mut(&id) {
+    let (count, character) = super::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
         (&mut unit.pilot_injuries, &mut unit.character_pilot)
-    } else {
-        let unit = world.btech.constructed.get_mut(&id).unwrap();
-        (&mut unit.pilot_injuries, &mut unit.character_pilot)
-    };
+    });
     *count = injuries;
     if let Some(character) = character {
         character.injuries = injuries.into();
@@ -42,14 +39,10 @@ pub(super) fn synchronize(world: &mut World, id: ObjectId, player: ObjectId) {
             injuries: injuries.into(),
             killed: false,
         });
-    if let Some(unit) = world.btech.vehicles.get_mut(&id) {
+    super::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
         unit.character_pilot = character;
         unit.crew_recovery.edit_tactical_injuries(injuries);
-    } else {
-        let unit = world.btech.constructed.get_mut(&id).unwrap();
-        unit.character_pilot = character;
-        unit.crew_recovery.edit_tactical_injuries(injuries);
-    }
+    });
     set_count(world, id, injuries);
     if let Some(recovery) = world.btech.recoveries.get_mut(&player) {
         recovery.edit_tactical_injuries(injuries);

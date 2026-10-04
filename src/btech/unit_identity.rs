@@ -53,16 +53,12 @@ pub(super) fn set(
 ) -> Result<()> {
     use anyhow::Context;
 
-    if let Some(unit) = world.btech.constructed.get_mut(&id) {
-        unit.set_identity(field, value)?;
-    } else {
-        let unit = world
-            .btech
-            .vehicles
-            .get_mut(&id)
-            .context("Unit is unavailable")?;
-        unit.set_identity(field, value)?;
-    };
+    super::with_unit_mut!(
+        world.btech.unit_mut(id).context("Unit is unavailable")?,
+        |unit| {
+            unit.set_identity(field, value)?;
+        }
+    );
     refresh(world, id)
 }
 
