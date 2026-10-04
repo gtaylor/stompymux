@@ -73,7 +73,7 @@ fn lua_weapon_annotations_cover_the_catalogue() {
     ] {
         let values = source
             .lines()
-            .find_map(|line| line.strip_prefix("---@alias BattleWeapon "))
+            .find_map(|line| line.strip_prefix("---@alias Weapon "))
             .unwrap();
         let actual: BTreeSet<_> = values.split('|').map(str::to_owned).collect();
         assert_eq!(actual, expected);

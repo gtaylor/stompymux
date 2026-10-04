@@ -18,8 +18,8 @@ btech.unit.contacts(dbref, preferences)
 | Name | Type | Description |
 | --- | --- | --- |
 | `dbref` | `integer` | Running observer unit dbref. |
-| `preferences` | `BattleContactPreferences?` | Optional inclusion filter; omitted lists all acquired contacts. |
+| `preferences` | `ContactPreferences?` | Optional inclusion filter; omitted lists all acquired contacts. |
 
 ## Returns
 
-- `BattleContactView[]`
+- `ContactView[]`

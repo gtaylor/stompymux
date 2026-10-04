@@ -18,7 +18,7 @@ btech.unit.add_technology(unit, technology)
 | Name | Type | Description |
 | --- | --- | --- |
 | `unit` | `DbRef\|Object` |  |
-| `technology` | `BattleTechnologyCode` | Typed constant from btech.unit.technology. |
+| `technology` | `TechnologyCode` | Typed constant from btech.unit.technology. |
 
 ## Returns
 

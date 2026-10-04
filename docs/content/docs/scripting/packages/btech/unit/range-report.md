@@ -23,4 +23,4 @@ btech.unit.range_report(dbref, player, coordinates)
 
 ## Returns
 
-- `BattleRangeReport`
+- `RangeReport`

@@ -3,13 +3,13 @@
 
 // lua-types-begin btech 00090
 //|---Return the detached catalog of supported advantages; gameplay availability varies by action.
-//|---@return BattleAdvantageDefinition[]
+//|---@return AdvantageDefinition[]
 //|function btech_character.advantages() end
 // lua-types-end
 
 // lua-types-begin btech 00092
 //|---Return a detached catalog in canonical lookup order.
-//|---@return BattleSkillDefinition[]
+//|---@return SkillDefinition[]
 //|function btech_character.skills() end
 // lua-types-end
 
@@ -26,7 +26,7 @@
 //|---Inspect progress without changing XP. Requires a callback and existing character attributes.
 //|---@param player integer
 //|---@param skill string Canonical name or short alias.
-//|---@return BattleSkillProgress
+//|---@return SkillProgress
 //|function btech_character.progress(player, skill) end
 // lua-types-end
 
@@ -50,7 +50,7 @@
 // lua-types-begin btech 00098
 //|---Detached saved character attributes and health; fails when no profile exists.
 //|---@param player integer
-//|---@return BattleCharacter
+//|---@return Character
 //|function btech_character.state(player) end
 // lua-types-end
 
@@ -75,7 +75,7 @@
 //|---skills and advantages while attributes stay complete.
 //|---@param kind string Char_value, Char_skill, Char_advantage or Char_attribute.
 //|---@param character? DbRef|Object
-//|---@return BattleCharacterValueDefinition[] definitions
+//|---@return CharacterValueDefinition[] definitions
 //|function btech_character.catalog(kind, character) end
 // lua-types-end
 
@@ -115,6 +115,6 @@
 //|---Read one character value; skills additionally report target and experience progress.
 //|---@param character DbRef|Object Player object.
 //|---@param value string|integer Character-value name, prefix or code.
-//|---@return BattleCharacterValueReport result
+//|---@return CharacterValueReport result
 //|function btech_character.value(character, value) end
 // lua-types-end

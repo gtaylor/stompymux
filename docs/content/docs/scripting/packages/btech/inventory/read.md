@@ -21,4 +21,4 @@ btech.inventory.read(object)
 
 ## Returns
 
-- `BattleInventoryEntry[]`
+- `InventoryEntry[]`

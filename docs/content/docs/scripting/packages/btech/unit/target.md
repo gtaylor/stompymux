@@ -25,4 +25,4 @@ btech.unit.target(dbref, pilot, section)
 
 ## Returns
 
-- `BattleAimSelection|nil`
+- `AimSelection|nil`

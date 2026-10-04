@@ -19,4 +19,4 @@ None.
 
 ## Returns
 
-- `BattleAdvantageDefinition[]`
+- `AdvantageDefinition[]`

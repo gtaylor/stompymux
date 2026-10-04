@@ -24,4 +24,4 @@ btech.unit.atmrange(dbref, pilot, weapon)
 
 ## Returns
 
-- `BattleAmmunitionMode`
+- `AmmunitionMode`

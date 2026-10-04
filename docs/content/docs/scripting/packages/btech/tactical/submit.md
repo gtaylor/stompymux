@@ -18,8 +18,8 @@ btech.tactical.submit(intentions)
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `intentions` | `BattleTacticalIntention[]` | One intention per unit; revisions are required. |
+| `intentions` | `TacticalIntention[]` | One intention per unit; revisions are required. |
 
 ## Returns
 
-- `BattleTacticalSubmitResult[] results Assigned IDs and revisions in request order.`
+- `TacticalSubmitResult[] results Assigned IDs and revisions in request order.`

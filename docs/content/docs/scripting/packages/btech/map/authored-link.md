@@ -22,4 +22,4 @@ btech.map.authored_link(child)
 
 ## Returns
 
-- `BattleAuthoredMapLink|nil`
+- `AuthoredMapLink|nil`

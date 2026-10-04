@@ -22,4 +22,4 @@ btech.map.line_of_sight(observer, target)
 
 ## Returns
 
-- `BattleLineOfSight state`
+- `LineOfSight state`

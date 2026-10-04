@@ -17,8 +17,8 @@ btech.parts.resolve(part)
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `part` | `BattlePartRef` |  |
+| `part` | `PartRef` |  |
 
 ## Returns
 
-- `BattlePartDefinition|nil part`
+- `PartDefinition|nil part`

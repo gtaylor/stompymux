@@ -22,4 +22,4 @@ btech.cargo.stores(actor, pattern)
 
 ## Returns
 
-- `BattleCargoRow[]`
+- `CargoRow[]`

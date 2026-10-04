@@ -21,4 +21,4 @@ btech.map.link(child)
 
 ## Returns
 
-- `BattleMapLink|nil`
+- `MapLink|nil`

@@ -19,4 +19,4 @@ None.
 
 ## Returns
 
-- `BattlePartCategory[] categories`
+- `PartCategory[] categories`

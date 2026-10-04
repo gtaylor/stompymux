@@ -22,7 +22,7 @@ btech.unit.slite(dbref, pilot, mode)
 | --- | --- | --- |
 | `dbref` | `integer` |  |
 | `pilot` | `integer` |  |
-| `mode?` | `BattleSearchlightMode` | Typed constant from btech.unit.searchlight_modes. |
+| `mode?` | `SearchlightMode` | Typed constant from btech.unit.searchlight_modes. |
 
 ## Returns
 

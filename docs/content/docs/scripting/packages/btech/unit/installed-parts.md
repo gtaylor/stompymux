@@ -21,4 +21,4 @@ btech.unit.installed_parts(unit)
 
 ## Returns
 
-- `BattlePartStack[] parts`
+- `PartStack[] parts`

@@ -23,4 +23,4 @@ btech.unit.hotload(dbref, pilot, weapon)
 
 ## Returns
 
-- `BattleFireMode`
+- `FireMode`

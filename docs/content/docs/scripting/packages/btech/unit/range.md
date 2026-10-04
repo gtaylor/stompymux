@@ -22,4 +22,4 @@ btech.unit.range(first, second)
 
 ## Returns
 
-- `BattleRange`
+- `Range`

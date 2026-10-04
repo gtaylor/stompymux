@@ -21,4 +21,4 @@ btech.autopilot.observe(unit)
 
 ## Returns
 
-- `BattleAutopilotObservation Filtered observation snapshot.`
+- `AutopilotObservation Filtered observation snapshot.`

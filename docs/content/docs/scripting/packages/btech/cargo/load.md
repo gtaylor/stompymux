@@ -25,4 +25,4 @@ btech.cargo.load(actor, pattern, quantity)
 
 ## Returns
 
-- `BattleCargoRow[] Transferred quantities.`
+- `CargoRow[] Transferred quantities.`

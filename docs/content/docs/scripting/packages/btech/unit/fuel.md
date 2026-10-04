@@ -21,4 +21,4 @@ btech.unit.fuel(unit)
 
 ## Returns
 
-- `BattleVtolFuelStatus`
+- `VtolFuelStatus`

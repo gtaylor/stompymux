@@ -18,7 +18,7 @@ btech.autopilot.configure(unit, patch, expected_revision)
 | Name | Type | Description |
 | --- | --- | --- |
 | `unit` | `integer` | The controlled unit. |
-| `patch` | `BattleAutopilotConfigPatch` | Settings to change. |
+| `patch` | `AutopilotConfigPatch` | Settings to change. |
 | `expected_revision` | `integer` | Optional revision guard. |
 
 ## Returns

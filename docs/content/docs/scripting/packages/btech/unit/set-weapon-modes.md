@@ -19,7 +19,7 @@ btech.unit.set_weapon_modes(unit, weapon_number, modes)
 | --- | --- | --- |
 | `unit` | `DbRef\|Object` |  |
 | `weapon_number` | `integer` | Zero-based stable weapon number. |
-| `modes` | `BattleWeaponModes` |  |
+| `modes` | `WeaponModes` |  |
 
 ## Returns
 

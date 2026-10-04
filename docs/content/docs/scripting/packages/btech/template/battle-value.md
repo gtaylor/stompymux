@@ -21,4 +21,4 @@ btech.template.battle_value(reference)
 
 ## Returns
 
-- `BattleBattleValue value`
+- `BattleValue value`

@@ -26,4 +26,4 @@ btech.unit.scan_building(dbref, pilot, x, y)
 
 ## Returns
 
-- `BattleBuildingScan`
+- `BuildingScan`

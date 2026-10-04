@@ -24,4 +24,4 @@ btech.unit.aim_hex(dbref, weapon, x, y)
 
 ## Returns
 
-- `BattleHexAimModifiers`
+- `HexAimModifiers`

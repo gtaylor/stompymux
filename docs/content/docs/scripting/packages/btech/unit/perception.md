@@ -21,4 +21,4 @@ btech.unit.perception(dbref)
 
 ## Returns
 
-- `BattlePerceptionReport`
+- `PerceptionReport`

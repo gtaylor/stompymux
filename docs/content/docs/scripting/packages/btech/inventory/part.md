@@ -21,4 +21,4 @@ btech.inventory.part(part)
 
 ## Returns
 
-- `BattlePart`
+- `Part`

@@ -17,7 +17,7 @@ btech.parts.set_cost(part, cost)
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `part` | `BattlePartRef` |  |
+| `part` | `PartRef` |  |
 | `cost` | `integer` | From 0 through 2^53-1. |
 
 ## Returns

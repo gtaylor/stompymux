@@ -21,4 +21,4 @@ btech.unit.payload(unit)
 
 ## Returns
 
-- `BattlePartStack[] parts`
+- `PartStack[] parts`

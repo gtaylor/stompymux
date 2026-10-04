@@ -26,4 +26,4 @@ btech.unit.lrsmap(dbref, pilot, mode, arguments)
 
 ## Returns
 
-- `BattleLongRangeMap`
+- `LongRangeMap`

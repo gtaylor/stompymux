@@ -23,4 +23,4 @@ btech.unit.rapidfire(dbref, pilot, weapon)
 
 ## Returns
 
-- `BattleFireMode`
+- `FireMode`

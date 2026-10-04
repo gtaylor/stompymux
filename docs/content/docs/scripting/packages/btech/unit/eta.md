@@ -23,4 +23,4 @@ btech.unit.eta(dbref, player, coordinates)
 
 ## Returns
 
-- `BattleEtaReport`
+- `EtaReport`

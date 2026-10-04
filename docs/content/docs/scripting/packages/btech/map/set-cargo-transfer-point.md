@@ -18,7 +18,7 @@ btech.map.set_cargo_transfer_point(map, point)
 | Name | Type | Description |
 | --- | --- | --- |
 | `map` | `DbRef\|Object` |  |
-| `point` | `BattleCargoTransferPoint\|nil` |  |
+| `point` | `CargoTransferPoint\|nil` |  |
 
 ## Returns
 

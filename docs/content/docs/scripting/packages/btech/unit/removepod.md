@@ -24,4 +24,4 @@ btech.unit.removepod(dbref, pilot, section, kind)
 
 ## Returns
 
-- `BattlePodRemoval`
+- `PodRemoval`

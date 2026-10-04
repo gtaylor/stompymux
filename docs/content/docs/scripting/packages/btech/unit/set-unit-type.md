@@ -18,7 +18,7 @@ btech.unit.set_unit_type(unit, unit_type)
 | Name | Type | Description |
 | --- | --- | --- |
 | `unit` | `DbRef\|Object` |  |
-| `unit_type` | `BattleUnitType` | Typed constant from btech.unit.types. |
+| `unit_type` | `UnitType` | Typed constant from btech.unit.types. |
 
 ## Returns
 

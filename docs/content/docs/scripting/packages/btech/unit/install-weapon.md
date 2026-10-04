@@ -18,7 +18,7 @@ btech.unit.install_weapon(unit, request)
 | Name | Type | Description |
 | --- | --- | --- |
 | `unit` | `DbRef\|Object` |  |
-| `request` | `BattleWeaponInstall` |  |
+| `request` | `WeaponInstall` |  |
 
 ## Returns
 

@@ -21,4 +21,4 @@ btech.unit.technologies(unit)
 
 ## Returns
 
-- `BattleTechnology[] technologies`
+- `Technology[] technologies`

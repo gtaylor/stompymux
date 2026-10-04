@@ -21,4 +21,4 @@ btech.template.loadout(name)
 
 ## Returns
 
-- `BattleLoadout`
+- `MechLoadout`

@@ -5,7 +5,7 @@
 //|---Read detached effective values using a canonical weapon name.
 //|---Examples: IS.MediumLaser or CL.LRM-20; exact names ignore ASCII case.
 //|---@param name string
-//|---@return BattleWeaponValues
+//|---@return WeaponValues
 //|function btech_weapon.settings(name) end
 // lua-types-end
 
@@ -14,7 +14,7 @@
 //|---@param actor integer
 //|---@param name string
 //|---@param seconds integer From 1 through 127.
-//|---@return BattleWeaponValues
+//|---@return WeaponValues
 //|function btech_weapon.set_recycle(actor, name, seconds) end
 // lua-types-end
 
@@ -23,6 +23,6 @@
 //|---@param actor integer
 //|---@param name string
 //|---@param value integer From 0 through 2147483647.
-//|---@return BattleWeaponValues
+//|---@return WeaponValues
 //|function btech_weapon.set_battle_value(actor, name, value) end
 // lua-types-end

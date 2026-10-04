@@ -23,4 +23,4 @@ btech.unit.cluster(dbref, pilot, weapon)
 
 ## Returns
 
-- `BattleAmmunitionMode`
+- `AmmunitionMode`

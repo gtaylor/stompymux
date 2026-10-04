@@ -23,4 +23,4 @@ btech.unit.fireswarm(dbref, pilot, weapon)
 
 ## Returns
 
-- `BattleAmmunitionMode`
+- `AmmunitionMode`

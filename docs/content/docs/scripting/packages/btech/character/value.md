@@ -22,4 +22,4 @@ btech.character.value(character, value)
 
 ## Returns
 
-- `BattleCharacterValueReport result`
+- `CharacterValueReport result`

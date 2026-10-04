@@ -23,4 +23,4 @@ btech.unit.narc(dbref, pilot, weapon)
 
 ## Returns
 
-- `BattleAmmunitionMode`
+- `AmmunitionMode`

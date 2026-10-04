@@ -24,4 +24,4 @@ btech.unit.atmexplosive(dbref, pilot, weapon)
 
 ## Returns
 
-- `BattleAmmunitionMode`
+- `AmmunitionMode`

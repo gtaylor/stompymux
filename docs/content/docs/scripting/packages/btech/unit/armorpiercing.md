@@ -23,4 +23,4 @@ btech.unit.armorpiercing(dbref, pilot, weapon)
 
 ## Returns
 
-- `BattleAmmunitionMode`
+- `AmmunitionMode`

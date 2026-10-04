@@ -25,4 +25,4 @@ btech.unit.scan_selected(dbref, pilot, options)
 
 ## Returns
 
-- `BattleSelectedScan`
+- `SelectedScan`

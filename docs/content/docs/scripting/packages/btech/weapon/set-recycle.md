@@ -23,4 +23,4 @@ btech.weapon.set_recycle(actor, name, seconds)
 
 ## Returns
 
-- `BattleWeaponValues`
+- `WeaponValues`

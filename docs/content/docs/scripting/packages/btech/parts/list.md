@@ -21,4 +21,4 @@ btech.parts.list(category)
 
 ## Returns
 
-- `BattlePartDefinition[] parts`
+- `PartDefinition[] parts`

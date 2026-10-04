@@ -22,4 +22,4 @@ btech.weapon.settings(name)
 
 ## Returns
 
-- `BattleWeaponValues`
+- `WeaponValues`

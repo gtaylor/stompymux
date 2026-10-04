@@ -23,4 +23,4 @@ btech.unit.criticals(dbref, section)
 
 ## Returns
 
-- `BattleCriticalReport`
+- `CriticalReport`

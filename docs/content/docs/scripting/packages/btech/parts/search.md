@@ -21,4 +21,4 @@ btech.parts.search(query)
 
 ## Returns
 
-- `BattlePartDefinition[] parts`
+- `PartDefinition[] parts`

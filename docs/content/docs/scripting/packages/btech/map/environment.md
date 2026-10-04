@@ -19,8 +19,8 @@ btech.map.environment(actor, dbref, conditions)
 | --- | --- | --- |
 | `actor` | `integer` |  |
 | `dbref` | `integer` |  |
-| `conditions` | `BattleMapEnvironment` |  |
+| `conditions` | `MapEnvironment` |  |
 
 ## Returns
 
-- `BattleMapEnvironment Actual resulting state, including retained underground status.`
+- `MapEnvironment Actual resulting state, including retained underground status.`

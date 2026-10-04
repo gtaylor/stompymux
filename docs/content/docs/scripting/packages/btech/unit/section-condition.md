@@ -18,7 +18,7 @@ btech.unit.section_condition(unit, section)
 | Name | Type | Description |
 | --- | --- | --- |
 | `unit` | `DbRef\|Object` |  |
-| `section` | `BattleSection` | Typed section constant from btech.unit.sections. |
+| `section` | `MechSection` | Typed section constant from btech.unit.sections. |
 
 ## Returns
 

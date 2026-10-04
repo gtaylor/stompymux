@@ -24,4 +24,4 @@ btech.unit.inarc(dbref, pilot, weapon, selector)
 
 ## Returns
 
-- `BattleAmmunitionMode`
+- `AmmunitionMode`

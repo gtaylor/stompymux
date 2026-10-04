@@ -23,4 +23,4 @@ btech.unit.ultra(dbref, pilot, weapon)
 
 ## Returns
 
-- `BattleFireMode`
+- `FireMode`

@@ -18,7 +18,7 @@ btech.unit.set_movement_type(unit, movement_type)
 | Name | Type | Description |
 | --- | --- | --- |
 | `unit` | `DbRef\|Object` |  |
-| `movement_type` | `BattleMovementType` | Typed constant from btech.unit.movement_types. |
+| `movement_type` | `MovementType` | Typed constant from btech.unit.movement_types. |
 
 ## Returns
 

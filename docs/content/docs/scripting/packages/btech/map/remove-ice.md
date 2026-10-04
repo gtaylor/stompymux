@@ -23,4 +23,4 @@ btech.map.remove_ice(actor, dbref, percentage)
 
 ## Returns
 
-- `BattleMapIceReport`
+- `MapIceReport`

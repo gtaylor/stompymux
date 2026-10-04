@@ -23,4 +23,4 @@ btech.tactical.observe(units, feedback_cursors)
 
 ## Returns
 
-- `BattleTacticalSnapshot snapshot Versioned intelligence and controller outcomes.`
+- `TacticalSnapshot snapshot Versioned intelligence and controller outcomes.`

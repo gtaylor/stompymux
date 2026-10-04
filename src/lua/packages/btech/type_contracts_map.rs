@@ -4,7 +4,7 @@
 // lua-types-begin btech 00024
 //|---Read the detached saved cargo location, or nil when the map has no location restriction.
 //|---@param map integer
-//|---@return BattleCargoTransferPoint|nil
+//|---@return CargoTransferPoint|nil
 //|function btech_map.cargo_point(map) end
 // lua-types-end
 
@@ -12,7 +12,7 @@
 //|---Wizard-only transfer-point configuration; nil clears the point. Coordinates must lie inside the map.
 //|---@param actor integer
 //|---@param map integer
-//|---@param point BattleCargoTransferPoint|nil
+//|---@param point CargoTransferPoint|nil
 //|function btech_map.set_cargo_point(actor, map, point) end
 // lua-types-end
 
@@ -59,7 +59,7 @@
 //|---Change saved light/weather conditions without reloading occupied terrain.
 //|---Perception follows the new light and visibility on the next scan; contacts and locks remain until then.
 //|---@param dbref integer Map object dbref.
-//|---@param light BattleLightLevel Typed constant from btech.map.light_levels.
+//|---@param light LightLevel Typed constant from btech.map.light_levels.
 //|---@param visibility integer Weather range from 0 through 60.
 //|---@return boolean
 //|function btech_map.conditions(dbref, light, visibility) end
@@ -89,7 +89,7 @@
 //|---Deliver a cockpit message to occupants of running units using the shared transactional emitter.
 //|---@param map DbRef|Object
 //|---@param message string One through 8191 bytes; leading spaces are removed.
-//|---@param options? BattleMapEmitOptions
+//|---@param options? MapEmitOptions
 //|function btech_map.emit(map, message, options) end
 // lua-types-end
 
@@ -195,7 +195,7 @@
 //|---Read the authored link configuration saved by the wizard editor. Rust extension retained
 //|---under its descriptive name; the canonical link follows the C contract.
 //|---@param child integer
-//|---@return BattleAuthoredMapLink|nil
+//|---@return AuthoredMapLink|nil
 //|function btech_map.authored_link(child) end
 // lua-types-end
 
@@ -203,7 +203,7 @@
 //|---Configure an authored link without rebuilding live routes; nil removes the configuration.
 //|---Rust extension retained under its descriptive name; the canonical setter follows the C contract.
 //|---@param child integer
-//|---@param link BattleAuthoredMapLink|nil
+//|---@param link AuthoredMapLink|nil
 //|---@return boolean
 //|function btech_map.set_authored_link(child, link) end
 // lua-types-end
@@ -211,14 +211,14 @@
 // lua-types-begin btech 00122
 //|---Read the strict C-contract link configuration of a child map, or nil when none is authored.
 //|---@param child DbRef|Object
-//|---@return BattleMapLink|nil
+//|---@return MapLink|nil
 //|function btech_map.link(child) end
 // lua-types-end
 
 // lua-types-begin btech 00123
 //|---Replace the C-contract link configuration of a child map; nil removes it.
 //|---@param child DbRef|Object
-//|---@param link BattleMapLink|nil
+//|---@param link MapLink|nil
 //|function btech_map.set_link(child, link) end
 // lua-types-end
 
@@ -276,7 +276,7 @@
 //|---@param x integer
 //|---@param y integer
 //|---@param hex Hex
-//|---@return BattleMapHexChange
+//|---@return MapHexChange
 //|function btech_map.set_hex(actor, dbref, x, y, hex) end
 // lua-types-end
 
@@ -285,7 +285,7 @@
 //|---@param actor integer
 //|---@param dbref integer
 //|---@param percentage integer Signed percentage threshold; outside 0–100 means never/always.
-//|---@return BattleMapIceReport
+//|---@return MapIceReport
 //|function btech_map.add_ice(actor, dbref, percentage) end
 // lua-types-end
 
@@ -294,7 +294,7 @@
 //|---@param actor integer
 //|---@param dbref integer
 //|---@param percentage integer
-//|---@return BattleMapIceReport
+//|---@return MapIceReport
 //|function btech_map.remove_ice(actor, dbref, percentage) end
 // lua-types-end
 
@@ -302,15 +302,15 @@
 //|---Wizard SETCOND action; updates live map rules without advancing time or resetting units.
 //|---@param actor integer
 //|---@param dbref integer
-//|---@param conditions BattleMapEnvironment
-//|---@return BattleMapEnvironment Actual resulting state, including retained underground status.
+//|---@param conditions MapEnvironment
+//|---@return MapEnvironment Actual resulting state, including retained underground status.
 //|function btech_map.environment(actor, dbref, conditions) end
 // lua-types-end
 
 // lua-types-begin btech 00137
 //|---List saved artillery blast zones in saved order.
 //|---@param map DbRef|Object
-//|---@return BattleBlastZone[]
+//|---@return BlastZone[]
 //|function btech_map.blast_zones(map) end
 // lua-types-end
 
@@ -318,21 +318,21 @@
 //|---List the map's scripted points of interest in file order. Units never see them.
 //|---@param map DbRef|Object
 //|---@param type? string Keep only points whose type matches exactly (case-sensitive).
-//|---@return BattleMapPointOfInterest[]
+//|---@return MapPointOfInterest[]
 //|function btech_map.points_of_interest(map, type) end
 // lua-types-end
 
 // lua-types-begin btech 00138
 //|---Read the saved cargo transfer point, or nil when the map has no location restriction.
 //|---@param map DbRef|Object
-//|---@return BattleCargoTransferPoint|nil
+//|---@return CargoTransferPoint|nil
 //|function btech_map.cargo_transfer_point(map) end
 // lua-types-end
 
 // lua-types-begin btech 00139
 //|---Replace the saved cargo transfer point; nil clears the restriction.
 //|---@param map DbRef|Object
-//|---@param point BattleCargoTransferPoint|nil
+//|---@param point CargoTransferPoint|nil
 //|function btech_map.set_cargo_transfer_point(map, point) end
 // lua-types-end
 
@@ -348,7 +348,7 @@
 //|---Read the one terrain feature a map shows for a hex: fire or smoke, then a structure, water, woods or the ground. Use btech.map.hex for every layer, including the terrain beneath fire or smoke.
 //|---@param map DbRef|Object
 //|---@param hex HexCoordinate
-//|---@return BattleTerrainName terrain
+//|---@return TerrainName terrain
 //|function btech_map.terrain(map, hex) end
 // lua-types-end
 
@@ -364,7 +364,7 @@
 //|---Report line of sight from one placed unit toward a unit or hex.
 //|---@param observer DbRef|Object
 //|---@param target DbRef|Object|HexCoordinate
-//|---@return BattleLineOfSight state
+//|---@return LineOfSight state
 //|function btech_map.line_of_sight(observer, target) end
 // lua-types-end
 
@@ -372,15 +372,15 @@
 //|---Place a unit on decoded terrain using the shared placement rules.
 //|---@param unit DbRef|Object
 //|---@param map DbRef|Object
-//|---@param position BattlePlacement
+//|---@param position Placement
 //|function btech_map.place_unit(unit, map, position) end
 // lua-types-end
 
 // lua-types-begin btech 00148
 //|---Measure the spatial range between two units or positions on one map. A position without z stands on the hex's surface.
 //|---@param map DbRef|Object
-//|---@param from DbRef|Object|BattlePlacement
-//|---@param to DbRef|Object|BattlePlacement
+//|---@param from DbRef|Object|Placement
+//|---@param to DbRef|Object|Placement
 //|---@return number range
 //|function btech_map.range(map, from, to) end
 // lua-types-end
@@ -396,7 +396,7 @@
 // lua-types-begin btech 00151
 //|---List units placed on a map in saved slot order; an optional filter omits distant units.
 //|---@param map DbRef|Object
-//|---@param filter? BattleMapUnitFilter
+//|---@param filter? MapUnitFilter
 //|---@return Object[] units
 //|function btech_map.units(map, filter) end
 // lua-types-end

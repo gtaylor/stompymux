@@ -18,7 +18,7 @@ btech.unit.clear_technologies(unit, group)
 | Name | Type | Description |
 | --- | --- | --- |
 | `unit` | `DbRef\|Object` |  |
-| `group` | `BattleTechnologyGroup` | Typed constant from btech.unit.technology_groups. |
+| `group` | `TechnologyGroup` | Typed constant from btech.unit.technology_groups. |
 
 ## Returns
 

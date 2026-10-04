@@ -21,4 +21,4 @@ btech.character.state(player)
 
 ## Returns
 
-- `BattleCharacter`
+- `Character`

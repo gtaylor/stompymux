@@ -21,4 +21,4 @@ btech.template.technologies(reference)
 
 ## Returns
 
-- `BattleTechnology[] technologies`
+- `Technology[] technologies`

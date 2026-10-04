@@ -21,4 +21,4 @@ btech.template.installed_parts(reference)
 
 ## Returns
 
-- `BattlePartStack[] parts`
+- `PartStack[] parts`

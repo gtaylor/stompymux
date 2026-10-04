@@ -22,4 +22,4 @@ btech.unit.eccm(dbref, pilot)
 
 ## Returns
 
-- `BattleElectronicMode`
+- `ElectronicMode`

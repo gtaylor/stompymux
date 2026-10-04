@@ -21,8 +21,8 @@ btech.unit.viewport(dbref, pilot, kind, arguments, dimensions)
 | `pilot` | `integer` |  |
 | `kind` | `'tactical'\|'long_range'` |  |
 | `arguments` | `string?` | Own unit, target label/dbref, or bearing and distance. |
-| `dimensions` | `BattleViewDimensions?` |  |
+| `dimensions` | `ViewDimensions?` |  |
 
 ## Returns
 
-- `BattleViewport`
+- `Viewport`

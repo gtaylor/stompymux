@@ -24,4 +24,4 @@ btech.unit.brief(unit, pilot, arguments)
 
 ## Returns
 
-- `BattleBriefReport`
+- `BriefReport`

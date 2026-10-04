@@ -23,4 +23,4 @@ btech.unit.vector(dbref, player, coordinates)
 
 ## Returns
 
-- `BattleVectorReport`
+- `VectorReport`

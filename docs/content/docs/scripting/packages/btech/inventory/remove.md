@@ -24,4 +24,4 @@ btech.inventory.remove(actor, object, pattern, quantity)
 
 ## Returns
 
-- `BattleCargoRow[]`
+- `CargoRow[]`
