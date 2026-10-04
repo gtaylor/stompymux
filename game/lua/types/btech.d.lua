@@ -324,8 +324,8 @@ function btech_unit.inspect(dbref) end
 ---@field null_signature SignatureState
 ---@field stealth SignatureState
 ---@field electronics Electronics Selected suite modes and last committed field.
----@field beacons table<MechSection, BeaconKind[]> Attached effects grouped by section.
----@field narc_sections MechSection[] Sections carrying homing beacons.
+---@field beacons table<UnitSection, BeaconKind[]> Attached effects grouped by section.
+---@field narc_sections UnitSection[] Sections carrying homing beacons.
 ---@field ams_enabled boolean Automatic anti-missile defense switch.
 ---@field auto_fall boolean Skip downhill cliff avoidance when piloted.
 ---@field hex_sync_pending boolean A collision interrupted synchronization of motion.point and position.
@@ -1272,7 +1272,7 @@ function btech_unit.weapon_states(dbref) end
 
 ---List mounted weapons in mounting order; an optional section restricts the result.
 ---@param unit DbRef|Object
----@param section? MechSection Typed section constant from btech.unit.sections.
+---@param section? UnitSection Typed section constant from btech.unit.sections.
 ---@return MountedWeapon[]
 function btech_unit.weapons(unit, section) end
 
@@ -1500,7 +1500,7 @@ function btech_unit.autoturret(dbref, pilot) end
 ---@field notices Notice[] Cockpit effects from the hit-location roll.
 ---@field hit boolean Whether the beacon met the full attack target.
 ---@field intercepted boolean Whether AMS intercepted the pod.
----@field section MechSection|VehicleSectionName|nil Surviving attachment section.
+---@field section UnitSection|VehicleSectionName|nil Surviving attachment section.
 ---@field rear boolean Rear-facing attachment notice.
 
 ---@class MechShotReport
@@ -2406,11 +2406,11 @@ function btech_unit.angeleccm(dbref, pilot) end
 function btech_unit.inarc(dbref, pilot, weapon, selector) end
 
 ---@class PodRow
----@field section MechSection|VehicleSectionName
+---@field section UnitSection|VehicleSectionName
 ---@field destroyed boolean
 ---@field kinds BeaconKind[]
 ---@class PodRemoval
----@field section MechSection
+---@field section UnitSection
 ---@field kind BeaconKind
 ---@field arm "left"|"right"
 ---@field target_number integer
@@ -3221,7 +3221,7 @@ function btech_unit.set_field(actor, unit, field, value) end
 -- C-parity contract surface shared by several groups below.
 
 ---Typed unit-layout section constant from btech.unit.sections.
----@class MechSection
+---@class UnitSection
 ---Typed unit class constant from btech.unit.types.
 ---@class UnitType
 ---Typed movement class constant from btech.unit.movement_types.
@@ -3248,7 +3248,7 @@ function btech_unit.set_field(actor, unit, field, value) end
 ---@field original integer
 
 ---@class ArmorStatus
----@field section? MechSection Omitted when the request did not select one.
+---@field section? UnitSection Omitted when the request did not select one.
 ---@field armor BattleValuePair
 ---@field internal BattleValuePair
 ---@field rear_armor BattleValuePair
@@ -3291,7 +3291,7 @@ function btech_unit.set_field(actor, unit, field, value) end
 ---@field name string
 
 ---@class CriticalSlot
----@field section MechSection
+---@field section UnitSection
 ---@field slot integer
 ---@field kind string
 ---@field part? PartDefinition
@@ -3304,7 +3304,7 @@ function btech_unit.set_field(actor, unit, field, value) end
 
 ---@class MountedWeapon
 ---@field number integer Zero-based stable weapon number.
----@field section MechSection
+---@field section UnitSection
 ---@field first_slot integer Zero-based first occupied critical slot.
 ---@field part PartDefinition
 ---@field slot_count integer
@@ -3454,7 +3454,7 @@ function btech_player.set_ui_preferences(player, preferences) end
 
 ---Read current, original and rear armor values; an omitted section reports the totals.
 ---@param reference string Template reference: the file stem of a `.toml` document anywhere under database.mech_database.
----@param section? MechSection Typed section constant from btech.unit.sections.
+---@param section? UnitSection Typed section constant from btech.unit.sections.
 ---@return ArmorStatus status
 function btech_template.armor(reference, section) end
 
@@ -3470,7 +3470,7 @@ function btech_template.battle_value(reference) end
 
 ---List one section's critical slots with resolved parts, modes and ammunition state.
 ---@param reference string
----@param section MechSection Typed section constant from btech.unit.sections.
+---@param section UnitSection Typed section constant from btech.unit.sections.
 ---@return CriticalSlot[] slots
 function btech_template.critical_slots(reference, section) end
 
@@ -3507,7 +3507,7 @@ function btech_template.show_weapon_specs(reference, player) end
 ---Publish one section's critical status report to a player.
 ---@param reference string
 ---@param player DbRef|Object
----@param section MechSection Typed section constant from btech.unit.sections.
+---@param section UnitSection Typed section constant from btech.unit.sections.
 function btech_template.show_critical_status(reference, player, section) end
 
 ---List configured and inferred technologies.
@@ -3517,7 +3517,7 @@ function btech_template.technologies(reference) end
 
 ---List mounted weapons in mounting order; an optional section restricts the result.
 ---@param reference string
----@param section? MechSection Typed section constant from btech.unit.sections.
+---@param section? UnitSection Typed section constant from btech.unit.sections.
 ---@return MountedWeapon[] weapons
 function btech_template.weapons(reference, section) end
 
@@ -3550,7 +3550,7 @@ function btech_unit.apply_damage(unit, request) end
 
 ---Read current, original and rear armor values; an omitted section reports the totals.
 ---@param unit DbRef|Object
----@param section? MechSection Typed section constant from btech.unit.sections.
+---@param section? UnitSection Typed section constant from btech.unit.sections.
 ---@return ArmorStatus status
 function btech_unit.armor(unit, section) end
 
@@ -3566,7 +3566,7 @@ function btech_unit.battle_value(unit) end
 
 ---List one section's critical slots with resolved parts, modes and ammunition state.
 ---@param unit DbRef|Object
----@param section MechSection Typed section constant from btech.unit.sections.
+---@param section UnitSection Typed section constant from btech.unit.sections.
 ---@return CriticalSlot[] slots
 function btech_unit.critical_slots(unit, section) end
 
@@ -3617,7 +3617,7 @@ function btech_unit.reset_critical_slots(unit) end
 
 ---Refill one ammunition bin to its installed capacity.
 ---@param unit DbRef|Object
----@param section MechSection Typed section constant from btech.unit.sections.
+---@param section UnitSection Typed section constant from btech.unit.sections.
 ---@param slot integer One-based critical slot.
 function btech_unit.restock_ammunition(unit, section, slot) end
 
@@ -3627,13 +3627,13 @@ function btech_unit.restore(unit) end
 
 ---Read a section's damage condition.
 ---@param unit DbRef|Object
----@param section MechSection Typed section constant from btech.unit.sections.
+---@param section UnitSection Typed section constant from btech.unit.sections.
 ---@return "operational"|"destroyed"|"flooded" condition
 function btech_unit.section_condition(unit, section) end
 
 ---@class WeaponInstall
 ---@field part PartRef Weapon part reference.
----@field section MechSection
+---@field section UnitSection
 ---@field slots integer[] Zero-based critical slots.
 ---@field rear_facing? boolean
 ---@field targeting_computer? boolean
@@ -3641,7 +3641,7 @@ function btech_unit.section_condition(unit, section) end
 
 ---@class AmmunitionConfiguration
 ---@field weapon PartRef Launcher part reference.
----@field section MechSection
+---@field section UnitSection
 ---@field slot integer Zero-based critical slot.
 ---@field half_ton? boolean
 ---@field ammunition_modes? AmmunitionModeConstant[]
@@ -3652,7 +3652,7 @@ function btech_unit.section_condition(unit, section) end
 
 ---@class SpecialInstall
 ---@field part? PartRef Omit to empty the slot.
----@field section MechSection
+---@field section UnitSection
 ---@field slot integer Zero-based critical slot.
 ---@field auxiliary_data? integer
 
@@ -3679,7 +3679,7 @@ function btech_unit.set_weapon_modes(unit, weapon_number, modes) end
 
 ---Patch armor values on one section.
 ---@param unit DbRef|Object
----@param section MechSection Typed section constant from btech.unit.sections.
+---@param section UnitSection Typed section constant from btech.unit.sections.
 ---@param patch table Current-armor, internal or rear-armor integers, each 0 through 255.
 function btech_unit.set_armor(unit, section, patch) end
 
@@ -3826,23 +3826,23 @@ local btech_repair = {}
 
 ---@class RepairArmorRequest
 ---@field operation RepairOperation
----@field section MechSection
+---@field section UnitSection
 ---@field value integer
 ---@class RepairInternalRequest
 ---@field operation RepairOperation
----@field section MechSection
+---@field section UnitSection
 ---@field value integer
 ---@class RepairRearArmorRequest
 ---@field operation RepairOperation
----@field section MechSection
+---@field section UnitSection
 ---@field value integer
 ---@class RepairPartRequest
 ---@field operation RepairOperation
----@field section MechSection
+---@field section UnitSection
 ---@field slot integer
 ---@class RepairReattachRequest
 ---@field operation RepairOperation
----@field section MechSection
+---@field section UnitSection
 
 ---@alias ImmediateRepair RepairArmorRequest|RepairInternalRequest|RepairRearArmorRequest|RepairPartRequest|RepairReattachRequest
 

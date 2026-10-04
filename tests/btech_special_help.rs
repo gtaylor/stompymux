@@ -39,7 +39,7 @@ async fn cockpit_help_matches_catalogue_without_mutation() {
             ("  HELP\tALL  ", "ALL"),
         ] {
             let actual = support::run_text(&scripts, &config, actor, 1, input);
-            assert_eq!(actual, SpecialType::Mech.help(Some(class), false, topic));
+            assert_eq!(actual, SpecialType::Unit.help(Some(class), false, topic));
         }
         for input in ["help", "Help", "help pilot"] {
             assert!(matches!(
@@ -54,7 +54,7 @@ async fn cockpit_help_matches_catalogue_without_mutation() {
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(loaded))).unwrap();
         assert_eq!(
             support::run_text(&scripts, &config, actor, 1, "HELP"),
-            SpecialType::Mech.help(Some(class), false, "")
+            SpecialType::Unit.help(Some(class), false, "")
         );
     }
 }

@@ -356,7 +356,7 @@
 // lua-types-begin btech 00168
 //|---List mounted weapons in mounting order; an optional section restricts the result.
 //|---@param unit DbRef|Object
-//|---@param section? MechSection Typed section constant from btech.unit.sections.
+//|---@param section? UnitSection Typed section constant from btech.unit.sections.
 //|---@return MountedWeapon[]
 //|function btech_unit.weapons(unit, section) end
 // lua-types-end
@@ -1772,7 +1772,7 @@
 // lua-types-begin btech 00480
 //|---Read current, original and rear armor values; an omitted section reports the totals.
 //|---@param unit DbRef|Object
-//|---@param section? MechSection Typed section constant from btech.unit.sections.
+//|---@param section? UnitSection Typed section constant from btech.unit.sections.
 //|---@return ArmorStatus status
 //|function btech_unit.armor(unit, section) end
 // lua-types-end
@@ -1794,7 +1794,7 @@
 // lua-types-begin btech 00483
 //|---List one section's critical slots with resolved parts, modes and ammunition state.
 //|---@param unit DbRef|Object
-//|---@param section MechSection Typed section constant from btech.unit.sections.
+//|---@param section UnitSection Typed section constant from btech.unit.sections.
 //|---@return CriticalSlot[] slots
 //|function btech_unit.critical_slots(unit, section) end
 // lua-types-end
@@ -1865,7 +1865,7 @@
 // lua-types-begin btech 00493
 //|---Refill one ammunition bin to its installed capacity.
 //|---@param unit DbRef|Object
-//|---@param section MechSection Typed section constant from btech.unit.sections.
+//|---@param section UnitSection Typed section constant from btech.unit.sections.
 //|---@param slot integer One-based critical slot.
 //|function btech_unit.restock_ammunition(unit, section, slot) end
 // lua-types-end
@@ -1879,7 +1879,7 @@
 // lua-types-begin btech 00495
 //|---Read a section's damage condition.
 //|---@param unit DbRef|Object
-//|---@param section MechSection Typed section constant from btech.unit.sections.
+//|---@param section UnitSection Typed section constant from btech.unit.sections.
 //|---@return "operational"|"destroyed"|"flooded" condition
 //|function btech_unit.section_condition(unit, section) end
 // lua-types-end
@@ -1916,7 +1916,7 @@
 // lua-types-begin btech 00504
 //|---Patch armor values on one section.
 //|---@param unit DbRef|Object
-//|---@param section MechSection Typed section constant from btech.unit.sections.
+//|---@param section UnitSection Typed section constant from btech.unit.sections.
 //|---@param patch table Current-armor, internal or rear-armor integers, each 0 through 255.
 //|function btech_unit.set_armor(unit, section, patch) end
 // lua-types-end

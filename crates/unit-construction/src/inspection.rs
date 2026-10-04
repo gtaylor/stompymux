@@ -40,7 +40,7 @@ pub fn inspect_raw_template_armor(
         row.armor.0 += u32::from(definition.armor);
         row.armor.1 += u32::from(definition.armor);
         let internal =
-            raw_canonical_mech_internal(template, *current).unwrap_or(definition.internal);
+            raw_canonical_unit_internal(template, *current).unwrap_or(definition.internal);
         row.internal.0 += u32::from(internal);
         row.internal.1 += u32::from(internal);
         row.rear_armor.0 += u32::from(definition.rear);
@@ -49,7 +49,9 @@ pub fn inspect_raw_template_armor(
     Ok(row)
 }
 
-fn raw_canonical_mech_internal(template: &RawTemplate, section: RawSectionCode) -> Option<u16> {
+/// Native post-load internal structure for any raw unit class; vehicles derive it from tonnage
+/// and Mechs from the structure chart. `None` keeps the authored value.
+fn raw_canonical_unit_internal(template: &RawTemplate, section: RawSectionCode) -> Option<u16> {
     if matches!(
         template.class,
         RawUnitClass::Vehicle | RawUnitClass::Vtol | RawUnitClass::Naval

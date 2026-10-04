@@ -283,11 +283,11 @@ pub(super) fn validate_changes(
     Ok(())
 }
 
-/// Insert the MECH registration row for a unit when no registration exists yet.
+/// Insert the MECH registration row for a Mech or vehicle when no registration exists yet.
 ///
 /// Both standalone @btech registrations and first construction persist the same
 /// row, so the write is idempotent and never replaces another special type.
-pub(super) async fn ensure_mech_registration(
+pub(super) async fn ensure_unit_registration(
     c: &mut SqliteConnection,
     id: ObjectId,
 ) -> Result<bool> {
@@ -361,7 +361,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
         if kind == "MECH"
             && before.btech.registrations().get(id).map(String::as_str) != Some("MECH")
         {
-            changed |= ensure_mech_registration(c, *id).await?;
+            changed |= ensure_unit_registration(c, *id).await?;
         }
     }
     for (id, map) in after.btech.maps() {

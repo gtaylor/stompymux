@@ -18,7 +18,7 @@ btech.template.critical_slots(reference, section)
 | Name | Type | Description |
 | --- | --- | --- |
 | `reference` | `string` |  |
-| `section` | `MechSection` | Typed section constant from btech.unit.sections. |
+| `section` | `UnitSection` | Typed section constant from btech.unit.sections. |
 
 ## Returns
 

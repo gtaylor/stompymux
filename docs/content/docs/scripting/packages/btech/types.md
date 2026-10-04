@@ -299,8 +299,8 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 - `null_signature`: `SignatureState`
 - `stealth`: `SignatureState`
 - `electronics`: `Electronics` — Selected suite modes and last committed field.
-- `beacons`: `table<MechSection, BeaconKind[]>` — Attached effects grouped by section.
-- `narc_sections`: `MechSection[]` — Sections carrying homing beacons.
+- `beacons`: `table<UnitSection, BeaconKind[]>` — Attached effects grouped by section.
+- `narc_sections`: `UnitSection[]` — Sections carrying homing beacons.
 - `ams_enabled`: `boolean` — Automatic anti-missile defense switch.
 - `auto_fall`: `boolean` — Skip downhill cliff avoidance when piloted.
 - `hex_sync_pending`: `boolean` — A collision interrupted synchronization of motion.point and position.
@@ -921,7 +921,7 @@ Alias: `"narc"|"homing"|"haywire"|"ecm"`
 - `notices`: `Notice[]` — Cockpit effects from the hit-location roll.
 - `hit`: `boolean` — Whether the beacon met the full attack target.
 - `intercepted`: `boolean` — Whether AMS intercepted the pod.
-- `section`: `MechSection|VehicleSectionName|nil` — Surviving attachment section.
+- `section`: `UnitSection|VehicleSectionName|nil` — Surviving attachment section.
 - `rear`: `boolean` — Rear-facing attachment notice.
 
 ## MechShotReport
@@ -1251,13 +1251,13 @@ Alias: `"off"|"ecm"|"eccm"`
 
 ## PodRow
 
-- `section`: `MechSection|VehicleSectionName`
+- `section`: `UnitSection|VehicleSectionName`
 - `destroyed`: `boolean`
 - `kinds`: `BeaconKind[]`
 
 ## PodRemoval
 
-- `section`: `MechSection`
+- `section`: `UnitSection`
 - `kind`: `BeaconKind`
 - `arm`: `"left"|"right"`
 - `target_number`: `integer`
@@ -1539,7 +1539,7 @@ Alias: `"follow_brief" | "include" | "exclude"`
 
 ## ArmorStatus
 
-- `section`: `MechSection` — Omitted when the request did not select one.
+- `section`: `UnitSection` — Omitted when the request did not select one.
 - `armor`: `BattleValuePair`
 - `internal`: `BattleValuePair`
 - `rear_armor`: `BattleValuePair`
@@ -1590,7 +1590,7 @@ Alias: `PartDefinition|{id: integer}|integer|string`
 
 ## CriticalSlot
 
-- `section`: `MechSection`
+- `section`: `UnitSection`
 - `slot`: `integer`
 - `kind`: `string`
 - `part`: `PartDefinition`
@@ -1604,7 +1604,7 @@ Alias: `PartDefinition|{id: integer}|integer|string`
 ## MountedWeapon
 
 - `number`: `integer` — Zero-based stable weapon number.
-- `section`: `MechSection`
+- `section`: `UnitSection`
 - `first_slot`: `integer` — Zero-based first occupied critical slot.
 - `part`: `PartDefinition`
 - `slot_count`: `integer`
@@ -1686,7 +1686,7 @@ Alias: `PartDefinition|{id: integer}|integer|string`
 ## WeaponInstall
 
 - `part`: `PartRef` — Weapon part reference.
-- `section`: `MechSection`
+- `section`: `UnitSection`
 - `slots`: `integer[]` — Zero-based critical slots.
 - `rear_facing`: `boolean`
 - `targeting_computer`: `boolean`
@@ -1695,7 +1695,7 @@ Alias: `PartDefinition|{id: integer}|integer|string`
 ## AmmunitionConfiguration
 
 - `weapon`: `PartRef` — Launcher part reference.
-- `section`: `MechSection`
+- `section`: `UnitSection`
 - `slot`: `integer` — Zero-based critical slot.
 - `half_ton`: `boolean`
 - `ammunition_modes`: `AmmunitionModeConstant[]`
@@ -1708,38 +1708,38 @@ Alias: `PartDefinition|{id: integer}|integer|string`
 ## SpecialInstall
 
 - `part`: `PartRef` — Omit to empty the slot.
-- `section`: `MechSection`
+- `section`: `UnitSection`
 - `slot`: `integer` — Zero-based critical slot.
 - `auxiliary_data`: `integer`
 
 ## RepairArmorRequest
 
 - `operation`: `RepairOperation`
-- `section`: `MechSection`
+- `section`: `UnitSection`
 - `value`: `integer`
 
 ## RepairInternalRequest
 
 - `operation`: `RepairOperation`
-- `section`: `MechSection`
+- `section`: `UnitSection`
 - `value`: `integer`
 
 ## RepairRearArmorRequest
 
 - `operation`: `RepairOperation`
-- `section`: `MechSection`
+- `section`: `UnitSection`
 - `value`: `integer`
 
 ## RepairPartRequest
 
 - `operation`: `RepairOperation`
-- `section`: `MechSection`
+- `section`: `UnitSection`
 - `slot`: `integer`
 
 ## RepairReattachRequest
 
 - `operation`: `RepairOperation`
-- `section`: `MechSection`
+- `section`: `UnitSection`
 
 ## ImmediateRepair
 

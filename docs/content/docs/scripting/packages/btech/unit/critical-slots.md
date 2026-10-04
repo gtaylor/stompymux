@@ -18,7 +18,7 @@ btech.unit.critical_slots(unit, section)
 | Name | Type | Description |
 | --- | --- | --- |
 | `unit` | `DbRef\|Object` |  |
-| `section` | `MechSection` | Typed section constant from btech.unit.sections. |
+| `section` | `UnitSection` | Typed section constant from btech.unit.sections. |
 
 ## Returns
 

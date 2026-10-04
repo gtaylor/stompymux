@@ -83,7 +83,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
     )
     .await?;
     for id in inserted {
-        super::btech::ensure_mech_registration(c, id).await?;
+        super::btech::ensure_unit_registration(c, id).await?;
     }
     Ok(changed)
 }
