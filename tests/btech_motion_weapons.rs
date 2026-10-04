@@ -660,9 +660,12 @@ async fn targeting_computer_aim_native_lua_damage_and_restart() {
                     slot: 5,
                 })
                 .unwrap();
-                let mut state = serde_json::to_value(&world.btech).unwrap();
-                state["constructed"][id.0.to_string()] = serde_json::to_value(unit).unwrap();
-                world.btech = serde_json::from_value(state).unwrap();
+                world
+                    .btech
+                    .rewrite_unit_record(id, |record| {
+                        *record = serde_json::to_value(unit).unwrap();
+                    })
+                    .unwrap();
             }
             restore_database(&config, &pristine_db);
             persistence::save(&config.database(), &world).await.unwrap();
@@ -1447,9 +1450,12 @@ async fn weapon_feed_jam_readiness_controls_and_persistence() {
     assert!(readiness.intact && readiness.jammed && !readiness.ready);
     assert_eq!(unit.ammunition(), original.ammunition());
     assert_eq!(unit.mass().unwrap(), original.mass().unwrap());
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][id.0.to_string()] = serde_json::to_value(&unit).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            *record = serde_json::to_value(&unit).unwrap();
+        })
+        .unwrap();
     world.validate(&config).unwrap();
     let before = world.btech.clone();
     assert!(spend_battle_weapon(&mut world, id, ObjectId(1), index).is_err());
@@ -1515,9 +1521,11 @@ async fn unjam_native_lua_countdown_outcomes_and_restart() {
             .position(|m| m.weapon == BattleWeapon::Srm4)
             .unwrap();
         unit.jam_weapon(index).unwrap();
-        let mut state = serde_json::to_value(&base.btech).unwrap();
-        state["constructed"][id.0.to_string()] = serde_json::to_value(unit).unwrap();
-        base.btech = serde_json::from_value(state).unwrap();
+        base.btech
+            .rewrite_unit_record(id, |record| {
+                *record = serde_json::to_value(unit).unwrap();
+            })
+            .unwrap();
         let seed = (0..=255)
             .find(|seed| {
                 let roll = BattleDice::seeded([*seed; 32]).two_d6();
@@ -2744,9 +2752,11 @@ async fn rotary_unjam_matrix(weapons: &[stompymux_rs::BattleWeapon]) {
             .position(|mount| mount.weapon == weapon)
             .unwrap();
         unit.jam_weapon(index).unwrap();
-        let mut state = serde_json::to_value(&base.btech).unwrap();
-        state["constructed"][id.0.to_string()] = serde_json::to_value(unit).unwrap();
-        base.btech = serde_json::from_value(state).unwrap();
+        base.btech
+            .rewrite_unit_record(id, |record| {
+                *record = serde_json::to_value(unit).unwrap();
+            })
+            .unwrap();
         base.validate(&config).unwrap();
         for extended in [false, true] {
             for connected in [false, true] {
@@ -4612,9 +4622,12 @@ async fn unjam_feedback_separates_pilot_cockpit_and_observers() {
             .position(|mount| mount.weapon == BattleWeapon::Srm4)
             .unwrap();
         unit.jam_weapon(index).unwrap();
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["constructed"][subject.0.to_string()] = serde_json::to_value(unit).unwrap();
-        world.btech = serde_json::from_value(state).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(subject, |record| {
+                *record = serde_json::to_value(unit).unwrap();
+            })
+            .unwrap();
         begin_battle_unjam(&mut world, subject, ObjectId(1), index).unwrap();
         let seed = (0..=255)
             .find(|seed| (BattleDice::seeded([*seed; 32]).two_d6() >= 6) == (outcome != "failure"))

@@ -250,10 +250,13 @@ async fn critical_launch_failures_are_atomic_and_distinguish_permanent_jams() {
                     },
                 );
         }
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["constructed"][id.0.to_string()] =
-            serde_json::to_value(BattleUnit::from_template(template).unwrap()).unwrap();
-        world.btech = serde_json::from_value(state).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                *record =
+                    serde_json::to_value(BattleUnit::from_template(template).unwrap()).unwrap();
+            })
+            .unwrap();
         let map = world.create(&config, "Firing field".into(), Kind::Room);
         create_battle_map(
             &mut world,

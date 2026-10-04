@@ -342,10 +342,12 @@ async fn inferno_mine_heat_uses_blast_duration_and_vehicle_fire_policy() {
                 rules.vehicle_impact.advanced_fire = advanced;
                 if stationary {
                     let mut overflow = world.clone();
-                    let mut encoded = serde_json::to_value(&overflow.btech).unwrap();
-                    encoded["vehicles"][ids[0].0.to_string()]["inferno_remaining"] =
-                        i32::MAX.into();
-                    overflow.btech = serde_json::from_value(encoded).unwrap();
+                    overflow
+                        .btech
+                        .rewrite_unit_record(ids[0], |record| {
+                            record["inferno_remaining"] = i32::MAX.into();
+                        })
+                        .unwrap();
                     let checkpoint = overflow.btech.clone();
                     assert!(resolve_mine_blast(&mut overflow, map, 0, rules).is_err());
                     assert_eq!(overflow.btech, checkpoint);
@@ -474,9 +476,12 @@ async fn mine_vehicle_hit_policy_controls_location_dice_and_safe_damage() {
         )
         .unwrap();
         let seed = BattleDice::seeded([71; 32]);
-        let mut encoded = serde_json::to_value(&world.btech).unwrap();
-        encoded["vehicles"][ids[0].0.to_string()]["dice"] = serde_json::to_value(&seed).unwrap();
-        world.btech = serde_json::from_value(encoded).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(ids[0], |record| {
+                record["dice"] = serde_json::to_value(&seed).unwrap();
+            })
+            .unwrap();
         let protection = world.btech.vehicles()[&ids[0]].sections().clone();
         let mut rules = blast_rules();
         rules.vehicle_impact.criticals.table = table;
@@ -530,17 +535,20 @@ async fn mine_packets_finish_after_hull_loss_and_retain_wreck_material_damage() 
                 matches!(dice.two_d6(), 10 | 11).then_some(initial)
             })
             .unwrap();
-        let mut saved = serde_json::to_value(&world.btech).unwrap();
-        let unit = &mut saved["vehicles"][ids[0].0.to_string()];
-        unit["sections"]["front"]["armor"] = 0.into();
-        unit["sections"]["front"]["internal"] = 1.into();
-        if internal {
-            unit["sections"]["turret"]["armor"] = 0.into();
-        }
-        unit["motion"]["heading"] = 180.0.into();
-        unit["motion"]["desired_heading"] = 180.0.into();
-        unit["dice"] = serde_json::to_value(&seed).unwrap();
-        world.btech = serde_json::from_value(saved).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(ids[0], |record| {
+                let unit = record;
+                unit["sections"]["front"]["armor"] = 0.into();
+                unit["sections"]["front"]["internal"] = 1.into();
+                if internal {
+                    unit["sections"]["turret"]["armor"] = 0.into();
+                }
+                unit["motion"]["heading"] = 180.0.into();
+                unit["motion"]["desired_heading"] = 180.0.into();
+                unit["dice"] = serde_json::to_value(&seed).unwrap();
+            })
+            .unwrap();
         set_minefield(
             &mut world,
             map,
@@ -663,16 +671,19 @@ async fn mine_followups_reselect_locations_after_turret_and_hull_loss() {
                 Some(initial)
             })
             .unwrap();
-        let mut saved = serde_json::to_value(&world.btech).unwrap();
-        let unit = &mut saved["vehicles"][ids[0].0.to_string()];
-        for section in ["turret", "front"] {
-            unit["sections"][section]["armor"] = 0.into();
-            unit["sections"][section]["internal"] = 1.into();
-        }
-        unit["motion"]["heading"] = 180.0.into();
-        unit["motion"]["desired_heading"] = 180.0.into();
-        unit["dice"] = serde_json::to_value(&seed).unwrap();
-        world.btech = serde_json::from_value(saved).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(ids[0], |record| {
+                let unit = record;
+                for section in ["turret", "front"] {
+                    unit["sections"][section]["armor"] = 0.into();
+                    unit["sections"][section]["internal"] = 1.into();
+                }
+                unit["motion"]["heading"] = 180.0.into();
+                unit["motion"]["desired_heading"] = 180.0.into();
+                unit["dice"] = serde_json::to_value(&seed).unwrap();
+            })
+            .unwrap();
         set_minefield(
             &mut world,
             map,
@@ -765,9 +776,12 @@ async fn mine_heat_explodes_remaining_wreck_sections() {
                 (dice.two_d6() == 9).then_some(initial)
             })
             .unwrap();
-        let mut saved = serde_json::to_value(&world.btech).unwrap();
-        saved["vehicles"][ids[0].0.to_string()]["dice"] = serde_json::to_value(dice).unwrap();
-        world.btech = serde_json::from_value(saved).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(ids[0], |record| {
+                record["dice"] = serde_json::to_value(dice).unwrap();
+            })
+            .unwrap();
         set_minefield(
             &mut world,
             map,

@@ -534,27 +534,25 @@ async fn loaded_acceleration_and_reverse_motion_use_the_same_ceiling_for_all_cha
             } else {
                 world.btech.constructed_units()[&a].mobility().maximum_speed
             };
-            let mut encoded = serde_json::to_value(&world.btech).unwrap();
-            let key = if index == 0 {
-                "constructed"
-            } else {
-                "vehicles"
-            };
-            let unit = &mut encoded[key][a.0.to_string()];
-            let heading = if reverse { 270.0 } else { 90.0 };
-            unit["motion"]["heading"] = heading.into();
-            unit["motion"]["desired_heading"] = heading.into();
-            unit["motion"]["desired_speed"] = (if reverse {
-                -unloaded * 2.0 / 3.0
-            } else {
-                unloaded
-            })
-            .into();
-            if index == 2 {
-                unit["vtol_flight"]["phase"] = serde_json::json!({"kind":"airborne"});
-                unit["vtol_flight"]["altitude"] = 5.0.into();
-            }
-            world.btech = serde_json::from_value(encoded).unwrap();
+            world
+                .btech
+                .rewrite_unit_record(a, |record| {
+                    let unit = record;
+                    let heading = if reverse { 270.0 } else { 90.0 };
+                    unit["motion"]["heading"] = heading.into();
+                    unit["motion"]["desired_heading"] = heading.into();
+                    unit["motion"]["desired_speed"] = (if reverse {
+                        -unloaded * 2.0 / 3.0
+                    } else {
+                        unloaded
+                    })
+                    .into();
+                    if index == 2 {
+                        unit["vtol_flight"]["phase"] = serde_json::json!({"kind":"airborne"});
+                        unit["vtol_flight"]["altitude"] = 5.0.into();
+                    }
+                })
+                .unwrap();
             set_battle_tow(&mut world, a, Some(b)).unwrap();
             let maximum = battle_unit_load(&world, a, true)
                 .unwrap()

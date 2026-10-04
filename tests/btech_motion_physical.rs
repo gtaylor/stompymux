@@ -9348,12 +9348,15 @@ async fn unjam_control_experience_and_delivery_rollback() {
                 .position(|m| m.weapon == weapon)
                 .unwrap();
             unit.jam_weapon(index).unwrap();
-            let mut state = serde_json::to_value(&world.btech).unwrap();
-            state["constructed"][id.0.to_string()] = serde_json::to_value(unit).unwrap();
-            if case == "prone" {
-                state["constructed"][id.0.to_string()]["posture"] = "prone".into();
-            }
-            world.btech = serde_json::from_value(state).unwrap();
+            world
+                .btech
+                .rewrite_unit_record(id, |record| {
+                    *record = serde_json::to_value(unit).unwrap();
+                    if case == "prone" {
+                        record["posture"] = "prone".into();
+                    }
+                })
+                .unwrap();
             begin_battle_unjam(&mut world, id, ObjectId(1), index).unwrap();
             let seed = (0..=255)
                 .find(|seed| {
@@ -9492,10 +9495,12 @@ async fn unjam_character_server_tick_retries_failed_commit() {
         let mut unit = world.btech.constructed_units()[&id].clone();
         let index = unit.loadout().unwrap().weapons.iter().position(|m| m.weapon == BattleWeapon::Srm4).unwrap();
         unit.jam_weapon(index).unwrap();
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["constructed"][id.0.to_string()] = serde_json::to_value(unit).unwrap();
-        state["constructed"][id.0.to_string()]["unjam"] = serde_json::json!({"weapon_index":index,"remaining":60});
-        world.btech = serde_json::from_value(state).unwrap();
+        world.btech
+            .rewrite_unit_record(id, |record| {
+        *record = serde_json::to_value(unit).unwrap();
+        record["unjam"] = serde_json::json!({"weapon_index":index,"remaining":60});
+        })
+            .unwrap();
         let seed = (0..=255).find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 12).unwrap();
         shot_seed(&mut world, id, seed);
         install_xp_channels(&mut world);

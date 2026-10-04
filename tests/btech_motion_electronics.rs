@@ -1161,9 +1161,12 @@ async fn electronics_modes_fields_damage_and_restart() {
                         },
                     })
                     .unwrap();
-                    let mut state = serde_json::to_value(&world.btech).unwrap();
-                    state["constructed"][id.0.to_string()] = serde_json::to_value(unit).unwrap();
-                    world.btech = serde_json::from_value(state).unwrap();
+                    world
+                        .btech
+                        .rewrite_unit_record(id, |record| {
+                            *record = serde_json::to_value(unit).unwrap();
+                        })
+                        .unwrap();
                     assert!(
                         toggle_battle_electronics(
                             &mut world,

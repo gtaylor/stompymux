@@ -4809,9 +4809,12 @@ async fn lateral_changes_delay_cancel_persist_and_move_without_turning_weapons()
     let mut corrupt = serde_json::to_value(&unit).unwrap();
     corrupt["lateral"]["remaining"] = serde_json::json!(7);
     let mut invalid = scripts.world().clone();
-    let mut encoded = serde_json::to_value(&invalid.btech).unwrap();
-    encoded["constructed"][source.0.to_string()] = corrupt;
-    invalid.btech = serde_json::from_value(encoded).unwrap();
+    invalid
+        .btech
+        .rewrite_unit_record(source, |record| {
+            *record = corrupt;
+        })
+        .unwrap();
     assert!(
         persistence::save(&config.database(), &invalid)
             .await

@@ -167,9 +167,12 @@ async fn artillery_zero_heat_uses_mobile_explosions_after_all_packets() {
             (dice.two_d6() == 9).then_some(initial)
         })
         .unwrap();
-    let mut encoded = serde_json::to_value(&world.btech).unwrap();
-    encoded["vehicles"][ids[0].0.to_string()]["dice"] = serde_json::to_value(initial).unwrap();
-    world.btech = serde_json::from_value(encoded).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(ids[0], |record| {
+            record["dice"] = serde_json::to_value(initial).unwrap();
+        })
+        .unwrap();
     let mut flight = approaching(&mut world, map, BattleArtilleryMode::Standard);
     let report = advance_artillery_flight(&mut world, map, &mut flight, rules())
         .unwrap()

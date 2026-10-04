@@ -310,9 +310,12 @@ async fn interference_is_temporary_but_hardware_team_and_map_loss_disconnect() {
         slot: 10,
     })
     .unwrap();
-    let mut encoded = serde_json::to_value(&world.btech).unwrap();
-    encoded["constructed"][first.0.to_string()] = serde_json::to_value(unit).unwrap();
-    world.btech = serde_json::from_value(encoded).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(first, |record| {
+            *record = serde_json::to_value(unit).unwrap();
+        })
+        .unwrap();
     assert!(battle_c3i_members(&world, first).unwrap().is_empty());
     assert!(battle_c3i_members(&world, units[1].0).unwrap().is_empty());
     assert!(serde_json::to_value(&world.btech).unwrap()["constructed"][first.0.to_string()]["c3i_network"].is_null());
@@ -1242,9 +1245,12 @@ async fn classic_capacity_counts_multiple_computers_and_has_a_twelve_unit_limit(
     })
     .unwrap();
     assert!(unit.c3_operational().unwrap());
-    let mut encoded = serde_json::to_value(&world.btech).unwrap();
-    encoded["constructed"][first.0.to_string()] = serde_json::to_value(&unit).unwrap();
-    world.btech = serde_json::from_value(encoded).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(first, |record| {
+            *record = serde_json::to_value(&unit).unwrap();
+        })
+        .unwrap();
     assert_eq!(battle_c3_members(&world, first).unwrap().len(), 10);
     unit.destroy_critical(CriticalLocation {
         section: BattleSection::RightArm,
@@ -1254,9 +1260,12 @@ async fn classic_capacity_counts_multiple_computers_and_has_a_twelve_unit_limit(
     // An intact slave cannot rescue a chassis whose installed masters all failed.
     assert!(unit.c3_hardware().unwrap().slave_operational);
     assert!(!unit.c3_operational().unwrap());
-    let mut encoded = serde_json::to_value(&world.btech).unwrap();
-    encoded["constructed"][first.0.to_string()] = serde_json::to_value(unit).unwrap();
-    world.btech = serde_json::from_value(encoded).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(first, |record| {
+            *record = serde_json::to_value(unit).unwrap();
+        })
+        .unwrap();
     assert!(battle_c3_members(&world, first).unwrap().is_empty());
     assert_eq!(battle_c3_members(&world, units[1].0).unwrap().len(), 7);
     persistence::save(&config.database(), &world).await.unwrap();
@@ -1393,9 +1402,12 @@ async fn classic_range_has_priority_and_falls_back_to_c3i_only_after_disconnecti
         slot: 2,
     })
     .unwrap();
-    let mut encoded = serde_json::to_value(&world.btech).unwrap();
-    encoded["constructed"][first.0.to_string()] = serde_json::to_value(unit).unwrap();
-    world.btech = serde_json::from_value(encoded).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(first, |record| {
+            *record = serde_json::to_value(unit).unwrap();
+        })
+        .unwrap();
     let damaged = battle_aim_modifiers(&world, first, target, index, 4, aim_rules()).unwrap();
     assert_eq!(
         damaged.network_range.unwrap().kind,
