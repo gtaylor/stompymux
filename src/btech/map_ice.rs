@@ -26,18 +26,15 @@ fn eligible(
     change: BattleIceChange,
     dice: &mut super::BattleDice,
 ) -> Result<bool> {
-    let count = coordinate
-        .neighbors()?
-        .into_iter()
-        .filter_map(|neighbor| {
-            map.base_hex(i64::from(neighbor.x), i64::from(neighbor.y))
-                .ok()
-        })
-        .filter(|tile| match change {
+    let mut count = 0_u8;
+    for neighbor in map.neighbors(coordinate)?.into_iter().flatten() {
+        let tile = map.base_hex(i64::from(neighbor.x), i64::from(neighbor.y))?;
+        let counts = match change {
             BattleIceChange::Grow => tile.is_open_water() || tile.has_bridge(),
             BattleIceChange::Melt => tile.is_ice(),
-        })
-        .count() as u8;
+        };
+        count += u8::from(counts);
+    }
     Ok(match change {
         BattleIceChange::Grow => count <= 4 && (count < 2 || dice.d6() > count),
         BattleIceChange::Melt => count <= 4 || dice.die(3)? == 1,

@@ -106,7 +106,7 @@ fn spread(map: &mut StoredBattleMap, index: u32, replaced: &mut BTreeSet<u32>) -
         x: (i64::from(index) % map.width) as i32,
         y: (i64::from(index) / map.width) as i32,
     };
-    let targets = spread_hexes(map, origin);
+    let targets = spread_hexes(map, origin)?;
     let mut ignite = [false; 4];
     for (slot, threshold) in [9, 11, 11, 12].into_iter().enumerate() {
         let dice = map.fire_dice.as_mut().unwrap();
@@ -153,44 +153,45 @@ fn spread(map: &mut StoredBattleMap, index: u32, replaced: &mut BTreeSet<u32>) -
 }
 
 /// Wind-relative candidate cells, including the second cell directly downwind.
-fn spread_hexes(map: &StoredBattleMap, origin: HexCoordinate) -> [Option<u32>; 4] {
+///
+/// Each row lists, for one wind bearing, the direction of the downwind cell and then the two
+/// side branches, as indexes into [`StoredBattleMap::neighbors`] (clockwise from north). The
+/// rows follow the reference spread table, irregular rows included: north and north-west winds
+/// order their side branches differently on even and odd columns, and a south-west wind's second
+/// side branch is north-east rather than north-west.
+fn spread_hexes(map: &StoredBattleMap, origin: HexCoordinate) -> Result<[Option<u32>; 4]> {
+    const EVEN: [[usize; 3]; 6] = [
+        [0, 5, 1],
+        [1, 0, 2],
+        [2, 1, 3],
+        [3, 2, 4],
+        [4, 3, 1],
+        [5, 0, 4],
+    ];
+    const ODD: [[usize; 3]; 6] = [
+        [0, 1, 5],
+        [1, 0, 2],
+        [2, 1, 3],
+        [3, 2, 4],
+        [4, 3, 1],
+        [5, 4, 0],
+    ];
     let bearing = ((map.wind_direction + 30) / 60 % 6) as usize;
-    let neighbor = |origin: HexCoordinate, branch: usize| {
-        // Column parity determines offset coordinates; branches retain their distinct spread odds.
-        const EVEN: [[(i32, i32); 3]; 6] = [
-            [(0, -1), (-1, 0), (1, 0)],
-            [(1, 0), (0, -1), (1, 1)],
-            [(1, 1), (1, 0), (0, 1)],
-            [(0, 1), (1, 1), (-1, 1)],
-            [(-1, 1), (0, 1), (1, 0)],
-            [(-1, 0), (0, -1), (-1, 1)],
-        ];
-        const ODD: [[(i32, i32); 3]; 6] = [
-            [(0, -1), (1, -1), (-1, -1)],
-            [(1, -1), (0, -1), (1, 0)],
-            [(1, 0), (1, -1), (0, 1)],
-            [(0, 1), (1, 0), (-1, 0)],
-            [(-1, 0), (0, 1), (1, -1)],
-            [(-1, -1), (-1, 0), (0, -1)],
-        ];
-        let (dx, dy) = if origin.x.rem_euclid(2) == 0 {
-            EVEN[bearing][branch]
+    let neighbor = |origin: HexCoordinate, branch: usize| -> Result<Option<HexCoordinate>> {
+        let rows = if origin.x.rem_euclid(2) == 0 {
+            &EVEN
         } else {
-            ODD[bearing][branch]
+            &ODD
         };
-        let x = origin.x + dx;
-        let y = origin.y + dy;
-        (x >= 0 && y >= 0 && i64::from(x) < map.width && i64::from(y) < map.height)
-            .then_some(HexCoordinate { x, y })
+        Ok(map.neighbors(origin)?[rows[bearing][branch]])
     };
-    let first = neighbor(origin, 0);
-    [
-        first,
-        neighbor(origin, 1),
-        neighbor(origin, 2),
-        first.and_then(|first| neighbor(first, 0)),
-    ]
-    .map(|hex| hex.map(|hex| (i64::from(hex.y) * map.width + i64::from(hex.x)) as u32))
+    let first = neighbor(origin, 0)?;
+    let second = match first {
+        Some(first) => neighbor(first, 0)?,
+        None => None,
+    };
+    Ok([first, neighbor(origin, 1)?, neighbor(origin, 2)?, second]
+        .map(|hex| hex.map(|hex| (i64::from(hex.y) * map.width + i64::from(hex.x)) as u32)))
 }
 
 #[cfg(test)]
@@ -209,27 +210,37 @@ mod tests {
         for bearing in [0, 29, 330, 359] {
             map.wind_direction = bearing;
             assert_eq!(
-                spread_hexes(&map, even),
+                spread_hexes(&map, even).unwrap(),
                 [Some(8), Some(13), Some(15), Some(2)]
             );
             assert_eq!(
-                spread_hexes(&map, odd),
+                spread_hexes(&map, odd).unwrap(),
                 [Some(9), Some(10), Some(8), Some(3)]
             );
         }
         map.wind_direction = 30;
         assert_eq!(
-            spread_hexes(&map, even),
+            spread_hexes(&map, even).unwrap(),
             [Some(15), Some(8), Some(21), Some(10)]
         );
         map.wind_direction = 240;
         assert_eq!(
-            spread_hexes(&map, even),
+            spread_hexes(&map, even).unwrap(),
             [Some(19), Some(20), Some(15), Some(18)]
+        );
+        // North-west winds order their side branches differently on odd columns.
+        map.wind_direction = 300;
+        assert_eq!(
+            spread_hexes(&map, even).unwrap(),
+            [Some(13), Some(8), Some(19), Some(6)]
+        );
+        assert_eq!(
+            spread_hexes(&map, odd).unwrap(),
+            [Some(8), Some(14), Some(9), Some(7)]
         );
         map.wind_direction = 0;
         assert_eq!(
-            spread_hexes(&map, HexCoordinate { x: 0, y: 0 }),
+            spread_hexes(&map, HexCoordinate { x: 0, y: 0 }).unwrap(),
             [None, None, Some(1), None]
         );
     }

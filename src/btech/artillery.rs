@@ -243,9 +243,9 @@ impl BattleArtilleryFlight {
             if self.mode != BattleArtilleryMode::Mine {
                 positions.extend(
                     impact
-                        .neighbors()?
+                        .neighbors_within(dimensions.0, dimensions.1)
                         .into_iter()
-                        .filter(|&cell| contains(dimensions, cell))
+                        .flatten()
                         .map(|cell| (cell, false, u16::from(self.weapon.profile().damage / 2))),
                 );
             }

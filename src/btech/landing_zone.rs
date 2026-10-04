@@ -54,14 +54,10 @@ impl StoredBattleMap {
         if !tile.is_open_ground() {
             return Ok(BattleLandingSuitability::ImproperTerrain);
         }
-        for neighbor in coordinate.neighbors()? {
-            if neighbor.x < 0
-                || neighbor.y < 0
-                || i64::from(neighbor.x) >= self.width
-                || i64::from(neighbor.y) >= self.height
-            {
+        for neighbor in self.neighbors(coordinate)? {
+            let Some(neighbor) = neighbor else {
                 return Ok(BattleLandingSuitability::UnevenGround);
-            }
+            };
             if self
                 .base_hex(i64::from(neighbor.x), i64::from(neighbor.y))?
                 .surface_height()

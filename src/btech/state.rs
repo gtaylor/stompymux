@@ -1,5 +1,5 @@
 //! Transactional maps and saved special-object identities, with shared immutable terrain.
-use super::{BattleTemplate, BattleUnit, Hex, MapAsset};
+use super::{BattleTemplate, BattleUnit, Hex, HexCoordinate, MapAsset};
 use crate::{Kind, ObjectId, SharedMap, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -170,6 +170,14 @@ impl StoredBattleMap {
             .get(index)
             .copied()
             .context("Incomplete map terrain")
+    }
+
+    /// The neighbors of `coordinate` indexed by direction clockwise from north, with `None` for
+    /// each direction that leaves the map.
+    pub fn neighbors(&self, coordinate: HexCoordinate) -> Result<[Option<HexCoordinate>; 6]> {
+        let width = u16::try_from(self.width).context("Map width out of range")?;
+        let height = u16::try_from(self.height).context("Map height out of range")?;
+        Ok(coordinate.neighbors_within(width, height))
     }
 
     /// Check the complete decoded map before it can participate in a world transaction.

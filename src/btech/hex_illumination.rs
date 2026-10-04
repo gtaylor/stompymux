@@ -16,14 +16,8 @@ pub fn hex_illuminated(world: &World, map: ObjectId, target: HexCoordinate) -> R
     );
     let record = world.btech.maps().get(&map).context("Map not found")?;
     record.base_hex(i64::from(target.x), i64::from(target.y))?;
-    for coordinate in std::iter::once(target).chain(target.neighbors()?) {
-        if coordinate.x < 0
-            || coordinate.y < 0
-            || i64::from(coordinate.x) >= record.width
-            || i64::from(coordinate.y) >= record.height
-        {
-            continue;
-        }
+    for coordinate in std::iter::once(target).chain(record.neighbors(target)?.into_iter().flatten())
+    {
         if record
             .decoration(coordinate)?
             .is_some_and(|effect| effect.kind == DecorationKind::Fire)
