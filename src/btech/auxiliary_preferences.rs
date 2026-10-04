@@ -54,7 +54,7 @@ pub fn set_bth_debug(
     pilot: ObjectId,
     enabled: bool,
 ) -> Result<()> {
-    super::radio::controlled(world, id, pilot)?;
+    super::power::controlled(world, id, pilot)?;
     storage(world, id)?.bth_debug = enabled;
     Ok(())
 }
@@ -85,7 +85,7 @@ pub fn set_mw_safety(
     pilot: ObjectId,
     enabled: bool,
 ) -> Result<()> {
-    super::radio::controlled(world, id, pilot)?;
+    super::power::controlled(world, id, pilot)?;
     storage(world, id)?.player_killer = !enabled;
     Ok(())
 }

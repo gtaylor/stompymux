@@ -80,12 +80,10 @@ pub(super) fn destination_configured(
         motion != Some(TransferMotionBlockage::Jumping),
         "While in mid-jump? No way."
     );
-    let (position, speed, crew_recovery) = if let Some(unit) = world.btech.vehicles().get(&id) {
-        (unit.position(), unit.motion(), unit.crew_recovery.remaining)
-    } else {
-        let unit = &world.btech.constructed_units()[&id];
-        (unit.position(), unit.motion(), unit.crew_recovery.remaining)
-    };
+    let (position, speed, crew_recovery) =
+        crate::btech::with_unit!(world.btech.unit(id).unwrap(), |unit| {
+            (unit.position(), unit.motion(), unit.crew_recovery.remaining)
+        });
     ensure!(crew_recovery == 0, "You are unconscious");
     if let Some(unit) = world.btech.constructed_units().get(&id) {
         ensure!(

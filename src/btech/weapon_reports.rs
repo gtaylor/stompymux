@@ -384,7 +384,7 @@ pub(super) fn cockpit(
         "Unit construction state is unavailable"
     );
     if require_pilot {
-        super::radio::controlled(&world, id, ctx.player)?;
+        super::power::controlled(&world, id, ctx.player)?;
     }
     Ok(id)
 }

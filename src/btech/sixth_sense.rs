@@ -70,10 +70,9 @@ fn state(world: &World, id: ObjectId) -> Result<&SixthSense> {
 
 /// Mutate an already validated unit without maintaining a separate event registry.
 fn state_mut(world: &mut World, id: ObjectId) -> &mut SixthSense {
-    if world.btech.vehicles().contains_key(&id) {
-        return &mut world.btech.vehicles.get_mut(&id).unwrap().sixth_sense;
-    }
-    &mut world.btech.constructed.get_mut(&id).unwrap().sixth_sense
+    crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
+        &mut unit.sixth_sense
+    })
 }
 
 /// Current material mass includes the same cargo and damage adjustments as movement.

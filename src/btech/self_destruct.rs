@@ -131,10 +131,9 @@ pub(super) fn validate(state: &BtechState) -> Result<()> {
 
 /// Mutable anatomy adapter; no countdown or detonation decisions are duplicated here.
 fn timer_mut(world: &mut World, id: ObjectId) -> &mut Option<BattleSelfDestruct> {
-    if world.btech.vehicles().contains_key(&id) {
-        return &mut world.btech.vehicles.get_mut(&id).unwrap().self_destruct;
-    }
-    &mut world.btech.constructed.get_mut(&id).unwrap().self_destruct
+    crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
+        &mut unit.self_destruct
+    })
 }
 
 /// Largest destructive live bin, retaining canonical order for equal hazards.

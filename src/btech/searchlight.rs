@@ -191,7 +191,7 @@ pub fn toggle_searchlight(
     id: ObjectId,
     pilot: ObjectId,
 ) -> Result<BattleNotice> {
-    super::radio::controlled(world, id, pilot)?;
+    super::power::controlled(world, id, pilot)?;
     super::power::require_running_unit(world, id)?;
     let (lamp, installed) = hardware(world, id).context("Unit is unavailable")?;
     ensure!(installed, "Your 'mech isn't equipped with searchlight!");
@@ -236,7 +236,7 @@ pub fn set_searchlight_mode(
     pilot: ObjectId,
     mode: BattleSearchlightMode,
 ) -> Result<BattleNotice> {
-    super::radio::controlled(world, id, pilot)?;
+    super::power::controlled(world, id, pilot)?;
     let (lamp, installed) = hardware(world, id).context("Unit is unavailable")?;
     ensure!(installed, "Your 'mech isn't equipped with searchlight!");
     ensure!(

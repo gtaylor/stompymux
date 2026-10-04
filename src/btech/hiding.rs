@@ -37,12 +37,9 @@ fn facts(world: &World, id: ObjectId) -> Option<(Option<u16>, bool, bool)> {
 
 /// Mutable timer and signature fields are the only chassis-specific hiding state.
 fn state_mut(world: &mut World, id: ObjectId) -> (&mut Option<u16>, &mut bool) {
-    if world.btech.vehicles().contains_key(&id) {
-        let unit = world.btech.vehicles.get_mut(&id).unwrap();
-        return (&mut unit.hide_elapsed, &mut unit.signature.hidden);
-    }
-    let unit = world.btech.constructed.get_mut(&id).unwrap();
-    (&mut unit.hide_elapsed, &mut unit.signature.hidden)
+    crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
+        (&mut unit.hide_elapsed, &mut unit.signature.hidden)
+    })
 }
 
 /// Begin hiding with wizard authority or installed camouflage, without acquiring any contacts.

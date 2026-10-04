@@ -102,20 +102,13 @@ fn injure_tactical_crew(
     let object = world.objects.get(&id).context("Unit is unavailable")?;
     ensure!(!object.flags.contains(Flag::Going), "Unit is unavailable");
     let character = object.flags.contains(Flag::InCharacter);
-    let (pilot, old_injuries, destroyed) = if let Some(vehicle) = world.btech.vehicles().get(&id) {
-        (
-            vehicle.pilot(),
-            vehicle.pilot_injuries(),
-            vehicle.is_destroyed(),
-        )
-    } else {
-        let unit = world
+    let (pilot, old_injuries, destroyed) = crate::btech::with_unit!(
+        world
             .btech
-            .constructed_units()
-            .get(&id)
-            .context("Unit construction state is unavailable")?;
-        (unit.pilot(), unit.pilot_injuries(), unit.is_destroyed())
-    };
+            .unit(id)
+            .context("Unit construction state is unavailable")?,
+        |unit| { (unit.pilot(), unit.pilot_injuries(), unit.is_destroyed()) }
+    );
     ensure!(
         !character || pilot.is_none(),
         "In-character pilot injury requires character casualty handling"

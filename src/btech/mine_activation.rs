@@ -172,12 +172,9 @@ pub fn mine_activations(
     }
     let tile = map.base_hex(i64::from(position.x), i64::from(position.y))?;
     let surface = i32::from(tile.standing_height());
-    let (elevation, mass) = if let Some(vehicle) = world.btech.vehicles().get(&id) {
-        (vehicle.elevation_level(tile), vehicle.effective_mass()?)
-    } else {
-        let unit = &world.btech.constructed_units()[&id];
+    let (elevation, mass) = crate::btech::with_unit!(world.btech.unit(id).unwrap(), |unit| {
         (unit.elevation_level(tile), unit.effective_mass()?)
-    };
+    });
     // Only active mines reach a unit hovering or flying one level above the surface.
     if elevation > surface + 1 {
         return Ok(Vec::new());

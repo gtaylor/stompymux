@@ -414,6 +414,24 @@ pub fn advance_units(world: &mut World, now: i64) -> Vec<BattleNotice> {
     notices
 }
 
+/// Require the assigned, physically present pilot of either chassis. The checks are
+/// those of [`controlled_unit`] and its vehicle counterpart, which also guard a caller
+/// that handles only one chassis.
+pub(super) fn controlled(world: &World, id: ObjectId, pilot: ObjectId) -> Result<()> {
+    if world.btech.vehicles().contains_key(&id) {
+        return super::vehicle_power::controlled(world, id, pilot);
+    }
+    controlled_unit(world, id, pilot)
+}
+
+/// Admit either chassis while the ground autopilot holds it.
+pub(super) fn autopilot_controlled(world: &World, id: ObjectId) -> Result<()> {
+    if world.btech.vehicles().contains_key(&id) {
+        return autopilot_controlled_vehicle(world, id);
+    }
+    autopilot_controlled_unit(world, id)
+}
+
 /// Require the currently assigned, physically present pilot of an available unit.
 pub(super) fn controlled_unit(world: &World, id: ObjectId, pilot: ObjectId) -> Result<()> {
     controlled_unit_by_actor(

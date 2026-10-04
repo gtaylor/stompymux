@@ -152,10 +152,9 @@ fn state(world: &World, id: ObjectId) -> Result<BattleElectronics> {
 
 /// Borrow common controls while keeping construction-specific storage private.
 fn state_mut(world: &mut World, id: ObjectId) -> &mut BattleElectronics {
-    if world.btech.vehicles().contains_key(&id) {
-        return &mut world.btech.vehicles.get_mut(&id).unwrap().electronics;
-    }
-    &mut world.btech.constructed.get_mut(&id).unwrap().electronics
+    crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
+        &mut unit.electronics
+    })
 }
 
 /// Query construction-specific equipment availability for a common suite.

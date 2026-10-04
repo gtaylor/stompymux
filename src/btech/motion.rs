@@ -465,22 +465,14 @@ fn advance_fall_headings(
             continue;
         }
         let (fall, power, destroyed, motion) =
-            if let Some(unit) = world.btech.constructed_units().get(&id) {
+            crate::btech::with_unit!(world.btech.unit(id).unwrap(), |unit| {
                 (
                     unit.free_fall(),
                     unit.power(),
                     unit.is_destroyed(),
                     unit.motion(),
                 )
-            } else {
-                let unit = &world.btech.vehicles()[&id];
-                (
-                    unit.free_fall(),
-                    unit.power(),
-                    unit.is_destroyed(),
-                    unit.motion(),
-                )
-            };
+            });
         if fall.is_none() || power != BattlePower::Running || destroyed {
             continue;
         }

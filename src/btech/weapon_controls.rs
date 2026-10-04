@@ -11,25 +11,14 @@ pub(super) fn ready_weapon(
     pilot: ObjectId,
     index: usize,
 ) -> Result<BattleWeaponReadiness> {
-    let (ready, feed_jammed) = if let Some(vehicle) = world.btech.vehicles().get(&id) {
-        super::vehicle_power::controlled(world, id, pilot)?;
-        ensure!(
-            vehicle.power() == BattlePower::Running,
-            "Start the unit first"
-        );
-        (
-            vehicle.weapon_readiness(index)?,
-            vehicle.jammed_weapons.contains(&index),
-        )
-    } else {
-        super::power::controlled_unit(world, id, pilot)?;
-        let unit = &world.btech.constructed_units()[&id];
+    let (ready, feed_jammed) = crate::btech::with_unit!(world.btech.unit(id).unwrap(), |unit| {
+        super::power::controlled(world, id, pilot)?;
         ensure!(unit.power() == BattlePower::Running, "Start the unit first");
         (
             unit.weapon_readiness(index)?,
             unit.jammed_weapons.contains(&index),
         )
-    };
+    });
     ensure!(ready.intact, "That weapon has been destroyed");
     ensure!(
         ready.recycle_remaining == 0,

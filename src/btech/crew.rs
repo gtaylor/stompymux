@@ -101,12 +101,9 @@ pub(crate) fn player_moved(world: &mut World, player: ObjectId) {
 
 /// Consciousness includes empty cockpit crew recovery as well as an assigned character.
 pub(super) fn unit_unconscious(world: &World, id: ObjectId) -> bool {
-    let (pilot, remaining) = if let Some(unit) = world.btech.vehicles().get(&id) {
+    let (pilot, remaining) = crate::btech::with_unit!(world.btech.unit(id).unwrap(), |unit| {
         (unit.pilot(), unit.crew_recovery().remaining)
-    } else {
-        let unit = &world.btech.constructed_units()[&id];
-        (unit.pilot(), unit.crew_recovery().remaining)
-    };
+    });
     remaining > 0 || pilot.is_some_and(|pilot| world.btech.unconscious(pilot))
 }
 

@@ -170,18 +170,12 @@ pub(super) fn synchronize_pair(
         .get(&position.map)
         .context("Tow battlefield is unavailable")?
         .hex(i64::from(position.x), i64::from(position.y))?;
-    let (motion, height) = if let Some(unit) = world.btech.vehicles().get(&carrier) {
+    let (motion, height) = crate::btech::with_unit!(world.btech.unit(carrier).unwrap(), |unit| {
         (
             unit.motion().context("Carrier motion is unavailable")?,
             unit.altitude(tile),
         )
-    } else {
-        let unit = &world.btech.constructed_units()[&carrier];
-        (
-            unit.motion().context("Carrier motion is unavailable")?,
-            unit.altitude(tile),
-        )
-    };
+    });
     let carried = super::BattleMotion {
         point: motion.point,
         heading: motion.heading,

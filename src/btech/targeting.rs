@@ -187,16 +187,9 @@ pub(super) fn set_selection(
     selection: Option<BattleTargetSelection>,
 ) {
     super::artillery_adjustment::reset(world, unit);
-    if let Some(vehicle) = world.btech.vehicles.get_mut(&unit) {
-        vehicle.target_lock = selection;
-        return;
-    }
-    world
-        .btech
-        .constructed
-        .get_mut(&unit)
-        .expect("checked unit")
-        .target_lock = selection;
+    crate::btech::with_unit_mut!(world.btech.unit_mut(unit).expect("checked unit"), |unit| {
+        unit.target_lock = selection;
+    })
 }
 
 /// Seconds a newly selected lock takes to settle.

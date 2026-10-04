@@ -177,19 +177,13 @@ pub fn award_battle_value_gunnery_experience(
     }
     let value = |id| -> Result<_> {
         let battle_value = super::battle_value::configured(world, id, request.speed_policy())?;
-        if let Some(unit) = world.btech.vehicles().get(&id) {
-            return Ok((
+        crate::btech::with_unit!(world.btech.unit(id).unwrap(), |unit| {
+            Ok((
                 battle_value,
                 unit.definition().max_speed,
                 unit.experience_settings(),
-            ));
-        }
-        let unit = &world.btech.constructed_units()[&id];
-        Ok((
-            battle_value,
-            unit.definition().max_speed,
-            unit.experience_settings(),
-        ))
+            ))
+        })
     };
     let (source_value, source_speed, source_settings) = value(request.attacker)?;
     let (target_value, target_speed, _) = value(request.target)?;

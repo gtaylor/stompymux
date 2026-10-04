@@ -38,7 +38,7 @@ pub fn send_radio_action(
     scripts.atomic(|_| {
         let (digital, frequency) = {
             let world = scripts.world.borrow();
-            super::radio::controlled(&world, sender, pilot)?;
+            super::power::controlled(&world, sender, pilot)?;
             let unit = super::radio::unit(&world, sender)?;
             ensure!(
                 !unit.is_destroyed(),
