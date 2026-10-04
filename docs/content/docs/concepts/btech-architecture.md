@@ -16,7 +16,7 @@ cost. Neither knows about the world or live units; `src/btech/` re-exports
 their types and layers live state and combat rules on top. Because Rust does
 not allow inherent methods on another crate's types, combat behavior for
 catalogue types is declared as extension traits in `src/btech/`, such as
-`BattleWeaponSalvo` for cluster hits and damage grouping.
+`WeaponSalvo` for cluster hits and damage grouping.
 
 ## State and ownership
 
@@ -183,7 +183,7 @@ command, Lua binding, or server tick.
 
 For durable state, update the `BtechState` or owned map/unit model, its
 validation, and the corresponding `src/persistence/btech_*.rs` adapter. A new
-`BattleUnit` or `BattleVehicle` field must also be listed in its `saved_parts!`
+`Mech` or `Vehicle` field must also be listed in its `saved_parts!`
 classification, which fails to compile until it is: `core` for data that
 changes rarely, `live` for per-tick state with a serde default, or
 `live_always` for per-tick state that is always written. Keep

@@ -104,8 +104,8 @@ pub fn choose_target(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::btech::BattleUnitTemplateExt;
-    use crate::btech::{BattlePosition, autopilot::observations::AutopilotContact};
+    use crate::btech::UnitTemplateExt;
+    use crate::btech::{Position, autopilot::observations::AutopilotContact};
 
     fn reference_choose_target(
         observation: &AutopilotObservation,
@@ -182,7 +182,7 @@ mod tests {
         let map = ObjectId(1);
         let at = |unit, range, friendly| AutopilotContact {
             unit: ObjectId(unit),
-            position: BattlePosition {
+            position: Position {
                 map,
                 x: unit as u16,
                 y: 0,
@@ -202,7 +202,7 @@ mod tests {
             heading: None,
             speed: 0.0,
             own: crate::btech::autopilot::observations::AutopilotOwnReadiness {
-                power: crate::btech::BattlePower::Off,
+                power: crate::btech::Power::Off,
                 maximum_speed: 0.0,
                 heat: None,
                 weapons: vec![],
@@ -213,7 +213,7 @@ mod tests {
         let config = crate::Config::load("tests/fixtures/game").unwrap();
         let mut world = crate::World::default();
         let unit = world.create(&config, "Policy weapon fixture".into(), crate::Kind::Thing);
-        crate::BattleUnitTemplate::parse("JR7-D", include_str!("../../../game/mechs/JR7-D.toml"))
+        crate::UnitTemplate::parse("JR7-D", include_str!("../../../game/mechs/JR7-D.toml"))
             .unwrap()
             .create(&mut world, unit)
             .unwrap();
@@ -277,7 +277,7 @@ mod tests {
         let map = ObjectId(1);
         let at = |unit: i64, range, network_range, relayed| AutopilotContact {
             unit: ObjectId(unit),
-            position: BattlePosition {
+            position: Position {
                 map,
                 x: unit as u16,
                 y: 0,
@@ -293,7 +293,7 @@ mod tests {
         let config = crate::Config::load("tests/fixtures/game").unwrap();
         let mut world = crate::World::default();
         let unit = world.create(&config, "Network policy fixture".into(), crate::Kind::Thing);
-        crate::BattleUnitTemplate::parse("JR7-D", include_str!("../../../game/mechs/JR7-D.toml"))
+        crate::UnitTemplate::parse("JR7-D", include_str!("../../../game/mechs/JR7-D.toml"))
             .unwrap()
             .create(&mut world, unit)
             .unwrap();
@@ -304,7 +304,7 @@ mod tests {
             heading: None,
             speed: 0.0,
             own: crate::btech::autopilot::observations::AutopilotOwnReadiness {
-                power: crate::btech::BattlePower::Running,
+                power: crate::btech::Power::Running,
                 maximum_speed: 0.0,
                 heat: None,
                 weapons: world.btech.constructed_units()[&unit]

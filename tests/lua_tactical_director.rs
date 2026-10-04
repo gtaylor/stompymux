@@ -2,10 +2,9 @@
 use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::{
-    BattleDice, BattlePower, BattleUnitSignature, BattleUnitTemplate, BattleUnitTemplateExt,
-    Config, HeartbeatHarness, Kind, MapAsset, ObjectId, Scripts, World, assign_battle_pilot,
-    create_battle_map, persistence, place_battle_unit, refresh_battle_contacts,
-    set_battle_unit_signature,
+    Config, Dice, HeartbeatHarness, Kind, MapAsset, ObjectId, Power, Scripts, UnitSignature,
+    UnitTemplate, UnitTemplateExt, World, assign_battle_pilot, create_battle_map, persistence,
+    place_battle_unit, refresh_battle_contacts, set_battle_unit_signature,
 };
 
 fn install_tactical_packages(config: &Config) {
@@ -159,7 +158,7 @@ async fn encounter_fixture() -> EncounterFixture {
     for (index, slot) in units.iter_mut().enumerate() {
         let unit = world.create(&config, format!("Tactical friend {index}"), Kind::Thing);
         world.objects.get_mut(&unit).unwrap().home = Some(ObjectId(config.home()));
-        BattleUnitTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml"))
+        UnitTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml"))
             .unwrap()
             .create(&mut world, unit)
             .unwrap();
@@ -170,7 +169,7 @@ async fn encounter_fixture() -> EncounterFixture {
     assign_battle_pilot(&mut world, units[0], ObjectId(1)).unwrap();
     let enemy = world.create(&config, "Tactical local hostile".into(), Kind::Thing);
     world.objects.get_mut(&enemy).unwrap().home = Some(ObjectId(config.home()));
-    BattleUnitTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml"))
+    UnitTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml"))
         .unwrap()
         .create(&mut world, enemy)
         .unwrap();
@@ -180,7 +179,7 @@ async fn encounter_fixture() -> EncounterFixture {
     set_battle_unit_signature(
         &mut world,
         enemy,
-        BattleUnitSignature {
+        UnitSignature {
             team: 1,
             hidden: false,
             illuminated: false,
@@ -194,9 +193,9 @@ async fn encounter_fixture() -> EncounterFixture {
     let mut state = serde_json::to_value(&world.btech).unwrap();
     for (index, unit) in units.into_iter().chain([enemy]).enumerate() {
         state["constructed"][unit.0.to_string()]["dice"] =
-            serde_json::to_value(BattleDice::seeded([index as u8 + 1; 32])).unwrap();
+            serde_json::to_value(Dice::seeded([index as u8 + 1; 32])).unwrap();
         state["constructed"][unit.0.to_string()]["power"] =
-            serde_json::to_value(BattlePower::Running).unwrap();
+            serde_json::to_value(Power::Running).unwrap();
     }
     world.btech = serde_json::from_value(state).unwrap();
     refresh_battle_contacts(&mut world, &units).unwrap();

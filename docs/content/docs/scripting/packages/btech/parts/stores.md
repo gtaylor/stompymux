@@ -21,4 +21,4 @@ btech.parts.stores(target)
 
 ## Returns
 
-- `BattlePartStack[] stores`
+- `PartStack[] stores`

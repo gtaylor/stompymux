@@ -6,7 +6,7 @@ use anyhow::{Context, Result};
 /// One selected mount and its first usable normal-ammunition bin; laser AMS draws no ammunition.
 pub(super) struct Defense {
     pub index: usize,
-    pub weapon: BattleWeapon,
+    pub weapon: Weapon,
     pub bin: Option<usize>,
 }
 
@@ -112,7 +112,7 @@ fn first_defense<L: Copy + Ord>(
         .enumerate()
         .filter(|(index, bin)| {
             bin.weapon == mount.weapon
-                && bin.mode == BattleAmmunitionMode::Normal
+                && bin.mode == AmmunitionMode::Normal
                 && supplied(*index, bin)
         })
         .min_by_key(|(_, bin)| {
@@ -134,7 +134,7 @@ pub(super) fn expend(
     world: &mut World,
     id: ObjectId,
     index: usize,
-    weapon: BattleWeapon,
+    weapon: Weapon,
     bin: Option<usize>,
     rounds: u16,
 ) -> Result<u16> {

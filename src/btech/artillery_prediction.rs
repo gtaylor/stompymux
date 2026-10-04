@@ -1,12 +1,12 @@
 //! Bounded, read-only artillery interception prediction using the live chassis motion proposals.
-use super::{BattleMovementRules, BattleVehicleMovement, HexCoordinate, Point};
+use super::{HexCoordinate, MovementRules, Point, VehicleMovement};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
 
 /// Predicted horizontal impact point; terrain stops freeze the last valid predicted location.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]
-pub struct BattleArtilleryPrediction {
+pub struct ArtilleryPrediction {
     pub coordinate: HexCoordinate,
     pub point: Point,
     pub seconds: u16,
@@ -20,8 +20,8 @@ pub fn predict_artillery_target(
     world: &World,
     shooter: ObjectId,
     target: ObjectId,
-    rules: BattleMovementRules,
-) -> Result<BattleArtilleryPrediction> {
+    rules: MovementRules,
+) -> Result<ArtilleryPrediction> {
     let source = super::scanner::scanner_unit(world, shooter).context("Shooter is unavailable")?;
     let other = super::scanner::scanner_unit(world, target).context("Target is unavailable")?;
     let origin = source.point.context("Shooter is not placed")?;
@@ -52,7 +52,7 @@ pub fn predict_artillery_target(
         .max(10.0) as u16;
     for seconds in 0..=limit {
         if super::artillery::flight_seconds(origin, motion.point)? <= seconds {
-            return Ok(BattleArtilleryPrediction {
+            return Ok(ArtilleryPrediction {
                 coordinate,
                 point: motion.point,
                 seconds,
@@ -92,7 +92,7 @@ pub fn predict_artillery_target(
             let movement = vehicle.map(|unit| unit.definition().movement);
             let elevation = |tile: super::Hex| {
                 let height = tile.surface_height();
-                if movement == Some(BattleVehicleMovement::Hover) {
+                if movement == Some(VehicleMovement::Hover) {
                     height.max(tile.water_line())
                 } else {
                     height
@@ -115,10 +115,10 @@ pub fn predict_artillery_target(
                 || (tile.is_open_water()
                     && matches!(
                         movement,
-                        Some(BattleVehicleMovement::Tracked | BattleVehicleMovement::Wheeled)
+                        Some(VehicleMovement::Tracked | VehicleMovement::Wheeled)
                     ))
                 || floodable
-                || (movement != Some(BattleVehicleMovement::Vtol)
+                || (movement != Some(VehicleMovement::Vtol)
                     && (elevation(tile) - elevation(previous)).abs()
                         > if mech.is_some() { 2 } else { 1 });
             if stopped {

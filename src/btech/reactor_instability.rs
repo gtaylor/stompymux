@@ -1,12 +1,12 @@
 //! Reactor section-loss admission and bounded committed timing, shared by every damage source.
-use super::{BattlePower, BattleUnit};
+use super::{Mech, Power};
 use crate::World;
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 
 /// Global startup grace preserves the zero-initialized reference timestamp without an unbounded clock.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct BattleReactorState {
+pub(crate) struct ReactorState {
     pub(crate) startup_remaining: u8,
     /// Host configuration participates in checkpoints but is not saved as scenario state.
     #[serde(default)]
@@ -15,7 +15,7 @@ pub(crate) struct BattleReactorState {
     pub(crate) punch: bool,
 }
 
-impl Default for BattleReactorState {
+impl Default for ReactorState {
     fn default() -> Self {
         Self {
             startup_remaining: 31,
@@ -25,7 +25,7 @@ impl Default for BattleReactorState {
     }
 }
 
-impl BattleReactorState {
+impl ReactorState {
     /// Thirty elapsed seconds remain eligible; the thirty-first closes the window.
     pub(crate) fn validate(&self) -> Result<()> {
         ensure!(
@@ -36,7 +36,7 @@ impl BattleReactorState {
     }
 }
 
-impl BattleUnit {
+impl Mech {
     /// None uses the initial world startup grace; zero denotes an expired damage window.
     pub fn reactor_instability_remaining(&self) -> Option<u8> {
         self.reactor_instability_remaining
@@ -50,7 +50,7 @@ pub fn configure_battle_reactor_policy(world: &mut World, enabled: bool, punch: 
 }
 
 /// Idle clocks still expire, including while their reactors are stopped.
-pub fn battle_reactor_windows_pending(world: &World) -> bool {
+pub fn reactor_windows_pending(world: &World) -> bool {
     world.btech.reactor.startup_remaining > 0
         || world.btech.constructed_units().values().any(|unit| {
             unit.reactor_instability_remaining
@@ -69,7 +69,7 @@ pub fn advance_battle_reactor_windows(world: &mut World) {
 }
 
 /// Called when section loss reaches three engine losses, with power captured before destruction.
-pub(super) fn triggered(world: &mut World, id: crate::ObjectId, power: BattlePower) -> bool {
+pub(super) fn triggered(world: &mut World, id: crate::ObjectId, power: Power) -> bool {
     if !world.btech.reactor.enabled {
         return false;
     }
@@ -79,19 +79,19 @@ pub(super) fn triggered(world: &mut World, id: crate::ObjectId, power: BattlePow
         return false;
     }
     let roll = unit.dice.generic_roll();
-    roll >= 9 && matches!(power, BattlePower::Running | BattlePower::Starting { .. })
+    roll >= 9 && matches!(power, Power::Running | Power::Starting { .. })
 }
 
 /// Section destruction and flooding share engine-loss admission and blast resolution.
 pub(super) fn section_loss(
     world: &mut World,
     id: crate::ObjectId,
-    power: BattlePower,
+    power: Power,
     previous_hits: u8,
-    rules: super::BattleFallRules,
-) -> Result<Option<super::BattleReactorExplosion>> {
+    rules: super::FallRules,
+) -> Result<Option<super::ReactorExplosion>> {
     if previous_hits >= 3
-        || world.btech.constructed_units()[&id].system_hits(super::BattleSystem::Engine) < 3
+        || world.btech.constructed_units()[&id].system_hits(super::System::Engine) < 3
         || !triggered(world, id, power)
     {
         return Ok(None);

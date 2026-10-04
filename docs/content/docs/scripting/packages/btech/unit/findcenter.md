@@ -22,4 +22,4 @@ btech.unit.findcenter(dbref, pilot)
 
 ## Returns
 
-- `BattleHexCenterReport`
+- `HexCenterReport`

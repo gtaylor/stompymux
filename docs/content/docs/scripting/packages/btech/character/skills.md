@@ -19,4 +19,4 @@ None.
 
 ## Returns
 
-- `BattleSkillDefinition[]`
+- `SkillDefinition[]`

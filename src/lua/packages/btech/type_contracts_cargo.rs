@@ -5,7 +5,7 @@
 //|---Read detached stock in the actor's current location. Requires cargo commands enabled.
 //|---@param actor integer
 //|---@param pattern? string Case-insensitive stock name, numeric part ID, or wildcard pattern.
-//|---@return BattleCargoRow[]
+//|---@return CargoRow[]
 //|function btech_cargo.manifest(actor, pattern) end
 // lua-types-end
 
@@ -13,7 +13,7 @@
 //|---Read hangar stock from a running unit at the configured loading point.
 //|---@param actor integer
 //|---@param pattern? string
-//|---@return BattleCargoRow[]
+//|---@return CargoRow[]
 //|function btech_cargo.stores(actor, pattern) end
 // lua-types-end
 
@@ -24,7 +24,7 @@
 //|---@param actor integer
 //|---@param pattern string
 //|---@param quantity integer Positive request per matched row, capped at 50000 and available stock.
-//|---@return BattleCargoRow[] Transferred quantities.
+//|---@return CargoRow[] Transferred quantities.
 //|function btech_cargo.load(actor, pattern, quantity) end
 // lua-types-end
 
@@ -33,6 +33,6 @@
 //|---@param actor integer
 //|---@param pattern string
 //|---@param quantity integer Positive request per matched row, capped at 50000 and available stock.
-//|---@return BattleCargoRow[] Transferred quantities.
+//|---@return CargoRow[] Transferred quantities.
 //|function btech_cargo.unload(actor, pattern, quantity) end
 // lua-types-end

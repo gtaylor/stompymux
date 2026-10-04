@@ -23,4 +23,4 @@ btech.unit.bootlegger(dbref, player, direction)
 
 ## Returns
 
-- `BattleBootleggerReport`
+- `BootleggerReport`

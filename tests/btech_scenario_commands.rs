@@ -9,7 +9,7 @@ use stompymux_rs::*;
 async fn heat_alias_shares_flamer_control() {
     for template in firing::templates() {
         let (_dir, config, world, _, _, weapon) =
-            firing::fixture_with_target(&template, Some(BattleWeapon::Flamer), &template).await;
+            firing::fixture_with_target(&template, Some(Weapon::Flamer), &template).await;
         for argument in [
             weapon.to_string(),
             format!("{weapon},{weapon}"),
@@ -38,13 +38,12 @@ async fn heat_alias_shares_flamer_control() {
 async fn native_team_control_matches_lua_and_restart() {
     for template in firing::templates() {
         let (_dir, config, mut world, unit, _, _) =
-            firing::fixture_with_target(&template, Some(BattleWeapon::MediumLaser), &template)
-                .await;
+            firing::fixture_with_target(&template, Some(Weapon::MediumLaser), &template).await;
         let visitor = world.create(&config, "Visitor".into(), Kind::Player);
         set_battle_unit_signature(
             &mut world,
             unit,
-            BattleUnitSignature {
+            UnitSignature {
                 team: 9,
                 hidden: true,
                 illuminated: true,
@@ -82,7 +81,7 @@ async fn native_team_control_matches_lua_and_restart() {
                 .unwrap();
             assert_eq!(
                 signature,
-                BattleUnitSignature {
+                UnitSignature {
                     team: team.max(0),
                     hidden: true,
                     illuminated: true

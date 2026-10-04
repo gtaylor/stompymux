@@ -23,4 +23,4 @@ btech.player.contact_options(options, brief_buildings)
 
 ## Returns
 
-- `BattleContactOptions`
+- `ContactOptions`

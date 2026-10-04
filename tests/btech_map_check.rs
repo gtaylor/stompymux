@@ -166,12 +166,12 @@ async fn membership_span_survives_holes_reuse_and_restart() {
         let map = world.btech.units()[&first].map.unwrap();
         for id in [first, middle] {
             firing::edit(&mut world, id, |unit| {
-                unit["power"] = serde_json::to_value(BattlePower::Off).unwrap();
+                unit["power"] = serde_json::to_value(Power::Off).unwrap();
                 unit["target_lock"] = serde_json::Value::Null;
             });
         }
         let last = world.create(&config, "Last member".into(), Kind::Thing);
-        BattleUnitTemplate::parse("test", &template)
+        UnitTemplate::parse("test", &template)
             .unwrap()
             .create(&mut world, last)
             .unwrap();

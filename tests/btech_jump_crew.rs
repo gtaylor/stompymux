@@ -20,10 +20,10 @@ async fn landing_distinguishes_empty_cockpits_from_unconscious_crews() {
                 }
                 if unconscious {
                     let seed = (0..=255)
-                        .find(|&seed| BattleDice::seeded([seed; 32]).two_d6() < 7)
+                        .find(|&seed| Dice::seeded([seed; 32]).two_d6() < 7)
                         .unwrap();
                     let mut saved = serde_json::to_value(&world.btech).unwrap();
-                    let dice = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+                    let dice = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
                     saved["constructed"][unit.0.to_string()]["crew_recovery"]["dice"] =
                         dice.clone();
                     saved["recoveries"]["1"]["dice"] = dice;
@@ -44,9 +44,9 @@ async fn landing_distinguishes_empty_cockpits_from_unconscious_crews() {
                         break;
                     }
                     let notices =
-                        advance_battle_jumps(&mut world, BattleMovementRules::STANDARD).unwrap();
+                        advance_battle_jumps(&mut world, MovementRules::STANDARD).unwrap();
                     let replay =
-                        advance_battle_jumps(&mut restored, BattleMovementRules::STANDARD).unwrap();
+                        advance_battle_jumps(&mut restored, MovementRules::STANDARD).unwrap();
                     assert_eq!(notices, replay);
                     assert_eq!(world.btech, restored.btech);
                     messages.extend(
@@ -58,7 +58,7 @@ async fn landing_distinguishes_empty_cockpits_from_unconscious_crews() {
                 }
                 let mech = &world.btech.constructed_units()[&unit];
                 assert!(mech.flight().is_none());
-                assert_eq!(mech.posture() == BattlePosture::Prone, unconscious);
+                assert_eq!(mech.posture() == Posture::Prone, unconscious);
                 assert_eq!(messages.iter().any(|m| m == "Your lack of conciousness makes you fall to the ground. Not like you can read this anyway."), unconscious);
                 assert_eq!(
                     messages.iter().any(|m| m == "You finish your jump."),

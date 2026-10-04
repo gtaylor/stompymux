@@ -7,10 +7,10 @@ use std::collections::{BTreeMap, BTreeSet};
 
 /// One physical equipment slot. Indices are zero-based; cockpit labels add one.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleCriticalInspection {
+pub struct CriticalInspection {
     pub slot: u8,
     pub equipment: String,
-    pub condition: BattleEquipmentCondition,
+    pub condition: EquipmentCondition,
     pub weapon_index: Option<usize>,
     pub ammunition_index: Option<usize>,
     pub ammunition_remaining: Option<u16>,
@@ -24,10 +24,10 @@ pub struct BattleCriticalInspection {
 
 /// Complete physical slot layout, including empty slots and destroyed sections.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleCriticalReport {
-    pub section: BattleUnitSection,
+pub struct CriticalReport {
+    pub section: UnitSection,
     pub name: String,
-    pub slots: Vec<BattleCriticalInspection>,
+    pub slots: Vec<CriticalInspection>,
 }
 
 /// Material condition supplied by each chassis without repeating equipment interpretation.
@@ -36,7 +36,7 @@ struct SlotDamage {
     destroyed: bool,
     disabled: bool,
     damaged: bool,
-    failure: Option<BattleEquipmentFailure>,
+    failure: Option<EquipmentFailure>,
 }
 
 /// Borrowed equipment shared by Mech and vehicle slot adapters.
@@ -48,22 +48,22 @@ struct Inventory<'a, L> {
     spent: &'a BTreeSet<usize>,
     powered_down: &'a BTreeSet<usize>,
     section_destroyed: bool,
-    failures: &'a BTreeMap<usize, BattleEquipmentFailure>,
+    failures: &'a BTreeMap<usize, EquipmentFailure>,
 }
 
 /// Names whose spelling depends on construction rather than critical-slot data.
 struct ConstructionNames {
     leg: bool,
     double_sinks: bool,
-    engine: BattleEngine,
+    engine: Engine,
     improved_jets: bool,
     small_cockpit: bool,
 }
 
 /// Inspect a section by its cockpit alias, without changing authority, dice or saved equipment.
-pub fn critical_report(world: &World, id: ObjectId, section: &str) -> Result<BattleCriticalReport> {
+pub fn critical_report(world: &World, id: ObjectId, section: &str) -> Result<CriticalReport> {
     if let Some(unit) = world.btech.vehicles().get(&id) {
-        let section = BattleVehicleSection::parse_location(section)
+        let section = VehicleSection::parse_location(section)
             .map_err(|_| anyhow::anyhow!("Invalid section!"))?;
         let layout = unit
             .definition()
@@ -72,7 +72,7 @@ pub fn critical_report(world: &World, id: ObjectId, section: &str) -> Result<Bat
             .filter(|layout| layout.internal > 0)
             .context("Invalid section!")?;
         let loadout = unit.loadout()?;
-        let engine = BattleEngine::display_from_flags(
+        let engine = Engine::display_from_flags(
             unit.definition().has_special("LightEngine_Tech"),
             unit.definition().has_special("CompactEngine_Tech"),
             unit.definition().has_special("XXL_Tech"),
@@ -96,8 +96,8 @@ pub fn critical_report(world: &World, id: ObjectId, section: &str) -> Result<Bat
             section_destroyed: unit.sections()[&section].internal == 0,
             failures: &unit.weapon_failures,
         };
-        return Ok(BattleCriticalReport {
-            section: BattleUnitSection::Vehicle(section),
+        return Ok(CriticalReport {
+            section: UnitSection::Vehicle(section),
             name: section.name().replace('_', " "),
             slots: inspect(
                 &inventory,
@@ -132,11 +132,11 @@ pub fn critical_report(world: &World, id: ObjectId, section: &str) -> Result<Bat
     let names = ConstructionNames {
         leg: unit.chassis().is_leg(section),
         double_sinks: unit.definition().has_double_heat_sinks(),
-        engine: BattleEngine::display_family(&loadout, unit.definition().clan_engine())?,
+        engine: Engine::display_family(&loadout, unit.definition().clan_engine())?,
         improved_jets: unit.definition().has_special("ImprovedJJ_Tech"),
         small_cockpit: unit
             .definition()
-            .has_technology(super::BattleTechnology::SmallCockpit),
+            .has_technology(super::Technology::SmallCockpit),
     };
     let inventory = Inventory {
         definitions: &layout.criticals,
@@ -148,8 +148,8 @@ pub fn critical_report(world: &World, id: ObjectId, section: &str) -> Result<Bat
         section_destroyed: unit.sections()[&section].internal == 0,
         failures: &unit.weapon_failures,
     };
-    Ok(BattleCriticalReport {
-        section: BattleUnitSection::Mech(section),
+    Ok(CriticalReport {
+        section: UnitSection::Mech(section),
         name: unit.chassis().section_name(section).replace('_', " "),
         slots: inspect(
             &inventory,
@@ -176,13 +176,13 @@ fn inspect<L: Copy + PartialEq>(
     count: u8,
     location: impl Fn(u8) -> L,
     damage: impl Fn(L) -> SlotDamage,
-) -> Vec<BattleCriticalInspection> {
+) -> Vec<CriticalInspection> {
     (0..count)
         .map(|slot| {
-            let mut row = BattleCriticalInspection {
+            let mut row = CriticalInspection {
                 slot,
                 equipment: "Empty".into(),
-                condition: BattleEquipmentCondition::Empty,
+                condition: EquipmentCondition::Empty,
                 weapon_index: None,
                 ammunition_index: None,
                 ammunition_remaining: None,
@@ -207,13 +207,12 @@ fn inspect<L: Copy + PartialEq>(
                 .iter()
                 .enumerate()
                 .find(|(_, bin)| bin.location == location);
-            let system = BattleSystem::named(&definition.equipment);
+            let system = System::named(&definition.equipment);
             let proxy = definition.equipment.eq_ignore_ascii_case("SplitCrit_Left")
                 || definition.equipment.eq_ignore_ascii_case("SplitCrit_Right");
             let placeholder = proxy
                 || system.is_some_and(|system| {
-                    system.is_noncritical()
-                        && !matches!(system, BattleSystem::Case | BattleSystem::CaseIi)
+                    system.is_noncritical() && !matches!(system, System::Case | System::CaseIi)
                 });
             let broken = weapon.is_some_and(|(_, mount)| {
                 mount
@@ -224,23 +223,23 @@ fn inspect<L: Copy + PartialEq>(
             row.condition =
                 if (facts.destroyed || broken) && (!placeholder || inventory.section_destroyed) {
                     if facts.destroyed {
-                        BattleEquipmentCondition::Destroyed
+                        EquipmentCondition::Destroyed
                     } else {
-                        BattleEquipmentCondition::Broken
+                        EquipmentCondition::Broken
                     }
                 } else if (facts.disabled
                     || weapon.is_some_and(|(index, _)| inventory.powered_down.contains(&index)))
                     && !facts.destroyed
                 {
-                    BattleEquipmentCondition::Disabled
+                    EquipmentCondition::Disabled
                 } else if facts.damaged {
-                    BattleEquipmentCondition::Damaged
+                    EquipmentCondition::Damaged
                 } else if let Some(failure) = facts.failure.or_else(|| {
                     weapon.and_then(|(index, _)| inventory.failures.get(&index).copied())
                 }) {
                     failure.condition()
                 } else {
-                    BattleEquipmentCondition::Operational
+                    EquipmentCondition::Operational
                 };
             if let Some((index, mount)) = weapon {
                 row.weapon_index = Some(index);
@@ -271,8 +270,7 @@ fn inspect<L: Copy + PartialEq>(
                 || definition.equipment.replace(['_', '.'], " "),
                 |system| names.system_name(system, &definition.equipment),
             );
-            if system == Some(BattleSystem::ArtemisIv)
-                && row.condition == BattleEquipmentCondition::Operational
+            if system == Some(System::ArtemisIv) && row.condition == EquipmentCondition::Operational
             {
                 row.controls_slot = definition.data.parse().ok().filter(|slot| *slot > 0);
             }
@@ -283,8 +281,8 @@ fn inspect<L: Copy + PartialEq>(
 
 impl ConstructionNames {
     /// Render construction-dependent names without persisting a second equipment catalogue.
-    fn system_name(&self, system: BattleSystem, authored: &str) -> String {
-        use BattleSystem::*;
+    fn system_name(&self, system: System, authored: &str) -> String {
+        use System::*;
         match system {
             ShoulderOrHip => if self.leg { "Hip" } else { "Shoulder" }.into(),
             HandOrFootActuator => if self.leg {
@@ -302,11 +300,11 @@ impl ConstructionNames {
             }
             .into(),
             Engine => match self.engine {
-                BattleEngine::Standard => "Engine",
-                BattleEngine::Light => "Engine (Light)",
-                BattleEngine::Xl => "Engine (XL)",
-                BattleEngine::Xxl => "Engine (XXL)",
-                BattleEngine::Compact => "Engine (Compact)",
+                super::Engine::Standard => "Engine",
+                super::Engine::Light => "Engine (Light)",
+                super::Engine::Xl => "Engine (XL)",
+                super::Engine::Xxl => "Engine (XXL)",
+                super::Engine::Compact => "Engine (Compact)",
             }
             .into(),
             JumpJet => if self.improved_jets {
@@ -328,7 +326,7 @@ impl ConstructionNames {
     }
 }
 
-impl BattleCriticalInspection {
+impl CriticalInspection {
     /// One numbered cockpit entry; unavailable bins suppress inventory quantities.
     fn text(&self) -> String {
         let mut text = format!(
@@ -345,7 +343,7 @@ impl BattleCriticalInspection {
         }
         if matches!(
             self.condition,
-            BattleEquipmentCondition::Operational | BattleEquipmentCondition::Damaged
+            EquipmentCondition::Operational | EquipmentCondition::Damaged
         ) {
             if let (Some(remaining), Some(capacity)) =
                 (self.ammunition_remaining, self.ammunition_capacity)
@@ -358,7 +356,7 @@ impl BattleCriticalInspection {
         }
         if !matches!(
             self.condition,
-            BattleEquipmentCondition::Empty | BattleEquipmentCondition::Operational
+            EquipmentCondition::Empty | EquipmentCondition::Operational
         ) {
             text.push_str(&format!(" ({})", self.condition.label()));
         }
@@ -369,11 +367,7 @@ impl BattleCriticalInspection {
 /// Render paired columns in physical slot order, without omitting uninstalled positions.
 pub fn critical_status(world: &World, id: ObjectId, section: &str) -> Result<String> {
     let report = critical_report(world, id, section)?;
-    let rows: Vec<_> = report
-        .slots
-        .iter()
-        .map(BattleCriticalInspection::text)
-        .collect();
+    let rows: Vec<_> = report.slots.iter().map(CriticalInspection::text).collect();
     let half = rows.len() / 2;
     let width = rows[..half].iter().map(String::len).max().unwrap_or(0);
     let mut lines = vec![format!("{} Criticals", report.name)];

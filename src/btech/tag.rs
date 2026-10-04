@@ -6,12 +6,12 @@ use serde::{Deserialize, Serialize};
 
 /// A target with a positive timer is settling; a timer without a target is recycling.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BattleTagState {
+pub struct TagState {
     pub target: Option<ObjectId>,
     pub remaining: u8,
 }
 
-impl BattleTagState {
+impl TagState {
     /// Losing a selected link starts the shared recycle clock; idle systems stay idle.
     pub(super) fn stop(&mut self) -> bool {
         if self.target.take().is_none() {
@@ -32,9 +32,9 @@ impl BattleTagState {
     }
 }
 
-impl BattleUnit {
+impl Mech {
     /// Saved TAG selection and countdown; current geometry is checked separately.
-    pub fn tag(&self) -> BattleTagState {
+    pub fn tag(&self) -> TagState {
         self.tag
     }
 
@@ -49,16 +49,16 @@ impl BattleUnit {
             self.loadout()?
                 .systems
                 .into_iter()
-                .filter(|part| part.system == BattleSystem::Tag)
+                .filter(|part| part.system == System::Tag)
                 .map(|part| !self.critical_unavailable(part.location)),
             self.c3_hardware()?,
         ))
     }
 }
 
-impl BattleVehicle {
+impl Vehicle {
     /// Saved illumination and recycling use the same state as Mech TAG systems.
-    pub fn tag(&self) -> BattleTagState {
+    pub fn tag(&self) -> TagState {
         self.tag
     }
 
@@ -73,7 +73,7 @@ impl BattleVehicle {
             self.loadout()?
                 .systems
                 .into_iter()
-                .filter(|part| part.system == BattleSystem::Tag)
+                .filter(|part| part.system == System::Tag)
                 .map(|part| !self.critical_unavailable(part.location)),
             self.c3_hardware()?,
         ))
@@ -81,7 +81,7 @@ impl BattleVehicle {
 }
 
 /// Losing either installed system disables TAG, including a combined TAG/C3 installation.
-fn hardware(parts: impl Iterator<Item = bool>, computers: BattleC3Hardware) -> (bool, bool) {
+fn hardware(parts: impl Iterator<Item = bool>, computers: C3Hardware) -> (bool, bool) {
     let mut installed = computers.masters > 0;
     let mut operational = computers.masters == 0 || computers.working_masters > 0;
     for working in parts {
@@ -98,23 +98,17 @@ pub(super) fn unit_hardware(world: &World, id: ObjectId) -> Result<(bool, bool)>
 }
 
 /// Read a shared TAG selection without maintaining another owner index.
-pub(super) fn state(world: &World, id: ObjectId) -> Option<BattleTagState> {
+pub(super) fn state(world: &World, id: ObjectId) -> Option<TagState> {
     world
         .btech
         .vehicles()
         .get(&id)
-        .map(BattleVehicle::tag)
-        .or_else(|| {
-            world
-                .btech
-                .constructed_units()
-                .get(&id)
-                .map(BattleUnit::tag)
-        })
+        .map(Vehicle::tag)
+        .or_else(|| world.btech.constructed_units().get(&id).map(Mech::tag))
 }
 
 /// Update one already-resolved participant in the enclosing transaction.
-fn set_state(world: &mut World, id: ObjectId, state: BattleTagState) {
+fn set_state(world: &mut World, id: ObjectId, state: TagState) {
     crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
         unit.tag = state;
     })
@@ -162,7 +156,7 @@ fn link_valid(world: &World, source: ObjectId, target: ObjectId) -> bool {
     let Some(unit) = super::scanner::scanner_unit(world, source) else {
         return false;
     };
-    unit.power == BattlePower::Running
+    unit.power == Power::Running
         && !unit.destroyed
         && unit_hardware(world, source).is_ok_and(|(_, available)| available)
         && unit_range(world, source, target).is_ok_and(|range| range.spatial <= 15.0)
@@ -185,7 +179,7 @@ pub fn select_tag(
     id: ObjectId,
     pilot: ObjectId,
     target: Option<ObjectId>,
-) -> Result<Vec<BattleNotice>> {
+) -> Result<Vec<Notice>> {
     admission(world, id, pilot)?;
     let current = state(world, id).context("Unit is unavailable")?;
     let mut notices = Vec::new();
@@ -197,12 +191,12 @@ pub fn select_tag(
         set_state(
             world,
             id,
-            BattleTagState {
+            TagState {
                 target: None,
                 remaining: 30,
             },
         );
-        notices.push(BattleNotice {
+        notices.push(Notice {
             unit: id,
             text: "Your TAG connection has been broken.".into(),
         });
@@ -240,12 +234,12 @@ pub fn select_tag(
         set_state(
             world,
             other,
-            BattleTagState {
+            TagState {
                 target: None,
                 remaining: 30,
             },
         );
-        notices.push(BattleNotice {
+        notices.push(Notice {
             unit: other,
             text: "Your TAG connection has been broken.".into(),
         });
@@ -253,12 +247,12 @@ pub fn select_tag(
     set_state(
         world,
         id,
-        BattleTagState {
+        TagState {
             target: Some(target),
             remaining: 30,
         },
     );
-    notices.push(BattleNotice {
+    notices.push(Notice {
         unit: id,
         text: format!("You light up {target_name} with your TAG."),
     });
@@ -266,7 +260,7 @@ pub fn select_tag(
 }
 
 /// Advance committed timers and reconcile movement, shutdown, damage, deletion and lost target ownership.
-pub fn advance_tags(world: &mut World) -> Vec<BattleNotice> {
+pub fn advance_tags(world: &mut World) -> Vec<Notice> {
     let updates: Vec<_> = super::scanner::scanner_ids(world)
         .into_iter()
         .filter_map(|id| {
@@ -285,11 +279,11 @@ pub fn advance_tags(world: &mut World) -> Vec<BattleNotice> {
     let mut notices = Vec::new();
     for (id, mut state, valid) in updates {
         if !valid {
-            state = BattleTagState {
+            state = TagState {
                 target: None,
                 remaining: 30,
             };
-            notices.push(BattleNotice {
+            notices.push(Notice {
                 unit: id,
                 text: "Your TAG connection has been broken.".into(),
             });
@@ -298,7 +292,7 @@ pub fn advance_tags(world: &mut World) -> Vec<BattleNotice> {
             if state.remaining == 0
                 && unit_hardware(world, id).is_ok_and(|(_, available)| available)
             {
-                notices.push(BattleNotice {
+                notices.push(Notice {
                     unit: id,
                     text: if state.target.is_some() {
                         "Your TAG system has achieved a stable lock."

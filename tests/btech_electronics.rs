@@ -2,9 +2,9 @@
 use stompymux_rs::*;
 
 /// Install electronic slots in otherwise empty torso positions.
-fn installed(name: &str, slots: u8, clan: bool) -> BattleUnit {
+fn installed(name: &str, slots: u8, clan: bool) -> Mech {
     let mut template =
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     if clan {
         template.attributes.insert("specials".into(), "Clan".into());
         template.heat_sinks = 20;
@@ -14,10 +14,7 @@ fn installed(name: &str, slots: u8, clan: bool) -> BattleUnit {
                 .retain(|_, part| part.equipment != "HeatSink");
         }
     }
-    let torso = template
-        .sections
-        .get_mut(&BattleSection::LeftTorso)
-        .unwrap();
+    let torso = template.sections.get_mut(&MechSection::LeftTorso).unwrap();
     for slot in 2..2 + slots {
         torso.criticals.insert(
             slot,
@@ -28,13 +25,13 @@ fn installed(name: &str, slots: u8, clan: bool) -> BattleUnit {
             },
         );
     }
-    BattleUnit::from_template(template).unwrap()
+    Mech::from_template(template).unwrap()
 }
 
 /// Guardian mass differs by technology; Angel mass is one ton per slot and has no intrinsic defensive BV.
 #[test]
 fn electronics_construction_mass_value_and_damage() {
-    use BattleElectronicSuite::{Angel, Guardian};
+    use ElectronicSuite::{Angel, Guardian};
     for (name, slots, clan, suite, available, mass, bv) in [
         ("Ecm", 1, false, Guardian, true, 768, 0.0),
         ("Ecm", 2, false, Guardian, true, 1536, 85.4),
@@ -45,7 +42,7 @@ fn electronics_construction_mass_value_and_damage() {
     ] {
         let base = installed(name, 0, clan);
         let mut unit = installed(name, slots, clan);
-        assert_eq!(unit.electronics(), BattleElectronics::default());
+        assert_eq!(unit.electronics(), Electronics::default());
         assert_eq!(unit.electronic_suite_available(suite).unwrap(), available);
         assert_eq!(
             unit.mass().unwrap().equipment - base.mass().unwrap().equipment,
@@ -59,7 +56,7 @@ fn electronics_construction_mass_value_and_damage() {
                 < 0.001
         );
         let location = CriticalLocation {
-            section: BattleSection::LeftTorso,
+            section: MechSection::LeftTorso,
             slot: 2,
         };
         unit.destroy_critical(location).unwrap();
@@ -68,8 +65,7 @@ fn electronics_construction_mass_value_and_damage() {
             unit.mass().unwrap().equipment - base.mass().unwrap().equipment,
             mass
         );
-        let restored: BattleUnit =
-            serde_json::from_value(serde_json::to_value(&unit).unwrap()).unwrap();
+        let restored: Mech = serde_json::from_value(serde_json::to_value(&unit).unwrap()).unwrap();
         assert_eq!(restored, unit);
     }
 }

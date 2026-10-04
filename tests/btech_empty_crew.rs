@@ -20,11 +20,8 @@ async fn fixture(vehicle: bool) -> (tempfile::TempDir, Config, World, ObjectId, 
         create_battle_vehicle(
             &mut world,
             id,
-            BattleVehicleTemplate::parse(
-                "Demolisher",
-                include_str!("../game/mechs/Demolisher.toml"),
-            )
-            .unwrap(),
+            VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+                .unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
@@ -32,8 +29,7 @@ async fn fixture(vehicle: bool) -> (tempfile::TempDir, Config, World, ObjectId, 
         create_battle_unit(
             &mut world,
             id,
-            BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
-                .unwrap(),
+            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
@@ -41,20 +37,20 @@ async fn fixture(vehicle: bool) -> (tempfile::TempDir, Config, World, ObjectId, 
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
     let value = (0..=255)
         .find(|value| {
-            let mut dice = BattleDice::seeded([*value; 32]);
+            let mut dice = Dice::seeded([*value; 32]);
             dice.two_d6() < 7 && dice.two_d6() >= 10
         })
         .unwrap();
     let mut saved = serde_json::to_value(&world.btech).unwrap();
     let state = &mut saved[if vehicle { "vehicles" } else { "constructed" }][id.0.to_string()];
-    state["power"] = serde_json::to_value(BattlePower::Running).unwrap();
-    state["crew_recovery"]["dice"] = serde_json::to_value(BattleDice::seeded([value; 32])).unwrap();
+    state["power"] = serde_json::to_value(Power::Running).unwrap();
+    state["crew_recovery"]["dice"] = serde_json::to_value(Dice::seeded([value; 32])).unwrap();
     world.btech = serde_json::from_value(saved).unwrap();
     (dir, config, world, id, value)
 }
 
 /// Inspect the same saved component through either construction's public adapter.
-fn recovery(world: &World, id: ObjectId) -> &BattleRecovery {
+fn recovery(world: &World, id: ObjectId) -> &Recovery {
     if let Some(unit) = world.btech.vehicles().get(&id) {
         return unit.crew_recovery();
     }
@@ -73,7 +69,7 @@ async fn empty_crew_injury_recovery_and_restart_share_player_rules() {
         let injury = injure_battle_tactical_pilot(&mut world, id, 3, false).unwrap();
         let check = injury.consciousness.unwrap();
         assert_eq!(check.target, 7);
-        assert_eq!(check.roll, BattleDice::seeded([value; 32]).two_d6());
+        assert_eq!(check.roll, Dice::seeded([value; 32]).two_d6());
         assert!(!check.conscious);
         assert_eq!(recovery(&world, id).remaining, 30);
         assert_eq!(
@@ -125,7 +121,7 @@ async fn cockpit_assignment_transfers_pending_recovery_and_death_clears_empty_cr
         let death = injure_battle_tactical_pilot(&mut destroyed, id, 6, false).unwrap();
         assert!(death.killed);
         assert_eq!(recovery(&destroyed, id).remaining, 0);
-        assert_eq!(recovery(&destroyed, id).mode, BattleRecoveryMode::Ready);
+        assert_eq!(recovery(&destroyed, id).mode, RecoveryMode::Ready);
         destroyed.validate(&config).unwrap();
         let owned = recovery(&world, id).clone();
         prepare_battle_recovery(&mut world, ObjectId(1)).unwrap();
@@ -139,7 +135,7 @@ async fn cockpit_assignment_transfers_pending_recovery_and_death_clears_empty_cr
             serde_json::to_value(recovery(&world, id)).unwrap()["dice"],
             parked
         );
-        assert_eq!(recovery(&world, id).mode, BattleRecoveryMode::Ready);
+        assert_eq!(recovery(&world, id).mode, RecoveryMode::Ready);
         assert!(world.btech.unconscious(ObjectId(1)));
         assert!(set_battle_speed(&mut world, id, ObjectId(1), 1.0).is_err());
         advance_battle_units(&mut world, 0);
@@ -203,7 +199,7 @@ async fn empty_crew_server_recovery_retries_without_spending_unsaved_dice() {
         injure_battle_tactical_pilot(&mut world,id,3,false).unwrap();
         world.btech
             .rewrite_unit_record(id, |record| {
-        record["power"] = serde_json::to_value(BattlePower::Off).unwrap();
+        record["power"] = serde_json::to_value(Power::Off).unwrap();
         record["crew_recovery"]["remaining"] = 1.into();
         })
             .unwrap();

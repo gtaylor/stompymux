@@ -18,7 +18,7 @@ btech.parts.adjust_stores(target, part, delta)
 | Name | Type | Description |
 | --- | --- | --- |
 | `target` | `DbRef\|Object` | Live object holding stock. |
-| `part` | `BattlePartRef` |  |
+| `part` | `PartRef` |  |
 | `delta` | `integer` |  |
 
 ## Returns

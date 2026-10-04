@@ -1,8 +1,5 @@
 //! Durable stand attempts and retry delays, including water and ice fall consequences.
-use super::{
-    BattleFallReport, BattleFallRules, BattleNotice, BattlePilotingCheck, BattlePosture,
-    BattlePower,
-};
+use super::{FallRules, MechFallReport, Notice, PilotingCheck, Posture, Power};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -10,11 +7,11 @@ use serde::{Deserialize, Serialize};
 /// Successful rises are upright but movement-locked; failed attempts recover while prone.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "state", rename_all = "snake_case")]
-pub enum BattleStandTimer {
+pub enum StandTimer {
     Rising { remaining: u8 },
     Recovering { remaining: u8 },
 }
-impl BattleStandTimer {
+impl StandTimer {
     /// Committed seconds until movement or another attempt is allowed.
     pub fn remaining(self) -> u8 {
         match self {
@@ -25,7 +22,7 @@ impl BattleStandTimer {
 
 /// Normal refuses impossible base targets; anyway overrides that refusal; careful uses -2.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum BattleStandMode {
+pub enum StandMode {
     Normal,
     Anyway,
     Careful,
@@ -49,19 +46,19 @@ impl StandActor {
 /// Fully resolved attempt; the caller stages its fall/injury notices with the world commit.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[must_use = "Stage attempt and fall notices before committing"]
-pub struct BattleStandAttempt {
-    pub check: BattlePilotingCheck,
-    pub fall: Option<BattleFallReport>,
-    pub timer: Option<BattleStandTimer>,
+pub struct StandAttempt {
+    pub check: PilotingCheck,
+    pub fall: Option<MechFallReport>,
+    pub timer: Option<StandTimer>,
     /// Ordered observer, cockpit and damage feedback captured by the attempt transaction.
-    pub notices: Vec<BattleNotice>,
+    pub notices: Vec<Notice>,
     /// Captured private roll feedback interleaved before stand/fall consequences.
-    pub pilot_notices: Vec<super::BattlePilotNotice>,
+    pub pilot_notices: Vec<super::PilotNotice>,
 }
 
-impl super::BattleUnit {
+impl super::Mech {
     /// Current rise/retry countdown, if any.
-    pub fn stand_timer(&self) -> Option<BattleStandTimer> {
+    pub fn stand_timer(&self) -> Option<StandTimer> {
         self.stand_timer
     }
 }
@@ -84,13 +81,10 @@ fn stand_target_by_actor(
         }
     }
     let unit = &world.btech.constructed_units()[&id];
-    ensure!(unit.power() == BattlePower::Running, "Start the unit first");
+    ensure!(unit.power() == Power::Running, "Start the unit first");
     unit.hull_down.require_mobile()?;
     ensure!(!unit.airborne(), "Land before trying to stand");
-    ensure!(
-        unit.posture() == BattlePosture::Prone,
-        "Unit is already standing"
-    );
+    ensure!(unit.posture() == Posture::Prone, "Unit is already standing");
     ensure!(
         unit.stand_timer.is_none(),
         "Still recovering from the last stand attempt"
@@ -108,10 +102,10 @@ pub fn begin_stand(
     world: &mut World,
     id: ObjectId,
     pilot: ObjectId,
-    mode: BattleStandMode,
+    mode: StandMode,
     careful_enabled: bool,
-    rules: BattleFallRules,
-) -> Result<BattleStandAttempt> {
+    rules: FallRules,
+) -> Result<StandAttempt> {
     begin_stand_inner(
         world,
         id,
@@ -129,10 +123,10 @@ pub fn begin_stand(
 pub(crate) fn begin_stand_autopilot(
     world: &mut World,
     id: ObjectId,
-    mode: BattleStandMode,
+    mode: StandMode,
     careful_enabled: bool,
-    rules: BattleFallRules,
-) -> Result<BattleStandAttempt> {
+    rules: FallRules,
+) -> Result<StandAttempt> {
     begin_stand_inner(
         world,
         id,
@@ -149,10 +143,10 @@ pub(super) fn begin_stand_in_action(
     world: &mut World,
     id: ObjectId,
     pilot: ObjectId,
-    mode: BattleStandMode,
+    mode: StandMode,
     careful_enabled: bool,
-    rules: BattleFallRules,
-) -> Result<BattleStandAttempt> {
+    rules: FallRules,
+) -> Result<StandAttempt> {
     begin_stand_inner(
         world,
         id,
@@ -169,18 +163,18 @@ fn begin_stand_inner(
     world: &mut World,
     id: ObjectId,
     actor: StandActor,
-    mode: BattleStandMode,
+    mode: StandMode,
     careful_enabled: bool,
-    rules: BattleFallRules,
+    rules: FallRules,
     character: bool,
-) -> Result<BattleStandAttempt> {
+) -> Result<StandAttempt> {
     let target = stand_target_by_actor(world, id, actor, rules.extended_piloting)?;
     ensure!(
-        mode != BattleStandMode::Careful || careful_enabled,
+        mode != StandMode::Careful || careful_enabled,
         "Careful standing is disabled"
     );
     ensure!(
-        mode == BattleStandMode::Anyway || target <= 12,
+        mode == StandMode::Anyway || target <= 12,
         "You would fail; use stand anyway"
     );
     ensure!(
@@ -190,15 +184,11 @@ fn begin_stand_inner(
     world.attempt(|world| {
         let mut notices = super::broadcast::observer_notices(world, id, "attempts to stand up.");
         let mut pilot_notices = Vec::new();
-        world.btech.constructed.get_mut(&id).unwrap().posture = BattlePosture::Standing;
+        world.btech.constructed.get_mut(&id).unwrap().posture = Posture::Standing;
         let check = super::piloting::roll_standing(
             world,
             id,
-            if mode == BattleStandMode::Careful {
-                -2
-            } else {
-                0
-            },
+            if mode == StandMode::Careful { -2 } else { 0 },
             rules.extended_piloting,
         )?;
         super::piloting::capture_feedback(
@@ -208,7 +198,7 @@ fn begin_stand_inner(
             &mut notices,
             &mut pilot_notices,
         );
-        notices.push(BattleNotice {
+        notices.push(Notice {
             unit: id,
             text: if check.success {
                 "You begin to stand up."
@@ -235,7 +225,7 @@ fn begin_stand_inner(
         } else {
             let base =
                 (30.0 / (unit.movement_maximum_speed() / 21.5).clamp(1.0, 30.0)).floor() as u8;
-            let remaining = if mode == BattleStandMode::Careful {
+            let remaining = if mode == StandMode::Careful {
                 if check.success {
                     base * 2
                 } else {
@@ -245,13 +235,13 @@ fn begin_stand_inner(
                 base
             };
             Some(if check.success {
-                BattleStandTimer::Rising { remaining }
+                StandTimer::Rising { remaining }
             } else {
-                BattleStandTimer::Recovering { remaining }
+                StandTimer::Recovering { remaining }
             })
         };
         unit.stand_timer = timer;
-        Ok(BattleStandAttempt {
+        Ok(StandAttempt {
             check,
             fall,
             timer,
@@ -262,7 +252,7 @@ fn begin_stand_inner(
 }
 
 /// Finish stand/retry events on committed seconds, including while shut down.
-pub fn advance_standing(world: &mut World) -> Vec<BattleNotice> {
+pub fn advance_standing(world: &mut World) -> Vec<Notice> {
     let mut notices = Vec::new();
     let pending: Vec<_> = world
         .btech
@@ -275,25 +265,25 @@ pub fn advance_standing(world: &mut World) -> Vec<BattleNotice> {
         let remaining = timer.remaining() - 1;
         if remaining > 0 {
             unit.stand_timer = Some(match timer {
-                BattleStandTimer::Rising { .. } => BattleStandTimer::Rising { remaining },
-                BattleStandTimer::Recovering { .. } => BattleStandTimer::Recovering { remaining },
+                StandTimer::Rising { .. } => StandTimer::Rising { remaining },
+                StandTimer::Recovering { .. } => StandTimer::Recovering { remaining },
             });
             continue;
         }
         unit.stand_timer = None;
-        if matches!(timer, BattleStandTimer::Rising { .. }) {
+        if matches!(timer, StandTimer::Rising { .. }) {
             notices.extend(
                 super::observer_messages(world, id, "stands up!")
                     .into_iter()
-                    .map(|(unit, text)| BattleNotice { unit, text }),
+                    .map(|(unit, text)| Notice { unit, text }),
             );
         }
 
-        notices.push(BattleNotice {
+        notices.push(Notice {
             unit: id,
             text: (match timer {
-                BattleStandTimer::Rising { .. } => "You have finally finished standing up.",
-                BattleStandTimer::Recovering { .. } => {
+                StandTimer::Rising { .. } => "You have finally finished standing up.",
+                StandTimer::Recovering { .. } => {
                     "You have finally recovered from your attempt to stand."
                 }
             })
@@ -309,8 +299,8 @@ pub(crate) fn configured_stand(
     config: &crate::Config,
     id: ObjectId,
     pilot: ObjectId,
-    mode: BattleStandMode,
-) -> Result<BattleStandAttempt> {
+    mode: StandMode,
+) -> Result<StandAttempt> {
     let settings = &config.battletech;
     let toughness = scripts
         .world
@@ -326,15 +316,15 @@ pub(crate) fn configured_stand(
         pilot,
         mode,
         settings.standcareful != 0,
-        BattleFallRules {
-            vehicle_impact: crate::BattleVehicleImpactRules::configured(settings, false),
-            stacking: crate::BattleStackingRules {
+        FallRules {
+            vehicle_impact: crate::VehicleImpactRules::configured(settings, false),
+            stacking: crate::StackingRules {
                 mode: settings.stacking,
                 damage_percent: settings.stackdamage,
                 hit_arcs: settings.hit_arcs,
             },
-            stagger: super::BattleStaggerMode::from_setting(settings.newstagger),
-            hit: super::BattleHitRules {
+            stagger: super::StaggerMode::from_setting(settings.newstagger),
+            hit: super::HitRules {
                 inferno_penalty: settings.inferno_penalty != 0,
                 exile_stun_mode: settings.exile_stun_code.clamp(0, 2) as u8,
             },

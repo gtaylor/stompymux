@@ -7,21 +7,21 @@ use serde::Serialize;
 /// Sighting retains the ordinary aim breakdown for its actual target kind.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(untagged)]
-pub enum BattleSightAim {
-    Unit(BattleAimModifiers),
-    Hex(BattleHexAimModifiers),
-    Artillery(BattleArtilleryAim),
+pub enum SightAim {
+    Unit(AimModifiers),
+    Hex(HexAimModifiers),
+    Artillery(ArtilleryAim),
 }
 
 /// A completed sighting consumes dice but never launches a weapon or changes its readiness.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct BattleSightReport {
+pub struct SightReport {
     pub shooter: ObjectId,
     pub weapon_index: usize,
-    pub weapon: BattleWeapon,
+    pub weapon: Weapon,
     pub target: Option<ObjectId>,
     pub coordinate: Option<HexCoordinate>,
-    pub aim: BattleSightAim,
+    pub aim: SightAim,
     pub target_number: Option<i32>,
     pub roll: u8,
     pub gatling_roll: Option<u8>,
@@ -36,7 +36,7 @@ pub(super) fn action(
     pilot: ObjectId,
     index: usize,
     request: super::fire_target::FireTargetRequest<'_>,
-) -> Result<BattleSightReport> {
+) -> Result<SightReport> {
     scripts.atomic(|before| {
         let operator = super::combat_operator::admit_running(before, shooter, pilot)?;
         let shooter = operator.source.unit;
@@ -45,9 +45,9 @@ pub(super) fn action(
         candidate.validate_action(config)?;
         *scripts.world.borrow_mut() = candidate;
         let network = match &report.aim {
-            BattleSightAim::Unit(aim) => aim.network_range,
-            BattleSightAim::Hex(aim) => aim.modifiers.network_range,
-            BattleSightAim::Artillery(_) => None,
+            SightAim::Unit(aim) => aim.network_range,
+            SightAim::Hex(aim) => aim.modifiers.network_range,
+            SightAim::Artillery(_) => None,
         };
         if report.target_number.is_some()
             && let Some(source) = network.and_then(|range| range.source)
@@ -146,14 +146,14 @@ fn resolve(
     pilot: ObjectId,
     index: usize,
     request: super::fire_target::FireTargetRequest<'_>,
-) -> Result<BattleSightReport> {
+) -> Result<SightReport> {
     let operator = super::combat_operator::admit_running(world, shooter, pilot)?;
     super::spotter::check_firing_role(world, shooter)?;
     let (mechanics, disabled, mode, mut dice) =
         super::with_unit!(world.btech.unit(shooter).expect("admitted unit"), |unit| {
             (
                 unit.weapon_mechanics(index)?,
-                unit.weapon_failures.get(&index) == Some(&BattleEquipmentFailure::Disabled),
+                unit.weapon_failures.get(&index) == Some(&EquipmentFailure::Disabled),
                 unit.fire_mode(index)?,
                 unit.dice.clone(),
             )
@@ -172,8 +172,8 @@ fn resolve(
     };
     check_busy(world, shooter)?;
     // Sighting still draws preparation intensity, with no supply check or cap.
-    let gatling_roll = (mode == BattleFireMode::Gatling).then(|| dice.d6());
-    let rules = BattleAimRules::configured(&config.battletech);
+    let gatling_roll = (mode == FireMode::Gatling).then(|| dice.d6());
+    let rules = AimRules::configured(&config.battletech);
     let (target, coordinate, aim, number, distance, partial_cover) = match target {
         None => {
             let prepared =
@@ -181,7 +181,7 @@ fn resolve(
             (
                 None,
                 Some(prepared.coordinate),
-                BattleSightAim::Artillery(prepared.aim),
+                SightAim::Artillery(prepared.aim),
                 Some(prepared.aim.target_number).filter(|number| *number <= 900),
                 prepared.distance,
                 false,
@@ -205,14 +205,7 @@ fn resolve(
             ensure!(aim.visible, "Target hex is not visible");
             let number = aim.subtotal();
             let distance = aim.modifiers.distance;
-            (
-                None,
-                Some(hex),
-                BattleSightAim::Hex(aim),
-                number,
-                distance,
-                false,
-            )
+            (None, Some(hex), SightAim::Hex(aim), number, distance, false)
         }
         Some(super::fire_target::ResolvedFireTarget::Unit {
             unit: target,
@@ -246,7 +239,7 @@ fn resolve(
             (
                 Some(target),
                 coordinate,
-                BattleSightAim::Unit(aim),
+                SightAim::Unit(aim),
                 number,
                 distance,
                 partial_cover,
@@ -257,7 +250,7 @@ fn resolve(
     crate::btech::with_unit_mut!(world.btech.unit_mut(shooter).unwrap(), |unit| {
         unit.dice = dice;
     });
-    Ok(BattleSightReport {
+    Ok(SightReport {
         shooter,
         weapon_index: index,
         weapon,
@@ -302,7 +295,7 @@ fn check_bearing(
     targeting: super::fire_target::TargetSource,
     index: usize,
     hex: HexCoordinate,
-    rules: BattleAimRules,
+    rules: AimRules,
 ) -> Result<()> {
     let shooter = targeting.unit;
     let facts = super::scanner::scanner_unit(world, shooter).context("Shooter is unavailable")?;
@@ -330,20 +323,20 @@ fn check_unit_target(
     targeting: super::fire_target::TargetSource,
     target: ObjectId,
     index: usize,
-    weapon: BattleWeapon,
-    rules: BattleAimRules,
+    weapon: Weapon,
+    rules: AimRules,
 ) -> Result<()> {
     let shooter = targeting.unit;
     let source = super::scanner::scanner_unit(world, shooter).context("Shooter is unavailable")?;
     let recipient = super::scanner::scanner_unit(world, target).context("Target is unavailable")?;
     ensure!(!recipient.destroyed, "Unit is destroyed");
-    let coolant = weapon == BattleWeapon::CoolantGun;
+    let coolant = weapon == Weapon::CoolantGun;
     ensure!(shooter != target || coolant, "A unit cannot fire on itself");
     super::fire_target::check_target_safety_for_source(world, targeting, target, weapon)?;
     let ammunition = crate::btech::with_unit!(world.btech.unit(shooter).unwrap(), |unit| {
         unit.ammunition_mode(index)?
     });
-    if ammunition.munition() == BattleAmmunitionMode::Stinger {
+    if ammunition.munition() == AmmunitionMode::Stinger {
         ensure!(
             super::stinger::target_airborne(world, target),
             "Stinger missiles can only engage airborne targets!"
@@ -383,8 +376,8 @@ pub(crate) fn resolve_action(
     shooter: ObjectId,
     pilot: ObjectId,
     index: usize,
-    target: BattleFireTarget,
-) -> Result<BattleSightReport> {
+    target: FireTarget,
+) -> Result<SightReport> {
     action(
         scripts,
         config,

@@ -28,7 +28,7 @@ fn action(scripts: &Scripts, id: ObjectId, pilot: ObjectId, argument: &str) -> R
             } else {
                 "Weapon safeties are [bold][fg=red]OFF[reset]"
             };
-            super::notify_message(scripts, super::BattleMessageTarget::Player(pilot), text)?;
+            super::notify_message(scripts, super::MessageTarget::Player(pilot), text)?;
         }
         Ok(())
     })

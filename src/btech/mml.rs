@@ -1,5 +1,5 @@
 //! Multi-missile launchers share ammunition profiles, controls and combat with other launchers.
-use super::{AmmunitionFeedback, BattleAmmunitionMode};
+use super::{AmmunitionFeedback, AmmunitionMode};
 use crate::{ObjectId, World};
 use anyhow::{Result, ensure};
 
@@ -9,14 +9,14 @@ pub fn toggle_mml_ammunition(
     id: ObjectId,
     pilot: ObjectId,
     index: usize,
-) -> Result<BattleAmmunitionMode> {
+) -> Result<AmmunitionMode> {
     let ready = super::weapon_controls::ready_weapon(world, id, pilot, index)?;
     ensure!(ready.weapon.is_mml(), "That weapon is not an MML launcher!");
     Ok(super::weapon_controls::toggle_ammunition_mode(
         world,
         id,
         index,
-        BattleAmmunitionMode::MmlLrm,
+        AmmunitionMode::MmlLrm,
     ))
 }
 
@@ -33,22 +33,22 @@ pub(crate) fn command(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::btech::BattleWeaponSalvo;
+    use crate::btech::WeaponSalvo;
     use crate::btech::weapon_groups::{WeaponGroupRequest, roll_weapon_groups};
-    use crate::btech::{AmmunitionBin, BattleDice, BattleFireMode, BattleWeapon};
+    use crate::btech::{AmmunitionBin, Dice, FireMode, Weapon};
 
     /// Capacity normalization uses the selected family before half-ton rounding.
     #[test]
     fn bins_size_each_family_and_reject_conflicting_modes() {
         for (weapon, srm, lrm) in [
-            (BattleWeapon::Mml3, 33, 40),
-            (BattleWeapon::Mml5, 20, 24),
-            (BattleWeapon::Mml7, 14, 17),
-            (BattleWeapon::Mml9, 11, 13),
+            (Weapon::Mml3, 33, 40),
+            (Weapon::Mml5, 20, 24),
+            (Weapon::Mml7, 14, 17),
+            (Weapon::Mml9, 11, 13),
         ] {
             for (mode, flags, full) in [
-                (BattleAmmunitionMode::Normal, vec![], srm),
-                (BattleAmmunitionMode::MmlLrm, vec!["MML_LRM".into()], lrm),
+                (AmmunitionMode::Normal, vec![], srm),
+                (AmmunitionMode::MmlLrm, vec!["MML_LRM".into()], lrm),
             ] {
                 assert_eq!(
                     AmmunitionBin::configuration(weapon, &flags).unwrap(),
@@ -60,65 +60,62 @@ mod tests {
                     AmmunitionBin::configuration(weapon, &half).unwrap(),
                     (full / 2, true, mode)
                 );
-                assert_eq!(
-                    BattleAmmunitionMode::initial_selection(weapon, &flags),
-                    mode
-                );
+                assert_eq!(AmmunitionMode::initial_selection(weapon, &flags), mode);
             }
             assert!(
                 AmmunitionBin::configuration(weapon, &["MML_LRM".into(), "Inferno".into()])
                     .is_err()
             );
         }
-        assert!(AmmunitionBin::configuration(BattleWeapon::Lrm5, &["MML_LRM".into()]).is_err());
+        assert!(AmmunitionBin::configuration(Weapon::Lrm5, &["MML_LRM".into()]).is_err());
     }
 
     /// Long-range bins pair the family flag with one LRM-compatible round in either order.
     #[test]
     fn long_range_bins_accept_one_special_round() {
         for (flag, mode) in [
-            ("Artemis/Mine", BattleAmmunitionMode::MmlLrmArtemis),
-            ("Narc/Smoke", BattleAmmunitionMode::MmlLrmNarc),
-            ("Swarm", BattleAmmunitionMode::MmlLrmSwarm),
-            ("Swarm1", BattleAmmunitionMode::MmlLrmSwarm1),
-            ("Sguided", BattleAmmunitionMode::MmlLrmSemiGuided),
-            ("Stinger", BattleAmmunitionMode::MmlLrmStinger),
+            ("Artemis/Mine", AmmunitionMode::MmlLrmArtemis),
+            ("Narc/Smoke", AmmunitionMode::MmlLrmNarc),
+            ("Swarm", AmmunitionMode::MmlLrmSwarm),
+            ("Swarm1", AmmunitionMode::MmlLrmSwarm1),
+            ("Sguided", AmmunitionMode::MmlLrmSemiGuided),
+            ("Stinger", AmmunitionMode::MmlLrmStinger),
         ] {
             for flags in [
                 vec!["MML_LRM".to_string(), flag.into()],
                 vec![flag.into(), "MML_LRM".into()],
             ] {
                 assert_eq!(
-                    AmmunitionBin::configuration(BattleWeapon::Mml5, &flags).unwrap(),
+                    AmmunitionBin::configuration(Weapon::Mml5, &flags).unwrap(),
                     (24, false, mode)
                 );
                 assert_eq!(
-                    BattleAmmunitionMode::initial_selection(BattleWeapon::Mml5, &flags),
+                    AmmunitionMode::initial_selection(Weapon::Mml5, &flags),
                     mode
                 );
             }
             assert!(mode.is_mml_lrm());
             assert_eq!(mode.munition().with_mml_family(true), Some(mode));
-            assert!(mode.supports(BattleWeapon::Mml5));
-            assert!(!mode.supports(BattleWeapon::Lrm5));
+            assert!(mode.supports(Weapon::Mml5));
+            assert!(!mode.supports(Weapon::Lrm5));
             assert!(
-                AmmunitionBin::configuration(BattleWeapon::Lrm5, &["MML_LRM".into(), flag.into()])
+                AmmunitionBin::configuration(Weapon::Lrm5, &["MML_LRM".into(), flag.into()])
                     .is_err()
             );
         }
         // SRM-family MML bins keep SRM rounds and still reject LRM-only guidance.
         assert_eq!(
-            AmmunitionBin::configuration(BattleWeapon::Mml5, &["Artemis/Mine".into()])
+            AmmunitionBin::configuration(Weapon::Mml5, &["Artemis/Mine".into()])
                 .unwrap()
                 .2,
-            BattleAmmunitionMode::Artemis
+            AmmunitionMode::Artemis
         );
         for flag in ["Swarm", "Swarm1", "Sguided", "Stinger"] {
-            assert!(AmmunitionBin::configuration(BattleWeapon::Mml5, &[flag.into()]).is_err());
+            assert!(AmmunitionBin::configuration(Weapon::Mml5, &[flag.into()]).is_err());
         }
         assert!(
             AmmunitionBin::configuration(
-                BattleWeapon::Mml5,
+                Weapon::Mml5,
                 &["MML_LRM".into(), "Swarm".into(), "Artemis/Mine".into()]
             )
             .is_err()
@@ -128,7 +125,7 @@ mod tests {
     /// Family changes keep a round both families carry and drop rounds the other family lacks.
     #[test]
     fn family_combination_rules() {
-        use BattleAmmunitionMode as Mode;
+        use AmmunitionMode as Mode;
         assert_eq!(
             Mode::Artemis.with_mml_family(true),
             Some(Mode::MmlLrmArtemis)
@@ -154,8 +151,8 @@ mod tests {
     /// Long-range special rounds keep LRM damage and grouping; Artemis adds its cluster bonus.
     #[test]
     fn long_range_guidance_uses_lrm_groups() {
-        use BattleAmmunitionMode as Mode;
-        let weapon = BattleWeapon::Mml9;
+        use AmmunitionMode as Mode;
+        let weapon = Weapon::Mml9;
         for roll in 2..=10 {
             assert_eq!(
                 weapon
@@ -180,7 +177,7 @@ mod tests {
                     damage_penalty: 0,
                     weapon,
                     ammunition,
-                    fire_mode: BattleFireMode::Normal,
+                    fire_mode: FireMode::Normal,
                     gatling_damage: None,
                     distance: Some(7.0),
                     glancing: false,
@@ -190,12 +187,12 @@ mod tests {
                     artemis_v: false,
                 };
                 let actual =
-                    roll_weapon_groups(request(mode), &mut BattleDice::seeded([seed; 32])).unwrap();
+                    roll_weapon_groups(request(mode), &mut Dice::seeded([seed; 32])).unwrap();
                 let mut unguided = request(expected);
                 unguided.guidance_blocked = false;
                 unguided.target_beacon = false;
                 let reference =
-                    roll_weapon_groups(unguided, &mut BattleDice::seeded([seed; 32])).unwrap();
+                    roll_weapon_groups(unguided, &mut Dice::seeded([seed; 32])).unwrap();
                 assert_eq!(actual.damage, reference.damage);
                 assert!(actual.damage.iter().all(|damage| (1..=5).contains(damage)));
             }
@@ -205,21 +202,16 @@ mod tests {
     /// Interception removes missiles, not damage points, after shared hotload and glancing rolls.
     #[test]
     fn interception_uses_ammunition_damage_and_preserves_dice() {
-        for weapon in [
-            BattleWeapon::Mml3,
-            BattleWeapon::Mml5,
-            BattleWeapon::Mml7,
-            BattleWeapon::Mml9,
-        ] {
-            for mode in [BattleAmmunitionMode::Normal, BattleAmmunitionMode::MmlLrm] {
-                for fire_mode in [BattleFireMode::Normal, BattleFireMode::Hotload] {
+        for weapon in [Weapon::Mml3, Weapon::Mml5, Weapon::Mml7, Weapon::Mml9] {
+            for mode in [AmmunitionMode::Normal, AmmunitionMode::MmlLrm] {
+                for fire_mode in [FireMode::Normal, FireMode::Hotload] {
                     for glancing in [false, true] {
                         for seed in 0..=255 {
-                            let mut dice = BattleDice::seeded([seed; 32]);
+                            let mut dice = Dice::seeded([seed; 32]);
                             let mut expected = dice.clone();
                             let first = expected.d6();
                             let second = expected.d6();
-                            let roll = if fire_mode == BattleFireMode::Hotload {
+                            let roll = if fire_mode == FireMode::Hotload {
                                 let third = expected.d6();
                                 first + second + third - first.max(second).max(third)
                             } else {

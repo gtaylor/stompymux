@@ -4,31 +4,31 @@ use stompymux_rs::*;
 #[test]
 fn precision_bins_have_half_capacity_without_double_halving() {
     for weapon in [
-        BattleWeapon::Ac2,
-        BattleWeapon::Ac5,
-        BattleWeapon::Ac10,
-        BattleWeapon::Ac20,
-        BattleWeapon::LightAc2,
-        BattleWeapon::LightAc5,
+        Weapon::Ac2,
+        Weapon::Ac5,
+        Weapon::Ac10,
+        Weapon::Ac20,
+        Weapon::LightAc2,
+        Weapon::LightAc5,
     ] {
         for half in [false, true] {
             let mut definition =
-                BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
                     .unwrap();
-            let mut part = definition.sections[&BattleSection::LeftArm].criticals[&2].clone();
+            let mut part = definition.sections[&MechSection::LeftArm].criticals[&2].clone();
             part.equipment = weapon.name().into();
             part.modes = vec!["Precision".into()];
             for slot in 2..2 + weapon.profile().critical_slots {
                 definition
                     .sections
-                    .get_mut(&BattleSection::LeftArm)
+                    .get_mut(&MechSection::LeftArm)
                     .unwrap()
                     .criticals
                     .insert(slot, part.clone());
             }
             let bin = definition
                 .sections
-                .get_mut(&BattleSection::RightTorso)
+                .get_mut(&MechSection::RightTorso)
                 .unwrap()
                 .criticals
                 .get_mut(&0)
@@ -39,7 +39,7 @@ fn precision_bins_have_half_capacity_without_double_halving() {
             if half {
                 bin.modes.push("Halfton".into());
             }
-            let unit = BattleUnit::from_template(definition).unwrap();
+            let unit = Mech::from_template(definition).unwrap();
             let loadout = unit.loadout().unwrap();
             let index = loadout
                 .weapons
@@ -52,7 +52,7 @@ fn precision_bins_have_half_capacity_without_double_halving() {
             assert_eq!(loadout.ammunition[0].half_ton, half);
             assert_eq!(
                 unit.ammunition_mode(index).unwrap(),
-                BattleAmmunitionMode::Precision
+                AmmunitionMode::Precision
             );
             assert_eq!(
                 unit.mass().unwrap().ammunition,
@@ -60,23 +60,23 @@ fn precision_bins_have_half_capacity_without_double_halving() {
             );
             assert_eq!(
                 weapon
-                    .damage_groups_for_ammunition(BattleAmmunitionMode::Precision, None, 1.0)
+                    .damage_groups_for_ammunition(AmmunitionMode::Precision, None, 1.0)
                     .unwrap(),
                 vec![u16::from(weapon.profile().damage)]
             );
             let mut saved = serde_json::to_value(&unit).unwrap();
             saved["ammunition"][0] = 1.into();
-            let restored: BattleUnit = serde_json::from_value(saved).unwrap();
+            let restored: Mech = serde_json::from_value(saved).unwrap();
             assert_eq!(restored.ammunition(), &[1]);
             assert_eq!(
                 restored.ammunition_mode(index).unwrap(),
-                BattleAmmunitionMode::Precision
+                AmmunitionMode::Precision
             );
         }
     }
     assert!(
-        BattleWeapon::UltraAc5
-            .damage_groups_for_ammunition(BattleAmmunitionMode::Precision, None, 1.0)
+        Weapon::UltraAc5
+            .damage_groups_for_ammunition(AmmunitionMode::Precision, None, 1.0)
             .is_err()
     );
 }

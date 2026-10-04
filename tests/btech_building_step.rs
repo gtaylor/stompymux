@@ -38,7 +38,7 @@ async fn ground_entry_reports_live_cf_once_and_replays_after_restart() {
             set_building_state(
                 &mut world,
                 interior,
-                BattleBuildingState {
+                BuildingState {
                     integrity,
                     maximum_integrity: 10,
                     flags,
@@ -52,7 +52,7 @@ async fn ground_entry_reports_live_cf_once_and_replays_after_restart() {
                     &mut world,
                     map,
                     ordinal,
-                    Some(BattleBuildingEntrance {
+                    Some(BuildingEntrance {
                         coordinate: HexCoordinate { x: 0, y: 10 },
                         interior,
                         data_char: 0,
@@ -78,7 +78,7 @@ async fn ground_entry_reports_live_cf_once_and_replays_after_restart() {
                 set_battle_character(
                     &mut world,
                     ObjectId(1),
-                    BattleCharacter {
+                    Character {
                         bruise: 0,
                         lethal: 0,
                         build: 5,
@@ -112,10 +112,8 @@ async fn ground_entry_reports_live_cf_once_and_replays_after_restart() {
             }
             let mut messages = Vec::new();
             for _ in 0..50 {
-                let notices =
-                    advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
-                let replay =
-                    advance_battle_motion(&mut restored, BattleMovementRules::STANDARD).unwrap();
+                let notices = advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
+                let replay = advance_battle_motion(&mut restored, MovementRules::STANDARD).unwrap();
                 assert_eq!(notices, replay);
                 messages.extend(
                     notices
@@ -158,7 +156,7 @@ async fn aircraft_overflight_does_not_report_ground_buildings() {
         &mut world,
         map,
         0,
-        Some(BattleBuildingEntrance {
+        Some(BuildingEntrance {
             coordinate: HexCoordinate { x: 0, y: 10 },
             interior,
             data_char: 0,
@@ -174,7 +172,7 @@ async fn aircraft_overflight_does_not_report_ground_buildings() {
     set_battle_speed(&mut world, id, ObjectId(1), 10.0).unwrap();
     let mut crossed = false;
     for _ in 0..50 {
-        let notices = advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
+        let notices = advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
         assert!(!notices.iter().any(|n| n.text.contains(" has CF of ")));
         crossed |= world.btech.vehicles()[&id].position().unwrap().y == 10;
     }
@@ -210,7 +208,7 @@ async fn interrupted_ground_steps_report_only_accepted_surface_entries() {
                 &mut world,
                 map,
                 0,
-                Some(BattleBuildingEntrance {
+                Some(BuildingEntrance {
                     coordinate: HexCoordinate { x: 0, y: 10 },
                     interior,
                     data_char: 0,
@@ -230,9 +228,8 @@ async fn interrupted_ground_steps_report_only_accepted_surface_entries() {
             set_battle_speed(&mut world, id, ObjectId(1), 10.0).unwrap();
             let mut messages = Vec::new();
             for _ in 0..50 {
-                messages.extend(
-                    advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap(),
-                );
+                messages
+                    .extend(advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap());
             }
             assert!(
                 messages

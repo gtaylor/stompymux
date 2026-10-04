@@ -1,11 +1,11 @@
 //! Live ammunition selection on constructed units, and the cockpit controls that change it.
-use super::{AmmunitionFeedback, BattleAmmunitionMode, BattleUnit};
+use super::{AmmunitionFeedback, AmmunitionMode, Mech};
 use crate::{ObjectId, World};
 use anyhow::{Result, ensure};
 
-impl BattleUnit {
+impl Mech {
     /// Current selected ammunition type; independent of bin inventory and recycle readiness.
-    pub fn ammunition_mode(&self, index: usize) -> Result<BattleAmmunitionMode> {
+    pub fn ammunition_mode(&self, index: usize) -> Result<AmmunitionMode> {
         ensure!(
             index < self.loadout()?.weapons.len(),
             "Weapon index out of bounds"
@@ -24,14 +24,14 @@ pub fn toggle_lbx(
     id: ObjectId,
     pilot: ObjectId,
     index: usize,
-) -> Result<BattleAmmunitionMode> {
+) -> Result<AmmunitionMode> {
     let readiness = super::weapon_controls::ready_weapon(world, id, pilot, index)?;
     ensure!(readiness.weapon.is_lbx(), "That weapon cannot be set LBX!");
     Ok(super::weapon_controls::toggle_ammunition_mode(
         world,
         id,
         index,
-        BattleAmmunitionMode::Cluster,
+        AmmunitionMode::Cluster,
     ))
 }
 
@@ -41,24 +41,21 @@ pub fn toggle_cluster(
     id: ObjectId,
     pilot: ObjectId,
     index: usize,
-) -> Result<BattleAmmunitionMode> {
+) -> Result<AmmunitionMode> {
     let readiness = super::weapon_controls::ready_weapon(world, id, pilot, index)?;
     let current = crate::btech::with_unit!(world.btech.unit(id).unwrap(), |unit| {
         unit.ammunition_mode(index)?
     });
     ensure!(readiness.weapon.is_artillery(), "Invalid weapon type!");
     ensure!(
-        matches!(
-            current,
-            BattleAmmunitionMode::Normal | BattleAmmunitionMode::Cluster
-        ),
+        matches!(current, AmmunitionMode::Normal | AmmunitionMode::Cluster),
         "That weapon has already been set to fire special rounds!"
     );
     Ok(super::weapon_controls::toggle_ammunition_mode(
         world,
         id,
         index,
-        BattleAmmunitionMode::Cluster,
+        AmmunitionMode::Cluster,
     ))
 }
 
@@ -88,7 +85,7 @@ pub fn toggle_artemis(
     id: ObjectId,
     pilot: ObjectId,
     index: usize,
-) -> Result<BattleAmmunitionMode> {
+) -> Result<AmmunitionMode> {
     let readiness = super::weapon_controls::ready_weapon(world, id, pilot, index)?;
     let operational = crate::btech::with_unit!(world.btech.unit(id).unwrap(), |unit| {
         unit.artemis_operational(index)?
@@ -98,19 +95,15 @@ pub fn toggle_artemis(
         "You do not have an Artemis system for that weapon."
     );
     ensure!(
-        super::weapon_controls::selectable_munition(
-            world,
-            id,
-            index,
-            BattleAmmunitionMode::Artemis
-        ) && !readiness.weapon.is_rocket(),
+        super::weapon_controls::selectable_munition(world, id, index, AmmunitionMode::Artemis)
+            && !readiness.weapon.is_rocket(),
         "That weapon cannot be set ARTEMIS!"
     );
     Ok(super::weapon_controls::toggle_ammunition_mode(
         world,
         id,
         index,
-        BattleAmmunitionMode::Artemis,
+        AmmunitionMode::Artemis,
     ))
 }
 

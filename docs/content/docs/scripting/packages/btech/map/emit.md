@@ -19,7 +19,7 @@ btech.map.emit(map, message, options)
 | --- | --- | --- |
 | `map` | `DbRef\|Object` |  |
 | `message` | `string` | One through 8191 bytes; leading spaces are removed. |
-| `options?` | `BattleMapEmitOptions` |  |
+| `options?` | `MapEmitOptions` |  |
 
 ## Returns
 

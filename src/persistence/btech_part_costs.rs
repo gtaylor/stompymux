@@ -51,7 +51,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
         if before.btech.part_costs.get(&id) == after.btech.part_costs.get(&id) {
             continue;
         }
-        let key = crate::BattlePart::from_id(id)
+        let key = crate::Part::from_id(id)
             .context("Invalid part cost identity")?
             .name;
         if let Some(cost) = after.btech.part_costs.get(&id) {

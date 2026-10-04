@@ -21,4 +21,4 @@ btech.unit.battle_value(unit)
 
 ## Returns
 
-- `BattleBattleValue value`
+- `BattleValue value`

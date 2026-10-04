@@ -70,13 +70,13 @@ pub(super) fn detached<T: serde::Serialize + ?Sized>(lua: &Lua, value: &T) -> ml
 }
 
 /// Decode the target grammar shared by direct firing and TIC commands.
-pub(super) fn firing_target(lua: &Lua, value: Value) -> mlua::Result<crate::BattleFireTarget> {
+pub(super) fn firing_target(lua: &Lua, value: Value) -> mlua::Result<crate::FireTarget> {
     match value {
-        Value::Nil => Ok(crate::BattleFireTarget::Selected),
-        Value::Table(_) => Ok(crate::BattleFireTarget::Hex {
+        Value::Nil => Ok(crate::FireTarget::Selected),
+        Value::Table(_) => Ok(crate::FireTarget::Hex {
             coordinate: lua.from_value(value)?,
         }),
-        _ => Ok(crate::BattleFireTarget::Unit {
+        _ => Ok(crate::FireTarget::Unit {
             unit: ObjectId(lua.from_value(value)?),
         }),
     }

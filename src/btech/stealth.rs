@@ -3,18 +3,16 @@ use super::*;
 use crate::{ObjectId, World};
 use anyhow::{Result, ensure};
 
-impl BattleUnit {
+impl Mech {
     /// Saved armor controls; the equipment capability is derived from installed slots.
-    pub fn stealth(&self) -> BattleSignatureState {
+    pub fn stealth(&self) -> SignatureState {
         self.stealth
     }
 
     /// Stealth armor draws on any working ECM suite, Guardian or Angel.
     pub(super) fn stealth_ecm_available(&self) -> Result<bool> {
-        Ok(
-            self.electronic_suite_available(BattleElectronicSuite::Guardian)?
-                || self.electronic_suite_available(BattleElectronicSuite::Angel)?,
-        )
+        Ok(self.electronic_suite_available(ElectronicSuite::Guardian)?
+            || self.electronic_suite_available(ElectronicSuite::Angel)?)
     }
 
     /// Bipeds require an ECM suite and two passive armor slots in each arm, leg and side torso.
@@ -23,19 +21,16 @@ impl BattleUnit {
         Ok(loadout
             .systems
             .iter()
-            .any(|part| matches!(part.system, BattleSystem::Ecm | BattleSystem::AngelEcm))
-            && BattleSection::ALL
+            .any(|part| matches!(part.system, System::Ecm | System::AngelEcm))
+            && MechSection::ALL
                 .into_iter()
-                .filter(|section| {
-                    !matches!(section, BattleSection::Head | BattleSection::CenterTorso)
-                })
+                .filter(|section| !matches!(section, MechSection::Head | MechSection::CenterTorso))
                 .all(|section| {
                     loadout
                         .systems
                         .iter()
                         .filter(|part| {
-                            part.system == BattleSystem::StealthArmor
-                                && part.location.section == section
+                            part.system == System::StealthArmor && part.location.section == section
                         })
                         .count()
                         >= 2
@@ -45,8 +40,7 @@ impl BattleUnit {
     /// Loss of power or ECM equipment clears the active effect without retargeting a pending event.
     pub(super) fn reconcile_stealth(&mut self) {
         if self.stealth.enabled
-            && (self.power() != BattlePower::Running
-                || !self.stealth_ecm_available().unwrap_or(false))
+            && (self.power() != Power::Running || !self.stealth_ecm_available().unwrap_or(false))
         {
             self.stealth.enabled = false;
         }
@@ -55,7 +49,7 @@ impl BattleUnit {
     /// Reject forged active state and invalid saved event countdowns.
     pub(super) fn validate_stealth(&self) -> Result<()> {
         ensure!(
-            self.stealth == BattleSignatureState::default() || self.has_stealth_armor()?,
+            self.stealth == SignatureState::default() || self.has_stealth_armor()?,
             "Stealth state requires complete installed armor and ECM"
         );
         ensure!(
@@ -66,7 +60,7 @@ impl BattleUnit {
         );
         ensure!(
             !self.stealth.enabled
-                || (self.power() == BattlePower::Running && self.stealth_ecm_available()?),
+                || (self.power() == Power::Running && self.stealth_ecm_available()?),
             "Active stealth requires running, working ECM"
         );
         Ok(())
@@ -74,10 +68,10 @@ impl BattleUnit {
 }
 
 /// Request the opposite selection; an existing switch cannot be replaced or accelerated.
-pub fn toggle_stealth(world: &mut World, id: ObjectId, pilot: ObjectId) -> Result<BattleNotice> {
+pub fn toggle_stealth(world: &mut World, id: ObjectId, pilot: ObjectId) -> Result<Notice> {
     super::power::controlled_unit(world, id, pilot)?;
     let unit = &world.btech.constructed_units()[&id];
-    ensure!(unit.power() == BattlePower::Running, "Start the unit first");
+    ensure!(unit.power() == Power::Running, "Start the unit first");
     ensure!(unit.position().is_some(), "Unit is not placed");
     ensure!(
         unit.has_stealth_armor()?,
@@ -98,11 +92,11 @@ pub fn toggle_stealth(world: &mut World, id: ObjectId, pilot: ObjectId) -> Resul
         .get_mut(&id)
         .unwrap()
         .stealth
-        .pending = Some(BattleSignatureTransition {
+        .pending = Some(SignatureTransition {
         enabled,
         remaining: 30,
     });
-    Ok(BattleNotice {
+    Ok(Notice {
         unit: id,
         text: if enabled {
             "Your Stealth Armor system begins to come online."
@@ -114,7 +108,7 @@ pub fn toggle_stealth(world: &mut World, id: ObjectId, pilot: ObjectId) -> Resul
 }
 
 /// Advance saved switches; an unpowered or damaged expiry consumes the event without enabling armor.
-pub fn advance_stealth(world: &mut World) -> Vec<BattleNotice> {
+pub fn advance_stealth(world: &mut World) -> Vec<Notice> {
     if !world
         .btech
         .constructed_units()
@@ -126,9 +120,9 @@ pub fn advance_stealth(world: &mut World) -> Vec<BattleNotice> {
     let mut notices = Vec::new();
     for (&id, unit) in &mut world.btech.constructed {
         let available =
-            unit.power() == BattlePower::Running && unit.stealth_ecm_available().unwrap_or(false);
+            unit.power() == Power::Running && unit.stealth_ecm_available().unwrap_or(false);
         if let Some(enabled) = unit.stealth.advance(available) {
-            notices.push(BattleNotice {
+            notices.push(Notice {
                 unit: id,
                 text: if enabled {
                     "Stealth Armor system engaged!"
@@ -143,18 +137,18 @@ pub fn advance_stealth(world: &mut World) -> Vec<BattleNotice> {
 }
 
 /// Stealth armor's range-bracket penalties.
-pub trait BattleStealthRange {
+pub trait StealthRange {
     /// Stealth raises medium, long and extreme penalties without changing minimum range or reach.
     fn against_stealth(self, enabled: bool) -> Self;
 }
 
-impl BattleStealthRange for BattleWeaponRange {
+impl StealthRange for WeaponRange {
     fn against_stealth(mut self, enabled: bool) -> Self {
         if enabled {
             self.modifier += match self.bracket {
-                BattleRangeBracket::Medium => 1,
-                BattleRangeBracket::Long => 2,
-                BattleRangeBracket::Extreme => 4,
+                RangeBracket::Medium => 1,
+                RangeBracket::Long => 2,
+                RangeBracket::Extreme => 4,
                 _ => 0,
             };
         }

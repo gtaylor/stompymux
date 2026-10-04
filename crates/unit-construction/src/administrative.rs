@@ -1,6 +1,6 @@
 //! Administrative template edits: tonnage, movement and technology codes that override a
 //! template's authored identity without rebuilding its construction.
-use super::{BattleSection, BattleSystem, BattleTemplate, BattleVehicleMovement};
+use super::{MechSection, MechTemplate, System, VehicleMovement};
 use std::collections::BTreeMap;
 
 pub fn administrative_template_tonnage(
@@ -16,15 +16,15 @@ pub fn administrative_template_tonnage(
 /// Apply the optional administrative movement override used by the C template fields.
 ///
 /// The Rust vehicle model currently admits the ground/VTOL movement families represented by
-/// `BattleVehicleMovement`. Other C movement values remain stored verbatim and use the admitted
+/// `VehicleMovement`. Other C movement values remain stored verbatim and use the admitted
 /// template's movement for vehicle-only calculations.
 pub fn administrative_template_movement(
     attributes: &BTreeMap<String, String>,
-    fallback: BattleVehicleMovement,
-) -> BattleVehicleMovement {
+    fallback: VehicleMovement,
+) -> VehicleMovement {
     attributes
         .get("administrative_movement_type")
-        .and_then(|value| BattleVehicleMovement::parse(value).ok())
+        .and_then(|value| VehicleMovement::parse(value).ok())
         .unwrap_or(fallback)
 }
 
@@ -137,11 +137,11 @@ pub fn edit_special(
     );
 }
 
-impl BattleTemplate {
+impl MechTemplate {
     /// The system installed at a section's critical slot, if the slot names one.
-    pub fn system_at(&self, section: BattleSection, slot: u8) -> Option<BattleSystem> {
+    pub fn system_at(&self, section: MechSection, slot: u8) -> Option<System> {
         let critical = self.sections.get(&section)?.criticals.get(&slot)?;
-        BattleSystem::named(&critical.equipment)
+        System::named(&critical.equipment)
     }
 
     /// Whether the installed equipment implies administrative technology `code`, as template
@@ -152,31 +152,31 @@ impl BattleTemplate {
             // and hand actuators from the conventional third and fourth slots.
             6 => {
                 !matches!(
-                    self.system_at(BattleSection::LeftArm, 2),
-                    Some(BattleSystem::LowerActuator)
+                    self.system_at(MechSection::LeftArm, 2),
+                    Some(System::LowerActuator)
                 ) && !matches!(
-                    self.system_at(BattleSection::RightArm, 2),
-                    Some(BattleSystem::LowerActuator)
+                    self.system_at(MechSection::RightArm, 2),
+                    Some(System::LowerActuator)
                 ) && !matches!(
-                    self.system_at(BattleSection::LeftArm, 3),
-                    Some(BattleSystem::HandOrFootActuator)
+                    self.system_at(MechSection::LeftArm, 3),
+                    Some(System::HandOrFootActuator)
                 ) && !matches!(
-                    self.system_at(BattleSection::RightArm, 3),
-                    Some(BattleSystem::HandOrFootActuator)
+                    self.system_at(MechSection::RightArm, 3),
+                    Some(System::HandOrFootActuator)
                 )
             }
             // Fewer than four center-torso engine criticals identify a compact
             // engine, including sparse but valid inspection templates.
             26 => {
                 self.sections
-                    .get(&BattleSection::CenterTorso)
+                    .get(&MechSection::CenterTorso)
                     .map_or(0, |section| {
                         section
                             .criticals
                             .values()
                             .filter(|critical| {
-                                BattleSystem::named(&critical.equipment)
-                                    .is_some_and(|system| system == BattleSystem::Engine)
+                                System::named(&critical.equipment)
+                                    .is_some_and(|system| system == System::Engine)
                             })
                             .count()
                     })

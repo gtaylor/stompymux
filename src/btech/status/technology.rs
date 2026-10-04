@@ -4,7 +4,7 @@ use crate::{ObjectId, World};
 use anyhow::Result;
 
 /// Project installation and physical availability without maintaining display-only state.
-pub(super) fn device(world: &World, id: ObjectId, system: BattleSystem) -> Result<(bool, bool)> {
+pub(super) fn device(world: &World, id: ObjectId, system: System) -> Result<(bool, bool)> {
     crate::btech::with_unit!(world.btech.unit(id).expect("unit record"), |u| {
         let parts = u
             .loadout()?
@@ -31,8 +31,8 @@ pub(super) fn lines(world: &World, id: ObjectId) -> Result<Vec<String>> {
     );
     let mut parts = Vec::new();
     for (system, name, mode) in [
-        (BattleSystem::Ecm, "ECM", electronics.guardian),
-        (BattleSystem::AngelEcm, "AngelECM", electronics.angel),
+        (System::Ecm, "ECM", electronics.guardian),
+        (System::AngelEcm, "AngelECM", electronics.angel),
     ] {
         let (installed, available) = device(world, id, system)?;
         if installed {
@@ -40,21 +40,21 @@ pub(super) fn lines(world: &World, id: ObjectId) -> Result<Vec<String>> {
                 "[fg=red bold]XX[reset]"
             } else {
                 match mode {
-                    BattleElectronicMode::Off => {
+                    ElectronicMode::Off => {
                         if electronics.field.countered {
                             "[fg=red]Off[reset]"
                         } else {
                             "[fg=green]Off[reset]"
                         }
                     }
-                    BattleElectronicMode::Ecm => {
+                    ElectronicMode::Ecm => {
                         if !electronics.field.countered {
                             "[fg=green bold]ECM[reset]"
                         } else {
                             "[fg=red bold]ECM[reset]"
                         }
                     }
-                    BattleElectronicMode::Eccm => "[fg=green bold]ECCM[reset]",
+                    ElectronicMode::Eccm => "[fg=green bold]ECCM[reset]",
                 }
             };
             parts.push(format!("{name}({status})  "));
@@ -64,7 +64,7 @@ pub(super) fn lines(world: &World, id: ObjectId) -> Result<Vec<String>> {
         if u.has_stealth_armor()? {
             parts.push(format!(
                 "SthArmor({})  ",
-                ready(u.stealth().enabled, device(world, id, BattleSystem::Ecm)?.1)
+                ready(u.stealth().enabled, device(world, id, System::Ecm)?.1)
             ));
         }
         if u.has_null_signature()? {
@@ -72,7 +72,7 @@ pub(super) fn lines(world: &World, id: ObjectId) -> Result<Vec<String>> {
                 "NullSigSys({})  ",
                 ready(
                     u.null_signature().enabled,
-                    device(world, id, BattleSystem::NullSignature)?.1
+                    device(world, id, System::NullSignature)?.1
                 )
             ));
         }
@@ -87,7 +87,7 @@ pub(super) fn lines(world: &World, id: ObjectId) -> Result<Vec<String>> {
             } else {
                 "[fg=green]Off[reset]"
             },
-            if !light.destroyed && light.mode == super::super::BattleSearchlightMode::Auto {
+            if !light.destroyed && light.mode == super::super::SearchlightMode::Auto {
                 "/Auto"
             } else {
                 ""
@@ -203,8 +203,8 @@ pub(super) fn lines(world: &World, id: ObjectId) -> Result<Vec<String>> {
         sensors.push("Radar");
     }
     for (system, label) in [
-        (BattleSystem::BeagleProbe, "BeagleProbe"),
-        (BattleSystem::BloodhoundProbe, "BloodhoundProbe"),
+        (System::BeagleProbe, "BeagleProbe"),
+        (System::BloodhoundProbe, "BloodhoundProbe"),
     ] {
         if device(world, id, system)?.0 {
             sensors.push(label);

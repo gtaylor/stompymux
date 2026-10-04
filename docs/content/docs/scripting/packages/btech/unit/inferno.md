@@ -23,4 +23,4 @@ btech.unit.inferno(dbref, pilot, weapon)
 
 ## Returns
 
-- `BattleAmmunitionMode`
+- `AmmunitionMode`

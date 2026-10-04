@@ -9,7 +9,7 @@ async fn fixture(
     observer: &str,
 ) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId, usize) {
     let (dir, config, mut world, source, observer, index) =
-        firing::fixture_with_target(source, Some(BattleWeapon::ClanArrowIv), observer).await;
+        firing::fixture_with_target(source, Some(Weapon::ClanArrowIv), observer).await;
     world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(observer);
     assign_battle_pilot(&mut world, observer, ObjectId(2)).unwrap();
     support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
@@ -128,7 +128,7 @@ async fn repeated_requests_survive_clear_and_shutdown() {
             &mut world,
             source,
             ObjectId(1),
-            BattleFallRules::configured(&config),
+            FallRules::configured(&config),
         )
         .unwrap();
         assert!(pending(&world, source));
@@ -337,18 +337,18 @@ async fn destruction_cancels_connections_for_all_chassis() {
             damage_battle_vehicle_phase(
                 &mut world,
                 source,
-                BattleVehicleSection::Front,
+                VehicleSection::Front,
                 1000,
-                BattleDamagePhase::Internal,
+                DamagePhase::Internal,
             )
             .unwrap();
         } else {
             apply_damage_phase(
                 &mut world,
                 source,
-                BattleSection::CenterTorso,
+                MechSection::CenterTorso,
                 1000,
-                BattleDamagePhase::Internal,
+                DamagePhase::Internal,
             )
             .unwrap();
         }
@@ -413,7 +413,7 @@ async fn simultaneous_requests_keep_insertion_order() {
         let (_dir, config, mut world, source, observer, _) = fixture(&template, &template).await;
         let second = world.create(&config, "Second observer".into(), Kind::Thing);
         world.objects.get_mut(&second).unwrap().home = Some(ObjectId(config.home()));
-        BattleUnitTemplate::parse("test", &template)
+        UnitTemplate::parse("test", &template)
             .unwrap()
             .create(&mut world, second)
             .unwrap();
@@ -421,7 +421,7 @@ async fn simultaneous_requests_keep_insertion_order() {
         let map = world.btech.units()[&source].map.unwrap();
         place_battle_unit(&mut world, second, map, 0, 10).unwrap();
         firing::edit(&mut world, second, |state| {
-            state["power"] = serde_json::to_value(BattlePower::Running).unwrap();
+            state["power"] = serde_json::to_value(Power::Running).unwrap();
             state["spotter"] = second.0.into();
         });
         select_battle_spotter(&mut world, source, ObjectId(1), Some(second)).unwrap();
@@ -448,8 +448,8 @@ async fn server_retries_connection_after_failed_commit() {
         for template in [include_str!("../game/mechs/JR7-D.toml"), include_str!("../game/mechs/Demolisher.toml")] {
             let (_dir, config, mut world, source, observer, _) = fixture(template, template).await;
             select_battle_spotter(&mut world, source, ObjectId(1), Some(observer)).unwrap();
-            stop_battle_unit(&mut world, source, ObjectId(1), BattleFallRules::configured(&config)).unwrap();
-            stop_battle_unit(&mut world, observer, ObjectId(2), BattleFallRules::configured(&config)).unwrap();
+            stop_battle_unit(&mut world, source, ObjectId(1), FallRules::configured(&config)).unwrap();
+            stop_battle_unit(&mut world, observer, ObjectId(2), FallRules::configured(&config)).unwrap();
             assign_battle_pilot(&mut world, source, ObjectId(1)).unwrap();
             support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
             firing::edit(&mut world, source, |state| state["spotter_events"]["events"][0]["remaining"] = 1.into());
@@ -566,8 +566,8 @@ async fn artillery_section_recycling_controls_radio_eligibility() {
     for template in firing::templates().into_iter().take(2) {
         let (_dir, _, world, source, observer, _) = fixture(&template, &template).await;
         for (section, allowed) in [
-            (BattleSection::LeftTorso, false),
-            (BattleSection::RightArm, true),
+            (MechSection::LeftTorso, false),
+            (MechSection::RightArm, true),
         ] {
             let mut candidate = world.clone();
             firing::edit(&mut candidate, source, |state| {

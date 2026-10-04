@@ -22,12 +22,12 @@ const AUTOMATIC: [&str; 7] = [
 /// Independently editable display modes, stored with the unit rather than its pilot.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct BattleBriefSettings {
+pub struct BriefSettings {
     pub contacts: u8,
     pub automatic: u8,
 }
 
-impl Default for BattleBriefSettings {
+impl Default for BriefSettings {
     fn default() -> Self {
         Self {
             contacts: 1,
@@ -36,7 +36,7 @@ impl Default for BattleBriefSettings {
     }
 }
 
-impl BattleBriefSettings {
+impl BriefSettings {
     /// Frame rendered rows; shortest mode deliberately emits no header, footer or empty-list text.
     pub fn frame_contacts(self, rows: &[String]) -> String {
         if self.contacts == 3 {
@@ -69,24 +69,24 @@ impl BattleBriefSettings {
     }
 }
 
-impl super::BattleUnit {
+impl super::Mech {
     /// The unit's durable display choices.
-    pub fn brief_settings(&self) -> BattleBriefSettings {
+    pub fn brief_settings(&self) -> BriefSettings {
         self.brief
     }
 }
 
-impl super::BattleVehicle {
+impl super::Vehicle {
     /// Saved cockpit display and automatic-contact notification choices.
-    pub fn brief_settings(&self) -> BattleBriefSettings {
+    pub fn brief_settings(&self) -> BriefSettings {
         self.brief
     }
 }
 
 /// Shared native/Lua result; query does not notify the cockpit or change state.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleBriefReport {
-    pub settings: BattleBriefSettings,
+pub struct BriefReport {
+    pub settings: BriefSettings,
     pub changed: bool,
     pub text: String,
 }
@@ -98,7 +98,7 @@ pub fn brief(
     unit: ObjectId,
     pilot: ObjectId,
     arguments: &str,
-) -> Result<BattleBriefReport> {
+) -> Result<BriefReport> {
     scripts.atomic(|_| {
         display_access(&scripts.world.borrow(), unit, pilot, true)?;
         let mut settings = {
@@ -110,7 +110,7 @@ pub fn brief(
         };
         let arguments = arguments.trim();
         if arguments.is_empty() {
-            return Ok(BattleBriefReport {
+            return Ok(BriefReport {
                 settings,
                 changed: false,
                 text: format!(
@@ -146,7 +146,7 @@ pub fn brief(
             })
         }
         super::notify_unit_text(scripts, unit, &text)?;
-        Ok(BattleBriefReport {
+        Ok(BriefReport {
             settings,
             changed: true,
             text,

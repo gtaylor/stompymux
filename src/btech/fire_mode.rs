@@ -1,11 +1,11 @@
 //! Live firing modes on constructed units and the cockpit controls that change them.
-use super::{BattleFireMode, BattlePower, BattleUnit, FireModeFeedback};
+use super::{FireMode, FireModeFeedback, Mech, Power};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 
-impl BattleUnit {
+impl Mech {
     /// Current firing mode, distinct from the template's initial equipment flags.
-    pub fn fire_mode(&self, index: usize) -> Result<BattleFireMode> {
+    pub fn fire_mode(&self, index: usize) -> Result<FireMode> {
         ensure!(
             index < self.loadout()?.weapons.len(),
             "Weapon index out of bounds"
@@ -20,7 +20,7 @@ pub fn toggle_flamer_heat(
     id: ObjectId,
     pilot: ObjectId,
     index: usize,
-) -> Result<BattleFireMode> {
+) -> Result<FireMode> {
     let readiness = super::weapon_controls::ready_weapon(world, id, pilot, index)?;
     ensure!(
         readiness.weapon.supports_heat_mode(),
@@ -30,7 +30,7 @@ pub fn toggle_flamer_heat(
         world,
         id,
         index,
-        BattleFireMode::Heat,
+        FireMode::Heat,
     ))
 }
 
@@ -96,7 +96,7 @@ pub(super) fn selected_command(
             let world = ctx.scripts.world.borrow();
             crate::btech::with_unit!(world.btech.unit(id).unwrap(), |unit| {
                 super::power::controlled(&world, id, ctx.player)?;
-                ensure!(unit.power() == BattlePower::Running, "Start the unit first");
+                ensure!(unit.power() == Power::Running, "Start the unit first");
                 unit.loadout()?.weapons.len()
             })
         };
@@ -146,7 +146,7 @@ pub fn toggle_hotload(
     id: ObjectId,
     pilot: ObjectId,
     index: usize,
-) -> Result<BattleFireMode> {
+) -> Result<FireMode> {
     let ready = super::weapon_controls::ready_weapon(world, id, pilot, index)?;
     ensure!(
         ready.weapon.supports_hotload(),
@@ -156,7 +156,7 @@ pub fn toggle_hotload(
         world,
         id,
         index,
-        BattleFireMode::Hotload,
+        FireMode::Hotload,
     ))
 }
 
@@ -170,9 +170,9 @@ pub(crate) fn hotload_command(
     })
 }
 
-impl BattleUnit {
+impl Mech {
     /// Select the firing behavior a supply check permits; the firing transaction persists fallback.
-    pub(super) fn effective_fire_mode(&self, index: usize) -> Result<BattleFireMode> {
+    pub(super) fn effective_fire_mode(&self, index: usize) -> Result<FireMode> {
         let loadout = self.loadout()?;
         self.effective_fire_mode_with_loadout(&loadout, index)
     }
@@ -180,9 +180,9 @@ impl BattleUnit {
     /// Preserve live supply fallback while sharing this immutable equipment projection.
     pub(crate) fn effective_fire_mode_with_loadout(
         &self,
-        loadout: &super::BattleLoadout,
+        loadout: &super::MechLoadout,
         index: usize,
-    ) -> Result<BattleFireMode> {
+    ) -> Result<FireMode> {
         ensure!(index < loadout.weapons.len(), "Weapon index out of bounds");
         effective_mode(
             self.fire_modes.get(&index).copied().unwrap_or_default(),
@@ -193,16 +193,16 @@ impl BattleUnit {
 
 /// Resolve burst fallback through the caller's unit-specific inventory query.
 pub(super) fn effective_mode(
-    mode: BattleFireMode,
-    feed: impl FnOnce(u16) -> Result<Vec<super::BattleAmmunitionDraw>>,
-) -> Result<BattleFireMode> {
+    mode: FireMode,
+    feed: impl FnOnce(u16) -> Result<Vec<super::AmmunitionDraw>>,
+) -> Result<FireMode> {
     let requested = mode.rounds_per_cycle();
     if requested == 1 {
         return Ok(mode);
     }
     let available: u16 = feed(requested)?.iter().map(|draw| draw.rounds).sum();
     Ok(if available < requested {
-        BattleFireMode::Normal
+        FireMode::Normal
     } else {
         mode
     })

@@ -21,8 +21,8 @@ pub(crate) fn report(
     let selected = source
         .selection(&world)
         .and_then(|selection| match selection {
-            super::BattleTargetSelection::Unit(lock) => Some(lock.target),
-            super::BattleTargetSelection::Hex(_) => None,
+            super::TargetSelection::Unit(lock) => Some(lock.target),
+            super::TargetSelection::Hex(_) => None,
         });
     let observer = super::scanner::scanner_unit(&world, unit)
         .context("Unit construction state is unavailable")?;

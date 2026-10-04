@@ -1,12 +1,12 @@
 //! Saved character values and skill-target arithmetic, independent of experience awards.
-use super::BattleCharacter;
+use super::Character;
 use crate::{Kind, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 
 /// A saved skill/advantage value; experience contains a low 24-bit XP balance and earned levels above it.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BattleCharacterValue {
+pub struct CharacterValue {
     pub value: u8,
     pub experience: u32,
     pub last_used: i64,
@@ -15,14 +15,14 @@ pub struct BattleCharacterValue {
 /// Attribute pairing used by the skill catalog.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleSkillCategory {
+pub enum SkillCategory {
     Athletic,
     Physical,
     Mental,
     Social,
 }
 
-impl BattleCharacterValue {
+impl CharacterValue {
     /// Skill level after applying the persisted earned-level bonus; does not award experience.
     pub fn effective_skill(self) -> u16 {
         u16::from(self.value) + (self.experience / 16_777_216) as u16
@@ -34,14 +34,14 @@ impl BattleCharacterValue {
     }
 }
 
-impl BattleCharacter {
+impl Character {
     /// Derive a skill's unmodified target from its category and effective level.
-    pub fn skill_target(self, category: BattleSkillCategory, skill: BattleCharacterValue) -> i16 {
+    pub fn skill_target(self, category: SkillCategory, skill: CharacterValue) -> i16 {
         let (first, second) = match category {
-            BattleSkillCategory::Athletic => (self.build, self.reflexes),
-            BattleSkillCategory::Physical => (self.reflexes, self.intuition),
-            BattleSkillCategory::Mental => (self.intuition, self.learn),
-            BattleSkillCategory::Social => (self.intuition, self.charisma),
+            SkillCategory::Athletic => (self.build, self.reflexes),
+            SkillCategory::Physical => (self.reflexes, self.intuition),
+            SkillCategory::Mental => (self.intuition, self.learn),
+            SkillCategory::Social => (self.intuition, self.charisma),
         };
         18 - i16::from(first) - i16::from(second) - skill.effective_skill() as i16
     }
@@ -49,7 +49,7 @@ impl BattleCharacter {
 
 /// Resolve actual player perception; absent character data has zero attributes and skill, target 18.
 pub fn perception_target(world: &World, player: ObjectId) -> Result<i16> {
-    character_skill_target(world, player, "Perception", BattleSkillCategory::Mental)
+    character_skill_target(world, player, "Perception", SkillCategory::Mental)
 }
 
 /// Resolve a known catalog skill without modifying its experience or last-use metadata.
@@ -57,7 +57,7 @@ pub(super) fn character_skill_target(
     world: &World,
     player: ObjectId,
     name: &str,
-    category: BattleSkillCategory,
+    category: SkillCategory,
 ) -> Result<i16> {
     ensure!(
         world
@@ -84,7 +84,7 @@ pub fn set_character_value(
     world: &mut World,
     player: ObjectId,
     name: &str,
-    value: BattleCharacterValue,
+    value: CharacterValue,
 ) -> Result<()> {
     ensure!(
         world
@@ -114,14 +114,14 @@ pub fn set_character_value(
 pub fn gunnery_target(
     world: &World,
     player: ObjectId,
-    weapon: super::BattleWeapon,
+    weapon: super::Weapon,
     extended: bool,
 ) -> Result<i16> {
     character_skill_target(
         world,
         player,
         weapon.gunnery_skill(extended),
-        BattleSkillCategory::Physical,
+        SkillCategory::Physical,
     )
 }
 
@@ -142,7 +142,7 @@ pub(super) fn installed_weapon(
     world: &World,
     unit: ObjectId,
     weapon_index: usize,
-) -> Result<super::BattleWeapon> {
+) -> Result<super::Weapon> {
     Ok(crate::btech::with_unit!(
         world
             .btech
@@ -162,7 +162,7 @@ pub(super) fn installed_weapon(
 pub(super) fn unit_weapon_gunnery_target(
     world: &World,
     unit: ObjectId,
-    weapon: super::BattleWeapon,
+    weapon: super::Weapon,
     extended: bool,
 ) -> Result<i16> {
     operator_weapon_gunnery_target(world, unit, weapon, active_pilot(world, unit)?, extended)
@@ -172,7 +172,7 @@ pub(super) fn unit_weapon_gunnery_target(
 pub(super) fn operator_weapon_gunnery_target(
     world: &World,
     unit: ObjectId,
-    weapon: super::BattleWeapon,
+    weapon: super::Weapon,
     operator: Option<ObjectId>,
     extended: bool,
 ) -> Result<i16> {
@@ -183,7 +183,7 @@ pub(super) fn operator_weapon_gunnery_target(
         world,
         operator,
         unit_gunnery_skill(world, unit, weapon, extended),
-        BattleSkillCategory::Physical,
+        SkillCategory::Physical,
     )
 }
 
@@ -191,7 +191,7 @@ pub(super) fn operator_weapon_gunnery_target(
 pub(super) fn unit_gunnery_skill(
     world: &World,
     unit: ObjectId,
-    weapon: super::BattleWeapon,
+    weapon: super::Weapon,
     extended: bool,
 ) -> &'static str {
     if !extended {
@@ -221,7 +221,7 @@ pub(super) fn operator_artillery_gunnery_target(
         world,
         operator,
         "Gunnery-Artillery",
-        BattleSkillCategory::Physical,
+        SkillCategory::Physical,
     )
 }
 
@@ -230,12 +230,7 @@ pub(super) fn unit_spotting_target(world: &World, unit: ObjectId) -> Result<i16>
     let Some(pilot) = active_pilot(world, unit)? else {
         return Ok(8);
     };
-    character_skill_target(
-        world,
-        pilot,
-        "Gunnery-Spotting",
-        BattleSkillCategory::Physical,
-    )
+    character_skill_target(world, pilot, "Gunnery-Spotting", SkillCategory::Physical)
 }
 
 /// Present connected player crew for ordinary conventional unit skill lookup.
@@ -269,7 +264,7 @@ pub fn unit_piloting_target(world: &World, unit: ObjectId, extended: bool) -> Re
     let Some(pilot) = active_pilot(world, unit)? else {
         return Ok(6);
     };
-    character_skill_target(world, pilot, skill, BattleSkillCategory::Physical)
+    character_skill_target(world, pilot, skill, SkillCategory::Physical)
 }
 
 /// Control checks include the chassis advantage, unlike raw attack and valuation skill inputs.
@@ -298,12 +293,12 @@ mod anatomy_tests {
     /// Default raw skill stays six; only control checks receive the quad advantage.
     #[test]
     fn control_bonus_does_not_change_raw_attack_or_valuation_skill() {
-        let template = super::super::BattleTemplate::parse(
+        let template = super::super::MechTemplate::parse(
             "JR7-D",
             include_str!("../../tests/fixtures/btech/mechs/JR7-D.toml"),
         )
         .unwrap();
-        let unit = super::super::BattleUnit::from_template(template).unwrap();
+        let unit = super::super::Mech::from_template(template).unwrap();
         for (chassis, expected) in [("Biped", 6), ("Quad", 4)] {
             // Exercise skill selection independently independently of live world validation.
             let mut encoded = serde_json::to_value(&unit).unwrap();

@@ -1,7 +1,5 @@
 //! Durable damage windows and transactional piloting checks for biped staggering.
-use super::{
-    BattleFallReport, BattleFallRules, BattlePilotingCheck, BattlePosture, BattlePower, BattleUnit,
-};
+use super::{FallRules, Mech, MechFallReport, PilotingCheck, Posture, Power};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -9,14 +7,14 @@ use serde::{Deserialize, Serialize};
 /// Traditional per-turn checks or the configured rolling sixty-second damage window.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleStaggerMode {
+pub enum StaggerMode {
     Traditional,
     #[default]
     Retain,
     Consume,
 }
 
-impl BattleStaggerMode {
+impl StaggerMode {
     /// Configuration zero selects traditional rules, two consumes history, other values retain it.
     pub fn from_setting(value: i64) -> Self {
         match value {
@@ -29,7 +27,7 @@ impl BattleStaggerMode {
 
 /// One incoming damage group; whole groups are marked or consumed, including threshold overshoot.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BattleStaggerHit {
+pub struct StaggerHit {
     pub damage: u16,
     pub remaining: u8,
     pub counted: bool,
@@ -37,18 +35,18 @@ pub struct BattleStaggerHit {
 
 /// Saved unit-local cadence and incoming damage; fall damage and internal explosions are excluded.
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BattleStagger {
+pub struct Stagger {
     /// Restored action-time damage scalar; ordinary hits update history independently.
     #[serde(default)]
     pub action_damage: i32,
-    pub hits: Vec<BattleStaggerHit>,
+    pub hits: Vec<StaggerHit>,
     pub elapsed: u64,
     pub turn_damage: u32,
     pub phase: u8,
     pub checked_phase: Option<u8>,
 }
 
-impl BattleStagger {
+impl Stagger {
     /// Positive twenty-point levels govern action-time checks, independently of rolling history.
     pub fn action_level(&self) -> i32 {
         (self.action_damage / 20).max(0)
@@ -78,11 +76,11 @@ impl BattleStagger {
     }
 
     /// Incoming ordinary damage counts once, before criticals or transfer change the unit.
-    pub(super) fn record(&mut self, damage: u16, mode: BattleStaggerMode) -> Result<()> {
+    pub(super) fn record(&mut self, damage: u16, mode: StaggerMode) -> Result<()> {
         if damage == 0 {
             return Ok(());
         }
-        if mode == BattleStaggerMode::Traditional {
+        if mode == StaggerMode::Traditional {
             self.hits.clear();
             self.elapsed = 0;
             self.turn_damage = self.turn_damage.saturating_add(u32::from(damage));
@@ -91,7 +89,7 @@ impl BattleStagger {
         ensure!(self.hits.len() < 4096, "Stagger history exceeds work limit");
         self.turn_damage = 0;
         self.checked_phase = None;
-        self.hits.push(BattleStaggerHit {
+        self.hits.push(StaggerHit {
             damage,
             remaining: 60,
             counted: false,
@@ -107,18 +105,18 @@ impl BattleStagger {
     }
 }
 
-impl BattleUnit {
+impl Mech {
     /// Saved damage and cadence used by stagger checks.
-    pub fn stagger(&self) -> &BattleStagger {
+    pub fn stagger(&self) -> &Stagger {
         &self.stagger
     }
 
     /// Traditional running units keep their phase even between hits; rolling windows age while present.
-    pub fn stagger_active(&self, mode: BattleStaggerMode) -> bool {
+    pub fn stagger_active(&self, mode: StaggerMode) -> bool {
         !self.is_destroyed()
             && (!self.stagger.hits.is_empty()
                 || self.stagger.turn_damage > 0
-                || (mode == BattleStaggerMode::Traditional && self.power() == BattlePower::Running))
+                || (mode == StaggerMode::Traditional && self.power() == Power::Running))
     }
 }
 
@@ -133,8 +131,8 @@ fn tonnage_modifier(tons: u16) -> i32 {
 }
 
 /// Action-time checks always apply tonnage, independently of the rolling-window setting.
-pub(super) fn action_modifier(unit: &BattleUnit) -> i16 {
-    if unit.power() != BattlePower::Running {
+pub(super) fn action_modifier(unit: &Mech) -> i16 {
+    if unit.power() != Power::Running {
         return 999;
     }
     (unit.stagger().action_level() + tonnage_modifier(unit.definition().tons))
@@ -143,56 +141,53 @@ pub(super) fn action_modifier(unit: &BattleUnit) -> i16 {
 
 /// Rule choices shared by the server heartbeat and isolated simulation callers.
 #[derive(Debug, Clone, Copy)]
-pub struct BattleStaggerRules {
+pub struct StaggerRules {
     /// Vehicle damage policy for mines reached by this consequence chain.
-    pub vehicle_impact: super::BattleVehicleImpactRules,
-    pub mode: BattleStaggerMode,
+    pub vehicle_impact: super::VehicleImpactRules,
+    pub mode: StaggerMode,
     pub interval: u64,
     pub tonnage: bool,
-    pub hit: super::BattleHitRules,
+    pub hit: super::HitRules,
     pub extended_piloting: bool,
 }
 
 /// One completed stagger check and its optional fall; notices are staged by the caller.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[must_use = "Publish stagger and fall notices with the enclosing world commit"]
-pub struct BattleStaggerReport {
+pub struct StaggerReport {
     pub unit: ObjectId,
     pub level: u32,
-    pub check: BattlePilotingCheck,
+    pub check: PilotingCheck,
     /// Notice boundary immediately before the initial control feedback, including cockpit fallback.
     pub check_notice_index: usize,
     /// Accepted control XP captured before a possible protection check.
-    pub experience_messages: Vec<super::BattleChannelMessage>,
-    pub fall: Option<BattleFallReport>,
+    pub experience_messages: Vec<super::DiagnosticMessage>,
+    pub fall: Option<MechFallReport>,
     /// Ordered severity, observer, cockpit and damage feedback captured before the fall.
-    pub notices: Vec<super::BattleNotice>,
+    pub notices: Vec<super::Notice>,
     /// Private roll feedback captured before fall consequences change crew state.
-    pub pilot_notices: Vec<super::BattlePilotNotice>,
+    pub pilot_notices: Vec<super::PilotNotice>,
 }
 
 /// Advance one committed second atomically, including all history, checks and resulting falls.
-pub fn advance_stagger(
-    world: &mut World,
-    rules: BattleStaggerRules,
-) -> Result<Vec<BattleStaggerReport>> {
+pub fn advance_stagger(world: &mut World, rules: StaggerRules) -> Result<Vec<StaggerReport>> {
     advance_stagger_inner(world, rules, false)
 }
 
 /// Advance stagger within a host action that publishes character injuries and casualties.
 pub(super) fn advance_stagger_in_action(
     world: &mut World,
-    rules: BattleStaggerRules,
-) -> Result<Vec<BattleStaggerReport>> {
+    rules: StaggerRules,
+) -> Result<Vec<StaggerReport>> {
     advance_stagger_inner(world, rules, true)
 }
 
 /// Shared history expiry, control checks and falls for either publication mode.
 fn advance_stagger_inner(
     world: &mut World,
-    rules: BattleStaggerRules,
+    rules: StaggerRules,
     character: bool,
-) -> Result<Vec<BattleStaggerReport>> {
+) -> Result<Vec<StaggerReport>> {
     world.attempt(|world| {
         let ids: Vec<_> = world
             .btech
@@ -211,11 +206,11 @@ fn advance_stagger_inner(
         for id in ids {
             let unit = &world.btech.constructed_units()[&id];
             unit.validate()?;
-            let conscious_off = unit.power() != BattlePower::Running
+            let conscious_off = unit.power() != Power::Running
                 && unit
                     .pilot()
                     .is_none_or(|pilot| !world.btech.unconscious(pilot));
-            let prone = unit.posture() == BattlePosture::Prone;
+            let prone = unit.posture() == Posture::Prone;
             let airborne = unit.airborne();
             let tons = unit.definition().tons;
             let unit = world.btech.constructed.get_mut(&id).unwrap();
@@ -224,7 +219,7 @@ fn advance_stagger_inner(
                 hit.remaining -= 1;
             }
             history.hits.retain(|hit| hit.remaining > 0);
-            let level = if rules.mode == BattleStaggerMode::Traditional {
+            let level = if rules.mode == StaggerMode::Traditional {
                 if conscious_off {
                     continue;
                 }
@@ -283,7 +278,7 @@ fn advance_stagger_inner(
                     remaining = remaining.saturating_sub(u32::from(hit.damage));
                     hit.counted = true;
                 }
-                if rules.mode == BattleStaggerMode::Consume {
+                if rules.mode == StaggerMode::Consume {
                     history.hits.retain(|hit| !hit.counted);
                     fresh / 20
                 } else {
@@ -291,15 +286,15 @@ fn advance_stagger_inner(
                 }
             };
             let tonnage = i64::from(tonnage_modifier(tons));
-            let modifier = if world.btech.constructed_units()[&id].power() != BattlePower::Running {
+            let modifier = if world.btech.constructed_units()[&id].power() != Power::Running {
                 999
-            } else if rules.mode == BattleStaggerMode::Traditional {
+            } else if rules.mode == StaggerMode::Traditional {
                 1
             } else {
                 i64::from(level) - 1 + if rules.tonnage { tonnage } else { 0 }
             };
             let mut notices = Vec::new();
-            if rules.mode != BattleStaggerMode::Traditional {
+            if rules.mode != StaggerMode::Traditional {
                 let (own, observed) = match level {
                     1 => (
                         "The damage causes you to stagger a little.",
@@ -314,13 +309,13 @@ fn advance_stagger_inner(
                         "staggers back and forth attempting to keep its footing!",
                     ),
                 };
-                notices.push(super::BattleNotice {
+                notices.push(super::Notice {
                     unit: id,
                     text: own.to_owned(),
                 });
                 notices.extend(super::broadcast::observer_notices(world, id, observed));
             }
-            notices.push(super::BattleNotice {
+            notices.push(super::Notice {
                 unit: id,
                 text: "You stagger from the damage!".to_owned(),
             });
@@ -358,14 +353,14 @@ fn advance_stagger_inner(
             let fall = if check.success {
                 None
             } else {
-                notices.push(super::BattleNotice {
+                notices.push(super::Notice {
                     unit: id,
                     text: "You fall over from all the damage!".to_owned(),
                 });
                 notices.extend(super::broadcast::observer_notices(
                     world,
                     id,
-                    if rules.mode == BattleStaggerMode::Traditional {
+                    if rules.mode == StaggerMode::Traditional {
                         "falls down, staggered by the damage!"
                     } else {
                         "tumbles over, staggered by the damage!"
@@ -380,9 +375,9 @@ fn advance_stagger_inner(
                     world,
                     id,
                     1,
-                    BattleFallRules {
+                    FallRules {
                         vehicle_impact: rules.vehicle_impact,
-                        stacking: crate::BattleStackingRules::STANDARD,
+                        stacking: crate::StackingRules::STANDARD,
                         hit: rules.hit,
                         extended_piloting: rules.extended_piloting,
                         stagger: rules.mode,
@@ -392,7 +387,7 @@ fn advance_stagger_inner(
                 fall.append_notices(id, &mut notices, &mut pilot_notices);
                 Some(fall)
             };
-            reports.push(BattleStaggerReport {
+            reports.push(StaggerReport {
                 experience_messages,
                 check_notice_index,
                 unit: id,

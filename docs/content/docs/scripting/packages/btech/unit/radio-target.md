@@ -25,4 +25,4 @@ btech.unit.radio_target(dbref, pilot, target, message)
 
 ## Returns
 
-- `BattleTargetedRadioReport`
+- `TargetedRadioReport`

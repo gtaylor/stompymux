@@ -5,11 +5,11 @@ use std::fmt::Write;
 /// Counts of explicitly classified generic checks; direct character dice are not automatically counted.
 /// Own this at the simulation lifetime boundary, so removing a unit cannot discard history.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct BattleRollStatistics {
+pub struct RollStatistics {
     counts: [u64; 11],
 }
 
-impl BattleRollStatistics {
+impl RollStatistics {
     /// Merge committed counts, validating the aggregate before changing any bucket.
     pub fn merge(&mut self, other: &Self) -> Result<()> {
         ensure!(
@@ -84,7 +84,7 @@ mod tests {
     /// Edge targets have exact cumulative endpoints; rendering never changes the histogram.
     #[test]
     fn reference_rows_and_empty_report() {
-        let mut statistics = BattleRollStatistics::default();
+        let mut statistics = RollStatistics::default();
         assert_eq!(statistics.render(), "No rolls to show statistics for!");
         statistics.record(7).unwrap();
         let before = statistics.clone();
@@ -114,7 +114,7 @@ mod tests {
     /// Each valid sum owns one bucket; invalid values and overflow do not partially change counts.
     #[test]
     fn bounded_accounting_and_independent_candidates() {
-        let mut statistics = BattleRollStatistics::default();
+        let mut statistics = RollStatistics::default();
         for roll in 2..=12 {
             statistics.record(roll).unwrap();
         }
@@ -128,7 +128,7 @@ mod tests {
         let mut candidate = statistics.clone();
         candidate.record(7).unwrap();
         assert_eq!(statistics, before);
-        let mut full = BattleRollStatistics { counts: [0; 11] };
+        let mut full = RollStatistics { counts: [0; 11] };
         full.counts[0] = u64::MAX - 1;
         full.record(12).unwrap();
         let before = full.clone();

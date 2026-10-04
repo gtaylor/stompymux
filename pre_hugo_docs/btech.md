@@ -240,7 +240,7 @@ valid Stinger targets. These terms appear in previews and actual firing.
 
 ## Conventional weapon salvos
 
-`BattleWeapon::missile_hits` implements unmodified 2d6 cluster tables for the
+`Weapon::missile_hits` implements unmodified 2d6 cluster tables for the
 supported SRM-2/4/6 and LRM-5/10/15/20. `damage_groups` gives each SRM a separate
 two-point impact and combines LRMs into groups of at most five one-point
 missiles. Conventional lasers, PPCs and autocannons produce one damage group without a cluster
@@ -295,7 +295,7 @@ the conventional resolver and must be added before those templates are enabled.
 
 ## Damage and mobility
 
-`BattleUnit::mobility` derives a damage-adjusted speed limit and piloting modifier
+`Mech::mobility` derives a damage-adjusted speed limit and piloting modifier
 from saved section and critical losses. A missing biped leg limits speed to
 10.75 kph and adds five to piloting checks; two missing legs prevent movement.
 A damaged hip halves speed and adds two, overriding other actuator damage in
@@ -362,14 +362,14 @@ action together, never independently commit its material phases. Leg loss adjust
 
 ## Biped hit-location rules
 
-`BattleHitArc` classifies a target-relative bearing using the three `hit_arcs`
+`HitArc` classifies a target-relative bearing using the three `hit_arcs`
 layouts. Modes 0 and 2 share the biped 180-degree front and 60-degree rear arcs;
 mode 1 uses four 90-degree arcs. Exact front/rear boundaries belong to those arcs.
 These are continuous bearings; parity with the reference's integer bearing
 quantization near boundaries still needs paired scenarios.
 
-`BattleHitTable` resolves supplied weapon (2d6), punch (d6), and kick (d6) rolls.
-`BattleHitRules` adds through-armor critical eligibility and the Exile head-hit
+`HitTable` resolves supplied weapon (2d6), punch (d6), and kick (d6) rolls.
+`HitRules` adds through-armor critical eligibility and the Exile head-hit
 variant. FASA critical rules make a weapon location roll of two a candidate.
 Standard rules use front armor percentage, including for rear hits: below 60%
 there is a 1-in-12 chance, at 100% a 1-in-71 chance, and at 60–99% no chance.
@@ -380,7 +380,7 @@ above 1 only reroll. Rear armor applies only to torso hits from the rear.
 Resolution returns a section and pending critical/stun effects. It does not
 apply damage, destroy components, schedule stun recovery, emit messages or
 establish that a shot can be fired. Combat handlers must apply those effects and
-commit their dice together. `BattleSection::damage_transfer` supplies conventional
+commit their dice together. `MechSection::damage_transfer` supplies conventional
 biped overflow destinations for the damage system. Critical-proof equipment,
 quad and other unit classes, aimed shots, partial cover and their rule variants
 remain pending. These rule primitives are not yet exposed as gameplay commands.
@@ -388,7 +388,7 @@ remain pending. These rule primitives are not yet exposed as gameplay commands.
 ## Transactional dice
 
 Each constructed unit owns an independent, system-seeded ChaCha8 dice stream in
-its saved unit record. `BattleDice` carries an explicit `chacha8-v1` algorithm tag;
+its saved unit record. `Dice` carries an explicit `chacha8-v1` algorithm tag;
 unknown tags fail loading. Bounded rejection sampling produces fair d6 results,
 and ordinary 2d6 checks sum two independent dice. The generator is provided by
 `rand_chacha`; game code owns the dice mapping and persistence contract.
@@ -596,7 +596,7 @@ The [coverage inventory](btech-coverage.md) tracks the remaining implementation.
 
 ## Conventional thermal accounting and environment
 
-`BattleHeat` persists stored weapon heat and the most recent excess-heat sample.
+`Heat` persists stored weapon heat and the most recent excess-heat sample.
 Each committed second samples `max(0, stored + production - dissipation)`, then
 changes stored heat by `(production - dissipation) / 30`, clamped at zero.
 Dry-ground production includes walking/running and five points per engine
@@ -641,7 +641,7 @@ not inferred from the current two-dimensional placement.
 
 ## Character health foundations
 
-Rust loads the existing `btech_character_state` columns into `BattleCharacter`,
+Rust loads the existing `btech_character_state` columns into `Character`,
 without creating missing profiles or interpreting the separate skills/advantages
 table. `btech.character.state(player)` returns a detached inspection table during
 a script callback. Trusted domain code can explicitly set a profile or call
@@ -669,7 +669,7 @@ failure and purge use the same transaction boundaries as other world changes.
 `tests/btech_character.rs` covers injury thresholds, lethal overflow, invalid
 profiles, selective writes, failed-save retry, detached inspection and purge.
 
-Consciousness uses a player-owned `BattleDice` stream so retries and restarts
+Consciousness uses a player-owned `Dice` stream so retries and restarts
 reproduce recovery outcomes independently of cockpit assignment. The versioned
 `btech_character_recovery` extension stores that stream, the remaining countdown,
 and explicit pain-resistance/toughness settings. Reads do not install the table;
@@ -716,7 +716,7 @@ Lua `unit.state.pilot_injuries` reports the count; the enclosing action publishe
 the returned injury notice with its commit.
 
 `resolve_battle_tactical_impact` composes conventional material damage, cockpit
-injury, flooding and balance consequences with explicit `BattleFallRules`.
+injury, flooding and balance consequences with explicit `FallRules`.
 Head injury occurs before material damage; explosion injury follows its nested
 damage cascade. Surviving assigned pilots receive one head injury or two explosion
 injuries. All effects must succeed before publishing the candidate. Applied injuries
@@ -753,7 +753,7 @@ Vehicle crew stun and physical-attack restrictions remain separate pending rules
 `resolve_battle_tactical_salvo` uses the same cluster and hit-location traversal as
 `resolve_battle_salvo`, applying tactical cockpit injuries, stun, flooding and
 balance consequences before continuing to the next critical or group.
-Each `BattleSalvoGroup` reports its material impact, applied pilot injuries and
+Each `SalvoGroup` reports its material impact, applied pilot injuries and
 staged occupant notices. The material-only resolver leaves these additional lists
 empty and continues to expose unresolved crew effects in the impact report.
 
@@ -801,7 +801,7 @@ remaining rule variants still need composition.
 
 ## Biped weapon arcs and upper-body facing
 
-`BattleFacing` persists torso orientation and flipped-arm state independently of
+`Facing` persists torso orientation and flipped-arm state independently of
 movement heading. `rotate_battle_torso` moves one step left/right (opposite turns
 return through center), or centers directly; attempts beyond the limit fail without
 mutation. `flip_battle_arms` toggles only chassis declaring `FlipArms`. Both require
@@ -1002,7 +1002,7 @@ changed entries, preserving other names and unrelated columns. Character purge
 removes the owned values as well as attributes and recovery state. Unknown value
 names remain data; this does not claim support for their gameplay rules.
 
-`BattleCharacter::skill_target` implements athletic, physical, mental and social
+`Character::skill_target` implements athletic, physical, mental and social
 attribute pairings. Effective skill includes the stored experience word's high-byte
 level bonus; its low 24 bits remain the experience balance. Reads do not award XP,
 recompute earned levels or alter timestamps. `battle_perception_target` uses mental
@@ -1115,7 +1115,7 @@ The conventional lock modifier is two without a selected unit, zero for a settle
 selection matching the shot, and otherwise one if the **selected** target lies
 in the torso's forward arc or two outside it. This intentionally follows the
 selected target's bearing even when inspecting a shot at another target, as in
-`combat/mech_bth.c`. `BattleAimRules.override_weapon_arcs` bypasses this penalty.
+`combat/mech_bth.c`. `AimRules.override_weapon_arcs` bypasses this penalty.
 Settling and current eligibility remain separate: a settled selection does not
 make a stale contact shootable. Sensor role selection follows
 `sensors/mech_sensor.c::mech_sensor_to_hit_bonus`.
@@ -1184,7 +1184,7 @@ upper-body (punch-table) d6 per group, preserving rear torso armor while bypassi
 the ordinary weapon-table through-armor-critical/head-graze rolls. This follows
 `combat/mech_hitloc_targeting.c`. Missile grouping, critical cascades and cockpit
 injuries/stun occur in the same candidate. Any resolution error discards the whole
-candidate. The returned `BattleShotReport` is marked `must_use` and contains the
+candidate. The returned `MechShotReport` is marked `must_use` and contains the
 roll, pre-shot aim, expenditure and optional damage report.
 
 The cockpit `fire` command now uses this domain composition. Reported section
@@ -1214,7 +1214,7 @@ higher. Shutdown/startup and pilot unconsciousness fail without consuming dice,
 even when numeric modifiers would otherwise guarantee success. Invalid/missing
 units fail validation before rolling. Crew stun is separate from unconsciousness.
 
-The returned `BattlePilotingCheck` includes skill, damage, cockpit, situational and absent
+The returned `PilotingCheck` includes skill, damage, cockpit, situational and absent
 pilot contributions, total, optional roll and success. It is `must_use`: the caller
 must apply the failed check's fall/movement effects and commit RNG with those effects.
 This API does not notify, award XP, apply fall damage or implement blinding.
@@ -1246,7 +1246,7 @@ and tactical injury resolver, stopping on unit destruction. The report contains
 the avoidance check, possible pilot injury, direction, total damage and groups;
 no notification or database write escapes the enclosing transaction.
 
-`BattlePosture` is serialized with the unit and exposed by Lua unit inspection.
+`Posture` is serialized with the unit and exposed by Lua unit inspection.
 Prone units have 0.5-level eyes instead of 1.5, do not receive standing partial
 cover, and count as submerged in depth-one water. Prone attacker movement adds
 two to aim; prone targets add -2 at range <=1 and +1 farther away, in addition to
@@ -1333,15 +1333,15 @@ actuators do not trigger these checks; lower/upper/foot losses in a leg with an
 already destroyed hip do not add another check. Destroyed and already-prone units
 do not fall again. Forced falls still perform the separate pilot-protection check.
 
-`BattleTacticalImpact` and `BattleSalvoGroup` include ordered `balance` reports with
+`TacticalImpact` and `SalvoGroup` include ordered `balance` reports with
 the cause, optional check and optional completed fall. Fall notices and nested
 injury notices are included in the enclosing group's notice list. `SectionLost`
 remains an explicit notification/casualty item; callers must not apply a second
 fall for an already handled tactical loss. Raw material APIs retain their explicit
 pending effects and never change posture.
 
-Tactical impacts and salvos take `BattleFallRules`; direct shots supply the same
-hit/piloting/toughness choices, including `BattleShotRules.extended_piloting`.
+Tactical impacts and salvos take `FallRules`; direct shots supply the same
+hit/piloting/toughness choices, including `ShotRules.extended_piloting`.
 A direct salvo recomputes target-relative hit direction and partial cover before
 each group, so a fall's new heading/posture affects later missiles. Head injury
 precedes its hit's material phases, while ammunition-explosion injury follows the
@@ -1406,7 +1406,7 @@ accumulate stagger damage; a fall clears the accumulated damage. Structural or
 pilot destruction and administrative placement/removal clear the saved tracker.
 Raw material-only APIs still leave gameplay composition to their caller.
 
-`BattleStaggerMode` selects traditional rules for configuration zero, consumed
+`StaggerMode` selects traditional rules for configuration zero, consumed
 rolling history for two, and retained rolling history for other nonzero values.
 Traditional rules check at twenty accumulated damage, with piloting modifier +1,
 then allow at most one check per thirty committed seconds. Sub-threshold damage
@@ -1473,7 +1473,7 @@ allows a stand attempt. A flooded hip also suppresses extra lower-actuator balan
 checks. Destroying the section clears its flooded marker; leaving water does not
 restore equipment. Drainage and repairs remain later repair-system work.
 
-`BattleSectionExposureReport` and fall/group reports retain new flooding events and their
+`SectionExposureReport` and fall/group reports retain new flooding events and their
 nested falls. Notice collection includes flooding and nested injuries exactly
 once at the enclosing commit. Lua unit inspection exposes `flooded_sections`.
 Flooding preserves the distinction between disabled equipment and destroyed
@@ -1493,7 +1493,7 @@ live stagger-triggered water fall retried after failed persistence. Reference:
 
 ### Direct-shot glancing rules
 
-The native direct-shot resolver accepts `BattleGlancingMode::from_setting` for
+The native direct-shot resolver accepts `GlancingMode::from_setting` for
 `glancing_blows`: zero disables glancing, two allows a glancing hit one below the
 ordinary target number, and every other value makes an exact ordinary hit glance.
 The aim subtotal and reported target number remain the ordinary values. The shot
@@ -1547,7 +1547,7 @@ observer combat broadcasts and aimed-section commands are also pending.
 
 ### Triggered ammunition explosions
 
-`BattleUnit::ammunition_hazard_maximum()` identifies the available bin with the
+`Mech::ammunition_hazard_maximum()` identifies the available bin with the
 largest remaining internal damage potential. Salvo count is multiplied by full
 weapon damage (including the complete missile rack). Equal hazards retain the
 first resolved section/slot; empty, destroyed and flooded bins are excluded.
@@ -1706,7 +1706,7 @@ remain separate interface work.
 
 ## Jump capacity and trajectory foundation
 
-`BattleUnit::jump_capacity(gravity)` derives conventional thrust from the template
+`Mech::jump_capacity(gravity)` derives conventional thrust from the template
 jump speed, subtracting 10.75 kph per effective destroyed or flooded jump jet.
 Repeated damage and overlapping physical/flood losses count once. Destroyed units
 have zero capacity. Map gravity scales thrust by `100 / max(gravity, 50)` and the
@@ -1720,7 +1720,7 @@ Lua `btech.unit.state(id).jump_capacity` returns detached `speed` and
 unit). It describes capability, not authorization to jump. Existing damage and
 flood facts persist the result without another mutable capacity counter.
 
-`BattleJumpPath` owns immutable takeoff/destination points, endpoint elevations,
+`JumpPath` owns immutable takeoff/destination points, endpoint elevations,
 distance and apex. Horizontal distance and absolute elevation change must each
 fit the supplied movement-point allowance. The additional apex elevation is
 `floor(min(MP + 1 - distance/3, 2*distance + 2))`. A sample interpolates endpoint
@@ -1740,7 +1740,7 @@ Obstacle handling, special-terrain landings and airborne combat remain incomplet
 
 ### Restartable flight progression
 
-`BattleJumpFlight` adds a serializable flight cursor to the trajectory foundation.
+`JumpFlight` adds a serializable flight cursor to the trajectory foundation.
 It records completed horizontal distance and the movement points used for the
 last airborne sample. Changing thrust between ticks therefore leaves the last
 sample unchanged; the next step uses the new thrust and curve. The launch path
@@ -1757,7 +1757,7 @@ A full five-MP, five-hex jump takes 60 such steps at normal gravity and movement
 rate. Overshoot and accumulated rounding error snap to the exact destination.
 An arrived cursor rejects another advance without changing state.
 
-The returned `BattleJumpStep` includes previous/current airborne samples and an
+The returned `JumpStep` includes previous/current airborne samples and an
 `airborne`, `landing` or `lost_thrust` outcome. Zero thrust leaves the cursor at
 its previous airborne position and requests lost-thrust handling; it does not
 teleport to the destination. Invalid capacity inputs do not change progress.
@@ -1982,7 +1982,7 @@ the changed tile and every neighboring unit.
 ### Atomic bridge collapse and retained altitude
 
 `break_battle_bridge` shares the terrain-break transaction and
-`BattleSurfaceBreak` report with ice fracture. A bridge becomes depth-one water.
+`SurfaceBreak` report with ice fracture. A bridge becomes depth-one water.
 The reference changes the map before selecting casualties: its elevation getter
 reads the replacement depth, so only occupants at elevation one fall, using a
 two-level multiplier. Occupants at other elevations retain their altitude. This
@@ -2427,7 +2427,7 @@ already taken damage.
 Ground-entry and landing hooks are now connected; explicit fall hooks remain pending. Collision damage
 requires calculated current mass, not nominal template tonnage: remaining armor,
 internal structure, ammunition, equipment and construction technology affect it.
-`BattleStackingInput` therefore requires explicit mass in 1/1024-ton units and
+`StackingInput` therefore requires explicit mass in 1/1024-ton units and
 adjusted jump movement points. The current-mass calculator now supplies ground-entry collisions. Landing callers supply adjusted jump capacity while preserving event ordering;
 explicit fall callers remain pending. No gameplay
 adapter substitutes nominal tonnage or exposes arbitrary player-triggered damage.
@@ -2437,7 +2437,7 @@ Read-only references: `movement/mech_domino.c`, `unit/mech_consistency.c`,
 
 ### Conventional current mass and automatic ground crowding
 
-`BattleUnit::mass` derives a component breakdown in 1/1024-ton units from the owned
+`Mech::mass` derives a component breakdown in 1/1024-ton units from the owned
 standard-fusion definition and current damage. Engine rating uses original speed,
 not damage-reduced mobility. Remaining structure and armor use the reference's
 half-ton rounding, including its one-unit tolerance. Weapon slots retain physical
@@ -2518,7 +2518,7 @@ selection but deals no collision damage when no thrust remains. A failed neighbo
 impact restores the complete enclosing damage transaction, including flight,
 criticals, both units and their dice.
 
-Stacking policy now travels with `BattleFallRules`, which already supplies nested
+Stacking policy now travels with `FallRules`, which already supplies nested
 tactical damage and fall behavior. Shot adapters forward their configured policy;
 movement and jump completion share the same field. The separate jump-rules wrapper
 and duplicate movement stacking field were removed. This keeps one policy value
@@ -2551,7 +2551,7 @@ Read-only references: `movement/mech_startup.c` and `unit/mech_lifecycle.c`.
 
 ### Airborne shutdown and free fall
 
-`BattleFreeFall` models BattleMech vertical descent in committed seconds. It stores
+`FreeFall` models BattleMech vertical descent in committed seconds. It stores
 integer altitude, drop speed and the remaining one-to-three-second countdown.
 The first event drops two levels, subsequent events accelerate by one level, and
 contact occurs when the distance to the caller-selected surface is no greater
@@ -2911,7 +2911,7 @@ and reports 20/16/3 internal explosion damage for standard/light/Magshot rifles.
 The enclosing damage transaction resolves transfer, CASE containment, nested
 criticals and crew injury. All slots are disabled before the cascade, preventing
 repeat explosions. Ordinary weapon criticals still disable individual slots.
-`BattleCriticalLoss::Weapon` includes `explosion_damage` for this composition.
+`CriticalLoss::Weapon` includes `explosion_damage` for this composition.
 
 Tests cover each initial mounting-slot hit, depleted critical selection, inert
 bins, all three explosion sizes, internal damage bypassing armor, CASE transfer,
@@ -3091,7 +3091,7 @@ remain unsupported and their template flags are rejected. Reference facts:
 `src/btech/equipment/catalogue.rs` is the single source for supported weapon
 identities, asset names, profiles, mass, gunnery family and recycle feedback.
 Its declarative table generates the typed enum and exhaustive accessors at
-compile time. `BattleWeapon::ALL` enumerates supported identities for inspection
+compile time. `Weapon::ALL` enumerates supported identities for inspection
 and coverage checks. Parsing remains strict: adding an asset to the game
 directory does not make an unimplemented weapon operational.
 
@@ -3157,7 +3157,7 @@ rules. Cockpit notices distinguish the protected hit, damaged gyro, destroyed
 gyro and further damage. Construction identity survives critical damage and
 restart; no separate damage flag or countdown is stored.
 
-Rust exposes `BattleGyro`, `BattleUnit::gyro()` and `gyro_damage()`. Lua unit
+Rust exposes `Gyro`, `Mech::gyro()` and `gyro_damage()`. Lua unit
 state exposes `gyro` (`standard`, `hardened`, `xl` or `compact`) and `gyro_damage`; existing
 mass and mobility inspection reflects the corresponding effects. Tests cover
 slot-order independence, mass, all damage thresholds, incomplete installations,
@@ -3243,7 +3243,7 @@ case-insensitive duplicates, empty records and unsupported flags. Reference:
 
 The `SMCPIT` construction flag reduces cockpit mass from three to two tons
 while the head survives. It adds one to piloting rolls and the standing target.
-This is a construction penalty, exposed as `BattlePilotingCheck.cockpit`, and
+This is a construction penalty, exposed as `PilotingCheck.cockpit`, and
 is kept separate from physical damage so undamaged units do not acquire
 additional damage-triggered landing checks. The shared piloting path applies
 it to ground, airborne and recoil checks without changing the base pilot skill.
@@ -3282,7 +3282,7 @@ rear-to-turret links. VTOLs require local links, including stationary VTOLs.
 Dangling links remain visible
 and provide no guidance. The `ArtemisIV` chassis flag alone installs nothing.
 
-`BattleUnit::artemis_controllers()`, `BattleVehicle::artemis_controllers()` and
+`Mech::artemis_controllers()`, `Vehicle::artemis_controllers()` and
 Lua `btech.unit.state(id).artemis`
 expose controller location, raw link, resolved weapon indices and availability.
 `artemis_operational(index)` checks for a surviving linked controller. Critical
@@ -3399,12 +3399,12 @@ unjammed launcher; one-shot mode changes are rejected. Ammunition selection
 remains independent, including Artemis rounds.
 
 Hotloading removes minimum-range penalties unless `hotloadaddshalfbthmod` is
-set, in which case the raw-distance half modifier applies. `BattleAimRules`
+set, in which case the raw-distance half modifier applies. `AimRules`
 exposes that option explicitly. Cluster resolution consumes three dice and uses
 the lowest two, before Artemis and glancing adjustments. Existing ELRM/dead-fire
 attack-dice rules remain in effect. An attack roll of two or three records a
 feed jam, consumes shooter dice, and spends no ammunition, heat or recycle;
-`BattleShotReport.jammed` distinguishes it from a failed Streak lock. Native/Lua
+`MechShotReport.jammed` distinguishes it from a failed Streak lock. Native/Lua
 feedback reports the jam, and the ordinary timed unjamming path recovers it.
 
 The first critical on an intact hotloaded launcher explodes for a full salvo's
@@ -3442,8 +3442,8 @@ loader failure are described below. Reference catalog facts: `unit/weapons_catal
 
 ### Shared ammunition draw planning
 
-`BattleUnit::ammunition_feed(index, rounds)` returns ordered
-`BattleAmmunitionDraw` records without mutating supply or consuming dice. It
+`Mech::ammunition_feed(index, rounds)` returns ordered
+`AmmunitionDraw` records without mutating supply or consuming dice. It
 prefers bins in the mount section, then canonical section/slot order, and skips
 empty, destroyed, flooded or differently selected ammunition. Each record
 contains a bin index and bounded quantity. If supply is short, the plan returns
@@ -3474,10 +3474,10 @@ two rounds and twice the catalog heat, including misses. Successful attacks
 roll the two-shell table (2–7: one; 8–12: two), with independent full-damage
 locations. Glancing shifts that table roll down four instead of halving damage.
 
-`BattleWeaponUse.ammunition` reports each actual `(bin_index, rounds)` draw;
+`WeaponUse.ammunition` reports each actual `(bin_index, rounds)` draw;
 `fire_mode` reports the effective mode after fallback. Native and Lua use this
 same result. The single-bin report field has been replaced rather than retained
-as a compatibility layer. `BattleShotReport.loader_destroyed` distinguishes
+as a compatibility layer. `MechShotReport.loader_destroyed` distinguishes
 permanent loader failure from hotload `jammed` state.
 
 Tests cover all four weapons, same-bin and cross-bin supply, hits and misses,
@@ -3597,7 +3597,7 @@ with one or two rounds left it spends the remaining supply for one heat/damage.
 A miss spends the same heat/ammunition; empty supply rejects atomically. There
 is no gatling feed-jam trigger or mode reset on shortage.
 
-`BattleWeaponUse.gatling_damage` records that prepared value. The hit resolver
+`WeaponUse.gatling_damage` records that prepared value. The hit resolver
 now receives the shared expenditure report rather than a growing positional
 tuple, so it uses the same mode and rolled value as supply/heat accounting.
 The standalone expenditure operation also prepares one roll and commits its
@@ -4109,7 +4109,7 @@ Tests cover actuator penalties, rejected-action immutability, explicit miss and 
 
 ## Biped punches
 
-Native `punch [left|right|both] [#unit]` and Lua `btech.unit.punch(unit, pilot, arms, target)` use the same Rust physical resolver as kicks. Selection defaults to both arms, attempted left then right. The Rust API exposes `BattlePhysicalRules`, `BattlePhysicalProfile` and `BattlePhysicalReport` for shared mechanics, plus punch selection and batch reports. Attack profiles identify the attack kind and limb; the separate balance report is present for kicks, successful trips and missed mace swings.
+Native `punch [left|right|both] [#unit]` and Lua `btech.unit.punch(unit, pilot, arms, target)` use the same Rust physical resolver as kicks. Selection defaults to both arms, attempted left then right. The Rust API exposes `PhysicalRules`, `PhysicalProfile` and `PhysicalReport` for shared mechanics, plus punch selection and batch reports. Attack profiles identify the attack kind and limb; the separate balance report is present for kicks, successful trips and missed mace swings.
 
 Each arm requires its section and shoulder, and all weapons in that arm must have completed recycling. Missing lower-arm or hand actuators impose aim penalties; upper/lower actuator losses also halve damage. Punches use nominal tonnage divided by ten, rounded down, before specialization and actuator adjustments. Unlike kicks, punches do not require both hips and do not perform an extra balance check on either a hit or miss. Damage can still cause normal critical, injury and fall consequences.
 
@@ -4122,7 +4122,7 @@ Tests cover ordered two-arm attacks, shoulder/weapon rejection with the other ar
 
 ## Biped trips
 
-Native `trip [left|right] [#unit]` and Lua `btech.unit.trip(unit, pilot, leg, target)` share the physical attack resolver. The leg defaults to right; omitting the target uses the current selection. Rust exposes `battle_trip_profile`, `resolve_battle_trip` and the shared `BattleLeg`, physical rules and report types.
+Native `trip [left|right] [#unit]` and Lua `btech.unit.trip(unit, pilot, leg, target)` share the physical attack resolver. The leg defaults to right; omitting the target uses the current selection. Rust exposes `battle_trip_profile`, `resolve_battle_trip` and the shared `Leg`, physical rules and report types.
 
 A trip requires both legs and hips and follows kick range, elevation, real-forward-arc and recovery restrictions. Targets must be standing and not rising. Physical aim uses the configured kick base, movement, terrain and specialization; unlike kicks, trips receive no upper/lower/foot actuator aim penalties.
 
@@ -4153,7 +4153,7 @@ Tests cover installation counts, implicit/explicit technology, mass, critical el
 
 Native `axe [left|right|both] [#unit]` and `sword [left|right|both] [#unit]`, and Lua `btech.unit.axe` / `btech.unit.sword`, use the shared physical resolver. Omitted arm selection considers both arms, left first, skipping arms without enough operational weapon parts. Explicit arm selection reports missing equipment. Both require a surviving arm, shoulder and hand, with no recycling ranged weapon in that arm.
 
-The shared Rust API uses `BattleArm`, `BattleArmSelection`, `BattleArmAttack` and `BattleArmAttackReport`; `battle_arm_attack_profile` is read-only and `resolve_battle_arm_attack` commits the action. Punches still permit two arms in one action. An accepted axe or sword swing starts 60-second recovery, which blocks another swing with the second arm; an unusable first arm can leave the second arm available. Expected arm rejections preserve earlier accepted attacks, while impact errors and callback aborts roll back the entire action and all staged messages.
+The shared Rust API uses `Arm`, `ArmSelection`, `ArmAttack` and `ArmAttackReport`; `battle_arm_attack_profile` is read-only and `resolve_battle_arm_attack` commits the action. Punches still permit two arms in one action. An accepted axe or sword swing starts 60-second recovery, which blocks another swing with the second arm; an unusable first arm can leave the second arm available. Expected arm rejections preserve earlier accepted attacks, while impact errors and callback aborts roll back the entire action and all staged messages.
 
 Axes require at least `floor(tons / 15)` operational same-arm `Axe` slots. Swords require `floor((tons + 15) / 20)` operational same-arm `Sword` slots. These observable attack thresholds differ from mass accounting. Each axe slot weighs 1,024 mass units; each sword slot weighs `floor(ceil(tons / 10) * 512 / ceil(tons / 15))` units. Lost criticals retain mass until their section is lost. Both systems are eligible for random critical hits and emit their equipment-loss messages; remaining usable parts determine whether another attack is possible.
 
@@ -4209,7 +4209,7 @@ References: `combat/mech_club.c`, `combat/mech_physical.c`, `combat/mech_physica
 
 ## One-way charge collision resolver
 
-Rust exposes `battle_charge_profile` and `resolve_battle_charge` with `BattleChargeRules`. This is the collision component for the pending movement integration; native/Lua charge initiation, accumulated-distance tracking, timeout and mutual-charge dispatch are not yet delivered.
+Rust exposes `battle_charge_profile` and `resolve_battle_charge` with `ChargeRules`. This is the collision component for the pending movement integration; native/Lua charge initiation, accumulated-distance tracking, timeout and mutual-charge dispatch are not yet delivered.
 
 The resolver accepts a pair of live tactical bipeds within the strict 0.6-hex collision trigger. The attacker must be powered, moving forward at least one MP and have no physical recovery. Jumping/free-falling participants and prone targets are rejected. The front arc uses real heading, ignoring torso rotation. The one-way reference checks ranged-weapon recovery in native section indices zero through five: both arms, both side torsos, center torso and left leg. This differs from the six sections that receive recovery.
 
@@ -4222,7 +4222,7 @@ On a hit, independently located packets of up to five damage strike the target, 
 Tests cover relative velocity/headings and truncation, configured damage modes, actual mass, rejected attempts, seeded hit/miss behavior, packet totals, control modifiers and saved six-section recovery. References: `combat/mech_charge.c`, `combat/mech_physical_damage.c`, `movement/mech_charge_tracking.c`, `unit/mech_identity.c` and `unit/mech_specification_state.c`. Mutual charges, initiation/cancellation, movement tracking, timeout and full end-to-end charge parity remain open; this component does not close that gate.
 
 
-Charge recoil is now sampled after the target's damage cascade. The profile remains the pre-collision forecast; `BattleChargeReport.received_damage` and `recoil_arc` describe recoil actually applied, with zero/absent values on a miss. New level-three recoil uses the target's post-damage speed and the participants' current headings, while retaining the collision's sampled tonnage. Recoil direction also uses the post-damage positions. This follows the reference's phase ordering and cached collision weight without introducing a mutable mass cache. A seeded test destroys a moving target's leg during the first damage group, verifies its stop, and checks the resulting increase in recoil. Mutual-charge integration remains pending.
+Charge recoil is now sampled after the target's damage cascade. The profile remains the pre-collision forecast; `ChargeReport.received_damage` and `recoil_arc` describe recoil actually applied, with zero/absent values on a miss. New level-three recoil uses the target's post-damage speed and the participants' current headings, while retaining the collision's sampled tonnage. Recoil direction also uses the post-damage positions. This follows the reference's phase ordering and cached collision weight without introducing a mutable mass cache. A seeded test destroys a moving target's leg during the first damage group, verifies its stop, and checks the resulting increase in recoil. Mutual-charge integration remains pending.
 
 
 ## Mutual charge collisions
@@ -4233,7 +4233,7 @@ Mutual attacks use their six charge sections for ranged recovery, and test uncon
 
 Each successful collision completes its damage and recoil, stops its attacker, and checks the original first participant's piloting before the original second participant's. Only then does the second collision run. Both participants receive six-section recovery after the pair if either attempt was accepted, regardless of hit or eligibility. The movement owner will clear both charge selections; selection tracking and automatic dispatch are still pending.
 
-The torso merge can retain both left and right flags. `BattleTorso::Both` represents that state explicitly, and shared geometry uses its rightward 59-degree offset. Left/right control requests from that state are rejected; centering clears it. Both is an inspected/persisted result, not an accepted rotation direction. Real-forward charge probing restores left first before merging the other pose, matching the reference's ordering. Tests verify the merged pose, geometry and control behavior.
+The torso merge can retain both left and right flags. `Torso::Both` represents that state explicitly, and shared geometry uses its rightward 59-degree offset. Left/right control requests from that state are rejected; centering clears it. Both is an inspected/persisted result, not an accepted rotation direction. Real-forward charge probing restores left first before merging the other pose, matching the reference's ordering. Tests verify the merged pose, geometry and control behavior.
 
 Seeded tests cover hit/miss pairs, rejected participants, no accepted attempts, recoil remainder behavior, a second attack after first-impact leg destruction, and restart/recovery. References are `combat/mech_charge.c`, `unit/mech_condition_state.c`, `unit/mech_identity.c`, and `movement/mech_move_controls.c`. Blindness, unsupported unit classes, native/Lua charge controls, movement tracking/timeouts and full end-to-end parity remain in their unfinished gates.
 
@@ -4249,7 +4249,7 @@ Selecting a different target preserves counters. Explicit cancellation and timeo
 
 ### Charge tracking during jumps
 
-Ground and jump updates now share `BattleMovementRules`. Active jump updates age new-rule charge selections without adding travel distance; stabilization and free-fall events do not run the charge timer. Integrated airborne endpoints check collision range and reject airborne attacks without spending attack dice or applying recovery. Mutual airborne rejection clears both selections. Landing and terrain-entry consequences precede the endpoint check, so normal landing uses grounded eligibility. Bridge interruption and lost thrust retain their early exit before endpoint collision dispatch.
+Ground and jump updates now share `MovementRules`. Active jump updates age new-rule charge selections without adding travel distance; stabilization and free-fall events do not run the charge timer. Integrated airborne endpoints check collision range and reject airborne attacks without spending attack dice or applying recovery. Mutual airborne rejection clears both selections. Landing and terrain-entry consequences precede the endpoint check, so normal landing uses grounded eligibility. Bridge interruption and lost thrust retain their early exit before endpoint collision dispatch.
 
 Focused tests verify timer expiration and persisted flight replay, old-rule counter preservation, unchanged charge distance, one-way/mutual airborne rejection without combat dice or damage, landing-before-eligibility order, and inactive tracking during stabilization. This closes the conventional jump-tracking gap noted above. Unimplemented charge eligibility modes, blindness, DFA, physical XP and other unit classes remain open.
 
@@ -4296,7 +4296,7 @@ Tests verify launch-time range versus snapped distance, fixed destination under 
 
 Native `jump #unit` and argument-free `jump` now select a DFA target; coordinate jumps retain their existing syntax. Lua uses `btech.unit.dfa(unit, pilot, target)`, with nil for the current lock. Command and Lua selection share the launch transaction and rollback staged output together. Status exposes the flight's DFA target.
 
-Normal and pilot-requested early landings share `BattleMovementRules`, including configured physical pilot skill, movement modifiers, hit arcs and fall rules. Landing inspects DFA eligibility while the flight still supplies the airborne aim modifier. An accepted attack resolves once, clears flight intent, and suppresses ordinary completion/crowding messages and the twelve-second jump stabilization timer. Moved or ineligible targets fall back to normal landing. Subsequent damaged-gear checks and flooding still run. Completed flight cursors are permitted only inside a landing transaction; world validation prevents committing an unresolved arrival.
+Normal and pilot-requested early landings share `MovementRules`, including configured physical pilot skill, movement modifiers, hit arcs and fall rules. Landing inspects DFA eligibility while the flight still supplies the airborne aim modifier. An accepted attack resolves once, clears flight intent, and suppresses ordinary completion/crowding messages and the twelve-second jump stabilization timer. Moved or ineligible targets fall back to normal landing. Subsequent damaged-gear checks and flooding still run. Completed flight cursors are permitted only inside a landing transaction; world validation prevents committing an unresolved arrival.
 
 Tests cover fixed-base airborne aim at actual arrival, saved replay, one-shot dispatch, normal fallback without attack dice, native/Lua default and explicit selection with rollback, and early-landing hits under pilot-based rules. Existing movement, physical and landing suites remain regression gates. Broader landing interactions (including full stagger behavior), unsupported unit classes, special movement/eligibility states and physical XP still require further characterization; this does not claim complete BattleTech parity.
 
@@ -4323,13 +4323,13 @@ Wizard command `@btech skill-threshold <skill>[=<value>]` and Lua `btech.charact
 
 Lua `btech.unit.evacuate(unit, wizard)` moves non-wizard contents of an in-character unit to `battletech.afterlife_dbref`, using ordinary teleport policies and callbacks. Successful moves release cockpit assignments through the usual movement reconciliation. When in-character rules are enabled and `xploss < 1000`, existing character profiles retain that per-thousand fraction of XP. Wizards stay aboard; tactical units do nothing. Occupants are snapshotted before callbacks, so newly arrived objects are not swept into an ongoing evacuation. A denied/redirected move or callback/XP error restores the operation's world changes and staged effects. This callable evacuation path does not yet enable automatic casualties from in-character combat.
 
-`BattleImpactReport::crew_casualty()` identifies lethal head or cockpit damage for conventional bipeds. Ordinary center-torso or engine destruction is not sufficient to infer crew death. The query reads actual damage phases and critical losses and does not move occupants; the enclosing action must apply in-character policy and publish evacuation. Other casualty causes, including fatal character injuries and environmental events, remain separate.
+`ImpactReport::crew_casualty()` identifies lethal head or cockpit damage for conventional bipeds. Ordinary center-torso or engine destruction is not sufficient to infer crew death. The query reads actual damage phases and critical losses and does not move occupants; the enclosing action must apply in-character policy and publish evacuation. Other casualty causes, including fatal character injuries and environmental events, remain separate.
 
 `resolve_battle_impact_action(scripts, config, unit, hit, damage)` combines the material resolver with lethal head/cockpit evacuation. It checkpoints world state and staged effects before damage, invokes ordinary evacuation callbacks for lethal in-character outcomes, validates the resulting world, and restores the entire action if any step fails. Ordinary CT destruction leaves occupants aboard. This host API is not a firing command: callers still own authority, hit selection and nonfatal injury/fall effects. Normal firing and physical attack eligibility are unchanged.
 
 `injure_battle_character_pilot` applies build-scaled health damage to a present pilot in an in-character unit. Nonfatal injuries use the player's existing consciousness dice and recovery state, including Pain Resistance and the caller's effective Toughness rule. Further injury while unconscious does not consume dice or restart recovery. Character-mode injury counts are stored separately from tactical injuries, so six points do not falsely destroy an RPG unit. Fatal health damage records unit loss, releases the pilot and clears the recovery countdown. `injure_battle_character_pilot_action` additionally evacuates occupants in the same checkpoint, restoring health, unit state, dice, movement and XP if evacuation fails. The final fatal injury does not increment the reference's surviving-injury counter. Normal combat callers still need to select this path when processing character injuries.
 
-The impact action now selects ordered character-injury processing for in-character units. Head injuries occur before their material phase; non-hotloaded ammunition/weapon explosion injuries occur after explosion damage if the pilot and unit survive. Pain Resistance reduces explosion injury, and Toughness applies to consciousness checks. Applied injuries appear in `BattleImpactReport.character_injuries` and are removed from pending effects, preventing duplicate application. Fatal health damage is a distinct `CharacterInjury` casualty cause and triggers the same atomic evacuation. Pure material resolution remains available without implicitly changing character health.
+The impact action now selects ordered character-injury processing for in-character units. Head injuries occur before their material phase; non-hotloaded ammunition/weapon explosion injuries occur after explosion damage if the pilot and unit survive. Pain Resistance reduces explosion injury, and Toughness applies to consciousness checks. Applied injuries appear in `ImpactReport.character_injuries` and are removed from pending effects, preventing duplicate application. Fatal health damage is a distinct `CharacterInjury` casualty cause and triggers the same atomic evacuation. Pure material resolution remains available without implicitly changing character health.
 
 Character impact actions apply crew stun through the shared ten-second stun implementation and publish its cockpit notice in the same transaction. Handled stun is removed from pending effects. Character injury actions also publish consciousness attempts, target/roll details and loss-of-consciousness feedback directly to the affected pilot, without exposing health-roll messages to other occupants or consuming additional dice. Failed actions restore staged notices along with world state.
 
@@ -4337,7 +4337,7 @@ Character impact actions apply crew stun through the shared ten-second stun impl
 
 Ordinary flooding entry points retain the character-mode guard. Character-enabled flooding is confined to the host action until movement and damage callers can publish evacuation in their own transactions.
 
-`fall_battle_unit_action(scripts, config, unit, levels, rules)` resolves character-enabled dry-ground and water falls with the shared posture, direction, damage and flooding logic. Pilot protection failures produce `BattleFallReport.character_injury`; tactical falls retain `pilot_injury`. Grouped damage applies character health at its actual event positions. Nested flooding can create new cockpit casualties, and the host action publishes all newly lethal crew states under one checkpoint. Private injury feedback traverses nested reports once. Ordinary fall entry points retain their character gate; surface-break/airborne interactions and normal combat/movement callers still require integration.
+`fall_battle_unit_action(scripts, config, unit, levels, rules)` resolves character-enabled dry-ground and water falls with the shared posture, direction, damage and flooding logic. Pilot protection failures produce `MechFallReport.character_injury`; tactical falls retain `pilot_injury`. Grouped damage applies character health at its actual event positions. Nested flooding can create new cockpit casualties, and the host action publishes all newly lethal crew states under one checkpoint. Private injury feedback traverses nested reports once. Ordinary fall entry points retain their character gate; surface-break/airborne interactions and normal combat/movement callers still require integration.
 
 `break_battle_surface_action(scripts, config, map, coordinate, terrain, rules)` breaks ice or a bridge inside one host checkpoint, supporting mixed tactical and character occupants. Character-mode falls also propagate their publication mode to landing-induced ice breaks. Neighbor/trigger order and terrain-before-fall semantics remain shared with ordinary breakage. Terrain, all affected units, character health, evacuation and staged notices roll back together on failure. Ordinary break APIs and upward-breakout/movement callers retain their existing character restrictions pending integration.
 
@@ -4355,13 +4355,13 @@ Interrupted horizontal movement after a descending ice break now propagates the 
 
 `resolve_battle_physical_attack_action` executes a single typed physical attack with normal cockpit authority and targeting/equipment checks, enabling character impact and balance-fall resolution. It publishes direct and nested private injuries, and evacuates newly lethal crews under one checkpoint. The ordinary physical APIs remain tactical; native/Lua routing, ordered multi-arm actions, physical XP and charge/DFA integration remain unfinished.
 
-`resolve_battle_arm_attack_action` accepts a `BattleArmAttackChoice` and sequences selected arms with character-aware targeting, impacts and falls. Per-arm targeting rejection preserves prior successful attacks, while resolution or casualty-publication failure rolls back the entire sequence. The host publishes aggregate cockpit notices once and traverses each completed attack for private injury feedback. Native/Lua routing and physical XP remain separate integration work.
+`resolve_battle_arm_attack_action` accepts a `ArmAttackChoice` and sequences selected arms with character-aware targeting, impacts and falls. Per-arm targeting rejection preserves prior successful attacks, while resolution or casualty-publication failure rolls back the entire sequence. The host publishes aggregate cockpit notices once and traverses each completed attack for private injury feedback. Native/Lua routing and physical XP remain separate integration work.
 
 Native and Lua kick, trip, punch, axe, sword, mace, saw, claw and club adapters now use the shared character-aware host actions. Target/contact checks and configured rules remain shared. The host owns notice publication, preventing duplicate adapter output; Lua keeps its outer transaction so a later callback error restores damage, recovery, crew movement and staged messages. Physical XP and charge/DFA integration remain incomplete.
 
-Direct single and arm-sequenced physical hits now award Piloting-Battlemech XP before damage when both units are in character, the live target is on another team, and the attacker has a present connected pilot. The award is `max(1, damage / 3)` using reduced glancing damage; misses and trips do not award direct-damage XP. `BattlePhysicalReport.experience` exposes the applied award. The shared catalog policy supplies thresholds and continuous-award behavior. Damage or evacuation failure rolls back XP with the attack. Charge/DFA awards and XP-channel messaging remain unfinished.
+Direct single and arm-sequenced physical hits now award Piloting-Battlemech XP before damage when both units are in character, the live target is on another team, and the attacker has a present connected pilot. The award is `max(1, damage / 3)` using reduced glancing damage; misses and trips do not award direct-damage XP. `PhysicalReport.experience` exposes the applied award. The shared catalog policy supplies thresholds and continuous-award behavior. Damage or evacuation failure rolls back XP with the attack. Charge/DFA awards and XP-channel messaging remain unfinished.
 
-`resolve_battle_charge_action` resolves one-way charge damage, recoil and balance with character-aware continuation packets and atomic casualty publication. Accepted packets continue after earlier destruction; eligible target packets award piloting XP before damage, while recoil and later hits on a wreck do not. `BattleChargeReport.experience` exposes these awards. Ordinary charge simulation, mutual charges and movement dispatch remain tactical pending their integration.
+`resolve_battle_charge_action` resolves one-way charge damage, recoil and balance with character-aware continuation packets and atomic casualty publication. Accepted packets continue after earlier destruction; eligible target packets award piloting XP before damage, while recoil and later hits on a wreck do not. `ChargeReport.experience` exposes these awards. Ordinary charge simulation, mutual charges and movement dispatch remain tactical pending their integration.
 
 `resolve_battle_mutual_charge_action` now publishes both pre-rolled charge outcomes under one character casualty checkpoint. Eligibility and attack rolls are frozen before either collision; a second accepted attack still resolves after first-collision crew loss. Direct awards use live pilot eligibility at each packet, and aggregate notices plus private injuries are published once. Movement dispatch still uses tactical charge entry points pending integration.
 
@@ -4381,33 +4381,33 @@ The server uses `advance_battle_stagger_action` for timed damage checks. Charact
 
 `resolve_battle_shot_action` resolves a complete direct shot with character target damage, shooter misloads/recoil and atomic casualty publication. It owns shot expenditure and consequence rollback. Native/Lua firing adapters use the configured character-capable action, retaining their existing observer and aim feedback. The host publishes messages, private injuries and casualties once within the enclosing transaction.
 
-`BattleGunneryExperienceInput::classic_chance` computes the default biped shooting-XP difficulty without consuming RNG or mutating character state. `BattleGunneryExperienceChance::award` applies a supplied 1..50 roll. Character firing uses these calculations when `battletech.xp.oldxpsystem` is nonzero. The shared game configuration selects the alternate battle-value formula, also implemented for supported bipeds.
+`GunneryExperienceInput::classic_chance` computes the default biped shooting-XP difficulty without consuming RNG or mutating character state. `GunneryExperienceChance::award` applies a supplied 1..50 roll. Character firing uses these calculations when `battletech.xp.oldxpsystem` is nonzero. The shared game configuration selects the alternate battle-value formula, also implemented for supported bipeds.
 
-`BattleUnitExperience` persists per-unit XP scaling and target suppression. `set_battle_unit_experience` is a trusted administrative operation; it rejects negative or nonfinite multipliers. `battle_gunnery_experience_eligible` checks pre-impact biped eligibility for the selected formula without changing dice or balances. Character shots use these settings and checks for classic awards.
+`UnitExperience` persists per-unit XP scaling and target suppression. `set_battle_unit_experience` is a trusted administrative operation; it rejects negative or nonfinite multipliers. `battle_gunnery_experience_eligible` checks pre-impact biped eligibility for the selected formula without changing dice or balances. Character shots use these settings and checks for classic awards.
 
 `award_battle_classic_gunnery_experience` atomically applies an eligible default-formula award using attacker-owned persisted dice. Its request supplies attack facts and timestamp; identity, tonnage, effective speeds, stored multiplier and skill balances come from the world. Errors restore both RNG and XP. Character firing invokes this operation after each location roll and before the corresponding damage group.
 
-`BattleUnit::effective_maximum_speed` derives the classic XP speed term from current construction mass, template speed, sampled TSM heat and special-map gravity. It preserves integer weight penalties and single-precision speed rounding, and remains distinct from damage-only mobility. Supported constructed bipeds have no cargo, towing, sprint, MASC or supercharger state yet.
+`Mech::effective_maximum_speed` derives the classic XP speed term from current construction mass, template speed, sampled TSM heat and special-map gravity. It preserves integer weight penalties and single-precision speed rounding, and remains distinct from damage-only mobility. Supported constructed bipeds have no cargo, towing, sprint, MASC or supercharger state yet.
 
-`BattleSalvoReport::experience` retains one optional formula-tagged award attempt per applied group. Misses, heat-only fire, coolant and shooter misloads do not invoke target damage awards. Shot, native-command and Lua checkpoints include XP and its RNG consumption alongside ammunition, damage and casualty transfer. Shooting XP diagnostics use the existing channel service.
+`MechSalvoReport::experience` retains one optional formula-tagged award attempt per applied group. Misses, heat-only fire, coolant and shooter misloads do not invoke target damage awards. Shot, native-command and Lua checkpoints include XP and its RNG consumption alongside ammunition, damage and casualty transfer. Shooting XP diagnostics use the existing channel service.
 
-`BattleWeapon::battle_value` exposes intrinsic catalogue values for all 124 supported weapons. `BattleUnit::battle_value` computes offensive, defensive and total conventional biped BV from installed equipment and current protection, heat capacity and effective movement. It is read-only and requires no pilot. Damage retains installed weapon/bin contributions while changing live protection and movement. The battle-value gunnery formula consumes this score, pilot adjustments and its configuration multipliers immediately before each group.
+`Weapon::battle_value` exposes intrinsic catalogue values for all 124 supported weapons. `Mech::battle_value` computes offensive, defensive and total conventional biped BV from installed equipment and current protection, heat capacity and effective movement. It is read-only and requires no pilot. Damage retains installed weapon/bin contributions while changing live protection and movement. The battle-value gunnery formula consumes this score, pilot adjustments and its configuration multipliers immediately before each group.
 
 `award_battle_gunnery_experience` selects the configured formula. Battle-value awards use nominal speed MP, weapon BV/recycle, optional pilot/BTH adjustments, weapon-family and per-unit scaling, and the configured cap. They consume no award dice and honor target suppression. Zero multipliers retain the one-XP minimum. Poor-skill extrapolation can make the square-root arithmetic undefined; Rust records an absent difficulty and explicitly awards the minimum instead of allowing undefined floating-to-integer conversion to affect the shot. Invalid divisors, caps or negative configuration multipliers reject the transaction. Direct, native and Lua character firing all share this path.
 
-`BattleSalvoReport::experience_messages` captures shooting diagnostics before each damage group. Host firing publishes accepted gains to `MechAttackXP`; battle-value mode also emits configured `MechXP` gain/trivial-hit diagnostics. Missing channels are ignored. Existing channel receive policy and history apply, and delivery errors roll back channels, XP, damage and pending output. Classic mode retains its distinct wording and does not emit the optional battle-value diagnostics. Other BattleTech diagnostic call sites remain to be integrated.
+`MechSalvoReport::experience_messages` captures shooting diagnostics before each damage group. Host firing publishes accepted gains to `MechAttackXP`; battle-value mode also emits configured `MechXP` gain/trivial-hit diagnostics. Missing channels are ignored. Existing channel receive policy and history apply, and delivery errors roll back channels, XP, damage and pending output. Classic mode retains its distinct wording and does not emit the optional battle-value diagnostics. Other BattleTech diagnostic call sites remain to be integrated.
 
 Physical attack, charge and DFA experience use the same biped skill selection as piloting checks: `Piloting-Biped` with extended piloting enabled, otherwise `Piloting-Battlemech`. The attack rules carry that selection through each pre-damage award. Native/Lua commands derive it from configuration; direct host operations use their explicit rules.
 
 Physical, charge and DFA reports also retain `experience_messages` for accepted awards. Host consequence publication sends them to `MechPilotXP`, including movement-triggered attacks, under the same checkpoint as damage and casualty transfer. Each message captures the pilot name, amount and selected skill before impact. Missing channels are ignored; delivery failures roll back the whole action.
 
-`BattleUnit::movement_experience()` exposes persisted crossing count and the last piloting XP attempt coordinates. Character ground/jump host updates count successful hex changes, offering one XP every ten updates. A repeated award coordinate is suppressed even across maps; the initial mark is `(0, 0)`. Disconnected pilots accumulate crossings without changing the mark. Awards use the configured biped piloting skill and publish `MechPilotXP` transactionally. Counter overflow rejects the tick instead of wrapping. This counts movement updates that change hex, not every intermediate hex traced within one update.
+`Mech::movement_experience()` exposes persisted crossing count and the last piloting XP attempt coordinates. Character ground/jump host updates count successful hex changes, offering one XP every ten updates. A repeated award coordinate is suppressed even across maps; the initial mark is `(0, 0)`. Disconnected pilots accumulate crossings without changing the mark. Awards use the configured biped piloting skill and publish `MechPilotXP` transactionally. Counter overflow rejects the tick instead of wrapping. This counts movement updates that change hex, not every intermediate hex traced within one update.
 
-Physical attack, charge and DFA balance/protection checks now retain optional `BattlePilotingCheck::experience`. Successful actual rolls against targets above two offer XP bounded by the situational modifier; automatic successes and failed/trivial checks do not. This award is independent of damage XP and does not update the movement counter or coordinate mark. The enclosing report publishes accepted gains through `MechPilotXP` under the same action checkpoint. The low-level `roll_piloting` function remains a no-XP primitive; callers explicitly select the award policy. Other control-check call sites remain to be integrated.
+Physical attack, charge and DFA balance/protection checks now retain optional `PilotingCheck::experience`. Successful actual rolls against targets above two offer XP bounded by the situational modifier; automatic successes and failed/trivial checks do not. This award is independent of damage XP and does not update the movement counter or coordinate mark. The enclosing report publishes accepted gains through `MechPilotXP` under the same action checkpoint. The low-level `roll_piloting` function remains a no-XP primitive; callers explicitly select the award policy. Other control-check call sites remain to be integrated.
 
-Character fall protection checks now award successful-check XP before damage, retaining the mutation in `BattleFallReport::avoidance.experience` and accepted diagnostics in `experience_messages`. The recursive host consequence publisher handles direct and nested falls without duplicating cockpit notices. Failed delivery restores the enclosing action, including prior attacks, dice, XP, damage, channel history and pending output. A failed balance check can therefore be followed by a separate successful protection award; automatic prone protection still consumes no dice and earns no XP.
+Character fall protection checks now award successful-check XP before damage, retaining the mutation in `MechFallReport::avoidance.experience` and accepted diagnostics in `experience_messages`. The recursive host consequence publisher handles direct and nested falls without duplicating cockpit notices. Failed delivery restores the enclosing action, including prior attacks, dice, XP, damage, channel history and pending output. A failed balance check can therefore be followed by a separate successful protection award; automatic prone protection still consumes no dice and earns no XP.
 
-Damage-triggered balance checks now retain accepted piloting XP on `BattleBalanceReport::check` and diagnostic snapshots in `experience_messages`. The shared impact/salvo/fall consequence traversal publishes them transactionally. Forced falls have no balance roll or balance award; their separate protection roll retains its own XP policy.
+Damage-triggered balance checks now retain accepted piloting XP on `BalanceReport::check` and diagnostic snapshots in `experience_messages`. The shared impact/salvo/fall consequence traversal publishes them transactionally. Forced falls have no balance roll or balance award; their separate protection roll retains its own XP policy.
 
 Stagger and thermal-shutdown reports now include `experience_messages` for accepted control-check XP. Stagger awards share the history-consumption transaction; shutdown balance awards occur before reactor power-down. Host publication restores history/clocks, dice, power, XP and pending output if delivery fails. Failed balance checks may independently earn protection XP in their resulting falls.
 
@@ -4438,8 +4438,8 @@ heat and recycle but do not remove any damage. Failed Streak locks do not
 activate defense. Successful attacks subtract interception from cluster hits
 before regrouping damage, so a defended LRM salvo retains five-point packets.
 
-`BattleShotReport::ams` records the activation and actual intercepted hits;
-`BattleSalvoReport::missiles_before_defense` retains the pre-defense cluster
+`MechShotReport::ams` records the activation and actual intercepted hits;
+`MechSalvoReport::missiles_before_defense` retains the pre-defense cluster
 count. Both native and Lua firing publish cockpit feedback within their owning
 shot transaction. Callback abort and persistence replay cover defense expenditure
 alongside the attack. Critical destruction disables the unit's AMS capability;
@@ -4477,7 +4477,7 @@ not permit manual fire from either defense type.
 ## Narc beacons
 
 Conventional IS and Clan Narc launchers resolve non-damaging pod hits inside the
-shared shot transaction. `BattleNarcReport` records hit/interception, attachment
+shared shot transaction. `NarcReport` records hit/interception, attachment
 section and cockpit notices. Unit state owns the set of marked sections, validates
 that each survives, and removes marks during section destruction. Explosive rounds
 use normal salvo damage. Narc-compatible missiles use the existing cluster bonus
@@ -4530,7 +4530,7 @@ Conventional Narc cannot be swatted off. Vehicle crew removal is deferred.
 
 ## Stealth armor
 
-`BattleSignatureState` owns active status and an optional destination/countdown. Equipment
+`SignatureState` owns active status and an optional destination/countdown. Equipment
 capability is derived from two passive armor slots in each non-head/non-center
 section and installed Guardian ECM. Runtime switching requires working Guardian
 parts. The thirty-second event belongs to the normal saved heartbeat, so a failed
@@ -4557,7 +4557,7 @@ recovery or attack dice change. Normal visibility and firing checks still apply.
 
 ## Null signature system
 
-Concealment systems share `BattleSignatureState` and its destination/countdown
+Concealment systems share `SignatureState` and its destination/countdown
 transition. Stealth armor still depends on Guardian ECM; NSS derives its capability
 from `NullSig_Device` in all seven non-head sections and requires every installed
 device to remain available. The generic state advances a pending event only at
@@ -4651,7 +4651,7 @@ weight is deliberately distinct from seismic's current physical mass.
 
 ## Radar sensing
 
-`R`/`radar` requires the `AntiAircraft` chassis flag. `BattleRadarTarget` evaluates
+`R`/`radar` requires the `AntiAircraft` chassis flag. `RadarTarget` evaluates
 explicit integer altitude, surface clearance and flying chassis identity; `battle_radar_contact` supplies
 current terrain, flight or fall altitude, equipment and map restrictions. Radar
 uses the shared selector, contact cache, acquisition rolls and signed aiming path.
@@ -4678,7 +4678,7 @@ bonuses remain part of the future aircraft implementation.
 
 ## Active probes
 
-Beagle (`B`), light Beagle (`A`) and Bloodhound (`H`) share `BattleActiveProbe`
+Beagle (`B`), light Beagle (`A`) and Bloodhound (`H`) share `ActiveProbe`
 for equipment, range and interference policy. They use the ordinary sensor
 selection/contact pipeline and transaction-owned aiming stream. Hardware ranges
 are six, three and eight hexes. Aiming adds a uniform zero through two, sampled
@@ -4722,7 +4722,7 @@ combat dice. A thirty-second timer prevents changes until the stable-lock notice
 `tag -` or a nil Lua target then releases the connection and starts thirty seconds
 of recycling. Equipment occupies one ton per installed slot.
 
-`BattleTagState` belongs to the tagging unit and persists with its other runtime
+`TagState` belongs to the tagging unit and persists with its other runtime
 state. `battle_tagged_by` derives current target ownership and rechecks equipment,
 power, objects, map/range and terrain. A new owner displaces the former owner into
 recycle; saved duplicate ownership is rejected. No second saved target-side link
@@ -4867,8 +4867,8 @@ damage. Explicit unit targets, indirect observer selection and self-cooling reta
 their existing routing precedence. B-mode resolves building integrity; indirect hex
 spotting and mine effects remain pending.
 
-Configured firing returns `BattleFireReport`: either the unit report or a
-`BattleHexShotReport` with `map` and `coordinate` and no target unit. Lua receives
+Configured firing returns `FireReport`: either the unit report or a
+`HexShotReport` with `map` and `coordinate` and no target unit. Lua receives
 the corresponding detached table. Both paths share configured aiming rules,
 launch-failure messages and the enclosing world/output checkpoint. Terrain shots
 publish coordinate-based observer feedback and woodland notices. Character-enabled
@@ -4890,7 +4890,7 @@ ammunition damage modifiers and glancing do not alter this nominal threshold.
 Misses and I/C modes do not make structural checks. Once fractured, later packets
 see water and consume no additional structural dice.
 
-`BattleHexShotReport.surfaces` retains each roll and optional fracture report.
+`HexShotReport.surfaces` retains each roll and optional fracture report.
 Observers who can see the coordinate receive break/shudder notices captured before
 terrain changes. Surface occupants fall through the existing surface-break system;
 configured native/Lua shots publish character consequences and evacuations inside
@@ -4918,7 +4918,7 @@ below; configuration alone does not schedule repairs.
 
 ### Building entrance references
 
-`BattleBuildingEntrance` links a battlefield coordinate to the interior map that
+`BuildingEntrance` links a battlefield coordinate to the interior map that
 owns construction integrity. `set_building_entrance` configures or removes a stable
 ordinal; `StoredBattleMap::building_at` selects the first matching ordinal and
 `building_entrances` exposes the ordered entries. Duplicate coordinates and multiple
@@ -4961,8 +4961,8 @@ Entrance movement and explicit repair/rebuild administration remain pending.
 
 ### Typed minefield definitions
 
-`BattleMinefield` stores coordinate, kind, signed strength, extra setting and owner.
-`BattleMineKind` distinguishes standard, inferno, command, vibra and scripted trigger
+`Minefield` stores coordinate, kind, signed strength, extra setting and owner.
+`MineKind` distinguishes standard, inferno, command, vibra and scripted trigger
 fields. Stable ordinals preserve ordering and permit multiple fields at one hex.
 `set_minefield` performs checked administrative configuration without changing
 terrain, occupants or dice; `StoredBattleMap::minefields` exposes the saved records.
@@ -5066,7 +5066,7 @@ submerged target receives ignition and steam feedback while retaining no burn.
 Observer messages use acquired, currently visible contacts. A candidate world
 contains duration changes and steam decoration together; overflow, invalid targets
 and late validation failure leave the caller's world untouched. The detached
-`BattleInfernoHit` report retains target, missile count, added duration, extinction
+`InfernoHit` report retains target, missile count, added duration, extinction
 and ordered notices for publication by the enclosing action.
 
 Tests cover paired-missile rounding through the supported count limit, repeated
@@ -5134,7 +5134,7 @@ host actions publish these callbacks together with injury consequences. Callback
 failure restores movement, damage, persistent script state and output. Detached
 low-level movement functions return notices; the host actions own Lua publication.
 
-`BattleMineEventReport` retains the triggering unit/reason, blasts, callback count
+`MineEventReport` retains the triggering unit/reason, blasts, callback count
 and notices. Fall reports retain their mine event; movement reports retain entry
 and landing events. Existing casualty handling visits nested mine injuries and
 falls without duplicating their public notices. No new persistence format or C
@@ -5161,7 +5161,7 @@ nested falls are skipped. Non-command fields and other frequencies/maps remain
 untouched except for ordinary colocated deletion and blast consequences. Repeating
 a consumed frequency is a no-op with no dice draws or notices.
 
-`BattleCommandMineReport` retains sender, map, frequency, ordered blasts and notices.
+`CommandMineReport` retains sender, map, frequency, ordered blasts and notices.
 `detonate_command_mines_action` publishes character injuries, nested fall effects
 and casualties within one host checkpoint. A late blast or publication failure
 restores every earlier change and pending notification. Physical activation,
@@ -5202,7 +5202,7 @@ radio delivery and transmission admission use the separate shared action below.
 
 `resolve_digital_radio(world, sender, channel, message)` computes digital
 receptions without mutation, dice draws or publication. It returns the frequency,
-map and ordered `BattleRadioReception` records, including the receiving channel,
+map and ordered `RadioReception` records, including the receiving channel,
 transmitter path, bearing and formatted cockpit text. `notices()` projects the
 result into ordinary cockpit notifications for the enclosing host transaction.
 
@@ -5251,7 +5251,7 @@ pilot's mental attributes at startup completion. A player's missing character
 profile yields 18; no player pilot yields 6. Later skill changes take effect at
 the next startup. Lua's `btech.unit.state` exposes this captured target.
 
-`BattleAnalogRadioReport` includes ordered receptions and `interfered_receivers`
+`AnalogRadioReport` includes ordered receptions and `interfered_receivers`
 for the enclosing host's XP policy; it does not award XP or publish messages.
 Tests cover boundary arithmetic, character/dice order, two-pass range loss,
 endpoint ECM, self-monitoring, muting, zero frequency, restart, late rejection
@@ -5275,7 +5275,7 @@ the configured hit, stagger, stacking and piloting rules.
 One outer checkpoint covers reception dice, all notifications, mine damage and
 nested character consequences. A late error restores the pre-transmission world
 and outbox. A later error in the enclosing Lua callback also rolls back the whole
-action. The returned `BattleRadioTransmission` retains tagged delivery diagnostics
+action. The returned `RadioTransmission` retains tagged delivery diagnostics
 and the command-mine report. Tests verify both modes, native/Lua parity, shutdown
 sending, restart, rejected admission and late mine/callback rollback.
 
@@ -5384,7 +5384,7 @@ pending with the autopilot runtime.
 ### Observer contact notifications
 
 Automatic contact events now project their cockpit notice through
-`BattleContactEvent::notice`. Observer mode suppresses ordinary acquisition and
+`ContactEvent::notice`. Observer mode suppresses ordinary acquisition and
 loss chatter while preserving the independent weapon-lock-loss warning. The
 server uses this projection through the same staged notification path as other
 unit messages. Acquisition rolls, contact state, sensor range, visibility and
@@ -5716,7 +5716,7 @@ base suitability. This display does not implement aircraft landing physics.
 
 `StoredBattleMap::landing_suitability(coordinate, team)` returns Ready,
 ImproperTerrain, UnevenGround or Blocked in that order. Circular
-`BattleLandingExclusion` records carry coordinate, radius, exempt team and owner.
+`LandingExclusion` records carry coordinate, radius, exempt team and owner.
 `set_battle_landing_exclusion(world, map, ordinal, zone?)` is the trusted Rust
 administrative setter; None removes a record. A nonzero matching team bypasses
 that individual circle, while team zero exempts nobody. Overlapping restrictions
@@ -5838,7 +5838,7 @@ Lua agreement, and restart persistence while outside the cockpit.
 
 `contacts +` applies saved unit-list preferences. Bare `contacts` retains its
 unfiltered acquired-contact list, and explicit `contacts #unit` remains a direct
-lookup. `BattleContactPreferences` includes dead, shutdown, enemy, ally and selected
+lookup. `ContactPreferences` includes dead, shutdown, enemy, ally and selected
 target categories. The defaults exclude wrecks and include the other categories.
 A selected unit with include_target enabled bypasses the category exclusions,
 but live acquisition and sensor visibility are always required. Wreck inclusion
@@ -5911,7 +5911,7 @@ invisible exclusion, callback rollback, visibility, authority and restart.
 
 ### Saved building inclusion
 
-`BattleContactPreferences.buildings` is a `BattleBuildingContactMode`: `Include`,
+`ContactPreferences.buildings` is a `BuildingContactMode`: `Include`,
 `Exclude` (the default), or `FollowBrief`. Lua uses `"include"`, `"exclude"`, and
 `"follow_brief"` respectively. For example, a trusted callback can use
 `btech.player.contact_preferences(player, {buildings="include"})` to include
@@ -6097,7 +6097,7 @@ cancel them when the active mode is requested. The simulation tick advances
 changes even at rest; expiration while stopped discards the request. Restart
 retains the countdown. Ground projection, domino collision relative speed and
 contact/report headings use the lateral travel axis; weapon arcs retain chassis
-facing. Rust exports BattleLateralMode, BattleLateralState, set_battle_lateral
+facing. Rust exports LateralMode, LateralState, set_battle_lateral
 and battle_lateral; Lua unit state exposes lateral. Tests cover eligibility,
 commands, rollback, alias parsing, replacement/cancellation, timing, restart,
 actual movement, contact displays, shutdown expiry and invalid saved countdowns.
@@ -6145,7 +6145,7 @@ hardware is not required. Tests cover forward/reverse/near-zero speeds, hour
 formatting, defaults, passengers, native/Lua output, rollback and persistence.
 
 Compass bearing now supports native `bearing` and read-only Lua unit.bearing,
-backed by Rust battle_bearing and BattleBearingReport. No arguments measures to
+backed by Rust battle_bearing and BearingReport. No arguments measures to
 the selected live visible unit or selected hex of any purpose. Two integers use
 the current continuous position; four supply origin and destination hex centers.
 Coordinates are bounded to the current map, with the reference bearing-only
@@ -6255,7 +6255,7 @@ its operational capability, destroys compressor slots in the center torso, and
 rolls one to four surviving center-torso engine criticals in slot order. Existing
 engine damage rules supply heat and destruction consequences.
 
-MASC and the supercharger share `BattleBoosterState` and the single
+MASC and the supercharger share `BoosterState` and the single
 `advance_battle_boosters_action` host update. Each keeps independent overload and
 recovery history. Either active device penalizes the other's check by one before
 wizard protection. Simultaneous checks retain their scheduling order across saves.
@@ -6272,7 +6272,7 @@ before, between, or after booster toggles, so valid hot forward/reverse throttle
 transitions can be saved and replayed through cooling.
 
 C3 computer hardware is represented by typed `C3Master`, `C3Slave`, and `C3i`
-critical slots. `BattleUnit::c3_hardware()` and Lua `unit.state(...).c3_hardware`
+critical slots. `Mech::c3_hardware()` and Lua `unit.state(...).c3_hardware`
 report installed and working hardware independently of reactor power and network
 membership. A biped master uses five slots grouped in slot order within one
 section (gaps are allowed); each complete group fails independently. Slaves need
@@ -6427,7 +6427,7 @@ sender echo, multi-recipient rollback, and restart parity share the C3i behavior
 
 Native `c3network` and `c3targets`, plus Lua `unit.c3_network(unit, pilot)` and
 `unit.c3_targets(unit, pilot)`, now use the same status/target report implementation
-as C3i. Both families return `BattleNetworkStatusReport` or
+as C3i. Both families return `NetworkStatusReport` or
 `BattleNetworkTargetReport` through their family-specific Rust entry points.
 Classic target rows identify `network_range.kind` as `c3`, independently of any
 simultaneous C3i membership.
@@ -6499,13 +6499,13 @@ new capabilities and saved mode flags.
 
 ### Chassis anatomy and quadruped decoding
 
-`BattleMechChassis` separates anatomy from the stable eight section identities.
+`MechChassis` separates anatomy from the stable eight section identities.
 It supplies chassis-specific section names, leg membership, and critical-slot
 capacity. Biped front attachments are arms with twelve slots; quad front
 attachments are legs with six. Both use six-slot head/rear-leg sections and
 12-slot torsos. The existing section enum retains its biped identifier names;
 code interpreting limb roles must use chassis anatomy, and quad labels come from
-`section_name` rather than the biped `BattleSection::name`.
+`section_name` rather than the biped `MechSection::name`.
 
 The asset decoder now accepts complete quad section layouts and resolves them
 after all fields are read, so `Move_Type` may appear after section data. Mixed
@@ -6692,11 +6692,11 @@ are supported without a C bridge.
 
 ### Artillery flight and impact rules
 
-`BattleArtilleryFlight` captures launch coordinates, weapon identity, ammunition
+`ArtilleryFlight` captures launch coordinates, weapon identity, ammunition
 mode and the attack's hit/miss result. Its validated serialized countdown advances
 in committed seconds: five hexes per second, truncated, with a ten-second minimum.
 Arrival uses the current map bounds and wind strength and returns an ordered
-`BattleArtilleryImpactPattern`. Countdown and random draws remain unchanged when
+`ArtilleryImpactPattern`. Countdown and random draws remain unchanged when
 arrival validation fails; an arrived cursor cannot emit another impact.
 
 Standard rounds produce five-point damage packets in the center and half damage
@@ -6757,7 +6757,7 @@ launchers are admitted to live unit construction. Ordinary range and
 instantaneous damage-group APIs reject artillery so it cannot silently use the
 conventional firing pipeline.
 
-`BattleWeapon::artillery_aim` accepts explicit live facts and computes the artillery
+`Weapon::artillery_aim` accepts explicit live facts and computes the artillery
 hit target without random draws. Maximum range is twenty times the catalogue long
 range, including cannon entries in the reference. Extended range takes the larger
 of that limit and twice medium range. Submerged mounts produce target 5000; raw
@@ -6801,7 +6801,7 @@ weapon launch action owns dice, ammunition, heat and recovery. A successful laun
 adds one persistent flight in the same transaction; failed admission spends nothing.
 Range and underwater sentinel targets produce misses, and artillery does not glance.
 
-Lua returns `BattleArtilleryLaunchReport`, including aim, expenditure and the map
+Lua returns `ArtilleryLaunchReport`, including aim, expenditure and the map
 queue ordinal. Damage, smoke and mine effects are applied only on arrival. A miss
 observed by a running friendly unit increments saved trajectory correction when
 the shooter remains running and the original hex remains selected. A selected
@@ -6894,7 +6894,7 @@ blocked mode changes, database replay and critical explosion eligibility.
 
 ### Ground-vehicle asset definitions
 
-`BattleVehicleTemplate::parse` and `read_battle_vehicle_template` decode Vehicle
+`VehicleTemplate::parse` and `read_battle_vehicle_template` decode Vehicle
 assets independently of BattleMech construction. Movement is typed as tracked,
 wheeled, hover or stationary. Vehicle sections are left, right, front, rear and
 an optional turret; aircraft and Mech sections are rejected. Hull faces require
@@ -6911,7 +6911,7 @@ separate implementation work.
 
 ### Ground-vehicle equipment resolution
 
-`BattleVehicleLoadout::resolve` interprets each vehicle weapon slot as a complete
+`VehicleLoadout::resolve` interprets each vehicle weapon slot as a complete
 weapon. Hull-face and slot order preserve weapon numbering. A Demolisher's two
 adjacent AC/20 slots resolve to two weapons, without imposing Mech critical-slot
 counts. Bins remain independent, with shared capacity, quantity and mode checks.
@@ -6934,7 +6934,7 @@ capacity rejection, unknown equipment, invalid modes and definition round-trip.
 
 ### Ground-vehicle engine diagnostics
 
-`BattleVehicleTemplate::engine` reports nominal output, suspension-adjusted mass
+`VehicleTemplate::engine` reports nominal output, suspension-adjusted mass
 rating, catalogue availability, powerplant family, engine mass and the hovercraft
 minimum. Mechs and vehicles share speed-to-rating arithmetic, catalogue lookup
 and fixed-point rounding. Vehicle rules apply fusion shielding before XL, XXL,
@@ -6954,7 +6954,7 @@ Complete vehicle mass, structural validation and live simulation remain unfinish
 
 ### Intact ground-vehicle mass diagnostics
 
-`BattleVehicleTemplate::mass()` resolves equipment and returns `BattleVehicleMass`,
+`VehicleTemplate::mass()` resolves equipment and returns `VehicleMass`,
 with component values in 1/1024-ton units. It accounts for installed engine mass
 (including shielding and the hover minimum), quarter-ton controls and turret
 rounding, hover components, structure and armor technology, whole vehicle weapons
@@ -6978,14 +6978,14 @@ separate work. Vehicle XXL engines use the asset flag `XXL_Tech`.
 
 ### Ground-vehicle material state
 
-`BattleVehicle` owns its template, current protection, and current ammunition.
+`Vehicle` owns its template, current protection, and current ammunition.
 Construction requires resolved equipment and a complete intact mass calculation.
 Loadouts remain derived; snapshots do not duplicate equipment definitions.
 Deserialization validates section membership, original protection limits, bin
 counts and capacities, and the absence of armor or ammunition in destroyed sections.
 
-`damage_phase` uses the shared `BattleDamagePhase` and a section-typed
-`BattleDamageResult<BattleVehicleSection>`. Armor and internals are separate phases
+`damage_phase` uses the shared `DamagePhase` and a section-typed
+`DamageResult<VehicleSection>`. Armor and internals are separate phases
 so a combat caller can insert critical resolution between them. Vehicle hits use
 the selected face's armor; the Mech rear-armor selector does not redirect them.
 Section loss clears its protection and ammunition. Any hull-face loss destroys
@@ -6999,7 +6999,7 @@ resolution, crew effects, or live vehicle commands.
 
 ### Ground-vehicle world ownership and saved games
 
-`create_battle_vehicle` registers an owned `BattleVehicle` on an unused live thing.
+`create_battle_vehicle` registers an owned `Vehicle` on an unused live thing.
 `BtechState::vehicles()` exposes vehicle records separately from the Mech simulator,
 while `units()` includes their common identities. Vehicles retain the shared MECH
 special-object registration, class code 1, and their ground movement identity.
@@ -7037,7 +7037,7 @@ Mech-only combat iteration still excludes vehicles until its consumers support t
 ### Vehicle administration through native commands and Lua
 
 `@btech unit-create` and `btech.unit.create` now select construction rules from the
-asset's declared Type. `BattleUnitTemplate` and `read_battle_unit_template` provide
+asset's declared Type. `UnitTemplate` and `read_battle_unit_template` provide
 the same checked dispatch to Rust callers. Asset reads retain directory confinement
 and the one-megabyte bound. Malformed Mech definitions never fall back to vehicle
 parsing, and unsupported unit classes are rejected explicitly.
@@ -7071,9 +7071,9 @@ continues to report `simulation_supported=false` and now includes pilot and powe
 
 ### Ground-vehicle motion proposals
 
-`BattleVehicleTemplate::ground_motion_step` computes a proposed one-second motion
-segment from an intact chassis, current terrain, a `BattleMotion`, and explicit
-`BattleVehicleMotionRules`. Turning and acceleration share the Mech implementation.
+`VehicleTemplate::ground_motion_step` computes a proposed one-second motion
+segment from an intact chassis, current terrain, a `Motion`, and explicit
+`VehicleMotionRules`. Turning and acceleration share the Mech implementation.
 The vehicle calculation applies rough/snow/forest/mountain speed costs, tracked and
 wheeled road/bridge bonuses, reverse speed limits, turning slowdown, Speed Demon
 acceleration, map movement scaling, and paved-surface turning above nominal speed.
@@ -7086,7 +7086,7 @@ before committing a proposed segment. Live vehicle movement remains unfinished.
 
 ### Live ground-vehicle travel on supported terrain
 
-Vehicles now retain `BattleMotion` with their saved placement. Existing speed and
+Vehicles now retain `Motion` with their saved placement. Existing speed and
 heading controls, named speeds and cockpit readouts dispatch to vehicles. Controls
 require a conscious assigned pilot in a running vehicle; readouts remain available
 to conscious occupants. Shutdown and hull destruction halt motion, and placement
@@ -7198,7 +7198,7 @@ adapters still need to combine those effects with the check in one transaction.
 
 ### Standard vehicle hit locations
 
-`BattleVehicle::standard_hit` resolves an existing 2d6 location roll against the
+`Vehicle::standard_hit` resolves an existing 2d6 location roll against the
 standard ground-vehicle table. Hull faces use attack direction; working turrets
 receive the table's turret rolls, while missing or destroyed turrets redirect
 those hits to the hull. The result identifies the face and any through-armor
@@ -7213,7 +7213,7 @@ vehicle attack transaction remain unfinished.
 
 ### FASA vehicle hit effects
 
-`BattleVehicle::fasa_hit` returns a hit location with explicit motive-speed loss,
+`Vehicle::fasa_hit` returns a hit location with explicit motive-speed loss,
 immobilization and turret-lock effects. Inputs separate configuration from existing
 immobilization/turret-lock conditions. Critical-proof equipment takes precedence.
 The resolver preserves front/rear shielding policy, friendly criticals, side-specific
@@ -7258,7 +7258,7 @@ lock effects remain unfinished.
 Vehicle weapon mounts now test their own hull-face arcs or a 60-degree turret arc
 against compass bearings. Geometry follows the reference's whole-degree facing
 and rounded target bearing. Rear-mount flags do not override a vehicle hull face.
-`BattleVehicle::weapon_bears_on` resolves a saved weapon index, current hull/turret
+`Vehicle::weapon_bears_on` resolves a saved weapon index, current hull/turret
 facing and section survival; a locked turret remains usable within its fixed arc.
 
 Tests cover boundary angles, wraparound, rounding, hull turns with a locked turret,
@@ -7786,7 +7786,7 @@ and disabled attempts consume no dice. Contact ownership, vehicle scan cadence,
 team/hidden facts and target locks remain separate integration work.
 
 Vehicles now own durable contacts through `update_battle_optical_contact` and
-`BattleVehicle::contacts`. The shared action acquires unseen targets only when
+`Vehicle::contacts`. The shared action acquires unseen targets only when
 requested, retains eligible contacts without rerolling, and removes lost contacts.
 Visual and Light Amplification contacts can connect Mechs and vehicles in either
 direction. Saved contacts validate target existence, distinct identity, a shared
@@ -7796,7 +7796,7 @@ contact displays, automatic scan cadence and target locks remain pending; these
 stored observations are last-known state, not a guarantee of current visibility.
 
 Vehicle snapshots now include scenario team, hidden and illuminated flags through
-`BattleVehicle::sensor_signature` and the shared trusted signature setter. Scenario
+`Vehicle::sensor_signature` and the shared trusted signature setter. Scenario
 illumination affects optical queries alongside external searchlights. Vehicles
 also cache the operator's perception target at startup completion, retaining it
 through shutdown, aborted startup and restart until a later startup completes.
@@ -7852,7 +7852,7 @@ vehicles still require catalogue entries. Shamash retains its diagnostic rating
 Svantovit-Streak now records the reference loader's effective 25-round Streak
 SRM-4 bin, and J-27_Transport omits a rotor that neither ground-vehicle parser
 accepts. The reference tree remains unchanged. The audit example now explicitly
-tries `BattleVehicle::new` as well as reporting equipment and mass diagnostics.
+tries `Vehicle::new` as well as reporting equipment and mass diagnostics.
 Successful construction does not certify tactical simulation or combat parity.
 
 Detailed unit scans and brief unit reports now accept vehicle observers and
@@ -8112,10 +8112,10 @@ AMS and beacon resolvers. Shooter-owned ammunition, heat, misloads and recoil st
 with the existing Mech launcher. Native and Lua actions publish feedback in the
 same transaction as damage, and callback failure restores all affected state.
 
-`BattleShotRules.vehicle_impact` supplies target vehicle policy. The configured
+`ShotRules.vehicle_impact` supplies target vehicle policy. The configured
 host builds it through the same policy adapter as vehicle firing; the vehicle
-wrapper adds only shooter critical policy. `BattleShotReport.salvo` and
-`BattleVehicleShotReport.salvo` both use `BattleTargetSalvo`, with `Mech` and
+wrapper adds only shooter critical policy. `MechShotReport.salvo` and
+`VehicleShotReport.salvo` both use `TargetSalvo`, with `Mech` and
 `Vehicle` variants. Lua reads the tag at `salvo.kind` and anatomy-specific fields
 under `salvo.report`. Beacon reports use a Mech or vehicle section identity.
 
@@ -8158,7 +8158,7 @@ internal-damage and critical handlers. Repeated inferno hits retain active timer
 Shutdown does not stop fires; destruction cancels them and any extinguishing attempt.
 
 Advanced terrain fire checks occur once per newly entered burning hex. Movement
-passes `BattleMovementRules.fall.vehicle_impact`, configured through the same adapter as
+passes `MovementRules.fall.vehicle_impact`, configured through the same adapter as
 firing. The crossing uses shared motive effects or armor damage, and severe results
 reuse inferno section ignition. Disabling damage stops travel in the affected hex.
 The movement transaction includes the position, damage, timers, dice and notices;
@@ -8203,7 +8203,7 @@ Artillery arrivals now damage mixed Mech and ground-vehicle occupants in map-slo
 order. Mines and artillery share packet resolution and heat effects, while each
 source retains its own footprint and packet sizes. Vehicle hits use vehicle
 location tables even for cluster bomblets. Arrival reports contain typed
-`BattleBlastImpact` packets and vehicle heat effects; vehicle observers receive
+`BlastImpact` packets and vehicle heat effects; vehicle observers receive
 visible arrival notices. Vehicle character casualties remain pending.
 
 
@@ -8601,7 +8601,7 @@ switch, rollback and persisted replay.
 
 ### Shared VTOL asset anatomy
 
-VTOL assets now use `BattleVehicleTemplate`, hull sections, weapon mounts and
+VTOL assets now use `VehicleTemplate`, hull sections, weapon mounts and
 ammunition bins shared with ground vehicles. Rotor anatomy has its own section
 identity. Class remains separate from movement: both bundled observation VTOLs
 retain their stationary movement. Rotorcraft suspension uses the 50/95/140 rating
@@ -8619,7 +8619,7 @@ Ground critical tables and rotor firing geometry do not stand in for those rules
 ### VTOL hit and rotor critical selection
 
 VTOL definitions now select standard/FASA hit locations from supplied rolls using
-shared `BattleVehicleHit` and hull-face identities. Rotor damage, rotor destruction
+shared `VehicleHit` and hull-face identities. Rotor damage, rotor destruction
 and FASA side-nine main-weapon destruction remain explicit secondary outcomes.
 Critical-proof equipment selects standard locations and suppresses those effects.
 Advanced rotor critical rolls distinguish main-rotor damage, tail-rotor loss and
@@ -8633,7 +8633,7 @@ unfinished, and the live-construction gate remains in place.
 
 ### Shared rotor material state
 
-`BattleVehicle` can now construct rotorcraft material independently of world
+`Vehicle` can now construct rotorcraft material independently of world
 admission. Main-rotor hits use shared motive speed loss and section destruction;
 rotor section loss removes lift and halts horizontal motion without destroying
 the hull or killing crew. Repeated hits report whether lift was newly lost so a
@@ -9148,7 +9148,7 @@ timers, locks and movement publication; carried-unit handling remains outstandin
 
 ### Shared building entry event state
 
-Mechs, ground vehicles and VTOLs now save the same `BattleBuildingEntry` record in
+Mechs, ground vehicles and VTOLs now save the same `BuildingEntry` record in
 their owned snapshots. Admission checks the current pilot, power, grounded posture,
 VTOL fuel, speed and route. A denied enter lock can be forced only when the building
 is unsafe and its integrity is strictly below integer half of maximum integrity.
@@ -9211,7 +9211,7 @@ pass, as described below.
 
 ### Interior arrival publication
 
-The entry host action returns transient `BattleBuildingArrival` reports for the
+The entry host action returns transient `BuildingArrival` reports for the
 surrounding tick. New map membership extends that tick's eligible scanner observers
 before startup completion. The existing scanner pass deduplicates observers and
 performs acquisition once. Reports are then published to currently acquired, visible
@@ -9354,14 +9354,14 @@ unfinished.
 
 ### Shared load accounting
 
-`battle_unit_load(world, unit, tsm_tow_bonus)` returns a derived `BattleUnitLoad`
+`battle_unit_load(world, unit, tsm_tow_bonus)` returns a derived `UnitLoad`
 for any included chassis. Material mass uses surviving components and current
 ammunition. External tow mass starts at twice the target's live material mass;
 salvage equipment, enabled hot-myomer towing assistance and carrier equipment each
 halve that integral load in sequence. No weight cache or extra tow ownership state
 is stored. Mech construction accepts the salvage and carrier metadata used here.
 
-`BattleUnitLoad::maximum_speed` applies the common construction-weight surcharge,
+`UnitLoad::maximum_speed` applies the common construction-weight surcharge,
 carried-load denominator floors and strict three-times-nominal overload threshold.
 It uses the fixed mass units and single-precision speed calculation shared with
 the existing unit-local Mech effective-speed query. Destroyed carriers return zero;
@@ -9516,8 +9516,8 @@ uses those valuations. Its separate nominal-speed ratio remains nominal, as the
 formula requires. Installed weapon value and ammunition accounting are unchanged.
 Vehicle cooling uses the shared construction capacity query.
 
-Firing adapters pass `tsm_tow_bonus` through `BattleShotRules` into each pre-impact
-`BattleGunneryAwardRequest`, so grouped damage uses the configured assistance and
+Firing adapters pass `tsm_tow_bonus` through `ShotRules` into each pre-impact
+`GunneryAwardRequest`, so grouped damage uses the configured assistance and
 current load. Standalone requests explicitly choose the setting. No load or battle
 value cache is introduced. Unit-local BV methods remain useful without world tow
 relationships.
@@ -9602,12 +9602,12 @@ and native/Lua pickup/dropoff commands still require integration.
 
 ### Ground-vehicle forced descent
 
-Ground vehicles now retain `BattleFreeFall` when support is removed, using the
+Ground vehicles now retain `FreeFall` when support is removed, using the
 same three-second descent clock, increasing downward speed and impact severity
 as rotorcraft. `begin_battle_vehicle_descent` starts at the retained vehicle
 height after tow detachment; `advance_battle_vehicle_descent` advances either
 class through one common transaction. The common outcome is
-`BattleVehicleDescentEvent`. The aircraft-specific advance entry still requires
+`VehicleDescentEvent`. The aircraft-specific advance entry still requires
 a VTOL. Aircraft retain their lift-recovery and rotor-impact consequences;
 ground vehicles use the existing vehicle fall material rules.
 
@@ -9697,7 +9697,7 @@ inspection. This closes the Rust-only scenario-permission limitation noted above
 ### Ground-vehicle digging cover
 
 Native `dig` and Lua `btech.unit.dig(unit, pilot)` share a transactional action
-and a saved `BattleDigState`. Tracked and wheeled vehicles prepare for twenty
+and a saved `DigState`. Tracked and wheeled vehicles prepare for twenty
 simulation seconds on eligible terrain. The ordinary heartbeat advances the
 countdown; restart preserves remaining time. Movement and heading commands cancel
 preparation. Completed cover blocks chassis turning and hull weapons until a
@@ -9719,7 +9719,7 @@ Hull-down and fortification remain unfinished.
 ### Quad hull-down posture
 
 `hulldown [-|stop]` and `btech.unit.hulldown(unit, pilot, argument?)` use one
-transactional action. Saved `BattleHullDownState` holds the completed posture and
+transactional action. Saved `HullDownState` holds the completed posture and
 a pending direction/countdown. The ordinary heartbeat owns advancement, including
 restart recovery. Delay is the truncated value of 30 divided by maximum chassis
 speed in MP, clamped to a divisor of 1–30. Lowering requests zero desired speed.
@@ -10539,7 +10539,7 @@ explosion and prevents changing firing or ammunition modes. Failure checks reuse
 the attack dice. A permanent critical loader jam is distinct from a manual feed
 jam and cannot be cleared by the ordinary unjam control.
 
-`BattleUnit::weapon_damage()` and Lua `btech.unit.state(id).weapon_damage` expose
+`Mech::weapon_damage()` and Lua `btech.unit.state(id).weapon_damage` expose
 the damaged slots. `weapon_damage_effects(index)` derives a mount's penalties
 across all of its slots, including split sections. Launch reports carry the
 resulting energy damage penalty into the shared Mech, vehicle and terrain packet
@@ -10698,7 +10698,7 @@ vehicle Lua state includes their current values. This covers receiving illuminat
 notices; vehicle searchlight hardware and controls require a separate integration.
 
 
-Vehicle searchlight hardware now uses the same saved BattleSearchlight state,
+Vehicle searchlight hardware now uses the same saved Searchlight state,
 switch admission/countdown, beam projection and damage-roll service as Mechs.
 Vehicle snapshots validate installed equipment and lamp-state invariants. All
 supported emitters feed the unit and terrain lighting queries, retaining their

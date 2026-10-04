@@ -34,7 +34,7 @@ pub fn save_map_action(
             crate::runtime::MapAssetWrite::new(config, actor, &format!("{name}.toml"), source)?;
         super::notify_message(
             scripts,
-            super::BattleMessageTarget::Player(actor),
+            super::MessageTarget::Player(actor),
             &format!("Saving {name}"),
         )?;
         scripts.effects.stage_map_write(request)?;

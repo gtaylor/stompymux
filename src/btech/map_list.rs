@@ -1,5 +1,5 @@
 //! Read-only operator listings share battlefield slot order and typed map-object selection.
-use super::{BattleMapObjectKind, StoredMap};
+use super::{MapObjectKind, StoredMap};
 use crate::{Config, ObjectId, Scripts};
 use anyhow::{Context, Result, bail, ensure};
 
@@ -25,14 +25,13 @@ pub fn list_map_action(
         );
         let record = before.btech.maps().get(&map).context("Map not found")?;
         record.validate()?;
-        let notify = |line: &str| {
-            super::notify_message(scripts, super::BattleMessageTarget::Player(actor), line)
-        };
+        let notify =
+            |line: &str| super::notify_message(scripts, super::MessageTarget::Player(actor), line);
         if objects {
             ensure!(record.terrain_ready(), "Map terrain is unavailable");
             notify("X   Y   Type  obj   dc   ds     di")?;
             notify("--------------------------------------------")?;
-            for kind in BattleMapObjectKind::ALL {
+            for kind in MapObjectKind::ALL {
                 for (slot, coordinate) in super::map_object_delete::object_positions(record, kind) {
                     let [object, byte, short, scalar] =
                         object_fields(record, kind, slot, coordinate)?;
@@ -78,7 +77,7 @@ pub fn list_map_action(
 /// Unused fields of newly created effects are zero; imported restoration payloads remain intact.
 fn object_fields(
     map: &StoredMap,
-    kind: BattleMapObjectKind,
+    kind: MapObjectKind,
     slot: super::map_object_delete::MapObjectSlot,
     coordinate: super::HexCoordinate,
 ) -> Result<[i64; 4]> {
@@ -102,7 +101,7 @@ fn object_fields(
     }
     let slot = slot.ordinal();
     Ok(match kind {
-        BattleMapObjectKind::Fire | BattleMapObjectKind::Smoke => {
+        MapObjectKind::Fire | MapObjectKind::Smoke => {
             let effect = map.decorations[&slot];
             let terrain = map
                 .base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?
@@ -114,7 +113,7 @@ fn object_fields(
                 0,
             ]
         }
-        BattleMapObjectKind::Mine => {
+        MapObjectKind::Mine => {
             let mine = map.minefields[&slot];
             [
                 mine.owner.0,
@@ -123,7 +122,7 @@ fn object_fields(
                 i64::from(mine.extra),
             ]
         }
-        BattleMapObjectKind::Building => {
+        MapObjectKind::Building => {
             let record = map.building_entrances[&slot];
             [
                 record.interior.0,
@@ -132,7 +131,7 @@ fn object_fields(
                 record.data_int,
             ]
         }
-        BattleMapObjectKind::Leave => {
+        MapObjectKind::Leave => {
             let record = map.building_exits[&slot];
             [
                 record.destination.0,
@@ -141,7 +140,7 @@ fn object_fields(
                 record.data_int,
             ]
         }
-        BattleMapObjectKind::Entrance => {
+        MapObjectKind::Entrance => {
             let record = map.building_entry_points[&slot];
             [
                 record.object.0,
@@ -150,7 +149,7 @@ fn object_fields(
                 record.data_int,
             ]
         }
-        BattleMapObjectKind::LandingBlock => {
+        MapObjectKind::LandingBlock => {
             let zone = map.landing_exclusions[&slot];
             [
                 zone.owner.0,
@@ -159,7 +158,7 @@ fn object_fields(
                 zone.radius,
             ]
         }
-        BattleMapObjectKind::Decoration => unreachable!(),
+        MapObjectKind::Decoration => unreachable!(),
     })
 }
 

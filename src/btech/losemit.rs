@@ -37,13 +37,13 @@ pub fn losemit_action(
         for (observer, text) in &messages {
             super::notify_message(
                 scripts,
-                super::BattleMessageTarget::Unit(*observer),
+                super::MessageTarget::Unit(*observer),
                 &crate::text::escape(text),
             )?;
         }
         super::notify_message(
             scripts,
-            super::BattleMessageTarget::Player(actor),
+            super::MessageTarget::Player(actor),
             "Broadcast done.",
         )?;
         scripts.effects.validate()?;

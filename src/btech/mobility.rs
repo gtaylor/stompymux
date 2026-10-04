@@ -1,17 +1,17 @@
 //! Derive BattleMech mobility from persistent section and actuator damage.
-use super::{BattleMechChassis, BattleSystem, BattleUnit, CriticalLocation};
+use super::{CriticalLocation, Mech, MechChassis, System};
 use serde::Serialize;
 
 /// Damage-only movement limits; heat, cargo, terrain and pilot advantages are applied separately.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]
-pub struct BattleMobility {
+pub struct Mobility {
     pub maximum_speed: f64,
     pub piloting_modifier: u8,
 }
 
-impl BattleUnit {
+impl Mech {
     /// Recompute mobility from facts instead of accumulating mutable penalties after each hit.
-    pub fn mobility(&self) -> BattleMobility {
+    pub fn mobility(&self) -> Mobility {
         // Hardened armor costs one running MP before damage adjusts the ceiling.
         let baseline = (self.propulsion.baseline(self.definition().max_speed)
             - self.hardened_speed_penalty())
@@ -22,11 +22,11 @@ impl BattleUnit {
         let gyro = self.gyro_damage();
         let (mut maximum_speed, leg_penalty) = match (chassis, missing) {
             (_, 0) => (baseline, 0),
-            (BattleMechChassis::Quad, 1) => (baseline - 10.75, 2),
-            (BattleMechChassis::Quad, 2) => (10.75, 7),
-            (BattleMechChassis::Quad, _) => (0.0, 2),
-            (BattleMechChassis::Biped, 1) => (10.75, 5),
-            (BattleMechChassis::Biped, _) => (0.0, 10),
+            (MechChassis::Quad, 1) => (baseline - 10.75, 2),
+            (MechChassis::Quad, 2) => (10.75, 7),
+            (MechChassis::Quad, _) => (0.0, 2),
+            (MechChassis::Biped, 1) => (10.75, 5),
+            (MechChassis::Biped, _) => (0.0, 10),
         };
         let mut piloting_modifier = leg_penalty + self.gyro_piloting_modifier();
         let mut hips = 0;
@@ -43,9 +43,9 @@ impl BattleUnit {
                         slot: **slot,
                     })
                 })
-                .filter_map(|(_, part)| BattleSystem::named(&part.equipment))
+                .filter_map(|(_, part)| System::named(&part.equipment))
                 .collect();
-            if damaged.contains(&BattleSystem::ShoulderOrHip) {
+            if damaged.contains(&System::ShoulderOrHip) {
                 hips += 1;
                 maximum_speed /= 2.0;
                 piloting_modifier += 2;
@@ -56,9 +56,7 @@ impl BattleUnit {
                 .filter(|system| {
                     matches!(
                         system,
-                        BattleSystem::UpperActuator
-                            | BattleSystem::LowerActuator
-                            | BattleSystem::HandOrFootActuator
+                        System::UpperActuator | System::LowerActuator | System::HandOrFootActuator
                     )
                 })
                 .count() as u8;
@@ -66,20 +64,15 @@ impl BattleUnit {
             piloting_modifier += actuators;
         }
         maximum_speed = self.propulsion.maximum(maximum_speed);
-        if (chassis == BattleMechChassis::Biped && hips == 2)
-            || missing
-                >= if chassis == BattleMechChassis::Quad {
-                    3
-                } else {
-                    2
-                }
+        if (chassis == MechChassis::Biped && hips == 2)
+            || missing >= if chassis == MechChassis::Quad { 3 } else { 2 }
             || gyro >= 2
             || self.is_destroyed()
             || self.masc_seized()
         {
             maximum_speed = 0.0;
         }
-        BattleMobility {
+        Mobility {
             maximum_speed: maximum_speed.max(0.0),
             piloting_modifier,
         }

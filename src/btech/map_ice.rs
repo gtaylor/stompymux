@@ -1,43 +1,43 @@
 //! Operator ice growth and melting share map randomness and ordinary surface-break consequences.
-use super::{BattleFallRules, BattleSurfaceBreak, HexCoordinate, StoredMap};
+use super::{FallRules, HexCoordinate, StoredMap, SurfaceBreak};
 use crate::{Config, ObjectId, Scripts};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
 
 /// The requested seasonal terrain transition.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum BattleIceChange {
+pub enum IceChange {
     Grow,
     Melt,
 }
 
 /// Changed coordinates and any occupant consequences, in map traversal order.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleMapIceReport {
+pub struct MapIceReport {
     pub map: ObjectId,
     pub changed: Vec<HexCoordinate>,
-    pub fractures: Vec<BattleSurfaceBreak>,
+    pub fractures: Vec<SurfaceBreak>,
 }
 
 /// Apply the neighborhood probability after the percentage draw has succeeded.
 fn eligible(
     map: &StoredMap,
     coordinate: HexCoordinate,
-    change: BattleIceChange,
-    dice: &mut super::BattleDice,
+    change: IceChange,
+    dice: &mut super::Dice,
 ) -> Result<bool> {
     let mut count = 0_u8;
     for neighbor in map.neighbors(coordinate)?.into_iter().flatten() {
         let tile = map.base_hex(i64::from(neighbor.x), i64::from(neighbor.y))?;
         let counts = match change {
-            BattleIceChange::Grow => tile.is_open_water() || tile.has_bridge(),
-            BattleIceChange::Melt => tile.is_ice(),
+            IceChange::Grow => tile.is_open_water() || tile.has_bridge(),
+            IceChange::Melt => tile.is_ice(),
         };
         count += u8::from(counts);
     }
     Ok(match change {
-        BattleIceChange::Grow => count <= 4 && (count < 2 || dice.d6() > count),
-        BattleIceChange::Melt => count <= 4 || dice.die(3)? == 1,
+        IceChange::Grow => count <= 4 && (count < 2 || dice.d6() > count),
+        IceChange::Melt => count <= 4 || dice.die(3)? == 1,
     })
 }
 
@@ -50,8 +50,8 @@ pub fn change_map_ice_action(
     actor: ObjectId,
     map: ObjectId,
     percentage: i32,
-    change: BattleIceChange,
-) -> Result<BattleMapIceReport> {
+    change: IceChange,
+) -> Result<MapIceReport> {
     scripts.atomic(|before| {
         ensure!(
             crate::authority::is_wizard(before, actor),
@@ -72,7 +72,7 @@ pub fn change_map_ice_action(
             original.fire_dice.is_some(),
             "Map random stream is unavailable"
         );
-        let mut report = BattleMapIceReport {
+        let mut report = MapIceReport {
             map,
             changed: Vec::new(),
             fractures: Vec::new(),
@@ -87,13 +87,13 @@ pub fn change_map_ice_action(
                     let mut world = scripts.world_mut();
                     let live = world.btech.maps.get_mut(&map).unwrap();
                     let record = match change {
-                        BattleIceChange::Grow => original,
-                        BattleIceChange::Melt => &*live,
+                        IceChange::Grow => original,
+                        IceChange::Melt => &*live,
                     };
                     let tile = record.base_hex(x, y)?;
                     let eligible_tile = match change {
-                        BattleIceChange::Grow => tile.is_open_water(),
-                        BattleIceChange::Melt => tile.is_ice(),
+                        IceChange::Grow => tile.is_open_water(),
+                        IceChange::Melt => tile.is_ice(),
                     };
                     if !eligible_tile {
                         continue;
@@ -112,7 +112,7 @@ pub fn change_map_ice_action(
                     continue;
                 }
                 match change {
-                    BattleIceChange::Grow => {
+                    IceChange::Grow => {
                         super::terrain_edit::replace_hex(
                             &mut scripts.world_mut(),
                             map,
@@ -120,7 +120,7 @@ pub fn change_map_ice_action(
                             original.base_hex(x, y)?.frozen(),
                         )?;
                     }
-                    BattleIceChange::Melt => {
+                    IceChange::Melt => {
                         report
                             .fractures
                             .push(super::evacuation::break_surface_action(
@@ -128,8 +128,8 @@ pub fn change_map_ice_action(
                                 config,
                                 map,
                                 coordinate,
-                                super::BattleSurface::Ice,
-                                BattleFallRules::configured(config),
+                                super::Surface::Ice,
+                                FallRules::configured(config),
                             )?)
                     }
                 }
@@ -137,8 +137,8 @@ pub fn change_map_ice_action(
             }
         }
         let verb = match change {
-            BattleIceChange::Grow => "'iced'",
-            BattleIceChange::Melt => "melted",
+            IceChange::Grow => "'iced'",
+            IceChange::Melt => "melted",
         };
         let count = if report.changed.is_empty() {
             "No".into()
@@ -147,7 +147,7 @@ pub fn change_map_ice_action(
         };
         super::notify_message(
             scripts,
-            super::BattleMessageTarget::Player(actor),
+            super::MessageTarget::Player(actor),
             &format!("{count} hexes {verb}."),
         )?;
         scripts.world().validate(config)?;
@@ -160,7 +160,7 @@ pub fn change_map_ice_action(
 fn command(
     ctx: &crate::CommandContext<'_>,
     input: &crate::CommandInput,
-    change: BattleIceChange,
+    change: IceChange,
 ) -> Result<crate::CommandAction> {
     let result = (|| -> Result<()> {
         let percentage = input
@@ -185,7 +185,7 @@ pub(crate) fn add_command(
     ctx: &crate::CommandContext<'_>,
     input: &crate::CommandInput,
 ) -> Result<crate::CommandAction> {
-    command(ctx, input, BattleIceChange::Grow)
+    command(ctx, input, IceChange::Grow)
 }
 
 /// Melt eligible ice and resolve its occupants through the shared fracture action.
@@ -193,5 +193,5 @@ pub(crate) fn remove_command(
     ctx: &crate::CommandContext<'_>,
     input: &crate::CommandInput,
 ) -> Result<crate::CommandAction> {
-    command(ctx, input, BattleIceChange::Melt)
+    command(ctx, input, IceChange::Melt)
 }

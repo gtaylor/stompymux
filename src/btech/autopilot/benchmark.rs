@@ -9,11 +9,8 @@ use super::{
     AutopilotConfig, AutopilotController, AutopilotFeedbackEvent, AutopilotFireMode,
     AutopilotOrder, AutopilotState, AutopilotSubmissionMode,
 };
-use crate::btech::BattleUnitTemplateExt;
-use crate::{
-    BattlePosition, BattleUnitTemplate, Config, HeartbeatHarness, Kind, MapAsset, World,
-    persistence,
-};
+use crate::btech::UnitTemplateExt;
+use crate::{Config, HeartbeatHarness, Kind, MapAsset, Position, UnitTemplate, World, persistence};
 use anyhow::{Context, Result, bail, ensure};
 use std::path::Path;
 use std::time::Duration;
@@ -438,7 +435,7 @@ fn fixture_world(
         MapAsset::from_cells(&map_source(scenario, seed))?,
     )?;
     if let Some(map) = world.btech.maps.get_mut(&map_id) {
-        map.fire_dice = Some(crate::BattleDice::seeded(seed_bytes(seed, 0)));
+        map.fire_dice = Some(crate::Dice::seeded(seed_bytes(seed, 0)));
     }
 
     let count = controller_count.min(DEFAULT_CONTROLLERS);
@@ -457,25 +454,21 @@ fn fixture_world(
     for index in 0..count {
         let unit_id = world.create(config, format!("autopilot-benchmark-{index}"), Kind::Thing);
         let (reference, source) = templates[index / CHASSIS_PER_KIND];
-        BattleUnitTemplate::parse(reference, source)?.create(&mut world, unit_id)?;
+        UnitTemplate::parse(reference, source)?.create(&mut world, unit_id)?;
         let stream_seed = seed_bytes(seed, index as u64 + 1);
         if let Some(unit) = world.btech.constructed.get_mut(&unit_id) {
-            unit.dice = crate::BattleDice::seeded(stream_seed);
+            unit.dice = crate::Dice::seeded(stream_seed);
             let mut recovery = serde_json::to_value(&unit.crew_recovery)?;
-            recovery["dice"] = serde_json::to_value(crate::BattleDice::seeded(seed_bytes(
-                seed,
-                index as u64 + 2_000,
-            )))?;
+            recovery["dice"] =
+                serde_json::to_value(crate::Dice::seeded(seed_bytes(seed, index as u64 + 2_000)))?;
             unit.crew_recovery = serde_json::from_value(recovery)?;
             unit.signature.team = if index % 2 == 0 { 1 } else { 2 };
         }
         if let Some(vehicle) = world.btech.vehicles.get_mut(&unit_id) {
-            vehicle.dice = crate::BattleDice::seeded(stream_seed);
+            vehicle.dice = crate::Dice::seeded(stream_seed);
             let mut recovery = serde_json::to_value(&vehicle.crew_recovery)?;
-            recovery["dice"] = serde_json::to_value(crate::BattleDice::seeded(seed_bytes(
-                seed,
-                index as u64 + 2_000,
-            )))?;
+            recovery["dice"] =
+                serde_json::to_value(crate::Dice::seeded(seed_bytes(seed, index as u64 + 2_000)))?;
             vehicle.crew_recovery = serde_json::from_value(recovery)?;
             vehicle.signature.team = if index % 2 == 0 { 1 } else { 2 };
         }
@@ -504,7 +497,7 @@ fn fixture_world(
         let mut orders = Vec::with_capacity(13);
         for leg in 0..12 {
             orders.push(AutopilotOrder::Move {
-                destination: BattlePosition {
+                destination: Position {
                     map: map_id,
                     x: if leg % 2 == 0 {
                         (x + 25).min(i64::from(MAP_WIDTH - 1)) as u16
@@ -518,12 +511,12 @@ fn fixture_world(
         }
         orders.push(AutopilotOrder::Patrol {
             waypoints: vec![
-                BattlePosition {
+                Position {
                     map: map_id,
                     x: x as u16,
                     y: y as u16,
                 },
-                BattlePosition {
+                Position {
                     map: map_id,
                     x: (x + 25).min(i64::from(MAP_WIDTH - 1)) as u16,
                     y: y as u16,
@@ -543,14 +536,14 @@ fn fixture_world(
             .collect::<Vec<_>>();
         for &id in &ids {
             if let Some(u) = world.btech.constructed.get_mut(&id) {
-                u.power = crate::BattlePower::Running;
+                u.power = crate::Power::Running;
                 if let Some(m) = u.motion.as_mut() {
                     m.heading = 90.0;
                     m.desired_heading = 90.0;
                 }
             }
             if let Some(u) = world.btech.vehicles.get_mut(&id) {
-                u.power = crate::BattlePower::Running;
+                u.power = crate::Power::Running;
                 if let Some(m) = u.motion.as_mut() {
                     m.heading = 90.0;
                     m.desired_heading = 90.0;
@@ -621,11 +614,11 @@ fn renew_workload(harness: &mut HeartbeatHarness, pristine: &World) -> Result<u6
     for &id in &ids {
         if let Some(unit) = pristine.btech.constructed_units().get(&id) {
             let mut unit = unit.clone();
-            unit.power = crate::BattlePower::Running;
+            unit.power = crate::Power::Running;
             world.btech.constructed.insert(id, unit);
         } else if let Some(unit) = pristine.btech.vehicles().get(&id) {
             let mut unit = unit.clone();
-            unit.power = crate::BattlePower::Running;
+            unit.power = crate::Power::Running;
             world.btech.vehicles.insert(id, unit);
         }
         let orders = pristine.btech.controllers()[&id]

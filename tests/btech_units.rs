@@ -2,24 +2,23 @@
 use crate::support;
 use sqlx::{Connection, SqliteConnection};
 use stompymux_rs::{
-    BattleSection, BattleTemplate, BattleUnit, Flag, Kind, ObjectId, Scripts, create_battle_unit,
-    dbck, persistence,
+    Flag, Kind, Mech, MechSection, MechTemplate, ObjectId, Scripts, create_battle_unit, dbck,
+    persistence,
 };
 const JENNER: &str = include_str!("fixtures/btech/mechs/JR7-D.toml");
 const ATLAS: &str = include_str!("fixtures/btech/mechs/AS7-D.toml");
 
 #[test]
 fn construction_sets_original_protection_and_independent_ammunition() {
-    let unit = BattleUnit::from_template(BattleTemplate::parse("JR7-D", JENNER).unwrap()).unwrap();
-    assert_eq!(unit.sections()[&BattleSection::CenterTorso].armor, 10);
-    assert_eq!(unit.sections()[&BattleSection::CenterTorso].internal, 11);
-    assert_eq!(unit.sections()[&BattleSection::CenterTorso].rear, 3);
+    let unit = Mech::from_template(MechTemplate::parse("JR7-D", JENNER).unwrap()).unwrap();
+    assert_eq!(unit.sections()[&MechSection::CenterTorso].armor, 10);
+    assert_eq!(unit.sections()[&MechSection::CenterTorso].internal, 11);
+    assert_eq!(unit.sections()[&MechSection::CenterTorso].rear, 3);
     assert_eq!(unit.ammunition(), &[25]);
-    let atlas = BattleUnit::from_template(BattleTemplate::parse("AS7-D", ATLAS).unwrap()).unwrap();
+    let atlas = Mech::from_template(MechTemplate::parse("AS7-D", ATLAS).unwrap()).unwrap();
     assert_eq!(atlas.ammunition(), &[15, 6, 6, 5, 5]);
     let ams_source = JENNER.replace("IS.MediumLaser", "CL.Anti-MissileSystem");
-    let ams =
-        BattleUnit::from_template(BattleTemplate::parse("JR7-D", &ams_source).unwrap()).unwrap();
+    let ams = Mech::from_template(MechTemplate::parse("JR7-D", &ams_source).unwrap()).unwrap();
     assert_eq!(
         ams.loadout()
             .unwrap()
@@ -36,14 +35,14 @@ fn construction_sets_original_protection_and_independent_ammunition() {
     ] {
         assert_ne!(source, JENNER);
         assert!(
-            BattleTemplate::parse("JR7-D", &source)
-                .and_then(BattleUnit::from_template)
+            MechTemplate::parse("JR7-D", &source)
+                .and_then(Mech::from_template)
                 .is_err()
         );
     }
     let unknown_field = JENNER.replace("radio = 2", "unknown_field = 2");
     assert_ne!(unknown_field, JENNER);
-    assert!(BattleTemplate::parse("JR7-D", &unknown_field).is_err());
+    assert!(MechTemplate::parse("JR7-D", &unknown_field).is_err());
 }
 
 #[tokio::test]
@@ -117,7 +116,7 @@ async fn constructed_units_survive_source_removal_and_purge_atomically() {
         create_battle_unit(
             &mut loaded,
             first,
-            BattleTemplate::parse("JR7-D", JENNER).unwrap()
+            MechTemplate::parse("JR7-D", JENNER).unwrap()
         )
         .is_err()
     );

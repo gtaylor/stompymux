@@ -6,16 +6,16 @@ use stompymux_rs::*;
 /// A placed, shutdown vehicle with an assigned operator and no active scanners.
 async fn fixture(stationary: bool) -> (tempfile::TempDir, Config, World, ObjectId) {
     fixture_movement(if stationary {
-        BattleVehicleMovement::Stationary
+        VehicleMovement::Stationary
     } else {
-        BattleVehicleMovement::Tracked
+        VehicleMovement::Tracked
     })
     .await
 }
 
 /// Use the same protection for tracked, wheeled and hover vulnerability checks.
 async fn fixture_movement(
-    movement: BattleVehicleMovement,
+    movement: VehicleMovement,
 ) -> (tempfile::TempDir, Config, World, ObjectId) {
     let (dir, config, mut world) = support::isolated_world().await;
     let map = world.create(&config, "Fire test".into(), Kind::Room);
@@ -28,13 +28,13 @@ async fn fixture_movement(
     .unwrap();
     let id = world.create(&config, "Burning vehicle".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-    let mut text = if movement == BattleVehicleMovement::Vtol {
+    let mut text = if movement == VehicleMovement::Vtol {
         include_str!("../game/mechs/Kestrel.toml")
     } else {
         include_str!("../game/mechs/Demolisher.toml")
     }
     .to_owned();
-    if movement == BattleVehicleMovement::Stationary {
+    if movement == VehicleMovement::Stationary {
         text = text
             .replace("movement = \"track\"", "movement = \"none\"")
             .replace("walk_mp = 5", "walk_mp = 0");
@@ -42,15 +42,15 @@ async fn fixture_movement(
     text = text.replace(
         "movement = \"track\"",
         match movement {
-            BattleVehicleMovement::Wheeled => "movement = \"wheel\"",
-            BattleVehicleMovement::Hover => "movement = \"hover\"",
+            VehicleMovement::Wheeled => "movement = \"wheel\"",
+            VehicleMovement::Hover => "movement = \"hover\"",
             _ => "movement = \"track\"",
         },
     );
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse("test", &text).unwrap(),
+        VehicleTemplate::parse("test", &text).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -66,11 +66,11 @@ fn edit(world: &mut World, id: ObjectId, change: impl FnOnce(&mut serde_json::Va
 }
 
 /// Find an independent stream with a selected leading result.
-fn matching_seed(predicate: impl Fn(&mut BattleDice) -> bool) -> [u8; 32] {
+fn matching_seed(predicate: impl Fn(&mut Dice) -> bool) -> [u8; 32] {
     for number in 0u32..100000 {
         let mut seed = [0; 32];
         seed[..4].copy_from_slice(&number.to_le_bytes());
-        if predicate(&mut BattleDice::seeded(seed)) {
+        if predicate(&mut Dice::seeded(seed)) {
             return seed;
         }
     }
@@ -78,10 +78,10 @@ fn matching_seed(predicate: impl Fn(&mut BattleDice) -> bool) -> [u8; 32] {
 }
 
 /// Advanced section fires use the ordinary armor damage policy.
-fn advanced() -> BattleVehicleImpactRules {
-    BattleVehicleImpactRules {
+fn advanced() -> VehicleImpactRules {
+    VehicleImpactRules {
         advanced_fire: true,
-        ..BattleVehicleImpactRules::STANDARD
+        ..VehicleImpactRules::STANDARD
     }
 }
 
@@ -90,10 +90,10 @@ async fn advanced_inferno_ignites_once_and_replays_section_pulses_after_shutdown
     let (_dir, config, mut world, id) = fixture(false).await;
     let seed = [17; 32];
     edit(&mut world, id, |unit| {
-        unit["dice"] = serde_json::to_value(BattleDice::seeded(seed)).unwrap()
+        unit["dice"] = serde_json::to_value(Dice::seeded(seed)).unwrap()
     });
     let original = world.btech.vehicles()[&id].clone();
-    let mut dice = BattleDice::seeded(seed);
+    let mut dice = Dice::seeded(seed);
     let report = resolve_battle_vehicle_inferno_hit(&mut world, id, 3, advanced()).unwrap();
     assert_eq!(report.damage.len(), 5);
     assert_eq!(report.explosion_roll, None);
@@ -111,7 +111,7 @@ async fn advanced_inferno_ignites_once_and_replays_section_pulses_after_shutdown
             60
         );
     }
-    assert_eq!(world.btech.vehicles()[&id].power(), BattlePower::Off);
+    assert_eq!(world.btech.vehicles()[&id].power(), Power::Off);
     assert_eq!(world.btech.vehicles()[&id].weapon_heat(), 0.0);
     for _ in 0..17 {
         assert!(
@@ -170,18 +170,14 @@ async fn standard_explosions_and_stationary_jelly_preserve_distinct_rules() {
         let mut world = base.clone();
         let seed = matching_seed(|dice| dice.two_d6() == roll);
         edit(&mut world, id, |unit| {
-            unit["dice"] = serde_json::to_value(BattleDice::seeded(seed)).unwrap()
+            unit["dice"] = serde_json::to_value(Dice::seeded(seed)).unwrap()
         });
         let before = world.btech.vehicles()[&id].clone();
-        let mut dice = BattleDice::seeded(seed);
+        let mut dice = Dice::seeded(seed);
         dice.two_d6();
-        let report = resolve_battle_vehicle_inferno_hit(
-            &mut world,
-            id,
-            1,
-            BattleVehicleImpactRules::STANDARD,
-        )
-        .unwrap();
+        let report =
+            resolve_battle_vehicle_inferno_hit(&mut world, id, 1, VehicleImpactRules::STANDARD)
+                .unwrap();
         assert_eq!(report.explosion_roll, Some(roll));
         assert_eq!(report.explosion.is_some(), roll == 9);
         assert!(world.btech.vehicles()[&id].burning_sections().is_empty());
@@ -200,7 +196,7 @@ async fn standard_explosions_and_stationary_jelly_preserve_distinct_rules() {
         world.validate(&config).unwrap();
     }
     let (_dir, config, base, id) = fixture(true).await;
-    for rules in [advanced(), BattleVehicleImpactRules::STANDARD] {
+    for rules in [advanced(), VehicleImpactRules::STANDARD] {
         let mut world = base.clone();
         let report = resolve_battle_vehicle_inferno_hit(&mut world, id, 3, rules).unwrap();
         assert_eq!(report.burn_seconds, 360);
@@ -242,14 +238,14 @@ async fn fire_pulses_extinguish_on_one_and_discard_destroyed_sections_without_da
     let seed = matching_seed(|dice| dice.d6() == 1);
     edit(&mut base, id, |unit| {
         unit["burning_sections"] = serde_json::json!({"turret":1});
-        unit["dice"] = serde_json::to_value(BattleDice::seeded(seed)).unwrap();
+        unit["dice"] = serde_json::to_value(Dice::seeded(seed)).unwrap();
     });
     let mut world = base.clone();
-    let armor = world.btech.vehicles()[&id].sections()[&BattleVehicleSection::Turret].armor;
+    let armor = world.btech.vehicles()[&id].sections()[&VehicleSection::Turret].armor;
     let notices = advance_battle_vehicle_fires(&mut world, &config).unwrap();
     assert!(world.btech.vehicles()[&id].burning_sections().is_empty());
     assert_eq!(
-        world.btech.vehicles()[&id].sections()[&BattleVehicleSection::Turret].armor,
+        world.btech.vehicles()[&id].sections()[&VehicleSection::Turret].armor,
         armor - 1
     );
     assert!(
@@ -259,13 +255,13 @@ async fn fire_pulses_extinguish_on_one_and_discard_destroyed_sections_without_da
             .any(|notice| notice.text.contains("finally goes out"))
     );
     let mut world = base.clone();
-    let internal = world.btech.vehicles()[&id].sections()[&BattleVehicleSection::Turret].internal;
+    let internal = world.btech.vehicles()[&id].sections()[&VehicleSection::Turret].internal;
     let _ = damage_battle_vehicle_phase(
         &mut world,
         id,
-        BattleVehicleSection::Turret,
+        VehicleSection::Turret,
         internal,
-        BattleDamagePhase::Internal,
+        DamagePhase::Internal,
     )
     .unwrap();
     assert!(
@@ -274,7 +270,7 @@ async fn fire_pulses_extinguish_on_one_and_discard_destroyed_sections_without_da
             .notices
             .is_empty()
     );
-    let mut dice = BattleDice::seeded(seed);
+    let mut dice = Dice::seeded(seed);
     dice.d6();
     assert_eq!(roll_unit_dice(&mut world, id, 1).unwrap(), [dice.d6()]);
     assert!(world.btech.vehicles()[&id].burning_sections().is_empty());
@@ -327,7 +323,7 @@ async fn extinguishing_shares_native_lua_countdown_and_callback_rollback() {
         a > 1 && b > 1
     });
     edit(&mut world, id, |unit| {
-        unit["dice"] = serde_json::to_value(BattleDice::seeded(seed)).unwrap()
+        unit["dice"] = serde_json::to_value(Dice::seeded(seed)).unwrap()
     });
     for _ in 0..119 {
         let _ = advance_battle_vehicle_fires(&mut world, &config).unwrap();
@@ -351,7 +347,7 @@ async fn extinguishing_shares_native_lua_countdown_and_callback_rollback() {
     assert!(begin_battle_vehicle_extinguishing(&mut world, id, ObjectId(1)).is_err());
     let mut running = base.clone();
     edit(&mut running, id, |unit| {
-        unit["power"] = serde_json::to_value(BattlePower::Running).unwrap()
+        unit["power"] = serde_json::to_value(Power::Running).unwrap()
     });
     assert!(begin_battle_vehicle_extinguishing(&mut running, id, ObjectId(1)).is_err());
     assert!(begin_battle_vehicle_extinguishing(&mut base, id, ObjectId(2)).is_err());
@@ -380,7 +376,7 @@ async fn invalid_burn_snapshots_are_rejected_and_hull_fire_preserves_occupants()
     });
     let mut world = base;
     edit(&mut world, id, |unit| {
-        unit["dice"] = serde_json::to_value(BattleDice::seeded(seed)).unwrap();
+        unit["dice"] = serde_json::to_value(Dice::seeded(seed)).unwrap();
         unit["burning_sections"] = serde_json::json!({"front":1});
         unit["sections"]["front"]["armor"] = 0.into();
         unit["sections"]["front"]["internal"] = 1.into();
@@ -407,7 +403,7 @@ async fn shutdown_vehicle_fire_retries_failed_server_commit() {
         let seed = matching_seed(|dice| dice.d6() == 1);
         edit(&mut world, id, |unit| {
             unit["burning_sections"] = serde_json::json!({"front":1});
-            unit["dice"] = serde_json::to_value(BattleDice::seeded(seed)).unwrap();
+            unit["dice"] = serde_json::to_value(Dice::seeded(seed)).unwrap();
         });
         assert!(battle_contact_observers(&world).is_empty());
         let mut expected = world.clone();
@@ -444,9 +440,9 @@ async fn vehicle_destruction_cancels_fire_jelly_and_extinguishing() {
             let _ = damage_battle_vehicle_phase(
                 &mut world,
                 id,
-                BattleVehicleSection::Front,
+                VehicleSection::Front,
                 100,
-                BattleDamagePhase::Internal,
+                DamagePhase::Internal,
             )
             .unwrap();
         }
@@ -471,18 +467,18 @@ async fn vehicle_destruction_cancels_fire_jelly_and_extinguishing() {
 #[tokio::test]
 async fn terrain_fire_checks_share_motive_damage_ignition_and_exact_dice() {
     for (movement, modifier) in [
-        (BattleVehicleMovement::Tracked, 0),
-        (BattleVehicleMovement::Wheeled, 2),
-        (BattleVehicleMovement::Hover, 4),
+        (VehicleMovement::Tracked, 0),
+        (VehicleMovement::Wheeled, 2),
+        (VehicleMovement::Hover, 4),
     ] {
         let (_dir, config, base, id) = fixture_movement(movement).await;
         for roll in 2..=12 {
             let mut world = base.clone();
             let seed = matching_seed(|dice| dice.two_d6() == roll);
             edit(&mut world, id, |unit| {
-                unit["dice"] = serde_json::to_value(BattleDice::seeded(seed)).unwrap()
+                unit["dice"] = serde_json::to_value(Dice::seeded(seed)).unwrap()
             });
-            let mut dice = BattleDice::seeded(seed);
+            let mut dice = Dice::seeded(seed);
             dice.two_d6();
             let report =
                 resolve_battle_vehicle_fire_exposure(&mut world, id, advanced().criticals).unwrap();
@@ -544,7 +540,7 @@ async fn fatal_fire_continues_section_damage_and_replays_wreck_pulses() {
             dice.two_d6() <= 7
         });
         edit(&mut world, id, |unit| {
-            unit["dice"] = serde_json::to_value(BattleDice::seeded(seed)).unwrap();
+            unit["dice"] = serde_json::to_value(Dice::seeded(seed)).unwrap();
             unit["sections"]["left"]["armor"] = 0.into();
             unit["sections"]["left"]["internal"] = 1.into();
         });
@@ -584,13 +580,13 @@ async fn fatal_fire_continues_section_damage_and_replays_wreck_pulses() {
         assert!(
             !world.btech.vehicles()[&id]
                 .burning_sections()
-                .contains_key(&BattleVehicleSection::Left)
+                .contains_key(&VehicleSection::Left)
         );
         for section in [
-            BattleVehicleSection::Right,
-            BattleVehicleSection::Front,
-            BattleVehicleSection::Rear,
-            BattleVehicleSection::Turret,
+            VehicleSection::Right,
+            VehicleSection::Front,
+            VehicleSection::Rear,
+            VehicleSection::Turret,
         ] {
             assert!(
                 world.btech.vehicles()[&id].sections()[&section].armor
@@ -615,20 +611,20 @@ async fn blast_heat_checks_zero_heat_and_existing_wrecks() {
                             let _ = damage_battle_vehicle_phase(
                                 &mut world,
                                 id,
-                                BattleVehicleSection::Front,
+                                VehicleSection::Front,
                                 100,
-                                BattleDamagePhase::Internal,
+                                DamagePhase::Internal,
                             )
                             .unwrap();
                         }
                         let seed = matching_seed(|dice| dice.two_d6() == roll);
                         edit(&mut world, id, |unit| {
-                            unit["dice"] = serde_json::to_value(BattleDice::seeded(seed)).unwrap()
+                            unit["dice"] = serde_json::to_value(Dice::seeded(seed)).unwrap()
                         });
                         let before = world.clone();
-                        let rules = BattleVehicleImpactRules {
+                        let rules = VehicleImpactRules {
                             advanced_fire,
-                            ..BattleVehicleImpactRules::STANDARD
+                            ..VehicleImpactRules::STANDARD
                         };
                         let result =
                             resolve_battle_vehicle_heat_exposure(&mut world, id, heat, rules)
@@ -638,7 +634,7 @@ async fn blast_heat_checks_zero_heat_and_existing_wrecks() {
                             assert!(result.fire.is_none() && result.explosion_roll.is_none());
                             assert_eq!(
                                 roll_unit_dice(&mut world, id, 1).unwrap(),
-                                [BattleDice::seeded(seed).d6()]
+                                [Dice::seeded(seed).d6()]
                             );
                         } else if advanced_fire {
                             assert_eq!(result.fire.as_ref().unwrap().roll, roll);
@@ -680,7 +676,7 @@ async fn blast_heat_checks_zero_heat_and_existing_wrecks() {
 
 /// Heat, terrain exposure and inferno share private emergency feedback from burning sections.
 async fn aircraft_fire_feedback_matrix(source: usize) {
-    let (_dir, config, mut base, id) = fixture_movement(BattleVehicleMovement::Vtol).await;
+    let (_dir, config, mut base, id) = fixture_movement(VehicleMovement::Vtol).await;
     base.objects
         .get_mut(&ObjectId(1))
         .unwrap()
@@ -694,10 +690,10 @@ async fn aircraft_fire_feedback_matrix(source: usize) {
         .flags
         .insert(Flag::Connected);
     edit(&mut base, id, |state| {
-        state["power"] = serde_json::to_value(BattlePower::Running).unwrap();
-        state["vtol_flight"] = serde_json::to_value(BattleVtolFlight {
+        state["power"] = serde_json::to_value(Power::Running).unwrap();
+        state["vtol_flight"] = serde_json::to_value(VtolFlight {
             fall: None,
-            phase: BattleVtolFlightPhase::Airborne,
+            phase: VtolFlightPhase::Airborne,
             altitude: 2.0,
             vertical_speed: 0.0,
         })
@@ -707,14 +703,14 @@ async fn aircraft_fire_feedback_matrix(source: usize) {
         }
     });
     let mut policy = advanced();
-    policy.criticals.table = BattleVehicleCriticalTable::Standard;
+    policy.criticals.table = VehicleCriticalTable::Standard;
     policy.criticals.vtol_table = None;
     policy.criticals.enabled = true;
     // One VM pair per shard; each seed candidate installs its world, per the
     // sandbox-reuse convention, instead of booting fresh VMs.
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(base.clone()))).unwrap();
     let replay = Scripts::new(&config, Rc::new(RefCell::new(base.clone()))).unwrap();
-    let resolve = |scripts: &Scripts| -> Vec<BattlePilotNotice> {
+    let resolve = |scripts: &Scripts| -> Vec<PilotNotice> {
         match source {
             0 => {
                 resolve_battle_vehicle_heat_exposure_action(scripts, &config, id, 5, policy)
@@ -743,7 +739,7 @@ async fn aircraft_fire_feedback_matrix(source: usize) {
     for seed in 0..=255 {
         let mut world = base.clone();
         edit(&mut world, id, |state| {
-            state["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
+            state["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap()
         });
         if source == 3 {
             edit(&mut world, id, |state| {

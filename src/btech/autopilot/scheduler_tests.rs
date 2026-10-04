@@ -1,7 +1,7 @@
 //! Scheduler regressions under deliberately reduced shared budgets.
 use super::*;
-use crate::btech::BattleUnitTemplateExt;
-use crate::{BattleUnitTemplate, Kind, MapAsset};
+use crate::btech::UnitTemplateExt;
+use crate::{Kind, MapAsset, UnitTemplate};
 
 fn fixture() -> (Config, World, Vec<ObjectId>) {
     let config =
@@ -19,17 +19,17 @@ fn fixture() -> (Config, World, Vec<ObjectId>) {
     let mut units = Vec::new();
     for row in [2, 8, 14] {
         let id = world.create(&config, format!("Scheduler unit {row}"), Kind::Thing);
-        BattleUnitTemplate::parse("JR7-D", include_str!("../../../game/mechs/JR7-D.toml"))
+        UnitTemplate::parse("JR7-D", include_str!("../../../game/mechs/JR7-D.toml"))
             .unwrap()
             .create(&mut world, id)
             .unwrap();
         crate::place_battle_unit(&mut world, id, map, 1, row).unwrap();
-        world.btech.constructed.get_mut(&id).unwrap().power = BattlePower::Running;
+        world.btech.constructed.get_mut(&id).unwrap().power = Power::Running;
         let mut controller = super::super::AutopilotController::new();
         controller
             .submit(
                 vec![AutopilotOrder::Move {
-                    destination: BattlePosition {
+                    destination: Position {
                         map,
                         x: 18,
                         y: row as u16,
@@ -133,7 +133,7 @@ fn valid_combat_target_is_retained_between_reassessment_ticks_but_loss_is_immedi
     let challenger = ObjectId(21);
     let contact = |unit, range| AutopilotContact {
         unit,
-        position: BattlePosition {
+        position: Position {
             map: ObjectId(1),
             x: 1,
             y: 1,
@@ -153,7 +153,7 @@ fn valid_combat_target_is_retained_between_reassessment_ticks_but_loss_is_immedi
         heading: None,
         speed: 0.0,
         own: AutopilotOwnReadiness {
-            power: BattlePower::Running,
+            power: Power::Running,
             maximum_speed: 0.0,
             heat: None,
             weapons: Vec::new(),
@@ -187,7 +187,7 @@ fn valid_combat_target_is_retained_between_reassessment_ticks_but_loss_is_immedi
 
 #[test]
 fn projected_heat_accounts_for_burst_modes_damage_and_gatling_bound_without_dice() {
-    use crate::{BattleFireMode as Mode, BattleWeapon as Weapon};
+    use crate::{FireMode as Mode, Weapon};
     assert_eq!(
         projected_launch_heat(Weapon::MediumLaser, Mode::Normal, 2),
         u16::from(Weapon::MediumLaser.profile().heat) + 2
@@ -239,13 +239,13 @@ fn crowded_world(config: Config, mut world: World) -> (Config, World, Vec<Object
     let mut ids = Vec::new();
     for index in 0..5 {
         let id = world.create(&config, format!("unit {index}"), Kind::Thing);
-        BattleUnitTemplate::parse("JR7-D", include_str!("../../../game/mechs/JR7-D.toml"))
+        UnitTemplate::parse("JR7-D", include_str!("../../../game/mechs/JR7-D.toml"))
             .unwrap()
             .create(&mut world, id)
             .unwrap();
         crate::place_battle_unit(&mut world, id, map, 0, if index == 0 { 0 } else { 3 }).unwrap();
         let unit = world.btech.constructed.get_mut(&id).unwrap();
-        unit.power = BattlePower::Running;
+        unit.power = Power::Running;
         unit.signature.team = 1;
         ids.push(id);
     }
@@ -253,7 +253,7 @@ fn crowded_world(config: Config, mut world: World) -> (Config, World, Vec<Object
     controller
         .submit(
             vec![AutopilotOrder::Move {
-                destination: BattlePosition { map, x: 0, y: 7 },
+                destination: Position { map, x: 0, y: 7 },
                 arrival_radius: 0,
             }],
             super::super::AutopilotSubmissionMode::Replace,
@@ -287,13 +287,13 @@ fn crowded_route_retries_then_recovers_or_blocks() {
     advance_with_metrics(&mut world, &config, 6, &mut metrics).unwrap();
     assert_eq!(metrics.congestion_by_unit[&ids[0]].clearance_checks, 1);
     // Moving one of four blockers still leaves three friends in the watched cell.
-    world.btech.constructed.get_mut(&ids[1]).unwrap().power = BattlePower::Off;
+    world.btech.constructed.get_mut(&ids[1]).unwrap().power = Power::Off;
     crate::place_battle_unit(&mut world, ids[1], map, 0, 4).unwrap();
     advance_with_metrics(&mut world, &config, 11, &mut metrics).unwrap();
     assert_eq!(metrics.expansions, 0);
     assert_eq!(metrics.congestion_by_unit[&ids[0]].early_starts, 0);
     for (index, id) in ids.iter().skip(1).enumerate() {
-        world.btech.constructed.get_mut(id).unwrap().power = BattlePower::Off;
+        world.btech.constructed.get_mut(id).unwrap().power = Power::Off;
         crate::place_battle_unit(&mut world, *id, map, 0, 4 + index as i64).unwrap();
     }
     // Clearance qualifies, but quota denial must not consume the early attempt.
@@ -328,7 +328,7 @@ fn congestion_watches_do_not_survive_replacement_or_restart() {
     assert!(!taken_over.btech.autopilot_plans.contains_key(&ids[0]));
     let mut removed = world.clone();
     let hangar = removed.create(&config, "Hangar".into(), Kind::Room);
-    removed.btech.constructed.get_mut(&ids[0]).unwrap().power = BattlePower::Off;
+    removed.btech.constructed.get_mut(&ids[0]).unwrap().power = Power::Off;
     crate::btech::placement::remove_unit(&mut removed, ids[0], hangar).unwrap();
     assert!(!removed.btech.autopilot_plans.contains_key(&ids[0]));
     let mut destroyed = world.clone();
@@ -338,7 +338,7 @@ fn congestion_watches_do_not_survive_replacement_or_restart() {
         .get_mut(&ids[0])
         .unwrap()
         .sections
-        .get_mut(&crate::BattleSection::CenterTorso)
+        .get_mut(&crate::MechSection::CenterTorso)
         .unwrap()
         .internal = 0;
     advance(&mut destroyed, &config, 2).unwrap();
@@ -369,13 +369,13 @@ fn waiting_controller_polling_benchmark() {
     let controller = base.btech.controllers()[&ids[0]].clone();
     for n in 1..100 {
         let id = base.create(&config, format!("waiter {n}"), Kind::Thing);
-        BattleUnitTemplate::parse("JR7-D", include_str!("../../../game/mechs/JR7-D.toml"))
+        UnitTemplate::parse("JR7-D", include_str!("../../../game/mechs/JR7-D.toml"))
             .unwrap()
             .create(&mut base, id)
             .unwrap();
         crate::place_battle_unit(&mut base, id, pos.map, 0, 0).unwrap();
         let unit = base.btech.constructed.get_mut(&id).unwrap();
-        unit.power = BattlePower::Running;
+        unit.power = Power::Running;
         unit.signature.team = 1;
         base.btech.controllers.insert(id, controller.clone());
     }
@@ -484,9 +484,9 @@ fn rising_mech_waits_without_failing_or_spending_navigation_work() {
     let (config, mut world, ids) = crowded_fixture();
     advance(&mut world, &config, 1).unwrap();
     let unit = world.btech.constructed.get_mut(&ids[0]).unwrap();
-    unit.stand_timer = Some(crate::btech::BattleStandTimer::Rising { remaining: 4 });
-    assert_eq!(unit.posture(), crate::btech::BattlePosture::Standing);
-    let before = world.battle_roll_statistics().unwrap();
+    unit.stand_timer = Some(crate::btech::StandTimer::Rising { remaining: 4 });
+    assert_eq!(unit.posture(), crate::btech::Posture::Standing);
+    let before = world.roll_statistics().unwrap();
     let mut metrics = AutopilotRuntimeMetrics::default();
     advance_with_metrics(&mut world, &config, 6, &mut metrics).unwrap();
     assert_eq!(
@@ -494,7 +494,7 @@ fn rising_mech_waits_without_failing_or_spending_navigation_work() {
         AutopilotState::Executing
     );
     assert_eq!(metrics.expansions, 0);
-    assert_eq!(world.battle_roll_statistics().unwrap(), before);
+    assert_eq!(world.roll_statistics().unwrap(), before);
     assert_eq!(world.btech.autopilot_plans[&ids[0]].congestion.poll_at, 6);
     world
         .btech

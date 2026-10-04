@@ -12,12 +12,7 @@ struct Obstacle {
 
 /// Select the reference terrain checks without duplicating the control or fall logic.
 /// Trees stand in woods; rocks lie in bare rough ground.
-fn profile(
-    movement: BattleVehicleMovement,
-    hex: Hex,
-    speed: f64,
-    new_terrain: bool,
-) -> Option<Obstacle> {
+fn profile(movement: VehicleMovement, hex: Hex, speed: f64, new_terrain: bool) -> Option<Obstacle> {
     let heavy_woods = hex.woods() == Some(Woods::Heavy);
     let rocks = hex.is_bare() && hex.ground() == Ground::Rough;
     let speed = speed.abs();
@@ -25,15 +20,15 @@ fn profile(
         return None;
     }
     let applies = match movement {
-        BattleVehicleMovement::Tracked => new_terrain && heavy_woods,
-        BattleVehicleMovement::Wheeled => new_terrain && (hex.is_woods() || rocks),
-        BattleVehicleMovement::Hover => hex.is_woods(),
-        BattleVehicleMovement::Stationary | BattleVehicleMovement::Vtol => false,
+        VehicleMovement::Tracked => new_terrain && heavy_woods,
+        VehicleMovement::Wheeled => new_terrain && (hex.is_woods() || rocks),
+        VehicleMovement::Hover => hex.is_woods(),
+        VehicleMovement::Stationary | VehicleMovement::Vtol => false,
     };
     if !applies {
         return None;
     }
-    let heavy = heavy_woods && movement != BattleVehicleMovement::Tracked;
+    let heavy = heavy_woods && movement != VehicleMovement::Tracked;
     Some(Obstacle {
         rocks,
         modifier: (speed / 10.75 / 6.0) as i16 + if heavy { 3 } else { 0 },
@@ -46,7 +41,7 @@ pub(super) fn resolve(
     world: &mut World,
     id: ObjectId,
     hex: Hex,
-    rules: BattleMovementRules,
+    rules: MovementRules,
     character: bool,
 ) -> Result<super::movement_report::MovementReport> {
     let unit = &world.btech.vehicles()[&id];
@@ -65,7 +60,7 @@ pub(super) fn resolve(
         rules.fall.extended_piloting,
         character,
     )?;
-    let mut notices = vec![BattleNotice {
+    let mut notices = vec![Notice {
         unit: id,
         text: if obstacle.rocks {
             "You try to avoid the rocks.."
@@ -77,7 +72,7 @@ pub(super) fn resolve(
     let mut pilot_notices = Vec::new();
     control.capture_feedback(id, &mut notices, &mut pilot_notices);
     if control.success {
-        notices.push(BattleNotice {
+        notices.push(Notice {
             unit: id,
             text: "You manage to dodge 'em!".into(),
         });
@@ -88,7 +83,7 @@ pub(super) fn resolve(
             ..Default::default()
         });
     }
-    notices.push(BattleNotice {
+    notices.push(Notice {
         unit: id,
         text: "You swerve, but not enough! This'll hurt!".into(),
     });
@@ -130,15 +125,15 @@ mod tests {
     #[test]
     fn chassis_configuration_and_speed_choose_the_same_obstacle_rules() {
         for movement in [
-            BattleVehicleMovement::Tracked,
-            BattleVehicleMovement::Wheeled,
-            BattleVehicleMovement::Hover,
+            VehicleMovement::Tracked,
+            VehicleMovement::Wheeled,
+            VehicleMovement::Hover,
         ] {
             assert!(profile(movement, Hex::new(Terrain::HeavyForest, 0), 10.75, true).is_none());
             let hit = profile(movement, Hex::new(Terrain::HeavyForest, 0), -86.0, true).unwrap();
             assert_eq!(
                 hit.modifier,
-                if movement == BattleVehicleMovement::Tracked {
+                if movement == VehicleMovement::Tracked {
                     1
                 } else {
                     4
@@ -148,15 +143,15 @@ mod tests {
             assert!(!hit.rocks);
             assert_eq!(
                 profile(movement, Hex::new(Terrain::HeavyForest, 0), 86.0, false).is_some(),
-                movement == BattleVehicleMovement::Hover
+                movement == VehicleMovement::Hover
             );
             assert_eq!(
                 profile(movement, Hex::new(Terrain::LightForest, 0), 86.0, true).is_some(),
-                movement != BattleVehicleMovement::Tracked
+                movement != VehicleMovement::Tracked
             );
             assert_eq!(
                 profile(movement, Hex::new(Terrain::Rough, 0), 86.0, true).is_some(),
-                movement == BattleVehicleMovement::Wheeled
+                movement == VehicleMovement::Wheeled
             );
         }
     }

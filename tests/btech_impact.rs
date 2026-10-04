@@ -1,15 +1,15 @@
 //! Whole-hit material/critical cascades, deterministic replay and database transaction boundaries.
 use crate::support;
 use stompymux_rs::{
-    BattleDice, BattleHit, BattleImpactEffect as Effect, BattleSection as Section, BattleTemplate,
-    Kind, ObjectId, create_battle_unit, persistence, resolve_battle_impact,
+    Dice, Hit, ImpactEffect as Effect, Kind, MechSection as Section, MechTemplate, ObjectId,
+    create_battle_unit, persistence, resolve_battle_impact,
 };
 
 /// Seed an isolated owned unit stream for deterministic damage scenarios.
 fn seed(world: &mut stompymux_rs::World, id: ObjectId, value: u8) {
     world
         .btech
-        .set_unit_dice(id, BattleDice::seeded([value; 32]))
+        .set_unit_dice(id, Dice::seeded([value; 32]))
         .unwrap();
 }
 
@@ -28,7 +28,7 @@ async fn fixture() -> (
     create_battle_unit(
         &mut world,
         id,
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
@@ -37,8 +37,8 @@ async fn fixture() -> (
 }
 
 /// An already-selected conventional weapon hit, with no head-graze reroll.
-fn hit(section: Section, tac: bool) -> BattleHit {
-    BattleHit {
+fn hit(section: Section, tac: bool) -> Hit {
+    Hit {
         section,
         rear_armor: false,
         through_armor_critical: tac,
@@ -175,15 +175,12 @@ async fn internal_twelve_severs_limb_without_transferring_overflow() {
 /// A wreck alone does not imply crew death; head and cockpit losses are explicit casualty triggers.
 #[tokio::test]
 async fn crew_casualties_distinguish_head_cockpit_and_center_torso() {
-    use stompymux_rs::BattleCrewCasualty;
+    use stompymux_rs::CrewCasualty;
     let (_dir, config, base, id) = fixture().await;
     let mut head = base.clone();
     let report = resolve_battle_impact(&mut head, id, hit(Section::Head, false), 100).unwrap();
     assert!(report.destroyed);
-    assert_eq!(
-        report.crew_casualty(),
-        Some(BattleCrewCasualty::HeadDestroyed)
-    );
+    assert_eq!(report.crew_casualty(), Some(CrewCasualty::HeadDestroyed));
     let mut torso = base.clone();
     let report =
         resolve_battle_impact(&mut torso, id, hit(Section::CenterTorso, false), 100).unwrap();
@@ -195,7 +192,7 @@ async fn crew_casualties_distinguish_head_cockpit_and_center_torso() {
         seed(&mut candidate, id, dice);
         let report =
             resolve_battle_impact(&mut candidate, id, hit(Section::Head, true), 1).unwrap();
-        if report.crew_casualty() == Some(BattleCrewCasualty::CockpitDestroyed) {
+        if report.crew_casualty() == Some(CrewCasualty::CockpitDestroyed) {
             cockpit = Some((candidate, report));
             break;
         }
@@ -236,7 +233,7 @@ async fn character_explosion_injuries_are_applied_once() {
     set_battle_character(
         &mut base,
         ObjectId(1),
-        BattleCharacter {
+        Character {
             build: 5,
             reflexes: 5,
             intuition: 5,
@@ -269,7 +266,7 @@ async fn character_explosion_injuries_are_applied_once() {
                 &mut candidate,
                 ObjectId(1),
                 "Pain_Resistance",
-                BattleCharacterValue {
+                CharacterValue {
                     value: u8::from(resistant),
                     ..Default::default()
                 },
@@ -348,7 +345,7 @@ async fn character_stun_actions_publish_and_roll_back() {
         std::rc::Rc::new(std::cell::RefCell::new(world.clone())),
     )
     .unwrap();
-    let stunned = |section| BattleHit {
+    let stunned = |section| Hit {
         section,
         crew_stun: true,
         ..hit(section, false)
@@ -412,7 +409,7 @@ async fn case_ii_vents_ammunition_explosion_through_local_armor() {
         "    { at = \"2-3\", item = \"JumpJet\" },\n]\n\n[sections.center_torso]",
         "    { at = \"2-3\", item = \"JumpJet\" },\n    { at = 4, item = \"CASE-II\" },\n]\n\n[sections.center_torso]",
     );
-    let template = BattleTemplate::parse("JR7-D", &source).unwrap();
+    let template = MechTemplate::parse("JR7-D", &source).unwrap();
     assert!(
         template.sections[&Section::RightTorso]
             .criticals
@@ -494,12 +491,12 @@ async fn technology_fixture(
     object.home = Some(ObjectId(config.home()));
     let source = include_str!("fixtures/btech/mechs/JR7-D.toml");
     let template = if matches!(specials, "SmallCockpit_Tech" | "SMCPIT") {
-        let mut template = BattleTemplate::parse("JR7-D", source).unwrap();
+        let mut template = MechTemplate::parse("JR7-D", source).unwrap();
         support::templates::small_cockpit(&mut template, specials);
         template
     } else {
         let source = support::templates::with_flags(source, &[specials]);
-        BattleTemplate::parse("JR7-D", &source).unwrap()
+        MechTemplate::parse("JR7-D", &source).unwrap()
     };
     create_battle_unit(&mut world, id, template).unwrap();
     support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
@@ -595,7 +592,7 @@ async fn laser_heat_sinks_glow_while_running() {
         create_battle_unit(
             &mut world,
             id,
-            BattleTemplate::parse("NightGyr-A", &source).unwrap(),
+            MechTemplate::parse("NightGyr-A", &source).unwrap(),
         )
         .unwrap();
         assert!(

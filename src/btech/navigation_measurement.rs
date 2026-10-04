@@ -36,7 +36,7 @@ pub(super) fn resolve(
     let unit = source.unit;
     let record = super::scanner::scanner_unit(world, unit).context("Unit is unavailable")?;
     ensure!(
-        record.power == super::BattlePower::Running && !record.destroyed,
+        record.power == super::Power::Running && !record.destroyed,
         "Start the unit first"
     );
     let position = record.position.context("You are not on a map!")?;
@@ -78,7 +78,7 @@ pub(super) fn resolve(
                 .selection(world)
                 .context("There is no default target!")?
             {
-                super::BattleTargetSelection::Unit(lock) => {
+                super::TargetSelection::Unit(lock) => {
                     ensure!(
                         super::visible_contact(world, unit, lock.target)?.is_some(),
                         "Target is not in line of sight!"
@@ -91,7 +91,7 @@ pub(super) fn resolve(
                         source: EndpointSource::Unit(lock.target),
                     }
                 }
-                super::BattleTargetSelection::Hex(lock) => checked(lock.hex.x, lock.hex.y, false)?,
+                super::TargetSelection::Hex(lock) => checked(lock.hex.x, lock.hex.y, false)?,
             };
             (point, format!("{operation} to default target is: "))
         }

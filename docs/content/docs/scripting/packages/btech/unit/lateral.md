@@ -23,4 +23,4 @@ btech.unit.lateral(dbref, player, direction)
 
 ## Returns
 
-- `BattleNotice`
+- `Notice`

@@ -1,5 +1,5 @@
 //! Persistent weapon degradation and derived combat effects, shared by every firing target path.
-use super::{BattleRangeBracket, BattleUnit, BattleWeapon, CriticalLocation};
+use super::{CriticalLocation, Mech, RangeBracket, Weapon};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
@@ -7,7 +7,7 @@ use std::collections::BTreeSet;
 /// The consequence carried by an occupied, damaged weapon slot.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleWeaponDamageKind {
+pub enum WeaponDamageKind {
     Superficial,
     Moderate,
     Focus,
@@ -19,18 +19,18 @@ pub enum BattleWeaponDamageKind {
 
 /// A damaged slot can accumulate distinct component effects through linked extension hits.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BattleWeaponDamage {
+pub struct WeaponDamage {
     pub location: CriticalLocation,
     /// Empty means damaged without a component penalty; repeated effects do not stack.
-    pub effects: BTreeSet<BattleWeaponDamageKind>,
+    pub effects: BTreeSet<WeaponDamageKind>,
 }
 
-impl BattleWeaponDamage {
+impl WeaponDamage {
     /// Create one damaged slot, representing superficial damage without a component flag.
-    pub fn new(location: CriticalLocation, kind: BattleWeaponDamageKind) -> Self {
+    pub fn new(location: CriticalLocation, kind: WeaponDamageKind) -> Self {
         Self {
             location,
-            effects: (kind != BattleWeaponDamageKind::Superficial)
+            effects: (kind != WeaponDamageKind::Superficial)
                 .then_some(kind)
                 .into_iter()
                 .collect(),
@@ -40,7 +40,7 @@ impl BattleWeaponDamage {
 
 /// Derived penalties; these are never persisted separately from the damaged slots.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize)]
-pub struct BattleWeaponDamageEffects {
+pub struct WeaponDamageEffects {
     pub moderate: u8,
     pub ranging: u8,
     pub heat: u8,
@@ -50,14 +50,11 @@ pub struct BattleWeaponDamageEffects {
     pub feed_locked: bool,
 }
 
-impl BattleWeaponDamageEffects {
+impl WeaponDamageEffects {
     /// Ranging and focus penalties apply outside short range; minimum-range penalties retain the short bracket.
-    pub fn accuracy(self, bracket: Option<BattleRangeBracket>) -> u8 {
+    pub fn accuracy(self, bracket: Option<RangeBracket>) -> u8 {
         self.moderate
-            + if matches!(
-                bracket,
-                Some(BattleRangeBracket::Short | BattleRangeBracket::Minimum)
-            ) {
+            + if matches!(bracket, Some(RangeBracket::Short | RangeBracket::Minimum)) {
                 0
             } else {
                 self.ranging
@@ -76,18 +73,18 @@ impl BattleWeaponDamageEffects {
 }
 
 /// Distinguish the energy family using the same catalogue classification as character gunnery.
-fn energy(weapon: BattleWeapon) -> bool {
+fn energy(weapon: Weapon) -> bool {
     weapon.gunnery_skill(true) == "Gunnery-Laser"
 }
 
-impl BattleUnit {
+impl Mech {
     /// Installed weapon damage records, including records retained on subsequently destroyed mounts.
-    pub fn weapon_damage(&self) -> &[BattleWeaponDamage] {
+    pub fn weapon_damage(&self) -> &[WeaponDamage] {
         &self.weapon_damage
     }
 
     /// Aggregate one mount's slots, including any split sections, without consuming dice.
-    pub fn weapon_damage_effects(&self, index: usize) -> Result<BattleWeaponDamageEffects> {
+    pub fn weapon_damage_effects(&self, index: usize) -> Result<WeaponDamageEffects> {
         let loadout = self.loadout()?;
         self.weapon_damage_with_loadout(&loadout, index)
     }
@@ -95,20 +92,20 @@ impl BattleUnit {
     /// Inspect live slot damage using the caller's immutable equipment projection.
     pub(crate) fn weapon_damage_with_loadout(
         &self,
-        loadout: &super::BattleLoadout,
+        loadout: &super::MechLoadout,
         index: usize,
-    ) -> Result<BattleWeaponDamageEffects> {
+    ) -> Result<WeaponDamageEffects> {
         let mount = loadout
             .weapons
             .get(index)
             .context("Weapon index out of bounds")?;
-        let mut effects = BattleWeaponDamageEffects::default();
+        let mut effects = WeaponDamageEffects::default();
         for damage in self
             .weapon_damage
             .iter()
             .filter(|damage| mount.criticals.contains(&damage.location))
         {
-            use BattleWeaponDamageKind as Kind;
+            use WeaponDamageKind as Kind;
             for kind in &damage.effects {
                 match kind {
                     Kind::Superficial => (),
@@ -139,7 +136,7 @@ impl BattleUnit {
         &mut self,
         location: CriticalLocation,
         roll: u8,
-    ) -> Result<Option<BattleWeaponDamageKind>> {
+    ) -> Result<Option<WeaponDamageKind>> {
         ensure!((2..=12).contains(&roll), "Invalid weapon critical roll");
         let loadout = self.loadout()?;
         let (index, mount) = loadout
@@ -171,7 +168,7 @@ impl BattleUnit {
             return Ok(None);
         }
         let adjusted = usize::from(roll) + previous + 1;
-        use BattleWeaponDamageKind as Kind;
+        use WeaponDamageKind as Kind;
         let kind = match adjusted {
             0..=3 => Kind::Superficial,
             4..=5 => Kind::Moderate,
@@ -202,8 +199,7 @@ impl BattleUnit {
                 record.effects.insert(kind);
             }
         } else {
-            self.weapon_damage
-                .push(BattleWeaponDamage::new(location, kind));
+            self.weapon_damage.push(WeaponDamage::new(location, kind));
             self.weapon_damage.sort_by_key(|damage| damage.location);
         }
         Ok(Some(kind))
@@ -211,10 +207,7 @@ impl BattleUnit {
 
     /// A destructive table result removes all damaged slots and spends one loss on an undamaged slot.
     /// Other slots remain installed on the broken mount and can take later critical hits.
-    pub(super) fn destroy_degraded_weapon(
-        &mut self,
-        index: usize,
-    ) -> Result<super::BattleCriticalLoss> {
+    pub(super) fn destroy_degraded_weapon(&mut self, index: usize) -> Result<super::CriticalLoss> {
         let loadout = self.loadout()?;
         let mount = loadout
             .weapons
@@ -227,7 +220,7 @@ impl BattleUnit {
         ensure!(
             matches!(
                 self.critical_loss(mount.criticals[0])?,
-                Some(super::BattleCriticalLoss::Weapon {
+                Some(super::CriticalLoss::Weapon {
                     explosion_damage: 0,
                     ..
                 })
@@ -257,7 +250,7 @@ impl BattleUnit {
         for location in locations {
             let _loss = self.destroy_critical(location)?;
         }
-        Ok(super::BattleCriticalLoss::Weapon {
+        Ok(super::CriticalLoss::Weapon {
             index,
             explosion_damage: 0,
         })
@@ -274,7 +267,7 @@ impl BattleUnit {
                 .iter()
                 .find(|mount| mount.criticals.contains(&damage.location))
                 .context("Damage on a nonweapon slot")?;
-            use BattleWeaponDamageKind as Kind;
+            use WeaponDamageKind as Kind;
             for kind in &damage.effects {
                 ensure!(
                     match kind {
@@ -319,16 +312,13 @@ impl BattleUnit {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{BattleSection, BattleTemplate, CriticalDefinition};
+    use crate::{CriticalDefinition, MechSection, MechTemplate};
 
     /// A single test mount in a free torso, retaining normal engines and crew equipment.
-    fn unit(weapon: BattleWeapon) -> (BattleUnit, usize, Vec<CriticalLocation>) {
+    fn unit(weapon: Weapon) -> (Mech, usize, Vec<CriticalLocation>) {
         let mut template =
-            BattleTemplate::parse("JR7-D", include_str!("../../game/mechs/JR7-D.toml")).unwrap();
-        let section = template
-            .sections
-            .get_mut(&BattleSection::LeftTorso)
-            .unwrap();
+            MechTemplate::parse("JR7-D", include_str!("../../game/mechs/JR7-D.toml")).unwrap();
+        let section = template.sections.get_mut(&MechSection::LeftTorso).unwrap();
         section.criticals.clear();
         for slot in 0..weapon.profile().critical_slots {
             section.criticals.insert(
@@ -340,12 +330,12 @@ mod tests {
                 },
             );
         }
-        let unit = BattleUnit::from_template(template).unwrap();
+        let unit = Mech::from_template(template).unwrap();
         let loadout = unit.loadout().unwrap();
         let index = loadout
             .weapons
             .iter()
-            .position(|mount| mount.criticals[0].section == BattleSection::LeftTorso)
+            .position(|mount| mount.criticals[0].section == MechSection::LeftTorso)
             .unwrap();
         (unit, index, loadout.weapons[index].criticals.clone())
     }
@@ -353,11 +343,11 @@ mod tests {
     /// Family thresholds distinguish moderate damage, degraded components and outright loss.
     #[test]
     fn critical_family_thresholds_and_durable_effects() {
-        use BattleWeaponDamageKind as Kind;
+        use WeaponDamageKind as Kind;
         for (weapon, first, second) in [
-            (BattleWeapon::Ppc, Kind::Focus, Kind::Crystal),
-            (BattleWeapon::Lrm20, Kind::Ranging, Kind::Feed),
-            (BattleWeapon::Ac10, Kind::Barrel, Kind::Feed),
+            (Weapon::Ppc, Kind::Focus, Kind::Crystal),
+            (Weapon::Lrm20, Kind::Ranging, Kind::Feed),
+            (Weapon::Ac10, Kind::Barrel, Kind::Feed),
         ] {
             let (base, index, slots) = unit(weapon);
             for (roll, expected) in [
@@ -376,12 +366,12 @@ mod tests {
                 assert!(unit.weapon_intact(index).unwrap());
                 assert_eq!(unit.mass().unwrap(), base.mass().unwrap());
                 assert_eq!(
-                    unit.critical_candidates(BattleSection::LeftTorso)
+                    unit.critical_candidates(MechSection::LeftTorso)
                         .contains(&slots[0]),
                     expected.is_none()
                 );
                 unit.validate().unwrap();
-                let restored: BattleUnit =
+                let restored: Mech =
                     serde_json::from_str(&serde_json::to_string(&unit).unwrap()).unwrap();
                 restored.validate().unwrap();
                 assert_eq!(
@@ -392,17 +382,17 @@ mod tests {
                     let effects = unit.weapon_damage_effects(index).unwrap();
                     assert_eq!(effects.feed_locked, kind == Kind::Feed);
                     assert_eq!(
-                        effects.accuracy(Some(BattleRangeBracket::Minimum)),
-                        effects.accuracy(Some(BattleRangeBracket::Short))
+                        effects.accuracy(Some(RangeBracket::Minimum)),
+                        effects.accuracy(Some(RangeBracket::Short))
                     );
                     assert_eq!(effects.heat, u8::from(kind == Kind::Crystal));
                     assert_eq!(effects.damage, u8::from(kind == Kind::Focus));
                     assert_eq!(
-                        effects.accuracy(Some(BattleRangeBracket::Short)),
+                        effects.accuracy(Some(RangeBracket::Short)),
                         u8::from(kind == Kind::Moderate)
                     );
                     assert_eq!(
-                        effects.accuracy(Some(BattleRangeBracket::Long)),
+                        effects.accuracy(Some(RangeBracket::Long)),
                         u8::from(matches!(kind, Kind::Moderate | Kind::Focus | Kind::Ranging))
                     );
                     assert_eq!(
@@ -422,7 +412,7 @@ mod tests {
     /// A hit beyond half the mount's slots forces destruction even with the lowest roll.
     #[test]
     fn accumulated_damage_forces_destruction_and_rejects_bad_records() {
-        let (mut unit, index, slots) = unit(BattleWeapon::Ppc);
+        let (mut unit, index, slots) = unit(Weapon::Ppc);
         assert!(unit.degrade_weapon(slots[0], 2).unwrap().is_some());
         assert!(unit.degrade_weapon(slots[1], 2).unwrap().is_none());
         assert_eq!(unit.weapon_damage().len(), 1);
@@ -432,7 +422,7 @@ mod tests {
             .push(duplicate.weapon_damage[0].clone());
         assert!(duplicate.validate().is_err());
         let mut wrong_family = unit.clone();
-        wrong_family.weapon_damage[0].effects = BTreeSet::from([BattleWeaponDamageKind::Barrel]);
+        wrong_family.weapon_damage[0].effects = BTreeSet::from([WeaponDamageKind::Barrel]);
         assert!(wrong_family.validate().is_err());
         assert!(unit.weapon_damage_effects(usize::MAX).is_err());
         unit.destroy_critical(slots[1]).unwrap();
@@ -442,7 +432,7 @@ mod tests {
     /// Destruction spends its one additional loss in mount order, independently of the selected slot.
     #[test]
     fn destructive_criticals_remove_damaged_slots_and_one_additional_slot() {
-        let (base, index, slots) = unit(BattleWeapon::Ppc);
+        let (base, index, slots) = unit(Weapon::Ppc);
         for degraded in [false, true] {
             let mut unit = base.clone();
             if degraded {
@@ -451,7 +441,7 @@ mod tests {
             assert!(unit.degrade_weapon(slots[1], 12).unwrap().is_none());
             assert!(matches!(
                 unit.destroy_degraded_weapon(index).unwrap(),
-                super::super::BattleCriticalLoss::Weapon {
+                super::super::CriticalLoss::Weapon {
                     explosion_damage: 0,
                     ..
                 }

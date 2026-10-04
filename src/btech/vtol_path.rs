@@ -1,7 +1,5 @@
 //! Ordered aircraft terrain traversal and atomic clear-path movement commits.
-use super::{
-    BattleVehicle, BattleVtolMotionStep, BattleVtolSurfaceContact, HexCoordinate, MapAsset, Point,
-};
+use super::{HexCoordinate, MapAsset, Point, Vehicle, VtolMotionStep, VtolSurfaceContact};
 use anyhow::{Context, Result};
 use serde::Serialize;
 
@@ -9,9 +7,9 @@ use serde::Serialize;
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 #[must_use = "Publish movement or resolve the first obstruction in the enclosing flight action"]
-pub enum BattleVtolPath {
+pub enum VtolPath {
     Advanced {
-        step: BattleVtolMotionStep,
+        step: VtolMotionStep,
     },
     MapEdge {
         hex: HexCoordinate,
@@ -25,17 +23,17 @@ pub enum BattleVtolPath {
         /// Representative point at or just inside the contact band.
         point: Point,
         altitude: f64,
-        contact: BattleVtolSurfaceContact,
+        contact: VtolSurfaceContact,
     },
 }
 
-impl BattleVtolMotionStep {
+impl VtolMotionStep {
     /// Find the first map edge or terrain contact, including altitude changes within a hex.
     /// Integer-altitude boundaries are sampled on both sides to retain truncation semantics.
     fn first_obstruction(
         self,
         lookup: &impl Fn(HexCoordinate) -> Result<Option<super::Hex>>,
-    ) -> Result<Option<BattleVtolPath>> {
+    ) -> Result<Option<VtolPath>> {
         let start = self.origin.0.point;
         let end = self.motion.point;
         let initial = self.origin.1.altitude;
@@ -43,7 +41,7 @@ impl BattleVtolMotionStep {
         let mut last = None;
         for (hex, from, to) in start.trace_intervals(end)? {
             let Some(tile) = lookup(hex)? else {
-                return Ok(Some(BattleVtolPath::MapEdge {
+                return Ok(Some(VtolPath::MapEdge {
                     hex,
                     last: last.context("Aircraft starts outside the map")?,
                     altitude: initial + change * from,
@@ -60,14 +58,14 @@ impl BattleVtolMotionStep {
             let entry_contact = if tile.is_woods()
                 && (entry_altitude as i32) < i32::from(tile.surface_height()) + 2
             {
-                Some(BattleVtolSurfaceContact::Forest)
+                Some(VtolSurfaceContact::Forest)
             } else if blocks_elevation {
-                Some(BattleVtolSurfaceContact::Elevation)
+                Some(VtolSurfaceContact::Elevation)
             } else {
                 None
             };
             if let Some(contact) = entry_contact.filter(|_| entered) {
-                return Ok(Some(BattleVtolPath::Contact {
+                return Ok(Some(VtolPath::Contact {
                     hex,
                     point: Point {
                         x: start.x + (end.x - start.x) * from,
@@ -112,10 +110,10 @@ impl BattleVtolMotionStep {
                 let mut sample = self;
                 sample.altitude = initial + change * time;
                 let contact = sample.surface_contact(tile);
-                if contact == BattleVtolSurfaceContact::Clear {
+                if contact == VtolSurfaceContact::Clear {
                     continue;
                 }
-                return Ok(Some(BattleVtolPath::Contact {
+                return Ok(Some(VtolPath::Contact {
                     hex,
                     point: Point {
                         x: start.x + (end.x - start.x) * time,
@@ -130,7 +128,7 @@ impl BattleVtolMotionStep {
     }
 }
 
-impl BattleVehicle {
+impl Vehicle {
     /// Advance an unobstructed aircraft event against the supplied current map asset.
     /// Map identity, horizontal control updates, fuel, effects and collision resolution belong to the host.
     /// Any obstruction returns before mutation; failures also preserve position and saved altitude.
@@ -138,7 +136,7 @@ impl BattleVehicle {
         &mut self,
         map: &MapAsset,
         movement_modifier: i64,
-    ) -> Result<BattleVtolPath> {
+    ) -> Result<VtolPath> {
         self.advance_vtol_clear_path_with(&|hex| Ok(map.hex(hex.x, hex.y)), movement_modifier)
     }
 
@@ -147,12 +145,12 @@ impl BattleVehicle {
         &mut self,
         lookup: &impl Fn(HexCoordinate) -> Result<Option<super::Hex>>,
         movement_modifier: i64,
-    ) -> Result<BattleVtolPath> {
+    ) -> Result<VtolPath> {
         let step = self.vtol_motion_step(movement_modifier)?;
         if let Some(obstruction) = step.first_obstruction(lookup)? {
             return Ok(obstruction);
         }
         self.commit_vtol_motion_at(step, step.motion.point)?;
-        Ok(BattleVtolPath::Advanced { step })
+        Ok(VtolPath::Advanced { step })
     }
 }

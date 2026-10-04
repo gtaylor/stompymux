@@ -1,17 +1,17 @@
 //! Conventional jump capacity and continuous flight geometry, independent of command authorization.
-use super::{BattleSystem, BattleUnit, Point};
+use super::{Mech, Point, System};
 use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
 
 /// Current jump performance at one map gravity, before launch and landing restrictions.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]
-pub struct BattleJumpCapacity {
+pub struct JumpCapacity {
     pub speed: f64,
     /// Whole movement points bound both horizontal range and endpoint elevation difference.
     pub movement_points: u16,
 }
 
-impl BattleJumpCapacity {
+impl JumpCapacity {
     /// Validate a capacity before it can be used by a saved flight cursor.
     pub(crate) fn validate(self) -> Result<()> {
         ensure!(
@@ -35,21 +35,21 @@ impl BattleJumpCapacity {
     }
 }
 
-impl BattleUnit {
+impl Mech {
     /// Template thrust minus effective jet losses; gravity is independent of the special-rules flag.
     /// This is capacity, not permission to jump while shut down, prone or otherwise restricted.
-    pub fn jump_capacity(&self, gravity: i64) -> Result<BattleJumpCapacity> {
+    pub fn jump_capacity(&self, gravity: i64) -> Result<JumpCapacity> {
         ensure!((0..=255).contains(&gravity), "Invalid jump gravity");
         let speed = if self.is_destroyed() {
             0.0
         } else {
             self.propulsion.jump(
                 self.definition().jump_speed,
-                usize::from(self.system_hits(BattleSystem::JumpJet)),
+                usize::from(self.system_hits(System::JumpJet)),
             ) * 100.0
                 / gravity.max(50) as f64
         };
-        BattleJumpCapacity::from_speed(speed)
+        JumpCapacity::from_speed(speed)
     }
 }
 
@@ -57,7 +57,7 @@ impl BattleUnit {
 /// This value neither moves a unit nor promises an unobstructed route or a successful landing.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(try_from = "JumpPathDefinition", into = "JumpPathDefinition")]
-pub struct BattleJumpPath {
+pub struct JumpPath {
     start: Point,
     end: Point,
     start_elevation: f64,
@@ -96,8 +96,8 @@ struct JumpPathDefinition {
     continuation: bool,
 }
 
-impl From<BattleJumpPath> for JumpPathDefinition {
-    fn from(path: BattleJumpPath) -> Self {
+impl From<JumpPath> for JumpPathDefinition {
+    fn from(path: JumpPath) -> Self {
         Self {
             start: path.start,
             end: path.end,
@@ -111,7 +111,7 @@ impl From<BattleJumpPath> for JumpPathDefinition {
     }
 }
 
-impl TryFrom<JumpPathDefinition> for BattleJumpPath {
+impl TryFrom<JumpPathDefinition> for JumpPath {
     type Error = anyhow::Error;
 
     fn try_from(value: JumpPathDefinition) -> Result<Self> {
@@ -125,7 +125,7 @@ impl TryFrom<JumpPathDefinition> for BattleJumpPath {
                 "A jump continuation cannot repeat launch admission"
             );
             return Self::continuation(
-                BattleJumpSample {
+                JumpSample {
                     point: value.start,
                     elevation: value.start_elevation,
                 },
@@ -177,12 +177,12 @@ impl TryFrom<JumpPathDefinition> for BattleJumpPath {
 
 /// An airborne sample; elevation is deliberately separate from the ground hex's surface.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-pub struct BattleJumpSample {
+pub struct JumpSample {
     pub point: Point,
     pub elevation: f64,
 }
 
-impl BattleJumpPath {
+impl JumpPath {
     /// Plan a nonzero center-directed jump within current horizontal and vertical capacity.
     /// Map bounds, same-hex rejection, terrain, crew state and flight events belong to the caller.
     pub fn new(
@@ -193,7 +193,7 @@ impl BattleJumpPath {
         movement_points: u16,
     ) -> Result<Self> {
         Self::build(
-            BattleJumpSample {
+            JumpSample {
                 point: start,
                 elevation: f64::from(start_elevation),
             },
@@ -225,7 +225,7 @@ impl BattleJumpPath {
             .containing_hex()?
             .center();
         Self::build(
-            BattleJumpSample {
+            JumpSample {
                 point: start,
                 elevation: f64::from(start_elevation),
             },
@@ -252,7 +252,7 @@ impl BattleJumpPath {
             "Targeted jump destination must be a hex center"
         );
         Self::build(
-            BattleJumpSample {
+            JumpSample {
                 point: start,
                 elevation: f64::from(start_elevation),
             },
@@ -270,7 +270,7 @@ impl BattleJumpPath {
     /// horizontal range and further climbing remain bounded by the supplied capacity.
     /// This only constructs geometry; the caller retains flight time, intent and collisions.
     pub fn continuation(
-        start: BattleJumpSample,
+        start: JumpSample,
         end: Point,
         end_elevation: i16,
         movement_points: u16,
@@ -280,7 +280,7 @@ impl BattleJumpPath {
 
     /// Build cached geometry from validated exact-destination or projected launch inputs.
     fn build(
-        start: BattleJumpSample,
+        start: JumpSample,
         end: Point,
         end_elevation: i16,
         movement_points: u16,
@@ -365,19 +365,19 @@ impl BattleJumpPath {
 
     /// Sample the curved flight path, including its exact takeoff and landing endpoints.
     /// Lost thrust can switch the curve from quartic to quadratic during a flight.
-    pub fn sample(self, progress: f64, current_movement_points: u16) -> Result<BattleJumpSample> {
+    pub fn sample(self, progress: f64, current_movement_points: u16) -> Result<JumpSample> {
         ensure!(
             progress.is_finite() && (0.0..=1.0).contains(&progress),
             "Invalid jump progress"
         );
         if progress == 0.0 {
-            return Ok(BattleJumpSample {
+            return Ok(JumpSample {
                 point: self.start,
                 elevation: self.start_elevation,
             });
         }
         if progress == 1.0 {
-            return Ok(BattleJumpSample {
+            return Ok(JumpSample {
                 point: self.end,
                 elevation: self.end_elevation,
             });
@@ -388,7 +388,7 @@ impl BattleJumpPath {
         } else {
             midpoint.powi(4)
         };
-        Ok(BattleJumpSample {
+        Ok(JumpSample {
             point: Point {
                 x: self.start.x + (self.end.x - self.start.x) * progress,
                 y: self.start.y + (self.end.y - self.start.y) * progress,
@@ -407,23 +407,23 @@ mod tests {
     /// Redirection geometry must preserve the committed point and fractional altitude exactly.
     #[test]
     fn airborne_continuation_preserves_samples_through_restart() {
-        let start = BattleJumpSample {
+        let start = JumpSample {
             point: Point { x: 1.25, y: 2.5 },
             elevation: 7.125,
         };
         let end = start.point.project(90.0, 2.0).unwrap();
-        let path = BattleJumpPath::continuation(start, end, 0, 3).unwrap();
+        let path = JumpPath::continuation(start, end, 0, 3).unwrap();
         assert_eq!(path.sample(0.0, 3).unwrap(), start);
         assert_eq!(
             path.sample(1.0, 3).unwrap(),
-            BattleJumpSample {
+            JumpSample {
                 point: end,
                 elevation: 0.0
             }
         );
         let saved = serde_json::to_value(path).unwrap();
         assert_eq!(saved["start_elevation"], 7.125);
-        let restored: BattleJumpPath = serde_json::from_value(saved).unwrap();
+        let restored: JumpPath = serde_json::from_value(saved).unwrap();
         assert_eq!(restored, path);
         for thrust in [0, 1, 3] {
             for progress in [0.0, 0.125, 0.5, 0.875, 1.0] {
@@ -433,14 +433,14 @@ mod tests {
                 );
             }
         }
-        let mut flight = super::super::BattleJumpFlight::new(path);
+        let mut flight = super::super::JumpFlight::new(path);
         assert_eq!(flight.sample(), start);
         let step = flight
-            .advance(BattleJumpCapacity::from_speed(32.25).unwrap(), 100)
+            .advance(JumpCapacity::from_speed(32.25).unwrap(), 100)
             .unwrap();
         assert_eq!(step.from, start);
         assert!(flight.travelled() > 0.0);
-        let replay: super::super::BattleJumpFlight =
+        let replay: super::super::JumpFlight =
             serde_json::from_value(serde_json::to_value(flight).unwrap()).unwrap();
         assert_eq!(replay, flight);
     }
@@ -448,16 +448,16 @@ mod tests {
     /// Airborne descent does not waive range, climb or coordinate representability limits.
     #[test]
     fn airborne_continuation_retains_admission_bounds() {
-        let start = BattleJumpSample {
+        let start = JumpSample {
             point: Point { x: 0.0, y: 0.0 },
             elevation: 8.25,
         };
         let end = start.point.project(90.0, 2.0).unwrap();
-        assert!(BattleJumpPath::continuation(start, end, 0, 3).is_ok());
-        assert!(BattleJumpPath::new(start.point, end, 8, 0, 3).is_err());
-        assert!(BattleJumpPath::continuation(start, end, 12, 3).is_err());
-        assert!(BattleJumpPath::continuation(start, end, 0, 1).is_err());
-        assert!(BattleJumpPath::continuation(start, start.point, 0, 3).is_err());
+        assert!(JumpPath::continuation(start, end, 0, 3).is_ok());
+        assert!(JumpPath::new(start.point, end, 8, 0, 3).is_err());
+        assert!(JumpPath::continuation(start, end, 12, 3).is_err());
+        assert!(JumpPath::continuation(start, end, 0, 1).is_err());
+        assert!(JumpPath::continuation(start, start.point, 0, 3).is_err());
         for elevation in [
             f64::NAN,
             f64::INFINITY,
@@ -465,10 +465,7 @@ mod tests {
             32768.0,
             -32769.0,
         ] {
-            assert!(
-                BattleJumpPath::continuation(BattleJumpSample { elevation, ..start }, end, 0, 3)
-                    .is_err()
-            );
+            assert!(JumpPath::continuation(JumpSample { elevation, ..start }, end, 0, 3).is_err());
         }
     }
 
@@ -476,15 +473,15 @@ mod tests {
     #[test]
     fn saved_jump_origin_modes_are_validated() {
         let start = Point { x: 1.0, y: 2.0 };
-        let path = BattleJumpPath::projected(start, 90, 2.0, 0, 0, 3).unwrap();
+        let path = JumpPath::projected(start, 90, 2.0, 0, 0, 3).unwrap();
         let original = serde_json::to_value(path).unwrap();
         for elevation in [0.25, 32768.0, -32769.0] {
             let mut saved = original.clone();
             saved["start_elevation"] = elevation.into();
-            assert!(serde_json::from_value::<BattleJumpPath>(saved).is_err());
+            assert!(serde_json::from_value::<JumpPath>(saved).is_err());
         }
         let mut saved = original;
         saved["continuation"] = true.into();
-        assert!(serde_json::from_value::<BattleJumpPath>(saved).is_err());
+        assert!(serde_json::from_value::<JumpPath>(saved).is_err());
     }
 }

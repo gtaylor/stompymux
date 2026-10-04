@@ -1,5 +1,5 @@
 //! Shared building destinations independent of chassis, entry timers and host movement publication.
-use super::{BattlePosition, HexCoordinate, StoredMap};
+use super::{HexCoordinate, Position, StoredMap};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -7,7 +7,7 @@ use std::{collections::BTreeMap, sync::Arc};
 
 /// An interior arrival coordinate and its saved single-byte direction selector.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BattleBuildingEntryPoint {
+pub struct BuildingEntryPoint {
     pub coordinate: HexCoordinate,
     pub direction: u8,
     /// Authored object reference; route selection uses the direction and coordinate.
@@ -20,7 +20,7 @@ pub struct BattleBuildingEntryPoint {
 
 /// A return-map record; its coordinate is selection metadata, not the exterior arrival point.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BattleBuildingExit {
+pub struct BuildingExit {
     pub coordinate: HexCoordinate,
     pub destination: ObjectId,
     /// Authored byte payload retained for map-object inspection.
@@ -33,12 +33,12 @@ pub struct BattleBuildingExit {
 
 impl StoredMap {
     /// Inspect authored arrival points in stable selection order.
-    pub fn building_entry_points(&self) -> &BTreeMap<u32, BattleBuildingEntryPoint> {
+    pub fn building_entry_points(&self) -> &BTreeMap<u32, BuildingEntryPoint> {
         &self.building_entry_points
     }
 
     /// Inspect ordered return-map links without evaluating exit policy.
-    pub fn building_exits(&self) -> &BTreeMap<u32, BattleBuildingExit> {
+    pub fn building_exits(&self) -> &BTreeMap<u32, BuildingExit> {
         &self.building_exits
     }
 }
@@ -64,7 +64,7 @@ pub fn set_building_entry_point(
     world: &mut World,
     id: ObjectId,
     ordinal: u32,
-    point: Option<BattleBuildingEntryPoint>,
+    point: Option<BuildingEntryPoint>,
 ) -> Result<()> {
     let record = map(world, id)?;
     if let Some(point) = point {
@@ -97,7 +97,7 @@ pub fn set_building_exit(
         world,
         id,
         ordinal,
-        destination.map(|destination| BattleBuildingExit {
+        destination.map(|destination| BuildingExit {
             coordinate: previous.map_or(HexCoordinate { x: 0, y: 0 }, |exit| exit.coordinate),
             destination,
             data_char: previous.map_or(0, |exit| exit.data_char),
@@ -112,7 +112,7 @@ pub fn set_building_return_link(
     world: &mut World,
     id: ObjectId,
     ordinal: u32,
-    exit: Option<BattleBuildingExit>,
+    exit: Option<BuildingExit>,
 ) -> Result<()> {
     let record = map(world, id)?;
     if let Some(exit) = exit {
@@ -142,7 +142,7 @@ pub fn building_entry_destination(
     exterior: ObjectId,
     coordinate: HexCoordinate,
     direction: Option<u8>,
-) -> Result<BattlePosition> {
+) -> Result<Position> {
     let entrance = map(world, exterior)?
         .building_at(coordinate)?
         .context("You see nothing to enter here!")?;
@@ -156,7 +156,7 @@ pub fn building_entry_destination(
         .find(|point| direction.is_none_or(|direction| point.direction == direction))
         .context("Building has no matching entry point")?;
     interior.base_hex(i64::from(point.coordinate.x), i64::from(point.coordinate.y))?;
-    Ok(BattlePosition {
+    Ok(Position {
         map: entrance.interior,
         x: u16::try_from(point.coordinate.x)?,
         y: u16::try_from(point.coordinate.y)?,
@@ -164,7 +164,7 @@ pub fn building_entry_destination(
 }
 
 /// Resolve the first return link and the first reciprocal exterior entrance without moving a unit.
-pub fn building_exit_destination(world: &World, interior: ObjectId) -> Result<BattlePosition> {
+pub fn building_exit_destination(world: &World, interior: ObjectId) -> Result<Position> {
     let destination = map(world, interior)?
         .building_exits
         .values()
@@ -185,7 +185,7 @@ pub fn building_exit_destination(world: &World, interior: ObjectId) -> Result<Ba
         i64::from(entrance.coordinate.x),
         i64::from(entrance.coordinate.y),
     )?;
-    Ok(BattlePosition {
+    Ok(Position {
         map: destination,
         x: u16::try_from(entrance.coordinate.x)?,
         y: u16::try_from(entrance.coordinate.y)?,

@@ -1,15 +1,15 @@
 //! Selective writes for character health/attributes, preserving skills and independent columns.
 use super::write::{Cell, Fields, row};
-use crate::{BattleCharacter, ObjectId, World};
+use crate::{Character, ObjectId, World};
 use anyhow::Result;
 use sqlx::{Row, SqliteConnection};
 use std::collections::BTreeMap;
 
 /// Decode the existing byte-bounded character columns without manufacturing default profiles.
-pub(super) async fn load(c: &mut SqliteConnection) -> Result<BTreeMap<ObjectId, BattleCharacter>> {
+pub(super) async fn load(c: &mut SqliteConnection) -> Result<BTreeMap<ObjectId, Character>> {
     let mut profiles = BTreeMap::new();
     for entry in sqlx::query("SELECT player_dbref,bruise,lethal,build,reflexes,intuition,learn,charisma FROM btech_character_state ORDER BY player_dbref").fetch_all(c).await? {
-        profiles.insert(ObjectId(entry.try_get("player_dbref")?), BattleCharacter {
+        profiles.insert(ObjectId(entry.try_get("player_dbref")?), Character {
             bruise: u8::try_from(entry.try_get::<i64, _>("bruise")?)?,
             lethal: u8::try_from(entry.try_get::<i64, _>("lethal")?)?,
             build: u8::try_from(entry.try_get::<i64, _>("build")?)?,
@@ -45,7 +45,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
 }
 
 /// Explicit column ownership avoids replacing character rows and cascading skill deletion.
-fn character_fields(profile: &BattleCharacter) -> Fields {
+fn character_fields(profile: &Character) -> Fields {
     Fields::from([
         ("bruise", Cell::Integer(i64::from(profile.bruise))),
         ("lethal", Cell::Integer(i64::from(profile.lethal))),

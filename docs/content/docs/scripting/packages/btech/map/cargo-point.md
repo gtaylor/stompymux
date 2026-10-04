@@ -21,4 +21,4 @@ btech.map.cargo_point(map)
 
 ## Returns
 
-- `BattleCargoTransferPoint|nil`
+- `CargoTransferPoint|nil`

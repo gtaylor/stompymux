@@ -1,20 +1,17 @@
 //! Shared launch outcomes for every unit class; adapters own inventory and anatomy-specific damage.
-use super::{
-    BattleAmmunitionMode, BattleBeaconLaunch, BattleDice, BattleFireMode, BattleGlancingMode,
-    BattleWeapon,
-};
+use super::{AmmunitionMode, BeaconLaunch, Dice, FireMode, GlancingMode, Weapon};
 use anyhow::{Result, ensure};
 
 /// Current weapon and admitted target facts after gatling preparation and ammunition fallback.
 pub(super) struct LaunchRollRequest {
-    pub damage: super::BattleWeaponDamageEffects,
-    pub weapon: BattleWeapon,
-    pub ammunition: BattleAmmunitionMode,
-    pub fire_mode: BattleFireMode,
+    pub damage: super::WeaponDamageEffects,
+    pub weapon: Weapon,
+    pub ammunition: AmmunitionMode,
+    pub fire_mode: FireMode,
     pub distance: f64,
     pub target_number: Option<i32>,
     pub streak_confused: bool,
-    pub glancing: BattleGlancingMode,
+    pub glancing: GlancingMode,
 }
 
 /// Unit-independent decisions consumed by both launch adapters.
@@ -32,7 +29,7 @@ pub(super) struct LaunchRoll {
 }
 
 /// Draw attack and propellant dice, then decide loader failure, Streak locking and glancing once.
-pub(super) fn roll_launch(request: LaunchRollRequest, dice: &mut BattleDice) -> Result<LaunchRoll> {
+pub(super) fn roll_launch(request: LaunchRollRequest, dice: &mut Dice) -> Result<LaunchRoll> {
     let LaunchRollRequest {
         damage,
         weapon,
@@ -48,12 +45,12 @@ pub(super) fn roll_launch(request: LaunchRollRequest, dice: &mut BattleDice) -> 
         "Invalid weapon range"
     );
     ensure!(
-        target_number != Some(i32::MIN) || glancing != BattleGlancingMode::BelowTarget,
+        target_number != Some(i32::MIN) || glancing != GlancingMode::BelowTarget,
         "Invalid glancing target number"
     );
     let roll = attack_roll(weapon, distance, dice);
     let propellant_roll =
-        (ammunition == BattleAmmunitionMode::Caseless && roll <= 3).then(|| dice.generic_roll());
+        (ammunition == AmmunitionMode::Caseless && roll <= 3).then(|| dice.generic_roll());
     let (mut loader_destroyed, mut jammed) = propellant_roll.map_or_else(
         || {
             (
@@ -89,26 +86,22 @@ pub(super) fn roll_launch(request: LaunchRollRequest, dice: &mut BattleDice) -> 
         jammed,
         launched,
         misload_required: critical_explosion
-            || (loader_destroyed
-                && (fire_mode == BattleFireMode::Rapid || propellant_roll.is_some())),
+            || (loader_destroyed && (fire_mode == FireMode::Rapid || propellant_roll.is_some())),
         hit: launched && threshold.is_some_and(|number| i32::from(roll) >= number),
         glancing: launched
             && !pod
             && (!weapon.is_streak() || streak_confused)
-            && glancing != BattleGlancingMode::Disabled
+            && glancing != GlancingMode::Disabled
             && threshold == Some(i32::from(roll)),
     })
 }
 
 /// Dead-fire missiles and extended LRMs below minimum range use the lowest two of three dice.
-pub(super) fn attack_roll(weapon: BattleWeapon, distance: f64, dice: &mut BattleDice) -> u8 {
+pub(super) fn attack_roll(weapon: Weapon, distance: f64, dice: &mut Dice) -> u8 {
     if weapon.is_dead_fire()
         || (matches!(
             weapon,
-            BattleWeapon::Elrm5
-                | BattleWeapon::Elrm10
-                | BattleWeapon::Elrm15
-                | BattleWeapon::Elrm20
+            Weapon::Elrm5 | Weapon::Elrm10 | Weapon::Elrm15 | Weapon::Elrm20
         ) && distance < f64::from(weapon.profile().minimum_range))
     {
         let first = dice.d6();
@@ -122,37 +115,32 @@ pub(super) fn attack_roll(weapon: BattleWeapon, distance: f64, dice: &mut Battle
 #[cfg(test)]
 mod tests {
     use super::*;
-    use BattleWeapon as W;
+    use Weapon as W;
 
     /// Generic attack checks count once; direct three-die attacks do not, and caseless failure adds one check.
     #[test]
     fn launch_roll_accounting_distinguishes_direct_dice_and_generic_checks() {
         let seed = (0..=255)
-            .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 2)
+            .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 2)
             .unwrap();
         for (weapon, ammunition, distance, count) in [
-            (
-                BattleWeapon::MediumLaser,
-                BattleAmmunitionMode::Normal,
-                1.0,
-                1,
-            ),
-            (BattleWeapon::LrDfm5, BattleAmmunitionMode::Normal, 1.0, 0),
-            (BattleWeapon::Elrm5, BattleAmmunitionMode::Normal, 1.0, 0),
-            (BattleWeapon::Elrm5, BattleAmmunitionMode::Normal, 10.0, 1),
-            (BattleWeapon::Ac10, BattleAmmunitionMode::Caseless, 1.0, 2),
+            (Weapon::MediumLaser, AmmunitionMode::Normal, 1.0, 1),
+            (Weapon::LrDfm5, AmmunitionMode::Normal, 1.0, 0),
+            (Weapon::Elrm5, AmmunitionMode::Normal, 1.0, 0),
+            (Weapon::Elrm5, AmmunitionMode::Normal, 10.0, 1),
+            (Weapon::Ac10, AmmunitionMode::Caseless, 1.0, 2),
         ] {
-            let mut dice = BattleDice::seeded([seed; 32]);
+            let mut dice = Dice::seeded([seed; 32]);
             let outcome = roll_launch(
                 LaunchRollRequest {
                     damage: Default::default(),
                     weapon,
                     ammunition,
-                    fire_mode: BattleFireMode::Normal,
+                    fire_mode: FireMode::Normal,
                     distance,
                     target_number: Some(2),
                     streak_confused: false,
-                    glancing: BattleGlancingMode::Disabled,
+                    glancing: GlancingMode::Disabled,
                 },
                 &mut dice,
             )
@@ -163,7 +151,7 @@ mod tests {
             }
             assert_eq!(
                 outcome.propellant_roll.is_some(),
-                ammunition == BattleAmmunitionMode::Caseless
+                ammunition == AmmunitionMode::Caseless
             );
         }
     }
@@ -172,16 +160,12 @@ mod tests {
     #[test]
     fn enhanced_failures_share_attack_dice_and_precedence() {
         let seed = (0..=255)
-            .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 2)
+            .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 2)
             .unwrap();
         for (damage, explosion, jam) in [
+            (super::super::WeaponDamageEffects::default(), false, false),
             (
-                super::super::BattleWeaponDamageEffects::default(),
-                false,
-                false,
-            ),
-            (
-                super::super::BattleWeaponDamageEffects {
+                super::super::WeaponDamageEffects {
                     explosion: 1,
                     ..Default::default()
                 },
@@ -189,7 +173,7 @@ mod tests {
                 false,
             ),
             (
-                super::super::BattleWeaponDamageEffects {
+                super::super::WeaponDamageEffects {
                     jam: 1,
                     ..Default::default()
                 },
@@ -197,7 +181,7 @@ mod tests {
                 true,
             ),
             (
-                super::super::BattleWeaponDamageEffects {
+                super::super::WeaponDamageEffects {
                     explosion: 1,
                     jam: 1,
                     ..Default::default()
@@ -206,19 +190,19 @@ mod tests {
                 false,
             ),
         ] {
-            let mut dice = BattleDice::seeded([seed; 32]);
+            let mut dice = Dice::seeded([seed; 32]);
             let mut expected = dice.clone();
             assert_eq!(expected.two_d6(), 2);
             let result = roll_launch(
                 LaunchRollRequest {
                     damage,
-                    weapon: BattleWeapon::Ac10,
-                    ammunition: BattleAmmunitionMode::Normal,
-                    fire_mode: BattleFireMode::Normal,
+                    weapon: Weapon::Ac10,
+                    ammunition: AmmunitionMode::Normal,
+                    fire_mode: FireMode::Normal,
                     distance: 1.0,
                     target_number: Some(2),
                     streak_confused: false,
-                    glancing: BattleGlancingMode::Disabled,
+                    glancing: GlancingMode::Disabled,
                 },
                 &mut dice,
             )
@@ -245,10 +229,10 @@ mod tests {
         ] {
             for seed in 0..=255 {
                 for distance in [0.0, 4.0, 6.0, 12.0, 18.0, 24.001] {
-                    let mut expected = BattleDice::seeded([seed; 32]);
+                    let mut expected = Dice::seeded([seed; 32]);
                     let mut values = [expected.d6(), expected.d6(), expected.d6()];
                     values.sort_unstable();
-                    let mut actual = BattleDice::seeded([seed; 32]);
+                    let mut actual = Dice::seeded([seed; 32]);
                     assert_eq!(
                         attack_roll(weapon, distance, &mut actual),
                         values[0] + values[1]
@@ -265,23 +249,23 @@ mod tests {
         for weapon in [W::Elrm5, W::Elrm10, W::Elrm15, W::Elrm20] {
             for seed in 0..=255 {
                 for distance in [0.0, 9.999, 10.0, 10.001, 36.0] {
-                    let mut expected = BattleDice::seeded([seed; 32]);
+                    let mut expected = Dice::seeded([seed; 32]);
                     let count = if distance < 10.0 { 3 } else { 2 };
                     let mut values: Vec<_> = (0..count).map(|_| expected.d6()).collect();
                     values.sort_unstable();
-                    let mut actual = BattleDice::seeded([seed; 32]);
+                    let mut actual = Dice::seeded([seed; 32]);
                     assert_eq!(
                         attack_roll(weapon, distance, &mut actual),
                         values[0] + values[1]
                     );
                     assert_eq!(actual, expected);
-                    let mut restored: BattleDice =
+                    let mut restored: Dice =
                         serde_json::from_value(serde_json::to_value(&actual).unwrap()).unwrap();
                     assert_eq!(restored.two_d6(), actual.two_d6());
                 }
             }
         }
-        let mut ordinary = BattleDice::seeded([1; 32]);
+        let mut ordinary = Dice::seeded([1; 32]);
         let mut expected = ordinary.clone();
         assert_eq!(attack_roll(W::Lrm20, 0.0, &mut ordinary), expected.two_d6());
         assert_eq!(ordinary, expected);

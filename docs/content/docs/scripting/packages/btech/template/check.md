@@ -21,4 +21,4 @@ btech.template.check(name)
 
 ## Returns
 
-- `BattleTemplateCheck`
+- `TemplateCheck`

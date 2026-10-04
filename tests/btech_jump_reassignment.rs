@@ -16,7 +16,7 @@ async fn transferred_jumps_rebind_boundaries_and_replay_to_landing() {
             let (_dir, config, mut world, unit, _, _) =
                 firing::fixture_with_target(source, None, source).await;
             launch_battle_jump(&mut world, unit, ObjectId(1), 0, 3.0).unwrap();
-            advance_battle_jumps(&mut world, BattleMovementRules::STANDARD).unwrap();
+            advance_battle_jumps(&mut world, MovementRules::STANDARD).unwrap();
             let flight = world.btech.constructed_units()[&unit].flight().unwrap();
             let destination = world.create(&config, "Destination".into(), Kind::Room);
             create_battle_map(
@@ -46,11 +46,10 @@ async fn transferred_jumps_rebind_boundaries_and_replay_to_landing() {
             assert_eq!(restored.btech, world.btech);
             let mut hit_edge = false;
             for _ in 0..100 {
-                let notices =
-                    advance_battle_jumps(&mut world, BattleMovementRules::STANDARD).unwrap();
+                let notices = advance_battle_jumps(&mut world, MovementRules::STANDARD).unwrap();
                 assert_eq!(
                     notices,
-                    advance_battle_jumps(&mut restored, BattleMovementRules::STANDARD).unwrap()
+                    advance_battle_jumps(&mut restored, MovementRules::STANDARD).unwrap()
                 );
                 assert_eq!(world.btech, restored.btech);
                 world.validate(&config).unwrap();
@@ -81,7 +80,7 @@ async fn rebound_jump_assignment_uses_host_rollback() {
     let (_dir, config, mut world, unit, _, _) =
         firing::fixture_with_target(source, None, source).await;
     launch_battle_jump(&mut world, unit, ObjectId(1), 0, 3.0).unwrap();
-    advance_battle_jumps(&mut world, BattleMovementRules::STANDARD).unwrap();
+    advance_battle_jumps(&mut world, MovementRules::STANDARD).unwrap();
     let map = world.create(&config, "Small map".into(), Kind::Room);
     create_battle_map(
         &mut world,
@@ -116,7 +115,7 @@ async fn rebound_jump_assignment_uses_host_rollback() {
     ))
     .unwrap();
     assert_eq!(native.world().btech, lua.world().btech);
-    let _ = advance_battle_jumps_action(&native, &config, BattleMovementRules::STANDARD).unwrap();
+    let _ = advance_battle_jumps_action(&native, &config, MovementRules::STANDARD).unwrap();
     assert!(
         native.world().btech.constructed_units()[&unit]
             .flight()

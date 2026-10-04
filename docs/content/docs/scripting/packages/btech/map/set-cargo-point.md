@@ -19,7 +19,7 @@ btech.map.set_cargo_point(actor, map, point)
 | --- | --- | --- |
 | `actor` | `integer` |  |
 | `map` | `integer` |  |
-| `point` | `BattleCargoTransferPoint\|nil` |  |
+| `point` | `CargoTransferPoint\|nil` |  |
 
 ## Returns
 

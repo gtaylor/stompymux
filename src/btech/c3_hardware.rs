@@ -1,12 +1,12 @@
 //! Shared command-computer accounting with chassis-specific slot sizes and live damage inputs.
-use super::{BattleSystem, BattleUnit, BattleVehicle};
+use super::{Mech, System, Vehicle};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
 /// Physical computer counts and current eligibility, independent of power and network membership.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BattleC3Hardware {
+pub struct C3Hardware {
     /// Complete master computers: five slots per Mech computer, one per vehicle computer.
     pub masters: usize,
     /// Master computers whose component slots are all functional.
@@ -23,7 +23,7 @@ pub struct BattleC3Hardware {
 
 /// Installation facts needed to distinguish absent masters from incomplete or destroyed computers.
 struct ComputerInventory {
-    hardware: BattleC3Hardware,
+    hardware: C3Hardware,
     master_installed: bool,
 }
 
@@ -40,20 +40,20 @@ impl ComputerInventory {
 /// Group computers within sections in slot order; intervening equipment does not split a group.
 /// Adapters supply live slots, including whole-unit destruction, so damage is never cached.
 fn inventory<S: Ord, const MASTER: usize, const C3I: usize>(
-    parts: impl IntoIterator<Item = (S, u8, BattleSystem, bool)>,
+    parts: impl IntoIterator<Item = (S, u8, System, bool)>,
 ) -> ComputerInventory {
-    let mut hardware = BattleC3Hardware::default();
+    let mut hardware = C3Hardware::default();
     let mut masters = BTreeMap::<_, Vec<_>>::new();
     let mut c3i_slots = 0;
     let mut working_c3i_slots = 0;
     for (section, slot, system, working) in parts {
         match system {
-            BattleSystem::C3Master => masters.entry(section).or_default().push((slot, working)),
-            BattleSystem::C3Slave => {
+            System::C3Master => masters.entry(section).or_default().push((slot, working)),
+            System::C3Slave => {
                 hardware.slave_installed = true;
                 hardware.slave_operational |= working;
             }
-            BattleSystem::C3i => {
+            System::C3i => {
                 c3i_slots += 1;
                 working_c3i_slots += usize::from(working);
             }
@@ -75,7 +75,7 @@ fn inventory<S: Ord, const MASTER: usize, const C3I: usize>(
     }
 }
 
-impl BattleUnit {
+impl Mech {
     /// Supply Mech slot availability, including flooding and whole-unit destruction.
     fn command_computers(&self) -> Result<ComputerInventory> {
         let systems = self.loadout()?.systems;
@@ -93,7 +93,7 @@ impl BattleUnit {
     }
 
     /// Derive computer capabilities without trusting template flags or caching damage.
-    pub fn c3_hardware(&self) -> Result<BattleC3Hardware> {
+    pub fn c3_hardware(&self) -> Result<C3Hardware> {
         Ok(self.command_computers()?.hardware)
     }
 
@@ -103,7 +103,7 @@ impl BattleUnit {
     }
 }
 
-impl BattleVehicle {
+impl Vehicle {
     /// Supply independent vehicle slots, including destroyed sections and whole-unit destruction.
     fn command_computers(&self) -> Result<ComputerInventory> {
         let systems = self.loadout()?.systems;
@@ -121,7 +121,7 @@ impl BattleVehicle {
     }
 
     /// Derive vehicle command-computer capabilities from installed equipment and live damage.
-    pub fn c3_hardware(&self) -> Result<BattleC3Hardware> {
+    pub fn c3_hardware(&self) -> Result<C3Hardware> {
         Ok(self.command_computers()?.hardware)
     }
 

@@ -3,12 +3,12 @@ use crate::support;
 use stompymux_rs::*;
 
 /// A bounded ammunition template with independently supplied quantity and bin flags.
-fn definition(weapon: BattleWeapon, quantity: u16, flags: &[&str]) -> BattleTemplate {
+fn definition(weapon: Weapon, quantity: u16, flags: &[&str]) -> MechTemplate {
     let mut template =
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     let bin = template
         .sections
-        .get_mut(&BattleSection::RightTorso)
+        .get_mut(&MechSection::RightTorso)
         .unwrap()
         .criticals
         .get_mut(&0)
@@ -22,7 +22,7 @@ fn definition(weapon: BattleWeapon, quantity: u16, flags: &[&str]) -> BattleTemp
 /// Template quantities select a size and fill it once, including zero, odd capacities and overfilled bins.
 #[test]
 fn ammunition_template_normalization_boundaries() {
-    for weapon in BattleWeapon::ALL
+    for weapon in Weapon::ALL
         .iter()
         .copied()
         .filter(|w| w.profile().ammunition_per_ton > 0)
@@ -44,8 +44,8 @@ fn ammunition_template_normalization_boundaries() {
                         part.equipment = part.equipment.to_ascii_lowercase();
                     }
                 }
-                let lowercase_unit = BattleUnit::from_template(lowercase).unwrap();
-                let unit = BattleUnit::from_template(template).unwrap();
+                let lowercase_unit = Mech::from_template(lowercase).unwrap();
+                let unit = Mech::from_template(template).unwrap();
                 let expected_half = explicit_half || quantity <= half;
                 let capacity = if expected_half { half } else { full };
                 let loadout = unit.loadout().unwrap();
@@ -57,21 +57,20 @@ fn ammunition_template_normalization_boundaries() {
                 assert_eq!(bin.capacity, capacity);
                 assert_eq!(unit.ammunition(), [capacity]);
                 assert_eq!(
-                    original.sections[&BattleSection::RightTorso].criticals[&0].data,
+                    original.sections[&MechSection::RightTorso].criticals[&0].data,
                     quantity.to_string()
                 );
                 assert_eq!(
-                    unit.definition().sections[&BattleSection::RightTorso].criticals[&0].data,
+                    unit.definition().sections[&MechSection::RightTorso].criticals[&0].data,
                     capacity.to_string()
                 );
             }
         }
     }
-    let unit =
-        BattleUnit::from_template(definition(BattleWeapon::Lbx2, 1, &["LBX/Cluster"])).unwrap();
+    let unit = Mech::from_template(definition(Weapon::Lbx2, 1, &["LBX/Cluster"])).unwrap();
     assert_eq!(
         unit.loadout().unwrap().ammunition[0].mode,
-        BattleAmmunitionMode::Cluster
+        AmmunitionMode::Cluster
     );
     assert_eq!(unit.ammunition(), [22]);
     for flags in [
@@ -79,9 +78,7 @@ fn ammunition_template_normalization_boundaries() {
         vec!["UnknownBinFlag"],
         vec!["LBX/Cluster"],
     ] {
-        assert!(
-            BattleUnit::from_template(definition(BattleWeapon::MachineGun, 1, &flags)).is_err()
-        );
+        assert!(Mech::from_template(definition(Weapon::MachineGun, 1, &flags)).is_err());
     }
 }
 

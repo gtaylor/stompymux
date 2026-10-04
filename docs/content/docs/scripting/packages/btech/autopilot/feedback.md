@@ -22,4 +22,4 @@ btech.autopilot.feedback(unit, after_sequence)
 
 ## Returns
 
-- `BattleAutopilotFeedbackPage Feedback records and a history-gap indicator.`
+- `AutopilotFeedbackPage Feedback records and a history-gap indicator.`

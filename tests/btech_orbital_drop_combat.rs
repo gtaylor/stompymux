@@ -6,10 +6,9 @@ use stompymux_rs::*;
 /// Install deterministic protection through the validated durable state format.
 fn protect(world: &mut World, id: ObjectId, mass: i64, seed: u8) {
     firing::edit(world, id, |state| {
-        state["orbital_drop"] =
-            serde_json::to_value(BattleOrbitalDrop::new(mass, 2).unwrap()).unwrap();
+        state["orbital_drop"] = serde_json::to_value(OrbitalDrop::new(mass, 2).unwrap()).unwrap();
         state["ground_elevation"] = serde_json::Value::Null;
-        state["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+        state["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
     });
 }
 
@@ -17,7 +16,7 @@ fn protect(world: &mut World, id: ObjectId, mass: i64, seed: u8) {
 fn intercept_seed() -> u8 {
     (0..=255)
         .find(|seed| {
-            let mut dice = BattleDice::seeded([*seed; 32]);
+            let mut dice = Dice::seeded([*seed; 32]);
             dice.two_d6();
             dice.two_d6() > 8
         })
@@ -95,7 +94,7 @@ async fn intercepted_packets_preserve_material_and_breach_without_overflow() {
 async fn firing_opens_cocoons_across_chassis_and_rolls_back_with_the_shot() {
     for (index, source) in firing::templates().into_iter().take(6).enumerate() {
         let (_dir, config, mut world, shooter, target, weapon) =
-            firing::fixture_with_target(&source, Some(BattleWeapon::MediumLaser), &source).await;
+            firing::fixture_with_target(&source, Some(Weapon::MediumLaser), &source).await;
         protect(&mut world, shooter, 100 * 1024, 42);
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         let before = scripts.world().btech.clone();
@@ -133,9 +132,9 @@ async fn firing_opens_cocoons_across_chassis_and_rolls_back_with_the_shot() {
 async fn intact_target_bonus_is_shared_and_disappears_after_breach() {
     for source in firing::templates().into_iter().take(6) {
         let (_dir, _config, mut world, shooter, target, weapon) =
-            firing::fixture_with_target(&source, Some(BattleWeapon::MediumLaser), &source).await;
+            firing::fixture_with_target(&source, Some(Weapon::MediumLaser), &source).await;
         protect(&mut world, target, 100 * 1024, 42);
-        let rules = BattleAimRules {
+        let rules = AimRules {
             woods_damage: false,
             dig_bonus: 2,
             dig_only_front: false,
@@ -167,9 +166,9 @@ async fn vehicle_internal_packets_intercept_once_and_safe_damage_skips_the_roll(
             firing::fixture_with_target(&source, None, &source).await;
         protect(&mut world, id, 100 * 1024, intercept_seed());
         let before = state(&world, id);
-        let mut rules = BattleVehicleCriticalRules {
+        let mut rules = VehicleCriticalRules {
             rotor_damage_divisor: 0,
-            table: BattleVehicleCriticalTable::Standard,
+            table: VehicleCriticalTable::Standard,
             vtol_table: None,
             enabled: true,
             combat_safe: true,
@@ -180,13 +179,13 @@ async fn vehicle_internal_packets_intercept_once_and_safe_damage_skips_the_roll(
         let safe_report = resolve_battle_vehicle_internal_damage(
             &mut safe,
             id,
-            BattleVehicleSection::Front,
+            VehicleSection::Front,
             1000,
             rules,
         )
         .unwrap();
         assert_eq!(safe_report.absorbed, 0);
-        let mut expected = BattleDice::seeded([intercept_seed(); 32]);
+        let mut expected = Dice::seeded([intercept_seed(); 32]);
         expected.two_d6();
         assert_eq!(
             state(&safe, id)["dice"],
@@ -194,14 +193,9 @@ async fn vehicle_internal_packets_intercept_once_and_safe_damage_skips_the_roll(
         );
         assert_eq!(state(&safe, id)["orbital_drop"], before["orbital_drop"]);
         rules.combat_safe = false;
-        let report = resolve_battle_vehicle_internal_damage(
-            &mut world,
-            id,
-            BattleVehicleSection::Front,
-            3,
-            rules,
-        )
-        .unwrap();
+        let report =
+            resolve_battle_vehicle_internal_damage(&mut world, id, VehicleSection::Front, 3, rules)
+                .unwrap();
         expected.two_d6();
         assert_eq!(
             state(&world, id)["dice"],
@@ -223,12 +217,12 @@ async fn vehicle_internal_packets_intercept_once_and_safe_damage_skips_the_roll(
 #[tokio::test]
 async fn failed_streak_lock_still_opens_the_cocoon() {
     let seed = (0..=255)
-        .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 2)
+        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 2)
         .unwrap();
     for source in firing::templates().into_iter().take(6) {
         let (_dir, config, mut world, id, target, weapon) = firing::fixture_with_supply(
             &source,
-            Some(BattleWeapon::StreakSrm2),
+            Some(Weapon::StreakSrm2),
             &source,
             false,
             Some(""),
@@ -264,7 +258,7 @@ async fn failed_streak_lock_still_opens_the_cocoon() {
 async fn coordinate_launches_publish_the_same_cocoon_breach() {
     for source in firing::templates().into_iter().take(6) {
         let (_dir, config, mut world, id, _, weapon) =
-            firing::fixture_with_target(&source, Some(BattleWeapon::MediumLaser), &source).await;
+            firing::fixture_with_target(&source, Some(Weapon::MediumLaser), &source).await;
         protect(&mut world, id, 100 * 1024, 42);
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         let report: mlua::Table = scripts

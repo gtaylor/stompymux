@@ -24,4 +24,4 @@ btech.unit.tactical(dbref, pilot, arguments)
 
 ## Returns
 
-- `BattleTacticalMap`
+- `TacticalMap`

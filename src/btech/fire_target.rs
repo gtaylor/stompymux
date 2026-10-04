@@ -1,5 +1,5 @@
 //! Shared firing requests defer native target decoding until per-weapon dispatch.
-use super::{BattleWeapon, HexCoordinate};
+use super::{HexCoordinate, Weapon};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 /// A firing request uses the cockpit selection, an explicit unit, or explicit map coordinates.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
-pub enum BattleFireTarget {
+pub enum FireTarget {
     /// Use the current cockpit selection and automatic coolant target.
     #[default]
     Selected,
@@ -17,7 +17,7 @@ pub enum BattleFireTarget {
     Hex { coordinate: HexCoordinate },
 }
 
-impl From<Option<ObjectId>> for BattleFireTarget {
+impl From<Option<ObjectId>> for FireTarget {
     /// Optional unit arguments use the cockpit selection when omitted.
     fn from(unit: Option<ObjectId>) -> Self {
         unit.map_or(Self::Selected, |unit| Self::Unit { unit })
@@ -38,7 +38,7 @@ impl From<ObjectId> for TargetSource {
 
 impl TargetSource {
     /// Read the unit's current target selection.
-    pub fn selection(self, world: &World) -> Option<super::BattleTargetSelection> {
+    pub fn selection(self, world: &World) -> Option<super::TargetSelection> {
         super::targeting::selection(world, self.unit)
     }
 }
@@ -46,7 +46,7 @@ impl TargetSource {
 /// Native arguments stay unresolved so each TIC weapon observes current battlefield state.
 #[derive(Clone, Copy)]
 pub(super) enum FireTargetRequest<'a> {
-    Target(BattleFireTarget),
+    Target(FireTarget),
     Arguments(&'a str),
 }
 
@@ -57,7 +57,7 @@ impl FireTargetRequest<'_> {
         world: &World,
         source: TargetSource,
         index: usize,
-    ) -> Result<BattleFireTarget> {
+    ) -> Result<FireTarget> {
         let shooter = source.unit;
         let (weapon, ammunition) = super::spotter::installation(world, shooter, index)?;
         let args = match self {
@@ -72,27 +72,27 @@ impl FireTargetRequest<'_> {
             && super::spotter::selected(world, shooter).is_some()
             && !matches!(
                 source.selection(world),
-                Some(super::BattleTargetSelection::Unit(_))
+                Some(super::TargetSelection::Unit(_))
             );
         if observed {
-            return Ok(BattleFireTarget::Selected);
+            return Ok(FireTarget::Selected);
         }
         if let Self::Target(target) = self {
             return Ok(target);
         }
         match args.as_slice() {
-            [] => Ok(BattleFireTarget::Selected),
+            [] => Ok(FireTarget::Selected),
             [text] => {
                 let identity = if text.starts_with('#') {
                     text
                 } else {
                     text.get(..2).context("Invalid target ID")?
                 };
-                Ok(BattleFireTarget::Unit {
+                Ok(FireTarget::Unit {
                     unit: super::radio_targeted::target(world, shooter, identity)?,
                 })
             }
-            [x, y] => Ok(BattleFireTarget::Hex {
+            [x, y] => Ok(FireTarget::Hex {
                 coordinate: HexCoordinate {
                     x: x.parse().context("Invalid map coordinates!")?,
                     y: y.parse().context("Invalid map coordinates!")?,
@@ -118,7 +118,7 @@ pub(super) fn resolve_conventional_for_source(
     world: &World,
     source: TargetSource,
     index: usize,
-    requested: BattleFireTarget,
+    requested: FireTarget,
 ) -> Result<ResolvedFireTarget> {
     let shooter = source.unit;
     let (weapon, ammunition) = super::spotter::installation(world, shooter, index)?;
@@ -126,17 +126,17 @@ pub(super) fn resolve_conventional_for_source(
         unit.fire_mode(index)?
     });
     let (unit_lock, hex_lock) = match source.selection(world) {
-        Some(super::BattleTargetSelection::Unit(lock)) => (Some(lock), None),
-        Some(super::BattleTargetSelection::Hex(lock)) => (None, Some(lock)),
+        Some(super::TargetSelection::Unit(lock)) => (Some(lock), None),
+        Some(super::TargetSelection::Hex(lock)) => (None, Some(lock)),
         None => (None, None),
     };
     if let Some((_, hex)) = super::spotter::indirect_hex_for_source(world, source, index)? {
         return Ok(ResolvedFireTarget::Hex(hex));
     }
     let (explicit, mut coordinate) = match requested {
-        BattleFireTarget::Selected => (None, None),
-        BattleFireTarget::Unit { unit } => (Some(unit), None),
-        BattleFireTarget::Hex { coordinate } => {
+        FireTarget::Selected => (None, None),
+        FireTarget::Unit { unit } => (Some(unit), None),
+        FireTarget::Hex { coordinate } => {
             let Some(unit) = super::hex_occupant(world, shooter, coordinate)? else {
                 return Ok(ResolvedFireTarget::Hex(coordinate));
             };
@@ -144,14 +144,14 @@ pub(super) fn resolve_conventional_for_source(
         }
     };
     let indirect = super::spotter::indirect_target_for_source(world, source, index)?;
-    let self_cooling = requested == BattleFireTarget::Selected && mode.self_cooling(weapon);
+    let self_cooling = requested == FireTarget::Selected && mode.self_cooling(weapon);
     if indirect.is_none()
-        && requested == BattleFireTarget::Selected
+        && requested == FireTarget::Selected
         && !self_cooling
         && let Some(lock) = hex_lock
     {
         coordinate = Some(lock.hex);
-        if lock.mode != super::BattleHexTargetMode::UnitAtHex
+        if lock.mode != super::HexTargetMode::UnitAtHex
             || super::hex_occupant(world, shooter, lock.hex)?.is_none()
         {
             return Ok(ResolvedFireTarget::Hex(lock.hex));
@@ -178,7 +178,7 @@ pub(super) fn resolve_conventional_for_source(
         });
     }
     ensure!(
-        coordinate.is_none() || ammunition.munition() != super::BattleAmmunitionMode::Stinger,
+        coordinate.is_none() || ammunition.munition() != super::AmmunitionMode::Stinger,
         "Stinger missiles cannot shoot hexes!"
     );
     Ok(ResolvedFireTarget::Unit { unit, coordinate })
@@ -189,7 +189,7 @@ pub(super) fn check_target_safety_for_source(
     world: &World,
     targeting: TargetSource,
     target: ObjectId,
-    weapon: BattleWeapon,
+    weapon: Weapon,
 ) -> Result<()> {
     let shooter = targeting.unit;
     let source = super::scanner::scanner_unit(world, shooter).context("Shooter is unavailable")?;
@@ -198,7 +198,7 @@ pub(super) fn check_target_safety_for_source(
         unit.friendly_fire_safety()
     });
     let lock = match targeting.selection(world) {
-        Some(super::BattleTargetSelection::Unit(lock)) => Some(lock),
+        Some(super::TargetSelection::Unit(lock)) => Some(lock),
         _ => None,
     };
     ensure!(
@@ -210,7 +210,7 @@ pub(super) fn check_target_safety_for_source(
             || lock.is_some_and(|lock| lock.target == target && lock.remaining == 0),
         "You need a stable lock to fire on that target!"
     );
-    if weapon == BattleWeapon::CoolantGun || source.signature.team != recipient.signature.team {
+    if weapon == Weapon::CoolantGun || source.signature.team != recipient.signature.team {
         return Ok(());
     }
     ensure!(!safety, "You can't fire on a teammate with FFSafeties on!");

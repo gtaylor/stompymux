@@ -23,4 +23,4 @@ btech.unit.caseless(dbref, pilot, weapon)
 
 ## Returns
 
-- `BattleAmmunitionMode`
+- `AmmunitionMode`

@@ -1,10 +1,10 @@
 //! Ordered mechanical admission shared by cockpit firing and chassis readiness inspection.
-use super::BattleWeapon;
+use super::Weapon;
 use anyhow::{Result, bail, ensure};
 
 /// Chassis-derived mechanical facts, independent of targets, ammunition and preparation work.
 pub(super) struct WeaponMechanics {
-    pub weapon: BattleWeapon,
+    pub weapon: Weapon,
     pub intact: bool,
     pub stunned: bool,
     pub temporary_failure: bool,
@@ -76,7 +76,7 @@ impl WeaponMechanics {
     }
 
     /// Sighting ignores recycling, posture and feed failures, but requires a usable offensive mount.
-    pub fn check_sight(&self, disabled: bool) -> Result<BattleWeapon> {
+    pub fn check_sight(&self, disabled: bool) -> Result<Weapon> {
         ensure!(
             !self.covered,
             "Only turret weapons are available while in cover."
@@ -90,7 +90,7 @@ impl WeaponMechanics {
     }
 
     /// Defensive weapons retain mechanical readiness for automatic defense but reject manual fire.
-    pub fn check_offensive(&self) -> Result<BattleWeapon> {
+    pub fn check_offensive(&self) -> Result<Weapon> {
         self.check()?;
         ensure!(!self.weapon.is_ams(), "That weapon is defensive only!");
         Ok(self.weapon)
@@ -107,7 +107,7 @@ mod tests {
         for bits in 0u32..256 {
             let bit = |n: u32| bits & (1 << n) != 0;
             let mechanics = WeaponMechanics {
-                weapon: BattleWeapon::MediumLaser,
+                weapon: Weapon::MediumLaser,
                 intact: bit(0),
                 stunned: bit(1),
                 temporary_failure: bit(2),

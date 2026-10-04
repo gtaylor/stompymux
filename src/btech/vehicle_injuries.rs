@@ -1,13 +1,8 @@
 //! Collect ordered character injuries from vehicle damage without repeating health calculations.
-use super::{
-    BattleCharacterPilotInjury, BattleVehicleArmorDamage, BattleVehicleCriticalResolution,
-};
+use super::{CharacterPilotInjury, VehicleArmorDamage, VehicleCriticalResolution};
 
 /// Armor criticals occur before penetration and its internal criticals.
-pub(super) fn collect_armor(
-    report: &BattleVehicleArmorDamage,
-    injuries: &mut Vec<BattleCharacterPilotInjury>,
-) {
+pub(super) fn collect_armor(report: &VehicleArmorDamage, injuries: &mut Vec<CharacterPilotInjury>) {
     for critical in &report.criticals {
         collect_critical(critical, injuries);
     }
@@ -18,8 +13,8 @@ pub(super) fn collect_armor(
 
 /// Nested weapon explosions finish before their surviving-pilot injury is applied.
 pub(super) fn collect_critical(
-    report: &BattleVehicleCriticalResolution,
-    injuries: &mut Vec<BattleCharacterPilotInjury>,
+    report: &VehicleCriticalResolution,
+    injuries: &mut Vec<CharacterPilotInjury>,
 ) {
     for damage in &report.internal_damage {
         collect_internal(damage, injuries);
@@ -31,8 +26,8 @@ pub(super) fn collect_critical(
 
 /// Blast heat applies advanced fire damage after its ordinary impact packets.
 pub(super) fn collect_heat(
-    report: &super::BattleVehicleHeatExposure,
-    injuries: &mut Vec<BattleCharacterPilotInjury>,
+    report: &super::VehicleHeatExposure,
+    injuries: &mut Vec<CharacterPilotInjury>,
 ) {
     if let Some(fire) = &report.fire {
         for damage in &fire.effects.damage {
@@ -43,8 +38,8 @@ pub(super) fn collect_heat(
 
 /// A misload or standalone internal explosion retains injuries on its critical reports.
 pub(super) fn collect_internal(
-    report: &super::BattleVehicleInternalDamage,
-    injuries: &mut Vec<BattleCharacterPilotInjury>,
+    report: &super::VehicleInternalDamage,
+    injuries: &mut Vec<CharacterPilotInjury>,
 ) {
     for critical in &report.criticals {
         collect_critical(critical, injuries);
@@ -53,8 +48,8 @@ pub(super) fn collect_internal(
 
 /// Vehicle salvos resolve ordinary groups before their inferno effects.
 pub(super) fn collect_salvo(
-    report: &super::BattleVehicleSalvoReport,
-    injuries: &mut Vec<BattleCharacterPilotInjury>,
+    report: &super::VehicleSalvoReport,
+    injuries: &mut Vec<CharacterPilotInjury>,
 ) {
     for group in &report.groups {
         if let Some(damage) = &group.impact.damage {

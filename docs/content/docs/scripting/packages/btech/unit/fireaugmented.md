@@ -23,4 +23,4 @@ btech.unit.fireaugmented(dbref, pilot, weapon)
 
 ## Returns
 
-- `BattleAmmunitionMode`
+- `AmmunitionMode`

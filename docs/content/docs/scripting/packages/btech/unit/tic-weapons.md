@@ -22,4 +22,4 @@ btech.unit.tic_weapons(unit, tic)
 
 ## Returns
 
-- `BattleMountedWeapon[] weapons`
+- `MountedWeapon[] weapons`

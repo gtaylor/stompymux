@@ -22,10 +22,11 @@ async fn map_assignment_preserves_running_chassis_and_restarts() {
         } else {
             "constructed"
         };
-        let stationary =
-            world.btech.vehicles().get(&unit).is_some_and(|unit| {
-                unit.definition().movement == BattleVehicleMovement::Stationary
-            });
+        let stationary = world
+            .btech
+            .vehicles()
+            .get(&unit)
+            .is_some_and(|unit| unit.definition().movement == VehicleMovement::Stationary);
         firing::edit(&mut world, unit, |state| {
             state["motion"]["heading"] = 90.0.into();
             state["motion"]["desired_heading"] = 90.0.into();
@@ -111,7 +112,7 @@ async fn new_units_use_destination_surface() {
     for source in firing::templates() {
         let unit = world.create(&config, "Unit".into(), Kind::Thing);
         world.objects.get_mut(&unit).unwrap().home = Some(ObjectId(config.home()));
-        BattleUnitTemplate::parse("test", &source)
+        UnitTemplate::parse("test", &source)
             .unwrap()
             .create(&mut world, unit)
             .unwrap();
@@ -140,7 +141,7 @@ async fn map_capacity_counts_all_chassis_and_allows_existing_members() {
     for index in 0..251 {
         let id = world.create(&config, "Unit".into(), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-        BattleUnitTemplate::parse("test", &sources[index % sources.len()])
+        UnitTemplate::parse("test", &sources[index % sources.len()])
             .unwrap()
             .create(&mut world, id)
             .unwrap();
@@ -168,10 +169,10 @@ async fn map_assignment_preserves_airborne_progress_and_restart() {
             firing::fixture_with_target(source, None, source).await;
         if index == 0 {
             launch_battle_jump(&mut world, unit, ObjectId(1), 0, 3.0).unwrap();
-            advance_battle_jumps(&mut world, BattleMovementRules::STANDARD).unwrap();
+            advance_battle_jumps(&mut world, MovementRules::STANDARD).unwrap();
         } else {
             let _ = begin_battle_vtol_takeoff(&mut world, unit, ObjectId(1), 0, false).unwrap();
-            advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
+            advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
         }
         let map = world.create(&config, "Airspace".into(), Kind::Room);
         create_battle_map(
@@ -200,10 +201,10 @@ async fn map_assignment_preserves_airborne_progress_and_restart() {
         world.validate(&config).unwrap();
         persistence::save(&config.database(), &world).await.unwrap();
         let mut restored = persistence::load(&config.database()).await.unwrap();
-        advance_battle_jumps(&mut world, BattleMovementRules::STANDARD).unwrap();
-        advance_battle_jumps(&mut restored, BattleMovementRules::STANDARD).unwrap();
-        advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
-        advance_battle_motion(&mut restored, BattleMovementRules::STANDARD).unwrap();
+        advance_battle_jumps(&mut world, MovementRules::STANDARD).unwrap();
+        advance_battle_jumps(&mut restored, MovementRules::STANDARD).unwrap();
+        advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
+        advance_battle_motion(&mut restored, MovementRules::STANDARD).unwrap();
         assert_eq!(world.btech, restored.btech);
     }
 }
@@ -230,7 +231,7 @@ async fn map_assignment_releases_tows_across_all_chassis_pairings() {
             let b = world.create(&config, "Tow".into(), Kind::Thing);
             for (id, source) in [(a, source), (b, target)] {
                 world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-                BattleUnitTemplate::parse("test", source)
+                UnitTemplate::parse("test", source)
                     .unwrap()
                     .create(&mut world, id)
                     .unwrap();

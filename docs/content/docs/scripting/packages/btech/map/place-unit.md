@@ -19,7 +19,7 @@ btech.map.place_unit(unit, map, position)
 | --- | --- | --- |
 | `unit` | `DbRef\|Object` |  |
 | `map` | `DbRef\|Object` |  |
-| `position` | `BattlePlacement` |  |
+| `position` | `Placement` |  |
 
 ## Returns
 

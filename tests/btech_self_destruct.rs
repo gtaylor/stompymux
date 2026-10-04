@@ -46,7 +46,7 @@ async fn fixture_on(chassis: &str, tile: &str) -> (tempfile::TempDir, Config, Wo
         "biped" | "quad" => create_battle_unit(
             &mut world,
             id,
-            BattleTemplate::parse(
+            MechTemplate::parse(
                 "test",
                 if chassis == "biped" {
                     include_str!("../game/mechs/JR7-D.toml")
@@ -72,7 +72,7 @@ async fn fixture_on(chassis: &str, tile: &str) -> (tempfile::TempDir, Config, Wo
             create_battle_vehicle(
                 &mut world,
                 id,
-                BattleVehicleTemplate::parse("test", &text).unwrap(),
+                VehicleTemplate::parse("test", &text).unwrap(),
             )
             .unwrap();
         }
@@ -88,17 +88,17 @@ async fn fixture_on(chassis: &str, tile: &str) -> (tempfile::TempDir, Config, Wo
     // A failed initial crew check followed by a successful recovery makes terminal replay observable.
     let seed = (0..=255)
         .find(|s| {
-            let mut dice = BattleDice::seeded([*s; 32]);
+            let mut dice = Dice::seeded([*s; 32]);
             dice.consciousness_roll(false) < 10 && dice.consciousness_roll(false) >= 10
         })
         .unwrap();
     // This fixture exercises a single detonation; reactor tests cover the additional instability blast.
     let combat_seed = (0..=255)
-        .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 8)
+        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 8)
         .unwrap();
     edit(&mut world, id, |s| {
-        s["crew_recovery"]["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-        s["dice"] = serde_json::to_value(BattleDice::seeded([combat_seed; 32])).unwrap();
+        s["crew_recovery"]["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
+        s["dice"] = serde_json::to_value(Dice::seeded([combat_seed; 32])).unwrap();
     });
     (dir, config, world, id)
 }
@@ -121,8 +121,8 @@ async fn self_destruct_airborne_vehicle_placement() {
                     state["ground_elevation"] = altitude.into();
                     return;
                 }
-                state["vtol_flight"] = serde_json::to_value(BattleVtolFlight {
-                    phase: BattleVtolFlightPhase::Airborne,
+                state["vtol_flight"] = serde_json::to_value(VtolFlight {
+                    phase: VtolFlightPhase::Airborne,
                     altitude,
                     vertical_speed: 4.0,
                     fall: None,
@@ -132,10 +132,7 @@ async fn self_destruct_airborne_vehicle_placement() {
             let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
             self_destruct_action(&scripts, &config, id, ObjectId(1), "ammo").unwrap();
             let outcomes = advance_battle_self_destructs_action(&scripts, &config).unwrap();
-            assert!(matches!(
-                outcomes[0],
-                BattleSelfDestructOutcome::Vehicle { .. }
-            ));
+            assert!(matches!(outcomes[0], SelfDestructOutcome::Vehicle { .. }));
             let world = scripts.world();
             let unit = &world.btech.vehicles()[&id];
             let falling = !(tile == "/4" && altitude < 4.0);
@@ -144,18 +141,15 @@ async fn self_destruct_airborne_vehicle_placement() {
                 .hex(0, 0)
                 .unwrap();
             assert_eq!(unit.elevation_level(hex), expected, "{chassis} {tile}");
-            assert_eq!(
-                unit.free_fall(),
-                falling.then(|| BattleFreeFall::new(expected))
-            );
+            assert_eq!(unit.free_fall(), falling.then(|| FreeFall::new(expected)));
             if let Some(flight) = unit.vtol_flight() {
                 assert_eq!(flight.vertical_speed, 0.0);
                 assert_eq!(
                     flight.phase,
                     if falling {
-                        BattleVtolFlightPhase::Falling
+                        VtolFlightPhase::Falling
                     } else {
-                        BattleVtolFlightPhase::Landed
+                        VtolFlightPhase::Landed
                     }
                 );
             }
@@ -196,7 +190,7 @@ async fn self_destruct_cross_chassis_native_lua_and_restart() {
             output.contains("ammunition will explode in 3 seconds"),
             "{output}"
         );
-        assert!(battle_self_destructs_pending(&scripts.world()));
+        assert!(self_destructs_pending(&scripts.world()));
         let pilot: Option<i64> = scripts
             .eval_callback(&format!("return btech.unit.state({}).pilot", id.0))
             .unwrap();
@@ -204,7 +198,7 @@ async fn self_destruct_cross_chassis_native_lua_and_restart() {
         let first = advance_battle_self_destructs_action(&scripts, &config).unwrap();
         assert!(matches!(
             &first[..],
-            [BattleSelfDestructOutcome::Countdown { remaining: 2, .. }]
+            [SelfDestructOutcome::Countdown { remaining: 2, .. }]
         ));
         let saved = scripts.world().clone();
         persistence::save(&config.database(), &saved).await.unwrap();
@@ -214,12 +208,12 @@ async fn self_destruct_cross_chassis_native_lua_and_restart() {
         let second = advance_battle_self_destructs_action(&scripts, &config).unwrap();
         assert!(matches!(
             &second[..],
-            [BattleSelfDestructOutcome::Countdown { remaining: 1, .. }]
+            [SelfDestructOutcome::Countdown { remaining: 1, .. }]
         ));
         let reports = advance_battle_self_destructs_action(&scripts, &config).unwrap();
         assert_eq!(reports.len(), 1);
         if chassis == "biped" || chassis == "quad" {
-            let BattleSelfDestructOutcome::Reactor { report } = &reports[0] else {
+            let SelfDestructOutcome::Reactor { report } = &reports[0] else {
                 panic!("{reports:?}")
             };
             assert_eq!(report.crew_injury.as_ref().unwrap().injuries, 4);
@@ -230,7 +224,7 @@ async fn self_destruct_cross_chassis_native_lua_and_restart() {
                 30
             );
         } else {
-            let BattleSelfDestructOutcome::Vehicle {
+            let SelfDestructOutcome::Vehicle {
                 damage,
                 crew_injury,
                 ..
@@ -238,16 +232,16 @@ async fn self_destruct_cross_chassis_native_lua_and_restart() {
             else {
                 panic!("{reports:?}")
             };
-            assert_eq!(damage.destroyed_sections, vec![BattleVehicleSection::Rear]);
+            assert_eq!(damage.destroyed_sections, vec![VehicleSection::Rear]);
             assert_eq!(crew_injury.injuries, 4);
             let snapshot = scripts.world();
             let vehicle = &snapshot.btech.vehicles()[&id];
             assert!(vehicle.is_destroyed());
             assert_eq!(vehicle.crew_recovery().remaining, 30);
             assert_eq!(vehicle.elevation_level(Hex::new(Terrain::Grassland, 0)), 6);
-            assert!(vehicle.sections()[&BattleVehicleSection::Front].internal > 0);
+            assert!(vehicle.sections()[&VehicleSection::Front].internal > 0);
         }
-        assert!(!battle_self_destructs_pending(&scripts.world()));
+        assert!(!self_destructs_pending(&scripts.world()));
         let after = scripts.world().clone();
         persistence::save(&config.database(), &after).await.unwrap();
         let mut restored = persistence::load(&config.database()).await.unwrap();
@@ -336,7 +330,7 @@ async fn self_destruct_admission_stop_and_atomic_cancel() {
     );
     assert_eq!(scripts.world().btech, assigned);
     self_destruct_action(&scripts, &config, id, ObjectId(1), "stop override").unwrap();
-    assert!(!battle_self_destructs_pending(&scripts.world()));
+    assert!(!self_destructs_pending(&scripts.world()));
     assert!(self_destruct_action(&scripts, &config, id, ObjectId(1), "stop override").is_err());
     *scripts.world_mut() = world;
     let enabled = configure(
@@ -373,12 +367,12 @@ async fn self_destruct_admission_stop_and_atomic_cancel() {
         &mut scripts.world_mut(),
         id,
         ObjectId(1),
-        BattleMovementRules::STANDARD.fall,
+        MovementRules::STANDARD.fall,
     )
     .unwrap();
     assert!(matches!(
         &advance_battle_self_destructs_action(&scripts, &enabled).unwrap()[..],
-        [BattleSelfDestructOutcome::Cancelled { .. }]
+        [SelfDestructOutcome::Cancelled { .. }]
     ));
 }
 
@@ -398,18 +392,18 @@ async fn self_destruct_ammunition_mode_and_live_supply_cancellation() {
         });
         assert!(matches!(
             &advance_battle_self_destructs_action(&scripts, &config).unwrap()[..],
-            [BattleSelfDestructOutcome::Cancelled { .. }]
+            [SelfDestructOutcome::Cancelled { .. }]
         ));
         *scripts.world_mut() = saved;
         let reports = advance_battle_self_destructs_action(&scripts, &config).unwrap();
         match (&reports[..], chassis) {
-            ([BattleSelfDestructOutcome::Ammunition { impacts, .. }], "biped") => {
+            ([SelfDestructOutcome::Ammunition { impacts, .. }], "biped") => {
                 assert!(!impacts.is_empty())
             }
-            ([BattleSelfDestructOutcome::Vehicle { .. }], "track") => {}
+            ([SelfDestructOutcome::Vehicle { .. }], "track") => {}
             _ => panic!("{reports:?}"),
         }
-        assert!(!battle_self_destructs_pending(&scripts.world()));
+        assert!(!self_destructs_pending(&scripts.world()));
         scripts.world().validate(&config).unwrap();
     }
 }
@@ -428,7 +422,7 @@ async fn self_destruct_order_and_failed_tick_replay() {
     create_battle_unit(
         &mut world,
         second,
-        BattleTemplate::parse("Daishi-H", include_str!("../game/mechs/Daishi-H.toml")).unwrap(),
+        MechTemplate::parse("Daishi-H", include_str!("../game/mechs/Daishi-H.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, second, support::FIXTURE_DICE_SEED);
@@ -460,15 +454,15 @@ async fn self_destruct_order_and_failed_tick_replay() {
     }
     for id in [first, second] {
         edit(&mut scripts.world_mut(), id, |s| {
-            s["power"] = serde_json::to_value(BattlePower::Off).unwrap()
+            s["power"] = serde_json::to_value(Power::Off).unwrap()
         });
     }
     let reports = advance_battle_self_destructs_action(&scripts, &config).unwrap();
     assert_eq!(
         reports,
         vec![
-            BattleSelfDestructOutcome::Cancelled { unit: second },
-            BattleSelfDestructOutcome::Cancelled { unit: first }
+            SelfDestructOutcome::Cancelled { unit: second },
+            SelfDestructOutcome::Cancelled { unit: first }
         ]
     );
     *scripts.world_mut() = pending;
@@ -514,7 +508,7 @@ async fn self_destruct_order_and_failed_tick_replay() {
     assert_eq!(scripts.world().objects[&pilot].location, Some(second));
     parent.set("events", previous).unwrap();
     advance_battle_self_destructs_action(&scripts, &config).unwrap();
-    assert!(!battle_self_destructs_pending(&scripts.world()));
+    assert!(!self_destructs_pending(&scripts.world()));
 }
 
 /// A failed database commit cannot consume a countdown or publish an early detonation after restart.
@@ -598,7 +592,7 @@ async fn self_destruct_character_ownership_and_wizard_exception() {
         .remove(Flag::InCharacter);
     self_destruct_action(&scripts, &config, id, pilot, "ammo").unwrap();
     self_destruct_action(&scripts, &config, id, pilot, "stop").unwrap();
-    assert!(!battle_self_destructs_pending(&scripts.world()));
+    assert!(!self_destructs_pending(&scripts.world()));
 }
 
 /// A destroyed ground vehicle with no crew recovery must still descend on an idle server after reload.
@@ -619,7 +613,7 @@ async fn self_destruct_ground_wreck_descends_after_restart() {
             let unit = &saved.btech.vehicles()[&id];
             assert!(unit.is_destroyed());
             assert_eq!(unit.crew_recovery().remaining, 0);
-            assert_eq!(unit.free_fall(), Some(BattleFreeFall::new(6)));
+            assert_eq!(unit.free_fall(), Some(FreeFall::new(6)));
             persistence::save(&config.database(), &saved).await.unwrap();
             let (_, shutdown, task, _, mut heartbeats) =
                 support::start(&config, Rc::new(std::cell::Cell::new(1))).await;

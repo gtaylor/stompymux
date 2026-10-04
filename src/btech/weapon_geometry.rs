@@ -5,7 +5,7 @@ use anyhow::{Context, Result, ensure};
 
 /// Geometry independent of ammunition, recycling and the target's damage anatomy.
 pub(super) struct WeaponGeometry {
-    pub weapon: BattleWeapon,
+    pub weapon: Weapon,
     pub submerged: bool,
     pub bears: bool,
 }
@@ -76,10 +76,9 @@ pub(super) fn submerged(world: &World, shooter: ObjectId, index: usize) -> Resul
         let fallen = unit.rotor_destroyed()
             && unit
                 .vtol_flight()
-                .is_some_and(|flight| flight.phase == BattleVtolFlightPhase::Landed);
+                .is_some_and(|flight| flight.phase == VtolFlightPhase::Landed);
         return Ok(elevation < -1
-            || (elevation < 0
-                && (fallen || mount.criticals[0].section == BattleVehicleSection::Rotor)));
+            || (elevation < 0 && (fallen || mount.criticals[0].section == VehicleSection::Rotor)));
     }
     let unit = &world.btech.constructed_units()[&shooter];
     let loadout = unit.loadout()?;
@@ -90,7 +89,7 @@ pub(super) fn submerged(world: &World, shooter: ObjectId, index: usize) -> Resul
     let elevation = unit.elevation_level(tile) - i32::from(tile.water_line());
     Ok(elevation < -1
         || (elevation < 0
-            && (unit.posture() == BattlePosture::Prone
+            && (unit.posture() == Posture::Prone
                 || unit.chassis().is_leg(mount.criticals[0].section))))
 }
 
@@ -100,9 +99,9 @@ pub(super) fn apply_water_range(
     world: &World,
     shooter: ObjectId,
     index: usize,
-    weapon: BattleWeapon,
+    weapon: Weapon,
     extended: bool,
-    aim: &mut BattleAimModifiers,
+    aim: &mut AimModifiers,
 ) -> Result<bool> {
     let water = submerged(world, shooter, index)?;
     if water {
@@ -119,7 +118,7 @@ pub(super) fn apply_water_range(
 
 /// Weapon eligibility is checked before launch; target waterline visibility remains a LOS rule.
 /// Torpedoes are the reverse of other weapons: they fire only from a submerged launcher.
-pub(super) fn check_water(weapon: BattleWeapon, submerged: bool) -> Result<()> {
+pub(super) fn check_water(weapon: Weapon, submerged: bool) -> Result<()> {
     if weapon.is_torpedo() {
         ensure!(submerged, "Torpedoes can only be fired underwater.");
         return Ok(());

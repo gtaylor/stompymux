@@ -1,11 +1,11 @@
 //! Tactical vehicle shot admission shares geometry and aim without spending ammunition or dice.
-use super::{BattleAimModifiers, BattleShotRules, BattleWeapon};
+use super::{AimModifiers, ShotRules, Weapon};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 
 /// Host-aware admission shares all geometry and control checks with raw tactical queries.
 pub(super) struct VehicleShotAdmission {
-    pub rules: BattleShotRules,
+    pub rules: ShotRules,
     pub character: bool,
 }
 
@@ -20,8 +20,8 @@ pub fn check_vehicle_shot(
     pilot: ObjectId,
     target: ObjectId,
     weapon_index: usize,
-    rules: BattleShotRules,
-) -> Result<BattleAimModifiers> {
+    rules: ShotRules,
+) -> Result<AimModifiers> {
     let mut dice = world
         .btech
         .vehicles()
@@ -52,8 +52,8 @@ pub(super) fn check_with_dice(
     target: ObjectId,
     weapon_index: usize,
     admission: VehicleShotAdmission,
-    dice: &mut super::BattleDice,
-) -> Result<(BattleAimModifiers, super::gatling::GatlingPreparation)> {
+    dice: &mut super::Dice,
+) -> Result<(AimModifiers, super::gatling::GatlingPreparation)> {
     let operator = super::combat_operator::controlled(world, shooter, pilot)?;
     let rules = admission.rules;
     let attacker = world
@@ -73,7 +73,7 @@ pub(super) fn check_with_dice(
     attacker.check_spotter_fire(shooter, weapon_index)?;
     let indirect =
         super::spotter::indirect_target_for_source(world, operator.source, weapon_index)?;
-    let self_cooling = shooter == target && mount.weapon == BattleWeapon::CoolantGun;
+    let self_cooling = shooter == target && mount.weapon == Weapon::CoolantGun;
     ensure!(
         shooter != target || self_cooling,
         "You cannot target yourself with this weapon"
@@ -117,7 +117,7 @@ pub(super) fn check_with_dice(
         target,
         mount.weapon,
     )?;
-    if attacker.ammunition_mode(weapon_index)?.munition() == super::BattleAmmunitionMode::Stinger {
+    if attacker.ammunition_mode(weapon_index)?.munition() == super::AmmunitionMode::Stinger {
         ensure!(
             super::stinger::target_airborne(world, target),
             "Stinger missiles can only engage airborne targets!"

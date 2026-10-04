@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 /// User-visible map-object kinds, ordered like the native map catalogue.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleMapObjectKind {
+pub enum MapObjectKind {
     Fire,
     Smoke,
     Decoration,
@@ -18,7 +18,7 @@ pub enum BattleMapObjectKind {
     LandingBlock,
 }
 
-impl BattleMapObjectKind {
+impl MapObjectKind {
     /// Stable operator spellings; prefix matching follows this order.
     pub const ALL: [Self; 8] = [
         Self::Fire,
@@ -60,7 +60,7 @@ pub fn delete_map_objects_action(
     config: &Config,
     actor: ObjectId,
     map: ObjectId,
-    kind: Option<BattleMapObjectKind>,
+    kind: Option<MapObjectKind>,
     coordinate: Option<HexCoordinate>,
 ) -> Result<usize> {
     scripts.atomic(|before| {
@@ -90,7 +90,7 @@ pub fn delete_map_objects_action(
             "A type or coordinate selector is required"
         );
         let mut count = 0;
-        for selected in BattleMapObjectKind::ALL
+        for selected in MapObjectKind::ALL
             .into_iter()
             .filter(|selected| kind.is_none_or(|kind| kind == *selected))
         {
@@ -103,7 +103,7 @@ pub fn delete_map_objects_action(
             (None, Some(p)) => format!("{count} objects at ({},{}) deleted.", p.x, p.y),
             (_, None) => format!("{count} objects deleted!"),
         };
-        super::notify_message(scripts, super::BattleMessageTarget::Player(actor), &text)?;
+        super::notify_message(scripts, super::MessageTarget::Player(actor), &text)?;
         scripts.world().validate(config)?;
         scripts.effects.validate()?;
         Ok(count)
@@ -127,14 +127,12 @@ impl MapObjectSlot {
 }
 
 /// Select a stored restoration collection for decoration object kinds.
-pub(super) fn restoration_kind(
-    kind: BattleMapObjectKind,
-) -> Option<super::BattleStaticDecorationKind> {
-    use super::BattleStaticDecorationKind as Stored;
+pub(super) fn restoration_kind(kind: MapObjectKind) -> Option<super::StaticDecorationKind> {
+    use super::StaticDecorationKind as Stored;
     match kind {
-        BattleMapObjectKind::Fire => Some(Stored::Fire),
-        BattleMapObjectKind::Smoke => Some(Stored::Smoke),
-        BattleMapObjectKind::Decoration => Some(Stored::Decoration),
+        MapObjectKind::Fire => Some(Stored::Fire),
+        MapObjectKind::Smoke => Some(Stored::Smoke),
+        MapObjectKind::Decoration => Some(Stored::Decoration),
         _ => None,
     }
 }
@@ -167,7 +165,7 @@ fn restore_terrain(current: super::Hex, terrain: super::Terrain) -> super::Hex {
 fn remove_kind(
     world: &mut World,
     map: ObjectId,
-    kind: BattleMapObjectKind,
+    kind: MapObjectKind,
     coordinate: Option<HexCoordinate>,
 ) -> Result<usize> {
     let record = world.btech.maps().get(&map).context("Map not found")?;
@@ -181,7 +179,7 @@ fn remove_kind(
         if let (MapObjectSlot::Stored(_), Some(stored_kind)) = (slot, restoration_kind(kind)) {
             // Fire and smoke never change the terrain they cover, so only generic decorations
             // have terrain to restore.
-            if stored_kind == super::BattleStaticDecorationKind::Decoration {
+            if stored_kind == super::StaticDecorationKind::Decoration {
                 let record = &world.btech.maps()[&map];
                 let terrain = record.static_decorations(stored_kind)[&ordinal]
                     .restored_terrain
@@ -196,19 +194,15 @@ fn remove_kind(
         }
         let slot = ordinal;
         match kind {
-            BattleMapObjectKind::Fire | BattleMapObjectKind::Smoke => {
+            MapObjectKind::Fire | MapObjectKind::Smoke => {
                 super::set_map_decoration(world, map, position, None)?;
             }
-            BattleMapObjectKind::Decoration => unreachable!(),
-            BattleMapObjectKind::Mine => super::set_minefield(world, map, slot, None)?,
-            BattleMapObjectKind::Building => super::set_building_entrance(world, map, slot, None)?,
-            BattleMapObjectKind::Leave => super::set_building_exit(world, map, slot, None)?,
-            BattleMapObjectKind::Entrance => {
-                super::set_building_entry_point(world, map, slot, None)?
-            }
-            BattleMapObjectKind::LandingBlock => {
-                super::set_landing_exclusion(world, map, slot, None)?
-            }
+            MapObjectKind::Decoration => unreachable!(),
+            MapObjectKind::Mine => super::set_minefield(world, map, slot, None)?,
+            MapObjectKind::Building => super::set_building_entrance(world, map, slot, None)?,
+            MapObjectKind::Leave => super::set_building_exit(world, map, slot, None)?,
+            MapObjectKind::Entrance => super::set_building_entry_point(world, map, slot, None)?,
+            MapObjectKind::LandingBlock => super::set_landing_exclusion(world, map, slot, None)?,
         }
         count += 1;
     }
@@ -223,7 +217,7 @@ pub(crate) fn command(
     let result = (|| -> Result<()> {
         let args: Vec<_> = input.args.split_whitespace().collect();
         let (kind, coordinate) = match args.as_slice() {
-            [kind] => (Some(BattleMapObjectKind::parse(kind)?), None),
+            [kind] => (Some(MapObjectKind::parse(kind)?), None),
             [x, y] => (
                 None,
                 Some(HexCoordinate {
@@ -232,7 +226,7 @@ pub(crate) fn command(
                 }),
             ),
             [kind, x, y] => (
-                Some(BattleMapObjectKind::parse(kind)?),
+                Some(MapObjectKind::parse(kind)?),
                 Some(HexCoordinate {
                     x: x.parse()?,
                     y: y.parse()?,
@@ -255,15 +249,15 @@ pub(crate) fn command(
 /// Stable typed record coordinates shared by operator listing and deletion.
 pub(super) fn object_positions(
     record: &super::StoredMap,
-    kind: BattleMapObjectKind,
+    kind: MapObjectKind,
 ) -> Vec<(MapObjectSlot, HexCoordinate)> {
     let mut positions: Vec<_> = match kind {
-        BattleMapObjectKind::Fire | BattleMapObjectKind::Smoke => record
+        MapObjectKind::Fire | MapObjectKind::Smoke => record
             .decorations
             .iter()
             .filter(|(_, effect)| {
                 effect.kind
-                    == if kind == BattleMapObjectKind::Fire {
+                    == if kind == MapObjectKind::Fire {
                         super::DecorationKind::Fire
                     } else {
                         super::DecorationKind::Smoke
@@ -279,27 +273,27 @@ pub(super) fn object_positions(
                 )
             })
             .collect(),
-        BattleMapObjectKind::Decoration => Vec::new(),
-        BattleMapObjectKind::Mine => record
+        MapObjectKind::Decoration => Vec::new(),
+        MapObjectKind::Mine => record
             .ordered_minefields()
             .map(|(&slot, d)| (MapObjectSlot::Stored(slot), d.coordinate))
             .collect(),
-        BattleMapObjectKind::Building => record
+        MapObjectKind::Building => record
             .building_entrances
             .iter()
             .map(|(&slot, d)| (MapObjectSlot::Stored(slot), d.coordinate))
             .collect(),
-        BattleMapObjectKind::Leave => record
+        MapObjectKind::Leave => record
             .building_exits
             .iter()
             .map(|(&slot, d)| (MapObjectSlot::Stored(slot), d.coordinate))
             .collect(),
-        BattleMapObjectKind::Entrance => record
+        MapObjectKind::Entrance => record
             .building_entry_points
             .iter()
             .map(|(&slot, d)| (MapObjectSlot::Stored(slot), d.coordinate))
             .collect(),
-        BattleMapObjectKind::LandingBlock => record
+        MapObjectKind::LandingBlock => record
             .ordered_landing_exclusions()
             .map(|(&slot, d)| (MapObjectSlot::Stored(slot), d.coordinate))
             .collect(),

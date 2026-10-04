@@ -7,13 +7,13 @@ use serde::{Deserialize, Serialize};
 /// Completed posture and an optional timed transition; cancellation retains the completed posture.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct BattleHullDownState {
+pub struct HullDownState {
     pub active: bool,
     pub pending: Option<bool>,
     pub remaining: u8,
 }
 
-impl BattleHullDownState {
+impl HullDownState {
     /// Cancel only the pending change, including on shutdown.
     pub(super) fn cancel(&mut self) {
         self.pending = None;
@@ -31,15 +31,15 @@ impl BattleHullDownState {
     }
 }
 
-impl BattleUnit {
+impl Mech {
     /// Current completed posture and remaining transition time.
-    pub fn hull_down(&self) -> BattleHullDownState {
+    pub fn hull_down(&self) -> HullDownState {
         self.hull_down
     }
 
     /// Whether the Mech stands clear of hull-down cover, with no posture change under way.
     pub(super) fn clear_of_stationary_cover(&self) -> bool {
-        self.hull_down == BattleHullDownState::default()
+        self.hull_down == HullDownState::default()
     }
 
     /// Validate saved stance independently of timers for other actions.
@@ -57,17 +57,16 @@ impl BattleUnit {
             return Ok(());
         }
         ensure!(
-            self.chassis() == BattleMechChassis::Quad
+            self.chassis() == MechChassis::Quad
                 && self.position().is_some()
-                && self.posture() == BattlePosture::Standing
+                && self.posture() == Posture::Standing
                 && !self.airborne()
                 && self.free_fall().is_none()
                 && self.stand_timer().is_none(),
             "Invalid hull-down posture"
         );
         ensure!(
-            state.pending.is_none()
-                || (self.power() == BattlePower::Running && !self.is_destroyed()),
+            state.pending.is_none() || (self.power() == Power::Running && !self.is_destroyed()),
             "Hull-down transition requires a running unit"
         );
         Ok(())
@@ -80,7 +79,7 @@ pub fn set_hull_down(
     id: ObjectId,
     pilot: ObjectId,
     argument: &str,
-) -> Result<Vec<BattleNotice>> {
+) -> Result<Vec<Notice>> {
     super::targeting::controlled(world, id, pilot)?;
     super::fortification::require_mobile(world, id)?;
     let unit = world
@@ -89,12 +88,12 @@ pub fn set_hull_down(
         .get(&id)
         .context("Only quads can go hull-down")?;
     ensure!(
-        unit.chassis() == BattleMechChassis::Quad,
+        unit.chassis() == MechChassis::Quad,
         "Only quads can go hull-down"
     );
     ensure!(unit.crew_recovery().remaining == 0, "You are unconscious");
     ensure!(
-        unit.posture() == BattlePosture::Standing,
+        unit.posture() == Posture::Standing,
         "You cannot go hull-down from a fallen position"
     );
     ensure!(
@@ -121,7 +120,7 @@ pub fn set_hull_down(
             .unwrap()
             .hull_down
             .cancel();
-        return Ok(vec![BattleNotice {
+        return Ok(vec![Notice {
             unit: id,
             text: "You stop changing your hull-down mode.".into(),
         }]);
@@ -141,7 +140,7 @@ pub fn set_hull_down(
     );
     let remaining = (30.0 / (unit.mobility().maximum_speed / 10.75).clamp(1.0, 30.0)) as u8;
     let unit = world.btech.constructed.get_mut(&id).unwrap();
-    unit.hull_down = BattleHullDownState {
+    unit.hull_down = HullDownState {
         active: state.active,
         pending: Some(active),
         remaining,
@@ -153,7 +152,7 @@ pub fn set_hull_down(
 }
 
 /// Format occupant and visibility-filtered observer messages once for both command adapters.
-fn notices(world: &World, id: ObjectId, active: bool, complete: bool) -> Vec<BattleNotice> {
+fn notices(world: &World, id: ObjectId, active: bool, complete: bool) -> Vec<Notice> {
     let (text, observer) = match (active, complete) {
         (true, false) => (
             "You start to lower yourself to the ground.",
@@ -172,20 +171,20 @@ fn notices(world: &World, id: ObjectId, active: bool, complete: bool) -> Vec<Bat
             "finishes lifting itself up.",
         ),
     };
-    let mut notices = vec![BattleNotice {
+    let mut notices = vec![Notice {
         unit: id,
         text: text.into(),
     }];
     notices.extend(
         super::observer_messages(world, id, observer)
             .into_iter()
-            .map(|(unit, text)| BattleNotice { unit, text }),
+            .map(|(unit, text)| Notice { unit, text }),
     );
     notices
 }
 
 /// Advance through the ordinary committed heartbeat, preserving completed posture on cancellation.
-pub(super) fn advance(world: &mut World) -> Vec<BattleNotice> {
+pub(super) fn advance(world: &mut World) -> Vec<Notice> {
     let mut completed = Vec::new();
     for (&id, unit) in &mut world.btech.constructed {
         let Some(active) = unit.hull_down.pending else {
@@ -198,7 +197,7 @@ pub(super) fn advance(world: &mut World) -> Vec<BattleNotice> {
         {
             continue;
         }
-        if unit.power() != BattlePower::Running || unit.is_destroyed() {
+        if unit.power() != Power::Running || unit.is_destroyed() {
             unit.hull_down.cancel();
             continue;
         }

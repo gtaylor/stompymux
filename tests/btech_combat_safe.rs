@@ -49,15 +49,15 @@ async fn fixture(
     for (index, source) in [observer, target].into_iter().enumerate() {
         let id = world.create(&config, format!("Unit {index}"), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-        BattleUnitTemplate::parse("test", source)
+        UnitTemplate::parse("test", source)
             .unwrap()
             .create(&mut world, id)
             .unwrap();
         support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut world, id, map, 0, if index == 0 { 3 } else { 0 }).unwrap();
         edit(&mut world, id, |state| {
-            state["power"] = serde_json::to_value(BattlePower::Running).unwrap();
-            state["dice"] = serde_json::to_value(BattleDice::seeded([19; 32])).unwrap();
+            state["power"] = serde_json::to_value(Power::Running).unwrap();
+            state["dice"] = serde_json::to_value(Dice::seeded([19; 32])).unwrap();
         });
         ids.push(id);
     }
@@ -69,8 +69,8 @@ async fn fixture(
 }
 
 /// Deterministic conventional firing policy for shared damage checks.
-fn rules() -> BattleAimRules {
-    BattleAimRules {
+fn rules() -> AimRules {
+    AimRules {
         woods_damage: false,
         dig_bonus: 3,
         dig_only_front: false,
@@ -84,16 +84,16 @@ fn rules() -> BattleAimRules {
 }
 
 /// Tactical conventional shot configuration shared by admission cases.
-fn shot_rules() -> BattleShotRules {
-    BattleShotRules {
+fn shot_rules() -> ShotRules {
+    ShotRules {
         range_damage: false,
         tsm_tow_bonus: true,
-        vehicle_impact: stompymux_rs::BattleVehicleImpactRules::STANDARD,
-        stacking: BattleStackingRules::STANDARD,
-        stagger: BattleStaggerMode::Retain,
-        glancing: BattleGlancingMode::Disabled,
+        vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
+        stacking: StackingRules::STANDARD,
+        stagger: StaggerMode::Retain,
+        glancing: GlancingMode::Disabled,
         aim: rules(),
-        hit: BattleHitRules {
+        hit: HitRules {
             inferno_penalty: false,
             exile_stun_mode: 0,
         },
@@ -117,7 +117,7 @@ fn fire(
     world: &mut World,
     shooter: ObjectId,
     target: ObjectId,
-) -> (Vec<BattleNotice>, serde_json::Value) {
+) -> (Vec<Notice>, serde_json::Value) {
     if world.btech.vehicles().contains_key(&shooter) {
         let report = fire_battle_vehicle_shot(
             world,
@@ -125,9 +125,9 @@ fn fire(
             ObjectId(1),
             target,
             0,
-            BattleVehicleShotRules {
+            VehicleShotRules {
                 shot: shot_rules(),
-                shooter_criticals: BattleVehicleImpactRules::STANDARD.criticals,
+                shooter_criticals: VehicleImpactRules::STANDARD.criticals,
             },
         )
         .unwrap();
@@ -147,11 +147,11 @@ async fn immunity_covers_all_chassis_pairs_and_replays() {
             let (_dir, config, mut initial, shooter, target) =
                 fixture(&attacker, &target_source, false).await;
             let high = (0..=255)
-                .find(|value| BattleDice::seeded([*value; 32]).two_d6() == 12)
+                .find(|value| Dice::seeded([*value; 32]).two_d6() == 12)
                 .unwrap();
             acquire(&mut initial, shooter, target);
             edit(&mut initial, shooter, |unit| {
-                unit["dice"] = serde_json::to_value(BattleDice::seeded([high; 32])).unwrap()
+                unit["dice"] = serde_json::to_value(Dice::seeded([high; 32])).unwrap()
             });
             let position = if let Some(unit) = initial.btech.vehicles().get(&shooter) {
                 unit.position()
@@ -244,9 +244,9 @@ async fn immunity_controls_are_atomic_across_chassis() {
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         let command = format!("@btech unit-combat-safe #{}=on", id.0);
         support::run_text(&scripts, &config, ObjectId(2), 1, &command);
-        assert!(!battle_combat_safe(&scripts.world(), id).unwrap());
+        assert!(!combat_safe(&scripts.world(), id).unwrap());
         support::run_text(&scripts, &config, ObjectId(1), 1, &command);
-        assert!(battle_combat_safe(&scripts.world(), id).unwrap());
+        assert!(combat_safe(&scripts.world(), id).unwrap());
         let before = scripts.world().btech.clone();
         assert!(
             scripts
@@ -271,7 +271,7 @@ async fn immunity_controls_are_atomic_across_chassis() {
         scripts
             .eval_callback::<()>(&format!("btech.unit.combat_safe({},false)", id.0))
             .unwrap();
-        assert!(!battle_combat_safe(&scripts.world(), id).unwrap());
+        assert!(!combat_safe(&scripts.world(), id).unwrap());
         scripts
             .world_mut()
             .objects
@@ -301,7 +301,7 @@ async fn immunity_protects_self_damage_and_fall_crew() {
             building.flags = 2;
             set_building_state(&mut world, position.map, building).unwrap();
             let before = state(&world, id);
-            let rules = BattleFallRules::configured(&config);
+            let rules = FallRules::configured(&config);
             let report =
                 serde_json::to_value(resolve_battle_unit_fall(&mut world, id, 2, rules).unwrap())
                     .unwrap();
@@ -331,18 +331,15 @@ async fn immunity_preserves_hit_routing_and_internal_damage_boundaries() {
         });
         let before = state(&world, id);
         if world.btech.vehicles().contains_key(&id) {
-            let rules = BattleFallRules::configured(&config)
-                .vehicle_impact
-                .criticals;
+            let rules = FallRules::configured(&config).vehicle_impact.criticals;
             let selection =
-                roll_battle_vehicle_critical(&mut world, id, BattleVehicleSection::Front, rules)
-                    .unwrap();
+                roll_battle_vehicle_critical(&mut world, id, VehicleSection::Front, rules).unwrap();
             assert!(selection.rolls.is_empty() && selection.effect.is_none());
             assert_eq!(state(&world, id), before);
             let report = resolve_battle_vehicle_internal_damage(
                 &mut world,
                 id,
-                BattleVehicleSection::Front,
+                VehicleSection::Front,
                 100,
                 rules,
             )
@@ -352,27 +349,27 @@ async fn immunity_preserves_hit_routing_and_internal_damage_boundaries() {
             assert!(report.criticals.is_empty() && report.notices.is_empty());
         } else {
             let mut unit = world.btech.constructed_units()[&id].clone();
-            assert!(unit.choose_critical(BattleSection::CenterTorso).is_none());
+            assert!(unit.choose_critical(MechSection::CenterTorso).is_none());
             assert_eq!(&unit, &world.btech.constructed_units()[&id]);
-            let rules = BattleHitRules {
+            let rules = HitRules {
                 inferno_penalty: false,
                 exile_stun_mode: 1,
             };
             for roll in [2, 12] {
-                let mut dice = BattleDice::seeded([19; 32]);
+                let mut dice = Dice::seeded([19; 32]);
                 let original = dice.clone();
                 let hit = rules
-                    .resolve(&unit, BattleHitArc::Front, roll, &mut dice)
+                    .resolve(&unit, HitArc::Front, roll, &mut dice)
                     .unwrap();
-                assert_eq!(hit.section, BattleSection::LeftArm);
+                assert_eq!(hit.section, MechSection::LeftArm);
                 assert!(!hit.crew_stun && !hit.through_armor_critical);
                 assert_eq!(dice, original);
             }
             let report = resolve_battle_impact(
                 &mut world,
                 id,
-                BattleHit {
-                    section: BattleSection::Head,
+                Hit {
+                    section: MechSection::Head,
                     rear_armor: false,
                     through_armor_critical: true,
                     crew_stun: true,
@@ -404,18 +401,18 @@ async fn immunity_protects_physical_damage_for_bipeds_and_quads() {
             .unwrap()
             .map;
         edit(&mut world, attacker, |unit| {
-            unit["power"] = serde_json::to_value(BattlePower::Off).unwrap()
+            unit["power"] = serde_json::to_value(Power::Off).unwrap()
         });
         place_battle_unit(&mut world, attacker, map, 0, 0).unwrap();
         edit(&mut world, attacker, |unit| {
-            unit["power"] = serde_json::to_value(BattlePower::Running).unwrap()
+            unit["power"] = serde_json::to_value(Power::Running).unwrap()
         });
         acquire(&mut world, attacker, target);
         let high = (0..=255)
-            .find(|value| BattleDice::seeded([*value; 32]).two_d6() == 12)
+            .find(|value| Dice::seeded([*value; 32]).two_d6() == 12)
             .unwrap();
         edit(&mut world, attacker, |unit| {
-            unit["dice"] = serde_json::to_value(BattleDice::seeded([high; 32])).unwrap()
+            unit["dice"] = serde_json::to_value(Dice::seeded([high; 32])).unwrap()
         });
         set_battle_combat_safe(&mut world, target, true).unwrap();
         set_battle_weapons_hold(&mut world, attacker, true).unwrap();
@@ -425,14 +422,14 @@ async fn immunity_protects_physical_damage_for_bipeds_and_quads() {
             attacker,
             ObjectId(1),
             target,
-            BattleLeg::Left,
-            BattlePhysicalRules {
+            Leg::Left,
+            PhysicalRules {
                 use_pilot_skill: false,
                 fasa_turning: false,
                 extended_movement: false,
                 hit_arc_mode: 0,
-                glancing: BattleGlancingMode::Disabled,
-                fall: BattleFallRules::configured(&config),
+                glancing: GlancingMode::Disabled,
+                fall: FallRules::configured(&config),
             },
         )
         .unwrap();
@@ -470,13 +467,13 @@ async fn immunity_blocks_flooding_until_the_unit_flag_is_removed() {
         )
         .unwrap();
         edit(&mut world, id, |unit| {
-            unit["power"] = serde_json::to_value(BattlePower::Off).unwrap();
+            unit["power"] = serde_json::to_value(Power::Off).unwrap();
             unit["sections"]["LeftLeg"]["armor"] = 0.into();
         });
         place_battle_unit(&mut world, id, map, 0, 0).unwrap();
         set_battle_combat_safe(&mut world, id, true).unwrap();
         let before = world.btech.clone();
-        let rules = BattleFallRules::configured(&config);
+        let rules = FallRules::configured(&config);
         assert!(flood_battle_unit(&mut world, id, rules).unwrap().is_empty());
         assert_eq!(world.btech, before);
         set_battle_combat_safe(&mut world, id, false).unwrap();
@@ -487,7 +484,7 @@ async fn immunity_blocks_flooding_until_the_unit_flag_is_removed() {
         assert!(
             reports
                 .iter()
-                .any(|report| report.section == BattleSection::LeftLeg)
+                .any(|report| report.section == MechSection::LeftLeg)
         );
         world.validate(&config).unwrap();
     }

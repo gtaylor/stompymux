@@ -1,32 +1,32 @@
 //! Borrowed command-network inputs keep membership and reporting independent of unit anatomy.
 use super::*;
-use crate::{BattleCommandNetwork, ObjectId, World};
+use crate::{CommandNetwork, ObjectId, World};
 use anyhow::{Context, Result};
 
 /// Common computer and tactical facts for one network participant or contact.
 pub(super) struct NetworkUnit<'a> {
     pub c3_network: Option<u64>,
     pub c3i_network: Option<u64>,
-    pub automation: BattleNetworkAutomation,
+    pub automation: NetworkAutomation,
     scanner: super::scanner::ScannerUnit<'a>,
     pilot: Option<ObjectId>,
-    motion: Option<BattleMotion>,
+    motion: Option<Motion>,
     /// Borrowed so equipment is scanned only when a network rule needs hardware.
-    computer: BattleUnitRef<'a>,
+    computer: UnitRef<'a>,
     pub protection: (u32, u32, u32, u32),
 }
 
 impl NetworkUnit<'_> {
     /// Current map placement.
-    pub fn position(&self) -> Option<BattlePosition> {
+    pub fn position(&self) -> Option<Position> {
         self.scanner.position
     }
     /// Reactor state remains separate from installed hardware.
-    pub fn power(&self) -> BattlePower {
+    pub fn power(&self) -> Power {
         self.scanner.power
     }
     /// Team and optical signature.
-    pub fn signature(&self) -> BattleUnitSignature {
+    pub fn signature(&self) -> UnitSignature {
         self.scanner.signature
     }
     /// Current operator for message reception.
@@ -34,11 +34,11 @@ impl NetworkUnit<'_> {
         self.pilot
     }
     /// Common movement snapshot.
-    pub fn motion(&self) -> Option<BattleMotion> {
+    pub fn motion(&self) -> Option<Motion> {
         self.motion
     }
     /// Physical and working computer counts.
-    pub fn c3_hardware(&self) -> Result<BattleC3Hardware> {
+    pub fn c3_hardware(&self) -> Result<C3Hardware> {
         self.computer.c3_hardware()
     }
     /// Classic computer eligibility before power and interference checks.
@@ -66,7 +66,7 @@ pub(super) fn unit(world: &World, id: ObjectId) -> Result<NetworkUnit<'_>> {
                 unit.network_automation,
                 unit.pilot(),
                 unit.motion(),
-                BattleUnitRef::from(unit),
+                UnitRef::from(unit),
                 totals(
                     unit.sections().values(),
                     unit.definition().sections.values(),
@@ -99,41 +99,31 @@ pub(super) fn units(
 }
 
 /// Change only the requested family's durable identity in the owning construction store.
-pub(super) fn set_link(
-    world: &mut World,
-    id: ObjectId,
-    kind: BattleCommandNetwork,
-    value: Option<u64>,
-) {
+pub(super) fn set_link(world: &mut World, id: ObjectId, kind: CommandNetwork, value: Option<u64>) {
     let (classic, improved) =
         crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
             (&mut unit.c3_network, &mut unit.c3i_network)
         });
     *match kind {
-        BattleCommandNetwork::C3 => classic,
-        BattleCommandNetwork::C3i => improved,
+        CommandNetwork::C3 => classic,
+        CommandNetwork::C3i => improved,
     } = value;
 }
 
 /// Record whether the server may link one family automatically for this unit.
-pub(super) fn set_automation(
-    world: &mut World,
-    id: ObjectId,
-    kind: BattleCommandNetwork,
-    enabled: bool,
-) {
+pub(super) fn set_automation(world: &mut World, id: ObjectId, kind: CommandNetwork, enabled: bool) {
     let automation = crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
         &mut unit.network_automation
     });
     *match kind {
-        BattleCommandNetwork::C3 => &mut automation.c3,
-        BattleCommandNetwork::C3i => &mut automation.c3i,
+        CommandNetwork::C3 => &mut automation.c3,
+        CommandNetwork::C3i => &mut automation.c3i,
     } = enabled;
 }
 
 /// Sum remaining and original protection, including rear armor where the chassis has it.
 fn totals<'a>(
-    live: impl Iterator<Item = &'a BattleSectionState>,
+    live: impl Iterator<Item = &'a SectionState>,
     original: impl Iterator<Item = &'a SectionDefinition>,
 ) -> (u32, u32, u32, u32) {
     let sum = |(a, i), (armor, rear, internal)| {

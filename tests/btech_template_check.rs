@@ -9,7 +9,7 @@ fn template_check_reports_normalization_and_construction_failures() {
         "item = \"Ammo_IS.SRM-4\", rounds = 25",
         "item = \"Ammo_IS.SRM-4\", rounds = 7",
     );
-    let template = BattleTemplate::parse("JR7-D", &source).unwrap();
+    let template = MechTemplate::parse("JR7-D", &source).unwrap();
     let original = template.clone();
     let report = check_battle_template(&template);
     assert!(report.constructible);
@@ -17,9 +17,9 @@ fn template_check_reports_normalization_and_construction_failures() {
     assert_eq!((report.weapons, report.ammunition_bins), (5, 1));
     assert_eq!(
         report.ammunition_adjustments,
-        [BattleAmmunitionAdjustment {
+        [AmmunitionAdjustment {
             location: CriticalLocation {
-                section: BattleSection::RightTorso,
+                section: MechSection::RightTorso,
                 slot: 0
             },
             supplied: 7,
@@ -33,7 +33,7 @@ fn template_check_reports_normalization_and_construction_failures() {
     let mut missing_gyro = original.clone();
     for critical in missing_gyro
         .sections
-        .get_mut(&BattleSection::CenterTorso)
+        .get_mut(&MechSection::CenterTorso)
         .unwrap()
         .criticals
         .values_mut()
@@ -46,11 +46,11 @@ fn template_check_reports_normalization_and_construction_failures() {
         .attributes
         .insert("specials".into(), "UnknownTechnology".into());
     for template in [
-        BattleTemplate::parse("JR7-D", &unknown_weapon).unwrap(),
+        MechTemplate::parse("JR7-D", &unknown_weapon).unwrap(),
         missing_gyro,
         unknown_technology,
     ] {
-        let expected = BattleUnit::from_template(template.clone()).unwrap_err();
+        let expected = Mech::from_template(template.clone()).unwrap_err();
         let report = check_battle_template(&template);
         assert!(!report.constructible);
         assert_eq!(report.rejection, Some(format!("{expected:#}")));
@@ -147,7 +147,7 @@ async fn template_check_native_lua_read_only_and_bounded_asset_access() {
 #[test]
 fn ammunition_rejections_include_location_equipment_and_flags() {
     let original =
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     for (equipment, data, flags, expected) in [
         (
             "Ammo_IS.SRM-4",
@@ -171,7 +171,7 @@ fn ammunition_rejections_include_location_equipment_and_flags() {
         let mut template = original.clone();
         let bin = template
             .sections
-            .get_mut(&BattleSection::RightTorso)
+            .get_mut(&MechSection::RightTorso)
             .unwrap()
             .criticals
             .get_mut(&0)
@@ -196,20 +196,20 @@ fn ammunition_rejections_include_location_equipment_and_flags() {
 #[test]
 fn narc_ammunition_is_constructible() {
     let mut template =
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     template
         .sections
-        .get_mut(&BattleSection::RightTorso)
+        .get_mut(&MechSection::RightTorso)
         .unwrap()
         .criticals
         .get_mut(&0)
         .unwrap()
         .modes = vec!["Narc/Smoke".into()];
     assert!(check_battle_template(&template).constructible);
-    let unit = stompymux_rs::BattleUnit::from_template(template).unwrap();
+    let unit = stompymux_rs::Mech::from_template(template).unwrap();
     assert_eq!(
         unit.loadout().unwrap().ammunition[0].mode,
-        stompymux_rs::BattleAmmunitionMode::Narc
+        stompymux_rs::AmmunitionMode::Narc
     );
 }
 
@@ -217,15 +217,15 @@ fn narc_ammunition_is_constructible() {
 #[test]
 fn quad_anatomy_decodes_and_constructs_assets() {
     let template =
-        BattleTemplate::parse("SCP-1N", include_str!("../game/mechs/SCP-1N.toml")).unwrap();
+        MechTemplate::parse("SCP-1N", include_str!("../game/mechs/SCP-1N.toml")).unwrap();
     let chassis = template.chassis().unwrap();
-    assert_eq!(chassis, BattleMechChassis::Quad);
+    assert_eq!(chassis, MechChassis::Quad);
     assert_eq!(chassis.legs().len(), 4);
     for (section, name) in [
-        (BattleSection::LeftArm, "Front_Left_Leg"),
-        (BattleSection::RightArm, "Front_Right_Leg"),
-        (BattleSection::LeftLeg, "Rear_Left_Leg"),
-        (BattleSection::RightLeg, "Rear_Right_Leg"),
+        (MechSection::LeftArm, "Front_Left_Leg"),
+        (MechSection::RightArm, "Front_Right_Leg"),
+        (MechSection::LeftLeg, "Rear_Left_Leg"),
+        (MechSection::RightLeg, "Rear_Right_Leg"),
     ] {
         assert!(chassis.is_leg(section));
         assert_eq!(chassis.section_name(section), name);
@@ -233,14 +233,14 @@ fn quad_anatomy_decodes_and_constructs_assets() {
         assert_eq!(chassis.critical_slots(section), 6);
         assert_eq!(template.sections[&section].internal, 13);
     }
-    assert_eq!(chassis.critical_slots(BattleSection::CenterTorso), 12);
-    assert_eq!(chassis.critical_slots(BattleSection::Head), 6);
-    let loadout = BattleLoadout::resolve(&template).unwrap();
+    assert_eq!(chassis.critical_slots(MechSection::CenterTorso), 12);
+    assert_eq!(chassis.critical_slots(MechSection::Head), 6);
+    let loadout = MechLoadout::resolve(&template).unwrap();
     assert_eq!(loadout.weapons.len(), 2);
     let report = check_battle_template(&template);
     assert_eq!(report.chassis, Some(chassis));
     assert!(report.constructible, "{:?}", report.rejection);
-    let saved: BattleTemplate =
+    let saved: MechTemplate =
         serde_json::from_value(serde_json::to_value(&template).unwrap()).unwrap();
     assert_eq!(saved, template);
     assert_eq!(saved.chassis().unwrap(), chassis);
@@ -261,8 +261,8 @@ fn chassis_section_parsing_is_order_independent_and_rejects_mixed_anatomy() {
     );
     assert_ne!(reordered, source);
     assert_eq!(
-        BattleTemplate::parse("SCP-1N", &reordered).unwrap(),
-        BattleTemplate::parse("SCP-1N", source).unwrap()
+        MechTemplate::parse("SCP-1N", &reordered).unwrap(),
+        MechTemplate::parse("SCP-1N", source).unwrap()
     );
     for bad in [
         source.replace("[sections.front_left_leg]", "[sections.left_arm]"),
@@ -271,17 +271,17 @@ fn chassis_section_parsing_is_order_independent_and_rejects_mixed_anatomy() {
         source.replace("movement = \"quad\"", "movement = \"biped\""),
     ] {
         assert_ne!(bad, source);
-        assert!(BattleTemplate::parse("SCP-1N", &bad).is_err());
+        assert!(MechTemplate::parse("SCP-1N", &bad).is_err());
     }
     let biped =
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     let chassis = biped.chassis().unwrap();
-    assert_eq!(chassis, BattleMechChassis::Biped);
-    assert!(!chassis.is_leg(BattleSection::LeftArm));
-    assert_eq!(chassis.critical_slots(BattleSection::LeftArm), 12);
+    assert_eq!(chassis, MechChassis::Biped);
+    assert!(!chassis.is_leg(MechSection::LeftArm));
+    assert_eq!(chassis.critical_slots(MechSection::LeftArm), 12);
     assert!(chassis.parse_section("Front_Left_Leg").is_err());
-    assert!(BattleMechChassis::Quad.parse_section("Left_Arm").is_err());
-    assert!(BattleMechChassis::parse("Tracked").is_err());
+    assert!(MechChassis::Quad.parse_section("Left_Arm").is_err());
+    assert!(MechChassis::parse("Tracked").is_err());
 }
 
 /// Command selectors follow chassis labels; template parsing remains stricter.
@@ -289,15 +289,15 @@ fn chassis_section_parsing_is_order_independent_and_rejects_mixed_anatomy() {
 fn chassis_command_locations_round_trip_labels_and_short_names() {
     for (chassis, shorts) in [
         (
-            BattleMechChassis::Biped,
+            MechChassis::Biped,
             ["LA", "RA", "LT", "RT", "CT", "LL", "RL", "HD"],
         ),
         (
-            BattleMechChassis::Quad,
+            MechChassis::Quad,
             ["FLL", "FRL", "LT", "RT", "CT", "RLL", "RRL", "H"],
         ),
     ] {
-        for (section, short) in BattleSection::ALL.into_iter().zip(shorts) {
+        for (section, short) in MechSection::ALL.into_iter().zip(shorts) {
             assert_eq!(chassis.parse_location(short).unwrap(), section);
             let name = chassis.section_name(section);
             assert_eq!(chassis.parse_location(name).unwrap(), section);
@@ -308,10 +308,10 @@ fn chassis_command_locations_round_trip_labels_and_short_names() {
         }
     }
     for short in ["FLLEG", "FRLEG", "RLLEG", "RRLEG"] {
-        assert!(BattleMechChassis::Quad.parse_location(short).is_ok());
-        assert!(BattleMechChassis::Biped.parse_location(short).is_err());
+        assert!(MechChassis::Quad.parse_location(short).is_ok());
+        assert!(MechChassis::Biped.parse_location(short).is_err());
     }
-    assert!(BattleMechChassis::Quad.parse_location("Left_Arm").is_err());
-    assert!(BattleMechChassis::Quad.parse_location("LL").is_err());
-    assert!(BattleMechChassis::Quad.parse_section("FLL").is_err());
+    assert!(MechChassis::Quad.parse_location("Left_Arm").is_err());
+    assert!(MechChassis::Quad.parse_location("LL").is_err());
+    assert!(MechChassis::Quad.parse_section("FLL").is_err());
 }

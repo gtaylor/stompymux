@@ -24,7 +24,7 @@ async fn falling_units_turn_without_translation_and_replay_shared_chassis_rates(
                 create_battle_unit(
                     &mut world,
                     id,
-                    BattleTemplate::parse(
+                    MechTemplate::parse(
                         "test",
                         if chassis == "quad" {
                             include_str!("../game/mechs/SCP-1N.toml")
@@ -48,7 +48,7 @@ async fn falling_units_turn_without_translation_and_replay_shared_chassis_rates(
                 create_battle_vehicle(
                     &mut world,
                     id,
-                    BattleVehicleTemplate::parse("test", &text).unwrap(),
+                    VehicleTemplate::parse("test", &text).unwrap(),
                 )
                 .unwrap();
                 support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
@@ -77,13 +77,13 @@ async fn falling_units_turn_without_translation_and_replay_shared_chassis_rates(
             unit["motion"]["desired_heading"] = 350.0.into();
             let ground = state.clone();
             let unit = &mut state[key][id.0.to_string()];
-            let fall = serde_json::to_value(BattleFreeFall::new(50)).unwrap();
+            let fall = serde_json::to_value(FreeFall::new(50)).unwrap();
             if chassis == "vtol" {
-                unit["vtol_flight"] = serde_json::to_value(BattleVtolFlight {
-                    phase: BattleVtolFlightPhase::Falling,
+                unit["vtol_flight"] = serde_json::to_value(VtolFlight {
+                    phase: VtolFlightPhase::Falling,
                     altitude: 50.0,
                     vertical_speed: 0.0,
-                    fall: Some(BattleFreeFall::new(50)),
+                    fall: Some(FreeFall::new(50)),
                 })
                 .unwrap();
             } else {
@@ -92,9 +92,9 @@ async fn falling_units_turn_without_translation_and_replay_shared_chassis_rates(
             }
             world.btech = serde_json::from_value(state).unwrap();
             world.validate(&config).unwrap();
-            let rules = BattleMovementRules {
+            let rules = MovementRules {
                 fasa_turning: fasa,
-                ..BattleMovementRules::STANDARD
+                ..MovementRules::STANDARD
             };
             // The same zero-speed ground turn includes the quad multiplier.
             if chassis != "vtol" {
@@ -128,7 +128,7 @@ async fn falling_units_turn_without_translation_and_replay_shared_chassis_rates(
             world.validate(&config).unwrap();
             if chassis == "vtol" {
                 let seed = (0..100)
-                    .find(|seed| BattleDice::seeded([*seed; 32]).die(2).unwrap() == 2)
+                    .find(|seed| Dice::seeded([*seed; 32]).die(2).unwrap() == 2)
                     .unwrap();
                 let mut recovered = world.clone();
                 recovered
@@ -141,7 +141,7 @@ async fn falling_units_turn_without_translation_and_replay_shared_chassis_rates(
                 advance_battle_motion(&mut recovered, rules).unwrap();
                 assert_eq!(
                     recovered.btech.vehicles()[&id].vtol_flight().unwrap().phase,
-                    BattleVtolFlightPhase::Airborne
+                    VtolFlightPhase::Airborne
                 );
                 assert!(
                     (recovered.btech.vehicles()[&id].motion().unwrap().heading
@@ -156,7 +156,7 @@ async fn falling_units_turn_without_translation_and_replay_shared_chassis_rates(
                         .rewrite_unit_record(id, |record| {
                             record["vtol_fuel"]["remaining"] = remaining.into();
                             record["dice"] =
-                                serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+                                serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
                         })
                         .unwrap();
                     let before = empty.clone();
@@ -195,7 +195,7 @@ async fn falling_units_turn_without_translation_and_replay_shared_chassis_rates(
                             rules.free_fusion_vtol_fuel,
                         )
                         .unwrap();
-                    assert!(!matches!(fuel, BattleVtolFuelUse::Exhausted { .. }));
+                    assert!(!matches!(fuel, VtolFuelUse::Exhausted { .. }));
                     expected[key][id.0.to_string()] = serde_json::to_value(aircraft).unwrap();
                 }
                 expected[key][id.0.to_string()]["motion"]["desired_heading"] = desired.into();

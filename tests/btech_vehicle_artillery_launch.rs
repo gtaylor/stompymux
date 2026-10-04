@@ -7,8 +7,7 @@ use stompymux_rs::*;
 async fn fixture(flags: &[&str]) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId, usize) {
     fixture_template(
         flags,
-        BattleVehicleTemplate::parse("Marksman", include_str!("../game/mechs/Marksman.toml"))
-            .unwrap(),
+        VehicleTemplate::parse("Marksman", include_str!("../game/mechs/Marksman.toml")).unwrap(),
     )
     .await
 }
@@ -16,7 +15,7 @@ async fn fixture(flags: &[&str]) -> (tempfile::TempDir, Config, World, ObjectId,
 /// Artillery construction and launch setup is shared by ground and rotorcraft test platforms.
 async fn fixture_template(
     flags: &[&str],
-    mut template: BattleVehicleTemplate,
+    mut template: VehicleTemplate,
 ) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId, usize) {
     let (dir, config, mut world) = support::isolated_world().await;
     let map = world.create(&config, "Artillery field".into(), Kind::Room);
@@ -50,7 +49,7 @@ async fn fixture_template(
         shooter,
         ObjectId(1),
         HexCoordinate { x: 1, y: 0 },
-        BattleHexTargetMode::Hex,
+        HexTargetMode::Hex,
     )
     .unwrap();
     let index = world.btech.vehicles()[&shooter]
@@ -70,7 +69,7 @@ async fn vehicle_artillery_native_lua_expenditure_and_queue_replay() {
     let lua = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
     let native = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     let report: (bool, u8, u32) = lua.eval_callback(&format!("local r=btech.unit.fire({},1,{index}); return r.launched,r.expenditure.heat,r.queued_shot", shooter.0)).unwrap();
-    assert_eq!(report, (true, BattleWeapon::Sniper.profile().heat, 0));
+    assert_eq!(report, (true, Weapon::Sniper.profile().heat, 0));
     let text = support::run_text(&native, &config, ObjectId(1), 1, &format!("fire {index}"));
     assert!(text.contains("You fire Sniper"), "{text}");
     assert_eq!(native.world().btech, lua.world().btech);
@@ -80,10 +79,7 @@ async fn vehicle_artillery_native_lua_expenditure_and_queue_replay() {
         before.ammunition().iter().sum::<u16>() - unit.ammunition().iter().sum::<u16>(),
         1
     );
-    assert_eq!(
-        unit.weapon_heat(),
-        f64::from(BattleWeapon::Sniper.profile().heat)
-    );
+    assert_eq!(unit.weapon_heat(), f64::from(Weapon::Sniper.profile().heat));
     assert!(unit.weapon_recycle()[&index] > 0);
     assert_eq!(fired.btech.maps()[&map].artillery_shots().len(), 1);
     assert!(
@@ -101,9 +97,8 @@ async fn vehicle_artillery_native_lua_expenditure_and_queue_replay() {
     .unwrap();
     for _ in 0..10 {
         assert_eq!(
-            advance_artillery_action(&lua, &config, BattleMovementRules::STANDARD.fall).unwrap(),
-            advance_artillery_action(&restored, &config, BattleMovementRules::STANDARD.fall)
-                .unwrap()
+            advance_artillery_action(&lua, &config, MovementRules::STANDARD.fall).unwrap(),
+            advance_artillery_action(&restored, &config, MovementRules::STANDARD.fall).unwrap()
         );
     }
     assert_eq!(lua.world().btech, restored.world().btech);
@@ -133,7 +128,7 @@ async fn vehicle_artillery_rejections_and_failed_callback_are_atomic() {
         shooter,
         ObjectId(1),
         HexCoordinate { x: 1, y: 2 },
-        BattleHexTargetMode::Hex,
+        HexTargetMode::Hex,
     )
     .unwrap();
     let original = rear.btech.clone();
@@ -149,9 +144,9 @@ async fn vehicle_artillery_rejections_and_failed_callback_are_atomic() {
 #[tokio::test]
 async fn vehicle_artillery_payloads_and_hotload_use_common_launch_rules() {
     for (flag, mode) in [
-        ("Cluster", BattleArtilleryMode::Cluster),
-        ("Smoke", BattleArtilleryMode::Smoke),
-        ("Mine", BattleArtilleryMode::Mine),
+        ("Cluster", ArtilleryMode::Cluster),
+        ("Smoke", ArtilleryMode::Smoke),
+        ("Mine", ArtilleryMode::Mine),
     ] {
         let (_dir, config, world, map, shooter, index) = fixture(&[flag]).await;
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
@@ -168,11 +163,11 @@ async fn vehicle_artillery_payloads_and_hotload_use_common_launch_rules() {
     for jam in [false, true] {
         let (_dir, config, mut world, map, shooter, index) = fixture(&[]).await;
         let seed = (0..=255)
-            .find(|seed| (BattleDice::seeded([*seed; 32]).two_d6() <= 3) == jam)
+            .find(|seed| (Dice::seeded([*seed; 32]).two_d6() <= 3) == jam)
             .unwrap();
         world
             .btech
-            .set_unit_dice(shooter, BattleDice::seeded([seed; 32]))
+            .set_unit_dice(shooter, Dice::seeded([seed; 32]))
             .unwrap();
         let ammunition = world.btech.vehicles()[&shooter]
             .ammunition()
@@ -191,7 +186,7 @@ async fn vehicle_artillery_payloads_and_hotload_use_common_launch_rules() {
                 if jam {
                     0
                 } else {
-                    BattleWeapon::Sniper.profile().heat
+                    Weapon::Sniper.profile().heat
                 }
             )
         );
@@ -229,7 +224,7 @@ async fn vehicle_artillery_correction_uses_mixed_observers_and_replays_aim() {
                 create_battle_vehicle(
                     &mut world,
                     observer,
-                    BattleVehicleTemplate::parse(
+                    VehicleTemplate::parse(
                         "Demolisher",
                         include_str!("../game/mechs/Demolisher.toml"),
                     )
@@ -241,8 +236,7 @@ async fn vehicle_artillery_correction_uses_mixed_observers_and_replays_aim() {
                 create_battle_unit(
                     &mut world,
                     observer,
-                    BattleTemplate::parse("AS7-D", include_str!("../game/mechs/AS7-D.toml"))
-                        .unwrap(),
+                    MechTemplate::parse("AS7-D", include_str!("../game/mechs/AS7-D.toml")).unwrap(),
                 )
                 .unwrap();
                 support::seed_object_dice(&mut world, observer, support::FIXTURE_DICE_SEED);
@@ -272,8 +266,7 @@ async fn vehicle_artillery_correction_uses_mixed_observers_and_replays_aim() {
                 .unwrap();
             assert!(!hit);
             for _ in 0..5 {
-                advance_artillery_action(&scripts, &config, BattleMovementRules::STANDARD.fall)
-                    .unwrap();
+                advance_artillery_action(&scripts, &config, MovementRules::STANDARD.fall).unwrap();
             }
             let midpoint = scripts.world().clone();
             persistence::save(&config.database(), &midpoint)
@@ -288,14 +281,10 @@ async fn vehicle_artillery_correction_uses_mixed_observers_and_replays_aim() {
             .unwrap();
             for _ in 0..5 {
                 assert_eq!(
-                    advance_artillery_action(&scripts, &config, BattleMovementRules::STANDARD.fall)
+                    advance_artillery_action(&scripts, &config, MovementRules::STANDARD.fall)
                         .unwrap(),
-                    advance_artillery_action(
-                        &restored,
-                        &config,
-                        BattleMovementRules::STANDARD.fall
-                    )
-                    .unwrap()
+                    advance_artillery_action(&restored, &config, MovementRules::STANDARD.fall)
+                        .unwrap()
                 );
             }
             assert_eq!(scripts.world().btech, restored.world().btech);
@@ -328,7 +317,7 @@ async fn vehicle_artillery_correction_uses_mixed_observers_and_replays_aim() {
                 shooter,
                 ObjectId(1),
                 HexCoordinate { x: 2, y: 0 },
-                BattleHexTargetMode::Hex,
+                HexTargetMode::Hex,
             )
             .unwrap();
             assert_eq!(ready.btech.vehicles()[&shooter].artillery_adjustment(), 0);
@@ -348,11 +337,8 @@ async fn vehicle_artillery_explicit_mixed_spotters_share_targets_and_correction_
             create_battle_vehicle(
                 &mut world,
                 observer,
-                BattleVehicleTemplate::parse(
-                    "Demolisher",
-                    include_str!("../game/mechs/Demolisher.toml"),
-                )
-                .unwrap(),
+                VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+                    .unwrap(),
             )
             .unwrap();
             support::seed_object_dice(&mut world, observer, support::FIXTURE_DICE_SEED);
@@ -360,7 +346,7 @@ async fn vehicle_artillery_explicit_mixed_spotters_share_targets_and_correction_
             create_battle_unit(
                 &mut world,
                 observer,
-                BattleTemplate::parse("AS7-D", include_str!("../game/mechs/AS7-D.toml")).unwrap(),
+                MechTemplate::parse("AS7-D", include_str!("../game/mechs/AS7-D.toml")).unwrap(),
             )
             .unwrap();
             support::seed_object_dice(&mut world, observer, support::FIXTURE_DICE_SEED);
@@ -381,7 +367,7 @@ async fn vehicle_artillery_explicit_mixed_spotters_share_targets_and_correction_
             observer,
             ObjectId(2),
             HexCoordinate { x: 0, y: 2 },
-            BattleHexTargetMode::Hex,
+            HexTargetMode::Hex,
         )
         .unwrap();
         select_battle_spotter(&mut world, observer, ObjectId(2), Some(observer)).unwrap();
@@ -408,10 +394,8 @@ async fn vehicle_artillery_explicit_mixed_spotters_share_targets_and_correction_
         );
         for _ in 0..10 {
             assert_eq!(
-                advance_artillery_action(&scripts, &config, BattleMovementRules::STANDARD.fall)
-                    .unwrap(),
-                advance_artillery_action(&replay, &config, BattleMovementRules::STANDARD.fall)
-                    .unwrap()
+                advance_artillery_action(&scripts, &config, MovementRules::STANDARD.fall).unwrap(),
+                advance_artillery_action(&replay, &config, MovementRules::STANDARD.fall).unwrap()
             );
         }
         assert_eq!(scripts.world().btech, replay.world().btech);
@@ -425,7 +409,7 @@ async fn vehicle_artillery_explicit_mixed_spotters_share_targets_and_correction_
             observer,
             ObjectId(2),
             HexCoordinate { x: 1, y: 0 },
-            BattleHexTargetMode::Hex,
+            HexTargetMode::Hex,
         )
         .unwrap();
         assert_eq!(state.btech.vehicles()[&shooter].artillery_adjustment(), 0);

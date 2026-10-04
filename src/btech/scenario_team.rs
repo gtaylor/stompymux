@@ -31,7 +31,7 @@ pub fn set_team_action(
         scripts.world().validate(config)?;
         super::notify_message(
             scripts,
-            super::BattleMessageTarget::Player(actor),
+            super::MessageTarget::Player(actor),
             &format!("Team set to {team}"),
         )?;
         scripts.effects.validate()?;

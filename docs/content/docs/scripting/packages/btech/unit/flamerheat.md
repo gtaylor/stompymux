@@ -23,4 +23,4 @@ btech.unit.flamerheat(dbref, pilot, weapon)
 
 ## Returns
 
-- `BattleFireMode`
+- `FireMode`

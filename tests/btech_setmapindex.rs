@@ -60,7 +60,7 @@ async fn removal_reentry_and_update_are_durable_for_all_chassis() {
         );
         assert_eq!(notices, advance_battle_units(&mut replay, 0));
         assert_eq!(restored.btech, replay.btech);
-        advance_battle_motion(&mut restored, BattleMovementRules::STANDARD).unwrap();
+        advance_battle_motion(&mut restored, MovementRules::STANDARD).unwrap();
         restored.validate(&config).unwrap();
         let after = serde_json::to_value(&restored.btech).unwrap();
         assert_eq!(after[key][unit.0.to_string()]["power"]["state"], "off");
@@ -81,10 +81,10 @@ async fn airborne_removal_replays_and_can_resume_before_update() {
         let map = world.objects[&unit].location.unwrap();
         if index == 0 {
             launch_battle_jump(&mut world, unit, ObjectId(1), 0, 3.0).unwrap();
-            advance_battle_jumps(&mut world, BattleMovementRules::STANDARD).unwrap();
+            advance_battle_jumps(&mut world, MovementRules::STANDARD).unwrap();
         } else {
             let _ = begin_battle_vtol_takeoff(&mut world, unit, ObjectId(1), 0, false).unwrap();
-            advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
+            advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
         }
         let before = world.btech.clone();
         remove_battle_map_membership(&mut world, unit).unwrap();
@@ -92,7 +92,7 @@ async fn airborne_removal_replays_and_can_resume_before_update() {
         persistence::save(&config.database(), &world).await.unwrap();
         let mut restored = persistence::load(&config.database()).await.unwrap();
         let suspended = restored.btech.clone();
-        advance_battle_jumps(&mut restored, BattleMovementRules::STANDARD).unwrap();
+        advance_battle_jumps(&mut restored, MovementRules::STANDARD).unwrap();
         assert_eq!(restored.btech, suspended);
         let mut immediate = restored.clone();
         reassign_battle_map(&mut immediate, unit, map, Some("RX")).unwrap();
@@ -110,8 +110,8 @@ async fn airborne_removal_replays_and_can_resume_before_update() {
         advance_battle_units(&mut world, 0);
         advance_battle_units(&mut restored, 0);
         assert_eq!(restored.btech, world.btech);
-        advance_battle_motion(&mut restored, BattleMovementRules::STANDARD).unwrap();
-        advance_battle_jumps(&mut restored, BattleMovementRules::STANDARD).unwrap();
+        advance_battle_motion(&mut restored, MovementRules::STANDARD).unwrap();
+        advance_battle_jumps(&mut restored, MovementRules::STANDARD).unwrap();
         restored.validate(&config).unwrap();
         reassign_battle_map(&mut restored, unit, map, Some("RX")).unwrap();
         restored.validate(&config).unwrap();
@@ -226,7 +226,7 @@ async fn removal_handles_starting_stopped_and_unplaced_units() {
     for source in firing::templates() {
         let (_dir, config, original, unit, _, _) =
             firing::fixture_with_target(&source, None, &source).await;
-        for power in [BattlePower::Off, BattlePower::Starting { remaining: 10 }] {
+        for power in [Power::Off, Power::Starting { remaining: 10 }] {
             let mut world = original.clone();
             firing::edit(&mut world, unit, |state| {
                 state["power"] = serde_json::to_value(power).unwrap();
@@ -241,14 +241,14 @@ async fn removal_handles_starting_stopped_and_unplaced_units() {
             assert_eq!(
                 notices.iter().any(|notice| notice.unit == unit
                     && notice.text.contains("startup sequence has been aborted")),
-                matches!(power, BattlePower::Starting { .. })
+                matches!(power, Power::Starting { .. })
             );
             world.validate(&config).unwrap();
         }
         let mut world = original;
         let new = world.create(&config, "Unplaced".into(), Kind::Thing);
         world.objects.get_mut(&new).unwrap().home = Some(ObjectId(config.home()));
-        BattleUnitTemplate::parse("test", &source)
+        UnitTemplate::parse("test", &source)
             .unwrap()
             .create(&mut world, new)
             .unwrap();

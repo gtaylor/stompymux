@@ -6,12 +6,12 @@ use anyhow::{Context, Result, ensure};
 /// Material effects retained until the host publishes nested injuries and casualties.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
 #[must_use = "Publish notices and nested consequences in the enclosing pickup transaction"]
-pub struct BattlePickupReport {
+pub struct PickupReport {
     /// Private terrain-induced checks ordered among pickup notices.
-    pub pilot_notices: Vec<BattlePilotNotice>,
-    pub notices: Vec<BattleNotice>,
-    pub flooding: Vec<BattleSectionExposureReport>,
-    pub ice: Option<BattleSurfaceBreak>,
+    pub pilot_notices: Vec<PilotNotice>,
+    pub notices: Vec<Notice>,
+    pub flooding: Vec<SectionExposureReport>,
+    pub ice: Option<SurfaceBreak>,
 }
 
 /// Tactical pickup; character participants or terrain casualties require the host action.
@@ -20,9 +20,9 @@ pub fn pickup_unit(
     carrier: ObjectId,
     pilot: ObjectId,
     target: ObjectId,
-    rules: BattleFallRules,
+    rules: FallRules,
     tsm_tow_bonus: bool,
-) -> Result<BattlePickupReport> {
+) -> Result<PickupReport> {
     pickup(world, carrier, pilot, target, rules, tsm_tow_bonus, false)
 }
 
@@ -32,10 +32,10 @@ pub(super) fn pickup(
     carrier: ObjectId,
     pilot: ObjectId,
     target: ObjectId,
-    rules: BattleFallRules,
+    rules: FallRules,
     tsm_tow_bonus: bool,
     character: bool,
-) -> Result<BattlePickupReport> {
+) -> Result<PickupReport> {
     super::pickup_admission(world, carrier, pilot, target)?;
     ensure!(
         character
@@ -59,15 +59,15 @@ pub(super) fn pickup(
         .btech
         .vehicles()
         .get(&carrier)
-        .is_some_and(|unit| unit.definition().movement == BattleVehicleMovement::Hover);
+        .is_some_and(|unit| unit.definition().movement == VehicleMovement::Hover);
     let mut candidate = world.clone();
     let mut pilot_notices = Vec::new();
     let mut notices = vec![
-        BattleNotice {
+        Notice {
             unit: carrier,
             text: "You attach your tow lines to the target.".into(),
         },
-        BattleNotice {
+        Notice {
             unit: target,
             text: "Tow lines are attached to you.".into(),
         },
@@ -165,7 +165,7 @@ pub(super) fn pickup(
     super::towing::synchronize_pair(&mut candidate, carrier, target)?;
     candidate.btech.validate_action(&candidate)?;
     *world = candidate;
-    Ok(BattlePickupReport {
+    Ok(PickupReport {
         pilot_notices,
         notices,
         flooding,

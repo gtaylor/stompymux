@@ -2,12 +2,12 @@
 use stompymux_rs::*;
 
 /// Replace the fixture's bin while preserving its other ordinary construction facts.
-fn definition(weapon: BattleWeapon, rounds: u16, flags: &[&str]) -> BattleTemplate {
+fn definition(weapon: Weapon, rounds: u16, flags: &[&str]) -> MechTemplate {
     let mut template =
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     let bin = template
         .sections
-        .get_mut(&BattleSection::RightTorso)
+        .get_mut(&MechSection::RightTorso)
         .unwrap()
         .criticals
         .get_mut(&0)
@@ -21,7 +21,7 @@ fn definition(weapon: BattleWeapon, rounds: u16, flags: &[&str]) -> BattleTempla
 /// Capacity rounds down for odd ammunition counts; mass and explosion potential follow actual rounds.
 #[test]
 fn half_ton_capacity_modes_mass_and_hazards() {
-    for weapon in BattleWeapon::ALL
+    for weapon in Weapon::ALL
         .iter()
         .copied()
         .filter(|w| w.profile().ammunition_per_ton > 0)
@@ -29,16 +29,15 @@ fn half_ton_capacity_modes_mass_and_hazards() {
         let full = u16::from(weapon.profile().ammunition_per_ton);
         let capacity = full / 2;
         for rounds in [0, capacity] {
-            let unit =
-                BattleUnit::from_template(definition(weapon, capacity, &["Halfton"])).unwrap();
+            let unit = Mech::from_template(definition(weapon, capacity, &["Halfton"])).unwrap();
             let mut state = serde_json::to_value(&unit).unwrap();
             state["ammunition"][0] = rounds.into();
-            let unit: BattleUnit = serde_json::from_value(state).unwrap();
+            let unit: Mech = serde_json::from_value(state).unwrap();
             let loadout = unit.loadout().unwrap();
             let bin = &loadout.ammunition[0];
             assert!(bin.half_ton);
             assert_eq!(bin.capacity, capacity);
-            assert_eq!(bin.mode, BattleAmmunitionMode::Normal);
+            assert_eq!(bin.mode, AmmunitionMode::Normal);
             assert_eq!(
                 unit.mass().unwrap().ammunition,
                 u32::from(rounds) * 1024 / u32::from(full)
@@ -46,16 +45,16 @@ fn half_ton_capacity_modes_mass_and_hazards() {
             let mut destroyed = unit.clone();
             assert_eq!(
                 destroyed.destroy_critical(bin.location).unwrap(),
-                Some(BattleCriticalLoss::Ammunition {
+                Some(CriticalLoss::Ammunition {
                     index: 0,
                     rounds,
                     explosion_damage: weapon.ammunition_explosion_damage(rounds)
                 })
             );
         }
-        assert!(BattleLoadout::resolve(&definition(weapon, capacity + 1, &["Halfton"])).is_err());
+        assert!(MechLoadout::resolve(&definition(weapon, capacity + 1, &["Halfton"])).is_err());
         assert_eq!(
-            BattleUnit::from_template(definition(weapon, capacity + 1, &["Halfton"]))
+            Mech::from_template(definition(weapon, capacity + 1, &["Halfton"]))
                 .unwrap()
                 .ammunition(),
             &[capacity]
@@ -65,9 +64,9 @@ fn half_ton_capacity_modes_mass_and_hazards() {
         vec!["Halfton", "LBX/Cluster"],
         vec!["LBX/Cluster", "Halfton"],
     ] {
-        let unit = BattleUnit::from_template(definition(BattleWeapon::Lbx10, 5, &flags)).unwrap();
+        let unit = Mech::from_template(definition(Weapon::Lbx10, 5, &flags)).unwrap();
         let loadout = unit.loadout().unwrap();
-        assert_eq!(loadout.ammunition[0].mode, BattleAmmunitionMode::Cluster);
+        assert_eq!(loadout.ammunition[0].mode, AmmunitionMode::Cluster);
         assert_eq!(loadout.ammunition[0].capacity, 5);
     }
     for flags in [
@@ -75,9 +74,7 @@ fn half_ton_capacity_modes_mass_and_hazards() {
         vec!["Halfton", "UnknownBinFlag"],
         vec!["Halfton", "LBX/Cluster"],
     ] {
-        assert!(
-            BattleUnit::from_template(definition(BattleWeapon::MachineGun, 100, &flags)).is_err()
-        );
+        assert!(Mech::from_template(definition(Weapon::MachineGun, 100, &flags)).is_err());
     }
 }
 
@@ -89,14 +86,13 @@ fn half_ton_osiris_and_razorback_construct_unchanged() {
             crate::support::repository_root().join(format!("game/mechs/{name}.toml")),
         )
         .unwrap();
-        let unit =
-            BattleUnit::from_template(BattleTemplate::parse(name, &source).unwrap()).unwrap();
+        let unit = Mech::from_template(MechTemplate::parse(name, &source).unwrap()).unwrap();
         assert!(
             unit.loadout()
                 .unwrap()
                 .ammunition
                 .iter()
-                .any(|bin| bin.weapon == BattleWeapon::MachineGun
+                .any(|bin| bin.weapon == Weapon::MachineGun
                     && bin.half_ton
                     && bin.capacity == 100
                     && bin.rounds == 100)

@@ -25,7 +25,7 @@ pub use orders::{
 };
 pub use runtime::AutopilotRuntimeMetrics;
 
-use crate::{ObjectId, World, btech::BattlePosition};
+use crate::{ObjectId, World, btech::Position};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
@@ -213,7 +213,7 @@ pub struct AutopilotFeedbackPage {
 /// Last sensor-confirmed location retained for a short tactical memory window.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct LastSighting {
-    pub position: BattlePosition,
+    pub position: Position,
     pub seen_at: i64,
 }
 
@@ -607,7 +607,7 @@ impl AutopilotController {
     /// Merge freshly observed positions into the bounded tactical memory.
     pub(crate) fn update_sightings(
         &mut self,
-        observations: impl IntoIterator<Item = (ObjectId, BattlePosition)>,
+        observations: impl IntoIterator<Item = (ObjectId, Position)>,
         seen_at: i64,
     ) {
         self.sightings.extend(
@@ -793,8 +793,8 @@ pub(crate) fn validate_controllers(
 mod tests {
     use super::*;
 
-    fn position(map: i64, x: u16, y: u16) -> BattlePosition {
-        BattlePosition {
+    fn position(map: i64, x: u16, y: u16) -> Position {
+        Position {
             map: ObjectId(map),
             x,
             y,

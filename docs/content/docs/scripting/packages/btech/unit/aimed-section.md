@@ -21,4 +21,4 @@ btech.unit.aimed_section(dbref)
 
 ## Returns
 
-- `BattleAimSelection|nil`
+- `AimSelection|nil`

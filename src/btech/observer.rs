@@ -1,9 +1,9 @@
 //! Trusted observer mode and radio identification, using saved battlefield membership identities.
-use super::{BattleRadioChannel, BattleUnit};
+use super::{Mech, RadioChannel};
 use crate::{Flag, Kind, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 
-impl BattleUnit {
+impl Mech {
     /// Administrator-controlled observer mode; cockpit pilots cannot enable it through radio settings.
     pub fn is_observer(&self) -> bool {
         self.observer
@@ -46,7 +46,7 @@ pub(super) fn radio_text(
     sender: ObjectId,
     channel: usize,
     bearing: u16,
-    selected: &BattleRadioChannel,
+    selected: &RadioChannel,
     message: &str,
 ) -> Result<String> {
     let source = super::radio::unit(world, sender)?;
@@ -94,7 +94,7 @@ fn team_color(team: i32) -> &'static str {
     }
 }
 
-impl super::BattleVehicle {
+impl super::Vehicle {
     /// Administrator-controlled observer role shared with the scanner and radio projections.
     pub fn is_observer(&self) -> bool {
         self.observer

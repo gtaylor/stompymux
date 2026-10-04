@@ -39,8 +39,7 @@ use super::construction::{
     is_fixed_item, mech_internal, movement_points, vehicle_internal,
 };
 use super::{
-    BattleMechChassis, BattleSection, CriticalDefinition, RawMovement, RawUnitClass,
-    SectionDefinition,
+    CriticalDefinition, MechChassis, MechSection, RawMovement, RawUnitClass, SectionDefinition,
 };
 use anyhow::{Context, Result, bail, ensure};
 use serde::Deserialize;
@@ -202,7 +201,7 @@ pub struct ParsedTemplate {
 /// Unit facts the section decoder needs, read from the unit-level fields first.
 struct Unit {
     class: Option<RawUnitClass>,
-    chassis: Option<BattleMechChassis>,
+    chassis: Option<MechChassis>,
     tons: i64,
     construction: Construction,
 }
@@ -279,7 +278,7 @@ impl ParsedTemplate {
         let chassis = match class {
             Some(RawUnitClass::Mech) => fields
                 .get("move_type")
-                .and_then(|movement| BattleMechChassis::parse(movement).ok()),
+                .and_then(|movement| MechChassis::parse(movement).ok()),
             _ => None,
         };
         let unit = Unit {
@@ -315,7 +314,7 @@ impl ParsedTemplate {
                     .with_context(|| format!("split mount {item}"))?;
             }
         }
-        if unit.places_equipment() && unit.chassis == Some(BattleMechChassis::Biped) {
+        if unit.places_equipment() && unit.chassis == Some(MechChassis::Biped) {
             parsed.derive_flip_arms();
         }
         Ok(parsed)
@@ -489,7 +488,7 @@ impl ParsedTemplate {
 }
 
 /// Internal structure a section receives when its document leaves it out.
-fn default_internal(unit: &Unit, mech: Option<BattleSection>) -> Option<u16> {
+fn default_internal(unit: &Unit, mech: Option<MechSection>) -> Option<u16> {
     let class = unit.class?;
     if !derives_internals(class) {
         return Some(0);
@@ -498,7 +497,7 @@ fn default_internal(unit: &Unit, mech: Option<BattleSection>) -> Option<u16> {
         Some(section) => mech_internal(
             u16::try_from(unit.tons).ok()?,
             section,
-            unit.chassis == Some(BattleMechChassis::Quad),
+            unit.chassis == Some(MechChassis::Quad),
         ),
         None => Some(vehicle_internal(unit.tons)),
     }
@@ -614,15 +613,15 @@ fn occupy(
 }
 
 /// Resolve a biped or quad section heading to its stable mech section.
-fn mech_section(heading: &str) -> Result<BattleSection> {
-    super::BattleMechChassis::Biped
+fn mech_section(heading: &str) -> Result<MechSection> {
+    super::MechChassis::Biped
         .parse_section(heading)
-        .or_else(|_| super::BattleMechChassis::Quad.parse_section(heading))
+        .or_else(|_| super::MechChassis::Quad.parse_section(heading))
 }
 
 /// Whether a split mount may continue from one section into the other.
-pub fn split_adjacent(primary: BattleSection, extension: BattleSection) -> bool {
-    use BattleSection::*;
+pub fn split_adjacent(primary: MechSection, extension: MechSection) -> bool {
+    use MechSection::*;
     matches!(
         (primary, extension),
         (LeftArm | LeftLeg | CenterTorso, LeftTorso)
@@ -633,8 +632,8 @@ pub fn split_adjacent(primary: BattleSection, extension: BattleSection) -> bool 
 }
 
 /// The extension marker names the side of the body the mount occupies.
-pub fn split_proxy_name(primary: BattleSection, extension: BattleSection) -> &'static str {
-    use BattleSection::*;
+pub fn split_proxy_name(primary: MechSection, extension: MechSection) -> &'static str {
+    use MechSection::*;
     if [primary, extension]
         .iter()
         .any(|section| matches!(section, LeftArm | LeftTorso | LeftLeg))
@@ -646,17 +645,17 @@ pub fn split_proxy_name(primary: BattleSection, extension: BattleSection) -> &'s
 }
 
 /// Encode an extension slot's link to the primary section and its first zero-based slot.
-pub fn split_link_data(section: BattleSection, slot: u8) -> String {
+pub fn split_link_data(section: MechSection, slot: u8) -> String {
     format!("{}:{slot}", section.name())
 }
 
 /// Decode an extension slot's link to the primary section and its first zero-based slot.
-pub fn parse_split_link(data: &str) -> Result<(BattleSection, u8)> {
+pub fn parse_split_link(data: &str) -> Result<(MechSection, u8)> {
     let (section, slot) = data
         .split_once(':')
         .context("Invalid split critical parent")?;
     Ok((
-        BattleSection::parse(section)?,
+        MechSection::parse(section)?,
         slot.parse().context("Invalid split critical parent slot")?,
     ))
 }
@@ -666,7 +665,7 @@ pub struct RenderSection<'a> {
     /// Lowercase document heading such as `left_arm`.
     pub heading: String,
     /// The stable mech section, so split links and fixed equipment can name it.
-    pub mech: Option<BattleSection>,
+    pub mech: Option<MechSection>,
     pub layout: &'a SectionDefinition,
 }
 
@@ -700,7 +699,7 @@ pub fn render(
     let chassis = match class {
         Some(RawUnitClass::Mech) => attributes
             .get("move_type")
-            .and_then(|movement| BattleMechChassis::parse(movement).ok()),
+            .and_then(|movement| MechChassis::parse(movement).ok()),
         _ => None,
     };
     let unit = Unit {
@@ -786,20 +785,19 @@ struct SectionFit {
 /// the fixed equipment a mech section holds; `None` means the section must be explicit.
 fn fit_section(
     unit: &Unit,
-    section: BattleSection,
+    section: MechSection,
     layout: &SectionDefinition,
 ) -> Option<SectionFit> {
-    use BattleSection::*;
+    use MechSection::*;
     use Omission::*;
     let chassis = unit.chassis?;
     let omissions: Vec<Vec<Omission>> = match section {
         LeftArm | RightArm | LeftLeg | RightLeg => {
-            let last =
-                if chassis == BattleMechChassis::Biped && matches!(section, LeftArm | RightArm) {
-                    Hand
-                } else {
-                    Foot
-                };
+            let last = if chassis == MechChassis::Biped && matches!(section, LeftArm | RightArm) {
+                Hand
+            } else {
+                Foot
+            };
             let actuators = [Shoulder, Upper, Lower, last];
             (0..16u8)
                 .map(|mask| {
@@ -856,10 +854,10 @@ fn fit_section(
 
 /// A split mount recovered from its primary run and linked extension slots.
 struct RenderedMount {
-    primary: BattleSection,
+    primary: MechSection,
     first: u8,
     last: u8,
-    extension: BattleSection,
+    extension: MechSection,
     extension_slots: Vec<u8>,
 }
 
@@ -916,10 +914,10 @@ fn split_mounts(sections: &[RenderSection<'_>]) -> Result<Vec<RenderedMount>> {
 fn primary_slot_count(
     weapon: &CriticalDefinition,
     sections: &[RenderSection<'_>],
-    primary: BattleSection,
+    primary: MechSection,
     first: u8,
 ) -> Option<u8> {
-    let total = super::BattleWeapon::parse(&weapon.equipment)
+    let total = super::Weapon::parse(&weapon.equipment)
         .ok()?
         .profile()
         .critical_slots;
@@ -1301,7 +1299,7 @@ placements = [
         assert_eq!(torso.criticals[&0].equipment, SPLIT_LEFT);
         assert_eq!(
             parse_split_link(&torso.criticals[&0].data).unwrap(),
-            (BattleSection::CenterTorso, 10)
+            (MechSection::CenterTorso, 10)
         );
 
         for (placements, class) in [
@@ -1332,12 +1330,10 @@ placements = [
 
     /// Render the sections of a parsed mech in anatomical order.
     fn render_mech(parsed: &ParsedTemplate) -> String {
-        let sections: Vec<_> = BattleSection::ALL
+        let sections: Vec<_> = MechSection::ALL
             .into_iter()
             .filter_map(|mech| {
-                let heading = BattleMechChassis::Biped
-                    .section_name(mech)
-                    .to_ascii_lowercase();
+                let heading = MechChassis::Biped.section_name(mech).to_ascii_lowercase();
                 let layout = parsed.sections.get(&heading)?;
                 Some(RenderSection {
                     heading,
@@ -1462,9 +1458,9 @@ placements = [
 "#;
         let parsed = ParsedTemplate::parse("X", source).unwrap();
         let sections: Vec<_> = [
-            ("front_left_leg", BattleSection::LeftArm),
-            ("left_torso", BattleSection::LeftTorso),
-            ("center_torso", BattleSection::CenterTorso),
+            ("front_left_leg", MechSection::LeftArm),
+            ("left_torso", MechSection::LeftTorso),
+            ("center_torso", MechSection::CenterTorso),
         ]
         .into_iter()
         .map(|(heading, mech)| RenderSection {

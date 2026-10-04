@@ -22,4 +22,4 @@ btech.cargo.manifest(actor, pattern)
 
 ## Returns
 
-- `BattleCargoRow[]`
+- `CargoRow[]`

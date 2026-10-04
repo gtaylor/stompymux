@@ -1,5 +1,5 @@
 //! Caseless autocannon ammunition controls.
-use super::{AmmunitionFeedback, BattleAmmunitionMode};
+use super::{AmmunitionFeedback, AmmunitionMode};
 use crate::{ObjectId, World};
 use anyhow::{Result, ensure};
 
@@ -9,17 +9,17 @@ pub fn toggle_caseless(
     id: ObjectId,
     pilot: ObjectId,
     index: usize,
-) -> Result<BattleAmmunitionMode> {
+) -> Result<AmmunitionMode> {
     let ready = super::weapon_controls::ready_weapon(world, id, pilot, index)?;
     ensure!(
-        BattleAmmunitionMode::Caseless.supports(ready.weapon),
+        AmmunitionMode::Caseless.supports(ready.weapon),
         "That weapon cannot fire CASELESS rounds!"
     );
     Ok(super::weapon_controls::toggle_ammunition_mode(
         world,
         id,
         index,
-        BattleAmmunitionMode::Caseless,
+        AmmunitionMode::Caseless,
     ))
 }
 

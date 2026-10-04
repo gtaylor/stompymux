@@ -7,7 +7,7 @@ use std::{
 use stompymux_rs::*;
 
 /// Isolate thermal sampling from startup timers without changing any other saved state.
-fn reactor(world: &mut World, id: ObjectId, power: BattlePower) {
+fn reactor(world: &mut World, id: ObjectId, power: Power) {
     world.btech.set_unit_power(id, power).unwrap();
 }
 
@@ -19,12 +19,7 @@ async fn fixture(
     let (dir, config, mut world) = support::isolated_world().await;
     let id = world.create(&config, "Heat regulator".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-    create_battle_unit(
-        &mut world,
-        id,
-        BattleTemplate::parse("test", source).unwrap(),
-    )
-    .unwrap();
+    create_battle_unit(&mut world, id, MechTemplate::parse("test", source).unwrap()).unwrap();
     if let Some((tile, temperature)) = tile {
         let map = world.create(&config, "Environment".into(), Kind::Room);
         create_battle_map(
@@ -129,10 +124,7 @@ async fn cutoff_cockpit_transition_and_restart() {
         place_battle_unit(&mut restored, id, map, 0, 0).unwrap();
         assign_battle_pilot(&mut restored, id, ObjectId(1)).unwrap();
         support::seed_object_dice(&mut restored, ObjectId(1), support::FIXTURE_DICE_SEED);
-        restored
-            .btech
-            .set_unit_power(id, BattlePower::Running)
-            .unwrap();
+        restored.btech.set_unit_power(id, Power::Running).unwrap();
         advance_battle_heat(&mut restored);
         let unit = &restored.btech.constructed_units()[&id];
         assert_eq!(
@@ -151,7 +143,7 @@ async fn cutoff_cockpit_transition_and_restart() {
         assert!(!unit.heat_active(&restored));
         let capacity = unit.definition().heat_sinks;
         let clock = unit.overheat_clock();
-        reactor(&mut restored, id, BattlePower::Off);
+        reactor(&mut restored, id, Power::Off);
         toggle_battle_heat_cutoff(&mut restored, id, ObjectId(1), true).unwrap();
         for _ in 0..4 {
             advance_battle_heat(&mut restored);
@@ -172,13 +164,13 @@ async fn cutoff_cockpit_transition_and_restart() {
             clock
         );
         assert!(!restored.btech.constructed_units()[&id].heat_active(&restored));
-        reactor(&mut restored, id, BattlePower::Running);
+        reactor(&mut restored, id, Power::Running);
         for _ in 0..100 {
             advance_battle_heat(&mut restored);
         }
         assert_eq!(
             restored.btech.constructed_units()[&id].heat_cutoff(),
-            BattleHeatCutoff::default()
+            HeatCutoff::default()
         );
         restored.validate(&config).unwrap();
         for bad in [
@@ -248,7 +240,7 @@ async fn cutoff_environment_samples_and_damaged_capacity() {
         .unwrap()
         .systems
         .into_iter()
-        .find(|part| part.system == BattleSystem::HeatSink)
+        .find(|part| part.system == System::HeatSink)
         .unwrap();
     destroy_battle_critical(&mut world, id, sink.location).unwrap();
     world.validate(&config).unwrap();
@@ -297,7 +289,7 @@ async fn idle_cutoff_transition_runs_on_server_heartbeat() {
             let saved = heartbeats
                 .until_saved(&config, 30, |saved| {
                     let unit = &saved.btech.constructed_units()[&id];
-                    assert_eq!(unit.power(), BattlePower::Off);
+                    assert_eq!(unit.power(), Power::Off);
                     unit.heat_cutoff().enabled
                 })
                 .await;

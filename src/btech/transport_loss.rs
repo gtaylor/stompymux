@@ -77,7 +77,7 @@ pub(super) fn publish(scripts: &Scripts, config: &Config, before: &World) -> Res
             }
             super::notify_unit(
                 scripts,
-                super::BattleNotice {
+                super::Notice {
                     unit: id,
                     text: "Due to your transport's destruction, your unit has been destroyed!"
                         .into(),

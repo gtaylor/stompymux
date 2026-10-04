@@ -1,5 +1,5 @@
 //! Versioned persistence for complete Rust-owned unit records.
-use crate::{BattleUnit, BtechState, ObjectId, World};
+use crate::{BtechState, Mech, ObjectId, World};
 use anyhow::{Result, ensure};
 use sqlx::SqliteConnection;
 use std::{
@@ -21,7 +21,7 @@ pub(super) async fn load(
     clock: super::btech_deadlines::Clock,
 ) -> Result<()> {
     let mut units = BTreeMap::new();
-    for (id, unit) in super::btech_unit_rows::load::<BattleUnit>(c, TABLE, TIMERS, clock).await? {
+    for (id, unit) in super::btech_unit_rows::load::<Mech>(c, TABLE, TIMERS, clock).await? {
         unit.validate()?;
         ensure!(
             !state.units.contains_key(&id) && !state.maps.contains_key(&id),

@@ -32,7 +32,7 @@ pub fn set_fortified(world: &mut World, id: ObjectId, enabled: bool) -> Result<(
                 unit.free_fall().is_none()
                     && unit
                         .vtol_flight()
-                        .is_none_or(|flight| flight.phase == super::BattleVtolFlightPhase::Landed),
+                        .is_none_or(|flight| flight.phase == super::VtolFlightPhase::Landed),
                 "Land the unit before fortifying it"
             );
             ensure!(

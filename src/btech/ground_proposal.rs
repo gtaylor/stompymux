@@ -1,13 +1,13 @@
 //! Read-only Mech ground proposals share live movement arithmetic with trajectory prediction.
-use super::{BattleMotion, BattleMovementRules, BattleVehicleTemplateMotion, HexCoordinate, Point};
+use super::{HexCoordinate, Motion, MovementRules, Point, VehicleTemplateMotion};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 
 /// One second of control changes and its proposed endpoint, before terrain-entry consequences.
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct BattleGroundMotionProposal {
+pub struct GroundMotionProposal {
     /// Updated controls retain the starting point until the caller resolves the segment.
-    pub motion: BattleMotion,
+    pub motion: Motion,
     pub destination: Point,
     /// A zero movement ceiling requires live damage reconciliation instead of traversal.
     pub immobilized: bool,
@@ -19,10 +19,10 @@ pub struct BattleGroundMotionProposal {
 pub fn propose_mech_ground_motion(
     world: &World,
     id: ObjectId,
-    mut motion: BattleMotion,
+    mut motion: Motion,
     coordinate: HexCoordinate,
-    rules: BattleMovementRules,
-) -> Result<BattleGroundMotionProposal> {
+    rules: MovementRules,
+) -> Result<GroundMotionProposal> {
     let unit = world
         .btech
         .constructed_units()
@@ -60,7 +60,7 @@ pub fn propose_mech_ground_motion(
         motion.limit_load(maximum, maximum);
     }
     if maximum == 0.0 {
-        return Ok(BattleGroundMotionProposal {
+        return Ok(GroundMotionProposal {
             motion,
             destination: motion.point,
             immobilized: true,
@@ -100,7 +100,7 @@ pub fn propose_mech_ground_motion(
             + if motion.speed < 0.0 { 180.0 } else { 0.0 },
         distance,
     )?;
-    Ok(BattleGroundMotionProposal {
+    Ok(GroundMotionProposal {
         motion,
         destination: proposed,
         immobilized: false,
@@ -111,10 +111,10 @@ pub fn propose_mech_ground_motion(
 pub fn propose_vehicle_ground_motion(
     world: &World,
     id: ObjectId,
-    old: BattleMotion,
+    old: Motion,
     coordinate: HexCoordinate,
-    rules: BattleMovementRules,
-) -> Result<BattleMotion> {
+    rules: MovementRules,
+) -> Result<Motion> {
     let vehicle = world
         .btech
         .vehicles()
@@ -151,7 +151,7 @@ pub fn propose_vehicle_ground_motion(
         } else {
             map.hex(i64::from(coordinate.x), i64::from(coordinate.y))?
         },
-        super::BattleVehicleMotionRules {
+        super::VehicleMotionRules {
             fasa_turning: rules.fasa_turning,
             slowdown: rules.slowdown,
             speed_demon: advantage,

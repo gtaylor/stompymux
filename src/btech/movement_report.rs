@@ -4,41 +4,41 @@
 #[derive(Default)]
 pub(super) struct MovementReport {
     /// Direct crew feedback captured before impacts can move or kill the pilot.
-    pub pilot_notices: Vec<super::BattlePilotNotice>,
-    pub boundaries: Vec<BattleBoundaryCrossing>,
-    pub experience_messages: Vec<super::BattleChannelMessage>,
-    pub dfas: Vec<super::BattleDfaReport>,
-    pub charges: Vec<super::BattleChargeReport>,
-    pub notices: Vec<super::BattleNotice>,
-    pub character_injuries: Vec<super::BattleCharacterPilotInjury>,
-    pub mines: Vec<super::BattleMineEventReport>,
-    pub falls: Vec<super::BattleFallReport>,
-    pub vehicle_falls: Vec<super::BattleVehicleFallReport>,
+    pub pilot_notices: Vec<super::PilotNotice>,
+    pub boundaries: Vec<BoundaryCrossing>,
+    pub experience_messages: Vec<super::DiagnosticMessage>,
+    pub dfas: Vec<super::DfaReport>,
+    pub charges: Vec<super::ChargeReport>,
+    pub notices: Vec<super::Notice>,
+    pub character_injuries: Vec<super::CharacterPilotInjury>,
+    pub mines: Vec<super::MineEventReport>,
+    pub falls: Vec<super::MechFallReport>,
+    pub vehicle_falls: Vec<super::VehicleFallReport>,
     pub stacking: super::stacking::StackingEffects,
 }
 
 /// An attempted unlinked edge retains controls for a host building-exit attempt.
 #[derive(Clone)]
-pub(super) struct BattleBoundaryCrossing {
+pub(super) struct BoundaryCrossing {
     pub unit: crate::ObjectId,
     pub map: crate::ObjectId,
-    pub motion: super::BattleMotion,
-    pub notice: super::BattleNotice,
+    pub motion: super::Motion,
+    pub notice: super::Notice,
 }
 
-impl BattleBoundaryCrossing {
+impl BoundaryCrossing {
     /// Retain the exact fallback notice so successful exits can replace it.
     pub fn new(
         unit: crate::ObjectId,
         map: crate::ObjectId,
-        motion: super::BattleMotion,
+        motion: super::Motion,
         text: &str,
     ) -> Self {
         Self {
             unit,
             map,
             motion,
-            notice: super::BattleNotice {
+            notice: super::Notice {
                 unit,
                 text: text.into(),
             },

@@ -23,4 +23,4 @@ btech.unit.gattling(dbref, pilot, weapon)
 
 ## Returns
 
-- `BattleFireMode`
+- `FireMode`

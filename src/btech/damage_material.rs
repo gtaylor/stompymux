@@ -1,12 +1,10 @@
 //! Typed material assignments shared by the Mech and vehicle damage-field adapters.
-use super::{
-    AmmunitionBin, BattleDamageReplacement, BattleDamageSlot, BattleSectionState, SectionDefinition,
-};
+use super::{AmmunitionBin, DamageReplacement, DamageSlot, SectionDefinition, SectionState};
 use std::collections::{BTreeMap, BTreeSet};
 
 /// Fully resolved assignments retain anatomy types after compact-format validation.
 pub(super) struct Material<S, L> {
-    pub sections: BTreeMap<S, BattleSectionState>,
+    pub sections: BTreeMap<S, SectionState>,
     pub losses: BTreeSet<L>,
     pub ammunition: Vec<u16>,
     pub restored: BTreeSet<L>,
@@ -15,13 +13,13 @@ pub(super) struct Material<S, L> {
 
 /// Translate validated records once, retaining unrepresented structural filler damage.
 pub(super) fn resolve<S: Copy + Ord, L: Copy + Ord>(
-    replacement: &BattleDamageReplacement,
+    replacement: &DamageReplacement,
     definitions: &BTreeMap<S, SectionDefinition>,
     old_losses: &BTreeSet<L>,
     bins: &[AmmunitionBin<L>],
     number: impl Fn(S) -> u8,
     location: impl Fn(S, u8) -> L,
-    slot: impl Fn(L) -> BattleDamageSlot,
+    slot: impl Fn(L) -> DamageSlot,
 ) -> Material<S, L> {
     let losses: BTreeSet<_> = definitions
         .iter()

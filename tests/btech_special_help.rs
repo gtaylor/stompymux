@@ -8,26 +8,23 @@ use stompymux_rs::*;
 #[tokio::test]
 async fn cockpit_help_matches_catalogue_without_mutation() {
     for (template, class) in [
-        (
-            include_str!("../game/mechs/JR7-D.toml"),
-            BattleCommandClass::Mech,
-        ),
+        (include_str!("../game/mechs/JR7-D.toml"), CommandClass::Mech),
         (
             include_str!("../game/mechs/GOL-1H.toml"),
-            BattleCommandClass::Mech,
+            CommandClass::Mech,
         ),
         (
             include_str!("../game/mechs/Demolisher.toml"),
-            BattleCommandClass::Ground,
+            CommandClass::Ground,
         ),
         (
             include_str!("../game/mechs/Kestrel.toml"),
-            BattleCommandClass::Vtol,
+            CommandClass::Vtol,
         ),
     ] {
         let (_dir, config, mut world) = support::isolated_world().await;
         let unit = world.create(&config, "Help cockpit".into(), Kind::Thing);
-        BattleUnitTemplate::parse("test", template)
+        UnitTemplate::parse("test", template)
             .unwrap()
             .create(&mut world, unit)
             .unwrap();
@@ -42,10 +39,7 @@ async fn cockpit_help_matches_catalogue_without_mutation() {
             ("  HELP\tALL  ", "ALL"),
         ] {
             let actual = support::run_text(&scripts, &config, actor, 1, input);
-            assert_eq!(
-                actual,
-                BattleSpecialType::Mech.help(Some(class), false, topic)
-            );
+            assert_eq!(actual, SpecialType::Mech.help(Some(class), false, topic));
         }
         for input in ["help", "Help", "help pilot"] {
             assert!(matches!(
@@ -60,7 +54,7 @@ async fn cockpit_help_matches_catalogue_without_mutation() {
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(loaded))).unwrap();
         assert_eq!(
             support::run_text(&scripts, &config, actor, 1, "HELP"),
-            BattleSpecialType::Mech.help(Some(class), false, "")
+            SpecialType::Mech.help(Some(class), false, "")
         );
     }
 }
@@ -121,10 +115,10 @@ async fn actor_location_and_linked_inventory_order_survive_restart() {
     let loaded = persistence::load(&config.database()).await.unwrap();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(loaded))).unwrap();
     for (exclude, expected) in [
-        (None, Some(BattleSpecialType::Debug)),
-        (Some(actor), Some(BattleSpecialType::Map)),
-        (Some(map), Some(BattleSpecialType::Debug)),
-        (Some(second), Some(BattleSpecialType::Autopilot)),
+        (None, Some(SpecialType::Debug)),
+        (Some(actor), Some(SpecialType::Map)),
+        (Some(map), Some(SpecialType::Debug)),
+        (Some(second), Some(SpecialType::Autopilot)),
         (Some(first), None),
     ] {
         if let Some(id) = exclude {
@@ -192,7 +186,7 @@ async fn help_respects_uncompressed_input() {
     ));
     assert_eq!(
         support::run_text(&scripts, &config, ObjectId(1), 1, "HELP   ALL"),
-        BattleSpecialType::Map.help(None, true, "ALL")
+        SpecialType::Map.help(None, true, "ALL")
     );
     assert!(
         support::run_text(&scripts, &config, ObjectId(1), 1, "HELP ALL ")

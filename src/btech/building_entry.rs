@@ -1,18 +1,18 @@
 //! Shared delayed building admission; the host evaluates locks and commits movement callbacks.
-use super::{BattlePosition, BattlePosture, HexCoordinate};
+use super::{HexCoordinate, Position, Posture};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 
 /// An entry event saves the selector, not a destination that could become stale.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BattleBuildingEntry {
+pub struct BuildingEntry {
     pub direction: Option<u8>,
     /// Zero means ready for the host to recheck locks and publish movement.
     pub remaining: u8,
 }
 
-impl BattleBuildingEntry {
+impl BuildingEntry {
     /// Bound saved work while allowing a ready event to survive transaction retries.
     pub(super) fn validate(self) -> Result<()> {
         ensure!(self.remaining <= 18, "Invalid building entry countdown");
@@ -21,7 +21,7 @@ impl BattleBuildingEntry {
 }
 
 /// Inspect a pending entry uniformly across the admitted chassis.
-pub fn building_entry(world: &World, id: ObjectId) -> Option<BattleBuildingEntry> {
+pub fn building_entry(world: &World, id: ObjectId) -> Option<BuildingEntry> {
     world.btech.vehicles().get(&id).map_or_else(
         || {
             world
@@ -35,7 +35,7 @@ pub fn building_entry(world: &World, id: ObjectId) -> Option<BattleBuildingEntry
 }
 
 /// Obtain the one saved event slot without duplicating scheduling or admission rules.
-fn slot(world: &mut World, id: ObjectId) -> Result<&mut Option<BattleBuildingEntry>> {
+fn slot(world: &mut World, id: ObjectId) -> Result<&mut Option<BuildingEntry>> {
     if world.btech.vehicles().contains_key(&id) {
         return Ok(&mut world.btech.vehicles.get_mut(&id).unwrap().building_entry);
     }
@@ -54,7 +54,7 @@ pub fn building_entry_destination_for_unit(
     id: ObjectId,
     pilot: ObjectId,
     direction: Option<u8>,
-) -> Result<BattlePosition> {
+) -> Result<Position> {
     destination_configured(
         world,
         id,
@@ -71,7 +71,7 @@ pub(super) fn destination_configured(
     pilot: ObjectId,
     direction: Option<u8>,
     policy: super::speed_bonus::SpeedPolicy,
-) -> Result<BattlePosition> {
+) -> Result<Position> {
     super::targeting::controlled(world, id, pilot)?;
     super::fortification::require_mobile(world, id)?;
     use super::map_transfer::TransferMotionBlockage;
@@ -87,7 +87,7 @@ pub(super) fn destination_configured(
     ensure!(crew_recovery == 0, "You are unconscious");
     if let Some(unit) = world.btech.constructed_units().get(&id) {
         ensure!(
-            unit.posture == BattlePosture::Standing && unit.stand_timer.is_none(),
+            unit.posture == Posture::Standing && unit.stand_timer.is_none(),
             "Crawl inside? I think not. Stand first."
         );
     }
@@ -147,7 +147,7 @@ pub fn begin_building_entry(
     pilot: ObjectId,
     direction: Option<u8>,
     lock_passed: bool,
-) -> Result<BattlePosition> {
+) -> Result<Position> {
     begin_configured(
         world,
         id,
@@ -166,7 +166,7 @@ pub(super) fn begin_configured(
     direction: Option<u8>,
     lock_passed: bool,
     policy: super::speed_bonus::SpeedPolicy,
-) -> Result<BattlePosition> {
+) -> Result<Position> {
     let destination = destination_configured(world, id, pilot, direction, policy)?;
     ensure!(
         building_entry_lock_allows(world, destination.map, lock_passed)?,
@@ -176,7 +176,7 @@ pub(super) fn begin_configured(
         building_entry(world, id).is_none(),
         "You are already entering the hangar!"
     );
-    *slot(world, id)? = Some(BattleBuildingEntry {
+    *slot(world, id)? = Some(BuildingEntry {
         direction: direction
             .filter(|value| *value != 0)
             .map(|value| value.to_ascii_lowercase()),
@@ -187,10 +187,7 @@ pub(super) fn begin_configured(
 
 /// Advance one committed second. Ready events remain saved until the host consumes them.
 /// This is separate from the ordinary power clock so readiness cannot silently move objects.
-pub fn advance_building_entry(
-    world: &mut World,
-    id: ObjectId,
-) -> Result<Option<BattleBuildingEntry>> {
+pub fn advance_building_entry(world: &mut World, id: ObjectId) -> Result<Option<BuildingEntry>> {
     let event = slot(world, id)?;
     if let Some(event) = event {
         event.remaining = event.remaining.saturating_sub(1);

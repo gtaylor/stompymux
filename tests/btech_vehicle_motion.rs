@@ -2,9 +2,8 @@
 use stompymux_rs::*;
 
 /// An intact tracked chassis with a 53.75 kph nominal flank speed.
-fn template() -> BattleVehicleTemplate {
-    BattleVehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
-        .unwrap()
+fn template() -> VehicleTemplate {
+    VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml")).unwrap()
 }
 
 #[test]
@@ -20,37 +19,25 @@ fn vehicle_motion_reaches_terrain_adjusted_targets_and_brakes_without_overshoot(
         (Terrain::HeavyForest, 53.75 / 3.0),
         (Terrain::Mountains, 53.75 / 3.0),
     ] {
-        let mut motion = BattleMotion::stationary(HexCoordinate { x: 50, y: 50 }.center());
+        let mut motion = Motion::stationary(HexCoordinate { x: 50, y: 50 }.center());
         motion.desired_speed = 53.75;
         for _ in 0..30 {
             motion = template
-                .ground_motion_step(
-                    motion,
-                    Hex::new(terrain, 0),
-                    BattleVehicleMotionRules::STANDARD,
-                )
+                .ground_motion_step(motion, Hex::new(terrain, 0), VehicleMotionRules::STANDARD)
                 .unwrap();
         }
         assert_eq!(motion.speed, target, "{terrain:?}");
         motion.desired_speed = 0.0;
         for _ in 0..30 {
             motion = template
-                .ground_motion_step(
-                    motion,
-                    Hex::new(terrain, 0),
-                    BattleVehicleMotionRules::STANDARD,
-                )
+                .ground_motion_step(motion, Hex::new(terrain, 0), VehicleMotionRules::STANDARD)
                 .unwrap();
         }
         assert_eq!(motion.speed, 0.0);
         motion.desired_speed = -53.75 * 2.0 / 3.0;
         for _ in 0..30 {
             motion = template
-                .ground_motion_step(
-                    motion,
-                    Hex::new(terrain, 0),
-                    BattleVehicleMotionRules::STANDARD,
-                )
+                .ground_motion_step(motion, Hex::new(terrain, 0), VehicleMotionRules::STANDARD)
                 .unwrap();
         }
         assert!((motion.speed + target * 2.0 / 3.0).abs() < 1e-10);
@@ -60,13 +47,13 @@ fn vehicle_motion_reaches_terrain_adjusted_targets_and_brakes_without_overshoot(
 #[test]
 fn vehicle_motion_handles_road_turning_hover_advantage_and_map_rate() {
     let mut template = template();
-    let mut motion = BattleMotion::stationary(HexCoordinate { x: 50, y: 50 }.center());
+    let mut motion = Motion::stationary(HexCoordinate { x: 50, y: 50 }.center());
     motion.desired_speed = template.max_speed;
     let normal = template
         .ground_motion_step(
             motion,
             Hex::new(Terrain::Grassland, 0),
-            BattleVehicleMotionRules::STANDARD,
+            VehicleMotionRules::STANDARD,
         )
         .unwrap();
     assert_eq!(normal.speed, template.max_speed / 20.0);
@@ -74,9 +61,9 @@ fn vehicle_motion_handles_road_turning_hover_advantage_and_map_rate() {
         .ground_motion_step(
             motion,
             Hex::new(Terrain::Grassland, 0),
-            BattleVehicleMotionRules {
+            VehicleMotionRules {
                 speed_demon: true,
-                ..BattleVehicleMotionRules::STANDARD
+                ..VehicleMotionRules::STANDARD
             },
         )
         .unwrap();
@@ -85,9 +72,9 @@ fn vehicle_motion_handles_road_turning_hover_advantage_and_map_rate() {
         .ground_motion_step(
             motion,
             Hex::new(Terrain::Grassland, 0),
-            BattleVehicleMotionRules {
+            VehicleMotionRules {
                 movement_modifier: 200,
-                ..BattleVehicleMotionRules::STANDARD
+                ..VehicleMotionRules::STANDARD
             },
         )
         .unwrap();
@@ -103,7 +90,7 @@ fn vehicle_motion_handles_road_turning_hover_advantage_and_map_rate() {
         .ground_motion_step(
             motion,
             Hex::new(Terrain::Road, 0),
-            BattleVehicleMotionRules::STANDARD,
+            VehicleMotionRules::STANDARD,
         )
         .unwrap();
     assert!((road.heading - (5.0 * (1.0 - 53.75 / 64.5 / 2.0))).abs() < 1e-12);
@@ -111,14 +98,14 @@ fn vehicle_motion_handles_road_turning_hover_advantage_and_map_rate() {
         .ground_motion_step(
             motion,
             Hex::new(Terrain::Road, 0),
-            BattleVehicleMotionRules {
+            VehicleMotionRules {
                 fasa_turning: true,
-                ..BattleVehicleMotionRules::STANDARD
+                ..VehicleMotionRules::STANDARD
             },
         )
         .unwrap();
     assert_eq!(fasa.heading, 0.0);
-    template.movement = BattleVehicleMovement::Hover;
+    template.movement = VehicleMovement::Hover;
     motion.heading = 0.0;
     motion.desired_heading = 0.0;
     motion.speed = template.max_speed;
@@ -127,7 +114,7 @@ fn vehicle_motion_handles_road_turning_hover_advantage_and_map_rate() {
             .ground_motion_step(
                 motion,
                 Hex::new(Terrain::Road, 0),
-                BattleVehicleMotionRules::STANDARD
+                VehicleMotionRules::STANDARD
             )
             .unwrap()
             .speed,
@@ -140,7 +127,7 @@ fn vehicle_motion_handles_road_turning_hover_advantage_and_map_rate() {
             .ground_motion_step(
                 motion,
                 Hex::new(Terrain::Grassland, 0),
-                BattleVehicleMotionRules::STANDARD
+                VehicleMotionRules::STANDARD
             )
             .is_ok()
     );
@@ -151,19 +138,19 @@ fn vehicle_motion_handles_road_turning_hover_advantage_and_map_rate() {
                 .ground_motion_step(
                     motion,
                     Hex::new(Terrain::Grassland, 0),
-                    BattleVehicleMotionRules::STANDARD
+                    VehicleMotionRules::STANDARD
                 )
                 .is_err()
         );
     }
-    template.movement = BattleVehicleMovement::Stationary;
+    template.movement = VehicleMovement::Stationary;
     motion.desired_speed = 1.0;
     assert!(
         template
             .ground_motion_step(
                 motion,
                 Hex::new(Terrain::Grassland, 0),
-                BattleVehicleMotionRules::STANDARD
+                VehicleMotionRules::STANDARD
             )
             .is_err()
     );

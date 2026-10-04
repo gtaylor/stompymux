@@ -23,4 +23,4 @@ btech.cargo.unload(actor, pattern, quantity)
 
 ## Returns
 
-- `BattleCargoRow[] Transferred quantities.`
+- `CargoRow[] Transferred quantities.`

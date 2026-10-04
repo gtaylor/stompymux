@@ -7,14 +7,14 @@ use serde::Serialize;
 /// Shooter-local launch damage with anatomy-specific casualty consequences.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", content = "report", rename_all = "snake_case")]
-pub enum BattleLaunchMisload {
-    Mech(BattleTacticalImpact),
-    Vehicle(BattleVehicleInternalDamage),
+pub enum LaunchMisload {
+    Mech(TacticalImpact),
+    Vehicle(VehicleInternalDamage),
 }
 
-impl BattleLaunchMisload {
+impl LaunchMisload {
     /// Private checks retain positions within the corresponding immediate notice stream.
-    pub(super) fn pilot_notices(&self) -> &[BattlePilotNotice] {
+    pub(super) fn pilot_notices(&self) -> &[PilotNotice] {
         match self {
             Self::Mech(hit) => &hit.pilot_notices,
             Self::Vehicle(hit) => &hit.pilot_notices,
@@ -22,7 +22,7 @@ impl BattleLaunchMisload {
     }
 
     /// Immediate notices are already ordered by the shared launch handler.
-    pub(super) fn notices(&self) -> Vec<BattleNotice> {
+    pub(super) fn notices(&self) -> Vec<Notice> {
         match self {
             Self::Mech(hit) => hit.notices.clone(),
             Self::Vehicle(hit) => hit.notices.iter().chain(&hit.broadcasts).cloned().collect(),
@@ -38,11 +38,11 @@ pub(super) struct CoordinateLaunch {
     pub jammed: bool,
     pub loader_destroyed: bool,
     pub propellant_roll: Option<u8>,
-    pub expenditure: BattleWeaponUse,
-    pub misload: Option<BattleLaunchMisload>,
+    pub expenditure: WeaponUse,
+    pub misload: Option<LaunchMisload>,
     pub ammunition_warning: Option<String>,
     /// Cocoon opening feedback from the shared launch stage.
-    pub launch_notices: Vec<BattleNotice>,
+    pub launch_notices: Vec<Notice>,
 }
 
 /// Delegate reservation, jams and attack dice to the established chassis launch handler.
@@ -52,7 +52,7 @@ pub(super) fn resolve(
     artillery: bool,
 ) -> Result<CoordinateLaunch> {
     if world.btech.vehicles().contains_key(&request.shooter) {
-        let request = BattleVehicleLaunchRequest {
+        let request = VehicleLaunchRequest {
             shooter: request.shooter,
             pilot: request.pilot,
             weapon_index: request.weapon_index,
@@ -60,7 +60,7 @@ pub(super) fn resolve(
             target_number: request.target_number,
             streak_confused: request.streak_confused,
             glancing: request.glancing,
-            critical_rules: BattleVehicleCriticalRules {
+            critical_rules: VehicleCriticalRules {
                 toughness: request.fall.toughness,
                 ..request.fall.vehicle_impact.criticals
             },
@@ -78,7 +78,7 @@ pub(super) fn resolve(
             loader_destroyed: launch.loader_destroyed,
             propellant_roll: launch.propellant_roll,
             expenditure: launch.expenditure.into(),
-            misload: launch.misload.map(BattleLaunchMisload::Vehicle),
+            misload: launch.misload.map(LaunchMisload::Vehicle),
             ammunition_warning: launch.ammunition_warning,
             launch_notices: launch.launch_notices,
         });
@@ -92,7 +92,7 @@ pub(super) fn resolve(
         loader_destroyed: launch.loader_destroyed,
         propellant_roll: launch.propellant_roll,
         expenditure: launch.expenditure,
-        misload: launch.misload.map(BattleLaunchMisload::Mech),
+        misload: launch.misload.map(LaunchMisload::Mech),
         ammunition_warning: launch.ammunition_warning,
         launch_notices: launch.launch_notices,
     })

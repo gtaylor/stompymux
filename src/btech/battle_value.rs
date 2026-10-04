@@ -1,8 +1,5 @@
 //! Current Mech and vehicle Battle Value from installed equipment and live defensive facts.
-use super::{
-    BattleEngine, BattleGyro, BattleSection, BattleSystem, BattleUnit, BattleWeapon,
-    BattleWeaponSettings, StoredMap,
-};
+use super::{Engine, Gyro, Mech, MechSection, StoredMap, System, Weapon, WeaponSettings};
 use anyhow::Result;
 use serde::Serialize;
 
@@ -16,8 +13,8 @@ pub struct BattleValue {
 
 /// Offensive weapons consume heat capacity in descending value order, retaining integer half-values.
 fn offensive_value(
-    settings: &BattleWeaponSettings,
-    mut weapons: Vec<BattleWeapon>,
+    settings: &WeaponSettings,
+    mut weapons: Vec<Weapon>,
     heat_efficiency: i32,
     tons: u16,
 ) -> f32 {
@@ -48,22 +45,22 @@ fn movement_modifier(running: i32, jumping: i32) -> i32 {
 
 /// Shared defensive equipment contributions retain installed weapons and ammunition bins.
 fn defensive_equipment(
-    settings: &BattleWeaponSettings,
-    weapons: impl Iterator<Item = BattleWeapon>,
-    ammunition: impl Iterator<Item = BattleWeapon>,
+    settings: &WeaponSettings,
+    weapons: impl Iterator<Item = Weapon>,
+    ammunition: impl Iterator<Item = Weapon>,
     ecm: bool,
     probe: bool,
 ) -> f32 {
     let mut value = if ecm { 61.0 } else { 0.0 } + if probe { 10.0 } else { 0.0 };
     for weapon in weapons {
-        if weapon.is_ams() || matches!(weapon, BattleWeapon::APod | BattleWeapon::ClanAPod) {
+        if weapon.is_ams() || matches!(weapon, Weapon::APod | Weapon::ClanAPod) {
             value += settings.battle_value(weapon) as f32;
         }
     }
     for weapon in ammunition {
         value += match weapon {
-            BattleWeapon::AntiMissileSystem => 11.0,
-            BattleWeapon::ClanAntiMissileSystem => 21.0,
+            Weapon::AntiMissileSystem => 11.0,
+            Weapon::ClanAntiMissileSystem => 21.0,
             _ => 0.0,
         };
     }
@@ -81,14 +78,14 @@ fn finish_value(offense: f32, mut defense: f32, movement: i32) -> BattleValue {
     }
 }
 
-impl BattleUnit {
+impl Mech {
     /// Compute the supported biped score with catalogue weapon values, without changing state.
     /// Installed weapons and bins retain their BV contribution after damage or expenditure.
     /// Armor, structure, heat sinks, jump jets and effective running speed use current state.
     pub fn battle_value(&self, map: Option<&StoredMap>) -> Result<BattleValue> {
         self.battle_value_at_speed(
             self.effective_maximum_speed(map)?,
-            &BattleWeaponSettings::default(),
+            &WeaponSettings::default(),
         )
     }
 
@@ -96,7 +93,7 @@ impl BattleUnit {
     fn battle_value_at_speed(
         &self,
         maximum: f64,
-        settings: &BattleWeaponSettings,
+        settings: &WeaponSettings,
     ) -> Result<BattleValue> {
         let definition = self.definition();
         let loadout = self.loadout()?;
@@ -105,7 +102,7 @@ impl BattleUnit {
         // (battle_value.c); reference builds without engine criticals still
         // produce a value, so fall back to the flag spelling there.
         let engine = self.engine().unwrap_or_else(|_| {
-            BattleEngine::display_from_flags(
+            Engine::display_from_flags(
                 definition.has_special("LightEngine_Tech"),
                 definition.has_special("CompactEngine_Tech"),
                 definition.has_special("XXL_Tech"),
@@ -113,9 +110,9 @@ impl BattleUnit {
             )
         });
         let engine_factor = match engine {
-            BattleEngine::Light => 0.75,
-            BattleEngine::Xl if definition.clan_engine() => 0.75,
-            BattleEngine::Xl | BattleEngine::Xxl => 0.5,
+            Engine::Light => 0.75,
+            Engine::Xl if definition.clan_engine() => 0.75,
+            Engine::Xl | Engine::Xxl => 0.5,
             _ => 1.0,
         };
         let armor: u32 = self
@@ -130,7 +127,7 @@ impl BattleUnit {
             .sum();
         let mut defense = armor as f32 * 2.5 + structure as f32 * 1.5 * engine_factor;
         defense += f32::from(definition.tons)
-            * if self.gyro() == BattleGyro::Hardened {
+            * if self.gyro() == Gyro::Hardened {
                 1.0
             } else {
                 0.5
@@ -138,12 +135,12 @@ impl BattleUnit {
         let ecm_slots = loadout
             .systems
             .iter()
-            .filter(|part| part.system == BattleSystem::Ecm)
+            .filter(|part| part.system == System::Ecm)
             .count();
         let probe_slots = loadout
             .systems
             .iter()
-            .filter(|part| part.system == BattleSystem::BeagleProbe)
+            .filter(|part| part.system == System::BeagleProbe)
             .count();
         defense += defensive_equipment(
             settings,
@@ -155,13 +152,13 @@ impl BattleUnit {
         let vulnerable_core = |section| {
             matches!(
                 section,
-                BattleSection::CenterTorso
-                    | BattleSection::Head
-                    | BattleSection::LeftLeg
-                    | BattleSection::RightLeg
+                MechSection::CenterTorso
+                    | MechSection::Head
+                    | MechSection::LeftLeg
+                    | MechSection::RightLeg
             )
         };
-        let xl = matches!(engine, BattleEngine::Xl | BattleEngine::Xxl);
+        let xl = matches!(engine, Engine::Xl | Engine::Xxl);
         for bin in &loadout.ammunition {
             let section = bin.location.section;
             // CASE II protects every location, including the core and XL side torsos.
@@ -181,8 +178,8 @@ impl BattleUnit {
                 !self.has_case(section)
             } else {
                 match section {
-                    BattleSection::LeftArm => !self.has_case(BattleSection::LeftTorso),
-                    BattleSection::RightArm => !self.has_case(BattleSection::RightTorso),
+                    MechSection::LeftArm => !self.has_case(MechSection::LeftTorso),
+                    MechSection::RightArm => !self.has_case(MechSection::RightTorso),
                     _ => false,
                 }
             };
@@ -193,14 +190,14 @@ impl BattleUnit {
                 .criticals
                 .values()
                 .filter(|part| {
-                    BattleWeapon::parse(&part.equipment)
+                    Weapon::parse(&part.equipment)
                         .is_ok_and(|weapon| weapon.weapon_explosion_damage() > 0)
                 })
                 .count() as f32;
         }
         // BV jump MP is independent of map gravity and does not use flight admission rules.
         let jump = ((definition.jump_speed as f32
-            - f32::from(self.system_hits(BattleSystem::JumpJet)) * 10.75)
+            - f32::from(self.system_hits(System::JumpJet)) * 10.75)
             .max(0.0)
             / 10.75) as i32;
         let maximum = maximum as f32;
@@ -224,23 +221,23 @@ impl BattleUnit {
     }
 }
 
-impl super::BattleVehicle {
+impl super::Vehicle {
     /// Ground-vehicle and VTOL BV with catalogue values; installed equipment remains counted after damage.
     /// Hull protection and available motive speed use current state. Vehicles have no gyro bonus
     /// or ammunition-bin vulnerability penalty in this valuation.
     pub fn battle_value(&self) -> Result<BattleValue> {
-        self.battle_value_at_speed(self.maximum_speed(), &BattleWeaponSettings::default())
+        self.battle_value_at_speed(self.maximum_speed(), &WeaponSettings::default())
     }
 
     /// Vehicle movement bands consume the same loaded ceiling as world movement.
     fn battle_value_at_speed(
         &self,
         maximum: f64,
-        settings: &BattleWeaponSettings,
+        settings: &WeaponSettings,
     ) -> Result<BattleValue> {
-        use super::{BattleVehicleMovement as Movement, BattleVehicleSection as Section};
+        use super::{VehicleMovement as Movement, VehicleSection as Section};
         let definition = self.definition();
-        let loadout = super::BattleVehicleLoadout::resolve(definition)?;
+        let loadout = super::VehicleLoadout::resolve(definition)?;
         let armor: u32 = self
             .sections()
             .values()
@@ -259,11 +256,11 @@ impl super::BattleVehicle {
             loadout
                 .systems
                 .iter()
-                .any(|part| part.system == BattleSystem::Ecm),
+                .any(|part| part.system == System::Ecm),
             loadout
                 .systems
                 .iter()
-                .any(|part| part.system == BattleSystem::BeagleProbe),
+                .any(|part| part.system == System::BeagleProbe),
         );
         let xl = definition.has_special("XLEngine_Tech") || definition.has_special("XXL_Tech");
         for mount in &loadout.weapons {
@@ -288,7 +285,7 @@ impl super::BattleVehicle {
         let masc = loadout
             .systems
             .iter()
-            .filter(|part| part.system == BattleSystem::Masc)
+            .filter(|part| part.system == System::Masc)
             .count()
             >= usize::from(
                 (definition.tons
@@ -357,27 +354,17 @@ mod tests {
     /// Exact heat capacity receives full credit; additional weapons retain integer half-values.
     #[test]
     fn weapon_heat_order_and_truncation() {
-        use BattleWeapon::{MediumLaser, Srm4};
+        use Weapon::{MediumLaser, Srm4};
         assert_eq!(
-            offensive_value(
-                &BattleWeaponSettings::default(),
-                vec![Srm4, MediumLaser],
-                3,
-                35
-            ),
+            offensive_value(&WeaponSettings::default(), vec![Srm4, MediumLaser], 3, 35),
             35.0 + 46.0 + 19.0
         );
         assert_eq!(
-            offensive_value(
-                &BattleWeaponSettings::default(),
-                vec![MediumLaser, Srm4],
-                6,
-                35
-            ),
+            offensive_value(&WeaponSettings::default(), vec![MediumLaser, Srm4], 6, 35),
             35.0 + 46.0 + 39.0
         );
         assert_eq!(
-            offensive_value(&BattleWeaponSettings::default(), vec![Srm4], -1, 35),
+            offensive_value(&WeaponSettings::default(), vec![Srm4], -1, 35),
             54.0
         );
     }

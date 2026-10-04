@@ -24,7 +24,7 @@ async fn fixture(
             create_battle_unit(
                 &mut world,
                 id,
-                BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
                     .unwrap(),
             )
             .unwrap();
@@ -32,7 +32,7 @@ async fn fixture(
             create_battle_vehicle(
                 &mut world,
                 id,
-                BattleVehicleTemplate::parse(
+                VehicleTemplate::parse(
                     "test",
                     if index == 1 {
                         include_str!("../game/mechs/Demolisher.toml")
@@ -62,7 +62,7 @@ async fn ice_falls_damage_then_flood_ground_vehicles_and_leave_hovercraft_unchan
         map,
         HexCoordinate { x: 0, y: 0 },
         Some(ids[1]),
-        BattleMovementRules::STANDARD.fall,
+        MovementRules::STANDARD.fall,
     )
     .unwrap();
     assert_eq!(
@@ -72,7 +72,7 @@ async fn ice_falls_damage_then_flood_ground_vehicles_and_leave_hovercraft_unchan
             map,
             HexCoordinate { x: 0, y: 0 },
             Some(ids[1]),
-            BattleMovementRules::STANDARD.fall
+            MovementRules::STANDARD.fall
         )
         .unwrap()
     );
@@ -101,7 +101,7 @@ async fn shallow_ice_changes_terrain_without_falls_or_flooding() {
         map,
         HexCoordinate { x: 0, y: 0 },
         Some(ids[1]),
-        BattleMovementRules::STANDARD.fall,
+        MovementRules::STANDARD.fall,
     )
     .unwrap();
     assert!(
@@ -126,7 +126,7 @@ async fn bridge_collapse_drops_deck_vehicles_and_clears_under_span_state() {
         &mut world,
         map,
         HexCoordinate { x: 0, y: 0 },
-        BattleMovementRules::STANDARD.fall,
+        MovementRules::STANDARD.fall,
     )
     .unwrap();
     // The vehicle on the deck falls past it into the water; the hovercraft beneath stays put.
@@ -166,7 +166,7 @@ async fn unsupported_character_fall_rolls_back_prior_neighbor_damage_and_terrain
             map,
             HexCoordinate { x: 0, y: 0 },
             Some(ids[1]),
-            BattleMovementRules::STANDARD.fall
+            MovementRules::STANDARD.fall
         )
         .is_err()
     );
@@ -178,20 +178,19 @@ async fn vehicle_fall_fractures_ice_before_outer_damage_and_replays_nested_falls
     let (_dir, config, mut world, _map, ids) = fixture(Terrain::Ice, 3).await;
     let id = ids[1];
     let seed = (0..=255)
-        .find(|seed| BattleDice::seeded([*seed; 32]).d6() == 1)
+        .find(|seed| Dice::seeded([*seed; 32]).d6() == 1)
         .unwrap();
     world
         .btech
-        .set_unit_dice(id, BattleDice::seeded([seed; 32]))
+        .set_unit_dice(id, Dice::seeded([seed; 32]))
         .unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
     let mut restored = persistence::load(&config.database()).await.unwrap();
     let fall =
-        resolve_battle_vehicle_fall(&mut world, id, 1, BattleMovementRules::STANDARD.fall).unwrap();
+        resolve_battle_vehicle_fall(&mut world, id, 1, MovementRules::STANDARD.fall).unwrap();
     assert_eq!(
         fall,
-        resolve_battle_vehicle_fall(&mut restored, id, 1, BattleMovementRules::STANDARD.fall)
-            .unwrap()
+        resolve_battle_vehicle_fall(&mut restored, id, 1, MovementRules::STANDARD.fall).unwrap()
     );
     assert_eq!(world.btech, restored.btech);
     let fracture = fall.ice_break.as_ref().unwrap();
@@ -234,7 +233,7 @@ async fn vehicle_shutdown_ice_cascade_keeps_each_pilots_feedback_private() {
         .find_map(|seed| {
             let mut bytes = [0; 32];
             bytes[..2].copy_from_slice(&seed.to_le_bytes());
-            let dice = BattleDice::seeded(bytes);
+            let dice = Dice::seeded(bytes);
             let mut probe = dice.clone();
             (probe.two_d6() == 12 && probe.d6() == 1).then_some(dice)
         })

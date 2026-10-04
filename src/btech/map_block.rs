@@ -34,7 +34,7 @@ pub fn add_landing_exclusion_action(
             &mut scripts.world_mut(),
             map,
             ordinal,
-            Some(super::BattleLandingExclusion {
+            Some(super::LandingExclusion {
                 coordinate,
                 radius: i64::from(radius),
                 exempt_team: team,
@@ -51,7 +51,7 @@ pub fn add_landing_exclusion_action(
         }
         super::notify_message(
             scripts,
-            super::BattleMessageTarget::Player(actor),
+            super::MessageTarget::Player(actor),
             &format!(
                 "Landingzone-block added to {},{} (distance: {radius})",
                 coordinate.x, coordinate.y

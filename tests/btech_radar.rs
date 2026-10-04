@@ -17,7 +17,7 @@ fn radar_altitude_and_range_boundaries() {
         (10, 2, 100.0, 100, true),
         (10, 2, 100.001, 100, false),
     ] {
-        let aim = BattleRadarTarget {
+        let aim = RadarTarget {
             flying_type: false,
             elevation,
             height_above_surface: clearance,
@@ -35,12 +35,12 @@ fn radar_altitude_and_range_boundaries() {
 /// Only terrain blockage rejects an otherwise elevated target; smoke, fire and water do not.
 #[test]
 fn radar_obscurants_signed_aim_and_invalid_inputs() {
-    let target = BattleRadarTarget {
+    let target = RadarTarget {
         flying_type: false,
         elevation: 10,
         height_above_surface: 5,
     };
-    let mut terrain = BattleTerrainLos {
+    let mut terrain = TerrainLos {
         woods: 8,
         target_woods: 2,
         water: 7,
@@ -71,12 +71,12 @@ fn radar_obscurants_signed_aim_and_invalid_inputs() {
 #[test]
 fn radar_flying_type_bonus_applies_below_ten_without_relaxing_detection() {
     for elevation in [0, 2, 3, 9, 10] {
-        let ground = BattleRadarTarget {
+        let ground = RadarTarget {
             flying_type: false,
             elevation,
             height_above_surface: i64::from(elevation),
         };
-        let flying = BattleRadarTarget {
+        let flying = RadarTarget {
             flying_type: true,
             ..ground
         };
@@ -114,7 +114,7 @@ async fn live_low_altitude_vtol_receives_radar_bonus_after_restart() {
     let map = world.btech.units()[&observer].map.unwrap();
     let before = world.btech.clone();
     let radar = battle_perceive(&world, observer, target).unwrap().unwrap();
-    assert_eq!(radar.channel, BattleDetectionChannel::Radar);
+    assert_eq!(radar.channel, DetectionChannel::Radar);
     assert_eq!(radar.aim_modifier, -3);
     assert!(radar.identified);
     assert_eq!(world.btech, before);
@@ -130,7 +130,7 @@ async fn live_low_altitude_vtol_receives_radar_bonus_after_restart() {
         battle_perceive(&restored, observer, target).unwrap(),
         Some(radar)
     );
-    set_battle_map_perception(&mut restored, map, BattleMapPerceptionFlag::Radar, false).unwrap();
+    set_battle_map_perception(&mut restored, map, MapPerceptionFlag::Radar, false).unwrap();
     assert_eq!(battle_perceive(&restored, observer, target).unwrap(), None);
     set_battle_map_cloud_base(&mut restored, ObjectId(1), map, 0).unwrap();
     let sensors = battle_perceive(&restored, observer, target)
@@ -138,7 +138,7 @@ async fn live_low_altitude_vtol_receives_radar_bonus_after_restart() {
         .unwrap();
     assert_eq!(
         (sensors.channel, sensors.aim_modifier),
-        (BattleDetectionChannel::Sensors, 0)
+        (DetectionChannel::Sensors, 0)
     );
     assert_eq!(
         battle_perception_profile(&restored, observer)
@@ -146,6 +146,6 @@ async fn live_low_altitude_vtol_receives_radar_bonus_after_restart() {
             .radar
             .unwrap()
             .status,
-        BattlePerceptionStatus::Disabled
+        PerceptionStatus::Disabled
     );
 }

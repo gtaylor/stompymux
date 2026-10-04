@@ -1,16 +1,16 @@
 //! Structure inspection with hidden-building perception, durable dice and atomic experience output.
-use super::{BattleChannelMessage, HexCoordinate};
+use super::{DiagnosticMessage, HexCoordinate};
 use crate::{Config, Flag, ObjectId, Scripts, World};
 use anyhow::{Context, Result};
 use serde::Serialize;
 
 /// Captured structure scan output and accepted perception diagnostics.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleBuildingScan {
+pub struct BuildingScan {
     /// Cockpit text; undiscovered and missing structures use the same reply.
     pub text: String,
     /// Accepted perception XP diagnostics to publish with the report.
-    pub experience_messages: Vec<BattleChannelMessage>,
+    pub experience_messages: Vec<DiagnosticMessage>,
 }
 
 /// Resolve a building scan atomically, including any eligible concealment roll and XP award.
@@ -22,7 +22,7 @@ pub fn scan_building(
     pilot: ObjectId,
     coordinate: HexCoordinate,
     now: i64,
-) -> Result<BattleBuildingScan> {
+) -> Result<BuildingScan> {
     scan_with_range(world, observer, pilot, coordinate, now, false)
 }
 
@@ -34,7 +34,7 @@ pub(super) fn scan_with_range(
     coordinate: HexCoordinate,
     now: i64,
     observer_range: bool,
-) -> Result<BattleBuildingScan> {
+) -> Result<BuildingScan> {
     let observer = super::combat_operator::for_owner(world, observer, pilot)?
         .source
         .unit;
@@ -52,9 +52,9 @@ fn resolve(
     coordinate: HexCoordinate,
     now: i64,
     observer_range: bool,
-) -> Result<BattleBuildingScan> {
+) -> Result<BuildingScan> {
     let map = super::scan::check_coordinate(world, observer, pilot, coordinate, observer_range)?;
-    let mut report = BattleBuildingScan {
+    let mut report = BuildingScan {
         text: "The sensors detect no building in the hex!".into(),
         experience_messages: Vec::new(),
     };
@@ -104,7 +104,7 @@ pub fn scan_building_action(
     observer: ObjectId,
     pilot: ObjectId,
     coordinate: HexCoordinate,
-) -> Result<BattleBuildingScan> {
+) -> Result<BuildingScan> {
     action_with_range(scripts, config, observer, pilot, coordinate, false)
 }
 
@@ -116,7 +116,7 @@ pub(super) fn action_with_range(
     pilot: ObjectId,
     coordinate: HexCoordinate,
     observer_range: bool,
-) -> Result<BattleBuildingScan> {
+) -> Result<BuildingScan> {
     let source = super::combat_operator::for_owner(&scripts.world(), observer, pilot)?.source;
     scripts.atomic(|_| {
         let report = scan_with_range(

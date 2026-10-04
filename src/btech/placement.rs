@@ -1,5 +1,5 @@
 //! Administrative battlefield placement, coordinated with world containment.
-use super::BattlePosition;
+use super::Position;
 use crate::{Flag, Kind, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 
@@ -8,7 +8,7 @@ pub fn place_unit(world: &mut World, id: ObjectId, map: ObjectId, x: i64, y: i64
     super::map_transfer::place(
         world,
         id,
-        BattlePosition {
+        Position {
             map,
             x: u16::try_from(x).context("Map coordinates out of bounds")?,
             y: u16::try_from(y).context("Map coordinates out of bounds")?,
@@ -25,7 +25,7 @@ pub fn remove_unit(world: &mut World, id: ObjectId, destination: ObjectId) -> Re
     }
     unit_target(world, id)?;
     ensure!(
-        world.btech.constructed_units()[&id].power() == super::BattlePower::Off,
+        world.btech.constructed_units()[&id].power() == super::Power::Off,
         "Shut down the unit before administrative placement"
     );
     ensure!(
@@ -51,8 +51,7 @@ pub fn remove_unit(world: &mut World, id: ObjectId, destination: ObjectId) -> Re
 pub(super) fn detach_membership(world: &mut World, id: ObjectId) -> Result<()> {
     super::towing::require_detached(world, id)?;
     ensure!(
-        super::scanner::scanner_unit(world, id)
-            .is_some_and(|unit| unit.power == super::BattlePower::Off),
+        super::scanner::scanner_unit(world, id).is_some_and(|unit| unit.power == super::Power::Off),
         "Shut down the unit before administrative placement"
     );
     super::map_slots::depart(&mut world.btech, id);

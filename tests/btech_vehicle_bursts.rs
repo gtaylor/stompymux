@@ -18,7 +18,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse("test", template).unwrap(),
+        VehicleTemplate::parse("test", template).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -38,7 +38,7 @@ fn supply(world: &mut World, id: ObjectId, amounts: &[u16]) {
         .btech
         .rewrite_unit_record(id, |record| {
             record["ammunition"] = serde_json::to_value(amounts).unwrap();
-            record["dice"] = serde_json::to_value(BattleDice::seeded([41; 32])).unwrap();
+            record["dice"] = serde_json::to_value(Dice::seeded([41; 32])).unwrap();
         })
         .unwrap();
 }
@@ -46,26 +46,11 @@ fn supply(world: &mut World, id: ObjectId, amounts: &[u16]) {
 #[tokio::test]
 async fn vehicle_bursts_span_bins_and_persist_single_shot_supply_fallback() {
     for (weapon, flag, mode, rounds) in [
-        ("IS.UltraAC/2", "UltraMode", BattleFireMode::Ultra, 2),
-        ("IS.AC/2", "RapidFire", BattleFireMode::Rapid, 2),
-        (
-            "IS.RotaryAC/2",
-            "Rotary_TwoShot",
-            BattleFireMode::Rotary2,
-            2,
-        ),
-        (
-            "IS.RotaryAC/2",
-            "Rotary_FourShot",
-            BattleFireMode::Rotary4,
-            4,
-        ),
-        (
-            "IS.RotaryAC/2",
-            "Rotary_SixShot",
-            BattleFireMode::Rotary6,
-            6,
-        ),
+        ("IS.UltraAC/2", "UltraMode", FireMode::Ultra, 2),
+        ("IS.AC/2", "RapidFire", FireMode::Rapid, 2),
+        ("IS.RotaryAC/2", "Rotary_TwoShot", FireMode::Rotary2, 2),
+        ("IS.RotaryAC/2", "Rotary_FourShot", FireMode::Rotary4, 4),
+        ("IS.RotaryAC/2", "Rotary_SixShot", FireMode::Rotary6, 6),
     ] {
         let template = include_str!("../game/mechs/Demolisher.toml")
             .replace("IS.AC/20", weapon)
@@ -97,7 +82,7 @@ async fn vehicle_bursts_span_bins_and_persist_single_shot_supply_fallback() {
                 .unwrap();
             assert_eq!(
                 draws[0],
-                BattleAmmunitionDraw {
+                AmmunitionDraw {
                     bin_index: 1,
                     rounds: 1
                 }
@@ -114,7 +99,7 @@ async fn vehicle_bursts_span_bins_and_persist_single_shot_supply_fallback() {
             assert_eq!(world.btech, restored.btech);
             assert_eq!(
                 cycle.fire_mode,
-                if enough { mode } else { BattleFireMode::Normal }
+                if enough { mode } else { FireMode::Normal }
             );
             assert_eq!(
                 cycle.ammunition.iter().map(|draw| draw.rounds).sum::<u16>(),
@@ -138,7 +123,7 @@ async fn vehicle_bursts_span_bins_and_persist_single_shot_supply_fallback() {
             );
             assert_eq!(
                 roll_unit_dice(&mut world, id, 1).unwrap(),
-                [BattleDice::seeded([41; 32]).d6()]
+                [Dice::seeded([41; 32]).d6()]
             );
             persistence::save(&config.database(), &world).await.unwrap();
             assert_eq!(
@@ -172,7 +157,7 @@ async fn vehicle_gatling_caps_damage_by_supply_and_replays_its_single_roll() {
         }
         persistence::save(&config.database(), &world).await.unwrap();
         let mut restored = persistence::load(&config.database()).await.unwrap();
-        let mut dice = BattleDice::seeded([41; 32]);
+        let mut dice = Dice::seeded([41; 32]);
         let damage = dice.d6().min((rounds / 3).max(1) as u8);
         let cycle = reserve_battle_vehicle_weapon(&mut world, id, ObjectId(1), 0, true).unwrap();
         assert_eq!(
@@ -181,7 +166,7 @@ async fn vehicle_gatling_caps_damage_by_supply_and_replays_its_single_roll() {
         );
         assert_eq!(restored.btech, world.btech);
         assert_eq!(cycle.gatling_damage, Some(damage));
-        assert_eq!(cycle.fire_mode, BattleFireMode::Gatling);
+        assert_eq!(cycle.fire_mode, FireMode::Gatling);
         assert_eq!(
             cycle.ammunition[0].rounds,
             (u16::from(damage) * 3).min(rounds)
@@ -211,7 +196,7 @@ async fn vehicle_feed_skips_lost_and_incompatible_bins_and_heat_cycles_need_no_a
         &mut world,
         id,
         VehicleCriticalLocation {
-            section: BattleVehicleSection::Turret,
+            section: VehicleSection::Turret,
             slot: 2,
         },
     )
@@ -231,7 +216,7 @@ async fn vehicle_feed_skips_lost_and_incompatible_bins_and_heat_cycles_need_no_a
     let (_dir, _config, mut world, id) = fixture(&template).await;
     let before = world.btech.vehicles()[&id].ammunition().to_vec();
     let cycle = reserve_battle_vehicle_weapon(&mut world, id, ObjectId(1), 0, true).unwrap();
-    assert_eq!(cycle.fire_mode, BattleFireMode::Heat);
+    assert_eq!(cycle.fire_mode, FireMode::Heat);
     assert!(cycle.ammunition.is_empty());
     assert_eq!(world.btech.vehicles()[&id].ammunition(), before);
 }

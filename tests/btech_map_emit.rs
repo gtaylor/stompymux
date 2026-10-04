@@ -54,11 +54,11 @@ async fn map_broadcast_audience_native_lua_and_restart() {
                 state["contacts"] = serde_json::json!({});
                 state["target_lock"] = serde_json::Value::Null;
                 if mode == "off" {
-                    state["power"] = serde_json::to_value(BattlePower::Off).unwrap();
+                    state["power"] = serde_json::to_value(Power::Off).unwrap();
                 }
                 if mode == "starting" {
                     state["power"] =
-                        serde_json::to_value(BattlePower::Starting { remaining: 10 }).unwrap();
+                        serde_json::to_value(Power::Starting { remaining: 10 }).unwrap();
                 }
                 if mode == "stunned" {
                     let field = if state.get("crew_stun_remaining").is_some() {
@@ -77,7 +77,7 @@ async fn map_broadcast_audience_native_lua_and_restart() {
             });
             if mode == "pilot_recovery" {
                 let mut state = serde_json::to_value(&world.btech).unwrap();
-                state["recoveries"]["1"] = serde_json::json!({"mode":{"kind":"tactical","injuries":1},"remaining":10,"pain_resistance":false,"toughness":false,"dice":BattleDice::seeded([63;32])});
+                state["recoveries"]["1"] = serde_json::json!({"mode":{"kind":"tactical","injuries":1},"remaining":10,"pain_resistance":false,"toughness":false,"dice":Dice::seeded([63;32])});
                 world.btech = serde_json::from_value(state).unwrap();
             }
             // Put the later-created target first to distinguish slot order from object-id order.

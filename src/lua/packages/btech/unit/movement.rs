@@ -126,9 +126,9 @@ pub(super) fn register(lua: &Lua, native: &Table, _world: &SharedWorld) -> mlua:
     let torso = lua.create_function(move |lua, (unit, pilot, direction): (i64, i64, String)| {
         crate::lua::transactions::require(lua)?;
         let direction = match direction.trim().to_ascii_lowercase().as_str() {
-            "l" | "left" => crate::BattleTorso::Left,
-            "r" | "right" => crate::BattleTorso::Right,
-            "c" | "center" => crate::BattleTorso::Center,
+            "l" | "left" => crate::Torso::Left,
+            "r" | "right" => crate::Torso::Right,
+            "c" | "center" => crate::Torso::Center,
             _ => {
                 return Err(error::failure(
                     "btech.operation.failed",
@@ -176,9 +176,9 @@ pub(super) fn register(lua: &Lua, native: &Table, _world: &SharedWorld) -> mlua:
         move |lua, (unit, pilot, mode): (i64, i64, Option<String>)| {
             crate::lua::transactions::require(lua)?;
             let mode = match mode.as_deref().unwrap_or("normal") {
-                "normal" => crate::BattleStandMode::Normal,
-                "anyway" => crate::BattleStandMode::Anyway,
-                "careful" => crate::BattleStandMode::Careful,
+                "normal" => crate::StandMode::Normal,
+                "anyway" => crate::StandMode::Anyway,
+                "careful" => crate::StandMode::Careful,
                 _ => {
                     return Err(error::failure(
                         "btech.operation.failed",

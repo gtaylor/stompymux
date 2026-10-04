@@ -10,7 +10,7 @@ async fn environment_controls_share_flags_rollback_and_restart() {
     for source in firing::templates() {
         let (_dir, config, mut world, unit, _, _) = firing::fixture_with_target(
             &source,
-            Some(BattleWeapon::MediumLaser),
+            Some(Weapon::MediumLaser),
             include_str!("../game/mechs/AS7-D.toml"),
         )
         .await;
@@ -64,7 +64,7 @@ async fn environment_controls_share_flags_rollback_and_restart() {
             let record = &world.btech.maps()[&map];
             assert_eq!(
                 record.environment(),
-                BattleMapEnvironment {
+                MapEnvironment {
                     gravity,
                     temperature,
                     vacuum,
@@ -91,12 +91,12 @@ async fn changed_environment_reaches_live_movement_heat_and_flight() {
     for source in firing::templates() {
         let (_dir, config, mut world, unit, _, _) = firing::fixture_with_target(
             &source,
-            Some(BattleWeapon::MediumLaser),
+            Some(Weapon::MediumLaser),
             include_str!("../game/mechs/AS7-D.toml"),
         )
         .await;
         let map = world.btech.units()[&unit].map.unwrap();
-        let conditions = |gravity, temperature, underground| BattleMapEnvironment {
+        let conditions = |gravity, temperature, underground| MapEnvironment {
             gravity,
             temperature,
             vacuum: false,
@@ -178,7 +178,7 @@ async fn environment_validation_and_authority_are_atomic() {
             &mut world,
             ordinary,
             map,
-            BattleMapEnvironment {
+            MapEnvironment {
                 gravity: 10,
                 temperature: 30,
                 vacuum: true,
@@ -272,7 +272,7 @@ async fn environment_validation_and_authority_are_atomic() {
 async fn in_flight_gravity_changes_resume_without_resetting_the_route() {
     let (_dir, config, mut world, unit, _, _) = firing::fixture_with_target(
         include_str!("../game/mechs/JR7-D.toml"),
-        Some(BattleWeapon::MediumLaser),
+        Some(Weapon::MediumLaser),
         include_str!("../game/mechs/AS7-D.toml"),
     )
     .await;
@@ -285,7 +285,7 @@ async fn in_flight_gravity_changes_resume_without_resetting_the_route() {
             candidate,
             ObjectId(1),
             map,
-            BattleMapEnvironment {
+            MapEnvironment {
                 gravity,
                 temperature: 20,
                 vacuum: false,
@@ -302,7 +302,7 @@ async fn in_flight_gravity_changes_resume_without_resetting_the_route() {
     persistence::save(&config.database(), &world).await.unwrap();
     let mut restored = persistence::load(&config.database()).await.unwrap();
     for candidate in [&mut world, &mut heavy, &mut restored] {
-        advance_battle_jumps(candidate, BattleMovementRules::STANDARD).unwrap();
+        advance_battle_jumps(candidate, MovementRules::STANDARD).unwrap();
         candidate.validate(&config).unwrap();
     }
     assert_eq!(world.btech, restored.btech);

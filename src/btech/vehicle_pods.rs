@@ -3,7 +3,7 @@ use super::*;
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 
-impl BattleVehicle {
+impl Vehicle {
     /// Remaining seconds of the crew's active iNarc removal attempt.
     pub fn pod_removal(&self) -> Option<u8> {
         self.pod_removal
@@ -11,7 +11,7 @@ impl BattleVehicle {
 }
 
 /// Start an eligible crew attempt; ordinary Narc remains attached after completion.
-pub fn begin_pod_removal(world: &mut World, id: ObjectId, pilot: ObjectId) -> Result<BattleNotice> {
+pub fn begin_pod_removal(world: &mut World, id: ObjectId, pilot: ObjectId) -> Result<Notice> {
     super::vehicle_power::controlled(world, id, pilot)?;
     let motion = super::vehicle_driving::readout(world, id, pilot)?;
     let unit = world
@@ -26,7 +26,7 @@ pub fn begin_pod_removal(world: &mut World, id: ObjectId, pilot: ObjectId) -> Re
     ensure!(
         unit.vtol_flight().is_none_or(|flight| matches!(
             flight.phase,
-            BattleVtolFlightPhase::Landed | BattleVtolFlightPhase::Launching { .. }
+            VtolFlightPhase::Landed | VtolFlightPhase::Launching { .. }
         )),
         "You must land before attempting to remove iNarc pods!"
     );
@@ -49,11 +49,11 @@ pub fn begin_pod_removal(world: &mut World, id: ObjectId, pilot: ObjectId) -> Re
     ensure!(
         unit.beacons()
             .values()
-            .any(|kinds| kinds.iter().any(|kind| *kind != BattleBeaconKind::Narc)),
+            .any(|kinds| kinds.iter().any(|kind| *kind != BeaconKind::Narc)),
         "There are no iNarc pods attached to this unit."
     );
     world.btech.vehicles.get_mut(&id).unwrap().pod_removal = Some(60);
-    Ok(BattleNotice {
+    Ok(Notice {
         unit: id,
         text: "You begin to systematically remove all the iNarc pods from your unit.".into(),
     })
@@ -72,7 +72,7 @@ pub fn begin_pod_removal_action(
 }
 
 /// Expire attempts even after shutdown; destroyed vehicles finish silently without removing state.
-pub(super) fn advance(world: &mut World) -> Vec<BattleNotice> {
+pub(super) fn advance(world: &mut World) -> Vec<Notice> {
     let ids: Vec<_> = world
         .btech
         .vehicles()
@@ -99,10 +99,10 @@ pub(super) fn advance(world: &mut World) -> Vec<BattleNotice> {
             continue;
         }
         unit.beacons.retain(|_, kinds| {
-            kinds.retain(|kind| *kind == BattleBeaconKind::Narc);
+            kinds.retain(|kind| *kind == BeaconKind::Narc);
             !kinds.is_empty()
         });
-        notices.push(BattleNotice {
+        notices.push(Notice {
             unit: id,
             text: "You remove all the iNARC pods from your unit.".into(),
         });

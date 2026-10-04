@@ -1,5 +1,5 @@
 //! Long-range terrain, elevation and contact maps with bounded staggered-row text rendering.
-use super::{BattleViewDimensions, BattleViewKind, BattleViewport};
+use super::{ViewDimensions, ViewKind, Viewport};
 use crate::{ObjectId, World};
 use anyhow::{Result, bail};
 use serde::Serialize;
@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 /// Long-range content and visibility modes; fine terrain/elevation masks remain a separate policy.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleLongRangeMode {
+pub enum LongRangeMode {
     Terrain,
     Elevation,
     ColoredElevation,
@@ -20,7 +20,7 @@ pub enum BattleLongRangeMode {
     UnderlyingTerrain,
 }
 
-impl std::str::FromStr for BattleLongRangeMode {
+impl std::str::FromStr for LongRangeMode {
     type Err = anyhow::Error;
     fn from_str(value: &str) -> Result<Self> {
         let lower = value.to_ascii_lowercase();
@@ -51,9 +51,9 @@ impl std::str::FromStr for BattleLongRangeMode {
 
 /// A bounded, already-filtered long-range display for native and Lua clients.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleLongRangeMap {
+pub struct LongRangeMap {
     /// Clipped display geometry.
-    pub viewport: BattleViewport,
+    pub viewport: Viewport,
     /// Styled text with filtered contact markers and terrain.
     pub text: String,
 }
@@ -65,15 +65,15 @@ pub fn long_range_map(
     world: &World,
     observer: ObjectId,
     pilot: ObjectId,
-    mode: BattleLongRangeMode,
+    mode: LongRangeMode,
     arguments: &str,
-    dimensions: BattleViewDimensions,
-) -> Result<BattleLongRangeMap> {
+    dimensions: ViewDimensions,
+) -> Result<LongRangeMap> {
     let viewport = super::resolve_viewport(
         world,
         observer,
         pilot,
-        BattleViewKind::LongRange,
+        ViewKind::LongRange,
         arguments,
         dimensions,
     )?;
@@ -87,13 +87,13 @@ pub(crate) fn from_arguments(
     pilot: ObjectId,
     mode: &str,
     arguments: &str,
-    dimensions: BattleViewDimensions,
-) -> Result<BattleLongRangeMap> {
+    dimensions: ViewDimensions,
+) -> Result<LongRangeMap> {
     let viewport = super::resolve_viewport(
         world,
         observer,
         pilot,
-        BattleViewKind::LongRange,
+        ViewKind::LongRange,
         arguments,
         dimensions,
     )?;
@@ -105,19 +105,16 @@ fn render_viewport(
     world: &World,
     observer: ObjectId,
     pilot: ObjectId,
-    mode: BattleLongRangeMode,
-    viewport: BattleViewport,
-) -> Result<BattleLongRangeMap> {
+    mode: LongRangeMode,
+    viewport: Viewport,
+) -> Result<LongRangeMap> {
     let observer = super::combat_operator::for_owner(world, observer, pilot)?
         .source
         .unit;
     let map = &world.btech.maps()[&viewport.map];
     let ansi = world.objects[&pilot].flags.contains(crate::Flag::Ansi);
     let mut occupants = Vec::new();
-    if matches!(
-        mode,
-        BattleLongRangeMode::Units | BattleLongRangeMode::VisibleUnits
-    ) {
+    if matches!(mode, LongRangeMode::Units | LongRangeMode::VisibleUnits) {
         let mut reader = None;
         for id in super::map_slots::all_unit_order(world, viewport.map)? {
             let unit = super::scanner::scanner_unit(world, id).expect("placed map unit");
@@ -174,9 +171,9 @@ fn render_viewport(
             if (map.has_flag(super::MapFlag::Dark)
                 || matches!(
                     mode,
-                    BattleLongRangeMode::VisibleTerrain
-                        | BattleLongRangeMode::VisibleElevation
-                        | BattleLongRangeMode::VisibleUnits
+                    LongRangeMode::VisibleTerrain
+                        | LongRangeMode::VisibleElevation
+                        | LongRangeMode::VisibleUnits
                 ))
                 && !viewer.visible(super::HexCoordinate { x, y })?
             {
@@ -186,33 +183,31 @@ fn render_viewport(
                 });
                 continue;
             }
-            let hex = if mode == BattleLongRangeMode::UnderlyingTerrain {
+            let hex = if mode == LongRangeMode::UnderlyingTerrain {
                 map.base_hex(i64::from(x), i64::from(y))?
             } else {
                 map.hex(i64::from(x), i64::from(y))?
             };
             let glyph = match mode {
-                BattleLongRangeMode::Elevation
-                | BattleLongRangeMode::ColoredElevation
-                | BattleLongRangeMode::VisibleElevation => {
-                    match super::map_style::shown_height(hex) {
-                        0 if matches!(
-                            mode,
-                            BattleLongRangeMode::Elevation | BattleLongRangeMode::VisibleElevation
-                        ) =>
-                        {
-                            ' '
-                        }
-                        elevation => stompymux_map::height_glyph(elevation),
+                LongRangeMode::Elevation
+                | LongRangeMode::ColoredElevation
+                | LongRangeMode::VisibleElevation => match super::map_style::shown_height(hex) {
+                    0 if matches!(
+                        mode,
+                        LongRangeMode::Elevation | LongRangeMode::VisibleElevation
+                    ) =>
+                    {
+                        ' '
                     }
-                }
+                    elevation => stompymux_map::height_glyph(elevation),
+                },
                 _ => hex.terrain().symbol(),
             };
-            let colored = mode == BattleLongRangeMode::ColoredElevation
+            let colored = mode == LongRangeMode::ColoredElevation
                 || (ansi
                     && !matches!(
                         mode,
-                        BattleLongRangeMode::Elevation | BattleLongRangeMode::VisibleElevation
+                        LongRangeMode::Elevation | LongRangeMode::VisibleElevation
                     ));
             cells.push(Cell {
                 glyph,
@@ -224,7 +219,7 @@ fn render_viewport(
             });
         }
     }
-    Ok(BattleLongRangeMap {
+    Ok(LongRangeMap {
         text: render(viewport, &cells),
         viewport,
     })
@@ -266,7 +261,7 @@ fn append_cell(text: &mut String, active: &mut &'static str, cell: Cell) {
 }
 
 /// Render staggered hex rows beneath the cockpit's fixed three coordinate-label rows.
-fn render(viewport: BattleViewport, cells: &[Cell]) -> String {
+fn render(viewport: Viewport, cells: &[Cell]) -> String {
     let width = usize::from(viewport.width);
     let last_x = viewport.origin.x + i32::from(viewport.width) - 1;
     let labels: Vec<_> = (viewport.origin.x..=last_x)
@@ -343,22 +338,22 @@ pub(crate) fn command(
 fn unit_glyph(world: &World, id: ObjectId) -> char {
     if let Some(unit) = world.btech.vehicles().get(&id) {
         return match unit.definition().movement {
-            super::BattleVehicleMovement::Tracked => 't',
-            super::BattleVehicleMovement::Wheeled => 'w',
-            super::BattleVehicleMovement::Hover => 'h',
-            super::BattleVehicleMovement::Vtol => 'v',
-            super::BattleVehicleMovement::Stationary => 'u',
+            super::VehicleMovement::Tracked => 't',
+            super::VehicleMovement::Wheeled => 'w',
+            super::VehicleMovement::Hover => 'h',
+            super::VehicleMovement::Vtol => 'v',
+            super::VehicleMovement::Stationary => 'u',
         };
     }
     match world.btech.constructed_units()[&id].chassis() {
-        super::BattleMechChassis::Biped => 'b',
-        super::BattleMechChassis::Quad => 'q',
+        super::MechChassis::Biped => 'b',
+        super::MechChassis::Quad => 'q',
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::BattleLongRangeMode as Mode;
+    use super::LongRangeMode as Mode;
 
     /// Equal-position winners depend on intervening positional exchanges, not self priority.
     #[test]
@@ -394,7 +389,7 @@ mod tests {
     /// Large coordinates keep three heading rows without shifting neighboring labels or hexes.
     #[test]
     fn coordinate_labels_keep_reference_three_row_layout() {
-        use super::{BattleViewport, Cell, render};
+        use super::{Cell, Viewport, render};
         use crate::{ObjectId, btech::HexCoordinate};
 
         for (x, labels) in [
@@ -404,7 +399,7 @@ mod tests {
             (9998, ["9911", "9900", "9900"]),
         ] {
             let origin = HexCoordinate { x, y: 7 };
-            let viewport = BattleViewport {
+            let viewport = Viewport {
                 map: ObjectId(1),
                 requested_center: origin,
                 origin,

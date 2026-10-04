@@ -33,7 +33,7 @@ async fn targeted_radio_mixed_pairs_share_visibility_delivery_and_restart() {
                 (target_template, listener, 1),
             ] {
                 let id = world.create(&config, "Radio unit".into(), Kind::Thing);
-                BattleUnitTemplate::parse("test", template)
+                UnitTemplate::parse("test", template)
                     .unwrap()
                     .create(&mut world, id)
                     .unwrap();
@@ -125,7 +125,7 @@ async fn targeted_radio_mixed_pairs_share_visibility_delivery_and_restart() {
                 report
             );
             fact(&mut world, target, |state| {
-                state["power"] = serde_json::to_value(BattlePower::Off).unwrap()
+                state["power"] = serde_json::to_value(Power::Off).unwrap()
             });
             assert_eq!(
                 resolve_targeted_radio(&world, sender, ObjectId(1), target, "Hello")
@@ -135,7 +135,7 @@ async fn targeted_radio_mixed_pairs_share_visibility_delivery_and_restart() {
                 1
             );
             fact(&mut world, sender, |state| {
-                state["power"] = serde_json::to_value(BattlePower::Off).unwrap()
+                state["power"] = serde_json::to_value(Power::Off).unwrap()
             });
             assert!(resolve_targeted_radio(&world, sender, ObjectId(1), target, "Hello").is_err());
         }
@@ -176,7 +176,7 @@ async fn channel_radio_rotates_mixed_transmitters_relays_and_receivers() {
             set_battle_character(
                 &mut world,
                 pilot,
-                BattleCharacter {
+                Character {
                     bruise: 0,
                     lethal: 0,
                     build: 3,
@@ -189,7 +189,7 @@ async fn channel_radio_rotates_mixed_transmitters_relays_and_receivers() {
             .unwrap();
             support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
             let id = world.create(&config, "Radio unit".into(), Kind::Thing);
-            BattleUnitTemplate::parse("test", &templates[(index + rotation) % templates.len()])
+            UnitTemplate::parse("test", &templates[(index + rotation) % templates.len()])
                 .unwrap()
                 .create(&mut world, id)
                 .unwrap();
@@ -213,7 +213,7 @@ async fn channel_radio_rotates_mixed_transmitters_relays_and_receivers() {
                 id,
                 pilot,
                 0,
-                BattleRadioMode::parse("DEI", caps).unwrap(),
+                RadioMode::parse("DEI", caps).unwrap(),
             )
             .unwrap();
             set_radio_title(&mut world, id, pilot, 0, "Mixed radio").unwrap();
@@ -245,7 +245,7 @@ async fn channel_radio_rotates_mixed_transmitters_relays_and_receivers() {
         assert!(received.text.contains("R-path:"));
         let mut disabled = world.clone();
         fact(&mut disabled, relay, |state| {
-            state["power"] = serde_json::to_value(BattlePower::Off).unwrap()
+            state["power"] = serde_json::to_value(Power::Off).unwrap()
         });
         assert!(
             !resolve_digital_radio(&disabled, sender, 0, "Hello")
@@ -289,9 +289,9 @@ async fn channel_radio_rotates_mixed_transmitters_relays_and_receivers() {
             &mut mined,
             map,
             0,
-            Some(BattleMinefield {
+            Some(Minefield {
                 coordinate: HexCoordinate { x: 0, y: 0 },
-                kind: BattleMineKind::Command,
+                kind: MineKind::Command,
                 strength: 0,
                 extra: 42,
                 owner: ObjectId(1),
@@ -321,7 +321,7 @@ async fn channel_radio_rotates_mixed_transmitters_relays_and_receivers() {
                 .is_empty()
         );
         // All receive a broadcast; only the distant receiver spends interference dice.
-        set_radio_mode(&mut world, sender, pilots[0], 0, BattleRadioMode::default()).unwrap();
+        set_radio_mode(&mut world, sender, pilots[0], 0, RadioMode::default()).unwrap();
         let analog_scripts = Scripts::new(
             &config,
             std::rc::Rc::new(std::cell::RefCell::new(world.clone())),
@@ -378,7 +378,7 @@ async fn channel_radio_rotates_mixed_transmitters_relays_and_receivers() {
             receiver,
             pilots[2],
             0,
-            BattleRadioMode::parse("S", capabilities).unwrap(),
+            RadioMode::parse("S", capabilities).unwrap(),
         )
         .unwrap();
         let mut scanned = false;

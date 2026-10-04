@@ -4,7 +4,7 @@
 // lua-types-begin btech 00536
 //|---Apply one immediate repair with operation from btech.repair.operations.
 //|---@param unit DbRef|Object
-//|---@param repair BattleImmediateRepair
+//|---@param repair ImmediateRepair
 //|function btech_repair.apply(unit, repair) end
 // lua-types-end
 

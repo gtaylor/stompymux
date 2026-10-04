@@ -22,7 +22,7 @@ async fn fixture(
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         if index < 2 {
             let mut definition =
-                BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
                     .unwrap();
             definition
                 .attributes
@@ -32,7 +32,7 @@ async fn fixture(
             create_battle_vehicle(
                 &mut world,
                 id,
-                BattleVehicleTemplate::parse("test", vehicle).unwrap(),
+                VehicleTemplate::parse("test", vehicle).unwrap(),
             )
             .unwrap();
         }
@@ -44,15 +44,15 @@ async fn fixture(
 }
 
 /// Assign scenario power without introducing crew actions into sensor tests.
-fn power(world: &mut World, ids: &[ObjectId], value: BattlePower) {
+fn power(world: &mut World, ids: &[ObjectId], value: Power) {
     for id in ids {
         world.btech.set_unit_power(*id, value).unwrap();
     }
 }
 
 /// Explicit team and perception facts for the contact domain action.
-fn rules(acquire: bool) -> BattleContactRules {
-    BattleContactRules {
+fn rules(acquire: bool) -> ContactRules {
+    ContactRules {
         hostile: false,
         hidden: false,
         perception: 7,
@@ -69,18 +69,18 @@ async fn vehicle_contacts_acquire_retain_lose_and_replay_without_extra_rolls() {
         include_str!("../game/mechs/Demolisher.toml"),
     )
     .await;
-    power(&mut world, &[vehicle], BattlePower::Running);
-    set_battle_map_visibility(&mut world, map, BattleLight::Day, 30).unwrap();
+    power(&mut world, &[vehicle], Power::Running);
+    set_battle_map_visibility(&mut world, map, Light::Day, 30).unwrap();
     for target in [mech, other] {
         let before = world.btech.clone();
         let update = update_battle_contact(&mut world, vehicle, target, rules(false)).unwrap();
-        assert_eq!(update.transition, BattleContactTransition::Unseen);
+        assert_eq!(update.transition, ContactTransition::Unseen);
         assert_eq!(world.btech, before);
         let update = update_battle_contact(&mut world, vehicle, target, rules(true)).unwrap();
-        assert_eq!(update.transition, BattleContactTransition::Acquired);
+        assert_eq!(update.transition, ContactTransition::Acquired);
         assert_eq!(
             update.detection,
-            Some(BattleDetection {
+            Some(Detection {
                 detected: true,
                 threshold: 0,
                 roll: None,
@@ -89,17 +89,16 @@ async fn vehicle_contacts_acquire_retain_lose_and_replay_without_extra_rolls() {
         assert!(world.btech.vehicles()[&vehicle].contacts()[&target].identified);
         let before = world.btech.clone();
         let update = update_battle_contact(&mut world, vehicle, target, rules(false)).unwrap();
-        assert_eq!(update.transition, BattleContactTransition::Retained);
+        assert_eq!(update.transition, ContactTransition::Retained);
         assert_eq!(update.detection, None);
         assert_eq!(world.btech, before);
         persistence::save(&config.database(), &world).await.unwrap();
         let mut restored = persistence::load(&config.database()).await.unwrap();
         assert_eq!(restored.btech, world.btech);
-        set_battle_map_perception(&mut restored, map, BattleMapPerceptionFlag::Sensors, false)
-            .unwrap();
-        set_battle_map_visibility(&mut restored, map, BattleLight::Day, 2).unwrap();
+        set_battle_map_perception(&mut restored, map, MapPerceptionFlag::Sensors, false).unwrap();
+        set_battle_map_visibility(&mut restored, map, Light::Day, 2).unwrap();
         let update = update_battle_contact(&mut restored, vehicle, target, rules(true)).unwrap();
-        assert_eq!(update.transition, BattleContactTransition::Lost);
+        assert_eq!(update.transition, ContactTransition::Lost);
         assert_eq!(update.detection, None);
         assert!(
             !restored.btech.vehicles()[&vehicle]
@@ -114,7 +113,7 @@ async fn vehicle_contacts_acquire_retain_lose_and_replay_without_extra_rolls() {
     let before = world.btech.clone();
     assert!(update_battle_contact(&mut world, vehicle, vehicle, rules(true)).is_err());
     assert_eq!(world.btech, before);
-    power(&mut world, &[vehicle], BattlePower::Off);
+    power(&mut world, &[vehicle], Power::Off);
     let before = world.btech.clone();
     assert!(update_battle_contact(&mut world, vehicle, mech, rules(true)).is_err());
     assert_eq!(world.btech, before);
@@ -134,16 +133,16 @@ async fn mixed_contacts_follow_placement_removal_and_database_purge() {
     for id in ids {
         place_battle_unit(&mut world, id, map, 0, 0).unwrap();
     }
-    power(&mut world, &ids, BattlePower::Running);
+    power(&mut world, &ids, Power::Running);
     for (observer, target) in [(a, c), (c, a), (c, d), (d, c), (d, b)] {
         assert_eq!(
             update_battle_contact(&mut world, observer, target, rules(true))
                 .unwrap()
                 .transition,
-            BattleContactTransition::Acquired
+            ContactTransition::Acquired
         );
     }
-    power(&mut world, &ids, BattlePower::Off);
+    power(&mut world, &ids, Power::Off);
     place_battle_unit(&mut world, c, map, 0, 1).unwrap();
     assert!(world.btech.constructed_units()[&a].contacts().is_empty());
     assert!(world.btech.vehicles()[&c].contacts().is_empty());
@@ -151,10 +150,10 @@ async fn mixed_contacts_follow_placement_removal_and_database_purge() {
     assert!(world.btech.vehicles()[&d].contacts().contains_key(&b));
     remove_battle_unit(&mut world, b, ObjectId(config.home())).unwrap();
     assert!(world.btech.vehicles()[&d].contacts().is_empty());
-    power(&mut world, &[a, d], BattlePower::Running);
+    power(&mut world, &[a, d], Power::Running);
     update_battle_contact(&mut world, a, d, rules(true)).unwrap();
     update_battle_contact(&mut world, d, a, rules(true)).unwrap();
-    power(&mut world, &[a, d], BattlePower::Off);
+    power(&mut world, &[a, d], Power::Off);
     world.objects.get_mut(&a).unwrap().flags.insert(Flag::Going);
     persistence::save(&config.database(), &world).await.unwrap();
     persistence::repair(&config.database(), config.database.busy_timeout_ms, |raw| {
@@ -175,7 +174,7 @@ async fn vehicle_contact_snapshots_reject_invalid_references() {
         include_str!("../game/mechs/Demolisher.toml"),
     )
     .await;
-    let good = BattleContact { identified: true };
+    let good = Contact { identified: true };
     let mut saved = serde_json::to_value(&world.btech).unwrap();
     saved["vehicles"][c.0.to_string()]["contacts"][a.0.to_string()] =
         serde_json::to_value(good).unwrap();

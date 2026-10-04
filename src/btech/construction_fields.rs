@@ -33,12 +33,12 @@ pub(super) fn set_movement(
     tsm_bonus: bool,
 ) -> Result<()> {
     if let Some(unit) = world.btech.constructed.get_mut(&id) {
-        let chassis = super::BattleMechChassis::parse(value.trim())?;
+        let chassis = super::MechChassis::parse(value.trim())?;
         unit.set_chassis(chassis);
         unit.validate()?;
         unit.mass()?;
     } else {
-        let movement = super::BattleVehicleMovement::parse(value.trim())?;
+        let movement = super::VehicleMovement::parse(value.trim())?;
         let unit = world
             .btech
             .vehicles

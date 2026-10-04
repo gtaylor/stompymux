@@ -4,7 +4,7 @@
 //! the world: who else claims its pilot or map slot, whether its locks and contacts point
 //! at units on its battlefield, and whether the world's objects and registrations agree
 //! with it.
-use super::{BattleUnitRef, BtechState, validation_contacts::Positions};
+use super::{BtechState, UnitRef, validation_contacts::Positions};
 use crate::{Kind, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use std::collections::BTreeSet;
@@ -27,7 +27,7 @@ impl BtechState {
         &self,
         world: &World,
         id: ObjectId,
-        unit: BattleUnitRef<'_>,
+        unit: UnitRef<'_>,
         towed: bool,
         roster: &mut UnitRoster,
         contact_positions: Option<&Positions>,
@@ -74,7 +74,7 @@ impl BtechState {
                 .with_context(|| format!("{noun} references missing map"))?;
             let (x, y) = (i64::from(position.x), i64::from(position.y));
             match unit {
-                BattleUnitRef::Mech(mech) => {
+                UnitRef::Mech(mech) => {
                     map.hex(x, y)?;
                     if let Some(flight) = mech.flight() {
                         ensure!(
@@ -88,7 +88,7 @@ impl BtechState {
                         flight.validate_on_map(map)?;
                     }
                 }
-                BattleUnitRef::Vehicle(vehicle) => {
+                UnitRef::Vehicle(vehicle) => {
                     let tile = map.base_hex(x, y)?;
                     ensure!(
                         !vehicle.under_bridge()
@@ -106,8 +106,8 @@ impl BtechState {
             );
         }
         let other_chassis = match unit {
-            BattleUnitRef::Mech(_) => self.vehicles.contains_key(&id),
-            BattleUnitRef::Vehicle(_) => self.constructed.contains_key(&id),
+            UnitRef::Mech(_) => self.vehicles.contains_key(&id),
+            UnitRef::Vehicle(_) => self.constructed.contains_key(&id),
         };
         ensure!(
             !other_chassis && !self.maps.contains_key(&id),

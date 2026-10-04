@@ -21,4 +21,4 @@ btech.unit.engine(unit)
 
 ## Returns
 
-- `BattleEngine engine`
+- `Engine engine`

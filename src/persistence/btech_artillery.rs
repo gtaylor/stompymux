@@ -5,8 +5,8 @@
 use super::btech_deadlines::Clock;
 use super::write::{Cell, Fields, Rows, purge_rows, sync_changed_rows};
 use crate::{
-    BattleArtilleryFlight, BattleArtilleryMode, BattleArtilleryShot, BattleWeapon, HexCoordinate,
-    ObjectId, StoredMap, World,
+    ArtilleryFlight, ArtilleryMode, ArtilleryShot, HexCoordinate, ObjectId, StoredMap, Weapon,
+    World,
 };
 use anyhow::{Context, Result, bail};
 use sqlx::{Row, SqliteConnection, sqlite::SqliteRow};
@@ -26,28 +26,28 @@ const COLUMNS: &[&str] = &[
 ];
 
 /// Stored code for a payload.
-fn mode_code(mode: BattleArtilleryMode) -> i64 {
+fn mode_code(mode: ArtilleryMode) -> i64 {
     match mode {
-        BattleArtilleryMode::Standard => 0,
-        BattleArtilleryMode::Cluster => 1,
-        BattleArtilleryMode::Smoke => 2,
-        BattleArtilleryMode::Mine => 3,
+        ArtilleryMode::Standard => 0,
+        ArtilleryMode::Cluster => 1,
+        ArtilleryMode::Smoke => 2,
+        ArtilleryMode::Mine => 3,
     }
 }
 
 /// Payload for a stored code.
-fn mode_from_code(code: i64) -> Result<BattleArtilleryMode> {
+fn mode_from_code(code: i64) -> Result<ArtilleryMode> {
     Ok(match code {
-        0 => BattleArtilleryMode::Standard,
-        1 => BattleArtilleryMode::Cluster,
-        2 => BattleArtilleryMode::Smoke,
-        3 => BattleArtilleryMode::Mine,
+        0 => ArtilleryMode::Standard,
+        1 => ArtilleryMode::Cluster,
+        2 => ArtilleryMode::Smoke,
+        3 => ArtilleryMode::Mine,
         other => bail!("Unknown artillery mode {other}"),
     })
 }
 
 /// Owned column values for one shot, relative to the saved clock.
-fn encode(shot: &BattleArtilleryShot, clock: Clock) -> Fields {
+fn encode(shot: &ArtilleryShot, clock: Clock) -> Fields {
     let flight = &shot.flight;
     Fields::from([
         ("shooter_dbref", Cell::Integer(shot.shooter.0)),
@@ -66,7 +66,7 @@ fn encode(shot: &BattleArtilleryShot, clock: Clock) -> Fields {
 }
 
 /// Rebuild one shot, revalidating its flight.
-fn decode(entry: &SqliteRow, clock: Clock) -> Result<BattleArtilleryShot> {
+fn decode(entry: &SqliteRow, clock: Clock) -> Result<ArtilleryShot> {
     let coordinate = |x: &str, y: &str| -> Result<HexCoordinate> {
         Ok(HexCoordinate {
             x: i32::try_from(entry.try_get::<i64, _>(x)?)?,
@@ -76,11 +76,11 @@ fn decode(entry: &SqliteRow, clock: Clock) -> Result<BattleArtilleryShot> {
     let part: i64 = entry.try_get("weapon_part_id")?;
     let weapon = i32::try_from(part)
         .ok()
-        .and_then(BattleWeapon::from_part_id)
+        .and_then(Weapon::from_part_id)
         .with_context(|| format!("Unknown artillery weapon {part}"))?;
-    Ok(BattleArtilleryShot {
+    Ok(ArtilleryShot {
         shooter: ObjectId(entry.try_get("shooter_dbref")?),
-        flight: BattleArtilleryFlight::from_saved(
+        flight: ArtilleryFlight::from_saved(
             coordinate("origin_x", "origin_y")?,
             coordinate("target_x", "target_y")?,
             weapon,
@@ -101,7 +101,7 @@ pub(super) async fn load(
         "SELECT map_dbref,shot_id,{} FROM btech_artillery ORDER BY map_dbref,shot_id",
         COLUMNS.join(",")
     );
-    let mut queues: BTreeMap<ObjectId, BTreeMap<u32, BattleArtilleryShot>> = BTreeMap::new();
+    let mut queues: BTreeMap<ObjectId, BTreeMap<u32, ArtilleryShot>> = BTreeMap::new();
     for entry in sqlx::query(sqlx::AssertSqlSafe(query))
         .fetch_all(&mut *c)
         .await?
@@ -122,7 +122,7 @@ pub(super) async fn load(
 }
 
 /// Rows for one map's queue, relative to `clock`.
-fn rows(shots: &BTreeMap<u32, BattleArtilleryShot>, clock: Clock) -> Rows {
+fn rows(shots: &BTreeMap<u32, ArtilleryShot>, clock: Clock) -> Rows {
     shots
         .iter()
         .map(|(&shot, record)| (vec![i64::from(shot)], encode(record, clock)))

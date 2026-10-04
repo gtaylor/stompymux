@@ -21,4 +21,4 @@ btech.unit.state(dbref)
 
 ## Returns
 
-- `BattleUnitState|BattleVehicleState`
+- `UnitState|VehicleState`

@@ -7,14 +7,14 @@ use anyhow::{Context, Result};
 pub(super) struct DirectEffectRequest {
     pub shooter: ObjectId,
     pub target: ObjectId,
-    pub weapon: BattleWeapon,
-    pub ammunition: BattleAmmunitionMode,
-    pub fire_mode: BattleFireMode,
+    pub weapon: Weapon,
+    pub ammunition: AmmunitionMode,
+    pub fire_mode: FireMode,
     pub hit: bool,
     pub launched: bool,
     pub intercepted: bool,
-    pub hit_rules: BattleHitRules,
-    pub vehicle_impact: BattleVehicleImpactRules,
+    pub hit_rules: HitRules,
+    pub vehicle_impact: VehicleImpactRules,
     pub hit_arc_mode: i64,
     pub woods_damage: bool,
     pub range_damage: bool,
@@ -29,11 +29,11 @@ pub(super) struct DirectEffectRequest {
 /// Immediate attachment or heat changes, separate from ordinary damage packets.
 #[derive(Default)]
 pub(super) struct DirectEffects {
-    pub narc: Option<BattleNarcReport<BattleUnitSection>>,
+    pub narc: Option<NarcReport<UnitSection>>,
     pub cooling: Option<f64>,
     pub heat_transfer: u8,
-    pub woods: Option<BattleWoodsAbsorption>,
-    pub missed_terrain: Option<BattleWoodlandImpact>,
+    pub woods: Option<WoodsAbsorption>,
+    pub missed_terrain: Option<WoodlandImpact>,
 }
 
 /// Apply effects inside the caller's unpublished candidate, preserving normal pod and heat ordering.
@@ -65,7 +65,7 @@ pub(super) fn resolve(world: &mut World, request: DirectEffectRequest) -> Result
                 request.hit_rules,
                 request.hit_arc_mode,
             )?
-            .map_section(BattleUnitSection::Mech)
+            .map_section(UnitSection::Mech)
         });
     }
     if !request.hit {
@@ -88,20 +88,20 @@ pub(super) fn resolve(world: &mut World, request: DirectEffectRequest) -> Result
             };
             report.missed_terrain = Some(resolve_woodland_attack(
                 world,
-                BattleWoodlandAttack {
+                WoodlandAttack {
                     shooter: request.shooter,
                     coordinate,
                     weapon: request.weapon,
                     ammunition: request.ammunition,
                     damage,
-                    intent: BattleWoodlandIntent::Incidental,
+                    intent: WoodlandIntent::Incidental,
                 },
             )?);
         }
         return Ok(report);
     }
-    let cooling = request.weapon == BattleWeapon::CoolantGun;
-    if !cooling && request.fire_mode != BattleFireMode::Heat {
+    let cooling = request.weapon == Weapon::CoolantGun;
+    if !cooling && request.fire_mode != FireMode::Heat {
         return Ok(report);
     }
     if request.woods_damage {
@@ -137,12 +137,12 @@ fn terrain_damage(world: &mut World, request: &DirectEffectRequest) -> Result<u1
             range_damage: request.range_damage,
             damage_penalty: request.damage_penalty,
             weapon: request.weapon,
-            ammunition: if request.ammunition == BattleAmmunitionMode::Cluster {
-                BattleAmmunitionMode::Normal
+            ammunition: if request.ammunition == AmmunitionMode::Cluster {
+                AmmunitionMode::Normal
             } else {
                 request.ammunition
             },
-            fire_mode: BattleFireMode::Normal,
+            fire_mode: FireMode::Normal,
             gatling_damage: request.gatling_damage,
             distance: Some(request.distance),
             glancing: false,
@@ -162,26 +162,26 @@ pub(super) fn thermal_notices(
     target: ObjectId,
     cooling: Option<f64>,
     heat_transfer: u8,
-) -> Vec<BattleNotice> {
+) -> Vec<Notice> {
     let mut notices = Vec::new();
     if cooling.is_some() {
         if shooter != target {
-            notices.push(BattleNotice {
+            notices.push(Notice {
                 unit: shooter,
                 text: "[fg=cyan]You hit with the stream of coolant!![reset]".into(),
             });
         }
-        notices.push(BattleNotice {
+        notices.push(Notice {
             unit: target,
             text: "[fg=cyan]Coolant washes over your systems!![reset]".into(),
         });
     }
     if heat_transfer > 0 {
-        notices.push(BattleNotice {
+        notices.push(Notice {
             unit: target,
             text: "The flaming plasma sprays all over you!".into(),
         });
-        notices.push(BattleNotice {
+        notices.push(Notice {
             unit: shooter,
             text: "You cover your target in flaming plasma!".into(),
         });

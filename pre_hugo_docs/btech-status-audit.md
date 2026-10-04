@@ -8,8 +8,8 @@ acceptance work. Projection does not close the setter contract.
 
 | Letters | Reference meaning | Rust authority / acceptance requirement |
 | --- | --- | --- |
-| a | VTOL landed | `BattleVtolFlightPhase`; include launch countdown and distinguish a completed landing from falling. |
-| b, c, k | Torso right/left, flipped arms | `BattleFacing`; preserve `BattleTorso::Both`, rather than reducing it to its effective angle. |
+| a | VTOL landed | `VtolFlightPhase`; include launch countdown and distinguish a completed landing from falling. |
+| b, c, k | Torso right/left, flipped arms | `Facing`; preserve `Torso::Both`, rather than reducing it to its effective angle. |
 | d, f | Started, destroyed | Power and chassis destruction services; do not infer destruction from power being off. |
 | g, i | Jumping, DFA | The admitted jump flight and its DFA target; orbital descent is a separate lifecycle. |
 | h | Fallen | Mech posture is available. Audit VTOL crash and rotor-loss transitions before choosing their mapping. |

@@ -23,4 +23,4 @@ btech.weapon.set_battle_value(actor, name, value)
 
 ## Returns
 
-- `BattleWeaponValues`
+- `WeaponValues`

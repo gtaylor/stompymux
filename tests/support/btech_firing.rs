@@ -25,7 +25,7 @@ pub fn edit(world: &mut World, id: ObjectId, change: impl FnOnce(&mut serde_json
 /// A configurable recipient supports both ground and airborne target admission cases.
 pub async fn fixture_with_target(
     source: &str,
-    weapon: Option<BattleWeapon>,
+    weapon: Option<Weapon>,
     target_source: &str,
 ) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId, usize) {
     fixture_with_computer(source, weapon, target_source, false).await
@@ -34,7 +34,7 @@ pub async fn fixture_with_target(
 /// Optional authored computer linkage exercises aim and per-packet guidance with the same loadout.
 pub async fn fixture_with_computer(
     source: &str,
-    weapon: Option<BattleWeapon>,
+    weapon: Option<Weapon>,
     target_source: &str,
     computer: bool,
 ) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId, usize) {
@@ -44,7 +44,7 @@ pub async fn fixture_with_computer(
 /// Supply an injected weapon with an optional authored ammunition type.
 pub async fn fixture_with_supply(
     source: &str,
-    weapon: Option<BattleWeapon>,
+    weapon: Option<Weapon>,
     target_source: &str,
     computer: bool,
     ammunition_flag: Option<&str>,
@@ -67,7 +67,7 @@ pub fn supply_fixture_on(
     mut world: World,
     config: &Config,
     source: &str,
-    weapon: Option<BattleWeapon>,
+    weapon: Option<Weapon>,
     target_source: &str,
     computer: bool,
     ammunition_flag: Option<&str>,
@@ -81,21 +81,18 @@ pub fn supply_fixture_on(
     )
     .unwrap();
     crate::seed_object_dice(&mut world, map, crate::FIXTURE_DICE_SEED);
-    let mut template = BattleUnitTemplate::parse("shooter", source).unwrap();
+    let mut template = UnitTemplate::parse("shooter", source).unwrap();
     if let Some(weapon) = weapon {
         let (section, count) = match &mut template {
-            BattleUnitTemplate::Mech(definition) => (
+            UnitTemplate::Mech(definition) => (
                 definition
                     .sections
-                    .get_mut(&BattleSection::LeftTorso)
+                    .get_mut(&MechSection::LeftTorso)
                     .unwrap(),
                 weapon.profile().critical_slots,
             ),
-            BattleUnitTemplate::Vehicle(definition) => (
-                definition
-                    .sections
-                    .get_mut(&BattleVehicleSection::Front)
-                    .unwrap(),
+            UnitTemplate::Vehicle(definition) => (
+                definition.sections.get_mut(&VehicleSection::Front).unwrap(),
                 1,
             ),
         };
@@ -142,7 +139,7 @@ pub fn supply_fixture_on(
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     }
     template.create(&mut world, shooter).unwrap();
-    BattleUnitTemplate::parse("target", target_source)
+    UnitTemplate::parse("target", target_source)
         .unwrap()
         .create(&mut world, target)
         .unwrap();
@@ -153,8 +150,8 @@ pub fn supply_fixture_on(
     place_battle_unit(&mut world, target, map, 0, 10).unwrap();
     for id in [shooter, target] {
         edit(&mut world, id, |state| {
-            state["power"] = serde_json::to_value(BattlePower::Running).unwrap();
-            state["dice"] = serde_json::to_value(BattleDice::seeded([42; 32])).unwrap();
+            state["power"] = serde_json::to_value(Power::Running).unwrap();
+            state["dice"] = serde_json::to_value(Dice::seeded([42; 32])).unwrap();
         });
     }
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(shooter);

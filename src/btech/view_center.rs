@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 /// Hardware radius used to admit a display center.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleViewKind {
+pub enum ViewKind {
     Tactical,
     LongRange,
 }
@@ -15,7 +15,7 @@ pub enum BattleViewKind {
 /// A view can follow the cockpit, an acquired contact or a relative compass projection.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
-pub enum BattleViewCenter {
+pub enum ViewCenter {
     OwnUnit,
     Contact { target: ObjectId },
     Projection { bearing: i32, distance: f64 },
@@ -23,7 +23,7 @@ pub enum BattleViewCenter {
 
 /// Resolved display center; projected coordinates may lie outside the map before viewport clipping.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-pub struct BattleViewPosition {
+pub struct ViewPosition {
     /// Battlefield containing the scanner.
     pub map: ObjectId,
     /// Requested center before the renderer clips the viewport to map bounds.
@@ -39,9 +39,9 @@ pub fn resolve_view_center(
     world: &World,
     observer: ObjectId,
     pilot: ObjectId,
-    kind: BattleViewKind,
-    center: BattleViewCenter,
-) -> Result<BattleViewPosition> {
+    kind: ViewKind,
+    center: ViewCenter,
+) -> Result<ViewPosition> {
     resolve_center(world, observer, pilot, kind, |_| Ok(center), true)
 }
 
@@ -51,25 +51,25 @@ fn resolve_center(
     world: &World,
     observer: ObjectId,
     pilot: ObjectId,
-    kind: BattleViewKind,
-    center: impl FnOnce(ObjectId) -> Result<BattleViewCenter>,
+    kind: ViewKind,
+    center: impl FnOnce(ObjectId) -> Result<ViewCenter>,
     require_hardware: bool,
-) -> Result<BattleViewPosition> {
+) -> Result<ViewPosition> {
     let observer = super::combat_operator::for_owner(world, observer, pilot)?
         .source
         .unit;
     let unit = super::scanner::scanner_unit(world, observer).context("Scanner is unavailable")?;
     ensure!(
-        unit.power == super::BattlePower::Running && !unit.destroyed,
+        unit.power == super::Power::Running && !unit.destroyed,
         "Start the unit first"
     );
     let ranges = world.btech.vehicles().get(&observer).map_or_else(
         || world.btech.constructed_units()[&observer].sensor_ranges(),
-        super::BattleVehicle::sensor_ranges,
+        super::Vehicle::sensor_ranges,
     );
     let maximum_range = match kind {
-        BattleViewKind::Tactical => ranges.tactical,
-        BattleViewKind::LongRange => ranges.long_range,
+        ViewKind::Tactical => ranges.tactical,
+        ViewKind::LongRange => ranges.long_range,
     };
     ensure!(
         !require_hardware || maximum_range > 0,
@@ -77,11 +77,11 @@ fn resolve_center(
     );
     let position = unit.position.context("Unit is not on a battlefield")?;
     let center = match center(observer)? {
-        BattleViewCenter::OwnUnit => HexCoordinate {
+        ViewCenter::OwnUnit => HexCoordinate {
             x: i32::from(position.x),
             y: i32::from(position.y),
         },
-        BattleViewCenter::Contact { target } => {
+        ViewCenter::Contact { target } => {
             let view =
                 super::visible_contact(world, observer, target)?.context("No such target.")?;
             ensure!(
@@ -97,7 +97,7 @@ fn resolve_center(
                 y: i32::from(target.y),
             }
         }
-        BattleViewCenter::Projection { bearing, distance } => {
+        ViewCenter::Projection { bearing, distance } => {
             ensure!(distance.is_finite(), "Invalid bearing or range.");
             ensure!(
                 unit.observer || distance.trunc().abs() <= f64::from(maximum_range),
@@ -112,7 +112,7 @@ fn resolve_center(
                 .containing_hex()?
         }
     };
-    Ok(BattleViewPosition {
+    Ok(ViewPosition {
         map: position.map,
         center,
         maximum_range,
@@ -124,9 +124,9 @@ pub fn parse_view_center(
     world: &World,
     observer: ObjectId,
     pilot: ObjectId,
-    kind: BattleViewKind,
+    kind: ViewKind,
     arguments: &str,
-) -> Result<BattleViewPosition> {
+) -> Result<ViewPosition> {
     resolve_center(
         world,
         observer,
@@ -143,26 +143,26 @@ pub(super) fn navigation_center(
     observer: ObjectId,
     pilot: ObjectId,
     arguments: &str,
-) -> Result<BattleViewPosition> {
+) -> Result<ViewPosition> {
     resolve_center(
         world,
         observer,
         pilot,
-        BattleViewKind::Tactical,
+        ViewKind::Tactical,
         |observer| parse_center(world, observer, arguments),
         false,
     )
 }
 
 /// Decode a center request independently of display admission.
-fn parse_center(world: &World, observer: ObjectId, arguments: &str) -> Result<BattleViewCenter> {
+fn parse_center(world: &World, observer: ObjectId, arguments: &str) -> Result<ViewCenter> {
     let args: Vec<_> = arguments.split_whitespace().collect();
     let center = match args.as_slice() {
-        [] => BattleViewCenter::OwnUnit,
-        [target] => BattleViewCenter::Contact {
+        [] => ViewCenter::OwnUnit,
+        [target] => ViewCenter::Contact {
             target: super::radio_targeted::target(world, observer, target)?,
         },
-        [bearing, distance] => BattleViewCenter::Projection {
+        [bearing, distance] => ViewCenter::Projection {
             bearing: bearing.parse().context("Invalid bearing or range.")?,
             distance: distance.parse().context("Invalid bearing or range.")?,
         },

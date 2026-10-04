@@ -20,7 +20,7 @@ fn templates() -> Vec<String> {
 }
 
 /// A shutdown, mapless cockpit makes unintended running or placement requirements observable.
-async fn fixture(template: BattleUnitTemplate) -> (tempfile::TempDir, Config, World, ObjectId) {
+async fn fixture(template: UnitTemplate) -> (tempfile::TempDir, Config, World, ObjectId) {
     let (dir, config, mut world) = support::isolated_world().await;
     let id = world.create(&config, "Critical inspection".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
@@ -52,9 +52,9 @@ fn without_nulls(value: &mut serde_json::Value) {
 #[tokio::test]
 async fn section_reports_preserve_all_supported_chassis() {
     for source in templates() {
-        let template = BattleUnitTemplate::parse("test", &source).unwrap();
+        let template = UnitTemplate::parse("test", &source).unwrap();
         let sections: Vec<_> = match &template {
-            BattleUnitTemplate::Mech(unit) => unit
+            UnitTemplate::Mech(unit) => unit
                 .sections
                 .iter()
                 .filter(|(_, layout)| layout.internal > 0)
@@ -65,7 +65,7 @@ async fn section_reports_preserve_all_supported_chassis() {
                     )
                 })
                 .collect(),
-            BattleUnitTemplate::Vehicle(unit) => unit
+            UnitTemplate::Vehicle(unit) => unit
                 .sections
                 .iter()
                 .filter(|(_, layout)| layout.internal > 0)
@@ -90,7 +90,7 @@ async fn section_reports_preserve_all_supported_chassis() {
             );
             assert!(report.slots.iter().all(|slot| matches!(
                 slot.condition,
-                BattleEquipmentCondition::Empty | BattleEquipmentCondition::Operational
+                EquipmentCondition::Empty | EquipmentCondition::Operational
             )));
             let lua: mlua::Table = scripts
                 .eval_callback(&format!(
@@ -146,7 +146,7 @@ async fn section_reports_preserve_all_supported_chassis() {
 async fn critical_report_native_access_and_anatomy() {
     for source in templates() {
         let (_dir, config, mut world, id) =
-            fixture(BattleUnitTemplate::parse("test", &source).unwrap()).await;
+            fixture(UnitTemplate::parse("test", &source).unwrap()).await;
         let section = if world.btech.vehicles().contains_key(&id) {
             "fs"
         } else {
@@ -183,7 +183,7 @@ async fn critical_report_native_access_and_anatomy() {
         );
         let mut impaired = world.clone();
         let mut state = serde_json::to_value(&impaired.btech).unwrap();
-        state["recoveries"]["1"] = serde_json::json!({"remaining":1,"pain_resistance":false,"toughness":false,"dice":BattleDice::seeded([12;32])});
+        state["recoveries"]["1"] = serde_json::json!({"remaining":1,"pain_resistance":false,"toughness":false,"dice":Dice::seeded([12;32])});
         impaired.btech = serde_json::from_value(state).unwrap();
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(impaired))).unwrap();
         let before = scripts.world().btech.clone();
@@ -193,10 +193,9 @@ async fn critical_report_native_access_and_anatomy() {
         );
         assert_eq!(scripts.world().btech, before);
     }
-    let (_dir, _config, world, id) = fixture(
-        BattleUnitTemplate::parse("GOL-1H", include_str!("../game/mechs/GOL-1H.toml")).unwrap(),
-    )
-    .await;
+    let (_dir, _config, world, id) =
+        fixture(UnitTemplate::parse("GOL-1H", include_str!("../game/mechs/GOL-1H.toml")).unwrap())
+            .await;
     let front = battle_critical_report(&world, id, "fll").unwrap();
     assert_eq!(front.slots.len(), 6);
     assert_eq!(front.slots[0].equipment, "Hip");
@@ -208,16 +207,15 @@ async fn critical_report_native_access_and_anatomy() {
 /// Slot damage, flood disabling and section loss remain distinct without hiding empty positions.
 #[tokio::test]
 async fn critical_report_material_conditions() {
-    let (_dir, config, mut world, id) = fixture(
-        BattleUnitTemplate::parse("GOL-1H", include_str!("../game/mechs/GOL-1H.toml")).unwrap(),
-    )
-    .await;
+    let (_dir, config, mut world, id) =
+        fixture(UnitTemplate::parse("GOL-1H", include_str!("../game/mechs/GOL-1H.toml")).unwrap())
+            .await;
     let mount = world.btech.constructed_units()[&id]
         .loadout()
         .unwrap()
         .weapons
         .iter()
-        .find(|mount| mount.weapon == BattleWeapon::Ppc)
+        .find(|mount| mount.weapon == Weapon::Ppc)
         .unwrap()
         .clone();
     let location = mount.criticals[0];
@@ -225,17 +223,15 @@ async fn critical_report_material_conditions() {
     world
         .btech
         .rewrite_unit_record(id, |record| {
-            record["weapon_damage"] = serde_json::json!([BattleWeaponDamage::new(
-                location,
-                BattleWeaponDamageKind::Focus
-            )]);
+            record["weapon_damage"] =
+                serde_json::json!([WeaponDamage::new(location, WeaponDamageKind::Focus)]);
         })
         .unwrap();
     world.validate(&config).unwrap();
     assert_eq!(
         battle_critical_report(&world, id, section).unwrap().slots[usize::from(location.slot)]
             .condition,
-        BattleEquipmentCondition::Damaged
+        EquipmentCondition::Damaged
     );
     let mut flooded = world.clone();
     flooded
@@ -247,37 +243,36 @@ async fn critical_report_material_conditions() {
     assert_eq!(
         battle_critical_report(&flooded, id, section).unwrap().slots[usize::from(location.slot)]
             .condition,
-        BattleEquipmentCondition::Disabled
+        EquipmentCondition::Disabled
     );
     destroy_battle_critical(&mut world, id, location).unwrap();
     let report = battle_critical_report(&world, id, section).unwrap();
     assert_eq!(
         report.slots[usize::from(location.slot)].condition,
-        BattleEquipmentCondition::Destroyed
+        EquipmentCondition::Destroyed
     );
     assert_eq!(
         report.slots[usize::from(mount.criticals[1].slot)].condition,
-        BattleEquipmentCondition::Broken
+        EquipmentCondition::Broken
     );
     apply_damage_phase(
         &mut world,
         id,
         location.section,
         u16::MAX,
-        BattleDamagePhase::Internal,
+        DamagePhase::Internal,
     )
     .unwrap();
     let report = battle_critical_report(&world, id, section).unwrap();
     assert_eq!(report.slots.len(), 12);
     assert!(report.slots.iter().all(|row| matches!(
         row.condition,
-        BattleEquipmentCondition::Empty | BattleEquipmentCondition::Destroyed
+        EquipmentCondition::Empty | EquipmentCondition::Destroyed
     )));
     world.validate(&config).unwrap();
 
     let (_dir, _config, mut world, id) = fixture(
-        BattleUnitTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
-            .unwrap(),
+        UnitTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml")).unwrap(),
     )
     .await;
     let bin = world.btech.vehicles()[&id].loadout().unwrap().ammunition[0].clone();
@@ -287,7 +282,7 @@ async fn critical_report_material_conditions() {
     let row = &battle_critical_report(&world, id, bin.location.section.name())
         .unwrap()
         .slots[usize::from(bin.location.slot)];
-    assert_eq!(row.condition, BattleEquipmentCondition::Destroyed);
+    assert_eq!(row.condition, EquipmentCondition::Destroyed);
     assert_eq!(row.ammunition_remaining, Some(0));
     let text = battle_critical_status(&world, id, bin.location.section.name()).unwrap();
     let line = text
@@ -301,11 +296,11 @@ async fn critical_report_material_conditions() {
 #[tokio::test]
 async fn critical_equipment_labels() {
     let mut template =
-        BattleTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap();
     support::templates::small_cockpit(&mut template, "SMCPIT");
     let missile = template
         .sections
-        .get_mut(&BattleSection::CenterTorso)
+        .get_mut(&MechSection::CenterTorso)
         .unwrap()
         .criticals
         .get_mut(&10)
@@ -313,7 +308,7 @@ async fn critical_equipment_labels() {
     missile.modes = vec!["OneShot".into(), "OneShot_Used".into(), "RearMount".into()];
     template
         .sections
-        .get_mut(&BattleSection::Head)
+        .get_mut(&MechSection::Head)
         .unwrap()
         .criticals
         .insert(
@@ -326,13 +321,13 @@ async fn critical_equipment_labels() {
         );
     template
         .sections
-        .get_mut(&BattleSection::RightTorso)
+        .get_mut(&MechSection::RightTorso)
         .unwrap()
         .criticals
         .get_mut(&0)
         .unwrap()
         .modes = vec!["Halfton".into(), "Inferno".into()];
-    let (_dir, config, mut world, id) = fixture(BattleUnitTemplate::Mech(template)).await;
+    let (_dir, config, mut world, id) = fixture(UnitTemplate::Mech(template)).await;
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     assert!(
@@ -364,7 +359,7 @@ async fn critical_equipment_labels() {
         &mut world,
         id,
         CriticalLocation {
-            section: BattleSection::Head,
+            section: MechSection::Head,
             slot: 5,
         },
     )
@@ -374,7 +369,7 @@ async fn critical_equipment_labels() {
     assert!(!text.contains("Controls Slot"));
 
     let (_dir, _config, world, id) = fixture(
-        BattleUnitTemplate::parse("Daishi-H", include_str!("../game/mechs/Daishi-H.toml")).unwrap(),
+        UnitTemplate::parse("Daishi-H", include_str!("../game/mechs/Daishi-H.toml")).unwrap(),
     )
     .await;
     assert!(

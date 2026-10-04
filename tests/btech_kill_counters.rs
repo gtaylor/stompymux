@@ -29,17 +29,17 @@ fn destroyed(world: &World, id: ObjectId) -> bool {
 async fn lethal_shots_credit_once_across_chassis_and_rollback() {
     let sources = firing::templates();
     let hit_seed = (0..=255)
-        .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 12)
+        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
         .unwrap();
     for (i, source) in sources.iter().enumerate() {
         let (_dir, config, mut base, id, target, index) = firing::fixture_with_target(
             source,
-            Some(BattleWeapon::MediumLaser),
+            Some(Weapon::MediumLaser),
             &sources[(i + 1) % sources.len()],
         )
         .await;
         firing::edit(&mut base, id, |unit| {
-            unit["dice"] = serde_json::to_value(BattleDice::seeded([hit_seed; 32])).unwrap();
+            unit["dice"] = serde_json::to_value(Dice::seeded([hit_seed; 32])).unwrap();
             unit["units_killed"] = 4.into();
         });
         let vehicle = base.btech.vehicles().contains_key(&target);
@@ -69,7 +69,7 @@ async fn lethal_shots_credit_once_across_chassis_and_rollback() {
         let mut chosen = None;
         for seed in 0..32 {
             firing::edit(&mut base, target, |unit| {
-                unit["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
+                unit["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap()
             });
             let scripts = Scripts::new(&config, Rc::new(RefCell::new(base.clone()))).unwrap();
             scripts.eval_callback::<()>(&command).unwrap();
@@ -173,7 +173,7 @@ async fn signed_fields_and_self_destruction_share_the_unit_owner() {
             &config,
             ObjectId(1),
             id,
-            BattleScenarioHit {
+            ScenarioHit {
                 section,
                 damage: 1000,
                 rear: false,
@@ -200,7 +200,7 @@ async fn shot_induced_water_and_vacuum_exposure_use_distinct_attribution() {
         ] {
             let (_dir, config, mut base, id, target, index) = firing::fixture_with_target(
                 include_str!("../game/mechs/JR7-D.toml"),
-                Some(BattleWeapon::MediumLaser),
+                Some(Weapon::MediumLaser),
                 target_source,
             )
             .await;
@@ -219,11 +219,11 @@ async fn shot_induced_water_and_vacuum_exposure_use_distinct_attribution() {
             support::seed_object_dice(&mut base, map, support::FIXTURE_DICE_SEED);
             for (unit, y) in [(id, 11), (target, 10)] {
                 firing::edit(&mut base, unit, |state| {
-                    state["power"] = serde_json::to_value(BattlePower::Off).unwrap()
+                    state["power"] = serde_json::to_value(Power::Off).unwrap()
                 });
                 place_battle_unit(&mut base, unit, map, 0, y).unwrap();
                 firing::edit(&mut base, unit, |state| {
-                    state["power"] = serde_json::to_value(BattlePower::Running).unwrap()
+                    state["power"] = serde_json::to_value(Power::Running).unwrap()
                 });
                 if water {
                     firing::edit(&mut base, unit, |state| {
@@ -236,7 +236,7 @@ async fn shot_induced_water_and_vacuum_exposure_use_distinct_attribution() {
                     &mut base,
                     ObjectId(1),
                     map,
-                    BattleMapEnvironment {
+                    MapEnvironment {
                         gravity: 100,
                         temperature: 20,
                         vacuum: true,
@@ -252,10 +252,10 @@ async fn shot_induced_water_and_vacuum_exposure_use_distinct_attribution() {
                 }
             });
             let hit_seed = (0..=255)
-                .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 12)
+                .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
                 .unwrap();
             firing::edit(&mut base, id, |state| {
-                state["dice"] = serde_json::to_value(BattleDice::seeded([hit_seed; 32])).unwrap()
+                state["dice"] = serde_json::to_value(Dice::seeded([hit_seed; 32])).unwrap()
             });
             refresh_battle_contacts(&mut base, &[id]).unwrap();
             select_battle_target(&mut base, id, ObjectId(1), Some(target)).unwrap();
@@ -263,7 +263,7 @@ async fn shot_induced_water_and_vacuum_exposure_use_distinct_attribution() {
             let mut chosen = None;
             for seed in 0..=255 {
                 firing::edit(&mut base, target, |state| {
-                    state["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
+                    state["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap()
                 });
                 let scripts = Scripts::new(&config, Rc::new(RefCell::new(base.clone()))).unwrap();
                 scripts.eval_callback::<()>(&command).unwrap();
@@ -275,8 +275,8 @@ async fn shot_induced_water_and_vacuum_exposure_use_distinct_attribution() {
                     } else {
                         unit.breached_sections()
                     };
-                    sections.contains(&BattleSection::Head)
-                        && unit.sections()[&BattleSection::Head].internal > 0
+                    sections.contains(&MechSection::Head)
+                        && unit.sections()[&MechSection::Head].internal > 0
                 };
                 if exposed {
                     chosen = Some(scripts);
@@ -309,7 +309,7 @@ async fn vehicle_vacuum_breaches_preserve_life_and_award_no_kill() {
     for source in firing::templates().into_iter().skip(2) {
         let (_dir, config, mut base, id, target, index) = firing::fixture_with_target(
             include_str!("../game/mechs/JR7-D.toml"),
-            Some(BattleWeapon::MediumLaser),
+            Some(Weapon::MediumLaser),
             &source,
         )
         .await;
@@ -318,7 +318,7 @@ async fn vehicle_vacuum_breaches_preserve_life_and_award_no_kill() {
             &mut base,
             ObjectId(1),
             map,
-            BattleMapEnvironment {
+            MapEnvironment {
                 gravity: 100,
                 temperature: 20,
                 vacuum: true,
@@ -335,16 +335,16 @@ async fn vehicle_vacuum_breaches_preserve_life_and_award_no_kill() {
             }
         });
         let hit_seed = (0..=255)
-            .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 12)
+            .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
             .unwrap();
         firing::edit(&mut base, id, |state| {
-            state["dice"] = serde_json::to_value(BattleDice::seeded([hit_seed; 32])).unwrap()
+            state["dice"] = serde_json::to_value(Dice::seeded([hit_seed; 32])).unwrap()
         });
         let command = format!("btech.unit.fire({},1,{index},{})", id.0, target.0);
         let mut chosen = None;
         for seed in 0..64 {
             firing::edit(&mut base, target, |state| {
-                state["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
+                state["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap()
             });
             let scripts = Scripts::new(&config, Rc::new(RefCell::new(base.clone()))).unwrap();
             scripts.eval_callback::<()>(&command).unwrap();

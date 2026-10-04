@@ -25,4 +25,4 @@ btech.unit.scan_terrain(dbref, pilot, x, y)
 
 ## Returns
 
-- `BattleHexScan`
+- `HexScan`

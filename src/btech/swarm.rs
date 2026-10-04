@@ -6,25 +6,25 @@ use serde::Serialize;
 
 /// One attack along a Swarm flight; a miss preserves every incoming missile.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct BattleSwarmHop {
+pub struct SwarmHop {
     pub target: ObjectId,
     pub incoming: u8,
     pub roll: u8,
     pub remaining: u8,
-    pub salvo: Option<BattleTargetSalvo>,
+    pub salvo: Option<TargetSalvo>,
 }
 
 /// Ordered consequences of a single launch, including secondary attacks and their unused missiles.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct BattleSwarmReport {
+pub struct SwarmReport {
     pub launched: u8,
     pub remaining: u8,
     pub traveled: f64,
-    pub hops: Vec<BattleSwarmHop>,
-    pub notices: Vec<BattleNotice>,
+    pub hops: Vec<SwarmHop>,
+    pub notices: Vec<Notice>,
     /// Private damage checks ordered across every target in the flight.
-    pub pilot_notices: Vec<BattlePilotNotice>,
-    pub broadcasts: Vec<BattleNotice>,
+    pub pilot_notices: Vec<PilotNotice>,
+    pub broadcasts: Vec<Notice>,
 }
 
 /// Immutable launch facts; secondary attacks retain the original threshold and glancing state.
@@ -32,7 +32,7 @@ pub(super) struct SwarmRequest<'a> {
     pub shooter: ObjectId,
     pub target: ObjectId,
     pub weapon: super::salvo::SalvoWeapon,
-    pub rules: BattleShotRules,
+    pub rules: ShotRules,
     pub first_hit: bool,
     pub first_roll: u8,
     pub target_number: i32,
@@ -55,13 +55,13 @@ fn sees(world: &World, observer: ObjectId, target: ObjectId) -> bool {
 }
 
 /// Resolve an admitted flight inside its launcher's existing world/effect transaction.
-pub(super) fn resolve(world: &mut World, request: SwarmRequest<'_>) -> Result<BattleSwarmReport> {
+pub(super) fn resolve(world: &mut World, request: SwarmRequest<'_>) -> Result<SwarmReport> {
     let shooter = request.shooter;
     let source = super::scanner::scanner_unit(world, shooter).context("Launcher unavailable")?;
     let map = source.position.context("Launcher is not placed")?.map;
     let team = source.signature.team;
     let weapon = request.weapon.weapon;
-    let mut report = BattleSwarmReport {
+    let mut report = SwarmReport {
         launched: weapon.profile().missiles,
         remaining: weapon.profile().missiles,
         traveled: 0.0,
@@ -78,7 +78,7 @@ pub(super) fn resolve(world: &mut World, request: SwarmRequest<'_>) -> Result<Ba
             .range_modifier(report.traveled, request.rules.aim.extended_ranges)?
             .is_none()
         {
-            report.notices.push(BattleNotice {
+            report.notices.push(Notice {
                 unit: target,
                 text: "Luckily, the missiles fall short of you!".into(),
             });
@@ -106,7 +106,7 @@ pub(super) fn resolve(world: &mut World, request: SwarmRequest<'_>) -> Result<Ba
                     world,
                     shooter,
                     target,
-                    BattleVehicleSalvoRequest {
+                    VehicleSalvoRequest {
                         range_damage: request.rules.range_damage,
                         damage_penalty: request.weapon.damage_penalty,
                         weapon,
@@ -131,7 +131,7 @@ pub(super) fn resolve(world: &mut World, request: SwarmRequest<'_>) -> Result<Ba
                     },
                 )?
             } else {
-                BattleTargetSalvo::Mech(super::salvo::resolve_salvo_from_shot(
+                TargetSalvo::Mech(super::salvo::resolve_salvo_from_shot(
                     world,
                     shooter,
                     target,
@@ -142,7 +142,7 @@ pub(super) fn resolve(world: &mut World, request: SwarmRequest<'_>) -> Result<Ba
                         range_damage: request.rules.range_damage,
                         aimed: None,
                         incoming: Some(incoming),
-                        rules: BattleFallRules {
+                        rules: FallRules {
                             vehicle_impact: request.rules.vehicle_impact,
                             stacking: request.rules.stacking,
                             stagger: request.rules.stagger,
@@ -162,7 +162,7 @@ pub(super) fn resolve(world: &mut World, request: SwarmRequest<'_>) -> Result<Ba
                 incoming.saturating_sub(salvo.missiles_before_defense().unwrap_or(0));
             if sees(world, shooter, target) {
                 let hits = incoming - report.remaining;
-                report.notices.push(BattleNotice {
+                report.notices.push(Notice {
                     unit: shooter,
                     text: format!(
                         "[fg=green]{} with {hits} missile{}![reset]",
@@ -188,7 +188,7 @@ pub(super) fn resolve(world: &mut World, request: SwarmRequest<'_>) -> Result<Ba
         } else {
             None
         };
-        report.hops.push(BattleSwarmHop {
+        report.hops.push(SwarmHop {
             target,
             incoming,
             roll,
@@ -202,14 +202,14 @@ pub(super) fn resolve(world: &mut World, request: SwarmRequest<'_>) -> Result<Ba
         let mut next = None;
         for candidate in super::map_slots::all_unit_order(world, map)? {
             if report.hops.iter().any(|hop| hop.target == candidate)
-                || battle_combat_safe(world, candidate)?
+                || combat_safe(world, candidate)?
             {
                 continue;
             }
             let Some(unit) = super::scanner::scanner_unit(world, candidate) else {
                 continue;
             };
-            if request.weapon.ammunition_mode.munition() == BattleAmmunitionMode::Swarm1
+            if request.weapon.ammunition_mode.munition() == AmmunitionMode::Swarm1
                 && unit.signature.team == team
             {
                 continue;
@@ -224,7 +224,7 @@ pub(super) fn resolve(world: &mut World, request: SwarmRequest<'_>) -> Result<Ba
             break;
         };
         if next != shooter {
-            report.notices.push(BattleNotice {
+            report.notices.push(Notice {
                 unit: next,
                 text: "The missile-swarm turns towards you!".into(),
             });
@@ -238,7 +238,7 @@ pub(super) fn resolve(world: &mut World, request: SwarmRequest<'_>) -> Result<Ba
                     |contact| format!("{} [{}]", contact.name, contact.label),
                 )
             };
-            report.notices.push(BattleNotice {
+            report.notices.push(Notice {
                 unit: shooter,
                 text: format!(
                     "Your missile-swarm of {} missile{} targets {name}!",
@@ -263,16 +263,16 @@ pub fn toggle_swarm(
     pilot: ObjectId,
     index: usize,
     friend_or_foe: bool,
-) -> Result<BattleAmmunitionMode> {
+) -> Result<AmmunitionMode> {
     let ready = super::weapon_controls::ready_weapon(world, id, pilot, index)?;
     anyhow::ensure!(
         !ready.weapon.is_rocket(),
         "Rocket launchers' mode cannot be altered!"
     );
     let mode = if friend_or_foe {
-        BattleAmmunitionMode::Swarm1
+        AmmunitionMode::Swarm1
     } else {
-        BattleAmmunitionMode::Swarm
+        AmmunitionMode::Swarm
     };
     anyhow::ensure!(
         super::weapon_controls::selectable_munition(world, id, index, mode),

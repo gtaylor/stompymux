@@ -1,8 +1,5 @@
 //! Transactional conventional jumping on supported terrain routes, with committed landing and stabilization.
-use super::{
-    BattleJumpFlight, BattleJumpOutcome, BattleJumpPath, BattleNotice, BattlePosture, BattlePower,
-    BattleUnit,
-};
+use super::{JumpFlight, JumpOutcome, JumpPath, Mech, Notice, Posture, Power};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 
@@ -15,7 +12,7 @@ pub(super) struct LastJump {
 
 impl LastJump {
     /// Capture historical field units without changing normalized flight geometry.
-    fn from_path(path: BattleJumpPath) -> Result<Self> {
+    fn from_path(path: JumpPath) -> Result<Self> {
         Ok(Self {
             heading: path.heading()?,
             length: (path.distance() * 322.5).trunc().min(32767.0) as i16,
@@ -29,9 +26,9 @@ impl LastJump {
     }
 }
 
-impl BattleUnit {
+impl Mech {
     /// Current airborne cursor; absent once a landing or fall has completed.
-    pub fn flight(&self) -> Option<BattleJumpFlight> {
+    pub fn flight(&self) -> Option<JumpFlight> {
         self.flight
     }
 
@@ -43,7 +40,7 @@ impl BattleUnit {
     }
 
     /// Pending unpowered vertical descent, including its durable event countdown.
-    pub fn free_fall(&self) -> Option<super::BattleFreeFall> {
+    pub fn free_fall(&self) -> Option<super::FreeFall> {
         self.free_fall
     }
 
@@ -74,7 +71,7 @@ impl BattleUnit {
 }
 
 /// Validate the currently supported route on launch and persisted-world loading.
-pub(super) fn validate_route(map: &super::StoredMap, path: BattleJumpPath) -> Result<()> {
+pub(super) fn validate_route(map: &super::StoredMap, path: JumpPath) -> Result<()> {
     ensure!(
         !map.has_flag(super::MapFlag::Underground),
         "The underground ceiling prevents jumping"
@@ -101,14 +98,14 @@ pub fn launch_jump(
     pilot: ObjectId,
     bearing: i32,
     range: f64,
-) -> Result<Vec<BattleNotice>> {
+) -> Result<Vec<Notice>> {
     world.attempt(|world| {
         let notices = launch(
             world,
             id,
             pilot,
             JumpRequest::Projected { bearing, range },
-            super::BattleMovementRules::STANDARD.fall,
+            super::MovementRules::STANDARD.fall,
             super::SpeedPolicy::STANDARD,
             None,
         )?;
@@ -124,14 +121,14 @@ pub fn launch_dfa(
     id: ObjectId,
     pilot: ObjectId,
     target: Option<ObjectId>,
-) -> Result<Vec<BattleNotice>> {
+) -> Result<Vec<Notice>> {
     world.attempt(|world| {
         let notices = launch(
             world,
             id,
             pilot,
             JumpRequest::Target(target),
-            super::BattleMovementRules::STANDARD.fall,
+            super::MovementRules::STANDARD.fall,
             super::SpeedPolicy::STANDARD,
             None,
         )?;
@@ -195,8 +192,8 @@ impl JumpRequest<'_> {
 
 /// Fully checked geometry remains uncommitted until all post-roll request validation succeeds.
 struct PreparedJump {
-    motion: super::BattleMotion,
-    flight: BattleJumpFlight,
+    motion: super::Motion,
+    flight: JumpFlight,
     last_jump: LastJump,
     dfa: bool,
 }
@@ -204,10 +201,10 @@ struct PreparedJump {
 /// Consequences that need the host's private injury, XP and casualty publication.
 #[derive(Default)]
 struct LaunchEffects {
-    pilot_notices: Vec<super::BattlePilotNotice>,
+    pilot_notices: Vec<super::PilotNotice>,
     rejection: Option<String>,
-    fall: Option<super::BattleFallReport>,
-    experience_messages: Vec<super::BattleChannelMessage>,
+    fall: Option<super::MechFallReport>,
+    experience_messages: Vec<super::DiagnosticMessage>,
 }
 
 /// Native and Lua conventional jumps publish a failed launch's consequences atomically.
@@ -249,7 +246,7 @@ fn launch_action(
 ) -> Result<()> {
     scripts.atomic(|before| {
         let mut effects = LaunchEffects::default();
-        let mut rules = super::BattleFallRules::configured(config);
+        let mut rules = super::FallRules::configured(config);
         rules.toughness =
             super::skills::boolean_advantage(&scripts.world.borrow(), pilot, "Toughness");
         let notices = launch(
@@ -264,11 +261,7 @@ fn launch_action(
         super::piloting::publish_ordered_notices(scripts, &notices, &effects.pilot_notices)?;
         super::channels::publish(scripts, config, &effects.experience_messages)?;
         if let Some(rejection) = &effects.rejection {
-            super::notify_message(
-                scripts,
-                super::BattleMessageTarget::Player(pilot),
-                rejection,
-            )?;
+            super::notify_message(scripts, super::MessageTarget::Player(pilot), rejection)?;
         }
         if let Some(fall) = effects.fall {
             super::evacuation::publish_fall_consequences(scripts, config, &fall)?;
@@ -285,10 +278,10 @@ fn launch(
     id: ObjectId,
     pilot: ObjectId,
     request: JumpRequest<'_>,
-    rules: super::BattleFallRules,
+    rules: super::FallRules,
     speed: super::SpeedPolicy,
     mut effects: Option<&mut LaunchEffects>,
-) -> Result<Vec<BattleNotice>> {
+) -> Result<Vec<Notice>> {
     ensure!(
         !world.btech.tows().contains_key(&id),
         "You cannot jump while towing another unit"
@@ -299,7 +292,7 @@ fn launch(
     super::fortification::require_mobile(world, id)?;
     unit.hull_down.require_mobile()?;
     ensure!(
-        unit.power() == BattlePower::Running && !unit.is_destroyed(),
+        unit.power() == Power::Running && !unit.is_destroyed(),
         "Start the unit first"
     );
     let maximum = unit.mobility().maximum_speed;
@@ -331,7 +324,7 @@ fn launch(
         "You haven't stabilized from your last jump yet."
     );
     ensure!(
-        unit.posture() == BattlePosture::Standing,
+        unit.posture() == Posture::Standing,
         "You can't Jump from a FALLEN position"
     );
     ensure!(
@@ -346,7 +339,7 @@ fn launch(
     let checked = unit.stagger().action_level() > 0;
     let mut notices = Vec::new();
     if checked {
-        notices.push(BattleNotice {
+        notices.push(Notice {
             unit: id,
             text: "The damage inhibits your coordination...".into(),
         });
@@ -370,7 +363,7 @@ fn launch(
                 )?);
         }
         if !check.success {
-            notices.push(BattleNotice {
+            notices.push(Notice {
                 unit: id,
                 text: "... something you apparently can't handle!".into(),
             });
@@ -401,7 +394,7 @@ fn launch(
             if let Some(effects) = effects {
                 effects.rejection = Some(text);
             } else {
-                notices.push(BattleNotice { unit: id, text });
+                notices.push(Notice { unit: id, text });
             }
             return Ok(notices);
         }
@@ -420,7 +413,7 @@ fn launch(
     unit.ground_elevation = None;
     unit.flight = Some(flight);
     unit.last_jump = last_jump;
-    notices.push(BattleNotice {
+    notices.push(Notice {
         unit: id,
         text: if dfa {
             "You engage your jump jets for a Death From Above attack!"
@@ -509,7 +502,7 @@ fn prepare_jump(world: &World, id: ObjectId, request: JumpRequest<'_>) -> Result
         .base_hex(i64::from(destination.x), i64::from(destination.y))?
         .standing_height();
     let path = match request {
-        JumpDestination::Projected { bearing, range } => BattleJumpPath::projected(
+        JumpDestination::Projected { bearing, range } => JumpPath::projected(
             motion.point,
             bearing,
             range,
@@ -517,7 +510,7 @@ fn prepare_jump(world: &World, id: ObjectId, request: JumpRequest<'_>) -> Result
             destination_elevation,
             capacity.movement_points,
         )?,
-        JumpDestination::Target(_) => BattleJumpPath::targeted(
+        JumpDestination::Target(_) => JumpPath::targeted(
             motion.point,
             destination.center(),
             range,
@@ -528,7 +521,7 @@ fn prepare_jump(world: &World, id: ObjectId, request: JumpRequest<'_>) -> Result
     };
     validate_route(map, path)?;
     let last_jump = LastJump::from_path(path)?;
-    let flight = BattleJumpFlight::new(path);
+    let flight = JumpFlight::new(path);
     Ok(PreparedJump {
         motion,
         last_jump,
@@ -539,17 +532,14 @@ fn prepare_jump(world: &World, id: ObjectId, request: JumpRequest<'_>) -> Result
 
 /// Advance jumps, falls, stabilization and shared orbital drops once; jumps also dispatch charge intent.
 /// All units, counters, fall dice and notices share one candidate.
-pub fn advance_jumps(
-    world: &mut World,
-    movement: super::BattleMovementRules,
-) -> Result<Vec<BattleNotice>> {
+pub fn advance_jumps(world: &mut World, movement: super::MovementRules) -> Result<Vec<Notice>> {
     Ok(advance_jumps_inner(world, movement, false)?.notices)
 }
 
 /// Advance conventional airborne state; the host runs orbital continuations around Lua callbacks.
 pub(super) fn advance_jumps_in_action(
     world: &mut World,
-    movement: super::BattleMovementRules,
+    movement: super::MovementRules,
 ) -> Result<super::movement_report::MovementReport> {
     advance_jumps_inner(world, movement, true)
 }
@@ -557,7 +547,7 @@ pub(super) fn advance_jumps_in_action(
 /// Shared tick; the explicit action mode owns character falls and casualty publication.
 fn advance_jumps_inner(
     world: &mut World,
-    movement: super::BattleMovementRules,
+    movement: super::MovementRules,
     character: bool,
 ) -> Result<super::movement_report::MovementReport> {
     let mut falls = Vec::new();
@@ -593,8 +583,8 @@ fn advance_jumps_inner(
             if unit.jump_stabilization > 0 {
                 let unit = candidate.btech.constructed.get_mut(&id).unwrap();
                 unit.jump_stabilization -= 1;
-                if unit.jump_stabilization == 0 && unit.power() == BattlePower::Running {
-                    notices.push(BattleNotice {
+                if unit.jump_stabilization == 0 && unit.power() == Power::Running {
+                    notices.push(Notice {
                         unit: id,
                         text: "You have finally stabilized after your jump.".to_owned(),
                     });
@@ -613,8 +603,8 @@ fn advance_jumps_inner(
         let Some(mut flight) = unit.flight else {
             let unit = candidate.btech.constructed.get_mut(&id).unwrap();
             unit.jump_stabilization -= 1;
-            if unit.jump_stabilization == 0 && unit.power() == BattlePower::Running {
-                notices.push(BattleNotice {
+            if unit.jump_stabilization == 0 && unit.power() == Power::Running {
+                notices.push(Notice {
                     unit: id,
                     text: "You have finally stabilized after your jump.".to_owned(),
                 });
@@ -636,8 +626,8 @@ fn advance_jumps_inner(
         let map = &candidate.btech.maps()[&position.map];
         let from = flight.sample().point;
         let step = flight.advance(unit.jump_capacity(map.gravity)?, map.movement_modifier)?;
-        if step.outcome == BattleJumpOutcome::LostThrust {
-            notices.push(BattleNotice {
+        if step.outcome == JumpOutcome::LostThrust {
+            notices.push(Notice {
                 unit: id,
                 text: "You lose control of your jump and fall!".to_owned(),
             });
@@ -680,7 +670,7 @@ fn advance_jumps_inner(
                 .context("Airborne unit has no motion")?
                 .point = point;
             unit.flight = Some(flight);
-            notices.push(BattleNotice {
+            notices.push(Notice {
                 unit: id,
                 text: "You cannot move off this map!".into(),
             });
@@ -688,7 +678,7 @@ fn advance_jumps_inner(
                 &mut candidate,
                 id,
                 false,
-                super::BattleMovementRules {
+                super::MovementRules {
                     fall: rules,
                     ..movement
                 },
@@ -718,7 +708,7 @@ fn advance_jumps_inner(
         let previous_elevation = unit.elevation_level(previous_tile);
         let next_elevation = (step.to.elevation + 0.5).trunc() as i32;
         if previous_tile.is_ice()
-            && step.outcome == BattleJumpOutcome::Landing
+            && step.outcome == JumpOutcome::Landing
             && (coordinate.x, coordinate.y) == (i32::from(position.x), i32::from(position.y))
         {
             // Arrival in the current destination hex precedes vertical ice crossing checks.
@@ -732,7 +722,7 @@ fn advance_jumps_inner(
                 &mut candidate,
                 id,
                 false,
-                super::BattleMovementRules {
+                super::MovementRules {
                     fall: rules,
                     ..movement
                 },
@@ -870,7 +860,7 @@ fn advance_jumps_inner(
             unit.flight = None;
             unit.ground_elevation = None;
             unit.jump_stabilization = 12;
-            notices.push(BattleNotice {
+            notices.push(Notice {
                 unit: id,
                 text: "CRASH! You crash into the bridge!".to_owned(),
             });
@@ -891,7 +881,7 @@ fn advance_jumps_inner(
             let previous_height = map
                 .base_hex(i64::from(position.x), i64::from(position.y))?
                 .surface_height();
-            notices.push(BattleNotice {
+            notices.push(Notice {
                 unit: id,
                 text: "[bold]You attempt to jump over elevation that is too high![reset]"
                     .to_owned(),
@@ -930,7 +920,7 @@ fn advance_jumps_inner(
                 false
             };
             if safe {
-                notices.push(BattleNotice {
+                notices.push(Notice {
                     unit: id,
                     text: "[bold]You land safely.[reset]".to_owned(),
                 });
@@ -938,7 +928,7 @@ fn advance_jumps_inner(
                     &mut candidate,
                     id,
                     false,
-                    super::BattleMovementRules {
+                    super::MovementRules {
                         fall: rules,
                         ..movement
                     },
@@ -956,7 +946,7 @@ fn advance_jumps_inner(
                 notices.extend(landing.notices);
                 experience_messages.extend(landing.experience_messages);
             } else {
-                notices.push(BattleNotice {
+                notices.push(Notice {
                     unit: id,
                     text: "[bold]You crash into the obstacle and fall from the sky![reset]"
                         .to_owned(),
@@ -969,11 +959,8 @@ fn advance_jumps_inner(
                 };
                 fall.append_notices(id, &mut notices, &mut pilot_notices);
                 falls.push(fall);
-                let input = super::stacking::physical_input(
-                    &candidate,
-                    id,
-                    super::BattleStackingEntry::Fall,
-                )?;
+                let input =
+                    super::stacking::physical_input(&candidate, id, super::StackingEntry::Fall)?;
                 notices.extend(resolve_airborne_stacking(
                     &mut candidate,
                     id,
@@ -1007,7 +994,7 @@ fn advance_jumps_inner(
         if crossed_hex {
             notices.extend(super::hiding::movement(&mut candidate, id));
         }
-        if step.outcome == BattleJumpOutcome::Airborne {
+        if step.outcome == JumpOutcome::Airborne {
             if crossed_hex {
                 notices.extend(flood_after_jump(
                     &mut candidate,
@@ -1036,8 +1023,8 @@ fn advance_jumps_inner(
         let landing = finish_landing_inner(
             &mut candidate,
             id,
-            step.outcome == BattleJumpOutcome::LostThrust,
-            super::BattleMovementRules {
+            step.outcome == JumpOutcome::LostThrust,
+            super::MovementRules {
                 fall: rules,
                 ..movement
             },
@@ -1107,8 +1094,8 @@ pub(super) fn finish_landing(
     world: &mut World,
     id: ObjectId,
     lost_thrust: bool,
-    movement: super::BattleMovementRules,
-) -> Result<Vec<BattleNotice>> {
+    movement: super::MovementRules,
+) -> Result<Vec<Notice>> {
     finish_landing_inner(
         world,
         id,
@@ -1125,7 +1112,7 @@ pub(super) fn finish_landing(
 pub(super) fn finish_landing_in_action(
     world: &mut World,
     id: ObjectId,
-    movement: super::BattleMovementRules,
+    movement: super::MovementRules,
     report: &mut super::movement_report::MovementReport,
 ) -> Result<()> {
     let landing = finish_landing_inner(
@@ -1153,11 +1140,11 @@ pub(super) fn finish_landing_in_action(
 
 /// Landing-local notices and XP; nested falls and collisions remain with their report owners.
 struct LandingOutcome {
-    vehicle_falls: Vec<super::BattleVehicleFallReport>,
-    mines: Vec<super::BattleMineEventReport>,
-    notices: Vec<BattleNotice>,
-    pilot_notices: Vec<super::BattlePilotNotice>,
-    experience_messages: Vec<super::BattleChannelMessage>,
+    vehicle_falls: Vec<super::VehicleFallReport>,
+    mines: Vec<super::MineEventReport>,
+    notices: Vec<Notice>,
+    pilot_notices: Vec<super::PilotNotice>,
+    experience_messages: Vec<super::DiagnosticMessage>,
 }
 
 /// Complete a landing while retaining nested character falls for the owning airborne action.
@@ -1165,9 +1152,9 @@ fn finish_landing_inner(
     world: &mut World,
     id: ObjectId,
     lost_thrust: bool,
-    movement: super::BattleMovementRules,
-    dfas: Option<&mut Vec<super::BattleDfaReport>>,
-    falls: &mut Vec<super::BattleFallReport>,
+    movement: super::MovementRules,
+    dfas: Option<&mut Vec<super::DfaReport>>,
+    falls: &mut Vec<super::MechFallReport>,
     collisions: &mut super::stacking::StackingEffects,
 ) -> Result<LandingOutcome> {
     let character = dfas.is_some();
@@ -1215,7 +1202,7 @@ fn finish_landing_inner(
                 }
                 dfa = true;
             }
-            Err(error) => notices.push(BattleNotice {
+            Err(error) => notices.push(Notice {
                 unit: id,
                 text: format!("{error:#}"),
             }),
@@ -1227,7 +1214,7 @@ fn finish_landing_inner(
         event.land();
     }
     if !lost_thrust && !dfa && !uncontrolled {
-        notices.push(BattleNotice {
+        notices.push(Notice {
             unit: id,
             text: "You finish your jump.".to_owned(),
         });
@@ -1251,7 +1238,7 @@ fn finish_landing_inner(
     let mut landing_failure = None;
     let mut stagger_failed = false;
     if !lost_thrust && !uncontrolled && action_stagger {
-        notices.push(BattleNotice {
+        notices.push(Notice {
             unit: id,
             text: "The damage you've taken makes the landing a bit harder...".into(),
         });
@@ -1296,7 +1283,7 @@ fn finish_landing_inner(
                 "lands, twists awkwardly, and falls down!",
             )
         };
-        notices.push(BattleNotice {
+        notices.push(Notice {
             unit: id,
             text: warning.to_owned(),
         });
@@ -1314,7 +1301,7 @@ fn finish_landing_inner(
         landing_failure = fall.then_some((failure, observed));
     }
     if fall && !world.btech.constructed_units()[&id].is_destroyed() {
-        notices.push(BattleNotice {
+        notices.push(Notice {
             unit: id,
             text: landing_failure
                 .map(|(failure, _)| failure)
@@ -1352,8 +1339,8 @@ fn finish_landing_inner(
         });
     }
     let unit = &world.btech.constructed_units()[&id];
-    if !dfa && !fall && !unit.is_destroyed() && unit.posture() != super::BattlePosture::Prone {
-        let input = super::stacking::physical_input(world, id, super::BattleStackingEntry::Jump)?;
+    if !dfa && !fall && !unit.is_destroyed() && unit.posture() != super::Posture::Prone {
+        let input = super::stacking::physical_input(world, id, super::StackingEntry::Jump)?;
         let collision = resolve_airborne_stacking(
             world,
             id,
@@ -1376,7 +1363,7 @@ fn finish_landing_inner(
         let event = super::mine_event::resolve(
             world,
             id,
-            super::BattleMineTriggerReason::Land,
+            super::MineTriggerReason::Land,
             rules,
             character,
         )?;
@@ -1397,7 +1384,7 @@ fn finish_landing_inner(
     }
     // Only completed traditional landing stops the separate action-time stagger check.
     // The early stagger-failure return above deliberately retains its scalar.
-    if rules.stagger == super::BattleStaggerMode::Traditional {
+    if rules.stagger == super::StaggerMode::Traditional {
         unit.stagger.action_damage = 0;
     }
     Ok(LandingOutcome {
@@ -1413,11 +1400,11 @@ fn finish_landing_inner(
 fn resolve_airborne_stacking(
     world: &mut World,
     id: ObjectId,
-    input: super::BattleStackingInput,
-    rules: super::BattleFallRules,
+    input: super::StackingInput,
+    rules: super::FallRules,
     effects: Option<&mut super::stacking::StackingEffects>,
-    feedback: (&mut Vec<super::BattlePilotNotice>, usize),
-) -> Result<Vec<BattleNotice>> {
+    feedback: (&mut Vec<super::PilotNotice>, usize),
+) -> Result<Vec<Notice>> {
     if let Some(effects) = effects {
         return super::stacking::resolve_in_action(
             world,
@@ -1436,10 +1423,10 @@ fn resolve_airborne_stacking(
 fn flood_after_jump(
     world: &mut World,
     id: ObjectId,
-    rules: super::BattleFallRules,
+    rules: super::FallRules,
     character: bool,
-    falls: &mut Vec<super::BattleFallReport>,
-) -> Result<Vec<BattleNotice>> {
+    falls: &mut Vec<super::MechFallReport>,
+) -> Result<Vec<Notice>> {
     let reports = if character {
         super::flooding::flood_unit_in_action(world, id, rules)?
     } else {

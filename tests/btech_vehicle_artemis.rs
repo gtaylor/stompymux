@@ -21,12 +21,12 @@ fn templates() -> Vec<String> {
 }
 
 /// Install one turret launcher and a controller without changing chassis identity.
-fn definition(source: &str, section: BattleVehicleSection, link: &str) -> BattleVehicleTemplate {
-    let mut template = BattleVehicleTemplate::parse("test", source).unwrap();
+fn definition(source: &str, section: VehicleSection, link: &str) -> VehicleTemplate {
+    let mut template = VehicleTemplate::parse("test", source).unwrap();
     for section in template.sections.values_mut() {
         section.criticals.clear();
     }
-    let mut turret = template.sections[&BattleVehicleSection::Front].clone();
+    let mut turret = template.sections[&VehicleSection::Front].clone();
     turret.criticals.insert(
         0,
         CriticalDefinition {
@@ -35,9 +35,7 @@ fn definition(source: &str, section: BattleVehicleSection, link: &str) -> Battle
             modes: vec![],
         },
     );
-    template
-        .sections
-        .insert(BattleVehicleSection::Turret, turret);
+    template.sections.insert(VehicleSection::Turret, turret);
     template
         .sections
         .get_mut(&section)
@@ -54,7 +52,7 @@ fn definition(source: &str, section: BattleVehicleSection, link: &str) -> Battle
     for (slot, modes) in [(2, vec![]), (3, vec!["Artemis/Mine".into()])] {
         template
             .sections
-            .get_mut(&BattleVehicleSection::Left)
+            .get_mut(&VehicleSection::Left)
             .unwrap()
             .criticals
             .insert(
@@ -74,13 +72,13 @@ fn definition(source: &str, section: BattleVehicleSection, link: &str) -> Battle
 fn vehicle_artemis_links_loss_and_roundtrip() {
     for source in templates() {
         for section in [
-            BattleVehicleSection::Turret,
-            BattleVehicleSection::Rear,
-            BattleVehicleSection::Front,
+            VehicleSection::Turret,
+            VehicleSection::Rear,
+            VehicleSection::Front,
         ] {
-            let unit = BattleVehicle::new(definition(&source, section, "1")).unwrap();
-            let linked = section == BattleVehicleSection::Turret
-                || (section == BattleVehicleSection::Rear && !unit.definition().is_vtol());
+            let unit = Vehicle::new(definition(&source, section, "1")).unwrap();
+            let linked = section == VehicleSection::Turret
+                || (section == VehicleSection::Rear && !unit.definition().is_vtol());
             assert_eq!(
                 unit.artemis_operational(0).unwrap(),
                 linked,
@@ -97,14 +95,14 @@ fn vehicle_artemis_links_loss_and_roundtrip() {
             let section_name = serde_json::to_value(section).unwrap();
             state["sections"][section_name.as_str().unwrap()] =
                 serde_json::json!({"armor":0,"internal":0,"rear":0});
-            let section_lost: BattleVehicle = serde_json::from_value(state).unwrap();
+            let section_lost: Vehicle = serde_json::from_value(state).unwrap();
             assert!(!section_lost.artemis_operational(0).unwrap());
             let mut damaged = unit.clone();
             assert!(damaged.destroy_critical(controller.location).unwrap());
             assert!(!damaged.artemis_operational(0).unwrap());
             assert!(!damaged.destroy_critical(controller.location).unwrap());
             assert_eq!(damaged.mass().unwrap(), unit.mass().unwrap());
-            let restored: BattleVehicle =
+            let restored: Vehicle =
                 serde_json::from_value(serde_json::to_value(&damaged).unwrap()).unwrap();
             assert_eq!(
                 restored.artemis_controllers().unwrap(),
@@ -112,16 +110,12 @@ fn vehicle_artemis_links_loss_and_roundtrip() {
             );
         }
         for link in ["-", "0", "2", "255"] {
-            let unit = BattleVehicle::new(definition(&source, BattleVehicleSection::Turret, link))
-                .unwrap();
+            let unit = Vehicle::new(definition(&source, VehicleSection::Turret, link)).unwrap();
             assert!(!unit.artemis_operational(0).unwrap());
             assert!(unit.artemis_controllers().unwrap()[0].operational);
         }
         for link in ["bad", "-1", "256"] {
-            assert!(
-                BattleVehicle::new(definition(&source, BattleVehicleSection::Turret, link))
-                    .is_err()
-            );
+            assert!(Vehicle::new(definition(&source, VehicleSection::Turret, link)).is_err());
         }
     }
 }
@@ -134,7 +128,7 @@ async fn fixture(source: &str) -> (tempfile::TempDir, Config, World, ObjectId) {
     create_battle_vehicle(
         &mut world,
         id,
-        definition(source, BattleVehicleSection::Turret, "1"),
+        definition(source, VehicleSection::Turret, "1"),
     )
     .unwrap();
     let map = world.create(&config, "Field".into(), Kind::Room);
@@ -149,10 +143,7 @@ async fn fixture(source: &str) -> (tempfile::TempDir, Config, World, ObjectId) {
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
     support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
-    world
-        .btech
-        .set_unit_power(id, BattlePower::Running)
-        .unwrap();
+    world.btech.set_unit_power(id, Power::Running).unwrap();
     (dir, config, world, id)
 }
 
@@ -178,7 +169,7 @@ async fn vehicle_artemis_controls_feed_rollback_and_restart() {
             lua.world().btech.vehicles()[&id]
                 .ammunition_mode(0)
                 .unwrap(),
-            BattleAmmunitionMode::Artemis
+            AmmunitionMode::Artemis
         );
         assert!(
             lua.eval_callback::<bool>(&format!(
@@ -197,7 +188,7 @@ async fn vehicle_artemis_controls_feed_rollback_and_restart() {
         let launch =
             reserve_battle_vehicle_weapon(&mut restored, id, ObjectId(1), 0, true).unwrap();
         assert!(launch.launched);
-        assert_eq!(launch.ammunition_mode, BattleAmmunitionMode::Artemis);
+        assert_eq!(launch.ammunition_mode, AmmunitionMode::Artemis);
         assert_eq!(
             restored.btech.vehicles()[&id].ammunition(),
             &[bins[0], bins[1] - 1]

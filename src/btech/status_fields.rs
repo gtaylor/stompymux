@@ -1,5 +1,5 @@
 //! Administrative status words are projections of authoritative damage and control state.
-use super::{BattleActiveProbe, BattleSystem};
+use super::{ActiveProbe, System};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result};
 
@@ -22,7 +22,7 @@ pub(super) fn vehicle_criticals(world: &World, id: ObjectId) -> Result<u32> {
 
 /// The protected first hardened-gyro hit is damage even before it affects stability.
 pub(super) fn secondary_criticals(world: &World, id: ObjectId) -> Result<u32> {
-    let probe = BattleActiveProbe::Light;
+    let probe = ActiveProbe::Light;
     let (gyro, probe_lost) = if let Some(unit) = world.btech.constructed_units().get(&id) {
         (
             unit.gyro_condition().1,
@@ -45,7 +45,7 @@ pub(super) fn secondary_criticals(world: &World, id: ObjectId) -> Result<u32> {
 /// Secondary status uses committed electronic observations and current control state.
 /// Inspection does not refresh interference or consume simulation time.
 pub(super) fn secondary_status(world: &World, id: ObjectId) -> Result<u32> {
-    use super::BattleElectronicMode as Mode;
+    use super::ElectronicMode as Mode;
     let (electronics, lamp, stealth, null_signature, turret, fortified, hold, no_xp) =
         if let Some(unit) = world.btech.constructed_units().get(&id) {
             (
@@ -103,24 +103,18 @@ pub(super) fn secondary_status(world: &World, id: ObjectId) -> Result<u32> {
 /// Main status follows admitted lifecycle state; observer-dependent cover is not unit-owned.
 pub(super) fn primary_status(world: &World, id: ObjectId) -> Result<u32> {
     use super::{
-        BattleHexTargetMode as Hex, BattlePosture, BattlePower, BattleTargetSelection as Target,
-        BattleTorso, BattleVtolFlightPhase as Flight,
+        HexTargetMode as Hex, Posture, Power, TargetSelection as Target, Torso,
+        VtolFlightPhase as Flight,
     };
     let scanner = super::scanner::scanner_unit(world, id).context("Unit is unavailable")?;
     let (selection, pilot, crew_unconscious, ams, safe, combat_safe, extra) =
         if let Some(unit) = world.btech.constructed_units().get(&id) {
             let flight = unit.flight();
             let extra = [
-                (
-                    1,
-                    matches!(unit.facing.torso, BattleTorso::Right | BattleTorso::Both),
-                ),
-                (
-                    2,
-                    matches!(unit.facing.torso, BattleTorso::Left | BattleTorso::Both),
-                ),
+                (1, matches!(unit.facing.torso, Torso::Right | Torso::Both)),
+                (2, matches!(unit.facing.torso, Torso::Left | Torso::Both)),
                 (6, flight.is_some()),
-                (7, unit.posture() == BattlePosture::Prone),
+                (7, unit.posture() == Posture::Prone),
                 (
                     8,
                     flight.is_some_and(|flight| flight.dfa_target().is_some()),
@@ -176,7 +170,7 @@ pub(super) fn primary_status(world: &World, id: ObjectId) -> Result<u32> {
         .and_then(|position| world.btech.maps().get(&position.map));
     let special = environment.is_some_and(|map| map.uses_special_rules());
     let flags = [
-        (3, scanner.power == BattlePower::Running),
+        (3, scanner.power == Power::Running),
         (5, scanner.destroyed),
         (11, ams),
         (12, safe),
@@ -213,7 +207,7 @@ pub(super) fn primary_status(world: &World, id: ObjectId) -> Result<u32> {
 fn lost_systems<L: Copy>(
     systems: &[super::SystemCritical<L>],
     unavailable: impl Fn(L) -> bool,
-) -> std::collections::BTreeSet<BattleSystem> {
+) -> std::collections::BTreeSet<System> {
     systems
         .iter()
         .filter(|part| unavailable(part.location))
@@ -223,7 +217,7 @@ fn lost_systems<L: Copy>(
 
 /// Critical status exposes damage and scenario state without reproducing cache-validity bits.
 pub(super) fn primary_criticals(world: &World, id: ObjectId) -> Result<u32> {
-    use BattleSystem as S;
+    use System as S;
     let scanner = super::scanner::scanner_unit(world, id).context("Unit is unavailable")?;
     let (
         lost,
@@ -255,17 +249,17 @@ pub(super) fn primary_criticals(world: &World, id: ObjectId) -> Result<u32> {
             }),
             unit.gyro_damage(),
             hips,
-            unit.chassis() == super::BattleMechChassis::Biped,
+            unit.chassis() == super::MechChassis::Biped,
             unit.heat_cutoff().enabled,
             unit.towable,
             unit.searchlight().destroyed,
             unit.illumination_observed,
             unit.inferno_remaining > 0,
             unit.stun_remaining > 0,
-            unit.has_active_probe(BattleActiveProbe::Beagle)?
-                && !unit.active_probe_available(BattleActiveProbe::Beagle)?,
-            unit.has_active_probe(BattleActiveProbe::Bloodhound)?
-                && !unit.active_probe_available(BattleActiveProbe::Bloodhound)?,
+            unit.has_active_probe(ActiveProbe::Beagle)?
+                && !unit.active_probe_available(ActiveProbe::Beagle)?,
+            unit.has_active_probe(ActiveProbe::Bloodhound)?
+                && !unit.active_probe_available(ActiveProbe::Bloodhound)?,
         )
     } else {
         let unit = &world.btech.vehicles()[&id];
@@ -282,10 +276,10 @@ pub(super) fn primary_criticals(world: &World, id: ObjectId) -> Result<u32> {
             unit.illumination_observed,
             unit.inferno_remaining > 0,
             false,
-            unit.has_active_probe(BattleActiveProbe::Beagle)?
-                && !unit.active_probe_available(BattleActiveProbe::Beagle)?,
-            unit.has_active_probe(BattleActiveProbe::Bloodhound)?
-                && !unit.active_probe_available(BattleActiveProbe::Bloodhound)?,
+            unit.has_active_probe(ActiveProbe::Beagle)?
+                && !unit.active_probe_available(ActiveProbe::Beagle)?,
+            unit.has_active_probe(ActiveProbe::Bloodhound)?
+                && !unit.active_probe_available(ActiveProbe::Bloodhound)?,
         )
     };
     let flags = [

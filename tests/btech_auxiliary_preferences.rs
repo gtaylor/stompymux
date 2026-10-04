@@ -9,7 +9,7 @@ use stompymux_rs::*;
 async fn retained_preferences_share_controls_and_leave_attack_results_unchanged() {
     for source in firing::templates() {
         let (_dir, config, world, id, target, index) =
-            firing::fixture_with_target(&source, Some(BattleWeapon::MediumLaser), &source).await;
+            firing::fixture_with_target(&source, Some(Weapon::MediumLaser), &source).await;
         let normal = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
         let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
         let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();

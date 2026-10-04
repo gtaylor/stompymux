@@ -5,8 +5,8 @@ use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 
 /// Ordinary direct-fire rules keep the selected-target settling contribution visible.
-fn rules() -> BattleAimRules {
-    BattleAimRules {
+fn rules() -> AimRules {
+    AimRules {
         woods_damage: false,
         dig_bonus: 3,
         dig_only_front: false,
@@ -115,7 +115,7 @@ async fn anti_air_tracks_shared_orbital_drops_and_installed_equipment() {
             firing::fixture_with_target(&source, None, &source).await;
         firing::edit(&mut world, target, |state| {
             state["orbital_drop"] =
-                serde_json::to_value(BattleOrbitalDrop::new(100 * 1024, 2).unwrap()).unwrap();
+                serde_json::to_value(OrbitalDrop::new(100 * 1024, 2).unwrap()).unwrap();
             state["ground_elevation"] = serde_json::Value::Null;
         });
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();

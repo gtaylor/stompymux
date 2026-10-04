@@ -1,5 +1,5 @@
 //! Five-column visible contact condition summary with per-column precedence.
-use super::{BattleBeaconKind, BattleElectronicMode, BattlePosture, BattlePower};
+use super::{BeaconKind, ElectronicMode, Posture, Power};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result};
 
@@ -28,11 +28,11 @@ pub(super) fn known_status(world: &World, observer: ObjectId, target: ObjectId) 
             ' '
         };
         let power = match vehicle.power() {
-            BattlePower::Off => 'S',
-            BattlePower::Starting { .. } => 's',
-            BattlePower::Running if vehicle.inferno_remaining() > 0 => 'I',
-            BattlePower::Running if !vehicle.burning_sections().is_empty() => 'B',
-            BattlePower::Running => ' ',
+            Power::Off => 'S',
+            Power::Starting { .. } => 's',
+            Power::Running if vehicle.inferno_remaining() > 0 => 'I',
+            Power::Running if !vehicle.burning_sections().is_empty() => 'B',
+            Power::Running => ' ',
         };
         return Ok([' ', condition, ' ', power, ' '].into_iter().collect());
     }
@@ -55,7 +55,7 @@ pub(super) fn known_status(world: &World, observer: ObjectId, target: ObjectId) 
     };
     let third = if unit.flight().is_some() {
         'J'
-    } else if unit.posture() == BattlePosture::Prone {
+    } else if unit.posture() == Posture::Prone {
         'F'
     } else if unit.stand_timer().is_some() {
         'f'
@@ -67,31 +67,30 @@ pub(super) fn known_status(world: &World, observer: ObjectId, target: ObjectId) 
         ' '
     };
     let fourth = match unit.power() {
-        BattlePower::Off => 'S',
-        BattlePower::Starting { .. } => 's',
-        BattlePower::Running if unit.heat().excess != 0.0 => '+',
-        BattlePower::Running if unit.inferno_remaining() > 0 => 'I',
-        BattlePower::Running => ' ',
+        Power::Off => 'S',
+        Power::Starting { .. } => 's',
+        Power::Running if unit.heat().excess != 0.0 => '+',
+        Power::Running if unit.inferno_remaining() > 0 => 'I',
+        Power::Running => ' ',
     };
     let electronics = unit.electronics();
     let modes = [electronics.guardian, electronics.angel];
-    let fifth =
-        if unit.has_beacon(BattleBeaconKind::Narc) || unit.has_beacon(BattleBeaconKind::Homing) {
-            if unit.signature().team == observer.signature.team {
-                'n'
-            } else {
-                'N'
-            }
-        } else if modes.contains(&BattleElectronicMode::Eccm) {
-            'P'
-        } else if modes.contains(&BattleElectronicMode::Ecm) {
-            'E'
-        } else if electronics.field.protected || electronics.field.angel_protected {
-            'p'
-        } else if electronics.field.disturbed || electronics.field.angel_disturbed {
-            'e'
+    let fifth = if unit.has_beacon(BeaconKind::Narc) || unit.has_beacon(BeaconKind::Homing) {
+        if unit.signature().team == observer.signature.team {
+            'n'
         } else {
-            ' '
-        };
+            'N'
+        }
+    } else if modes.contains(&ElectronicMode::Eccm) {
+        'P'
+    } else if modes.contains(&ElectronicMode::Ecm) {
+        'E'
+    } else if electronics.field.protected || electronics.field.angel_protected {
+        'p'
+    } else if electronics.field.disturbed || electronics.field.angel_disturbed {
+        'e'
+    } else {
+        ' '
+    };
     Ok([first, second, third, fourth, fifth].into_iter().collect())
 }

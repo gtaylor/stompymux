@@ -1,5 +1,5 @@
 //! Wizard map operations and asset and saved-world inspection through the native command registry.
-use super::BattleUnitTemplateExt;
+use super::UnitTemplateExt;
 use crate::{CommandAction, CommandContext, CommandInput, CommandReport, ObjectId};
 use anyhow::{Context, Result, bail, ensure};
 
@@ -10,7 +10,7 @@ pub(crate) fn rolls_command(
     _input: &CommandInput,
 ) -> Result<CommandAction> {
     Ok(CommandAction::Report(CommandReport::Literal(
-        ctx.scripts.world().battle_roll_statistics()?.render(),
+        ctx.scripts.world().roll_statistics()?.render(),
     )))
 }
 
@@ -90,7 +90,7 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
                         flag if flag.eq_ignore_ascii_case("hide") => false,
                         _ => bail!("Expected reveal or hide"),
                     };
-                    Some(super::BattleCargoTransferPoint { x, y, reveal_hint })
+                    Some(super::CargoTransferPoint { x, y, reveal_hint })
                 };
                 ensure!(args.next().is_none(), "Unexpected cargo-point arguments");
                 super::set_cargo_transfer_point(
@@ -144,7 +144,7 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
                 let part = args.next().context("Expected part identifier or name")?;
                 let part = part
                     .parse()
-                    .or_else(|_| super::BattlePart::parse(part).map(|part| part.part_id))?;
+                    .or_else(|_| super::Part::parse(part).map(|part| part.part_id))?;
                 let quantity = args.next().context("Expected quantity")?.parse()?;
                 ensure!(args.next().is_none(), "Unexpected inventory arguments");
                 super::set_inventory_quantity_action(
@@ -173,7 +173,7 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
                         "Part {}: {} ({})",
                         entry.part_id,
                         entry.quantity,
-                        super::BattlePart::from_id(entry.part_id)
+                        super::Part::from_id(entry.part_id)
                             .map_or_else(|| "Unknown part".into(), |part| part.name)
                     )
                 })
@@ -191,7 +191,7 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
     ) {
         let result = (|| -> Result<String> {
             if operation.eq_ignore_ascii_case("weapon-settings") {
-                let weapon = super::BattleWeapon::parse(argument.trim())?;
+                let weapon = super::Weapon::parse(argument.trim())?;
                 let values = ctx.scripts.world().btech.weapon_settings().get(weapon);
                 return Ok(format!(
                     "{}: recycle {} seconds; Battle Value {}.",
@@ -336,7 +336,7 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
                     &ctx.config.path(&ctx.config.database.mech_database),
                     argument,
                 )?;
-                let loadout = super::BattleLoadout::resolve(&template)?;
+                let loadout = super::MechLoadout::resolve(&template)?;
                 let mut lines = vec![format!(
                     "{} ({}): {} weapons, {} ammunition bins, {} system criticals",
                     template.name,
@@ -424,7 +424,7 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
                 {
                     lines.push(format!("Fortified: {}", super::unit_fortified(&world, id)?));
                     lines.push(format!("Observer: {}", super::unit_observer(&world, id)?));
-                    let visibility = super::battle_visibility(&world, id)?;
+                    let visibility = super::visibility(&world, id)?;
                     lines.push(format!(
                         "Visibility: invisible={}, clairvoyant={}",
                         visibility.invisible, visibility.clairvoyant
@@ -596,7 +596,7 @@ fn mutate_object(ctx: &CommandContext<'_>, operation: &str, argument: &str) -> R
         super::set_battle_visibility(
             &mut ctx.scripts.world_mut(),
             id,
-            super::BattleVisibility {
+            super::Visibility {
                 invisible,
                 clairvoyant,
             },
@@ -916,7 +916,7 @@ pub(crate) fn motion_command(
         )));
     }
     let result = ctx.scripts.atomic(|_| {
-        (|| -> Result<super::BattleNotice> {
+        (|| -> Result<super::Notice> {
             let mut world = ctx.scripts.world.borrow_mut();
             let unit = world
                 .objects
@@ -993,9 +993,9 @@ pub(crate) fn facing_command(
                 super::flip_arms(&mut world, unit, ctx.player)?
             } else {
                 let direction = match argument.as_str() {
-                    "l" | "left" => super::BattleTorso::Left,
-                    "r" | "right" => super::BattleTorso::Right,
-                    "c" | "center" => super::BattleTorso::Center,
+                    "l" | "left" => super::Torso::Left,
+                    "r" | "right" => super::Torso::Right,
+                    "c" | "center" => super::Torso::Center,
                     _ => bail!("Usage: rottorso <left|right|center>"),
                 };
                 super::rotate_torso(&mut world, unit, ctx.player, direction)?
@@ -1095,7 +1095,7 @@ pub(crate) fn lock_command(
                         .get(2)
                         .map(|mode| mode.parse())
                         .transpose()?
-                        .unwrap_or(super::BattleHexTargetMode::UnitAtHex);
+                        .unwrap_or(super::HexTargetMode::UnitAtHex);
                     super::select_hex_target(&mut world, unit, ctx.player, hex, mode)?
                 }
                 _ => anyhow::bail!("Usage: lock <#unit|-> or lock <x> <y> [H|B|I|C]"),
@@ -1219,9 +1219,9 @@ pub(crate) fn stand_command(
             return Ok(Some(format!("Your BTH to stand would be: {target}")));
         }
         let mode = match argument.as_str() {
-            "" => super::BattleStandMode::Normal,
-            "anyway" => super::BattleStandMode::Anyway,
-            "careful" => super::BattleStandMode::Careful,
+            "" => super::StandMode::Normal,
+            "anyway" => super::StandMode::Anyway,
+            "careful" => super::StandMode::Careful,
             _ => bail!("Usage: stand [check|anyway|careful]"),
         };
         let _attempt =

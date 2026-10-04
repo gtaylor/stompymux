@@ -18,7 +18,7 @@ btech.player.set_loadout(player, loadout)
 | Name | Type | Description |
 | --- | --- | --- |
 | `player` | `DbRef\|Object` |  |
-| `loadout` | `BattlePersonalCombatLoadout\|nil` |  |
+| `loadout` | `PersonalCombatLoadout\|nil` |  |
 
 ## Returns
 

@@ -43,13 +43,13 @@ fn ignite(world: &mut World, map: ObjectId, x: i32, y: i32, seconds: i64) {
         world,
         map,
         HexCoordinate { x, y },
-        Some(BattleDecoration::new(DecorationKind::Fire, seconds, None)),
+        Some(Decoration::new(DecorationKind::Fire, seconds, None)),
     )
     .unwrap();
 }
 
 /// The overlay at a hex.
-fn overlay(world: &World, map: ObjectId, x: i32, y: i32) -> Option<BattleDecoration> {
+fn overlay(world: &World, map: ObjectId, x: i32, y: i32) -> Option<Decoration> {
     world.btech.maps()[&map]
         .decoration(HexCoordinate { x, y })
         .unwrap()
@@ -108,21 +108,21 @@ async fn spreading_fire_never_relights_a_burning_hex() {
 #[tokio::test]
 async fn new_fire_keeps_the_decorations_beneath_it() {
     let (_dir, _config, mut world, map) = field("2 1\n.0.0\n", |hex| hex).await;
-    let record = BattleStaticDecoration {
+    let record = StaticDecoration {
         coordinate: HexCoordinate { x: 1, y: 0 },
         restored_terrain: None,
         object: ObjectId(1),
         duration: 0,
         scalar: 0,
     };
-    let decoration = BattleStaticDecoration {
+    let decoration = StaticDecoration {
         restored_terrain: Some(Terrain::Water),
         ..record
     };
     set_battle_static_decoration(
         &mut world,
         map,
-        BattleStaticDecorationKind::Smoke,
+        StaticDecorationKind::Smoke,
         1,
         Some(record),
     )
@@ -130,7 +130,7 @@ async fn new_fire_keeps_the_decorations_beneath_it() {
     set_battle_static_decoration(
         &mut world,
         map,
-        BattleStaticDecorationKind::Decoration,
+        StaticDecorationKind::Decoration,
         2,
         Some(decoration),
     )
@@ -139,12 +139,12 @@ async fn new_fire_keeps_the_decorations_beneath_it() {
     let stored = &world.btech.maps()[&map];
     assert!(
         stored
-            .static_decorations(BattleStaticDecorationKind::Smoke)
+            .static_decorations(StaticDecorationKind::Smoke)
             .is_empty()
     );
     assert_eq!(
         stored
-            .static_decorations(BattleStaticDecorationKind::Decoration)
+            .static_decorations(StaticDecorationKind::Decoration)
             .get(&2),
         Some(&decoration)
     );
@@ -157,7 +157,7 @@ fn mech(world: &mut World, config: &Config, map: ObjectId, x: i64, y: i64) -> Ob
     create_battle_unit(
         world,
         id,
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(world, id, support::FIXTURE_DICE_SEED);
@@ -166,8 +166,8 @@ fn mech(world: &mut World, config: &Config, map: ObjectId, x: i64, y: i64) -> Ob
         .btech
         .rewrite_unit_record(id, |record| {
             let unit = record;
-            unit["power"] = serde_json::to_value(BattlePower::Running).unwrap();
-            unit["dice"] = serde_json::to_value(BattleDice::seeded([19; 32])).unwrap();
+            unit["power"] = serde_json::to_value(Power::Running).unwrap();
+            unit["dice"] = serde_json::to_value(Dice::seeded([19; 32])).unwrap();
         })
         .unwrap();
     id
@@ -237,7 +237,7 @@ async fn smoky_crossing() -> (tempfile::TempDir, World, ObjectId) {
         &mut world,
         map,
         HexCoordinate { x: 0, y: 0 },
-        Some(BattleDecoration::new(DecorationKind::Smoke, 60, None)),
+        Some(Decoration::new(DecorationKind::Smoke, 60, None)),
     )
     .unwrap();
     ignite(&mut world, map, 1, 0, 60);
@@ -250,7 +250,7 @@ async fn smoky_crossing() -> (tempfile::TempDir, World, ObjectId) {
 async fn tactical_map_shows_the_terrain_beneath_fire_and_smoke() {
     let (_dir, world, id) = smoky_crossing().await;
     let report =
-        battle_tactical_map(&world, id, ObjectId(1), "", BattleViewDimensions::default()).unwrap();
+        battle_tactical_map(&world, id, ObjectId(1), "", ViewDimensions::default()).unwrap();
     let plain = text::plain(&report.text);
     let lines: Vec<_> = plain.lines().collect();
     let hex = |x: usize, y: usize| {
@@ -277,21 +277,14 @@ async fn long_range_u_mode_shows_the_terrain_beneath_fire_and_smoke() {
     let (_dir, world, id) = smoky_crossing().await;
     let map = |mode| {
         text::plain(
-            &battle_long_range_map(
-                &world,
-                id,
-                ObjectId(1),
-                mode,
-                "",
-                BattleViewDimensions::default(),
-            )
-            .unwrap()
-            .text,
+            &battle_long_range_map(&world, id, ObjectId(1), mode, "", ViewDimensions::default())
+                .unwrap()
+                .text,
         )
     };
-    let terrain = map(BattleLongRangeMode::Terrain);
+    let terrain = map(LongRangeMode::Terrain);
     assert!(terrain.contains('&') && terrain.contains(':'), "{terrain}");
-    let beneath = map(BattleLongRangeMode::UnderlyingTerrain);
+    let beneath = map(LongRangeMode::UnderlyingTerrain);
     assert!(
         !beneath.contains('&') && !beneath.contains(':'),
         "{beneath}"

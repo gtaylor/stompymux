@@ -5,30 +5,30 @@ type: docs
 
 Record shapes and aliases used by the callable signatures in this reference.
 
-## BattleSectionName
+## MechSectionName
 
 Alias: `"LeftArm"|"RightArm"|"LeftTorso"|"RightTorso"|"CenterTorso"|"LeftLeg"|"RightLeg"|"Head"`
 
-## BattleNotice
+## Notice
 
 - `unit`: `integer` — Recipient unit dbref.
 - `text`: `string` — Cockpit message text.
 
-## BattleCriticalDefinition
+## CriticalDefinition
 
 - `equipment`: `string` — Unresolved asset equipment name.
 - `data`: `string` — Unresolved asset data token.
 - `modes`: `string[]` — Unresolved asset mode names.
 
-## BattleSectionDefinition
+## SectionDefinition
 
 - `armor`: `integer`
 - `internal`: `integer`
 - `rear`: `integer`
-- `criticals`: `table<integer, BattleCriticalDefinition>` — Zero-based slot positions.
+- `criticals`: `table<integer, CriticalDefinition>` — Zero-based slot positions.
 - `configuration`: `string|nil`
 
-## BattleTemplate
+## MechTemplate
 
 - `name`: `string`
 - `reference`: `string`
@@ -36,7 +36,7 @@ Alias: `"LeftArm"|"RightArm"|"LeftTorso"|"RightTorso"|"CenterTorso"|"LeftLeg"|"R
 - `max_speed`: `number`
 - `jump_speed`: `number`
 - `heat_sinks`: `integer` — Cooling capacity; double sinks are already counted twice.
-- `sections`: `table<BattleSectionName, BattleSectionDefinition>`
+- `sections`: `table<MechSectionName, SectionDefinition>`
 - `attributes`: `table<string, string>` — Unit-level source fields; not validated simulation capabilities.
 
 ## MapAssetSummary
@@ -46,7 +46,7 @@ Alias: `"LeftArm"|"RightArm"|"LeftTorso"|"RightTorso"|"CenterTorso"|"LeftLeg"|"R
 - `gravity`: `integer`
 - `temperature`: `integer`
 - `flags`: `MapFlag[]` — Map flags the asset enables.
-- `points_of_interest`: `BattleMapPointOfInterest[]` — Scripted points of interest in file order.
+- `points_of_interest`: `MapPointOfInterest[]` — Scripted points of interest in file order.
 
 ## Hex
 
@@ -59,13 +59,27 @@ Alias: `"LeftArm"|"RightArm"|"LeftTorso"|"RightTorso"|"CenterTorso"|"LeftLeg"|"R
 
 ## StoredMap
 
-- `cargo_transfer_point`: `BattleCargoTransferPoint|nil` — Saved cargo location and hint policy.
+- `cargo_transfer_point`: `CargoTransferPoint|nil` — Saved cargo location and hint policy.
 - `building_exits`: `table<integer, {coordinate: HexCoordinate, destination: integer, data_char: integer, data_short: integer, data_int: integer}>` — Return-link slots; coordinates are selection metadata.
 - `name`: `string`
 - `width`: `integer`
 - `height`: `integer`
 - `gravity`: `integer`
 - `temperature`: `integer`
+- `flags`: `MapFlag[]` — Enabled map flags.
+- `light`: `integer` — 0 night, 1 twilight, 2 day
+- `visibility`: `integer` — Weather range in hexes
+- `sensor_flags`: `integer` — Disabled perception channels: sensor band bit 0 (1), radar bit 5 (32), probes bit 6 (64).
+- `maximum_visibility`: `integer` — Saved map sensor range ceiling
+- `terrain_ready`: `boolean` — Whether saved tiles have a valid dictionary.
+
+## MapPointOfInterest
+
+- `type`: `string` — Case-sensitive category chosen by the map author.
+- `name`: `string` — Display name chosen by the map author.
+- `x`: `integer` — Zero-based column.
+- `y`: `integer` — Zero-based row.
+- `elevation`: `integer|nil` — Levels above (negative: below) the hex's ground level, or nil when unset.
 
 ## StoredBattleUnit
 
@@ -76,68 +90,75 @@ Alias: `"LeftArm"|"RightArm"|"LeftTorso"|"RightTorso"|"CenterTorso"|"LeftLeg"|"R
 - `tons`: `integer`
 - `map`: `integer|nil`
 
-## BattleWeapon
+## Weapon
 
 Alias: `"arrow_iv"|"clan_arrow_iv"|"long_tom"|"sniper"|"thumper"|"long_tom_cannon"|"sniper_cannon"|"thumper_cannon"|"a_pod"|"clan_a_pod"|"i_narc_beacon"|"narc_beacon"|"clan_narc_beacon"|"anti_missile_system"|"clan_anti_missile_system"|"laser_ams"|"clan_laser_ams"|"clan_lbx2"|"clan_lbx5"|"clan_lbx10"|"clan_lbx20"|"clan_ultra_ac2"|"clan_ultra_ac5"|"clan_ultra_ac10"|"clan_ultra_ac20"|"mml3"|"mml5"|"mml7"|"mml9"|"clan_atm3"|"clan_atm6"|"clan_atm9"|"clan_atm12"|"clan_lrm5"|"clan_lrm10"|"clan_lrm15"|"clan_lrm20"|"clan_srm2"|"clan_srm4"|"clan_srm6"|"clan_streak_srm2"|"clan_streak_srm4"|"clan_streak_srm6"|"clan_streak_lrm5"|"clan_streak_lrm10"|"clan_streak_lrm15"|"clan_streak_lrm20"|"clan_gauss_rifle"|"clan_machine_gun"|"clan_light_machine_gun"|"clan_heavy_machine_gun"|"clan_er_large_laser"|"clan_er_medium_laser"|"clan_er_small_laser"|"clan_er_micro_laser"|"clan_er_ppc"|"clan_flamer"|"clan_heavy_large_laser"|"clan_heavy_medium_laser"|"clan_heavy_small_laser"|"clan_large_pulse_laser"|"clan_medium_pulse_laser"|"clan_small_pulse_laser"|"clan_micro_pulse_laser"|"clan_er_large_pulse_laser"|"clan_er_medium_pulse_laser"|"clan_er_small_pulse_laser"|"clan_plasma_rifle"|"flamer"|"coolant_gun"|"heavy_flamer"|"vehicle_flamer"|"vehicle_heavy_flamer"|"plasma_rifle"|"acid_thrower"|"thunderbolt5"|"thunderbolt10"|"thunderbolt15"|"thunderbolt20"|"hyper_ac2"|"hyper_ac5"|"hyper_ac10"|"machine_gun"|"heavy_machine_gun"|"light_ac2"|"light_ac5"|"small_laser"|"medium_laser"|"large_laser"|"ppc"|"er_small_laser"|"er_medium_laser"|"er_large_laser"|"er_ppc"|"small_pulse_laser"|"medium_pulse_laser"|"large_pulse_laser"|"x_small_pulse_laser"|"x_medium_pulse_laser"|"x_large_pulse_laser"|"light_ppc"|"heavy_ppc"|"snub_nosed_ppc"|"srm2"|"rocket10"|"rocket15"|"rocket20"|"mrm10"|"mrm20"|"mrm30"|"mrm40"|"streak_srm2"|"streak_srm4"|"streak_srm6"|"lr_dfm5"|"lr_dfm10"|"lr_dfm15"|"lr_dfm20"|"sr_dfm2"|"sr_dfm4"|"sr_dfm6"|"elrm5"|"elrm10"|"elrm15"|"elrm20"|"nlrm5"|"nlrm10"|"nlrm15"|"nlrm20"|"lrt5"|"lrt10"|"lrt15"|"lrt20"|"srt2"|"srt4"|"srt6"|"clan_lrt5"|"clan_lrt10"|"clan_lrt15"|"clan_lrt20"|"clan_srt2"|"clan_srt4"|"clan_srt6"|"lrm5"|"lrm10"|"lrm15"|"srm4"|"srm6"|"lrm20"|"heavy_gauss_rifle"|"gauss_rifle"|"light_gauss_rifle"|"magshot_gauss_rifle"|"lbx2"|"lbx5"|"lbx10"|"lbx20"|"ac2"|"ac5"|"ac10"|"ac20"|"ultra_ac2"|"ultra_ac5"|"ultra_ac10"|"ultra_ac20"|"rotary_ac2"|"rotary_ac5"|"clan_rotary_ac2"|"clan_rotary_ac5"|"clan_rotary_ac10"`
 
-## BattleCriticalLocation
+## CriticalLocation
 
-- `section`: `BattleSectionName`
+- `section`: `MechSectionName`
 - `slot`: `integer` — Zero-based critical slot.
 
-## BattleAmmunitionMode
+## AmmunitionMode
 
 Alias: `"smoke"|"mine"|"i_narc_explosive"|"i_narc_haywire"|"i_narc_ecm"|"i_narc_nemesis"|"semi_guided"|"swarm"|"swarm1"|"stinger"|"narc"|"normal"|"cluster"|"artemis"|"precision"|"flechette"|"armor_piercing"|"caseless"|"incendiary"|"inferno"|"mml_lrm"|"mml_lrm_artemis"|"mml_lrm_narc"|"mml_lrm_swarm"|"mml_lrm_swarm1"|"mml_lrm_semi_guided"|"mml_lrm_stinger"|"extended_range"|"high_explosive"|"thunder_augmented"|"thunder_vibrabomb"|"thunder_active"`
 
-## BattleFireMode
+## FireMode
 
 Alias: `"normal"|"heat"|"hotload"|"ultra"|"rapid"|"rotary2"|"rotary3"|"rotary4"|"rotary5"|"rotary6"|"gatling"`
 
-## BattleWeaponMount
+## WeaponMount
 
-- `weapon`: `BattleWeapon`
-- `criticals`: `BattleCriticalLocation[]` — Slots belonging to one weapon.
+- `weapon`: `Weapon`
+- `criticals`: `CriticalLocation[]` — Slots belonging to one weapon.
 - `one_shot`: `boolean` — Self-contained launcher; does not draw from ammunition bins.
 - `initially_spent`: `boolean` — Initial template supply already expended.
-- `initial_ammunition_mode`: `BattleAmmunitionMode`
-- `initial_fire_mode`: `BattleFireMode` — Template mode; live mode is reported by unit.weapons.
+- `initial_ammunition_mode`: `AmmunitionMode`
+- `initial_fire_mode`: `FireMode` — Template mode; live mode is reported by unit.weapons.
 - `rear_mount`: `boolean`
 - `on_targeting_computer`: `boolean` — Explicit authored link, separate from automatic eligibility.
 
-## BattleAmmunitionBin
+## AmmunitionBin
 
-- `location`: `BattleCriticalLocation`
-- `weapon`: `BattleWeapon`
+- `location`: `CriticalLocation`
+- `weapon`: `Weapon`
 - `rounds`: `integer` — Initial salvos in this independent bin.
 - `capacity`: `integer` — Installed bin capacity in salvos.
 - `hotload`: `boolean` — Retained bin flag; does not hotload the launcher.
 - `half_ton`: `boolean` — Explicit half-ton construction flag.
-- `mode`: `BattleAmmunitionMode`
+- `mode`: `AmmunitionMode`
 
-## BattleSystemCritical
+## SystemCritical
 
-- `location`: `BattleCriticalLocation`
+- `location`: `CriticalLocation`
 - `system`: `string` — Snake_case system identity.
 
-## BattleLoadout
+## MechLoadout
 
-- `weapons`: `BattleWeaponMount[]`
-- `ammunition`: `BattleAmmunitionBin[]`
-- `systems`: `BattleSystemCritical[]`
+- `weapons`: `WeaponMount[]`
+- `ammunition`: `AmmunitionBin[]`
+- `systems`: `SystemCritical[]`
 
-## BattleCargoTransferPoint
+## CargoTransferPoint
 
 - `x`: `integer` — Zero-based map column.
 - `y`: `integer` — Zero-based map row.
 - `reveal_hint`: `boolean|nil` — Defaults to false; disclose coordinates in location failures only when true.
 
-## BattleRadioChannel
+## BtechMapAPI
+
+- `terrain_types`: `TerrainTypes` — Terrain names reported by btech.map.terrain.
+- `ground_types`: `GroundTypes` — Ground names for a hex's ground field.
+- `woods_types`: `WoodsTypes` — Woods densities for a hex's woods field.
+- `structure_kinds`: `StructureKinds` — Structure kinds for the kind field of a hex's structure.
+
+## RadioChannel
 
 - `frequency`: `integer` — Frequency from 0 through 999999.
 - `title`: `string` — At most fifteen UTF-8 bytes.
 - `mode`: `{digital: boolean, muted: boolean, relay: boolean, info: boolean, scan: boolean, color: string?}`
 
-## BattleVtolFuelStatus
+## VtolFuelStatus
 
 - `original_capacity`: `integer` — Template fuel capacity.
 - `capacity`: `integer` — Current capacity including 2000 per installed or carried auxiliary tank.
@@ -146,19 +167,19 @@ Alias: `"normal"|"heat"|"hotload"|"ultra"|"rapid"|"rotary2"|"rotary3"|"rotary4"|
 - `installed_tanks`: `integer` — Fuel_Tank criticals in saved VTOL construction.
 - `excess_mass`: `integer` — Fuel above original capacity in 1/1024 tons before cargo discounts.
 
-## BattleSectionState
+## SectionState
 
 - `armor`: `integer`
 - `internal`: `integer`
 - `rear`: `integer`
 
-## BattlePosition
+## Position
 
 - `map`: `integer` — Battlefield object dbref.
 - `x`: `integer` — Zero-based column.
 - `y`: `integer` — Zero-based row.
 
-## BattlePower
+## UnitPower
 
 - `state`: `"off"|"starting"|"running"`
 - `remaining`: `integer|nil` — Remaining committed seconds during startup.
@@ -168,7 +189,7 @@ Alias: `"normal"|"heat"|"hotload"|"ultra"|"rapid"|"rotary2"|"rotary3"|"rotary4"|
 - `x`: `number`
 - `y`: `number`
 
-## BattleMotion
+## Motion
 
 - `point`: `table` — Continuous x/y measured in hex heights.
 - `heading`: `number` — Current clockwise compass heading.
@@ -176,45 +197,45 @@ Alias: `"normal"|"heat"|"hotload"|"ultra"|"rapid"|"rotary2"|"rotary3"|"rotary4"|
 - `speed`: `number` — Current kph, negative for reverse.
 - `desired_speed`: `number`
 
-## BattleMobility
+## Mobility
 
 - `maximum_speed`: `number` — Damage-adjusted maximum kph before terrain, heat and cargo.
 - `piloting_modifier`: `integer` — Damage modifier for subsequent piloting checks.
 
-## BattleDetectionChannel
+## DetectionChannel
 
 Alias: `"sensors"|"sight"|"radar"|"probe" Values from btech.unit.detection_channels.`
 
-## BattlePerceptionStatus
+## PerceptionStatus
 
 Alias: `"ready"|"degraded"|"jammed"|"damaged"|"disabled"|"absent"`
 
-## BattleTargetLock
+## TargetLock
 
 - `target`: `integer` — Selected unit dbref; may no longer be visible.
 - `remaining`: `integer` — Settling seconds, 0..8; zero does not establish visibility.
 
-## BattleStaggerHit
+## StaggerHit
 
 - `damage`: `integer`
 - `remaining`: `integer` — Seconds until this incoming damage group expires.
 - `counted`: `boolean` — Whether a rolling check already used this group.
 
-## BattleStagger
+## Stagger
 
 - `action_damage`: `integer` — Restored signed action-time scalar, independent of incoming damage history.
-- `hits`: `BattleStaggerHit[]`
+- `hits`: `StaggerHit[]`
 - `elapsed`: `integer` — Committed seconds since the last rolling check.
 - `turn_damage`: `integer` — Unchecked traditional damage.
 - `phase`: `integer` — Saved per-unit turn phase, 0 through 29.
 - `checked_phase`: `integer?` — Phase of the previous traditional check.
 
-## BattleStandTimer
+## StandTimer
 
 - `state`: `"rising"|"recovering"`
 - `remaining`: `integer` — Committed seconds remaining, 1..60.
 
-## BattleMass
+## Mass
 
 - `engine`: `integer` — Engine mass in 1/1024 tons.
 - `cockpit`: `integer`
@@ -226,17 +247,17 @@ Alias: `"ready"|"degraded"|"jammed"|"damaged"|"disabled"|"absent"`
 - `cargo`: `integer` — Authored cargo-space installation mass, excluding loose stock.
 - `total`: `integer` — Current total in 1/1024 tons.
 
-## BattleLateralMode
+## LateralMode
 
 Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 
-## BattleLateralState
+## LateralState
 
-- `active`: `BattleLateralMode`
-- `pending`: `BattleLateralMode?`
+- `active`: `LateralMode`
+- `pending`: `LateralMode?`
 - `remaining`: `integer` — Seconds until pending direction activates.
 
-## BattleTransportState
+## TransportState
 
 - `altitude`: `number|nil` — Continuous altitude in terrain levels, including carried and pending-descent fractions.
 - `fortified`: `boolean` — Scenario emplacement; blocks movement and towing, counts as immobile for aiming.
@@ -246,57 +267,57 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 - `orbital_drop`: `{elevation: integer, protection: {state: "cocoon"|"jump_jets", integrity: integer?}}|nil` — Saved orbital descent; inspection does not advance it.
 - `free_fall`: `{elevation: number, speed: integer, remaining: integer, grounded: boolean}|nil` — Pending descent; inspection does not advance it.
 
-## BattleHullDownState
+## HullDownState
 
 - `active`: `boolean` — Completed lowered posture.
 - `pending`: `boolean|nil` — Lowering (true) or raising (false).
 - `remaining`: `integer` — Seconds left in the transition; zero when idle.
 
-## BattleRadioState
+## RadioState
 
 - `radio_experience_remaining`: `integer` — Saved communication XP gate, 0 through 61 seconds.
 - `radio_skill`: `integer` — Communication target captured on startup.
-- `radio`: `BattleRadioChannel[]` — Active channels, indexed from one in this inspection array.
+- `radio`: `RadioChannel[]` — Active channels, indexed from one in this inspection array.
 - `radio_capabilities`: `{channels: integer, range: integer, relay: boolean, digital: boolean, info: boolean, scan: boolean}` — Derived installed hardware limits.
 
-## BattleUnitState
+## UnitState
 
 - `mw_safety`: `boolean` — MechWarrior safety; enabled when startup completes.
 - `bth_debug`: `boolean` — Retained debug preference; combat reports do not consume this flag.
 - `last_startup`: `integer` — Unix time of the last completed startup; zero before first completion.
 - `cockpit_links`: `integer[]` — Three explicit cockpit destinations; unresolved references remain saved.
 - `preferred_id`: `string?` — Configured two-letter preference; separate from the currently assigned ID.
-- `hull_down`: `BattleHullDownState` — Quad hull-down posture and transition.
+- `hull_down`: `HullDownState` — Quad hull-down posture and transition.
 - `kind`: `"mech"`
-- `mass`: `BattleMass` — Derived current mass; detached from world state.
+- `mass`: `Mass` — Derived current mass; detached from world state.
 - `searchlight_warning`: `boolean` — Notify occupants on external illumination transitions.
-- `lateral`: `BattleLateralState`
+- `lateral`: `LateralState`
 - `autocon_shutdown`: `boolean` — Include shutdown targets in routine notices; defaults false.
 - `armor_warning`: `boolean` — Armor threshold warnings; enabled by default.
 - `ammunition_warning`: `boolean` — Low-ammunition warnings; enabled by default.
 - `friendly_fire_safety`: `boolean` — Reject non-coolant fire at teammates; off by default.
-- `null_signature`: `BattleSignatureState`
-- `stealth`: `BattleSignatureState`
-- `electronics`: `BattleElectronics` — Selected suite modes and last committed field.
-- `beacons`: `table<BattleSection, BattleBeaconKind[]>` — Attached effects grouped by section.
-- `narc_sections`: `BattleSection[]` — Sections carrying homing beacons.
+- `null_signature`: `SignatureState`
+- `stealth`: `SignatureState`
+- `electronics`: `Electronics` — Selected suite modes and last committed field.
+- `beacons`: `table<MechSection, BeaconKind[]>` — Attached effects grouped by section.
+- `narc_sections`: `MechSection[]` — Sections carrying homing beacons.
 - `ams_enabled`: `boolean` — Automatic anti-missile defense switch.
 - `auto_fall`: `boolean` — Skip downhill cliff avoidance when piloted.
 - `hex_sync_pending`: `boolean` — A collision interrupted synchronization of motion.point and position.
 - `elevation`: `integer|nil` — Current signed altitude with terrain-effect jump rounding; nil when unplaced.
-- `stand_timer`: `BattleStandTimer?`
+- `stand_timer`: `StandTimer?`
 - `reactor_instability_remaining`: `integer?` — Damage window ticks remaining; nil uses initial world startup grace.
 - `triple_myomer_active`: `boolean` — Derived from installed myomer and sampled excess heat.
 - `movement_maximum_speed`: `number` — Current throttle ceiling, including active myomer.
 - `charge`: `{target: integer?, elapsed: integer, distance: number}` — Persistent charge intent and movement counters.
 - `limb_recycle`: `table<string, integer>` — Remaining physical recovery seconds by limb.
-- `stagger`: `BattleStagger`
+- `stagger`: `Stagger`
 - `posture`: `"standing"|"prone"`
 - `flooded_sections`: `string[]` — Persistent flooded section names.
 - `breached_sections`: `string[]` — Persistent vacuum-disabled section names.
 - `map_slot`: `integer|nil` — Persisted battlefield membership order.
-- `aimed_section`: `BattleAimSelection|nil` — Saved anatomy preference; independent of the current lock.
-- `target_lock`: `BattleTargetLock|BattleHexLock|nil`
+- `aimed_section`: `AimSelection|nil` — Saved anatomy preference; independent of the current lock.
+- `target_lock`: `TargetLock|HexLock|nil`
 - `sensor_ranges`: `{tactical: integer, long_range: integer, scan: integer}` — Computer-derived hex limits after sensor damage.
 - `observer`: `boolean` — Administrator-assigned observer role.
 - `combat_safe`: `boolean` — Operator-imposed immunity to combat damage.
@@ -307,8 +328,8 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 - `fired_recently`: `boolean` — Launched a weapon since the last heartbeat.
 - `spotter`: `integer?` — Self ID while spotting, otherwise the selected observer.
 - `artillery_adjustment`: `integer` — Saved correction for the current artillery target.
-- `spotter_events`: `BattleSpotterEvents` — Pending radio requests and periodic checks.
-- `tag`: `BattleTagState`
+- `spotter_events`: `SpotterEvents` — Pending radio requests and periodic checks.
+- `tag`: `TagState`
 - `signature`: `{team: integer, hidden: boolean, illuminated: boolean}` — Team, hiding and scenario lighting.
 - `scanner_perception`: `integer` — Perception captured at startup completion.
 - `facing`: `{torso: "left"|"center"|"right"|"both", arms_flipped: boolean}`
@@ -329,10 +350,10 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 - `component_failures`: `{location: table, failure: string}[]` — Nonweapon diagnostic conditions; material damage determines system operation.
 - `weapon_failures`: `table<integer, "jammed"|"shorted"|"dud"|"empty"|"disabled"|"ammunition_jam"|"critical_ammunition_jam">` — Temporary conditions by mount index; existing recycle clocks govern recovery.
 - `gyro`: `"standard"|"hardened"|"xl"|"compact"` — Construction family.
-- `artemis`: `BattleArtemisController[]` — Installed controllers and resolved links.
-- `weapon_damage`: `BattleWeaponDamage[]|nil` — Mech weapon critical degradation.
-- `masc`: `BattleBoosterState` — Saved activation and overload/recovery state.
-- `supercharger`: `BattleBoosterState` — Independent compressor timer and failure state.
+- `artemis`: `ArtemisController[]` — Installed controllers and resolved links.
+- `weapon_damage`: `WeaponDamage[]|nil` — Mech weapon critical degradation.
+- `masc`: `BoosterState` — Saved activation and overload/recovery state.
+- `supercharger`: `BoosterState` — Independent compressor timer and failure state.
 - `supercharger_installed`: `boolean` — Template technology flag.
 - `supercharger_operational`: `boolean` — Technology remains available and has not failed.
 - `c3_members`: `integer[]` — Classic C3 members retained by current working-master capacity.
@@ -341,26 +362,26 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 - `c3_hardware`: `{masters: integer, working_masters: integer, slave_installed: boolean, slave_operational: boolean, c3i_installed: boolean, c3i_operational: boolean}` — Installed and working command-network computers; independent of power and membership.
 - `masc_installed`: `boolean` — Sufficient MASC hardware is installed.
 - `masc_operational`: `boolean` — Enough MASC slots remain functional; does not indicate activation.
-- `unjam`: `BattleUnjam|nil` — Active feed recovery.
+- `unjam`: `Unjam|nil` — Active feed recovery.
 - `dumping`: `table|nil` — Active ammunition selection and elapsed cadence.
 - `gyro_damage`: `integer` — Effective gyro damage after hardened protection.
-- `mobility`: `BattleMobility`
+- `mobility`: `Mobility`
 - `jump_capacity`: `{speed: number, movement_points: integer}` — Damage/gravity-adjusted capacity; does not authorize flight. Unplaced units use 100% gravity.
 - `flight`: `{path: {start: Point, end: Point, start_elevation: number, end_elevation: integer, movement_points: integer, continuation: boolean, projection: {bearing: integer, range: number}|nil, target_range: number|nil}, travelled: number, completed_distance: number, landing_requested: boolean, sampled_movement_points: integer, dfa_target: integer|nil}|nil`
 - `airborne`: `{point: Point, elevation: number}|nil` — Last committed airborne sample.
 - `jump_stabilization`: `integer` — Remaining seconds, zero through twelve.
 - `engine`: `"standard"|"light"|"xl"|"xxl"|"compact"` — Installed fusion-engine family.
 - `destroyed`: `boolean` — Core structure, cockpit or engine is destroyed.
-- `lost_criticals`: `BattleCriticalLocation[]` — Explicit destroyed equipment slots.
-- `motion`: `BattleMotion|nil`
-- `power`: `BattlePower`
+- `lost_criticals`: `CriticalLocation[]` — Explicit destroyed equipment slots.
+- `motion`: `Motion|nil`
+- `power`: `UnitPower`
 - `pilot`: `integer|nil` — Player in the cockpit; must be physically inside this unit.
-- `position`: `BattlePosition|nil`
-- `definition`: `BattleTemplate` — Owned definition, independent of source files.
-- `sections`: `table<BattleSectionName, BattleSectionState>`
+- `position`: `Position|nil`
+- `definition`: `MechTemplate` — Owned definition, independent of source files.
+- `sections`: `table<MechSectionName, SectionState>`
 - `ammunition`: `integer[]` — Remaining salvos in resolved bin order.
 
-## BattleVehicleMass
+## VehicleMass
 
 - `engine`: `integer`
 - `cockpit`: `integer`
@@ -376,13 +397,13 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 - `total`: `integer` — Current physical mass in 1/1024-ton units.
 - `design_total`: `integer` — Current component total with full surviving bins.
 
-## BattleDigState
+## DigState
 
 - `dug_in`: `boolean` — Whether cover applies.
 - `digging`: `boolean` — Whether preparation is active.
 - `completion`: `integer[]` — Pending completion deadlines in seconds; empty means none.
 
-## BattleVehicleState
+## VehicleState
 
 - `armor_warning`: `boolean` — Armor severity warnings; enabled by default.
 - `ammunition_warning`: `boolean` — Low-ammunition warnings; enabled by default.
@@ -394,22 +415,22 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 - `last_startup`: `integer` — Unix time of the last completed startup; zero before first completion.
 - `cockpit_links`: `integer[]` — Three explicit cockpit destinations; unresolved references remain saved.
 - `preferred_id`: `string?` — Configured two-letter preference; separate from the currently assigned ID.
-- `fuel`: `BattleVtolFuelStatus|nil` — Live fuel projection for VTOLs only.
+- `fuel`: `VtolFuelStatus|nil` — Live fuel projection for VTOLs only.
 - `fired_recently`: `boolean` — A weapon launched since the last heartbeat.
 - `observer`: `boolean` — Administrator-assigned observer role.
 - `combat_safe`: `boolean` — Operator-imposed immunity to combat damage.
 - `weapons_hold`: `boolean` — Operator-imposed firing restriction; mechanical readiness is independent.
 - `visibility`: `{invisible: boolean, clairvoyant: boolean}` — Operator visibility state.
-- `dig`: `BattleDigState` — Saved ground-vehicle cover preparation.
-- `mass`: `BattleVehicleMass` — Derived from current material and ammunition; units are 1/1024 ton.
+- `dig`: `DigState` — Saved ground-vehicle cover preparation.
+- `mass`: `VehicleMass` — Derived from current material and ammunition; units are 1/1024 ton.
 - `inferno_remaining`: `integer` — Stationary-unit jelly duration.
 - `burning_sections`: `table<string, integer>` — Section fire countdowns in seconds.
 - `extinguishing`: `integer|nil` — Seconds until the crew completes its attempt.
 - `pod_removal`: `integer|nil` — Remaining seconds of the crew iNarc-removal attempt.
 - `beacons`: `table<string, string[]>` — Attached effects keyed by surviving vehicle section.
 - `ams_enabled`: `boolean` — Saved automatic anti-missile defense switch.
-- `artemis`: `BattleArtemisController[]` — Installed controllers and resolved links.
-- `unjam`: `BattleUnjam|nil` — Active feed clearing attempt.
+- `artemis`: `ArtemisController[]` — Installed controllers and resolved links.
+- `unjam`: `Unjam|nil` — Active feed clearing attempt.
 - `weapon_recycle`: `table<integer, integer>` — Countdown seconds by zero-based weapon index.
 - `spent_launchers`: `integer[]` — Expended zero-based one-shot weapon indices.
 - `lost_criticals`: `table[]` — Destroyed vehicle equipment locations, each with section and zero-based slot.
@@ -428,8 +449,8 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 - `signature`: `{team: integer, hidden: boolean, illuminated: boolean}` — Team, hiding and scenario lighting.
 - `scanner_perception`: `integer` — Perception captured at startup completion.
 - `sensor_ranges`: `{tactical: integer, long_range: integer, scan: integer}` — Computer-derived hex limits.
-- `aimed_section`: `BattleAimSelection|nil` — Saved anatomy preference; independent of the current lock.
-- `target_lock`: `BattleTargetLock|BattleHexLock|nil` — Saved selection and settling countdown.
+- `aimed_section`: `AimSelection|nil` — Saved anatomy preference; independent of the current lock.
+- `target_lock`: `TargetLock|HexLock|nil` — Saved selection and settling countdown.
 - `artillery_adjustment`: `integer` — Saved correction for the selected artillery coordinate.
 - `c3_hardware`: `{masters: integer, working_masters: integer, slave_installed: boolean, slave_operational: boolean, c3i_installed: boolean, c3i_operational: boolean}` — Installed and working command-network computers; independent of power and membership.
 - `c3i_members`: `integer[]` — Eligible members in the improved command network.
@@ -437,16 +458,16 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 - `flooded`: `boolean` — Permanently disabled by water, independently of armor and crew health.
 - `breached_sections`: `string[]` — Persisted vacuum breaches; equipment is disabled without destroying slots or expending ammunition.
 - `crew_killed`: `boolean` — Instant crew loss, independent of tactical and character injury counts.
-- `electronics`: `BattleElectronics` — Selected suite modes and last committed field.
+- `electronics`: `Electronics` — Selected suite modes and last committed field.
 - `spotter`: `integer|nil` — Self declares spotting; another unit selects a forward observer.
-- `spotter_events`: `BattleSpotterEvents` — Pending radio requests and periodic checks.
-- `tag`: `BattleTagState` — Shared TAG selection and lock/recycle countdown.
+- `spotter_events`: `SpotterEvents` — Pending radio requests and periodic checks.
+- `tag`: `TagState` — Shared TAG selection and lock/recycle countdown.
 - `character_pilot`: `{injuries: integer, killed: boolean}?` — Saved RPG pilot status, independent of tactical injury count.
 - `friendly_fire_safety`: `boolean` — Pilot-selected teammate protection.
 - `auto_fall`: `boolean` — Skip downhill cliff avoidance when piloted.
-- `brief`: `BattleBriefSettings`
-- `fire_modes`: `table<integer, BattleFireMode>` — Selected non-normal firing modes by zero-based weapon index.
-- `ammunition_modes`: `table<integer, BattleAmmunitionMode>` — Selected non-normal modes by zero-based weapon index.
+- `brief`: `BriefSettings`
+- `fire_modes`: `table<integer, FireMode>` — Selected non-normal firing modes by zero-based weapon index.
+- `ammunition_modes`: `table<integer, AmmunitionMode>` — Selected non-normal modes by zero-based weapon index.
 - `turret_heading`: `number|nil` — Absolute heading of a surviving turret.
 - `automatic_turret`: `boolean` — Pilot-selected automatic unit/hex target tracking.
 - `turret_jammed`: `boolean` — Recoverable turret rotation damage.
@@ -457,26 +478,26 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 - `immobilized`: `boolean` — Motive-system destruction prevents ground motion.
 - `under_bridge`: `boolean` — Hovercraft beneath a bridge span.
 - `elevation`: `integer|nil` — Ground support height; hovercraft float at water level.
-- `motion`: `BattleMotion|nil`
+- `motion`: `Motion|nil`
 - `pilot`: `integer|nil` — Assigned cockpit operator.
-- `power`: `BattlePower`
+- `power`: `UnitPower`
 - `kind`: `"vehicle"`
 - `simulation_supported`: `false` — Full vehicle terrain and combat support is unfinished.
 - `definition`: `table` — Owned ground-vehicle definition.
-- `sections`: `table<string, BattleSectionState>` — Vehicle faces: left, right, front, rear, turret.
+- `sections`: `table<string, SectionState>` — Vehicle faces: left, right, front, rear, turret.
 - `ammunition`: `integer[]` — Remaining rounds in resolved bin order.
-- `position`: `BattlePosition|nil`
+- `position`: `Position|nil`
 - `map_slot`: `integer|nil`
 - `destroyed`: `boolean` — Any hull face has lost its internal structure.
 
-## BattleRange
+## Range
 
 - `horizontal`: `number` — Horizontal Euclidean range in hex heights.
 - `spatial`: `number` — Euclidean range including signed ground elevation/depth.
 - `bearing`: `number|nil` — Degrees clockwise from north; nil for coincident centers.
 - `hex_distance`: `integer` — Minimum adjacent hex steps, without terrain costs.
 
-## BattleCharacter
+## Character
 
 - `perception_target`: `integer` — Target derived from intuition, learning and effective Perception skill.
 - `values`: `table<string, {value: integer, experience: integer, last_used: integer}>` — Detached named skill/advantage records.
@@ -489,19 +510,19 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 - `learn`: `integer`
 - `charisma`: `integer`
 
-## BattleAdvantageDefinition
+## AdvantageDefinition
 
 - `name`: `string` — Canonical advantage name.
 - `kind`: `"boolean"|"ranked"|"attribute_mask"` — Boolean values activate only at one.
 
-## BattleSkillDefinition
+## SkillDefinition
 
 - `name`: `string` — Canonical storage name.
 - `category`: `"athletic"|"mental"|"physical"|"social"`
 - `threshold`: `integer` — Default experience threshold.
 - `continuous`: `boolean` — Whether awards bypass the thirty-second interval.
 
-## BattleSkillProgress
+## SkillProgress
 
 - `name`: `string` — Canonical skill name.
 - `target`: `integer` — Current skill target including stored earned levels.
@@ -517,7 +538,7 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 - `x`: `integer`
 - `y`: `integer`
 
-## BattleSurfaceBreak
+## SurfaceBreak
 
 - `map`: `integer`
 - `coordinate`: `HexCoordinate`
@@ -529,67 +550,67 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 - `flooded_vehicles`: `integer[]`
 - `notices`: `table[]` — Unit dbrefs and cockpit message text.
 
-## BattleMapEmitOptions
+## MapEmitOptions
 
 - `audience`: `"all"|"range"|"line_of_sight"` — Recipient selection; defaults to all.
 - `origin`: `HexCoordinate` — Required anchor for range and line_of_sight audiences.
 - `range`: `number` — Nonnegative hex radius; required with the range audience.
 
-## BattleAuthoredMapLink
+## AuthoredMapLink
 
 - `parent`: `integer` — Parent map.
 - `coordinate`: `HexCoordinate` — Placement on the parent.
 - `entrances`: `table[]` — Four cardinal modes, north/east/south/west: {kind="none"}, {kind="offset",distance=N}, or {kind="exact",coordinate={x=X,y=Y}}.
 
-## BattleMapEntrance
+## MapEntrance
 
 Alias: `{mode: "offset", offset: integer}|{mode: "exact", x: integer, y: integer}`
 
-## BattleMapEntrances
+## MapEntrances
 
-- `north`: `BattleMapEntrance`
-- `east`: `BattleMapEntrance`
-- `south`: `BattleMapEntrance`
-- `west`: `BattleMapEntrance`
+- `north`: `MapEntrance`
+- `east`: `MapEntrance`
+- `south`: `MapEntrance`
+- `west`: `MapEntrance`
 
-## BattleMapLink
+## MapLink
 
 - `parent`: `Object` — Parent map object.
 - `x`: `integer` — Placement column on the parent.
 - `y`: `integer` — Placement row on the parent.
-- `entrances`: `BattleMapEntrances`
+- `entrances`: `MapEntrances`
 
-## BattleMapHexChange
+## MapHexChange
 
 - `map`: `integer`
 - `coordinate`: `HexCoordinate`
 - `before`: `Hex`
 - `after`: `Hex`
 
-## BattleMapIceReport
+## MapIceReport
 
 - `map`: `integer`
 - `changed`: `HexCoordinate[]` — Coordinates in column-major processing order.
-- `fractures`: `BattleSurfaceBreak[]` — Melting consequences, including affected occupants.
+- `fractures`: `SurfaceBreak[]` — Melting consequences, including affected occupants.
 
-## BattleMapEnvironment
+## MapEnvironment
 
 - `gravity`: `integer` — Percent of Earth gravity, 0 through 255.
 - `temperature`: `integer` — Celsius, -128 through 127.
 - `vacuum`: `boolean?` — Defaults to false, clearing existing vacuum.
 - `underground`: `boolean?` — Defaults to false; existing underground status is retained.
 
-## BattleBlastZone
+## BlastZone
 
 - `x`: `integer`
 - `y`: `integer`
 - `radius`: `integer`
 
-## BattleTerrainName
+## TerrainName
 
 Alias: `"grassland"|"road"|"light_forest"|"heavy_forest"|"water"|"ice"|"bridge"|"rough"|"mountains"|"fire"|"smoke"|"snow"|"building"|"wall"|"sand"`
 
-## BattleTerrainTypes
+## TerrainTypes
 
 - `GRASSLAND`: `"grassland"`
 - `ROAD`: `"road"`
@@ -639,40 +660,40 @@ Alias: `"building"|"wall"|"bridge"`
 - `WALL`: `"wall"`
 - `BRIDGE`: `"bridge"`
 
-## BattleLineOfSight
+## LineOfSight
 
 Alias: `"none"|"blocked"|"clear"`
 
-## BattlePlacement
+## Placement
 
 Alias: `{x: integer, y: integer, z?: integer}`
 
-## BattleMapUnitFilter
+## MapUnitFilter
 
 - `origin`: `HexCoordinate` — Filter anchor.
 - `range`: `number` — Nonnegative hex radius.
 
-## BattlePerceptionReport
+## PerceptionReport
 
 - `light`: `"night"|"twilight"|"day"` — Current battlefield light.
 - `sight_range`: `integer` — Weather visibility in hexes, capped by the map ceiling.
 - `lit_sight_range`: `integer` — Reach to illuminated targets; triple sight at night.
 - `sensor_range`: `integer` — Effective all-conditions sensor band; zero while unavailable.
-- `sensors`: `BattlePerceptionStatus` — Condition of the sensor band.
-- `probe`: `{kind: BattleProbeKind, range: integer, status: BattlePerceptionStatus}|nil` — Best installed active probe.
-- `radar`: `{range: integer, status: BattlePerceptionStatus}|nil` — Anti-aircraft radar, if installed.
+- `sensors`: `PerceptionStatus` — Condition of the sensor band.
+- `probe`: `{kind: ProbeKind, range: integer, status: PerceptionStatus}|nil` — Best installed active probe.
+- `radar`: `{range: integer, status: PerceptionStatus}|nil` — Anti-aircraft radar, if installed.
 - `running`: `boolean` — Stopped units perceive nothing.
 - `text`: `string` — The report printed by the sensor command.
 
-## BattleProbeKind
+## ProbeKind
 
 Alias: `"beagle"|"light"|"bloodhound"|"watchdog"`
 
-## BattleContactArc
+## ContactArc
 
 Alias: `"front" | "right" | "rear" | "left"`
 
-## BattleContactView
+## ContactView
 
 - `label`: `string` — Battlefield label, lowercase for identified allies.
 - `coordinate`: `HexCoordinate`
@@ -680,34 +701,34 @@ Alias: `"front" | "right" | "rear" | "left"`
 - `short_text`: `string` — Plain compact biped contact row.
 - `verbose_text`: `string` — Plain multiline C0 contact report.
 - `identified`: `boolean` — Current terrain permits identification.
-- `weapon_arc`: `BattleContactArc` — Observer torso direction; individual weapons may have different arcs.
-- `detection`: `BattleDetectionChannel|nil` — How the observer currently perceives this contact; nil for clairvoyant-only views.
+- `weapon_arc`: `ContactArc` — Observer torso direction; individual weapons may have different arcs.
+- `detection`: `DetectionChannel|nil` — How the observer currently perceives this contact; nil for clairvoyant-only views.
 - `status`: `string` — Five visible condition columns; blank behind blocking terrain.
 - `target`: `integer` — Acquired unit dbref.
 - `name`: `string` — Chassis name, or "something" for unidentified signals.
 - `friendly`: `boolean` — Identified and on the same team as observer.
-- `range`: `BattleRange`
+- `range`: `Range`
 - `network_range`: `number|nil` — Closest usable command-network sighting distance; nil without an active network.
 - `heading`: `number` — Travel axis including lateral offset; reverse speed travels opposite this axis.
 - `speed`: `number` — Current kph.
 
-## BattleSpotterEvents
+## SpotterEvents
 
-- `events`: `BattleSpotterEvent[]` — Independent requests in insertion order; detached inspection only.
+- `events`: `SpotterEvent[]` — Independent requests in insertion order; detached inspection only.
 
-## BattleSpotterEvent
+## SpotterEvent
 
 - `order`: `integer` — Global order among active events.
 - `remaining`: `integer` — Seconds until connection completion or maintenance.
 - `observer`: `integer` — Observer unit dbref.
 - `positions`: `Point[]?` — Captured shooter and observer coordinates during setup; nil for maintenance.
 
-## BattleTagState
+## TagState
 
 - `target`: `integer?` — Selected target; nil during recycle.
 - `remaining`: `integer` — Lock/recycle seconds, zero through thirty.
 
-## BattleWeaponReadiness
+## WeaponReadiness
 
 - `weapon`: `string` — Conventional weapon kind.
 - `intact`: `boolean`
@@ -718,24 +739,24 @@ Alias: `"front" | "right" | "rear" | "left"`
 - `posture_ready`: `boolean` — Prone support and mounting restrictions.
 - `ready`: `boolean` — Power, mechanical conditions, preparation and supply permit use; targeting and authority remain separate.
 
-## BattleVehicleSectionName
+## VehicleSectionName
 
 Alias: `"front"|"right"|"left"|"rear"|"turret"|"rotor"`
 
-## BattleWeaponInspection
+## WeaponInspection
 
 - `preferred_ammunition_section`: `string|nil` — Canonical preferred ammunition section; fallback remains automatic.
 - `index`: `integer` — Zero-based stable weapon number.
 - `name`: `string` — Equipment display name.
-- `section`: `BattleSectionName|BattleVehicleSectionName`
+- `section`: `MechSectionName|VehicleSectionName`
 - `failure`: `"jammed"|"shorted"|"dud"|"empty"|"disabled"|"ammunition_jam"|"critical_ammunition_jam"|nil` — Temporary operational failure independent of physical integrity.
 - `rear_mount`: `boolean`
 - `one_shot`: `boolean`
-- `readiness`: `BattleWeaponReadiness`
-- `ammunition_mode`: `BattleAmmunitionMode`
-- `fire_mode`: `BattleFireMode`
+- `readiness`: `WeaponReadiness`
+- `ammunition_mode`: `AmmunitionMode`
+- `fire_mode`: `FireMode`
 
-## BattleAimModifiers
+## AimModifiers
 
 - `self_target`: `boolean` — Coolant self-application bypasses contact acquisition.
 - `indirect`: `{spotter: integer, spotting: integer, movement: integer, target_lock: integer}|nil` — Observer contributions; perception then describes the spotter's view.
@@ -761,94 +782,94 @@ Alias: `"front"|"right"|"left"|"rear"|"turret"|"rotor"`
 - `weapon_accuracy`: `integer` — Intrinsic accuracy adjustment; pulse lasers contribute -2, MRMs +1.
 - `weapon_damage`: `integer` — Penalty from damaged focusing, ranging and other weapon components.
 - `target_lock`: `integer`
-- `perception`: `{channel: BattleDetectionChannel|nil, direct_fire: boolean, modifier: integer}|nil` — Nil without a current contact; direct_fire is false behind blocking terrain.
+- `perception`: `{channel: DetectionChannel|nil, direct_fire: boolean, modifier: integer}|nil` — Nil without a current contact; direct_fire is false behind blocking terrain.
 
-## BattleSectionExposureReport
+## SectionExposureReport
 
 - `cause`: `"water"|"vacuum"`
-- `section`: `BattleSectionName`
+- `section`: `MechSectionName`
 - `reactor_explosion`: `table|nil`
 - `fall`: `table|nil`
 - `notices`: `{unit: integer, text: string}[]`
 
-## BattleTacticalImpact
+## TacticalImpact
 
-- `impact`: `table` — Ordered material damage, critical losses and exposures (BattleSectionExposureReport[]).
+- `impact`: `table` — Ordered material damage, critical losses and exposures (SectionExposureReport[]).
 - `pilot_injuries`: `table[]` — Applied crew consequences.
 - `notices`: `table[]` — Cockpit messages.
 - `balance`: `table[]` — Applied balance checks and falls.
 - `flooding`: `table[]` — Applied flooding consequences.
 
-## BattleAmmunitionDraw
+## AmmunitionDraw
 
 - `bin_index`: `integer` — Zero-based bin index.
 - `rounds`: `integer`
 
-## BattleWeaponUse
+## WeaponUse
 
 - `damage_penalty`: `integer` — Energy damage lost to focusing damage.
 - `critical_failure`: `"barrel"|"crystal"|"feed"|nil` — Component responsible for a failed launch.
 - `weapon`: `string`
-- `ammunition`: `BattleAmmunitionDraw[]` — Actual live-bin expenditure.
-- `fire_mode`: `BattleFireMode` — Effective mode after supply fallback.
+- `ammunition`: `AmmunitionDraw[]` — Actual live-bin expenditure.
+- `fire_mode`: `FireMode` — Effective mode after supply fallback.
 - `heat`: `integer` — Already applied; do not add this heat again.
 - `gatling_damage`: `integer|nil` — Supply-limited gatling damage before glancing.
-- `ammunition_mode`: `BattleAmmunitionMode`
+- `ammunition_mode`: `AmmunitionMode`
 
-## BattleSalvoGroup
+## SalvoGroup
 
 - `damage`: `integer`
-- `hit`: `{section: BattleSectionName, rear_armor: boolean, through_armor_critical: boolean, crew_stun: boolean}`
-- `impact`: `table` — Ordered material phases, critical losses, exposures (BattleSectionExposureReport[]), dump_ignitions, plasma_heat rolls, searchlight_destroyed and remaining scenario effects.
+- `hit`: `{section: MechSectionName, rear_armor: boolean, through_armor_critical: boolean, crew_stun: boolean}`
+- `impact`: `table` — Ordered material phases, critical losses, exposures (SectionExposureReport[]), dump_ignitions, plasma_heat rolls, searchlight_destroyed and remaining scenario effects.
 - `pilot_injuries`: `table[]` — Applied tactical injuries and consciousness results.
 - `notices`: `{unit: integer, text: string}[]` — Already staged by unit.fire.
 - `balance`: `table[]` — Applied balance checks and any nested falls.
 - `flooding`: `table[]` — Applied section flooding and any nested falls.
 
-## BattleInfernoHit
+## InfernoHit
 
 - `target`: `integer`
 - `missiles`: `integer` — Surviving missiles after interception.
 - `burn_seconds`: `integer` — Duration added before immersion.
 - `extinguished`: `boolean`
-- `notices`: `BattleNotice[]`
+- `notices`: `Notice[]`
 
-## BattleWoodlandImpact
+## WoodlandImpact
 
 - `map`: `integer`
 - `coordinate`: `HexCoordinate`
 - `effect`: `{effect: "none"}|{effect: "ignite", seconds: integer}|{effect: "clear", clearing: "thin_to_light"|"cut_to_clear"|"cut_to_rough"}` — What the attack did to the woods.
-- `notices`: `BattleNotice[]`
+- `notices`: `Notice[]`
 
-## BattleWoodsAbsorption
+## WoodsAbsorption
 
 - `damage_before`: `integer` — Damage supplied to terrain before absorption: per shell for direct/burst fire, total for missiles after glancing cluster adjustment and interception.
 - `damage_after`: `integer` — Remaining armor damage: minimum one per shell before glancing for direct/burst hits; whole-projectile totals may be zero.
-- `terrain`: `BattleWoodlandImpact` — Committed ignition or clearing check.
-- `notices`: `BattleNotice[]` — Ordered absorption and terrain feedback.
+- `terrain`: `WoodlandImpact` — Committed ignition or clearing check.
+- `notices`: `Notice[]` — Ordered absorption and terrain feedback.
 
-## BattleSalvoReport
+## MechSalvoReport
 
-- `initial_woods`: `BattleWoodsAbsorption|nil` — Nominal LBX terrain check before pellet counting and absorption.
-- `woods`: `BattleWoodsAbsorption|nil` — Occupied-woods consequences for direct shells (including bursts) or missile/pellet armor damage, after missile interception.
+- `initial_woods`: `WoodsAbsorption|nil` — Nominal LBX terrain check before pellet counting and absorption.
+- `woods`: `WoodsAbsorption|nil` — Occupied-woods consequences for direct shells (including bursts) or missile/pellet armor damage, after missile interception.
 - `missiles_before_defense`: `integer|nil` — Cluster hits before automatic defenses.
 - `cluster_roll`: `integer|nil` — Original missile cluster roll; nil for direct non-missile hits.
-- `inferno`: `BattleInfernoHit|nil` — Burning replaces armor damage.
-- `groups`: `BattleSalvoGroup[]`
+- `inferno`: `InfernoHit|nil` — Burning replaces armor damage.
+- `groups`: `SalvoGroup[]`
 
-## BattleCharacterValue
+## CharacterValue
 
 - `value`: `integer` — Trained skill level.
 - `experience`: `integer` — Encoded earned levels and XP balance.
 - `last_used`: `integer` — Last accepted award timestamp.
 
-## BattleExperienceAward
+## ExperienceAward
 
 - `accepted`: `boolean`
-- `before`: `BattleCharacterValue`
-- `after`: `BattleCharacterValue`
+- `before`: `CharacterValue`
+- `after`: `CharacterValue`
 
-## BattlePilotingCheck
+## PilotingCheck
 
 - `skill`: `integer` — Base pilot skill target.
 - `damage`: `integer` — Penalty from physical damage.
@@ -858,15 +879,31 @@ Alias: `"front"|"right"|"left"|"rear"|"turret"|"rotor"`
 - `target`: `integer` — Total required roll.
 - `roll`: `integer|nil` — No dice when already prone or unable to act.
 - `success`: `boolean`
-- `experience`: `BattleExperienceAward|nil` — Accepted or rate-limited skill mutation for XP-awarding callers.
+- `experience`: `ExperienceAward|nil` — Accepted or rate-limited skill mutation for XP-awarding callers.
 
-## BattleRecoilReport
+## MechFallReport
 
-- `experience_messages`: `BattleChannelMessage[]` — Accepted recoil XP diagnostics published with the shot.
-- `check`: `BattlePilotingCheck`
-- `fall`: `BattleFallReport|nil`
+- `avoidance`: `PilotingCheck|nil` — Personal-injury check; combat-safe units skip it.
+- `pilot`: `integer|nil` — Pilot dbref captured before fall injuries can clear the assignment.
+- `experience_messages`: `DiagnosticMessage[]` — Accepted protection-check diagnostics captured before fall damage.
+- `pilot_injury`: `table|nil` — Tactical crew injury.
+- `character_injury`: `table|nil` — Personal injury to an assigned character pilot, independent of tactical crew health.
+- `direction_roll`: `integer`
+- `arc`: `"Front"|"Rear"|"Left"|"Right"`
+- `damage`: `integer`
+- `groups`: `SalvoGroup[]` — Fall damage in the order it was applied.
+- `mines`: `table` — Mine activation after the fall damage sequence.
+- `ice_break`: `SurfaceBreak|nil` — Ice fracture can cause nested water falls for this unit and its neighbors.
+- `flooding`: `SectionExposureReport[]`
+- `inferno_notices`: `Notice[]`
 
-## BattleAmsReport
+## RecoilReport
+
+- `experience_messages`: `DiagnosticMessage[]` — Accepted recoil XP diagnostics published with the shot.
+- `check`: `PilotingCheck`
+- `fall`: `MechFallReport|nil`
+
+## AmsReport
 
 - `weapon_index`: `integer` — Zero-based defensive weapon index.
 - `ammunition_bin`: `integer|nil` — Selected normal-ammunition bin; nil for laser AMS, which uses none.
@@ -874,137 +911,158 @@ Alias: `"front"|"right"|"left"|"rear"|"turret"|"rotor"`
 - `ammunition_spent`: `integer` — May be less than interception capacity.
 - `shot_down`: `integer` — Actual intercepted hits after the missile meets its base target number.
 
-## BattleBeaconKind
+## BeaconKind
 
 Alias: `"narc"|"homing"|"haywire"|"ecm"`
 
-## BattleNarcReport
+## NarcReport
 
-- `kind`: `BattleBeaconKind`
-- `notices`: `BattleNotice[]` — Cockpit effects from the hit-location roll.
+- `kind`: `BeaconKind`
+- `notices`: `Notice[]` — Cockpit effects from the hit-location roll.
 - `hit`: `boolean` — Whether the beacon met the full attack target.
 - `intercepted`: `boolean` — Whether AMS intercepted the pod.
-- `section`: `BattleSection|BattleVehicleSectionName|nil` — Surviving attachment section.
+- `section`: `MechSection|VehicleSectionName|nil` — Surviving attachment section.
 - `rear`: `boolean` — Rear-facing attachment notice.
 
-## BattleShotReport
+## MechShotReport
 
-- `launch_notices`: `BattleNotice[]` — Cocoon opening feedback before target consequences.
+- `launch_notices`: `Notice[]` — Cocoon opening feedback before target consequences.
 - `coordinate`: `{x: integer, y: integer}|nil` — Coordinate-directed shot; target identifies the selected occupant.
 - `experience_messages`: `table[]` — Accepted spotting/artillery awards, including misses.
 - `streak_confused`: `boolean` — Angel interference disables Streak homing.
-- `narc`: `BattleNarcReport|nil` — Normal beacon outcome; explosive pods use salvo damage.
-- `ams`: `BattleAmsReport|nil` — Automatic defense activation; absent for missile rolls below base target number.
+- `narc`: `NarcReport|nil` — Normal beacon outcome; explosive pods use salvo damage.
+- `ams`: `AmsReport|nil` — Automatic defense activation; absent for missile rolls below base target number.
 - `ammunition_warning`: `string|nil` — Pre-expenditure warning staged with the shot.
 - `shooter`: `integer`
 - `target`: `integer`
 - `weapon_index`: `integer` — Zero-based stable weapon number.
-- `aim`: `BattleAimModifiers`
+- `aim`: `AimModifiers`
 - `target_number`: `integer|nil` — Ordinary aim subtotal; nil beyond physical range.
 - `roll`: `integer`
 - `glancing`: `boolean`
-- `recoil`: `BattleRecoilReport|nil` — Moving Heavy Gauss control check and fall.
+- `recoil`: `RecoilReport|nil` — Moving Heavy Gauss control check and fall.
 - `jammed`: `boolean` — Recoverable ammunition-feed failure without expenditure.
 - `loader_destroyed`: `boolean` — Permanent mount loss from loader failure or propellant ignition.
 - `propellant_roll`: `integer|nil` — Second caseless roll; eight or more ignites propellant.
-- `misload`: `BattleTacticalImpact|nil` — Applied misload or propellant ignition damage.
+- `misload`: `TacticalImpact|nil` — Applied misload or propellant ignition damage.
 - `launched`: `boolean` — False for failed Streak lock: no heat/ammo expenditure, but weapon recycles.
 - `hit`: `boolean` — Launch classification; missile near misses may have no target effects.
-- `expenditure`: `BattleWeaponUse`
+- `expenditure`: `WeaponUse`
 - `salvo`: `{kind: 'mech'|'vehicle'|'swarm', report: table}|nil` — Target-specific damage; nil on a miss or a heat-mode hit.
 - `heat_transfer`: `integer` — Heat already added to the target, zero unless a heat-mode shot hits.
-- `thermal_woods`: `BattleWoodsAbsorption|nil` — Terrain effects and feedback preceding thermal transfer; heat/cooling strength remains unchanged.
-- `missed_terrain`: `BattleWoodlandImpact|nil` — Incidental terrain check after a launched non-missile miss, independent of woods damage configuration.
+- `thermal_woods`: `WoodsAbsorption|nil` — Terrain effects and feedback preceding thermal transfer; heat/cooling strength remains unchanged.
+- `missed_terrain`: `WoodlandImpact|nil` — Incidental terrain check after a launched non-missile miss, independent of woods damage configuration.
 - `cooling`: `number?` — Coolant reduction applied to stored heat, including temporary negative credit.
 
-## BattleVehicleShotReport
+## VehicleShotReport
 
-- `experience_messages`: `BattleChannelMessage[]` — Accepted spotting/artillery awards, including misses.
+- `experience_messages`: `DiagnosticMessage[]` — Accepted spotting/artillery awards, including misses.
 - `coordinate`: `{x: integer, y: integer}|nil` — Occupied-hex shot; target identifies the selected occupant.
 - `shooter`: `integer`
 - `target`: `integer`
 - `weapon_index`: `integer` — Zero-based stable weapon number.
-- `aim`: `BattleAimModifiers`
+- `aim`: `AimModifiers`
 - `streak_confused`: `boolean`
 - `ammunition_warning`: `string|nil` — Pre-expenditure warning staged with the shot.
-- `launch_notices`: `BattleNotice[]` — Cocoon opening feedback before target consequences.
+- `launch_notices`: `Notice[]` — Cocoon opening feedback before target consequences.
 - `target_number`: `integer|nil` — Ordinary aim subtotal; nil beyond physical range.
 - `roll`: `integer`
 - `launched`: `boolean` — False for failed Streak lock: no heat/ammo expenditure, but weapon recycles.
 - `hit`: `boolean` — Launch classification; missile near misses may have no target effects.
 - `glancing`: `boolean` — Tactical missile shots use the base target-number boundary.
-- `recoil`: `BattleRecoilReport|nil` — Always nil: vehicles make no recoil control check.
+- `recoil`: `RecoilReport|nil` — Always nil: vehicles make no recoil control check.
 - `jammed`: `boolean` — Recoverable ammunition-feed failure without expenditure.
 - `loader_destroyed`: `boolean` — Permanent mount loss from loader failure or propellant ignition.
 - `propellant_roll`: `integer|nil` — Second caseless roll; eight or more ignites propellant.
 - `misload`: `table|nil` — Shooter internal damage and critical consequences.
-- `expenditure`: `BattleVehicleWeaponUse`
-- `ams`: `BattleAmsReport|nil`
-- `narc`: `BattleNarcReport|nil` — Beacon attachment or interception; vehicle sections use their own names.
+- `expenditure`: `VehicleWeaponUse`
+- `ams`: `AmsReport|nil`
+- `narc`: `NarcReport|nil` — Beacon attachment or interception; vehicle sections use their own names.
 - `cooling`: `number|nil` — Coolant removed from target stored heat.
 - `heat_transfer`: `integer` — Direct flamer heat added to the target, otherwise zero.
-- `thermal_woods`: `BattleWoodsAbsorption|nil` — Terrain effects and feedback preceding thermal transfer; heat/cooling strength remains unchanged.
-- `missed_terrain`: `BattleWoodlandImpact|nil` — Incidental terrain check after a launched non-missile miss, independent of woods damage configuration.
+- `thermal_woods`: `WoodsAbsorption|nil` — Terrain effects and feedback preceding thermal transfer; heat/cooling strength remains unchanged.
+- `missed_terrain`: `WoodlandImpact|nil` — Incidental terrain check after a launched non-missile miss, independent of woods damage configuration.
 - `salvo`: `{kind: 'mech'|'vehicle'|'swarm', report: table}|nil` — Target-specific ordered damage groups.
 
-## BattleVehicleInfernoHit
+## VehicleInfernoHit
 
 - `missiles`: `integer` — Surviving missiles after clustering and interception.
 - `explosion_roll`: `integer|nil` — Standard mobile-vehicle heat check.
 - `burn_seconds`: `integer` — Jelly duration added to a stationary unit.
 - `damage`: `table[]` — Ordered initial section fire damage.
 - `explosion`: `table|nil` — Completed heat catastrophe.
-- `notices`: `BattleNotice[]` — Already staged by firing.
-- `broadcasts`: `BattleNotice[]` — Raw damage broadcasts handled by firing.
+- `notices`: `Notice[]` — Already staged by firing.
+- `broadcasts`: `Notice[]` — Raw damage broadcasts handled by firing.
 
-## BattleVehicleSalvoReport
+## VehicleSalvoReport
 
-- `initial_woods`: `BattleWoodsAbsorption|nil` — Nominal LBX terrain check before pellet counting and absorption.
-- `woods`: `BattleWoodsAbsorption|nil` — Occupied-woods consequences for direct shells (including bursts) or missile/pellet armor damage, after missile interception.
+- `initial_woods`: `WoodsAbsorption|nil` — Nominal LBX terrain check before pellet counting and absorption.
+- `woods`: `WoodsAbsorption|nil` — Occupied-woods consequences for direct shells (including bursts) or missile/pellet armor damage, after missile interception.
 - `experience`: `table[]` — Per-packet optional pre-impact XP awards.
 - `experience_messages`: `table[]` — Ordered XP channel diagnostics.
 - `cluster_roll`: `integer|nil`
 - `missiles_before_defense`: `integer|nil`
 - `groups`: `table[]` — Located conventional damage packets.
-- `inferno`: `BattleVehicleInfernoHit|nil` — Dedicated vehicle inferno outcome.
+- `inferno`: `VehicleInfernoHit|nil` — Dedicated vehicle inferno outcome.
 
-## BattleVehicleWeaponUse
+## VehicleWeaponUse
 
 - `weapon`: `string`
-- `ammunition`: `BattleAmmunitionDraw[]` — Actual live-bin expenditure.
-- `ammunition_mode`: `BattleAmmunitionMode`
-- `fire_mode`: `BattleFireMode` — Effective mode after supply fallback.
+- `ammunition`: `AmmunitionDraw[]` — Actual live-bin expenditure.
+- `ammunition_mode`: `AmmunitionMode`
+- `fire_mode`: `FireMode` — Effective mode after supply fallback.
 - `gatling_damage`: `integer|nil` — Supply-limited gatling damage before glancing.
 - `launched`: `boolean` — False for a failed Streak lock; also reported on the shot.
 - `heat`: `integer` — Already applied; do not add this heat again.
 
-## BattleArtilleryLaunchReport
+## ArtilleryAim
 
-- `launch_notices`: `BattleNotice[]` — Cocoon opening feedback before target consequences.
+- `target_number`: `integer` — Out-of-range and underwater aims keep the reference's impossible target numbers.
+- `maximum_range`: `integer`
+- `range`: `"in_range"|"out_of_range"|"underwater"`
+
+## VehicleInternalDamage
+
+- `section`: `VehicleSectionName`
+- `incoming`: `integer`
+- `structural_damage`: `integer`
+- `rolls`: `integer[]` — Internal critical roll, preceded by a damage-entry roll for standalone explosions.
+- `absorbed`: `integer`
+- `discarded`: `integer` — Vehicle-local internal explosions do not transfer excess to another section.
+- `destroyed_sections`: `VehicleSectionName[]`
+- `unit_destroyed`: `boolean`
+- `criticals`: `table[]` — Critical resolutions in execution order.
+- `notices`: `Notice[]` — Includes nested critical notices in execution order.
+- `pilot_notices`: `table[]` — Pilot-only control feedback indexed into the damage notice stream.
+- `broadcasts`: `Notice[]`
+
+## ArtilleryLaunchReport
+
+- `launch_notices`: `Notice[]` — Cocoon opening feedback before target consequences.
 - `shooter`: `integer`
 - `map`: `integer`
 - `coordinate`: `{x: integer, y: integer}`
 - `weapon_index`: `integer`
-- `aim`: `{target_number: integer, maximum_range: integer, range: string}`
+- `aim`: `ArtilleryAim`
 - `roll`: `integer`
 - `hit`: `boolean`
 - `launched`: `boolean`
 - `jammed`: `boolean`
 - `loader_destroyed`: `boolean`
 - `propellant_roll`: `integer|nil`
-- `expenditure`: `BattleWeaponUse`
-- `misload`: `{kind: "mech"|"vehicle", report: BattleTacticalImpact|BattleVehicleInternalDamage}|nil`
+- `expenditure`: `WeaponUse`
+- `misload`: `{kind: "mech"|"vehicle", report: TacticalImpact|VehicleInternalDamage}|nil`
 - `ammunition_warning`: `string|nil`
 - `queued_shot`: `integer|nil` — Persistent map queue ordinal, present after launch.
 
-## BattleHexShotReport
+## HexShotReport
 
-- `launch_notices`: `BattleNotice[]` — Cocoon opening feedback before target consequences.
+- `launch_notices`: `Notice[]` — Cocoon opening feedback before target consequences.
 - `shooter`: `integer`
 - `map`: `integer`
 - `coordinate`: `{x: integer, y: integer}`
 - `weapon_index`: `integer`
-- `aim`: `BattleHexAimModifiers`
+- `aim`: `HexAimModifiers`
 - `target_number`: `integer|nil`
 - `roll`: `integer`
 - `hit`: `boolean`
@@ -1012,56 +1070,56 @@ Alias: `"narc"|"homing"|"haywire"|"ecm"`
 - `jammed`: `boolean`
 - `loader_destroyed`: `boolean`
 - `propellant_roll`: `integer|nil`
-- `expenditure`: `BattleWeaponUse`
-- `misload`: `{kind: "mech"|"vehicle", report: BattleTacticalImpact|BattleVehicleInternalDamage}|nil`
+- `expenditure`: `WeaponUse`
+- `misload`: `{kind: "mech"|"vehicle", report: TacticalImpact|VehicleInternalDamage}|nil`
 - `ammunition_warning`: `string|nil`
 - `cluster_roll`: `integer|nil`
 - `terrain`: `table[]` — Applied woodland effects and captured notices.
 - `surfaces`: `table[]` — Structural rolls, optional fracture/falls, and notices.
 - `buildings`: `table[]` — Building identity, actual damage, remaining integrity and notices.
-- `recoil`: `BattleRecoilReport|nil`
+- `recoil`: `RecoilReport|nil`
 
-## BattleAimSelection
+## AimSelection
 
 Alias: `{class: "mech", section: string}|{class: "ground_vehicle"|"vtol", section: string}`
 
-## BattleSightReport
+## SightReport
 
 - `shooter`: `integer`
 - `weapon_index`: `integer`
 - `weapon`: `string`
 - `target`: `integer|nil`
 - `coordinate`: `HexCoordinate|nil`
-- `aim`: `BattleAimModifiers|BattleHexAimModifiers|BattleArtilleryAim`
+- `aim`: `AimModifiers|HexAimModifiers|ArtilleryAim`
 - `target_number`: `integer|nil` — Nil when out of range.
 - `roll`: `integer` — Attack dice consumed without launching.
 - `gatling_roll`: `integer|nil` — Preparation intensity, without an ammunition cap.
 - `partial_cover`: `boolean`
 
-## BattleWeaponValues
+## WeaponValues
 
 - `recycle_seconds`: `integer` — Effective runtime recycle time, from 1 through 127 seconds.
 - `battle_value`: `integer` — Effective runtime Battle Value, from 0 through 2147483647.
 
-## BattleInventoryEntry
+## InventoryEntry
 
 - `part_id`: `integer` — Stable game-directory part identifier.
 - `quantity`: `integer` — Positive stock quantity, at most 2147483647.
 
-## BattlePart
+## Part
 
 - `part_id`: `integer` — Stable inventory identifier.
 - `name`: `string` — Canonical stock name.
 - `kind`: `"weapon"|"ammunition"|"component"|"commodity"|"bomb"`
 - `mass`: `integer` — Catalogue mass in 1/1024 tons; loose bomb stock uses four times this value.
 
-## BattleInventoryCleanup
+## InventoryCleanup
 
 - `original_entries`: `integer`
 - `new_entries`: `integer`
 - `items`: `integer`
 
-## BattleCargoRow
+## CargoRow
 
 - `name`: `string` — Stock display name.
 
@@ -1081,16 +1139,17 @@ Alias: `{class: "mech", section: string}|{class: "ground_vehicle"|"vtol", sectio
 - `system`: `table` — World event telemetry.
 - `autopilot`: `BtechAutopilotAPI` — Lua control of unit-attached ground autopilots.
 - `tactical`: `BtechTacticalAPI` — Filtered group observations and atomic intentions.
-- `errors`: `table` — Structured btech error-code tree from mux.error.code_tree('btech').
+- `errors`: `BtechErrorCodes` — Structured btech error-code tree from mux.error.code_tree('btech').
+- `error`: `{codes: BtechErrorCodes}` — Error namespace; `codes` is the same tree as `errors`.
 
-## BattleAmmunitionAdjustment
+## AmmunitionAdjustment
 
-- `location`: `BattleCriticalLocation`
+- `location`: `CriticalLocation`
 - `supplied`: `integer` — Authored initial quantity.
 - `normalized`: `integer` — Initial quantity after construction normalization.
 - `inferred_half_ton`: `boolean` — Construction would infer a half-ton bin.
 
-## BattleTemplateCheck
+## TemplateCheck
 
 - `chassis`: `"biped"|"quad"|nil` — Parsed anatomy, independent of simulation readiness.
 - `name`: `string`
@@ -1099,25 +1158,25 @@ Alias: `{class: "mech", section: string}|{class: "ground_vehicle"|"vtol", sectio
 - `rejection`: `string|nil` — First construction failure; nil for a constructible template.
 - `weapons`: `integer` — Resolved weapon count on success; zero on rejection.
 - `ammunition_bins`: `integer` — Resolved bin count on success; zero on rejection.
-- `ammunition_adjustments`: `BattleAmmunitionAdjustment[]` — Changes on successful construction.
+- `ammunition_adjustments`: `AmmunitionAdjustment[]` — Changes on successful construction.
 
-## BattleArtemisController
+## ArtemisController
 
-- `location`: `{section: BattleSectionName|BattleVehicleSectionName, slot: integer}` — Zero-based controller position.
+- `location`: `{section: MechSectionName|VehicleSectionName, slot: integer}` — Zero-based controller position.
 - `link`: `integer` — One-based template launcher slot; zero is unassigned.
 - `weapon_indices`: `integer[]` — Zero-based missile mounts matching the link.
 - `operational`: `boolean` — Controller is available under the unit’s equipment damage rules.
 
-## BattleUnjam
+## Unjam
 
 - `weapon_index`: `integer` — Zero-based weapon number.
 - `remaining`: `integer` — Committed seconds remaining, 1 through 60.
 
-## BattleEquipmentCondition
+## EquipmentCondition
 
 Alias: `'empty'|'operational'|'damaged'|'disabled'|'broken'|'destroyed'|'jammed'|'shorted'|'ammo_jam'`
 
-## BattleWeaponDamageEffects
+## WeaponDamageEffects
 
 - `moderate`: `integer` — General accuracy penalty.
 - `ranging`: `integer` — Accuracy penalty beyond short range.
@@ -1127,22 +1186,22 @@ Alias: `'empty'|'operational'|'damaged'|'disabled'|'broken'|'destroyed'|'jammed'
 - `jam`: `integer` — Nonzero count jams on an attack roll of count plus one or less.
 - `feed_locked`: `boolean` — Prevents changing ammunition modes.
 
-## BattleWeaponDiagnostic
+## WeaponDiagnostic
 
 - `index`: `integer` — Zero-based installed mount number, including destroyed mounts.
 - `weapon`: `string` — Catalogue weapon identifier (snake case).
 - `section`: `string` — Chassis-specific location name.
-- `condition`: `BattleEquipmentCondition`
+- `condition`: `EquipmentCondition`
 - `damaged_slots`: `integer`
 - `destroyed_slots`: `integer`
 - `disabled_slots`: `integer`
-- `effects`: `BattleWeaponDamageEffects` — Existing firing penalties, without recomputation in Lua.
+- `effects`: `WeaponDamageEffects` — Existing firing penalties, without recomputation in Lua.
 - `preferred_ammunition_section`: `string?`
 
-## BattleWeaponSpecification
+## WeaponSpecification
 
-- `weapon`: `BattleWeapon` — Catalogue weapon identifier (snake case).
-- `ammunition`: `BattleAmmunitionMode` — MMLs have separate normal (SRM) and mml_lrm rows.
+- `weapon`: `Weapon` — Catalogue weapon identifier (snake case).
+- `ammunition`: `AmmunitionMode` — MMLs have separate normal (SRM) and mml_lrm rows.
 - `heat`: `integer`
 - `damage`: `integer`
 - `minimum_range`: `integer`
@@ -1152,11 +1211,11 @@ Alias: `'empty'|'operational'|'damaged'|'disabled'|'broken'|'destroyed'|'jammed'
 - `extended_range`: `integer?` — Present when extended range is configured.
 - `recycle_seconds`: `integer` — Effective runtime value for new activations.
 
-## BattleCriticalInspection
+## CriticalInspection
 
 - `slot`: `integer` — Zero-based physical slot; native labels add one.
 - `equipment`: `string` — Resolved display name, including bin mode.
-- `condition`: `BattleEquipmentCondition`
+- `condition`: `EquipmentCondition`
 - `weapon_index`: `integer?` — Stable zero-based mount index, including split extensions.
 - `ammunition_index`: `integer?` — Zero-based bin index.
 - `ammunition_remaining`: `integer?` — Saved bin quantity; native text hides it when unavailable.
@@ -1166,17 +1225,17 @@ Alias: `'empty'|'operational'|'damaged'|'disabled'|'broken'|'destroyed'|'jammed'
 - `spent`: `boolean`
 - `controls_slot`: `integer?` — Authored Artemis display label, already one-based.
 
-## BattleCriticalReport
+## CriticalReport
 
 - `section`: `string` — Stable Mech or vehicle section identity.
 - `name`: `string` — Chassis-specific display heading.
-- `slots`: `BattleCriticalInspection[]` — All six or twelve physical slots, including empty ones.
+- `slots`: `CriticalInspection[]` — All six or twelve physical slots, including empty ones.
 
-## BattleElectronicMode
+## ElectronicMode
 
 Alias: `"off"|"ecm"|"eccm"`
 
-## BattleElectronicField
+## ElectronicField
 
 - `protected`: `boolean`
 - `angel_protected`: `boolean`
@@ -1184,47 +1243,47 @@ Alias: `"off"|"ecm"|"eccm"`
 - `angel_disturbed`: `boolean`
 - `countered`: `boolean`
 
-## BattleElectronics
+## Electronics
 
-- `guardian`: `BattleElectronicMode`
-- `angel`: `BattleElectronicMode`
-- `field`: `BattleElectronicField`
+- `guardian`: `ElectronicMode`
+- `angel`: `ElectronicMode`
+- `field`: `ElectronicField`
 
-## BattlePodRow
+## PodRow
 
-- `section`: `BattleSection|BattleVehicleSectionName`
+- `section`: `MechSection|VehicleSectionName`
 - `destroyed`: `boolean`
-- `kinds`: `BattleBeaconKind[]`
+- `kinds`: `BeaconKind[]`
 
-## BattlePodRemoval
+## PodRemoval
 
-- `section`: `BattleSection`
-- `kind`: `BattleBeaconKind`
+- `section`: `MechSection`
+- `kind`: `BeaconKind`
 - `arm`: `"left"|"right"`
 - `target_number`: `integer`
 - `roll`: `integer`
 - `removed`: `boolean`
 - `self_damage`: `integer`
-- `impact`: `BattleTacticalImpact|nil`
-- `notices`: `BattleNotice[]`
+- `impact`: `TacticalImpact|nil`
+- `notices`: `Notice[]`
 
-## BattleSignatureTransition
+## SignatureTransition
 
 - `enabled`: `boolean`
 - `remaining`: `integer`
 
-## BattleSignatureState
+## SignatureState
 
 - `enabled`: `boolean`
-- `pending`: `BattleSignatureTransition|nil`
+- `pending`: `SignatureTransition|nil`
 
-## BattleHexLock
+## HexLock
 
 - `hex`: `{x: integer, y: integer}`
 - `mode`: `'unit_at_hex'|'hex'|'building'|'ignite'|'clear'`
 - `remaining`: `integer` — Eight seconds to settle; zero is settled.
 
-## BattleHexAimModifiers
+## HexAimModifiers
 
 - `hex`: `{x: integer, y: integer}`
 - `mode`: `'unit_at_hex'|'hex'|'building'|'ignite'|'clear'`
@@ -1232,7 +1291,7 @@ Alias: `"off"|"ecm"|"eccm"`
 - `hex_bonus`: `integer` — Zero for unit-at-hex, otherwise -4.
 - `subtotal`: `integer|nil` — Nil beyond weapon range; numeric aim alone does not authorize firing.
 
-## BattleRadioReception
+## RadioReception
 
 - `receiver`: `integer`
 - `channel`: `integer` — Zero-based receiving channel.
@@ -1240,58 +1299,58 @@ Alias: `"off"|"ecm"|"eccm"`
 - `bearing`: `integer` — Bearing toward final transmitter.
 - `text`: `string` — Formatted cockpit message.
 
-## BattleChannelMessage
+## DiagnosticMessage
 
 - `channel`: `"debug"|"economy"|"attack_experience"|"experience"|"piloting_experience"|"frequencies"|"zero_frequencies"|"map_errors"`
 - `text`: `string`
 
-## BattleRadioTransmission
+## RadioTransmission
 
-- `delivery`: `{mode: 'analog'|'digital', report: {sender: integer, map: integer, frequency: integer, receptions: BattleRadioReception[], interfered_receivers: integer[]?, scans: {receiver: integer, channel: integer, previous: integer, frequency: integer}[]?, notifications: BattleNotice[]?}}`
+- `delivery`: `{mode: 'analog'|'digital', report: {sender: integer, map: integer, frequency: integer, receptions: RadioReception[], interfered_receivers: integer[]?, scans: {receiver: integer, channel: integer, previous: integer, frequency: integer}[]?, notifications: Notice[]?}}`
 - `mines`: `table` — Ordered frequency-matched command-mine report and consequences.
-- `audit_messages`: `BattleChannelMessage[]` — Diagnostics committed with the transmission.
-- `experience_messages`: `BattleChannelMessage[]` — Accepted communication XP diagnostics.
+- `audit_messages`: `DiagnosticMessage[]` — Diagnostics committed with the transmission.
+- `experience_messages`: `DiagnosticMessage[]` — Accepted communication XP diagnostics.
 
-## BattleTargetedRadioReport
+## TargetedRadioReport
 
 - `sender`: `integer`
 - `target`: `integer`
 - `notices`: `{unit: integer, text: string}[]` — Captured sender echo and powered-recipient message.
 
-## BattleBuildingScan
+## BuildingScan
 
 - `text`: `string` — Cockpit reply; undiscovered and missing buildings share one message.
-- `experience_messages`: `BattleChannelMessage[]` — Accepted perception diagnostics.
+- `experience_messages`: `DiagnosticMessage[]` — Accepted perception diagnostics.
 
-## BattleMineScan
+## MineScan
 
 - `found`: `boolean` — Successful recognition only; configuration is never disclosed.
 - `text`: `string`
-- `experience_messages`: `BattleChannelMessage[]`
+- `experience_messages`: `DiagnosticMessage[]`
 
-## BattleHexScan
+## HexScan
 
-- `building`: `BattleBuildingScan`
-- `mines`: `BattleMineScan`
+- `building`: `BuildingScan`
+- `mines`: `MineScan`
 
-## BattleSelectedScan
+## SelectedScan
 
 - `kind`: `'unit'|'building'|'hex'`
-- `report`: `string|BattleBuildingScan|BattleHexScan`
+- `report`: `string|BuildingScan|HexScan`
 
-## BattleViewPosition
+## ViewPosition
 
 - `map`: `integer` — Scanner battlefield dbref.
 - `center`: `{x: integer, y: integer}` — Requested center before viewport clipping.
 - `maximum_range`: `integer` — Damage-adjusted display hardware radius.
 
-## BattleViewDimensions
+## ViewDimensions
 
 - `tactical_width`: `integer?` — Requested columns, 5..40; default 21.
 - `tactical_height`: `integer?` — Requested rows, 5..24; default 14.
 - `long_range_height`: `integer?` — Requested rows, 10..40; default 11.
 
-## BattleViewport
+## Viewport
 
 - `map`: `integer`
 - `requested_center`: `{x: integer, y: integer}`
@@ -1300,17 +1359,17 @@ Alias: `"off"|"ecm"|"eccm"`
 - `height`: `integer` — Row count.
 - `maximum_range`: `integer`
 
-## BattleLongRangeMap
+## LongRangeMap
 
-- `viewport`: `BattleViewport`
+- `viewport`: `Viewport`
 - `text`: `string` — Filtered staggered-row display.
 
-## BattleTacticalMap
+## TacticalMap
 
-- `viewport`: `BattleViewport`
+- `viewport`: `Viewport`
 - `text`: `string` — Styled hex display with acquired two-character contact labels.
 
-## BattleHexCenterReport
+## HexCenterReport
 
 - `coordinate`: `HexCoordinate`
 - `elevation`: `integer`
@@ -1318,35 +1377,35 @@ Alias: `"off"|"ecm"|"eccm"`
 - `bearing`: `integer` — Clockwise degrees; 180 at the exact center.
 - `text`: `string` — Shared native readout.
 
-## BattleNavigationReport
+## NavigationReport
 
 - `center`: `HexCoordinate` — Requested local map center.
 - `text`: `string` — Styled local map, continuous-position plot and live readouts.
 
-## BattleBuildingContactMode
+## BuildingContactMode
 
 Alias: `"follow_brief" | "include" | "exclude"`
 
-## BattleContactPreferences
+## ContactPreferences
 
 - `include_dead`: `boolean` — Defaults false.
 - `include_shutdown`: `boolean` — Defaults true.
 - `include_enemies`: `boolean` — Defaults true.
 - `include_allies`: `boolean` — Defaults true.
 - `include_target`: `boolean` — Defaults true; never bypasses visibility.
-- `buildings`: `BattleBuildingContactMode` — Defaults "exclude"; applies to native contacts +, independently of unit filtering.
+- `buildings`: `BuildingContactMode` — Defaults "exclude"; applies to native contacts +, independently of unit filtering.
 
-## BattleContactOptions
+## ContactOptions
 
 - `buildings`: `boolean` — Include building contacts for native output.
-- `preferences`: `BattleContactPreferences` — Decoded unit categories.
+- `preferences`: `ContactPreferences` — Decoded unit categories.
 - `ignored`: `string[]` — Unrecognized characters in encounter order.
 
-## BattleBuildingContact
+## BuildingContact
 
-- `detection`: `BattleDetectionChannel|nil` — Whether the sensor band or sight reaches the entrance.
+- `detection`: `DetectionChannel|nil` — Whether the sensor band or sight reaches the entrance.
 - `short_text`: `string` — Plain compact row after identification locks.
-- `weapon_arc`: `BattleContactArc` — Observer torso direction toward entrance.
+- `weapon_arc`: `ContactArc` — Observer torso direction toward entrance.
 - `interior`: `integer`
 - `coordinate`: `HexCoordinate`
 - `elevation`: `integer`
@@ -1359,45 +1418,45 @@ Alias: `"follow_brief" | "include" | "exclude"`
 - `hidden`: `boolean` — Concealed entrance identified successfully.
 - `status`: `string` — Blank, x (restricted), X (safe/restricted command center), or C (command center).
 
-## BattleBriefSettings
+## BriefSettings
 
 - `contacts`: `integer` — Contact mode 0..3; defaults 1.
 - `automatic`: `integer` — Routine notice mode 0..6; defaults 0.
 
-## BattleBriefReport
+## BriefReport
 
-- `settings`: `BattleBriefSettings`
+- `settings`: `BriefSettings`
 - `changed`: `boolean` — An edit was requested; query is false.
 - `text`: `string` — Query or cockpit confirmation.
 
-## BattleBootleggerReport
+## BootleggerReport
 
 - `modifier`: `integer` — Situational difficulty and failed-fall severity.
-- `check`: `BattlePilotingCheck`
-- `fall`: `BattleFallReport?`
-- `notices`: `BattleNotice[]`
+- `check`: `PilotingCheck`
+- `fall`: `MechFallReport?`
+- `notices`: `Notice[]`
 
-## BattleEtaReport
+## EtaReport
 
 - `coordinate`: `HexCoordinate`
 - `range`: `number` — Horizontal range.
 - `minutes`: `integer?` — Whole minutes, absent when effectively stationary.
 - `text`: `string`
 
-## BattleBearingReport
+## BearingReport
 
 - `origin`: `Point`
 - `destination`: `Point`
 - `bearing`: `integer` — Clockwise compass degrees, 180 for coincident points.
 - `text`: `string`
 
-## BattleRangeReport
+## RangeReport
 
 - `horizontal`: `number` — Horizontal distance in hexes.
 - `spatial`: `number` — Spatial distance after dark-map terrain masking.
 - `text`: `string`
 
-## BattleVectorReport
+## VectorReport
 
 - `horizontal`: `number`
 - `spatial`: `number`
@@ -1405,14 +1464,14 @@ Alias: `"follow_brief" | "include" | "exclude"`
 - `vertical_bearing`: `integer` — Signed vertical angle rounded away from zero.
 - `text`: `string`
 
-## BattleBoosterState
+## BoosterState
 
 - `enabled`: `boolean`
 - `counter`: `integer`
 - `remaining`: `integer` — Seconds until the next overload/recovery check.
 - `failed`: `boolean` — Hardware failure persists through shutdown.
 
-## BattleNetworkStatusRow
+## NetworkStatusRow
 
 - `unit`: `integer`
 - `label`: `string`
@@ -1426,7 +1485,7 @@ Alias: `"follow_brief" | "include" | "exclude"`
 - `armor_percent`: `integer`
 - `internal_percent`: `integer`
 
-## BattleSwarmHop
+## SwarmHop
 
 - `target`: `integer`
 - `incoming`: `integer`
@@ -1434,21 +1493,21 @@ Alias: `"follow_brief" | "include" | "exclude"`
 - `remaining`: `integer`
 - `salvo`: `{kind: 'mech'|'vehicle', report: table}|nil` — Absent for a secondary miss.
 
-## BattleSwarmReport
+## SwarmReport
 
 - `launched`: `integer`
 - `remaining`: `integer`
 - `traveled`: `number` — Cumulative distance, including a terminal leg that falls short.
-- `hops`: `BattleSwarmHop[]` — Ordered attacks, at most eleven.
-- `notices`: `BattleNotice[]`
-- `broadcasts`: `BattleNotice[]`
+- `hops`: `SwarmHop[]` — Ordered attacks, at most eleven.
+- `notices`: `Notice[]`
+- `broadcasts`: `Notice[]`
 
-## BattleWeaponDamage
+## WeaponDamage
 
-- `location`: `{section: BattleSectionName, slot: integer}`
+- `location`: `{section: MechSectionName, slot: integer}`
 - `effects`: `("moderate"|"focus"|"crystal"|"ranging"|"barrel"|"feed")[]` — Distinct component effects; empty means superficial damage.
 
-## BattleRuntimeStats
+## RuntimeStats
 
 - `simulation_pending`: `boolean` — Same work predicate as the server's one-second simulation tick.
 - `scanner_observers`: `integer`
@@ -1461,16 +1520,16 @@ Alias: `"follow_brief" | "include" | "exclude"`
 - `inline_record_bytes`: `integer` — Root/map/unit inline sizes only; heap storage excluded.
 - `encoded_state_bytes`: `integer` — Exact compact JSON encoding size, not allocator usage.
 
-## BattleUnitField
+## UnitField
 
 - `name`: `string` — Full field name, independent of display width.
 - `value`: `string|nil` — Available field value; nil displays as n/a.
 
-## BattleUnitFieldReport
+## UnitFieldReport
 
 - `unit`: `integer`
 - `columns`: `integer`
-- `fields`: `BattleUnitField[]`
+- `fields`: `UnitField[]`
 - `text`: `string` — Literal report text, already published to the actor.
 
 ## BattleValuePair
@@ -1478,19 +1537,19 @@ Alias: `"follow_brief" | "include" | "exclude"`
 - `current`: `integer`
 - `original`: `integer`
 
-## BattleArmorStatus
+## ArmorStatus
 
-- `section`: `BattleSection` — Omitted when the request did not select one.
+- `section`: `MechSection` — Omitted when the request did not select one.
 - `armor`: `BattleValuePair`
 - `internal`: `BattleValuePair`
 - `rear_armor`: `BattleValuePair`
 
-## BattleAmmunitionStatus
+## AmmunitionStatus
 
 - `rounds`: `integer`
 - `capacity`: `integer`
 
-## BattleWeaponStats
+## WeaponStats
 
 - `kind`: `string`
 - `heat`: `integer`
@@ -1504,7 +1563,7 @@ Alias: `"follow_brief" | "include" | "exclude"`
 - `recycle_time`: `integer`
 - `battle_value`: `integer`
 
-## BattlePartDefinition
+## PartDefinition
 
 - `id`: `integer` — Stable catalogue part identifier.
 - `short_name`: `string`
@@ -1513,105 +1572,105 @@ Alias: `"follow_brief" | "include" | "exclude"`
 - `category`: `string`
 - `weight_tons`: `number`
 - `cost`: `integer`
-- `weapon`: `BattleWeaponStats` — Present for weapon parts.
+- `weapon`: `WeaponStats` — Present for weapon parts.
 
-## BattlePartRef
+## PartRef
 
-Alias: `BattlePartDefinition|integer|string`
+Alias: `PartDefinition|{id: integer}|integer|string`
 
-## BattlePartStack
+## PartStack
 
-- `part`: `BattlePartDefinition`
+- `part`: `PartDefinition`
 - `quantity`: `integer`
 
-## BattlePartCategory
+## PartCategory
 
 - `code`: `string`
 - `name`: `string`
 
-## BattleCriticalSlot
+## CriticalSlot
 
-- `section`: `BattleSection`
+- `section`: `MechSection`
 - `slot`: `integer`
 - `kind`: `string`
-- `part`: `BattlePartDefinition`
+- `part`: `PartDefinition`
 - `operational`: `boolean`
 - `temporary_failure`: `boolean`
 - `auxiliary_data`: `integer`
-- `ammunition`: `BattleAmmunitionStatus`
-- `fire_modes`: `BattleFireModeConstant[]`
-- `ammunition_modes`: `BattleAmmunitionModeConstant[]`
+- `ammunition`: `AmmunitionStatus`
+- `fire_modes`: `FireModeConstant[]`
+- `ammunition_modes`: `AmmunitionModeConstant[]`
 
-## BattleMountedWeapon
+## MountedWeapon
 
 - `number`: `integer` — Zero-based stable weapon number.
-- `section`: `BattleSection`
+- `section`: `MechSection`
 - `first_slot`: `integer` — Zero-based first occupied critical slot.
-- `part`: `BattlePartDefinition`
+- `part`: `PartDefinition`
 - `slot_count`: `integer`
 - `recycle`: `integer` — Seconds remaining in the current cycle.
 - `recycle_time`: `integer` — Full recycle time in seconds.
 - `operational`: `boolean`
 
-## BattleEngine
+## Engine
 
 - `rating`: `integer`
 - `suspension_factor`: `integer`
 
-## BattleRadioChannelReport
+## RadioChannelReport
 
 - `channel`: `integer` — One-based channel position.
 - `frequency`: `integer` — Frequency from 0 through 999999.
 - `title`: `string` — At most fifteen UTF-8 bytes.
 - `modes`: `string[]` — Active mode names: digital, mute, relay, information, scan.
 
-## BattleBattleValue
+## BattleValue
 
 - `total`: `number`
 - `offensive`: `number`
 - `defensive`: `number`
 
-## BattleTechnology
+## Technology
 
-- `code`: `BattleTechnologyCode`
+- `code`: `TechnologyCode`
 - `name`: `string`
 - `group`: `"primary"|"secondary"|"infantry"`
 - `source`: `"configured"|"inferred"`
 
-## BattleCharacterValueDefinition
+## CharacterValueDefinition
 
 - `code`: `integer`
 - `name`: `string`
 - `kind`: `string` — Char_value, Char_skill, Char_advantage or Char_attribute.
 - `default_experience_threshold`: `integer`
 
-## BattleCharacterValueReport
+## CharacterValueReport
 
-- `definition`: `BattleCharacterValueDefinition`
+- `definition`: `CharacterValueDefinition`
 - `amount`: `integer`
 - `target`: `integer` — Skill targets including earned levels.
 - `experience`: `integer`
 - `experience_to_next_level`: `integer`
 
-## BattlePersonalCombatArmor
+## PersonalCombatArmor
 
 - `head`: `integer`
 - `torso`: `integer`
 - `hands`: `integer`
 - `feet`: `integer`
 
-## BattlePersonalCombatEquipment
+## PersonalCombatEquipment
 
-- `weapon`: `BattlePartDefinition`
+- `weapon`: `PartDefinition`
 - `ammunition`: `integer`
 
-## BattlePersonalCombatLoadout
+## PersonalCombatLoadout
 
-- `armor`: `BattlePersonalCombatArmor`
-- `right`: `BattlePersonalCombatEquipment`
-- `left`: `BattlePersonalCombatEquipment`
+- `armor`: `PersonalCombatArmor`
+- `right`: `PersonalCombatEquipment`
+- `left`: `PersonalCombatEquipment`
 
-## BattleUiPreferencesState
+## UiPreferencesState
 
 - `tactical_height`: `integer`
 - `tactical_width`: `integer`
@@ -1624,76 +1683,76 @@ Alias: `BattlePartDefinition|integer|string`
 - `buildings`: `"follow_brief"|"include"|"exclude"`
 - `configured`: `boolean`
 
-## BattleWeaponInstall
+## WeaponInstall
 
-- `part`: `BattlePartRef` — Weapon part reference.
-- `section`: `BattleSection`
+- `part`: `PartRef` — Weapon part reference.
+- `section`: `MechSection`
 - `slots`: `integer[]` — Zero-based critical slots.
 - `rear_facing`: `boolean`
 - `targeting_computer`: `boolean`
 - `one_shot`: `boolean`
 
-## BattleAmmunitionConfiguration
+## AmmunitionConfiguration
 
-- `weapon`: `BattlePartRef` — Launcher part reference.
-- `section`: `BattleSection`
+- `weapon`: `PartRef` — Launcher part reference.
+- `section`: `MechSection`
 - `slot`: `integer` — Zero-based critical slot.
 - `half_ton`: `boolean`
-- `ammunition_modes`: `BattleAmmunitionModeConstant[]`
+- `ammunition_modes`: `AmmunitionModeConstant[]`
 
-## BattleWeaponModes
+## WeaponModes
 
-- `fire_modes`: `BattleFireModeConstant[]`
-- `ammunition_modes`: `BattleAmmunitionModeConstant[]`
+- `fire_modes`: `FireModeConstant[]`
+- `ammunition_modes`: `AmmunitionModeConstant[]`
 
-## BattleSpecialInstall
+## SpecialInstall
 
-- `part`: `BattlePartRef` — Omit to empty the slot.
-- `section`: `BattleSection`
+- `part`: `PartRef` — Omit to empty the slot.
+- `section`: `MechSection`
 - `slot`: `integer` — Zero-based critical slot.
 - `auxiliary_data`: `integer`
 
-## BattleRepairArmorRequest
+## RepairArmorRequest
 
-- `operation`: `BattleRepairOperation`
-- `section`: `BattleSection`
+- `operation`: `RepairOperation`
+- `section`: `MechSection`
 - `value`: `integer`
 
-## BattleRepairInternalRequest
+## RepairInternalRequest
 
-- `operation`: `BattleRepairOperation`
-- `section`: `BattleSection`
+- `operation`: `RepairOperation`
+- `section`: `MechSection`
 - `value`: `integer`
 
-## BattleRepairRearArmorRequest
+## RepairRearArmorRequest
 
-- `operation`: `BattleRepairOperation`
-- `section`: `BattleSection`
+- `operation`: `RepairOperation`
+- `section`: `MechSection`
 - `value`: `integer`
 
-## BattleRepairPartRequest
+## RepairPartRequest
 
-- `operation`: `BattleRepairOperation`
-- `section`: `BattleSection`
+- `operation`: `RepairOperation`
+- `section`: `MechSection`
 - `slot`: `integer`
 
-## BattleRepairReattachRequest
+## RepairReattachRequest
 
-- `operation`: `BattleRepairOperation`
-- `section`: `BattleSection`
+- `operation`: `RepairOperation`
+- `section`: `MechSection`
 
-## BattleImmediateRepair
+## ImmediateRepair
 
-Alias: `BattleRepairArmorRequest|BattleRepairInternalRequest|BattleRepairRearArmorRequest|BattleRepairPartRequest|BattleRepairReattachRequest`
+Alias: `RepairArmorRequest|RepairInternalRequest|RepairRearArmorRequest|RepairPartRequest|RepairReattachRequest`
 
-## BattleAutopilotStates
+## AutopilotStates
 
 - `PAUSED`: `"paused"`
 - `IDLE`: `"idle"`
 - `EXECUTING`: `"executing"`
 - `BLOCKED`: `"blocked"`
 
-## BattleAutopilotOrderStates
+## AutopilotOrderStates
 
 - `QUEUED`: `"queued"`
 - `RUNNING`: `"running"`
@@ -1701,7 +1760,7 @@ Alias: `BattleRepairArmorRequest|BattleRepairInternalRequest|BattleRepairRearArm
 - `FAILED`: `"failed"`
 - `CANCELED`: `"canceled"`
 
-## BattleAutopilotReasons
+## AutopilotReasons
 
 - `MANUAL_TAKEOVER`: `"manual_takeover"`
 - `CONTACT_LOST`: `"contact_lost"`
@@ -1716,98 +1775,98 @@ Alias: `BattleRepairArmorRequest|BattleRepairInternalRequest|BattleRepairRearArm
 - `UNSUPPORTED`: `"unsupported"`
 - `STALE_REVISION`: `"stale_revision"`
 
-## BattleAutopilotRangeBand
+## AutopilotRangeBand
 
 - `minimum`: `integer` — Inclusive minimum engagement range in hexes.
 - `maximum`: `integer` — Inclusive maximum engagement range in hexes.
 
-## BattleAutopilotConfig
+## AutopilotConfig
 
 - `speed_percent`: `integer` — Desired speed as a percentage from 0 through 100.
 - `fire_mode`: `"hold"|"assigned_target"|"opportunistic"` — Current serialized weapon policy.
 - `heat_ceiling`: `integer` — Projected heat limit for autonomous fire.
-- `preferred_range`: `BattleAutopilotRangeBand|nil` — Optional engagement band.
+- `preferred_range`: `AutopilotRangeBand|nil` — Optional engagement band.
 
-## BattleAutopilotConfigPatch
+## AutopilotConfigPatch
 
 - `speed_percent`: `integer|nil` — Optional speed update.
-- `fire_mode`: `BattleAutopilotFireMode|nil` — Optional weapon-policy update.
+- `fire_mode`: `AutopilotFireMode|nil` — Optional weapon-policy update.
 - `heat_ceiling`: `integer|nil` — Optional projected heat limit.
-- `preferred_range`: `BattleAutopilotRangeBand|false|nil` — Set or clear the preferred band.
+- `preferred_range`: `AutopilotRangeBand|false|nil` — Set or clear the preferred band.
 
-## BattleAutopilotControllerState
+## AutopilotControllerState
 
 Alias: `"paused"|"idle"|"executing"|"blocked"`
 
-## BattleAutopilotOrderState
+## AutopilotOrderState
 
 Alias: `"queued"|"running"|"succeeded"|"failed"|"canceled"`
 
-## BattleAutopilotFeedbackEvent
+## AutopilotFeedbackEvent
 
 Alias: `"configured"|"paused"|"resumed"|"manual_takeover"|"order_queued"|"order_started"|"order_succeeded"|"order_failed"|"order_canceled"|"blocked"`
 
-## BattleAutopilotReason
+## AutopilotReason
 
 Alias: `"manual_takeover"|"contact_lost"|"stuck"|"unreachable"|"invalidated"|"resource_limit"|"congested"|"invalid_target"|"unit_unavailable"|"map_changed"|"unsupported"|"stale_revision"`
 
-## BattleAutopilotOrder
+## AutopilotOrder
 
-- `kind`: `BattleAutopilotOrderName`
-- `destination`: `BattlePosition|nil` — Move or attack-move destination.
+- `kind`: `AutopilotOrderName`
+- `destination`: `Position|nil` — Move or attack-move destination.
 - `arrival_radius`: `integer|nil` — Destination tolerance in hexes.
 - `target`: `integer|nil` — Follow or attack target unit.
 - `separation`: `integer|nil` — Follow distance in hexes.
-- `waypoints`: `BattlePosition[]|nil` — Patrol route.
-- `range`: `BattleAutopilotRangeBand|nil` — Optional attack engagement band.
+- `waypoints`: `Position[]|nil` — Patrol route.
+- `range`: `AutopilotRangeBand|nil` — Optional attack engagement band.
 
-## BattleAutopilotStoredOrder
+## AutopilotStoredOrder
 
 - `kind`: `"move"|"hold"|"follow"|"patrol"|"attack"|"attack_move"` — Serialized intent kind.
-- `destination`: `BattlePosition|nil` — Move or attack-move destination.
+- `destination`: `Position|nil` — Move or attack-move destination.
 - `arrival_radius`: `integer|nil` — Destination tolerance in hexes.
 - `target`: `integer|nil` — Follow or attack target unit.
 - `separation`: `integer|nil` — Follow distance in hexes.
-- `waypoints`: `BattlePosition[]|nil` — Patrol route.
-- `range`: `BattleAutopilotRangeBand|nil` — Optional engagement band.
+- `waypoints`: `Position[]|nil` — Patrol route.
+- `range`: `AutopilotRangeBand|nil` — Optional engagement band.
 
-## BattleAutopilotOrderProgress
+## AutopilotOrderProgress
 
 - `waypoint_index`: `integer` — Current waypoint cursor.
 - `recovery_attempts`: `integer` — Replanning attempts for the active order.
 - `stagnant_ticks`: `integer` — Ticks without route progress.
-- `attack_move_origin`: `BattlePosition|nil` — Position where attack-move pursuit began.
+- `attack_move_origin`: `Position|nil` — Position where attack-move pursuit began.
 - `attack_move_suppressed_target`: `integer|nil` — Contact already engaged during attack-move.
 
-## BattleAutopilotOrderRecord
+## AutopilotOrderRecord
 
 - `id`: `integer` — Stable controller-local order ID.
-- `order`: `BattleAutopilotStoredOrder` — Serialized order intent; submissions use typed constants.
-- `state`: `BattleAutopilotOrderState` — Lifecycle state.
-- `progress`: `BattleAutopilotOrderProgress` — Durable execution cursor.
+- `order`: `AutopilotStoredOrder` — Serialized order intent; submissions use typed constants.
+- `state`: `AutopilotOrderState` — Lifecycle state.
+- `progress`: `AutopilotOrderProgress` — Durable execution cursor.
 
-## BattleAutopilotStatus
+## AutopilotStatus
 
-- `config`: `BattleAutopilotConfig` — Controller settings.
-- `state`: `BattleAutopilotControllerState` — Controller lifecycle state.
-- `blocking_reason`: `BattleAutopilotReason|nil` — Reason the controller is blocked, if any.
+- `config`: `AutopilotConfig` — Controller settings.
+- `state`: `AutopilotControllerState` — Controller lifecycle state.
+- `blocking_reason`: `AutopilotReason|nil` — Reason the controller is blocked, if any.
 - `revision`: `integer` — Management revision.
 - `next_order_id`: `integer` — Next order ID that will be assigned.
-- `active`: `BattleAutopilotOrderRecord|nil` — Current order.
-- `queue`: `BattleAutopilotOrderRecord[]` — Queued orders.
-- `feedback`: `BattleAutopilotFeedback[]` — Recently retained outcomes.
+- `active`: `AutopilotOrderRecord|nil` — Current order.
+- `queue`: `AutopilotOrderRecord[]` — Queued orders.
+- `feedback`: `AutopilotFeedback[]` — Recently retained outcomes.
 - `next_feedback_sequence`: `integer` — Next feedback sequence that will be assigned.
-- `sightings`: `table<integer, BattleAutopilotSighting>` — Retained contact memory keyed by unit ID.
+- `sightings`: `table<integer, AutopilotSighting>` — Retained contact memory keyed by unit ID.
 
-## BattleAutopilotSubmitResult
+## AutopilotSubmitResult
 
 - `ids`: `integer[]` — Assigned order IDs.
 - `revision`: `integer` — New management revision.
 
-## BattleAutopilotContact
+## AutopilotContact
 
 - `unit`: `integer` — Acquired unit identity.
-- `position`: `BattlePosition` — Observed position.
+- `position`: `Position` — Observed position.
 - `friendly`: `boolean` — Whether the contact is allied.
 - `identified`: `boolean` — Whether sensors identified the contact well enough to determine allegiance.
 - `known_destroyed`: `boolean` — Whether the visible contact status reports destruction.
@@ -1816,51 +1875,51 @@ Alias: `"manual_takeover"|"contact_lost"|"stuck"|"unreachable"|"invalidated"|"re
 - `relayed`: `boolean` — Seen only by network peers; the unit cannot lock or fire on it yet.
 - `seen_at`: `integer` — Simulation time of the observation.
 
-## BattleAutopilotMemory
+## AutopilotMemory
 
 - `unit`: `integer` — Previously acquired unit identity.
-- `position`: `BattlePosition` — Last sensor-confirmed position.
+- `position`: `Position` — Last sensor-confirmed position.
 - `seen_at`: `integer` — Simulation time of the last sighting.
 
-## BattleHeat
+## Heat
 
 - `stored`: `number` — Current stored weapon heat.
 - `excess`: `number` — Sampled excess heat.
 
-## BattleAutopilotOwnReadiness
+## AutopilotOwnReadiness
 
-- `power`: `BattlePower` — Current power state.
+- `power`: `UnitPower` — Current power state.
 - `maximum_speed`: `number` — Damage-adjusted maximum speed.
-- `heat`: `BattleHeat|nil` — Conventional heat state; nil for ground vehicles.
-- `weapons`: `BattleWeaponReadiness[]` — Readiness for installed weapons.
+- `heat`: `Heat|nil` — Conventional heat state; nil for ground vehicles.
+- `weapons`: `WeaponReadiness[]` — Readiness for installed weapons.
 
-## BattleAutopilotSighting
+## AutopilotSighting
 
-- `position`: `BattlePosition` — Last sensor-confirmed position.
+- `position`: `Position` — Last sensor-confirmed position.
 - `seen_at`: `integer` — Simulation time of the last sighting.
 
-## BattleAutopilotObservation
+## AutopilotObservation
 
 - `unit`: `integer` — Observing unit.
 - `time`: `integer` — Current simulation time.
-- `position`: `BattlePosition|nil` — Own position, if placed.
+- `position`: `Position|nil` — Own position, if placed.
 - `heading`: `number|nil` — Own heading, if motion is available.
 - `speed`: `number` — Own current speed.
-- `own`: `BattleAutopilotOwnReadiness` — Own mechanical and weapon readiness.
-- `contacts`: `BattleAutopilotContact[]` — Current sensor contacts, plus those relayed by active C3/C3i peers.
-- `remembered`: `BattleAutopilotMemory[]` — Fresh retained sightings.
+- `own`: `AutopilotOwnReadiness` — Own mechanical and weapon readiness.
+- `contacts`: `AutopilotContact[]` — Current sensor contacts, plus those relayed by active C3/C3i peers.
+- `remembered`: `AutopilotMemory[]` — Fresh retained sightings.
 
-## BattleAutopilotFeedback
+## AutopilotFeedback
 
 - `sequence`: `integer` — Monotonic feedback sequence.
 - `simulation_time`: `integer` — Simulation time of the event.
 - `order_id`: `integer|nil` — Related order ID.
-- `event`: `BattleAutopilotFeedbackEvent` — Event kind.
-- `reason`: `BattleAutopilotReason|nil` — Optional event reason.
+- `event`: `AutopilotFeedbackEvent` — Event kind.
+- `reason`: `AutopilotReason|nil` — Optional event reason.
 
-## BattleAutopilotFeedbackPage
+## AutopilotFeedbackPage
 
-- `records`: `BattleAutopilotFeedback[]` — Retained feedback records after the cursor.
+- `records`: `AutopilotFeedback[]` — Retained feedback records after the cursor.
 - `history_gap`: `boolean` — Whether older records fell outside the retention window.
 
 ## BtechAutopilotAPI
@@ -1868,32 +1927,32 @@ Alias: `"manual_takeover"|"contact_lost"|"stuck"|"unreachable"|"invalidated"|"re
 - `orders`: `table`
 - `submission_modes`: `table`
 - `fire_modes`: `table`
-- `states`: `BattleAutopilotStates` — Controller lifecycle strings.
-- `order_states`: `BattleAutopilotOrderStates` — Order lifecycle strings.
-- `reasons`: `BattleAutopilotReasons` — Blocking and outcome reason strings.
-- `attach`: `fun(unit: integer, options?: BattleAutopilotConfigPatch)`
+- `states`: `AutopilotStates` — Controller lifecycle strings.
+- `order_states`: `AutopilotOrderStates` — Order lifecycle strings.
+- `reasons`: `AutopilotReasons` — Blocking and outcome reason strings.
+- `attach`: `fun(unit: integer, options?: AutopilotConfigPatch)`
 - `detach`: `fun(unit: integer)`
-- `configure`: `fun(unit: integer, patch: BattleAutopilotConfigPatch, expected_revision?: integer):` — integer
-- `submit`: `fun(unit: integer, orders: BattleAutopilotOrder[], mode: BattleAutopilotSubmissionMode, expected_revision?: integer):` — BattleAutopilotSubmitResult
+- `configure`: `fun(unit: integer, patch: AutopilotConfigPatch, expected_revision?: integer):` — integer
+- `submit`: `fun(unit: integer, orders: AutopilotOrder[], mode: AutopilotSubmissionMode, expected_revision?: integer):` — AutopilotSubmitResult
 - `cancel`: `fun(unit: integer, order_id: integer, expected_revision?: integer):` — boolean
 - `pause`: `fun(unit: integer)`
 - `resume`: `fun(unit: integer)`
-- `status`: `fun(unit: integer):` — BattleAutopilotStatus
-- `observe`: `fun(unit: integer):` — BattleAutopilotObservation
-- `feedback`: `fun(unit: integer, after_sequence?: integer):` — BattleAutopilotFeedbackPage
+- `status`: `fun(unit: integer):` — AutopilotStatus
+- `observe`: `fun(unit: integer):` — AutopilotObservation
+- `feedback`: `fun(unit: integer, after_sequence?: integer):` — AutopilotFeedbackPage
 
-## BattleTacticalUnitSnapshot
+## TacticalUnitSnapshot
 
 - `unit`: `integer` — Assigned friendly unit ID.
 - `revision`: `integer` — Management revision used for stale-intention protection.
-- `status`: `BattleAutopilotStatus` — Controller state; sightings are supplied through observation instead.
-- `observation`: `BattleAutopilotObservation` — Per-unit permitted intelligence.
-- `feedback`: `BattleAutopilotFeedbackPage` — Outcome page after the requested cursor.
+- `status`: `AutopilotStatus` — Controller state; sightings are supplied through observation instead.
+- `observation`: `AutopilotObservation` — Per-unit permitted intelligence.
+- `feedback`: `AutopilotFeedbackPage` — Outcome page after the requested cursor.
 
-## BattleTacticalSighting
+## TacticalSighting
 
 - `observer`: `integer` — Unit that acquired this sighting.
-- `position`: `BattlePosition` — Last observed position.
+- `position`: `Position` — Last observed position.
 - `seen_at`: `integer` — Committed simulation seconds.
 - `current`: `boolean` — Whether this observer currently acquires the contact.
 - `friendly`: `boolean|nil` — Present only for a current observation.
@@ -1901,33 +1960,25 @@ Alias: `"manual_takeover"|"contact_lost"|"stuck"|"unreachable"|"invalidated"|"re
 - `known_destroyed`: `boolean|nil` — Present only for a current observation.
 - `relayed`: `boolean|nil` — Present only for a current observation; true when only C3/C3i peers see it.
 
-## BattleTacticalContact
+## TacticalContact
 
 - `unit`: `integer` — Contact identity.
-- `observations`: `BattleTacticalSighting[]` — Source observations, ordered by observer ID.
+- `observations`: `TacticalSighting[]` — Source observations, ordered by observer ID.
 
-## BattleTacticalSnapshot
+## TacticalSnapshot
 
 - `version`: `integer` — Snapshot schema version, currently 1.
 - `time`: `integer` — Committed simulation seconds; restart does not advance this clock.
-- `units`: `BattleTacticalUnitSnapshot[]` — Assigned controllers, ordered by unit ID.
-- `contacts`: `BattleTacticalContact[]` — Aggregated sightings, ordered by contact ID.
+- `units`: `TacticalUnitSnapshot[]` — Assigned controllers, ordered by unit ID.
+- `contacts`: `TacticalContact[]` — Aggregated sightings, ordered by contact ID.
 
-## BattleTacticalIntention
+## TacticalIntention
 
 - `unit`: `integer` — Assigned unit ID.
 - `expected_revision`: `integer` — Required current management revision.
-- `mode`: `BattleAutopilotSubmissionMode` — Append or replace using typed constants.
-- `orders`: `BattleAutopilotOrder[]` — Ordinary unit orders, at most 64.
+- `mode`: `AutopilotSubmissionMode` — Append or replace using typed constants.
+- `orders`: `AutopilotOrder[]` — Ordinary unit orders, at most 64.
 
-## BattleTacticalSubmitResult
+## TacticalSubmitResult
 
 - `unit`: `integer` — Controller receiving these order IDs.
-
-## BattleMapPointOfInterest
-
-- `type`: `string` — Case-sensitive category chosen by the map author.
-- `name`: `string` — Display name chosen by the map author.
-- `x`: `integer` — Zero-based column.
-- `y`: `integer` — Zero-based row.
-- `elevation`: `integer|nil` — Levels above (negative: below) the hex's ground level, or nil when unset.

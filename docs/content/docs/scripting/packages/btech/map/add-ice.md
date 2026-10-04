@@ -23,4 +23,4 @@ btech.map.add_ice(actor, dbref, percentage)
 
 ## Returns
 
-- `BattleMapIceReport`
+- `MapIceReport`

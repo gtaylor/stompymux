@@ -25,4 +25,4 @@ btech.unit.view_center(dbref, pilot, kind, arguments)
 
 ## Returns
 
-- `BattleViewPosition`
+- `ViewPosition`

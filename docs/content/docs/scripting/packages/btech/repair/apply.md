@@ -18,7 +18,7 @@ btech.repair.apply(unit, repair)
 | Name | Type | Description |
 | --- | --- | --- |
 | `unit` | `DbRef\|Object` |  |
-| `repair` | `BattleImmediateRepair` |  |
+| `repair` | `ImmediateRepair` |  |
 
 ## Returns
 

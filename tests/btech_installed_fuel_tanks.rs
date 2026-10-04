@@ -4,10 +4,9 @@ use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 
 /// Two distinct tank slots share the left hull face without replacing weapon equipment.
-fn aircraft(cargo_tech: bool) -> BattleVehicleTemplate {
+fn aircraft(cargo_tech: bool) -> VehicleTemplate {
     let mut template =
-        BattleVehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml"))
-            .unwrap();
+        VehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml")).unwrap();
     if !cargo_tech {
         template
             .attributes
@@ -16,7 +15,7 @@ fn aircraft(cargo_tech: bool) -> BattleVehicleTemplate {
     for slot in [0, 1] {
         template
             .sections
-            .get_mut(&BattleVehicleSection::Left)
+            .get_mut(&VehicleSection::Left)
             .unwrap()
             .criticals
             .insert(
@@ -40,13 +39,13 @@ async fn installed_and_carried_tanks_share_capacity_load_and_restart() {
         let mut empty = template.clone();
         empty
             .sections
-            .get_mut(&BattleVehicleSection::Left)
+            .get_mut(&VehicleSection::Left)
             .unwrap()
             .criticals
             .clear();
         assert_eq!(template.mass().unwrap(), empty.mass().unwrap());
         let id = world.create(&config, "Tanker".into(), Kind::Thing);
-        BattleUnitTemplate::Vehicle(template)
+        UnitTemplate::Vehicle(template)
             .create(&mut world, id)
             .unwrap();
         support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
@@ -102,7 +101,7 @@ async fn installed_and_carried_tanks_share_capacity_load_and_restart() {
 async fn damaged_installed_tanks_retain_capacity_and_cargo_contribution() {
     let (_dir, config, mut world) = support::isolated_world().await;
     let id = world.create(&config, "Tanker".into(), Kind::Thing);
-    BattleUnitTemplate::Vehicle(aircraft(true))
+    UnitTemplate::Vehicle(aircraft(true))
         .create(&mut world, id)
         .unwrap();
     let before = battle_vtol_fuel_status(&world, id).unwrap();
@@ -128,17 +127,14 @@ async fn damaged_installed_tanks_retain_capacity_and_cargo_contribution() {
 /// Ground vehicles may describe tank equipment without acquiring VTOL capacity or duplicated stock weight.
 #[test]
 fn tank_equipment_uses_shared_identity_without_creating_ground_fuel_state() {
-    assert_eq!(
-        BattleSystem::parse("fuel_tank").unwrap(),
-        BattleSystem::FuelTank
-    );
+    assert_eq!(System::parse("fuel_tank").unwrap(), System::FuelTank);
     let mut template =
-        BattleVehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+        VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
             .unwrap();
     let before = template.mass().unwrap();
     template
         .sections
-        .get_mut(&BattleVehicleSection::Left)
+        .get_mut(&VehicleSection::Left)
         .unwrap()
         .criticals
         .insert(
@@ -149,7 +145,7 @@ fn tank_equipment_uses_shared_identity_without_creating_ground_fuel_state() {
                 modes: vec![],
             },
         );
-    let vehicle = BattleVehicle::new(template).unwrap();
+    let vehicle = Vehicle::new(template).unwrap();
     assert_eq!(vehicle.mass().unwrap(), before);
     assert_eq!(vehicle.installed_fuel_tanks(), 0);
     assert!(vehicle.vtol_fuel().is_none());

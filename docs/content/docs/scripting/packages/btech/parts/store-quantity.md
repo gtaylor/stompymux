@@ -18,7 +18,7 @@ btech.parts.store_quantity(target, part)
 | Name | Type | Description |
 | --- | --- | --- |
 | `target` | `DbRef\|Object` |  |
-| `part` | `BattlePartRef` |  |
+| `part` | `PartRef` |  |
 
 ## Returns
 

@@ -146,7 +146,7 @@ async fn airborne_shutdown_preserves_descent_and_startup_abort_does_not_fall() {
                 .await;
         firing::edit(&mut world, id, |state| {
             state["target_lock"] = serde_json::Value::Null;
-            state["power"] = serde_json::to_value(BattlePower::Starting { remaining: 10 }).unwrap();
+            state["power"] = serde_json::to_value(Power::Starting { remaining: 10 }).unwrap();
         });
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         let notices = stop_battle_unit_action(&scripts, &config, id, ObjectId(1)).unwrap();
@@ -187,7 +187,7 @@ async fn shutdown_fall_casualties_and_failed_evacuation_are_atomic() {
     set_battle_character(
         &mut world,
         pilot,
-        BattleCharacter {
+        Character {
             build: 5,
             reflexes: 5,
             intuition: 5,
@@ -204,18 +204,18 @@ async fn shutdown_fall_casualties_and_failed_evacuation_are_atomic() {
     apply_damage_phase(
         &mut world,
         id,
-        BattleSection::Head,
+        MechSection::Head,
         1000,
-        BattleDamagePhase::Armor { rear: false },
+        DamagePhase::Armor { rear: false },
     )
     .unwrap();
-    let internal = world.btech.constructed_units()[&id].sections()[&BattleSection::Head].internal;
+    let internal = world.btech.constructed_units()[&id].sections()[&MechSection::Head].internal;
     apply_damage_phase(
         &mut world,
         id,
-        BattleSection::Head,
+        MechSection::Head,
         internal - 1,
-        BattleDamagePhase::Internal,
+        DamagePhase::Internal,
     )
     .unwrap();
     speed(&mut world, id, 21.5);
@@ -224,7 +224,7 @@ async fn shutdown_fall_casualties_and_failed_evacuation_are_atomic() {
         .find(|seed| {
             let mut candidate = world.clone();
             firing::edit(&mut candidate, id, |state| {
-                state["dice"] = serde_json::to_value(BattleDice::seeded([*seed; 32])).unwrap()
+                state["dice"] = serde_json::to_value(Dice::seeded([*seed; 32])).unwrap()
             });
             let scripts = Scripts::new(&config, Rc::new(RefCell::new(candidate))).unwrap();
             stop_battle_unit_action(&scripts, &config, id, pilot).is_ok()
@@ -232,7 +232,7 @@ async fn shutdown_fall_casualties_and_failed_evacuation_are_atomic() {
         })
         .unwrap();
     firing::edit(&mut world, id, |state| {
-        state["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
+        state["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap()
     });
     let before = world.clone();
     world.objects.remove(&afterlife);

@@ -22,7 +22,7 @@ async fn fixture(
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         if index < 2 {
             let mut definition =
-                BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
                     .unwrap();
             definition
                 .attributes
@@ -32,7 +32,7 @@ async fn fixture(
             create_battle_vehicle(
                 &mut world,
                 id,
-                BattleVehicleTemplate::parse("test", vehicle).unwrap(),
+                VehicleTemplate::parse("test", vehicle).unwrap(),
             )
             .unwrap();
         }
@@ -46,10 +46,7 @@ async fn fixture(
 /// Mark units running through their saved state so contact updates may run without crews.
 fn running(world: &mut World, ids: &[ObjectId]) {
     for id in ids {
-        world
-            .btech
-            .set_unit_power(*id, BattlePower::Running)
-            .unwrap();
+        world.btech.set_unit_power(*id, Power::Running).unwrap();
     }
 }
 
@@ -155,16 +152,16 @@ async fn mech_searchlights_illuminate_vehicle_targets_and_replay_perception() {
         })
         .unwrap();
     // Without the all-conditions band, only sight reaches the target four hexes away.
-    set_battle_map_perception(&mut world, map, BattleMapPerceptionFlag::Sensors, false).unwrap();
+    set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, false).unwrap();
     let before = world.btech.clone();
     let sight = |world: &World| {
         battle_perceive(world, observer, target)
             .unwrap()
             .map(|perception| (perception.channel, perception.aim_modifier))
     };
-    assert_eq!(sight(&world), Some((BattleDetectionChannel::Sight, 1)));
+    assert_eq!(sight(&world), Some((DetectionChannel::Sight, 1)));
     let mut short = world.clone();
-    set_battle_map_visibility(&mut short, map, BattleLight::Night, 2).unwrap();
+    set_battle_map_visibility(&mut short, map, Light::Night, 2).unwrap();
     assert_eq!(sight(&short), None);
     assert_eq!(world.btech, before);
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(lamp);
@@ -180,10 +177,10 @@ async fn mech_searchlights_illuminate_vehicle_targets_and_replay_perception() {
     }
     assert!(battle_unit_illuminated(&world, target));
     let lit = sight(&world);
-    assert_eq!(lit, Some((BattleDetectionChannel::Sight, 0)));
+    assert_eq!(lit, Some((DetectionChannel::Sight, 0)));
     // A lit target stays visible out to three times the night visibility.
     let mut short = world.clone();
-    set_battle_map_visibility(&mut short, map, BattleLight::Night, 2).unwrap();
+    set_battle_map_visibility(&mut short, map, Light::Night, 2).unwrap();
     assert_eq!(sight(&short), lit);
     persistence::save(&config.database(), &world).await.unwrap();
     let restored = persistence::load(&config.database()).await.unwrap();
@@ -233,7 +230,7 @@ async fn hovercraft_sight_lines_retain_under_bridge_height_after_restart() {
 }
 
 /// A hidden hostile target searched for by a pilot with perception skill seven.
-const HIDDEN: BattleContactRules = BattleContactRules {
+const HIDDEN: ContactRules = ContactRules {
     hostile: true,
     hidden: true,
     perception: 7,
@@ -248,7 +245,7 @@ async fn vehicle_acquisition_uses_hull_and_turret_weights_and_saves_exact_dice()
         include_str!("../game/mechs/Demolisher.toml"),
     )
     .await;
-    set_battle_map_visibility(&mut world, map, BattleLight::Day, 30).unwrap();
+    set_battle_map_visibility(&mut world, map, Light::Day, 30).unwrap();
     running(&mut world, &[vehicle_a]);
     assert_eq!(battle_perception_factor(HIDDEN.perception), 79);
     for target in [mech_b, vehicle_b] {
@@ -265,12 +262,12 @@ async fn vehicle_acquisition_uses_hull_and_turret_weights_and_saves_exact_dice()
         assert_eq!((100.0 - distance / 3.0) as u16, 98);
         // Threshold = hull arc (+15 turret) * 79 / 100 / 4 * 98.
         for (heading, offset, threshold, arc) in [
-            (0.0, 0.0, 2156, BattleSensorArc::Front),
-            (0.0, 90.0, 1862, BattleSensorArc::Front),
-            (90.0, 0.0, 1470, BattleSensorArc::Side),
-            (90.0, 270.0, 1764, BattleSensorArc::Side),
-            (180.0, 0.0, 882, BattleSensorArc::Rear),
-            (180.0, 180.0, 1176, BattleSensorArc::Rear),
+            (0.0, 0.0, 2156, SensorArc::Front),
+            (0.0, 90.0, 1862, SensorArc::Front),
+            (90.0, 0.0, 1470, SensorArc::Side),
+            (90.0, 270.0, 1764, SensorArc::Side),
+            (180.0, 0.0, 882, SensorArc::Rear),
+            (180.0, 180.0, 1176, SensorArc::Rear),
         ] {
             world
                 .btech
@@ -279,16 +276,16 @@ async fn vehicle_acquisition_uses_hull_and_turret_weights_and_saves_exact_dice()
                     vehicle["motion"]["heading"] = serde_json::json!(heading);
                     vehicle["motion"]["desired_heading"] = serde_json::json!(heading);
                     vehicle["turret_offset"] = serde_json::json!(offset);
-                    vehicle["dice"] = serde_json::to_value(BattleDice::seeded([43; 32])).unwrap();
+                    vehicle["dice"] = serde_json::to_value(Dice::seeded([43; 32])).unwrap();
                     vehicle["contacts"] = serde_json::json!({});
                 })
                 .unwrap();
             assert_eq!(
-                BattleSensorArc::from_bearing(0.0, heading, BattleFacing::default()).unwrap(),
+                SensorArc::from_bearing(0.0, heading, Facing::default()).unwrap(),
                 arc
             );
             let before = world.clone();
-            let mut expected = BattleDice::seeded([43; 32]);
+            let mut expected = Dice::seeded([43; 32]);
             let roll = expected.die(10_000).unwrap();
             let detection = update_battle_contact(&mut world, vehicle_a, target, HIDDEN)
                 .unwrap()
@@ -296,7 +293,7 @@ async fn vehicle_acquisition_uses_hull_and_turret_weights_and_saves_exact_dice()
                 .unwrap();
             assert_eq!(
                 detection,
-                BattleDetection {
+                Detection {
                     detected: roll < threshold,
                     threshold,
                     roll: Some(roll)
@@ -324,11 +321,11 @@ async fn vehicle_acquisition_rolls_only_for_hidden_hostiles_beyond_automatic_ran
         include_str!("../game/mechs/Demolisher.toml"),
     )
     .await;
-    set_battle_map_visibility(&mut world, map, BattleLight::Night, 30).unwrap();
+    set_battle_map_visibility(&mut world, map, Light::Night, 30).unwrap();
     running(&mut world, &[vehicle_a]);
     world
         .btech
-        .set_unit_dice(vehicle_a, BattleDice::seeded([77; 32]))
+        .set_unit_dice(vehicle_a, Dice::seeded([77; 32]))
         .unwrap();
     let before = world.btech.clone();
     for (hostile, hidden) in [(false, false), (true, false), (false, true)] {
@@ -337,17 +334,17 @@ async fn vehicle_acquisition_rolls_only_for_hidden_hostiles_beyond_automatic_ran
             &mut trial,
             vehicle_a,
             vehicle_b,
-            BattleContactRules {
+            ContactRules {
                 hostile,
                 hidden,
                 ..HIDDEN
             },
         )
         .unwrap();
-        assert_eq!(update.transition, BattleContactTransition::Acquired);
+        assert_eq!(update.transition, ContactTransition::Acquired);
         assert_eq!(
             update.detection,
-            Some(BattleDetection {
+            Some(Detection {
                 detected: true,
                 threshold: 0,
                 roll: None
@@ -355,11 +352,11 @@ async fn vehicle_acquisition_rolls_only_for_hidden_hostiles_beyond_automatic_ran
         );
         assert_eq!(
             roll_unit_dice(&mut trial, vehicle_a, 1).unwrap(),
-            vec![BattleDice::seeded([77; 32]).d6()]
+            vec![Dice::seeded([77; 32]).d6()]
         );
     }
     let mut searched = world.clone();
-    let mut expected = BattleDice::seeded([77; 32]);
+    let mut expected = Dice::seeded([77; 32]);
     let update = update_battle_contact(&mut searched, vehicle_a, vehicle_b, HIDDEN).unwrap();
     assert_eq!(
         update.detection.unwrap().roll,
@@ -377,10 +374,10 @@ async fn vehicle_acquisition_rolls_only_for_hidden_hostiles_beyond_automatic_ran
     assert!(detection.detected);
     assert!(detection.threshold > 0);
     assert_eq!(detection.roll, None);
-    assert_eq!(update.transition, BattleContactTransition::Acquired);
+    assert_eq!(update.transition, ContactTransition::Acquired);
     assert_eq!(
         roll_unit_dice(&mut world, vehicle_a, 1).unwrap(),
-        vec![BattleDice::seeded([77; 32]).d6()]
+        vec![Dice::seeded([77; 32]).d6()]
     );
 }
 
@@ -400,7 +397,7 @@ async fn dug_in_eye_height_changes_live_los_and_survives_restart() {
     world
         .btech
         .rewrite_unit_record(target, |record| {
-            record["dig"] = serde_json::to_value(BattleDigState::covered()).unwrap();
+            record["dig"] = serde_json::to_value(DigState::covered()).unwrap();
         })
         .unwrap();
     let before = world.btech.clone();

@@ -1,5 +1,5 @@
 //! Passive Triple Strength Myomer installation and distinct runtime speed calculations.
-use super::BattleUnit;
+use super::Mech;
 
 /// One extra walking MP, rounded back to whole running MP with ties-to-even walking conversion.
 fn boost(maximum: f64) -> f64 {
@@ -9,7 +9,7 @@ fn boost(maximum: f64) -> f64 {
     (((maximum / 1.5 / 10.75).round_ties_even() + 1.0) * 1.5).ceil() * 10.75
 }
 
-impl BattleUnit {
+impl Mech {
     /// TSM activates at the last sampled excess heat of nine, independent of stored weapon heat.
     pub fn triple_myomer_active(&self) -> bool {
         self.definition().has_triple_myomer() && self.heat().excess >= 9.0

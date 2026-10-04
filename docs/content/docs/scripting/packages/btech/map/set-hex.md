@@ -25,4 +25,4 @@ btech.map.set_hex(actor, dbref, x, y, hex)
 
 ## Returns
 
-- `BattleMapHexChange`
+- `MapHexChange`

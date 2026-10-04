@@ -11,8 +11,8 @@ use crate::btech_motion_common::{
 use crate::support;
 use crate::support::{restore_database, snapshot_database};
 use stompymux_rs::{
-    BattleMovementRules, BattleTemplate, ObjectId, advance_battle_motion, persistence,
-    set_battle_heading, set_battle_speed,
+    MechTemplate, MovementRules, ObjectId, advance_battle_motion, persistence, set_battle_heading,
+    set_battle_speed,
 };
 
 /// Add a defense and, for ballistic AMS, a matching bin without replacing the fixture's
@@ -20,17 +20,17 @@ use stompymux_rs::{
 fn install_test_ams(
     world: &mut stompymux_rs::World,
     id: ObjectId,
-    weapon: stompymux_rs::BattleWeapon,
+    weapon: stompymux_rs::Weapon,
 ) -> (usize, Option<usize>) {
-    install_test_ams_at(world, id, weapon, stompymux_rs::BattleSection::LeftArm)
+    install_test_ams_at(world, id, weapon, stompymux_rs::MechSection::LeftArm)
 }
 
 /// Supply one arm-mounted defense for equipment selection scenarios.
 fn install_test_ams_at(
     world: &mut stompymux_rs::World,
     id: ObjectId,
-    weapon: stompymux_rs::BattleWeapon,
-    section: stompymux_rs::BattleSection,
+    weapon: stompymux_rs::Weapon,
+    section: stompymux_rs::MechSection,
 ) -> (usize, Option<usize>) {
     use stompymux_rs::*;
     let mut definition = world.btech.constructed_units()[&id].definition().clone();
@@ -46,7 +46,7 @@ fn install_test_ams_at(
         part.data = weapon.profile().ammunition_per_ton.to_string();
         arm.criticals.insert(4 + slots, part);
     }
-    let constructed = BattleUnit::from_template(definition.clone()).unwrap();
+    let constructed = Mech::from_template(definition.clone()).unwrap();
     world
         .btech
         .rewrite_unit_record(id, |record| {
@@ -66,7 +66,7 @@ fn install_test_ams_at(
 }
 
 /// Automatic defense uses one ready mount even on misses; a shortage limits cost, not capacity.
-async fn ams_interception_matrix(entries: &[(stompymux_rs::BattleWeapon, bool, f64, u16)]) {
+async fn ams_interception_matrix(entries: &[(stompymux_rs::Weapon, bool, f64, u16)]) {
     use stompymux_rs::*;
     let (_dir, config, pristine, _id, _target) = shot_fixture().await;
     let pristine_db = snapshot_database(&config);
@@ -106,7 +106,7 @@ async fn ams_interception_matrix(entries: &[(stompymux_rs::BattleWeapon, bool, f
                 &mut world,
                 ObjectId(1),
                 "Gunnery-Missile",
-                BattleCharacterValue {
+                CharacterValue {
                     value: if case == "miss" { 0 } else { 30 },
                     experience: 0,
                     last_used: 0,
@@ -121,18 +121,18 @@ async fn ams_interception_matrix(entries: &[(stompymux_rs::BattleWeapon, bool, f
                 .position(|m| {
                     m.weapon
                         == if case == "laser" {
-                            BattleWeapon::MediumLaser
+                            Weapon::MediumLaser
                         } else {
-                            BattleWeapon::Srm4
+                            Weapon::Srm4
                         }
                 })
                 .unwrap();
             let seed = (0..=255)
-                .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 2)
+                .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 2)
                 .unwrap();
             shot_seed(&mut world, id, seed);
             let cluster_seed = (0..=255)
-                .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 12)
+                .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
                 .unwrap();
             shot_seed(&mut world, target, cluster_seed);
             world
@@ -175,7 +175,7 @@ async fn ams_interception_matrix(entries: &[(stompymux_rs::BattleWeapon, bool, f
                     &mut world,
                     target,
                     CriticalLocation {
-                        section: BattleSection::LeftArm,
+                        section: MechSection::LeftArm,
                         slot: 4,
                     },
                 )
@@ -227,7 +227,7 @@ async fn ams_interception_matrix(entries: &[(stompymux_rs::BattleWeapon, bool, f
                     before.btech.constructed_units()[&target]
                 );
             }
-            let mut expected_dice = BattleDice::seeded([seed; 32]);
+            let mut expected_dice = Dice::seeded([seed; 32]);
             expected_dice.two_d6();
             if let Some(ams) = &report.ams {
                 let roll = if clan {
@@ -284,26 +284,26 @@ async fn ams_interception_matrix(entries: &[(stompymux_rs::BattleWeapon, bool, f
 
 #[tokio::test]
 async fn ams_interception_expenditure_eligibility_and_restart_ams() {
-    use stompymux_rs::BattleWeapon;
-    ams_interception_matrix(&[(BattleWeapon::AntiMissileSystem, false, 1.0, 10)]).await;
+    use stompymux_rs::Weapon;
+    ams_interception_matrix(&[(Weapon::AntiMissileSystem, false, 1.0, 10)]).await;
 }
 
 #[tokio::test]
 async fn ams_interception_expenditure_eligibility_and_restart_clan_ams() {
-    use stompymux_rs::BattleWeapon;
-    ams_interception_matrix(&[(BattleWeapon::ClanAntiMissileSystem, true, 1.0, 10)]).await;
+    use stompymux_rs::Weapon;
+    ams_interception_matrix(&[(Weapon::ClanAntiMissileSystem, true, 1.0, 10)]).await;
 }
 
 #[tokio::test]
 async fn ams_interception_expenditure_eligibility_and_restart_laser_ams() {
-    use stompymux_rs::BattleWeapon;
-    ams_interception_matrix(&[(BattleWeapon::LaserAms, false, 7.0, 25)]).await;
+    use stompymux_rs::Weapon;
+    ams_interception_matrix(&[(Weapon::LaserAms, false, 7.0, 25)]).await;
 }
 
 #[tokio::test]
 async fn ams_interception_expenditure_eligibility_and_restart_clan_laser_ams() {
-    use stompymux_rs::BattleWeapon;
-    ams_interception_matrix(&[(BattleWeapon::ClanLaserAms, true, 5.0, 25)]).await;
+    use stompymux_rs::Weapon;
+    ams_interception_matrix(&[(Weapon::ClanLaserAms, true, 5.0, 25)]).await;
 }
 
 /// Native and Lua controls/firing share defense effects and rollback all expenditure on callback abort.
@@ -311,10 +311,10 @@ async fn ams_interception_expenditure_eligibility_and_restart_clan_laser_ams() {
 async fn ams_native_lua_controls_fire_and_rollback() {
     use stompymux_rs::*;
     for weapon in [
-        BattleWeapon::AntiMissileSystem,
-        BattleWeapon::ClanAntiMissileSystem,
-        BattleWeapon::LaserAms,
-        BattleWeapon::ClanLaserAms,
+        Weapon::AntiMissileSystem,
+        Weapon::ClanAntiMissileSystem,
+        Weapon::LaserAms,
+        Weapon::ClanLaserAms,
     ] {
         let (_dir, config, mut world, id, target) = shot_fixture().await;
         let (index, _) = install_test_ams(&mut world, id, weapon);
@@ -332,7 +332,7 @@ async fn ams_native_lua_controls_fire_and_rollback() {
             &mut world,
             ObjectId(1),
             "Gunnery-Missile",
-            BattleCharacterValue {
+            CharacterValue {
                 value: 30,
                 experience: 0,
                 last_used: 0,
@@ -377,7 +377,7 @@ async fn ams_native_lua_controls_fire_and_rollback() {
             .unwrap()
             .weapons
             .iter()
-            .position(|m| m.weapon == BattleWeapon::Srm4)
+            .position(|m| m.weapon == Weapon::Srm4)
             .unwrap();
         let before = lua.world().btech.clone();
         assert!(
@@ -424,12 +424,12 @@ async fn ams_native_lua_controls_fire_and_rollback() {
 async fn ams_cluster_packets_and_streak_lock() {
     use stompymux_rs::*;
     for (weapon, locked) in [
-        (BattleWeapon::Lrm20, true),
-        (BattleWeapon::StreakSrm6, true),
-        (BattleWeapon::StreakSrm6, false),
+        (Weapon::Lrm20, true),
+        (Weapon::StreakSrm6, true),
+        (Weapon::StreakSrm6, false),
     ] {
         let (_dir, config, mut world, id, target) = shot_fixture().await;
-        install_test_ams(&mut world, target, BattleWeapon::AntiMissileSystem);
+        install_test_ams(&mut world, target, Weapon::AntiMissileSystem);
         world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(target);
         assign_battle_pilot(&mut world, target, ObjectId(2)).unwrap();
         support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
@@ -439,10 +439,7 @@ async fn ams_cluster_packets_and_streak_lock() {
         }
         set_battle_ams(&mut world, target, ObjectId(2), true).unwrap();
         let mut definition = world.btech.constructed_units()[&id].definition().clone();
-        let arm = definition
-            .sections
-            .get_mut(&BattleSection::LeftArm)
-            .unwrap();
+        let arm = definition.sections.get_mut(&MechSection::LeftArm).unwrap();
         let mut part = arm.criticals[&2].clone();
         part.equipment = weapon.name().into();
         arm.criticals.retain(|slot, _| *slot < 2);
@@ -451,7 +448,7 @@ async fn ams_cluster_packets_and_streak_lock() {
         }
         let bin = definition
             .sections
-            .get_mut(&BattleSection::RightTorso)
+            .get_mut(&MechSection::RightTorso)
             .unwrap()
             .criticals
             .get_mut(&0)
@@ -477,7 +474,7 @@ async fn ams_cluster_packets_and_streak_lock() {
             &mut world,
             ObjectId(1),
             "Gunnery-Missile",
-            BattleCharacterValue {
+            CharacterValue {
                 value: if locked { 30 } else { 0 },
                 experience: 0,
                 last_used: 0,
@@ -486,13 +483,13 @@ async fn ams_cluster_packets_and_streak_lock() {
         .unwrap();
         let seed = (0..=255)
             .find(|seed| {
-                let mut dice = BattleDice::seeded([*seed; 32]);
+                let mut dice = Dice::seeded([*seed; 32]);
                 dice.two_d6() == 2 && dice.d6() == 4
             })
             .unwrap();
         shot_seed(&mut world, id, seed);
         let cluster_seed = (0..=255)
-            .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 7)
+            .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 7)
             .unwrap();
         shot_seed(&mut world, target, cluster_seed);
         let before = world.clone();
@@ -508,11 +505,11 @@ async fn ams_cluster_packets_and_streak_lock() {
         } else {
             assert_eq!(report.ams.as_ref().unwrap().shot_down, 4);
             let salvo = report.salvo.as_ref().unwrap().as_mech().unwrap();
-            let hits = if weapon == BattleWeapon::Lrm20 { 12 } else { 6 };
+            let hits = if weapon == Weapon::Lrm20 { 12 } else { 6 };
             assert_eq!(salvo.missiles_before_defense, Some(hits));
             assert_eq!(
                 salvo.groups.iter().map(|g| g.damage).collect::<Vec<_>>(),
-                if weapon == BattleWeapon::Lrm20 {
+                if weapon == Weapon::Lrm20 {
                     vec![5, 3]
                 } else {
                     vec![2, 2]
@@ -542,14 +539,14 @@ async fn ams_multiple_mount_selection_and_capability_loss() {
         let (first, first_bin) = install_test_ams_at(
             &mut world,
             target,
-            BattleWeapon::AntiMissileSystem,
-            BattleSection::LeftArm,
+            Weapon::AntiMissileSystem,
+            MechSection::LeftArm,
         );
         let (second, second_bin) = install_test_ams_at(
             &mut world,
             target,
-            BattleWeapon::ClanAntiMissileSystem,
-            BattleSection::RightArm,
+            Weapon::ClanAntiMissileSystem,
+            MechSection::RightArm,
         );
         let (first_bin, second_bin) = (first_bin.unwrap(), second_bin.unwrap());
         world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(target);
@@ -565,7 +562,7 @@ async fn ams_multiple_mount_selection_and_capability_loss() {
             &mut world,
             ObjectId(1),
             "Gunnery-Missile",
-            BattleCharacterValue {
+            CharacterValue {
                 value: 30,
                 experience: 0,
                 last_used: 0,
@@ -577,18 +574,18 @@ async fn ams_multiple_mount_selection_and_capability_loss() {
             .unwrap()
             .weapons
             .iter()
-            .position(|m| m.weapon == BattleWeapon::Srm4)
+            .position(|m| m.weapon == Weapon::Srm4)
             .unwrap();
         let seed = (0..=255)
             .find(|seed| {
-                let mut dice = BattleDice::seeded([*seed; 32]);
+                let mut dice = Dice::seeded([*seed; 32]);
                 dice.two_d6();
                 dice.d6() == 6 && dice.d6() == 6
             })
             .unwrap();
         shot_seed(&mut world, id, seed);
         let cluster_seed = (0..=255)
-            .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 12)
+            .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
             .unwrap();
         shot_seed(&mut world, target, cluster_seed);
         world
@@ -610,7 +607,7 @@ async fn ams_multiple_mount_selection_and_capability_loss() {
                 &mut world,
                 target,
                 CriticalLocation {
-                    section: BattleSection::LeftArm,
+                    section: MechSection::LeftArm,
                     slot: 4,
                 },
             )
@@ -672,13 +669,13 @@ async fn ams_multiple_mount_selection_and_capability_loss() {
 fn install_test_narc(
     world: &mut stompymux_rs::World,
     id: ObjectId,
-    weapon: stompymux_rs::BattleWeapon,
+    weapon: stompymux_rs::Weapon,
 ) -> (usize, usize) {
     use stompymux_rs::*;
     let mut definition = world.btech.constructed_units()[&id].definition().clone();
     let torso = definition
         .sections
-        .get_mut(&BattleSection::LeftTorso)
+        .get_mut(&MechSection::LeftTorso)
         .unwrap();
     for slot in 2..2 + weapon.profile().critical_slots {
         torso.criticals.insert(
@@ -700,7 +697,7 @@ fn install_test_narc(
             },
         );
     }
-    let constructed = BattleUnit::from_template(definition.clone()).unwrap();
+    let constructed = Mech::from_template(definition.clone()).unwrap();
     world
         .btech
         .rewrite_unit_record(id, |record| {
@@ -727,7 +724,7 @@ fn install_test_narc(
 #[tokio::test]
 async fn narc_pod_outcomes_and_restart() {
     use stompymux_rs::*;
-    for weapon in [BattleWeapon::NarcBeacon, BattleWeapon::ClanNarcBeacon] {
+    for weapon in [Weapon::NarcBeacon, Weapon::ClanNarcBeacon] {
         for case in ["hit", "miss", "intercepted", "explosive", "stun"] {
             let (_dir, config, mut world, id, target) = shot_fixture().await;
             let (index, normal_bin) = install_test_narc(&mut world, id, weapon);
@@ -736,7 +733,7 @@ async fn narc_pod_outcomes_and_restart() {
                 &mut world,
                 ObjectId(1),
                 "Gunnery-Missile",
-                BattleCharacterValue {
+                CharacterValue {
                     value: if case == "miss" { 0 } else { 30 },
                     experience: 0,
                     last_used: 0,
@@ -744,7 +741,7 @@ async fn narc_pod_outcomes_and_restart() {
             )
             .unwrap();
             if case == "intercepted" {
-                install_test_ams(&mut world, target, BattleWeapon::AntiMissileSystem);
+                install_test_ams(&mut world, target, Weapon::AntiMissileSystem);
                 world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(target);
                 assign_battle_pilot(&mut world, target, ObjectId(2)).unwrap();
                 support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
@@ -757,16 +754,16 @@ async fn narc_pod_outcomes_and_restart() {
             if case == "explosive" {
                 assert_eq!(
                     toggle_battle_explosive(&mut world, id, ObjectId(1), index).unwrap(),
-                    BattleAmmunitionMode::Narc
+                    AmmunitionMode::Narc
                 );
             }
             let seed = (0..=255)
-                .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 2)
+                .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 2)
                 .unwrap();
             shot_seed(&mut world, id, seed);
             let target_seed = (0..=255)
                 .find(|seed| {
-                    let mut dice = BattleDice::seeded([*seed; 32]);
+                    let mut dice = Dice::seeded([*seed; 32]);
                     dice.two_d6() == 12 && dice.d6() < 6
                 })
                 .unwrap();
@@ -831,13 +828,13 @@ async fn narc_pod_outcomes_and_restart() {
 async fn narc_guidance_and_section_destruction() {
     use stompymux_rs::*;
     let (_dir, _config, mut world, id, target) = shot_fixture().await;
-    let (index, _) = install_test_narc(&mut world, id, BattleWeapon::NarcBeacon);
+    let (index, _) = install_test_narc(&mut world, id, Weapon::NarcBeacon);
     shot_skill(&mut world, 30);
     set_battle_character_value(
         &mut world,
         ObjectId(1),
         "Gunnery-Missile",
-        BattleCharacterValue {
+        CharacterValue {
             value: 30,
             experience: 0,
             last_used: 0,
@@ -846,12 +843,12 @@ async fn narc_guidance_and_section_destruction() {
     .unwrap();
     // A seven attaches to the center torso, away from ammunition and head effects.
     let seed = (0..=255)
-        .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 7)
+        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 7)
         .unwrap();
     shot_seed(&mut world, target, seed);
     let pod =
         resolve_battle_shot(&mut world, id, ObjectId(1), target, index, shot_rules()).unwrap();
-    let BattleUnitSection::Mech(section) = pod.narc.unwrap().section.unwrap() else {
+    let UnitSection::Mech(section) = pod.narc.unwrap().section.unwrap() else {
         panic!("Expected Mech attachment")
     };
     world
@@ -866,11 +863,11 @@ async fn narc_guidance_and_section_destruction() {
         .unwrap()
         .weapons
         .iter()
-        .position(|m| m.weapon == BattleWeapon::Srm4)
+        .position(|m| m.weapon == Weapon::Srm4)
         .unwrap();
     toggle_battle_narc(&mut world, id, ObjectId(1), srm).unwrap();
     let cluster_seed = (0..=255)
-        .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 6)
+        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 6)
         .unwrap();
     for marked in [false, true] {
         let mut candidate = world.clone();
@@ -891,14 +888,7 @@ async fn narc_guidance_and_section_destruction() {
             if marked { 3 } else { 2 }
         );
     }
-    apply_damage_phase(
-        &mut world,
-        target,
-        section,
-        u16::MAX,
-        BattleDamagePhase::Internal,
-    )
-    .unwrap();
+    apply_damage_phase(&mut world, target, section, u16::MAX, DamagePhase::Internal).unwrap();
     assert!(
         world.btech.constructed_units()[&target]
             .narc_sections()
@@ -912,13 +902,13 @@ async fn narc_native_lua_controls_and_rollback() {
     use stompymux_rs::*;
     for explosive in [false, true] {
         let (_dir, config, mut world, id, target) = shot_fixture().await;
-        let (index, _) = install_test_narc(&mut world, id, BattleWeapon::NarcBeacon);
+        let (index, _) = install_test_narc(&mut world, id, Weapon::NarcBeacon);
         shot_skill(&mut world, 30);
         set_battle_character_value(
             &mut world,
             ObjectId(1),
             "Gunnery-Missile",
-            BattleCharacterValue {
+            CharacterValue {
                 value: 30,
                 experience: 0,
                 last_used: 0,
@@ -1004,13 +994,13 @@ async fn narc_native_lua_controls_and_rollback() {
 async fn narc_attachment_transfers_off_destroyed_sections() {
     use stompymux_rs::*;
     let (_dir, config, mut world, id, target) = shot_fixture().await;
-    let (index, _) = install_test_narc(&mut world, id, BattleWeapon::ClanNarcBeacon);
+    let (index, _) = install_test_narc(&mut world, id, Weapon::ClanNarcBeacon);
     shot_skill(&mut world, 30);
     set_battle_character_value(
         &mut world,
         ObjectId(1),
         "Gunnery-Missile",
-        BattleCharacterValue {
+        CharacterValue {
             value: 30,
             experience: 0,
             last_used: 0,
@@ -1018,29 +1008,29 @@ async fn narc_attachment_transfers_off_destroyed_sections() {
     )
     .unwrap();
     let seed = (0..=255)
-        .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 4)
+        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 4)
         .unwrap();
     shot_seed(&mut world, target, seed);
     apply_damage_phase(
         &mut world,
         target,
-        BattleSection::RightArm,
+        MechSection::RightArm,
         u16::MAX,
-        BattleDamagePhase::Internal,
+        DamagePhase::Internal,
     )
     .unwrap();
     let report =
         resolve_battle_shot(&mut world, id, ObjectId(1), target, index, shot_rules()).unwrap();
     assert_eq!(
         report.narc.unwrap().section,
-        Some(BattleUnitSection::Mech(BattleSection::RightTorso))
+        Some(UnitSection::Mech(MechSection::RightTorso))
     );
     apply_damage_phase(
         &mut world,
         target,
-        BattleSection::RightTorso,
+        MechSection::RightTorso,
         u16::MAX,
-        BattleDamagePhase::Internal,
+        DamagePhase::Internal,
     )
     .unwrap();
     assert!(
@@ -1059,11 +1049,11 @@ async fn narc_attachment_transfers_off_destroyed_sections() {
 fn install_test_electronics(
     world: &mut stompymux_rs::World,
     id: ObjectId,
-    suite: stompymux_rs::BattleElectronicSuite,
+    suite: stompymux_rs::ElectronicSuite,
 ) {
     use stompymux_rs::*;
     let mut definition = world.btech.constructed_units()[&id].definition().clone();
-    let (name, first) = if suite == BattleElectronicSuite::Guardian {
+    let (name, first) = if suite == ElectronicSuite::Guardian {
         ("Ecm", 3)
     } else {
         ("AngelEcm", 5)
@@ -1071,7 +1061,7 @@ fn install_test_electronics(
     for slot in first..first + 2 {
         definition
             .sections
-            .get_mut(&BattleSection::RightTorso)
+            .get_mut(&MechSection::RightTorso)
             .unwrap()
             .criticals
             .insert(
@@ -1083,7 +1073,7 @@ fn install_test_electronics(
                 },
             );
     }
-    BattleUnit::from_template(definition.clone()).unwrap();
+    Mech::from_template(definition.clone()).unwrap();
     world.btech.set_unit_definition(id, definition).unwrap();
 }
 
@@ -1091,10 +1081,7 @@ fn install_test_electronics(
 #[tokio::test]
 async fn electronics_modes_fields_damage_and_restart() {
     use stompymux_rs::*;
-    for suite in [
-        BattleElectronicSuite::Guardian,
-        BattleElectronicSuite::Angel,
-    ] {
+    for suite in [ElectronicSuite::Guardian, ElectronicSuite::Angel] {
         for cause in ["toggle", "critical", "section", "shutdown"] {
             let (_dir, config, mut world, id, target) = shot_fixture().await;
             install_test_electronics(&mut world, id, suite);
@@ -1103,15 +1090,9 @@ async fn electronics_modes_fields_damage_and_restart() {
             state["constructed"][target.0.to_string()]["signature"]["team"] = 2.into();
             world.btech = serde_json::from_value(state).unwrap();
             assert_eq!(
-                toggle_battle_electronics(
-                    &mut world,
-                    id,
-                    ObjectId(1),
-                    suite,
-                    BattleElectronicMode::Ecm
-                )
-                .unwrap(),
-                BattleElectronicMode::Ecm
+                toggle_battle_electronics(&mut world, id, ObjectId(1), suite, ElectronicMode::Ecm)
+                    .unwrap(),
+                ElectronicMode::Ecm
             );
             assert!(
                 battle_electronic_field(&world, id)
@@ -1146,15 +1127,15 @@ async fn electronics_modes_fields_damage_and_restart() {
                         id,
                         ObjectId(1),
                         suite,
-                        BattleElectronicMode::Eccm,
+                        ElectronicMode::Eccm,
                     )
                     .unwrap();
                 }
                 "critical" => {
                     let mut unit = world.btech.constructed_units()[&id].clone();
                     unit.destroy_critical(CriticalLocation {
-                        section: BattleSection::RightTorso,
-                        slot: if suite == BattleElectronicSuite::Guardian {
+                        section: MechSection::RightTorso,
+                        slot: if suite == ElectronicSuite::Guardian {
                             3
                         } else {
                             5
@@ -1173,7 +1154,7 @@ async fn electronics_modes_fields_damage_and_restart() {
                             id,
                             ObjectId(1),
                             suite,
-                            BattleElectronicMode::Ecm
+                            ElectronicMode::Ecm
                         )
                         .is_err()
                     );
@@ -1182,9 +1163,9 @@ async fn electronics_modes_fields_damage_and_restart() {
                     apply_damage_phase(
                         &mut world,
                         id,
-                        BattleSection::RightTorso,
+                        MechSection::RightTorso,
                         u16::MAX,
-                        BattleDamagePhase::Internal,
+                        DamagePhase::Internal,
                     )
                     .unwrap();
                 }
@@ -1193,8 +1174,8 @@ async fn electronics_modes_fields_damage_and_restart() {
                         &mut world,
                         id,
                         ObjectId(1),
-                        stompymux_rs::BattleFallRules {
-                            vehicle_impact: stompymux_rs::BattleVehicleImpactRules::STANDARD,
+                        stompymux_rs::FallRules {
+                            vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
                             stacking: shot_rules().stacking,
                             stagger: shot_rules().stagger,
                             hit: shot_rules().hit,
@@ -1230,8 +1211,8 @@ async fn electronics_modes_fields_damage_and_restart() {
 async fn electronics_native_lua_controls_and_rollback() {
     use stompymux_rs::*;
     for (suite, ecm, eccm) in [
-        (BattleElectronicSuite::Guardian, "ecm", "eccm"),
-        (BattleElectronicSuite::Angel, "angelecm", "angeleccm"),
+        (ElectronicSuite::Guardian, "ecm", "eccm"),
+        (ElectronicSuite::Angel, "angelecm", "angeleccm"),
     ] {
         let (_dir, config, mut world, id, _) = shot_fixture().await;
         install_test_electronics(&mut world, id, suite);
@@ -1276,11 +1257,8 @@ async fn electronics_native_lua_controls_and_rollback() {
 #[tokio::test]
 async fn electronics_suppress_narc_and_artemis_guidance() {
     use stompymux_rs::*;
-    for mode in [BattleAmmunitionMode::Narc, BattleAmmunitionMode::Artemis] {
-        for suite in [
-            BattleElectronicSuite::Guardian,
-            BattleElectronicSuite::Angel,
-        ] {
+    for mode in [AmmunitionMode::Narc, AmmunitionMode::Artemis] {
+        for suite in [ElectronicSuite::Guardian, ElectronicSuite::Angel] {
             for case in ["clear", "blocked", "countered", "short_counter"] {
                 let (_dir, config, mut world, id, target) = shot_fixture().await;
                 install_test_electronics(&mut world, target, suite);
@@ -1288,7 +1266,7 @@ async fn electronics_suppress_narc_and_artemis_guidance() {
                     &mut world,
                     id,
                     if case == "short_counter" {
-                        BattleElectronicSuite::Guardian
+                        ElectronicSuite::Guardian
                     } else {
                         suite
                     },
@@ -1305,7 +1283,7 @@ async fn electronics_suppress_narc_and_artemis_guidance() {
                     &mut world,
                     ObjectId(1),
                     "Gunnery-Missile",
-                    BattleCharacterValue {
+                    CharacterValue {
                         value: 30,
                         experience: 0,
                         last_used: 0,
@@ -1315,20 +1293,20 @@ async fn electronics_suppress_narc_and_artemis_guidance() {
                 let mut definition = world.btech.constructed_units()[&id].definition().clone();
                 let jump = definition
                     .sections
-                    .get_mut(&BattleSection::CenterTorso)
+                    .get_mut(&MechSection::CenterTorso)
                     .unwrap()
                     .criticals
                     .remove(&11)
                     .unwrap();
                 definition
                     .sections
-                    .get_mut(&BattleSection::LeftTorso)
+                    .get_mut(&MechSection::LeftTorso)
                     .unwrap()
                     .criticals
                     .insert(11, jump);
                 definition
                     .sections
-                    .get_mut(&BattleSection::CenterTorso)
+                    .get_mut(&MechSection::CenterTorso)
                     .unwrap()
                     .criticals
                     .insert(
@@ -1341,13 +1319,13 @@ async fn electronics_suppress_narc_and_artemis_guidance() {
                     );
                 definition
                     .sections
-                    .get_mut(&BattleSection::RightTorso)
+                    .get_mut(&MechSection::RightTorso)
                     .unwrap()
                     .criticals
                     .get_mut(&0)
                     .unwrap()
                     .modes = vec![
-                    if mode == BattleAmmunitionMode::Narc {
+                    if mode == AmmunitionMode::Narc {
                         "Narc/Smoke"
                     } else {
                         "Artemis/Mine"
@@ -1367,9 +1345,9 @@ async fn electronics_suppress_narc_and_artemis_guidance() {
                     .unwrap()
                     .weapons
                     .iter()
-                    .position(|m| m.weapon == BattleWeapon::Srm4)
+                    .position(|m| m.weapon == Weapon::Srm4)
                     .unwrap();
-                if mode == BattleAmmunitionMode::Narc {
+                if mode == AmmunitionMode::Narc {
                     toggle_battle_narc(&mut world, id, ObjectId(1), index).unwrap();
                 } else {
                     toggle_battle_artemis(&mut world, id, ObjectId(1), index).unwrap();
@@ -1380,7 +1358,7 @@ async fn electronics_suppress_narc_and_artemis_guidance() {
                         target,
                         ObjectId(2),
                         suite,
-                        BattleElectronicMode::Ecm,
+                        ElectronicMode::Ecm,
                     )
                     .unwrap();
                 }
@@ -1390,29 +1368,29 @@ async fn electronics_suppress_narc_and_artemis_guidance() {
                         id,
                         ObjectId(1),
                         if case == "short_counter" {
-                            BattleElectronicSuite::Guardian
+                            ElectronicSuite::Guardian
                         } else {
                             suite
                         },
-                        BattleElectronicMode::Eccm,
+                        ElectronicMode::Eccm,
                     )
                     .unwrap();
                 }
                 let seed = (0..=255)
-                    .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 6)
+                    .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 6)
                     .unwrap();
                 shot_seed(&mut world, target, seed);
                 // Firing queries current emissions even before the next observation heartbeat.
                 assert_eq!(
                     world.btech.constructed_units()[&target].electronics().field,
-                    BattleElectronicField::default()
+                    ElectronicField::default()
                 );
                 let before = world.clone();
                 let report =
                     resolve_battle_shot(&mut world, id, ObjectId(1), target, index, shot_rules())
                         .unwrap();
                 let blocked = case == "blocked"
-                    || (case == "short_counter" && suite == BattleElectronicSuite::Angel);
+                    || (case == "short_counter" && suite == ElectronicSuite::Angel);
                 assert_eq!(
                     report.salvo.unwrap().into_mech().unwrap().groups.len(),
                     if blocked { 2 } else { 3 },
@@ -1437,16 +1415,13 @@ async fn electronics_suppress_narc_and_artemis_guidance() {
 #[tokio::test]
 async fn electronics_angel_disables_streak_homing() {
     use stompymux_rs::*;
-    for weapon in [BattleWeapon::StreakSrm4, BattleWeapon::ClanStreakSrm4] {
-        for suite in [
-            BattleElectronicSuite::Guardian,
-            BattleElectronicSuite::Angel,
-        ] {
+    for weapon in [Weapon::StreakSrm4, Weapon::ClanStreakSrm4] {
+        for suite in [ElectronicSuite::Guardian, ElectronicSuite::Angel] {
             for (hit, glance) in [
                 (false, None),
                 (true, None),
-                (true, Some(BattleGlancingMode::AtTarget)),
-                (true, Some(BattleGlancingMode::BelowTarget)),
+                (true, Some(GlancingMode::AtTarget)),
+                (true, Some(GlancingMode::BelowTarget)),
             ] {
                 let (_dir, config, mut world, id, target) = shot_fixture().await;
                 install_test_electronics(&mut world, target, suite);
@@ -1462,7 +1437,7 @@ async fn electronics_angel_disables_streak_homing() {
                     target,
                     ObjectId(2),
                     suite,
-                    BattleElectronicMode::Ecm,
+                    ElectronicMode::Ecm,
                 )
                 .unwrap();
                 shot_skill(&mut world, 30);
@@ -1470,7 +1445,7 @@ async fn electronics_angel_disables_streak_homing() {
                     &mut world,
                     ObjectId(1),
                     "Gunnery-Missile",
-                    BattleCharacterValue {
+                    CharacterValue {
                         value: if hit { 30 } else { 0 },
                         experience: 0,
                         last_used: 0,
@@ -1480,21 +1455,21 @@ async fn electronics_angel_disables_streak_homing() {
                 let mut definition = world.btech.constructed_units()[&id].definition().clone();
                 let jump = definition
                     .sections
-                    .get_mut(&BattleSection::CenterTorso)
+                    .get_mut(&MechSection::CenterTorso)
                     .unwrap()
                     .criticals
                     .remove(&11)
                     .unwrap();
                 definition
                     .sections
-                    .get_mut(&BattleSection::LeftTorso)
+                    .get_mut(&MechSection::LeftTorso)
                     .unwrap()
                     .criticals
                     .insert(11, jump);
                 for slot in 10..10 + weapon.profile().critical_slots {
                     definition
                         .sections
-                        .get_mut(&BattleSection::CenterTorso)
+                        .get_mut(&MechSection::CenterTorso)
                         .unwrap()
                         .criticals
                         .insert(
@@ -1508,7 +1483,7 @@ async fn electronics_angel_disables_streak_homing() {
                 }
                 let bin = definition
                     .sections
-                    .get_mut(&BattleSection::RightTorso)
+                    .get_mut(&MechSection::RightTorso)
                     .unwrap()
                     .criticals
                     .get_mut(&0)
@@ -1528,10 +1503,10 @@ async fn electronics_angel_disables_streak_homing() {
                     .position(|m| m.weapon == weapon)
                     .unwrap();
                 let attack_seed = (0..=255)
-                    .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 2)
+                    .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 2)
                     .unwrap();
                 let cluster_seed = (0..=255)
-                    .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 6)
+                    .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 6)
                     .unwrap();
                 shot_seed(&mut world, id, attack_seed);
                 shot_seed(&mut world, target, cluster_seed);
@@ -1542,7 +1517,7 @@ async fn electronics_angel_disables_streak_homing() {
                         &mut preview,
                         ObjectId(1),
                         "Gunnery-Missile",
-                        BattleCharacterValue {
+                        CharacterValue {
                             value: 0,
                             experience: 0,
                             last_used: 0,
@@ -1554,16 +1529,12 @@ async fn electronics_angel_disables_streak_homing() {
                             .unwrap()
                             .target_number
                             .unwrap();
-                    let target_number = if mode == BattleGlancingMode::AtTarget {
-                        2
-                    } else {
-                        3
-                    };
+                    let target_number = if mode == GlancingMode::AtTarget { 2 } else { 3 };
                     set_battle_character_value(
                         &mut world,
                         ObjectId(1),
                         "Gunnery-Missile",
-                        BattleCharacterValue {
+                        CharacterValue {
                             value: (baseline - target_number).try_into().unwrap(),
                             experience: 0,
                             last_used: 0,
@@ -1575,13 +1546,13 @@ async fn electronics_angel_disables_streak_homing() {
                 let before = world.clone();
                 let report =
                     resolve_battle_shot(&mut world, id, ObjectId(1), target, index, rules).unwrap();
-                let angel = suite == BattleElectronicSuite::Angel;
+                let angel = suite == ElectronicSuite::Angel;
                 assert_eq!(report.streak_confused, angel);
-                let landed = hit && glance != Some(BattleGlancingMode::BelowTarget);
+                let landed = hit && glance != Some(GlancingMode::BelowTarget);
                 assert_eq!(report.launched, landed || angel);
                 assert_eq!(
                     report.glancing,
-                    angel && glance == Some(BattleGlancingMode::AtTarget)
+                    angel && glance == Some(GlancingMode::AtTarget)
                 );
                 assert!(
                     !report
@@ -1620,20 +1591,16 @@ async fn electronics_angel_disables_streak_homing() {
 #[tokio::test]
 async fn electronics_flooding_and_map_membership() {
     use stompymux_rs::*;
-    for suite in [
-        BattleElectronicSuite::Guardian,
-        BattleElectronicSuite::Angel,
-    ] {
+    for suite in [ElectronicSuite::Guardian, ElectronicSuite::Angel] {
         let (_dir, config, mut wet, id) = water_fixture(2).await;
         install_test_electronics(&mut wet, id, suite);
-        toggle_battle_electronics(&mut wet, id, ObjectId(1), suite, BattleElectronicMode::Ecm)
-            .unwrap();
+        toggle_battle_electronics(&mut wet, id, ObjectId(1), suite, ElectronicMode::Ecm).unwrap();
         apply_damage_phase(
             &mut wet,
             id,
-            BattleSection::RightTorso,
+            MechSection::RightTorso,
             8,
-            BattleDamagePhase::Armor { rear: false },
+            DamagePhase::Armor { rear: false },
         )
         .unwrap();
         flood_battle_unit(&mut wet, id, fall_rules()).unwrap();
@@ -1644,11 +1611,11 @@ async fn electronics_flooding_and_map_membership() {
         );
         assert_eq!(
             wet.btech.constructed_units()[&id].electronics().guardian,
-            BattleElectronicMode::Off
+            ElectronicMode::Off
         );
         assert_eq!(
             wet.btech.constructed_units()[&id].electronics().angel,
-            BattleElectronicMode::Off
+            ElectronicMode::Off
         );
         persistence::save(&config.database(), &wet).await.unwrap();
         assert_eq!(
@@ -1657,13 +1624,13 @@ async fn electronics_flooding_and_map_membership() {
         );
     }
     let (_dir, config, mut world, id, target) = shot_fixture().await;
-    install_test_electronics(&mut world, id, BattleElectronicSuite::Guardian);
+    install_test_electronics(&mut world, id, ElectronicSuite::Guardian);
     toggle_battle_electronics(
         &mut world,
         id,
         ObjectId(1),
-        BattleElectronicSuite::Guardian,
-        BattleElectronicMode::Ecm,
+        ElectronicSuite::Guardian,
+        ElectronicMode::Ecm,
     )
     .unwrap();
     let map = world.btech.constructed_units()[&id].position().unwrap().map;
@@ -1677,7 +1644,7 @@ async fn electronics_flooding_and_map_membership() {
     assert!(battle_unit_range(&world, id, target).unwrap().spatial > 6.0);
     assert_eq!(
         battle_electronic_field(&world, target).unwrap(),
-        BattleElectronicField::default()
+        ElectronicField::default()
     );
     refresh_battle_electronic_fields(&mut world).unwrap();
     let other = world.create(&config, "Other field".into(), Kind::Room);
@@ -1693,7 +1660,7 @@ async fn electronics_flooding_and_map_membership() {
     place_battle_unit(&mut world, target, other, 5, 5).unwrap();
     assert_eq!(
         battle_electronic_field(&world, target).unwrap(),
-        BattleElectronicField::default()
+        ElectronicField::default()
     );
     persistence::save(&config.database(), &world).await.unwrap();
     assert_eq!(
@@ -1709,7 +1676,7 @@ async fn electronics_server_heartbeat_persists_field() {
     tokio::task::LocalSet::new()
         .run_until(async {
             let (_dir, config, mut world, id, target) = shot_fixture().await;
-            install_test_electronics(&mut world, id, BattleElectronicSuite::Angel);
+            install_test_electronics(&mut world, id, ElectronicSuite::Angel);
             let mut state = serde_json::to_value(&world.btech).unwrap();
             state["constructed"][id.0.to_string()]["signature"]["team"] = 1.into();
             state["constructed"][target.0.to_string()]["signature"]["team"] = 2.into();
@@ -1718,13 +1685,13 @@ async fn electronics_server_heartbeat_persists_field() {
                 &mut world,
                 id,
                 ObjectId(1),
-                BattleElectronicSuite::Angel,
-                BattleElectronicMode::Ecm,
+                ElectronicSuite::Angel,
+                ElectronicMode::Ecm,
             )
             .unwrap();
             assert_eq!(
                 world.btech.constructed_units()[&target].electronics().field,
-                BattleElectronicField::default()
+                ElectronicField::default()
             );
             persistence::save(&config.database(), &world).await.unwrap();
             let scripts =
@@ -1772,7 +1739,7 @@ fn install_test_inarc(world: &mut stompymux_rs::World, id: ObjectId) -> usize {
     let mut definition = world.btech.constructed_units()[&id].definition().clone();
     let torso = definition
         .sections
-        .get_mut(&BattleSection::LeftTorso)
+        .get_mut(&MechSection::LeftTorso)
         .unwrap();
     for slot in 2..5 {
         torso.criticals.insert(
@@ -1800,7 +1767,7 @@ fn install_test_inarc(world: &mut stompymux_rs::World, id: ObjectId) -> usize {
             },
         );
     }
-    let unit = BattleUnit::from_template(definition.clone()).unwrap();
+    let unit = Mech::from_template(definition.clone()).unwrap();
     world
         .btech
         .rewrite_unit_record(id, |record| {
@@ -1813,7 +1780,7 @@ fn install_test_inarc(world: &mut stompymux_rs::World, id: ObjectId) -> usize {
         .unwrap()
         .weapons
         .iter()
-        .position(|mount| mount.weapon == BattleWeapon::INarcBeacon)
+        .position(|mount| mount.weapon == Weapon::INarcBeacon)
         .unwrap()
 }
 
@@ -1822,17 +1789,11 @@ fn install_test_inarc(world: &mut stompymux_rs::World, id: ObjectId) -> usize {
 async fn inarc_outcomes_supply_and_restart() {
     use stompymux_rs::*;
     for (mode, kind) in [
-        (BattleAmmunitionMode::Normal, Some(BattleBeaconKind::Homing)),
-        (BattleAmmunitionMode::INarcExplosive, None),
-        (
-            BattleAmmunitionMode::INarcHaywire,
-            Some(BattleBeaconKind::Haywire),
-        ),
-        (BattleAmmunitionMode::INarcEcm, Some(BattleBeaconKind::Ecm)),
-        (
-            BattleAmmunitionMode::INarcNemesis,
-            Some(BattleBeaconKind::Homing),
-        ),
+        (AmmunitionMode::Normal, Some(BeaconKind::Homing)),
+        (AmmunitionMode::INarcExplosive, None),
+        (AmmunitionMode::INarcHaywire, Some(BeaconKind::Haywire)),
+        (AmmunitionMode::INarcEcm, Some(BeaconKind::Ecm)),
+        (AmmunitionMode::INarcNemesis, Some(BeaconKind::Homing)),
     ] {
         for case in ["hit", "miss", "intercepted", "empty"] {
             let (_dir, config, mut world, id, target) = shot_fixture().await;
@@ -1843,7 +1804,7 @@ async fn inarc_outcomes_supply_and_restart() {
                 &mut world,
                 ObjectId(1),
                 "Gunnery-Missile",
-                BattleCharacterValue {
+                CharacterValue {
                     value: if case == "miss" { 0 } else { 30 },
                     experience: 0,
                     last_used: 0,
@@ -1851,7 +1812,7 @@ async fn inarc_outcomes_supply_and_restart() {
             )
             .unwrap();
             if case == "intercepted" {
-                install_test_ams(&mut world, target, BattleWeapon::AntiMissileSystem);
+                install_test_ams(&mut world, target, Weapon::AntiMissileSystem);
                 world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(target);
                 assign_battle_pilot(&mut world, target, ObjectId(2)).unwrap();
                 support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
@@ -1866,7 +1827,7 @@ async fn inarc_outcomes_supply_and_restart() {
                 .unwrap()
                 .ammunition
                 .iter()
-                .position(|bin| bin.weapon == BattleWeapon::INarcBeacon && bin.mode == mode)
+                .position(|bin| bin.weapon == Weapon::INarcBeacon && bin.mode == mode)
                 .unwrap();
             if case == "empty" {
                 world
@@ -1877,7 +1838,7 @@ async fn inarc_outcomes_supply_and_restart() {
                     .unwrap();
             }
             let seed = (0..=255)
-                .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 2)
+                .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 2)
                 .unwrap();
             shot_seed(&mut world, id, seed);
             shot_seed(&mut world, target, 0);
@@ -1910,7 +1871,7 @@ async fn inarc_outcomes_supply_and_restart() {
                     before.btech.constructed_units()[&target].sections()
                 );
                 assert!(report.salvo.is_none());
-                if kind == BattleBeaconKind::Ecm && case == "hit" {
+                if kind == BeaconKind::Ecm && case == "hit" {
                     assert!(battle_electronic_field(&world, target).unwrap().disturbed);
                     assert!(
                         pod.notices
@@ -1967,7 +1928,7 @@ async fn inarc_effects_coexist_and_follow_section_lifetime() {
         &mut world,
         ObjectId(1),
         "Gunnery-Missile",
-        BattleCharacterValue {
+        CharacterValue {
             value: 30,
             experience: 0,
             last_used: 0,
@@ -1975,12 +1936,12 @@ async fn inarc_effects_coexist_and_follow_section_lifetime() {
     )
     .unwrap();
     let seed = (0..=255)
-        .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 7)
+        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 7)
         .unwrap();
     for mode in [
-        BattleAmmunitionMode::Normal,
-        BattleAmmunitionMode::INarcHaywire,
-        BattleAmmunitionMode::INarcEcm,
+        AmmunitionMode::Normal,
+        AmmunitionMode::INarcHaywire,
+        AmmunitionMode::INarcEcm,
     ] {
         set_battle_inarc_ammunition(&mut world, id, ObjectId(1), index, mode).unwrap();
         shot_seed(&mut world, target, seed);
@@ -1988,14 +1949,14 @@ async fn inarc_effects_coexist_and_follow_section_lifetime() {
             resolve_battle_shot(&mut world, id, ObjectId(1), target, index, shot_rules()).unwrap();
         assert_eq!(
             report.narc.unwrap().section,
-            Some(BattleUnitSection::Mech(BattleSection::CenterTorso))
+            Some(UnitSection::Mech(MechSection::CenterTorso))
         );
         for _ in 0..30 {
             advance_battle_recycle(&mut world);
         }
     }
     assert_eq!(
-        world.btech.constructed_units()[&target].beacons()[&BattleSection::CenterTorso].len(),
+        world.btech.constructed_units()[&target].beacons()[&MechSection::CenterTorso].len(),
         4
     );
     let target_laser = world.btech.constructed_units()[&target]
@@ -2003,7 +1964,7 @@ async fn inarc_effects_coexist_and_follow_section_lifetime() {
         .unwrap()
         .weapons
         .iter()
-        .position(|m| m.weapon == BattleWeapon::MediumLaser)
+        .position(|m| m.weapon == Weapon::MediumLaser)
         .unwrap();
     assert_eq!(
         battle_aim_modifiers(&world, target, id, target_laser, 4, shot_rules().aim)
@@ -2016,7 +1977,7 @@ async fn inarc_effects_coexist_and_follow_section_lifetime() {
         .unwrap()
         .weapons
         .iter()
-        .position(|m| m.weapon == BattleWeapon::Srm4)
+        .position(|m| m.weapon == Weapon::Srm4)
         .unwrap();
     toggle_battle_narc(&mut world, id, ObjectId(1), srm).unwrap();
     assert_eq!(
@@ -2043,7 +2004,7 @@ async fn inarc_effects_coexist_and_follow_section_lifetime() {
         })
         .unwrap();
     let cluster_seed = (0..=255)
-        .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 6)
+        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 6)
         .unwrap();
     shot_seed(&mut world, target, cluster_seed);
     let salvo =
@@ -2052,9 +2013,9 @@ async fn inarc_effects_coexist_and_follow_section_lifetime() {
     apply_damage_phase(
         &mut world,
         target,
-        BattleSection::CenterTorso,
+        MechSection::CenterTorso,
         u16::MAX,
-        BattleDamagePhase::Internal,
+        DamagePhase::Internal,
     )
     .unwrap();
     assert!(
@@ -2083,7 +2044,7 @@ async fn inarc_native_lua_selection_fire_and_rollback() {
             &mut world,
             ObjectId(1),
             "Gunnery-Missile",
-            BattleCharacterValue {
+            CharacterValue {
                 value: 30,
                 experience: 0,
                 last_used: 0,
@@ -2146,12 +2107,12 @@ async fn inarc_native_lua_selection_fire_and_rollback() {
 fn prepare_test_pod_removal(
     world: &mut stompymux_rs::World,
     id: ObjectId,
-    section: stompymux_rs::BattleSection,
-    kind: stompymux_rs::BattleBeaconKind,
+    section: stompymux_rs::MechSection,
+    kind: stompymux_rs::BeaconKind,
 ) {
     use stompymux_rs::*;
     let mut definition = world.btech.constructed_units()[&id].definition().clone();
-    for arm in [BattleSection::LeftArm, BattleSection::RightArm] {
+    for arm in [MechSection::LeftArm, MechSection::RightArm] {
         for (slot, equipment) in [(2, "LowerActuator"), (3, "HandOrFootActuator")] {
             definition.sections.get_mut(&arm).unwrap().criticals.insert(
                 slot,
@@ -2194,17 +2155,17 @@ async fn pod_removal_arm_selection_damage_and_restart() {
     ] {
         let (_dir, config, mut world, id, _) = shot_fixture().await;
         let section = if case.contains("left_pod") {
-            BattleSection::LeftArm
+            MechSection::LeftArm
         } else {
-            BattleSection::CenterTorso
+            MechSection::CenterTorso
         };
-        prepare_test_pod_removal(&mut world, id, section, BattleBeaconKind::Homing);
+        prepare_test_pod_removal(&mut world, id, section, BeaconKind::Homing);
         shot_skill(&mut world, 30);
         set_battle_character_value(
             &mut world,
             ObjectId(1),
             "Piloting-Biped",
-            BattleCharacterValue {
+            CharacterValue {
                 value: if case == "success" { 30 } else { 0 },
                 experience: 0,
                 last_used: 0,
@@ -2238,7 +2199,7 @@ async fn pod_removal_arm_selection_damage_and_restart() {
             })
             .unwrap();
         let seed = (0..=255)
-            .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 2)
+            .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 2)
             .unwrap();
         shot_seed(&mut world, id, seed);
         let before = world.clone();
@@ -2247,7 +2208,7 @@ async fn pod_removal_arm_selection_damage_and_restart() {
             id,
             ObjectId(1),
             section,
-            BattleBeaconKind::Homing,
+            BeaconKind::Homing,
             fall_rules(),
         );
         if matches!(case, "both_recycle" | "blocked_left_pod") {
@@ -2261,9 +2222,9 @@ async fn pod_removal_arm_selection_damage_and_restart() {
         assert_eq!(
             report.arm,
             if matches!(case, "right_better" | "left_recycle" | "left_pod") {
-                BattleArm::Right
+                Arm::Right
             } else {
-                BattleArm::Left
+                Arm::Left
             }
         );
         assert_eq!(
@@ -2281,7 +2242,7 @@ async fn pod_removal_arm_selection_damage_and_restart() {
             60
         );
         assert_eq!(
-            world.btech.constructed_units()[&id].has_beacon(BattleBeaconKind::Homing),
+            world.btech.constructed_units()[&id].has_beacon(BeaconKind::Homing),
             !removed
         );
         assert_eq!(
@@ -2302,7 +2263,7 @@ async fn pod_inspection_and_removal_native_lua_rollback() {
     use stompymux_rs::*;
     for (character, success) in [(false, true), (false, false), (true, false)] {
         let (_dir, config, mut world, id, _) = shot_fixture().await;
-        prepare_test_pod_removal(&mut world, id, BattleSection::Head, BattleBeaconKind::Ecm);
+        prepare_test_pod_removal(&mut world, id, MechSection::Head, BeaconKind::Ecm);
         if character {
             world
                 .objects
@@ -2321,7 +2282,7 @@ async fn pod_inspection_and_removal_native_lua_rollback() {
             &mut world,
             ObjectId(1),
             skill,
-            BattleCharacterValue {
+            CharacterValue {
                 value: if success { 30 } else { 0 },
                 experience: 0,
                 last_used: 0,
@@ -2329,7 +2290,7 @@ async fn pod_inspection_and_removal_native_lua_rollback() {
         )
         .unwrap();
         let seed = (0..=255)
-            .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 2)
+            .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 2)
             .unwrap();
         shot_seed(&mut world, id, seed);
         let native = Scripts::new(
@@ -2392,12 +2353,7 @@ async fn pod_removal_preserves_other_effects_and_rejects_invalid_attempts() {
             .unwrap()
             .is_empty()
     );
-    prepare_test_pod_removal(
-        &mut world,
-        id,
-        BattleSection::CenterTorso,
-        BattleBeaconKind::Ecm,
-    );
+    prepare_test_pod_removal(&mut world, id, MechSection::CenterTorso, BeaconKind::Ecm);
     world
         .btech
         .rewrite_unit_record(id, |record| {
@@ -2410,7 +2366,7 @@ async fn pod_removal_preserves_other_effects_and_rejects_invalid_attempts() {
         &mut world,
         ObjectId(1),
         "Piloting-Biped",
-        BattleCharacterValue {
+        CharacterValue {
             value: 30,
             experience: 0,
             last_used: 0,
@@ -2418,17 +2374,9 @@ async fn pod_removal_preserves_other_effects_and_rejects_invalid_attempts() {
     )
     .unwrap();
     for (pilot, section, kind) in [
-        (
-            ObjectId(1),
-            BattleSection::CenterTorso,
-            BattleBeaconKind::Narc,
-        ),
-        (ObjectId(1), BattleSection::Head, BattleBeaconKind::Homing),
-        (
-            ObjectId(0),
-            BattleSection::CenterTorso,
-            BattleBeaconKind::Ecm,
-        ),
+        (ObjectId(1), MechSection::CenterTorso, BeaconKind::Narc),
+        (ObjectId(1), MechSection::Head, BeaconKind::Homing),
+        (ObjectId(0), MechSection::CenterTorso, BeaconKind::Ecm),
     ] {
         let before = world.btech.clone();
         assert!(remove_battle_pod(&mut world, id, pilot, section, kind, fall_rules()).is_err());
@@ -2439,19 +2387,19 @@ async fn pod_removal_preserves_other_effects_and_rejects_invalid_attempts() {
         &mut world,
         id,
         ObjectId(1),
-        BattleSection::CenterTorso,
-        BattleBeaconKind::Ecm,
+        MechSection::CenterTorso,
+        BeaconKind::Ecm,
         fall_rules(),
     )
     .unwrap();
     assert!(report.removed);
     let unit = &world.btech.constructed_units()[&id];
     assert_eq!(
-        unit.beacons()[&BattleSection::CenterTorso],
+        unit.beacons()[&MechSection::CenterTorso],
         std::collections::BTreeSet::from([
-            BattleBeaconKind::Narc,
-            BattleBeaconKind::Homing,
-            BattleBeaconKind::Haywire,
+            BeaconKind::Narc,
+            BeaconKind::Homing,
+            BeaconKind::Haywire,
         ])
     );
     assert!(!battle_electronic_field(&world, id).unwrap().disturbed);
@@ -2461,8 +2409,8 @@ async fn pod_removal_preserves_other_effects_and_rejects_invalid_attempts() {
 fn install_test_stealth(world: &mut stompymux_rs::World, id: ObjectId) {
     use stompymux_rs::*;
     let mut definition = world.btech.constructed_units()[&id].definition().clone();
-    for section in BattleSection::ALL {
-        if matches!(section, BattleSection::Head | BattleSection::CenterTorso) {
+    for section in MechSection::ALL {
+        if matches!(section, MechSection::Head | MechSection::CenterTorso) {
             continue;
         }
         for slot in [4, 5] {
@@ -2484,7 +2432,7 @@ fn install_test_stealth(world: &mut stompymux_rs::World, id: ObjectId) {
     for slot in [6, 7] {
         definition
             .sections
-            .get_mut(&BattleSection::LeftTorso)
+            .get_mut(&MechSection::LeftTorso)
             .unwrap()
             .criticals
             .insert(
@@ -2524,7 +2472,7 @@ async fn stealth_switch_effects_damage_and_restart() {
             assert!(advance_battle_stealth(&mut world).is_empty());
             assert_eq!(
                 world.btech.constructed_units()[&id].stealth(),
-                BattleSignatureState::default()
+                SignatureState::default()
             );
             continue;
         }
@@ -2551,7 +2499,7 @@ async fn stealth_switch_effects_damage_and_restart() {
                     &mut world,
                     id,
                     CriticalLocation {
-                        section: BattleSection::LeftTorso,
+                        section: MechSection::LeftTorso,
                         slot: 6,
                     },
                 )
@@ -2722,25 +2670,25 @@ fn install_test_nss(world: &mut stompymux_rs::World, id: ObjectId) {
     let mut definition = world.btech.constructed_units()[&id].definition().clone();
     let jet = definition
         .sections
-        .get_mut(&BattleSection::CenterTorso)
+        .get_mut(&MechSection::CenterTorso)
         .unwrap()
         .criticals
         .remove(&11)
         .unwrap();
     definition
         .sections
-        .get_mut(&BattleSection::LeftTorso)
+        .get_mut(&MechSection::LeftTorso)
         .unwrap()
         .criticals
         .insert(8, jet);
-    for section in BattleSection::ALL
+    for section in MechSection::ALL
         .into_iter()
-        .filter(|section| *section != BattleSection::Head)
+        .filter(|section| *section != MechSection::Head)
     {
-        let slot = if section == BattleSection::CenterTorso {
+        let slot = if section == MechSection::CenterTorso {
             11
         } else {
-            if matches!(section, BattleSection::LeftLeg | BattleSection::RightLeg) {
+            if matches!(section, MechSection::LeftLeg | MechSection::RightLeg) {
                 5
             } else {
                 9
@@ -2804,7 +2752,7 @@ async fn nss_switch_damage_accounting_and_restart() {
                 &mut world,
                 id,
                 CriticalLocation {
-                    section: BattleSection::LeftArm,
+                    section: MechSection::LeftArm,
                     slot: 9,
                 },
             )
@@ -2812,7 +2760,7 @@ async fn nss_switch_damage_accounting_and_restart() {
             assert!(advance_battle_null_signature(&mut world).is_empty());
             assert_eq!(
                 world.btech.constructed_units()[&id].null_signature(),
-                BattleSignatureState::default()
+                SignatureState::default()
             );
             continue;
         }
@@ -2841,7 +2789,7 @@ async fn nss_switch_damage_accounting_and_restart() {
                     &mut world,
                     id,
                     CriticalLocation {
-                        section: BattleSection::LeftArm,
+                        section: MechSection::LeftArm,
                         slot: 9,
                     },
                 )
@@ -2876,7 +2824,7 @@ async fn nss_excludes_stealth_armor_and_allows_unlocked_fire() {
         .clone();
     let arm = &mut definition
         .sections
-        .get_mut(&BattleSection::LeftArm)
+        .get_mut(&MechSection::LeftArm)
         .unwrap()
         .criticals;
     let free = (0..12).find(|slot| !arm.contains_key(slot)).unwrap();
@@ -2889,7 +2837,7 @@ async fn nss_excludes_stealth_armor_and_allows_unlocked_fire() {
         },
     );
     assert!(
-        BattleUnit::from_template(definition)
+        Mech::from_template(definition)
             .unwrap_err()
             .to_string()
             .contains("cannot be combined with stealth armor")
@@ -2905,7 +2853,7 @@ async fn nss_excludes_stealth_armor_and_allows_unlocked_fire() {
     let mut fired = world.clone();
     let result = resolve_battle_shot(&mut fired, id, ObjectId(1), target, 0, shot_rules());
     assert!(result.is_ok(), "{result:?}");
-    let range = BattleWeapon::MediumLaser
+    let range = Weapon::MediumLaser
         .range_modifier(4.0, false)
         .unwrap()
         .unwrap();
@@ -3012,8 +2960,8 @@ async fn recent_fire_is_visible_durable_and_heartbeat_scoped() {
     assert_eq!(world.btech, before);
     assert_eq!(
         preview.perception,
-        Some(BattlePerceptionAim {
-            channel: Some(BattleDetectionChannel::Sensors),
+        Some(PerceptionAim {
+            channel: Some(DetectionChannel::Sensors),
             direct_fire: true,
             modifier: 0,
         })
@@ -3021,7 +2969,7 @@ async fn recent_fire_is_visible_durable_and_heartbeat_scoped() {
     let report = resolve_battle_shot(&mut world, id, ObjectId(1), target, 0, shot_rules()).unwrap();
     assert_eq!(report.aim, preview);
     // Perception consumes no dice, so the attack roll is the stream's first.
-    assert_eq!(report.roll, BattleDice::seeded([7; 32]).two_d6());
+    assert_eq!(report.roll, Dice::seeded([7; 32]).two_d6());
     assert!(world.btech.constructed_units()[&id].fired_recently());
     persistence::save(&config.database(), &world).await.unwrap();
     assert_eq!(
@@ -3041,7 +2989,7 @@ async fn recent_fire_is_visible_durable_and_heartbeat_scoped() {
 async fn perception_current_ecm_jams_sensors_and_recovers() {
     use stompymux_rs::*;
     let (_dir, _config, mut world, id, target) = shot_fixture().await;
-    install_test_electronics(&mut world, target, BattleElectronicSuite::Guardian);
+    install_test_electronics(&mut world, target, ElectronicSuite::Guardian);
     let mut state = serde_json::to_value(&world.btech).unwrap();
     state["constructed"][target.0.to_string()]["power"] = serde_json::json!({"state":"running"});
     state["constructed"][target.0.to_string()]["signature"]["team"] = 2.into();
@@ -3049,7 +2997,7 @@ async fn perception_current_ecm_jams_sensors_and_recovers() {
     state["constructed"][target.0.to_string()]["electronics"]["guardian"] = "ecm".into();
     world.btech = serde_json::from_value(state).unwrap();
     let profile = battle_perception_profile(&world, id).unwrap();
-    assert_eq!(profile.sensors, BattlePerceptionStatus::Jammed);
+    assert_eq!(profile.sensors, PerceptionStatus::Jammed);
     assert_eq!(profile.sensor_range, 0);
     assert!(
         battle_perception_report(&world, id)
@@ -3063,33 +3011,33 @@ async fn perception_current_ecm_jams_sensors_and_recovers() {
             .unwrap()
             .unwrap()
             .channel,
-        BattleDetectionChannel::Sight
+        DetectionChannel::Sight
     );
     destroy_battle_critical(
         &mut world,
         target,
         CriticalLocation {
-            section: BattleSection::RightTorso,
+            section: MechSection::RightTorso,
             slot: 3,
         },
     )
     .unwrap();
     let profile = battle_perception_profile(&world, id).unwrap();
-    assert_eq!(profile.sensors, BattlePerceptionStatus::Ready);
+    assert_eq!(profile.sensors, PerceptionStatus::Ready);
     assert_eq!(profile.sensor_range, DEFAULT_SENSOR_RANGE);
     assert_eq!(
         battle_perceive(&world, id, target)
             .unwrap()
             .unwrap()
             .channel,
-        BattleDetectionChannel::Sensors
+        DetectionChannel::Sensors
     );
     let map = world.btech.constructed_units()[&id].position().unwrap().map;
-    set_battle_map_perception(&mut world, map, BattleMapPerceptionFlag::Sensors, false).unwrap();
+    set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, false).unwrap();
     let profile = battle_perception_profile(&world, id).unwrap();
-    assert_eq!(profile.sensors, BattlePerceptionStatus::Disabled);
+    assert_eq!(profile.sensors, PerceptionStatus::Disabled);
     assert_eq!(profile.sensor_range, 0);
-    assert!(!world.btech.maps()[&map].perception_disabled(BattleMapPerceptionFlag::Probes));
+    assert!(!world.btech.maps()[&map].perception_disabled(MapPerceptionFlag::Probes));
 }
 
 /// A radar-equipped observer and an unpowered falling target on a battlefield long enough for radar.
@@ -3102,7 +3050,7 @@ async fn radar_fixture() -> (
 ) {
     use stompymux_rs::*;
     let mut template =
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     template
         .attributes
         .insert("specials".into(), "AntiAircraft".into());
@@ -3113,7 +3061,7 @@ async fn radar_fixture() -> (
     create_battle_unit(
         &mut world,
         target,
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
@@ -3121,7 +3069,7 @@ async fn radar_fixture() -> (
     world
         .btech
         .rewrite_unit_record(target, |record| {
-            record["free_fall"] = serde_json::to_value(BattleFreeFall::new(11)).unwrap();
+            record["free_fall"] = serde_json::to_value(FreeFall::new(11)).unwrap();
         })
         .unwrap();
     world
@@ -3151,9 +3099,9 @@ async fn radar_requires_anti_aircraft_equipment() {
     assert!(world.btech.constructed_units()[&id].has_radar());
     assert_eq!(
         battle_perception_profile(&world, id).unwrap().radar,
-        Some(BattleRadarProfile {
+        Some(RadarProfile {
             range: RADAR_RANGE,
-            status: BattlePerceptionStatus::Ready,
+            status: PerceptionStatus::Ready,
         })
     );
     assert!(
@@ -3177,14 +3125,14 @@ async fn radar_world_range_map_bits_and_restart() {
         world
             .btech
             .rewrite_unit_record(target, |record| {
-                record["free_fall"] = serde_json::to_value(BattleFreeFall::new(altitude)).unwrap();
+                record["free_fall"] = serde_json::to_value(FreeFall::new(altitude)).unwrap();
             })
             .unwrap();
         let before = world.btech.clone();
         let perceived = battle_perceive(&world, id, target).unwrap();
         assert_eq!(perceived.is_some(), expected, "altitude {altitude}");
         if let Some(perceived) = perceived {
-            assert_eq!(perceived.channel, BattleDetectionChannel::Radar);
+            assert_eq!(perceived.channel, DetectionChannel::Radar);
             assert_eq!(perceived.aim_modifier, -3);
             assert!(perceived.identified);
             assert!(!perceived.probed);
@@ -3206,8 +3154,8 @@ async fn radar_world_range_map_bits_and_restart() {
     );
     let visible = visible_battle_contacts(&loaded, id).unwrap();
     assert_eq!(visible.len(), 1);
-    assert_eq!(visible[0].detection, Some(BattleDetectionChannel::Radar));
-    set_battle_map_perception(&mut loaded, map, BattleMapPerceptionFlag::Radar, false).unwrap();
+    assert_eq!(visible[0].detection, Some(DetectionChannel::Radar));
+    set_battle_map_perception(&mut loaded, map, MapPerceptionFlag::Radar, false).unwrap();
     assert_eq!(battle_perceive(&loaded, id, target).unwrap(), None);
     assert_eq!(
         battle_perception_profile(&loaded, id)
@@ -3215,11 +3163,11 @@ async fn radar_world_range_map_bits_and_restart() {
             .radar
             .unwrap()
             .status,
-        BattlePerceptionStatus::Disabled
+        PerceptionStatus::Disabled
     );
-    assert!(!loaded.btech.maps()[&map].perception_disabled(BattleMapPerceptionFlag::Sensors));
+    assert!(!loaded.btech.maps()[&map].perception_disabled(MapPerceptionFlag::Sensors));
     assert!(visible_battle_contacts(&loaded, id).unwrap().is_empty());
-    set_battle_map_perception(&mut loaded, map, BattleMapPerceptionFlag::Radar, true).unwrap();
+    set_battle_map_perception(&mut loaded, map, MapPerceptionFlag::Radar, true).unwrap();
     assert!(battle_perceive(&loaded, id, target).unwrap().is_some());
 }
 
@@ -3232,7 +3180,7 @@ async fn radar_lua_aim_and_shot_rollback() {
     shot_seed(&mut world, id, 7);
     // Exercise the two-on-location critical branch with the host's actual critical-hit setting.
     let critical_seed = (0..=255)
-        .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 2)
+        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 2)
         .unwrap();
     shot_seed(&mut world, target, critical_seed);
     refresh_battle_contacts(&mut world, &[id]).unwrap();
@@ -3246,8 +3194,8 @@ async fn radar_lua_aim_and_shot_rollback() {
     // Radar's tracking bonus beats the sensor band's zero.
     assert_eq!(
         aim.perception,
-        Some(BattlePerceptionAim {
-            channel: Some(BattleDetectionChannel::Radar),
+        Some(PerceptionAim {
+            channel: Some(DetectionChannel::Radar),
             direct_fire: true,
             modifier: -3,
         })
@@ -3281,17 +3229,17 @@ async fn radar_lua_aim_and_shot_rollback() {
 fn install_test_probe(
     world: &mut stompymux_rs::World,
     id: ObjectId,
-    probe: stompymux_rs::BattleActiveProbe,
+    probe: stompymux_rs::ActiveProbe,
 ) {
     use stompymux_rs::*;
     let (name, count) = match probe {
-        BattleActiveProbe::Beagle => ("BeagleProbe", 2),
-        BattleActiveProbe::Light => ("Light_BAP", 1),
-        BattleActiveProbe::Bloodhound => ("BloodhoundProbe", 3),
-        BattleActiveProbe::Watchdog => ("ECM", 2),
+        ActiveProbe::Beagle => ("BeagleProbe", 2),
+        ActiveProbe::Light => ("Light_BAP", 1),
+        ActiveProbe::Bloodhound => ("BloodhoundProbe", 3),
+        ActiveProbe::Watchdog => ("ECM", 2),
     };
     let mut definition = world.btech.constructed_units()[&id].definition().clone();
-    if probe == BattleActiveProbe::Watchdog {
+    if probe == ActiveProbe::Watchdog {
         let specials = definition
             .attributes
             .entry("specials".into())
@@ -3305,7 +3253,7 @@ fn install_test_probe(
     for slot in 3..3 + count {
         definition
             .sections
-            .get_mut(&BattleSection::LeftTorso)
+            .get_mut(&MechSection::LeftTorso)
             .unwrap()
             .criticals
             .insert(
@@ -3317,7 +3265,7 @@ fn install_test_probe(
                 },
             );
     }
-    BattleUnit::from_template(definition.clone()).unwrap();
+    Mech::from_template(definition.clone()).unwrap();
     world.btech.set_unit_definition(id, definition).unwrap();
 }
 
@@ -3327,10 +3275,10 @@ fn install_test_probe(
 async fn active_probe_equipment_damage_and_restart() {
     use stompymux_rs::*;
     for (probe, mass) in [
-        (BattleActiveProbe::Beagle, 1536),
-        (BattleActiveProbe::Light, 512),
-        (BattleActiveProbe::Bloodhound, 2046),
-        (BattleActiveProbe::Watchdog, 1536),
+        (ActiveProbe::Beagle, 1536),
+        (ActiveProbe::Light, 512),
+        (ActiveProbe::Bloodhound, 2046),
+        (ActiveProbe::Watchdog, 1536),
     ] {
         let (_dir, config, mut world, id, target) = shot_fixture().await;
         let probed = |world: &World| battle_perceive(world, id, target).unwrap().unwrap().probed;
@@ -3357,27 +3305,27 @@ async fn active_probe_equipment_damage_and_restart() {
         );
         assert_eq!(
             battle_perception_profile(&world, id).unwrap().probe,
-            Some(BattleProbeProfile {
+            Some(ProbeProfile {
                 kind: probe,
                 range: u16::from(probe.range(false)),
-                status: BattlePerceptionStatus::Ready,
+                status: PerceptionStatus::Ready,
             })
         );
         // The adjacent target is probed, though the sensor band wins the tie at equal aim.
         let perceived = battle_perceive(&world, id, target).unwrap().unwrap();
         assert!(perceived.probed);
-        assert_eq!(perceived.channel, BattleDetectionChannel::Sensors);
+        assert_eq!(perceived.channel, DetectionChannel::Sensors);
         let map = world.btech.constructed_units()[&id].position().unwrap().map;
-        set_battle_map_perception(&mut world, map, BattleMapPerceptionFlag::Probes, false).unwrap();
-        assert_eq!(status(&world), Some(BattlePerceptionStatus::Disabled));
+        set_battle_map_perception(&mut world, map, MapPerceptionFlag::Probes, false).unwrap();
+        assert_eq!(status(&world), Some(PerceptionStatus::Disabled));
         assert!(!probed(&world));
-        set_battle_map_perception(&mut world, map, BattleMapPerceptionFlag::Probes, true).unwrap();
+        set_battle_map_perception(&mut world, map, MapPerceptionFlag::Probes, true).unwrap();
         assert!(probed(&world));
         destroy_battle_critical(
             &mut world,
             id,
             CriticalLocation {
-                section: BattleSection::LeftTorso,
+                section: MechSection::LeftTorso,
                 slot: 3,
             },
         )
@@ -3387,13 +3335,13 @@ async fn active_probe_equipment_damage_and_restart() {
                 .active_probe_available(probe)
                 .unwrap()
         );
-        assert_eq!(status(&world), Some(BattlePerceptionStatus::Damaged));
+        assert_eq!(status(&world), Some(PerceptionStatus::Damaged));
         assert!(!probed(&world));
         world.validate(&config).unwrap();
         persistence::save(&config.database(), &world).await.unwrap();
         let loaded = persistence::load(&config.database()).await.unwrap();
         assert_eq!(world.btech, loaded.btech);
-        assert_eq!(status(&loaded), Some(BattlePerceptionStatus::Damaged));
+        assert_eq!(status(&loaded), Some(PerceptionStatus::Damaged));
     }
 }
 
@@ -3402,9 +3350,9 @@ async fn active_probe_equipment_damage_and_restart() {
 async fn active_probe_live_interference_and_concealment() {
     use stompymux_rs::*;
     for probe in [
-        BattleActiveProbe::Beagle,
-        BattleActiveProbe::Light,
-        BattleActiveProbe::Bloodhound,
+        ActiveProbe::Beagle,
+        ActiveProbe::Light,
+        ActiveProbe::Bloodhound,
     ] {
         let (_dir, config, mut world, id, target) = shot_fixture().await;
         install_test_probe(&mut world, id, probe);
@@ -3419,15 +3367,15 @@ async fn active_probe_live_interference_and_concealment() {
         // Null signature hides the target from the sensor band and from every probe but the
         // Bloodhound; daylight sight still finds it.
         let perceived = battle_perceive(&world, id, target).unwrap().unwrap();
-        assert_eq!(perceived.channel, BattleDetectionChannel::Sight);
-        assert_eq!(perceived.probed, probe == BattleActiveProbe::Bloodhound);
+        assert_eq!(perceived.channel, DetectionChannel::Sight);
+        assert_eq!(perceived.probed, probe == ActiveProbe::Bloodhound);
         world
             .btech
             .rewrite_unit_record(target, |record| {
                 record["null_signature"]["enabled"] = false.into();
             })
             .unwrap();
-        install_test_electronics(&mut world, target, BattleElectronicSuite::Angel);
+        install_test_electronics(&mut world, target, ElectronicSuite::Angel);
         world
             .btech
             .rewrite_unit_record(target, |record| {
@@ -3442,14 +3390,14 @@ async fn active_probe_live_interference_and_concealment() {
                 .probe
                 .unwrap()
                 .status,
-            BattlePerceptionStatus::Ready
+            PerceptionStatus::Ready
         );
         assert!(!battle_perceive(&world, id, target).unwrap().unwrap().probed);
         destroy_battle_critical(
             &mut world,
             target,
             CriticalLocation {
-                section: BattleSection::RightTorso,
+                section: MechSection::RightTorso,
                 slot: 5,
             },
         )
@@ -3464,9 +3412,9 @@ async fn active_probe_live_interference_and_concealment() {
 async fn active_probe_contacts_behind_walls_lock_but_refuse_direct_fire() {
     use stompymux_rs::*;
     for probe in [
-        BattleActiveProbe::Beagle,
-        BattleActiveProbe::Light,
-        BattleActiveProbe::Bloodhound,
+        ActiveProbe::Beagle,
+        ActiveProbe::Light,
+        ActiveProbe::Bloodhound,
     ] {
         let (_dir, config, mut world, id, target) = shot_fixture().await;
         install_test_probe(&mut world, id, probe);
@@ -3485,7 +3433,7 @@ async fn active_probe_contacts_behind_walls_lock_but_refuse_direct_fire() {
         shot_seed(&mut world, id, 7);
         shot_seed(&mut world, target, 7);
         let perceived = battle_perceive(&world, id, target).unwrap().unwrap();
-        assert_eq!(perceived.channel, BattleDetectionChannel::Probe);
+        assert_eq!(perceived.channel, DetectionChannel::Probe);
         assert!(!perceived.identified);
         assert!(perceived.probed);
         let events = refresh_battle_contacts(&mut world, &[id]).unwrap();
@@ -3494,13 +3442,13 @@ async fn active_probe_contacts_behind_walls_lock_but_refuse_direct_fire() {
         assert!(!events[0].identified);
         assert_eq!(
             world.btech.constructed_units()[&id].contacts()[&target],
-            BattleContact { identified: false }
+            Contact { identified: false }
         );
         let aim = battle_aim_modifiers(&world, id, target, 0, 4, optical_aim_rules()).unwrap();
         assert_eq!(
             aim.perception,
-            Some(BattlePerceptionAim {
-                channel: Some(BattleDetectionChannel::Probe),
+            Some(PerceptionAim {
+                channel: Some(DetectionChannel::Probe),
                 direct_fire: false,
                 modifier: 0,
             })
@@ -3563,12 +3511,12 @@ async fn airborne_target_woods_share_height_boundary_across_channels() {
     let (_dir, config, base, observer, target) = radar_fixture().await;
     for ground in [0, 4] {
         for channel in [
-            BattleDetectionChannel::Sensors,
-            BattleDetectionChannel::Sight,
-            BattleDetectionChannel::Radar,
+            DetectionChannel::Sensors,
+            DetectionChannel::Sight,
+            DetectionChannel::Radar,
         ] {
             // Radar never sees a target at altitude two, so only raised ground can test it.
-            if channel == BattleDetectionChannel::Radar && ground == 0 {
+            if channel == DetectionChannel::Radar && ground == 0 {
                 continue;
             }
             let mut world = base.clone();
@@ -3577,21 +3525,18 @@ async fn airborne_target_woods_share_height_boundary_across_channels() {
                 .unwrap()
                 .map;
             // Leave only the channel under test able to reach the target.
-            let visibility = if channel == BattleDetectionChannel::Radar {
+            let visibility = if channel == DetectionChannel::Radar {
                 0
             } else {
                 30
             };
-            set_battle_map_visibility(&mut world, map, BattleLight::Night, visibility).unwrap();
+            set_battle_map_visibility(&mut world, map, Light::Night, visibility).unwrap();
             for (flag, enabled) in [
                 (
-                    BattleMapPerceptionFlag::Sensors,
-                    channel == BattleDetectionChannel::Sensors,
+                    MapPerceptionFlag::Sensors,
+                    channel == DetectionChannel::Sensors,
                 ),
-                (
-                    BattleMapPerceptionFlag::Radar,
-                    channel == BattleDetectionChannel::Radar,
-                ),
+                (MapPerceptionFlag::Radar, channel == DetectionChannel::Radar),
             ] {
                 set_battle_map_perception(&mut world, map, flag, enabled).unwrap();
             }
@@ -3605,7 +3550,7 @@ async fn airborne_target_woods_share_height_boundary_across_channels() {
                     ))
                     .unwrap();
                 state["constructed"][target.0.to_string()]["free_fall"] =
-                    serde_json::to_value(BattleFreeFall::new(ground + clearance)).unwrap();
+                    serde_json::to_value(FreeFall::new(ground + clearance)).unwrap();
                 world.btech = serde_json::from_value(state).unwrap();
                 world.validate(&config).unwrap();
                 let before = world.btech.clone();
@@ -3636,7 +3581,7 @@ fn install_test_tag(world: &mut stompymux_rs::World, id: ObjectId, target: Objec
     let mut definition = world.btech.constructed_units()[&id].definition().clone();
     definition
         .sections
-        .get_mut(&BattleSection::LeftTorso)
+        .get_mut(&MechSection::LeftTorso)
         .unwrap()
         .criticals
         .insert(
@@ -3647,7 +3592,7 @@ fn install_test_tag(world: &mut stompymux_rs::World, id: ObjectId, target: Objec
                 modes: vec![],
             },
         );
-    BattleUnit::from_template(definition.clone()).unwrap();
+    Mech::from_template(definition.clone()).unwrap();
     let mut state = serde_json::to_value(&world.btech).unwrap();
     state["constructed"][id.0.to_string()]["definition"] =
         serde_json::to_value(definition).unwrap();
@@ -3704,7 +3649,7 @@ async fn tag_selection_timers_and_restart() {
     );
     assert_eq!(
         loaded.btech.constructed_units()[&id].tag(),
-        BattleTagState::default()
+        TagState::default()
     );
     assert_eq!(
         serde_json::to_value(&loaded.btech.constructed_units()[&id]).unwrap()["dice"],
@@ -3724,16 +3669,16 @@ async fn tag_loss_geometry_damage_shutdown_and_validation() {
         match reason {
             "unseen" => {
                 let map = world.btech.constructed_units()[&id].position().unwrap().map;
-                set_battle_map_perception(&mut world, map, BattleMapPerceptionFlag::Sensors, false)
+                set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, false)
                     .unwrap();
-                set_battle_map_visibility(&mut world, map, BattleLight::Day, 0).unwrap();
+                set_battle_map_visibility(&mut world, map, Light::Day, 0).unwrap();
             }
             "damage" => {
                 destroy_battle_critical(
                     &mut world,
                     id,
                     CriticalLocation {
-                        section: BattleSection::LeftTorso,
+                        section: MechSection::LeftTorso,
                         slot: 3,
                     },
                 )
@@ -3778,7 +3723,7 @@ async fn tag_loss_geometry_damage_shutdown_and_validation() {
         );
         assert_eq!(
             world.btech.constructed_units()[&id].tag(),
-            BattleTagState {
+            TagState {
                 target: None,
                 remaining: if reason == "shutdown" { 29 } else { 30 }
             }
@@ -3876,7 +3821,7 @@ async fn tag_takeover_and_rejected_targets() {
     );
     assert_eq!(
         world.btech.constructed_units()[&id].tag(),
-        BattleTagState {
+        TagState {
             target: None,
             remaining: 30
         }
@@ -3922,10 +3867,10 @@ async fn semiguided_fixture() -> (
     world.btech = serde_json::from_value(state).unwrap();
     select_battle_tag(&mut world, tagger, ObjectId(1), Some(target)).unwrap();
     let mut definition =
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     definition
         .sections
-        .get_mut(&BattleSection::CenterTorso)
+        .get_mut(&MechSection::CenterTorso)
         .unwrap()
         .criticals
         .get_mut(&10)
@@ -3933,7 +3878,7 @@ async fn semiguided_fixture() -> (
         .equipment = "IS.LRM-5".into();
     let torso = definition
         .sections
-        .get_mut(&BattleSection::RightTorso)
+        .get_mut(&MechSection::RightTorso)
         .unwrap();
     let bin = torso.criticals.get_mut(&0).unwrap();
     bin.equipment = "Ammo_IS.LRM-5".into();
@@ -3964,7 +3909,7 @@ async fn semiguided_fixture() -> (
         .unwrap()
         .weapons
         .iter()
-        .position(|mount| mount.weapon == BattleWeapon::Lrm5)
+        .position(|mount| mount.weapon == Weapon::Lrm5)
         .unwrap();
     world.validate(&config).unwrap();
     (dir, config, world, shooter, target, tagger, index)
@@ -4005,7 +3950,7 @@ async fn semiguided_tag_aim_and_link_loss() {
                     &mut trial,
                     tagger,
                     CriticalLocation {
-                        section: BattleSection::LeftTorso,
+                        section: MechSection::LeftTorso,
                         slot: 3,
                     },
                 )
@@ -4055,7 +4000,7 @@ async fn semiguided_native_lua_fire_and_matching_supply() {
         .unwrap()
         .weapons
         .iter()
-        .position(|mount| mount.weapon == BattleWeapon::MediumLaser)
+        .position(|mount| mount.weapon == Weapon::MediumLaser)
         .unwrap();
     let before = world.btech.clone();
     assert!(toggle_battle_semiguided(&mut world, shooter, ObjectId(1), laser).is_err());
@@ -4092,7 +4037,7 @@ async fn semiguided_native_lua_fire_and_matching_supply() {
         native.world().btech.constructed_units()[&shooter]
             .ammunition_mode(index)
             .unwrap(),
-        BattleAmmunitionMode::SemiGuided,
+        AmmunitionMode::SemiGuided,
         "{text}"
     );
     lua.eval_callback::<mlua::Value>(&format!(
@@ -4121,10 +4066,7 @@ async fn semiguided_native_lua_fire_and_matching_supply() {
     let rules = shot_rules();
     let shot =
         resolve_battle_shot(&mut direct, shooter, ObjectId(1), target, index, rules).unwrap();
-    assert_eq!(
-        shot.expenditure.ammunition_mode,
-        BattleAmmunitionMode::SemiGuided
-    );
+    assert_eq!(shot.expenditure.ammunition_mode, AmmunitionMode::SemiGuided);
     assert_eq!(
         direct.btech.constructed_units()[&shooter].ammunition(),
         &[23, 24]
@@ -4208,7 +4150,7 @@ async fn spotter_target_persistence_and_live_revalidation() {
     let before = world.btech.clone();
     assert_eq!(
         battle_spotter_target(&world, shooter).unwrap(),
-        BattleSpotterTarget {
+        SpotterTarget {
             spotter: observer,
             target
         }
@@ -4226,7 +4168,7 @@ async fn spotter_target_persistence_and_live_revalidation() {
         .unwrap()
         .weapons
         .iter()
-        .position(|mount| mount.weapon == BattleWeapon::MediumLaser)
+        .position(|mount| mount.weapon == Weapon::MediumLaser)
         .unwrap();
     assert!(
         resolve_battle_shot(
@@ -4466,7 +4408,7 @@ async fn indirect_spotter_experience_eligibility_and_rollback() {
     set_battle_character(
         &mut world,
         observer_pilot,
-        BattleCharacter {
+        Character {
             build: 5,
             reflexes: 5,
             intuition: 5,
@@ -4487,7 +4429,7 @@ async fn indirect_spotter_experience_eligibility_and_rollback() {
             .insert(Flag::InCharacter);
     }
     let seed = (0..=255)
-        .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 2)
+        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 2)
         .unwrap();
     shot_seed(&mut world, shooter, seed);
     for exclusion in [
@@ -4538,7 +4480,7 @@ async fn indirect_spotter_experience_eligibility_and_rollback() {
                     &mut trial,
                     observer_pilot,
                     "Gunnery-Spotting",
-                    BattleCharacterValue {
+                    CharacterValue {
                         experience: 1,
                         ..Default::default()
                     },
@@ -4554,7 +4496,7 @@ async fn indirect_spotter_experience_eligibility_and_rollback() {
                         &mut trial,
                         pilot,
                         skill,
-                        BattleCharacterValue {
+                        CharacterValue {
                             last_used: i64::MAX,
                             ..Default::default()
                         },
@@ -4633,8 +4575,8 @@ async fn indirect_hex_visibility_uses_terrain_and_perception_rules() {
     let point = HexCoordinate { x: 5, y: 2 };
     let map = world.btech.constructed_units()[&id].position().unwrap().map;
     for (sensors, visibility, expected) in [
-        (true, 30, Some(BattleDetectionChannel::Sensors)),
-        (false, 30, Some(BattleDetectionChannel::Sight)),
+        (true, 30, Some(DetectionChannel::Sensors)),
+        (false, 30, Some(DetectionChannel::Sight)),
         (false, 0, None),
     ] {
         let mut state = serde_json::to_value(&world.btech).unwrap();
@@ -4644,7 +4586,7 @@ async fn indirect_hex_visibility_uses_terrain_and_perception_rules() {
         state["maps"][map.0.to_string()]["sensor_flags"] = if sensors {
             0.into()
         } else {
-            BattleMapPerceptionFlag::Sensors.bit().into()
+            MapPerceptionFlag::Sensors.bit().into()
         };
         world.btech = serde_json::from_value(state).unwrap();
         let before = world.btech.clone();
@@ -4677,7 +4619,7 @@ async fn indirect_fire_hex_feedback_native_lua_and_rollback() {
     use stompymux_rs::*;
     let (_dir, config, mut world, shooter, target, observer, index) = spotter_fixture().await;
     let seed = (0..=255)
-        .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 2)
+        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 2)
         .unwrap();
     shot_seed(&mut world, shooter, seed);
     let mut state = serde_json::to_value(&world.btech).unwrap();
@@ -4778,16 +4720,16 @@ async fn hex_target_selection_lifecycle_and_validation() {
         .unwrap();
     assert!(!battle_hex_visible(&world, id, point).unwrap());
     for mode in [
-        BattleHexTargetMode::UnitAtHex,
-        BattleHexTargetMode::Hex,
-        BattleHexTargetMode::Building,
-        BattleHexTargetMode::Ignite,
-        BattleHexTargetMode::Clear,
+        HexTargetMode::UnitAtHex,
+        HexTargetMode::Hex,
+        HexTargetMode::Building,
+        HexTargetMode::Ignite,
+        HexTargetMode::Clear,
     ] {
         select_battle_hex_target(&mut world, id, ObjectId(1), point, mode).unwrap();
         assert_eq!(
             world.btech.constructed_units()[&id].hex_lock(),
-            Some(BattleHexLock {
+            Some(HexLock {
                 hex: point,
                 mode,
                 remaining: 8
@@ -4803,7 +4745,7 @@ async fn hex_target_selection_lifecycle_and_validation() {
             id,
             ObjectId(1),
             HexCoordinate { x: -1, y: 0 },
-            BattleHexTargetMode::Hex
+            HexTargetMode::Hex
         )
         .is_err()
     );
@@ -4949,7 +4891,7 @@ async fn hex_occupant_fire_routing_aim_and_rollback() {
         shooter,
         ObjectId(1),
         point,
-        BattleHexTargetMode::UnitAtHex,
+        HexTargetMode::UnitAtHex,
     )
     .unwrap();
     assert_eq!(
@@ -5055,7 +4997,7 @@ async fn hex_aim_modes_visibility_and_neutral_target_terms() {
         shooter,
         ObjectId(1),
         point,
-        BattleHexTargetMode::UnitAtHex,
+        HexTargetMode::UnitAtHex,
     )
     .unwrap();
     let unit = battle_aim_modifiers(&world, shooter, target, 0, 6, optical_aim_rules()).unwrap();
@@ -5072,16 +5014,16 @@ async fn hex_aim_modes_visibility_and_neutral_target_terms() {
             - i32::from(unit.perception.unwrap().modifier)
     );
     for mode in [
-        BattleHexTargetMode::UnitAtHex,
-        BattleHexTargetMode::Hex,
-        BattleHexTargetMode::Building,
-        BattleHexTargetMode::Ignite,
-        BattleHexTargetMode::Clear,
+        HexTargetMode::UnitAtHex,
+        HexTargetMode::Hex,
+        HexTargetMode::Building,
+        HexTargetMode::Ignite,
+        HexTargetMode::Clear,
     ] {
         select_battle_hex_target(&mut world, shooter, ObjectId(1), point, mode).unwrap();
         let report =
             battle_hex_aim_modifiers(&world, shooter, point, 0, 6, optical_aim_rules()).unwrap();
-        let bonus = if mode == BattleHexTargetMode::UnitAtHex {
+        let bonus = if mode == HexTargetMode::UnitAtHex {
             0
         } else {
             -4
@@ -5174,9 +5116,9 @@ async fn hex_aim_range_and_lua_inspection_are_read_only() {
 async fn direct_hex_shots_commit_launch_terrain_and_restart_replay() {
     use stompymux_rs::*;
     for (mode, hit) in [
-        (BattleHexTargetMode::Ignite, true),
-        (BattleHexTargetMode::Ignite, false),
-        (BattleHexTargetMode::Clear, true),
+        (HexTargetMode::Ignite, true),
+        (HexTargetMode::Ignite, false),
+        (HexTargetMode::Clear, true),
     ] {
         let (_dir, config, mut world, shooter, target) = shot_fixture().await;
         let map = world.btech.constructed_units()[&shooter]
@@ -5189,7 +5131,7 @@ async fn direct_hex_shots_commit_launch_terrain_and_restart_replay() {
             .unwrap()
             .weapons
             .iter()
-            .position(|mount| mount.weapon == BattleWeapon::MediumLaser)
+            .position(|mount| mount.weapon == Weapon::MediumLaser)
             .unwrap();
         let mut encoded = serde_json::to_value(&world.btech).unwrap();
         let width = world.btech.maps()[&map].width as usize;
@@ -5217,7 +5159,7 @@ async fn direct_hex_shots_commit_launch_terrain_and_restart_replay() {
                     && report
                         .terrain
                         .iter()
-                        .any(|impact| impact.effect != BattleWoodlandEffect::None)
+                        .any(|impact| impact.effect != WoodlandEffect::None)
             })
             .unwrap();
         shot_seed(&mut world, shooter, seed);
@@ -5304,14 +5246,8 @@ async fn direct_hex_shot_rejection_preserves_inventory_and_dice() {
     for (point, mode) in [
         (HexCoordinate { x: -1, y: 0 }, None),
         (HexCoordinate { x: 5, y: 4 }, None),
-        (
-            HexCoordinate { x: 5, y: 7 },
-            Some(BattleHexTargetMode::Ignite),
-        ),
-        (
-            HexCoordinate { x: 5, y: 7 },
-            Some(BattleHexTargetMode::Building),
-        ),
+        (HexCoordinate { x: 5, y: 7 }, Some(HexTargetMode::Ignite)),
+        (HexCoordinate { x: 5, y: 7 }, Some(HexTargetMode::Building)),
     ] {
         if let Some(mode) = mode {
             select_battle_hex_target(&mut world, shooter, ObjectId(1), point, mode).unwrap();
@@ -5335,7 +5271,7 @@ async fn direct_hex_missiles_spend_ammunition_and_only_resolve_packets_on_hits()
             &mut world,
             ObjectId(1),
             "Gunnery-Missile",
-            BattleCharacterValue {
+            CharacterValue {
                 value: if hit { 20 } else { 0 },
                 experience: 0,
                 last_used: 0,
@@ -5355,7 +5291,7 @@ async fn direct_hex_missiles_spend_ammunition_and_only_resolve_packets_on_hits()
             shooter,
             ObjectId(1),
             coordinate,
-            BattleHexTargetMode::Clear,
+            HexTargetMode::Clear,
         )
         .unwrap();
         let target_number = battle_pilot_hex_aim_modifiers(
@@ -5370,9 +5306,7 @@ async fn direct_hex_missiles_spend_ammunition_and_only_resolve_packets_on_hits()
         .subtotal()
         .unwrap();
         let seed = (0..=255)
-            .find(|seed| {
-                (i32::from(BattleDice::seeded([*seed; 32]).two_d6()) >= target_number) == hit
-            })
+            .find(|seed| (i32::from(Dice::seeded([*seed; 32]).two_d6()) >= target_number) == hit)
             .unwrap();
         shot_seed(&mut world, shooter, seed);
         let before = world.clone();
@@ -5410,9 +5344,9 @@ async fn hex_fire_native_lua_routing_and_character_rollback() {
     use stompymux_rs::*;
     for character in [false, true] {
         for mode in [
-            BattleHexTargetMode::Ignite,
-            BattleHexTargetMode::Clear,
-            BattleHexTargetMode::UnitAtHex,
+            HexTargetMode::Ignite,
+            HexTargetMode::Clear,
+            HexTargetMode::UnitAtHex,
         ] {
             let (_dir, config, mut world, shooter, target) = shot_fixture().await;
             let map = world.btech.constructed_units()[&shooter]
@@ -5425,7 +5359,7 @@ async fn hex_fire_native_lua_routing_and_character_rollback() {
                 .unwrap()
                 .weapons
                 .iter()
-                .position(|mount| mount.weapon == BattleWeapon::MediumLaser)
+                .position(|mount| mount.weapon == Weapon::MediumLaser)
                 .unwrap();
             let mut encoded = serde_json::to_value(&world.btech).unwrap();
             let width = world.btech.maps()[&map].width as usize;
@@ -5515,7 +5449,7 @@ async fn hex_fire_character_recoil_native_lua_and_abort() {
         .clone();
     let torso = definition
         .sections
-        .get_mut(&BattleSection::LeftTorso)
+        .get_mut(&MechSection::LeftTorso)
         .unwrap();
     let mut part = torso.criticals[&0].clone();
     part.equipment = "IS.HeavyGaussRifle".into();
@@ -5543,7 +5477,7 @@ async fn hex_fire_character_recoil_native_lua_and_abort() {
         &mut world,
         ObjectId(1),
         "Gunnery-Ballistic",
-        BattleCharacterValue {
+        CharacterValue {
             value: 20,
             experience: 0,
             last_used: 0,
@@ -5554,7 +5488,7 @@ async fn hex_fire_character_recoil_native_lua_and_abort() {
         &mut world,
         ObjectId(1),
         "Piloting-Battlemech",
-        BattleCharacterValue {
+        CharacterValue {
             value: 0,
             experience: 0,
             last_used: 0,
@@ -5572,19 +5506,19 @@ async fn hex_fire_character_recoil_native_lua_and_abort() {
         .unwrap()
         .weapons
         .iter()
-        .position(|mount| mount.weapon == BattleWeapon::HeavyGaussRifle)
+        .position(|mount| mount.weapon == Weapon::HeavyGaussRifle)
         .unwrap();
     select_battle_hex_target(
         &mut world,
         shooter,
         ObjectId(1),
         HexCoordinate { x: 5, y: 3 },
-        BattleHexTargetMode::UnitAtHex,
+        HexTargetMode::UnitAtHex,
     )
     .unwrap();
     let seed = (0..=255)
         .find(|seed| {
-            let mut dice = BattleDice::seeded([*seed; 32]);
+            let mut dice = Dice::seeded([*seed; 32]);
             dice.two_d6();
             dice.two_d6() <= 4
         })
@@ -5636,7 +5570,7 @@ async fn hex_fire_character_recoil_native_lua_and_abort() {
     );
     assert_eq!(
         lua.world().btech.constructed_units()[&shooter].posture(),
-        BattlePosture::Prone
+        Posture::Prone
     );
     let text = |messages: Vec<(ObjectId, stompymux_rs::text::Document)>| {
         messages
@@ -5696,7 +5630,7 @@ async fn hex_surface_weapon_probability_and_replay() {
                 .unwrap()
                 .weapons
                 .iter()
-                .position(|mount| mount.weapon == BattleWeapon::MediumLaser)
+                .position(|mount| mount.weapon == Weapon::MediumLaser)
                 .unwrap();
             let mut encoded = serde_json::to_value(&world.btech).unwrap();
             let width = world.btech.maps()[&map].width as usize;
@@ -5710,7 +5644,7 @@ async fn hex_surface_weapon_probability_and_replay() {
                 shooter,
                 ObjectId(1),
                 coordinate,
-                BattleHexTargetMode::Hex,
+                HexTargetMode::Hex,
             )
             .unwrap();
             let seed = (0..=255)
@@ -5731,7 +5665,7 @@ async fn hex_surface_weapon_probability_and_replay() {
                 .unwrap();
             shot_seed(&mut world, shooter, seed);
             let before = world.clone();
-            for mode in [BattleHexTargetMode::Ignite, BattleHexTargetMode::Clear] {
+            for mode in [HexTargetMode::Ignite, HexTargetMode::Clear] {
                 let mut non_structural = before.clone();
                 select_battle_hex_target(
                     &mut non_structural,
@@ -5773,7 +5707,7 @@ async fn hex_surface_weapon_probability_and_replay() {
             .subtotal()
             .unwrap();
             let miss_seed = (0..=255)
-                .find(|seed| i32::from(BattleDice::seeded([*seed; 32]).two_d6()) < target_number)
+                .find(|seed| i32::from(Dice::seeded([*seed; 32]).two_d6()) < target_number)
                 .unwrap();
             shot_seed(&mut miss, shooter, miss_seed);
             let missed = resolve_battle_hex_shot(
@@ -5888,7 +5822,7 @@ async fn hex_surface_weapon_native_lua_character_rollback() {
         .unwrap()
         .weapons
         .iter()
-        .position(|mount| mount.weapon == BattleWeapon::MediumLaser)
+        .position(|mount| mount.weapon == Weapon::MediumLaser)
         .unwrap();
     let mut encoded = serde_json::to_value(&world.btech).unwrap();
     let width = world.btech.maps()[&map].width as usize;
@@ -5908,7 +5842,7 @@ async fn hex_surface_weapon_native_lua_character_rollback() {
     set_battle_character(
         &mut world,
         ObjectId(2),
-        BattleCharacter {
+        Character {
             build: 5,
             reflexes: 5,
             intuition: 5,
@@ -5920,10 +5854,7 @@ async fn hex_surface_weapon_native_lua_character_rollback() {
     )
     .unwrap();
     support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
-    world
-        .btech
-        .set_unit_power(target, BattlePower::Running)
-        .unwrap();
+    world.btech.set_unit_power(target, Power::Running).unwrap();
     let passenger = world.create(&config, "Ice passenger".into(), Kind::Player);
     world.objects.get_mut(&passenger).unwrap().location = Some(target);
     world
@@ -5939,7 +5870,7 @@ async fn hex_surface_weapon_native_lua_character_rollback() {
         shooter,
         ObjectId(1),
         coordinate,
-        BattleHexTargetMode::Hex,
+        HexTargetMode::Hex,
     )
     .unwrap();
     let seed = (0..=255)
@@ -6081,7 +6012,7 @@ async fn building_fire_damage_policies_and_committed_repair() {
             &mut world,
             map,
             0,
-            Some(BattleBuildingEntrance {
+            Some(BuildingEntrance {
                 coordinate,
                 interior,
                 data_char: 0,
@@ -6093,7 +6024,7 @@ async fn building_fire_damage_policies_and_committed_repair() {
         set_building_state(
             &mut world,
             interior,
-            BattleBuildingState {
+            BuildingState {
                 integrity: initial,
                 maximum_integrity: initial,
                 flags: 0,
@@ -6108,7 +6039,7 @@ async fn building_fire_damage_policies_and_committed_repair() {
             shooter,
             ObjectId(1),
             coordinate,
-            BattleHexTargetMode::Building,
+            HexTargetMode::Building,
         )
         .unwrap();
         let index = world.btech.constructed_units()[&shooter]
@@ -6116,7 +6047,7 @@ async fn building_fire_damage_policies_and_committed_repair() {
             .unwrap()
             .weapons
             .iter()
-            .position(|mount| mount.weapon == BattleWeapon::MediumLaser)
+            .position(|mount| mount.weapon == Weapon::MediumLaser)
             .unwrap();
         let before = world.clone();
 
@@ -6147,7 +6078,7 @@ async fn building_fire_damage_policies_and_committed_repair() {
         .subtotal()
         .unwrap();
         let seed = (0..=255)
-            .find(|seed| i32::from(BattleDice::seeded([*seed; 32]).two_d6()) < target_number)
+            .find(|seed| i32::from(Dice::seeded([*seed; 32]).two_d6()) < target_number)
             .unwrap();
         shot_seed(&mut missed, shooter, seed);
         let miss_report = resolve_battle_hex_shot(
@@ -6193,7 +6124,7 @@ async fn building_fire_damage_policies_and_committed_repair() {
             set_building_state(
                 &mut immune,
                 immune_map,
-                BattleBuildingState {
+                BuildingState {
                     flags: flag,
                     ..state
                 },
@@ -6293,7 +6224,7 @@ async fn building_fire_native_lua_interior_messages_and_rollback() {
         &mut world,
         map,
         0,
-        Some(BattleBuildingEntrance {
+        Some(BuildingEntrance {
             coordinate,
             interior,
             data_char: 0,
@@ -6305,7 +6236,7 @@ async fn building_fire_native_lua_interior_messages_and_rollback() {
     set_building_state(
         &mut world,
         interior,
-        BattleBuildingState {
+        BuildingState {
             integrity: 10,
             maximum_integrity: 10,
             flags: 0,
@@ -6320,7 +6251,7 @@ async fn building_fire_native_lua_interior_messages_and_rollback() {
         shooter,
         ObjectId(1),
         coordinate,
-        BattleHexTargetMode::Building,
+        HexTargetMode::Building,
     )
     .unwrap();
     let index = world.btech.constructed_units()[&shooter]
@@ -6328,7 +6259,7 @@ async fn building_fire_native_lua_interior_messages_and_rollback() {
         .unwrap()
         .weapons
         .iter()
-        .position(|mount| mount.weapon == BattleWeapon::MediumLaser)
+        .position(|mount| mount.weapon == Weapon::MediumLaser)
         .unwrap();
     world
         .objects
@@ -6401,7 +6332,7 @@ fn install_test_inferno(world: &mut stompymux_rs::World, id: ObjectId) -> usize 
         .unwrap()
         .weapons
         .iter()
-        .position(|m| m.weapon == BattleWeapon::Srm4)
+        .position(|m| m.weapon == Weapon::Srm4)
         .unwrap()
 }
 
@@ -6415,7 +6346,7 @@ async fn inferno_ammunition_native_lua_fire_restart_and_rollback() {
         &mut world,
         ObjectId(1),
         "Gunnery-Missile",
-        BattleCharacterValue {
+        CharacterValue {
             value: 30,
             experience: 0,
             last_used: 0,
@@ -6543,7 +6474,7 @@ async fn inferno_ammunition_interception_and_overflow_preserve_firing_transactio
         &mut base,
         ObjectId(1),
         "Gunnery-Missile",
-        BattleCharacterValue {
+        CharacterValue {
             value: 30,
             experience: 0,
             last_used: 0,
@@ -6565,7 +6496,7 @@ async fn inferno_ammunition_interception_and_overflow_preserve_firing_transactio
         .is_err()
     );
     assert_eq!(overflowing.btech, before.btech);
-    install_test_ams(&mut base, target, BattleWeapon::AntiMissileSystem);
+    install_test_ams(&mut base, target, Weapon::AntiMissileSystem);
     base.objects.get_mut(&ObjectId(2)).unwrap().location = Some(target);
     assign_battle_pilot(&mut base, target, ObjectId(2)).unwrap();
     support::seed_object_dice(&mut base, ObjectId(2), support::FIXTURE_DICE_SEED);
@@ -6583,7 +6514,7 @@ async fn inferno_ammunition_interception_and_overflow_preserve_firing_transactio
         let before = world.clone();
         let report =
             resolve_battle_shot(&mut world, id, ObjectId(1), target, index, shot_rules()).unwrap();
-        let Some(stompymux_rs::BattleTargetSalvo::Mech(salvo)) = report.salvo else {
+        let Some(stompymux_rs::TargetSalvo::Mech(salvo)) = report.salvo else {
             continue;
         };
         assert!(salvo.groups.is_empty());
@@ -6634,7 +6565,7 @@ async fn inferno_ammunition_heat_penalty_selects_inferno_before_larger_bins() {
         .unwrap();
     base.validate(&config).unwrap();
     let seed = (0..=255)
-        .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 2)
+        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 2)
         .unwrap();
     for (heat, target) in [
         (10.0, 4),
@@ -6687,7 +6618,7 @@ async fn inferno_ammunition_hex_hits_apply_one_zero_damage_terrain_exposure() {
         &mut base,
         ObjectId(1),
         "Gunnery-Missile",
-        BattleCharacterValue {
+        CharacterValue {
             value: 30,
             experience: 0,
             last_used: 0,
@@ -6704,10 +6635,10 @@ async fn inferno_ammunition_hex_hits_apply_one_zero_damage_terrain_exposure() {
         })
         .unwrap();
     for mode in [
-        BattleHexTargetMode::Ignite,
-        BattleHexTargetMode::Clear,
-        BattleHexTargetMode::Hex,
-        BattleHexTargetMode::Building,
+        HexTargetMode::Ignite,
+        HexTargetMode::Clear,
+        HexTargetMode::Hex,
+        HexTargetMode::Building,
     ] {
         let mut selected = base.clone();
         select_battle_hex_target(&mut selected, id, ObjectId(1), coordinate, mode).unwrap();
@@ -6727,7 +6658,7 @@ async fn inferno_ammunition_hex_hits_apply_one_zero_damage_terrain_exposure() {
             assert!(report.cluster_roll.is_some());
             assert_eq!(
                 report.terrain.len(),
-                usize::from(mode != BattleHexTargetMode::Building)
+                usize::from(mode != HexTargetMode::Building)
             );
             assert!(report.buildings.is_empty());
             assert!(report.surfaces.is_empty());
@@ -6746,12 +6677,12 @@ async fn inferno_ammunition_hex_hits_apply_one_zero_damage_terrain_exposure() {
 /// Speed Demon changes acceleration and braking through the live movement path and saved replay.
 #[tokio::test]
 async fn speed_demon_acceleration_braking_and_restart_use_the_assigned_pilot() {
-    use stompymux_rs::{BattleCharacterValue, set_battle_character_value};
+    use stompymux_rs::{CharacterValue, set_battle_character_value};
     let (_dir, config, mut world, id) = fixture('.').await;
     stompymux_rs::set_battle_character(
         &mut world,
         ObjectId(1),
-        stompymux_rs::BattleCharacter {
+        stompymux_rs::Character {
             bruise: 0,
             lethal: 0,
             build: 5,
@@ -6767,7 +6698,7 @@ async fn speed_demon_acceleration_braking_and_restart_use_the_assigned_pilot() {
         &mut world,
         ObjectId(1),
         "Speed_Demon",
-        BattleCharacterValue {
+        CharacterValue {
             value: 1,
             ..Default::default()
         },
@@ -6805,7 +6736,7 @@ async fn speed_demon_acceleration_braking_and_restart_use_the_assigned_pilot() {
         &mut world,
         ObjectId(1),
         "Speed_Demon",
-        BattleCharacterValue {
+        CharacterValue {
             value: 2,
             ..Default::default()
         },
@@ -6824,7 +6755,7 @@ async fn quad_lateral_requires_intact_support() {
     use stompymux_rs::*;
     let (_dir, _config, mut world, id) = fixture('.').await;
     let before = world.btech.clone();
-    assert!(set_battle_lateral(&mut world, id, ObjectId(1), BattleLateralMode::FrontLeft).is_err());
+    assert!(set_battle_lateral(&mut world, id, ObjectId(1), LateralMode::FrontLeft).is_err());
     assert_eq!(world.btech, before);
     world
         .btech
@@ -6832,18 +6763,16 @@ async fn quad_lateral_requires_intact_support() {
             record["definition"]["attributes"]["move_type"] = "Quad".into();
         })
         .unwrap();
-    set_battle_lateral(&mut world, id, ObjectId(1), BattleLateralMode::FrontLeft).unwrap();
+    set_battle_lateral(&mut world, id, ObjectId(1), LateralMode::FrontLeft).unwrap();
     assert_eq!(world.btech.constructed_units()[&id].lateral().remaining, 6);
     world
         .btech
         .rewrite_unit_record(id, |record| {
-            record["flooded_sections"] = serde_json::to_value([BattleSection::LeftArm]).unwrap();
+            record["flooded_sections"] = serde_json::to_value([MechSection::LeftArm]).unwrap();
         })
         .unwrap();
     let before = world.btech.clone();
-    assert!(
-        set_battle_lateral(&mut world, id, ObjectId(1), BattleLateralMode::FrontRight).is_err()
-    );
+    assert!(set_battle_lateral(&mut world, id, ObjectId(1), LateralMode::FrontRight).is_err());
     assert_eq!(world.btech, before);
 }
 
@@ -6853,11 +6782,11 @@ async fn quad_live_movement_standing_and_restart() {
     use stompymux_rs::*;
     let source = format!("12 12\n{}", format!("{}\n", ".0".repeat(12)).repeat(12));
     let template =
-        BattleTemplate::parse("SCP-1N", include_str!("../game/mechs/SCP-1N.toml")).unwrap();
+        MechTemplate::parse("SCP-1N", include_str!("../game/mechs/SCP-1N.toml")).unwrap();
     let (_dir, config, mut world, id) = fixture_assets(&source, template).await;
     assert_eq!(
         world.btech.constructed_units()[&id].chassis(),
-        BattleMechChassis::Quad
+        MechChassis::Quad
     );
     set_battle_speed(&mut world, id, ObjectId(1), 96.75).unwrap();
     for _ in 0..5 {
@@ -6886,7 +6815,7 @@ async fn quad_live_movement_standing_and_restart() {
         &mut world,
         id,
         ObjectId(1),
-        BattleStandMode::Normal,
+        StandMode::Normal,
         true,
         fall_rules(),
     )
@@ -6898,7 +6827,7 @@ async fn quad_live_movement_standing_and_restart() {
         before,
         serde_json::to_value(&world.btech.constructed_units()[&id]).unwrap()["dice"]
     );
-    assert!(rotate_battle_torso(&mut world, id, ObjectId(1), BattleTorso::Left).is_err());
+    assert!(rotate_battle_torso(&mut world, id, ObjectId(1), Torso::Left).is_err());
     world.validate(&config).unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
     assert_eq!(
@@ -6913,7 +6842,7 @@ async fn quad_live_weapon_and_front_leg_combat() {
     use stompymux_rs::*;
     let source = format!("12 12\n{}", format!("{}\n", ".0".repeat(12)).repeat(12));
     let template =
-        BattleTemplate::parse("SCP-1N", include_str!("../game/mechs/SCP-1N.toml")).unwrap();
+        MechTemplate::parse("SCP-1N", include_str!("../game/mechs/SCP-1N.toml")).unwrap();
     let (_dir, config, mut world, id) = fixture_assets(&source, template.clone()).await;
     let map = world.btech.constructed_units()[&id].position().unwrap().map;
     let target = world.create(&config, "Target quad".into(), Kind::Thing);
@@ -6931,7 +6860,7 @@ async fn quad_live_weapon_and_front_leg_combat() {
     shot_seed(&mut firing, target, 4);
     let _shot = resolve_battle_shot(&mut firing, id, ObjectId(1), target, 0, shot_rules()).unwrap();
     firing.validate(&config).unwrap();
-    for leg in [BattleLeg::Left, BattleLeg::Right] {
+    for leg in [Leg::Left, Leg::Right] {
         let mut candidate = world.clone();
         shot_seed(&mut candidate, id, 1);
         shot_seed(&mut candidate, target, 2);
@@ -6939,12 +6868,12 @@ async fn quad_live_weapon_and_front_leg_combat() {
             resolve_battle_kick(&mut candidate, id, ObjectId(1), target, leg, kick_rules())
                 .unwrap();
         assert_eq!(
-            report.profile.attack.section(BattleMechChassis::Quad),
-            leg.section(BattleMechChassis::Quad)
+            report.profile.attack.section(MechChassis::Quad),
+            leg.section(MechChassis::Quad)
         );
         assert_eq!(
             candidate.btech.constructed_units()[&id].limb_recycle()
-                [&leg.section(BattleMechChassis::Quad)],
+                [&leg.section(MechChassis::Quad)],
             60
         );
         candidate.validate(&config).unwrap();
@@ -6964,7 +6893,7 @@ async fn quad_club_rejection_is_atomic_across_command_paths() {
     use stompymux_rs::*;
     let source = format!("12 12\n{}", format!("{}\n", "`0".repeat(12)).repeat(12));
     let template =
-        BattleTemplate::parse("SCP-1N", include_str!("../game/mechs/SCP-1N.toml")).unwrap();
+        MechTemplate::parse("SCP-1N", include_str!("../game/mechs/SCP-1N.toml")).unwrap();
     let (_dir, config, mut world, id) = fixture_assets(&source, template).await;
     let before = world.btech.clone();
     for selection in [None, Some("left"), Some("right")] {
@@ -6999,17 +6928,17 @@ async fn quad_dump_location_selectors_use_live_anatomy() {
     use stompymux_rs::*;
     let source = format!("12 12\n{}", format!("{}\n", ".0".repeat(12)).repeat(12));
     let mut template =
-        BattleTemplate::parse("SCP-1N", include_str!("../game/mechs/SCP-1N.toml")).unwrap();
+        MechTemplate::parse("SCP-1N", include_str!("../game/mechs/SCP-1N.toml")).unwrap();
     let bin = template
         .sections
-        .get_mut(&BattleSection::LeftTorso)
+        .get_mut(&MechSection::LeftTorso)
         .unwrap()
         .criticals
         .remove(&0)
         .unwrap();
     template
         .sections
-        .get_mut(&BattleSection::LeftArm)
+        .get_mut(&MechSection::LeftArm)
         .unwrap()
         .criticals
         .insert(5, bin);
@@ -7022,8 +6951,8 @@ async fn quad_dump_location_selectors_use_live_anatomy() {
                 .dumping()
                 .unwrap()
                 .selection,
-            BattleDumpSelection::Slot(CriticalLocation {
-                section: BattleSection::LeftArm,
+            DumpSelection::Slot(CriticalLocation {
+                section: MechSection::LeftArm,
                 slot: 5
             })
         );
@@ -7042,13 +6971,12 @@ async fn quad_pods_inspect_anatomy_and_reject_swatting() {
     use stompymux_rs::*;
     let source = format!("12 12\n{}", format!("{}\n", ".0".repeat(12)).repeat(12));
     let template =
-        BattleTemplate::parse("SCP-1N", include_str!("../game/mechs/SCP-1N.toml")).unwrap();
+        MechTemplate::parse("SCP-1N", include_str!("../game/mechs/SCP-1N.toml")).unwrap();
     let (_dir, config, mut world, id) = fixture_assets(&source, template).await;
     world
         .btech
         .rewrite_unit_record(id, |record| {
-            record["beacons"]["LeftArm"] =
-                serde_json::to_value([BattleBeaconKind::Homing]).unwrap();
+            record["beacons"]["LeftArm"] = serde_json::to_value([BeaconKind::Homing]).unwrap();
         })
         .unwrap();
     world.validate(&config).unwrap();
@@ -7061,8 +6989,8 @@ async fn quad_pods_inspect_anatomy_and_reject_swatting() {
             &mut world,
             id,
             ObjectId(1),
-            BattleSection::LeftArm,
-            BattleBeaconKind::Homing,
+            MechSection::LeftArm,
+            BeaconKind::Homing,
             fall_rules()
         )
         .unwrap_err()
@@ -7096,13 +7024,13 @@ async fn quad_pods_inspect_anatomy_and_reject_swatting() {
 #[tokio::test]
 async fn apod_live_fire_and_restart() {
     use stompymux_rs::*;
-    for weapon in [BattleWeapon::APod, BattleWeapon::ClanAPod] {
+    for weapon in [Weapon::APod, Weapon::ClanAPod] {
         let source = format!("12 12\n{}", format!("{}\n", ".0".repeat(12)).repeat(12));
         let mut template =
-            BattleTemplate::parse("SCP-1N", include_str!("../game/mechs/SCP-1N.toml")).unwrap();
+            MechTemplate::parse("SCP-1N", include_str!("../game/mechs/SCP-1N.toml")).unwrap();
         template
             .sections
-            .get_mut(&BattleSection::LeftArm)
+            .get_mut(&MechSection::LeftArm)
             .unwrap()
             .criticals
             .insert(
@@ -7169,7 +7097,7 @@ async fn apod_live_fire_and_restart() {
 #[tokio::test]
 async fn stinger_airborne_admission_and_shot_replay() {
     use stompymux_rs::*;
-    let template = BattleTemplate::parse(
+    let template = MechTemplate::parse(
         "test",
         &include_str!("fixtures/btech/mechs/JR7-D.toml").replace("IS.SRM-4", "IS.LRM-5"),
     )
@@ -7196,7 +7124,7 @@ async fn stinger_airborne_admission_and_shot_replay() {
     create_battle_unit(
         &mut world,
         target,
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
@@ -7206,7 +7134,7 @@ async fn stinger_airborne_admission_and_shot_replay() {
         .unwrap()
         .weapons
         .iter()
-        .position(|mount| mount.weapon == BattleWeapon::Lrm5)
+        .position(|mount| mount.weapon == Weapon::Lrm5)
         .unwrap();
     let before = world.btech.clone();
     assert!(
@@ -7243,10 +7171,7 @@ async fn stinger_airborne_admission_and_shot_replay() {
     let shot =
         resolve_battle_shot(&mut world, id, ObjectId(1), target, index, shot_rules()).unwrap();
     assert!(shot.launched);
-    assert_eq!(
-        shot.expenditure.ammunition_mode,
-        BattleAmmunitionMode::Stinger
-    );
+    assert_eq!(shot.expenditure.ammunition_mode, AmmunitionMode::Stinger);
     assert_eq!(shot.expenditure.ammunition[0].rounds, 1);
     assert_eq!(
         resolve_battle_shot(&mut loaded, id, ObjectId(1), target, index, shot_rules()).unwrap(),
@@ -7270,7 +7195,7 @@ async fn stinger_native_lua_selection_and_restart() {
         .unwrap()
         .weapons
         .iter()
-        .position(|mount| mount.weapon == BattleWeapon::MediumLaser)
+        .position(|mount| mount.weapon == Weapon::MediumLaser)
         .unwrap();
     assert!(toggle_battle_stinger(&mut world, shooter, ObjectId(1), laser).is_err());
     assert_eq!(world.btech, before);
@@ -7323,7 +7248,7 @@ async fn stinger_native_lua_selection_and_restart() {
         lua.world().btech.constructed_units()[&shooter]
             .ammunition_mode(index)
             .unwrap(),
-        BattleAmmunitionMode::Stinger
+        AmmunitionMode::Stinger
     );
     // A mode may be selected without matching stock; ordinary rounds must not substitute.
     assert!(
@@ -7417,7 +7342,7 @@ async fn weapons_hold_physical_damage_warns_without_suppressing_transfers() {
     for (transfer, explosion) in [(false, false), (true, false), (true, true)] {
         let (_dir, config, mut base, id, target) = kick_fixture().await;
         let seed = (0..=255)
-            .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 12)
+            .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
             .unwrap();
         shot_seed(&mut base, id, seed);
         shot_seed(&mut base, target, 0);
@@ -7446,19 +7371,13 @@ async fn weapons_hold_physical_damage_warns_without_suppressing_transfers() {
             id,
             ObjectId(1),
             target,
-            BattleLeg::Left,
+            Leg::Left,
             kick_rules(),
         )
         .unwrap();
-        let report = resolve_battle_kick(
-            &mut held,
-            id,
-            ObjectId(1),
-            target,
-            BattleLeg::Left,
-            kick_rules(),
-        )
-        .unwrap();
+        let report =
+            resolve_battle_kick(&mut held, id, ObjectId(1), target, Leg::Left, kick_rules())
+                .unwrap();
         assert!(report.hit && report.impact.is_some());
         let warnings: Vec<_> = report
             .notices
@@ -7479,7 +7398,7 @@ async fn weapons_hold_physical_damage_warns_without_suppressing_transfers() {
         );
         assert!(warnings.iter().all(|n| n.unit == id));
         if explosion {
-            assert!(report.impact.as_ref().unwrap().impact.criticals.iter().any(|(_, loss)| matches!(loss, BattleCriticalLoss::Ammunition { explosion_damage, .. } if *explosion_damage > 0)));
+            assert!(report.impact.as_ref().unwrap().impact.criticals.iter().any(|(_, loss)| matches!(loss, CriticalLoss::Ammunition { explosion_damage, .. } if *explosion_damage > 0)));
         }
         assert_eq!(
             report.impact.as_ref().unwrap().notices[0].text,
@@ -7495,7 +7414,7 @@ async fn weapons_hold_physical_damage_warns_without_suppressing_transfers() {
                 id,
                 ObjectId(1),
                 target,
-                BattleLeg::Left,
+                Leg::Left,
                 kick_rules()
             )
             .unwrap(),
@@ -7520,7 +7439,7 @@ async fn weapons_hold_charge_and_dfa_warn_only_for_target_packets() {
             prepare_test_charge(&mut base, id);
         }
         let seed = (0..=255)
-            .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 12)
+            .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
             .unwrap();
         shot_seed(&mut base, id, seed);
         shot_seed(&mut base, target, 0);
@@ -7534,7 +7453,7 @@ async fn weapons_hold_charge_and_dfa_warn_only_for_target_packets() {
                         world,
                         id,
                         target,
-                        BattleChargeRules {
+                        ChargeRules {
                             distance: 2.0,
                             new_rules: true,
                             technology_level_three: true,
@@ -7585,7 +7504,7 @@ async fn weapons_hold_physical_feedback_shares_host_publication_and_rollback() {
     for character in [false, true] {
         let (_dir, config, mut base, id, target) = kick_fixture().await;
         let seed = (0..=255)
-            .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 12)
+            .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
             .unwrap();
         shot_seed(&mut base, id, seed);
         shot_seed(&mut base, target, 0);
@@ -7652,7 +7571,7 @@ async fn weapons_hold_direct_mech_impacts_retain_shooter_and_weapon_effects() {
     let (_dir, config, mut base, id, target) = shot_fixture().await;
     shot_skill(&mut base, 10);
     let seed = (0..=255)
-        .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 12)
+        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
         .unwrap();
     shot_seed(&mut base, id, seed);
     shot_seed(&mut base, target, 0);
@@ -7714,14 +7633,14 @@ async fn ground_proposals_match_live_trajectories_without_mutating_state() {
             let row = format!("{terrain}0").repeat(12);
             let map = format!("12 12\n{}", format!("{row}\n").repeat(12));
             let (_dir, _config, baseline, id) =
-                fixture_assets(&map, BattleTemplate::parse("test", source).unwrap()).await;
+                fixture_assets(&map, MechTemplate::parse("test", source).unwrap()).await;
             for slowdown in 0..=2 {
                 for fasa_turning in [false, true] {
                     for speed in [-10.75, 32.25] {
                         let mut world = baseline.clone();
                         set_battle_speed(&mut world, id, ObjectId(1), speed).unwrap();
                         set_battle_heading(&mut world, id, ObjectId(1), 90.0).unwrap();
-                        let rules = BattleMovementRules {
+                        let rules = MovementRules {
                             slowdown,
                             fasa_turning,
                             ..RULES
@@ -7748,7 +7667,7 @@ async fn ground_proposals_match_live_trajectories_without_mutating_state() {
                             let actual = world.btech.constructed_units()[&id].motion().unwrap();
                             assert_eq!(
                                 actual,
-                                stompymux_rs::BattleMotion {
+                                stompymux_rs::Motion {
                                     point: proposal.destination,
                                     ..proposal.motion
                                 }
@@ -7777,7 +7696,7 @@ async fn ground_proposals_reject_invalid_coordinates_and_nonfinite_motion() {
             propose_battle_mech_ground_motion(
                 &world,
                 id,
-                stompymux_rs::BattleMotion {
+                stompymux_rs::Motion {
                     speed: bad,
                     ..motion
                 },
@@ -7807,7 +7726,7 @@ async fn edited_hardened_protection_controls_live_hit_messages_and_balance() {
         .unwrap()
         .systems
         .iter()
-        .filter(|part| part.system == BattleSystem::Gyro)
+        .filter(|part| part.system == System::Gyro)
         .map(|part| part.location)
         .collect();
     destroy_battle_critical(&mut world, id, slots[0]).unwrap();
@@ -7823,7 +7742,7 @@ async fn edited_hardened_protection_controls_live_hit_messages_and_balance() {
         let report = resolve_battle_tactical_impact(
             &mut candidate,
             id,
-            balance_hit(BattleSection::CenterTorso, true),
+            balance_hit(MechSection::CenterTorso, true),
             1,
             fall_rules(),
         )
@@ -7831,8 +7750,8 @@ async fn edited_hardened_protection_controls_live_hit_messages_and_balance() {
         if report.impact.criticals.len() != 1
             || !matches!(
                 report.impact.criticals[0].1,
-                BattleCriticalLoss::System {
-                    system: BattleSystem::Gyro
+                CriticalLoss::System {
+                    system: System::Gyro
                 }
             )
         {
@@ -7847,8 +7766,8 @@ async fn edited_hardened_protection_controls_live_hit_messages_and_balance() {
         );
         assert!(report.balance.iter().all(|balance| !matches!(
             balance.cause,
-            BattleBalanceCause::Critical {
-                system: BattleSystem::Gyro,
+            BalanceCause::Critical {
+                system: System::Gyro,
                 ..
             }
         )));
@@ -7882,7 +7801,7 @@ async fn melee_specialist_requires_exact_one_for_dfa() {
                 &mut world,
                 ObjectId(1),
                 name,
-                BattleCharacterValue {
+                CharacterValue {
                     value: raw,
                     ..Default::default()
                 },
@@ -7923,14 +7842,14 @@ async fn firing_keeps_critical_balance_rolls_private_to_target_pilot() {
             record["power"] = serde_json::json!({"state":"running"});
         })
         .unwrap();
-    for section in BattleSection::ALL {
+    for section in MechSection::ALL {
         let armor = base.btech.constructed_units()[&target].sections()[&section].armor;
         apply_damage_phase(
             &mut base,
             target,
             section,
             armor,
-            BattleDamagePhase::Armor { rear: false },
+            DamagePhase::Armor { rear: false },
         )
         .unwrap();
     }
@@ -8007,12 +7926,12 @@ async fn rapid_misload_balance_feedback_stays_private() {
     use stompymux_rs::*;
     let (_dir, config, mut base, id, target) = shot_fixture().await;
     let mut definition = base.btech.constructed_units()[&id].definition().clone();
-    let mut gun = definition.sections[&BattleSection::LeftArm].criticals[&2].clone();
+    let mut gun = definition.sections[&MechSection::LeftArm].criticals[&2].clone();
     gun.equipment = "IS.AC/2".into();
     gun.modes = vec!["RapidFire".into()];
     definition
         .sections
-        .get_mut(&BattleSection::LeftLeg)
+        .get_mut(&MechSection::LeftLeg)
         .unwrap()
         .criticals
         .insert(4, gun);
@@ -8035,7 +7954,7 @@ async fn rapid_misload_balance_feedback_stays_private() {
         .unwrap()
         .weapons
         .iter()
-        .position(|mount| mount.weapon == BattleWeapon::Ac2)
+        .position(|mount| mount.weapon == Weapon::Ac2)
         .unwrap();
     toggle_battle_rapid(&mut base, id, ObjectId(1), index).unwrap();
     base.objects.get_mut(&ObjectId(2)).unwrap().location = Some(id);
@@ -8047,14 +7966,11 @@ async fn rapid_misload_balance_feedback_stays_private() {
     for n in 0u32..65536 {
         let mut seed = [0; 32];
         seed[..4].copy_from_slice(&n.to_le_bytes());
-        if BattleDice::seeded(seed).two_d6() != 2 {
+        if Dice::seeded(seed).two_d6() != 2 {
             continue;
         }
         let mut before = base.clone();
-        before
-            .btech
-            .set_unit_dice(id, BattleDice::seeded(seed))
-            .unwrap();
+        before.btech.set_unit_dice(id, Dice::seeded(seed)).unwrap();
         let scripts = Scripts::new(
             &config,
             std::rc::Rc::new(std::cell::RefCell::new(before.clone())),
@@ -8128,7 +8044,7 @@ async fn charge_control_feedback_is_private_for_single_and_mutual_collisions() {
             .btech
             .rewrite_unit_record(second, |record| {
                 let unit = record;
-                unit["power"] = serde_json::to_value(BattlePower::Running).unwrap();
+                unit["power"] = serde_json::to_value(Power::Running).unwrap();
                 unit["motion"]["speed"] = 21.5.into();
                 unit["motion"]["desired_speed"] = 21.5.into();
                 unit["motion"]["heading"] = 180.0.into();
@@ -8136,7 +8052,7 @@ async fn charge_control_feedback_is_private_for_single_and_mutual_collisions() {
             })
             .unwrap();
         let seed = (0..=255)
-            .find(|byte| BattleDice::seeded([*byte; 32]).two_d6() == 12)
+            .find(|byte| Dice::seeded([*byte; 32]).two_d6() == 12)
             .unwrap();
         shot_seed(&mut world, first, seed);
         shot_seed(&mut world, second, seed);
@@ -8151,7 +8067,7 @@ async fn charge_control_feedback_is_private_for_single_and_mutual_collisions() {
         let before = world.clone();
         let scripts =
             Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
-        let rules = BattleChargeRules {
+        let rules = ChargeRules {
             distance: 2.0,
             new_rules: false,
             technology_level_three: false,
@@ -8212,12 +8128,7 @@ async fn charge_control_feedback_is_private_for_single_and_mutual_collisions() {
 async fn pod_self_damage_preserves_private_fall_feedback() {
     use stompymux_rs::*;
     let (_dir, config, mut world, id, _) = shot_fixture().await;
-    prepare_test_pod_removal(
-        &mut world,
-        id,
-        BattleSection::LeftLeg,
-        BattleBeaconKind::Ecm,
-    );
+    prepare_test_pod_removal(&mut world, id, MechSection::LeftLeg, BeaconKind::Ecm);
     world
         .objects
         .get_mut(&ObjectId(1))
@@ -8240,7 +8151,7 @@ async fn pod_self_damage_preserves_private_fall_feedback() {
         })
         .unwrap();
     let seed = (0..=255)
-        .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 2)
+        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 2)
         .unwrap();
     shot_seed(&mut world, id, seed);
     let native = Scripts::new(
@@ -8253,9 +8164,9 @@ async fn pod_self_damage_preserves_private_fall_feedback() {
         &config,
         id,
         ObjectId(1),
-        BattleSection::LeftLeg,
-        BattleBeaconKind::Ecm,
-        BattleFallRules::configured(&config),
+        MechSection::LeftLeg,
+        BeaconKind::Ecm,
+        FallRules::configured(&config),
     )
     .unwrap();
     assert!(!report.removed);

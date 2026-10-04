@@ -6,7 +6,7 @@ use std::{collections::BTreeMap, io::Write};
 
 /// Live counts and measured representation sizes; no allocator or historical event totals are inferred.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleRuntimeStats {
+pub struct RuntimeStats {
     pub simulation_pending: bool,
     pub scanner_observers: usize,
     pub reactor_startup_remaining: u8,
@@ -37,11 +37,7 @@ impl Write for ByteCounter {
 }
 
 /// Inspect the same live state used by the one-second simulation scheduler without advancing it.
-pub fn runtime_stats(
-    world: &World,
-    config: &Config,
-    actor: ObjectId,
-) -> Result<BattleRuntimeStats> {
+pub fn runtime_stats(world: &World, config: &Config, actor: ObjectId) -> Result<RuntimeStats> {
     ensure!(
         crate::authority::is_wizard(world, actor),
         "Permission denied."
@@ -54,7 +50,7 @@ pub fn runtime_stats(
     for kind in state.registrations().values() {
         *registration_kinds.entry(kind.clone()).or_insert(0) += 1;
     }
-    Ok(BattleRuntimeStats {
+    Ok(RuntimeStats {
         simulation_pending: super::simulation_pending::pending(
             world,
             config,

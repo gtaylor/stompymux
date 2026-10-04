@@ -26,7 +26,7 @@ async fn entry_delay_replays_and_rechecks_live_routes_for_every_chassis() {
             &mut world,
             exterior,
             0,
-            Some(BattleBuildingEntrance {
+            Some(BuildingEntrance {
                 coordinate: HexCoordinate { x: 0, y: 0 },
                 interior,
                 data_char: 0,
@@ -39,7 +39,7 @@ async fn entry_delay_replays_and_rechecks_live_routes_for_every_chassis() {
             &mut world,
             interior,
             0,
-            Some(BattleBuildingEntryPoint {
+            Some(BuildingEntryPoint {
                 coordinate: HexCoordinate { x: 1, y: 1 },
                 direction: b'n',
                 object: ObjectId(-1),
@@ -49,7 +49,7 @@ async fn entry_delay_replays_and_rechecks_live_routes_for_every_chassis() {
         )
         .unwrap();
         let id = world.create(&config, "Traveler".into(), Kind::Thing);
-        BattleUnitTemplate::parse("test", source)
+        UnitTemplate::parse("test", source)
             .unwrap()
             .create(&mut world, id)
             .unwrap();
@@ -73,7 +73,7 @@ async fn entry_delay_replays_and_rechecks_live_routes_for_every_chassis() {
                     .effective_maximum_speed(world.btech.maps().get(&exterior))
                     .unwrap()
             },
-            BattleVehicle::maximum_speed,
+            Vehicle::maximum_speed,
         );
         // Forward and reverse motion use the same strict threshold.
         for speed in [maximum / 3.0, -maximum / 3.0] {
@@ -108,7 +108,7 @@ async fn entry_delay_replays_and_rechecks_live_routes_for_every_chassis() {
             set_building_state(
                 &mut world,
                 interior,
-                BattleBuildingState {
+                BuildingState {
                     integrity,
                     maximum_integrity: 101,
                     flags,
@@ -154,7 +154,7 @@ async fn entry_delay_replays_and_rechecks_live_routes_for_every_chassis() {
         assert_eq!(world.objects[&id].location, Some(exterior));
         assert_eq!(
             battle_building_entry(&world, id).unwrap(),
-            BattleBuildingEntry {
+            BuildingEntry {
                 direction: Some(b'n'),
                 remaining: 0
             }
@@ -174,7 +174,7 @@ async fn entry_delay_replays_and_rechecks_live_routes_for_every_chassis() {
             &mut world,
             interior,
             0,
-            Some(BattleBuildingEntryPoint {
+            Some(BuildingEntryPoint {
                 coordinate: HexCoordinate { x: 0, y: 1 },
                 direction: b'n',
                 object: ObjectId(-1),

@@ -22,4 +22,4 @@ btech.unit.weapon_states(dbref)
 
 ## Returns
 
-- `BattleWeaponInspection[] Lua array positions start at one; use each entry's index to fire.`
+- `WeaponInspection[] Lua array positions start at one; use each entry's index to fire.`

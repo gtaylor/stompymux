@@ -1,5 +1,5 @@
 //! Read-only combat warning decisions; reports own delivery and transaction rollback.
-use super::{BattleSection, BattleUnit, BattleWeaponUse};
+use super::{Mech, MechSection, WeaponUse};
 
 /// Reference thresholds use integer division before comparing remaining armor.
 pub(super) fn armor_severity(original: u16, remaining: u16) -> u8 {
@@ -19,13 +19,13 @@ pub(super) fn armor_severity(original: u16, remaining: u16) -> u8 {
 }
 
 /// Select front or rear armor exactly as material damage does.
-pub(super) fn armor_level(unit: &BattleUnit, section: BattleSection, rear: bool) -> u8 {
+pub(super) fn armor_level(unit: &Mech, section: MechSection, rear: bool) -> u8 {
     let original = &unit.definition().sections[&section];
     let state = &unit.sections()[&section];
     if rear
         && matches!(
             section,
-            BattleSection::LeftTorso | BattleSection::RightTorso | BattleSection::CenterTorso
+            MechSection::LeftTorso | MechSection::RightTorso | MechSection::CenterTorso
         )
     {
         return armor_severity(original.rear, state.rear);
@@ -34,16 +34,16 @@ pub(super) fn armor_level(unit: &BattleUnit, section: BattleSection, rear: bool)
 }
 
 /// A warning describes only the final severity reached by this armor phase.
-pub(super) fn armor_message(section: BattleSection, rear: bool, severity: u8) -> String {
+pub(super) fn armor_message(section: MechSection, rear: bool, severity: u8) -> String {
     let location = match section {
-        BattleSection::LeftArm => "LA",
-        BattleSection::RightArm => "RA",
-        BattleSection::LeftTorso => "LT",
-        BattleSection::RightTorso => "RT",
-        BattleSection::CenterTorso => "CT",
-        BattleSection::LeftLeg => "LL",
-        BattleSection::RightLeg => "RL",
-        BattleSection::Head => "H",
+        MechSection::LeftArm => "LA",
+        MechSection::RightArm => "RA",
+        MechSection::LeftTorso => "LT",
+        MechSection::RightTorso => "RT",
+        MechSection::CenterTorso => "CT",
+        MechSection::LeftLeg => "LL",
+        MechSection::RightLeg => "RL",
+        MechSection::Head => "H",
     };
     armor_text(location, rear, severity)
 }
@@ -73,8 +73,8 @@ fn ammunition_severity(capacity: u32, remaining: u32, offset: u32) -> Option<boo
 }
 
 /// Half-slot warning weights follow the reference's preference accounting, not usable rounds.
-fn ammunition_weight(half_ton: bool, mode: super::BattleAmmunitionMode) -> u32 {
-    use super::BattleAmmunitionMode as Mode;
+fn ammunition_weight(half_ton: bool, mode: super::AmmunitionMode) -> u32 {
+    use super::AmmunitionMode as Mode;
     if half_ton || matches!(mode, Mode::ArmorPiercing | Mode::Precision) {
         return 2;
     }
@@ -85,10 +85,7 @@ fn ammunition_weight(half_ton: bool, mode: super::BattleAmmunitionMode) -> u32 {
 }
 
 /// Check all installed bins of this weapon, independent of currently selected ammunition mode.
-pub(super) fn ammunition_message(
-    unit: &BattleUnit,
-    expenditure: &BattleWeaponUse,
-) -> Option<String> {
+pub(super) fn ammunition_message(unit: &Mech, expenditure: &WeaponUse) -> Option<String> {
     if !unit.ammunition_warning() || expenditure.ammunition.is_empty() {
         return None;
     }
@@ -102,11 +99,7 @@ pub(super) fn ammunition_message(
 }
 
 /// Dumping checks each bin before ejection using the number of extra rounds in that step.
-pub(super) fn dumping_message(
-    unit: &BattleUnit,
-    weapon: super::BattleWeapon,
-    rounds: u16,
-) -> Option<String> {
+pub(super) fn dumping_message(unit: &Mech, weapon: super::Weapon, rounds: u16) -> Option<String> {
     if !unit.ammunition_warning() || rounds == 0 {
         return None;
     }
@@ -122,7 +115,7 @@ pub(super) fn dumping_message(
 fn ammunition_warning<L>(
     bins: &[super::AmmunitionBin<L>],
     rounds: &[u16],
-    weapon: super::BattleWeapon,
+    weapon: super::Weapon,
     offset: u32,
 ) -> Option<String> {
     let mut capacity = 0;
@@ -153,14 +146,14 @@ fn ammunition_warning<L>(
 }
 
 /// Firing warning windows depend on effective burst behavior, never the unit's anatomy.
-fn launch_offset(gatling: Option<u8>, mode: super::BattleFireMode) -> u32 {
+fn launch_offset(gatling: Option<u8>, mode: super::FireMode) -> u32 {
     u32::from(gatling.unwrap_or(0)).max(u32::from(mode.is_double_shot()))
 }
 
 /// Vehicle launches use the same installed-bin weights and pre-expenditure warning windows.
 pub(super) fn vehicle_ammunition_message(
-    unit: &super::BattleVehicle,
-    expenditure: &super::BattleVehicleWeaponUse,
+    unit: &super::Vehicle,
+    expenditure: &super::VehicleWeaponUse,
 ) -> Option<String> {
     if !unit.ammunition_warning() || expenditure.ammunition.is_empty() {
         return None;
@@ -174,7 +167,7 @@ pub(super) fn vehicle_ammunition_message(
 }
 
 /// Vehicle armor locations supply labels to the common severity message.
-pub(super) fn vehicle_armor_message(section: super::BattleVehicleSection, severity: u8) -> String {
+pub(super) fn vehicle_armor_message(section: super::VehicleSection, severity: u8) -> String {
     let label: String = section
         .name()
         .chars()
@@ -197,7 +190,7 @@ mod tests {
     }
     #[test]
     fn ammunition_bin_weights_keep_special_mode_and_half_ton_precedence() {
-        use super::super::BattleAmmunitionMode as Mode;
+        use super::super::AmmunitionMode as Mode;
         for (mode, expected) in [
             (Mode::Normal, 4),
             (Mode::ArmorPiercing, 2),

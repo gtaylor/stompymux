@@ -18,10 +18,10 @@ fn launched(report: &mlua::Table) -> bool {
 #[test]
 fn streak_lrm_catalogue_and_packet_facts() {
     for (weapon, id, size, slots, capacity, mass, heat, recycle) in [
-        (BattleWeapon::ClanStreakLrm5, 155, 5, 1, 24, 2048, 2, 15),
-        (BattleWeapon::ClanStreakLrm10, 156, 10, 2, 12, 5120, 4, 20),
-        (BattleWeapon::ClanStreakLrm15, 157, 15, 3, 8, 7168, 5, 25),
-        (BattleWeapon::ClanStreakLrm20, 158, 20, 5, 6, 10240, 6, 30),
+        (Weapon::ClanStreakLrm5, 155, 5, 1, 24, 2048, 2, 15),
+        (Weapon::ClanStreakLrm10, 156, 10, 2, 12, 5120, 4, 20),
+        (Weapon::ClanStreakLrm15, 157, 15, 3, 8, 7168, 5, 25),
+        (Weapon::ClanStreakLrm20, 158, 20, 5, 6, 10240, 6, 30),
     ] {
         let p = weapon.profile();
         assert_eq!(
@@ -45,11 +45,9 @@ fn streak_lrm_catalogue_and_packet_facts() {
             ),
             (1, 0, 7, 14, 21)
         );
-        assert_eq!(BattlePart::from_id(id).unwrap().name, weapon.name());
+        assert_eq!(Part::from_id(id).unwrap().name, weapon.name());
         assert_eq!(
-            BattlePart::from_id(id + AMMUNITION_PART_OFFSET)
-                .unwrap()
-                .name,
+            Part::from_id(id + AMMUNITION_PART_OFFSET).unwrap().name,
             format!("Ammo_{}", weapon.name())
         );
         assert!(weapon.is_streak());
@@ -66,10 +64,10 @@ fn streak_lrm_catalogue_and_packet_facts() {
 }
 
 /// Supply and recycle change only as the shared lock result dictates; both adapters replay the same shot.
-async fn streak_lrm_matrix(weapon: BattleWeapon) {
+async fn streak_lrm_matrix(weapon: Weapon) {
     let seeds = [2u8, 12].map(|roll| {
         let seed = (0..=255)
-            .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == roll)
+            .find(|seed| Dice::seeded([*seed; 32]).two_d6() == roll)
             .unwrap();
         [seed; 32]
     });
@@ -98,7 +96,7 @@ async fn streak_lrm_matrix(weapon: BattleWeapon) {
             support::restore_database(&config, &pristine_db);
             let mut world = base.clone();
             firing::edit(&mut world, shooter, |state| {
-                state["dice"] = serde_json::to_value(BattleDice::seeded(seeds[shape])).unwrap()
+                state["dice"] = serde_json::to_value(Dice::seeded(seeds[shape])).unwrap()
             });
             support::install(&native, world.clone());
             support::install(&lua, world);
@@ -158,22 +156,22 @@ async fn streak_lrm_matrix(weapon: BattleWeapon) {
 
 #[tokio::test]
 async fn streak_lrm_native_lua_launch_and_restart_lrm5() {
-    streak_lrm_matrix(BattleWeapon::ClanStreakLrm5).await;
+    streak_lrm_matrix(Weapon::ClanStreakLrm5).await;
 }
 
 #[tokio::test]
 async fn streak_lrm_native_lua_launch_and_restart_lrm10() {
-    streak_lrm_matrix(BattleWeapon::ClanStreakLrm10).await;
+    streak_lrm_matrix(Weapon::ClanStreakLrm10).await;
 }
 
 #[tokio::test]
 async fn streak_lrm_native_lua_launch_and_restart_lrm15() {
-    streak_lrm_matrix(BattleWeapon::ClanStreakLrm15).await;
+    streak_lrm_matrix(Weapon::ClanStreakLrm15).await;
 }
 
 #[tokio::test]
 async fn streak_lrm_native_lua_launch_and_restart_lrm20() {
-    streak_lrm_matrix(BattleWeapon::ClanStreakLrm20).await;
+    streak_lrm_matrix(Weapon::ClanStreakLrm20).await;
 }
 
 /// Streak salvos activate the same automatic defense on every supported attacker/defender pairing.
@@ -183,7 +181,7 @@ async fn streak_lrm_automatic_defense_across_chassis() {
         for target_source in defense::templates() {
             let (_dir, config, mut world, shooter, target, index) = firing::fixture_with_supply(
                 &source,
-                Some(BattleWeapon::ClanStreakLrm20),
+                Some(Weapon::ClanStreakLrm20),
                 &target_source,
                 false,
                 Some(""),
@@ -196,10 +194,10 @@ async fn streak_lrm_automatic_defense_across_chassis() {
                 state["ams_enabled"] = true.into();
             });
             let seed = (0..=255)
-                .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 12)
+                .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
                 .unwrap();
             firing::edit(&mut world, shooter, |state| {
-                state["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
+                state["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap()
             });
             refresh_battle_contacts(&mut world, &[shooter]).unwrap();
             let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
@@ -223,7 +221,7 @@ async fn streak_lrm_requires_matching_ammunition() {
     for source in firing::templates() {
         let (_dir, config, world, shooter, target, index) = firing::fixture_with_target(
             &source,
-            Some(BattleWeapon::ClanStreakLrm10),
+            Some(Weapon::ClanStreakLrm10),
             include_str!("../game/mechs/AS7-D.toml"),
         )
         .await;

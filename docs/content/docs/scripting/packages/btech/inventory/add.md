@@ -25,4 +25,4 @@ btech.inventory.add(actor, object, pattern, quantity)
 
 ## Returns
 
-- `BattleCargoRow[] Requested changes after the request cap.`
+- `CargoRow[] Requested changes after the request cap.`

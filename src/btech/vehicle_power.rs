@@ -1,5 +1,5 @@
 //! Ground-vehicle startup and shutdown share the world heartbeat and cockpit ownership boundary.
-use super::{BattleNotice, BattlePower, BattleVehicleMovement};
+use super::{Notice, Power, VehicleMovement};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 
@@ -52,11 +52,11 @@ pub(super) fn start_by_actor(
     id: ObjectId,
     actor: super::combat_operator::ControlActor,
     fast: bool,
-) -> Result<BattleNotice> {
+) -> Result<Notice> {
     controlled_by_actor(world, id, actor)?;
     let unit = &world.btech.vehicles()[&id];
     ensure!(
-        unit.power() == BattlePower::Off,
+        unit.power() == Power::Off,
         "Unit is already running or starting"
     );
     ensure!(!unit.is_destroyed(), "Destroyed unit cannot start");
@@ -76,13 +76,13 @@ pub(super) fn start_by_actor(
         .get(&position.map)
         .context("Map not found")?
         .hex(i64::from(position.x), i64::from(position.y))?;
-    world.btech.vehicles.get_mut(&id).unwrap().power = BattlePower::Starting {
+    world.btech.vehicles.get_mut(&id).unwrap().power = Power::Starting {
         remaining: if fast { 5 } else { 30 },
     };
     if let super::combat_operator::ControlActor::Player(pilot) = actor {
         super::pilot_health::synchronize(world, id, pilot);
     }
-    Ok(BattleNotice {
+    Ok(Notice {
         unit: id,
         text: "Startup Cycle commencing...".into(),
     })
@@ -92,20 +92,20 @@ pub(super) fn start_by_actor(
 pub(super) fn stop_admitted(
     world: &mut World,
     id: ObjectId,
-    mut rules: super::BattleFallRules,
+    mut rules: super::FallRules,
     effects: Option<&mut super::shutdown::ShutdownEffects>,
-) -> Result<Vec<BattleNotice>> {
+) -> Result<Vec<Notice>> {
     let unit = &world.btech.vehicles()[&id];
     ensure!(
-        unit.power() != BattlePower::Off,
+        unit.power() != Power::Off,
         "The unit has not been started yet"
     );
-    let starting = matches!(unit.power(), BattlePower::Starting { .. });
+    let starting = matches!(unit.power(), Power::Starting { .. });
     let position = unit.position().context("Vehicle is not placed")?;
     let tile =
         world.btech.maps()[&position.map].base_hex(i64::from(position.x), i64::from(position.y))?;
     let altitude = unit.elevation_level(tile);
-    let airborne = unit.definition().movement != super::BattleVehicleMovement::Stationary
+    let airborne = unit.definition().movement != super::VehicleMovement::Stationary
         && altitude > i32::from(tile.standing_height())
         && altitude < 300;
     let moving = unit.motion().is_some_and(|motion| motion.speed > 10.75);
@@ -113,7 +113,7 @@ pub(super) fn stop_admitted(
         .pilot()
         .is_some_and(|pilot| super::skills::boolean_advantage(world, pilot, "Toughness"));
     let mut candidate = world.clone();
-    let mut notices = vec![BattleNotice {
+    let mut notices = vec![Notice {
         unit: id,
         text: if starting {
             "The startup sequence has been aborted."
@@ -126,20 +126,20 @@ pub(super) fn stop_admitted(
         let already_falling = unit.free_fall().is_some()
             || unit
                 .vtol_flight()
-                .is_some_and(|flight| flight.phase == super::BattleVtolFlightPhase::Falling);
+                .is_some_and(|flight| flight.phase == super::VtolFlightPhase::Falling);
         if !already_falling {
             super::vtol_crash::begin_descent(&mut candidate, id)?;
         }
-        notices.push(BattleNotice {
+        notices.push(Notice {
             unit: id,
             text: "You start free-fall.. Enjoy the ride!".into(),
         });
     } else if !starting && moving {
-        notices.push(BattleNotice {
+        notices.push(Notice {
             unit: id,
             text: "Your systems stop in mid-motion!".into(),
         });
-        notices.push(BattleNotice {
+        notices.push(Notice {
             unit: id,
             text: "You tumble end over end and come to a crashing halt!".into(),
         });
@@ -167,13 +167,13 @@ pub(super) fn stop_admitted(
     }
     let unit = candidate.btech.vehicles.get_mut(&id).unwrap();
     if unit.searchlight.on {
-        notices.push(BattleNotice {
+        notices.push(Notice {
             unit: id,
             text: "Your searchlight shuts off.".into(),
         });
     }
     if unit.tag.stop() {
-        notices.push(BattleNotice {
+        notices.push(Notice {
             unit: id,
             text: "Your TAG connection has been broken.".into(),
         });
@@ -185,10 +185,10 @@ pub(super) fn stop_admitted(
 }
 
 /// Shared control cleanup after location-dependent shutdown consequences have been resolved.
-pub(super) fn finish_shutdown(unit: &mut super::BattleVehicle) {
+pub(super) fn finish_shutdown(unit: &mut super::Vehicle) {
     unit.cancel_digging();
     unit.target_lock = None;
-    unit.power = BattlePower::Off;
+    unit.power = Power::Off;
     unit.tag.stop();
     unit.searchlight.shutdown();
     unit.hide_elapsed = None;
@@ -199,12 +199,12 @@ pub(super) fn finish_shutdown(unit: &mut super::BattleVehicle) {
 }
 
 /// Advance countdowns and capture the operator's perception when startup completes.
-pub(super) fn advance(world: &mut World, now: i64) -> Vec<BattleNotice> {
+pub(super) fn advance(world: &mut World, now: i64) -> Vec<Notice> {
     let perception: std::collections::BTreeMap<_, _> = world
         .btech
         .vehicles()
         .iter()
-        .filter(|(_, unit)| matches!(unit.power(), BattlePower::Starting { remaining: 1 }))
+        .filter(|(_, unit)| matches!(unit.power(), Power::Starting { remaining: 1 }))
         .map(|(&id, unit)| {
             let target = unit
                 .pilot()
@@ -230,7 +230,7 @@ pub(super) fn advance(world: &mut World, now: i64) -> Vec<BattleNotice> {
     let mut notices = Vec::new();
     let mut online = Vec::new();
     for (&id, unit) in world.btech.vehicles.iter_mut() {
-        let BattlePower::Starting { .. } = unit.power else {
+        let Power::Starting { .. } = unit.power else {
             continue;
         };
         if world
@@ -252,22 +252,22 @@ pub(super) fn advance(world: &mut World, now: i64) -> Vec<BattleNotice> {
             online.push(id);
         }
         let text = match (remaining, unit.definition().movement) {
-            (25, BattleVehicleMovement::Stationary) => "Main reactor is now online.",
+            (25, VehicleMovement::Stationary) => "Main reactor is now online.",
             (25, _) => "Powerplant initialized and online.",
-            (20, BattleVehicleMovement::Tracked) => "Auto-aligning drive wheels.",
-            (15, BattleVehicleMovement::Tracked) => "Adjusting track tension.",
-            (20, BattleVehicleMovement::Wheeled) => "Performing steering system checks.",
-            (15, BattleVehicleMovement::Wheeled) => "Checking wheel status.",
-            (20, BattleVehicleMovement::Hover) => "Checking plenum chamber status.",
-            (15, BattleVehicleMovement::Hover) => "Verifying fan status.",
-            (20, BattleVehicleMovement::Stationary) => "Gyros are now stable.",
-            (15, BattleVehicleMovement::Stationary) => "Main computer system is now online.",
+            (20, VehicleMovement::Tracked) => "Auto-aligning drive wheels.",
+            (15, VehicleMovement::Tracked) => "Adjusting track tension.",
+            (20, VehicleMovement::Wheeled) => "Performing steering system checks.",
+            (15, VehicleMovement::Wheeled) => "Checking wheel status.",
+            (20, VehicleMovement::Hover) => "Checking plenum chamber status.",
+            (15, VehicleMovement::Hover) => "Verifying fan status.",
+            (20, VehicleMovement::Stationary) => "Gyros are now stable.",
+            (15, VehicleMovement::Stationary) => "Main computer system is now online.",
             (10, _) => "Scanners are now operational.",
             (5, _) => "Targeting system is now operational.",
             (0, _) => "All systems operational!",
             _ => continue,
         };
-        notices.push(BattleNotice {
+        notices.push(Notice {
             unit: id,
             text: text.into(),
         });

@@ -48,11 +48,7 @@ fn root(lua: &Lua) -> PathBuf {
     let config = crate::lua::configuration(lua);
     config.path(&config.database.mech_database)
 }
-fn read_unit(
-    lua: &Lua,
-    value: Value,
-    argument_number: usize,
-) -> mlua::Result<crate::BattleUnitTemplate> {
+fn read_unit(lua: &Lua, value: Value, argument_number: usize) -> mlua::Result<crate::UnitTemplate> {
     // Every critical must name a known part; validate through the raw path
     // before parsing so display and value projections reject the same
     // templates.
@@ -126,10 +122,10 @@ fn read_raw_unit(
 }
 fn section(
     value: Value,
-    template: &crate::BattleTemplate,
+    template: &crate::MechTemplate,
     required: bool,
     argument_number: usize,
-) -> mlua::Result<Option<crate::BattleSection>> {
+) -> mlua::Result<Option<crate::MechSection>> {
     if value.is_nil() {
         return if required {
             Err(argument(
@@ -445,7 +441,7 @@ pub(super) fn register(lua: &Lua, native: &Table, shared: &SharedWorld) -> mlua:
                 let text = {
                     let borrowed = world.borrow();
                     match template {
-                        crate::BattleUnitTemplate::Mech(template) => match kind {
+                        crate::UnitTemplate::Mech(template) => match kind {
                             0 => crate::btech::inspect_template_status_text(&borrowed, &template),
                             1 => crate::btech::inspect_template_weapon_text(
                                 &borrowed,
@@ -460,7 +456,7 @@ pub(super) fn register(lua: &Lua, native: &Table, shared: &SharedWorld) -> mlua:
                                 )
                             }
                         },
-                        crate::BattleUnitTemplate::Vehicle(template) => match kind {
+                        crate::UnitTemplate::Vehicle(template) => match kind {
                             0 => crate::btech::inspect_vehicle_template_status_text(
                                 &borrowed, &template,
                             ),

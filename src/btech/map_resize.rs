@@ -80,11 +80,7 @@ pub fn resize_map_action(
                 .retain(|point| inside(i64::from(point.x), i64::from(point.y)));
             world.validate(config)?;
         }
-        super::notify_message(
-            scripts,
-            super::BattleMessageTarget::Player(actor),
-            "Size set.",
-        )?;
+        super::notify_message(scripts, super::MessageTarget::Player(actor), "Size set.")?;
         scripts.effects.validate()?;
         Ok(())
     })

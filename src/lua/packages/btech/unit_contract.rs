@@ -64,10 +64,10 @@ fn raw_live_section(
 
 fn section(
     value: Value,
-    template: &crate::BattleTemplate,
+    template: &crate::MechTemplate,
     required: bool,
     argument: usize,
-) -> mlua::Result<Option<crate::BattleSection>> {
+) -> mlua::Result<Option<crate::MechSection>> {
     if value.is_nil() {
         return if required {
             Err(error::failure_with_detail(
@@ -94,11 +94,11 @@ fn section(
 fn vehicle_section(
     world: &crate::World,
     id: ObjectId,
-    unit: &crate::BattleVehicle,
+    unit: &crate::Vehicle,
     value: Value,
     required: bool,
     argument: usize,
-) -> mlua::Result<Option<crate::BattleVehicleSection>> {
+) -> mlua::Result<Option<crate::VehicleSection>> {
     if value.is_nil() {
         return if required {
             Err(error::failure_with_detail(
@@ -170,10 +170,10 @@ fn live_mech_section(
     world: &crate::World,
     id: ObjectId,
     value: Value,
-    template: &crate::BattleTemplate,
+    template: &crate::MechTemplate,
     required: bool,
     argument: usize,
-) -> mlua::Result<Option<crate::BattleSection>> {
+) -> mlua::Result<Option<crate::MechSection>> {
     let selected = section(value, template, required, argument)?;
     if let Some(selected) = selected {
         let code = crate::btech::inspection_section_code(template, selected)
@@ -228,7 +228,7 @@ pub(super) fn register(lua: &Lua, native: &Table, shared: &SharedWorld) -> mlua:
             let default = crate::btech::registered_unit_default_template(&borrowed, id);
             let unit = borrowed.btech.constructed_units().get(&id);
             let template = unit
-                .map(crate::BattleUnit::definition)
+                .map(crate::Mech::definition)
                 .or(default.as_ref())
                 .unwrap();
             let raw = unit.map_or_else(
@@ -272,7 +272,7 @@ pub(super) fn register(lua: &Lua, native: &Table, shared: &SharedWorld) -> mlua:
             let default = crate::btech::registered_unit_default_template(&borrowed, id);
             let unit = borrowed.btech.constructed_units().get(&id);
             let template = unit
-                .map(crate::BattleUnit::definition)
+                .map(crate::Mech::definition)
                 .or(default.as_ref())
                 .unwrap();
             let selected =
@@ -317,7 +317,7 @@ pub(super) fn register(lua: &Lua, native: &Table, shared: &SharedWorld) -> mlua:
             let default = crate::btech::registered_unit_default_template(&borrowed, id);
             let unit = borrowed.btech.constructed_units().get(&id);
             let template = unit
-                .map(crate::BattleUnit::definition)
+                .map(crate::Mech::definition)
                 .or(default.as_ref())
                 .unwrap();
             let selected = live_mech_section(&borrowed, id, value(&args, 1), template, false, 2)?;
@@ -366,7 +366,7 @@ pub(super) fn register(lua: &Lua, native: &Table, shared: &SharedWorld) -> mlua:
                 });
             // C projects no channels while the radio configuration is zeroed
             // (btech_unit_bindings.c:300 with mech_radio_state.c:46-48).
-            const NO_CHANNELS: [crate::btech::BattleRadioChannel; 0] = [];
+            const NO_CHANNELS: [crate::btech::RadioChannel; 0] = [];
             let channels = channels.unwrap_or(&NO_CHANNELS);
             for (i, channel) in channels.iter().enumerate() {
                 let row = lua.create_table()?;
@@ -409,7 +409,7 @@ pub(super) fn register(lua: &Lua, native: &Table, shared: &SharedWorld) -> mlua:
                 let tons = crate::btech::administrative_unit_tonnage(&borrowed, id)
                     .ok_or_else(|| mlua::Error::external("unit tonnage is unavailable"))?;
                 let movement = crate::btech::administrative_unit_movement(&borrowed, id)
-                    .and_then(|value| crate::BattleVehicleMovement::parse(&value).ok())
+                    .and_then(|value| crate::VehicleMovement::parse(&value).ok())
                     .unwrap_or(unit.definition().movement);
                 let (rating, suspension) = crate::btech::inspection_vehicle_engine_values(
                     tons,
@@ -424,7 +424,7 @@ pub(super) fn register(lua: &Lua, native: &Table, shared: &SharedWorld) -> mlua:
             let default = crate::btech::registered_unit_default_template(&borrowed, id);
             let unit = borrowed.btech.constructed_units().get(&id);
             let template = unit
-                .map(crate::BattleUnit::definition)
+                .map(crate::Mech::definition)
                 .or(default.as_ref())
                 .unwrap();
             let raw = unit.map_or_else(

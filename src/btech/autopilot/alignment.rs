@@ -1,10 +1,10 @@
 //! Pure mount-arc scoring and admitted torso/turret alignment for observed targets.
 use super::observations::AutopilotObservation;
-use crate::btech::{BattleMountArcs, BattleVehicleMountArcs};
-use crate::{BattleNotice, BattlePosition, BattleTorso, ObjectId, World};
+use crate::btech::{MountArcs, VehicleMountArcs};
+use crate::{Notice, ObjectId, Position, Torso, World};
 
 /// Persistent mount capability ignores temporary recycle/heat to avoid maneuver oscillation.
-pub(crate) fn available(weapon: &crate::BattleWeaponReadiness) -> bool {
+pub(crate) fn available(weapon: &crate::WeaponReadiness) -> bool {
     weapon.intact
         && !weapon.spent
         && !weapon.jammed
@@ -14,7 +14,7 @@ pub(crate) fn available(weapon: &crate::BattleWeaponReadiness) -> bool {
 }
 
 /// Estimated effectiveness shares range factors with the pure target selection policy.
-pub(crate) fn effectiveness(weapon: crate::BattleWeapon, range: f64) -> f64 {
+pub(crate) fn effectiveness(weapon: crate::Weapon, range: f64) -> f64 {
     let p = weapon.profile();
     if range > f64::from(p.long_range) {
         return 0.0;
@@ -43,7 +43,7 @@ pub(crate) fn score(
     heading: f64,
     bearing: f64,
     range: f64,
-    torso: BattleTorso,
+    torso: Torso,
     turret: Option<f64>,
 ) -> f64 {
     if let Some(unit) = world.btech.constructed_units().get(&id) {
@@ -86,10 +86,10 @@ pub(crate) fn score(
 pub(crate) fn align(
     world: &mut World,
     id: ObjectId,
-    target: BattlePosition,
+    target: Position,
     observation: &AutopilotObservation,
     allow_hull: bool,
-    notices: &mut Vec<BattleNotice>,
+    notices: &mut Vec<Notice>,
 ) {
     let Some(scanner) = crate::btech::scanner::scanner_unit(world, id) else {
         return;
@@ -107,14 +107,14 @@ pub(crate) fn align(
         .btech
         .constructed_units()
         .get(&id)
-        .map_or(BattleTorso::Center, |u| u.facing().torso);
+        .map_or(Torso::Center, |u| u.facing().torso);
     let current_turret = world
         .btech
         .vehicles()
         .get(&id)
         .and_then(|u| u.turret_heading());
     let can_twist = world.btech.constructed_units().get(&id).is_some_and(|u| {
-        u.chassis() != crate::BattleMechChassis::Quad && u.posture() != crate::BattlePosture::Prone
+        u.chassis() != crate::MechChassis::Quad && u.posture() != crate::Posture::Prone
     });
     let can_turret =
         world.btech.vehicles().get(&id).is_some_and(|u| {
@@ -147,14 +147,9 @@ pub(crate) fn align(
         (bearing + 270.0) % 360.0,
     ];
     for next in headings.into_iter().take(if allow_hull { 5 } else { 1 }) {
-        for torso in [
-            current_torso,
-            BattleTorso::Center,
-            BattleTorso::Left,
-            BattleTorso::Right,
-        ]
-        .into_iter()
-        .take(if can_twist { 4 } else { 1 })
+        for torso in [current_torso, Torso::Center, Torso::Left, Torso::Right]
+            .into_iter()
+            .take(if can_twist { 4 } else { 1 })
         {
             let rotated_turret = if can_turret {
                 turret
@@ -184,9 +179,9 @@ pub(crate) fn align(
     if best.1 != current_torso {
         let direction = if matches!(
             (current_torso, best.1),
-            (BattleTorso::Left, BattleTorso::Right) | (BattleTorso::Right, BattleTorso::Left)
+            (Torso::Left, Torso::Right) | (Torso::Right, Torso::Left)
         ) {
-            BattleTorso::Center
+            Torso::Center
         } else {
             best.1
         };

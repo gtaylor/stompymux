@@ -1,12 +1,12 @@
 //! Analog frequency search using receiver-owned dice and the enclosing transmission transaction.
-use super::BattleNotice;
+use super::Notice;
 use crate::{ObjectId, World};
 use anyhow::Result;
 use serde::Serialize;
 
 /// One detected transmission moves a scanning channel toward its source frequency.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleFrequencyScan {
+pub struct FrequencyScan {
     pub receiver: ObjectId,
     pub channel: u8,
     pub previous: u32,
@@ -20,7 +20,7 @@ pub(super) fn scan(
     receiver: ObjectId,
     frequency: u32,
     message: &str,
-) -> Result<(Vec<BattleFrequencyScan>, Vec<BattleNotice>)> {
+) -> Result<(Vec<FrequencyScan>, Vec<Notice>)> {
     let unit = super::radio::unit(world, receiver)?;
     if frequency == 0 || !unit.radio_capabilities().scan {
         return Ok((Vec::new(), Vec::new()));
@@ -40,7 +40,7 @@ pub(super) fn scan(
             continue;
         }
         if scans.is_empty() {
-            notices.push(BattleNotice {
+            notices.push(Notice {
                 unit: receiver,
                 text: "You notice a unknown transmission your scanner.. ".into(),
             });
@@ -61,13 +61,13 @@ pub(super) fn scan(
             previous - step
         };
         unit.radio[channel].frequency = next;
-        scans.push(BattleFrequencyScan {
+        scans.push(FrequencyScan {
             receiver,
             channel: channel as u8,
             previous,
             frequency: next,
         });
-        notices.push(BattleNotice {
+        notices.push(Notice {
             unit: receiver,
             text: format!(
                 "Your systems manage to zero on it {precision} on channel {}.",

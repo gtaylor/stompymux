@@ -1,6 +1,6 @@
 //! C-compatible character catalog projection and mutation for Lua adapters.
 
-use super::{BattleCharacterValue, BattleSkillDefinition};
+use super::{CharacterValue, SkillDefinition};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
@@ -61,7 +61,7 @@ pub fn character_value_definition_code(code: usize) -> Option<CharacterValueDefi
     character_value_definitions().get(code).copied()
 }
 
-fn saved(world: &World, player: ObjectId, name: &str) -> BattleCharacterValue {
+fn saved(world: &World, player: ObjectId, name: &str) -> CharacterValue {
     world
         .btech
         .character_values()
@@ -70,7 +70,7 @@ fn saved(world: &World, player: ObjectId, name: &str) -> BattleCharacterValue {
         .copied()
         .unwrap_or_else(|| {
             if name == "Lives" {
-                BattleCharacterValue {
+                CharacterValue {
                     value: 1,
                     ..Default::default()
                 }
@@ -110,7 +110,7 @@ pub fn character_saved_value(
     world: &World,
     player: ObjectId,
     definition: CharacterValueDefinition,
-) -> BattleCharacterValue {
+) -> CharacterValue {
     saved(world, player, definition.name)
 }
 
@@ -151,7 +151,7 @@ pub fn set_character_raw_value(
     Ok(())
 }
 
-fn skill(definition: CharacterValueDefinition) -> Result<&'static BattleSkillDefinition> {
+fn skill(definition: CharacterValueDefinition) -> Result<&'static SkillDefinition> {
     ensure!(definition.kind == "Char_skill", "Value is not a skill");
     super::skill_definition(definition.name).context("Unknown skill")
 }
@@ -163,28 +163,27 @@ pub fn set_character_skill_target(
     target: i32,
 ) -> Result<()> {
     let skill = skill(definition)?;
-    let profile =
-        world
-            .btech
-            .characters()
-            .get(&player)
-            .copied()
-            .unwrap_or(super::BattleCharacter {
-                bruise: 0,
-                lethal: 0,
-                build: 0,
-                reflexes: 0,
-                intuition: 0,
-                learn: 0,
-                charisma: 0,
-            });
+    let profile = world
+        .btech
+        .characters()
+        .get(&player)
+        .copied()
+        .unwrap_or(super::Character {
+            bruise: 0,
+            lethal: 0,
+            build: 0,
+            reflexes: 0,
+            intuition: 0,
+            learn: 0,
+            charisma: 0,
+        });
     let existing = saved(world, player, skill.name);
     let earned = existing.experience / 16_777_216;
     let (a, b) = match skill.category {
-        super::BattleSkillCategory::Athletic => (profile.build, profile.reflexes),
-        super::BattleSkillCategory::Physical => (profile.reflexes, profile.intuition),
-        super::BattleSkillCategory::Mental => (profile.intuition, profile.learn),
-        super::BattleSkillCategory::Social => (profile.intuition, profile.charisma),
+        super::SkillCategory::Athletic => (profile.build, profile.reflexes),
+        super::SkillCategory::Physical => (profile.reflexes, profile.intuition),
+        super::SkillCategory::Mental => (profile.intuition, profile.learn),
+        super::SkillCategory::Social => (profile.intuition, profile.charisma),
     };
     let raw = 18_i32 - i32::from(a) - i32::from(b) - target - earned as i32;
     ensure!(

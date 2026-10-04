@@ -16,7 +16,7 @@ async fn preferred_sections_controls_feed_and_restart() {
         let id = world.create(&config, "Ammo preference".into(), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         let (weapon, preference, preferred_bin, other_bin) = if vehicle {
-            let mut definition = BattleVehicleTemplate::parse("test", source).unwrap();
+            let mut definition = VehicleTemplate::parse("test", source).unwrap();
             let bin = definition
                 .sections
                 .values()
@@ -26,7 +26,7 @@ async fn preferred_sections_controls_feed_and_restart() {
                 .clone();
             definition
                 .sections
-                .get_mut(&BattleVehicleSection::Left)
+                .get_mut(&VehicleSection::Left)
                 .unwrap()
                 .criticals
                 .insert(0, bin.clone());
@@ -36,7 +36,7 @@ async fn preferred_sections_controls_feed_and_restart() {
             let weapon_type = loadout
                 .ammunition
                 .iter()
-                .find(|b| b.location.section == BattleVehicleSection::Left)
+                .find(|b| b.location.section == VehicleSection::Left)
                 .unwrap()
                 .weapon;
             (
@@ -49,18 +49,18 @@ async fn preferred_sections_controls_feed_and_restart() {
                 loadout
                     .ammunition
                     .iter()
-                    .position(|b| b.location.section == BattleVehicleSection::Left)
+                    .position(|b| b.location.section == VehicleSection::Left)
                     .unwrap(),
                 loadout
                     .ammunition
                     .iter()
                     .position(|b| {
-                        b.weapon == weapon_type && b.location.section != BattleVehicleSection::Left
+                        b.weapon == weapon_type && b.location.section != VehicleSection::Left
                     })
                     .unwrap(),
             )
         } else {
-            let mut definition = BattleTemplate::parse("test", source).unwrap();
+            let mut definition = MechTemplate::parse("test", source).unwrap();
             let bin = definition
                 .sections
                 .values()
@@ -70,7 +70,7 @@ async fn preferred_sections_controls_feed_and_restart() {
                 .clone();
             definition
                 .sections
-                .get_mut(&BattleSection::Head)
+                .get_mut(&MechSection::Head)
                 .unwrap()
                 .criticals
                 .insert(3, bin);
@@ -80,7 +80,7 @@ async fn preferred_sections_controls_feed_and_restart() {
             let weapon_type = loadout
                 .ammunition
                 .iter()
-                .find(|b| b.location.section == BattleSection::Head)
+                .find(|b| b.location.section == MechSection::Head)
                 .unwrap()
                 .weapon;
             (
@@ -93,13 +93,13 @@ async fn preferred_sections_controls_feed_and_restart() {
                 loadout
                     .ammunition
                     .iter()
-                    .position(|b| b.location.section == BattleSection::Head)
+                    .position(|b| b.location.section == MechSection::Head)
                     .unwrap(),
                 loadout
                     .ammunition
                     .iter()
                     .position(|b| {
-                        b.weapon == weapon_type && b.location.section != BattleSection::Head
+                        b.weapon == weapon_type && b.location.section != MechSection::Head
                     })
                     .unwrap(),
             )
@@ -174,11 +174,11 @@ async fn preferred_sections_controls_feed_and_restart() {
         assert_eq!(
             feed(&saved, 2),
             [
-                BattleAmmunitionDraw {
+                AmmunitionDraw {
                     bin_index: preferred_bin,
                     rounds: 1
                 },
-                BattleAmmunitionDraw {
+                AmmunitionDraw {
                     bin_index: other_bin,
                     rounds: 1
                 }
@@ -192,7 +192,7 @@ async fn preferred_sections_controls_feed_and_restart() {
         firing
             .btech
             .rewrite_unit_record(id, |record| {
-                record["power"] = serde_json::to_value(BattlePower::Running).unwrap();
+                record["power"] = serde_json::to_value(Power::Running).unwrap();
             })
             .unwrap();
         let spent = if vehicle {
@@ -258,7 +258,7 @@ async fn preferred_sections_controls_feed_and_restart() {
 /// Laser AMS draws no ammunition, so these energy weapons are not eligible for usebin.
 #[tokio::test]
 async fn laser_defense_rejects_preferred_ammunition() {
-    for weapon in [BattleWeapon::LaserAms, BattleWeapon::ClanLaserAms] {
+    for weapon in [Weapon::LaserAms, Weapon::ClanLaserAms] {
         let (_dir, config, mut world) = support::isolated_world().await;
         let id = world.create(&config, "Laser defense".into(), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
@@ -271,7 +271,7 @@ async fn laser_defense_rejects_preferred_ammunition() {
         create_battle_vehicle(
             &mut world,
             id,
-            BattleVehicleTemplate::parse("test", &source).unwrap(),
+            VehicleTemplate::parse("test", &source).unwrap(),
         )
         .unwrap();
         let map = world.create(&config, "Field".into(), Kind::Room);

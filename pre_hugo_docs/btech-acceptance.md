@@ -541,7 +541,7 @@ integration gates are unchanged; this is not full-project completion acceptance.
 
 ## Shared compact damage format
 
-Damage inspection now formats typed `BattleDamageRecord` values for both Mechs
+Damage inspection now formats typed `DamageRecord` values for both Mechs
 and vehicles. The same codec parses complete ordered replacement descriptions,
 retaining duplicate assignments and signed numeric values while rejecting malformed
 records, unknown keywords, invalid numeric identities and overflow. Format-level

@@ -71,11 +71,9 @@ async fn registered_unit_defaults_are_inspectable_without_constructed_runtime() 
 #[tokio::test(flavor = "current_thread")]
 async fn mech_inspection_projects_exact_record_shapes_and_keeps_the_old_report() {
     let (_directory, _config, scripts) = isolated_scripts().await;
-    let template = stompymux_rs::BattleTemplate::parse(
-        "JR7-D",
-        include_str!("fixtures/btech/mechs/JR7-D.toml"),
-    )
-    .unwrap();
+    let template =
+        stompymux_rs::MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+            .unwrap();
     stompymux_rs::create_battle_unit(
         &mut scripts.world_mut(),
         stompymux_rs::ObjectId(14),
@@ -227,7 +225,7 @@ async fn template_lookup_is_case_insensitive_bounded_and_registry_gated() {
 async fn vehicle_inspection_uses_vehicle_sections_and_raw_slot_inventory() {
     let (_directory, config, scripts) = isolated_scripts().await;
     let source = include_str!("../game/mechs/Demolisher.toml");
-    let template = stompymux_rs::BattleVehicleTemplate::parse("Demolisher", source).unwrap();
+    let template = stompymux_rs::VehicleTemplate::parse("Demolisher", source).unwrap();
     stompymux_rs::create_battle_vehicle(
         &mut scripts.world_mut(),
         stompymux_rs::ObjectId(14),
@@ -288,11 +286,9 @@ async fn vehicle_inspection_uses_vehicle_sections_and_raw_slot_inventory() {
 #[tokio::test(flavor = "current_thread")]
 async fn inspection_getters_follow_c_argument_contracts() {
     let (_directory, _config, scripts) = isolated_scripts().await;
-    let template = stompymux_rs::BattleTemplate::parse(
-        "JR7-D",
-        include_str!("fixtures/btech/mechs/JR7-D.toml"),
-    )
-    .unwrap();
+    let template =
+        stompymux_rs::MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+            .unwrap();
     stompymux_rs::create_battle_unit(
         &mut scripts.world_mut(),
         stompymux_rs::ObjectId(14),
@@ -415,11 +411,9 @@ async fn inspection_getters_follow_c_argument_contracts() {
 #[tokio::test(flavor = "current_thread")]
 async fn engine_suspension_factor_matches_c_susp_factor() {
     let (_directory, _config, scripts) = isolated_scripts().await;
-    let template = stompymux_rs::BattleTemplate::parse(
-        "JR7-D",
-        include_str!("fixtures/btech/mechs/JR7-D.toml"),
-    )
-    .unwrap();
+    let template =
+        stompymux_rs::MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+            .unwrap();
     stompymux_rs::create_battle_unit(
         &mut scripts.world_mut(),
         stompymux_rs::ObjectId(14),
@@ -489,12 +483,12 @@ fn parity_probe_templates_parse_through_unit_construction() {
     let ground = include_str!("fixtures/lua-probes/templates/PARITY-GROUND.toml");
     let vtol = include_str!("fixtures/lua-probes/templates/PARITY-VTOL.toml");
     let naval = include_str!("fixtures/lua-probes/templates/PARITY-NAVAL.toml");
-    assert!(stompymux_rs::BattleUnitTemplate::parse("PARITY-GROUND", ground).is_ok());
-    assert!(stompymux_rs::BattleUnitTemplate::parse("PARITY-VTOL", vtol).is_ok());
+    assert!(stompymux_rs::UnitTemplate::parse("PARITY-GROUND", ground).is_ok());
+    assert!(stompymux_rs::UnitTemplate::parse("PARITY-VTOL", vtol).is_ok());
     // Naval unit construction stays blocked until the loader accepts the class
     // (C template_load.c loads every unit class).
     assert_eq!(
-        stompymux_rs::BattleUnitTemplate::parse("PARITY-NAVAL", naval)
+        stompymux_rs::UnitTemplate::parse("PARITY-NAVAL", naval)
             .unwrap_err()
             .to_string(),
         "Unsupported unit template type Naval"

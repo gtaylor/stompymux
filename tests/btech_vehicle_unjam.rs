@@ -18,7 +18,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse("test", template).unwrap(),
+        VehicleTemplate::parse("test", template).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -36,7 +36,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
 fn seed(world: &mut World, id: ObjectId, value: u8) {
     world
         .btech
-        .set_unit_dice(id, BattleDice::seeded([value; 32]))
+        .set_unit_dice(id, Dice::seeded([value; 32]))
         .unwrap();
 }
 
@@ -58,11 +58,11 @@ async fn vehicle_feed_clearing_replays_skill_success_and_failure() {
         jam(&mut base, id);
         for success in [false, true] {
             let value = (0..=255)
-                .find(|value| (BattleDice::seeded([*value; 32]).two_d6() >= target) == success)
+                .find(|value| (Dice::seeded([*value; 32]).two_d6() >= target) == success)
                 .unwrap();
             let mut world = base.clone();
             seed(&mut world, id, value);
-            let mut dice = BattleDice::seeded([value; 32]);
+            let mut dice = Dice::seeded([value; 32]);
             let roll = dice.two_d6();
             let ammo: u16 = world.btech.vehicles()[&id].ammunition().iter().sum();
             begin_battle_unjam(&mut world, id, ObjectId(1), 0).unwrap();
@@ -141,20 +141,14 @@ async fn vehicle_feed_clearing_admission_lua_rollback_and_silent_expiry() {
     for condition in ["empty", "off", "destroyed"] {
         let mut world = base.clone();
         seed(&mut world, id, 17);
-        let mut dice = BattleDice::seeded([17; 32]);
+        let mut dice = Dice::seeded([17; 32]);
         begin_battle_unjam(&mut world, id, ObjectId(1), 0).unwrap();
         let mut saved = serde_json::to_value(&world.btech).unwrap();
         if condition == "empty" {
             saved["vehicles"][id.0.to_string()]["ammunition"] = serde_json::json!([0, 0, 0, 0]);
             world.btech = serde_json::from_value(saved.clone()).unwrap();
         } else if condition == "off" {
-            stop_battle_unit(
-                &mut world,
-                id,
-                ObjectId(1),
-                BattleMovementRules::STANDARD.fall,
-            )
-            .unwrap();
+            stop_battle_unit(&mut world, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
         } else {
             let location = world.btech.vehicles()[&id].loadout().unwrap().weapons[0].criticals[0];
             destroy_battle_vehicle_critical(&mut world, id, location).unwrap();
@@ -195,7 +189,7 @@ async fn vehicle_feed_clearing_character_xp_and_output_roll_back_together() {
     set_battle_character(
         &mut world,
         ObjectId(1),
-        BattleCharacter {
+        Character {
             build: 5,
             reflexes: 4,
             intuition: 5,
@@ -211,7 +205,7 @@ async fn vehicle_feed_clearing_character_xp_and_output_roll_back_together() {
         &mut world,
         ObjectId(1),
         "Piloting-Tracked",
-        BattleCharacterValue {
+        CharacterValue {
             value: 0,
             experience: 0,
             last_used: 0,
@@ -219,7 +213,7 @@ async fn vehicle_feed_clearing_character_xp_and_output_roll_back_together() {
     )
     .unwrap();
     let value = (0..=255)
-        .find(|value| BattleDice::seeded([*value; 32]).two_d6() == 12)
+        .find(|value| Dice::seeded([*value; 32]).two_d6() == 12)
         .unwrap();
     seed(&mut world, id, value);
     begin_battle_unjam(&mut world, id, ObjectId(1), 0).unwrap();
@@ -290,7 +284,7 @@ async fn vehicle_feed_clearing_broadcasts_only_to_current_contacts() {
     create_battle_vehicle(
         &mut world,
         observer,
-        BattleVehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+        VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
             .unwrap(),
     )
     .unwrap();
@@ -299,11 +293,11 @@ async fn vehicle_feed_clearing_broadcasts_only_to_current_contacts() {
     place_battle_unit(&mut world, observer, map, 0, 0).unwrap();
     world
         .btech
-        .set_unit_power(observer, BattlePower::Running)
+        .set_unit_power(observer, Power::Running)
         .unwrap();
     refresh_battle_contacts(&mut world, &[observer]).unwrap();
     let value = (0..=255)
-        .find(|value| BattleDice::seeded([*value; 32]).two_d6() == 12)
+        .find(|value| Dice::seeded([*value; 32]).two_d6() == 12)
         .unwrap();
     seed(&mut world, id, value);
     begin_battle_unjam(&mut world, id, ObjectId(1), 0).unwrap();
@@ -319,12 +313,13 @@ async fn vehicle_feed_clearing_broadcasts_only_to_current_contacts() {
         .unwrap();
     let visible = advance_battle_unjamming(&mut world, false, false).unwrap();
     let hidden = advance_battle_unjamming(&mut unseen, false, false).unwrap();
-    assert!(visible.iter().any(|(recipient, text)| *recipient
-        == BattleMessageTarget::Unit(observer)
-        && text.contains("ejects a mangled shell")));
+    assert!(visible.iter().any(
+        |(recipient, text)| *recipient == MessageTarget::Unit(observer)
+            && text.contains("ejects a mangled shell")
+    ));
     assert!(
         !hidden
             .iter()
-            .any(|(recipient, _)| *recipient == BattleMessageTarget::Unit(observer))
+            .any(|(recipient, _)| *recipient == MessageTarget::Unit(observer))
     );
 }

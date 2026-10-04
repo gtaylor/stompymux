@@ -275,7 +275,7 @@ async fn changing_wind_preserves_pending_deadlines_and_restart() {
             &mut world,
             map,
             coordinate,
-            Some(BattleDecoration::new(DecorationKind::Fire, 120, None)),
+            Some(Decoration::new(DecorationKind::Fire, 120, None)),
         )
         .unwrap();
         for _ in 0..10 {

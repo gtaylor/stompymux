@@ -1,15 +1,15 @@
 //! Explicit asset-class dispatch for administrative unit construction.
-use super::{BattleTemplate, BattleVehicleTemplate, document::ParsedTemplate};
+use super::{MechTemplate, VehicleTemplate, document::ParsedTemplate};
 use anyhow::{Result, bail};
 
 /// Supported construction asset classes retain their own anatomy and validation.
 #[derive(Debug, Clone, PartialEq)]
-pub enum BattleUnitTemplate {
-    Mech(BattleTemplate),
-    Vehicle(BattleVehicleTemplate),
+pub enum UnitTemplate {
+    Mech(MechTemplate),
+    Vehicle(VehicleTemplate),
 }
 
-impl BattleUnitTemplate {
+impl UnitTemplate {
     /// Decode a TOML document whose file stem is `reference`, selecting by its declared class.
     /// A malformed Mech never falls back to vehicle parsing.
     pub fn parse(reference: &str, source: &str) -> Result<Self> {
@@ -20,8 +20,8 @@ impl BattleUnitTemplate {
     pub fn from_parsed(parsed: ParsedTemplate) -> Result<Self> {
         let kind = parsed.required("type")?;
         match kind.to_ascii_lowercase().as_str() {
-            "mech" => Ok(Self::Mech(BattleTemplate::from_parsed(parsed)?)),
-            "vehicle" | "vtol" => Ok(Self::Vehicle(BattleVehicleTemplate::from_parsed(parsed)?)),
+            "mech" => Ok(Self::Mech(MechTemplate::from_parsed(parsed)?)),
+            "vehicle" | "vtol" => Ok(Self::Vehicle(VehicleTemplate::from_parsed(parsed)?)),
             _ => bail!("Unsupported unit template type {kind}"),
         }
     }

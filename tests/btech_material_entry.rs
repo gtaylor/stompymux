@@ -3,8 +3,8 @@ use crate::support;
 use stompymux_rs::*;
 
 /// A chosen location lets these scenarios isolate material dice from hit-table dice.
-fn hit(section: BattleSection) -> BattleHit {
-    BattleHit {
+fn hit(section: MechSection) -> Hit {
+    Hit {
         section,
         rear_armor: false,
         through_armor_critical: false,
@@ -22,23 +22,18 @@ async fn biped_and_quad_material_entries_consume_exact_dice_and_replay() {
         let (_dir, config, mut base) = support::isolated_world().await;
         let id = base.create(&config, "Material target".into(), Kind::Thing);
         base.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-        create_battle_unit(
-            &mut base,
-            id,
-            BattleTemplate::parse("test", source).unwrap(),
-        )
-        .unwrap();
+        create_battle_unit(&mut base, id, MechTemplate::parse("test", source).unwrap()).unwrap();
         support::seed_object_dice(&mut base, id, support::FIXTURE_DICE_SEED);
         for scenario in ["zero", "armor", "internal", "missing_sections", "overflow"] {
             let mut before = base.clone();
-            let section = BattleSection::LeftArm;
+            let section = MechSection::LeftArm;
             if matches!(scenario, "internal" | "overflow") {
                 apply_damage_phase(
                     &mut before,
                     id,
                     section,
                     u16::MAX,
-                    BattleDamagePhase::Armor { rear: false },
+                    DamagePhase::Armor { rear: false },
                 )
                 .unwrap();
             }
@@ -49,7 +44,7 @@ async fn biped_and_quad_material_entries_consume_exact_dice_and_replay() {
                     id,
                     section,
                     internal - 1,
-                    BattleDamagePhase::Internal,
+                    DamagePhase::Internal,
                 )
                 .unwrap();
             }
@@ -57,23 +52,23 @@ async fn biped_and_quad_material_entries_consume_exact_dice_and_replay() {
                 apply_damage_phase(
                     &mut before,
                     id,
-                    BattleSection::LeftTorso,
+                    MechSection::LeftTorso,
                     u16::MAX,
-                    BattleDamagePhase::Internal,
+                    DamagePhase::Internal,
                 )
                 .unwrap();
             }
             // A low internal roll isolates entry accounting from equipment critical dice.
             let seed = (0..=255)
                 .find(|value| {
-                    let mut dice = BattleDice::seeded([*value; 32]);
+                    let mut dice = Dice::seeded([*value; 32]);
                     dice.two_d6();
                     dice.two_d6() <= 7
                 })
                 .unwrap();
             before
                 .btech
-                .set_unit_dice(id, BattleDice::seeded([seed; 32]))
+                .set_unit_dice(id, Dice::seeded([seed; 32]))
                 .unwrap();
             before.validate(&config).unwrap();
             persistence::save(&config.database(), &before)
@@ -98,7 +93,7 @@ async fn biped_and_quad_material_entries_consume_exact_dice_and_replay() {
                 "internal" => 2,
                 _ => 1,
             };
-            let mut dice = BattleDice::seeded([seed; 32]);
+            let mut dice = Dice::seeded([seed; 32]);
             for _ in 0..entries {
                 dice.two_d6();
             }
@@ -109,8 +104,8 @@ async fn biped_and_quad_material_entries_consume_exact_dice_and_replay() {
             );
             let expected_sections: Vec<_> = match scenario {
                 "zero" => vec![],
-                "missing_sections" => vec![BattleSection::CenterTorso],
-                "overflow" => vec![section, section, BattleSection::LeftTorso],
+                "missing_sections" => vec![MechSection::CenterTorso],
+                "overflow" => vec![section, section, MechSection::LeftTorso],
                 "internal" => vec![section, section],
                 _ => vec![section],
             };

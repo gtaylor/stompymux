@@ -7,7 +7,7 @@ use std::{collections::BTreeMap, sync::Arc};
 
 /// A battlefield coordinate leading to the map that owns the building's integrity.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BattleBuildingEntrance {
+pub struct BuildingEntrance {
     pub coordinate: HexCoordinate,
     pub interior: ObjectId,
     /// Authored byte payload retained for map-object inspection.
@@ -20,12 +20,12 @@ pub struct BattleBuildingEntrance {
 
 impl StoredMap {
     /// Stable entrance order; duplicate coordinates retain first-entry selection semantics.
-    pub fn building_entrances(&self) -> &BTreeMap<u32, BattleBuildingEntrance> {
+    pub fn building_entrances(&self) -> &BTreeMap<u32, BuildingEntrance> {
         &self.building_entrances
     }
 
     /// Inspect the first entrance at a checked coordinate without selecting an occupant.
-    pub fn building_at(&self, coordinate: HexCoordinate) -> Result<Option<BattleBuildingEntrance>> {
+    pub fn building_at(&self, coordinate: HexCoordinate) -> Result<Option<BuildingEntrance>> {
         self.base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
         Ok(self
             .building_entrances
@@ -42,7 +42,7 @@ pub fn set_building_entrance(
     world: &mut World,
     map: ObjectId,
     ordinal: u32,
-    entrance: Option<BattleBuildingEntrance>,
+    entrance: Option<BuildingEntrance>,
 ) -> Result<()> {
     ensure!(
         world

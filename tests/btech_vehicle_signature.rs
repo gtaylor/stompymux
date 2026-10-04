@@ -14,13 +14,13 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
         MapAsset::from_cells(&format!("1 20\n{}", ".0\n".repeat(20))).unwrap(),
     )
     .unwrap();
-    set_battle_map_visibility(&mut world, map, BattleLight::Night, 30).unwrap();
+    set_battle_map_visibility(&mut world, map, Light::Night, 30).unwrap();
     let id = world.create(&config, "Vehicle".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse("test", template).unwrap(),
+        VehicleTemplate::parse("test", template).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -39,13 +39,7 @@ async fn vehicle_perception_captures_completion_and_replays_until_next_startup()
     let (_dir, config, mut world, id) =
         fixture(include_str!("../game/mechs/Demolisher.toml")).await;
     assert_eq!(world.btech.vehicles()[&id].scanner_perception(), 18);
-    stop_battle_unit(
-        &mut world,
-        id,
-        ObjectId(1),
-        BattleMovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut world, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
@@ -55,7 +49,7 @@ async fn vehicle_perception_captures_completion_and_replays_until_next_startup()
     set_battle_character(
         &mut world,
         ObjectId(1),
-        BattleCharacter {
+        Character {
             bruise: 0,
             lethal: 0,
             build: 5,
@@ -76,7 +70,7 @@ async fn vehicle_perception_captures_completion_and_replays_until_next_startup()
         &mut world,
         ObjectId(1),
         "Perception",
-        BattleCharacterValue {
+        CharacterValue {
             value: 2,
             ..Default::default()
         },
@@ -88,24 +82,12 @@ async fn vehicle_perception_captures_completion_and_replays_until_next_startup()
     persistence::save(&config.database(), &world).await.unwrap();
     let mut restored = persistence::load(&config.database()).await.unwrap();
     assert_eq!(world.btech, restored.btech);
-    stop_battle_unit(
-        &mut restored,
-        id,
-        ObjectId(1),
-        BattleMovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut restored, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
     assign_battle_pilot(&mut restored, id, ObjectId(1)).unwrap();
     support::seed_object_dice(&mut restored, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut restored, id, ObjectId(1), true).unwrap();
     advance_battle_units(&mut restored, 0);
-    stop_battle_unit(
-        &mut restored,
-        id,
-        ObjectId(1),
-        BattleMovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut restored, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
     assert_eq!(
         restored.btech.vehicles()[&id].scanner_perception(),
         expected
@@ -131,7 +113,7 @@ async fn vehicle_signature_drives_scenario_lighting_and_detached_lua_state() {
     create_battle_vehicle(
         &mut world,
         target,
-        BattleVehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+        VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
             .unwrap(),
     )
     .unwrap();
@@ -139,15 +121,15 @@ async fn vehicle_signature_drives_scenario_lighting_and_detached_lua_state() {
     place_battle_unit(&mut world, target, map, 0, 17).unwrap();
     assert_eq!(
         world.btech.vehicles()[&target].signature(),
-        BattleUnitSignature::default()
+        UnitSignature::default()
     );
     assert!(!battle_unit_illuminated(&world, target));
     let unlit = battle_perceive(&world, observer, target).unwrap().unwrap();
     assert_eq!(
         (unlit.channel, unlit.aim_modifier),
-        (BattleDetectionChannel::Sight, 1)
+        (DetectionChannel::Sight, 1)
     );
-    let signature = BattleUnitSignature {
+    let signature = UnitSignature {
         team: -17,
         hidden: true,
         illuminated: true,
@@ -157,7 +139,7 @@ async fn vehicle_signature_drives_scenario_lighting_and_detached_lua_state() {
     let lit = battle_perceive(&world, observer, target).unwrap().unwrap();
     assert_eq!(
         (lit.channel, lit.aim_modifier),
-        (BattleDetectionChannel::Sight, 0)
+        (DetectionChannel::Sight, 0)
     );
     persistence::save(&config.database(), &world).await.unwrap();
     let restored = persistence::load(&config.database()).await.unwrap();
@@ -184,7 +166,7 @@ async fn vehicle_signature_drives_scenario_lighting_and_detached_lua_state() {
         .unwrap()
         .flags
         .insert(Flag::Going);
-    assert!(set_battle_unit_signature(&mut world, target, BattleUnitSignature::default()).is_err());
+    assert!(set_battle_unit_signature(&mut world, target, UnitSignature::default()).is_err());
     assert_eq!(world.btech, before);
     assert!(!battle_unit_illuminated(&world, target));
 }

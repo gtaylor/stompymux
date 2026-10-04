@@ -6,9 +6,9 @@ use anyhow::Result;
 /// Result of encountering an incline or drop while moving backward.
 pub(super) struct ReverseSlopeCheck {
     pub success: bool,
-    pub pilot_notices: Vec<BattlePilotNotice>,
-    pub notices: Vec<BattleNotice>,
-    pub experience_messages: Vec<BattleChannelMessage>,
+    pub pilot_notices: Vec<PilotNotice>,
+    pub notices: Vec<Notice>,
+    pub experience_messages: Vec<DiagnosticMessage>,
 }
 
 /// Use the same height modifier, pilot exemption and XP rules across ground unit types.
@@ -21,7 +21,7 @@ pub(super) fn check(
 ) -> Result<ReverseSlopeCheck> {
     let control = super::terrain_control::check(world, id, change.abs() - 1, extended, character)?;
     let success = control.success;
-    let mut notices = vec![BattleNotice {
+    let mut notices = vec![Notice {
         unit: id,
         text: if change > 0 {
             "You notice a small incline behind you!"
@@ -32,7 +32,7 @@ pub(super) fn check(
     }];
     let mut pilot_notices = Vec::new();
     control.capture_feedback(id, &mut notices, &mut pilot_notices);
-    notices.push(BattleNotice {
+    notices.push(Notice {
         unit: id,
         text: if success {
             "You manage to overcome the obstacle."

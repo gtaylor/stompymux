@@ -7,8 +7,8 @@ use serde::Serialize;
 /// An internal explosion's ordered rolls, critical consequences and final protection change.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[must_use = "Publish damage notices and visibility-filtered broadcasts with the enclosing attack"]
-pub struct BattleVehicleInternalDamage {
-    pub section: BattleVehicleSection,
+pub struct VehicleInternalDamage {
+    pub section: VehicleSection,
     pub incoming: u32,
     pub structural_damage: u32,
     /// Internal critical roll, preceded by a damage-entry roll for standalone explosions.
@@ -16,14 +16,14 @@ pub struct BattleVehicleInternalDamage {
     pub absorbed: u16,
     /// Vehicle-local internal explosions do not transfer excess to another section.
     pub discarded: u32,
-    pub destroyed_sections: Vec<BattleVehicleSection>,
+    pub destroyed_sections: Vec<VehicleSection>,
     pub unit_destroyed: bool,
-    pub criticals: Vec<BattleVehicleCriticalResolution>,
+    pub criticals: Vec<VehicleCriticalResolution>,
     /// Includes nested critical notices in execution order.
-    pub notices: Vec<BattleNotice>,
+    pub notices: Vec<Notice>,
     /// Pilot-only control feedback indexed into the damage notice stream.
-    pub pilot_notices: Vec<BattlePilotNotice>,
-    pub broadcasts: Vec<BattleNotice>,
+    pub pilot_notices: Vec<PilotNotice>,
+    pub broadcasts: Vec<Notice>,
 }
 
 /// Resolve a vehicle-local internal explosion atomically, including nested critical effects.
@@ -31,10 +31,10 @@ pub struct BattleVehicleInternalDamage {
 pub fn resolve_vehicle_internal_damage(
     world: &mut World,
     id: ObjectId,
-    section: BattleVehicleSection,
+    section: VehicleSection,
     amount: u32,
-    rules: BattleVehicleCriticalRules,
-) -> Result<BattleVehicleInternalDamage> {
+    rules: VehicleCriticalRules,
+) -> Result<VehicleInternalDamage> {
     world.attempt(|world| {
         let result =
             resolve_in_candidate(world, id, section, amount, rules, DamageContext::default())?;
@@ -63,11 +63,11 @@ impl DamageContext {
 pub(super) fn resolve_in_candidate(
     world: &mut World,
     id: ObjectId,
-    section: BattleVehicleSection,
+    section: VehicleSection,
     amount: u32,
-    rules: BattleVehicleCriticalRules,
+    rules: VehicleCriticalRules,
     context: DamageContext,
-) -> Result<BattleVehicleInternalDamage> {
+) -> Result<VehicleInternalDamage> {
     let vehicle = world
         .btech
         .vehicles()
@@ -81,12 +81,12 @@ pub(super) fn resolve_in_candidate(
 pub(super) fn resolve_penetration(
     world: &mut World,
     id: ObjectId,
-    section: BattleVehicleSection,
+    section: VehicleSection,
     amount: u32,
-    rules: BattleVehicleCriticalRules,
+    rules: VehicleCriticalRules,
     armor_criticals: bool,
     context: DamageContext,
-) -> Result<BattleVehicleInternalDamage> {
+) -> Result<VehicleInternalDamage> {
     resolve_damage(
         world,
         id,
@@ -102,12 +102,12 @@ pub(super) fn resolve_penetration(
 fn resolve_damage(
     world: &mut World,
     id: ObjectId,
-    section: BattleVehicleSection,
+    section: VehicleSection,
     amount: u32,
-    rules: BattleVehicleCriticalRules,
+    rules: VehicleCriticalRules,
     context: DamageContext,
     armor_criticals: Option<bool>,
-) -> Result<BattleVehicleInternalDamage> {
+) -> Result<VehicleInternalDamage> {
     ensure!(
         context.depth < 64,
         "Vehicle critical cascade limit exceeded"
@@ -133,12 +133,12 @@ fn resolve_damage(
     );
     let structural_damage = if vehicle
         .definition()
-        .has_technology(super::BattleTechnology::ReinforcedStructure)
+        .has_technology(super::Technology::ReinforcedStructure)
     {
         amount.div_ceil(2)
     } else if vehicle
         .definition()
-        .has_technology(super::BattleTechnology::CompositeStructure)
+        .has_technology(super::Technology::CompositeStructure)
     {
         amount
             .checked_mul(2)
@@ -146,7 +146,7 @@ fn resolve_damage(
     } else {
         amount
     };
-    let mut result = BattleVehicleInternalDamage {
+    let mut result = VehicleInternalDamage {
         section,
         incoming: amount,
         structural_damage,
@@ -182,7 +182,7 @@ fn resolve_damage(
             return Ok(result);
         }
         super::damage_counters::record(world, id, context.attacker, amount)?;
-        result.notices.push(BattleNotice {
+        result.notices.push(Notice {
             unit: id,
             text: format!(
                 "[fg=yellow bold]You have been hit for {amount} points of damage in the {} [reset]",
@@ -197,9 +197,9 @@ fn resolve_damage(
     let penalty = if armor_criticals.is_some()
         && vehicle
             .definition()
-            .has_technology(super::BattleTechnology::HardenedArmor)
+            .has_technology(super::Technology::HardenedArmor)
     {
-        super::BattleTechnology::HARDENED_CRITICAL_PENALTY
+        super::Technology::HARDENED_CRITICAL_PENALTY
     } else {
         0
     };
@@ -236,7 +236,7 @@ fn resolve_damage(
     let damage = vehicle.damage_phase(
         section,
         structural_damage.min(u32::from(u16::MAX)) as u16,
-        BattleDamagePhase::Internal,
+        DamagePhase::Internal,
     )?;
     let destroyed = vehicle.is_destroyed();
     super::kill_counters::transition(world, id, context.attacker, was_destroyed, destroyed)?;
@@ -245,11 +245,11 @@ fn resolve_damage(
     result.discarded = structural_damage - u32::from(damage.absorbed);
     for lost in &damage.destroyed_sections {
         let name = lost.name().replace('_', " ");
-        result.notices.push(BattleNotice {
+        result.notices.push(Notice {
             unit: id,
             text: format!("Your {name} has been destroyed!"),
         });
-        result.broadcasts.push(BattleNotice {
+        result.broadcasts.push(Notice {
             unit: id,
             text: format!("'s {name} has been destroyed!"),
         });

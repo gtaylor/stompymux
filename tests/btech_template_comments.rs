@@ -38,32 +38,32 @@ fn comments_are_ignored_and_do_not_relax_unit_fields() {
         let duplicate = format!("name = \"duplicate\"\n{commented}");
         let unclosed = format!("unit_era = \"unclosed\n{commented}");
         if mech {
-            let expected = BattleTemplate::parse(reference, source).unwrap();
-            let actual = BattleTemplate::parse(reference, &commented).unwrap();
+            let expected = MechTemplate::parse(reference, source).unwrap();
+            let actual = MechTemplate::parse(reference, &commented).unwrap();
             assert_eq!(actual, expected);
             assert!(!actual.attributes.contains_key("comment"));
             assert_eq!(
-                BattleLoadout::resolve(&actual).unwrap(),
-                BattleLoadout::resolve(&expected).unwrap()
+                MechLoadout::resolve(&actual).unwrap(),
+                MechLoadout::resolve(&expected).unwrap()
             );
-            assert!(BattleTemplate::parse(reference, &duplicate).is_err());
-            assert!(BattleTemplate::parse(reference, &unclosed).is_err());
+            assert!(MechTemplate::parse(reference, &duplicate).is_err());
+            assert!(MechTemplate::parse(reference, &unclosed).is_err());
         } else {
-            let expected = BattleVehicleTemplate::parse(reference, source).unwrap();
-            let actual = BattleVehicleTemplate::parse(reference, &commented).unwrap();
+            let expected = VehicleTemplate::parse(reference, source).unwrap();
+            let actual = VehicleTemplate::parse(reference, &commented).unwrap();
             assert_eq!(actual, expected);
             assert!(!actual.attributes.contains_key("comment"));
             assert_eq!(
-                BattleVehicleLoadout::resolve(&actual).unwrap(),
-                BattleVehicleLoadout::resolve(&expected).unwrap()
+                VehicleLoadout::resolve(&actual).unwrap(),
+                VehicleLoadout::resolve(&expected).unwrap()
             );
-            assert!(BattleVehicleTemplate::parse(reference, &duplicate).is_err());
-            assert!(BattleVehicleTemplate::parse(reference, &unclosed).is_err());
+            assert!(VehicleTemplate::parse(reference, &duplicate).is_err());
+            assert!(VehicleTemplate::parse(reference, &unclosed).is_err());
         }
     }
     let oversized = format!("# {}", "x".repeat(1_048_576));
-    assert!(BattleTemplate::parse("oversized", &oversized).is_err());
-    assert!(BattleVehicleTemplate::parse("oversized", &oversized).is_err());
+    assert!(MechTemplate::parse("oversized", &oversized).is_err());
+    assert!(VehicleTemplate::parse("oversized", &oversized).is_err());
 }
 
 #[tokio::test]
@@ -75,11 +75,11 @@ async fn asset_comments_are_not_exposed_through_native_or_lua_inspection() {
         "left_torso",
     );
     std::fs::write(dir.path().join("mechs/Grendel-Prime.toml"), &source).unwrap();
-    let expected = BattleTemplate::parse("Grendel-Prime", &source).unwrap();
+    let expected = MechTemplate::parse("Grendel-Prime", &source).unwrap();
     assert!(!expected.attributes.contains_key("comment"));
     assert_eq!(
         expected,
-        BattleTemplate::parse(
+        MechTemplate::parse(
             "Grendel-Prime",
             include_str!("../game/mechs/Grendel-Prime.toml")
         )

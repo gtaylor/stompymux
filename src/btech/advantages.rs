@@ -1,12 +1,12 @@
 //! Typed character-advantage catalog and shared boolean interpretation for gameplay consumers.
-use super::BattleCharacterValue;
+use super::CharacterValue;
 use serde::Serialize;
 use std::collections::BTreeMap;
 
 /// Reference advantage values have three distinct interpretations, independent of skill XP.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleAdvantageKind {
+pub enum AdvantageKind {
     /// Exactly one enables the advantage; other stored values do not.
     Boolean,
     /// A numeric level, not a boolean switch.
@@ -17,19 +17,19 @@ pub enum BattleAdvantageKind {
 
 /// Canonical identity and interpretation; presence does not imply every associated action exists.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-pub struct BattleAdvantageDefinition {
+pub struct AdvantageDefinition {
     pub name: &'static str,
-    pub kind: BattleAdvantageKind,
+    pub kind: AdvantageKind,
 }
 
 /// Keep catalog entries declarative while preserving their reference order.
-const fn advantage(name: &'static str, kind: BattleAdvantageKind) -> BattleAdvantageDefinition {
-    BattleAdvantageDefinition { name, kind }
+const fn advantage(name: &'static str, kind: AdvantageKind) -> AdvantageDefinition {
+    AdvantageDefinition { name, kind }
 }
 
-use BattleAdvantageKind::{AttributeMask as A, Boolean as B, Ranked as R};
+use AdvantageKind::{AttributeMask as A, Boolean as B, Ranked as R};
 /// Supported character advantages; values remain in the ordinary character record.
-pub const BATTLE_ADVANTAGES: &[BattleAdvantageDefinition] = &[
+pub const BATTLE_ADVANTAGES: &[AdvantageDefinition] = &[
     advantage("Ambidextrous", B),
     advantage("Bloodname", B),
     advantage("Combat_Sense", B),
@@ -53,16 +53,16 @@ pub const BATTLE_ADVANTAGES: &[BattleAdvantageDefinition] = &[
 ];
 
 /// Resolve full names case-insensitively without accepting ambiguous abbreviations.
-pub fn advantage_definition(name: &str) -> Option<&'static BattleAdvantageDefinition> {
+pub fn advantage_definition(name: &str) -> Option<&'static AdvantageDefinition> {
     BATTLE_ADVANTAGES
         .iter()
         .find(|entry| entry.name.eq_ignore_ascii_case(name))
 }
 
 /// Apply the reference boolean rule to saved values without interpreting ranks or attribute bits as switches.
-pub(super) fn enabled(values: &BTreeMap<String, BattleCharacterValue>, name: &str) -> bool {
+pub(super) fn enabled(values: &BTreeMap<String, CharacterValue>, name: &str) -> bool {
     advantage_definition(name).is_some_and(|definition| {
-        definition.kind == BattleAdvantageKind::Boolean
+        definition.kind == AdvantageKind::Boolean
             && values
                 .iter()
                 .any(|(key, value)| key.eq_ignore_ascii_case(definition.name) && value.value == 1)

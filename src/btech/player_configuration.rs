@@ -5,29 +5,29 @@ use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BattlePersonalEquipment {
+pub struct PersonalEquipment {
     pub weapon: String,
     pub ammunition: Option<u8>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BattlePersonalLoadout {
+pub struct PersonalLoadout {
     pub armor_head: u8,
     pub armor_torso: u8,
     pub armor_hands: u8,
     pub armor_feet: u8,
-    pub right: Option<BattlePersonalEquipment>,
-    pub left: Option<BattlePersonalEquipment>,
+    pub right: Option<PersonalEquipment>,
+    pub left: Option<PersonalEquipment>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BattlePlayerConfiguration {
+pub struct PlayerConfiguration {
     pub mechwarrior_template: Option<String>,
-    pub loadout: Option<BattlePersonalLoadout>,
+    pub loadout: Option<PersonalLoadout>,
     pub technician_available_at: i64,
 }
 
-impl BattlePlayerConfiguration {
+impl PlayerConfiguration {
     pub(crate) fn validate(&self) -> Result<()> {
         if let Some(reference) = &self.mechwarrior_template {
             ensure!(
@@ -45,7 +45,7 @@ impl BattlePlayerConfiguration {
             ensure!(loadout.armor_hands <= 2, "Invalid personal hand armor");
             ensure!(loadout.armor_feet <= 2, "Invalid personal foot armor");
             for equipment in [&loadout.right, &loadout.left].into_iter().flatten() {
-                let part = super::BattlePart::parse(&equipment.weapon)?;
+                let part = super::Part::parse(&equipment.weapon)?;
                 ensure!(
                     matches!(part.part_id, 6..=20 | 153 | 154),
                     "Invalid personal weapon"
@@ -70,7 +70,7 @@ fn require_player(world: &World, player: ObjectId) -> Result<()> {
     Ok(())
 }
 
-pub fn player_configuration(world: &World, player: ObjectId) -> Result<BattlePlayerConfiguration> {
+pub fn player_configuration(world: &World, player: ObjectId) -> Result<PlayerConfiguration> {
     require_player(world, player)?;
     Ok(world
         .btech
@@ -83,12 +83,12 @@ pub fn player_configuration(world: &World, player: ObjectId) -> Result<BattlePla
 pub fn set_player_configuration(
     world: &mut World,
     player: ObjectId,
-    configuration: BattlePlayerConfiguration,
+    configuration: PlayerConfiguration,
 ) -> Result<()> {
     require_player(world, player)?;
     configuration.validate()?;
     let values = &mut world.btech.player_configuration;
-    if configuration == BattlePlayerConfiguration::default() {
+    if configuration == PlayerConfiguration::default() {
         values.remove(&player);
     } else {
         values.insert(player, configuration);

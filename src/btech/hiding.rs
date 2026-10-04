@@ -1,16 +1,16 @@
 //! Shared camouflage preparation, cached observer checks and cover loss for supported units.
-use super::{BattleNotice, BattlePower, Ground};
+use super::{Ground, Notice, Power};
 use crate::{CommandAction, CommandContext, CommandInput, CommandReport, Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 
-impl super::BattleUnit {
+impl super::Mech {
     /// Elapsed committed hide checks; zero is the initial scheduled event.
     pub fn hide_elapsed(&self) -> Option<u16> {
         self.hide_elapsed
     }
 }
 
-impl super::BattleVehicle {
+impl super::Vehicle {
     /// Elapsed committed hide checks, shared by ground vehicles and rotorcraft.
     pub fn hide_elapsed(&self) -> Option<u16> {
         self.hide_elapsed
@@ -43,11 +43,7 @@ fn state_mut(world: &mut World, id: ObjectId) -> (&mut Option<u16>, &mut bool) {
 }
 
 /// Begin hiding with wizard authority or installed camouflage, without acquiring any contacts.
-pub fn begin_battle_hiding(
-    world: &mut World,
-    id: ObjectId,
-    pilot: ObjectId,
-) -> Result<BattleNotice> {
+pub fn begin_battle_hiding(world: &mut World, id: ObjectId, pilot: ObjectId) -> Result<Notice> {
     super::power::controlled_running_unit(world, id, pilot)?;
     let (elapsed, camouflage, vtol) = facts(world, id).context("Unit is unavailable")?;
     ensure!(
@@ -74,7 +70,7 @@ pub fn begin_battle_hiding(
         ensure!(
             world.btech.vehicles()[&id]
                 .vtol_flight()
-                .is_none_or(|flight| flight.phase == super::BattleVtolFlightPhase::Landed),
+                .is_none_or(|flight| flight.phase == super::VtolFlightPhase::Landed),
             "You must be landed!"
         );
     }
@@ -89,14 +85,14 @@ pub fn begin_battle_hiding(
         ),
     };
     *state_mut(world, id).0 = Some(0);
-    Ok(BattleNotice {
+    Ok(Notice {
         unit: id,
         text: text.into(),
     })
 }
 
 /// A pending hide wakes otherwise idle unit processing and survives restart.
-pub fn battle_hiding_pending(world: &World) -> bool {
+pub fn hiding_pending(world: &World) -> bool {
     world
         .btech
         .constructed_units()
@@ -129,7 +125,7 @@ fn exposed(world: &World, id: ObjectId) -> Result<bool> {
             || other.visibility.clairvoyant
             || other.visibility.invisible
             || other.destroyed
-            || other.power != BattlePower::Running
+            || other.power != Power::Running
             || other.signature.team == unit.signature.team
             || world
                 .objects
@@ -146,7 +142,7 @@ fn exposed(world: &World, id: ObjectId) -> Result<bool> {
 }
 
 /// Advance one event per unit in stable order, committing all timers and notices atomically.
-pub fn advance_battle_hiding(world: &mut World) -> Result<Vec<BattleNotice>> {
+pub fn advance_battle_hiding(world: &mut World) -> Result<Vec<Notice>> {
     let mut candidate = world.clone();
     let ids: Vec<_> = super::scanner::scanner_ids(world)
         .into_iter()
@@ -168,7 +164,7 @@ pub fn advance_battle_hiding(world: &mut World) -> Result<Vec<BattleNotice>> {
         }
         if exposed(&candidate, id)? {
             *state_mut(&mut candidate, id).0 = None;
-            notices.push(BattleNotice {
+            notices.push(Notice {
                 unit: id,
                 text: "Your spidey sense tingles, telling you this isn't going to work......"
                     .into(),
@@ -183,7 +179,7 @@ pub fn advance_battle_hiding(world: &mut World) -> Result<Vec<BattleNotice>> {
         }
         *timer = None;
         *hidden = true;
-        notices.push(BattleNotice {
+        notices.push(Notice {
             unit: id,
             text: "You are now hidden!".into(),
         });
@@ -200,13 +196,13 @@ fn reveal(
     cancel: bool,
     text: &str,
     broadcast: &str,
-) -> Vec<BattleNotice> {
+) -> Vec<Notice> {
     let Some(unit) = super::scanner::scanner_unit(world, id) else {
         return Vec::new();
     };
     let mut notices = Vec::new();
     if unit.signature.hidden {
-        notices.push(BattleNotice {
+        notices.push(Notice {
             unit: id,
             text: text.into(),
         });
@@ -221,7 +217,7 @@ fn reveal(
 }
 
 /// Attempted firing reveals cover and cancels preparation before mechanical or target rejection.
-pub(super) fn firing(world: &mut World, id: ObjectId) -> Vec<BattleNotice> {
+pub(super) fn firing(world: &mut World, id: ObjectId) -> Vec<Notice> {
     reveal(
         world,
         id,
@@ -232,7 +228,7 @@ pub(super) fn firing(world: &mut World, id: ObjectId) -> Vec<BattleNotice> {
 }
 
 /// Armor-directed damage ruins current cover; it does not cancel a pending hide event.
-pub(super) fn damage(world: &mut World, id: ObjectId) -> Vec<BattleNotice> {
+pub(super) fn damage(world: &mut World, id: ObjectId) -> Vec<Notice> {
     reveal(
         world,
         id,
@@ -243,7 +239,7 @@ pub(super) fn damage(world: &mut World, id: ObjectId) -> Vec<BattleNotice> {
 }
 
 /// A committed map/hex crossing cancels hiding; motion within the same hex does not.
-pub(super) fn movement(world: &mut World, id: ObjectId) -> Vec<BattleNotice> {
+pub(super) fn movement(world: &mut World, id: ObjectId) -> Vec<Notice> {
     reveal(
         world,
         id,
@@ -254,7 +250,7 @@ pub(super) fn movement(world: &mut World, id: ObjectId) -> Vec<BattleNotice> {
 }
 
 /// Cover changes across movement adapters that relocate units after their local terrain step.
-pub(super) fn movement_changes(world: &mut World, before: &World) -> Vec<BattleNotice> {
+pub(super) fn movement_changes(world: &mut World, before: &World) -> Vec<Notice> {
     let ids: Vec<_> = super::scanner::scanner_ids(before)
         .into_iter()
         .filter(|&id| {

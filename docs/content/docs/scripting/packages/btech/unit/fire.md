@@ -32,4 +32,4 @@ btech.unit.fire(dbref, pilot, weapon, target)
 
 ## Returns
 
-- `BattleShotReport|BattleVehicleShotReport|BattleHexShotReport|BattleArtilleryLaunchReport`
+- `MechShotReport|VehicleShotReport|HexShotReport|ArtilleryLaunchReport`

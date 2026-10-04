@@ -4,7 +4,7 @@
 //! stream drawn from OS entropy, so a scenario that builds them and then rolls would differ
 //! from one test process to the next. [`seed_world_dice`] replaces every stream in a world
 //! with one derived from a base seed and the holder's identity.
-use stompymux_rs::{BattleDice, ObjectId, World};
+use stompymux_rs::{Dice, ObjectId, World};
 
 /// Base seed shared fixture builders pass to [`seed_world_dice`].
 pub const FIXTURE_DICE_SEED: u64 = 0x5eed_d1ce;
@@ -59,8 +59,8 @@ fn seed_holders(world: &mut World, seed: u64, select: impl Fn(ObjectId) -> bool)
         .filter(|id| select(*id))
         .collect();
     for id in units {
-        let unit = BattleDice::seeded(stream_seed(seed, Holder::Unit, id));
-        let crew = BattleDice::seeded(stream_seed(seed, Holder::CrewRecovery, id));
+        let unit = Dice::seeded(stream_seed(seed, Holder::Unit, id));
+        let crew = Dice::seeded(stream_seed(seed, Holder::CrewRecovery, id));
         if world.btech.vehicles().contains_key(&id) {
             // A vehicle edit re-decodes and validates its whole record, so set both
             // streams in one pass.
@@ -84,7 +84,7 @@ fn seed_holders(world: &mut World, seed: u64, select: impl Fn(ObjectId) -> bool)
         .filter(|id| select(*id))
         .collect();
     for player in players {
-        let dice = BattleDice::seeded(stream_seed(seed, Holder::PlayerRecovery, player));
+        let dice = Dice::seeded(stream_seed(seed, Holder::PlayerRecovery, player));
         world.btech.set_recovery_dice(player, dice).unwrap();
     }
     let maps: Vec<ObjectId> = world
@@ -95,7 +95,7 @@ fn seed_holders(world: &mut World, seed: u64, select: impl Fn(ObjectId) -> bool)
         .filter(|id| select(*id))
         .collect();
     for map in maps {
-        let dice = BattleDice::seeded(stream_seed(seed, Holder::MapFire, map));
+        let dice = Dice::seeded(stream_seed(seed, Holder::MapFire, map));
         world.btech.replace_map_fire_dice(map, dice).unwrap();
     }
 }

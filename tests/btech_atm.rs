@@ -10,7 +10,7 @@ use stompymux_rs::*;
 fn atm_profiles_tables_and_ammunition_markers() {
     for (weapon, id, size, slots, capacity, mass, heat, recycle, hits) in [
         (
-            BattleWeapon::ClanAtm3,
+            Weapon::ClanAtm3,
             65,
             3,
             2,
@@ -21,7 +21,7 @@ fn atm_profiles_tables_and_ammunition_markers() {
             [1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3],
         ),
         (
-            BattleWeapon::ClanAtm6,
+            Weapon::ClanAtm6,
             66,
             6,
             3,
@@ -32,7 +32,7 @@ fn atm_profiles_tables_and_ammunition_markers() {
             [2, 2, 3, 3, 4, 4, 4, 5, 5, 6, 6],
         ),
         (
-            BattleWeapon::ClanAtm9,
+            Weapon::ClanAtm9,
             67,
             9,
             4,
@@ -43,7 +43,7 @@ fn atm_profiles_tables_and_ammunition_markers() {
             [3, 3, 4, 5, 5, 5, 5, 7, 7, 9, 9],
         ),
         (
-            BattleWeapon::ClanAtm12,
+            Weapon::ClanAtm12,
             68,
             12,
             5,
@@ -76,11 +76,9 @@ fn atm_profiles_tables_and_ammunition_markers() {
             ),
             (2, 4, 5, 10, 15)
         );
-        assert_eq!(BattlePart::from_id(id).unwrap().name, weapon.name());
+        assert_eq!(Part::from_id(id).unwrap().name, weapon.name());
         assert_eq!(
-            BattlePart::from_id(id + AMMUNITION_PART_OFFSET)
-                .unwrap()
-                .name,
+            Part::from_id(id + AMMUNITION_PART_OFFSET).unwrap().name,
             format!("Ammo_{}", weapon.name())
         );
         assert!(weapon.supports_hotload());
@@ -92,9 +90,9 @@ fn atm_profiles_tables_and_ammunition_markers() {
             // The ATM's guidance adds two to the cluster roll.
             let landed = weapon.missile_hits((roll + 2).min(12)).unwrap();
             for (mode, damage, ranges) in [
-                (BattleAmmunitionMode::Normal, 2, (4, 5, 10, 15)),
-                (BattleAmmunitionMode::ExtendedRange, 1, (4, 9, 18, 27)),
-                (BattleAmmunitionMode::HighExplosive, 3, (0, 3, 6, 9)),
+                (AmmunitionMode::Normal, 2, (4, 5, 10, 15)),
+                (AmmunitionMode::ExtendedRange, 1, (4, 9, 18, 27)),
+                (AmmunitionMode::HighExplosive, 3, (0, 3, 6, 9)),
             ] {
                 let profile = weapon.profile_for_ammunition(mode);
                 assert_eq!(
@@ -128,7 +126,7 @@ fn atm_profiles_tables_and_ammunition_markers() {
                             .range_modifier_for_ammunition(
                                 distance,
                                 extended,
-                                BattleFireMode::Normal,
+                                FireMode::Normal,
                                 false,
                                 mode
                             )
@@ -144,9 +142,9 @@ fn atm_profiles_tables_and_ammunition_markers() {
 }
 
 /// Both native selectors and Lua calls use the same saved ammo mode and match the same supplied bin.
-async fn atm_modes_matrix(weapon: BattleWeapon) {
+async fn atm_modes_matrix(weapon: Weapon) {
     let seed = (0..=255)
-        .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 12)
+        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
         .unwrap();
     let (_dir, config, base) = support::isolated_world().await;
     let native = Scripts::new(&config, Rc::new(RefCell::new(base.clone()))).unwrap();
@@ -155,15 +153,11 @@ async fn atm_modes_matrix(weapon: BattleWeapon) {
     let mut probed_fidelity = [false; 2];
     for source in firing::templates() {
         for (shape, (command, flag, mode)) in [
-            (
-                "atmrange",
-                "ExtendedRange",
-                BattleAmmunitionMode::ExtendedRange,
-            ),
+            ("atmrange", "ExtendedRange", AmmunitionMode::ExtendedRange),
             (
                 "atmexplosive",
                 "HighExplosive",
-                BattleAmmunitionMode::HighExplosive,
+                AmmunitionMode::HighExplosive,
             ),
         ]
         .into_iter()
@@ -180,7 +174,7 @@ async fn atm_modes_matrix(weapon: BattleWeapon) {
                 Some(flag),
             );
             firing::edit(&mut world, shooter, |state| {
-                state["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
+                state["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap()
             });
             support::install(&native, world.clone());
             support::install(&lua, world);
@@ -254,22 +248,22 @@ async fn atm_modes_matrix(weapon: BattleWeapon) {
 
 #[tokio::test]
 async fn atm_modes_firing_and_restart_across_chassis_atm3() {
-    atm_modes_matrix(BattleWeapon::ClanAtm3).await;
+    atm_modes_matrix(Weapon::ClanAtm3).await;
 }
 
 #[tokio::test]
 async fn atm_modes_firing_and_restart_across_chassis_atm6() {
-    atm_modes_matrix(BattleWeapon::ClanAtm6).await;
+    atm_modes_matrix(Weapon::ClanAtm6).await;
 }
 
 #[tokio::test]
 async fn atm_modes_firing_and_restart_across_chassis_atm9() {
-    atm_modes_matrix(BattleWeapon::ClanAtm9).await;
+    atm_modes_matrix(Weapon::ClanAtm9).await;
 }
 
 #[tokio::test]
 async fn atm_modes_firing_and_restart_across_chassis_atm12() {
-    atm_modes_matrix(BattleWeapon::ClanAtm12).await;
+    atm_modes_matrix(Weapon::ClanAtm12).await;
 }
 
 /// A failed or feed-jammed AMS mount defends nothing, on a Mech as on a vehicle.
@@ -280,7 +274,7 @@ async fn failed_or_jammed_ams_does_not_intercept() {
         for field in ["weapon_failures", "jammed_weapons"] {
             let (_dir, config, mut world, shooter, target, index) = firing::fixture_with_supply(
                 source,
-                Some(BattleWeapon::ClanAtm12),
+                Some(Weapon::ClanAtm12),
                 &target_source,
                 false,
                 Some(""),
@@ -303,11 +297,11 @@ async fn failed_or_jammed_ams_does_not_intercept() {
                 })
                 .unwrap();
             let seed = (0..=255)
-                .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 12)
+                .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
                 .unwrap();
             world
                 .btech
-                .set_unit_dice(shooter, BattleDice::seeded([seed; 32]))
+                .set_unit_dice(shooter, Dice::seeded([seed; 32]))
                 .unwrap();
             let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
             let report: mlua::Table = scripts
@@ -340,7 +334,7 @@ async fn atm_ams_and_missing_supply() {
         for target_source in defense::templates() {
             let (_dir, config, mut world, shooter, target, index) = firing::fixture_with_supply(
                 &source,
-                Some(BattleWeapon::ClanAtm12),
+                Some(Weapon::ClanAtm12),
                 &target_source,
                 false,
                 Some(""),
@@ -350,10 +344,10 @@ async fn atm_ams_and_missing_supply() {
                 state["ams_enabled"] = true.into()
             });
             let seed = (0..=255)
-                .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 12)
+                .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
                 .unwrap();
             firing::edit(&mut world, shooter, |state| {
-                state["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
+                state["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap()
             });
             let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
             let report: mlua::Table = scripts
@@ -367,7 +361,7 @@ async fn atm_ams_and_missing_supply() {
         }
         let (_dir, config, world, shooter, target, index) = firing::fixture_with_target(
             &source,
-            Some(BattleWeapon::ClanAtm3),
+            Some(Weapon::ClanAtm3),
             include_str!("../game/mechs/AS7-D.toml"),
         )
         .await;
@@ -390,10 +384,10 @@ async fn atm_ams_and_missing_supply() {
 async fn atm_mode_controls_share_eligibility_and_exclusivity() {
     for source in firing::templates() {
         for (weapon, eligible) in [
-            (BattleWeapon::ClanAtm3, true),
-            (BattleWeapon::Lrm5, false),
-            (BattleWeapon::ClanStreakLrm5, false),
-            (BattleWeapon::MediumLaser, false),
+            (Weapon::ClanAtm3, true),
+            (Weapon::Lrm5, false),
+            (Weapon::ClanStreakLrm5, false),
+            (Weapon::MediumLaser, false),
         ] {
             let (_dir, config, mut world, id, _, index) = firing::fixture_with_target(
                 &source,
@@ -402,8 +396,8 @@ async fn atm_mode_controls_share_eligibility_and_exclusivity() {
             )
             .await;
             let before = world.btech.clone();
-            let er = BattleAmmunitionMode::ExtendedRange;
-            let he = BattleAmmunitionMode::HighExplosive;
+            let er = AmmunitionMode::ExtendedRange;
+            let he = AmmunitionMode::HighExplosive;
             assert!(toggle_atm_ammunition(&mut world, id, ObjectId(2), index, er).is_err());
             assert_eq!(world.btech, before);
             if !eligible {
@@ -421,7 +415,7 @@ async fn atm_mode_controls_share_eligibility_and_exclusivity() {
             );
             assert_eq!(
                 toggle_atm_ammunition(&mut world, id, ObjectId(1), index, he).unwrap(),
-                BattleAmmunitionMode::Normal
+                AmmunitionMode::Normal
             );
             assert_eq!(world.btech, before);
             let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();

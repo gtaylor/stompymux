@@ -1,6 +1,6 @@
 //! Bounded motion estimates from visible hex-center samples only; no world or dice access.
 use super::navigation::GridHex;
-use crate::{BattlePosition, HexCoordinate, ObjectId, Point};
+use crate::{HexCoordinate, ObjectId, Point, Position};
 
 /// Fixed, bounded policies for isolated pursuit comparisons; not a game setting.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, serde::Serialize)]
@@ -41,16 +41,16 @@ pub struct PursuitEvidence {
     pub model_error: f64,
     pub candidates: usize,
     pub estimated_seconds: f64,
-    pub scores: Vec<(BattlePosition, f64)>,
+    pub scores: Vec<(Position, f64)>,
     /// Moving-target and stopped-target estimates for each candidate, in seconds.
-    pub scenario_scores: Vec<(BattlePosition, f64, f64)>,
+    pub scenario_scores: Vec<(Position, f64, f64)>,
     pub samples: usize,
     pub span: i64,
     pub velocity: (f64, f64),
     pub horizon: i64,
     pub reason: &'static str,
-    pub observed: Option<BattlePosition>,
-    pub aim: Option<BattlePosition>,
+    pub observed: Option<Position>,
+    pub aim: Option<Position>,
 }
 
 /// One synchronous controller's observation history, excluded from persistence.
@@ -60,17 +60,17 @@ pub(crate) struct Pursuit {
     policy: PursuitPolicy,
     evidence: PursuitEvidence,
     key: Option<(u64, ObjectId, ObjectId)>,
-    samples: Vec<(i64, BattlePosition)>,
+    samples: Vec<(i64, Position)>,
     vector: Option<(f64, f64)>,
-    aim: Option<BattlePosition>,
+    aim: Option<Position>,
     reconsider_at: i64,
     /// A failed predicted search falls back until the next observed target hex.
-    rejected_at: Option<BattlePosition>,
+    rejected_at: Option<Position>,
     /// Once in firing range, direct pursuit owns this uninterrupted contact episode.
     engaged: bool,
 }
 
-fn center(p: BattlePosition) -> Point {
+fn center(p: Position) -> Point {
     HexCoordinate {
         x: i32::from(p.x),
         y: i32::from(p.y),
@@ -89,7 +89,7 @@ impl Pursuit {
     pub fn geometry(
         &mut self,
         now: i64,
-        own: BattlePosition,
+        own: Position,
         band: super::AutopilotRangeBand,
         positional: bool,
         actual: bool,
@@ -102,7 +102,7 @@ impl Pursuit {
 
     /// Add at most one sample per simulation second. Reversals immediately drop confidence.
     #[cfg(test)]
-    pub fn sample(&mut self, order: u64, target: ObjectId, position: BattlePosition, now: i64) {
+    pub fn sample(&mut self, order: u64, target: ObjectId, position: Position, now: i64) {
         self.sample_policy(order, target, position, now, PursuitPolicy::Control);
     }
 
@@ -110,7 +110,7 @@ impl Pursuit {
         &mut self,
         order: u64,
         target: ObjectId,
-        position: BattlePosition,
+        position: Position,
         now: i64,
         policy: PursuitPolicy,
     ) {
@@ -161,7 +161,7 @@ impl Pursuit {
     }
 
     /// Reject one predicted region, allowing direct pursuit through the normal scheduler.
-    pub fn reject(&mut self, observed: BattlePosition) {
+    pub fn reject(&mut self, observed: Position) {
         self.adaptive.reject(observed);
         self.rejected_at = Some(observed);
         self.aim = None;
@@ -172,14 +172,14 @@ impl Pursuit {
     pub fn choose(
         &mut self,
         now: i64,
-        own: BattlePosition,
+        own: Position,
         speed: f64,
         radius: u16,
         width: i64,
         height: i64,
-        leash: Option<BattlePosition>,
-        score: impl FnMut(BattlePosition, (f64, f64), f64) -> Option<(f64, f64)>,
-    ) -> Option<BattlePosition> {
+        leash: Option<Position>,
+        score: impl FnMut(Position, (f64, f64), f64) -> Option<(f64, f64)>,
+    ) -> Option<Position> {
         if self.policy == PursuitPolicy::Adaptive {
             return self
                 .adaptive
@@ -193,13 +193,13 @@ impl Pursuit {
     pub fn predict(
         &mut self,
         now: i64,
-        own: BattlePosition,
+        own: Position,
         speed: f64,
         radius: u16,
         width: i64,
         height: i64,
-        leash: Option<BattlePosition>,
-    ) -> Option<BattlePosition> {
+        leash: Option<Position>,
+    ) -> Option<Position> {
         let (_, _, horizon_limit, lead_limit) = self.policy.limits();
         let &(last_time, last) = self.samples.last()?;
         if last_time != now || self.rejected_at == Some(last) {
@@ -211,7 +211,7 @@ impl Pursuit {
             self.evidence.reason = "engaged";
             return None;
         }
-        let legal = |p: BattlePosition| {
+        let legal = |p: Position| {
             p.map == own.map
                 && i64::from(p.x) < width
                 && i64::from(p.y) < height
@@ -284,7 +284,7 @@ impl Pursuit {
             let (Ok(x), Ok(y)) = (u16::try_from(hex.x), u16::try_from(hex.y)) else {
                 return None;
             };
-            let aim = BattlePosition {
+            let aim = Position {
                 map: last.map,
                 x,
                 y,
@@ -338,14 +338,14 @@ impl Pursuit {
 #[cfg(test)]
 mod tests {
     use super::*;
-    fn pos(x: u16, y: u16) -> BattlePosition {
-        BattlePosition {
+    fn pos(x: u16, y: u16) -> Position {
+        Position {
             map: ObjectId(1),
             x,
             y,
         }
     }
-    fn prediction(p: &mut Pursuit, t: i64) -> Option<BattlePosition> {
+    fn prediction(p: &mut Pursuit, t: i64) -> Option<Position> {
         p.predict(t, pos(2, 20), 0.2, 3, 48, 48, None)
     }
     #[test]
@@ -476,8 +476,7 @@ mod integration_tests {
         runtime::advance(&mut world, &config, 1).unwrap();
         let p = world.btech.autopilot_plans.get_mut(&id).unwrap();
         let before = p.clone();
-        p.pursuit
-            .sample(1, target, BattlePosition { map, x: 6, y: 1 }, 2);
+        p.pursuit.sample(1, target, Position { map, x: 6, y: 1 }, 2);
         assert_ne!(*p, before);
         let tracked = world.clone();
         assert_eq!(world.btech.autopilot_plans, tracked.btech.autopilot_plans);

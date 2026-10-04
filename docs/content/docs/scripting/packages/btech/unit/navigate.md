@@ -23,4 +23,4 @@ btech.unit.navigate(dbref, pilot, arguments)
 
 ## Returns
 
-- `BattleNavigationReport`
+- `NavigationReport`

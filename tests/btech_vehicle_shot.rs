@@ -22,7 +22,7 @@ async fn fixture(
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         if index < 2 {
             let mut definition =
-                BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
                     .unwrap();
             definition
                 .attributes
@@ -32,7 +32,7 @@ async fn fixture(
             create_battle_vehicle(
                 &mut world,
                 id,
-                BattleVehicleTemplate::parse("test", vehicle).unwrap(),
+                VehicleTemplate::parse("test", vehicle).unwrap(),
             )
             .unwrap();
         }
@@ -44,15 +44,15 @@ async fn fixture(
 }
 
 /// Assign scenario power without introducing crew actions into sensor tests.
-fn power(world: &mut World, ids: &[ObjectId], value: BattlePower) {
+fn power(world: &mut World, ids: &[ObjectId], value: Power) {
     for id in ids {
         world.btech.set_unit_power(*id, value).unwrap();
     }
 }
 
 /// Ordinary conventional aim without range extensions or arc overrides.
-fn rules() -> BattleAimRules {
-    BattleAimRules {
+fn rules() -> AimRules {
+    AimRules {
         woods_damage: false,
         dig_bonus: 3,
         dig_only_front: false,
@@ -66,16 +66,16 @@ fn rules() -> BattleAimRules {
 }
 
 /// Tactical conventional shot configuration shared by admission cases.
-fn shot_rules() -> BattleShotRules {
-    BattleShotRules {
+fn shot_rules() -> ShotRules {
+    ShotRules {
         range_damage: false,
         tsm_tow_bonus: true,
-        vehicle_impact: stompymux_rs::BattleVehicleImpactRules::STANDARD,
-        stacking: BattleStackingRules::STANDARD,
-        stagger: BattleStaggerMode::Retain,
-        glancing: BattleGlancingMode::Disabled,
+        vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
+        stacking: StackingRules::STANDARD,
+        stagger: StaggerMode::Retain,
+        glancing: GlancingMode::Disabled,
         aim: rules(),
-        hit: BattleHitRules {
+        hit: HitRules {
             inferno_penalty: false,
             exile_stun_mode: 0,
         },
@@ -97,7 +97,7 @@ async fn engagement() -> (tempfile::TempDir, Config, World, ObjectId, [ObjectId;
         place_battle_unit(&mut world, id, map, 0, 0).unwrap();
     }
     place_battle_unit(&mut world, ids[2], map, 0, 1).unwrap();
-    power(&mut world, &ids, BattlePower::Running);
+    power(&mut world, &ids, Power::Running);
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(ids[2]);
     assign_battle_pilot(&mut world, ids[2], ObjectId(1)).unwrap();
     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
@@ -141,12 +141,8 @@ async fn vehicle_firing_checks_readiness_arcs_visibility_and_preserves_all_state
         ] {
             let mut world = initial.clone();
             if condition == "crew" {
-                damage_battle_vehicle_controls(
-                    &mut world,
-                    shooter,
-                    BattleVehicleControlHit::CrewStun,
-                )
-                .unwrap();
+                damage_battle_vehicle_controls(&mut world, shooter, VehicleControlHit::CrewStun)
+                    .unwrap();
             } else if condition == "character" {
                 world
                     .objects
@@ -174,7 +170,7 @@ async fn vehicle_firing_checks_readiness_arcs_visibility_and_preserves_all_state
                     }
                     "destroyed" => {
                         saved["vehicles"][shooter.0.to_string()]["weapon_failures"]["0"] =
-                            serde_json::to_value(BattleEquipmentFailure::Disabled).unwrap();
+                            serde_json::to_value(EquipmentFailure::Disabled).unwrap();
                     }
                     _ => unreachable!(),
                 }
@@ -218,7 +214,7 @@ async fn vehicle_friendly_fire_preferences_native_lua_and_map_policy_survive_res
                 set_battle_unit_signature(
                     &mut world,
                     target,
-                    BattleUnitSignature {
+                    UnitSignature {
                         team: i32::from(hostile),
                         ..Default::default()
                     },
@@ -320,7 +316,7 @@ async fn vehicle_shot_checks_reject_submerged_weapons_and_depleted_ammunition() 
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(shooter);
     assign_battle_pilot(&mut world, shooter, ObjectId(1)).unwrap();
     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
-    power(&mut world, &[shooter, target], BattlePower::Running);
+    power(&mut world, &[shooter, target], Power::Running);
     let before = world.btech.clone();
     assert!(
         check_battle_vehicle_shot(&world, shooter, ObjectId(1), target, 0, shot_rules())

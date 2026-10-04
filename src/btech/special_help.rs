@@ -1,11 +1,11 @@
 //! Read-only special-object help derived from the same catalogue as command admission.
-use super::{BattleCommandClass, BattleSpecialCommand, BattleSpecialType, menu};
+use super::{CommandClass, SpecialCommand, SpecialType, menu};
 use crate::text;
 
-impl BattleSpecialType {
+impl SpecialType {
     /// Render the selected object's visible command menu or exact named help category.
     /// Authority and object selection belong to the caller; this never changes game state.
-    pub fn help(self, class: Option<BattleCommandClass>, privileged: bool, topic: &str) -> String {
+    pub fn help(self, class: Option<CommandClass>, privileged: bool, topic: &str) -> String {
         let entries: Vec<_> = self.visible_commands(class, privileged).collect();
         let mut starts: Vec<_> = entries
             .iter()
@@ -133,7 +133,7 @@ fn split_line(value: &str, width: usize) -> (&str, &str) {
 }
 
 /// Syntax starts with the reference colored command word; descriptions are indented three spaces.
-fn detail(lines: &mut Vec<String>, entry: &BattleSpecialCommand) {
+fn detail(lines: &mut Vec<String>, entry: &SpecialCommand) {
     let mut remaining = entry.syntax.as_str();
     let mut first = true;
     while !remaining.is_empty() {
@@ -170,7 +170,7 @@ mod tests {
     /// Public maps expose only STORES, with an incomplete four-column row retaining its width.
     #[test]
     fn ungrouped_public_help_has_reference_rows() {
-        let help = text::plain(&BattleSpecialType::Map.help(None, false, ""));
+        let help = text::plain(&SpecialType::Map.help(None, false, ""));
         let lines: Vec<_> = help.lines().collect();
         assert_eq!(lines.len(), 6);
         assert_eq!(lines[2], format!("STORES{}", " ".repeat(13)));
@@ -179,7 +179,7 @@ mod tests {
             format!("{}MAP command listing: {}", " ".repeat(28), " ".repeat(29))
         );
         assert!(lines[4].contains("'HELP ALL'"));
-        let detail = BattleSpecialType::Map.help(None, false, "aLl");
+        let detail = SpecialType::Map.help(None, false, "aLl");
         assert!(detail.contains(&text::truncate("[fg=cyan]STORES[reset]", 78)));
         assert!(!detail.contains("LOADMAP"));
         assert!(detail.lines().all(|line| text::width(line) == 78));
@@ -189,35 +189,35 @@ mod tests {
     #[test]
     fn categorized_help_obeys_class_and_authority() {
         for privileged in [false, true] {
-            for class in [BattleCommandClass::Mech, BattleCommandClass::Ground] {
-                let help = BattleSpecialType::Mech.help(Some(class), privileged, "");
+            for class in [CommandClass::Mech, CommandClass::Ground] {
+                let help = SpecialType::Mech.help(Some(class), privileged, "");
                 assert!(help.find("Movement").unwrap() < help.find("Radio").unwrap());
-                assert_eq!(help.contains("Physical"), class == BattleCommandClass::Mech);
+                assert_eq!(help.contains("Physical"), class == CommandClass::Mech);
                 assert_eq!(help.contains("Restricted"), privileged);
                 assert!(help.contains("HELP SUBTOPIC"));
                 assert!(
-                    BattleSpecialType::Mech
+                    SpecialType::Mech
                         .help(Some(class), privileged, "ALL")
                         .contains("ALL not available")
                 );
                 assert!(
-                    BattleSpecialType::Mech
+                    SpecialType::Mech
                         .help(Some(class), privileged, "Mov")
                         .contains("Subcategory not found.")
                 );
-                let detail = BattleSpecialType::Mech.help(Some(class), privileged, "mOvEmEnT");
+                let detail = SpecialType::Mech.help(Some(class), privileged, "mOvEmEnT");
                 assert!(detail.contains(&text::truncate("[fg=blue bold]HEADING[reset]", 78)));
                 assert!(!detail.contains("HELP SUBTOPIC"));
                 assert!(detail.lines().all(|line| text::width(line) == 78));
             }
         }
         assert!(
-            BattleSpecialType::Mech
+            SpecialType::Mech
                 .help(None, true, "")
                 .contains("There are no commands")
         );
         assert!(
-            BattleSpecialType::Map
+            SpecialType::Map
                 .help(None, true, "missing")
                 .contains("doesn't have any other detailed help")
         );

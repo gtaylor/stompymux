@@ -6,13 +6,13 @@ use serde::Serialize;
 
 /// One identified or restricted visible entrance, without mine or character-skill disclosure.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct BattleBuildingContact {
+pub struct BuildingContact {
     /// Whether the sensor band or sight reaches the entrance hex.
-    pub detection: Option<super::BattleDetectionChannel>,
+    pub detection: Option<super::DetectionChannel>,
     /// Plain compact building row after lock evaluation.
     pub short_text: String,
     /// General observer torso direction toward the entrance.
-    pub weapon_arc: super::BattleContactArc,
+    pub weapon_arc: super::ContactArc,
     pub interior: ObjectId,
     pub coordinate: super::HexCoordinate,
     pub elevation: i32,
@@ -26,7 +26,7 @@ pub struct BattleBuildingContact {
     pub status: char,
 }
 
-impl BattleBuildingContact {
+impl BuildingContact {
     /// Restricted identification highlights the row without interpreting its name as markup.
     pub fn styled_text(&self) -> String {
         super::contacts::styled_row(&self.short_text, (!self.identified).then_some("yellow"))
@@ -60,7 +60,7 @@ pub fn building_contacts(
     scripts: &Scripts,
     observer: ObjectId,
     pilot: ObjectId,
-) -> Result<Vec<BattleBuildingContact>> {
+) -> Result<Vec<BuildingContact>> {
     scripts.atomic(|_| {
         let source = super::brief::display_source(&scripts.world.borrow(), observer, pilot)?;
         let map = admission(&scripts.world.borrow(), source, pilot)?;
@@ -119,7 +119,7 @@ fn admission(world: &World, source: TargetSource, pilot: ObjectId) -> Result<Obj
     let observer = source.unit;
     let unit = super::scanner::scanner_unit(world, observer).context("Scanner is unavailable")?;
     ensure!(
-        unit.power == super::BattlePower::Running && !unit.destroyed,
+        unit.power == super::Power::Running && !unit.destroyed,
         "Start the unit first"
     );
     Ok(unit.position.context("Unit is not on a battlefield")?.map)
@@ -132,8 +132,8 @@ fn candidate(
     pilot: ObjectId,
     map: ObjectId,
     slot: u32,
-    entrance: super::BattleBuildingEntrance,
-) -> Result<Option<BattleBuildingContact>> {
+    entrance: super::BuildingEntrance,
+) -> Result<Option<BuildingContact>> {
     if admission(world, source, pilot)? != map {
         return Ok(None);
     }
@@ -175,7 +175,7 @@ fn candidate(
     let altitude = super::unit_elevation(world, observer)?.context("Unit has no elevation")?;
     let heading = unit.heading.context("Unit has no heading")?;
     let bearing = point.bearing(center)?.unwrap_or(180.0);
-    Ok(Some(BattleBuildingContact {
+    Ok(Some(BuildingContact {
         detection,
         short_text: String::new(),
         weapon_arc: unit.facing.contact_arc(

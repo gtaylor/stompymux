@@ -22,4 +22,4 @@ btech.unit.weapon_diagnostics(dbref)
 
 ## Returns
 
-- `BattleWeaponDiagnostic[]`
+- `WeaponDiagnostic[]`

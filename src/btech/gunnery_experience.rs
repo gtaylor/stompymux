@@ -4,7 +4,7 @@ use anyhow::{Result, ensure};
 /// Unit facts needed by the configured classic gunnery experience formula.
 /// Speeds are cargo-adjusted maximum speeds in the same units as unit motion.
 #[derive(Debug, Clone, Copy)]
-pub struct BattleGunneryExperienceInput {
+pub struct GunneryExperienceInput {
     pub attacker_tons: u16,
     pub target_tons: u16,
     pub attacker_speed: f64,
@@ -17,16 +17,16 @@ pub struct BattleGunneryExperienceInput {
 
 /// Pre-damage award difficulty; the caller owns eligibility and the random stream.
 #[derive(Debug, Clone, Copy, PartialEq, serde::Serialize)]
-pub struct BattleGunneryExperienceChance {
+pub struct GunneryExperienceChance {
     /// Percentage-like difficulty before multiplication by packet damage.
     pub difficulty: f64,
     pub damage: u16,
 }
 
-impl BattleGunneryExperienceInput {
+impl GunneryExperienceInput {
     /// Compute the classic formula selected by `oldxpsystem`, without consuming RNG.
     /// Impossible or nearly certain hits and zero damage do not request an award roll.
-    pub fn classic_chance(self) -> Result<Option<BattleGunneryExperienceChance>> {
+    pub fn classic_chance(self) -> Result<Option<GunneryExperienceChance>> {
         ensure!(
             self.attacker_tons > 0,
             "Gunnery XP requires positive attacker tonnage"
@@ -61,14 +61,14 @@ impl BattleGunneryExperienceInput {
             difficulty.is_finite(),
             "Gunnery XP difficulty exceeds supported range"
         );
-        Ok(Some(BattleGunneryExperienceChance {
+        Ok(Some(GunneryExperienceChance {
             difficulty,
             damage: self.damage,
         }))
     }
 }
 
-impl BattleGunneryExperienceChance {
+impl GunneryExperienceChance {
     /// Apply the inclusive 1..=50 gate and the classic hard cap, without mutating a character.
     pub fn award(self, roll: u8) -> Result<Option<u32>> {
         ensure!(
@@ -104,13 +104,13 @@ fn speed_weight(speed: f64) -> u8 {
 /// Persisted unit scaling and target suppression for shooting experience.
 #[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(default)]
-pub struct BattleUnitExperience {
+pub struct UnitExperience {
     pub multiplier: f64,
     /// Used by the battle-value formula; the classic formula does not consult this flag.
     pub suppress_gunnery: bool,
 }
 
-impl Default for BattleUnitExperience {
+impl Default for UnitExperience {
     fn default() -> Self {
         Self {
             multiplier: 1.0,
@@ -119,7 +119,7 @@ impl Default for BattleUnitExperience {
     }
 }
 
-impl BattleUnitExperience {
+impl UnitExperience {
     /// Reject invalid saved or administratively supplied scaling before it reaches arithmetic.
     pub(super) fn validate(self) -> Result<()> {
         ensure!(
@@ -130,16 +130,16 @@ impl BattleUnitExperience {
     }
 }
 
-impl super::BattleUnit {
+impl super::Mech {
     /// Current persisted shooting-XP policy for this unit.
-    pub fn experience_settings(&self) -> BattleUnitExperience {
+    pub fn experience_settings(&self) -> UnitExperience {
         self.experience
     }
 }
 
-impl super::BattleVehicle {
+impl super::Vehicle {
     /// Current persisted shooting-XP policy, shared with Mechs.
-    pub fn experience_settings(&self) -> BattleUnitExperience {
+    pub fn experience_settings(&self) -> UnitExperience {
         self.experience
     }
 }
@@ -150,7 +150,7 @@ struct ExperienceUnit {
     team: i32,
     destroyed: bool,
     tons: u16,
-    settings: BattleUnitExperience,
+    settings: UnitExperience,
 }
 
 /// Read shared award inputs without coupling either construction layout to the formula.
@@ -169,7 +169,7 @@ fn experience_unit(world: &crate::World, id: crate::ObjectId) -> Option<Experien
 pub fn set_unit_experience(
     world: &mut crate::World,
     id: crate::ObjectId,
-    settings: BattleUnitExperience,
+    settings: UnitExperience,
 ) -> Result<()> {
     use anyhow::Context;
     settings.validate()?;
@@ -187,7 +187,7 @@ pub fn set_unit_experience(
 
 /// Formula selection affects sure-hit and target-suppression eligibility.
 #[derive(Debug, Clone, Copy)]
-pub enum BattleGunneryExperienceMode {
+pub enum GunneryExperienceMode {
     Classic,
     BattleValue { difficulty_modifier: bool },
 }
@@ -200,7 +200,7 @@ pub fn gunnery_experience_eligible(
     pilot: crate::ObjectId,
     target: crate::ObjectId,
     base_to_hit: i32,
-    mode: BattleGunneryExperienceMode,
+    mode: GunneryExperienceMode,
 ) -> bool {
     use crate::Flag;
     if attacker == target || base_to_hit > 12 {
@@ -208,8 +208,8 @@ pub fn gunnery_experience_eligible(
     }
     let needs_difficulty = matches!(
         mode,
-        BattleGunneryExperienceMode::Classic
-            | BattleGunneryExperienceMode::BattleValue {
+        GunneryExperienceMode::Classic
+            | GunneryExperienceMode::BattleValue {
                 difficulty_modifier: true
             }
     );
@@ -232,8 +232,7 @@ pub fn gunnery_experience_eligible(
     if victim.destroyed || source.team == victim.team {
         return false;
     }
-    if matches!(mode, BattleGunneryExperienceMode::BattleValue { .. })
-        && victim.settings.suppress_gunnery
+    if matches!(mode, GunneryExperienceMode::BattleValue { .. }) && victim.settings.suppress_gunnery
     {
         return false;
     }
@@ -247,13 +246,13 @@ pub fn gunnery_experience_eligible(
 
 /// Pre-impact shooting facts; unit speed, mass and environment are derived from the world.
 #[derive(Debug, Clone, Copy)]
-pub struct BattleGunneryAwardRequest {
+pub struct GunneryAwardRequest {
     /// Apply configured hot-myomer assistance to both participants' external towing load.
     pub tsm_tow_bonus: bool,
     pub attacker: crate::ObjectId,
     pub pilot: crate::ObjectId,
     pub target: crate::ObjectId,
-    pub weapon: super::BattleWeapon,
+    pub weapon: super::Weapon,
     pub damage: u16,
     pub base_to_hit: i32,
     pub extended_gunnery: bool,
@@ -262,7 +261,7 @@ pub struct BattleGunneryAwardRequest {
     pub now: i64,
 }
 
-impl BattleGunneryAwardRequest {
+impl GunneryAwardRequest {
     /// Share the towing policy between classic difficulty and battle-value awards.
     pub(super) fn speed_policy(self) -> super::SpeedPolicy {
         super::SpeedPolicy {
@@ -273,12 +272,12 @@ impl BattleGunneryAwardRequest {
 
 /// One eligible classic XP attempt, including unsuccessful award gates and skill rate limits.
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
-pub struct BattleGunneryExperienceAward {
-    pub chance: BattleGunneryExperienceChance,
+pub struct GunneryExperienceAward {
+    pub chance: GunneryExperienceChance,
     pub roll: u8,
     pub amount: Option<u32>,
     pub skill: &'static str,
-    pub award: Option<super::BattleExperienceAward>,
+    pub award: Option<super::ExperienceAward>,
 }
 
 /// Award classic gunnery XP atomically before a damage packet is applied.
@@ -286,8 +285,8 @@ pub struct BattleGunneryExperienceAward {
 /// The enclosing shot must roll this operation back if later damage or casualty publication fails.
 pub fn award_classic_gunnery_experience(
     world: &mut crate::World,
-    request: BattleGunneryAwardRequest,
-) -> Result<Option<BattleGunneryExperienceAward>> {
+    request: GunneryAwardRequest,
+) -> Result<Option<GunneryExperienceAward>> {
     if request.damage == 0
         || !gunnery_experience_eligible(
             world,
@@ -295,14 +294,14 @@ pub fn award_classic_gunnery_experience(
             request.pilot,
             request.target,
             request.base_to_hit,
-            BattleGunneryExperienceMode::Classic,
+            GunneryExperienceMode::Classic,
         )
     {
         return Ok(None);
     }
     let attacker = experience_unit(world, request.attacker).expect("eligible attacker");
     let target = experience_unit(world, request.target).expect("eligible target");
-    let chance = BattleGunneryExperienceInput {
+    let chance = GunneryExperienceInput {
         attacker_tons: attacker.tons,
         target_tons: target.tons,
         attacker_speed: super::effective_speed::configured(
@@ -342,7 +341,7 @@ pub fn award_classic_gunnery_experience(
         })
         .transpose()?;
     *world = candidate;
-    Ok(Some(BattleGunneryExperienceAward {
+    Ok(Some(GunneryExperienceAward {
         chance,
         roll,
         amount,
@@ -352,10 +351,7 @@ pub fn award_classic_gunnery_experience(
 }
 
 /// Hit calculations and XP awards use the same chassis and weapon-family skill policy.
-pub(super) fn award_skill(
-    world: &crate::World,
-    request: BattleGunneryAwardRequest,
-) -> &'static str {
+pub(super) fn award_skill(world: &crate::World, request: GunneryAwardRequest) -> &'static str {
     super::skills::unit_gunnery_skill(
         world,
         request.attacker,
@@ -367,12 +363,12 @@ pub(super) fn award_skill(
 /// Formula-specific award evidence retained by a completed shot.
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
 #[serde(tag = "formula", rename_all = "snake_case")]
-pub enum BattleShotExperienceAward {
-    Classic(BattleGunneryExperienceAward),
+pub enum ShotExperienceAward {
+    Classic(GunneryExperienceAward),
     BattleValue(super::BattleValueExperienceAward),
 }
 
-impl BattleShotExperienceAward {
+impl ShotExperienceAward {
     /// Proposed amount before ordinary skill rate limiting; classic gates may reject the award.
     pub fn amount(&self) -> Option<u32> {
         match self {
@@ -390,7 +386,7 @@ impl BattleShotExperienceAward {
     }
 
     /// Character mutation report, including rejected skill rate limits.
-    pub fn award(&self) -> Option<&super::BattleExperienceAward> {
+    pub fn award(&self) -> Option<&super::ExperienceAward> {
         match self {
             Self::Classic(report) => report.award.as_ref(),
             Self::BattleValue(report) => Some(&report.award),
@@ -401,27 +397,27 @@ impl BattleShotExperienceAward {
 /// Select the configured formula while keeping its distinct eligibility and RNG behavior.
 pub fn award_gunnery_experience(
     world: &mut crate::World,
-    request: BattleGunneryAwardRequest,
+    request: GunneryAwardRequest,
     config: &crate::config::XpConfig,
-) -> Result<Option<BattleShotExperienceAward>> {
+) -> Result<Option<ShotExperienceAward>> {
     if config.oldxpsystem != 0 {
         return award_classic_gunnery_experience(
             world,
-            BattleGunneryAwardRequest {
+            GunneryAwardRequest {
                 use_unit_modifier: config.perunit_xpmod != 0,
                 ..request
             },
         )
-        .map(|report| report.map(BattleShotExperienceAward::Classic));
+        .map(|report| report.map(ShotExperienceAward::Classic));
     }
     super::award_battle_value_gunnery_experience(world, request, config)
-        .map(|report| report.map(BattleShotExperienceAward::BattleValue))
+        .map(|report| report.map(ShotExperienceAward::BattleValue))
 }
 
 /// Borrowed configuration and immutable attack facts reused between damage groups.
 #[derive(Clone, Copy)]
 pub(super) struct GunneryAwardContext<'a> {
-    pub request: BattleGunneryAwardRequest,
+    pub request: GunneryAwardRequest,
     pub config: &'a crate::config::XpConfig,
 }
 
@@ -431,11 +427,11 @@ impl GunneryAwardContext<'_> {
         self,
         world: &crate::World,
         damage: u16,
-        attempt: Option<&BattleShotExperienceAward>,
-    ) -> Vec<super::BattleChannelMessage> {
+        attempt: Option<&ShotExperienceAward>,
+    ) -> Vec<super::DiagnosticMessage> {
         super::channels::gunnery_messages(
             world,
-            BattleGunneryAwardRequest {
+            GunneryAwardRequest {
                 damage,
                 ..self.request
             },
@@ -449,10 +445,10 @@ impl GunneryAwardContext<'_> {
         self,
         world: &mut crate::World,
         damage: u16,
-    ) -> Result<Option<BattleShotExperienceAward>> {
+    ) -> Result<Option<ShotExperienceAward>> {
         award_gunnery_experience(
             world,
-            BattleGunneryAwardRequest {
+            GunneryAwardRequest {
                 damage,
                 ..self.request
             },
@@ -466,8 +462,8 @@ mod tests {
     use super::*;
 
     /// Equal units at target seven produce a five-point award for six damage.
-    fn sample() -> BattleGunneryExperienceInput {
-        BattleGunneryExperienceInput {
+    fn sample() -> GunneryExperienceInput {
+        GunneryExperienceInput {
             attacker_tons: 35,
             target_tons: 35,
             attacker_speed: 53.75,
@@ -484,7 +480,7 @@ mod tests {
         let chance = sample().classic_chance().unwrap().unwrap();
         assert!((chance.difficulty - 100.0 * 30.0 / 36.0).abs() < 1e-10);
         assert_eq!(chance.award(50).unwrap(), Some(5));
-        let chance = BattleGunneryExperienceInput {
+        let chance = GunneryExperienceInput {
             base_to_hit: 3,
             damage: 1,
             ..sample()
@@ -496,7 +492,7 @@ mod tests {
         assert_eq!(chance.award(6).unwrap(), None);
         for bth in [-1, 0, 1, 2, 13] {
             assert!(
-                BattleGunneryExperienceInput {
+                GunneryExperienceInput {
                     base_to_hit: bth,
                     ..sample()
                 }
@@ -512,7 +508,7 @@ mod tests {
     /// Mass truncates before clamps; relative speed is squared and the configured unit multiplier is applied last.
     #[test]
     fn mass_speed_scaling_and_cap() {
-        let input = BattleGunneryExperienceInput {
+        let input = GunneryExperienceInput {
             attacker_tons: 60,
             target_tons: 35,
             attacker_speed: 21.5,
@@ -536,7 +532,7 @@ mod tests {
         ] {
             assert_eq!(speed_weight(speed), weight);
         }
-        let zero = BattleGunneryExperienceInput {
+        let zero = GunneryExperienceInput {
             unit_modifier: 0.0,
             ..sample()
         }
@@ -550,19 +546,19 @@ mod tests {
     #[test]
     fn invalid_and_zero_damage_inputs() {
         for input in [
-            BattleGunneryExperienceInput {
+            GunneryExperienceInput {
                 attacker_tons: 0,
                 ..sample()
             },
-            BattleGunneryExperienceInput {
+            GunneryExperienceInput {
                 attacker_speed: f64::NAN,
                 ..sample()
             },
-            BattleGunneryExperienceInput {
+            GunneryExperienceInput {
                 target_speed: -1.0,
                 ..sample()
             },
-            BattleGunneryExperienceInput {
+            GunneryExperienceInput {
                 unit_modifier: f64::INFINITY,
                 ..sample()
             },
@@ -570,7 +566,7 @@ mod tests {
             assert!(input.classic_chance().is_err());
         }
         assert!(
-            BattleGunneryExperienceInput {
+            GunneryExperienceInput {
                 damage: 0,
                 ..sample()
             }

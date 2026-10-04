@@ -1,5 +1,5 @@
 //! Live ground-vehicle controls and traced travel with explicit boundaries for unresolved hazards.
-use super::{BattleMotion, BattleMovementRules, BattleNotice, BattlePower, BattleVehicleMovement};
+use super::{Motion, MovementRules, Notice, Power, VehicleMovement};
 use crate::{Flag, Kind, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 
@@ -16,7 +16,7 @@ struct VehicleStep {
 }
 
 /// Read motion for a conscious player physically inside an available, running vehicle.
-pub(super) fn readout(world: &World, id: ObjectId, viewer: ObjectId) -> Result<BattleMotion> {
+pub(super) fn readout(world: &World, id: ObjectId, viewer: ObjectId) -> Result<Motion> {
     readout_by_actor(
         world,
         id,
@@ -28,7 +28,7 @@ pub(super) fn readout_by_actor(
     world: &World,
     id: ObjectId,
     actor: super::combat_operator::ControlActor,
-) -> Result<BattleMotion> {
+) -> Result<Motion> {
     if let super::combat_operator::ControlActor::Autopilot = actor {
         super::power::autopilot_controlled_vehicle(world, id)?;
     }
@@ -53,7 +53,7 @@ pub(super) fn readout_by_actor(
     }
     let vehicle = &world.btech.vehicles()[&id];
     ensure!(
-        vehicle.power() == BattlePower::Running && !vehicle.is_destroyed(),
+        vehicle.power() == Power::Running && !vehicle.is_destroyed(),
         "Start the unit first"
     );
     vehicle.motion().context("Unit is not placed")
@@ -67,7 +67,7 @@ pub(crate) fn set_control_by_actor(
     heading: Option<f64>,
     policy: super::SpeedPolicy,
     free_fusion_fuel: bool,
-) -> Result<BattleNotice> {
+) -> Result<Notice> {
     super::vehicle_power::controlled_by_actor(world, id, actor)?;
     super::fortification::require_mobile(world, id)?;
     let mut motion = readout_by_actor(world, id, actor)?;
@@ -85,12 +85,12 @@ pub(crate) fn set_control_by_actor(
             "You're out of fuel!"
         );
         ensure!(
-            speed.is_none() || flight.phase != super::BattleVtolFlightPhase::Falling,
+            speed.is_none() || flight.phase != super::VtolFlightPhase::Falling,
             "Take off before changing flight controls"
         );
     }
     ensure!(
-        vehicle.definition().movement != BattleVehicleMovement::Stationary && maximum > 0.0,
+        vehicle.definition().movement != VehicleMovement::Stationary && maximum > 0.0,
         "Vehicle cannot move"
     );
     let mut text = if let Some(speed) = speed {
@@ -129,17 +129,17 @@ pub(crate) fn set_control_by_actor(
         if vehicle.cancel_digging() {
             text = format!("You cease your attempts at digging in.\r\n{text}");
         }
-        vehicle.dig = super::BattleDigState::default();
+        vehicle.dig = super::DigState::default();
     }
     vehicle.motion = Some(motion);
-    Ok(BattleNotice { unit: id, text })
+    Ok(Notice { unit: id, text })
 }
 
 /// Resolve supported ground and surface travel in the enclosing movement candidate.
 /// Unsupported hazards stop before entry; they must gain their own effects before admission.
 pub(super) fn advance(
     world: &mut World,
-    rules: BattleMovementRules,
+    rules: MovementRules,
     character: bool,
 ) -> Result<super::movement_report::MovementReport> {
     let ids: Vec<_> = world
@@ -150,8 +150,8 @@ pub(super) fn advance(
             (!vehicle.definition().is_vtol()
                 && vehicle.orbital_drop.is_none()
                 && vehicle.free_fall().is_none()
-                && vehicle.power() == BattlePower::Running
-                && vehicle.motion().is_some_and(BattleMotion::active)
+                && vehicle.power() == Power::Running
+                && vehicle.motion().is_some_and(Motion::active)
                 && world
                     .objects
                     .get(&id)
@@ -165,9 +165,9 @@ pub(super) fn advance(
         // Earlier mine blasts can stop another vehicle selected at the beginning of this tick.
         if vehicle.orbital_drop.is_some()
             || vehicle.free_fall().is_some()
-            || vehicle.power() != BattlePower::Running
+            || vehicle.power() != Power::Running
             || vehicle.is_destroyed()
-            || !vehicle.motion().is_some_and(BattleMotion::active)
+            || !vehicle.motion().is_some_and(Motion::active)
         {
             continue;
         }
@@ -196,7 +196,7 @@ pub(super) fn advance(
         let mut under_bridge = vehicle.under_bridge();
         let reverse_checks = next.speed < 0.0
             && rules.roll_on_backwalk
-            && vehicle.definition().movement != BattleVehicleMovement::Tracked;
+            && vehicle.definition().movement != VehicleMovement::Tracked;
         let mut entries = Vec::new();
         let traversed = old.point.trace_positions(next.point)?;
         for (hex, point) in traversed {
@@ -208,11 +208,11 @@ pub(super) fn advance(
             if hex.x == i32::from(position.x) && hex.y == i32::from(position.y) {
                 continue;
             }
-            let bridge_collision = vehicle.definition().movement == BattleVehicleMovement::Hover
+            let bridge_collision = vehicle.definition().movement == VehicleMovement::Hover
                 && previous_tile.deck_clearance().is_some_and(|deck| deck != 0)
                 && previous_height == i32::from(previous_tile.water_line())
                 && tile.deck_clearance() == Some(1);
-            let next_under = vehicle.definition().movement == BattleVehicleMovement::Hover
+            let next_under = vehicle.definition().movement == VehicleMovement::Hover
                 && previous_height == i32::from(previous_tile.water_line())
                 && tile.deck_clearance().is_some_and(|deck| deck >= 2)
                 && (under_bridge || previous_tile.is_water_surface());
@@ -268,7 +268,7 @@ pub(super) fn advance(
             entry_motion.point = point;
             world.btech.vehicles.get_mut(&id).unwrap().update_motion(
                 entry_motion,
-                super::BattlePosition {
+                super::Position {
                     map: position.map,
                     x: u16::try_from(hex.x)?,
                     y: u16::try_from(hex.y)?,
@@ -326,7 +326,7 @@ pub(super) fn advance(
                     rules.fall.extended_piloting,
                     character,
                 )?;
-                report.notices.push(BattleNotice {
+                report.notices.push(Notice {
                     unit: id,
                     text: "You notice the underside of the bridge in front of you!".into(),
                 });
@@ -345,7 +345,7 @@ pub(super) fn advance(
                         "drives right into the underside of the bridge.",
                     )
                 };
-                report.notices.push(BattleNotice {
+                report.notices.push(Notice {
                     unit: id,
                     text: message.into(),
                 });
@@ -428,7 +428,7 @@ pub(super) fn advance(
                     if cliff
                         && change < 0
                         && tile.is_open_water()
-                        && unit.definition().movement != BattleVehicleMovement::Hover
+                        && unit.definition().movement != VehicleMovement::Hover
                         && !unit.definition().has_special("Waterproof_Tech")
                     {
                         report
@@ -481,7 +481,7 @@ pub(super) fn advance(
                 world,
                 id,
                 tile,
-                BattleMovementRules {
+                MovementRules {
                     fall: fall_rules,
                     ..rules
                 },
@@ -502,7 +502,7 @@ pub(super) fn advance(
             let event = super::mine_event::resolve(
                 world,
                 id,
-                super::BattleMineTriggerReason::Step,
+                super::MineTriggerReason::Step,
                 rules.fall,
                 character,
             )?;
@@ -558,7 +558,7 @@ pub(super) fn advance(
             next.desired_speed = changed.desired_speed;
             if unit.is_destroyed()
                 || unit.immobilized()
-                || unit.power() != BattlePower::Running
+                || unit.power() != Power::Running
                 || next.speed == 0.0
             {
                 next = changed;
@@ -571,7 +571,7 @@ pub(super) fn advance(
             if edge {
                 report
                     .boundaries
-                    .push(super::movement_report::BattleBoundaryCrossing::new(
+                    .push(super::movement_report::BoundaryCrossing::new(
                         id,
                         position.map,
                         next,
@@ -581,7 +581,7 @@ pub(super) fn advance(
             next.point = reached;
             next.stop_translation();
             next.desired_heading = next.heading;
-            report.notices.push(BattleNotice {
+            report.notices.push(Notice {
                 unit: id,
                 text: text.into(),
             });
@@ -590,7 +590,7 @@ pub(super) fn advance(
         let hex = next.point.containing_hex()?;
         vehicle.update_motion(
             next,
-            super::BattlePosition {
+            super::Position {
                 map: position.map,
                 x: u16::try_from(hex.x)?,
                 y: u16::try_from(hex.y)?,

@@ -29,8 +29,7 @@ async fn cross_surface(row: &str) {
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse("Fulcrum", include_str!("../game/mechs/Fulcrum.toml"))
-            .unwrap(),
+        VehicleTemplate::parse("Fulcrum", include_str!("../game/mechs/Fulcrum.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
@@ -44,15 +43,14 @@ async fn cross_surface(row: &str) {
     }
     set_battle_heading(&mut world, id, ObjectId(1), 90.0).unwrap();
     for _ in 0..10 {
-        advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
+        advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
     }
     set_battle_speed(&mut world, id, ObjectId(1), 107.5).unwrap();
     world
         .btech
         .rewrite_map_record(map, |record| {
             record["decorations"]["25"] =
-                serde_json::to_value(BattleDecoration::new(DecorationKind::Smoke, 120, None))
-                    .unwrap();
+                serde_json::to_value(Decoration::new(DecorationKind::Smoke, 120, None)).unwrap();
         })
         .unwrap();
     let mech = world.create(&config, "Submerged Jenner".into(), Kind::Thing);
@@ -60,7 +58,7 @@ async fn cross_surface(row: &str) {
     create_battle_unit(
         &mut world,
         mech,
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, mech, support::FIXTURE_DICE_SEED);
@@ -71,7 +69,7 @@ async fn cross_surface(row: &str) {
     let mut replayed = false;
     let mut reached_shore = false;
     for _ in 0..100 {
-        let notices = advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
+        let notices = advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
         assert!(notices.is_empty(), "{notices:?}");
         let position = world.btech.vehicles()[&id].position().unwrap();
         assert_eq!(battle_unit_elevation(&world, id).unwrap(), Some(0));
@@ -84,8 +82,8 @@ async fn cross_surface(row: &str) {
                 let mut restored = persistence::load(&config.database()).await.unwrap();
                 let mut expected = world.clone();
                 assert_eq!(
-                    advance_battle_motion(&mut restored, BattleMovementRules::STANDARD).unwrap(),
-                    advance_battle_motion(&mut expected, BattleMovementRules::STANDARD).unwrap()
+                    advance_battle_motion(&mut restored, MovementRules::STANDARD).unwrap(),
+                    advance_battle_motion(&mut expected, MovementRules::STANDARD).unwrap()
                 );
                 assert_eq!(restored.btech, expected.btech);
                 replayed = true;

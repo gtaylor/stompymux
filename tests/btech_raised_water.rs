@@ -39,8 +39,7 @@ async fn field(asset: MapAsset) -> (tempfile::TempDir, World, [ObjectId; 2]) {
         create_battle_unit(
             &mut world,
             id,
-            BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
-                .unwrap(),
+            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
@@ -53,12 +52,12 @@ async fn field(asset: MapAsset) -> (tempfile::TempDir, World, [ObjectId; 2]) {
         }
         let mut state = serde_json::to_value(&world.btech).unwrap();
         let unit = &mut state["constructed"][id.0.to_string()];
-        unit["dice"] = serde_json::to_value(BattleDice::seeded([23; 32])).unwrap();
-        unit["crew_recovery"]["dice"] = serde_json::to_value(BattleDice::seeded([13; 32])).unwrap();
+        unit["dice"] = serde_json::to_value(Dice::seeded([23; 32])).unwrap();
+        unit["crew_recovery"]["dice"] = serde_json::to_value(Dice::seeded([13; 32])).unwrap();
         unit["motion"]["heading"] = serde_json::json!(180.0);
         unit["motion"]["desired_heading"] = serde_json::json!(180.0);
         state["recoveries"][pilot.0.to_string()]["dice"] =
-            serde_json::to_value(BattleDice::seeded([11; 32])).unwrap();
+            serde_json::to_value(Dice::seeded([11; 32])).unwrap();
         world.btech = serde_json::from_value(state).unwrap();
         units.push(id);
     }
@@ -99,8 +98,8 @@ async fn lifting_a_map_lifts_units_without_changing_what_happens() {
     assert_eq!(units, high_units);
     let mut deepest = 0;
     for tick in 0..240 {
-        let low_report = advance_battle_motion(&mut low_world, BattleMovementRules::STANDARD);
-        let high_report = advance_battle_motion(&mut high_world, BattleMovementRules::STANDARD);
+        let low_report = advance_battle_motion(&mut low_world, MovementRules::STANDARD);
+        let high_report = advance_battle_motion(&mut high_world, MovementRules::STANDARD);
         assert_eq!(
             format!("{low_report:?}"),
             format!("{high_report:?}"),
@@ -173,7 +172,7 @@ async fn vehicle_field(
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse("test", template).unwrap(),
+        VehicleTemplate::parse("test", template).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
@@ -186,13 +185,13 @@ async fn vehicle_field(
     }
     let mut state = serde_json::to_value(&world.btech).unwrap();
     let unit = &mut state["vehicles"][id.0.to_string()];
-    unit["dice"] = serde_json::to_value(BattleDice::seeded([29; 32])).unwrap();
-    unit["crew_recovery"]["dice"] = serde_json::to_value(BattleDice::seeded([13; 32])).unwrap();
-    state["recoveries"]["1"]["dice"] = serde_json::to_value(BattleDice::seeded([11; 32])).unwrap();
+    unit["dice"] = serde_json::to_value(Dice::seeded([29; 32])).unwrap();
+    unit["crew_recovery"]["dice"] = serde_json::to_value(Dice::seeded([13; 32])).unwrap();
+    state["recoveries"]["1"]["dice"] = serde_json::to_value(Dice::seeded([11; 32])).unwrap();
     world.btech = serde_json::from_value(state).unwrap();
     set_battle_heading(&mut world, id, ObjectId(1), 90.0).unwrap();
     for _ in 0..10 {
-        advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
+        advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
     }
     set_battle_speed(&mut world, id, ObjectId(1), 53.75).unwrap();
     (dir, world, id)
@@ -217,8 +216,8 @@ async fn lifting_a_map_lifts_vehicles_without_changing_what_happens() {
         assert_eq!(id, high_id);
         let mut furthest = 0;
         for tick in 0..90 {
-            let low_report = advance_battle_motion(&mut low, BattleMovementRules::STANDARD);
-            let high_report = advance_battle_motion(&mut high, BattleMovementRules::STANDARD);
+            let low_report = advance_battle_motion(&mut low, MovementRules::STANDARD);
+            let high_report = advance_battle_motion(&mut high, MovementRules::STANDARD);
             assert_eq!(
                 format!("{low_report:?}"),
                 format!("{high_report:?}"),
@@ -252,15 +251,15 @@ async fn lifting_a_map_lifts_vehicles_without_changing_what_happens() {
 }
 
 /// Standard shooting rules for comparing combat at either height.
-fn shot_rules() -> BattleShotRules {
-    BattleShotRules {
+fn shot_rules() -> ShotRules {
+    ShotRules {
         range_damage: false,
         tsm_tow_bonus: true,
-        vehicle_impact: stompymux_rs::BattleVehicleImpactRules::STANDARD,
-        stacking: stompymux_rs::BattleStackingRules::STANDARD,
-        stagger: BattleStaggerMode::Retain,
-        glancing: BattleGlancingMode::Disabled,
-        aim: BattleAimRules {
+        vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
+        stacking: stompymux_rs::StackingRules::STANDARD,
+        stagger: StaggerMode::Retain,
+        glancing: GlancingMode::Disabled,
+        aim: AimRules {
             woods_damage: false,
             dig_bonus: 3,
             dig_only_front: false,
@@ -271,7 +270,7 @@ fn shot_rules() -> BattleShotRules {
             hotload_half_minimum: false,
             override_weapon_arcs: true,
         },
-        hit: BattleHitRules {
+        hit: HitRules {
             inferno_penalty: false,
             exile_stun_mode: 0,
         },
@@ -298,8 +297,7 @@ async fn duel(
         create_battle_unit(
             &mut world,
             id,
-            BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
-                .unwrap(),
+            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
@@ -312,13 +310,13 @@ async fn duel(
         }
         let mut state = serde_json::to_value(&world.btech).unwrap();
         let unit = &mut state["constructed"][id.0.to_string()];
-        unit["dice"] = serde_json::to_value(BattleDice::seeded([31; 32])).unwrap();
-        unit["crew_recovery"]["dice"] = serde_json::to_value(BattleDice::seeded([13; 32])).unwrap();
+        unit["dice"] = serde_json::to_value(Dice::seeded([31; 32])).unwrap();
+        unit["crew_recovery"]["dice"] = serde_json::to_value(Dice::seeded([13; 32])).unwrap();
         if prone {
             unit["posture"] = serde_json::json!("prone");
         }
         state["recoveries"][pilot.0.to_string()]["dice"] =
-            serde_json::to_value(BattleDice::seeded([11; 32])).unwrap();
+            serde_json::to_value(Dice::seeded([11; 32])).unwrap();
         world.btech = serde_json::from_value(state).unwrap();
         units.push(id);
     }
@@ -430,12 +428,12 @@ async fn lifting_a_map_keeps_combat_in_water_unchanged() {
 }
 
 /// Ordinary fall rules for flooding.
-fn rules_fall() -> BattleFallRules {
-    BattleFallRules {
-        vehicle_impact: stompymux_rs::BattleVehicleImpactRules::STANDARD,
-        stacking: stompymux_rs::BattleStackingRules::STANDARD,
-        stagger: BattleStaggerMode::Retain,
-        hit: BattleHitRules {
+fn rules_fall() -> FallRules {
+    FallRules {
+        vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
+        stacking: stompymux_rs::StackingRules::STANDARD,
+        stagger: StaggerMode::Retain,
+        hit: HitRules {
             inferno_penalty: false,
             exile_stun_mode: 0,
         },
@@ -475,12 +473,7 @@ async fn barrage(asset: MapAsset, target_row: i64) -> (tempfile::TempDir, World,
     ] {
         let id = world.create(&config, format!("Barrage unit {row}"), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-        create_battle_unit(
-            &mut world,
-            id,
-            BattleTemplate::parse("test", source).unwrap(),
-        )
-        .unwrap();
+        create_battle_unit(&mut world, id, MechTemplate::parse("test", source).unwrap()).unwrap();
         support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut world, id, map, 0, row).unwrap();
         if let Some(pilot) = pilot {
@@ -490,7 +483,7 @@ async fn barrage(asset: MapAsset, target_row: i64) -> (tempfile::TempDir, World,
         set_battle_unit_signature(
             &mut world,
             id,
-            BattleUnitSignature {
+            UnitSignature {
                 team,
                 ..Default::default()
             },
@@ -500,10 +493,10 @@ async fn barrage(asset: MapAsset, target_row: i64) -> (tempfile::TempDir, World,
             .btech
             .rewrite_unit_record(id, |record| {
                 let unit = record;
-                unit["power"] = serde_json::to_value(BattlePower::Running).unwrap();
-                unit["dice"] = serde_json::to_value(BattleDice::seeded([31; 32])).unwrap();
+                unit["power"] = serde_json::to_value(Power::Running).unwrap();
+                unit["dice"] = serde_json::to_value(Dice::seeded([31; 32])).unwrap();
                 unit["crew_recovery"]["dice"] =
-                    serde_json::to_value(BattleDice::seeded([13; 32])).unwrap();
+                    serde_json::to_value(Dice::seeded([13; 32])).unwrap();
             })
             .unwrap();
         units.push(id);
@@ -512,7 +505,7 @@ async fn barrage(asset: MapAsset, target_row: i64) -> (tempfile::TempDir, World,
     let seen = (0..=255).any(|seed| {
         world
             .btech
-            .set_unit_dice(spotter, BattleDice::seeded([seed; 32]))
+            .set_unit_dice(spotter, Dice::seeded([seed; 32]))
             .unwrap();
         refresh_battle_contacts(&mut world, &[spotter, shooter]).unwrap();
         visible_battle_contact(&world, spotter, target)
@@ -539,7 +532,7 @@ async fn lifting_a_map_keeps_indirect_fire_into_water_unchanged() {
         let [shooter, spotter, target] = units;
         assert_eq!(
             battle_spotter_target(&low, shooter).unwrap(),
-            BattleSpotterTarget { spotter, target },
+            SpotterTarget { spotter, target },
             "row {target_row}"
         );
         let lrm = low.btech.constructed_units()[&shooter]
@@ -547,7 +540,7 @@ async fn lifting_a_map_keeps_indirect_fire_into_water_unchanged() {
             .unwrap()
             .weapons
             .iter()
-            .position(|mount| mount.weapon == BattleWeapon::Lrm20)
+            .position(|mount| mount.weapon == Weapon::Lrm20)
             .unwrap();
         let aim = format!(
             "{:?}",

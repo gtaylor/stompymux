@@ -6,28 +6,28 @@ use serde::Serialize;
 
 /// Damage applied to one occupant, retaining packet consequences for character publication.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleMineBlastHit {
+pub struct MineBlastHit {
     pub unit: ObjectId,
     pub damage: u16,
     /// Signed adjustment to the burn timer, after material packets.
     pub burn_seconds: i64,
-    pub arc: BattleHitArc,
-    pub impacts: Vec<BattleBlastImpact>,
-    pub vehicle_heat: Option<BattleVehicleHeatExposure>,
+    pub arc: HitArc,
+    pub impacts: Vec<BlastImpact>,
+    pub vehicle_heat: Option<VehicleHeatExposure>,
 }
 
 /// One complete mine blast; callers publish notices and character consequences in the same transaction.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[must_use = "Publish mine blast notices and consequences with the enclosing action"]
-pub struct BattleMineBlastReport {
+pub struct MineBlastReport {
     pub map: ObjectId,
-    pub mine: BattleMinefield,
-    pub hits: Vec<BattleMineBlastHit>,
+    pub mine: Minefield,
+    pub hits: Vec<MineBlastHit>,
     pub ignited: Vec<HexCoordinate>,
     pub removed: Vec<u32>,
-    pub notices: Vec<BattleNotice>,
+    pub notices: Vec<Notice>,
     /// Pilot-only messages indexed into the enclosing notice stream.
-    pub pilot_notices: Vec<BattlePilotNotice>,
+    pub pilot_notices: Vec<PilotNotice>,
 }
 
 /// Resolve an admitted conventional blast; movement/radio authority and trigger feedback belong to the caller.
@@ -35,8 +35,8 @@ pub fn resolve_mine_blast(
     world: &mut World,
     map: ObjectId,
     ordinal: u32,
-    rules: BattleFallRules,
-) -> Result<BattleMineBlastReport> {
+    rules: FallRules,
+) -> Result<MineBlastReport> {
     resolve(world, map, ordinal, rules, false)
 }
 
@@ -45,8 +45,8 @@ pub(super) fn resolve_in_action(
     world: &mut World,
     map: ObjectId,
     ordinal: u32,
-    rules: BattleFallRules,
-) -> Result<BattleMineBlastReport> {
+    rules: FallRules,
+) -> Result<MineBlastReport> {
     resolve(world, map, ordinal, rules, true)
 }
 
@@ -55,9 +55,9 @@ fn resolve(
     world: &mut World,
     map: ObjectId,
     ordinal: u32,
-    rules: BattleFallRules,
+    rules: FallRules,
     character: bool,
-) -> Result<BattleMineBlastReport> {
+) -> Result<MineBlastReport> {
     ensure!(
         world
             .objects
@@ -74,16 +74,16 @@ fn resolve(
     ensure!(
         matches!(
             mine.kind,
-            BattleMineKind::Standard
-                | BattleMineKind::Inferno
-                | BattleMineKind::Command
-                | BattleMineKind::Vibra
-                | BattleMineKind::Active
+            MineKind::Standard
+                | MineKind::Inferno
+                | MineKind::Command
+                | MineKind::Vibra
+                | MineKind::Active
         ),
         "Trigger mines require their script handler"
     );
-    let neighbors = matches!(mine.kind, BattleMineKind::Command | BattleMineKind::Vibra);
-    let damage = if mine.kind == BattleMineKind::Inferno {
+    let neighbors = matches!(mine.kind, MineKind::Command | MineKind::Vibra);
+    let damage = if mine.kind == MineKind::Inferno {
         mine.strength.max(0) as u16 / 3
     } else {
         mine.strength.max(0) as u16
@@ -104,7 +104,7 @@ fn resolve(
         }
     }
     world.attempt(|world| {
-        let mut report = BattleMineBlastReport {
+        let mut report = MineBlastReport {
             map,
             mine,
             hits: Vec::new(),
@@ -139,17 +139,17 @@ fn resolve(
 /// Resolve a blast cell in map-slot order, freezing each occupant's arc before its packets.
 fn hit_hex(
     world: &mut World,
-    report: &mut BattleMineBlastReport,
+    report: &mut MineBlastReport,
     coordinate: HexCoordinate,
     damage: u16,
-    rules: BattleFallRules,
+    rules: FallRules,
     character: bool,
 ) -> Result<()> {
     let tile = world.btech.maps()[&report.map]
         .base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
     let ground = i32::from(tile.surface_height());
     let neighbor = coordinate != report.mine.coordinate;
-    let inferno = report.mine.kind == BattleMineKind::Inferno;
+    let inferno = report.mine.kind == MineKind::Inferno;
     // Rear armor remains selected after a rear-facing occupant within this blast cell.
     let blast = super::blast_damage::BlastCell {
         coordinate,
@@ -169,7 +169,7 @@ fn hit_hex(
             "Mine blast requires character consequence publication"
         );
         let arc = target.arc;
-        rear |= arc == BattleHitArc::Rear;
+        rear |= arc == HitArc::Rear;
         let rules = target.rules;
         report.notices.extend(super::broadcast::observer_notices(
             world,
@@ -182,7 +182,7 @@ fn hit_hex(
                 "is hit by shrapnel!"
             },
         ));
-        report.notices.push(BattleNotice {
+        report.notices.push(Notice {
             unit: id,
             text: if inferno {
                 "Globs of flaming gel hit you!"
@@ -193,7 +193,7 @@ fn hit_hex(
             }
             .into(),
         });
-        let mut hit = BattleMineBlastHit {
+        let mut hit = MineBlastHit {
             unit: id,
             damage,
             burn_seconds: 0,
@@ -207,8 +207,8 @@ fn hit_hex(
             super::blast_damage::BlastDamage {
                 damage,
                 packet_size: 5,
-                class: BattleDamageClass::Ordinary,
-                table: BattleHitTable::Kick,
+                class: DamageClass::Ordinary,
+                table: HitTable::Kick,
                 arc,
                 heat: if inferno {
                     i32::from(report.mine.strength)

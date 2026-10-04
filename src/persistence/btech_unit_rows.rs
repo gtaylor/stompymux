@@ -11,7 +11,7 @@
 use super::btech_deadlines::Clock;
 use super::write::{Cell, Fields, Rows, row, sync_changed_rows, update};
 use crate::btech::saved_parts::{SavedParts, merge};
-use crate::btech::timers::{BattleTimer, SavedTimer, SavedTimers, TimerMotion, blank, restore};
+use crate::btech::timers::{SavedTimer, SavedTimers, Timer, TimerMotion, blank, restore};
 use crate::{ObjectId, SharedMap};
 use anyhow::{Context, Result, bail, ensure};
 use serde::de::DeserializeOwned;
@@ -31,7 +31,7 @@ const UP: i64 = 2;
 const WRAP: i64 = 3;
 
 /// The value a stored timer row stands for at simulation second `now`.
-fn timer_value(timer: BattleTimer, motion: i64, anchor: i64, now: i64) -> Result<i64> {
+fn timer_value(timer: Timer, motion: i64, anchor: i64, now: i64) -> Result<i64> {
     let value = match motion {
         HELD => anchor,
         DOWN => anchor - now,
@@ -167,7 +167,7 @@ pub(super) async fn load<T: SavedParts + DeserializeOwned>(
         let live: String = entry.try_get("live")?;
         let mut record = merge(&core, &live)?;
         for (timer, slot, motion, anchor) in counters.remove(&id.0).unwrap_or_default() {
-            let timer = BattleTimer::from_code(timer)?;
+            let timer = Timer::from_code(timer)?;
             restore(
                 &mut record,
                 &timer.pointer(slot)?,
@@ -289,31 +289,31 @@ mod tests {
         let timers = |second: i64| {
             Sample(vec![
                 SavedTimer {
-                    timer: BattleTimer::Stun,
+                    timer: Timer::Stun,
                     slot: 0,
                     value: 10 - second,
                     motion: TimerMotion::Down,
                 },
                 SavedTimer {
-                    timer: BattleTimer::Hide,
+                    timer: Timer::Hide,
                     slot: 0,
                     value: second,
                     motion: TimerMotion::Up,
                 },
                 SavedTimer {
-                    timer: BattleTimer::OverheatPhase,
+                    timer: Timer::OverheatPhase,
                     slot: 0,
                     value: (7 + second) % 30,
                     motion: TimerMotion::Wrap,
                 },
                 SavedTimer {
-                    timer: BattleTimer::Tag,
+                    timer: Timer::Tag,
                     slot: 0,
                     value: 5,
                     motion: TimerMotion::Held,
                 },
                 SavedTimer {
-                    timer: BattleTimer::Inferno,
+                    timer: Timer::Inferno,
                     slot: 0,
                     value: 0,
                     motion: TimerMotion::Held,
@@ -325,7 +325,7 @@ mod tests {
         assert_eq!(first, timer_rows(&timers(40), 140).unwrap());
         assert_eq!(first.len(), 4, "a held counter at zero needs no row");
         for (key, fields) in &first {
-            let timer = BattleTimer::from_code(key[0]).unwrap();
+            let timer = Timer::from_code(key[0]).unwrap();
             let (Cell::Integer(motion), Cell::Integer(anchor)) =
                 (&fields["motion"], &fields["anchor"])
             else {
@@ -339,6 +339,6 @@ mod tests {
                 .value;
             assert_eq!(timer_value(timer, *motion, *anchor, 109).unwrap(), expected);
         }
-        assert!(timer_value(BattleTimer::Stun, DOWN, 100, 101).is_err());
+        assert!(timer_value(Timer::Stun, DOWN, 100, 101).is_err());
     }
 }

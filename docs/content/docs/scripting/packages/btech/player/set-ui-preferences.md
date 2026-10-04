@@ -18,7 +18,7 @@ btech.player.set_ui_preferences(player, preferences)
 | Name | Type | Description |
 | --- | --- | --- |
 | `player` | `DbRef\|Object` |  |
-| `preferences` | `BattleUiPreferencesState\|nil` |  |
+| `preferences` | `UiPreferencesState\|nil` |  |
 
 ## Returns
 

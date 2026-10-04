@@ -6,8 +6,8 @@
 //|---Trusted callback code owns authorization to change the selected player's preferences.
 //|---Native tactical/LRS and Lua tactical/LRS/viewport use these defaults; navigate stays radius two.
 //|---@param player integer Live player dbref.
-//|---@param dimensions BattleViewDimensions? Validated replacement; omit for a read-only query.
-//|---@return BattleViewDimensions
+//|---@param dimensions ViewDimensions? Validated replacement; omit for a read-only query.
+//|---@return ViewDimensions
 //|function btech_player.view_dimensions(player, dimensions) end
 // lua-types-end
 
@@ -15,8 +15,8 @@
 //|---Read or replace saved contact-list inclusion policy for a live player.
 //|---Trusted callback code owns edit authorization; omitted replacement fields use defaults.
 //|---@param player integer
-//|---@param preferences BattleContactPreferences?
-//|---@return BattleContactPreferences
+//|---@param preferences ContactPreferences?
+//|---@return ContactPreferences
 //|function btech_player.contact_preferences(player, preferences) end
 // lua-types-end
 
@@ -25,21 +25,21 @@
 //|---Does not access game state; b requests building identification in native output.
 //|---@param options string Single word, up to fifty characters are processed.
 //|---@param brief_buildings boolean? Initial building inclusion from unit brief settings; defaults false.
-//|---@return BattleContactOptions
+//|---@return ContactOptions
 //|function btech_player.contact_options(options, brief_buildings) end
 // lua-types-end
 
 // lua-types-begin btech 00454
 //|---Read the saved personal-combat loadout, or nil when none is configured.
 //|---@param player DbRef|Object
-//|---@return BattlePersonalCombatLoadout|nil loadout
+//|---@return PersonalCombatLoadout|nil loadout
 //|function btech_player.loadout(player) end
 // lua-types-end
 
 // lua-types-begin btech 00455
 //|---Replace the saved personal-combat loadout; nil clears it.
 //|---@param player DbRef|Object
-//|---@param loadout BattlePersonalCombatLoadout|nil
+//|---@param loadout PersonalCombatLoadout|nil
 //|function btech_player.set_loadout(player, loadout) end
 // lua-types-end
 
@@ -60,13 +60,13 @@
 // lua-types-begin btech 00458
 //|---Read the saved tactical contact and display preferences.
 //|---@param player DbRef|Object
-//|---@return BattleUiPreferencesState preferences
+//|---@return UiPreferencesState preferences
 //|function btech_player.ui_preferences(player) end
 // lua-types-end
 
 // lua-types-begin btech 00459
 //|---Replace the saved tactical contact and display preferences; nil clears them.
 //|---@param player DbRef|Object
-//|---@param preferences BattleUiPreferencesState|nil
+//|---@param preferences UiPreferencesState|nil
 //|function btech_player.set_ui_preferences(player, preferences) end
 // lua-types-end

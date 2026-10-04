@@ -5,7 +5,7 @@ use serde::Serialize;
 
 /// A read-only navigation measurement and its shared native/Lua text.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct BattleHexCenterReport {
+pub struct HexCenterReport {
     pub coordinate: super::HexCoordinate,
     pub elevation: i32,
     pub range: f64,
@@ -15,17 +15,13 @@ pub struct BattleHexCenterReport {
 
 /// Measure horizontal distance and clockwise bearing without requiring scanner hardware.
 /// A coincident position uses the established south-facing (180 degree) readout convention.
-pub fn find_center(
-    world: &World,
-    unit: ObjectId,
-    pilot: ObjectId,
-) -> Result<BattleHexCenterReport> {
+pub fn find_center(world: &World, unit: ObjectId, pilot: ObjectId) -> Result<HexCenterReport> {
     let source = super::brief::display_source(world, unit, pilot)?;
     let unit = source.unit;
     super::combat_operator::controlled(world, unit, pilot)?;
     let record = super::scanner::scanner_unit(world, unit).context("Unit is unavailable")?;
     ensure!(
-        record.power == super::BattlePower::Running && !record.destroyed,
+        record.power == super::Power::Running && !record.destroyed,
         "Start the unit first"
     );
     let position = record.position.context("Unit is not on a battlefield")?;
@@ -36,7 +32,7 @@ pub fn find_center(
     let point = record.point.context("Unit has no motion state")?;
     let (range, bearing) = measurement(point, coordinate)?;
     let elevation = super::unit_elevation(world, unit)?.context("Unit has no elevation")?;
-    Ok(BattleHexCenterReport {
+    Ok(HexCenterReport {
         coordinate,
         elevation,
         range,

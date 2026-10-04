@@ -21,4 +21,4 @@ btech.template.inspect(name)
 
 ## Returns
 
-- `BattleTemplate`
+- `MechTemplate`

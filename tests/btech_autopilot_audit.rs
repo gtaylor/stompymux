@@ -10,14 +10,14 @@ use crate::{
     support::autopilot::{heartbeat_snapshots, heartbeat_snapshots_until},
 };
 use std::{cell::RefCell, collections::BTreeMap, rc::Rc};
-use stompymux_rs::BattleUnitTemplateExt;
+use stompymux_rs::UnitTemplateExt;
 use stompymux_rs::btech::autopilot::observations;
 use stompymux_rs::btech::{AutopilotOrderState, AutopilotReason, AutopilotState, LastSighting};
 use stompymux_rs::{
-    BattlePosition, BattlePower, BattleUnitSignature, BattleUnitTemplate, BattleVehicleTemplate,
-    Config, HeartbeatHarness, Kind, MapAsset, ObjectId, Scripts, World, assign_battle_pilot,
-    create_battle_map, create_battle_vehicle, persistence, place_battle_unit,
-    refresh_battle_contacts, set_battle_speed, set_battle_unit_signature,
+    Config, HeartbeatHarness, Kind, MapAsset, ObjectId, Position, Power, Scripts, UnitSignature,
+    UnitTemplate, VehicleTemplate, World, assign_battle_pilot, create_battle_map,
+    create_battle_vehicle, persistence, place_battle_unit, refresh_battle_contacts,
+    set_battle_speed, set_battle_unit_signature,
 };
 
 use crate::support::btech_firing as firing;
@@ -40,17 +40,14 @@ async fn mech_fixture(
     crate::support::seed_object_dice(&mut world, map, crate::support::FIXTURE_DICE_SEED);
     let unit = world.create(&config, "Autopilot audit mech".into(), Kind::Thing);
     world.objects.get_mut(&unit).unwrap().home = Some(ObjectId(config.home()));
-    BattleUnitTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml"))
+    UnitTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml"))
         .unwrap()
         .create(&mut world, unit)
         .unwrap();
     crate::support::seed_object_dice(&mut world, unit, crate::support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, unit, map, start.0, start.1).unwrap();
 
-    world
-        .btech
-        .set_unit_power(unit, BattlePower::Running)
-        .unwrap();
+    world.btech.set_unit_power(unit, Power::Running).unwrap();
     world.validate(&config).unwrap();
     (directory, config, world, map, unit)
 }
@@ -58,27 +55,27 @@ async fn mech_fixture(
 #[tokio::test(flavor = "current_thread")]
 async fn observation_is_safe_before_startup_and_expires_future_or_old_memory() {
     let (_directory, config, mut world, map, unit) = mech_fixture("1 2\n.0\n.0\n", (0, 1)).await;
-    world.btech.set_unit_power(unit, BattlePower::Off).unwrap();
+    world.btech.set_unit_power(unit, Power::Off).unwrap();
     world.validate(&config).unwrap();
 
     let sightings = BTreeMap::from([
         (
             ObjectId(101),
             LastSighting {
-                position: BattlePosition { map, x: 0, y: 0 },
+                position: Position { map, x: 0, y: 0 },
                 seen_at: 0,
             },
         ),
         (
             ObjectId(102),
             LastSighting {
-                position: BattlePosition { map, x: 0, y: 0 },
+                position: Position { map, x: 0, y: 0 },
                 seen_at: 50,
             },
         ),
     ]);
     let observation = observations::observe_with_memory(&world, unit, 20, &sightings).unwrap();
-    assert_eq!(observation.own.power, BattlePower::Off);
+    assert_eq!(observation.own.power, Power::Off);
     assert!(observation.contacts.is_empty());
     assert_eq!(observation.remembered.len(), 1);
     assert_eq!(observation.remembered[0].unit, ObjectId(101));
@@ -159,7 +156,7 @@ async fn vehicle_ground_classes_are_admitted_on_water_and_bridge_maps() {
         create_battle_vehicle(
             &mut world,
             id,
-            BattleVehicleTemplate::parse("test", template).unwrap(),
+            VehicleTemplate::parse("test", template).unwrap(),
         )
         .unwrap();
         crate::support::seed_object_dice(&mut world, id, crate::support::FIXTURE_DICE_SEED);
@@ -169,7 +166,7 @@ async fn vehicle_ground_classes_are_admitted_on_water_and_bridge_maps() {
     let mut state = serde_json::to_value(&world.btech).unwrap();
     for id in &units {
         state["vehicles"][id.0.to_string()]["power"] =
-            serde_json::to_value(BattlePower::Running).unwrap();
+            serde_json::to_value(Power::Running).unwrap();
     }
     world.btech = serde_json::from_value(state).unwrap();
     world.validate(&config).unwrap();
@@ -234,16 +231,13 @@ async fn competing_routes_make_progress_without_permanent_congestion_block() {
     let (_directory, config, mut world, map, first) = mech_fixture(&map_asset, (3, 6)).await;
     let second = world.create(&config, "Autopilot congestion follower".into(), Kind::Thing);
     world.objects.get_mut(&second).unwrap().home = Some(ObjectId(config.home()));
-    BattleUnitTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml"))
+    UnitTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml"))
         .unwrap()
         .create(&mut world, second)
         .unwrap();
     crate::support::seed_object_dice(&mut world, second, crate::support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, second, map, 5, 6).unwrap();
-    world
-        .btech
-        .set_unit_power(second, BattlePower::Running)
-        .unwrap();
+    world.btech.set_unit_power(second, Power::Running).unwrap();
     world.validate(&config).unwrap();
 
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
@@ -349,7 +343,7 @@ async fn weapons_hold_and_heat_ceiling_admit_no_autonomous_shot() {
     set_battle_unit_signature(
         &mut world,
         target,
-        BattleUnitSignature {
+        UnitSignature {
             team: 1,
             hidden: false,
             illuminated: false,
@@ -422,7 +416,7 @@ async fn autonomous_fire_rechecks_heat_between_multiple_mounts() {
     set_battle_unit_signature(
         &mut world,
         target,
-        BattleUnitSignature {
+        UnitSignature {
             team: 1,
             hidden: false,
             illuminated: false,
@@ -577,7 +571,7 @@ async fn failed_firing_heartbeat_discards_shots_and_retries_identically() {
     set_battle_unit_signature(
         &mut world,
         target,
-        BattleUnitSignature {
+        UnitSignature {
             team: 1,
             hidden: false,
             illuminated: false,
@@ -645,8 +639,8 @@ async fn failed_firing_heartbeat_discards_shots_and_retries_identically() {
         serde_json::to_value(&before).unwrap()
     );
     assert_eq!(
-        harness.world().battle_roll_statistics().unwrap(),
-        before.battle_roll_statistics().unwrap()
+        harness.world().roll_statistics().unwrap(),
+        before.roll_statistics().unwrap()
     );
     sqlx::query("DROP TRIGGER autopilot_shot_fail")
         .execute(&mut db)

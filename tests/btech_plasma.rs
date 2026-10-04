@@ -13,11 +13,11 @@ async fn plasma_heat_transfer_unwind_and_saved_dice_replay() {
     create_battle_unit(
         &mut base,
         id,
-        BattleTemplate::parse("AS7-D", include_str!("fixtures/btech/mechs/AS7-D.toml")).unwrap(),
+        MechTemplate::parse("AS7-D", include_str!("fixtures/btech/mechs/AS7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut base, id, support::FIXTURE_DICE_SEED);
-    let rules = BattleHitRules {
+    let rules = HitRules {
         inferno_penalty: false,
         exile_stun_mode: 0,
     };
@@ -41,26 +41,21 @@ async fn plasma_heat_transfer_unwind_and_saved_dice_replay() {
             })
             .unwrap();
         let section = if fatal {
-            BattleSection::CenterTorso
+            MechSection::CenterTorso
         } else {
-            BattleSection::LeftArm
+            MechSection::LeftArm
         };
         let (before, ordinary, ordinary_report) = (0..=u8::MAX)
             .find_map(|seed| {
                 let mut before = scenario.clone();
                 before
                     .btech
-                    .set_unit_dice(id, BattleDice::seeded([seed; 32]))
+                    .set_unit_dice(id, Dice::seeded([seed; 32]))
                     .unwrap();
                 let mut ordinary = before.clone();
-                let report = resolve_battle_salvo(
-                    &mut ordinary,
-                    id,
-                    BattleWeapon::Ac10,
-                    BattleHitArc::Front,
-                    rules,
-                )
-                .ok()?;
+                let report =
+                    resolve_battle_salvo(&mut ordinary, id, Weapon::Ac10, HitArc::Front, rules)
+                        .ok()?;
                 let group = &report.groups[0];
                 (group.hit.section == section
                     && group.impact.criticals.is_empty()
@@ -80,38 +75,23 @@ async fn plasma_heat_transfer_unwind_and_saved_dice_replay() {
             .unwrap();
         let mut restored = persistence::load(&config.database()).await.unwrap();
         let mut clan = before.clone();
-        let clan_report = resolve_battle_salvo(
-            &mut clan,
-            id,
-            BattleWeapon::ClanPlasmaRifle,
-            BattleHitArc::Front,
-            rules,
-        )
-        .unwrap();
+        let clan_report =
+            resolve_battle_salvo(&mut clan, id, Weapon::ClanPlasmaRifle, HitArc::Front, rules)
+                .unwrap();
         assert_eq!(clan_report, ordinary_report);
         assert_eq!(clan.btech, ordinary.btech);
         let mut plasma = before.clone();
-        let report = resolve_battle_salvo(
-            &mut plasma,
-            id,
-            BattleWeapon::PlasmaRifle,
-            BattleHitArc::Front,
-            rules,
-        )
-        .unwrap();
-        let replay = resolve_battle_salvo(
-            &mut restored,
-            id,
-            BattleWeapon::PlasmaRifle,
-            BattleHitArc::Front,
-            rules,
-        )
-        .unwrap();
+        let report =
+            resolve_battle_salvo(&mut plasma, id, Weapon::PlasmaRifle, HitArc::Front, rules)
+                .unwrap();
+        let replay =
+            resolve_battle_salvo(&mut restored, id, Weapon::PlasmaRifle, HitArc::Front, rules)
+                .unwrap();
         assert_eq!(report, replay);
         assert_eq!(plasma.btech, restored.btech);
         let mut expected = serde_json::to_value(&ordinary.btech).unwrap();
         let unit = &mut expected["constructed"][id.0.to_string()];
-        let mut dice: BattleDice = serde_json::from_value(unit["dice"].clone()).unwrap();
+        let mut dice: Dice = serde_json::from_value(unit["dice"].clone()).unwrap();
         let rolls: Vec<_> = (0..expected_rolls).map(|_| dice.d6()).collect();
         unit["dice"] = serde_json::to_value(dice).unwrap();
         unit["heat"]["stored"] = rolls.iter().map(|&v| f64::from(v)).sum::<f64>().into();
@@ -127,7 +107,7 @@ async fn plasma_heat_transfer_unwind_and_saved_dice_replay() {
 /// Plasma bins lose their supply on a critical without detonating or disabling a separate mount.
 #[test]
 fn plasma_ammunition_is_inert_and_mount_facts_are_distinct() {
-    let weapon = BattleWeapon::PlasmaRifle;
+    let weapon = Weapon::PlasmaRifle;
     assert_eq!(weapon.mass(), 6144);
     assert_eq!(weapon.gunnery_skill(true), "Gunnery-Ballistic");
     assert!(weapon.supports_targeting_computer());
@@ -136,21 +116,21 @@ fn plasma_ammunition_is_inert_and_mount_facts_are_distinct() {
         assert_eq!(weapon.ammunition_explosion_damage(rounds), 0);
     }
     let mut template =
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
-    let arm = template.sections.get_mut(&BattleSection::LeftArm).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+    let arm = template.sections.get_mut(&MechSection::LeftArm).unwrap();
     for slot in [2, 3] {
         arm.criticals.get_mut(&slot).unwrap().equipment = weapon.name().into();
     }
     let bin = template
         .sections
-        .get_mut(&BattleSection::RightTorso)
+        .get_mut(&MechSection::RightTorso)
         .unwrap()
         .criticals
         .get_mut(&0)
         .unwrap();
     bin.equipment = "Ammo_IS.PlasmaRifle".into();
     bin.data = "10".into();
-    let mut unit = BattleUnit::from_template(template).unwrap();
+    let mut unit = Mech::from_template(template).unwrap();
     let loadout = unit.loadout().unwrap();
     let location = loadout.ammunition[0].location;
     let index = loadout
@@ -160,7 +140,7 @@ fn plasma_ammunition_is_inert_and_mount_facts_are_distinct() {
         .unwrap();
     assert_eq!(
         unit.destroy_critical(location).unwrap(),
-        Some(BattleCriticalLoss::Ammunition {
+        Some(CriticalLoss::Ammunition {
             index: 0,
             rounds: 10,
             explosion_damage: 0,

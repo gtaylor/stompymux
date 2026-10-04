@@ -3,8 +3,8 @@
 //! A hidden hostile unit cannot be found beyond [`HIDDEN_DETECTION_RANGE`] unless an active
 //! probe reaches it. Closer than [`AUTOMATIC_DETECTION_RANGE`] it is found automatically, and
 //! in between the observer rolls against its facing and the pilot's perception skill.
-use super::BattlePerception;
-use crate::btech::{BattleFacing, BattleVehicleSection};
+use super::Perception;
+use crate::btech::{Facing, VehicleSection};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
@@ -17,15 +17,15 @@ pub const AUTOMATIC_DETECTION_RANGE: f64 = 3.0;
 
 /// Observer-relative direction used to weight searches and lock settling; independent of hit arcs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum BattleSensorArc {
+pub enum SensorArc {
     Front,
     Side,
     Rear,
 }
 
-impl BattleSensorArc {
+impl SensorArc {
     /// Determine direction from continuous compass bearing and torso-adjusted heading.
-    pub fn from_bearing(bearing: f64, heading: f64, facing: BattleFacing) -> Result<Self> {
+    pub fn from_bearing(bearing: f64, heading: f64, facing: Facing) -> Result<Self> {
         ensure!(
             bearing.is_finite() && heading.is_finite(),
             "Invalid sensor direction"
@@ -45,7 +45,7 @@ impl BattleSensorArc {
 
 /// Target facts that decide whether acquiring a newly perceived unit needs a roll.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct BattleAcquisitionRules {
+pub struct AcquisitionRules {
     pub hostile: bool,
     pub hidden: bool,
     /// The observing pilot's perception skill target.
@@ -54,7 +54,7 @@ pub struct BattleAcquisitionRules {
 
 /// One acquisition decision. Only hidden-unit searches consume dice.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-pub struct BattleDetection {
+pub struct Detection {
     pub detected: bool,
     /// Strict upper bound for a successful 1–10,000 roll; zero when no search was needed.
     pub threshold: u16,
@@ -62,7 +62,7 @@ pub struct BattleDetection {
     pub roll: Option<u16>,
 }
 
-impl BattleDetection {
+impl Detection {
     /// A decision made without a search.
     const fn settled(detected: bool) -> Self {
         Self {
@@ -95,26 +95,26 @@ pub fn perception_factor(perception: i16) -> u16 {
 pub(crate) fn acquire(
     world: &mut World,
     observer: ObjectId,
-    perception: &BattlePerception,
-    rules: BattleAcquisitionRules,
-) -> Result<BattleDetection> {
+    perception: &Perception,
+    rules: AcquisitionRules,
+) -> Result<Detection> {
     if !(rules.hidden && rules.hostile) || perception.probed {
-        return Ok(BattleDetection::settled(true));
+        return Ok(Detection::settled(true));
     }
     let distance = perception.range.spatial;
     if distance > HIDDEN_DETECTION_RANGE {
-        return Ok(BattleDetection::settled(false));
+        return Ok(Detection::settled(false));
     }
     let threshold = hidden_threshold(world, observer, perception, rules.perception)?;
     if distance < AUTOMATIC_DETECTION_RANGE {
-        return Ok(BattleDetection {
+        return Ok(Detection {
             detected: true,
             threshold,
             roll: None,
         });
     }
     let roll = crate::btech::dice::unit_dice_mut(world, observer)?.die(10_000)?;
-    Ok(BattleDetection {
+    Ok(Detection {
         detected: roll < threshold,
         threshold,
         roll: Some(roll),
@@ -125,7 +125,7 @@ pub(crate) fn acquire(
 fn hidden_threshold(
     world: &World,
     observer: ObjectId,
-    perception: &BattlePerception,
+    perception: &Perception,
     skill: i16,
 ) -> Result<u16> {
     let bearing = perception.range.bearing.unwrap_or(180.0);
@@ -145,27 +145,23 @@ fn observer_arc_base(world: &World, observer: ObjectId, bearing: f64) -> Result<
             .context("Unit construction state is unavailable")?;
         let heading = unit.motion().context("Unit is not placed")?.heading;
         return Ok(
-            match BattleSensorArc::from_bearing(bearing, heading, unit.facing())? {
-                BattleSensorArc::Front => 100,
-                BattleSensorArc::Side => 70,
-                BattleSensorArc::Rear => 40,
+            match SensorArc::from_bearing(bearing, heading, unit.facing())? {
+                SensorArc::Front => 100,
+                SensorArc::Side => 70,
+                SensorArc::Rear => 40,
             },
         );
     };
     let heading = vehicle.motion().context("Vehicle is not placed")?.heading;
-    let base = match BattleSensorArc::from_bearing(
-        bearing.round(),
-        heading.trunc(),
-        BattleFacing::default(),
-    )? {
-        BattleSensorArc::Front => 100,
-        BattleSensorArc::Side => 80,
-        BattleSensorArc::Rear => 50,
+    let base = match SensorArc::from_bearing(bearing.round(), heading.trunc(), Facing::default())? {
+        SensorArc::Front => 100,
+        SensorArc::Side => 80,
+        SensorArc::Rear => 50,
     };
     let turret = vehicle
         .definition()
         .sections
-        .get(&BattleVehicleSection::Turret)
+        .get(&VehicleSection::Turret)
         .is_some_and(|section| section.internal > 0)
         && {
             let facing = heading + vehicle.turret_offset;
@@ -204,20 +200,17 @@ mod tests {
     /// Bearings split into a 120-degree front, two sides and a rear, following torso twist.
     #[test]
     fn arcs_follow_heading_and_torso_twist() {
-        let facing = BattleFacing::default();
+        let facing = Facing::default();
         for (bearing, arc) in [
-            (0.0, BattleSensorArc::Front),
-            (60.0, BattleSensorArc::Front),
-            (90.0, BattleSensorArc::Side),
-            (120.0, BattleSensorArc::Side),
-            (180.0, BattleSensorArc::Rear),
-            (300.0, BattleSensorArc::Front),
+            (0.0, SensorArc::Front),
+            (60.0, SensorArc::Front),
+            (90.0, SensorArc::Side),
+            (120.0, SensorArc::Side),
+            (180.0, SensorArc::Rear),
+            (300.0, SensorArc::Front),
         ] {
-            assert_eq!(
-                BattleSensorArc::from_bearing(bearing, 0.0, facing).unwrap(),
-                arc
-            );
+            assert_eq!(SensorArc::from_bearing(bearing, 0.0, facing).unwrap(), arc);
         }
-        assert!(BattleSensorArc::from_bearing(f64::NAN, 0.0, facing).is_err());
+        assert!(SensorArc::from_bearing(f64::NAN, 0.0, facing).is_err());
     }
 }

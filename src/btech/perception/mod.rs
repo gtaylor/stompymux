@@ -24,16 +24,15 @@ mod sight;
 
 pub(crate) use acquisition::acquire;
 pub use acquisition::{
-    AUTOMATIC_DETECTION_RANGE, BattleAcquisitionRules, BattleDetection, BattleSensorArc,
-    HIDDEN_DETECTION_RANGE, perception_factor,
+    AUTOMATIC_DETECTION_RANGE, AcquisitionRules, Detection, HIDDEN_DETECTION_RANGE, SensorArc,
+    perception_factor,
 };
-pub use probe::BattleActiveProbe;
-pub use radar::{BattleRadarTarget, RADAR_RANGE};
-pub use report::{BattlePerceptionReport, perception_report};
+pub use probe::ActiveProbe;
+pub use radar::{RADAR_RANGE, RadarTarget};
+pub use report::{PerceptionReport, perception_report};
 
 use crate::btech::{
-    BattleLight, BattlePower, BattleRange, BattleSystem, BattleTerrainLos, BattleVehicleMovement,
-    HexCoordinate, StoredMap,
+    HexCoordinate, Light, Power, Range, StoredMap, System, TerrainLos, VehicleMovement,
 };
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
@@ -45,9 +44,9 @@ pub const DEFAULT_SENSOR_RANGE: u16 = 15;
 
 /// Host-configured sensor band reach, defaulting to [`DEFAULT_SENSOR_RANGE`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BattleSensorRange(pub u16);
+pub struct SensorRange(pub u16);
 
-impl Default for BattleSensorRange {
+impl Default for SensorRange {
     fn default() -> Self {
         Self(DEFAULT_SENSOR_RANGE)
     }
@@ -55,20 +54,20 @@ impl Default for BattleSensorRange {
 
 /// Apply the host's sensor band reach; negative or oversized values are clamped to the map ceiling.
 pub fn configure_perception(world: &mut World, sensor_range: i64) {
-    world.btech.sensor_range = BattleSensorRange(sensor_range.clamp(0, 60) as u16);
+    world.btech.sensor_range = SensorRange(sensor_range.clamp(0, 60) as u16);
 }
 
 /// How a target is perceived. Declaration order breaks ties between equal aim modifiers.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleDetectionChannel {
+pub enum DetectionChannel {
     Sensors,
     Sight,
     Radar,
     Probe,
 }
 
-impl BattleDetectionChannel {
+impl DetectionChannel {
     /// Every channel, in tie-break order.
     pub const ALL: [Self; 4] = [Self::Sensors, Self::Sight, Self::Radar, Self::Probe];
 
@@ -100,21 +99,21 @@ impl BattleDetectionChannel {
 
 /// A current detection of one target by one observer.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]
-pub struct BattlePerception {
-    pub channel: BattleDetectionChannel,
+pub struct Perception {
+    pub channel: DetectionChannel,
     /// Terrain leaves a line of fire. Only probe contacts behind blocking terrain are unidentified.
     pub identified: bool,
     /// Perception's contribution to weapon aim: concealment, cover, darkness or radar tracking.
     pub aim_modifier: i16,
     /// An active probe reaches the target, which reveals hidden units.
     pub probed: bool,
-    pub range: BattleRange,
+    pub range: Range,
 }
 
 /// Condition of one perception system on the observing unit.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattlePerceptionStatus {
+pub enum PerceptionStatus {
     /// Working at full reach.
     Ready,
     /// Working at reduced reach after damage.
@@ -131,34 +130,34 @@ pub enum BattlePerceptionStatus {
 
 /// The best installed active probe and its current condition.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-pub struct BattleProbeProfile {
-    pub kind: BattleActiveProbe,
+pub struct ProbeProfile {
+    pub kind: ActiveProbe,
     /// Reach in hexes, including the stationary-installation bonus.
     pub range: u16,
-    pub status: BattlePerceptionStatus,
+    pub status: PerceptionStatus,
 }
 
 /// Installed anti-aircraft radar and its current condition.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-pub struct BattleRadarProfile {
+pub struct RadarProfile {
     /// Reach in hexes; line of sight caps radar here on every chassis, fixed or mobile.
     pub range: u16,
-    pub status: BattlePerceptionStatus,
+    pub status: PerceptionStatus,
 }
 
 /// Everything an observer can currently perceive with, computed once per observation.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]
-pub struct BattlePerceptionProfile {
-    pub light: BattleLight,
+pub struct PerceptionProfile {
+    pub light: Light,
     /// Weather visibility, capped by the battlefield ceiling.
     pub sight_range: u16,
     /// Reach to an illuminated target; three times sight at night, otherwise equal to it.
     pub lit_sight_range: u16,
     /// Effective all-conditions band; zero while the sensors are unavailable.
     pub sensor_range: u16,
-    pub sensors: BattlePerceptionStatus,
-    pub probe: Option<BattleProbeProfile>,
-    pub radar: Option<BattleRadarProfile>,
+    pub sensors: PerceptionStatus,
+    pub probe: Option<ProbeProfile>,
+    pub radar: Option<RadarProfile>,
     #[serde(skip)]
     pub(crate) clairvoyant: bool,
     #[serde(skip)]
@@ -169,17 +168,17 @@ pub struct BattlePerceptionProfile {
     level: i32,
 }
 
-impl BattlePerceptionProfile {
+impl PerceptionProfile {
     /// The probe that can currently reach targets, if any.
-    fn ready_probe(&self) -> Option<BattleProbeProfile> {
+    fn ready_probe(&self) -> Option<ProbeProfile> {
         self.probe
-            .filter(|probe| probe.status == BattlePerceptionStatus::Ready)
+            .filter(|probe| probe.status == PerceptionStatus::Ready)
     }
 
     /// Installed radar that can currently track targets, if any.
-    fn ready_radar(&self) -> Option<BattleRadarProfile> {
+    fn ready_radar(&self) -> Option<RadarProfile> {
         self.radar
-            .filter(|radar| radar.status == BattlePerceptionStatus::Ready)
+            .filter(|radar| radar.status == PerceptionStatus::Ready)
     }
 }
 
@@ -189,7 +188,7 @@ pub(crate) fn installation_reach(world: &World, observer: ObjectId, ordinary: u1
         .btech
         .vehicles()
         .get(&observer)
-        .is_some_and(|unit| unit.definition().movement == BattleVehicleMovement::Stationary)
+        .is_some_and(|unit| unit.definition().movement == VehicleMovement::Stationary)
     {
         return ordinary * 140 / 100;
     }
@@ -202,11 +201,11 @@ pub(crate) fn installation_reach(world: &World, observer: ObjectId, ordinary: u1
 /// altitude eleven.
 fn radar_aim(
     world: &World,
-    profile: &BattlePerceptionProfile,
+    profile: &PerceptionProfile,
     target: ObjectId,
     point: &crate::btech::los::UnitSightPoint,
-    terrain: BattleTerrainLos,
-    range: BattleRange,
+    terrain: TerrainLos,
+    range: Range,
 ) -> Result<Option<i16>> {
     let Some(radar) = profile.ready_radar() else {
         return Ok(None);
@@ -225,23 +224,19 @@ fn radar_aim(
         .vehicles()
         .get(&target)
         .is_some_and(|unit| unit.definition().is_vtol());
-    BattleRadarTarget::above_tile(point.level, tile, flying).evaluate(
-        terrain,
-        range.spatial,
-        radar.range,
-    )
+    RadarTarget::above_tile(point.level, tile, flying).evaluate(terrain, range.spatial, radar.range)
 }
 
 /// Battlefield switches that turn off one perception channel for every unit on the map.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleMapPerceptionFlag {
+pub enum MapPerceptionFlag {
     Sensors,
     Radar,
     Probes,
 }
 
-impl BattleMapPerceptionFlag {
+impl MapPerceptionFlag {
     /// Every perception switch, in bit order.
     pub const ALL: [Self; 3] = [Self::Sensors, Self::Radar, Self::Probes];
 
@@ -274,7 +269,7 @@ pub fn parse_perception_flags(value: &str) -> Result<i64> {
         .split([' ', '\t', ','])
         .filter(|name| !name.is_empty())
         .try_fold(0, |flags, name| {
-            let flag = BattleMapPerceptionFlag::ALL
+            let flag = MapPerceptionFlag::ALL
                 .into_iter()
                 .find(|flag| flag.name().eq_ignore_ascii_case(name))
                 .with_context(|| format!("Unknown sensor flag {name:?}"))?;
@@ -284,10 +279,10 @@ pub fn parse_perception_flags(value: &str) -> Result<i64> {
 
 /// Display the disabled perception channels in `flags`; `-` when none are disabled.
 pub fn format_perception_flags(flags: i64) -> String {
-    let names: Vec<_> = BattleMapPerceptionFlag::ALL
+    let names: Vec<_> = MapPerceptionFlag::ALL
         .into_iter()
         .filter(|flag| flags & flag.bit() != 0)
-        .map(BattleMapPerceptionFlag::name)
+        .map(MapPerceptionFlag::name)
         .collect();
     if names.is_empty() {
         return "-".into();
@@ -297,7 +292,7 @@ pub fn format_perception_flags(flags: i64) -> String {
 
 impl StoredMap {
     /// Whether operators switched this perception channel off for the battlefield.
-    pub fn perception_disabled(&self, flag: BattleMapPerceptionFlag) -> bool {
+    pub fn perception_disabled(&self, flag: MapPerceptionFlag) -> bool {
         self.sensor_flags & flag.bit() != 0
     }
 }
@@ -306,7 +301,7 @@ impl StoredMap {
 pub fn set_map_perception(
     world: &mut World,
     map: ObjectId,
-    flag: BattleMapPerceptionFlag,
+    flag: MapPerceptionFlag,
     enabled: bool,
 ) -> Result<()> {
     ensure!(
@@ -326,7 +321,7 @@ pub fn set_map_perception(
 }
 
 /// Summarize an observer's current reach without tracing any target.
-pub fn perception_profile(world: &World, observer: ObjectId) -> Result<BattlePerceptionProfile> {
+pub fn perception_profile(world: &World, observer: ObjectId) -> Result<PerceptionProfile> {
     let unit = crate::btech::scanner::scanner_unit(world, observer)
         .context("Observer is not constructed")?;
     let position = unit.position.context("Observer is not placed")?;
@@ -339,22 +334,22 @@ pub fn perception_profile(world: &World, observer: ObjectId) -> Result<BattlePer
     let ceiling = u16::try_from(map.maximum_visibility.clamp(0, 60))?;
     let visibility = u16::try_from(map.visibility.clamp(0, 60))?;
     let sight_range = visibility.min(ceiling);
-    let lit_sight_range = if light == BattleLight::Night {
+    let lit_sight_range = if light == Light::Night {
         (visibility * 3).min(ceiling)
     } else {
         sight_range
     };
     let jammed = crate::btech::electronic_field(world, observer)?.blocks_outgoing_guidance();
     let (sensors, sensor_range) = sensor_band(world, observer, map, jammed)?;
-    let radar = unit.radar.then(|| BattleRadarProfile {
+    let radar = unit.radar.then(|| RadarProfile {
         range: RADAR_RANGE,
-        status: if map.perception_disabled(BattleMapPerceptionFlag::Radar) {
-            BattlePerceptionStatus::Disabled
+        status: if map.perception_disabled(MapPerceptionFlag::Radar) {
+            PerceptionStatus::Disabled
         } else {
-            BattlePerceptionStatus::Ready
+            PerceptionStatus::Ready
         },
     });
-    Ok(BattlePerceptionProfile {
+    Ok(PerceptionProfile {
         light,
         sight_range,
         lit_sight_range,
@@ -375,7 +370,7 @@ fn sensor_band(
     observer: ObjectId,
     map: &StoredMap,
     jammed: bool,
-) -> Result<(BattlePerceptionStatus, u16)> {
+) -> Result<(PerceptionStatus, u16)> {
     let mech = world.btech.constructed_units().get(&observer);
     let absent = match (mech, world.btech.vehicles().get(&observer)) {
         (Some(unit), _) => unit.definition().has_special("NoSensors"),
@@ -383,23 +378,23 @@ fn sensor_band(
         (None, None) => anyhow::bail!("Observer is not constructed"),
     };
     if absent {
-        return Ok((BattlePerceptionStatus::Absent, 0));
+        return Ok((PerceptionStatus::Absent, 0));
     }
-    if map.perception_disabled(BattleMapPerceptionFlag::Sensors) {
-        return Ok((BattlePerceptionStatus::Disabled, 0));
+    if map.perception_disabled(MapPerceptionFlag::Sensors) {
+        return Ok((PerceptionStatus::Disabled, 0));
     }
-    let hits = mech.map_or(0, |unit| unit.system_hits(BattleSystem::Sensors));
+    let hits = mech.map_or(0, |unit| unit.system_hits(System::Sensors));
     if hits >= 2 {
-        return Ok((BattlePerceptionStatus::Damaged, 0));
+        return Ok((PerceptionStatus::Damaged, 0));
     }
     if jammed {
-        return Ok((BattlePerceptionStatus::Jammed, 0));
+        return Ok((PerceptionStatus::Jammed, 0));
     }
     let range = installation_reach(world, observer, world.btech.sensor_range.0);
     if hits == 1 {
-        return Ok((BattlePerceptionStatus::Degraded, range / 2));
+        return Ok((PerceptionStatus::Degraded, range / 2));
     }
-    Ok((BattlePerceptionStatus::Ready, range))
+    Ok((PerceptionStatus::Ready, range))
 }
 
 /// Pick the working probe with the longest reach, or else the best installed one as damaged.
@@ -408,15 +403,14 @@ fn probe_profile(
     observer: ObjectId,
     map: &StoredMap,
     jammed: bool,
-) -> Result<Option<BattleProbeProfile>> {
+) -> Result<Option<ProbeProfile>> {
     // Build the equipment projection once and check every family against it.
     let (clan, fittings) = match world.btech.vehicles().get(&observer) {
         Some(vehicle) => {
             let loadout = vehicle.loadout()?;
             (
                 vehicle.definition().has_special("Clan"),
-                BattleActiveProbe::BY_REACH
-                    .map(|kind| (kind, vehicle.probe_fitting(&loadout, kind))),
+                ActiveProbe::BY_REACH.map(|kind| (kind, vehicle.probe_fitting(&loadout, kind))),
             )
         }
         None => {
@@ -428,7 +422,7 @@ fn probe_profile(
             let loadout = unit.loadout()?;
             (
                 unit.definition().has_special("Clan"),
-                BattleActiveProbe::BY_REACH.map(|kind| (kind, unit.probe_fitting(&loadout, kind))),
+                ActiveProbe::BY_REACH.map(|kind| (kind, unit.probe_fitting(&loadout, kind))),
             )
         }
     };
@@ -439,21 +433,21 @@ fn probe_profile(
         }
         let range = installation_reach(world, observer, u16::from(kind.range(clan)));
         if !fitting.available {
-            damaged.get_or_insert(BattleProbeProfile {
+            damaged.get_or_insert(ProbeProfile {
                 kind,
                 range,
-                status: BattlePerceptionStatus::Damaged,
+                status: PerceptionStatus::Damaged,
             });
             continue;
         }
-        let status = if map.perception_disabled(BattleMapPerceptionFlag::Probes) {
-            BattlePerceptionStatus::Disabled
+        let status = if map.perception_disabled(MapPerceptionFlag::Probes) {
+            PerceptionStatus::Disabled
         } else if jammed {
-            BattlePerceptionStatus::Jammed
+            PerceptionStatus::Jammed
         } else {
-            BattlePerceptionStatus::Ready
+            PerceptionStatus::Ready
         };
-        return Ok(Some(BattleProbeProfile {
+        return Ok(Some(ProbeProfile {
             kind,
             range,
             status,
@@ -463,11 +457,7 @@ fn probe_profile(
 }
 
 /// Perceive one target with a freshly computed observer profile.
-pub fn perceive(
-    world: &World,
-    observer: ObjectId,
-    target: ObjectId,
-) -> Result<Option<BattlePerception>> {
+pub fn perceive(world: &World, observer: ObjectId, target: ObjectId) -> Result<Option<Perception>> {
     let profile = perception_profile(world, observer)?;
     perceive_prepared(world, observer, &profile, target, None, None)
 }
@@ -479,11 +469,11 @@ pub fn perceive(
 pub(crate) fn perceive_prepared(
     world: &World,
     observer: ObjectId,
-    profile: &BattlePerceptionProfile,
+    profile: &PerceptionProfile,
     target: ObjectId,
-    geometry: Option<(BattleTerrainLos, BattleRange)>,
+    geometry: Option<(TerrainLos, Range)>,
     illumination: Option<&crate::btech::searchlight::IlluminationContext<'_>>,
-) -> Result<Option<BattlePerception>> {
+) -> Result<Option<Perception>> {
     let _measurement = crate::btech::autopilot::diagnostics::measure(
         crate::btech::autopilot::diagnostics::Category::Sensors,
     );
@@ -519,8 +509,8 @@ pub(crate) fn perceive_prepared(
         },
         hull_down,
     };
-    let mut best: Option<(i16, BattleDetectionChannel)> = None;
-    let mut offer = |channel: BattleDetectionChannel, aim: i16| {
+    let mut best: Option<(i16, DetectionChannel)> = None;
+    let mut offer = |channel: DetectionChannel, aim: i16| {
         if best.is_none_or(|current| (aim, channel) < current) {
             best = Some((aim, channel));
         }
@@ -543,14 +533,14 @@ pub(crate) fn perceive_prepared(
     {
         probed = true;
         offer(
-            BattleDetectionChannel::Probe,
+            DetectionChannel::Probe,
             sight::partial_cover(terrain, hull_down),
         );
     }
     if let Some(aim) = radar_aim(world, profile, target, &point, terrain, range)? {
-        offer(BattleDetectionChannel::Radar, aim + hull_down);
+        offer(DetectionChannel::Radar, aim + hull_down);
     }
-    Ok(best.map(|(aim_modifier, channel)| BattlePerception {
+    Ok(best.map(|(aim_modifier, channel)| Perception {
         channel,
         identified: !terrain.blocked,
         aim_modifier,
@@ -564,7 +554,7 @@ pub fn hex_perception(
     world: &World,
     observer: ObjectId,
     target: HexCoordinate,
-) -> Result<Option<BattleDetectionChannel>> {
+) -> Result<Option<DetectionChannel>> {
     let profile = perception_profile(world, observer)?;
     hex_perception_prepared(world, observer, &profile, target, true)
 }
@@ -576,10 +566,10 @@ pub fn hex_perception(
 pub(crate) fn hex_perception_prepared(
     world: &World,
     observer: ObjectId,
-    profile: &BattlePerceptionProfile,
+    profile: &PerceptionProfile,
     target: HexCoordinate,
     require_running: bool,
-) -> Result<Option<BattleDetectionChannel>> {
+) -> Result<Option<DetectionChannel>> {
     ensure!(
         world
             .objects
@@ -591,11 +581,11 @@ pub(crate) fn hex_perception_prepared(
         .context("Observer is not constructed")?;
     let position = unit.position.context("Observer is not placed")?;
     let (terrain, distance) = crate::btech::los::unit_hex_los(world, observer, target)?;
-    if require_running && unit.power != BattlePower::Running {
+    if require_running && unit.power != Power::Running {
         return Ok(None);
     }
     if profile.clairvoyant {
-        return Ok(Some(BattleDetectionChannel::Sight));
+        return Ok(Some(DetectionChannel::Sight));
     }
     let map = &world.btech.maps()[&position.map];
     let tile = map.base_hex(i64::from(target.x), i64::from(target.y))?;
@@ -626,7 +616,7 @@ mod tests {
     /// Channel codes, names and serialization stay aligned for rows and Lua.
     #[test]
     fn channel_codes_names_and_serialization_agree() {
-        for channel in BattleDetectionChannel::ALL {
+        for channel in DetectionChannel::ALL {
             assert_eq!(
                 serde_json::to_value(channel).unwrap(),
                 serde_json::json!(channel.name())
@@ -635,7 +625,7 @@ mod tests {
             assert_eq!(channel.code(false), channel.code(true).to_ascii_lowercase());
         }
         assert_eq!(
-            BattleDetectionChannel::ALL
+            DetectionChannel::ALL
                 .map(|channel| channel.code(true))
                 .iter()
                 .collect::<String>(),
@@ -646,12 +636,12 @@ mod tests {
     /// Declaration order is the tie-break when two channels give the same aim.
     #[test]
     fn channel_order_prefers_everyday_channels_on_ties() {
-        let mut sorted = BattleDetectionChannel::ALL;
+        let mut sorted = DetectionChannel::ALL;
         sorted.sort();
-        assert_eq!(sorted, BattleDetectionChannel::ALL);
+        assert_eq!(sorted, DetectionChannel::ALL);
         assert!(
-            (0, BattleDetectionChannel::Sensors) < (0, BattleDetectionChannel::Probe)
-                && (-3, BattleDetectionChannel::Radar) < (0, BattleDetectionChannel::Sensors)
+            (0, DetectionChannel::Sensors) < (0, DetectionChannel::Probe)
+                && (-3, DetectionChannel::Radar) < (0, DetectionChannel::Sensors)
         );
     }
 
@@ -664,18 +654,18 @@ mod tests {
             "cloud_base": 0, "sensor_flags": 2
         }))
         .unwrap();
-        assert!(!map.perception_disabled(BattleMapPerceptionFlag::Sensors));
-        map.sensor_flags |= BattleMapPerceptionFlag::Probes.bit();
-        assert!(map.perception_disabled(BattleMapPerceptionFlag::Probes));
-        assert!(!map.perception_disabled(BattleMapPerceptionFlag::Radar));
+        assert!(!map.perception_disabled(MapPerceptionFlag::Sensors));
+        map.sensor_flags |= MapPerceptionFlag::Probes.bit();
+        assert!(map.perception_disabled(MapPerceptionFlag::Probes));
+        assert!(!map.perception_disabled(MapPerceptionFlag::Radar));
         assert_eq!(map.sensor_flags, 66);
         assert_eq!(
             [
-                BattleMapPerceptionFlag::Sensors,
-                BattleMapPerceptionFlag::Radar,
-                BattleMapPerceptionFlag::Probes
+                MapPerceptionFlag::Sensors,
+                MapPerceptionFlag::Radar,
+                MapPerceptionFlag::Probes
             ]
-            .map(BattleMapPerceptionFlag::bit),
+            .map(MapPerceptionFlag::bit),
             [1, 32, 64]
         );
     }
@@ -684,13 +674,10 @@ mod tests {
     #[test]
     fn sensor_range_defaults_and_clamps() {
         let mut world = World::default();
-        assert_eq!(
-            world.btech.sensor_range,
-            BattleSensorRange(DEFAULT_SENSOR_RANGE)
-        );
+        assert_eq!(world.btech.sensor_range, SensorRange(DEFAULT_SENSOR_RANGE));
         configure_perception(&mut world, 90);
-        assert_eq!(world.btech.sensor_range, BattleSensorRange(60));
+        assert_eq!(world.btech.sensor_range, SensorRange(60));
         configure_perception(&mut world, -1);
-        assert_eq!(world.btech.sensor_range, BattleSensorRange(0));
+        assert_eq!(world.btech.sensor_range, SensorRange(0));
     }
 }

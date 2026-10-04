@@ -23,4 +23,4 @@ btech.unit.sguided(dbref, pilot, weapon)
 
 ## Returns
 
-- `BattleAmmunitionMode`
+- `AmmunitionMode`

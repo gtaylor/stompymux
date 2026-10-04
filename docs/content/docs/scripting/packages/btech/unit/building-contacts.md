@@ -22,4 +22,4 @@ btech.unit.building_contacts(unit, pilot)
 
 ## Returns
 
-- `BattleBuildingContact[]`
+- `BuildingContact[]`

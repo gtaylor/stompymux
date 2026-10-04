@@ -12,7 +12,7 @@ async fn startup_health_replays_without_premature_crew_death() {
             let (_dir, config, mut world, unit, _, _) =
                 firing::fixture_with_target(&source, None, &source).await;
             firing::edit(&mut world, unit, |state| {
-                state["power"] = serde_json::to_value(BattlePower::Off).unwrap();
+                state["power"] = serde_json::to_value(Power::Off).unwrap();
                 state["target_lock"] = serde_json::Value::Null
             });
             if character {
@@ -26,7 +26,7 @@ async fn startup_health_replays_without_premature_crew_death() {
             set_battle_character(
                 &mut world,
                 ObjectId(1),
-                BattleCharacter {
+                Character {
                     build: 1,
                     reflexes: 1,
                     intuition: 1,
@@ -111,9 +111,12 @@ async fn startup_health_replays_without_premature_crew_death() {
             assert_eq!(lua_value, "7");
             if character {
                 let status = text::plain(&battle_unit_status(&started, unit, "").unwrap());
-                if started.btech.vehicles().get(&unit).is_some_and(|unit| {
-                    unit.definition().movement == BattleVehicleMovement::Stationary
-                }) {
+                if started
+                    .btech
+                    .vehicles()
+                    .get(&unit)
+                    .is_some_and(|unit| unit.definition().movement == VehicleMovement::Stationary)
+                {
                     assert!(!status.contains("Pilot Injury:"));
                 } else {
                     assert!(

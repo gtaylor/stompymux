@@ -1,5 +1,5 @@
 //! Persistent flooded equipment, submerged armor breaches and immediate BattleMech falls.
-use super::{BattleFallRules, BattlePosture, BattleSection, BattleSectionExposureReport};
+use super::{FallRules, MechSection, Posture, SectionExposureReport};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 
@@ -7,8 +7,8 @@ use anyhow::{Context, Result, ensure};
 pub fn flood_unit(
     world: &mut World,
     id: ObjectId,
-    rules: BattleFallRules,
-) -> Result<Vec<BattleSectionExposureReport>> {
+    rules: FallRules,
+) -> Result<Vec<SectionExposureReport>> {
     ensure!(
         world
             .objects
@@ -26,10 +26,10 @@ pub fn flood_unit(
 pub(super) fn flood_unit_in_action(
     world: &mut World,
     id: ObjectId,
-    rules: BattleFallRules,
-) -> Result<Vec<BattleSectionExposureReport>> {
+    rules: FallRules,
+) -> Result<Vec<SectionExposureReport>> {
     let mut reports = Vec::new();
-    for section in BattleSection::ALL {
+    for section in MechSection::ALL {
         if let Some(report) = flood_section_inner(world, id, section, rules, true)? {
             reports.push(report);
         }
@@ -41,9 +41,9 @@ pub(super) fn flood_unit_in_action(
 pub(super) fn flood_section(
     world: &mut World,
     id: ObjectId,
-    section: BattleSection,
-    rules: BattleFallRules,
-) -> Result<Option<BattleSectionExposureReport>> {
+    section: MechSection,
+    rules: FallRules,
+) -> Result<Option<SectionExposureReport>> {
     ensure!(
         world
             .objects
@@ -58,9 +58,9 @@ pub(super) fn flood_section(
 pub(super) fn flood_section_in_action(
     world: &mut World,
     id: ObjectId,
-    section: BattleSection,
-    rules: BattleFallRules,
-) -> Result<Option<BattleSectionExposureReport>> {
+    section: MechSection,
+    rules: FallRules,
+) -> Result<Option<SectionExposureReport>> {
     flood_section_inner(world, id, section, rules, false)
 }
 
@@ -68,10 +68,10 @@ pub(super) fn flood_section_in_action(
 fn flood_section_inner(
     world: &mut World,
     id: ObjectId,
-    section: BattleSection,
-    rules: BattleFallRules,
+    section: MechSection,
+    rules: FallRules,
     whole_unit: bool,
-) -> Result<Option<BattleSectionExposureReport>> {
+) -> Result<Option<SectionExposureReport>> {
     let object = world.objects.get(&id).context("Unit is unavailable")?;
     ensure!(
         !object.flags.contains(Flag::Going),
@@ -106,7 +106,7 @@ fn flood_section_inner(
         return Ok(None);
     }
     let leg = unit.chassis().is_leg(section);
-    if depth == 1 && unit.posture() == BattlePosture::Standing && !leg {
+    if depth == 1 && unit.posture() == Posture::Standing && !leg {
         return Ok(None);
     }
     let state = &unit.sections()[&section];
@@ -120,7 +120,7 @@ fn flood_section_inner(
         world,
         id,
         section,
-        super::BattleSectionExposure::Water,
+        super::SectionExposure::Water,
         Some(rules),
         None,
     )

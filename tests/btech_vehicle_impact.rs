@@ -18,7 +18,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse("test", template).unwrap(),
+        VehicleTemplate::parse("test", template).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -33,11 +33,11 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
 }
 
 /// Find a deterministic stream for a specific multi-stage explosion path.
-fn matching_seed(predicate: impl Fn(&mut BattleDice) -> bool) -> [u8; 32] {
+fn matching_seed(predicate: impl Fn(&mut Dice) -> bool) -> [u8; 32] {
     for value in 0u32..100000 {
         let mut seed = [0; 32];
         seed[..4].copy_from_slice(&value.to_le_bytes());
-        if predicate(&mut BattleDice::seeded(seed)) {
+        if predicate(&mut Dice::seeded(seed)) {
             return seed;
         }
     }
@@ -46,17 +46,14 @@ fn matching_seed(predicate: impl Fn(&mut BattleDice) -> bool) -> [u8; 32] {
 
 /// Change only the victim's random stream.
 fn set_seed(world: &mut World, id: ObjectId, seed: [u8; 32]) {
-    world
-        .btech
-        .set_unit_dice(id, BattleDice::seeded(seed))
-        .unwrap();
+    world.btech.set_unit_dice(id, Dice::seeded(seed)).unwrap();
 }
 
 /// Explicit policy for the hit table and critical consequences.
-fn rules(table: BattleVehicleCriticalTable) -> BattleVehicleImpactRules {
-    BattleVehicleImpactRules {
+fn rules(table: VehicleCriticalTable) -> VehicleImpactRules {
+    VehicleImpactRules {
         advanced_fire: false,
-        criticals: BattleVehicleCriticalRules {
+        criticals: VehicleCriticalRules {
             rotor_damage_divisor: 0,
             extended_piloting: false,
             vtol_table: None,
@@ -65,7 +62,7 @@ fn rules(table: BattleVehicleCriticalTable) -> BattleVehicleImpactRules {
             combat_safe: false,
             toughness: false,
         },
-        hit: BattleVehicleHitRules {
+        hit: VehicleHitRules {
             critical_mode: 1,
             critical_level: 40,
         },
@@ -74,18 +71,18 @@ fn rules(table: BattleVehicleCriticalTable) -> BattleVehicleImpactRules {
 
 #[test]
 fn advanced_locations_cover_all_arcs_and_turretless_fallbacks() {
-    use BattleVehicleSection as S;
-    let intact = BattleVehicle::new(
-        BattleVehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+    use VehicleSection as S;
+    let intact = Vehicle::new(
+        VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
             .unwrap(),
     )
     .unwrap();
     let mut lost = intact.clone();
-    lost.damage_phase(S::Turret, 8, BattleDamagePhase::Internal)
+    lost.damage_phase(S::Turret, 8, DamagePhase::Internal)
         .unwrap();
     for (arc, row) in [
         (
-            BattleHitArc::Front,
+            HitArc::Front,
             [
                 S::Front,
                 S::Front,
@@ -101,7 +98,7 @@ fn advanced_locations_cover_all_arcs_and_turretless_fallbacks() {
             ],
         ),
         (
-            BattleHitArc::Rear,
+            HitArc::Rear,
             [
                 S::Rear,
                 S::Rear,
@@ -117,7 +114,7 @@ fn advanced_locations_cover_all_arcs_and_turretless_fallbacks() {
             ],
         ),
         (
-            BattleHitArc::Left,
+            HitArc::Left,
             [
                 S::Left,
                 S::Left,
@@ -133,7 +130,7 @@ fn advanced_locations_cover_all_arcs_and_turretless_fallbacks() {
             ],
         ),
         (
-            BattleHitArc::Right,
+            HitArc::Right,
             [
                 S::Right,
                 S::Right,
@@ -152,7 +149,7 @@ fn advanced_locations_cover_all_arcs_and_turretless_fallbacks() {
         for roll in 2..=12 {
             for turret in [false, true] {
                 let vehicle = if turret { &intact } else { &lost };
-                let mut dice = BattleDice::seeded([9; 32]);
+                let mut dice = Dice::seeded([9; 32]);
                 let hit = vehicle.advanced_hit(arc, roll, 1, 40, &mut dice).unwrap();
                 assert_eq!(
                     hit.section,
@@ -165,23 +162,17 @@ fn advanced_locations_cover_all_arcs_and_turretless_fallbacks() {
                 assert_eq!(
                     hit.through_armor_critical,
                     matches!(roll, 2 | 12)
-                        || (roll == 8 && matches!(arc, BattleHitArc::Left | BattleHitArc::Right))
+                        || (roll == 8 && matches!(arc, HitArc::Left | HitArc::Right))
                 );
                 assert_eq!(hit.motive_roll, None);
-                assert_eq!(dice.d6(), BattleDice::seeded([9; 32]).d6());
+                assert_eq!(dice.d6(), Dice::seeded([9; 32]).d6());
             }
         }
         assert_eq!(intact.critical_proof_hit(arc, 12).unwrap().section, row[0]);
     }
     assert!(
         intact
-            .advanced_hit(
-                BattleHitArc::Front,
-                1,
-                1,
-                40,
-                &mut BattleDice::seeded([0; 32])
-            )
+            .advanced_hit(HitArc::Front, 1, 1, 40, &mut Dice::seeded([0; 32]))
             .is_err()
     );
 }
@@ -196,13 +187,12 @@ fn advanced_motive_rolls_apply_class_modifiers_and_critical_immunity() {
             )
             .replace("armor = 40", "armor = 0")
             .replace("walk_mp = 5", "walk_mp = 8");
-        let vehicle =
-            BattleVehicle::new(BattleVehicleTemplate::parse("test", &text).unwrap()).unwrap();
+        let vehicle = Vehicle::new(VehicleTemplate::parse("test", &text).unwrap()).unwrap();
         for roll in 2..=12 {
             let stream = matching_seed(|dice| dice.two_d6() == roll);
-            let mut dice = BattleDice::seeded(stream);
+            let mut dice = Dice::seeded(stream);
             let hit = vehicle
-                .advanced_hit(BattleHitArc::Front, 3, 1, 40, &mut dice)
+                .advanced_hit(HitArc::Front, 3, 1, 40, &mut dice)
                 .unwrap();
             assert_eq!(hit.motive_roll, Some(roll));
             let adjusted = roll + modifier;
@@ -217,47 +207,46 @@ fn advanced_motive_rolls_apply_class_modifiers_and_critical_immunity() {
             assert_eq!(
                 hit.motive,
                 match adjusted {
-                    10 | 11 => Some(BattleVehicleMotiveHit::SpeedLoss { movement_points: 1 }),
-                    12.. => Some(BattleVehicleMotiveHit::Immobilize),
+                    10 | 11 => Some(VehicleMotiveHit::SpeedLoss { movement_points: 1 }),
+                    12.. => Some(VehicleMotiveHit::Immobilize),
                     _ => None,
                 }
             );
-            let mut expected = BattleDice::seeded(stream);
+            let mut expected = Dice::seeded(stream);
             expected.two_d6();
             assert_eq!(dice.d6(), expected.d6());
         }
         let text = support::templates::with_flags(&text, &["CritProof_Tech"]);
-        let immune =
-            BattleVehicle::new(BattleVehicleTemplate::parse("test", &text).unwrap()).unwrap();
-        let mut dice = BattleDice::seeded([9; 32]);
+        let immune = Vehicle::new(VehicleTemplate::parse("test", &text).unwrap()).unwrap();
+        let mut dice = Dice::seeded([9; 32]);
         assert_eq!(
             immune
-                .advanced_hit(BattleHitArc::Front, 3, 2, 100, &mut dice)
+                .advanced_hit(HitArc::Front, 3, 2, 100, &mut dice)
                 .unwrap()
                 .motive_roll,
             None
         );
-        assert_eq!(dice.d6(), BattleDice::seeded([9; 32]).d6());
+        assert_eq!(dice.d6(), Dice::seeded([9; 32]).d6());
     }
 }
 
 #[tokio::test]
 async fn complete_impacts_apply_hit_effects_and_damage_with_saved_replay() {
-    use BattleVehicleCriticalTable as T;
+    use VehicleCriticalTable as T;
     for (table, arc, roll, section, loss, locked) in [
         (
             T::Standard,
-            BattleHitArc::Left,
+            HitArc::Left,
             7,
-            BattleVehicleSection::Left,
+            VehicleSection::Left,
             0.0,
             false,
         ),
         (
             T::Advanced,
-            BattleHitArc::Front,
+            HitArc::Front,
             5,
-            BattleVehicleSection::Right,
+            VehicleSection::Right,
             0.0,
             false,
         ),
@@ -294,7 +283,7 @@ async fn complete_impacts_apply_hit_effects_and_damage_with_saved_replay() {
             before.maximum_speed() - loss
         );
         assert_eq!(world.btech.vehicles()[&id].turret_locked(), locked);
-        let mut dice = BattleDice::seeded(stream);
+        let mut dice = Dice::seeded(stream);
         dice.two_d6();
         if table != T::Standard {
             dice.two_d6();
@@ -328,10 +317,10 @@ async fn hull_impacts_preserve_occupants_and_combat_safety_preserves_material() 
     let report = resolve_battle_vehicle_impact(
         &mut world,
         id,
-        BattleHitArc::Left,
+        HitArc::Left,
         40,
         None,
-        rules(BattleVehicleCriticalTable::Standard),
+        rules(VehicleCriticalTable::Standard),
     )
     .unwrap();
     assert!(report.damage.unwrap().unit_destroyed);
@@ -342,26 +331,25 @@ async fn hull_impacts_preserve_occupants_and_combat_safety_preserves_material() 
         resolve_battle_vehicle_impact(
             &mut world,
             id,
-            BattleHitArc::Left,
+            HitArc::Left,
             0,
             None,
-            rules(BattleVehicleCriticalTable::Standard)
+            rules(VehicleCriticalTable::Standard)
         )
         .is_err()
     );
     assert_eq!(world.btech, before);
     let sections = world.btech.vehicles()[&id].sections().clone();
-    let mut policy = rules(BattleVehicleCriticalTable::Standard);
+    let mut policy = rules(VehicleCriticalTable::Standard);
     policy.criticals.combat_safe = true;
     let report =
-        resolve_battle_vehicle_impact(&mut world, id, BattleHitArc::Left, 40, None, policy)
-            .unwrap();
+        resolve_battle_vehicle_impact(&mut world, id, HitArc::Left, 40, None, policy).unwrap();
     assert!(report.hit.is_none());
     assert!(report.damage.is_none());
     assert!(report.notices.is_empty());
     assert_eq!(world.btech.vehicles()[&id].sections(), &sections);
     assert_eq!(world.btech.vehicles()[&id].motive_speed_loss(), 0.0);
-    let mut dice = BattleDice::seeded(stream);
+    let mut dice = Dice::seeded(stream);
     dice.two_d6();
     dice.two_d6();
     assert_eq!(roll_unit_dice(&mut world, id, 1).unwrap(), [dice.d6()]);
@@ -389,21 +377,19 @@ async fn advanced_motive_impacts_commit_steering_speed_and_penetration_together(
         .unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
     let mut restored = persistence::load(&config.database()).await.unwrap();
-    let policy = rules(BattleVehicleCriticalTable::Advanced);
+    let policy = rules(VehicleCriticalTable::Advanced);
     let report =
-        resolve_battle_vehicle_impact(&mut world, id, BattleHitArc::Front, 1, None, policy)
-            .unwrap();
+        resolve_battle_vehicle_impact(&mut world, id, HitArc::Front, 1, None, policy).unwrap();
     assert_eq!(
         report,
-        resolve_battle_vehicle_impact(&mut restored, id, BattleHitArc::Front, 1, None, policy)
-            .unwrap()
+        resolve_battle_vehicle_impact(&mut restored, id, HitArc::Front, 1, None, policy).unwrap()
     );
     assert_eq!(world.btech, restored.btech);
     assert_eq!(report.hit.unwrap().motive_roll, Some(11));
     assert_eq!(world.btech.vehicles()[&id].piloting_damage(), 2);
     assert_eq!(world.btech.vehicles()[&id].maximum_speed(), 43.0);
     assert_eq!(
-        world.btech.vehicles()[&id].sections()[&BattleVehicleSection::Front].internal,
+        world.btech.vehicles()[&id].sections()[&VehicleSection::Front].internal,
         7
     );
     assert!(
@@ -412,7 +398,7 @@ async fn advanced_motive_impacts_commit_steering_speed_and_penetration_together(
             .iter()
             .any(|notice| notice.text == "wobbles violently.")
     );
-    let mut dice = BattleDice::seeded(stream);
+    let mut dice = Dice::seeded(stream);
     for _ in 0..5 {
         dice.two_d6();
     }

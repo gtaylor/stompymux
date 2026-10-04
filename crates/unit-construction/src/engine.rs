@@ -1,12 +1,12 @@
 //! Fusion-engine identity derived from supported BattleMech installations, independent of live damage.
-use super::{BattleLoadout, BattleSection, BattleSystem};
+use super::{MechLoadout, MechSection, System};
 use anyhow::{Result, bail, ensure};
 use serde::Serialize;
 
 /// Supported BattleMech fusion-engine construction families.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleEngine {
+pub enum Engine {
     Standard,
     Light,
     Xl,
@@ -14,10 +14,10 @@ pub enum BattleEngine {
     Compact,
 }
 
-impl BattleEngine {
+impl Engine {
     /// Recognize complete installations, including side slots relocated into the center torso.
     /// Return the effective mass/combat family; flags do not grant equipment.
-    pub fn resolve(loadout: &BattleLoadout, clan: bool) -> Result<Self> {
+    pub fn resolve(loadout: &MechLoadout, clan: bool) -> Result<Self> {
         let [center, left, right] = engine_slots(loadout)?;
         if (center, left, right) == (3, 0, 0) {
             return Ok(Self::Compact);
@@ -88,7 +88,7 @@ impl BattleEngine {
     }
 
     /// Name the installed technology from the same slot inventory used by engine construction.
-    pub fn display_family(loadout: &BattleLoadout, clan: bool) -> Result<Self> {
+    pub fn display_family(loadout: &MechLoadout, clan: bool) -> Result<Self> {
         let [center, left, right] = engine_slots(loadout)?;
         Ok(Self::display_from_flags(
             !clan && [left, right].contains(&2),
@@ -111,19 +111,19 @@ impl BattleEngine {
 }
 
 /// Count the installed engine once, rejecting components outside supported torso sections.
-fn engine_slots(loadout: &BattleLoadout) -> Result<[u8; 3]> {
+fn engine_slots(loadout: &MechLoadout) -> Result<[u8; 3]> {
     let mut center = 0;
     let mut left = 0;
     let mut right = 0;
     for part in loadout
         .systems
         .iter()
-        .filter(|part| part.system == BattleSystem::Engine)
+        .filter(|part| part.system == System::Engine)
     {
         match part.location.section {
-            BattleSection::CenterTorso => center += 1,
-            BattleSection::LeftTorso => left += 1,
-            BattleSection::RightTorso => right += 1,
+            MechSection::CenterTorso => center += 1,
+            MechSection::LeftTorso => left += 1,
+            MechSection::RightTorso => right += 1,
             _ => bail!(
                 "Engine critical outside torso: {} critical {}",
                 part.location.section.name(),

@@ -1,11 +1,11 @@
 //! Shared ammunition draw planning and expenditure after damage to a firing unit.
-use super::{BattleUnit, BattleVehicle};
+use super::{Mech, Vehicle};
 use anyhow::{Context, Result};
 use serde::Serialize;
 
 /// A bounded draw from one live bin, in feed-priority order.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-pub struct BattleAmmunitionDraw {
+pub struct AmmunitionDraw {
     pub bin_index: usize,
     pub rounds: u16,
 }
@@ -15,8 +15,8 @@ pub struct BattleAmmunitionDraw {
 /// Preserve feed order and omit empty draws from the attack's expenditure report.
 pub(super) fn spend_surviving_draws(
     inventory: &mut [u16],
-    draws: impl IntoIterator<Item = BattleAmmunitionDraw>,
-) -> Vec<BattleAmmunitionDraw> {
+    draws: impl IntoIterator<Item = AmmunitionDraw>,
+) -> Vec<AmmunitionDraw> {
     let mut spent = Vec::new();
     for draw in draws {
         let available = &mut inventory[draw.bin_index];
@@ -25,16 +25,16 @@ pub(super) fn spend_surviving_draws(
             continue;
         }
         *available -= rounds;
-        spent.push(BattleAmmunitionDraw { rounds, ..draw });
+        spent.push(AmmunitionDraw { rounds, ..draw });
     }
     spent
 }
 
-impl BattleUnit {
+impl Mech {
     /// Plan up to `rounds` compatible rounds without changing inventory, mode, heat or dice.
     /// Prefer the selected section, then the mount and canonical section/slot order; empty or unavailable bins are skipped.
     /// A short plan exposes shortage so a firing mode can choose its specified fallback atomically.
-    pub fn ammunition_feed(&self, index: usize, rounds: u16) -> Result<Vec<BattleAmmunitionDraw>> {
+    pub fn ammunition_feed(&self, index: usize, rounds: u16) -> Result<Vec<AmmunitionDraw>> {
         let loadout = self.loadout()?;
         self.ammunition_feed_with_loadout(&loadout, index, rounds)
     }
@@ -42,10 +42,10 @@ impl BattleUnit {
     /// Resolve the live feed using an equipment projection from this immutable unit.
     pub(crate) fn ammunition_feed_with_loadout(
         &self,
-        loadout: &super::BattleLoadout,
+        loadout: &super::MechLoadout,
         index: usize,
         rounds: u16,
-    ) -> Result<Vec<BattleAmmunitionDraw>> {
+    ) -> Result<Vec<AmmunitionDraw>> {
         let mount = loadout
             .weapons
             .get(index)
@@ -83,11 +83,11 @@ impl BattleUnit {
     }
 }
 
-impl BattleVehicle {
+impl Vehicle {
     /// Plan up to `rounds` compatible rounds without changing inventory, mode, heat or dice.
     /// Prefer the selected section, then the mount and canonical section/slot order; empty or unavailable bins are skipped.
     /// A short plan exposes shortage so a firing mode can choose its specified fallback atomically.
-    pub fn ammunition_feed(&self, index: usize, rounds: u16) -> Result<Vec<BattleAmmunitionDraw>> {
+    pub fn ammunition_feed(&self, index: usize, rounds: u16) -> Result<Vec<AmmunitionDraw>> {
         let loadout = self.loadout()?;
         self.ammunition_feed_with_loadout(&loadout, index, rounds)
     }
@@ -95,10 +95,10 @@ impl BattleVehicle {
     /// Resolve the live feed using an equipment projection from this immutable unit.
     pub(crate) fn ammunition_feed_with_loadout(
         &self,
-        loadout: &super::BattleVehicleLoadout,
+        loadout: &super::VehicleLoadout,
         index: usize,
         rounds: u16,
-    ) -> Result<Vec<BattleAmmunitionDraw>> {
+    ) -> Result<Vec<AmmunitionDraw>> {
         let mount = loadout
             .weapons
             .get(index)
@@ -140,7 +140,7 @@ impl BattleVehicle {
 fn plan_draws<L: Ord>(
     bins: impl Iterator<Item = (usize, (u8, L), u16)>,
     rounds: u16,
-) -> Vec<BattleAmmunitionDraw> {
+) -> Vec<AmmunitionDraw> {
     let mut bins: Vec<_> = bins.collect();
     bins.sort_by(|left, right| left.1.cmp(&right.1));
     let mut remaining = rounds;
@@ -150,7 +150,7 @@ fn plan_draws<L: Ord>(
             break;
         }
         let rounds = available.min(remaining);
-        draws.push(BattleAmmunitionDraw { bin_index, rounds });
+        draws.push(AmmunitionDraw { bin_index, rounds });
         remaining -= rounds;
     }
     draws

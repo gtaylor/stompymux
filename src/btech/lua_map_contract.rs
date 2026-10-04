@@ -7,17 +7,17 @@ use std::collections::{BTreeMap, BTreeSet};
 
 /// A live unit sample in the persisted mixed map-slot order.
 #[derive(Debug, Clone)]
-pub struct BattleMapMember {
+pub struct MapMember {
     pub id: ObjectId,
     pub label: String,
-    pub position: BattlePosition,
+    pub position: Position,
     pub point: Point,
     /// Continuous altitude in the C API's map-coordinate scale.
     pub z: f64,
 }
 
 /// Return constructed Mechs and vehicles in their common battlefield order.
-pub fn battle_map_members(world: &World, map: ObjectId) -> Result<Vec<BattleMapMember>> {
+pub fn map_members(world: &World, map: ObjectId) -> Result<Vec<MapMember>> {
     super::map_slots::all_unit_order(world, map)?
         .into_iter()
         .map(|id| {
@@ -35,7 +35,7 @@ pub fn battle_map_members(world: &World, map: ObjectId) -> Result<Vec<BattleMapM
                 .unit(id)
                 .context("Unit construction state is unavailable")?;
             let z = super::with_unit!(record, |record| record.altitude(tile));
-            Ok(BattleMapMember {
+            Ok(MapMember {
                 id,
                 label: unit.label().context("Placed unit lacks an ID")?,
                 position,
@@ -47,11 +47,7 @@ pub fn battle_map_members(world: &World, map: ObjectId) -> Result<Vec<BattleMapM
 }
 
 /// Locate a unit label relative to either a unit's battlefield or a map.
-pub fn battle_map_unit_by_label(
-    world: &World,
-    origin: ObjectId,
-    label: &str,
-) -> Result<Option<ObjectId>> {
+pub fn map_unit_by_label(world: &World, origin: ObjectId, label: &str) -> Result<Option<ObjectId>> {
     let map = if world.btech.maps().contains_key(&origin) {
         origin
     } else {
@@ -62,24 +58,24 @@ pub fn battle_map_unit_by_label(
         };
         position.map
     };
-    Ok(battle_map_members(world, map)?
+    Ok(map_members(world, map)?
         .into_iter()
         .find_map(|unit| unit.label.eq_ignore_ascii_case(label).then_some(unit.id)))
 }
 
 /// A range endpoint in continuous horizontal coordinates and terrain-height units.
 #[derive(Debug, Clone, Copy)]
-pub struct BattleMapSpatialPoint {
+pub struct MapSpatialPoint {
     pub x: f32,
     pub y: f32,
     pub z: f32,
 }
 
 /// Project a hex center with the reference runtime's exact float32 arithmetic.
-pub fn battle_map_hex_point(coordinate: HexCoordinate, z: f64) -> BattleMapSpatialPoint {
+pub fn map_hex_point(coordinate: HexCoordinate, z: f64) -> MapSpatialPoint {
     const ALPHA: f32 = 93.09773;
     const SCALE_MAP: f32 = 322.5;
-    BattleMapSpatialPoint {
+    MapSpatialPoint {
         x: (2.0 + 3.0 * coordinate.x as f32) * ALPHA,
         y: (if coordinate.x % 2 == 0 {
             0.5 * SCALE_MAP
@@ -91,7 +87,7 @@ pub fn battle_map_hex_point(coordinate: HexCoordinate, z: f64) -> BattleMapSpati
 }
 
 /// Return the live battlefield containing a unit.
-pub fn battle_map_unit_map(world: &World, unit: ObjectId) -> Result<ObjectId> {
+pub fn map_unit_map(world: &World, unit: ObjectId) -> Result<ObjectId> {
     super::scanner::scanner_unit(world, unit)
         .context("unit runtime state is unavailable")?
         .position
@@ -100,16 +96,12 @@ pub fn battle_map_unit_map(world: &World, unit: ObjectId) -> Result<ObjectId> {
 }
 
 /// Read a live unit endpoint and require membership on the supplied map.
-pub fn battle_map_unit_point(
-    world: &World,
-    map: ObjectId,
-    unit: ObjectId,
-) -> Result<BattleMapSpatialPoint> {
-    let sample = battle_map_members(world, map)?
+pub fn map_unit_point(world: &World, map: ObjectId, unit: ObjectId) -> Result<MapSpatialPoint> {
+    let sample = map_members(world, map)?
         .into_iter()
         .find(|sample| sample.id == unit)
         .context("unit endpoint is not on the supplied map")?;
-    Ok(BattleMapSpatialPoint {
+    Ok(MapSpatialPoint {
         x: (sample.point.x * 322.5) as f32,
         y: (sample.point.y * 322.5) as f32,
         z: (sample.z * 64.5) as f32,
@@ -117,10 +109,7 @@ pub fn battle_map_unit_point(
 }
 
 /// Measure the C API's three-dimensional map range.
-pub fn battle_map_spatial_range(
-    from: BattleMapSpatialPoint,
-    to: BattleMapSpatialPoint,
-) -> Result<f64> {
+pub fn map_spatial_range(from: MapSpatialPoint, to: MapSpatialPoint) -> Result<f64> {
     let dx = from.x - to.x;
     let dy = from.y - to.y;
     let dz = from.z - to.z;
@@ -129,52 +118,44 @@ pub fn battle_map_spatial_range(
 
 /// Result vocabulary exposed by `btech.map.line_of_sight`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum BattleMapLos {
+pub enum MapLos {
     Clear,
     Blocked,
     None,
 }
 
 /// Query a unit-to-hex terrain ray without updating contacts.
-pub fn battle_map_hex_los(
-    world: &World,
-    observer: ObjectId,
-    target: HexCoordinate,
-) -> Result<BattleMapLos> {
+pub fn map_hex_los(world: &World, observer: ObjectId, target: HexCoordinate) -> Result<MapLos> {
     let (terrain, _) = super::los::unit_hex_los(world, observer, target)?;
     Ok(if terrain.blocked {
-        BattleMapLos::Blocked
+        MapLos::Blocked
     } else {
-        BattleMapLos::Clear
+        MapLos::Clear
     })
 }
 
 /// Query current perception, retaining the C clear/blocked/none distinction.
-pub fn battle_map_unit_los(
-    world: &World,
-    observer: ObjectId,
-    target: ObjectId,
-) -> Result<BattleMapLos> {
+pub fn map_unit_los(world: &World, observer: ObjectId, target: ObjectId) -> Result<MapLos> {
     let source = super::scanner::scanner_unit(world, observer)
         .context("observer runtime state is unavailable")?;
     let destination = super::scanner::scanner_unit(world, target)
         .context("target runtime state is unavailable")?;
     let source_position = source.position.context("observer is not on a live map")?;
     let Some(target_position) = destination.position else {
-        return Ok(BattleMapLos::None);
+        return Ok(MapLos::None);
     };
     if source_position.map != target_position.map {
-        return Ok(BattleMapLos::None);
+        return Ok(MapLos::None);
     }
     let terrain = super::unit_terrain_los(world, observer, target)?;
     let visible =
         source.visibility.clairvoyant || super::perceive(world, observer, target)?.is_some();
     Ok(if !visible {
-        BattleMapLos::None
+        MapLos::None
     } else if terrain.blocked {
-        BattleMapLos::Blocked
+        MapLos::Blocked
     } else {
-        BattleMapLos::Clear
+        MapLos::Clear
     })
 }
 
@@ -205,7 +186,7 @@ pub fn place_battle_map_unit(
             super::scenario_map::reassign_in_candidate(world, target, map, None)?;
             super::towing::set_tow(world, unit, Some(target))?;
         }
-        let position = BattlePosition {
+        let position = Position {
             map,
             x: u16::try_from(coordinate.x)?,
             y: u16::try_from(coordinate.y)?,
@@ -310,7 +291,7 @@ pub fn update_battle_map_links_trusted_action(
                     &mut candidate,
                     parent,
                     slot,
-                    Some(BattleBuildingEntrance {
+                    Some(BuildingEntrance {
                         coordinate,
                         interior: child,
                         data_char: 0,
@@ -357,7 +338,7 @@ pub fn update_battle_map_links_trusted_action(
                                 &mut candidate,
                                 map,
                                 slot as u32,
-                                Some(BattleBuildingEntryPoint {
+                                Some(BuildingEntryPoint {
                                     coordinate,
                                     direction: b"nesw"[direction],
                                     object: ObjectId(-1),
@@ -405,7 +386,7 @@ pub fn update_battle_map_links_trusted_action(
     Ok(())
 }
 
-fn substitute_hex_message(text: &str, origin: HexCoordinate, recipient: BattlePosition) -> String {
+fn substitute_hex_message(text: &str, origin: HexCoordinate, recipient: Position) -> String {
     let current = origin.x == i32::from(recipient.x) && origin.y == i32::from(recipient.y);
     let mut output = String::new();
     let mut characters = text.chars().peekable();
@@ -433,7 +414,7 @@ fn substitute_hex_message(text: &str, origin: HexCoordinate, recipient: BattlePo
 
 /// Audience selection for a trusted Lua map broadcast.
 #[derive(Debug, Clone, Copy)]
-pub enum BattleMapEmitAudience {
+pub enum MapEmitAudience {
     All,
     Range {
         origin: Point,
@@ -450,7 +431,7 @@ pub fn emit_battle_map_trusted_action(
     scripts: &Scripts,
     map: ObjectId,
     text: &str,
-    audience: BattleMapEmitAudience,
+    audience: MapEmitAudience,
 ) -> Result<()> {
     let before = scripts.world().clone();
     ensure!(
@@ -460,37 +441,37 @@ pub fn emit_battle_map_trusted_action(
         "Map is unavailable"
     );
     before.btech.maps().get(&map).context("Map not found")?;
-    let units = battle_map_members(&before, map)?;
+    let units = map_members(&before, map)?;
     for unit in units {
         let scanner =
             super::scanner::scanner_unit(&before, unit.id).context("Unit is unavailable")?;
-        if scanner.power != BattlePower::Running {
+        if scanner.power != Power::Running {
             continue;
         }
         let selected = match audience {
-            BattleMapEmitAudience::All => true,
-            BattleMapEmitAudience::Range { origin, z, range } => {
+            MapEmitAudience::All => true,
+            MapEmitAudience::Range { origin, z, range } => {
                 let actual = if let Some(z) = z {
-                    battle_map_spatial_range(
-                        BattleMapSpatialPoint {
+                    map_spatial_range(
+                        MapSpatialPoint {
                             x: (origin.x * 322.5) as f32,
                             y: (origin.y * 322.5) as f32,
                             z: (z * 64.5) as f32,
                         },
-                        BattleMapSpatialPoint {
+                        MapSpatialPoint {
                             x: (unit.point.x * 322.5) as f32,
                             y: (unit.point.y * 322.5) as f32,
                             z: (unit.z * 64.5) as f32,
                         },
                     )?
                 } else {
-                    battle_map_spatial_range(
-                        BattleMapSpatialPoint {
+                    map_spatial_range(
+                        MapSpatialPoint {
                             x: (origin.x * 322.5) as f32,
                             y: (origin.y * 322.5) as f32,
                             z: 0.0,
                         },
-                        BattleMapSpatialPoint {
+                        MapSpatialPoint {
                             x: (unit.point.x * 322.5) as f32,
                             y: (unit.point.y * 322.5) as f32,
                             z: 0.0,
@@ -499,7 +480,7 @@ pub fn emit_battle_map_trusted_action(
                 };
                 actual <= range
             }
-            BattleMapEmitAudience::LineOfSight { origin } => {
+            MapEmitAudience::LineOfSight { origin } => {
                 super::hex_visible(&before, unit.id, origin)?
             }
         };
@@ -512,7 +493,7 @@ pub fn emit_battle_map_trusted_action(
                     target: unit.id,
                     sender: ObjectId(-1),
                     document: match audience {
-                        BattleMapEmitAudience::LineOfSight { origin } => {
+                        MapEmitAudience::LineOfSight { origin } => {
                             substitute_hex_message(text, origin, unit.position).into()
                         }
                         _ => text.into(),

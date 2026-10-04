@@ -23,4 +23,4 @@ btech.inventory.fix(actor, object)
 
 ## Returns
 
-- `BattleInventoryCleanup`
+- `InventoryCleanup`

@@ -8,21 +8,21 @@ use serde::Serialize;
 /// Applied critical with occupant feedback staged for the enclosing attack transaction.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[must_use = "Publish critical notices with the enclosing attack transaction"]
-pub struct BattleVehicleCriticalResolution {
-    pub selection: BattleVehicleCriticalReport,
+pub struct VehicleCriticalResolution {
+    pub selection: VehicleCriticalReport,
     /// Engine-loss landing check when terrain permits an attempt, retained for host diagnostics.
-    pub emergency_landing: Option<BattlePilotingCheck>,
-    pub notices: Vec<BattleNotice>,
+    pub emergency_landing: Option<PilotingCheck>,
+    pub notices: Vec<Notice>,
     /// Pilot-only control feedback indexed into the damage notice stream.
-    pub pilot_notices: Vec<BattlePilotNotice>,
-    pub pilot_injury: Option<BattlePilotInjury>,
+    pub pilot_notices: Vec<PilotNotice>,
+    pub pilot_injury: Option<TacticalPilotInjury>,
     /// Direct character injury; nested explosions retain their own ordered reports.
-    pub character_injury: Option<BattleCharacterPilotInjury>,
-    pub internal_damage: Vec<BattleVehicleInternalDamage>,
-    pub ammunition_cascade: Option<BattleVehicleAmmunitionCascade>,
-    pub explosion: Option<BattleVehicleExplosion>,
+    pub character_injury: Option<CharacterPilotInjury>,
+    pub internal_damage: Vec<VehicleInternalDamage>,
+    pub ammunition_cascade: Option<VehicleAmmunitionCascade>,
+    pub explosion: Option<VehicleExplosion>,
     /// Visibility-filtered broadcasts owed by the enclosing attack, not global messages.
-    pub broadcasts: Vec<BattleNotice>,
+    pub broadcasts: Vec<Notice>,
 }
 
 /// Resolve selection and its consequences atomically. Unsupported character casualties
@@ -30,9 +30,9 @@ pub struct BattleVehicleCriticalResolution {
 pub fn resolve_vehicle_critical(
     world: &mut World,
     id: ObjectId,
-    section: BattleVehicleSection,
-    rules: BattleVehicleCriticalRules,
-) -> Result<BattleVehicleCriticalResolution> {
+    section: VehicleSection,
+    rules: VehicleCriticalRules,
+) -> Result<VehicleCriticalResolution> {
     world.attempt(|world| {
         let report = resolve_in_candidate(world, id, section, rules, DamageContext::default())?;
         Ok(report)
@@ -43,10 +43,10 @@ pub fn resolve_vehicle_critical(
 pub(super) fn resolve_in_candidate(
     candidate: &mut World,
     id: ObjectId,
-    section: BattleVehicleSection,
-    rules: BattleVehicleCriticalRules,
+    section: VehicleSection,
+    rules: VehicleCriticalRules,
     context: DamageContext,
-) -> Result<BattleVehicleCriticalResolution> {
+) -> Result<VehicleCriticalResolution> {
     ensure!(
         context.depth < 64,
         "Vehicle critical cascade limit exceeded"
@@ -62,15 +62,15 @@ pub(super) fn resolve_in_candidate(
     let mut explosion = None;
     let mut broadcasts = Vec::new();
     if let Some(effect) = selection.effect {
-        notices.push(BattleNotice {
+        notices.push(Notice {
             unit: id,
             text: "[fg=yellow bold]CRITICAL HIT![reset]".into(),
         });
         if matches!(
             effect,
-            BattleVehicleCriticalEffect::CrewHit | BattleVehicleCriticalEffect::CrewKilled
+            VehicleCriticalEffect::CrewHit | VehicleCriticalEffect::CrewKilled
         ) {
-            let killed = effect == BattleVehicleCriticalEffect::CrewKilled;
+            let killed = effect == VehicleCriticalEffect::CrewKilled;
             if killed {
                 let vehicle = candidate.btech.vehicles.get_mut(&id).unwrap();
                 let pilot = vehicle.pilot();
@@ -89,16 +89,16 @@ pub(super) fn resolve_in_candidate(
                 {
                     recovery.remaining = 0;
                 }
-                let advanced = selection.table == BattleVehicleCriticalTable::Advanced;
+                let advanced = selection.table == VehicleCriticalTable::Advanced;
                 if advanced {
                     candidate
                         .btech
                         .vehicles
                         .get_mut(&id)
                         .unwrap()
-                        .apply_motive_hit(BattleVehicleMotiveHit::Immobilize);
+                        .apply_motive_hit(VehicleMotiveHit::Immobilize);
                 }
-                notices.push(BattleNotice { unit: id, text: if candidate.btech.vehicles()[&id].definition().is_vtol() && !advanced { "Your cockpit is destroyed!" } else if advanced { "[fg=red bold]The shot ricochets around the crew compartment, instantly killing everyone![reset]" } else { "Your armor is pierced and you are killed instantly!" }.into() });
+                notices.push(Notice { unit: id, text: if candidate.btech.vehicles()[&id].definition().is_vtol() && !advanced { "Your cockpit is destroyed!" } else if advanced { "[fg=red bold]The shot ricochets around the crew compartment, instantly killing everyone![reset]" } else { "Your armor is pierced and you are killed instantly!" }.into() });
             }
             if !killed {
                 let was_destroyed = candidate.btech.vehicles()[&id].is_destroyed();
@@ -124,18 +124,18 @@ pub(super) fn resolve_in_candidate(
                     }
                 }
             }
-        } else if effect == BattleVehicleCriticalEffect::PowerPlant
-            || (effect == BattleVehicleCriticalEffect::FuelTank
-                && (selection.table != BattleVehicleCriticalTable::Advanced
+        } else if effect == VehicleCriticalEffect::PowerPlant
+            || (effect == VehicleCriticalEffect::FuelTank
+                && (selection.table != VehicleCriticalTable::Advanced
                     || candidate.btech.vehicles()[&id]
                         .definition()
                         .has_special("ICEEngine_Tech")))
         {
-            let powerplant = effect == BattleVehicleCriticalEffect::PowerPlant;
+            let powerplant = effect == VehicleCriticalEffect::PowerPlant;
             let contained = powerplant
                 && candidate.btech.vehicles()[&id].definition().is_vtol()
                 && candidate.btech.vehicles()[&id].has_powerplant_containment();
-            notices.push(BattleNotice {
+            notices.push(Notice {
                 unit: id,
                 text: if powerplant {
                     "Your power plant explodes!"
@@ -144,7 +144,7 @@ pub(super) fn resolve_in_candidate(
                 }
                 .into(),
             });
-            broadcasts.push(BattleNotice {
+            broadcasts.push(Notice {
                 unit: id,
                 text: if powerplant {
                     "'s power plant suddenly explodes!"
@@ -166,7 +166,7 @@ pub(super) fn resolve_in_candidate(
                     .surface_height();
                 let vehicle = candidate.btech.vehicles.get_mut(&id).unwrap();
                 let flight = vehicle.vtol_flight.as_mut().unwrap();
-                flight.phase = BattleVtolFlightPhase::Landed;
+                flight.phase = VtolFlightPhase::Landed;
                 flight.fall = None;
                 flight.altitude = f64::from(height);
                 flight.vertical_speed = 0.0;
@@ -185,7 +185,7 @@ pub(super) fn resolve_in_candidate(
             notices.extend(result.notices.clone());
             broadcasts.extend(result.broadcasts.clone());
             explosion = Some(result);
-        } else if effect == BattleVehicleCriticalEffect::Ammunition {
+        } else if effect == VehicleCriticalEffect::Ammunition {
             let cascade = discharge_vehicle_ammunition_cascade(candidate, id, section)?;
             ammunition_cascade = Some(cascade.clone());
             if cascade.damage == 0 {
@@ -201,8 +201,8 @@ pub(super) fn resolve_in_candidate(
                 pilot_injury = loss.injury;
                 character_injury = loss.character_injury;
             } else {
-                notices.push(BattleNotice { unit: id, text: "[fg=red bold]One of your ammo bins is struck causing a cascading explosion![reset]".into() });
-                broadcasts.push(BattleNotice {
+                notices.push(Notice { unit: id, text: "[fg=red bold]One of your ammo bins is struck causing a cascading explosion![reset]".into() });
+                broadcasts.push(Notice {
                     unit: id,
                     text: "has an internal ammo explosion!".into(),
                 });
@@ -223,7 +223,7 @@ pub(super) fn resolve_in_candidate(
                 broadcasts.extend(damage.broadcasts.clone());
                 internal_damage.push(damage);
             }
-        } else if effect == BattleVehicleCriticalEffect::WeaponDestroyed {
+        } else if effect == VehicleCriticalEffect::WeaponDestroyed {
             let loss = destroy_weapon(candidate, id, section, rules, context)?;
             super::piloting::append_feedback(
                 &mut pilot_notices,
@@ -235,38 +235,38 @@ pub(super) fn resolve_in_candidate(
             internal_damage.extend(loss.damage);
             pilot_injury = loss.injury;
             character_injury = loss.character_injury;
-        } else if effect == BattleVehicleCriticalEffect::TurretBlownOff {
+        } else if effect == VehicleCriticalEffect::TurretBlownOff {
             let amount =
-                candidate.btech.vehicles()[&id].sections()[&BattleVehicleSection::Turret].internal;
+                candidate.btech.vehicles()[&id].sections()[&VehicleSection::Turret].internal;
             damage_vehicle_phase(
                 candidate,
                 id,
-                BattleVehicleSection::Turret,
+                VehicleSection::Turret,
                 amount,
-                BattleDamagePhase::Internal,
+                DamagePhase::Internal,
             )?;
-            notices.push(BattleNotice {
+            notices.push(Notice {
                 unit: id,
                 text: "[fg=red bold]The shot pops your turret clear off its housing![reset]".into(),
             });
-            broadcasts.push(BattleNotice {
+            broadcasts.push(Notice {
                 unit: id,
                 text: "'s turret flies off!".into(),
             });
         } else if candidate.btech.vehicles()[&id]
             .vtol_flight()
-            .is_some_and(|flight| flight.phase == BattleVtolFlightPhase::Airborne)
-            && (effect == BattleVehicleCriticalEffect::Engine
-                || (effect == BattleVehicleCriticalEffect::FuelTank
-                    && selection.table == BattleVehicleCriticalTable::Advanced))
+            .is_some_and(|flight| flight.phase == VtolFlightPhase::Airborne)
+            && (effect == VehicleCriticalEffect::Engine
+                || (effect == VehicleCriticalEffect::FuelTank
+                    && selection.table == VehicleCriticalTable::Advanced))
         {
             emergency_landing = super::vtol_emergency::engine_landing(
                 candidate,
                 id,
                 rules.extended_piloting,
-                selection.table == BattleVehicleCriticalTable::Advanced,
+                selection.table == VehicleCriticalTable::Advanced,
             )?;
-            notices.push(BattleNotice {
+            notices.push(Notice {
                 unit: id,
                 text: "Your engine takes a direct hit!".into(),
             });
@@ -279,7 +279,7 @@ pub(super) fn resolve_in_candidate(
                     &mut pilot_notices,
                 );
             }
-            notices.push(BattleNotice {
+            notices.push(Notice {
                 unit: id,
                 text: if emergency_landing
                     .as_ref()
@@ -295,7 +295,7 @@ pub(super) fn resolve_in_candidate(
             apply(candidate, id, &selection, effect, &mut notices)?;
         }
     }
-    Ok(BattleVehicleCriticalResolution {
+    Ok(VehicleCriticalResolution {
         selection,
         emergency_landing,
         notices,
@@ -313,13 +313,13 @@ pub(super) fn resolve_in_candidate(
 fn apply(
     world: &mut World,
     id: ObjectId,
-    report: &BattleVehicleCriticalReport,
-    effect: BattleVehicleCriticalEffect,
-    notices: &mut Vec<BattleNotice>,
+    report: &VehicleCriticalReport,
+    effect: VehicleCriticalEffect,
+    notices: &mut Vec<Notice>,
 ) -> Result<()> {
-    use BattleVehicleControlHit as H;
-    use BattleVehicleCriticalEffect as E;
-    let advanced = report.table == BattleVehicleCriticalTable::Advanced;
+    use VehicleControlHit as H;
+    use VehicleCriticalEffect as E;
+    let advanced = report.table == VehicleCriticalTable::Advanced;
     let no_effect = "The shot pierces your armor yet fails to hit a critical system!";
     let mut control = None;
     let text = match effect {
@@ -361,7 +361,7 @@ fn apply(
                 },
             )?;
             let section = report.section.name().replace('_', " ");
-            notices.push(BattleNotice {
+            notices.push(Notice {
                 unit: id,
                 text: if repeated {
                     format!("The destroyed weapon stabilizers in your {section} take another hit!")
@@ -380,7 +380,7 @@ fn apply(
         E::WeaponJam => {
             notices.push(match jam_vehicle_weapon(world, id, report.section)? {
                 Some(jam) => jam.notice(id),
-                None => BattleNotice {
+                None => Notice {
                     unit: id,
                     text: no_effect.into(),
                 },
@@ -410,26 +410,26 @@ fn apply(
                 world,
                 id,
                 if immobilize {
-                    BattleVehicleMotiveHit::Immobilize
+                    VehicleMotiveHit::Immobilize
                 } else {
-                    BattleVehicleMotiveHit::SpeedLoss { movement_points: 1 }
+                    VehicleMotiveHit::SpeedLoss { movement_points: 1 }
                 },
             )?;
             match (movement, immobilize) {
-                (BattleVehicleMovement::Tracked, false) => "One of your tracks is damaged!",
-                (BattleVehicleMovement::Wheeled, false) => "One of your wheels is damaged!",
-                (BattleVehicleMovement::Hover, false) => "Your air skirt is damaged!",
-                (BattleVehicleMovement::Tracked, true) => {
+                (VehicleMovement::Tracked, false) => "One of your tracks is damaged!",
+                (VehicleMovement::Wheeled, false) => "One of your wheels is damaged!",
+                (VehicleMovement::Hover, false) => "Your air skirt is damaged!",
+                (VehicleMovement::Tracked, true) => {
                     "One of your tracks is destroyed, immobilizing your vehicle!"
                 }
-                (BattleVehicleMovement::Wheeled, true) => {
+                (VehicleMovement::Wheeled, true) => {
                     "One of your wheels is destroyed, immobilizing your vehicle!"
                 }
-                (BattleVehicleMovement::Hover, true) => {
+                (VehicleMovement::Hover, true) => {
                     "Your lift fan is destroyed, immobilizing your vehicle!"
                 }
-                (BattleVehicleMovement::Stationary, _) => no_effect,
-                (BattleVehicleMovement::Vtol, _) => {
+                (VehicleMovement::Stationary, _) => no_effect,
+                (VehicleMovement::Vtol, _) => {
                     anyhow::bail!("VTOL motive hits require rotor consequences")
                 }
             }
@@ -446,7 +446,7 @@ fn apply(
                 vehicle.maximum_speed() == 0.0
                     || vehicle.vtol_flight().is_none_or(|flight| matches!(
                         flight.phase,
-                        BattleVtolFlightPhase::Landed | BattleVtolFlightPhase::Launching { .. }
+                        VtolFlightPhase::Landed | VtolFlightPhase::Launching { .. }
                     )),
                 "Airborne VTOL engine loss requires emergency landing and crash resolution"
             );
@@ -469,13 +469,13 @@ fn apply(
         damage_vehicle_controls(world, id, hit)?;
     }
     if !text.is_empty() {
-        notices.push(BattleNotice {
+        notices.push(Notice {
             unit: id,
             text: text.into(),
         });
     }
     if matches!(effect, E::Commander | E::CrewStunned) {
-        notices.push(BattleNotice { unit: id, text: "[fg=red bold]The shot resonates throughout the crew compartment, temporarily stunning you![reset]".into() });
+        notices.push(Notice { unit: id, text: "[fg=red bold]The shot resonates throughout the crew compartment, temporarily stunning you![reset]".into() });
     }
     Ok(())
 }
@@ -483,25 +483,25 @@ fn apply(
 /// Effects of one weapon loss, collected before publication by the parent critical.
 #[derive(Default)]
 struct WeaponDestruction {
-    notices: Vec<BattleNotice>,
-    pilot_notices: Vec<BattlePilotNotice>,
-    broadcasts: Vec<BattleNotice>,
-    damage: Vec<BattleVehicleInternalDamage>,
-    injury: Option<BattlePilotInjury>,
-    character_injury: Option<BattleCharacterPilotInjury>,
+    notices: Vec<Notice>,
+    pilot_notices: Vec<PilotNotice>,
+    broadcasts: Vec<Notice>,
+    damage: Vec<VehicleInternalDamage>,
+    injury: Option<TacticalPilotInjury>,
+    character_injury: Option<CharacterPilotInjury>,
 }
 
 /// Disable the selected mount before resolving its explosion, preventing it from exploding twice.
 fn destroy_weapon(
     world: &mut World,
     id: ObjectId,
-    section: BattleVehicleSection,
-    rules: BattleVehicleCriticalRules,
+    section: VehicleSection,
+    rules: VehicleCriticalRules,
     context: DamageContext,
 ) -> Result<WeaponDestruction> {
     let mut effects = WeaponDestruction::default();
     let Some(index) = select_vehicle_weapon_critical(world, id, section)? else {
-        effects.notices.push(BattleNotice {
+        effects.notices.push(Notice {
             unit: id,
             text: "The shot pierces your armor yet fails to hit a critical system!".into(),
         });
@@ -529,7 +529,7 @@ fn destroy_weapon(
     );
     let gauss = mount.weapon.weapon_explosion_damage() > 0;
     let jammed = mount.weapon.jammed_explosion_damage() > 0 && vehicle.weapon_jammed(index)?;
-    let hotload = vehicle.fire_mode(index)? == BattleFireMode::Hotload;
+    let hotload = vehicle.fire_mode(index)? == FireMode::Hotload;
     let hotload_supply = mount
         .weapon
         .hotload_supply_mode(vehicle.ammunition_mode(index)?);
@@ -543,12 +543,12 @@ fn destroy_weapon(
         u32::from(mount.weapon.profile_for_ammunition(hotload_supply).damage)
             * u32::from(mount.weapon.profile().missiles.max(1))
     } else if !hotload
-        && vehicle.ammunition_mode(index)? == BattleAmmunitionMode::Incendiary
+        && vehicle.ammunition_mode(index)? == AmmunitionMode::Incendiary
         && vehicle
             .weapon_recycle()
             .get(&index)
             .is_some_and(|remaining| *remaining > 0)
-        && supplied(BattleAmmunitionMode::Incendiary)
+        && supplied(AmmunitionMode::Incendiary)
     {
         u32::from(mount.weapon.profile().damage)
     } else {
@@ -557,17 +557,17 @@ fn destroy_weapon(
     destroy_vehicle_critical(world, id, mount.criticals[0])?;
     let name = mount.weapon.name().split_once('.').unwrap().1;
     if explosion == 0 {
-        effects.notices.push(BattleNotice {
+        effects.notices.push(Notice {
             unit: id,
             text: format!("[fg=red bold]Your {name} is destroyed![reset]"),
         });
         return Ok(effects);
     }
-    effects.notices.push(BattleNotice {
+    effects.notices.push(Notice {
         unit: id,
         text: format!("Your {name} has been destroyed!"),
     });
-    effects.notices.push(BattleNotice {
+    effects.notices.push(Notice {
         unit: id,
         text: if gauss {
             format!("It explodes for {explosion} points damage.")
@@ -579,7 +579,7 @@ fn destroy_weapon(
             format!("[fg=red bold]The incendiary ammunition in your launcher ignites for {explosion} points of damage![reset]")
         },
     });
-    effects.broadcasts.push(BattleNotice {
+    effects.broadcasts.push(Notice {
         unit: id,
         text: if gauss {
             format!(

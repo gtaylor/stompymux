@@ -1,27 +1,27 @@
 //! Catastrophic vehicle explosions destroy local sections with aircraft rear CASE containment.
-use super::{BattleDamagePhase, BattleNotice, BattleSystem, BattleVehicle, BattleVehicleSection};
+use super::{DamagePhase, Notice, System, Vehicle, VehicleSection};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
 
 /// Completed catastrophe; occupant and visibility notices remain caller-published.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleVehicleExplosion {
+pub struct VehicleExplosion {
     pub contained: bool,
-    pub destroyed_sections: Vec<BattleVehicleSection>,
-    pub notices: Vec<BattleNotice>,
-    pub broadcasts: Vec<BattleNotice>,
+    pub destroyed_sections: Vec<VehicleSection>,
+    pub notices: Vec<Notice>,
+    pub broadcasts: Vec<Notice>,
 }
 
-impl BattleVehicle {
+impl Vehicle {
     /// Installed CASE provides rear power-plant containment; Clan technology alone does not.
     /// Configuration text does not install CASE equipment or add containment by itself.
     pub fn has_powerplant_containment(&self) -> bool {
         self.definition().sections.values().any(|layout| {
             layout.criticals.values().any(|part| {
                 matches!(
-                    BattleSystem::named(&part.equipment),
-                    Some(BattleSystem::Case | BattleSystem::CaseIi)
+                    System::named(&part.equipment),
+                    Some(System::Case | System::CaseIi)
                 )
             })
         })
@@ -33,7 +33,7 @@ pub(super) fn explode_in_candidate(
     world: &mut World,
     id: ObjectId,
     contained: bool,
-) -> Result<BattleVehicleExplosion> {
+) -> Result<VehicleExplosion> {
     ensure!(
         !world
             .btech
@@ -51,7 +51,7 @@ pub(super) fn explode_followup_in_candidate(
     world: &mut World,
     id: ObjectId,
     contained: bool,
-) -> Result<BattleVehicleExplosion> {
+) -> Result<VehicleExplosion> {
     let object = world.objects.get(&id).context("Vehicle is unavailable")?;
     ensure!(
         !object.flags.contains(Flag::Going),
@@ -80,11 +80,11 @@ pub(super) fn explode_followup_in_candidate(
         .sections()
         .iter()
         .filter(|(section, state)| {
-            state.internal > 0 && (!contained || **section == BattleVehicleSection::Rear)
+            state.internal > 0 && (!contained || **section == VehicleSection::Rear)
         })
         .map(|(&section, state)| (section, state.internal))
         .collect();
-    let mut result = BattleVehicleExplosion {
+    let mut result = VehicleExplosion {
         contained,
         destroyed_sections: Vec::new(),
         notices: Vec::new(),
@@ -96,14 +96,14 @@ pub(super) fn explode_followup_in_candidate(
         vehicle.kill_crew();
     }
     for (section, amount) in sections {
-        let damage = vehicle.damage_phase(section, amount, BattleDamagePhase::Internal)?;
+        let damage = vehicle.damage_phase(section, amount, DamagePhase::Internal)?;
         result.destroyed_sections.extend(damage.destroyed_sections);
         let name = section.name().replace('_', " ");
-        result.notices.push(BattleNotice {
+        result.notices.push(Notice {
             unit: id,
             text: format!("Your {name} has been destroyed!"),
         });
-        result.broadcasts.push(BattleNotice {
+        result.broadcasts.push(Notice {
             unit: id,
             text: format!("'s {name} has been destroyed!"),
         });

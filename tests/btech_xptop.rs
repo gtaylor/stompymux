@@ -8,7 +8,7 @@ fn player(world: &mut World, config: &Config, name: &str, experience: u32) -> Ob
     set_battle_character(
         world,
         id,
-        BattleCharacter {
+        Character {
             bruise: 0,
             lethal: 0,
             build: 5,
@@ -24,7 +24,7 @@ fn player(world: &mut World, config: &Config, name: &str, experience: u32) -> Ob
         world,
         id,
         "Piloting-Biped",
-        BattleCharacterValue {
+        CharacterValue {
             value: 4,
             experience,
             last_used: 123,

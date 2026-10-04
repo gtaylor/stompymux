@@ -22,4 +22,4 @@ btech.unit.pods(dbref, pilot)
 
 ## Returns
 
-- `BattlePodRow[]`
+- `PodRow[]`

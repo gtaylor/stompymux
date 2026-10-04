@@ -72,17 +72,17 @@ pub(super) fn secondary(world: &mut World, id: ObjectId, bits: u32) -> Result<()
 }
 
 /// Suite modes are exclusive; an all-clear pair turns the suite off.
-fn mode(ecm: bool, eccm: bool) -> Result<super::BattleElectronicMode> {
+fn mode(ecm: bool, eccm: bool) -> Result<super::ElectronicMode> {
     ensure!(
         !(ecm && eccm),
         "A suite cannot use ECM and ECCM simultaneously"
     );
     Ok(if ecm {
-        super::BattleElectronicMode::Ecm
+        super::ElectronicMode::Ecm
     } else if eccm {
-        super::BattleElectronicMode::Eccm
+        super::ElectronicMode::Eccm
     } else {
-        super::BattleElectronicMode::Off
+        super::ElectronicMode::Off
     })
 }
 
@@ -95,7 +95,7 @@ pub(super) fn secondary_criticals(world: &mut World, id: ObjectId, bits: u32) ->
         unit.set_hardened_hit_used(bits & 1 != 0)?;
         if probe_changed {
             ensure!(
-                unit.has_active_probe(super::BattleActiveProbe::Light)?,
+                unit.has_active_probe(super::ActiveProbe::Light)?,
                 "A light probe is not installed"
             );
             unit.critical_conditions.light_probe_failure = Some(bits & 2 != 0);
@@ -109,7 +109,7 @@ pub(super) fn secondary_criticals(world: &mut World, id: ObjectId, bits: u32) ->
             .context("Unit is unavailable")?;
         if probe_changed {
             ensure!(
-                unit.has_active_probe(super::BattleActiveProbe::Light)?,
+                unit.has_active_probe(super::ActiveProbe::Light)?,
                 "A light probe is not installed"
             );
             unit.critical_conditions.light_probe_failure = Some(bits & 2 != 0);

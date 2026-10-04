@@ -1,5 +1,5 @@
 //! Size-bounded reads of named map and template assets confined to their configured directory.
-use super::{BattleTemplate, MapAsset};
+use super::{MapAsset, MechTemplate};
 use anyhow::{Context, Result, ensure};
 use std::{
     fs::File,
@@ -75,23 +75,22 @@ pub(super) fn read_map_with_flags(
 }
 
 /// Decode a biped template from a configured mech directory.
-pub fn read_template(root: &Path, name: &str) -> Result<BattleTemplate> {
+pub fn read_template(root: &Path, name: &str) -> Result<MechTemplate> {
     let (reference, source) = super::read_template_document(root, name)?;
-    BattleTemplate::parse(&reference, &source).with_context(|| format!("template {name}"))
+    MechTemplate::parse(&reference, &source).with_context(|| format!("template {name}"))
 }
 
 /// Decode a ground-vehicle definition from the configured game asset directory.
-pub fn read_vehicle_template(root: &Path, name: &str) -> Result<super::BattleVehicleTemplate> {
+pub fn read_vehicle_template(root: &Path, name: &str) -> Result<super::VehicleTemplate> {
     let (reference, source) = super::read_template_document(root, name)?;
-    super::BattleVehicleTemplate::parse(&reference, &source)
+    super::VehicleTemplate::parse(&reference, &source)
         .with_context(|| format!("vehicle template {name}"))
 }
 
 /// Read an explicitly typed construction asset from the configured unit directory.
-pub fn read_unit_template(root: &Path, name: &str) -> Result<super::BattleUnitTemplate> {
+pub fn read_unit_template(root: &Path, name: &str) -> Result<super::UnitTemplate> {
     let (reference, source) = super::read_template_document(root, name)?;
-    super::BattleUnitTemplate::parse(&reference, &source)
-        .with_context(|| format!("unit template {name}"))
+    super::UnitTemplate::parse(&reference, &source).with_context(|| format!("unit template {name}"))
 }
 
 #[cfg(test)]

@@ -1,20 +1,20 @@
 //! Render constructed templates back into TOML template documents, folding administrative
 //! edits into the saved identity.
 use super::{
-    BattleMechChassis, BattleSection, BattleTemplate, BattleVehicleTemplate,
+    MechChassis, MechSection, MechTemplate, VehicleTemplate,
     document::{RenderSection, render},
 };
 use anyhow::Result;
 use std::collections::BTreeMap;
 
-impl BattleTemplate {
+impl MechTemplate {
     /// Render this mech as a TOML template document, folding in administrative edits.
     pub fn to_document(&self) -> Result<String> {
         unit_template_source(self)
     }
 }
 
-impl BattleVehicleTemplate {
+impl VehicleTemplate {
     /// Render this vehicle as a TOML template document, folding in administrative edits.
     pub fn to_document(&self) -> Result<String> {
         vehicle_template_source(self)
@@ -22,11 +22,11 @@ impl BattleVehicleTemplate {
 }
 
 /// Render a constructed mech as a TOML template document.
-fn unit_template_source(template: &BattleTemplate) -> Result<String> {
+fn unit_template_source(template: &MechTemplate) -> Result<String> {
     let chassis = template.chassis()?;
     let default_movement = match chassis {
-        BattleMechChassis::Biped => "Biped",
-        BattleMechChassis::Quad => "Quad",
+        MechChassis::Biped => "Biped",
+        MechChassis::Quad => "Quad",
     };
     let attributes = saved_attributes(
         &template.attributes,
@@ -34,7 +34,7 @@ fn unit_template_source(template: &BattleTemplate) -> Result<String> {
         default_movement,
         template.tons,
     );
-    let sections: Vec<_> = BattleSection::ALL
+    let sections: Vec<_> = MechSection::ALL
         .into_iter()
         .map(|section| RenderSection {
             heading: chassis.section_name(section).to_ascii_lowercase(),
@@ -46,7 +46,7 @@ fn unit_template_source(template: &BattleTemplate) -> Result<String> {
 }
 
 /// Render a constructed vehicle as a TOML template document.
-fn vehicle_template_source(template: &BattleVehicleTemplate) -> Result<String> {
+fn vehicle_template_source(template: &VehicleTemplate) -> Result<String> {
     let (class, movement) = if template.is_vtol() {
         ("VTOL", "VTOL")
     } else {

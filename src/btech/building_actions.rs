@@ -5,7 +5,7 @@ use anyhow::{Result, ensure};
 
 /// A committed arrival awaits the tick's normal sensor pass before observer publication.
 #[derive(Debug, Clone)]
-pub struct BattleBuildingArrival {
+pub struct BuildingArrival {
     participants: Vec<(ObjectId, crate::state::Generation)>,
     destination: ObjectId,
     message: String,
@@ -13,10 +13,7 @@ pub struct BattleBuildingArrival {
 
 /// Publish only contacts acquired by the ordinary scanner pass, without advancing sensors or dice.
 /// Reports belong to the enclosing tick and must be discarded if that tick rolls back.
-pub fn publish_building_arrivals(
-    scripts: &Scripts,
-    arrivals: Vec<BattleBuildingArrival>,
-) -> Result<()> {
+pub fn publish_building_arrivals(scripts: &Scripts, arrivals: Vec<BuildingArrival>) -> Result<()> {
     transaction(scripts, || {
         for arrival in arrivals {
             for (unit, generation) in arrival.participants {
@@ -156,7 +153,7 @@ pub fn building_entries_pending(world: &crate::World) -> bool {
 
 /// Advance entry events once, rechecking current routes and locks before ordinary teleport movement.
 /// Invalid eligibility consumes the event; callback errors restore the entire entry step for retry.
-pub fn advance_building_entries_action(scripts: &Scripts) -> Result<Vec<BattleBuildingArrival>> {
+pub fn advance_building_entries_action(scripts: &Scripts) -> Result<Vec<BuildingArrival>> {
     transaction(scripts, || {
         let mut arrivals = Vec::new();
         let ids: Vec<_> = {
@@ -180,13 +177,13 @@ pub fn advance_building_entries_action(scripts: &Scripts) -> Result<Vec<BattleBu
                     .btech
                     .vehicles()
                     .get(&id)
-                    .and_then(BattleVehicle::pilot)
+                    .and_then(Vehicle::pilot)
                     .or_else(|| {
                         world
                             .btech
                             .constructed_units()
                             .get(&id)
-                            .and_then(BattleUnit::pilot)
+                            .and_then(Mech::pilot)
                     })
             };
             let Some(pilot) = pilot else {
@@ -206,7 +203,7 @@ pub fn advance_building_entries_action(scripts: &Scripts) -> Result<Vec<BattleBu
             if !building_entry_lock_allows(&scripts.world(), destination.map, outcome.passes)? {
                 notify_unit(
                     scripts,
-                    BattleNotice {
+                    Notice {
                         unit: id,
                         text: outcome
                             .enactor_message
@@ -248,7 +245,7 @@ impl BuildingDirection {
         world: &crate::World,
         id: ObjectId,
         policy: super::speed_bonus::SpeedPolicy,
-    ) -> Result<BattlePosition> {
+    ) -> Result<Position> {
         match self {
             Self::Entry { pilot, direction } => {
                 super::building_entry::destination_configured(world, id, pilot, direction, policy)
@@ -262,9 +259,9 @@ impl BuildingDirection {
 fn transfer_building(
     scripts: &Scripts,
     id: ObjectId,
-    destination: BattlePosition,
+    destination: Position,
     direction: BuildingDirection,
-) -> Result<Option<BattleBuildingArrival>> {
+) -> Result<Option<BuildingArrival>> {
     let target = scripts.world().btech.tows().get(&id).copied();
     let participants: Vec<_> = std::iter::once(id)
         .chain(target)
@@ -343,12 +340,12 @@ fn transfer_building(
     }
     notify_unit(
         scripts,
-        BattleNotice {
+        Notice {
             unit: id,
             text: cockpit,
         },
     )?;
-    Ok(Some(BattleBuildingArrival {
+    Ok(Some(BuildingArrival {
         participants,
         destination: destination.map,
         message,
@@ -358,10 +355,7 @@ fn transfer_building(
 /// Leave through the building's reciprocal route using the common movement transaction.
 /// A denied teleport returns no arrival report; callback errors restore state and effects.
 /// The caller publishes a successful report after its ordinary scanner pass.
-pub fn exit_building_action(
-    scripts: &Scripts,
-    id: ObjectId,
-) -> Result<Option<BattleBuildingArrival>> {
+pub fn exit_building_action(scripts: &Scripts, id: ObjectId) -> Result<Option<BuildingArrival>> {
     transaction(scripts, || {
         let destination = building_exit_for_unit(&scripts.world(), id)?;
         let arrival = transfer_building(scripts, id, destination, BuildingDirection::Exit)?;
@@ -370,7 +364,7 @@ pub fn exit_building_action(
         } else {
             notify_unit(
                 scripts,
-                BattleNotice {
+                Notice {
                     unit: id,
                     text: "Unable to leave the hangar: teleportation was denied.".into(),
                 },
@@ -392,13 +386,13 @@ fn warn_unpiloted_exit(scripts: &Scripts, id: ObjectId) -> Result<()> {
             .btech
             .vehicles()
             .get(&id)
-            .and_then(BattleVehicle::pilot)
+            .and_then(Vehicle::pilot)
             .or_else(|| {
                 world
                     .btech
                     .constructed_units()
                     .get(&id)
-                    .and_then(BattleUnit::pilot)
+                    .and_then(Mech::pilot)
             });
         pilot
             .and_then(|pilot| world.objects.get(&pilot))
@@ -413,7 +407,7 @@ fn warn_unpiloted_exit(scripts: &Scripts, id: ObjectId) -> Result<()> {
     ] {
         notify_unit(
             scripts,
-            BattleNotice {
+            Notice {
                 unit: id,
                 text: text.into(),
             },
@@ -462,7 +456,7 @@ pub(crate) fn command(
 pub(super) fn dispatch_boundary_exits(
     scripts: &Scripts,
     report: &mut super::movement_report::MovementReport,
-) -> Result<Vec<BattleBuildingArrival>> {
+) -> Result<Vec<BuildingArrival>> {
     let mut arrivals = Vec::new();
     for boundary in std::mem::take(&mut report.boundaries) {
         let eligible = {
@@ -480,7 +474,7 @@ pub(super) fn dispatch_boundary_exits(
             continue;
         }
         if let Err(error) = building_exit_for_unit(&scripts.world(), boundary.unit) {
-            report.notices.push(BattleNotice {
+            report.notices.push(Notice {
                 unit: boundary.unit,
                 text: error.to_string(),
             });
@@ -492,13 +486,13 @@ pub(super) fn dispatch_boundary_exits(
                 .btech
                 .vehicles()
                 .get(&boundary.unit)
-                .and_then(BattleVehicle::motion)
+                .and_then(Vehicle::motion)
                 .or_else(|| {
                     world
                         .btech
                         .constructed_units()
                         .get(&boundary.unit)
-                        .and_then(BattleUnit::motion)
+                        .and_then(Mech::motion)
                 })
                 .expect("placed boundary unit")
         };
@@ -530,7 +524,7 @@ pub(super) fn dispatch_boundary_exits(
 }
 
 /// Replace only motion controls while retaining the boundary's last valid coordinate.
-fn set_boundary_motion(world: &mut crate::World, id: ObjectId, motion: BattleMotion) {
+fn set_boundary_motion(world: &mut crate::World, id: ObjectId, motion: Motion) {
     if let Some(unit) = world.btech.vehicles.get_mut(&id) {
         unit.motion = Some(motion);
     } else if let Some(unit) = world.btech.constructed.get_mut(&id) {

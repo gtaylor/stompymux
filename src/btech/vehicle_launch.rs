@@ -1,31 +1,31 @@
 //! Atomic vehicle launch preparation and attack rolls, before target damage and publication.
-use super::{BattleGlancingMode, BattleVehicleWeaponUse};
+use super::{GlancingMode, VehicleWeaponUse};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
 
 /// Target-independent inputs from the enclosing attack's current admission and aim calculation.
 #[derive(Debug, Clone, Copy)]
-pub struct BattleVehicleLaunchRequest {
+pub struct VehicleLaunchRequest {
     pub shooter: ObjectId,
     pub pilot: ObjectId,
     pub weapon_index: usize,
     pub distance: f64,
     pub target_number: Option<i32>,
     pub streak_confused: bool,
-    pub glancing: BattleGlancingMode,
+    pub glancing: GlancingMode,
     /// Shooter-local critical policy for a rapid misload or caseless propellant ignition.
-    pub critical_rules: super::BattleVehicleCriticalRules,
+    pub critical_rules: super::VehicleCriticalRules,
 }
 
 /// A launched cycle or failed Streak lock; the enclosing attack still owns all target effects.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[must_use = "Apply target effects and publish notices before committing the enclosing attack"]
-pub struct BattleVehicleLaunch {
+pub struct VehicleLaunch {
     /// Pre-expenditure warning, published with the enclosing shot.
     pub ammunition_warning: Option<String>,
     /// Cocoon opening precedes the shot's target consequences.
-    pub launch_notices: Vec<super::BattleNotice>,
+    pub launch_notices: Vec<super::Notice>,
     pub roll: u8,
     /// Permanent mount loss from an Ultra/rapid loader failure or propellant ignition.
     pub loader_destroyed: bool,
@@ -34,12 +34,12 @@ pub struct BattleVehicleLaunch {
     /// Caseless ignition check following an attack roll of two or three.
     pub propellant_roll: Option<u8>,
     /// Internal damage and nested critical consequences on the shooter.
-    pub misload: Option<super::BattleVehicleInternalDamage>,
+    pub misload: Option<super::VehicleInternalDamage>,
     /// Launch classification; a missile near miss can still be rejected by target resolution.
     pub hit: bool,
     /// Tactical missile shots qualify this boundary against their base target number.
     pub glancing: bool,
-    pub expenditure: BattleVehicleWeaponUse,
+    pub expenditure: VehicleWeaponUse,
 }
 
 /// Reserve and roll a vehicle firing cycle atomically, consuming only its own saved dice stream.
@@ -49,8 +49,8 @@ pub struct BattleVehicleLaunch {
 /// Rapid and caseless misloads resolve shooter-local internal damage before spending surviving supply.
 pub fn launch_vehicle_weapon(
     world: &mut World,
-    request: BattleVehicleLaunchRequest,
-) -> Result<BattleVehicleLaunch> {
+    request: VehicleLaunchRequest,
+) -> Result<VehicleLaunch> {
     world.attempt(|world| {
         let result = launch(world, request, false, None)?;
         Ok(result)
@@ -60,20 +60,20 @@ pub fn launch_vehicle_weapon(
 /// Resolve on an unpublished candidate so every error discards mode, inventory and random changes.
 pub(super) fn launch_artillery(
     world: &mut World,
-    request: BattleVehicleLaunchRequest,
-) -> Result<BattleVehicleLaunch> {
+    request: VehicleLaunchRequest,
+) -> Result<VehicleLaunch> {
     launch(world, request, true, None)
 }
 
 /// One reservation and roll implementation for direct weapons and admitted artillery.
 fn launch(
     world: &mut World,
-    request: BattleVehicleLaunchRequest,
+    request: VehicleLaunchRequest,
     artillery: bool,
     prepared_gatling: Option<super::gatling::GatlingPreparation>,
-) -> Result<BattleVehicleLaunch> {
-    use super::BattleFireMode;
-    let BattleVehicleLaunchRequest {
+) -> Result<VehicleLaunch> {
+    use super::FireMode;
+    let VehicleLaunchRequest {
         shooter,
         pilot,
         weapon_index,
@@ -102,7 +102,7 @@ fn launch(
     let requested = unit.fire_mode(weapon_index)?;
     let effective = unit.effective_fire_mode(weapon_index)?;
     // Gatling reserves its supply-limited D6 before the weapon's attack roll.
-    let prepared = if effective == BattleFireMode::Gatling {
+    let prepared = if effective == FireMode::Gatling {
         Some(super::vehicle_readiness::reserve_prepared_weapon(
             world,
             shooter,
@@ -165,7 +165,7 @@ fn launch(
         } else {
             vehicle.jam_weapon(weapon_index)?;
         }
-        BattleVehicleWeaponUse {
+        VehicleWeaponUse {
             weapon,
             ammunition: Vec::new(),
             ammunition_mode: ammunition,
@@ -201,7 +201,7 @@ fn launch(
     } else {
         None
     };
-    Ok(BattleVehicleLaunch {
+    Ok(VehicleLaunch {
         ammunition_warning,
         launch_notices,
         roll,
@@ -218,8 +218,8 @@ fn launch(
 /// Direct shots have already prepared gatling dice before their sensor aim calculation.
 pub(super) fn launch_prepared(
     world: &mut World,
-    request: BattleVehicleLaunchRequest,
+    request: VehicleLaunchRequest,
     prepared: super::gatling::GatlingPreparation,
-) -> Result<BattleVehicleLaunch> {
+) -> Result<VehicleLaunch> {
     launch(world, request, false, Some(prepared))
 }

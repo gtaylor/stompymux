@@ -18,7 +18,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse("test", template).unwrap(),
+        VehicleTemplate::parse("test", template).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -49,7 +49,7 @@ async fn vehicle_cycles_reserve_ammunition_replay_and_pause_when_shutdown() {
     let cycle = reserve_battle_vehicle_weapon(&mut world, id, ObjectId(1), 0, true).unwrap();
     assert_eq!(
         cycle.ammunition,
-        vec![BattleAmmunitionDraw {
+        vec![AmmunitionDraw {
             bin_index: 0,
             rounds: 1
         }]
@@ -75,22 +75,16 @@ async fn vehicle_cycles_reserve_ammunition_replay_and_pause_when_shutdown() {
             .ready
     );
     let _cycle = reserve_battle_vehicle_weapon(&mut world, id, ObjectId(1), 0, true).unwrap();
-    stop_battle_unit(
-        &mut world,
-        id,
-        ObjectId(1),
-        BattleMovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut world, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
     let checkpoint = world.btech.clone();
     assert!(advance_battle_recycle(&mut world).is_empty());
     assert_eq!(world.btech, checkpoint);
     damage_battle_vehicle_phase(
         &mut world,
         id,
-        BattleVehicleSection::Turret,
+        VehicleSection::Turret,
         100,
-        BattleDamagePhase::Internal,
+        DamagePhase::Internal,
     )
     .unwrap();
     assert!(world.btech.vehicles()[&id].weapon_recycle().is_empty());
@@ -151,7 +145,7 @@ async fn vehicle_one_shots_energy_and_empty_bins_obey_readiness() {
     ] {
         let mut bad = original.clone();
         bad[field] = value;
-        assert!(serde_json::from_value::<BattleVehicle>(bad).is_err());
+        assert!(serde_json::from_value::<Vehicle>(bad).is_err());
     }
 }
 
@@ -185,7 +179,7 @@ async fn vehicle_ammunition_prefers_mount_section_before_other_live_bins() {
     let cycle = reserve_battle_vehicle_weapon(&mut world, id, ObjectId(1), 0, true).unwrap();
     assert_eq!(
         cycle.ammunition,
-        vec![BattleAmmunitionDraw {
+        vec![AmmunitionDraw {
             bin_index: 1,
             rounds: 1
         }]
@@ -200,7 +194,7 @@ async fn vehicle_ammunition_prefers_mount_section_before_other_live_bins() {
     let cycle = reserve_battle_vehicle_weapon(&mut world, id, ObjectId(1), 1, true).unwrap();
     assert_eq!(
         cycle.ammunition,
-        vec![BattleAmmunitionDraw {
+        vec![AmmunitionDraw {
             bin_index: 0,
             rounds: 1
         }]
@@ -212,7 +206,7 @@ async fn vehicle_ammunition_prefers_mount_section_before_other_live_bins() {
 #[tokio::test]
 async fn vehicle_failed_streak_locks_recycle_without_expenditure() {
     let base = include_str!("../game/mechs/Demolisher.toml");
-    let streak = BattleWeapon::StreakSrm4.name();
+    let streak = Weapon::StreakSrm4.name();
     for one_shot in [false, true] {
         let mode = if one_shot {
             ", modes = [\"OneShot\"]"
@@ -286,11 +280,11 @@ async fn vehicle_stinger_selection_controls_live_ammunition() {
     let index = loadout
         .weapons
         .iter()
-        .position(|mount| mount.initial_ammunition_mode == BattleAmmunitionMode::Stinger)
+        .position(|mount| mount.initial_ammunition_mode == AmmunitionMode::Stinger)
         .unwrap();
     assert_eq!(
         world.btech.vehicles()[&id].ammunition_mode(index).unwrap(),
-        BattleAmmunitionMode::Stinger
+        AmmunitionMode::Stinger
     );
     let checkpoint = world.btech.clone();
     assert!(toggle_battle_stinger(&mut world, id, ObjectId(2), index).is_err());
@@ -333,10 +327,10 @@ async fn vehicle_stinger_selection_controls_live_ammunition() {
     let loaded = persistence::load(&config.database()).await.unwrap();
     assert_eq!(loaded.btech, world.btech);
     let cycle = reserve_battle_vehicle_weapon(&mut world, id, ObjectId(1), index, true).unwrap();
-    assert_eq!(cycle.ammunition_mode, BattleAmmunitionMode::Normal);
+    assert_eq!(cycle.ammunition_mode, AmmunitionMode::Normal);
     assert_eq!(
         loadout.ammunition[cycle.ammunition[0].bin_index].mode,
-        BattleAmmunitionMode::Normal
+        AmmunitionMode::Normal
     );
     let checkpoint = world.btech.clone();
     assert!(toggle_battle_stinger(&mut world, id, ObjectId(1), index).is_err());
@@ -346,14 +340,14 @@ async fn vehicle_stinger_selection_controls_live_ammunition() {
     }
     assert_eq!(
         toggle_battle_stinger(&mut world, id, ObjectId(1), index).unwrap(),
-        BattleAmmunitionMode::Stinger
+        AmmunitionMode::Stinger
     );
     let cycle = reserve_battle_vehicle_weapon(&mut world, id, ObjectId(1), index, true).unwrap();
     let stinger_bin = cycle.ammunition[0].bin_index;
-    assert_eq!(cycle.ammunition_mode, BattleAmmunitionMode::Stinger);
+    assert_eq!(cycle.ammunition_mode, AmmunitionMode::Stinger);
     assert_eq!(
         loadout.ammunition[stinger_bin].mode,
-        BattleAmmunitionMode::Stinger
+        AmmunitionMode::Stinger
     );
     world
         .btech
@@ -388,7 +382,7 @@ async fn vehicle_stinger_selection_controls_live_ammunition() {
     ] {
         let mut bad = original.clone();
         bad["ammunition_modes"] = modes;
-        assert!(serde_json::from_value::<BattleVehicle>(bad).is_err());
+        assert!(serde_json::from_value::<Vehicle>(bad).is_err());
     }
 }
 
@@ -399,44 +393,39 @@ async fn vehicle_ammunition_controls_share_admission_supply_and_transactions() {
         (
             "precision",
             "Precision",
-            BattleAmmunitionMode::Precision,
-            BattleWeapon::Ac20,
+            AmmunitionMode::Precision,
+            Weapon::Ac20,
         ),
         (
             "flechette",
             "Flechette",
-            BattleAmmunitionMode::Flechette,
-            BattleWeapon::Ac20,
+            AmmunitionMode::Flechette,
+            Weapon::Ac20,
         ),
         (
             "armorpiercing",
             "AP",
-            BattleAmmunitionMode::ArmorPiercing,
-            BattleWeapon::Ac20,
+            AmmunitionMode::ArmorPiercing,
+            Weapon::Ac20,
         ),
         (
             "caseless",
             "Caseless",
-            BattleAmmunitionMode::Caseless,
-            BattleWeapon::Ac20,
+            AmmunitionMode::Caseless,
+            Weapon::Ac20,
         ),
         (
             "incendiary",
             "Incendiary",
-            BattleAmmunitionMode::Incendiary,
-            BattleWeapon::Ac20,
+            AmmunitionMode::Incendiary,
+            Weapon::Ac20,
         ),
-        (
-            "lbx",
-            "LBX/Cluster",
-            BattleAmmunitionMode::Cluster,
-            BattleWeapon::Lbx20,
-        ),
+        ("lbx", "LBX/Cluster", AmmunitionMode::Cluster, Weapon::Lbx20),
         (
             "sguided",
             "Sguided",
-            BattleAmmunitionMode::SemiGuided,
-            BattleWeapon::Lrm5,
+            AmmunitionMode::SemiGuided,
+            Weapon::Lrm5,
         ),
     ] {
         let template = include_str!("../game/mechs/Demolisher.toml")
@@ -539,7 +528,7 @@ async fn vehicle_equipment_losses_disable_mounts_and_matching_supply() {
     assert_eq!(loaded.btech, world.btech);
     let checkpoint = world.btech.clone();
     let absent = VehicleCriticalLocation {
-        section: BattleVehicleSection::Front,
+        section: VehicleSection::Front,
         slot: 11,
     };
     assert!(destroy_battle_vehicle_critical(&mut world, id, absent).is_err());
@@ -548,13 +537,13 @@ async fn vehicle_equipment_losses_disable_mounts_and_matching_supply() {
     let original = serde_json::to_value(&world.btech.vehicles()[&id]).unwrap();
     let mut bad = original.clone();
     bad["weapon_recycle"]["0"] = 1.into();
-    assert!(serde_json::from_value::<BattleVehicle>(bad).is_err());
+    assert!(serde_json::from_value::<Vehicle>(bad).is_err());
     let mut bad = original.clone();
     bad["ammunition"][0] = 1.into();
-    assert!(serde_json::from_value::<BattleVehicle>(bad).is_err());
+    assert!(serde_json::from_value::<Vehicle>(bad).is_err());
     let mut bad = original;
     bad["lost_criticals"] = serde_json::json!([absent]);
-    assert!(serde_json::from_value::<BattleVehicle>(bad).is_err());
+    assert!(serde_json::from_value::<Vehicle>(bad).is_err());
     world
         .objects
         .get_mut(&id)
@@ -574,12 +563,12 @@ async fn vehicle_weapon_critical_selection_excludes_losses_and_replays() {
         fixture(include_str!("../game/mechs/Demolisher.toml")).await;
     world
         .btech
-        .set_unit_dice(id, BattleDice::seeded([31; 32]))
+        .set_unit_dice(id, Dice::seeded([31; 32]))
         .unwrap();
-    let section = BattleVehicleSection::Turret;
+    let section = VehicleSection::Turret;
     let before = world.btech.clone();
     assert_eq!(
-        select_battle_vehicle_weapon_critical(&mut world, id, BattleVehicleSection::Front).unwrap(),
+        select_battle_vehicle_weapon_critical(&mut world, id, VehicleSection::Front).unwrap(),
         None
     );
     assert!(select_battle_vehicle_weapon_critical(&mut world, ObjectId(-1), section).is_err());
@@ -598,7 +587,7 @@ async fn vehicle_weapon_critical_selection_excludes_losses_and_replays() {
             .unwrap(),
         vec![0, 1]
     );
-    let mut expected = BattleDice::seeded([31; 32]);
+    let mut expected = Dice::seeded([31; 32]);
     let first = usize::from(expected.die(2).unwrap() - 1);
     assert_eq!(
         select_battle_vehicle_weapon_critical(&mut world, id, section).unwrap(),

@@ -13,13 +13,13 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
         MapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
-    set_battle_map_visibility(&mut world, map, BattleLight::Night, 30).unwrap();
+    set_battle_map_visibility(&mut world, map, Light::Night, 30).unwrap();
     let id = world.create(&config, "Vehicle".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse("test", template).unwrap(),
+        VehicleTemplate::parse("test", template).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -51,7 +51,7 @@ slots = [
 }
 
 /// The installed probe summary for a vehicle.
-fn probe(world: &World, id: ObjectId) -> Option<BattleProbeProfile> {
+fn probe(world: &World, id: ObjectId) -> Option<ProbeProfile> {
     battle_perception_profile(world, id).unwrap().probe
 }
 
@@ -66,8 +66,8 @@ async fn vehicle_sensor_command_and_lua_share_the_perception_report() {
     .unwrap();
     let report = battle_perception_report(&world, id).unwrap();
     assert!(report.running);
-    assert_eq!(report.profile.light, BattleLight::Night);
-    assert_eq!(report.profile.sensors, BattlePerceptionStatus::Ready);
+    assert_eq!(report.profile.light, Light::Night);
+    assert_eq!(report.profile.sensors, PerceptionStatus::Ready);
     assert_eq!(
         (
             report.profile.sensor_range,
@@ -108,7 +108,7 @@ async fn vehicle_sensor_command_and_lua_share_the_perception_report() {
         &mut scripts.world_mut(),
         id,
         ObjectId(1),
-        BattleMovementRules::STANDARD.fall,
+        MovementRules::STANDARD.fall,
     )
     .unwrap();
     let stopped = battle_perception_report(&scripts.world(), id).unwrap();
@@ -141,17 +141,17 @@ async fn stationary_vehicles_extend_sensor_and_probe_reach() {
         assert_eq!(profile.sensor_range, sensors);
         assert_eq!(
             profile.probe,
-            Some(BattleProbeProfile {
-                kind: BattleActiveProbe::Bloodhound,
+            Some(ProbeProfile {
+                kind: ActiveProbe::Bloodhound,
                 range: bloodhound,
-                status: BattlePerceptionStatus::Ready
+                status: PerceptionStatus::Ready
             })
         );
         assert_eq!(
             profile.radar,
-            Some(BattleRadarProfile {
+            Some(RadarProfile {
                 range: radar,
-                status: BattlePerceptionStatus::Ready
+                status: PerceptionStatus::Ready
             })
         );
     }
@@ -161,39 +161,39 @@ async fn stationary_vehicles_extend_sensor_and_probe_reach() {
 #[tokio::test]
 async fn vehicle_probe_profile_follows_critical_and_section_loss() {
     let (_dir, config, mut world, id) = fixture(&equipped()).await;
-    let ready = |kind: BattleActiveProbe| {
-        Some(BattleProbeProfile {
+    let ready = |kind: ActiveProbe| {
+        Some(ProbeProfile {
             kind,
             range: u16::from(kind.range(false)),
-            status: BattlePerceptionStatus::Ready,
+            status: PerceptionStatus::Ready,
         })
     };
-    let destroyed = Some(BattleProbeProfile {
-        kind: BattleActiveProbe::Bloodhound,
+    let destroyed = Some(ProbeProfile {
+        kind: ActiveProbe::Bloodhound,
         range: 8,
-        status: BattlePerceptionStatus::Damaged,
+        status: PerceptionStatus::Damaged,
     });
-    assert_eq!(probe(&world, id), ready(BattleActiveProbe::Bloodhound));
+    assert_eq!(probe(&world, id), ready(ActiveProbe::Bloodhound));
     let mut section_loss = world.clone();
     damage_battle_vehicle_phase(
         &mut section_loss,
         id,
-        BattleVehicleSection::Front,
+        VehicleSection::Front,
         8,
-        BattleDamagePhase::Internal,
+        DamagePhase::Internal,
     )
     .unwrap();
     assert_eq!(probe(&section_loss, id), destroyed);
     for (slot, expected) in [
-        (2, ready(BattleActiveProbe::Beagle)),
-        (0, ready(BattleActiveProbe::Beagle)),
+        (2, ready(ActiveProbe::Beagle)),
+        (0, ready(ActiveProbe::Beagle)),
         (1, destroyed),
     ] {
         destroy_battle_vehicle_critical(
             &mut world,
             id,
             VehicleCriticalLocation {
-                section: BattleVehicleSection::Front,
+                section: VehicleSection::Front,
                 slot,
             },
         )
@@ -220,25 +220,19 @@ async fn vehicle_map_perception_switches_persist() {
     let (_dir, config, mut world, id) = fixture(&equipped()).await;
     let map = world.btech.vehicles()[&id].position().unwrap().map;
     for flag in [
-        BattleMapPerceptionFlag::Sensors,
-        BattleMapPerceptionFlag::Probes,
-        BattleMapPerceptionFlag::Radar,
+        MapPerceptionFlag::Sensors,
+        MapPerceptionFlag::Probes,
+        MapPerceptionFlag::Radar,
     ] {
         set_battle_map_perception(&mut world, map, flag, false).unwrap();
     }
     let profile = battle_perception_profile(&world, id).unwrap();
     assert_eq!(
         (profile.sensors, profile.sensor_range),
-        (BattlePerceptionStatus::Disabled, 0)
+        (PerceptionStatus::Disabled, 0)
     );
-    assert_eq!(
-        profile.probe.unwrap().status,
-        BattlePerceptionStatus::Disabled
-    );
-    assert_eq!(
-        profile.radar.unwrap().status,
-        BattlePerceptionStatus::Disabled
-    );
+    assert_eq!(profile.probe.unwrap().status, PerceptionStatus::Disabled);
+    assert_eq!(profile.radar.unwrap().status, PerceptionStatus::Disabled);
     assert_eq!(
         battle_perception_report(&world, id).unwrap().text,
         [
@@ -252,12 +246,9 @@ async fn vehicle_map_perception_switches_persist() {
     persistence::save(&config.database(), &world).await.unwrap();
     let mut restored = persistence::load(&config.database()).await.unwrap();
     assert_eq!(battle_perception_profile(&restored, id).unwrap(), profile);
-    set_battle_map_perception(&mut restored, map, BattleMapPerceptionFlag::Probes, true).unwrap();
+    set_battle_map_perception(&mut restored, map, MapPerceptionFlag::Probes, true).unwrap();
     let profile = battle_perception_profile(&restored, id).unwrap();
-    assert_eq!(profile.probe.unwrap().status, BattlePerceptionStatus::Ready);
-    assert_eq!(profile.sensors, BattlePerceptionStatus::Disabled);
-    assert_eq!(
-        profile.radar.unwrap().status,
-        BattlePerceptionStatus::Disabled
-    );
+    assert_eq!(profile.probe.unwrap().status, PerceptionStatus::Ready);
+    assert_eq!(profile.sensors, PerceptionStatus::Disabled);
+    assert_eq!(profile.radar.unwrap().status, PerceptionStatus::Disabled);
 }

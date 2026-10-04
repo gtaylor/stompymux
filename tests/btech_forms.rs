@@ -14,13 +14,13 @@ async fn forms_cover_stock_and_share_native_lua_names_without_mutation() {
     let forms = battle_part_forms(&world, ObjectId(1)).unwrap();
     assert_eq!(forms.len(), 618);
     assert!(forms.windows(2).all(|pair| {
-        let key = |f: &BattlePartForm| (f.short_name.clone(), f.part_id);
+        let key = |f: &PartForm| (f.short_name.clone(), f.part_id);
         key(&pair[0]) < key(&pair[1])
     }));
     let ids: BTreeSet<_> = forms.iter().map(|f| f.part_id).collect();
     assert_eq!(ids.len(), forms.len());
     for form in &forms {
-        let part = BattlePart::from_id(form.part_id).unwrap();
+        let part = Part::from_id(form.part_id).unwrap();
         assert_eq!(form.very_long_name, part.name);
     }
     let laser = forms

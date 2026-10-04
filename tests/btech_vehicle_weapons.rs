@@ -18,7 +18,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse("test", template).unwrap(),
+        VehicleTemplate::parse("test", template).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -49,7 +49,7 @@ async fn vehicle_weapon_inspection_preserves_indices_failure_details_and_replay(
                 &mut world,
                 id,
                 VehicleCriticalLocation {
-                    section: BattleVehicleSection::Turret,
+                    section: VehicleSection::Turret,
                     slot: 0,
                 },
             )
@@ -70,7 +70,7 @@ async fn vehicle_weapon_inspection_preserves_indices_failure_details_and_replay(
                         }
                         "ap" => {
                             vehicle["ammunition_modes"]["0"] =
-                                serde_json::to_value(BattleAmmunitionMode::ArmorPiercing).unwrap()
+                                serde_json::to_value(AmmunitionMode::ArmorPiercing).unwrap()
                         }
                         _ => {}
                     }

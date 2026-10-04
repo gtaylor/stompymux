@@ -26,10 +26,9 @@ fn storage(world: &mut World, id: ObjectId) -> Result<&mut ShotCounters> {
 }
 
 /// Broadcast classification includes the configured near-miss band even for beacon weapons.
-pub(super) fn hit(roll: u8, target: Option<i32>, mode: super::BattleGlancingMode) -> bool {
+pub(super) fn hit(roll: u8, target: Option<i32>, mode: super::GlancingMode) -> bool {
     target.is_some_and(|number| {
-        i64::from(roll)
-            >= i64::from(number) - i64::from(mode == super::BattleGlancingMode::BelowTarget)
+        i64::from(roll) >= i64::from(number) - i64::from(mode == super::GlancingMode::BelowTarget)
     })
 }
 
@@ -83,7 +82,7 @@ mod tests {
     /// The broadcast's hit band is independent of the missile/beacon damage admission band.
     #[test]
     fn broadcast_result_keeps_near_misses_and_range_separate() {
-        use super::super::BattleGlancingMode::{AtTarget, BelowTarget, Disabled};
+        use super::super::GlancingMode::{AtTarget, BelowTarget, Disabled};
         for mode in [Disabled, AtTarget, BelowTarget] {
             assert!(!hit(12, None, mode));
             assert!(!hit(5, Some(7), mode));

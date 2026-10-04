@@ -1,5 +1,5 @@
 //! Player controls for rapid firing of conventional and light autocannons.
-use super::{BattleFireMode, FireModeFeedback};
+use super::{FireMode, FireModeFeedback};
 use crate::{ObjectId, World};
 use anyhow::{Result, ensure};
 
@@ -9,7 +9,7 @@ pub fn toggle_rapid(
     id: ObjectId,
     pilot: ObjectId,
     index: usize,
-) -> Result<BattleFireMode> {
+) -> Result<FireMode> {
     let ready = super::weapon_controls::ready_weapon(world, id, pilot, index)?;
     ensure!(
         ready.weapon.supports_rapid_fire(),
@@ -19,7 +19,7 @@ pub fn toggle_rapid(
         world,
         id,
         index,
-        BattleFireMode::Rapid,
+        FireMode::Rapid,
     ))
 }
 

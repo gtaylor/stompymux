@@ -6,30 +6,30 @@ use serde::Serialize;
 
 /// Ordered damage to one occupant of a reactor blast cell.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleReactorBlastHit {
+pub struct ReactorBlastHit {
     pub unit: ObjectId,
     pub coordinate: HexCoordinate,
     pub damage: u16,
     pub heat: i32,
-    pub arc: BattleHitArc,
-    pub impacts: Vec<BattleBlastImpact>,
-    pub vehicle_heat: Option<BattleVehicleHeatExposure>,
+    pub arc: HitArc,
+    pub impacts: Vec<BlastImpact>,
+    pub vehicle_heat: Option<VehicleHeatExposure>,
 }
 
 /// Destruction and neighboring material damage from one reactor.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleReactorExplosion {
+pub struct ReactorExplosion {
     /// An instability blast caused by dismantling this reactor, completed before its own blast.
-    pub section_explosion: Option<Box<BattleReactorExplosion>>,
+    pub section_explosion: Option<Box<ReactorExplosion>>,
     pub unit: ObjectId,
     pub map: ObjectId,
-    pub hits: Vec<BattleReactorBlastHit>,
+    pub hits: Vec<ReactorBlastHit>,
     pub ignited: Vec<HexCoordinate>,
     /// Final unit-owned injury, applied after all radial blast effects.
-    pub crew_injury: Option<BattlePilotInjury>,
-    pub notices: Vec<BattleNotice>,
+    pub crew_injury: Option<TacticalPilotInjury>,
+    pub notices: Vec<Notice>,
     /// Private packet feedback indexed into the complete reactor notice stream.
-    pub pilot_notices: Vec<BattlePilotNotice>,
+    pub pilot_notices: Vec<PilotNotice>,
 }
 
 /// Detonate a constructed Mech through an authorized host action, including casualty callbacks.
@@ -38,12 +38,12 @@ pub fn reactor_explosion_action(
     scripts: &Scripts,
     config: &Config,
     id: ObjectId,
-) -> Result<BattleReactorExplosion> {
+) -> Result<ReactorExplosion> {
     scripts.atomic(|before| {
         let report = detonate(
             &mut scripts.world.borrow_mut(),
             id,
-            BattleFallRules::configured(config),
+            FallRules::configured(config),
             config.battletech.explode_reactor > 1,
         )?;
         super::piloting::publish_ordered_notices(scripts, &report.notices, &report.pilot_notices)?;
@@ -58,9 +58,9 @@ pub fn reactor_explosion_action(
 pub(super) fn detonate(
     world: &mut World,
     id: ObjectId,
-    rules: BattleFallRules,
+    rules: FallRules,
     punch: bool,
-) -> Result<BattleReactorExplosion> {
+) -> Result<ReactorExplosion> {
     ensure!(
         world
             .objects
@@ -76,7 +76,7 @@ pub(super) fn detonate(
     let position = unit.position().context("Reactor must be on a map")?;
     // Head loss is terminal for this action; engine criticals may already have stopped the reactor.
     ensure!(
-        unit.sections()[&BattleSection::Head].internal > 0,
+        unit.sections()[&MechSection::Head].internal > 0,
         "Reactor has already exploded"
     );
     let point = unit
@@ -117,7 +117,7 @@ pub(super) fn detonate(
             cells.push((coordinate, distance as u16 + 1));
         }
     }
-    let mut report = BattleReactorExplosion {
+    let mut report = ReactorExplosion {
         section_explosion: None,
         unit: id,
         map: position.map,
@@ -127,23 +127,23 @@ pub(super) fn detonate(
         notices: super::broadcast::observer_notices(world, id, "suddenly explodes!"),
         pilot_notices: Vec::new(),
     };
-    report.notices.push(BattleNotice {
+    report.notices.push(Notice {
         unit: id,
         text: "Suddenly you feel great heat overcoming your senses.. you faint.. (and die)".into(),
     });
     for section in [
-        BattleSection::CenterTorso,
-        BattleSection::LeftTorso,
-        BattleSection::RightTorso,
-        BattleSection::LeftLeg,
-        BattleSection::RightLeg,
-        BattleSection::Head,
+        MechSection::CenterTorso,
+        MechSection::LeftTorso,
+        MechSection::RightTorso,
+        MechSection::LeftLeg,
+        MechSection::RightLeg,
+        MechSection::Head,
     ] {
         let unit = world.btech.constructed.get_mut(&id).unwrap();
         let power = unit.power();
-        let engine_hits = unit.system_hits(BattleSystem::Engine);
+        let engine_hits = unit.system_hits(System::Engine);
         let amount = unit.sections()[&section].internal;
-        let phase = unit.damage_phase(section, amount, BattleDamagePhase::Internal);
+        let phase = unit.damage_phase(section, amount, DamagePhase::Internal);
         if !phase.destroyed_sections.is_empty()
             && let Some(blast) =
                 super::reactor_instability::section_loss(world, id, power, engine_hits, rules)?
@@ -188,11 +188,11 @@ pub(super) fn detonate(
 /// Freeze facing per occupant; rear armor selection persists through one cell's ordered occupants.
 fn hit_cell(
     world: &mut World,
-    report: &mut BattleReactorExplosion,
+    report: &mut ReactorExplosion,
     coordinate: HexCoordinate,
     point: Point,
     (damage, heat): (u16, i32),
-    rules: BattleFallRules,
+    rules: FallRules,
     punch: bool,
 ) -> Result<()> {
     let tile = world.btech.maps()[&report.map]
@@ -218,7 +218,7 @@ fn hit_cell(
         let Some(target) = blast.target(world, id, rules)? else {
             continue;
         };
-        rear |= target.arc == BattleHitArc::Rear;
+        rear |= target.arc == HitArc::Rear;
         let (observer, cockpit) = if direct {
             (
                 "is hit badly by the blast!",
@@ -233,7 +233,7 @@ fn hit_cell(
         report
             .notices
             .extend(super::broadcast::observer_notices(world, id, observer));
-        report.notices.push(BattleNotice {
+        report.notices.push(Notice {
             unit: id,
             text: cockpit.into(),
         });
@@ -243,11 +243,11 @@ fn hit_cell(
             super::blast_damage::BlastDamage {
                 damage,
                 packet_size: 3,
-                class: super::BattleDamageClass::Ordinary,
+                class: super::DamageClass::Ordinary,
                 table: if punch {
-                    BattleHitTable::Punch
+                    HitTable::Punch
                 } else {
-                    BattleHitTable::Weapon
+                    HitTable::Weapon
                 },
                 arc: target.arc,
                 heat,
@@ -256,7 +256,7 @@ fn hit_cell(
             &mut rear,
             target.rules,
         )?;
-        report.hits.push(BattleReactorBlastHit {
+        report.hits.push(ReactorBlastHit {
             unit: id,
             coordinate,
             damage,

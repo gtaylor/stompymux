@@ -1,5 +1,5 @@
 //! A single owned unit or coordinate selection with a committed eight-second settling countdown.
-use super::{BattleNotice, BattlePower, BattleUnit};
+use super::{Mech, Notice, Power};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 /// Selected unit and settling time. Zero means settled, not necessarily currently visible.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct BattleTargetLock {
+pub struct TargetLock {
     pub target: ObjectId,
     pub remaining: u8,
 }
@@ -15,7 +15,7 @@ pub struct BattleTargetLock {
 /// Purpose of a saved coordinate selection; ordinary coordinates address a unit occupying the hex.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleHexTargetMode {
+pub enum HexTargetMode {
     UnitAtHex,
     Hex,
     Building,
@@ -23,7 +23,7 @@ pub enum BattleHexTargetMode {
     Clear,
 }
 
-impl BattleHexTargetMode {
+impl HexTargetMode {
     /// Plain language description for cockpit inspection.
     pub fn name(self) -> &'static str {
         match self {
@@ -36,7 +36,7 @@ impl BattleHexTargetMode {
     }
 }
 
-impl std::str::FromStr for BattleHexTargetMode {
+impl std::str::FromStr for HexTargetMode {
     type Err = anyhow::Error;
     fn from_str(value: &str) -> Result<Self> {
         match value.to_ascii_lowercase().as_str() {
@@ -53,21 +53,21 @@ impl std::str::FromStr for BattleHexTargetMode {
 /// A coordinate on the unit's current map with a targeting purpose and settling countdown.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct BattleHexLock {
+pub struct HexLock {
     pub hex: super::HexCoordinate,
-    pub mode: BattleHexTargetMode,
+    pub mode: HexTargetMode,
     pub remaining: u8,
 }
 
 /// One owned target selection; unit and coordinate locks cannot coexist.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(untagged)]
-pub enum BattleTargetSelection {
-    Unit(BattleTargetLock),
-    Hex(BattleHexLock),
+pub enum TargetSelection {
+    Unit(TargetLock),
+    Hex(HexLock),
 }
 
-impl BattleTargetSelection {
+impl TargetSelection {
     /// Seconds remaining until the selected target settles.
     pub fn remaining(self) -> u8 {
         match self {
@@ -85,46 +85,46 @@ impl BattleTargetSelection {
     }
 }
 
-impl BattleUnit {
+impl Mech {
     /// Historical selection; callers must separately check current visibility before firing.
-    pub fn target_lock(&self) -> Option<BattleTargetLock> {
+    pub fn target_lock(&self) -> Option<TargetLock> {
         match self.target_lock {
-            Some(BattleTargetSelection::Unit(lock)) => Some(lock),
+            Some(TargetSelection::Unit(lock)) => Some(lock),
             _ => None,
         }
     }
     /// Current coordinate target, independent of visibility or an occupying unit.
-    pub fn hex_lock(&self) -> Option<BattleHexLock> {
+    pub fn hex_lock(&self) -> Option<HexLock> {
         match self.target_lock {
-            Some(BattleTargetSelection::Hex(lock)) => Some(lock),
+            Some(TargetSelection::Hex(lock)) => Some(lock),
             _ => None,
         }
     }
 
     /// Inspect the single selected target without projecting it to a particular target kind.
-    pub fn target_selection(&self) -> Option<BattleTargetSelection> {
+    pub fn target_selection(&self) -> Option<TargetSelection> {
         self.target_lock
     }
 }
 
-impl super::BattleVehicle {
+impl super::Vehicle {
     /// Historical selection; callers must separately check current visibility before firing.
-    pub fn target_lock(&self) -> Option<BattleTargetLock> {
+    pub fn target_lock(&self) -> Option<TargetLock> {
         match self.target_lock {
-            Some(BattleTargetSelection::Unit(lock)) => Some(lock),
+            Some(TargetSelection::Unit(lock)) => Some(lock),
             _ => None,
         }
     }
     /// Current coordinate target, independent of visibility or an occupying unit.
-    pub fn hex_lock(&self) -> Option<BattleHexLock> {
+    pub fn hex_lock(&self) -> Option<HexLock> {
         match self.target_lock {
-            Some(BattleTargetSelection::Hex(lock)) => Some(lock),
+            Some(TargetSelection::Hex(lock)) => Some(lock),
             _ => None,
         }
     }
 
     /// Inspect the single selected target without projecting it to a particular target kind.
-    pub fn target_selection(&self) -> Option<BattleTargetSelection> {
+    pub fn target_selection(&self) -> Option<TargetSelection> {
         self.target_lock
     }
 }
@@ -146,7 +146,7 @@ fn controlled_by_actor(
     super::power::controlled_by_actor(world, unit, actor)?;
     let state = super::scanner::scanner_unit(world, unit).context("Unit is unavailable")?;
     ensure!(
-        state.power == BattlePower::Running && !state.destroyed,
+        state.power == Power::Running && !state.destroyed,
         "Start the unit first"
     );
     Ok(())
@@ -163,25 +163,21 @@ fn controlled_source(world: &World, owner: ObjectId, actor: ObjectId) -> Result<
 }
 
 /// Read the owning construction's unit or coordinate selection.
-pub(super) fn selection(world: &World, unit: ObjectId) -> Option<BattleTargetSelection> {
+pub(super) fn selection(world: &World, unit: ObjectId) -> Option<TargetSelection> {
     world.btech.vehicles().get(&unit).map_or_else(
         || {
             world
                 .btech
                 .constructed_units()
                 .get(&unit)
-                .and_then(BattleUnit::target_selection)
+                .and_then(Mech::target_selection)
         },
-        super::BattleVehicle::target_selection,
+        super::Vehicle::target_selection,
     )
 }
 
 /// Store an admitted selection and invalidate its trajectory correction.
-pub(super) fn set_selection(
-    world: &mut World,
-    unit: ObjectId,
-    selection: Option<BattleTargetSelection>,
-) {
+pub(super) fn set_selection(world: &mut World, unit: ObjectId, selection: Option<TargetSelection>) {
     super::artillery_adjustment::reset(world, unit);
     crate::btech::with_unit_mut!(world.btech.unit_mut(unit).expect("checked unit"), |unit| {
         unit.target_lock = selection;
@@ -221,7 +217,7 @@ pub(super) fn set_administrative_target(
         world,
         unit,
         target.map(|target| {
-            BattleTargetSelection::Unit(BattleTargetLock {
+            TargetSelection::Unit(TargetLock {
                 target,
                 remaining: SETTLING_DELAY,
             })
@@ -236,7 +232,7 @@ pub fn select_target(
     unit: ObjectId,
     pilot: ObjectId,
     target: Option<ObjectId>,
-) -> Result<BattleNotice> {
+) -> Result<Notice> {
     let source = controlled_source(world, unit, pilot)?;
     if let Some(target) = target {
         ensure!(
@@ -253,13 +249,13 @@ pub fn select_target(
         world,
         unit,
         target.map(|target| {
-            BattleTargetSelection::Unit(BattleTargetLock {
+            TargetSelection::Unit(TargetLock {
                 target,
                 remaining: SETTLING_DELAY,
             })
         }),
     );
-    let notice = BattleNotice {
+    let notice = Notice {
         unit,
         text: (if target.is_some() {
             "Target set; sensors are acquiring a stable lock."
@@ -277,7 +273,7 @@ pub(crate) fn select_target_autopilot(
     world: &mut World,
     unit: ObjectId,
     target: Option<ObjectId>,
-) -> Result<BattleNotice> {
+) -> Result<Notice> {
     controlled_by_actor(world, unit, super::combat_operator::ControlActor::Autopilot)?;
     let source = unit;
     if let Some(target) = target {
@@ -293,13 +289,13 @@ pub(crate) fn select_target_autopilot(
         world,
         unit,
         target.map(|target| {
-            BattleTargetSelection::Unit(BattleTargetLock {
+            TargetSelection::Unit(TargetLock {
                 target,
                 remaining: SETTLING_DELAY,
             })
         }),
     );
-    Ok(BattleNotice {
+    Ok(Notice {
         unit,
         text: (if target.is_some() {
             "Target set; sensors are acquiring a stable lock."
@@ -316,8 +312,8 @@ pub fn select_hex_target(
     unit: ObjectId,
     pilot: ObjectId,
     hex: super::HexCoordinate,
-    mode: BattleHexTargetMode,
-) -> Result<BattleNotice> {
+    mode: HexTargetMode,
+) -> Result<Notice> {
     let source = controlled_source(world, unit, pilot)?;
     let position = super::scanner::scanner_unit(world, source)
         .and_then(|state| state.position)
@@ -326,20 +322,20 @@ pub fn select_hex_target(
     set_selection(
         world,
         unit,
-        Some(BattleTargetSelection::Hex(BattleHexLock {
+        Some(TargetSelection::Hex(HexLock {
             hex,
             mode,
             remaining: SETTLING_DELAY,
         })),
     );
     let purpose = match mode {
-        BattleHexTargetMode::UnitAtHex => "at",
-        BattleHexTargetMode::Hex => "to hex at",
-        BattleHexTargetMode::Building => "to building at",
-        BattleHexTargetMode::Ignite => "to igniting hex at",
-        BattleHexTargetMode::Clear => "to clearing hex at",
+        HexTargetMode::UnitAtHex => "at",
+        HexTargetMode::Hex => "to hex at",
+        HexTargetMode::Building => "to building at",
+        HexTargetMode::Ignite => "to igniting hex at",
+        HexTargetMode::Clear => "to clearing hex at",
     };
-    let notice = BattleNotice {
+    let notice = Notice {
         unit,
         text: format!(
             "Target coordinates set {purpose} (X,Y) {}, {}",
@@ -351,7 +347,7 @@ pub fn select_hex_target(
 }
 
 /// Settle unit locks silently when unseen; coordinate locks announce completion regardless of visibility.
-pub fn advance_target_locks(world: &mut World) -> Vec<BattleNotice> {
+pub fn advance_target_locks(world: &mut World) -> Vec<Notice> {
     let updates: Vec<_> = world
         .btech
         .constructed_units()
@@ -375,16 +371,13 @@ pub fn advance_target_locks(world: &mut World) -> Vec<BattleNotice> {
                 None
             } else {
                 match lock {
-                    BattleTargetSelection::Unit(lock) => {
-                        super::visible_contact(world, id, lock.target)
-                            .ok()
-                            .flatten()
-                            .map(|_| {
-                                "The sensors acquire a stable lock on your selected target."
-                                    .to_owned()
-                            })
-                    }
-                    BattleTargetSelection::Hex(lock) => Some(format!(
+                    TargetSelection::Unit(lock) => super::visible_contact(world, id, lock.target)
+                        .ok()
+                        .flatten()
+                        .map(|_| {
+                            "The sensors acquire a stable lock on your selected target.".to_owned()
+                        }),
+                    TargetSelection::Hex(lock) => Some(format!(
                         "The sensors acquire a stable lock on ({},{}).",
                         lock.hex.x, lock.hex.y
                     )),
@@ -400,7 +393,7 @@ pub fn advance_target_locks(world: &mut World) -> Vec<BattleNotice> {
             unit.target_lock = Some(lock);
         });
         if let Some(text) = message {
-            notices.push(BattleNotice { unit: id, text });
+            notices.push(Notice { unit: id, text });
         }
     }
     notices

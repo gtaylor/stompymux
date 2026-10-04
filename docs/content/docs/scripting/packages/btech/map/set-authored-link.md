@@ -19,7 +19,7 @@ btech.map.set_authored_link(child, link)
 | Name | Type | Description |
 | --- | --- | --- |
 | `child` | `integer` |  |
-| `link` | `BattleAuthoredMapLink\|nil` |  |
+| `link` | `AuthoredMapLink\|nil` |  |
 
 ## Returns
 

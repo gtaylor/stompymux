@@ -1,16 +1,14 @@
 //! Skill names and default advancement policy, shared by inspection and named experience awards.
-use super::{
-    BattleExperienceAward, BattleExperienceRules, BattleSkillCategory, award_character_experience,
-};
+use super::{ExperienceAward, ExperienceRules, SkillCategory, award_character_experience};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
 
 /// Canonical skill identity and its default experience policy.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-pub struct BattleSkillDefinition {
+pub struct SkillDefinition {
     pub name: &'static str,
-    pub category: BattleSkillCategory,
+    pub category: SkillCategory,
     pub threshold: u32,
     pub continuous: bool,
 }
@@ -18,11 +16,11 @@ pub struct BattleSkillDefinition {
 /// Keep catalog entries compact while retaining explicit metadata.
 const fn skill(
     name: &'static str,
-    category: BattleSkillCategory,
+    category: SkillCategory,
     threshold: u32,
     continuous: bool,
-) -> BattleSkillDefinition {
-    BattleSkillDefinition {
+) -> SkillDefinition {
+    SkillDefinition {
         name,
         category,
         threshold,
@@ -30,9 +28,9 @@ const fn skill(
     }
 }
 
-use BattleSkillCategory::{Athletic as A, Mental as M, Physical as P, Social as S};
+use SkillCategory::{Athletic as A, Mental as M, Physical as P, Social as S};
 /// Default skill catalog; availability of a skill does not imply its associated game action is implemented.
-pub const BATTLE_SKILLS: &[BattleSkillDefinition] = &[
+pub const BATTLE_SKILLS: &[SkillDefinition] = &[
     skill("Acrobatics", A, 50, false),
     skill("Administration", M, 50, false),
     skill("Alternate_Identity", M, 50, false),
@@ -113,7 +111,7 @@ pub const BATTLE_SKILLS: &[BattleSkillDefinition] = &[
     skill("Zero-G_Operations", P, 50, false),
 ];
 
-impl BattleSkillDefinition {
+impl SkillDefinition {
     /// Short lookup name made from the first three characters at each uppercase letter.
     /// Single fragments use the first five characters of the full name instead.
     pub fn short_name(self) -> String {
@@ -121,8 +119,8 @@ impl BattleSkillDefinition {
     }
 
     /// Default award policy; runtime threshold overrides can supply a different threshold explicitly.
-    pub fn experience_rules(self) -> BattleExperienceRules {
-        BattleExperienceRules {
+    pub fn experience_rules(self) -> ExperienceRules {
+        ExperienceRules {
             category: self.category,
             threshold: self.threshold,
             continuous: self.continuous,
@@ -132,7 +130,7 @@ impl BattleSkillDefinition {
 
 /// Resolve canonical names before short aliases, with ASCII case-insensitive matching.
 /// When aliases collide, the first catalog entry wins.
-pub fn skill_definition(name: &str) -> Option<&'static BattleSkillDefinition> {
+pub fn skill_definition(name: &str) -> Option<&'static SkillDefinition> {
     BATTLE_SKILLS
         .iter()
         .find(|skill| skill.name.eq_ignore_ascii_case(name))
@@ -187,9 +185,9 @@ pub fn award_skill_experience(
     amount: u32,
     now: i64,
     override_interval: bool,
-) -> Result<BattleExperienceAward> {
+) -> Result<ExperienceAward> {
     let skill = skill_definition(name).context("Unknown skill")?;
-    let rules = BattleExperienceRules {
+    let rules = ExperienceRules {
         threshold: skill_threshold(world, skill.name)?,
         ..skill.experience_rules()
     };
@@ -206,7 +204,7 @@ pub fn award_skill_experience(
 
 /// Detached character skill progress under the current runtime threshold.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleSkillProgress {
+pub struct SkillProgress {
     pub name: &'static str,
     pub target: i16,
     pub raw_target: i16,
@@ -220,7 +218,7 @@ pub struct BattleSkillProgress {
 }
 
 /// Inspect named skill progress without awarding XP or recalculating stored earned levels.
-pub fn skill_progress(world: &World, player: ObjectId, name: &str) -> Result<BattleSkillProgress> {
+pub fn skill_progress(world: &World, player: ObjectId, name: &str) -> Result<SkillProgress> {
     let definition = skill_definition(name).context("Unknown skill")?;
     let character = world
         .btech
@@ -237,17 +235,17 @@ pub fn skill_progress(world: &World, player: ObjectId, name: &str) -> Result<Bat
     let threshold = skill_threshold(world, definition.name)?;
     let next = value.next_level_balance(
         *character,
-        BattleExperienceRules {
+        ExperienceRules {
             threshold,
             ..definition.experience_rules()
         },
     );
-    Ok(BattleSkillProgress {
+    Ok(SkillProgress {
         name: definition.name,
         target: character.skill_target(definition.category, value),
         raw_target: character.skill_target(
             definition.category,
-            super::BattleCharacterValue {
+            super::CharacterValue {
                 experience: 0,
                 ..value
             },
@@ -299,7 +297,7 @@ pub fn retain_character_experience(
             continue;
         }
         if let Some(definition) = skill {
-            let rules = BattleExperienceRules {
+            let rules = ExperienceRules {
                 threshold: skill_threshold(world, definition.name)?,
                 ..definition.experience_rules()
             };

@@ -18,7 +18,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse("test", template).unwrap(),
+        VehicleTemplate::parse("test", template).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -34,7 +34,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
 
 #[tokio::test]
 async fn vehicle_control_damage_stacks_without_changing_skills_or_construction() {
-    use BattleVehicleControlHit as H;
+    use VehicleControlHit as H;
     let text = include_str!("../game/mechs/Demolisher.toml").replace(
         "[sections.front_side]\n",
         "[sections.front_side]\nslots = [{ at = 1, item = \"IS.MediumLaser\" }]\n",
@@ -45,12 +45,12 @@ async fn vehicle_control_damage_stacks_without_changing_skills_or_construction()
     let front = loadout
         .weapons
         .iter()
-        .position(|mount| mount.criticals[0].section == BattleVehicleSection::Front)
+        .position(|mount| mount.criticals[0].section == VehicleSection::Front)
         .unwrap();
     let turret = loadout
         .weapons
         .iter()
-        .position(|mount| mount.criticals[0].section == BattleVehicleSection::Turret)
+        .position(|mount| mount.criticals[0].section == VehicleSection::Turret)
         .unwrap();
     let baseline = roll_battle_piloting(&mut world, id, -1, true).unwrap();
     for hit in [
@@ -59,7 +59,7 @@ async fn vehicle_control_damage_stacks_without_changing_skills_or_construction()
         H::Sensors,
         H::Sensors,
         H::Stabilizers {
-            section: BattleVehicleSection::Turret,
+            section: VehicleSection::Turret,
         },
     ] {
         damage_battle_vehicle_controls(&mut world, id, hit).unwrap();
@@ -69,7 +69,7 @@ async fn vehicle_control_damage_stacks_without_changing_skills_or_construction()
         &mut world,
         id,
         H::Stabilizers {
-            section: BattleVehicleSection::Turret,
+            section: VehicleSection::Turret,
         },
     )
     .unwrap();
@@ -126,7 +126,7 @@ async fn vehicle_control_damage_stacks_without_changing_skills_or_construction()
 
 #[tokio::test]
 async fn vehicle_control_penalties_saturate_and_reject_invalid_state() {
-    use BattleVehicleControlHit as H;
+    use VehicleControlHit as H;
     let (_dir, _config, mut world, id) =
         fixture(include_str!("../game/mechs/Demolisher.toml")).await;
     for _ in 0..130 {
@@ -143,14 +143,14 @@ async fn vehicle_control_penalties_saturate_and_reject_invalid_state() {
     for field in ["piloting_damage", "gunnery_damage"] {
         let mut bad = original.clone();
         bad[field] = 128.into();
-        assert!(serde_json::from_value::<BattleVehicle>(bad).is_err());
+        assert!(serde_json::from_value::<Vehicle>(bad).is_err());
     }
     damage_battle_vehicle_phase(
         &mut world,
         id,
-        BattleVehicleSection::Turret,
+        VehicleSection::Turret,
         100,
-        BattleDamagePhase::Internal,
+        DamagePhase::Internal,
     )
     .unwrap();
     let before = world.btech.clone();
@@ -159,7 +159,7 @@ async fn vehicle_control_penalties_saturate_and_reject_invalid_state() {
             &mut world,
             id,
             H::Stabilizers {
-                section: BattleVehicleSection::Turret
+                section: VehicleSection::Turret
             }
         )
         .is_err()
@@ -183,7 +183,7 @@ async fn crew_stun_limits_controls_restarts_and_recovers_after_shutdown() {
     let pilot = ObjectId(1);
     let maximum = world.btech.vehicles()[&id].maximum_speed();
     set_battle_speed(&mut world, id, pilot, maximum).unwrap();
-    damage_battle_vehicle_controls(&mut world, id, BattleVehicleControlHit::Commander).unwrap();
+    damage_battle_vehicle_controls(&mut world, id, VehicleControlHit::Commander).unwrap();
     let vehicle = &world.btech.vehicles()[&id];
     assert_eq!(vehicle.crew_stun_remaining(), 60);
     assert_eq!(vehicle.piloting_damage(), 1);
@@ -210,12 +210,12 @@ async fn crew_stun_limits_controls_restarts_and_recovers_after_shutdown() {
         advance_battle_units(&mut world, 0);
     }
     assert_eq!(world.btech.vehicles()[&id].crew_stun_remaining(), 1);
-    damage_battle_vehicle_controls(&mut world, id, BattleVehicleControlHit::CrewStun).unwrap();
+    damage_battle_vehicle_controls(&mut world, id, VehicleControlHit::CrewStun).unwrap();
     assert_eq!(
         world.btech.vehicles()[&id].motion().unwrap().desired_speed,
         -maximum * 2.0 / 3.0
     );
-    stop_battle_unit(&mut world, id, pilot, BattleMovementRules::STANDARD.fall).unwrap();
+    stop_battle_unit(&mut world, id, pilot, MovementRules::STANDARD.fall).unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
     let mut loaded = persistence::load(&config.database()).await.unwrap();
     let mut recovery_notices = Vec::new();
@@ -231,7 +231,7 @@ async fn crew_stun_limits_controls_restarts_and_recovers_after_shutdown() {
     assert!(advance_battle_units(&mut world, 0).is_empty());
     let mut bad = serde_json::to_value(&world.btech.vehicles()[&id]).unwrap();
     bad["crew_stun_remaining"] = serde_json::json!(61);
-    assert!(serde_json::from_value::<BattleVehicle>(bad).is_err());
+    assert!(serde_json::from_value::<Vehicle>(bad).is_err());
 }
 
 #[tokio::test]
@@ -239,8 +239,8 @@ async fn powered_off_crew_recovery_retries_failed_server_ticks() {
     use sqlx::Connection;
     tokio::task::LocalSet::new().run_until(async {
         let (_dir,config,mut world,id)=fixture(include_str!("../game/mechs/Demolisher.toml")).await;
-        damage_battle_vehicle_controls(&mut world,id,BattleVehicleControlHit::CrewStun).unwrap();
-        stop_battle_unit(&mut world,id,ObjectId(1),BattleMovementRules::STANDARD.fall).unwrap();
+        damage_battle_vehicle_controls(&mut world,id,VehicleControlHit::CrewStun).unwrap();
+        stop_battle_unit(&mut world,id,ObjectId(1),MovementRules::STANDARD.fall).unwrap();
         for _ in 0..58 {advance_battle_units(&mut world, 0);}
         persistence::save(&config.database(),&world).await.unwrap();
         let mut sql=sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
@@ -260,18 +260,18 @@ async fn powered_off_crew_recovery_retries_failed_server_ticks() {
 async fn hull_destruction_cancels_crew_recovery() {
     let (_dir, _config, mut world, id) =
         fixture(include_str!("../game/mechs/Demolisher.toml")).await;
-    damage_battle_vehicle_controls(&mut world, id, BattleVehicleControlHit::CrewStun).unwrap();
+    damage_battle_vehicle_controls(&mut world, id, VehicleControlHit::CrewStun).unwrap();
     damage_battle_vehicle_phase(
         &mut world,
         id,
-        BattleVehicleSection::Front,
+        VehicleSection::Front,
         100,
-        BattleDamagePhase::Internal,
+        DamagePhase::Internal,
     )
     .unwrap();
     assert_eq!(world.btech.vehicles()[&id].crew_stun_remaining(), 0);
     assert!(advance_battle_units(&mut world, 0).is_empty());
     let mut bad = serde_json::to_value(&world.btech.vehicles()[&id]).unwrap();
     bad["crew_stun_remaining"] = serde_json::json!(1);
-    assert!(serde_json::from_value::<BattleVehicle>(bad).is_err());
+    assert!(serde_json::from_value::<Vehicle>(bad).is_err());
 }

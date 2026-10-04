@@ -1,12 +1,12 @@
 //! Hit direction samples shared unit geometry at each material packet boundary.
-use super::{BattleHitArc, scanner::scanner_unit, unit_range};
+use super::{HitArc, scanner::scanner_unit, unit_range};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result};
 
 /// Fixed impacts retain their authored direction; direct fire follows the live combatants.
 #[derive(Clone, Copy)]
 pub(super) enum HitDirection {
-    Fixed(BattleHitArc),
+    Fixed(HitArc),
     Direct {
         shooter: ObjectId,
         mode: i64,
@@ -19,7 +19,7 @@ pub(super) enum HitDirection {
 
 impl HitDirection {
     /// Recompute after earlier damage effects have changed a combatant's position or heading.
-    pub(super) fn current(self, world: &World, target: ObjectId) -> Result<BattleHitArc> {
+    pub(super) fn current(self, world: &World, target: ObjectId) -> Result<HitArc> {
         if let Self::Fixed(arc) = self {
             return Ok(arc);
         }
@@ -34,9 +34,9 @@ impl HitDirection {
             Self::SelfHit { mode } => (180.0, unit.heading.unwrap_or(0.0), mode),
         };
         let classify = if world.btech.vehicles().contains_key(&target) {
-            BattleHitArc::from_vehicle_bearing
+            HitArc::from_vehicle_bearing
         } else {
-            BattleHitArc::from_bearing
+            HitArc::from_bearing
         };
         classify(bearing, heading, mode)
     }
@@ -76,11 +76,11 @@ mod tests {
                 .unwrap();
                 let shooter = world.create(&config, "Shooter".into(), Kind::Thing);
                 let target = world.create(&config, "Target".into(), Kind::Thing);
-                BattleUnitTemplate::parse("shooter", source)
+                UnitTemplate::parse("shooter", source)
                     .unwrap()
                     .create(&mut world, shooter)
                     .unwrap();
-                BattleUnitTemplate::parse("target", recipient)
+                UnitTemplate::parse("target", recipient)
                     .unwrap()
                     .create(&mut world, target)
                     .unwrap();
@@ -88,10 +88,10 @@ mod tests {
                 place_battle_unit(&mut world, target, map, 0, 1).unwrap();
                 let direction = HitDirection::Direct { shooter, mode: 1 };
                 for (heading, expected) in [
-                    (0.0, BattleHitArc::Rear),
-                    (90.0, BattleHitArc::Right),
-                    (180.0, BattleHitArc::Front),
-                    (270.0, BattleHitArc::Left),
+                    (0.0, HitArc::Rear),
+                    (90.0, HitArc::Right),
+                    (180.0, HitArc::Front),
+                    (270.0, HitArc::Left),
                 ] {
                     let motion = crate::btech::with_unit_mut!(
                         world.btech.unit_mut(target).unwrap(),
@@ -101,10 +101,10 @@ mod tests {
                     motion.desired_heading = heading;
                     assert_eq!(direction.current(&world, target).unwrap(), expected);
                     assert_eq!(
-                        HitDirection::Fixed(BattleHitArc::Front)
+                        HitDirection::Fixed(HitArc::Front)
                             .current(&world, target)
                             .unwrap(),
-                        BattleHitArc::Front
+                        HitArc::Front
                     );
                 }
                 // Sample every degree and both sides of each boundary for all rule modes.
@@ -119,13 +119,13 @@ mod tests {
                         for offset in [-0.001, 0.0, 0.001] {
                             let angle = (f64::from(degree) + offset).rem_euclid(360.0);
                             let expected = if angle <= front || angle >= 360.0 - front {
-                                BattleHitArc::Front
+                                HitArc::Front
                             } else if angle >= 180.0 - rear && angle <= 180.0 + rear {
-                                BattleHitArc::Rear
+                                HitArc::Rear
                             } else if angle > 180.0 {
-                                BattleHitArc::Left
+                                HitArc::Left
                             } else {
-                                BattleHitArc::Right
+                                HitArc::Right
                             };
                             let motion = if vehicle {
                                 world
@@ -167,10 +167,7 @@ mod tests {
                 }
                 place_battle_unit(&mut world, target, map, 0, 1).unwrap();
                 place_battle_unit(&mut world, shooter, map, 0, 0).unwrap();
-                assert_eq!(
-                    direction.current(&world, target).unwrap(),
-                    BattleHitArc::Front
-                );
+                assert_eq!(direction.current(&world, target).unwrap(), HitArc::Front);
             }
         }
     }

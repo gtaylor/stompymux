@@ -1,27 +1,27 @@
 //! Minefield recognition and combined hex reports with shared transactional perception and output.
-use super::{BattleBuildingScan, BattleChannelMessage, HexCoordinate};
+use super::{BuildingScan, DiagnosticMessage, HexCoordinate};
 use crate::{Config, ObjectId, Scripts, World};
 use anyhow::Result;
 use serde::Serialize;
 
 /// Mine recognition discloses presence only, never field type, strength, owner or trigger settings.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleMineScan {
+pub struct MineScan {
     /// Whether the range and perception checks recognized mines.
     pub found: bool,
     /// Recognition or nondisclosure text, without mine configuration.
     pub text: String,
     /// Accepted perception XP diagnostics.
-    pub experience_messages: Vec<BattleChannelMessage>,
+    pub experience_messages: Vec<DiagnosticMessage>,
 }
 
 /// Ordered structure and minefield results from a full hex scan.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleHexScan {
+pub struct HexScan {
     /// Building phase, resolved first.
-    pub building: BattleBuildingScan,
+    pub building: BuildingScan,
     /// Mine recognition phase, resolved second.
-    pub mines: BattleMineScan,
+    pub mines: MineScan,
 }
 
 /// Recognize mines at their authored coordinate, using a range gate followed by perception.
@@ -33,7 +33,7 @@ pub fn scan_mines(
     pilot: ObjectId,
     coordinate: HexCoordinate,
     now: i64,
-) -> Result<BattleMineScan> {
+) -> Result<MineScan> {
     scan_with_range(world, observer, pilot, coordinate, now, false)
 }
 
@@ -45,14 +45,14 @@ fn scan_with_range(
     coordinate: HexCoordinate,
     now: i64,
     observer_range: bool,
-) -> Result<BattleMineScan> {
+) -> Result<MineScan> {
     let observer = super::combat_operator::for_owner(world, observer, pilot)?
         .source
         .unit;
     let mut candidate = world.clone();
     let map =
         super::scan::check_coordinate(&candidate, observer, pilot, coordinate, observer_range)?;
-    let mut report = BattleMineScan {
+    let mut report = MineScan {
         found: false,
         text: "You see nothing else of interest in the hex, either.".into(),
         experience_messages: Vec::new(),
@@ -103,7 +103,7 @@ pub fn scan_hex_action(
     observer: ObjectId,
     pilot: ObjectId,
     coordinate: HexCoordinate,
-) -> Result<BattleHexScan> {
+) -> Result<HexScan> {
     action_with_range(scripts, config, observer, pilot, coordinate, false)
 }
 
@@ -115,7 +115,7 @@ pub(super) fn action_with_range(
     pilot: ObjectId,
     coordinate: HexCoordinate,
     observer_range: bool,
-) -> Result<BattleHexScan> {
+) -> Result<HexScan> {
     let source = super::combat_operator::for_owner(&scripts.world(), observer, pilot)?.source;
     scripts.atomic(|_| {
         let now = crate::clock::wall_time();
@@ -139,11 +139,11 @@ pub(super) fn action_with_range(
         )?;
         super::channels::publish(scripts, config, &mines.experience_messages)?;
         let recipient = if mines.found {
-            super::BattleMessageTarget::Unit(source.unit)
+            super::MessageTarget::Unit(source.unit)
         } else {
-            super::BattleMessageTarget::Player(pilot)
+            super::MessageTarget::Player(pilot)
         };
         super::notify_message(scripts, recipient, &mines.text)?;
-        Ok(BattleHexScan { building, mines })
+        Ok(HexScan { building, mines })
     })
 }

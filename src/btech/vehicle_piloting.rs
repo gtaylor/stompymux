@@ -1,5 +1,5 @@
 //! Ground-vehicle control checks use crew skills and private dice without applying hazard effects.
-use super::BattlePilotingCheck;
+use super::PilotingCheck;
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 
@@ -9,7 +9,7 @@ pub(super) fn roll(
     id: ObjectId,
     modifier: i32,
     extended: bool,
-) -> Result<BattlePilotingCheck> {
+) -> Result<PilotingCheck> {
     let object = world.objects.get(&id).context("Unit is unavailable")?;
     ensure!(!object.flags.contains(Flag::Going), "Unit is unavailable");
     let vehicle = world
@@ -21,7 +21,7 @@ pub(super) fn roll(
     let cockpit = u8::from(
         vehicle
             .definition()
-            .has_technology(super::BattleTechnology::SmallCockpit),
+            .has_technology(super::Technology::SmallCockpit),
     );
     let absent_character_pilot = if object.flags.contains(Flag::InCharacter)
         && vehicle
@@ -37,7 +37,7 @@ pub(super) fn roll(
     let armor = u8::from(
         vehicle
             .definition()
-            .has_technology(super::BattleTechnology::HardenedArmor),
+            .has_technology(super::Technology::HardenedArmor),
     );
     let target = i32::from(skill)
         .wrapping_add(i32::from(damage))
@@ -60,7 +60,7 @@ pub(super) fn roll(
                 .generic_roll(),
         )
     };
-    Ok(BattlePilotingCheck {
+    Ok(PilotingCheck {
         skill,
         damage,
         cockpit,

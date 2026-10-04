@@ -49,8 +49,8 @@ pub fn load_map_action(
         super::channels::publish(
             scripts,
             config,
-            &[super::BattleChannelMessage::new(
-                super::BattleChannel::MapErrors,
+            &[super::DiagnosticMessage::new(
+                super::DiagnosticChannel::MapErrors,
                 text,
             )],
         )?;
@@ -108,7 +108,7 @@ fn load_map_state_action(
         }
         super::notify_message(
             scripts,
-            super::BattleMessageTarget::Player(actor),
+            super::MessageTarget::Player(actor),
             &format!("Loading {name}"),
         )?;
         {
@@ -128,7 +128,7 @@ fn load_map_state_action(
         if actor != ObjectId(1) {
             super::notify_message(
                 scripts,
-                super::BattleMessageTarget::Player(actor),
+                super::MessageTarget::Player(actor),
                 "Clearing Mechs off Newly Loaded Map",
             )?;
             super::clear_map_units_action(scripts, config, actor, id)?;

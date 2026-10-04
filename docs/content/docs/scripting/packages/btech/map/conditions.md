@@ -19,7 +19,7 @@ btech.map.conditions(dbref, light, visibility)
 | Name | Type | Description |
 | --- | --- | --- |
 | `dbref` | `integer` | Map object dbref. |
-| `light` | `BattleLightLevel` | Typed constant from btech.map.light_levels. |
+| `light` | `LightLevel` | Typed constant from btech.map.light_levels. |
 | `visibility` | `integer` | Weather range from 0 through 60. |
 
 ## Returns

@@ -272,7 +272,7 @@ async fn ice_growth_commits_against_an_occupied_durable_map() {
             .await
             .unwrap();
         let growth =
-            change_battle_map_ice_action(&scripts, &config, actor, map, 100, BattleIceChange::Grow)
+            change_battle_map_ice_action(&scripts, &config, actor, map, 100, IceChange::Grow)
                 .unwrap();
         assert_eq!(growth.changed, vec![HexCoordinate { x: 0, y: 5 }]);
         let saved = scripts.world().clone();
@@ -283,8 +283,7 @@ async fn ice_growth_commits_against_an_occupied_durable_map() {
             loaded.btech.maps()[&map].base_hex(0, 5).unwrap().terrain(),
             Terrain::Ice
         );
-        change_battle_map_ice_action(&scripts, &config, actor, map, 100, BattleIceChange::Melt)
-            .unwrap();
+        change_battle_map_ice_action(&scripts, &config, actor, map, 100, IceChange::Melt).unwrap();
         let melted = scripts.world().clone();
         persistence::save(&config.database(), &melted)
             .await
@@ -318,7 +317,7 @@ async fn edit_admission_overlays_and_extreme_elevations() {
         &mut world,
         map,
         coordinate,
-        Some(BattleDecoration::new(DecorationKind::Smoke, 30, None)),
+        Some(Decoration::new(DecorationKind::Smoke, 30, None)),
     )
     .unwrap();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
@@ -506,7 +505,7 @@ async fn terrain_saves_preserve_persisted_landing_exclusions() {
                 .await;
         let map = world.btech.units()[&unit].map.unwrap();
         let actor = operator(&mut world, &config, map);
-        let zone = BattleLandingExclusion {
+        let zone = LandingExclusion {
             coordinate: HexCoordinate { x: 0, y: 11 },
             radius: 3,
             exempt_team: 7,
@@ -522,7 +521,7 @@ async fn terrain_saves_preserve_persisted_landing_exclusions() {
         sqlx::query("UPDATE btech_map_objects SET data_short=77 WHERE map_dbref=? AND object_type=9 AND ordinal=7")
             .bind(map.0).execute(&mut sql).await.unwrap();
         world = persistence::load(&config.database()).await.unwrap();
-        let zone = BattleLandingExclusion {
+        let zone = LandingExclusion {
             data_short: 77,
             ..zone
         };

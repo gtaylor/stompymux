@@ -9,7 +9,7 @@ use stompymux_rs::*;
 async fn scenario_packets_match_native_lua_and_restart() {
     for (index, source) in firing::templates().iter().enumerate() {
         let (_dir, config, world, unit, _, _) =
-            firing::fixture_with_target(source, Some(BattleWeapon::MediumLaser), source).await;
+            firing::fixture_with_target(source, Some(Weapon::MediumLaser), source).await;
         for (damage, clusters, rear) in [(11, 3, false), (10, 1, true), (1000, 4, false)] {
             let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
             let lua = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
@@ -85,7 +85,7 @@ async fn scenario_packets_match_native_lua_and_restart() {
 async fn scenario_packets_guard_and_rollback_across_chassis() {
     for source in firing::templates() {
         let (dir, config, mut world, unit, _, _) =
-            firing::fixture_with_target(&source, Some(BattleWeapon::MediumLaser), &source).await;
+            firing::fixture_with_target(&source, Some(Weapon::MediumLaser), &source).await;
         let visitor = world.create(&config, "Visitor".into(), Kind::Player);
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
         for args in [
@@ -117,7 +117,7 @@ async fn scenario_packets_guard_and_rollback_across_chassis() {
                 &config,
                 visitor,
                 unit,
-                BattleScenarioSalvo {
+                ScenarioSalvo {
                     damage: 11,
                     clusters: 3,
                     rear: false,
@@ -153,7 +153,7 @@ async fn scenario_packets_guard_and_rollback_across_chassis() {
             &config,
             ObjectId(1),
             unit,
-            BattleScenarioSalvo {
+            ScenarioSalvo {
                 damage: 1000,
                 clusters: 4,
                 rear: false,
@@ -174,7 +174,7 @@ async fn scenario_packets_work_without_placement_and_preserve_safe_material() {
         let (_dir, config, mut world) = support::isolated_world().await;
         let unit = world.create(&config, "Scenario unit".into(), Kind::Thing);
         world.objects.get_mut(&unit).unwrap().home = Some(ObjectId(config.home()));
-        BattleUnitTemplate::parse("test", &source)
+        UnitTemplate::parse("test", &source)
             .unwrap()
             .create(&mut world, unit)
             .unwrap();
@@ -185,7 +185,7 @@ async fn scenario_packets_work_without_placement_and_preserve_safe_material() {
             &config,
             ObjectId(1),
             unit,
-            BattleScenarioSalvo {
+            ScenarioSalvo {
                 damage: 11,
                 clusters: 3,
                 rear: false,
@@ -202,7 +202,7 @@ async fn scenario_packets_work_without_placement_and_preserve_safe_material() {
             &config,
             ObjectId(1),
             unit,
-            BattleScenarioSalvo {
+            ScenarioSalvo {
                 damage: 1000,
                 clusters: 1000,
                 rear: false,
@@ -233,7 +233,7 @@ async fn scenario_packets_work_without_placement_and_preserve_safe_material() {
 async fn scenario_packets_preserve_private_balance_feedback() {
     let source = include_str!("../game/mechs/JR7-D.toml");
     let (_dir, config, mut baseline, unit, _, _) =
-        firing::fixture_with_target(source, Some(BattleWeapon::MediumLaser), source).await;
+        firing::fixture_with_target(source, Some(Weapon::MediumLaser), source).await;
     baseline
         .objects
         .get_mut(&ObjectId(1))
@@ -251,7 +251,7 @@ async fn scenario_packets_preserve_private_balance_feedback() {
     for seed in 1..=64_u8 {
         let mut state = serde_json::to_value(&baseline.btech).unwrap();
         state["constructed"][unit.0.to_string()]["dice"] =
-            serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+            serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
         let mut world = baseline.clone();
         world.btech = serde_json::from_value(state).unwrap();
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
@@ -260,7 +260,7 @@ async fn scenario_packets_preserve_private_balance_feedback() {
             &config,
             ObjectId(1),
             unit,
-            BattleScenarioSalvo {
+            ScenarioSalvo {
                 damage: 100,
                 clusters: 10,
                 rear: false,
@@ -272,8 +272,8 @@ async fn scenario_packets_preserve_private_balance_feedback() {
             .impacts
             .iter()
             .flat_map(|impact| match impact {
-                BattleBlastImpact::Mech(impact) => impact.pilot_notices.clone(),
-                BattleBlastImpact::Vehicle(_) => Vec::new(),
+                BlastImpact::Mech(impact) => impact.pilot_notices.clone(),
+                BlastImpact::Vehicle(_) => Vec::new(),
             })
             .collect();
         if expected.is_empty() {

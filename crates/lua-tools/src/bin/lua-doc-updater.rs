@@ -383,7 +383,7 @@ fn parse_autopilot_functions(source: &Path) -> Result<Vec<ApiFunction>> {
                     ("mode", "Append or replace the existing queue."),
                     ("expected_revision", "Optional revision guard."),
                 ],
-                Some("BattleAutopilotSubmitResult Order IDs and the new management revision."),
+                Some("AutopilotSubmitResult Order IDs and the new management revision."),
             ),
             "cancel" => (
                 "Cancel an active or queued order.",
@@ -407,12 +407,12 @@ fn parse_autopilot_functions(source: &Path) -> Result<Vec<ApiFunction>> {
             "status" => (
                 "Read detached controller settings, state, orders, progress, and blocking information.",
                 vec![("unit", "The controlled unit.")],
-                Some("BattleAutopilotStatus Controller status."),
+                Some("AutopilotStatus Controller status."),
             ),
             "observe" => (
                 "Read the controller's filtered own-unit, visible-contact, and remembered-sighting observations.",
                 vec![("unit", "The controlled unit.")],
-                Some("BattleAutopilotObservation Filtered observation snapshot."),
+                Some("AutopilotObservation Filtered observation snapshot."),
             ),
             "feedback" => (
                 "Read bounded order transitions and outcome records.",
@@ -420,7 +420,7 @@ fn parse_autopilot_functions(source: &Path) -> Result<Vec<ApiFunction>> {
                     ("unit", "The controlled unit."),
                     ("after_sequence", "Optional sequence cursor."),
                 ],
-                Some("BattleAutopilotFeedbackPage Feedback records and a history-gap indicator."),
+                Some("AutopilotFeedbackPage Feedback records and a history-gap indicator."),
             ),
             _ => continue,
         };
@@ -957,11 +957,8 @@ mod tests {
     #[test]
     fn splits_nested_luals_types_without_losing_descriptions() {
         assert_eq!(
-            split_type("table<integer, BattleCriticalDefinition> Zero-based slots."),
-            (
-                "table<integer, BattleCriticalDefinition>",
-                "Zero-based slots."
-            )
+            split_type("table<integer, CriticalDefinition> Zero-based slots."),
+            ("table<integer, CriticalDefinition>", "Zero-based slots.")
         );
         assert_eq!(split_type("DbRef|Object"), ("DbRef|Object", ""));
     }

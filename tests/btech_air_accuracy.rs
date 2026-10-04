@@ -3,8 +3,8 @@ use crate::support::btech_firing as firing;
 use stompymux_rs::*;
 
 /// Ordinary aim policy leaves the target's air bonuses visible without range extensions.
-fn rules() -> BattleAimRules {
-    BattleAimRules {
+fn rules() -> AimRules {
+    AimRules {
         woods_damage: false,
         dig_bonus: 3,
         dig_only_front: false,
@@ -21,10 +21,7 @@ fn rules() -> BattleAimRules {
 #[tokio::test]
 async fn rotorcraft_modifiers_match_preview_and_firing_for_every_shooter() {
     for source in firing::templates() {
-        for (weapon, flag) in [
-            (BattleWeapon::Lbx10, "LBX/Cluster"),
-            (BattleWeapon::Lrm5, "Stinger"),
-        ] {
+        for (weapon, flag) in [(Weapon::Lbx10, "LBX/Cluster"), (Weapon::Lrm5, "Stinger")] {
             let (_dir, config, mut base, shooter, target, index) = firing::fixture_with_supply(
                 &source,
                 Some(weapon),
@@ -33,7 +30,7 @@ async fn rotorcraft_modifiers_match_preview_and_firing_for_every_shooter() {
                 Some(flag),
             )
             .await;
-            if weapon == BattleWeapon::Lbx10 {
+            if weapon == Weapon::Lbx10 {
                 toggle_battle_lbx(&mut base, shooter, ObjectId(1), index).unwrap();
             } else {
                 toggle_battle_stinger(&mut base, shooter, ObjectId(1), index).unwrap();
@@ -58,7 +55,7 @@ async fn rotorcraft_modifiers_match_preview_and_firing_for_every_shooter() {
                 let aim =
                     battle_pilot_aim_modifiers(&world, shooter, target, index, false, rules())
                         .unwrap();
-                let expected_ammo = if weapon == BattleWeapon::Lbx10 || flying {
+                let expected_ammo = if weapon == Weapon::Lbx10 || flying {
                     -3
                 } else {
                     0
@@ -90,7 +87,7 @@ async fn stinger_orbital_bonus_survives_opening_protection_and_restart() {
     for source in firing::templates() {
         let (_dir, config, mut world, shooter, target, index) = firing::fixture_with_supply(
             &source,
-            Some(BattleWeapon::Lrm5),
+            Some(Weapon::Lrm5),
             include_str!("../game/mechs/JR7-D.toml"),
             false,
             Some("Stinger"),
@@ -98,8 +95,7 @@ async fn stinger_orbital_bonus_survives_opening_protection_and_restart() {
         .await;
         toggle_battle_stinger(&mut world, shooter, ObjectId(1), index).unwrap();
         firing::edit(&mut world, target, |state| {
-            state["orbital_drop"] =
-                serde_json::to_value(BattleOrbitalDrop::new(35, 2).unwrap()).unwrap();
+            state["orbital_drop"] = serde_json::to_value(OrbitalDrop::new(35, 2).unwrap()).unwrap();
             state["ground_elevation"] = serde_json::Value::Null;
         });
         let protected =
@@ -129,7 +125,7 @@ async fn stinger_fire_admits_orbitally_dropped_ground_vehicles() {
     for source in firing::templates() {
         let (_dir, config, mut world, shooter, target, index) = firing::fixture_with_supply(
             &source,
-            Some(BattleWeapon::Lrm5),
+            Some(Weapon::Lrm5),
             include_str!("../game/mechs/Demolisher.toml"),
             false,
             Some("Stinger"),
@@ -137,8 +133,7 @@ async fn stinger_fire_admits_orbitally_dropped_ground_vehicles() {
         .await;
         toggle_battle_stinger(&mut world, shooter, ObjectId(1), index).unwrap();
         firing::edit(&mut world, target, |state| {
-            state["orbital_drop"] =
-                serde_json::to_value(BattleOrbitalDrop::new(80, 2).unwrap()).unwrap();
+            state["orbital_drop"] = serde_json::to_value(OrbitalDrop::new(80, 2).unwrap()).unwrap();
             state["ground_elevation"] = serde_json::Value::Null;
         });
         refresh_battle_contacts(&mut world, &[shooter]).unwrap();

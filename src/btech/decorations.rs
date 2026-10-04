@@ -8,7 +8,7 @@ use std::sync::Arc;
 /// Persisted simulation lifetime and independently scheduled fire spread check.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct BattleDecoration {
+pub struct Decoration {
     pub kind: DecorationKind,
     /// Signed map-object duration: constant for smoke, spent at fire spread events.
     /// Expiry countdowns advance independently and must not overwrite this value.
@@ -27,7 +27,7 @@ pub struct BattleDecoration {
 
 impl StoredMap {
     /// Inspect an overlay independently of the underlying tile.
-    pub fn decoration(&self, coordinate: HexCoordinate) -> Result<Option<BattleDecoration>> {
+    pub fn decoration(&self, coordinate: HexCoordinate) -> Result<Option<Decoration>> {
         self.base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
         let index = (i64::from(coordinate.y) * self.width + i64::from(coordinate.x)) as u32;
         Ok(self.decorations.get(&index).copied())
@@ -41,7 +41,7 @@ pub fn set_map_decoration(
     world: &mut World,
     map: ObjectId,
     coordinate: HexCoordinate,
-    decoration: Option<BattleDecoration>,
+    decoration: Option<Decoration>,
 ) -> Result<()> {
     ensure!(
         world
@@ -69,7 +69,7 @@ pub fn set_map_decoration(
         if decoration.is_some_and(|effect| effect.kind == DecorationKind::Fire)
             && record.fire_dice.is_none()
         {
-            record.fire_dice = Some(super::BattleDice::fresh());
+            record.fire_dice = Some(super::Dice::fresh());
         }
         if let Some(decoration) = decoration {
             install_decoration(record, index, decoration)?;
@@ -103,7 +103,7 @@ pub(super) fn raise_smoke(
         world,
         map,
         coordinate,
-        Some(BattleDecoration::new(DecorationKind::Smoke, seconds, None)),
+        Some(Decoration::new(DecorationKind::Smoke, seconds, None)),
     )
 }
 
@@ -112,7 +112,7 @@ pub(super) fn raise_smoke(
 pub(super) fn install_decoration(
     map: &mut StoredMap,
     index: u32,
-    mut effect: BattleDecoration,
+    mut effect: Decoration,
 ) -> Result<()> {
     effect.order = map
         .decorations
@@ -130,8 +130,8 @@ pub(super) fn install_decoration(
     };
     map.base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
     for kind in [
-        super::BattleStaticDecorationKind::Fire,
-        super::BattleStaticDecorationKind::Smoke,
+        super::StaticDecorationKind::Fire,
+        super::StaticDecorationKind::Smoke,
     ] {
         Arc::make_mut(&mut map.static_decorations[kind.index()])
             .retain(|_, record| record.coordinate != coordinate);
@@ -174,7 +174,7 @@ pub fn advance_map_smoke(world: &mut World) {
     }
 }
 
-impl BattleDecoration {
+impl Decoration {
     /// Create a marker with its retained signed-short duration and independent event clock.
     pub fn new(kind: DecorationKind, remaining: i64, next_spread: Option<u16>) -> Self {
         Self {

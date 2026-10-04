@@ -22,8 +22,7 @@ async fn runtime_statistics_match_live_state_native_lua_and_restart() {
     assert_eq!((empty.mechs, empty.vehicles, empty.maps), (0, 0, 0));
     for template in firing::templates() {
         let (_dir, config, mut world, parent, target, _) =
-            firing::fixture_with_target(&template, Some(BattleWeapon::MediumLaser), &template)
-                .await;
+            firing::fixture_with_target(&template, Some(Weapon::MediumLaser), &template).await;
         let player = world.create(&config, "Player".into(), Kind::Player);
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         select_battle_target(&mut scripts.world_mut(), parent, ObjectId(1), Some(target)).unwrap();
@@ -99,7 +98,7 @@ async fn digging_alone_keeps_simulation_pending_until_completion() {
             "movement = \"track\"",
             &format!("movement = \"{movement}\""),
         );
-        BattleUnitTemplate::parse("test", &source)
+        UnitTemplate::parse("test", &source)
             .unwrap()
             .create(&mut world, id)
             .unwrap();
@@ -134,10 +133,7 @@ async fn digging_alone_keeps_simulation_pending_until_completion() {
             }
             advance_battle_units(&mut world, 0);
         }
-        assert_eq!(
-            world.btech.vehicles()[&id].dig_state(),
-            BattleDigState::covered()
-        );
+        assert_eq!(world.btech.vehicles()[&id].dig_state(), DigState::covered());
         assert!(
             !battle_runtime_stats(&world, &config, ObjectId(1))
                 .unwrap()

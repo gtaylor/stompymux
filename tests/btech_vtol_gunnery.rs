@@ -7,7 +7,7 @@ fn profile(world: &mut World, player: ObjectId) {
     set_battle_character(
         world,
         player,
-        BattleCharacter {
+        Character {
             bruise: 0,
             lethal: 0,
             build: 3,
@@ -35,7 +35,7 @@ fn profile(world: &mut World, player: ObjectId) {
             world,
             player,
             skill,
-            BattleCharacterValue {
+            CharacterValue {
                 value: index as u8,
                 experience: if index == 3 { 16_777_216 } else { 0 },
                 last_used: 123,
@@ -55,7 +55,7 @@ fn profile(world: &mut World, player: ObjectId) {
 async fn conventional_vtol_cockpit_uses_aerospace_skill_and_preserves_piloting() {
     let template = &firing::templates()[6];
     let (_dir, config, mut world, parent, _, index) =
-        firing::fixture_with_target(template, Some(BattleWeapon::MediumLaser), template).await;
+        firing::fixture_with_target(template, Some(Weapon::MediumLaser), template).await;
     profile(&mut world, ObjectId(1));
     let before = world.btech.clone();
     assert_eq!(
@@ -91,7 +91,7 @@ async fn conventional_vtol_cockpit_uses_aerospace_skill_and_preserves_piloting()
 async fn conventional_vtol_experience_uses_the_same_aerospace_skill() {
     let template = &firing::templates()[6];
     let (_dir, _config, mut world, parent, target, index) =
-        firing::fixture_with_target(template, Some(BattleWeapon::MediumLaser), template).await;
+        firing::fixture_with_target(template, Some(Weapon::MediumLaser), template).await;
     profile(&mut world, ObjectId(1));
     for (unit, team) in [(parent, 1), (target, 2)] {
         world
@@ -103,7 +103,7 @@ async fn conventional_vtol_experience_uses_the_same_aerospace_skill() {
         set_battle_unit_signature(
             &mut world,
             unit,
-            BattleUnitSignature {
+            UnitSignature {
                 team,
                 hidden: false,
                 illuminated: false,
@@ -117,13 +117,13 @@ async fn conventional_vtol_experience_uses_the_same_aerospace_skill() {
     );
     let award = award_battle_classic_gunnery_experience(
         &mut world,
-        BattleGunneryAwardRequest {
+        GunneryAwardRequest {
             tsm_tow_bonus: false,
 
             attacker: parent,
             pilot: ObjectId(1),
             target,
-            weapon: BattleWeapon::MediumLaser,
+            weapon: Weapon::MediumLaser,
             damage: 1000,
             base_to_hit: 7,
             extended_gunnery: false,

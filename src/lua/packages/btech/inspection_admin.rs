@@ -61,8 +61,8 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
     })?;
     native.set("map_hex", error::wrap(lua, hex, "btech.operation.failed")?)?;
     for (name, change) in [
-        ("map_add_ice", crate::BattleIceChange::Grow),
-        ("map_remove_ice", crate::BattleIceChange::Melt),
+        ("map_add_ice", crate::IceChange::Grow),
+        ("map_remove_ice", crate::IceChange::Melt),
     ] {
         let action =
             lua.create_function(move |lua, (actor, id, percentage): (i64, i64, i32)| {
@@ -155,7 +155,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                         &crate::lua::configuration(lua),
                         ObjectId(actor),
                         ObjectId(unit),
-                        crate::BattleScenarioSalvo {
+                        crate::ScenarioSalvo {
                             damage,
                             clusters,
                             rear,
@@ -304,7 +304,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                     &crate::lua::configuration(lua),
                     ObjectId(actor),
                     ObjectId(unit),
-                    crate::BattleScenarioPosition {
+                    crate::ScenarioPosition {
                         coordinate: crate::HexCoordinate { x, y },
                         elevation,
                     },
@@ -328,7 +328,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                     &crate::lua::configuration(lua),
                     ObjectId(actor),
                     ObjectId(unit),
-                    crate::BattleScenarioPosition {
+                    crate::ScenarioPosition {
                         coordinate: crate::HexCoordinate { x, y },
                         elevation,
                     },
@@ -357,7 +357,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                     &crate::lua::configuration(lua),
                     ObjectId(actor),
                     ObjectId(unit),
-                    crate::BattleScenarioHit {
+                    crate::ScenarioHit {
                         section: &section,
                         damage,
                         rear,

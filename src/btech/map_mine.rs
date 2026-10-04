@@ -1,13 +1,13 @@
 //! Operator mine placement shares record insertion and transactional publication with map gameplay.
-use super::{BattleMineKind, BattleMinefield, HexCoordinate};
+use super::{HexCoordinate, MineKind, Minefield};
 use crate::{Config, ObjectId, Scripts};
 use anyhow::{Context, Result, ensure};
 
 /// Requested placement retains full-width strength for confirmation before storage clamping.
 #[derive(Debug, Clone, Copy)]
-pub struct BattleMinePlacement {
+pub struct MinePlacement {
     pub coordinate: HexCoordinate,
-    pub kind: BattleMineKind,
+    pub kind: MineKind,
     pub strength: i32,
     pub extra: i32,
 }
@@ -18,7 +18,7 @@ pub fn add_mine_action(
     config: &Config,
     actor: ObjectId,
     map: ObjectId,
-    placement: BattleMinePlacement,
+    placement: MinePlacement,
 ) -> Result<u32> {
     scripts.atomic(|before| {
         ensure!(
@@ -36,7 +36,7 @@ pub fn add_mine_action(
         let ordinal = super::insert_minefield(
             &mut scripts.world_mut(),
             map,
-            BattleMinefield {
+            Minefield {
                 coordinate: placement.coordinate,
                 kind: placement.kind,
                 strength: placement
@@ -49,7 +49,7 @@ pub fn add_mine_action(
         )?;
         super::notify_message(
             scripts,
-            super::BattleMessageTarget::Player(actor),
+            super::MessageTarget::Player(actor),
             &format!(
                 "{:?} mine added to ({},{}) (strength: {} / extra: {})",
                 placement.kind,
@@ -73,7 +73,7 @@ pub(crate) fn command(
     let result = (|| -> Result<()> {
         let args: Vec<_> = input.args.split_whitespace().collect();
         ensure!((4..=5).contains(&args.len()), "Invalid arguments!");
-        let placement = BattleMinePlacement {
+        let placement = MinePlacement {
             coordinate: HexCoordinate {
                 x: args[0].parse().context("Invalid number!")?,
                 y: args[1].parse().context("Invalid number!")?,
@@ -84,7 +84,7 @@ pub(crate) fn command(
                 .map(|value| value.parse().context("Invalid number!"))
                 .transpose()?
                 .unwrap_or(0),
-            kind: BattleMineKind::parse(args[2])?,
+            kind: MineKind::parse(args[2])?,
         };
         let map = super::special_dispatch::object(ctx)?;
         add_mine_action(ctx.scripts, ctx.config, ctx.player, map, placement)?;

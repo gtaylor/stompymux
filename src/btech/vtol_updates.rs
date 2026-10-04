@@ -5,7 +5,7 @@ use anyhow::{Context, Result, ensure};
 
 /// Append feedback through the ordinary movement publication boundary.
 fn notice(report: &mut super::movement_report::MovementReport, id: ObjectId, text: &str) {
-    report.notices.push(BattleNotice {
+    report.notices.push(Notice {
         unit: id,
         text: text.into(),
     });
@@ -14,7 +14,7 @@ fn notice(report: &mut super::movement_report::MovementReport, id: ObjectId, tex
 /// Advance descent first, then launch and powered flight; new lift loss waits until the next tick.
 pub(super) fn advance_all(
     world: &mut World,
-    rules: BattleMovementRules,
+    rules: MovementRules,
     character: bool,
 ) -> Result<super::movement_report::MovementReport> {
     let mut report = super::vtol_crash::advance_all(world, rules, character)?;
@@ -26,7 +26,7 @@ pub(super) fn advance_all(
             (unit.vtol_flight().is_some_and(|flight| {
                 matches!(
                     flight.phase,
-                    BattleVtolFlightPhase::Launching { .. } | BattleVtolFlightPhase::Airborne
+                    VtolFlightPhase::Launching { .. } | VtolFlightPhase::Airborne
                 )
             }) && world
                 .objects
@@ -57,7 +57,7 @@ pub(super) fn advance_all(
             .maps()
             .get(&position.map)
             .context("Aircraft map is unavailable")?;
-        if matches!(flight.phase, BattleVtolFlightPhase::Launching { .. }) {
+        if matches!(flight.phase, VtolFlightPhase::Launching { .. }) {
             let underground = map.has_flag(super::MapFlag::Underground);
             let result = world
                 .btech
@@ -66,10 +66,10 @@ pub(super) fn advance_all(
                 .unwrap()
                 .advance_vtol_takeoff(underground, rules.free_fusion_vtol_fuel)?;
             match result {
-                BattleVtolTakeoff::Aborted { reason } => {
+                VtolTakeoff::Aborted { reason } => {
                     notice(&mut report, id, &format!("Takeoff aborted: {reason}"))
                 }
-                BattleVtolTakeoff::LiftedOff => {
+                VtolTakeoff::LiftedOff => {
                     notice(&mut report, id, "You lift off!");
                     report.notices.extend(super::broadcast::observer_notices(
                         world,
@@ -81,11 +81,11 @@ pub(super) fn advance_all(
             }
             continue;
         }
-        if flight.phase != BattleVtolFlightPhase::Airborne {
+        if flight.phase != VtolFlightPhase::Airborne {
             continue;
         }
         // An administratively inserted, stopped aircraft waits aloft until startup finishes.
-        if unit.power() != BattlePower::Running {
+        if unit.power() != Power::Running {
             continue;
         }
         if unit.is_destroyed() || unit.rotor_destroyed() {
@@ -110,7 +110,7 @@ pub(super) fn advance_all(
         fall_rules.toughness |= unit
             .pilot()
             .is_some_and(|pilot| super::skills::boolean_advantage(world, pilot, "Toughness"));
-        let movement = BattleVehicleMotionRules {
+        let movement = VehicleMotionRules {
             fasa_turning: rules.fasa_turning,
             slowdown: rules.slowdown,
             speed_demon,
@@ -123,7 +123,7 @@ pub(super) fn advance_all(
             false,
             rules.free_fusion_vtol_fuel,
         )?;
-        if let BattleVtolFuelUse::Exhausted { newly } = fuel {
+        if let VtolFuelUse::Exhausted { newly } = fuel {
             if newly {
                 notice(&mut report, id, "You run out of fuel and begin to fall!");
             }
@@ -146,7 +146,7 @@ pub(super) fn advance_all(
             character,
         )?;
         match outcome {
-            BattleVtolEnvironment::Obstacle {
+            VtolEnvironment::Obstacle {
                 fall,
                 notices,
                 pilot_notices,
@@ -162,10 +162,10 @@ pub(super) fn advance_all(
                 report.experience_messages.extend(experience_messages);
                 report.vehicle_falls.extend(fall.map(|fall| *fall));
             }
-            BattleVtolEnvironment::Boundary { .. } => {
+            VtolEnvironment::Boundary { .. } => {
                 report
                     .boundaries
-                    .push(super::movement_report::BattleBoundaryCrossing::new(
+                    .push(super::movement_report::BoundaryCrossing::new(
                         id,
                         edge_map,
                         edge_motion,
@@ -173,8 +173,8 @@ pub(super) fn advance_all(
                     ));
                 notice(&mut report, id, "You cannot move off this map!")
             }
-            BattleVtolEnvironment::Movement {
-                path: BattleVtolPath::Advanced { step },
+            VtolEnvironment::Movement {
+                path: VtolPath::Advanced { step },
             } if step.ceiling_reached => {
                 notice(
                     &mut report,
@@ -182,7 +182,7 @@ pub(super) fn advance_all(
                     "You cannot achieve orbit! Vertical movement halted!",
                 );
             }
-            BattleVtolEnvironment::Landed { landing, .. } => {
+            VtolEnvironment::Landed { landing, .. } => {
                 let effects = super::vtol_controls::landing_consequences(
                     world, id, landing, fall_rules, character,
                 )?;
@@ -194,7 +194,7 @@ pub(super) fn advance_all(
                 report.notices.extend(effects.notices);
                 report.mines.extend(effects.mines);
             }
-            BattleVtolEnvironment::Flooded { newly: true, .. } => {
+            VtolEnvironment::Flooded { newly: true, .. } => {
                 notice(&mut report, id, "You crash your vehicle into the water!");
                 notice(
                     &mut report,
@@ -207,7 +207,7 @@ pub(super) fn advance_all(
                     "splashes into the water!",
                 ));
             }
-            BattleVtolEnvironment::Crashed { fall, .. } => {
+            VtolEnvironment::Crashed { fall, .. } => {
                 notice(
                     &mut report,
                     id,
@@ -222,8 +222,7 @@ pub(super) fn advance_all(
                 report.notices.extend(fall.feedback.notices.iter().cloned());
                 report.vehicle_falls.push(*fall);
             }
-            BattleVtolEnvironment::CrashRequired { .. }
-            | BattleVtolEnvironment::ObstacleRequired { .. } => {
+            VtolEnvironment::CrashRequired { .. } | VtolEnvironment::ObstacleRequired { .. } => {
                 unreachable!("World contacts resolve crash damage")
             }
             _ => {}

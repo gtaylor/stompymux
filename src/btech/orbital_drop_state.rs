@@ -1,27 +1,27 @@
 //! Shared ownership checks for orbital-drop cursors in persisted Mechs and ground vehicles.
-use super::{BattleDropProtection, BattleOrbitalDrop, BattleUnit, BattleVehicle};
+use super::{DropProtection, Mech, OrbitalDrop, Vehicle};
 use crate::{ObjectId, World};
 use anyhow::{Result, ensure};
 
 /// Target-owned protection, independent of the attacker's chassis and selection owner.
-pub(super) fn current(world: &World, id: ObjectId) -> Option<BattleOrbitalDrop> {
+pub(super) fn current(world: &World, id: ObjectId) -> Option<OrbitalDrop> {
     world
         .btech
         .constructed_units()
         .get(&id)
-        .and_then(BattleUnit::orbital_drop)
+        .and_then(Mech::orbital_drop)
         .or_else(|| {
             world
                 .btech
                 .vehicles()
                 .get(&id)
-                .and_then(BattleVehicle::orbital_drop)
+                .and_then(Vehicle::orbital_drop)
         })
 }
 
 /// Every active drop has a physical pose and exclusively owns vertical movement.
 fn validate(
-    drop: Option<BattleOrbitalDrop>,
+    drop: Option<OrbitalDrop>,
     placed: bool,
     has_motion: bool,
     competing_altitude: bool,
@@ -34,15 +34,15 @@ fn validate(
         "Orbital drop requires an exclusive placed altitude owner"
     );
     ensure!(
-        drop.protection() != BattleDropProtection::Breached,
+        drop.protection() != DropProtection::Breached,
         "A breached orbital drop must hand control to landing or free fall"
     );
     Ok(())
 }
 
-impl BattleUnit {
+impl Mech {
     /// Current cocoon or jump-jet descent, independent of ordinary jump flight.
-    pub fn orbital_drop(&self) -> Option<BattleOrbitalDrop> {
+    pub fn orbital_drop(&self) -> Option<OrbitalDrop> {
         self.orbital_drop
     }
 
@@ -57,9 +57,9 @@ impl BattleUnit {
     }
 }
 
-impl BattleVehicle {
+impl Vehicle {
     /// Ground chassis use the same protection and descent cursor as Mechs.
-    pub fn orbital_drop(&self) -> Option<BattleOrbitalDrop> {
+    pub fn orbital_drop(&self) -> Option<OrbitalDrop> {
         self.orbital_drop
     }
 

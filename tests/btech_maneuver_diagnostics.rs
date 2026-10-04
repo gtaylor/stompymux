@@ -10,7 +10,7 @@ fn attempt(
     config: &Config,
     unit: ObjectId,
     action: u8,
-) -> anyhow::Result<Option<BattlePilotingCheck>> {
+) -> anyhow::Result<Option<PilotingCheck>> {
     match action {
         0 => Ok(Some(
             battle_bootlegger(scripts, config, unit, ObjectId(1), "right")?.check,
@@ -22,9 +22,9 @@ fn attempt(
                 config,
                 unit,
                 ObjectId(1),
-                BattleStandMode::Anyway,
+                StandMode::Anyway,
                 false,
-                BattleFallRules::configured(config),
+                FallRules::configured(config),
             )?
             .check,
         )),
@@ -53,7 +53,7 @@ async fn maneuver_checks_publish_diagnostics_at_the_roll_boundary() {
                 .into();
                 state["motion"]["desired_speed"] = state["motion"]["speed"].clone();
                 if action == 2 {
-                    state["posture"] = serde_json::to_value(BattlePosture::Prone).unwrap();
+                    state["posture"] = serde_json::to_value(Posture::Prone).unwrap();
                 }
             });
             world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(unit);

@@ -1,8 +1,5 @@
 //! Shared pickup admission using current cockpit, movement, equipment and relationship state.
-use super::{
-    BattleMechChassis, BattlePosture, BattlePower, BattleSection, BattleSystem,
-    BattleVehicleMovement, BattleVtolFlightPhase,
-};
+use super::{MechChassis, MechSection, Posture, Power, System, VehicleMovement, VtolFlightPhase};
 use crate::{Flag, Kind, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 
@@ -105,7 +102,7 @@ pub fn pickup_admission(
             ensure!(
                 matches!(
                     flight.phase,
-                    BattleVtolFlightPhase::Landed | BattleVtolFlightPhase::Airborne
+                    VtolFlightPhase::Landed | VtolFlightPhase::Airborne
                 ),
                 "Finish the flight transition before pickup"
             );
@@ -119,11 +116,11 @@ pub fn pickup_admission(
         let unit = &world.btech.constructed_units()[&carrier];
         ensure!(unit.crew_recovery().remaining == 0, "You are unconscious");
         ensure!(
-            unit.chassis() != BattleMechChassis::Quad,
+            unit.chassis() != MechChassis::Quad,
             "Quads cannot pick up units"
         );
         ensure!(
-            unit.posture() == BattlePosture::Standing,
+            unit.posture() == Posture::Standing,
             "Stand before attempting pickup"
         );
         ensure!(
@@ -135,15 +132,15 @@ pub fn pickup_admission(
             unit.carried_club().is_none(),
             "Put down the club before pickup"
         );
-        let arms = [BattleSection::LeftArm, BattleSection::RightArm];
+        let arms = [MechSection::LeftArm, MechSection::RightArm];
         ensure!(
             arms.iter().all(|arm| unit.sections()[arm].internal > 0),
             "Both arms must survive to pick up a unit"
         );
         let mut functioning = false;
         for arm in arms {
-            functioning |= super::physical::actuator(unit, arm, 0, BattleSystem::ShoulderOrHip)?
-                && super::physical::actuator(unit, arm, 3, BattleSystem::HandOrFootActuator)?;
+            functioning |= super::physical::actuator(unit, arm, 0, System::ShoulderOrHip)?
+                && super::physical::actuator(unit, arm, 3, System::HandOrFootActuator)?;
         }
         ensure!(functioning, "You need a functioning arm to pick things up");
         unit.definition().tons
@@ -160,7 +157,7 @@ pub fn pickup_admission(
     );
     if let Some(unit) = world.btech.vehicles().get(&target) {
         ensure!(
-            unit.definition().movement != BattleVehicleMovement::Stationary,
+            unit.definition().movement != VehicleMovement::Stationary,
             "That target is immobile"
         );
         ensure!(
@@ -198,7 +195,7 @@ pub fn pickup_admission(
     );
     if source.signature.team != victim.signature.team {
         ensure!(
-            victim.power != BattlePower::Running,
+            victim.power != Power::Running,
             "You cannot pick up a running enemy unit"
         );
         ensure!(
@@ -216,18 +213,18 @@ pub fn pickup_admission(
 pub(super) fn prepare_target(
     world: &mut World,
     target: ObjectId,
-    rules: super::BattleFallRules,
-) -> Result<Vec<super::BattleNotice>> {
+    rules: super::FallRules,
+) -> Result<Vec<super::Notice>> {
     let power = super::scanner::scanner_unit(world, target)
         .context("Target is unavailable")?
         .power;
     // Pickup arrests translation before shutdown, avoiding a shutdown-induced moving fall.
     if let Some(unit) = world.btech.vehicles.get_mut(&target) {
         unit.halt();
-        unit.dig = super::BattleDigState::default();
+        unit.dig = super::DigState::default();
         unit.building_entry = None;
         if let Some(flight) = &mut unit.vtol_flight {
-            *flight = super::BattleVtolFlight {
+            *flight = super::VtolFlight {
                 altitude: flight.altitude,
                 ..Default::default()
             };
@@ -242,14 +239,14 @@ pub(super) fn prepare_target(
             motion.stop_translation();
             motion.desired_heading = motion.heading;
         }
-        unit.posture = BattlePosture::Prone;
-        unit.facing.torso = super::BattleTorso::Center;
+        unit.posture = Posture::Prone;
+        unit.facing.torso = super::Torso::Center;
         unit.facing.arms_flipped = false;
         unit.stand_timer = None;
         unit.hull_down = Default::default();
         unit.building_entry = None;
     }
-    if power == BattlePower::Off {
+    if power == Power::Off {
         return Ok(Vec::new());
     }
     super::power::stop_admitted(world, target, rules)
@@ -263,8 +260,8 @@ pub fn prepare_pickup(
     carrier: ObjectId,
     pilot: ObjectId,
     target: ObjectId,
-    rules: super::BattleFallRules,
-) -> Result<Vec<super::BattleNotice>> {
+    rules: super::FallRules,
+) -> Result<Vec<super::Notice>> {
     pickup_admission(world, carrier, pilot, target)?;
     world.attempt(|world| {
         let notices = prepare_target(world, target, rules)?;

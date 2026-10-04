@@ -1,9 +1,9 @@
 //! Rebuild Mech system baselines after a damage-field critical replacement.
-use super::{BattleBeaconKind, BattleUnit};
+use super::{BeaconKind, Mech};
 use anyhow::Result;
 
 /// Adopt owned construction and surviving equipment without combat rolls or template-file reloads.
-pub(super) fn recalculate(unit: &mut BattleUnit, gyro_protection_used: bool) -> Result<()> {
+pub(super) fn recalculate(unit: &mut Mech, gyro_protection_used: bool) -> Result<()> {
     let loadout = unit.loadout()?;
     unit.reconstructed_cooling = Some(super::engine_sink_capacity::reconstructed_capacity(unit)?);
     unit.heat_cutoff.disabled = unit.heat_cutoff.disabled.min(unit.cooling_capacity());
@@ -19,7 +19,7 @@ pub(super) fn recalculate(unit: &mut BattleUnit, gyro_protection_used: bool) -> 
     // Thermal production and cooling are derived from installed equipment at the next sample.
     // Recalculation does not advance that sample or replace stored heat.
     unit.beacons.retain(|_, kinds| {
-        kinds.retain(|kind| *kind == BattleBeaconKind::Narc);
+        kinds.retain(|kind| *kind == BeaconKind::Narc);
         !kinds.is_empty()
     });
     let available: std::collections::BTreeSet<_> = loadout

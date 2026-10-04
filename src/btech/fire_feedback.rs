@@ -1,12 +1,12 @@
 //! Shared visible firing messages for Mech and vehicle actions.
-use super::{BattleNotice, BattleWeapon, HexCoordinate};
+use super::{HexCoordinate, Notice, Weapon};
 use crate::ObjectId;
 
 /// Target-independent report facts used by the common formatter.
 pub(super) struct ShotFeedback {
     pub shooter: ObjectId,
     pub target: ObjectId,
-    pub weapon: BattleWeapon,
+    pub weapon: Weapon,
     pub aimed_section: String,
     pub roll: u8,
     pub target_number: Option<i32>,
@@ -14,8 +14,8 @@ pub(super) struct ShotFeedback {
     pub hit: bool,
     pub observer_hit: bool,
     pub coordinate: Option<HexCoordinate>,
-    pub pilot_notices: Vec<super::BattlePilotNotice>,
-    pub notices: Vec<BattleNotice>,
+    pub pilot_notices: Vec<super::PilotNotice>,
+    pub notices: Vec<Notice>,
 }
 
 /// Identities and geometry captured before damage can change visibility.
@@ -30,7 +30,7 @@ pub(super) struct ShotAudience {
 pub(super) fn messages(
     report: ShotFeedback,
     audience: ShotAudience,
-    private: &mut Vec<super::BattlePilotNotice>,
+    private: &mut Vec<super::PilotNotice>,
 ) -> Vec<(ObjectId, String)> {
     let ShotAudience {
         attacker_visible,
@@ -113,26 +113,22 @@ pub(super) fn messages(
 }
 
 /// Ordinary glancing hits notify the receiving cockpit for every unit class.
-pub(super) fn glancing_notices(
-    target: ObjectId,
-    weapon: BattleWeapon,
-    glancing: bool,
-) -> Vec<BattleNotice> {
+pub(super) fn glancing_notices(target: ObjectId, weapon: Weapon, glancing: bool) -> Vec<Notice> {
     if !glancing || weapon.is_streak() {
         return Vec::new();
     }
-    vec![BattleNotice {
+    vec![Notice {
         unit: target,
         text: "You are nicked by a glancing blow!".into(),
     }]
 }
 
 /// Electronic interference has the same launcher feedback regardless of its carrier.
-pub(super) fn streak_notices(shooter: ObjectId, confused: bool) -> Vec<BattleNotice> {
+pub(super) fn streak_notices(shooter: ObjectId, confused: bool) -> Vec<Notice> {
     if !confused {
         return Vec::new();
     }
-    vec![BattleNotice {
+    vec![Notice {
         unit: shooter,
         text: "The ECM confuses your streak homing system!".into(),
     }]
@@ -143,16 +139,16 @@ pub(super) fn destruction_notices(
     shooter: ObjectId,
     target: ObjectId,
     destroyed: bool,
-) -> Vec<BattleNotice> {
+) -> Vec<Notice> {
     if !destroyed {
         return Vec::new();
     }
     vec![
-        BattleNotice {
+        Notice {
             unit: shooter,
             text: "You destroyed the target!".into(),
         },
-        BattleNotice {
+        Notice {
             unit: target,
             text: "You have been destroyed!".into(),
         },
@@ -161,9 +157,9 @@ pub(super) fn destruction_notices(
 
 /// Collect Mech damage packets once, regardless of which class fired them.
 pub(super) fn mech_salvo_notices(
-    salvo: &super::BattleSalvoReport,
-    private: &mut Vec<super::BattlePilotNotice>,
-) -> Vec<BattleNotice> {
+    salvo: &super::MechSalvoReport,
+    private: &mut Vec<super::PilotNotice>,
+) -> Vec<Notice> {
     let mut notices = salvo
         .initial_woods
         .iter()
@@ -182,9 +178,9 @@ pub(super) fn mech_salvo_notices(
 
 /// Join vehicle damage packets for either shooter class while retaining pilot-only checks.
 pub(super) fn vehicle_salvo_notices(
-    salvo: &super::BattleVehicleSalvoReport,
-    private: &mut Vec<super::BattlePilotNotice>,
-) -> Vec<BattleNotice> {
+    salvo: &super::VehicleSalvoReport,
+    private: &mut Vec<super::PilotNotice>,
+) -> Vec<Notice> {
     let mut notices = salvo
         .initial_woods
         .iter()

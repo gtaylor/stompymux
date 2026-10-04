@@ -1,13 +1,13 @@
 //! Command-network status as a pure typed report and private cockpit display.
 use super::HexCoordinate;
 use super::network_unit::unit as network_unit;
-use crate::{BattleCommandNetwork, ObjectId, World};
+use crate::{CommandNetwork, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
 
 /// Live status supplied by one running, unjammed peer, without requiring visual contact.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct BattleNetworkStatusRow {
+pub struct NetworkStatusRow {
     pub unit: ObjectId,
     pub label: String,
     pub name: String,
@@ -23,23 +23,19 @@ pub struct BattleNetworkStatusRow {
 
 /// Network members available for automatic status reporting, excluding the requesting unit.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct BattleNetworkStatusReport {
-    pub rows: Vec<BattleNetworkStatusRow>,
+pub struct NetworkStatusReport {
+    pub rows: Vec<NetworkStatusRow>,
     pub text: String,
 }
 
 /// Inspect C3i status without acquiring contacts, changing membership, or consuming dice.
-pub fn status(world: &World, id: ObjectId, pilot: ObjectId) -> Result<BattleNetworkStatusReport> {
-    report(world, id, pilot, BattleCommandNetwork::C3i)
+pub fn status(world: &World, id: ObjectId, pilot: ObjectId) -> Result<NetworkStatusReport> {
+    report(world, id, pilot, CommandNetwork::C3i)
 }
 
 /// Inspect classic C3 using the same report and its active master capacity.
-pub fn c3_status(
-    world: &World,
-    id: ObjectId,
-    pilot: ObjectId,
-) -> Result<BattleNetworkStatusReport> {
-    report(world, id, pilot, BattleCommandNetwork::C3)
+pub fn c3_status(world: &World, id: ObjectId, pilot: ObjectId) -> Result<NetworkStatusReport> {
+    report(world, id, pilot, CommandNetwork::C3)
 }
 
 /// Build a private report for the selected command-network family.
@@ -47,8 +43,8 @@ fn report(
     world: &World,
     id: ObjectId,
     pilot: ObjectId,
-    kind: BattleCommandNetwork,
-) -> Result<BattleNetworkStatusReport> {
+    kind: CommandNetwork,
+) -> Result<NetworkStatusReport> {
     super::command_network::ready_for(world, id, pilot, kind)?;
     ensure!(
         !super::command_network::members_for(world, id, kind)?.is_empty(),
@@ -66,7 +62,7 @@ fn report(
         let motion = unit.motion().context("Peer has no motion state")?;
         let range = super::unit_range(world, id, peer)?;
         let (armor, original_armor, internal, original_internal) = unit.protection;
-        rows.push(BattleNetworkStatusRow {
+        rows.push(NetworkStatusRow {
             unit: peer,
             label: unit
                 .battlefield_id()
@@ -112,7 +108,7 @@ fn report(
         ));
     }
     lines.push(format!("End {} Network Status", kind.name()));
-    Ok(BattleNetworkStatusReport {
+    Ok(NetworkStatusReport {
         rows,
         text: lines.join("\r\n"),
     })
@@ -131,7 +127,7 @@ pub(crate) fn command(
     ctx: &crate::CommandContext<'_>,
     input: &crate::CommandInput,
 ) -> Result<crate::CommandAction> {
-    command_for(ctx, input, BattleCommandNetwork::C3i)
+    command_for(ctx, input, CommandNetwork::C3i)
 }
 
 /// Classic C3 private cockpit display.
@@ -139,14 +135,14 @@ pub(crate) fn c3_command(
     ctx: &crate::CommandContext<'_>,
     input: &crate::CommandInput,
 ) -> Result<crate::CommandAction> {
-    command_for(ctx, input, BattleCommandNetwork::C3)
+    command_for(ctx, input, CommandNetwork::C3)
 }
 
 /// Dispatch a report without broadcasting to other cockpit occupants.
 fn command_for(
     ctx: &crate::CommandContext<'_>,
     _: &crate::CommandInput,
-    kind: BattleCommandNetwork,
+    kind: CommandNetwork,
 ) -> Result<crate::CommandAction> {
     let result = (|| {
         let world = ctx.scripts.world();

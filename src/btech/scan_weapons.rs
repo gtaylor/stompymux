@@ -1,5 +1,5 @@
 //! Adversarial weapon rows share one fixed-column renderer across supported unit anatomies.
-use super::{BattleEquipmentFailure, WeaponMount};
+use super::{EquipmentFailure, WeaponMount};
 use crate::{ObjectId, World, text};
 use anyhow::{Context, Result};
 
@@ -14,7 +14,7 @@ pub(super) fn render(world: &World, id: ObjectId) -> Result<String> {
                         unit.section_name(slot.section),
                         unit.critical_unavailable(slot)
                             || unit.weapon_failures().get(&index)
-                                == Some(&BattleEquipmentFailure::Disabled),
+                                == Some(&EquipmentFailure::Disabled),
                         unit.weapon_recycle().get(&index).copied().unwrap_or(0),
                     )
                 })

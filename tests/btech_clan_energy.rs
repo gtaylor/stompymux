@@ -4,7 +4,7 @@ use stompymux_rs::*;
 /// Construct each supported Clan energy identity without requiring unrelated Clan chassis flags.
 #[test]
 fn clan_energy_mounts_accuracy_and_grouped_critical_losses() {
-    for &weapon in BattleWeapon::ALL
+    for &weapon in Weapon::ALL
         .iter()
         .filter(|w| w.name().starts_with("CL.") && w.gunnery_skill(true) == "Gunnery-Laser")
     {
@@ -16,15 +16,14 @@ fn clan_energy_mounts_accuracy_and_grouped_critical_losses() {
             [u16::from(weapon.profile().damage)]
         );
         let mut template =
-            BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
-                .unwrap();
-        let arm = template.sections.get_mut(&BattleSection::LeftArm).unwrap();
+            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        let arm = template.sections.get_mut(&MechSection::LeftArm).unwrap();
         let mut part = arm.criticals[&2].clone();
         part.equipment = weapon.name().into();
         for slot in 2..2 + weapon.profile().critical_slots {
             arm.criticals.insert(slot, part.clone());
         }
-        let unit = BattleUnit::from_template(template.clone()).unwrap();
+        let unit = Mech::from_template(template.clone()).unwrap();
         let loadout = unit.loadout().unwrap();
         let (index, mount) = loadout
             .weapons
@@ -38,17 +37,14 @@ fn clan_energy_mounts_accuracy_and_grouped_critical_losses() {
         );
         assert_eq!(
             weapon.supports_targeting_computer(),
-            weapon != BattleWeapon::ClanFlamer
+            weapon != Weapon::ClanFlamer
         );
-        assert_eq!(
-            weapon.supports_heat_mode(),
-            weapon == BattleWeapon::ClanFlamer
-        );
+        assert_eq!(weapon.supports_heat_mode(), weapon == Weapon::ClanFlamer);
         for location in &mount.criticals {
             let mut damaged = unit.clone();
             assert_eq!(
                 damaged.destroy_critical(*location).unwrap(),
-                Some(BattleCriticalLoss::Weapon {
+                Some(CriticalLoss::Weapon {
                     index,
                     explosion_damage: 0
                 })
@@ -59,11 +55,11 @@ fn clan_energy_mounts_accuracy_and_grouped_critical_losses() {
         if weapon.profile().critical_slots > 1 {
             template
                 .sections
-                .get_mut(&BattleSection::LeftArm)
+                .get_mut(&MechSection::LeftArm)
                 .unwrap()
                 .criticals
                 .remove(&2);
-            assert!(BattleUnit::from_template(template).is_err());
+            assert!(Mech::from_template(template).is_err());
         }
         let accuracy = if weapon.name().contains("ERLargePulse")
             || weapon.name().contains("ERMediumPulse")
@@ -79,10 +75,7 @@ fn clan_energy_mounts_accuracy_and_grouped_critical_losses() {
         };
         assert_eq!(weapon.accuracy_modifier(), accuracy);
     }
-    assert_eq!(
-        BattleWeapon::ClanFlamer.mass(),
-        BattleWeapon::Flamer.mass() / 2
-    );
-    assert!(!BattleWeapon::ClanPlasmaRifle.is_flamer());
-    assert_eq!(BattleWeapon::ClanPlasmaRifle.weapon_explosion_damage(), 0);
+    assert_eq!(Weapon::ClanFlamer.mass(), Weapon::Flamer.mass() / 2);
+    assert!(!Weapon::ClanPlasmaRifle.is_flamer());
+    assert_eq!(Weapon::ClanPlasmaRifle.weapon_explosion_damage(), 0);
 }

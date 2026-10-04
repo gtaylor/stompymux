@@ -1,7 +1,5 @@
 //! Durable biped posture and atomic ground/water tactical fall resolution.
-use super::{
-    BattleHitArc, BattleHitRules, BattlePilotInjury, BattlePilotingCheck, BattleSalvoGroup,
-};
+use super::{HitArc, HitRules, PilotingCheck, SalvoGroup, TacticalPilotInjury};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -9,35 +7,35 @@ use serde::{Deserialize, Serialize};
 /// Ground posture changes eye height, movement and combat geometry.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattlePosture {
+pub enum Posture {
     #[default]
     Standing,
     Prone,
 }
 
-impl super::BattleUnit {
+impl super::Mech {
     /// Current persisted biped posture.
-    pub fn posture(&self) -> BattlePosture {
+    pub fn posture(&self) -> Posture {
         self.posture
     }
 }
 
 /// Change the common ground posture without imposing movement or fall-damage policy.
-pub(super) fn set_prone(unit: &mut super::BattleUnit) {
+pub(super) fn set_prone(unit: &mut super::Mech) {
     unit.hull_down = Default::default();
-    unit.posture = super::BattlePosture::Prone;
+    unit.posture = super::Posture::Prone;
     unit.facing = Default::default();
 }
 
 /// Rule choices for pilot protection and grouped fall hits.
 #[derive(Debug, Clone, Copy)]
-pub struct BattleFallRules {
+pub struct FallRules {
     /// Vehicle damage policy for mines reached by this consequence chain.
-    pub vehicle_impact: super::BattleVehicleImpactRules,
+    pub vehicle_impact: super::VehicleImpactRules,
     /// Crowding policy for airborne critical-damage falls inside the damage transaction.
-    pub stacking: super::BattleStackingRules,
-    pub stagger: super::BattleStaggerMode,
-    pub hit: BattleHitRules,
+    pub stacking: super::StackingRules,
+    pub stagger: super::StaggerMode,
+    pub hit: HitRules,
     pub extended_piloting: bool,
     pub toughness: bool,
 }
@@ -45,29 +43,29 @@ pub struct BattleFallRules {
 /// Completed tactical fall; callers stage notices and consume any remaining impact effects.
 ///
 /// Both chassis report the same fall. `G` is the chassis's damage group and `F` the
-/// feedback it carries beyond the groups; [`BattleFallReport`] and
-/// [`super::BattleVehicleFallReport`] name the report for each chassis.
+/// feedback it carries beyond the groups; [`MechFallReport`] and
+/// [`super::VehicleFallReport`] name the report for each chassis.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[must_use = "Stage fall and injury notices and consume remaining impact effects before committing"]
 pub struct FallReport<G, F> {
     /// Combat-safe units skip the personal-injury check.
-    pub avoidance: Option<BattlePilotingCheck>,
+    pub avoidance: Option<PilotingCheck>,
     /// Pilot captured before fall injuries can clear the assignment.
     pub pilot: Option<ObjectId>,
     /// Accepted protection-check diagnostics captured before fall damage.
-    pub experience_messages: Vec<super::BattleChannelMessage>,
-    pub pilot_injury: Option<BattlePilotInjury>,
+    pub experience_messages: Vec<super::DiagnosticMessage>,
+    pub pilot_injury: Option<TacticalPilotInjury>,
     /// Personal injury to an assigned character pilot, independent of tactical crew health.
-    pub character_injury: Option<super::BattleCharacterPilotInjury>,
+    pub character_injury: Option<super::CharacterPilotInjury>,
     pub direction_roll: u8,
-    pub arc: BattleHitArc,
+    pub arc: HitArc,
     pub damage: u32,
     /// Fall damage in the order it was applied.
     pub groups: Vec<G>,
     /// Mine activation after the fall damage sequence.
-    pub mines: super::BattleMineEventReport,
+    pub mines: super::MineEventReport,
     /// Ice fracture can cause nested water falls for this unit and its neighbors.
-    pub ice_break: Option<Box<super::BattleSurfaceBreak>>,
+    pub ice_break: Option<Box<super::SurfaceBreak>>,
     /// Chassis-specific feedback, reported alongside the fields above.
     #[serde(flatten)]
     pub feedback: F,
@@ -75,13 +73,13 @@ pub struct FallReport<G, F> {
 
 /// What a BattleMech's fall reports beyond its damage groups.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleFallFeedback {
-    pub flooding: Vec<super::BattleSectionExposureReport>,
-    pub inferno_notices: Vec<super::BattleNotice>,
+pub struct MechFallFeedback {
+    pub flooding: Vec<super::SectionExposureReport>,
+    pub inferno_notices: Vec<super::Notice>,
 }
 
 /// A BattleMech's fall.
-pub type BattleFallReport = FallReport<BattleSalvoGroup, BattleFallFeedback>;
+pub type MechFallReport = FallReport<SalvoGroup, MechFallFeedback>;
 
 /// Fall by the supplied damage multiplier (one for an ordinary same-level fall).
 /// Water applies immersion and flooding; intact ice can fracture into nested water falls. Bridge falls select the deck or lower surface from the starting altitude.
@@ -89,8 +87,8 @@ pub fn resolve_fall(
     world: &mut World,
     id: ObjectId,
     levels: u8,
-    rules: BattleFallRules,
-) -> Result<BattleFallReport> {
+    rules: FallRules,
+) -> Result<MechFallReport> {
     ensure!(levels > 0, "Fall multiplier must be positive");
     resolve_fall_inner(world, id, i32::from(levels), rules, false)
 }
@@ -99,8 +97,8 @@ pub fn resolve_fall(
 pub(super) fn resolve_zero_fall(
     world: &mut World,
     id: ObjectId,
-    rules: BattleFallRules,
-) -> Result<BattleFallReport> {
+    rules: FallRules,
+) -> Result<MechFallReport> {
     resolve_fall_inner(world, id, 0, rules, false)
 }
 
@@ -109,8 +107,8 @@ pub(super) fn resolve_signed_fall(
     world: &mut World,
     id: ObjectId,
     levels: i16,
-    rules: BattleFallRules,
-) -> Result<BattleFallReport> {
+    rules: FallRules,
+) -> Result<MechFallReport> {
     resolve_fall_inner(world, id, i32::from(levels), rules, false)
 }
 
@@ -119,8 +117,8 @@ pub(super) fn resolve_character_fall(
     world: &mut World,
     id: ObjectId,
     levels: u8,
-    rules: BattleFallRules,
-) -> Result<BattleFallReport> {
+    rules: FallRules,
+) -> Result<MechFallReport> {
     resolve_fall_inner(world, id, i32::from(levels), rules, true)
 }
 
@@ -129,8 +127,8 @@ pub(super) fn resolve_character_signed_fall(
     world: &mut World,
     id: ObjectId,
     levels: i16,
-    rules: BattleFallRules,
-) -> Result<BattleFallReport> {
+    rules: FallRules,
+) -> Result<MechFallReport> {
     resolve_fall_inner(world, id, i32::from(levels), rules, true)
 }
 
@@ -138,10 +136,10 @@ pub(super) fn resolve_contract_fall(
     world: &mut World,
     id: ObjectId,
     levels: i32,
-    rules: BattleFallRules,
+    rules: FallRules,
     character: bool,
     tons: u32,
-) -> Result<BattleFallReport> {
+) -> Result<MechFallReport> {
     resolve_fall_inner_with_tonnage(world, id, levels, rules, character, Some(tons))
 }
 
@@ -150,9 +148,9 @@ fn resolve_fall_inner(
     world: &mut World,
     id: ObjectId,
     levels: i32,
-    rules: BattleFallRules,
+    rules: FallRules,
     character: bool,
-) -> Result<BattleFallReport> {
+) -> Result<MechFallReport> {
     resolve_fall_inner_with_tonnage(world, id, levels, rules, character, None)
 }
 
@@ -160,10 +158,10 @@ fn resolve_fall_inner_with_tonnage(
     world: &mut World,
     id: ObjectId,
     levels: i32,
-    rules: BattleFallRules,
+    rules: FallRules,
     character: bool,
     tonnage: Option<u32>,
-) -> Result<BattleFallReport> {
+) -> Result<MechFallReport> {
     let unit = world
         .btech
         .constructed_units()
@@ -182,9 +180,9 @@ pub(super) fn resolve_material(
     world: &mut World,
     id: ObjectId,
     levels: i32,
-    rules: BattleFallRules,
+    rules: FallRules,
     character: bool,
-) -> Result<BattleFallReport> {
+) -> Result<MechFallReport> {
     resolve_material_with_tonnage(world, id, levels, rules, character, None)
 }
 
@@ -192,10 +190,10 @@ fn resolve_material_with_tonnage(
     world: &mut World,
     id: ObjectId,
     levels: i32,
-    rules: BattleFallRules,
+    rules: FallRules,
     character: bool,
     tonnage: Option<u32>,
-) -> Result<BattleFallReport> {
+) -> Result<MechFallReport> {
     let object = world.objects.get(&id).context("Unit is unavailable")?;
     ensure!(
         !object.flags.contains(Flag::Going)
@@ -268,10 +266,7 @@ fn resolve_material_with_tonnage(
                 None
             };
         let unit = world.btech.constructed.get_mut(&id).unwrap();
-        if matches!(
-            unit.stand_timer,
-            Some(super::BattleStandTimer::Rising { .. })
-        ) {
+        if matches!(unit.stand_timer, Some(super::StandTimer::Rising { .. })) {
             unit.stand_timer = None;
         }
         unit.stagger.clear_damage();
@@ -367,7 +362,7 @@ fn resolve_material_with_tonnage(
                     world, id, hit, amount, rules, None,
                 )?
             };
-            groups.push(BattleSalvoGroup {
+            groups.push(SalvoGroup {
                 damage: amount,
                 hit,
                 impact: outcome.impact,
@@ -379,24 +374,18 @@ fn resolve_material_with_tonnage(
             });
         }
         let mines = if position.is_some() {
-            super::mine_event::resolve(
-                world,
-                id,
-                super::BattleMineTriggerReason::Fall,
-                rules,
-                character,
-            )?
+            super::mine_event::resolve(world, id, super::MineTriggerReason::Fall, rules, character)?
         } else {
-            super::BattleMineEventReport {
+            super::MineEventReport {
                 unit: id,
-                reason: super::BattleMineTriggerReason::Fall,
+                reason: super::MineTriggerReason::Fall,
                 blasts: Vec::new(),
                 triggers: 0,
                 notices: Vec::new(),
                 pilot_notices: Vec::new(),
             }
         };
-        Ok(BattleFallReport {
+        Ok(MechFallReport {
             experience_messages,
             avoidance,
             pilot,
@@ -408,7 +397,7 @@ fn resolve_material_with_tonnage(
             groups,
             mines,
             ice_break,
-            feedback: BattleFallFeedback {
+            feedback: MechFallFeedback {
                 flooding,
                 inferno_notices,
             },
@@ -416,9 +405,9 @@ fn resolve_material_with_tonnage(
     })
 }
 
-impl BattleFallReport {
+impl MechFallReport {
     /// Notices for applied pilot injury, initial flooding and subsequent grouped damage.
-    pub fn notices(&self, unit: ObjectId) -> Vec<super::BattleNotice> {
+    pub fn notices(&self, unit: ObjectId) -> Vec<super::Notice> {
         let mut notices = Vec::new();
         self.append_notices(unit, &mut notices, &mut Vec::new());
         notices
@@ -428,8 +417,8 @@ impl BattleFallReport {
     pub fn append_notices(
         &self,
         unit: ObjectId,
-        notices: &mut Vec<super::BattleNotice>,
-        private: &mut Vec<super::BattlePilotNotice>,
+        notices: &mut Vec<super::Notice>,
+        private: &mut Vec<super::PilotNotice>,
     ) {
         if let Some(check) = &self.avoidance {
             super::piloting::capture_feedback(unit, self.pilot, check, notices, private);
@@ -475,22 +464,22 @@ impl BattleFallReport {
     }
 }
 
-impl BattleFallRules {
+impl FallRules {
     /// Standard host fall policy shared by shutdown, landing and towing actions.
     pub fn configured(settings: &crate::Config) -> Self {
         let config = &settings.battletech;
         Self {
-            vehicle_impact: crate::BattleVehicleImpactRules::configured(config, false),
-            stacking: super::BattleStackingRules {
+            vehicle_impact: crate::VehicleImpactRules::configured(config, false),
+            stacking: super::StackingRules {
                 mode: config.stacking,
                 damage_percent: config.stackdamage,
                 hit_arcs: config.hit_arcs,
             },
-            hit: super::BattleHitRules {
+            hit: super::HitRules {
                 inferno_penalty: config.inferno_penalty != 0,
                 exile_stun_mode: config.exile_stun_code.clamp(0, 2) as u8,
             },
-            stagger: super::BattleStaggerMode::from_setting(config.newstagger),
+            stagger: super::StaggerMode::from_setting(config.newstagger),
             extended_piloting: config.extended_piloting != 0,
             toughness: false,
         }

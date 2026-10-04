@@ -4,10 +4,10 @@ use crate::support;
 use stompymux_rs::*;
 
 /// Every probe family in order of increasing reach, with its template equipment name.
-const FAMILIES: [(BattleActiveProbe, &str); 3] = [
-    (BattleActiveProbe::Light, "Light_BAP"),
-    (BattleActiveProbe::Beagle, "BeagleProbe"),
-    (BattleActiveProbe::Bloodhound, "BloodhoundProbe"),
+const FAMILIES: [(ActiveProbe, &str); 3] = [
+    (ActiveProbe::Light, "Light_BAP"),
+    (ActiveProbe::Beagle, "BeagleProbe"),
+    (ActiveProbe::Bloodhound, "BloodhoundProbe"),
 ];
 
 /// A one-hex-wide lane built from per-hex rows, listed north to south.
@@ -34,10 +34,7 @@ async fn hill_lane(length: usize) -> (tempfile::TempDir, Config, World, ObjectId
 
 /// Start a unit without the startup countdown by editing its saved power state.
 fn running(world: &mut World, id: ObjectId) {
-    world
-        .btech
-        .set_unit_power(id, BattlePower::Running)
-        .unwrap();
+    world.btech.set_unit_power(id, Power::Running).unwrap();
 }
 
 /// Place a running tank, or a stationary tower, whose only front item is the given equipment.
@@ -51,7 +48,7 @@ fn probe_vehicle(
 ) -> ObjectId {
     let id = world.create(config, "Probe carrier".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-    let mut definition = BattleVehicleTemplate::parse(
+    let mut definition = VehicleTemplate::parse(
         "test",
         if stationary {
             include_str!("../game/mechs/RadioTower.toml")
@@ -60,10 +57,7 @@ fn probe_vehicle(
         },
     )
     .unwrap();
-    let front = definition
-        .sections
-        .get_mut(&BattleVehicleSection::Front)
-        .unwrap();
+    let front = definition.sections.get_mut(&VehicleSection::Front).unwrap();
     front.criticals.clear();
     if let Some(equipment) = equipment {
         front.criticals.insert(
@@ -93,14 +87,14 @@ fn mech(
 ) -> ObjectId {
     let id = world.create(config, "Probe subject".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-    create_battle_unit(world, id, BattleTemplate::parse("test", source).unwrap()).unwrap();
+    create_battle_unit(world, id, MechTemplate::parse("test", source).unwrap()).unwrap();
     support::seed_object_dice(world, id, support::FIXTURE_DICE_SEED);
     place_battle_unit(world, id, map, 0, y).unwrap();
     running(world, id);
     set_battle_unit_signature(
         world,
         id,
-        BattleUnitSignature {
+        UnitSignature {
             team,
             ..Default::default()
         },
@@ -123,7 +117,7 @@ fn target(world: &mut World, config: &Config, map: ObjectId, y: i64) -> ObjectId
 
 /// Administratively move a running unit, which requires a brief shutdown.
 fn relocate(world: &mut World, id: ObjectId, map: ObjectId, y: i64) {
-    world.btech.set_unit_power(id, BattlePower::Off).unwrap();
+    world.btech.set_unit_power(id, Power::Off).unwrap();
     place_battle_unit(world, id, map, 0, y).unwrap();
     running(world, id);
 }
@@ -146,15 +140,15 @@ fn seat(world: &mut World, id: ObjectId, pilot: ObjectId) {
 }
 
 /// Tactical conventional shot configuration without optional damage or arc rules.
-fn shot_rules() -> BattleShotRules {
-    BattleShotRules {
+fn shot_rules() -> ShotRules {
+    ShotRules {
         range_damage: false,
         tsm_tow_bonus: true,
-        vehicle_impact: BattleVehicleImpactRules::STANDARD,
-        stacking: BattleStackingRules::STANDARD,
-        stagger: BattleStaggerMode::Retain,
-        glancing: BattleGlancingMode::Disabled,
-        aim: BattleAimRules {
+        vehicle_impact: VehicleImpactRules::STANDARD,
+        stacking: StackingRules::STANDARD,
+        stagger: StaggerMode::Retain,
+        glancing: GlancingMode::Disabled,
+        aim: AimRules {
             woods_damage: false,
             dig_bonus: 3,
             dig_only_front: false,
@@ -165,7 +159,7 @@ fn shot_rules() -> BattleShotRules {
             hotload_half_minimum: false,
             override_weapon_arcs: false,
         },
-        hit: BattleHitRules {
+        hit: HitRules {
             inferno_penalty: false,
             exile_stun_mode: 0,
         },
@@ -196,19 +190,15 @@ async fn probe_families_reach_their_range_and_only_bloodhound_sees_concealment()
         let profile = battle_perception_profile(&world, observer).unwrap();
         assert_eq!(
             profile.probe,
-            Some(BattleProbeProfile {
+            Some(ProbeProfile {
                 kind: probe,
                 range: u16::from(probe.range(false)),
-                status: BattlePerceptionStatus::Ready,
+                status: PerceptionStatus::Ready,
             })
         );
         let before = world.btech.clone();
         let perception = battle_perceive(&world, observer, target).unwrap().unwrap();
-        assert_eq!(
-            perception.channel,
-            BattleDetectionChannel::Probe,
-            "{probe:?}"
-        );
+        assert_eq!(perception.channel, DetectionChannel::Probe, "{probe:?}");
         assert!(perception.probed && !perception.identified, "{probe:?}");
         assert_eq!(perception.aim_modifier, 0, "{probe:?}");
         conceal(&mut world, target);
@@ -216,9 +206,7 @@ async fn probe_families_reach_their_range_and_only_bloodhound_sees_concealment()
             battle_perceive(&world, observer, target)
                 .unwrap()
                 .map(|perception| perception.channel),
-            probe
-                .sees_concealed()
-                .then_some(BattleDetectionChannel::Probe),
+            probe.sees_concealed().then_some(DetectionChannel::Probe),
             "{probe:?} against a null signature"
         );
         world.btech = before;
@@ -291,26 +279,24 @@ async fn hostile_ecm_map_switch_and_angel_protection_reject_probes() {
                 .unwrap()
                 .status
         };
-        assert_eq!(probed(&world), Some(BattleDetectionChannel::Probe));
+        assert_eq!(probed(&world), Some(DetectionChannel::Probe));
 
         let mut switched = world.clone();
-        set_battle_map_perception(&mut switched, map, BattleMapPerceptionFlag::Probes, false)
-            .unwrap();
-        assert_eq!(status(&switched), BattlePerceptionStatus::Disabled);
+        set_battle_map_perception(&mut switched, map, MapPerceptionFlag::Probes, false).unwrap();
+        assert_eq!(status(&switched), PerceptionStatus::Disabled);
         assert_eq!(probed(&switched), None, "{probe:?} disabled");
-        set_battle_map_perception(&mut switched, map, BattleMapPerceptionFlag::Probes, true)
-            .unwrap();
-        assert_eq!(probed(&switched), Some(BattleDetectionChannel::Probe));
+        set_battle_map_perception(&mut switched, map, MapPerceptionFlag::Probes, true).unwrap();
+        assert_eq!(probed(&switched), Some(DetectionChannel::Probe));
 
         toggle_battle_electronics(
             &mut world,
             jammer,
             ObjectId(2),
-            BattleElectronicSuite::Guardian,
-            BattleElectronicMode::Ecm,
+            ElectronicSuite::Guardian,
+            ElectronicMode::Ecm,
         )
         .unwrap();
-        assert_eq!(status(&world), BattlePerceptionStatus::Jammed, "{probe:?}");
+        assert_eq!(status(&world), PerceptionStatus::Jammed, "{probe:?}");
         assert_eq!(probed(&world), None, "{probe:?} jammed");
     }
 
@@ -332,14 +318,14 @@ async fn hostile_ecm_map_switch_and_angel_protection_reject_probes() {
         &mut world,
         target,
         ObjectId(2),
-        BattleElectronicSuite::Angel,
-        BattleElectronicMode::Ecm,
+        ElectronicSuite::Angel,
+        ElectronicMode::Ecm,
     )
     .unwrap();
     let profile = battle_perception_profile(&world, observer).unwrap();
     assert_eq!(
         profile.probe.map(|probe| probe.status),
-        Some(BattlePerceptionStatus::Ready)
+        Some(PerceptionStatus::Ready)
     );
     assert!(battle_perceive(&world, observer, target).unwrap().is_none());
 }
@@ -348,13 +334,13 @@ async fn hostile_ecm_map_switch_and_angel_protection_reject_probes() {
 /// beyond five hexes; out of probe reach the ordinary hidden-unit rules apply.
 #[tokio::test]
 async fn probes_acquire_hidden_hostiles_without_a_search() {
-    let rules = BattleContactRules {
+    let rules = ContactRules {
         hostile: true,
         hidden: true,
         perception: 7,
         acquire: true,
     };
-    let dice = |world: &World, id: ObjectId| -> BattleDice {
+    let dice = |world: &World, id: ObjectId| -> Dice {
         serde_json::from_value(
             serde_json::to_value(&world.btech.vehicles()[&id]).unwrap()["dice"].clone(),
         )
@@ -373,7 +359,7 @@ async fn probes_acquire_hidden_hostiles_without_a_search() {
         set_battle_unit_signature(
             &mut world,
             target,
-            BattleUnitSignature {
+            UnitSignature {
                 team: 2,
                 hidden: true,
                 illuminated: false,
@@ -400,9 +386,9 @@ async fn probes_acquire_hidden_hostiles_without_a_search() {
         assert_eq!(
             update.transition,
             if acquired {
-                BattleContactTransition::Acquired
+                ContactTransition::Acquired
             } else {
-                BattleContactTransition::Unseen
+                ContactTransition::Unseen
             },
             "{case}"
         );
@@ -440,7 +426,7 @@ async fn probe_contacts_behind_hills_lock_and_spot_but_refuse_direct_fire_and_sc
         .unwrap()
         .unwrap();
     assert!(!view.identified);
-    assert_eq!(view.detection, Some(BattleDetectionChannel::Probe));
+    assert_eq!(view.detection, Some(DetectionChannel::Probe));
     assert!(view.short_text.starts_with("p "), "{}", view.short_text);
 
     select_battle_target(&mut world, observer, ObjectId(2), Some(target)).unwrap();
@@ -471,7 +457,7 @@ async fn probe_contacts_behind_hills_lock_and_spot_but_refuse_direct_fire_and_sc
     select_battle_spotter(&mut world, shooter, ObjectId(1), Some(observer)).unwrap();
     assert_eq!(
         battle_spotter_target(&world, shooter).unwrap(),
-        BattleSpotterTarget {
+        SpotterTarget {
             spotter: observer,
             target
         }
@@ -481,7 +467,7 @@ async fn probe_contacts_behind_hills_lock_and_spot_but_refuse_direct_fire_and_sc
         .unwrap()
         .weapons
         .iter()
-        .position(|mount| mount.weapon == BattleWeapon::Lrm20)
+        .position(|mount| mount.weapon == Weapon::Lrm20)
         .unwrap();
     let aim = battle_aim_modifiers(&world, shooter, target, lrm, 4, shot_rules().aim).unwrap();
     assert_eq!(
@@ -490,8 +476,8 @@ async fn probe_contacts_behind_hills_lock_and_spot_but_refuse_direct_fire_and_sc
     );
     assert_eq!(
         aim.perception,
-        Some(BattlePerceptionAim {
-            channel: Some(BattleDetectionChannel::Probe),
+        Some(PerceptionAim {
+            channel: Some(DetectionChannel::Probe),
             direct_fire: false,
             modifier: 0,
         })

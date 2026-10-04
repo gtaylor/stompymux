@@ -1,12 +1,12 @@
 //! Saved channel settings with capabilities derived from the installed radio quality.
-use super::BattleUnit;
+use super::Mech;
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 
 /// Hardware limits shared by all supported radios.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-pub struct BattleRadioCapabilities {
+pub struct RadioCapabilities {
     pub channels: u8,
     pub range: u16,
     pub relay: bool,
@@ -15,7 +15,7 @@ pub struct BattleRadioCapabilities {
     pub digital: bool,
 }
 
-impl BattleRadioCapabilities {
+impl RadioCapabilities {
     /// Encode the installed channel count and hardware feature bits for administrative inspection.
     pub(super) fn configuration(self) -> u8 {
         self.channels
@@ -28,7 +28,7 @@ impl BattleRadioCapabilities {
 
 /// Transmission and reception preferences, independent of hardware and channel frequency.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BattleRadioMode {
+pub struct RadioMode {
     pub digital: bool,
     pub muted: bool,
     pub relay: bool,
@@ -41,10 +41,10 @@ pub struct BattleRadioMode {
 
 /// One radio channel; inactive slots remain saved if equipment configuration changes.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BattleRadioChannel {
+pub struct RadioChannel {
     pub frequency: u32,
     pub title: String,
-    pub mode: BattleRadioMode,
+    pub mode: RadioMode,
 }
 
 /// Communication target for a constructed radio before startup samples its pilot.
@@ -52,14 +52,14 @@ pub(super) fn default_skill() -> i16 {
     6
 }
 
-impl BattleUnit {
+impl Mech {
     /// Saved communication target used by reception interference until the next startup.
     pub fn radio_skill(&self) -> i16 {
         self.radio_skill
     }
 
     /// Quality zero uses the chassis default; nonzero radio range overrides its derived reach.
-    pub fn radio_capabilities(&self) -> BattleRadioCapabilities {
+    pub fn radio_capabilities(&self) -> RadioCapabilities {
         capabilities(
             &self.definition().attributes,
             self.definition().has_special("Clan"),
@@ -68,7 +68,7 @@ impl BattleUnit {
     }
 
     /// Active channel settings in letter order, starting with channel A.
-    pub fn radio_channels(&self) -> &[BattleRadioChannel] {
+    pub fn radio_channels(&self) -> &[RadioChannel] {
         &self.radio[..usize::from(self.radio_capabilities().channels)]
     }
 
@@ -84,7 +84,7 @@ fn capabilities(
     attributes: &std::collections::BTreeMap<String, String>,
     clan: bool,
     hardware: super::hardware_settings::HardwareSettings,
-) -> BattleRadioCapabilities {
+) -> RadioCapabilities {
     let quality = attributes
         .get("radio")
         .and_then(|value| value.parse::<u8>().ok())
@@ -104,7 +104,7 @@ fn capabilities(
         .filter(|v| *v != 0)
         .unwrap_or(channels + if clan || quality >= 4 { 16 } else { 0 });
     let configuration = hardware.radio_configuration.unwrap_or(configuration);
-    BattleRadioCapabilities {
+    RadioCapabilities {
         channels: configuration % 16,
         range: hardware.radio_range.unwrap_or_else(|| {
             attributes
@@ -121,7 +121,7 @@ fn capabilities(
 }
 
 /// Validate all saved slots, including those hidden by the current hardware.
-pub(super) fn validate_channels(channels: &[BattleRadioChannel; 16]) -> Result<()> {
+pub(super) fn validate_channels(channels: &[RadioChannel; 16]) -> Result<()> {
     for channel in channels {
         ensure!(channel.frequency <= 999999, "Invalid radio frequency");
         ensure!(
@@ -133,9 +133,9 @@ pub(super) fn validate_channels(channels: &[BattleRadioChannel; 16]) -> Result<(
     Ok(())
 }
 
-impl BattleRadioMode {
+impl RadioMode {
     /// Decode the cockpit mode letters; an unrecognized suffix ends mode selection.
-    pub fn parse(text: &str, capabilities: BattleRadioCapabilities) -> Result<Self> {
+    pub fn parse(text: &str, capabilities: RadioCapabilities) -> Result<Self> {
         let mut mode = Self::default();
         for c in text.trim_start().chars() {
             match c {
@@ -253,7 +253,7 @@ pub fn set_radio_mode(
     unit: ObjectId,
     pilot: ObjectId,
     channel: u8,
-    mode: BattleRadioMode,
+    mode: RadioMode,
 ) -> Result<()> {
     access(world, unit, pilot, channel)?;
     mode.validate()?;
@@ -353,8 +353,7 @@ pub(crate) fn command(
                 })
             }
             _ => {
-                let mode =
-                    BattleRadioMode::parse(value, self::unit(&world, unit)?.radio_capabilities())?;
+                let mode = RadioMode::parse(value, self::unit(&world, unit)?.radio_capabilities())?;
                 set_radio_mode(&mut world, unit, ctx.player, channel, mode.clone())?;
                 if value.is_empty() {
                     return Ok(format!("Channel {letter} <send> mode set to analog."));
@@ -390,9 +389,9 @@ pub(crate) fn command(
     )))
 }
 
-impl super::BattleVehicle {
+impl super::Vehicle {
     /// Installed radio hardware uses the common equipment rules.
-    pub fn radio_capabilities(&self) -> BattleRadioCapabilities {
+    pub fn radio_capabilities(&self) -> RadioCapabilities {
         capabilities(
             &self.definition().attributes,
             self.definition().has_special("Clan"),
@@ -401,7 +400,7 @@ impl super::BattleVehicle {
     }
 
     /// Active channel settings in letter order.
-    pub fn radio_channels(&self) -> &[BattleRadioChannel] {
+    pub fn radio_channels(&self) -> &[RadioChannel] {
         &self.radio[..usize::from(self.radio_capabilities().channels)]
     }
 
@@ -419,17 +418,17 @@ impl super::BattleVehicle {
 /// Borrow the facts radio rules need without depending on chassis anatomy.
 pub(super) struct RadioUnit<'a> {
     state: super::scanner::ScannerUnit<'a>,
-    channels: &'a [BattleRadioChannel],
-    capabilities: BattleRadioCapabilities,
+    channels: &'a [RadioChannel],
+    capabilities: RadioCapabilities,
     skill: i16,
     stun: bool,
 }
 
 impl RadioUnit<'_> {
-    pub(super) fn radio_channels(&self) -> &[BattleRadioChannel] {
+    pub(super) fn radio_channels(&self) -> &[RadioChannel] {
         self.channels
     }
-    pub(super) fn radio_capabilities(&self) -> BattleRadioCapabilities {
+    pub(super) fn radio_capabilities(&self) -> RadioCapabilities {
         self.capabilities
     }
     pub(super) fn radio_skill(&self) -> i16 {
@@ -441,13 +440,13 @@ impl RadioUnit<'_> {
     pub(super) fn is_observer(&self) -> bool {
         self.state.observer
     }
-    pub(super) fn power(&self) -> super::BattlePower {
+    pub(super) fn power(&self) -> super::Power {
         self.state.power
     }
-    pub(super) fn position(&self) -> Option<super::BattlePosition> {
+    pub(super) fn position(&self) -> Option<super::Position> {
         self.state.position
     }
-    pub(super) fn signature(&self) -> super::BattleUnitSignature {
+    pub(super) fn signature(&self) -> super::UnitSignature {
         self.state.signature
     }
     pub(super) fn battlefield_id(&self) -> Option<String> {
@@ -489,8 +488,8 @@ pub(super) fn unit(world: &World, id: ObjectId) -> Result<RadioUnit<'_>> {
 
 /// Disjoint mutable storage used by common scanning and reception rules.
 pub(super) struct RadioStorage<'a> {
-    pub(super) radio: &'a mut [BattleRadioChannel; 16],
-    pub(super) dice: &'a mut super::BattleDice,
+    pub(super) radio: &'a mut [RadioChannel; 16],
+    pub(super) dice: &'a mut super::Dice,
     pub(super) remaining: &'a mut u8,
     pub(super) pilot: Option<ObjectId>,
 }
@@ -522,7 +521,7 @@ pub(super) fn storage(world: &mut World, id: ObjectId) -> Result<RadioStorage<'_
 }
 
 /// Common template radio capabilities for native and scripting controls.
-pub fn unit_radio_capabilities(world: &World, id: ObjectId) -> Result<BattleRadioCapabilities> {
+pub fn unit_radio_capabilities(world: &World, id: ObjectId) -> Result<RadioCapabilities> {
     Ok(unit(world, id)?.radio_capabilities())
 }
 
@@ -540,7 +539,7 @@ pub(super) fn startup_skill(world: &World, pilot: Option<ObjectId>) -> i16 {
                 world,
                 pilot,
                 "Comm-Conventional",
-                super::BattleSkillCategory::Mental,
+                super::SkillCategory::Mental,
             )
             .expect("validated player")
         })

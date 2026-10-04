@@ -12,7 +12,7 @@ pub fn request_database_save(scripts: &Scripts, actor: ObjectId) -> Result<()> {
         );
         super::notify_message(
             scripts,
-            super::BattleMessageTarget::Player(actor),
+            super::MessageTarget::Player(actor),
             "SQLite checkpoint complete.",
         )?;
         scripts.effects.request_save();

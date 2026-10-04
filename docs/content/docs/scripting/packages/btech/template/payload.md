@@ -21,4 +21,4 @@ btech.template.payload(reference)
 
 ## Returns
 
-- `BattlePartStack[] parts`
+- `PartStack[] parts`

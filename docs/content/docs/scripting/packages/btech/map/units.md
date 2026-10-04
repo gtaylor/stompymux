@@ -18,7 +18,7 @@ btech.map.units(map, filter)
 | Name | Type | Description |
 | --- | --- | --- |
 | `map` | `DbRef\|Object` |  |
-| `filter?` | `BattleMapUnitFilter` |  |
+| `filter?` | `MapUnitFilter` |  |
 
 ## Returns
 

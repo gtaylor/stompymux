@@ -5,14 +5,14 @@ use serde::{Deserialize, Serialize};
 
 /// Durable construction state of an interior map; zero maximum means no active structure.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BattleBuildingState {
+pub struct BuildingState {
     pub integrity: i64,
     pub maximum_integrity: i64,
     pub flags: i64,
     pub regeneration: i64,
 }
 
-impl Default for BattleBuildingState {
+impl Default for BuildingState {
     /// Ordinary battlefields have no construction integrity and use the standard repair factor.
     fn default() -> Self {
         Self {
@@ -24,7 +24,7 @@ impl Default for BattleBuildingState {
     }
 }
 
-impl BattleBuildingState {
+impl BuildingState {
     /// A surviving damaged structure starts its standard two-minute repair interval.
     pub(crate) fn repair_delay(self) -> Option<u16> {
         (self.integrity > 0 && self.integrity < self.maximum_integrity).then_some(120)
@@ -78,11 +78,7 @@ impl BattleBuildingState {
 
 /// Configure an interior map without moving occupants or reloading its terrain.
 /// The host caller owns administrative authorization; this does not schedule repair events.
-pub fn set_building_state(
-    world: &mut World,
-    map: ObjectId,
-    state: BattleBuildingState,
-) -> Result<()> {
+pub fn set_building_state(world: &mut World, map: ObjectId, state: BuildingState) -> Result<()> {
     state.validate()?;
     ensure!(
         world

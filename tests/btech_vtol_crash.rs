@@ -4,36 +4,29 @@ use stompymux_rs::*;
 
 /// Install placed material for component tests without admitting an aircraft to live simulation.
 fn aircraft(world: &mut World, id: ObjectId, map: ObjectId, falling: bool) {
-    let unit = BattleVehicle::new(
-        BattleVehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml"))
-            .unwrap(),
+    let unit = Vehicle::new(
+        VehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml")).unwrap(),
     )
     .unwrap();
     let mut saved = serde_json::to_value(unit).unwrap();
     saved["position"] = serde_json::json!({"map":map.0,"x":0,"y":0});
     saved["map_slot"] = 0.into();
-    saved["power"] = serde_json::to_value(if falling {
-        BattlePower::Off
-    } else {
-        BattlePower::Running
-    })
-    .unwrap();
-    saved["motion"] = serde_json::to_value(BattleMotion::stationary(
-        HexCoordinate { x: 0, y: 0 }.center(),
-    ))
-    .unwrap();
-    saved["vtol_flight"] = serde_json::to_value(BattleVtolFlight {
+    saved["power"] =
+        serde_json::to_value(if falling { Power::Off } else { Power::Running }).unwrap();
+    saved["motion"] =
+        serde_json::to_value(Motion::stationary(HexCoordinate { x: 0, y: 0 }.center())).unwrap();
+    saved["vtol_flight"] = serde_json::to_value(VtolFlight {
         phase: if falling {
-            BattleVtolFlightPhase::Falling
+            VtolFlightPhase::Falling
         } else {
-            BattleVtolFlightPhase::Airborne
+            VtolFlightPhase::Airborne
         },
         altitude: 5.0,
         vertical_speed: 0.0,
-        fall: falling.then(|| BattleFreeFall::new(5)),
+        fall: falling.then(|| FreeFall::new(5)),
     })
     .unwrap();
-    saved["dice"] = serde_json::to_value(BattleDice::seeded([17; 32])).unwrap();
+    saved["dice"] = serde_json::to_value(Dice::seeded([17; 32])).unwrap();
     let mut state = serde_json::to_value(&world.btech).unwrap();
     state["vehicles"][id.0.to_string()] = saved;
     world.btech = serde_json::from_value(state).unwrap();
@@ -60,7 +53,7 @@ async fn crashes_share_packets_water_reduction_and_saved_replay() {
                 aircraft(&mut world, id, map, falling);
                 let tons = world.btech.vehicles()[&id].definition().tons;
                 let mut replay = world.clone();
-                let mut rules = BattleMovementRules::STANDARD.fall;
+                let mut rules = MovementRules::STANDARD.fall;
                 rules.vehicle_impact.criticals.enabled = false;
                 let report = resolve_battle_vtol_crash(&mut world, id, levels, rules).unwrap();
                 assert_eq!(report.damage, levels * (u32::from(tons) + 5) / divisor);
@@ -77,8 +70,8 @@ async fn crashes_share_packets_water_reduction_and_saved_replay() {
                 let unit = &world.btech.vehicles()[&id];
                 assert_eq!(
                     unit.vtol_flight().unwrap(),
-                    BattleVtolFlight {
-                        phase: BattleVtolFlightPhase::Landed,
+                    VtolFlight {
+                        phase: VtolFlightPhase::Landed,
                         altitude: height,
                         vertical_speed: 0.0,
                         fall: None,
@@ -87,8 +80,7 @@ async fn crashes_share_packets_water_reduction_and_saved_replay() {
                 assert!(unit.immobilized());
                 assert_eq!(unit.maximum_speed(), 0.0);
                 assert_eq!(
-                    serde_json::from_value::<BattleVehicle>(serde_json::to_value(unit).unwrap())
-                        .unwrap(),
+                    serde_json::from_value::<Vehicle>(serde_json::to_value(unit).unwrap()).unwrap(),
                     *unit
                 );
                 let before = world.btech.clone();
@@ -114,7 +106,7 @@ async fn safe_crash_stops_descent_without_damage_and_invalid_crashes_are_atomic(
     let id = world.create(&config, "Safe aircraft".into(), Kind::Thing);
     aircraft(&mut world, id, map, true);
     let original = world.btech.clone();
-    let mut rules = BattleMovementRules::STANDARD.fall;
+    let mut rules = MovementRules::STANDARD.fall;
     assert!(resolve_battle_vtol_crash(&mut world, id, u32::MAX, rules).is_err());
     assert_eq!(world.btech, original);
     rules.vehicle_impact.criticals.combat_safe = true;
@@ -124,11 +116,8 @@ async fn safe_crash_stops_descent_without_damage_and_invalid_crashes_are_atomic(
     let unit = &world.btech.vehicles()[&id];
     assert!(!unit.immobilized());
     assert_eq!(unit.sections(), original.vehicles()[&id].sections());
-    assert_eq!(
-        unit.vtol_flight().unwrap().phase,
-        BattleVtolFlightPhase::Landed
-    );
-    let mut dice = BattleDice::seeded([17; 32]);
+    assert_eq!(unit.vtol_flight().unwrap().phase, VtolFlightPhase::Landed);
+    let mut dice = Dice::seeded([17; 32]);
     dice.d6();
     assert_eq!(
         serde_json::to_value(unit).unwrap()["dice"],
@@ -164,9 +153,9 @@ async fn nested_mine_admission_failure_rolls_back_crash_damage_and_dice() {
         &mut world,
         map,
         0,
-        Some(BattleMinefield {
+        Some(Minefield {
             coordinate: HexCoordinate { x: 0, y: 0 },
-            kind: BattleMineKind::Command,
+            kind: MineKind::Command,
             strength: 1,
             extra: 0,
             owner: ObjectId(1),
@@ -176,7 +165,7 @@ async fn nested_mine_admission_failure_rolls_back_crash_damage_and_dice() {
     let id = world.create(&config, "Mined aircraft".into(), Kind::Thing);
     aircraft(&mut world, id, map, true);
     let before = world.btech.clone();
-    let mut rules = BattleMovementRules::STANDARD.fall;
+    let mut rules = MovementRules::STANDARD.fall;
     rules.vehicle_impact.criticals.enabled = false;
     let error = resolve_battle_vtol_crash(&mut world, id, 1, rules).unwrap_err();
     assert!(
@@ -189,7 +178,7 @@ async fn nested_mine_admission_failure_rolls_back_crash_damage_and_dice() {
     // The same rejection at the scheduled impact must retain the due cursor.
     for _ in 0..5 {
         let event = advance_battle_vtol_fall(&mut world, id, rules).unwrap();
-        assert!(!matches!(event, BattleVehicleDescentEvent::Impact { .. }));
+        assert!(!matches!(event, VehicleDescentEvent::Impact { .. }));
     }
     let due = world.btech.clone();
     for _ in 0..2 {
@@ -220,8 +209,8 @@ async fn descent_commits_crashes_at_shared_clock_boundaries_and_survives_reload(
         .unwrap();
         support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
         aircraft(&mut world, id, map, true);
-        let mut clock = BattleFreeFall::new(5);
-        let mut rules = BattleMovementRules::STANDARD.fall;
+        let mut clock = FreeFall::new(5);
+        let mut rules = MovementRules::STANDARD.fall;
         rules.vehicle_impact.criticals.enabled = false;
         let mut landed = false;
         for _ in 0..20 {
@@ -237,15 +226,15 @@ async fn descent_commits_crashes_at_shared_clock_boundaries_and_survives_reload(
             );
             assert_eq!(world.btech, replay.btech);
             match step {
-                BattleFreeFallStep::Recovered => panic!("Unpowered clock cannot recover"),
-                BattleFreeFallStep::Waiting => {
-                    assert_eq!(event, BattleVehicleDescentEvent::Waiting)
+                FreeFallStep::Recovered => panic!("Unpowered clock cannot recover"),
+                FreeFallStep::Waiting => {
+                    assert_eq!(event, VehicleDescentEvent::Waiting)
                 }
-                BattleFreeFallStep::Descending => {
-                    assert_eq!(event, BattleVehicleDescentEvent::Descending)
+                FreeFallStep::Descending => {
+                    assert_eq!(event, VehicleDescentEvent::Descending)
                 }
-                BattleFreeFallStep::Impact { levels } => {
-                    let BattleVehicleDescentEvent::Impact {
+                FreeFallStep::Impact { levels } => {
+                    let VehicleDescentEvent::Impact {
                         levels: actual,
                         fall,
                     } = event
@@ -261,7 +250,7 @@ async fn descent_commits_crashes_at_shared_clock_boundaries_and_survives_reload(
                     );
                     assert_eq!(world.btech, expected.btech);
                     let flight = world.btech.vehicles()[&id].vtol_flight().unwrap();
-                    assert_eq!(flight.phase, BattleVtolFlightPhase::Landed);
+                    assert_eq!(flight.phase, VtolFlightPhase::Landed);
                     assert_eq!(flight.altitude, f64::from(surface));
                     assert!(flight.fall.is_none());
                     let settled = world.btech.clone();
@@ -304,14 +293,13 @@ async fn movement_dispatch_advances_falls_and_powered_flight_exactly_once() {
     aircraft(&mut world, falling, map, true);
     aircraft(&mut world, flying, map, false);
     let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["vehicles"][falling.0.to_string()]["power"] =
-        serde_json::to_value(BattlePower::Off).unwrap();
+    state["vehicles"][falling.0.to_string()]["power"] = serde_json::to_value(Power::Off).unwrap();
     state["vehicles"][flying.0.to_string()]["map_slot"] = 1.into();
     state["vehicles"][flying.0.to_string()]["motion"]["speed"] = 20.into();
     state["vehicles"][flying.0.to_string()]["motion"]["desired_speed"] = 20.into();
     world.btech = serde_json::from_value(state).unwrap();
     let airborne = world.btech.vehicles()[&flying].clone();
-    let mut rules = BattleMovementRules::STANDARD;
+    let mut rules = MovementRules::STANDARD;
     rules.fall.vehicle_impact.criticals.enabled = false;
     for tick in 1..=6 {
         let mut expected = world.clone();
@@ -328,7 +316,7 @@ async fn movement_dispatch_advances_falls_and_powered_flight_exactly_once() {
             world.btech.vehicles()[&flying].sections(),
             airborne.sections()
         );
-        if let BattleVehicleDescentEvent::Impact { fall, .. } = event {
+        if let VehicleDescentEvent::Impact { fall, .. } = event {
             assert_eq!(tick, 6);
             assert!(
                 notices
@@ -362,8 +350,7 @@ async fn host_movement_uses_character_path_and_rolls_back_invalid_placement() {
     let id = world.create(&config, "Host aircraft".into(), Kind::Thing);
     aircraft(&mut world, id, map, true);
     for _ in 0..2 {
-        let _ =
-            advance_battle_vtol_fall(&mut world, id, BattleMovementRules::STANDARD.fall).unwrap();
+        let _ = advance_battle_vtol_fall(&mut world, id, MovementRules::STANDARD.fall).unwrap();
     }
     world
         .objects
@@ -374,7 +361,7 @@ async fn host_movement_uses_character_path_and_rolls_back_invalid_placement() {
     world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(id);
     let before = world.clone();
     assert!(
-        advance_battle_motion(&mut world, BattleMovementRules::STANDARD)
+        advance_battle_motion(&mut world, MovementRules::STANDARD)
             .unwrap_err()
             .to_string()
             .contains("character publication")
@@ -387,7 +374,7 @@ async fn host_movement_uses_character_path_and_rolls_back_invalid_placement() {
     }
     let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
     let error =
-        advance_battle_motion_action(&scripts, &config, BattleMovementRules::STANDARD).unwrap_err();
+        advance_battle_motion_action(&scripts, &config, MovementRules::STANDARD).unwrap_err();
     assert!(
         error
             .to_string()
@@ -429,7 +416,7 @@ async fn world_contacts_commit_clear_flight_landing_crash_and_water_with_replay(
             .unwrap();
         let before = world.btech.clone();
         let mut replay = world.clone();
-        let mut rules = BattleMovementRules::STANDARD.fall;
+        let mut rules = MovementRules::STANDARD.fall;
         rules.vehicle_impact.criticals.enabled = false;
         let result = advance_battle_vtol_environment(&mut world, id, false, rules).unwrap();
         assert_eq!(
@@ -441,8 +428,8 @@ async fn world_contacts_commit_clear_flight_landing_crash_and_water_with_replay(
         match (expected, result) {
             (
                 "movement",
-                BattleVtolEnvironment::Movement {
-                    path: BattleVtolPath::Advanced { .. },
+                VtolEnvironment::Movement {
+                    path: VtolPath::Advanced { .. },
                 },
             ) => {
                 assert_eq!(
@@ -450,37 +437,28 @@ async fn world_contacts_commit_clear_flight_landing_crash_and_water_with_replay(
                     altitude + vertical / 129.0
                 );
             }
-            ("landing", BattleVtolEnvironment::Landed { .. }) => {
+            ("landing", VtolEnvironment::Landed { .. }) => {
                 assert_eq!(unit.vtol_flight().unwrap().altitude, 1.0);
-                assert_eq!(
-                    unit.vtol_flight().unwrap().phase,
-                    BattleVtolFlightPhase::Landed
-                );
+                assert_eq!(unit.vtol_flight().unwrap().phase, VtolFlightPhase::Landed);
             }
             (
                 "crash",
-                BattleVtolEnvironment::Crashed {
-                    path: BattleVtolPath::Contact { contact, .. },
+                VtolEnvironment::Crashed {
+                    path: VtolPath::Contact { contact, .. },
                     fall,
                 },
             ) => {
-                assert_eq!(
-                    contact,
-                    BattleVtolSurfaceContact::Ground { fall_levels: 13 }
-                );
+                assert_eq!(contact, VtolSurfaceContact::Ground { fall_levels: 13 });
                 assert_eq!(fall.avoidance.unwrap().situational, 13);
                 assert!(!fall.groups.is_empty());
                 assert_eq!(unit.vtol_flight().unwrap().altitude, 1.0);
                 assert!(unit.immobilized());
             }
-            ("water", BattleVtolEnvironment::Flooded { newly: true, .. }) => {
+            ("water", VtolEnvironment::Flooded { newly: true, .. }) => {
                 assert!(unit.flooded() && unit.is_destroyed());
                 assert!(!unit.crew_killed());
-                assert_eq!(unit.power(), BattlePower::Off);
-                assert_eq!(
-                    unit.vtol_flight().unwrap().phase,
-                    BattleVtolFlightPhase::Landed
-                );
+                assert_eq!(unit.power(), Power::Off);
+                assert_eq!(unit.vtol_flight().unwrap().phase, VtolFlightPhase::Landed);
                 assert!(unit.vtol_flight().unwrap().fall.is_none());
                 assert!(unit.vtol_flight().unwrap().altitude <= -1.0);
             }
@@ -494,7 +472,7 @@ async fn world_contacts_commit_clear_flight_landing_crash_and_water_with_replay(
             );
         }
         assert_eq!(
-            serde_json::from_value::<BattleVehicle>(serde_json::to_value(unit).unwrap()).unwrap(),
+            serde_json::from_value::<Vehicle>(serde_json::to_value(unit).unwrap()).unwrap(),
             *unit
         );
     }
@@ -520,9 +498,9 @@ async fn world_contact_failure_restores_precontact_height_position_and_dice() {
         &mut world,
         map,
         0,
-        Some(BattleMinefield {
+        Some(Minefield {
             coordinate: HexCoordinate { x: 0, y: 0 },
-            kind: BattleMineKind::Command,
+            kind: MineKind::Command,
             strength: 1,
             extra: 0,
             owner: ObjectId(1),
@@ -539,7 +517,7 @@ async fn world_contact_failure_restores_precontact_height_position_and_dice() {
         })
         .unwrap();
     let before = world.btech.clone();
-    let mut rules = BattleMovementRules::STANDARD.fall;
+    let mut rules = MovementRules::STANDARD.fall;
     rules.vehicle_impact.criticals.enabled = false;
     for _ in 0..2 {
         let error = advance_battle_vtol_environment(&mut world, id, false, rules).unwrap_err();
@@ -572,8 +550,8 @@ async fn launch_flight_and_fuel_exhaustion_share_one_restartable_tick() {
         world
             .btech
             .rewrite_unit_record(id, |record| {
-                record["vtol_flight"] = serde_json::to_value(BattleVtolFlight {
-                    phase: BattleVtolFlightPhase::Launching { remaining: 2 },
+                record["vtol_flight"] = serde_json::to_value(VtolFlight {
+                    phase: VtolFlightPhase::Launching { remaining: 2 },
                     altitude: 0.0,
                     vertical_speed: 0.0,
                     fall: None,
@@ -585,9 +563,9 @@ async fn launch_flight_and_fuel_exhaustion_share_one_restartable_tick() {
                 }
             })
             .unwrap();
-        let rules = BattleMovementRules {
+        let rules = MovementRules {
             free_fusion_vtol_fuel: free_fuel,
-            ..BattleMovementRules::STANDARD
+            ..MovementRules::STANDARD
         };
         for tick in 1..=5 {
             let mut replay = world.clone();
@@ -599,25 +577,22 @@ async fn launch_flight_and_fuel_exhaustion_share_one_restartable_tick() {
             let unit = &world.btech.vehicles()[&id];
             let flight = unit.vtol_flight().unwrap();
             if tick == 1 {
-                assert_eq!(
-                    flight.phase,
-                    BattleVtolFlightPhase::Launching { remaining: 1 }
-                );
+                assert_eq!(flight.phase, VtolFlightPhase::Launching { remaining: 1 });
                 assert_eq!(flight.altitude, 0.0);
             } else if tick == 2 {
-                assert_eq!(flight.phase, BattleVtolFlightPhase::Airborne);
+                assert_eq!(flight.phase, VtolFlightPhase::Airborne);
                 assert_eq!(flight.altitude, 0.0);
                 assert_eq!(flight.vertical_speed, 60.0);
                 assert!(notices.iter().any(|notice| notice.text == "You lift off!"));
             } else if free_fuel || tick == 3 {
-                assert_eq!(flight.phase, BattleVtolFlightPhase::Airborne);
+                assert_eq!(flight.phase, VtolFlightPhase::Airborne);
                 assert!((flight.altitude - f64::from(tick - 2) * 60.0 / 129.0).abs() < 1e-12);
                 assert_eq!(unit.vtol_fuel().unwrap().remaining(), 0);
             } else {
-                assert_eq!(flight.phase, BattleVtolFlightPhase::Falling);
+                assert_eq!(flight.phase, VtolFlightPhase::Falling);
                 assert_eq!(flight.altitude, 60.0 / 129.0);
                 assert_eq!(unit.vtol_fuel().unwrap().remaining(), -1);
-                let mut cursor = BattleFreeFall::new(0);
+                let mut cursor = FreeFall::new(0);
                 if tick == 5 {
                     let _ = cursor.advance(0).unwrap();
                 }
@@ -653,11 +628,11 @@ async fn launch_rechecks_ceiling_and_unlinked_boundaries_stop_horizontal_flight(
     state["vehicles"][id.0.to_string()]["vtol_flight"]["phase"] =
         serde_json::json!({"kind":"launching","remaining":1});
     world.btech = serde_json::from_value(state).unwrap();
-    let notices = advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
+    let notices = advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
     assert!(notices.iter().any(|notice| notice.text.contains("ceiling")));
     assert_eq!(
         world.btech.vehicles()[&id].vtol_flight().unwrap().phase,
-        BattleVtolFlightPhase::Landed
+        VtolFlightPhase::Landed
     );
     aircraft(&mut world, id, map, false);
     let mut state = serde_json::to_value(&world.btech).unwrap();
@@ -672,7 +647,7 @@ async fn launch_rechecks_ceiling_and_unlinked_boundaries_stop_horizontal_flight(
         })
         .unwrap();
     let before = world.btech.clone();
-    let notices = advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
+    let notices = advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
     assert!(
         notices
             .iter()
@@ -686,12 +661,12 @@ async fn launch_rechecks_ceiling_and_unlinked_boundaries_stop_horizontal_flight(
         before.vehicles()[&id].vtol_fuel().unwrap().remaining() - 1
     );
     let flight = unit.vtol_flight().unwrap();
-    assert_eq!(flight.phase, BattleVtolFlightPhase::Airborne);
+    assert_eq!(flight.phase, VtolFlightPhase::Airborne);
     assert_eq!(flight.vertical_speed, 60.0);
     assert!(flight.altitude > 5.0 && flight.altitude < 5.0 + 60.0 / 129.0);
     assert_eq!(unit.sections(), before.vehicles()[&id].sections());
     assert!(
-        advance_battle_motion(&mut world, BattleMovementRules::STANDARD)
+        advance_battle_motion(&mut world, MovementRules::STANDARD)
             .unwrap()
             .is_empty()
     );
@@ -714,7 +689,7 @@ async fn shared_control_commands_apply_aircraft_velocity_and_rotor_limits() {
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let id = world.create(&config, "Controlled aircraft".into(), Kind::Thing);
-    BattleUnitTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml"))
+    UnitTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml"))
         .unwrap()
         .create(&mut world, id)
         .unwrap();
@@ -774,23 +749,11 @@ async fn shared_control_commands_apply_aircraft_velocity_and_rotor_limits() {
             record["vtol_flight"]["phase"] = serde_json::json!({"kind":"airborne"});
         })
         .unwrap();
-    let _ = stop_battle_unit(
-        &mut world,
-        id,
-        ObjectId(2),
-        BattleMovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    let _ = stop_battle_unit(&mut world, id, ObjectId(2), MovementRules::STANDARD.fall).unwrap();
     let unit = &world.btech.vehicles()[&id];
-    assert_eq!(unit.power(), BattlePower::Off);
-    assert_eq!(
-        unit.vtol_flight().unwrap().phase,
-        BattleVtolFlightPhase::Falling
-    );
-    assert_eq!(
-        unit.vtol_flight().unwrap().fall,
-        Some(BattleFreeFall::new(5))
-    );
+    assert_eq!(unit.power(), Power::Off);
+    assert_eq!(unit.vtol_flight().unwrap().phase, VtolFlightPhase::Falling);
+    assert_eq!(unit.vtol_flight().unwrap().fall, Some(FreeFall::new(5)));
 }
 
 #[tokio::test]
@@ -808,7 +771,7 @@ async fn boundary_resolution_reuses_the_first_exit_and_preserves_saved_replay() 
         state["maps"][map.0.to_string()]["movement_modifier"] = 10000.into();
         state["vehicles"][id.0.to_string()]["position"]["x"] = 1.into();
         state["vehicles"][id.0.to_string()]["position"]["y"] = 1.into();
-        state["vehicles"][id.0.to_string()]["motion"] = serde_json::to_value(BattleMotion {
+        state["vehicles"][id.0.to_string()]["motion"] = serde_json::to_value(Motion {
             point: HexCoordinate { x: 1, y: 1 }.center(),
             heading,
             desired_heading: heading,
@@ -819,7 +782,7 @@ async fn boundary_resolution_reuses_the_first_exit_and_preserves_saved_replay() 
         world.btech = serde_json::from_value(state).unwrap();
         let mut pure = world.btech.vehicles()[&id].clone();
         let path = pure.advance_vtol_clear_path(&asset, 10000).unwrap();
-        let BattleVtolPath::MapEdge {
+        let VtolPath::MapEdge {
             hex,
             last,
             altitude,
@@ -833,22 +796,13 @@ async fn boundary_resolution_reuses_the_first_exit_and_preserves_saved_replay() 
         let before = world.btech.clone();
         assert_eq!(pure, before.vehicles()[&id]);
         let mut replay = world.clone();
-        let result = advance_battle_vtol_environment(
-            &mut world,
-            id,
-            false,
-            BattleMovementRules::STANDARD.fall,
-        )
-        .unwrap();
-        assert_eq!(result, BattleVtolEnvironment::Boundary { path });
+        let result =
+            advance_battle_vtol_environment(&mut world, id, false, MovementRules::STANDARD.fall)
+                .unwrap();
+        assert_eq!(result, VtolEnvironment::Boundary { path });
         assert_eq!(
-            advance_battle_vtol_environment(
-                &mut replay,
-                id,
-                false,
-                BattleMovementRules::STANDARD.fall
-            )
-            .unwrap(),
+            advance_battle_vtol_environment(&mut replay, id, false, MovementRules::STANDARD.fall)
+                .unwrap(),
             result
         );
         assert_eq!(world.btech, replay.btech);
@@ -864,7 +818,7 @@ async fn boundary_resolution_reuses_the_first_exit_and_preserves_saved_replay() 
             serde_json::to_value(&before.vehicles()[&id]).unwrap()["dice"]
         );
         assert_eq!(
-            serde_json::from_value::<BattleVehicle>(serde_json::to_value(unit).unwrap()).unwrap(),
+            serde_json::from_value::<Vehicle>(serde_json::to_value(unit).unwrap()).unwrap(),
             *unit
         );
     }
@@ -887,7 +841,7 @@ async fn an_intermediate_ground_collision_takes_precedence_over_a_map_exit() {
     let mut state = serde_json::to_value(&world.btech).unwrap();
     state["maps"][map.0.to_string()]["movement_modifier"] = 10000.into();
     state["vehicles"][id.0.to_string()]["position"]["y"] = 2.into();
-    state["vehicles"][id.0.to_string()]["motion"] = serde_json::to_value(BattleMotion {
+    state["vehicles"][id.0.to_string()]["motion"] = serde_json::to_value(Motion {
         point: HexCoordinate { x: 0, y: 2 }.center(),
         heading: 0.0,
         desired_heading: 0.0,
@@ -896,15 +850,15 @@ async fn an_intermediate_ground_collision_takes_precedence_over_a_map_exit() {
     })
     .unwrap();
     world.btech = serde_json::from_value(state).unwrap();
-    let mut rules = BattleMovementRules::STANDARD.fall;
+    let mut rules = MovementRules::STANDARD.fall;
     rules.vehicle_impact.criticals.enabled = false;
     let result = advance_battle_vtol_environment(&mut world, id, false, rules).unwrap();
     assert!(matches!(
         result,
-        BattleVtolEnvironment::Obstacle {
-            path: BattleVtolPath::Contact {
+        VtolEnvironment::Obstacle {
+            path: VtolPath::Contact {
                 hex: HexCoordinate { x: 0, y: 1 },
-                contact: BattleVtolSurfaceContact::Elevation,
+                contact: VtolSurfaceContact::Elevation,
                 ..
             },
             fall: None,
@@ -918,7 +872,7 @@ async fn an_intermediate_ground_collision_takes_precedence_over_a_map_exit() {
     );
     assert_eq!(
         world.btech.vehicles()[&id].vtol_flight().unwrap().phase,
-        BattleVtolFlightPhase::Landed
+        VtolFlightPhase::Landed
     );
     assert_eq!(
         world.btech.vehicles()[&id].motion().unwrap().desired_speed,
@@ -944,7 +898,7 @@ async fn movement_dispatch_recovers_powered_aircraft_without_impact_or_dice() {
         .btech
         .rewrite_unit_record(id, |record| {
             let unit = record;
-            unit["power"] = serde_json::to_value(BattlePower::Running).unwrap();
+            unit["power"] = serde_json::to_value(Power::Running).unwrap();
             unit["definition"]["attributes"]["specials"] = "CargoTech".into();
             unit["vtol_fuel"]["remaining"] = 0.into();
             unit["vtol_flight"]["fall"]["speed"] = 0.into();
@@ -953,9 +907,9 @@ async fn movement_dispatch_recovers_powered_aircraft_without_impact_or_dice() {
         .unwrap();
     let before = serde_json::to_value(&world.btech.vehicles()[&id]).unwrap();
     let mut replay = world.clone();
-    let rules = BattleMovementRules {
+    let rules = MovementRules {
         free_fusion_vtol_fuel: true,
-        ..BattleMovementRules::STANDARD
+        ..MovementRules::STANDARD
     };
     let report = advance_battle_motion(&mut world, rules).unwrap();
     let other = advance_battle_motion(&mut replay, rules).unwrap();
@@ -965,10 +919,7 @@ async fn movement_dispatch_recovers_powered_aircraft_without_impact_or_dice() {
     );
     assert_eq!(world.btech, replay.btech);
     let unit = &world.btech.vehicles()[&id];
-    assert_eq!(
-        unit.vtol_flight().unwrap().phase,
-        BattleVtolFlightPhase::Airborne
-    );
+    assert_eq!(unit.vtol_flight().unwrap().phase, VtolFlightPhase::Airborne);
     assert!(unit.vtol_flight().unwrap().fall.is_none());
     let after = serde_json::to_value(unit).unwrap();
     for field in ["dice", "sections", "motion", "vtol_fuel"] {
@@ -995,22 +946,15 @@ async fn destroyed_aircraft_descend_and_settle_with_replay_and_no_second_pilot_l
         aircraft(&mut world, id, map, false);
         let mut unit = world.btech.vehicles()[&id].clone();
         let hit = unit
-            .damage_phase(
-                BattleVehicleSection::Front,
-                u16::MAX,
-                BattleDamagePhase::Internal,
-            )
+            .damage_phase(VehicleSection::Front, u16::MAX, DamagePhase::Internal)
             .unwrap();
         assert!(hit.unit_destroyed);
         assert!(unit.is_destroyed());
-        assert_eq!(
-            unit.vtol_flight().unwrap().phase,
-            BattleVtolFlightPhase::Falling
-        );
+        assert_eq!(unit.vtol_flight().unwrap().phase, VtolFlightPhase::Falling);
         let mut saved = serde_json::to_value(&world.btech).unwrap();
         saved["vehicles"][id.0.to_string()] = serde_json::to_value(unit).unwrap();
         world.btech = serde_json::from_value(saved).unwrap();
-        let mut rules = BattleMovementRules::STANDARD;
+        let mut rules = MovementRules::STANDARD;
         rules.fall.vehicle_impact.criticals.enabled = false;
         let mut impacted = false;
         for _ in 0..30 {
@@ -1026,7 +970,7 @@ async fn destroyed_aircraft_descend_and_settle_with_replay_and_no_second_pilot_l
             );
             assert_eq!(world.btech, replay.btech);
             assert_eq!(world.btech, dispatched.btech);
-            if let BattleVehicleDescentEvent::Impact { fall, .. } = event {
+            if let VehicleDescentEvent::Impact { fall, .. } = event {
                 assert!(!fall.groups.is_empty());
                 assert!(fall.pilot_injury.is_none());
                 assert!(fall.character_injury.is_none());
@@ -1040,7 +984,7 @@ async fn destroyed_aircraft_descend_and_settle_with_replay_and_no_second_pilot_l
         let unit = &world.btech.vehicles()[&id];
         assert!(unit.is_destroyed());
         let flight = unit.vtol_flight().unwrap();
-        assert_eq!(flight.phase, BattleVtolFlightPhase::Landed);
+        assert_eq!(flight.phase, VtolFlightPhase::Landed);
         assert_eq!(flight.altitude, surface);
         assert!(flight.fall.is_none());
         let settled = world.btech.clone();

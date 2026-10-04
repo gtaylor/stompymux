@@ -18,7 +18,7 @@ btech.autopilot.attach(unit, options)
 | Name | Type | Description |
 | --- | --- | --- |
 | `unit` | `integer` | The unit to control. |
-| `options` | `BattleAutopilotConfigPatch` | Optional initial configuration. |
+| `options` | `AutopilotConfigPatch` | Optional initial configuration. |
 
 ## Returns
 

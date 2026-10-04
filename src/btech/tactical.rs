@@ -4,7 +4,7 @@ use super::autopilot::observations::{AutopilotObservation, observe_with_memory};
 use super::autopilot::{
     AutopilotController, AutopilotFeedbackPage, AutopilotOrder, AutopilotSubmissionMode,
 };
-use super::{BattlePosition, BattleVehicleMovement};
+use super::{Position, VehicleMovement};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -34,7 +34,7 @@ pub struct TacticalSighting {
     /// Assigned friendly unit that acquired this intelligence.
     pub observer: ObjectId,
     /// Position at the time of observation.
-    pub position: BattlePosition,
+    pub position: Position,
     /// Committed simulation second of acquisition.
     pub seen_at: i64,
     /// Whether this source currently acquires the contact.
@@ -118,9 +118,7 @@ fn validate_members(world: &World, units: &[ObjectId]) -> Result<Vec<ObjectId>> 
             world.btech.constructed_units().contains_key(&id)
                 || world.btech.vehicles().get(&id).is_some_and(|v| matches!(
                     v.definition().movement,
-                    BattleVehicleMovement::Tracked
-                        | BattleVehicleMovement::Wheeled
-                        | BattleVehicleMovement::Hover
+                    VehicleMovement::Tracked | VehicleMovement::Wheeled | VehicleMovement::Hover
                 )),
             "Tactical control requires a ground unit"
         );

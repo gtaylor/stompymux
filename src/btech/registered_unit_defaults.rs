@@ -1,5 +1,5 @@
 //! Detached C-compatible defaults for registered units before a template is loaded.
-use super::{BattleSection, BattleTemplate, CriticalDefinition, SectionDefinition};
+use super::{CriticalDefinition, MechSection, MechTemplate, SectionDefinition};
 use crate::{Flag, Kind, ObjectId, World};
 use anyhow::{Context, Result};
 use std::collections::BTreeMap;
@@ -16,7 +16,7 @@ fn critical(equipment: &str) -> CriticalDefinition {
 ///
 /// This is a detached inspection value. It does not admit the unit to Rust simulation or
 /// manufacture a persisted template merely because the special object was registered.
-pub fn registered_unit_default_template(world: &World, id: ObjectId) -> Option<BattleTemplate> {
+pub fn registered_unit_default_template(world: &World, id: ObjectId) -> Option<MechTemplate> {
     let object = world.objects.get(&id)?;
     if object.kind != Kind::Thing
         || object.flags.contains(Flag::Going)
@@ -26,7 +26,7 @@ pub fn registered_unit_default_template(world: &World, id: ObjectId) -> Option<B
     {
         return None;
     }
-    let mut sections: BTreeMap<_, _> = BattleSection::ALL
+    let mut sections: BTreeMap<_, _> = MechSection::ALL
         .into_iter()
         .map(|section| (section, SectionDefinition::default()))
         .collect();
@@ -37,7 +37,7 @@ pub fn registered_unit_default_template(world: &World, id: ObjectId) -> Option<B
         }
     };
     install(
-        BattleSection::Head,
+        MechSection::Head,
         &[
             (0, "LifeSupport"),
             (1, "Sensors"),
@@ -47,7 +47,7 @@ pub fn registered_unit_default_template(world: &World, id: ObjectId) -> Option<B
         ],
     );
     install(
-        BattleSection::CenterTorso,
+        MechSection::CenterTorso,
         &[
             (0, "Engine"),
             (1, "Engine"),
@@ -62,10 +62,10 @@ pub fn registered_unit_default_template(world: &World, id: ObjectId) -> Option<B
         ],
     );
     for section in [
-        BattleSection::LeftArm,
-        BattleSection::RightArm,
-        BattleSection::LeftLeg,
-        BattleSection::RightLeg,
+        MechSection::LeftArm,
+        MechSection::RightArm,
+        MechSection::LeftLeg,
+        MechSection::RightLeg,
     ] {
         install(
             section,
@@ -77,7 +77,7 @@ pub fn registered_unit_default_template(world: &World, id: ObjectId) -> Option<B
             ],
         );
     }
-    Some(BattleTemplate {
+    Some(MechTemplate {
         name: String::new(),
         reference: String::new(),
         tons: 0,
@@ -100,7 +100,7 @@ pub fn ensure_registered_unit_runtime(world: &mut World, id: ObjectId) -> Result
     }
     let definition =
         registered_unit_default_template(world, id).context("Unit runtime state is unavailable")?;
-    let unit = super::BattleUnit::from_contract_template(definition)?;
+    let unit = super::Mech::from_contract_template(definition)?;
     world.btech.units.insert(id, unit.identity());
     world.btech.constructed.insert(id, unit);
     Ok(())

@@ -6,9 +6,9 @@ use std::collections::BTreeSet;
 
 /// Four independent, ordered groups; damage and ammunition depletion do not change membership.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BattleTics(pub(crate) [BTreeSet<usize>; 4]);
+pub struct Tics(pub(crate) [BTreeSet<usize>; 4]);
 
-impl BattleTics {
+impl Tics {
     /// Stored groups may reference only installed weapons within the reference numbering bound.
     pub(super) fn validate(&self, weapons: usize) -> Result<()> {
         ensure!(
@@ -24,19 +24,14 @@ impl BattleTics {
 
 /// Membership changes are idempotent and validated before any unit state changes.
 #[derive(Debug, Clone)]
-pub enum BattleTicEdit {
+pub enum TicEdit {
     Add(Vec<usize>),
     Remove(Vec<usize>),
     Clear,
 }
 
 /// Read a group's ordered weapon numbers under the same cockpit authority as membership edits.
-pub fn battle_tic(
-    world: &World,
-    id: ObjectId,
-    pilot: ObjectId,
-    group: usize,
-) -> Result<Vec<usize>> {
+pub fn tic(world: &World, id: ObjectId, pilot: ObjectId, group: usize) -> Result<Vec<usize>> {
     ensure!(group < 4, "TIC number must be between 0 and 3");
     let (groups, _) = controlled(world, id, pilot)?;
     Ok(groups.0[group].iter().copied().collect())
@@ -48,20 +43,20 @@ pub fn edit_battle_tic(
     id: ObjectId,
     pilot: ObjectId,
     group: usize,
-    edit: BattleTicEdit,
+    edit: TicEdit,
 ) -> Result<()> {
     ensure!(group < 4, "TIC number must be between 0 and 3");
     let (groups, count) = controlled(world, id, pilot)?;
     let mut next = groups.clone();
     match edit {
-        BattleTicEdit::Add(indices) | BattleTicEdit::Remove(indices)
+        TicEdit::Add(indices) | TicEdit::Remove(indices)
             if indices.iter().any(|&i| i >= count || i >= 96) =>
         {
             anyhow::bail!("Weapon number is out of bounds");
         }
-        BattleTicEdit::Add(indices) => next.0[group].extend(indices),
-        BattleTicEdit::Remove(indices) => next.0[group].retain(|i| !indices.contains(i)),
-        BattleTicEdit::Clear => next.0[group].clear(),
+        TicEdit::Add(indices) => next.0[group].extend(indices),
+        TicEdit::Remove(indices) => next.0[group].retain(|i| !indices.contains(i)),
+        TicEdit::Clear => next.0[group].clear(),
     }
     crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
         unit.tics = next;
@@ -70,7 +65,7 @@ pub fn edit_battle_tic(
 }
 
 /// Adapt owned state and cockpit authority; selection and ordering remain chassis-independent.
-fn controlled(world: &World, id: ObjectId, pilot: ObjectId) -> Result<(&BattleTics, usize)> {
+fn controlled(world: &World, id: ObjectId, pilot: ObjectId) -> Result<(&Tics, usize)> {
     crate::btech::with_unit!(world.btech.unit(id).unwrap(), |unit| {
         super::power::controlled(world, id, pilot)?;
         Ok((&unit.tics, unit.loadout()?.weapons.len()))
@@ -110,7 +105,7 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
             let groups = selection(group_text, 4)?;
             controlled(&world, id, ctx.player)?;
             for &group in &groups {
-                edit_battle_tic(&mut world, id, ctx.player, group, BattleTicEdit::Clear)?;
+                edit_battle_tic(&mut world, id, ctx.player, group, TicEdit::Clear)?;
             }
             return Ok(groups
                 .iter()
@@ -121,7 +116,7 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
         let group: usize = group_text.parse().context("Invalid TIC number")?;
         if input.name == "listtic" {
             ensure!(weapons.is_none(), "Usage: listtic <TIC number>");
-            let members = battle_tic(&world, id, ctx.player, group)?;
+            let members = tic(&world, id, ctx.player, group)?;
             return Ok(format!(
                 "TIC #{group}: {}",
                 if members.is_empty() {
@@ -133,9 +128,9 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
         }
         let members = selection(weapons.context("Supply a weapon selection")?, 96)?;
         let edit = if input.name == "addtic" {
-            BattleTicEdit::Add(members)
+            TicEdit::Add(members)
         } else {
-            BattleTicEdit::Remove(members)
+            TicEdit::Remove(members)
         };
         edit_battle_tic(&mut world, id, ctx.player, group, edit)?;
         Ok(format!("TIC #{group} updated."))
@@ -148,10 +143,10 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
 
 /// Ordered firing outcome, including rejected attempts that did not consume weapon resources.
 #[derive(Debug, Serialize)]
-pub struct BattleTicShot {
+pub struct TicShot {
     pub group: usize,
     pub weapon: usize,
-    pub report: Option<super::BattleFireReport>,
+    pub report: Option<super::FireReport>,
     pub rejection: Option<String>,
 }
 
@@ -163,8 +158,8 @@ pub fn fire_battle_tics(
     id: ObjectId,
     pilot: ObjectId,
     groups: Vec<usize>,
-    target: impl Into<super::BattleFireTarget>,
-) -> Result<Vec<BattleTicShot>> {
+    target: impl Into<super::FireTarget>,
+) -> Result<Vec<TicShot>> {
     fire_tics(
         scripts,
         config,
@@ -183,7 +178,7 @@ pub(super) fn fire_tics(
     pilot: ObjectId,
     groups: Vec<usize>,
     target: super::fire_target::FireTargetRequest<'_>,
-) -> Result<Vec<BattleTicShot>> {
+) -> Result<Vec<TicShot>> {
     scripts.atomic(|before| {
         super::weapons_hold::admit(before, id, pilot)?;
         before.validate_action(config)?;
@@ -191,7 +186,7 @@ pub(super) fn fire_tics(
         let groups: BTreeSet<_> = groups.into_iter().collect();
         let selected = groups
             .into_iter()
-            .map(|group| Ok((group, battle_tic(before, id, pilot, group)?)))
+            .map(|group| Ok((group, tic(before, id, pilot, group)?)))
             .collect::<Result<Vec<_>>>()?;
         ensure!(running(before, id), "Unit must be started");
         let positioned = before.btech.vehicles().get(&id).map_or_else(
@@ -204,13 +199,13 @@ pub(super) fn fire_tics(
         for (group, members) in selected {
             super::notify_message(
                 scripts,
-                super::BattleMessageTarget::Player(pilot),
+                super::MessageTarget::Player(pilot),
                 &format!("Firing weapons in tic #{group}!"),
             )?;
             if members.is_empty() {
                 super::notify_message(
                     scripts,
-                    super::BattleMessageTarget::Player(pilot),
+                    super::MessageTarget::Player(pilot),
                     "*Click* (the tic contained no weapons)",
                 )?;
             }
@@ -223,13 +218,13 @@ pub(super) fn fire_tics(
                     Err(message) => {
                         super::notify_message(
                             scripts,
-                            super::BattleMessageTarget::Player(pilot),
+                            super::MessageTarget::Player(pilot),
                             &message,
                         )?;
                         (None, Some(message))
                     }
                 };
-                shots.push(BattleTicShot {
+                shots.push(TicShot {
                     group,
                     weapon,
                     report,
@@ -264,9 +259,9 @@ fn running(world: &World, id: ObjectId) -> bool {
                 .btech
                 .constructed_units()
                 .get(&id)
-                .is_some_and(|u| u.power() == super::BattlePower::Running)
+                .is_some_and(|u| u.power() == super::Power::Running)
         },
-        |u| u.power() == super::BattlePower::Running,
+        |u| u.power() == super::Power::Running,
     )
 }
 

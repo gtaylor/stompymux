@@ -22,7 +22,7 @@ async fn fixture(
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         if index < 2 {
             let mut definition =
-                BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
                     .unwrap();
             definition
                 .attributes
@@ -32,7 +32,7 @@ async fn fixture(
             create_battle_vehicle(
                 &mut world,
                 id,
-                BattleVehicleTemplate::parse("test", vehicle).unwrap(),
+                VehicleTemplate::parse("test", vehicle).unwrap(),
             )
             .unwrap();
         }
@@ -44,7 +44,7 @@ async fn fixture(
 }
 
 /// Assign scenario power without introducing crew actions into sensor tests.
-fn power(world: &mut World, ids: &[ObjectId], value: BattlePower) {
+fn power(world: &mut World, ids: &[ObjectId], value: Power) {
     for id in ids {
         world.btech.set_unit_power(*id, value).unwrap();
     }
@@ -63,11 +63,11 @@ async fn vehicle_contact_rows_use_movement_labels_and_match_native_lua() {
         for id in ids {
             place_battle_unit(&mut world, id, map, 0, 0).unwrap();
         }
-        power(&mut world, &ids, BattlePower::Running);
+        power(&mut world, &ids, Power::Running);
         set_battle_unit_signature(
             &mut world,
             d,
-            BattleUnitSignature {
+            UnitSignature {
                 team: 17,
                 ..Default::default()
             },
@@ -144,9 +144,9 @@ async fn vehicle_contact_views_filter_conditions_and_recheck_visibility_without_
     for id in ids {
         place_battle_unit(&mut world, id, map, 0, 0).unwrap();
     }
-    power(&mut world, &ids, BattlePower::Running);
+    power(&mut world, &ids, Power::Running);
     refresh_battle_contacts(&mut world, &ids).unwrap();
-    power(&mut world, &[d], BattlePower::Off);
+    power(&mut world, &[d], Power::Off);
     assert_eq!(
         visible_battle_contact(&world, c, d)
             .unwrap()
@@ -154,7 +154,7 @@ async fn vehicle_contact_views_filter_conditions_and_recheck_visibility_without_
             .status,
         "   S "
     );
-    let preferences = BattleContactPreferences {
+    let preferences = ContactPreferences {
         include_shutdown: false,
         ..Default::default()
     };
@@ -167,9 +167,9 @@ async fn vehicle_contact_views_filter_conditions_and_recheck_visibility_without_
     damage_battle_vehicle_phase(
         &mut world,
         d,
-        BattleVehicleSection::Front,
+        VehicleSection::Front,
         8,
-        BattleDamagePhase::Internal,
+        DamagePhase::Internal,
     )
     .unwrap();
     assert_eq!(
@@ -180,7 +180,7 @@ async fn vehicle_contact_views_filter_conditions_and_recheck_visibility_without_
         " D S "
     );
     assert!(
-        !filtered_battle_contacts(&world, c, BattleContactPreferences::default())
+        !filtered_battle_contacts(&world, c, ContactPreferences::default())
             .unwrap()
             .iter()
             .any(|v| v.target == d)
@@ -189,7 +189,7 @@ async fn vehicle_contact_views_filter_conditions_and_recheck_visibility_without_
         filtered_battle_contacts(
             &world,
             c,
-            BattleContactPreferences {
+            ContactPreferences {
                 include_dead: true,
                 ..Default::default()
             }
@@ -203,7 +203,7 @@ async fn vehicle_contact_views_filter_conditions_and_recheck_visibility_without_
         set_battle_visibility(
             &mut world,
             id,
-            BattleVisibility {
+            Visibility {
                 invisible: true,
                 clairvoyant: false,
             },
@@ -228,7 +228,7 @@ async fn newly_visible_vehicle_targets_do_not_panic_in_mech_consumers() {
     for id in ids {
         place_battle_unit(&mut world, id, map, 0, 0).unwrap();
     }
-    power(&mut world, &ids, BattlePower::Running);
+    power(&mut world, &ids, Power::Running);
     refresh_battle_contacts(&mut world, &ids).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(a);
     assign_battle_pilot(&mut world, a, ObjectId(1)).unwrap();

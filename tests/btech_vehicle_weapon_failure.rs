@@ -18,7 +18,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse("test", template).unwrap(),
+        VehicleTemplate::parse("test", template).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -38,16 +38,16 @@ async fn critical_jams_select_unaffected_weapons_and_replay_powered_recovery() {
         fixture(include_str!("../game/mechs/Demolisher.toml")).await;
     world
         .btech
-        .set_unit_dice(id, BattleDice::seeded([31; 32]))
+        .set_unit_dice(id, Dice::seeded([31; 32]))
         .unwrap();
     let checkpoint = world.btech.clone();
     assert!(
-        jam_battle_vehicle_weapon(&mut world, id, BattleVehicleSection::Front)
+        jam_battle_vehicle_weapon(&mut world, id, VehicleSection::Front)
             .unwrap()
             .is_none()
     );
     assert_eq!(world.btech, checkpoint);
-    let mut dice = BattleDice::seeded([31; 32]);
+    let mut dice = Dice::seeded([31; 32]);
     let index = usize::from(dice.die(2).unwrap() - 1);
     let seconds = dice.die(61).unwrap() + 59;
     let ammunition = world.btech.vehicles()[&id].ammunition().to_vec();
@@ -55,12 +55,12 @@ async fn critical_jams_select_unaffected_weapons_and_replay_powered_recovery() {
     assert!(cycle.launched);
     let after_shot = world.btech.vehicles()[&id].ammunition().to_vec();
     assert_ne!(ammunition, after_shot);
-    let jam = jam_battle_vehicle_weapon(&mut world, id, BattleVehicleSection::Turret)
+    let jam = jam_battle_vehicle_weapon(&mut world, id, VehicleSection::Turret)
         .unwrap()
         .unwrap();
     assert_eq!(jam.index, index);
     assert_eq!(jam.seconds, seconds);
-    assert_eq!(jam.failure, BattleEquipmentFailure::Jammed);
+    assert_eq!(jam.failure, EquipmentFailure::Jammed);
     assert!(jam.notice(id).text.contains("temporarily jams"));
     assert_eq!(world.btech.vehicles()[&id].ammunition(), after_shot);
     let ready = world.btech.vehicles()[&id].weapon_readiness(index).unwrap();
@@ -69,12 +69,12 @@ async fn critical_jams_select_unaffected_weapons_and_replay_powered_recovery() {
     assert!(reserve_battle_vehicle_weapon(&mut world, id, ObjectId(1), index, true).is_err());
     persistence::save(&config.database(), &world).await.unwrap();
     let mut loaded = persistence::load(&config.database()).await.unwrap();
-    let second = jam_battle_vehicle_weapon(&mut world, id, BattleVehicleSection::Turret)
+    let second = jam_battle_vehicle_weapon(&mut world, id, VehicleSection::Turret)
         .unwrap()
         .unwrap();
     assert_eq!(
         second,
-        jam_battle_vehicle_weapon(&mut loaded, id, BattleVehicleSection::Turret)
+        jam_battle_vehicle_weapon(&mut loaded, id, VehicleSection::Turret)
             .unwrap()
             .unwrap()
     );
@@ -85,19 +85,13 @@ async fn critical_jams_select_unaffected_weapons_and_replay_powered_recovery() {
     roll_unit_dice(&mut loaded, id, 1).unwrap();
     let checkpoint = world.btech.clone();
     assert!(
-        jam_battle_vehicle_weapon(&mut world, id, BattleVehicleSection::Turret)
+        jam_battle_vehicle_weapon(&mut world, id, VehicleSection::Turret)
             .unwrap()
             .is_none()
     );
     assert_eq!(world.btech, checkpoint);
     assert_eq!(world.btech, loaded.btech);
-    stop_battle_unit(
-        &mut world,
-        id,
-        ObjectId(1),
-        BattleMovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut world, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
     let checkpoint = world.btech.clone();
     for _ in 0..120 {
         assert!(advance_battle_recycle(&mut world).is_empty());
@@ -135,10 +129,10 @@ async fn critical_shorts_validate_snapshots_and_disappear_with_destroyed_mounts(
         "[sections.front_side]\nslots = [{ at = 1, item = \"IS.MediumLaser\" }]\n",
     );
     let (_dir, _config, mut world, id) = fixture(&text).await;
-    let jam = jam_battle_vehicle_weapon(&mut world, id, BattleVehicleSection::Front)
+    let jam = jam_battle_vehicle_weapon(&mut world, id, VehicleSection::Front)
         .unwrap()
         .unwrap();
-    assert_eq!(jam.failure, BattleEquipmentFailure::Shorted);
+    assert_eq!(jam.failure, EquipmentFailure::Shorted);
     assert!(jam.notice(id).text.contains("short out"));
     let original = serde_json::to_value(&world.btech.vehicles()[&id]).unwrap();
     for (field, value) in [
@@ -150,7 +144,7 @@ async fn critical_shorts_validate_snapshots_and_disappear_with_destroyed_mounts(
     ] {
         let mut bad = original.clone();
         bad[field] = value;
-        assert!(serde_json::from_value::<BattleVehicle>(bad).is_err());
+        assert!(serde_json::from_value::<Vehicle>(bad).is_err());
     }
     let mount = world.btech.vehicles()[&id].loadout().unwrap().weapons[jam.index].criticals[0];
     assert!(destroy_battle_vehicle_critical(&mut world, id, mount).unwrap());
@@ -158,20 +152,20 @@ async fn critical_shorts_validate_snapshots_and_disappear_with_destroyed_mounts(
     assert!(world.btech.vehicles()[&id].weapon_recycle().is_empty());
     let checkpoint = world.btech.clone();
     assert!(
-        jam_battle_vehicle_weapon(&mut world, id, BattleVehicleSection::Front)
+        jam_battle_vehicle_weapon(&mut world, id, VehicleSection::Front)
             .unwrap()
             .is_none()
     );
     assert_eq!(world.btech, checkpoint);
-    let jam = jam_battle_vehicle_weapon(&mut world, id, BattleVehicleSection::Turret)
+    let jam = jam_battle_vehicle_weapon(&mut world, id, VehicleSection::Turret)
         .unwrap()
         .unwrap();
     damage_battle_vehicle_phase(
         &mut world,
         id,
-        BattleVehicleSection::Turret,
+        VehicleSection::Turret,
         100,
-        BattleDamagePhase::Internal,
+        DamagePhase::Internal,
     )
     .unwrap();
     assert!(

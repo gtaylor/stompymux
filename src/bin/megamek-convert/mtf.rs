@@ -380,7 +380,7 @@ fn feed_other_tech_launchers(criticals: &mut [Vec<Critical>]) {
             continue;
         };
         let other = if namespace == "IS" { "CL" } else { "IS" };
-        let Ok(fed) = stompymux_rs::BattleWeapon::parse(&format!("{other}.{label}")) else {
+        let Ok(fed) = stompymux_rs::Weapon::parse(&format!("{other}.{label}")) else {
             continue;
         };
         if !launchers.contains(&fed) {
@@ -822,21 +822,18 @@ mod tests {
             rounds: 6,
         };
         let mut criticals = vec![vec![
-            narc(stompymux_rs::BattleWeapon::ClanNarcBeacon),
-            pods(stompymux_rs::BattleWeapon::NarcBeacon),
+            narc(stompymux_rs::Weapon::ClanNarcBeacon),
+            pods(stompymux_rs::Weapon::NarcBeacon),
         ]];
         feed_other_tech_launchers(&mut criticals);
-        assert_eq!(
-            criticals[0][1],
-            pods(stompymux_rs::BattleWeapon::ClanNarcBeacon)
-        );
+        assert_eq!(criticals[0][1], pods(stompymux_rs::Weapon::ClanNarcBeacon));
         // Ammunition for a launcher the unit carries is left alone.
         let mut matched = vec![vec![
-            narc(stompymux_rs::BattleWeapon::NarcBeacon),
-            pods(stompymux_rs::BattleWeapon::NarcBeacon),
+            narc(stompymux_rs::Weapon::NarcBeacon),
+            pods(stompymux_rs::Weapon::NarcBeacon),
         ]];
         feed_other_tech_launchers(&mut matched);
-        assert_eq!(matched[0][1], pods(stompymux_rs::BattleWeapon::NarcBeacon));
+        assert_eq!(matched[0][1], pods(stompymux_rs::Weapon::NarcBeacon));
     }
 
     /// The full error chain from converting an `.mtf` source.

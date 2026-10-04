@@ -6,9 +6,9 @@ mod catalogue;
 mod families;
 mod range;
 mod water;
-pub use catalogue::BattleWeapon;
-pub use range::{BattleRangeBracket, BattleWeaponRange};
-pub use water::BattleWaterRanges;
+pub use catalogue::Weapon;
+pub use range::{RangeBracket, WeaponRange};
+pub use water::WaterRanges;
 
 /// Match ASCII equipment namespaces while retaining the original asset text for diagnostics.
 pub fn strip_name_prefix<'a>(name: &'a str, prefix: &str) -> Option<&'a str> {
@@ -32,17 +32,17 @@ pub struct WeaponProfile {
     pub recycle_seconds: u8,
 }
 
-impl BattleWeapon {
+impl Weapon {
     /// Effective range in hexes, including artillery map-sheet units and optional extreme range.
     pub fn effective_range(self, extended: bool) -> u16 {
-        self.effective_range_for_ammunition(extended, super::BattleAmmunitionMode::Normal)
+        self.effective_range_for_ammunition(extended, super::AmmunitionMode::Normal)
     }
 
     /// Maximum reach follows the selected ammunition family before extreme-range expansion.
     pub fn effective_range_for_ammunition(
         self,
         extended: bool,
-        ammunition: super::BattleAmmunitionMode,
+        ammunition: super::AmmunitionMode,
     ) -> u16 {
         let profile = self.profile_for_ammunition(ammunition);
         let normal = u16::from(profile.long_range) * if self.is_artillery() { 20 } else { 1 };
@@ -247,7 +247,7 @@ impl BattleWeapon {
 
     /// Gauss and plasma ammunition are inert; ordinary rounds release their projectile damage.
     pub fn ammunition_explosion_damage(self, rounds: u16) -> u32 {
-        self.ammunition_explosion_damage_for_mode(rounds, super::BattleAmmunitionMode::Normal)
+        self.ammunition_explosion_damage_for_mode(rounds, super::AmmunitionMode::Normal)
     }
 
     /// Whether a launcher requires a successful Streak lock before spending heat and ammunition.
@@ -315,7 +315,7 @@ impl BattleWeapon {
 /// Conventional biped systems represented by individual critical slots.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleSystem {
+pub enum System {
     ShoulderOrHip,
     UpperActuator,
     LowerActuator,
@@ -368,7 +368,7 @@ pub enum BattleSystem {
     LargeVibroblade,
 }
 
-impl BattleSystem {
+impl System {
     /// Passive equipment occupies slots but cannot receive random critical hits.
     pub fn is_noncritical(self) -> bool {
         matches!(
@@ -459,7 +459,7 @@ impl BattleSystem {
 
 #[cfg(test)]
 mod tests {
-    use super::BattleWeapon as W;
+    use super::Weapon as W;
 
     /// Enhanced LRMs are heavier LRMs with a three-hex minimum range and the same salvos.
     #[test]

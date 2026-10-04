@@ -2,12 +2,12 @@
 use stompymux_rs::*;
 
 /// Replace one bin without enabling an unconnected artillery launcher.
-fn ammunition_template(weapon: BattleWeapon, flags: &[&str]) -> BattleTemplate {
+fn ammunition_template(weapon: Weapon, flags: &[&str]) -> MechTemplate {
     let mut template =
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     let bin = template
         .sections
-        .get_mut(&BattleSection::RightTorso)
+        .get_mut(&MechSection::RightTorso)
         .unwrap()
         .criticals
         .get_mut(&0)
@@ -21,46 +21,31 @@ fn ammunition_template(weapon: BattleWeapon, flags: &[&str]) -> BattleTemplate {
 /// Every artillery family retains all four payloads through loadout resolution and saved unit state.
 #[test]
 fn artillery_ammunition_payloads_and_round_trip() {
-    for weapon in BattleWeapon::ALL
+    for weapon in Weapon::ALL
         .iter()
         .copied()
         .filter(|weapon| weapon.is_artillery())
     {
         assert!(weapon.supports_hotload());
         for (flag, mode, payload) in [
-            (
-                None,
-                BattleAmmunitionMode::Normal,
-                BattleArtilleryMode::Standard,
-            ),
+            (None, AmmunitionMode::Normal, ArtilleryMode::Standard),
             (
                 Some("Cluster"),
-                BattleAmmunitionMode::Cluster,
-                BattleArtilleryMode::Cluster,
+                AmmunitionMode::Cluster,
+                ArtilleryMode::Cluster,
             ),
-            (
-                Some("Smoke"),
-                BattleAmmunitionMode::Smoke,
-                BattleArtilleryMode::Smoke,
-            ),
-            (
-                Some("Mine"),
-                BattleAmmunitionMode::Mine,
-                BattleArtilleryMode::Mine,
-            ),
+            (Some("Smoke"), AmmunitionMode::Smoke, ArtilleryMode::Smoke),
+            (Some("Mine"), AmmunitionMode::Mine, ArtilleryMode::Mine),
         ] {
             let flags: Vec<_> = flag.into_iter().collect();
             let template = ammunition_template(weapon, &flags);
-            let unit = BattleUnit::from_template(template).unwrap();
+            let unit = Mech::from_template(template).unwrap();
             let bin = unit.loadout().unwrap().ammunition[0].clone();
             assert_eq!(bin.mode, mode);
-            assert_eq!(
-                BattleArtilleryMode::from_ammunition(bin.mode).unwrap(),
-                payload
-            );
+            assert_eq!(ArtilleryMode::from_ammunition(bin.mode).unwrap(), payload);
             assert_eq!(bin.capacity, u16::from(weapon.profile().ammunition_per_ton));
             assert_eq!(unit.ammunition()[0], bin.capacity);
-            let restored: BattleUnit =
+            let restored: Mech =
                 serde_json::from_value(serde_json::to_value(&unit).unwrap()).unwrap();
             assert_eq!(restored, unit);
             assert_eq!(restored.loadout().unwrap().ammunition[0].mode, mode);
@@ -74,36 +59,28 @@ fn artillery_ammunition_payloads_and_round_trip() {
             vec!["Smoke", "Smoke"],
         ] {
             assert!(
-                BattleLoadout::resolve(&ammunition_template(weapon, &flags)).is_err(),
+                MechLoadout::resolve(&ammunition_template(weapon, &flags)).is_err(),
                 "{}: {flags:?}",
                 weapon.name()
             );
         }
     }
-    assert!(BattleArtilleryMode::from_ammunition(BattleAmmunitionMode::Narc).is_err());
-    assert!(BattleArtilleryMode::from_ammunition(BattleAmmunitionMode::Artemis).is_err());
+    assert!(ArtilleryMode::from_ammunition(AmmunitionMode::Narc).is_err());
+    assert!(ArtilleryMode::from_ammunition(AmmunitionMode::Artemis).is_err());
 }
 
 /// Literal missile Smoke/Mine supplies stay distinct from the older combined guidance flag spellings.
 #[test]
 fn artillery_flags_do_not_reinterpret_conventional_ammunition() {
     for (weapon, flag, mode) in [
-        (
-            BattleWeapon::Lbx10,
-            "LBX/Cluster",
-            BattleAmmunitionMode::Cluster,
-        ),
-        (
-            BattleWeapon::Lrm5,
-            "Artemis/Mine",
-            BattleAmmunitionMode::Artemis,
-        ),
-        (BattleWeapon::Srm4, "Narc/Smoke", BattleAmmunitionMode::Narc),
+        (Weapon::Lbx10, "LBX/Cluster", AmmunitionMode::Cluster),
+        (Weapon::Lrm5, "Artemis/Mine", AmmunitionMode::Artemis),
+        (Weapon::Srm4, "Narc/Smoke", AmmunitionMode::Narc),
     ] {
-        let loadout = BattleLoadout::resolve(&ammunition_template(weapon, &[flag])).unwrap();
+        let loadout = MechLoadout::resolve(&ammunition_template(weapon, &[flag])).unwrap();
         assert_eq!(loadout.ammunition[0].mode, mode);
         for flag in ["Cluster", "Smoke", "Mine"] {
-            let result = BattleLoadout::resolve(&ammunition_template(weapon, &[flag]));
+            let result = MechLoadout::resolve(&ammunition_template(weapon, &[flag]));
             assert_eq!(
                 result.is_ok(),
                 flag != "Cluster" && weapon.profile().missiles > 0
@@ -116,35 +93,32 @@ fn artillery_flags_do_not_reinterpret_conventional_ammunition() {
 #[test]
 fn artillery_mount_payload_resolution_and_conflicts() {
     for (flags, expected) in [
-        (vec![], BattleAmmunitionMode::Normal),
-        (vec!["Cluster"], BattleAmmunitionMode::Cluster),
-        (vec!["Smoke"], BattleAmmunitionMode::Smoke),
-        (vec!["Mine", "RearMount"], BattleAmmunitionMode::Mine),
+        (vec![], AmmunitionMode::Normal),
+        (vec!["Cluster"], AmmunitionMode::Cluster),
+        (vec!["Smoke"], AmmunitionMode::Smoke),
+        (vec!["Mine", "RearMount"], AmmunitionMode::Mine),
     ] {
         let mut template = ammunition_template(
-            BattleWeapon::ClanArrowIv,
+            Weapon::ClanArrowIv,
             &flags
                 .iter()
                 .copied()
                 .filter(|flag| *flag != "RearMount")
                 .collect::<Vec<_>>(),
         );
-        let section = template
-            .sections
-            .get_mut(&BattleSection::LeftTorso)
-            .unwrap();
+        let section = template.sections.get_mut(&MechSection::LeftTorso).unwrap();
         section.criticals.clear();
         for slot in 0..12 {
             section.criticals.insert(
                 slot,
                 CriticalDefinition {
-                    equipment: BattleWeapon::ClanArrowIv.name().into(),
+                    equipment: Weapon::ClanArrowIv.name().into(),
                     data: "-".into(),
                     modes: flags.iter().map(|flag| (*flag).into()).collect(),
                 },
             );
         }
-        let loadout = BattleLoadout::resolve(&template).unwrap();
+        let loadout = MechLoadout::resolve(&template).unwrap();
         let mount = loadout
             .weapons
             .iter()
@@ -157,17 +131,17 @@ fn artillery_mount_payload_resolution_and_conflicts() {
                 .retain(|_, part| part.equipment != "JumpJet");
         }
         template.jump_speed = 0.0;
-        assert!(BattleUnit::from_template(template.clone()).is_ok());
+        assert!(Mech::from_template(template.clone()).is_ok());
         for part in template
             .sections
-            .get_mut(&BattleSection::LeftTorso)
+            .get_mut(&MechSection::LeftTorso)
             .unwrap()
             .criticals
             .values_mut()
         {
             part.modes.push("Hotload".into());
         }
-        let hotloaded = BattleUnit::from_template(template.clone()).unwrap();
+        let hotloaded = Mech::from_template(template.clone()).unwrap();
         let index = hotloaded
             .loadout()
             .unwrap()
@@ -175,22 +149,22 @@ fn artillery_mount_payload_resolution_and_conflicts() {
             .iter()
             .position(|mount| mount.weapon.is_artillery())
             .unwrap();
-        assert_eq!(hotloaded.fire_mode(index).unwrap(), BattleFireMode::Hotload);
+        assert_eq!(hotloaded.fire_mode(index).unwrap(), FireMode::Hotload);
         assert_eq!(hotloaded.ammunition_mode(index).unwrap(), expected);
-        let restored: BattleUnit =
+        let restored: Mech =
             serde_json::from_value(serde_json::to_value(&hotloaded).unwrap()).unwrap();
         assert_eq!(restored, hotloaded);
 
         for part in template
             .sections
-            .get_mut(&BattleSection::LeftTorso)
+            .get_mut(&MechSection::LeftTorso)
             .unwrap()
             .criticals
             .values_mut()
         {
             part.modes = vec!["Smoke".into(), "Mine".into()];
         }
-        let error = BattleLoadout::resolve(&template).unwrap_err();
+        let error = MechLoadout::resolve(&template).unwrap_err();
         assert!(format!("{error:#}").contains("Conflicting artillery ammunition flags"));
     }
 }

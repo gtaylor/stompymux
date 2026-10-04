@@ -63,7 +63,7 @@ async fn stock_loads_existing_rows_and_selectively_persists_corrections() {
         include_str!("../game/mechs/Kestrel.toml"),
     ] {
         let id = world.create(&config, "Stock holder".into(), Kind::Thing);
-        BattleUnitTemplate::parse("test", source)
+        UnitTemplate::parse("test", source)
             .unwrap()
             .create(&mut world, id)
             .unwrap();

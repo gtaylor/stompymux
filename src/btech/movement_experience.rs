@@ -6,14 +6,14 @@ use serde::{Deserialize, Serialize};
 /// Successful hex-changing updates and the coordinates of the last eligible XP attempt.
 /// The mark deliberately excludes map identity, and starts at coordinate zero.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BattleMovementExperience {
+pub struct MovementExperience {
     pub hexes_walked: u64,
     pub last_award_position: (u16, u16),
 }
 
-impl super::BattleUnit {
+impl super::Mech {
     /// Persisted movement progress, shared by ground and airborne movement.
-    pub fn movement_experience(&self) -> BattleMovementExperience {
+    pub fn movement_experience(&self) -> MovementExperience {
         self.movement_experience
     }
 }
@@ -24,7 +24,7 @@ pub(super) fn record_entry(
     world: &mut World,
     id: ObjectId,
     extended: bool,
-) -> Result<Option<super::BattleChannelMessage>> {
+) -> Result<Option<super::DiagnosticMessage>> {
     if !world.objects[&id].flags.contains(Flag::InCharacter) {
         return Ok(None);
     }
@@ -57,8 +57,8 @@ pub(super) fn record_entry(
     let award =
         super::award_skill_experience(world, pilot, skill, 1, crate::clock::wall_time(), false)?;
     Ok(award.accepted.then(|| {
-        super::BattleChannelMessage::new(
-            super::BattleChannel::PilotingExperience,
+        super::DiagnosticMessage::new(
+            super::DiagnosticChannel::PilotingExperience,
             format!("{} gained 1 {skill} XP", world.objects[&pilot].name),
         )
     }))

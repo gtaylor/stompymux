@@ -94,7 +94,7 @@ async fn reshape_persists_grid_and_removes_map_objects() {
         &mut world,
         map,
         7,
-        Some(BattleLandingExclusion {
+        Some(LandingExclusion {
             coordinate: HexCoordinate { x: 0, y: 3 },
             radius: 2,
             exempt_team: 1,
@@ -171,7 +171,7 @@ async fn resize_keeps_effects_on_remaining_hexes_and_clears_building_routes() {
         &mut world,
         map,
         4,
-        Some(BattleBuildingEntrance {
+        Some(BuildingEntrance {
             coordinate: HexCoordinate { x: 1, y: 1 },
             interior,
             data_char: 0,
@@ -189,7 +189,7 @@ async fn resize_keeps_effects_on_remaining_hexes_and_clears_building_routes() {
             &mut world,
             map,
             HexCoordinate { x, y },
-            Some(BattleDecoration::new(kind, 30, None)),
+            Some(Decoration::new(kind, 30, None)),
         )
         .unwrap();
     }

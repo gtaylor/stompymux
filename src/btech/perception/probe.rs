@@ -1,12 +1,12 @@
 //! Active probe families and their installed-equipment checks.
-use crate::btech::{BattleLoadout, BattleSystem, BattleUnit, BattleVehicle, BattleVehicleLoadout};
+use crate::btech::{Mech, MechLoadout, System, Vehicle, VehicleLoadout};
 use anyhow::Result;
 use serde::Serialize;
 
 /// Installed active-probe family.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleActiveProbe {
+pub enum ActiveProbe {
     Beagle,
     Light,
     Bloodhound,
@@ -14,7 +14,7 @@ pub enum BattleActiveProbe {
     Watchdog,
 }
 
-impl BattleActiveProbe {
+impl ActiveProbe {
     /// Every family, longest reach first.
     pub const BY_REACH: [Self; 4] = [Self::Bloodhound, Self::Watchdog, Self::Beagle, Self::Light];
 
@@ -46,12 +46,12 @@ impl BattleActiveProbe {
     }
 
     /// Probe critical identity and minimum installation size.
-    pub(crate) fn equipment(self) -> (BattleSystem, usize) {
+    pub(crate) fn equipment(self) -> (System, usize) {
         match self {
-            Self::Beagle => (BattleSystem::BeagleProbe, 1),
-            Self::Light => (BattleSystem::LightProbe, 1),
-            Self::Bloodhound => (BattleSystem::BloodhoundProbe, 3),
-            Self::Watchdog => (BattleSystem::Ecm, 2),
+            Self::Beagle => (System::BeagleProbe, 1),
+            Self::Light => (System::LightProbe, 1),
+            Self::Bloodhound => (System::BloodhoundProbe, 3),
+            Self::Watchdog => (System::Ecm, 2),
         }
     }
 }
@@ -63,38 +63,34 @@ pub(crate) struct ProbeFitting {
     pub available: bool,
 }
 
-impl BattleUnit {
+impl Mech {
     /// Presence follows installed parts; Bloodhound requires three slots on a biped.
-    pub fn has_active_probe(&self, probe: BattleActiveProbe) -> Result<bool> {
+    pub fn has_active_probe(&self, probe: ActiveProbe) -> Result<bool> {
         Ok(self.probe_fitting(&self.loadout()?, probe).installed)
     }
 
     /// Damage or flooding to any installed component disables that probe family.
-    pub fn active_probe_available(&self, probe: BattleActiveProbe) -> Result<bool> {
+    pub fn active_probe_available(&self, probe: ActiveProbe) -> Result<bool> {
         Ok(self.probe_fitting(&self.loadout()?, probe).available)
     }
 
     /// Check one family against a loadout the caller already built, so several families
     /// share a single equipment projection.
-    pub(crate) fn probe_fitting(
-        &self,
-        loadout: &BattleLoadout,
-        probe: BattleActiveProbe,
-    ) -> ProbeFitting {
+    pub(crate) fn probe_fitting(&self, loadout: &MechLoadout, probe: ActiveProbe) -> ProbeFitting {
         let (system, minimum) = probe.equipment();
         let parts = || loadout.systems.iter().filter(|part| part.system == system);
         if parts().count() < minimum
-            || (probe == BattleActiveProbe::Watchdog
+            || (probe == ActiveProbe::Watchdog
                 && !self
                     .definition()
-                    .has_technology(crate::btech::BattleTechnology::Watchdog))
+                    .has_technology(crate::btech::Technology::Watchdog))
         {
             return ProbeFitting {
                 installed: false,
                 available: false,
             };
         }
-        let available = if probe == BattleActiveProbe::Light
+        let available = if probe == ActiveProbe::Light
             && let Some(failed) = self.critical_conditions.light_probe_failure
         {
             !failed
@@ -112,14 +108,14 @@ impl BattleUnit {
     }
 }
 
-impl BattleVehicle {
+impl Vehicle {
     /// Vehicles install each probe as one equipment slot, including Bloodhound probes.
-    pub fn has_active_probe(&self, probe: BattleActiveProbe) -> Result<bool> {
+    pub fn has_active_probe(&self, probe: ActiveProbe) -> Result<bool> {
         Ok(self.probe_fitting(&self.loadout()?, probe).installed)
     }
 
     /// At least one surviving installed probe of the requested family is usable.
-    pub fn active_probe_available(&self, probe: BattleActiveProbe) -> Result<bool> {
+    pub fn active_probe_available(&self, probe: ActiveProbe) -> Result<bool> {
         Ok(self.probe_fitting(&self.loadout()?, probe).available)
     }
 
@@ -127,17 +123,17 @@ impl BattleVehicle {
     /// share a single equipment projection.
     pub(crate) fn probe_fitting(
         &self,
-        loadout: &BattleVehicleLoadout,
-        probe: BattleActiveProbe,
+        loadout: &VehicleLoadout,
+        probe: ActiveProbe,
     ) -> ProbeFitting {
         let system = probe.equipment().0;
         let mut parts = loadout.systems.iter().filter(|part| part.system == system);
         let installed = loadout.systems.iter().any(|part| part.system == system)
-            && (probe != BattleActiveProbe::Watchdog
+            && (probe != ActiveProbe::Watchdog
                 || self
                     .definition()
-                    .has_technology(crate::btech::BattleTechnology::Watchdog));
-        let available = if probe == BattleActiveProbe::Light
+                    .has_technology(crate::btech::Technology::Watchdog));
+        let available = if probe == ActiveProbe::Light
             && let Some(failed) = self.critical_conditions.light_probe_failure
         {
             !failed
@@ -162,15 +158,15 @@ mod tests {
     /// Reach ordering drives profile selection; only the Bloodhound sees concealed units.
     #[test]
     fn families_order_by_reach_and_concealment() {
-        let ranges = |clan| BattleActiveProbe::BY_REACH.map(|probe| probe.range(clan));
+        let ranges = |clan| ActiveProbe::BY_REACH.map(|probe| probe.range(clan));
         assert_eq!(ranges(false), [8, 5, 4, 3]);
         assert_eq!(ranges(true), [8, 5, 5, 3]);
         assert_eq!(
-            BattleActiveProbe::BY_REACH.map(BattleActiveProbe::sees_concealed),
+            ActiveProbe::BY_REACH.map(ActiveProbe::sees_concealed),
             [true, false, false, false]
         );
         assert_eq!(
-            serde_json::to_value(BattleActiveProbe::Bloodhound).unwrap(),
+            serde_json::to_value(ActiveProbe::Bloodhound).unwrap(),
             "bloodhound"
         );
     }

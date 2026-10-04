@@ -1697,7 +1697,7 @@ remains active.
 
 ## Transactional global roll history and retirement (2026-09-14)
 
-`World::battle_roll_statistics` now reads live Mech, vehicle and map journals
+`World::roll_statistics` now reads live Mech, vehicle and map journals
 together with process-local retired history. Histogram merging preflights
 overflow. Retirement merges all selected journals before draining any of them,
 so repeated retention cannot double-count and an error cannot partially drain
@@ -2413,7 +2413,7 @@ and the remaining six-subsystem audit requirements remain open.
 ## Ordered control-action feedback (2026-09-14)
 
 Standing, controlled prone drops and manual early jump landing now capture
-private piloting feedback before their consequences. `BattlePilotNotice` retains
+private piloting feedback before their consequences. `PilotNotice` retains
 the recipient and insertion point, and one shared publisher interleaves it with
 ordinary cockpit/observer notices. Movement and orbital landing use that same
 publisher. Automatic standing and slow drops do not fabricate roll messages.
@@ -2849,7 +2849,7 @@ Next output gap characterized while waiting: `mech_recovery_event` calls
 `handlemwconc(mech, 0)`, which privately reports the attempt and target/roll;
 success then tells occupants "The pilot regains consciousness!". Rust currently
 returns only a short player-owned success/failure notice. The existing
-`BattleCharacterNotice`/`notify_character` path can carry the already-resolved
+`CharacterNotice`/`notify_character` path can carry the already-resolved
 check, avoiding extra dice. Player-owned recovery after leaving a cockpit is an
 existing tested lifecycle; preserve that while matching occupied-cockpit output.
 Also inspect IC `pilotdam` reads: startup sets both count representations, but
@@ -2857,7 +2857,7 @@ subsequent character injury currently updates only `character_pilot.injuries`.
 
 ## Recovery feedback (2026-09-14)
 
-Added typed check/audience information to `BattleCharacterNotice`, replacing its
+Added typed check/audience information to `CharacterNotice`, replacing its
 single static-text field. The event captures its existing target, roll, outcome,
 assigned live cockpit and blindness. Shared output publishes reference private
 attempt/roll messages and a successful occupant announcement. Failed occupied
@@ -2952,7 +2952,7 @@ Reference tree unchanged. All processes started in this continuation are termina
 
 ### Retained map decoration duration (2026-09-14)
 
-Added `BattleDecoration.object_duration`, a persisted signed-short value distinct
+Added `Decoration.object_duration`, a persisted signed-short value distinct
 from the event countdown. A common constructor initializes all gameplay marker
 creation paths. Operator smoke retains the clamped original input, including
 negative durations whose event runs next tick. Fire decrements the retained
@@ -3504,7 +3504,7 @@ the loader reads Rust-owned complete records and does not read the reference
 runtime/construction tables. Documented this dependency without adding a partial
 status overlay or claiming import completion.
 
-Implemented `BattleRollStatistics`, an explicit generic-roll histogram and the
+Implemented `RollStatistics`, an explicit generic-roll histogram and the
 reference-format diagnostic renderer. Tests cover exact empty/edge/middle rows,
 all buckets, total counts, read-only rendering, independent candidates, rejected
 inputs and atomic overflow. All 241 library tests pass in
@@ -3520,7 +3520,7 @@ with partial live totals. The full six-subsystem goal remains active.
 
 ## Explicit roll journals and first classified combat callers (2026-09-14)
 
-Added a process-local generic-roll journal to `BattleDice`. Candidate clones own
+Added a process-local generic-roll journal to `Dice`. Candidate clones own
 independent journals, generator/gameplay equality remains about the random stream,
 and saved data contains only the tagged generator. Direct serialization preserves
 its u128 stream position; the initial serde-flatten approach failed restoration
@@ -3782,7 +3782,7 @@ audit gaps remain open.
 
 ## Catalogue-driven help rendering (2026-09-14)
 
-The shared typed catalogue now supplies `BattleSpecialType::help`: ordered
+The shared typed catalogue now supplies `SpecialType::help`: ordered
 categories, class/privilege filtering, four-column command lists, named detail,
 ALL restrictions, exact category errors, syntax colors and indented wrapping.
 Menu cells and rules are shared with weapon specifications, preserving the

@@ -4,19 +4,19 @@
 //! under which it steps, mirroring the advance functions that own it. A counter that
 //! steps unconditionally while nonzero is simply `Down`; one that pauses, such as weapon
 //! recycling on a shut-down unit, is `Held` while paused.
-use super::timers::{BattleTimer as T, SavedTimer, SavedTimers, TimerList, TimerMotion::*};
-use super::{BattleHeat, BattlePower, BattleUnit};
+use super::timers::{SavedTimer, SavedTimers, Timer as T, TimerList, TimerMotion::*};
+use super::{Heat, Mech, Power};
 
-impl SavedTimers for BattleUnit {
+impl SavedTimers for Mech {
     fn saved_timers(&self) -> Vec<SavedTimer> {
         let mut list = TimerList::new();
-        let running = self.power() == BattlePower::Running;
+        let running = self.power() == Power::Running;
         let destroyed = self.is_destroyed();
-        if let BattlePower::Starting { remaining } = self.power {
+        if let Power::Starting { remaining } = self.power {
             list.add(T::Startup, 0, remaining, Down);
         }
         // Thermal samples run while the unit is powered or still holds heat.
-        let thermal = !destroyed && (running || self.heat != BattleHeat::default());
+        let thermal = !destroyed && (running || self.heat != Heat::default());
         let clock = self.overheat_clock;
         list.add(
             T::OverheatElapsed,

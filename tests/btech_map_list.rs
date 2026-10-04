@@ -11,13 +11,13 @@ async fn object_table_keeps_effect_creation_order_across_restart_and_rollback() 
     for (kind, stored, name, lua_name) in [
         (
             DecorationKind::Fire,
-            BattleStaticDecorationKind::Fire,
+            StaticDecorationKind::Fire,
             "FIRE",
             "add_fire",
         ),
         (
             DecorationKind::Smoke,
-            BattleStaticDecorationKind::Smoke,
+            StaticDecorationKind::Smoke,
             "SMOKE",
             "add_smoke",
         ),
@@ -37,7 +37,7 @@ async fn object_table_keeps_effect_creation_order_across_restart_and_rollback() 
             map,
             stored,
             0,
-            Some(BattleStaticDecoration {
+            Some(StaticDecoration {
                 coordinate: HexCoordinate { x: 2, y: 2 },
                 restored_terrain: None,
                 object: ObjectId(1),
@@ -51,7 +51,7 @@ async fn object_table_keeps_effect_creation_order_across_restart_and_rollback() 
                 &mut world,
                 map,
                 HexCoordinate { x, y: 0 },
-                Some(BattleDecoration::new(kind, 20, None)),
+                Some(Decoration::new(kind, 20, None)),
             )
             .unwrap();
         }
@@ -64,7 +64,7 @@ async fn object_table_keeps_effect_creation_order_across_restart_and_rollback() 
                     &mut world,
                     map,
                     HexCoordinate { x: 2, y: 0 },
-                    Some(BattleDecoration::new(kind, 30, None)),
+                    Some(Decoration::new(kind, 30, None)),
                 )
                 .unwrap();
             }

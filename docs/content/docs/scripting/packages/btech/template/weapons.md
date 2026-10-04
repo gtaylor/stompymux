@@ -18,8 +18,8 @@ btech.template.weapons(reference, section)
 | Name | Type | Description |
 | --- | --- | --- |
 | `reference` | `string` |  |
-| `section?` | `BattleSection` | Typed section constant from btech.unit.sections. |
+| `section?` | `MechSection` | Typed section constant from btech.unit.sections. |
 
 ## Returns
 
-- `BattleMountedWeapon[] weapons`
+- `MountedWeapon[] weapons`

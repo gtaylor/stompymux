@@ -1,7 +1,7 @@
 //! Lua table projection for detached BattleTech inspection records.
 
 use super::{constants, parts_contract};
-use crate::{BattlePartForm, World};
+use crate::{PartForm, World};
 use mlua::{Lua, Table, Value};
 
 fn pair(lua: &Lua, values: (u32, u32)) -> mlua::Result<Table> {
@@ -28,7 +28,7 @@ pub(super) fn armor(lua: &Lua, row: crate::btech::InspectionArmor) -> mlua::Resu
 pub(super) fn weapon(
     lua: &Lua,
     world: &World,
-    catalogue: &[BattlePartForm],
+    catalogue: &[PartForm],
     row: &crate::btech::InspectionWeapon,
 ) -> mlua::Result<Table> {
     let table = lua.create_table()?;
@@ -57,7 +57,7 @@ pub(super) fn weapon(
 pub(super) fn weapons(
     lua: &Lua,
     world: &World,
-    catalogue: &[BattlePartForm],
+    catalogue: &[PartForm],
     rows: impl IntoIterator<Item = crate::btech::InspectionWeapon>,
 ) -> mlua::Result<Table> {
     let table = lua.create_table()?;
@@ -70,7 +70,7 @@ pub(super) fn weapons(
 pub(super) fn inventory(
     lua: &Lua,
     world: &World,
-    catalogue: &[BattlePartForm],
+    catalogue: &[PartForm],
     rows: impl IntoIterator<Item = (crate::btech::InspectionPart, u32)>,
 ) -> mlua::Result<Table> {
     let table = lua.create_table()?;
@@ -104,7 +104,7 @@ pub(super) fn inventory(
 pub(super) fn criticals(
     lua: &Lua,
     world: &World,
-    catalogue: &[BattlePartForm],
+    catalogue: &[PartForm],
     rows: impl IntoIterator<Item = crate::btech::InspectionCritical>,
 ) -> mlua::Result<Table> {
     let table = lua.create_table()?;

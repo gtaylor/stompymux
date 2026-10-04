@@ -1,25 +1,25 @@
 //! Shared launch-failure feedback for unit and coordinate shots.
-use super::{BattleHexShotReport, BattleNotice, BattleShotReport, BattleWeapon};
+use super::{HexShotReport, MechShotReport, Notice, Weapon};
 use crate::ObjectId;
 
 /// Mechanical launch facts plus the consequence notices already captured by the resolver.
 pub(super) struct LaunchFeedback {
-    critical_failure: Option<super::BattleWeaponDamageKind>,
+    critical_failure: Option<super::WeaponDamageKind>,
     shooter: ObjectId,
-    weapon: BattleWeapon,
-    fire_mode: super::BattleFireMode,
+    weapon: Weapon,
+    fire_mode: super::FireMode,
     propellant_roll: Option<u8>,
     loader_destroyed: bool,
     jammed: bool,
     launched: bool,
     misload: bool,
-    pilot_notices: Vec<super::BattlePilotNotice>,
-    notices: Vec<BattleNotice>,
+    pilot_notices: Vec<super::PilotNotice>,
+    notices: Vec<Notice>,
 }
 
-impl From<&BattleShotReport> for LaunchFeedback {
+impl From<&MechShotReport> for LaunchFeedback {
     /// Capture common mechanical facts without inventing a damage target.
-    fn from(report: &BattleShotReport) -> Self {
+    fn from(report: &MechShotReport) -> Self {
         Self {
             critical_failure: report.expenditure.critical_failure,
             shooter: report.shooter,
@@ -39,9 +39,9 @@ impl From<&BattleShotReport> for LaunchFeedback {
     }
 }
 
-impl From<&BattleHexShotReport> for LaunchFeedback {
+impl From<&HexShotReport> for LaunchFeedback {
     /// Capture common mechanical facts without inventing a damage target.
-    fn from(report: &BattleHexShotReport) -> Self {
+    fn from(report: &HexShotReport) -> Self {
         Self {
             critical_failure: report.expenditure.critical_failure,
             shooter: report.shooter,
@@ -61,9 +61,9 @@ impl From<&BattleHexShotReport> for LaunchFeedback {
     }
 }
 
-impl From<&super::BattleArtilleryLaunchReport> for LaunchFeedback {
+impl From<&super::ArtilleryLaunchReport> for LaunchFeedback {
     /// Artillery shares loader failures and immediate shooter consequences.
-    fn from(report: &super::BattleArtilleryLaunchReport) -> Self {
+    fn from(report: &super::ArtilleryLaunchReport) -> Self {
         Self {
             critical_failure: report.expenditure.critical_failure,
             shooter: report.shooter,
@@ -87,16 +87,16 @@ impl From<&super::BattleArtilleryLaunchReport> for LaunchFeedback {
 pub(super) fn failure_messages(
     report: LaunchFeedback,
     observers: Vec<(ObjectId, String)>,
-    private: &mut Vec<super::BattlePilotNotice>,
+    private: &mut Vec<super::PilotNotice>,
 ) -> Option<Vec<(ObjectId, String)>> {
     let shooter = report.shooter;
     if let Some(failure) = report.critical_failure {
         let name = report.weapon.name().split_once('.').unwrap().1;
         let text = match failure {
-            super::BattleWeaponDamageKind::Crystal => format!(
+            super::WeaponDamageKind::Crystal => format!(
                 "[fg=red bold]The damaged charging crystal on your {name} overloads![reset]"
             ),
-            super::BattleWeaponDamageKind::Feed => format!(
+            super::WeaponDamageKind::Feed => format!(
                 "[fg=red bold]The damaged ammo feed on your {name} triggers an internal explosion![reset]"
             ),
             _ => format!("[fg=red bold]The ammo loader mechanism jams on your {name}![reset]"),
@@ -172,7 +172,7 @@ pub(super) fn failure_messages(
             shooter,
             format!(
                 "[fg=red bold]The ammo {} mechanism jams on your {}![reset]",
-                if report.fire_mode == super::BattleFireMode::Rapid || report.weapon.is_rotary() {
+                if report.fire_mode == super::FireMode::Rapid || report.weapon.is_rotary() {
                     "loader"
                 } else {
                     "loading"
@@ -194,9 +194,9 @@ pub(super) fn failure_messages(
     None
 }
 
-impl From<&super::BattleVehicleShotReport> for LaunchFeedback {
+impl From<&super::VehicleShotReport> for LaunchFeedback {
     /// Vehicle storage supplies the same launch facts to the common feedback policy.
-    fn from(report: &super::BattleVehicleShotReport) -> Self {
+    fn from(report: &super::VehicleShotReport) -> Self {
         Self {
             critical_failure: None,
             shooter: report.shooter,
@@ -214,8 +214,8 @@ impl From<&super::BattleVehicleShotReport> for LaunchFeedback {
 }
 
 /// Both unit classes use the same failed-lock feedback without expenditure or target damage.
-pub(super) fn streak_failure(shooter: ObjectId) -> Vec<BattleNotice> {
-    vec![BattleNotice {
+pub(super) fn streak_failure(shooter: ObjectId) -> Vec<Notice> {
+    vec![Notice {
         unit: shooter,
         text: "Your streak fails to lock on.".into(),
     }]

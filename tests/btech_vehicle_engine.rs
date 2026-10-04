@@ -2,9 +2,9 @@
 use stompymux_rs::*;
 
 /// A tracked 80-ton chassis with three walking movement points has a 240-rating powerplant.
-fn tracked(flags: &str) -> BattleVehicleTemplate {
+fn tracked(flags: &str) -> VehicleTemplate {
     let mut template =
-        BattleVehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+        VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
             .unwrap();
     template.attributes.insert("specials".into(), flags.into());
     template
@@ -13,40 +13,28 @@ fn tracked(flags: &str) -> BattleVehicleTemplate {
 #[test]
 fn vehicle_engine_shielding_precedes_family_rounding() {
     for (flags, powerplant, half_tons) in [
-        ("ICEEngine_Tech", BattleVehiclePowerplant::Combustion, 46),
-        (
-            "-",
-            BattleVehiclePowerplant::Fusion(BattleEngine::Standard),
-            35,
-        ),
-        (
-            "XLEngine_Tech",
-            BattleVehiclePowerplant::Fusion(BattleEngine::Xl),
-            18,
-        ),
-        (
-            "XXL_Tech",
-            BattleVehiclePowerplant::Fusion(BattleEngine::Xxl),
-            12,
-        ),
+        ("ICEEngine_Tech", VehiclePowerplant::Combustion, 46),
+        ("-", VehiclePowerplant::Fusion(Engine::Standard), 35),
+        ("XLEngine_Tech", VehiclePowerplant::Fusion(Engine::Xl), 18),
+        ("XXL_Tech", VehiclePowerplant::Fusion(Engine::Xxl), 12),
         (
             "LightEngine_Tech",
-            BattleVehiclePowerplant::Fusion(BattleEngine::Light),
+            VehiclePowerplant::Fusion(Engine::Light),
             27,
         ),
         (
             "CompactEngine_Tech",
-            BattleVehiclePowerplant::Fusion(BattleEngine::Compact),
+            VehiclePowerplant::Fusion(Engine::Compact),
             53,
         ),
         (
             "ICEEngine_Tech XLEngine_Tech",
-            BattleVehiclePowerplant::Combustion,
+            VehiclePowerplant::Combustion,
             46,
         ),
         (
             "XLEngine_Tech XXL_Tech LightEngine_Tech",
-            BattleVehiclePowerplant::Fusion(BattleEngine::Xl),
+            VehiclePowerplant::Fusion(Engine::Xl),
             18,
         ),
     ] {
@@ -60,7 +48,7 @@ fn vehicle_engine_shielding_precedes_family_rounding() {
         assert_eq!(report.installed_mass, half_tons * 512, "{flags}");
         assert_eq!(report.hover_minimum, 0);
         assert_eq!(template, before);
-        let restored: BattleVehicleTemplate =
+        let restored: VehicleTemplate =
             serde_json::from_value(serde_json::to_value(template).unwrap()).unwrap();
         assert_eq!(restored.engine().unwrap(), report);
     }
@@ -80,11 +68,11 @@ fn vehicle_suspension_and_missing_engine_diagnostics() {
         (41, 235),
         (100, 235),
     ] {
-        assert_eq!(BattleVehicleMovement::Hover.suspension(tons), expected);
-        assert_eq!(BattleVehicleMovement::Wheeled.suspension(tons), 20);
-        assert_eq!(BattleVehicleMovement::Tracked.suspension(tons), 0);
+        assert_eq!(VehicleMovement::Hover.suspension(tons), expected);
+        assert_eq!(VehicleMovement::Wheeled.suspension(tons), 20);
+        assert_eq!(VehicleMovement::Tracked.suspension(tons), 0);
     }
-    let truck = BattleVehicleTemplate::parse(
+    let truck = VehicleTemplate::parse(
         "Flatbed_Truck",
         include_str!("../game/mechs/Flatbed_Truck.toml"),
     )
@@ -93,7 +81,7 @@ fn vehicle_suspension_and_missing_engine_diagnostics() {
     .unwrap();
     assert_eq!((truck.nominal_rating, truck.weight_rating), (50, 30));
     assert_eq!(truck.installed_mass, 2 * 1024);
-    let hover = BattleVehicleTemplate::parse("Fulcrum", include_str!("../game/mechs/Fulcrum.toml"))
+    let hover = VehicleTemplate::parse("Fulcrum", include_str!("../game/mechs/Fulcrum.toml"))
         .unwrap()
         .engine()
         .unwrap();
@@ -101,7 +89,7 @@ fn vehicle_suspension_and_missing_engine_diagnostics() {
     assert_eq!(hover.engine_mass, 21 * 512);
     assert_eq!(hover.hover_minimum, 10 * 1024);
     let mut template = tracked("-");
-    template.movement = BattleVehicleMovement::Hover;
+    template.movement = VehicleMovement::Hover;
     template.tons = 5;
     template.max_speed = 16.125;
     let engine = template.engine().unwrap();
@@ -109,7 +97,7 @@ fn vehicle_suspension_and_missing_engine_diagnostics() {
     assert_eq!(engine.standard_mass, None);
     assert_eq!(engine.engine_mass, 0);
     assert_eq!(engine.installed_mass, 1024);
-    template.movement = BattleVehicleMovement::Tracked;
+    template.movement = VehicleMovement::Tracked;
     template.tons = 11;
     assert_eq!(template.engine().unwrap().standard_mass, None);
     assert_eq!(template.engine().unwrap().installed_mass, 0);

@@ -1,18 +1,13 @@
 //! Selective persistence for MechWarrior template and personal-combat preferences.
 
-use crate::{
-    BattlePersonalEquipment, BattlePersonalLoadout, BattlePlayerConfiguration, ObjectId, World,
-};
+use crate::{ObjectId, PersonalEquipment, PersonalLoadout, PlayerConfiguration, World};
 use anyhow::Result;
 use sqlx::{Row, SqliteConnection};
 use std::collections::{BTreeMap, BTreeSet};
 
 pub(super) async fn load(
     c: &mut SqliteConnection,
-) -> Result<(
-    BTreeMap<ObjectId, BattlePlayerConfiguration>,
-    BTreeSet<ObjectId>,
-)> {
+) -> Result<(BTreeMap<ObjectId, PlayerConfiguration>, BTreeSet<ObjectId>)> {
     let rows = sqlx::query("SELECT player_dbref,mechwarrior_template,has_loadout,armor_head,armor_torso,armor_hands,armor_feet,right_weapon,left_weapon,has_right_ammunition,has_left_ammunition,right_ammunition,left_ammunition,technician_available_at FROM btech_player_configuration WHERE mechwarrior_template IS NOT NULL OR has_loadout=1 OR technician_available_at!=0 ORDER BY player_dbref").fetch_all(c).await?;
     let mut result = BTreeMap::new();
     let mut invalid = BTreeSet::new();
@@ -21,7 +16,7 @@ pub(super) async fn load(
         let equipment = |weapon: &str,
                          has_ammunition: &str,
                          ammunition: &str|
-         -> Result<Option<BattlePersonalEquipment>> {
+         -> Result<Option<PersonalEquipment>> {
             let Some(weapon) = row
                 .try_get::<Option<String>, _>(weapon)?
                 .filter(|weapon| !weapon.is_empty())
@@ -33,10 +28,10 @@ pub(super) async fn load(
             } else {
                 None
             };
-            Ok(Some(BattlePersonalEquipment { weapon, ammunition }))
+            Ok(Some(PersonalEquipment { weapon, ammunition }))
         };
         let loadout = if row.try_get::<i64, _>("has_loadout")? != 0 {
-            Some(BattlePersonalLoadout {
+            Some(PersonalLoadout {
                 armor_head: u8::try_from(row.try_get::<i64, _>("armor_head")?)?,
                 armor_torso: u8::try_from(row.try_get::<i64, _>("armor_torso")?)?,
                 armor_hands: u8::try_from(row.try_get::<i64, _>("armor_hands")?)?,
@@ -47,7 +42,7 @@ pub(super) async fn load(
         } else {
             None
         };
-        let configuration = BattlePlayerConfiguration {
+        let configuration = PlayerConfiguration {
             mechwarrior_template: row
                 .try_get::<Option<String>, _>("mechwarrior_template")?
                 .filter(|reference| !reference.is_empty()),

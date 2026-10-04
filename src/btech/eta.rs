@@ -5,7 +5,7 @@ use serde::Serialize;
 
 /// A detached estimate; no minutes means the unit is effectively stationary.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct BattleEtaReport {
+pub struct EtaReport {
     pub coordinate: super::HexCoordinate,
     pub range: f64,
     pub minutes: Option<u32>,
@@ -14,25 +14,18 @@ pub struct BattleEtaReport {
 
 /// Measure a supplied coordinate or an ordinary selected hex; does not change simulation state.
 /// Reverse speed uses its magnitude. Explicit coordinates may lie outside the current map.
-pub fn eta(
-    world: &World,
-    unit: ObjectId,
-    viewer: ObjectId,
-    arguments: &str,
-) -> Result<BattleEtaReport> {
+pub fn eta(world: &World, unit: ObjectId, viewer: ObjectId, arguments: &str) -> Result<EtaReport> {
     let source = super::brief::display_source(world, unit, viewer)?;
     let record = super::scanner::scanner_unit(world, source.unit).context("Unit is unavailable")?;
     ensure!(
-        record.power == super::BattlePower::Running && !record.destroyed,
+        record.power == super::Power::Running && !record.destroyed,
         "Start the unit first"
     );
     record.position.context("Unit is not on a battlefield")?;
     let words: Vec<_> = arguments.split_whitespace().collect();
     let coordinate = match words.as_slice() {
         [] => match source.selection(world) {
-            Some(super::BattleTargetSelection::Hex(lock))
-                if lock.mode == super::BattleHexTargetMode::Hex =>
-            {
+            Some(super::TargetSelection::Hex(lock)) if lock.mode == super::HexTargetMode::Hex => {
                 lock.hex
             }
             _ => anyhow::bail!("You have invalid default target for ETA!"),
@@ -57,7 +50,7 @@ pub fn eta(
         || "Never, mech not moving".to_owned(),
         |minutes| format!("{:02}:{:02}", minutes / 60, minutes % 60),
     );
-    Ok(BattleEtaReport {
+    Ok(EtaReport {
         coordinate,
         range,
         minutes,
@@ -74,7 +67,7 @@ pub fn eta_action(
     unit: ObjectId,
     viewer: ObjectId,
     arguments: &str,
-) -> Result<BattleEtaReport> {
+) -> Result<EtaReport> {
     scripts.atomic(|_| {
         let report = eta(&scripts.world(), unit, viewer, arguments)?;
         let source = super::brief::display_source(&scripts.world(), unit, viewer)?;

@@ -143,11 +143,8 @@ pub(super) fn register(lua: &Lua, native: &Table, _world: &SharedWorld) -> mlua:
         error::wrap(lua, mml_ammunition, "btech.operation.failed")?,
     )?;
     for (name, mode) in [
-        ("unit_atmrange", crate::BattleAmmunitionMode::ExtendedRange),
-        (
-            "unit_atmexplosive",
-            crate::BattleAmmunitionMode::HighExplosive,
-        ),
+        ("unit_atmrange", crate::AmmunitionMode::ExtendedRange),
+        ("unit_atmexplosive", crate::AmmunitionMode::HighExplosive),
     ] {
         let callback =
             lua.create_function(move |lua, (unit, pilot, index): (i64, i64, usize)| {

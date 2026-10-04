@@ -1,13 +1,13 @@
 //! Loose stock carried in inventories: physical mass and named stock corrections.
-use super::{BattleInventoryEntry, BattlePart};
+use super::{InventoryEntry, Part};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result};
 
 /// Sum quantities with checked arithmetic, retaining integral mass until unit-load adjustment.
-pub(super) fn entries_mass(entries: &[BattleInventoryEntry]) -> Result<u64> {
+pub(super) fn entries_mass(entries: &[InventoryEntry]) -> Result<u64> {
     entries.iter().try_fold(0_u64, |total, entry| {
         entry.validate()?;
-        let part = BattlePart::from_id(entry.part_id)
+        let part = Part::from_id(entry.part_id)
             .with_context(|| format!("Unknown inventory part {}", entry.part_id))?;
         total
             .checked_add(
@@ -32,6 +32,6 @@ pub fn set_inventory_named(
     name: &str,
     quantity: i32,
 ) -> Result<()> {
-    let part = BattlePart::parse(name)?;
+    let part = Part::parse(name)?;
     super::set_inventory_quantity(world, actor, object, part.part_id, quantity)
 }

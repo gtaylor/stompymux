@@ -27,12 +27,9 @@ async fn reactor_shot_and_neighbor_death_have_distinct_attribution() {
             include_str!("../game/mechs/JR7-D.toml"),
             include_str!("../game/mechs/GOL-1H.toml"),
         ] {
-            let (_dir, config, mut base, id, target, index) = firing::fixture_with_target(
-                shooter,
-                Some(BattleWeapon::MediumLaser),
-                target_source,
-            )
-            .await;
+            let (_dir, config, mut base, id, target, index) =
+                firing::fixture_with_target(shooter, Some(Weapon::MediumLaser), target_source)
+                    .await;
             firing::edit(&mut base, target, |state| {
                 state["sections"]["CenterTorso"]["armor"] = 0.into();
                 state["sections"]["CenterTorso"]["rear"] = 0.into();
@@ -47,11 +44,8 @@ async fn reactor_shot_and_neighbor_death_have_distinct_attribution() {
             create_battle_vehicle(
                 &mut base,
                 neighbor,
-                BattleVehicleTemplate::parse(
-                    "Demolisher",
-                    include_str!("../game/mechs/Demolisher.toml"),
-                )
-                .unwrap(),
+                VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+                    .unwrap(),
             )
             .unwrap();
             support::seed_object_dice(&mut base, neighbor, support::FIXTURE_DICE_SEED);
@@ -71,19 +65,19 @@ async fn reactor_shot_and_neighbor_death_have_distinct_attribution() {
                 for rounds in state["ammunition"].as_array_mut().unwrap() {
                     *rounds = 0.into();
                 }
-                state["dice"] = serde_json::to_value(BattleDice::seeded([17; 32])).unwrap();
+                state["dice"] = serde_json::to_value(Dice::seeded([17; 32])).unwrap();
             });
             let hit_seed = (0..=255)
-                .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 12)
+                .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
                 .unwrap();
             firing::edit(&mut base, id, |state| {
-                state["dice"] = serde_json::to_value(BattleDice::seeded([hit_seed; 32])).unwrap()
+                state["dice"] = serde_json::to_value(Dice::seeded([hit_seed; 32])).unwrap()
             });
             let command = format!("btech.unit.fire({},1,{index},{})", id.0, target.0);
             let mut chosen = None;
             for seed in 0..=255 {
                 firing::edit(&mut base, target, |state| {
-                    state["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
+                    state["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap()
                 });
                 let scripts = Scripts::new(&config, Rc::new(RefCell::new(base.clone()))).unwrap();
                 let report: mlua::Table =

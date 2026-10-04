@@ -1,5 +1,5 @@
 //! Operator cleanup of loose stock records, independent of unit repair and installed equipment.
-use super::{BattleInventoryEntry, BattlePart};
+use super::{InventoryEntry, Part};
 use crate::{Config, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
@@ -7,13 +7,13 @@ use std::collections::BTreeMap;
 
 /// Detached cleanup totals; quantities are wide enough to count multiple full stock rows.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleInventoryCleanup {
+pub struct InventoryCleanup {
     pub original_entries: usize,
     pub new_entries: usize,
     pub items: u64,
 }
 
-impl BattleInventoryCleanup {
+impl InventoryCleanup {
     /// Operator feedback retains the two inventory-consistency summary lines.
     pub fn text(&self) -> String {
         format!(
@@ -29,10 +29,10 @@ fn structural_placeholder(id: i32) -> bool {
 }
 
 /// Rebuild ordered positive stock, rejecting quantity overflow.
-fn normalized(entries: &[BattleInventoryEntry]) -> Result<Vec<BattleInventoryEntry>> {
+fn normalized(entries: &[InventoryEntry]) -> Result<Vec<InventoryEntry>> {
     let mut quantities = BTreeMap::<i32, i64>::new();
     for entry in entries {
-        if structural_placeholder(entry.part_id) || BattlePart::from_id(entry.part_id).is_none() {
+        if structural_placeholder(entry.part_id) || Part::from_id(entry.part_id).is_none() {
             continue;
         }
         let quantity = quantities.entry(entry.key()).or_default();
@@ -44,7 +44,7 @@ fn normalized(entries: &[BattleInventoryEntry]) -> Result<Vec<BattleInventoryEnt
         .into_iter()
         .filter(|(_, quantity)| *quantity > 0)
         .map(|(part_id, quantity)| {
-            Ok(BattleInventoryEntry {
+            Ok(InventoryEntry {
                 part_id,
                 quantity: i32::try_from(quantity).context("Inventory quantity overflow")?,
             })
@@ -59,14 +59,14 @@ pub fn clean_inventory(
     config: &Config,
     actor: ObjectId,
     object: ObjectId,
-) -> Result<BattleInventoryCleanup> {
+) -> Result<InventoryCleanup> {
     ensure!(
         crate::authority::is_wizard(world, actor),
         "Permission denied."
     );
     let entries = super::inventory(world, object)?;
     let cleaned = normalized(entries)?;
-    let report = BattleInventoryCleanup {
+    let report = InventoryCleanup {
         original_entries: entries.len(),
         new_entries: cleaned.len(),
         items: cleaned.iter().try_fold(0u64, |sum, row| {
@@ -97,14 +97,10 @@ pub fn clean_inventory_action(
     config: &Config,
     actor: ObjectId,
     object: ObjectId,
-) -> Result<BattleInventoryCleanup> {
+) -> Result<InventoryCleanup> {
     scripts.atomic(|_| {
         let report = clean_inventory(&mut scripts.world_mut(), config, actor, object)?;
-        super::notify_message(
-            scripts,
-            super::BattleMessageTarget::Player(actor),
-            &report.text(),
-        )?;
+        super::notify_message(scripts, super::MessageTarget::Player(actor), &report.text())?;
         scripts.effects.validate()?;
         Ok(report)
     })
@@ -140,7 +136,7 @@ mod tests {
     /// Cleanup sums signed duplicate rows and discards placeholders and unknowns.
     #[test]
     fn normalizes_stock_without_changing_part_identity() {
-        let row = |part_id, quantity| BattleInventoryEntry { part_id, quantity };
+        let row = |part_id, quantity| InventoryEntry { part_id, quantity };
         let mut entries = vec![
             row(528, 9),
             row(528, -4),

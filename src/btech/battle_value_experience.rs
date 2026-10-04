@@ -1,5 +1,5 @@
 //! Battle-value gunnery experience arithmetic and atomic skill awards without random gates.
-use super::{BattleGunneryAwardRequest, BattleGunneryExperienceMode, BattleWeapon};
+use super::{GunneryAwardRequest, GunneryExperienceMode, Weapon};
 use crate::{World, config::XpConfig};
 use anyhow::{Result, ensure};
 use serde::Serialize;
@@ -13,7 +13,7 @@ pub struct BattleValueExperienceInput {
     pub target_speed: f64,
     pub attacker_pilot_modifier: f64,
     pub target_pilot_modifier: f64,
-    pub weapon: BattleWeapon,
+    pub weapon: Weapon,
     pub damage: u16,
     pub base_to_hit: i32,
     pub unit_modifier: f64,
@@ -48,14 +48,14 @@ impl BattleValueExperienceInput {
     /// Apply configured multipliers literally, followed by the damage percentage and award cap.
     /// Zero multipliers still receive one XP; impossible and optionally trivial hits receive none.
     pub fn calculate(self, config: &XpConfig) -> Result<Option<BattleValueExperienceCalculation>> {
-        self.calculate_with_settings(config, &super::BattleWeaponSettings::default())
+        self.calculate_with_settings(config, &super::WeaponSettings::default())
     }
 
     /// Apply the same formula with the current runtime catalogue overrides.
     pub fn calculate_with_settings(
         self,
         config: &XpConfig,
-        settings: &super::BattleWeaponSettings,
+        settings: &super::WeaponSettings,
     ) -> Result<Option<BattleValueExperienceCalculation>> {
         if self.damage == 0 || self.base_to_hit > 12 || (config.bthmod != 0 && self.base_to_hit < 3)
         {
@@ -152,13 +152,13 @@ pub struct BattleValueExperienceAward {
     pub calculation: BattleValueExperienceCalculation,
     pub amount: u32,
     pub skill: &'static str,
-    pub award: super::BattleExperienceAward,
+    pub award: super::ExperienceAward,
 }
 
 /// Derive current pre-impact facts and apply XP atomically, consuming no dice.
 pub fn award_battle_value_gunnery_experience(
     world: &mut World,
-    request: BattleGunneryAwardRequest,
+    request: GunneryAwardRequest,
     config: &XpConfig,
 ) -> Result<Option<BattleValueExperienceAward>> {
     if request.damage == 0
@@ -168,7 +168,7 @@ pub fn award_battle_value_gunnery_experience(
             request.pilot,
             request.target,
             request.base_to_hit,
-            BattleGunneryExperienceMode::BattleValue {
+            GunneryExperienceMode::BattleValue {
                 difficulty_modifier: config.bthmod != 0,
             },
         )
@@ -247,7 +247,7 @@ mod tests {
             target_speed: 64.5,
             attacker_pilot_modifier: 1.0,
             target_pilot_modifier: 1.0,
-            weapon: BattleWeapon::MediumLaser,
+            weapon: Weapon::MediumLaser,
             damage: 5,
             base_to_hit: 7,
             unit_modifier: 1.0,
@@ -347,7 +347,7 @@ mod tests {
             8
         );
         let missile = BattleValueExperienceInput {
-            weapon: BattleWeapon::Srm4,
+            weapon: Weapon::Srm4,
             damage: 2,
             ..input()
         };

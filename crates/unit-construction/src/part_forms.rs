@@ -1,6 +1,6 @@
 //! Catalogue spellings of every part (abbreviated, short and very long names) and an index
 //! that resolves an exact spelling to its part identity.
-use super::BattlePart;
+use super::Part;
 use serde::Serialize;
 use std::{collections::BTreeMap, sync::OnceLock};
 
@@ -34,7 +34,7 @@ pub fn part_short_name(name: &str) -> String {
 
 /// The three catalogue spellings of one part identity.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattlePartForm {
+pub struct PartForm {
     pub part_id: i32,
     pub short_name: String,
     pub long_name: String,
@@ -44,8 +44,8 @@ pub struct BattlePartForm {
 /// Enumerate the immutable catalogue without command authority checks, sorted by
 /// short name and part. Built once; template parsing, validation, and every Lua
 /// VM's package registration read it.
-pub fn part_catalogue() -> &'static [BattlePartForm] {
-    static SORTED: OnceLock<Vec<BattlePartForm>> = OnceLock::new();
+pub fn part_catalogue() -> &'static [PartForm] {
+    static SORTED: OnceLock<Vec<PartForm>> = OnceLock::new();
     SORTED.get_or_init(|| {
         let mut forms = part_names().forms.clone();
         forms.sort_by(|a, b| (&a.short_name, a.part_id).cmp(&(&b.short_name, b.part_id)));
@@ -55,23 +55,23 @@ pub fn part_catalogue() -> &'static [BattlePartForm] {
 
 /// Exact catalogue indexes choose the lowest part ID for colliding names.
 #[derive(Debug, Default)]
-pub struct BattlePartNames {
+pub struct PartNames {
     /// Lowercased abbreviations to part identities.
     pub abbreviations: BTreeMap<String, i32>,
     /// Lowercased very long names to part identities.
     pub canonical: BTreeMap<String, i32>,
     /// Every part's spellings in catalogue order.
-    pub forms: Vec<BattlePartForm>,
+    pub forms: Vec<PartForm>,
 }
 
 /// Build immutable indexes once; selection must not depend on the stock currently present.
-pub fn part_names() -> &'static BattlePartNames {
-    static NAMES: OnceLock<BattlePartNames> = OnceLock::new();
+pub fn part_names() -> &'static PartNames {
+    static NAMES: OnceLock<PartNames> = OnceLock::new();
     NAMES.get_or_init(|| {
-        let mut names = BattlePartNames::default();
-        for part in BattlePart::all() {
+        let mut names = PartNames::default();
+        for part in Part::all() {
             let alias = part_abbreviation(&part_short_name(&part.name));
-            names.forms.push(BattlePartForm {
+            names.forms.push(PartForm {
                 part_id: part.part_id,
                 short_name: alias.clone(),
                 long_name: part_short_name(&part.name),

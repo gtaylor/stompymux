@@ -22,4 +22,4 @@ btech.unit.weapon_specifications(dbref)
 
 ## Returns
 
-- `BattleWeaponSpecification[]`
+- `WeaponSpecification[]`

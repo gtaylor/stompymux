@@ -18,8 +18,8 @@ btech.map.range(map, from, to)
 | Name | Type | Description |
 | --- | --- | --- |
 | `map` | `DbRef\|Object` |  |
-| `from` | `DbRef\|Object\|BattlePlacement` |  |
-| `to` | `DbRef\|Object\|BattlePlacement` |  |
+| `from` | `DbRef\|Object\|Placement` |  |
+| `to` | `DbRef\|Object\|Placement` |  |
 
 ## Returns
 

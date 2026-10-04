@@ -18,7 +18,7 @@ btech.map.set_link(child, link)
 | Name | Type | Description |
 | --- | --- | --- |
 | `child` | `DbRef\|Object` |  |
-| `link` | `BattleMapLink\|nil` |  |
+| `link` | `MapLink\|nil` |  |
 
 ## Returns
 

@@ -1,14 +1,14 @@
 //! Bounded tactical hex displays with live terrain and acquired contact labels.
-use super::{BattleViewDimensions, BattleViewKind, BattleViewport, HexCoordinate, Terrain};
+use super::{HexCoordinate, Terrain, ViewDimensions, ViewKind, Viewport};
 use crate::{ObjectId, World};
 use anyhow::{Result, bail};
 use serde::Serialize;
 
 /// A filtered tactical display shared by native and Lua clients.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleTacticalMap {
+pub struct TacticalMap {
     /// Clipped geometry, including the requested display center.
-    pub viewport: BattleViewport,
+    pub viewport: Viewport,
     /// Escaped, styled text; rendering has no game-state side effects.
     pub text: String,
 }
@@ -36,8 +36,8 @@ pub fn tactical_map(
     observer: ObjectId,
     pilot: ObjectId,
     arguments: &str,
-    dimensions: BattleViewDimensions,
-) -> Result<BattleTacticalMap> {
+    dimensions: ViewDimensions,
+) -> Result<TacticalMap> {
     display(world, observer, pilot, arguments, dimensions, false)
 }
 
@@ -47,13 +47,13 @@ pub(super) fn navigation_hex_map(
     observer: ObjectId,
     pilot: ObjectId,
     arguments: &str,
-) -> Result<BattleTacticalMap> {
+) -> Result<TacticalMap> {
     display(
         world,
         observer,
         pilot,
         arguments,
-        BattleViewDimensions::default(),
+        ViewDimensions::default(),
         true,
     )
 }
@@ -64,9 +64,9 @@ fn display(
     observer: ObjectId,
     pilot: ObjectId,
     arguments: &str,
-    dimensions: BattleViewDimensions,
+    dimensions: ViewDimensions,
     navigation: bool,
-) -> Result<BattleTacticalMap> {
+) -> Result<TacticalMap> {
     let arguments = arguments.trim();
     let (first, rest) = arguments
         .split_once(char::is_whitespace)
@@ -87,7 +87,7 @@ fn display(
     };
     let viewport = if navigation {
         let position = super::view_center::navigation_center(world, observer, pilot, arguments)?;
-        BattleViewport {
+        Viewport {
             map: position.map,
             requested_center: position.center,
             origin: HexCoordinate {
@@ -103,7 +103,7 @@ fn display(
             world,
             observer,
             pilot,
-            BattleViewKind::Tactical,
+            ViewKind::Tactical,
             center,
             dimensions,
         )?
@@ -184,8 +184,8 @@ fn display(
                     x: viewport.origin.x + x as i32,
                     y: viewport.origin.y + y as i32,
                 };
-                let ready = map.landing_suitability(coordinate, team)?
-                    == super::BattleLandingSuitability::Ready;
+                let ready =
+                    map.landing_suitability(coordinate, team)? == super::LandingSuitability::Ready;
                 let row = y * 2 + usize::from(coordinate.x.rem_euclid(2) == 0) + 1;
                 canvas[row][x * 3 + 1] = Pixel {
                     glyph: if ready { 'O' } else { 'X' },
@@ -203,7 +203,7 @@ fn display(
     if let Some(threshold) = cliff {
         draw_cliffs(map, viewport, &mut canvas, threshold, ansi)?;
     }
-    Ok(BattleTacticalMap {
+    Ok(TacticalMap {
         viewport,
         text: if navigation {
             render_local(viewport, &canvas)
@@ -216,7 +216,7 @@ fn display(
 /// Draw the same terrain and hex edges for cockpit and map-only views.
 fn terrain_canvas(
     world: &World,
-    viewport: BattleViewport,
+    viewport: Viewport,
     observer: Option<ObjectId>,
     visible: bool,
     ansi: bool,
@@ -316,8 +316,8 @@ pub(super) fn map_view(
     map: ObjectId,
     player: ObjectId,
     center: HexCoordinate,
-    dimensions: BattleViewDimensions,
-) -> Result<BattleTacticalMap> {
+    dimensions: ViewDimensions,
+) -> Result<TacticalMap> {
     let record = world
         .btech
         .maps()
@@ -329,14 +329,14 @@ pub(super) fn map_view(
         .get(&player)
         .is_some_and(|player| player.flags.contains(crate::Flag::Ansi));
     let canvas = terrain_canvas(world, viewport, None, false, ansi)?;
-    Ok(BattleTacticalMap {
+    Ok(TacticalMap {
         viewport,
         text: render(viewport, &canvas),
     })
 }
 
 /// Select the radius-two polygon from the staggered canvas, with explicit boundary roofs.
-fn render_local(viewport: BattleViewport, canvas: &[Vec<Pixel>]) -> String {
+fn render_local(viewport: Viewport, canvas: &[Vec<Pixel>]) -> String {
     let mut output = vec![vec![Pixel::plain(' '); 16]; 12];
     for y in 0..5 {
         for x in 0..5 {
@@ -381,7 +381,7 @@ fn draw_mines(
     world: &World,
     observer: ObjectId,
     map: &super::StoredMap,
-    viewport: BattleViewport,
+    viewport: Viewport,
     canvas: &mut [Vec<Pixel>],
 ) -> Result<()> {
     let mut fields = std::collections::BTreeMap::new();
@@ -407,7 +407,7 @@ fn draw_mines(
             let Some(kind) = fields.get(&(coordinate.x, coordinate.y)) else {
                 continue;
             };
-            if *kind == super::BattleMineKind::Trigger
+            if *kind == super::MineKind::Trigger
                 || !viewer.visible(coordinate)?
                 || !super::visibility::hex_unblocked(world, observer, coordinate)?
             {
@@ -424,7 +424,7 @@ fn draw_mines(
 /// Water and ice depths are negative, independent of temporary surface decorations.
 fn draw_cliffs(
     map: &super::StoredMap,
-    viewport: BattleViewport,
+    viewport: Viewport,
     canvas: &mut [Vec<Pixel>],
     threshold: i16,
     ansi: bool,
@@ -482,7 +482,7 @@ fn draw_cliffs(
 }
 
 /// Add full coordinate labels outside the escaped and independently styled canvas rows.
-fn render(viewport: BattleViewport, canvas: &[Vec<Pixel>]) -> String {
+fn render(viewport: Viewport, canvas: &[Vec<Pixel>]) -> String {
     let last_x = viewport.origin.x + i32::from(viewport.width) - 1;
     let digits = last_x.to_string().len().max(3);
     let labels: Vec<_> = (viewport.origin.x..=last_x)

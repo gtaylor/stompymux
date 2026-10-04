@@ -18,7 +18,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+        VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
             .unwrap(),
     )
     .unwrap();
@@ -47,7 +47,7 @@ async fn vehicle_control_uses_configured_skills_cockpit_and_saved_dice() {
     set_battle_character(
         &mut world,
         ObjectId(1),
-        BattleCharacter {
+        Character {
             build: 5,
             reflexes: 4,
             intuition: 3,
@@ -69,7 +69,7 @@ async fn vehicle_control_uses_configured_skills_cockpit_and_saved_dice() {
             &mut world,
             ObjectId(1),
             name,
-            BattleCharacterValue {
+            CharacterValue {
                 value,
                 experience: 16_777_216,
                 last_used: 0,
@@ -79,14 +79,14 @@ async fn vehicle_control_uses_configured_skills_cockpit_and_saved_dice() {
     }
     let original = serde_json::to_value(&world.btech).unwrap();
     for (movement, expected) in [
-        (BattleVehicleMovement::Tracked, 6),
-        (BattleVehicleMovement::Wheeled, 7),
-        (BattleVehicleMovement::Hover, 8),
-        (BattleVehicleMovement::Stationary, 6),
+        (VehicleMovement::Tracked, 6),
+        (VehicleMovement::Wheeled, 7),
+        (VehicleMovement::Hover, 8),
+        (VehicleMovement::Stationary, 6),
     ] {
         let mut state = original.clone();
         // Keep the synthetic hovercraft inside the engine catalogue after suspension allowance.
-        if movement == BattleVehicleMovement::Hover {
+        if movement == VehicleMovement::Hover {
             state["vehicles"][id.0.to_string()]["definition"]["max_speed"] = 64.5.into();
         }
         state["vehicles"][id.0.to_string()]["definition"]["movement"] =
@@ -101,7 +101,7 @@ async fn vehicle_control_uses_configured_skills_cockpit_and_saved_dice() {
     let mut state = original;
     state["vehicles"][id.0.to_string()]["definition"]["attributes"]["specials"] = "SMCPIT".into();
     state["vehicles"][id.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded([12; 32])).unwrap();
+        serde_json::to_value(Dice::seeded([12; 32])).unwrap();
     world.btech = serde_json::from_value(state).unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
     let mut loaded = persistence::load(&config.database()).await.unwrap();
@@ -110,7 +110,7 @@ async fn vehicle_control_uses_configured_skills_cockpit_and_saved_dice() {
         (check.skill, check.cockpit, check.damage, check.target),
         (6, 1, 0, 6)
     );
-    assert_eq!(check.roll, Some(BattleDice::seeded([12; 32]).two_d6()));
+    assert_eq!(check.roll, Some(Dice::seeded([12; 32]).two_d6()));
     assert_eq!(check.success, check.roll.unwrap() >= 6);
     assert_eq!(
         check,
@@ -134,13 +134,7 @@ async fn vehicle_control_uses_configured_skills_cockpit_and_saved_dice() {
 async fn stopped_unconscious_and_unavailable_vehicle_checks_do_not_consume_dice() {
     let (_dir, _config, world, id) = fixture().await;
     let mut stopped = world.clone();
-    stop_battle_unit(
-        &mut stopped,
-        id,
-        ObjectId(1),
-        BattleMovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut stopped, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
     let before = stopped.btech.clone();
     let check = roll_battle_piloting(&mut stopped, id, -100, true).unwrap();
     assert!(!check.success && check.roll.is_none());
@@ -149,7 +143,7 @@ async fn stopped_unconscious_and_unavailable_vehicle_checks_do_not_consume_dice(
     let mut state = serde_json::to_value(&world.btech).unwrap();
     state["recoveries"]["1"] = serde_json::json!({
         "mode":{"kind":"tactical","injuries":4},"remaining":30,
-        "pain_resistance":false,"toughness":false,"dice":BattleDice::seeded([0;32])
+        "pain_resistance":false,"toughness":false,"dice":Dice::seeded([0;32])
     });
     world.btech = serde_json::from_value(state).unwrap();
     let before = world.btech.clone();

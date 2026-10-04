@@ -1,5 +1,5 @@
 //! Smoke and mine missile controls share inventory, authority and feedback across unit classes.
-use super::{AmmunitionFeedback, BattleAmmunitionMode};
+use super::{AmmunitionFeedback, AmmunitionMode};
 use crate::{ObjectId, World};
 use anyhow::{Result, ensure};
 
@@ -10,13 +10,10 @@ pub fn toggle_missile_rounds(
     id: ObjectId,
     pilot: ObjectId,
     index: usize,
-    mode: BattleAmmunitionMode,
-) -> Result<BattleAmmunitionMode> {
+    mode: AmmunitionMode,
+) -> Result<AmmunitionMode> {
     ensure!(
-        matches!(
-            mode,
-            BattleAmmunitionMode::Smoke | BattleAmmunitionMode::Mine
-        ),
+        matches!(mode, AmmunitionMode::Smoke | AmmunitionMode::Mine),
         "Invalid missile round mode"
     );
     let ready = super::weapon_controls::ready_weapon(world, id, pilot, index)?;
@@ -41,9 +38,9 @@ pub(crate) fn command(
     input: &crate::CommandInput,
 ) -> Result<crate::CommandAction> {
     let mode = if input.name.eq_ignore_ascii_case("firesmoke") {
-        BattleAmmunitionMode::Smoke
+        AmmunitionMode::Smoke
     } else {
-        BattleAmmunitionMode::Mine
+        AmmunitionMode::Mine
     };
     super::fire_mode::selected_command(ctx, input, |world, id, pilot, index| {
         toggle_missile_rounds(world, id, pilot, index, mode)

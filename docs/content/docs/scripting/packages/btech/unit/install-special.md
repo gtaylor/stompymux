@@ -18,7 +18,7 @@ btech.unit.install_special(unit, request)
 | Name | Type | Description |
 | --- | --- | --- |
 | `unit` | `DbRef\|Object` |  |
-| `request` | `BattleSpecialInstall` |  |
+| `request` | `SpecialInstall` |  |
 
 ## Returns
 

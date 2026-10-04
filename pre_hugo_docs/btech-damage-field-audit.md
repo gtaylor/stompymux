@@ -67,7 +67,7 @@ These requirements are not closed by the existing read-projection tests.
 
 ## Shared format implementation
 
-`damage_records.rs` now owns `BattleDamageRecord`, its canonical formatter and
+`damage_records.rs` now owns `DamageRecord`, its canonical formatter and
 `parse_damage_field`. Both Mech and vehicle inspection use that formatter. Parsing
 retains input order and repeated assignments; empty input is a valid empty list.
 Malformed records, trailing junk, unknown keywords, out-of-range section/slot
@@ -238,7 +238,7 @@ inspection. Rust therefore retains them for reporting and persistence without
 inventing lost engine, actuator, cooling or electronic capability. No recovery
 event is manufactured. Physical destruction still wins in reports.
 
-The shared code enum is now `BattleEquipmentFailure`; `BattleComponentFailure`
+The shared code enum is now `EquipmentFailure`; `ComponentFailure`
 provides typed component locations. Weapon failures keep their operational map
 and existing firing/recovery owner. Critical-slot inspection now displays weapon
 failures through that same owner, as whole-weapon diagnostics already do. Lua

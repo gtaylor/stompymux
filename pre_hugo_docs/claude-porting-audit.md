@@ -114,7 +114,7 @@ API (112). Only 9 names match. Missing with no generic fallback:
 Weapon (152/178, delta is personal-combat and infantry), ammo-mode (23/23), gyro,
 cockpit, MASC/TSM, ECM/C3/TAG/NARC/Artemis catalogs are ported. Gaps:
 
-- **CASE II** is implemented as `BattleSystem::CaseIi` (`CASE-II` criticals), with
+- **CASE II** is implemented as `System::CaseIi` (`CASE-II` criticals), with
   the venting rule described in `btech-coverage.md`.
 - Mech `ICEEngine_Tech`, `Waterproof_Tech`, `TargComp_Tech` (chassis flag),
   `OmniMech_Tech`, `ForceSingleHS`, `NoSensors`, `SS_Ability` and `CompactHS` have no
@@ -139,8 +139,8 @@ C3 targeting, aimed shots and self-destruct are ported. Gaps:
   (`moddamagewithwoods`); underwater weapon range profiles.
   **Underwater combat (2026-09-14):** the shared Rust catalogue now
   exposes all 32 active water profiles, optional long bands, extended limits and
-  rounded water accuracy through `BattleWaterRanges` and
-  `BattleWeapon::water_range_modifier`. Boundary tests include PPC zero/minimum
+  rounded water accuracy through `WaterRanges` and
+  `Weapon::water_range_modifier`. Boundary tests include PPC zero/minimum
   penalties and small lasers without a long band. Unit and coordinate aim now
   select water bands from mounting-section submersion before C3 and stealth.
   Water C3 uses normal physical water reach and peer water brackets; live network
@@ -388,7 +388,7 @@ stacking, heat interaction and movement XP are ported. Gaps:
   appends history without increasing it. `StaggerDamage` is read-only in the
   script catalog and setter. SQLite runtime restoration can nevertheless restore
   a positive scalar, so this is not globally unreachable. Exact restored-scalar
-  representation is now present in Rust-owned `BattleStagger.action_damage`.
+  representation is now present in Rust-owned `Stagger.action_damage`.
   Controlled drops apply its positive twenty-point levels to the roll and force
   a minimum level-one fall when necessary; status and read-only `StaggerDamage`
   inspection use the same value. Successful/failing drops retain this scalar
@@ -444,7 +444,7 @@ stacking, heat interaction and movement XP are ported. Gaps:
   **Crash-path review (2026-09-14):** the formulas above belong to distinct
   reference paths. `mech_vtol_altitude_check` uses
   `1 + trunc(abs(vertical_speed) / MP1)` for vertical surface contact, matching
-  Rust's `BattleVtolMotionStep::surface_contact`; replacing that formula with
+  Rust's `VtolMotionStep::surface_contact`; replacing that formula with
   drop height would introduce a regression. `flight_hex_transition_resolve`
   uses `drop_height + 1` after rolling back a horizontal terrain collision.
   That airborne horizontal collision path is implemented in the elevation-entry
@@ -795,7 +795,7 @@ stealth, C3/C3i, TAG, NARC, searchlight and sensor damage are ported. Gaps:
   `X Y Type obj dc ds di`, with rows formatted as
   `%-3d %-3d %-5s %-5d %-4d %-6d %ld`. Its smoke `ds` is the original
   signed-short duration, while the expiry event has a separate countdown.
-  Rust now retains `BattleDecoration.object_duration` independently of the
+  Rust now retains `Decoration.object_duration` independently of the
   countdown: smoke keeps its original signed-short duration, and fire spends
   this budget at spread events then preserves it during burnout. All marker
   creation paths share a constructor; operator commands preserve negative and

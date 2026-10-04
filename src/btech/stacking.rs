@@ -1,29 +1,26 @@
 //! Crowded-hex biped collisions share occupancy, dice and damage in one transaction.
-use super::{
-    BattleFallRules, BattleHit, BattleHitArc, BattleHitTable, BattleNotice, BattlePosture,
-    BattlePower,
-};
+use super::{FallRules, Hit, HitArc, HitTable, Notice, Posture, Power};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 
 /// Applied collision effects retained until the host publishes private character feedback.
 #[derive(Default)]
 pub(super) struct StackingEffects {
-    pub experience_messages: Vec<super::BattleChannelMessage>,
-    pub impacts: Vec<super::BattleTacticalImpact>,
-    pub falls: Vec<super::BattleFallReport>,
+    pub experience_messages: Vec<super::DiagnosticMessage>,
+    pub impacts: Vec<super::TacticalImpact>,
+    pub falls: Vec<super::MechFallReport>,
 }
 
 /// Collision policy and damage scaling from the battlefield configuration.
 #[derive(Debug, Clone, Copy)]
-pub struct BattleStackingRules {
+pub struct StackingRules {
     /// Zero disables stacking, two deals damage, and other values require avoidance.
     pub mode: i64,
     pub damage_percent: i64,
     pub hit_arcs: i64,
 }
 
-impl BattleStackingRules {
+impl StackingRules {
     /// Conventional collision damage, with ordinary biped hit arcs.
     pub const STANDARD: Self = Self {
         mode: 2,
@@ -34,7 +31,7 @@ impl BattleStackingRules {
 
 /// Ground motion uses relative velocity; jump and fall entries use surviving jump capacity.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum BattleStackingEntry {
+pub enum StackingEntry {
     Ground,
     Jump,
     Fall,
@@ -43,8 +40,8 @@ pub enum BattleStackingEntry {
 /// Physical inputs supplied by the caller's mass and movement calculation.
 /// Mass uses 1/1024-ton units, including current equipment, armor and ammunition.
 #[derive(Debug, Clone, Copy)]
-pub struct BattleStackingInput {
-    pub entry: BattleStackingEntry,
+pub struct StackingInput {
+    pub entry: StackingEntry,
     pub mass: u32,
     pub jump_movement_points: u16,
 }
@@ -54,8 +51,8 @@ pub struct BattleStackingInput {
 pub(super) fn physical_input(
     world: &World,
     id: ObjectId,
-    entry: BattleStackingEntry,
-) -> Result<BattleStackingInput> {
+    entry: StackingEntry,
+) -> Result<StackingInput> {
     let unit = world
         .btech
         .constructed_units()
@@ -69,12 +66,12 @@ pub(super) fn physical_input(
         100
     };
     let thrust = (unit.definition().jump_speed
-        - f64::from(unit.system_hits(super::BattleSystem::JumpJet)) * 10.75)
+        - f64::from(unit.system_hits(super::System::JumpJet)) * 10.75)
         .max(0.0);
-    Ok(BattleStackingInput {
+    Ok(StackingInput {
         entry,
         mass: unit.effective_mass()?,
-        jump_movement_points: if entry == BattleStackingEntry::Ground {
+        jump_movement_points: if entry == StackingEntry::Ground {
             0
         } else {
             (thrust * 100.0 / gravity as f64 / 10.75) as u16
@@ -88,10 +85,10 @@ pub(super) fn physical_input(
 pub fn resolve_stacking(
     world: &mut World,
     id: ObjectId,
-    input: BattleStackingInput,
-    rules: BattleStackingRules,
-    fall: BattleFallRules,
-) -> Result<Vec<BattleNotice>> {
+    input: StackingInput,
+    rules: StackingRules,
+    fall: FallRules,
+) -> Result<Vec<Notice>> {
     world.attempt(|world| {
         let notices = resolve_in_candidate(world, id, input, rules, fall, None, &mut Vec::new())?;
         world.btech.validate_action(world)?;
@@ -103,12 +100,12 @@ pub fn resolve_stacking(
 pub(super) fn resolve_in_action(
     world: &mut World,
     id: ObjectId,
-    input: BattleStackingInput,
-    rules: BattleStackingRules,
-    fall: BattleFallRules,
+    input: StackingInput,
+    rules: StackingRules,
+    fall: FallRules,
     effects: &mut StackingEffects,
-    feedback: (&mut Vec<super::BattlePilotNotice>, usize),
-) -> Result<Vec<BattleNotice>> {
+    feedback: (&mut Vec<super::PilotNotice>, usize),
+) -> Result<Vec<Notice>> {
     let mut private = Vec::new();
     let notices = resolve_in_candidate(world, id, input, rules, fall, Some(effects), &mut private)?;
     super::piloting::append_feedback(feedback.0, private, feedback.1);
@@ -119,12 +116,12 @@ pub(super) fn resolve_in_action(
 pub(super) fn resolve_pure_with_feedback(
     world: &mut World,
     id: ObjectId,
-    input: BattleStackingInput,
-    rules: BattleStackingRules,
-    fall: BattleFallRules,
-    private: &mut Vec<super::BattlePilotNotice>,
+    input: StackingInput,
+    rules: StackingRules,
+    fall: FallRules,
+    private: &mut Vec<super::PilotNotice>,
     offset: usize,
-) -> Result<Vec<BattleNotice>> {
+) -> Result<Vec<Notice>> {
     let mut feedback = Vec::new();
     let notices = resolve_in_candidate(world, id, input, rules, fall, None, &mut feedback)?;
     super::piloting::append_feedback(private, feedback, offset);
@@ -135,12 +132,12 @@ pub(super) fn resolve_pure_with_feedback(
 fn resolve_in_candidate(
     world: &mut World,
     id: ObjectId,
-    input: BattleStackingInput,
-    rules: BattleStackingRules,
-    fall: BattleFallRules,
+    input: StackingInput,
+    rules: StackingRules,
+    fall: FallRules,
     mut effects: Option<&mut StackingEffects>,
-    private: &mut Vec<super::BattlePilotNotice>,
-) -> Result<Vec<BattleNotice>> {
+    private: &mut Vec<super::PilotNotice>,
+) -> Result<Vec<Notice>> {
     if rules.mode == 0 {
         return Ok(Vec::new());
     }
@@ -161,7 +158,7 @@ fn resolve_in_candidate(
         .constructed_units()
         .iter()
         .filter(|(other_id, other)| {
-            !(input.entry == BattleStackingEntry::Jump && **other_id == id)
+            !(input.entry == StackingEntry::Jump && **other_id == id)
                 && other.position() == Some(position)
                 && !other.is_destroyed()
                 && !other.airborne()
@@ -193,7 +190,7 @@ fn resolve_in_candidate(
         .find_map(|(&other, unit)| {
             if other == id
                 || unit.position() != Some(position)
-                || unit.power() != BattlePower::Running
+                || unit.power() != Power::Running
                 || unit.airborne()
                 || (unit.signature().team == team) != same_team
             {
@@ -226,9 +223,9 @@ fn resolve_in_candidate(
         return Ok(Vec::new());
     }
     world.btech.constructed.get_mut(&id).unwrap().charge = Default::default();
-    let ground = entry == BattleStackingEntry::Ground;
+    let ground = entry == StackingEntry::Ground;
     let mut notices = vec![
-        BattleNotice {
+        Notice {
             unit: id,
             text: (match (ground, rules.mode == 2) {
                 (true, true) => "You bump into another unit!",
@@ -238,7 +235,7 @@ fn resolve_in_candidate(
             })
             .to_owned(),
         },
-        BattleNotice {
+        Notice {
             unit: target,
             text: (match (ground, rules.mode == 2) {
                 (true, true) => "Another unit bumps into you!",
@@ -266,9 +263,9 @@ fn resolve_in_candidate(
             target,
             (scaled / 100).max(1),
             if ground {
-                BattleHitTable::Weapon
+                HitTable::Weapon
             } else {
-                BattleHitTable::Punch
+                HitTable::Punch
             },
             rules.hit_arcs,
             fall,
@@ -282,9 +279,9 @@ fn resolve_in_candidate(
             id,
             (scaled / 500).max(1),
             if ground {
-                BattleHitTable::Weapon
+                HitTable::Weapon
             } else {
-                BattleHitTable::Kick
+                HitTable::Kick
             },
             rules.hit_arcs,
             fall,
@@ -345,13 +342,8 @@ fn resolve_in_candidate(
 }
 
 /// Relative velocity governs ground impact; airborne impact truncates mass to whole tons.
-fn collision_damage(
-    input: BattleStackingInput,
-    speed: f64,
-    other_speed: f64,
-    heading_delta: f64,
-) -> i64 {
-    let raw = if input.entry == BattleStackingEntry::Ground {
+fn collision_damage(input: StackingInput, speed: f64, other_speed: f64, heading_delta: f64) -> i64 {
+    let raw = if input.entry == StackingEntry::Ground {
         let relative = speed - other_speed * heading_delta.to_radians().cos();
         (relative.abs() / 10.75 * (f64::from(input.mass) / 1024.0 + 5.0) / 15.0) as i64
     } else {
@@ -367,28 +359,28 @@ fn apply_collision(
     mover: ObjectId,
     target: ObjectId,
     damage: i64,
-    mut table: BattleHitTable,
+    mut table: HitTable,
     arcs: i64,
-    fall: BattleFallRules,
-    notices: &mut Vec<BattleNotice>,
-    private: &mut Vec<super::BattlePilotNotice>,
+    fall: FallRules,
+    notices: &mut Vec<Notice>,
+    private: &mut Vec<super::PilotNotice>,
     mut effects: Option<&mut StackingEffects>,
 ) -> Result<()> {
     let unit = &world.btech.constructed_units()[&target];
     if unit.is_destroyed() {
         return Ok(());
     }
-    if unit.posture() == BattlePosture::Prone {
-        table = BattleHitTable::Weapon;
+    if unit.posture() == Posture::Prone {
+        table = HitTable::Weapon;
     }
     let arc = if mover == target {
-        BattleHitArc::Front
+        HitArc::Front
     } else {
         let point = unit.motion().context("Collision target requires motion")?;
         let origin = world.btech.constructed_units()[&mover]
             .motion()
             .context("Collision requires motion")?;
-        BattleHitArc::from_bearing(
+        HitArc::from_bearing(
             point.point.bearing(origin.point)?.unwrap_or(0.0),
             point.heading,
             arcs,
@@ -400,13 +392,13 @@ fn apply_collision(
     while remaining > 0 && !world.btech.constructed_units()[&target].is_destroyed() {
         let unit = &world.btech.constructed_units()[&target];
         let mut dice = unit.dice.clone();
-        let hit = if table == BattleHitTable::Weapon {
+        let hit = if table == HitTable::Weapon {
             fall.hit
                 .resolve(unit, arc, dice.generic_roll(), &mut dice)?
         } else {
-            BattleHit {
+            Hit {
                 section: table.location(unit.chassis(), arc, dice.d6())?,
-                rear_armor: arc == BattleHitArc::Rear,
+                rear_armor: arc == HitArc::Rear,
                 through_armor_critical: false,
                 crew_stun: false,
             }
@@ -438,7 +430,7 @@ fn apply_collision(
 }
 
 /// Each damaged cockpit uses its own pilot's protection advantage.
-fn with_toughness(world: &World, id: ObjectId, mut rules: BattleFallRules) -> BattleFallRules {
+fn with_toughness(world: &World, id: ObjectId, mut rules: FallRules) -> FallRules {
     rules.toughness = world.btech.constructed_units()[&id]
         .pilot()
         .and_then(|pilot| world.btech.character_values().get(&pilot))
@@ -453,8 +445,8 @@ mod tests {
     /// Damage uses relative motion, fractional ground mass and compressed high-energy impacts.
     #[test]
     fn relative_velocity_and_current_mass_determine_collision_damage() {
-        let mut input = BattleStackingInput {
-            entry: BattleStackingEntry::Ground,
+        let mut input = StackingInput {
+            entry: StackingEntry::Ground,
             mass: 35 * 1024,
             jump_movement_points: 5,
         };
@@ -464,7 +456,7 @@ mod tests {
         assert_eq!(collision_damage(input, 21.5, 21.5, 90.0), 5);
         assert_eq!(collision_damage(input, 118.25, 0.0, 0.0), 16);
         input.mass = 34 * 1024 + 512;
-        input.entry = BattleStackingEntry::Jump;
+        input.entry = StackingEntry::Jump;
         assert_eq!(collision_damage(input, 0.0, 0.0, 0.0), 13);
         input.jump_movement_points = 4;
         assert_eq!(collision_damage(input, 0.0, 0.0, 0.0), 11);

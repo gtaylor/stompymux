@@ -582,11 +582,11 @@ async fn map_condition_commands_and_lua_validate_and_rollback() {
 
 #[tokio::test]
 async fn decoration_rows_preserve_extensions_and_reject_corrupt_lifetimes() {
-    use stompymux_rs::{BattleDecoration, DecorationKind, HexCoordinate, set_map_decoration};
+    use stompymux_rs::{Decoration, DecorationKind, HexCoordinate, set_map_decoration};
     let (_dir, config, mut world, id, mut sql) = fixture().await;
     create(&config, &mut world, id).await;
     let coordinate = HexCoordinate { x: 0, y: 0 };
-    let smoke = BattleDecoration::new(DecorationKind::Smoke, 100, None);
+    let smoke = Decoration::new(DecorationKind::Smoke, 100, None);
     set_map_decoration(&mut world, id, coordinate, Some(smoke)).unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
     sqlx::raw_sql("ALTER TABLE btech_map_decorations ADD COLUMN opaque TEXT DEFAULT 'retained'")
@@ -597,7 +597,7 @@ async fn decoration_rows_preserve_extensions_and_reject_corrupt_lifetimes() {
         &mut world,
         id,
         coordinate,
-        Some(BattleDecoration {
+        Some(Decoration {
             remaining: 99,
             ..smoke
         }),
@@ -617,7 +617,7 @@ async fn decoration_rows_preserve_extensions_and_reject_corrupt_lifetimes() {
         &mut world,
         id,
         coordinate,
-        Some(BattleDecoration {
+        Some(Decoration {
             remaining: 98,
             ..smoke
         }),
@@ -635,7 +635,7 @@ async fn decoration_rows_preserve_extensions_and_reject_corrupt_lifetimes() {
 #[tokio::test]
 async fn wind_and_fire_randomness_survive_reload_and_reject_missing_streams() {
     use stompymux_rs::{
-        BattleDecoration, DecorationKind, HexCoordinate, set_map_decoration, set_map_wind,
+        Decoration, DecorationKind, HexCoordinate, set_map_decoration, set_map_wind,
     };
     let (_dir, config, mut world, id, mut sql) = fixture().await;
     create(&config, &mut world, id).await;
@@ -654,7 +654,7 @@ async fn wind_and_fire_randomness_survive_reload_and_reject_missing_streams() {
         &mut world,
         id,
         coordinate,
-        Some(BattleDecoration::new(DecorationKind::Fire, 120, Some(60))),
+        Some(Decoration::new(DecorationKind::Fire, 120, Some(60))),
     )
     .unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
@@ -699,7 +699,7 @@ async fn wind_and_fire_randomness_survive_reload_and_reject_missing_streams() {
         &mut world,
         id,
         coordinate,
-        Some(BattleDecoration::new(DecorationKind::Fire, 60, Some(60))),
+        Some(Decoration::new(DecorationKind::Fire, 60, Some(60))),
     )
     .unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
@@ -717,7 +717,7 @@ async fn wind_and_fire_randomness_survive_reload_and_reject_missing_streams() {
 #[tokio::test]
 async fn permanent_decorations_survive_idle_and_mixed_timer_service() {
     use stompymux_rs::{
-        BattleDecoration, DecorationKind, HexCoordinate, advance_map_fire, advance_map_smoke,
+        Decoration, DecorationKind, HexCoordinate, advance_map_fire, advance_map_smoke,
         map_fire_pending, map_smoke_pending, set_map_decoration,
     };
     let (_dir, config, mut world, id, _sql) = fixture().await;
@@ -729,7 +729,7 @@ async fn permanent_decorations_survive_idle_and_mixed_timer_service() {
             &mut world,
             id,
             coordinate,
-            Some(BattleDecoration::new(kind, 0, None)),
+            Some(Decoration::new(kind, 0, None)),
         )
         .unwrap();
     }
@@ -753,7 +753,7 @@ async fn permanent_decorations_survive_idle_and_mixed_timer_service() {
                 candidate,
                 id,
                 coordinate,
-                Some(BattleDecoration::new(kind, 2, None)),
+                Some(Decoration::new(kind, 2, None)),
             )
             .unwrap();
         }
@@ -786,7 +786,7 @@ async fn permanent_decorations_survive_idle_and_mixed_timer_service() {
             &mut world,
             id,
             fire,
-            Some(BattleDecoration::new(DecorationKind::Fire, 0, Some(1)))
+            Some(Decoration::new(DecorationKind::Fire, 0, Some(1)))
         )
         .is_err()
     );
@@ -796,7 +796,7 @@ async fn permanent_decorations_survive_idle_and_mixed_timer_service() {
         &mut world,
         id,
         fire,
-        Some(BattleDecoration::new(DecorationKind::Smoke, 1, None)),
+        Some(Decoration::new(DecorationKind::Smoke, 1, None)),
     )
     .unwrap();
     advance_map_smoke(&mut world);

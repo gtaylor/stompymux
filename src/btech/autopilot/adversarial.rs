@@ -1,7 +1,7 @@
 //! Seeded multi-participant encounters through the production heartbeat and admission rules.
 use super::*;
-use crate::btech::BattleUnitTemplateExt;
-use crate::{BattlePosition, BattlePower, Config, HeartbeatHarness, ObjectId, World};
+use crate::btech::UnitTemplateExt;
+use crate::{Config, HeartbeatHarness, ObjectId, Position, Power, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
 use std::{collections::BTreeMap, io::Write, path::Path};
@@ -79,7 +79,7 @@ struct Participant {
     stationary: usize,
     stagnant: usize,
     remaining: Option<f64>,
-    destination: Option<BattlePosition>,
+    destination: Option<Position>,
     shortest: Option<f64>,
     terminal: bool,
     seen: bool,
@@ -120,17 +120,17 @@ fn orders(world: &mut World, id: ObjectId, orders: Vec<AutopilotOrder>, fire: bo
 /// Setup-only placement; scenario events never relocate running units.
 pub(super) fn place(world: &mut World, id: ObjectId, map: ObjectId, x: i64, y: i64) -> Result<()> {
     if let Some(u) = world.btech.constructed.get_mut(&id) {
-        u.power = BattlePower::Off;
+        u.power = Power::Off;
     }
     if let Some(u) = world.btech.vehicles.get_mut(&id) {
-        u.power = BattlePower::Off;
+        u.power = Power::Off;
     }
     crate::btech::place_unit(world, id, map, x, y)?;
     if let Some(u) = world.btech.constructed.get_mut(&id) {
-        u.power = BattlePower::Running;
+        u.power = Power::Running;
     }
     if let Some(u) = world.btech.vehicles.get_mut(&id) {
-        u.power = BattlePower::Running;
+        u.power = Power::Running;
     }
     Ok(())
 }
@@ -151,17 +151,17 @@ pub(super) fn seed_unit(world: &mut World, id: ObjectId, seed: u8, role: u8) {
     bytes[0] = role;
     bytes[31] = seed.wrapping_add(role);
     if let Some(u) = world.btech.constructed.get_mut(&id) {
-        u.dice = crate::BattleDice::seeded(bytes);
+        u.dice = crate::Dice::seeded(bytes);
         let mut recovery = serde_json::to_value(&u.crew_recovery).expect("serialize recovery");
         recovery["dice"] =
-            serde_json::to_value(crate::BattleDice::seeded(bytes)).expect("serialize dice");
+            serde_json::to_value(crate::Dice::seeded(bytes)).expect("serialize dice");
         u.crew_recovery = serde_json::from_value(recovery).expect("recovery with seeded dice");
     }
     if let Some(u) = world.btech.vehicles.get_mut(&id) {
-        u.dice = crate::BattleDice::seeded(bytes);
+        u.dice = crate::Dice::seeded(bytes);
         let mut recovery = serde_json::to_value(&u.crew_recovery).expect("serialize recovery");
         recovery["dice"] =
-            serde_json::to_value(crate::BattleDice::seeded(bytes)).expect("serialize dice");
+            serde_json::to_value(crate::Dice::seeded(bytes)).expect("serialize dice");
         u.crew_recovery = serde_json::from_value(recovery).expect("recovery with seeded dice");
     }
 }
@@ -195,7 +195,7 @@ fn script(world: &mut World, id: ObjectId, tick: usize, cap: f64) -> Result<bool
 }
 
 /// Shortest geometric route uses authoritative eligibility, not Euclidean distance through walls.
-fn shortest(world: &World, id: ObjectId, from: BattlePosition, to: BattlePosition) -> Option<f64> {
+fn shortest(world: &World, id: ObjectId, from: Position, to: Position) -> Option<f64> {
     let start = navigation::GridHex::new(from.x, from.y);
     let goal = navigation::GridHex::new(to.x, to.y);
     let mut distances = BTreeMap::from([(start, 0_u32)]);
@@ -214,12 +214,12 @@ fn shortest(world: &World, id: ObjectId, from: BattlePosition, to: BattlePositio
                 if traversal::assess(
                     world,
                     id,
-                    BattlePosition {
+                    Position {
                         map: from.map,
                         x: h.x,
                         y: h.y,
                     },
-                    BattlePosition {
+                    Position {
                         map: from.map,
                         x,
                         y,
@@ -383,7 +383,7 @@ pub async fn run_policy(
                     ("focal".to_owned(), focal, target),
                     ("opponent".to_owned(), target, focal),
                 ];
-                let destination = BattlePosition { map, x: 9, y: 6 };
+                let destination = Position { map, x: 9, y: 6 };
                 let fixed = matches!(name, "bottleneck" | "passage" | "no_passing_space");
                 orders(
                     &mut world,
@@ -411,7 +411,7 @@ pub async fn run_policy(
                         }]
                     } else if name == "passage" {
                         vec![AutopilotOrder::Move {
-                            destination: BattlePosition { map, x: 2, y: 6 },
+                            destination: Position { map, x: 2, y: 6 },
                             arrival_radius: 0,
                         }]
                     } else {
@@ -431,7 +431,7 @@ pub async fn run_policy(
                 if matches!(name, "pursuers" | "bottleneck" | "no_passing_space") {
                     for n in 0..2 {
                         let id = world.create(&config, format!("ally {n}"), crate::Kind::Thing);
-                        crate::BattleUnitTemplate::parse(stock_reference(chassis), &source)?
+                        crate::UnitTemplate::parse(stock_reference(chassis), &source)?
                             .create(&mut world, id)?;
                         if let Some(u) = world.btech.constructed.get_mut(&id) {
                             u.signature.team = 1;
@@ -491,7 +491,7 @@ pub async fn run_policy(
                             format!("waiting follower {n}"),
                             crate::Kind::Thing,
                         );
-                        crate::BattleUnitTemplate::parse(stock_reference(chassis), &source)?
+                        crate::UnitTemplate::parse(stock_reference(chassis), &source)?
                             .create(&mut world, id)?;
                         if let Some(u) = world.btech.constructed.get_mut(&id) {
                             u.signature.team = 1;
@@ -504,7 +504,7 @@ pub async fn run_policy(
                             &mut world,
                             id,
                             vec![AutopilotOrder::Move {
-                                destination: BattlePosition {
+                                destination: Position {
                                     map,
                                     x: 9,
                                     y: row as u16,
@@ -520,7 +520,7 @@ pub async fn run_policy(
                                 format!("lane {n} blocker {k}"),
                                 crate::Kind::Thing,
                             );
-                            crate::BattleUnitTemplate::parse(stock_reference(chassis), &source)?
+                            crate::UnitTemplate::parse(stock_reference(chassis), &source)?
                                 .create(&mut world, blocker)?;
                             if let Some(u) = world.btech.constructed.get_mut(&blocker) {
                                 u.signature.team = 1;
@@ -574,12 +574,12 @@ pub async fn run_policy(
                 for (role, id, enemy) in ids {
                     let own = crate::btech::scanner::scanner_unit(&world, id).unwrap();
                     let goal = if (id == focal && fixed) || role.starts_with("waiting_") {
-                        Some(BattlePosition {
+                        Some(Position {
                             y: own.position.unwrap().y,
                             ..destination
                         })
                     } else if id == target && name == "passage" {
-                        Some(BattlePosition { map, x: 2, y: 6 })
+                        Some(Position { map, x: 2, y: 6 })
                     } else {
                         None
                     };
@@ -711,7 +711,7 @@ pub async fn run_policy(
                                 &mut world,
                                 target,
                                 vec![AutopilotOrder::Move {
-                                    destination: BattlePosition { map, x: 10, y: 6 },
+                                    destination: Position { map, x: 10, y: 6 },
                                     arrival_radius: 0,
                                 }],
                                 false,
@@ -738,7 +738,7 @@ pub async fn run_policy(
                                     &mut world,
                                     p.id,
                                     vec![AutopilotOrder::Move {
-                                        destination: BattlePosition { map, x: 10, y: row },
+                                        destination: Position { map, x: 10, y: row },
                                         arrival_radius: 0,
                                     }],
                                     false,
@@ -754,7 +754,7 @@ pub async fn run_policy(
                                     &mut world,
                                     p.id,
                                     vec![AutopilotOrder::Move {
-                                        destination: BattlePosition {
+                                        destination: Position {
                                             map,
                                             x: if tick == 35 { 6 } else { 10 },
                                             y: 6,
@@ -771,7 +771,7 @@ pub async fn run_policy(
                                     &mut world,
                                     focal,
                                     crate::btech::CriticalLocation {
-                                        section: crate::BattleSection::LeftLeg,
+                                        section: crate::MechSection::LeftLeg,
                                         slot: 2,
                                     },
                                 )?;
@@ -779,7 +779,7 @@ pub async fn run_policy(
                                 crate::btech::damage_vehicle_motive(
                                     &mut world,
                                     focal,
-                                    crate::btech::BattleVehicleMotiveHit::SpeedLoss {
+                                    crate::btech::VehicleMotiveHit::SpeedLoss {
                                         movement_points: 1,
                                     },
                                 )?;

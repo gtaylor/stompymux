@@ -22,4 +22,4 @@ btech.character.progress(player, skill)
 
 ## Returns
 
-- `BattleSkillProgress`
+- `SkillProgress`

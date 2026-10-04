@@ -3,14 +3,10 @@ use crate::support;
 use stompymux_rs::*;
 
 /// Install a supported split mount with a zero-based parent pointer in each extension slot.
-fn definition(
-    weapon: BattleWeapon,
-    parent: BattleSection,
-    extension: BattleSection,
-) -> BattleTemplate {
-    use BattleSection::*;
+fn definition(weapon: Weapon, parent: MechSection, extension: MechSection) -> MechTemplate {
+    use MechSection::*;
     let mut template =
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     let count = weapon.profile().critical_slots;
     let first = if parent == CenterTorso {
         10
@@ -61,13 +57,13 @@ fn definition(
 /// Both section traversal orders and every permitted link direction resolve a single mount.
 #[test]
 fn split_mount_locations_metadata_and_critical_availability() {
-    use BattleSection::*;
+    use MechSection::*;
     for weapon in [
-        BattleWeapon::Ac20,
-        BattleWeapon::HeavyGaussRifle,
-        BattleWeapon::Lbx20,
-        BattleWeapon::UltraAc20,
-        BattleWeapon::ClanUltraAc20,
+        Weapon::Ac20,
+        Weapon::HeavyGaussRifle,
+        Weapon::Lbx20,
+        Weapon::UltraAc20,
+        Weapon::ClanUltraAc20,
     ] {
         for (parent, extension) in [
             (LeftArm, LeftTorso),
@@ -82,7 +78,7 @@ fn split_mount_locations_metadata_and_critical_availability() {
             (CenterTorso, RightTorso),
         ] {
             let template = definition(weapon, parent, extension);
-            let original = BattleUnit::from_template(template.clone()).unwrap();
+            let original = Mech::from_template(template.clone()).unwrap();
             let loadout = original.loadout().unwrap();
             let mut mixed = template;
             for section in mixed.sections.values_mut() {
@@ -94,7 +90,7 @@ fn split_mount_locations_metadata_and_critical_availability() {
                     };
                 }
             }
-            assert_eq!(BattleLoadout::resolve(&mixed).unwrap(), loadout);
+            assert_eq!(MechLoadout::resolve(&mixed).unwrap(), loadout);
             let mounts: Vec<_> = loadout
                 .weapons
                 .iter()
@@ -114,7 +110,7 @@ fn split_mount_locations_metadata_and_critical_availability() {
             let mut damaged = original.clone();
             assert_eq!(
                 damaged.destroy_critical(child).unwrap(),
-                Some(BattleCriticalLoss::Weapon {
+                Some(CriticalLoss::Weapon {
                     index,
                     explosion_damage: weapon.weapon_explosion_damage()
                 })
@@ -124,7 +120,7 @@ fn split_mount_locations_metadata_and_critical_availability() {
                 damaged.mass().unwrap().equipment,
                 original.mass().unwrap().equipment
             );
-            if weapon == BattleWeapon::HeavyGaussRifle {
+            if weapon == Weapon::HeavyGaussRifle {
                 assert!(
                     mount
                         .criticals
@@ -140,8 +136,8 @@ fn split_mount_locations_metadata_and_critical_availability() {
 /// Broken links, partial runs and inconsistent metadata cannot create operational weapons.
 #[test]
 fn invalid_split_links_are_rejected() {
-    use BattleSection::*;
-    let source = definition(BattleWeapon::HeavyGaussRifle, LeftArm, LeftTorso);
+    use MechSection::*;
+    let source = definition(Weapon::HeavyGaussRifle, LeftArm, LeftTorso);
     for variant in 0..8 {
         let mut template = source.clone();
         let child = template.sections.get_mut(&LeftTorso).unwrap();
@@ -178,10 +174,7 @@ fn invalid_split_links_are_rejected() {
             }
             _ => unreachable!(),
         }
-        assert!(
-            BattleUnit::from_template(template).is_err(),
-            "variant {variant}"
-        );
+        assert!(Mech::from_template(template).is_err(), "variant {variant}");
     }
     let mut template = source;
     for part in template
@@ -195,17 +188,17 @@ fn invalid_split_links_are_rejected() {
             part.equipment = "IS.GaussRifle".into();
         }
     }
-    assert!(BattleUnit::from_template(template).is_err());
+    assert!(Mech::from_template(template).is_err());
 }
 
 /// An extension critical detonates a Gauss weapon in its primary section, where CASE applies.
 #[tokio::test]
 async fn split_gauss_explosion_origin_case_and_restart() {
-    use BattleSection::*;
+    use MechSection::*;
     let (_dir, config, mut base) = support::isolated_world().await;
     let id = base.create(&config, "Split Gauss".into(), Kind::Thing);
     base.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-    let mut template = definition(BattleWeapon::HeavyGaussRifle, LeftArm, LeftTorso);
+    let mut template = definition(Weapon::HeavyGaussRifle, LeftArm, LeftTorso);
     template
         .sections
         .get_mut(&LeftArm)
@@ -216,7 +209,7 @@ async fn split_gauss_explosion_origin_case_and_restart() {
         .equipment = "CASE".into();
     create_battle_unit(&mut base, id, template).unwrap();
     support::seed_object_dice(&mut base, id, support::FIXTURE_DICE_SEED);
-    let hit = BattleHit {
+    let hit = Hit {
         section: LeftTorso,
         rear_armor: false,
         through_armor_critical: true,
@@ -224,7 +217,7 @@ async fn split_gauss_explosion_origin_case_and_restart() {
     };
     for seed in 0..=255 {
         base.btech
-            .set_unit_dice(id, BattleDice::seeded([seed; 32]))
+            .set_unit_dice(id, Dice::seeded([seed; 32]))
             .unwrap();
         let mut fired = base.clone();
         let report = resolve_battle_impact(&mut fired, id, hit, 1).unwrap();
@@ -232,7 +225,7 @@ async fn split_gauss_explosion_origin_case_and_restart() {
             slot.section == LeftTorso
                 && matches!(
                     loss,
-                    BattleCriticalLoss::Weapon {
+                    CriticalLoss::Weapon {
                         explosion_damage: 25,
                         ..
                     }
@@ -251,7 +244,7 @@ async fn split_gauss_explosion_origin_case_and_restart() {
             report
                 .pending_effects
                 .iter()
-                .filter(|effect| **effect == BattleImpactEffect::ExplosionInjury)
+                .filter(|effect| **effect == ImpactEffect::ExplosionInjury)
                 .count(),
             1
         );
@@ -272,18 +265,13 @@ async fn split_gauss_explosion_origin_case_and_restart() {
 /// Losing either section disables the mount while surviving weapon slots retain their physical mass.
 #[tokio::test]
 async fn split_section_loss_preserves_remaining_slot_mass() {
-    use BattleSection::*;
+    use MechSection::*;
     for (parent, extension, lost_mass) in [(LeftArm, LeftTorso, 13512), (LeftTorso, LeftArm, 4914)]
     {
         let (_dir, config, mut world) = support::isolated_world().await;
         let id = world.create(&config, "Split mass".into(), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-        create_battle_unit(
-            &mut world,
-            id,
-            definition(BattleWeapon::Ac20, parent, extension),
-        )
-        .unwrap();
+        create_battle_unit(&mut world, id, definition(Weapon::Ac20, parent, extension)).unwrap();
         support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
         let before = &world.btech.constructed_units()[&id];
         let mass = before.mass().unwrap().equipment;
@@ -292,9 +280,9 @@ async fn split_section_loss_preserves_remaining_slot_mass() {
             .unwrap()
             .weapons
             .iter()
-            .position(|mount| mount.weapon == BattleWeapon::Ac20)
+            .position(|mount| mount.weapon == Weapon::Ac20)
             .unwrap();
-        apply_damage_phase(&mut world, id, LeftArm, 100, BattleDamagePhase::Internal).unwrap();
+        apply_damage_phase(&mut world, id, LeftArm, 100, DamagePhase::Internal).unwrap();
         let after = &world.btech.constructed_units()[&id];
         assert!(!after.weapon_intact(index).unwrap());
         assert_eq!(mass - after.mass().unwrap().equipment, lost_mass);
@@ -306,13 +294,13 @@ async fn split_section_loss_preserves_remaining_slot_mass() {
 #[test]
 fn arrow_mount_can_end_before_the_primary_section_boundary() {
     let template =
-        BattleTemplate::parse("CPLT-C5", include_str!("../game/mechs/CPLT-C5.toml")).unwrap();
-    let unit = BattleUnit::from_template(template.clone()).unwrap();
+        MechTemplate::parse("CPLT-C5", include_str!("../game/mechs/CPLT-C5.toml")).unwrap();
+    let unit = Mech::from_template(template.clone()).unwrap();
     let loadout = unit.loadout().unwrap();
     let index = loadout
         .weapons
         .iter()
-        .position(|mount| mount.weapon == BattleWeapon::ArrowIv)
+        .position(|mount| mount.weapon == Weapon::ArrowIv)
         .unwrap();
     let mount = &loadout.weapons[index];
     assert_eq!(mount.criticals.len(), 15);
@@ -320,7 +308,7 @@ fn arrow_mount_can_end_before_the_primary_section_boundary() {
         mount
             .criticals
             .iter()
-            .filter(|slot| slot.section == BattleSection::RightArm)
+            .filter(|slot| slot.section == MechSection::RightArm)
             .count(),
         9
     );
@@ -328,7 +316,7 @@ fn arrow_mount_can_end_before_the_primary_section_boundary() {
         mount
             .criticals
             .iter()
-            .filter(|slot| slot.section == BattleSection::RightTorso)
+            .filter(|slot| slot.section == MechSection::RightTorso)
             .count(),
         6
     );
@@ -336,7 +324,7 @@ fn arrow_mount_can_end_before_the_primary_section_boundary() {
         loadout
             .weapons
             .iter()
-            .filter(|mount| mount.weapon == BattleWeapon::ArrowIv)
+            .filter(|mount| mount.weapon == Weapon::ArrowIv)
             .count(),
         1
     );
@@ -344,7 +332,7 @@ fn arrow_mount_can_end_before_the_primary_section_boundary() {
         let mut damaged = unit.clone();
         damaged.destroy_critical(slot).unwrap();
         assert!(!damaged.weapon_intact(index).unwrap());
-        let restored: BattleUnit =
+        let restored: Mech =
             serde_json::from_value(serde_json::to_value(&damaged).unwrap()).unwrap();
         assert_eq!(restored, damaged);
     }
@@ -352,31 +340,30 @@ fn arrow_mount_can_end_before_the_primary_section_boundary() {
         let mut incomplete = template.clone();
         incomplete
             .sections
-            .get_mut(&BattleSection::RightTorso)
+            .get_mut(&MechSection::RightTorso)
             .unwrap()
             .criticals
             .remove(&slot);
-        assert!(BattleUnit::from_template(incomplete).is_err());
+        assert!(Mech::from_template(incomplete).is_err());
     }
 }
 
 /// Damage in either half contributes to one launcher and excludes exactly the damaged slots.
 #[test]
 fn split_weapon_degradation_shares_one_effect_set() {
-    use BattleSection::*;
+    use MechSection::*;
     for (parent, extension) in [
         (LeftArm, LeftTorso),
         (RightArm, RightTorso),
         (LeftTorso, LeftLeg),
         (RightTorso, CenterTorso),
     ] {
-        let base =
-            BattleUnit::from_template(definition(BattleWeapon::Ac20, parent, extension)).unwrap();
+        let base = Mech::from_template(definition(Weapon::Ac20, parent, extension)).unwrap();
         let loadout = base.loadout().unwrap();
         let index = loadout
             .weapons
             .iter()
-            .position(|mount| mount.weapon == BattleWeapon::Ac20)
+            .position(|mount| mount.weapon == Weapon::Ac20)
             .unwrap();
         let mount = &loadout.weapons[index];
         let first = mount.criticals[0];
@@ -387,10 +374,10 @@ fn split_weapon_degradation_shares_one_effect_set() {
             .unwrap();
         let mut state = serde_json::to_value(&base).unwrap();
         state["weapon_damage"] = serde_json::json!([
-            BattleWeaponDamage::new(first, BattleWeaponDamageKind::Barrel),
-            BattleWeaponDamage::new(second, BattleWeaponDamageKind::Feed),
+            WeaponDamage::new(first, WeaponDamageKind::Barrel),
+            WeaponDamage::new(second, WeaponDamageKind::Feed),
         ]);
-        let damaged: BattleUnit = serde_json::from_value(state).unwrap();
+        let damaged: Mech = serde_json::from_value(state).unwrap();
         assert!(damaged.weapon_intact(index).unwrap());
         assert_eq!(damaged.mass().unwrap(), base.mass().unwrap());
         let effects = damaged.weapon_damage_effects(index).unwrap();
@@ -404,18 +391,14 @@ fn split_weapon_degradation_shares_one_effect_set() {
                     .contains(&location)
             );
         }
-        let restored: BattleUnit =
+        let restored: Mech =
             serde_json::from_str(&serde_json::to_string(&damaged).unwrap()).unwrap();
         assert_eq!(restored.weapon_damage_effects(index).unwrap(), effects);
     }
 }
 
 /// Select one requested critical and, while the mount works, its exact enhanced table roll.
-fn critical_stream(
-    unit: &BattleUnit,
-    location: CriticalLocation,
-    weapon_roll: Option<u8>,
-) -> BattleDice {
+fn critical_stream(unit: &Mech, location: CriticalLocation, weapon_roll: Option<u8>) -> Dice {
     let candidates = unit.critical_candidates(location.section);
     let selected = candidates
         .iter()
@@ -426,7 +409,7 @@ fn critical_stream(
         .find_map(|value| {
             let mut bytes = [0; 32];
             bytes[..4].copy_from_slice(&value.to_le_bytes());
-            let dice = BattleDice::seeded(bytes);
+            let dice = Dice::seeded(bytes);
             let mut trial = dice.clone();
             trial.two_d6(); // Material entry precedes critical selection.
             (matches!(trial.two_d6(), 8 | 9)
@@ -441,14 +424,14 @@ fn critical_stream(
 #[tokio::test]
 async fn repeated_split_proxy_criticals_accumulate_once_and_replay() {
     for weapon in [
-        BattleWeapon::Ac20,
-        BattleWeapon::Lbx20,
-        BattleWeapon::UltraAc20,
-        BattleWeapon::ClanUltraAc20,
+        Weapon::Ac20,
+        Weapon::Lbx20,
+        Weapon::UltraAc20,
+        Weapon::ClanUltraAc20,
     ] {
         for (parent, extension) in [
-            (BattleSection::LeftArm, BattleSection::LeftTorso),
-            (BattleSection::RightTorso, BattleSection::RightArm),
+            (MechSection::LeftArm, MechSection::LeftTorso),
+            (MechSection::RightTorso, MechSection::RightArm),
         ] {
             let (_dir, config, mut world) = support::isolated_world().await;
             let id = world.create(&config, "Split damage".into(), Kind::Thing);
@@ -468,7 +451,7 @@ async fn repeated_split_proxy_criticals_accumulate_once_and_replay() {
                 .iter()
                 .find(|location| location.section == extension)
                 .unwrap();
-            let hit = BattleHit {
+            let hit = Hit {
                 section: extension,
                 rear_armor: false,
                 through_armor_critical: true,
@@ -519,23 +502,23 @@ async fn repeated_split_proxy_criticals_accumulate_once_and_replay() {
                     assert!(unit.weapon_damage().is_empty());
                     assert_eq!(
                         unit.weapon_damage_effects(index).unwrap(),
-                        BattleWeaponDamageEffects::default()
+                        WeaponDamageEffects::default()
                     );
                 }
                 let criticals = battle_critical_report(&world, id, primary.section.name()).unwrap();
                 assert_eq!(
                     criticals.slots[usize::from(primary.slot)].condition,
                     if step < 4 {
-                        BattleEquipmentCondition::Damaged
+                        EquipmentCondition::Damaged
                     } else {
-                        BattleEquipmentCondition::Destroyed
+                        EquipmentCondition::Destroyed
                     }
                 );
                 let extensions = battle_critical_report(&world, id, proxy.section.name()).unwrap();
                 let proxy_row = &extensions.slots[usize::from(proxy.slot)];
                 assert_eq!(proxy_row.weapon_index, Some(index));
                 assert!(!proxy_row.equipment.contains("SplitCrit"));
-                assert_eq!(proxy_row.condition, BattleEquipmentCondition::Operational);
+                assert_eq!(proxy_row.condition, EquipmentCondition::Operational);
                 let diagnostic = &battle_weapon_diagnostics(&world, id).unwrap()[index];
                 assert_eq!(diagnostic.damaged_slots, u8::from(step < 4));
                 assert_eq!(
@@ -570,7 +553,7 @@ async fn repeated_split_proxy_criticals_accumulate_once_and_replay() {
 /// A centre torso weapon continuing into a side torso loads from TOML and survives a save.
 #[test]
 fn center_torso_split_mounts_load_and_round_trip_from_documents() {
-    use BattleSection::*;
+    use MechSection::*;
     let source = include_str!("fixtures/btech/mechs/JR7-D.toml")
         .replace(
             "    { at = 11, item = \"IS.SRM-4\" },\n    { at = 12, item = \"JumpJet\" },\n",
@@ -578,12 +561,12 @@ fn center_torso_split_mounts_load_and_round_trip_from_documents() {
         )
         .replace("    { at = \"1-2\", item = \"JumpJet\" },\n", "")
         + "\n[[split_mounts]]\nitem = \"IS.AC/20\"\nplacements = [\n    { section = \"center_torso\", at = \"11-12\" },\n    { section = \"left_torso\", at = \"1-8\" },\n]\n";
-    let template = BattleTemplate::parse("JR7-D", &source).unwrap();
-    let loadout = BattleLoadout::resolve(&template).unwrap();
+    let template = MechTemplate::parse("JR7-D", &source).unwrap();
+    let loadout = MechLoadout::resolve(&template).unwrap();
     let mount = loadout
         .weapons
         .iter()
-        .find(|mount| mount.weapon == BattleWeapon::Ac20)
+        .find(|mount| mount.weapon == Weapon::Ac20)
         .unwrap();
     assert_eq!(mount.criticals.len(), 10);
     assert_eq!(mount.criticals[0].section, CenterTorso);
@@ -591,19 +574,18 @@ fn center_torso_split_mounts_load_and_round_trip_from_documents() {
 
     let document = template.to_document().unwrap();
     assert!(document.contains("{ section = \"center_torso\", at = \"11-12\" }"));
-    assert_eq!(BattleTemplate::parse("JR7-D", &document).unwrap(), template);
+    assert_eq!(MechTemplate::parse("JR7-D", &document).unwrap(), template);
 
     let reversed = source.replace(
         "{ section = \"center_torso\", at = \"11-12\" },\n    { section = \"left_torso\", at = \"1-8\" },",
         "{ section = \"left_torso\", at = \"1-8\" },\n    { section = \"center_torso\", at = \"11-12\" },",
     );
     assert_ne!(reversed, source);
-    let loadout =
-        BattleLoadout::resolve(&BattleTemplate::parse("JR7-D", &reversed).unwrap()).unwrap();
+    let loadout = MechLoadout::resolve(&MechTemplate::parse("JR7-D", &reversed).unwrap()).unwrap();
     let mount = loadout
         .weapons
         .iter()
-        .find(|mount| mount.weapon == BattleWeapon::Ac20)
+        .find(|mount| mount.weapon == Weapon::Ac20)
         .unwrap();
     assert_eq!(mount.criticals[0].section, LeftTorso);
     assert_eq!(mount.criticals.last().unwrap().section, CenterTorso);
@@ -612,5 +594,5 @@ fn center_torso_split_mounts_load_and_round_trip_from_documents() {
         "\"left_torso\", at = \"1-8\"",
         "\"left_arm\", at = \"5-12\"",
     );
-    assert!(BattleTemplate::parse("JR7-D", &distant).is_err());
+    assert!(MechTemplate::parse("JR7-D", &distant).is_err());
 }

@@ -1,15 +1,15 @@
 //! Precision autocannon ammunition controls and target-movement adjustment.
-use super::{AmmunitionFeedback, BattleAmmunitionMode};
+use super::{AmmunitionFeedback, AmmunitionMode};
 use crate::{ObjectId, World};
 use anyhow::{Result, ensure};
 
 /// Precision ammunition's reduction of the target-movement modifier.
-pub(crate) trait BattlePrecisionAim {
+pub(crate) trait PrecisionAim {
     /// Precision reduces the complete target-movement modifier by two, with a zero floor.
     fn target_movement_modifier(self, movement: i8) -> i8;
 }
 
-impl BattlePrecisionAim for BattleAmmunitionMode {
+impl PrecisionAim for AmmunitionMode {
     fn target_movement_modifier(self, movement: i8) -> i8 {
         if self == Self::Precision {
             movement.saturating_sub(2).max(0)
@@ -25,17 +25,17 @@ pub fn toggle_precision(
     id: ObjectId,
     pilot: ObjectId,
     index: usize,
-) -> Result<BattleAmmunitionMode> {
+) -> Result<AmmunitionMode> {
     let ready = super::weapon_controls::ready_weapon(world, id, pilot, index)?;
     ensure!(
-        BattleAmmunitionMode::Precision.supports(ready.weapon),
+        AmmunitionMode::Precision.supports(ready.weapon),
         "That weapon cannot fire Precision rounds!"
     );
     Ok(super::weapon_controls::toggle_ammunition_mode(
         world,
         id,
         index,
-        BattleAmmunitionMode::Precision,
+        AmmunitionMode::Precision,
     ))
 }
 
@@ -56,11 +56,11 @@ mod tests {
     fn precision_movement_reduction_has_a_zero_floor() {
         for (movement, expected) in [(-4, 0), (-2, 0), (0, 0), (1, 0), (2, 0), (3, 1), (7, 5)] {
             assert_eq!(
-                BattleAmmunitionMode::Precision.target_movement_modifier(movement),
+                AmmunitionMode::Precision.target_movement_modifier(movement),
                 expected
             );
             assert_eq!(
-                BattleAmmunitionMode::Normal.target_movement_modifier(movement),
+                AmmunitionMode::Normal.target_movement_modifier(movement),
                 movement
             );
         }

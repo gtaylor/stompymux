@@ -73,7 +73,7 @@ async fn external_markers_survive_unregistration_and_reactivation() {
         .unwrap();
         support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     }
-    let entrance = BattleBuildingEntrance {
+    let entrance = BuildingEntrance {
         coordinate: HexCoordinate { x: 0, y: 0 },
         interior: removed,
         data_char: 0,
@@ -85,7 +85,7 @@ async fn external_markers_survive_unregistration_and_reactivation() {
     set_battle_map_link(
         &mut world,
         exterior,
-        Some(BattleMapLink {
+        Some(MapLink {
             parent: removed,
             coordinate: HexCoordinate { x: 1, y: 1 },
             entrances: Default::default(),
@@ -222,7 +222,7 @@ async fn failed_map_save_keeps_the_previous_database_intact() {
 async fn retired_building_target_does_not_panic_or_reappear() {
     let (_dir, config, mut world, shooter, _, index) = firing::fixture_with_target(
         include_str!("../game/mechs/JR7-D.toml"),
-        Some(BattleWeapon::SmallLaser),
+        Some(Weapon::SmallLaser),
         include_str!("../game/mechs/AS7-D.toml"),
     )
     .await;
@@ -241,7 +241,7 @@ async fn retired_building_target_does_not_panic_or_reappear() {
         &mut world,
         exterior,
         0,
-        Some(BattleBuildingEntrance {
+        Some(BuildingEntrance {
             coordinate,
             interior,
             data_char: 0,
@@ -255,14 +255,14 @@ async fn retired_building_target_does_not_panic_or_reappear() {
         shooter,
         ObjectId(1),
         coordinate,
-        BattleHexTargetMode::Building,
+        HexTargetMode::Building,
     )
     .unwrap();
     let seed = (0..=255)
-        .find(|&seed| BattleDice::seeded([seed; 32]).two_d6() == 12)
+        .find(|&seed| Dice::seeded([seed; 32]).two_d6() == 12)
         .unwrap();
     firing::edit(&mut world, shooter, |unit| {
-        unit["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
+        unit["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap()
     });
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     let output = support::run_text(
@@ -279,14 +279,14 @@ async fn retired_building_target_does_not_panic_or_reappear() {
         ObjectId(1),
         coordinate,
         index,
-        BattleShotRules {
+        ShotRules {
             range_damage: false,
             tsm_tow_bonus: true,
-            vehicle_impact: BattleVehicleImpactRules::STANDARD,
-            stacking: BattleStackingRules::STANDARD,
-            glancing: BattleGlancingMode::Disabled,
-            stagger: BattleStaggerMode::Retain,
-            aim: BattleAimRules {
+            vehicle_impact: VehicleImpactRules::STANDARD,
+            stacking: StackingRules::STANDARD,
+            glancing: GlancingMode::Disabled,
+            stagger: StaggerMode::Retain,
+            aim: AimRules {
                 woods_damage: false,
                 dig_bonus: 3,
                 dig_only_front: false,
@@ -297,7 +297,7 @@ async fn retired_building_target_does_not_panic_or_reappear() {
                 hotload_half_minimum: false,
                 override_weapon_arcs: false,
             },
-            hit: BattleHitRules {
+            hit: HitRules {
                 inferno_penalty: false,
                 exile_stun_mode: 0,
             },

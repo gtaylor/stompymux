@@ -20,7 +20,7 @@ use clap::Parser;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
-use stompymux_rs::{BattleUnitTemplate, BattleVehicle, check_battle_template};
+use stompymux_rs::{UnitTemplate, Vehicle, check_battle_template};
 
 /// Command-line options.
 #[derive(Parser)]
@@ -137,10 +137,10 @@ fn run(args: &Args, path: &Path, written: &mut std::collections::BTreeSet<String
 /// Validate a draft as the game would load it and return the canonical template document.
 fn finish(reference: &str, draft: &draft::Draft) -> Result<String> {
     let source = draft.render();
-    let template = BattleUnitTemplate::parse(reference, &source)
+    let template = UnitTemplate::parse(reference, &source)
         .context("stompymux rejected the converted template")?;
     let document = match template {
-        BattleUnitTemplate::Mech(mech) => {
+        UnitTemplate::Mech(mech) => {
             let check = check_battle_template(&mech);
             if let Some(rejection) = check.rejection {
                 bail!("stompymux cannot construct this mech: {rejection}");
@@ -152,14 +152,12 @@ fn finish(reference: &str, draft: &draft::Draft) -> Result<String> {
             );
             mech.to_document()?
         }
-        BattleUnitTemplate::Vehicle(vehicle) => {
-            BattleVehicle::new(vehicle.clone())
-                .context("stompymux cannot construct this vehicle")?;
+        UnitTemplate::Vehicle(vehicle) => {
+            Vehicle::new(vehicle.clone()).context("stompymux cannot construct this vehicle")?;
             vehicle.to_document()?
         }
     };
-    BattleUnitTemplate::parse(reference, &document)
-        .context("the rendered template does not load")?;
+    UnitTemplate::parse(reference, &document).context("the rendered template does not load")?;
     Ok(document)
 }
 

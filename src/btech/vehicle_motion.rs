@@ -1,10 +1,10 @@
 //! Ground-vehicle motion proposals share turning and acceleration with the Mech motion engine.
-use super::{BattleMotion, BattleVehicleMovement, BattleVehicleTemplate, Hex};
+use super::{Hex, Motion, VehicleMovement, VehicleTemplate};
 use anyhow::{Result, ensure};
 
 /// Inputs independent of vehicle construction, supplied by world configuration and pilot state.
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct BattleVehicleMotionRules {
+pub struct VehicleMotionRules {
     pub fasa_turning: bool,
     pub slowdown: i64,
     pub speed_demon: bool,
@@ -12,7 +12,7 @@ pub struct BattleVehicleMotionRules {
     pub movement_modifier: i64,
 }
 
-impl BattleVehicleMotionRules {
+impl VehicleMotionRules {
     /// Ordinary ground rules without pilot advantages or map rate changes.
     pub const STANDARD: Self = Self {
         fasa_turning: false,
@@ -23,53 +23,53 @@ impl BattleVehicleMotionRules {
 }
 
 /// One-second motion proposals for intact and damaged vehicles.
-pub trait BattleVehicleTemplateMotion {
+pub trait VehicleTemplateMotion {
     /// Propose one second of intact vehicle motion on the supplied current hex.
     /// This does not admit terrain entry, resolve hazards or mutate world state. The
     /// movement adapter must trace the proposed segment and resolve each crossed hex.
     fn ground_motion_step(
         &self,
-        motion: BattleMotion,
+        motion: Motion,
         hex: Hex,
-        rules: BattleVehicleMotionRules,
-    ) -> Result<BattleMotion>;
+        rules: VehicleMotionRules,
+    ) -> Result<Motion>;
 
     /// Share motion arithmetic between intact proposals and damaged live vehicles.
     fn motion_at_maximum(
         &self,
-        motion: BattleMotion,
+        motion: Motion,
         hex: Hex,
-        rules: BattleVehicleMotionRules,
+        rules: VehicleMotionRules,
         maximum: f64,
-    ) -> Result<BattleMotion>;
+    ) -> Result<Motion>;
 
     /// Shared heading and acceleration, before either ground or flight path projection.
     fn control_at_maximum(
         &self,
-        motion: BattleMotion,
+        motion: Motion,
         hex: Hex,
-        rules: BattleVehicleMotionRules,
+        rules: VehicleMotionRules,
         maximum: f64,
-    ) -> Result<BattleMotion>;
+    ) -> Result<Motion>;
 }
 
-impl BattleVehicleTemplateMotion for BattleVehicleTemplate {
+impl VehicleTemplateMotion for VehicleTemplate {
     fn ground_motion_step(
         &self,
-        motion: BattleMotion,
+        motion: Motion,
         hex: Hex,
-        rules: BattleVehicleMotionRules,
-    ) -> Result<BattleMotion> {
+        rules: VehicleMotionRules,
+    ) -> Result<Motion> {
         self.motion_at_maximum(motion, hex, rules, self.max_speed)
     }
 
     fn motion_at_maximum(
         &self,
-        mut motion: BattleMotion,
+        mut motion: Motion,
         hex: Hex,
-        rules: BattleVehicleMotionRules,
+        rules: VehicleMotionRules,
         maximum: f64,
-    ) -> Result<BattleMotion> {
+    ) -> Result<Motion> {
         motion = self.control_at_maximum(motion, hex, rules, maximum)?;
         let rate = if rules.movement_modifier > 0 {
             rules.movement_modifier as f64 / 100.0
@@ -86,11 +86,11 @@ impl BattleVehicleTemplateMotion for BattleVehicleTemplate {
 
     fn control_at_maximum(
         &self,
-        mut motion: BattleMotion,
+        mut motion: Motion,
         hex: Hex,
-        rules: BattleVehicleMotionRules,
+        rules: VehicleMotionRules,
         maximum: f64,
-    ) -> Result<BattleMotion> {
+    ) -> Result<Motion> {
         ensure!(
             maximum.is_finite() && maximum >= 0.0,
             "Invalid vehicle maximum speed"
@@ -106,7 +106,7 @@ impl BattleVehicleTemplateMotion for BattleVehicleTemplate {
             motion.desired_speed >= -retained * 2.0 / 3.0 && motion.desired_speed <= retained,
             "Speed exceeds vehicle limits"
         );
-        if self.movement == BattleVehicleMovement::Stationary || maximum == 0.0 {
+        if self.movement == VehicleMovement::Stationary || maximum == 0.0 {
             ensure!(!motion.active(), "Stationary vehicle cannot move");
             return Ok(motion);
         }
@@ -129,7 +129,7 @@ impl BattleVehicleTemplateMotion for BattleVehicleTemplate {
         if (hex.is_road() || hex.has_bridge())
             && matches!(
                 self.movement,
-                BattleVehicleMovement::Tracked | BattleVehicleMovement::Wheeled
+                VehicleMovement::Tracked | VehicleMovement::Wheeled
             )
         {
             target *= (maximum + 10.75) / maximum;
@@ -150,22 +150,22 @@ impl BattleVehicleTemplateMotion for BattleVehicleTemplate {
     }
 }
 
-impl super::BattleVehicle {
+impl super::Vehicle {
     /// Propose motion using the current damage-adjusted throttle envelope.
     pub fn ground_motion_step(
         &self,
-        motion: BattleMotion,
+        motion: Motion,
         hex: Hex,
-        rules: BattleVehicleMotionRules,
-    ) -> Result<BattleMotion> {
+        rules: VehicleMotionRules,
+    ) -> Result<Motion> {
         self.definition()
             .motion_at_maximum(motion, hex, rules, self.maximum_speed())
     }
 }
 
 /// Speed divisor a vehicle's hex imposes on its desired throttle.
-fn terrain_divisor(hex: Hex, movement: BattleVehicleMovement) -> f64 {
-    hex.ground_speed_divisor(movement == BattleVehicleMovement::Wheeled)
+fn terrain_divisor(hex: Hex, movement: VehicleMovement) -> f64 {
+    hex.ground_speed_divisor(movement == VehicleMovement::Wheeled)
 }
 
 #[cfg(test)]
@@ -177,14 +177,14 @@ mod tests {
     #[test]
     fn sand_slows_only_wheeled_vehicles() {
         assert_eq!(
-            terrain_divisor(Hex::new(Terrain::Sand, 0), BattleVehicleMovement::Wheeled),
+            terrain_divisor(Hex::new(Terrain::Sand, 0), VehicleMovement::Wheeled),
             2.0
         );
-        for movement in [BattleVehicleMovement::Tracked, BattleVehicleMovement::Hover] {
+        for movement in [VehicleMovement::Tracked, VehicleMovement::Hover] {
             assert_eq!(terrain_divisor(Hex::new(Terrain::Sand, 0), movement), 1.0);
         }
         assert_eq!(
-            terrain_divisor(Hex::new(Terrain::Rough, 0), BattleVehicleMovement::Tracked),
+            terrain_divisor(Hex::new(Terrain::Rough, 0), VehicleMovement::Tracked),
             2.0
         );
     }

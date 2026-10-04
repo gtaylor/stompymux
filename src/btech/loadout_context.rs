@@ -3,13 +3,13 @@
 //! Address keys are identity tokens, never dereferenced. The scope's lifetime
 //! keeps every registered source alive and immutable; clones at other addresses
 //! cannot inherit a cached projection. No projection survives its owning scope.
-use super::{BattleLoadout, BattleUnit, BattleVehicle, BattleVehicleLoadout, BtechState};
+use super::{BtechState, Mech, MechLoadout, Vehicle, VehicleLoadout};
 use std::{cell::RefCell, collections::HashMap, marker::PhantomData, rc::Rc};
 
 #[derive(Default)]
 struct Projections {
-    mechs: HashMap<usize, Option<BattleLoadout>>,
-    vehicles: HashMap<usize, Option<BattleVehicleLoadout>>,
+    mechs: HashMap<usize, Option<MechLoadout>>,
+    vehicles: HashMap<usize, Option<VehicleLoadout>>,
 }
 thread_local! { static ACTIVE: RefCell<Vec<(Rc<()>, Projections)>> = const { RefCell::new(Vec::new()) }; }
 
@@ -65,7 +65,7 @@ impl<'a> LoadoutScope<'a> {
     }
 
     /// Standalone unit validation also shares its equipment projection internally.
-    pub(super) fn unit(unit: &'a BattleUnit) -> Self {
+    pub(super) fn unit(unit: &'a Mech) -> Self {
         let address = std::ptr::from_ref(unit) as usize;
         if ACTIVE.with(|slot| {
             slot.borrow()
@@ -93,7 +93,7 @@ impl Drop for LoadoutScope<'_> {
     }
 }
 
-pub(super) fn mech(unit: &BattleUnit) -> Option<BattleLoadout> {
+pub(super) fn mech(unit: &Mech) -> Option<MechLoadout> {
     ACTIVE.with(|slot| {
         slot.borrow()
             .last()?
@@ -103,7 +103,7 @@ pub(super) fn mech(unit: &BattleUnit) -> Option<BattleLoadout> {
             .clone()
     })
 }
-pub(super) fn remember_mech(unit: &BattleUnit, projection: &BattleLoadout) {
+pub(super) fn remember_mech(unit: &Mech, projection: &MechLoadout) {
     ACTIVE.with(|slot| {
         if let Some(entry) = slot
             .borrow_mut()
@@ -114,7 +114,7 @@ pub(super) fn remember_mech(unit: &BattleUnit, projection: &BattleLoadout) {
         }
     });
 }
-pub(super) fn vehicle(unit: &BattleVehicle) -> Option<BattleVehicleLoadout> {
+pub(super) fn vehicle(unit: &Vehicle) -> Option<VehicleLoadout> {
     ACTIVE.with(|slot| {
         slot.borrow()
             .last()?
@@ -124,7 +124,7 @@ pub(super) fn vehicle(unit: &BattleVehicle) -> Option<BattleVehicleLoadout> {
             .clone()
     })
 }
-pub(super) fn remember_vehicle(unit: &BattleVehicle, projection: &BattleVehicleLoadout) {
+pub(super) fn remember_vehicle(unit: &Vehicle, projection: &VehicleLoadout) {
     ACTIVE.with(|slot| {
         if let Some(entry) = slot
             .borrow_mut()
@@ -139,13 +139,13 @@ pub(super) fn remember_vehicle(unit: &BattleVehicle, projection: &BattleVehicleL
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::btech::BattleUnitTemplateExt;
+    use crate::btech::UnitTemplateExt;
     #[test]
     fn scopes_do_not_reuse_projections_for_clones_or_after_drop() {
         let config = crate::Config::load("tests/fixtures/game").unwrap();
         let mut world = crate::World::default();
         let id = world.create(&config, "Loadout scope".into(), crate::Kind::Thing);
-        crate::BattleUnitTemplate::parse("JR7-D", include_str!("../../game/mechs/JR7-D.toml"))
+        crate::UnitTemplate::parse("JR7-D", include_str!("../../game/mechs/JR7-D.toml"))
             .unwrap()
             .create(&mut world, id)
             .unwrap();

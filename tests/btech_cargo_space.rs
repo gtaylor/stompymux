@@ -18,11 +18,11 @@ fn templates() -> Vec<String> {
 }
 
 /// Preserve other construction technologies while changing only cargo installation facts.
-fn configured(source: &str, space: &str, flags: &str) -> BattleUnitTemplate {
-    let mut template = BattleUnitTemplate::parse("test", source).unwrap();
+fn configured(source: &str, space: &str, flags: &str) -> UnitTemplate {
+    let mut template = UnitTemplate::parse("test", source).unwrap();
     let attributes = match &mut template {
-        BattleUnitTemplate::Mech(template) => &mut template.attributes,
-        BattleUnitTemplate::Vehicle(template) => &mut template.attributes,
+        UnitTemplate::Mech(template) => &mut template.attributes,
+        UnitTemplate::Vehicle(template) => &mut template.attributes,
     };
     let previous = attributes.get("specials").cloned().unwrap_or_default();
     let mut technologies = previous
@@ -138,21 +138,21 @@ async fn cargo_space_rejects_invalid_capacity_and_mass_overflow_before_creation(
 /// Losing a limb changes surviving material but does not erase an unlocated cargo installation.
 #[test]
 fn mech_cargo_installation_survives_section_loss_and_does_not_enable_suits() {
-    let BattleUnitTemplate::Mech(template) = configured(&templates()[0], "500", "CargoTech") else {
+    let UnitTemplate::Mech(template) = configured(&templates()[0], "500", "CargoTech") else {
         unreachable!()
     };
-    let unit = BattleUnit::from_template(template.clone()).unwrap();
+    let unit = Mech::from_template(template.clone()).unwrap();
     let before = unit.mass().unwrap();
     assert_eq!(before.cargo, 5120);
     let mut saved = serde_json::to_value(&unit).unwrap();
     saved["sections"]["LeftArm"]["internal"] = 0.into();
     saved["sections"]["LeftArm"]["armor"] = 0.into();
-    let damaged: BattleUnit = serde_json::from_value(saved).unwrap();
+    let damaged: Mech = serde_json::from_value(saved).unwrap();
     assert_eq!(damaged.mass().unwrap().cargo, before.cargo);
     assert!(damaged.mass().unwrap().total < before.total);
     let mut template = template;
     template.attributes.insert("max_suits".into(), "1".into());
-    assert!(BattleUnit::from_template(template).is_err());
+    assert!(Mech::from_template(template).is_err());
 }
 
 /// An empty but overweight cargo installation participates in the common propulsion limit.

@@ -20,8 +20,8 @@ btech.player.view_dimensions(player, dimensions)
 | Name | Type | Description |
 | --- | --- | --- |
 | `player` | `integer` | Live player dbref. |
-| `dimensions` | `BattleViewDimensions?` | Validated replacement; omit for a read-only query. |
+| `dimensions` | `ViewDimensions?` | Validated replacement; omit for a read-only query. |
 
 ## Returns
 
-- `BattleViewDimensions`
+- `ViewDimensions`

@@ -27,21 +27,21 @@ async fn electronic_status_colors_follow_countering_without_refreshing_the_field
             advance_battle_units(&mut world, 0);
         }
         for (mode, countered, expected) in [
-            (BattleElectronicMode::Off, false, "[fg=green]Off[reset]"),
-            (BattleElectronicMode::Off, true, "[fg=red]Off[reset]"),
+            (ElectronicMode::Off, false, "[fg=green]Off[reset]"),
+            (ElectronicMode::Off, true, "[fg=red]Off[reset]"),
             (
-                BattleElectronicMode::Ecm,
+                ElectronicMode::Ecm,
                 false,
                 "[fg=green bold]ECM[reset]",
             ),
-            (BattleElectronicMode::Ecm, true, "[fg=red bold]ECM[reset]"),
+            (ElectronicMode::Ecm, true, "[fg=red bold]ECM[reset]"),
             (
-                BattleElectronicMode::Eccm,
+                ElectronicMode::Eccm,
                 false,
                 "[fg=green bold]ECCM[reset]",
             ),
             (
-                BattleElectronicMode::Eccm,
+                ElectronicMode::Eccm,
                 true,
                 "[fg=green bold]ECCM[reset]",
             ),
@@ -196,11 +196,11 @@ async fn coordinate_target_labels_keep_reference_spacing() {
             advance_battle_units(&mut world, 0);
         }
         for (mode, expected) in [
-            (BattleHexTargetMode::UnitAtHex, "Target: 1 0"),
-            (BattleHexTargetMode::Hex, "Target: Hex 1 0"),
-            (BattleHexTargetMode::Building, "Target: Building at 1 0"),
-            (BattleHexTargetMode::Ignite, "Target: Hex 1 0"),
-            (BattleHexTargetMode::Clear, "Target: Hex 1 0"),
+            (HexTargetMode::UnitAtHex, "Target: 1 0"),
+            (HexTargetMode::Hex, "Target: Hex 1 0"),
+            (HexTargetMode::Building, "Target: Building at 1 0"),
+            (HexTargetMode::Ignite, "Target: Hex 1 0"),
+            (HexTargetMode::Clear, "Target: Hex 1 0"),
         ] {
             select_battle_hex_target(
                 &mut world,
@@ -230,7 +230,7 @@ async fn limb_recycling_uses_cockpit_ticks_without_advancing_time() {
             .rewrite_unit_record(id, |record| {
                 record["limb_recycle"] =
                     serde_json::to_value(std::collections::BTreeMap::from([(
-                        BattleSection::LeftArm,
+                        MechSection::LeftArm,
                         seconds,
                     )]))
                     .unwrap();
@@ -260,11 +260,11 @@ async fn vehicle_damage_banners_follow_owned_motive_state() {
         damage_battle_vehicle_motive(
             &mut world,
             id,
-            BattleVehicleMotiveHit::SpeedLoss { movement_points: 1 },
+            VehicleMotiveHit::SpeedLoss { movement_points: 1 },
         )
         .unwrap();
         assert!(!text::plain(&battle_unit_status(&world, id, "").unwrap()).contains(banner));
-        damage_battle_vehicle_motive(&mut world, id, BattleVehicleMotiveHit::Immobilize).unwrap();
+        damage_battle_vehicle_motive(&mut world, id, VehicleMotiveHit::Immobilize).unwrap();
         let before = world.btech.clone();
         let report = text::plain(&battle_unit_status(&world, id, "").unwrap());
         assert_eq!(report.matches(banner).count(), 1);
@@ -305,9 +305,9 @@ async fn landed_rotor_loss_has_its_own_damage_banner() {
     damage_battle_vehicle_phase(
         &mut world,
         id,
-        BattleVehicleSection::Rotor,
+        VehicleSection::Rotor,
         u16::MAX,
-        BattleDamagePhase::Internal,
+        DamagePhase::Internal,
     )
     .unwrap();
     let before = world.btech.clone();
@@ -337,7 +337,7 @@ async fn named_fixture(
     )
     .unwrap();
     let id = world.create(&config, "Vehicle".into(), Kind::Thing);
-    BattleUnitTemplate::parse(reference, source)
+    UnitTemplate::parse(reference, source)
         .unwrap()
         .create(&mut world, id)
         .unwrap();
@@ -345,7 +345,7 @@ async fn named_fixture(
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
     let observer = world.create(&config, "Observer".into(), Kind::Thing);
-    BattleUnitTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+    UnitTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
         .unwrap()
         .create(&mut world, observer)
         .unwrap();
@@ -484,7 +484,7 @@ async fn vehicle_status_tracks_live_load_damage_ammunition_and_flight() {
     let (_dir, config, mut world, id, _) =
         fixture(include_str!("../game/mechs/Kestrel.toml")).await;
     let target = world.create(&config, "Load".into(), Kind::Thing);
-    BattleUnitTemplate::parse(
+    UnitTemplate::parse(
         "Savannah_Master",
         include_str!("../game/mechs/Savannah_Master.toml"),
     )
@@ -630,7 +630,7 @@ async fn status_diagram_damage_and_selectors_preserve_live_state() {
     assert_ne!(damaged, intact);
     assert!(damaged.contains("[fg=red]"));
     let unit = scripts.world().btech.constructed_units()[&id].clone();
-    let section = &unit.definition().sections[&BattleSection::LeftArm];
+    let section = &unit.definition().sections[&MechSection::LeftArm];
     set_battle_unit_field_action(
         &scripts,
         &config,

@@ -1,8 +1,6 @@
 //! Selective persistence of return-map links and interior arrival points in map-object rows.
 use super::write::{Cell, Fields, row};
-use crate::{
-    BattleBuildingEntryPoint, BattleBuildingExit, HexCoordinate, ObjectId, StoredMap, World,
-};
+use crate::{BuildingEntryPoint, BuildingExit, HexCoordinate, ObjectId, StoredMap, World};
 use anyhow::{Context, Result, ensure};
 use sqlx::{Row, SqliteConnection};
 use std::{collections::BTreeMap, sync::Arc};
@@ -29,7 +27,7 @@ pub(super) async fn load(
             );
             Arc::make_mut(&mut map.building_exits).insert(
                 ordinal,
-                BattleBuildingExit {
+                BuildingExit {
                     destination,
                     coordinate: HexCoordinate {
                         x: record.try_get("x")?,
@@ -42,7 +40,7 @@ pub(super) async fn load(
             );
             continue;
         }
-        let point = BattleBuildingEntryPoint {
+        let point = BuildingEntryPoint {
             coordinate: HexCoordinate {
                 x: record.try_get("x")?,
                 y: record.try_get("y")?,

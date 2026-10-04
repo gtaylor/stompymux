@@ -2,9 +2,9 @@
 use stompymux_rs::*;
 
 /// An intact tracked fixture with two turret weapons and four ammunition bins.
-fn vehicle() -> BattleVehicle {
-    BattleVehicle::new(
-        BattleVehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+fn vehicle() -> Vehicle {
+    Vehicle::new(
+        VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
             .unwrap(),
     )
     .unwrap()
@@ -21,61 +21,50 @@ fn vehicle_turret_loss_clears_bins_without_destroying_hull() {
     assert_eq!(vehicle, before);
     let armor = vehicle
         .damage_phase(
-            BattleVehicleSection::Turret,
+            VehicleSection::Turret,
             45,
-            BattleDamagePhase::Armor { rear: true },
+            DamagePhase::Armor { rear: true },
         )
         .unwrap();
     assert_eq!((armor.absorbed, armor.remaining), (40, 5));
     assert!(!armor.unit_destroyed);
     let internal = vehicle
         .damage_phase(
-            BattleVehicleSection::Turret,
+            VehicleSection::Turret,
             armor.remaining,
-            BattleDamagePhase::Internal,
+            DamagePhase::Internal,
         )
         .unwrap();
     assert_eq!((internal.absorbed, internal.remaining), (5, 0));
     assert!(internal.destroyed_sections.is_empty());
     let snapshot = serde_json::to_value(&vehicle).unwrap();
-    let mut restored: BattleVehicle = serde_json::from_value(snapshot).unwrap();
+    let mut restored: Vehicle = serde_json::from_value(snapshot).unwrap();
     let result = vehicle
-        .damage_phase(
-            BattleVehicleSection::Turret,
-            10,
-            BattleDamagePhase::Internal,
-        )
+        .damage_phase(VehicleSection::Turret, 10, DamagePhase::Internal)
         .unwrap();
     assert_eq!(
         restored
-            .damage_phase(
-                BattleVehicleSection::Turret,
-                10,
-                BattleDamagePhase::Internal
-            )
+            .damage_phase(VehicleSection::Turret, 10, DamagePhase::Internal)
             .unwrap(),
         result
     );
     assert_eq!((result.absorbed, result.remaining), (3, 7));
-    assert_eq!(
-        result.destroyed_sections,
-        vec![BattleVehicleSection::Turret]
-    );
+    assert_eq!(result.destroyed_sections, vec![VehicleSection::Turret]);
     assert!(!result.unit_destroyed);
     assert_eq!(vehicle.ammunition(), &[0, 0, 0, 0]);
     assert_eq!(restored, vehicle);
     let again = vehicle
-        .damage_phase(BattleVehicleSection::Turret, 3, BattleDamagePhase::Internal)
+        .damage_phase(VehicleSection::Turret, 3, DamagePhase::Internal)
         .unwrap();
     assert_eq!((again.absorbed, again.remaining), (0, 3));
     assert!(again.destroyed_sections.is_empty());
     let result = vehicle
-        .damage_phase(BattleVehicleSection::Front, 8, BattleDamagePhase::Internal)
+        .damage_phase(VehicleSection::Front, 8, DamagePhase::Internal)
         .unwrap();
     assert!(result.unit_destroyed);
-    assert_eq!(vehicle.sections()[&BattleVehicleSection::Front].armor, 0);
+    assert_eq!(vehicle.sections()[&VehicleSection::Front].armor, 0);
     assert!(vehicle.expend_ammunition(0, 1).is_err());
-    let restored: BattleVehicle =
+    let restored: Vehicle =
         serde_json::from_value(serde_json::to_value(&vehicle).unwrap()).unwrap();
     assert!(restored.is_destroyed());
 }
@@ -94,7 +83,7 @@ fn vehicle_snapshot_rejects_inconsistent_material_state() {
         let mut snapshot = original.clone();
         *snapshot.pointer_mut(pointer).unwrap() = value;
         assert!(
-            serde_json::from_value::<BattleVehicle>(snapshot).is_err(),
+            serde_json::from_value::<Vehicle>(snapshot).is_err(),
             "{pointer}"
         );
     }
@@ -103,18 +92,18 @@ fn vehicle_snapshot_rejects_inconsistent_material_state() {
         .as_object_mut()
         .unwrap()
         .remove("front");
-    assert!(serde_json::from_value::<BattleVehicle>(snapshot).is_err());
+    assert!(serde_json::from_value::<Vehicle>(snapshot).is_err());
     let mut snapshot = original;
     snapshot["sections"]["turret"] = serde_json::json!({"armor":0,"internal":0,"rear":0});
-    assert!(serde_json::from_value::<BattleVehicle>(snapshot.clone()).is_err());
+    assert!(serde_json::from_value::<Vehicle>(snapshot.clone()).is_err());
     snapshot["ammunition"] = serde_json::json!([0, 0, 0, 0]);
     assert!(
-        !serde_json::from_value::<BattleVehicle>(snapshot)
+        !serde_json::from_value::<Vehicle>(snapshot)
             .unwrap()
             .is_destroyed()
     );
-    let mut truck = BattleVehicle::new(
-        BattleVehicleTemplate::parse(
+    let mut truck = Vehicle::new(
+        VehicleTemplate::parse(
             "Flatbed_Truck",
             include_str!("../game/mechs/Flatbed_Truck.toml"),
         )
@@ -124,24 +113,20 @@ fn vehicle_snapshot_rejects_inconsistent_material_state() {
     let before = truck.clone();
     assert!(
         truck
-            .damage_phase(
-                BattleVehicleSection::Turret,
-                10,
-                BattleDamagePhase::Internal
-            )
+            .damage_phase(VehicleSection::Turret, 10, DamagePhase::Internal)
             .is_err()
     );
     assert_eq!(truck, before);
     for section in [
-        BattleVehicleSection::Left,
-        BattleVehicleSection::Right,
-        BattleVehicleSection::Front,
-        BattleVehicleSection::Rear,
+        VehicleSection::Left,
+        VehicleSection::Right,
+        VehicleSection::Front,
+        VehicleSection::Rear,
     ] {
         let mut vehicle = vehicle();
         assert!(
             vehicle
-                .damage_phase(section, 8, BattleDamagePhase::Internal)
+                .damage_phase(section, 8, DamagePhase::Internal)
                 .unwrap()
                 .unit_destroyed
         );

@@ -6,13 +6,13 @@ use serde::{Deserialize, Serialize};
 
 /// Charge intent and accumulated movement; clearing a selection can retain its counters.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
-pub struct BattleChargeState {
+pub struct ChargeState {
     pub target: Option<ObjectId>,
     pub elapsed: u8,
     pub distance: f32,
 }
 
-impl BattleChargeState {
+impl ChargeState {
     /// Reject corrupt persisted counters without requiring the target to remain alive.
     pub(super) fn validate(self) -> Result<()> {
         ensure!(
@@ -25,7 +25,7 @@ impl BattleChargeState {
 
 /// Select the current lock, an explicit acquired unit, or cancel the complete charge state.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum BattleChargeSelection {
+pub enum ChargeSelection {
     Default,
     Target(ObjectId),
     Cancel,
@@ -33,14 +33,14 @@ pub enum BattleChargeSelection {
 
 /// Charge settings supplied alongside the movement/fall policy.
 #[derive(Debug, Clone, Copy)]
-pub struct BattleChargePolicy {
+pub struct ChargePolicy {
     pub new_rules: bool,
     pub technology_level_three: bool,
     pub extended_movement: bool,
     pub hit_arc_mode: i64,
 }
 
-impl BattleChargePolicy {
+impl ChargePolicy {
     /// Standard velocity-based charge rules without the optional recoil variant.
     pub const STANDARD: Self = Self {
         new_rules: false,
@@ -50,26 +50,26 @@ impl BattleChargePolicy {
     };
 
     /// Build collision rules from the moving unit's current accumulated distance.
-    fn collision(self, movement: BattleMovementRules, distance: f32) -> BattleChargeRules {
-        BattleChargeRules {
+    fn collision(self, movement: MovementRules, distance: f32) -> ChargeRules {
+        ChargeRules {
             distance,
             new_rules: self.new_rules,
             technology_level_three: self.technology_level_three,
-            physical: BattlePhysicalRules {
+            physical: PhysicalRules {
                 use_pilot_skill: true,
                 fasa_turning: movement.fasa_turning,
                 extended_movement: self.extended_movement,
                 hit_arc_mode: self.hit_arc_mode,
-                glancing: BattleGlancingMode::Disabled,
+                glancing: GlancingMode::Disabled,
                 fall: movement.fall,
             },
         }
     }
 }
 
-impl BattleUnit {
+impl Mech {
     /// Persistent selection, elapsed movement updates and accumulated charge travel.
-    pub fn charge(&self) -> BattleChargeState {
+    pub fn charge(&self) -> ChargeState {
         self.charge
     }
 }
@@ -80,30 +80,30 @@ pub fn select_charge(
     world: &mut World,
     id: ObjectId,
     pilot: ObjectId,
-    selection: BattleChargeSelection,
-) -> Result<Vec<BattleNotice>> {
+    selection: ChargeSelection,
+) -> Result<Vec<Notice>> {
     super::power::controlled_unit(world, id, pilot)?;
     let unit = &world.btech.constructed_units()[&id];
     ensure!(
-        unit.power() == BattlePower::Running && !unit.is_destroyed(),
+        unit.power() == Power::Running && !unit.is_destroyed(),
         "Start the unit first"
     );
     unit.validate_charge_support()?;
     let position = unit.position().context("Unit is not on a battlefield")?;
-    if selection == BattleChargeSelection::Cancel {
-        world.btech.constructed.get_mut(&id).unwrap().charge = BattleChargeState::default();
-        return Ok(vec![BattleNotice {
+    if selection == ChargeSelection::Cancel {
+        world.btech.constructed.get_mut(&id).unwrap().charge = ChargeState::default();
+        return Ok(vec![Notice {
             unit: id,
             text: "You are no longer charging.".into(),
         }]);
     }
     let target = match selection {
-        BattleChargeSelection::Default => unit
+        ChargeSelection::Default => unit
             .target_lock()
             .map(|lock| lock.target)
             .context("You do not have a default target set!")?,
-        BattleChargeSelection::Target(target) => target,
-        BattleChargeSelection::Cancel => unreachable!("cancellation handled above"),
+        ChargeSelection::Target(target) => target,
+        ChargeSelection::Cancel => unreachable!("cancellation handled above"),
     };
     ensure!(target != id, "Cannot charge yourself");
     let victim = world
@@ -117,7 +117,7 @@ pub fn select_charge(
             .is_some_and(|other| other.map == position.map),
         "Charge target is on another battlefield"
     );
-    if matches!(selection, BattleChargeSelection::Target(_)) {
+    if matches!(selection, ChargeSelection::Target(_)) {
         ensure!(
             visible_contact(world, id, target)?.is_some()
                 && super::visibility::unit_unblocked(world, id, target)?,
@@ -132,9 +132,9 @@ pub fn select_charge(
     world.attempt(|world| {
         world.btech.constructed.get_mut(&id).unwrap().charge.target = Some(target);
         world.btech.validate_action(world)?;
-        Ok(vec![BattleNotice {
+        Ok(vec![Notice {
             unit: id,
-            text: if selection == BattleChargeSelection::Default {
+            text: if selection == ChargeSelection::Default {
                 "Charge target set to default target.".into()
             } else {
                 format!("Charge target set to #{}.", target.0)
@@ -144,18 +144,14 @@ pub fn select_charge(
 }
 
 /// Age a selection at the start of a movement update, reproducing the post-increment timeout.
-pub(super) fn begin_update(
-    world: &mut World,
-    id: ObjectId,
-    policy: BattleChargePolicy,
-) -> Vec<BattleNotice> {
+pub(super) fn begin_update(world: &mut World, id: ObjectId, policy: ChargePolicy) -> Vec<Notice> {
     let unit = world.btech.constructed.get_mut(&id).unwrap();
     if !policy.new_rules || unit.charge.target.is_none() {
         return vec![];
     }
     if unit.charge.elapsed == 60 {
-        unit.charge = BattleChargeState::default();
-        return vec![BattleNotice {
+        unit.charge = ChargeState::default();
+        return vec![Notice {
             unit: id,
             text: "Charge timed out, charge reset.".into(),
         }];
@@ -170,7 +166,7 @@ pub(super) fn record_distance(
     id: ObjectId,
     from: Point,
     to: Point,
-    policy: BattleChargePolicy,
+    policy: ChargePolicy,
 ) {
     let unit = world.btech.constructed.get_mut(&id).unwrap();
     if !policy.new_rules || unit.charge.target.is_none() {
@@ -190,10 +186,10 @@ pub(super) fn record_distance(
 pub(super) fn finish_update(
     world: &mut World,
     id: ObjectId,
-    movement: BattleMovementRules,
-    mut reports: Option<&mut Vec<BattleChargeReport>>,
-    feedback: (&mut Vec<super::BattlePilotNotice>, usize),
-) -> Result<Vec<BattleNotice>> {
+    movement: MovementRules,
+    mut reports: Option<&mut Vec<ChargeReport>>,
+    feedback: (&mut Vec<super::PilotNotice>, usize),
+) -> Result<Vec<Notice>> {
     let charge = world.btech.constructed_units()[&id].charge;
     let Some(target) = charge.target else {
         return Ok(vec![]);
@@ -217,8 +213,8 @@ pub(super) fn finish_update(
         })
     });
     if !valid || !live {
-        world.btech.constructed.get_mut(&id).unwrap().charge = BattleChargeState::default();
-        return Ok(vec![BattleNotice {
+        world.btech.constructed.get_mut(&id).unwrap().charge = ChargeState::default();
+        return Ok(vec![Notice {
             unit: id,
             text: "Invalid CHARGE target!".into(),
         }]);
@@ -252,7 +248,7 @@ pub(super) fn finish_update(
             report.notices
         }
     } else if let Err(error) = profile(world, id, target, rules) {
-        vec![BattleNotice {
+        vec![Notice {
             unit: id,
             text: format!("{error:#}"),
         }]
@@ -273,9 +269,9 @@ pub(super) fn finish_update(
             report.notices
         }
     };
-    world.btech.constructed.get_mut(&id).unwrap().charge = BattleChargeState::default();
+    world.btech.constructed.get_mut(&id).unwrap().charge = ChargeState::default();
     if mutual {
-        world.btech.constructed.get_mut(&target).unwrap().charge = BattleChargeState::default();
+        world.btech.constructed.get_mut(&target).unwrap().charge = ChargeState::default();
     }
     Ok(notices)
 }

@@ -1,8 +1,6 @@
 //! Jump thrust, gravity, continuous trajectory boundaries and detached persisted inspection.
 use crate::support;
-use stompymux_rs::{
-    BattleJumpPath, BattleSection, BattleSystem, BattleTemplate, BattleUnit, Point,
-};
+use stompymux_rs::{JumpPath, Mech, MechSection, MechTemplate, Point, System};
 
 /// Loose stock uses the shared load calculation for both projected and targeted jumps.
 #[tokio::test]
@@ -117,7 +115,7 @@ async fn runtime_fixture() -> (
     create_battle_unit(
         &mut world,
         id,
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 5, 5).unwrap();
@@ -132,12 +130,12 @@ async fn runtime_fixture() -> (
 }
 
 /// Conventional fall rules used by jump landing and lost-thrust handling.
-fn jump_rules() -> stompymux_rs::BattleFallRules {
-    stompymux_rs::BattleFallRules {
-        vehicle_impact: stompymux_rs::BattleVehicleImpactRules::STANDARD,
-        stacking: stompymux_rs::BattleStackingRules::STANDARD,
-        stagger: stompymux_rs::BattleStaggerMode::Retain,
-        hit: stompymux_rs::BattleHitRules {
+fn jump_rules() -> stompymux_rs::FallRules {
+    stompymux_rs::FallRules {
+        vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
+        stacking: stompymux_rs::StackingRules::STANDARD,
+        stagger: stompymux_rs::StaggerMode::Retain,
+        hit: stompymux_rs::HitRules {
             inferno_penalty: false,
             exile_stun_mode: 0,
         },
@@ -154,12 +152,12 @@ async fn destruction_and_thermal_shutdown_cancel_airborne_state() {
     launch_battle_jump(&mut world, id, ObjectId(1), 0, 2.0).unwrap();
     advance_battle_jumps(
         &mut world,
-        stompymux_rs::BattleMovementRules {
-            fall: stompymux_rs::BattleFallRules {
-                stacking: stompymux_rs::BattleStackingRules::STANDARD,
+        stompymux_rs::MovementRules {
+            fall: stompymux_rs::FallRules {
+                stacking: stompymux_rs::StackingRules::STANDARD,
                 ..jump_rules()
             },
-            ..stompymux_rs::BattleMovementRules::STANDARD
+            ..stompymux_rs::MovementRules::STANDARD
         },
     )
     .unwrap();
@@ -167,20 +165,20 @@ async fn destruction_and_thermal_shutdown_cancel_airborne_state() {
     apply_damage_phase(
         &mut destroyed,
         id,
-        BattleSection::CenterTorso,
+        MechSection::CenterTorso,
         u16::MAX,
-        BattleDamagePhase::Internal,
+        DamagePhase::Internal,
     )
     .unwrap();
     let unit = &destroyed.btech.constructed_units()[&id];
     assert!(unit.is_destroyed());
     assert!(unit.flight().is_none());
     assert_eq!(unit.jump_stabilization(), 0);
-    assert_eq!(unit.power(), BattlePower::Off);
+    assert_eq!(unit.power(), Power::Off);
     destroyed.validate(&config).unwrap();
     let seed = (0..=255)
         .find(|seed| {
-            let mut dice = BattleDice::seeded([*seed; 32]);
+            let mut dice = Dice::seeded([*seed; 32]);
             for _ in 0..3 {
                 dice.d6();
             } // Unskilled Computer check.
@@ -191,29 +189,29 @@ async fn destruction_and_thermal_shutdown_cancel_airborne_state() {
         .btech
         .rewrite_unit_record(id, |record| {
             let unit = record;
-            unit["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+            unit["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
             unit["heat"] = serde_json::json!({"stored":24.0,"excess":14.0});
             unit["overheat_clock"] = serde_json::json!({"elapsed":30,"phase":0,"injury_due":false});
         })
         .unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
     let mut restored = persistence::load(&config.database()).await.unwrap();
-    let rules = BattleOverheatRules {
-        vehicle_impact: stompymux_rs::BattleVehicleImpactRules::STANDARD,
-        stacking: BattleStackingRules::STANDARD,
+    let rules = OverheatRules {
+        vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
+        stacking: StackingRules::STANDARD,
         hit: jump_rules().hit,
         extended_piloting: true,
-        stagger: BattleStaggerMode::Retain,
+        stagger: StaggerMode::Retain,
     };
     let replay = advance_battle_overheat(&mut restored, rules).unwrap();
     let reports = advance_battle_overheat(
         &mut world,
-        BattleOverheatRules {
-            vehicle_impact: stompymux_rs::BattleVehicleImpactRules::STANDARD,
-            stacking: stompymux_rs::BattleStackingRules::STANDARD,
+        OverheatRules {
+            vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
+            stacking: stompymux_rs::StackingRules::STANDARD,
             hit: jump_rules().hit,
             extended_piloting: true,
-            stagger: BattleStaggerMode::Retain,
+            stagger: StaggerMode::Retain,
         },
     )
     .unwrap();
@@ -229,8 +227,8 @@ async fn destruction_and_thermal_shutdown_cancel_airborne_state() {
     assert!(reports[0].shutdown && reports[0].fall.is_some());
     let unit = &world.btech.constructed_units()[&id];
     assert!(unit.flight().is_none());
-    assert_eq!(unit.power(), BattlePower::Off);
-    assert_eq!(unit.posture(), BattlePosture::Prone);
+    assert_eq!(unit.power(), Power::Off);
+    assert_eq!(unit.posture(), Posture::Prone);
     assert_eq!(unit.jump_stabilization(), 0);
     world.validate(&config).unwrap();
 }
@@ -331,7 +329,7 @@ async fn connected_jump_domain_updates_height_heat_landing_and_stabilization_aft
     create_battle_unit(
         &mut world,
         observer,
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, observer, support::FIXTURE_DICE_SEED);
@@ -342,10 +340,10 @@ async fn connected_jump_domain_updates_height_heat_landing_and_stabilization_aft
     assert!(
         advance_battle_motion(
             &mut world,
-            BattleMovementRules {
+            MovementRules {
                 fasa_turning: false,
                 slowdown: 2,
-                ..stompymux_rs::BattleMovementRules::STANDARD
+                ..stompymux_rs::MovementRules::STANDARD
             }
         )
         .unwrap()
@@ -366,12 +364,12 @@ async fn connected_jump_domain_updates_height_heat_landing_and_stabilization_aft
         assert!(
             advance_battle_jumps(
                 &mut world,
-                stompymux_rs::BattleMovementRules {
-                    fall: stompymux_rs::BattleFallRules {
-                        stacking: stompymux_rs::BattleStackingRules::STANDARD,
+                stompymux_rs::MovementRules {
+                    fall: stompymux_rs::FallRules {
+                        stacking: stompymux_rs::StackingRules::STANDARD,
                         ..jump_rules()
                     },
-                    ..stompymux_rs::BattleMovementRules::STANDARD
+                    ..stompymux_rs::MovementRules::STANDARD
                 }
             )
             .unwrap()
@@ -410,23 +408,23 @@ async fn connected_jump_domain_updates_height_heat_landing_and_stabilization_aft
         assert_eq!(
             advance_battle_jumps(
                 &mut world,
-                stompymux_rs::BattleMovementRules {
-                    fall: stompymux_rs::BattleFallRules {
-                        stacking: stompymux_rs::BattleStackingRules::STANDARD,
+                stompymux_rs::MovementRules {
+                    fall: stompymux_rs::FallRules {
+                        stacking: stompymux_rs::StackingRules::STANDARD,
                         ..jump_rules()
                     },
-                    ..stompymux_rs::BattleMovementRules::STANDARD
+                    ..stompymux_rs::MovementRules::STANDARD
                 }
             )
             .unwrap(),
             advance_battle_jumps(
                 &mut loaded,
-                stompymux_rs::BattleMovementRules {
-                    fall: stompymux_rs::BattleFallRules {
-                        stacking: stompymux_rs::BattleStackingRules::STANDARD,
+                stompymux_rs::MovementRules {
+                    fall: stompymux_rs::FallRules {
+                        stacking: stompymux_rs::StackingRules::STANDARD,
                         ..jump_rules()
                     },
-                    ..stompymux_rs::BattleMovementRules::STANDARD
+                    ..stompymux_rs::MovementRules::STANDARD
                 }
             )
             .unwrap()
@@ -443,7 +441,7 @@ async fn connected_jump_domain_updates_height_heat_landing_and_stabilization_aft
         &mut shutdown,
         id,
         ObjectId(1),
-        stompymux_rs::BattleMovementRules::STANDARD.fall,
+        stompymux_rs::MovementRules::STANDARD.fall,
     )
     .unwrap();
     assert_eq!(
@@ -453,12 +451,12 @@ async fn connected_jump_domain_updates_height_heat_landing_and_stabilization_aft
     assert!(
         advance_battle_jumps(
             &mut shutdown,
-            stompymux_rs::BattleMovementRules {
-                fall: stompymux_rs::BattleFallRules {
-                    stacking: stompymux_rs::BattleStackingRules::STANDARD,
+            stompymux_rs::MovementRules {
+                fall: stompymux_rs::FallRules {
+                    stacking: stompymux_rs::StackingRules::STANDARD,
                     ..jump_rules()
                 },
-                ..stompymux_rs::BattleMovementRules::STANDARD
+                ..stompymux_rs::MovementRules::STANDARD
             }
         )
         .unwrap()
@@ -471,12 +469,12 @@ async fn connected_jump_domain_updates_height_heat_landing_and_stabilization_aft
     for remaining in (0..12).rev() {
         let notices = advance_battle_jumps(
             &mut world,
-            stompymux_rs::BattleMovementRules {
-                fall: stompymux_rs::BattleFallRules {
-                    stacking: stompymux_rs::BattleStackingRules::STANDARD,
+            stompymux_rs::MovementRules {
+                fall: stompymux_rs::FallRules {
+                    stacking: stompymux_rs::StackingRules::STANDARD,
                     ..jump_rules()
                 },
-                ..stompymux_rs::BattleMovementRules::STANDARD
+                ..stompymux_rs::MovementRules::STANDARD
             },
         )
         .unwrap();
@@ -553,12 +551,12 @@ async fn losing_all_jets_ends_flight_with_a_fall_and_saved_cursor_corruption_is_
     launch_battle_jump(&mut world, id, ObjectId(1), 0, 2.0).unwrap();
     advance_battle_jumps(
         &mut world,
-        stompymux_rs::BattleMovementRules {
-            fall: stompymux_rs::BattleFallRules {
-                stacking: stompymux_rs::BattleStackingRules::STANDARD,
+        stompymux_rs::MovementRules {
+            fall: stompymux_rs::FallRules {
+                stacking: stompymux_rs::StackingRules::STANDARD,
                 ..jump_rules()
             },
-            ..stompymux_rs::BattleMovementRules::STANDARD
+            ..stompymux_rs::MovementRules::STANDARD
         },
     )
     .unwrap();
@@ -572,7 +570,7 @@ async fn losing_all_jets_ends_flight_with_a_fall_and_saved_cursor_corruption_is_
         .unwrap()
         .systems
         .into_iter()
-        .filter(|part| part.system == BattleSystem::JumpJet)
+        .filter(|part| part.system == System::JumpJet)
         .map(|part| part.location)
         .collect();
     for location in jets {
@@ -581,18 +579,18 @@ async fn losing_all_jets_ends_flight_with_a_fall_and_saved_cursor_corruption_is_
     let point = world.btech.constructed_units()[&id].motion().unwrap().point;
     let notices = advance_battle_jumps(
         &mut world,
-        stompymux_rs::BattleMovementRules {
-            fall: stompymux_rs::BattleFallRules {
-                stacking: stompymux_rs::BattleStackingRules::STANDARD,
+        stompymux_rs::MovementRules {
+            fall: stompymux_rs::FallRules {
+                stacking: stompymux_rs::StackingRules::STANDARD,
                 ..jump_rules()
             },
-            ..stompymux_rs::BattleMovementRules::STANDARD
+            ..stompymux_rs::MovementRules::STANDARD
         },
     )
     .unwrap();
     let unit = &world.btech.constructed_units()[&id];
     assert!(unit.flight().is_none());
-    assert_eq!(unit.posture(), BattlePosture::Prone);
+    assert_eq!(unit.posture(), Posture::Prone);
     assert_eq!(unit.motion().unwrap().point, point);
     assert!(
         notices
@@ -603,8 +601,8 @@ async fn losing_all_jets_ends_flight_with_a_fall_and_saved_cursor_corruption_is_
 }
 
 /// A five-hex path with enough height variation to detect lost trajectory state.
-fn flight_path() -> BattleJumpPath {
-    BattleJumpPath::new(Point { x: 2.0, y: 3.0 }, Point { x: 2.0, y: 8.0 }, -1, 4, 5).unwrap()
+fn flight_path() -> JumpPath {
+    JumpPath::new(Point { x: 2.0, y: 3.0 }, Point { x: 2.0, y: 8.0 }, -1, 4, 5).unwrap()
 }
 
 #[tokio::test]
@@ -612,32 +610,30 @@ async fn projected_jump_checks_requested_range_before_destination_snapping() {
     use stompymux_rs::*;
     let (_dir, config, mut world, id) = runtime_fixture().await;
     let start = world.btech.constructed_units()[&id].motion().unwrap().point;
-    let short = BattleJumpPath::projected(start, 90, 3.0, 0, 0, 5).unwrap();
+    let short = JumpPath::projected(start, 90, 3.0, 0, 0, 5).unwrap();
     assert!(short.distance() > 3.0);
     assert_eq!(short.apex(), 5);
     launch_battle_jump(&mut world, id, ObjectId(1), 90, 5.0).unwrap();
     let flight = world.btech.constructed_units()[&id].flight().unwrap();
     assert!(flight.path().distance() > 5.0);
-    assert!(
-        BattleJumpPath::new(start, flight.path().sample(1.0, 5).unwrap().point, 0, 0, 5).is_err()
-    );
-    let restored: BattleJumpFlight =
+    assert!(JumpPath::new(start, flight.path().sample(1.0, 5).unwrap().point, 0, 0, 5).is_err());
+    let restored: JumpFlight =
         serde_json::from_str(&serde_json::to_string(&flight).unwrap()).unwrap();
     assert_eq!(restored, flight);
     let mut bad = serde_json::to_value(flight).unwrap();
     bad["path"]["end"]["y"] = 0.into();
-    assert!(serde_json::from_value::<BattleJumpFlight>(bad).is_err());
+    assert!(serde_json::from_value::<JumpFlight>(bad).is_err());
     persistence::save(&config.database(), &world).await.unwrap();
     let mut loaded = persistence::load(&config.database()).await.unwrap();
     for _ in 0..63 {
         advance_battle_jumps(
             &mut loaded,
-            stompymux_rs::BattleMovementRules {
-                fall: stompymux_rs::BattleFallRules {
-                    stacking: stompymux_rs::BattleStackingRules::STANDARD,
+            stompymux_rs::MovementRules {
+                fall: stompymux_rs::FallRules {
+                    stacking: stompymux_rs::StackingRules::STANDARD,
                     ..jump_rules()
                 },
-                ..stompymux_rs::BattleMovementRules::STANDARD
+                ..stompymux_rs::MovementRules::STANDARD
             },
         )
         .unwrap();
@@ -652,7 +648,7 @@ async fn projected_jump_checks_requested_range_before_destination_snapping() {
 
 #[test]
 fn timed_flight_replays_after_serialization_and_snaps_to_the_endpoint() {
-    use stompymux_rs::{BattleJumpFlight, BattleJumpOutcome};
+    use stompymux_rs::{JumpFlight, JumpOutcome};
     for (gravity, modifier, seconds) in [
         (100, 100, 60),
         (100, 0, 60),
@@ -663,7 +659,7 @@ fn timed_flight_replays_after_serialization_and_snaps_to_the_endpoint() {
         (200, 100, 120),
     ] {
         let capacity = jenner().jump_capacity(gravity).unwrap();
-        let mut flight = BattleJumpFlight::new(flight_path());
+        let mut flight = JumpFlight::new(flight_path());
         let mut restored = flight;
         for second in 1..=seconds {
             let previous = flight.sample();
@@ -673,9 +669,9 @@ fn timed_flight_replays_after_serialization_and_snaps_to_the_endpoint() {
             assert_eq!(
                 step.outcome,
                 if second == seconds {
-                    BattleJumpOutcome::Landing
+                    JumpOutcome::Landing
                 } else {
-                    BattleJumpOutcome::Airborne
+                    JumpOutcome::Airborne
                 }
             );
             assert_eq!(step.to, flight.sample());
@@ -697,14 +693,14 @@ fn timed_flight_replays_after_serialization_and_snaps_to_the_endpoint() {
 
 #[test]
 fn flight_uses_current_thrust_without_rewriting_the_previous_airborne_sample() {
-    use stompymux_rs::{BattleJumpCapacity, BattleJumpFlight, BattleJumpOutcome};
-    let mut flight = BattleJumpFlight::new(flight_path());
+    use stompymux_rs::{JumpCapacity, JumpFlight, JumpOutcome};
+    let mut flight = JumpFlight::new(flight_path());
     let full = jenner().jump_capacity(100).unwrap();
     for _ in 0..15 {
         let _ = flight.advance(full, 100).unwrap();
     }
     let previous = flight.sample();
-    let damaged = BattleJumpCapacity {
+    let damaged = JumpCapacity {
         speed: 32.25,
         movement_points: 3,
     };
@@ -718,38 +714,38 @@ fn flight_uses_current_thrust_without_rewriting_the_previous_airborne_sample() {
         step.to,
         flight.path().sample(flight.travelled() / 5.0, 3).unwrap()
     );
-    let restored: BattleJumpFlight =
+    let restored: JumpFlight =
         serde_json::from_str(&serde_json::to_string(&flight).unwrap()).unwrap();
     assert_eq!(restored.sample(), flight.sample());
     assert_eq!(restored, flight);
     let before = flight;
     let lost = flight
         .advance(
-            BattleJumpCapacity {
+            JumpCapacity {
                 speed: 0.0,
                 movement_points: 0,
             },
             100,
         )
         .unwrap();
-    assert_eq!(lost.outcome, BattleJumpOutcome::LostThrust);
+    assert_eq!(lost.outcome, JumpOutcome::LostThrust);
     assert_eq!(lost.from, lost.to);
     assert_eq!(lost.from, before.sample());
     assert_eq!(flight, before);
     for bad in [
-        BattleJumpCapacity {
+        JumpCapacity {
             speed: -1.0,
             movement_points: 0,
         },
-        BattleJumpCapacity {
+        JumpCapacity {
             speed: f64::NAN,
             movement_points: 0,
         },
-        BattleJumpCapacity {
+        JumpCapacity {
             speed: f64::INFINITY,
             movement_points: 5,
         },
-        BattleJumpCapacity {
+        JumpCapacity {
             speed: 53.75,
             movement_points: 4,
         },
@@ -758,21 +754,21 @@ fn flight_uses_current_thrust_without_rewriting_the_previous_airborne_sample() {
         assert_eq!(flight, before);
     }
     let step = flight.advance(full, i64::MAX).unwrap();
-    assert_eq!(step.outcome, BattleJumpOutcome::Landing);
+    assert_eq!(step.outcome, JumpOutcome::Landing);
     assert_eq!(step.to.point, Point { x: 2.0, y: 8.0 });
 }
 
 #[test]
 fn saved_flight_rejects_corrupt_progress_and_reconstructs_launch_geometry() {
-    use stompymux_rs::BattleJumpFlight;
-    let flight = BattleJumpFlight::new(flight_path());
+    use stompymux_rs::JumpFlight;
+    let flight = JumpFlight::new(flight_path());
     let state = serde_json::to_value(flight).unwrap();
     assert!(state["path"].get("distance").is_none());
     assert!(state["path"].get("apex").is_none());
     for travelled in [-1.0, 5.0001, f64::INFINITY] {
         let mut corrupt = state.clone();
         corrupt["travelled"] = serde_json::json!(travelled);
-        assert!(serde_json::from_value::<BattleJumpFlight>(corrupt).is_err());
+        assert!(serde_json::from_value::<JumpFlight>(corrupt).is_err());
     }
     for (key, value) in [
         ("movement_points", serde_json::json!(4)),
@@ -783,19 +779,19 @@ fn saved_flight_rejects_corrupt_progress_and_reconstructs_launch_geometry() {
         let mut corrupt = state.clone();
         corrupt["path"][key] = value;
         assert!(
-            serde_json::from_value::<BattleJumpFlight>(corrupt).is_err(),
+            serde_json::from_value::<JumpFlight>(corrupt).is_err(),
             "{key}"
         );
     }
     let mut corrupt = state;
     corrupt["path"]["end"] = corrupt["path"]["start"].clone();
-    assert!(serde_json::from_value::<BattleJumpFlight>(corrupt).is_err());
+    assert!(serde_json::from_value::<JumpFlight>(corrupt).is_err());
 }
 
 /// Intact Jenner with five conventional jump jets.
-fn jenner() -> BattleUnit {
-    BattleUnit::from_template(
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+fn jenner() -> Mech {
+    Mech::from_template(
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap()
 }
@@ -823,7 +819,7 @@ fn gravity_and_effective_jet_losses_bound_jump_capacity() {
         .unwrap()
         .systems
         .into_iter()
-        .filter(|part| part.system == BattleSystem::JumpJet)
+        .filter(|part| part.system == System::JumpJet)
         .map(|part| part.location)
         .collect();
     for (lost, location) in jets.into_iter().enumerate() {
@@ -838,16 +834,16 @@ fn gravity_and_effective_jet_losses_bound_jump_capacity() {
             4 - lost as u16
         );
     }
-    let atlas = BattleUnit::from_template(
-        BattleTemplate::parse("AS7-D", include_str!("fixtures/btech/mechs/AS7-D.toml")).unwrap(),
+    let atlas = Mech::from_template(
+        MechTemplate::parse("AS7-D", include_str!("fixtures/btech/mechs/AS7-D.toml")).unwrap(),
     )
     .unwrap();
     assert_eq!(atlas.jump_capacity(50).unwrap().speed, 0.0);
     let mut unit = jenner();
     unit.damage_phase(
-        BattleSection::CenterTorso,
+        MechSection::CenterTorso,
         u16::MAX,
-        stompymux_rs::BattleDamagePhase::Internal,
+        stompymux_rs::DamagePhase::Internal,
     );
     assert_eq!(unit.jump_capacity(50).unwrap().speed, 0.0);
 }
@@ -857,7 +853,7 @@ fn trajectory_preserves_endpoints_apex_and_lost_thrust_curve() {
     let start = Point { x: 2.0, y: 3.0 };
     let end = Point { x: 2.0, y: 8.0 };
     for (from, to) in [(0, 0), (-1, 4), (5, 0)] {
-        let path = BattleJumpPath::new(start, end, from, to, 5).unwrap();
+        let path = JumpPath::new(start, end, from, to, 5).unwrap();
         assert_eq!(path.distance(), 5.0);
         assert_eq!(path.apex(), 4);
         assert_eq!(path.sample(0.0, 5).unwrap().point, start);
@@ -875,13 +871,13 @@ fn trajectory_preserves_endpoints_apex_and_lost_thrust_curve() {
             assert!(path.sample(progress, 5).is_err());
         }
     }
-    assert!(BattleJumpPath::new(start, end, 0, 6, 5).is_err());
-    assert!(BattleJumpPath::new(start, end, 6, 0, 5).is_err());
-    assert!(BattleJumpPath::new(start, end, 0, 0, 4).is_err());
-    assert!(BattleJumpPath::new(start, start, 0, 0, 5).is_err());
-    assert!(BattleJumpPath::new(start, end, 0, 0, 0).is_err());
+    assert!(JumpPath::new(start, end, 0, 6, 5).is_err());
+    assert!(JumpPath::new(start, end, 6, 0, 5).is_err());
+    assert!(JumpPath::new(start, end, 0, 0, 4).is_err());
+    assert!(JumpPath::new(start, start, 0, 0, 5).is_err());
+    assert!(JumpPath::new(start, end, 0, 0, 0).is_err());
     assert!(
-        BattleJumpPath::new(
+        JumpPath::new(
             start,
             Point {
                 x: f64::NAN,
@@ -893,7 +889,7 @@ fn trajectory_preserves_endpoints_apex_and_lost_thrust_curve() {
         )
         .is_err()
     );
-    let short = BattleJumpPath::new(start, Point { x: 2.0, y: 4.0 }, 0, 0, 8).unwrap();
+    let short = JumpPath::new(start, Point { x: 2.0, y: 4.0 }, 0, 0, 8).unwrap();
     assert_eq!(short.apex(), 4); // Short jumps use the twice-range-plus-two cap.
 }
 
@@ -918,7 +914,7 @@ async fn flooded_capacity_and_lua_inspection_survive_restart_without_mutation() 
     create_battle_unit(
         &mut world,
         id,
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
@@ -928,7 +924,7 @@ async fn flooded_capacity_and_lua_inspection_survive_restart_without_mutation() 
         &mut world,
         id,
         stompymux_rs::CriticalLocation {
-            section: BattleSection::LeftTorso,
+            section: MechSection::LeftTorso,
             slot: 0,
         },
     )
@@ -960,7 +956,7 @@ fn seed_airborne_critical(
     world: &mut stompymux_rs::World,
     id: stompymux_rs::ObjectId,
     location: stompymux_rs::CriticalLocation,
-) -> stompymux_rs::BattleDice {
+) -> stompymux_rs::Dice {
     use stompymux_rs::*;
     let candidates = world.btech.constructed_units()[&id].critical_candidates(location.section);
     let selected = candidates
@@ -971,16 +967,16 @@ fn seed_airborne_critical(
     let count = candidates.len() as u16;
     let seed = (0..=255)
         .find(|seed| {
-            let mut dice = BattleDice::seeded([*seed; 32]);
+            let mut dice = Dice::seeded([*seed; 32]);
             dice.two_d6(); // Material entry precedes the through-armor critical check.
             matches!(dice.two_d6(), 8 | 9) && dice.die(count).unwrap() == selected
         })
         .unwrap();
     world
         .btech
-        .set_unit_dice(id, BattleDice::seeded([seed; 32]))
+        .set_unit_dice(id, Dice::seeded([seed; 32]))
         .unwrap();
-    let mut expected = BattleDice::seeded([seed; 32]);
+    let mut expected = Dice::seeded([seed; 32]);
     expected.two_d6(); // Material entry.
     expected.two_d6();
     expected.die(count).unwrap();
@@ -988,8 +984,8 @@ fn seed_airborne_critical(
 }
 
 /// A small selected impact isolates critical consequences from hit-location selection.
-fn airborne_hit(section: BattleSection) -> stompymux_rs::BattleHit {
-    stompymux_rs::BattleHit {
+fn airborne_hit(section: MechSection) -> stompymux_rs::Hit {
+    stompymux_rs::Hit {
         section,
         rear_armor: false,
         through_armor_critical: true,
@@ -1005,12 +1001,12 @@ async fn airborne_actuator_damage_defers_balance_and_last_jet_falls_immediately(
     launch_battle_jump(&mut base, id, ObjectId(1), 0, 2.0).unwrap();
     advance_battle_jumps(
         &mut base,
-        stompymux_rs::BattleMovementRules {
-            fall: stompymux_rs::BattleFallRules {
-                stacking: stompymux_rs::BattleStackingRules::STANDARD,
+        stompymux_rs::MovementRules {
+            fall: stompymux_rs::FallRules {
+                stacking: stompymux_rs::StackingRules::STANDARD,
                 ..jump_rules()
             },
-            ..stompymux_rs::BattleMovementRules::STANDARD
+            ..stompymux_rs::MovementRules::STANDARD
         },
     )
     .unwrap();
@@ -1020,7 +1016,7 @@ async fn airborne_actuator_damage_defers_balance_and_last_jet_falls_immediately(
             &mut world,
             id,
             CriticalLocation {
-                section: BattleSection::LeftLeg,
+                section: MechSection::LeftLeg,
                 slot,
             },
         );
@@ -1028,7 +1024,7 @@ async fn airborne_actuator_damage_defers_balance_and_last_jet_falls_immediately(
         let report = resolve_battle_tactical_impact(
             &mut world,
             id,
-            airborne_hit(BattleSection::LeftLeg),
+            airborne_hit(MechSection::LeftLeg),
             1,
             jump_rules(),
         )
@@ -1055,7 +1051,7 @@ async fn airborne_actuator_damage_defers_balance_and_last_jet_falls_immediately(
     for last in [false, true] {
         let mut world = base.clone();
         let location = CriticalLocation {
-            section: BattleSection::LeftTorso,
+            section: MechSection::LeftTorso,
             slot: 0,
         };
         if last {
@@ -1064,7 +1060,7 @@ async fn airborne_actuator_damage_defers_balance_and_last_jet_falls_immediately(
                 .unwrap()
                 .systems
                 .into_iter()
-                .filter(|part| part.system == BattleSystem::JumpJet && part.location != location)
+                .filter(|part| part.system == System::JumpJet && part.location != location)
                 .map(|part| part.location)
                 .collect();
             for jet in jets {
@@ -1129,7 +1125,7 @@ async fn airborne_actuator_damage_defers_balance_and_last_jet_falls_immediately(
             assert_eq!(report.balance.len(), 1);
             assert!(report.balance[0].check.is_none());
             assert_eq!(report.balance[0].fall.as_ref().unwrap().damage, 4);
-            assert_eq!(unit.posture(), BattlePosture::Prone);
+            assert_eq!(unit.posture(), Posture::Prone);
             assert!(
                 report.notices.iter().any(
                     |notice| notice.text == "Losing your last jump jet, you fall from the sky!"
@@ -1165,12 +1161,12 @@ async fn airborne_gyro_falls_use_gravity_adjusted_capacity_and_replay_after_rest
         launch_battle_jump(&mut world, id, ObjectId(1), 0, 2.0).unwrap();
         advance_battle_jumps(
             &mut world,
-            stompymux_rs::BattleMovementRules {
-                fall: stompymux_rs::BattleFallRules {
-                    stacking: stompymux_rs::BattleStackingRules::STANDARD,
+            stompymux_rs::MovementRules {
+                fall: stompymux_rs::FallRules {
+                    stacking: stompymux_rs::StackingRules::STANDARD,
                     ..jump_rules()
                 },
-                ..stompymux_rs::BattleMovementRules::STANDARD
+                ..stompymux_rs::MovementRules::STANDARD
             },
         )
         .unwrap();
@@ -1178,7 +1174,7 @@ async fn airborne_gyro_falls_use_gravity_adjusted_capacity_and_replay_after_rest
             &mut world,
             id,
             CriticalLocation {
-                section: BattleSection::CenterTorso,
+                section: MechSection::CenterTorso,
                 slot: 3,
             },
         );
@@ -1194,7 +1190,7 @@ async fn airborne_gyro_falls_use_gravity_adjusted_capacity_and_replay_after_rest
         let report = resolve_battle_tactical_impact(
             &mut world,
             id,
-            airborne_hit(BattleSection::CenterTorso),
+            airborne_hit(MechSection::CenterTorso),
             1,
             jump_rules(),
         )
@@ -1215,7 +1211,7 @@ async fn airborne_gyro_falls_use_gravity_adjusted_capacity_and_replay_after_rest
         let replay = resolve_battle_tactical_impact(
             &mut restarted,
             id,
-            airborne_hit(BattleSection::CenterTorso),
+            airborne_hit(MechSection::CenterTorso),
             1,
             jump_rules(),
         )
@@ -1246,7 +1242,7 @@ async fn airborne_target_modifier_uses_current_thrust_and_gravity_without_consum
     create_battle_unit(
         &mut world,
         observer,
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, observer, map, 5, 8).unwrap();
@@ -1265,7 +1261,7 @@ async fn airborne_target_modifier_uses_current_thrust_and_gravity_without_consum
             id,
             0,
             4,
-            BattleAimRules {
+            AimRules {
                 woods_damage: false,
                 dig_bonus: 3,
                 dig_only_front: false,
@@ -1301,9 +1297,9 @@ async fn traditional_airborne_stagger_consumes_damage_without_a_piloting_roll() 
     let before = serde_json::to_value(&world.btech.constructed_units()[&id]).unwrap();
     let reports = advance_battle_stagger(
         &mut world,
-        BattleStaggerRules {
-            vehicle_impact: stompymux_rs::BattleVehicleImpactRules::STANDARD,
-            mode: BattleStaggerMode::Traditional,
+        StaggerRules {
+            vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
+            mode: StaggerMode::Traditional,
             interval: 5,
             tonnage: true,
             hit: jump_rules().hit,
@@ -1334,7 +1330,7 @@ async fn second_airborne_gyro_forces_a_fall_even_with_zero_whole_jump_points() {
     set_battle_character(
         &mut world,
         ObjectId(1),
-        BattleCharacter {
+        Character {
             build: 5,
             reflexes: 4,
             intuition: 3,
@@ -1350,7 +1346,7 @@ async fn second_airborne_gyro_forces_a_fall_even_with_zero_whole_jump_points() {
         &mut world,
         ObjectId(1),
         "Piloting-Biped",
-        BattleCharacterValue {
+        CharacterValue {
             value: 30,
             experience: 0,
             last_used: 0,
@@ -1362,14 +1358,14 @@ async fn second_airborne_gyro_forces_a_fall_even_with_zero_whole_jump_points() {
         &mut world,
         id,
         CriticalLocation {
-            section: BattleSection::CenterTorso,
+            section: MechSection::CenterTorso,
             slot: 3,
         },
     );
     let first = resolve_battle_tactical_impact(
         &mut world,
         id,
-        airborne_hit(BattleSection::CenterTorso),
+        airborne_hit(MechSection::CenterTorso),
         1,
         jump_rules(),
     )
@@ -1383,7 +1379,7 @@ async fn second_airborne_gyro_forces_a_fall_even_with_zero_whole_jump_points() {
         .unwrap()
         .systems
         .into_iter()
-        .filter(|part| part.system == BattleSystem::JumpJet)
+        .filter(|part| part.system == System::JumpJet)
         .take(4)
         .map(|part| part.location)
         .collect();
@@ -1401,14 +1397,14 @@ async fn second_airborne_gyro_forces_a_fall_even_with_zero_whole_jump_points() {
         &mut world,
         id,
         CriticalLocation {
-            section: BattleSection::CenterTorso,
+            section: MechSection::CenterTorso,
             slot: 4,
         },
     );
     let second = resolve_battle_tactical_impact(
         &mut world,
         id,
-        airborne_hit(BattleSection::CenterTorso),
+        airborne_hit(MechSection::CenterTorso),
         1,
         jump_rules(),
     )
@@ -1419,7 +1415,7 @@ async fn second_airborne_gyro_forces_a_fall_even_with_zero_whole_jump_points() {
     assert!(fall.groups.is_empty());
     assert!(fall.avoidance.unwrap().roll.is_some());
     let unit = &world.btech.constructed_units()[&id];
-    assert_eq!(unit.posture(), BattlePosture::Prone);
+    assert_eq!(unit.posture(), Posture::Prone);
     assert!(unit.flight().is_none());
     world.validate(&config).unwrap();
 }
@@ -1433,17 +1429,17 @@ async fn airborne_support_loss_preserves_thrust_and_prone_landing_after_restart(
         launch_battle_jump(&mut world, id, ObjectId(1), 0, 2.0).unwrap();
         advance_battle_jumps(
             &mut world,
-            stompymux_rs::BattleMovementRules {
-                fall: stompymux_rs::BattleFallRules {
-                    stacking: stompymux_rs::BattleStackingRules::STANDARD,
+            stompymux_rs::MovementRules {
+                fall: stompymux_rs::FallRules {
+                    stacking: stompymux_rs::StackingRules::STANDARD,
                     ..jump_rules()
                 },
-                ..stompymux_rs::BattleMovementRules::STANDARD
+                ..stompymux_rs::MovementRules::STANDARD
             },
         )
         .unwrap();
         let flight = world.btech.constructed_units()[&id].flight();
-        for (index, section) in [BattleSection::LeftLeg, BattleSection::RightLeg]
+        for (index, section) in [MechSection::LeftLeg, MechSection::RightLeg]
             .into_iter()
             .enumerate()
         {
@@ -1463,9 +1459,9 @@ async fn airborne_support_loss_preserves_thrust_and_prone_landing_after_restart(
             assert_eq!(
                 unit.posture(),
                 if index == 0 {
-                    BattlePosture::Standing
+                    Posture::Standing
                 } else {
-                    BattlePosture::Prone
+                    Posture::Prone
                 }
             );
             world.validate(&config).unwrap();
@@ -1482,23 +1478,23 @@ async fn airborne_support_loss_preserves_thrust_and_prone_landing_after_restart(
         for _ in 0..23 {
             let expected = advance_battle_jumps(
                 &mut world,
-                stompymux_rs::BattleMovementRules {
-                    fall: stompymux_rs::BattleFallRules {
-                        stacking: stompymux_rs::BattleStackingRules::STANDARD,
+                stompymux_rs::MovementRules {
+                    fall: stompymux_rs::FallRules {
+                        stacking: stompymux_rs::StackingRules::STANDARD,
                         ..jump_rules()
                     },
-                    ..stompymux_rs::BattleMovementRules::STANDARD
+                    ..stompymux_rs::MovementRules::STANDARD
                 },
             )
             .unwrap();
             let actual = advance_battle_jumps(
                 &mut restarted,
-                stompymux_rs::BattleMovementRules {
-                    fall: stompymux_rs::BattleFallRules {
-                        stacking: stompymux_rs::BattleStackingRules::STANDARD,
+                stompymux_rs::MovementRules {
+                    fall: stompymux_rs::FallRules {
+                        stacking: stompymux_rs::StackingRules::STANDARD,
                         ..jump_rules()
                     },
-                    ..stompymux_rs::BattleMovementRules::STANDARD
+                    ..stompymux_rs::MovementRules::STANDARD
                 },
             )
             .unwrap();
@@ -1508,7 +1504,7 @@ async fn airborne_support_loss_preserves_thrust_and_prone_landing_after_restart(
         assert_eq!(world.btech, restarted.btech);
         let unit = &world.btech.constructed_units()[&id];
         assert!(unit.flight().is_none());
-        assert_eq!(unit.posture(), BattlePosture::Prone);
+        assert_eq!(unit.posture(), Posture::Prone);
         assert_eq!(unit.jump_stabilization(), 12);
         assert!(
             notices
@@ -1529,14 +1525,14 @@ async fn last_jet_loss_still_ends_a_structurally_collapsed_jump() {
     use stompymux_rs::*;
     let (_dir, config, mut world, id) = runtime_fixture().await;
     launch_battle_jump(&mut world, id, ObjectId(1), 0, 2.0).unwrap();
-    for section in [BattleSection::LeftLeg, BattleSection::RightLeg] {
+    for section in [MechSection::LeftLeg, MechSection::RightLeg] {
         seed_airborne_critical(&mut world, id, CriticalLocation { section, slot: 0 });
         let _report =
             resolve_battle_tactical_impact(&mut world, id, airborne_hit(section), 1, jump_rules())
                 .unwrap();
     }
     let location = CriticalLocation {
-        section: BattleSection::LeftTorso,
+        section: MechSection::LeftTorso,
         slot: 0,
     };
     let jets: Vec<_> = world.btech.constructed_units()[&id]
@@ -1544,7 +1540,7 @@ async fn last_jet_loss_still_ends_a_structurally_collapsed_jump() {
         .unwrap()
         .systems
         .into_iter()
-        .filter(|part| part.system == BattleSystem::JumpJet && part.location != location)
+        .filter(|part| part.system == System::JumpJet && part.location != location)
         .map(|part| part.location)
         .collect();
     for jet in jets {
@@ -1574,7 +1570,7 @@ async fn airborne_fire_uses_shared_native_lua_transactions_and_saved_trajectorie
     create_battle_unit(
         &mut base,
         target,
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut base, target, support::FIXTURE_DICE_SEED);
@@ -1594,7 +1590,7 @@ async fn airborne_fire_uses_shared_native_lua_transactions_and_saved_trajectorie
     set_battle_character(
         &mut base,
         ObjectId(1),
-        BattleCharacter {
+        Character {
             build: 5,
             reflexes: 4,
             intuition: 3,
@@ -1610,7 +1606,7 @@ async fn airborne_fire_uses_shared_native_lua_transactions_and_saved_trajectorie
         &mut base,
         ObjectId(1),
         "Gunnery-Laser",
-        BattleCharacterValue {
+        CharacterValue {
             value: 30,
             experience: 0,
             last_used: 0,
@@ -1628,12 +1624,12 @@ async fn airborne_fire_uses_shared_native_lua_transactions_and_saved_trajectorie
         for _ in 0..6 {
             advance_battle_jumps(
                 &mut world,
-                stompymux_rs::BattleMovementRules {
-                    fall: stompymux_rs::BattleFallRules {
-                        stacking: stompymux_rs::BattleStackingRules::STANDARD,
+                stompymux_rs::MovementRules {
+                    fall: stompymux_rs::FallRules {
+                        stacking: stompymux_rs::StackingRules::STANDARD,
                         ..jump_rules()
                     },
-                    ..stompymux_rs::BattleMovementRules::STANDARD
+                    ..stompymux_rs::MovementRules::STANDARD
                 },
             )
             .unwrap();
@@ -1710,7 +1706,7 @@ async fn early_landing_native_lua_success_failure_and_rollback_share_current_poi
         set_battle_character(
             &mut world,
             ObjectId(1),
-            BattleCharacter {
+            Character {
                 build: 5,
                 reflexes: 4,
                 intuition: 3,
@@ -1726,7 +1722,7 @@ async fn early_landing_native_lua_success_failure_and_rollback_share_current_poi
             &mut world,
             ObjectId(1),
             "Piloting-Biped",
-            BattleCharacterValue {
+            CharacterValue {
                 value: if success { 30 } else { 0 },
                 experience: 0,
                 last_used: 0,
@@ -1737,23 +1733,23 @@ async fn early_landing_native_lua_success_failure_and_rollback_share_current_poi
         for _ in 0..9 {
             advance_battle_jumps(
                 &mut world,
-                stompymux_rs::BattleMovementRules {
-                    fall: stompymux_rs::BattleFallRules {
-                        stacking: stompymux_rs::BattleStackingRules::STANDARD,
+                stompymux_rs::MovementRules {
+                    fall: stompymux_rs::FallRules {
+                        stacking: stompymux_rs::StackingRules::STANDARD,
                         ..jump_rules()
                     },
-                    ..stompymux_rs::BattleMovementRules::STANDARD
+                    ..stompymux_rs::MovementRules::STANDARD
                 },
             )
             .unwrap();
         }
         // Seed a failing ordinary skill-11 check while retaining real fall dice.
         let seed = (0..=255)
-            .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() < 11)
+            .find(|seed| Dice::seeded([*seed; 32]).two_d6() < 11)
             .unwrap();
         world
             .btech
-            .set_unit_dice(id, BattleDice::seeded([seed; 32]))
+            .set_unit_dice(id, Dice::seeded([seed; 32]))
             .unwrap();
         let point = world.btech.constructed_units()[&id].motion().unwrap().point;
         persistence::save(&config.database(), &world).await.unwrap();
@@ -1804,9 +1800,9 @@ async fn early_landing_native_lua_success_failure_and_rollback_share_current_poi
         assert_eq!(
             unit.posture(),
             if success {
-                BattlePosture::Standing
+                Posture::Standing
             } else {
-                BattlePosture::Prone
+                Posture::Prone
             }
         );
         assert_eq!(unit.jump_stabilization(), 12);
@@ -1830,7 +1826,7 @@ async fn early_landing_success_still_checks_damaged_landing_gear() {
         &mut world,
         id,
         CriticalLocation {
-            section: BattleSection::LeftLeg,
+            section: MechSection::LeftLeg,
             slot: 1,
         },
     )
@@ -1838,24 +1834,24 @@ async fn early_landing_success_still_checks_damaged_landing_gear() {
     // Disconnected pilot uses target six; damaged actuator adds one to both checks.
     let seed = (0..=255)
         .find(|seed| {
-            let mut dice = BattleDice::seeded([*seed; 32]);
+            let mut dice = Dice::seeded([*seed; 32]);
             dice.two_d6() >= 7 && dice.two_d6() < 7
         })
         .unwrap();
     world
         .btech
-        .set_unit_dice(id, BattleDice::seeded([seed; 32]))
+        .set_unit_dice(id, Dice::seeded([seed; 32]))
         .unwrap();
     let notices = land_battle_jump(
         &mut world,
         id,
         ObjectId(1),
-        stompymux_rs::BattleMovementRules {
-            fall: stompymux_rs::BattleFallRules {
-                stacking: stompymux_rs::BattleStackingRules::STANDARD,
+        stompymux_rs::MovementRules {
+            fall: stompymux_rs::FallRules {
+                stacking: stompymux_rs::StackingRules::STANDARD,
                 ..jump_rules()
             },
-            ..stompymux_rs::BattleMovementRules::STANDARD
+            ..stompymux_rs::MovementRules::STANDARD
         },
     )
     .unwrap();
@@ -1870,7 +1866,7 @@ async fn early_landing_success_still_checks_damaged_landing_gear() {
     );
     assert_eq!(
         world.btech.constructed_units()[&id].posture(),
-        BattlePosture::Prone
+        Posture::Prone
     );
     world.validate(&config).unwrap();
 }
@@ -1881,11 +1877,11 @@ async fn tcp_early_landing_save_failure_restores_flight_and_dice_before_retry() 
     use stompymux_rs::*;
     tokio::task::LocalSet::new().run_until(async {
         let (_dir, config, mut world, id) = runtime_fixture().await;
-        set_battle_character(&mut world, ObjectId(1), BattleCharacter { build: 5, reflexes: 4, intuition: 3, learn: 2, charisma: 1, bruise: 0, lethal: 0 }).unwrap();
+        set_battle_character(&mut world, ObjectId(1), Character { build: 5, reflexes: 4, intuition: 3, learn: 2, charisma: 1, bruise: 0, lethal: 0 }).unwrap();
         support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
-        set_battle_character_value(&mut world, ObjectId(1), "Piloting-Biped", BattleCharacterValue { value: 30, experience: 0, last_used: 0 }).unwrap();
+        set_battle_character_value(&mut world, ObjectId(1), "Piloting-Biped", CharacterValue { value: 30, experience: 0, last_used: 0 }).unwrap();
         launch_battle_jump(&mut world, id, ObjectId(1), 0, 2.0).unwrap();
-        for _ in 0..6 { advance_battle_jumps(&mut world, stompymux_rs::BattleMovementRules {fall: stompymux_rs::BattleFallRules { stacking: stompymux_rs::BattleStackingRules::STANDARD, ..jump_rules() },  ..stompymux_rs::BattleMovementRules::STANDARD }).unwrap(); }
+        for _ in 0..6 { advance_battle_jumps(&mut world, stompymux_rs::MovementRules {fall: stompymux_rs::FallRules { stacking: stompymux_rs::StackingRules::STANDARD, ..jump_rules() },  ..stompymux_rs::MovementRules::STANDARD }).unwrap(); }
         persistence::save(&config.database(), &world).await.unwrap();
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         sqlx::query("UPDATE player_state SET password_hash=? WHERE object_dbref=1").bind(accounts::hash("secret", &config).unwrap()).execute(&mut sql).await.unwrap();
@@ -1909,8 +1905,8 @@ async fn tcp_early_landing_save_failure_restores_flight_and_dice_before_retry() 
         assert!(feedback.contains("Modified Pilot Skill:"), "{feedback}");
         let landed = persistence::load(&config.database()).await.unwrap();
         assert!(landed.btech.constructed_units()[&id].flight().is_none());
-        assert_eq!(landed.btech.constructed_units()[&id].posture(), BattlePosture::Standing);
-        let mut expected_dice: BattleDice = serde_json::from_value(serde_json::to_value(&before).unwrap()["dice"].clone()).unwrap();
+        assert_eq!(landed.btech.constructed_units()[&id].posture(), Posture::Standing);
+        let mut expected_dice: Dice = serde_json::from_value(serde_json::to_value(&before).unwrap()["dice"].clone()).unwrap();
         expected_dice.two_d6();
         assert_eq!(serde_json::to_value(&landed.btech.constructed_units()[&id]).unwrap()["dice"], serde_json::to_value(expected_dice).unwrap());
         shutdown.send(ShutdownRequest::Sigterm).unwrap();
@@ -1924,9 +1920,9 @@ async fn damage_history_does_not_block_launch_or_add_an_unrelated_landing_roll()
     use stompymux_rs::*;
     let (_dir, config, base, id) = runtime_fixture().await;
     for mode in [
-        BattleStaggerMode::Traditional,
-        BattleStaggerMode::Retain,
-        BattleStaggerMode::Consume,
+        StaggerMode::Traditional,
+        StaggerMode::Retain,
+        StaggerMode::Consume,
     ] {
         for damage in [1, 20, 40] {
             let mut world = base.clone();
@@ -1934,7 +1930,7 @@ async fn damage_history_does_not_block_launch_or_add_an_unrelated_landing_roll()
                 .btech
                 .rewrite_unit_record(id, |record| {
                     let history = &mut record["stagger"];
-                    if mode == BattleStaggerMode::Traditional {
+                    if mode == StaggerMode::Traditional {
                         history["turn_damage"] = damage.into();
                     } else {
                         history["hits"] =
@@ -1946,7 +1942,7 @@ async fn damage_history_does_not_block_launch_or_add_an_unrelated_landing_roll()
             launch_battle_jump(&mut world, id, ObjectId(1), 0, 1.0).unwrap();
             persistence::save(&config.database(), &world).await.unwrap();
             let mut restarted = persistence::load(&config.database()).await.unwrap();
-            let rules = BattleFallRules {
+            let rules = FallRules {
                 stagger: mode,
                 ..jump_rules()
             };
@@ -1954,23 +1950,23 @@ async fn damage_history_does_not_block_launch_or_add_an_unrelated_landing_roll()
                 assert_eq!(
                     advance_battle_jumps(
                         &mut world,
-                        stompymux_rs::BattleMovementRules {
-                            fall: stompymux_rs::BattleFallRules {
-                                stacking: stompymux_rs::BattleStackingRules::STANDARD,
+                        stompymux_rs::MovementRules {
+                            fall: stompymux_rs::FallRules {
+                                stacking: stompymux_rs::StackingRules::STANDARD,
                                 ..rules
                             },
-                            ..stompymux_rs::BattleMovementRules::STANDARD
+                            ..stompymux_rs::MovementRules::STANDARD
                         }
                     )
                     .unwrap(),
                     advance_battle_jumps(
                         &mut restarted,
-                        stompymux_rs::BattleMovementRules {
-                            fall: stompymux_rs::BattleFallRules {
-                                stacking: stompymux_rs::BattleStackingRules::STANDARD,
+                        stompymux_rs::MovementRules {
+                            fall: stompymux_rs::FallRules {
+                                stacking: stompymux_rs::StackingRules::STANDARD,
                                 ..rules
                             },
-                            ..stompymux_rs::BattleMovementRules::STANDARD
+                            ..stompymux_rs::MovementRules::STANDARD
                         }
                     )
                     .unwrap()
@@ -1979,7 +1975,7 @@ async fn damage_history_does_not_block_launch_or_add_an_unrelated_landing_roll()
             assert_eq!(world.btech, restarted.btech);
             let unit = &world.btech.constructed_units()[&id];
             assert!(unit.flight().is_none());
-            assert_eq!(unit.posture(), BattlePosture::Standing);
+            assert_eq!(unit.posture(), Posture::Standing);
             let after = serde_json::to_value(unit).unwrap();
             assert_eq!(before["dice"], after["dice"]);
             // Flight updates leave aging and consumption to the stagger heartbeat.
@@ -1993,7 +1989,7 @@ async fn damage_history_does_not_block_launch_or_add_an_unrelated_landing_roll()
 async fn rolling_damage_can_still_force_a_fall_after_launch() {
     use stompymux_rs::*;
     let (_dir, config, base, id) = runtime_fixture().await;
-    for mode in [BattleStaggerMode::Retain, BattleStaggerMode::Consume] {
+    for mode in [StaggerMode::Retain, StaggerMode::Consume] {
         let mut world = base.clone();
         world
             .objects
@@ -2011,8 +2007,8 @@ async fn rolling_damage_can_still_force_a_fall_after_launch() {
         launch_battle_jump(&mut world, id, ObjectId(1), 0, 2.0).unwrap();
         let reports = advance_battle_stagger(
             &mut world,
-            BattleStaggerRules {
-                vehicle_impact: stompymux_rs::BattleVehicleImpactRules::STANDARD,
+            StaggerRules {
+                vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
                 mode,
                 interval: 1,
                 tonnage: true,
@@ -2026,7 +2022,7 @@ async fn rolling_damage_can_still_force_a_fall_after_launch() {
         assert_eq!(reports[0].fall.as_ref().unwrap().damage, 4);
         let unit = &world.btech.constructed_units()[&id];
         assert!(unit.flight().is_none());
-        assert_eq!(unit.posture(), BattlePosture::Prone);
+        assert_eq!(unit.posture(), Posture::Prone);
         assert!(unit.stagger().hits.is_empty());
         world.validate(&config).unwrap();
     }
@@ -2059,7 +2055,7 @@ fn jump_hills(
         world,
         id,
         ObjectId(1),
-        stompymux_rs::BattleMovementRules::STANDARD.fall,
+        stompymux_rs::MovementRules::STANDARD.fall,
     )
     .unwrap();
     let home = world.objects[&id].home.unwrap();
@@ -2099,23 +2095,23 @@ async fn jumps_use_destination_height_and_enforce_ascent_and_descent_capacity() 
             assert_eq!(
                 advance_battle_jumps(
                     &mut world,
-                    stompymux_rs::BattleMovementRules {
-                        fall: stompymux_rs::BattleFallRules {
-                            stacking: stompymux_rs::BattleStackingRules::STANDARD,
+                    stompymux_rs::MovementRules {
+                        fall: stompymux_rs::FallRules {
+                            stacking: stompymux_rs::StackingRules::STANDARD,
                             ..jump_rules()
                         },
-                        ..stompymux_rs::BattleMovementRules::STANDARD
+                        ..stompymux_rs::MovementRules::STANDARD
                     }
                 )
                 .unwrap(),
                 advance_battle_jumps(
                     &mut restarted,
-                    stompymux_rs::BattleMovementRules {
-                        fall: stompymux_rs::BattleFallRules {
-                            stacking: stompymux_rs::BattleStackingRules::STANDARD,
+                    stompymux_rs::MovementRules {
+                        fall: stompymux_rs::FallRules {
+                            stacking: stompymux_rs::StackingRules::STANDARD,
                             ..jump_rules()
                         },
-                        ..stompymux_rs::BattleMovementRules::STANDARD
+                        ..stompymux_rs::MovementRules::STANDARD
                     }
                 )
                 .unwrap()
@@ -2125,7 +2121,7 @@ async fn jumps_use_destination_height_and_enforce_ascent_and_descent_capacity() 
         let unit = &world.btech.constructed_units()[&id];
         assert!(unit.flight().is_none());
         assert_eq!(unit.position().unwrap().y, 3);
-        assert_eq!(unit.posture(), BattlePosture::Standing);
+        assert_eq!(unit.posture(), Posture::Standing);
         world.validate(&config).unwrap();
     }
     for (start, end) in [(0, 6), (6, 0)] {
@@ -2154,7 +2150,7 @@ async fn hill_collision_rolls_back_the_transition_then_lands_or_falls() {
             set_battle_character(
                 &mut world,
                 ObjectId(1),
-                BattleCharacter {
+                Character {
                     build: 5,
                     reflexes: 4,
                     intuition: 3,
@@ -2170,7 +2166,7 @@ async fn hill_collision_rolls_back_the_transition_then_lands_or_falls() {
                 &mut world,
                 ObjectId(1),
                 "Piloting-Biped",
-                BattleCharacterValue {
+                CharacterValue {
                     value: 30,
                     experience: 0,
                     last_used: 0,
@@ -2194,12 +2190,12 @@ async fn hill_collision_rolls_back_the_transition_then_lands_or_falls() {
             let point = world.btech.constructed_units()[&id].motion().unwrap().point;
             let notices = advance_battle_jumps(
                 &mut world,
-                stompymux_rs::BattleMovementRules {
-                    fall: stompymux_rs::BattleFallRules {
-                        stacking: stompymux_rs::BattleStackingRules::STANDARD,
+                stompymux_rs::MovementRules {
+                    fall: stompymux_rs::FallRules {
+                        stacking: stompymux_rs::StackingRules::STANDARD,
                         ..jump_rules()
                     },
-                    ..stompymux_rs::BattleMovementRules::STANDARD
+                    ..stompymux_rs::MovementRules::STANDARD
                 },
             )
             .unwrap();
@@ -2207,12 +2203,12 @@ async fn hill_collision_rolls_back_the_transition_then_lands_or_falls() {
                 notices,
                 advance_battle_jumps(
                     &mut restarted,
-                    stompymux_rs::BattleMovementRules {
-                        fall: stompymux_rs::BattleFallRules {
-                            stacking: stompymux_rs::BattleStackingRules::STANDARD,
+                    stompymux_rs::MovementRules {
+                        fall: stompymux_rs::FallRules {
+                            stacking: stompymux_rs::StackingRules::STANDARD,
                             ..jump_rules()
                         },
-                        ..stompymux_rs::BattleMovementRules::STANDARD
+                        ..stompymux_rs::MovementRules::STANDARD
                     }
                 )
                 .unwrap()
@@ -2228,9 +2224,9 @@ async fn hill_collision_rolls_back_the_transition_then_lands_or_falls() {
             assert_eq!(
                 unit.posture(),
                 if safe {
-                    BattlePosture::Standing
+                    Posture::Standing
                 } else {
-                    BattlePosture::Prone
+                    Posture::Prone
                 }
             );
             assert_eq!(unit.jump_stabilization(), 12);
@@ -2270,7 +2266,7 @@ async fn dry_terrain_jump_routes_share_adapters_heat_and_restartable_landing() {
             &mut world,
             id,
             ObjectId(1),
-            stompymux_rs::BattleMovementRules::STANDARD.fall,
+            stompymux_rs::MovementRules::STANDARD.fall,
         )
         .unwrap();
         remove_battle_unit(&mut world, id, home).unwrap();
@@ -2316,12 +2312,12 @@ async fn dry_terrain_jump_routes_share_adapters_heat_and_restartable_landing() {
         for _ in 0..12 {
             advance_battle_jumps(
                 &mut flight_world,
-                stompymux_rs::BattleMovementRules {
-                    fall: stompymux_rs::BattleFallRules {
-                        stacking: stompymux_rs::BattleStackingRules::STANDARD,
+                stompymux_rs::MovementRules {
+                    fall: stompymux_rs::FallRules {
+                        stacking: stompymux_rs::StackingRules::STANDARD,
                         ..jump_rules()
                     },
-                    ..stompymux_rs::BattleMovementRules::STANDARD
+                    ..stompymux_rs::MovementRules::STANDARD
                 },
             )
             .unwrap();
@@ -2334,23 +2330,23 @@ async fn dry_terrain_jump_routes_share_adapters_heat_and_restartable_landing() {
             assert_eq!(
                 advance_battle_jumps(
                     &mut flight_world,
-                    stompymux_rs::BattleMovementRules {
-                        fall: stompymux_rs::BattleFallRules {
-                            stacking: stompymux_rs::BattleStackingRules::STANDARD,
+                    stompymux_rs::MovementRules {
+                        fall: stompymux_rs::FallRules {
+                            stacking: stompymux_rs::StackingRules::STANDARD,
                             ..jump_rules()
                         },
-                        ..stompymux_rs::BattleMovementRules::STANDARD
+                        ..stompymux_rs::MovementRules::STANDARD
                     }
                 )
                 .unwrap(),
                 advance_battle_jumps(
                     &mut restarted,
-                    stompymux_rs::BattleMovementRules {
-                        fall: stompymux_rs::BattleFallRules {
-                            stacking: stompymux_rs::BattleStackingRules::STANDARD,
+                    stompymux_rs::MovementRules {
+                        fall: stompymux_rs::FallRules {
+                            stacking: stompymux_rs::StackingRules::STANDARD,
                             ..jump_rules()
                         },
-                        ..stompymux_rs::BattleMovementRules::STANDARD
+                        ..stompymux_rs::MovementRules::STANDARD
                     }
                 )
                 .unwrap()
@@ -2360,7 +2356,7 @@ async fn dry_terrain_jump_routes_share_adapters_heat_and_restartable_landing() {
         let unit = &flight_world.btech.constructed_units()[&id];
         assert!(unit.flight().is_none());
         assert_eq!(unit.position().unwrap().y, 3);
-        assert_eq!(unit.posture(), BattlePosture::Standing);
+        assert_eq!(unit.posture(), Posture::Standing);
         assert_eq!(serde_json::to_value(unit).unwrap()["dice"], before["dice"]);
         assert_eq!(
             unit.heat_rates(&flight_world).production,
@@ -2388,7 +2384,7 @@ async fn water_jump_fixture(
         &mut world,
         id,
         ObjectId(1),
-        stompymux_rs::BattleMovementRules::STANDARD.fall,
+        stompymux_rs::MovementRules::STANDARD.fall,
     )
     .unwrap();
     remove_battle_unit(&mut world, id, home).unwrap();
@@ -2427,21 +2423,21 @@ async fn water_jump_avoids_airborne_flooding_then_floods_and_cools_on_landing() 
     apply_damage_phase(
         &mut world,
         id,
-        BattleSection::LeftTorso,
+        MechSection::LeftTorso,
         8,
-        BattleDamagePhase::Armor { rear: false },
+        DamagePhase::Armor { rear: false },
     )
     .unwrap();
     launch_battle_jump(&mut world, id, ObjectId(1), 0, 3.0).unwrap();
     for _ in 0..12 {
         advance_battle_jumps(
             &mut world,
-            stompymux_rs::BattleMovementRules {
-                fall: stompymux_rs::BattleFallRules {
-                    stacking: stompymux_rs::BattleStackingRules::STANDARD,
+            stompymux_rs::MovementRules {
+                fall: stompymux_rs::FallRules {
+                    stacking: stompymux_rs::StackingRules::STANDARD,
                     ..jump_rules()
                 },
-                ..stompymux_rs::BattleMovementRules::STANDARD
+                ..stompymux_rs::MovementRules::STANDARD
             },
         )
         .unwrap();
@@ -2464,12 +2460,12 @@ async fn water_jump_avoids_airborne_flooding_then_floods_and_cools_on_landing() 
         }
         let expected = advance_battle_jumps(
             &mut world,
-            stompymux_rs::BattleMovementRules {
-                fall: stompymux_rs::BattleFallRules {
-                    stacking: stompymux_rs::BattleStackingRules::STANDARD,
+            stompymux_rs::MovementRules {
+                fall: stompymux_rs::FallRules {
+                    stacking: stompymux_rs::StackingRules::STANDARD,
                     ..jump_rules()
                 },
-                ..stompymux_rs::BattleMovementRules::STANDARD
+                ..stompymux_rs::MovementRules::STANDARD
             },
         )
         .unwrap();
@@ -2477,12 +2473,12 @@ async fn water_jump_avoids_airborne_flooding_then_floods_and_cools_on_landing() 
             expected,
             advance_battle_jumps(
                 &mut restarted,
-                stompymux_rs::BattleMovementRules {
-                    fall: stompymux_rs::BattleFallRules {
-                        stacking: stompymux_rs::BattleStackingRules::STANDARD,
+                stompymux_rs::MovementRules {
+                    fall: stompymux_rs::FallRules {
+                        stacking: stompymux_rs::StackingRules::STANDARD,
                         ..jump_rules()
                     },
-                    ..stompymux_rs::BattleMovementRules::STANDARD
+                    ..stompymux_rs::MovementRules::STANDARD
                 }
             )
             .unwrap()
@@ -2493,7 +2489,7 @@ async fn water_jump_avoids_airborne_flooding_then_floods_and_cools_on_landing() 
     let unit = &world.btech.constructed_units()[&id];
     assert!(unit.flight().is_none());
     assert_eq!(unit.position().unwrap().y, 2);
-    assert!(unit.flooded_sections().contains(&BattleSection::LeftTorso));
+    assert!(unit.flooded_sections().contains(&MechSection::LeftTorso));
     assert_eq!(unit.heat_rates(&world).dissipation, 16.0);
     assert!(
         notices
@@ -2525,7 +2521,7 @@ async fn shallow_water_launches_and_airborne_fire_above_deep_water_are_supported
     create_battle_unit(
         &mut world,
         target,
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
@@ -2534,12 +2530,12 @@ async fn shallow_water_launches_and_airborne_fire_above_deep_water_are_supported
     for _ in 0..12 {
         advance_battle_jumps(
             &mut world,
-            stompymux_rs::BattleMovementRules {
-                fall: stompymux_rs::BattleFallRules {
-                    stacking: stompymux_rs::BattleStackingRules::STANDARD,
+            stompymux_rs::MovementRules {
+                fall: stompymux_rs::FallRules {
+                    stacking: stompymux_rs::StackingRules::STANDARD,
                     ..jump_rules()
                 },
-                ..stompymux_rs::BattleMovementRules::STANDARD
+                ..stompymux_rs::MovementRules::STANDARD
             },
         )
         .unwrap();
@@ -2573,13 +2569,13 @@ async fn shallow_water_launches_and_airborne_fire_above_deep_water_are_supported
 async fn submerged_hex_entry_floods_breached_legs_without_canceling_thrust() {
     use stompymux_rs::*;
     let (_dir, config, mut world, id) = water_jump_fixture(5, false).await;
-    for section in [BattleSection::LeftLeg, BattleSection::RightLeg] {
+    for section in [MechSection::LeftLeg, MechSection::RightLeg] {
         apply_damage_phase(
             &mut world,
             id,
             section,
             6,
-            BattleDamagePhase::Armor { rear: false },
+            DamagePhase::Armor { rear: false },
         )
         .unwrap();
     }
@@ -2588,19 +2584,19 @@ async fn submerged_hex_entry_floods_breached_legs_without_canceling_thrust() {
     for _ in 0..60 {
         advance_battle_jumps(
             &mut world,
-            stompymux_rs::BattleMovementRules {
-                fall: stompymux_rs::BattleFallRules {
-                    stacking: stompymux_rs::BattleStackingRules::STANDARD,
+            stompymux_rs::MovementRules {
+                fall: stompymux_rs::FallRules {
+                    stacking: stompymux_rs::StackingRules::STANDARD,
                     ..jump_rules()
                 },
-                ..stompymux_rs::BattleMovementRules::STANDARD
+                ..stompymux_rs::MovementRules::STANDARD
             },
         )
         .unwrap();
         let unit = &world.btech.constructed_units()[&id];
-        if unit.flight().is_some() && unit.flooded_sections().contains(&BattleSection::RightLeg) {
-            assert_eq!(unit.posture(), BattlePosture::Prone);
-            assert!(unit.flooded_sections().contains(&BattleSection::LeftLeg));
+        if unit.flight().is_some() && unit.flooded_sections().contains(&MechSection::RightLeg) {
+            assert_eq!(unit.posture(), Posture::Prone);
+            assert!(unit.flooded_sections().contains(&MechSection::LeftLeg));
             flooded_in_flight = true;
         }
         if unit.flight().is_none() {
@@ -2621,9 +2617,9 @@ async fn airborne_shutdown_native_lua_and_saved_descent_agree() {
     for _ in 0..4 {
         advance_battle_jumps(
             &mut world,
-            stompymux_rs::BattleMovementRules {
+            stompymux_rs::MovementRules {
                 fall: jump_rules(),
-                ..stompymux_rs::BattleMovementRules::STANDARD
+                ..stompymux_rs::MovementRules::STANDARD
             },
         )
         .unwrap();
@@ -2649,7 +2645,7 @@ async fn airborne_shutdown_native_lua_and_saved_descent_agree() {
     assert_eq!(native.world().btech, lua.world().btech);
     let mut world = native.world().clone();
     let unit = &world.btech.constructed_units()[&id];
-    assert_eq!(unit.power(), BattlePower::Off);
+    assert_eq!(unit.power(), Power::Off);
     assert!(unit.pilot().is_none());
     assert!(unit.flight().is_none());
     assert!(unit.airborne());
@@ -2660,18 +2656,18 @@ async fn airborne_shutdown_native_lua_and_saved_descent_agree() {
         let mut restored = persistence::load(&config.database()).await.unwrap();
         let notices = advance_battle_jumps(
             &mut world,
-            stompymux_rs::BattleMovementRules {
+            stompymux_rs::MovementRules {
                 fall: jump_rules(),
-                ..stompymux_rs::BattleMovementRules::STANDARD
+                ..stompymux_rs::MovementRules::STANDARD
             },
         )
         .unwrap();
         assert_eq!(
             advance_battle_jumps(
                 &mut restored,
-                stompymux_rs::BattleMovementRules {
+                stompymux_rs::MovementRules {
                     fall: jump_rules(),
-                    ..stompymux_rs::BattleMovementRules::STANDARD
+                    ..stompymux_rs::MovementRules::STANDARD
                 }
             )
             .unwrap(),
@@ -2690,7 +2686,7 @@ async fn airborne_shutdown_native_lua_and_saved_descent_agree() {
     let unit = &world.btech.constructed_units()[&id];
     assert_eq!(impacts, 1);
     assert!(!unit.airborne());
-    assert_eq!(unit.posture(), BattlePosture::Prone);
+    assert_eq!(unit.posture(), Posture::Prone);
     assert_eq!(unit.jump_stabilization(), 0);
 }
 
@@ -2705,9 +2701,9 @@ async fn free_fall_impact_failure_is_atomic_and_removal_cancels_descent() {
         assert!(
             advance_battle_jumps(
                 &mut world,
-                stompymux_rs::BattleMovementRules {
+                stompymux_rs::MovementRules {
                     fall: jump_rules(),
-                    ..stompymux_rs::BattleMovementRules::STANDARD
+                    ..stompymux_rs::MovementRules::STANDARD
                 }
             )
             .unwrap()
@@ -2724,9 +2720,9 @@ async fn free_fall_impact_failure_is_atomic_and_removal_cancels_descent() {
     assert!(
         advance_battle_jumps(
             &mut world,
-            stompymux_rs::BattleMovementRules {
+            stompymux_rs::MovementRules {
                 fall: jump_rules(),
-                ..stompymux_rs::BattleMovementRules::STANDARD
+                ..stompymux_rs::MovementRules::STANDARD
             }
         )
         .is_err()
@@ -2743,9 +2739,9 @@ async fn free_fall_impact_failure_is_atomic_and_removal_cancels_descent() {
     assert!(
         advance_battle_jumps(
             &mut removed,
-            stompymux_rs::BattleMovementRules {
+            stompymux_rs::MovementRules {
                 fall: jump_rules(),
-                ..stompymux_rs::BattleMovementRules::STANDARD
+                ..stompymux_rs::MovementRules::STANDARD
             }
         )
         .unwrap()
@@ -2757,9 +2753,9 @@ async fn free_fall_impact_failure_is_atomic_and_removal_cancels_descent() {
     assert!(
         advance_battle_jumps(
             &mut world,
-            stompymux_rs::BattleMovementRules {
+            stompymux_rs::MovementRules {
                 fall: jump_rules(),
-                ..stompymux_rs::BattleMovementRules::STANDARD
+                ..stompymux_rs::MovementRules::STANDARD
             }
         )
         .unwrap()
@@ -2802,10 +2798,7 @@ async fn free_fall_surface_contact_and_engine_restart_keep_the_event_cadence() {
         for second in 1..=impact_second {
             advance_battle_units(&mut world, 0);
             if second == 5 {
-                assert_eq!(
-                    world.btech.constructed_units()[&id].power(),
-                    BattlePower::Running
-                );
+                assert_eq!(world.btech.constructed_units()[&id].power(), Power::Running);
                 assert!(world.btech.constructed_units()[&id].airborne());
                 assert!(launch_battle_jump(&mut world, id, ObjectId(1), 0, 1.0).is_err());
                 assert!(set_battle_speed(&mut world, id, ObjectId(1), 1.0).is_err());
@@ -2814,18 +2807,18 @@ async fn free_fall_surface_contact_and_engine_restart_keep_the_event_cadence() {
             let mut restored = persistence::load(&config.database()).await.unwrap();
             let events = advance_battle_jumps(
                 &mut world,
-                stompymux_rs::BattleMovementRules {
+                stompymux_rs::MovementRules {
                     fall: jump_rules(),
-                    ..stompymux_rs::BattleMovementRules::STANDARD
+                    ..stompymux_rs::MovementRules::STANDARD
                 },
             )
             .unwrap();
             assert_eq!(
                 advance_battle_jumps(
                     &mut restored,
-                    stompymux_rs::BattleMovementRules {
+                    stompymux_rs::MovementRules {
                         fall: jump_rules(),
-                        ..stompymux_rs::BattleMovementRules::STANDARD
+                        ..stompymux_rs::MovementRules::STANDARD
                     }
                 )
                 .unwrap(),
@@ -2866,9 +2859,9 @@ async fn restarted_free_fall_can_land_and_retains_its_pending_impact() {
                 &mut world,
                 id,
                 ObjectId(1),
-                stompymux_rs::BattleMovementRules {
+                stompymux_rs::MovementRules {
                     fall: jump_rules(),
-                    ..stompymux_rs::BattleMovementRules::STANDARD
+                    ..stompymux_rs::MovementRules::STANDARD
                 }
             )
             .is_err()
@@ -2879,16 +2872,16 @@ async fn restarted_free_fall_can_land_and_retains_its_pending_impact() {
             advance_battle_units(&mut world, 0);
             advance_battle_jumps(
                 &mut world,
-                stompymux_rs::BattleMovementRules {
+                stompymux_rs::MovementRules {
                     fall: jump_rules(),
-                    ..stompymux_rs::BattleMovementRules::STANDARD
+                    ..stompymux_rs::MovementRules::STANDARD
                 },
             )
             .unwrap();
         }
         let dice = (0..=u8::MAX)
             .find_map(|seed| {
-                let dice = BattleDice::seeded([seed; 32]);
+                let dice = Dice::seeded([seed; 32]);
                 let mut check = dice.clone();
                 (check.two_d6() == roll).then_some(dice)
             })
@@ -2928,9 +2921,9 @@ async fn restarted_free_fall_can_land_and_retains_its_pending_impact() {
         assert_eq!(
             unit.posture(),
             if roll == 11 {
-                BattlePosture::Standing
+                Posture::Standing
             } else {
-                BattlePosture::Prone
+                Posture::Prone
             }
         );
         persistence::save(&config.database(), &landed)
@@ -2939,18 +2932,18 @@ async fn restarted_free_fall_can_land_and_retains_its_pending_impact() {
         let mut restored = persistence::load(&config.database()).await.unwrap();
         let notices = advance_battle_jumps(
             &mut landed,
-            stompymux_rs::BattleMovementRules {
+            stompymux_rs::MovementRules {
                 fall: jump_rules(),
-                ..stompymux_rs::BattleMovementRules::STANDARD
+                ..stompymux_rs::MovementRules::STANDARD
             },
         )
         .unwrap();
         assert_eq!(
             advance_battle_jumps(
                 &mut restored,
-                stompymux_rs::BattleMovementRules {
+                stompymux_rs::MovementRules {
                     fall: jump_rules(),
-                    ..stompymux_rs::BattleMovementRules::STANDARD
+                    ..stompymux_rs::MovementRules::STANDARD
                 }
             )
             .unwrap(),
@@ -2965,7 +2958,7 @@ async fn restarted_free_fall_can_land_and_retains_its_pending_impact() {
         assert!(landed.btech.constructed_units()[&id].free_fall().is_none());
         assert_eq!(
             landed.btech.constructed_units()[&id].posture(),
-            BattlePosture::Prone
+            Posture::Prone
         );
     }
 }
@@ -2977,16 +2970,16 @@ async fn powered_off_free_fall_stabilization_counts_down_through_restart() {
     let (_dir, config, mut world, id) = runtime_fixture().await;
     world
         .btech
-        .set_unit_dice(id, BattleDice::seeded([1; 32]))
+        .set_unit_dice(id, Dice::seeded([1; 32]))
         .unwrap();
     launch_battle_jump(&mut world, id, ObjectId(1), 0, 1.0).unwrap();
     stop_battle_unit(&mut world, id, ObjectId(1), jump_rules()).unwrap();
     for _ in 0..3 {
         advance_battle_jumps(
             &mut world,
-            stompymux_rs::BattleMovementRules {
+            stompymux_rs::MovementRules {
                 fall: jump_rules(),
-                ..stompymux_rs::BattleMovementRules::STANDARD
+                ..stompymux_rs::MovementRules::STANDARD
             },
         )
         .unwrap();
@@ -2999,9 +2992,9 @@ async fn powered_off_free_fall_stabilization_counts_down_through_restart() {
         assert!(
             advance_battle_jumps(
                 &mut world,
-                stompymux_rs::BattleMovementRules {
+                stompymux_rs::MovementRules {
                     fall: jump_rules(),
-                    ..stompymux_rs::BattleMovementRules::STANDARD
+                    ..stompymux_rs::MovementRules::STANDARD
                 }
             )
             .unwrap()
@@ -3019,9 +3012,9 @@ async fn powered_off_free_fall_stabilization_counts_down_through_restart() {
         assert!(
             advance_battle_jumps(
                 &mut world,
-                stompymux_rs::BattleMovementRules {
+                stompymux_rs::MovementRules {
                     fall: jump_rules(),
-                    ..stompymux_rs::BattleMovementRules::STANDARD
+                    ..stompymux_rs::MovementRules::STANDARD
                 }
             )
             .unwrap()
@@ -3032,9 +3025,9 @@ async fn powered_off_free_fall_stabilization_counts_down_through_restart() {
     assert!(
         advance_battle_jumps(
             &mut world,
-            stompymux_rs::BattleMovementRules {
+            stompymux_rs::MovementRules {
                 fall: jump_rules(),
-                ..stompymux_rs::BattleMovementRules::STANDARD
+                ..stompymux_rs::MovementRules::STANDARD
             }
         )
         .unwrap()
@@ -3043,13 +3036,13 @@ async fn powered_off_free_fall_stabilization_counts_down_through_restart() {
     assert_eq!(
         advance_battle_jumps(
             &mut world,
-            stompymux_rs::BattleMovementRules {
+            stompymux_rs::MovementRules {
                 fall: jump_rules(),
-                ..stompymux_rs::BattleMovementRules::STANDARD
+                ..stompymux_rs::MovementRules::STANDARD
             }
         )
         .unwrap(),
-        vec![BattleNotice {
+        vec![Notice {
             unit: id,
             text: "You have finally stabilized after your jump.".to_owned()
         }]
@@ -3064,7 +3057,7 @@ async fn tcp_free_fall_retries_shutdown_and_impact_saves_across_restart() {
     tokio::task::LocalSet::new().run_until(async {
         let (_dir, config, mut world, id) = runtime_fixture().await;
         launch_battle_jump(&mut world, id, ObjectId(1), 0, 1.0).unwrap();
-        world.btech.set_unit_dice(id, BattleDice::seeded([1; 32])).unwrap();
+        world.btech.set_unit_dice(id, Dice::seeded([1; 32])).unwrap();
         persistence::save(&config.database(), &world).await.unwrap();
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         sqlx::query("UPDATE player_state SET password_hash=? WHERE object_dbref=1").bind(accounts::hash("secret", &config).unwrap()).execute(&mut sql).await.unwrap();
@@ -3087,7 +3080,7 @@ async fn tcp_free_fall_retries_shutdown_and_impact_saves_across_restart() {
         task.await.unwrap().unwrap();
         let saved = persistence::load(&config.database()).await.unwrap();
         let cursor = saved.btech.constructed_units()[&id].free_fall().unwrap();
-        assert_eq!(saved.btech.constructed_units()[&id].power(), BattlePower::Off);
+        assert_eq!(saved.btech.constructed_units()[&id].power(), Power::Off);
         assert!(saved.btech.constructed_units()[&id].pilot().is_none());
         // Hold the resumed timer through login so a live tick cannot outrun the restart assertion.
         sqlx::query(sqlx::AssertSqlSafe(format!("CREATE TRIGGER hold_restart BEFORE UPDATE ON btech_units WHEN NEW.dbref={} BEGIN SELECT RAISE(ABORT,'restart checkpoint'); END",id.0))).execute(&mut sql).await.unwrap();
@@ -3108,14 +3101,14 @@ async fn tcp_free_fall_retries_shutdown_and_impact_saves_across_restart() {
         assert_eq!(persistence::load(&config.database()).await.unwrap().btech.constructed_units()[&id], before);
         let mut expected = saved;
         let mut expected_fall = jump_rules();
-        expected_fall.hit = stompymux_rs::BattleFallRules::configured(&config).hit;
-        advance_battle_jumps(&mut expected, stompymux_rs::BattleMovementRules {fall: expected_fall,  ..stompymux_rs::BattleMovementRules::STANDARD }).unwrap();
+        expected_fall.hit = stompymux_rs::FallRules::configured(&config).hit;
+        advance_battle_jumps(&mut expected, stompymux_rs::MovementRules {fall: expected_fall,  ..stompymux_rs::MovementRules::STANDARD }).unwrap();
         sqlx::query("DROP TRIGGER reject_impact").execute(&mut sql).await.unwrap();
         let landed = jump_tick(&config, id, &mut heartbeats).await;
         client.until("You hit the ground!").await;
         let unit = &landed.btech.constructed_units()[&id];
         assert!(unit.free_fall().is_none());
-        assert_eq!(unit.posture(), BattlePosture::Prone);
+        assert_eq!(unit.posture(), Posture::Prone);
         assert_eq!(unit.sections(), expected.btech.constructed_units()[&id].sections());
         assert_eq!(serde_json::to_value(unit).unwrap()["dice"], serde_json::to_value(&expected.btech.constructed_units()[&id]).unwrap()["dice"]);
         shutdown.send(ShutdownRequest::Sigterm).unwrap();
@@ -3146,9 +3139,9 @@ async fn hardened_gyro_airborne_protection_and_restart() {
     launch_battle_jump(&mut world, id, ObjectId(1), 0, 2.0).unwrap();
     advance_battle_jumps(
         &mut world,
-        stompymux_rs::BattleMovementRules {
+        stompymux_rs::MovementRules {
             fall: jump_rules(),
-            ..stompymux_rs::BattleMovementRules::STANDARD
+            ..stompymux_rs::MovementRules::STANDARD
         },
     )
     .unwrap();
@@ -3157,7 +3150,7 @@ async fn hardened_gyro_airborne_protection_and_restart() {
             &mut world,
             id,
             CriticalLocation {
-                section: BattleSection::CenterTorso,
+                section: MechSection::CenterTorso,
                 slot,
             },
         );
@@ -3173,7 +3166,7 @@ async fn hardened_gyro_airborne_protection_and_restart() {
         let report = resolve_battle_tactical_impact(
             &mut world,
             id,
-            airborne_hit(BattleSection::CenterTorso),
+            airborne_hit(MechSection::CenterTorso),
             1,
             jump_rules(),
         )
@@ -3182,7 +3175,7 @@ async fn hardened_gyro_airborne_protection_and_restart() {
             resolve_battle_tactical_impact(
                 &mut restored,
                 id,
-                airborne_hit(BattleSection::CenterTorso),
+                airborne_hit(MechSection::CenterTorso),
                 1,
                 jump_rules()
             )
@@ -3213,7 +3206,7 @@ fn jump_observer(
     create_battle_unit(
         world,
         observer,
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(world, observer, support::FIXTURE_DICE_SEED);
@@ -3285,19 +3278,19 @@ async fn jump_observers_cover_launch_landings_damage_and_transaction_replay() {
         let mut world = native.world().clone();
         match scenario {
             "leg" => {
-                let mut hit = airborne_hit(BattleSection::LeftLeg);
+                let mut hit = airborne_hit(MechSection::LeftLeg);
                 hit.through_armor_critical = false;
                 resolve_battle_tactical_impact(&mut world, id, hit, 14, jump_rules()).unwrap();
             }
             "actuator" | "gyro" => {
                 let location = if scenario == "actuator" {
                     CriticalLocation {
-                        section: BattleSection::LeftLeg,
+                        section: MechSection::LeftLeg,
                         slot: 1,
                     }
                 } else {
                     CriticalLocation {
-                        section: BattleSection::CenterTorso,
+                        section: MechSection::CenterTorso,
                         slot: 3,
                     }
                 };
@@ -3306,11 +3299,11 @@ async fn jump_observers_cover_launch_landings_damage_and_transaction_replay() {
             _ => {}
         }
         let seed = (0..=255)
-            .find(|seed| (BattleDice::seeded([*seed; 32]).two_d6() >= 6) == (scenario == "early"))
+            .find(|seed| (Dice::seeded([*seed; 32]).two_d6() >= 6) == (scenario == "early"))
             .unwrap();
         world
             .btech
-            .set_unit_dice(id, BattleDice::seeded([seed; 32]))
+            .set_unit_dice(id, Dice::seeded([seed; 32]))
             .unwrap();
         persistence::save(&config.database(), &world).await.unwrap();
         let mut restored = persistence::load(&config.database()).await.unwrap();
@@ -3360,7 +3353,7 @@ async fn jump_observers_cover_launch_landings_damage_and_transaction_replay() {
                 pilot_messages[2],
                 format!(
                     "Modified Pilot Skill: BTH 6\tRoll: {}",
-                    BattleDice::seeded([seed; 32]).two_d6()
+                    Dice::seeded([seed; 32]).two_d6()
                 )
             );
             let witnessed: Vec<_> = notices
@@ -3375,18 +3368,18 @@ async fn jump_observers_cover_launch_landings_damage_and_transaction_replay() {
             for _ in 0..60 {
                 let notices = advance_battle_jumps(
                     &mut world,
-                    stompymux_rs::BattleMovementRules {
+                    stompymux_rs::MovementRules {
                         fall: jump_rules(),
-                        ..stompymux_rs::BattleMovementRules::STANDARD
+                        ..stompymux_rs::MovementRules::STANDARD
                     },
                 )
                 .unwrap();
                 assert_eq!(
                     advance_battle_jumps(
                         &mut restored,
-                        stompymux_rs::BattleMovementRules {
+                        stompymux_rs::MovementRules {
                             fall: jump_rules(),
-                            ..stompymux_rs::BattleMovementRules::STANDARD
+                            ..stompymux_rs::MovementRules::STANDARD
                         }
                     )
                     .unwrap(),
@@ -3406,10 +3399,10 @@ async fn jump_observers_cover_launch_landings_damage_and_transaction_replay() {
 }
 
 /// Five improved jets use ten contiguous slots while retaining the template's five MP thrust.
-fn improved_jet_template() -> BattleTemplate {
+fn improved_jet_template() -> MechTemplate {
     let mut template =
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
-    let jet = template.sections[&BattleSection::LeftTorso].criticals[&0].clone();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+    let jet = template.sections[&MechSection::LeftTorso].criticals[&0].clone();
     for section in template.sections.values_mut() {
         section
             .criticals
@@ -3418,7 +3411,7 @@ fn improved_jet_template() -> BattleTemplate {
     for slot in 0..10 {
         template
             .sections
-            .get_mut(&BattleSection::LeftTorso)
+            .get_mut(&MechSection::LeftTorso)
             .unwrap()
             .criticals
             .insert(slot, jet.clone());
@@ -3433,9 +3426,9 @@ fn improved_jet_template() -> BattleTemplate {
 #[test]
 fn improved_jet_construction_pairs_and_mass() {
     let template = improved_jet_template();
-    let improved = BattleUnit::from_template(template.clone()).unwrap();
-    let ordinary = BattleUnit::from_template(
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+    let improved = Mech::from_template(template.clone()).unwrap();
+    let ordinary = Mech::from_template(
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     assert_eq!(improved.jump_capacity(100).unwrap().movement_points, 5);
@@ -3449,7 +3442,7 @@ fn improved_jet_construction_pairs_and_mass() {
             "missing" => {
                 invalid
                     .sections
-                    .get_mut(&BattleSection::LeftTorso)
+                    .get_mut(&MechSection::LeftTorso)
                     .unwrap()
                     .criticals
                     .remove(&1);
@@ -3457,21 +3450,21 @@ fn improved_jet_construction_pairs_and_mass() {
             "split" => {
                 let part = invalid
                     .sections
-                    .get_mut(&BattleSection::LeftTorso)
+                    .get_mut(&MechSection::LeftTorso)
                     .unwrap()
                     .criticals
                     .remove(&1)
                     .unwrap();
                 invalid
                     .sections
-                    .get_mut(&BattleSection::RightTorso)
+                    .get_mut(&MechSection::RightTorso)
                     .unwrap()
                     .criticals
                     .insert(1, part);
             }
             _ => invalid.jump_speed -= 10.75,
         }
-        assert!(BattleUnit::from_template(invalid).is_err(), "{case}");
+        assert!(Mech::from_template(invalid).is_err(), "{case}");
     }
 }
 
@@ -3501,7 +3494,7 @@ async fn improved_jet_group_loss_flight_and_adapter_replay() {
         })
         .unwrap();
     assert_eq!(
-        flooded.btech.constructed_units()[&id].system_hits(BattleSystem::JumpJet),
+        flooded.btech.constructed_units()[&id].system_hits(System::JumpJet),
         5
     );
     assert_eq!(
@@ -3516,13 +3509,13 @@ async fn improved_jet_group_loss_flight_and_adapter_replay() {
     apply_damage_phase(
         &mut severed,
         id,
-        BattleSection::LeftTorso,
+        MechSection::LeftTorso,
         8,
-        BattleDamagePhase::Internal,
+        DamagePhase::Internal,
     )
     .unwrap();
     let unit = &severed.btech.constructed_units()[&id];
-    assert_eq!(unit.system_hits(BattleSystem::JumpJet), 5);
+    assert_eq!(unit.system_hits(System::JumpJet), 5);
     assert_eq!(unit.jump_capacity(100).unwrap().movement_points, 0);
     // The torso's ten jet slots and the attached arm's two medium lasers are gone.
     assert_eq!(
@@ -3533,7 +3526,7 @@ async fn improved_jet_group_loss_flight_and_adapter_replay() {
         for last in [false, true] {
             let mut before = base.clone();
             let location = CriticalLocation {
-                section: BattleSection::LeftTorso,
+                section: MechSection::LeftTorso,
                 slot,
             };
             if last {
@@ -3542,7 +3535,7 @@ async fn improved_jet_group_loss_flight_and_adapter_replay() {
                         &mut before,
                         id,
                         CriticalLocation {
-                            section: BattleSection::LeftTorso,
+                            section: MechSection::LeftTorso,
                             slot: first,
                         },
                     )
@@ -3622,10 +3615,7 @@ async fn improved_jet_group_loss_flight_and_adapter_replay() {
             );
             assert_eq!(world.btech, restored.btech);
             let unit = &world.btech.constructed_units()[&id];
-            assert_eq!(
-                unit.system_hits(BattleSystem::JumpJet),
-                if last { 5 } else { 1 }
-            );
+            assert_eq!(unit.system_hits(System::JumpJet), if last { 5 } else { 1 });
             assert_eq!(
                 unit.jump_capacity(100).unwrap().movement_points,
                 if last { 0 } else { 4 }
@@ -3682,13 +3672,7 @@ async fn airborne_charge_timer_and_saved_replay() {
     let (_dir, config, mut base, id) = runtime_fixture().await;
     let (target, _) = jump_observer(&mut base, &config, id);
     refresh_battle_contacts(&mut base, &[id]).unwrap();
-    select_battle_charge(
-        &mut base,
-        id,
-        ObjectId(1),
-        BattleChargeSelection::Target(target),
-    )
-    .unwrap();
+    select_battle_charge(&mut base, id, ObjectId(1), ChargeSelection::Target(target)).unwrap();
     launch_battle_jump(&mut base, id, ObjectId(1), 0, 2.0).unwrap();
     base.btech
         .rewrite_unit_record(id, |record| {
@@ -3698,13 +3682,13 @@ async fn airborne_charge_timer_and_saved_replay() {
         .unwrap();
     for new_rules in [false, true] {
         let mut world = base.clone();
-        let rules = BattleMovementRules {
+        let rules = MovementRules {
             fall: jump_rules(),
-            charge: BattleChargePolicy {
+            charge: ChargePolicy {
                 new_rules,
-                ..BattleChargePolicy::STANDARD
+                ..ChargePolicy::STANDARD
             },
-            ..BattleMovementRules::STANDARD
+            ..MovementRules::STANDARD
         };
         advance_battle_jumps(&mut world, rules).unwrap();
         let charge = world.btech.constructed_units()[&id].charge();
@@ -3725,7 +3709,7 @@ async fn airborne_charge_timer_and_saved_replay() {
         assert_eq!(
             world.btech.constructed_units()[&id].charge(),
             if new_rules {
-                BattleChargeState::default()
+                ChargeState::default()
             } else {
                 charge
             }
@@ -3747,13 +3731,7 @@ async fn airborne_charge_rejection_clears_one_or_both_selections() {
     place_battle_unit(&mut base, target, map, 5, 5).unwrap();
     refresh_battle_contacts(&mut base, &[id]).unwrap();
     launch_battle_jump(&mut base, id, ObjectId(1), 0, 2.0).unwrap();
-    select_battle_charge(
-        &mut base,
-        id,
-        ObjectId(1),
-        BattleChargeSelection::Target(target),
-    )
-    .unwrap();
+    select_battle_charge(&mut base, id, ObjectId(1), ChargeSelection::Target(target)).unwrap();
     for mutual in [false, true] {
         let mut world = base.clone();
         if mutual {
@@ -3767,9 +3745,9 @@ async fn airborne_charge_rejection_clears_one_or_both_selections() {
         let before = serde_json::to_value(&world.btech).unwrap();
         let notices = advance_battle_jumps(
             &mut world,
-            BattleMovementRules {
+            MovementRules {
                 fall: jump_rules(),
-                ..BattleMovementRules::STANDARD
+                ..MovementRules::STANDARD
             },
         )
         .unwrap();
@@ -3781,7 +3759,7 @@ async fn airborne_charge_rejection_clears_one_or_both_selections() {
         );
         for unit_id in [id, target] {
             let unit = &world.btech.constructed_units()[&unit_id];
-            assert_eq!(unit.charge(), BattleChargeState::default());
+            assert_eq!(unit.charge(), ChargeState::default());
             assert!(unit.limb_recycle().is_empty());
             let after = serde_json::to_value(unit).unwrap();
             assert_eq!(
@@ -3809,9 +3787,9 @@ async fn airborne_charge_landing_checks_ground_eligibility() {
     world.btech = serde_json::from_value(state).unwrap();
     place_battle_unit(&mut world, target, map, 5, 3).unwrap();
     launch_battle_jump(&mut world, id, ObjectId(1), 0, 2.0).unwrap();
-    let rules = BattleMovementRules {
+    let rules = MovementRules {
         fall: jump_rules(),
-        ..BattleMovementRules::STANDARD
+        ..MovementRules::STANDARD
     };
     // Detect the last step through the public trajectory rather than a hard-coded tick count.
     loop {
@@ -3825,25 +3803,19 @@ async fn airborne_charge_landing_checks_ground_eligibility() {
             )
             .unwrap()
             .outcome
-            == BattleJumpOutcome::Landing
+            == JumpOutcome::Landing
         {
             break;
         }
         advance_battle_jumps(&mut world, rules).unwrap();
     }
     refresh_battle_contacts(&mut world, &[id]).unwrap();
-    select_battle_charge(
-        &mut world,
-        id,
-        ObjectId(1),
-        BattleChargeSelection::Target(target),
-    )
-    .unwrap();
+    select_battle_charge(&mut world, id, ObjectId(1), ChargeSelection::Target(target)).unwrap();
     let notices = advance_battle_jumps(&mut world, rules).unwrap();
     assert!(!world.btech.constructed_units()[&id].airborne());
     assert_eq!(
         world.btech.constructed_units()[&id].charge(),
-        BattleChargeState::default()
+        ChargeState::default()
     );
     assert!(
         notices
@@ -3862,20 +3834,14 @@ async fn airborne_charge_landing_checks_ground_eligibility() {
             .any(|notice| notice.text.contains("fast enough")),
         "{notices:?}"
     );
-    select_battle_charge(
-        &mut world,
-        id,
-        ObjectId(1),
-        BattleChargeSelection::Target(target),
-    )
-    .unwrap();
+    select_battle_charge(&mut world, id, ObjectId(1), ChargeSelection::Target(target)).unwrap();
     let charge = world.btech.constructed_units()[&id].charge();
     advance_battle_jumps(
         &mut world,
-        BattleMovementRules {
-            charge: BattleChargePolicy {
+        MovementRules {
+            charge: ChargePolicy {
                 new_rules: true,
-                ..BattleChargePolicy::STANDARD
+                ..ChargePolicy::STANDARD
             },
             ..rules
         },
@@ -3926,9 +3892,9 @@ async fn dfa_launch_fixed_destination_and_saved_intent() {
             motion.desired_speed = 21.5;
         })
         .unwrap();
-    let rules = BattleMovementRules {
+    let rules = MovementRules {
         fall: jump_rules(),
-        ..BattleMovementRules::STANDARD
+        ..MovementRules::STANDARD
     };
     advance_battle_motion(&mut world, rules).unwrap();
     advance_battle_jumps(&mut world, rules).unwrap();
@@ -4000,17 +3966,14 @@ fn dfa_launch_path_validation() {
     let start = HexCoordinate { x: 5, y: 5 }.center();
     let end = HexCoordinate { x: 6, y: 5 }.center();
     for range in [f64::NAN, f64::INFINITY, 0.0, -1.0, 6.0] {
-        assert!(BattleJumpPath::targeted(start, end, range, 0, 0, 5).is_err());
+        assert!(JumpPath::targeted(start, end, range, 0, 0, 5).is_err());
     }
-    let path = BattleJumpPath::targeted(start, end, 0.75, 0, 0, 5).unwrap();
+    let path = JumpPath::targeted(start, end, 0.75, 0, 0, 5).unwrap();
     let mut stored = serde_json::to_value(path).unwrap();
     stored["projection"] = serde_json::json!({"bearing":0,"range":0.75});
-    assert!(serde_json::from_value::<BattleJumpPath>(stored).is_err());
+    assert!(serde_json::from_value::<JumpPath>(stored).is_err());
     let stored = serde_json::to_value(path).unwrap();
-    assert_eq!(
-        path,
-        serde_json::from_value::<BattleJumpPath>(stored).unwrap()
-    );
+    assert_eq!(path, serde_json::from_value::<JumpPath>(stored).unwrap());
 }
 
 /// A targeted jump dispatches exactly one landing attack with airborne aim and no ordinary stabilization.
@@ -4029,7 +3992,7 @@ async fn dfa_landing_dispatch_and_saved_replay() {
     set_battle_character(
         &mut world,
         ObjectId(1),
-        BattleCharacter {
+        Character {
             build: 5,
             reflexes: 4,
             intuition: 3,
@@ -4045,7 +4008,7 @@ async fn dfa_landing_dispatch_and_saved_replay() {
         &mut world,
         ObjectId(1),
         "Piloting-Biped",
-        BattleCharacterValue {
+        CharacterValue {
             value: 30,
             experience: 0,
             last_used: 0,
@@ -4054,10 +4017,10 @@ async fn dfa_landing_dispatch_and_saved_replay() {
     .unwrap();
     refresh_battle_contacts(&mut world, &[id]).unwrap();
     launch_battle_dfa(&mut world, id, ObjectId(1), Some(target)).unwrap();
-    let rules = BattleMovementRules {
+    let rules = MovementRules {
         physical_pilot_skill: false,
         fall: jump_rules(),
-        ..BattleMovementRules::STANDARD
+        ..MovementRules::STANDARD
     };
     loop {
         let unit = &world.btech.constructed_units()[&id];
@@ -4070,18 +4033,18 @@ async fn dfa_landing_dispatch_and_saved_replay() {
             )
             .unwrap()
             .outcome
-            == BattleJumpOutcome::Landing
+            == JumpOutcome::Landing
         {
             break;
         }
         advance_battle_jumps(&mut world, rules).unwrap();
     }
     let seed = (0..=255)
-        .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 2)
+        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 2)
         .unwrap();
     world
         .btech
-        .set_unit_dice(id, BattleDice::seeded([seed; 32]))
+        .set_unit_dice(id, Dice::seeded([seed; 32]))
         .unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
     let mut loaded = persistence::load(&config.database()).await.unwrap();
@@ -4112,7 +4075,7 @@ async fn dfa_landing_dispatch_and_saved_replay() {
     assert!(unit.flight().is_none());
     assert_eq!(unit.jump_stabilization(), 0);
     assert_eq!(unit.limb_recycle().len(), 6);
-    assert_eq!(unit.posture(), BattlePosture::Prone);
+    assert_eq!(unit.posture(), Posture::Prone);
     assert!(advance_battle_jumps(&mut world, rules).unwrap().is_empty());
     world.validate(&config).unwrap();
 }
@@ -4141,10 +4104,10 @@ async fn dfa_landing_moved_target_falls_back() {
     place_battle_unit(&mut world, target, map, 9, 9).unwrap();
     let before =
         serde_json::to_value(&world.btech.constructed_units()[&id]).unwrap()["dice"].clone();
-    let rules = BattleMovementRules {
+    let rules = MovementRules {
         physical_pilot_skill: false,
         fall: jump_rules(),
-        ..BattleMovementRules::STANDARD
+        ..MovementRules::STANDARD
     };
     let mut notices = Vec::new();
     while world.btech.constructed_units()[&id].flight().is_some() {
@@ -4252,7 +4215,7 @@ async fn dfa_landing_early_attack_uses_shared_policy() {
     set_battle_character(
         &mut world,
         ObjectId(1),
-        BattleCharacter {
+        Character {
             build: 5,
             reflexes: 4,
             intuition: 3,
@@ -4268,7 +4231,7 @@ async fn dfa_landing_early_attack_uses_shared_policy() {
         &mut world,
         ObjectId(1),
         "Piloting-Biped",
-        BattleCharacterValue {
+        CharacterValue {
             value: 30,
             experience: 0,
             last_used: 0,
@@ -4277,10 +4240,10 @@ async fn dfa_landing_early_attack_uses_shared_policy() {
     .unwrap();
     refresh_battle_contacts(&mut world, &[id]).unwrap();
     launch_battle_dfa(&mut world, id, ObjectId(1), Some(target)).unwrap();
-    let rules = BattleMovementRules {
+    let rules = MovementRules {
         physical_pilot_skill: true,
         fall: jump_rules(),
-        ..BattleMovementRules::STANDARD
+        ..MovementRules::STANDARD
     };
     while world.btech.constructed_units()[&id].position()
         != world.btech.constructed_units()[&target].position()
@@ -4318,9 +4281,9 @@ async fn character_free_fall_action_replays_and_rolls_back_casualties() {
         let (_dir, config, mut world, id) = runtime_fixture().await;
         launch_battle_jump(&mut world, id, ObjectId(1), 0, 1.0).unwrap();
         stop_battle_unit(&mut world, id, ObjectId(1), jump_rules()).unwrap();
-        let movement = BattleMovementRules {
+        let movement = MovementRules {
             fall: jump_rules(),
-            ..BattleMovementRules::STANDARD
+            ..MovementRules::STANDARD
         };
         for _ in 0..2 {
             advance_battle_jumps(&mut world, movement).unwrap();
@@ -4338,7 +4301,7 @@ async fn character_free_fall_action_replays_and_rolls_back_casualties() {
         set_battle_character(
             &mut world,
             pilot,
-            BattleCharacter {
+            Character {
                 build: 5,
                 reflexes: 5,
                 intuition: 5,
@@ -4357,11 +4320,11 @@ async fn character_free_fall_action_replays_and_rolls_back_casualties() {
             .flags
             .insert(Flag::InCharacter);
         let seed = (0..=255)
-            .find(|byte| BattleDice::seeded([*byte; 32]).two_d6() == 2)
+            .find(|byte| Dice::seeded([*byte; 32]).two_d6() == 2)
             .unwrap();
         world
             .btech
-            .set_unit_dice(id, BattleDice::seeded([seed; 32]))
+            .set_unit_dice(id, Dice::seeded([seed; 32]))
             .unwrap();
         let baseline = world.clone();
         assert!(advance_battle_jumps(&mut world, movement).is_err());
@@ -4393,7 +4356,7 @@ async fn character_free_fall_action_replays_and_rolls_back_casualties() {
         let candidate = scripts.world().clone();
         let unit = &candidate.btech.constructed_units()[&id];
         assert!(unit.free_fall().is_none());
-        assert_eq!(unit.posture(), BattlePosture::Prone);
+        assert_eq!(unit.posture(), Posture::Prone);
         assert_eq!(unit.character_pilot_status().unwrap().killed, fatal);
         assert_eq!(
             candidate.objects[&pilot].location,
@@ -4418,15 +4381,15 @@ async fn character_water_landing_evacuates_and_retries() {
     apply_damage_phase(
         &mut world,
         id,
-        BattleSection::Head,
+        MechSection::Head,
         7,
-        BattleDamagePhase::Armor { rear: false },
+        DamagePhase::Armor { rear: false },
     )
     .unwrap();
     launch_battle_jump(&mut world, id, ObjectId(1), 0, 3.0).unwrap();
-    let movement = BattleMovementRules {
+    let movement = MovementRules {
         fall: jump_rules(),
-        ..BattleMovementRules::STANDARD
+        ..MovementRules::STANDARD
     };
     for second in 0..60 {
         let mut next = world.clone();
@@ -4457,7 +4420,7 @@ async fn character_water_landing_evacuates_and_retries() {
     set_battle_character(
         &mut world,
         pilot,
-        BattleCharacter {
+        Character {
             build: 5,
             reflexes: 5,
             intuition: 5,
@@ -4496,7 +4459,7 @@ async fn character_water_landing_evacuates_and_retries() {
     let candidate = scripts.world().clone();
     let unit = &candidate.btech.constructed_units()[&id];
     assert!(unit.flight().is_none());
-    assert!(unit.flooded_sections().contains(&BattleSection::Head));
+    assert!(unit.flooded_sections().contains(&MechSection::Head));
     assert!(unit.is_destroyed());
     assert_eq!(candidate.objects[&pilot].location, Some(afterlife));
     candidate.validate(&config).unwrap();
@@ -4525,7 +4488,7 @@ async fn character_dfa_landing_dispatch_rolls_back_and_replays() {
     set_battle_character(
         &mut world,
         ObjectId(1),
-        BattleCharacter {
+        Character {
             build: 5,
             reflexes: 4,
             intuition: 3,
@@ -4541,7 +4504,7 @@ async fn character_dfa_landing_dispatch_rolls_back_and_replays() {
         &mut world,
         ObjectId(1),
         "Piloting-Biped",
-        BattleCharacterValue {
+        CharacterValue {
             value: 30,
             experience: 0,
             last_used: 0,
@@ -4550,10 +4513,10 @@ async fn character_dfa_landing_dispatch_rolls_back_and_replays() {
     .unwrap();
     refresh_battle_contacts(&mut world, &[id]).unwrap();
     launch_battle_dfa(&mut world, id, ObjectId(1), Some(target)).unwrap();
-    let rules = BattleMovementRules {
+    let rules = MovementRules {
         physical_pilot_skill: false,
         fall: jump_rules(),
-        ..BattleMovementRules::STANDARD
+        ..MovementRules::STANDARD
     };
     loop {
         let unit = &world.btech.constructed_units()[&id];
@@ -4566,7 +4529,7 @@ async fn character_dfa_landing_dispatch_rolls_back_and_replays() {
             )
             .unwrap()
             .outcome
-            == BattleJumpOutcome::Landing
+            == JumpOutcome::Landing
         {
             break;
         }
@@ -4598,7 +4561,7 @@ async fn character_dfa_landing_dispatch_rolls_back_and_replays() {
     set_battle_character(
         &mut world,
         pilot,
-        BattleCharacter {
+        Character {
             build: 5,
             reflexes: 5,
             intuition: 5,
@@ -4614,7 +4577,7 @@ async fn character_dfa_landing_dispatch_rolls_back_and_replays() {
     for unit in [id, target] {
         let seed = (0..=255)
             .find(|seed| {
-                let mut dice = BattleDice::seeded([*seed; 32]);
+                let mut dice = Dice::seeded([*seed; 32]);
                 if unit == id {
                     dice.two_d6() == 12
                 } else {
@@ -4623,7 +4586,7 @@ async fn character_dfa_landing_dispatch_rolls_back_and_replays() {
             })
             .unwrap();
         state["constructed"][unit.0.to_string()]["dice"] =
-            serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+            serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
     }
     world.btech = serde_json::from_value(state).unwrap();
     let baseline = world.clone();
@@ -4700,7 +4663,7 @@ async fn character_jump_commands_land_and_rollback() {
         set_battle_character(
             &mut base,
             pilot,
-            BattleCharacter {
+            Character {
                 build: 5,
                 reflexes: 5,
                 intuition: 5,
@@ -4717,7 +4680,7 @@ async fn character_jump_commands_land_and_rollback() {
                 &mut base,
                 pilot,
                 name,
-                BattleCharacterValue {
+                CharacterValue {
                     value: 30,
                     experience: 0,
                     last_used: 0,
@@ -4783,10 +4746,10 @@ async fn character_jump_commands_land_and_rollback() {
                 .dfa_target(),
             (mode != 2).then_some(target)
         );
-        let rules = BattleMovementRules {
+        let rules = MovementRules {
             physical_pilot_skill: false,
             fall: jump_rules(),
-            ..BattleMovementRules::STANDARD
+            ..MovementRules::STANDARD
         };
         for _ in 0..100 {
             if native.world().btech.constructed_units()[&id]
@@ -4824,9 +4787,9 @@ async fn character_landing_control_experience_and_restart() {
     for obstacle in [false, true] {
         for extended in [false, true] {
             for (section, slot, skill_level) in [
-                (BattleSection::LeftLeg, 1, 0),
-                (BattleSection::LeftLeg, 0, 1),
-                (BattleSection::CenterTorso, 3, 2),
+                (MechSection::LeftLeg, 1, 0),
+                (MechSection::LeftLeg, 0, 1),
+                (MechSection::CenterTorso, 3, 2),
             ] {
                 let (_dir, config, mut world, id) = runtime_fixture().await;
                 if obstacle {
@@ -4847,7 +4810,7 @@ async fn character_landing_control_experience_and_restart() {
                 set_battle_character(
                     &mut world,
                     ObjectId(1),
-                    BattleCharacter {
+                    Character {
                         build: 5,
                         reflexes: 5,
                         intuition: 5,
@@ -4868,7 +4831,7 @@ async fn character_landing_control_experience_and_restart() {
                     &mut world,
                     ObjectId(1),
                     skill,
-                    BattleCharacterValue {
+                    CharacterValue {
                         value: skill_level,
                         experience: 0,
                         last_used: 0,
@@ -4880,13 +4843,13 @@ async fn character_landing_control_experience_and_restart() {
                     .unwrap();
                 let seed = (0..=255)
                     .find(|seed| {
-                        let mut dice = BattleDice::seeded([*seed; 32]);
+                        let mut dice = Dice::seeded([*seed; 32]);
                         dice.two_d6() == 12 && dice.two_d6() == 12
                     })
                     .unwrap();
                 world
                     .btech
-                    .set_unit_dice(id, BattleDice::seeded([seed; 32]))
+                    .set_unit_dice(id, Dice::seeded([seed; 32]))
                     .unwrap();
                 let mut channel = Channel::new("MechPilotXP".into());
                 channel.users.push(communication::Membership {
@@ -4898,12 +4861,12 @@ async fn character_landing_control_experience_and_restart() {
                 let scripts =
                     Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world)))
                         .unwrap();
-                let rules = BattleMovementRules {
-                    fall: BattleFallRules {
+                let rules = MovementRules {
+                    fall: FallRules {
                         extended_piloting: extended,
                         ..jump_rules()
                     },
-                    ..BattleMovementRules::STANDARD
+                    ..MovementRules::STANDARD
                 };
                 let mut rejected = false;
                 let mut restarted = false;
@@ -4965,7 +4928,7 @@ async fn character_landing_control_experience_and_restart() {
                 let gear = *rolls.last().unwrap();
                 assert_eq!(
                     pilot_output[gear - 1],
-                    if section == BattleSection::CenterTorso {
+                    if section == MechSection::CenterTorso {
                         "Your damaged gyro makes it harder to land"
                     } else {
                         "Your damaged leg actuators make it harder to land"
@@ -4985,7 +4948,7 @@ async fn character_landing_control_experience_and_restart() {
                 assert!(!candidate.btech.constructed_units()[&id].airborne());
                 assert_eq!(
                     candidate.btech.constructed_units()[&id].posture(),
-                    BattlePosture::Standing
+                    Posture::Standing
                 );
                 assert_eq!(
                     candidate.btech.character_values()[&ObjectId(1)][skill].experience_balance(),
@@ -5081,7 +5044,7 @@ async fn character_manual_landing_adapters_and_casualty_rollback() {
             set_battle_character(
                 &mut world,
                 pilot,
-                BattleCharacter {
+                Character {
                     build: 5,
                     reflexes: if successful { 4 } else { 0 },
                     intuition: if successful { 5 } else { 0 },
@@ -5099,7 +5062,7 @@ async fn character_manual_landing_adapters_and_casualty_rollback() {
                     &mut world,
                     id,
                     CriticalLocation {
-                        section: BattleSection::LeftLeg,
+                        section: MechSection::LeftLeg,
                         slot: 1,
                     },
                 )
@@ -5109,7 +5072,7 @@ async fn character_manual_landing_adapters_and_casualty_rollback() {
                 .find_map(|seed| {
                     let mut bytes = [0; 32];
                     bytes[..2].copy_from_slice(&seed.to_le_bytes());
-                    let dice = BattleDice::seeded(bytes);
+                    let dice = Dice::seeded(bytes);
                     let mut probe = dice.clone();
                     (probe.two_d6() == 12 && probe.two_d6() == 12).then_some(dice)
                 })
@@ -5122,9 +5085,7 @@ async fn character_manual_landing_adapters_and_casualty_rollback() {
             });
             world.channels.insert("MechPilotXP".into(), channel);
             let before = world.clone();
-            assert!(
-                land_battle_jump(&mut world, id, pilot, BattleMovementRules::STANDARD).is_err()
-            );
+            assert!(land_battle_jump(&mut world, id, pilot, MovementRules::STANDARD).is_err());
             assert_eq!(world.btech, before.btech);
             let native =
                 Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
@@ -5263,7 +5224,7 @@ async fn named_jump_fields_retain_launch_after_landing_and_restart() {
         if landed.btech.constructed_units()[&id].flight().is_none() {
             break;
         }
-        advance_battle_jumps(&mut landed, BattleMovementRules::STANDARD).unwrap();
+        advance_battle_jumps(&mut landed, MovementRules::STANDARD).unwrap();
     }
     assert!(landed.btech.constructed_units()[&id].flight().is_none());
     persistence::save(&config.database(), &landed)
@@ -5300,9 +5261,9 @@ async fn jump_course_fields_redirect_without_moving_the_committed_cursor() {
         }
         let mut world = setup.world().clone();
         launch_battle_jump(&mut world, id, ObjectId(1), 0, 4.0).unwrap();
-        let rules = BattleMovementRules {
+        let rules = MovementRules {
             fall: jump_rules(),
-            ..BattleMovementRules::STANDARD
+            ..MovementRules::STANDARD
         };
         for _ in 0..10 {
             advance_battle_jumps(&mut world, rules).unwrap();
@@ -5408,9 +5369,9 @@ async fn shortened_jump_fields_land_on_the_next_tick_after_restart() {
     for length in ["0", "-32768", "1", "270"] {
         let (_dir, config, mut world, id) = runtime_fixture().await;
         launch_battle_jump(&mut world, id, ObjectId(1), 0, 4.0).unwrap();
-        let rules = BattleMovementRules {
+        let rules = MovementRules {
             fall: jump_rules(),
-            ..BattleMovementRules::STANDARD
+            ..MovementRules::STANDARD
         };
         for _ in 0..10 {
             advance_battle_jumps(&mut world, rules).unwrap();
@@ -5465,9 +5426,9 @@ async fn jump_fields_keep_dfa_intent_without_chasing_the_target() {
     let (target, _) = jump_observer(&mut world, &config, id);
     refresh_battle_contacts(&mut world, &[id]).unwrap();
     launch_battle_dfa(&mut world, id, ObjectId(1), Some(target)).unwrap();
-    let rules = BattleMovementRules {
+    let rules = MovementRules {
         fall: jump_rules(),
-        ..BattleMovementRules::STANDARD
+        ..MovementRules::STANDARD
     };
     for _ in 0..3 {
         advance_battle_jumps(&mut world, rules).unwrap();
@@ -5512,9 +5473,9 @@ async fn jump_fields_redirect_into_existing_collision_handling() {
     let (_dir, config, mut world, id) = runtime_fixture().await;
     jump_hills(&mut world, id, 0, 0, 9);
     launch_battle_jump(&mut world, id, ObjectId(1), 90, 4.0).unwrap();
-    let rules = BattleMovementRules {
+    let rules = MovementRules {
         fall: jump_rules(),
-        ..BattleMovementRules::STANDARD
+        ..MovementRules::STANDARD
     };
     for _ in 0..3 {
         advance_battle_jumps(&mut world, rules).unwrap();
@@ -5559,9 +5520,9 @@ async fn damage_replacement_during_jump_defers_lost_thrust_and_replays_restorati
             .unwrap();
         let mut world = setup.world().clone();
         launch_battle_jump(&mut world, id, ObjectId(1), 0, 4.0).unwrap();
-        let rules = BattleMovementRules {
+        let rules = MovementRules {
             fall: jump_rules(),
-            ..BattleMovementRules::STANDARD
+            ..MovementRules::STANDARD
         };
         for _ in 0..10 {
             advance_battle_jumps(&mut world, rules).unwrap();
@@ -5655,14 +5616,14 @@ async fn free_fall_landing_feedback_is_private_and_replays() {
                 .insert(Flag::Connected);
         }
         let byte = (0..=255)
-            .find(|byte| BattleDice::seeded([*byte; 32]).two_d6() == roll)
+            .find(|byte| Dice::seeded([*byte; 32]).two_d6() == roll)
             .unwrap();
         world
             .btech
             .rewrite_unit_record(id, |record| {
-                record["free_fall"] = serde_json::to_value(BattleFreeFall::new(1)).unwrap();
+                record["free_fall"] = serde_json::to_value(FreeFall::new(1)).unwrap();
                 record["free_fall"]["remaining"] = 1.into();
-                record["dice"] = serde_json::to_value(BattleDice::seeded([byte; 32])).unwrap();
+                record["dice"] = serde_json::to_value(Dice::seeded([byte; 32])).unwrap();
             })
             .unwrap();
         world.validate(&config).unwrap();
@@ -5680,9 +5641,9 @@ async fn free_fall_landing_feedback_is_private_and_replays() {
         }
         let replay =
             Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(restored))).unwrap();
-        let movement = BattleMovementRules {
+        let movement = MovementRules {
             fall: jump_rules(),
-            ..BattleMovementRules::STANDARD
+            ..MovementRules::STANDARD
         };
         advance_battle_jumps_action(&scripts, &config, movement).unwrap();
         advance_battle_jumps_action(&replay, &config, movement).unwrap();

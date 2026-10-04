@@ -18,7 +18,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+        VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
             .unwrap(),
     )
     .unwrap();
@@ -49,7 +49,7 @@ async fn turret_controls_follow_hull_turns_and_replay_through_native_and_lua() {
     assert_eq!(world.btech, before);
     set_battle_heading(&mut world, id, ObjectId(1), 90.0).unwrap();
     for _ in 0..20 {
-        advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
+        advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
     }
     assert_eq!(world.btech.vehicles()[&id].motion().unwrap().heading, 90.0);
     assert_eq!(battle_turret_readout(&world, id, ObjectId(1)).unwrap(), 0.0);
@@ -93,7 +93,7 @@ async fn turret_controls_follow_hull_turns_and_replay_through_native_and_lua() {
 async fn turret_locks_persist_and_loss_removes_facing_and_prevents_control() {
     let (_dir, config, mut world, id) = fixture().await;
     set_battle_turret(&mut world, id, ObjectId(1), 120.0).unwrap();
-    damage_battle_vehicle_motive(&mut world, id, BattleVehicleMotiveHit::Immobilize).unwrap();
+    damage_battle_vehicle_motive(&mut world, id, VehicleMotiveHit::Immobilize).unwrap();
     set_battle_turret(&mut world, id, ObjectId(1), 90.0).unwrap();
     lock_battle_vehicle_turret(&mut world, id).unwrap();
     let before = world.btech.clone();
@@ -107,9 +107,9 @@ async fn turret_locks_persist_and_loss_removes_facing_and_prevents_control() {
     damage_battle_vehicle_phase(
         &mut loaded,
         id,
-        BattleVehicleSection::Turret,
+        VehicleSection::Turret,
         100,
-        BattleDamagePhase::Internal,
+        DamagePhase::Internal,
     )
     .unwrap();
     assert!(!loaded.btech.vehicles()[&id].turret_locked());
@@ -133,7 +133,7 @@ async fn turret_locks_persist_and_loss_removes_facing_and_prevents_control() {
     ] {
         let mut bad = original.clone();
         bad[field] = value;
-        assert!(serde_json::from_value::<BattleVehicle>(bad).is_err());
+        assert!(serde_json::from_value::<Vehicle>(bad).is_err());
     }
 }
 
@@ -201,13 +201,7 @@ async fn turret_repair_expires_offline_and_cannot_clear_a_second_hit_lock() {
     let (_dir, _config, mut world, id) = fixture().await;
     jam_battle_vehicle_turret(&mut world, id).unwrap();
     begin_battle_turret_repair(&mut world, id, ObjectId(1)).unwrap();
-    stop_battle_unit(
-        &mut world,
-        id,
-        ObjectId(1),
-        BattleMovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut world, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
     for _ in 0..60 {
         assert!(advance_battle_units(&mut world, 0).is_empty());
     }
@@ -237,7 +231,7 @@ async fn turret_repair_expires_offline_and_cannot_clear_a_second_hit_lock() {
     let original = serde_json::to_value(&world.btech.vehicles()[&id]).unwrap();
     let mut both = original.clone();
     both["turret_jammed"] = true.into();
-    let both: BattleVehicle = serde_json::from_value(both).unwrap();
+    let both: Vehicle = serde_json::from_value(both).unwrap();
     assert!(both.turret_locked() && both.turret_jammed());
     for (field, value) in [
         ("turret_repairs", serde_json::json!([0])),
@@ -246,7 +240,7 @@ async fn turret_repair_expires_offline_and_cannot_clear_a_second_hit_lock() {
     ] {
         let mut bad = original.clone();
         bad[field] = value;
-        assert!(serde_json::from_value::<BattleVehicle>(bad).is_err());
+        assert!(serde_json::from_value::<Vehicle>(bad).is_err());
     }
 }
 
@@ -286,9 +280,9 @@ async fn fixturret_native_and_lua_share_transactional_repair_state() {
     damage_battle_vehicle_phase(
         &mut destroyed,
         id,
-        BattleVehicleSection::Turret,
+        VehicleSection::Turret,
         100,
-        BattleDamagePhase::Internal,
+        DamagePhase::Internal,
     )
     .unwrap();
     assert!(destroyed.btech.vehicles()[&id].turret_repairs().is_empty());
@@ -302,7 +296,7 @@ async fn powered_off_turret_repair_retries_failed_server_ticks() {
         let (_dir,config,mut world,id)=fixture().await;
         jam_battle_vehicle_turret(&mut world,id).unwrap();
         begin_battle_turret_repair(&mut world,id,ObjectId(1)).unwrap();
-        stop_battle_unit(&mut world,id,ObjectId(1),BattleMovementRules::STANDARD.fall).unwrap();
+        stop_battle_unit(&mut world,id,ObjectId(1),MovementRules::STANDARD.fall).unwrap();
         for _ in 0..58 {advance_battle_units(&mut world, 0);}
         persistence::save(&config.database(),&world).await.unwrap();
         let mut sql=sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
@@ -322,7 +316,7 @@ async fn powered_off_turret_repair_retries_failed_server_ticks() {
 #[tokio::test]
 async fn automatic_turret_controls_tracking_gates_and_restart() {
     let (_dir, config, mut world, id) = fixture().await;
-    world.btech.set_unit_power(id, BattlePower::Off).unwrap();
+    world.btech.set_unit_power(id, Power::Off).unwrap();
     let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
     let before = scripts.world().btech.clone();
     assert!(
@@ -336,22 +330,19 @@ async fn automatic_turret_controls_tracking_gates_and_restart() {
     assert_eq!(scripts.world().btech, before);
     let text = support::run_text(&scripts, &config, ObjectId(1), 1, "autoturret ignored");
     assert!(text.contains("now ON"), "{text}");
-    assert!(!battle_automatic_turrets_pending(&scripts.world()));
+    assert!(!automatic_turrets_pending(&scripts.world()));
     assert!(toggle_battle_automatic_turret(&mut scripts.world_mut(), id, ObjectId(2)).is_err());
     let mut world = scripts.world().clone();
-    world
-        .btech
-        .set_unit_power(id, BattlePower::Running)
-        .unwrap();
+    world.btech.set_unit_power(id, Power::Running).unwrap();
     select_battle_hex_target(
         &mut world,
         id,
         ObjectId(1),
         HexCoordinate { x: 0, y: 0 },
-        BattleHexTargetMode::Hex,
+        HexTargetMode::Hex,
     )
     .unwrap();
-    assert!(battle_automatic_turrets_pending(&world));
+    assert!(automatic_turrets_pending(&world));
     advance_battle_automatic_turrets(&mut world);
     assert_eq!(world.btech.vehicles()[&id].turret_heading(), Some(180.0));
     assert_eq!(
@@ -361,10 +352,10 @@ async fn automatic_turret_controls_tracking_gates_and_restart() {
             .remaining(),
         8
     );
-    assert!(!battle_automatic_turrets_pending(&world));
+    assert!(!automatic_turrets_pending(&world));
     set_battle_turret(&mut world, id, ObjectId(1), 90.0).unwrap();
     for (field, value) in [
-        ("power", serde_json::to_value(BattlePower::Off).unwrap()),
+        ("power", serde_json::to_value(Power::Off).unwrap()),
         ("turret_jammed", serde_json::json!(true)),
         ("turret_locked", serde_json::json!(true)),
     ] {
@@ -379,14 +370,14 @@ async fn automatic_turret_controls_tracking_gates_and_restart() {
             })
             .unwrap();
         let before = stopped.btech.clone();
-        assert!(!battle_automatic_turrets_pending(&stopped), "{field}");
+        assert!(!automatic_turrets_pending(&stopped), "{field}");
         advance_battle_automatic_turrets(&mut stopped);
         assert_eq!(stopped.btech, before, "{field}");
     }
     let mut unconscious = world.clone();
     let mut recovery = serde_json::to_value(world.btech.vehicles()[&id].crew_recovery()).unwrap();
     recovery["remaining"] = 1.into();
-    recovery["mode"] = serde_json::to_value(BattleRecoveryMode::Tactical { injuries: 1 }).unwrap();
+    recovery["mode"] = serde_json::to_value(RecoveryMode::Tactical { injuries: 1 }).unwrap();
     let mut state = serde_json::to_value(&unconscious.btech).unwrap();
     state["recoveries"]["1"] = recovery;
     unconscious.btech = serde_json::from_value(state).unwrap();
@@ -443,13 +434,7 @@ async fn automatic_turret_tracks_moving_units_and_hexes() {
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
-    stop_battle_unit(
-        &mut world,
-        id,
-        ObjectId(1),
-        BattleMovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut world, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
     place_battle_unit(&mut world, id, map, 1, 1).unwrap();
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
@@ -462,7 +447,7 @@ async fn automatic_turret_tracks_moving_units_and_hexes() {
     create_battle_unit(
         &mut world,
         target,
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
@@ -494,7 +479,7 @@ async fn automatic_turret_tracks_moving_units_and_hexes() {
     .unwrap();
     support::seed_object_dice(&mut world, elsewhere, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, target, elsewhere, 0, 0).unwrap();
-    assert!(!battle_automatic_turrets_pending(&world));
+    assert!(!automatic_turrets_pending(&world));
     advance_battle_automatic_turrets(&mut world);
     assert_eq!(world.btech.vehicles()[&id].turret_heading(), Some(180.0));
     select_battle_hex_target(
@@ -502,7 +487,7 @@ async fn automatic_turret_tracks_moving_units_and_hexes() {
         id,
         ObjectId(1),
         HexCoordinate { x: 2, y: 1 },
-        BattleHexTargetMode::Hex,
+        HexTargetMode::Hex,
     )
     .unwrap();
     advance_battle_automatic_turrets(&mut world);
@@ -539,7 +524,7 @@ async fn automatic_tracking_is_shared_by_ground_and_rotorcraft() {
         create_battle_vehicle(
             &mut world,
             id,
-            BattleVehicleTemplate::parse("test", &source).unwrap(),
+            VehicleTemplate::parse("test", &source).unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
@@ -564,7 +549,7 @@ async fn automatic_tracking_is_shared_by_ground_and_rotorcraft() {
             id,
             ObjectId(1),
             HexCoordinate { x: 0, y: 0 },
-            BattleHexTargetMode::Hex,
+            HexTargetMode::Hex,
         )
         .unwrap();
         advance_battle_automatic_turrets(&mut world);
@@ -580,13 +565,13 @@ async fn automatic_tracking_is_shared_by_ground_and_rotorcraft() {
             .iter()
             .enumerate()
         {
-            if bin.location.section == BattleVehicleSection::Turret {
+            if bin.location.section == VehicleSection::Turret {
                 damaged["vehicles"][id.0.to_string()]["ammunition"][index] = 0.into();
             }
         }
 
         world.btech = serde_json::from_value(damaged).unwrap();
-        assert!(!battle_automatic_turrets_pending(&world));
+        assert!(!automatic_turrets_pending(&world));
         assert!(toggle_battle_automatic_turret(&mut world, id, ObjectId(1)).is_err());
         world.validate(&config).unwrap();
     }
@@ -604,7 +589,7 @@ async fn automatic_turret_runs_after_restart() {
                 id,
                 ObjectId(1),
                 HexCoordinate { x: 0, y: 0 },
-                BattleHexTargetMode::Hex,
+                HexTargetMode::Hex,
             )
             .unwrap();
             for _ in 0..8 {

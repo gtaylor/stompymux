@@ -1,10 +1,10 @@
 //! Shared building-exit placement and rotorcraft continuation, independent of host callbacks.
-use super::{BattlePosition, BattleVtolFlightPhase};
+use super::{Position, VtolFlightPhase};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 
 /// Resolve the first reciprocal exit and reject structures whose entrance remains rubble.
-pub fn building_exit_for_unit(world: &World, id: ObjectId) -> Result<BattlePosition> {
+pub fn building_exit_for_unit(world: &World, id: ObjectId) -> Result<Position> {
     super::map_transfer::validate_transfer(world, id, true)?;
     let position = super::scanner::scanner_unit(world, id)
         .and_then(|unit| unit.position)
@@ -24,7 +24,7 @@ pub fn building_exit_for_unit(world: &World, id: ObjectId) -> Result<BattlePosit
 /// Transfer through the current building return route, preserving crew and requested controls.
 /// VTOLs continue airborne one level above the exterior surface with their vertical speed intact.
 /// The host must apply teleport policies, callbacks and observer publication.
-pub fn exit_building(world: &mut World, id: ObjectId) -> Result<BattlePosition> {
+pub fn exit_building(world: &mut World, id: ObjectId) -> Result<Position> {
     exit_configured(world, id, super::speed_bonus::SpeedPolicy::STANDARD)
 }
 
@@ -33,7 +33,7 @@ pub(super) fn exit_configured(
     world: &mut World,
     id: ObjectId,
     policy: super::speed_bonus::SpeedPolicy,
-) -> Result<BattlePosition> {
+) -> Result<Position> {
     let destination = building_exit_for_unit(world, id)?;
     let vertical_speed = world
         .btech
@@ -46,7 +46,7 @@ pub(super) fn exit_configured(
         let maximum = super::effective_speed::configured(world, id, policy)?;
         let motion = if let Some(unit) = world.btech.vehicles.get_mut(&id) {
             if let Some(flight) = &mut unit.vtol_flight {
-                flight.phase = BattleVtolFlightPhase::Airborne;
+                flight.phase = VtolFlightPhase::Airborne;
                 flight.altitude += 1.0;
                 flight.vertical_speed = vertical_speed.expect("VTOL flight state");
             }

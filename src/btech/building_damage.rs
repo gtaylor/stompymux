@@ -6,13 +6,13 @@ use serde::Serialize;
 
 /// One accepted building packet, including immune structures and clamped actual damage.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct BattleBuildingImpact {
+pub struct BuildingImpact {
     pub interior: ObjectId,
     pub damage: u16,
     pub remaining: i64,
     pub destroyed: bool,
     pub immune: bool,
-    pub notices: Vec<BattleNotice>,
+    pub notices: Vec<Notice>,
 }
 
 /// Apply a successful building packet inside the firing transaction; absent or ruined buildings are quiet.
@@ -21,7 +21,7 @@ pub(super) fn resolve(
     shooter: ObjectId,
     coordinate: HexCoordinate,
     damage: u16,
-) -> Result<Option<BattleBuildingImpact>> {
+) -> Result<Option<BuildingImpact>> {
     let map = super::scanner::scanner_unit(world, shooter)
         .and_then(|unit| unit.position)
         .context("Shooter is not placed")?
@@ -46,13 +46,13 @@ pub(super) fn resolve(
         return Ok(None);
     }
     if source.building.is_complex() || building.is_command_center() {
-        return Ok(Some(BattleBuildingImpact {
+        return Ok(Some(BuildingImpact {
             interior,
             damage: 0,
             remaining: building.integrity,
             destroyed: false,
             immune: true,
-            notices: vec![BattleNotice {
+            notices: vec![Notice {
                 unit: shooter,
                 text: "Your shot only scratches the paint!".into(),
             }],
@@ -67,11 +67,11 @@ pub(super) fn resolve(
     let name = super::building_entrance::structure_name(world, interior)?;
     let suffix = if destroyed { ", destroying it!" } else { "." };
     let mut notices = vec![
-        BattleNotice {
+        Notice {
             unit: shooter,
             text: format!("You hit {name} for {damage} points of damage{suffix}"),
         },
-        BattleNotice {
+        Notice {
             unit: interior,
             text: format!(
                 "The {} is hit for {damage} {}points of damage{suffix}",
@@ -92,7 +92,7 @@ pub(super) fn resolve(
     if remaining > 0 && building.integrity == building.maximum_integrity {
         record.building_repair = record.building.repair_delay();
     }
-    Ok(Some(BattleBuildingImpact {
+    Ok(Some(BuildingImpact {
         interior,
         damage,
         remaining,

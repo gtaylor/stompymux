@@ -26,10 +26,10 @@ fn prepare(world: &mut World, shooter: ObjectId, target: ObjectId, terrain: Terr
         })
         .unwrap();
     let seed = (0..=255)
-        .find(|&value| BattleDice::seeded([value; 32]).two_d6() == roll)
+        .find(|&value| Dice::seeded([value; 32]).two_d6() == roll)
         .unwrap();
     firing::edit(world, shooter, |state| {
-        state["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
+        state["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap()
     });
     refresh_battle_contacts(world, &[shooter]).unwrap();
 }
@@ -51,7 +51,7 @@ fn prepare_seeded(
         })
         .unwrap();
     firing::edit(world, shooter, |state| {
-        state["dice"] = serde_json::to_value(BattleDice::seeded(seed)).unwrap()
+        state["dice"] = serde_json::to_value(Dice::seeded(seed)).unwrap()
     });
     refresh_battle_contacts(world, &[shooter]).unwrap();
 }
@@ -70,16 +70,10 @@ fn fire(scripts: &Scripts, shooter: ObjectId, index: usize, target: ObjectId) ->
 /// Put LRM fixtures beyond minimum range and keep their forward mounts facing the target.
 fn missile_lane(world: &mut World, shooter: ObjectId, target: ObjectId) {
     let map = world.btech.units()[&target].map.unwrap();
-    stop_battle_unit(
-        world,
-        shooter,
-        ObjectId(1),
-        BattleMovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(world, shooter, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
     place_battle_unit(world, shooter, map, 0, 4).unwrap();
     firing::edit(world, shooter, |state| {
-        state["power"] = serde_json::to_value(BattlePower::Running).unwrap();
+        state["power"] = serde_json::to_value(Power::Running).unwrap();
         state["motion"]["heading"] = 180.0.into();
         state["motion"]["desired_heading"] = 180.0.into();
     });
@@ -155,7 +149,7 @@ async fn missile_woods_absorption_matches_native_lua_and_restart() {
                 booted.clone(),
                 &fixture_config,
                 &source,
-                Some(BattleWeapon::Lrm5),
+                Some(Weapon::Lrm5),
                 &recipient,
                 false,
                 Some(""),
@@ -227,7 +221,7 @@ async fn completely_absorbed_missiles_skip_damage_and_roll_back_with_the_callbac
             booted.clone(),
             &fixture_config,
             include_str!("../game/mechs/JR7-D.toml"),
-            Some(BattleWeapon::Srm2),
+            Some(Weapon::Srm2),
             &recipient,
             false,
             Some(""),
@@ -260,7 +254,7 @@ async fn completely_absorbed_missiles_skip_damage_and_roll_back_with_the_callbac
             prior[key][target.0.to_string()]["sections"],
             after[key][target.0.to_string()]["sections"]
         );
-        let mut dice = BattleDice::seeded([42; 32]);
+        let mut dice = Dice::seeded([42; 32]);
         assert_eq!(salvo["cluster_roll"], dice.two_d6());
         assert_eq!(
             after[key][target.0.to_string()]["dice"],
@@ -280,10 +274,10 @@ async fn missile_ammunition_controls_woods_payload_and_inferno_bypass() {
         include_str!("../game/mechs/Demolisher.toml"),
     ] {
         for (weapon, flag, payload) in [
-            (BattleWeapon::Mml5, "", 2_u64),
-            (BattleWeapon::Mml5, "MML_LRM", 1),
-            (BattleWeapon::Thunderbolt20, "", 20),
-            (BattleWeapon::Srm6, "Inferno", 0),
+            (Weapon::Mml5, "", 2_u64),
+            (Weapon::Mml5, "MML_LRM", 1),
+            (Weapon::Thunderbolt20, "", 20),
+            (Weapon::Srm6, "Inferno", 0),
         ] {
             let (mut fixture, shooter, target, index) = firing::supply_fixture_on(
                 booted.clone(),
@@ -300,7 +294,7 @@ async fn missile_ammunition_controls_woods_payload_and_inferno_bypass() {
             } else if flag == "Inferno" {
                 toggle_battle_inferno(&mut fixture, shooter, ObjectId(1), index).unwrap();
             }
-            if weapon == BattleWeapon::Thunderbolt20 {
+            if weapon == Weapon::Thunderbolt20 {
                 missile_lane(&mut fixture, shooter, target);
             }
             prepare(&mut fixture, shooter, target, Terrain::HeavyForest, 12);
@@ -322,7 +316,7 @@ async fn missile_ammunition_controls_woods_payload_and_inferno_bypass() {
                         salvo["woods"]["damage_after"],
                         original.saturating_sub(4) / payload * payload
                     );
-                    if weapon == BattleWeapon::Thunderbolt20 {
+                    if weapon == Weapon::Thunderbolt20 {
                         let notices = salvo["woods"]["notices"].as_array().unwrap();
                         assert_eq!(notices[0]["text"], "You clear 0,10.");
                         assert_eq!(
@@ -357,10 +351,7 @@ async fn missile_woods_absorption_follows_live_ams_interception() {
         include_str!("../game/mechs/JR7-D.toml"),
         include_str!("../game/mechs/Demolisher.toml"),
     ] {
-        for ams in [
-            BattleWeapon::AntiMissileSystem,
-            BattleWeapon::ClanAntiMissileSystem,
-        ] {
+        for ams in [Weapon::AntiMissileSystem, Weapon::ClanAntiMissileSystem] {
             for recipient in [
                 include_str!("../game/mechs/JR7-D.toml")
                     .replace("IS.MediumLaser", ams.name())
@@ -370,7 +361,7 @@ async fn missile_woods_absorption_follows_live_ams_interception() {
                     ),
                 include_str!("../game/mechs/Demolisher.toml").replace("IS.AC/20", ams.name()),
             ] {
-                for weapon in [BattleWeapon::Lrm5, BattleWeapon::Lrm20] {
+                for weapon in [Weapon::Lrm5, Weapon::Lrm20] {
                     let (mut world, shooter, target, index) = firing::supply_fixture_on(
                         booted.clone(),
                         &fixture_config,
@@ -423,7 +414,7 @@ async fn single_hit_woods_absorption_matches_native_lua_and_restart() {
                 booted.clone(),
                 &fixture_config,
                 &source,
-                Some(BattleWeapon::MediumLaser),
+                Some(Weapon::MediumLaser),
                 &recipient,
                 false,
                 None,
@@ -488,9 +479,9 @@ async fn single_hit_woods_damage_floor_and_glancing_order() {
         include_str!("../game/mechs/Demolisher.toml"),
     ] {
         for (weapon, base_damage) in [
-            (BattleWeapon::SmallLaser, 3_u64),
-            (BattleWeapon::Ppc, 10),
-            (BattleWeapon::GaussRifle, 15),
+            (Weapon::SmallLaser, 3_u64),
+            (Weapon::Ppc, 10),
+            (Weapon::GaussRifle, 15),
         ] {
             let (fixture, shooter, target, index) = firing::supply_fixture_on(
                 booted.clone(),
@@ -542,7 +533,7 @@ async fn single_hit_woods_damage_floor_and_glancing_order() {
 async fn woods_impact_callback_failure_restores_damage_terrain_dice_and_notices() {
     let (dir, _config, mut world, shooter, target, index) = firing::fixture_with_target(
         include_str!("../game/mechs/JR7-D.toml"),
-        Some(BattleWeapon::Ppc),
+        Some(Weapon::Ppc),
         include_str!("../game/mechs/AS7-D.toml"),
     )
     .await;
@@ -567,7 +558,7 @@ async fn woods_impact_callback_failure_restores_damage_terrain_dice_and_notices(
 async fn woodland_clearing_uses_damage_before_absorption() {
     let (dir, _config, mut world, shooter, target, index) = firing::fixture_with_target(
         include_str!("../game/mechs/JR7-D.toml"),
-        Some(BattleWeapon::Ppc),
+        Some(Weapon::Ppc),
         include_str!("../game/mechs/AS7-D.toml"),
     )
     .await;
@@ -575,12 +566,12 @@ async fn woodland_clearing_uses_damage_before_absorption() {
     prepare(&mut world, shooter, target, Terrain::HeavyForest, 12);
     let seed = (0..=255)
         .find(|&seed| {
-            let mut dice = BattleDice::seeded([seed; 32]);
+            let mut dice = Dice::seeded([seed; 32]);
             dice.two_d6() == 12 && dice.two_d6() > 5 && (7..=10).contains(&dice.two_d6())
         })
         .unwrap();
     firing::edit(&mut world, shooter, |state| {
-        state["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
+        state["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap()
     });
     let map = world.btech.units()[&target].map.unwrap();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
@@ -600,7 +591,7 @@ async fn woodland_clearing_uses_damage_before_absorption() {
 
 /// Bursts reduce each shell once, publish one terrain effect and retain glancing
 /// cluster counts; sharded one weapon per test over the full chassis matrix.
-async fn burst_matrix(weapon: BattleWeapon) {
+async fn burst_matrix(weapon: Weapon) {
     let (dir, fixture_config, base) = support::isolated_world().await;
     let toggles = [(true, false), (true, true), (false, false), (false, true)];
     let configs: Vec<_> = toggles
@@ -632,7 +623,7 @@ async fn burst_matrix(weapon: BattleWeapon) {
                 missile_lane(&mut fixture, shooter, target);
                 if weapon.is_ultra() {
                     toggle_battle_ultra(&mut fixture, shooter, ObjectId(1), index).unwrap();
-                } else if weapon == BattleWeapon::Ac5 {
+                } else if weapon == Weapon::Ac5 {
                     toggle_battle_rapid(&mut fixture, shooter, ObjectId(1), index).unwrap();
                 } else {
                     set_battle_rotary(&mut fixture, shooter, ObjectId(1), index, 6).unwrap();
@@ -685,12 +676,12 @@ async fn burst_matrix(weapon: BattleWeapon) {
                             .unwrap_or_else(|| panic!("{report}"));
                         let roll = salvo["cluster_roll"].as_u64().unwrap() as u8;
                         let adjusted = roll.saturating_sub(if glancing { 4 } else { 0 });
-                        let count = if weapon != BattleWeapon::RotaryAc5 {
+                        let count = if weapon != Weapon::RotaryAc5 {
                             if adjusted >= 8 { 2 } else { 1 }
                         } else if adjusted < 2 {
                             1
                         } else {
-                            usize::from(BattleWeapon::Srm6.missile_hits(adjusted).unwrap())
+                            usize::from(Weapon::Srm6.missile_hits(adjusted).unwrap())
                         };
                         assert_eq!(groups.len(), count, "{report}");
                         let base_damage = u64::from(weapon.profile().damage);
@@ -735,22 +726,22 @@ async fn burst_matrix(weapon: BattleWeapon) {
 
 #[tokio::test]
 async fn burst_shells_share_woods_reduction_ultra_ac2() {
-    burst_matrix(BattleWeapon::UltraAc2).await;
+    burst_matrix(Weapon::UltraAc2).await;
 }
 
 #[tokio::test]
 async fn burst_shells_share_woods_reduction_ultra_ac5() {
-    burst_matrix(BattleWeapon::UltraAc5).await;
+    burst_matrix(Weapon::UltraAc5).await;
 }
 
 #[tokio::test]
 async fn burst_shells_share_woods_reduction_rotary_ac5() {
-    burst_matrix(BattleWeapon::RotaryAc5).await;
+    burst_matrix(Weapon::RotaryAc5).await;
 }
 
 #[tokio::test]
 async fn burst_shells_share_woods_reduction_rapid_ac5() {
-    burst_matrix(BattleWeapon::Ac5).await;
+    burst_matrix(Weapon::Ac5).await;
 }
 
 /// Thermal hits run the woods effect once but preserve catalogue heat/cooling strength.
@@ -773,9 +764,9 @@ async fn thermal_woods_share_heat_terrain_feedback_and_rollback() {
             include_str!("../game/mechs/Demolisher.toml"),
         ] {
             for weapon in [
-                BattleWeapon::Flamer,
-                BattleWeapon::VehicleHeavyFlamer,
-                BattleWeapon::CoolantGun,
+                Weapon::Flamer,
+                Weapon::VehicleHeavyFlamer,
+                Weapon::CoolantGun,
             ] {
                 let (mut fixture, shooter, target, index) = firing::supply_fixture_on(
                     booted.clone(),
@@ -788,7 +779,7 @@ async fn thermal_woods_share_heat_terrain_feedback_and_rollback() {
                 );
                 sequence += 1;
                 let probe = probe_database(&fixture_config, sequence);
-                if weapon != BattleWeapon::CoolantGun {
+                if weapon != Weapon::CoolantGun {
                     toggle_battle_flamer_heat(&mut fixture, shooter, ObjectId(1), index).unwrap();
                 }
                 for (pair_index, &(enabled, glancing)) in toggles.iter().enumerate() {
@@ -826,7 +817,7 @@ async fn thermal_woods_share_heat_terrain_feedback_and_rollback() {
                     );
                     assert!(report["salvo"].is_null(), "{report}");
                     let amount = f64::from(weapon.profile().damage);
-                    let cooling = weapon == BattleWeapon::CoolantGun;
+                    let cooling = weapon == Weapon::CoolantGun;
                     if cooling {
                         assert_eq!(report["cooling"], amount);
                     } else {
@@ -892,7 +883,7 @@ async fn thermal_woods_share_heat_terrain_feedback_and_rollback() {
 async fn pellet_matrix(
     source: &str,
     recipient: &str,
-    weapon: BattleWeapon,
+    weapon: Weapon,
     terrains: &[Terrain],
 ) -> (bool, bool, bool) {
     let mut cleared = false;
@@ -902,7 +893,7 @@ async fn pellet_matrix(
     let configs = [false, true].map(|enabled| configured(&dir, enabled, false));
     let (pairs, booted) = boot_pairs(&configs, &base);
     let seeds: Vec<u8> = (0..=255)
-        .filter(|&seed| BattleDice::seeded([seed; 32]).two_d6() == 12)
+        .filter(|&seed| Dice::seeded([seed; 32]).two_d6() == 12)
         .collect();
     {
         {
@@ -1024,7 +1015,7 @@ async fn pellet_woods_two_stage_terrain_mech_v_mech_lbx2() {
     let (_cleared, _thinned, absorbed_all) = pellet_matrix(
         include_str!("../game/mechs/JR7-D.toml"),
         include_str!("../game/mechs/AS7-D.toml"),
-        BattleWeapon::Lbx2,
+        Weapon::Lbx2,
         &[Terrain::LightForest, Terrain::HeavyForest],
     )
     .await;
@@ -1042,7 +1033,7 @@ async fn pellet_woods_two_stage_terrain_mech_v_mech_lbx20_heavy_forest() {
     pellet_matrix(
         include_str!("../game/mechs/JR7-D.toml"),
         include_str!("../game/mechs/AS7-D.toml"),
-        BattleWeapon::Lbx20,
+        Weapon::Lbx20,
         &[Terrain::HeavyForest],
     )
     .await;
@@ -1053,7 +1044,7 @@ async fn pellet_woods_two_stage_terrain_mech_v_mech_lbx20_light_forest() {
     pellet_matrix(
         include_str!("../game/mechs/JR7-D.toml"),
         include_str!("../game/mechs/AS7-D.toml"),
-        BattleWeapon::Lbx20,
+        Weapon::Lbx20,
         &[Terrain::LightForest],
     )
     .await;
@@ -1064,7 +1055,7 @@ async fn pellet_woods_two_stage_terrain_mech_v_vehicle_lbx2() {
     let (_cleared, _thinned, absorbed_all) = pellet_matrix(
         include_str!("../game/mechs/JR7-D.toml"),
         include_str!("../game/mechs/Demolisher.toml"),
-        BattleWeapon::Lbx2,
+        Weapon::Lbx2,
         &[Terrain::LightForest, Terrain::HeavyForest],
     )
     .await;
@@ -1079,7 +1070,7 @@ async fn pellet_woods_two_stage_terrain_mech_v_vehicle_lbx20() {
     let (cleared, thinned, _absorbed_all) = pellet_matrix(
         include_str!("../game/mechs/JR7-D.toml"),
         include_str!("../game/mechs/Demolisher.toml"),
-        BattleWeapon::Lbx20,
+        Weapon::Lbx20,
         &[Terrain::LightForest, Terrain::HeavyForest],
     )
     .await;
@@ -1094,7 +1085,7 @@ async fn pellet_woods_two_stage_terrain_vehicle_v_mech_lbx2() {
     let (_cleared, _thinned, absorbed_all) = pellet_matrix(
         include_str!("../game/mechs/Demolisher.toml"),
         include_str!("../game/mechs/AS7-D.toml"),
-        BattleWeapon::Lbx2,
+        Weapon::Lbx2,
         &[Terrain::LightForest, Terrain::HeavyForest],
     )
     .await;
@@ -1109,7 +1100,7 @@ async fn pellet_woods_two_stage_terrain_vehicle_v_mech_lbx20_heavy_forest() {
     pellet_matrix(
         include_str!("../game/mechs/Demolisher.toml"),
         include_str!("../game/mechs/AS7-D.toml"),
-        BattleWeapon::Lbx20,
+        Weapon::Lbx20,
         &[Terrain::HeavyForest],
     )
     .await;
@@ -1120,7 +1111,7 @@ async fn pellet_woods_two_stage_terrain_vehicle_v_mech_lbx20_light_forest() {
     pellet_matrix(
         include_str!("../game/mechs/Demolisher.toml"),
         include_str!("../game/mechs/AS7-D.toml"),
-        BattleWeapon::Lbx20,
+        Weapon::Lbx20,
         &[Terrain::LightForest],
     )
     .await;
@@ -1131,7 +1122,7 @@ async fn pellet_woods_two_stage_terrain_vehicle_v_vehicle_lbx2() {
     let (_cleared, _thinned, absorbed_all) = pellet_matrix(
         include_str!("../game/mechs/Demolisher.toml"),
         include_str!("../game/mechs/Demolisher.toml"),
-        BattleWeapon::Lbx2,
+        Weapon::Lbx2,
         &[Terrain::LightForest, Terrain::HeavyForest],
     )
     .await;
@@ -1146,7 +1137,7 @@ async fn pellet_woods_two_stage_terrain_vehicle_v_vehicle_lbx20() {
     let (cleared, thinned, _absorbed_all) = pellet_matrix(
         include_str!("../game/mechs/Demolisher.toml"),
         include_str!("../game/mechs/Demolisher.toml"),
-        BattleWeapon::Lbx20,
+        Weapon::Lbx20,
         &[Terrain::LightForest, Terrain::HeavyForest],
     )
     .await;
@@ -1163,22 +1154,22 @@ async fn missed_direct_shots_share_incidental_terrain_and_preserve_targets() {
     for key in 0_u16..=u16::MAX {
         let mut seed = [0; 32];
         seed[..2].copy_from_slice(&key.to_le_bytes());
-        let mut dice = BattleDice::seeded(seed);
+        let mut dice = Dice::seeded(seed);
         if dice.two_d6() != 3 {
             continue;
         }
         let effect = resolve_woodland_effect(
             Hex::new(Terrain::HeavyForest, 0),
-            BattleWeapon::Flamer,
-            BattleAmmunitionMode::Normal,
+            Weapon::Flamer,
+            AmmunitionMode::Normal,
             3,
-            BattleWoodlandIntent::Incidental,
+            WoodlandIntent::Incidental,
             &mut dice,
         );
         let kind = match effect {
-            BattleWoodlandEffect::None => 0,
-            BattleWoodlandEffect::Clear { .. } => 1,
-            BattleWoodlandEffect::Ignite { .. } => 2,
+            WoodlandEffect::None => 0,
+            WoodlandEffect::Clear { .. } => 1,
+            WoodlandEffect::Ignite { .. } => 2,
         };
         seeds.entry(kind).or_insert(seed);
         if seeds.len() == 3 {
@@ -1205,8 +1196,8 @@ async fn missed_direct_shots_share_incidental_terrain_and_preserve_targets() {
             include_str!("../game/mechs/AS7-D.toml"),
             include_str!("../game/mechs/Demolisher.toml"),
         ] {
-            for weapon in [BattleWeapon::Ppc, BattleWeapon::Lbx20, BattleWeapon::Flamer] {
-                let cluster = weapon == BattleWeapon::Lbx20;
+            for weapon in [Weapon::Ppc, Weapon::Lbx20, Weapon::Flamer] {
+                let cluster = weapon == Weapon::Lbx20;
                 let (mut fixture, shooter, target, index) = firing::supply_fixture_on(
                     booted.clone(),
                     &fixture_config,
@@ -1221,14 +1212,14 @@ async fn missed_direct_shots_share_incidental_terrain_and_preserve_targets() {
                 if cluster {
                     toggle_battle_lbx(&mut fixture, shooter, ObjectId(1), index).unwrap();
                 }
-                if weapon == BattleWeapon::Flamer {
+                if weapon == Weapon::Flamer {
                     toggle_battle_flamer_heat(&mut fixture, shooter, ObjectId(1), index).unwrap();
                 }
                 for (&_enabled, pair) in [false, true].iter().zip(&pairs) {
                     for &seed in &seeds {
                         let mut world = fixture.clone();
                         prepare_seeded(&mut world, shooter, target, Terrain::HeavyForest, seed);
-                        let mut dice = BattleDice::seeded(seed);
+                        let mut dice = Dice::seeded(seed);
                         let before = world.btech.clone();
                         assert_eq!(dice.two_d6(), 3);
                         let mut expected = world.clone();
@@ -1237,22 +1228,22 @@ async fn missed_direct_shots_share_incidental_terrain_and_preserve_targets() {
                         });
                         let terrain = resolve_woodland_attack(
                             &mut expected,
-                            BattleWoodlandAttack {
+                            WoodlandAttack {
                                 shooter,
                                 coordinate: HexCoordinate { x: 0, y: 10 },
                                 weapon,
                                 ammunition: if cluster {
-                                    BattleAmmunitionMode::Cluster
+                                    AmmunitionMode::Cluster
                                 } else {
-                                    BattleAmmunitionMode::Normal
+                                    AmmunitionMode::Normal
                                 },
                                 damage: weapon.profile().damage.into(),
-                                intent: BattleWoodlandIntent::Incidental,
+                                intent: WoodlandIntent::Incidental,
                             },
                         )
                         .unwrap();
-                        cleared |= matches!(terrain.effect, BattleWoodlandEffect::Clear { .. });
-                        ignited |= matches!(terrain.effect, BattleWoodlandEffect::Ignite { .. });
+                        cleared |= matches!(terrain.effect, WoodlandEffect::Clear { .. });
+                        ignited |= matches!(terrain.effect, WoodlandEffect::Ignite { .. });
                         pair.install(world);
                         assert!(
                             pair.lua

@@ -23,5 +23,5 @@ btech.unit.c3i(dbref, pilot, target)
 
 ## Returns
 
-- `BattleNotice[]|nil`
+- `Notice[]|nil`
 - `table|nil error`

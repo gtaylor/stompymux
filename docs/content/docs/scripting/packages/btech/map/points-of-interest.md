@@ -22,4 +22,4 @@ btech.map.points_of_interest(map, type)
 
 ## Returns
 
-- `BattleMapPointOfInterest[]`
+- `MapPointOfInterest[]`

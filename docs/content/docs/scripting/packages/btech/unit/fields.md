@@ -23,4 +23,4 @@ btech.unit.fields(actor, unit, arguments)
 
 ## Returns
 
-- `BattleUnitFieldReport`
+- `UnitFieldReport`

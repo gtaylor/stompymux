@@ -21,4 +21,4 @@ btech.template.engine(reference)
 
 ## Returns
 
-- `BattleEngine engine`
+- `Engine engine`

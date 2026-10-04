@@ -19,15 +19,13 @@ async fn fixture() -> (tempfile::TempDir, Config, World, [ObjectId; 3]) {
         let id = world.create(&config, "Unit".into(), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         if index != 1 {
-            let mut template = BattleVehicleTemplate::parse(
-                "Demolisher",
-                include_str!("../game/mechs/Demolisher.toml"),
-            )
-            .unwrap();
+            let mut template =
+                VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+                    .unwrap();
             for (slot, equipment) in [(0, "Ecm"), (1, "AngelEcm")] {
                 template
                     .sections
-                    .get_mut(&BattleVehicleSection::Front)
+                    .get_mut(&VehicleSection::Front)
                     .unwrap()
                     .criticals
                     .insert(
@@ -44,7 +42,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, [ObjectId; 3]) {
             create_battle_unit(
                 &mut world,
                 id,
-                BattleTemplate::parse("AS7-D", include_str!("../game/mechs/AS7-D.toml")).unwrap(),
+                MechTemplate::parse("AS7-D", include_str!("../game/mechs/AS7-D.toml")).unwrap(),
             )
             .unwrap();
         }
@@ -70,21 +68,12 @@ async fn fixture() -> (tempfile::TempDir, Config, World, [ObjectId; 3]) {
 
 #[tokio::test]
 async fn vehicle_emitters_share_fields_countermeasures_and_restart() {
-    for suite in [
-        BattleElectronicSuite::Guardian,
-        BattleElectronicSuite::Angel,
-    ] {
+    for suite in [ElectronicSuite::Guardian, ElectronicSuite::Angel] {
         let (_dir, config, mut world, [emitter, mech, vehicle]) = fixture().await;
-        toggle_battle_electronics(
-            &mut world,
-            emitter,
-            ObjectId(1),
-            suite,
-            BattleElectronicMode::Ecm,
-        )
-        .unwrap();
+        toggle_battle_electronics(&mut world, emitter, ObjectId(1), suite, ElectronicMode::Ecm)
+            .unwrap();
         let notices = refresh_battle_electronic_fields(&mut world).unwrap();
-        let suite_name = if suite == BattleElectronicSuite::Guardian {
+        let suite_name = if suite == ElectronicSuite::Guardian {
             "ECM"
         } else {
             "AngelECM"
@@ -97,7 +86,7 @@ async fn vehicle_emitters_share_fields_countermeasures_and_restart() {
         for receiver in [mech, vehicle] {
             let field = battle_electronic_field(&world, receiver).unwrap();
             assert!(field.blocks_outgoing_guidance());
-            assert_eq!(field.angel_disturbed, suite == BattleElectronicSuite::Angel);
+            assert_eq!(field.angel_disturbed, suite == ElectronicSuite::Angel);
             assert!(
                 notices
                     .iter()
@@ -117,8 +106,8 @@ async fn vehicle_emitters_share_fields_countermeasures_and_restart() {
                 candidate,
                 vehicle,
                 ObjectId(2),
-                BattleElectronicSuite::Angel,
-                BattleElectronicMode::Eccm,
+                ElectronicSuite::Angel,
+                ElectronicMode::Eccm,
             )
             .unwrap();
             refresh_battle_electronic_fields(candidate).unwrap();
@@ -143,8 +132,8 @@ async fn vehicle_emitters_share_fields_countermeasures_and_restart() {
                 candidate,
                 emitter,
                 VehicleCriticalLocation {
-                    section: BattleVehicleSection::Front,
-                    slot: if suite == BattleElectronicSuite::Guardian {
+                    section: VehicleSection::Front,
+                    slot: if suite == ElectronicSuite::Guardian {
                         0
                     } else {
                         1
@@ -158,15 +147,15 @@ async fn vehicle_emitters_share_fields_countermeasures_and_restart() {
                     .unwrap()
                     .contains(&format!("{suite_name}([fg=red bold]XX[reset])"))
             );
-            assert_eq!(state.guardian, BattleElectronicMode::Off);
-            assert_eq!(state.angel, BattleElectronicMode::Off);
+            assert_eq!(state.guardian, ElectronicMode::Off);
+            assert_eq!(state.angel, ElectronicMode::Off);
             assert!(
                 toggle_battle_electronics(
                     candidate,
                     emitter,
                     ObjectId(1),
                     suite,
-                    BattleElectronicMode::Ecm
+                    ElectronicMode::Ecm
                 )
                 .is_err()
             );
@@ -212,30 +201,21 @@ async fn vehicle_native_lua_electronics_and_failed_callback_are_identical() {
 #[tokio::test]
 async fn vehicle_shutdown_clears_both_suites_and_rejects_invalid_saved_emissions() {
     let (_dir, config, mut world, [emitter, mech, vehicle]) = fixture().await;
-    for suite in [
-        BattleElectronicSuite::Guardian,
-        BattleElectronicSuite::Angel,
-    ] {
-        toggle_battle_electronics(
-            &mut world,
-            emitter,
-            ObjectId(1),
-            suite,
-            BattleElectronicMode::Ecm,
-        )
-        .unwrap();
+    for suite in [ElectronicSuite::Guardian, ElectronicSuite::Angel] {
+        toggle_battle_electronics(&mut world, emitter, ObjectId(1), suite, ElectronicMode::Ecm)
+            .unwrap();
     }
     refresh_battle_electronic_fields(&mut world).unwrap();
     stop_battle_unit(
         &mut world,
         emitter,
         ObjectId(1),
-        BattleMovementRules::STANDARD.fall,
+        MovementRules::STANDARD.fall,
     )
     .unwrap();
     let state = world.btech.vehicles()[&emitter].electronics();
-    assert_eq!(state.guardian, BattleElectronicMode::Off);
-    assert_eq!(state.angel, BattleElectronicMode::Off);
+    assert_eq!(state.guardian, ElectronicMode::Off);
+    assert_eq!(state.angel, ElectronicMode::Off);
     let notices = refresh_battle_electronic_fields(&mut world).unwrap();
     for receiver in [mech, vehicle] {
         assert!(

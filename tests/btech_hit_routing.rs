@@ -40,7 +40,7 @@ async fn fixture(
     for id in [shooter, target] {
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     }
-    BattleUnitTemplate::parse(
+    UnitTemplate::parse(
         "test",
         if vehicle {
             include_str!("../game/mechs/Demolisher.toml")
@@ -52,7 +52,7 @@ async fn fixture(
     .create(&mut world, shooter)
     .unwrap();
     support::seed_object_dice(&mut world, shooter, support::FIXTURE_DICE_SEED);
-    let mut template = BattleTemplate::parse(
+    let mut template = MechTemplate::parse(
         "test",
         if quad {
             include_str!("../game/mechs/GOL-1H.toml")
@@ -75,7 +75,7 @@ async fn fixture(
     place_battle_unit(&mut world, target, map, 0, 0).unwrap();
     for id in [shooter, target] {
         edit(&mut world, id, |state| {
-            state["power"] = serde_json::to_value(BattlePower::Running).unwrap();
+            state["power"] = serde_json::to_value(Power::Running).unwrap();
         });
     }
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(shooter);
@@ -83,7 +83,7 @@ async fn fixture(
     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     for seed in 0..=255 {
         edit(&mut world, shooter, |state| {
-            state["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
+            state["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap()
         });
         refresh_battle_contacts(&mut world, &[shooter]).unwrap();
         if visible_battle_contact(&world, shooter, target)
@@ -99,10 +99,10 @@ async fn fixture(
             .is_some()
     );
     let high = (0..=255)
-        .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 12)
+        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
         .unwrap();
     edit(&mut world, shooter, |state| {
-        state["dice"] = serde_json::to_value(BattleDice::seeded([high; 32])).unwrap()
+        state["dice"] = serde_json::to_value(Dice::seeded([high; 32])).unwrap()
     });
     world.validate(&config).unwrap();
     (dir, config, world, shooter, target)
@@ -113,7 +113,7 @@ async fn fixture(
 async fn configured_hit_routes_share_native_lua_and_restart() {
     let selected = (0..=255)
         .find(|seed| {
-            let mut dice = BattleDice::seeded([*seed; 32]);
+            let mut dice = Dice::seeded([*seed; 32]);
             dice.two_d6() == 3 && dice.two_d6() == 12
         })
         .expect("distinct entry and delegated head roll");
@@ -125,28 +125,27 @@ async fn configured_hit_routes_share_native_lua_and_restart() {
                     let mut world = base.clone();
                     set_battle_combat_safe(&mut world, target, safe).unwrap();
                     edit(&mut world, target, |state| {
-                        state["dice"] =
-                            serde_json::to_value(BattleDice::seeded([selected; 32])).unwrap()
+                        state["dice"] = serde_json::to_value(Dice::seeded([selected; 32])).unwrap()
                     });
-                    let mut expected_dice = BattleDice::seeded([selected; 32]);
+                    let mut expected_dice = Dice::seeded([selected; 32]);
                     let entry = expected_dice.two_d6();
                     let roll = if proof { expected_dice.two_d6() } else { entry };
                     // The shooter approaches the target from behind.
                     let section = if safe {
-                        BattleSection::LeftArm
+                        MechSection::LeftArm
                     } else if roll == 12 {
-                        BattleHitTable::Punch
+                        HitTable::Punch
                             .location(
                                 base.btech.constructed_units()[&target].chassis(),
-                                BattleHitArc::Rear,
+                                HitArc::Rear,
                                 expected_dice.d6(),
                             )
                             .unwrap()
                     } else {
-                        BattleHitTable::Weapon
+                        HitTable::Weapon
                             .location(
                                 base.btech.constructed_units()[&target].chassis(),
-                                BattleHitArc::Rear,
+                                HitArc::Rear,
                                 roll,
                             )
                             .unwrap()
@@ -183,7 +182,7 @@ async fn configured_hit_routes_share_native_lua_and_restart() {
                         actual,
                         (
                             format!("{section:?}"),
-                            !safe && roll == 12 && section != BattleSection::Head,
+                            !safe && roll == 12 && section != MechSection::Head,
                             false
                         )
                     );
@@ -219,24 +218,24 @@ async fn critical_proof_preserves_damage_head_injury_and_limb_loss() {
     for quad in [false, true] {
         let (_dir, config, base, _, target) = fixture(false, quad, true).await;
         for section in [
-            BattleSection::CenterTorso,
-            BattleSection::LeftArm,
-            BattleSection::Head,
+            MechSection::CenterTorso,
+            MechSection::LeftArm,
+            MechSection::Head,
         ] {
             for (roll, tac) in [(8, false), (12, false), (8, true), (12, true)] {
                 let mut world = base.clone();
                 let seed = (0..=255)
                     .find(|seed| {
-                        let mut dice = BattleDice::seeded([*seed; 32]);
+                        let mut dice = Dice::seeded([*seed; 32]);
                         dice.two_d6(); // Material entry precedes either critical check.
                         dice.two_d6() == roll
                     })
                     .unwrap();
                 edit(&mut world, target, |state| {
                     state["sections"][format!("{section:?}")]["armor"] = 0.into();
-                    state["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+                    state["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
                 });
-                let mut expected_dice = BattleDice::seeded([seed; 32]);
+                let mut expected_dice = Dice::seeded([seed; 32]);
                 expected_dice.two_d6();
                 assert_eq!(expected_dice.two_d6(), roll);
                 if tac {
@@ -247,7 +246,7 @@ async fn critical_proof_preserves_damage_head_injury_and_limb_loss() {
                 let report = resolve_battle_impact(
                     &mut world,
                     target,
-                    BattleHit {
+                    Hit {
                         section,
                         rear_armor: false,
                         through_armor_critical: tac,
@@ -259,17 +258,15 @@ async fn critical_proof_preserves_damage_head_injury_and_limb_loss() {
                 assert!(report.criticals.is_empty());
                 assert_eq!(
                     world.btech.constructed_units()[&target].sections()[&section].internal,
-                    if !tac && roll == 12 && section != BattleSection::CenterTorso {
+                    if !tac && roll == 12 && section != MechSection::CenterTorso {
                         0
                     } else {
                         original - 1
                     }
                 );
                 assert_eq!(
-                    report
-                        .pending_effects
-                        .contains(&BattleImpactEffect::HeadInjury),
-                    section == BattleSection::Head
+                    report.pending_effects.contains(&ImpactEffect::HeadInjury),
+                    section == MechSection::Head
                 );
                 let state =
                     serde_json::to_value(&world.btech.constructed_units()[&target]).unwrap();

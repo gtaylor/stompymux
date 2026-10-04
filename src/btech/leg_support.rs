@@ -1,8 +1,8 @@
 //! Chassis-aware support for standing and landing, derived from current limb damage.
-use super::{BattleMechChassis, BattleSystem, BattleUnit, CriticalLocation};
+use super::{CriticalLocation, Mech, MechChassis, System};
 use anyhow::{Result, ensure};
 
-impl BattleUnit {
+impl Mech {
     /// Destroyed or flooded load-bearing sections, including both front legs on quads.
     pub fn unavailable_legs(&self) -> usize {
         self.chassis()
@@ -15,7 +15,7 @@ impl BattleUnit {
     /// Charge selection permits one unavailable quad leg; bipeds need both legs.
     pub fn validate_charge_support(&self) -> Result<()> {
         let missing = self.unavailable_legs();
-        if self.chassis() == BattleMechChassis::Biped {
+        if self.chassis() == MechChassis::Biped {
             ensure!(missing == 0, "With one leg? Are you kidding?");
             return Ok(());
         }
@@ -34,7 +34,7 @@ impl BattleUnit {
         ensure!(missing < chassis.legs().len(), "No legs to stand on");
         ensure!(missing <= 2, "You'd be far too unstable!");
         ensure!(self.gyro_damage() < 2, "Cannot stand with a destroyed gyro");
-        Ok(chassis != BattleMechChassis::Quad || missing != 0)
+        Ok(chassis != MechChassis::Quad || missing != 0)
     }
 
     /// Damage that prevents an upright landing without ending jump thrust.
@@ -44,7 +44,7 @@ impl BattleUnit {
         if self.masc_seized() {
             return true;
         }
-        if chassis == BattleMechChassis::Quad {
+        if chassis == MechChassis::Quad {
             return self.unavailable_legs() >= 3;
         }
         let legs = chassis.legs();
@@ -56,7 +56,7 @@ impl BattleUnit {
                 .criticals
                 .iter()
                 .any(|(&slot, part)| {
-                    BattleSystem::named(&part.equipment) == Some(BattleSystem::ShoulderOrHip)
+                    System::named(&part.equipment) == Some(System::ShoulderOrHip)
                         && self.critical_destroyed(CriticalLocation {
                             section: *section,
                             slot,

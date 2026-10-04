@@ -1,12 +1,12 @@
 //! Firing modes a weapon can be set to, with their burst sizes, jam thresholds and launch heat.
-use super::BattleWeapon;
+use super::Weapon;
 use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
 
 /// Supported live weapon behavior; normal is implicit when no override is stored.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleFireMode {
+pub enum FireMode {
     #[default]
     Normal,
     Heat,
@@ -21,14 +21,9 @@ pub enum BattleFireMode {
     Gatling,
 }
 
-impl BattleFireMode {
+impl FireMode {
     /// Heat for one completed launch, shared by all carriers and their supply fallback modes.
-    pub fn launch_heat(
-        self,
-        weapon: BattleWeapon,
-        gatling_damage: Option<u8>,
-        launched: bool,
-    ) -> u8 {
+    pub fn launch_heat(self, weapon: Weapon, gatling_damage: Option<u8>, launched: bool) -> u8 {
         if !launched {
             return 0;
         }
@@ -36,12 +31,12 @@ impl BattleFireMode {
     }
 
     /// Coolant heat mode redirects the shot to its carrier before target selection.
-    pub fn self_cooling(self, weapon: BattleWeapon) -> bool {
-        self == Self::Heat && weapon == BattleWeapon::CoolantGun
+    pub fn self_cooling(self, weapon: Weapon) -> bool {
+        self == Self::Heat && weapon == Weapon::CoolantGun
     }
 
     /// Whether this firing behavior is valid for the installed weapon family.
-    pub fn supports(self, weapon: BattleWeapon) -> bool {
+    pub fn supports(self, weapon: Weapon) -> bool {
         match self {
             Self::Normal => true,
             Self::Heat => weapon.supports_heat_mode(),
@@ -56,7 +51,7 @@ impl BattleFireMode {
     }
 }
 
-impl BattleWeapon {
+impl Weapon {
     /// Two-shell hit table; glancing shifts the cluster roll instead of halving shell damage.
     pub fn double_shot_damage_groups(self, roll: u8, glancing: bool) -> Result<Vec<u16>> {
         ensure!(
@@ -73,7 +68,7 @@ impl BattleWeapon {
     }
 }
 
-impl BattleFireMode {
+impl FireMode {
     /// Requested rounds before ammunition shortage can reset the firing mode.
     pub fn rounds_per_cycle(self) -> u16 {
         match self {
@@ -113,21 +108,21 @@ impl BattleFireMode {
 
 #[cfg(test)]
 mod tests {
-    use crate::BattleWeapon;
+    use crate::Weapon;
 
     #[test]
     fn two_shell_tables_and_glancing_preserve_individual_damage() {
         for weapon in [
-            BattleWeapon::UltraAc2,
-            BattleWeapon::UltraAc5,
-            BattleWeapon::UltraAc10,
-            BattleWeapon::UltraAc20,
-            BattleWeapon::Ac2,
-            BattleWeapon::Ac5,
-            BattleWeapon::Ac10,
-            BattleWeapon::Ac20,
-            BattleWeapon::LightAc2,
-            BattleWeapon::LightAc5,
+            Weapon::UltraAc2,
+            Weapon::UltraAc5,
+            Weapon::UltraAc10,
+            Weapon::UltraAc20,
+            Weapon::Ac2,
+            Weapon::Ac5,
+            Weapon::Ac10,
+            Weapon::Ac20,
+            Weapon::LightAc2,
+            Weapon::LightAc5,
         ] {
             for roll in 2..=12 {
                 for glancing in [false, true] {
@@ -152,7 +147,7 @@ mod tests {
             }
         }
         assert!(
-            BattleWeapon::MediumLaser
+            Weapon::MediumLaser
                 .double_shot_damage_groups(8, false)
                 .is_err()
         );

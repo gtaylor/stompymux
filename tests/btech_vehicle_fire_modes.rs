@@ -18,7 +18,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse("test", template).unwrap(),
+        VehicleTemplate::parse("test", template).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -35,22 +35,12 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
 #[tokio::test]
 async fn native_and_lua_vehicle_firing_controls_share_state_and_rollback() {
     for (weapon, flag, command, mode) in [
-        ("IS.Flamer", "Heat", "flamerheat", BattleFireMode::Heat),
-        ("IS.LRM-5", "Hotload", "hotload", BattleFireMode::Hotload),
-        ("IS.UltraAC/2", "UltraMode", "ultra", BattleFireMode::Ultra),
-        ("IS.AC/2", "RapidFire", "rapidfire", BattleFireMode::Rapid),
-        (
-            "IS.MachineGun",
-            "Gattling",
-            "gattling",
-            BattleFireMode::Gatling,
-        ),
-        (
-            "IS.RotaryAC/2",
-            "Rotary_FourShot",
-            "rac",
-            BattleFireMode::Rotary4,
-        ),
+        ("IS.Flamer", "Heat", "flamerheat", FireMode::Heat),
+        ("IS.LRM-5", "Hotload", "hotload", FireMode::Hotload),
+        ("IS.UltraAC/2", "UltraMode", "ultra", FireMode::Ultra),
+        ("IS.AC/2", "RapidFire", "rapidfire", FireMode::Rapid),
+        ("IS.MachineGun", "Gattling", "gattling", FireMode::Gatling),
+        ("IS.RotaryAC/2", "Rotary_FourShot", "rac", FireMode::Rotary4),
     ] {
         let template = include_str!("../game/mechs/Demolisher.toml").replace(
             "item = \"IS.AC/20\" }",
@@ -91,11 +81,11 @@ async fn native_and_lua_vehicle_firing_controls_share_state_and_rollback() {
         failed.eval_callback::<mlua::Value>(&lua_command).unwrap();
         assert_eq!(
             failed.world().btech.vehicles()[&id].fire_mode(0).unwrap(),
-            BattleFireMode::Normal
+            FireMode::Normal
         );
         assert_eq!(
             failed.world().btech.vehicles()[&id].weapon_failures()[&0],
-            BattleEquipmentFailure::Disabled
+            EquipmentFailure::Disabled
         );
         let selected_failure = failed.world().clone();
         assert!(
@@ -152,7 +142,7 @@ async fn native_and_lua_vehicle_firing_controls_share_state_and_rollback() {
         let output = support::run_text(&native, &config, ObjectId(1), 1, &native_command);
         assert_eq!(
             native.world().btech.vehicles()[&id].fire_mode(0).unwrap(),
-            BattleFireMode::Normal,
+            FireMode::Normal,
             "{command}: {output}"
         );
         lua.eval_callback::<mlua::Value>(&lua_command).unwrap();
@@ -163,7 +153,7 @@ async fn native_and_lua_vehicle_firing_controls_share_state_and_rollback() {
         assert_eq!(restored.btech, world.btech);
         assert_eq!(
             restored.btech.vehicles()[&id].fire_mode(0).unwrap(),
-            BattleFireMode::Normal
+            FireMode::Normal
         );
         let activate = if command == "rac" {
             format!("btech.unit.rac({},1,0,4)", id.0)
@@ -213,7 +203,7 @@ async fn vehicle_firing_mode_guards_and_snapshot_validation_preserve_state() {
         world
             .btech
             .rewrite_unit_record(id, |record| match damage {
-                "off" => record["power"] = serde_json::to_value(BattlePower::Off).unwrap(),
+                "off" => record["power"] = serde_json::to_value(Power::Off).unwrap(),
                 "recycling" => record["weapon_recycle"] = serde_json::json!({"0":1}),
                 _ => (),
             })
@@ -223,7 +213,7 @@ async fn vehicle_firing_mode_guards_and_snapshot_validation_preserve_state() {
                 &mut world,
                 id,
                 VehicleCriticalLocation {
-                    section: BattleVehicleSection::Turret,
+                    section: VehicleSection::Turret,
                     slot: 0,
                 },
             )
@@ -282,11 +272,11 @@ async fn live_modes_control_reservations_and_hotloaded_critical_eligibility() {
         .unwrap()
         .weapons
         .iter()
-        .position(|mount| mount.weapon == BattleWeapon::Lrm5)
+        .position(|mount| mount.weapon == Weapon::Lrm5)
         .unwrap();
     let value = (0..=255)
         .find(|value| {
-            let mut dice = BattleDice::seeded([*value; 32]);
+            let mut dice = Dice::seeded([*value; 32]);
             if dice.two_d6() != 11 {
                 return false;
             }
@@ -300,7 +290,7 @@ async fn live_modes_control_reservations_and_hotloaded_critical_eligibility() {
         toggle_battle_hotload(&mut world, id, ObjectId(1), index).unwrap();
         assert_eq!(
             world.btech.vehicles()[&id].fire_mode(index).unwrap(),
-            BattleFireMode::Normal
+            FireMode::Normal
         );
         if hotload {
             toggle_battle_hotload(&mut world, id, ObjectId(1), index).unwrap();
@@ -310,28 +300,28 @@ async fn live_modes_control_reservations_and_hotloaded_critical_eligibility() {
         assert_eq!(
             cycle.fire_mode,
             if hotload {
-                BattleFireMode::Hotload
+                FireMode::Hotload
             } else {
-                BattleFireMode::Normal
+                FireMode::Normal
             }
         );
         assert_eq!(cycle.ammunition.len(), 1);
         assert_eq!(cycle.ammunition[0].rounds, 1);
         world
             .btech
-            .set_unit_dice(id, BattleDice::seeded([value; 32]))
+            .set_unit_dice(id, Dice::seeded([value; 32]))
             .unwrap();
         persistence::save(&config.database(), &world).await.unwrap();
         world = persistence::load(&config.database()).await.unwrap();
         let result = resolve_battle_vehicle_critical(
             &mut world,
             id,
-            BattleVehicleSection::Front,
-            BattleVehicleCriticalRules {
+            VehicleSection::Front,
+            VehicleCriticalRules {
                 rotor_damage_divisor: 0,
                 extended_piloting: false,
                 vtol_table: None,
-                table: BattleVehicleCriticalTable::Advanced,
+                table: VehicleCriticalTable::Advanced,
                 enabled: true,
                 combat_safe: false,
                 toughness: false,
@@ -340,7 +330,7 @@ async fn live_modes_control_reservations_and_hotloaded_critical_eligibility() {
         .unwrap();
         assert_eq!(result.internal_damage.len(), usize::from(hotload));
         assert_eq!(
-            world.btech.vehicles()[&id].sections()[&BattleVehicleSection::Front].internal,
+            world.btech.vehicles()[&id].sections()[&VehicleSection::Front].internal,
             if hotload { 3 } else { 8 }
         );
     }
@@ -350,9 +340,9 @@ async fn live_modes_control_reservations_and_hotloaded_critical_eligibility() {
 #[tokio::test]
 async fn temporary_weapon_failures_keep_recycle_admission_and_firing_lock() {
     for (weapon, command, failure) in [
-        ("IS.Flamer", "flamerheat", BattleEquipmentFailure::Shorted),
-        ("IS.AC/2", "rapidfire", BattleEquipmentFailure::Jammed),
-        ("IS.AC/2", "rapidfire", BattleEquipmentFailure::Disabled),
+        ("IS.Flamer", "flamerheat", EquipmentFailure::Shorted),
+        ("IS.AC/2", "rapidfire", EquipmentFailure::Jammed),
+        ("IS.AC/2", "rapidfire", EquipmentFailure::Disabled),
     ] {
         let source = include_str!("../game/mechs/Demolisher.toml")
             .replace("item = \"IS.AC/20\" }", &format!("item = \"{weapon}\" }}"));

@@ -18,7 +18,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse("test", template).unwrap(),
+        VehicleTemplate::parse("test", template).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -36,17 +36,17 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
 fn seed(world: &mut World, id: ObjectId, value: u8) {
     world
         .btech
-        .set_unit_dice(id, BattleDice::seeded([value; 32]))
+        .set_unit_dice(id, Dice::seeded([value; 32]))
         .unwrap();
 }
 
 /// Isolated internal damage with criticals disabled still consumes its two diagnostic rolls.
-fn rules() -> BattleVehicleCriticalRules {
-    BattleVehicleCriticalRules {
+fn rules() -> VehicleCriticalRules {
+    VehicleCriticalRules {
         rotor_damage_divisor: 0,
         extended_piloting: false,
         vtol_table: None,
-        table: BattleVehicleCriticalTable::Advanced,
+        table: VehicleCriticalTable::Advanced,
         enabled: false,
         combat_safe: false,
         toughness: false,
@@ -54,11 +54,11 @@ fn rules() -> BattleVehicleCriticalRules {
 }
 
 /// Find a deterministic stream for a specific multi-stage explosion path.
-fn matching_seed(predicate: impl Fn(&mut BattleDice) -> bool) -> [u8; 32] {
+fn matching_seed(predicate: impl Fn(&mut Dice) -> bool) -> [u8; 32] {
     for value in 0u32..100000 {
         let mut seed = [0; 32];
         seed[..4].copy_from_slice(&value.to_le_bytes());
-        if predicate(&mut BattleDice::seeded(seed)) {
+        if predicate(&mut Dice::seeded(seed)) {
             return seed;
         }
     }
@@ -67,17 +67,14 @@ fn matching_seed(predicate: impl Fn(&mut BattleDice) -> bool) -> [u8; 32] {
 
 /// Change only the victim's random stream.
 fn set_seed(world: &mut World, id: ObjectId, seed: [u8; 32]) {
-    world
-        .btech
-        .set_unit_dice(id, BattleDice::seeded(seed))
-        .unwrap();
+    world.btech.set_unit_dice(id, Dice::seeded(seed)).unwrap();
 }
 
 /// Plain front armor hit; hit-table secondary effects have already been resolved by the caller.
-fn hit(amount: u32) -> BattleVehicleArmorHit {
-    BattleVehicleArmorHit {
-        damage_class: BattleDamageClass::Ordinary,
-        section: BattleVehicleSection::Front,
+fn hit(amount: u32) -> VehicleArmorHit {
+    VehicleArmorHit {
+        damage_class: DamageClass::Ordinary,
+        section: VehicleSection::Front,
         amount,
         through_armor_critical: false,
         armor_piercing: None,
@@ -93,21 +90,21 @@ async fn reflective_armor_depends_on_the_damage_class() {
     );
     // The Demolisher's front carries forty armor points over eight internal.
     for (class, amount, armor_damage, overflow) in [
-        (BattleDamageClass::Ordinary, 43, 43, 3),
-        (BattleDamageClass::Energy, 21, 10, 0),
-        (BattleDamageClass::Energy, 1, 1, 0),
+        (DamageClass::Ordinary, 43, 43, 3),
+        (DamageClass::Energy, 21, 10, 0),
+        (DamageClass::Energy, 1, 1, 0),
         // Forty points stop eighty energy damage; the other five pass at full value.
-        (BattleDamageClass::Energy, 85, 42, 5),
-        (BattleDamageClass::AreaEffect, 10, 20, 0),
+        (DamageClass::Energy, 85, 42, 5),
+        (DamageClass::AreaEffect, 10, 20, 0),
         // Twenty damage strips all forty points; the last five pass through.
-        (BattleDamageClass::AreaEffect, 25, 50, 5),
+        (DamageClass::AreaEffect, 25, 50, 5),
     ] {
         let (_dir, _config, mut world, id) = fixture(&text).await;
         seed(&mut world, id, 21);
         let report = resolve_battle_vehicle_armor_damage(
             &mut world,
             id,
-            BattleVehicleArmorHit {
+            VehicleArmorHit {
                 damage_class: class,
                 ..hit(amount)
             },
@@ -118,7 +115,7 @@ async fn reflective_armor_depends_on_the_damage_class() {
         assert_eq!(report.absorbed, armor_damage.min(40) as u16);
         assert_eq!(report.overflow, overflow, "{class:?} {amount}");
         assert_eq!(
-            world.btech.vehicles()[&id].sections()[&BattleVehicleSection::Front].internal,
+            world.btech.vehicles()[&id].sections()[&VehicleSection::Front].internal,
             8 - overflow as u16
         );
     }
@@ -157,7 +154,7 @@ async fn armor_penetration_uses_one_entry_roll_and_applies_material_modifiers() 
         assert_eq!(report.absorbed, armor_damage.min(40) as u16);
         assert_eq!(report.overflow, overflow);
         assert_eq!(
-            world.btech.vehicles()[&id].sections()[&BattleVehicleSection::Front].internal,
+            world.btech.vehicles()[&id].sections()[&VehicleSection::Front].internal,
             8 - internal_damage
         );
         assert_eq!(
@@ -168,7 +165,7 @@ async fn armor_penetration_uses_one_entry_roll_and_applies_material_modifiers() 
                 .count(),
             usize::from(amount > 0)
         );
-        let mut dice = BattleDice::seeded([21; 32]);
+        let mut dice = Dice::seeded([21; 32]);
         assert_eq!(
             report.rolls,
             if amount > 0 {
@@ -223,10 +220,10 @@ async fn through_armor_criticals_suppress_only_additional_internal_dispatch() {
             if dispatched { 0 } else { 2 }
         );
         assert_eq!(
-            world.btech.vehicles()[&id].sections()[&BattleVehicleSection::Front].internal,
+            world.btech.vehicles()[&id].sections()[&VehicleSection::Front].internal,
             7
         );
-        let mut dice = BattleDice::seeded(stream);
+        let mut dice = Dice::seeded(stream);
         dice.two_d6();
         dice.two_d6();
         dice.two_d6();
@@ -243,12 +240,7 @@ async fn armor_piercing_uses_remaining_armor_threshold_and_weapon_penalty() {
         dice.two_d6() == 12
     });
     for amount in [20, 21, 41] {
-        for weapon in [
-            BattleWeapon::Ac2,
-            BattleWeapon::Ac5,
-            BattleWeapon::Ac10,
-            BattleWeapon::Ac20,
-        ] {
+        for weapon in [Weapon::Ac2, Weapon::Ac5, Weapon::Ac10, Weapon::Ac20] {
             let mut world = base.clone();
             set_seed(&mut world, id, stream);
             let mut request = hit(amount);
@@ -260,7 +252,7 @@ async fn armor_piercing_uses_remaining_armor_threshold_and_weapon_penalty() {
                 report.criticals.len(),
                 if amount != 21 {
                     0
-                } else if matches!(weapon, BattleWeapon::Ac2 | BattleWeapon::Ac5) {
+                } else if matches!(weapon, Weapon::Ac2 | Weapon::Ac5) {
                     1
                 } else {
                     2
@@ -277,7 +269,7 @@ async fn armor_piercing_uses_remaining_armor_threshold_and_weapon_penalty() {
     let mut world = base.clone();
     let before = world.btech.clone();
     let mut request = hit(1);
-    request.armor_piercing = Some(BattleWeapon::MediumLaser);
+    request.armor_piercing = Some(Weapon::MediumLaser);
     assert!(resolve_battle_vehicle_armor_damage(&mut world, id, request, rules()).is_err());
     assert_eq!(world.btech, before);
 }
@@ -314,11 +306,11 @@ async fn armor_destruction_preserves_occupants_and_safe_hits_only_advance_entry_
     assert!(world.btech.vehicles()[&id].crew_killed());
     assert_eq!(world.btech.vehicles()[&id].pilot_injuries(), 0);
     assert_eq!(
-        world.btech.vehicles()[&id].sections()[&BattleVehicleSection::Front].armor,
+        world.btech.vehicles()[&id].sections()[&VehicleSection::Front].armor,
         39
     );
     assert_eq!(
-        world.btech.vehicles()[&id].sections()[&BattleVehicleSection::Front].internal,
+        world.btech.vehicles()[&id].sections()[&VehicleSection::Front].internal,
         8
     );
     assert_eq!(
@@ -334,12 +326,12 @@ async fn armor_destruction_preserves_occupants_and_safe_hits_only_advance_entry_
     assert_eq!(world.btech.vehicles()[&id].sections(), &sections);
     assert!(report.notices.is_empty());
     assert!(report.internal.is_none());
-    let mut dice = BattleDice::seeded([21; 32]);
+    let mut dice = Dice::seeded([21; 32]);
     assert_eq!(report.rolls, [dice.two_d6()]);
     assert_eq!(roll_unit_dice(&mut world, id, 1).unwrap(), [dice.d6()]);
     let mut world = base.clone();
     let mut request = hit(100);
-    request.section = BattleVehicleSection::Turret;
+    request.section = VehicleSection::Turret;
     let report = resolve_battle_vehicle_armor_damage(&mut world, id, request, rules()).unwrap();
     assert!(!report.unit_destroyed);
     assert_eq!(report.internal.unwrap().discarded, 52);
@@ -360,7 +352,7 @@ fn environment(world: &mut World, id: ObjectId, gravity: u8, vacuum: bool) {
         world,
         ObjectId(1),
         map,
-        BattleMapEnvironment {
+        MapEnvironment {
             gravity,
             temperature: 20,
             vacuum,
@@ -409,8 +401,8 @@ async fn vacuum_penetration_disables_equipment_and_survives_environment_change_a
         let report = resolve_battle_vehicle_armor_damage(
             &mut world,
             id,
-            BattleVehicleArmorHit {
-                damage_class: BattleDamageClass::Ordinary,
+            VehicleArmorHit {
+                damage_class: DamageClass::Ordinary,
                 section,
                 amount: u32::from(initial.armor) + 1,
                 through_armor_critical: false,
@@ -442,7 +434,7 @@ async fn vacuum_penetration_disables_equipment_and_survives_environment_change_a
         assert_eq!(vehicle.weapon_readiness(0).unwrap().recycle_remaining, 0);
         assert_eq!(vehicle.ammunition(), ammunition);
         let diagnostic = &battle_weapon_diagnostics(&world, id).unwrap()[0];
-        assert_eq!(diagnostic.condition, BattleEquipmentCondition::Disabled);
+        assert_eq!(diagnostic.condition, EquipmentCondition::Disabled);
         assert_eq!(diagnostic.destroyed_slots, 0);
         assert!(diagnostic.disabled_slots > 0);
         let before = world.btech.clone();
@@ -453,7 +445,7 @@ async fn vacuum_penetration_disables_equipment_and_survives_environment_change_a
             criticals
                 .slots
                 .iter()
-                .any(|slot| slot.condition == BattleEquipmentCondition::Disabled)
+                .any(|slot| slot.condition == EquipmentCondition::Disabled)
         );
         environment(&mut world, id, 100, false);
         world.validate(&config).unwrap();
@@ -482,7 +474,7 @@ async fn vacuum_armor_checks_follow_threshold_and_special_condition_dice_order()
             let mut world = initial.clone();
             environment(&mut world, id, gravity, vacuum);
             set_seed(&mut world, id, seed);
-            let mut expected = BattleDice::seeded(seed);
+            let mut expected = Dice::seeded(seed);
             let expected_rolls: Vec<_> = (0..expected_rolls).map(|_| expected.two_d6()).collect();
             let report =
                 resolve_battle_vehicle_armor_damage(&mut world, id, hit(1), rules()).unwrap();
@@ -494,7 +486,7 @@ async fn vacuum_armor_checks_follow_threshold_and_special_condition_dice_order()
             assert_eq!(
                 world.btech.vehicles()[&id]
                     .breached_sections()
-                    .contains(&BattleVehicleSection::Front),
+                    .contains(&VehicleSection::Front),
                 vacuum && threshold >= 10
             );
             if vacuum && threshold >= 10 {
@@ -530,7 +522,7 @@ async fn vacuum_internal_damage_and_safety_preserve_check_boundaries() {
         let report = resolve_battle_vehicle_internal_damage(
             &mut world,
             id,
-            BattleVehicleSection::Front,
+            VehicleSection::Front,
             amount,
             rules(),
         )
@@ -539,14 +531,14 @@ async fn vacuum_internal_damage_and_safety_preserve_check_boundaries() {
         assert_eq!(
             world.btech.vehicles()[&id]
                 .breached_sections()
-                .contains(&BattleVehicleSection::Front),
+                .contains(&VehicleSection::Front),
             amount == 1
         );
         world.validate(&config).unwrap();
     }
     let mut world = initial.clone();
     environment(&mut world, id, 100, true);
-    let safe = BattleVehicleCriticalRules {
+    let safe = VehicleCriticalRules {
         combat_safe: true,
         ..rules()
     };
@@ -589,7 +581,7 @@ async fn vacuum_disables_remote_supply_and_electronics_without_destroying_them()
     );
     assert!(
         world.btech.vehicles()[&id]
-            .electronic_suite_available(BattleElectronicSuite::Guardian)
+            .electronic_suite_available(ElectronicSuite::Guardian)
             .unwrap()
     );
     assert!(
@@ -602,8 +594,8 @@ async fn vacuum_disables_remote_supply_and_electronics_without_destroying_them()
         &mut world,
         id,
         ObjectId(1),
-        BattleElectronicSuite::Guardian,
-        BattleElectronicMode::Ecm,
+        ElectronicSuite::Guardian,
+        ElectronicMode::Ecm,
     )
     .unwrap();
     environment(&mut world, id, 100, true);
@@ -616,10 +608,10 @@ async fn vacuum_disables_remote_supply_and_electronics_without_destroying_them()
     assert_eq!(ready.ammunition, 0);
     assert_eq!(unit.ammunition(), &[5]);
     assert!(unit.lost_criticals().is_empty());
-    assert_eq!(unit.electronics().guardian, BattleElectronicMode::Off);
+    assert_eq!(unit.electronics().guardian, ElectronicMode::Off);
     assert!(
         !unit
-            .electronic_suite_available(BattleElectronicSuite::Guardian)
+            .electronic_suite_available(ElectronicSuite::Guardian)
             .unwrap()
     );
     assert!(!unit.c3_hardware().unwrap().slave_operational);
@@ -637,7 +629,7 @@ async fn vacuum_disables_remote_supply_and_electronics_without_destroying_them()
 /// A disabled AMS mount does not remove the capability supplied by another intact mount.
 #[tokio::test]
 async fn vacuum_disabled_ams_preserves_whole_unit_capability() {
-    let name = BattleWeapon::AntiMissileSystem.name();
+    let name = Weapon::AntiMissileSystem.name();
     let template = include_str!("../game/mechs/Demolisher.toml")
         .replace(
             "[sections.front_side]\narmor = 40\n",
@@ -658,11 +650,11 @@ async fn vacuum_disabled_ams_preserves_whole_unit_capability() {
     let unit = &world.btech.vehicles()[&id];
     assert!(unit.ams_enabled());
     assert!(unit.critical_unavailable(VehicleCriticalLocation {
-        section: BattleVehicleSection::Front,
+        section: VehicleSection::Front,
         slot: 0
     }));
     assert!(!unit.critical_unavailable(VehicleCriticalLocation {
-        section: BattleVehicleSection::Rear,
+        section: VehicleSection::Rear,
         slot: 0
     }));
     world.validate(&config).unwrap();
@@ -683,16 +675,16 @@ async fn rotor_divisor_preserves_minimum_internal_damage_and_restart() {
         (u32::MAX, 7, 1),
     ] {
         let mut world = base.clone();
-        let rules = BattleVehicleCriticalRules {
+        let rules = VehicleCriticalRules {
             rotor_damage_divisor: divisor,
             ..rules()
         };
         let report = resolve_battle_vehicle_armor_damage(
             &mut world,
             id,
-            BattleVehicleArmorHit {
-                damage_class: BattleDamageClass::Ordinary,
-                section: BattleVehicleSection::Rotor,
+            VehicleArmorHit {
+                damage_class: DamageClass::Ordinary,
+                section: VehicleSection::Rotor,
                 amount,
                 through_armor_critical: false,
                 armor_piercing: None,
@@ -704,7 +696,7 @@ async fn rotor_divisor_preserves_minimum_internal_damage_and_restart() {
         assert_eq!(report.armor_damage, expected);
         assert_eq!(u32::from(report.absorbed), expected);
         assert_eq!(
-            world.btech.vehicles()[&id].sections()[&BattleVehicleSection::Rotor].armor,
+            world.btech.vehicles()[&id].sections()[&VehicleSection::Rotor].armor,
             40 - expected as u16
         );
         persistence::save(&config.database(), &world).await.unwrap();
@@ -717,13 +709,13 @@ async fn rotor_divisor_preserves_minimum_internal_damage_and_restart() {
         let _report = resolve_battle_vehicle_internal_damage(
             &mut internal,
             id,
-            BattleVehicleSection::Rotor,
+            VehicleSection::Rotor,
             2,
             rules,
         )
         .unwrap();
         assert_eq!(
-            internal.btech.vehicles()[&id].sections()[&BattleVehicleSection::Rotor].internal,
+            internal.btech.vehicles()[&id].sections()[&VehicleSection::Rotor].internal,
             1
         );
     }
@@ -751,9 +743,9 @@ async fn hardened_armor_hampers_vehicle_driving() {
 fn hardened_armor_is_barred_from_hovercraft_and_vtols() {
     let tracked = include_str!("../game/mechs/Demolisher.toml");
     let harden = |source: &str| support::templates::with_flags(source, &["HardenedArmor_Tech"]);
-    assert!(BattleVehicleTemplate::parse("test", &harden(tracked)).is_ok());
+    assert!(VehicleTemplate::parse("test", &harden(tracked)).is_ok());
     assert!(
-        BattleVehicleTemplate::parse(
+        VehicleTemplate::parse(
             "test",
             &harden(&tracked.replace("movement = \"track\"", "movement = \"wheel\""))
         )
@@ -765,11 +757,11 @@ fn hardened_armor_is_barred_from_hovercraft_and_vtols() {
     ] {
         let hardened = harden(&source);
         assert!(hardened.contains("armor = \"hardened\""));
-        let error = BattleVehicleTemplate::parse("test", &hardened).unwrap_err();
+        let error = VehicleTemplate::parse("test", &hardened).unwrap_err();
         assert!(
             format!("{error:#}").contains("Hovercraft and VTOLs cannot mount hardened armor"),
             "{error:#}"
         );
-        assert!(BattleVehicleTemplate::parse("test", &source).is_ok());
+        assert!(VehicleTemplate::parse("test", &source).is_ok());
     }
 }

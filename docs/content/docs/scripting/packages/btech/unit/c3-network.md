@@ -22,5 +22,5 @@ btech.unit.c3_network(dbref, pilot)
 
 ## Returns
 
-- `{rows: BattleNetworkStatusRow[], text: string}|nil`
+- `{rows: NetworkStatusRow[], text: string}|nil`
 - `table|nil error`

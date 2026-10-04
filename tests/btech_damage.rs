@@ -1,14 +1,14 @@
 //! Material damage, transfer accounting, section loss and durable core destruction.
 use crate::support;
 use stompymux_rs::{
-    BattleDamagePhase as Phase, BattleSection as Section, BattleTemplate, BattleUnit, Kind,
-    ObjectId, apply_damage_phase, create_battle_unit, persistence,
+    DamagePhase as Phase, Kind, Mech, MechSection as Section, MechTemplate, ObjectId,
+    apply_damage_phase, create_battle_unit, persistence,
 };
 
 /// A fresh Jenner with reference armor and structure quantities.
-fn jenner() -> BattleUnit {
-    BattleUnit::from_template(
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+fn jenner() -> Mech {
+    Mech::from_template(
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap()
 }
@@ -72,7 +72,7 @@ async fn core_damage_survives_restart_and_rejects_invalid_phase_targets_atomical
     create_battle_unit(
         &mut world,
         id,
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
@@ -96,10 +96,10 @@ async fn core_damage_survives_restart_and_rejects_invalid_phase_targets_atomical
     stompymux_rs::set_battle_speed(&mut world, id, ObjectId(1), 10.0).unwrap();
     stompymux_rs::advance_battle_motion(
         &mut world,
-        stompymux_rs::BattleMovementRules {
+        stompymux_rs::MovementRules {
             fasa_turning: false,
             slowdown: 2,
-            ..stompymux_rs::BattleMovementRules::STANDARD
+            ..stompymux_rs::MovementRules::STANDARD
         },
     )
     .unwrap();
@@ -130,7 +130,7 @@ async fn core_damage_survives_restart_and_rejects_invalid_phase_targets_atomical
     assert_eq!(world.objects[&ObjectId(1)].location, Some(id));
     assert_eq!(
         world.btech.constructed_units()[&id].power(),
-        stompymux_rs::BattlePower::Off
+        stompymux_rs::Power::Off
     );
     assert_eq!(
         world.btech.constructed_units()[&id].motion().unwrap().speed,

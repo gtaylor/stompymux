@@ -7,24 +7,24 @@ use stompymux_rs::*;
 fn insert_drop(world: &mut World, id: ObjectId) {
     firing::edit(world, id, |state| {
         state["orbital_drop"] =
-            serde_json::to_value(BattleOrbitalDrop::new(35 * 1024, 300).unwrap()).unwrap();
+            serde_json::to_value(OrbitalDrop::new(35 * 1024, 300).unwrap()).unwrap();
         state["ground_elevation"] = serde_json::Value::Null;
     });
 }
 
 /// One accessor keeps every acceptance case independent of anatomy storage.
-fn drop_state(world: &World, id: ObjectId) -> Option<BattleOrbitalDrop> {
+fn drop_state(world: &World, id: ObjectId) -> Option<OrbitalDrop> {
     world
         .btech
         .constructed_units()
         .get(&id)
-        .and_then(BattleUnit::orbital_drop)
+        .and_then(Mech::orbital_drop)
         .or_else(|| {
             world
                 .btech
                 .vehicles()
                 .get(&id)
-                .and_then(BattleVehicle::orbital_drop)
+                .and_then(Vehicle::orbital_drop)
         })
 }
 
@@ -38,7 +38,7 @@ async fn saved_drops_own_geometry_and_survive_scenario_relocation() {
             .btech
             .vehicles()
             .get(&unit)
-            .is_some_and(|unit| unit.definition().movement == BattleVehicleMovement::Stationary)
+            .is_some_and(|unit| unit.definition().movement == VehicleMovement::Stationary)
         {
             firing::edit(&mut world, unit, |state| {
                 state["motion"]["speed"] = 1.0.into();
@@ -48,10 +48,10 @@ async fn saved_drops_own_geometry_and_survive_scenario_relocation() {
         world.validate(&config).unwrap();
         assert_eq!(battle_unit_altitude(&world, unit).unwrap(), Some(300.0));
         assert_eq!(battle_unit_elevation(&world, unit).unwrap(), Some(300));
-        advance_battle_jumps(&mut world, BattleMovementRules::STANDARD).unwrap();
+        advance_battle_jumps(&mut world, MovementRules::STANDARD).unwrap();
         assert_eq!(battle_unit_elevation(&world, unit).unwrap(), Some(298));
         let before = world.btech.clone();
-        advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
+        advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
         assert_eq!(world.btech, before);
         persistence::save(&config.database(), &world).await.unwrap();
         let restored = persistence::load(&config.database()).await.unwrap();
@@ -72,10 +72,7 @@ async fn saved_drops_own_geometry_and_survive_scenario_relocation() {
             serde_json::to_value(moved).unwrap()
         );
         assert_eq!(moved.elevation(), 123);
-        assert_eq!(
-            moved.protection(),
-            BattleDropProtection::Cocoon { integrity: 8 }
-        );
+        assert_eq!(moved.protection(), DropProtection::Cocoon { integrity: 8 });
         assert_eq!(
             battle_unit_altitude(&scripts.world(), unit).unwrap(),
             Some(123.0)
@@ -143,7 +140,7 @@ async fn restart_rejects_competing_altitude_owners_and_aircraft_cocoons() {
         let group = if index < 2 { "constructed" } else { "vehicles" };
         let mut state = serde_json::to_value(&world.btech).unwrap();
         state[group][unit.0.to_string()]["orbital_drop"] =
-            serde_json::to_value(BattleOrbitalDrop::new(1024, 300).unwrap()).unwrap();
+            serde_json::to_value(OrbitalDrop::new(1024, 300).unwrap()).unwrap();
         if index == 6 {
             assert!(serde_json::from_value::<BtechState>(state).is_err());
             continue;
@@ -152,7 +149,7 @@ async fn restart_rejects_competing_altitude_owners_and_aircraft_cocoons() {
             ("ground_elevation", serde_json::json!(12.0)),
             (
                 "free_fall",
-                serde_json::to_value(BattleFreeFall::new(300)).unwrap(),
+                serde_json::to_value(FreeFall::new(300)).unwrap(),
             ),
             (
                 "orbital_drop",

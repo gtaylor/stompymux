@@ -1,7 +1,7 @@
 //! Battle map viewing, terrain, links, persistence, environment, and map flag native bindings.
 
 use super::*;
-use crate::btech::BattleUnitTemplateExt;
+use crate::btech::UnitTemplateExt;
 
 /// Register this package slice on the private native table.
 pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::Result<()> {
@@ -43,9 +43,9 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                     &crate::lua::configuration(lua),
                     ObjectId(actor),
                     ObjectId(map),
-                    crate::BattleMinePlacement {
+                    crate::MinePlacement {
                         coordinate: crate::HexCoordinate { x, y },
-                        kind: crate::BattleMineKind::parse(&kind).map_err(mlua::Error::external)?,
+                        kind: crate::MineKind::parse(&kind).map_err(mlua::Error::external)?,
                         strength,
                         extra: extra.unwrap_or(0),
                     },
@@ -100,7 +100,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
     )?;
     let set_link = lua.create_function(|lua, (child, value): (i64, Value)| {
         crate::lua::transactions::require(lua)?;
-        let link: Option<crate::BattleMapLink> = lua.from_value(value)?;
+        let link: Option<crate::MapLink> = lua.from_value(value)?;
         let scripts = crate::Scripts::services(lua)?;
         crate::lua::transactions::run(lua, &scripts.world, || {
             crate::set_battle_map_link(&mut scripts.world_mut(), ObjectId(child), link)
@@ -156,7 +156,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             crate::lua::transactions::require(lua)?;
             let kind = kind
                 .as_deref()
-                .map(crate::BattleMapObjectKind::parse)
+                .map(crate::MapObjectKind::parse)
                 .transpose()
                 .map_err(mlua::Error::external)?;
             let coordinate = match (x, y) {
@@ -298,7 +298,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
     )?;
     let environment = lua.create_function(|lua, (actor, id, value): (i64, i64, Value)| {
         crate::lua::transactions::require(lua)?;
-        let conditions: crate::BattleMapEnvironment = lua.from_value(value)?;
+        let conditions: crate::MapEnvironment = lua.from_value(value)?;
         let scripts = crate::Scripts::services(lua)?;
         crate::lua::transactions::run(lua, &scripts.world, || {
             let actual = crate::set_battle_map_environment_action(
@@ -324,7 +324,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                 crate::set_battle_map_visibility(
                     &mut scripts.world_mut(),
                     ObjectId(id),
-                    crate::BattleLight::from_stored(i64::from(light))?,
+                    crate::Light::from_stored(i64::from(light))?,
                     u8::try_from(visibility)?,
                 )
             })()
@@ -427,12 +427,12 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
         crate::lua::transactions::require(lua)?;
         let scripts = crate::Scripts::services(lua)?;
         if let Some(value) = value {
-            let flags: crate::BattleVisibility = lua.from_value(mlua::Value::Table(value))?;
+            let flags: crate::Visibility = lua.from_value(mlua::Value::Table(value))?;
             crate::set_battle_visibility(&mut scripts.world_mut(), ObjectId(id), flags)
                 .map_err(mlua::Error::external)?;
         }
-        let flags = crate::battle_visibility(&scripts.world(), ObjectId(id))
-            .map_err(mlua::Error::external)?;
+        let flags =
+            crate::visibility(&scripts.world(), ObjectId(id)).map_err(mlua::Error::external)?;
         lua.to_value(&flags)
     })?;
     native.set(
@@ -446,7 +446,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             crate::set_battle_combat_safe(&mut scripts.world_mut(), ObjectId(id), enabled)
                 .map_err(mlua::Error::external)?;
         }
-        crate::battle_combat_safe(&scripts.world(), ObjectId(id)).map_err(mlua::Error::external)
+        crate::combat_safe(&scripts.world(), ObjectId(id)).map_err(mlua::Error::external)
     })?;
     native.set(
         "unit_combat_safe",
@@ -459,7 +459,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             crate::set_battle_weapons_hold(&mut scripts.world_mut(), ObjectId(id), enabled)
                 .map_err(mlua::Error::external)?;
         }
-        crate::battle_weapons_hold(&scripts.world(), ObjectId(id)).map_err(mlua::Error::external)
+        crate::weapons_hold(&scripts.world(), ObjectId(id)).map_err(mlua::Error::external)
     })?;
     native.set(
         "unit_weapons_hold",

@@ -21,4 +21,4 @@ btech.player.ui_preferences(player)
 
 ## Returns
 
-- `BattleUiPreferencesState preferences`
+- `UiPreferencesState preferences`

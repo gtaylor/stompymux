@@ -4,7 +4,7 @@ use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use std::collections::BTreeSet;
 
-impl BattleUnit {
+impl Mech {
     /// The unit's position in its current battlefield membership list.
     pub fn map_slot(&self) -> Option<u32> {
         self.map_slot

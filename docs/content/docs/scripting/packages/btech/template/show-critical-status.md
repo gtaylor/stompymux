@@ -19,7 +19,7 @@ btech.template.show_critical_status(reference, player, section)
 | --- | --- | --- |
 | `reference` | `string` |  |
 | `player` | `DbRef\|Object` |  |
-| `section` | `BattleSection` | Typed section constant from btech.unit.sections. |
+| `section` | `MechSection` | Typed section constant from btech.unit.sections. |
 
 ## Returns
 

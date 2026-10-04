@@ -296,9 +296,33 @@ Alias: `CreateRoomOptions|CreateThingOptions|CreateExitOptions`
 - `not_found`: `MuxConfigNotFoundErrorCode` — `mux.config.not_found`.
 - `unsupported`: `MuxConfigUnsupportedErrorCode` — `mux.config.unsupported`.
 
+## MuxMacroInvalidErrorCode
+
+- `code`: `"mux.macro.invalid"`
+
+## MuxMacroNotFoundErrorCode
+
+- `code`: `"mux.macro.not_found"`
+
+## MuxMacroExistsErrorCode
+
+- `code`: `"mux.macro.exists"`
+
+## MuxMacroSlotsFullErrorCode
+
+- `code`: `"mux.macro.slots_full"`
+
+## MuxMacroErrorCodes
+
+- `invalid`: `MuxMacroInvalidErrorCode` — `mux.macro.invalid`.
+- `not_found`: `MuxMacroNotFoundErrorCode` — `mux.macro.not_found`.
+- `exists`: `MuxMacroExistsErrorCode` — `mux.macro.exists`.
+- `slots_full`: `MuxMacroSlotsFullErrorCode` — `mux.macro.slots_full`.
+
 ## MuxErrorCodes
 
 - `arg`: `MuxArgErrorCodes` — Invalid-argument code branch.
+- `macro`: `MuxMacroErrorCodes` — Player-macro code branch.
 - `unavailable`: `MuxUnavailableErrorCodes` — Runtime-availability code branch.
 - `runtime`: `MuxRuntimeErrorCode` — `mux.runtime`.
 - `state`: `MuxStateErrorCodes` — Persistent-state code branch.
@@ -326,6 +350,51 @@ Alias: `CreateRoomOptions|CreateThingOptions|CreateExitOptions`
 
 - `assertion`: `TestingAssertionErrorCode` — `testing.assertion`.
 - `runtime`: `TestingRuntimeErrorCode` — `testing.runtime`.
+
+## BtechPartNotFoundErrorCode
+
+- `code`: `"btech.part.not_found"`
+
+## BtechPartAmbiguousErrorCode
+
+- `code`: `"btech.part.ambiguous"`
+
+## BtechPartWrongKindErrorCode
+
+- `code`: `"btech.part.wrong_kind"`
+
+## BtechTemplateNotFoundErrorCode
+
+- `code`: `"btech.template.not_found"`
+
+## BtechTemplateInvalidErrorCode
+
+- `code`: `"btech.template.invalid"`
+
+## BtechOperationFailedErrorCode
+
+- `code`: `"btech.operation.failed"`
+
+## BtechPartErrorCodes
+
+- `not_found`: `BtechPartNotFoundErrorCode` — `btech.part.not_found`.
+- `ambiguous`: `BtechPartAmbiguousErrorCode` — `btech.part.ambiguous`.
+- `wrong_kind`: `BtechPartWrongKindErrorCode` — `btech.part.wrong_kind`.
+
+## BtechTemplateErrorCodes
+
+- `not_found`: `BtechTemplateNotFoundErrorCode` — `btech.template.not_found`.
+- `invalid`: `BtechTemplateInvalidErrorCode` — `btech.template.invalid`.
+
+## BtechOperationErrorCodes
+
+- `failed`: `BtechOperationFailedErrorCode` — `btech.operation.failed`.
+
+## BtechErrorCodes
+
+- `part`: `BtechPartErrorCodes` — Inventory-part code branch.
+- `template`: `BtechTemplateErrorCodes` — Unit-template code branch.
+- `operation`: `BtechOperationErrorCodes` — Gameplay-operation code branch.
 
 ## AccessNamespace
 
@@ -375,7 +444,6 @@ Alias: `CreateRoomOptions|CreateThingOptions|CreateExitOptions`
 - `CHANNEL_TRANSMIT`: `Lock` — Transmit on a channel.
 - `CHANNEL_RECEIVE`: `Lock` — Receive channel traffic.
 - `IDENTIFY_BUILDING`: `Lock` — Silently identify a visible BattleTech structure.
-- `IDENTIFY_BUILDING`: `Lock` — Identify a BattleTech building contact.
 
 ## PowerNamespace
 

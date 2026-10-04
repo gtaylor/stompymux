@@ -29,22 +29,22 @@ pub async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId, ObjectId)
         &mut world,
         map,
         p,
-        Some(BattleDecoration::new(DecorationKind::Fire, 0, None)),
+        Some(Decoration::new(DecorationKind::Fire, 0, None)),
     )
     .unwrap();
     set_map_decoration(
         &mut world,
         map,
         other,
-        Some(BattleDecoration::new(DecorationKind::Smoke, 20, None)),
+        Some(Decoration::new(DecorationKind::Smoke, 20, None)),
     )
     .unwrap();
     set_battle_static_decoration(
         &mut world,
         map,
-        BattleStaticDecorationKind::Decoration,
+        StaticDecorationKind::Decoration,
         0,
-        Some(BattleStaticDecoration {
+        Some(StaticDecoration {
             coordinate: p,
             restored_terrain: Some(Terrain::Water),
             object: ObjectId(0),
@@ -58,9 +58,9 @@ pub async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId, ObjectId)
             &mut world,
             map,
             ordinal,
-            Some(BattleMinefield {
+            Some(Minefield {
                 coordinate: p,
-                kind: BattleMineKind::Standard,
+                kind: MineKind::Standard,
                 strength: 5,
                 extra: 0,
                 owner: ObjectId(1),
@@ -71,7 +71,7 @@ pub async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId, ObjectId)
             &mut world,
             map,
             ordinal,
-            Some(BattleLandingExclusion {
+            Some(LandingExclusion {
                 coordinate: p,
                 radius: 1,
                 exempt_team: 0,
@@ -85,7 +85,7 @@ pub async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId, ObjectId)
         &mut world,
         map,
         0,
-        Some(BattleBuildingEntrance {
+        Some(BuildingEntrance {
             coordinate: p,
             interior,
             data_char: 0,
@@ -99,7 +99,7 @@ pub async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId, ObjectId)
         &mut world,
         map,
         0,
-        Some(BattleBuildingExit {
+        Some(BuildingExit {
             coordinate: p,
             destination: interior,
             data_char: 0,
@@ -112,7 +112,7 @@ pub async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId, ObjectId)
         &mut world,
         map,
         0,
-        Some(BattleBuildingEntryPoint {
+        Some(BuildingEntryPoint {
             coordinate: p,
             direction: b'n',
             object: ObjectId(-1),

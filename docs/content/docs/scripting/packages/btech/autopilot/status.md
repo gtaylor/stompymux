@@ -21,4 +21,4 @@ btech.autopilot.status(unit)
 
 ## Returns
 
-- `BattleAutopilotStatus Controller status.`
+- `AutopilotStatus Controller status.`

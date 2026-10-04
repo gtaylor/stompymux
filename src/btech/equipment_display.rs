@@ -1,8 +1,8 @@
 //! Equipment labels for cockpit inventory displays, separate from template identifiers.
-use super::{BattleAmmunitionMode as A, BattleWeapon};
+use super::{AmmunitionMode as A, Weapon};
 
 /// Installed weapon names retain Clan identity without the Inner Sphere namespace.
-pub(super) fn weapon_name(weapon: BattleWeapon) -> String {
+pub(super) fn weapon_name(weapon: Weapon) -> String {
     weapon
         .name()
         .strip_prefix("IS.")
@@ -11,7 +11,7 @@ pub(super) fn weapon_name(weapon: BattleWeapon) -> String {
 }
 
 /// Ammunition labels describe the typed bin mode without exposing template flag spellings.
-pub(super) fn ammunition_description(weapon: BattleWeapon, mode: A) -> &'static str {
+pub(super) fn ammunition_description(weapon: Weapon, mode: A) -> &'static str {
     match mode {
         A::Normal => "",
         A::Cluster if weapon.is_lbx() => " Shotgun",

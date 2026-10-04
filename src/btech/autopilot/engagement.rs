@@ -4,7 +4,7 @@ use super::{
     navigation::{Goal, GridHex},
     observations::AutopilotObservation,
 };
-use crate::{BattlePosition, HexCoordinate, ObjectId, World};
+use crate::{HexCoordinate, ObjectId, Position, World};
 
 /// Temporary weapon readiness does not change the preferred position.
 pub(crate) fn preferred(observation: &AutopilotObservation) -> AutopilotRangeBand {
@@ -50,11 +50,11 @@ pub(crate) fn preferred(observation: &AutopilotObservation) -> AutopilotRangeBan
 /// Search intent; both the target and leash come from admitted, filtered information.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct Engagement {
-    pub target: BattlePosition,
+    pub target: Position,
     pub target_id: ObjectId,
-    pub aim: BattlePosition,
+    pub aim: Position,
     pub band: AutopilotRangeBand,
-    pub leash: Option<BattlePosition>,
+    pub leash: Option<Position>,
     pub maximum: u16,
 }
 impl Engagement {

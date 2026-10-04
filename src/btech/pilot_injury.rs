@@ -1,20 +1,20 @@
 //! Atomic tactical cockpit injuries, unconsciousness and scenario pilot loss.
-use super::{BattleConsciousnessCheck, BattleNotice};
+use super::{ConsciousnessCheck, Notice};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
 
 /// Tactical injury outcome; notices are published by the enclosing attack after commit.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattlePilotInjury {
+pub struct TacticalPilotInjury {
     pub injuries: u8,
     pub killed: bool,
-    pub consciousness: Option<BattleConsciousnessCheck>,
+    pub consciousness: Option<ConsciousnessCheck>,
 }
 
-impl BattlePilotInjury {
+impl TacticalPilotInjury {
     /// Optional occupant notice for a newly failed consciousness check or scenario death.
-    pub fn notice(&self, unit: ObjectId) -> Option<BattleNotice> {
+    pub fn notice(&self, unit: ObjectId) -> Option<Notice> {
         let text = if self.killed {
             "The pilot is killed from personal injuries!"
         } else if self.consciousness.is_some_and(|check| !check.conscious) {
@@ -22,7 +22,7 @@ impl BattlePilotInjury {
         } else {
             return None;
         };
-        Some(BattleNotice {
+        Some(Notice {
             unit,
             text: text.to_owned(),
         })
@@ -36,7 +36,7 @@ pub fn injure_tactical_pilot(
     id: ObjectId,
     hits: u8,
     toughness: bool,
-) -> Result<BattlePilotInjury> {
+) -> Result<TacticalPilotInjury> {
     world.attempt(|world| {
         let report = injure_tactical_pilot_in_candidate(world, id, hits, toughness)?;
         Ok(report)
@@ -49,7 +49,7 @@ pub(super) fn injure_tactical_pilot_in_candidate(
     id: ObjectId,
     hits: u8,
     toughness: bool,
-) -> Result<BattlePilotInjury> {
+) -> Result<TacticalPilotInjury> {
     injure_tactical_crew(world, id, hits, toughness, false)
 }
 
@@ -59,7 +59,7 @@ pub(super) fn injure_terminal_crew(
     world: &mut World,
     id: ObjectId,
     hits: u8,
-) -> Result<BattlePilotInjury> {
+) -> Result<TacticalPilotInjury> {
     let (pilot, destroyed, previous) = super::with_unit!(
         world.btech.unit(id).context("Unit is unavailable")?,
         |unit| {
@@ -98,7 +98,7 @@ fn injure_tactical_crew(
     hits: u8,
     toughness: bool,
     terminal: bool,
-) -> Result<BattlePilotInjury> {
+) -> Result<TacticalPilotInjury> {
     let object = world.objects.get(&id).context("Unit is unavailable")?;
     ensure!(!object.flags.contains(Flag::Going), "Unit is unavailable");
     let character = object.flags.contains(Flag::InCharacter);
@@ -123,7 +123,7 @@ fn injure_tactical_crew(
         );
     }
     let injuries = super::pilot_health::bounded(u16::from(old_injuries) + u16::from(hits));
-    let mut report = BattlePilotInjury {
+    let mut report = TacticalPilotInjury {
         injuries,
         killed: injuries >= 6,
         consciousness: None,
@@ -161,8 +161,8 @@ fn injure_tactical_crew(
 
 /// Health routing shared by chassis-specific damage resolvers.
 pub(super) enum PilotInjury {
-    Tactical(BattlePilotInjury),
-    Character(super::BattleCharacterPilotInjury),
+    Tactical(TacticalPilotInjury),
+    Character(super::CharacterPilotInjury),
 }
 
 /// Select character health only for an assigned in-character pilot; virtual crews remain tactical.
@@ -198,15 +198,15 @@ pub(super) fn injure_in_candidate(
 
 /// Material damage plus applied tactical pilot injuries; unresolved effects remain explicit.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleTacticalImpact {
-    pub impact: super::BattleImpactReport,
-    pub pilot_injuries: Vec<BattlePilotInjury>,
+pub struct TacticalImpact {
+    pub impact: super::ImpactReport,
+    pub pilot_injuries: Vec<TacticalPilotInjury>,
     /// Private balance feedback ordered within this impact cascade.
-    pub pilot_notices: Vec<super::BattlePilotNotice>,
-    pub notices: Vec<BattleNotice>,
+    pub pilot_notices: Vec<super::PilotNotice>,
+    pub notices: Vec<Notice>,
     /// Ordered immediate balance checks and any completed falls.
-    pub balance: Vec<super::BattleBalanceReport>,
-    pub flooding: Vec<super::BattleSectionExposureReport>,
+    pub balance: Vec<super::BalanceReport>,
+    pub flooding: Vec<super::SectionExposureReport>,
 }
 
 /// Compose a conventional impact and surviving-pilot injuries in one candidate world.
@@ -214,10 +214,10 @@ pub struct BattleTacticalImpact {
 pub fn resolve_tactical_impact(
     world: &mut World,
     id: ObjectId,
-    hit: super::BattleHit,
+    hit: super::Hit,
     damage: u16,
-    rules: super::BattleFallRules,
-) -> Result<BattleTacticalImpact> {
+    rules: super::FallRules,
+) -> Result<TacticalImpact> {
     world.attempt(|world| {
         let report = resolve_tactical_impact_in_candidate(world, id, hit, damage, rules, None)?;
         Ok(report)
@@ -228,11 +228,11 @@ pub fn resolve_tactical_impact(
 pub(super) fn resolve_tactical_impact_in_candidate(
     world: &mut World,
     id: ObjectId,
-    hit: super::BattleHit,
+    hit: super::Hit,
     damage: u16,
-    rules: super::BattleFallRules,
+    rules: super::FallRules,
     weapon_effect: Option<super::impact::WeaponEffect>,
-) -> Result<BattleTacticalImpact> {
+) -> Result<TacticalImpact> {
     ensure!(
         world
             .objects
@@ -255,7 +255,7 @@ pub(super) fn set_administrative_injuries(
     world: &mut World,
     id: ObjectId,
     value: &str,
-) -> Result<Option<BattleNotice>> {
+) -> Result<Option<Notice>> {
     let injuries = value
         .trim()
         .parse::<u8>()

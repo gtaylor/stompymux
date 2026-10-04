@@ -1,26 +1,26 @@
 //! The read-only perception summary printed by the `sensor` command and returned to Lua.
-use super::{BattlePerceptionProfile, BattlePerceptionStatus, perception_profile};
-use crate::btech::{BattleLight, BattlePower};
+use super::{PerceptionProfile, PerceptionStatus, perception_profile};
+use crate::btech::{Light, Power};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result};
 use serde::Serialize;
 
 /// A unit's perception systems together with the text the `sensor` command prints.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct BattlePerceptionReport {
+pub struct PerceptionReport {
     #[serde(flatten)]
-    pub profile: BattlePerceptionProfile,
+    pub profile: PerceptionProfile,
     /// Whether the unit is running; stopped units perceive nothing.
     pub running: bool,
     pub text: String,
 }
 
 /// Summarize how far and by what means a placed unit can currently perceive.
-pub fn perception_report(world: &World, id: ObjectId) -> Result<BattlePerceptionReport> {
+pub fn perception_report(world: &World, id: ObjectId) -> Result<PerceptionReport> {
     let unit =
         crate::btech::scanner::scanner_unit(world, id).context("Enter a constructed unit first")?;
     unit.position.context("Unit is not on a battlefield")?;
-    let running = unit.power == BattlePower::Running;
+    let running = unit.power == Power::Running;
     let profile = perception_profile(world, id)?;
     let mut lines = vec![
         sensors_line(&profile),
@@ -31,7 +31,7 @@ pub fn perception_report(world: &World, id: ObjectId) -> Result<BattlePerception
     if !running {
         lines.push("Your unit is shut down; nothing is perceived until it starts.".into());
     }
-    Ok(BattlePerceptionReport {
+    Ok(PerceptionReport {
         profile,
         running,
         text: lines.join("\r\n"),
@@ -39,29 +39,29 @@ pub fn perception_report(world: &World, id: ObjectId) -> Result<BattlePerception
 }
 
 /// Explain the all-conditions band, including why it is short or silent.
-fn sensors_line(profile: &BattlePerceptionProfile) -> String {
+fn sensors_line(profile: &PerceptionProfile) -> String {
     let detail = match profile.sensors {
-        BattlePerceptionStatus::Ready => {
+        PerceptionStatus::Ready => {
             format!("{} hexes in any light or weather", profile.sensor_range)
         }
-        BattlePerceptionStatus::Degraded => format!(
+        PerceptionStatus::Degraded => format!(
             "{} hexes in any light or weather (damaged)",
             profile.sensor_range
         ),
-        BattlePerceptionStatus::Jammed => "jammed by ECM, relying on sight".into(),
-        BattlePerceptionStatus::Damaged => "destroyed, relying on sight".into(),
-        BattlePerceptionStatus::Disabled => "disabled on this battlefield".into(),
-        BattlePerceptionStatus::Absent => "none".into(),
+        PerceptionStatus::Jammed => "jammed by ECM, relying on sight".into(),
+        PerceptionStatus::Damaged => "destroyed, relying on sight".into(),
+        PerceptionStatus::Disabled => "disabled on this battlefield".into(),
+        PerceptionStatus::Absent => "none".into(),
     };
     format!("Sensors: {detail}")
 }
 
 /// Explain weather reach and the night-time darkness rule.
-fn sight_line(profile: &BattlePerceptionProfile) -> String {
+fn sight_line(profile: &PerceptionProfile) -> String {
     match profile.light {
-        BattleLight::Day => format!("Sight:   {} hexes", profile.sight_range),
-        BattleLight::Twilight => format!("Sight:   {} hexes (twilight)", profile.sight_range),
-        BattleLight::Night => format!(
+        Light::Day => format!("Sight:   {} hexes", profile.sight_range),
+        Light::Twilight => format!("Sight:   {} hexes (twilight)", profile.sight_range),
+        Light::Night => format!(
             "Sight:   {} hexes at night, +1 to hit unless the target is lit; lit targets to {}",
             profile.sight_range, profile.lit_sight_range
         ),
@@ -69,7 +69,7 @@ fn sight_line(profile: &BattlePerceptionProfile) -> String {
 }
 
 /// Name the working probe, or the reason it cannot see.
-fn probe_line(profile: &BattlePerceptionProfile) -> String {
+fn probe_line(profile: &PerceptionProfile) -> String {
     let Some(probe) = profile.probe else {
         return "Probe:   none".into();
     };
@@ -82,7 +82,7 @@ fn probe_line(profile: &BattlePerceptionProfile) -> String {
 }
 
 /// Describe installed radar and its condition.
-fn radar_line(profile: &BattlePerceptionProfile) -> String {
+fn radar_line(profile: &PerceptionProfile) -> String {
     let Some(radar) = profile.radar else {
         return "Radar:   none".into();
     };
@@ -94,32 +94,32 @@ fn radar_line(profile: &BattlePerceptionProfile) -> String {
 }
 
 /// Parenthetical condition for optional equipment; working equipment needs none.
-fn status_suffix(status: BattlePerceptionStatus) -> &'static str {
+fn status_suffix(status: PerceptionStatus) -> &'static str {
     match status {
-        BattlePerceptionStatus::Ready | BattlePerceptionStatus::Absent => "",
-        BattlePerceptionStatus::Degraded => " (damaged)",
-        BattlePerceptionStatus::Jammed => " (jammed by ECM)",
-        BattlePerceptionStatus::Damaged => " (destroyed)",
-        BattlePerceptionStatus::Disabled => " (disabled on this battlefield)",
+        PerceptionStatus::Ready | PerceptionStatus::Absent => "",
+        PerceptionStatus::Degraded => " (damaged)",
+        PerceptionStatus::Jammed => " (jammed by ECM)",
+        PerceptionStatus::Damaged => " (destroyed)",
+        PerceptionStatus::Disabled => " (disabled on this battlefield)",
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::btech::{BattleActiveProbe, BattleProbeProfile, BattleRadarProfile};
+    use crate::btech::{ActiveProbe, ProbeProfile, RadarProfile};
 
-    fn profile() -> BattlePerceptionProfile {
-        BattlePerceptionProfile {
-            light: BattleLight::Night,
+    fn profile() -> PerceptionProfile {
+        PerceptionProfile {
+            light: Light::Night,
             sight_range: 10,
             lit_sight_range: 30,
             sensor_range: 15,
-            sensors: BattlePerceptionStatus::Ready,
-            probe: Some(BattleProbeProfile {
-                kind: BattleActiveProbe::Beagle,
+            sensors: PerceptionStatus::Ready,
+            probe: Some(ProbeProfile {
+                kind: ActiveProbe::Beagle,
                 range: 6,
-                status: BattlePerceptionStatus::Jammed,
+                status: PerceptionStatus::Jammed,
             }),
             radar: None,
             clairvoyant: false,
@@ -146,13 +146,13 @@ mod tests {
             "Probe:   Beagle Active Probe, 6 hexes (jammed by ECM)"
         );
         assert_eq!(radar_line(&profile), "Radar:   none");
-        let jammed = BattlePerceptionProfile {
-            sensors: BattlePerceptionStatus::Jammed,
+        let jammed = PerceptionProfile {
+            sensors: PerceptionStatus::Jammed,
             sensor_range: 0,
-            light: BattleLight::Day,
-            radar: Some(BattleRadarProfile {
+            light: Light::Day,
+            radar: Some(RadarProfile {
                 range: 180,
-                status: BattlePerceptionStatus::Ready,
+                status: PerceptionStatus::Ready,
             }),
             ..profile
         };

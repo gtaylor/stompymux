@@ -1,8 +1,8 @@
 //! Effective speed from shared load accounting and chassis-specific propulsion and map rules.
-use super::{BattleUnit, StoredMap};
+use super::{Mech, StoredMap};
 use anyhow::Result;
 
-impl BattleUnit {
+impl Mech {
     /// Maximum used by classic gunnery XP, derived from current mass and template speed.
     /// This unit-local query excludes external load; world load queries include towing.
     /// Damage-only mobility and throttle limits remain separate.
@@ -10,7 +10,7 @@ impl BattleUnit {
     pub fn effective_maximum_speed(&self, map: Option<&StoredMap>) -> Result<f64> {
         self.effective_speed_with_load(
             map,
-            super::BattleUnitLoad {
+            super::UnitLoad {
                 nominal_tons: self.definition().tons,
                 material_mass: self.effective_mass()?,
                 carried_mass: 0,
@@ -24,7 +24,7 @@ impl BattleUnit {
     pub(super) fn effective_speed_with_load(
         &self,
         map: Option<&StoredMap>,
-        load: super::BattleUnitLoad,
+        load: super::UnitLoad,
         maximum: f64,
     ) -> Result<f64> {
         let speed = super::speed_bonus::SpeedBonuses {
@@ -83,7 +83,7 @@ pub(crate) fn configured(
 mod tests {
     /// Exercise the shared load calculator with no external load.
     fn mass_speed(tons: u16, mass: u32, maximum: f64, destroyed: bool) -> f32 {
-        super::super::BattleUnitLoad {
+        super::super::UnitLoad {
             nominal_tons: tons,
             material_mass: mass,
             carried_mass: 0,

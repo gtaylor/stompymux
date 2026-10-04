@@ -5,19 +5,19 @@ use anyhow::{Context, Result, ensure};
 
 /// A validated spotter and its currently acquired unit target; no dice or derived aim is stored.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct BattleSpotterTarget {
+pub struct SpotterTarget {
     pub spotter: ObjectId,
     pub target: ObjectId,
 }
 
-impl BattleUnit {
+impl Mech {
     /// Self-selection declares this unit a spotter; another ID selects a forward observer.
     pub fn spotter(&self) -> Option<ObjectId> {
         self.spotter
     }
 
     /// Read pending radio connections and periodic checks without advancing their clocks.
-    pub fn spotter_events(&self) -> &super::BattleSpotterEvents {
+    pub fn spotter_events(&self) -> &super::SpotterEvents {
         &self.spotter_events
     }
 
@@ -32,14 +32,14 @@ impl BattleUnit {
     }
 }
 
-impl BattleVehicle {
+impl Vehicle {
     /// Self-selection declares this unit a spotter; another ID selects its observer.
     pub fn spotter(&self) -> Option<ObjectId> {
         self.spotter
     }
 
     /// Read pending radio connections and periodic checks without advancing their clocks.
-    pub fn spotter_events(&self) -> &super::BattleSpotterEvents {
+    pub fn spotter_events(&self) -> &super::SpotterEvents {
         &self.spotter_events
     }
 
@@ -58,8 +58,8 @@ impl BattleVehicle {
 fn check_fire(
     spotter: Option<ObjectId>,
     id: ObjectId,
-    weapon: BattleWeapon,
-    ammunition: BattleAmmunitionMode,
+    weapon: Weapon,
+    ammunition: AmmunitionMode,
 ) -> Result<()> {
     check_role(spotter, id)?;
     ensure!(
@@ -88,13 +88,13 @@ pub(super) fn selected(world: &World, id: ObjectId) -> Option<ObjectId> {
         .btech
         .vehicles()
         .get(&id)
-        .and_then(BattleVehicle::spotter)
+        .and_then(Vehicle::spotter)
         .or_else(|| {
             world
                 .btech
                 .constructed_units()
                 .get(&id)
-                .and_then(BattleUnit::spotter)
+                .and_then(Mech::spotter)
         })
 }
 
@@ -105,7 +105,7 @@ pub(super) fn indirect_aim(
     target: ObjectId,
     index: usize,
     fasa_turning: bool,
-) -> Result<Option<BattleIndirectAim>> {
+) -> Result<Option<IndirectAim>> {
     let Some(link) = indirect_target_for_source(world, source, index)? else {
         return Ok(None);
     };
@@ -121,11 +121,11 @@ pub(super) fn observer_aim(
     world: &World,
     spotter: ObjectId,
     fasa_turning: bool,
-) -> Result<BattleIndirectAim> {
+) -> Result<IndirectAim> {
     let movement = crate::btech::with_unit!(world.btech.unit(spotter).unwrap(), |unit| {
         unit.attacker_movement_modifier(fasa_turning)
     });
-    Ok(BattleIndirectAim {
+    Ok(IndirectAim {
         spotter,
         spotting: super::skills::unit_spotting_target(world, spotter)?,
         movement,
@@ -145,10 +145,10 @@ pub fn select_spotter(
     id: ObjectId,
     pilot: ObjectId,
     selected: Option<ObjectId>,
-) -> Result<Vec<BattleNotice>> {
+) -> Result<Vec<Notice>> {
     power::controlled(world, id, pilot)?;
     let unit = super::scanner::scanner_unit(world, id).context("Unit is unavailable")?;
-    ensure!(unit.power == BattlePower::Running, "Start the unit first");
+    ensure!(unit.power == Power::Running, "Start the unit first");
     let text = match selected {
         None => {
             if self::selected(world, id) == Some(id) {
@@ -187,17 +187,17 @@ pub fn select_spotter(
                 let range = super::unit_range(world, id, target)?.spatial;
                 let maximum = 2.0 * f64::from(super::unit_radio_capabilities(world, target)?.range);
                 let mut notices = vec![
-                    BattleNotice {
+                    Notice {
                         unit: target,
                         text: "Someone is trying to establish a data link with you!".into(),
                     },
-                    BattleNotice {
+                    Notice {
                         unit: id,
                         text: "You attempt to establish a data link..... please stand by.".into(),
                     },
                 ];
                 if range > maximum {
-                    notices.push(BattleNotice {
+                    notices.push(Notice {
                         unit: id,
                         text: "That target is our of data link range!".into(),
                     });
@@ -214,16 +214,16 @@ pub fn select_spotter(
     crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
         unit.spotter = selected;
     });
-    Ok(vec![BattleNotice { unit: id, text }])
+    Ok(vec![Notice { unit: id, text }])
 }
 
 /// Resolve a selected observer's unit target without requiring that the firer see the target.
 /// The initial firer-to-observer contact is only required when establishing the direct link.
-pub fn spotter_target(world: &World, firer: ObjectId) -> Result<BattleSpotterTarget> {
+pub fn spotter_target(world: &World, firer: ObjectId) -> Result<SpotterTarget> {
     let spotter = active_observer(world, firer)?;
     let target = match super::targeting::selection(world, spotter) {
-        Some(BattleTargetSelection::Unit(lock)) => lock.target,
-        Some(BattleTargetSelection::Hex(lock)) => super::hex_occupant(world, firer, lock.hex)?
+        Some(TargetSelection::Unit(lock)) => lock.target,
+        Some(TargetSelection::Hex(lock)) => super::hex_occupant(world, firer, lock.hex)?
             .context("Your spotter's hex is empty; no unit target is available")?,
         None => anyhow::bail!("Your spotter has no target set!"),
     };
@@ -231,14 +231,14 @@ pub fn spotter_target(world: &World, firer: ObjectId) -> Result<BattleSpotterTar
         visible_contact(world, spotter, target)?.is_some(),
         "Your spotter does not have a target in LOS!"
     );
-    Ok(BattleSpotterTarget { spotter, target })
+    Ok(SpotterTarget { spotter, target })
 }
 
 /// Coordinate spotting omits the observer's terrain aim contribution and spotting awards.
 pub(super) fn coordinate_target(world: &World, observer: ObjectId) -> bool {
     matches!(
         super::targeting::selection(world, observer),
-        Some(BattleTargetSelection::Hex(_))
+        Some(TargetSelection::Hex(_))
     )
 }
 
@@ -264,7 +264,7 @@ pub(super) fn active_observer(world: &World, firer: ObjectId) -> Result<ObjectId
         "You do not have a spotter!"
     );
     ensure!(
-        observer.power == BattlePower::Running && !observer.destroyed,
+        observer.power == Power::Running && !observer.destroyed,
         "Spotter is unavailable"
     );
     ensure!(
@@ -280,12 +280,12 @@ pub(super) fn active_observer(world: &World, firer: ObjectId) -> Result<ObjectId
             .btech
             .vehicles()
             .get(&spotter)
-            .and_then(BattleVehicle::pilot)
+            .and_then(Vehicle::pilot)
             .or_else(|| world
                 .btech
                 .constructed_units()
                 .get(&spotter)
-                .and_then(BattleUnit::pilot))
+                .and_then(Mech::pilot))
             .is_some_and(|pilot| world.btech.unconscious(pilot)),
         "Your spotter is unconscious!"
     );
@@ -297,7 +297,7 @@ pub(super) fn indirect_target_for_source(
     world: &World,
     source: super::fire_target::TargetSource,
     index: usize,
-) -> Result<Option<BattleSpotterTarget>> {
+) -> Result<Option<SpotterTarget>> {
     let firer = source.unit;
     ensure!(
         super::scanner::scanner_unit(world, firer).is_some(),
@@ -320,10 +320,7 @@ fn uses_observer(
     Ok(weapon.supports_indirect_ammunition(ammunition)
         && !weapon.is_artillery()
         && selected(world, firer).is_some()
-        && !matches!(
-            source.selection(world),
-            Some(BattleTargetSelection::Unit(_))
-        ))
+        && !matches!(source.selection(world), Some(TargetSelection::Unit(_))))
 }
 
 /// Resolve observer participation using the unit's lock and datalink.
@@ -337,8 +334,7 @@ pub(super) fn indirect_hex_for_source(
         return Ok(None);
     }
     let observer = active_observer(world, firer)?;
-    let Some(BattleTargetSelection::Hex(lock)) = super::targeting::selection(world, observer)
-    else {
+    let Some(TargetSelection::Hex(lock)) = super::targeting::selection(world, observer) else {
         return Ok(None);
     };
     if super::hex_occupant(world, firer, lock.hex)?.is_some() {
@@ -370,9 +366,9 @@ pub(super) fn check_indirect_water(
 pub(super) fn award_indirect_experience(
     world: &mut World,
     firer: ObjectId,
-    link: BattleSpotterTarget,
-    aim: &mut BattleAimModifiers,
-) -> Result<Vec<BattleChannelMessage>> {
+    link: SpotterTarget,
+    aim: &mut AimModifiers,
+) -> Result<Vec<DiagnosticMessage>> {
     if coordinate_target(world, link.spotter) {
         return Ok(Vec::new());
     }
@@ -381,13 +377,13 @@ pub(super) fn award_indirect_experience(
         (
             link.spotter,
             "Gunnery-Spotting",
-            BattleChannel::Experience,
+            DiagnosticChannel::Experience,
             "spotting XP",
         ),
         (
             firer,
             "Gunnery-Artillery",
-            BattleChannel::AttackExperience,
+            DiagnosticChannel::AttackExperience,
             "1 artillery XP",
         ),
     ] {
@@ -416,7 +412,7 @@ pub(super) fn award_indirect_experience(
         let award =
             award_skill_experience(world, pilot, skill, 1, crate::clock::wall_time(), false)?;
         if award.accepted {
-            messages.push(BattleChannelMessage::new(
+            messages.push(DiagnosticMessage::new(
                 channel,
                 format!("{} gained {description}", world.objects[&pilot].name),
             ));
@@ -434,7 +430,7 @@ pub(super) fn installation(
     world: &World,
     id: ObjectId,
     index: usize,
-) -> Result<(BattleWeapon, BattleAmmunitionMode)> {
+) -> Result<(Weapon, AmmunitionMode)> {
     let unit = world.btech.unit(id).context("Unit is not constructed")?;
     Ok((
         unit.weapon_readiness(index)?.weapon,
@@ -487,17 +483,13 @@ mod tests {
     /// Rockets can use observer coordination without gaining switchable hotload or semi-guided modes.
     #[test]
     fn spotter_indirect_profiles_do_not_enable_rocket_ammunition_modes() {
-        for weapon in [
-            BattleWeapon::Rocket10,
-            BattleWeapon::Rocket15,
-            BattleWeapon::Rocket20,
-        ] {
+        for weapon in [Weapon::Rocket10, Weapon::Rocket15, Weapon::Rocket20] {
             assert!(weapon.supports_indirect_fire());
             assert!(!weapon.supports_hotload());
             assert!(!weapon.supports_semiguided());
         }
-        assert!(!BattleWeapon::MediumLaser.supports_indirect_fire());
-        assert!(BattleWeapon::Lrm5.supports_indirect_fire());
-        assert!(BattleWeapon::Lrm5.supports_semiguided());
+        assert!(!Weapon::MediumLaser.supports_indirect_fire());
+        assert!(Weapon::Lrm5.supports_indirect_fire());
+        assert!(Weapon::Lrm5.supports_semiguided());
     }
 }

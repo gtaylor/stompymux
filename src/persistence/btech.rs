@@ -46,7 +46,7 @@ pub(super) async fn load(c: &mut SqliteConnection) -> Result<BtechState> {
                 landing_exclusion_order: Default::default(),
                 minefields: Default::default(),
             minefield_order: Default::default(),
-                building: crate::BattleBuildingState {
+                building: crate::BuildingState {
                     integrity: row.try_get("cf")?,
                     maximum_integrity: row.try_get("cf_max")?,
                     flags: row.try_get("build_flag")?,

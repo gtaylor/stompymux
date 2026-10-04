@@ -1,7 +1,7 @@
 //! Conventional weapon aim combines range, movement, equipment, perception and target settling.
 use super::{
-    BattlePrecisionAim, BattleSection, BattleSemiGuidedAim, BattleStealthRange, BattleSystem,
-    BattleUnit, BattleWeapon, BattleWeaponRange, CriticalLocation,
+    CriticalLocation, Mech, MechSection, PrecisionAim, SemiGuidedAim, StealthRange, System, Weapon,
+    WeaponRange,
 };
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
@@ -9,7 +9,7 @@ use serde::Serialize;
 
 /// Game configuration affecting the supported movement and range contributions.
 #[derive(Debug, Clone, Copy)]
-pub struct BattleAimRules {
+pub struct AimRules {
     /// Select the woods-damage variant's occupied-forest accuracy calculation.
     pub woods_damage: bool,
     /// Target cover modifier, bounded to the signed modifier range by configuration.
@@ -26,7 +26,7 @@ pub struct BattleAimRules {
     pub override_weapon_arcs: bool,
 }
 
-impl BattleAimRules {
+impl AimRules {
     /// Shared live-game policy for weapon previews and firing adapters.
     pub(crate) fn configured(config: &crate::config::BattleTechConfig) -> Self {
         Self {
@@ -47,9 +47,9 @@ impl BattleAimRules {
 
 /// How the aiming unit currently perceives its target and what that costs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-pub struct BattlePerceptionAim {
+pub struct PerceptionAim {
     /// Absent only for a clairvoyant view of a target nobody has acquired.
-    pub channel: Option<super::BattleDetectionChannel>,
+    pub channel: Option<super::DetectionChannel>,
     /// Terrain leaves a line of fire; probe contacts behind hills need indirect fire.
     pub direct_fire: bool,
     pub modifier: i16,
@@ -57,14 +57,14 @@ pub struct BattlePerceptionAim {
 
 /// Additional observer contributions to a conventional indirect shot.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-pub struct BattleIndirectAim {
+pub struct IndirectAim {
     pub spotter: ObjectId,
     pub spotting: i16,
     pub movement: u8,
     pub target_lock: u8,
 }
 
-impl BattleIndirectAim {
+impl IndirectAim {
     /// Coordination costs one, with the observer's skill measured against target four.
     pub fn modifier(self) -> i32 {
         1 + i32::from(self.spotting) - 4 + i32::from(self.movement) + i32::from(self.target_lock)
@@ -73,16 +73,16 @@ impl BattleIndirectAim {
 
 /// An inspectable subtotal, not firing permission; posture and advanced equipment remain separate.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct BattleAimModifiers {
+pub struct AimModifiers {
     /// Coolant self-application does not require an acquired contact.
     pub self_target: bool,
     /// Observer sensor aim replaces the firing unit sensor aim when present.
-    pub indirect: Option<BattleIndirectAim>,
+    pub indirect: Option<IndirectAim>,
     pub gunnery: i16,
     pub distance: f64,
     /// Active command-network range calculation, independent of physical distance and visibility permission.
-    pub network_range: Option<super::BattleNetworkRange>,
-    pub range: Option<BattleWeaponRange>,
+    pub network_range: Option<super::NetworkRange>,
+    pub range: Option<WeaponRange>,
     pub attacker_movement: u8,
     /// Firing at a unit while below the surface in water.
     pub attacker_water: u8,
@@ -114,10 +114,10 @@ pub struct BattleAimModifiers {
     pub aimed_section: i8,
     pub target_lock: u8,
     /// None means the aiming unit has no acquired contact it can currently perceive.
-    pub perception: Option<BattlePerceptionAim>,
+    pub perception: Option<PerceptionAim>,
 }
 
-impl BattleAimModifiers {
+impl AimModifiers {
     /// Sum supported contributions only; unseen or out-of-range shots have no subtotal.
     pub fn subtotal(&self) -> Option<i32> {
         let perception = if self.self_target {
@@ -152,12 +152,12 @@ impl BattleAimModifiers {
                 + i32::from(self.aimed_section)
                 + i32::from(self.target_lock)
                 + i32::from(perception)
-                + self.indirect.map_or(0, BattleIndirectAim::modifier),
+                + self.indirect.map_or(0, IndirectAim::modifier),
         )
     }
 }
 
-impl BattleUnit {
+impl Mech {
     /// Jumping and stabilization precede ground speed and the template's walking threshold.
     pub fn attacker_movement_modifier(&self, fasa_turning: bool) -> u8 {
         if self.airborne() {
@@ -166,11 +166,8 @@ impl BattleUnit {
         if self.jump_stabilization() > 0 {
             return 2;
         }
-        if self.posture() == super::BattlePosture::Prone
-            || matches!(
-                self.stand_timer(),
-                Some(super::BattleStandTimer::Rising { .. })
-            )
+        if self.posture() == super::Posture::Prone
+            || matches!(self.stand_timer(), Some(super::StandTimer::Rising { .. }))
         {
             return 2;
         }
@@ -184,9 +181,9 @@ impl BattleUnit {
     }
 
     /// Derive section accuracy penalties without accumulating hit-order-dependent modifiers.
-    pub fn mounting_modifier(&self, section: BattleSection) -> u8 {
+    pub fn mounting_modifier(&self, section: MechSection) -> u8 {
         let leg = self.chassis().is_leg(section);
-        let arm = !leg && matches!(section, BattleSection::LeftArm | BattleSection::RightArm);
+        let arm = !leg && matches!(section, MechSection::LeftArm | MechSection::RightArm);
         if !arm && !leg {
             return 0;
         }
@@ -199,29 +196,23 @@ impl BattleUnit {
                     slot: **slot,
                 })
             })
-            .filter_map(|(_, critical)| BattleSystem::named(&critical.equipment))
+            .filter_map(|(_, critical)| System::named(&critical.equipment))
             .collect();
-        if damaged.contains(&BattleSystem::ShoulderOrHip) {
+        if damaged.contains(&System::ShoulderOrHip) {
             return if arm { 4 } else { 0 };
         }
         damaged
             .iter()
             .filter(|system| {
-                matches!(
-                    system,
-                    BattleSystem::UpperActuator | BattleSystem::LowerActuator
-                ) || (leg && **system == BattleSystem::HandOrFootActuator)
+                matches!(system, System::UpperActuator | System::LowerActuator)
+                    || (leg && **system == System::HandOrFootActuator)
             })
             .count() as u8
     }
 }
 
 /// Ground firing penalties use the construction's walking threshold, including after motive damage.
-fn ground_attacker_movement(
-    motion: Option<super::BattleMotion>,
-    maximum: f64,
-    fasa_turning: bool,
-) -> u8 {
+fn ground_attacker_movement(motion: Option<super::Motion>, maximum: f64, fasa_turning: bool) -> u8 {
     let Some(motion) = motion else {
         return 0;
     };
@@ -235,7 +226,7 @@ fn ground_attacker_movement(
     turning + 1
 }
 
-impl super::BattleVehicle {
+impl super::Vehicle {
     /// Ground speed and optional hull-turn penalty; turret rotation does not add a movement penalty.
     pub fn attacker_movement_modifier(&self, fasa_turning: bool) -> u8 {
         ground_attacker_movement(self.motion(), self.template_speed(), fasa_turning)
@@ -290,7 +281,7 @@ pub fn unit_target_movement_modifier(
     Ok(
         target_motion(speed, extended) + i8::from(defender.airborne())
             - if immobile { 4 } else { 0 }
-            + if defender.posture() == super::BattlePosture::Prone {
+            + if defender.posture() == super::Posture::Prone {
                 if distance <= 1.0 { -2 } else { 1 }
             } else {
                 0
@@ -325,27 +316,24 @@ pub(super) fn perception_aim(
     viewer: ObjectId,
     target: ObjectId,
     coordinate_spotting: bool,
-) -> Result<Option<BattlePerceptionAim>> {
+) -> Result<Option<PerceptionAim>> {
     let attacker = super::scanner::scanner_unit(world, viewer).context("Shooter is unavailable")?;
-    if attacker.power != super::BattlePower::Running {
+    if attacker.power != super::Power::Running {
         return Ok(None);
     }
     // Visibility privileges do not fabricate an acquisition: the shot is effectively impossible.
-    let unacquired = attacker
-        .visibility
-        .clairvoyant
-        .then_some(BattlePerceptionAim {
-            channel: None,
-            direct_fire: true,
-            modifier: 10_000,
-        });
+    let unacquired = attacker.visibility.clairvoyant.then_some(PerceptionAim {
+        channel: None,
+        direct_fire: true,
+        modifier: 10_000,
+    });
     if !attacker.contacts.contains_key(&target) {
         return Ok(unacquired);
     }
     let Some(perception) = super::perceive(world, viewer, target)? else {
         return Ok(unacquired);
     };
-    Ok(Some(BattlePerceptionAim {
+    Ok(Some(PerceptionAim {
         channel: Some(perception.channel),
         direct_fire: perception.identified,
         modifier: if coordinate_spotting {
@@ -358,7 +346,7 @@ pub(super) fn perception_aim(
 
 /// Shared firing admission: the target must be a perceived contact, and a direct shot needs a
 /// line of fire. Self-applied coolant needs neither.
-pub(super) fn ensure_perceived(aim: &BattleAimModifiers) -> Result<()> {
+pub(super) fn ensure_perceived(aim: &AimModifiers) -> Result<()> {
     if aim.self_target {
         return Ok(());
     }
@@ -384,7 +372,7 @@ pub(super) fn lock_modifier(
     }
     let shooter = source.unit;
     let selection = source.selection(world);
-    if matches!(selection, Some(super::BattleTargetSelection::Unit(lock)) if lock.target == target && (lock.remaining == 0 || super::targeting_mode::mode(world, shooter) == 3))
+    if matches!(selection, Some(super::TargetSelection::Unit(lock)) if lock.target == target && (lock.remaining == 0 || super::targeting_mode::mode(world, shooter) == 3))
     {
         return Ok(0);
     }
@@ -406,10 +394,10 @@ pub(super) fn selected_front(
         .heading
         .context("Shooter has no battlefield motion")?;
     let bearing = match source.selection(world) {
-        Some(super::BattleTargetSelection::Unit(lock)) => {
+        Some(super::TargetSelection::Unit(lock)) => {
             super::unit_range(world, shooter, lock.target)?.bearing
         }
-        Some(super::BattleTargetSelection::Hex(lock)) => attacker
+        Some(super::TargetSelection::Hex(lock)) => attacker
             .point
             .context("Shooter has no battlefield motion")?
             .bearing(lock.hex.center())?,
@@ -417,8 +405,8 @@ pub(super) fn selected_front(
     }
     .unwrap_or(180.0);
     Ok(Some(
-        super::BattleSensorArc::from_bearing(bearing, heading, attacker.facing)?
-            == super::BattleSensorArc::Front,
+        super::SensorArc::from_bearing(bearing, heading, attacker.facing)?
+            == super::SensorArc::Front,
     ))
 }
 
@@ -429,8 +417,8 @@ pub fn aim_modifiers(
     target: ObjectId,
     weapon_index: usize,
     gunnery: i16,
-    rules: BattleAimRules,
-) -> Result<BattleAimModifiers> {
+    rules: AimRules,
+) -> Result<AimModifiers> {
     aim_modifiers_for_source(world, shooter.into(), target, weapon_index, gunnery, rules)
 }
 
@@ -442,8 +430,8 @@ pub(super) fn aim_modifiers_for_source(
     target: ObjectId,
     weapon_index: usize,
     gunnery: i16,
-    rules: BattleAimRules,
-) -> Result<BattleAimModifiers> {
+    rules: AimRules,
+) -> Result<AimModifiers> {
     let shooter = source.unit;
     if world.btech.vehicles().contains_key(&shooter) {
         return super::vehicle_aim::modifiers(world, source, target, weapon_index, gunnery, rules);
@@ -501,7 +489,7 @@ pub(super) fn aim_modifiers_for_source(
         .accuracy(modifiers.range.map(|range| range.bracket));
     super::aimed_target::apply_aim(world, shooter, target, mount.weapon, &mut modifiers)?;
     modifiers.attacker_water = water_modifier(world, shooter)?;
-    modifiers.self_target = shooter == target && mount.weapon == BattleWeapon::CoolantGun;
+    modifiers.self_target = shooter == target && mount.weapon == Weapon::CoolantGun;
     modifiers.indirect = indirect;
     modifiers.range = modifiers
         .range
@@ -536,13 +524,13 @@ pub(super) fn aim_modifiers_for_source(
 
 /// Weapon, movement and equipment terms shared by unit and terrain targets.
 pub(super) fn weapon_modifiers(
-    attacker: &BattleUnit,
+    attacker: &Mech,
     weapon_index: usize,
     mount: &super::WeaponMount,
     distance: f64,
     gunnery: i16,
-    rules: BattleAimRules,
-) -> Result<BattleAimModifiers> {
+    rules: AimRules,
+) -> Result<AimModifiers> {
     let ammunition = attacker.ammunition_mode(weapon_index)?;
     let mut aim = weapon_base(
         mount.weapon,
@@ -557,20 +545,20 @@ pub(super) fn weapon_modifiers(
         .accuracy(aim.range.map(|range| range.bracket));
     aim.attacker_movement = attacker.attacker_movement_modifier(rules.fasa_turning);
     aim.heat = attacker.heat().to_hit_modifier();
-    aim.sensors = match attacker.system_hits(BattleSystem::Sensors) {
+    aim.sensors = match attacker.system_hits(System::Sensors) {
         0 => 0,
         1 => 2,
         _ => 75,
     };
     aim.mounting_section = attacker.mounting_modifier(mount.criticals[0].section);
-    aim.beacon_accuracy = i8::from(attacker.has_beacon(super::BattleBeaconKind::Haywire));
+    aim.beacon_accuracy = i8::from(attacker.has_beacon(super::BeaconKind::Haywire));
     let loadout = attacker.loadout()?;
     if mount.computer_assists(
         ammunition,
         loadout
             .systems
             .iter()
-            .filter(|part| part.system == BattleSystem::TargetingComputer)
+            .filter(|part| part.system == System::TargetingComputer)
             .map(|part| !attacker.critical_unavailable(part.location)),
     ) {
         aim.targeting_computer = -1;
@@ -580,14 +568,14 @@ pub(super) fn weapon_modifiers(
 
 /// Target-independent weapon arithmetic shared by every supported chassis and target kind.
 pub(super) fn weapon_base(
-    weapon: super::BattleWeapon,
+    weapon: super::Weapon,
     distance: f64,
     gunnery: i16,
-    rules: BattleAimRules,
-    fire_mode: super::BattleFireMode,
-    ammunition: super::BattleAmmunitionMode,
-) -> Result<BattleAimModifiers> {
-    Ok(BattleAimModifiers {
+    rules: AimRules,
+    fire_mode: super::FireMode,
+    ammunition: super::AmmunitionMode,
+) -> Result<AimModifiers> {
+    Ok(AimModifiers {
         self_target: false,
         indirect: None,
         gunnery,
@@ -614,8 +602,8 @@ pub(super) fn weapon_base(
         weapon_damage: 0,
         beacon_accuracy: 0,
         ammunition_accuracy: match ammunition {
-            super::BattleAmmunitionMode::Cluster => -1,
-            super::BattleAmmunitionMode::ArmorPiercing => 1,
+            super::AmmunitionMode::Cluster => -1,
+            super::AmmunitionMode::ArmorPiercing => 1,
             _ => 0,
         },
         targeting_computer: 0,
@@ -634,23 +622,19 @@ pub fn pilot_aim_modifiers(
     target: ObjectId,
     weapon_index: usize,
     extended_gunnery: bool,
-    rules: BattleAimRules,
-) -> Result<BattleAimModifiers> {
+    rules: AimRules,
+) -> Result<AimModifiers> {
     let gunnery = super::unit_gunnery_target(world, shooter, weapon_index, extended_gunnery)?;
     aim_modifiers(world, shooter, target, weapon_index, gunnery, rules)
 }
 
 /// Close-range target movement for grounded biped physical attacks.
 /// Eligibility rejects airborne targets before this calculation; immobility stacks with posture.
-pub(super) fn ground_physical_target_modifier(
-    world: &World,
-    target: &BattleUnit,
-    extended: bool,
-) -> i8 {
+pub(super) fn ground_physical_target_modifier(world: &World, target: &Mech, extended: bool) -> i8 {
     let immobile = super::aimed_target::mech_immobile(world, target);
     target_motion(target.motion().map_or(0.0, |motion| motion.speed), extended)
         - if immobile { 4 } else { 0 }
-        - if target.posture() == super::BattlePosture::Prone {
+        - if target.posture() == super::Posture::Prone {
             2
         } else {
             0
@@ -694,10 +678,10 @@ pub(super) fn target_modifiers(
     world: &World,
     shooter: ObjectId,
     target: ObjectId,
-    weapon: BattleWeapon,
-    ammunition: super::BattleAmmunitionMode,
+    weapon: Weapon,
+    ammunition: super::AmmunitionMode,
     distance: f64,
-    rules: BattleAimRules,
+    rules: AimRules,
 ) -> Result<TargetAimModifiers> {
     let attacker = super::scanner::scanner_unit(world, shooter)
         .context("Shooter construction is unavailable")?;
@@ -709,11 +693,11 @@ pub(super) fn target_modifiers(
         distance,
         rules.extended_movement,
     )?);
-    let artemis_v_guided = ammunition.munition() == super::BattleAmmunitionMode::Artemis
+    let artemis_v_guided = ammunition.munition() == super::AmmunitionMode::Artemis
         && super::artemis::artemis_v(world, shooter)
         && !super::electronic_field(world, shooter)?.blocks_outgoing_guidance()
         && !super::electronic_field(world, target)?.blocks_incoming_guidance();
-    let friendly_tag = ammunition.munition() == super::BattleAmmunitionMode::SemiGuided
+    let friendly_tag = ammunition.munition() == super::AmmunitionMode::SemiGuided
         && super::tagged_by(world, target).is_some_and(|tagger| {
             tagger != shooter
                 && super::scanner::scanner_unit(world, tagger)
@@ -727,7 +711,7 @@ pub(super) fn target_modifiers(
     let flying = aircraft.is_some_and(|flight| {
         matches!(
             flight.phase,
-            super::BattleVtolFlightPhase::Airborne | super::BattleVtolFlightPhase::Falling
+            super::VtolFlightPhase::Airborne | super::VtolFlightPhase::Falling
         )
     });
     let moving_aircraft =
@@ -747,13 +731,13 @@ pub(super) fn target_modifiers(
             0
         },
         orbital_drop: super::orbital_drop_state::current(world, target)
-            .map_or(0, super::BattleOrbitalDrop::target_modifier),
+            .map_or(0, super::OrbitalDrop::target_modifier),
         movement: ammunition.tag_movement_modifier(movement, friendly_tag)
             + i8::from(moving_aircraft),
         // Homing beacons and Artemis V guidance each make the shot one easier.
         beacon_accuracy: -i8::from(
-            super::narc::has_beacon(world, target, super::BattleBeaconKind::Homing)
-                && ammunition.munition() == super::BattleAmmunitionMode::Narc
+            super::narc::has_beacon(world, target, super::BeaconKind::Homing)
+                && ammunition.munition() == super::AmmunitionMode::Narc
                 && !weapon.is_narc(),
         ) - i8::from(artemis_v_guided),
         concealed: defender.concealed,
@@ -781,15 +765,15 @@ pub(super) fn occupied_woods(world: &World, target: ObjectId) -> Result<i8> {
 
 /// LBX gains two more points against rotorcraft; Stinger distinguishes flight from orbital orbital descents.
 fn airborne_ammunition_adjustment(
-    ammunition: super::BattleAmmunitionMode,
+    ammunition: super::AmmunitionMode,
     rotorcraft: bool,
     flying: bool,
     cocoon: bool,
 ) -> i8 {
     match ammunition.munition() {
-        super::BattleAmmunitionMode::Cluster if rotorcraft => -2,
-        super::BattleAmmunitionMode::Stinger if flying => -3,
-        super::BattleAmmunitionMode::Stinger if cocoon => -1,
+        super::AmmunitionMode::Cluster if rotorcraft => -2,
+        super::AmmunitionMode::Stinger if flying => -3,
+        super::AmmunitionMode::Stinger if cocoon => -1,
         _ => 0,
     }
 }
@@ -800,7 +784,7 @@ mod tests {
     /// Cluster keeps its base -1 and Stinger has no extra bonus against a jumping Mech.
     #[test]
     fn airborne_ammunition_distinguishes_rotorcraft_orbital_descents_and_jumps() {
-        use super::super::BattleAmmunitionMode as Mode;
+        use super::super::AmmunitionMode as Mode;
         for (rotorcraft, flying, cocoon, cluster, stinger) in [
             (false, false, false, 0, 0),
             (true, false, false, -2, 0),

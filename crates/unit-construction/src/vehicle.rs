@@ -7,7 +7,7 @@ use std::collections::BTreeMap;
 /// Vehicle locomotion retained from assets; fixed installations and rotorcraft remain distinct.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleVehicleMovement {
+pub enum VehicleMovement {
     Tracked,
     Wheeled,
     Hover,
@@ -15,7 +15,7 @@ pub enum BattleVehicleMovement {
     Vtol,
 }
 
-impl BattleVehicleMovement {
+impl VehicleMovement {
     /// Configured control skill; fixed installations have no extended locomotion skill.
     pub fn piloting_skill(self, extended: bool) -> Option<&'static str> {
         if !extended {
@@ -50,7 +50,7 @@ impl BattleVehicleMovement {
 /// Vehicle armor faces have their own identities; they are not BattleMech limbs or torso sections.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleVehicleSection {
+pub enum VehicleSection {
     Left,
     Right,
     Front,
@@ -59,7 +59,7 @@ pub enum BattleVehicleSection {
     Rotor,
 }
 
-impl BattleVehicleSection {
+impl VehicleSection {
     /// Stable asset headings for hull faces, turrets and rotors.
     pub fn name(self) -> &'static str {
         match self {
@@ -104,20 +104,20 @@ impl BattleVehicleSection {
 
 /// A parsed vehicle asset. Equipment validation, construction and vehicle simulation are separate work.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct BattleVehicleTemplate {
+pub struct VehicleTemplate {
     pub name: String,
     pub reference: String,
-    pub movement: BattleVehicleMovement,
+    pub movement: VehicleMovement,
     pub tons: u16,
     pub max_speed: f64,
     /// Absence is preserved; the eventual engine rules determine the installed cooling.
     pub heat_sinks: Option<u16>,
-    pub sections: BTreeMap<BattleVehicleSection, SectionDefinition>,
+    pub sections: BTreeMap<VehicleSection, SectionDefinition>,
     /// Preserve unit-level fields, including cargo, specials and equipment awaiting implementation.
     pub attributes: BTreeMap<String, String>,
 }
 
-impl BattleVehicleTemplate {
+impl VehicleTemplate {
     /// Installed cooling capacity; fusion vehicles retain ten sinks when omitted or zero.
     pub fn heat_sink_capacity(&self) -> u16 {
         match self.heat_sinks.unwrap_or(0) {
@@ -151,14 +151,14 @@ impl BattleVehicleTemplate {
             if self.is_vtol() {
                 matches!(
                     self.movement,
-                    BattleVehicleMovement::Vtol | BattleVehicleMovement::Stationary
+                    VehicleMovement::Vtol | VehicleMovement::Stationary
                 )
             } else {
-                self.movement != BattleVehicleMovement::Vtol
+                self.movement != VehicleMovement::Vtol
             },
             "Vehicle type and locomotion disagree"
         );
-        let rotor = self.sections.get(&BattleVehicleSection::Rotor);
+        let rotor = self.sections.get(&VehicleSection::Rotor);
         ensure!(
             if self.is_vtol() {
                 rotor.is_some_and(|section| section.internal > 0)
@@ -169,10 +169,10 @@ impl BattleVehicleTemplate {
         );
         // Hardened armor is too heavy for craft that ride on air: hovercraft and VTOLs.
         ensure!(
-            !self.has_technology(super::BattleTechnology::HardenedArmor)
+            !self.has_technology(super::Technology::HardenedArmor)
                 || !matches!(
                     self.movement,
-                    BattleVehicleMovement::Hover | BattleVehicleMovement::Vtol
+                    VehicleMovement::Hover | VehicleMovement::Vtol
                 ),
             "Hovercraft and VTOLs cannot mount hardened armor"
         );
@@ -191,7 +191,7 @@ impl BattleVehicleTemplate {
             kind.eq_ignore_ascii_case("Vehicle") || kind.eq_ignore_ascii_case("VTOL"),
             "Expected a vehicle or VTOL template"
         );
-        let movement = BattleVehicleMovement::parse(&parsed.required("move_type")?)?;
+        let movement = VehicleMovement::parse(&parsed.required("move_type")?)?;
         let name = parsed.required("name")?;
         let reference = parsed.required("reference")?;
         let tons = parsed
@@ -218,13 +218,13 @@ impl BattleVehicleTemplate {
         let mut sections: BTreeMap<_, _> = parsed
             .sections
             .into_iter()
-            .map(|(name, section)| Ok((BattleVehicleSection::parse(&name)?, section)))
+            .map(|(name, section)| Ok((VehicleSection::parse(&name)?, section)))
             .collect::<Result<_>>()?;
         for section in [
-            BattleVehicleSection::Left,
-            BattleVehicleSection::Right,
-            BattleVehicleSection::Front,
-            BattleVehicleSection::Rear,
+            VehicleSection::Left,
+            VehicleSection::Right,
+            VehicleSection::Front,
+            VehicleSection::Rear,
         ] {
             ensure!(
                 sections

@@ -1,6 +1,6 @@
 //! The clear-line rule shared by the sensor band and sight, as a pure function of traced facts.
-use super::BattleDetectionChannel;
-use crate::btech::{BattleLight, BattleTerrainLos};
+use super::DetectionChannel;
+use crate::btech::{Light, TerrainLos};
 use anyhow::Result;
 
 /// Woods points on the path at which the line is no longer clear.
@@ -15,11 +15,11 @@ pub(super) const PARTIAL_COVER: i16 = 3;
 /// One observation's terrain trace and the observer's current reach, gathered once per pair.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(super) struct SightFacts {
-    pub terrain: BattleTerrainLos,
+    pub terrain: TerrainLos,
     pub distance: f64,
     pub target_underwater: bool,
     pub crosses_clouds: bool,
-    pub light: BattleLight,
+    pub light: Light,
     /// Weather visibility, already capped by the battlefield ceiling.
     pub sight_range: u16,
     /// Night reach to an illuminated target, already capped by the battlefield ceiling.
@@ -54,7 +54,7 @@ impl SightFacts {
 }
 
 /// Partial cover and hull-down posture, the physical cover a probe cannot see past.
-pub(super) fn partial_cover(terrain: BattleTerrainLos, hull_down: i16) -> i16 {
+pub(super) fn partial_cover(terrain: TerrainLos, hull_down: i16) -> i16 {
     if terrain.partial_cover {
         PARTIAL_COVER + hull_down
     } else {
@@ -70,41 +70,41 @@ pub(super) fn partial_cover(terrain: BattleTerrainLos, hull_down: i16) -> i16 {
 pub(super) fn perceive(
     facts: &SightFacts,
     lit: impl FnOnce() -> Result<bool>,
-) -> Result<Option<(BattleDetectionChannel, i16)>> {
+) -> Result<Option<(DetectionChannel, i16)>> {
     if !facts.clear_line() {
         return Ok(None);
     }
     let cover = facts.cover();
     if facts.sensor_range > 0 && facts.distance <= f64::from(facts.sensor_range) {
-        return Ok(Some((BattleDetectionChannel::Sensors, cover)));
+        return Ok(Some((DetectionChannel::Sensors, cover)));
     }
-    if facts.light != BattleLight::Night {
+    if facts.light != Light::Night {
         return Ok((facts.distance <= f64::from(facts.sight_range))
-            .then_some((BattleDetectionChannel::Sight, cover)));
+            .then_some((DetectionChannel::Sight, cover)));
     }
     if facts.distance > f64::from(facts.lit_sight_range.max(facts.sight_range)) {
         return Ok(None);
     }
     if lit()? {
-        return Ok(Some((BattleDetectionChannel::Sight, cover)));
+        return Ok(Some((DetectionChannel::Sight, cover)));
     }
     Ok((facts.distance <= f64::from(facts.sight_range))
-        .then_some((BattleDetectionChannel::Sight, cover + 1)))
+        .then_some((DetectionChannel::Sight, cover + 1)))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use BattleDetectionChannel::{Sensors, Sight};
+    use DetectionChannel::{Sensors, Sight};
 
     /// A clear day with thirty hexes of visibility and the default fifteen-hex band.
     fn facts(distance: f64) -> SightFacts {
         SightFacts {
-            terrain: BattleTerrainLos::default(),
+            terrain: TerrainLos::default(),
             distance,
             target_underwater: false,
             crosses_clouds: false,
-            light: BattleLight::Day,
+            light: Light::Day,
             sight_range: 30,
             lit_sight_range: 30,
             ceiling: 60,
@@ -113,7 +113,7 @@ mod tests {
         }
     }
 
-    fn resolve(facts: SightFacts, lit: bool) -> Option<(BattleDetectionChannel, i16)> {
+    fn resolve(facts: SightFacts, lit: bool) -> Option<(DetectionChannel, i16)> {
         perceive(&facts, || Ok(lit)).unwrap()
     }
 
@@ -121,7 +121,7 @@ mod tests {
     #[test]
     fn bands_follow_distance_light_and_illumination() {
         let night = |distance| SightFacts {
-            light: BattleLight::Night,
+            light: Light::Night,
             sight_range: 5,
             lit_sight_range: 15,
             sensor_range: 10,
@@ -155,7 +155,7 @@ mod tests {
             ),
             (
                 SightFacts {
-                    light: BattleLight::Twilight,
+                    light: Light::Twilight,
                     ..night(12.0)
                 },
                 true,
@@ -178,19 +178,19 @@ mod tests {
     #[test]
     fn obstacles_break_the_clear_line_for_both_bands() {
         let obstacles = [
-            BattleTerrainLos {
+            TerrainLos {
                 blocked: true,
                 ..Default::default()
             },
-            BattleTerrainLos {
+            TerrainLos {
                 fire: true,
                 ..Default::default()
             },
-            BattleTerrainLos {
+            TerrainLos {
                 smoke: true,
                 ..Default::default()
             },
-            BattleTerrainLos {
+            TerrainLos {
                 woods: WOODS_LIMIT,
                 ..Default::default()
             },
@@ -218,7 +218,7 @@ mod tests {
             None
         );
         let underwater = |water| SightFacts {
-            terrain: BattleTerrainLos {
+            terrain: TerrainLos {
                 water,
                 ..Default::default()
             },
@@ -242,7 +242,7 @@ mod tests {
     /// Woods on the path and in the target hex, partial cover and hull-down all add to aim.
     #[test]
     fn cover_accumulates_woods_partial_cover_and_hull_down() {
-        let terrain = BattleTerrainLos {
+        let terrain = TerrainLos {
             woods: 2,
             target_woods: 1,
             partial_cover: true,
@@ -262,7 +262,7 @@ mod tests {
         assert_eq!(partial_cover(terrain, 2), 5);
         assert_eq!(
             partial_cover(
-                BattleTerrainLos {
+                TerrainLos {
                     partial_cover: false,
                     ..terrain
                 },
@@ -281,7 +281,7 @@ mod tests {
         assert!(
             perceive(
                 &SightFacts {
-                    light: BattleLight::Night,
+                    light: Light::Night,
                     ..facts(5.0)
                 },
                 unused
@@ -293,7 +293,7 @@ mod tests {
         assert!(
             perceive(
                 &SightFacts {
-                    light: BattleLight::Night,
+                    light: Light::Night,
                     ..facts(20.0)
                 },
                 failing

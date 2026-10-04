@@ -8,7 +8,7 @@ use std::{collections::BTreeMap, sync::Arc};
 /// Distinct explosive and scripted trigger behaviors retained in saved maps.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleMineKind {
+pub enum MineKind {
     Standard,
     Inferno,
     Command,
@@ -18,7 +18,7 @@ pub enum BattleMineKind {
     Active,
 }
 
-impl BattleMineKind {
+impl MineKind {
     /// Parse the six complete operator spellings, without prefix matching.
     pub fn parse(value: &str) -> Result<Self> {
         match value.to_ascii_lowercase().as_str() {
@@ -60,9 +60,9 @@ impl BattleMineKind {
 
 /// One minefield definition. Extra is the command channel, vibra threshold or trigger radius.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BattleMinefield {
+pub struct Minefield {
     pub coordinate: HexCoordinate,
-    pub kind: BattleMineKind,
+    pub kind: MineKind,
     pub strength: i16,
     pub extra: i32,
     pub owner: ObjectId,
@@ -70,12 +70,12 @@ pub struct BattleMinefield {
 
 impl StoredMap {
     /// Persistent record identities, including multiple fields at the same coordinate.
-    pub fn minefields(&self) -> &BTreeMap<u32, BattleMinefield> {
+    pub fn minefields(&self) -> &BTreeMap<u32, Minefield> {
         &self.minefields
     }
 
     /// Gameplay traversal order, independent of saved record identifiers.
-    pub fn ordered_minefields(&self) -> impl Iterator<Item = (&u32, &BattleMinefield)> {
+    pub fn ordered_minefields(&self) -> impl Iterator<Item = (&u32, &Minefield)> {
         self.minefield_order
             .iter()
             .map(|slot| (slot, &self.minefields[slot]))
@@ -88,7 +88,7 @@ pub fn set_minefield(
     world: &mut World,
     map: ObjectId,
     ordinal: u32,
-    mine: Option<BattleMinefield>,
+    mine: Option<Minefield>,
 ) -> Result<()> {
     ensure!(
         world
@@ -133,7 +133,7 @@ pub fn set_minefield(
 }
 
 /// Prepend a newly created mine without renumbering surviving records or their auxiliary data.
-pub fn insert_minefield(world: &mut World, map: ObjectId, mine: BattleMinefield) -> Result<u32> {
+pub fn insert_minefield(world: &mut World, map: ObjectId, mine: Minefield) -> Result<u32> {
     let record = world.btech.maps().get(&map).context("Map not found")?;
     let ordinal = (0..=u32::try_from(record.minefields.len())?)
         .find(|slot| !record.minefields.contains_key(slot))

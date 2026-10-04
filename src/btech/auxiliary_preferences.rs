@@ -59,14 +59,14 @@ pub fn set_bth_debug(
     Ok(())
 }
 
-impl super::BattleUnit {
+impl super::Mech {
     /// Current BTHDebug configuration; attack reports do not consume this flag.
     pub fn bth_debug(&self) -> bool {
         self.auxiliary_preferences.bth_debug
     }
 }
 
-impl super::BattleVehicle {
+impl super::Vehicle {
     /// Current BTHDebug configuration; attack reports do not consume this flag.
     pub fn bth_debug(&self) -> bool {
         self.auxiliary_preferences.bth_debug
@@ -90,14 +90,14 @@ pub fn set_mw_safety(
     Ok(())
 }
 
-impl super::BattleUnit {
+impl super::Mech {
     /// Whether the MechWarrior weapon-safety preference is enabled.
     pub fn mw_safety(&self) -> bool {
         !self.auxiliary_preferences.player_killer
     }
 }
 
-impl super::BattleVehicle {
+impl super::Vehicle {
     /// Whether the MechWarrior weapon-safety preference is enabled.
     pub fn mw_safety(&self) -> bool {
         !self.auxiliary_preferences.player_killer

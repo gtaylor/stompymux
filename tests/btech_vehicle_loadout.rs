@@ -5,17 +5,17 @@ use stompymux_rs::*;
 #[test]
 fn vehicle_slots_are_complete_weapons_and_independent_bins() {
     let template =
-        BattleVehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+        VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
             .unwrap();
-    let loadout = BattleVehicleLoadout::resolve(&template).unwrap();
+    let loadout = VehicleLoadout::resolve(&template).unwrap();
     assert_eq!(loadout.weapons.len(), 2);
     assert_eq!(loadout.ammunition.len(), 4);
     for (slot, mount) in loadout.weapons.iter().enumerate() {
-        assert_eq!(mount.weapon, BattleWeapon::Ac20);
+        assert_eq!(mount.weapon, Weapon::Ac20);
         assert_eq!(
             mount.criticals,
             [VehicleCriticalLocation {
-                section: BattleVehicleSection::Turret,
+                section: VehicleSection::Turret,
                 slot: slot as u8
             }]
         );
@@ -25,46 +25,32 @@ fn vehicle_slots_are_complete_weapons_and_independent_bins() {
         assert_eq!(bin.capacity, 5);
         assert_eq!(bin.rounds, 5);
     }
-    let template: BattleVehicleTemplate =
+    let template: VehicleTemplate =
         serde_json::from_value(serde_json::to_value(&template).unwrap()).unwrap();
-    assert_eq!(BattleVehicleLoadout::resolve(&template).unwrap(), loadout);
-    let truck = BattleVehicleTemplate::parse(
+    assert_eq!(VehicleLoadout::resolve(&template).unwrap(), loadout);
+    let truck = VehicleTemplate::parse(
         "Flatbed_Truck",
         include_str!("../game/mechs/Flatbed_Truck.toml"),
     )
     .unwrap();
-    assert!(
-        BattleVehicleLoadout::resolve(&truck)
-            .unwrap()
-            .weapons
-            .is_empty()
-    );
-    let hover = BattleVehicleTemplate::parse("Fulcrum", include_str!("../game/mechs/Fulcrum.toml"))
-        .unwrap();
-    let loadout = BattleVehicleLoadout::resolve(&hover).unwrap();
+    assert!(VehicleLoadout::resolve(&truck).unwrap().weapons.is_empty());
+    let hover =
+        VehicleTemplate::parse("Fulcrum", include_str!("../game/mechs/Fulcrum.toml")).unwrap();
+    let loadout = VehicleLoadout::resolve(&hover).unwrap();
     assert_eq!(loadout.weapons.len(), 3);
     assert_eq!(loadout.systems.len(), 2);
-    assert_eq!(
-        loadout.systems[0].location.section,
-        BattleVehicleSection::Front
-    );
-    assert_eq!(
-        loadout.systems[1].location.section,
-        BattleVehicleSection::Rear
-    );
+    assert_eq!(loadout.systems[0].location.section, VehicleSection::Front);
+    assert_eq!(loadout.systems[1].location.section, VehicleSection::Rear);
 }
 
 /// Every known weapon fits one vehicle slot, including artillery and disposable launchers.
 #[test]
 fn vehicle_catalogue_uses_shared_modes_and_supply() {
     let mut template =
-        BattleVehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+        VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
             .unwrap();
-    for &weapon in BattleWeapon::ALL {
-        let turret = template
-            .sections
-            .get_mut(&BattleVehicleSection::Turret)
-            .unwrap();
+    for &weapon in Weapon::ALL {
+        let turret = template.sections.get_mut(&VehicleSection::Turret).unwrap();
         turret.criticals.clear();
         turret.criticals.insert(
             0,
@@ -88,7 +74,7 @@ fn vehicle_catalogue_uses_shared_modes_and_supply() {
                 },
             );
         }
-        let loadout = BattleVehicleLoadout::resolve(&template).unwrap();
+        let loadout = VehicleLoadout::resolve(&template).unwrap();
         assert_eq!(loadout.weapons.len(), 1);
         assert_eq!(loadout.weapons[0].weapon, weapon);
         assert_eq!(loadout.weapons[0].criticals.len(), 1);
@@ -98,15 +84,12 @@ fn vehicle_catalogue_uses_shared_modes_and_supply() {
             usize::from(weapon.profile().ammunition_per_ton > 0)
         );
     }
-    let turret = template
-        .sections
-        .get_mut(&BattleVehicleSection::Turret)
-        .unwrap();
+    let turret = template.sections.get_mut(&VehicleSection::Turret).unwrap();
     turret.criticals.clear();
     turret.criticals.insert(
         0,
         CriticalDefinition {
-            equipment: BattleWeapon::ClanArrowIv.name().into(),
+            equipment: Weapon::ClanArrowIv.name().into(),
             data: "-".into(),
             modes: vec!["Cluster".into(), "Hotload".into()],
         },
@@ -114,46 +97,39 @@ fn vehicle_catalogue_uses_shared_modes_and_supply() {
     turret.criticals.insert(
         1,
         CriticalDefinition {
-            equipment: format!("Ammo_{}", BattleWeapon::ClanArrowIv.name()),
+            equipment: format!("Ammo_{}", Weapon::ClanArrowIv.name()),
             data: "2".into(),
             modes: vec!["Cluster".into(), "Halfton".into()],
         },
     );
-    let loadout = BattleVehicleLoadout::resolve(&template).unwrap();
-    assert_eq!(
-        loadout.weapons[0].initial_fire_mode,
-        BattleFireMode::Hotload
-    );
+    let loadout = VehicleLoadout::resolve(&template).unwrap();
+    assert_eq!(loadout.weapons[0].initial_fire_mode, FireMode::Hotload);
     assert_eq!(
         loadout.weapons[0].initial_ammunition_mode,
-        BattleAmmunitionMode::Cluster
+        AmmunitionMode::Cluster
     );
     assert_eq!(loadout.ammunition[0].capacity, 2);
     assert!(loadout.ammunition[0].half_ton);
     template
         .sections
-        .get_mut(&BattleVehicleSection::Turret)
+        .get_mut(&VehicleSection::Turret)
         .unwrap()
         .criticals
         .get_mut(&1)
         .unwrap()
         .data = "3".into();
     assert!(
-        format!(
-            "{:#}",
-            BattleVehicleLoadout::resolve(&template).unwrap_err()
-        )
-        .contains("Turret slot 2")
+        format!("{:#}", VehicleLoadout::resolve(&template).unwrap_err()).contains("Turret slot 2")
     );
     template
         .sections
-        .get_mut(&BattleVehicleSection::Turret)
+        .get_mut(&VehicleSection::Turret)
         .unwrap()
         .criticals
         .remove(&1);
     template
         .sections
-        .get_mut(&BattleVehicleSection::Turret)
+        .get_mut(&VehicleSection::Turret)
         .unwrap()
         .criticals
         .get_mut(&0)
@@ -161,11 +137,8 @@ fn vehicle_catalogue_uses_shared_modes_and_supply() {
         .modes
         .push("Mine".into());
     assert!(
-        format!(
-            "{:#}",
-            BattleVehicleLoadout::resolve(&template).unwrap_err()
-        )
-        .contains("Conflicting artillery")
+        format!("{:#}", VehicleLoadout::resolve(&template).unwrap_err())
+            .contains("Conflicting artillery")
     );
 }
 
@@ -179,15 +152,10 @@ fn vehicle_loadout_rejects_unknown_equipment_and_bad_slots() {
         ("IS.MediumLaser", "unknown", vec![], 0),
         ("IS.MediumLaser", "-", vec![], 12),
     ] {
-        let mut template = BattleVehicleTemplate::parse(
-            "Demolisher",
-            include_str!("../game/mechs/Demolisher.toml"),
-        )
-        .unwrap();
-        let turret = template
-            .sections
-            .get_mut(&BattleVehicleSection::Turret)
-            .unwrap();
+        let mut template =
+            VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+                .unwrap();
+        let turret = template.sections.get_mut(&VehicleSection::Turret).unwrap();
         turret.criticals.clear();
         turret.criticals.insert(
             slot,
@@ -197,7 +165,7 @@ fn vehicle_loadout_rejects_unknown_equipment_and_bad_slots() {
                 modes: modes.into_iter().map(str::to_string).collect(),
             },
         );
-        let error = BattleVehicleLoadout::resolve(&template).unwrap_err();
+        let error = VehicleLoadout::resolve(&template).unwrap_err();
         assert!(format!("{error:#}").contains("Turret slot"));
     }
 }

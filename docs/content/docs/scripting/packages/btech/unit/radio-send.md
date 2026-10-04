@@ -25,4 +25,4 @@ btech.unit.radio_send(dbref, pilot, channel, message)
 
 ## Returns
 
-- `BattleRadioTransmission`
+- `RadioTransmission`

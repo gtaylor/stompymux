@@ -1,7 +1,7 @@
 //! Shot outcomes compared with and without validation shortcuts, plus failure-atomicity checks.
 use super::*;
-use crate::btech::BattleUnitTemplateExt;
-use crate::{BattleDice, BattlePower, BattleUnitTemplate, Config, Kind, MapAsset, ObjectId};
+use crate::btech::UnitTemplateExt;
+use crate::{Config, Dice, Kind, MapAsset, ObjectId, Power, UnitTemplate};
 use std::sync::Arc;
 
 fn fixture(source: &str, recipient: &str, seed: u8) -> (Config, World, ObjectId, ObjectId) {
@@ -18,14 +18,14 @@ fn fixture(source: &str, recipient: &str, seed: u8) -> (Config, World, ObjectId,
     let shooter = world.create(&config, "Shooter".into(), Kind::Thing);
     let target = world.create(&config, "Recipient".into(), Kind::Thing);
     for (id, template, y, team) in [(shooter, source, 8, 1), (target, recipient, 5, 2)] {
-        BattleUnitTemplate::parse("unit", template)
+        UnitTemplate::parse("unit", template)
             .unwrap()
             .create(&mut world, id)
             .unwrap();
         crate::place_battle_unit(&mut world, id, map, 0, y).unwrap();
         crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
-            unit.power = BattlePower::Running;
-            unit.dice = BattleDice::seeded([seed; 32]);
+            unit.power = Power::Running;
+            unit.dice = Dice::seeded([seed; 32]);
             unit.signature.team = team;
         })
     }
@@ -61,7 +61,7 @@ fn fire(
     target: ObjectId,
     index: usize,
 ) -> Result<(serde_json::Value, serde_json::Value), String> {
-    let rules = crate::btech::BattleShotRules::configured(&config.battletech, false);
+    let rules = crate::btech::ShotRules::configured(&config.battletech, false);
     if world.btech.constructed_units().contains_key(&shooter) {
         let result = if let Some(pilot) = world.btech.constructed_units()[&shooter].pilot() {
             crate::btech::shot::resolve_shot(world, shooter, pilot, target, index, rules)
@@ -77,9 +77,9 @@ fn fire(
             })
             .map_err(|e| format!("{e:#}"))
     } else {
-        let vehicle_rules = crate::btech::BattleVehicleShotRules {
+        let vehicle_rules = crate::btech::VehicleShotRules {
             shot: rules,
-            shooter_criticals: crate::btech::BattleVehicleImpactRules::configured(
+            shooter_criticals: crate::btech::VehicleImpactRules::configured(
                 &config.battletech,
                 false,
             )
@@ -155,8 +155,8 @@ fn shot_transactions_match_reference_across_chassis_and_rejections() {
                         Err(_) => rejected += 1,
                     }
                     assert_eq!(
-                        optimized.battle_roll_statistics().unwrap(),
-                        reference.battle_roll_statistics().unwrap()
+                        optimized.roll_statistics().unwrap(),
+                        reference.roll_statistics().unwrap()
                     );
                     assert_eq!(
                         serde_json::to_value(&optimized).unwrap(),
@@ -198,8 +198,8 @@ fn shot_transactions_discard_expenditure_damage_and_validation_failures() {
                     assert_eq!(crate::btech::validation_context::retained(), (0, 0));
                     assert_eq!(crate::btech::equipment_context::retained(), (0, 0));
                     assert_eq!(
-                        world.battle_roll_statistics().unwrap(),
-                        initial.battle_roll_statistics().unwrap()
+                        world.roll_statistics().unwrap(),
+                        initial.roll_statistics().unwrap()
                     );
                     assert_eq!(
                         serde_json::to_value(&world).unwrap(),
@@ -306,18 +306,18 @@ fn special_shot_effects_match_reference_validation() {
                 "item = \"Ammo_IS.SRM-4\", rounds = 25 }",
                 "item = \"Ammo_IS.SRM-4\", rounds = 25, modes = [\"Inferno\"] }",
             ),
-            crate::BattleWeapon::Srm4,
+            crate::Weapon::Srm4,
         ),
         (
             vehicle.replace(
                 "item = \"IS.AC/20\" }",
                 "item = \"IS.Flamer\", modes = [\"Heat\"] }",
             ),
-            crate::BattleWeapon::Flamer,
+            crate::Weapon::Flamer,
         ),
         (
             include_str!("../../game/mechs/AS7-S2.toml").to_owned(),
-            crate::BattleWeapon::HeavyGaussRifle,
+            crate::Weapon::HeavyGaussRifle,
         ),
     ];
     for (source, weapon) in cases {
@@ -331,14 +331,14 @@ fn special_shot_effects_match_reference_validation() {
                     .position(|mount| mount.weapon == weapon)
                     .unwrap()
             });
-            if weapon == crate::BattleWeapon::Srm4 {
+            if weapon == crate::Weapon::Srm4 {
                 initial
                     .btech
                     .constructed
                     .get_mut(&shooter)
                     .unwrap()
                     .ammunition_modes
-                    .insert(index, crate::BattleAmmunitionMode::Inferno);
+                    .insert(index, crate::AmmunitionMode::Inferno);
             }
             let mut optimized = initial.clone();
             let mut reference = initial;
@@ -358,8 +358,8 @@ fn special_shot_effects_match_reference_validation() {
                 serde_json::to_value(&reference).unwrap()
             );
             assert_eq!(
-                optimized.battle_roll_statistics().unwrap(),
-                reference.battle_roll_statistics().unwrap()
+                optimized.roll_statistics().unwrap(),
+                reference.roll_statistics().unwrap()
             );
         }
     }
@@ -386,7 +386,7 @@ fn validation_projection_requires_exact_equipment_and_roster_membership() {
             }
         }
     }
-    let replacement = crate::BattleUnit::from_template(definition).unwrap();
+    let replacement = crate::Mech::from_template(definition).unwrap();
     assert!(cached_loadout(shooter, &replacement).is_none());
     unit(shooter, &replacement).unwrap();
     let changed = cached_loadout(shooter, &replacement).unwrap();
@@ -418,7 +418,7 @@ fn contact_position_index_handles_missing_unplaced_sparse_and_duplicate_records(
     assert_eq!(positions.get(ObjectId(i64::MIN)), None);
     assert_eq!(positions.get(ObjectId(i64::MAX)), None);
     let unit = world.btech.constructed_units()[&shooter].clone();
-    let unplaced = crate::BattleUnit::from_template(unit.definition().clone()).unwrap();
+    let unplaced = crate::Mech::from_template(unit.definition().clone()).unwrap();
     world
         .btech
         .constructed
@@ -454,7 +454,7 @@ fn missile_defenses_match_reference_for_both_chassis() {
             let (config, mut initial, shooter, target) = fixture(source, recipient, 3);
             // Guarantee an admitted missile hit so every pairing exercises defense expenditure.
             let dice = (0u8..=255)
-                .map(|seed| BattleDice::seeded([seed; 32]))
+                .map(|seed| Dice::seeded([seed; 32]))
                 .find(|dice| dice.clone().two_d6() == 12)
                 .unwrap();
             crate::btech::with_unit_mut!(initial.btech.unit_mut(shooter).unwrap(), |unit| {
@@ -469,7 +469,7 @@ fn missile_defenses_match_reference_for_both_chassis() {
                     .unwrap()
                     .weapons
                     .iter()
-                    .position(|mount| mount.weapon == crate::BattleWeapon::Srm4)
+                    .position(|mount| mount.weapon == crate::Weapon::Srm4)
                     .unwrap()
             } else {
                 initial.btech.vehicles()[&shooter]
@@ -477,7 +477,7 @@ fn missile_defenses_match_reference_for_both_chassis() {
                     .unwrap()
                     .weapons
                     .iter()
-                    .position(|mount| mount.weapon == crate::BattleWeapon::Srm6)
+                    .position(|mount| mount.weapon == crate::Weapon::Srm6)
                     .unwrap()
             };
             let mut optimized = initial.clone();
@@ -499,8 +499,8 @@ fn missile_defenses_match_reference_for_both_chassis() {
                 serde_json::to_value(&reference).unwrap()
             );
             assert_eq!(
-                optimized.battle_roll_statistics().unwrap(),
-                reference.battle_roll_statistics().unwrap()
+                optimized.roll_statistics().unwrap(),
+                reference.roll_statistics().unwrap()
             );
         }
     }

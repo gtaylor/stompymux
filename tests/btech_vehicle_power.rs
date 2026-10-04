@@ -2,8 +2,8 @@
 use crate::support;
 use sqlx::{Connection, SqliteConnection};
 use stompymux_rs::{
-    BattlePower, BattleVehicleTemplate, Config, Kind, MapAsset, ObjectId, Scripts, ShutdownRequest,
-    World, advance_battle_units, assign_battle_pilot, create_battle_map, create_battle_vehicle,
+    Config, Kind, MapAsset, ObjectId, Power, Scripts, ShutdownRequest, VehicleTemplate, World,
+    advance_battle_units, assign_battle_pilot, create_battle_map, create_battle_vehicle,
     persistence, place_battle_unit, remove_battle_unit, start_battle_unit, stop_battle_unit,
 };
 
@@ -26,7 +26,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+        VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
             .unwrap(),
     )
     .unwrap();
@@ -55,7 +55,7 @@ async fn startup_emits_six_stages_and_resumes_only_committed_seconds() {
             world = persistence::load(&config.database()).await.unwrap();
             assert_eq!(
                 world.btech.vehicles()[&id].power(),
-                BattlePower::Starting { remaining: 18 }
+                Power::Starting { remaining: 18 }
             );
         }
     }
@@ -70,17 +70,17 @@ async fn startup_emits_six_stages_and_resumes_only_committed_seconds() {
             "All systems operational!"
         ]
     );
-    assert_eq!(world.btech.vehicles()[&id].power(), BattlePower::Running);
+    assert_eq!(world.btech.vehicles()[&id].power(), Power::Running);
     assert!(advance_battle_units(&mut world, 0).is_empty());
     assert!(remove_battle_unit(&mut world, id, ObjectId(config.start())).is_err());
     stop_battle_unit(
         &mut world,
         id,
         ObjectId(1),
-        stompymux_rs::BattleMovementRules::STANDARD.fall,
+        stompymux_rs::MovementRules::STANDARD.fall,
     )
     .unwrap();
-    assert_eq!(world.btech.vehicles()[&id].power(), BattlePower::Off);
+    assert_eq!(world.btech.vehicles()[&id].power(), Power::Off);
     assert_eq!(world.btech.vehicles()[&id].pilot(), None);
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
@@ -113,10 +113,7 @@ async fn abort_and_lua_rollback_cancel_pending_startup_and_output() {
     for _ in 0..31 {
         assert!(advance_battle_units(&mut scripts.world_mut(), 0).is_empty());
     }
-    assert_eq!(
-        scripts.world().btech.vehicles()[&id].power(),
-        BattlePower::Off
-    );
+    assert_eq!(scripts.world().btech.vehicles()[&id].power(), Power::Off);
     assert_eq!(scripts.world().btech.vehicles()[&id].pilot(), None);
 }
 
@@ -136,10 +133,7 @@ async fn override_requires_wizard_and_corrupt_countdowns_fail_loading() {
     let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
     let text = support::run_text(&scripts, &config, ObjectId(2), 2, "startup override");
     assert!(text.contains("Insufficient access"), "{text}");
-    assert_eq!(
-        scripts.world().btech.vehicles()[&id].power(),
-        BattlePower::Off
-    );
+    assert_eq!(scripts.world().btech.vehicles()[&id].power(), Power::Off);
     let text = support::run_text(&scripts, &config, ObjectId(2), 2, "startup");
     assert!(text.contains("Startup Cycle"), "{text}");
     let world = scripts.world().clone();
@@ -185,7 +179,7 @@ async fn server_tick_retries_failed_countdowns_without_publishing_completion() {
         assert_eq!(persistence::load(&config.database()).await.unwrap().btech.vehicles()[&id].power(),initial);
         sqlx::query("DROP TRIGGER deny_tick").execute(&mut sql).await.unwrap();
         client.until_heartbeats("All systems operational!", &mut heartbeats, 20).await;
-        assert_eq!(persistence::load(&config.database()).await.unwrap().btech.vehicles()[&id].power(),BattlePower::Running);
+        assert_eq!(persistence::load(&config.database()).await.unwrap().btech.vehicles()[&id].power(),Power::Running);
         let before_point = persistence::load(&config.database()).await.unwrap().btech.vehicles()[&id].motion().unwrap().point;
         client.send("speed 10.75").await;
         client.until("Desired speed changed to 10 KPH.").await;
@@ -193,7 +187,7 @@ async fn server_tick_retries_failed_countdowns_without_publishing_completion() {
         client.send("shutdown").await;
         client.until("All systems shut down.").await;
         let loaded=persistence::load(&config.database()).await.unwrap();
-        assert_eq!(loaded.btech.vehicles()[&id].power(),BattlePower::Off);
+        assert_eq!(loaded.btech.vehicles()[&id].power(),Power::Off);
         assert_eq!(loaded.btech.vehicles()[&id].pilot(),None);
         shutdown.send(ShutdownRequest::Sigterm).unwrap();
         task.await.unwrap().unwrap();
@@ -223,12 +217,12 @@ async fn native_vehicle_pilot_departure_and_hull_destruction_reconcile_state() {
     stompymux_rs::damage_battle_vehicle_phase(
         &mut world,
         id,
-        stompymux_rs::BattleVehicleSection::Front,
+        stompymux_rs::VehicleSection::Front,
         8,
-        stompymux_rs::BattleDamagePhase::Internal,
+        stompymux_rs::DamagePhase::Internal,
     )
     .unwrap();
-    assert_eq!(world.btech.vehicles()[&id].power(), BattlePower::Off);
+    assert_eq!(world.btech.vehicles()[&id].power(), Power::Off);
     assert!(start_battle_unit(&mut world, id, ObjectId(1), true).is_err());
     persistence::save(&config.database(), &world).await.unwrap();
 }

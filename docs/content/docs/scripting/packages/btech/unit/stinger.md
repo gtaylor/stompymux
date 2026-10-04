@@ -23,4 +23,4 @@ btech.unit.stinger(dbref, pilot, weapon)
 
 ## Returns
 
-- `BattleAmmunitionMode`
+- `AmmunitionMode`

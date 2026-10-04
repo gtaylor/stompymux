@@ -21,4 +21,4 @@ btech.runtime.stats(actor)
 
 ## Returns
 
-- `BattleRuntimeStats`
+- `RuntimeStats`

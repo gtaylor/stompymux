@@ -7,9 +7,7 @@
 //! Combat opens a [`Scope`] sized to the battlefield. Outside one, a small
 //! ambient cache still serves repeat resolutions, since validation and status
 //! reads resolve the same few templates over and over.
-use super::{
-    BattleLoadout, BattleTemplate, BattleVehicleLoadout, BattleVehicleTemplate, BtechState,
-};
+use super::{BtechState, MechLoadout, MechTemplate, VehicleLoadout, VehicleTemplate};
 use anyhow::Result;
 use std::{cell::RefCell, collections::VecDeque, marker::PhantomData, rc::Rc};
 
@@ -43,8 +41,8 @@ impl<D: PartialEq + Clone, L: Clone> Projections<D, L> {
     }
 }
 struct Cache {
-    mechs: Projections<BattleTemplate, BattleLoadout>,
-    vehicles: Projections<BattleVehicleTemplate, BattleVehicleLoadout>,
+    mechs: Projections<MechTemplate, MechLoadout>,
+    vehicles: Projections<VehicleTemplate, VehicleLoadout>,
 }
 thread_local! { static ACTIVE: RefCell<Option<Cache>> = const { RefCell::new(None) }; }
 
@@ -123,8 +121,8 @@ fn remember(write: impl Fn(&mut Cache)) {
     }
 }
 
-/// Resolve exactly the same Mech parser inputs as BattleUnit::loadout.
-pub(super) fn mech(definition: &BattleTemplate, contract: bool) -> Result<BattleLoadout> {
+/// Resolve exactly the same Mech parser inputs as Mech::loadout.
+pub(super) fn mech(definition: &MechTemplate, contract: bool) -> Result<MechLoadout> {
     if let Some((loadout, scoped)) = cached(|cache| cache.mechs.get(definition, contract)) {
         if scoped {
             super::autopilot::diagnostics::count("equipment_projection_reused");
@@ -133,19 +131,16 @@ pub(super) fn mech(definition: &BattleTemplate, contract: bool) -> Result<Battle
     }
     let _measurement = super::autopilot::diagnostics::combat("equipment_resolution");
     let loadout = if contract {
-        BattleLoadout::resolve_contract(definition)
+        MechLoadout::resolve_contract(definition)
     } else {
-        BattleLoadout::resolve(definition)
+        MechLoadout::resolve(definition)
     }?;
     remember(|cache| cache.mechs.insert(definition, contract, &loadout));
     Ok(loadout)
 }
 
-/// Resolve exactly the same vehicle parser inputs as BattleVehicle::loadout.
-pub(super) fn vehicle(
-    definition: &BattleVehicleTemplate,
-    contract: bool,
-) -> Result<BattleVehicleLoadout> {
+/// Resolve exactly the same vehicle parser inputs as Vehicle::loadout.
+pub(super) fn vehicle(definition: &VehicleTemplate, contract: bool) -> Result<VehicleLoadout> {
     if let Some((loadout, scoped)) = cached(|cache| cache.vehicles.get(definition, contract)) {
         if scoped {
             super::autopilot::diagnostics::count("equipment_projection_reused");
@@ -154,9 +149,9 @@ pub(super) fn vehicle(
     }
     let _measurement = super::autopilot::diagnostics::combat("equipment_resolution");
     let loadout = if contract {
-        BattleVehicleLoadout::resolve_contract(definition)
+        VehicleLoadout::resolve_contract(definition)
     } else {
-        BattleVehicleLoadout::resolve(definition)
+        VehicleLoadout::resolve(definition)
     }?;
     remember(|cache| cache.vehicles.insert(definition, contract, &loadout));
     Ok(loadout)
@@ -178,9 +173,9 @@ mod tests {
     #[test]
     fn exact_inputs_contract_mode_eviction_and_failures_match_the_parser() {
         let template =
-            BattleTemplate::parse("JR7-D", include_str!("../../game/mechs/JR7-D.toml")).unwrap();
+            MechTemplate::parse("JR7-D", include_str!("../../game/mechs/JR7-D.toml")).unwrap();
         let scope = Scope::with_limits(1, 0);
-        let expected = BattleLoadout::resolve(&template).unwrap();
+        let expected = MechLoadout::resolve(&template).unwrap();
         assert_eq!(mech(&template, false).unwrap(), expected);
         assert_eq!(mech(&template.clone(), false).unwrap(), expected);
         let mut changed = template.clone();
@@ -193,11 +188,11 @@ mod tests {
         }
         let new = mech(&changed, false).unwrap();
         assert_ne!(new, expected);
-        assert_eq!(new, BattleLoadout::resolve(&changed).unwrap());
+        assert_eq!(new, MechLoadout::resolve(&changed).unwrap());
         assert_eq!(retained(), (1, 0));
         assert_eq!(
             mech(&template, true).unwrap(),
-            BattleLoadout::resolve_contract(&template).unwrap()
+            MechLoadout::resolve_contract(&template).unwrap()
         );
         assert_eq!(mech(&template, false).unwrap(), expected);
         let mut invalid = template.clone();
@@ -213,7 +208,7 @@ mod tests {
             .equipment = "Unknown equipment".into();
         assert_eq!(
             mech(&invalid, false).unwrap_err().to_string(),
-            BattleLoadout::resolve(&invalid).unwrap_err().to_string()
+            MechLoadout::resolve(&invalid).unwrap_err().to_string()
         );
         assert_eq!(retained(), (1, 0));
         invalidate();

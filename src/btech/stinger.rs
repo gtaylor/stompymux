@@ -1,5 +1,5 @@
 //! Stinger ammunition selection uses the ordinary transactional weapon controls.
-use super::{AmmunitionFeedback, BattleAmmunitionMode};
+use super::{AmmunitionFeedback, AmmunitionMode};
 use crate::{ObjectId, World};
 use anyhow::{Result, ensure};
 
@@ -9,22 +9,17 @@ pub fn toggle_stinger(
     id: ObjectId,
     pilot: ObjectId,
     index: usize,
-) -> Result<BattleAmmunitionMode> {
+) -> Result<AmmunitionMode> {
     super::weapon_controls::ready_weapon(world, id, pilot, index)?;
     ensure!(
-        super::weapon_controls::selectable_munition(
-            world,
-            id,
-            index,
-            BattleAmmunitionMode::Stinger
-        ),
+        super::weapon_controls::selectable_munition(world, id, index, AmmunitionMode::Stinger),
         "That weapon cannot be set STINGER!"
     );
     Ok(super::weapon_controls::toggle_ammunition_mode(
         world,
         id,
         index,
-        BattleAmmunitionMode::Stinger,
+        AmmunitionMode::Stinger,
     ))
 }
 
@@ -50,8 +45,7 @@ pub(super) fn target_airborne(world: &World, target: ObjectId) -> bool {
                 || unit.vtol_flight().is_some_and(|flight| {
                     matches!(
                         flight.phase,
-                        super::BattleVtolFlightPhase::Airborne
-                            | super::BattleVtolFlightPhase::Falling
+                        super::VtolFlightPhase::Airborne | super::VtolFlightPhase::Falling
                     )
                 })
         })

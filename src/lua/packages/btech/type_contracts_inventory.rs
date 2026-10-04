@@ -20,7 +20,7 @@
 //|---@param object integer
 //|---@param pattern string Exact abbreviation/full name, then wildcard; may match absent stock.
 //|---@param quantity integer Positive requested quantity per match.
-//|---@return BattleCargoRow[] Requested changes after the request cap.
+//|---@return CargoRow[] Requested changes after the request cap.
 //|function btech_inventory.add(actor, object, pattern, quantity) end
 // lua-types-end
 
@@ -30,7 +30,7 @@
 //|---@param object integer
 //|---@param pattern string
 //|---@param quantity integer Positive requested quantity per match.
-//|---@return BattleCargoRow[]
+//|---@return CargoRow[]
 //|function btech_inventory.remove(actor, object, pattern, quantity) end
 // lua-types-end
 
@@ -46,14 +46,14 @@
 //|---Preserves installed equipment; reconciles carrying load. Callback failure restores inventory.
 //|---@param actor integer
 //|---@param object integer
-//|---@return BattleInventoryCleanup
+//|---@return InventoryCleanup
 //|function btech_inventory.fix(actor, object) end
 // lua-types-end
 
 // lua-types-begin btech 00233
 //|---Describe stock by exact name or stored identifier; names ignore ASCII case.
 //|---@param part string|integer
-//|---@return BattlePart
+//|---@return Part
 //|function btech_inventory.part(part) end
 // lua-types-end
 
@@ -76,7 +76,7 @@
 // lua-types-begin btech 00236
 //|---Read an object's detached, ordered loose-parts stock in a callback.
 //|---@param object integer
-//|---@return BattleInventoryEntry[]
+//|---@return InventoryEntry[]
 //|function btech_inventory.read(object) end
 // lua-types-end
 

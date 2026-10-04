@@ -20,8 +20,8 @@ fn add_map(
     id
 }
 
-fn link(parent: ObjectId, entries: [BattleMapEntrance; 4]) -> BattleMapLink {
-    BattleMapLink {
+fn link(parent: ObjectId, entries: [MapEntrance; 4]) -> MapLink {
+    MapLink {
         parent,
         coordinate: HexCoordinate { x: 0, y: 0 },
         entrances: entries,
@@ -43,12 +43,12 @@ async fn rebuild_order_native_lua_rollback_and_restart() {
         Some(link(
             root,
             [
-                BattleMapEntrance::Offset { distance: 1 },
-                BattleMapEntrance::Exact {
+                MapEntrance::Offset { distance: 1 },
+                MapEntrance::Exact {
                     coordinate: HexCoordinate { x: 4, y: 2 },
                 },
-                BattleMapEntrance::None,
-                BattleMapEntrance::Offset { distance: i32::MAX },
+                MapEntrance::None,
+                MapEntrance::Offset { distance: i32::MAX },
             ],
         )),
     )
@@ -57,17 +57,14 @@ async fn rebuild_order_native_lua_rollback_and_restart() {
     set_battle_map_link(
         &mut world,
         c,
-        Some(link(
-            a,
-            [BattleMapEntrance::Offset { distance: i32::MAX }; 4],
-        )),
+        Some(link(a, [MapEntrance::Offset { distance: i32::MAX }; 4])),
     )
     .unwrap();
     set_building_entrance(
         &mut world,
         root,
         9,
-        Some(BattleBuildingEntrance {
+        Some(BuildingEntrance {
             coordinate: HexCoordinate { x: 1, y: 1 },
             interior: stale,
             data_char: 0,
@@ -81,7 +78,7 @@ async fn rebuild_order_native_lua_rollback_and_restart() {
         &mut world,
         root,
         7,
-        Some(BattleBuildingEntryPoint {
+        Some(BuildingEntryPoint {
             coordinate: HexCoordinate { x: 2, y: 2 },
             direction: b'n',
             object: ObjectId(-1),
@@ -252,8 +249,8 @@ async fn configuration_lua_preserves_inactive_columns_and_missing_default_rows()
         .unwrap();
     let mut loaded = persistence::load(&config.database()).await.unwrap();
     let mut definition = loaded.btech.maps()[&child].authored_link().unwrap();
-    definition.entrances[0] = BattleMapEntrance::Offset { distance: 1 };
-    definition.entrances[1] = BattleMapEntrance::Exact {
+    definition.entrances[0] = MapEntrance::Offset { distance: 1 };
+    definition.entrances[1] = MapEntrance::Exact {
         coordinate: HexCoordinate { x: 2, y: 1 },
     };
     set_battle_map_link(&mut loaded, child, Some(definition)).unwrap();
@@ -274,8 +271,8 @@ async fn configuration_lua_preserves_inactive_columns_and_missing_default_rows()
     );
     let before = loaded.btech.clone();
     for bad in [
-        BattleMapEntrance::Offset { distance: -1 },
-        BattleMapEntrance::Exact {
+        MapEntrance::Offset { distance: -1 },
+        MapEntrance::Exact {
             coordinate: HexCoordinate { x: 3, y: 0 },
         },
     ] {
@@ -309,12 +306,12 @@ async fn rebuild_resolves_offsets_and_skips_cropped_coordinates() {
     let definition = link(
         root,
         [
-            BattleMapEntrance::Exact {
+            MapEntrance::Exact {
                 coordinate: HexCoordinate { x: 2, y: 2 },
             },
-            BattleMapEntrance::Offset { distance: i32::MAX },
-            BattleMapEntrance::None,
-            BattleMapEntrance::None,
+            MapEntrance::Offset { distance: i32::MAX },
+            MapEntrance::None,
+            MapEntrance::None,
         ],
     );
     set_battle_map_link(&mut world, child, Some(definition)).unwrap();
@@ -341,7 +338,7 @@ async fn rebuild_resolves_offsets_and_skips_cropped_coordinates() {
     assert_eq!(points.len(), 1);
     assert_eq!(
         points[&0],
-        BattleBuildingEntryPoint {
+        BuildingEntryPoint {
             coordinate: HexCoordinate { x: 0, y: 0 },
             direction: b'e',
             object: ObjectId(-1),
@@ -367,14 +364,14 @@ async fn rebuild_failure_restores_routes_and_configuration() {
     set_battle_map_link(
         &mut world,
         child,
-        Some(link(root, [BattleMapEntrance::Offset { distance: 0 }; 4])),
+        Some(link(root, [MapEntrance::Offset { distance: 0 }; 4])),
     )
     .unwrap();
     set_building_entrance(
         &mut world,
         root,
         7,
-        Some(BattleBuildingEntrance {
+        Some(BuildingEntrance {
             coordinate: HexCoordinate { x: 1, y: 1 },
             interior: other,
             data_char: 0,

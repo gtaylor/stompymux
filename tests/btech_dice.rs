@@ -2,18 +2,18 @@
 use crate::support;
 use sqlx::{Connection, SqliteConnection};
 use stompymux_rs::{
-    BattleDice, BattleTemplate, BattleVehicleTemplate, Kind, ObjectId, Scripts, create_battle_unit,
+    Dice, Kind, MechTemplate, ObjectId, Scripts, VehicleTemplate, create_battle_unit,
     create_battle_vehicle, persistence, roll_unit_dice,
 };
 
 #[test]
 fn seeded_dice_resume_across_serialization_and_cover_all_two_dice_results() {
-    let mut dice = BattleDice::seeded([7; 32]);
+    let mut dice = Dice::seeded([7; 32]);
     for _ in 0..7 {
         dice.d6();
     }
     let encoded = serde_json::to_string(&dice).unwrap();
-    let mut resumed: BattleDice = serde_json::from_str(&encoded).unwrap();
+    let mut resumed: Dice = serde_json::from_str(&encoded).unwrap();
     let mut counts = [0; 13];
     for _ in 0..4096 {
         let roll = dice.two_d6();
@@ -23,8 +23,8 @@ fn seeded_dice_resume_across_serialization_and_cover_all_two_dice_results() {
     }
     assert!(counts[2..=12].iter().all(|count| *count > 0));
     assert!(counts[7] > counts[2] && counts[7] > counts[12]);
-    assert!(serde_json::from_str::<BattleDice>(&encoded.replace("chacha8-v1", "unknown")).is_err());
-    assert_eq!(format!("{dice:?}"), "BattleDice(chacha8-v1)");
+    assert!(serde_json::from_str::<Dice>(&encoded.replace("chacha8-v1", "unknown")).is_err());
+    assert_eq!(format!("{dice:?}"), "Dice(chacha8-v1)");
 }
 
 #[tokio::test]
@@ -48,19 +48,15 @@ async fn verify_saved_dice(vehicle: bool) {
         create_battle_vehicle(
             &mut world,
             id,
-            BattleVehicleTemplate::parse(
-                "Demolisher",
-                include_str!("../game/mechs/Demolisher.toml"),
-            )
-            .unwrap(),
+            VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+                .unwrap(),
         )
         .unwrap();
     } else {
         create_battle_unit(
             &mut world,
             id,
-            BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
-                .unwrap(),
+            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
         )
         .unwrap();
     }
@@ -117,11 +113,8 @@ async fn vehicle_streams_are_independent_and_reject_unknown_algorithms() {
         create_battle_vehicle(
             &mut world,
             id,
-            BattleVehicleTemplate::parse(
-                "Demolisher",
-                include_str!("../game/mechs/Demolisher.toml"),
-            )
-            .unwrap(),
+            VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+                .unwrap(),
         )
         .unwrap();
         ids.push(id);
@@ -129,7 +122,7 @@ async fn vehicle_streams_are_independent_and_reject_unknown_algorithms() {
     let mut encoded = serde_json::to_value(&world.btech).unwrap();
     for &id in &ids {
         encoded["vehicles"][id.0.to_string()]["dice"] =
-            serde_json::to_value(BattleDice::seeded([19; 32])).unwrap();
+            serde_json::to_value(Dice::seeded([19; 32])).unwrap();
     }
     world.btech = serde_json::from_value(encoded).unwrap();
     let checkpoint = world.clone();
@@ -145,5 +138,5 @@ async fn vehicle_streams_are_independent_and_reject_unknown_algorithms() {
     assert_eq!(first, roll_unit_dice(&mut world, ids[1], 20).unwrap());
     let mut invalid = serde_json::to_value(&world.btech.vehicles()[&ids[0]]).unwrap();
     invalid["dice"]["algorithm"] = "unknown".into();
-    assert!(serde_json::from_value::<stompymux_rs::BattleVehicle>(invalid).is_err());
+    assert!(serde_json::from_value::<stompymux_rs::Vehicle>(invalid).is_err());
 }

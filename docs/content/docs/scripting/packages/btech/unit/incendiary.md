@@ -23,4 +23,4 @@ btech.unit.incendiary(dbref, pilot, weapon)
 
 ## Returns
 
-- `BattleAmmunitionMode`
+- `AmmunitionMode`

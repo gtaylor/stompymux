@@ -1,5 +1,5 @@
 //! BattleTech diagnostic messages staged through the ordinary transactional channel service.
-use super::{BattleGunneryAwardRequest, BattleGunneryExperienceMode, BattleShotExperienceAward};
+use super::{GunneryAwardRequest, GunneryExperienceMode, ShotExperienceAward};
 use crate::{Config, Scripts, World, config::XpConfig};
 use anyhow::Result;
 use serde::Serialize;
@@ -7,7 +7,7 @@ use serde::Serialize;
 /// Implemented diagnostic destinations; ordinary channel administration owns their existence.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleChannel {
+pub enum DiagnosticChannel {
     MapErrors,
     Debug,
     Economy,
@@ -18,7 +18,7 @@ pub enum BattleChannel {
     ZeroFrequencies,
 }
 
-impl BattleChannel {
+impl DiagnosticChannel {
     /// Canonical channel spelling used in diagnostic headers.
     pub fn name(self) -> &'static str {
         match self {
@@ -36,14 +36,14 @@ impl BattleChannel {
 
 /// An immutable diagnostic captured before damage or host callbacks can change participant names.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleChannelMessage {
-    pub channel: BattleChannel,
+pub struct DiagnosticMessage {
+    pub channel: DiagnosticChannel,
     pub text: String,
 }
 
-impl BattleChannelMessage {
+impl DiagnosticMessage {
     /// Diagnostic channel records are single-line even when a participant name contains a newline.
-    pub(super) fn new(channel: BattleChannel, text: String) -> Self {
+    pub(super) fn new(channel: DiagnosticChannel, text: String) -> Self {
         Self {
             channel,
             text: text.replace('\n', " "),
@@ -57,9 +57,9 @@ pub(super) fn stock_message(
     holder: crate::ObjectId,
     name: &str,
     change: i32,
-) -> BattleChannelMessage {
-    BattleChannelMessage::new(
-        BattleChannel::Economy,
+) -> DiagnosticMessage {
+    DiagnosticMessage::new(
+        DiagnosticChannel::Economy,
         format!(
             "#{} {} {} {} {} #{}.",
             actor.0,
@@ -75,10 +75,10 @@ pub(super) fn stock_message(
 /// Format accepted awards and the battle-value formula's optional trivial-hit diagnostic.
 pub(super) fn gunnery_messages(
     world: &World,
-    request: BattleGunneryAwardRequest,
+    request: GunneryAwardRequest,
     config: &XpConfig,
-    attempt: Option<&BattleShotExperienceAward>,
-) -> Vec<BattleChannelMessage> {
+    attempt: Option<&ShotExperienceAward>,
+) -> Vec<DiagnosticMessage> {
     let Some(attempt) = attempt else {
         if config.oldxpsystem == 0
             && config.bthmod != 0
@@ -91,13 +91,13 @@ pub(super) fn gunnery_messages(
                 request.pilot,
                 request.target,
                 request.base_to_hit,
-                BattleGunneryExperienceMode::BattleValue {
+                GunneryExperienceMode::BattleValue {
                     difficulty_modifier: false,
                 },
             )
         {
-            return vec![BattleChannelMessage::new(
-                BattleChannel::Experience,
+            return vec![DiagnosticMessage::new(
+                DiagnosticChannel::Experience,
                 format!(
                     "#{} in #{} 1 noxp #{}",
                     request.pilot.0, request.attacker.0, request.target.0
@@ -112,13 +112,13 @@ pub(super) fn gunnery_messages(
     let pilot = &world.objects[&request.pilot].name;
     let target = &world.objects[&request.target].name;
     let message = match attempt {
-        BattleShotExperienceAward::Classic(report) => format!(
+        ShotExperienceAward::Classic(report) => format!(
             "{pilot} gained {} gun XP from feat of {:.6} % difficulty ({} occurences) against {target}",
             report.amount.unwrap(),
             report.chance.difficulty,
             request.damage
         ),
-        BattleShotExperienceAward::BattleValue(report) => {
+        ShotExperienceAward::BattleValue(report) => {
             let difficulty = report
                 .calculation
                 .difficulty
@@ -129,13 +129,13 @@ pub(super) fn gunnery_messages(
             )
         }
     };
-    let mut messages = vec![BattleChannelMessage::new(
-        BattleChannel::AttackExperience,
+    let mut messages = vec![DiagnosticMessage::new(
+        DiagnosticChannel::AttackExperience,
         message,
     )];
-    if matches!(attempt, BattleShotExperienceAward::BattleValue(_)) && config.noisy_xpgain != 0 {
-        messages.push(BattleChannelMessage::new(
-            BattleChannel::Experience,
+    if matches!(attempt, ShotExperienceAward::BattleValue(_)) && config.noisy_xpgain != 0 {
+        messages.push(DiagnosticMessage::new(
+            DiagnosticChannel::Experience,
             format!(
                 "#{} in #{} {} damage #{}",
                 request.pilot.0, request.attacker.0, request.damage, request.target.0
@@ -149,7 +149,7 @@ pub(super) fn gunnery_messages(
 pub(super) fn publish_shot(
     scripts: &Scripts,
     config: &Config,
-    report: &super::BattleShotReport,
+    report: &super::MechShotReport,
 ) -> Result<()> {
     publish(scripts, config, &report.experience_messages)
 }
@@ -158,7 +158,7 @@ pub(super) fn publish_shot(
 pub(super) fn publish(
     scripts: &Scripts,
     config: &Config,
-    messages: &[BattleChannelMessage],
+    messages: &[DiagnosticMessage],
 ) -> Result<()> {
     if messages.is_empty() {
         return Ok(());

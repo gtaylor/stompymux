@@ -23,7 +23,7 @@ async fn fixture(hover: bool) -> (tempfile::TempDir, Config, World, ObjectId, Ob
     create_battle_vehicle(
         &mut world,
         id,
-        BattleVehicleTemplate::parse(
+        VehicleTemplate::parse(
             "test",
             if hover {
                 include_str!("../game/mechs/Fulcrum.toml")
@@ -44,7 +44,7 @@ async fn fixture(hover: bool) -> (tempfile::TempDir, Config, World, ObjectId, Ob
     }
     set_battle_heading(&mut world, id, ObjectId(1), 90.0).unwrap();
     for _ in 0..10 {
-        advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
+        advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
     }
     set_battle_speed(&mut world, id, ObjectId(1), 53.75).unwrap();
     (dir, config, world, id, map)
@@ -72,7 +72,7 @@ async fn vehicles_cross_decks_and_hover_under_spans_without_changing_water_heigh
         let mut on_bridge = false;
         let mut exited = false;
         for _ in 0..150 {
-            let notices = advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
+            let notices = advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
             assert!(notices.is_empty(), "{hover}: {notices:?}");
             let x = world.btech.vehicles()[&id].position().unwrap().x;
             if (3..8).contains(&x) {
@@ -86,9 +86,8 @@ async fn vehicles_cross_decks_and_hover_under_spans_without_changing_water_heigh
                     let mut restored = persistence::load(&config.database()).await.unwrap();
                     let mut next = world.clone();
                     assert_eq!(
-                        advance_battle_motion(&mut restored, BattleMovementRules::STANDARD)
-                            .unwrap(),
-                        advance_battle_motion(&mut next, BattleMovementRules::STANDARD).unwrap()
+                        advance_battle_motion(&mut restored, MovementRules::STANDARD).unwrap(),
+                        advance_battle_motion(&mut next, MovementRules::STANDARD).unwrap()
                     );
                     assert_eq!(restored.btech, next.btech);
                     on_bridge = true;
@@ -121,7 +120,7 @@ async fn low_spans_stop_hovercraft_and_inconsistent_saved_underpass_state_is_rej
         .unwrap();
     let mut stopped = false;
     for _ in 0..100 {
-        let notices = advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
+        let notices = advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
         if notices
             .iter()
             .any(|notice| notice.text.contains("underside of the bridge in front"))
@@ -165,11 +164,11 @@ async fn low_spans_resolve_control_or_impact_before_restoring_hovercraft_positio
     ] {
         let (_dir, config, mut world, id, map) = fixture(true).await;
         let seed = (0..=255)
-            .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 12)
+            .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
             .unwrap();
         let mut saved = serde_json::to_value(&world.btech).unwrap();
         let value = &mut saved["vehicles"][id.0.to_string()];
-        value["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+        value["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
         value["piloting_damage"] = if success { 0 } else { 100 }.into();
         if !piloted {
             value["pilot"] = serde_json::Value::Null;
@@ -181,9 +180,9 @@ async fn low_spans_resolve_control_or_impact_before_restoring_hovercraft_positio
             );
         }
         world.btech = serde_json::from_value(saved).unwrap();
-        let rules = BattleMovementRules {
+        let rules = MovementRules {
             skid_cliff: skid,
-            ..BattleMovementRules::STANDARD
+            ..MovementRules::STANDARD
         };
         let mut collided = false;
         for _ in 0..150 {

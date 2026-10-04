@@ -14,7 +14,7 @@ fn targets(world: &World, id: ObjectId, destination: ObjectId) -> Result<()> {
         "Destination must be a live room or thing"
     );
     ensure!(
-        world.btech.vehicles()[&id].power() == super::BattlePower::Off,
+        world.btech.vehicles()[&id].power() == super::Power::Off,
         "Shut down the unit before administrative placement"
     );
     world.validate_move(id, destination)

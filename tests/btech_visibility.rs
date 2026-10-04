@@ -48,13 +48,13 @@ async fn fixture(
     for (index, source) in [observer, target].into_iter().enumerate() {
         let id = world.create(&config, format!("Unit {index}"), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-        BattleUnitTemplate::parse("test", source)
+        UnitTemplate::parse("test", source)
             .unwrap()
             .create(&mut world, id)
             .unwrap();
         place_battle_unit(&mut world, id, map, 0, if index == 0 { 2 } else { 0 }).unwrap();
         edit(&mut world, id, |state| {
-            state["power"] = serde_json::to_value(BattlePower::Running).unwrap();
+            state["power"] = serde_json::to_value(Power::Running).unwrap();
         });
         ids.push(id);
     }
@@ -124,8 +124,8 @@ async fn visibility_controls_all_chassis_are_atomic_and_durable() {
         let loaded = persistence::load(&config.database()).await.unwrap();
         assert_eq!(loaded.btech, scripts.world().btech);
         assert_eq!(
-            battle_visibility(&loaded, id).unwrap(),
-            BattleVisibility {
+            visibility(&loaded, id).unwrap(),
+            Visibility {
                 invisible: true,
                 clairvoyant: true
             }
@@ -143,7 +143,7 @@ async fn visibility_controls_all_chassis_are_atomic_and_durable() {
             set_battle_visibility(
                 &mut going,
                 id,
-                BattleVisibility {
+                Visibility {
                     invisible: true,
                     clairvoyant: false
                 }
@@ -176,12 +176,12 @@ async fn visibility_sensor_loss_and_clairvoyant_contacts_cross_all_chassis() {
                     .unwrap()
                     .unwrap()
                     .channel,
-                BattleDetectionChannel::Sensors
+                DetectionChannel::Sensors
             );
             set_battle_visibility(
                 &mut world,
                 target,
-                BattleVisibility {
+                Visibility {
                     invisible: true,
                     clairvoyant: false,
                 },
@@ -205,7 +205,7 @@ async fn visibility_sensor_loss_and_clairvoyant_contacts_cross_all_chassis() {
             set_battle_visibility(
                 &mut world,
                 observer,
-                BattleVisibility {
+                Visibility {
                     invisible: false,
                     clairvoyant: true,
                 },
@@ -255,7 +255,7 @@ async fn clairvoyance_preserves_physical_los_and_unacquired_aim() {
         set_battle_visibility(
             &mut world,
             observer,
-            BattleVisibility {
+            Visibility {
                 invisible: false,
                 clairvoyant: true,
             },
@@ -265,7 +265,7 @@ async fn clairvoyance_preserves_physical_los_and_unacquired_aim() {
         assert!(battle_hex_visible(&world, observer, hex).unwrap());
         assert_eq!(
             battle_hex_perception(&world, observer, hex).unwrap(),
-            Some(BattleDetectionChannel::Sight)
+            Some(DetectionChannel::Sight)
         );
         assert!(battle_perceive(&world, observer, target).unwrap().is_none());
         assert!(battle_hex_visible(&world, observer, HexCoordinate { x: 9, y: 9 }).is_err());
@@ -274,7 +274,7 @@ async fn clairvoyance_preserves_physical_los_and_unacquired_aim() {
             .unwrap();
         assert!(view.identified);
         assert_eq!(view.detection, None);
-        let rules = BattleAimRules {
+        let rules = AimRules {
             woods_damage: false,
             dig_bonus: 3,
             dig_only_front: false,
@@ -288,7 +288,7 @@ async fn clairvoyance_preserves_physical_los_and_unacquired_aim() {
         let aim = battle_aim_modifiers(&world, observer, target, 0, 4, rules).unwrap();
         assert_eq!(
             aim.perception,
-            Some(BattlePerceptionAim {
+            Some(PerceptionAim {
                 channel: None,
                 direct_fire: true,
                 modifier: 10_000,
@@ -318,22 +318,17 @@ async fn invisibility_suppresses_all_perception_channels_without_acquisition() {
     let (_dir, config, base, observer, target) =
         fixture(&source, include_str!("../game/mechs/JR7-D.toml"), false).await;
     let map = base.btech.units()[&observer].map.unwrap();
-    for channel in BattleDetectionChannel::ALL {
+    for channel in DetectionChannel::ALL {
         let mut world = base.clone();
         // Silence every channel that would win the tie-break ahead of the one under test.
-        if channel != BattleDetectionChannel::Sensors {
-            set_battle_map_perception(&mut world, map, BattleMapPerceptionFlag::Sensors, false)
-                .unwrap();
+        if channel != DetectionChannel::Sensors {
+            set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, false).unwrap();
         }
-        if matches!(
-            channel,
-            BattleDetectionChannel::Radar | BattleDetectionChannel::Probe
-        ) {
-            set_battle_map_visibility(&mut world, map, BattleLight::Day, 0).unwrap();
+        if matches!(channel, DetectionChannel::Radar | DetectionChannel::Probe) {
+            set_battle_map_visibility(&mut world, map, Light::Day, 0).unwrap();
         }
-        if channel == BattleDetectionChannel::Radar {
-            set_battle_map_perception(&mut world, map, BattleMapPerceptionFlag::Probes, false)
-                .unwrap();
+        if channel == DetectionChannel::Radar {
+            set_battle_map_perception(&mut world, map, MapPerceptionFlag::Probes, false).unwrap();
             edit(&mut world, target, |state| {
                 state["ground_elevation"] = 5.into()
             });
@@ -347,7 +342,7 @@ async fn invisibility_suppresses_all_perception_channels_without_acquisition() {
         set_battle_visibility(
             &mut world,
             target,
-            BattleVisibility {
+            Visibility {
                 invisible: true,
                 clairvoyant: false,
             },
@@ -356,7 +351,7 @@ async fn invisibility_suppresses_all_perception_channels_without_acquisition() {
         set_battle_visibility(
             &mut world,
             observer,
-            BattleVisibility {
+            Visibility {
                 invisible: false,
                 clairvoyant: true,
             },

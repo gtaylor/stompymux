@@ -1,43 +1,43 @@
 //! Construction mass arithmetic in 1/1024-ton units: engines, structure, armor, systems and
 //! cargo space, shared by Mech and vehicle mass calculations.
-use super::{BattleSection, BattleSystem, WeaponMount};
+use super::{MechSection, System, WeaponMount};
 use anyhow::{Context, Result, ensure};
 
 /// Installed system mass per surviving Mech critical, independent of current critical damage.
-pub fn system_slot_mass(definition: &super::BattleTemplate, system: BattleSystem) -> u32 {
+pub fn system_slot_mass(definition: &super::MechTemplate, system: System) -> u32 {
     match system {
-        BattleSystem::Case | BattleSystem::LightProbe => 512,
-        BattleSystem::C3i => 1280,
+        System::Case | System::LightProbe => 512,
+        System::C3i => 1280,
         // The Clan active probe fills one slot for a ton; the Beagle two for a ton and a half.
-        BattleSystem::BeagleProbe => {
+        System::BeagleProbe => {
             if definition.has_special("Clan") {
                 1024
             } else {
                 768
             }
         }
-        BattleSystem::BloodhoundProbe => 2048 / 3,
-        BattleSystem::TargetingComputer
-        | BattleSystem::Masc
-        | BattleSystem::C3Master
-        | BattleSystem::C3Slave
-        | BattleSystem::Tag
-        | BattleSystem::AngelEcm
-        | BattleSystem::Axe
-        | BattleSystem::Mace
-        | BattleSystem::DualSaw
-        | BattleSystem::Claw => 1024,
+        System::BloodhoundProbe => 2048 / 3,
+        System::TargetingComputer
+        | System::Masc
+        | System::C3Master
+        | System::C3Slave
+        | System::Tag
+        | System::AngelEcm
+        | System::Axe
+        | System::Mace
+        | System::DualSaw
+        | System::Claw => 1024,
         // An Artemis V controller weighs a ton and a half.
-        BattleSystem::ArtemisIv => {
-            if definition.has_technology(super::BattleTechnology::ArtemisV) {
+        System::ArtemisIv => {
+            if definition.has_technology(super::Technology::ArtemisV) {
                 1536
             } else {
                 1024
             }
         }
         // A Watchdog CEWS weighs a ton and a half across two ECM slots.
-        BattleSystem::Ecm => {
-            if definition.has_technology(super::BattleTechnology::Watchdog) {
+        System::Ecm => {
+            if definition.has_technology(super::Technology::Watchdog) {
                 768
             } else if definition.has_special("Clan") {
                 1024
@@ -46,30 +46,30 @@ pub fn system_slot_mass(definition: &super::BattleTemplate, system: BattleSystem
             }
         }
         // Inner Sphere CASE II weighs a ton per slot; the Clan version weighs half as much.
-        BattleSystem::CaseIi => {
+        System::CaseIi => {
             if definition.has_special("Clan") {
                 512
             } else {
                 1024
             }
         }
-        BattleSystem::Sword => {
+        System::Sword => {
             u32::from(definition.tons.div_ceil(10)) * 512 / u32::from(definition.tons.div_ceil(15))
         }
         // Half a ton plus a twentieth of the Mech rounded up to the half ton, spread over one
         // slot plus one per twenty tons.
-        BattleSystem::RetractableBlade => {
+        System::RetractableBlade => {
             let slots = u32::from(definition.tons.div_ceil(20)) + 1;
             (512 + half_ton((u32::from(definition.tons) * 1024).div_ceil(20))) / slots
         }
-        BattleSystem::Lance => 1024,
-        BattleSystem::Flail => 5 * 1024 / 4,
-        BattleSystem::WreckingBall => 4 * 1024 / 5,
-        BattleSystem::ChainWhip => 3 * 1024 / 2,
-        BattleSystem::SmallVibroblade => 3 * 1024,
-        BattleSystem::MediumVibroblade => 5 * 1024 / 2,
-        BattleSystem::LargeVibroblade => 7 * 1024 / 4,
-        BattleSystem::JumpJet => match definition.tons {
+        System::Lance => 1024,
+        System::Flail => 5 * 1024 / 4,
+        System::WreckingBall => 4 * 1024 / 5,
+        System::ChainWhip => 3 * 1024 / 2,
+        System::SmallVibroblade => 3 * 1024,
+        System::MediumVibroblade => 5 * 1024 / 2,
+        System::LargeVibroblade => 7 * 1024 / 4,
+        System::JumpJet => match definition.tons {
             0..=55 => 512,
             56..=85 => 1024,
             _ => 2048,
@@ -92,7 +92,7 @@ pub fn one_shot_mass<L>(mount: &super::WeaponMount<L>) -> u32 {
 /// their mass, rounded up to the half ton.
 pub fn power_amplifier_mass(
     weapons: &[WeaponMount],
-    survives: impl Fn(BattleSection) -> bool,
+    survives: impl Fn(MechSection) -> bool,
 ) -> u32 {
     let energy: u32 = weapons
         .iter()
@@ -100,9 +100,9 @@ pub fn power_amplifier_mass(
             (mount.weapon.is_energy() && mount.weapon.profile().ammunition_per_ton == 0)
                 || matches!(
                     mount.weapon,
-                    super::BattleWeapon::PlasmaRifle
-                        | super::BattleWeapon::LaserAms
-                        | super::BattleWeapon::ClanLaserAms
+                    super::Weapon::PlasmaRifle
+                        | super::Weapon::LaserAms
+                        | super::Weapon::ClanLaserAms
                 )
         })
         .filter(|mount| survives(mount.criticals[0].section))
@@ -225,17 +225,14 @@ mod tests {
     #[test]
     fn case_ii_slot_mass_depends_on_technology_base() {
         let mut definition =
-            crate::BattleTemplate::parse("JR7-D", include_str!("../tests/fixtures/JR7-D.toml"))
+            crate::MechTemplate::parse("JR7-D", include_str!("../tests/fixtures/JR7-D.toml"))
                 .unwrap();
-        assert_eq!(system_slot_mass(&definition, BattleSystem::CaseIi), 1024);
-        assert_eq!(system_slot_mass(&definition, BattleSystem::Case), 512);
+        assert_eq!(system_slot_mass(&definition, System::CaseIi), 1024);
+        assert_eq!(system_slot_mass(&definition, System::Case), 512);
         let specials = definition.attributes.entry("specials".into()).or_default();
         specials.push_str(" Clan");
-        assert_eq!(system_slot_mass(&definition, BattleSystem::CaseIi), 512);
-        assert_eq!(
-            BattleSystem::parse("CASE-II").unwrap(),
-            BattleSystem::CaseIi
-        );
-        assert!(BattleSystem::CaseIi.is_noncritical());
+        assert_eq!(system_slot_mass(&definition, System::CaseIi), 512);
+        assert_eq!(System::parse("CASE-II").unwrap(), System::CaseIi);
+        assert!(System::CaseIi.is_noncritical());
     }
 }

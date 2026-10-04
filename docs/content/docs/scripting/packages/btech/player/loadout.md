@@ -21,4 +21,4 @@ btech.player.loadout(player)
 
 ## Returns
 
-- `BattlePersonalCombatLoadout|nil loadout`
+- `PersonalCombatLoadout|nil loadout`

@@ -4,7 +4,7 @@
 //! `dice_block` and `dice_word`. Unsigned 64-bit values are stored bit for bit in
 //! SQLite's signed 64-bit integers.
 use super::write::Cell;
-use crate::{BattleDice, btech::BattleDiceState};
+use crate::{Dice, btech::DiceState};
 use anyhow::{Context, Result};
 use sqlx::{Row, sqlite::SqliteRow};
 
@@ -12,7 +12,7 @@ use sqlx::{Row, sqlite::SqliteRow};
 pub(super) const COLUMNS: &str = "dice_seed,dice_stream,dice_block,dice_word";
 
 /// Owned column values for a stream, ready for a row write.
-pub(super) fn fields(dice: &BattleDice) -> [(&'static str, Cell); 4] {
+pub(super) fn fields(dice: &Dice) -> [(&'static str, Cell); 4] {
     let state = dice.saved_state();
     [
         ("dice_seed", Cell::Blob(state.seed.to_vec())),
@@ -23,10 +23,10 @@ pub(super) fn fields(dice: &BattleDice) -> [(&'static str, Cell); 4] {
 }
 
 /// Rebuild a stream from a row selected with [`COLUMNS`].
-pub(super) fn read(row: &SqliteRow) -> Result<BattleDice> {
+pub(super) fn read(row: &SqliteRow) -> Result<Dice> {
     let seed: Vec<u8> = row.try_get("dice_seed")?;
     let word: i64 = row.try_get("dice_word")?;
-    BattleDice::from_saved_state(BattleDiceState {
+    Dice::from_saved_state(DiceState {
         seed: seed.try_into().ok().context("Dice seed must be 32 bytes")?,
         stream: row.try_get::<i64, _>("dice_stream")? as u64,
         block: row.try_get::<i64, _>("dice_block")? as u64,

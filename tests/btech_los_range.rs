@@ -25,12 +25,12 @@ async fn fixture(
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let observer = world.create(&config, "Observer".into(), Kind::Thing);
     let target = world.create(&config, "Target".into(), Kind::Thing);
-    BattleUnitTemplate::parse("test", source)
+    UnitTemplate::parse("test", source)
         .unwrap()
         .create(&mut world, observer)
         .unwrap();
     support::seed_object_dice(&mut world, observer, support::FIXTURE_DICE_SEED);
-    BattleUnitTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml"))
+    UnitTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml"))
         .unwrap()
         .create(&mut world, target)
         .unwrap();

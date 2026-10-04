@@ -4,7 +4,7 @@
 //! with the clock is not rewritten. A database without the row holds a fresh world, whose
 //! window has not started closing.
 use super::{btech_deadlines::Clock, write::Cell};
-use crate::{World, btech::reactor_instability::BattleReactorState};
+use crate::{World, btech::reactor_instability::ReactorState};
 use anyhow::Result;
 use sqlx::SqliteConnection;
 
@@ -21,8 +21,8 @@ async fn stored(c: &mut SqliteConnection) -> Result<Option<Option<i64>>> {
 }
 
 /// A fresh world starts at event tick zero; an existing clock never reopens on reload.
-pub(super) async fn load(c: &mut SqliteConnection, clock: Clock) -> Result<BattleReactorState> {
-    let mut state = BattleReactorState::default();
+pub(super) async fn load(c: &mut SqliteConnection, clock: Clock) -> Result<ReactorState> {
+    let mut state = ReactorState::default();
     if let Some(closes_at) = stored(c).await? {
         state.startup_remaining = clock.optional_remaining(closes_at, MAX_REMAINING)?;
     }
@@ -39,9 +39,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
     if previous == closes_at {
         // A fresh world's untouched window needs no row, and a row that exists already
         // holds this deadline.
-        if remaining == BattleReactorState::default().startup_remaining
-            || stored(c).await?.is_some()
-        {
+        if remaining == ReactorState::default().startup_remaining || stored(c).await?.is_some() {
             return Ok(false);
         }
     }

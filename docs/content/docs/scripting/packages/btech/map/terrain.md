@@ -22,4 +22,4 @@ btech.map.terrain(map, hex)
 
 ## Returns
 
-- `BattleTerrainName terrain`
+- `TerrainName terrain`

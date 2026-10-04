@@ -1,8 +1,7 @@
 //! Compact damage inspection projects authoritative material and equipment state without mutating it.
 use super::{
-    AmmunitionBin, BattleDamageRecord, BattleSection, BattleSectionState, BattleSystem,
-    BattleVehicleSection, CriticalLocation, SectionDefinition, VehicleCriticalLocation,
-    WeaponMount,
+    AmmunitionBin, CriticalLocation, DamageRecord, MechSection, SectionDefinition, SectionState,
+    System, VehicleCriticalLocation, VehicleSection, WeaponMount,
 };
 use crate::{ObjectId, World};
 use anyhow::{Context, Result};
@@ -11,11 +10,11 @@ use std::collections::BTreeMap;
 /// Shared borrowed construction and current ammunition for either anatomical location type.
 struct Inventory<'a, S, L> {
     definitions: &'a BTreeMap<S, SectionDefinition>,
-    sections: &'a BTreeMap<S, BattleSectionState>,
+    sections: &'a BTreeMap<S, SectionState>,
     weapons: &'a [WeaponMount<L>],
     bins: &'a [AmmunitionBin<L>],
     remaining: &'a [u16],
-    components: &'a [super::BattleComponentFailure<L>],
+    components: &'a [super::ComponentFailure<L>],
 }
 
 /// Structural filler and split links do not represent damage-list equipment records.
@@ -23,42 +22,42 @@ pub(super) fn placeholder(name: &str) -> bool {
     name.eq_ignore_ascii_case("SplitCrit_Left")
         || name.eq_ignore_ascii_case("SplitCrit_Right")
         || matches!(
-            BattleSystem::named(name),
+            System::named(name),
             Some(
-                BattleSystem::EndoSteel
-                    | BattleSystem::FerroFibrous
-                    | BattleSystem::HeavyFerroFibrous
-                    | BattleSystem::LightFerroFibrous
-                    | BattleSystem::TripleStrengthMyomer
-                    | BattleSystem::StealthArmor
-                    | BattleSystem::LaserReflective
+                System::EndoSteel
+                    | System::FerroFibrous
+                    | System::HeavyFerroFibrous
+                    | System::LightFerroFibrous
+                    | System::TripleStrengthMyomer
+                    | System::StealthArmor
+                    | System::LaserReflective
             )
         )
 }
 
 /// Retained numeric identities belong to this text format, independently of Rust enum layout.
-pub(super) fn mech_section(section: BattleSection) -> u8 {
+pub(super) fn mech_section(section: MechSection) -> u8 {
     match section {
-        BattleSection::LeftArm => 0,
-        BattleSection::RightArm => 1,
-        BattleSection::LeftTorso => 2,
-        BattleSection::RightTorso => 3,
-        BattleSection::CenterTorso => 4,
-        BattleSection::LeftLeg => 5,
-        BattleSection::RightLeg => 6,
-        BattleSection::Head => 7,
+        MechSection::LeftArm => 0,
+        MechSection::RightArm => 1,
+        MechSection::LeftTorso => 2,
+        MechSection::RightTorso => 3,
+        MechSection::CenterTorso => 4,
+        MechSection::LeftLeg => 5,
+        MechSection::RightLeg => 6,
+        MechSection::Head => 7,
     }
 }
 
 /// Vehicle faces use their own physical identities in the same numeric text format.
-pub(super) fn vehicle_section(section: BattleVehicleSection) -> u8 {
+pub(super) fn vehicle_section(section: VehicleSection) -> u8 {
     match section {
-        BattleVehicleSection::Left => 0,
-        BattleVehicleSection::Right => 1,
-        BattleVehicleSection::Front => 2,
-        BattleVehicleSection::Rear => 3,
-        BattleVehicleSection::Turret => 4,
-        BattleVehicleSection::Rotor => 5,
+        VehicleSection::Left => 0,
+        VehicleSection::Right => 1,
+        VehicleSection::Front => 2,
+        VehicleSection::Rear => 3,
+        VehicleSection::Turret => 4,
+        VehicleSection::Rotor => 5,
     }
 }
 
@@ -95,7 +94,7 @@ fn render<S: Copy + Ord, L: Copy + PartialEq>(
         ] {
             if before != after {
                 result.push(
-                    BattleDamageRecord::Armor {
+                    DamageRecord::Armor {
                         section: number(section),
                         rear,
                         loss: i32::from(before) - i32::from(after),
@@ -109,7 +108,7 @@ fn render<S: Copy + Ord, L: Copy + PartialEq>(
         let current = &inventory.sections[&section];
         if original.internal != 0 && original.internal != current.internal {
             result.push(
-                BattleDamageRecord::Internal {
+                DamageRecord::Internal {
                     section: number(section),
                     loss: i32::from(original.internal) - i32::from(current.internal),
                 }
@@ -126,7 +125,7 @@ fn render<S: Copy + Ord, L: Copy + PartialEq>(
             let section_number = number(section);
             if destroyed(location) {
                 result.push(
-                    BattleDamageRecord::Critical {
+                    DamageRecord::Critical {
                         section: section_number,
                         slot,
                     }
@@ -143,7 +142,7 @@ fn render<S: Copy + Ord, L: Copy + PartialEq>(
                 let spent = i32::from(bin.capacity) - i32::from(inventory.remaining[index]);
                 if spent != 0 {
                     result.push(
-                        BattleDamageRecord::Ammunition {
+                        DamageRecord::Ammunition {
                             section: section_number,
                             slot,
                             spent,
@@ -160,7 +159,7 @@ fn render<S: Copy + Ord, L: Copy + PartialEq>(
                 let state = failure(index);
                 if state != 0 {
                     result.push(
-                        BattleDamageRecord::Failure {
+                        DamageRecord::Failure {
                             section: section_number,
                             slot,
                             failure: i32::from(state),
@@ -172,7 +171,7 @@ fn render<S: Copy + Ord, L: Copy + PartialEq>(
                 super::component_failure::at(inventory.components, location)
             {
                 result.push(
-                    BattleDamageRecord::Failure {
+                    DamageRecord::Failure {
                         section: section_number,
                         slot,
                         failure: i32::from(failure.code()),
@@ -258,7 +257,7 @@ mod tests {
     #[test]
     fn destroyed_section_omits_fillers_and_retains_case() {
         let definitions = BTreeMap::from([(
-            BattleSection::LeftTorso,
+            MechSection::LeftTorso,
             SectionDefinition {
                 armor: 8,
                 rear: 4,
@@ -292,8 +291,8 @@ mod tests {
             },
         )]);
         let sections = BTreeMap::from([(
-            BattleSection::LeftTorso,
-            BattleSectionState {
+            MechSection::LeftTorso,
+            SectionState {
                 armor: 0,
                 rear: 0,
                 internal: 0,

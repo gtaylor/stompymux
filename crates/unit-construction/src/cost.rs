@@ -4,14 +4,11 @@ use anyhow::{Result, ensure};
 use std::collections::BTreeMap;
 
 /// Market prices of loose parts by part id. Parts without an entry cost nothing.
-pub type BattlePartPrices = BTreeMap<i32, u64>;
+pub type PartPrices = BTreeMap<i32, u64>;
 
 /// The market price of one catalogued part.
-pub fn part_price(prices: &BattlePartPrices, part_id: i32) -> Result<u64> {
-    ensure!(
-        BattlePart::from_id(part_id).is_some(),
-        "Unknown inventory part"
-    );
+pub fn part_price(prices: &PartPrices, part_id: i32) -> Result<u64> {
+    ensure!(Part::from_id(part_id).is_some(), "Unknown inventory part");
     Ok(prices.get(&part_id).copied().unwrap_or(0))
 }
 const WEAPON_COST: [u64; 196] = [
@@ -46,7 +43,7 @@ const AMMO_COST: [u64; 196] = [
     31000, 30000, 30000, 30000, 30000, 27000, 27000, 27000, 30000, 30000, 30000, 30000, 27000,
     27000, 27000,
 ];
-fn flag(template: &BattleTemplate, name: &str) -> bool {
+fn flag(template: &MechTemplate, name: &str) -> bool {
     ["specials", "specials2"]
         .iter()
         .filter_map(|key| template.attributes.get(*key))
@@ -84,7 +81,7 @@ fn raw_weapon_cost(id: i32) -> u64 {
 }
 
 fn raw_weapon_mass(id: i32) -> u32 {
-    if let Some(weapon) = BattleWeapon::from_part_id(id) {
+    if let Some(weapon) = Weapon::from_part_id(id) {
         return weapon.mass();
     }
     match id {
@@ -98,8 +95,7 @@ fn raw_weapon_mass(id: i32) -> u32 {
 }
 
 fn raw_weapon_is_energy(id: i32) -> bool {
-    BattleWeapon::from_part_id(id)
-        .is_some_and(|weapon| weapon.gunnery_skill(true) == "Gunnery-Laser")
+    Weapon::from_part_id(id).is_some_and(|weapon| weapon.gunnery_skill(true) == "Gunnery-Laser")
         || matches!(id, 175 | 176)
 }
 
@@ -108,13 +104,13 @@ fn raw_ammunition_cost(template: &RawTemplate) -> Result<f64> {
     for section in RawSectionCode::for_unit(template.class, template.movement) {
         for row in inspect_raw_template_criticals(template, *section)? {
             let Some(part) = row.part else { continue };
-            let Some(weapon_id) = BattlePart::ammunition_weapon_id(part.id) else {
+            let Some(weapon_id) = Part::ammunition_weapon_id(part.id) else {
                 continue;
             };
             let Some((_, maximum)) = row.ammunition else {
                 continue;
             };
-            let Some(weapon) = BattleWeapon::from_part_id(weapon_id) else {
+            let Some(weapon) = Weapon::from_part_id(weapon_id) else {
                 continue;
             };
             let per_ton = u64::from(weapon.profile().ammunition_per_ton);
@@ -132,70 +128,67 @@ fn raw_ammunition_cost(template: &RawTemplate) -> Result<f64> {
     Ok(total)
 }
 
-fn raw_equipment_cost(prices: &BattlePartPrices, template: &RawTemplate) -> Result<f64> {
+fn raw_equipment_cost(prices: &PartPrices, template: &RawTemplate) -> Result<f64> {
     let mut total = 0.0;
     let mut bloodhound = 0_u64;
     for definition in template.sections.values() {
         for critical in definition.criticals.values() {
-            let Some(part) = BattlePart::parse(&critical.equipment).ok() else {
+            let Some(part) = Part::parse(&critical.equipment).ok() else {
                 continue;
             };
-            if matches!(
-                part.kind,
-                BattlePartKind::Weapon | BattlePartKind::Ammunition
-            ) {
+            if matches!(part.kind, PartKind::Weapon | PartKind::Ammunition) {
                 continue;
             }
-            total += if let Some(system) = BattleSystem::named(&critical.equipment) {
+            total += if let Some(system) = System::named(&critical.equipment) {
                 match system {
-                    BattleSystem::Case => 50000.0,
-                    BattleSystem::CaseIi => 175000.0,
-                    BattleSystem::BeagleProbe => 100000.0,
-                    BattleSystem::LightProbe => 50000.0,
-                    BattleSystem::BloodhoundProbe => {
+                    System::Case => 50000.0,
+                    System::CaseIi => 175000.0,
+                    System::BeagleProbe => 100000.0,
+                    System::LightProbe => 50000.0,
+                    System::BloodhoundProbe => {
                         bloodhound += 1;
                         0.0
                     }
-                    BattleSystem::ArtemisIv => {
+                    System::ArtemisIv => {
                         if raw_flag(template, "ArtemisV_Tech") {
                             250000.0
                         } else {
                             100000.0
                         }
                     }
-                    BattleSystem::AngelEcm => 375000.0,
-                    BattleSystem::C3Master => 300000.0,
-                    BattleSystem::C3Slave => 250000.0,
-                    BattleSystem::C3i => 375000.0,
-                    BattleSystem::Ecm => {
+                    System::AngelEcm => 375000.0,
+                    System::C3Master => 300000.0,
+                    System::C3Slave => 250000.0,
+                    System::C3i => 375000.0,
+                    System::Ecm => {
                         if raw_flag(template, "WatchDog_Tech") {
                             500000.0
                         } else {
                             100000.0
                         }
                     }
-                    BattleSystem::Tag => 50000.0,
-                    BattleSystem::TargetingComputer => 10000.0,
-                    BattleSystem::Axe => 5000.0,
-                    BattleSystem::ShoulderOrHip
-                    | BattleSystem::UpperActuator
-                    | BattleSystem::LowerActuator
-                    | BattleSystem::HandOrFootActuator
-                    | BattleSystem::LifeSupport
-                    | BattleSystem::Sensors
-                    | BattleSystem::Cockpit
-                    | BattleSystem::Engine
-                    | BattleSystem::Gyro
-                    | BattleSystem::HeatSink
-                    | BattleSystem::JumpJet
-                    | BattleSystem::FerroFibrous
-                    | BattleSystem::LightFerroFibrous
-                    | BattleSystem::EndoSteel
-                    | BattleSystem::TripleStrengthMyomer
-                    | BattleSystem::StealthArmor
-                    | BattleSystem::LaserReflective
-                    | BattleSystem::Masc
-                    | BattleSystem::Sword => 0.0,
+                    System::Tag => 50000.0,
+                    System::TargetingComputer => 10000.0,
+                    System::Axe => 5000.0,
+                    System::ShoulderOrHip
+                    | System::UpperActuator
+                    | System::LowerActuator
+                    | System::HandOrFootActuator
+                    | System::LifeSupport
+                    | System::Sensors
+                    | System::Cockpit
+                    | System::Engine
+                    | System::Gyro
+                    | System::HeatSink
+                    | System::JumpJet
+                    | System::FerroFibrous
+                    | System::LightFerroFibrous
+                    | System::EndoSteel
+                    | System::TripleStrengthMyomer
+                    | System::StealthArmor
+                    | System::LaserReflective
+                    | System::Masc
+                    | System::Sword => 0.0,
                     _ => part_price(prices, part.part_id)? as f64,
                 }
             } else if part.part_id == 427 {
@@ -210,21 +203,21 @@ fn raw_equipment_cost(prices: &BattlePartPrices, template: &RawTemplate) -> Resu
     Ok(total + (bloodhound / 3 * 500000) as f64)
 }
 
-fn raw_mech_template(template: &RawTemplate) -> Result<BattleTemplate> {
+fn raw_mech_template(template: &RawTemplate) -> Result<MechTemplate> {
     anyhow::ensure!(
         template.class == RawUnitClass::Mech,
         "template is not a Mech"
     );
     let movement = template.movement;
     let mut sections = std::collections::BTreeMap::new();
-    for (ordinal, section) in BattleSection::ALL.into_iter().enumerate() {
+    for (ordinal, section) in MechSection::ALL.into_iter().enumerate() {
         let raw = RawSectionCode::from_ordinal(template.class, movement, ordinal)
             .and_then(|code| template.sections.get(&code))
             .cloned()
             .unwrap_or_default();
         sections.insert(section, raw);
     }
-    Ok(BattleTemplate {
+    Ok(MechTemplate {
         name: template.name.clone(),
         reference: template.reference.clone(),
         tons: u16::try_from(template.tons)?,
@@ -236,7 +229,7 @@ fn raw_mech_template(template: &RawTemplate) -> Result<BattleTemplate> {
     })
 }
 
-fn raw_vehicle_base_cost(prices: &BattlePartPrices, template: &RawTemplate) -> Result<u64> {
+fn raw_vehicle_base_cost(prices: &PartPrices, template: &RawTemplate) -> Result<u64> {
     let tons = u64::try_from(template.tons)?;
     let weapons = inspect_raw_template_weapons(template)?;
     let mut total = (tons * 1500) as f64;
@@ -331,7 +324,7 @@ fn raw_vehicle_base_cost(prices: &BattlePartPrices, template: &RawTemplate) -> R
 }
 
 /// Calculate native construction cost without requiring a combat runtime class.
-pub fn raw_template_base_cost(prices: &BattlePartPrices, template: &RawTemplate) -> Result<u64> {
+pub fn raw_template_base_cost(prices: &PartPrices, template: &RawTemplate) -> Result<u64> {
     match template.class {
         RawUnitClass::Mech => template_base_cost(prices, &raw_mech_template(template)?),
         RawUnitClass::Vehicle | RawUnitClass::Vtol | RawUnitClass::Naval => {
@@ -369,9 +362,9 @@ type InspectionFlags = (InspectionPart, bool, bool);
 /// catalogue part that native inspection and economy code can price without a
 /// combat implementation. Structural split links remain in the clone because
 /// the supported weapon resolver consumes them.
-fn inspection_loadout(template: &BattleTemplate) -> Result<(BattleLoadout, Vec<InspectionFlags>)> {
+fn inspection_loadout(template: &MechTemplate) -> Result<(MechLoadout, Vec<InspectionFlags>)> {
     let normalized = inspection_compatible_template(template);
-    if let Ok(loadout) = BattleLoadout::resolve(&normalized) {
+    if let Ok(loadout) = MechLoadout::resolve(&normalized) {
         return Ok((loadout, Vec::new()));
     }
     let mut compatible = normalized;
@@ -380,10 +373,10 @@ fn inspection_loadout(template: &BattleTemplate) -> Result<(BattleLoadout, Vec<I
         definition.criticals.retain(|_, critical| {
             if critical.equipment.eq_ignore_ascii_case("SplitCrit_Left")
                 || critical.equipment.eq_ignore_ascii_case("SplitCrit_Right")
-                || BattleSystem::named(&critical.equipment).is_some()
-                || BattleWeapon::parse(&critical.equipment).is_ok()
+                || System::named(&critical.equipment).is_some()
+                || Weapon::parse(&critical.equipment).is_ok()
                 || strip_name_prefix(&critical.equipment, "Ammo_")
-                    .is_some_and(|name| BattleWeapon::parse(name).is_ok())
+                    .is_some_and(|name| Weapon::parse(name).is_ok())
             {
                 return true;
             }
@@ -393,10 +386,10 @@ fn inspection_loadout(template: &BattleTemplate) -> Result<(BattleLoadout, Vec<I
             false
         });
     }
-    Ok((BattleLoadout::resolve(&compatible)?, raw))
+    Ok((MechLoadout::resolve(&compatible)?, raw))
 }
 /// Calculate the legacy MaxTech/FASA construction estimate from pristine material.
-pub fn template_base_cost(prices: &BattlePartPrices, template: &BattleTemplate) -> Result<u64> {
+pub fn template_base_cost(prices: &PartPrices, template: &MechTemplate) -> Result<u64> {
     let (loadout, raw_parts) = inspection_loadout(template)?;
     let tons = u64::from(administrative_template_tonnage(
         &template.attributes,
@@ -428,16 +421,16 @@ pub fn template_base_cost(prices: &BattlePartPrices, template: &BattleTemplate) 
     for part in &loadout.systems {
         let arm = matches!(
             part.location.section,
-            BattleSection::LeftArm | BattleSection::RightArm
+            MechSection::LeftArm | MechSection::RightArm
         );
         let leg = template.chassis()?.is_leg(part.location.section);
         total += match part.system {
-            BattleSystem::UpperActuator if arm => (tons * 100) as f64,
-            BattleSystem::LowerActuator if arm => (tons * 50) as f64,
-            BattleSystem::HandOrFootActuator if arm => (tons * 80) as f64,
-            BattleSystem::UpperActuator if leg => (tons * 150) as f64,
-            BattleSystem::LowerActuator if leg => (tons * 80) as f64,
-            BattleSystem::HandOrFootActuator if leg => (tons * 120) as f64,
+            System::UpperActuator if arm => (tons * 100) as f64,
+            System::LowerActuator if arm => (tons * 50) as f64,
+            System::HandOrFootActuator if arm => (tons * 80) as f64,
+            System::UpperActuator if leg => (tons * 150) as f64,
+            System::LowerActuator if leg => (tons * 80) as f64,
+            System::HandOrFootActuator if leg => (tons * 120) as f64,
             _ => 0.0,
         };
     }
@@ -540,7 +533,7 @@ pub fn template_base_cost(prices: &BattlePartPrices, template: &BattleTemplate) 
         } else {
             (cost
                 * (u64::from(bin.capacity) / per)
-                * if bin.mode.munition() == BattleAmmunitionMode::Artemis {
+                * if bin.mode.munition() == AmmunitionMode::Artemis {
                     2
                 } else {
                     1
@@ -553,53 +546,53 @@ pub fn template_base_cost(prices: &BattlePartPrices, template: &BattleTemplate) 
     let mut clan_case = std::collections::BTreeSet::new();
     for part in &loadout.systems {
         match part.system {
-            BattleSystem::Masc => masc += 1,
-            BattleSystem::Sword => sword = true,
-            BattleSystem::Case => total += 50000.0,
-            BattleSystem::CaseIi => total += 175000.0,
-            BattleSystem::BeagleProbe => total += 100000.0,
-            BattleSystem::LightProbe => total += 50000.0,
-            BattleSystem::BloodhoundProbe => bloodhound += 1,
-            BattleSystem::ArtemisIv => {
+            System::Masc => masc += 1,
+            System::Sword => sword = true,
+            System::Case => total += 50000.0,
+            System::CaseIi => total += 175000.0,
+            System::BeagleProbe => total += 100000.0,
+            System::LightProbe => total += 50000.0,
+            System::BloodhoundProbe => bloodhound += 1,
+            System::ArtemisIv => {
                 total += if flag(template, "ArtemisV_Tech") {
                     250000.0
                 } else {
                     100000.0
                 }
             }
-            BattleSystem::AngelEcm => total += 375000.0,
-            BattleSystem::C3Master => total += 300000.0,
-            BattleSystem::C3Slave => total += 250000.0,
-            BattleSystem::C3i => total += 375000.0,
-            BattleSystem::Ecm => {
+            System::AngelEcm => total += 375000.0,
+            System::C3Master => total += 300000.0,
+            System::C3Slave => total += 250000.0,
+            System::C3i => total += 375000.0,
+            System::Ecm => {
                 total += if flag(template, "WatchDog_Tech") {
                     500000.0
                 } else {
                     100000.0
                 }
             }
-            BattleSystem::Tag => total += 50000.0,
-            BattleSystem::TargetingComputer => total += 10000.0,
-            BattleSystem::Axe => total += 5000.0,
-            BattleSystem::ShoulderOrHip
-            | BattleSystem::UpperActuator
-            | BattleSystem::LowerActuator
-            | BattleSystem::HandOrFootActuator
-            | BattleSystem::LifeSupport
-            | BattleSystem::Sensors
-            | BattleSystem::Cockpit
-            | BattleSystem::Engine
-            | BattleSystem::Gyro
-            | BattleSystem::HeatSink
-            | BattleSystem::JumpJet
-            | BattleSystem::FerroFibrous
-            | BattleSystem::LightFerroFibrous
-            | BattleSystem::EndoSteel
-            | BattleSystem::TripleStrengthMyomer
-            | BattleSystem::StealthArmor
-            | BattleSystem::LaserReflective => {}
+            System::Tag => total += 50000.0,
+            System::TargetingComputer => total += 10000.0,
+            System::Axe => total += 5000.0,
+            System::ShoulderOrHip
+            | System::UpperActuator
+            | System::LowerActuator
+            | System::HandOrFootActuator
+            | System::LifeSupport
+            | System::Sensors
+            | System::Cockpit
+            | System::Engine
+            | System::Gyro
+            | System::HeatSink
+            | System::JumpJet
+            | System::FerroFibrous
+            | System::LightFerroFibrous
+            | System::EndoSteel
+            | System::TripleStrengthMyomer
+            | System::StealthArmor
+            | System::LaserReflective => {}
             _ => {
-                if let Ok(part_id) = BattlePart::parse(
+                if let Ok(part_id) = Part::parse(
                     &template.sections[&part.location.section].criticals[&part.location.slot]
                         .equipment,
                 ) {
@@ -638,12 +631,9 @@ pub fn template_base_cost(prices: &BattlePartPrices, template: &BattleTemplate) 
 }
 
 /// Calculate the legacy vehicle/VTOL branch of the FASA construction estimate.
-pub fn vehicle_template_base_cost(
-    prices: &BattlePartPrices,
-    template: &BattleVehicleTemplate,
-) -> Result<u64> {
+pub fn vehicle_template_base_cost(prices: &PartPrices, template: &VehicleTemplate) -> Result<u64> {
     let compatible = inspection_compatible_vehicle_template(template);
-    let loadout = BattleVehicleLoadout::resolve(&compatible)?;
+    let loadout = VehicleLoadout::resolve(&compatible)?;
     let tons = u64::from(administrative_template_tonnage(
         &template.attributes,
         template.tons,
@@ -654,7 +644,7 @@ pub fn vehicle_template_base_cost(
     let mut turret_mass = 0u64;
     let mut amplifier_mass = 0u64;
     for mount in &loadout.weapons {
-        if mount.criticals[0].section == BattleVehicleSection::Turret {
+        if mount.criticals[0].section == VehicleSection::Turret {
             turret_mass += u64::from(mount.weapon.mass())
         }
         if mount.weapon.gunnery_skill(true) == "Gunnery-Laser" {
@@ -665,10 +655,10 @@ pub fn vehicle_template_base_cost(
         total += (20000 * (amplifier_mass / 1024) / 10) as f64
     }
     total += (5000 * (turret_mass / 10) / 1024) as f64;
-    if movement == BattleVehicleMovement::Hover {
+    if movement == VehicleMovement::Hover {
         total += (2000 * tons) as f64
     }
-    if movement == BattleVehicleMovement::Vtol {
+    if movement == VehicleMovement::Vtol {
         total += (4000 * tons) as f64
     }
     let (rating, suspension) = inspection_vehicle_engine_rating(template)?;
@@ -738,7 +728,7 @@ pub fn vehicle_template_base_cost(
         } else {
             (cost
                 * (u64::from(bin.capacity) / per)
-                * if bin.mode.munition() == BattleAmmunitionMode::Artemis {
+                * if bin.mode.munition() == AmmunitionMode::Artemis {
                     2
                 } else {
                     1
@@ -748,52 +738,52 @@ pub fn vehicle_template_base_cost(
     let mut bloodhound = 0_u64;
     for part in &loadout.systems {
         total += match part.system {
-            BattleSystem::Case => 50000.0,
-            BattleSystem::CaseIi => 175000.0,
-            BattleSystem::BeagleProbe => 100000.0,
-            BattleSystem::LightProbe => 50000.0,
-            BattleSystem::BloodhoundProbe => {
+            System::Case => 50000.0,
+            System::CaseIi => 175000.0,
+            System::BeagleProbe => 100000.0,
+            System::LightProbe => 50000.0,
+            System::BloodhoundProbe => {
                 bloodhound += 1;
                 0.0
             }
-            BattleSystem::ArtemisIv => {
+            System::ArtemisIv => {
                 if flag_vehicle(template, "ArtemisV_Tech") {
                     250000.0
                 } else {
                     100000.0
                 }
             }
-            BattleSystem::AngelEcm => 375000.0,
-            BattleSystem::C3Master => 300000.0,
-            BattleSystem::C3Slave => 250000.0,
-            BattleSystem::C3i => 375000.0,
-            BattleSystem::Ecm => {
+            System::AngelEcm => 375000.0,
+            System::C3Master => 300000.0,
+            System::C3Slave => 250000.0,
+            System::C3i => 375000.0,
+            System::Ecm => {
                 if flag_vehicle(template, "WatchDog_Tech") {
                     500000.0
                 } else {
                     100000.0
                 }
             }
-            BattleSystem::Tag => 50000.0,
-            BattleSystem::TargetingComputer => 10000.0,
-            BattleSystem::ShoulderOrHip
-            | BattleSystem::UpperActuator
-            | BattleSystem::LowerActuator
-            | BattleSystem::HandOrFootActuator
-            | BattleSystem::LifeSupport
-            | BattleSystem::Sensors
-            | BattleSystem::Cockpit
-            | BattleSystem::Engine
-            | BattleSystem::Gyro
-            | BattleSystem::HeatSink
-            | BattleSystem::JumpJet
-            | BattleSystem::FerroFibrous
-            | BattleSystem::LightFerroFibrous
-            | BattleSystem::EndoSteel
-            | BattleSystem::TripleStrengthMyomer
-            | BattleSystem::StealthArmor
-            | BattleSystem::LaserReflective => 0.0,
-            _ => BattlePart::parse(
+            System::Tag => 50000.0,
+            System::TargetingComputer => 10000.0,
+            System::ShoulderOrHip
+            | System::UpperActuator
+            | System::LowerActuator
+            | System::HandOrFootActuator
+            | System::LifeSupport
+            | System::Sensors
+            | System::Cockpit
+            | System::Engine
+            | System::Gyro
+            | System::HeatSink
+            | System::JumpJet
+            | System::FerroFibrous
+            | System::LightFerroFibrous
+            | System::EndoSteel
+            | System::TripleStrengthMyomer
+            | System::StealthArmor
+            | System::LaserReflective => 0.0,
+            _ => Part::parse(
                 &template.sections[&part.location.section].criticals[&part.location.slot].equipment,
             )
             .ok()
@@ -803,15 +793,15 @@ pub fn vehicle_template_base_cost(
     }
     total += (bloodhound / 3 * 500000) as f64;
     let modifier = match movement {
-        BattleVehicleMovement::Tracked => 1.0 + tons as f64 / 100.0,
-        BattleVehicleMovement::Wheeled => 1.0 + tons as f64 / 200.0,
-        BattleVehicleMovement::Hover => 1.0 + tons as f64 / 50.0,
-        BattleVehicleMovement::Vtol => 1.0 + tons as f64 / 30.0,
-        BattleVehicleMovement::Stationary => 1.0,
+        VehicleMovement::Tracked => 1.0 + tons as f64 / 100.0,
+        VehicleMovement::Wheeled => 1.0 + tons as f64 / 200.0,
+        VehicleMovement::Hover => 1.0 + tons as f64 / 50.0,
+        VehicleMovement::Vtol => 1.0 + tons as f64 / 30.0,
+        VehicleMovement::Stationary => 1.0,
     };
     Ok((total * modifier) as u64)
 }
-fn flag_vehicle(template: &BattleVehicleTemplate, name: &str) -> bool {
+fn flag_vehicle(template: &VehicleTemplate, name: &str) -> bool {
     ["specials", "specials2"]
         .iter()
         .filter_map(|key| template.attributes.get(*key))

@@ -1,5 +1,5 @@
 //! Atomic ice and bridge breakage: terrain changes before occupant immersion and falls.
-use super::{BattleFallReport, BattleFallRules, BattleNotice, Hex, HexCoordinate};
+use super::{FallRules, Hex, HexCoordinate, MechFallReport, Notice};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
@@ -7,31 +7,31 @@ use serde::Serialize;
 /// Terrain change and ordered occupant consequences owned by the enclosing world transaction.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[must_use = "Commit terrain, unit effects and notices together"]
-pub struct BattleSurfaceBreak {
+pub struct SurfaceBreak {
     pub map: ObjectId,
     pub coordinate: HexCoordinate,
     pub before: Hex,
     pub after: Hex,
     pub fall_levels: u8,
-    pub falls: Vec<(ObjectId, BattleFallReport)>,
-    pub vehicle_falls: Vec<(ObjectId, super::BattleVehicleFallReport)>,
+    pub falls: Vec<(ObjectId, MechFallReport)>,
+    pub vehicle_falls: Vec<(ObjectId, super::VehicleFallReport)>,
     pub flooded_vehicles: Vec<ObjectId>,
     /// Private occupant fall checks ordered within surface notices.
-    pub pilot_notices: Vec<super::BattlePilotNotice>,
-    pub notices: Vec<BattleNotice>,
+    pub pilot_notices: Vec<super::PilotNotice>,
+    pub notices: Vec<Notice>,
 }
 
 /// A surface that can break and drop its occupants into the water below.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleSurface {
+pub enum Surface {
     /// Frozen water with nothing built over it.
     Ice,
     /// A bridge deck spanning water.
     Bridge,
 }
 
-impl BattleSurface {
+impl Surface {
     /// The breakable surface of `hex`, if it has one.
     pub fn of(hex: Hex) -> Option<Self> {
         if hex.has_bridge() {
@@ -43,7 +43,7 @@ impl BattleSurface {
 
 /// Requested surface and whether the owning action can publish character casualties.
 struct SurfaceBreakPolicy {
-    surface: BattleSurface,
+    surface: Surface,
     character: bool,
 }
 
@@ -55,8 +55,8 @@ pub fn break_ice(
     map: ObjectId,
     coordinate: HexCoordinate,
     trigger: Option<ObjectId>,
-    rules: BattleFallRules,
-) -> Result<BattleSurfaceBreak> {
+    rules: FallRules,
+) -> Result<SurfaceBreak> {
     break_surface(
         world,
         map,
@@ -65,7 +65,7 @@ pub fn break_ice(
         None,
         rules,
         SurfaceBreakPolicy {
-            surface: BattleSurface::Ice,
+            surface: Surface::Ice,
             character: false,
         },
     )
@@ -77,8 +77,8 @@ pub(super) fn break_ice_in_action(
     map: ObjectId,
     coordinate: HexCoordinate,
     trigger: Option<ObjectId>,
-    rules: BattleFallRules,
-) -> Result<BattleSurfaceBreak> {
+    rules: FallRules,
+) -> Result<SurfaceBreak> {
     break_surface(
         world,
         map,
@@ -87,7 +87,7 @@ pub(super) fn break_ice_in_action(
         None,
         rules,
         SurfaceBreakPolicy {
-            surface: BattleSurface::Ice,
+            surface: Surface::Ice,
             character: true,
         },
     )
@@ -100,8 +100,8 @@ pub fn break_bridge(
     world: &mut World,
     map: ObjectId,
     coordinate: HexCoordinate,
-    rules: BattleFallRules,
-) -> Result<BattleSurfaceBreak> {
+    rules: FallRules,
+) -> Result<SurfaceBreak> {
     break_surface(
         world,
         map,
@@ -110,7 +110,7 @@ pub fn break_bridge(
         None,
         rules,
         SurfaceBreakPolicy {
-            surface: BattleSurface::Bridge,
+            surface: Surface::Bridge,
             character: false,
         },
     )
@@ -122,8 +122,8 @@ pub(super) fn break_ice_upward(
     map: ObjectId,
     coordinate: HexCoordinate,
     id: ObjectId,
-    rules: BattleFallRules,
-) -> Result<BattleSurfaceBreak> {
+    rules: FallRules,
+) -> Result<SurfaceBreak> {
     break_ice_upward_inner(world, map, coordinate, id, rules, false)
 }
 
@@ -133,8 +133,8 @@ pub(super) fn break_ice_upward_in_action(
     map: ObjectId,
     coordinate: HexCoordinate,
     id: ObjectId,
-    rules: BattleFallRules,
-) -> Result<BattleSurfaceBreak> {
+    rules: FallRules,
+) -> Result<SurfaceBreak> {
     break_ice_upward_inner(world, map, coordinate, id, rules, true)
 }
 
@@ -144,9 +144,9 @@ fn break_ice_upward_inner(
     map: ObjectId,
     coordinate: HexCoordinate,
     id: ObjectId,
-    rules: BattleFallRules,
+    rules: FallRules,
     character: bool,
-) -> Result<BattleSurfaceBreak> {
+) -> Result<SurfaceBreak> {
     let mut candidate = world.clone();
     let tile = candidate
         .btech
@@ -174,7 +174,7 @@ fn break_ice_upward_inner(
             unit.ground_elevation = Some(unit.altitude(tile));
         }
     }
-    let mut notices = vec![BattleNotice {
+    let mut notices = vec![Notice {
         unit: id,
         text: "You break through the ice!".to_owned(),
     }];
@@ -191,7 +191,7 @@ fn break_ice_upward_inner(
         Some(id),
         rules,
         SurfaceBreakPolicy {
-            surface: BattleSurface::Ice,
+            surface: Surface::Ice,
             character,
         },
     )?;
@@ -210,9 +210,9 @@ fn break_surface(
     coordinate: HexCoordinate,
     trigger: Option<ObjectId>,
     exclude: Option<ObjectId>,
-    rules: BattleFallRules,
+    rules: FallRules,
     policy: SurfaceBreakPolicy,
-) -> Result<BattleSurfaceBreak> {
+) -> Result<SurfaceBreak> {
     let expected = policy.surface;
     ensure!(
         world
@@ -225,10 +225,10 @@ fn break_surface(
     record.validate()?;
     let tile = record.base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
     ensure!(
-        BattleSurface::of(tile) == Some(expected),
+        Surface::of(tile) == Some(expected),
         "Tile is not the requested breakable surface"
     );
-    let bridge = expected == BattleSurface::Bridge;
+    let bridge = expected == Surface::Bridge;
     // Occupants stand on the deck or the ice. A collapsing deck drops them to the river bed.
     let surface_height = i32::from(tile.deck_height().unwrap_or(tile.water_line()));
     let fall_levels = match tile.deck_clearance() {
@@ -261,7 +261,7 @@ fn break_surface(
         }
         let eligible = if let Some(unit) = world.btech.vehicles().get(&id) {
             !unit.is_destroyed()
-                && (bridge || unit.definition().movement != super::BattleVehicleMovement::Hover)
+                && (bridge || unit.definition().movement != super::VehicleMovement::Hover)
                 && (unit.elevation_level(tile) == surface_height || Some(id) == trigger)
         } else {
             let unit = &world.btech.constructed_units()[&id];
@@ -276,7 +276,7 @@ fn break_surface(
     // Preserve the visible fracture event before the new water surface changes unit heights.
     let mut notices = Vec::new();
     if let Some(id) = trigger {
-        notices.push(BattleNotice {
+        notices.push(Notice {
             unit: id,
             text: "You break the ice!".to_owned(),
         });
@@ -334,7 +334,7 @@ fn break_surface(
         i64::from(coordinate.y),
         replacement,
     )?;
-    let mut report = BattleSurfaceBreak {
+    let mut report = SurfaceBreak {
         map,
         coordinate,
         before: tile,
@@ -388,7 +388,7 @@ fn break_surface(
                     && Some(id) == trigger
                     && vehicle.definition().has_special("Waterproof_Tech");
                 if !vehicle.is_destroyed() && !protected_trigger {
-                    report.notices.push(BattleNotice {
+                    report.notices.push(Notice {
                         unit: id,
                         text: "Water renders your vehicle inoperable.".into(),
                     });
@@ -430,8 +430,8 @@ fn break_surface(
 pub(super) fn check_ice_landing(
     world: &mut World,
     id: ObjectId,
-    rules: BattleFallRules,
-) -> Result<Option<BattleSurfaceBreak>> {
+    rules: FallRules,
+) -> Result<Option<SurfaceBreak>> {
     check_ice_landing_inner(world, id, rules, false)
 }
 
@@ -439,8 +439,8 @@ pub(super) fn check_ice_landing(
 pub(super) fn check_ice_landing_in_action(
     world: &mut World,
     id: ObjectId,
-    rules: BattleFallRules,
-) -> Result<Option<BattleSurfaceBreak>> {
+    rules: FallRules,
+) -> Result<Option<SurfaceBreak>> {
     check_ice_landing_inner(world, id, rules, true)
 }
 
@@ -448,9 +448,9 @@ pub(super) fn check_ice_landing_in_action(
 fn check_ice_landing_inner(
     world: &mut World,
     id: ObjectId,
-    rules: BattleFallRules,
+    rules: FallRules,
     character: bool,
-) -> Result<Option<BattleSurfaceBreak>> {
+) -> Result<Option<SurfaceBreak>> {
     let unit = super::scanner::scanner_unit(world, id).context("Unit not found")?;
     if unit.destroyed {
         return Ok(None);
@@ -461,7 +461,7 @@ fn check_ice_landing_inner(
     let (height, hover) = if let Some(vehicle) = world.btech.vehicles().get(&id) {
         (
             vehicle.elevation_level(tile),
-            vehicle.definition().movement == super::BattleVehicleMovement::Hover,
+            vehicle.definition().movement == super::VehicleMovement::Hover,
         )
     } else {
         (
@@ -486,7 +486,7 @@ fn check_ice_landing_inner(
         None,
         rules,
         SurfaceBreakPolicy {
-            surface: BattleSurface::Ice,
+            surface: Surface::Ice,
             character,
         },
     )
@@ -498,9 +498,9 @@ pub(super) fn break_surface_in_action(
     world: &mut World,
     map: ObjectId,
     coordinate: HexCoordinate,
-    surface: BattleSurface,
-    rules: BattleFallRules,
-) -> Result<BattleSurfaceBreak> {
+    surface: Surface,
+    rules: FallRules,
+) -> Result<SurfaceBreak> {
     break_surface(
         world,
         map,

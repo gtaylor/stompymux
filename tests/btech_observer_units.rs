@@ -22,12 +22,12 @@ async fn observers_share_admin_disclosure_radio_and_saved_role() {
         support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
         let id = world.create(&config, "Observer".into(), Kind::Thing);
         let target = world.create(&config, "Subject".into(), Kind::Thing);
-        BattleUnitTemplate::parse("test", template)
+        UnitTemplate::parse("test", template)
             .unwrap()
             .create(&mut world, id)
             .unwrap();
         support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
-        BattleUnitTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+        UnitTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
             .unwrap()
             .create(&mut world, target)
             .unwrap();
@@ -113,21 +113,15 @@ async fn observers_share_admin_disclosure_radio_and_saved_role() {
             "{exact}"
         );
         assert!(
-            parse_battle_view_center(
-                &observing,
-                id,
-                ObjectId(1),
-                BattleViewKind::Tactical,
-                "180 1000"
-            )
-            .is_ok()
+            parse_battle_view_center(&observing, id, ObjectId(1), ViewKind::Tactical, "180 1000")
+                .is_ok()
         );
         assert!(
             parse_battle_view_center(
                 &observing,
                 id,
                 ObjectId(1),
-                BattleViewKind::Tactical,
+                ViewKind::Tactical,
                 &format!("#{}", target.0)
             )
             .is_err()
@@ -149,7 +143,7 @@ async fn observers_share_admin_disclosure_radio_and_saved_role() {
             "{}",
             receiver.text
         );
-        let event = BattleContactEvent {
+        let event = ContactEvent {
             identified: true,
             observer: id,
             target,
@@ -158,7 +152,7 @@ async fn observers_share_admin_disclosure_radio_and_saved_role() {
             experience_message: None,
         };
         assert!(event.notice(&observing).is_none());
-        let lost = BattleContactEvent {
+        let lost = ContactEvent {
             acquired: false,
             lock_lost: true,
             ..event

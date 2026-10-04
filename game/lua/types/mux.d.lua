@@ -332,8 +332,26 @@ local State = {}
 ---@class MuxConfigErrorCodes: ErrorCode
 ---@field not_found MuxConfigNotFoundErrorCode `mux.config.not_found`.
 ---@field unsupported MuxConfigUnsupportedErrorCode `mux.config.unsupported`.
+---Checked `mux.macro.invalid` error-code node.
+---@class MuxMacroInvalidErrorCode: ErrorCode
+---@field code "mux.macro.invalid"
+---Checked `mux.macro.not_found` error-code node.
+---@class MuxMacroNotFoundErrorCode: ErrorCode
+---@field code "mux.macro.not_found"
+---Checked `mux.macro.exists` error-code node.
+---@class MuxMacroExistsErrorCode: ErrorCode
+---@field code "mux.macro.exists"
+---Checked `mux.macro.slots_full` error-code node.
+---@class MuxMacroSlotsFullErrorCode: ErrorCode
+---@field code "mux.macro.slots_full"
+---@class MuxMacroErrorCodes: ErrorCode
+---@field invalid MuxMacroInvalidErrorCode `mux.macro.invalid`.
+---@field not_found MuxMacroNotFoundErrorCode `mux.macro.not_found`.
+---@field exists MuxMacroExistsErrorCode `mux.macro.exists`.
+---@field slots_full MuxMacroSlotsFullErrorCode `mux.macro.slots_full`.
 ---@class MuxErrorCodes: ErrorCode
 ---@field arg MuxArgErrorCodes Invalid-argument code branch.
+---@field macro MuxMacroErrorCodes Player-macro code branch.
 ---@field unavailable MuxUnavailableErrorCodes Runtime-availability code branch.
 ---@field runtime MuxRuntimeErrorCode `mux.runtime`.
 ---@field state MuxStateErrorCodes Persistent-state code branch.
@@ -359,6 +377,38 @@ local State = {}
 ---@class TestingErrorCodes: ErrorCode
 ---@field assertion TestingAssertionErrorCode `testing.assertion`.
 ---@field runtime TestingRuntimeErrorCode `testing.runtime`.
+---Checked `btech.part.not_found` error-code node.
+---@class BtechPartNotFoundErrorCode: ErrorCode
+---@field code "btech.part.not_found"
+---Checked `btech.part.ambiguous` error-code node.
+---@class BtechPartAmbiguousErrorCode: ErrorCode
+---@field code "btech.part.ambiguous"
+---Checked `btech.part.wrong_kind` error-code node.
+---@class BtechPartWrongKindErrorCode: ErrorCode
+---@field code "btech.part.wrong_kind"
+---Checked `btech.template.not_found` error-code node.
+---@class BtechTemplateNotFoundErrorCode: ErrorCode
+---@field code "btech.template.not_found"
+---Checked `btech.template.invalid` error-code node.
+---@class BtechTemplateInvalidErrorCode: ErrorCode
+---@field code "btech.template.invalid"
+---Checked `btech.operation.failed` error-code node.
+---@class BtechOperationFailedErrorCode: ErrorCode
+---@field code "btech.operation.failed"
+---@class BtechPartErrorCodes: ErrorCode
+---@field not_found BtechPartNotFoundErrorCode `btech.part.not_found`.
+---@field ambiguous BtechPartAmbiguousErrorCode `btech.part.ambiguous`.
+---@field wrong_kind BtechPartWrongKindErrorCode `btech.part.wrong_kind`.
+---@class BtechTemplateErrorCodes: ErrorCode
+---@field not_found BtechTemplateNotFoundErrorCode `btech.template.not_found`.
+---@field invalid BtechTemplateInvalidErrorCode `btech.template.invalid`.
+---@class BtechOperationErrorCodes: ErrorCode
+---@field failed BtechOperationFailedErrorCode `btech.operation.failed`.
+---Checked native code tree for BattleTech package failures.
+---@class BtechErrorCodes: ErrorCode
+---@field part BtechPartErrorCodes Inventory-part code branch.
+---@field template BtechTemplateErrorCodes Unit-template code branch.
+---@field operation BtechOperationErrorCodes Gameplay-operation code branch.
 
 ---Immutable lookup namespace for command-access constants.
 ---
@@ -419,7 +469,6 @@ local State = {}
 ---@field CHANNEL_TRANSMIT Lock Transmit on a channel.
 ---@field CHANNEL_RECEIVE Lock Receive channel traffic.
 ---@field IDENTIFY_BUILDING Lock Silently identify a visible BattleTech structure.
----@field IDENTIFY_BUILDING Lock Identify a BattleTech building contact.
 ---@see mux.error.codes.arg.invalid
 
 ---Dynamic, immutable lookup namespace for registered powers. Keys must use the

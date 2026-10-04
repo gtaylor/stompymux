@@ -1,5 +1,5 @@
 //! Persistent vehicle control damage and crew recovery feed driving and firing admission.
-use super::{BattleVehicle, BattleVehicleSection};
+use super::{Vehicle, VehicleSection};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
@@ -8,15 +8,15 @@ use std::collections::BTreeSet;
 /// Direct control-system consequences; the enclosing critical action owns notices and crew effects.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
-pub enum BattleVehicleControlHit {
+pub enum VehicleControlHit {
     Driver,
     CrewStun,
     Commander,
     Sensors,
-    Stabilizers { section: BattleVehicleSection },
+    Stabilizers { section: VehicleSection },
 }
 
-impl BattleVehicle {
+impl Vehicle {
     /// Seconds until the crew recovers; another stun restarts the full minute.
     pub fn crew_stun_remaining(&self) -> u8 {
         self.crew_stun_remaining
@@ -51,7 +51,7 @@ impl BattleVehicle {
     }
 
     /// Sections whose weapon stabilizers have been destroyed.
-    pub fn lost_stabilizers(&self) -> &BTreeSet<BattleVehicleSection> {
+    pub fn lost_stabilizers(&self) -> &BTreeSet<VehicleSection> {
         &self.lost_stabilizers
     }
 
@@ -77,22 +77,22 @@ impl BattleVehicle {
 
     /// Apply a direct control hit without mutating construction or crew skill values.
     /// Cumulative penalties saturate at the reference's signed-byte ceiling of 127.
-    pub fn apply_control_hit(&mut self, hit: BattleVehicleControlHit) -> Result<()> {
+    pub fn apply_control_hit(&mut self, hit: VehicleControlHit) -> Result<()> {
         ensure!(!self.is_destroyed(), "Vehicle is destroyed");
         match hit {
-            BattleVehicleControlHit::CrewStun => self.stun_crew(),
-            BattleVehicleControlHit::Commander => {
+            VehicleControlHit::CrewStun => self.stun_crew(),
+            VehicleControlHit::Commander => {
                 self.piloting_damage = self.piloting_damage.saturating_add(1).min(127);
                 self.gunnery_damage = self.gunnery_damage.saturating_add(1).min(127);
                 self.stun_crew();
             }
-            BattleVehicleControlHit::Driver => {
+            VehicleControlHit::Driver => {
                 self.piloting_damage = self.piloting_damage.saturating_add(2).min(127)
             }
-            BattleVehicleControlHit::Sensors => {
+            VehicleControlHit::Sensors => {
                 self.gunnery_damage = self.gunnery_damage.saturating_add(1).min(127)
             }
-            BattleVehicleControlHit::Stabilizers { section } => {
+            VehicleControlHit::Stabilizers { section } => {
                 ensure!(
                     self.sections()
                         .get(&section)
@@ -110,7 +110,7 @@ impl BattleVehicle {
 pub fn damage_vehicle_controls(
     world: &mut World,
     id: ObjectId,
-    hit: BattleVehicleControlHit,
+    hit: VehicleControlHit,
 ) -> Result<()> {
     ensure!(
         world
@@ -128,7 +128,7 @@ pub fn damage_vehicle_controls(
 }
 
 /// Recover conscious control independently of vehicle power inside the server transaction.
-pub(super) fn advance(world: &mut World) -> Vec<super::BattleNotice> {
+pub(super) fn advance(world: &mut World) -> Vec<super::Notice> {
     let mut notices = Vec::new();
     for (&id, vehicle) in world.btech.vehicles.iter_mut() {
         if vehicle.crew_stun_remaining == 0
@@ -142,7 +142,7 @@ pub(super) fn advance(world: &mut World) -> Vec<super::BattleNotice> {
         vehicle.crew_stun_remaining -= 1;
         if vehicle.crew_stun_remaining == 0 {
             vehicle.crew_stun_condition = None;
-            notices.push(super::BattleNotice {
+            notices.push(super::Notice {
                 unit: id,
                 text: "Your head clears and you're able to control your vehicle again.".into(),
             });

@@ -1,5 +1,5 @@
 //! BattleMech firing arcs and durable torso/arm facing controls.
-use super::{BattleMechChassis, BattleNotice, BattlePower, BattleSection, BattleUnit, WeaponMount};
+use super::{Mech, MechChassis, MechSection, Notice, Power, WeaponMount};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 /// Relative torso orientation; firing geometry uses the game's 59-degree offsets.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleTorso {
+pub enum Torso {
     Left,
     #[default]
     Center,
@@ -16,7 +16,7 @@ pub enum BattleTorso {
     Both,
 }
 
-impl BattleTorso {
+impl Torso {
     /// Effective geometry offset; a merged pose retains rightward geometry.
     pub fn offset(self) -> f64 {
         match self {
@@ -43,22 +43,22 @@ impl BattleTorso {
 
 /// Upper-body facing, independent of the movement heading.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BattleFacing {
-    pub torso: BattleTorso,
+pub struct Facing {
+    pub torso: Torso,
     pub arms_flipped: bool,
 }
 
 /// General biped contact direction, separate from individual mount firing eligibility.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleContactArc {
+pub enum ContactArc {
     Front,
     Right,
     Rear,
     Left,
 }
 
-impl BattleContactArc {
+impl ContactArc {
     /// Human-readable arc name shared by scan and contact reports.
     pub(crate) fn description(self, vehicle: bool) -> &'static str {
         match self {
@@ -82,10 +82,10 @@ impl BattleContactArc {
     }
 }
 
-impl BattleFacing {
+impl Facing {
     /// Classify a contact using whole heading degrees, nearest bearing and torso offset.
     /// Arm flips do not change this general direction; mounts retain their own firing checks.
-    pub fn contact_arc(self, heading: f64, bearing: f64) -> Result<BattleContactArc> {
+    pub fn contact_arc(self, heading: f64, bearing: f64) -> Result<ContactArc> {
         ensure!(
             heading.is_finite() && bearing.is_finite(),
             "Invalid contact direction"
@@ -95,36 +95,36 @@ impl BattleFacing {
             - self.torso.offset())
         .rem_euclid(360.0);
         Ok(if angle <= 60.0 || angle >= 300.0 {
-            BattleContactArc::Front
+            ContactArc::Front
         } else if angle <= 120.0 {
-            BattleContactArc::Right
+            ContactArc::Right
         } else if angle < 240.0 {
-            BattleContactArc::Rear
+            ContactArc::Rear
         } else {
-            BattleContactArc::Left
+            ContactArc::Left
         })
     }
 }
 
 /// Firing-arc geometry for Mech weapon mounts.
-pub trait BattleMountArcs {
+pub trait MountArcs {
     /// Test a compass bearing against mounting arcs; leg mounts ignore torso rotation.
     fn bears_on(
         &self,
-        chassis: BattleMechChassis,
+        chassis: MechChassis,
         heading: f64,
         bearing: f64,
-        facing: BattleFacing,
+        facing: Facing,
     ) -> Result<bool>;
 }
 
-impl BattleMountArcs for WeaponMount {
+impl MountArcs for WeaponMount {
     fn bears_on(
         &self,
-        chassis: BattleMechChassis,
+        chassis: MechChassis,
         heading: f64,
         bearing: f64,
-        facing: BattleFacing,
+        facing: Facing,
     ) -> Result<bool> {
         ensure!(
             heading.is_finite() && bearing.is_finite(),
@@ -148,17 +148,17 @@ impl BattleMountArcs for WeaponMount {
             return Ok(rear);
         }
         let side = match section {
-            BattleSection::LeftArm => (240.0..300.0).contains(&angle),
-            BattleSection::RightArm => angle > 60.0 && angle <= 120.0,
+            MechSection::LeftArm => (240.0..300.0).contains(&angle),
+            MechSection::RightArm => angle > 60.0 && angle <= 120.0,
             _ => return Ok(front),
         };
         Ok(side || if facing.arms_flipped { rear } else { front })
     }
 }
 
-impl BattleUnit {
+impl Mech {
     /// Persisted upper-body pose used by weapon arc queries.
-    pub fn facing(&self) -> BattleFacing {
+    pub fn facing(&self) -> Facing {
         self.facing
     }
 }
@@ -168,8 +168,8 @@ pub fn rotate_torso(
     world: &mut World,
     id: ObjectId,
     pilot: ObjectId,
-    direction: BattleTorso,
-) -> Result<BattleNotice> {
+    direction: Torso,
+) -> Result<Notice> {
     let notice = rotate_torso_by_actor(
         world,
         id,
@@ -184,8 +184,8 @@ pub fn rotate_torso(
 pub(crate) fn rotate_torso_autopilot(
     world: &mut World,
     id: ObjectId,
-    direction: BattleTorso,
-) -> Result<BattleNotice> {
+    direction: Torso,
+) -> Result<Notice> {
     rotate_torso_by_actor(
         world,
         id,
@@ -198,53 +198,47 @@ fn rotate_torso_by_actor(
     world: &mut World,
     id: ObjectId,
     actor: super::combat_operator::ControlActor,
-    direction: BattleTorso,
-) -> Result<BattleNotice> {
-    ensure!(
-        direction != BattleTorso::Both,
-        "Choose left, right or center"
-    );
+    direction: Torso,
+) -> Result<Notice> {
+    ensure!(direction != Torso::Both, "Choose left, right or center");
     super::power::controlled_unit_by_actor(world, id, actor)?;
     let unit = &world.btech.constructed_units()[&id];
-    ensure!(unit.power() == BattlePower::Running, "Start the unit first");
+    ensure!(unit.power() == Power::Running, "Start the unit first");
     ensure!(
-        unit.posture() != super::BattlePosture::Prone,
+        unit.posture() != super::Posture::Prone,
         "Stand the unit up first"
     );
     ensure!(
-        unit.chassis() != BattleMechChassis::Quad,
+        unit.chassis() != MechChassis::Quad,
         "Quads can't rotate their torsos."
     );
     let torso = match (unit.facing.torso, direction) {
-        (BattleTorso::Left | BattleTorso::Both, BattleTorso::Left)
-        | (BattleTorso::Right | BattleTorso::Both, BattleTorso::Right) => {
+        (Torso::Left | Torso::Both, Torso::Left) | (Torso::Right | Torso::Both, Torso::Right) => {
             anyhow::bail!("You cannot rotate torso beyond 60 degrees!")
         }
-        (BattleTorso::Left, BattleTorso::Right) | (BattleTorso::Right, BattleTorso::Left) => {
-            BattleTorso::Center
-        }
+        (Torso::Left, Torso::Right) | (Torso::Right, Torso::Left) => Torso::Center,
         (_, direction) => direction,
     };
     world.btech.constructed.get_mut(&id).unwrap().facing.torso = torso;
-    Ok(BattleNotice {
+    Ok(Notice {
         unit: id,
         text: (match direction {
-            BattleTorso::Left => "You rotate your torso left.",
-            BattleTorso::Right => "You rotate your torso right.",
-            BattleTorso::Center => "You center your torso.",
-            BattleTorso::Both => unreachable!("direction checked above"),
+            Torso::Left => "You rotate your torso left.",
+            Torso::Right => "You rotate your torso right.",
+            Torso::Center => "You center your torso.",
+            Torso::Both => unreachable!("direction checked above"),
         })
         .to_owned(),
     })
 }
 
 /// Toggle arms only on chassis explicitly supporting arm flipping.
-pub fn flip_arms(world: &mut World, id: ObjectId, pilot: ObjectId) -> Result<BattleNotice> {
+pub fn flip_arms(world: &mut World, id: ObjectId, pilot: ObjectId) -> Result<Notice> {
     super::power::controlled_unit(world, id, pilot)?;
     let unit = &world.btech.constructed_units()[&id];
-    ensure!(unit.power() == BattlePower::Running, "Start the unit first");
+    ensure!(unit.power() == Power::Running, "Start the unit first");
     ensure!(
-        unit.posture() != super::BattlePosture::Prone,
+        unit.posture() != super::Posture::Prone,
         "Stand the unit up first"
     );
     ensure!(
@@ -255,7 +249,7 @@ pub fn flip_arms(world: &mut World, id: ObjectId, pilot: ObjectId) -> Result<Bat
     unit.facing.arms_flipped = !unit.facing.arms_flipped;
     let flipped = unit.facing.arms_flipped;
     let _ = super::autopilot::manual_takeover(world, id);
-    Ok(BattleNotice {
+    Ok(Notice {
         unit: id,
         text: (if flipped {
             "Arms have been flipped to BACKWARD position"

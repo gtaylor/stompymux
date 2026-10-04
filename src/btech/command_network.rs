@@ -1,6 +1,6 @@
 //! Command-network membership with shared identities, family-specific capacity, and transactional controls.
 use super::network_unit::{set_link, unit as network_unit, units as network_units};
-use super::{BattleNotice, BattlePower};
+use super::{Notice, Power};
 use crate::{Flag, ObjectId, Scripts, World};
 use anyhow::{Context, Result, ensure};
 use std::collections::BTreeMap;
@@ -8,12 +8,12 @@ use std::collections::BTreeMap;
 /// Independent command-computer network families.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
 #[serde(rename_all = "lowercase")]
-pub enum BattleCommandNetwork {
+pub enum CommandNetwork {
     C3,
     C3i,
 }
 
-impl BattleCommandNetwork {
+impl CommandNetwork {
     /// Player-facing network name.
     pub fn name(self) -> &'static str {
         match self {
@@ -65,7 +65,7 @@ impl BattleCommandNetwork {
 }
 
 /// Current physical eligibility; reactor shutdown and interference retain membership.
-fn eligible(world: &World, id: ObjectId, kind: BattleCommandNetwork) -> bool {
+fn eligible(world: &World, id: ObjectId, kind: CommandNetwork) -> bool {
     world
         .objects
         .get(&id)
@@ -76,11 +76,7 @@ fn eligible(world: &World, id: ObjectId, kind: BattleCommandNetwork) -> bool {
 
 /// Inspect all eligible members, including the caller, or an empty list when disconnected.
 /// Shutdown and ECM do not remove a member; targeting applies its own availability checks.
-pub fn members_for(
-    world: &World,
-    id: ObjectId,
-    kind: BattleCommandNetwork,
-) -> Result<Vec<ObjectId>> {
+pub fn members_for(world: &World, id: ObjectId, kind: CommandNetwork) -> Result<Vec<ObjectId>> {
     let unit = network_unit(world, id)?;
     let Some(network) = kind.link(&unit) else {
         return Ok(vec![]);
@@ -105,11 +101,11 @@ pub fn members_for(
 fn trim(
     world: &World,
     id: ObjectId,
-    kind: BattleCommandNetwork,
+    kind: CommandNetwork,
     mut result: Vec<ObjectId>,
     retain_requester: bool,
 ) -> Result<Vec<ObjectId>> {
-    if kind == BattleCommandNetwork::C3 {
+    if kind == CommandNetwork::C3 {
         let capacity = kind.capacity(world, &result)?;
         if result.len() > capacity {
             let mut ranked = result
@@ -139,7 +135,7 @@ fn trim(
 }
 
 /// Remove dead membership and singleton identities before allocating or changing a network.
-fn normalize(world: &mut World, kind: BattleCommandNetwork) -> Result<()> {
+fn normalize(world: &mut World, kind: CommandNetwork) -> Result<()> {
     let disconnected = network_units(world)?
         .keys()
         .copied()
@@ -155,7 +151,7 @@ fn normalize(world: &mut World, kind: BattleCommandNetwork) -> Result<()> {
 
 /// Reject over-capacity or conflicting shared identities on database load.
 pub(super) fn validate(world: &World) -> Result<()> {
-    for kind in [BattleCommandNetwork::C3, BattleCommandNetwork::C3i] {
+    for kind in [CommandNetwork::C3, CommandNetwork::C3i] {
         let mut groups = BTreeMap::<_, Vec<_>>::new();
         for (_, unit) in network_units(world)? {
             if let Some(network) = kind.link(&unit) {
@@ -183,7 +179,7 @@ pub(super) fn validate(world: &World) -> Result<()> {
 
 /// Pilot intent for one network control command.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum BattleNetworkRequest {
+pub enum NetworkRequest {
     /// Join the named unit's network; automatic management is left as it was.
     Join(ObjectId),
     /// Disconnect and hold the unit out of automatic management.
@@ -198,16 +194,16 @@ pub fn request_for(
     world: &mut World,
     id: ObjectId,
     pilot: ObjectId,
-    request: BattleNetworkRequest,
-    kind: BattleCommandNetwork,
-) -> Result<Vec<BattleNotice>> {
+    request: NetworkRequest,
+    kind: CommandNetwork,
+) -> Result<Vec<Notice>> {
     match request {
-        BattleNetworkRequest::Join(target) => join_leave_for(world, id, pilot, Some(target), kind),
-        BattleNetworkRequest::Leave => {
+        NetworkRequest::Join(target) => join_leave_for(world, id, pilot, Some(target), kind),
+        NetworkRequest::Leave => {
             let mut notices = join_leave_for(world, id, pilot, None, kind)?;
             super::network_unit::set_automation(world, id, kind, false);
             let name = kind.name();
-            notices.push(BattleNotice {
+            notices.push(Notice {
                 unit: id,
                 text: format!(
                     "Automatic {name} linking is off until you run {} +.",
@@ -216,13 +212,13 @@ pub fn request_for(
             });
             Ok(notices)
         }
-        BattleNetworkRequest::Automatic => {
+        NetworkRequest::Automatic => {
             ready_for(world, id, pilot, kind)?;
             let mut candidate = world.clone();
             super::network_unit::set_automation(&mut candidate, id, kind, true);
             let mut notices = super::network_topology::reconcile_for(&mut candidate, kind)?;
             if kind.link(&network_unit(&candidate, id)?).is_none() {
-                notices.push(BattleNotice {
+                notices.push(Notice {
                     unit: id,
                     text: format!(
                         "Automatic {} linking resumed; no network is available yet.",
@@ -243,8 +239,8 @@ pub fn join_leave_for(
     id: ObjectId,
     pilot: ObjectId,
     target: Option<ObjectId>,
-    kind: BattleCommandNetwork,
-) -> Result<Vec<BattleNotice>> {
+    kind: CommandNetwork,
+) -> Result<Vec<Notice>> {
     ready_for(world, id, pilot, kind)?;
     let name = kind.name();
     let unit = network_unit(world, id)?;
@@ -255,7 +251,7 @@ pub fn join_leave_for(
         set_link(&mut candidate, id, kind, None);
         normalize(&mut candidate, kind)?;
         *world = candidate;
-        return Ok(vec![BattleNotice {
+        return Ok(vec![Notice {
             unit: id,
             text: if connected {
                 format!("You disconnect from the {name} network.")
@@ -276,10 +272,7 @@ pub fn join_leave_for(
         peer.signature().team == unit.signature().team,
         "You can't use the {name} network of unfriendly units!"
     );
-    ensure!(
-        peer.power() == BattlePower::Running,
-        "That unit is not started!"
-    );
+    ensure!(peer.power() == Power::Running, "That unit is not started!");
     ensure!(
         eligible(&candidate, target, kind),
         "That unit does not appear to be equipped with working {name}!"
@@ -304,7 +297,7 @@ pub fn join_leave_for(
             .checked_add(1)
             .with_context(|| format!("{name} network identities exhausted"))?,
     };
-    let mut notices = vec![BattleNotice {
+    let mut notices = vec![Notice {
         unit: id,
         text: format!(
             "You connect to {}'s {name} network.",
@@ -314,13 +307,13 @@ pub fn join_leave_for(
     for &recipient in &group {
         let peer = network_unit(&candidate, recipient)?;
         if recipient == target
-            || (peer.power() == BattlePower::Running
+            || (peer.power() == Power::Running
                 && !super::electronic_field(&candidate, recipient)?.blocks_outgoing_guidance()
                 && !peer
                     .pilot()
                     .is_some_and(|pilot| candidate.btech.unconscious(pilot)))
         {
-            notices.push(BattleNotice {
+            notices.push(Notice {
                 unit: recipient,
                 text: format!(
                     "{} connects to your {name} network.",
@@ -344,16 +337,16 @@ pub fn control(
     id: ObjectId,
     pilot: ObjectId,
     arguments: &str,
-    kind: BattleCommandNetwork,
-) -> Result<Vec<BattleNotice>> {
+    kind: CommandNetwork,
+) -> Result<Vec<Notice>> {
     let words: Vec<_> = arguments.split_whitespace().collect();
     ensure!(words.len() == 1, "Invalid number of arguments to function!");
     let request = match words[0] {
-        "-" => BattleNetworkRequest::Leave,
-        "+" => BattleNetworkRequest::Automatic,
+        "-" => NetworkRequest::Leave,
+        "+" => NetworkRequest::Automatic,
         label => {
             let world = scripts.world();
-            BattleNetworkRequest::Join(super::radio_targeted::target(&world, id, label)?)
+            NetworkRequest::Join(super::radio_targeted::target(&world, id, label)?)
         }
     };
     scripts.atomic(|_| {
@@ -369,7 +362,7 @@ pub fn control(
 fn command_for(
     ctx: &crate::CommandContext<'_>,
     input: &crate::CommandInput,
-    kind: BattleCommandNetwork,
+    kind: CommandNetwork,
 ) -> Result<crate::CommandAction> {
     let result = (|| {
         let id = ctx
@@ -411,11 +404,11 @@ pub(super) fn ready_for(
     world: &World,
     id: ObjectId,
     pilot: ObjectId,
-    kind: BattleCommandNetwork,
+    kind: CommandNetwork,
 ) -> Result<()> {
     super::power::controlled(world, id, pilot)?;
     let unit = network_unit(world, id)?;
-    ensure!(unit.power() == BattlePower::Running, "Start the unit first");
+    ensure!(unit.power() == Power::Running, "Start the unit first");
     ensure!(
         kind.installed(&unit)?,
         "This unit is not equipped with {}!",
@@ -436,11 +429,11 @@ pub(super) fn ready_for(
 
 /// Inspect C3i membership independently of classic C3.
 pub fn members(world: &World, id: ObjectId) -> Result<Vec<ObjectId>> {
-    members_for(world, id, BattleCommandNetwork::C3i)
+    members_for(world, id, CommandNetwork::C3i)
 }
 /// Inspect classic C3 membership with working-master capacity.
 pub fn c3_members(world: &World, id: ObjectId) -> Result<Vec<ObjectId>> {
-    members_for(world, id, BattleCommandNetwork::C3)
+    members_for(world, id, CommandNetwork::C3)
 }
 /// Join or leave C3i through the shared membership transaction.
 pub fn join_leave(
@@ -448,8 +441,8 @@ pub fn join_leave(
     id: ObjectId,
     pilot: ObjectId,
     target: Option<ObjectId>,
-) -> Result<Vec<BattleNotice>> {
-    join_leave_for(world, id, pilot, target, BattleCommandNetwork::C3i)
+) -> Result<Vec<Notice>> {
+    join_leave_for(world, id, pilot, target, CommandNetwork::C3i)
 }
 /// Join or leave classic C3 through the shared membership transaction.
 pub fn join_leave_c3(
@@ -457,8 +450,8 @@ pub fn join_leave_c3(
     id: ObjectId,
     pilot: ObjectId,
     target: Option<ObjectId>,
-) -> Result<Vec<BattleNotice>> {
-    join_leave_for(world, id, pilot, target, BattleCommandNetwork::C3)
+) -> Result<Vec<Notice>> {
+    join_leave_for(world, id, pilot, target, CommandNetwork::C3)
 }
 /// C3i cockpit control and notification.
 pub fn c3i(
@@ -466,8 +459,8 @@ pub fn c3i(
     id: ObjectId,
     pilot: ObjectId,
     arguments: &str,
-) -> Result<Vec<BattleNotice>> {
-    control(scripts, id, pilot, arguments, BattleCommandNetwork::C3i)
+) -> Result<Vec<Notice>> {
+    control(scripts, id, pilot, arguments, CommandNetwork::C3i)
 }
 /// Classic C3 cockpit control and notification.
 pub fn c3(
@@ -475,35 +468,35 @@ pub fn c3(
     id: ObjectId,
     pilot: ObjectId,
     arguments: &str,
-) -> Result<Vec<BattleNotice>> {
-    control(scripts, id, pilot, arguments, BattleCommandNetwork::C3)
+) -> Result<Vec<Notice>> {
+    control(scripts, id, pilot, arguments, CommandNetwork::C3)
 }
 /// C3i command dispatch.
 pub(crate) fn command(
     ctx: &crate::CommandContext<'_>,
     input: &crate::CommandInput,
 ) -> Result<crate::CommandAction> {
-    command_for(ctx, input, BattleCommandNetwork::C3i)
+    command_for(ctx, input, CommandNetwork::C3i)
 }
 /// Classic C3 command dispatch.
 pub(crate) fn c3_command(
     ctx: &crate::CommandContext<'_>,
     input: &crate::CommandInput,
 ) -> Result<crate::CommandAction> {
-    command_for(ctx, input, BattleCommandNetwork::C3)
+    command_for(ctx, input, CommandNetwork::C3)
 }
 /// Members currently able to exchange data, with classic capacity reduced by unavailable masters.
 /// This temporary view leaves durable membership unchanged; consciousness is optional for messages.
 pub(super) fn active_members(
     world: &World,
     id: ObjectId,
-    kind: BattleCommandNetwork,
+    kind: CommandNetwork,
     check_consciousness: bool,
 ) -> Result<Vec<ObjectId>> {
     let mut active = Vec::new();
     for member in members_for(world, id, kind)? {
         let unit = network_unit(world, member)?;
-        if unit.power() != BattlePower::Running
+        if unit.power() != Power::Running
             || super::electronic_field(world, member)?.blocks_outgoing_guidance()
             || (check_consciousness
                 && unit

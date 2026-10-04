@@ -1,26 +1,26 @@
 //! Timed ammunition-feed recovery on committed simulation seconds.
-use super::{BattleMessageTarget as Recipient, BattlePower, BattleUnit};
+use super::{Mech, MessageTarget as Recipient, Power};
 use crate::{ObjectId, World};
 use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
 
 /// One active attempt per unit; expiry resolves against current crew, equipment and supply.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BattleUnjam {
+pub struct Unjam {
     pub weapon_index: usize,
     pub remaining: u8,
 }
 
-impl super::BattleVehicle {
+impl super::Vehicle {
     /// The saved active ammunition-feed clearing attempt, including remaining seconds.
-    pub fn unjam(&self) -> Option<BattleUnjam> {
+    pub fn unjam(&self) -> Option<Unjam> {
         self.unjam
     }
 }
 
-impl BattleUnit {
+impl Mech {
     /// Pending recovery, including its saved countdown.
-    pub fn unjam(&self) -> Option<BattleUnjam> {
+    pub fn unjam(&self) -> Option<Unjam> {
         self.unjam
     }
 }
@@ -35,7 +35,7 @@ pub fn begin_unjam(
     super::power::controlled(world, id, pilot)?;
     let state = super::unjam_unit::state(world, id, index)?;
     ensure!(
-        state.power == BattlePower::Running && !state.destroyed,
+        state.power == Power::Running && !state.destroyed,
         "Start the unit first"
     );
     ensure!(state.ready.intact, "That weapon has been destroyed");
@@ -60,7 +60,7 @@ pub fn begin_unjam(
         state.pending.is_none(),
         "You are already unjamming a weapon!"
     );
-    *super::unjam_unit::pending(world, id)? = Some(BattleUnjam {
+    *super::unjam_unit::pending(world, id)? = Some(Unjam {
         weapon_index: index,
         remaining: 60,
     });
@@ -74,8 +74,8 @@ pub fn begin_unjam(
 pub(crate) struct UnjamReport {
     messages: Vec<(Recipient, String)>,
     /// Diagnostic records positioned before their corresponding cockpit message.
-    diagnostics: Vec<(usize, super::BattleChannelMessage)>,
-    experience_messages: Vec<super::BattleChannelMessage>,
+    diagnostics: Vec<(usize, super::DiagnosticMessage)>,
+    experience_messages: Vec<super::DiagnosticMessage>,
 }
 
 /// Advance tactical attempts atomically. Character attempts require the host action.
@@ -158,7 +158,7 @@ fn advance_unjamming_inner(
             let index = attempt.weapon_index;
             *pending = None;
             let state = super::unjam_unit::state(world, id, index)?;
-            if state.power != BattlePower::Running || !state.ready.intact || !state.jammed {
+            if state.power != Power::Running || !state.ready.intact || !state.jammed {
                 continue;
             }
             if state

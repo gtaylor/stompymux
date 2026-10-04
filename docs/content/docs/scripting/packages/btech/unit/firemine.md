@@ -24,4 +24,4 @@ btech.unit.firemine(dbref, pilot, weapon)
 
 ## Returns
 
-- `BattleAmmunitionMode`
+- `AmmunitionMode`

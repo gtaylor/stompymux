@@ -7,14 +7,14 @@ use serde::Serialize;
 /// Applied command detonations in stable field order; the radio caller owns transmission admission.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[must_use = "Publish command mine notices and character consequences in the transmission checkpoint"]
-pub struct BattleCommandMineReport {
+pub struct CommandMineReport {
     pub sender: ObjectId,
     pub map: ObjectId,
     pub frequency: i32,
-    pub blasts: Vec<BattleMineBlastReport>,
-    pub notices: Vec<BattleNotice>,
+    pub blasts: Vec<MineBlastReport>,
+    pub notices: Vec<Notice>,
     /// Pilot-only messages indexed into the enclosing notice stream.
-    pub pilot_notices: Vec<BattlePilotNotice>,
+    pub pilot_notices: Vec<PilotNotice>,
 }
 
 /// Detonate matching command fields on the sender's current map without spending radio resources.
@@ -23,8 +23,8 @@ pub fn detonate_command_mines(
     world: &mut World,
     sender: ObjectId,
     frequency: i32,
-    rules: BattleFallRules,
-) -> Result<BattleCommandMineReport> {
+    rules: FallRules,
+) -> Result<CommandMineReport> {
     resolve(world, sender, frequency, rules, false)
 }
 
@@ -33,9 +33,9 @@ pub(super) fn resolve(
     world: &mut World,
     sender: ObjectId,
     frequency: i32,
-    rules: BattleFallRules,
+    rules: FallRules,
     character: bool,
-) -> Result<BattleCommandMineReport> {
+) -> Result<CommandMineReport> {
     ensure!(
         world
             .objects
@@ -59,10 +59,10 @@ pub(super) fn resolve(
     record.validate()?;
     let selected: Vec<_> = record
         .ordered_minefields()
-        .filter(|(_, mine)| mine.kind == BattleMineKind::Command && mine.extra == frequency)
+        .filter(|(_, mine)| mine.kind == MineKind::Command && mine.extra == frequency)
         .map(|(&ordinal, &mine)| (ordinal, mine))
         .collect();
-    let mut report = BattleCommandMineReport {
+    let mut report = CommandMineReport {
         sender,
         map,
         frequency,

@@ -1,27 +1,24 @@
 //! Heartbeat stability checks share piloting, fall, internal-damage and transaction services.
-use super::{
-    BattleFallReport, BattleNotice, BattlePilotingCheck, BattlePower, BattleSection,
-    BattleTacticalImpact,
-};
+use super::{MechFallReport, MechSection, Notice, PilotingCheck, Power, TacticalImpact};
 use crate::{Config, Flag, ObjectId, Scripts, World};
 use anyhow::Result;
 use serde::Serialize;
 
 /// Completed heartbeat check and all immediate consequences, suitable for deterministic replay.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct BattlePeriodicPiloting {
+pub struct PeriodicPiloting {
     pub unit: ObjectId,
-    pub check: BattlePilotingCheck,
+    pub check: PilotingCheck,
     /// Assigned recipient captured before fall damage or evacuation; absence means cockpit fallback.
     pub pilot: Option<ObjectId>,
     pub gravity_damage: u16,
-    pub fall: Option<BattleFallReport>,
-    pub vehicle_fall: Option<super::BattleVehicleFallReport>,
-    pub impacts: Vec<BattleTacticalImpact>,
+    pub fall: Option<MechFallReport>,
+    pub vehicle_fall: Option<super::VehicleFallReport>,
+    pub impacts: Vec<TacticalImpact>,
     /// Private feedback from nested falls and gravity impacts.
-    pub pilot_notices: Vec<super::BattlePilotNotice>,
-    pub notices: Vec<BattleNotice>,
-    pub experience_messages: Vec<super::BattleChannelMessage>,
+    pub pilot_notices: Vec<super::PilotNotice>,
+    pub notices: Vec<Notice>,
+    pub experience_messages: Vec<super::DiagnosticMessage>,
 }
 
 /// Select the reference's prioritized check without consuming dice or changing unit state.
@@ -29,13 +26,13 @@ fn required(world: &World, id: ObjectId, config: &Config) -> Result<Option<(i16,
     if let Some(unit) = world.btech.vehicles().get(&id) {
         let fallen = unit
             .vtol_flight()
-            .is_some_and(|f| f.phase == super::BattleVtolFlightPhase::Landed)
+            .is_some_and(|f| f.phase == super::VtolFlightPhase::Landed)
             && unit
                 .sections()
-                .get(&super::BattleVehicleSection::Rotor)
+                .get(&super::VehicleSection::Rotor)
                 .is_some_and(|s| s.internal == 0);
         return Ok((world.btech.turn_clock.due()
-            && unit.power() != BattlePower::Running
+            && unit.power() != Power::Running
             && super::crew::unit_unconscious(world, id)
             && !unit.is_destroyed()
             && unit.position().is_some()
@@ -47,7 +44,7 @@ fn required(world: &World, id: ObjectId, config: &Config) -> Result<Option<(i16,
     let unit = &world.btech.constructed_units()[&id];
     if unit.is_destroyed()
         || unit.position().is_none()
-        || (unit.power() != BattlePower::Running && !super::crew::unit_unconscious(world, id))
+        || (unit.power() != Power::Running && !super::crew::unit_unconscious(world, id))
     {
         return Ok(None);
     }
@@ -57,11 +54,8 @@ fn required(world: &World, id: ObjectId, config: &Config) -> Result<Option<(i16,
         super::load::movement_maximum(world, id, unloaded, config.battletech.tsm_tow_bonus != 0)?;
     let mut modifier = None;
     let mut gravity_damage = 0;
-    if world.btech.turn_clock.due()
-        && unit.posture() != super::BattlePosture::Prone
-        && !unit.airborne()
-    {
-        if unit.power() != BattlePower::Running {
+    if world.btech.turn_clock.due() && unit.posture() != super::Posture::Prone && !unit.airborne() {
+        if unit.power() != Power::Running {
             modifier = Some(3);
         }
         if unit.triple_myomer_active() {
@@ -75,7 +69,7 @@ fn required(world: &World, id: ObjectId, config: &Config) -> Result<Option<(i16,
         }
     }
     let hips = unit.loadout()?.systems.iter().any(|part| {
-        part.system == super::BattleSystem::ShoulderOrHip
+        part.system == super::System::ShoulderOrHip
             && unit.chassis().legs().contains(&part.location.section)
             && unit.critical_unavailable(part.location)
     });
@@ -89,7 +83,7 @@ fn required(world: &World, id: ObjectId, config: &Config) -> Result<Option<(i16,
 pub fn advance_periodic_piloting(
     world: &mut World,
     config: &Config,
-) -> Result<Vec<BattlePeriodicPiloting>> {
+) -> Result<Vec<PeriodicPiloting>> {
     let ids: Vec<_> = world
         .btech
         .constructed_units()
@@ -108,7 +102,7 @@ pub fn advance_periodic_piloting(
         let Some((modifier, gravity_damage)) = required(world, id, config)? else {
             continue;
         };
-        let mut rules = super::BattleFallRules::configured(config);
+        let mut rules = super::FallRules::configured(config);
         rules.toughness = world
             .btech
             .constructed_units()
@@ -125,7 +119,7 @@ pub fn advance_periodic_piloting(
             super::piloting::award_control_check(world, id, &mut check, rules.extended_piloting)?
                 .into_iter()
                 .collect();
-        let mut report = BattlePeriodicPiloting {
+        let mut report = PeriodicPiloting {
             unit: id,
             check,
             pilot,
@@ -139,7 +133,7 @@ pub fn advance_periodic_piloting(
         };
         if !check.success {
             if gravity_damage > 0 {
-                report.notices.push(BattleNotice {
+                report.notices.push(Notice {
                     unit: id,
                     text: "Your legs take some damage!".into(),
                 });
@@ -148,10 +142,10 @@ pub fn advance_periodic_piloting(
                     .legs()
                     .to_vec();
                 for section in [
-                    BattleSection::LeftArm,
-                    BattleSection::RightArm,
-                    BattleSection::LeftLeg,
-                    BattleSection::RightLeg,
+                    MechSection::LeftArm,
+                    MechSection::RightArm,
+                    MechSection::LeftLeg,
+                    MechSection::RightLeg,
                 ] {
                     if !legs.contains(&section)
                         || world.btech.constructed_units()[&id].sections()[&section].internal == 0
@@ -174,7 +168,7 @@ pub fn advance_periodic_piloting(
                     report.impacts.push(impact);
                 }
             } else {
-                report.notices.push(BattleNotice {
+                report.notices.push(Notice {
                     unit: id,
                     text: "Your damaged mech falls as you try to run!".into(),
                 });
@@ -216,7 +210,7 @@ pub fn advance_periodic_piloting(
 pub fn advance_periodic_piloting_action(
     scripts: &Scripts,
     config: &Config,
-) -> Result<Vec<BattlePeriodicPiloting>> {
+) -> Result<Vec<PeriodicPiloting>> {
     scripts.atomic(|before| {
         let reports = advance_periodic_piloting(&mut scripts.world_mut(), config)?;
         for report in &reports {
@@ -226,8 +220,8 @@ pub fn advance_periodic_piloting_action(
             if let Some(messages) = report.check.messages() {
                 let recipient = report
                     .pilot
-                    .map(super::BattleMessageTarget::Player)
-                    .unwrap_or(super::BattleMessageTarget::Unit(report.unit));
+                    .map(super::MessageTarget::Player)
+                    .unwrap_or(super::MessageTarget::Unit(report.unit));
                 for text in messages {
                     super::notify_message(scripts, recipient, &text)?;
                 }

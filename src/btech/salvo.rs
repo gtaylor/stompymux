@@ -1,8 +1,5 @@
 //! Conventional missile-cluster tables and atomic grouped weapon-hit resolution.
-use super::{
-    BattleFlechetteDamage, BattleHit, BattleHitArc, BattleHitRules, BattleImpactReport,
-    BattleWeapon,
-};
+use super::{FlechetteDamage, Hit, HitArc, HitRules, ImpactReport, Weapon};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, bail, ensure};
 use serde::Serialize;
@@ -25,7 +22,7 @@ const CLUSTER_HITS: &[(u8, [u8; 11])] = &[
 ];
 
 /// Missile cluster hits and per-hit damage grouping for every weapon.
-pub trait BattleWeaponSalvo {
+pub trait WeaponSalvo {
     /// Resolve an unmodified 2d6 cluster roll for a supported conventional launcher.
     fn missile_hits(self, roll: u8) -> Result<u8>;
 
@@ -46,7 +43,7 @@ pub trait BattleWeaponSalvo {
     /// Resolve packet sizes for a selected ammunition type at the actual attack range.
     fn damage_groups_for_ammunition(
         self,
-        mode: super::BattleAmmunitionMode,
+        mode: super::AmmunitionMode,
         cluster_roll: Option<u8>,
         distance: f64,
     ) -> Result<Vec<u16>>;
@@ -54,7 +51,7 @@ pub trait BattleWeaponSalvo {
     /// Cluster rounds resolve individual pellets; slug rounds retain conventional direct damage.
     fn damage_groups_for_ammunition_hit(
         self,
-        mode: super::BattleAmmunitionMode,
+        mode: super::AmmunitionMode,
         cluster_roll: Option<u8>,
         glancing: bool,
         distance: Option<f64>,
@@ -64,7 +61,7 @@ pub trait BattleWeaponSalvo {
     /// to the Artemis cluster bonus. ATMs add their own guidance bonus unless ECM blocks it.
     fn damage_groups_for_guided_hit(
         self,
-        mode: super::BattleAmmunitionMode,
+        mode: super::AmmunitionMode,
         cluster_roll: Option<u8>,
         glancing: bool,
         distance: Option<f64>,
@@ -73,7 +70,7 @@ pub trait BattleWeaponSalvo {
     ) -> Result<Vec<u16>>;
 }
 
-impl BattleWeaponSalvo for BattleWeapon {
+impl WeaponSalvo for Weapon {
     fn missile_hits(self, roll: u8) -> Result<u8> {
         ensure!((2..=12).contains(&roll), "Invalid missile cluster roll");
         if self.is_streak() || self.is_thunderbolt() || self.is_narc() || self == Self::INarcBeacon
@@ -165,7 +162,7 @@ impl BattleWeaponSalvo for BattleWeapon {
         distance: Option<f64>,
     ) -> Result<Vec<u16>> {
         self.damage_groups_for_ammunition_hit(
-            super::BattleAmmunitionMode::Normal,
+            super::AmmunitionMode::Normal,
             cluster_roll,
             glancing,
             distance,
@@ -174,7 +171,7 @@ impl BattleWeaponSalvo for BattleWeapon {
 
     fn damage_groups_for_ammunition(
         self,
-        mode: super::BattleAmmunitionMode,
+        mode: super::AmmunitionMode,
         cluster_roll: Option<u8>,
         distance: f64,
     ) -> Result<Vec<u16>> {
@@ -183,7 +180,7 @@ impl BattleWeaponSalvo for BattleWeapon {
 
     fn damage_groups_for_ammunition_hit(
         self,
-        mode: super::BattleAmmunitionMode,
+        mode: super::AmmunitionMode,
         cluster_roll: Option<u8>,
         glancing: bool,
         distance: Option<f64>,
@@ -193,7 +190,7 @@ impl BattleWeaponSalvo for BattleWeapon {
 
     fn damage_groups_for_guided_hit(
         self,
-        mode: super::BattleAmmunitionMode,
+        mode: super::AmmunitionMode,
         cluster_roll: Option<u8>,
         glancing: bool,
         distance: Option<f64>,
@@ -205,21 +202,19 @@ impl BattleWeaponSalvo for BattleWeapon {
             mode.supports(self),
             "{}",
             match mode {
-                super::BattleAmmunitionMode::Cluster =>
-                    "Weapon does not support cluster ammunition",
-                super::BattleAmmunitionMode::SemiGuided =>
+                super::AmmunitionMode::Cluster => "Weapon does not support cluster ammunition",
+                super::AmmunitionMode::SemiGuided =>
                     "Weapon does not support semi-guided ammunition",
-                super::BattleAmmunitionMode::Artemis =>
-                    "Weapon does not support Artemis ammunition",
+                super::AmmunitionMode::Artemis => "Weapon does not support Artemis ammunition",
                 _ => "Weapon does not support specialized autocannon ammunition",
             }
         );
         ensure!(
-            mode != super::BattleAmmunitionMode::Inferno,
+            mode != super::AmmunitionMode::Inferno,
             "Inferno hits use burn exposure instead of armor damage groups"
         );
-        let cluster = mode == super::BattleAmmunitionMode::Cluster;
-        let artemis = mode.munition() == super::BattleAmmunitionMode::Artemis;
+        let cluster = mode == super::AmmunitionMode::Cluster;
+        let artemis = mode.munition() == super::AmmunitionMode::Artemis;
         if let Some(distance) = distance {
             ensure!(
                 distance.is_finite() && distance >= 0.0,
@@ -342,44 +337,44 @@ impl BattleWeaponSalvo for BattleWeapon {
 
 /// One independently located damage group in a successful salvo.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleSalvoGroup {
+pub struct SalvoGroup {
     pub damage: u16,
-    pub hit: BattleHit,
-    pub impact: BattleImpactReport,
+    pub hit: Hit,
+    pub impact: ImpactReport,
     /// Applied by the tactical resolver; fall injuries are nested in the balance report.
-    pub pilot_injuries: Vec<super::BattlePilotInjury>,
-    pub pilot_notices: Vec<super::BattlePilotNotice>,
-    pub notices: Vec<super::BattleNotice>,
+    pub pilot_injuries: Vec<super::TacticalPilotInjury>,
+    pub pilot_notices: Vec<super::PilotNotice>,
+    pub notices: Vec<super::Notice>,
     /// Balance consequences completed before the next damage group.
-    pub balance: Vec<super::BattleBalanceReport>,
-    pub flooding: Vec<super::BattleSectionExposureReport>,
+    pub balance: Vec<super::BalanceReport>,
+    pub flooding: Vec<super::SectionExposureReport>,
 }
 
 /// Rolled cluster size and applied groups; resolution stops when the target is destroyed.
-/// `G` is the chassis's group result and `I` its inferno result. [`BattleSalvoReport`]
-/// and [`super::BattleVehicleSalvoReport`] name it for each chassis.
+/// `G` is the chassis's group result and `I` its inferno result. [`MechSalvoReport`]
+/// and [`super::VehicleSalvoReport`] name it for each chassis.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct SalvoReport<G, I> {
-    pub initial_woods: Option<super::BattleWoodsAbsorption>,
-    pub woods: Option<super::BattleWoodsAbsorption>,
+    pub initial_woods: Option<super::WoodsAbsorption>,
+    pub woods: Option<super::WoodsAbsorption>,
     pub missiles_before_defense: Option<u8>,
     pub cluster_roll: Option<u8>,
     pub inferno: Option<I>,
     pub groups: Vec<G>,
-    pub experience: Vec<Option<super::BattleShotExperienceAward>>,
-    pub experience_messages: Vec<super::BattleChannelMessage>,
+    pub experience: Vec<Option<super::ShotExperienceAward>>,
+    pub experience_messages: Vec<super::DiagnosticMessage>,
 }
 
 /// A salvo's effects on a BattleMech.
-pub type BattleSalvoReport = SalvoReport<BattleSalvoGroup, super::BattleInfernoHit>;
+pub type MechSalvoReport = SalvoReport<SalvoGroup, super::InfernoHit>;
 
 /// Effects that the enclosing action can apply and publish between weapon groups.
 #[derive(Clone, Copy)]
 enum SalvoEffects<'a> {
     Material,
-    Tactical(super::BattleFallRules),
+    Tactical(super::FallRules),
     Character {
-        rules: super::BattleFallRules,
+        rules: super::FallRules,
         experience: Option<super::gunnery_experience::GunneryAwardContext<'a>>,
     },
 }
@@ -388,15 +383,15 @@ enum SalvoEffects<'a> {
 pub(super) fn resolve_salvo_in_action(
     world: &mut World,
     target: ObjectId,
-    weapon: BattleWeapon,
-    arc: BattleHitArc,
-    rules: super::BattleFallRules,
-) -> Result<BattleSalvoReport> {
+    weapon: Weapon,
+    arc: HitArc,
+    rules: super::FallRules,
+) -> Result<MechSalvoReport> {
     world.attempt(|world| {
         resolve_salvo_with_effects(
             world,
             target,
-            (weapon, super::BattleAmmunitionMode::Normal),
+            (weapon, super::AmmunitionMode::Normal),
             HitGeometry::Fixed(arc),
             rules.hit,
             SalvoEffects::Character {
@@ -415,15 +410,15 @@ pub(super) fn resolve_salvo_in_action(
 pub fn resolve_salvo(
     world: &mut World,
     target: ObjectId,
-    weapon: BattleWeapon,
-    arc: BattleHitArc,
-    rules: BattleHitRules,
-) -> Result<BattleSalvoReport> {
+    weapon: Weapon,
+    arc: HitArc,
+    rules: HitRules,
+) -> Result<MechSalvoReport> {
     world.attempt(|world| {
         resolve_salvo_with_effects(
             world,
             target,
-            (weapon, super::BattleAmmunitionMode::Normal),
+            (weapon, super::AmmunitionMode::Normal),
             HitGeometry::Fixed(arc),
             rules,
             SalvoEffects::Material,
@@ -437,15 +432,15 @@ pub fn resolve_salvo(
 pub fn resolve_tactical_salvo(
     world: &mut World,
     target: ObjectId,
-    weapon: BattleWeapon,
-    arc: BattleHitArc,
-    rules: super::BattleFallRules,
-) -> Result<BattleSalvoReport> {
+    weapon: Weapon,
+    arc: HitArc,
+    rules: super::FallRules,
+) -> Result<MechSalvoReport> {
     world.attempt(|world| {
         resolve_salvo_with_effects(
             world,
             target,
-            (weapon, super::BattleAmmunitionMode::Normal),
+            (weapon, super::AmmunitionMode::Normal),
             HitGeometry::Fixed(arc),
             rules.hit,
             SalvoEffects::Tactical(rules),
@@ -461,7 +456,7 @@ pub(super) struct ShotDamage<'a> {
     pub submerged: bool,
     pub aimed: Option<super::aimed_hit::AimedShot>,
     pub incoming: Option<u8>,
-    pub rules: super::BattleFallRules,
+    pub rules: super::FallRules,
     pub hit_arc_mode: i64,
     pub glancing: bool,
     pub character: bool,
@@ -476,7 +471,7 @@ pub(super) fn resolve_salvo_from_shot(
     target: ObjectId,
     weapon: impl Into<SalvoWeapon>,
     damage: ShotDamage<'_>,
-) -> Result<BattleSalvoReport> {
+) -> Result<MechSalvoReport> {
     world.attempt(|world| resolve_salvo_in_candidate(world, shooter, target, weapon, damage))
 }
 
@@ -487,7 +482,7 @@ pub(super) fn resolve_salvo_in_candidate(
     target: ObjectId,
     weapon: impl Into<SalvoWeapon>,
     damage: ShotDamage<'_>,
-) -> Result<BattleSalvoReport> {
+) -> Result<MechSalvoReport> {
     let weapon = weapon.into();
     let effects = if damage.character {
         SalvoEffects::Character {
@@ -524,14 +519,14 @@ pub(super) fn resolve_salvo_in_candidate(
 #[derive(Clone, Copy)]
 pub(super) struct SalvoWeapon {
     pub(super) damage_penalty: u8,
-    pub(super) weapon: BattleWeapon,
-    pub(super) ammunition_mode: super::BattleAmmunitionMode,
-    pub(super) fire_mode: super::BattleFireMode,
+    pub(super) weapon: Weapon,
+    pub(super) ammunition_mode: super::AmmunitionMode,
+    pub(super) fire_mode: super::FireMode,
     pub(super) gatling_damage: Option<u8>,
 }
 
-impl From<&super::BattleWeaponUse> for SalvoWeapon {
-    fn from(weapon: &super::BattleWeaponUse) -> Self {
+impl From<&super::WeaponUse> for SalvoWeapon {
+    fn from(weapon: &super::WeaponUse) -> Self {
         Self {
             damage_penalty: weapon.damage_penalty,
             weapon: weapon.weapon,
@@ -542,8 +537,8 @@ impl From<&super::BattleWeaponUse> for SalvoWeapon {
     }
 }
 
-impl From<&super::BattleVehicleWeaponUse> for SalvoWeapon {
-    fn from(weapon: &super::BattleVehicleWeaponUse) -> Self {
+impl From<&super::VehicleWeaponUse> for SalvoWeapon {
+    fn from(weapon: &super::VehicleWeaponUse) -> Self {
         Self {
             damage_penalty: 0,
             weapon: weapon.weapon,
@@ -557,7 +552,7 @@ impl From<&super::BattleVehicleWeaponUse> for SalvoWeapon {
 /// An explicitly supplied attack direction or the live geometry of a direct shot.
 #[derive(Clone, Copy)]
 enum HitGeometry {
-    Fixed(BattleHitArc),
+    Fixed(HitArc),
     Direct {
         range_damage: bool,
         submerged: bool,
@@ -566,7 +561,7 @@ enum HitGeometry {
         shooter: ObjectId,
         damage_penalty: u8,
         hit_arc_mode: i64,
-        fire_mode: super::BattleFireMode,
+        fire_mode: super::FireMode,
         gatling_damage: Option<u8>,
         intercepted: u8,
         incoming: Option<u8>,
@@ -575,7 +570,7 @@ enum HitGeometry {
 
 impl HitGeometry {
     /// Falls rotate the target and remove standing partial cover before later groups land.
-    fn current(self, world: &World, target: ObjectId) -> Result<(BattleHitArc, bool)> {
+    fn current(self, world: &World, target: ObjectId) -> Result<(HitArc, bool)> {
         let (shooter, hit_arc_mode) = match self {
             Self::Fixed(arc) => return Ok((arc, false)),
             Self::Direct {
@@ -600,12 +595,12 @@ impl HitGeometry {
 fn resolve_salvo_with_effects(
     world: &mut World,
     target: ObjectId,
-    weapon: (BattleWeapon, super::BattleAmmunitionMode),
+    weapon: (Weapon, super::AmmunitionMode),
     geometry: HitGeometry,
-    rules: BattleHitRules,
+    rules: HitRules,
     effects: SalvoEffects<'_>,
     glancing: bool,
-) -> Result<BattleSalvoReport> {
+) -> Result<MechSalvoReport> {
     let (weapon, mode) = weapon;
     let character = matches!(effects, SalvoEffects::Character { .. });
     let tactical_rules = match effects {
@@ -679,7 +674,7 @@ fn resolve_salvo_with_effects(
     let unit = world.btech.constructed.get_mut(&target).unwrap();
     let fire_mode = match geometry {
         HitGeometry::Direct { fire_mode, .. } => fire_mode,
-        HitGeometry::Fixed(_) => super::BattleFireMode::Normal,
+        HitGeometry::Fixed(_) => super::FireMode::Normal,
     };
     let gatling_damage = match geometry {
         HitGeometry::Direct { gatling_damage, .. } => gatling_damage,
@@ -717,8 +712,8 @@ fn resolve_salvo_with_effects(
             glancing: glancing && (!shell_woods || fire_mode.rounds_per_cycle() > 1),
             guidance_blocked,
             angel_blocked,
-            target_beacon: unit.has_beacon(super::BattleBeaconKind::Narc)
-                || unit.has_beacon(super::BattleBeaconKind::Homing),
+            target_beacon: unit.has_beacon(super::BeaconKind::Narc)
+                || unit.has_beacon(super::BeaconKind::Homing),
             artemis_v,
         },
         &mut unit.dice,
@@ -728,7 +723,7 @@ fn resolve_salvo_with_effects(
         HitGeometry::Direct { incoming, .. } => incoming,
         HitGeometry::Fixed(_) => None,
     });
-    let mut report = BattleSalvoReport {
+    let mut report = MechSalvoReport {
         initial_woods,
         woods: None,
         missiles_before_defense: None,
@@ -744,14 +739,14 @@ fn resolve_salvo_with_effects(
     };
     if let Some((hits, surviving)) = packets.intercept(weapon, intercepted) {
         report.missiles_before_defense = Some(hits as u8);
-        if mode == super::BattleAmmunitionMode::Inferno {
+        if mode == super::AmmunitionMode::Inferno {
             if surviving > 0 {
                 report.inferno = Some(super::resolve_inferno_hit(world, target, surviving)?);
             }
             return Ok(report);
         }
     }
-    if (weapon.profile().missiles > 0 || mode == super::BattleAmmunitionMode::Cluster)
+    if (weapon.profile().missiles > 0 || mode == super::AmmunitionMode::Cluster)
         && let HitGeometry::Direct {
             shooter,
             woods_damage: true,
@@ -779,9 +774,9 @@ fn resolve_salvo_with_effects(
         )?;
     }
     let damage_groups = packets.damage;
-    let weapon_effect = if weapon == BattleWeapon::PlasmaRifle {
+    let weapon_effect = if weapon == Weapon::PlasmaRifle {
         Some(super::impact::WeaponEffect::Plasma)
-    } else if mode == super::BattleAmmunitionMode::ArmorPiercing {
+    } else if mode == super::AmmunitionMode::ArmorPiercing {
         Some(super::impact::WeaponEffect::ArmorPiercing(weapon))
     } else if weapon.is_energy() {
         Some(super::impact::WeaponEffect::Energy)
@@ -802,29 +797,29 @@ fn resolve_salvo_with_effects(
         };
         let unit = &world.btech.constructed_units()[&target];
         let mut dice = unit.dice.clone();
-        let hit = if let Some(super::BattleUnitSection::Mech(section)) = preferred {
-            BattleHit {
+        let hit = if let Some(super::UnitSection::Mech(section)) = preferred {
+            Hit {
                 section,
-                rear_armor: arc == BattleHitArc::Rear
+                rear_armor: arc == HitArc::Rear
                     && matches!(
                         section,
-                        super::BattleSection::LeftTorso
-                            | super::BattleSection::RightTorso
-                            | super::BattleSection::CenterTorso
+                        super::MechSection::LeftTorso
+                            | super::MechSection::RightTorso
+                            | super::MechSection::CenterTorso
                     ),
                 through_armor_critical: false,
                 crew_stun: false,
             }
         } else if partial_cover {
-            let section = super::BattleHitTable::Punch.location(unit.chassis(), arc, dice.d6())?;
-            BattleHit {
+            let section = super::HitTable::Punch.location(unit.chassis(), arc, dice.d6())?;
+            Hit {
                 section,
-                rear_armor: arc == BattleHitArc::Rear
+                rear_armor: arc == HitArc::Rear
                     && matches!(
                         section,
-                        super::BattleSection::LeftTorso
-                            | super::BattleSection::RightTorso
-                            | super::BattleSection::CenterTorso
+                        super::MechSection::LeftTorso
+                            | super::MechSection::RightTorso
+                            | super::MechSection::CenterTorso
                     ),
                 through_armor_critical: false,
                 crew_stun: false,
@@ -898,7 +893,7 @@ fn resolve_salvo_with_effects(
                 )
             };
         report.experience.push(experience);
-        report.groups.push(BattleSalvoGroup {
+        report.groups.push(SalvoGroup {
             damage,
             hit,
             impact,
@@ -914,8 +909,8 @@ fn resolve_salvo_with_effects(
 
 #[cfg(test)]
 mod tests {
-    use super::BattleWeapon as W;
-    use crate::btech::BattleWeaponSalvo;
+    use super::Weapon as W;
+    use crate::btech::WeaponSalvo;
 
     #[test]
     fn snub_damage_uses_exact_range_before_glancing_rounding() {
@@ -972,7 +967,7 @@ mod tests {
             for roll in 2..=12 {
                 let groups = weapon
                     .damage_groups_for_ammunition_hit(
-                        super::super::BattleAmmunitionMode::Cluster,
+                        super::super::AmmunitionMode::Cluster,
                         Some(roll),
                         true,
                         Some(1.0),
@@ -1049,7 +1044,7 @@ mod tests {
     /// The ATM's guidance adds two to the cluster roll unless ECM blocks it.
     #[test]
     fn atm_guidance_bonus_is_lost_to_ecm() {
-        use super::super::BattleAmmunitionMode as Mode;
+        use super::super::AmmunitionMode as Mode;
         for roll in 2..=12u8 {
             let landed = |guidance_blocked| {
                 W::ClanAtm12
@@ -1151,17 +1146,17 @@ mod tests {
 
 #[cfg(test)]
 mod artemis_tests {
-    use super::super::{BattleAmmunitionMode, BattleWeapon};
-    use crate::btech::BattleWeaponSalvo;
+    use super::super::{AmmunitionMode, Weapon};
+    use crate::btech::WeaponSalvo;
 
     /// Combine both modifiers before the below-table one-missile fallback and upper cap.
     #[test]
     fn artemis_glancing_table_boundaries() {
-        for weapon in [BattleWeapon::Srm6, BattleWeapon::Lrm20, BattleWeapon::Mrm40] {
+        for weapon in [Weapon::Srm6, Weapon::Lrm20, Weapon::Mrm40] {
             for roll in 2..=12 {
                 let actual = weapon
                     .damage_groups_for_ammunition_hit(
-                        BattleAmmunitionMode::Artemis,
+                        AmmunitionMode::Artemis,
                         Some(roll),
                         true,
                         Some(8.0),
@@ -1179,13 +1174,8 @@ mod artemis_tests {
             }
         }
         assert_eq!(
-            BattleWeapon::StreakSrm6
-                .damage_groups_for_ammunition_hit(
-                    BattleAmmunitionMode::Artemis,
-                    Some(2),
-                    true,
-                    Some(8.0)
-                )
+            Weapon::StreakSrm6
+                .damage_groups_for_ammunition_hit(AmmunitionMode::Artemis, Some(2), true, Some(8.0))
                 .unwrap()
                 .iter()
                 .sum::<u16>(),
@@ -1201,18 +1191,18 @@ mod flechette_tests {
     #[test]
     fn flechette_armored_damage_precedes_glancing() {
         for (weapon, normal, glancing) in [
-            (BattleWeapon::Ac2, 1, 1),
-            (BattleWeapon::Ac5, 2, 1),
-            (BattleWeapon::Ac10, 5, 3),
-            (BattleWeapon::Ac20, 10, 5),
-            (BattleWeapon::LightAc2, 1, 1),
-            (BattleWeapon::LightAc5, 2, 1),
+            (Weapon::Ac2, 1, 1),
+            (Weapon::Ac5, 2, 1),
+            (Weapon::Ac10, 5, 3),
+            (Weapon::Ac20, 10, 5),
+            (Weapon::LightAc2, 1, 1),
+            (Weapon::LightAc5, 2, 1),
         ] {
             for (glance, damage) in [(false, normal), (true, glancing)] {
                 assert_eq!(
                     weapon
                         .damage_groups_for_ammunition_hit(
-                            super::super::BattleAmmunitionMode::Flechette,
+                            super::super::AmmunitionMode::Flechette,
                             None,
                             glance,
                             Some(1.0)
@@ -1228,10 +1218,10 @@ mod flechette_tests {
     #[test]
     fn enhanced_lrms_match_lrm_salvos() {
         for (enhanced, standard) in [
-            (BattleWeapon::Nlrm5, BattleWeapon::Lrm5),
-            (BattleWeapon::Nlrm10, BattleWeapon::Lrm10),
-            (BattleWeapon::Nlrm15, BattleWeapon::Lrm15),
-            (BattleWeapon::Nlrm20, BattleWeapon::Lrm20),
+            (Weapon::Nlrm5, Weapon::Lrm5),
+            (Weapon::Nlrm10, Weapon::Lrm10),
+            (Weapon::Nlrm15, Weapon::Lrm15),
+            (Weapon::Nlrm20, Weapon::Lrm20),
         ] {
             for roll in 2..=12 {
                 assert_eq!(

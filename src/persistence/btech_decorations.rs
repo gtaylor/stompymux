@@ -4,7 +4,7 @@
 //! smoking tiles cause no writes between spread, burnout and expiry events.
 use super::btech_deadlines::Clock;
 use super::write::{Cell, Fields, purge_rows, row};
-use crate::{BattleDecoration, DecorationKind, ObjectId, StoredMap, World};
+use crate::{Decoration, DecorationKind, ObjectId, StoredMap, World};
 use anyhow::{Context, Result, bail, ensure};
 use sqlx::{Row, SqliteConnection};
 use std::{
@@ -47,7 +47,7 @@ pub(super) async fn load(
             .try_get::<Option<i64>, _>("spreads_at")?
             .map(|spreads_at| clock.remaining(spreads_at, 60))
             .transpose()?;
-        let effect = BattleDecoration {
+        let effect = Decoration {
             kind,
             object_duration: i16::try_from(row.try_get::<i64, _>("object_duration")?)?,
             order: row.try_get("creation_order")?,
@@ -129,7 +129,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
 }
 
 /// Whether the marker's lifetime is counting down each second rather than held still.
-fn lifetime_running(effect: BattleDecoration) -> bool {
+fn lifetime_running(effect: Decoration) -> bool {
     match effect.kind {
         DecorationKind::Smoke => effect.remaining > 0,
         DecorationKind::Fire => effect.remaining != 0 && effect.next_spread.is_none(),
@@ -138,7 +138,7 @@ fn lifetime_running(effect: BattleDecoration) -> bool {
 
 /// Persist the stable kind spelling, the lifetime as a value or deadline, and any pending
 /// spread as a deadline.
-fn values(effect: BattleDecoration, clock: Clock) -> Fields {
+fn values(effect: Decoration, clock: Clock) -> Fields {
     let running = lifetime_running(effect);
     Fields::from([
         (

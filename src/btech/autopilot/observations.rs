@@ -5,7 +5,7 @@ use anyhow::{Context, Result};
 use serde::Serialize;
 use std::collections::{BTreeMap, BTreeSet};
 
-use super::super::{BattleHeat, BattlePosition, BattlePower, BattleWeaponReadiness};
+use super::super::{Heat, Position, Power, WeaponReadiness};
 use super::LastSighting;
 
 /// One currently acquired contact. Its fields come only from the existing sensor view.
@@ -14,7 +14,7 @@ pub struct AutopilotContact {
     /// Unit identity acquired by the observer.
     pub unit: ObjectId,
     /// Position at the observation tick.
-    pub position: BattlePosition,
+    pub position: Position,
     /// Whether the unit is allied with the observer.
     pub friendly: bool,
     /// Whether sensors have identified the contact well enough to determine allegiance.
@@ -48,7 +48,7 @@ pub struct AutopilotObservation {
     /// Current simulation time.
     pub time: i64,
     /// Own position, if placed.
-    pub position: Option<BattlePosition>,
+    pub position: Option<Position>,
     /// Own current heading, if motion is available.
     pub heading: Option<f64>,
     /// Own current speed.
@@ -65,18 +65,18 @@ pub struct AutopilotObservation {
 /// Capabilities available to a unit's own in-game tactical director.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct AutopilotOwnReadiness {
-    pub power: BattlePower,
+    pub power: Power,
     pub maximum_speed: f64,
     /// BattleMech thermal state; ground vehicles have no conventional overheat meter.
-    pub heat: Option<BattleHeat>,
-    pub weapons: Vec<BattleWeaponReadiness>,
+    pub heat: Option<Heat>,
+    pub weapons: Vec<WeaponReadiness>,
 }
 
 /// A location the unit saw earlier, without current enemy state.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct AutopilotMemory {
     pub unit: ObjectId,
-    pub position: BattlePosition,
+    pub position: Position,
     pub seen_at: i64,
 }
 
@@ -98,7 +98,7 @@ pub fn observe_with_memory(
     // while it is starting, shut down, or being restored before placement.  In
     // those states expose the own-unit readiness below and no current contacts;
     // never turn a display precondition failure into a controller failure.
-    let contacts = if own.power == BattlePower::Running && own.position.is_some() {
+    let contacts = if own.power == Power::Running && own.position.is_some() {
         let mut contacts = super::super::network_contacts::networked_contact_facts(world, unit)
             .unwrap_or_default()
             .into_iter()

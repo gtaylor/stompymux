@@ -4,9 +4,9 @@ use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 
 /// Thermal admission uses the standard impact and movement policy in every scenario.
-fn rules() -> BattleOverheatRules {
-    let fall = BattleMovementRules::STANDARD.fall;
-    BattleOverheatRules {
+fn rules() -> OverheatRules {
+    let fall = MovementRules::STANDARD.fall;
+    OverheatRules {
         vehicle_impact: fall.vehicle_impact,
         stacking: fall.stacking,
         hit: fall.hit,
@@ -18,12 +18,12 @@ fn rules() -> BattleOverheatRules {
 /// Force a due override without adding injury, ammunition or movement checks.
 fn due(world: &mut World, id: ObjectId, heat: f64, roll: u8) {
     let seed = (0..=255)
-        .find(|&s| BattleDice::seeded([s; 32]).two_d6() == roll)
+        .find(|&s| Dice::seeded([s; 32]).two_d6() == roll)
         .unwrap();
     firing::edit(world, id, |state| {
         state["heat"] = serde_json::json!({"stored":heat + 10.0,"excess":heat});
         state["overheat_clock"] = serde_json::json!({"elapsed":30,"phase":0,"injury_due":false});
-        state["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+        state["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
     });
 }
 
@@ -34,7 +34,7 @@ async fn fixture(source: &str) -> (tempfile::TempDir, Config, World, ObjectId) {
     set_battle_character(
         &mut world,
         ObjectId(1),
-        BattleCharacter {
+        Character {
             bruise: 0,
             lethal: 0,
             build: 5,
@@ -50,7 +50,7 @@ async fn fixture(source: &str) -> (tempfile::TempDir, Config, World, ObjectId) {
         &mut world,
         ObjectId(1),
         "Computer",
-        BattleCharacterValue {
+        CharacterValue {
             value: 2,
             experience: 0,
             last_used: 0,
@@ -129,7 +129,7 @@ async fn computer_override_xp_obeys_character_success_and_heat_gates() {
                         assert!(report.computer_experience.unwrap().accepted);
                         assert_eq!(
                             report.experience_messages[0].channel,
-                            BattleChannel::Experience
+                            DiagnosticChannel::Experience
                         );
                         assert_eq!(
                             report.experience_messages[0].text,

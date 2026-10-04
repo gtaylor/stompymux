@@ -1,7 +1,6 @@
 //! Shared vehicle and rotorcraft material state with validated replay and explicit damage phases.
 use super::{
-    BattleDamagePhase, BattleDamageResult, BattleSectionState, BattleVehicleLoadout,
-    BattleVehicleSection, BattleVehicleTemplate,
+    DamagePhase, DamageResult, SectionState, VehicleLoadout, VehicleSection, VehicleTemplate,
 };
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -11,7 +10,7 @@ use std::collections::BTreeMap;
 /// Combat adapters must still resolve hit locations, criticals, crew effects and notifications.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(try_from = "VehicleRecord")]
-pub struct BattleVehicle {
+pub struct Vehicle {
     #[serde(default)]
     pub(super) auxiliary_preferences: super::auxiliary_preferences::AuxiliaryPreferences,
     #[serde(default)]
@@ -25,7 +24,7 @@ pub struct BattleVehicle {
     pub(super) units_killed: i32,
     pub(super) no_armor_warning: bool,
     pub(super) no_ammunition_warning: bool,
-    pub(super) searchlight: super::BattleSearchlight,
+    pub(super) searchlight: super::Searchlight,
     pub(super) autocon_shutdown: bool,
     pub(super) searchlight_warning: bool,
     pub(super) illumination_observed: bool,
@@ -40,7 +39,7 @@ pub struct BattleVehicle {
     pub(super) hardware: super::hardware_settings::HardwareSettings,
     #[serde(default)]
     pub(super) self_destruct_safe: bool,
-    pub(super) self_destruct: Option<super::BattleSelfDestruct>,
+    pub(super) self_destruct: Option<super::SelfDestruct>,
     /// Elapsed one-second camouflage preparation checks.
     pub(super) hide_elapsed: Option<u16>,
     /// Scenario permission shared with Mechs for out-of-character pickup targets.
@@ -58,16 +57,16 @@ pub struct BattleVehicle {
     pub(super) combat_safe: bool,
     /// Operator visibility privileges, independent of sensor equipment.
     #[serde(default)]
-    pub(super) visibility: super::BattleVisibility,
-    pub(super) dig: super::BattleDigState,
+    pub(super) visibility: super::Visibility,
+    pub(super) dig: super::DigState,
     #[serde(default)]
     contract_loadout: bool,
     #[serde(default)]
     administrative_raw: Option<super::AdministrativeRawUnit>,
-    definition: BattleVehicleTemplate,
-    pub(super) sections: BTreeMap<BattleVehicleSection, BattleSectionState>,
+    definition: VehicleTemplate,
+    pub(super) sections: BTreeMap<VehicleSection, SectionState>,
     pub(super) ammunition: Vec<u16>,
-    position: Option<super::BattlePosition>,
+    position: Option<super::Position>,
     /// Keep the physical pose after tactical membership is removed.
     #[serde(default)]
     pub(super) detached: bool,
@@ -76,20 +75,20 @@ pub struct BattleVehicle {
     pub(super) battlefield_label: Option<String>,
     /// Optional configured identity, used only when selecting a new battlefield ID.
     #[serde(default)]
-    pub(super) preferred_id: Option<super::BattlePreferredId>,
+    pub(super) preferred_id: Option<super::PreferredId>,
     pub(super) pilot: Option<crate::ObjectId>,
-    pub(super) power: super::BattlePower,
-    pub(super) motion: Option<super::BattleMotion>,
+    pub(super) power: super::Power,
+    pub(super) motion: Option<super::Motion>,
     /// Facing retained while the vehicle has no map motion, as in the native Mech record.
     #[serde(default)]
     pub(super) detached_heading: f64,
     pub(super) under_bridge: bool,
     pub(super) ground_elevation: Option<f64>,
     /// Ground chassis use the same forced-descent clock as aircraft after losing support.
-    pub(super) free_fall: Option<super::BattleFreeFall>,
+    pub(super) free_fall: Option<super::FreeFall>,
     /// Ground chassis share the Mech cocoon and jump-jet descent model.
     #[serde(default)]
-    pub(super) orbital_drop: Option<super::BattleOrbitalDrop>,
+    pub(super) orbital_drop: Option<super::OrbitalDrop>,
     #[serde(default)]
     pub(super) propulsion: super::propulsion::Propulsion,
     #[serde(default)]
@@ -109,75 +108,73 @@ pub struct BattleVehicle {
     pub(super) pilot_injuries: u8,
     /// Confirmed tactical pilot death, independently of the current injury count.
     pub(super) pilot_killed: bool,
-    pub(super) character_pilot: Option<super::BattleCharacterPilotStatus>,
+    pub(super) character_pilot: Option<super::CharacterPilotStatus>,
     /// Permanent water destruction, independent of hull integrity and crew injury.
     flooded: bool,
     /// Sections whose equipment was disabled by vacuum exposure.
     #[serde(default)]
-    pub(super) breached_sections: std::collections::BTreeSet<BattleVehicleSection>,
+    pub(super) breached_sections: std::collections::BTreeSet<VehicleSection>,
     /// Hull disabled by destruction of its carrier, independently of crew injury.
     transport_destroyed: bool,
     /// Tail rotor loss constrains flight controls without destroying the hull.
     pub(super) tail_rotor_destroyed: bool,
-    pub(super) vtol_fuel: Option<super::BattleVtolFuel>,
-    pub(super) vtol_flight: Option<super::BattleVtolFlight>,
+    pub(super) vtol_fuel: Option<super::VtolFuel>,
+    pub(super) vtol_flight: Option<super::VtolFlight>,
     /// Instant loss of the entire crew, independent of accumulated pilot injuries.
     crew_killed: bool,
-    pub(super) crew_recovery: super::BattleRecovery,
+    pub(super) crew_recovery: super::Recovery,
     pub(super) piloting_damage: u8,
     pub(super) gunnery_damage: u8,
-    pub(super) lost_stabilizers: std::collections::BTreeSet<BattleVehicleSection>,
+    pub(super) lost_stabilizers: std::collections::BTreeSet<VehicleSection>,
     pub(super) lost_criticals: std::collections::BTreeSet<super::VehicleCriticalLocation>,
-    pub(super) brief: super::BattleBriefSettings,
-    pub(super) tics: super::BattleTics,
-    pub(super) signature: super::BattleUnitSignature,
+    pub(super) brief: super::BriefSettings,
+    pub(super) tics: super::Tics,
+    pub(super) signature: super::UnitSignature,
     pub(super) scanner_perception: i16,
-    pub(super) radio: [super::BattleRadioChannel; 16],
+    pub(super) radio: [super::RadioChannel; 16],
     pub(super) radio_skill: i16,
     pub(super) fired_recently: bool,
     pub(super) radio_experience_remaining: u8,
-    pub(super) experience: super::BattleUnitExperience,
+    pub(super) experience: super::UnitExperience,
     pub(super) friendly_fire_safety: bool,
     pub(super) auto_fall: bool,
     pub(super) ams_enabled: bool,
     /// Passive weapon heat and coolant credit; ground vehicles do not sample overheating.
     pub(super) weapon_heat: f64,
     pub(super) inferno_remaining: u32,
-    pub(super) burning_sections: BTreeMap<BattleVehicleSection, u8>,
+    pub(super) burning_sections: BTreeMap<VehicleSection, u8>,
     pub(super) extinguishing: Option<u8>,
-    pub(super) building_entry: Option<super::BattleBuildingEntry>,
-    pub(super) beacons:
-        BTreeMap<BattleVehicleSection, std::collections::BTreeSet<super::BattleBeaconKind>>,
-    pub(super) target_lock: Option<super::BattleTargetSelection>,
+    pub(super) building_entry: Option<super::BuildingEntry>,
+    pub(super) beacons: BTreeMap<VehicleSection, std::collections::BTreeSet<super::BeaconKind>>,
+    pub(super) target_lock: Option<super::TargetSelection>,
     #[serde(default)]
-    pub(super) aimed_section: Option<super::BattleAimSelection>,
+    pub(super) aimed_section: Option<super::AimSelection>,
     pub(super) artillery_adjustment: u8,
     pub(super) c3_network: Option<u64>,
     pub(super) c3i_network: Option<u64>,
     /// Which network families the server may link automatically.
-    pub(super) network_automation: super::BattleNetworkAutomation,
-    pub(super) electronics: super::BattleElectronics,
+    pub(super) network_automation: super::NetworkAutomation,
+    pub(super) electronics: super::Electronics,
     pub(super) spotter: Option<crate::ObjectId>,
-    pub(super) spotter_events: super::BattleSpotterEvents,
-    pub(super) tag: super::BattleTagState,
-    pub(super) contacts: BTreeMap<crate::ObjectId, super::BattleContact>,
-    pub(super) fire_modes: BTreeMap<usize, super::BattleFireMode>,
-    pub(super) ammunition_modes: BTreeMap<usize, super::BattleAmmunitionMode>,
-    pub(super) ammunition_sections: BTreeMap<usize, BattleVehicleSection>,
-    pub(super) unjam: Option<super::BattleUnjam>,
+    pub(super) spotter_events: super::SpotterEvents,
+    pub(super) tag: super::TagState,
+    pub(super) contacts: BTreeMap<crate::ObjectId, super::Contact>,
+    pub(super) fire_modes: BTreeMap<usize, super::FireMode>,
+    pub(super) ammunition_modes: BTreeMap<usize, super::AmmunitionMode>,
+    pub(super) ammunition_sections: BTreeMap<usize, VehicleSection>,
+    pub(super) unjam: Option<super::Unjam>,
     pub(super) pod_removal: Option<u8>,
     pub(super) jammed_weapons: std::collections::BTreeSet<usize>,
     #[serde(default)]
-    pub(super) component_failures:
-        Vec<super::BattleComponentFailure<super::VehicleCriticalLocation>>,
-    pub(super) weapon_failures: BTreeMap<usize, super::BattleEquipmentFailure>,
+    pub(super) component_failures: Vec<super::ComponentFailure<super::VehicleCriticalLocation>>,
+    pub(super) weapon_failures: BTreeMap<usize, super::EquipmentFailure>,
     pub(super) weapon_recycle: BTreeMap<usize, u16>,
     /// Gauss mounts deliberately powered down; independent of material damage.
     #[serde(default)]
     pub(super) powered_down_weapons: std::collections::BTreeSet<usize>,
     pub(super) spent_launchers: std::collections::BTreeSet<usize>,
     /// Replayable outcomes owned by this vehicle and committed with its effects.
-    pub(super) dice: super::BattleDice,
+    pub(super) dice: super::Dice,
 }
 
 /// Snapshot input is validated against its owned definition before becoming domain state.
@@ -202,7 +199,7 @@ struct VehicleRecord {
     #[serde(default)]
     no_ammunition_warning: bool,
     #[serde(default)]
-    searchlight: super::BattleSearchlight,
+    searchlight: super::Searchlight,
     #[serde(default)]
     autocon_shutdown: bool,
     #[serde(default)]
@@ -224,7 +221,7 @@ struct VehicleRecord {
     #[serde(default)]
     self_destruct_safe: bool,
     #[serde(default)]
-    self_destruct: Option<super::BattleSelfDestruct>,
+    self_destruct: Option<super::SelfDestruct>,
     #[serde(default)]
     hide_elapsed: Option<u16>,
     #[serde(default)]
@@ -238,13 +235,13 @@ struct VehicleRecord {
     #[serde(default)]
     combat_safe: bool,
     #[serde(default)]
-    visibility: super::BattleVisibility,
+    visibility: super::Visibility,
     #[serde(default)]
-    dig: super::BattleDigState,
-    definition: BattleVehicleTemplate,
-    sections: BTreeMap<BattleVehicleSection, BattleSectionState>,
+    dig: super::DigState,
+    definition: VehicleTemplate,
+    sections: BTreeMap<VehicleSection, SectionState>,
     ammunition: Vec<u16>,
-    position: Option<super::BattlePosition>,
+    position: Option<super::Position>,
     /// Keep the physical pose after tactical membership is removed.
     #[serde(default)]
     pub(super) detached: bool,
@@ -252,19 +249,19 @@ struct VehicleRecord {
     #[serde(default)]
     battlefield_label: Option<String>,
     #[serde(default)]
-    preferred_id: Option<super::BattlePreferredId>,
+    preferred_id: Option<super::PreferredId>,
     pilot: Option<crate::ObjectId>,
-    power: super::BattlePower,
-    motion: Option<super::BattleMotion>,
+    power: super::Power,
+    motion: Option<super::Motion>,
     #[serde(default)]
     detached_heading: f64,
     under_bridge: bool,
     #[serde(default)]
     ground_elevation: Option<f64>,
     #[serde(default)]
-    free_fall: Option<super::BattleFreeFall>,
+    free_fall: Option<super::FreeFall>,
     #[serde(default)]
-    orbital_drop: Option<super::BattleOrbitalDrop>,
+    orbital_drop: Option<super::OrbitalDrop>,
     #[serde(default)]
     pub(super) propulsion: super::propulsion::Propulsion,
     #[serde(default)]
@@ -287,39 +284,39 @@ struct VehicleRecord {
     pilot_injuries: u8,
     #[serde(default)]
     pilot_killed: bool,
-    character_pilot: Option<super::BattleCharacterPilotStatus>,
+    character_pilot: Option<super::CharacterPilotStatus>,
     flooded: bool,
     #[serde(default)]
-    breached_sections: std::collections::BTreeSet<BattleVehicleSection>,
+    breached_sections: std::collections::BTreeSet<VehicleSection>,
     /// Hull disabled by destruction of its carrier, independently of crew injury.
     transport_destroyed: bool,
     /// Tail rotor loss constrains flight controls without destroying the hull.
     tail_rotor_destroyed: bool,
     #[serde(default)]
-    vtol_fuel: Option<super::BattleVtolFuel>,
+    vtol_fuel: Option<super::VtolFuel>,
     #[serde(default)]
-    vtol_flight: Option<super::BattleVtolFlight>,
+    vtol_flight: Option<super::VtolFlight>,
     /// Instant loss of the entire crew, independent of accumulated pilot injuries.
     crew_killed: bool,
-    crew_recovery: super::BattleRecovery,
+    crew_recovery: super::Recovery,
     piloting_damage: u8,
     gunnery_damage: u8,
-    lost_stabilizers: std::collections::BTreeSet<BattleVehicleSection>,
+    lost_stabilizers: std::collections::BTreeSet<VehicleSection>,
     lost_criticals: std::collections::BTreeSet<super::VehicleCriticalLocation>,
-    brief: super::BattleBriefSettings,
+    brief: super::BriefSettings,
     #[serde(default)]
-    tics: super::BattleTics,
-    signature: super::BattleUnitSignature,
+    tics: super::Tics,
+    signature: super::UnitSignature,
     scanner_perception: i16,
     #[serde(default)]
-    radio: [super::BattleRadioChannel; 16],
+    radio: [super::RadioChannel; 16],
     #[serde(default = "super::radio::default_skill")]
     radio_skill: i16,
     #[serde(default)]
     fired_recently: bool,
     #[serde(default)]
     radio_experience_remaining: u8,
-    experience: super::BattleUnitExperience,
+    experience: super::UnitExperience,
     friendly_fire_safety: bool,
     auto_fall: bool,
     ams_enabled: bool,
@@ -327,49 +324,49 @@ struct VehicleRecord {
     weapon_heat: f64,
     #[serde(default)]
     inferno_remaining: u32,
-    burning_sections: BTreeMap<BattleVehicleSection, u8>,
+    burning_sections: BTreeMap<VehicleSection, u8>,
     #[serde(default)]
     extinguishing: Option<u8>,
     #[serde(default)]
-    building_entry: Option<super::BattleBuildingEntry>,
-    beacons: BTreeMap<BattleVehicleSection, std::collections::BTreeSet<super::BattleBeaconKind>>,
-    target_lock: Option<super::BattleTargetSelection>,
+    building_entry: Option<super::BuildingEntry>,
+    beacons: BTreeMap<VehicleSection, std::collections::BTreeSet<super::BeaconKind>>,
+    target_lock: Option<super::TargetSelection>,
     #[serde(default)]
-    aimed_section: Option<super::BattleAimSelection>,
+    aimed_section: Option<super::AimSelection>,
     artillery_adjustment: u8,
     c3_network: Option<u64>,
     c3i_network: Option<u64>,
     #[serde(default)]
-    network_automation: super::BattleNetworkAutomation,
-    electronics: super::BattleElectronics,
+    network_automation: super::NetworkAutomation,
+    electronics: super::Electronics,
     spotter: Option<crate::ObjectId>,
     #[serde(default)]
-    spotter_events: super::BattleSpotterEvents,
+    spotter_events: super::SpotterEvents,
     #[serde(default)]
-    tag: super::BattleTagState,
-    contacts: BTreeMap<crate::ObjectId, super::BattleContact>,
-    fire_modes: BTreeMap<usize, super::BattleFireMode>,
-    ammunition_modes: BTreeMap<usize, super::BattleAmmunitionMode>,
+    tag: super::TagState,
+    contacts: BTreeMap<crate::ObjectId, super::Contact>,
+    fire_modes: BTreeMap<usize, super::FireMode>,
+    ammunition_modes: BTreeMap<usize, super::AmmunitionMode>,
     #[serde(default)]
-    ammunition_sections: BTreeMap<usize, BattleVehicleSection>,
+    ammunition_sections: BTreeMap<usize, VehicleSection>,
     #[serde(default)]
-    unjam: Option<super::BattleUnjam>,
+    unjam: Option<super::Unjam>,
     #[serde(default)]
     pod_removal: Option<u8>,
     jammed_weapons: std::collections::BTreeSet<usize>,
     #[serde(default)]
-    component_failures: Vec<super::BattleComponentFailure<super::VehicleCriticalLocation>>,
-    weapon_failures: BTreeMap<usize, super::BattleEquipmentFailure>,
+    component_failures: Vec<super::ComponentFailure<super::VehicleCriticalLocation>>,
+    weapon_failures: BTreeMap<usize, super::EquipmentFailure>,
     weapon_recycle: BTreeMap<usize, u16>,
     #[serde(default)]
     powered_down_weapons: std::collections::BTreeSet<usize>,
     spent_launchers: std::collections::BTreeSet<usize>,
-    dice: super::BattleDice,
+    dice: super::Dice,
 }
 
 // Live fields change routinely while a vehicle moves, fires and recovers; everything
 // else is construction, damage and settings, saved only when it changes.
-super::saved_parts::saved_parts!(BattleVehicle {
+super::saved_parts::saved_parts!(Vehicle {
     core: [
         auxiliary_preferences,
         base_movement_fields,
@@ -491,9 +488,9 @@ super::saved_parts::saved_parts!(BattleVehicle {
     ],
 });
 
-impl BattleVehicle {
+impl Vehicle {
     /// The name of one of this vehicle's sections.
-    pub fn section_name(&self, section: BattleVehicleSection) -> &'static str {
+    pub fn section_name(&self, section: VehicleSection) -> &'static str {
         section.name()
     }
 
@@ -507,7 +504,7 @@ impl BattleVehicle {
             super::speed_bonus::saved_limit(self.maximum_speed(), false, false, false) + 10.75,
         )?;
         ensure!(
-            self.power() == super::BattlePower::Running
+            self.power() == super::Power::Running
                 || !motion.translating()
                 || self.idle_flight_controls(),
             "Inactive untowed vehicle retains motion"
@@ -520,7 +517,7 @@ impl BattleVehicle {
     }
 
     /// Replace the construction template in place, for fixtures that edit it.
-    pub(super) fn set_fixture_definition(&mut self, definition: BattleVehicleTemplate) {
+    pub(super) fn set_fixture_definition(&mut self, definition: VehicleTemplate) {
         self.definition = definition;
     }
 
@@ -555,9 +552,9 @@ impl BattleVehicle {
             self.lost_criticals.remove(&first);
         }
         let failure = if fire.iter().any(|mode| mode == "Disabled") {
-            Some(super::BattleEquipmentFailure::Disabled)
+            Some(super::EquipmentFailure::Disabled)
         } else if fire.iter().any(|mode| mode == "Broken") {
-            Some(super::BattleEquipmentFailure::Dud)
+            Some(super::EquipmentFailure::Dud)
         } else {
             None
         };
@@ -589,7 +586,7 @@ impl BattleVehicle {
 
     pub(super) fn replace_construction_contract(
         &mut self,
-        definition: BattleVehicleTemplate,
+        definition: VehicleTemplate,
         touched: &[super::VehicleCriticalLocation],
     ) -> Result<()> {
         self.replace_construction_mode(definition, touched, true)
@@ -597,7 +594,7 @@ impl BattleVehicle {
 
     fn replace_construction_mode(
         &mut self,
-        definition: BattleVehicleTemplate,
+        definition: VehicleTemplate,
         touched: &[super::VehicleCriticalLocation],
         contract: bool,
     ) -> Result<()> {
@@ -676,7 +673,7 @@ impl BattleVehicle {
 
     pub(super) fn set_administrative_armor(
         &mut self,
-        section: BattleVehicleSection,
+        section: VehicleSection,
         armor: Option<u16>,
         internal: Option<u16>,
         rear: Option<u16>,
@@ -703,7 +700,7 @@ impl BattleVehicle {
 
     pub(super) fn apply_immediate_repair(
         &mut self,
-        section: BattleVehicleSection,
+        section: VehicleSection,
         kind: super::AdministrativeRepairKind,
         value: u16,
         hull: super::ReattachHull,
@@ -790,15 +787,15 @@ impl BattleVehicle {
     }
     /// Construct intact material state only when the template has complete equipment and mass rules.
     /// This does not certify construction legality or add a vehicle to the running world.
-    pub fn new(definition: BattleVehicleTemplate) -> Result<Self> {
+    pub fn new(definition: VehicleTemplate) -> Result<Self> {
         Self::new_mode(definition, false)
     }
 
-    pub(crate) fn new_contract(definition: BattleVehicleTemplate) -> Result<Self> {
+    pub(crate) fn new_contract(definition: VehicleTemplate) -> Result<Self> {
         Self::new_mode(definition, true)
     }
 
-    fn new_mode(definition: BattleVehicleTemplate, contract_loadout: bool) -> Result<Self> {
+    fn new_mode(definition: VehicleTemplate, contract_loadout: bool) -> Result<Self> {
         // The (tons + 5, at least 10) / 10 internal structure
         // (vehicle_int_check) is forced while the template file is read;
         // construction and saved-definition restore keep the stored internals
@@ -809,13 +806,13 @@ impl BattleVehicle {
             definition.mass()?;
         }
         let loadout = if contract_loadout {
-            BattleVehicleLoadout::resolve_contract(&definition)?
+            VehicleLoadout::resolve_contract(&definition)?
         } else {
-            BattleVehicleLoadout::resolve(&definition)?
+            VehicleLoadout::resolve(&definition)?
         };
         let vtol_fuel = definition
             .is_vtol()
-            .then(|| super::BattleVtolFuel::from_template(&definition))
+            .then(|| super::VtolFuel::from_template(&definition))
             .transpose()?;
         let sections = Self::pristine_sections(&definition);
         let ammunition = loadout
@@ -840,7 +837,7 @@ impl BattleVehicle {
             .iter()
             .enumerate()
             .filter_map(|(index, mount)| {
-                (mount.initial_fire_mode != super::BattleFireMode::Normal)
+                (mount.initial_fire_mode != super::FireMode::Normal)
                     .then_some((index, mount.initial_fire_mode))
             })
             .collect();
@@ -849,11 +846,11 @@ impl BattleVehicle {
             .iter()
             .enumerate()
             .filter_map(|(index, mount)| {
-                (mount.initial_ammunition_mode != super::BattleAmmunitionMode::Normal)
+                (mount.initial_ammunition_mode != super::AmmunitionMode::Normal)
                     .then_some((index, mount.initial_ammunition_mode))
             })
             .collect();
-        let vtol_flight = definition.is_vtol().then(super::BattleVtolFlight::default);
+        let vtol_flight = definition.is_vtol().then(super::VtolFlight::default);
         Ok(Self {
             no_armor_warning: false,
             no_ammunition_warning: false,
@@ -883,7 +880,7 @@ impl BattleVehicle {
             battlefield_label: None,
             preferred_id: None,
             pilot: None,
-            power: super::BattlePower::Off,
+            power: super::Power::Off,
             motion: None,
             detached_heading: 0.0,
             under_bridge: false,
@@ -915,7 +912,7 @@ impl BattleVehicle {
             hide_elapsed: None,
             self_destruct: None,
             self_destruct_safe: false,
-            crew_recovery: super::BattleRecovery::fresh(),
+            crew_recovery: super::Recovery::fresh(),
             piloting_damage: 0,
             gunnery_damage: 0,
             lost_stabilizers: std::collections::BTreeSet::new(),
@@ -933,8 +930,8 @@ impl BattleVehicle {
             observer: false,
             weapons_hold: false,
             combat_safe: false,
-            visibility: super::BattleVisibility::default(),
-            dig: super::BattleDigState::default(),
+            visibility: super::Visibility::default(),
+            dig: super::DigState::default(),
             experience: Default::default(),
             friendly_fire_safety: false,
             auto_fall: false,
@@ -968,14 +965,14 @@ impl BattleVehicle {
             powered_down_weapons: Default::default(),
             weapon_recycle: BTreeMap::new(),
             spent_launchers,
-            dice: super::BattleDice::fresh(),
+            dice: super::Dice::fresh(),
         })
     }
 
     /// Absolute facing of a surviving turret; its offset is attached to the hull.
     pub fn turret_heading(&self) -> Option<f64> {
         self.sections
-            .get(&BattleVehicleSection::Turret)
+            .get(&VehicleSection::Turret)
             .filter(|state| state.internal > 0)
             .map(|_| (self.heading() + self.turret_offset).rem_euclid(360.0))
     }
@@ -1017,7 +1014,7 @@ impl BattleVehicle {
     }
 
     /// Saved virtual-crew recovery, independent of mechanical crew stun.
-    pub fn crew_recovery(&self) -> &super::BattleRecovery {
+    pub fn crew_recovery(&self) -> &super::Recovery {
         &self.crew_recovery
     }
 
@@ -1056,7 +1053,7 @@ impl BattleVehicle {
         self.crew_recovery.clear();
         self.clear_fires();
         self.target_lock = None;
-        self.power = super::BattlePower::Off;
+        self.power = super::Power::Off;
         self.searchlight.shutdown();
         self.crew_stun_remaining = 0;
         self.crew_stun_condition = None;
@@ -1103,7 +1100,7 @@ impl BattleVehicle {
         if self.immobilized
             || self.rotor_destroyed()
             || self.is_destroyed()
-            || self.definition.movement == super::BattleVehicleMovement::Stationary
+            || self.definition.movement == super::VehicleMovement::Stationary
         {
             return 0.0;
         }
@@ -1112,18 +1109,18 @@ impl BattleVehicle {
     }
 
     /// Apply an explicit motive consequence; damage adapters own notices and the enclosing transaction.
-    pub fn apply_motive_hit(&mut self, hit: super::BattleVehicleMotiveHit) {
+    pub fn apply_motive_hit(&mut self, hit: super::VehicleMotiveHit) {
         if self.immobilized
             || matches!(
                 hit,
-                super::BattleVehicleMotiveHit::SpeedLoss { movement_points: 0 }
+                super::VehicleMotiveHit::SpeedLoss { movement_points: 0 }
             )
         {
             return;
         }
         match hit {
-            super::BattleVehicleMotiveHit::Immobilize => self.immobilized = true,
-            super::BattleVehicleMotiveHit::SpeedLoss { movement_points } => {
+            super::VehicleMotiveHit::Immobilize => self.immobilized = true,
+            super::VehicleMotiveHit::SpeedLoss { movement_points } => {
                 self.propulsion.lower(f64::from(movement_points) * 10.75);
                 self.motive_speed_loss = (self.motive_speed_loss
                     + f64::from(movement_points) * 10.75)
@@ -1152,7 +1149,7 @@ impl BattleVehicle {
     }
 
     /// Saved RPG injury status; character health determines death independently of tactical hits.
-    pub fn character_pilot_status(&self) -> Option<super::BattleCharacterPilotStatus> {
+    pub fn character_pilot_status(&self) -> Option<super::CharacterPilotStatus> {
         self.character_pilot
     }
 
@@ -1167,7 +1164,7 @@ impl BattleVehicle {
     }
 
     /// Saved engine lifecycle driven by committed one-second updates.
-    pub fn power(&self) -> super::BattlePower {
+    pub fn power(&self) -> super::Power {
         self.power
     }
 
@@ -1192,7 +1189,7 @@ impl BattleVehicle {
     }
 
     /// Current forced-descent cursor for either a ground chassis or rotorcraft.
-    pub fn free_fall(&self) -> Option<super::BattleFreeFall> {
+    pub fn free_fall(&self) -> Option<super::FreeFall> {
         self.free_fall
             .or_else(|| self.vtol_flight.and_then(|flight| flight.fall))
     }
@@ -1219,16 +1216,14 @@ impl BattleVehicle {
         if under_bridge && tile.has_bridge() {
             return i32::from(tile.water_line());
         }
-        if self.definition.movement == super::BattleVehicleMovement::Hover
-            && tile.is_water_surface()
-        {
+        if self.definition.movement == super::VehicleMovement::Hover && tile.is_water_surface() {
             return i32::from(tile.water_line());
         }
         i32::from(tile.standing_height())
     }
 
     /// Current continuous position and commanded motion.
-    pub fn motion(&self) -> Option<super::BattleMotion> {
+    pub fn motion(&self) -> Option<super::Motion> {
         self.motion
     }
 
@@ -1241,8 +1236,8 @@ impl BattleVehicle {
     /// Commit a traced movement segment without resetting battlefield membership.
     pub(super) fn update_motion(
         &mut self,
-        motion: super::BattleMotion,
-        position: super::BattlePosition,
+        motion: super::Motion,
+        position: super::Position,
         under_bridge: bool,
     ) {
         if self.position != Some(position) {
@@ -1257,7 +1252,7 @@ impl BattleVehicle {
     /// Restore a rejected terrain entry while preserving any fall-induced heading and damage.
     pub(super) fn restore_ground_position(
         &mut self,
-        position: super::BattlePosition,
+        position: super::Position,
         point: super::Point,
         height: i16,
         under_bridge: bool,
@@ -1277,7 +1272,7 @@ impl BattleVehicle {
     }
 
     /// Saved battlefield coordinates, absent when held outside a battlefield.
-    pub fn position(&self) -> Option<super::BattlePosition> {
+    pub fn position(&self) -> Option<super::Position> {
         (!self.detached).then_some(self.position).flatten()
     }
 
@@ -1287,7 +1282,7 @@ impl BattleVehicle {
     }
 
     /// Placement adapters update coordinates and slot together.
-    pub(super) fn set_placement(&mut self, placement: Option<(super::BattlePosition, u32)>) {
+    pub(super) fn set_placement(&mut self, placement: Option<(super::Position, u32)>) {
         if self.position.map(|p| p.map) != placement.map(|(p, _)| p.map) {
             self.c3_network = None;
             self.tag.target = None;
@@ -1297,12 +1292,12 @@ impl BattleVehicle {
         self.ground_elevation = None;
         self.free_fall = None;
         self.orbital_drop = None;
-        self.dig = super::BattleDigState::default();
+        self.dig = super::DigState::default();
         if let Some(flight) = &mut self.vtol_flight {
-            *flight = super::BattleVtolFlight::default();
+            *flight = super::VtolFlight::default();
         }
         self.motion = placement.map(|(position, _)| {
-            let mut motion = super::BattleMotion::stationary(
+            let mut motion = super::Motion::stationary(
                 super::HexCoordinate {
                     x: i32::from(position.x),
                     y: i32::from(position.y),
@@ -1320,7 +1315,7 @@ impl BattleVehicle {
     }
 
     /// Last physical coordinates remain available after removal from the tactical map.
-    pub(super) fn retained_position(&self) -> Option<super::BattlePosition> {
+    pub(super) fn retained_position(&self) -> Option<super::Position> {
         self.position
     }
 
@@ -1331,12 +1326,12 @@ impl BattleVehicle {
         self.c3_network = None;
         self.tag.target = None;
         self.c3i_network = None;
-        self.dig = super::BattleDigState::default();
+        self.dig = super::DigState::default();
         self.building_entry = None;
     }
 
     /// Replace tactical membership without resetting movement, altitude, flight or crew.
-    pub(super) fn assign_membership(&mut self, position: super::BattlePosition, slot: u32) {
+    pub(super) fn assign_membership(&mut self, position: super::Position, slot: u32) {
         self.detached = false;
         self.position = Some(position);
         self.map_slot = Some(slot);
@@ -1347,7 +1342,7 @@ impl BattleVehicle {
     }
 
     /// Immutable construction facts used for replay and equipment resolution.
-    pub fn definition(&self) -> &BattleVehicleTemplate {
+    pub fn definition(&self) -> &VehicleTemplate {
         &self.definition
     }
 
@@ -1380,13 +1375,13 @@ impl BattleVehicle {
     }
 
     /// Keep resolved locomotion and its authored attribute in agreement.
-    pub(super) fn set_movement(&mut self, movement: super::BattleVehicleMovement) {
+    pub(super) fn set_movement(&mut self, movement: super::VehicleMovement) {
         let name = match movement {
-            super::BattleVehicleMovement::Tracked => "Track",
-            super::BattleVehicleMovement::Wheeled => "Wheel",
-            super::BattleVehicleMovement::Hover => "Hover",
-            super::BattleVehicleMovement::Stationary => "None",
-            super::BattleVehicleMovement::Vtol => "VTOL",
+            super::VehicleMovement::Tracked => "Track",
+            super::VehicleMovement::Wheeled => "Wheel",
+            super::VehicleMovement::Hover => "Hover",
+            super::VehicleMovement::Stationary => "None",
+            super::VehicleMovement::Vtol => "VTOL",
         };
         self.definition.movement = movement;
         self.definition
@@ -1424,7 +1419,7 @@ impl BattleVehicle {
     }
 
     /// Current protection keyed by vehicle faces rather than Mech sections.
-    pub fn sections(&self) -> &BTreeMap<BattleVehicleSection, BattleSectionState> {
+    pub fn sections(&self) -> &BTreeMap<VehicleSection, SectionState> {
         &self.sections
     }
 
@@ -1434,7 +1429,7 @@ impl BattleVehicle {
     }
 
     /// Resolve derived equipment without storing a second copy in the snapshot.
-    pub fn loadout(&self) -> Result<BattleVehicleLoadout> {
+    pub fn loadout(&self) -> Result<VehicleLoadout> {
         if let Some(projection) = super::loadout_context::vehicle(self) {
             return Ok(projection);
         }
@@ -1457,10 +1452,8 @@ impl BattleVehicle {
     /// Hull loss is distinct from crew death, turret loss and rotor loss.
     pub(super) fn hull_destroyed(&self) -> bool {
         self.sections.iter().any(|(&section, state)| {
-            !matches!(
-                section,
-                BattleVehicleSection::Turret | BattleVehicleSection::Rotor
-            ) && state.internal == 0
+            !matches!(section, VehicleSection::Turret | VehicleSection::Rotor)
+                && state.internal == 0
         })
     }
 
@@ -1492,8 +1485,8 @@ impl BattleVehicle {
     /// Apply the common surviving-inventory rule after a misload has resolved vehicle damage.
     pub(super) fn spend_surviving_draws(
         &mut self,
-        draws: Vec<super::BattleAmmunitionDraw>,
-    ) -> Vec<super::BattleAmmunitionDraw> {
+        draws: Vec<super::AmmunitionDraw>,
+    ) -> Vec<super::AmmunitionDraw> {
         let spent = super::ammunition_feed::spend_surviving_draws(&mut self.ammunition, draws);
         if !spent.is_empty() {
             self.live_mass.invalidate();
@@ -1506,16 +1499,16 @@ impl BattleVehicle {
     /// This primitive does not transfer damage or roll criticals, and turret loss preserves the hull.
     pub fn damage_phase(
         &mut self,
-        section: BattleVehicleSection,
+        section: VehicleSection,
         amount: u16,
-        phase: BattleDamagePhase,
-    ) -> Result<BattleDamageResult<BattleVehicleSection>> {
+        phase: DamagePhase,
+    ) -> Result<DamageResult<VehicleSection>> {
         ensure!(
             self.sections.contains_key(&section),
             "Vehicle section {} is absent",
             section.name()
         );
-        let mut result = BattleDamageResult {
+        let mut result = DamageResult {
             section,
             absorbed: 0,
             remaining: amount,
@@ -1532,8 +1525,8 @@ impl BattleVehicle {
             .get_mut(&section)
             .expect("validated vehicle face");
         let protection = match phase {
-            BattleDamagePhase::Armor { .. } => &mut state.armor,
-            BattleDamagePhase::Internal => &mut state.internal,
+            DamagePhase::Armor { .. } => &mut state.armor,
+            DamagePhase::Internal => &mut state.internal,
         };
         result.absorbed = (*protection).min(amount);
         *protection -= result.absorbed;
@@ -1541,7 +1534,7 @@ impl BattleVehicle {
             self.live_mass.invalidate();
         }
         result.remaining -= result.absorbed;
-        if matches!(phase, BattleDamagePhase::Internal) && state.internal == 0 {
+        if matches!(phase, DamagePhase::Internal) && state.internal == 0 {
             state.armor = 0;
             state.rear = 0;
             for (index, bin) in loadout.ammunition.iter().enumerate() {
@@ -1549,7 +1542,7 @@ impl BattleVehicle {
                     self.ammunition[index] = 0;
                 }
             }
-            if section == BattleVehicleSection::Turret {
+            if section == VehicleSection::Turret {
                 self.turret_locked = false;
                 self.turret_jammed = false;
                 self.turret_repairs.clear();
@@ -1562,7 +1555,7 @@ impl BattleVehicle {
             self.weapon_recycle
                 .retain(|index, _| loadout.weapons[*index].criticals[0].section != section);
             self.beacons.remove(&section);
-            if section == BattleVehicleSection::Rotor {
+            if section == VehicleSection::Rotor {
                 self.lose_vtol_lift();
                 self.halt();
             }
@@ -1580,7 +1573,7 @@ impl BattleVehicle {
     }
 }
 
-impl TryFrom<VehicleRecord> for BattleVehicle {
+impl TryFrom<VehicleRecord> for Vehicle {
     type Error = anyhow::Error;
 
     /// Reject snapshots whose protection or ammunition cannot belong to the supplied construction.
@@ -1589,7 +1582,7 @@ impl TryFrom<VehicleRecord> for BattleVehicle {
     }
 }
 
-impl BattleVehicle {
+impl Vehicle {
     /// Take every field from a saved record without checking it.
     fn from_record(record: VehicleRecord) -> Self {
         Self {
@@ -1718,21 +1711,19 @@ impl BattleVehicle {
     }
 
     /// Section protection as built, before any damage.
-    fn pristine_sections(
-        definition: &BattleVehicleTemplate,
-    ) -> BTreeMap<BattleVehicleSection, BattleSectionState> {
+    fn pristine_sections(definition: &VehicleTemplate) -> BTreeMap<VehicleSection, SectionState> {
         definition
             .sections
             .iter()
             .map(|(&section, layout)| {
                 let state = if layout.internal == 0 {
-                    BattleSectionState {
+                    SectionState {
                         armor: 0,
                         internal: 0,
                         rear: 0,
                     }
                 } else {
-                    BattleSectionState {
+                    SectionState {
                         armor: layout.armor,
                         internal: layout.internal,
                         rear: layout.rear,
@@ -1756,7 +1747,7 @@ impl BattleVehicle {
         }
         self.loadout()?;
         if self.definition.is_vtol() {
-            super::BattleVtolFuel::from_template(&self.definition)?;
+            super::VtolFuel::from_template(&self.definition)?;
         }
         let pristine = Self::pristine_sections(&self.definition);
         ensure!(
@@ -1837,7 +1828,7 @@ impl BattleVehicle {
                 && (!self
                     .sections
                     .iter()
-                    .any(|(section, state)| *section != BattleVehicleSection::Turret
+                    .any(|(section, state)| *section != VehicleSection::Turret
                         && state.internal == 0)
                     || (self.crew_stun_remaining == 0 && self.crew_stun_condition != Some(true))),
             "Invalid vehicle crew stun countdown"
@@ -1880,14 +1871,14 @@ impl BattleVehicle {
                 "Invalid vehicle battlefield coordinates"
             );
         }
-        if let super::BattlePower::Starting { remaining } = self.power {
+        if let super::Power::Starting { remaining } = self.power {
             ensure!(
                 (1..=30).contains(&remaining),
                 "Invalid vehicle startup countdown"
             );
         }
         ensure!(
-            self.power == super::BattlePower::Off || self.position.is_some(),
+            self.power == super::Power::Off || self.position.is_some(),
             "Powered vehicle requires a battlefield"
         );
         ensure!(
@@ -1931,7 +1922,7 @@ impl BattleVehicle {
                 "Vehicle continuous position differs from hex"
             );
             ensure!(
-                self.power == super::BattlePower::Running
+                self.power == super::Power::Running
                     || !propelled.translating()
                     || super::vtol_flight::idle_controls(self.power, self.vtol_flight, self.motion),
                 "Inactive vehicle retains motion"
@@ -1940,7 +1931,7 @@ impl BattleVehicle {
         ensure!(
             !self.under_bridge
                 || (self.position.is_some()
-                    && self.definition.movement == super::BattleVehicleMovement::Hover),
+                    && self.definition.movement == super::VehicleMovement::Hover),
             "Invalid vehicle under-bridge state"
         );
         ensure!(
@@ -1985,7 +1976,7 @@ impl BattleVehicle {
                 || self
                     .definition
                     .sections
-                    .contains_key(&BattleVehicleSection::Turret),
+                    .contains_key(&VehicleSection::Turret),
             "Automatic tracking without an authored turret"
         );
 
@@ -2023,7 +2014,7 @@ impl BattleVehicle {
         ensure!(
             self.fire_modes
                 .iter()
-                .all(|(index, mode)| *mode != super::BattleFireMode::Normal
+                .all(|(index, mode)| *mode != super::FireMode::Normal
                     && loadout
                         .weapons
                         .get(*index)
@@ -2032,7 +2023,7 @@ impl BattleVehicle {
         );
         ensure!(
             self.ammunition_modes.iter().all(|(index, mode)| *mode
-                != super::BattleAmmunitionMode::Normal
+                != super::AmmunitionMode::Normal
                 && loadout
                     .weapons
                     .get(*index)
@@ -2068,9 +2059,8 @@ impl BattleVehicle {
         );
         super::weapon_power::validate(&self.powered_down_weapons, &loadout.weapons)?;
         ensure!(
-            self.target_lock.is_none_or(
-                |lock| lock.remaining() <= 8 && self.power == super::BattlePower::Running
-            ),
+            self.target_lock
+                .is_none_or(|lock| lock.remaining() <= 8 && self.power == super::Power::Running),
             "Invalid vehicle target lock countdown or power state"
         );
         if let Some(selection) = self.aimed_section {
@@ -2145,7 +2135,7 @@ impl BattleVehicle {
             },
         )?;
         ensure!(
-            !self.is_destroyed() || self.power == super::BattlePower::Off,
+            !self.is_destroyed() || self.power == super::Power::Off,
             "Destroyed vehicle must be shut down"
         );
         super::crew_recovery::validate(&self.crew_recovery, self.pilot(), self.pilot_injuries())?;
@@ -2156,7 +2146,7 @@ impl BattleVehicle {
     }
 }
 
-impl BattleVehicle {
+impl Vehicle {
     /// Common identity projection for object registration and saved-game inspection.
     pub(crate) fn identity(&self) -> super::StoredBattleUnit {
         super::StoredBattleUnit {
@@ -2164,11 +2154,11 @@ impl BattleVehicle {
             template: self.definition.reference.clone(),
             class_code: if self.definition.is_vtol() { 2 } else { 1 },
             movement_code: match self.definition.movement {
-                super::BattleVehicleMovement::Tracked => 1,
-                super::BattleVehicleMovement::Wheeled => 2,
-                super::BattleVehicleMovement::Hover => 3,
-                super::BattleVehicleMovement::Stationary => 10,
-                super::BattleVehicleMovement::Vtol => 4,
+                super::VehicleMovement::Tracked => 1,
+                super::VehicleMovement::Wheeled => 2,
+                super::VehicleMovement::Hover => 3,
+                super::VehicleMovement::Stationary => 10,
+                super::VehicleMovement::Vtol => 4,
             },
             tons: i64::from(self.definition.tons),
             map: self.position().map(|position| position.map),
@@ -2180,7 +2170,7 @@ impl BattleVehicle {
 pub fn create_vehicle(
     world: &mut crate::World,
     id: crate::ObjectId,
-    definition: BattleVehicleTemplate,
+    definition: VehicleTemplate,
 ) -> Result<()> {
     ensure!(
         world
@@ -2197,7 +2187,7 @@ pub fn create_vehicle(
         "Object already has BattleTech state"
     );
     super::inventory_mass(world, id)?;
-    let vehicle = BattleVehicle::new(definition)?;
+    let vehicle = Vehicle::new(definition)?;
     world.btech.units.insert(id, vehicle.identity());
     world.btech.vehicles.insert(id, vehicle);
     std::sync::Arc::make_mut(&mut world.btech.registrations).insert(id, "MECH".into());
@@ -2208,10 +2198,10 @@ pub fn create_vehicle(
 pub fn damage_vehicle_phase(
     world: &mut crate::World,
     id: crate::ObjectId,
-    section: BattleVehicleSection,
+    section: VehicleSection,
     amount: u16,
-    phase: BattleDamagePhase,
-) -> Result<BattleDamageResult<BattleVehicleSection>> {
+    phase: DamagePhase,
+) -> Result<DamageResult<VehicleSection>> {
     ensure!(
         world
             .objects
@@ -2231,7 +2221,7 @@ pub fn damage_vehicle_phase(
 pub fn damage_vehicle_motive(
     world: &mut crate::World,
     id: crate::ObjectId,
-    hit: super::BattleVehicleMotiveHit,
+    hit: super::VehicleMotiveHit,
 ) -> Result<()> {
     ensure!(
         world

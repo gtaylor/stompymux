@@ -40,8 +40,7 @@ async fn fixture_with_ranges(
         let id = world.create(&config, "Scan unit".into(), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         let mut template =
-            BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
-                .unwrap();
+            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
         for &(field, value) in ranges {
             template.attributes.insert(field.into(), value.into());
         }
@@ -65,14 +64,14 @@ async fn fixture_with_ranges(
 
 /// Leave no channel that reaches anything: the sensor band switched off and no visibility.
 fn blind(world: &mut World, map: ObjectId) {
-    set_battle_map_perception(world, map, BattleMapPerceptionFlag::Sensors, false).unwrap();
-    set_battle_map_visibility(world, map, BattleLight::Day, 0).unwrap();
+    set_battle_map_perception(world, map, MapPerceptionFlag::Sensors, false).unwrap();
+    set_battle_map_visibility(world, map, Light::Day, 0).unwrap();
 }
 
 /// Restore the fixture's clear day with the sensor band switched back on.
 fn unblind(world: &mut World, map: ObjectId) {
-    set_battle_map_perception(world, map, BattleMapPerceptionFlag::Sensors, true).unwrap();
-    set_battle_map_visibility(world, map, BattleLight::Day, 30).unwrap();
+    set_battle_map_perception(world, map, MapPerceptionFlag::Sensors, true).unwrap();
+    set_battle_map_visibility(world, map, Light::Day, 30).unwrap();
 }
 
 /// Save a known contact without consuming acquisition dice.
@@ -89,8 +88,7 @@ fn acquire(world: &mut World, source: ObjectId, target: ObjectId) {
 fn sensor_defaults_follow_technology_base_and_critical_halving() {
     for (clan, base) in [(false, 25), (true, 35)] {
         let mut template =
-            BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
-                .unwrap();
+            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
         for field in ["tac_range", "lrs_range", "scan_range"] {
             template.attributes.remove(field);
         }
@@ -105,30 +103,30 @@ fn sensor_defaults_follow_technology_base_and_critical_halving() {
                     .retain(|_, part| part.equipment != "HeatSink");
             }
         }
-        let mut unit = BattleUnit::from_template(template).unwrap();
+        let mut unit = Mech::from_template(template).unwrap();
         assert_eq!(
             unit.sensor_ranges(),
-            BattleSensorRanges {
+            SensorRanges {
                 tactical: base,
                 long_range: base * 2,
                 scan: base
             }
         );
         unit.destroy_critical(CriticalLocation {
-            section: BattleSection::Head,
+            section: MechSection::Head,
             slot: 1,
         })
         .unwrap();
         assert_eq!(
             unit.sensor_ranges(),
-            BattleSensorRanges {
+            SensorRanges {
                 tactical: base / 2,
                 long_range: base,
                 scan: base / 2
             }
         );
         unit.destroy_critical(CriticalLocation {
-            section: BattleSection::Head,
+            section: MechSection::Head,
             slot: 4,
         })
         .unwrap();
@@ -207,9 +205,9 @@ async fn observer_scan_bypasses_range_but_not_visibility_or_failed_hardware() {
     assert!(scan_battle_unit(&world, source, ObjectId(1), target, "I").is_ok());
     assert!(scan_battle_unit(&world, source, ObjectId(2), target, "I").is_err());
     assert!(scan_battle_unit(&world, source, ObjectId(1), target, "N").is_err());
-    set_battle_map_visibility(&mut world, map, BattleLight::Day, 0).unwrap();
+    set_battle_map_visibility(&mut world, map, Light::Day, 0).unwrap();
     assert!(scan_battle_unit(&world, source, ObjectId(1), target, "I").is_err());
-    set_battle_map_visibility(&mut world, map, BattleLight::Day, 30).unwrap();
+    set_battle_map_visibility(&mut world, map, Light::Day, 30).unwrap();
     world
         .btech
         .rewrite_unit_record(source, |record| {
@@ -301,7 +299,7 @@ async fn scan_warnings_follow_target_visibility_and_rollback_with_lua() {
         set_battle_observer(&mut shared.borrow_mut(), source, false).unwrap();
         let mut state = serde_json::to_value(&shared.borrow().btech).unwrap();
         state["constructed"][target.0.to_string()]["power"] =
-            serde_json::to_value(BattlePower::Off).unwrap();
+            serde_json::to_value(Power::Off).unwrap();
         shared.borrow_mut().btech = serde_json::from_value(state).unwrap();
         assert!(scan_battle_unit_action(&scripts, source, ObjectId(1), target, "A").is_ok());
         assert!(scripts.drain_outbox().is_empty());
@@ -317,7 +315,7 @@ async fn coordinate_scan_selects_visible_occupants_in_saved_order() {
     create_battle_unit(
         &mut world,
         other,
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, other, support::FIXTURE_DICE_SEED);
@@ -414,7 +412,7 @@ fn scan_structure(world: &mut World, config: &Config, map: ObjectId) -> ObjectId
     set_building_state(
         world,
         interior,
-        BattleBuildingState {
+        BuildingState {
             integrity: 31,
             maximum_integrity: 50,
             flags: 0,
@@ -426,7 +424,7 @@ fn scan_structure(world: &mut World, config: &Config, map: ObjectId) -> ObjectId
         world,
         map,
         0,
-        Some(BattleBuildingEntrance {
+        Some(BuildingEntrance {
             coordinate: HexCoordinate { x: 1, y: 2 },
             interior,
             data_char: 0,
@@ -538,7 +536,7 @@ async fn concealed_building_rolls_awards_and_callback_rollback_replay() {
     set_battle_character(
         &mut world,
         ObjectId(1),
-        BattleCharacter {
+        Character {
             bruise: 0,
             lethal: 0,
             build: 5,
@@ -627,9 +625,9 @@ fn scan_mine(world: &mut World, map: ObjectId, coordinate: HexCoordinate) {
         world,
         map,
         0,
-        Some(BattleMinefield {
+        Some(Minefield {
             coordinate,
-            kind: BattleMineKind::Command,
+            kind: MineKind::Command,
             strength: 12,
             extra: 123,
             owner: ObjectId(1),
@@ -655,7 +653,7 @@ fn scan_perception(world: &mut World, source: ObjectId) {
     set_battle_character(
         world,
         ObjectId(1),
-        BattleCharacter {
+        Character {
             bruise: 0,
             lethal: 0,
             build: 5,
@@ -685,7 +683,7 @@ async fn mine_recognition_gates_dice_and_replays_without_revealing_configuration
     assert_eq!(world.btech, before);
     scan_mine(&mut world, map, coordinate);
     let mut expected = serde_json::to_value(&world.btech).unwrap();
-    let mut dice: BattleDice =
+    let mut dice: Dice =
         serde_json::from_value(expected["constructed"][source.0.to_string()]["dice"].clone())
             .unwrap();
     dice.die(8).unwrap();
@@ -717,7 +715,7 @@ async fn mine_recognition_gates_dice_and_replays_without_revealing_configuration
     let far = HexCoordinate { x: 1, y: 11 };
     scan_mine(&mut world, map, far);
     let mut expected = serde_json::to_value(&world.btech).unwrap();
-    let mut dice: BattleDice =
+    let mut dice: Dice =
         serde_json::from_value(expected["constructed"][source.0.to_string()]["dice"].clone())
             .unwrap();
     dice.die(8).unwrap();
@@ -809,11 +807,11 @@ async fn selected_scan_dispatches_each_lock_mode_without_changing_countdowns() {
     let scripts = Scripts::new(&config, shared.clone()).unwrap();
     assert!(scan_battle_selected_action(&scripts, &config, source, ObjectId(1), "").is_err());
     for mode in [
-        BattleHexTargetMode::UnitAtHex,
-        BattleHexTargetMode::Ignite,
-        BattleHexTargetMode::Clear,
-        BattleHexTargetMode::Building,
-        BattleHexTargetMode::Hex,
+        HexTargetMode::UnitAtHex,
+        HexTargetMode::Ignite,
+        HexTargetMode::Clear,
+        HexTargetMode::Building,
+        HexTargetMode::Hex,
     ] {
         let _ =
             select_battle_hex_target(&mut world, source, ObjectId(1), coordinate, mode).unwrap();
@@ -822,13 +820,13 @@ async fn selected_scan_dispatches_each_lock_mode_without_changing_countdowns() {
         let report =
             scan_battle_selected_action(&scripts, &config, source, ObjectId(1), "").unwrap();
         match (&report, mode) {
-            (BattleSelectedScan::Building(report), BattleHexTargetMode::Building) => {
+            (SelectedScan::Building(report), HexTargetMode::Building) => {
                 assert!(report.text.contains("CF is 31"))
             }
-            (BattleSelectedScan::Hex(report), BattleHexTargetMode::Hex) => {
+            (SelectedScan::Hex(report), HexTargetMode::Hex) => {
                 assert!(!report.mines.found)
             }
-            (BattleSelectedScan::Unit(text), _) => assert_eq!(
+            (SelectedScan::Unit(text), _) => assert_eq!(
                 *text,
                 scan_battle_unit(&world, source, ObjectId(1), target, "").unwrap()
             ),
@@ -851,7 +849,7 @@ async fn selected_scan_dispatches_each_lock_mode_without_changing_countdowns() {
             .collect::<Vec<_>>()
             .join("\n");
         match report {
-            BattleSelectedScan::Unit(text) => assert_eq!(native, text),
+            SelectedScan::Unit(text) => assert_eq!(native, text),
             _ => assert_eq!(native, messages),
         }
         assert_eq!(shared.borrow().btech, before);
@@ -865,7 +863,7 @@ async fn selected_scan_dispatches_each_lock_mode_without_changing_countdowns() {
     *shared.borrow_mut() = restored;
     assert!(matches!(
         scan_battle_selected_action(&scripts, &config, source, ObjectId(1), "").unwrap(),
-        BattleSelectedScan::Hex(_)
+        SelectedScan::Hex(_)
     ));
 }
 
@@ -878,7 +876,7 @@ async fn selected_observer_coordinates_bypass_distance_but_keep_visibility_and_r
         &mut world,
         map,
         1,
-        Some(BattleBuildingEntrance {
+        Some(BuildingEntrance {
             coordinate: far,
             interior,
             data_char: 0,
@@ -887,24 +885,18 @@ async fn selected_observer_coordinates_bypass_distance_but_keep_visibility_and_r
         }),
     )
     .unwrap();
-    let _ = select_battle_hex_target(
-        &mut world,
-        source,
-        ObjectId(1),
-        far,
-        BattleHexTargetMode::Hex,
-    )
-    .unwrap();
+    let _ =
+        select_battle_hex_target(&mut world, source, ObjectId(1), far, HexTargetMode::Hex).unwrap();
     let shared = std::rc::Rc::new(std::cell::RefCell::new(world));
     let scripts = Scripts::new(&config, shared.clone()).unwrap();
     assert!(scan_battle_selected_action(&scripts, &config, source, ObjectId(1), "").is_err());
     set_battle_observer(&mut shared.borrow_mut(), source, true).unwrap();
     let report = scan_battle_selected_action(&scripts, &config, source, ObjectId(1), "").unwrap();
-    assert!(matches!(report, BattleSelectedScan::Hex(_)));
+    assert!(matches!(report, SelectedScan::Hex(_)));
     assert!(scan_battle_hex_action(&scripts, &config, source, ObjectId(1), far).is_err());
-    set_battle_map_visibility(&mut shared.borrow_mut(), map, BattleLight::Day, 0).unwrap();
+    set_battle_map_visibility(&mut shared.borrow_mut(), map, Light::Day, 0).unwrap();
     assert!(scan_battle_selected_action(&scripts, &config, source, ObjectId(1), "").is_err());
-    set_battle_map_visibility(&mut shared.borrow_mut(), map, BattleLight::Day, 30).unwrap();
+    set_battle_map_visibility(&mut shared.borrow_mut(), map, Light::Day, 30).unwrap();
     let coordinate = HexCoordinate { x: 1, y: 2 };
     scan_mine(&mut shared.borrow_mut(), map, coordinate);
     scan_perception(&mut shared.borrow_mut(), source);
@@ -913,7 +905,7 @@ async fn selected_observer_coordinates_bypass_distance_but_keep_visibility_and_r
         source,
         ObjectId(1),
         coordinate,
-        BattleHexTargetMode::Hex,
+        HexTargetMode::Hex,
     )
     .unwrap();
     let _ = scripts.drain_outbox();
@@ -991,7 +983,7 @@ async fn brief_reports_are_silent_and_do_not_use_detailed_scan_range() {
         report
     );
     assert!(report_battle_unit(&world, source, ObjectId(2), target).is_err());
-    set_battle_map_visibility(&mut world, map, BattleLight::Day, 0).unwrap();
+    set_battle_map_visibility(&mut world, map, Light::Day, 0).unwrap();
     assert!(report_battle_unit(&world, source, ObjectId(1), target).is_err());
 }
 
@@ -1003,7 +995,7 @@ async fn brief_coordinate_reports_follow_visible_occupants_and_saved_hex_selecti
         source,
         ObjectId(1),
         HexCoordinate { x: 1, y: 2 },
-        BattleHexTargetMode::Hex,
+        HexTargetMode::Hex,
     )
     .unwrap();
     let report = report_battle_unit(&world, source, ObjectId(1), target).unwrap();
@@ -1043,51 +1035,34 @@ async fn display_centers_project_signed_ranges_and_share_lua_grammar() {
         &world,
         source,
         ObjectId(1),
-        BattleViewKind::Tactical,
-        BattleViewCenter::OwnUnit,
+        ViewKind::Tactical,
+        ViewCenter::OwnUnit,
     )
     .unwrap();
     assert_eq!(own.center, HexCoordinate { x: 1, y: 1 });
     assert_eq!(own.maximum_range, 20);
-    let forward = parse_battle_view_center(
-        &world,
-        source,
-        ObjectId(1),
-        BattleViewKind::Tactical,
-        "180 20.9",
-    )
-    .unwrap();
-    let backward = parse_battle_view_center(
-        &world,
-        source,
-        ObjectId(1),
-        BattleViewKind::Tactical,
-        "0 -20.9",
-    )
-    .unwrap();
+    let forward =
+        parse_battle_view_center(&world, source, ObjectId(1), ViewKind::Tactical, "180 20.9")
+            .unwrap();
+    let backward =
+        parse_battle_view_center(&world, source, ObjectId(1), ViewKind::Tactical, "0 -20.9")
+            .unwrap();
     assert_eq!(forward, backward);
     assert_eq!(forward.center, HexCoordinate { x: 1, y: 22 });
     assert_eq!(
-        parse_battle_view_center(
-            &world,
-            source,
-            ObjectId(1),
-            BattleViewKind::Tactical,
-            "540 20.9"
-        )
-        .unwrap(),
+        parse_battle_view_center(&world, source, ObjectId(1), ViewKind::Tactical, "540 20.9")
+            .unwrap(),
         forward
     );
     let contact =
-        parse_battle_view_center(&world, source, ObjectId(1), BattleViewKind::Tactical, "ab")
-            .unwrap();
+        parse_battle_view_center(&world, source, ObjectId(1), ViewKind::Tactical, "ab").unwrap();
     assert_eq!(contact.center, HexCoordinate { x: 1, y: 2 });
     assert_eq!(
         parse_battle_view_center(
             &world,
             source,
             ObjectId(1),
-            BattleViewKind::Tactical,
+            ViewKind::Tactical,
             &format!("#{}", target.0)
         )
         .unwrap(),
@@ -1095,7 +1070,7 @@ async fn display_centers_project_signed_ranges_and_share_lua_grammar() {
     );
     for args in ["180 21", "0 -21", "90 NaN", "0 inf", "0 1 2", "2.5 1"] {
         assert!(
-            parse_battle_view_center(&world, source, ObjectId(1), BattleViewKind::Tactical, args)
+            parse_battle_view_center(&world, source, ObjectId(1), ViewKind::Tactical, args)
                 .is_err(),
             "{args}"
         );
@@ -1124,7 +1099,7 @@ async fn display_centers_project_signed_ranges_and_share_lua_grammar() {
             &restored,
             source,
             ObjectId(1),
-            BattleViewKind::Tactical,
+            ViewKind::Tactical,
             "180 20.9"
         )
         .unwrap(),
@@ -1139,51 +1114,28 @@ async fn display_center_observer_exemption_is_projection_only() {
     acquire(&mut world, source, target);
     set_battle_observer(&mut world, source, true).unwrap();
     assert!(
-        parse_battle_view_center(&world, source, ObjectId(1), BattleViewKind::Tactical, "AB")
-            .is_err()
+        parse_battle_view_center(&world, source, ObjectId(1), ViewKind::Tactical, "AB").is_err()
     );
     let long =
-        parse_battle_view_center(&world, source, ObjectId(1), BattleViewKind::LongRange, "AB")
-            .unwrap();
+        parse_battle_view_center(&world, source, ObjectId(1), ViewKind::LongRange, "AB").unwrap();
     assert_eq!(long.maximum_range, 40);
-    let projected = parse_battle_view_center(
-        &world,
-        source,
-        ObjectId(1),
-        BattleViewKind::Tactical,
-        "180 100",
-    )
-    .unwrap();
+    let projected =
+        parse_battle_view_center(&world, source, ObjectId(1), ViewKind::Tactical, "180 100")
+            .unwrap();
     assert_eq!(projected.center, HexCoordinate { x: 1, y: 101 });
     assert!(
-        parse_battle_view_center(
-            &world,
-            source,
-            ObjectId(1),
-            BattleViewKind::Tactical,
-            "180 1e100"
-        )
-        .is_err()
-    );
-    assert!(
-        parse_battle_view_center(&world, source, ObjectId(2), BattleViewKind::Tactical, "")
+        parse_battle_view_center(&world, source, ObjectId(1), ViewKind::Tactical, "180 1e100")
             .is_err()
     );
-    set_battle_map_visibility(&mut world, map, BattleLight::Day, 0).unwrap();
+    assert!(parse_battle_view_center(&world, source, ObjectId(2), ViewKind::Tactical, "").is_err());
+    set_battle_map_visibility(&mut world, map, Light::Day, 0).unwrap();
     assert!(
-        parse_battle_view_center(&world, source, ObjectId(1), BattleViewKind::LongRange, "AB")
-            .is_err()
+        parse_battle_view_center(&world, source, ObjectId(1), ViewKind::LongRange, "AB").is_err()
     );
     // Center projection reveals coordinates only; terrain and occupants need separate display filtering.
     assert!(
-        parse_battle_view_center(
-            &world,
-            source,
-            ObjectId(1),
-            BattleViewKind::Tactical,
-            "180 100"
-        )
-        .is_ok()
+        parse_battle_view_center(&world, source, ObjectId(1), ViewKind::Tactical, "180 100")
+            .is_ok()
     );
     world
         .btech
@@ -1194,15 +1146,14 @@ async fn display_center_observer_exemption_is_projection_only() {
         })
         .unwrap();
     assert!(
-        parse_battle_view_center(&world, source, ObjectId(1), BattleViewKind::LongRange, "")
-            .is_err()
+        parse_battle_view_center(&world, source, ObjectId(1), ViewKind::LongRange, "").is_err()
     );
 }
 
 #[tokio::test]
 async fn viewports_clip_requested_dimensions_and_match_lua_without_state_changes() {
     let (_dir, config, mut world, _map, source, _) = fixture().await;
-    let dimensions = BattleViewDimensions {
+    let dimensions = ViewDimensions {
         tactical_width: 40,
         tactical_height: 24,
         long_range_height: 40,
@@ -1211,7 +1162,7 @@ async fn viewports_clip_requested_dimensions_and_match_lua_without_state_changes
         &world,
         source,
         ObjectId(1),
-        BattleViewKind::Tactical,
+        ViewKind::Tactical,
         "",
         dimensions,
     )
@@ -1222,7 +1173,7 @@ async fn viewports_clip_requested_dimensions_and_match_lua_without_state_changes
         &world,
         source,
         ObjectId(1),
-        BattleViewKind::LongRange,
+        ViewKind::LongRange,
         "",
         dimensions,
     )
@@ -1233,7 +1184,7 @@ async fn viewports_clip_requested_dimensions_and_match_lua_without_state_changes
         &world,
         source,
         ObjectId(1),
-        BattleViewKind::LongRange,
+        ViewKind::LongRange,
         "180 100",
         dimensions,
     )
@@ -1259,29 +1210,22 @@ async fn viewports_clip_requested_dimensions_and_match_lua_without_state_changes
     assert!(scripts.drain_outbox().is_empty());
     assert_eq!(scripts.world().btech, before);
     for invalid in [
-        BattleViewDimensions {
+        ViewDimensions {
             tactical_width: 4,
             ..dimensions
         },
-        BattleViewDimensions {
+        ViewDimensions {
             tactical_height: 25,
             ..dimensions
         },
-        BattleViewDimensions {
+        ViewDimensions {
             long_range_height: 41,
             ..dimensions
         },
     ] {
         assert!(
-            resolve_battle_viewport(
-                &world,
-                source,
-                ObjectId(1),
-                BattleViewKind::Tactical,
-                "",
-                invalid
-            )
-            .is_err()
+            resolve_battle_viewport(&world, source, ObjectId(1), ViewKind::Tactical, "", invalid)
+                .is_err()
         );
     }
     persistence::save(&config.database(), &world).await.unwrap();
@@ -1291,7 +1235,7 @@ async fn viewports_clip_requested_dimensions_and_match_lua_without_state_changes
             &restored,
             source,
             ObjectId(1),
-            BattleViewKind::LongRange,
+            ViewKind::LongRange,
             "180 100",
             dimensions
         )
@@ -1308,7 +1252,7 @@ async fn viewports_clip_requested_dimensions_and_match_lua_without_state_changes
         &world,
         source,
         ObjectId(1),
-        BattleViewKind::Tactical,
+        ViewKind::Tactical,
         "",
         dimensions,
     )
@@ -1326,7 +1270,7 @@ async fn long_range_maps_render_overlays_and_visible_contacts_without_mutation()
         &mut world,
         map,
         HexCoordinate { x: 0, y: 3 },
-        Some(BattleDecoration::new(DecorationKind::Fire, 30, None)),
+        Some(Decoration::new(DecorationKind::Fire, 30, None)),
     )
     .unwrap();
     let before = world.btech.clone();
@@ -1334,9 +1278,9 @@ async fn long_range_maps_render_overlays_and_visible_contacts_without_mutation()
         &world,
         source,
         ObjectId(1),
-        BattleLongRangeMode::Terrain,
+        LongRangeMode::Terrain,
         "",
-        BattleViewDimensions::default(),
+        ViewDimensions::default(),
     )
     .unwrap();
     assert_eq!(text::plain(&terrain.text).lines().count(), 25);
@@ -1358,9 +1302,9 @@ async fn long_range_maps_render_overlays_and_visible_contacts_without_mutation()
         &world,
         source,
         ObjectId(1),
-        BattleLongRangeMode::Units,
+        LongRangeMode::Units,
         "",
-        BattleViewDimensions::default(),
+        ViewDimensions::default(),
     )
     .unwrap();
     assert_eq!(text::plain(&units.text).lines().nth(5).unwrap(), "  1  * ");
@@ -1390,9 +1334,9 @@ async fn long_range_maps_render_overlays_and_visible_contacts_without_mutation()
             &restored,
             source,
             ObjectId(1),
-            BattleLongRangeMode::Units,
+            LongRangeMode::Units,
             "",
-            BattleViewDimensions::default()
+            ViewDimensions::default()
         )
         .unwrap(),
         units
@@ -1404,9 +1348,9 @@ async fn long_range_maps_render_overlays_and_visible_contacts_without_mutation()
         &world,
         source,
         ObjectId(1),
-        BattleLongRangeMode::Units,
+        LongRangeMode::Units,
         "",
-        BattleViewDimensions::default(),
+        ViewDimensions::default(),
     )
     .unwrap();
     assert_eq!(text::plain(&enemy.text).lines().nth(7).unwrap(), "  2  B ");
@@ -1426,7 +1370,7 @@ async fn long_range_stacked_markers_share_native_lua_and_restart_order() {
             &mut world,
             source,
             ObjectId(1),
-            BattleMovementRules::STANDARD.fall,
+            MovementRules::STANDARD.fall,
         )
         .unwrap();
         place_battle_unit(&mut world, source, map, 1, 20).unwrap();
@@ -1442,8 +1386,7 @@ async fn long_range_stacked_markers_share_native_lua_and_restart_order() {
         create_battle_unit(
             &mut world,
             earlier,
-            BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
-                .unwrap(),
+            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, earlier, support::FIXTURE_DICE_SEED);
@@ -1472,8 +1415,8 @@ async fn long_range_stacked_markers_share_native_lua_and_restart_order() {
         )
         .unwrap();
         for (selector, mode) in [
-            ("M", BattleLongRangeMode::Units),
-            ("S", BattleLongRangeMode::VisibleUnits),
+            ("M", LongRangeMode::Units),
+            ("S", LongRangeMode::VisibleUnits),
         ] {
             let report = battle_long_range_map(
                 &world,
@@ -1481,7 +1424,7 @@ async fn long_range_stacked_markers_share_native_lua_and_restart_order() {
                 ObjectId(1),
                 mode,
                 "",
-                BattleViewDimensions::default(),
+                ViewDimensions::default(),
             )
             .unwrap();
             assert_eq!(
@@ -1519,7 +1462,7 @@ async fn long_range_stacked_markers_share_native_lua_and_restart_order() {
                     ObjectId(1),
                     mode,
                     "",
-                    BattleViewDimensions::default()
+                    ViewDimensions::default()
                 )
                 .unwrap(),
                 report
@@ -1542,9 +1485,9 @@ async fn long_range_maps_mask_dark_terrain_and_unacquired_units() {
         &world,
         source,
         ObjectId(1),
-        BattleLongRangeMode::Units,
+        LongRangeMode::Units,
         "",
-        BattleViewDimensions::default(),
+        ViewDimensions::default(),
     )
     .unwrap();
     assert!(!text::plain(&units.text).contains('b') && !text::plain(&units.text).contains('B'));
@@ -1553,9 +1496,9 @@ async fn long_range_maps_mask_dark_terrain_and_unacquired_units() {
         &world,
         source,
         ObjectId(1),
-        BattleLongRangeMode::Elevation,
+        LongRangeMode::Elevation,
         "",
-        BattleViewDimensions::default(),
+        ViewDimensions::default(),
     )
     .unwrap();
     assert!(elevation.text.contains('?'));
@@ -1564,9 +1507,9 @@ async fn long_range_maps_mask_dark_terrain_and_unacquired_units() {
         &world,
         source,
         ObjectId(1),
-        BattleLongRangeMode::Terrain,
+        LongRangeMode::Terrain,
         "180 100",
-        BattleViewDimensions::default(),
+        ViewDimensions::default(),
     )
     .unwrap();
     assert_eq!(far.viewport.origin.y, 49);
@@ -1576,9 +1519,9 @@ async fn long_range_maps_mask_dark_terrain_and_unacquired_units() {
             &world,
             source,
             ObjectId(2),
-            BattleLongRangeMode::Terrain,
+            LongRangeMode::Terrain,
             "",
-            BattleViewDimensions::default()
+            ViewDimensions::default()
         )
         .is_err()
     );
@@ -1596,10 +1539,7 @@ async fn long_range_elevation_rows_preserve_zero_space_and_water_depth() {
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
-    world
-        .btech
-        .set_unit_power(source, BattlePower::Off)
-        .unwrap();
+    world.btech.set_unit_power(source, Power::Off).unwrap();
     place_battle_unit(&mut world, source, map, 1, 1).unwrap();
     start_battle_unit(&mut world, source, ObjectId(1), true).unwrap();
     for _ in 0..5 {
@@ -1609,9 +1549,9 @@ async fn long_range_elevation_rows_preserve_zero_space_and_water_depth() {
         &world,
         source,
         ObjectId(1),
-        BattleLongRangeMode::Elevation,
+        LongRangeMode::Elevation,
         "",
-        BattleViewDimensions::default(),
+        ViewDimensions::default(),
     )
     .unwrap();
     assert_eq!((report.viewport.width, report.viewport.height), (3, 2));
@@ -1627,7 +1567,7 @@ async fn long_range_colors_follow_ansi_and_keep_labels_outside_styles() {
         &mut world,
         map,
         HexCoordinate { x: 0, y: 3 },
-        Some(BattleDecoration::new(DecorationKind::Fire, 30, None)),
+        Some(Decoration::new(DecorationKind::Fire, 30, None)),
     )
     .unwrap();
     world
@@ -1640,9 +1580,9 @@ async fn long_range_colors_follow_ansi_and_keep_labels_outside_styles() {
         &world,
         source,
         ObjectId(1),
-        BattleLongRangeMode::Units,
+        LongRangeMode::Units,
         "",
-        BattleViewDimensions::default(),
+        ViewDimensions::default(),
     )
     .unwrap();
     assert!(!plain.text.contains("[fg=") && !plain.text.contains("[bold]"));
@@ -1656,9 +1596,9 @@ async fn long_range_colors_follow_ansi_and_keep_labels_outside_styles() {
         &world,
         source,
         ObjectId(1),
-        BattleLongRangeMode::Units,
+        LongRangeMode::Units,
         "",
-        BattleViewDimensions::default(),
+        ViewDimensions::default(),
     )
     .unwrap();
     assert_eq!(text::plain(&colored.text), plain.text);
@@ -1696,9 +1636,9 @@ async fn long_range_colors_follow_ansi_and_keep_labels_outside_styles() {
         &world,
         source,
         ObjectId(1),
-        BattleLongRangeMode::Elevation,
+        LongRangeMode::Elevation,
         "",
-        BattleViewDimensions::default(),
+        ViewDimensions::default(),
     )
     .unwrap();
     assert!(!ordinary.text.contains("[fg="));
@@ -1712,9 +1652,9 @@ async fn long_range_colors_follow_ansi_and_keep_labels_outside_styles() {
         &world,
         source,
         ObjectId(1),
-        BattleLongRangeMode::ColoredElevation,
+        LongRangeMode::ColoredElevation,
         "",
-        BattleViewDimensions::default(),
+        ViewDimensions::default(),
     )
     .unwrap();
     assert!(elevation.text.contains("[fg=red bold]0"));
@@ -1738,9 +1678,9 @@ async fn long_range_colors_follow_ansi_and_keep_labels_outside_styles() {
             &restored,
             source,
             ObjectId(1),
-            BattleLongRangeMode::ColoredElevation,
+            LongRangeMode::ColoredElevation,
             "",
-            BattleViewDimensions::default()
+            ViewDimensions::default()
         )
         .unwrap(),
         elevation
@@ -1757,9 +1697,9 @@ async fn explicit_long_range_visibility_modes_filter_ordinary_maps() {
         &world,
         source,
         ObjectId(1),
-        BattleLongRangeMode::Terrain,
+        LongRangeMode::Terrain,
         "",
-        BattleViewDimensions::default(),
+        ViewDimensions::default(),
     )
     .unwrap();
     assert!(!terrain.text.contains('?'));
@@ -1767,9 +1707,9 @@ async fn explicit_long_range_visibility_modes_filter_ordinary_maps() {
         &world,
         source,
         ObjectId(1),
-        BattleLongRangeMode::VisibleTerrain,
+        LongRangeMode::VisibleTerrain,
         "",
-        BattleViewDimensions::default(),
+        ViewDimensions::default(),
     )
     .unwrap();
     assert!(limited.text.contains('?'));
@@ -1781,9 +1721,9 @@ async fn explicit_long_range_visibility_modes_filter_ordinary_maps() {
     )
     .unwrap();
     for (code, mode) in [
-        ("L", BattleLongRangeMode::VisibleTerrain),
-        ("H", BattleLongRangeMode::VisibleElevation),
-        ("S", BattleLongRangeMode::VisibleUnits),
+        ("L", LongRangeMode::VisibleTerrain),
+        ("H", LongRangeMode::VisibleElevation),
+        ("S", LongRangeMode::VisibleUnits),
     ] {
         let expected = battle_long_range_map(
             &world,
@@ -1791,7 +1731,7 @@ async fn explicit_long_range_visibility_modes_filter_ordinary_maps() {
             ObjectId(1),
             mode,
             "",
-            BattleViewDimensions::default(),
+            ViewDimensions::default(),
         )
         .unwrap();
         assert_eq!(
@@ -1818,9 +1758,9 @@ async fn explicit_long_range_visibility_modes_filter_ordinary_maps() {
             &restored,
             source,
             ObjectId(1),
-            BattleLongRangeMode::VisibleTerrain,
+            LongRangeMode::VisibleTerrain,
             "",
-            BattleViewDimensions::default()
+            ViewDimensions::default()
         )
         .unwrap(),
         limited
@@ -1830,9 +1770,9 @@ async fn explicit_long_range_visibility_modes_filter_ordinary_maps() {
         &world,
         source,
         ObjectId(1),
-        BattleLongRangeMode::VisibleTerrain,
+        LongRangeMode::VisibleTerrain,
         "",
-        BattleViewDimensions::default(),
+        ViewDimensions::default(),
     )
     .unwrap();
     assert_eq!(clear.text, terrain.text);
@@ -1842,9 +1782,9 @@ async fn explicit_long_range_visibility_modes_filter_ordinary_maps() {
 #[tokio::test]
 async fn terrain_fire_and_inferno_illumination_follow_live_sources_without_acquisition() {
     let (_dir, config, mut world, map, source, target) = fixture().await;
-    set_battle_map_visibility(&mut world, map, BattleLight::Night, 3).unwrap();
+    set_battle_map_visibility(&mut world, map, Light::Night, 3).unwrap();
     // Without the sensor band, only sight (and therefore illumination) reaches past three hexes.
-    set_battle_map_perception(&mut world, map, BattleMapPerceptionFlag::Sensors, false).unwrap();
+    set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, false).unwrap();
     let coordinate = HexCoordinate { x: 1, y: 7 };
     let fire = HexCoordinate { x: 1, y: 8 };
     assert!(!battle_hex_visible(&world, source, coordinate).unwrap());
@@ -1853,7 +1793,7 @@ async fn terrain_fire_and_inferno_illumination_follow_live_sources_without_acqui
         &mut world,
         map,
         fire,
-        Some(BattleDecoration::new(DecorationKind::Fire, 30, None)),
+        Some(Decoration::new(DecorationKind::Fire, 30, None)),
     )
     .unwrap();
     let before = world.btech.clone();
@@ -1865,9 +1805,9 @@ async fn terrain_fire_and_inferno_illumination_follow_live_sources_without_acqui
         &world,
         source,
         ObjectId(1),
-        BattleLongRangeMode::VisibleTerrain,
+        LongRangeMode::VisibleTerrain,
         "",
-        BattleViewDimensions::default(),
+        ViewDimensions::default(),
     )
     .unwrap();
     assert_eq!(
@@ -1889,9 +1829,9 @@ async fn terrain_fire_and_inferno_illumination_follow_live_sources_without_acqui
             &restored,
             source,
             ObjectId(1),
-            BattleLongRangeMode::VisibleTerrain,
+            LongRangeMode::VisibleTerrain,
             "",
-            BattleViewDimensions::default()
+            ViewDimensions::default()
         )
         .unwrap(),
         rendered
@@ -1912,18 +1852,12 @@ async fn tactical_maps_render_contacts_and_underlying_terrain_with_native_lua_pa
         &mut world,
         map,
         HexCoordinate { x: 0, y: 3 },
-        Some(BattleDecoration::new(DecorationKind::Fire, 30, None)),
+        Some(Decoration::new(DecorationKind::Fire, 30, None)),
     )
     .unwrap();
     let before = world.btech.clone();
-    let report = battle_tactical_map(
-        &world,
-        source,
-        ObjectId(1),
-        "",
-        BattleViewDimensions::default(),
-    )
-    .unwrap();
+    let report =
+        battle_tactical_map(&world, source, ObjectId(1), "", ViewDimensions::default()).unwrap();
     let plain = text::plain(&report.text);
     assert_eq!(plain.lines().count(), 32);
     assert_eq!(plain.lines().nth(2).unwrap(), "     0  1  2  ");
@@ -1933,14 +1867,7 @@ async fn tactical_maps_render_contacts_and_underlying_terrain_with_native_lua_pa
     assert_eq!(&plain.lines().nth(10).unwrap()[5..7], "&&");
     assert_eq!(&plain.lines().nth(11).unwrap()[5..7], "__");
     assert!(
-        battle_tactical_map(
-            &world,
-            source,
-            ObjectId(1),
-            "u",
-            BattleViewDimensions::default(),
-        )
-        .is_err()
+        battle_tactical_map(&world, source, ObjectId(1), "u", ViewDimensions::default(),).is_err()
     );
     assert!(report.text.contains("[bold]**[reset]"));
     assert!(report.text.contains("[fg=yellow bold]ab[reset]"));
@@ -1970,7 +1897,7 @@ async fn tactical_maps_render_contacts_and_underlying_terrain_with_native_lua_pa
             source,
             ObjectId(1),
             "",
-            BattleViewDimensions::default()
+            ViewDimensions::default()
         )
         .unwrap(),
         report
@@ -1981,27 +1908,15 @@ async fn tactical_maps_render_contacts_and_underlying_terrain_with_native_lua_pa
         .unwrap()
         .flags
         .remove(Flag::Ansi);
-    let monochrome = battle_tactical_map(
-        &world,
-        source,
-        ObjectId(1),
-        "",
-        BattleViewDimensions::default(),
-    )
-    .unwrap();
+    let monochrome =
+        battle_tactical_map(&world, source, ObjectId(1), "", ViewDimensions::default()).unwrap();
     assert_eq!(text::plain(&monochrome.text), plain);
     assert!(!monochrome.text.contains("[fg="));
     let mut signature = world.btech.constructed_units()[&target].signature();
     signature.team = 2;
     set_battle_unit_signature(&mut world, target, signature).unwrap();
-    let enemy = battle_tactical_map(
-        &world,
-        source,
-        ObjectId(1),
-        "",
-        BattleViewDimensions::default(),
-    )
-    .unwrap();
+    let enemy =
+        battle_tactical_map(&world, source, ObjectId(1), "", ViewDimensions::default()).unwrap();
     assert_eq!(
         &text::plain(&enemy.text).lines().nth(7).unwrap()[8..10],
         "AB"
@@ -2014,22 +1929,10 @@ async fn tactical_maps_mask_unseen_hexes_and_reuse_display_admission() {
     let (_dir, _config, mut world, map, source, _target) = fixture().await;
     blind(&mut world, map);
     let before = world.btech.clone();
-    let ordinary = battle_tactical_map(
-        &world,
-        source,
-        ObjectId(1),
-        "",
-        BattleViewDimensions::default(),
-    )
-    .unwrap();
-    let limited = battle_tactical_map(
-        &world,
-        source,
-        ObjectId(1),
-        "L",
-        BattleViewDimensions::default(),
-    )
-    .unwrap();
+    let ordinary =
+        battle_tactical_map(&world, source, ObjectId(1), "", ViewDimensions::default()).unwrap();
+    let limited =
+        battle_tactical_map(&world, source, ObjectId(1), "L", ViewDimensions::default()).unwrap();
     assert!(!ordinary.text.contains('?'));
     let plain = text::plain(&limited.text);
     assert!(plain.contains("??"));
@@ -2038,26 +1941,13 @@ async fn tactical_maps_mask_unseen_hexes_and_reuse_display_admission() {
     assert_eq!(world.btech, before);
     for args in ["Z", "L 0 NaN", "0 21", "ab"] {
         assert!(
-            battle_tactical_map(
-                &world,
-                source,
-                ObjectId(1),
-                args,
-                BattleViewDimensions::default()
-            )
-            .is_err(),
+            battle_tactical_map(&world, source, ObjectId(1), args, ViewDimensions::default())
+                .is_err(),
             "{args}"
         );
     }
     assert!(
-        battle_tactical_map(
-            &world,
-            source,
-            ObjectId(3),
-            "",
-            BattleViewDimensions::default()
-        )
-        .is_err()
+        battle_tactical_map(&world, source, ObjectId(3), "", ViewDimensions::default()).is_err()
     );
     world
         .btech
@@ -2066,14 +1956,7 @@ async fn tactical_maps_mask_unseen_hexes_and_reuse_display_admission() {
         })
         .unwrap();
     assert_eq!(
-        battle_tactical_map(
-            &world,
-            source,
-            ObjectId(1),
-            "",
-            BattleViewDimensions::default()
-        )
-        .unwrap(),
+        battle_tactical_map(&world, source, ObjectId(1), "", ViewDimensions::default()).unwrap(),
         limited
     );
     set_battle_observer(&mut world, source, true).unwrap();
@@ -2082,7 +1965,7 @@ async fn tactical_maps_mask_unseen_hexes_and_reuse_display_admission() {
         source,
         ObjectId(1),
         "180 100",
-        BattleViewDimensions::default(),
+        ViewDimensions::default(),
     )
     .unwrap();
     assert_eq!(projected.viewport.origin.y, 46);
@@ -2102,10 +1985,7 @@ async fn tactical_clipping_preserves_global_hex_parity_and_elevation() {
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
-    world
-        .btech
-        .set_unit_power(source, BattlePower::Off)
-        .unwrap();
+    world.btech.set_unit_power(source, Power::Off).unwrap();
     place_battle_unit(&mut world, source, map, 5, 1).unwrap();
     place_battle_unit(&mut world, target, map, 6, 1).unwrap();
     start_battle_unit(&mut world, source, ObjectId(1), true).unwrap();
@@ -2118,7 +1998,7 @@ async fn tactical_clipping_preserves_global_hex_parity_and_elevation() {
         source,
         ObjectId(1),
         "",
-        BattleViewDimensions {
+        ViewDimensions {
             tactical_width: 5,
             tactical_height: 5,
             ..Default::default()
@@ -2141,7 +2021,7 @@ async fn tactical_clipping_preserves_global_hex_parity_and_elevation() {
         source,
         ObjectId(1),
         "M",
-        BattleViewDimensions {
+        ViewDimensions {
             tactical_width: 5,
             tactical_height: 5,
             ..Default::default()
@@ -2169,10 +2049,7 @@ async fn tactical_cliffs_use_signed_depth_thresholds_and_share_native_lua_output
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
-    world
-        .btech
-        .set_unit_power(source, BattlePower::Off)
-        .unwrap();
+    world.btech.set_unit_power(source, Power::Off).unwrap();
     place_battle_unit(&mut world, source, map, 1, 1).unwrap();
     place_battle_unit(&mut world, target, map, 2, 1).unwrap();
     start_battle_unit(&mut world, source, ObjectId(1), true).unwrap();
@@ -2191,26 +2068,14 @@ async fn tactical_cliffs_use_signed_depth_thresholds_and_share_native_lua_output
         &mut world,
         map,
         HexCoordinate { x: 1, y: 2 },
-        Some(BattleDecoration::new(DecorationKind::Smoke, 30, None)),
+        Some(Decoration::new(DecorationKind::Smoke, 30, None)),
     )
     .unwrap();
     let before = world.btech.clone();
-    let mech = battle_tactical_map(
-        &world,
-        source,
-        ObjectId(1),
-        "C",
-        BattleViewDimensions::default(),
-    )
-    .unwrap();
-    let tank = battle_tactical_map(
-        &world,
-        source,
-        ObjectId(1),
-        "T",
-        BattleViewDimensions::default(),
-    )
-    .unwrap();
+    let mech =
+        battle_tactical_map(&world, source, ObjectId(1), "C", ViewDimensions::default()).unwrap();
+    let tank =
+        battle_tactical_map(&world, source, ObjectId(1), "T", ViewDimensions::default()).unwrap();
     let mech_plain = text::plain(&mech.text);
     let lines: Vec<_> = mech_plain.lines().collect();
     assert_eq!(&lines[3][8..10], " 3");
@@ -2259,7 +2124,7 @@ async fn tactical_cliffs_use_signed_depth_thresholds_and_share_native_lua_output
             source,
             ObjectId(1),
             "C",
-            BattleViewDimensions::default()
+            ViewDimensions::default()
         )
         .unwrap(),
         mech
@@ -2270,14 +2135,8 @@ async fn tactical_cliffs_use_signed_depth_thresholds_and_share_native_lua_output
         .unwrap()
         .flags
         .insert(Flag::Ansi);
-    let colored = battle_tactical_map(
-        &world,
-        source,
-        ObjectId(1),
-        "T",
-        BattleViewDimensions::default(),
-    )
-    .unwrap();
+    let colored =
+        battle_tactical_map(&world, source, ObjectId(1), "T", ViewDimensions::default()).unwrap();
     assert!(colored.text.contains("[fg=red bold]"));
     assert_eq!(
         &text::plain(&colored.text).lines().nth(6).unwrap()[8..11],
@@ -2290,14 +2149,9 @@ async fn tactical_cliffs_use_signed_depth_thresholds_and_share_native_lua_output
         })
         .unwrap();
     for flag in ["C", "T"] {
-        let error = battle_tactical_map(
-            &world,
-            source,
-            ObjectId(1),
-            flag,
-            BattleViewDimensions::default(),
-        )
-        .unwrap_err();
+        let error =
+            battle_tactical_map(&world, source, ObjectId(1), flag, ViewDimensions::default())
+                .unwrap_err();
         assert!(error.to_string().contains("You can't see that much here!"));
     }
 }
@@ -2311,17 +2165,17 @@ async fn landing_overlays_honor_saved_team_exclusions_and_terrain() {
             .landing_suitability(coordinate, team)
             .unwrap()
     };
-    assert_eq!(query(&world, center, 0), BattleLandingSuitability::Ready);
+    assert_eq!(query(&world, center, 0), LandingSuitability::Ready);
     assert_eq!(
         query(&world, HexCoordinate { x: 0, y: 1 }, 0),
-        BattleLandingSuitability::UnevenGround
+        LandingSuitability::UnevenGround
     );
     assert!(
         world.btech.maps()[&map]
             .landing_suitability(HexCoordinate { x: -1, y: 0 }, 0)
             .is_err()
     );
-    let zone = BattleLandingExclusion {
+    let zone = LandingExclusion {
         coordinate: center,
         radius: 1,
         exempt_team: 2,
@@ -2329,15 +2183,15 @@ async fn landing_overlays_honor_saved_team_exclusions_and_terrain() {
         data_short: 0,
     };
     set_battle_landing_exclusion(&mut world, map, 7, Some(zone)).unwrap();
-    assert_eq!(query(&world, center, 0), BattleLandingSuitability::Blocked);
-    assert_eq!(query(&world, center, 2), BattleLandingSuitability::Ready);
+    assert_eq!(query(&world, center, 0), LandingSuitability::Blocked);
+    assert_eq!(query(&world, center, 2), LandingSuitability::Ready);
     assert_eq!(
         query(&world, HexCoordinate { x: 1, y: 2 }, 0),
-        BattleLandingSuitability::Blocked
+        LandingSuitability::Blocked
     );
     assert_eq!(
         query(&world, HexCoordinate { x: 1, y: 3 }, 0),
-        BattleLandingSuitability::Ready
+        LandingSuitability::Ready
     );
     let before = world.btech.clone();
     assert!(
@@ -2345,7 +2199,7 @@ async fn landing_overlays_honor_saved_team_exclusions_and_terrain() {
             &mut world,
             map,
             8,
-            Some(BattleLandingExclusion {
+            Some(LandingExclusion {
                 coordinate: HexCoordinate { x: 3, y: 1 },
                 ..zone
             })
@@ -2353,14 +2207,8 @@ async fn landing_overlays_honor_saved_team_exclusions_and_terrain() {
         .is_err()
     );
     assert_eq!(world.btech, before);
-    let report = battle_tactical_map(
-        &world,
-        source,
-        ObjectId(1),
-        "B",
-        BattleViewDimensions::default(),
-    )
-    .unwrap();
+    let report =
+        battle_tactical_map(&world, source, ObjectId(1), "B", ViewDimensions::default()).unwrap();
     let plain = text::plain(&report.text);
     assert_eq!(&plain.lines().nth(5).unwrap()[8..10], "**");
     assert_eq!(&plain.lines().nth(6).unwrap()[8..9], "X");
@@ -2379,7 +2227,7 @@ async fn landing_overlays_honor_saved_team_exclusions_and_terrain() {
         source,
         ObjectId(1),
         "B",
-        BattleViewDimensions::default(),
+        ViewDimensions::default(),
     )
     .unwrap();
     assert_eq!(text::plain(&monochrome_report.text), plain);
@@ -2412,7 +2260,7 @@ async fn landing_overlays_honor_saved_team_exclusions_and_terrain() {
             source,
             ObjectId(1),
             "B",
-            BattleViewDimensions::default()
+            ViewDimensions::default()
         )
         .unwrap(),
         report
@@ -2420,14 +2268,8 @@ async fn landing_overlays_honor_saved_team_exclusions_and_terrain() {
     let mut signature = world.btech.constructed_units()[&source].signature();
     signature.team = 2;
     set_battle_unit_signature(&mut world, source, signature).unwrap();
-    let exempt = battle_tactical_map(
-        &world,
-        source,
-        ObjectId(1),
-        "B",
-        BattleViewDimensions::default(),
-    )
-    .unwrap();
+    let exempt =
+        battle_tactical_map(&world, source, ObjectId(1), "B", ViewDimensions::default()).unwrap();
     assert_eq!(
         &text::plain(&exempt.text).lines().nth(6).unwrap()[8..9],
         "O"
@@ -2443,16 +2285,10 @@ async fn landing_overlays_honor_saved_team_exclusions_and_terrain() {
         })
         .unwrap();
     assert!(
-        battle_tactical_map(
-            &world,
-            source,
-            ObjectId(1),
-            "B",
-            BattleViewDimensions::default()
-        )
-        .unwrap_err()
-        .to_string()
-        .contains("You can't see that much here!")
+        battle_tactical_map(&world, source, ObjectId(1), "B", ViewDimensions::default())
+            .unwrap_err()
+            .to_string()
+            .contains("You can't see that much here!")
     );
 }
 
@@ -2464,22 +2300,18 @@ async fn landing_suitability_checks_full_hex_neighborhood_terrain_and_fire() {
         (
             "~0~0~0\n~0/0~0\n~0~0~0\n",
             0,
-            BattleLandingSuitability::ImproperTerrain,
+            LandingSuitability::ImproperTerrain,
         ),
-        (
-            "~0~0~0\n~0#0~0\n~0~0~0\n",
-            0,
-            BattleLandingSuitability::Ready,
-        ),
+        ("~0~0~0\n~0#0~0\n~0~0~0\n", 0, LandingSuitability::Ready),
         (
             ".0.1.0\n.0#0.0\n.0.0.0\n",
             0,
-            BattleLandingSuitability::UnevenGround,
+            LandingSuitability::UnevenGround,
         ),
         (
             ".0.0.0\n.0-0.0\n.0.0.0\n",
             0,
-            BattleLandingSuitability::ImproperTerrain,
+            LandingSuitability::ImproperTerrain,
         ),
     ] {
         let map = world.create(&config, "Landing terrain".into(), Kind::Room);
@@ -2503,14 +2335,14 @@ async fn landing_suitability_checks_full_hex_neighborhood_terrain_and_fire() {
                 &mut world,
                 map,
                 center,
-                Some(BattleDecoration::new(kind, 30, None)),
+                Some(Decoration::new(kind, 30, None)),
             )
             .unwrap();
             assert_eq!(
                 world.btech.maps()[&map]
                     .landing_suitability(center, 0)
                     .unwrap(),
-                BattleLandingSuitability::ImproperTerrain
+                LandingSuitability::ImproperTerrain
             );
         }
     }
@@ -2521,23 +2353,17 @@ async fn landing_suitability_checks_full_hex_neighborhood_terrain_and_fire() {
 async fn tactical_mines_filter_trigger_fields_and_visibility_without_recognition() {
     let (_dir, config, mut world, map, source, _target) = fixture().await;
     let coordinate = HexCoordinate { x: 1, y: 2 };
-    let mine = BattleMinefield {
+    let mine = Minefield {
         coordinate,
-        kind: BattleMineKind::Command,
+        kind: MineKind::Command,
         strength: 19,
         extra: 4321,
         owner: ObjectId(1),
     };
     set_minefield(&mut world, map, 1, Some(mine)).unwrap();
     let before = world.btech.clone();
-    let report = battle_tactical_map(
-        &world,
-        source,
-        ObjectId(1),
-        "M",
-        BattleViewDimensions::default(),
-    )
-    .unwrap();
+    let report =
+        battle_tactical_map(&world, source, ObjectId(1), "M", ViewDimensions::default()).unwrap();
     let plain = text::plain(&report.text);
     assert_eq!(&plain.lines().nth(7).unwrap()[8..10], "ab");
     assert_eq!(&plain.lines().nth(8).unwrap()[8..10], "<>");
@@ -2569,7 +2395,7 @@ async fn tactical_mines_filter_trigger_fields_and_visibility_without_recognition
             source,
             ObjectId(1),
             "M",
-            BattleViewDimensions::default()
+            ViewDimensions::default()
         )
         .unwrap(),
         report
@@ -2578,31 +2404,19 @@ async fn tactical_mines_filter_trigger_fields_and_visibility_without_recognition
         &mut world,
         map,
         0,
-        Some(BattleMinefield {
-            kind: BattleMineKind::Trigger,
+        Some(Minefield {
+            kind: MineKind::Trigger,
             ..mine
         }),
     )
     .unwrap();
-    let trigger = battle_tactical_map(
-        &world,
-        source,
-        ObjectId(1),
-        "M",
-        BattleViewDimensions::default(),
-    )
-    .unwrap();
+    let trigger =
+        battle_tactical_map(&world, source, ObjectId(1), "M", ViewDimensions::default()).unwrap();
     assert!(!text::plain(&trigger.text).contains("<>"));
     set_minefield(&mut world, map, 0, None).unwrap();
     blind(&mut world, map);
-    let hidden = battle_tactical_map(
-        &world,
-        source,
-        ObjectId(1),
-        "M",
-        BattleViewDimensions::default(),
-    )
-    .unwrap();
+    let hidden =
+        battle_tactical_map(&world, source, ObjectId(1), "M", ViewDimensions::default()).unwrap();
     assert!(!text::plain(&hidden.text).contains("<>"));
     world
         .btech
@@ -2610,14 +2424,8 @@ async fn tactical_mines_filter_trigger_fields_and_visibility_without_recognition
             record["flags"] = 32.into();
         })
         .unwrap();
-    let dark = battle_tactical_map(
-        &world,
-        source,
-        ObjectId(1),
-        "M",
-        BattleViewDimensions::default(),
-    )
-    .unwrap();
+    let dark =
+        battle_tactical_map(&world, source, ObjectId(1), "M", ViewDimensions::default()).unwrap();
     assert!(text::plain(&dark.text).contains('?'));
     assert!(!text::plain(&dark.text).contains("<>"));
 }
@@ -2679,10 +2487,7 @@ async fn findcenter_measures_continuous_position_without_sensor_hardware() {
         report
     );
     assert!(find_battle_hex_center(&world, source, ObjectId(3)).is_err());
-    world
-        .btech
-        .set_unit_power(source, BattlePower::Off)
-        .unwrap();
+    world.btech.set_unit_power(source, Power::Off).unwrap();
     assert!(find_battle_hex_center(&world, source, ObjectId(1)).is_err());
 }
 
@@ -2755,7 +2560,7 @@ async fn navigation_combines_local_map_continuous_plot_and_readouts_without_muta
         .nth(14),
         Some('X')
     );
-    set_battle_map_visibility(&mut world, map, BattleLight::Day, 0).unwrap();
+    set_battle_map_visibility(&mut world, map, Light::Day, 0).unwrap();
     let mut state = serde_json::to_value(&world.btech).unwrap();
     state["maps"][map.0.to_string()]["flags"] = 32.into();
     state["constructed"][source.0.to_string()]["lost_criticals"] =
@@ -2785,10 +2590,7 @@ async fn navigation_keeps_even_center_on_single_hex_maps_with_off_map_surroundin
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
-    world
-        .btech
-        .set_unit_power(source, BattlePower::Off)
-        .unwrap();
+    world.btech.set_unit_power(source, Power::Off).unwrap();
     place_battle_unit(&mut world, source, map, 0, 0).unwrap();
     start_battle_unit(&mut world, source, ObjectId(1), true).unwrap();
     for _ in 0..5 {
@@ -2815,23 +2617,21 @@ async fn saved_view_dimensions_drive_native_lua_maps_and_preserve_other_configur
     let (_dir, config, mut world, _map, source, _target) = fixture().await;
     assert_eq!(
         battle_view_dimensions(&world, ObjectId(1)).unwrap(),
-        BattleViewDimensions::default()
+        ViewDimensions::default()
     );
     let before = world.btech.clone();
     assert!(
         set_battle_view_dimensions(
             &mut world,
             ObjectId(1),
-            BattleViewDimensions {
+            ViewDimensions {
                 tactical_width: 4,
                 ..Default::default()
             }
         )
         .is_err()
     );
-    assert!(
-        set_battle_view_dimensions(&mut world, source, BattleViewDimensions::default()).is_err()
-    );
+    assert!(set_battle_view_dimensions(&mut world, source, ViewDimensions::default()).is_err());
     assert_eq!(world.btech, before);
     let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
     let _: mlua::Table = scripts
@@ -2839,7 +2639,7 @@ async fn saved_view_dimensions_drive_native_lua_maps_and_preserve_other_configur
             "return btech.player.view_dimensions(1,{tactical_height=6,long_range_height=40})",
         )
         .unwrap();
-    let dimensions = BattleViewDimensions {
+    let dimensions = ViewDimensions {
         tactical_height: 6,
         long_range_height: 40,
         ..Default::default()
@@ -2883,7 +2683,7 @@ async fn saved_view_dimensions_drive_native_lua_maps_and_preserve_other_configur
         &scripts.world(),
         source,
         ObjectId(1),
-        BattleLongRangeMode::Terrain,
+        LongRangeMode::Terrain,
         "",
         dimensions,
     )
@@ -2923,7 +2723,7 @@ async fn saved_view_dimensions_drive_native_lua_maps_and_preserve_other_configur
     .unwrap();
     sqlx::query("UPDATE btech_player_configuration SET include_shutdown=0,has_loadout=1,right_weapon='test weapon',technician_available_at=12345 WHERE player_dbref=1").execute(&mut sql).await.unwrap();
     world = persistence::load(&config.database()).await.unwrap();
-    set_battle_view_dimensions(&mut world, ObjectId(1), BattleViewDimensions::default()).unwrap();
+    set_battle_view_dimensions(&mut world, ObjectId(1), ViewDimensions::default()).unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
     let row = sqlx::query("SELECT include_shutdown,has_loadout,right_weapon,technician_available_at FROM btech_player_configuration WHERE player_dbref=1").fetch_one(&mut sql).await.unwrap();
     assert_eq!(row.get::<i64, _>("include_shutdown"), 0);
@@ -2933,7 +2733,7 @@ async fn saved_view_dimensions_drive_native_lua_maps_and_preserve_other_configur
     let restored = persistence::load(&config.database()).await.unwrap();
     assert_eq!(
         battle_view_dimensions(&restored, ObjectId(1)).unwrap(),
-        BattleViewDimensions::default()
+        ViewDimensions::default()
     );
     sqlx::query("UPDATE btech_player_configuration SET tactical_width=4 WHERE player_dbref=1")
         .execute(&mut sql)
@@ -2958,7 +2758,7 @@ async fn mapdisplay_edits_only_its_player_and_survives_restart() {
         support::run_text(&scripts, &config, ObjectId(1), 1, "mapdisplay 30 20 40"),
         "Map display: tactical 30 wide by 20 high; long-range height 40."
     );
-    let dimensions = BattleViewDimensions {
+    let dimensions = ViewDimensions {
         tactical_width: 30,
         tactical_height: 20,
         long_range_height: 40,
@@ -2986,7 +2786,7 @@ async fn mapdisplay_edits_only_its_player_and_survives_restart() {
                 );
                 assert_eq!(
                     battle_view_dimensions(&scripts.world(), ObjectId(1)).unwrap(),
-                    BattleViewDimensions {
+                    ViewDimensions {
                         tactical_width: width,
                         tactical_height: height,
                         long_range_height: lrs,
@@ -3046,7 +2846,7 @@ async fn mapdisplay_edits_only_its_player_and_survives_restart() {
         .unwrap();
     assert_eq!(
         serde_json::to_value(lua).unwrap(),
-        serde_json::to_value(BattleViewDimensions::default()).unwrap()
+        serde_json::to_value(ViewDimensions::default()).unwrap()
     );
     assert!(restarted.drain_outbox().is_empty());
 }
@@ -3055,7 +2855,7 @@ async fn mapdisplay_edits_only_its_player_and_survives_restart() {
 #[tokio::test]
 async fn contact_preferences_filter_lists_without_bypassing_acquisition() {
     let (_dir, config, mut world, map, source, target) = fixture().await;
-    let hidden = BattleContactPreferences {
+    let hidden = ContactPreferences {
         include_allies: false,
         include_enemies: false,
         include_shutdown: false,
@@ -3105,7 +2905,7 @@ async fn contact_preferences_filter_lists_without_bypassing_acquisition() {
     let mut signature = world.btech.constructed_units()[&target].signature();
     signature.team = 2;
     set_battle_unit_signature(&mut world, target, signature).unwrap();
-    let enemies = BattleContactPreferences {
+    let enemies = ContactPreferences {
         include_allies: false,
         include_target: false,
         ..Default::default()
@@ -3120,7 +2920,7 @@ async fn contact_preferences_filter_lists_without_bypassing_acquisition() {
         filtered_battle_contacts(
             &world,
             source,
-            BattleContactPreferences {
+            ContactPreferences {
                 include_enemies: false,
                 ..enemies
             }
@@ -3129,7 +2929,7 @@ async fn contact_preferences_filter_lists_without_bypassing_acquisition() {
         .is_empty()
     );
     let _ = select_battle_target(&mut world, source, ObjectId(1), Some(target)).unwrap();
-    let selected = BattleContactPreferences {
+    let selected = ContactPreferences {
         include_target: true,
         ..hidden
     };
@@ -3139,7 +2939,7 @@ async fn contact_preferences_filter_lists_without_bypassing_acquisition() {
             .len(),
         1
     );
-    let no_shutdown = BattleContactPreferences {
+    let no_shutdown = ContactPreferences {
         include_shutdown: false,
         include_target: false,
         ..Default::default()
@@ -3157,7 +2957,7 @@ async fn contact_preferences_filter_lists_without_bypassing_acquisition() {
         })
         .unwrap();
     assert!(world.btech.constructed_units()[&target].is_destroyed());
-    let dead = BattleContactPreferences {
+    let dead = ContactPreferences {
         include_dead: true,
         ..no_shutdown
     };
@@ -3179,7 +2979,7 @@ async fn contact_preferences_filter_lists_without_bypassing_acquisition() {
         1
     );
     set_battle_contact_preferences(&mut world, ObjectId(1), selected).unwrap();
-    let dimensions = BattleViewDimensions {
+    let dimensions = ViewDimensions {
         tactical_height: 6,
         ..Default::default()
     };
@@ -3288,7 +3088,7 @@ async fn contact_option_strings_are_transient_and_match_lua_filtering() {
     let restored = persistence::load(&config.database()).await.unwrap();
     assert_eq!(
         battle_contact_preferences(&restored, ObjectId(1)).unwrap(),
-        BattleContactPreferences::default()
+        ContactPreferences::default()
     );
 }
 
@@ -3314,7 +3114,7 @@ async fn building_contacts_identify_concealed_structures_and_rollback_failed_loc
         (31, 50)
     );
     assert_eq!(contacts[0].elevation, 1);
-    assert_eq!(contacts[0].weapon_arc, BattleContactArc::Rear);
+    assert_eq!(contacts[0].weapon_arc, ContactArc::Rear);
     assert!(contacts[0].identified);
     assert!(
         support::run_text(&scripts, &config, ObjectId(1), 1, "contacts b")
@@ -3535,7 +3335,7 @@ async fn brief_modes_are_unit_owned_and_control_buildings_and_notices() {
     );
     let initial = scripts.world().btech.clone();
     let query = battle_brief(&scripts, source, ObjectId(1), "").unwrap();
-    assert_eq!(query.settings, BattleBriefSettings::default());
+    assert_eq!(query.settings, BriefSettings::default());
     assert!(!query.changed);
     assert_eq!(scripts.world().btech, initial);
     assert!(scripts.drain_outbox().is_empty());
@@ -3572,7 +3372,7 @@ async fn brief_modes_are_unit_owned_and_control_buildings_and_notices() {
             serde_json::to_value(parsed).unwrap()
         );
     }
-    let event = BattleContactEvent {
+    let event = ContactEvent {
         experience_message: None,
         identified: true,
         observer: source,
@@ -3602,7 +3402,7 @@ async fn brief_modes_are_unit_owned_and_control_buildings_and_notices() {
         signature.team = 99;
         set_battle_unit_signature(&mut hostile, target, signature).unwrap();
         assert_eq!(event.notice(&hostile).is_some(), mode != 6);
-        let warning = BattleContactEvent {
+        let warning = ContactEvent {
             acquired: false,
             lock_lost: true,
             ..event.clone()
@@ -3634,14 +3434,14 @@ async fn brief_modes_are_unit_owned_and_control_buildings_and_notices() {
     let restored = persistence::load(&config.database()).await.unwrap();
     assert_eq!(
         restored.btech.constructed_units()[&source].brief_settings(),
-        BattleBriefSettings {
+        BriefSettings {
             contacts: 3,
             automatic: 6
         }
     );
     assert_eq!(
         restored.btech.constructed_units()[&target].brief_settings(),
-        BattleBriefSettings::default()
+        BriefSettings::default()
     );
     let mut encoded = serde_json::to_value(&restored.btech).unwrap();
     encoded["constructed"][source.0.to_string()]["brief"]["contacts"] = serde_json::json!(4);
@@ -3664,7 +3464,7 @@ async fn contact_modes_order_buildings_wrecks_and_units_without_changing_lua_que
     create_battle_unit(
         &mut world,
         near,
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, near, support::FIXTURE_DICE_SEED);
@@ -3848,21 +3648,20 @@ async fn contact_detection_rechecks_channels_without_rewriting_acquisition() {
     let shared = std::rc::Rc::new(std::cell::RefCell::new(world));
     let scripts = Scripts::new(&config, shared.clone()).unwrap();
     for (sensors, visibility, expected) in [
-        (true, 30, Some(BattleDetectionChannel::Sensors)),
-        (true, 0, Some(BattleDetectionChannel::Sensors)),
-        (false, 30, Some(BattleDetectionChannel::Sight)),
+        (true, 30, Some(DetectionChannel::Sensors)),
+        (true, 0, Some(DetectionChannel::Sensors)),
+        (false, 30, Some(DetectionChannel::Sight)),
         (false, 0, None),
     ] {
         shared.borrow_mut().btech = baseline.clone();
         set_battle_map_perception(
             &mut shared.borrow_mut(),
             map,
-            BattleMapPerceptionFlag::Sensors,
+            MapPerceptionFlag::Sensors,
             sensors,
         )
         .unwrap();
-        set_battle_map_visibility(&mut shared.borrow_mut(), map, BattleLight::Day, visibility)
-            .unwrap();
+        set_battle_map_visibility(&mut shared.borrow_mut(), map, Light::Day, visibility).unwrap();
         let before = scripts.world().btech.clone();
         let contact = visible_battle_contact(&scripts.world(), source, target).unwrap();
         assert_eq!(contact.as_ref().map(|c| c.detection), expected.map(Some));
@@ -3908,7 +3707,7 @@ async fn contact_detection_rechecks_channels_without_rewriting_acquisition() {
             .unwrap()
             .unwrap()
             .detection,
-        Some(BattleDetectionChannel::Sensors)
+        Some(DetectionChannel::Sensors)
     );
     let mut state = serde_json::to_value(&restored.btech).unwrap();
     state["constructed"][source.0.to_string()]["contacts"] = serde_json::json!({});
@@ -3928,18 +3727,18 @@ async fn contact_weapon_arc_tracks_observer_pose_in_native_lua_and_restart() {
     let shared = std::rc::Rc::new(std::cell::RefCell::new(world));
     let scripts = Scripts::new(&config, shared.clone()).unwrap();
     for (heading, torso, expected) in [
-        (0.0, BattleTorso::Center, BattleContactArc::Rear),
-        (90.0, BattleTorso::Center, BattleContactArc::Right),
-        (270.0, BattleTorso::Center, BattleContactArc::Left),
-        (180.0, BattleTorso::Center, BattleContactArc::Front),
-        (90.0, BattleTorso::Right, BattleContactArc::Front),
-        (90.0, BattleTorso::Both, BattleContactArc::Front),
-        (90.0, BattleTorso::Left, BattleContactArc::Rear),
+        (0.0, Torso::Center, ContactArc::Rear),
+        (90.0, Torso::Center, ContactArc::Right),
+        (270.0, Torso::Center, ContactArc::Left),
+        (180.0, Torso::Center, ContactArc::Front),
+        (90.0, Torso::Right, ContactArc::Front),
+        (90.0, Torso::Both, ContactArc::Front),
+        (90.0, Torso::Left, ContactArc::Rear),
     ] {
         let mut state = baseline.clone();
         state["constructed"][source.0.to_string()]["motion"]["heading"] =
             serde_json::json!(heading);
-        state["constructed"][source.0.to_string()]["facing"] = serde_json::to_value(BattleFacing {
+        state["constructed"][source.0.to_string()]["facing"] = serde_json::to_value(Facing {
             torso,
             arms_flipped: false,
         })
@@ -3981,7 +3780,7 @@ async fn contact_weapon_arc_tracks_observer_pose_in_native_lua_and_restart() {
             .unwrap()
             .unwrap()
             .weapon_arc,
-        BattleContactArc::Rear
+        ContactArc::Rear
     );
 }
 
@@ -3992,7 +3791,7 @@ async fn automatic_contact_modes_control_detail_color_and_escaping() {
     let baseline = serde_json::to_value(&world.btech).unwrap();
     let shared = std::rc::Rc::new(std::cell::RefCell::new(world));
     let scripts = Scripts::new(&config, shared.clone()).unwrap();
-    let event = BattleContactEvent {
+    let event = ContactEvent {
         experience_message: None,
         identified: true,
         observer: source,
@@ -4011,7 +3810,7 @@ async fn automatic_contact_modes_control_detail_color_and_escaping() {
             let before = scripts.world().btech.clone();
             let expected = mode != 6 && !(friendly && matches!(mode, 2 | 3 | 5));
             for acquired in [true, false] {
-                let notice = BattleContactEvent {
+                let notice = ContactEvent {
                     acquired,
                     ..event.clone()
                 }
@@ -4044,7 +3843,7 @@ async fn automatic_contact_modes_control_detail_color_and_escaping() {
                     }
                 }
             }
-            let warning = BattleContactEvent {
+            let warning = ContactEvent {
                 acquired: false,
                 lock_lost: true,
                 ..event.clone()
@@ -4126,7 +3925,7 @@ async fn probe_contacts_through_terrain_hide_identity_and_friendly_categories() 
         &mut world,
         source,
         ObjectId(1),
-        BattleMovementRules::STANDARD.fall,
+        MovementRules::STANDARD.fall,
     )
     .unwrap();
     place_battle_unit(&mut world, source, map, 1, 1).unwrap();
@@ -4164,7 +3963,7 @@ async fn probe_contacts_through_terrain_hide_identity_and_friendly_categories() 
     assert!(!view.identified && !view.friendly);
     assert_eq!(view.name, "something");
     assert_eq!(view.status, "     ");
-    assert_eq!(view.detection, Some(BattleDetectionChannel::Probe));
+    assert_eq!(view.detection, Some(DetectionChannel::Probe));
     assert!(view.short_text.starts_with("p "), "{}", view.short_text);
     let native = support::run_text(&scripts, &config, ObjectId(1), 1, "contacts");
     assert!(native.contains("something"));
@@ -4191,7 +3990,7 @@ async fn probe_contacts_through_terrain_hide_identity_and_friendly_categories() 
     assert_eq!(lua.get::<String>("status").unwrap(), view.status);
     assert_eq!(
         lua.get::<String>("detection").unwrap(),
-        BattleDetectionChannel::Probe.name()
+        DetectionChannel::Probe.name()
     );
     let range: mlua::Table = lua.get("range").unwrap();
     assert_eq!(range.get::<f64>("spatial").unwrap(), view.range.spatial);
@@ -4214,7 +4013,7 @@ async fn shutdown_contact_notice_preference_is_independent_and_durable() {
     let (_dir, config, world, _map, source, target) = fixture().await;
     let shared = std::rc::Rc::new(std::cell::RefCell::new(world));
     let scripts = Scripts::new(&config, shared.clone()).unwrap();
-    let event = BattleContactEvent {
+    let event = ContactEvent {
         experience_message: None,
         identified: true,
         observer: source,
@@ -4229,7 +4028,7 @@ async fn shutdown_contact_notice_preference_is_independent_and_durable() {
             .unwrap()
             .is_some()
     );
-    let lock = BattleContactEvent {
+    let lock = ContactEvent {
         acquired: false,
         lock_lost: true,
         ..event.clone()
@@ -4269,12 +4068,12 @@ async fn shutdown_contact_notice_preference_is_independent_and_durable() {
     assert!(event.notice(&scripts.world()).is_none());
     let mut state = serde_json::to_value(&scripts.world().btech).unwrap();
     state["constructed"][target.0.to_string()]["power"] =
-        serde_json::to_value(BattlePower::Running).unwrap();
+        serde_json::to_value(Power::Running).unwrap();
     shared.borrow_mut().btech = serde_json::from_value(state).unwrap();
     assert!(event.notice(&scripts.world()).is_some());
     let mut state = serde_json::to_value(&scripts.world().btech).unwrap();
     state["constructed"][target.0.to_string()]["power"] =
-        serde_json::to_value(BattlePower::Starting { remaining: 3 }).unwrap();
+        serde_json::to_value(Power::Starting { remaining: 3 }).unwrap();
     shared.borrow_mut().btech = serde_json::from_value(state).unwrap();
     assert!(event.notice(&scripts.world()).is_none());
     shared.borrow_mut().btech = enabled;
@@ -4285,7 +4084,7 @@ async fn shutdown_contact_notice_preference_is_independent_and_durable() {
     assert_eq!(event.notice(&restored), event.notice(&saved));
     assert_eq!(
         battle_contact_preferences(&restored, ObjectId(1)).unwrap(),
-        BattleContactPreferences::default()
+        ContactPreferences::default()
     );
     assert!(
         set_battle_autocon_shutdown(&mut shared.borrow_mut(), source, ObjectId(2), false).is_err()
@@ -4370,20 +4169,19 @@ async fn compact_building_rows_share_terrain_detection_channels() {
         .unwrap();
     assert_eq!(lua, expected);
     for (sensors, visibility, expected) in [
-        (true, 0, Some(BattleDetectionChannel::Sensors)),
-        (false, 30, Some(BattleDetectionChannel::Sight)),
+        (true, 0, Some(DetectionChannel::Sensors)),
+        (false, 30, Some(DetectionChannel::Sight)),
         (false, 0, None),
     ] {
         shared.borrow_mut().btech = baseline.clone();
         set_battle_map_perception(
             &mut shared.borrow_mut(),
             map,
-            BattleMapPerceptionFlag::Sensors,
+            MapPerceptionFlag::Sensors,
             sensors,
         )
         .unwrap();
-        set_battle_map_visibility(&mut shared.borrow_mut(), map, BattleLight::Day, visibility)
-            .unwrap();
+        set_battle_map_visibility(&mut shared.borrow_mut(), map, Light::Day, visibility).unwrap();
         let before = scripts.world().btech.clone();
         let detection =
             battle_hex_perception(&scripts.world(), source, HexCoordinate { x: 1, y: 2 }).unwrap();
@@ -4617,11 +4415,11 @@ async fn verbose_contacts_share_multiline_reports_with_lua_and_restart() {
     let mut state = serde_json::to_value(&before).unwrap();
     let start = HexCoordinate { x: 1, y: 2 }.center();
     let end = HexCoordinate { x: 1, y: 4 }.center();
-    let path = BattleJumpPath::new(start, end, 0, 0, 5).unwrap();
+    let path = JumpPath::new(start, end, 0, 0, 5).unwrap();
     state["constructed"][target.0.to_string()]["flight"] =
-        serde_json::to_value(BattleJumpFlight::new(path)).unwrap();
+        serde_json::to_value(JumpFlight::new(path)).unwrap();
     state["constructed"][target.0.to_string()]["power"] =
-        serde_json::to_value(BattlePower::Running).unwrap();
+        serde_json::to_value(Power::Running).unwrap();
     shared.borrow_mut().btech = serde_json::from_value(state).unwrap();
     let row = visible_battle_contact(&scripts.world(), source, target)
         .unwrap()
@@ -4679,7 +4477,7 @@ async fn lateral_changes_delay_cancel_persist_and_move_without_turning_weapons()
         scripts.world().btech.constructed_units()[&source]
             .lateral()
             .active,
-        BattleLateralMode::None
+        LateralMode::None
     );
     let notices = advance_battle_units(&mut shared.borrow_mut(), 0);
     assert!(notices.iter().any(|notice| notice.text
@@ -4700,7 +4498,7 @@ async fn lateral_changes_delay_cancel_persist_and_move_without_turning_weapons()
             .unwrap()
             .unwrap()
             .weapon_arc,
-        BattleContactArc::Rear
+        ContactArc::Rear
     );
     battle_lateral(&scripts, source, ObjectId(1), "sw").unwrap();
     let abort = battle_lateral(&scripts, source, ObjectId(1), "fr").unwrap();
@@ -4720,7 +4518,7 @@ async fn lateral_changes_delay_cancel_persist_and_move_without_turning_weapons()
         scripts.world().btech.constructed_units()[&source]
             .lateral()
             .pending,
-        Some(BattleLateralMode::RearRight)
+        Some(LateralMode::RearRight)
     );
     battle_lateral(&scripts, source, ObjectId(1), "fr").unwrap();
     let _ = scripts.drain_outbox();
@@ -4729,7 +4527,7 @@ async fn lateral_changes_delay_cancel_persist_and_move_without_turning_weapons()
         .unwrap()
         .point;
     let _ = set_battle_speed(&mut shared.borrow_mut(), source, ObjectId(1), 10.0).unwrap();
-    let _ = advance_battle_motion(&mut shared.borrow_mut(), BattleMovementRules::STANDARD).unwrap();
+    let _ = advance_battle_motion(&mut shared.borrow_mut(), MovementRules::STANDARD).unwrap();
     let unit = scripts.world().btech.constructed_units()[&source].clone();
     let bearing = point
         .bearing(unit.motion().unwrap().point)
@@ -4756,31 +4554,25 @@ async fn lateral_changes_delay_cancel_persist_and_move_without_turning_weapons()
         .unwrap();
     assert_eq!(heading, 60.0);
     for (name, mode) in [
-        ("nw", BattleLateralMode::FrontLeft),
-        ("FL", BattleLateralMode::FrontLeft),
-        ("ne", BattleLateralMode::FrontRight),
-        ("fr", BattleLateralMode::FrontRight),
-        ("sw", BattleLateralMode::RearLeft),
-        ("rl", BattleLateralMode::RearLeft),
-        ("se", BattleLateralMode::RearRight),
-        ("rr", BattleLateralMode::RearRight),
-        ("-", BattleLateralMode::None),
+        ("nw", LateralMode::FrontLeft),
+        ("FL", LateralMode::FrontLeft),
+        ("ne", LateralMode::FrontRight),
+        ("fr", LateralMode::FrontRight),
+        ("sw", LateralMode::RearLeft),
+        ("rl", LateralMode::RearLeft),
+        ("se", LateralMode::RearRight),
+        ("rr", LateralMode::RearRight),
+        ("-", LateralMode::None),
     ] {
-        assert_eq!(BattleLateralMode::parse(name).unwrap(), mode);
+        assert_eq!(LateralMode::parse(name).unwrap(), mode);
     }
     // Stopping does not freeze the scheduled change or apply it while powered off.
     let mut stopped = scripts.world().clone();
-    let _ = set_battle_lateral(
-        &mut stopped,
-        source,
-        ObjectId(1),
-        BattleLateralMode::RearLeft,
-    )
-    .unwrap();
+    let _ = set_battle_lateral(&mut stopped, source, ObjectId(1), LateralMode::RearLeft).unwrap();
     stopped
         .btech
         .edit_unit(source, |unit| {
-            unit.set_power(BattlePower::Off);
+            unit.set_power(Power::Off);
             unit.edit_motion(|motion| {
                 motion.speed = 0.0;
                 motion.desired_speed = 0.0;
@@ -4799,7 +4591,7 @@ async fn lateral_changes_delay_cancel_persist_and_move_without_turning_weapons()
     assert!(advance_battle_units(&mut stopped, 0).is_empty());
     assert_eq!(
         stopped.btech.constructed_units()[&source].lateral().active,
-        BattleLateralMode::FrontRight
+        LateralMode::FrontRight
     );
     assert_eq!(
         stopped.btech.constructed_units()[&source].lateral().pending,
@@ -4889,11 +4681,11 @@ async fn bootlegger_pivots_recycle_legs_and_replay_failed_falls_atomically() {
     unit["motion"]["desired_speed"] = serde_json::json!(50.0);
     for success in [true, false] {
         let seed = (0..=255)
-            .find(|seed| (BattleDice::seeded([*seed; 32]).two_d6() >= 7) == success)
+            .find(|seed| (Dice::seeded([*seed; 32]).two_d6() >= 7) == success)
             .unwrap();
         let mut state = initial.clone();
         state["constructed"][source.0.to_string()]["dice"] =
-            serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+            serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
         shared.borrow_mut().btech = serde_json::from_value(state.clone()).unwrap();
         assert_eq!(
             battle_bootlegger_modifier(&scripts.world(), source, ObjectId(1)).unwrap(),
@@ -4970,11 +4762,11 @@ async fn bootlegger_pivots_recycle_legs_and_replay_failed_falls_atomically() {
             assert_eq!(motion.desired_heading, 80.0);
             assert_eq!(motion.speed, 25.0);
             assert_eq!(motion.desired_speed, 50.0);
-            assert_eq!(unit.limb_recycle()[&BattleSection::LeftLeg], 30);
-            assert_eq!(unit.limb_recycle()[&BattleSection::RightLeg], 30);
+            assert_eq!(unit.limb_recycle()[&MechSection::LeftLeg], 30);
+            assert_eq!(unit.limb_recycle()[&MechSection::RightLeg], 30);
             assert!(report.fall.is_none());
         } else {
-            assert_eq!(unit.posture(), BattlePosture::Prone);
+            assert_eq!(unit.posture(), Posture::Prone);
             assert!(report.fall.as_ref().unwrap().damage > 0);
         }
         persistence::save(&config.database(), &after).await.unwrap();
@@ -5012,7 +4804,7 @@ async fn bootlegger_pivots_recycle_legs_and_replay_failed_falls_atomically() {
     }
     for (key, value) in [
         ("limb_recycle", serde_json::json!({"LeftLeg":1})),
-        ("power", serde_json::to_value(BattlePower::Off).unwrap()),
+        ("power", serde_json::to_value(Power::Off).unwrap()),
     ] {
         let mut state = initial.clone();
         state["constructed"][source.0.to_string()][key] = value;
@@ -5039,7 +4831,7 @@ async fn bootlegger_character_checks_award_xp_and_preserve_failed_action_rollbac
     set_battle_character(
         &mut world,
         ObjectId(1),
-        BattleCharacter {
+        Character {
             bruise: 0,
             lethal: 0,
             build: 5,
@@ -5056,7 +4848,7 @@ async fn bootlegger_character_checks_award_xp_and_preserve_failed_action_rollbac
             &mut world,
             ObjectId(1),
             skill,
-            BattleCharacterValue {
+            CharacterValue {
                 value: 2,
                 ..Default::default()
             },
@@ -5069,11 +4861,11 @@ async fn bootlegger_character_checks_award_xp_and_preserve_failed_action_rollbac
         serde_json::json!(50.0);
     for success in [true, false] {
         let seed = (0..=255)
-            .find(|seed| (BattleDice::seeded([*seed; 32]).two_d6() >= 7) == success)
+            .find(|seed| (Dice::seeded([*seed; 32]).two_d6() >= 7) == success)
             .unwrap();
         let mut state = initial.clone();
         state["constructed"][source.0.to_string()]["dice"] =
-            serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+            serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
         let mut candidate = world.clone();
         candidate.btech = serde_json::from_value(state).unwrap();
         let shared = std::rc::Rc::new(std::cell::RefCell::new(candidate));
@@ -5174,15 +4966,15 @@ async fn eta_uses_horizontal_range_absolute_speed_and_only_plain_hex_defaults() 
     }
     assert!(battle_eta(&scripts.world(), source, ObjectId(3), "1 2").is_err());
     for mode in [
-        BattleHexTargetMode::Hex,
-        BattleHexTargetMode::Ignite,
-        BattleHexTargetMode::Clear,
-        BattleHexTargetMode::Building,
-        BattleHexTargetMode::UnitAtHex,
+        HexTargetMode::Hex,
+        HexTargetMode::Ignite,
+        HexTargetMode::Clear,
+        HexTargetMode::Building,
+        HexTargetMode::UnitAtHex,
     ] {
         let mut state = serde_json::to_value(&scripts.world().btech).unwrap();
         state["constructed"][source.0.to_string()]["target_lock"] =
-            serde_json::to_value(BattleTargetSelection::Hex(BattleHexLock {
+            serde_json::to_value(TargetSelection::Hex(HexLock {
                 hex: HexCoordinate { x: 1, y: 2 },
                 mode,
                 remaining: 3,
@@ -5190,14 +4982,14 @@ async fn eta_uses_horizontal_range_absolute_speed_and_only_plain_hex_defaults() 
             .unwrap();
         shared.borrow_mut().btech = serde_json::from_value(state).unwrap();
         let result = battle_eta(&scripts.world(), source, ObjectId(1), "");
-        assert_eq!(result.is_ok(), mode == BattleHexTargetMode::Hex);
+        assert_eq!(result.is_ok(), mode == HexTargetMode::Hex);
     }
     let _ = select_battle_hex_target(
         &mut shared.borrow_mut(),
         source,
         ObjectId(1),
         HexCoordinate { x: 1, y: 2 },
-        BattleHexTargetMode::Hex,
+        HexTargetMode::Hex,
     )
     .unwrap();
     let saved = scripts.world().clone();
@@ -5289,15 +5081,15 @@ async fn bearing_queries_share_defaults_bounds_and_live_visibility_without_mutat
         180
     );
     for mode in [
-        BattleHexTargetMode::Hex,
-        BattleHexTargetMode::Building,
-        BattleHexTargetMode::Ignite,
-        BattleHexTargetMode::Clear,
-        BattleHexTargetMode::UnitAtHex,
+        HexTargetMode::Hex,
+        HexTargetMode::Building,
+        HexTargetMode::Ignite,
+        HexTargetMode::Clear,
+        HexTargetMode::UnitAtHex,
     ] {
         let mut state = serde_json::to_value(&scripts.world().btech).unwrap();
         state["constructed"][source.0.to_string()]["target_lock"] =
-            serde_json::to_value(BattleTargetSelection::Hex(BattleHexLock {
+            serde_json::to_value(TargetSelection::Hex(HexLock {
                 hex: HexCoordinate { x: 1, y: 0 },
                 mode,
                 remaining: 3,
@@ -5789,7 +5581,7 @@ async fn ammunition_dump_controls_timers_and_restart_share_native_lua_state() {
             .dumping()
             .unwrap()
             .selection,
-        BattleDumpSelection::All
+        DumpSelection::All
     );
     for _ in 0..7 {
         advance_battle_dumping(&mut scripts.world_mut()).unwrap();
@@ -5829,7 +5621,7 @@ async fn ammunition_dump_controls_timers_and_restart_share_native_lua_state() {
             .dumping()
             .unwrap()
             .selection,
-        BattleDumpSelection::Weapon(_)
+        DumpSelection::Weapon(_)
     ));
     begin_battle_dump(&mut world, source, ObjectId(1), "stop").unwrap();
     assert!(advance_battle_dumping(&mut world).unwrap().is_empty());
@@ -5843,7 +5635,7 @@ async fn ammunition_dump_low_capacity_bins_preserve_cadence_and_shutdown_cancels
         &mut world,
         source,
         ObjectId(1),
-        BattleMovementRules::STANDARD.fall,
+        MovementRules::STANDARD.fall,
     )
     .unwrap();
     let id = world.create(&config, "Dumping Atlas".into(), Kind::Thing);
@@ -5851,7 +5643,7 @@ async fn ammunition_dump_low_capacity_bins_preserve_cadence_and_shutdown_cancels
     create_battle_unit(
         &mut world,
         id,
-        BattleTemplate::parse("AS7-D", include_str!("fixtures/btech/mechs/AS7-D.toml")).unwrap(),
+        MechTemplate::parse("AS7-D", include_str!("fixtures/btech/mechs/AS7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
@@ -5895,13 +5687,7 @@ async fn ammunition_dump_low_capacity_bins_preserve_cadence_and_shutdown_cancels
     assert!(world.btech.constructed_units()[&id].dumping().is_none());
     begin_battle_dump(&mut world, id, ObjectId(1), "all").unwrap();
     let before = world.btech.constructed_units()[&id].ammunition().to_vec();
-    stop_battle_unit(
-        &mut world,
-        id,
-        ObjectId(1),
-        BattleMovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut world, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
     assert!(advance_battle_dumping(&mut world).unwrap().is_empty());
     assert!(world.btech.constructed_units()[&id].dumping().is_none());
     assert_eq!(world.btech.constructed_units()[&id].ammunition(), before);
@@ -5935,24 +5721,23 @@ async fn ammunition_dump_server_retries_failed_commits_without_losing_rounds() {
 fn explicit_template_ranges_preserve_defaults_and_damage_limits() {
     for value in ["0", "1", "127"] {
         let mut template =
-            BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
-                .unwrap();
+            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
         for field in ["scan_range", "tac_range", "lrs_range"] {
             template.attributes.insert(field.into(), value.into());
         }
         template
             .attributes
             .insert("radio_range".into(), "32767".into());
-        let mut unit = BattleUnit::from_template(template).unwrap();
+        let mut unit = Mech::from_template(template).unwrap();
         let expected = if value == "0" {
-            BattleSensorRanges {
+            SensorRanges {
                 tactical: 25,
                 long_range: 50,
                 scan: 25,
             }
         } else {
             let n = value.parse().unwrap();
-            BattleSensorRanges {
+            SensorRanges {
                 tactical: n,
                 long_range: n,
                 scan: n,
@@ -5961,26 +5746,26 @@ fn explicit_template_ranges_preserve_defaults_and_damage_limits() {
         assert_eq!(unit.sensor_ranges(), expected);
         assert_eq!(unit.radio_capabilities().range, 32767);
         unit.destroy_critical(CriticalLocation {
-            section: BattleSection::Head,
+            section: MechSection::Head,
             slot: 1,
         })
         .unwrap();
         assert_eq!(
             unit.sensor_ranges(),
-            BattleSensorRanges {
+            SensorRanges {
                 tactical: expected.tactical / 2,
                 long_range: expected.long_range / 2,
                 scan: expected.scan / 2
             }
         );
         unit.destroy_critical(CriticalLocation {
-            section: BattleSection::Head,
+            section: MechSection::Head,
             slot: 4,
         })
         .unwrap();
         assert_eq!(
             unit.sensor_ranges(),
-            BattleSensorRanges {
+            SensorRanges {
                 tactical: 0,
                 long_range: 0,
                 scan: 0
@@ -6001,13 +5786,10 @@ fn explicit_template_ranges_preserve_defaults_and_damage_limits() {
             },
         ] {
             let mut template =
-                BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
                     .unwrap();
             template.attributes.insert(field.into(), value.into());
-            assert!(
-                BattleUnit::from_template(template).is_err(),
-                "{field}={value}"
-            );
+            assert!(Mech::from_template(template).is_err(), "{field}={value}");
         }
     }
 }
@@ -6028,7 +5810,7 @@ async fn range_overrides_control_live_queries_delivery_and_restart() {
         source,
         ObjectId(1),
         0,
-        BattleRadioMode {
+        RadioMode {
             digital: true,
             ..Default::default()
         },
@@ -6056,17 +5838,14 @@ async fn range_overrides_control_live_queries_delivery_and_restart() {
             .iter()
             .any(|r| r.receiver == target)
     );
-    for (kind, limit) in [
-        (BattleViewKind::Tactical, 3),
-        (BattleViewKind::LongRange, 7),
-    ] {
+    for (kind, limit) in [(ViewKind::Tactical, 3), (ViewKind::LongRange, 7)] {
         assert_eq!(
             resolve_battle_view_center(
                 &world,
                 source,
                 ObjectId(1),
                 kind,
-                BattleViewCenter::Projection {
+                ViewCenter::Projection {
                     bearing: 180,
                     distance: f64::from(limit)
                 }
@@ -6081,7 +5860,7 @@ async fn range_overrides_control_live_queries_delivery_and_restart() {
                 source,
                 ObjectId(1),
                 kind,
-                BattleViewCenter::Projection {
+                ViewCenter::Projection {
                     bearing: 180,
                     distance: f64::from(limit + 1)
                 }
@@ -6109,9 +5888,9 @@ async fn range_overrides_control_live_queries_delivery_and_restart() {
 #[tokio::test]
 async fn tactical_mine_markers_follow_gameplay_insertion_order() {
     let (_dir, _config, mut world, map, source, _target) = fixture().await;
-    let mine = BattleMinefield {
+    let mine = Minefield {
         coordinate: HexCoordinate { x: 1, y: 2 },
-        kind: BattleMineKind::Standard,
+        kind: MineKind::Standard,
         strength: 10,
         extra: 0,
         owner: ObjectId(1),
@@ -6119,23 +5898,17 @@ async fn tactical_mine_markers_follow_gameplay_insertion_order() {
     stompymux_rs::insert_minefield(&mut world, map, mine).unwrap();
     let render = |world: &World| {
         text::plain(
-            &battle_tactical_map(
-                world,
-                source,
-                ObjectId(1),
-                "M",
-                BattleViewDimensions::default(),
-            )
-            .unwrap()
-            .text,
+            &battle_tactical_map(world, source, ObjectId(1), "M", ViewDimensions::default())
+                .unwrap()
+                .text,
         )
     };
     assert_eq!(&render(&world).lines().nth(8).unwrap()[8..10], "<>");
     stompymux_rs::insert_minefield(
         &mut world,
         map,
-        BattleMinefield {
-            kind: BattleMineKind::Trigger,
+        Minefield {
+            kind: MineKind::Trigger,
             ..mine
         },
     )
@@ -6209,12 +5982,11 @@ async fn removed_movement_controls_and_biped_lateral_are_unavailable() {
     assert!(unit.get("sprinting").is_none());
     assert!(unit.get("tight_turn_mode").is_none());
     let mut invalid = state;
-    invalid["constructed"][source.0.to_string()]["lateral"] =
-        serde_json::to_value(BattleLateralState {
-            active: BattleLateralMode::FrontLeft,
-            ..Default::default()
-        })
-        .unwrap();
+    invalid["constructed"][source.0.to_string()]["lateral"] = serde_json::to_value(LateralState {
+        active: LateralMode::FrontLeft,
+        ..Default::default()
+    })
+    .unwrap();
     let mut world = scripts.world().clone();
     world.btech = serde_json::from_value(invalid).unwrap();
     assert!(world.validate(&config).is_err());

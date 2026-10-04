@@ -18,7 +18,7 @@ btech.unit.configure_ammunition(unit, request)
 | Name | Type | Description |
 | --- | --- | --- |
 | `unit` | `DbRef\|Object` |  |
-| `request` | `BattleAmmunitionConfiguration` |  |
+| `request` | `AmmunitionConfiguration` |  |
 
 ## Returns
 

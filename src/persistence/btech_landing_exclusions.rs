@@ -1,6 +1,6 @@
 //! Selective persistence of typed landing exclusions in the shared map-object table.
 use super::write::{Cell, Fields, row};
-use crate::{BattleLandingExclusion, HexCoordinate, ObjectId, StoredMap, World};
+use crate::{HexCoordinate, LandingExclusion, ObjectId, StoredMap, World};
 use anyhow::{Context, Result, ensure};
 use sqlx::{Row, SqliteConnection};
 use std::{collections::BTreeMap, sync::Arc};
@@ -17,7 +17,7 @@ pub(super) async fn load(
             .get_mut(&ObjectId(row.try_get("map_dbref")?))
             .context("Landing exclusion references missing map")?;
         let ordinal = u32::try_from(row.try_get::<i64, _>("ordinal")?)?;
-        let zone = BattleLandingExclusion {
+        let zone = LandingExclusion {
             coordinate: HexCoordinate {
                 x: row.try_get("x")?,
                 y: row.try_get("y")?,
@@ -97,7 +97,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
 }
 
 /// Persist the complete landing exclusion definition without repurposing other map-object fields.
-fn zone_fields(zone: BattleLandingExclusion) -> super::write::Fields {
+fn zone_fields(zone: LandingExclusion) -> super::write::Fields {
     Fields::from([
         ("x", Cell::Integer(i64::from(zone.coordinate.x))),
         ("y", Cell::Integer(i64::from(zone.coordinate.y))),

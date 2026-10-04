@@ -24,4 +24,4 @@ btech.unit.set_fuel(actor, unit, amount)
 
 ## Returns
 
-- `BattleVtolFuelStatus`
+- `VtolFuelStatus`

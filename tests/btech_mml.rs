@@ -9,45 +9,20 @@ use stompymux_rs::*;
 #[test]
 fn mml_profiles_and_cluster_tables() {
     for (weapon, id, capacity, hits) in [
-        (
-            BattleWeapon::Mml3,
-            126,
-            40,
-            [1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3],
-        ),
-        (
-            BattleWeapon::Mml5,
-            127,
-            24,
-            [1, 2, 2, 3, 3, 3, 3, 4, 4, 5, 5],
-        ),
-        (
-            BattleWeapon::Mml7,
-            128,
-            17,
-            [2, 2, 3, 4, 4, 4, 4, 6, 6, 7, 7],
-        ),
-        (
-            BattleWeapon::Mml9,
-            129,
-            13,
-            [3, 3, 4, 5, 5, 5, 5, 7, 7, 9, 9],
-        ),
+        (Weapon::Mml3, 126, 40, [1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3]),
+        (Weapon::Mml5, 127, 24, [1, 2, 2, 3, 3, 3, 3, 4, 4, 5, 5]),
+        (Weapon::Mml7, 128, 17, [2, 2, 3, 4, 4, 4, 4, 6, 6, 7, 7]),
+        (Weapon::Mml9, 129, 13, [3, 3, 4, 5, 5, 5, 5, 7, 7, 9, 9]),
     ] {
         assert_eq!(weapon.part_id(), id);
         for (mode, conventional, damage, ammo) in [
             (
-                BattleAmmunitionMode::Normal,
-                BattleWeapon::Srm6,
+                AmmunitionMode::Normal,
+                Weapon::Srm6,
                 2,
                 weapon.profile().ammunition_per_ton,
             ),
-            (
-                BattleAmmunitionMode::MmlLrm,
-                BattleWeapon::Lrm20,
-                1,
-                capacity,
-            ),
+            (AmmunitionMode::MmlLrm, Weapon::Lrm20, 1, capacity),
         ] {
             let profile = weapon.profile_for_ammunition(mode);
             assert_eq!(profile.ammunition_per_ton, ammo);
@@ -58,7 +33,7 @@ fn mml_profiles_and_cluster_tables() {
             );
             assert_eq!(
                 weapon.supports_indirect_ammunition(mode),
-                mode == BattleAmmunitionMode::MmlLrm
+                mode == AmmunitionMode::MmlLrm
             );
             for range in [
                 0.0, 1.0, 3.0, 4.0, 6.0, 7.0, 9.0, 10.0, 14.0, 15.0, 21.0, 22.0, 28.0, 29.0,
@@ -69,7 +44,7 @@ fn mml_profiles_and_cluster_tables() {
                             .range_modifier_for_ammunition(
                                 range,
                                 extended,
-                                BattleFireMode::Normal,
+                                FireMode::Normal,
                                 false,
                                 mode
                             )
@@ -101,15 +76,10 @@ fn mml_profiles_and_cluster_tables() {
 #[tokio::test]
 async fn mml_modes_firing_and_restart_across_chassis() {
     for source in firing::templates() {
-        for weapon in [
-            BattleWeapon::Mml3,
-            BattleWeapon::Mml5,
-            BattleWeapon::Mml7,
-            BattleWeapon::Mml9,
-        ] {
+        for weapon in [Weapon::Mml3, Weapon::Mml5, Weapon::Mml7, Weapon::Mml9] {
             for (command, flag, mode) in [
-                ("mml", "MML_LRM", BattleAmmunitionMode::MmlLrm),
-                ("mml", "", BattleAmmunitionMode::Normal),
+                ("mml", "MML_LRM", AmmunitionMode::MmlLrm),
+                ("mml", "", AmmunitionMode::Normal),
             ] {
                 let (_dir, config, mut world, shooter, target, index) =
                     firing::fixture_with_supply(
@@ -121,13 +91,13 @@ async fn mml_modes_firing_and_restart_across_chassis() {
                     )
                     .await;
                 let seed = (0..=255)
-                    .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 12)
+                    .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
                     .unwrap();
                 firing::edit(&mut world, shooter, |state| {
-                    state["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
+                    state["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap()
                 });
                 // Enter the opposite mode first so the same control tests both transition directions.
-                if mode == BattleAmmunitionMode::Normal {
+                if mode == AmmunitionMode::Normal {
                     toggle_mml_ammunition(&mut world, shooter, ObjectId(1), index).unwrap();
                 }
                 // Both families can fire at seven hexes, with different range penalties and damage.
@@ -144,7 +114,7 @@ async fn mml_modes_firing_and_restart_across_chassis() {
                 assert_eq!(mml.len(), 2);
                 assert_eq!((mml[0].damage, mml[0].long_range), (2, 9));
                 assert_eq!((mml[1].damage, mml[1].long_range), (1, 21));
-                assert_eq!(mml[1].ammunition, BattleAmmunitionMode::MmlLrm);
+                assert_eq!(mml[1].ammunition, AmmunitionMode::MmlLrm);
                 let display = battle_weapon_specification_text(&world, shooter, true).unwrap();
                 assert!(display.contains("(SRM)"));
                 assert!(display.contains("(LRM)"));
@@ -190,7 +160,7 @@ async fn mml_modes_firing_and_restart_across_chassis() {
                 let mut damage = 0;
                 for group in groups.sequence_values::<mlua::Table>() {
                     let value = group.unwrap().get::<u16>("damage").unwrap();
-                    if mode == BattleAmmunitionMode::Normal {
+                    if mode == AmmunitionMode::Normal {
                         assert_eq!(value, 2);
                     } else {
                         assert!((1..=5).contains(&value));
@@ -243,20 +213,20 @@ async fn mml_modes_firing_and_restart_across_chassis() {
 async fn mml_ams_and_missing_supply() {
     for source in firing::templates() {
         for (flag, mode) in [
-            ("", BattleAmmunitionMode::Normal),
-            ("MML_LRM", BattleAmmunitionMode::MmlLrm),
+            ("", AmmunitionMode::Normal),
+            ("MML_LRM", AmmunitionMode::MmlLrm),
         ] {
             for target_source in defense::templates() {
                 let (_dir, config, mut world, shooter, target, index) =
                     firing::fixture_with_supply(
                         &source,
-                        Some(BattleWeapon::Mml9),
+                        Some(Weapon::Mml9),
                         &target_source,
                         false,
                         Some(flag),
                     )
                     .await;
-                if mode == BattleAmmunitionMode::MmlLrm {
+                if mode == AmmunitionMode::MmlLrm {
                     toggle_mml_ammunition(&mut world, shooter, ObjectId(1), index).unwrap();
                 }
                 firing::edit(&mut world, target, |state| {
@@ -266,10 +236,10 @@ async fn mml_ams_and_missing_supply() {
                         serde_json::to_value(HexCoordinate { x: 0, y: 4 }.center()).unwrap();
                 });
                 let seed = (0..=255)
-                    .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 12)
+                    .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
                     .unwrap();
                 firing::edit(&mut world, shooter, |state| {
-                    state["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
+                    state["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap()
                 });
                 let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
                 let report: mlua::Table = scripts
@@ -284,7 +254,7 @@ async fn mml_ams_and_missing_supply() {
         }
         let (_dir, config, world, shooter, target, index) = firing::fixture_with_target(
             &source,
-            Some(BattleWeapon::Mml3),
+            Some(Weapon::Mml3),
             include_str!("../game/mechs/AS7-D.toml"),
         )
         .await;
@@ -306,7 +276,7 @@ async fn mml_ams_and_missing_supply() {
 #[tokio::test]
 async fn mml_controls_require_ready_launchers_and_matching_supply() {
     for source in firing::templates() {
-        for weapon in [BattleWeapon::Mml3, BattleWeapon::Lrm5] {
+        for weapon in [Weapon::Mml3, Weapon::Lrm5] {
             let (_dir, config, mut world, shooter, target, index) = firing::fixture_with_supply(
                 &source,
                 Some(weapon),
@@ -326,7 +296,7 @@ async fn mml_controls_require_ready_launchers_and_matching_supply() {
             }
             assert_eq!(
                 toggle_mml_ammunition(&mut world, shooter, ObjectId(1), index).unwrap(),
-                BattleAmmunitionMode::MmlLrm
+                AmmunitionMode::MmlLrm
             );
             let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
             let selected = scripts.world().btech.clone();
@@ -377,18 +347,18 @@ async fn mml_controls_require_ready_launchers_and_matching_supply() {
 async fn mml_ammunition_hazards_follow_bin_contents() {
     for source in firing::templates() {
         for (flag, mode, per_missile) in [
-            ("", BattleAmmunitionMode::Normal, 2u32),
-            ("MML_LRM", BattleAmmunitionMode::MmlLrm, 1),
+            ("", AmmunitionMode::Normal, 2u32),
+            ("MML_LRM", AmmunitionMode::MmlLrm, 1),
         ] {
             let (_dir, _config, mut world, id, _, index) = firing::fixture_with_supply(
                 &source,
-                Some(BattleWeapon::Mml9),
+                Some(Weapon::Mml9),
                 include_str!("../game/mechs/AS7-D.toml"),
                 false,
                 Some(flag),
             )
             .await;
-            if mode == BattleAmmunitionMode::MmlLrm {
+            if mode == AmmunitionMode::MmlLrm {
                 toggle_mml_ammunition(&mut world, id, ObjectId(1), index).unwrap();
             }
             toggle_battle_hotload(&mut world, id, ObjectId(1), index).unwrap();
@@ -398,13 +368,13 @@ async fn mml_ammunition_hazards_follow_bin_contents() {
                     .ammunition
                     .iter()
                     .enumerate()
-                    .find(|(_, bin)| bin.weapon == BattleWeapon::Mml9)
+                    .find(|(_, bin)| bin.weapon == Weapon::Mml9)
                     .unwrap();
                 let rounds = unit.ammunition()[bin_index];
                 let mut damaged = unit.clone();
                 assert_eq!(
                     damaged.destroy_critical(bin.location).unwrap(),
-                    Some(BattleCriticalLoss::Ammunition {
+                    Some(CriticalLoss::Ammunition {
                         index: bin_index,
                         rounds,
                         explosion_damage: u32::from(rounds) * 9 * per_missile,
@@ -415,7 +385,7 @@ async fn mml_ammunition_hazards_follow_bin_contents() {
                     damaged
                         .destroy_critical(loadout.weapons[index].criticals[0])
                         .unwrap(),
-                    Some(BattleCriticalLoss::Weapon {
+                    Some(CriticalLoss::Weapon {
                         index,
                         explosion_damage: (9 * per_missile) as u8,
                     })
@@ -423,20 +393,18 @@ async fn mml_ammunition_hazards_follow_bin_contents() {
             } else {
                 let unit = &world.btech.vehicles()[&id];
                 let loadout = unit.loadout().unwrap();
-                let report = unit
-                    .ammunition_cascade(BattleVehicleSection::Front)
-                    .unwrap();
+                let report = unit.ammunition_cascade(VehicleSection::Front).unwrap();
                 let other: u32 = loadout
                     .ammunition
                     .iter()
                     .enumerate()
-                    .filter(|(_, bin)| bin.weapon != BattleWeapon::Mml9)
+                    .filter(|(_, bin)| bin.weapon != Weapon::Mml9)
                     .map(|(i, bin)| bin.weapon.ammunition_explosion_damage(unit.ammunition()[i]))
                     .sum();
                 let bin = loadout
                     .ammunition
                     .iter()
-                    .position(|bin| bin.weapon == BattleWeapon::Mml9)
+                    .position(|bin| bin.weapon == Weapon::Mml9)
                     .unwrap();
                 assert_eq!(
                     report.damage - other,
@@ -451,44 +419,44 @@ async fn mml_ammunition_hazards_follow_bin_contents() {
 /// family, firing draws the matching bin with LRM grouping, and the selection survives restart.
 #[tokio::test]
 async fn mml_long_range_special_rounds_select_fire_and_persist() {
-    type Toggle = fn(&mut World, ObjectId, ObjectId, usize) -> anyhow::Result<BattleAmmunitionMode>;
-    let rounds: [(&str, Toggle, BattleAmmunitionMode, BattleAmmunitionMode); 5] = [
+    type Toggle = fn(&mut World, ObjectId, ObjectId, usize) -> anyhow::Result<AmmunitionMode>;
+    let rounds: [(&str, Toggle, AmmunitionMode, AmmunitionMode); 5] = [
         (
             "Narc/Smoke",
             toggle_battle_narc,
-            BattleAmmunitionMode::Narc,
-            BattleAmmunitionMode::MmlLrmNarc,
+            AmmunitionMode::Narc,
+            AmmunitionMode::MmlLrmNarc,
         ),
         (
             "Swarm",
             |world, id, pilot, index| toggle_battle_swarm(world, id, pilot, index, false),
-            BattleAmmunitionMode::Swarm,
-            BattleAmmunitionMode::MmlLrmSwarm,
+            AmmunitionMode::Swarm,
+            AmmunitionMode::MmlLrmSwarm,
         ),
         (
             "Swarm1",
             |world, id, pilot, index| toggle_battle_swarm(world, id, pilot, index, true),
-            BattleAmmunitionMode::Swarm1,
-            BattleAmmunitionMode::MmlLrmSwarm1,
+            AmmunitionMode::Swarm1,
+            AmmunitionMode::MmlLrmSwarm1,
         ),
         (
             "Sguided",
             toggle_battle_semiguided,
-            BattleAmmunitionMode::SemiGuided,
-            BattleAmmunitionMode::MmlLrmSemiGuided,
+            AmmunitionMode::SemiGuided,
+            AmmunitionMode::MmlLrmSemiGuided,
         ),
         (
             "Stinger",
             toggle_battle_stinger,
-            BattleAmmunitionMode::Stinger,
-            BattleAmmunitionMode::MmlLrmStinger,
+            AmmunitionMode::Stinger,
+            AmmunitionMode::MmlLrmStinger,
         ),
     ];
     for source in firing::templates() {
         for (flag, toggle, round, mode) in rounds {
             let (_dir, config, mut world, shooter, target, index) = firing::fixture_with_supply(
                 &source,
-                Some(BattleWeapon::Mml9),
+                Some(Weapon::Mml9),
                 include_str!("../game/mechs/AS7-D.toml"),
                 false,
                 Some(&format!("MML_LRM {flag}")),
@@ -496,7 +464,7 @@ async fn mml_long_range_special_rounds_select_fire_and_persist() {
             .await;
             let pilot = ObjectId(1);
             // Narc rounds exist in both families; LRM-only rounds are refused while SRM is selected.
-            if round == BattleAmmunitionMode::Narc {
+            if round == AmmunitionMode::Narc {
                 assert_eq!(toggle(&mut world, shooter, pilot, index).unwrap(), round);
                 assert_eq!(
                     toggle_mml_ammunition(&mut world, shooter, pilot, index).unwrap(),
@@ -508,13 +476,13 @@ async fn mml_long_range_special_rounds_select_fire_and_persist() {
                 assert_eq!(world.btech, before);
                 assert_eq!(
                     toggle_mml_ammunition(&mut world, shooter, pilot, index).unwrap(),
-                    BattleAmmunitionMode::MmlLrm
+                    AmmunitionMode::MmlLrm
                 );
                 assert_eq!(toggle(&mut world, shooter, pilot, index).unwrap(), mode);
                 // Returning to SRM drops the LRM-only round rather than keeping an impossible supply.
                 assert_eq!(
                     toggle_mml_ammunition(&mut world, shooter, pilot, index).unwrap(),
-                    BattleAmmunitionMode::Normal
+                    AmmunitionMode::Normal
                 );
                 toggle_mml_ammunition(&mut world, shooter, pilot, index).unwrap();
                 assert_eq!(toggle(&mut world, shooter, pilot, index).unwrap(), mode);
@@ -526,15 +494,15 @@ async fn mml_long_range_special_rounds_select_fire_and_persist() {
             // Toggling the round again keeps the LRM family.
             assert_eq!(
                 toggle(&mut world, shooter, pilot, index).unwrap(),
-                BattleAmmunitionMode::MmlLrm
+                AmmunitionMode::MmlLrm
             );
             assert_eq!(toggle(&mut world, shooter, pilot, index).unwrap(), mode);
 
             let seed = (0..=255)
-                .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 12)
+                .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
                 .unwrap();
             firing::edit(&mut world, shooter, |state| {
-                state["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
+                state["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap()
             });
             firing::edit(&mut world, target, |state| {
                 state["position"]["y"] = 4.into();
@@ -546,7 +514,7 @@ async fn mml_long_range_special_rounds_select_fire_and_persist() {
                 "return btech.unit.fire({},1,{index},{})",
                 shooter.0, target.0
             );
-            if round == BattleAmmunitionMode::Stinger {
+            if round == AmmunitionMode::Stinger {
                 // Stinger rounds keep their airborne-only restriction in the LRM family.
                 let before = scripts.world().btech.clone();
                 let error = scripts
@@ -569,10 +537,7 @@ async fn mml_long_range_special_rounds_select_fire_and_persist() {
             );
             let draws: mlua::Table = expenditure.get("ammunition").unwrap();
             assert_eq!(draws.raw_len(), 1);
-            if !matches!(
-                round,
-                BattleAmmunitionMode::Swarm | BattleAmmunitionMode::Swarm1
-            ) {
+            if !matches!(round, AmmunitionMode::Swarm | AmmunitionMode::Swarm1) {
                 let salvo: mlua::Table = report.get("salvo").unwrap();
                 let salvo = salvo
                     .get::<Option<mlua::Table>>("report")

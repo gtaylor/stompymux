@@ -82,9 +82,8 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
     let tic_world = world.clone();
     let tic = lua.create_function(move |lua, (unit, pilot, group): (i64, i64, usize)| {
         crate::lua::transactions::require(lua)?;
-        let members =
-            crate::battle_tic(&tic_world.borrow(), ObjectId(unit), ObjectId(pilot), group)
-                .map_err(|e| error::failure("btech.operation.failed", format!("{e:#}")))?;
+        let members = crate::tic(&tic_world.borrow(), ObjectId(unit), ObjectId(pilot), group)
+            .map_err(|e| error::failure("btech.operation.failed", format!("{e:#}")))?;
         detached(lua, &members)
     })?;
     native.set("unit_tic", error::wrap(lua, tic, "btech.operation.failed")?)?;
@@ -101,13 +100,13 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             crate::lua::transactions::require(lua)?;
             crate::lua::transactions::run(lua, &tic_world, || {
                 let edit = match operation.as_str() {
-                    "add" => crate::BattleTicEdit::Add(members.ok_or_else(|| {
+                    "add" => crate::TicEdit::Add(members.ok_or_else(|| {
                         error::failure("btech.operation.failed", "Supply weapon numbers")
                     })?),
-                    "remove" => crate::BattleTicEdit::Remove(members.ok_or_else(|| {
+                    "remove" => crate::TicEdit::Remove(members.ok_or_else(|| {
                         error::failure("btech.operation.failed", "Supply weapon numbers")
                     })?),
-                    "clear" if members.is_none() => crate::BattleTicEdit::Clear,
+                    "clear" if members.is_none() => crate::TicEdit::Clear,
                     _ => {
                         return Err(error::failure(
                             "btech.operation.failed",

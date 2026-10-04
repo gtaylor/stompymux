@@ -26,7 +26,7 @@ fn unit(
         "biped" | "quad" => create_battle_unit(
             world,
             id,
-            BattleTemplate::parse(
+            MechTemplate::parse(
                 "test",
                 if chassis == "quad" {
                     include_str!("../game/mechs/GOL-1H.toml")
@@ -49,18 +49,14 @@ fn unit(
                     .replace("walk_mp = 5", "walk_mp = 0"),
                 _ => include_str!("../game/mechs/Demolisher.toml").to_owned(),
             };
-            create_battle_vehicle(
-                world,
-                id,
-                BattleVehicleTemplate::parse("test", &source).unwrap(),
-            )
-            .unwrap();
+            create_battle_vehicle(world, id, VehicleTemplate::parse("test", &source).unwrap())
+                .unwrap();
         }
     };
     support::seed_object_dice(world, id, support::FIXTURE_DICE_SEED);
     place_battle_unit(world, id, map, i64::from(x), i64::from(y)).unwrap();
     edit(world, id, |state| {
-        state["dice"] = serde_json::to_value(BattleDice::seeded([17; 32])).unwrap()
+        state["dice"] = serde_json::to_value(Dice::seeded([17; 32])).unwrap()
     });
     id
 }
@@ -225,7 +221,7 @@ async fn reactor_casualties_and_callback_failure_are_atomic() {
     set_battle_character(
         &mut world,
         pilot,
-        BattleCharacter {
+        Character {
             build: 5,
             reflexes: 5,
             intuition: 5,
@@ -314,15 +310,15 @@ async fn chain_fixture() -> (
 async fn reactor_manual_destruction_preserves_bounded_reentry() {
     let (_dir, config, world, source, _, vehicle) = chain_fixture().await;
     for (roll, power, elapsed, window, repeats) in [
-        (8, BattlePower::Running, 0, None, false),
-        (9, BattlePower::Running, 0, None, true),
-        (9, BattlePower::Starting { remaining: 3 }, 0, None, true),
-        (9, BattlePower::Off, 0, None, false),
-        (9, BattlePower::Running, 31, None, false),
-        (9, BattlePower::Running, 31, Some(1), true),
+        (8, Power::Running, 0, None, false),
+        (9, Power::Running, 0, None, true),
+        (9, Power::Starting { remaining: 3 }, 0, None, true),
+        (9, Power::Off, 0, None, false),
+        (9, Power::Running, 31, None, false),
+        (9, Power::Running, 31, Some(1), true),
     ] {
         let seed = (0..=255)
-            .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == roll)
+            .find(|seed| Dice::seeded([*seed; 32]).two_d6() == roll)
             .unwrap();
         let mut candidate = world.clone();
         for _ in 0..elapsed {
@@ -331,7 +327,7 @@ async fn reactor_manual_destruction_preserves_bounded_reentry() {
         edit(&mut candidate, source, |state| {
             state["power"] = serde_json::to_value(power).unwrap();
             state["reactor_instability_remaining"] = serde_json::to_value(window).unwrap();
-            state["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+            state["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
         });
         let before = candidate.clone();
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(candidate))).unwrap();
@@ -365,16 +361,13 @@ async fn reactor_manual_destruction_preserves_bounded_reentry() {
 }
 
 /// Locate a blast caused by damage to a neighboring Mech, retaining its report inside the initiating packet.
-fn neighbor_blast(
-    report: &BattleReactorExplosion,
-    neighbor: ObjectId,
-) -> Option<&BattleReactorExplosion> {
+fn neighbor_blast(report: &ReactorExplosion, neighbor: ObjectId) -> Option<&ReactorExplosion> {
     report
         .hits
         .iter()
         .flat_map(|hit| &hit.impacts)
         .find_map(|impact| {
-            let BattleBlastImpact::Mech(impact) = impact else {
+            let BlastImpact::Mech(impact) = impact else {
                 return None;
             };
             impact
@@ -393,14 +386,14 @@ async fn reactor_chain_replay_and_casualty_rollback() {
     for slot in [0, 1] {
         target
             .destroy_critical(CriticalLocation {
-                section: BattleSection::CenterTorso,
+                section: MechSection::CenterTorso,
                 slot,
             })
             .unwrap();
     }
     edit(&mut world, second, |state| {
         *state = serde_json::to_value(target).unwrap();
-        state["power"] = serde_json::to_value(BattlePower::Running).unwrap();
+        state["power"] = serde_json::to_value(Power::Running).unwrap();
         state["reactor_instability_remaining"] = 31.into();
         state["sections"]["CenterTorso"]["internal"] = 1.into();
         state["sections"]["CenterTorso"]["armor"] = 0.into();
@@ -423,7 +416,7 @@ async fn reactor_chain_replay_and_casualty_rollback() {
         .find(|seed| {
             let mut candidate = world.clone();
             edit(&mut candidate, second, |state| {
-                state["dice"] = serde_json::to_value(BattleDice::seeded([*seed; 32])).unwrap()
+                state["dice"] = serde_json::to_value(Dice::seeded([*seed; 32])).unwrap()
             });
             let scripts = Scripts::new(&config, Rc::new(RefCell::new(candidate))).unwrap();
             neighbor_blast(
@@ -434,7 +427,7 @@ async fn reactor_chain_replay_and_casualty_rollback() {
         })
         .expect("neighboring reactor chain should be reachable");
     edit(&mut world, second, |state| {
-        state["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
+        state["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap()
     });
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
     let parents: mlua::Table = scripts
@@ -476,8 +469,8 @@ async fn reactor_chain_replay_and_casualty_rollback() {
             .iter()
             .flat_map(|hit| &hit.impacts)
             .all(|impact| match impact {
-                BattleBlastImpact::Mech(impact) => impact.impact.reactor_explosions.is_empty(),
-                BattleBlastImpact::Vehicle(_) => true,
+                BlastImpact::Mech(impact) => impact.impact.reactor_explosions.is_empty(),
+                BlastImpact::Vehicle(_) => true,
             })
     );
     assert_ne!(scripts.world().objects[&ObjectId(2)].location, Some(second));
@@ -518,14 +511,14 @@ async fn reactor_chain_preserves_private_packet_feedback() {
         .flags
         .insert(Flag::Connected);
     let source_seed = (0..=255)
-        .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 9)
+        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 9)
         .unwrap();
     edit(&mut baseline, source, |state| {
-        state["power"] = serde_json::to_value(BattlePower::Running).unwrap();
-        state["dice"] = serde_json::to_value(BattleDice::seeded([source_seed; 32])).unwrap();
+        state["power"] = serde_json::to_value(Power::Running).unwrap();
+        state["dice"] = serde_json::to_value(Dice::seeded([source_seed; 32])).unwrap();
     });
     edit(&mut baseline, target, |state| {
-        state["power"] = serde_json::to_value(BattlePower::Running).unwrap();
+        state["power"] = serde_json::to_value(Power::Running).unwrap();
         for section in ["LeftLeg", "RightLeg"] {
             state["sections"][section]["armor"] = 0.into();
             state["sections"][section]["internal"] = 1.into();
@@ -534,7 +527,7 @@ async fn reactor_chain_preserves_private_packet_feedback() {
     for seed in 0..64 {
         let mut world = baseline.clone();
         edit(&mut world, target, |state| {
-            state["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+            state["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
         });
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
         let report = reactor_explosion_action(&scripts, &config, source).unwrap();

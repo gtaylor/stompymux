@@ -24,12 +24,12 @@ fn install(world: &mut World, id: ObjectId, computer: bool) {
 }
 
 /// Uniform state inspection deliberately reads the public chassis adapters.
-fn tag(world: &World, id: ObjectId) -> BattleTagState {
+fn tag(world: &World, id: ObjectId) -> TagState {
     world
         .btech
         .vehicles()
         .get(&id)
-        .map(BattleVehicle::tag)
+        .map(Vehicle::tag)
         .unwrap_or_else(|| world.btech.constructed_units()[&id].tag())
 }
 
@@ -72,13 +72,13 @@ async fn tag_across_chassis_native_lua_rollback_and_restart() {
                 .btech
                 .vehicles()
                 .get(&target)
-                .and_then(BattleVehicle::battlefield_id)
+                .and_then(Vehicle::battlefield_id)
                 .or_else(|| {
                     world
                         .btech
                         .constructed_units()
                         .get(&target)
-                        .and_then(BattleUnit::battlefield_id)
+                        .and_then(Mech::battlefield_id)
                 })
                 .unwrap();
             let reply =
@@ -115,7 +115,7 @@ async fn tag_across_chassis_native_lua_rollback_and_restart() {
                     .text
                     .contains("finished recycling")
             );
-            assert_eq!(tag(&restored, id), BattleTagState::default());
+            assert_eq!(tag(&restored, id), TagState::default());
             let key = if restored.btech.vehicles().contains_key(&id) {
                 "vehicles"
             } else {
@@ -154,7 +154,7 @@ async fn tag_equipment_and_damage_have_distinct_replies() {
                 &mut world,
                 id,
                 VehicleCriticalLocation {
-                    section: BattleVehicleSection::Front,
+                    section: VehicleSection::Front,
                     slot: 7,
                 },
             )
@@ -164,7 +164,7 @@ async fn tag_equipment_and_damage_have_distinct_replies() {
                 &mut world,
                 id,
                 CriticalLocation {
-                    section: BattleSection::LeftTorso,
+                    section: MechSection::LeftTorso,
                     slot: 7,
                 },
             )
@@ -188,11 +188,11 @@ async fn tag_equipment_and_damage_have_distinct_replies() {
 fn relocate(world: &mut World, id: ObjectId, map: ObjectId, y: i64) {
     edit(world, id, |state| {
         state["target_lock"] = serde_json::Value::Null;
-        state["power"] = serde_json::to_value(BattlePower::Off).unwrap();
+        state["power"] = serde_json::to_value(Power::Off).unwrap();
     });
     place_battle_unit(world, id, map, 0, y).unwrap();
     edit(world, id, |state| {
-        state["power"] = serde_json::to_value(BattlePower::Running).unwrap()
+        state["power"] = serde_json::to_value(Power::Running).unwrap()
     });
 }
 
@@ -270,14 +270,14 @@ async fn tag_takeover_crosses_chassis_and_rejects_corrupt_saved_ownership() {
         select_battle_tag(&mut world, id, ObjectId(1), Some(target)).unwrap();
         let map = world.btech.units()[&id].map.unwrap();
         let other = world.create(&config, "Replacement TAG".into(), Kind::Thing);
-        BattleUnitTemplate::parse("test", replacement)
+        UnitTemplate::parse("test", replacement)
             .unwrap()
             .create(&mut world, other)
             .unwrap();
         place_battle_unit(&mut world, other, map, 0, 11).unwrap();
         install(&mut world, other, false);
         edit(&mut world, other, |state| {
-            state["power"] = serde_json::to_value(BattlePower::Running).unwrap()
+            state["power"] = serde_json::to_value(Power::Running).unwrap()
         });
         release_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
         world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(other);
@@ -287,7 +287,7 @@ async fn tag_takeover_crosses_chassis_and_rejects_corrupt_saved_ownership() {
         assert_eq!(notices.len(), 2);
         assert_eq!(
             tag(&world, id),
-            BattleTagState {
+            TagState {
                 target: None,
                 remaining: 30
             }
@@ -324,13 +324,8 @@ async fn vehicle_tag_shutdown_recycles_and_inspection_exposes_state() {
             .unwrap();
         assert_eq!(selected, target.0);
         assert_eq!(scripts.world().btech, world.btech);
-        let notices = stop_battle_unit(
-            &mut world,
-            id,
-            ObjectId(1),
-            BattleFallRules::configured(&config),
-        )
-        .unwrap();
+        let notices =
+            stop_battle_unit(&mut world, id, ObjectId(1), FallRules::configured(&config)).unwrap();
         assert!(
             notices
                 .iter()
@@ -338,7 +333,7 @@ async fn vehicle_tag_shutdown_recycles_and_inspection_exposes_state() {
         );
         assert_eq!(
             tag(&world, id),
-            BattleTagState {
+            TagState {
                 target: None,
                 remaining: 30
             }
@@ -363,7 +358,7 @@ async fn vehicle_tag_guides_mech_and_vehicle_missiles() {
     for source in [&sources[0], &sources[2]] {
         let (_dir, config, mut world, shooter, target, index) = firing::fixture_with_supply(
             source,
-            Some(BattleWeapon::Lrm5),
+            Some(Weapon::Lrm5),
             &sources[2],
             false,
             Some("Sguided"),
@@ -376,9 +371,9 @@ async fn vehicle_tag_guides_mech_and_vehicle_missiles() {
         });
         edit(&mut world, shooter, |state| {
             state["ammunition_modes"][index.to_string()] =
-                serde_json::to_value(BattleAmmunitionMode::SemiGuided).unwrap();
+                serde_json::to_value(AmmunitionMode::SemiGuided).unwrap();
         });
-        let rules = BattleAimRules {
+        let rules = AimRules {
             woods_damage: false,
             dig_bonus: 2,
             dig_only_front: false,
@@ -393,14 +388,14 @@ async fn vehicle_tag_guides_mech_and_vehicle_missiles() {
         assert!(unaided.target_movement > 0);
         let map = world.btech.units()[&shooter].map.unwrap();
         let tagger = world.create(&config, "TAG vehicle".into(), Kind::Thing);
-        BattleUnitTemplate::parse("test", &sources[2])
+        UnitTemplate::parse("test", &sources[2])
             .unwrap()
             .create(&mut world, tagger)
             .unwrap();
         place_battle_unit(&mut world, tagger, map, 0, 11).unwrap();
         install(&mut world, tagger, false);
         edit(&mut world, tagger, |state| {
-            state["power"] = serde_json::to_value(BattlePower::Running).unwrap()
+            state["power"] = serde_json::to_value(Power::Running).unwrap()
         });
         release_battle_pilot(&mut world, shooter, ObjectId(1)).unwrap();
         world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(tagger);
@@ -430,7 +425,7 @@ async fn vehicle_tag_guides_mech_and_vehicle_missiles() {
             &mut world,
             tagger,
             VehicleCriticalLocation {
-                section: BattleVehicleSection::Front,
+                section: VehicleSection::Front,
                 slot: 7,
             },
         )

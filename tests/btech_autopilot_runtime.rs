@@ -1,10 +1,10 @@
 //! End-to-end ground-autopilot lifecycle coverage on isolated fixture worlds.
 use crate::support;
 use std::{cell::RefCell, rc::Rc};
-use stompymux_rs::BattleUnitTemplateExt;
+use stompymux_rs::UnitTemplateExt;
 use stompymux_rs::{
-    BattlePower, BattleUnitSignature, BattleUnitTemplate, Config, Kind, MapAsset, ObjectId,
-    Scripts, World, assign_battle_pilot, create_battle_map, persistence, place_battle_unit,
+    Config, Kind, MapAsset, ObjectId, Power, Scripts, UnitSignature, UnitTemplate, World,
+    assign_battle_pilot, create_battle_map, persistence, place_battle_unit,
     refresh_battle_contacts, set_battle_speed, set_battle_unit_signature,
 };
 
@@ -23,7 +23,7 @@ async fn ground_fixture() -> (tempfile::TempDir, Config, World, ObjectId, Object
     .unwrap();
     let unit = world.create(&config, "Autopilot mech".into(), Kind::Thing);
     world.objects.get_mut(&unit).unwrap().home = Some(ObjectId(config.home()));
-    BattleUnitTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml"))
+    UnitTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml"))
         .unwrap()
         .create(&mut world, unit)
         .unwrap();
@@ -34,10 +34,7 @@ async fn ground_fixture() -> (tempfile::TempDir, Config, World, ObjectId, Object
 
     // Starting directly in Running keeps this fixture focused on controller behavior;
     // the ordinary startup state machine is covered by the BTech power scenarios.
-    world
-        .btech
-        .set_unit_power(unit, BattlePower::Running)
-        .unwrap();
+    world.btech.set_unit_power(unit, Power::Running).unwrap();
     world.validate(&config).unwrap();
     (directory, config, world, map, unit)
 }
@@ -187,7 +184,7 @@ async fn controller_intent_revision_and_queue_survive_persistence_restart() {
     assert_eq!(
         after.queued_orders()[0].order.clone(),
         stompymux_rs::btech::AutopilotOrder::Move {
-            destination: stompymux_rs::BattlePosition { map, x: 0, y: 6 },
+            destination: stompymux_rs::Position { map, x: 0, y: 6 },
             arrival_radius: 0,
         }
     );
@@ -207,7 +204,7 @@ async fn explicit_attack_uses_filtered_sensor_observation() {
     set_battle_unit_signature(
         &mut world,
         target,
-        BattleUnitSignature {
+        UnitSignature {
             team: 1,
             hidden: false,
             illuminated: false,

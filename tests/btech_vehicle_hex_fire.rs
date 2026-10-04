@@ -5,7 +5,7 @@ use stompymux_rs::*;
 
 /// A running turreted gun platform faces an empty forest cell.
 async fn fixture(
-    mode: BattleHexTargetMode,
+    mode: HexTargetMode,
     terrain: &str,
 ) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId, usize) {
     fixture_with_template(mode, terrain, include_str!("../game/mechs/Demolisher.toml")).await
@@ -13,7 +13,7 @@ async fn fixture(
 
 /// Supply a weapon variant while retaining the same coordinate setup.
 async fn fixture_with_template(
-    mode: BattleHexTargetMode,
+    mode: HexTargetMode,
     terrain: &str,
     template: &str,
 ) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId, usize) {
@@ -32,7 +32,7 @@ async fn fixture_with_template(
     create_battle_vehicle(
         &mut world,
         shooter,
-        BattleVehicleTemplate::parse("test", template).unwrap(),
+        VehicleTemplate::parse("test", template).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, shooter, support::FIXTURE_DICE_SEED);
@@ -49,12 +49,7 @@ async fn fixture_with_template(
         .unwrap()
         .weapons
         .iter()
-        .position(|m| {
-            matches!(
-                m.weapon,
-                BattleWeapon::Ac20 | BattleWeapon::Ac2 | BattleWeapon::MachineGun
-            )
-        })
+        .position(|m| matches!(m.weapon, Weapon::Ac20 | Weapon::Ac2 | Weapon::MachineGun))
         .unwrap();
     let mut saved = serde_json::to_value(&world.btech).unwrap();
     crate::support::set_hex_terrain(
@@ -62,7 +57,7 @@ async fn fixture_with_template(
         Terrain::from_name(terrain).unwrap(),
     );
     saved["vehicles"][shooter.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded([42; 32])).unwrap();
+        serde_json::to_value(Dice::seeded([42; 32])).unwrap();
     world.btech = serde_json::from_value(saved).unwrap();
     select_battle_hex_target(
         &mut world,
@@ -78,11 +73,11 @@ async fn fixture_with_template(
 #[tokio::test]
 async fn vehicle_coordinate_modes_share_native_lua_expenditure_and_restart() {
     for mode in [
-        BattleHexTargetMode::UnitAtHex,
-        BattleHexTargetMode::Hex,
-        BattleHexTargetMode::Clear,
-        BattleHexTargetMode::Ignite,
-        BattleHexTargetMode::Building,
+        HexTargetMode::UnitAtHex,
+        HexTargetMode::Hex,
+        HexTargetMode::Clear,
+        HexTargetMode::Ignite,
+        HexTargetMode::Building,
     ] {
         let (_dir, config, world, shooter, _map, index) = fixture(mode, "heavy_forest").await;
         persistence::save(&config.database(), &world).await.unwrap();
@@ -103,9 +98,9 @@ async fn vehicle_coordinate_modes_share_native_lua_expenditure_and_restart() {
         let report: (bool, i32, i32, usize, bool) = lua.eval_callback(&code).unwrap();
         assert!(report.0);
         assert_eq!((report.1, report.2, report.4), (1, 0, true));
-        if mode == BattleHexTargetMode::UnitAtHex {
+        if mode == HexTargetMode::UnitAtHex {
             assert_eq!(report.3, 0);
-        } else if mode != BattleHexTargetMode::Building {
+        } else if mode != HexTargetMode::Building {
             assert!(report.3 > 0);
         }
         let again: (bool, i32, i32, usize, bool) = replay.eval_callback(&code).unwrap();
@@ -122,7 +117,7 @@ async fn vehicle_coordinate_modes_share_native_lua_expenditure_and_restart() {
         );
         assert_eq!(
             vehicle.weapon_heat(),
-            f64::from(BattleWeapon::Ac20.profile().heat)
+            f64::from(Weapon::Ac20.profile().heat)
         );
         assert!(vehicle.weapon_recycle()[&index] > 0);
         assert!(
@@ -137,7 +132,7 @@ async fn vehicle_coordinate_modes_share_native_lua_expenditure_and_restart() {
 #[tokio::test]
 async fn vehicle_hex_fire_rollback_restores_inventory_terrain_and_dice() {
     let (_dir, config, world, shooter, _map, index) =
-        fixture(BattleHexTargetMode::Clear, "heavy_forest").await;
+        fixture(HexTargetMode::Clear, "heavy_forest").await;
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     let before = scripts.world().btech.clone();
     assert!(
@@ -160,7 +155,7 @@ async fn vehicle_hex_fire_rollback_restores_inventory_terrain_and_dice() {
 
 #[tokio::test]
 async fn vehicle_surface_shots_use_shooter_dice_and_shared_fracture() {
-    let (_dir, config, world, shooter, map, index) = fixture(BattleHexTargetMode::Hex, "ice").await;
+    let (_dir, config, world, shooter, map, index) = fixture(HexTargetMode::Hex, "ice").await;
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     let report:(bool,usize,bool)=scripts.eval_callback(&format!("local r=btech.unit.fire({},1,{index}); return r.hit,#r.surfaces,r.surfaces[1]~=nil and r.surfaces[1].fracture~=nil",shooter.0)).unwrap();
     assert_eq!(report, (true, 1, true));
@@ -180,13 +175,13 @@ async fn vehicle_coordinate_misload_is_tagged_and_rolls_back_with_terrain_action
         .replace("IS.AC/20", "IS.AC/2")
         .replace("\"IS.AC/2\" }", "\"IS.AC/2\", modes = [\"RapidFire\"] }");
     let (_dir, config, mut world, shooter, _map, index) =
-        fixture_with_template(BattleHexTargetMode::Hex, "heavy_forest", &template).await;
+        fixture_with_template(HexTargetMode::Hex, "heavy_forest", &template).await;
     let seed = (0..=255)
-        .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 2)
+        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 2)
         .unwrap();
     world
         .btech
-        .set_unit_dice(shooter, BattleDice::seeded([seed; 32]))
+        .set_unit_dice(shooter, Dice::seeded([seed; 32]))
         .unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
     let lua = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
@@ -236,7 +231,7 @@ fn character_crew(world: &mut World, shooter: ObjectId) {
     set_battle_character(
         &mut *world,
         ObjectId(2),
-        BattleCharacter {
+        Character {
             build: 5,
             reflexes: 5,
             intuition: 5,
@@ -258,11 +253,11 @@ async fn character_vehicle_terrain_fire_shares_commands_replay_and_rollback() {
         include_str!("../game/mechs/Kestrel.toml"),
     ] {
         for mode in [
-            BattleHexTargetMode::UnitAtHex,
-            BattleHexTargetMode::Hex,
-            BattleHexTargetMode::Clear,
-            BattleHexTargetMode::Ignite,
-            BattleHexTargetMode::Building,
+            HexTargetMode::UnitAtHex,
+            HexTargetMode::Hex,
+            HexTargetMode::Clear,
+            HexTargetMode::Ignite,
+            HexTargetMode::Building,
         ] {
             let (_dir, config, mut world, shooter, _, index) =
                 fixture_with_template(mode, "heavy_forest", template).await;
@@ -272,7 +267,7 @@ async fn character_vehicle_terrain_fire_shares_commands_replay_and_rollback() {
                     .btech
                     .rewrite_unit_record(shooter, |record| {
                         record["vtol_flight"]["phase"] =
-                            serde_json::to_value(BattleVtolFlightPhase::Airborne).unwrap();
+                            serde_json::to_value(VtolFlightPhase::Airborne).unwrap();
                         record["vtol_flight"]["altitude"] = serde_json::json!(1.5);
                     })
                     .unwrap();
@@ -332,7 +327,7 @@ async fn character_coordinate_misload_publishes_injuries_and_rolls_back_failed_e
         .replace("\"IS.AC/2\" }", "\"IS.AC/2\", modes = [\"RapidFire\"] }");
     for fatal in [false, true] {
         let (dir, _config, mut world, shooter, _, index) =
-            fixture_with_template(BattleHexTargetMode::Hex, "heavy_forest", &template).await;
+            fixture_with_template(HexTargetMode::Hex, "heavy_forest", &template).await;
         let path = dir.path().join("stompymux.toml");
         let mut settings: toml::Value =
             toml::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
@@ -349,7 +344,7 @@ async fn character_coordinate_misload_publishes_injuries_and_rolls_back_failed_e
             .find_map(|number| {
                 let mut seed = [0; 32];
                 seed[..4].copy_from_slice(&number.to_le_bytes());
-                let mut dice = BattleDice::seeded(seed);
+                let mut dice = Dice::seeded(seed);
                 let attack = dice.two_d6();
                 dice.two_d6();
                 let count = dice.two_d6();
@@ -364,7 +359,7 @@ async fn character_coordinate_misload_publishes_injuries_and_rolls_back_failed_e
             .unwrap();
         world
             .btech
-            .set_unit_dice(shooter, BattleDice::seeded(seed))
+            .set_unit_dice(shooter, Dice::seeded(seed))
             .unwrap();
         persistence::save(&config.database(), &world).await.unwrap();
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();

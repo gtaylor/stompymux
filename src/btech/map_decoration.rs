@@ -1,5 +1,5 @@
 //! Wizard fire and smoke commands share installation, duration admission and transactional publication.
-use super::{BattleDecoration, DecorationKind, HexCoordinate};
+use super::{Decoration, DecorationKind, HexCoordinate};
 use crate::{Config, ObjectId, Scripts};
 use anyhow::{Context, Result, ensure};
 
@@ -41,7 +41,7 @@ pub fn add_map_decoration_action(
                     i64::from(seconds.clamp(i32::from(i16::MIN), i32::from(i16::MAX)))
                 }
             };
-            let mut effect = BattleDecoration::new(
+            let mut effect = Decoration::new(
                 kind,
                 remaining,
                 (remaining < 0).then_some(record.fire_spread_interval()),
@@ -56,7 +56,7 @@ pub fn add_map_decoration_action(
         };
         super::notify_message(
             scripts,
-            super::BattleMessageTarget::Player(actor),
+            super::MessageTarget::Player(actor),
             &format!(
                 "Added: {label} at ({},{}) with duration of {duration}s.",
                 coordinate.x, coordinate.y

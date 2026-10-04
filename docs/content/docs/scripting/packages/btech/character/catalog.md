@@ -23,4 +23,4 @@ btech.character.catalog(kind, character)
 
 ## Returns
 
-- `BattleCharacterValueDefinition[] definitions`
+- `CharacterValueDefinition[] definitions`

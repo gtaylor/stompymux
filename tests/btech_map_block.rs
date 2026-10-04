@@ -244,9 +244,9 @@ async fn addblock_radius_team_and_restart() {
                 (i64::from(radius), team, ObjectId(1))
             );
             let expected = if radius >= 0 && team != 7 {
-                BattleLandingSuitability::Blocked
+                LandingSuitability::Blocked
             } else {
-                BattleLandingSuitability::Ready
+                LandingSuitability::Ready
             };
             assert_eq!(
                 saved.btech.maps()[&map]
@@ -343,9 +343,9 @@ async fn addblock_validation_and_full_width_saved_radii() {
             radius
         );
         let expected = if radius < 0 {
-            BattleLandingSuitability::Ready
+            LandingSuitability::Ready
         } else {
-            BattleLandingSuitability::Blocked
+            LandingSuitability::Blocked
         };
         assert_eq!(
             loaded.btech.maps()[&map]

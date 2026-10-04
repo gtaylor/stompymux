@@ -9,7 +9,7 @@ use stompymux_rs::*;
 async fn scenario_section_damage_matches_native_lua_and_restart() {
     for (index, template) in firing::templates().iter().enumerate() {
         let (_dir, config, world, unit, other, _) =
-            firing::fixture_with_target(template, Some(BattleWeapon::MediumLaser), template).await;
+            firing::fixture_with_target(template, Some(Weapon::MediumLaser), template).await;
         let locations = if index < 2 {
             ["h", "lt", "ct"]
         } else {
@@ -114,7 +114,7 @@ async fn scenario_section_damage_matches_native_lua_and_restart() {
                 &config,
                 visitor,
                 unit,
-                BattleScenarioHit {
+                ScenarioHit {
                     section: locations[0],
                     damage: 1,
                     rear: false,

@@ -7,13 +7,13 @@ use serde::Serialize;
 /// Target-side consequences reuse each unit class's existing damage resolver.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(tag = "kind", content = "report", rename_all = "snake_case")]
-pub enum BattleTargetSalvo {
-    Mech(BattleSalvoReport),
-    Vehicle(BattleVehicleSalvoReport),
-    Swarm(super::BattleSwarmReport),
+pub enum TargetSalvo {
+    Mech(MechSalvoReport),
+    Vehicle(VehicleSalvoReport),
+    Swarm(super::SwarmReport),
 }
 
-impl BattleTargetSalvo {
+impl TargetSalvo {
     /// Actual missile cluster size before defensive interception, used to cap the defensive report.
     pub(super) fn missiles_before_defense(&self) -> Option<u8> {
         match self {
@@ -24,9 +24,9 @@ impl BattleTargetSalvo {
     }
 }
 
-impl BattleTargetSalvo {
+impl TargetSalvo {
     /// Inspect Mech anatomy without assuming the target's unit class.
-    pub fn as_mech(&self) -> Option<&BattleSalvoReport> {
+    pub fn as_mech(&self) -> Option<&MechSalvoReport> {
         match self {
             Self::Mech(report) => Some(report),
             Self::Vehicle(_) | Self::Swarm(_) => None,
@@ -34,7 +34,7 @@ impl BattleTargetSalvo {
     }
 
     /// Take ownership of Mech-specific consequences.
-    pub fn into_mech(self) -> Option<BattleSalvoReport> {
+    pub fn into_mech(self) -> Option<MechSalvoReport> {
         match self {
             Self::Mech(report) => Some(report),
             Self::Vehicle(_) | Self::Swarm(_) => None,
@@ -46,8 +46,8 @@ impl BattleTargetSalvo {
         &self,
         shooter: ObjectId,
         target: ObjectId,
-        private: &mut Vec<super::BattlePilotNotice>,
-    ) -> Vec<BattleNotice> {
+        private: &mut Vec<super::PilotNotice>,
+    ) -> Vec<Notice> {
         if let Self::Swarm(report) = self {
             super::piloting::append_feedback(private, report.pilot_notices.clone(), 0);
             return report.notices.clone();
@@ -79,7 +79,7 @@ impl BattleTargetSalvo {
     }
 
     /// Raw vehicle location and critical broadcasts, before the host applies visibility.
-    pub(super) fn broadcasts(&self) -> Vec<BattleNotice> {
+    pub(super) fn broadcasts(&self) -> Vec<Notice> {
         match self {
             Self::Mech(_) => Vec::new(),
             Self::Swarm(report) => report.broadcasts.clone(),
@@ -104,11 +104,11 @@ pub(super) fn resolve_vehicle_target(
     world: &mut World,
     shooter: ObjectId,
     target: ObjectId,
-    request: BattleVehicleSalvoRequest,
+    request: VehicleSalvoRequest,
     hit_arc_mode: i64,
-    rules: BattleVehicleImpactRules,
+    rules: VehicleImpactRules,
     context: super::vehicle_salvo::SalvoContext<'_>,
-) -> Result<BattleTargetSalvo> {
+) -> Result<TargetSalvo> {
     world.attempt(|world| {
         resolve_vehicle_target_in_candidate(
             world,
@@ -127,11 +127,11 @@ pub(super) fn resolve_vehicle_target_in_candidate(
     world: &mut World,
     shooter: ObjectId,
     target: ObjectId,
-    mut request: BattleVehicleSalvoRequest,
+    mut request: VehicleSalvoRequest,
     hit_arc_mode: i64,
-    rules: BattleVehicleImpactRules,
+    rules: VehicleImpactRules,
     context: super::vehicle_salvo::SalvoContext<'_>,
-) -> Result<BattleTargetSalvo> {
+) -> Result<TargetSalvo> {
     let direction = super::hit_direction::HitDirection::Direct {
         shooter,
         mode: hit_arc_mode,
@@ -145,5 +145,5 @@ pub(super) fn resolve_vehicle_target_in_candidate(
     super::vehicle_salvo::resolve_with_context_in_candidate(
         world, target, direction, request, rules, context,
     )
-    .map(BattleTargetSalvo::Vehicle)
+    .map(TargetSalvo::Vehicle)
 }

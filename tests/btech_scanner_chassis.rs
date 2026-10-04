@@ -19,19 +19,17 @@ fn templates() -> Vec<String> {
 }
 
 /// Add probes to unoccupied slots without changing the unit's weapons or required equipment.
-fn equipment(source: &str) -> BattleUnitTemplate {
-    let mut template = BattleUnitTemplate::parse("test", source).unwrap();
+fn equipment(source: &str) -> UnitTemplate {
+    let mut template = UnitTemplate::parse("test", source).unwrap();
     let (attributes, section, parts) = match &mut template {
-        BattleUnitTemplate::Mech(definition) => {
+        UnitTemplate::Mech(definition) => {
             let section = definition
                 .sections
                 .iter_mut()
                 .find(|(name, section)| {
                     matches!(
                         **name,
-                        BattleSection::LeftTorso
-                            | BattleSection::RightTorso
-                            | BattleSection::CenterTorso
+                        MechSection::LeftTorso | MechSection::RightTorso | MechSection::CenterTorso
                     ) && (0..12)
                         .filter(|slot| !section.criticals.contains_key(slot))
                         .count()
@@ -52,12 +50,9 @@ fn equipment(source: &str) -> BattleUnitTemplate {
                 ],
             )
         }
-        BattleUnitTemplate::Vehicle(definition) => (
+        UnitTemplate::Vehicle(definition) => (
             &mut definition.attributes,
-            definition
-                .sections
-                .get_mut(&BattleVehicleSection::Front)
-                .unwrap(),
+            definition.sections.get_mut(&VehicleSection::Front).unwrap(),
             vec!["BeagleProbe", "Light_BAP", "BloodhoundProbe"],
         ),
     };
@@ -109,7 +104,7 @@ async fn fixture(
     let mut ids = Vec::new();
     for (index, template) in [
         equipment(source),
-        BattleUnitTemplate::parse("test", target).unwrap(),
+        UnitTemplate::parse("test", target).unwrap(),
     ]
     .into_iter()
     .enumerate()
@@ -126,7 +121,7 @@ async fn fixture(
         )
         .unwrap();
         edit(&mut world, id, |state| {
-            state["power"] = serde_json::to_value(BattlePower::Running).unwrap();
+            state["power"] = serde_json::to_value(Power::Running).unwrap();
         });
         ids.push(id);
     }
@@ -140,8 +135,8 @@ async fn fixture(
 /// Lift a rotorcraft target into the air at the given altitude.
 fn airborne(world: &mut World, id: ObjectId, altitude: f64) {
     edit(world, id, |state| {
-        state["vtol_flight"] = serde_json::to_value(BattleVtolFlight {
-            phase: BattleVtolFlightPhase::Airborne,
+        state["vtol_flight"] = serde_json::to_value(VtolFlight {
+            phase: VtolFlightPhase::Airborne,
             altitude,
             ..Default::default()
         })
@@ -160,7 +155,7 @@ fn observer_dice(world: &World, id: ObjectId) -> serde_json::Value {
 }
 
 /// Destroy every installed part of one probe family on either anatomy.
-fn destroy_probe(world: &mut World, id: ObjectId, system: BattleSystem) {
+fn destroy_probe(world: &mut World, id: ObjectId, system: System) {
     if world.btech.vehicles().contains_key(&id) {
         let parts = world.btech.vehicles()[&id].loadout().unwrap().systems;
         for part in parts.into_iter().filter(|part| part.system == system) {
@@ -197,9 +192,9 @@ async fn automatic_scanning_matrix(source: &str) {
             }
             assert!(battle_contact_observers(&world).contains(&observer));
             let (channel, aim) = if flying {
-                (BattleDetectionChannel::Radar, -3)
+                (DetectionChannel::Radar, -3)
             } else {
-                (BattleDetectionChannel::Sensors, 0)
+                (DetectionChannel::Sensors, 0)
             };
             let perception = battle_perceive(&world, observer, target).unwrap().unwrap();
             assert_eq!(
@@ -302,9 +297,9 @@ async fn stationary_probe_extension_and_shared_radar_ceiling() {
             }
             let perception = battle_perceive(&world, observer, target).unwrap();
             let channel = if radar {
-                BattleDetectionChannel::Radar
+                DetectionChannel::Radar
             } else {
-                BattleDetectionChannel::Probe
+                DetectionChannel::Probe
             };
             assert_eq!(
                 perception.map(|perception| (perception.channel, perception.identified)),
@@ -341,7 +336,7 @@ async fn probe_contacts_cross_obstacles_and_reconcile_after_equipment_loss() {
             .unwrap()
             .unwrap();
         assert!(!contact.identified);
-        assert_eq!(contact.detection, Some(BattleDetectionChannel::Probe));
+        assert_eq!(contact.detection, Some(DetectionChannel::Probe));
         assert!(
             contact.short_text.starts_with("p "),
             "{}",
@@ -358,7 +353,7 @@ async fn probe_contacts_cross_obstacles_and_reconcile_after_equipment_loss() {
         assert!(text.contains("something"), "{text}");
         let mut damaged = native.world().clone();
         let _ = select_battle_target(&mut damaged, observer, ObjectId(1), Some(target)).unwrap();
-        let rules = BattleAimRules {
+        let rules = AimRules {
             woods_damage: false,
             dig_bonus: 3,
             dig_only_front: false,
@@ -373,32 +368,29 @@ async fn probe_contacts_cross_obstacles_and_reconcile_after_equipment_loss() {
             battle_aim_modifiers(&damaged, observer, target, 0, 4, rules)
                 .unwrap()
                 .perception,
-            Some(BattlePerceptionAim {
-                channel: Some(BattleDetectionChannel::Probe),
+            Some(PerceptionAim {
+                channel: Some(DetectionChannel::Probe),
                 direct_fire: false,
                 modifier: cover
             })
         );
         for (system, fallback) in [
-            (
-                BattleSystem::BloodhoundProbe,
-                Some(BattleActiveProbe::Beagle),
-            ),
-            (BattleSystem::BeagleProbe, Some(BattleActiveProbe::Light)),
-            (BattleSystem::LightProbe, None),
+            (System::BloodhoundProbe, Some(ActiveProbe::Beagle)),
+            (System::BeagleProbe, Some(ActiveProbe::Light)),
+            (System::LightProbe, None),
         ] {
             destroy_probe(&mut damaged, observer, system);
             let profile = battle_perception_profile(&damaged, observer).unwrap();
             let working = profile
                 .probe
-                .filter(|probe| probe.status == BattlePerceptionStatus::Ready)
+                .filter(|probe| probe.status == PerceptionStatus::Ready)
                 .map(|probe| probe.kind);
             assert_eq!(working, fallback, "{system:?}");
             assert_eq!(
                 battle_perceive(&damaged, observer, target)
                     .unwrap()
                     .map(|perception| perception.channel),
-                fallback.map(|_| BattleDetectionChannel::Probe)
+                fallback.map(|_| DetectionChannel::Probe)
             );
         }
         assert!(
@@ -438,14 +430,14 @@ async fn radar_tracks_launching_vtols_only_after_liftoff() {
         state["contacts"] = serde_json::json!({target.0.to_string():{"identified":true}});
     });
     for phase in [
-        BattleVtolFlightPhase::Landed,
-        BattleVtolFlightPhase::Launching { remaining: 1 },
-        BattleVtolFlightPhase::Airborne,
+        VtolFlightPhase::Landed,
+        VtolFlightPhase::Launching { remaining: 1 },
+        VtolFlightPhase::Airborne,
     ] {
         let mut world = base.clone();
-        let flying = phase == BattleVtolFlightPhase::Airborne;
+        let flying = phase == VtolFlightPhase::Airborne;
         edit(&mut world, target, |state| {
-            state["vtol_flight"] = serde_json::to_value(BattleVtolFlight {
+            state["vtol_flight"] = serde_json::to_value(VtolFlight {
                 phase,
                 altitude: if flying { 5.0 } else { 0.0 },
                 ..Default::default()
@@ -453,9 +445,9 @@ async fn radar_tracks_launching_vtols_only_after_liftoff() {
             .unwrap()
         });
         let channel = if flying {
-            BattleDetectionChannel::Radar
+            DetectionChannel::Radar
         } else {
-            BattleDetectionChannel::Sensors
+            DetectionChannel::Sensors
         };
         assert_eq!(
             battle_perceive(&world, observer, target)
@@ -481,17 +473,17 @@ async fn radar_tracks_launching_vtols_only_after_liftoff() {
 fn install_gatling(world: &mut World, id: ObjectId, supply: u16) -> usize {
     let vehicle = world.btech.vehicles().contains_key(&id);
     let mut template = if vehicle {
-        BattleUnitTemplate::Vehicle(world.btech.vehicles()[&id].definition().clone())
+        UnitTemplate::Vehicle(world.btech.vehicles()[&id].definition().clone())
     } else {
-        BattleUnitTemplate::Mech(world.btech.constructed_units()[&id].definition().clone())
+        UnitTemplate::Mech(world.btech.constructed_units()[&id].definition().clone())
     };
     let section = match &mut template {
-        BattleUnitTemplate::Mech(definition) => {
+        UnitTemplate::Mech(definition) => {
             definition
                 .sections
                 .iter_mut()
                 .find(|(name, section)| {
-                    matches!(name, BattleSection::LeftTorso | BattleSection::RightTorso)
+                    matches!(name, MechSection::LeftTorso | MechSection::RightTorso)
                         && (0..12)
                             .filter(|slot| !section.criticals.contains_key(slot))
                             .count()
@@ -500,10 +492,9 @@ fn install_gatling(world: &mut World, id: ObjectId, supply: u16) -> usize {
                 .unwrap()
                 .1
         }
-        BattleUnitTemplate::Vehicle(definition) => definition
-            .sections
-            .get_mut(&BattleVehicleSection::Front)
-            .unwrap(),
+        UnitTemplate::Vehicle(definition) => {
+            definition.sections.get_mut(&VehicleSection::Front).unwrap()
+        }
     };
     let slots: Vec<_> = (0..12)
         .filter(|slot| !section.criticals.contains_key(slot))
@@ -526,16 +517,16 @@ fn install_gatling(world: &mut World, id: ObjectId, supply: u16) -> usize {
         },
     );
     let (definition, ammunition, index) = match template {
-        BattleUnitTemplate::Mech(definition) => {
-            let unit = BattleUnit::from_template(definition.clone()).unwrap();
+        UnitTemplate::Mech(definition) => {
+            let unit = Mech::from_template(definition.clone()).unwrap();
             let index = unit
                 .loadout()
                 .unwrap()
                 .weapons
                 .iter()
                 .position(|mount| {
-                    mount.weapon == BattleWeapon::MachineGun
-                        && mount.initial_fire_mode == BattleFireMode::Gatling
+                    mount.weapon == Weapon::MachineGun
+                        && mount.initial_fire_mode == FireMode::Gatling
                 })
                 .unwrap();
             let mut ammunition = unit.ammunition().to_vec();
@@ -543,10 +534,10 @@ fn install_gatling(world: &mut World, id: ObjectId, supply: u16) -> usize {
             let bin_index = loadout
                 .ammunition
                 .iter()
-                .rposition(|bin| bin.weapon == BattleWeapon::MachineGun && bin.capacity >= supply)
+                .rposition(|bin| bin.weapon == Weapon::MachineGun && bin.capacity >= supply)
                 .unwrap();
             for (i, bin) in loadout.ammunition.iter().enumerate() {
-                if bin.weapon == BattleWeapon::MachineGun {
+                if bin.weapon == Weapon::MachineGun {
                     ammunition[i] = if i == bin_index { supply } else { 0 };
                 }
             }
@@ -556,16 +547,16 @@ fn install_gatling(world: &mut World, id: ObjectId, supply: u16) -> usize {
                 index,
             )
         }
-        BattleUnitTemplate::Vehicle(definition) => {
-            let unit = BattleVehicle::new(definition.clone()).unwrap();
+        UnitTemplate::Vehicle(definition) => {
+            let unit = Vehicle::new(definition.clone()).unwrap();
             let index = unit
                 .loadout()
                 .unwrap()
                 .weapons
                 .iter()
                 .position(|mount| {
-                    mount.weapon == BattleWeapon::MachineGun
-                        && mount.initial_fire_mode == BattleFireMode::Gatling
+                    mount.weapon == Weapon::MachineGun
+                        && mount.initial_fire_mode == FireMode::Gatling
                 })
                 .unwrap();
             let mut ammunition = unit.ammunition().to_vec();
@@ -573,10 +564,10 @@ fn install_gatling(world: &mut World, id: ObjectId, supply: u16) -> usize {
             let bin_index = loadout
                 .ammunition
                 .iter()
-                .rposition(|bin| bin.weapon == BattleWeapon::MachineGun && bin.capacity >= supply)
+                .rposition(|bin| bin.weapon == Weapon::MachineGun && bin.capacity >= supply)
                 .unwrap();
             for (i, bin) in loadout.ammunition.iter().enumerate() {
-                if bin.weapon == BattleWeapon::MachineGun {
+                if bin.weapon == Weapon::MachineGun {
                     ammunition[i] = if i == bin_index { supply } else { 0 };
                 }
             }
@@ -590,8 +581,7 @@ fn install_gatling(world: &mut World, id: ObjectId, supply: u16) -> usize {
     edit(world, id, |state| {
         state["definition"] = definition;
         state["ammunition"] = ammunition;
-        state["fire_modes"][index.to_string()] =
-            serde_json::to_value(BattleFireMode::Gatling).unwrap();
+        state["fire_modes"][index.to_string()] = serde_json::to_value(FireMode::Gatling).unwrap();
     });
     index
 }
@@ -605,18 +595,18 @@ async fn gatling_attack_order_replays_across_chassis() {
                 fixture(&source, include_str!("../game/mechs/JR7-D.toml"), 1, false).await;
             let index = install_gatling(&mut world, shooter, supply);
             edit(&mut world, shooter, |state| {
-                state["dice"] = serde_json::to_value(BattleDice::seeded([17; 32])).unwrap();
+                state["dice"] = serde_json::to_value(Dice::seeded([17; 32])).unwrap();
             });
             edit(&mut world, target, |state| {
-                state["dice"] = serde_json::to_value(BattleDice::seeded([42; 32])).unwrap();
+                state["dice"] = serde_json::to_value(Dice::seeded([42; 32])).unwrap();
             });
             refresh_battle_contacts(&mut world, &[shooter]).unwrap();
             let perception = battle_perceive(&world, shooter, target).unwrap().unwrap();
             assert_eq!(
                 (perception.channel, perception.aim_modifier),
-                (BattleDetectionChannel::Sensors, 0)
+                (DetectionChannel::Sensors, 0)
             );
-            let mut expected = BattleDice::seeded([17; 32]);
+            let mut expected = Dice::seeded([17; 32]);
             let damage = expected.d6().min((supply.min(18) / 3).max(1) as u8);
             let roll = expected.two_d6();
             let scripts =
@@ -630,11 +620,7 @@ async fn gatling_attack_order_replays_across_chassis() {
             let sight: (u8, u8, i16) = preview.eval_callback(&format!("local r=btech.unit.sight({},1,{index},{}); return r.roll,r.gatling_roll,r.aim.perception.modifier", shooter.0, target.0)).unwrap();
             assert_eq!(
                 sight,
-                (
-                    roll,
-                    BattleDice::seeded([17; 32]).d6(),
-                    perception.aim_modifier
-                )
+                (roll, Dice::seeded([17; 32]).d6(), perception.aim_modifier)
             );
             let mut sight_expected = before.clone();
             edit(&mut sight_expected, shooter, |state| {

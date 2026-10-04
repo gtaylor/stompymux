@@ -4,7 +4,7 @@ use stompymux_rs::*;
 
 /// A vehicle facing east beside a short sequence of one-level rises and descents.
 async fn fixture(
-    movement: BattleVehicleMovement,
+    movement: VehicleMovement,
     reverse: bool,
 ) -> (tempfile::TempDir, Config, World, ObjectId) {
     let (dir, config, mut world) = support::isolated_world().await;
@@ -19,13 +19,13 @@ async fn fixture(
     .unwrap();
     let id = world.create(&config, "Vehicle".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-    let mut template = BattleVehicleTemplate::parse(
+    let mut template = VehicleTemplate::parse(
         "Flatbed_Truck",
         include_str!("../game/mechs/Flatbed_Truck.toml"),
     )
     .unwrap();
     template.movement = movement;
-    if movement == BattleVehicleMovement::Hover {
+    if movement == VehicleMovement::Hover {
         template.max_speed = 64.5;
     }
     let maximum = template.max_speed;
@@ -40,7 +40,7 @@ async fn fixture(
     }
     set_battle_heading(&mut world, id, ObjectId(1), 90.0).unwrap();
     for _ in 0..10 {
-        advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
+        advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
     }
     set_battle_speed(
         &mut world,
@@ -59,9 +59,9 @@ async fn fixture(
 #[tokio::test]
 async fn vehicle_slopes_reduce_speed_once_per_step_and_replay_mid_climb() {
     for (movement, reverse) in [
-        (BattleVehicleMovement::Tracked, false),
-        (BattleVehicleMovement::Wheeled, false),
-        (BattleVehicleMovement::Tracked, true),
+        (VehicleMovement::Tracked, false),
+        (VehicleMovement::Wheeled, false),
+        (VehicleMovement::Tracked, true),
     ] {
         let (_dir, config, mut world, id) = fixture(movement, reverse).await;
         let mut changes = 0;
@@ -73,10 +73,10 @@ async fn vehicle_slopes_reduce_speed_once_per_step_and_replay_mid_climb() {
                 .ground_motion_step(
                     unit.motion().unwrap(),
                     Hex::new(Terrain::Grassland, 0),
-                    BattleVehicleMotionRules::STANDARD,
+                    VehicleMotionRules::STANDARD,
                 )
                 .unwrap();
-            let notices = advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
+            let notices = advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
             assert!(notices.is_empty(), "{movement:?} {reverse}: {notices:?}");
             let height = battle_unit_elevation(&world, id).unwrap().unwrap();
             if height != old_height {
@@ -105,21 +105,21 @@ async fn vehicle_slopes_reduce_speed_once_per_step_and_replay_mid_climb() {
 #[tokio::test]
 async fn reverse_slope_checks_replay_success_and_failed_climbs_and_descents() {
     for (movement, uphill, success) in [
-        (BattleVehicleMovement::Wheeled, true, true),
-        (BattleVehicleMovement::Wheeled, true, false),
-        (BattleVehicleMovement::Wheeled, false, false),
-        (BattleVehicleMovement::Hover, true, true),
-        (BattleVehicleMovement::Hover, true, false),
-        (BattleVehicleMovement::Hover, false, false),
+        (VehicleMovement::Wheeled, true, true),
+        (VehicleMovement::Wheeled, true, false),
+        (VehicleMovement::Wheeled, false, false),
+        (VehicleMovement::Hover, true, true),
+        (VehicleMovement::Hover, true, false),
+        (VehicleMovement::Hover, false, false),
     ] {
         let (_dir, config, mut world, id) = fixture(movement, true).await;
         let map = world.btech.vehicles()[&id].position().unwrap().map;
         let seed = (0..=255)
-            .find(|seed| (BattleDice::seeded([*seed; 32]).two_d6() >= 6) == success)
+            .find(|seed| (Dice::seeded([*seed; 32]).two_d6() >= 6) == success)
             .unwrap();
         let mut saved = serde_json::to_value(&world.btech).unwrap();
         saved["vehicles"][id.0.to_string()]["dice"] =
-            serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+            serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
         for row in 0..3 {
             for x in 0..12 {
                 crate::support::set_hex_elevation(
@@ -132,7 +132,7 @@ async fn reverse_slope_checks_replay_success_and_failed_climbs_and_descents() {
         let mut checked = false;
         for _ in 0..100 {
             let before = world.clone();
-            let notices = advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
+            let notices = advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
             if !notices
                 .iter()
                 .any(|notice| notice.text.contains("behind you!"))
@@ -155,11 +155,11 @@ async fn reverse_slope_checks_replay_success_and_failed_climbs_and_descents() {
                     .ground_motion_step(
                         previous.motion().unwrap(),
                         Hex::new(Terrain::Grassland, 0),
-                        BattleVehicleMotionRules::STANDARD,
+                        VehicleMotionRules::STANDARD,
                     )
                     .unwrap();
                 assert_eq!(unit.motion().unwrap().speed, proposed.speed);
-                let mut expected_dice = BattleDice::seeded([seed; 32]);
+                let mut expected_dice = Dice::seeded([seed; 32]);
                 expected_dice.two_d6();
                 assert_eq!(
                     serde_json::to_value(unit).unwrap()["dice"],
@@ -186,7 +186,7 @@ async fn reverse_slope_checks_replay_success_and_failed_climbs_and_descents() {
             let mut restored = persistence::load(&config.database()).await.unwrap();
             assert_eq!(
                 notices,
-                advance_battle_motion(&mut restored, BattleMovementRules::STANDARD).unwrap()
+                advance_battle_motion(&mut restored, MovementRules::STANDARD).unwrap()
             );
             assert_eq!(world.btech, restored.btech);
             world.validate(&config).unwrap();
@@ -203,11 +203,11 @@ async fn reverse_slope_checks_replay_success_and_failed_climbs_and_descents() {
 
 #[tokio::test]
 async fn disabled_reverse_checks_cross_slopes_without_control_dice() {
-    let (_dir, _config, mut world, id) = fixture(BattleVehicleMovement::Wheeled, true).await;
+    let (_dir, _config, mut world, id) = fixture(VehicleMovement::Wheeled, true).await;
     let dice = serde_json::to_value(&world.btech.vehicles()[&id]).unwrap()["dice"].clone();
-    let rules = BattleMovementRules {
+    let rules = MovementRules {
         roll_on_backwalk: false,
-        ..BattleMovementRules::STANDARD
+        ..MovementRules::STANDARD
     };
     let mut climbed = false;
     for _ in 0..100 {
@@ -226,7 +226,7 @@ async fn disabled_reverse_checks_cross_slopes_without_control_dice() {
 
 #[tokio::test]
 async fn two_level_vehicle_cliffs_stop_before_entry() {
-    let (_dir, _config, mut world, id) = fixture(BattleVehicleMovement::Tracked, false).await;
+    let (_dir, _config, mut world, id) = fixture(VehicleMovement::Tracked, false).await;
     let map = world.btech.vehicles()[&id].position().unwrap().map;
     world
         .btech
@@ -239,7 +239,7 @@ async fn two_level_vehicle_cliffs_stop_before_entry() {
     let mut stopped = false;
     for _ in 0..100 {
         let old = world.btech.vehicles()[&id].motion().unwrap().point;
-        let notices = advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
+        let notices = advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
         if notices
             .iter()
             .any(|notice| notice.text.contains("hill too steep"))
@@ -256,7 +256,7 @@ async fn two_level_vehicle_cliffs_stop_before_entry() {
 
 #[tokio::test]
 async fn retained_height_applies_only_to_the_departure_hex() {
-    let (_dir, config, mut world, id) = fixture(BattleVehicleMovement::Tracked, false).await;
+    let (_dir, config, mut world, id) = fixture(VehicleMovement::Tracked, false).await;
     let map = world.btech.vehicles()[&id].position().unwrap().map;
     let mut saved = serde_json::to_value(&world.btech).unwrap();
     saved["vehicles"][id.0.to_string()]["ground_elevation"] = 2.into();
@@ -276,11 +276,11 @@ async fn retained_height_applies_only_to_the_departure_hex() {
             .ground_motion_step(
                 unit.motion().unwrap(),
                 Hex::new(Terrain::Grassland, 0),
-                BattleVehicleMotionRules::STANDARD,
+                VehicleMotionRules::STANDARD,
             )
             .unwrap();
         assert!(
-            advance_battle_motion(&mut world, BattleMovementRules::STANDARD)
+            advance_battle_motion(&mut world, MovementRules::STANDARD)
                 .unwrap()
                 .is_empty()
         );
@@ -303,55 +303,13 @@ async fn retained_height_applies_only_to_the_departure_hex() {
 #[tokio::test]
 async fn vehicle_cliffs_replay_stops_crashes_drops_and_water_destruction() {
     for (movement, downhill, success, skid, water, waterproof) in [
-        (
-            BattleVehicleMovement::Tracked,
-            false,
-            true,
-            false,
-            false,
-            false,
-        ),
-        (
-            BattleVehicleMovement::Tracked,
-            false,
-            false,
-            false,
-            false,
-            false,
-        ),
-        (
-            BattleVehicleMovement::Wheeled,
-            false,
-            false,
-            true,
-            false,
-            false,
-        ),
-        (BattleVehicleMovement::Hover, true, true, true, false, false),
-        (
-            BattleVehicleMovement::Hover,
-            true,
-            false,
-            false,
-            false,
-            false,
-        ),
-        (
-            BattleVehicleMovement::Wheeled,
-            true,
-            false,
-            false,
-            true,
-            false,
-        ),
-        (
-            BattleVehicleMovement::Tracked,
-            true,
-            false,
-            false,
-            true,
-            true,
-        ),
+        (VehicleMovement::Tracked, false, true, false, false, false),
+        (VehicleMovement::Tracked, false, false, false, false, false),
+        (VehicleMovement::Wheeled, false, false, true, false, false),
+        (VehicleMovement::Hover, true, true, true, false, false),
+        (VehicleMovement::Hover, true, false, false, false, false),
+        (VehicleMovement::Wheeled, true, false, false, true, false),
+        (VehicleMovement::Tracked, true, false, false, true, true),
     ] {
         let (_dir, config, mut world, id) = fixture(movement, false).await;
         let map = world.btech.vehicles()[&id].position().unwrap().map;
@@ -360,9 +318,9 @@ async fn vehicle_cliffs_replay_stops_crashes_drops_and_water_destruction() {
         unit["motion"]["speed"] = world.btech.vehicles()[&id].maximum_speed().into();
         unit["piloting_damage"] = if success { 0 } else { 100 }.into();
         let seed = (0..=255)
-            .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 12)
+            .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
             .unwrap();
-        unit["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+        unit["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
         if waterproof {
             unit["definition"]["attributes"]["specials"] = "Waterproof_Tech".into();
         }
@@ -384,9 +342,9 @@ async fn vehicle_cliffs_replay_stops_crashes_drops_and_water_destruction() {
             }
         }
         world.btech = serde_json::from_value(saved).unwrap();
-        let rules = BattleMovementRules {
+        let rules = MovementRules {
             skid_cliff: skid,
-            ..BattleMovementRules::STANDARD
+            ..MovementRules::STANDARD
         };
         let mut encountered = false;
         for _ in 0..100 {
@@ -413,7 +371,7 @@ async fn vehicle_cliffs_replay_stops_crashes_drops_and_water_destruction() {
             if success {
                 assert_eq!(unit.sections(), before.btech.vehicles()[&id].sections());
                 assert!(notices.iter().any(|n| n.text.contains("manage to stop")));
-                let mut dice = BattleDice::seeded([seed; 32]);
+                let mut dice = Dice::seeded([seed; 32]);
                 dice.two_d6();
                 assert_eq!(
                     serde_json::to_value(unit).unwrap()["dice"],
@@ -452,15 +410,15 @@ async fn vehicle_cliffs_replay_stops_crashes_drops_and_water_destruction() {
 #[tokio::test]
 async fn vehicle_auto_fall_skips_only_piloted_downhill_avoidance_and_replays() {
     for (downhill, piloted) in [(true, true), (true, false), (false, true)] {
-        let (_dir, config, mut world, id) = fixture(BattleVehicleMovement::Tracked, false).await;
+        let (_dir, config, mut world, id) = fixture(VehicleMovement::Tracked, false).await;
         set_battle_auto_fall(&mut world, id, ObjectId(1), true).unwrap();
         let map = world.btech.vehicles()[&id].position().unwrap().map;
         let seed = (0..=255)
-            .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 12)
+            .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
             .unwrap();
         let mut saved = serde_json::to_value(&world.btech).unwrap();
         saved["vehicles"][id.0.to_string()]["dice"] =
-            serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+            serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
         if !piloted {
             saved["vehicles"][id.0.to_string()]["pilot"] = serde_json::Value::Null;
         }
@@ -476,7 +434,7 @@ async fn vehicle_auto_fall_skips_only_piloted_downhill_avoidance_and_replays() {
         let mut encountered = false;
         for _ in 0..100 {
             let before = world.clone();
-            let notices = advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
+            let notices = advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
             if !notices
                 .iter()
                 .any(|n| n.text.contains("hill too steep") || n.text.contains("large drop"))
@@ -497,19 +455,15 @@ async fn vehicle_auto_fall_skips_only_piloted_downhill_avoidance_and_replays() {
                 );
                 let mut expected = before.clone();
                 // Both hexes are dry grass: an ordinary fall has the same private dice sequence.
-                let _fall = resolve_battle_vehicle_fall(
-                    &mut expected,
-                    id,
-                    2,
-                    BattleMovementRules::STANDARD.fall,
-                )
-                .unwrap();
+                let _fall =
+                    resolve_battle_vehicle_fall(&mut expected, id, 2, MovementRules::STANDARD.fall)
+                        .unwrap();
                 assert_eq!(
                     serde_json::to_value(unit).unwrap()["dice"],
                     serde_json::to_value(&expected.btech.vehicles()[&id]).unwrap()["dice"]
                 );
             } else {
-                let mut expected = BattleDice::seeded([seed; 32]);
+                let mut expected = Dice::seeded([seed; 32]);
                 if piloted {
                     expected.two_d6();
                 }
@@ -524,7 +478,7 @@ async fn vehicle_auto_fall_skips_only_piloted_downhill_avoidance_and_replays() {
             let mut restored = persistence::load(&config.database()).await.unwrap();
             assert_eq!(
                 notices,
-                advance_battle_motion(&mut restored, BattleMovementRules::STANDARD).unwrap()
+                advance_battle_motion(&mut restored, MovementRules::STANDARD).unwrap()
             );
             assert_eq!(world.btech, restored.btech);
             break;
@@ -536,7 +490,7 @@ async fn vehicle_auto_fall_skips_only_piloted_downhill_avoidance_and_replays() {
 
 #[tokio::test]
 async fn vehicle_auto_fall_native_lua_and_storage_share_control_and_rollback() {
-    let (_dir, config, world, id) = fixture(BattleVehicleMovement::Tracked, false).await;
+    let (_dir, config, world, id) = fixture(VehicleMovement::Tracked, false).await;
     let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
     assert!(
         support::run_text(&scripts, &config, ObjectId(1), 1, "mechprefs").contains("AutoFall: OFF")

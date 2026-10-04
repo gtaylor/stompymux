@@ -1,8 +1,5 @@
 //! Target-independent weapon packet sizing after a successful launch and hit.
-use super::{
-    BattleAmmunitionMode, BattleDice, BattleFireMode, BattleFlechetteDamage, BattleRotaryDamage,
-    BattleWeapon, BattleWeaponSalvo,
-};
+use super::{AmmunitionMode, Dice, FireMode, FlechetteDamage, RotaryDamage, Weapon, WeaponSalvo};
 use anyhow::{Context, Result, ensure};
 
 /// Damage inputs resolved by the enclosing unit or terrain attack.
@@ -11,9 +8,9 @@ pub(super) struct WeaponGroupRequest {
     /// Whether the launching mount is below the waterline.
     pub submerged: bool,
     pub damage_penalty: u8,
-    pub weapon: BattleWeapon,
-    pub ammunition: BattleAmmunitionMode,
-    pub fire_mode: BattleFireMode,
+    pub weapon: Weapon,
+    pub ammunition: AmmunitionMode,
+    pub fire_mode: FireMode,
     pub gatling_damage: Option<u8>,
     pub distance: Option<f64>,
     pub glancing: bool,
@@ -35,7 +32,7 @@ pub(super) struct WeaponGroups {
 /// Consume candidate dice and size packets without assigning hit locations or applying damage.
 pub(super) fn roll_weapon_groups(
     request: WeaponGroupRequest,
-    dice: &mut BattleDice,
+    dice: &mut Dice,
 ) -> Result<WeaponGroups> {
     let WeaponGroupRequest {
         range_damage,
@@ -61,11 +58,9 @@ pub(super) fn roll_weapon_groups(
     let range_energy = range_damage && weapon.gunnery_skill(true) == "Gunnery-Laser";
     let defer_glancing = damage_penalty > 0 || range_energy;
     let burst = fire_mode.rounds_per_cycle() > 1;
-    let cluster_roll = (burst
-        || weapon.profile().missiles > 0
-        || mode == BattleAmmunitionMode::Cluster)
+    let cluster_roll = (burst || weapon.profile().missiles > 0 || mode == AmmunitionMode::Cluster)
         .then(|| {
-            if fire_mode == BattleFireMode::Hotload {
+            if fire_mode == FireMode::Hotload {
                 let first = dice.d6();
                 let second = dice.d6();
                 let third = dice.d6();
@@ -82,13 +77,13 @@ pub(super) fn roll_weapon_groups(
         }]
     } else if weapon.is_streak() && angel_blocked {
         let conventional = match weapon {
-            BattleWeapon::StreakSrm2 | BattleWeapon::ClanStreakSrm2 => BattleWeapon::Srm2,
-            BattleWeapon::StreakSrm4 | BattleWeapon::ClanStreakSrm4 => BattleWeapon::Srm4,
-            BattleWeapon::StreakSrm6 | BattleWeapon::ClanStreakSrm6 => BattleWeapon::Srm6,
-            BattleWeapon::ClanStreakLrm5 => BattleWeapon::ClanLrm5,
-            BattleWeapon::ClanStreakLrm10 => BattleWeapon::ClanLrm10,
-            BattleWeapon::ClanStreakLrm15 => BattleWeapon::ClanLrm15,
-            BattleWeapon::ClanStreakLrm20 => BattleWeapon::ClanLrm20,
+            Weapon::StreakSrm2 | Weapon::ClanStreakSrm2 => Weapon::Srm2,
+            Weapon::StreakSrm4 | Weapon::ClanStreakSrm4 => Weapon::Srm4,
+            Weapon::StreakSrm6 | Weapon::ClanStreakSrm6 => Weapon::Srm6,
+            Weapon::ClanStreakLrm5 => Weapon::ClanLrm5,
+            Weapon::ClanStreakLrm10 => Weapon::ClanLrm10,
+            Weapon::ClanStreakLrm15 => Weapon::ClanLrm15,
+            Weapon::ClanStreakLrm20 => Weapon::ClanLrm20,
             _ => unreachable!("Streak family checked"),
         };
         conventional.damage_groups_for_hit(cluster_roll, glancing, distance)?
@@ -101,24 +96,24 @@ pub(super) fn roll_weapon_groups(
             .map(|damage| mode.armored_damage(damage))
             .collect()
     } else {
-        let guided_mode = if mode == BattleAmmunitionMode::Inferno {
+        let guided_mode = if mode == AmmunitionMode::Inferno {
             // Nominal missile packets supply the hit count; target resolvers apply burning instead.
-            BattleAmmunitionMode::Normal
+            AmmunitionMode::Normal
         } else if guidance_blocked
             && matches!(
                 mode.munition(),
-                BattleAmmunitionMode::Artemis | BattleAmmunitionMode::Narc
+                AmmunitionMode::Artemis | AmmunitionMode::Narc
             )
         {
-            mode.with_munition(BattleAmmunitionMode::Normal)
-        } else if mode.munition() == BattleAmmunitionMode::Narc && target_beacon {
-            mode.with_munition(BattleAmmunitionMode::Artemis)
+            mode.with_munition(AmmunitionMode::Normal)
+        } else if mode.munition() == AmmunitionMode::Narc && target_beacon {
+            mode.with_munition(AmmunitionMode::Artemis)
         } else {
             mode
         };
         // Artemis V improves only its own guided rounds, not Narc beacon homing.
         let artemis_v =
-            artemis_v && guided_mode == mode && mode.munition() == BattleAmmunitionMode::Artemis;
+            artemis_v && guided_mode == mode && mode.munition() == AmmunitionMode::Artemis;
         weapon.damage_groups_for_guided_hit(
             guided_mode,
             cluster_roll,
@@ -166,7 +161,7 @@ pub(super) fn roll_weapon_groups(
         damage.retain(|packet| *packet > 0);
     }
     Ok(WeaponGroups {
-        missile_damage: if mode == BattleAmmunitionMode::Cluster {
+        missile_damage: if mode == AmmunitionMode::Cluster {
             1
         } else {
             weapon.profile_for_ammunition(mode).damage
@@ -179,7 +174,7 @@ pub(super) fn roll_weapon_groups(
 impl WeaponGroups {
     /// A glancing unit hit reduces shell damage as well as the already-adjusted burst count.
     /// Occupied-woods callers defer this step until after per-shell absorption instead.
-    pub(super) fn finish_burst_glancing(&mut self, mode: BattleFireMode, glancing: bool) {
+    pub(super) fn finish_burst_glancing(&mut self, mode: FireMode, glancing: bool) {
         if !glancing || mode.rounds_per_cycle() <= 1 {
             return;
         }
@@ -218,11 +213,7 @@ impl WeaponGroups {
 
     /// Cap defensive kills and rebuild remaining missile packets for every target anatomy.
     /// Returns cluster size and survivors; non-missile packets remain unchanged.
-    pub(super) fn intercept(
-        &mut self,
-        weapon: BattleWeapon,
-        intercepted: u8,
-    ) -> Option<(u16, u16)> {
+    pub(super) fn intercept(&mut self, weapon: Weapon, intercepted: u8) -> Option<(u16, u16)> {
         if weapon.profile().missiles == 0 {
             return None;
         }
@@ -249,12 +240,12 @@ mod tests {
     /// Artemis V adds three to the cluster roll, only for its own guided rounds.
     #[test]
     fn artemis_v_adds_one_more_to_guided_clusters() {
-        let weapon = BattleWeapon::Lrm20;
+        let weapon = Weapon::Lrm20;
         for roll in 2..=9 {
             assert_eq!(
                 weapon
                     .damage_groups_for_guided_hit(
-                        BattleAmmunitionMode::Artemis,
+                        AmmunitionMode::Artemis,
                         Some(roll),
                         false,
                         None,
@@ -264,7 +255,7 @@ mod tests {
                     .unwrap(),
                 weapon
                     .damage_groups_for_ammunition_hit(
-                        BattleAmmunitionMode::Normal,
+                        AmmunitionMode::Normal,
                         Some(roll + 3),
                         false,
                         None
@@ -280,7 +271,7 @@ mod tests {
                     damage_penalty: 0,
                     weapon,
                     ammunition,
-                    fire_mode: BattleFireMode::Normal,
+                    fire_mode: FireMode::Normal,
                     gatling_damage: None,
                     distance: Some(7.0),
                     glancing: false,
@@ -290,19 +281,19 @@ mod tests {
                     artemis_v,
                 };
             let roll = |request| {
-                roll_weapon_groups(request, &mut BattleDice::seeded([seed; 32]))
+                roll_weapon_groups(request, &mut Dice::seeded([seed; 32]))
                     .unwrap()
                     .damage
             };
             // Narc homing keeps the Artemis IV bonus even on an Artemis V chassis.
             assert_eq!(
-                roll(request(BattleAmmunitionMode::Narc, true, true, false)),
-                roll(request(BattleAmmunitionMode::Artemis, false, false, false))
+                roll(request(AmmunitionMode::Narc, true, true, false)),
+                roll(request(AmmunitionMode::Artemis, false, false, false))
             );
             // ECM blocks Artemis V just as it blocks Artemis IV.
             assert_eq!(
-                roll(request(BattleAmmunitionMode::Artemis, true, false, true)),
-                roll(request(BattleAmmunitionMode::Normal, false, false, false))
+                roll(request(AmmunitionMode::Artemis, true, false, true)),
+                roll(request(AmmunitionMode::Normal, false, false, false))
             );
         }
     }
@@ -312,15 +303,15 @@ mod tests {
     fn cluster_accounting_preserves_direct_hotload_and_energy_rolls() {
         for seed in 0..=255 {
             for (weapon, fire_mode, count) in [
-                (BattleWeapon::Lrm20, BattleFireMode::Normal, 1),
-                (BattleWeapon::Lrm20, BattleFireMode::Hotload, 0),
-                (BattleWeapon::MediumLaser, BattleFireMode::Normal, 0),
+                (Weapon::Lrm20, FireMode::Normal, 1),
+                (Weapon::Lrm20, FireMode::Hotload, 0),
+                (Weapon::MediumLaser, FireMode::Normal, 0),
             ] {
-                let mut dice = BattleDice::seeded([seed; 32]);
+                let mut dice = Dice::seeded([seed; 32]);
                 let mut expected = dice.clone();
-                let roll = if weapon == BattleWeapon::MediumLaser {
+                let roll = if weapon == Weapon::MediumLaser {
                     None
-                } else if fire_mode == BattleFireMode::Hotload {
+                } else if fire_mode == FireMode::Hotload {
                     let a = expected.d6();
                     let b = expected.d6();
                     let c = expected.d6();
@@ -334,7 +325,7 @@ mod tests {
                         submerged: false,
                         damage_penalty: 0,
                         weapon,
-                        ammunition: BattleAmmunitionMode::Normal,
+                        ammunition: AmmunitionMode::Normal,
                         fire_mode,
                         gatling_damage: None,
                         distance: Some(7.0),
@@ -364,20 +355,20 @@ mod tests {
     #[test]
     fn missile_cover_preserves_payload_grouping_and_consumes_no_dice() {
         for (weapon, mode) in [
-            (BattleWeapon::Lrm5, BattleAmmunitionMode::Normal),
-            (BattleWeapon::Lrm20, BattleAmmunitionMode::Normal),
-            (BattleWeapon::Srm2, BattleAmmunitionMode::Normal),
-            (BattleWeapon::Srm6, BattleAmmunitionMode::Normal),
-            (BattleWeapon::StreakSrm6, BattleAmmunitionMode::Normal),
-            (BattleWeapon::Thunderbolt20, BattleAmmunitionMode::Normal),
-            (BattleWeapon::Mml5, BattleAmmunitionMode::Normal),
-            (BattleWeapon::Mml5, BattleAmmunitionMode::MmlLrm),
+            (Weapon::Lrm5, AmmunitionMode::Normal),
+            (Weapon::Lrm20, AmmunitionMode::Normal),
+            (Weapon::Srm2, AmmunitionMode::Normal),
+            (Weapon::Srm6, AmmunitionMode::Normal),
+            (Weapon::StreakSrm6, AmmunitionMode::Normal),
+            (Weapon::Thunderbolt20, AmmunitionMode::Normal),
+            (Weapon::Mml5, AmmunitionMode::Normal),
+            (Weapon::Mml5, AmmunitionMode::MmlLrm),
         ] {
             for seed in 0..=255 {
                 for glancing in [false, true] {
                     for intercepted in [0, 1, 255] {
                         for reduction in [2, 4] {
-                            let mut dice = BattleDice::seeded([seed; 32]);
+                            let mut dice = Dice::seeded([seed; 32]);
                             let mut groups = roll_weapon_groups(
                                 WeaponGroupRequest {
                                     submerged: false,
@@ -385,7 +376,7 @@ mod tests {
                                     damage_penalty: 0,
                                     weapon,
                                     ammunition: mode,
-                                    fire_mode: BattleFireMode::Normal,
+                                    fire_mode: FireMode::Normal,
                                     gatling_damage: None,
                                     distance: Some(7.0),
                                     glancing,
@@ -426,19 +417,19 @@ mod tests {
     #[test]
     fn underwater_energy_damage_uses_water_bands_and_missing_long_range() {
         for (weapon, distance, penalty, expected) in [
-            (BattleWeapon::Ppc, 1.0, 0, 11),
-            (BattleWeapon::Ppc, 1.01, 0, 10),
-            (BattleWeapon::Ppc, 7.0, 0, 10),
-            (BattleWeapon::Ppc, 7.01, 0, 9),
-            (BattleWeapon::Ppc, 10.0, 0, 9),
-            (BattleWeapon::Ppc, 10.01, 0, 5),
-            (BattleWeapon::Ppc, 10.01, 2, 4),
-            (BattleWeapon::SmallLaser, 1.0, 0, 4),
-            (BattleWeapon::SmallLaser, 1.01, 0, 1),
-            (BattleWeapon::SmallLaser, 2.0, 0, 1),
+            (Weapon::Ppc, 1.0, 0, 11),
+            (Weapon::Ppc, 1.01, 0, 10),
+            (Weapon::Ppc, 7.0, 0, 10),
+            (Weapon::Ppc, 7.01, 0, 9),
+            (Weapon::Ppc, 10.0, 0, 9),
+            (Weapon::Ppc, 10.01, 0, 5),
+            (Weapon::Ppc, 10.01, 2, 4),
+            (Weapon::SmallLaser, 1.0, 0, 4),
+            (Weapon::SmallLaser, 1.01, 0, 1),
+            (Weapon::SmallLaser, 2.0, 0, 1),
         ] {
             for glancing in [false, true] {
-                let mut dice = BattleDice::seeded([3; 32]);
+                let mut dice = Dice::seeded([3; 32]);
                 let before = dice.clone();
                 let groups = roll_weapon_groups(
                     WeaponGroupRequest {
@@ -446,8 +437,8 @@ mod tests {
                         range_damage: true,
                         damage_penalty: penalty,
                         weapon,
-                        ammunition: BattleAmmunitionMode::Normal,
-                        fire_mode: BattleFireMode::Normal,
+                        ammunition: AmmunitionMode::Normal,
+                        fire_mode: FireMode::Normal,
                         gatling_damage: None,
                         distance: Some(distance),
                         glancing,
@@ -487,16 +478,16 @@ mod tests {
         ] {
             for enabled in [false, true] {
                 for glancing in [false, true] {
-                    let mut dice = BattleDice::seeded([3; 32]);
+                    let mut dice = Dice::seeded([3; 32]);
                     let before = dice.clone();
                     let groups = roll_weapon_groups(
                         WeaponGroupRequest {
                             submerged: false,
                             range_damage: enabled,
                             damage_penalty: 0,
-                            weapon: BattleWeapon::Ppc,
-                            ammunition: BattleAmmunitionMode::Normal,
-                            fire_mode: BattleFireMode::Normal,
+                            weapon: Weapon::Ppc,
+                            ammunition: AmmunitionMode::Normal,
+                            fire_mode: FireMode::Normal,
                             gatling_damage: None,
                             distance: Some(distance),
                             glancing,
@@ -523,9 +514,9 @@ mod tests {
         }
         // A ballistic weapon keeps its own range profile, and a degraded energy hit floors at one.
         for (weapon, penalty, distance, expected) in [
-            (BattleWeapon::HeavyGaussRifle, 0, 1.0, 25),
-            (BattleWeapon::Ppc, 1, 19.0, 4),
-            (BattleWeapon::SmallLaser, 1, 4.0, 1),
+            (Weapon::HeavyGaussRifle, 0, 1.0, 25),
+            (Weapon::Ppc, 1, 19.0, 4),
+            (Weapon::SmallLaser, 1, 4.0, 1),
         ] {
             let groups = roll_weapon_groups(
                 WeaponGroupRequest {
@@ -533,8 +524,8 @@ mod tests {
                     range_damage: true,
                     damage_penalty: penalty,
                     weapon,
-                    ammunition: BattleAmmunitionMode::Normal,
-                    fire_mode: BattleFireMode::Normal,
+                    ammunition: AmmunitionMode::Normal,
+                    fire_mode: FireMode::Normal,
                     gatling_damage: None,
                     distance: Some(distance),
                     glancing: false,
@@ -543,7 +534,7 @@ mod tests {
                     target_beacon: false,
                     artemis_v: false,
                 },
-                &mut BattleDice::seeded([0; 32]),
+                &mut Dice::seeded([0; 32]),
             )
             .unwrap();
             assert_eq!(groups.damage, vec![expected]);
@@ -554,15 +545,15 @@ mod tests {
     #[test]
     fn energy_degradation_precedes_glancing_packet_rounding() {
         for (glancing, expected) in [(false, 9), (true, 5)] {
-            let mut dice = BattleDice::seeded([0; 32]);
+            let mut dice = Dice::seeded([0; 32]);
             let before = dice.clone();
             let groups = roll_weapon_groups(
                 WeaponGroupRequest {
                     submerged: false,
                     range_damage: false,
-                    weapon: BattleWeapon::Ppc,
-                    ammunition: BattleAmmunitionMode::Normal,
-                    fire_mode: BattleFireMode::Normal,
+                    weapon: Weapon::Ppc,
+                    ammunition: AmmunitionMode::Normal,
+                    fire_mode: FireMode::Normal,
                     gatling_damage: None,
                     damage_penalty: 1,
                     distance: Some(4.0),
@@ -589,15 +580,15 @@ mod streak_lrm_tests {
     #[test]
     fn streak_lrm_confusion_and_cluster_packets() {
         for (weapon, conventional) in [
-            (BattleWeapon::ClanStreakLrm5, BattleWeapon::ClanLrm5),
-            (BattleWeapon::ClanStreakLrm10, BattleWeapon::ClanLrm10),
-            (BattleWeapon::ClanStreakLrm15, BattleWeapon::ClanLrm15),
-            (BattleWeapon::ClanStreakLrm20, BattleWeapon::ClanLrm20),
+            (Weapon::ClanStreakLrm5, Weapon::ClanLrm5),
+            (Weapon::ClanStreakLrm10, Weapon::ClanLrm10),
+            (Weapon::ClanStreakLrm15, Weapon::ClanLrm15),
+            (Weapon::ClanStreakLrm20, Weapon::ClanLrm20),
         ] {
             for seed in 0..=255 {
                 for confused in [false, true] {
                     for glancing in [false, true] {
-                        let mut dice = BattleDice::seeded([seed; 32]);
+                        let mut dice = Dice::seeded([seed; 32]);
                         let mut expected_dice = dice.clone();
                         let roll = expected_dice.two_d6();
                         let groups = roll_weapon_groups(
@@ -606,8 +597,8 @@ mod streak_lrm_tests {
                                 range_damage: false,
                                 damage_penalty: 0,
                                 weapon,
-                                ammunition: BattleAmmunitionMode::Normal,
-                                fire_mode: BattleFireMode::Normal,
+                                ammunition: AmmunitionMode::Normal,
+                                fire_mode: FireMode::Normal,
                                 gatling_damage: None,
                                 distance: Some(7.0),
                                 glancing,

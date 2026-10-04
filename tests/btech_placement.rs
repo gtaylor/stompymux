@@ -1,7 +1,7 @@
 //! Battlefield placement, persisted containment, failure atomicity and map destruction.
 use crate::support;
 use stompymux_rs::{
-    BattleTemplate, Flag, Kind, MapAsset, ObjectId, Scripts, create_battle_map, create_battle_unit,
+    Flag, Kind, MapAsset, MechTemplate, ObjectId, Scripts, create_battle_map, create_battle_unit,
     dbck, persistence, place_battle_unit, reload_battle_map, remove_battle_unit,
 };
 const JENNER: &str = include_str!("fixtures/btech/mechs/JR7-D.toml");
@@ -27,7 +27,7 @@ async fn placement_round_trips_coordinates_and_containment_without_shared_unit_s
         create_battle_unit(
             &mut world,
             id,
-            BattleTemplate::parse("JR7-D", JENNER).unwrap(),
+            MechTemplate::parse("JR7-D", JENNER).unwrap(),
         )
         .unwrap();
         ids.push(id);
@@ -114,7 +114,7 @@ async fn placement_callbacks_roll_back_and_native_commands_report_coordinates() 
     create_battle_unit(
         &mut world,
         id,
-        BattleTemplate::parse("JR7-D", JENNER).unwrap(),
+        MechTemplate::parse("JR7-D", JENNER).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
@@ -221,7 +221,7 @@ async fn map_slots_control_occupant_order_and_reuse() {
         create_battle_unit(
             &mut world,
             id,
-            BattleTemplate::parse("JR7-D", JENNER).unwrap(),
+            MechTemplate::parse("JR7-D", JENNER).unwrap(),
         )
         .unwrap();
         ids.push(id);

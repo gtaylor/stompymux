@@ -1,5 +1,5 @@
 //! Incendiary autocannon ammunition controls.
-use super::{AmmunitionFeedback, BattleAmmunitionMode};
+use super::{AmmunitionFeedback, AmmunitionMode};
 use crate::{ObjectId, World};
 use anyhow::{Result, ensure};
 
@@ -9,17 +9,17 @@ pub fn toggle_incendiary(
     id: ObjectId,
     pilot: ObjectId,
     index: usize,
-) -> Result<BattleAmmunitionMode> {
+) -> Result<AmmunitionMode> {
     let ready = super::weapon_controls::ready_weapon(world, id, pilot, index)?;
     ensure!(
-        BattleAmmunitionMode::Incendiary.supports(ready.weapon),
+        AmmunitionMode::Incendiary.supports(ready.weapon),
         "That weapon cannot fire Incendiary rounds!"
     );
     Ok(super::weapon_controls::toggle_ammunition_mode(
         world,
         id,
         index,
-        BattleAmmunitionMode::Incendiary,
+        AmmunitionMode::Incendiary,
     ))
 }
 

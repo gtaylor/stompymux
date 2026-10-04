@@ -2,9 +2,9 @@
 use stompymux_rs::*;
 
 /// Four installed gyro slots with the explicit hardened technology flag.
-fn definition() -> BattleTemplate {
+fn definition() -> MechTemplate {
     let mut template =
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
     template
         .attributes
         .insert("specials".into(), "HDGYRO".into());
@@ -14,19 +14,19 @@ fn definition() -> BattleTemplate {
 /// All slot orders preserve the protected first hit and require three hits to lose mobility.
 #[test]
 fn hardened_gyro_mass_and_damage_thresholds() {
-    let ordinary = BattleUnit::from_template(
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+    let ordinary = Mech::from_template(
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
-    let unit = BattleUnit::from_template(definition()).unwrap();
-    assert_eq!(unit.gyro(), BattleGyro::Hardened);
+    let unit = Mech::from_template(definition()).unwrap();
+    assert_eq!(unit.gyro(), Gyro::Hardened);
     assert_eq!(unit.mass().unwrap().gyro, ordinary.mass().unwrap().gyro * 2);
     let slots: Vec<_> = unit
         .loadout()
         .unwrap()
         .systems
         .iter()
-        .filter(|p| p.system == BattleSystem::Gyro)
+        .filter(|p| p.system == System::Gyro)
         .map(|p| p.location)
         .collect();
     for offset in 0..4 {
@@ -34,7 +34,7 @@ fn hardened_gyro_mass_and_damage_thresholds() {
         for count in 1..=4 {
             let slot = slots[(offset + count - 1) % 4];
             damaged.destroy_critical(slot).unwrap();
-            assert_eq!(damaged.system_hits(BattleSystem::Gyro), count as u8);
+            assert_eq!(damaged.system_hits(System::Gyro), count as u8);
             assert_eq!(damaged.gyro_damage(), (count - 1) as u8);
             assert_eq!(
                 damaged.mobility().piloting_modifier,
@@ -49,7 +49,7 @@ fn hardened_gyro_mass_and_damage_thresholds() {
                 }
             );
             assert_eq!(damaged.mass().unwrap().gyro, unit.mass().unwrap().gyro);
-            let restored: BattleUnit =
+            let restored: Mech =
                 serde_json::from_value(serde_json::to_value(&damaged).unwrap()).unwrap();
             assert_eq!(restored.gyro_damage(), damaged.gyro_damage());
         }
@@ -57,30 +57,25 @@ fn hardened_gyro_mass_and_damage_thresholds() {
     let mut incomplete = definition();
     incomplete
         .sections
-        .get_mut(&BattleSection::CenterTorso)
+        .get_mut(&MechSection::CenterTorso)
         .unwrap()
         .criticals
         .remove(&3);
-    assert!(BattleUnit::from_template(incomplete).is_err());
+    assert!(Mech::from_template(incomplete).is_err());
 }
 
 /// Alternative gyro installations retain ordinary two-hit failure and their distinct mass.
 #[test]
 fn xl_and_compact_gyro_construction_damage_and_restore() {
-    let standard = BattleUnit::from_template(
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+    let standard = Mech::from_template(
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     for (flag, family, count, mass) in [
-        (
-            "XLGYRO",
-            BattleGyro::Xl,
-            6,
-            standard.mass().unwrap().gyro / 2,
-        ),
+        ("XLGYRO", Gyro::Xl, 6, standard.mass().unwrap().gyro / 2),
         (
             "CGYRO",
-            BattleGyro::Compact,
+            Gyro::Compact,
             2,
             standard.mass().unwrap().gyro * 3 / 2,
         ),
@@ -89,23 +84,20 @@ fn xl_and_compact_gyro_construction_damage_and_restore() {
         template.attributes.insert("specials".into(), flag.into());
         let center = template
             .sections
-            .get_mut(&BattleSection::CenterTorso)
+            .get_mut(&MechSection::CenterTorso)
             .unwrap();
-        if family == BattleGyro::Compact {
+        if family == Gyro::Compact {
             center.criticals.remove(&5);
             center.criticals.remove(&6);
         } else {
             let gyro = center.criticals[&3].clone();
             let launcher = center.criticals.insert(10, gyro.clone()).unwrap();
             let jet = center.criticals.insert(11, gyro).unwrap();
-            let torso = template
-                .sections
-                .get_mut(&BattleSection::LeftTorso)
-                .unwrap();
+            let torso = template.sections.get_mut(&MechSection::LeftTorso).unwrap();
             torso.criticals.insert(4, launcher);
             torso.criticals.insert(5, jet);
         }
-        let unit = BattleUnit::from_template(template.clone()).unwrap();
+        let unit = Mech::from_template(template.clone()).unwrap();
         assert_eq!(unit.gyro(), family);
         assert_eq!(unit.mass().unwrap().gyro, mass);
         let slots: Vec<_> = unit
@@ -113,7 +105,7 @@ fn xl_and_compact_gyro_construction_damage_and_restore() {
             .unwrap()
             .systems
             .iter()
-            .filter(|part| part.system == BattleSystem::Gyro)
+            .filter(|part| part.system == System::Gyro)
             .map(|part| part.location)
             .collect();
         assert_eq!(slots.len(), count);
@@ -134,7 +126,7 @@ fn xl_and_compact_gyro_construction_damage_and_restore() {
                     }
                 );
                 assert_eq!(damaged.mass().unwrap().gyro, mass);
-                let restored: BattleUnit =
+                let restored: Mech =
                     serde_json::from_value(serde_json::to_value(&damaged).unwrap()).unwrap();
                 assert_eq!(restored.gyro(), family);
                 assert_eq!(restored.gyro_damage(), hit as u8);
@@ -148,12 +140,12 @@ fn xl_and_compact_gyro_construction_damage_and_restore() {
             .unwrap()
             .criticals
             .remove(&slots[0].slot);
-        assert!(BattleUnit::from_template(incomplete).is_err());
+        assert!(Mech::from_template(incomplete).is_err());
         template
             .attributes
             .insert("specials".into(), format!("{flag} HDGYRO"));
         assert!(
-            BattleUnit::from_template(template)
+            Mech::from_template(template)
                 .unwrap_err()
                 .to_string()
                 .contains("Conflicting gyro")
@@ -169,18 +161,18 @@ fn hardened_gyro_piloting_preserves_damage_and_recalculation_order() {
         include_str!("../game/mechs/GOL-1H.toml"),
     ] {
         for hardened in [false, true] {
-            let mut template = BattleTemplate::parse("test", source).unwrap();
+            let mut template = MechTemplate::parse("test", source).unwrap();
             if hardened {
                 let specials = template.attributes.entry("specials".into()).or_default();
                 specials.push_str(" HDGYRO");
             }
-            let base = BattleUnit::from_template(template).unwrap();
+            let base = Mech::from_template(template).unwrap();
             let gyro: Vec<_> = base
                 .loadout()
                 .unwrap()
                 .systems
                 .iter()
-                .filter(|part| part.system == BattleSystem::Gyro)
+                .filter(|part| part.system == System::Gyro)
                 .map(|part| part.location)
                 .collect();
             let legs = base.chassis().legs();
@@ -211,8 +203,7 @@ fn hardened_gyro_piloting_preserves_damage_and_recalculation_order() {
                 unit.mobility().piloting_modifier,
                 if hardened { 6 } else { 4 }
             );
-            let saved: BattleUnit =
-                serde_json::from_value(serde_json::to_value(&unit).unwrap()).unwrap();
+            let saved: Mech = serde_json::from_value(serde_json::to_value(&unit).unwrap()).unwrap();
             assert_eq!(saved.mobility(), unit.mobility());
             assert_eq!(saved.gyro_damage(), unit.gyro_damage());
             unit.destroy_critical(second_leg).unwrap();
@@ -235,29 +226,28 @@ fn hardened_gyro_recalculation_follows_section_loss_anatomy() {
         include_str!("../game/mechs/JR7-D.toml"),
         include_str!("../game/mechs/GOL-1H.toml"),
     ] {
-        let mut template = BattleTemplate::parse("test", source).unwrap();
+        let mut template = MechTemplate::parse("test", source).unwrap();
         template
             .attributes
             .entry("specials".into())
             .or_default()
             .push_str(" HDGYRO");
-        let base = BattleUnit::from_template(template).unwrap();
+        let base = Mech::from_template(template).unwrap();
         let gyro = base
             .loadout()
             .unwrap()
             .systems
             .iter()
-            .find(|part| part.system == BattleSystem::Gyro)
+            .find(|part| part.system == System::Gyro)
             .unwrap()
             .location;
-        for section in [BattleSection::LeftArm, BattleSection::LeftTorso] {
+        for section in [MechSection::LeftArm, MechSection::LeftTorso] {
             let mut control = base.clone();
-            control.damage_phase(section, u16::MAX, BattleDamagePhase::Internal);
+            control.damage_phase(section, u16::MAX, DamagePhase::Internal);
             let mut unit = base.clone();
             unit.destroy_critical(gyro).unwrap();
-            unit.damage_phase(section, u16::MAX, BattleDamagePhase::Internal);
-            let recalculated =
-                base.chassis().is_leg(section) || section == BattleSection::LeftTorso;
+            unit.damage_phase(section, u16::MAX, DamagePhase::Internal);
+            let recalculated = base.chassis().is_leg(section) || section == MechSection::LeftTorso;
             assert_eq!(
                 unit.mobility().piloting_modifier,
                 control.mobility().piloting_modifier + if recalculated { 2 } else { 0 }

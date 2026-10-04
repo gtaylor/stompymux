@@ -1,5 +1,5 @@
 //! Player controls for gatling firing of machine guns.
-use super::{BattleFireMode, FireModeFeedback};
+use super::{FireMode, FireModeFeedback};
 use crate::{ObjectId, World};
 use anyhow::{Result, ensure};
 
@@ -9,7 +9,7 @@ pub fn toggle_gatling(
     id: ObjectId,
     pilot: ObjectId,
     index: usize,
-) -> Result<BattleFireMode> {
+) -> Result<FireMode> {
     let ready = super::weapon_controls::ready_weapon(world, id, pilot, index)?;
     ensure!(
         ready.weapon.supports_gatling(),
@@ -19,7 +19,7 @@ pub fn toggle_gatling(
         world,
         id,
         index,
-        BattleFireMode::Gatling,
+        FireMode::Gatling,
     ))
 }
 
@@ -51,7 +51,7 @@ pub(super) fn prepare(
     world: &World,
     shooter: ObjectId,
     index: usize,
-    dice: &mut super::BattleDice,
+    dice: &mut super::Dice,
 ) -> Result<GatlingPreparation> {
     let unit = world
         .btech
@@ -59,7 +59,7 @@ pub(super) fn prepare(
         .ok_or_else(|| anyhow::anyhow!("Shooter is unavailable"))?;
     let (mode, rounds) = super::with_unit!(unit, |unit| {
         let mode = unit.fire_mode(index)?;
-        let rounds = if mode == BattleFireMode::Gatling {
+        let rounds = if mode == FireMode::Gatling {
             unit.ammunition_feed(index, 18)?
                 .iter()
                 .map(|draw| draw.rounds)
@@ -69,7 +69,7 @@ pub(super) fn prepare(
         };
         (mode, rounds)
     });
-    let damage = if mode == BattleFireMode::Gatling {
+    let damage = if mode == FireMode::Gatling {
         Some(roll_damage(rounds, dice)?)
     } else {
         None
@@ -78,7 +78,7 @@ pub(super) fn prepare(
 }
 
 /// Roll supply-limited gatling damage before the attack roll for either unit class.
-pub(super) fn roll_damage(rounds: u16, dice: &mut super::BattleDice) -> Result<u8> {
+pub(super) fn roll_damage(rounds: u16, dice: &mut super::Dice) -> Result<u8> {
     ensure!(rounds > 0, "No usable ammunition");
     Ok(dice.d6().min((rounds.min(18) / 3).max(1) as u8))
 }

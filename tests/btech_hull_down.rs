@@ -22,7 +22,7 @@ async fn fixture(
     let id = world.create(&config, "Quad".into(), Kind::Thing);
     let shooter = world.create(&config, "Observer".into(), Kind::Thing);
     for (id, source, x) in [(id, source, 2), (shooter, observer, 0)] {
-        BattleUnitTemplate::parse("test", source)
+        UnitTemplate::parse("test", source)
             .unwrap()
             .create(&mut world, id)
             .unwrap();
@@ -152,17 +152,11 @@ async fn shutdown_cancels_changes_preserves_completed_posture_and_falls_clear_it
                 advance_battle_units(&mut world, 0);
             }
         }
-        stop_battle_unit(
-            &mut world,
-            id,
-            ObjectId(1),
-            BattleMovementRules::STANDARD.fall,
-        )
-        .unwrap();
+        stop_battle_unit(&mut world, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
         let state = world.btech.constructed_units()[&id].hull_down();
         assert_eq!(
             state,
-            BattleHullDownState {
+            HullDownState {
                 active: complete,
                 pending: None,
                 remaining: 0
@@ -170,11 +164,10 @@ async fn shutdown_cancels_changes_preserves_completed_posture_and_falls_clear_it
         );
         world.validate(&config).unwrap();
         if complete {
-            let _ =
-                resolve_battle_fall(&mut world, id, 1, BattleMovementRules::STANDARD.fall).unwrap();
+            let _ = resolve_battle_fall(&mut world, id, 1, MovementRules::STANDARD.fall).unwrap();
             assert_eq!(
                 world.btech.constructed_units()[&id].hull_down(),
-                BattleHullDownState::default()
+                HullDownState::default()
             );
             world.validate(&config).unwrap();
         }
@@ -251,10 +244,10 @@ async fn hull_down_cover_is_shared_between_attackers_by_sensors_and_sight() {
         let cover = i16::from(terrain.woods) + i16::from(terrain.target_woods) + 3;
         // The sensor band reaches first; with it switched off, sight carries the same cover.
         for (sensors, channel) in [
-            (true, BattleDetectionChannel::Sensors),
-            (false, BattleDetectionChannel::Sight),
+            (true, DetectionChannel::Sensors),
+            (false, DetectionChannel::Sight),
         ] {
-            set_battle_map_perception(&mut world, map, BattleMapPerceptionFlag::Sensors, sensors)
+            set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, sensors)
                 .unwrap();
             let before = battle_perceive(&world, shooter, id).unwrap().unwrap();
             assert_eq!((before.channel, before.aim_modifier), (channel, cover));
@@ -270,7 +263,7 @@ async fn hull_down_cover_is_shared_between_attackers_by_sensors_and_sight() {
                 advance_battle_units(&mut world, 0);
             }
         }
-        set_battle_map_perception(&mut world, map, BattleMapPerceptionFlag::Sensors, true).unwrap();
+        set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, true).unwrap();
         // Open ground removes the bonus, even though the unit remains lowered.
         world
             .btech
@@ -302,13 +295,7 @@ async fn pickup_clears_completed_quad_cover() {
     let (_dir, config, mut world, id, carrier) =
         fixture(QUAD, include_str!("fixtures/btech/mechs/AS7-D.toml")).await;
     lower(&mut world, id);
-    stop_battle_unit(
-        &mut world,
-        id,
-        ObjectId(1),
-        BattleMovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut world, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
     let position = world.btech.constructed_units()[&id].position().unwrap();
     place_battle_unit(
         &mut world,
@@ -340,12 +327,12 @@ async fn pickup_clears_completed_quad_cover() {
         carrier,
         ObjectId(1),
         id,
-        BattleMovementRules::STANDARD.fall,
+        MovementRules::STANDARD.fall,
     )
     .unwrap();
     assert_eq!(
         world.btech.constructed_units()[&id].hull_down(),
-        BattleHullDownState::default()
+        HullDownState::default()
     );
     world.validate(&config).unwrap();
 }

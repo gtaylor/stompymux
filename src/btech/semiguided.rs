@@ -1,15 +1,15 @@
 //! Semi-guided missile ammunition controls and friendly TAG target-movement assistance.
-use super::{AmmunitionFeedback, BattleAmmunitionMode};
+use super::{AmmunitionFeedback, AmmunitionMode};
 use crate::{ObjectId, World};
 use anyhow::{Result, ensure};
 
 /// Semi-guided ammunition's use of friendly TAG designation.
-pub(crate) trait BattleSemiGuidedAim {
+pub(crate) trait SemiGuidedAim {
     /// Friendly TAG from another unit removes positive movement penalties but preserves negative modifiers.
     fn tag_movement_modifier(self, movement: i8, friendly_other_tag: bool) -> i8;
 }
 
-impl BattleSemiGuidedAim for BattleAmmunitionMode {
+impl SemiGuidedAim for AmmunitionMode {
     fn tag_movement_modifier(self, movement: i8, friendly_other_tag: bool) -> i8 {
         if self.munition() == Self::SemiGuided && friendly_other_tag {
             return movement.min(0);
@@ -24,22 +24,17 @@ pub fn toggle_semiguided(
     id: ObjectId,
     pilot: ObjectId,
     index: usize,
-) -> Result<BattleAmmunitionMode> {
+) -> Result<AmmunitionMode> {
     super::weapon_controls::ready_weapon(world, id, pilot, index)?;
     ensure!(
-        super::weapon_controls::selectable_munition(
-            world,
-            id,
-            index,
-            BattleAmmunitionMode::SemiGuided
-        ),
+        super::weapon_controls::selectable_munition(world, id, index, AmmunitionMode::SemiGuided),
         "That weapon cannot fire Sguided missiles!"
     );
     Ok(super::weapon_controls::toggle_ammunition_mode(
         world,
         id,
         index,
-        BattleAmmunitionMode::SemiGuided,
+        AmmunitionMode::SemiGuided,
     ))
 }
 
@@ -62,15 +57,15 @@ mod tests {
     fn semiguided_tag_movement_preserves_negative_modifiers() {
         for movement in [-4, -2, 0, 1, 3, 7] {
             assert_eq!(
-                BattleAmmunitionMode::SemiGuided.tag_movement_modifier(movement, true),
+                AmmunitionMode::SemiGuided.tag_movement_modifier(movement, true),
                 movement.min(0)
             );
             assert_eq!(
-                BattleAmmunitionMode::SemiGuided.tag_movement_modifier(movement, false),
+                AmmunitionMode::SemiGuided.tag_movement_modifier(movement, false),
                 movement
             );
             assert_eq!(
-                BattleAmmunitionMode::Normal.tag_movement_modifier(movement, true),
+                AmmunitionMode::Normal.tag_movement_modifier(movement, true),
                 movement
             );
         }

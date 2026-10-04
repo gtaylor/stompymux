@@ -4,25 +4,22 @@ use stompymux_rs::*;
 #[test]
 fn inferno_ammunition_templates_preserve_capacity_modes_and_mass() {
     for weapon in [
-        BattleWeapon::Srm2,
-        BattleWeapon::Srm4,
-        BattleWeapon::Srm6,
-        BattleWeapon::StreakSrm2,
-        BattleWeapon::StreakSrm4,
-        BattleWeapon::StreakSrm6,
-        BattleWeapon::ClanSrm4,
-        BattleWeapon::ClanStreakSrm6,
-        BattleWeapon::Lrm20,
-        BattleWeapon::NarcBeacon,
+        Weapon::Srm2,
+        Weapon::Srm4,
+        Weapon::Srm6,
+        Weapon::StreakSrm2,
+        Weapon::StreakSrm4,
+        Weapon::StreakSrm6,
+        Weapon::ClanSrm4,
+        Weapon::ClanStreakSrm6,
+        Weapon::Lrm20,
+        Weapon::NarcBeacon,
     ] {
         for half in [false, true] {
             let mut definition =
-                BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
                     .unwrap();
-            let arm = definition
-                .sections
-                .get_mut(&BattleSection::LeftArm)
-                .unwrap();
+            let arm = definition.sections.get_mut(&MechSection::LeftArm).unwrap();
             let mut part = arm.criticals[&2].clone();
             part.equipment = weapon.name().into();
             part.modes = vec!["Inferno".into()];
@@ -32,7 +29,7 @@ fn inferno_ammunition_templates_preserve_capacity_modes_and_mass() {
             }
             let bin = definition
                 .sections
-                .get_mut(&BattleSection::RightTorso)
+                .get_mut(&MechSection::RightTorso)
                 .unwrap()
                 .criticals
                 .get_mut(&0)
@@ -43,7 +40,7 @@ fn inferno_ammunition_templates_preserve_capacity_modes_and_mass() {
             if half {
                 bin.modes.push("Halfton".into());
             }
-            let unit = BattleUnit::from_template(definition).unwrap();
+            let unit = Mech::from_template(definition).unwrap();
             let loadout = unit.loadout().unwrap();
             let index = loadout
                 .weapons
@@ -52,17 +49,17 @@ fn inferno_ammunition_templates_preserve_capacity_modes_and_mass() {
                 .unwrap();
             assert_eq!(
                 unit.ammunition_mode(index).unwrap(),
-                BattleAmmunitionMode::Inferno
+                AmmunitionMode::Inferno
             );
             let capacity = weapon.profile().ammunition_per_ton / if half { 2 } else { 1 };
-            assert_eq!(loadout.ammunition[0].mode, BattleAmmunitionMode::Inferno);
+            assert_eq!(loadout.ammunition[0].mode, AmmunitionMode::Inferno);
             assert_eq!(unit.ammunition(), &[u16::from(capacity)]);
             assert_eq!(
                 unit.mass().unwrap().ammunition,
                 u32::from(capacity) * 1024 / u32::from(weapon.profile().ammunition_per_ton)
             );
             assert_eq!(
-                serde_json::from_value::<BattleUnit>(serde_json::to_value(&unit).unwrap()).unwrap(),
+                serde_json::from_value::<Mech>(serde_json::to_value(&unit).unwrap()).unwrap(),
                 unit
             );
         }
@@ -72,30 +69,30 @@ fn inferno_ammunition_templates_preserve_capacity_modes_and_mass() {
 #[test]
 fn inferno_ammunition_ignites_small_missiles_without_offering_armor_packets() {
     assert_eq!(
-        BattleWeapon::Srm2.terrain_ignition_target(BattleAmmunitionMode::Normal),
+        Weapon::Srm2.terrain_ignition_target(AmmunitionMode::Normal),
         None
     );
     assert_eq!(
-        BattleWeapon::Srm2.terrain_ignition_target(BattleAmmunitionMode::Inferno),
+        Weapon::Srm2.terrain_ignition_target(AmmunitionMode::Inferno),
         Some(5)
     );
     assert!(
-        BattleWeapon::Srm4
-            .damage_groups_for_ammunition(BattleAmmunitionMode::Inferno, Some(7), 1.0)
+        Weapon::Srm4
+            .damage_groups_for_ammunition(AmmunitionMode::Inferno, Some(7), 1.0)
             .is_err()
     );
     let mut ignited = false;
     for seed in 0..32 {
-        let mut dice = BattleDice::seeded([seed; 32]);
+        let mut dice = Dice::seeded([seed; 32]);
         let effect = resolve_woodland_effect(
             Hex::new(Terrain::HeavyForest, 0),
-            BattleWeapon::Srm2,
-            BattleAmmunitionMode::Inferno,
+            Weapon::Srm2,
+            AmmunitionMode::Inferno,
             0,
-            BattleWoodlandIntent::Ignite,
+            WoodlandIntent::Ignite,
             &mut dice,
         );
-        ignited |= matches!(effect, BattleWoodlandEffect::Ignite { .. });
+        ignited |= matches!(effect, WoodlandEffect::Ignite { .. });
     }
     assert!(ignited);
 }

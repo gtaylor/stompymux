@@ -6,7 +6,7 @@ use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 
 /// Observe readiness through the chassis boundary without duplicating control rules.
-fn readiness(world: &World, id: ObjectId, index: usize) -> BattleWeaponReadiness {
+fn readiness(world: &World, id: ObjectId, index: usize) -> WeaponReadiness {
     if let Some(unit) = world.btech.vehicles().get(&id) {
         return unit.weapon_readiness(index).unwrap();
     }
@@ -20,11 +20,11 @@ fn readiness(world: &World, id: ObjectId, index: usize) -> BattleWeaponReadiness
 async fn gauss_power_down_adapters_state_and_restart() {
     for source in templates() {
         for weapon in [
-            BattleWeapon::GaussRifle,
-            BattleWeapon::ClanGaussRifle,
-            BattleWeapon::LightGaussRifle,
-            BattleWeapon::MagshotGaussRifle,
-            BattleWeapon::HeavyGaussRifle,
+            Weapon::GaussRifle,
+            Weapon::ClanGaussRifle,
+            Weapon::LightGaussRifle,
+            Weapon::MagshotGaussRifle,
+            Weapon::HeavyGaussRifle,
         ] {
             let (_dir, config, base, id, _target, index) = fixture_with_supply(
                 &source,
@@ -74,7 +74,7 @@ async fn gauss_power_down_adapters_state_and_restart() {
             assert!(!readiness(&native.world(), id, index).ready);
             assert_eq!(
                 battle_weapon_diagnostics(&native.world(), id).unwrap()[index].condition,
-                BattleEquipmentCondition::Disabled
+                EquipmentCondition::Disabled
             );
             let section = if group == "vehicles" { "front" } else { "lt" };
             let report = battle_critical_report(&native.world(), id, section).unwrap();
@@ -83,7 +83,7 @@ async fn gauss_power_down_adapters_state_and_restart() {
                     .slots
                     .iter()
                     .filter(|slot| slot.weapon_index == Some(index))
-                    .all(|slot| slot.condition == BattleEquipmentCondition::Disabled)
+                    .all(|slot| slot.condition == EquipmentCondition::Disabled)
             );
             let disabled = native.world().btech.clone();
             let output =
@@ -91,13 +91,7 @@ async fn gauss_power_down_adapters_state_and_restart() {
             assert!(output.contains("destroyed"), "{output}");
             assert_eq!(native.world().btech, disabled);
             let mut world = native.world().clone();
-            stop_battle_unit(
-                &mut world,
-                id,
-                ObjectId(1),
-                BattleFallRules::configured(&config),
-            )
-            .unwrap();
+            stop_battle_unit(&mut world, id, ObjectId(1), FallRules::configured(&config)).unwrap();
             assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
             support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
             start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
@@ -114,7 +108,7 @@ async fn gauss_power_down_adapters_state_and_restart() {
                 let slot = damaged.loadout().unwrap().weapons[index].criticals[0];
                 assert_eq!(
                     damaged.destroy_critical(slot).unwrap(),
-                    Some(BattleCriticalLoss::Weapon {
+                    Some(CriticalLoss::Weapon {
                         index,
                         explosion_damage: 0
                     })
@@ -136,7 +130,7 @@ async fn gauss_power_down_guards_and_validation() {
         );
         let (_dir, config, base, id, _, index) = fixture_with_target(
             &source,
-            Some(BattleWeapon::MagshotGaussRifle),
+            Some(Weapon::MagshotGaussRifle),
             include_str!("../game/mechs/JR7-D.toml"),
         )
         .await;
@@ -147,22 +141,12 @@ async fn gauss_power_down_guards_and_validation() {
                     state["weapon_recycle"] = serde_json::json!({index.to_string(): 3})
                 }),
                 "off" => {
-                    stop_battle_unit(
-                        &mut world,
-                        id,
-                        ObjectId(1),
-                        BattleFallRules::configured(&config),
-                    )
-                    .unwrap();
+                    stop_battle_unit(&mut world, id, ObjectId(1), FallRules::configured(&config))
+                        .unwrap();
                 }
                 _ => {
-                    stop_battle_unit(
-                        &mut world,
-                        id,
-                        ObjectId(1),
-                        BattleFallRules::configured(&config),
-                    )
-                    .unwrap();
+                    stop_battle_unit(&mut world, id, ObjectId(1), FallRules::configured(&config))
+                        .unwrap();
                     remove_battle_unit(&mut world, id, ObjectId(config.home())).unwrap();
                 }
             }
@@ -215,25 +199,25 @@ async fn powered_down_vehicle_gauss_critical_is_inert() {
     for source in templates().into_iter().skip(2) {
         let (_dir, config, mut base, id, _, index) = fixture_with_supply(
             &source,
-            Some(BattleWeapon::MagshotGaussRifle),
+            Some(Weapon::MagshotGaussRifle),
             include_str!("../game/mechs/JR7-D.toml"),
             false,
             Some(""),
         )
         .await;
         disable_gauss_weapon(&mut base, id, ObjectId(1), index).unwrap();
-        let rules = BattleVehicleCriticalRules {
+        let rules = VehicleCriticalRules {
             rotor_damage_divisor: 0,
             extended_piloting: false,
             vtol_table: None,
-            table: BattleVehicleCriticalTable::Advanced,
+            table: VehicleCriticalTable::Advanced,
             enabled: true,
             combat_safe: false,
             toughness: false,
         };
-        if base.btech.vehicles()[&id].definition().movement == BattleVehicleMovement::Stationary {
+        if base.btech.vehicles()[&id].definition().movement == VehicleMovement::Stationary {
             let result =
-                resolve_battle_vehicle_critical(&mut base, id, BattleVehicleSection::Front, rules)
+                resolve_battle_vehicle_critical(&mut base, id, VehicleSection::Front, rules)
                     .unwrap();
             assert_eq!(result.selection.effect, None);
             continue;
@@ -242,13 +226,13 @@ async fn powered_down_vehicle_gauss_critical_is_inert() {
         for seed in 0..=255 {
             let mut world = base.clone();
             edit(&mut world, id, |state| {
-                state["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
+                state["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap()
             });
             let before = world.btech.vehicles()[&id].sections().clone();
             let result =
-                resolve_battle_vehicle_critical(&mut world, id, BattleVehicleSection::Front, rules)
+                resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Front, rules)
                     .unwrap();
-            if result.selection.effect != Some(BattleVehicleCriticalEffect::WeaponDestroyed) {
+            if result.selection.effect != Some(VehicleCriticalEffect::WeaponDestroyed) {
                 continue;
             }
             assert!(result.internal_damage.is_empty());
@@ -275,11 +259,11 @@ async fn powered_down_vehicle_gauss_critical_is_inert() {
 async fn mech_damage_failure_codes_preserve_gauss_explosion_rules() {
     for source in templates().into_iter().take(2) {
         for weapon in [
-            BattleWeapon::GaussRifle,
-            BattleWeapon::ClanGaussRifle,
-            BattleWeapon::LightGaussRifle,
-            BattleWeapon::MagshotGaussRifle,
-            BattleWeapon::HeavyGaussRifle,
+            Weapon::GaussRifle,
+            Weapon::ClanGaussRifle,
+            Weapon::LightGaussRifle,
+            Weapon::MagshotGaussRifle,
+            Weapon::HeavyGaussRifle,
         ] {
             let (_dir, config, world, id, _, index) =
                 fixture_with_target(&source, Some(weapon), &source).await;
@@ -300,7 +284,7 @@ async fn mech_damage_failure_codes_preserve_gauss_explosion_rules() {
                 let location = unit.loadout().unwrap().weapons[index].criticals[0];
                 assert_eq!(
                     unit.destroy_critical(location).unwrap(),
-                    Some(BattleCriticalLoss::Weapon {
+                    Some(CriticalLoss::Weapon {
                         index,
                         explosion_damage: if code == 5 {
                             0

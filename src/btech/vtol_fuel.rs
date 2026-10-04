@@ -1,19 +1,19 @@
 //! Saved VTOL fuel and movement-event consumption, using the owning vehicle's dice stream.
-use super::{BattlePower, BattleVehicle, BattleVehicleTemplate};
+use super::{Power, Vehicle, VehicleTemplate};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 
 /// Fuel inventory is independent of engine damage and the flight event that consumes it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BattleVtolFuel {
+pub struct VtolFuel {
     capacity: u32,
     /// Minus one records that exhaustion was already announced; zero awaits the next fuel check.
     remaining: i64,
 }
 
-impl BattleVtolFuel {
+impl VtolFuel {
     /// Authored capacity, or the common VTOL default when omitted.
-    pub(super) fn from_template(template: &BattleVehicleTemplate) -> Result<Self> {
+    pub(super) fn from_template(template: &VehicleTemplate) -> Result<Self> {
         let capacity = template
             .attributes
             .get("fuel")
@@ -45,7 +45,7 @@ impl BattleVtolFuel {
             .max(0) as u64
     }
     /// Original capacity matches the chassis; excess fuel can remain after unloading tanks.
-    pub(super) fn validate(self, template: &BattleVehicleTemplate) -> Result<()> {
+    pub(super) fn validate(self, template: &VehicleTemplate) -> Result<()> {
         ensure!(
             self.capacity == Self::from_template(template)?.capacity
                 && (-1..=i64::from(u32::MAX)).contains(&self.remaining),
@@ -80,15 +80,15 @@ pub(super) fn set_original_capacity(
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 #[must_use = "Handle fuel exhaustion and crash scheduling with the owning movement event"]
-pub enum BattleVtolFuelUse {
+pub enum VtolFuelUse {
     Skipped,
     Consumed { amount: u32, remaining: u32 },
     Exhausted { newly: bool },
 }
 
-impl BattleVehicle {
+impl Vehicle {
     /// Fuel exists only on rotorcraft; ground vehicles use their existing engine model.
-    pub fn vtol_fuel(&self) -> Option<BattleVtolFuel> {
+    pub fn vtol_fuel(&self) -> Option<VtolFuel> {
         self.vtol_fuel
     }
 
@@ -102,8 +102,8 @@ impl BattleVehicle {
             .values()
             .flat_map(|section| section.criticals.values())
             .filter(|critical| {
-                super::BattleSystem::named(&critical.equipment)
-                    .is_some_and(|system| system == super::BattleSystem::FuelTank)
+                super::System::named(&critical.equipment)
+                    .is_some_and(|system| system == super::System::FuelTank)
             })
             .count() as u64
     }
@@ -112,11 +112,11 @@ impl BattleVehicle {
     pub(super) fn auxiliary_fuel_mass(&self) -> u64 {
         self.installed_fuel_tanks()
             * u64::from(
-                super::BattlePart::from_id(FUEL_TANK_PART)
+                super::Part::from_id(FUEL_TANK_PART)
                     .expect("fuel tank catalogue entry")
                     .mass,
             )
-            + self.vtol_fuel().map_or(0, BattleVtolFuel::excess_mass)
+            + self.vtol_fuel().map_or(0, VtolFuel::excess_mass)
     }
 
     /// Consume one flight movement event, preserving the low-speed chance and delayed exhaustion.
@@ -127,14 +127,14 @@ impl BattleVehicle {
         elevation: i32,
         landed: bool,
         free_fusion_fuel: bool,
-    ) -> Result<BattleVtolFuelUse> {
+    ) -> Result<VtolFuelUse> {
         ensure!(self.definition().is_vtol(), "Flight fuel requires a VTOL");
         ensure!(vertical_speed.is_finite(), "Invalid vertical speed");
         if landed
-            || self.power() != BattlePower::Running
+            || self.power() != Power::Running
             || (free_fusion_fuel && !self.definition().has_special("ICEEngine_Tech"))
         {
-            return Ok(BattleVtolFuelUse::Skipped);
+            return Ok(VtolFuelUse::Skipped);
         }
         let speed = self.motion().map_or(0.0, |motion| motion.speed.abs());
         let maximum = self.maximum_speed();
@@ -144,7 +144,7 @@ impl BattleVehicle {
                 cost = (speed / maximum).floor().min(f64::from(u32::MAX)) as u32;
             }
         } else if speed < 10.75 && vertical_speed.abs() < 21.5 && self.dice.die(2)? == 1 {
-            return Ok(BattleVtolFuelUse::Skipped);
+            return Ok(VtolFuelUse::Skipped);
         }
         let fuel = self
             .vtol_fuel
@@ -153,7 +153,7 @@ impl BattleVehicle {
         if fuel.remaining > 0 {
             let amount = cost.min(fuel.remaining as u32);
             fuel.remaining -= i64::from(amount);
-            return Ok(BattleVtolFuelUse::Consumed {
+            return Ok(VtolFuelUse::Consumed {
                 amount,
                 remaining: fuel.remaining as u32,
             });
@@ -162,7 +162,7 @@ impl BattleVehicle {
         fuel.remaining = -1;
         self.lose_vtol_lift();
         self.halt();
-        Ok(BattleVtolFuelUse::Exhausted { newly })
+        Ok(VtolFuelUse::Exhausted { newly })
     }
 }
 
@@ -171,7 +171,7 @@ const FUEL_TANK_PART: i32 = 422;
 
 /// Live fuel projection combines saved fuel with loose auxiliary-tank stock.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-pub struct BattleVtolFuelStatus {
+pub struct VtolFuelStatus {
     pub original_capacity: u32,
     pub capacity: u64,
     pub remaining: i64,
@@ -183,7 +183,7 @@ pub struct BattleVtolFuelStatus {
 }
 
 /// Derive capacity without persisting a second copy of inventory-dependent state.
-pub fn vtol_fuel_status(world: &crate::World, id: crate::ObjectId) -> Result<BattleVtolFuelStatus> {
+pub fn vtol_fuel_status(world: &crate::World, id: crate::ObjectId) -> Result<VtolFuelStatus> {
     let vehicle = world
         .btech
         .vehicles()
@@ -206,7 +206,7 @@ pub fn vtol_fuel_status(world: &crate::World, id: crate::ObjectId) -> Result<Bat
         .and_then(|tanks| tanks.checked_mul(2000))
         .and_then(|extra| extra.checked_add(u64::from(fuel.capacity())))
         .context("Fuel capacity overflow")?;
-    Ok(BattleVtolFuelStatus {
+    Ok(VtolFuelStatus {
         original_capacity: fuel.capacity(),
         capacity,
         remaining: fuel.remaining(),
@@ -223,7 +223,7 @@ pub fn set_vtol_fuel(
     actor: crate::ObjectId,
     id: crate::ObjectId,
     amount: u32,
-) -> Result<BattleVtolFuelStatus> {
+) -> Result<VtolFuelStatus> {
     ensure!(
         crate::authority::is_wizard(world, actor),
         "Permission denied."

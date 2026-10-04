@@ -1,12 +1,12 @@
 //! Automatic anti-missile defenses, with expenditure owned by the enclosing shot transaction.
-use super::{BattleNotice, BattlePower, BattleUnit, BattleWeapon};
+use super::{Mech, Notice, Power, Weapon};
 use crate::{ObjectId, World};
 use anyhow::{Result, ensure};
 use serde::Serialize;
 
 /// One defensive activation against an admitted missile hit.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleAmsReport {
+pub struct AmsReport {
     pub weapon_index: usize,
     /// Bin that fed the defense; laser AMS has none.
     pub ammunition_bin: Option<usize>,
@@ -15,14 +15,14 @@ pub struct BattleAmsReport {
     pub shot_down: u8,
 }
 
-impl BattleUnit {
+impl Mech {
     /// Pilot-selected automatic defense state, initially disabled.
     pub fn ams_enabled(&self) -> bool {
         self.ams_enabled
     }
 }
 
-impl super::BattleVehicle {
+impl super::Vehicle {
     /// Pilot-selected automatic defense state, initially disabled and saved with the vehicle.
     pub fn ams_enabled(&self) -> bool {
         self.ams_enabled
@@ -46,11 +46,11 @@ pub(super) fn intercept(
     attacker: ObjectId,
     target: ObjectId,
     incoming: u8,
-) -> Result<Option<BattleAmsReport>> {
+) -> Result<Option<AmsReport>> {
     if incoming == 0
         || !super::ams_unit::enabled(world, target)?
         || super::scanner::scanner_unit(world, target)
-            .is_none_or(|unit| unit.power != BattlePower::Running)
+            .is_none_or(|unit| unit.power != Power::Running)
         || !super::ams_unit::available(world, target)?
     {
         return Ok(None);
@@ -60,15 +60,12 @@ pub(super) fn intercept(
     else {
         return Ok(None);
     };
-    let clan = matches!(
-        weapon,
-        BattleWeapon::ClanAntiMissileSystem | BattleWeapon::ClanLaserAms
-    );
+    let clan = matches!(weapon, Weapon::ClanAntiMissileSystem | Weapon::ClanLaserAms);
     let dice = super::dice::unit_dice_mut(world, attacker)?;
     let roll = if clan { dice.generic_roll() } else { dice.d6() };
     let count = roll.min(incoming);
     let spent = super::ams_unit::expend(world, target, index, weapon, bin, u16::from(count))?;
-    Ok(Some(BattleAmsReport {
+    Ok(Some(AmsReport {
         weapon_index: index,
         ammunition_bin: bin,
         roll,
@@ -77,16 +74,16 @@ pub(super) fn intercept(
     }))
 }
 
-impl BattleAmsReport {
+impl AmsReport {
     /// Defense feedback after cluster resolution determines whether every potential hit was intercepted.
     pub(super) fn notices(
         &self,
         attacker: ObjectId,
         target: ObjectId,
         hits: Option<u8>,
-    ) -> Vec<BattleNotice> {
+    ) -> Vec<Notice> {
         let Some(hits) = hits else {
-            return vec![BattleNotice {
+            return vec![Notice {
                 unit: target,
                 text: "Your Anti-Missile System activates and shoots at the incoming missiles!"
                     .into(),
@@ -94,7 +91,7 @@ impl BattleAmsReport {
         };
         let all = self.shot_down >= hits;
         vec![
-            BattleNotice {
+            Notice {
                 unit: attacker,
                 text: if all {
                     "All of your missiles are shot down by the target!".into()
@@ -105,7 +102,7 @@ impl BattleAmsReport {
                     )
                 },
             },
-            BattleNotice {
+            Notice {
                 unit: target,
                 text: if all {
                     "Your Anti-Missile System activates and shoots all the incoming missiles!"

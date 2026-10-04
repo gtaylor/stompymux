@@ -167,13 +167,8 @@ fn contracts(root: &Path) -> Result<BTreeMap<String, BTreeMap<usize, Contract>>>
         }
     }
     for module in ["mux", "btech"] {
-        let blocks = modules
-            .get(module)
-            .with_context(|| format!("no {module} contracts"))?;
-        for (expected, index) in blocks.keys().enumerate() {
-            if *index != expected {
-                bail!("{module}: missing contract index {expected}");
-            }
+        if !modules.contains_key(module) {
+            bail!("no {module} contracts");
         }
     }
     Ok(modules)
@@ -270,6 +265,27 @@ mod tests {
         let path = root.join("game/lua/types/mux.d.lua");
         fs::write(path, "stale").unwrap();
         assert!(output(root, &Mode::Check, "mux", &mux).is_err());
+    }
+
+    #[test]
+    fn index_gaps_keep_numeric_order() {
+        let directory = fixture();
+        let source = directory.path().join("src/lua/packages/contracts.rs");
+        let original = fs::read_to_string(&source).unwrap();
+        fs::write(
+            &source,
+            format!(
+                "// lua-types-begin mux 00009\n//|function mux.last() end\n// lua-types-end\n\
+                 {original}\
+                 // lua-types-begin mux 00004\n//|function mux.middle() end\n// lua-types-end\n"
+            ),
+        )
+        .unwrap();
+        let mux = render(&contracts(directory.path()).unwrap()["mux"]);
+        let ping = mux.find("mux.ping").unwrap();
+        let middle = mux.find("mux.middle").unwrap();
+        let last = mux.find("mux.last").unwrap();
+        assert!(ping < middle && middle < last);
     }
 
     #[test]

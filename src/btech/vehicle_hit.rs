@@ -1,15 +1,15 @@
 //! Ground-vehicle hit locations and conditional critical eligibility, separate from damage.
-use super::{BattleDice, BattleHitArc, BattleVehicle, BattleVehicleMovement, BattleVehicleSection};
+use super::{Dice, HitArc, Vehicle, VehicleMovement, VehicleSection};
 use anyhow::{Result, ensure};
 use serde::Serialize;
 
 /// A vehicle hit and its secondary effects; a critical candidate still requires component selection.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[must_use = "Apply the hit and any critical effects in the enclosing damage transaction"]
-pub struct BattleVehicleHit {
-    pub section: BattleVehicleSection,
+pub struct VehicleHit {
+    pub section: VehicleSection,
     pub through_armor_critical: bool,
-    pub motive: Option<BattleVehicleMotiveHit>,
+    pub motive: Option<VehicleMotiveHit>,
     /// Advanced motive roll before the movement-class adjustment.
     pub motive_roll: Option<u8>,
     pub piloting_penalty: u8,
@@ -18,7 +18,7 @@ pub struct BattleVehicleHit {
 /// Direct motive consequences selected by a vehicle hit table.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
-pub enum BattleVehicleMotiveHit {
+pub enum VehicleMotiveHit {
     /// Reduce maximum speed by this many movement points.
     SpeedLoss {
         movement_points: u8,
@@ -28,29 +28,29 @@ pub enum BattleVehicleMotiveHit {
 
 /// Armor thresholds shared by vehicle hit tables.
 #[derive(Debug, Clone, Copy)]
-pub struct BattleVehicleHitRules {
+pub struct VehicleHitRules {
     pub critical_mode: i64,
     pub critical_level: i64,
 }
 
-impl BattleVehicle {
+impl Vehicle {
     /// Resolve the standard ground-vehicle table from an existing 2d6 roll.
     /// Critical modes at most one disable armor-based candidates, except originally unarmored faces.
     /// The caller owns the supplied dice and commits all effects together. Advanced vehicle,
     /// dug-in and combat-safe policies must be handled by the combat adapter before choosing this table.
     pub fn standard_hit(
         &self,
-        arc: BattleHitArc,
+        arc: HitArc,
         roll: u8,
         critical_mode: i64,
-        dice: &mut BattleDice,
-    ) -> Result<BattleVehicleHit> {
+        dice: &mut Dice,
+    ) -> Result<VehicleHit> {
         ensure!(
             (2..=12).contains(&roll),
             "Hit location roll must be between 2 and 12"
         );
         let section = self.hit_section(arc, roll);
-        let turret_hit = section == BattleVehicleSection::Turret;
+        let turret_hit = section == VehicleSection::Turret;
         let candidate = matches!(roll, 2 | 12) || (roll == 11 && turret_hit);
         let critical = candidate
             && self.critical_candidate(
@@ -59,7 +59,7 @@ impl BattleVehicle {
                 if turret_hit { 50 } else { 40 },
                 dice,
             )?;
-        Ok(BattleVehicleHit {
+        Ok(VehicleHit {
             section,
             through_armor_critical: critical,
             motive: None,
@@ -69,8 +69,8 @@ impl BattleVehicle {
     }
 
     /// Standard location selection after validating the primary roll.
-    fn hit_section(&self, arc: BattleHitArc, roll: u8) -> BattleVehicleSection {
-        use BattleVehicleSection as S;
+    fn hit_section(&self, arc: HitArc, roll: u8) -> VehicleSection {
+        use VehicleSection as S;
         let hull = arc.vehicle_section();
         let turret = self
             .sections()
@@ -78,18 +78,18 @@ impl BattleVehicle {
             .is_some_and(|state| state.internal > 0);
         let turret_hit = turret
             && (matches!(roll, 10 | 11)
-                || (roll == 12 && matches!(arc, BattleHitArc::Front | BattleHitArc::Rear)));
+                || (roll == 12 && matches!(arc, HitArc::Front | HitArc::Rear)));
         if turret_hit { S::Turret } else { hull }
     }
 
     /// Critical-proof routing sends roll twelve to the hull even when a turret survives.
-    pub fn critical_proof_hit(&self, arc: BattleHitArc, roll: u8) -> Result<BattleVehicleHit> {
+    pub fn critical_proof_hit(&self, arc: HitArc, roll: u8) -> Result<VehicleHit> {
         ensure!(
             (2..=12).contains(&roll),
             "Hit location roll must be between 2 and 12"
         );
         let section = self.hit_section(arc, if roll == 12 { 7 } else { roll });
-        Ok(BattleVehicleHit {
+        Ok(VehicleHit {
             section,
             through_armor_critical: false,
             motive: None,
@@ -101,22 +101,22 @@ impl BattleVehicle {
     /// Advanced ground-vehicle table and its armor-gated motive check, without changing material state.
     pub fn advanced_hit(
         &self,
-        arc: BattleHitArc,
+        arc: HitArc,
         roll: u8,
         critical_mode: i64,
         critical_level: i64,
-        dice: &mut BattleDice,
-    ) -> Result<BattleVehicleHit> {
+        dice: &mut Dice,
+    ) -> Result<VehicleHit> {
         ensure!(
             (2..=12).contains(&roll),
             "Hit location roll must be between 2 and 12"
         );
-        use BattleVehicleSection as S;
-        let side = matches!(arc, BattleHitArc::Left | BattleHitArc::Right);
+        use VehicleSection as S;
+        let side = matches!(arc, HitArc::Left | HitArc::Right);
         let hull = self.hit_section(arc, 7);
         let turretless = match arc {
-            BattleHitArc::Front => S::Left,
-            BattleHitArc::Rear => S::Right,
+            HitArc::Front => S::Left,
+            HitArc::Rear => S::Right,
             _ => hull,
         };
         let turret = self
@@ -125,8 +125,8 @@ impl BattleVehicle {
             .is_some_and(|section| section.internal > 0);
         let section = match roll {
             5 => match arc {
-                BattleHitArc::Front => S::Right,
-                BattleHitArc::Rear => S::Left,
+                HitArc::Front => S::Right,
+                HitArc::Rear => S::Left,
                 _ => S::Front,
             },
             9 => {
@@ -145,7 +145,7 @@ impl BattleVehicle {
             }
             _ => hull,
         };
-        let mut hit = BattleVehicleHit {
+        let mut hit = VehicleHit {
             section,
             through_armor_critical: matches!(roll, 2 | 12) || (side && roll == 8),
             motive: None,
@@ -165,12 +165,12 @@ impl BattleVehicle {
     /// Armor thresholds gate secondary dice; exemptions and ineligible armor consume none.
     pub(super) fn critical_candidate(
         &self,
-        section: BattleVehicleSection,
+        section: VehicleSection,
         mode: i64,
         threshold: i64,
-        dice: &mut BattleDice,
+        dice: &mut Dice,
     ) -> Result<bool> {
-        if self.definition().movement == BattleVehicleMovement::Stationary
+        if self.definition().movement == VehicleMovement::Stationary
             || self.definition().has_special("CritProof_Tech")
         {
             return Ok(false);

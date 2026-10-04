@@ -1,29 +1,26 @@
 //! Controlled Mech drops reuse piloting, fall damage, flooding and physical mine events.
-use super::{
-    BattleFallReport, BattleMineEventReport, BattleNotice, BattlePilotingCheck,
-    BattleSectionExposureReport,
-};
+use super::{MechFallReport, MineEventReport, Notice, PilotingCheck, SectionExposureReport};
 use crate::{Config, ObjectId, Scripts, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
 
 /// Completed controlled drop; an optional failed control check precedes ordinary fall consequences.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct BattleProneReport {
+pub struct ProneReport {
     /// Slow drops succeed without consuming control dice.
-    pub check: Option<BattlePilotingCheck>,
+    pub check: Option<PilotingCheck>,
     /// A failed fast-drop check delegates damage to the ordinary fall resolver.
-    pub fall: Option<BattleFallReport>,
+    pub fall: Option<MechFallReport>,
     /// New breaches flooded after the final prone posture is established.
-    pub flooding: Vec<BattleSectionExposureReport>,
+    pub flooding: Vec<SectionExposureReport>,
     /// The final stepping event follows any earlier fall-triggered mines.
-    pub mines: BattleMineEventReport,
+    pub mines: MineEventReport,
     /// Ordered cockpit and observer messages already published by the host action.
-    pub notices: Vec<BattleNotice>,
+    pub notices: Vec<Notice>,
     /// Private control feedback follows the drop warnings and precedes impact feedback.
-    pub pilot_notices: Vec<super::BattlePilotNotice>,
+    pub pilot_notices: Vec<super::PilotNotice>,
     /// Control-check experience diagnostics committed with the action.
-    pub experience_messages: Vec<super::BattleChannelMessage>,
+    pub experience_messages: Vec<super::DiagnosticMessage>,
 }
 
 /// Execute the native and Lua controlled-drop contract within one host rollback boundary.
@@ -32,7 +29,7 @@ pub fn prone_action(
     config: &Config,
     id: ObjectId,
     pilot: ObjectId,
-) -> Result<BattleProneReport> {
+) -> Result<ProneReport> {
     scripts.atomic(|before| {
         let report = resolve(&mut scripts.world.borrow_mut(), config, id, pilot)?;
         super::piloting::publish_maneuver_feedback(
@@ -63,7 +60,7 @@ fn resolve(
     config: &Config,
     id: ObjectId,
     pilot: ObjectId,
-) -> Result<BattleProneReport> {
+) -> Result<ProneReport> {
     ensure!(
         !world.btech.vehicles().contains_key(&id),
         "You can't prone in this!"
@@ -71,11 +68,11 @@ fn resolve(
     super::power::controlled_unit(world, id, pilot)?;
     let unit = &world.btech.constructed_units()[&id];
     ensure!(
-        unit.power() == super::BattlePower::Running,
+        unit.power() == super::Power::Running,
         "Start the unit first"
     );
     ensure!(
-        unit.posture() != super::BattlePosture::Prone,
+        unit.posture() != super::Posture::Prone,
         "You are already prone."
     );
     ensure!(!unit.airborne(), "You can't prone in the air!");
@@ -104,7 +101,7 @@ fn resolve(
     };
     let stagger_level = unit.stagger().action_level();
     let levels = speed_levels.max(u8::from(stagger_level > 0));
-    let mut rules = super::BattleFallRules::configured(config);
+    let mut rules = super::FallRules::configured(config);
     rules.toughness = world
         .btech
         .character_values()
@@ -114,7 +111,7 @@ fn resolve(
     let mut pilot_notices = Vec::new();
     let mut experience_messages = Vec::new();
     if speed_levels > 0 {
-        notices.push(BattleNotice {
+        notices.push(Notice {
             unit: id,
             text: if speed_levels == 2 {
                 "You attempt a controlled drop while running."
@@ -125,7 +122,7 @@ fn resolve(
         });
     }
     if stagger_level > 0 {
-        notices.push(BattleNotice {
+        notices.push(Notice {
             unit: id,
             text: "Still staggering, you try not to fall on your face.".into(),
         });
@@ -153,7 +150,7 @@ fn resolve(
         None
     };
     let failed = check.as_ref().is_some_and(|check| !check.success);
-    notices.push(BattleNotice {
+    notices.push(Notice {
         unit: id,
         text: match check.as_ref() {
             None => "You drop to the ground prone!",
@@ -195,7 +192,7 @@ fn resolve(
         notices.extend(flood.notices.clone());
     }
     notices.extend(super::extinguish_inferno_in_water(world, id)?);
-    if rules.stagger != super::BattleStaggerMode::Traditional {
+    if rules.stagger != super::StaggerMode::Traditional {
         world
             .btech
             .constructed
@@ -204,15 +201,14 @@ fn resolve(
             .stagger
             .clear_damage();
     }
-    let mines =
-        super::mine_event::resolve(world, id, super::BattleMineTriggerReason::Step, rules, true)?;
+    let mines = super::mine_event::resolve(world, id, super::MineTriggerReason::Step, rules, true)?;
     super::piloting::append_feedback(
         &mut pilot_notices,
         mines.pilot_notices.iter().cloned(),
         notices.len(),
     );
     notices.extend(mines.notices.clone());
-    Ok(BattleProneReport {
+    Ok(ProneReport {
         check,
         fall,
         flooding,

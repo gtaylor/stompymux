@@ -23,4 +23,4 @@ btech.unit.bearing(dbref, player, coordinates)
 
 ## Returns
 
-- `BattleBearingReport`
+- `BearingReport`

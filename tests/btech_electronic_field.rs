@@ -5,11 +5,11 @@ use stompymux_rs::*;
 fn source(
     team: i32,
     distance: f64,
-    guardian: BattleElectronicMode,
-    angel: BattleElectronicMode,
-    personal: BattleElectronicMode,
-) -> BattleElectronicSource {
-    BattleElectronicSource {
+    guardian: ElectronicMode,
+    angel: ElectronicMode,
+    personal: ElectronicMode,
+) -> ElectronicSource {
+    ElectronicSource {
         team,
         distance,
         guardian,
@@ -19,14 +19,14 @@ fn source(
 }
 
 /// Resolve a newly observed field without previous disturbance flags.
-fn fresh(sources: Vec<BattleElectronicSource>) -> BattleElectronicField {
-    resolve_battle_electronic_field(BattleElectronicField::default(), 1, sources, false).unwrap()
+fn fresh(sources: Vec<ElectronicSource>) -> ElectronicField {
+    resolve_battle_electronic_field(ElectronicField::default(), 1, sources, false).unwrap()
 }
 
 /// Exact range boundaries include six hexes for suites and half a hex for personal emissions.
 #[test]
 fn field_range_boundaries_and_invalid_distances() {
-    use BattleElectronicMode::{Ecm, Off};
+    use ElectronicMode::{Ecm, Off};
     for (distance, guardian, personal) in [
         (0.0, true, true),
         (0.5, true, true),
@@ -54,7 +54,7 @@ fn field_range_boundaries_and_invalid_distances() {
     for distance in [-0.01, f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
         assert!(
             resolve_battle_electronic_field(
-                BattleElectronicField::default(),
+                ElectronicField::default(),
                 1,
                 [source(1, distance, Ecm, Off, Off)],
                 false
@@ -67,7 +67,7 @@ fn field_range_boundaries_and_invalid_distances() {
 /// Only opposing ECCM cancels protection; equal strength cancels, and Angel contributes two.
 #[test]
 fn field_opposing_strength_and_angel_weight() {
-    use BattleElectronicMode::{Eccm, Ecm, Off};
+    use ElectronicMode::{Eccm, Ecm, Off};
     let ordinary = source(1, 0.0, Ecm, Off, Off);
     let enemy_counter = source(2, 1.0, Eccm, Off, Off);
     assert!(fresh(vec![ordinary]).protected);
@@ -90,7 +90,7 @@ fn field_opposing_strength_and_angel_weight() {
 /// Protection and disturbance are independent: opposing ECM does not cancel friendly ECM.
 #[test]
 fn field_simultaneous_effects_and_guidance() {
-    use BattleElectronicMode::{Ecm, Off};
+    use ElectronicMode::{Ecm, Off};
     let field = fresh(vec![
         source(1, 0.0, Ecm, Ecm, Off),
         source(2, 0.0, Ecm, Ecm, Off),
@@ -99,14 +99,14 @@ fn field_simultaneous_effects_and_guidance() {
     assert!(!field.countered);
     assert!(field.blocks_incoming_guidance() && field.blocks_outgoing_guidance());
     let reversed = resolve_battle_electronic_field(
-        BattleElectronicField::default(),
+        ElectronicField::default(),
         2,
         [source(1, 0.0, Ecm, Off, Off)],
         false,
     )
     .unwrap();
     assert!(reversed.disturbed && !reversed.protected);
-    let saved: BattleElectronicField =
+    let saved: ElectronicField =
         serde_json::from_value(serde_json::to_value(field).unwrap()).unwrap();
     assert_eq!(saved, field);
 }
@@ -114,7 +114,7 @@ fn field_simultaneous_effects_and_guidance() {
 /// A continuing disturbance retains its family until clearance; a later disturbance is classified anew.
 #[test]
 fn field_disturbance_transition_and_clearance() {
-    use BattleElectronicMode::{Eccm, Ecm, Off};
+    use ElectronicMode::{Eccm, Ecm, Off};
     let old = fresh(vec![source(2, 1.0, Ecm, Off, Off)]);
     let angel = source(2, 1.0, Off, Ecm, Off);
     let continued = resolve_battle_electronic_field(old, 1, [angel], false).unwrap();
@@ -131,16 +131,16 @@ fn field_disturbance_transition_and_clearance() {
     assert!(renewed.angel_disturbed && !renewed.disturbed);
     assert_eq!(
         resolve_battle_electronic_field(renewed, 1, [], false).unwrap(),
-        BattleElectronicField::default()
+        ElectronicField::default()
     );
 }
 
 /// Self-interference is a large ordinary contribution, rather than an uncancellable special case.
 #[test]
 fn field_self_interference_and_personal_contributions() {
-    use BattleElectronicMode::{Eccm, Ecm, Off};
+    use ElectronicMode::{Eccm, Ecm, Off};
     let affected =
-        resolve_battle_electronic_field(BattleElectronicField::default(), 1, [], true).unwrap();
+        resolve_battle_electronic_field(ElectronicField::default(), 1, [], true).unwrap();
     assert!(affected.disturbed && !affected.protected);
     let counters = vec![source(1, 0.0, Off, Eccm, Off); 500];
     assert!(
@@ -158,15 +158,14 @@ fn field_self_interference_and_personal_contributions() {
 /// Selecting the other mode replaces it; selecting the current mode disables the suite.
 #[test]
 fn electronic_modes_are_exclusive_and_round_trip() {
-    use BattleElectronicMode::{Eccm, Ecm, Off};
+    use ElectronicMode::{Eccm, Ecm, Off};
     assert_eq!(Off.toggle(Ecm), Ecm);
     assert_eq!(Ecm.toggle(Eccm), Eccm);
     assert_eq!(Eccm.toggle(Eccm), Off);
     assert_eq!(Ecm.toggle(Off), Off);
     for mode in [Off, Ecm, Eccm] {
         assert_eq!(
-            serde_json::from_value::<BattleElectronicMode>(serde_json::to_value(mode).unwrap())
-                .unwrap(),
+            serde_json::from_value::<ElectronicMode>(serde_json::to_value(mode).unwrap()).unwrap(),
             mode
         );
     }
@@ -175,8 +174,8 @@ fn electronic_modes_are_exclusive_and_round_trip() {
 /// Countering and disturbance produce separate notices only at their transitions.
 #[test]
 fn electronic_field_notices_follow_transitions() {
-    use BattleElectronicMode::{Eccm, Ecm, Off};
-    let clear = BattleElectronicField::default();
+    use ElectronicMode::{Eccm, Ecm, Off};
+    let clear = ElectronicField::default();
     let blocked = fresh(vec![source(2, 1.0, Ecm, Eccm, Off)]);
     let notices = blocked.notices(clear, ObjectId(7), true);
     assert_eq!(notices.len(), 2);

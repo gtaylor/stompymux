@@ -48,11 +48,9 @@ pub(super) fn register(lua: &Lua, native: &Table, _world: &SharedWorld) -> mlua:
     let charge = lua.create_function(|lua, (id, pilot, target): (i64, i64, mlua::Value)| {
         crate::lua::transactions::require(lua)?;
         let selection = match target {
-            mlua::Value::Nil => crate::BattleChargeSelection::Default,
-            mlua::Value::Integer(id) => crate::BattleChargeSelection::Target(ObjectId(id)),
-            mlua::Value::String(value) if value.to_str()? == "-" => {
-                crate::BattleChargeSelection::Cancel
-            }
+            mlua::Value::Nil => crate::ChargeSelection::Default,
+            mlua::Value::Integer(id) => crate::ChargeSelection::Target(ObjectId(id)),
+            mlua::Value::String(value) if value.to_str()? == "-" => crate::ChargeSelection::Cancel,
             _ => return Err(mlua::Error::external("Expected a target dbref, '-' or nil")),
         };
         let scripts = crate::Scripts::services(lua)?;
@@ -103,13 +101,13 @@ pub(super) fn register(lua: &Lua, native: &Table, _world: &SharedWorld) -> mlua:
         native.set(name, error::wrap(lua, callback, "btech.operation.failed")?)?;
     }
     for (name, kind) in [
-        ("unit_punch", crate::BattleArmAttack::Punch.into()),
-        ("unit_axe", crate::BattleArmAttack::Axe.into()),
-        ("unit_sword", crate::BattleArmAttack::Sword.into()),
-        ("unit_mace", crate::BattleArmAttack::Mace.into()),
-        ("unit_saw", crate::BattleArmAttack::Saw.into()),
-        ("unit_claw", crate::BattleArmAttack::Claw.into()),
-        ("unit_melee", crate::BattleArmWeapon::Installed),
+        ("unit_punch", crate::ArmAttack::Punch.into()),
+        ("unit_axe", crate::ArmAttack::Axe.into()),
+        ("unit_sword", crate::ArmAttack::Sword.into()),
+        ("unit_mace", crate::ArmAttack::Mace.into()),
+        ("unit_saw", crate::ArmAttack::Saw.into()),
+        ("unit_claw", crate::ArmAttack::Claw.into()),
+        ("unit_melee", crate::ArmWeapon::Installed),
     ] {
         let callback = lua.create_function(
             move |lua, (id, pilot, leg, target): (i64, i64, Option<String>, Option<i64>)| {

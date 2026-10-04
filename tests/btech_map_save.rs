@@ -24,7 +24,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
         &mut world,
         map,
         HexCoordinate { x: 1, y: 0 },
-        Some(BattleDecoration::new(DecorationKind::Fire, 60, None)),
+        Some(Decoration::new(DecorationKind::Fire, 60, None)),
     )
     .unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(map);

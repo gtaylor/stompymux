@@ -31,8 +31,8 @@ that correction routine.
 
 ## Original mismatch that motivated the change
 
-`BattleUnit::mobility` derives propulsion from `definition.max_speed` and current
-material damage. `BattleVehicle::maximum_speed` derives it from that same
+`Mech::mobility` derives propulsion from `definition.max_speed` and current
+material damage. `Vehicle::maximum_speed` derives it from that same
 construction value and `motive_speed_loss`. The template-speed edit correctly
 leaves these unchanged immediately, but a later Mech actuator loss still starts
 from construction speed, rather than the edited template baseline.

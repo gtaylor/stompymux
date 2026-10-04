@@ -20,8 +20,7 @@ async fn fixture(teams: &[i32]) -> (tempfile::TempDir, Config, World, Vec<Object
         create_battle_unit(
             &mut world,
             id,
-            BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
-                .unwrap(),
+            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
         )
         .unwrap();
         place_battle_unit(&mut world, id, map, 1, 1).unwrap();
@@ -51,19 +50,19 @@ async fn fixture(teams: &[i32]) -> (tempfile::TempDir, Config, World, Vec<Object
 fn seed(world: &mut World, id: ObjectId, count: u16, selection: u16, roll: Option<u8>) {
     let chosen = (0..=255)
         .find(|value| {
-            let mut dice = BattleDice::seeded([*value; 32]);
+            let mut dice = Dice::seeded([*value; 32]);
             dice.die(count).unwrap() == selection && roll.is_none_or(|roll| dice.two_d6() == roll)
         })
         .unwrap();
     world
         .btech
-        .set_unit_dice(id, BattleDice::seeded([chosen; 32]))
+        .set_unit_dice(id, Dice::seeded([chosen; 32]))
         .unwrap();
 }
 
 /// Current mass and thrust are explicit until construction-weight calculation is integrated.
-fn input(entry: BattleStackingEntry) -> BattleStackingInput {
-    BattleStackingInput {
+fn input(entry: StackingEntry) -> StackingInput {
+    StackingInput {
         entry,
         mass: 35 * 1024,
         jump_movement_points: 5,
@@ -71,8 +70,8 @@ fn input(entry: BattleStackingEntry) -> BattleStackingInput {
 }
 
 /// Ordinary tactical damage configuration.
-fn fall() -> BattleFallRules {
-    BattleMovementRules::STANDARD.fall
+fn fall() -> FallRules {
+    MovementRules::STANDARD.fall
 }
 
 #[tokio::test]
@@ -84,8 +83,8 @@ async fn crowding_thresholds_and_disabled_mode_do_not_consume_dice() {
             resolve_battle_stacking(
                 &mut world,
                 ids[0],
-                input(BattleStackingEntry::Jump),
-                BattleStackingRules::STANDARD,
+                input(StackingEntry::Jump),
+                StackingRules::STANDARD,
                 fall()
             )
             .unwrap()
@@ -99,10 +98,10 @@ async fn crowding_thresholds_and_disabled_mode_do_not_consume_dice() {
         resolve_battle_stacking(
             &mut world,
             ids[0],
-            input(BattleStackingEntry::Jump),
-            BattleStackingRules {
+            input(StackingEntry::Jump),
+            StackingRules {
                 mode: 0,
-                ..BattleStackingRules::STANDARD
+                ..StackingRules::STANDARD
             },
             fall()
         )
@@ -123,8 +122,8 @@ async fn crowding_selection_obeys_team_priority_and_stopped_target_gaps() {
         let events = resolve_battle_stacking(
             &mut world,
             ids[0],
-            input(BattleStackingEntry::Jump),
-            BattleStackingRules::STANDARD,
+            input(StackingEntry::Jump),
+            StackingRules::STANDARD,
             fall(),
         )
         .unwrap();
@@ -137,7 +136,7 @@ async fn crowding_selection_obeys_team_priority_and_stopped_target_gaps() {
         &mut world,
         ids[0],
         ObjectId(1),
-        stompymux_rs::BattleMovementRules::STANDARD.fall,
+        stompymux_rs::MovementRules::STANDARD.fall,
     )
     .unwrap();
     // Shut-down units count toward the threshold, but cannot be selected as targets.
@@ -147,8 +146,8 @@ async fn crowding_selection_obeys_team_priority_and_stopped_target_gaps() {
         resolve_battle_stacking(
             &mut world,
             ids[1],
-            input(BattleStackingEntry::Fall),
-            BattleStackingRules::STANDARD,
+            input(StackingEntry::Fall),
+            StackingRules::STANDARD,
             fall()
         )
         .unwrap()
@@ -160,12 +159,12 @@ async fn crowding_selection_obeys_team_priority_and_stopped_target_gaps() {
 #[tokio::test]
 async fn crowding_avoidance_falls_and_success_replay_without_target_damage() {
     for entry in [
-        BattleStackingEntry::Ground,
-        BattleStackingEntry::Jump,
-        BattleStackingEntry::Fall,
+        StackingEntry::Ground,
+        StackingEntry::Jump,
+        StackingEntry::Fall,
     ] {
         for success in [false, true] {
-            let (_dir, config, mut world, ids) = fixture(if entry == BattleStackingEntry::Jump {
+            let (_dir, config, mut world, ids) = fixture(if entry == StackingEntry::Jump {
                 &[0, 0, 0, 0]
             } else {
                 &[0, 0, 0]
@@ -179,7 +178,7 @@ async fn crowding_avoidance_falls_and_success_replay_without_target_damage() {
                     motion.desired_speed = 21.5;
                 })
                 .unwrap();
-            let target = if entry == BattleStackingEntry::Ground {
+            let target = if entry == StackingEntry::Ground {
                 9
             } else {
                 11
@@ -188,9 +187,9 @@ async fn crowding_avoidance_falls_and_success_replay_without_target_damage() {
             let other = world.btech.constructed_units()[&ids[1]].clone();
             persistence::save(&config.database(), &world).await.unwrap();
             let mut loaded = persistence::load(&config.database()).await.unwrap();
-            let rules = BattleStackingRules {
+            let rules = StackingRules {
                 mode: 1,
-                ..BattleStackingRules::STANDARD
+                ..StackingRules::STANDARD
             };
             let events =
                 resolve_battle_stacking(&mut world, id, input(entry), rules, fall()).unwrap();
@@ -204,14 +203,14 @@ async fn crowding_avoidance_falls_and_success_replay_without_target_damage() {
             assert_eq!(
                 unit.posture(),
                 if success {
-                    BattlePosture::Standing
+                    Posture::Standing
                 } else {
-                    BattlePosture::Prone
+                    Posture::Prone
                 }
             );
             assert_eq!(
                 unit.motion().unwrap().speed,
-                if success && entry != BattleStackingEntry::Ground {
+                if success && entry != StackingEntry::Ground {
                     21.5
                 } else {
                     0.0
@@ -242,8 +241,8 @@ async fn collision_damage_and_second_unit_failure_commit_together() {
         resolve_battle_stacking(
             &mut rejected,
             ids[0],
-            input(BattleStackingEntry::Jump),
-            BattleStackingRules::STANDARD,
+            input(StackingEntry::Jump),
+            StackingRules::STANDARD,
             fall()
         )
         .is_err()
@@ -255,8 +254,8 @@ async fn collision_damage_and_second_unit_failure_commit_together() {
     let events = resolve_battle_stacking(
         &mut world,
         ids[0],
-        input(BattleStackingEntry::Jump),
-        BattleStackingRules::STANDARD,
+        input(StackingEntry::Jump),
+        StackingRules::STANDARD,
         fall(),
     )
     .unwrap();
@@ -265,8 +264,8 @@ async fn collision_damage_and_second_unit_failure_commit_together() {
         resolve_battle_stacking(
             &mut loaded,
             ids[0],
-            input(BattleStackingEntry::Jump),
-            BattleStackingRules::STANDARD,
+            input(StackingEntry::Jump),
+            StackingRules::STANDARD,
             fall()
         )
         .unwrap()
@@ -288,12 +287,12 @@ async fn collision_damage_and_second_unit_failure_commit_together() {
 #[tokio::test]
 async fn collision_tables_use_punch_kick_and_prone_normal_locations() {
     for entry in [
-        BattleStackingEntry::Ground,
-        BattleStackingEntry::Jump,
-        BattleStackingEntry::Fall,
+        StackingEntry::Ground,
+        StackingEntry::Jump,
+        StackingEntry::Fall,
     ] {
         for prone in [false, true] {
-            let (_dir, config, mut world, ids) = fixture(if entry == BattleStackingEntry::Jump {
+            let (_dir, config, mut world, ids) = fixture(if entry == StackingEntry::Jump {
                 &[0, 0, 0, 0]
             } else {
                 &[0, 0, 0]
@@ -302,26 +301,26 @@ async fn collision_tables_use_punch_kick_and_prone_normal_locations() {
             seed(&mut world, ids[0], 3, 1, None);
             let target_seed = (0..=255)
                 .find(|value| {
-                    let mut dice = BattleDice::seeded([*value; 32]);
+                    let mut dice = Dice::seeded([*value; 32]);
                     dice.d6() == 3 && dice.d6() == 5
                 })
                 .unwrap();
             let mut state = serde_json::to_value(&world.btech).unwrap();
             state["constructed"][ids[1].0.to_string()]["dice"] =
-                serde_json::to_value(BattleDice::seeded([target_seed; 32])).unwrap();
+                serde_json::to_value(Dice::seeded([target_seed; 32])).unwrap();
             state["constructed"][ids[1].0.to_string()]["posture"] =
                 serde_json::to_value(if prone {
-                    BattlePosture::Prone
+                    Posture::Prone
                 } else {
-                    BattlePosture::Standing
+                    Posture::Standing
                 })
                 .unwrap();
             state["constructed"][ids[0].0.to_string()]["motion"]["speed"] = 21.5.into();
             world.btech = serde_json::from_value(state).unwrap();
             let before = world.btech.constructed_units()[&ids[1]].sections().clone();
-            let physical = BattleStackingInput {
+            let physical = StackingInput {
                 entry,
-                mass: if entry == BattleStackingEntry::Ground {
+                mass: if entry == StackingEntry::Ground {
                     35 * 1024
                 } else {
                     20 * 1024
@@ -332,14 +331,14 @@ async fn collision_tables_use_punch_kick_and_prone_normal_locations() {
                 &mut world,
                 ids[0],
                 physical,
-                BattleStackingRules::STANDARD,
+                StackingRules::STANDARD,
                 fall(),
             )
             .unwrap();
-            let location = if prone || entry == BattleStackingEntry::Ground {
-                BattleSection::LeftTorso
+            let location = if prone || entry == StackingEntry::Ground {
+                MechSection::LeftTorso
             } else {
-                BattleSection::CenterTorso
+                MechSection::CenterTorso
             };
             let warning = before[&location].armor - 5 < before[&location].armor / 2;
             assert_eq!(events.len(), 2 + usize::from(warning));
@@ -385,15 +384,15 @@ async fn ground_entry_collisions_use_current_mass_and_replay_the_whole_tick() {
             })
             .unwrap();
         world.validate(&config).unwrap();
-        let movement = BattleMovementRules {
-            fall: BattleFallRules {
-                stacking: BattleStackingRules {
+        let movement = MovementRules {
+            fall: FallRules {
+                stacking: StackingRules {
                     mode,
-                    ..BattleStackingRules::STANDARD
+                    ..StackingRules::STANDARD
                 },
                 ..fall()
             },
-            ..BattleMovementRules::STANDARD
+            ..MovementRules::STANDARD
         };
         if mode == 2 {
             let mut rejected = world.clone();
@@ -472,12 +471,12 @@ async fn landing_fixture(neighbors: usize) -> (tempfile::TempDir, Config, World,
     launch_battle_jump(&mut world, ids[0], ObjectId(1), 180, 1.0).unwrap();
     advance_battle_jumps(
         &mut world,
-        stompymux_rs::BattleMovementRules {
-            fall: BattleFallRules {
-                stacking: BattleStackingRules::STANDARD,
+        stompymux_rs::MovementRules {
+            fall: FallRules {
+                stacking: StackingRules::STANDARD,
                 ..fall()
             },
-            ..stompymux_rs::BattleMovementRules::STANDARD
+            ..stompymux_rs::MovementRules::STANDARD
         },
     )
     .unwrap();
@@ -500,10 +499,10 @@ async fn completed_landings_exclude_the_arriving_unit_and_replay_crowding() {
             );
             seed(&mut world, id, 3, 1, Some(if success { 11 } else { 10 }));
             let before = world.btech.clone();
-            let rules = BattleFallRules {
-                stacking: BattleStackingRules {
+            let rules = FallRules {
+                stacking: StackingRules {
                     mode,
-                    ..BattleStackingRules::STANDARD
+                    ..StackingRules::STANDARD
                 },
                 ..fall()
             };
@@ -519,9 +518,9 @@ async fn completed_landings_exclude_the_arriving_unit_and_replay_crowding() {
                 assert!(
                     advance_battle_jumps(
                         &mut rejected,
-                        stompymux_rs::BattleMovementRules {
+                        stompymux_rs::MovementRules {
                             fall: rules,
-                            ..stompymux_rs::BattleMovementRules::STANDARD
+                            ..stompymux_rs::MovementRules::STANDARD
                         }
                     )
                     .is_err()
@@ -532,9 +531,9 @@ async fn completed_landings_exclude_the_arriving_unit_and_replay_crowding() {
             let mut loaded = persistence::load(&config.database()).await.unwrap();
             let events = advance_battle_jumps(
                 &mut world,
-                stompymux_rs::BattleMovementRules {
+                stompymux_rs::MovementRules {
                     fall: rules,
-                    ..stompymux_rs::BattleMovementRules::STANDARD
+                    ..stompymux_rs::MovementRules::STANDARD
                 },
             )
             .unwrap();
@@ -542,9 +541,9 @@ async fn completed_landings_exclude_the_arriving_unit_and_replay_crowding() {
                 events,
                 advance_battle_jumps(
                     &mut loaded,
-                    stompymux_rs::BattleMovementRules {
+                    stompymux_rs::MovementRules {
                         fall: rules,
-                        ..stompymux_rs::BattleMovementRules::STANDARD
+                        ..stompymux_rs::MovementRules::STANDARD
                     }
                 )
                 .unwrap()
@@ -572,9 +571,9 @@ async fn completed_landings_exclude_the_arriving_unit_and_replay_crowding() {
                 assert_eq!(
                     unit.posture(),
                     if collides && !success {
-                        BattlePosture::Prone
+                        Posture::Prone
                     } else {
-                        BattlePosture::Standing
+                        Posture::Standing
                     }
                 );
             }
@@ -621,13 +620,13 @@ async fn early_landing_uses_configured_crowding_in_native_and_lua_transactions()
         let id = ids[0];
         let chosen = (0..=255)
             .find(|value| {
-                let mut dice = BattleDice::seeded([*value; 32]);
+                let mut dice = Dice::seeded([*value; 32]);
                 dice.two_d6() >= 6 && dice.die(3).unwrap() == 1
             })
             .unwrap();
         world
             .btech
-            .set_unit_dice(id, BattleDice::seeded([chosen; 32]))
+            .set_unit_dice(id, Dice::seeded([chosen; 32]))
             .unwrap();
         refresh_battle_contacts(&mut world, &[ids[2]]).unwrap();
         assert!(
@@ -714,13 +713,13 @@ async fn landing_collision_thrust_uses_gravity_only_with_special_conditions() {
         let map = world.btech.constructed_units()[&id].position().unwrap().map;
         let mover_seed = (0..=255)
             .find(|value| {
-                let mut dice = BattleDice::seeded([*value; 32]);
+                let mut dice = Dice::seeded([*value; 32]);
                 dice.two_d6() >= 6 && dice.die(3).unwrap() == 1
             })
             .unwrap();
         let target_seed = (0..=255)
             .find(|value| {
-                let mut dice = BattleDice::seeded([*value; 32]);
+                let mut dice = Dice::seeded([*value; 32]);
                 let first = dice.d6();
                 dice.two_d6(); // First damage packet enters material resolution.
                 first == 3 && dice.d6() == 3
@@ -731,15 +730,15 @@ async fn landing_collision_thrust_uses_gravity_only_with_special_conditions() {
         state["maps"][map.0.to_string()]["flags"] = if special { 2 } else { 0 }.into();
         for (unit, value) in [(id, mover_seed), (ids[1], target_seed)] {
             state["constructed"][unit.0.to_string()]["dice"] =
-                serde_json::to_value(BattleDice::seeded([value; 32])).unwrap();
+                serde_json::to_value(Dice::seeded([value; 32])).unwrap();
         }
         world.btech = serde_json::from_value(state).unwrap();
         let before =
-            world.btech.constructed_units()[&ids[1]].sections()[&BattleSection::CenterTorso].armor;
-        let rules = BattleFallRules {
-            stacking: BattleStackingRules {
+            world.btech.constructed_units()[&ids[1]].sections()[&MechSection::CenterTorso].armor;
+        let rules = FallRules {
+            stacking: StackingRules {
                 damage_percent: 50,
-                ..BattleStackingRules::STANDARD
+                ..StackingRules::STANDARD
             },
             ..fall()
         };
@@ -747,14 +746,14 @@ async fn landing_collision_thrust_uses_gravity_only_with_special_conditions() {
             &mut world,
             id,
             ObjectId(1),
-            stompymux_rs::BattleMovementRules {
+            stompymux_rs::MovementRules {
                 fall: rules,
-                ..stompymux_rs::BattleMovementRules::STANDARD
+                ..stompymux_rs::MovementRules::STANDARD
             },
         )
         .unwrap();
         let after =
-            world.btech.constructed_units()[&ids[1]].sections()[&BattleSection::CenterTorso].armor;
+            world.btech.constructed_units()[&ids[1]].sections()[&MechSection::CenterTorso].armor;
         assert_eq!(before - after, if special { 4 } else { 6 });
         world.validate(&config).unwrap();
     }
@@ -767,7 +766,7 @@ async fn jump_obstacle_falls_resolve_crowding_after_fall_damage() {
     let map = world.btech.constructed_units()[&id].position().unwrap().map;
     let chosen = (0..=255)
         .find(|value| {
-            let mut dice = BattleDice::seeded([*value; 32]);
+            let mut dice = Dice::seeded([*value; 32]);
             let safe = dice.two_d6() >= 7;
             dice.d6();
             safe && dice.two_d6() == 7 && dice.die(3).unwrap() == 1
@@ -785,11 +784,11 @@ async fn jump_obstacle_falls_resolve_crowding_after_fall_damage() {
             serde_json::to_value(HexCoordinate { x: 1, y: 0 }.center()).unwrap();
     }
     state["constructed"][id.0.to_string()]["dice"] =
-        serde_json::to_value(BattleDice::seeded([chosen; 32])).unwrap();
+        serde_json::to_value(Dice::seeded([chosen; 32])).unwrap();
     world.btech = serde_json::from_value(state).unwrap();
     launch_battle_jump(&mut world, id, ObjectId(1), 180, 2.0).unwrap();
-    let rules = BattleFallRules {
-        stacking: BattleStackingRules::STANDARD,
+    let rules = FallRules {
+        stacking: StackingRules::STANDARD,
         ..fall()
     };
     let mut rejected = world.clone();
@@ -803,9 +802,9 @@ async fn jump_obstacle_falls_resolve_crowding_after_fall_damage() {
     assert!(
         advance_battle_jumps(
             &mut rejected,
-            stompymux_rs::BattleMovementRules {
+            stompymux_rs::MovementRules {
                 fall: rules,
-                ..stompymux_rs::BattleMovementRules::STANDARD
+                ..stompymux_rs::MovementRules::STANDARD
             }
         )
         .is_err()
@@ -814,20 +813,20 @@ async fn jump_obstacle_falls_resolve_crowding_after_fall_damage() {
     let mut expected = world.clone();
     let mut expected_notices = advance_battle_jumps(
         &mut expected,
-        stompymux_rs::BattleMovementRules {
-            fall: BattleFallRules {
-                stacking: BattleStackingRules {
+        stompymux_rs::MovementRules {
+            fall: FallRules {
+                stacking: StackingRules {
                     mode: 0,
                     ..rules.stacking
                 },
                 ..rules
             },
-            ..stompymux_rs::BattleMovementRules::STANDARD
+            ..stompymux_rs::MovementRules::STANDARD
         },
     )
     .unwrap();
-    let physical = BattleStackingInput {
-        entry: BattleStackingEntry::Fall,
+    let physical = StackingInput {
+        entry: StackingEntry::Fall,
         mass: expected.btech.constructed_units()[&id]
             .mass()
             .unwrap()
@@ -841,9 +840,9 @@ async fn jump_obstacle_falls_resolve_crowding_after_fall_damage() {
     let mut loaded = persistence::load(&config.database()).await.unwrap();
     let events = advance_battle_jumps(
         &mut world,
-        stompymux_rs::BattleMovementRules {
+        stompymux_rs::MovementRules {
             fall: rules,
-            ..stompymux_rs::BattleMovementRules::STANDARD
+            ..stompymux_rs::MovementRules::STANDARD
         },
     )
     .unwrap();
@@ -853,9 +852,9 @@ async fn jump_obstacle_falls_resolve_crowding_after_fall_damage() {
         events,
         advance_battle_jumps(
             &mut loaded,
-            stompymux_rs::BattleMovementRules {
+            stompymux_rs::MovementRules {
                 fall: rules,
-                ..stompymux_rs::BattleMovementRules::STANDARD
+                ..stompymux_rs::MovementRules::STANDARD
             }
         )
         .unwrap()
@@ -870,12 +869,12 @@ async fn jump_obstacle_falls_resolve_crowding_after_fall_damage() {
 }
 
 /// Avoid unrelated pilot injuries and distribute a five-level fall over four intact sections.
-fn thermal_fall_dice() -> BattleDice {
+fn thermal_fall_dice() -> Dice {
     (0u32..100_000)
         .find_map(|value| {
             let mut bytes = [0; 32];
             bytes[..4].copy_from_slice(&value.to_le_bytes());
-            let original = BattleDice::seeded(bytes);
+            let original = Dice::seeded(bytes);
             let mut dice = original.clone();
             for _ in 0..3 {
                 dice.d6();
@@ -910,15 +909,15 @@ async fn airborne_shutdown_scales_fall_and_commits_crowding_before_power_down() 
                     serde_json::json!({"elapsed":30,"phase":0,"injury_due":false});
             })
             .unwrap();
-        let rules = BattleOverheatRules {
-            vehicle_impact: stompymux_rs::BattleVehicleImpactRules::STANDARD,
+        let rules = OverheatRules {
+            vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
             hit: fall().hit,
             extended_piloting: true,
-            stagger: BattleStaggerMode::Retain,
-            stacking: BattleStackingRules {
+            stagger: StaggerMode::Retain,
+            stacking: StackingRules {
                 mode,
                 damage_percent: 50,
-                ..BattleStackingRules::STANDARD
+                ..StackingRules::STANDARD
             },
         };
         if mode == 2 {
@@ -950,7 +949,7 @@ async fn airborne_shutdown_scales_fall_and_commits_crowding_before_power_down() 
             mode == 2
         );
         let unit = &world.btech.constructed_units()[&id];
-        assert_eq!(unit.power(), BattlePower::Off);
+        assert_eq!(unit.power(), Power::Off);
         assert!(unit.pilot().is_none());
         assert!(unit.flight().is_none());
         assert_eq!(unit.jump_stabilization(), 0);
@@ -974,7 +973,7 @@ async fn airborne_critical_falls_apply_configured_collisions_inside_the_impact()
                     .unwrap()
                     .systems
                     .into_iter()
-                    .filter(|part| part.system == BattleSystem::JumpJet)
+                    .filter(|part| part.system == System::JumpJet)
                     .map(|part| part.location)
                     .collect();
                 for &location in &jets[..jets.len() - 1] {
@@ -983,7 +982,7 @@ async fn airborne_critical_falls_apply_configured_collisions_inside_the_impact()
                 *jets.last().unwrap()
             } else {
                 CriticalLocation {
-                    section: BattleSection::CenterTorso,
+                    section: MechSection::CenterTorso,
                     slot: 3,
                 }
             };
@@ -996,7 +995,7 @@ async fn airborne_critical_falls_apply_configured_collisions_inside_the_impact()
                 + 1;
             let chosen = (0..=255)
                 .find(|value| {
-                    let mut dice = BattleDice::seeded([*value; 32]);
+                    let mut dice = Dice::seeded([*value; 32]);
                     dice.two_d6(); // Material entry precedes the selected critical.
                     matches!(dice.two_d6(), 8 | 9)
                         && dice.die(candidates.len() as u16).unwrap() == selected
@@ -1005,18 +1004,18 @@ async fn airborne_critical_falls_apply_configured_collisions_inside_the_impact()
                 .unwrap();
             world
                 .btech
-                .set_unit_dice(id, BattleDice::seeded([chosen; 32]))
+                .set_unit_dice(id, Dice::seeded([chosen; 32]))
                 .unwrap();
-            let hit = BattleHit {
+            let hit = Hit {
                 section: location.section,
                 rear_armor: false,
                 through_armor_critical: true,
                 crew_stun: false,
             };
-            let rules = BattleFallRules {
-                stacking: BattleStackingRules {
+            let rules = FallRules {
+                stacking: StackingRules {
                     mode,
-                    ..BattleStackingRules::STANDARD
+                    ..StackingRules::STANDARD
                 },
                 ..fall()
             };
@@ -1076,7 +1075,7 @@ async fn ground_shutdown_speed_boundary_and_facing_match_native_lua() {
         let id = ids[0];
         let chosen = (0..=255)
             .find(|value| {
-                let mut dice = BattleDice::seeded([*value; 32]);
+                let mut dice = Dice::seeded([*value; 32]);
                 let protected = dice.two_d6() >= 7;
                 dice.d6();
                 protected && dice.two_d6() == 7 && dice.die(3).unwrap() == 1
@@ -1088,12 +1087,12 @@ async fn ground_shutdown_speed_boundary_and_facing_match_native_lua() {
                 let unit = record;
                 unit["motion"]["speed"] = speed.into();
                 unit["motion"]["desired_speed"] = speed.into();
-                unit["facing"] = serde_json::to_value(BattleFacing {
-                    torso: BattleTorso::Left,
+                unit["facing"] = serde_json::to_value(Facing {
+                    torso: Torso::Left,
                     arms_flipped: true,
                 })
                 .unwrap();
-                unit["dice"] = serde_json::to_value(BattleDice::seeded([chosen; 32])).unwrap();
+                unit["dice"] = serde_json::to_value(Dice::seeded([chosen; 32])).unwrap();
             })
             .unwrap();
         world.validate(&config).unwrap();
@@ -1122,16 +1121,16 @@ async fn ground_shutdown_speed_boundary_and_facing_match_native_lua() {
         assert!(text.contains("All systems shut down"), "{text}");
         let saved = native.world().clone();
         let unit = &saved.btech.constructed_units()[&id];
-        assert_eq!(unit.power(), BattlePower::Off);
+        assert_eq!(unit.power(), Power::Off);
         assert_eq!(
             unit.posture(),
             if speed > 10.75 {
-                BattlePosture::Prone
+                Posture::Prone
             } else {
-                BattlePosture::Standing
+                Posture::Standing
             }
         );
-        assert_eq!(unit.facing().torso, BattleTorso::Center);
+        assert_eq!(unit.facing().torso, Torso::Center);
         assert_eq!(unit.facing().arms_flipped, speed <= 10.75);
         assert!(unit.pilot().is_none());
         assert_eq!(unit.motion().unwrap().speed, 0.0);
@@ -1161,13 +1160,13 @@ async fn moving_shutdown_neighbor_failure_rolls_back_power_fall_and_facing() {
             record["facing"]["torso"] = "right".into();
             let chosen = (0..=255)
                 .find(|value| {
-                    let mut dice = BattleDice::seeded([*value; 32]);
+                    let mut dice = Dice::seeded([*value; 32]);
                     let protected = dice.two_d6() >= 7;
                     dice.d6();
                     protected && dice.two_d6() == 7
                 })
                 .unwrap();
-            record["dice"] = serde_json::to_value(BattleDice::seeded([chosen; 32])).unwrap();
+            record["dice"] = serde_json::to_value(Dice::seeded([chosen; 32])).unwrap();
         })
         .unwrap();
     for target in &ids[1..] {
@@ -1181,18 +1180,15 @@ async fn moving_shutdown_neighbor_failure_rolls_back_power_fall_and_facing() {
     let before = world.btech.clone();
     assert!(stop_battle_unit(&mut world, id, ObjectId(1), fall()).is_err());
     assert_eq!(world.btech, before);
-    let disabled = BattleFallRules {
-        stacking: BattleStackingRules {
+    let disabled = FallRules {
+        stacking: StackingRules {
             mode: 0,
-            ..BattleStackingRules::STANDARD
+            ..StackingRules::STANDARD
         },
         ..fall()
     };
     stop_battle_unit(&mut world, id, ObjectId(1), disabled).unwrap();
-    assert_eq!(
-        world.btech.constructed_units()[&id].power(),
-        BattlePower::Off
-    );
+    assert_eq!(world.btech.constructed_units()[&id].power(), Power::Off);
     for target in &ids[1..] {
         assert_eq!(
             world.btech.constructed_units()[target],
@@ -1243,19 +1239,19 @@ async fn collision_observers_filter_each_participant_and_replay_all_entry_modes(
     // Keep this routing matrix on armor-only torso hits; random target criticals have their own notice tests.
     let target_seed = (0..=255)
         .find(|seed| {
-            let mut dice = BattleDice::seeded([*seed; 32]);
+            let mut dice = Dice::seeded([*seed; 32]);
             let mut locations = [dice.d6(), dice.d6(), dice.d6()];
             locations.sort();
             locations == [2, 3, 4]
         })
         .unwrap();
     base.btech
-        .set_unit_dice(target, BattleDice::seeded([target_seed; 32]))
+        .set_unit_dice(target, Dice::seeded([target_seed; 32]))
         .unwrap();
     for entry in [
-        BattleStackingEntry::Ground,
-        BattleStackingEntry::Jump,
-        BattleStackingEntry::Fall,
+        StackingEntry::Ground,
+        StackingEntry::Jump,
+        StackingEntry::Fall,
     ] {
         for (mode, success) in [(1, false), (1, true), (2, true)] {
             for visible in 0..4 {
@@ -1278,11 +1274,7 @@ async fn collision_observers_filter_each_participant_and_replay_all_entry_modes(
                         viewer["power"] = serde_json::json!({"state":"off"});
                     }
                     world.btech = serde_json::from_value(state).unwrap();
-                    let count = if entry == BattleStackingEntry::Jump {
-                        3
-                    } else {
-                        4
-                    };
+                    let count = if entry == StackingEntry::Jump { 3 } else { 4 };
                     seed(
                         &mut world,
                         actor,
@@ -1291,9 +1283,9 @@ async fn collision_observers_filter_each_participant_and_replay_all_entry_modes(
                         Some(if success { 12 } else { 2 }),
                     );
                     let observer_before = world.btech.constructed_units()[&observer].clone();
-                    let rules = BattleStackingRules {
+                    let rules = StackingRules {
                         mode,
-                        ..BattleStackingRules::STANDARD
+                        ..StackingRules::STANDARD
                     };
                     let original = world.btech.clone();
                     let mut rejected = world.clone();
@@ -1348,7 +1340,7 @@ async fn collision_observers_filter_each_participant_and_replay_all_entry_modes(
                         } else {
                             "someone".to_owned()
                         };
-                        let action = match (entry == BattleStackingEntry::Ground, mode) {
+                        let action = match (entry == StackingEntry::Ground, mode) {
                             (true, 2) => "bumps into",
                             (true, _) => "nearly bumps into",
                             (false, 2) => "lands on",
@@ -1357,7 +1349,7 @@ async fn collision_observers_filter_each_participant_and_replay_all_entry_modes(
                         expected.push(format!("{actor_name} {action} {target_name}!"));
                         if mode == 1
                             && !success
-                            && entry != BattleStackingEntry::Ground
+                            && entry != StackingEntry::Ground
                             && visible & 1 != 0
                         {
                             expected.push(format!("{} falls down!", identity(actor.0)));
@@ -1399,7 +1391,7 @@ async fn character_collision_action_replays_injury_and_evacuation() {
         set_battle_character(
             &mut world,
             pilot,
-            BattleCharacter {
+            Character {
                 build: 5,
                 reflexes: 5,
                 intuition: 5,
@@ -1412,22 +1404,22 @@ async fn character_collision_action_replays_injury_and_evacuation() {
         .unwrap();
         support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
         let chosen = (0..=255)
-            .find(|byte| BattleDice::seeded([*byte; 32]).d6() == 6)
+            .find(|byte| Dice::seeded([*byte; 32]).d6() == 6)
             .unwrap();
         world
             .btech
-            .set_unit_dice(target, BattleDice::seeded([chosen; 32]))
+            .set_unit_dice(target, Dice::seeded([chosen; 32]))
             .unwrap();
-        let rules = BattleStackingRules {
+        let rules = StackingRules {
             damage_percent: 1,
-            ..BattleStackingRules::STANDARD
+            ..StackingRules::STANDARD
         };
         let baseline = world.clone();
         assert!(
             resolve_battle_stacking(
                 &mut world,
                 ids[0],
-                input(BattleStackingEntry::Jump),
+                input(StackingEntry::Jump),
                 rules,
                 fall()
             )
@@ -1444,7 +1436,7 @@ async fn character_collision_action_replays_injury_and_evacuation() {
                     &scripts,
                     &config,
                     ids[0],
-                    input(BattleStackingEntry::Jump),
+                    input(StackingEntry::Jump),
                     rules,
                     fall()
                 )
@@ -1469,7 +1461,7 @@ async fn character_collision_action_replays_injury_and_evacuation() {
             &scripts,
             &config,
             ids[0],
-            input(BattleStackingEntry::Jump),
+            input(StackingEntry::Jump),
             rules,
             fall(),
         )
@@ -1480,7 +1472,7 @@ async fn character_collision_action_replays_injury_and_evacuation() {
                 &replay,
                 &config,
                 ids[0],
-                input(BattleStackingEntry::Jump),
+                input(StackingEntry::Jump),
                 rules,
                 fall()
             )
@@ -1498,7 +1490,7 @@ async fn character_collision_action_replays_injury_and_evacuation() {
             Some(if fatal { afterlife } else { target })
         );
         assert!(
-            candidate.btech.constructed_units()[&target].sections()[&BattleSection::Head].internal
+            candidate.btech.constructed_units()[&target].sections()[&MechSection::Head].internal
                 > 0
         );
         assert_ne!(
@@ -1530,7 +1522,7 @@ async fn character_collision_avoidance_falls_and_replays() {
     set_battle_character(
         &mut world,
         ObjectId(1),
-        BattleCharacter {
+        Character {
             build: 5,
             reflexes: 5,
             intuition: 5,
@@ -1543,20 +1535,14 @@ async fn character_collision_avoidance_falls_and_replays() {
     .unwrap();
     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     seed(&mut world, mover, 3, 1, Some(2));
-    let rules = BattleStackingRules {
+    let rules = StackingRules {
         mode: 1,
-        ..BattleStackingRules::STANDARD
+        ..StackingRules::STANDARD
     };
     let baseline = world.clone();
     assert!(
-        resolve_battle_stacking(
-            &mut world,
-            mover,
-            input(BattleStackingEntry::Jump),
-            rules,
-            fall()
-        )
-        .is_err()
+        resolve_battle_stacking(&mut world, mover, input(StackingEntry::Jump), rules, fall())
+            .is_err()
     );
     assert_eq!(world.btech, baseline.btech);
     persistence::save(&config.database(), &baseline)
@@ -1574,7 +1560,7 @@ async fn character_collision_avoidance_falls_and_replays() {
         &scripts,
         &config,
         mover,
-        input(BattleStackingEntry::Jump),
+        input(StackingEntry::Jump),
         rules,
         fall(),
     )
@@ -1585,7 +1571,7 @@ async fn character_collision_avoidance_falls_and_replays() {
             &replay,
             &config,
             mover,
-            input(BattleStackingEntry::Jump),
+            input(StackingEntry::Jump),
             rules,
             fall()
         )
@@ -1594,7 +1580,7 @@ async fn character_collision_avoidance_falls_and_replays() {
     assert_eq!(scripts.world().btech, replay.world().btech);
     assert_eq!(
         scripts.world().btech.constructed_units()[&mover].posture(),
-        BattlePosture::Prone
+        Posture::Prone
     );
     assert_ne!(
         scripts.world().btech.constructed_units()[&mover].sections(),
@@ -1608,11 +1594,11 @@ async fn character_collision_avoidance_falls_and_replays() {
 async fn character_crowding_experience_and_delivery_rollback() {
     for extended in [false, true] {
         for entry in [
-            BattleStackingEntry::Ground,
-            BattleStackingEntry::Jump,
-            BattleStackingEntry::Fall,
+            StackingEntry::Ground,
+            StackingEntry::Jump,
+            StackingEntry::Fall,
         ] {
-            let (_dir, config, mut world, ids) = fixture(if entry == BattleStackingEntry::Jump {
+            let (_dir, config, mut world, ids) = fixture(if entry == StackingEntry::Jump {
                 &[0, 0, 0, 0]
             } else {
                 &[0, 0, 0]
@@ -1634,7 +1620,7 @@ async fn character_crowding_experience_and_delivery_rollback() {
             set_battle_character(
                 &mut world,
                 ObjectId(1),
-                BattleCharacter {
+                Character {
                     build: 5,
                     reflexes: 5,
                     intuition: 5,
@@ -1655,7 +1641,7 @@ async fn character_crowding_experience_and_delivery_rollback() {
                 &mut world,
                 ObjectId(1),
                 skill,
-                BattleCharacterValue {
+                CharacterValue {
                     value: 3,
                     experience: 0,
                     last_used: 0,
@@ -1687,11 +1673,11 @@ async fn character_crowding_experience_and_delivery_rollback() {
             let before = world.clone();
             let scripts =
                 Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
-            let rules = BattleStackingRules {
+            let rules = StackingRules {
                 mode: 1,
-                ..BattleStackingRules::STANDARD
+                ..StackingRules::STANDARD
             };
-            let fall = BattleFallRules {
+            let fall = FallRules {
                 extended_piloting: extended,
                 ..fall()
             };
@@ -1745,18 +1731,14 @@ async fn character_crowding_experience_and_delivery_rollback() {
                         && message.source().contains("nearly"))
             );
             let candidate = scripts.world().clone();
-            let amount = if entry == BattleStackingEntry::Ground {
-                1
-            } else {
-                3
-            };
+            let amount = if entry == StackingEntry::Ground { 1 } else { 3 };
             assert_eq!(
                 candidate.btech.character_values()[&ObjectId(1)][skill].experience_balance(),
                 amount
             );
             assert_eq!(
                 candidate.btech.constructed_units()[&id].posture(),
-                BattlePosture::Standing
+                Posture::Standing
             );
             assert_eq!(
                 candidate.btech.constructed_units()[&ids[1]],
@@ -1807,8 +1789,8 @@ async fn weapons_hold_collision_feedback_preserves_damage_and_replay() {
         let expected = resolve_battle_stacking(
             &mut ordinary,
             ids[0],
-            input(BattleStackingEntry::Jump),
-            BattleStackingRules::STANDARD,
+            input(StackingEntry::Jump),
+            StackingRules::STANDARD,
             fall(),
         )
         .unwrap();
@@ -1818,8 +1800,8 @@ async fn weapons_hold_collision_feedback_preserves_damage_and_replay() {
         let events = resolve_battle_stacking(
             &mut base,
             ids[0],
-            input(BattleStackingEntry::Jump),
-            BattleStackingRules::STANDARD,
+            input(StackingEntry::Jump),
+            StackingRules::STANDARD,
             fall(),
         )
         .unwrap();
@@ -1841,8 +1823,8 @@ async fn weapons_hold_collision_feedback_preserves_damage_and_replay() {
             resolve_battle_stacking(
                 &mut replay,
                 ids[0],
-                input(BattleStackingEntry::Jump),
-                BattleStackingRules::STANDARD,
+                input(StackingEntry::Jump),
+                StackingRules::STANDARD,
                 fall()
             )
             .unwrap(),
@@ -1871,14 +1853,14 @@ async fn collision_damage_preserves_target_balance_feedback() {
             .flags
             .insert(Flag::Connected);
     }
-    for section in BattleSection::ALL {
+    for section in MechSection::ALL {
         let armor = base.btech.constructed_units()[&target].sections()[&section].armor;
         apply_damage_phase(
             &mut base,
             target,
             section,
             armor,
-            BattleDamagePhase::Armor { rear: false },
+            DamagePhase::Armor { rear: false },
         )
         .unwrap();
     }
@@ -1893,7 +1875,7 @@ async fn collision_damage_preserves_target_balance_feedback() {
         let mut world = base.clone();
         world
             .btech
-            .set_unit_dice(target, BattleDice::seeded([byte; 32]))
+            .set_unit_dice(target, Dice::seeded([byte; 32]))
             .unwrap();
         let before = world.clone();
         let scripts =
@@ -1902,8 +1884,8 @@ async fn collision_damage_preserves_target_balance_feedback() {
             &scripts,
             &config,
             mover,
-            input(BattleStackingEntry::Ground),
-            BattleStackingRules::STANDARD,
+            input(StackingEntry::Ground),
+            StackingRules::STANDARD,
             fall(),
         )
         .unwrap();
@@ -1929,8 +1911,8 @@ async fn collision_damage_preserves_target_balance_feedback() {
             &scripts,
             &config,
             mover,
-            input(BattleStackingEntry::Ground),
-            BattleStackingRules::STANDARD,
+            input(StackingEntry::Ground),
+            StackingRules::STANDARD,
             fall(),
         )
         .unwrap();
@@ -1979,7 +1961,7 @@ async fn airborne_critical_collision_publishes_secondary_character_effects() {
     set_battle_character(
         &mut base,
         pilot,
-        BattleCharacter {
+        Character {
             build: 5,
             reflexes: 5,
             intuition: 5,
@@ -1995,32 +1977,32 @@ async fn airborne_critical_collision_publishes_secondary_character_effects() {
         &mut base,
         airborne,
         CriticalLocation {
-            section: BattleSection::CenterTorso,
+            section: MechSection::CenterTorso,
             slot: 3,
         },
     )
     .unwrap();
     let armor =
-        base.btech.constructed_units()[&airborne].sections()[&BattleSection::CenterTorso].armor;
+        base.btech.constructed_units()[&airborne].sections()[&MechSection::CenterTorso].armor;
     apply_damage_phase(
         &mut base,
         airborne,
-        BattleSection::CenterTorso,
+        MechSection::CenterTorso,
         armor,
-        BattleDamagePhase::Armor { rear: false },
+        DamagePhase::Armor { rear: false },
     )
     .unwrap();
     let head_seed = (0..=255)
-        .find(|byte| BattleDice::seeded([*byte; 32]).d6() == 6)
+        .find(|byte| Dice::seeded([*byte; 32]).d6() == 6)
         .unwrap();
     base.btech
-        .set_unit_dice(neighbor, BattleDice::seeded([head_seed; 32]))
+        .set_unit_dice(neighbor, Dice::seeded([head_seed; 32]))
         .unwrap();
     for byte in 0..=255 {
         let mut world = base.clone();
         world
             .btech
-            .set_unit_dice(airborne, BattleDice::seeded([byte; 32]))
+            .set_unit_dice(airborne, Dice::seeded([byte; 32]))
             .unwrap();
         let before = world.clone();
         let scripts =
@@ -2029,8 +2011,8 @@ async fn airborne_critical_collision_publishes_secondary_character_effects() {
             &scripts,
             &config,
             airborne,
-            BattleWeapon::MediumLaser,
-            BattleHitArc::Front,
+            Weapon::MediumLaser,
+            HitArc::Front,
             fall(),
         )
         .unwrap();
@@ -2066,8 +2048,8 @@ async fn airborne_critical_collision_publishes_secondary_character_effects() {
             &scripts,
             &config,
             airborne,
-            BattleWeapon::MediumLaser,
-            BattleHitArc::Front,
+            Weapon::MediumLaser,
+            HitArc::Front,
             fall(),
         )
         .unwrap();
@@ -2096,7 +2078,7 @@ async fn airborne_critical_collision_publishes_secondary_character_effects() {
         set_battle_character(
             &mut scripts.world_mut(),
             pilot,
-            BattleCharacter {
+            Character {
                 build: 5,
                 reflexes: 5,
                 intuition: 5,
@@ -2118,8 +2100,8 @@ async fn airborne_critical_collision_publishes_secondary_character_effects() {
                 &scripts,
                 &config,
                 airborne,
-                BattleWeapon::MediumLaser,
-                BattleHitArc::Front,
+                Weapon::MediumLaser,
+                HitArc::Front,
                 fall()
             )
             .is_err()
@@ -2132,8 +2114,8 @@ async fn airborne_critical_collision_publishes_secondary_character_effects() {
             &scripts,
             &config,
             airborne,
-            BattleWeapon::MediumLaser,
-            BattleHitArc::Front,
+            Weapon::MediumLaser,
+            HitArc::Front,
             fall(),
         )
         .unwrap();

@@ -6,17 +6,17 @@ use serde::Serialize;
 
 /// Terrain aim reports visibility separately from arithmetic; firing admission remains caller-owned.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct BattleHexAimModifiers {
+pub struct HexAimModifiers {
     pub hex: HexCoordinate,
-    pub mode: BattleHexTargetMode,
+    pub mode: HexTargetMode,
     pub visible: bool,
     pub hex_bonus: i8,
     /// Shared weapon contributions; unit-specific movement, lock and sensor terms remain neutral.
     #[serde(flatten)]
-    pub modifiers: BattleAimModifiers,
+    pub modifiers: AimModifiers,
 }
 
-impl BattleHexAimModifiers {
+impl HexAimModifiers {
     /// Numeric aim exists within weapon range even when another firing rule forbids the attack.
     pub fn subtotal(&self) -> Option<i32> {
         self.modifiers
@@ -32,8 +32,8 @@ pub fn hex_aim_modifiers(
     hex: HexCoordinate,
     weapon_index: usize,
     gunnery: i16,
-    rules: BattleAimRules,
-) -> Result<BattleHexAimModifiers> {
+    rules: AimRules,
+) -> Result<HexAimModifiers> {
     modifiers_for_source(world, shooter.into(), hex, weapon_index, gunnery, rules)
 }
 
@@ -44,12 +44,12 @@ pub(super) fn modifiers_for_source(
     hex: HexCoordinate,
     weapon_index: usize,
     gunnery: i16,
-    rules: BattleAimRules,
-) -> Result<BattleHexAimModifiers> {
+    rules: AimRules,
+) -> Result<HexAimModifiers> {
     let shooter = source.unit;
     let mode = match source.selection(world) {
-        Some(BattleTargetSelection::Hex(lock)) => lock.mode,
-        _ => BattleHexTargetMode::UnitAtHex,
+        Some(TargetSelection::Hex(lock)) => lock.mode,
+        _ => HexTargetMode::UnitAtHex,
     };
     ensure!(
         world
@@ -90,7 +90,7 @@ pub(super) fn modifiers_for_source(
             )
         };
     ensure!(
-        ammunition.munition() != BattleAmmunitionMode::Stinger,
+        ammunition.munition() != AmmunitionMode::Stinger,
         "Stinger missiles cannot shoot hexes!"
     );
     let indirect = super::spotter::indirect_hex_for_source(world, source, weapon_index)?;
@@ -127,7 +127,7 @@ pub(super) fn modifiers_for_source(
             .accuracy(modifiers.range.map(|range| range.bracket));
     }
     super::targeting_mode::apply(world, source, None, weapon, ammunition, &mut modifiers)?;
-    Ok(BattleHexAimModifiers {
+    Ok(HexAimModifiers {
         hex,
         mode,
         visible: hex_visible(
@@ -135,7 +135,7 @@ pub(super) fn modifiers_for_source(
             indirect.map_or(shooter, |(observer, _)| observer),
             hex,
         )?,
-        hex_bonus: if mode == BattleHexTargetMode::UnitAtHex {
+        hex_bonus: if mode == HexTargetMode::UnitAtHex {
             0
         } else {
             -4
@@ -151,8 +151,8 @@ pub fn pilot_hex_aim_modifiers(
     hex: HexCoordinate,
     weapon_index: usize,
     extended_gunnery: bool,
-    rules: BattleAimRules,
-) -> Result<BattleHexAimModifiers> {
+    rules: AimRules,
+) -> Result<HexAimModifiers> {
     let gunnery = unit_gunnery_target(world, shooter, weapon_index, extended_gunnery)?;
     hex_aim_modifiers(world, shooter, hex, weapon_index, gunnery, rules)
 }

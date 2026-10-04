@@ -1,5 +1,5 @@
 //! Runtime equipment conditions can be edited independently of material critical-slot losses.
-use super::{BattleGyro, BattleSystem, BattleUnit};
+use super::{Gyro, Mech, System};
 use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
 
@@ -56,15 +56,15 @@ impl CriticalConditions {
     }
 }
 
-impl BattleUnit {
+impl Mech {
     /// Rebuild impairment from replacement material, retaining the independent protection flag.
     pub(super) fn reconstruct_gyro(&mut self, protection_used: bool) {
         self.critical_conditions.gyro = None;
         self.critical_conditions.gyro_piloting = None;
         self.recalculate_actuators();
-        if self.gyro() == BattleGyro::Hardened {
+        if self.gyro() == Gyro::Hardened {
             self.critical_conditions.gyro = Some(GyroCondition {
-                losses: self.system_hits(BattleSystem::Gyro),
+                losses: self.system_hits(System::Gyro),
                 damage: self.gyro_damage(),
                 hardened_hit_used: protection_used,
             });
@@ -74,7 +74,7 @@ impl BattleUnit {
     /// Current gyro contribution preserves the order of hardened protection and recalculation.
     pub(super) fn gyro_piloting_modifier(&self) -> u8 {
         let derived = u8::from(self.gyro_damage() > 0) * 3;
-        if self.gyro() == BattleGyro::Hardened {
+        if self.gyro() == Gyro::Hardened {
             return self.critical_conditions.gyro_piloting.unwrap_or(derived);
         }
         derived
@@ -82,7 +82,7 @@ impl BattleUnit {
 
     /// A first impairing hit adds three to the current contribution; protection and later hits do not.
     pub(super) fn record_gyro_critical(&mut self, previous_damage: u8, previous_modifier: u8) {
-        if self.gyro() == BattleGyro::Hardened {
+        if self.gyro() == Gyro::Hardened {
             self.critical_conditions.gyro_piloting = Some(
                 previous_modifier
                     + if previous_damage == 0 && self.gyro_damage() > 0 {
@@ -95,11 +95,11 @@ impl BattleUnit {
     }
 
     /// Section loss or exposure recalculates every Mech location except a biped arm.
-    pub(super) fn recalculate_section_loss(&mut self, section: super::BattleSection) {
+    pub(super) fn recalculate_section_loss(&mut self, section: super::MechSection) {
         if self.chassis().is_leg(section)
             || !matches!(
                 section,
-                super::BattleSection::LeftArm | super::BattleSection::RightArm
+                super::MechSection::LeftArm | super::MechSection::RightArm
             )
         {
             self.recalculate_actuators();
@@ -109,7 +109,7 @@ impl BattleUnit {
     /// Rebuild actuator speed and gyro piloting together at the shared damage reset points.
     pub(super) fn recalculate_actuators(&mut self) {
         self.propulsion.recalculate(self.template_speed());
-        if self.gyro() == BattleGyro::Hardened {
+        if self.gyro() == Gyro::Hardened {
             let (damage, protection_used) = self.gyro_condition();
             self.critical_conditions.gyro_piloting = Some(if !protection_used {
                 0
@@ -123,7 +123,7 @@ impl BattleUnit {
 
     /// Current impairment and consumed hardened protection, including hits since an edit.
     pub(super) fn gyro_condition(&self) -> (u8, bool) {
-        let losses = self.system_hits(BattleSystem::Gyro);
+        let losses = self.system_hits(System::Gyro);
         if let Some(gyro) = self.critical_conditions.gyro {
             let added = losses.saturating_sub(gyro.losses);
             return (
@@ -132,7 +132,7 @@ impl BattleUnit {
                 gyro.hardened_hit_used || added > 0,
             );
         }
-        let hardened = self.gyro() == BattleGyro::Hardened;
+        let hardened = self.gyro() == Gyro::Hardened;
         (
             losses.saturating_sub(u8::from(hardened)),
             hardened && losses > 0,
@@ -141,10 +141,10 @@ impl BattleUnit {
 
     /// Identify the newly consumed protection hit without confusing it with existing impairment.
     pub(super) fn protected_gyro_hit(&self) -> bool {
-        if self.gyro() != BattleGyro::Hardened {
+        if self.gyro() != Gyro::Hardened {
             return false;
         }
-        let losses = self.system_hits(BattleSystem::Gyro);
+        let losses = self.system_hits(System::Gyro);
         self.critical_conditions.gyro.map_or(losses == 1, |gyro| {
             !gyro.hardened_hit_used && losses == gyro.losses.saturating_add(1)
         })
@@ -153,13 +153,13 @@ impl BattleUnit {
     /// Change only the hardened first-hit condition; preserve current impairment and material.
     pub(super) fn set_hardened_hit_used(&mut self, used: bool) -> Result<()> {
         ensure!(
-            !used || self.gyro() == BattleGyro::Hardened,
+            !used || self.gyro() == Gyro::Hardened,
             "A hardened gyro is not installed"
         );
         let (damage, previous) = self.gyro_condition();
         if used != previous {
             self.critical_conditions.gyro = Some(GyroCondition {
-                losses: self.system_hits(BattleSystem::Gyro),
+                losses: self.system_hits(System::Gyro),
                 damage,
                 hardened_hit_used: used,
             });

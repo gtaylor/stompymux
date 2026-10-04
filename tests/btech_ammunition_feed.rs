@@ -2,13 +2,13 @@
 use stompymux_rs::*;
 
 /// Three ordinary bins and one Artemis bin, including a preferred bin in the launcher section.
-fn unit() -> BattleUnit {
+fn unit() -> Mech {
     let mut template =
-        BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
-    let bin = template.sections[&BattleSection::RightTorso].criticals[&0].clone();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+    let bin = template.sections[&MechSection::RightTorso].criticals[&0].clone();
     template
         .sections
-        .get_mut(&BattleSection::LeftTorso)
+        .get_mut(&MechSection::LeftTorso)
         .unwrap()
         .criticals
         .insert(5, bin.clone());
@@ -16,30 +16,30 @@ fn unit() -> BattleUnit {
     special.modes = vec!["Artemis/Mine".into()];
     template
         .sections
-        .get_mut(&BattleSection::RightTorso)
+        .get_mut(&MechSection::RightTorso)
         .unwrap()
         .criticals
         .insert(4, special);
     let jet = template
         .sections
-        .get_mut(&BattleSection::CenterTorso)
+        .get_mut(&MechSection::CenterTorso)
         .unwrap()
         .criticals
         .insert(11, bin)
         .unwrap();
     template
         .sections
-        .get_mut(&BattleSection::RightTorso)
+        .get_mut(&MechSection::RightTorso)
         .unwrap()
         .criticals
         .insert(6, jet);
-    let unit = BattleUnit::from_template(template).unwrap();
+    let unit = Mech::from_template(template).unwrap();
     let mut state = serde_json::to_value(&unit).unwrap();
     for (i, bin) in unit.loadout().unwrap().ammunition.iter().enumerate() {
         state["ammunition"][i] = match bin.location.section {
-            BattleSection::LeftTorso => 2,
-            BattleSection::CenterTorso => 1,
-            _ if bin.mode == BattleAmmunitionMode::Artemis => 24,
+            MechSection::LeftTorso => 2,
+            MechSection::CenterTorso => 1,
+            _ if bin.mode == AmmunitionMode::Artemis => 24,
             _ => 1,
         }
         .into();
@@ -56,7 +56,7 @@ fn feed_priority_shortage_and_read_only_planning() {
     let index = loadout
         .weapons
         .iter()
-        .position(|m| m.weapon == BattleWeapon::Srm4)
+        .position(|m| m.weapon == Weapon::Srm4)
         .unwrap();
     let bin_index = |section| {
         loadout
@@ -65,18 +65,18 @@ fn feed_priority_shortage_and_read_only_planning() {
             .position(|bin| bin.location.section == section)
             .unwrap()
     };
-    let center = bin_index(BattleSection::CenterTorso);
-    let left = bin_index(BattleSection::LeftTorso);
-    let right = bin_index(BattleSection::RightTorso);
+    let center = bin_index(MechSection::CenterTorso);
+    let left = bin_index(MechSection::LeftTorso);
+    let right = bin_index(MechSection::RightTorso);
     assert!(unit.ammunition_feed(index, 0).unwrap().is_empty());
     assert_eq!(
         unit.ammunition_feed(index, 2).unwrap(),
         vec![
-            BattleAmmunitionDraw {
+            AmmunitionDraw {
                 bin_index: center,
                 rounds: 1
             },
-            BattleAmmunitionDraw {
+            AmmunitionDraw {
                 bin_index: left,
                 rounds: 1
             }
@@ -85,15 +85,15 @@ fn feed_priority_shortage_and_read_only_planning() {
     assert_eq!(
         unit.ammunition_feed(index, u16::MAX).unwrap(),
         vec![
-            BattleAmmunitionDraw {
+            AmmunitionDraw {
                 bin_index: center,
                 rounds: 1
             },
-            BattleAmmunitionDraw {
+            AmmunitionDraw {
                 bin_index: left,
                 rounds: 2
             },
-            BattleAmmunitionDraw {
+            AmmunitionDraw {
                 bin_index: right,
                 rounds: 1
             }
@@ -113,15 +113,15 @@ fn feed_availability_mode_and_restore() {
         .unwrap()
         .weapons
         .iter()
-        .position(|m| m.weapon == BattleWeapon::Srm4)
+        .position(|m| m.weapon == Weapon::Srm4)
         .unwrap();
     unit.destroy_critical(CriticalLocation {
-        section: BattleSection::CenterTorso,
+        section: MechSection::CenterTorso,
         slot: 11,
     })
     .unwrap();
     let mut state = serde_json::to_value(&unit).unwrap();
-    state["flooded_sections"] = serde_json::json!([BattleSection::LeftTorso]);
+    state["flooded_sections"] = serde_json::json!([MechSection::LeftTorso]);
     unit = serde_json::from_value(state).unwrap();
     assert_eq!(
         unit.ammunition_feed(index, 2)
@@ -136,20 +136,19 @@ fn feed_availability_mode_and_restore() {
         .unwrap()
         .ammunition
         .iter()
-        .position(|bin| bin.mode == BattleAmmunitionMode::Artemis)
+        .position(|bin| bin.mode == AmmunitionMode::Artemis)
         .unwrap();
     let mut state = serde_json::to_value(&unit).unwrap();
     state["ammunition_modes"] = serde_json::json!({index.to_string():"artemis"});
     unit = serde_json::from_value(state).unwrap();
     assert_eq!(
         unit.ammunition_feed(index, 2).unwrap(),
-        vec![BattleAmmunitionDraw {
+        vec![AmmunitionDraw {
             bin_index: special,
             rounds: 2
         }]
     );
-    let restored: BattleUnit =
-        serde_json::from_value(serde_json::to_value(&unit).unwrap()).unwrap();
+    let restored: Mech = serde_json::from_value(serde_json::to_value(&unit).unwrap()).unwrap();
     assert_eq!(
         restored.ammunition_feed(index, 2).unwrap(),
         unit.ammunition_feed(index, 2).unwrap()
@@ -168,41 +167,40 @@ fn preferred_section_preserves_mode_filter_and_fallback() {
     let weapon = loadout
         .weapons
         .iter()
-        .position(|m| m.weapon == BattleWeapon::Srm4)
+        .position(|m| m.weapon == Weapon::Srm4)
         .unwrap();
     let mut state = serde_json::to_value(&initial).unwrap();
     state["ammunition_sections"] = serde_json::json!({weapon.to_string(): "RightTorso"});
-    let selected: BattleUnit = serde_json::from_value(state.clone()).unwrap();
+    let selected: Mech = serde_json::from_value(state.clone()).unwrap();
     let normal = selected.ammunition_feed(weapon, 2).unwrap();
     assert_eq!(
         loadout.ammunition[normal[0].bin_index].location.section,
-        BattleSection::RightTorso
+        MechSection::RightTorso
     );
     assert!(
         normal
             .iter()
-            .all(|draw| loadout.ammunition[draw.bin_index].mode == BattleAmmunitionMode::Normal)
+            .all(|draw| loadout.ammunition[draw.bin_index].mode == AmmunitionMode::Normal)
     );
     state["ammunition"][normal[0].bin_index] = 0.into();
-    let depleted: BattleUnit = serde_json::from_value(state.clone()).unwrap();
+    let depleted: Mech = serde_json::from_value(state.clone()).unwrap();
     assert_eq!(
         depleted.ammunition_section(weapon),
-        Some(BattleSection::RightTorso)
+        Some(MechSection::RightTorso)
     );
     assert_eq!(
         loadout.ammunition[depleted.ammunition_feed(weapon, 1).unwrap()[0].bin_index]
             .location
             .section,
-        BattleSection::CenterTorso
+        MechSection::CenterTorso
     );
-    state["ammunition_modes"] =
-        serde_json::json!({weapon.to_string(): BattleAmmunitionMode::Artemis});
-    let special: BattleUnit = serde_json::from_value(state).unwrap();
+    state["ammunition_modes"] = serde_json::json!({weapon.to_string(): AmmunitionMode::Artemis});
+    let special: Mech = serde_json::from_value(state).unwrap();
     let draws = special.ammunition_feed(weapon, 2).unwrap();
     assert_eq!(draws.len(), 1);
     assert_eq!(draws[0].rounds, 2);
     assert_eq!(
         loadout.ammunition[draws[0].bin_index].mode,
-        BattleAmmunitionMode::Artemis
+        AmmunitionMode::Artemis
     );
 }

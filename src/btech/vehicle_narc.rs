@@ -4,14 +4,14 @@ use crate::{ObjectId, World};
 use anyhow::Result;
 use std::collections::{BTreeMap, BTreeSet};
 
-impl BattleVehicle {
+impl Vehicle {
     /// Persistent pod effects on surviving hull faces or the turret.
-    pub fn beacons(&self) -> &BTreeMap<BattleVehicleSection, BTreeSet<BattleBeaconKind>> {
+    pub fn beacons(&self) -> &BTreeMap<VehicleSection, BTreeSet<BeaconKind>> {
         &self.beacons
     }
 
     /// Whether any surviving section carries a particular attached effect.
-    pub fn has_beacon(&self, kind: BattleBeaconKind) -> bool {
+    pub fn has_beacon(&self, kind: BeaconKind) -> bool {
         self.beacons.values().any(|kinds| kinds.contains(&kind))
     }
 }
@@ -22,10 +22,10 @@ pub(super) fn attach(
     shooter: ObjectId,
     target: ObjectId,
     shot: super::narc::PodShot,
-    rules: BattleVehicleImpactRules,
+    rules: VehicleImpactRules,
     hit_arc_mode: i64,
-) -> Result<BattleNarcReport<BattleUnitSection>> {
-    let mut report = BattleNarcReport {
+) -> Result<NarcReport<UnitSection>> {
+    let mut report = NarcReport {
         kind: shot.kind,
         hit: shot.hit,
         intercepted: shot.intercepted,
@@ -45,7 +45,7 @@ pub(super) fn attach(
     let location = super::vehicle_impact::resolve_location(world, target, arc, rules)?;
     report.notices = location.notices;
     report.broadcasts = location.broadcasts;
-    report.rear = arc == BattleHitArc::Rear;
+    report.rear = arc == HitArc::Rear;
     let Some(hit) = location.hit else {
         return Ok(report);
     };
@@ -62,14 +62,14 @@ pub(super) fn attach(
         .entry(hit.section)
         .or_default()
         .insert(shot.kind);
-    report.section = Some(BattleUnitSection::Vehicle(hit.section));
-    if shot.kind == BattleBeaconKind::Haywire {
-        report.notices.push(BattleNotice {
+    report.section = Some(UnitSection::Vehicle(hit.section));
+    if shot.kind == BeaconKind::Haywire {
+        report.notices.push(Notice {
             unit: target,
             text: "Your targetting system goes a bit haywire!".into(),
         });
     }
-    if shot.kind == BattleBeaconKind::Ecm {
+    if shot.kind == BeaconKind::Ecm {
         report
             .notices
             .extend(super::electronics::refresh_receiver(world, target)?);

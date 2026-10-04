@@ -1,22 +1,22 @@
 //! In-character cockpit injuries, persistent health and fatal unit loss.
-use super::{BattleCharacterInjury, BattleConsciousnessCheck};
+use super::{CharacterInjury, ConsciousnessCheck};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 
 /// Character-mode pilot damage is independent of the six-hit tactical injury limit.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BattleCharacterPilotStatus {
+pub struct CharacterPilotStatus {
     pub injuries: u16,
     pub killed: bool,
 }
 
 /// Health and consciousness outcomes; the action owner publishes fatal evacuation.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleCharacterPilotInjury {
+pub struct CharacterPilotInjury {
     pub player: ObjectId,
-    pub injury: BattleCharacterInjury,
-    pub consciousness: Option<BattleConsciousnessCheck>,
+    pub injury: CharacterInjury,
+    pub consciousness: Option<ConsciousnessCheck>,
 }
 
 /// Apply health, consciousness and unit consequences atomically to a present in-character pilot.
@@ -25,7 +25,7 @@ pub fn injure_character_pilot(
     unit: ObjectId,
     hits: u8,
     toughness: bool,
-) -> Result<BattleCharacterPilotInjury> {
+) -> Result<CharacterPilotInjury> {
     let object = world.objects.get(&unit).context("Unit is unavailable")?;
     ensure!(
         object.flags.contains(Flag::InCharacter) && !object.flags.contains(Flag::Going),
@@ -55,7 +55,7 @@ pub fn injure_character_pilot(
     let mut status = status.unwrap_or_default();
     let mut candidate = world.clone();
     let injury = super::injure_character(&mut candidate, pilot, hits)?;
-    let mut report = BattleCharacterPilotInjury {
+    let mut report = CharacterPilotInjury {
         player: pilot,
         injury,
         consciousness: None,
@@ -88,9 +88,9 @@ pub fn injure_character_pilot(
 }
 
 /// Keep the health calculation shared while each chassis performs its own wreck cleanup.
-fn store_status(world: &mut World, id: ObjectId, status: BattleCharacterPilotStatus) {
+fn store_status(world: &mut World, id: ObjectId, status: CharacterPilotStatus) {
     let injuries = super::pilot_health::bounded(status.injuries);
-    let status = BattleCharacterPilotStatus {
+    let status = CharacterPilotStatus {
         injuries: injuries.into(),
         ..status
     };
@@ -111,14 +111,11 @@ fn store_status(world: &mut World, id: ObjectId, status: BattleCharacterPilotSta
 }
 
 /// Publish initial consciousness feedback only to the affected pilot; no second roll is performed.
-pub(super) fn notify_injury(
-    scripts: &crate::Scripts,
-    report: &BattleCharacterPilotInjury,
-) -> Result<()> {
+pub(super) fn notify_injury(scripts: &crate::Scripts, report: &CharacterPilotInjury) -> Result<()> {
     let Some(check) = report.consciousness else {
         return Ok(());
     };
-    let recipient = super::BattleMessageTarget::Player(report.player);
+    let recipient = super::MessageTarget::Player(report.player);
     super::notify_message(scripts, recipient, "You attempt to keep consciousness!")?;
     super::notify_message(
         scripts,

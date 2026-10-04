@@ -4,12 +4,12 @@ use stompymux_rs::*;
 
 /// A running wheeled vehicle in a long, level corridor.
 async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {
-    fixture_movement(BattleVehicleMovement::Wheeled).await
+    fixture_movement(VehicleMovement::Wheeled).await
 }
 
 /// Build either ground drivetrain for shared terrain-entry checks.
 async fn fixture_movement(
-    movement: BattleVehicleMovement,
+    movement: VehicleMovement,
 ) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {
     let (dir, config, mut world) = support::isolated_world().await;
     let map = world.create(&config, "Road".into(), Kind::Room);
@@ -28,13 +28,13 @@ async fn fixture_movement(
     .unwrap();
     let id = world.create(&config, "Truck".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-    let mut template = BattleVehicleTemplate::parse(
+    let mut template = VehicleTemplate::parse(
         "Flatbed_Truck",
         include_str!("../game/mechs/Flatbed_Truck.toml"),
     )
     .unwrap();
     template.movement = movement;
-    if movement == BattleVehicleMovement::Hover {
+    if movement == VehicleMovement::Hover {
         template.max_speed = 64.5;
     }
     create_battle_vehicle(&mut world, id, template).unwrap();
@@ -54,7 +54,7 @@ async fn vehicle_driving_replays_motion_and_coordinates_through_shared_controls(
     let (_dir, config, mut world, id, map) = fixture().await;
     set_battle_heading(&mut world, id, ObjectId(1), 90.0).unwrap();
     for _ in 0..10 {
-        advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
+        advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
     }
     assert_eq!(world.btech.vehicles()[&id].motion().unwrap().heading, 90.0);
     set_battle_speed(&mut world, id, ObjectId(1), 86.0).unwrap();
@@ -63,7 +63,7 @@ async fn vehicle_driving_replays_motion_and_coordinates_through_shared_controls(
     assert!(set_battle_speed(&mut world, id, ObjectId(1), f64::NAN).is_err());
     assert_eq!(world.btech, before.btech);
     for _ in 0..20 {
-        advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
+        advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
     }
     assert_eq!(world.btech.vehicles()[&id].motion().unwrap().speed, 86.0);
     assert!(world.btech.vehicles()[&id].position().unwrap().x > 2);
@@ -72,14 +72,14 @@ async fn vehicle_driving_replays_motion_and_coordinates_through_shared_controls(
     let mut restored = persistence::load(&config.database()).await.unwrap();
     for _ in 0..10 {
         assert_eq!(
-            advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap(),
-            advance_battle_motion(&mut restored, BattleMovementRules::STANDARD).unwrap()
+            advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap(),
+            advance_battle_motion(&mut restored, MovementRules::STANDARD).unwrap()
         );
     }
     assert_eq!(world.btech, restored.btech);
     let mut edge = false;
     for _ in 0..200 {
-        edge |= advance_battle_motion(&mut world, BattleMovementRules::STANDARD)
+        edge |= advance_battle_motion(&mut world, MovementRules::STANDARD)
             .unwrap()
             .iter()
             .any(|notice| notice.text.contains("Map edge"));
@@ -133,16 +133,16 @@ async fn native_and_lua_vehicle_controls_share_rollback_and_shutdown() {
 #[tokio::test]
 async fn vehicle_authored_terrain_shares_elevation_hazards_and_replay() {
     for movement in [
-        BattleVehicleMovement::Tracked,
-        BattleVehicleMovement::Wheeled,
-        BattleVehicleMovement::Hover,
+        VehicleMovement::Tracked,
+        VehicleMovement::Wheeled,
+        VehicleMovement::Hover,
     ] {
         for terrain in [Terrain::Building, Terrain::Wall] {
             for height in [0, 1, 3] {
                 let (_dir, config, mut world, id, map) = fixture_movement(movement).await;
                 set_battle_heading(&mut world, id, ObjectId(1), 90.0).unwrap();
                 for _ in 0..30 {
-                    advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
+                    advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
                 }
                 set_battle_speed(&mut world, id, ObjectId(1), 64.5).unwrap();
                 let mut saved = serde_json::to_value(&world.btech).unwrap();
@@ -170,10 +170,9 @@ async fn vehicle_authored_terrain_shares_elevation_hazards_and_replay() {
                 let mut hazard = false;
                 for tick in 0..45 {
                     let notices =
-                        advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
+                        advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
                     let expected =
-                        advance_battle_motion(&mut ordinary, BattleMovementRules::STANDARD)
-                            .unwrap();
+                        advance_battle_motion(&mut ordinary, MovementRules::STANDARD).unwrap();
                     assert_eq!(notices, expected);
                     assert_eq!(world.btech.vehicles()[&id], ordinary.btech.vehicles()[&id]);
                     entered |= world.btech.vehicles()[&id].position().unwrap().x >= 3;
@@ -227,7 +226,7 @@ async fn burning_corridor() -> (tempfile::TempDir, Config, World, ObjectId, Obje
                     &mut world,
                     map,
                     hex,
-                    Some(BattleDecoration::new(DecorationKind::Fire, 120, Some(30))),
+                    Some(Decoration::new(DecorationKind::Fire, 120, Some(30))),
                 )
                 .unwrap();
             }
@@ -237,20 +236,17 @@ async fn burning_corridor() -> (tempfile::TempDir, Config, World, ObjectId, Obje
 }
 
 /// Put a prescribed fire/motive pair first in the driver's private stream.
-fn terrain_seed(world: &mut World, id: ObjectId, fire: u8, motive: u8) -> BattleDice {
+fn terrain_seed(world: &mut World, id: ObjectId, fire: u8, motive: u8) -> Dice {
     let seed = (0u32..100000)
         .find_map(|number| {
             let mut seed = [0; 32];
             seed[..4].copy_from_slice(&number.to_le_bytes());
-            let mut dice = BattleDice::seeded(seed);
+            let mut dice = Dice::seeded(seed);
             (dice.two_d6() == fire && dice.two_d6() == motive).then_some(seed)
         })
         .unwrap();
-    world
-        .btech
-        .set_unit_dice(id, BattleDice::seeded(seed))
-        .unwrap();
-    BattleDice::seeded(seed)
+    world.btech.set_unit_dice(id, Dice::seeded(seed)).unwrap();
+    Dice::seeded(seed)
 }
 
 #[tokio::test]
@@ -259,21 +255,21 @@ async fn terrain_fire_is_configured_and_stops_at_the_first_disabling_crossing() 
     let mut dice = terrain_seed(&mut base, id, 6, 10); // Wheeled: fire 8, motive 12.
     let original = base.btech.vehicles()[&id].motion().unwrap();
     let mut safe = base.clone();
-    advance_battle_motion(&mut safe, BattleMovementRules::STANDARD).unwrap();
+    advance_battle_motion(&mut safe, MovementRules::STANDARD).unwrap();
     assert!(safe.btech.vehicles()[&id].motion().unwrap().point.x > original.point.x + 1.0);
     assert_eq!(
         roll_unit_dice(&mut safe, id, 1).unwrap(),
         [dice.clone().d6()]
     );
-    let rules = BattleMovementRules {
-        fall: BattleFallRules {
-            vehicle_impact: BattleVehicleImpactRules {
+    let rules = MovementRules {
+        fall: FallRules {
+            vehicle_impact: VehicleImpactRules {
                 advanced_fire: true,
-                ..BattleVehicleImpactRules::STANDARD
+                ..VehicleImpactRules::STANDARD
             },
-            ..BattleMovementRules::STANDARD.fall
+            ..MovementRules::STANDARD.fall
         },
-        ..BattleMovementRules::STANDARD
+        ..MovementRules::STANDARD
     };
     persistence::save(&config.database(), &base).await.unwrap();
     let mut restored = persistence::load(&config.database()).await.unwrap();
@@ -306,15 +302,15 @@ async fn terrain_fire_is_configured_and_stops_at_the_first_disabling_crossing() 
 #[tokio::test]
 async fn fire_exposure_requires_entry_and_hull_loss_preserves_occupants() {
     let (_dir, config, mut world, id, map) = burning_corridor().await;
-    let rules = BattleMovementRules {
-        fall: BattleFallRules {
-            vehicle_impact: BattleVehicleImpactRules {
+    let rules = MovementRules {
+        fall: FallRules {
+            vehicle_impact: VehicleImpactRules {
                 advanced_fire: true,
-                ..BattleVehicleImpactRules::STANDARD
+                ..VehicleImpactRules::STANDARD
             },
-            ..BattleMovementRules::STANDARD.fall
+            ..MovementRules::STANDARD.fall
         },
-        ..BattleMovementRules::STANDARD
+        ..MovementRules::STANDARD
     };
     let mut quiet = world.clone();
     let mut saved = serde_json::to_value(&quiet.btech).unwrap();
@@ -332,7 +328,7 @@ async fn fire_exposure_requires_entry_and_hull_loss_preserves_occupants() {
         &mut quiet,
         map,
         hex,
-        Some(BattleDecoration::new(DecorationKind::Fire, 120, Some(30))),
+        Some(Decoration::new(DecorationKind::Fire, 120, Some(30))),
     )
     .unwrap();
     let before = serde_json::to_value(&quiet.btech.vehicles()[&id]).unwrap();
@@ -387,7 +383,7 @@ async fn every_crossed_fire_hex_checks_once_without_adding_stationary_exposure()
         .unwrap();
     let start = world.btech.vehicles()[&id].motion().unwrap().point;
     let mut ordinary = world.clone();
-    advance_battle_motion(&mut ordinary, BattleMovementRules::STANDARD).unwrap();
+    advance_battle_motion(&mut ordinary, MovementRules::STANDARD).unwrap();
     let end = ordinary.btech.vehicles()[&id].motion().unwrap().point;
     let crossings = start.trace(end).unwrap().len() - 1;
     assert!(crossings >= 2);
@@ -395,23 +391,20 @@ async fn every_crossed_fire_hex_checks_once_without_adding_stationary_exposure()
         .find_map(|number| {
             let mut seed = [0; 32];
             seed[..4].copy_from_slice(&number.to_le_bytes());
-            let mut dice = BattleDice::seeded(seed);
+            let mut dice = Dice::seeded(seed);
             (0..crossings).all(|_| dice.two_d6() <= 5).then_some(seed)
         })
         .unwrap();
-    world
-        .btech
-        .set_unit_dice(id, BattleDice::seeded(seed))
-        .unwrap();
-    let rules = BattleMovementRules {
-        fall: BattleFallRules {
-            vehicle_impact: BattleVehicleImpactRules {
+    world.btech.set_unit_dice(id, Dice::seeded(seed)).unwrap();
+    let rules = MovementRules {
+        fall: FallRules {
+            vehicle_impact: VehicleImpactRules {
                 advanced_fire: true,
-                ..BattleVehicleImpactRules::STANDARD
+                ..VehicleImpactRules::STANDARD
             },
-            ..BattleMovementRules::STANDARD.fall
+            ..MovementRules::STANDARD.fall
         },
-        ..BattleMovementRules::STANDARD
+        ..MovementRules::STANDARD
     };
     let notices = advance_battle_motion(&mut world, rules).unwrap();
     assert!(notices.is_empty());
@@ -423,7 +416,7 @@ async fn every_crossed_fire_hex_checks_once_without_adding_stationary_exposure()
         world.btech.vehicles()[&id].sections(),
         ordinary.btech.vehicles()[&id].sections()
     );
-    let mut dice = BattleDice::seeded(seed);
+    let mut dice = Dice::seeded(seed);
     for _ in 0..crossings {
         dice.two_d6();
     }
@@ -435,14 +428,14 @@ async fn every_crossed_fire_hex_checks_once_without_adding_stationary_exposure()
 fn corridor_entries(world: &World, id: ObjectId) -> Vec<HexCoordinate> {
     let origin = world.btech.vehicles()[&id].motion().unwrap().point;
     let mut clear = world.clone();
-    advance_battle_motion(&mut clear, BattleMovementRules::STANDARD).unwrap();
+    advance_battle_motion(&mut clear, MovementRules::STANDARD).unwrap();
     let end = clear.btech.vehicles()[&id].motion().unwrap().point;
     origin.trace(end).unwrap().into_iter().skip(1).collect()
 }
 
 /// Prevent incidental critical cascades from obscuring the per-crossing mine packet checks.
-fn mine_movement_rules() -> BattleMovementRules {
-    let mut rules = BattleMovementRules::STANDARD;
+fn mine_movement_rules() -> MovementRules {
+    let mut rules = MovementRules::STANDARD;
     rules.fall.vehicle_impact.criticals.enabled = false;
     rules.fall.vehicle_impact.hit.critical_mode = 0;
     rules
@@ -454,12 +447,12 @@ fn seed_corridor_mines(
     id: ObjectId,
     map: ObjectId,
     entries: &[HexCoordinate],
-) -> BattleDice {
+) -> Dice {
     let seed = (0u32..100000)
         .find_map(|number| {
             let mut bytes = [0; 32];
             bytes[..4].copy_from_slice(&number.to_le_bytes());
-            let initial = BattleDice::seeded(bytes);
+            let initial = Dice::seeded(bytes);
             let mut dice = initial.clone();
             entries
                 .iter()
@@ -473,15 +466,12 @@ fn seed_corridor_mines(
         .unwrap();
     world.btech.set_unit_dice(id, seed.clone()).unwrap();
     for (index, &coordinate) in entries.iter().enumerate() {
-        for (offset, kind, strength) in [
-            (0, BattleMineKind::Trigger, 0),
-            (1, BattleMineKind::Standard, 1),
-        ] {
+        for (offset, kind, strength) in [(0, MineKind::Trigger, 0), (1, MineKind::Standard, 1)] {
             set_minefield(
                 world,
                 map,
                 index as u32 * 2 + offset,
-                Some(BattleMinefield {
+                Some(Minefield {
                     coordinate,
                     kind,
                     strength,
@@ -615,9 +605,9 @@ async fn unrelated_mines_and_motion_inside_one_hex_do_not_trigger_or_stop_vehicl
         &mut world,
         map,
         0,
-        Some(BattleMinefield {
+        Some(Minefield {
             coordinate: HexCoordinate { x: 19, y: 2 },
-            kind: BattleMineKind::Standard,
+            kind: MineKind::Standard,
             strength: 10,
             extra: 0,
             owner: ObjectId(1),
@@ -650,9 +640,9 @@ async fn unrelated_mines_and_motion_inside_one_hex_do_not_trigger_or_stop_vehicl
         &mut world,
         map,
         1,
-        Some(BattleMinefield {
+        Some(Minefield {
             coordinate,
-            kind: BattleMineKind::Standard,
+            kind: MineKind::Standard,
             strength: 10,
             extra: 0,
             owner: ObjectId(1),
@@ -684,9 +674,9 @@ async fn disabling_mine_heat_precedes_terrain_fire_and_stops_at_entry() {
         &mut world,
         map,
         0,
-        Some(BattleMinefield {
+        Some(Minefield {
             coordinate: first,
-            kind: BattleMineKind::Inferno,
+            kind: MineKind::Inferno,
             strength: 2,
             extra: 0,
             owner: ObjectId(1),
@@ -697,14 +687,14 @@ async fn disabling_mine_heat_precedes_terrain_fire_and_stops_at_entry() {
         &mut world,
         map,
         first,
-        Some(BattleDecoration::new(DecorationKind::Fire, 120, Some(30))),
+        Some(Decoration::new(DecorationKind::Fire, 120, Some(30))),
     )
     .unwrap();
     let mut dice = (0u32..100000)
         .find_map(|number| {
             let mut bytes = [0; 32];
             bytes[..4].copy_from_slice(&number.to_le_bytes());
-            let initial = BattleDice::seeded(bytes);
+            let initial = Dice::seeded(bytes);
             let mut dice = initial.clone();
             (dice.two_d6() == 6 && dice.two_d6() == 10 && dice.two_d6() <= 5).then_some(initial)
         })
@@ -763,7 +753,7 @@ async fn mine_blast_disables_a_later_vehicle_before_its_scheduled_movement() {
     create_battle_vehicle(
         &mut world,
         other,
-        BattleVehicleTemplate::parse(
+        VehicleTemplate::parse(
             "Flatbed_Truck",
             include_str!("../game/mechs/Flatbed_Truck.toml"),
         )
@@ -782,7 +772,7 @@ async fn mine_blast_disables_a_later_vehicle_before_its_scheduled_movement() {
     world
         .btech
         .rewrite_unit_record(other, |record| {
-            record["power"] = serde_json::to_value(BattlePower::Running).unwrap();
+            record["power"] = serde_json::to_value(Power::Running).unwrap();
             record["motion"]["speed"] = 86.0.into();
             record["motion"]["desired_speed"] = 86.0.into();
         })
@@ -792,9 +782,9 @@ async fn mine_blast_disables_a_later_vehicle_before_its_scheduled_movement() {
         &mut world,
         map,
         0,
-        Some(BattleMinefield {
+        Some(Minefield {
             coordinate: first,
-            kind: BattleMineKind::Vibra,
+            kind: MineKind::Vibra,
             strength: 8,
             extra: 0,
             owner: ObjectId(1),
@@ -805,7 +795,7 @@ async fn mine_blast_disables_a_later_vehicle_before_its_scheduled_movement() {
     let notices = advance_battle_motion(&mut world, mine_movement_rules()).unwrap();
     for target in [id, other] {
         assert!(world.btech.vehicles()[&target].is_destroyed());
-        assert_eq!(world.btech.vehicles()[&target].power(), BattlePower::Off);
+        assert_eq!(world.btech.vehicles()[&target].power(), Power::Off);
     }
     assert_eq!(
         world.btech.vehicles()[&other].motion().unwrap().point,
@@ -840,9 +830,9 @@ async fn later_boundary_does_not_bypass_an_earlier_mine() {
         &mut world,
         map,
         0,
-        Some(BattleMinefield {
+        Some(Minefield {
             coordinate: first,
-            kind: BattleMineKind::Inferno,
+            kind: MineKind::Inferno,
             strength: 2,
             extra: 0,
             owner: ObjectId(1),
@@ -882,8 +872,8 @@ async fn vehicle_mine_movement_retries_a_failed_server_save() {
         use sqlx::Connection;
         let (_dir, config, mut world, id, map) = fast_corridor(2000).await;
         let first = corridor_entries(&world, id)[0];
-        set_minefield(&mut world, map, 0, Some(BattleMinefield {
-            coordinate: first, kind: BattleMineKind::Vibra, strength: 8, extra: 0, owner: ObjectId(1),
+        set_minefield(&mut world, map, 0, Some(Minefield {
+            coordinate: first, kind: MineKind::Vibra, strength: 8, extra: 0, owner: ObjectId(1),
         })).unwrap();
         persistence::save(&config.database(), &world).await.unwrap();
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
@@ -914,9 +904,9 @@ async fn fatal_mine_heat_still_checks_terrain_fire_before_stopping() {
         &mut world,
         map,
         0,
-        Some(BattleMinefield {
+        Some(Minefield {
             coordinate: first,
-            kind: BattleMineKind::Inferno,
+            kind: MineKind::Inferno,
             strength: 2,
             extra: 0,
             owner: ObjectId(1),
@@ -927,7 +917,7 @@ async fn fatal_mine_heat_still_checks_terrain_fire_before_stopping() {
         .find_map(|number| {
             let mut bytes = [0; 32];
             bytes[..4].copy_from_slice(&number.to_le_bytes());
-            let initial = BattleDice::seeded(bytes);
+            let initial = Dice::seeded(bytes);
             let mut dice = initial.clone();
             if dice.two_d6() != 8 {
                 return None;
@@ -983,7 +973,7 @@ async fn ground_vehicles_cross_crowded_hexes_without_stacking_effects() {
     let (_dir, config, mut world, id, map) = fixture().await;
     set_battle_heading(&mut world, id, ObjectId(1), 90.0).unwrap();
     for _ in 0..10 {
-        advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
+        advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
     }
     set_battle_speed(&mut world, id, ObjectId(1), 86.0).unwrap();
     let mut empty = world.clone();
@@ -995,7 +985,7 @@ async fn ground_vehicles_cross_crowded_hexes_without_stacking_effects() {
             create_battle_vehicle(
                 &mut world,
                 other,
-                BattleVehicleTemplate::parse(
+                VehicleTemplate::parse(
                     "Flatbed_Truck",
                     include_str!("../game/mechs/Flatbed_Truck.toml"),
                 )
@@ -1007,7 +997,7 @@ async fn ground_vehicles_cross_crowded_hexes_without_stacking_effects() {
             create_battle_unit(
                 &mut world,
                 other,
-                BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
                     .unwrap(),
             )
             .unwrap();
@@ -1020,8 +1010,8 @@ async fn ground_vehicles_cross_crowded_hexes_without_stacking_effects() {
     let mut passed = false;
     for _ in 0..100 {
         assert_eq!(
-            advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap(),
-            advance_battle_motion(&mut empty, BattleMovementRules::STANDARD).unwrap()
+            advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap(),
+            advance_battle_motion(&mut empty, MovementRules::STANDARD).unwrap()
         );
         assert_eq!(world.btech.vehicles()[&id], empty.btech.vehicles()[&id]);
         if world.btech.vehicles()[&id].position().unwrap().x > 3 {
@@ -1051,27 +1041,27 @@ async fn ground_vehicles_cross_crowded_hexes_without_stacking_effects() {
 #[tokio::test]
 async fn vehicle_water_entry_replays_avoidance_flooding_and_exemptions() {
     for (movement, success, waterproof, depth, piloted) in [
-        (BattleVehicleMovement::Wheeled, true, false, 1, true),
-        (BattleVehicleMovement::Wheeled, false, false, 1, true),
-        (BattleVehicleMovement::Tracked, true, false, 1, true),
-        (BattleVehicleMovement::Tracked, false, false, 1, true),
-        (BattleVehicleMovement::Tracked, true, true, 1, true),
-        (BattleVehicleMovement::Wheeled, true, false, 0, true),
-        (BattleVehicleMovement::Wheeled, true, false, 1, false),
+        (VehicleMovement::Wheeled, true, false, 1, true),
+        (VehicleMovement::Wheeled, false, false, 1, true),
+        (VehicleMovement::Tracked, true, false, 1, true),
+        (VehicleMovement::Tracked, false, false, 1, true),
+        (VehicleMovement::Tracked, true, true, 1, true),
+        (VehicleMovement::Wheeled, true, false, 0, true),
+        (VehicleMovement::Wheeled, true, false, 1, false),
     ] {
         let (_dir, config, mut world, id, map) = fixture_movement(movement).await;
         set_battle_heading(&mut world, id, ObjectId(1), 90.0).unwrap();
         for _ in 0..10 {
-            advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
+            advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
         }
         set_battle_speed(&mut world, id, ObjectId(1), 86.0).unwrap();
         let seed = (0..=255)
-            .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 12)
+            .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
             .unwrap();
         let mut saved = serde_json::to_value(&world.btech).unwrap();
         let unit = &mut saved["vehicles"][id.0.to_string()];
         unit["piloting_damage"] = if success { 0 } else { 100 }.into();
-        unit["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+        unit["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
         if !piloted {
             unit["pilot"] = serde_json::Value::Null;
         }
@@ -1090,7 +1080,7 @@ async fn vehicle_water_entry_replays_avoidance_flooding_and_exemptions() {
         let mut encountered = false;
         for _ in 0..100 {
             let before = world.clone();
-            let notices = advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
+            let notices = advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
             let unit = &world.btech.vehicles()[&id];
             let checked = notices.iter().any(|n| n.text.contains("body of water"));
             if !checked && unit.position().unwrap().x < 3 {
@@ -1114,7 +1104,7 @@ async fn vehicle_water_entry_replays_avoidance_flooding_and_exemptions() {
             } else {
                 assert!(unit.motion().unwrap().active());
             }
-            let mut dice = BattleDice::seeded([seed; 32]);
+            let mut dice = Dice::seeded([seed; 32]);
             if checked && piloted {
                 dice.two_d6();
             }
@@ -1128,7 +1118,7 @@ async fn vehicle_water_entry_replays_avoidance_flooding_and_exemptions() {
             let mut restored = persistence::load(&config.database()).await.unwrap();
             assert_eq!(
                 notices,
-                advance_battle_motion(&mut restored, BattleMovementRules::STANDARD).unwrap()
+                advance_battle_motion(&mut restored, MovementRules::STANDARD).unwrap()
             );
             assert_eq!(world.btech, restored.btech);
             world.validate(&config).unwrap();
@@ -1147,70 +1137,58 @@ async fn vehicle_water_entry_replays_avoidance_flooding_and_exemptions() {
 async fn vehicle_obstacles_share_checks_falls_configuration_and_replay() {
     for (movement, terrain, enabled, success, checked) in [
         (
-            BattleVehicleMovement::Tracked,
+            VehicleMovement::Tracked,
             Terrain::HeavyForest,
             true,
             false,
             true,
         ),
         (
-            BattleVehicleMovement::Tracked,
+            VehicleMovement::Tracked,
             Terrain::HeavyForest,
             true,
             true,
             true,
         ),
         (
-            BattleVehicleMovement::Tracked,
+            VehicleMovement::Tracked,
             Terrain::HeavyForest,
             false,
             true,
             false,
         ),
         (
-            BattleVehicleMovement::Tracked,
+            VehicleMovement::Tracked,
             Terrain::LightForest,
             true,
             true,
             false,
         ),
         (
-            BattleVehicleMovement::Wheeled,
+            VehicleMovement::Wheeled,
             Terrain::LightForest,
             true,
             false,
             true,
         ),
         (
-            BattleVehicleMovement::Wheeled,
+            VehicleMovement::Wheeled,
             Terrain::HeavyForest,
             true,
             true,
             true,
         ),
+        (VehicleMovement::Wheeled, Terrain::Rough, true, false, true),
+        (VehicleMovement::Wheeled, Terrain::Rough, false, true, false),
         (
-            BattleVehicleMovement::Wheeled,
-            Terrain::Rough,
-            true,
-            false,
-            true,
-        ),
-        (
-            BattleVehicleMovement::Wheeled,
-            Terrain::Rough,
-            false,
-            true,
-            false,
-        ),
-        (
-            BattleVehicleMovement::Hover,
+            VehicleMovement::Hover,
             Terrain::HeavyForest,
             false,
             false,
             true,
         ),
         (
-            BattleVehicleMovement::Hover,
+            VehicleMovement::Hover,
             Terrain::LightForest,
             false,
             true,
@@ -1220,7 +1198,7 @@ async fn vehicle_obstacles_share_checks_falls_configuration_and_replay() {
         let (_dir, config, mut world, id, map) = fixture_movement(movement).await;
         let maximum = world.btech.vehicles()[&id].maximum_speed();
         let seed = (0..=255)
-            .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 12)
+            .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
             .unwrap();
         let mut saved = serde_json::to_value(&world.btech).unwrap();
         let unit = &mut saved["vehicles"][id.0.to_string()];
@@ -1229,7 +1207,7 @@ async fn vehicle_obstacles_share_checks_falls_configuration_and_replay() {
         unit["motion"]["speed"] = maximum.into();
         unit["motion"]["desired_speed"] = maximum.into();
         unit["piloting_damage"] = if success { 0 } else { 100 }.into();
-        unit["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+        unit["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
         for row in 0..3 {
             for x in 3..20 {
                 let tile = &mut saved["maps"][map.0.to_string()]["terrain"][row * 20 + x];
@@ -1239,9 +1217,9 @@ async fn vehicle_obstacles_share_checks_falls_configuration_and_replay() {
         saved["maps"][map.0.to_string()]["decorations"]["23"] =
             serde_json::json!({"kind":"smoke", "remaining":120, "object_duration":120, "order":-1});
         world.btech = serde_json::from_value(saved).unwrap();
-        let rules = BattleMovementRules {
+        let rules = MovementRules {
             new_terrain: enabled,
-            ..BattleMovementRules::STANDARD
+            ..MovementRules::STANDARD
         };
         let mut entered = false;
         for _ in 0..100 {
@@ -1313,19 +1291,19 @@ async fn vehicle_obstacles_share_checks_falls_configuration_and_replay() {
 #[tokio::test]
 async fn tracked_and_wheeled_ice_entry_replays_shared_fracture_and_waterproof_roles() {
     for (movement, fracture, depth, waterproof) in [
-        (BattleVehicleMovement::Tracked, false, 3, false),
-        (BattleVehicleMovement::Wheeled, false, 3, false),
-        (BattleVehicleMovement::Tracked, true, 1, false),
-        (BattleVehicleMovement::Wheeled, true, 1, true),
-        (BattleVehicleMovement::Tracked, true, 0, false),
+        (VehicleMovement::Tracked, false, 3, false),
+        (VehicleMovement::Wheeled, false, 3, false),
+        (VehicleMovement::Tracked, true, 1, false),
+        (VehicleMovement::Wheeled, true, 1, true),
+        (VehicleMovement::Tracked, true, 0, false),
     ] {
         let (_dir, config, mut world, id, map) = fixture_movement(movement).await;
         let seed = (0..=255)
-            .find(|seed| (BattleDice::seeded([*seed; 32]).d6() == 1) == fracture)
+            .find(|seed| (Dice::seeded([*seed; 32]).d6() == 1) == fracture)
             .unwrap();
         let neighbor = world.create(&config, "Waterproof neighbor".into(), Kind::Thing);
         world.objects.get_mut(&neighbor).unwrap().home = Some(ObjectId(config.home()));
-        let mut template = BattleVehicleTemplate::parse(
+        let mut template = VehicleTemplate::parse(
             "Flatbed_Truck",
             include_str!("../game/mechs/Flatbed_Truck.toml"),
         )
@@ -1341,8 +1319,7 @@ async fn tracked_and_wheeled_ice_entry_replays_shared_fracture_and_waterproof_ro
         create_battle_unit(
             &mut world,
             mech,
-            BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
-                .unwrap(),
+            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, mech, support::FIXTURE_DICE_SEED);
@@ -1353,7 +1330,7 @@ async fn tracked_and_wheeled_ice_entry_replays_shared_fracture_and_waterproof_ro
         unit["motion"]["desired_heading"] = 120.0.into();
         unit["motion"]["speed"] = 86.0.into();
         unit["motion"]["desired_speed"] = 86.0.into();
-        unit["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+        unit["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
         if waterproof {
             unit["definition"]["attributes"]["specials"] = "Waterproof_Tech".into();
         }
@@ -1365,7 +1342,7 @@ async fn tracked_and_wheeled_ice_entry_replays_shared_fracture_and_waterproof_ro
         let mut entered = false;
         for _ in 0..100 {
             let before = world.clone();
-            let notices = advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
+            let notices = advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
             let unit = &world.btech.vehicles()[&id];
             if unit.position().unwrap().x < 3 {
                 continue;
@@ -1399,7 +1376,7 @@ async fn tracked_and_wheeled_ice_entry_replays_shared_fracture_and_waterproof_ro
             );
             assert_eq!(unit.motion().unwrap().active(), !(fracture && depth > 0));
             if !fracture || depth == 0 {
-                let mut dice = BattleDice::seeded([seed; 32]);
+                let mut dice = Dice::seeded([seed; 32]);
                 dice.d6();
                 assert_eq!(
                     serde_json::to_value(unit).unwrap()["dice"],
@@ -1416,7 +1393,7 @@ async fn tracked_and_wheeled_ice_entry_replays_shared_fracture_and_waterproof_ro
             } else {
                 assert_eq!(
                     world.btech.constructed_units()[&mech].posture(),
-                    BattlePosture::Prone
+                    Posture::Prone
                 );
                 let neighbor_notice = notices
                     .iter()
@@ -1439,9 +1416,7 @@ async fn tracked_and_wheeled_ice_entry_replays_shared_fracture_and_waterproof_ro
                     .flags
                     .insert(Flag::InCharacter);
                 let snapshot = rejected.btech.clone();
-                assert!(
-                    advance_battle_motion(&mut rejected, BattleMovementRules::STANDARD).is_err()
-                );
+                assert!(advance_battle_motion(&mut rejected, MovementRules::STANDARD).is_err());
                 assert_eq!(snapshot, rejected.btech);
             }
             persistence::save(&config.database(), &before)
@@ -1450,7 +1425,7 @@ async fn tracked_and_wheeled_ice_entry_replays_shared_fracture_and_waterproof_ro
             let mut restored = persistence::load(&config.database()).await.unwrap();
             assert_eq!(
                 notices,
-                advance_battle_motion(&mut restored, BattleMovementRules::STANDARD).unwrap()
+                advance_battle_motion(&mut restored, MovementRules::STANDARD).unwrap()
             );
             assert_eq!(world.btech, restored.btech);
             world.validate(&config).unwrap();
@@ -1467,7 +1442,7 @@ async fn tracked_and_wheeled_ice_entry_replays_shared_fracture_and_waterproof_ro
 
 #[tokio::test]
 async fn waterproof_vehicle_stays_below_ice_without_a_surface_fracture_roll() {
-    let (_dir, config, mut world, id, map) = fixture_movement(BattleVehicleMovement::Tracked).await;
+    let (_dir, config, mut world, id, map) = fixture_movement(VehicleMovement::Tracked).await;
     let mut saved = serde_json::to_value(&world.btech).unwrap();
     let unit = &mut saved["vehicles"][id.0.to_string()];
     unit["definition"]["attributes"]["specials"] = "Waterproof_Tech".into();
@@ -1488,7 +1463,7 @@ async fn waterproof_vehicle_stays_below_ice_without_a_surface_fracture_roll() {
     let mut entered = false;
     for _ in 0..100 {
         assert!(
-            advance_battle_motion(&mut world, BattleMovementRules::STANDARD)
+            advance_battle_motion(&mut world, MovementRules::STANDARD)
                 .unwrap()
                 .is_empty()
         );
@@ -1519,7 +1494,7 @@ async fn terrain_fire_crew_death_evacuates_in_the_movement_checkpoint() {
         .find_map(|value| {
             let mut seed = [0; 32];
             seed[..4].copy_from_slice(&value.to_le_bytes());
-            let mut dice = BattleDice::seeded(seed);
+            let mut dice = Dice::seeded(seed);
             if dice.two_d6() != 8 {
                 return None;
             }
@@ -1534,7 +1509,7 @@ async fn terrain_fire_crew_death_evacuates_in_the_movement_checkpoint() {
     world
         .btech
         .rewrite_unit_record(id, |record| {
-            record["dice"] = serde_json::to_value(BattleDice::seeded(seed)).unwrap();
+            record["dice"] = serde_json::to_value(Dice::seeded(seed)).unwrap();
             for section in record["sections"].as_object_mut().unwrap().values_mut() {
                 section["armor"] = 0.into();
             }
@@ -1546,9 +1521,9 @@ async fn terrain_fire_crew_death_evacuates_in_the_movement_checkpoint() {
         .unwrap()
         .flags
         .insert(Flag::InCharacter);
-    let mut rules = BattleMovementRules::STANDARD;
+    let mut rules = MovementRules::STANDARD;
     rules.fall.vehicle_impact.advanced_fire = true;
-    rules.fall.vehicle_impact.criticals.table = BattleVehicleCriticalTable::Standard;
+    rules.fall.vehicle_impact.criticals.table = VehicleCriticalTable::Standard;
     world
         .objects
         .get_mut(&ObjectId(2))
@@ -1586,9 +1561,9 @@ async fn character_movement_collisions_publish_falls_and_rollback_casualties() {
     for hazard in ["forest", "cliff", "bridge", "ice", "water_cliff"] {
         for initial in [0, 9] {
             let movement = if hazard == "bridge" {
-                BattleVehicleMovement::Hover
+                VehicleMovement::Hover
             } else {
-                BattleVehicleMovement::Wheeled
+                VehicleMovement::Wheeled
             };
             let (_dir, config, mut world, id, map) = fixture_movement(movement).await;
             release_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
@@ -1608,7 +1583,7 @@ async fn character_movement_collisions_publish_falls_and_rollback_casualties() {
             set_battle_character(
                 &mut world,
                 ObjectId(2),
-                BattleCharacter {
+                Character {
                     bruise: 0,
                     lethal: 0,
                     build: 5,
@@ -1636,9 +1611,9 @@ async fn character_movement_collisions_publish_falls_and_rollback_casualties() {
             unit["definition"]["attributes"]["specials"] = "ICEEngine_Tech CritProof_Tech".into();
             if hazard == "ice" {
                 let seed = (0..=255)
-                    .find(|seed| BattleDice::seeded([*seed; 32]).d6() == 1)
+                    .find(|seed| Dice::seeded([*seed; 32]).d6() == 1)
                     .unwrap();
-                unit["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+                unit["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
             }
             if hazard == "bridge" {
                 unit["under_bridge"] = true.into();
@@ -1660,9 +1635,9 @@ async fn character_movement_collisions_publish_falls_and_rollback_casualties() {
                 }
             }
             world.btech = serde_json::from_value(saved).unwrap();
-            let rules = BattleMovementRules {
+            let rules = MovementRules {
                 new_terrain: true,
-                ..BattleMovementRules::STANDARD
+                ..MovementRules::STANDARD
             };
             let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
             let afterlife = ObjectId(config.battletech.afterlife_dbref);
@@ -1763,10 +1738,7 @@ async fn character_movement_collisions_publish_falls_and_rollback_casualties() {
 #[tokio::test]
 async fn character_water_entry_preserves_occupants_and_replays_flooding() {
     use std::{cell::RefCell, rc::Rc};
-    for movement in [
-        BattleVehicleMovement::Tracked,
-        BattleVehicleMovement::Wheeled,
-    ] {
+    for movement in [VehicleMovement::Tracked, VehicleMovement::Wheeled] {
         for success in [false, true] {
             let (_dir, config, mut world, id, map) = fixture_movement(movement).await;
             world
@@ -1792,7 +1764,7 @@ async fn character_water_entry_preserves_occupants_and_replays_flooding() {
             set_battle_character(
                 &mut world,
                 ObjectId(2),
-                BattleCharacter {
+                Character {
                     build: 5,
                     reflexes: 5,
                     intuition: 5,
@@ -1807,7 +1779,7 @@ async fn character_water_entry_preserves_occupants_and_replays_flooding() {
             assign_battle_pilot(&mut world, id, ObjectId(2)).unwrap();
             support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
             let seed = (0..=255)
-                .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 12)
+                .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
                 .unwrap();
             let mut saved = serde_json::to_value(&world.btech).unwrap();
             let unit = &mut saved["vehicles"][id.0.to_string()];
@@ -1816,7 +1788,7 @@ async fn character_water_entry_preserves_occupants_and_replays_flooding() {
             unit["motion"]["speed"] = 86.0.into();
             unit["motion"]["desired_speed"] = 86.0.into();
             unit["piloting_damage"] = if success { 0 } else { 100 }.into();
-            unit["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+            unit["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
             for row in 0..3 {
                 for x in 3..20 {
                     let tile = &mut saved["maps"][map.0.to_string()]["terrain"][row * 20 + x];
@@ -1825,7 +1797,7 @@ async fn character_water_entry_preserves_occupants_and_replays_flooding() {
             }
             world.btech = serde_json::from_value(saved).unwrap();
             let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-            let rules = BattleMovementRules::STANDARD;
+            let rules = MovementRules::STANDARD;
             let mut encountered = false;
             for _ in 0..100 {
                 let before = scripts.world().clone();

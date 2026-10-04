@@ -33,28 +33,26 @@ pub(super) fn speed(world: &World, id: ObjectId) -> Result<f64> {
 }
 
 /// Vehicle jet availability comes from the same loadout used by orbital compensation.
-fn vehicle_losses(unit: &BattleVehicle) -> Result<usize> {
+fn vehicle_losses(unit: &Vehicle) -> Result<usize> {
     Ok(unit
         .loadout()?
         .systems
         .iter()
-        .filter(|part| {
-            part.system == BattleSystem::JumpJet && unit.critical_unavailable(part.location)
-        })
+        .filter(|part| part.system == System::JumpJet && unit.critical_unavailable(part.location))
         .count())
 }
 
 /// Correct current jump thrust without changing equipment or mass; the caller owns rollback.
 pub(super) fn set(world: &mut World, id: ObjectId, value: &str) -> Result<()> {
     let speed = super::propulsion::parse(value)?;
-    BattleJumpCapacity::from_speed(speed * 2.0)
+    JumpCapacity::from_speed(speed * 2.0)
         .context("Jump speed exceeds supported flight capacity at low gravity")?;
     if let Some(unit) = world.btech.constructed.get_mut(&id) {
         ensure!(
             !unit.is_destroyed() || speed == 0.0,
             "Destroyed units cannot provide jump thrust"
         );
-        let lost = usize::from(unit.system_hits(BattleSystem::JumpJet));
+        let lost = usize::from(unit.system_hits(System::JumpJet));
         unit.propulsion.set_jump(speed, lost);
     } else {
         let unit = world

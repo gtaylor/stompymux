@@ -7,18 +7,18 @@ use serde::{Deserialize, Serialize};
 /// The leg used by a kick or trip; the other must still support the unit.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleLeg {
+pub enum Leg {
     Left,
     Right,
 }
-impl BattleLeg {
+impl Leg {
     /// The selected attack leg: front pair on quads.
-    pub fn section(self, chassis: BattleMechChassis) -> BattleSection {
+    pub fn section(self, chassis: MechChassis) -> MechSection {
         match self {
-            Self::Left if chassis == BattleMechChassis::Quad => BattleSection::LeftArm,
-            Self::Right if chassis == BattleMechChassis::Quad => BattleSection::RightArm,
-            Self::Left => BattleSection::LeftLeg,
-            Self::Right => BattleSection::RightLeg,
+            Self::Left if chassis == MechChassis::Quad => MechSection::LeftArm,
+            Self::Right if chassis == MechChassis::Quad => MechSection::RightArm,
+            Self::Left => MechSection::LeftLeg,
+            Self::Right => MechSection::RightLeg,
         }
     }
 }
@@ -26,17 +26,17 @@ impl BattleLeg {
 /// An arm selected for a physical attack.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleArm {
+pub enum Arm {
     Left,
     Right,
 }
 
-impl BattleArm {
+impl Arm {
     /// The attacking biped section.
-    pub fn section(self) -> BattleSection {
+    pub fn section(self) -> MechSection {
         match self {
-            Self::Left => BattleSection::LeftArm,
-            Self::Right => BattleSection::RightArm,
+            Self::Left => MechSection::LeftArm,
+            Self::Right => MechSection::RightArm,
         }
     }
 }
@@ -44,29 +44,29 @@ impl BattleArm {
 /// The physical attack determines reach, arc, base aim, damage and balance rules.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
-pub enum BattlePhysicalAttack {
+pub enum PhysicalAttack {
     Kick {
-        leg: BattleLeg,
+        leg: Leg,
     },
     Trip {
-        leg: BattleLeg,
+        leg: Leg,
     },
     Punch {
-        arm: BattleArm,
+        arm: Arm,
     },
     /// A swing with the physical weapon installed in one arm; never a punch.
     Weapon {
-        arm: BattleArm,
-        weapon: BattleArmAttack,
+        arm: Arm,
+        weapon: ArmAttack,
     },
     Club,
 }
 
-impl BattlePhysicalAttack {
+impl PhysicalAttack {
     /// Limb that owns this attack's recovery timer for the attacking chassis.
-    pub fn section(self, chassis: BattleMechChassis) -> BattleSection {
+    pub fn section(self, chassis: MechChassis) -> MechSection {
         match self {
-            Self::Club => BattleSection::RightArm,
+            Self::Club => MechSection::RightArm,
             Self::Kick { leg } | Self::Trip { leg } => leg.section(chassis),
             Self::Punch { arm } | Self::Weapon { arm, .. } => arm.section(),
         }
@@ -74,21 +74,21 @@ impl BattlePhysicalAttack {
 
     /// Check chassis anatomy and supporting legs before geometric or timing eligibility.
     /// A `Weapon` carrying `Punch` is malformed and rejected here, before any attack path uses it.
-    pub fn validate_chassis_support(self, unit: &BattleUnit) -> Result<()> {
+    pub fn validate_chassis_support(self, unit: &Mech) -> Result<()> {
         ensure!(
-            self.hand_weapon() != Some(BattleArmAttack::Punch),
+            self.hand_weapon() != Some(ArmAttack::Punch),
             "A punch is not a weapon swing"
         );
         let chassis = unit.chassis();
         if !self.uses_leg() {
             ensure!(
-                chassis != BattleMechChassis::Quad,
+                chassis != MechChassis::Quad,
                 "What are you going to {} with, your front right leg?",
                 self.verb()
             );
             return Ok(());
         }
-        let maximum_missing = usize::from(chassis == BattleMechChassis::Quad);
+        let maximum_missing = usize::from(chassis == MechChassis::Quad);
         ensure!(
             unit.unavailable_legs() <= maximum_missing,
             "Too few supporting legs for this attack"
@@ -102,7 +102,7 @@ impl BattlePhysicalAttack {
                 continue;
             }
             ensure!(
-                actuator(unit, leg, 0, BattleSystem::ShoulderOrHip)?,
+                actuator(unit, leg, 0, System::ShoulderOrHip)?,
                 "You cannot attack with a destroyed hip"
             );
         }
@@ -120,7 +120,7 @@ impl BattlePhysicalAttack {
     }
 
     /// Arm making a punch or weapon swing; its side arc is also reachable.
-    fn arm(self) -> Option<BattleArm> {
+    fn arm(self) -> Option<Arm> {
         match self {
             Self::Punch { arm } | Self::Weapon { arm, .. } => Some(arm),
             _ => None,
@@ -128,7 +128,7 @@ impl BattlePhysicalAttack {
     }
 
     /// Installed arm weapon, including mechanical weapons that need no hand.
-    fn hand_weapon(self) -> Option<BattleArmAttack> {
+    fn hand_weapon(self) -> Option<ArmAttack> {
         match self {
             Self::Weapon { weapon, .. } => Some(weapon),
             _ => None,
@@ -151,7 +151,7 @@ impl BattlePhysicalAttack {
 /// Every variant except `Punch` is a physical weapon installed in the arm.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleArmAttack {
+pub enum ArmAttack {
     Punch,
     Axe,
     Sword,
@@ -168,7 +168,7 @@ pub enum BattleArmAttack {
     LargeVibroblade,
 }
 
-impl BattleArmAttack {
+impl ArmAttack {
     /// Hand weapons in the order an arm carrying several would swing them.
     pub const HAND_WEAPONS: [Self; 13] = [
         Self::Axe,
@@ -187,37 +187,37 @@ impl BattleArmAttack {
     ];
 
     /// Bind one selected arm to the shared physical attack description.
-    fn attack(self, arm: BattleArm) -> BattlePhysicalAttack {
+    fn attack(self, arm: Arm) -> PhysicalAttack {
         match self {
-            Self::Punch => BattlePhysicalAttack::Punch { arm },
-            weapon => BattlePhysicalAttack::Weapon { arm, weapon },
+            Self::Punch => PhysicalAttack::Punch { arm },
+            weapon => PhysicalAttack::Weapon { arm, weapon },
         }
     }
 
     /// Hand weapon backed by an installed equipment family.
-    pub fn from_system(system: BattleSystem) -> Option<Self> {
+    pub fn from_system(system: System) -> Option<Self> {
         Self::HAND_WEAPONS
             .into_iter()
             .find(|weapon| weapon.system() == Some(system))
     }
 
     /// Equipment family backing a hand weapon; punches need none.
-    pub fn system(self) -> Option<BattleSystem> {
+    pub fn system(self) -> Option<System> {
         Some(match self {
             Self::Punch => return None,
-            Self::Axe => BattleSystem::Axe,
-            Self::Sword => BattleSystem::Sword,
-            Self::Mace => BattleSystem::Mace,
-            Self::Saw => BattleSystem::DualSaw,
-            Self::Claw => BattleSystem::Claw,
-            Self::RetractableBlade => BattleSystem::RetractableBlade,
-            Self::Lance => BattleSystem::Lance,
-            Self::Flail => BattleSystem::Flail,
-            Self::WreckingBall => BattleSystem::WreckingBall,
-            Self::ChainWhip => BattleSystem::ChainWhip,
-            Self::SmallVibroblade => BattleSystem::SmallVibroblade,
-            Self::MediumVibroblade => BattleSystem::MediumVibroblade,
-            Self::LargeVibroblade => BattleSystem::LargeVibroblade,
+            Self::Axe => System::Axe,
+            Self::Sword => System::Sword,
+            Self::Mace => System::Mace,
+            Self::Saw => System::DualSaw,
+            Self::Claw => System::Claw,
+            Self::RetractableBlade => System::RetractableBlade,
+            Self::Lance => System::Lance,
+            Self::Flail => System::Flail,
+            Self::WreckingBall => System::WreckingBall,
+            Self::ChainWhip => System::ChainWhip,
+            Self::SmallVibroblade => System::SmallVibroblade,
+            Self::MediumVibroblade => System::MediumVibroblade,
+            Self::LargeVibroblade => System::LargeVibroblade,
         })
     }
 
@@ -373,7 +373,7 @@ impl BattleArmAttack {
     }
 
     /// Hand weapon installed in an arm, whether or not enough of it still works to swing.
-    pub(super) fn installed(unit: &BattleUnit, section: BattleSection) -> Result<Option<Self>> {
+    pub(super) fn installed(unit: &Mech, section: MechSection) -> Result<Option<Self>> {
         let loadout = unit.loadout()?;
         Ok(Self::HAND_WEAPONS.into_iter().find(|kind| {
             loadout
@@ -384,7 +384,7 @@ impl BattleArmAttack {
     }
 
     /// Count operational same-arm parts using the attack's observable minimum, not its mass divisor.
-    pub(super) fn available(self, unit: &BattleUnit, section: BattleSection) -> Result<bool> {
+    pub(super) fn available(self, unit: &Mech, section: MechSection) -> Result<bool> {
         let Some(system) = self.system() else {
             return Ok(true);
         };
@@ -409,10 +409,10 @@ pub fn arm_attack_profile(
     attacker: ObjectId,
     pilot: ObjectId,
     target: ObjectId,
-    arm: BattleArm,
-    kind: BattleArmAttack,
-    rules: BattlePhysicalRules,
-) -> Result<BattlePhysicalProfile> {
+    arm: Arm,
+    kind: ArmAttack,
+    rules: PhysicalRules,
+) -> Result<PhysicalProfile> {
     attack_profile(
         world,
         attacker,
@@ -426,19 +426,19 @@ pub fn arm_attack_profile(
 
 /// Policy shared by physical inspection and attack resolution.
 #[derive(Debug, Clone, Copy)]
-pub struct BattlePhysicalRules {
+pub struct PhysicalRules {
     pub use_pilot_skill: bool,
     pub fasa_turning: bool,
     pub extended_movement: bool,
     pub hit_arc_mode: i64,
-    pub glancing: BattleGlancingMode,
-    pub fall: BattleFallRules,
+    pub glancing: GlancingMode,
+    pub fall: FallRules,
 }
 
 /// Read-only physical attack calculation. The attack roll and all consequences are separate.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct BattlePhysicalProfile {
-    pub attack: BattlePhysicalAttack,
+pub struct PhysicalProfile {
+    pub attack: PhysicalAttack,
     pub target_number: i32,
     pub base: i16,
     pub actuators: u8,
@@ -450,44 +450,44 @@ pub struct BattlePhysicalProfile {
     /// Direct material damage; trips always have zero.
     pub damage: u16,
     /// Location table for direct impacts; unused by trips and fixed-location attacks.
-    pub hit_table: BattleHitTable,
+    pub hit_table: HitTable,
     /// Direct location used instead of a table roll by claws and saws.
-    pub fixed_location: Option<BattleSection>,
-    pub hit_arc: BattleHitArc,
+    pub fixed_location: Option<MechSection>,
+    pub hit_arc: HitArc,
 }
 
 /// Completed attack with already-applied damage, balance and fall consequences.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct BattlePhysicalReport {
+pub struct PhysicalReport {
     pub attacker: ObjectId,
     pub target: ObjectId,
-    pub profile: BattlePhysicalProfile,
+    pub profile: PhysicalProfile,
     pub roll: u8,
     pub hit: bool,
     pub glancing: bool,
-    pub impact: Option<BattleTacticalImpact>,
+    pub impact: Option<TacticalImpact>,
     /// Lance armor-penetration check, made when armor remains where the lance struck.
-    pub penetration: Option<BattleLancePenetration>,
+    pub penetration: Option<LancePenetration>,
     /// Damage a flail or wrecking ball dealt its own wielder on a natural 2.
-    pub fumble: Option<BattleTacticalImpact>,
+    pub fumble: Option<TacticalImpact>,
     /// Piloting XP applied before eligible direct damage; absent for trips and ineligible combat.
-    pub experience: Option<BattleExperienceAward>,
+    pub experience: Option<ExperienceAward>,
     /// Accepted damage and control-check XP diagnostics captured during resolution.
-    pub experience_messages: Vec<super::BattleChannelMessage>,
+    pub experience_messages: Vec<super::DiagnosticMessage>,
     /// Kick balance check, missed-mace balance, or target balance after a successful trip; absent for punches and missed trips.
-    pub balance: Option<BattlePilotingCheck>,
-    pub fall: Option<BattleFallReport>,
+    pub balance: Option<PilotingCheck>,
+    pub fall: Option<MechFallReport>,
     /// Private balance feedback ordered among attack and fall notices.
-    pub pilot_notices: Vec<super::BattlePilotNotice>,
-    pub notices: Vec<BattleNotice>,
+    pub pilot_notices: Vec<super::PilotNotice>,
+    pub notices: Vec<Notice>,
 }
 
 /// Test one mechanical actuator at its canonical slot, including flooding and slot loss.
 pub(super) fn actuator(
-    unit: &BattleUnit,
-    section: BattleSection,
+    unit: &Mech,
+    section: MechSection,
     slot: u8,
-    system: BattleSystem,
+    system: System,
 ) -> Result<bool> {
     let location = CriticalLocation { section, slot };
     Ok(!unit.critical_unavailable(location)
@@ -504,15 +504,15 @@ pub fn kick_profile(
     attacker: ObjectId,
     pilot: ObjectId,
     target: ObjectId,
-    leg: BattleLeg,
-    rules: BattlePhysicalRules,
-) -> Result<BattlePhysicalProfile> {
+    leg: Leg,
+    rules: PhysicalRules,
+) -> Result<PhysicalProfile> {
     attack_profile(
         world,
         attacker,
         pilot,
         target,
-        BattlePhysicalAttack::Kick { leg },
+        PhysicalAttack::Kick { leg },
         rules,
         None,
     )
@@ -524,15 +524,15 @@ pub fn trip_profile(
     attacker: ObjectId,
     pilot: ObjectId,
     target: ObjectId,
-    leg: BattleLeg,
-    rules: BattlePhysicalRules,
-) -> Result<BattlePhysicalProfile> {
+    leg: Leg,
+    rules: PhysicalRules,
+) -> Result<PhysicalProfile> {
     attack_profile(
         world,
         attacker,
         pilot,
         target,
-        BattlePhysicalAttack::Trip { leg },
+        PhysicalAttack::Trip { leg },
         rules,
         None,
     )
@@ -544,15 +544,15 @@ pub fn punch_profile(
     attacker: ObjectId,
     pilot: ObjectId,
     target: ObjectId,
-    arm: BattleArm,
-    rules: BattlePhysicalRules,
-) -> Result<BattlePhysicalProfile> {
+    arm: Arm,
+    rules: PhysicalRules,
+) -> Result<PhysicalProfile> {
     attack_profile(
         world,
         attacker,
         pilot,
         target,
-        BattlePhysicalAttack::Punch { arm },
+        PhysicalAttack::Punch { arm },
         rules,
         None,
     )
@@ -561,7 +561,7 @@ pub fn punch_profile(
 /// Per-action arm recovery allowance and character casualty publication capability.
 #[derive(Default)]
 struct AttackContext {
-    completed_arm: Option<BattleSection>,
+    completed_arm: Option<MechSection>,
     character: bool,
 }
 
@@ -571,10 +571,10 @@ fn attack_profile(
     attacker: ObjectId,
     pilot: ObjectId,
     target: ObjectId,
-    attack: BattlePhysicalAttack,
-    rules: BattlePhysicalRules,
-    completed_arm: Option<BattleSection>,
-) -> Result<BattlePhysicalProfile> {
+    attack: PhysicalAttack,
+    rules: PhysicalRules,
+    completed_arm: Option<MechSection>,
+) -> Result<PhysicalProfile> {
     attack_profile_inner(
         world,
         attacker,
@@ -595,10 +595,10 @@ fn attack_profile_inner(
     attacker: ObjectId,
     pilot: ObjectId,
     target: ObjectId,
-    attack: BattlePhysicalAttack,
-    rules: BattlePhysicalRules,
+    attack: PhysicalAttack,
+    rules: PhysicalRules,
     context: AttackContext,
-) -> Result<BattlePhysicalProfile> {
+) -> Result<PhysicalProfile> {
     let completed_arm = context.completed_arm;
     super::power::controlled_unit(world, attacker, pilot)?;
     ensure!(attacker != target, "You cannot attack yourself");
@@ -620,10 +620,7 @@ fn attack_profile_inner(
     let source = &world.btech.constructed_units()[&attacker];
     let victim = &world.btech.constructed_units()[&target];
     attack.validate_chassis_support(source)?;
-    ensure!(
-        source.power() == BattlePower::Running,
-        "Start the unit first"
-    );
+    ensure!(source.power() == Power::Running, "Start the unit first");
     ensure!(
         !source.airborne() && source.free_fall().is_none(),
         "You can't perform physical attacks while in the air!"
@@ -643,25 +640,25 @@ fn attack_profile_inner(
         "Your limbs are still recovering from another attack"
     );
     ensure!(
-        source.posture() != BattlePosture::Prone,
+        source.posture() != Posture::Prone,
         "You cannot attack a mech from a prone position."
     );
     ensure!(
         source.stun_remaining() == 0,
         "You are still recovering from your stunning experience!"
     );
-    if matches!(attack, BattlePhysicalAttack::Punch { .. }) {
+    if matches!(attack, PhysicalAttack::Punch { .. }) {
         ensure!(
-            source.carried_club.map(BattleArm::section) != Some(attack.section(source.chassis())),
+            source.carried_club.map(Arm::section) != Some(attack.section(source.chassis())),
             "You are carrying a club in this arm and cannot punch with it"
         );
     }
-    let club = attack == BattlePhysicalAttack::Club;
+    let club = attack == PhysicalAttack::Club;
     let required_sections = if club {
-        vec![BattleSection::LeftArm, BattleSection::RightArm]
-    } else if attack.uses_leg() && source.chassis() == BattleMechChassis::Biped {
-        vec![BattleSection::LeftLeg, BattleSection::RightLeg]
-    } else if attack.hand_weapon() == Some(BattleArmAttack::Claw) {
+        vec![MechSection::LeftArm, MechSection::RightArm]
+    } else if attack.uses_leg() && source.chassis() == MechChassis::Biped {
+        vec![MechSection::LeftLeg, MechSection::RightLeg]
+    } else if attack.hand_weapon() == Some(ArmAttack::Claw) {
         vec![]
     } else {
         vec![attack.section(source.chassis())]
@@ -669,7 +666,7 @@ fn attack_profile_inner(
     for section in required_sections {
         if club {
             ensure!(
-                actuator(source, section, 3, BattleSystem::HandOrFootActuator)?,
+                actuator(source, section, 3, System::HandOrFootActuator)?,
                 "Both hands must work to club"
             );
         }
@@ -678,7 +675,7 @@ fn attack_profile_inner(
             "The required limb is destroyed"
         );
         ensure!(
-            actuator(source, section, 0, BattleSystem::ShoulderOrHip)?,
+            actuator(source, section, 0, System::ShoulderOrHip)?,
             "The required hip or shoulder is destroyed"
         );
     }
@@ -694,7 +691,7 @@ fn attack_profile_inner(
                     source,
                     attack.section(source.chassis()),
                     3,
-                    BattleSystem::HandOrFootActuator
+                    System::HandOrFootActuator
                 )?,
             "The required hand is destroyed or missing"
         );
@@ -709,7 +706,7 @@ fn attack_profile_inner(
                 .criticals
                 .iter()
                 .any(|slot| slot.section == attack.section(source.chassis())
-                    || (club && slot.section == BattleSection::LeftArm))
+                    || (club && slot.section == MechSection::LeftArm))
                 && source.weapon_recycle().contains_key(&index)),
         "You have weapons recycling on your selected limb."
     );
@@ -719,8 +716,8 @@ fn attack_profile_inner(
     );
     if attack.is_trip() {
         ensure!(
-            victim.posture() != BattlePosture::Prone
-                && !matches!(victim.stand_timer(), Some(BattleStandTimer::Rising { .. })),
+            victim.posture() != Posture::Prone
+                && !matches!(victim.stand_timer(), Some(StandTimer::Rising { .. })),
             "Your target is already down!"
         );
     }
@@ -776,14 +773,13 @@ fn attack_profile_inner(
             "The target is too high in elevation for you to kick at."
         );
         ensure!(
-            elevation == target_elevation || victim.posture() != BattlePosture::Prone,
+            elevation == target_elevation || victim.posture() != Posture::Prone,
             "The target is too low in elevation for you to kick."
         );
     } else {
         ensure!(
-            (!matches!(attack, BattlePhysicalAttack::Punch { .. })
-                || elevation <= target_elevation)
-                && (elevation < target_elevation || victim.posture() != BattlePosture::Prone),
+            (!matches!(attack, PhysicalAttack::Punch { .. }) || elevation <= target_elevation)
+                && (elevation < target_elevation || victim.posture() != Posture::Prone),
             "The target is too low for this arm attack."
         );
     }
@@ -796,8 +792,8 @@ fn attack_profile_inner(
     let angle = (range.bearing.unwrap_or(heading) - heading - twist).rem_euclid(360.0);
     let forward = angle <= 60.0 || angle >= 300.0;
     let side = match attack.arm() {
-        Some(BattleArm::Left) => (240.0..300.0).contains(&angle),
-        Some(BattleArm::Right) => angle > 60.0 && angle <= 120.0,
+        Some(Arm::Left) => (240.0..300.0).contains(&angle),
+        Some(Arm::Right) => angle > 60.0 && angle <= 120.0,
         None => false,
     };
     ensure!(
@@ -808,30 +804,27 @@ fn attack_profile_inner(
         source,
         attack.section(source.chassis()),
         1,
-        BattleSystem::UpperActuator,
+        System::UpperActuator,
     )?;
     let lower = actuator(
         source,
         attack.section(source.chassis()),
         2,
-        BattleSystem::LowerActuator,
+        System::LowerActuator,
     )?;
     let foot = actuator(
         source,
         attack.section(source.chassis()),
         3,
-        BattleSystem::HandOrFootActuator,
+        System::HandOrFootActuator,
     )?;
     let actuators = if club {
         let mut penalty = 0;
-        for section in [BattleSection::LeftArm, BattleSection::RightArm] {
-            for (slot, system) in [
-                (1, BattleSystem::UpperActuator),
-                (2, BattleSystem::LowerActuator),
-            ] {
+        for section in [MechSection::LeftArm, MechSection::RightArm] {
+            for (slot, system) in [(1, System::UpperActuator), (2, System::LowerActuator)] {
                 let location = CriticalLocation { section, slot };
                 let right = CriticalLocation {
-                    section: BattleSection::RightArm,
+                    section: MechSection::RightArm,
                     slot,
                 };
                 let installed = source
@@ -856,10 +849,10 @@ fn attack_profile_inner(
         .get(&pilot)
         .is_some_and(|values| super::advantages::enabled(values, "Melee_Specialist"));
     let skill_bonus = match attack {
-        BattlePhysicalAttack::Kick { .. } | BattlePhysicalAttack::Trip { .. } => 2,
-        BattlePhysicalAttack::Club => 1,
-        BattlePhysicalAttack::Punch { .. } => 0,
-        BattlePhysicalAttack::Weapon { weapon, .. } => weapon.skill_bonus(),
+        PhysicalAttack::Kick { .. } | PhysicalAttack::Trip { .. } => 2,
+        PhysicalAttack::Club => 1,
+        PhysicalAttack::Punch { .. } => 0,
+        PhysicalAttack::Weapon { weapon, .. } => weapon.skill_bonus(),
     };
     let base = if rules.use_pilot_skill {
         unit_piloting_target(world, attacker, rules.fall.extended_piloting)? - skill_bonus
@@ -868,9 +861,7 @@ fn attack_profile_inner(
     } else {
         4
     };
-    let weapon_modifier = attack
-        .hand_weapon()
-        .map_or(0, BattleArmAttack::weapon_modifier);
+    let weapon_modifier = attack.hand_weapon().map_or(0, ArmAttack::weapon_modifier);
     let movement = i16::from(source.attacker_movement_modifier(rules.fasa_turning));
     let attacker_movement = if specialist {
         (movement - 1).min(0)
@@ -886,15 +877,11 @@ fn attack_profile_inner(
     };
     let tons = source.definition().tons;
     let mut damage = match attack {
-        BattlePhysicalAttack::Punch { .. } => BattleArmAttack::Punch.damage(tons),
-        BattlePhysicalAttack::Weapon { weapon, .. } => weapon.damage(tons),
+        PhysicalAttack::Punch { .. } => ArmAttack::Punch.damage(tons),
+        PhysicalAttack::Weapon { weapon, .. } => weapon.damage(tons),
         _ => tons / 5,
     };
-    if source.triple_myomer_active()
-        && attack
-            .hand_weapon()
-            .is_none_or(BattleArmAttack::myomer_doubles)
-    {
+    if source.triple_myomer_active() && attack.hand_weapon().is_none_or(ArmAttack::myomer_doubles) {
         damage *= 2;
     }
     damage += u16::from(specialist);
@@ -908,12 +895,12 @@ fn attack_profile_inner(
         damage = 0;
     }
     let direction = unit_range(world, target, attacker)?;
-    let hit_arc = BattleHitArc::from_bearing(
+    let hit_arc = HitArc::from_bearing(
         direction.bearing.unwrap_or(180.0),
         victim.motion().map_or(0.0, |m| m.heading),
         rules.hit_arc_mode,
     )?;
-    Ok(BattlePhysicalProfile {
+    Ok(PhysicalProfile {
         attack,
         target_number: i32::from(base)
             + i32::from(actuators)
@@ -928,22 +915,21 @@ fn attack_profile_inner(
         target_movement,
         terrain,
         damage,
-        hit_table: if victim.posture() == BattlePosture::Prone {
-            BattleHitTable::Weapon
+        hit_table: if victim.posture() == Posture::Prone {
+            HitTable::Weapon
         } else if elevation > target_elevation
-            || (matches!(attack, BattlePhysicalAttack::Punch { .. })
-                && elevation == target_elevation)
+            || (matches!(attack, PhysicalAttack::Punch { .. }) && elevation == target_elevation)
         {
-            BattleHitTable::Punch
+            HitTable::Punch
         } else if (attack.hand_weapon().is_some() || club) && elevation == target_elevation {
-            BattleHitTable::Weapon
+            HitTable::Weapon
         } else {
-            BattleHitTable::Kick
+            HitTable::Kick
         },
         fixed_location: attack
             .hand_weapon()
-            .is_some_and(BattleArmAttack::fixed_location)
-            .then_some(BattleSection::LeftArm),
+            .is_some_and(ArmAttack::fixed_location)
+            .then_some(MechSection::LeftArm),
         hit_arc,
     })
 }
@@ -952,8 +938,8 @@ fn attack_profile_inner(
 pub(super) fn participant_fall_rules(
     world: &World,
     id: ObjectId,
-    mut rules: BattleFallRules,
-) -> BattleFallRules {
+    mut rules: FallRules,
+) -> FallRules {
     rules.toughness |= world.btech.constructed_units()[&id]
         .pilot()
         .and_then(|pilot| world.btech.character_values().get(&pilot))
@@ -967,15 +953,15 @@ pub fn resolve_kick(
     attacker: ObjectId,
     pilot: ObjectId,
     target: ObjectId,
-    leg: BattleLeg,
-    rules: BattlePhysicalRules,
-) -> Result<BattlePhysicalReport> {
+    leg: Leg,
+    rules: PhysicalRules,
+) -> Result<PhysicalReport> {
     resolve_attack(
         world,
         attacker,
         pilot,
         target,
-        BattlePhysicalAttack::Kick { leg },
+        PhysicalAttack::Kick { leg },
         rules,
         None,
     )
@@ -987,15 +973,15 @@ pub fn resolve_trip(
     attacker: ObjectId,
     pilot: ObjectId,
     target: ObjectId,
-    leg: BattleLeg,
-    rules: BattlePhysicalRules,
-) -> Result<BattlePhysicalReport> {
+    leg: Leg,
+    rules: PhysicalRules,
+) -> Result<PhysicalReport> {
     resolve_attack(
         world,
         attacker,
         pilot,
         target,
-        BattlePhysicalAttack::Trip { leg },
+        PhysicalAttack::Trip { leg },
         rules,
         None,
     )
@@ -1007,10 +993,10 @@ fn resolve_attack(
     attacker: ObjectId,
     pilot: ObjectId,
     target: ObjectId,
-    attack: BattlePhysicalAttack,
-    rules: BattlePhysicalRules,
-    completed_arm: Option<BattleSection>,
-) -> Result<BattlePhysicalReport> {
+    attack: PhysicalAttack,
+    rules: PhysicalRules,
+    completed_arm: Option<MechSection>,
+) -> Result<PhysicalReport> {
     resolve_attack_inner(
         world,
         attacker,
@@ -1031,9 +1017,9 @@ pub(super) fn resolve_attack_in_action(
     attacker: ObjectId,
     pilot: ObjectId,
     target: ObjectId,
-    attack: BattlePhysicalAttack,
-    rules: BattlePhysicalRules,
-) -> Result<BattlePhysicalReport> {
+    attack: PhysicalAttack,
+    rules: PhysicalRules,
+) -> Result<PhysicalReport> {
     resolve_attack_inner(
         world,
         attacker,
@@ -1054,32 +1040,32 @@ fn resolve_attack_inner(
     attacker: ObjectId,
     pilot: ObjectId,
     target: ObjectId,
-    attack: BattlePhysicalAttack,
-    rules: BattlePhysicalRules,
+    attack: PhysicalAttack,
+    rules: PhysicalRules,
     context: AttackContext,
-) -> Result<BattlePhysicalReport> {
+) -> Result<PhysicalReport> {
     let character = context.character;
     let profile = attack_profile_inner(world, attacker, pilot, target, attack, rules, context)?;
     world.attempt(|world| {
         let unit = world.btech.constructed.get_mut(&attacker).unwrap();
         let roll = unit.dice.generic_roll();
         unit.limb_recycle.insert(attack.section(unit.chassis()), 60);
-        if attack == BattlePhysicalAttack::Club {
-            unit.limb_recycle.insert(BattleSection::LeftArm, 60);
+        if attack == PhysicalAttack::Club {
+            unit.limb_recycle.insert(MechSection::LeftArm, 60);
         }
         let weapon = attack.hand_weapon();
-        unit.heat.stored += f64::from(weapon.map_or(0, BattleArmAttack::heat));
+        unit.heat.stored += f64::from(weapon.map_or(0, ArmAttack::heat));
         let threshold =
-            profile.target_number - i32::from(rules.glancing == BattleGlancingMode::BelowTarget);
+            profile.target_number - i32::from(rules.glancing == GlancingMode::BelowTarget);
         // A natural 2 swings flails and wrecking balls back into their wielder.
         let fumble = weapon
-            .and_then(BattleArmAttack::fumble_damage)
+            .and_then(ArmAttack::fumble_damage)
             .filter(|_| roll == 2);
         let hit = fumble.is_none() && i32::from(roll) >= threshold;
         let glancing =
-            hit && rules.glancing != BattleGlancingMode::Disabled && i32::from(roll) == threshold;
+            hit && rules.glancing != GlancingMode::Disabled && i32::from(roll) == threshold;
         let mut pilot_notices = Vec::new();
-        let mut notices = vec![BattleNotice {
+        let mut notices = vec![Notice {
             unit: attacker,
             text: format!(
                 "You try to {} #{}.  BTH:  {},\tRoll:  {}",
@@ -1089,8 +1075,8 @@ fn resolve_attack_inner(
                 roll
             ),
         }];
-        if world.btech.constructed_units()[&target].power() == BattlePower::Running {
-            notices.push(BattleNotice {
+        if world.btech.constructed_units()[&target].power() == Power::Running {
+            notices.push(Notice {
                 unit: target,
                 text: format!("#{} tries to {} you!", attacker.0, attack.verb()),
             });
@@ -1115,15 +1101,15 @@ fn resolve_attack_inner(
                 target,
                 "is nicked by a glancing blow!",
             ));
-            notices.push(BattleNotice {
+            notices.push(Notice {
                 unit: target,
                 text: "You are nicked by a glancing blow!".into(),
             });
         }
-        if hit && attack == BattlePhysicalAttack::Club {
+        if hit && attack == PhysicalAttack::Club {
             let unit = world.btech.constructed.get_mut(&attacker).unwrap();
             if unit.carried_club.take().is_some() {
-                notices.push(BattleNotice {
+                notices.push(Notice {
                     unit: attacker,
                     text: "Your club shatters on contact.".into(),
                 });
@@ -1138,26 +1124,26 @@ fn resolve_attack_inner(
             let victim = &world.btech.constructed_units()[&target];
             let mut dice = victim.dice.clone();
             let location = if let Some(section) = profile.fixed_location {
-                BattleHit {
+                Hit {
                     section,
                     rear_armor: false,
                     through_armor_critical: false,
                     crew_stun: false,
                 }
-            } else if profile.hit_table == BattleHitTable::Weapon {
+            } else if profile.hit_table == HitTable::Weapon {
                 let roll = dice.generic_roll();
                 rules
                     .fall
                     .hit
                     .resolve(victim, profile.hit_arc, roll, &mut dice)?
             } else {
-                BattleHit {
+                Hit {
                     section: profile.hit_table.location(
                         victim.chassis(),
                         profile.hit_arc,
                         dice.d6(),
                     )?,
-                    rear_armor: profile.hit_arc == BattleHitArc::Rear,
+                    rear_armor: profile.hit_arc == HitArc::Rear,
                     through_armor_critical: false,
                     crew_stun: false,
                 }
@@ -1203,7 +1189,7 @@ fn resolve_attack_inner(
             );
             notices.extend(result.notices.iter().cloned());
             impact = Some(result);
-            if weapon == Some(BattleArmAttack::Lance) {
+            if weapon == Some(ArmAttack::Lance) {
                 penetration = lance_penetration(
                     world,
                     attacker,
@@ -1218,8 +1204,8 @@ fn resolve_attack_inner(
         }
         let mut fumble_impact = None;
         if let Some(damage) = fumble {
-            let name = weapon.map_or("weapon", BattleArmAttack::name);
-            notices.push(BattleNotice {
+            let name = weapon.map_or("weapon", ArmAttack::name);
+            notices.push(Notice {
                 unit: attacker,
                 text: format!("Your {name} swings wide and slams into you!"),
             });
@@ -1234,7 +1220,7 @@ fn resolve_attack_inner(
             let location = rules
                 .fall
                 .hit
-                .resolve(source, BattleHitArc::Front, roll, &mut dice)?;
+                .resolve(source, HitArc::Front, roll, &mut dice)?;
             world.btech.constructed.get_mut(&attacker).unwrap().dice = dice;
             let fall_rules = participant_fall_rules(world, attacker, rules.fall);
             let result = super::impact::resolve_attack_in_candidate(
@@ -1261,10 +1247,10 @@ fn resolve_attack_inner(
         // Unit making a balance check after this attack, and the check's modifier.
         let balance_check = match weapon {
             _ if fumble.is_some() => Some((attacker, 0)),
-            Some(BattleArmAttack::Mace) if !hit => Some((attacker, 2)),
+            Some(ArmAttack::Mace) if !hit => Some((attacker, 2)),
             // A wrecking ball hit unbalances its target as a charge does.
-            Some(BattleArmAttack::WreckingBall) if hit => Some((target, 2)),
-            _ if matches!(attack, BattlePhysicalAttack::Kick { .. }) => {
+            Some(ArmAttack::WreckingBall) if hit => Some((target, 2)),
+            _ if matches!(attack, PhysicalAttack::Kick { .. }) => {
                 Some((if hit { target } else { attacker }, 0))
             }
             _ if attack.is_trip() && hit => Some((target, 0)),
@@ -1272,7 +1258,7 @@ fn resolve_attack_inner(
         };
         let (balance, fall) = if let Some((balancing, modifier)) = balance_check {
             if !hit {
-                notices.push(BattleNotice {
+                notices.push(Notice {
                     unit: attacker,
                     text: "You miss and try to remain standing!".into(),
                 });
@@ -1296,18 +1282,18 @@ fn resolve_attack_inner(
             }
             let fall = if !balance.success
                 && !world.btech.constructed_units()[&balancing].is_destroyed()
-                && world.btech.constructed_units()[&balancing].posture() != BattlePosture::Prone
+                && world.btech.constructed_units()[&balancing].posture() != Posture::Prone
             {
                 if attack.is_trip() {
-                    notices.push(BattleNotice {
+                    notices.push(Notice {
                         unit: attacker,
                         text: format!("You trip #{}!", target.0),
                     });
                 }
                 if !attack.is_trip()
-                    || world.btech.constructed_units()[&target].power() == BattlePower::Running
+                    || world.btech.constructed_units()[&target].power() == Power::Running
                 {
-                    notices.push(BattleNotice {
+                    notices.push(Notice {
                         unit: balancing,
                         text: if attack.is_trip() {
                             "You are tripped and fall to the ground!"
@@ -1354,7 +1340,7 @@ fn resolve_attack_inner(
             (None, None)
         };
         world.btech.validate_action(world)?;
-        Ok(BattlePhysicalReport {
+        Ok(PhysicalReport {
             attacker,
             target,
             profile,
@@ -1376,9 +1362,9 @@ fn resolve_attack_inner(
 
 /// Lance armor-penetration roll and the internal damage it drove through on 10 or more.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct BattleLancePenetration {
+pub struct LancePenetration {
     pub roll: u8,
-    pub impact: Option<BattleTacticalImpact>,
+    pub impact: Option<TacticalImpact>,
 }
 
 /// Lowest 2d6 roll with which a lance drives one point through remaining armor.
@@ -1394,19 +1380,19 @@ fn lance_penetration(
     world: &mut World,
     attacker: ObjectId,
     target: ObjectId,
-    location: BattleHit,
-    rules: BattlePhysicalRules,
+    location: Hit,
+    rules: PhysicalRules,
     character: bool,
-    notices: &mut Vec<BattleNotice>,
-    pilot_notices: &mut Vec<super::BattlePilotNotice>,
-) -> Result<Option<BattleLancePenetration>> {
+    notices: &mut Vec<Notice>,
+    pilot_notices: &mut Vec<super::PilotNotice>,
+) -> Result<Option<LancePenetration>> {
     let victim = &world.btech.constructed_units()[&target];
     let section = location.section;
     let state = &victim.sections()[&section];
     let rear = location.rear_armor
         && matches!(
             section,
-            BattleSection::LeftTorso | BattleSection::RightTorso | BattleSection::CenterTorso
+            MechSection::LeftTorso | MechSection::RightTorso | MechSection::CenterTorso
         );
     let armor = if rear { state.rear } else { state.armor };
     if victim.is_destroyed() || state.internal == 0 || armor == 0 {
@@ -1420,13 +1406,13 @@ fn lance_penetration(
         .dice
         .generic_roll();
     if roll < LANCE_PENETRATION_TARGET {
-        return Ok(Some(BattleLancePenetration { roll, impact: None }));
+        return Ok(Some(LancePenetration { roll, impact: None }));
     }
-    notices.push(BattleNotice {
+    notices.push(Notice {
         unit: attacker,
         text: "Your lance punches through the armor!".into(),
     });
-    notices.push(BattleNotice {
+    notices.push(Notice {
         unit: target,
         text: "A lance punches through your armor!".into(),
     });
@@ -1447,15 +1433,15 @@ fn lance_penetration(
     )?;
     super::piloting::append_feedback(pilot_notices, result.pilot_notices.clone(), notices.len());
     notices.extend(result.notices.iter().cloned());
-    Ok(Some(BattleLancePenetration {
+    Ok(Some(LancePenetration {
         roll,
         impact: Some(result),
     }))
 }
 
-impl BattleUnit {
+impl Mech {
     /// Physical recovery timers keyed by the limb that performed an attack.
-    pub fn limb_recycle(&self) -> &std::collections::BTreeMap<BattleSection, u16> {
+    pub fn limb_recycle(&self) -> &std::collections::BTreeMap<MechSection, u16> {
         &self.limb_recycle
     }
 }
@@ -1463,7 +1449,7 @@ impl BattleUnit {
 /// Arms attempted in a physical command, always left before right when both are selected.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleArmSelection {
+pub enum ArmSelection {
     Left,
     Right,
     Both,
@@ -1471,19 +1457,19 @@ pub enum BattleArmSelection {
 
 /// An arm that could not attack, without discarding another arm's completed punch.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct BattleArmRejection {
-    pub arm: BattleArm,
+pub struct ArmRejection {
+    pub arm: Arm,
     pub reason: String,
 }
 
 /// Ordered arm attacks and per-arm failures, committed as one action with staged notices.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct BattleArmAttackReport {
-    pub attacks: Vec<BattlePhysicalReport>,
-    pub rejections: Vec<BattleArmRejection>,
+pub struct ArmAttackReport {
+    pub attacks: Vec<PhysicalReport>,
+    pub rejections: Vec<ArmRejection>,
     /// Private feedback with positions in the combined arm sequence.
-    pub pilot_notices: Vec<super::BattlePilotNotice>,
-    pub notices: Vec<BattleNotice>,
+    pub pilot_notices: Vec<super::PilotNotice>,
+    pub notices: Vec<Notice>,
 }
 
 /// Resolve a punch action using the shared arm-attack sequencer.
@@ -1492,40 +1478,40 @@ pub fn resolve_punch(
     attacker: ObjectId,
     pilot: ObjectId,
     target: ObjectId,
-    arms: BattleArmSelection,
-    rules: BattlePhysicalRules,
-) -> Result<BattleArmAttackReport> {
+    arms: ArmSelection,
+    rules: PhysicalRules,
+) -> Result<ArmAttackReport> {
     resolve_arm_attack(
         world,
         attacker,
         pilot,
         target,
         arms,
-        BattleArmAttack::Punch,
+        ArmAttack::Punch,
         rules,
     )
 }
 
 /// Attack each selected arm makes in one sequenced arm action.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum BattleArmWeapon {
+pub enum ArmWeapon {
     /// Every selected arm makes this attack.
-    Fixed(BattleArmAttack),
+    Fixed(ArmAttack),
     /// Each selected arm swings whichever hand weapon it carries.
     Installed,
 }
 
-impl From<BattleArmAttack> for BattleArmWeapon {
-    fn from(kind: BattleArmAttack) -> Self {
+impl From<ArmAttack> for ArmWeapon {
+    fn from(kind: ArmAttack) -> Self {
         Self::Fixed(kind)
     }
 }
 
 /// Arm selection and physical weapon used by one sequenced host action.
 #[derive(Debug, Clone, Copy)]
-pub struct BattleArmAttackChoice {
-    pub arms: BattleArmSelection,
-    pub kind: BattleArmWeapon,
+pub struct ArmAttackChoice {
+    pub arms: ArmSelection,
+    pub kind: ArmWeapon,
 }
 
 /// Attempt the selected arms in order; an impact error rolls back the entire action.
@@ -1536,16 +1522,16 @@ pub fn resolve_arm_attack(
     attacker: ObjectId,
     pilot: ObjectId,
     target: ObjectId,
-    arms: BattleArmSelection,
-    kind: BattleArmAttack,
-    rules: BattlePhysicalRules,
-) -> Result<BattleArmAttackReport> {
+    arms: ArmSelection,
+    kind: ArmAttack,
+    rules: PhysicalRules,
+) -> Result<ArmAttackReport> {
     resolve_arm_attack_inner(
         world,
         attacker,
         pilot,
         target,
-        BattleArmAttackChoice {
+        ArmAttackChoice {
             arms,
             kind: kind.into(),
         },
@@ -1560,9 +1546,9 @@ pub(super) fn resolve_arm_attack_in_action(
     attacker: ObjectId,
     pilot: ObjectId,
     target: ObjectId,
-    choice: BattleArmAttackChoice,
-    rules: BattlePhysicalRules,
-) -> Result<BattleArmAttackReport> {
+    choice: ArmAttackChoice,
+    rules: PhysicalRules,
+) -> Result<ArmAttackReport> {
     resolve_arm_attack_inner(world, attacker, pilot, target, choice, rules, true)
 }
 
@@ -1572,11 +1558,11 @@ fn resolve_arm_attack_inner(
     attacker: ObjectId,
     pilot: ObjectId,
     target: ObjectId,
-    choice: BattleArmAttackChoice,
-    rules: BattlePhysicalRules,
+    choice: ArmAttackChoice,
+    rules: PhysicalRules,
     character: bool,
-) -> Result<BattleArmAttackReport> {
-    let BattleArmAttackChoice { arms, kind } = choice;
+) -> Result<ArmAttackReport> {
+    let ArmAttackChoice { arms, kind } = choice;
     super::power::controlled_unit(world, attacker, pilot)?;
     ensure!(
         world.btech.constructed_units()[&attacker]
@@ -1584,14 +1570,14 @@ fn resolve_arm_attack_inner(
             .is_empty(),
         "Your limbs are still recovering from another attack"
     );
-    let auto_select = arms == BattleArmSelection::Both;
-    let arms: &[BattleArm] = match arms {
-        BattleArmSelection::Left => &[BattleArm::Left],
-        BattleArmSelection::Right => &[BattleArm::Right],
-        BattleArmSelection::Both => &[BattleArm::Left, BattleArm::Right],
+    let auto_select = arms == ArmSelection::Both;
+    let arms: &[Arm] = match arms {
+        ArmSelection::Left => &[Arm::Left],
+        ArmSelection::Right => &[Arm::Right],
+        ArmSelection::Both => &[Arm::Left, Arm::Right],
     };
     world.attempt(|world| {
-        let mut report = BattleArmAttackReport {
+        let mut report = ArmAttackReport {
             attacks: Vec::new(),
             rejections: Vec::new(),
             pilot_notices: Vec::new(),
@@ -1601,25 +1587,23 @@ fn resolve_arm_attack_inner(
         for &arm in arms {
             let unit = &world.btech.constructed_units()[&attacker];
             let kind = match kind {
-                BattleArmWeapon::Fixed(kind) => kind,
-                BattleArmWeapon::Installed => {
-                    match BattleArmAttack::installed(unit, arm.section())? {
-                        Some(kind) => kind,
-                        None if auto_select => continue,
-                        None => {
-                            let reason = format!(
-                                "{}: No physical weapon installed in this arm",
-                                arm.section().name().replace('_', " ")
-                            );
-                            report.notices.push(BattleNotice {
-                                unit: attacker,
-                                text: reason.clone(),
-                            });
-                            report.rejections.push(BattleArmRejection { arm, reason });
-                            continue;
-                        }
+                ArmWeapon::Fixed(kind) => kind,
+                ArmWeapon::Installed => match ArmAttack::installed(unit, arm.section())? {
+                    Some(kind) => kind,
+                    None if auto_select => continue,
+                    None => {
+                        let reason = format!(
+                            "{}: No physical weapon installed in this arm",
+                            arm.section().name().replace('_', " ")
+                        );
+                        report.notices.push(Notice {
+                            unit: attacker,
+                            text: reason.clone(),
+                        });
+                        report.rejections.push(ArmRejection { arm, reason });
+                        continue;
                     }
-                }
+                },
             };
             if auto_select && !kind.available(unit, arm.section())? {
                 continue;
@@ -1640,11 +1624,11 @@ fn resolve_arm_attack_inner(
                 },
             ) {
                 let reason = format!("{}: {error:#}", arm.section().name().replace('_', " "));
-                report.notices.push(BattleNotice {
+                report.notices.push(Notice {
                     unit: attacker,
                     text: reason.clone(),
                 });
-                report.rejections.push(BattleArmRejection { arm, reason });
+                report.rejections.push(ArmRejection { arm, reason });
                 continue;
             }
             let result = resolve_attack_inner(
@@ -1679,10 +1663,10 @@ fn resolve_arm_attack_inner(
                 .join("\n");
             if reasons.is_empty() {
                 match kind {
-                    BattleArmWeapon::Fixed(kind) => {
+                    ArmWeapon::Fixed(kind) => {
                         anyhow::bail!("No usable {kind:?} in the selected arms")
                     }
-                    BattleArmWeapon::Installed => {
+                    ArmWeapon::Installed => {
                         anyhow::bail!("No usable physical weapon in the selected arms")
                     }
                 }
@@ -1695,11 +1679,11 @@ fn resolve_arm_attack_inner(
 }
 
 /// Parse one or both arms, defaulting to both.
-fn selected_arms(value: Option<&str>) -> Result<BattleArmSelection> {
+fn selected_arms(value: Option<&str>) -> Result<ArmSelection> {
     match value.map(str::to_ascii_lowercase).as_deref() {
-        None | Some("b" | "both") => Ok(BattleArmSelection::Both),
-        Some("l" | "left") => Ok(BattleArmSelection::Left),
-        Some("r" | "right") => Ok(BattleArmSelection::Right),
+        None | Some("b" | "both") => Ok(ArmSelection::Both),
+        Some("l" | "left") => Ok(ArmSelection::Left),
+        Some("r" | "right") => Ok(ArmSelection::Right),
         _ => anyhow::bail!("Choose left, right, or both arms"),
     }
 }
@@ -1712,15 +1696,15 @@ pub(crate) fn configured_arm_attack(
     pilot: ObjectId,
     arms: Option<&str>,
     target: Option<ObjectId>,
-    kind: BattleArmWeapon,
-) -> Result<BattleArmAttackReport> {
+    kind: ArmWeapon,
+) -> Result<ArmAttackReport> {
     let (chosen, arms) = {
         let world = scripts.world.borrow();
         super::power::controlled_unit(&world, id, pilot)?;
         let arms = selected_arms(arms)?;
         (selected_target(&world, id, target)?, arms)
     };
-    let choice = BattleArmAttackChoice { arms, kind };
+    let choice = ArmAttackChoice { arms, kind };
     super::arm_attack_action(
         scripts,
         config,
@@ -1751,32 +1735,32 @@ fn selected_target(world: &World, id: ObjectId, target: Option<ObjectId>) -> Res
 }
 
 /// Parse one leg; default selection is the right leg.
-fn selected_leg(value: Option<&str>) -> Result<BattleLeg> {
+fn selected_leg(value: Option<&str>) -> Result<Leg> {
     match value.map(str::to_ascii_lowercase).as_deref() {
-        None | Some("r" | "right") => Ok(BattleLeg::Right),
-        Some("l" | "left") => Ok(BattleLeg::Left),
+        None | Some("r" | "right") => Ok(Leg::Right),
+        Some("l" | "left") => Ok(Leg::Left),
         _ => anyhow::bail!("Choose a single left or right leg"),
     }
 }
 
 /// Build one kick policy from the saved game settings.
-pub(crate) fn configured_rules(config: &crate::Config) -> BattlePhysicalRules {
+pub(crate) fn configured_rules(config: &crate::Config) -> PhysicalRules {
     let settings = &config.battletech;
-    BattlePhysicalRules {
+    PhysicalRules {
         use_pilot_skill: settings.phys_use_pskill != 0,
         fasa_turning: settings.fasaturn != 0,
         extended_movement: settings.extendedmovemod != 0,
         hit_arc_mode: settings.hit_arcs,
-        glancing: BattleGlancingMode::from_setting(settings.glancing_blows),
-        fall: BattleFallRules {
-            vehicle_impact: crate::BattleVehicleImpactRules::configured(settings, false),
-            stacking: BattleStackingRules {
+        glancing: GlancingMode::from_setting(settings.glancing_blows),
+        fall: FallRules {
+            vehicle_impact: crate::VehicleImpactRules::configured(settings, false),
+            stacking: StackingRules {
                 mode: settings.stacking,
                 damage_percent: settings.stackdamage,
                 hit_arcs: settings.hit_arcs,
             },
-            stagger: BattleStaggerMode::from_setting(settings.newstagger),
-            hit: BattleHitRules {
+            stagger: StaggerMode::from_setting(settings.newstagger),
+            hit: HitRules {
                 inferno_penalty: settings.inferno_penalty != 0,
                 exile_stun_mode: settings.exile_stun_code.clamp(0, 2) as u8,
             },
@@ -1794,14 +1778,14 @@ pub(crate) fn configured_kick(
     pilot: ObjectId,
     leg: Option<&str>,
     target: Option<ObjectId>,
-) -> Result<BattlePhysicalReport> {
+) -> Result<PhysicalReport> {
     let (chosen, leg) = {
         let world = scripts.world.borrow();
         super::power::controlled_unit(&world, id, pilot)?;
         let leg = selected_leg(leg)?;
         (selected_target(&world, id, target)?, leg)
     };
-    let attack = BattlePhysicalAttack::Kick { leg };
+    let attack = PhysicalAttack::Kick { leg };
     super::physical_attack_action(
         scripts,
         config,
@@ -1821,14 +1805,14 @@ pub(crate) fn configured_trip(
     pilot: ObjectId,
     leg: Option<&str>,
     target: Option<ObjectId>,
-) -> Result<BattlePhysicalReport> {
+) -> Result<PhysicalReport> {
     let (chosen, leg) = {
         let world = scripts.world.borrow();
         super::power::controlled_unit(&world, id, pilot)?;
         let leg = selected_leg(leg)?;
         (selected_target(&world, id, target)?, leg)
     };
-    let attack = BattlePhysicalAttack::Trip { leg };
+    let attack = PhysicalAttack::Trip { leg };
     super::physical_attack_action(
         scripts,
         config,
@@ -1929,9 +1913,9 @@ fn command_for(
         let notices = match kind {
             PhysicalCommand::Charge => {
                 let selection = match (leg, target) {
-                    (None, None) => BattleChargeSelection::Default,
-                    (None, Some(target)) => BattleChargeSelection::Target(target),
-                    (Some("-"), None) => BattleChargeSelection::Cancel,
+                    (None, None) => ChargeSelection::Default,
+                    (None, Some(target)) => ChargeSelection::Target(target),
+                    (Some("-"), None) => ChargeSelection::Cancel,
                     _ => anyhow::bail!("{usage}"),
                 };
                 select_charge(
@@ -1960,8 +1944,8 @@ fn command_for(
             }
             PhysicalCommand::Punch | PhysicalCommand::Melee => {
                 let attack = match kind {
-                    PhysicalCommand::Melee => BattleArmWeapon::Installed,
-                    _ => BattleArmWeapon::Fixed(BattleArmAttack::Punch),
+                    PhysicalCommand::Melee => ArmWeapon::Installed,
+                    _ => ArmWeapon::Fixed(ArmAttack::Punch),
                 };
                 configured_arm_attack(
                     ctx.scripts,
@@ -1995,7 +1979,7 @@ pub(crate) fn configured_club(
     id: ObjectId,
     pilot: ObjectId,
     target: Option<ObjectId>,
-) -> Result<BattlePhysicalReport> {
+) -> Result<PhysicalReport> {
     let chosen = {
         let world = scripts.world.borrow();
         super::power::controlled_unit(&world, id, pilot)?;
@@ -2007,7 +1991,7 @@ pub(crate) fn configured_club(
         id,
         pilot,
         chosen,
-        BattlePhysicalAttack::Club,
+        PhysicalAttack::Club,
         configured_rules(config),
     )
 }
@@ -2018,17 +2002,9 @@ pub fn club_profile(
     id: ObjectId,
     pilot: ObjectId,
     target: ObjectId,
-    rules: BattlePhysicalRules,
-) -> Result<BattlePhysicalProfile> {
-    attack_profile(
-        world,
-        id,
-        pilot,
-        target,
-        BattlePhysicalAttack::Club,
-        rules,
-        None,
-    )
+    rules: PhysicalRules,
+) -> Result<PhysicalProfile> {
+    attack_profile(world, id, pilot, target, PhysicalAttack::Club, rules, None)
 }
 
 /// Commit one two-handed club swing and its damage, recovery and breakage.
@@ -2037,17 +2013,9 @@ pub fn resolve_club(
     id: ObjectId,
     pilot: ObjectId,
     target: ObjectId,
-    rules: BattlePhysicalRules,
-) -> Result<BattlePhysicalReport> {
-    resolve_attack(
-        world,
-        id,
-        pilot,
-        target,
-        BattlePhysicalAttack::Club,
-        rules,
-        None,
-    )
+    rules: PhysicalRules,
+) -> Result<PhysicalReport> {
+    resolve_attack(world, id, pilot, target, PhysicalAttack::Club, rules, None)
 }
 
 /// Native two-handed club adapter.

@@ -5,7 +5,7 @@ use serde::Serialize;
 
 /// A read-only vector; vertical bearing is signed and rounded away from zero.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct BattleVectorReport {
+pub struct VectorReport {
     pub horizontal: f64,
     pub spatial: f64,
     pub bearing: u16,
@@ -20,7 +20,7 @@ pub fn vector_display(
     unit: ObjectId,
     viewer: ObjectId,
     arguments: &str,
-) -> Result<BattleVectorReport> {
+) -> Result<VectorReport> {
     let words: Vec<_> = arguments.split_whitespace().collect();
     ensure!(
         matches!(words.len(), 0 | 2 | 3 | 4 | 6),
@@ -85,7 +85,7 @@ pub fn vector_display(
     };
     let prefix = prefix.unwrap_or(segment.prefix);
     let distance = super::navigation_measurement::range_text(spatial, horizontal);
-    Ok(BattleVectorReport {
+    Ok(VectorReport {
         horizontal,
         spatial,
         bearing,

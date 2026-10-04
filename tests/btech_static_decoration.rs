@@ -29,7 +29,7 @@ async fn generic_decoration_records_survive_reload_and_resizes_that_keep_their_h
         .unwrap();
     world = persistence::load(&config.database()).await.unwrap();
     let definition =
-        world.btech.maps()[&map].static_decorations(BattleStaticDecorationKind::Decoration)[&5];
+        world.btech.maps()[&map].static_decorations(StaticDecorationKind::Decoration)[&5];
     assert_eq!(definition.restored_terrain, Some(Terrain::Water));
     assert_eq!(definition.object, ObjectId(1));
     assert_eq!(definition.duration, 123);
@@ -45,9 +45,9 @@ async fn generic_decoration_records_survive_reload_and_resizes_that_keep_their_h
         set_battle_static_decoration(
             &mut world,
             map,
-            BattleStaticDecorationKind::Decoration,
+            StaticDecorationKind::Decoration,
             5,
-            Some(BattleStaticDecoration {
+            Some(StaticDecoration {
                 coordinate: HexCoordinate { x: -1, y: 1 },
                 ..definition
             })
@@ -58,9 +58,9 @@ async fn generic_decoration_records_survive_reload_and_resizes_that_keep_their_h
     set_battle_static_decoration(
         &mut world,
         map,
-        BattleStaticDecorationKind::Decoration,
+        StaticDecorationKind::Decoration,
         5,
-        Some(BattleStaticDecoration {
+        Some(StaticDecoration {
             coordinate: HexCoordinate { x: 0, y: 1 },
             restored_terrain: Some(Terrain::Grassland),
             ..definition
@@ -70,7 +70,7 @@ async fn generic_decoration_records_survive_reload_and_resizes_that_keep_their_h
     set_battle_static_decoration(
         &mut world,
         map,
-        BattleStaticDecorationKind::Decoration,
+        StaticDecorationKind::Decoration,
         9,
         Some(definition),
     )
@@ -95,7 +95,7 @@ async fn generic_decoration_records_survive_reload_and_resizes_that_keep_their_h
     persistence::save(&config.database(), &world).await.unwrap();
     assert_eq!(
         world.btech.maps()[&map]
-            .static_decorations(BattleStaticDecorationKind::Decoration)
+            .static_decorations(StaticDecorationKind::Decoration)
             .len(),
         2
     );
@@ -104,7 +104,7 @@ async fn generic_decoration_records_survive_reload_and_resizes_that_keep_their_h
     let response = support::run_text(&scripts, &config, ObjectId(1), 1, "setmapsize 1 2");
     let saved = scripts.world().clone();
     let kept: Vec<_> = saved.btech.maps()[&map]
-        .static_decorations(BattleStaticDecorationKind::Decoration)
+        .static_decorations(StaticDecorationKind::Decoration)
         .values()
         .map(|record| record.coordinate)
         .collect();

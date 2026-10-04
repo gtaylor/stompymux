@@ -45,7 +45,7 @@ accounting for those paths.
 
 ## Histogram and renderer checkpoint
 
-`BattleRollStatistics` owns eleven private counts and derives its total without
+`RollStatistics` owns eleven private counts and derives its total without
 a second mutable counter. `record` accepts an explicitly classified sum from 2
 to 12 and rejects invalid inputs or overflow without partial updates. Counts do
 not expose generator state. The value can be cloned into a discarded candidate
@@ -75,7 +75,7 @@ passes and reference files are unchanged.
 
 ## Explicit generic-roll journal
 
-`BattleDice::generic_roll` now records one sum in a private per-stream journal.
+`Dice::generic_roll` now records one sum in a private per-stream journal.
 Plain `two_d6`, `d6` and consciousness dice do not count automatically. Journals
 clone with candidate worlds, making a discarded clone independent of its source.
 Generator equality deliberately compares the random stream only; diagnostics
@@ -90,7 +90,7 @@ Initial classified callers:
 
 | Rule | Reference path | Rust accounting |
 | --- | --- | --- |
-| Ordinary weapon attack | `combat/mech_fire_preparation.c::weapon_fire_roll` calls `btech_random_roll` | `BattleWeapon::attack_roll` uses `generic_roll` |
+| Ordinary weapon attack | `combat/mech_fire_preparation.c::weapon_fire_roll` calls `btech_random_roll` | `Weapon::attack_roll` uses `generic_roll` |
 | Dead-fire attack | Same function draws three direct d6 | Remains uncounted |
 | Extended LRM below minimum | Same direct three-die branch | Remains uncounted |
 | Extended LRM at/above minimum | Generic branch | Counted once |
@@ -131,7 +131,7 @@ and exact journal buckets without changing random outcomes. The production
 Computer skill override. This search alone does not prove all reference call
 sites have corresponding runtime behavior: missing rules and ownership boundaries
 still require acceptance against the reference inventory.
-`World::battle_roll_statistics` now combines live unit/map journals with retained
+`World::roll_statistics` now combines live unit/map journals with retained
 history. The wizard-only `+rolls` command uses that read-only aggregate.
 
 The transactional `World` root owns skipped `btech_retired_rolls`. Queries merge

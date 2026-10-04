@@ -1,6 +1,6 @@
 //! Selective persistence of shared parts inventories in the game directory's economy table.
 use super::write::{Cell, Fields, row};
-use crate::{BattleInventoryEntry, ObjectId, World};
+use crate::{InventoryEntry, ObjectId, World};
 use anyhow::{Result, ensure};
 use sqlx::{Row, SqliteConnection};
 use std::collections::BTreeMap;
@@ -8,14 +8,14 @@ use std::collections::BTreeMap;
 /// Read stable part identities without reinterpreting them as installed equipment.
 pub(super) async fn load(
     c: &mut SqliteConnection,
-) -> Result<BTreeMap<ObjectId, Vec<BattleInventoryEntry>>> {
+) -> Result<BTreeMap<ObjectId, Vec<InventoryEntry>>> {
     let count: i64 = sqlx::query_scalar("SELECT count(*) FROM btech_economy_parts")
         .fetch_one(&mut *c)
         .await?;
     ensure!(count <= 1_000_000, "Too many inventory entries");
-    let mut inventories = BTreeMap::<ObjectId, Vec<BattleInventoryEntry>>::new();
+    let mut inventories = BTreeMap::<ObjectId, Vec<InventoryEntry>>::new();
     for row in sqlx::query("SELECT object_dbref,part_id,quantity FROM btech_economy_parts ORDER BY object_dbref,part_id").fetch_all(c).await? {
-        let entry = BattleInventoryEntry {
+        let entry = InventoryEntry {
             part_id: i32::try_from(row.try_get::<i64, _>("part_id")?)?,
             quantity: i32::try_from(row.try_get::<i64, _>("quantity")?)?,
         };

@@ -1,5 +1,5 @@
 //! Torpedo launchers: LRTs and SRTs fire only underwater, at targets in the water.
-use super::{BattleVehicleMovement, BattleWeapon};
+use super::{VehicleMovement, Weapon};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 
@@ -20,7 +20,7 @@ pub(super) fn target_in_water(world: &World, target: ObjectId) -> Result<bool> {
         return Ok(false);
     }
     let elevation = if let Some(vehicle) = world.btech.vehicles().get(&target) {
-        if vehicle.definition().movement == BattleVehicleMovement::Hover {
+        if vehicle.definition().movement == VehicleMovement::Hover {
             return Ok(false);
         }
         vehicle.elevation_level(tile)
@@ -36,7 +36,7 @@ pub(super) fn target_in_water(world: &World, target: ObjectId) -> Result<bool> {
 }
 
 /// Torpedoes need a target in the water; other weapons are unaffected.
-pub(super) fn check_target(world: &World, weapon: BattleWeapon, target: ObjectId) -> Result<()> {
+pub(super) fn check_target(world: &World, weapon: Weapon, target: ObjectId) -> Result<()> {
     if !weapon.is_torpedo() {
         return Ok(());
     }
@@ -50,17 +50,17 @@ pub(super) fn check_target(world: &World, weapon: BattleWeapon, target: ObjectId
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::btech::BattleWeaponSalvo;
+    use crate::btech::WeaponSalvo;
 
     /// Torpedo launchers keep their ordinary reach underwater and take no special munitions
     /// beyond Artemis guidance.
     #[test]
     fn torpedoes_fire_underwater_at_their_ordinary_ranges() {
         for weapon in [
-            BattleWeapon::Lrt15,
-            BattleWeapon::Srt2,
-            BattleWeapon::ClanSrt6,
-            BattleWeapon::ClanLrt20,
+            Weapon::Lrt15,
+            Weapon::Srt2,
+            Weapon::ClanSrt6,
+            Weapon::ClanLrt20,
         ] {
             assert!(weapon.is_torpedo());
             let ranges = weapon.water_ranges().unwrap();
@@ -74,19 +74,19 @@ mod tests {
                 )
             );
             assert!(!weapon.supports_indirect_fire());
-            assert!(super::super::BattleAmmunitionMode::Artemis.supports(weapon));
+            assert!(super::super::AmmunitionMode::Artemis.supports(weapon));
             for mode in [
-                super::super::BattleAmmunitionMode::Smoke,
-                super::super::BattleAmmunitionMode::Mine,
-                super::super::BattleAmmunitionMode::Narc,
-                super::super::BattleAmmunitionMode::Inferno,
+                super::super::AmmunitionMode::Smoke,
+                super::super::AmmunitionMode::Mine,
+                super::super::AmmunitionMode::Narc,
+                super::super::AmmunitionMode::Inferno,
             ] {
                 assert!(!mode.supports(weapon), "{weapon:?} {mode:?}");
             }
         }
-        assert!(!BattleWeapon::Lrm20.is_torpedo());
+        assert!(!Weapon::Lrm20.is_torpedo());
         assert_eq!(
-            BattleWeapon::Lrt10
+            Weapon::Lrt10
                 .water_range_modifier(13.0, false)
                 .unwrap()
                 .unwrap()
@@ -99,10 +99,10 @@ mod tests {
     #[test]
     fn torpedo_salvos_match_missile_launchers() {
         for (torpedo, launcher) in [
-            (BattleWeapon::Lrt20, BattleWeapon::Lrm20),
-            (BattleWeapon::ClanLrt10, BattleWeapon::ClanLrm10),
-            (BattleWeapon::Srt4, BattleWeapon::Srm4),
-            (BattleWeapon::ClanSrt6, BattleWeapon::ClanSrm6),
+            (Weapon::Lrt20, Weapon::Lrm20),
+            (Weapon::ClanLrt10, Weapon::ClanLrm10),
+            (Weapon::Srt4, Weapon::Srm4),
+            (Weapon::ClanSrt6, Weapon::ClanSrm6),
         ] {
             for roll in 2..=12 {
                 assert_eq!(

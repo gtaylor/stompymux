@@ -6,19 +6,17 @@ use serde::Serialize;
 
 /// One occupied-woods absorption with committed terrain feedback.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattleWoodsAbsorption {
+pub struct WoodsAbsorption {
     pub damage_before: u16,
     /// Per-shell damage retains one before glancing; missile totals may reach zero.
     pub damage_after: u16,
-    pub terrain: BattleWoodlandImpact,
-    pub notices: Vec<BattleNotice>,
+    pub terrain: WoodlandImpact,
+    pub notices: Vec<Notice>,
 }
 
 /// Direct shells use a per-projectile damage floor; missiles and pellets use total absorption.
-pub(super) fn direct_shells(weapon: BattleWeapon, mode: BattleAmmunitionMode) -> bool {
-    weapon.profile().missiles == 0
-        && !weapon.is_artillery()
-        && mode != BattleAmmunitionMode::Cluster
+pub(super) fn direct_shells(weapon: Weapon, mode: AmmunitionMode) -> bool {
+    weapon.profile().missiles == 0 && !weapon.is_artillery() && mode != AmmunitionMode::Cluster
 }
 
 /// Apply occupied cover before glancing and use pre-absorption damage for intentional terrain effects.
@@ -27,11 +25,11 @@ pub(super) fn resolve_shells(
     world: &mut World,
     shooter: ObjectId,
     target: ObjectId,
-    weapon: BattleWeapon,
-    mode: BattleAmmunitionMode,
+    weapon: Weapon,
+    mode: AmmunitionMode,
     packets: &mut [u16],
     glancing: bool,
-) -> Result<Option<BattleWoodsAbsorption>> {
+) -> Result<Option<WoodsAbsorption>> {
     let Some(&damage) = packets.first() else {
         return Ok(None);
     };
@@ -48,17 +46,17 @@ pub(super) fn resolve_shells(
         packets.fill(damage_after);
         let terrain = terrain_effect(world, shooter, target, weapon, mode, damage_before)?;
         let mut notices = vec![
-            BattleNotice {
+            Notice {
                 unit: shooter,
                 text: "The woods absorb some of your shot!".into(),
             },
-            BattleNotice {
+            Notice {
                 unit: target,
                 text: "The woods absorb some of the damage!".into(),
             },
         ];
         notices.extend(terrain.notices.iter().cloned());
-        Some(BattleWoodsAbsorption {
+        Some(WoodsAbsorption {
             damage_before,
             damage_after,
             terrain,
@@ -79,10 +77,10 @@ pub(super) fn begin_pellets(
     world: &mut World,
     shooter: ObjectId,
     target: ObjectId,
-    weapon: BattleWeapon,
-    mode: BattleAmmunitionMode,
-) -> Result<Option<BattleWoodsAbsorption>> {
-    if mode != BattleAmmunitionMode::Cluster || !weapon.is_lbx() {
+    weapon: Weapon,
+    mode: AmmunitionMode,
+) -> Result<Option<WoodsAbsorption>> {
+    if mode != AmmunitionMode::Cluster || !weapon.is_lbx() {
         return Ok(None);
     }
     resolve_shells(
@@ -101,10 +99,10 @@ pub(super) fn resolve_projectiles(
     world: &mut World,
     shooter: ObjectId,
     target: ObjectId,
-    weapon: BattleWeapon,
-    mode: BattleAmmunitionMode,
+    weapon: Weapon,
+    mode: AmmunitionMode,
     packets: &mut super::weapon_groups::WeaponGroups,
-) -> Result<Option<BattleWoodsAbsorption>> {
+) -> Result<Option<WoodsAbsorption>> {
     if packets.damage.is_empty() {
         return Ok(None);
     }
@@ -116,7 +114,7 @@ pub(super) fn resolve_projectiles(
     let before = damage_before / packets.missile_payload();
     let after = damage_after / packets.missile_payload();
     let terrain = terrain_effect(world, shooter, target, weapon, mode, damage_before)?;
-    let noun = match (mode == BattleAmmunitionMode::Cluster, before == 1) {
+    let noun = match (mode == AmmunitionMode::Cluster, before == 1) {
         (true, true) => "pellet",
         (true, false) => "pellets",
         (false, true) => "missile",
@@ -130,14 +128,14 @@ pub(super) fn resolve_projectiles(
         "Some of the"
     };
     let notices = vec![
-        BattleNotice {
+        Notice {
             unit: shooter,
             text: format!(
                 "{quantity} {noun} {} absorbed by the trees!",
                 if before == 1 { "is" } else { "are" }
             ),
         },
-        BattleNotice {
+        Notice {
             unit: target,
             text: format!(
                 "The trees absorb {} {noun}",
@@ -150,7 +148,7 @@ pub(super) fn resolve_projectiles(
         },
     ];
     let notices = terrain.notices.iter().cloned().chain(notices).collect();
-    Ok(Some(BattleWoodsAbsorption {
+    Ok(Some(WoodsAbsorption {
         damage_before,
         damage_after,
         terrain,
@@ -163,16 +161,16 @@ fn terrain_effect(
     world: &mut World,
     shooter: ObjectId,
     target: ObjectId,
-    weapon: BattleWeapon,
-    mode: BattleAmmunitionMode,
+    weapon: Weapon,
+    mode: AmmunitionMode,
     damage: u16,
-) -> Result<BattleWoodlandImpact> {
+) -> Result<WoodlandImpact> {
     let position = super::scanner::scanner_unit(world, target)
         .and_then(|unit| unit.position)
         .context("Target is not placed")?;
     resolve_woodland_attack(
         world,
-        BattleWoodlandAttack {
+        WoodlandAttack {
             shooter,
             coordinate: HexCoordinate {
                 x: position.x.into(),
@@ -181,7 +179,7 @@ fn terrain_effect(
             weapon,
             ammunition: mode,
             damage,
-            intent: BattleWoodlandIntent::Clear,
+            intent: WoodlandIntent::Clear,
         },
     )
 }

@@ -23,4 +23,4 @@ btech.unit.artemis(dbref, pilot, weapon)
 
 ## Returns
 
-- `BattleAmmunitionMode`
+- `AmmunitionMode`

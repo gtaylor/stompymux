@@ -4,8 +4,8 @@ use anyhow::Result;
 
 /// Skill mutation and the accepted award's pre-impact diagnostic snapshot.
 pub(super) struct PhysicalExperience {
-    pub award: super::BattleExperienceAward,
-    pub message: Option<super::BattleChannelMessage>,
+    pub award: super::ExperienceAward,
+    pub message: Option<super::DiagnosticMessage>,
 }
 
 /// Award before damage so lethal hits remain eligible and failed cascades restore the award.
@@ -45,8 +45,8 @@ pub(super) fn award(
     let amount = u32::from(damage / 3).max(1);
     let award = super::award_skill_experience(world, pilot, skill, amount, now, false)?;
     let message = award.accepted.then(|| {
-        super::BattleChannelMessage::new(
-            super::BattleChannel::PilotingExperience,
+        super::DiagnosticMessage::new(
+            super::DiagnosticChannel::PilotingExperience,
             format!("{} gained {amount} {skill} XP", world.objects[&pilot].name),
         )
     });

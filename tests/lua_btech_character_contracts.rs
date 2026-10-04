@@ -8,7 +8,7 @@ async fn character_contract_uses_object_identity_catalog_codes_and_zero_return_m
     stompymux_rs::set_battle_character(
         &mut s.world_mut(),
         stompymux_rs::ObjectId(1),
-        stompymux_rs::BattleCharacter {
+        stompymux_rs::Character {
             bruise: 2,
             lethal: 1,
             build: 5,

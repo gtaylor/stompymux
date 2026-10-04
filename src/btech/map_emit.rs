@@ -10,7 +10,7 @@ fn recipients(world: &World, map: ObjectId) -> Result<Vec<ObjectId>> {
             world.objects.get(&id).is_some_and(|object| {
                 object.kind != crate::Kind::Garbage && !object.flags.contains(crate::Flag::Going)
             }) && super::scanner::scanner_unit(world, id)
-                .is_some_and(|unit| unit.power == super::BattlePower::Running)
+                .is_some_and(|unit| unit.power == super::Power::Running)
                 && !super::crew::unit_unconscious(world, id)
         })
         .collect())
@@ -60,7 +60,7 @@ pub fn emit_map_action(
         }
         super::notify_message(
             scripts,
-            super::BattleMessageTarget::Player(actor),
+            super::MessageTarget::Player(actor),
             "Message sent!",
         )?;
         scripts.effects.validate()?;

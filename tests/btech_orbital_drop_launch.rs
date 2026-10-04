@@ -146,7 +146,7 @@ async fn unpowered_vtol_insertion_waits_for_startup_with_saved_controls() {
     let (_dir, config, mut world, unit, _, _) =
         firing::fixture_with_target(source, None, source).await;
     firing::edit(&mut world, unit, |state| {
-        state["power"] = serde_json::to_value(BattlePower::Off).unwrap();
+        state["power"] = serde_json::to_value(Power::Off).unwrap();
         state["target_lock"] = serde_json::Value::Null;
     });
     let scripts = scripts(&config, &world);
@@ -167,7 +167,7 @@ async fn unpowered_vtol_insertion_waits_for_startup_with_saved_controls() {
             landed.motion().unwrap().desired_speed,
         )
     };
-    assert_eq!(phase, BattleVtolFlightPhase::Landed);
+    assert_eq!(phase, VtolFlightPhase::Landed);
     assert_eq!(
         desired_speed,
         waiting.btech.vehicles()[&unit]
@@ -177,7 +177,7 @@ async fn unpowered_vtol_insertion_waits_for_startup_with_saved_controls() {
     );
     let before = waiting.btech.clone();
     for _ in 0..5 {
-        advance_battle_motion(&mut waiting, BattleMovementRules::STANDARD).unwrap();
+        advance_battle_motion(&mut waiting, MovementRules::STANDARD).unwrap();
     }
     assert_eq!(waiting.btech, before);
     assert_eq!(battle_unit_elevation(&waiting, unit).unwrap(), Some(20));
@@ -190,7 +190,7 @@ async fn unpowered_vtol_insertion_waits_for_startup_with_saved_controls() {
         for _ in 0..5 {
             advance_battle_units(world, 0);
         }
-        advance_battle_motion(world, BattleMovementRules::STANDARD).unwrap();
+        advance_battle_motion(world, MovementRules::STANDARD).unwrap();
         world.validate(&config).unwrap();
         assert!(world.btech.vehicles()[&unit].motion().unwrap().speed > 0.0);
         assert!(world.btech.vehicles()[&unit].orbital_drop().is_none());
@@ -225,9 +225,9 @@ async fn insertion_replaces_jump_and_rejects_prone_or_digging_units_without_relo
             firing::fixture_with_target(source, None, source).await;
         firing::edit(&mut world, unit, |state| {
             if index == 0 {
-                state["posture"] = serde_json::to_value(BattlePosture::Prone).unwrap();
+                state["posture"] = serde_json::to_value(Posture::Prone).unwrap();
             } else {
-                state["dig"] = serde_json::to_value(BattleDigState::preparing(10)).unwrap();
+                state["dig"] = serde_json::to_value(DigState::preparing(10)).unwrap();
             }
         });
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
@@ -261,7 +261,7 @@ async fn insertion_output_failure_restores_prior_pose_and_existing_messages() {
         &config,
         ObjectId(1),
         unit,
-        BattleScenarioPosition {
+        ScenarioPosition {
             coordinate: HexCoordinate { x: 0, y: 9 },
             elevation: Some(10),
         },
@@ -273,7 +273,7 @@ async fn insertion_output_failure_restores_prior_pose_and_existing_messages() {
         &config,
         ObjectId(1),
         unit,
-        BattleScenarioPosition {
+        ScenarioPosition {
             coordinate: HexCoordinate { x: 0, y: 8 },
             elevation: None,
         },

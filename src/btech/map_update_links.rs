@@ -6,7 +6,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 /// Counts of installed runtime records and descents skipped for cycles or depth.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize)]
-pub struct BattleMapLinkUpdate {
+pub struct MapLinkUpdate {
     pub buildings: usize,
     pub leaves: usize,
     pub entrances: usize,
@@ -35,7 +35,7 @@ pub fn update_map_links_action(
     config: &Config,
     actor: ObjectId,
     root: ObjectId,
-) -> Result<BattleMapLinkUpdate> {
+) -> Result<MapLinkUpdate> {
     scripts.atomic(|before| {
         ensure!(
             crate::authority::is_wizard(before, actor),
@@ -64,7 +64,7 @@ pub fn update_map_links_action(
             map: root,
             depth: 0,
         }];
-        let mut stats = BattleMapLinkUpdate::default();
+        let mut stats = MapLinkUpdate::default();
         while let Some(work) = pending.pop() {
             match work {
                 Work::Child {
@@ -78,7 +78,7 @@ pub fn update_map_links_action(
                         &mut scripts.world_mut(),
                         parent,
                         slot,
-                        Some(super::BattleBuildingEntrance {
+                        Some(super::BuildingEntrance {
                             coordinate,
                             interior: child,
                             data_char: 0,
@@ -134,7 +134,7 @@ pub fn update_map_links_action(
                                     &mut world,
                                     map,
                                     slot as u32,
-                                    Some(super::BattleBuildingEntryPoint {
+                                    Some(super::BuildingEntryPoint {
                                         coordinate,
                                         direction: b"nesw"[direction],
                                         object: crate::ObjectId(-1),
@@ -175,7 +175,7 @@ pub fn update_map_links_action(
         }
         super::notify_message(
             scripts,
-            super::BattleMessageTarget::Player(actor),
+            super::MessageTarget::Player(actor),
             &format!(
                 "Updated {} BUILD objs, {} LEAVE objs, {} ENTRANCE objs; skipped {} link descents.",
                 stats.buildings, stats.leaves, stats.entrances, stats.skipped

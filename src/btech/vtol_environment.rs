@@ -1,5 +1,5 @@
 //! Aircraft surface resolution reuses deliberate landing and shared vehicle flooding.
-use super::{BattleVehicle, BattleVtolLanding, BattleVtolPath, BattleVtolSurfaceContact, MapAsset};
+use super::{MapAsset, Vehicle, VtolLanding, VtolPath, VtolSurfaceContact};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
 
@@ -7,48 +7,48 @@ use serde::Serialize;
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 #[must_use = "Publish environmental effects or resolve the required crash in the host transaction"]
-pub enum BattleVtolEnvironment {
+pub enum VtolEnvironment {
     /// No mutation: horizontal obstacles need the world's pilot and shared control check.
     ObstacleRequired {
-        path: BattleVtolPath,
+        path: VtolPath,
     },
     /// A horizontal obstacle has stopped flight, caused an emergency landing or applied a crash.
     Obstacle {
-        path: BattleVtolPath,
-        fall: Option<Box<super::BattleVehicleFallReport>>,
-        notices: Vec<super::BattleNotice>,
+        path: VtolPath,
+        fall: Option<Box<super::VehicleFallReport>>,
+        notices: Vec<super::Notice>,
         /// Pilot roll feedback captured before landing or crash changes crew state.
-        pilot_notices: Vec<super::BattlePilotNotice>,
-        experience_messages: Vec<super::BattleChannelMessage>,
+        pilot_notices: Vec<super::PilotNotice>,
+        experience_messages: Vec<super::DiagnosticMessage>,
     },
     Movement {
-        path: BattleVtolPath,
+        path: VtolPath,
     },
     /// Stopped horizontal motion at the last traced hex of an unlinked map.
     Boundary {
-        path: BattleVtolPath,
+        path: VtolPath,
     },
     Landed {
-        path: BattleVtolPath,
-        landing: BattleVtolLanding,
+        path: VtolPath,
+        landing: VtolLanding,
     },
     Flooded {
-        path: BattleVtolPath,
+        path: VtolPath,
         newly: bool,
     },
     /// No mutation: the host must apply shared falling damage at this contact before committing.
     CrashRequired {
-        path: BattleVtolPath,
+        path: VtolPath,
         levels: u32,
     },
     /// World contact resolution has applied the shared fall damage at this position.
     Crashed {
-        path: BattleVtolPath,
-        fall: Box<super::BattleVehicleFallReport>,
+        path: VtolPath,
+        fall: Box<super::VehicleFallReport>,
     },
 }
 
-impl BattleVehicle {
+impl Vehicle {
     /// Resolve an airborne movement event's first surface contact on a candidate copy.
     /// Ground contact attempts ordinary landing; failed landing requires the shared host fall action.
     /// The host owns map identity, landing mines, notifications, callbacks and casualty publication.
@@ -57,7 +57,7 @@ impl BattleVehicle {
         map: &MapAsset,
         movement_modifier: i64,
         free_fusion_fuel: bool,
-    ) -> Result<BattleVtolEnvironment> {
+    ) -> Result<VtolEnvironment> {
         self.advance_environment_with(
             &|hex| Ok(map.hex(hex.x, hex.y)),
             movement_modifier,
@@ -71,43 +71,43 @@ impl BattleVehicle {
         lookup: &impl Fn(super::HexCoordinate) -> Result<Option<super::Hex>>,
         movement_modifier: i64,
         free_fusion_fuel: bool,
-    ) -> Result<BattleVtolEnvironment> {
+    ) -> Result<VtolEnvironment> {
         let mut candidate = self.clone();
         let path = candidate.advance_vtol_clear_path_with(lookup, movement_modifier)?;
-        if let BattleVtolPath::MapEdge { last, altitude, .. } = path {
+        if let VtolPath::MapEdge { last, altitude, .. } = path {
             candidate.place_at(last, last.center(), altitude)?;
             candidate.motion.as_mut().unwrap().stop_translation();
             *self = candidate;
-            return Ok(BattleVtolEnvironment::Boundary { path });
+            return Ok(VtolEnvironment::Boundary { path });
         }
-        let BattleVtolPath::Contact { hex, contact, .. } = path else {
+        let VtolPath::Contact { hex, contact, .. } = path else {
             *self = candidate;
-            return Ok(BattleVtolEnvironment::Movement { path });
+            return Ok(VtolEnvironment::Movement { path });
         };
         let tile = lookup(hex)?.context("Contact hex is unavailable")?;
         candidate.place_contact(path)?;
         let outcome = match contact {
-            BattleVtolSurfaceContact::Forest | BattleVtolSurfaceContact::Elevation => {
-                return Ok(BattleVtolEnvironment::ObstacleRequired { path });
+            VtolSurfaceContact::Forest | VtolSurfaceContact::Elevation => {
+                return Ok(VtolEnvironment::ObstacleRequired { path });
             }
-            BattleVtolSurfaceContact::Clear => unreachable!("Contact path cannot be clear"),
-            BattleVtolSurfaceContact::Water => {
+            VtolSurfaceContact::Clear => unreachable!("Contact path cannot be clear"),
+            VtolSurfaceContact::Water => {
                 // Contact has ended flight before shared destruction handles loss of lift.
                 let flight = candidate.vtol_flight.as_mut().unwrap();
-                flight.phase = super::BattleVtolFlightPhase::Landed;
+                flight.phase = super::VtolFlightPhase::Landed;
                 flight.vertical_speed = 0.0;
                 flight.fall = None;
                 let newly = candidate.destroy_by_flooding();
-                BattleVtolEnvironment::Flooded { path, newly }
+                VtolEnvironment::Flooded { path, newly }
             }
-            BattleVtolSurfaceContact::Ground { fall_levels } => {
+            VtolSurfaceContact::Ground { fall_levels } => {
                 let Ok(landing) = candidate.land_vtol(tile, free_fusion_fuel) else {
-                    return Ok(BattleVtolEnvironment::CrashRequired {
+                    return Ok(VtolEnvironment::CrashRequired {
                         path,
                         levels: fall_levels,
                     });
                 };
-                BattleVtolEnvironment::Landed { path, landing }
+                VtolEnvironment::Landed { path, landing }
             }
         };
         *self = candidate;
@@ -115,8 +115,8 @@ impl BattleVehicle {
     }
 
     /// Place an observed contact, retaining agreement between continuous and hex coordinates.
-    fn place_contact(&mut self, path: BattleVtolPath) -> Result<()> {
-        let BattleVtolPath::Contact {
+    fn place_contact(&mut self, path: VtolPath) -> Result<()> {
+        let VtolPath::Contact {
             hex,
             point,
             altitude,
@@ -148,7 +148,7 @@ impl BattleVehicle {
             motion.point.containing_hex()? == hex,
             "Contact point differs from contact hex"
         );
-        let position = super::BattlePosition {
+        let position = super::Position {
             map: self.position().context("Aircraft is not placed")?.map,
             x: u16::try_from(hex.x)?,
             y: u16::try_from(hex.y)?,
@@ -168,8 +168,8 @@ pub fn advance_vtol_environment(
     world: &mut crate::World,
     id: crate::ObjectId,
     free_fusion_fuel: bool,
-    rules: super::BattleFallRules,
-) -> Result<BattleVtolEnvironment> {
+    rules: super::FallRules,
+) -> Result<VtolEnvironment> {
     advance_in_candidate(world, id, free_fusion_fuel, rules, false)
 }
 
@@ -178,9 +178,9 @@ pub(super) fn advance_in_candidate(
     world: &mut crate::World,
     id: crate::ObjectId,
     free_fusion_fuel: bool,
-    rules: super::BattleFallRules,
+    rules: super::FallRules,
     character: bool,
-) -> Result<BattleVtolEnvironment> {
+) -> Result<VtolEnvironment> {
     let object = world.objects.get(&id).context("Aircraft is unavailable")?;
     ensure!(
         !object.flags.contains(crate::Flag::Going)
@@ -216,7 +216,7 @@ pub(super) fn advance_in_candidate(
     let unit = candidate.btech.vehicles.get_mut(&id).unwrap();
     let mut outcome =
         unit.advance_environment_with(&lookup, map.movement_modifier, free_fusion_fuel)?;
-    if let BattleVtolEnvironment::CrashRequired { path, levels } = outcome {
+    if let VtolEnvironment::CrashRequired { path, levels } = outcome {
         unit.place_contact(path)?;
         // Crossing exposes the aircraft before armor damage can ruin its cover.
         let mut notices = if candidate.btech.vehicles()[&id].position() != Some(position) {
@@ -230,19 +230,19 @@ pub(super) fn advance_in_candidate(
         super::piloting::append_feedback(&mut fall.feedback.pilot_notices, private, notices.len());
         notices.append(&mut fall.feedback.notices);
         fall.feedback.notices = notices;
-        outcome = BattleVtolEnvironment::Crashed {
+        outcome = VtolEnvironment::Crashed {
             path,
             fall: Box::new(fall),
         };
     }
-    if let BattleVtolEnvironment::ObstacleRequired { path } = outcome {
-        let BattleVtolPath::Contact {
+    if let VtolEnvironment::ObstacleRequired { path } = outcome {
+        let VtolPath::Contact {
             contact, altitude, ..
         } = path
         else {
             unreachable!("Obstacle requires a contact path")
         };
-        let forest = contact == BattleVtolSurfaceContact::Forest;
+        let forest = contact == VtolSurfaceContact::Forest;
         let old_tile = map.base_hex(i64::from(position.x), i64::from(position.y))?;
         // Hex rollback restores the previous terrain elevation, including the ice surface rule.
         let rollback_height =
@@ -262,7 +262,7 @@ pub(super) fn advance_in_candidate(
                 .unwrap()
                 .altitude = f64::from(rollback_height);
         }
-        let mut notices = vec![super::BattleNotice {
+        let mut notices = vec![super::Notice {
             unit: id,
             text: if forest {
                 "You go where no flying thing has ever gone before.."
@@ -299,7 +299,7 @@ pub(super) fn advance_in_candidate(
             false
         };
         let fall = if safe {
-            notices.push(super::BattleNotice {
+            notices.push(super::Notice {
                 unit: id,
                 text: if forest {
                     "You stop in time!"
@@ -315,7 +315,7 @@ pub(super) fn advance_in_candidate(
             } else {
                 unit.motion.as_mut().unwrap().speed = 0.0;
                 let flight = unit.vtol_flight.as_mut().unwrap();
-                flight.phase = super::BattleVtolFlightPhase::Landed;
+                flight.phase = super::VtolFlightPhase::Landed;
                 flight.vertical_speed = 0.0;
             }
             None
@@ -329,7 +329,7 @@ pub(super) fn advance_in_candidate(
                     .place_contact(path)?;
                 notices.extend(super::hiding::movement(&mut candidate, id));
             }
-            notices.push(super::BattleNotice {
+            notices.push(super::Notice {
                 unit: id,
                 text: if forest {
                     "Eww.. You've a bad feeling about this."
@@ -370,7 +370,7 @@ pub(super) fn advance_in_candidate(
             notices.extend(fall.feedback.notices.iter().cloned());
             Some(Box::new(fall))
         };
-        outcome = BattleVtolEnvironment::Obstacle {
+        outcome = VtolEnvironment::Obstacle {
             path,
             fall,
             notices,

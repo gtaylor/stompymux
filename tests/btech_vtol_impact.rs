@@ -17,29 +17,23 @@ async fn aircraft_impacts_apply_location_rotor_and_armor_effects_with_saved_repl
         } else {
             include_str!("../game/mechs/Kestrel.toml").into()
         };
-        let unit =
-            BattleVehicle::new(BattleVehicleTemplate::parse("Kestrel", &source).unwrap()).unwrap();
-        for arc in [
-            BattleHitArc::Front,
-            BattleHitArc::Rear,
-            BattleHitArc::Left,
-            BattleHitArc::Right,
-        ] {
+        let unit = Vehicle::new(VehicleTemplate::parse("Kestrel", &source).unwrap()).unwrap();
+        for arc in [HitArc::Front, HitArc::Rear, HitArc::Left, HitArc::Right] {
             for roll in 2..=12 {
                 let seed = (0..=255)
                     .find(|seed| {
-                        let mut dice = BattleDice::seeded([*seed; 32]);
+                        let mut dice = Dice::seeded([*seed; 32]);
                         let first = dice.two_d6();
                         (if proof { dice.two_d6() } else { first }) == roll
                     })
                     .unwrap();
                 let mut saved = serde_json::to_value(&unit).unwrap();
-                saved["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+                saved["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
                 let mut state = serde_json::to_value(&world.btech).unwrap();
                 state["vehicles"][id.0.to_string()] = saved;
                 world.btech = serde_json::from_value(state).unwrap();
                 let mut replay = world.clone();
-                let mut rules = BattleVehicleImpactRules::STANDARD;
+                let mut rules = VehicleImpactRules::STANDARD;
                 rules.criticals.enabled = false;
                 let selected = unit.definition().vtol_hit(arc, roll).unwrap();
                 let report =
@@ -55,15 +49,15 @@ async fn aircraft_impacts_apply_location_rotor_and_armor_effects_with_saved_repl
                 let changed = &world.btech.vehicles()[&id];
                 assert_eq!(
                     changed.rotor_destroyed(),
-                    selected.rotor == Some(BattleRotorHit::Destroy)
+                    selected.rotor == Some(RotorHit::Destroy)
                 );
-                if selected.rotor == Some(BattleRotorHit::Damage) {
+                if selected.rotor == Some(RotorHit::Damage) {
                     assert_eq!(changed.maximum_speed(), 182.75);
                 }
                 assert!(changed.lost_criticals().is_empty());
                 assert!(!changed.crew_killed());
                 assert_eq!(
-                    serde_json::from_value::<BattleVehicle>(serde_json::to_value(changed).unwrap())
+                    serde_json::from_value::<Vehicle>(serde_json::to_value(changed).unwrap())
                         .unwrap(),
                     *changed
                 );
@@ -79,29 +73,24 @@ async fn aircraft_impacts_apply_location_rotor_and_armor_effects_with_saved_repl
 async fn safe_aircraft_impacts_preserve_material_and_rejected_input_rolls_back() {
     let (_dir, config, mut world) = support::isolated_world().await;
     let id = world.create(&config, "Protected aircraft".into(), Kind::Thing);
-    let unit = BattleVehicle::new(
-        BattleVehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml"))
-            .unwrap(),
+    let unit = Vehicle::new(
+        VehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml")).unwrap(),
     )
     .unwrap();
     let mut state = serde_json::to_value(&world.btech).unwrap();
     state["vehicles"][id.0.to_string()] = serde_json::to_value(&unit).unwrap();
     world.btech = serde_json::from_value(state).unwrap();
     let before = world.btech.clone();
-    let mut rules = BattleVehicleImpactRules::STANDARD;
-    rules.criticals.table = BattleVehicleCriticalTable::Advanced;
-    assert!(
-        resolve_battle_vehicle_impact(&mut world, id, BattleHitArc::Front, 0, None, rules).is_err()
-    );
+    let mut rules = VehicleImpactRules::STANDARD;
+    rules.criticals.table = VehicleCriticalTable::Advanced;
+    assert!(resolve_battle_vehicle_impact(&mut world, id, HitArc::Front, 0, None, rules).is_err());
     assert_eq!(world.btech, before);
-    rules.criticals.table = BattleVehicleCriticalTable::Standard;
-    assert!(
-        resolve_battle_vehicle_impact(&mut world, id, BattleHitArc::Left, 0, None, rules).is_err()
-    );
+    rules.criticals.table = VehicleCriticalTable::Standard;
+    assert!(resolve_battle_vehicle_impact(&mut world, id, HitArc::Left, 0, None, rules).is_err());
     assert_eq!(world.btech, before);
     rules.criticals.combat_safe = true;
     let report =
-        resolve_battle_vehicle_impact(&mut world, id, BattleHitArc::Left, 1, None, rules).unwrap();
+        resolve_battle_vehicle_impact(&mut world, id, HitArc::Left, 1, None, rules).unwrap();
     assert!(report.hit.is_none());
     let changed = &world.btech.vehicles()[&id];
     assert_eq!(changed.sections(), unit.sections());
@@ -114,35 +103,29 @@ async fn safe_aircraft_impacts_preserve_material_and_rejected_input_rolls_back()
 async fn advanced_aircraft_impacts_use_the_aircraft_table_and_shared_armor_pipeline() {
     let (_dir, config, mut world) = support::isolated_world().await;
     let id = world.create(&config, "Advanced aircraft".into(), Kind::Thing);
-    let unit = BattleVehicle::new(
-        BattleVehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml"))
-            .unwrap(),
+    let unit = Vehicle::new(
+        VehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml")).unwrap(),
     )
     .unwrap();
-    for arc in [
-        BattleHitArc::Front,
-        BattleHitArc::Rear,
-        BattleHitArc::Left,
-        BattleHitArc::Right,
-    ] {
+    for arc in [HitArc::Front, HitArc::Rear, HitArc::Left, HitArc::Right] {
         for roll in 2..=12 {
             let seed = (0..=255)
                 .find(|seed| {
-                    let mut dice = BattleDice::seeded([*seed; 32]);
+                    let mut dice = Dice::seeded([*seed; 32]);
                     dice.two_d6();
                     dice.two_d6() == roll
                 })
                 .unwrap();
             let mut saved = serde_json::to_value(&unit).unwrap();
-            saved["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+            saved["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
             let mut state = serde_json::to_value(&world.btech).unwrap();
             state["vehicles"][id.0.to_string()] = saved;
             world.btech = serde_json::from_value(state).unwrap();
             let mut replay = world.clone();
-            let mut rules = BattleVehicleImpactRules::STANDARD;
-            rules.criticals.table = BattleVehicleCriticalTable::Advanced;
+            let mut rules = VehicleImpactRules::STANDARD;
+            rules.criticals.table = VehicleCriticalTable::Advanced;
             rules.criticals.enabled = false;
-            let mut dice = BattleDice::seeded([seed; 32]);
+            let mut dice = Dice::seeded([seed; 32]);
             dice.two_d6();
             dice.two_d6();
             let selected = unit.advanced_vtol_hit(arc, roll, 2, 60, &mut dice).unwrap();
@@ -168,37 +151,35 @@ async fn advanced_aircraft_impacts_use_the_aircraft_table_and_shared_armor_pipel
 async fn impact_and_critical_routing_honor_aircraft_policy_over_ground_settings() {
     let (_dir, config, mut world) = support::isolated_world().await;
     let id = world.create(&config, "Aircraft policy".into(), Kind::Thing);
-    let unit = BattleVehicle::new(
-        BattleVehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml"))
-            .unwrap(),
+    let unit = Vehicle::new(
+        VehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml")).unwrap(),
     )
     .unwrap();
     for (ground, aircraft) in [
         (
-            BattleVehicleCriticalTable::Advanced,
-            BattleVehicleCriticalTable::Standard,
+            VehicleCriticalTable::Advanced,
+            VehicleCriticalTable::Standard,
         ),
         (
-            BattleVehicleCriticalTable::Standard,
-            BattleVehicleCriticalTable::Advanced,
+            VehicleCriticalTable::Standard,
+            VehicleCriticalTable::Advanced,
         ),
     ] {
         let mut state = serde_json::to_value(&world.btech).unwrap();
         let mut saved = serde_json::to_value(&unit).unwrap();
-        saved["dice"] = serde_json::to_value(BattleDice::seeded([42; 32])).unwrap();
+        saved["dice"] = serde_json::to_value(Dice::seeded([42; 32])).unwrap();
         state["vehicles"][id.0.to_string()] = saved;
         world.btech = serde_json::from_value(state).unwrap();
         let mut critical_world = world.clone();
-        let mut rules = BattleVehicleImpactRules::STANDARD;
+        let mut rules = VehicleImpactRules::STANDARD;
         rules.criticals.table = ground;
         rules.criticals.vtol_table = Some(aircraft);
         rules.criticals.enabled = false;
         let report =
-            resolve_battle_vehicle_impact(&mut world, id, BattleHitArc::Front, 1, None, rules)
-                .unwrap();
+            resolve_battle_vehicle_impact(&mut world, id, HitArc::Front, 1, None, rules).unwrap();
         assert_eq!(
             report.rolls.len(),
-            if aircraft == BattleVehicleCriticalTable::Advanced {
+            if aircraft == VehicleCriticalTable::Advanced {
                 2
             } else {
                 1
@@ -208,15 +189,15 @@ async fn impact_and_critical_routing_honor_aircraft_policy_over_ground_settings(
         let selected = roll_battle_vehicle_critical(
             &mut critical_world,
             id,
-            BattleVehicleSection::Front,
+            VehicleSection::Front,
             rules.criticals,
         )
         .unwrap();
         assert_eq!(selected.table, aircraft);
-        let mut dice = BattleDice::seeded([42; 32]);
+        let mut dice = Dice::seeded([42; 32]);
         assert_eq!(
             selected.rolls,
-            [if aircraft == BattleVehicleCriticalTable::Advanced {
+            [if aircraft == VehicleCriticalTable::Advanced {
                 dice.two_d6()
             } else {
                 dice.d6()

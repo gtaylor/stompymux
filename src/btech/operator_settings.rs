@@ -20,7 +20,7 @@ pub fn edit_weapon_settings(
     name: &str,
     value: i64,
     recycle: bool,
-) -> Result<super::BattleWeaponValues> {
+) -> Result<super::WeaponValues> {
     let mut candidate = scripts.world().clone();
     let values = if recycle {
         super::set_weapon_recycle(&mut candidate, actor, name, value)?
@@ -28,7 +28,7 @@ pub fn edit_weapon_settings(
         super::set_weapon_battle_value(&mut candidate, actor, name, value)?
     };
     if recycle {
-        let weapon = super::BattleWeapon::parse(name)?;
+        let weapon = super::Weapon::parse(name)?;
         audit(
             scripts,
             format!(

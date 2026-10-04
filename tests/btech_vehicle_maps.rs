@@ -3,7 +3,7 @@ use crate::support;
 use stompymux_rs::*;
 
 /// Read the staggered LRS cell for a known coordinate, independently of contact marker choice.
-fn cell(report: &BattleLongRangeMap, x: i32, y: i32) -> char {
+fn cell(report: &LongRangeMap, x: i32, y: i32) -> char {
     let x_offset = (x - report.viewport.origin.x) as usize;
     let y_offset = (y - report.viewport.origin.y) as usize;
     let label_rows = (report.viewport.origin.x + i32::from(report.viewport.width) - 1)
@@ -49,7 +49,7 @@ async fn mixed_maps_navigation_and_measurements_share_every_supported_movement_t
     let mut ids = Vec::new();
     for (x, (source, _)) in sources.iter().enumerate() {
         let id = base.create(&config, "Formation unit".into(), Kind::Thing);
-        BattleUnitTemplate::parse("test", source)
+        UnitTemplate::parse("test", source)
             .unwrap()
             .create(&mut base, id)
             .unwrap();
@@ -65,7 +65,7 @@ async fn mixed_maps_navigation_and_measurements_share_every_supported_movement_t
             "constructed"
         };
         let unit = &mut state[key][id.0.to_string()];
-        unit["power"] = serde_json::to_value(BattlePower::Running).unwrap();
+        unit["power"] = serde_json::to_value(Power::Running).unwrap();
         for &target in &ids {
             if target != id {
                 unit["contacts"][target.0.to_string()] = serde_json::json!({"identified": false});
@@ -73,7 +73,7 @@ async fn mixed_maps_navigation_and_measurements_share_every_supported_movement_t
         }
     }
     state["vehicles"][ids[5].0.to_string()]["vtol_flight"]["phase"] =
-        serde_json::to_value(BattleVtolFlightPhase::Airborne).unwrap();
+        serde_json::to_value(VtolFlightPhase::Airborne).unwrap();
     state["vehicles"][ids[5].0.to_string()]["vtol_flight"]["altitude"] = 5.25.into();
     state["vehicles"][ids[5].0.to_string()]["vtol_flight"]["vertical_speed"] = 1.25.into();
     base.btech = serde_json::from_value(state).unwrap();
@@ -86,12 +86,12 @@ async fn mixed_maps_navigation_and_measurements_share_every_supported_movement_t
         let _ = select_battle_target(&mut world, observer, ObjectId(1), Some(target)).unwrap();
         world.validate(&config).unwrap();
         let before = world.btech.clone();
-        let dimensions = BattleViewDimensions::default();
+        let dimensions = ViewDimensions::default();
         let lrs = battle_long_range_map(
             &world,
             observer,
             ObjectId(1),
-            BattleLongRangeMode::Units,
+            LongRangeMode::Units,
             "",
             dimensions,
         )
@@ -108,13 +108,13 @@ async fn mixed_maps_navigation_and_measurements_share_every_supported_movement_t
             assert!(text::plain(&tac.text).contains(&format!("a{}", char::from(b'a' + x as u8))));
         }
         for mode in [
-            BattleLongRangeMode::Terrain,
-            BattleLongRangeMode::Elevation,
-            BattleLongRangeMode::ColoredElevation,
-            BattleLongRangeMode::VisibleTerrain,
-            BattleLongRangeMode::VisibleElevation,
-            BattleLongRangeMode::VisibleUnits,
-            BattleLongRangeMode::UnderlyingTerrain,
+            LongRangeMode::Terrain,
+            LongRangeMode::Elevation,
+            LongRangeMode::ColoredElevation,
+            LongRangeMode::VisibleTerrain,
+            LongRangeMode::VisibleElevation,
+            LongRangeMode::VisibleUnits,
+            LongRangeMode::UnderlyingTerrain,
         ] {
             battle_long_range_map(&world, observer, ObjectId(1), mode, "", dimensions).unwrap();
         }
@@ -136,20 +136,14 @@ async fn mixed_maps_navigation_and_measurements_share_every_supported_movement_t
             &world,
             observer,
             ObjectId(1),
-            BattleViewKind::Tactical,
+            ViewKind::Tactical,
             &format!("#{}", target.0),
         )
         .unwrap();
         assert_eq!(centered.center.x, ((index + 1) % ids.len()) as i32);
         assert!(
-            parse_battle_view_center(
-                &world,
-                observer,
-                ObjectId(1),
-                BattleViewKind::Tactical,
-                "90 1000"
-            )
-            .is_err()
+            parse_battle_view_center(&world, observer, ObjectId(1), ViewKind::Tactical, "90 1000")
+                .is_err()
         );
         assert!(battle_navigate(&world, observer, ObjectId(-1), "").is_err());
         let scripts = Scripts::new(
@@ -196,13 +190,13 @@ async fn mixed_maps_navigation_and_measurements_share_every_supported_movement_t
             );
         }
         for (mode, selector) in [
-            (BattleLongRangeMode::Terrain, "Terrain-map"),
-            (BattleLongRangeMode::Elevation, "Elevation-map"),
-            (BattleLongRangeMode::ColoredElevation, "Combined"),
-            (BattleLongRangeMode::Units, "Mechs"),
-            (BattleLongRangeMode::VisibleTerrain, "LOS"),
-            (BattleLongRangeMode::VisibleElevation, "Height"),
-            (BattleLongRangeMode::VisibleUnits, "Sensors"),
+            (LongRangeMode::Terrain, "Terrain-map"),
+            (LongRangeMode::Elevation, "Elevation-map"),
+            (LongRangeMode::ColoredElevation, "Combined"),
+            (LongRangeMode::Units, "Mechs"),
+            (LongRangeMode::VisibleTerrain, "LOS"),
+            (LongRangeMode::VisibleElevation, "Height"),
+            (LongRangeMode::VisibleUnits, "Sensors"),
         ] {
             let label = format!("a{}", char::from(b'a' + ((index + 1) % ids.len()) as u8));
             for arguments in [
@@ -255,7 +249,7 @@ async fn mixed_maps_navigation_and_measurements_share_every_supported_movement_t
                         &mut candidate,
                         observer,
                         ObjectId(1),
-                        BattleFallRules::configured(&config),
+                        FallRules::configured(&config),
                     )
                     .unwrap();
                     assign_battle_pilot(&mut candidate, observer, ObjectId(1)).unwrap();
@@ -274,7 +268,7 @@ async fn mixed_maps_navigation_and_measurements_share_every_supported_movement_t
                     };
                     for slot in [1, 4] {
                         unit.destroy_critical(CriticalLocation {
-                            section: BattleSection::Head,
+                            section: MechSection::Head,
                             slot,
                         })
                         .unwrap();
@@ -327,7 +321,7 @@ async fn mixed_maps_navigation_and_measurements_share_every_supported_movement_t
                 &restored,
                 observer,
                 ObjectId(1),
-                BattleLongRangeMode::Units,
+                LongRangeMode::Units,
                 "",
                 dimensions
             )
@@ -337,7 +331,7 @@ async fn mixed_maps_navigation_and_measurements_share_every_supported_movement_t
         set_battle_unit_signature(
             &mut world,
             target,
-            BattleUnitSignature {
+            UnitSignature {
                 team: 1,
                 ..Default::default()
             },
@@ -347,7 +341,7 @@ async fn mixed_maps_navigation_and_measurements_share_every_supported_movement_t
             &world,
             observer,
             ObjectId(1),
-            BattleLongRangeMode::Units,
+            LongRangeMode::Units,
             "",
             dimensions,
         )

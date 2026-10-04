@@ -1,18 +1,18 @@
 //! Saved player display preferences, independent of cockpit state and explicit renderer overrides.
-use super::BattleViewDimensions;
+use super::ViewDimensions;
 use crate::{Flag, Kind, ObjectId, World};
 use anyhow::{Result, ensure};
 
 /// Player-owned map dimensions and unit-list inclusion settings.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(default, deny_unknown_fields)]
-pub struct BattlePlayerPreferences {
-    pub dimensions: BattleViewDimensions,
-    pub contacts: super::BattleContactPreferences,
+pub struct PlayerPreferences {
+    pub dimensions: ViewDimensions,
+    pub contacts: super::ContactPreferences,
 }
 
 /// Read saved dimensions or the standard defaults for a live player.
-pub fn view_dimensions(world: &World, player: ObjectId) -> Result<BattleViewDimensions> {
+pub fn view_dimensions(world: &World, player: ObjectId) -> Result<ViewDimensions> {
     ensure!(
         world.objects.get(&player).is_some_and(
             |object| object.kind == Kind::Player && !object.flags.contains(Flag::Going)
@@ -33,7 +33,7 @@ pub fn view_dimensions(world: &World, player: ObjectId) -> Result<BattleViewDime
 pub fn set_view_dimensions(
     world: &mut World,
     player: ObjectId,
-    dimensions: BattleViewDimensions,
+    dimensions: ViewDimensions,
 ) -> Result<()> {
     view_dimensions(world, player)?;
     dimensions.validate()?;
@@ -54,8 +54,8 @@ pub(crate) fn command(
         let arguments: Vec<_> = input.args.split_whitespace().collect();
         let replacement = match arguments.as_slice() {
             [] => None,
-            [reset] if reset.eq_ignore_ascii_case("reset") => Some(BattleViewDimensions::default()),
-            [width, height, lrs] => Some(BattleViewDimensions {
+            [reset] if reset.eq_ignore_ascii_case("reset") => Some(ViewDimensions::default()),
+            [width, height, lrs] => Some(ViewDimensions {
                 tactical_width: width
                     .parse::<u16>()
                     .map_err(|_| anyhow::anyhow!("Invalid tactical width"))?,

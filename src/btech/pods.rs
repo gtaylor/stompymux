@@ -7,30 +7,30 @@ use std::collections::BTreeSet;
 
 /// One installed section in the cockpit's pod inspection table.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BattlePodRow {
-    pub section: BattleUnitSection,
+pub struct PodRow {
+    pub section: UnitSection,
     pub destroyed: bool,
-    pub kinds: BTreeSet<BattleBeaconKind>,
+    pub kinds: BTreeSet<BeaconKind>,
 }
 
 /// A completed swat, including any self-inflicted damage and its nested consequences.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct BattlePodRemoval {
-    pub section: BattleSection,
-    pub kind: BattleBeaconKind,
-    pub arm: BattleArm,
+pub struct PodRemoval {
+    pub section: MechSection,
+    pub kind: BeaconKind,
+    pub arm: Arm,
     pub target_number: i32,
     pub roll: u8,
     pub removed: bool,
     pub self_damage: u16,
-    pub impact: Option<BattleTacticalImpact>,
-    pub notices: Vec<BattleNotice>,
+    pub impact: Option<TacticalImpact>,
+    pub notices: Vec<Notice>,
     /// Nested self-damage checks indexed into the attempt notice stream.
-    pub pilot_notices: Vec<BattlePilotNotice>,
+    pub pilot_notices: Vec<PilotNotice>,
 }
 
 /// Inspect a running unit after the same cockpit prerequisites as the native PODS command.
-pub fn inspect_pods(world: &World, id: ObjectId, pilot: ObjectId) -> Result<Vec<BattlePodRow>> {
+pub fn inspect_pods(world: &World, id: ObjectId, pilot: ObjectId) -> Result<Vec<PodRow>> {
     controlled(world, id, pilot)?;
     if let Some(unit) = world.btech.vehicles().get(&id) {
         return Ok(rows(
@@ -45,12 +45,12 @@ pub fn inspect_pods(world: &World, id: ObjectId, pilot: ObjectId) -> Result<Vec<
                     )
                 }),
             unit.beacons(),
-            BattleUnitSection::Vehicle,
+            UnitSection::Vehicle,
         ));
     }
     let unit = &world.btech.constructed_units()[&id];
     Ok(rows(
-        BattleSection::ALL.into_iter().map(|section| {
+        MechSection::ALL.into_iter().map(|section| {
             (
                 section,
                 unit.definition().sections[&section].internal > 0,
@@ -58,22 +58,22 @@ pub fn inspect_pods(world: &World, id: ObjectId, pilot: ObjectId) -> Result<Vec<
             )
         }),
         unit.beacons(),
-        BattleUnitSection::Mech,
+        UnitSection::Mech,
     ))
 }
 
 /// Both construction adapters supply installed sections to one pod-row policy.
 fn rows<S: Copy + Ord>(
     sections: impl Iterator<Item = (S, bool, bool)>,
-    beacons: &std::collections::BTreeMap<S, BTreeSet<BattleBeaconKind>>,
-    identity: impl Fn(S) -> BattleUnitSection,
-) -> Vec<BattlePodRow> {
+    beacons: &std::collections::BTreeMap<S, BTreeSet<BeaconKind>>,
+    identity: impl Fn(S) -> UnitSection,
+) -> Vec<PodRow> {
     if beacons.is_empty() {
         return Vec::new();
     }
     sections
         .filter(|(_, installed, _)| *installed)
-        .map(|(section, _, destroyed)| BattlePodRow {
+        .map(|(section, _, destroyed)| PodRow {
             section: identity(section),
             destroyed,
             kinds: beacons.get(&section).cloned().unwrap_or_default(),
@@ -92,17 +92,17 @@ fn controlled(world: &World, id: ObjectId, pilot: ObjectId) -> Result<()> {
 }
 
 /// Slot identity and damage both matter for the swatting arm's actuator penalties.
-fn actuator(unit: &BattleUnit, section: BattleSection, slot: u8, system: BattleSystem) -> bool {
+fn actuator(unit: &Mech, section: MechSection, slot: u8, system: System) -> bool {
     let location = CriticalLocation { section, slot };
     !unit.critical_unavailable(location)
         && unit.definition().sections[&section]
             .criticals
             .get(&slot)
-            .is_some_and(|part| BattleSystem::named(&part.equipment) == Some(system))
+            .is_some_and(|part| System::named(&part.equipment) == Some(system))
 }
 
 /// Return the arm's aiming penalty and halved damage, or reject unavailable/recycling arms.
-fn arm_profile(unit: &BattleUnit, arm: BattleArm) -> Result<Option<(i32, u16)>> {
+fn arm_profile(unit: &Mech, arm: Arm) -> Result<Option<(i32, u16)>> {
     let section = arm.section();
     if unit.sections()[&section].internal == 0 || unit.limb_recycle().contains_key(&section) {
         return Ok(None);
@@ -122,9 +122,9 @@ fn arm_profile(unit: &BattleUnit, arm: BattleArm) -> Result<Option<(i32, u16)>> 
     {
         return Ok(None);
     }
-    let upper = actuator(unit, section, 1, BattleSystem::UpperActuator);
-    let lower = actuator(unit, section, 2, BattleSystem::LowerActuator);
-    let hand = actuator(unit, section, 3, BattleSystem::HandOrFootActuator);
+    let upper = actuator(unit, section, 1, System::UpperActuator);
+    let lower = actuator(unit, section, 2, System::LowerActuator);
+    let hand = actuator(unit, section, 3, System::HandOrFootActuator);
     let penalty = 2 * i32::from(!upper) + 2 * i32::from(!lower) + i32::from(!hand);
     let mut damage = (unit.definition().tons + 5) / 10;
     if !lower {
@@ -141,10 +141,10 @@ pub fn remove_pod(
     world: &mut World,
     id: ObjectId,
     pilot: ObjectId,
-    section: BattleSection,
-    kind: BattleBeaconKind,
-    rules: BattleFallRules,
-) -> Result<BattlePodRemoval> {
+    section: MechSection,
+    kind: BeaconKind,
+    rules: FallRules,
+) -> Result<PodRemoval> {
     ensure!(
         world
             .objects
@@ -160,21 +160,21 @@ fn resolve(
     world: &mut World,
     id: ObjectId,
     pilot: ObjectId,
-    section: BattleSection,
-    kind: BattleBeaconKind,
-    rules: BattleFallRules,
-) -> Result<BattlePodRemoval> {
+    section: MechSection,
+    kind: BeaconKind,
+    rules: FallRules,
+) -> Result<PodRemoval> {
     controlled(world, id, pilot)?;
     ensure!(
         world.btech.constructed_units().contains_key(&id),
         "Only biped BattleMechs can swat individual pods"
     );
     ensure!(
-        world.btech.constructed_units()[&id].chassis() != BattleMechChassis::Quad,
+        world.btech.constructed_units()[&id].chassis() != MechChassis::Quad,
         "Quads can not knock of iNARC pods!"
     );
     ensure!(
-        kind != BattleBeaconKind::Narc,
+        kind != BeaconKind::Narc,
         "Conventional NARC pods cannot be swatted off"
     );
     let unit = &world.btech.constructed_units()[&id];
@@ -189,10 +189,10 @@ fn resolve(
         "There are no iNarc {kind:?} pods attached to your {}!",
         section.name().replace('_', " ")
     );
-    let choices: &[BattleArm] = match section {
-        BattleSection::LeftArm => &[BattleArm::Right],
-        BattleSection::RightArm => &[BattleArm::Left],
-        _ => &[BattleArm::Left, BattleArm::Right],
+    let choices: &[Arm] = match section {
+        MechSection::LeftArm => &[Arm::Right],
+        MechSection::RightArm => &[Arm::Left],
+        _ => &[Arm::Left, Arm::Right],
     };
     let mut selected = None;
     for &arm in choices {
@@ -217,7 +217,7 @@ fn resolve(
             .generic_roll();
         let removed = i32::from(roll) >= target_number;
         let mut pilot_notices = Vec::new();
-        let mut notices = vec![BattleNotice {
+        let mut notices = vec![Notice {
             unit: id,
             text: format!(
                 "You try to swat at the iNarc pods attached to your {} with your {}.  BTH:  {target_number},\tRoll:  {roll}",
@@ -232,7 +232,7 @@ fn resolve(
             if kinds.is_empty() {
                 unit.beacons.remove(&section);
             }
-            notices.push(BattleNotice {
+            notices.push(Notice {
                 unit: id,
                 text: format!(
                     "You knock a {kind:?} pod off your {}!",
@@ -246,7 +246,7 @@ fn resolve(
             ));
             None
         } else {
-            notices.push(BattleNotice {
+            notices.push(Notice {
                 unit: id,
                 text: "Uh oh. You miss the pod and hit yourself!".into(),
             });
@@ -255,7 +255,7 @@ fn resolve(
                 id,
                 "tries to swat off an iNarc pod, but misses and hits itself!",
             ));
-            let hit = BattleHit {
+            let hit = Hit {
                 section,
                 rear_armor: false,
                 through_armor_critical: false,
@@ -289,7 +289,7 @@ fn resolve(
             .insert(arm.section(), 60);
         notices.extend(refresh_electronic_fields(world)?);
         world.btech.validate_action(world)?;
-        Ok(BattlePodRemoval {
+        Ok(PodRemoval {
             section,
             kind,
             arm,
@@ -310,10 +310,10 @@ pub fn remove_pod_action(
     config: &crate::Config,
     id: ObjectId,
     pilot: ObjectId,
-    section: BattleSection,
-    kind: BattleBeaconKind,
-    rules: BattleFallRules,
-) -> Result<BattlePodRemoval> {
+    section: MechSection,
+    kind: BeaconKind,
+    rules: FallRules,
+) -> Result<PodRemoval> {
     scripts.atomic(|before| {
         let report = resolve(
             &mut scripts.world.borrow_mut(),
@@ -334,7 +334,7 @@ pub fn remove_pod_action(
 }
 
 /// Resolve command locations against the unit's own anatomy.
-pub(crate) fn section(world: &World, id: ObjectId, value: &str) -> Result<BattleSection> {
+pub(crate) fn section(world: &World, id: ObjectId, value: &str) -> Result<MechSection> {
     world
         .btech
         .constructed_units()
@@ -345,11 +345,11 @@ pub(crate) fn section(world: &World, id: ObjectId, value: &str) -> Result<Battle
 }
 
 /// Only haywire and ECM need explicit selectors; the default is a homing pod.
-pub(crate) fn kind(value: &str) -> BattleBeaconKind {
+pub(crate) fn kind(value: &str) -> BeaconKind {
     match value.chars().next().map(|c| c.to_ascii_uppercase()) {
-        Some('Y') => BattleBeaconKind::Haywire,
-        Some('E') => BattleBeaconKind::Ecm,
-        _ => BattleBeaconKind::Homing,
+        Some('Y') => BeaconKind::Haywire,
+        Some('E') => BeaconKind::Ecm,
+        _ => BeaconKind::Homing,
     }
 }
 
@@ -365,10 +365,10 @@ pub fn pod_status(world: &World, id: ObjectId, pilot: ObjectId) -> Result<String
     ];
     for row in rows {
         let marks = [
-            BattleBeaconKind::Narc,
-            BattleBeaconKind::Homing,
-            BattleBeaconKind::Haywire,
-            BattleBeaconKind::Ecm,
+            BeaconKind::Narc,
+            BeaconKind::Homing,
+            BeaconKind::Haywire,
+            BeaconKind::Ecm,
         ]
         .map(|kind| {
             if row.destroyed {
@@ -382,10 +382,10 @@ pub fn pod_status(world: &World, id: ObjectId, pilot: ObjectId) -> Result<String
         lines.push(format!(
             "{:<14} |  {}   |    {}    |    {}     |  {}   |    {}",
             match row.section {
-                BattleUnitSection::Mech(section) => world.btech.constructed_units()[&id]
+                UnitSection::Mech(section) => world.btech.constructed_units()[&id]
                     .chassis()
                     .section_name(section),
-                BattleUnitSection::Vehicle(section) => section.name(),
+                UnitSection::Vehicle(section) => section.name(),
             }
             .replace('_', " "),
             marks[0],

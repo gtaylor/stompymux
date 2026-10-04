@@ -10,7 +10,7 @@ async fn character_lists_filter_skills_only_and_remain_read_only() {
     set_battle_character(
         &mut world,
         ObjectId(1),
-        BattleCharacter {
+        Character {
             build: 3,
             reflexes: 3,
             intuition: 3,
@@ -32,7 +32,7 @@ async fn character_lists_filter_skills_only_and_remain_read_only() {
             &mut world,
             ObjectId(1),
             name,
-            BattleCharacterValue {
+            CharacterValue {
                 value,
                 experience,
                 last_used,

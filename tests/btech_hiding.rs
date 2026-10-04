@@ -40,7 +40,7 @@ async fn fixture(
         (true, true) => source.replacen("specials = [", "specials = [\"Camo_Tech\", ", 1),
         (true, false) => format!("specials = [\"Camo_Tech\"]\n{source}"),
     };
-    BattleUnitTemplate::parse("test", &source)
+    UnitTemplate::parse("test", &source)
         .unwrap()
         .create(&mut world, id)
         .unwrap();
@@ -54,7 +54,7 @@ async fn fixture(
         advance_battle_units(&mut world, 0);
     }
     edit(&mut world, id, |unit| {
-        unit["dice"] = serde_json::to_value(BattleDice::seeded([42; 32])).unwrap()
+        unit["dice"] = serde_json::to_value(Dice::seeded([42; 32])).unwrap()
     });
     world.validate(&config).unwrap();
     (dir, config, world, map, id)
@@ -141,7 +141,7 @@ async fn hiding_native_lua_all_chassis_timing_and_restart() {
                 }
             }
             assert_eq!(hiding(&world, id), (None, true));
-            assert!(!battle_hiding_pending(&world));
+            assert!(!hiding_pending(&world));
             persistence::save(&config.database(), &world).await.unwrap();
             assert_eq!(
                 persistence::load(&config.database()).await.unwrap().btech,
@@ -180,7 +180,7 @@ async fn hiding_authority_and_cached_observer_rules() {
             result.unwrap();
             let observer = world.create(&config, "Observer".into(), Kind::Thing);
             world.objects.get_mut(&observer).unwrap().home = Some(ObjectId(config.home()));
-            BattleUnitTemplate::parse("Hunter", include_str!("../game/mechs/Hunter.toml"))
+            UnitTemplate::parse("Hunter", include_str!("../game/mechs/Hunter.toml"))
                 .unwrap()
                 .create(&mut world, observer)
                 .unwrap();
@@ -210,7 +210,7 @@ async fn hiding_authority_and_cached_observer_rules() {
                 set_battle_visibility(
                     &mut test,
                     observer,
-                    BattleVisibility {
+                    Visibility {
                         invisible: condition == "invisible",
                         clairvoyant: condition == "clairvoyant",
                     },
@@ -218,7 +218,7 @@ async fn hiding_authority_and_cached_observer_rules() {
                 .unwrap();
                 edit(&mut test, observer, |unit| match condition {
                     "friendly" => unit["signature"]["team"] = serde_json::json!(0),
-                    "off" => unit["power"] = serde_json::to_value(BattlePower::Off).unwrap(),
+                    "off" => unit["power"] = serde_json::to_value(Power::Off).unwrap(),
                     "observer" => unit["observer"] = serde_json::json!(true),
                     "unacquired" => unit["contacts"] = serde_json::json!({}),
                     _ => {}
@@ -252,7 +252,7 @@ async fn hiding_fire_intent_survives_rejection_and_rolls_back_with_callbacks() {
             unit["signature"]["hidden"] = serde_json::json!(true);
             unit["hide_elapsed"] = serde_json::json!(7);
         });
-        edit_battle_tic(&mut world, id, ObjectId(1), 0, BattleTicEdit::Add(vec![0])).unwrap();
+        edit_battle_tic(&mut world, id, ObjectId(1), 0, TicEdit::Add(vec![0])).unwrap();
         for command in ["fire 0 invalid", "fire 999999 invalid", "firetic 0 invalid"] {
             let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
             let text = support::run_text(&native, &config, ObjectId(1), 1, command);
@@ -296,14 +296,14 @@ async fn hiding_damage_and_shutdown_distinguish_cover_from_preparation() {
         for amount in [0, 1] {
             let mut test = world.clone();
             let notices = if test.btech.vehicles().contains_key(&id) {
-                let mut rules = BattleVehicleImpactRules::STANDARD.criticals;
+                let mut rules = VehicleImpactRules::STANDARD.criticals;
                 rules.enabled = false;
                 resolve_battle_vehicle_armor_damage(
                     &mut test,
                     id,
-                    BattleVehicleArmorHit {
-                        damage_class: BattleDamageClass::Ordinary,
-                        section: BattleVehicleSection::Front,
+                    VehicleArmorHit {
+                        damage_class: DamageClass::Ordinary,
+                        section: VehicleSection::Front,
                         amount: u32::from(amount),
                         through_armor_critical: false,
                         armor_piercing: None,
@@ -316,14 +316,14 @@ async fn hiding_damage_and_shutdown_distinguish_cover_from_preparation() {
                 resolve_battle_tactical_impact(
                     &mut test,
                     id,
-                    BattleHit {
-                        section: BattleSection::CenterTorso,
+                    Hit {
+                        section: MechSection::CenterTorso,
                         rear_armor: false,
                         through_armor_critical: false,
                         crew_stun: false,
                     },
                     amount,
-                    BattleFallRules::configured(&config),
+                    FallRules::configured(&config),
                 )
                 .unwrap()
                 .notices
@@ -337,13 +337,7 @@ async fn hiding_damage_and_shutdown_distinguish_cover_from_preparation() {
             );
             test.validate(&config).unwrap();
         }
-        stop_battle_unit(
-            &mut world,
-            id,
-            ObjectId(1),
-            BattleFallRules::configured(&config),
-        )
-        .unwrap();
+        stop_battle_unit(&mut world, id, ObjectId(1), FallRules::configured(&config)).unwrap();
         assert_eq!(hiding(&world, id), (None, true));
         world.validate(&config).unwrap();
     }
@@ -369,8 +363,8 @@ async fn hiding_movement_waits_for_a_hex_crossing() {
             unit["motion"]["speed"] = serde_json::json!(10.75);
             unit["motion"]["desired_speed"] = serde_json::json!(10.75);
             if vtol {
-                unit["vtol_flight"] = serde_json::to_value(BattleVtolFlight {
-                    phase: BattleVtolFlightPhase::Airborne,
+                unit["vtol_flight"] = serde_json::to_value(VtolFlight {
+                    phase: VtolFlightPhase::Airborne,
                     altitude: 1.0,
                     ..Default::default()
                 })
@@ -381,7 +375,7 @@ async fn hiding_movement_waits_for_a_hex_crossing() {
         });
         world.validate(&config).unwrap();
         assert!(
-            advance_battle_motion(&mut world, BattleMovementRules::STANDARD)
+            advance_battle_motion(&mut world, MovementRules::STANDARD)
                 .unwrap()
                 .iter()
                 .all(|n| !n.text.contains("break your cover"))
@@ -389,7 +383,7 @@ async fn hiding_movement_waits_for_a_hex_crossing() {
         assert!(hiding(&world, id).1);
         let mut crossed = false;
         for _ in 0..90 {
-            let notices = advance_battle_motion(&mut world, BattleMovementRules::STANDARD).unwrap();
+            let notices = advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
             if !hiding(&world, id).1 {
                 assert!(notices.iter().any(|n| n.text.contains("break your cover")));
                 crossed = true;
@@ -517,7 +511,7 @@ async fn hiding_admission_and_elevation_checks_are_atomic() {
             .is_some_and(|u| u.definition().is_vtol());
         edit(&mut high, id, |unit| {
             if vtol {
-                unit["vtol_flight"] = serde_json::to_value(BattleVtolFlight {
+                unit["vtol_flight"] = serde_json::to_value(VtolFlight {
                     altitude: 1.0,
                     ..Default::default()
                 })
@@ -536,8 +530,8 @@ async fn hiding_admission_and_elevation_checks_are_atomic() {
         if vtol {
             let mut airborne = world.clone();
             edit(&mut airborne, id, |unit| {
-                unit["vtol_flight"] = serde_json::to_value(BattleVtolFlight {
-                    phase: BattleVtolFlightPhase::Airborne,
+                unit["vtol_flight"] = serde_json::to_value(VtolFlight {
+                    phase: VtolFlightPhase::Airborne,
                     altitude: 1.0,
                     ..Default::default()
                 })
@@ -574,8 +568,8 @@ async fn hiding_aircraft_crash_orders_crossing_before_damage_and_replays() {
             unit["hide_elapsed"] = 7.into();
             unit["motion"]["speed"] = if crossed { 100.0 } else { 0.0 }.into();
             unit["motion"]["desired_speed"] = if crossed { 100.0 } else { 0.0 }.into();
-            unit["vtol_flight"] = serde_json::to_value(BattleVtolFlight {
-                phase: BattleVtolFlightPhase::Airborne,
+            unit["vtol_flight"] = serde_json::to_value(VtolFlight {
+                phase: VtolFlightPhase::Airborne,
                 altitude: 1.5,
                 vertical_speed: if crossed { 0.0 } else { -129.0 },
                 ..Default::default()
@@ -585,12 +579,12 @@ async fn hiding_aircraft_crash_orders_crossing_before_damage_and_replays() {
         world.validate(&config).unwrap();
         persistence::save(&config.database(), &world).await.unwrap();
         let mut replay = persistence::load(&config.database()).await.unwrap();
-        let mut rules = BattleMovementRules::STANDARD.fall;
+        let mut rules = MovementRules::STANDARD.fall;
         rules.vehicle_impact.criticals.enabled = false;
         if crossed {
-            let movement_rules = BattleMovementRules {
+            let movement_rules = MovementRules {
                 fall: rules,
-                ..BattleMovementRules::STANDARD
+                ..MovementRules::STANDARD
             };
             let live = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
             advance_battle_motion_action(&live, &config, movement_rules).unwrap();
@@ -621,11 +615,11 @@ async fn hiding_aircraft_crash_orders_crossing_before_damage_and_replays() {
         );
         assert_eq!(world.btech, replay.btech);
         let (fall, notices) = match result {
-            BattleVtolEnvironment::Crashed { fall, .. } if !crossed => {
+            VtolEnvironment::Crashed { fall, .. } if !crossed => {
                 let notices = fall.feedback.notices.clone();
                 (fall, notices)
             }
-            BattleVtolEnvironment::Obstacle {
+            VtolEnvironment::Obstacle {
                 fall: Some(fall),
                 notices,
                 ..
@@ -683,10 +677,10 @@ async fn weapons_hold_controls_admission_cover_and_saved_state() {
             unit["signature"]["hidden"] = true.into();
             unit["hide_elapsed"] = 7.into();
         });
-        edit_battle_tic(&mut world, id, ObjectId(1), 0, BattleTicEdit::Add(vec![0])).unwrap();
+        edit_battle_tic(&mut world, id, ObjectId(1), 0, TicEdit::Add(vec![0])).unwrap();
         let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
         let lua = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
-        assert!(!battle_weapons_hold(&world, id).unwrap());
+        assert!(!weapons_hold(&world, id).unwrap());
         let text = support::run_text(
             &native,
             &config,
@@ -760,12 +754,12 @@ async fn weapons_hold_controls_admission_cover_and_saved_state() {
             &mut restored,
             id,
             ObjectId(1),
-            BattleFallRules::configured(&config),
+            FallRules::configured(&config),
         )
         .unwrap();
-        assert!(battle_weapons_hold(&restored, id).unwrap());
+        assert!(weapons_hold(&restored, id).unwrap());
         set_battle_weapons_hold(&mut restored, id, false).unwrap();
-        assert!(!battle_weapons_hold(&restored, id).unwrap());
+        assert!(!weapons_hold(&restored, id).unwrap());
         let text = support::run_text(
             &native,
             &config,
@@ -838,7 +832,7 @@ async fn weapons_hold_authority_and_rejected_edits_are_atomic() {
             &mut scripts.world_mut(),
             id,
             ObjectId(1),
-            BattleFallRules::configured(&config),
+            FallRules::configured(&config),
         )
         .unwrap();
         assign_battle_pilot(&mut scripts.world_mut(), id, ObjectId(1)).unwrap();

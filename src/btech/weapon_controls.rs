@@ -1,5 +1,5 @@
 //! Shared authorization, mechanical guards and state updates for cockpit weapon-mode controls.
-use super::{BattleFireMode, BattlePower, BattleWeaponReadiness};
+use super::{FireMode, Power, WeaponReadiness};
 use crate::{ObjectId, World};
 use anyhow::{Result, ensure};
 
@@ -10,10 +10,10 @@ pub(super) fn ready_weapon(
     id: ObjectId,
     pilot: ObjectId,
     index: usize,
-) -> Result<BattleWeaponReadiness> {
+) -> Result<WeaponReadiness> {
     let (ready, feed_jammed) = crate::btech::with_unit!(world.btech.unit(id).unwrap(), |unit| {
         super::power::controlled(world, id, pilot)?;
-        ensure!(unit.power() == BattlePower::Running, "Start the unit first");
+        ensure!(unit.power() == Power::Running, "Start the unit first");
         (
             unit.weapon_readiness(index)?,
             unit.jammed_weapons.contains(&index),
@@ -43,15 +43,10 @@ pub(super) fn ready_weapon(
 
 /// Set a previously authorized and equipment-validated mode, storing normal implicitly.
 /// Reports whether the setting changed, including repeated rotary burst selection.
-pub(super) fn set_fire_mode(
-    world: &mut World,
-    id: ObjectId,
-    index: usize,
-    mode: BattleFireMode,
-) -> bool {
+pub(super) fn set_fire_mode(world: &mut World, id: ObjectId, index: usize, mode: FireMode) -> bool {
     let modes = fire_modes_mut(world, id);
     let previous = modes.get(&index).copied().unwrap_or_default();
-    if mode == BattleFireMode::Normal {
+    if mode == FireMode::Normal {
         modes.remove(&index);
     } else {
         modes.insert(index, mode);
@@ -64,14 +59,14 @@ pub(super) fn toggle_fire_mode(
     world: &mut World,
     id: ObjectId,
     index: usize,
-    selected: BattleFireMode,
-) -> BattleFireMode {
+    selected: FireMode,
+) -> FireMode {
     let current = fire_modes_mut(world, id)
         .get(&index)
         .copied()
         .unwrap_or_default();
     let mode = if current == selected {
-        BattleFireMode::Normal
+        FireMode::Normal
     } else {
         selected
     };
@@ -84,28 +79,28 @@ pub(super) fn toggle_ammunition_mode(
     world: &mut World,
     id: ObjectId,
     index: usize,
-    selected: super::BattleAmmunitionMode,
-) -> super::BattleAmmunitionMode {
+    selected: super::AmmunitionMode,
+) -> super::AmmunitionMode {
     let current = ammunition_modes_mut(world, id)
         .get(&index)
         .copied()
         .unwrap_or_default();
-    let mode = if !weapon(world, id, index).is_some_and(super::BattleWeapon::is_mml) {
+    let mode = if !weapon(world, id, index).is_some_and(super::Weapon::is_mml) {
         if current == selected {
-            super::BattleAmmunitionMode::Normal
+            super::AmmunitionMode::Normal
         } else {
             selected
         }
-    } else if selected == super::BattleAmmunitionMode::MmlLrm {
+    } else if selected == super::AmmunitionMode::MmlLrm {
         // The family control keeps a compatible special round and otherwise falls back to normal.
         let long_range = !current.is_mml_lrm();
         current
             .with_mml_family(long_range)
-            .or_else(|| super::BattleAmmunitionMode::Normal.with_mml_family(long_range))
+            .or_else(|| super::AmmunitionMode::Normal.with_mml_family(long_range))
             .unwrap_or_default()
     } else {
         let munition = if current.munition() == selected.munition() {
-            super::BattleAmmunitionMode::Normal
+            super::AmmunitionMode::Normal
         } else {
             selected.munition()
         };
@@ -121,7 +116,7 @@ pub(super) fn selectable_munition(
     world: &World,
     id: ObjectId,
     index: usize,
-    munition: super::BattleAmmunitionMode,
+    munition: super::AmmunitionMode,
 ) -> bool {
     let Some(weapon) = weapon(world, id, index) else {
         return false;
@@ -136,7 +131,7 @@ pub(super) fn selectable_munition(
 }
 
 /// The mounted weapon at `index` for either unit class.
-fn weapon(world: &World, id: ObjectId, index: usize) -> Option<super::BattleWeapon> {
+fn weapon(world: &World, id: ObjectId, index: usize) -> Option<super::Weapon> {
     super::with_unit!(world.btech.unit(id)?, |unit| {
         unit.loadout()
             .ok()?
@@ -150,7 +145,7 @@ fn weapon(world: &World, id: ObjectId, index: usize) -> Option<super::BattleWeap
 fn fire_modes_mut(
     world: &mut World,
     id: ObjectId,
-) -> &mut std::collections::BTreeMap<usize, BattleFireMode> {
+) -> &mut std::collections::BTreeMap<usize, FireMode> {
     if world.btech.vehicles().contains_key(&id) {
         return &mut world
             .btech
@@ -172,10 +167,10 @@ pub(super) fn set_ammunition_mode(
     world: &mut World,
     id: ObjectId,
     index: usize,
-    mode: super::BattleAmmunitionMode,
+    mode: super::AmmunitionMode,
 ) {
     let modes = ammunition_modes_mut(world, id);
-    if mode == super::BattleAmmunitionMode::Normal {
+    if mode == super::AmmunitionMode::Normal {
         modes.remove(&index);
     } else {
         modes.insert(index, mode);
@@ -186,7 +181,7 @@ pub(super) fn set_ammunition_mode(
 fn ammunition_modes_mut(
     world: &mut World,
     id: ObjectId,
-) -> &mut std::collections::BTreeMap<usize, super::BattleAmmunitionMode> {
+) -> &mut std::collections::BTreeMap<usize, super::AmmunitionMode> {
     if world.btech.vehicles().contains_key(&id) {
         &mut world
             .btech

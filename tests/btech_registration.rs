@@ -322,7 +322,7 @@ async fn mech_registration_teardown_is_idempotent_and_forgets_configuration() {
     assert!(!after.btech.vehicles().contains_key(&unit));
     assert_eq!(
         btech::unit_configuration(&after, unit),
-        BattleUnitConfiguration::default()
+        UnitConfiguration::default()
     );
     // Teardown never moves or destroys the container thing (C only frees the special object).
     assert_eq!(after.objects[&unit].location, Some(ObjectId(1)));
@@ -385,7 +385,7 @@ async fn unregister_constructed_unit_releases_map_and_pilot_references() {
         assert!(!after.btech.vehicles().contains_key(&unit));
         assert_eq!(
             btech::unit_configuration(&after, unit),
-            BattleUnitConfiguration::default()
+            UnitConfiguration::default()
         );
         // The other unit keeps its identity; pilots are always players in this model, so
         // no valid state can dangle from the unregistered unit.

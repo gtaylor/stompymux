@@ -87,8 +87,8 @@ pub(super) fn register(lua: &Lua, native: &Table, _world: &SharedWorld) -> mlua:
             crate::lua::transactions::require(lua)?;
             let scripts = crate::Scripts::services(lua)?;
             let kind = match kind.as_str() {
-                "tactical" => crate::BattleViewKind::Tactical,
-                "long_range" => crate::BattleViewKind::LongRange,
+                "tactical" => crate::ViewKind::Tactical,
+                "long_range" => crate::ViewKind::LongRange,
                 _ => {
                     return Err(error::failure(
                         "btech.operation.failed",
@@ -99,7 +99,7 @@ pub(super) fn register(lua: &Lua, native: &Table, _world: &SharedWorld) -> mlua:
             let defaults = crate::battle_view_dimensions(&scripts.world.borrow(), ObjectId(pilot))
                 .map_err(|e| error::failure("btech.operation.failed", format!("{e:#}")))?;
             let dimensions = match dimensions {
-                Some(table) => crate::BattleViewDimensions {
+                Some(table) => crate::ViewDimensions {
                     tactical_width: table
                         .get::<Option<u16>>("tactical_width")?
                         .unwrap_or(defaults.tactical_width),
@@ -133,8 +133,8 @@ pub(super) fn register(lua: &Lua, native: &Table, _world: &SharedWorld) -> mlua:
             crate::lua::transactions::require(lua)?;
             let scripts = crate::Scripts::services(lua)?;
             let kind = match kind.as_str() {
-                "tactical" => crate::BattleViewKind::Tactical,
-                "long_range" => crate::BattleViewKind::LongRange,
+                "tactical" => crate::ViewKind::Tactical,
+                "long_range" => crate::ViewKind::LongRange,
                 _ => {
                     return Err(error::failure(
                         "btech.operation.failed",

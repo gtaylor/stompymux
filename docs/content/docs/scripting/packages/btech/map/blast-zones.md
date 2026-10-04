@@ -21,4 +21,4 @@ btech.map.blast_zones(map)
 
 ## Returns
 
-- `BattleBlastZone[]`
+- `BlastZone[]`

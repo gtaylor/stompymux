@@ -13,7 +13,7 @@ changing heading does not itself move that destination. Consequently arbitrary
 independent edits can leave a reference jump travelling away from its landing
 location. A Rust implementation must not silently pretend this is just history.
 
-Rust owns validated `BattleJumpPath` geometry and a saved `BattleJumpFlight`
+Rust owns validated `JumpPath` geometry and a saved `JumpFlight`
 cursor. Distance, endpoint, progress, wrapping and sampled altitude agree by
 construction. `LastJump` is a separate report retained after flight retirement.
 The implementation uses coherent remaining-route edits, preserving the committed
@@ -44,14 +44,14 @@ flight progress/dice/DFA intent, and uses the shared collision and landing servi
 
 ## Shared continuation geometry and cursor
 
-`BattleJumpPath::continuation` now constructs remaining-route geometry from an
+`JumpPath::continuation` now constructs remaining-route geometry from an
 exact airborne point and fractional altitude. The saved route distinguishes a
 continuation from ordinary takeoff admission. Descent from an already airborne
 sample can exceed the original takeoff elevation difference; horizontal range
 and additional climb still use the supplied capacity. Normal launch constructors
 and saved launches retain integral takeoff and their existing admission checks.
 
-`BattleJumpFlight::redirect` requires the replacement path to begin at the exact
+`JumpFlight::redirect` requires the replacement path to begin at the exact
 committed sample. It retains the last thrust sample, DFA target, boundary policy
 and cumulative completed distance while replacing the remaining segment. Status
 reports total progress; altitude rounding continues to recognize a flight that

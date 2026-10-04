@@ -4,7 +4,7 @@ use stompymux_rs::*;
 
 /// Stable slot order puts a vehicle before a Mech, with a second vehicle in a neighboring cell.
 async fn fixture(
-    movement: BattleVehicleMovement,
+    movement: VehicleMovement,
 ) -> (tempfile::TempDir, Config, World, ObjectId, [ObjectId; 3]) {
     let (dir, config, mut world) = support::isolated_world().await;
     let map = world.create(&config, "Artillery field".into(), Kind::Room);
@@ -23,15 +23,13 @@ async fn fixture(
             create_battle_unit(
                 &mut world,
                 id,
-                BattleTemplate::parse("AS7-D", include_str!("../game/mechs/AS7-D.toml")).unwrap(),
+                MechTemplate::parse("AS7-D", include_str!("../game/mechs/AS7-D.toml")).unwrap(),
             )
             .unwrap();
         } else {
-            let mut template = BattleVehicleTemplate::parse(
-                "Demolisher",
-                include_str!("../game/mechs/Demolisher.toml"),
-            )
-            .unwrap();
+            let mut template =
+                VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+                    .unwrap();
             template.movement = movement;
             create_battle_vehicle(&mut world, id, template).unwrap();
         }
@@ -50,22 +48,17 @@ async fn fixture(
 }
 
 /// Keep packet tests independent of random critical cascades.
-fn rules() -> BattleFallRules {
-    let mut rules = BattleMovementRules::STANDARD.fall;
+fn rules() -> FallRules {
+    let mut rules = MovementRules::STANDARD.fall;
     rules.vehicle_impact.criticals.enabled = false;
     rules.vehicle_impact.hit.critical_mode = 0;
     rules
 }
 
 /// Stop just before arrival so persisted replay includes the map's pattern dice.
-fn approaching(
-    world: &mut World,
-    map: ObjectId,
-    mode: BattleArtilleryMode,
-) -> BattleArtilleryFlight {
+fn approaching(world: &mut World, map: ObjectId, mode: ArtilleryMode) -> ArtilleryFlight {
     let center = HexCoordinate { x: 1, y: 1 };
-    let mut flight =
-        BattleArtilleryFlight::new(center, center, BattleWeapon::LongTom, mode, true).unwrap();
+    let mut flight = ArtilleryFlight::new(center, center, Weapon::LongTom, mode, true).unwrap();
     for _ in 0..9 {
         assert!(
             advance_artillery_flight(world, map, &mut flight, rules())
@@ -78,8 +71,8 @@ fn approaching(
 
 #[tokio::test]
 async fn mixed_artillery_packets_use_vehicle_tables_and_replay_arrival() {
-    let (_dir, config, base, map, ids) = fixture(BattleVehicleMovement::Stationary).await;
-    for mode in [BattleArtilleryMode::Standard, BattleArtilleryMode::Cluster] {
+    let (_dir, config, base, map, ids) = fixture(VehicleMovement::Stationary).await;
+    for mode in [ArtilleryMode::Standard, ArtilleryMode::Cluster] {
         let mut world = base.clone();
         let mut flight = approaching(&mut world, map, mode);
         persistence::save(&config.database(), &world).await.unwrap();
@@ -94,7 +87,7 @@ async fn mixed_artillery_packets_use_vehicle_tables_and_replay_arrival() {
         );
         assert_eq!(world.btech, restored.btech);
         assert_eq!(flight, replay);
-        if mode == BattleArtilleryMode::Standard {
+        if mode == ArtilleryMode::Standard {
             assert_eq!(
                 report.hits.iter().map(|hit| hit.unit).collect::<Vec<_>>(),
                 ids
@@ -116,7 +109,7 @@ async fn mixed_artillery_packets_use_vehicle_tables_and_replay_arrival() {
                 .iter()
                 .find(|cell| cell.position == hit.coordinate)
                 .unwrap();
-            let BattleArtilleryEffect::Damage {
+            let ArtilleryEffect::Damage {
                 total, packet_size, ..
             } = cell.effect
             else {
@@ -128,9 +121,9 @@ async fn mixed_artillery_packets_use_vehicle_tables_and_replay_arrival() {
             );
             for impact in &hit.impacts {
                 if hit.unit == ids[1] {
-                    assert!(matches!(impact, BattleBlastImpact::Mech(_)));
+                    assert!(matches!(impact, BlastImpact::Mech(_)));
                 } else {
-                    let BattleBlastImpact::Vehicle(impact) = impact else {
+                    let BlastImpact::Vehicle(impact) = impact else {
                         panic!("Vehicle packet expected")
                     };
                     assert_eq!(
@@ -153,12 +146,12 @@ async fn mixed_artillery_packets_use_vehicle_tables_and_replay_arrival() {
 
 #[tokio::test]
 async fn artillery_zero_heat_uses_mobile_explosions_after_all_packets() {
-    let (_dir, config, mut world, map, ids) = fixture(BattleVehicleMovement::Tracked).await;
+    let (_dir, config, mut world, map, ids) = fixture(VehicleMovement::Tracked).await;
     let initial = (0u32..100000)
         .find_map(|number| {
             let mut bytes = [0; 32];
             bytes[..4].copy_from_slice(&number.to_le_bytes());
-            let initial = BattleDice::seeded(bytes);
+            let initial = Dice::seeded(bytes);
             let mut dice = initial.clone();
             for _ in 0..4 {
                 dice.two_d6();
@@ -173,7 +166,7 @@ async fn artillery_zero_heat_uses_mobile_explosions_after_all_packets() {
             record["dice"] = serde_json::to_value(initial).unwrap();
         })
         .unwrap();
-    let mut flight = approaching(&mut world, map, BattleArtilleryMode::Standard);
+    let mut flight = approaching(&mut world, map, ArtilleryMode::Standard);
     let report = advance_artillery_flight(&mut world, map, &mut flight, rules())
         .unwrap()
         .unwrap();
@@ -193,14 +186,14 @@ async fn artillery_zero_heat_uses_mobile_explosions_after_all_packets() {
 
 #[tokio::test]
 async fn later_vehicle_character_guard_restores_artillery_world_and_cursor() {
-    let (_dir, config, mut world, map, ids) = fixture(BattleVehicleMovement::Stationary).await;
+    let (_dir, config, mut world, map, ids) = fixture(VehicleMovement::Stationary).await;
     world
         .objects
         .get_mut(&ids[2])
         .unwrap()
         .flags
         .insert(Flag::InCharacter);
-    let mut flight = approaching(&mut world, map, BattleArtilleryMode::Standard);
+    let mut flight = approaching(&mut world, map, ArtilleryMode::Standard);
     let before = world.clone();
     let cursor = flight.clone();
     assert!(advance_artillery_flight(&mut world, map, &mut flight, rules()).is_err());
@@ -215,7 +208,7 @@ async fn later_vehicle_character_guard_restores_artillery_world_and_cursor() {
 
 #[tokio::test]
 async fn vehicle_observers_receive_visible_artillery_arrival_notices() {
-    let (_dir, config, mut world, map, ids) = fixture(BattleVehicleMovement::Stationary).await;
+    let (_dir, config, mut world, map, ids) = fixture(VehicleMovement::Stationary).await;
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(ids[0]);
     assign_battle_pilot(&mut world, ids[0], ObjectId(1)).unwrap();
     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
@@ -223,7 +216,7 @@ async fn vehicle_observers_receive_visible_artillery_arrival_notices() {
     for _ in 0..5 {
         advance_battle_units(&mut world, 0);
     }
-    let mut flight = approaching(&mut world, map, BattleArtilleryMode::Standard);
+    let mut flight = approaching(&mut world, map, ArtilleryMode::Standard);
     let report = advance_artillery_flight(&mut world, map, &mut flight, rules())
         .unwrap()
         .unwrap();
@@ -243,7 +236,7 @@ async fn vehicle_observers_receive_visible_artillery_arrival_notices() {
 #[tokio::test]
 async fn artillery_water_depth_excludes_submerged_hulls_but_not_hovercraft() {
     for depth in [3, 4] {
-        let (_dir, config, mut world, _map, ids) = fixture(BattleVehicleMovement::Tracked).await;
+        let (_dir, config, mut world, _map, ids) = fixture(VehicleMovement::Tracked).await;
         let map = world.create(&config, "Water".into(), Kind::Room);
         let row = format!("~{depth}~{depth}~{depth}\n");
         create_battle_map(
@@ -256,18 +249,16 @@ async fn artillery_water_depth_excludes_submerged_hulls_but_not_hovercraft() {
         support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
         let hover = world.create(&config, "Hover target".into(), Kind::Thing);
         world.objects.get_mut(&hover).unwrap().home = Some(ObjectId(config.home()));
-        let mut template = BattleVehicleTemplate::parse(
-            "Demolisher",
-            include_str!("../game/mechs/Demolisher.toml"),
-        )
-        .unwrap();
-        template.movement = BattleVehicleMovement::Hover;
+        let mut template =
+            VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+                .unwrap();
+        template.movement = VehicleMovement::Hover;
         create_battle_vehicle(&mut world, hover, template).unwrap();
         support::seed_object_dice(&mut world, hover, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut world, ids[0], map, 1, 1).unwrap();
         place_battle_unit(&mut world, hover, map, 1, 1).unwrap();
         let original = world.btech.vehicles()[&ids[0]].clone();
-        let mut flight = approaching(&mut world, map, BattleArtilleryMode::Standard);
+        let mut flight = approaching(&mut world, map, ArtilleryMode::Standard);
         let report = advance_artillery_flight(&mut world, map, &mut flight, rules())
             .unwrap()
             .unwrap();
@@ -290,12 +281,12 @@ async fn artillery_water_depth_excludes_submerged_hulls_but_not_hovercraft() {
 /// Rear selection persists across a front-facing Mech to a later vehicle in the same blast cell.
 #[tokio::test]
 async fn blast_rear_selection_redirects_later_vehicle_faces_and_preserves_dice() {
-    let (_dir, config, base, map, ids) = fixture(BattleVehicleMovement::Stationary).await;
+    let (_dir, config, base, map, ids) = fixture(VehicleMovement::Stationary).await;
     for artillery in [false, true] {
         for salvage in [false, true] {
             for table in [
-                BattleVehicleCriticalTable::Standard,
-                BattleVehicleCriticalTable::Advanced,
+                VehicleCriticalTable::Standard,
+                VehicleCriticalTable::Advanced,
             ] {
                 let mut world = base.clone();
                 place_battle_unit(&mut world, ids[2], map, 1, 1).unwrap();
@@ -304,10 +295,10 @@ async fn blast_rear_selection_redirects_later_vehicle_faces_and_preserves_dice()
                     .find_map(|number| {
                         let mut bytes = [0; 32];
                         bytes[..4].copy_from_slice(&number.to_le_bytes());
-                        let initial = BattleDice::seeded(bytes);
+                        let initial = Dice::seeded(bytes);
                         let mut dice = initial.clone();
                         for _ in 0..packets {
-                            if table != BattleVehicleCriticalTable::Standard {
+                            if table != VehicleCriticalTable::Standard {
                                 dice.two_d6();
                             }
                             if dice.two_d6() != 7 {
@@ -338,7 +329,7 @@ async fn blast_rear_selection_redirects_later_vehicle_faces_and_preserves_dice()
                 let mut policy = rules();
                 policy.vehicle_impact.criticals.table = table;
                 let impacts = if artillery {
-                    let mut flight = approaching(&mut world, map, BattleArtilleryMode::Standard);
+                    let mut flight = approaching(&mut world, map, ArtilleryMode::Standard);
                     let report = advance_artillery_flight(&mut world, map, &mut flight, policy)
                         .unwrap()
                         .unwrap();
@@ -352,9 +343,9 @@ async fn blast_rear_selection_redirects_later_vehicle_faces_and_preserves_dice()
                         &mut world,
                         map,
                         0,
-                        Some(BattleMinefield {
+                        Some(Minefield {
                             coordinate: HexCoordinate { x: 1, y: 1 },
-                            kind: BattleMineKind::Standard,
+                            kind: MineKind::Standard,
                             strength: 1,
                             extra: 0,
                             owner: ObjectId(1),
@@ -367,22 +358,22 @@ async fn blast_rear_selection_redirects_later_vehicle_faces_and_preserves_dice()
                 };
                 assert_eq!(impacts.len(), packets);
                 for impact in impacts {
-                    let BattleBlastImpact::Vehicle(impact) = impact else {
+                    let BlastImpact::Vehicle(impact) = impact else {
                         panic!("Vehicle packet expected")
                     };
-                    assert_eq!(impact.hit.unwrap().section, BattleVehicleSection::Front);
+                    assert_eq!(impact.hit.unwrap().section, VehicleSection::Front);
                     let damage = impact.damage.unwrap();
-                    assert_eq!(damage.section, BattleVehicleSection::Rear);
+                    assert_eq!(damage.section, VehicleSection::Rear);
                     assert_eq!(damage.rolls.len(), if salvage { 1 } else { 2 });
                 }
                 let unit = &world.btech.vehicles()[&ids[2]];
                 assert_eq!(
-                    unit.sections()[&BattleVehicleSection::Front],
-                    original.sections()[&BattleVehicleSection::Front]
+                    unit.sections()[&VehicleSection::Front],
+                    original.sections()[&VehicleSection::Front]
                 );
                 assert_eq!(
-                    original.sections()[&BattleVehicleSection::Rear].armor
-                        - unit.sections()[&BattleVehicleSection::Rear].armor,
+                    original.sections()[&VehicleSection::Rear].armor
+                        - unit.sections()[&VehicleSection::Rear].armor,
                     if artillery { 20 } else { 1 }
                 );
                 persistence::save(&config.database(), &world).await.unwrap();
@@ -400,13 +391,13 @@ async fn blast_rear_selection_redirects_later_vehicle_faces_and_preserves_dice()
 #[tokio::test]
 async fn character_artillery_heat_evacuates_atomically_with_the_flight_cursor() {
     use std::{cell::RefCell, rc::Rc};
-    let (_dir, config, mut world, map, ids) = fixture(BattleVehicleMovement::Tracked).await;
+    let (_dir, config, mut world, map, ids) = fixture(VehicleMovement::Tracked).await;
     let id = ids[0];
     let seed = (0u32..100_000)
         .find_map(|value| {
             let mut seed = [0; 32];
             seed[..4].copy_from_slice(&value.to_le_bytes());
-            let mut dice = BattleDice::seeded(seed);
+            let mut dice = Dice::seeded(seed);
             for _ in 0..4 {
                 dice.two_d6();
                 dice.two_d6();
@@ -414,11 +405,8 @@ async fn character_artillery_heat_evacuates_atomically_with_the_flight_cursor() 
             (dice.two_d6() == 9).then_some(seed)
         })
         .unwrap();
-    world
-        .btech
-        .set_unit_dice(id, BattleDice::seeded(seed))
-        .unwrap();
-    let mut flight = approaching(&mut world, map, BattleArtilleryMode::Standard);
+    world.btech.set_unit_dice(id, Dice::seeded(seed)).unwrap();
+    let mut flight = approaching(&mut world, map, ArtilleryMode::Standard);
     world
         .objects
         .get_mut(&id)

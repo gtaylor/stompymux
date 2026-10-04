@@ -19,8 +19,8 @@ btech.player.contact_preferences(player, preferences)
 | Name | Type | Description |
 | --- | --- | --- |
 | `player` | `integer` |  |
-| `preferences` | `BattleContactPreferences?` |  |
+| `preferences` | `ContactPreferences?` |  |
 
 ## Returns
 
-- `BattleContactPreferences`
+- `ContactPreferences`

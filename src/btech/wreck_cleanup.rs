@@ -122,13 +122,13 @@ pub(crate) fn retired(
 }
 
 /// Keep an otherwise idle server active until its last scheduled wreck retires.
-pub fn battle_wrecks_pending(world: &World) -> bool {
+pub fn wrecks_pending(world: &World) -> bool {
     !world.btech.wrecks.is_empty()
 }
 
 /// Advance the timers present at entry; callbacks, movement and effects share one rollback boundary.
 pub fn advance_battle_wrecks_action(scripts: &Scripts, config: &Config) -> Result<Vec<ObjectId>> {
-    if !battle_wrecks_pending(&scripts.world.borrow()) {
+    if !wrecks_pending(&scripts.world.borrow()) {
         return Ok(Vec::new());
     }
     scripts.atomic(|before| {

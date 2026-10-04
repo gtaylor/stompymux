@@ -26,4 +26,4 @@ btech.unit.sight(dbref, pilot, weapon, target)
 
 ## Returns
 
-- `BattleSightReport`
+- `SightReport`

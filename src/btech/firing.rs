@@ -4,26 +4,23 @@ use anyhow::{Context, Result, ensure};
 
 /// Detached weapon inspection; the index is stable even when the equipment becomes unavailable.
 #[derive(Debug, serde::Serialize)]
-pub(crate) struct BattleWeaponInspection<S = super::BattleSection> {
+pub(crate) struct WeaponInspection<S = super::MechSection> {
     pub index: usize,
     pub name: &'static str,
     pub section: S,
     pub rear_mount: bool,
     pub preferred_ammunition_section: Option<&'static str>,
     pub one_shot: bool,
-    pub fire_mode: super::BattleFireMode,
-    pub ammunition_mode: super::BattleAmmunitionMode,
-    pub readiness: super::BattleWeaponReadiness,
+    pub fire_mode: super::FireMode,
+    pub ammunition_mode: super::AmmunitionMode,
+    pub readiness: super::WeaponReadiness,
     /// Temporary operational failure, independent of physical mount integrity.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub failure: Option<super::BattleEquipmentFailure>,
+    pub failure: Option<super::EquipmentFailure>,
 }
 
 /// Inspect each mounted weapon without acquiring targets, authorizing fire or consuming dice.
-pub(crate) fn weapon_states(
-    world: &crate::World,
-    id: ObjectId,
-) -> Result<Vec<BattleWeaponInspection>> {
+pub(crate) fn weapon_states(world: &crate::World, id: ObjectId) -> Result<Vec<WeaponInspection>> {
     let unit = world
         .btech
         .constructed_units()
@@ -35,7 +32,7 @@ pub(crate) fn weapon_states(
         .iter()
         .enumerate()
         .map(|(index, mount)| {
-            Ok(BattleWeaponInspection {
+            Ok(WeaponInspection {
                 index,
                 name: mount.weapon.name(),
                 section: mount.criticals[0].section,
@@ -57,7 +54,7 @@ pub(crate) fn weapon_states(
 pub(crate) fn vehicle_weapon_states(
     world: &crate::World,
     id: ObjectId,
-) -> Result<Vec<BattleWeaponInspection<super::BattleVehicleSection>>> {
+) -> Result<Vec<WeaponInspection<super::VehicleSection>>> {
     let unit = world
         .btech
         .vehicles()
@@ -68,7 +65,7 @@ pub(crate) fn vehicle_weapon_states(
         .iter()
         .enumerate()
         .map(|(index, mount)| {
-            Ok(BattleWeaponInspection {
+            Ok(WeaponInspection {
                 index,
                 name: mount.weapon.name(),
                 section: mount.criticals[0].section,
@@ -174,7 +171,7 @@ pub(super) fn group_status(
 }
 
 /// Keep mode labels, ammunition and readiness wording identical across unit classes.
-fn weapon_line<S>(mount: BattleWeaponInspection<S>, location: &str) -> String {
+fn weapon_line<S>(mount: WeaponInspection<S>, location: &str) -> String {
     let index = mount.index;
     let state = mount.readiness;
     let ammunition = if state.weapon.profile().ammunition_per_ton == 0 && !mount.one_shot {
@@ -185,60 +182,60 @@ fn weapon_line<S>(mount: BattleWeaponInspection<S>, location: &str) -> String {
     format!(
         "{index}: {}{}{} in {}{}; {}; {}s; {ammunition}{}",
         mount.name,
-        if mount.fire_mode == super::BattleFireMode::Heat {
+        if mount.fire_mode == super::FireMode::Heat {
             " [HEAT]"
-        } else if mount.fire_mode == super::BattleFireMode::Rotary2 {
+        } else if mount.fire_mode == super::FireMode::Rotary2 {
             " [RAC 2]"
-        } else if mount.fire_mode == super::BattleFireMode::Rotary3 {
+        } else if mount.fire_mode == super::FireMode::Rotary3 {
             " [RAC 3]"
-        } else if mount.fire_mode == super::BattleFireMode::Rotary4 {
+        } else if mount.fire_mode == super::FireMode::Rotary4 {
             " [RAC 4]"
-        } else if mount.fire_mode == super::BattleFireMode::Rotary5 {
+        } else if mount.fire_mode == super::FireMode::Rotary5 {
             " [RAC 5]"
-        } else if mount.fire_mode == super::BattleFireMode::Rotary6 {
+        } else if mount.fire_mode == super::FireMode::Rotary6 {
             " [RAC 6]"
-        } else if mount.fire_mode == super::BattleFireMode::Gatling {
+        } else if mount.fire_mode == super::FireMode::Gatling {
             " [GATTLING]"
-        } else if mount.fire_mode == super::BattleFireMode::Rapid {
+        } else if mount.fire_mode == super::FireMode::Rapid {
             " [RAPID]"
-        } else if mount.fire_mode == super::BattleFireMode::Ultra {
+        } else if mount.fire_mode == super::FireMode::Ultra {
             " [ULTRA]"
-        } else if mount.fire_mode == super::BattleFireMode::Hotload {
+        } else if mount.fire_mode == super::FireMode::Hotload {
             " [HOTLOAD]"
-        } else if mount.ammunition_mode.munition() == super::BattleAmmunitionMode::Artemis {
+        } else if mount.ammunition_mode.munition() == super::AmmunitionMode::Artemis {
             " [Artemis]"
-        } else if mount.ammunition_mode == super::BattleAmmunitionMode::Cluster {
+        } else if mount.ammunition_mode == super::AmmunitionMode::Cluster {
             if state.weapon.is_artillery() {
                 " [Cluster]"
             } else {
                 " [LBX]"
             }
-        } else if mount.ammunition_mode == super::BattleAmmunitionMode::Smoke {
+        } else if mount.ammunition_mode == super::AmmunitionMode::Smoke {
             " [Smoke]"
-        } else if mount.ammunition_mode == super::BattleAmmunitionMode::Mine {
+        } else if mount.ammunition_mode == super::AmmunitionMode::Mine {
             " [Mine]"
         } else if mount.one_shot {
             " [OS]"
         } else {
             ""
         },
-        if mount.ammunition_mode == super::BattleAmmunitionMode::Inferno {
+        if mount.ammunition_mode == super::AmmunitionMode::Inferno {
             " [Inferno]"
-        } else if mount.ammunition_mode == super::BattleAmmunitionMode::Incendiary {
+        } else if mount.ammunition_mode == super::AmmunitionMode::Incendiary {
             " [Incendiary]"
-        } else if mount.ammunition_mode == super::BattleAmmunitionMode::Caseless {
+        } else if mount.ammunition_mode == super::AmmunitionMode::Caseless {
             " [CASELESS]"
-        } else if mount.ammunition_mode == super::BattleAmmunitionMode::ArmorPiercing {
+        } else if mount.ammunition_mode == super::AmmunitionMode::ArmorPiercing {
             " [AP]"
-        } else if mount.ammunition_mode == super::BattleAmmunitionMode::Precision {
+        } else if mount.ammunition_mode == super::AmmunitionMode::Precision {
             " [Precision]"
-        } else if mount.ammunition_mode == super::BattleAmmunitionMode::Flechette {
+        } else if mount.ammunition_mode == super::AmmunitionMode::Flechette {
             " [Flechette]"
-        } else if mount.ammunition_mode.munition() == super::BattleAmmunitionMode::Swarm {
+        } else if mount.ammunition_mode.munition() == super::AmmunitionMode::Swarm {
             " [Swarm]"
-        } else if mount.ammunition_mode.munition() == super::BattleAmmunitionMode::Swarm1 {
+        } else if mount.ammunition_mode.munition() == super::AmmunitionMode::Swarm1 {
             " [Swarm1]"
-        } else if mount.ammunition_mode.munition() == super::BattleAmmunitionMode::SemiGuided {
+        } else if mount.ammunition_mode.munition() == super::AmmunitionMode::SemiGuided {
             " [Sguided]"
         } else {
             ""
@@ -247,13 +244,13 @@ fn weapon_line<S>(mount: BattleWeaponInspection<S>, location: &str) -> String {
         if mount.rear_mount { " (rear)" } else { "" },
         if state.ready {
             "ready"
-        } else if !state.intact || mount.failure == Some(super::BattleEquipmentFailure::Disabled) {
+        } else if !state.intact || mount.failure == Some(super::EquipmentFailure::Disabled) {
             "disabled"
-        } else if mount.failure == Some(super::BattleEquipmentFailure::Shorted) {
+        } else if mount.failure == Some(super::EquipmentFailure::Shorted) {
             "shorted"
-        } else if mount.failure == Some(super::BattleEquipmentFailure::Dud) {
+        } else if mount.failure == Some(super::EquipmentFailure::Dud) {
             "dud"
-        } else if mount.failure == Some(super::BattleEquipmentFailure::Empty) {
+        } else if mount.failure == Some(super::EquipmentFailure::Empty) {
             "empty"
         } else if state.jammed {
             "jammed"
@@ -312,10 +309,10 @@ pub(crate) fn fire_command(
 }
 
 /// Completed configured shot and the ordered cockpit messages owned by the caller's transaction.
-pub(crate) struct BattleFiringAction {
-    pub report: super::BattleFireReport,
+pub(crate) struct FiringAction {
+    pub report: super::FireReport,
     pub messages: Vec<(ObjectId, String)>,
-    pub pilot_notices: Vec<super::BattlePilotNotice>,
+    pub pilot_notices: Vec<super::PilotNotice>,
 }
 
 /// Use one rule mapping and feedback policy for native commands and trusted Lua callbacks.
@@ -326,8 +323,8 @@ pub(crate) fn resolve_action(
     shooter: ObjectId,
     pilot: ObjectId,
     index: usize,
-    target: super::BattleFireTarget,
-) -> Result<super::BattleFireReport> {
+    target: super::FireTarget,
+) -> Result<super::FireReport> {
     super::evacuation::configured_firing_action(
         scripts,
         config,
@@ -346,7 +343,7 @@ pub(super) fn resolve_in_action(
     pilot: ObjectId,
     index: usize,
     request: super::fire_target::FireTargetRequest<'_>,
-) -> Result<BattleFiringAction> {
+) -> Result<FiringAction> {
     let operator = super::combat_operator::admit(world, shooter, pilot)?;
     let shooter = operator.source.unit;
     super::spotter::check_firing_role(world, shooter)?;
@@ -403,8 +400,8 @@ pub(super) fn resolve_in_action(
         // Decide what the defender could observe before damage changes its sensors or posture.
         let attacker_visible =
             super::visible_contact(world, target, shooter).is_ok_and(|contact| contact.is_some());
-        let observers = if unit.fire_mode(index)? == super::BattleFireMode::Rapid
-            || unit.ammunition_mode(index)? == super::BattleAmmunitionMode::Caseless
+        let observers = if unit.fire_mode(index)? == super::FireMode::Rapid
+            || unit.ammunition_mode(index)? == super::AmmunitionMode::Caseless
         {
             super::observer_messages(world, shooter, "shudders from an internal explosion!")
         } else {
@@ -448,7 +445,7 @@ pub(super) fn resolve_in_action(
                 coordinate,
             },
             index,
-            super::BattleShotRules::configured(config, toughness),
+            super::ShotRules::configured(config, toughness),
             &config.xp,
         )?;
         let bearing = super::unit_range(world, target, shooter)?
@@ -468,7 +465,7 @@ pub(super) fn resolve_in_action(
     if let Some(messages) =
         super::launch_feedback::failure_messages((&report).into(), observers, &mut failure_private)
     {
-        return Ok(BattleFiringAction {
+        return Ok(FiringAction {
             pilot_notices: failure_private,
             report: report.into(),
             messages,
@@ -520,7 +517,7 @@ pub(super) fn resolve_in_action(
             messages.extend(super::observer_messages(&before, notice.unit, &notice.text));
         }
     }
-    Ok(BattleFiringAction {
+    Ok(FiringAction {
         pilot_notices: private,
         report: report.into(),
         messages,

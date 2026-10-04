@@ -21,4 +21,4 @@ btech.unit.radio_channels(unit)
 
 ## Returns
 
-- `BattleRadioChannelReport[] channels`
+- `RadioChannelReport[] channels`

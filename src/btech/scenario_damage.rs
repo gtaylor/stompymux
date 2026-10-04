@@ -6,14 +6,14 @@ use serde::Serialize;
 /// Located damage retains the existing anatomy-specific reports without duplicating resolution.
 #[derive(Debug, Serialize)]
 #[serde(tag = "kind", content = "impact", rename_all = "snake_case")]
-pub enum BattleScenarioDamage {
-    Mech(super::BattleImpactReport),
-    Vehicle(super::BattleVehicleArmorDamage),
+pub enum ScenarioDamage {
+    Mech(super::ImpactReport),
+    Vehicle(super::VehicleArmorDamage),
 }
 
 /// Named hit input shared by native and Lua scenario controls.
 #[derive(Debug, Clone, Copy)]
-pub struct BattleScenarioHit<'a> {
+pub struct ScenarioHit<'a> {
     pub section: &'a str,
     pub damage: i32,
     pub rear: bool,
@@ -26,9 +26,9 @@ pub fn damage_section_action(
     config: &Config,
     actor: ObjectId,
     unit: ObjectId,
-    hit: BattleScenarioHit<'_>,
-) -> Result<BattleScenarioDamage> {
-    let BattleScenarioHit {
+    hit: ScenarioHit<'_>,
+) -> Result<ScenarioDamage> {
+    let ScenarioHit {
         section,
         damage,
         rear,
@@ -38,20 +38,20 @@ pub fn damage_section_action(
         admit(before, actor, unit, damage)?;
         if let Some(vehicle) = before.btech.vehicles().get(&unit) {
             let section =
-                super::BattleVehicleSection::parse_location(section).context("Invalid section!")?;
+                super::VehicleSection::parse_location(section).context("Invalid section!")?;
             ensure!(
                 vehicle.definition().sections.contains_key(&section),
                 "Invalid section!"
             );
             let mut rules =
-                super::BattleVehicleImpactRules::configured(&config.battletech, false).criticals;
-            rules.combat_safe = super::battle_combat_safe(before, unit)?;
+                super::VehicleImpactRules::configured(&config.battletech, false).criticals;
+            rules.combat_safe = super::combat_safe(before, unit)?;
             return super::evacuation::directed_vehicle_damage_action(
                 scripts,
                 config,
                 unit,
-                super::BattleVehicleArmorHit {
-                    damage_class: super::BattleDamageClass::Ordinary,
+                super::VehicleArmorHit {
+                    damage_class: super::DamageClass::Ordinary,
                     section,
                     amount: damage as u32,
                     through_armor_critical: critical,
@@ -60,7 +60,7 @@ pub fn damage_section_action(
                 rear,
                 rules,
             )
-            .map(BattleScenarioDamage::Vehicle);
+            .map(ScenarioDamage::Vehicle);
         }
         let mech = before
             .btech
@@ -75,7 +75,7 @@ pub fn damage_section_action(
             scripts,
             config,
             unit,
-            super::BattleHit {
+            super::Hit {
                 section,
                 rear_armor: rear,
                 through_armor_critical: critical,
@@ -83,7 +83,7 @@ pub fn damage_section_action(
             },
             damage as u16,
         )
-        .map(BattleScenarioDamage::Mech)
+        .map(ScenarioDamage::Mech)
     })
 }
 
@@ -113,7 +113,7 @@ pub(crate) fn command(
             ctx.config,
             ctx.player,
             unit,
-            BattleScenarioHit {
+            ScenarioHit {
                 section: args[0],
                 damage,
                 rear,

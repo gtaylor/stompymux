@@ -1,5 +1,5 @@
 //! Bounded tactical and long-range viewport dimensions and edge clipping for map renderers.
-use super::{BattleViewKind, HexCoordinate};
+use super::{HexCoordinate, ViewKind};
 use crate::{ObjectId, World};
 use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 /// Requested display dimensions; explicit renderer values override saved player preferences.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
-pub struct BattleViewDimensions {
+pub struct ViewDimensions {
     /// Requested tactical columns, 5 through 40.
     pub tactical_width: u16,
     /// Requested tactical rows, 5 through 24.
@@ -16,7 +16,7 @@ pub struct BattleViewDimensions {
     pub long_range_height: u16,
 }
 
-impl Default for BattleViewDimensions {
+impl Default for ViewDimensions {
     fn default() -> Self {
         Self {
             tactical_width: 21,
@@ -26,7 +26,7 @@ impl Default for BattleViewDimensions {
     }
 }
 
-impl BattleViewDimensions {
+impl ViewDimensions {
     /// Validate supported user dimensions before hardware and small-map clipping.
     pub fn validate(self) -> Result<()> {
         ensure!(
@@ -47,7 +47,7 @@ impl BattleViewDimensions {
 
 /// A fully in-bounds rectangle. Width and height are counts, never inclusive end coordinates.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-pub struct BattleViewport {
+pub struct Viewport {
     /// Scanner battlefield.
     pub map: ObjectId,
     /// Selected center; map-only views clamp it before resolving the rectangle.
@@ -70,10 +70,10 @@ pub fn resolve_viewport(
     world: &World,
     observer: ObjectId,
     pilot: ObjectId,
-    kind: BattleViewKind,
+    kind: ViewKind,
     arguments: &str,
-    dimensions: BattleViewDimensions,
-) -> Result<BattleViewport> {
+    dimensions: ViewDimensions,
+) -> Result<Viewport> {
     dimensions.validate()?;
     let view = super::parse_view_center(world, observer, pilot, kind, arguments)?;
     let map = &world.btech.maps()[&view.map];
@@ -85,7 +85,7 @@ pub fn resolve_viewport(
         kind,
         dimensions,
     );
-    Ok(BattleViewport {
+    Ok(Viewport {
         map: view.map,
         requested_center: view.center,
         origin: HexCoordinate {
@@ -104,11 +104,11 @@ fn rectangle(
     map_width: i64,
     map_height: i64,
     radius: i64,
-    kind: BattleViewKind,
-    dimensions: BattleViewDimensions,
+    kind: ViewKind,
+    dimensions: ViewDimensions,
 ) -> (i64, i64, i64, i64) {
     let (width, height) = match kind {
-        BattleViewKind::Tactical => (
+        ViewKind::Tactical => (
             i64::from(dimensions.tactical_width)
                 .min(2 * radius)
                 .min(map_width),
@@ -116,7 +116,7 @@ fn rectangle(
                 .min(2 * radius)
                 .min(map_height),
         ),
-        BattleViewKind::LongRange => {
+        ViewKind::LongRange => {
             let height = i64::from(dimensions.long_range_height)
                 .min(2 * radius)
                 .min(map_height);
@@ -147,8 +147,8 @@ pub(super) fn map_viewport(
     map: ObjectId,
     record: &super::StoredMap,
     center: HexCoordinate,
-    dimensions: BattleViewDimensions,
-) -> Result<BattleViewport> {
+    dimensions: ViewDimensions,
+) -> Result<Viewport> {
     dimensions.validate()?;
     record.validate()?;
     ensure!(record.terrain_ready(), "Map terrain is unavailable");
@@ -163,7 +163,7 @@ pub(super) fn map_viewport(
         i64::from(dimensions.tactical_width).min(record.width),
         i64::from(dimensions.tactical_height).min(record.height),
     );
-    Ok(BattleViewport {
+    Ok(Viewport {
         map,
         requested_center: center,
         origin: HexCoordinate {
@@ -198,10 +198,10 @@ mod tests {
                     100,
                     map_height,
                     radius,
-                    BattleViewKind::LongRange,
-                    BattleViewDimensions {
+                    ViewKind::LongRange,
+                    ViewDimensions {
                         long_range_height: requested,
-                        ..BattleViewDimensions::default()
+                        ..ViewDimensions::default()
                     },
                 );
                 assert_eq!(height, expected);
@@ -212,7 +212,7 @@ mod tests {
 
     #[test]
     fn dimensions_clip_at_edges_and_preserve_long_range_inclusive_span() {
-        let dimensions = BattleViewDimensions {
+        let dimensions = ViewDimensions {
             tactical_width: 40,
             tactical_height: 24,
             long_range_height: 40,
@@ -227,22 +227,22 @@ mod tests {
                 y: i32::MAX,
             },
         ] {
-            for kind in [BattleViewKind::Tactical, BattleViewKind::LongRange] {
+            for kind in [ViewKind::Tactical, ViewKind::LongRange] {
                 let (x, width, y, height) = rectangle(center, 3, 2, 8, kind, dimensions);
                 assert_eq!((x, width, y, height), (0, 3, 0, 2));
             }
         }
         let center = HexCoordinate { x: 100, y: 100 };
         assert_eq!(
-            rectangle(center, 300, 300, 8, BattleViewKind::Tactical, dimensions),
+            rectangle(center, 300, 300, 8, ViewKind::Tactical, dimensions),
             (92, 16, 92, 16)
         );
         assert_eq!(
-            rectangle(center, 300, 300, 8, BattleViewKind::LongRange, dimensions),
+            rectangle(center, 300, 300, 8, ViewKind::LongRange, dimensions),
             (65, 71, 92, 17)
         );
         assert_eq!(
-            rectangle(center, 1, 1, 8, BattleViewKind::LongRange, dimensions),
+            rectangle(center, 1, 1, 8, ViewKind::LongRange, dimensions),
             (0, 1, 0, 1)
         );
     }

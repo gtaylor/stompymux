@@ -19,7 +19,7 @@ pub fn tow_action(
                 carrier,
                 pilot,
                 target,
-                BattleFallRules::configured(config),
+                FallRules::configured(config),
                 config.battletech.tsm_tow_bonus != 0,
                 true,
             )?;
