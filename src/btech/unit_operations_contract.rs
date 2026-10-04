@@ -688,8 +688,11 @@ pub(crate) fn set_unit_weapon_modes(
     fire_names: Vec<String>,
     ammunition_names: Vec<String>,
 ) -> Result<()> {
-    if world.btech.vehicles().contains_key(&id) {
-        let state = vehicle(world, id)?;
+    let state = world
+        .btech
+        .unit_mut(id)
+        .context("unit runtime state is unavailable")?;
+    super::with_unit_mut!(state, |state| {
         ensure!(
             number < state.loadout()?.weapons.len(),
             "weapon number is not mounted"
@@ -705,25 +708,8 @@ pub(crate) fn set_unit_weapon_modes(
         } else {
             state.ammunition_modes.insert(number, ammunition);
         }
-        return Ok(());
-    }
-    let state = unit(world, id)?;
-    ensure!(
-        number < state.loadout()?.weapons.len(),
-        "weapon number is not mounted"
-    );
-    state.set_contract_weapon_mode_names(number, fire_names, ammunition_names)?;
-    if fire == BattleFireMode::Normal {
-        state.fire_modes.remove(&number);
-    } else {
-        state.fire_modes.insert(number, fire);
-    }
-    if ammunition == BattleAmmunitionMode::Normal {
-        state.ammunition_modes.remove(&number);
-    } else {
-        state.ammunition_modes.insert(number, ammunition);
-    }
-    Ok(())
+        Ok(())
+    })
 }
 
 pub(crate) fn install_unit_special(
