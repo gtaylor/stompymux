@@ -715,6 +715,27 @@ mod tests {
         assert_eq!(unit.motion().unwrap().desired_speed, 0.0);
     }
 
+    /// A unit without power may keep a heading order but not a throttle, on either chassis.
+    #[test]
+    fn unpowered_units_keep_a_pending_turn_but_no_throttle() {
+        let (mut world, mech, vehicle, _) = world();
+        for id in [mech, vehicle] {
+            world
+                .btech
+                .edit_unit_motion(id, |motion| motion.desired_heading = 90.0)
+                .unwrap();
+            let unit = world.btech.unit(id).unwrap();
+            assert_eq!(unit.power(), BattlePower::Off);
+            assert_eq!(unit.motion().unwrap().desired_heading, 90.0);
+            assert!(
+                world
+                    .btech
+                    .edit_unit_motion(id, |motion| motion.desired_speed = 10.0)
+                    .is_err()
+            );
+        }
+    }
+
     /// The shared read view reports what each chassis's own getters report.
     #[test]
     fn unit_reference_reads_either_chassis() {

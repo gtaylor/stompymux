@@ -473,8 +473,7 @@ impl BattleUnit {
     pub(super) fn validate_untowed(&self) -> Result<()> {
         if let Some(motion) = self.motion() {
             ensure!(
-                self.power() == super::BattlePower::Running
-                    || (motion.speed == 0.0 && motion.desired_speed == 0.0),
+                self.power() == super::BattlePower::Running || !motion.translating(),
                 "Unpowered untowed unit cannot move"
             );
             motion.validate(self.motion_speed_limit(self.definition().max_speed))?;
@@ -1366,7 +1365,7 @@ impl BattleUnit {
             );
             ensure!(
                 self.power == super::BattlePower::Running
-                    || (motion.propelled(self.power)?.speed == 0.0 && motion.desired_speed == 0.0),
+                    || !motion.propelled(self.power)?.translating(),
                 "Unpowered unit cannot propel itself"
             );
         }

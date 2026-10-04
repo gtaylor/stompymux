@@ -503,7 +503,7 @@ impl BattleVehicle {
         )?;
         ensure!(
             self.power() == super::BattlePower::Running
-                || !motion.active()
+                || !motion.translating()
                 || self.idle_flight_controls(),
             "Inactive untowed vehicle retains motion"
         );
@@ -1927,7 +1927,7 @@ impl BattleVehicle {
             );
             ensure!(
                 self.power == super::BattlePower::Running
-                    || !propelled.active()
+                    || !propelled.translating()
                     || super::vtol_flight::idle_controls(self.power, self.vtol_flight, self.motion),
                 "Inactive vehicle retains motion"
             );

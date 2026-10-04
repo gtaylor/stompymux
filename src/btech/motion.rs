@@ -40,6 +40,12 @@ impl BattleMotion {
         self.speed != 0.0 || self.desired_speed != 0.0 || self.heading != self.desired_heading
     }
 
+    /// Whether the unit is travelling or has been ordered to. A pending turn alone is
+    /// not travel: a unit without power keeps its heading order until it restarts.
+    pub fn translating(self) -> bool {
+        self.speed != 0.0 || self.desired_speed != 0.0
+    }
+
     /// Stop horizontal travel without cancelling an independent heading command.
     pub(super) fn stop_translation(&mut self) {
         self.speed = 0.0;
