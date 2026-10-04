@@ -860,6 +860,22 @@ Alias: `"front"|"right"|"left"|"rear"|"turret"|"rotor"`
 - `success`: `boolean`
 - `experience`: `ExperienceAward|nil` — Accepted or rate-limited skill mutation for XP-awarding callers.
 
+## MechFallReport
+
+- `avoidance`: `PilotingCheck|nil` — Personal-injury check; combat-safe units skip it.
+- `pilot`: `integer|nil` — Pilot dbref captured before fall injuries can clear the assignment.
+- `experience_messages`: `DiagnosticMessage[]` — Accepted protection-check diagnostics captured before fall damage.
+- `pilot_injury`: `table|nil` — Tactical crew injury.
+- `character_injury`: `table|nil` — Personal injury to an assigned character pilot, independent of tactical crew health.
+- `direction_roll`: `integer`
+- `arc`: `"Front"|"Rear"|"Left"|"Right"`
+- `damage`: `integer`
+- `groups`: `SalvoGroup[]` — Fall damage in the order it was applied.
+- `mines`: `table` — Mine activation after the fall damage sequence.
+- `ice_break`: `SurfaceBreak|nil` — Ice fracture can cause nested water falls for this unit and its neighbors.
+- `flooding`: `SectionExposureReport[]`
+- `inferno_notices`: `Notice[]`
+
 ## RecoilReport
 
 - `experience_messages`: `DiagnosticMessage[]` — Accepted recoil XP diagnostics published with the shot.
@@ -978,6 +994,27 @@ Alias: `"narc"|"homing"|"haywire"|"ecm"`
 - `launched`: `boolean` — False for a failed Streak lock; also reported on the shot.
 - `heat`: `integer` — Already applied; do not add this heat again.
 
+## ArtilleryAim
+
+- `target_number`: `integer` — Out-of-range and underwater aims keep the reference's impossible target numbers.
+- `maximum_range`: `integer`
+- `range`: `"in_range"|"out_of_range"|"underwater"`
+
+## VehicleInternalDamage
+
+- `section`: `VehicleSectionName`
+- `incoming`: `integer`
+- `structural_damage`: `integer`
+- `rolls`: `integer[]` — Internal critical roll, preceded by a damage-entry roll for standalone explosions.
+- `absorbed`: `integer`
+- `discarded`: `integer` — Vehicle-local internal explosions do not transfer excess to another section.
+- `destroyed_sections`: `VehicleSectionName[]`
+- `unit_destroyed`: `boolean`
+- `criticals`: `table[]` — Critical resolutions in execution order.
+- `notices`: `Notice[]` — Includes nested critical notices in execution order.
+- `pilot_notices`: `table[]` — Pilot-only control feedback indexed into the damage notice stream.
+- `broadcasts`: `Notice[]`
+
 ## ArtilleryLaunchReport
 
 - `launch_notices`: `Notice[]` — Cocoon opening feedback before target consequences.
@@ -985,7 +1022,7 @@ Alias: `"narc"|"homing"|"haywire"|"ecm"`
 - `map`: `integer`
 - `coordinate`: `{x: integer, y: integer}`
 - `weapon_index`: `integer`
-- `aim`: `{target_number: integer, maximum_range: integer, range: string}`
+- `aim`: `ArtilleryAim`
 - `roll`: `integer`
 - `hit`: `boolean`
 - `launched`: `boolean`

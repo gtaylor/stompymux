@@ -359,6 +359,38 @@ local State = {}
 ---@class TestingErrorCodes: ErrorCode
 ---@field assertion TestingAssertionErrorCode `testing.assertion`.
 ---@field runtime TestingRuntimeErrorCode `testing.runtime`.
+---Checked `btech.part.not_found` error-code node.
+---@class BtechPartNotFoundErrorCode: ErrorCode
+---@field code "btech.part.not_found"
+---Checked `btech.part.ambiguous` error-code node.
+---@class BtechPartAmbiguousErrorCode: ErrorCode
+---@field code "btech.part.ambiguous"
+---Checked `btech.part.wrong_kind` error-code node.
+---@class BtechPartWrongKindErrorCode: ErrorCode
+---@field code "btech.part.wrong_kind"
+---Checked `btech.template.not_found` error-code node.
+---@class BtechTemplateNotFoundErrorCode: ErrorCode
+---@field code "btech.template.not_found"
+---Checked `btech.template.invalid` error-code node.
+---@class BtechTemplateInvalidErrorCode: ErrorCode
+---@field code "btech.template.invalid"
+---Checked `btech.operation.failed` error-code node.
+---@class BtechOperationFailedErrorCode: ErrorCode
+---@field code "btech.operation.failed"
+---@class BtechPartErrorCodes: ErrorCode
+---@field not_found BtechPartNotFoundErrorCode `btech.part.not_found`.
+---@field ambiguous BtechPartAmbiguousErrorCode `btech.part.ambiguous`.
+---@field wrong_kind BtechPartWrongKindErrorCode `btech.part.wrong_kind`.
+---@class BtechTemplateErrorCodes: ErrorCode
+---@field not_found BtechTemplateNotFoundErrorCode `btech.template.not_found`.
+---@field invalid BtechTemplateInvalidErrorCode `btech.template.invalid`.
+---@class BtechOperationErrorCodes: ErrorCode
+---@field failed BtechOperationFailedErrorCode `btech.operation.failed`.
+---Checked native code tree for BattleTech package failures.
+---@class BtechErrorCodes: ErrorCode
+---@field part BtechPartErrorCodes Inventory-part code branch.
+---@field template BtechTemplateErrorCodes Unit-template code branch.
+---@field operation BtechOperationErrorCodes Gameplay-operation code branch.
 
 ---Immutable lookup namespace for command-access constants.
 ---

@@ -1468,6 +1468,21 @@ function btech_unit.autoturret(dbref, pilot) end
 ---@field success boolean
 ---@field experience ExperienceAward|nil Accepted or rate-limited skill mutation for XP-awarding callers.
 
+---A BattleMech's fall.
+---@class MechFallReport
+---@field avoidance PilotingCheck|nil Personal-injury check; combat-safe units skip it.
+---@field pilot integer|nil Pilot dbref captured before fall injuries can clear the assignment.
+---@field experience_messages DiagnosticMessage[] Accepted protection-check diagnostics captured before fall damage.
+---@field pilot_injury table|nil Tactical crew injury.
+---@field character_injury table|nil Personal injury to an assigned character pilot, independent of tactical crew health.
+---@field direction_roll integer
+---@field arc "Front"|"Rear"|"Left"|"Right"
+---@field damage integer
+---@field groups SalvoGroup[] Fall damage in the order it was applied.
+---@field mines table Mine activation after the fall damage sequence.
+---@field ice_break SurfaceBreak|nil Ice fracture can cause nested water falls for this unit and its neighbors.
+---@field flooding SectionExposureReport[]
+---@field inferno_notices Notice[]
 ---@class RecoilReport
 ---@field experience_messages DiagnosticMessage[] Accepted recoil XP diagnostics published with the shot.
 ---@field check PilotingCheck
@@ -1575,13 +1590,32 @@ function btech_unit.autoturret(dbref, pilot) end
 ---@field launched boolean False for a failed Streak lock; also reported on the shot.
 ---@field heat integer Already applied; do not add this heat again.
 
+---Complete artillery aim result. Range failure is distinct from launch admission or expenditure.
+---@class ArtilleryAim
+---@field target_number integer Out-of-range and underwater aims keep the reference's impossible target numbers.
+---@field maximum_range integer
+---@field range "in_range"|"out_of_range"|"underwater"
+---An internal explosion's ordered rolls, critical consequences and final protection change.
+---@class VehicleInternalDamage
+---@field section VehicleSectionName
+---@field incoming integer
+---@field structural_damage integer
+---@field rolls integer[] Internal critical roll, preceded by a damage-entry roll for standalone explosions.
+---@field absorbed integer
+---@field discarded integer Vehicle-local internal explosions do not transfer excess to another section.
+---@field destroyed_sections VehicleSectionName[]
+---@field unit_destroyed boolean
+---@field criticals table[] Critical resolutions in execution order.
+---@field notices Notice[] Includes nested critical notices in execution order.
+---@field pilot_notices table[] Pilot-only control feedback indexed into the damage notice stream.
+---@field broadcasts Notice[]
 ---@class ArtilleryLaunchReport
 ---@field launch_notices Notice[] Cocoon opening feedback before target consequences.
 ---@field shooter integer
 ---@field map integer
 ---@field coordinate {x: integer, y: integer}
 ---@field weapon_index integer
----@field aim {target_number: integer, maximum_range: integer, range: string}
+---@field aim ArtilleryAim
 ---@field roll integer
 ---@field hit boolean
 ---@field launched boolean

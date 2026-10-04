@@ -327,6 +327,51 @@ Alias: `CreateRoomOptions|CreateThingOptions|CreateExitOptions`
 - `assertion`: `TestingAssertionErrorCode` — `testing.assertion`.
 - `runtime`: `TestingRuntimeErrorCode` — `testing.runtime`.
 
+## BtechPartNotFoundErrorCode
+
+- `code`: `"btech.part.not_found"`
+
+## BtechPartAmbiguousErrorCode
+
+- `code`: `"btech.part.ambiguous"`
+
+## BtechPartWrongKindErrorCode
+
+- `code`: `"btech.part.wrong_kind"`
+
+## BtechTemplateNotFoundErrorCode
+
+- `code`: `"btech.template.not_found"`
+
+## BtechTemplateInvalidErrorCode
+
+- `code`: `"btech.template.invalid"`
+
+## BtechOperationFailedErrorCode
+
+- `code`: `"btech.operation.failed"`
+
+## BtechPartErrorCodes
+
+- `not_found`: `BtechPartNotFoundErrorCode` — `btech.part.not_found`.
+- `ambiguous`: `BtechPartAmbiguousErrorCode` — `btech.part.ambiguous`.
+- `wrong_kind`: `BtechPartWrongKindErrorCode` — `btech.part.wrong_kind`.
+
+## BtechTemplateErrorCodes
+
+- `not_found`: `BtechTemplateNotFoundErrorCode` — `btech.template.not_found`.
+- `invalid`: `BtechTemplateInvalidErrorCode` — `btech.template.invalid`.
+
+## BtechOperationErrorCodes
+
+- `failed`: `BtechOperationFailedErrorCode` — `btech.operation.failed`.
+
+## BtechErrorCodes
+
+- `part`: `BtechPartErrorCodes` — Inventory-part code branch.
+- `template`: `BtechTemplateErrorCodes` — Unit-template code branch.
+- `operation`: `BtechOperationErrorCodes` — Gameplay-operation code branch.
+
 ## AccessNamespace
 
 - `PUBLIC`: `Access` — Allows every invoker; also the default when access is omitted.
