@@ -57,13 +57,19 @@
 ---@field height integer
 ---@field gravity integer
 ---@field temperature integer
-
 ---@field flags MapFlag[] Enabled map flags.
 ---@field light integer 0 night, 1 twilight, 2 day
 ---@field visibility integer Weather range in hexes
 ---@field sensor_flags integer Disabled perception channels: sensor band bit 0 (1), radar bit 5 (32), probes bit 6 (64).
 ---@field maximum_visibility integer Saved map sensor range ceiling
 ---@field terrain_ready boolean Whether saved tiles have a valid dictionary.
+
+---@class MapPointOfInterest
+---@field type string Case-sensitive category chosen by the map author.
+---@field name string Display name chosen by the map author.
+---@field x integer Zero-based column.
+---@field y integer Zero-based row.
+---@field elevation integer|nil Levels above (negative: below) the hex's ground level, or nil when unset.
 
 ---@class StoredBattleUnit
 ---@field name string
@@ -128,19 +134,12 @@ function btech_template.loadout(name) end
 ---@field y integer Zero-based map row.
 ---@field reveal_hint boolean|nil Defaults to false; disclose coordinates in location failures only when true.
 
+---@class BtechMapAPI
+---@field terrain_types TerrainTypes Terrain names reported by btech.map.terrain.
+---@field ground_types GroundTypes Ground names for a hex's ground field.
+---@field woods_types WoodsTypes Woods densities for a hex's woods field.
+---@field structure_kinds StructureKinds Structure kinds for the kind field of a hex's structure.
 local btech_map = {}
----Terrain names reported by btech.map.terrain.
----@type TerrainTypes
-btech_map.terrain_types = {}
----Ground names for a hex's ground field.
----@type GroundTypes
-btech_map.ground_types = {}
----Woods densities for a hex's woods field.
----@type WoodsTypes
-btech_map.woods_types = {}
----Structure kinds for the kind field of a hex's structure.
----@type StructureKinds
-btech_map.structure_kinds = {}
 
 ---Read the detached saved cargo location, or nil when the map has no location restriction.
 ---@param map integer
@@ -1951,7 +1950,8 @@ local btech_runtime = {}
 ---@field system table World event telemetry.
 ---@field autopilot BtechAutopilotAPI Lua control of unit-attached ground autopilots.
 ---@field tactical BtechTacticalAPI Filtered group observations and atomic intentions.
----@field errors table Structured btech error-code tree from mux.error.code_tree('btech').
+---@field errors BtechErrorCodes Structured btech error-code tree from mux.error.code_tree('btech').
+---@field error {codes: BtechErrorCodes} Error namespace; `codes` is the same tree as `errors`.
 btech = {
   runtime = btech_runtime,
   database = btech_database,
@@ -3280,7 +3280,7 @@ function btech_unit.set_field(actor, unit, field, value) end
 ---@field cost integer
 ---@field weapon? WeaponStats Present for weapon parts.
 
----@alias PartRef PartDefinition|integer|string
+---@alias PartRef PartDefinition|{id: integer}|integer|string
 
 ---@class PartStack
 ---@field part PartDefinition
@@ -4023,7 +4023,7 @@ function btech_system.units_in_zone(zone) end
 ---@field observe fun(unit: integer): AutopilotObservation
 ---@field feedback fun(unit: integer, after_sequence?: integer): AutopilotFeedbackPage
 
-local btech_autopilot = {} ---@type BtechAutopilotAPI
+local btech_autopilot ---@type BtechAutopilotAPI
 
 btech.parts = btech_parts
 btech.repair = btech_repair
@@ -4108,13 +4108,6 @@ function btech_map.has_flag(dbref, flag) end
 ---@param flag MapFlag Typed constant from btech.map.flags.
 ---@param enabled boolean
 function btech_map.set_flag(actor, map, flag, enabled) end
-
----@class MapPointOfInterest
----@field type string Case-sensitive category chosen by the map author.
----@field name string Display name chosen by the map author.
----@field x integer Zero-based column.
----@field y integer Zero-based row.
----@field elevation integer|nil Levels above (negative: below) the hex's ground level, or nil when unset.
 
 ---List the map's scripted points of interest in file order. Units never see them.
 ---@param map DbRef|Object

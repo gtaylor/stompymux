@@ -1,3 +1,5 @@
+-- This probe exercises invalid calls and native internals on purpose.
+---@diagnostic disable: missing-parameter, param-type-mismatch, redundant-parameter
 -- Differential probe: mux.session, mux.telnet, mux.config and top-level mux.
 -- Oracles: btmux-khi mux_session_bindings.c, mux_telnet_bindings.c,
 -- mux_config_bindings.c and mux_package.c at the pinned revision.

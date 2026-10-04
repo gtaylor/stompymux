@@ -1,3 +1,5 @@
+-- This probe exercises invalid calls and native internals on purpose.
+---@diagnostic disable: undefined-field, undefined-global
 local function json_string(value)
   return '"' .. value:gsub('[%z\1-\31\\"]', function(byte)
     local escapes = { ['\\'] = '\\\\', ['"'] = '\\"', ['\b'] = '\\b',

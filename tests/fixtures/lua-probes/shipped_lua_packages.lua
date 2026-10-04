@@ -1,3 +1,5 @@
+-- This probe exercises invalid calls and native internals on purpose.
+---@diagnostic disable: inject-field, param-type-mismatch, undefined-field
 -- Differential probe: shipped Lua packages (testing, access_policy,
 -- object_appearances) loaded through require from the seeded game directory.
 --

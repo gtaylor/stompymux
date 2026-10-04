@@ -1,3 +1,5 @@
+-- This probe exercises invalid calls and native internals on purpose.
+---@diagnostic disable: inject-field
 -- Differential probe: canonical btech package identity, subpackage stability,
 -- typed-catalog immutability, and constant __eq semantics (typed vs untyped).
 -- Oracle: btmux-khi/src/mux/lua/packages/btech/btech_package.c install order,

@@ -15,4 +15,5 @@ for name in pairs(forbidden) do
     package_table.preload[name] = nil
 end
 
+---@diagnostic disable-next-line: assign-type-mismatch
 package = nil

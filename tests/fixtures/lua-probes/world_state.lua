@@ -1,3 +1,5 @@
+-- This probe exercises invalid calls and native internals on purpose.
+---@diagnostic disable: missing-parameter, param-type-mismatch, undefined-field
 local function json_string(value)
   return '"' .. value:gsub('[%z\1-\31\\"]', function(byte)
     local escapes = { ['\\'] = '\\\\', ['"'] = '\\"', ['\b'] = '\\b',

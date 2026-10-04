@@ -1,3 +1,5 @@
+-- This probe exercises invalid calls and native internals on purpose.
+---@diagnostic disable: assign-type-mismatch, inject-field, missing-parameter, param-type-mismatch, redundant-parameter
 -- Differential probe: mux.comsys channel registry, handles, flags and errors.
 -- Oracle: btmux-khi/src/mux/lua/packages/mux/comsys/mux_comsys_bindings.c and
 -- mux_comsys_channel_flag_bindings.c at the pinned revision.

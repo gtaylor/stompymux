@@ -1,3 +1,5 @@
+-- This probe exercises invalid calls and native internals on purpose.
+---@diagnostic disable: assign-type-mismatch, inject-field, param-type-mismatch, undefined-field
 -- Differential probe: mux.error/btech.error code trees, plain-table nodes and raises.
 -- Oracle: btmux-khi/src/mux/lua/lua_error.c and .../mux/error/mux_error_bindings.c.
 local function json_string(value)

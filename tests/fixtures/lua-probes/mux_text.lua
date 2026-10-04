@@ -1,3 +1,5 @@
+-- This probe exercises invalid calls and native internals on purpose.
+---@diagnostic disable: assign-type-mismatch, missing-parameter, param-type-mismatch, redundant-parameter
 -- Differential probe: mux.text styled-text utilities.
 -- Oracle: btmux-khi/src/mux/lua/packages/mux/text/mux_text_bindings.c.
 -- C-compatible corpus lives in c_* keys; documented Rust extensions

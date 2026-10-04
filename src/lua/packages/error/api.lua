@@ -82,7 +82,7 @@ local function normalize(err)
         local c,m=cstring(err.code),cstring(err.message)
         text=c and m and (c:sub(1,255)..': '..m:sub(1,2047)) or 'table'
     elseif type(err)=='string' or type(err)=='number' then
-        text=cstring(err)
+        text=cstring(err) --[[@as string]]
         local source,line,detail=text:match('^%[string "(.-)"%]:(%d+):(.*)$')
         if source then text=source..':'..line..':'..detail end
     else

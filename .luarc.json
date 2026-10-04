@@ -6,6 +6,9 @@
     ],
     "workspace.checkThirdParty": false,
     "workspace.ignoreSubmodules": true,
+    "workspace.ignoreDir": [
+        "tests/fixtures/game/lua/types"
+    ],
     "workspace.useGitIgnore": true,
     "diagnostics.enable": true,
     "diagnostics.libraryFiles": "Enable",

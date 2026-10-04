@@ -314,7 +314,7 @@
 //|function btech_map.blast_zones(map) end
 // lua-types-end
 
-// lua-types-begin btech 00554
+// lua-types-begin btech 00553
 //|---List the map's scripted points of interest in file order. Units never see them.
 //|---@param map DbRef|Object
 //|---@param type? string Keep only points whose type matches exactly (case-sensitive).

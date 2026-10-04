@@ -1,3 +1,5 @@
+-- This probe exercises invalid calls and native internals on purpose.
+---@diagnostic disable: redundant-parameter
 -- Differential probe: btech.player configuration surface on the seeded GOD
 -- player plus btech.system.units_in_zone over a freshly built zone.
 local function quote(value)

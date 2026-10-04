@@ -332,8 +332,26 @@ local State = {}
 ---@class MuxConfigErrorCodes: ErrorCode
 ---@field not_found MuxConfigNotFoundErrorCode `mux.config.not_found`.
 ---@field unsupported MuxConfigUnsupportedErrorCode `mux.config.unsupported`.
+---Checked `mux.macro.invalid` error-code node.
+---@class MuxMacroInvalidErrorCode: ErrorCode
+---@field code "mux.macro.invalid"
+---Checked `mux.macro.not_found` error-code node.
+---@class MuxMacroNotFoundErrorCode: ErrorCode
+---@field code "mux.macro.not_found"
+---Checked `mux.macro.exists` error-code node.
+---@class MuxMacroExistsErrorCode: ErrorCode
+---@field code "mux.macro.exists"
+---Checked `mux.macro.slots_full` error-code node.
+---@class MuxMacroSlotsFullErrorCode: ErrorCode
+---@field code "mux.macro.slots_full"
+---@class MuxMacroErrorCodes: ErrorCode
+---@field invalid MuxMacroInvalidErrorCode `mux.macro.invalid`.
+---@field not_found MuxMacroNotFoundErrorCode `mux.macro.not_found`.
+---@field exists MuxMacroExistsErrorCode `mux.macro.exists`.
+---@field slots_full MuxMacroSlotsFullErrorCode `mux.macro.slots_full`.
 ---@class MuxErrorCodes: ErrorCode
 ---@field arg MuxArgErrorCodes Invalid-argument code branch.
+---@field macro MuxMacroErrorCodes Player-macro code branch.
 ---@field unavailable MuxUnavailableErrorCodes Runtime-availability code branch.
 ---@field runtime MuxRuntimeErrorCode `mux.runtime`.
 ---@field state MuxStateErrorCodes Persistent-state code branch.
@@ -451,7 +469,6 @@ local State = {}
 ---@field CHANNEL_TRANSMIT Lock Transmit on a channel.
 ---@field CHANNEL_RECEIVE Lock Receive channel traffic.
 ---@field IDENTIFY_BUILDING Lock Silently identify a visible BattleTech structure.
----@field IDENTIFY_BUILDING Lock Identify a BattleTech building contact.
 ---@see mux.error.codes.arg.invalid
 
 ---Dynamic, immutable lookup namespace for registered powers. Keys must use the

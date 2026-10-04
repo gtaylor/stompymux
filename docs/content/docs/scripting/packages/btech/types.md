@@ -66,6 +66,20 @@ Alias: `"LeftArm"|"RightArm"|"LeftTorso"|"RightTorso"|"CenterTorso"|"LeftLeg"|"R
 - `height`: `integer`
 - `gravity`: `integer`
 - `temperature`: `integer`
+- `flags`: `MapFlag[]` — Enabled map flags.
+- `light`: `integer` — 0 night, 1 twilight, 2 day
+- `visibility`: `integer` — Weather range in hexes
+- `sensor_flags`: `integer` — Disabled perception channels: sensor band bit 0 (1), radar bit 5 (32), probes bit 6 (64).
+- `maximum_visibility`: `integer` — Saved map sensor range ceiling
+- `terrain_ready`: `boolean` — Whether saved tiles have a valid dictionary.
+
+## MapPointOfInterest
+
+- `type`: `string` — Case-sensitive category chosen by the map author.
+- `name`: `string` — Display name chosen by the map author.
+- `x`: `integer` — Zero-based column.
+- `y`: `integer` — Zero-based row.
+- `elevation`: `integer|nil` — Levels above (negative: below) the hex's ground level, or nil when unset.
 
 ## StoredBattleUnit
 
@@ -130,6 +144,13 @@ Alias: `"normal"|"heat"|"hotload"|"ultra"|"rapid"|"rotary2"|"rotary3"|"rotary4"|
 - `x`: `integer` — Zero-based map column.
 - `y`: `integer` — Zero-based map row.
 - `reveal_hint`: `boolean|nil` — Defaults to false; disclose coordinates in location failures only when true.
+
+## BtechMapAPI
+
+- `terrain_types`: `TerrainTypes` — Terrain names reported by btech.map.terrain.
+- `ground_types`: `GroundTypes` — Ground names for a hex's ground field.
+- `woods_types`: `WoodsTypes` — Woods densities for a hex's woods field.
+- `structure_kinds`: `StructureKinds` — Structure kinds for the kind field of a hex's structure.
 
 ## RadioChannel
 
@@ -1118,7 +1139,8 @@ Alias: `{class: "mech", section: string}|{class: "ground_vehicle"|"vtol", sectio
 - `system`: `table` — World event telemetry.
 - `autopilot`: `BtechAutopilotAPI` — Lua control of unit-attached ground autopilots.
 - `tactical`: `BtechTacticalAPI` — Filtered group observations and atomic intentions.
-- `errors`: `table` — Structured btech error-code tree from mux.error.code_tree('btech').
+- `errors`: `BtechErrorCodes` — Structured btech error-code tree from mux.error.code_tree('btech').
+- `error`: `{codes: BtechErrorCodes}` — Error namespace; `codes` is the same tree as `errors`.
 
 ## AmmunitionAdjustment
 
@@ -1554,7 +1576,7 @@ Alias: `"follow_brief" | "include" | "exclude"`
 
 ## PartRef
 
-Alias: `PartDefinition|integer|string`
+Alias: `PartDefinition|{id: integer}|integer|string`
 
 ## PartStack
 
@@ -1960,11 +1982,3 @@ Alias: `"manual_takeover"|"contact_lost"|"stuck"|"unreachable"|"invalidated"|"re
 ## TacticalSubmitResult
 
 - `unit`: `integer` — Controller receiving these order IDs.
-
-## MapPointOfInterest
-
-- `type`: `string` — Case-sensitive category chosen by the map author.
-- `name`: `string` — Display name chosen by the map author.
-- `x`: `integer` — Zero-based column.
-- `y`: `integer` — Zero-based row.
-- `elevation`: `integer|nil` — Levels above (negative: below) the hex's ground level, or nil when unset.
