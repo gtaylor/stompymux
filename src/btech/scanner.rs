@@ -3,7 +3,7 @@ use super::{
     BattleContactRules, BattleContactTransition, BattlePerception, BattlePower, BattleUnit,
 };
 use crate::{Flag, Kind, ObjectId, World};
-use anyhow::{Result, ensure};
+use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 
 /// Scenario-owned signature facts: team, hiding and scenario lighting.
@@ -142,24 +142,17 @@ pub fn set_unit_signature(
     signature: BattleUnitSignature,
 ) -> Result<()> {
     ensure!(world.objects.get(&id).is_some_and(|object| object.kind == Kind::Thing && !object.flags.contains(Flag::Going)), "Unit must be a live thing");
-    if let Some(vehicle) = world.btech.vehicles.get_mut(&id) {
-        if vehicle.signature.team != signature.team {
-            vehicle.c3_network = None;
-            vehicle.c3i_network = None;
+    let unit = world
+        .btech
+        .unit_mut(id)
+        .context("Unit construction state is unavailable")?;
+    super::with_unit_mut!(unit, |unit| {
+        if unit.signature.team != signature.team {
+            unit.c3_network = None;
+            unit.c3i_network = None;
         }
-        vehicle.signature = signature;
-        return Ok(());
-    }
-    ensure!(
-        world.btech.constructed_units().contains_key(&id),
-        "Unit construction state is unavailable"
-    );
-    let unit = world.btech.constructed.get_mut(&id).unwrap();
-    if unit.signature.team != signature.team {
-        unit.c3i_network = None;
-        unit.c3_network = None;
-    }
-    unit.signature = signature;
+        unit.signature = signature;
+    });
     Ok(())
 }
 

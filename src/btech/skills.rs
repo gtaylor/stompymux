@@ -258,19 +258,11 @@ pub(super) fn active_pilot(world: &World, unit: ObjectId) -> Result<Option<Objec
 
 /// Raw unit piloting skill for attacks and valuation, before control bonuses or damage.
 pub fn unit_piloting_target(world: &World, unit: ObjectId, extended: bool) -> Result<i16> {
-    let skill = if let Some(vehicle) = world.btech.vehicles().get(&unit) {
-        vehicle.definition().movement.piloting_skill(extended)
-    } else {
-        Some(
-            world
-                .btech
-                .constructed_units()
-                .get(&unit)
-                .context("Unit construction state is unavailable")?
-                .chassis()
-                .piloting_skill(extended),
-        )
-    };
+    let skill = world
+        .btech
+        .unit(unit)
+        .context("Unit construction state is unavailable")?
+        .piloting_skill(extended);
     let Some(skill) = skill else {
         return Ok(6);
     };

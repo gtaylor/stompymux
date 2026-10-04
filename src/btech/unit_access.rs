@@ -100,6 +100,22 @@ macro_rules! shared_fields {
 }
 
 impl<'a> BattleUnitRef<'a> {
+    /// The pilot skill this chassis tests, or `None` for a chassis nobody steers.
+    pub(super) fn piloting_skill(&self, extended: bool) -> Option<&'static str> {
+        match *self {
+            Self::Mech(unit) => Some(unit.chassis().piloting_skill(extended)),
+            Self::Vehicle(vehicle) => vehicle.definition().movement.piloting_skill(extended),
+        }
+    }
+
+    /// Top speed the chassis can reach in its current material condition, before load and terrain.
+    pub(super) fn maximum_speed(&self) -> f64 {
+        match *self {
+            Self::Mech(unit) => unit.mobility().maximum_speed,
+            Self::Vehicle(vehicle) => vehicle.maximum_speed(),
+        }
+    }
+
     /// Whether the unit is a BattleMech.
     pub fn is_mech(&self) -> bool {
         matches!(self, Self::Mech(_))

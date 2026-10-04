@@ -211,15 +211,10 @@ pub(super) fn synchronize_pair(
 /// Remove ownership and external translation on an unpublished release candidate.
 pub(super) fn detach(world: &mut World, carrier: ObjectId) -> Option<ObjectId> {
     let target = Arc::make_mut(&mut world.btech.tows).remove(&carrier)?;
-    let motion = if let Some(unit) = world.btech.vehicles.get_mut(&target) {
-        unit.motion.as_mut()
-    } else {
-        world
-            .btech
-            .constructed
-            .get_mut(&target)
-            .and_then(|unit| unit.motion.as_mut())
-    };
+    let motion = world
+        .btech
+        .unit_mut(target)
+        .and_then(|unit| super::with_unit_mut!(unit, |unit| unit.motion.as_mut()));
     if let Some(motion) = motion {
         motion.stop_translation();
         motion.desired_heading = motion.heading;

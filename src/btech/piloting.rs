@@ -336,15 +336,8 @@ pub(super) fn award_reason(
     }) {
         return Ok((None, None));
     }
-    let (pilot, skill) = if let Some(vehicle) = world.btech.vehicles().get(&id) {
-        (
-            vehicle.pilot(),
-            vehicle.definition().movement.piloting_skill(extended),
-        )
-    } else {
-        let unit = &world.btech.constructed_units()[&id];
-        (unit.pilot(), Some(unit.chassis().piloting_skill(extended)))
-    };
+    let unit = world.btech.unit(id).expect("in-character unit");
+    let (pilot, skill) = (unit.pilot(), unit.piloting_skill(extended));
     let (Some(pilot), Some(skill)) = (pilot, skill) else {
         return Ok((None, None));
     };

@@ -51,24 +51,16 @@ pub fn assign_pilot(world: &mut World, unit: ObjectId, pilot: ObjectId) -> Resul
 
 /// Release only the requested player's cockpit assignment.
 pub fn release_pilot(world: &mut World, unit: ObjectId, pilot: ObjectId) -> Result<()> {
-    if let Some(vehicle) = world.btech.vehicles().get(&unit) {
-        ensure!(
-            vehicle.pilot() == Some(pilot),
-            "You are not piloting this unit"
-        );
-        world.btech.vehicles.get_mut(&unit).unwrap().pilot = None;
-        return Ok(());
-    }
     let record = world
         .btech
-        .constructed_units()
-        .get(&unit)
+        .unit(unit)
         .context("Unit construction state is unavailable")?;
     ensure!(
-        record.pilot == Some(pilot),
+        record.pilot() == Some(pilot),
         "You are not piloting this unit"
     );
-    world.btech.constructed.get_mut(&unit).unwrap().pilot = None;
+    let record = world.btech.unit_mut(unit).expect("checked unit");
+    super::with_unit_mut!(record, |record| record.pilot = None);
     Ok(())
 }
 

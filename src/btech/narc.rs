@@ -319,12 +319,8 @@ impl<S> BattleNarcReport<S> {
 
 /// Query attached effects through the same construction boundary used by targeting.
 pub(super) fn has_beacon(world: &World, id: ObjectId, kind: BattleBeaconKind) -> bool {
-    if let Some(unit) = world.btech.vehicles().get(&id) {
-        return unit.has_beacon(kind);
-    }
     world
         .btech
-        .constructed_units()
-        .get(&id)
+        .unit(id)
         .is_some_and(|unit| unit.has_beacon(kind))
 }

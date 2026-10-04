@@ -30,13 +30,11 @@ pub fn battle_map_members(world: &World, map: ObjectId) -> Result<Vec<BattleMapM
                 .get(&map)
                 .context("Map not found")?
                 .base_hex(i64::from(position.x), i64::from(position.y))?;
-            let z = if let Some(vehicle) = world.btech.vehicles().get(&id) {
-                vehicle.altitude(tile)
-            } else {
-                world.btech.constructed_units()[&id]
-                    .retained_altitude()
-                    .unwrap_or(f64::from(tile.standing_height()))
-            };
+            let record = world
+                .btech
+                .unit(id)
+                .context("Unit construction state is unavailable")?;
+            let z = super::with_unit!(record, |record| record.altitude(tile));
             Ok(BattleMapMember {
                 id,
                 label: unit.label().context("Placed unit lacks an ID")?,

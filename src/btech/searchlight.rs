@@ -102,28 +102,16 @@ impl super::BattleVehicle {
 
 /// Read live lamp state without resolving static equipment flags.
 fn lamp_state(world: &World, id: ObjectId) -> Option<BattleSearchlight> {
-    world
-        .btech
-        .constructed_units()
-        .get(&id)
-        .map(|unit| unit.searchlight)
-        .or_else(|| world.btech.vehicles().get(&id).map(|unit| unit.searchlight))
+    world.btech.unit(id).map(|unit| unit.searchlight())
 }
 
 /// Read installed hardware independently of anatomy and cockpit admission.
 fn hardware(world: &World, id: ObjectId) -> Option<(BattleSearchlight, bool)> {
-    if let Some(unit) = world.btech.constructed_units().get(&id) {
-        return Some((
-            unit.searchlight,
-            unit.definition().has_special("Searchlight"),
-        ));
-    }
-    world.btech.vehicles().get(&id).map(|unit| {
-        (
-            unit.searchlight,
-            unit.definition().has_special("Searchlight"),
-        )
-    })
+    let unit = world.btech.unit(id)?;
+    Some(super::with_unit!(unit, |unit| (
+        unit.searchlight,
+        unit.definition().has_special("Searchlight"),
+    )))
 }
 
 /// Borrow admitted hardware without duplicating switch or damage rules.

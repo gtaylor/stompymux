@@ -407,12 +407,10 @@ fn targeting(
         )),
         None => {}
     }
-    let safety = if let Some(u) = world.btech.constructed_units().get(&source.unit) {
-        u.mw_safety()
-    } else {
-        let u = &world.btech.vehicles()[&source.unit];
-        u.mw_safety()
-    };
+    let safety = world
+        .btech
+        .unit(source.unit)
+        .is_none_or(|unit| unit.mw_safety());
     if !safety {
         lines.push("Weapon Safeties are [fg=red bold]OFF[reset].".into());
     }

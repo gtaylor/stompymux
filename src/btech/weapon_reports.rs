@@ -306,12 +306,14 @@ pub fn weapon_specification_text(world: &World, id: ObjectId, extended: bool) ->
     if rows.is_empty() {
         return Ok("You have no weapons!".into());
     }
-    let (name, reference) = if let Some(unit) = world.btech.vehicles().get(&id) {
-        (&unit.definition().name, &unit.definition().reference)
-    } else {
-        let definition = world.btech.constructed_units()[&id].definition();
-        (&definition.name, &definition.reference)
-    };
+    let unit = world
+        .btech
+        .unit(id)
+        .context("Unit construction state is unavailable")?;
+    let (name, reference) = super::with_unit!(unit, |unit| (
+        &unit.definition().name,
+        &unit.definition().reference,
+    ));
     let title = if name == reference {
         name.to_owned()
     } else {

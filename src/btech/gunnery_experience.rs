@@ -155,26 +155,14 @@ struct ExperienceUnit {
 
 /// Read shared award inputs without coupling either construction layout to the formula.
 fn experience_unit(world: &crate::World, id: crate::ObjectId) -> Option<ExperienceUnit> {
-    if let Some(unit) = world.btech.vehicles().get(&id) {
-        return Some(ExperienceUnit {
-            pilot: unit.pilot(),
-            team: unit.signature().team,
-            destroyed: unit.is_destroyed(),
-            tons: unit.definition().tons,
-            settings: unit.experience_settings(),
-        });
-    }
-    world
-        .btech
-        .constructed_units()
-        .get(&id)
-        .map(|unit| ExperienceUnit {
-            pilot: unit.pilot(),
-            team: unit.signature().team,
-            destroyed: unit.is_destroyed(),
-            tons: unit.definition().tons,
-            settings: unit.experience_settings(),
-        })
+    let unit = world.btech.unit(id)?;
+    Some(super::with_unit!(unit, |unit| ExperienceUnit {
+        pilot: unit.pilot(),
+        team: unit.signature().team,
+        destroyed: unit.is_destroyed(),
+        tons: unit.definition().tons,
+        settings: unit.experience_settings(),
+    }))
 }
 
 /// Set trusted administrative XP policy without changing character balances or RNG.

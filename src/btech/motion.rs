@@ -509,11 +509,7 @@ fn advance_fall_headings(
                 continue;
             }
         }
-        let maximum = if let Some(unit) = world.btech.constructed_units().get(&id) {
-            unit.mobility().maximum_speed
-        } else {
-            world.btech.vehicles()[&id].maximum_speed()
-        };
+        let maximum = world.btech.unit(id).expect("moving unit").maximum_speed();
         let maximum = super::load::movement_maximum(world, id, maximum, rules.tsm_tow_bonus)?;
         let maximum = if let Some(unit) = world.btech.constructed_units().get(&id) {
             let effective = super::speed_bonus::on_map(

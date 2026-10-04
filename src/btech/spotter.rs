@@ -146,11 +146,7 @@ pub fn select_spotter(
     pilot: ObjectId,
     selected: Option<ObjectId>,
 ) -> Result<Vec<BattleNotice>> {
-    if world.btech.vehicles().contains_key(&id) {
-        super::vehicle_power::controlled(world, id, pilot)?;
-    } else {
-        power::controlled_unit(world, id, pilot)?;
-    }
+    power::controlled(world, id, pilot)?;
     let unit = super::scanner::scanner_unit(world, id).context("Unit is unavailable")?;
     ensure!(unit.power == BattlePower::Running, "Start the unit first");
     let text = match selected {
