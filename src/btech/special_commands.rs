@@ -119,7 +119,7 @@ mod tests {
         for (kind, count) in [
             (BattleSpecialType::Mech, 194),
             (BattleSpecialType::Debug, 9),
-            (BattleSpecialType::Map, 26),
+            (BattleSpecialType::Map, 25),
             (BattleSpecialType::Autopilot, 7),
         ] {
             assert_eq!(kind.commands().len(), count);

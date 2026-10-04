@@ -16,9 +16,8 @@ async fn native_lua_selectors_replay_and_rollback_all_owned_kinds() {
         ("b", "'b'", 1),
         ("LEAVE 1 1", "'LEAVE',1,1", 1),
         ("ENTRA", "'ENTRA'", 1),
-        ("LINKED 1 1", "'LINKED',1,1", 1),
         ("BLZ", "'BLZ'", 2),
-        ("1 1", "nil,1,1", 10),
+        ("1 1", "nil,1,1", 9),
         ("-1 99", "nil,-1,99", 0),
     ] {
         let (_dir, config, world, map, interior) = fixture().await;
@@ -40,10 +39,6 @@ async fn native_lua_selectors_replay_and_rollback_all_owned_kinds() {
         let saved = native.world().clone();
         if args == "1 1" || args == "b" {
             assert!(saved.btech.maps()[&interior].building_exits().is_empty());
-        }
-        if args == "1 1" || args == "LINKED 1 1" {
-            assert!(saved.btech.maps()[&map].wrapping());
-            assert_eq!(saved.btech.maps()[&map].linked_markers().len(), 1);
         }
         if args == "1 1" {
             assert_eq!(

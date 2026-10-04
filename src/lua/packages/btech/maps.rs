@@ -388,23 +388,6 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
         "map_cloud",
         error::wrap(lua, clouds, "btech.operation.failed")?,
     )?;
-    let shared = world.clone();
-    let wrapping = lua.create_function(move |lua, (id, enabled): (i64, mlua::Value)| {
-        crate::lua::transactions::require(lua)?;
-        let mlua::Value::Boolean(enabled) = enabled else {
-            return Err(error::failure(
-                "btech.operation.failed",
-                "Wrapping requires a boolean",
-            ));
-        };
-        crate::set_battle_map_wrapping(&mut shared.borrow_mut(), ObjectId(id), enabled)
-            .map_err(|e| error::failure("btech.operation.failed", e))?;
-        Ok(true)
-    })?;
-    native.set(
-        "map_wrapping",
-        error::wrap(lua, wrapping, "btech.operation.failed")?,
-    )?;
     for (name, create) in [("map_create", true), ("map_reload", false)] {
         let operation = lua.create_function(move |lua, (id, name): (i64, String)| {
             crate::lua::transactions::require(lua)?;

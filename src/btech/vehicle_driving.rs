@@ -198,8 +198,7 @@ pub(super) fn advance(
             && rules.roll_on_backwalk
             && vehicle.definition().movement != BattleVehicleMovement::Tracked;
         let mut entries = Vec::new();
-        let traversed = map.trace_motion(old.point, next.point)?;
-        next.point = map.motion_destination(next.point)?;
+        let traversed = old.point.trace_positions(next.point)?;
         for (hex, point) in traversed {
             let Ok(tile) = map.base_hex(i64::from(hex.x), i64::from(hex.y)) else {
                 edge = true;

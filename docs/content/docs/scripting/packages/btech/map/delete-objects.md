@@ -19,7 +19,7 @@ btech.map.delete_objects(actor, dbref, kind, x, y)
 | --- | --- | --- |
 | `actor` | `integer` |  |
 | `dbref` | `integer` |  |
-| `kind?` | `string` | FIRE, SMOKE, DECO, MINE, BUILDING, LEAVE, ENTRA, LINKED, or BLZ; prefixes accepted. |
+| `kind?` | `string` | FIRE, SMOKE, DECO, MINE, BUILDING, LEAVE, ENTRA, or BLZ; prefixes accepted. |
 | `x?` | `integer` | Must be paired with y. |
 | `y?` | `integer` | Must be paired with x. |
 

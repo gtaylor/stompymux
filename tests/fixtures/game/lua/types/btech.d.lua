@@ -51,8 +51,6 @@
 
 ---@class StoredMap
 ---@field cargo_transfer_point BattleCargoTransferPoint|nil Saved cargo location and hint policy.
----@field wrapping boolean Opposite-edge wrapping is enabled.
----@field linked_markers table<integer, {coordinate: HexCoordinate, object: integer, data_char: integer, data_short: integer, data_int: integer}> Complete authored linked marker records.
 ---@field building_exits table<integer, {coordinate: HexCoordinate, destination: integer, data_char: integer, data_short: integer, data_int: integer}> Return-link slots; coordinates are selection metadata.
 ---@field name string
 ---@field width integer
@@ -991,7 +989,7 @@ function btech_map.list(actor, dbref, target) end
 ---Delete map objects by type, coordinate, or both. At least one selector is required.
 ---@param actor integer
 ---@param dbref integer
----@param kind? string FIRE, SMOKE, DECO, MINE, BUILDING, LEAVE, ENTRA, LINKED, or BLZ; prefixes accepted.
+---@param kind? string FIRE, SMOKE, DECO, MINE, BUILDING, LEAVE, ENTRA, or BLZ; prefixes accepted.
 ---@param x? integer Must be paired with y.
 ---@param y? integer Must be paired with x.
 ---@return integer Number of selected records deleted; reciprocal cleanup is not counted.
@@ -1053,12 +1051,6 @@ function btech_map.remove_ice(actor, dbref, percentage) end
 ---@param conditions BattleMapEnvironment
 ---@return BattleMapEnvironment Actual resulting state, including retained underground status.
 function btech_map.environment(actor, dbref, conditions) end
-
----Enable or disable saved opposite-edge wrapping.
----@param dbref integer
----@param enabled boolean
----@return boolean
-function btech_map.wrapping(dbref, enabled) end
 
 ---@class BattleBlastZone
 ---@field x integer

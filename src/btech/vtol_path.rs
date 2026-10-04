@@ -139,7 +139,7 @@ impl BattleVehicle {
         map: &MapAsset,
         movement_modifier: i64,
     ) -> Result<BattleVtolPath> {
-        self.advance_vtol_clear_path_with(&|hex| Ok(map.hex(hex.x, hex.y)), movement_modifier, None)
+        self.advance_vtol_clear_path_with(&|hex| Ok(map.hex(hex.x, hex.y)), movement_modifier)
     }
 
     /// Trace either decoded assets or current world terrain without copying a map.
@@ -147,26 +147,12 @@ impl BattleVehicle {
         &mut self,
         lookup: &impl Fn(HexCoordinate) -> Result<Option<super::Hex>>,
         movement_modifier: i64,
-        boundary: Option<&super::StoredMap>,
     ) -> Result<BattleVtolPath> {
         let step = self.vtol_motion_step(movement_modifier)?;
-        if let Some(mut obstruction) = step.first_obstruction(lookup)? {
-            if let Some(map) = boundary
-                && let BattleVtolPath::Contact { hex, point, .. } = &mut obstruction
-            {
-                let resolved = map.motion_hex(*hex)?;
-                if resolved != *hex {
-                    *hex = resolved;
-                    *point = resolved.center();
-                }
-            }
+        if let Some(obstruction) = step.first_obstruction(lookup)? {
             return Ok(obstruction);
         }
-        let point = match boundary {
-            Some(map) => map.motion_destination(step.motion.point)?,
-            None => step.motion.point,
-        };
-        self.commit_vtol_motion_at(step, point)?;
+        self.commit_vtol_motion_at(step, step.motion.point)?;
         Ok(BattleVtolPath::Advanced { step })
     }
 }

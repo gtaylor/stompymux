@@ -474,7 +474,7 @@ pub(super) fn dispatch_boundary_exits(
                     .btech
                     .maps()
                     .get(&boundary.map)
-                    .is_some_and(|map| !map.wrapping() && !map.building_exits().is_empty())
+                    .is_some_and(|map| !map.building_exits().is_empty())
         };
         if !eligible {
             continue;

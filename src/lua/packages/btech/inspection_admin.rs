@@ -37,8 +37,6 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             "cargo_transfer_point",
             detached(lua, &map.cargo_transfer_point())?,
         )?;
-        result.set("wrapping", map.wrapping())?;
-        result.set("linked_markers", detached(lua, map.linked_markers())?)?;
         result.set("building_exits", detached(lua, map.building_exits())?)?;
         result.set("light", map.light)?;
         result.set("visibility", map.visibility)?;

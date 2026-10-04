@@ -38,7 +38,6 @@ mod btech_units;
 mod btech_values;
 mod btech_vehicles;
 mod btech_view_preferences;
-mod btech_wrapping;
 mod btech_wrecks;
 mod communication;
 mod load;

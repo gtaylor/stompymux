@@ -250,7 +250,6 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
             | "map-reload"
             | "map-cloud"
             | "map-conditions"
-            | "map-wrapping"
             | "unit-create"
             | "unit-place"
             | "unit-remove"
@@ -559,7 +558,7 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
                 ))
             }
             _ => bail!(
-                "Usage: @btech status | range #unit,#unit | template <name> | template-check <name> | loadout <name> | mapfile <name> | inspect #object | unit-place <unit>=<map>,<x>,<y> | unit-remove <unit>=<destination> | unit-create <object>=<template> | map-create <object>=<asset> | map-reload <object>=<asset> | map-conditions <map>=<night|twilight|day>,<visibility 0-60> | map-cloud <map>=<altitude> | map-wrapping <map>=<on|off>"
+                "Usage: @btech status | range #unit,#unit | template <name> | template-check <name> | loadout <name> | mapfile <name> | inspect #object | unit-place <unit>=<map>,<x>,<y> | unit-remove <unit>=<destination> | unit-create <object>=<template> | map-create <object>=<asset> | map-reload <object>=<asset> | map-conditions <map>=<night|twilight|day>,<visibility 0-60> | map-cloud <map>=<altitude>"
             ),
         }
     })();
@@ -669,19 +668,6 @@ fn mutate_object(ctx: &CommandContext<'_>, operation: &str, argument: &str) -> R
             "Unit #{} out-of-character towing {}.",
             id.0,
             if enabled { "enabled" } else { "disabled" }
-        ));
-    }
-    if operation.eq_ignore_ascii_case("map-wrapping") {
-        let wrapping = match name.trim().to_ascii_lowercase().as_str() {
-            "on" => true,
-            "off" => false,
-            _ => anyhow::bail!("Usage: @btech map-wrapping <map>=<on|off>"),
-        };
-        super::set_map_wrapping(&mut ctx.scripts.world.borrow_mut(), id, wrapping)?;
-        return Ok(format!(
-            "Map #{} wrapping {}.",
-            id.0,
-            if wrapping { "enabled" } else { "disabled" }
         ));
     }
     if operation.eq_ignore_ascii_case("map-cloud") {

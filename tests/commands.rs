@@ -108,7 +108,6 @@ async fn native_catalog_permissions_and_aliases() {
             "addsmoke",
             "addmine",
             "addblock",
-            "setlinked",
             "loadmap",
             "savemap",
             "setmapsize",

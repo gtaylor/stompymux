@@ -53,7 +53,6 @@ pub(super) async fn load(c: &mut SqliteConnection) -> Result<BtechState> {
                     regeneration: row.try_get("regen_factor")?,
                 },
                 movement_modifier: row.try_get("move_mod")?,
-                linked_markers: Default::default(),
                 light: row.try_get("light")?,
                 visibility: row.try_get("visibility")?,
                 maximum_visibility: row.try_get("max_visibility")?,
@@ -98,7 +97,6 @@ pub(super) async fn load(c: &mut SqliteConnection) -> Result<BtechState> {
     super::btech_building_routes::load(c, &mut maps).await?;
     super::btech_map_links::load(c, &mut maps).await?;
     super::btech_landing_exclusions::load(c, &mut maps).await?;
-    super::btech_wrapping::load(c, &mut maps).await?;
     super::btech_minefields::load(c, &mut maps).await?;
     super::btech_building_repair::load(c, &mut maps, clock).await?;
     super::btech_decorations::load(c, &mut maps, clock).await?;
@@ -400,10 +398,10 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
             changed = true;
             continue;
         }
-        // Mines, building routes, wrapping and landing exclusions have selective writers.
+        // Mines, building routes and landing exclusions have selective writers.
         // Other map-object records remain outside terrain replacement ownership.
         let objects: i64 = sqlx::query_scalar(
-            "SELECT count(*) FROM btech_map_objects WHERE map_dbref=? AND object_type NOT IN (0,1,2,3,4,5,6,7,9)",
+            "SELECT count(*) FROM btech_map_objects WHERE map_dbref=? AND object_type NOT IN (0,1,2,3,4,5,6,9)",
         )
         .bind(id.0)
         .fetch_one(&mut *c)
@@ -461,7 +459,6 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
     changed |= super::btech_building_routes::save(c, before, after).await?;
     changed |= super::btech_map_links::save(c, before, after).await?;
     changed |= super::btech_landing_exclusions::save(c, before, after).await?;
-    changed |= super::btech_wrapping::save(c, before, after).await?;
     changed |= super::btech_minefields::save(c, before, after).await?;
     changed |= super::btech_building_repair::save(c, before, after).await?;
     changed |= super::btech_artillery::save(c, before, after).await?;

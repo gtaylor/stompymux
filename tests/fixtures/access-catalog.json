@@ -380,10 +380,6 @@
       "c_permissions": "CA_WIZARD",
       "switch_table": "nullptr"
     },
-    "setlinked": {
-      "c_permissions": "CA_WIZARD",
-      "switch_table": "nullptr"
-    },
     "loadmap": {
       "c_permissions": "CA_WIZARD",
       "switch_table": "nullptr"

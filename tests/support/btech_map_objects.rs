@@ -121,8 +121,6 @@ pub async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId, ObjectId)
         }),
     )
     .unwrap();
-    set_battle_linked_marker(&mut world, map, 0, Some(p)).unwrap();
-    set_battle_linked_marker(&mut world, map, 1, Some(other)).unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
     (dir, config, world, map, interior)
 }

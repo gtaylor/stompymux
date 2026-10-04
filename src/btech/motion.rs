@@ -780,8 +780,7 @@ fn resolve_ground_segment(
         .context("Ground segment requires placement")?;
     let map = &world.btech.maps()[&position.map];
     let current = map.base_hex(i64::from(position.x), i64::from(position.y))?;
-    let traversed = map.trace_motion(trace_start, proposed)?;
-    proposed = map.motion_destination(proposed)?;
+    let traversed = trace_start.trace_positions(proposed)?;
     let mut destination = proposed.containing_hex().ok();
     let mut previous_height = current.surface_height();
     let mut previous_tile = current;

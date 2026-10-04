@@ -26,9 +26,6 @@ mod btech_gauss;
 #[path = "../btech_map_field_report.rs"]
 mod btech_map_field_report;
 
-#[path = "../btech_map_link.rs"]
-mod btech_map_link;
-
 #[path = "../btech_mass.rs"]
 mod btech_mass;
 

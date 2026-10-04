@@ -61,7 +61,6 @@ no_list: true
 - [`update_links`](update-links/)
 - [`update_links_as`](update-links-as/)
 - [`view`](view/)
-- [`wrapping`](wrapping/)
 
 ## Constants
 
