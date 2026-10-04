@@ -181,7 +181,7 @@ pub(super) fn resolve_signed_in_candidate(
                 .get_mut(&id)
                 .unwrap()
                 .apply_motive_hit(BattleVehicleMotiveHit::Immobilize);
-            report.notices.push(BattleNotice {
+            report.feedback.notices.push(BattleNotice {
                 unit: id,
                 text: "Your rotor has been destroyed!".into(),
             });
@@ -237,10 +237,10 @@ pub(super) fn advance_all(
             report.notices.extend(observers);
             super::piloting::append_feedback(
                 &mut report.pilot_notices,
-                fall.pilot_notices.iter().cloned(),
+                fall.feedback.pilot_notices.iter().cloned(),
                 report.notices.len(),
             );
-            report.notices.extend(fall.notices.iter().cloned());
+            report.notices.extend(fall.feedback.notices.iter().cloned());
             report.vehicle_falls.push(*fall);
         }
     }

@@ -191,10 +191,10 @@ pub fn advance_periodic_piloting(
                     )?;
                     super::piloting::append_feedback(
                         &mut report.pilot_notices,
-                        fall.pilot_notices.iter().cloned(),
+                        fall.feedback.pilot_notices.iter().cloned(),
                         report.notices.len(),
                     );
-                    report.notices.extend(fall.notices.clone());
+                    report.notices.extend(fall.feedback.notices.clone());
                     report.vehicle_fall = Some(fall);
                 } else {
                     let fall = if world.objects[&id].flags.contains(Flag::InCharacter) {

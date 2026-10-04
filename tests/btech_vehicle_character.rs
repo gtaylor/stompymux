@@ -997,7 +997,7 @@ async fn character_vehicle_falls_share_personal_injury_and_atomic_evacuation() {
             initial == 9
         );
         assert_eq!(report.damage, 0);
-        assert!(report.impacts.is_empty());
+        assert!(report.groups.is_empty());
         let result = scripts.world().clone();
         assert_eq!(
             result.btech.vehicles()[&id].pilot_injuries(),
@@ -1070,7 +1070,7 @@ async fn character_vehicle_fall_protection_reuses_control_experience() {
     assert_eq!(report.experience_messages.len(), 1);
     assert!(report.character_injury.is_none());
     assert!(report.damage > 0);
-    assert!(!report.impacts.is_empty());
+    assert!(!report.groups.is_empty());
 }
 
 #[tokio::test]

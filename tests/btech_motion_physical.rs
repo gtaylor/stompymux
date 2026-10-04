@@ -3480,7 +3480,8 @@ async fn character_leg_flood_fall_evacuates_nested_casualty() {
             || message.source() == "You make a piloting skill roll!")));
 
     assert!(
-        fall.flooding
+        fall.feedback
+            .flooding
             .iter()
             .any(|report| report.section == BattleSection::Head)
     );

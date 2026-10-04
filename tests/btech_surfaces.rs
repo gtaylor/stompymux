@@ -1105,7 +1105,7 @@ async fn bridge_falls_choose_deck_or_lower_surface_at_the_two_level_boundary() {
         assert_eq!(world.btech, loaded.btech);
         assert_eq!(fall.damage, if final_height < 0 { 2 } else { 4 });
         assert!(fall.ice_break.is_none());
-        assert!(fall.flooding.is_empty());
+        assert!(fall.feedback.flooding.is_empty());
         assert_eq!(
             battle_unit_elevation(&world, id).unwrap(),
             Some(final_height)

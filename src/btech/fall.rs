@@ -43,9 +43,13 @@ pub struct BattleFallRules {
 }
 
 /// Completed tactical fall; callers stage notices and consume any remaining impact effects.
+///
+/// Both chassis report the same fall. `G` is the chassis's damage group and `F` the
+/// feedback it carries beyond the groups; [`BattleFallReport`] and
+/// [`super::BattleVehicleFallReport`] name the report for each chassis.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[must_use = "Stage fall and injury notices and consume remaining impact effects before committing"]
-pub struct BattleFallReport {
+pub struct FallReport<G, F> {
     /// Combat-safe units skip the personal-injury check.
     pub avoidance: Option<BattlePilotingCheck>,
     /// Pilot captured before fall injuries can clear the assignment.
@@ -53,18 +57,31 @@ pub struct BattleFallReport {
     /// Accepted protection-check diagnostics captured before fall damage.
     pub experience_messages: Vec<super::BattleChannelMessage>,
     pub pilot_injury: Option<BattlePilotInjury>,
+    /// Personal injury to an assigned character pilot, independent of tactical crew health.
     pub character_injury: Option<super::BattleCharacterPilotInjury>,
     pub direction_roll: u8,
     pub arc: BattleHitArc,
     pub damage: u32,
-    pub groups: Vec<BattleSalvoGroup>,
-    pub flooding: Vec<super::BattleSectionExposureReport>,
-    pub inferno_notices: Vec<super::BattleNotice>,
+    /// Fall damage in the order it was applied.
+    pub groups: Vec<G>,
     /// Mine activation after the fall damage sequence.
     pub mines: super::BattleMineEventReport,
     /// Ice fracture can cause nested water falls for this unit and its neighbors.
     pub ice_break: Option<Box<super::BattleSurfaceBreak>>,
+    /// Chassis-specific feedback, reported alongside the fields above.
+    #[serde(flatten)]
+    pub feedback: F,
 }
+
+/// What a BattleMech's fall reports beyond its damage groups.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct BattleFallFeedback {
+    pub flooding: Vec<super::BattleSectionExposureReport>,
+    pub inferno_notices: Vec<super::BattleNotice>,
+}
+
+/// A BattleMech's fall.
+pub type BattleFallReport = FallReport<BattleSalvoGroup, BattleFallFeedback>;
 
 /// Fall by the supplied damage multiplier (one for an ordinary same-level fall).
 /// Water applies immersion and flooding; intact ice can fracture into nested water falls. Bridge falls select the deck or lower surface from the starting altitude.
@@ -389,10 +406,12 @@ fn resolve_material_with_tonnage(
             arc,
             damage,
             groups,
-            flooding,
-            inferno_notices,
             mines,
             ice_break,
+            feedback: BattleFallFeedback {
+                flooding,
+                inferno_notices,
+            },
         })
     })
 }
@@ -422,7 +441,7 @@ impl BattleFallReport {
         {
             notices.push(notice);
         }
-        notices.extend(self.inferno_notices.clone());
+        notices.extend(self.feedback.inferno_notices.clone());
         if let Some(fracture) = &self.ice_break {
             super::piloting::append_feedback(
                 private,
@@ -431,7 +450,7 @@ impl BattleFallReport {
             );
             notices.extend(fracture.notices.iter().cloned());
         }
-        for report in &self.flooding {
+        for report in &self.feedback.flooding {
             super::piloting::append_feedback(
                 private,
                 report.pilot_notices.iter().cloned(),

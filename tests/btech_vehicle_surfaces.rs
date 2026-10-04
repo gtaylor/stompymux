@@ -195,7 +195,7 @@ async fn vehicle_fall_fractures_ice_before_outer_damage_and_replays_nested_falls
     assert_eq!(fracture.vehicle_falls[0].1.damage, 12);
     assert_eq!(fall.damage, 4);
     assert!(world.btech.vehicles()[&id].flooded());
-    assert!(!fall.impacts.is_empty());
+    assert!(!fall.groups.is_empty());
     world.validate(&config).unwrap();
 }
 

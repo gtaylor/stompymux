@@ -4783,7 +4783,7 @@ async fn water_falls_scale_damage_and_replay_before_standing() {
         persistence::save(&config.database(), &world).await.unwrap();
         let fall = resolve_battle_fall(&mut world, id, 1, fall_rules()).unwrap();
         assert_eq!(fall.damage, if depth == 0 { 4 } else { 2 });
-        assert!(fall.flooding.is_empty());
+        assert!(fall.feedback.flooding.is_empty());
         assert_eq!(
             world.btech.constructed_units()[&id].posture(),
             BattlePosture::Prone
@@ -4925,7 +4925,8 @@ async fn water_depth_and_rear_breaches_disable_ammo_and_engine_without_explosion
             assert_eq!(world.btech.constructed_units()[&id].ammunition(), &[25]);
             let fall = stompymux_rs::resolve_battle_fall(&mut world, id, 1, fall_rules()).unwrap();
             assert!(
-                fall.flooding
+                fall.feedback
+                    .flooding
                     .iter()
                     .any(|report| report.section == S::RightTorso)
             );
@@ -5060,9 +5061,9 @@ async fn water_initial_flooding_precedes_fall_damage_and_disables_external_sinks
     apply_damage_phase(&mut world, id, S::CenterTorso, 10, P::Armor { rear: false }).unwrap();
     shot_seed(&mut world, id, water_fall_seed(false));
     let fall = resolve_battle_fall(&mut world, id, 1, fall_rules()).unwrap();
-    assert_eq!(fall.flooding[0].section, S::CenterTorso);
+    assert_eq!(fall.feedback.flooding[0].section, S::CenterTorso);
     assert!(fall.groups.is_empty()); // Engine flooding already destroyed the unit.
-    assert!(fall.flooding[0].reactor_explosion.is_none());
+    assert!(fall.feedback.flooding[0].reactor_explosion.is_none());
     assert_eq!(fall.direction_roll, 4); // The eligible flooding check consumes dice before fall direction.
     assert_eq!(
         world.btech.constructed_units()[&id].sections()[&S::CenterTorso].internal,

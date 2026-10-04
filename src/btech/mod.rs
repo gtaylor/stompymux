@@ -370,7 +370,9 @@ pub use vehicle_hit::{BattleVehicleHit, BattleVehicleHitRules, BattleVehicleMoti
 pub use vehicle_turret::{lock_vehicle_turret, set_turret, turret_readout};
 
 mod fall;
-pub use fall::{BattleFallReport, BattleFallRules, BattlePosture, resolve_fall};
+pub use fall::{
+    BattleFallFeedback, BattleFallReport, BattleFallRules, BattlePosture, FallReport, resolve_fall,
+};
 
 pub(crate) mod stand;
 pub use stand::{
@@ -1026,7 +1028,7 @@ pub use vehicle_burning::{
 mod fall_profile;
 mod vehicle_fall;
 pub use evacuation::vehicle_fall_action;
-pub use vehicle_fall::{BattleVehicleFallReport, resolve_vehicle_fall};
+pub use vehicle_fall::{BattleVehicleFallFeedback, BattleVehicleFallReport, resolve_vehicle_fall};
 
 mod reverse_slope;
 

@@ -619,7 +619,7 @@ async fn hiding_aircraft_crash_orders_crossing_before_damage_and_replays() {
         assert_eq!(world.btech, replay.btech);
         let (fall, notices) = match result {
             BattleVtolEnvironment::Crashed { fall, .. } if !crossed => {
-                let notices = fall.notices.clone();
+                let notices = fall.feedback.notices.clone();
                 (fall, notices)
             }
             BattleVtolEnvironment::Obstacle {
@@ -629,7 +629,7 @@ async fn hiding_aircraft_crash_orders_crossing_before_damage_and_replays() {
             } if crossed => (fall, notices),
             result => panic!("Expected an aircraft crash (crossed={crossed}): {result:?}"),
         };
-        assert!(!fall.impacts.is_empty());
+        assert!(!fall.groups.is_empty());
         assert_eq!(
             world.btech.vehicles()[&id].position().unwrap().y,
             if crossed { 1 } else { 2 }

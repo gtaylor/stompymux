@@ -358,10 +358,10 @@ pub(super) fn advance(
                     )?;
                     super::piloting::append_feedback(
                         &mut report.pilot_notices,
-                        fall.pilot_notices.iter().cloned(),
+                        fall.feedback.pilot_notices.iter().cloned(),
                         report.notices.len(),
                     );
-                    report.notices.extend(fall.notices.iter().cloned());
+                    report.notices.extend(fall.feedback.notices.iter().cloned());
                     report.vehicle_falls.push(fall);
                 }
                 let unit = world.btech.vehicles.get_mut(&id).unwrap();
@@ -417,10 +417,10 @@ pub(super) fn advance(
                     )?;
                     super::piloting::append_feedback(
                         &mut report.pilot_notices,
-                        fall.pilot_notices.iter().cloned(),
+                        fall.feedback.pilot_notices.iter().cloned(),
                         report.notices.len(),
                     );
-                    report.notices.extend(fall.notices.iter().cloned());
+                    report.notices.extend(fall.feedback.notices.iter().cloned());
                     report.vehicle_falls.push(fall);
                     let tile = world.btech.maps()[&position.map]
                         .base_hex(i64::from(hex.x), i64::from(hex.y))?;

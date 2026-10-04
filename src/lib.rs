@@ -816,8 +816,11 @@ pub use btech::{
 
 pub use btech::advance_vtol_environment as advance_battle_vtol_environment;
 pub use btech::resolve_vtol_crash as resolve_battle_vtol_crash;
+pub use btech::{
+    BattleFallFeedback, BattleVehicleFallFeedback, BattleVehicleFallReport, FallReport,
+    resolve_vehicle_fall as resolve_battle_vehicle_fall,
+};
 pub use btech::{BattleVehicleDescentEvent, advance_vtol_fall as advance_battle_vtol_fall};
-pub use btech::{BattleVehicleFallReport, resolve_vehicle_fall as resolve_battle_vehicle_fall};
 pub use btech::{
     begin_vtol_takeoff as begin_battle_vtol_takeoff,
     set_vtol_vertical_speed as set_battle_vtol_vertical_speed,

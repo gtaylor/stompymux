@@ -226,10 +226,10 @@ pub(super) fn advance_in_candidate(
         };
         let mut fall =
             super::vtol_crash::resolve_in_candidate(&mut candidate, id, levels, rules, character)?;
-        let private = std::mem::take(&mut fall.pilot_notices);
-        super::piloting::append_feedback(&mut fall.pilot_notices, private, notices.len());
-        notices.append(&mut fall.notices);
-        fall.notices = notices;
+        let private = std::mem::take(&mut fall.feedback.pilot_notices);
+        super::piloting::append_feedback(&mut fall.feedback.pilot_notices, private, notices.len());
+        notices.append(&mut fall.feedback.notices);
+        fall.feedback.notices = notices;
         outcome = BattleVtolEnvironment::Crashed {
             path,
             fall: Box::new(fall),
@@ -364,10 +364,10 @@ pub(super) fn advance_in_candidate(
             )?;
             super::piloting::append_feedback(
                 &mut pilot_notices,
-                fall.pilot_notices.iter().cloned(),
+                fall.feedback.pilot_notices.iter().cloned(),
                 notices.len(),
             );
-            notices.extend(fall.notices.iter().cloned());
+            notices.extend(fall.feedback.notices.iter().cloned());
             Some(Box::new(fall))
         };
         outcome = BattleVtolEnvironment::Obstacle {

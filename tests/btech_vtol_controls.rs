@@ -221,7 +221,7 @@ async fn elevation_collision_rolls_back_and_preserves_signed_crash_severity() {
         assert_eq!(fall.is_none(), safe, "{tile}");
         let nested = fall
             .as_ref()
-            .map(|fall| fall.pilot_notices.clone())
+            .map(|fall| fall.feedback.pilot_notices.clone())
             .unwrap_or_default();
         let unit = &world.btech.vehicles()[&id];
         assert_eq!(unit.position(), before.btech.vehicles()[&id].position());
@@ -363,7 +363,7 @@ async fn forest_entry_replays_pilot_avoidance_and_one_level_crashes() {
         assert_eq!(fall.is_none(), safe);
         let nested = fall
             .as_ref()
-            .map(|fall| fall.pilot_notices.clone())
+            .map(|fall| fall.feedback.pilot_notices.clone())
             .unwrap_or_default();
         assert!(
             notices
