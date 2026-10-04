@@ -29,6 +29,11 @@ pub struct BattleRecovery {
 }
 
 impl BattleRecovery {
+    /// Replace the private random stream, for fixtures that need exact rolls.
+    pub(super) fn set_dice(&mut self, dice: BattleDice) {
+        self.dice = dice;
+    }
+
     /// Correct a tactical injury counter without rolling dice or rescheduling recovery.
     pub(super) fn edit_tactical_injuries(&mut self, injuries: u8) {
         if matches!(self.mode, BattleRecoveryMode::Tactical { .. }) {

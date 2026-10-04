@@ -189,9 +189,7 @@ fn fire_rules() -> BattleVehicleShotRules {
 fn seed(world: &mut World, id: ObjectId, value: u8) {
     world
         .btech
-        .rewrite_unit_record(id, |record| {
-            record["dice"] = serde_json::to_value(BattleDice::seeded([value; 32])).unwrap();
-        })
+        .set_unit_dice(id, BattleDice::seeded([value; 32]))
         .unwrap();
 }
 
@@ -1848,9 +1846,7 @@ async fn mech_vehicle_fire_locks_damage_and_restart_share_existing_resolvers() {
             .unwrap();
         world
             .btech
-            .rewrite_unit_record(shooter, |record| {
-                record["dice"] = serde_json::to_value(BattleDice::seeded([value; 32])).unwrap();
-            })
+            .set_unit_dice(shooter, BattleDice::seeded([value; 32]))
             .unwrap();
         select_battle_target(&mut world, shooter, ObjectId(1), Some(target)).unwrap();
         for _ in 0..3 {
@@ -2183,9 +2179,7 @@ async fn mech_vehicle_admission_hex_selection_and_lock_cleanup() {
         .unwrap();
     world
         .btech
-        .rewrite_unit_record(shooter, |record| {
-            record["dice"] = serde_json::to_value(BattleDice::seeded([value; 32])).unwrap();
-        })
+        .set_unit_dice(shooter, BattleDice::seeded([value; 32]))
         .unwrap();
     let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
     let (recipient, x, y): (i64, i32, i32) = scripts
@@ -2861,11 +2855,7 @@ async fn character_direct_fire_shares_native_lua_casualties_for_both_chassis() {
                             let mut probe = world.clone();
                             probe
                                 .btech
-                                .rewrite_unit_record(target, |record| {
-                                    record["dice"] =
-                                        serde_json::to_value(BattleDice::seeded([*seed; 32]))
-                                            .unwrap();
-                                })
+                                .set_unit_dice(target, BattleDice::seeded([*seed; 32]))
                                 .unwrap();
                             let _ = resolve_battle_vehicle_impact(
                                 &mut probe,
@@ -2883,10 +2873,7 @@ async fn character_direct_fire_shares_native_lua_casualties_for_both_chassis() {
                         .unwrap();
                     world
                         .btech
-                        .rewrite_unit_record(target, |record| {
-                            record["dice"] =
-                                serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-                        })
+                        .set_unit_dice(target, BattleDice::seeded([seed; 32]))
                         .unwrap();
                 }
                 refresh_battle_contacts(&mut world, &[shooter]).unwrap();
@@ -3350,10 +3337,7 @@ async fn configured_energy_range_damage_is_shared_by_all_unit_pairings() {
                 refresh_battle_contacts(&mut world, &[shooter]).unwrap();
                 world
                     .btech
-                    .rewrite_unit_record(shooter, |record| {
-                        record["dice"] =
-                            serde_json::to_value(BattleDice::seeded([attack_seed; 32])).unwrap();
-                    })
+                    .set_unit_dice(shooter, BattleDice::seeded([attack_seed; 32]))
                     .unwrap();
                 let native = Scripts::new(
                     &config,

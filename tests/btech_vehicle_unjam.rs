@@ -36,9 +36,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
 fn seed(world: &mut World, id: ObjectId, value: u8) {
     world
         .btech
-        .rewrite_unit_record(id, |record| {
-            record["dice"] = serde_json::to_value(BattleDice::seeded([value; 32])).unwrap();
-        })
+        .set_unit_dice(id, BattleDice::seeded([value; 32]))
         .unwrap();
 }
 
@@ -301,9 +299,7 @@ async fn vehicle_feed_clearing_broadcasts_only_to_current_contacts() {
     place_battle_unit(&mut world, observer, map, 0, 0).unwrap();
     world
         .btech
-        .rewrite_unit_record(observer, |record| {
-            record["power"] = serde_json::to_value(BattlePower::Running).unwrap();
-        })
+        .set_unit_power(observer, BattlePower::Running)
         .unwrap();
     refresh_battle_contacts(&mut world, &[observer]).unwrap();
     let value = (0..=255)

@@ -132,9 +132,7 @@ async fn clan_ammunition_containment_and_sink_losses_survive_restart() {
     let mut found = false;
     for seed in 0..=u8::MAX {
         base.btech
-            .rewrite_unit_record(id, |record| {
-                record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-            })
+            .set_unit_dice(id, BattleDice::seeded([seed; 32]))
             .unwrap();
         let hit = BattleHit {
             section: BattleSection::RightTorso,

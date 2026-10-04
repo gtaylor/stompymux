@@ -9,9 +9,7 @@ use stompymux_rs::{
 fn seed(world: &mut stompymux_rs::World, id: ObjectId, value: u8) {
     world
         .btech
-        .rewrite_unit_record(id, |record| {
-            record["dice"] = serde_json::to_value(BattleDice::seeded([value; 32])).unwrap();
-        })
+        .set_unit_dice(id, BattleDice::seeded([value; 32]))
         .unwrap();
 }
 

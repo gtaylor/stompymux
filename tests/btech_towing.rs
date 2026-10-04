@@ -358,12 +358,7 @@ async fn towing_load_shares_equipment_discounts_and_live_mass_across_chassis() {
                 assert_eq!(load.carried_mass, u64::from(mass) * 2 / divisor);
                 assert_eq!(world.btech, before);
                 assert!(load.maximum_speed(100.0).unwrap() <= 100.0);
-                world
-                    .btech
-                    .rewrite_unit_record(b, |record| {
-                        record["ammunition"][0] = 0.into();
-                    })
-                    .unwrap();
+                world.btech.set_unit_ammunition_bin(b, 0, 0).unwrap();
                 let lighter = battle_unit_load(&world, a, false).unwrap();
                 assert!(lighter.carried_mass < load.carried_mass);
                 assert!(

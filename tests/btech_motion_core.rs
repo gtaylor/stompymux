@@ -925,10 +925,7 @@ async fn stun_throttle_change_precedes_a_simultaneous_hip_critical() {
         let mut trial = world.clone();
         trial
             .btech
-            .rewrite_unit_record(id, |record| {
-                record["dice"] =
-                    serde_json::to_value(stompymux_rs::BattleDice::seeded([seed; 32])).unwrap();
-            })
+            .set_unit_dice(id, stompymux_rs::BattleDice::seeded([seed; 32]))
             .unwrap();
         let hit = stompymux_rs::BattleHit {
             section: stompymux_rs::BattleSection::LeftLeg,
@@ -2822,12 +2819,7 @@ async fn direct_out_of_range_shot_still_rolls_and_spends_without_target_damage()
     {
         part.equipment = part.equipment.replace("IS.SRM-4", "IS.StreakSRM-4");
     }
-    world
-        .btech
-        .rewrite_unit_record(id, |record| {
-            record["definition"] = serde_json::to_value(definition).unwrap();
-        })
-        .unwrap();
+    world.btech.set_unit_definition(id, definition).unwrap();
     let report =
         stompymux_rs::resolve_battle_shot(&mut world, id, ObjectId(1), target, index, rules)
             .unwrap();
@@ -3984,12 +3976,7 @@ async fn damage_balance_ammunition_fall_precedes_explosion_pilot_injury() {
     let source = format!("12 12\n{}", format!("{}\n", ".0".repeat(12)).repeat(12));
     let (_dir, config, mut world, id) = fixture_assets(&source, template).await;
     // This scenario needs depleted live ammunition, independently of template initialization.
-    world
-        .btech
-        .rewrite_unit_record(id, |record| {
-            record["ammunition"][0] = 1.into();
-        })
-        .unwrap();
+    world.btech.set_unit_ammunition_bin(id, 0, 1).unwrap();
     stop_battle_unit(
         &mut world,
         id,
@@ -5476,11 +5463,7 @@ async fn ammunition_detonation_bypasses_armor_replays_and_honors_pain_resistance
     let (_dir, config, mut base, id) = fixture('.').await;
     shot_skill(&mut base, 20);
     // One SRM4 salvo has eight internal damage, destroying the torso without reaching CT.
-    base.btech
-        .rewrite_unit_record(id, |record| {
-            record["ammunition"][0] = 1.into();
-        })
-        .unwrap();
+    base.btech.set_unit_ammunition_bin(id, 0, 1).unwrap();
     for (resistance, injuries) in [(0, 2), (1, 1)] {
         let mut world = base.clone();
         stompymux_rs::set_battle_character_value(
@@ -5558,12 +5541,7 @@ async fn ammunition_detonation_leg_falls_on_ground_and_bridge_decks() {
         );
         let (_dir, config, mut world, id) = fixture_assets(&source, template.clone()).await;
         balance_skill(&mut world);
-        world
-            .btech
-            .rewrite_unit_record(id, |record| {
-                record["ammunition"][0] = 1.into();
-            })
-            .unwrap();
+        world.btech.set_unit_ammunition_bin(id, 0, 1).unwrap();
         shot_seed(&mut world, id, water_fall_seed(false));
         let result = explode_battle_ammunition(&mut world, id, 0, fall_rules());
         let report = result.unwrap();
@@ -5691,11 +5669,7 @@ async fn overheat_unpiloted_thresholds_and_computer_dice_match_heat_bands() {
     use stompymux_rs::advance_battle_overheat;
     let (_dir, config, mut base, id) = fixture('.').await;
     // Empty bins retain their slots; a failed ammunition check still consumes its roll.
-    base.btech
-        .rewrite_unit_record(id, |record| {
-            record["ammunition"][0] = 0.into();
-        })
-        .unwrap();
+    base.btech.set_unit_ammunition_bin(id, 0, 0).unwrap();
     for (heat, ammo_target, reactor_target) in [
         (10.0, None, 13),
         (13.99, None, 13),
@@ -5777,12 +5751,7 @@ async fn overheat_life_support_injury_precedes_ammunition_explosion_and_shutdown
         },
     )
     .unwrap();
-    world
-        .btech
-        .rewrite_unit_record(id, |record| {
-            record["ammunition"][0] = 1.into();
-        })
-        .unwrap();
+    world.btech.set_unit_ammunition_bin(id, 0, 1).unwrap();
     let seed = (0..=255)
         .find(|seed| stompymux_rs::BattleDice::seeded([*seed; 32]).two_d6() < 6)
         .unwrap();
@@ -5836,9 +5805,9 @@ async fn overheat_shutdown_at_speed_can_topple_without_structural_fall_damage() 
         let (_dir, config, mut world, id) = fixture(terrain).await;
         world
             .btech
-            .rewrite_unit_record(id, |record| {
-                record["motion"]["speed"] = speed.into();
-                record["motion"]["desired_speed"] = speed.into();
+            .edit_unit_motion(id, |motion| {
+                motion.speed = speed;
+                motion.desired_speed = speed;
             })
             .unwrap();
         overheat_due(&mut world, id, 14.0, false);
@@ -5867,11 +5836,7 @@ async fn overheat_intact_life_support_uses_one_coin_roll_above_thirty_heat() {
     use stompymux_rs::advance_battle_overheat;
     let (_dir, config, mut base, id) = fixture('.').await;
     computer_skill(&mut base, 30);
-    base.btech
-        .rewrite_unit_record(id, |record| {
-            record["ammunition"][0] = 0.into();
-        })
-        .unwrap();
+    base.btech.set_unit_ammunition_bin(id, 0, 0).unwrap();
     for coin in [1, 2] {
         let seed = (0..=255)
             .find(|seed| {
@@ -6737,12 +6702,7 @@ async fn flamer_selections_preserve_order_partial_errors_and_transaction_rollbac
             .unwrap()
             .equipment = "IS.Flamer".into();
     }
-    world
-        .btech
-        .rewrite_unit_record(id, |record| {
-            record["definition"] = serde_json::to_value(definition).unwrap();
-        })
-        .unwrap();
+    world.btech.set_unit_definition(id, definition).unwrap();
     world.validate(&config).unwrap();
     let native = Scripts::new(
         &config,
@@ -6843,12 +6803,7 @@ async fn pulse_accuracy_changes_a_miss_to_a_glancing_hit() {
             .get_mut(&2)
             .unwrap()
             .equipment = weapon.name().into();
-        world
-            .btech
-            .rewrite_unit_record(id, |record| {
-                record["definition"] = serde_json::to_value(definition).unwrap();
-            })
-            .unwrap();
+        world.btech.set_unit_definition(id, definition).unwrap();
         world.validate(&config).unwrap();
         variants.push(world);
     }
@@ -6925,11 +6880,7 @@ async fn snub_ppc_range_damage_native_lua_and_restart() {
     for slot in [2, 3] {
         arm.criticals.get_mut(&slot).unwrap().equipment = "IS.SnubNosedPPC".into();
     }
-    base.btech
-        .rewrite_unit_record(id, |record| {
-            record["definition"] = serde_json::to_value(definition).unwrap();
-        })
-        .unwrap();
+    base.btech.set_unit_definition(id, definition).unwrap();
     // Fix scanner and damage streams so range assertions cannot fail on random contact loss.
     shot_seed(&mut base, id, 1);
     shot_seed(&mut base, target, 1);
@@ -7356,11 +7307,7 @@ async fn case_contains_ammunition_but_not_weapon_damage_or_xl_loss() {
         }
     }
     let mut xl = before;
-    xl.btech
-        .rewrite_unit_record(id, |record| {
-            record["definition"] = serde_json::to_value(definition).unwrap();
-        })
-        .unwrap();
+    xl.btech.set_unit_definition(id, definition).unwrap();
     let center = xl.btech.constructed_units()[&id].sections()[&BattleSection::CenterTorso].clone();
     let report = explode_battle_ammunition(&mut xl, id, 0, fall_rules()).unwrap();
     assert!(report.impact.destroyed);
@@ -7490,11 +7437,7 @@ async fn streak_lock_failure_launch_boundaries_and_saved_recycle() {
     {
         part.equipment = part.equipment.replace("IS.SRM-4", "IS.StreakSRM-4");
     }
-    base.btech
-        .rewrite_unit_record(id, |record| {
-            record["definition"] = serde_json::to_value(definition).unwrap();
-        })
-        .unwrap();
+    base.btech.set_unit_definition(id, definition).unwrap();
     let mut probe = base.clone();
     let threshold = resolve_battle_shot(&mut probe, id, ObjectId(1), target, index, shot_rules())
         .unwrap()
@@ -7669,11 +7612,7 @@ async fn gauss_weapon_explosion_native_lua_and_rollback() {
     for slot in 2..9 {
         arm.criticals.insert(slot, part.clone());
     }
-    base.btech
-        .rewrite_unit_record(target, |record| {
-            record["definition"] = serde_json::to_value(definition).unwrap();
-        })
-        .unwrap();
+    base.btech.set_unit_definition(target, definition).unwrap();
     for value in 0..=u8::MAX {
         let mut before = base.clone();
         shot_seed(&mut before, target, value);
@@ -7763,13 +7702,13 @@ async fn heavy_gauss_recoil_matrix(classes: &[(u16, i32)]) {
     let config = Config::load(dir.path()).unwrap();
     // This target stream exercises a critical cascade that exposed mismatched adapter rules.
     base.btech
-        .rewrite_unit_record(target, |record| {
-            record["dice"] = serde_json::to_value(BattleDice::seeded([
+        .set_unit_dice(
+            target,
+            BattleDice::seeded([
                 132, 74, 49, 4, 20, 209, 99, 178, 82, 28, 126, 55, 74, 93, 238, 238, 168, 9, 81,
                 56, 101, 52, 14, 199, 89, 158, 107, 178, 62, 214, 43, 219,
-            ]))
-            .unwrap();
-        })
+            ]),
+        )
         .unwrap();
     let mut definition = base.btech.constructed_units()[&id].definition().clone();
     let torso = definition

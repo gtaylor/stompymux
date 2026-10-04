@@ -63,12 +63,7 @@ async fn vehicle_mine_queries_use_live_mass_and_preserve_saved_state() {
         [3, 5, 9]
     );
     assert_eq!(world.btech, original);
-    world
-        .btech
-        .rewrite_unit_record(id, |record| {
-            record["ammunition"][0] = 4.into();
-        })
-        .unwrap();
+    world.btech.set_unit_ammunition_bin(id, 0, 4).unwrap();
     let mass = world.btech.vehicles()[&id].mass().unwrap();
     assert_eq!(mass.total / 1024, 79);
     let before = world.btech.clone();

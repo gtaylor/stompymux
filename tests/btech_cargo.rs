@@ -692,9 +692,9 @@ async fn wizard_stock_actions_share_audits_and_immediate_load_limits() {
         };
         world
             .btech
-            .rewrite_unit_record(unit, |record| {
-                record["motion"]["speed"] = maximum.into();
-                record["motion"]["desired_speed"] = maximum.into();
+            .edit_unit_motion(unit, |motion| {
+                motion.speed = maximum;
+                motion.desired_speed = maximum;
             })
             .unwrap();
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();

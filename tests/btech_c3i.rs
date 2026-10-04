@@ -1734,18 +1734,11 @@ async fn underwater_network_aim_keeps_the_physical_water_limit() {
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     for (id, y) in [(shooter, 2), (peer, 7), (target, 8)] {
-        world
-            .btech
-            .rewrite_unit_record(id, |record| {
-                record["power"] = serde_json::to_value(BattlePower::Off).unwrap();
-            })
-            .unwrap();
+        world.btech.set_unit_power(id, BattlePower::Off).unwrap();
         place_battle_unit(&mut world, id, map, 10, y).unwrap();
         world
             .btech
-            .rewrite_unit_record(id, |record| {
-                record["power"] = serde_json::to_value(BattlePower::Running).unwrap();
-            })
+            .set_unit_power(id, BattlePower::Running)
             .unwrap();
     }
     // This scenario tests network range after acquisition. Moving to the water map

@@ -151,9 +151,7 @@ async fn fixture(source: &str) -> (tempfile::TempDir, Config, World, ObjectId) {
     support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     world
         .btech
-        .rewrite_unit_record(id, |record| {
-            record["power"] = serde_json::to_value(BattlePower::Running).unwrap();
-        })
+        .set_unit_power(id, BattlePower::Running)
         .unwrap();
     (dir, config, world, id)
 }

@@ -176,9 +176,7 @@ async fn fatal_vehicle_character_injury_evacuates_atomically_and_preserves_mater
 fn seed_vehicle(world: &mut World, id: ObjectId, seed: u8) {
     world
         .btech
-        .rewrite_unit_record(id, |record| {
-            record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-        })
+        .set_unit_dice(id, BattleDice::seeded([seed; 32]))
         .unwrap();
 }
 
@@ -449,9 +447,7 @@ async fn nested_crew_death_finishes_weapon_damage_before_single_evacuation() {
         .unwrap();
     world
         .btech
-        .rewrite_unit_record(id, |record| {
-            record["dice"] = serde_json::to_value(BattleDice::seeded(seed)).unwrap();
-        })
+        .set_unit_dice(id, BattleDice::seeded(seed))
         .unwrap();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     let rules = BattleVehicleCriticalRules {
@@ -851,9 +847,9 @@ async fn character_mine_heat_evacuates_after_packets_and_rolls_back_the_field() 
     .unwrap();
     world
         .btech
-        .rewrite_unit_record(id, |record| {
-            record["motion"]["heading"] = 180.0.into();
-            record["motion"]["desired_heading"] = 180.0.into();
+        .edit_unit_motion(id, |motion| {
+            motion.heading = 180.0;
+            motion.desired_heading = 180.0;
         })
         .unwrap();
     let seed = (0..=255)
@@ -979,9 +975,7 @@ async fn character_vehicle_falls_share_personal_injury_and_atomic_evacuation() {
             .unwrap();
         world
             .btech
-            .rewrite_unit_record(id, |record| {
-                record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-            })
+            .set_unit_dice(id, BattleDice::seeded([seed; 32]))
             .unwrap();
         let rules = BattleMovementRules::STANDARD.fall;
         let before = world.btech.clone();

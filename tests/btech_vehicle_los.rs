@@ -329,9 +329,7 @@ async fn vehicle_acquisition_rolls_only_for_hidden_hostiles_beyond_automatic_ran
     running(&mut world, &[vehicle_a]);
     world
         .btech
-        .rewrite_unit_record(vehicle_a, |record| {
-            record["dice"] = serde_json::to_value(BattleDice::seeded([77; 32])).unwrap();
-        })
+        .set_unit_dice(vehicle_a, BattleDice::seeded([77; 32]))
         .unwrap();
     let before = world.btech.clone();
     for (hostile, hidden) in [(false, false), (true, false), (false, true)] {

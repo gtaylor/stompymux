@@ -51,9 +51,7 @@ fn place(
     // Start directly in Running; the startup state machine has its own scenarios.
     world
         .btech
-        .rewrite_unit_record(id, |record| {
-            record["power"] = serde_json::to_value(BattlePower::Running).unwrap();
-        })
+        .set_unit_power(id, BattlePower::Running)
         .unwrap();
     id
 }

@@ -57,9 +57,7 @@ fn seed(world: &mut World, id: ObjectId, count: u16, selection: u16, roll: Optio
         .unwrap();
     world
         .btech
-        .rewrite_unit_record(id, |record| {
-            record["dice"] = serde_json::to_value(BattleDice::seeded([chosen; 32])).unwrap();
-        })
+        .set_unit_dice(id, BattleDice::seeded([chosen; 32]))
         .unwrap();
 }
 
@@ -176,9 +174,9 @@ async fn crowding_avoidance_falls_and_success_replay_without_target_damage() {
             let id = ids[0];
             world
                 .btech
-                .rewrite_unit_record(id, |record| {
-                    record["motion"]["speed"] = 21.5.into();
-                    record["motion"]["desired_speed"] = 21.5.into();
+                .edit_unit_motion(id, |motion| {
+                    motion.speed = 21.5;
+                    motion.desired_speed = 21.5;
                 })
                 .unwrap();
             let target = if entry == BattleStackingEntry::Ground {
@@ -629,9 +627,7 @@ async fn early_landing_uses_configured_crowding_in_native_and_lua_transactions()
             .unwrap();
         world
             .btech
-            .rewrite_unit_record(id, |record| {
-                record["dice"] = serde_json::to_value(BattleDice::seeded([chosen; 32])).unwrap();
-            })
+            .set_unit_dice(id, BattleDice::seeded([chosen; 32]))
             .unwrap();
         refresh_battle_contacts(&mut world, &[ids[2]]).unwrap();
         assert!(
@@ -1009,10 +1005,7 @@ async fn airborne_critical_falls_apply_configured_collisions_inside_the_impact()
                 .unwrap();
             world
                 .btech
-                .rewrite_unit_record(id, |record| {
-                    record["dice"] =
-                        serde_json::to_value(BattleDice::seeded([chosen; 32])).unwrap();
-                })
+                .set_unit_dice(id, BattleDice::seeded([chosen; 32]))
                 .unwrap();
             let hit = BattleHit {
                 section: location.section,
@@ -1257,9 +1250,7 @@ async fn collision_observers_filter_each_participant_and_replay_all_entry_modes(
         })
         .unwrap();
     base.btech
-        .rewrite_unit_record(target, |record| {
-            record["dice"] = serde_json::to_value(BattleDice::seeded([target_seed; 32])).unwrap();
-        })
+        .set_unit_dice(target, BattleDice::seeded([target_seed; 32]))
         .unwrap();
     for entry in [
         BattleStackingEntry::Ground,
@@ -1425,9 +1416,7 @@ async fn character_collision_action_replays_injury_and_evacuation() {
             .unwrap();
         world
             .btech
-            .rewrite_unit_record(target, |record| {
-                record["dice"] = serde_json::to_value(BattleDice::seeded([chosen; 32])).unwrap();
-            })
+            .set_unit_dice(target, BattleDice::seeded([chosen; 32]))
             .unwrap();
         let rules = BattleStackingRules {
             damage_percent: 1,
@@ -1675,9 +1664,9 @@ async fn character_crowding_experience_and_delivery_rollback() {
             .unwrap();
             world
                 .btech
-                .rewrite_unit_record(id, |record| {
-                    record["motion"]["speed"] = 21.5.into();
-                    record["motion"]["desired_speed"] = 21.5.into();
+                .edit_unit_motion(id, |motion| {
+                    motion.speed = 21.5;
+                    motion.desired_speed = 21.5;
                 })
                 .unwrap();
             seed(&mut world, id, 3, 1, Some(12));
@@ -1894,9 +1883,9 @@ async fn collision_damage_preserves_target_balance_feedback() {
         .unwrap();
     }
     base.btech
-        .rewrite_unit_record(mover, |record| {
-            record["motion"]["speed"] = 43.0.into();
-            record["motion"]["desired_speed"] = 43.0.into();
+        .edit_unit_motion(mover, |motion| {
+            motion.speed = 43.0;
+            motion.desired_speed = 43.0;
         })
         .unwrap();
     seed(&mut base, mover, 3, 1, None);
@@ -1904,9 +1893,7 @@ async fn collision_damage_preserves_target_balance_feedback() {
         let mut world = base.clone();
         world
             .btech
-            .rewrite_unit_record(target, |record| {
-                record["dice"] = serde_json::to_value(BattleDice::seeded([byte; 32])).unwrap();
-            })
+            .set_unit_dice(target, BattleDice::seeded([byte; 32]))
             .unwrap();
         let before = world.clone();
         let scripts =
@@ -2027,17 +2014,13 @@ async fn airborne_critical_collision_publishes_secondary_character_effects() {
         .find(|byte| BattleDice::seeded([*byte; 32]).d6() == 6)
         .unwrap();
     base.btech
-        .rewrite_unit_record(neighbor, |record| {
-            record["dice"] = serde_json::to_value(BattleDice::seeded([head_seed; 32])).unwrap();
-        })
+        .set_unit_dice(neighbor, BattleDice::seeded([head_seed; 32]))
         .unwrap();
     for byte in 0..=255 {
         let mut world = base.clone();
         world
             .btech
-            .rewrite_unit_record(airborne, |record| {
-                record["dice"] = serde_json::to_value(BattleDice::seeded([byte; 32])).unwrap();
-            })
+            .set_unit_dice(airborne, BattleDice::seeded([byte; 32]))
             .unwrap();
         let before = world.clone();
         let scripts =

@@ -1125,8 +1125,8 @@ async fn tow_transfer_denial_and_either_arrival_callback_restore_the_entire_pair
 fn actual_speed(world: &mut World, id: ObjectId, speed: f64) {
     world
         .btech
-        .rewrite_unit_record(id, |record| {
-            record["motion"]["speed"] = speed.into();
+        .edit_unit_motion(id, |motion| {
+            motion.speed = speed;
         })
         .unwrap();
 }

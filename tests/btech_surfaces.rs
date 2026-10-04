@@ -203,9 +203,7 @@ fn ice_seed(world: &mut World, id: ObjectId, fracture: bool, avoidance_first: bo
         .unwrap();
     world
         .btech
-        .rewrite_unit_record(id, |record| {
-            record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-        })
+        .set_unit_dice(id, BattleDice::seeded([seed; 32]))
         .unwrap();
 }
 
@@ -404,9 +402,7 @@ async fn early_ice_landing_native_lua_parity_and_callback_rollback_include_the_m
         .unwrap();
     world
         .btech
-        .rewrite_unit_record(id, |record| {
-            record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-        })
+        .set_unit_dice(id, BattleDice::seeded([seed; 32]))
         .unwrap();
     let native = Scripts::new(
         &config,
@@ -740,9 +736,7 @@ async fn ice_standing_native_lua_and_restart_cover_success_failure_and_fracture(
             .unwrap();
         world
             .btech
-            .rewrite_unit_record(id, |record| {
-                record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-            })
+            .set_unit_dice(id, BattleDice::seeded([seed; 32]))
             .unwrap();
         let initial = resolve_battle_fall(&mut world, id, 1, rules()).unwrap();
         assert!(initial.avoidance.unwrap().success && initial.ice_break.is_none());
@@ -1143,9 +1137,7 @@ async fn bridge_deck_fire_and_standing_share_native_lua_transactions() {
     place_battle_unit(&mut world, target, map, 1, 0).unwrap();
     world
         .btech
-        .rewrite_unit_record(id, |record| {
-            record["dice"] = serde_json::to_value(BattleDice::seeded([0; 32])).unwrap();
-        })
+        .set_unit_dice(id, BattleDice::seeded([0; 32]))
         .unwrap();
     refresh_battle_contacts(&mut world, &[id]).unwrap();
     let native = Scripts::new(
@@ -1189,9 +1181,7 @@ async fn bridge_deck_fire_and_standing_share_native_lua_transactions() {
         .unwrap();
     world
         .btech
-        .rewrite_unit_record(id, |record| {
-            record["dice"] = serde_json::to_value(BattleDice::seeded([safe_seed; 32])).unwrap();
-        })
+        .set_unit_dice(id, BattleDice::seeded([safe_seed; 32]))
         .unwrap();
     let fall = resolve_battle_fall(&mut world, id, 1, rules()).unwrap();
     assert!(fall.avoidance.unwrap().success);
@@ -1202,9 +1192,7 @@ async fn bridge_deck_fire_and_standing_share_native_lua_transactions() {
         let mut candidate = world.clone();
         candidate
             .btech
-            .rewrite_unit_record(id, |record| {
-                record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-            })
+            .set_unit_dice(id, BattleDice::seeded([seed; 32]))
             .unwrap();
         let native = Scripts::new(
             &config,
@@ -1483,9 +1471,7 @@ async fn bridge_jump_entry_underpass_and_interrupted_hex_update_replay_after_res
                 .unwrap();
             resumed
                 .btech
-                .rewrite_unit_record(id, |record| {
-                    record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-                })
+                .set_unit_dice(id, BattleDice::seeded([seed; 32]))
                 .unwrap();
             let stand = begin_battle_stand(
                 &mut resumed,
@@ -1679,10 +1665,7 @@ async fn bridge_deck_jumps_and_early_landings_share_native_lua_state() {
                     .unwrap();
                 current
                     .btech
-                    .rewrite_unit_record(id, |record| {
-                        record["dice"] =
-                            serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-                    })
+                    .set_unit_dice(id, BattleDice::seeded([seed; 32]))
                     .unwrap();
                 loaded.btech = current.btech.clone();
                 let native = Scripts::new(
@@ -3181,9 +3164,7 @@ async fn failed_under_ice_control_keeps_the_bottom_and_allows_standing() {
         .unwrap();
     world
         .btech
-        .rewrite_unit_record(id, |record| {
-            record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-        })
+        .set_unit_dice(id, BattleDice::seeded([seed; 32]))
         .unwrap();
     let report = begin_battle_stand(
         &mut world,
@@ -4163,9 +4144,7 @@ async fn character_fall_fractures_ice_with_nested_evacuation() {
         .unwrap();
     world
         .btech
-        .rewrite_unit_record(trigger, |record| {
-            record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-        })
+        .set_unit_dice(trigger, BattleDice::seeded([seed; 32]))
         .unwrap();
     let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
     let report = fall_battle_unit_action(&scripts, &config, trigger, 1, rules()).unwrap();
@@ -5244,9 +5223,7 @@ async fn woodland_impacts_commit_dice_terrain_and_notices_with_restart_replay() 
             .unwrap();
         world
             .btech
-            .rewrite_unit_record(shooter, |record| {
-                record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-            })
+            .set_unit_dice(shooter, BattleDice::seeded([seed; 32]))
             .unwrap();
         persistence::save(&config.database(), &world).await.unwrap();
         let mut replay = persistence::load(&config.database()).await.unwrap();

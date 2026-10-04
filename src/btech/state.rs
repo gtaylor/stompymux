@@ -573,7 +573,7 @@ impl BtechState {
 
     /// Drop the runtime-only state a serialization round trip never carries. Keep this
     /// in step with this type's `#[serde(skip)]` fields.
-    fn clear_runtime_state(&mut self) {
+    pub(super) fn clear_runtime_state(&mut self) {
         self.template_registry = Default::default();
         self.retire_sanctions = Default::default();
         self.autopilot_plans = Default::default();

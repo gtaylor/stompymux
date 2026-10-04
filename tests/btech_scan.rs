@@ -1598,9 +1598,7 @@ async fn long_range_elevation_rows_preserve_zero_space_and_water_depth() {
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     world
         .btech
-        .rewrite_unit_record(source, |record| {
-            record["power"] = serde_json::to_value(BattlePower::Off).unwrap();
-        })
+        .set_unit_power(source, BattlePower::Off)
         .unwrap();
     place_battle_unit(&mut world, source, map, 1, 1).unwrap();
     start_battle_unit(&mut world, source, ObjectId(1), true).unwrap();
@@ -2103,9 +2101,7 @@ async fn tactical_clipping_preserves_global_hex_parity_and_elevation() {
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     world
         .btech
-        .rewrite_unit_record(source, |record| {
-            record["power"] = serde_json::to_value(BattlePower::Off).unwrap();
-        })
+        .set_unit_power(source, BattlePower::Off)
         .unwrap();
     place_battle_unit(&mut world, source, map, 5, 1).unwrap();
     place_battle_unit(&mut world, target, map, 6, 1).unwrap();
@@ -2172,9 +2168,7 @@ async fn tactical_cliffs_use_signed_depth_thresholds_and_share_native_lua_output
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     world
         .btech
-        .rewrite_unit_record(source, |record| {
-            record["power"] = serde_json::to_value(BattlePower::Off).unwrap();
-        })
+        .set_unit_power(source, BattlePower::Off)
         .unwrap();
     place_battle_unit(&mut world, source, map, 1, 1).unwrap();
     place_battle_unit(&mut world, target, map, 2, 1).unwrap();
@@ -2675,9 +2669,7 @@ async fn findcenter_measures_continuous_position_without_sensor_hardware() {
     assert!(find_battle_hex_center(&world, source, ObjectId(3)).is_err());
     world
         .btech
-        .rewrite_unit_record(source, |record| {
-            record["power"] = serde_json::to_value(BattlePower::Off).unwrap();
-        })
+        .set_unit_power(source, BattlePower::Off)
         .unwrap();
     assert!(find_battle_hex_center(&world, source, ObjectId(1)).is_err());
 }
@@ -2783,9 +2775,7 @@ async fn navigation_keeps_even_center_on_single_hex_maps_with_off_map_surroundin
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     world
         .btech
-        .rewrite_unit_record(source, |record| {
-            record["power"] = serde_json::to_value(BattlePower::Off).unwrap();
-        })
+        .set_unit_power(source, BattlePower::Off)
         .unwrap();
     place_battle_unit(&mut world, source, map, 0, 0).unwrap();
     start_battle_unit(&mut world, source, ObjectId(1), true).unwrap();
@@ -4777,9 +4767,7 @@ async fn lateral_changes_delay_cancel_persist_and_move_without_turning_weapons()
     .unwrap();
     stopped
         .btech
-        .rewrite_unit_record(source, |record| {
-            record["power"] = serde_json::to_value(BattlePower::Off).unwrap();
-        })
+        .set_unit_power(source, BattlePower::Off)
         .unwrap();
     for _ in 0..5 {
         let _ = advance_battle_units(&mut stopped, 0);

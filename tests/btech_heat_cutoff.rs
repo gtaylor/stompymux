@@ -8,12 +8,7 @@ use stompymux_rs::*;
 
 /// Isolate thermal sampling from startup timers without changing any other saved state.
 fn reactor(world: &mut World, id: ObjectId, power: BattlePower) {
-    world
-        .btech
-        .rewrite_unit_record(id, |record| {
-            record["power"] = serde_json::to_value(power).unwrap();
-        })
-        .unwrap();
+    world.btech.set_unit_power(id, power).unwrap();
 }
 
 /// A powered-off cockpit, optionally placed on an authored environment tile.
@@ -136,9 +131,7 @@ async fn cutoff_cockpit_transition_and_restart() {
         support::seed_object_dice(&mut restored, ObjectId(1), support::FIXTURE_DICE_SEED);
         restored
             .btech
-            .rewrite_unit_record(id, |record| {
-                record["power"] = serde_json::to_value(BattlePower::Running).unwrap();
-            })
+            .set_unit_power(id, BattlePower::Running)
             .unwrap();
         advance_battle_heat(&mut restored);
         let unit = &restored.btech.constructed_units()[&id];

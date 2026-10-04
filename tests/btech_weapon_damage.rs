@@ -50,9 +50,7 @@ async fn critical_degradation_replays_and_survives_database_restart() {
             let mut world = base.clone();
             world
                 .btech
-                .rewrite_unit_record(id, |record| {
-                    record["dice"] = serde_json::to_value(BattleDice::seeded([value; 32])).unwrap();
-                })
+                .set_unit_dice(id, BattleDice::seeded([value; 32]))
                 .unwrap();
             let before = world.clone();
             let hit = BattleHit {

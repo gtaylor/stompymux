@@ -36,9 +36,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
 fn seed(world: &mut World, id: ObjectId, value: u8) {
     world
         .btech
-        .rewrite_unit_record(id, |record| {
-            record["dice"] = serde_json::to_value(BattleDice::seeded([value; 32])).unwrap();
-        })
+        .set_unit_dice(id, BattleDice::seeded([value; 32]))
         .unwrap();
 }
 

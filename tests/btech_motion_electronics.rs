@@ -1084,12 +1084,7 @@ fn install_test_electronics(
             );
     }
     BattleUnit::from_template(definition.clone()).unwrap();
-    world
-        .btech
-        .rewrite_unit_record(id, |record| {
-            record["definition"] = serde_json::to_value(definition).unwrap();
-        })
-        .unwrap();
+    world.btech.set_unit_definition(id, definition).unwrap();
 }
 
 /// Operating modes, team-sensitive fields and damage/shutdown loss survive database round trips.
@@ -2498,12 +2493,7 @@ fn install_test_stealth(world: &mut stompymux_rs::World, id: ObjectId) {
                 },
             );
     }
-    world
-        .btech
-        .rewrite_unit_record(id, |record| {
-            record["definition"] = serde_json::to_value(definition).unwrap();
-        })
-        .unwrap();
+    world.btech.set_unit_definition(id, definition).unwrap();
 }
 
 /// Saved switches complete at thirty ticks; damage/shutdown clear effects and invalid expiries are consumed.
@@ -2767,12 +2757,7 @@ fn install_test_nss(world: &mut stompymux_rs::World, id: ObjectId) {
                 },
             );
     }
-    world
-        .btech
-        .rewrite_unit_record(id, |record| {
-            record["definition"] = serde_json::to_value(definition).unwrap();
-        })
-        .unwrap();
+    world.btech.set_unit_definition(id, definition).unwrap();
 }
 
 /// Device loss, shutdown and unavailable expiries clear NSS without supplying any ECM noise.
@@ -3330,12 +3315,7 @@ fn install_test_probe(
             );
     }
     BattleUnit::from_template(definition.clone()).unwrap();
-    world
-        .btech
-        .rewrite_unit_record(id, |record| {
-            record["definition"] = serde_json::to_value(definition).unwrap();
-        })
-        .unwrap();
+    world.btech.set_unit_definition(id, definition).unwrap();
 }
 
 /// Probe equipment adds mass and reach; the map switch and critical damage silence it, and the
@@ -4140,12 +4120,7 @@ async fn semiguided_native_lua_fire_and_matching_supply() {
     );
     assert_eq!(lua.world().btech, direct.btech);
     let mut empty = selected;
-    empty
-        .btech
-        .rewrite_unit_record(shooter, |record| {
-            record["ammunition"][0] = 0.into();
-        })
-        .unwrap();
+    empty.btech.set_unit_ammunition_bin(shooter, 0, 0).unwrap();
     let before = empty.btech.clone();
     assert!(resolve_battle_shot(&mut empty, shooter, ObjectId(1), target, index, rules).is_err());
     assert_eq!(empty.btech, before);
@@ -5927,9 +5902,7 @@ async fn hex_surface_weapon_native_lua_character_rollback() {
     support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
     world
         .btech
-        .rewrite_unit_record(target, |record| {
-            record["power"] = serde_json::to_value(BattlePower::Running).unwrap();
-        })
+        .set_unit_power(target, BattlePower::Running)
         .unwrap();
     let passenger = world.create(&config, "Ice passenger".into(), Kind::Player);
     world.objects.get_mut(&passenger).unwrap().location = Some(target);
@@ -8055,9 +8028,7 @@ async fn rapid_misload_balance_feedback_stays_private() {
         let mut before = base.clone();
         before
             .btech
-            .rewrite_unit_record(id, |record| {
-                record["dice"] = serde_json::to_value(BattleDice::seeded(seed)).unwrap();
-            })
+            .set_unit_dice(id, BattleDice::seeded(seed))
             .unwrap();
         let scripts = Scripts::new(
             &config,

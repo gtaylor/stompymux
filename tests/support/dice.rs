@@ -59,13 +59,22 @@ fn seed_holders(world: &mut World, seed: u64, select: impl Fn(ObjectId) -> bool)
         .filter(|id| select(*id))
         .collect();
     for id in units {
-        world
-            .btech
-            .rewrite_unit_record(id, |record| {
-                record["dice"] = stream(seed, Holder::Unit, id);
-                record["crew_recovery"]["dice"] = stream(seed, Holder::CrewRecovery, id);
-            })
-            .unwrap();
+        let unit = BattleDice::seeded(stream_seed(seed, Holder::Unit, id));
+        let crew = BattleDice::seeded(stream_seed(seed, Holder::CrewRecovery, id));
+        if world.btech.vehicles().contains_key(&id) {
+            // A vehicle edit re-decodes and validates its whole record, so set both
+            // streams in one pass.
+            world
+                .btech
+                .rewrite_unit_record(id, |record| {
+                    record["dice"] = serde_json::to_value(unit).unwrap();
+                    record["crew_recovery"]["dice"] = serde_json::to_value(crew).unwrap();
+                })
+                .unwrap();
+            continue;
+        }
+        world.btech.set_unit_dice(id, unit).unwrap();
+        world.btech.set_unit_crew_recovery_dice(id, crew).unwrap();
     }
     let players: Vec<ObjectId> = world
         .btech
@@ -75,12 +84,8 @@ fn seed_holders(world: &mut World, seed: u64, select: impl Fn(ObjectId) -> bool)
         .filter(|id| select(*id))
         .collect();
     for player in players {
-        world
-            .btech
-            .rewrite_recovery_record(player, |record| {
-                record["dice"] = stream(seed, Holder::PlayerRecovery, player);
-            })
-            .unwrap();
+        let dice = BattleDice::seeded(stream_seed(seed, Holder::PlayerRecovery, player));
+        world.btech.set_recovery_dice(player, dice).unwrap();
     }
     let maps: Vec<ObjectId> = world
         .btech
@@ -90,21 +95,9 @@ fn seed_holders(world: &mut World, seed: u64, select: impl Fn(ObjectId) -> bool)
         .filter(|id| select(*id))
         .collect();
     for map in maps {
-        world
-            .btech
-            .rewrite_map_record(map, |record| {
-                if record["fire_dice"].is_null() {
-                    return;
-                }
-                record["fire_dice"] = stream(seed, Holder::MapFire, map);
-            })
-            .unwrap();
+        let dice = BattleDice::seeded(stream_seed(seed, Holder::MapFire, map));
+        world.btech.replace_map_fire_dice(map, dice).unwrap();
     }
-}
-
-/// The serialized stream for one holder.
-fn stream(seed: u64, holder: Holder, id: ObjectId) -> serde_json::Value {
-    serde_json::to_value(BattleDice::seeded(stream_seed(seed, holder, id))).unwrap()
 }
 
 /// Derive a 32-byte ChaCha key from the base seed, holder kind and identity.

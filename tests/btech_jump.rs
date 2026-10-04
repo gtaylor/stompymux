@@ -978,9 +978,7 @@ fn seed_airborne_critical(
         .unwrap();
     world
         .btech
-        .rewrite_unit_record(id, |record| {
-            record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-        })
+        .set_unit_dice(id, BattleDice::seeded([seed; 32]))
         .unwrap();
     let mut expected = BattleDice::seeded([seed; 32]);
     expected.two_d6(); // Material entry.
@@ -1746,9 +1744,7 @@ async fn early_landing_native_lua_success_failure_and_rollback_share_current_poi
             .unwrap();
         world
             .btech
-            .rewrite_unit_record(id, |record| {
-                record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-            })
+            .set_unit_dice(id, BattleDice::seeded([seed; 32]))
             .unwrap();
         let point = world.btech.constructed_units()[&id].motion().unwrap().point;
         persistence::save(&config.database(), &world).await.unwrap();
@@ -1839,9 +1835,7 @@ async fn early_landing_success_still_checks_damaged_landing_gear() {
         .unwrap();
     world
         .btech
-        .rewrite_unit_record(id, |record| {
-            record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-        })
+        .set_unit_dice(id, BattleDice::seeded([seed; 32]))
         .unwrap();
     let notices = land_battle_jump(
         &mut world,
@@ -2890,12 +2884,7 @@ async fn restarted_free_fall_can_land_and_retains_its_pending_impact() {
                 (check.two_d6() == roll).then_some(dice)
             })
             .unwrap();
-        world
-            .btech
-            .rewrite_unit_record(id, |record| {
-                record["dice"] = serde_json::to_value(dice).unwrap();
-            })
-            .unwrap();
+        world.btech.set_unit_dice(id, dice).unwrap();
         let before = world.btech.clone();
         let native = Scripts::new(
             &config,
@@ -2979,9 +2968,7 @@ async fn powered_off_free_fall_stabilization_counts_down_through_restart() {
     let (_dir, config, mut world, id) = runtime_fixture().await;
     world
         .btech
-        .rewrite_unit_record(id, |record| {
-            record["dice"] = serde_json::to_value(BattleDice::seeded([1; 32])).unwrap();
-        })
+        .set_unit_dice(id, BattleDice::seeded([1; 32]))
         .unwrap();
     launch_battle_jump(&mut world, id, ObjectId(1), 0, 1.0).unwrap();
     stop_battle_unit(&mut world, id, ObjectId(1), jump_rules()).unwrap();
@@ -3068,11 +3055,7 @@ async fn tcp_free_fall_retries_shutdown_and_impact_saves_across_restart() {
     tokio::task::LocalSet::new().run_until(async {
         let (_dir, config, mut world, id) = runtime_fixture().await;
         launch_battle_jump(&mut world, id, ObjectId(1), 0, 1.0).unwrap();
-        world.btech
-            .rewrite_unit_record(id, |record| {
-        record["dice"] = serde_json::to_value(BattleDice::seeded([1; 32])).unwrap();
-        })
-            .unwrap();
+        world.btech.set_unit_dice(id, BattleDice::seeded([1; 32])).unwrap();
         persistence::save(&config.database(), &world).await.unwrap();
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         sqlx::query("UPDATE player_state SET password_hash=? WHERE object_dbref=1").bind(accounts::hash("secret", &config).unwrap()).execute(&mut sql).await.unwrap();
@@ -3318,9 +3301,7 @@ async fn jump_observers_cover_launch_landings_damage_and_transaction_replay() {
             .unwrap();
         world
             .btech
-            .rewrite_unit_record(id, |record| {
-                record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-            })
+            .set_unit_dice(id, BattleDice::seeded([seed; 32]))
             .unwrap();
         persistence::save(&config.database(), &world).await.unwrap();
         let mut restored = persistence::load(&config.database()).await.unwrap();
@@ -3491,9 +3472,7 @@ async fn improved_jet_group_loss_flight_and_adapter_replay() {
     use stompymux_rs::*;
     let (_dir, config, mut base, id) = runtime_fixture().await;
     base.btech
-        .rewrite_unit_record(id, |record| {
-            record["definition"] = serde_json::to_value(improved_jet_template()).unwrap();
-        })
+        .set_unit_definition(id, improved_jet_template())
         .unwrap();
     base.validate(&config).unwrap();
     let (observer, _witness) = jump_observer(&mut base, &config, id);
@@ -3933,9 +3912,9 @@ async fn dfa_launch_fixed_destination_and_saved_intent() {
     );
     world
         .btech
-        .rewrite_unit_record(target, |record| {
-            record["motion"]["speed"] = 21.5.into();
-            record["motion"]["desired_speed"] = 21.5.into();
+        .edit_unit_motion(target, |motion| {
+            motion.speed = 21.5;
+            motion.desired_speed = 21.5;
         })
         .unwrap();
     let rules = BattleMovementRules {
@@ -4093,9 +4072,7 @@ async fn dfa_landing_dispatch_and_saved_replay() {
         .unwrap();
     world
         .btech
-        .rewrite_unit_record(id, |record| {
-            record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-        })
+        .set_unit_dice(id, BattleDice::seeded([seed; 32]))
         .unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
     let mut loaded = persistence::load(&config.database()).await.unwrap();
@@ -4375,9 +4352,7 @@ async fn character_free_fall_action_replays_and_rolls_back_casualties() {
             .unwrap();
         world
             .btech
-            .rewrite_unit_record(id, |record| {
-                record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-            })
+            .set_unit_dice(id, BattleDice::seeded([seed; 32]))
             .unwrap();
         let baseline = world.clone();
         assert!(advance_battle_jumps(&mut world, movement).is_err());
@@ -4902,10 +4877,7 @@ async fn character_landing_control_experience_and_restart() {
                     .unwrap();
                 world
                     .btech
-                    .rewrite_unit_record(id, |record| {
-                        record["dice"] =
-                            serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-                    })
+                    .set_unit_dice(id, BattleDice::seeded([seed; 32]))
                     .unwrap();
                 let mut channel = Channel::new("MechPilotXP".into());
                 channel.users.push(communication::Membership {
@@ -5133,12 +5105,7 @@ async fn character_manual_landing_adapters_and_casualty_rollback() {
                     (probe.two_d6() == 12 && probe.two_d6() == 12).then_some(dice)
                 })
                 .unwrap();
-            world
-                .btech
-                .rewrite_unit_record(id, |record| {
-                    record["dice"] = serde_json::to_value(dice).unwrap();
-                })
-                .unwrap();
+            world.btech.set_unit_dice(id, dice).unwrap();
             let mut channel = Channel::new("MechPilotXP".into());
             channel.users.push(communication::Membership {
                 who: pilot,

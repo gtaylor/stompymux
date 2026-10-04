@@ -36,9 +36,7 @@ async fn hill_lane(length: usize) -> (tempfile::TempDir, Config, World, ObjectId
 fn running(world: &mut World, id: ObjectId) {
     world
         .btech
-        .rewrite_unit_record(id, |record| {
-            record["power"] = serde_json::to_value(BattlePower::Running).unwrap();
-        })
+        .set_unit_power(id, BattlePower::Running)
         .unwrap();
 }
 
@@ -125,12 +123,7 @@ fn target(world: &mut World, config: &Config, map: ObjectId, y: i64) -> ObjectId
 
 /// Administratively move a running unit, which requires a brief shutdown.
 fn relocate(world: &mut World, id: ObjectId, map: ObjectId, y: i64) {
-    world
-        .btech
-        .rewrite_unit_record(id, |record| {
-            record["power"] = serde_json::to_value(BattlePower::Off).unwrap();
-        })
-        .unwrap();
+    world.btech.set_unit_power(id, BattlePower::Off).unwrap();
     place_battle_unit(world, id, map, 0, y).unwrap();
     running(world, id);
 }

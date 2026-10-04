@@ -38,9 +38,7 @@ async fn critical_jams_select_unaffected_weapons_and_replay_powered_recovery() {
         fixture(include_str!("../game/mechs/Demolisher.toml")).await;
     world
         .btech
-        .rewrite_unit_record(id, |record| {
-            record["dice"] = serde_json::to_value(BattleDice::seeded([31; 32])).unwrap();
-        })
+        .set_unit_dice(id, BattleDice::seeded([31; 32]))
         .unwrap();
     let checkpoint = world.btech.clone();
     assert!(

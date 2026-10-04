@@ -186,9 +186,7 @@ async fn vehicle_coordinate_misload_is_tagged_and_rolls_back_with_terrain_action
         .unwrap();
     world
         .btech
-        .rewrite_unit_record(shooter, |record| {
-            record["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-        })
+        .set_unit_dice(shooter, BattleDice::seeded([seed; 32]))
         .unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
     let lua = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
@@ -366,9 +364,7 @@ async fn character_coordinate_misload_publishes_injuries_and_rolls_back_failed_e
             .unwrap();
         world
             .btech
-            .rewrite_unit_record(shooter, |record| {
-                record["dice"] = serde_json::to_value(BattleDice::seeded(seed)).unwrap();
-            })
+            .set_unit_dice(shooter, BattleDice::seeded(seed))
             .unwrap();
         persistence::save(&config.database(), &world).await.unwrap();
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();

@@ -190,10 +190,7 @@ pub(crate) fn expected_grass_miss_rolls(mut roll: impl FnMut() -> u8) {
 pub(crate) fn shot_seed(world: &mut stompymux_rs::World, id: ObjectId, seed: u8) {
     world
         .btech
-        .rewrite_unit_record(id, |record| {
-            record["dice"] =
-                serde_json::to_value(stompymux_rs::BattleDice::seeded([seed; 32])).unwrap();
-        })
+        .set_unit_dice(id, stompymux_rs::BattleDice::seeded([seed; 32]))
         .unwrap();
 }
 
@@ -487,9 +484,9 @@ pub(crate) fn prepare_test_charge(world: &mut stompymux_rs::World, id: ObjectId)
     .unwrap();
     world
         .btech
-        .rewrite_unit_record(id, |record| {
-            record["motion"]["speed"] = 21.5.into();
-            record["motion"]["desired_speed"] = 21.5.into();
+        .edit_unit_motion(id, |motion| {
+            motion.speed = 21.5;
+            motion.desired_speed = 21.5;
         })
         .unwrap();
 }

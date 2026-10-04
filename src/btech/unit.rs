@@ -468,6 +468,11 @@ super::saved_parts::saved_parts!(BattleUnit {
 });
 
 impl BattleUnit {
+    /// Replace the construction template in place, for fixtures that edit it.
+    pub(super) fn set_fixture_definition(&mut self, definition: BattleTemplate) {
+        self.definition = definition;
+    }
+
     pub(crate) fn administrative_raw(&self) -> Option<&super::AdministrativeRawUnit> {
         self.administrative_raw.as_ref()
     }

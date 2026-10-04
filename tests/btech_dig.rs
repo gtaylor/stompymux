@@ -186,9 +186,9 @@ async fn dug_in_cover_is_shared_by_mech_and_vehicle_aim_with_arc_and_height_gate
         ] {
             world
                 .btech
-                .rewrite_unit_record(target, |record| {
-                    record["motion"]["heading"] = heading.into();
-                    record["motion"]["desired_heading"] = heading.into();
+                .edit_unit_motion(target, |motion| {
+                    motion.heading = heading;
+                    motion.desired_heading = heading;
                 })
                 .unwrap();
             assert_eq!(
@@ -211,9 +211,9 @@ async fn dug_in_cover_is_shared_by_mech_and_vehicle_aim_with_arc_and_height_gate
         }
         world
             .btech
-            .rewrite_unit_record(target, |record| {
-                record["motion"]["heading"] = 180.0.into();
-                record["motion"]["desired_heading"] = 180.0.into();
+            .edit_unit_motion(target, |motion| {
+                motion.heading = 180.0;
+                motion.desired_heading = 180.0;
             })
             .unwrap();
         assert_eq!(
@@ -298,9 +298,7 @@ async fn dug_in_turret_routing_uses_the_41_42_boundary_for_each_hit_table() {
                 .unwrap();
             world
                 .btech
-                .rewrite_unit_record(id, |record| {
-                    record["dice"] = serde_json::to_value(BattleDice::seeded(seed)).unwrap();
-                })
+                .set_unit_dice(id, BattleDice::seeded(seed))
                 .unwrap();
             let mut replay = world.clone();
             let mut rules = BattleVehicleImpactRules::STANDARD;

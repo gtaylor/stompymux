@@ -35,9 +35,7 @@ async fn ground_fixture() -> (tempfile::TempDir, Config, World, ObjectId, Object
     // the ordinary startup state machine is covered by the BTech power scenarios.
     world
         .btech
-        .rewrite_unit_record(unit, |record| {
-            record["power"] = serde_json::to_value(BattlePower::Running).unwrap();
-        })
+        .set_unit_power(unit, BattlePower::Running)
         .unwrap();
     world.validate(&config).unwrap();
     (directory, config, world, map, unit)

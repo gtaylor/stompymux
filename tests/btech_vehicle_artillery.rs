@@ -413,9 +413,7 @@ async fn character_artillery_heat_evacuates_atomically_with_the_flight_cursor() 
         .unwrap();
     world
         .btech
-        .rewrite_unit_record(id, |record| {
-            record["dice"] = serde_json::to_value(BattleDice::seeded(seed)).unwrap();
-        })
+        .set_unit_dice(id, BattleDice::seeded(seed))
         .unwrap();
     let mut flight = approaching(&mut world, map, BattleArtilleryMode::Standard);
     world

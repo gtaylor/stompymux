@@ -50,10 +50,7 @@ async fn plasma_heat_transfer_unwind_and_saved_dice_replay() {
                 let mut before = scenario.clone();
                 before
                     .btech
-                    .rewrite_unit_record(id, |record| {
-                        record["dice"] =
-                            serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
-                    })
+                    .set_unit_dice(id, BattleDice::seeded([seed; 32]))
                     .unwrap();
                 let mut ordinary = before.clone();
                 let report = resolve_battle_salvo(
