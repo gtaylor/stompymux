@@ -320,6 +320,7 @@ async fn ams_native_lua_controls_fire_and_rollback() {
         install_test_ams(&mut world, target, weapon);
         world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(target);
         assign_battle_pilot(&mut world, target, ObjectId(2)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, target, ObjectId(2), true).unwrap();
         for _ in 0..5 {
             advance_battle_units(&mut world, 0);
@@ -1684,6 +1685,7 @@ async fn electronics_flooding_and_map_membership() {
         BattleMapAsset::from_cells(&format!("12 12\n{}", format!("{row}\n").repeat(12))).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, other, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, target, other, 5, 5).unwrap();
     assert_eq!(
         battle_electronic_field(&world, target).unwrap(),
@@ -3119,6 +3121,7 @@ async fn radar_fixture() -> (
         BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, target, map, 5, 4).unwrap();
     world
         .btech
@@ -3853,10 +3856,12 @@ async fn tag_takeover_and_rejected_targets() {
     let map = world.btech.constructed_units()[&id].position().unwrap().map;
     let other = world.create(&config, "Other tagger".into(), Kind::Thing);
     create_battle_unit(&mut world, other, definition).unwrap();
+    support::seed_object_dice(&mut world, other, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, other, map, 5, 6).unwrap();
     release_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(other);
     assign_battle_pilot(&mut world, other, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, other, ObjectId(1), true).unwrap();
     for _ in 0..5 {
         advance_battle_units(&mut world, 0);
@@ -3952,6 +3957,7 @@ async fn semiguided_fixture() -> (
     release_battle_pilot(&mut world, tagger, ObjectId(1)).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(shooter);
     assign_battle_pilot(&mut world, shooter, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, shooter, ObjectId(1), true).unwrap();
     for _ in 0..5 {
         advance_battle_units(&mut world, 0);
@@ -4155,11 +4161,13 @@ async fn spotter_fixture() -> (
     release_battle_pilot(&mut world, shooter, ObjectId(1)).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(observer);
     assign_battle_pilot(&mut world, observer, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     select_battle_spotter(&mut world, observer, ObjectId(1), Some(observer)).unwrap();
     select_battle_target(&mut world, observer, ObjectId(1), Some(target)).unwrap();
     release_battle_pilot(&mut world, observer, ObjectId(1)).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(shooter);
     assign_battle_pilot(&mut world, shooter, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     refresh_battle_contacts(&mut world, &[shooter]).unwrap();
     select_battle_spotter(&mut world, shooter, ObjectId(1), Some(observer)).unwrap();
     (dir, config, world, shooter, target, observer, index)
@@ -6744,6 +6752,7 @@ async fn speed_demon_acceleration_braking_and_restart_use_the_assigned_pilot() {
         },
     )
     .unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     set_battle_character_value(
         &mut world,
         ObjectId(1),
@@ -7178,6 +7187,7 @@ async fn stinger_airborne_admission_and_shot_replay() {
         BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, target, map, 5, 4).unwrap();
     let index = world.btech.constructed_units()[&id]
         .loadout()
@@ -7209,6 +7219,7 @@ async fn stinger_airborne_admission_and_shot_replay() {
     assert_eq!(world.btech, before);
     world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(target);
     assign_battle_pilot(&mut world, target, ObjectId(2)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, target, ObjectId(2), false).unwrap();
     for _ in 0..30 {
         advance_battle_units(&mut world, 0);

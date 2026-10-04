@@ -18,6 +18,7 @@ async fn vehicles_save_damage_replay_and_purge_with_their_objects() {
             .unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     assert_eq!(world.btech.units()[&id].class_code, 1);
     assert_eq!(world.btech.units()[&id].movement_code, 1);
     assert!(!world.btech.constructed_units().contains_key(&id));

@@ -166,6 +166,7 @@ async fn hiding_authority_and_cached_observer_rules() {
                 .remove(Flag::Wizard);
             world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(id);
             assign_battle_pilot(&mut world, id, ObjectId(2)).unwrap();
+            support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
             let before = world.btech.clone();
             let result = begin_battle_hiding(&mut world, id, ObjectId(2));
             if !camouflage {
@@ -180,9 +181,11 @@ async fn hiding_authority_and_cached_observer_rules() {
                 .unwrap()
                 .create(&mut world, observer)
                 .unwrap();
+            support::seed_object_dice(&mut world, observer, support::FIXTURE_DICE_SEED);
             place_battle_unit(&mut world, observer, map, 1, 0).unwrap();
             world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(observer);
             assign_battle_pilot(&mut world, observer, ObjectId(1)).unwrap();
+            support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
             start_battle_unit(&mut world, observer, ObjectId(1), true).unwrap();
             for _ in 0..5 {
                 advance_battle_units(&mut world, 0);
@@ -833,6 +836,11 @@ async fn weapons_hold_authority_and_rejected_edits_are_atomic() {
         )
         .unwrap();
         assign_battle_pilot(&mut scripts.world_mut(), id, ObjectId(1)).unwrap();
+        support::seed_object_dice(
+            &mut scripts.world_mut(),
+            ObjectId(1),
+            support::FIXTURE_DICE_SEED,
+        );
         let stopped = scripts.world().btech.clone();
         for command in ["fire nonsense", "firetic nonsense"] {
             let text = support::run_text(&scripts, &config, ObjectId(1), 1, command);

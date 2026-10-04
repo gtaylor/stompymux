@@ -16,6 +16,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
         BattleMapAsset::from_cells("2 2\n.1.1\n.1&1\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(map);
     persistence::save(&config.database(), &world).await.unwrap();
     let mut sql = sqlx::SqliteConnection::connect_with(

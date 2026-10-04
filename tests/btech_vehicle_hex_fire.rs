@@ -247,6 +247,7 @@ fn character_crew(world: &mut World, shooter: ObjectId) {
     )
     .unwrap();
     assign_battle_pilot(world, shooter, ObjectId(2)).unwrap();
+    support::seed_object_dice(world, ObjectId(2), support::FIXTURE_DICE_SEED);
 }
 
 #[tokio::test]

@@ -130,8 +130,10 @@ async fn cutoff_cockpit_transition_and_restart() {
             BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut restored, map, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut restored, id, map, 0, 0).unwrap();
         assign_battle_pilot(&mut restored, id, ObjectId(1)).unwrap();
+        support::seed_object_dice(&mut restored, ObjectId(1), support::FIXTURE_DICE_SEED);
         restored
             .btech
             .rewrite_unit_record(id, |record| {

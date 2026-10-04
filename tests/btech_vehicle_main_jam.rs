@@ -154,6 +154,7 @@ async fn main_jam_recovers_on_next_powered_update_only_when_already_recycling() 
         persistence::save(&config.database(), &world).await.unwrap();
         let mut loaded = persistence::load(&config.database()).await.unwrap();
         assign_battle_pilot(&mut loaded, id, ObjectId(1)).unwrap();
+        support::seed_object_dice(&mut loaded, ObjectId(1), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut loaded, id, ObjectId(1), true).unwrap();
         for _ in 0..5 {
             advance_battle_units(&mut loaded, 0);

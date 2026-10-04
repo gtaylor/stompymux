@@ -108,6 +108,11 @@ async fn reassignment_preserves_drops_and_detached_update_retires_them() {
             BattleMapAsset::from_cells("1 2\n.0\n.0\n").unwrap(),
         )
         .unwrap();
+        crate::support::seed_object_dice(
+            &mut world,
+            destination,
+            crate::support::FIXTURE_DICE_SEED,
+        );
         let report = reassign_battle_map(&mut world, unit, destination, None).unwrap();
         assert!(report.reset_origin);
         assert_eq!(drop_state(&world, unit).unwrap().elevation(), 300);

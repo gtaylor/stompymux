@@ -793,6 +793,7 @@ async fn mine_blast_disables_a_later_vehicle_before_its_scheduled_movement() {
         .unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, other, support::FIXTURE_DICE_SEED);
     place_battle_unit(
         &mut world,
         other,
@@ -1024,6 +1025,7 @@ async fn ground_vehicles_cross_crowded_hexes_without_stacking_effects() {
                 .unwrap(),
             )
             .unwrap();
+            support::seed_object_dice(&mut world, other, support::FIXTURE_DICE_SEED);
         } else {
             create_battle_unit(
                 &mut world,
@@ -1032,6 +1034,7 @@ async fn ground_vehicles_cross_crowded_hexes_without_stacking_effects() {
                     .unwrap(),
             )
             .unwrap();
+            support::seed_object_dice(&mut world, other, support::FIXTURE_DICE_SEED);
         }
         place_battle_unit(&mut world, other, map, 3, 1).unwrap();
         occupants.push(other);

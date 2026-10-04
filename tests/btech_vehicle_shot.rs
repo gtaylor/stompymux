@@ -107,6 +107,7 @@ async fn engagement() -> (tempfile::TempDir, Config, World, ObjectId, [ObjectId;
     power(&mut world, &ids, BattlePower::Running);
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(ids[2]);
     assign_battle_pilot(&mut world, ids[2], ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     refresh_battle_contacts(&mut world, &[ids[2]]).unwrap();
     (dir, config, world, map, ids)
 }

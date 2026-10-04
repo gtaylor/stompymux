@@ -31,6 +31,7 @@ async fn preferred_sections_controls_feed_and_restart() {
                 .criticals
                 .insert(0, bin.clone());
             create_battle_vehicle(&mut world, id, definition).unwrap();
+            support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
             let loadout = world.btech.vehicles()[&id].loadout().unwrap();
             let weapon_type = loadout
                 .ammunition
@@ -74,6 +75,7 @@ async fn preferred_sections_controls_feed_and_restart() {
                 .criticals
                 .insert(3, bin);
             create_battle_unit(&mut world, id, definition).unwrap();
+            support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
             let loadout = world.btech.constructed_units()[&id].loadout().unwrap();
             let weapon_type = loadout
                 .ammunition
@@ -104,6 +106,7 @@ async fn preferred_sections_controls_feed_and_restart() {
         };
         world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
         assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         assert!(
             set_battle_ammunition_section(&mut world, id, ObjectId(1), weapon, Some(preference))
                 .is_err()
@@ -116,8 +119,10 @@ async fn preferred_sections_controls_feed_and_restart() {
             BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut world, id, map, 0, 0).unwrap();
         assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         let before = scripts.world().btech.clone();
         assert!(

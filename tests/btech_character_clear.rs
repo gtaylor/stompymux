@@ -174,6 +174,7 @@ async fn clear_preserves_mech_and_vehicle_pilot_state() {
             },
         )
         .unwrap();
+        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         injure_battle_character_pilot(&mut world, unit, 1, false).unwrap();
         let before = world.btech.clone();
         clear_battle_character(&mut world, ObjectId(1), ObjectId(1)).unwrap();

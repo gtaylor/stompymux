@@ -44,6 +44,7 @@ async fn damage_piloting_and_template_lifecycle_match_zero_return_contracts() {
         assert(select('#',btech.unit.save_template(unit,'saved-contract'))==0)
     "#).unwrap();
     assign_battle_pilot(&mut scripts.world_mut(), id, pilot).unwrap();
+    support::seed_object_dice(&mut scripts.world_mut(), pilot, support::FIXTURE_DICE_SEED);
     scripts
         .eval_callback::<()>(
             r#"
@@ -61,6 +62,7 @@ async fn damage_piloting_and_template_lifecycle_match_zero_return_contracts() {
         )
         .unwrap();
     assign_battle_pilot(&mut scripts.world_mut(), id, pilot).unwrap();
+    support::seed_object_dice(&mut scripts.world_mut(), pilot, support::FIXTURE_DICE_SEED);
     scripts.eval_callback::<()>(r#"
         local unit=mux.world.object(unit_id)
         btech.unit.radio_frequency(unit_id,pilot_id,0,456)
@@ -92,6 +94,7 @@ async fn critical_weapon_ammunition_modes_and_special_edits_are_strict() {
         BattleTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     let root = config.path(&config.database.mech_database);
     std::fs::create_dir_all(&root).unwrap();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
@@ -255,6 +258,7 @@ async fn vehicle_operations_cover_live_damage_falls_templates_and_equipment() {
         .flags
         .insert(Flag::Connected);
     assign_battle_pilot(&mut world, target, observer).unwrap();
+    support::seed_object_dice(&mut world, observer, support::FIXTURE_DICE_SEED);
     refresh_battle_contacts(&mut world, &[target]).unwrap();
     let root = config.path(&config.database.mech_database);
     std::fs::create_dir_all(&root).unwrap();
@@ -552,6 +556,7 @@ async fn weapon_install_accepts_native_slot_layouts() {
         BattleTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     let paired = stompymux_rs::btech::part_catalogue()
         .iter()
         .find(|part| {
@@ -640,6 +645,7 @@ async fn raw_registered_criticals_survive_restart() {
         BattleTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     scripts
         .inspect_lua()
@@ -896,6 +902,7 @@ async fn every_unit_operation_is_unavailable_while_checking() {
         BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     let checking = Scripts::from_sources(
         &config,

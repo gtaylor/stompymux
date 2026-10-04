@@ -320,6 +320,11 @@ async fn self_destruct_admission_stop_and_atomic_cancel() {
     assert!(self_destruct_action(&scripts, &config, id, ObjectId(2), "stop override").is_err());
     assert_eq!(scripts.world().btech, pending);
     assign_battle_pilot(&mut scripts.world_mut(), id, ObjectId(1)).unwrap();
+    support::seed_object_dice(
+        &mut scripts.world_mut(),
+        ObjectId(1),
+        support::FIXTURE_DICE_SEED,
+    );
     assert!(self_destruct_action(&scripts, &config, id, ObjectId(1), "stop").is_err());
     let assigned = scripts.world().btech.clone();
     assert!(
@@ -352,9 +357,19 @@ async fn self_destruct_admission_stop_and_atomic_cancel() {
     );
     self_destruct_action(&scripts, &enabled, id, ObjectId(1), "reactor").unwrap();
     assign_battle_pilot(&mut scripts.world_mut(), id, ObjectId(1)).unwrap();
+    support::seed_object_dice(
+        &mut scripts.world_mut(),
+        ObjectId(1),
+        support::FIXTURE_DICE_SEED,
+    );
     self_destruct_action(&scripts, &enabled, id, ObjectId(1), "stop").unwrap();
     self_destruct_action(&scripts, &enabled, id, ObjectId(1), "reactor").unwrap();
     assign_battle_pilot(&mut scripts.world_mut(), id, ObjectId(1)).unwrap();
+    support::seed_object_dice(
+        &mut scripts.world_mut(),
+        ObjectId(1),
+        support::FIXTURE_DICE_SEED,
+    );
     stop_battle_unit(
         &mut scripts.world_mut(),
         id,
@@ -417,10 +432,12 @@ async fn self_destruct_order_and_failed_tick_replay() {
         BattleTemplate::parse("Daishi-H", include_str!("../game/mechs/Daishi-H.toml")).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, second, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, second, map, 0, 0).unwrap();
     let pilot = ObjectId(2);
     world.objects.get_mut(&pilot).unwrap().location = Some(second);
     assign_battle_pilot(&mut world, second, pilot).unwrap();
+    support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, second, pilot, true).unwrap();
     for _ in 0..5 {
         advance_battle_units(&mut world, 0);

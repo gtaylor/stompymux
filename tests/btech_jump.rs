@@ -334,6 +334,7 @@ async fn connected_jump_domain_updates_height_heat_landing_and_stabilization_aft
         BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, observer, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, observer, map, 3, 4).unwrap();
     set_battle_speed(&mut world, id, ObjectId(1), 32.25).unwrap();
     launch_battle_jump(&mut world, id, ObjectId(1), 0, 2.0).unwrap();
@@ -918,6 +919,7 @@ async fn flooded_capacity_and_lua_inspection_survive_restart_without_mutation() 
         BattleMapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let id = world.create(&config, "Jump Jenner".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     create_battle_unit(
@@ -926,6 +928,7 @@ async fn flooded_capacity_and_lua_inspection_survive_restart_without_mutation() 
         BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
     // Flooding a previously damaged jet must not subtract its thrust a second time.
     stompymux_rs::destroy_battle_critical(
@@ -1573,9 +1576,11 @@ async fn airborne_fire_uses_shared_native_lua_transactions_and_saved_trajectorie
         BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut base, target, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut base, target, map, 5, 3).unwrap();
     base.objects.get_mut(&ObjectId(2)).unwrap().location = Some(target);
     assign_battle_pilot(&mut base, target, ObjectId(2)).unwrap();
+    support::seed_object_dice(&mut base, ObjectId(2), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut base, target, ObjectId(2), true).unwrap();
     for _ in 0..5 {
         advance_battle_units(&mut base, 0);
@@ -1599,6 +1604,7 @@ async fn airborne_fire_uses_shared_native_lua_transactions_and_saved_trajectorie
         },
     )
     .unwrap();
+    support::seed_object_dice(&mut base, ObjectId(1), support::FIXTURE_DICE_SEED);
     set_battle_character_value(
         &mut base,
         ObjectId(1),
@@ -2068,6 +2074,7 @@ fn jump_hills(
     .unwrap();
     place_battle_unit(world, id, map, 5, 5).unwrap();
     assign_battle_pilot(world, id, ObjectId(1)).unwrap();
+    support::seed_object_dice(world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(world, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
         advance_battle_units(world, 0);
@@ -2159,6 +2166,7 @@ async fn hill_collision_rolls_back_the_transition_then_lands_or_falls() {
                 },
             )
             .unwrap();
+            support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
             set_battle_character_value(
                 &mut world,
                 ObjectId(1),
@@ -2404,6 +2412,7 @@ async fn water_jump_fixture(
     .unwrap();
     place_battle_unit(&mut world, id, map, 5, 5).unwrap();
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
         advance_battle_units(&mut world, 0);
@@ -2519,6 +2528,7 @@ async fn shallow_water_launches_and_airborne_fire_above_deep_water_are_supported
         BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, target, map, 6, 2).unwrap();
     launch_battle_jump(&mut world, id, ObjectId(1), 0, 3.0).unwrap();
     for _ in 0..12 {
@@ -2787,6 +2797,7 @@ async fn free_fall_surface_contact_and_engine_restart_keep_the_event_cadence() {
         }
         world.btech = serde_json::from_value(state).unwrap();
         assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
         for second in 1..=impact_second {
             advance_battle_units(&mut world, 0);
@@ -3007,6 +3018,7 @@ async fn powered_off_free_fall_stabilization_counts_down_through_restart() {
     world = persistence::load(&config.database()).await.unwrap();
     assert_eq!(world.btech.constructed_units()[&id].jump_stabilization(), 7);
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
         advance_battle_units(&mut world, 0);
@@ -3214,6 +3226,7 @@ fn jump_observer(
         BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(world, observer, support::FIXTURE_DICE_SEED);
     let map = world.btech.constructed_units()[&subject]
         .position()
         .unwrap()
@@ -4265,6 +4278,7 @@ async fn dfa_landing_early_attack_uses_shared_policy() {
         },
     )
     .unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     set_battle_character_value(
         &mut world,
         ObjectId(1),
@@ -4448,6 +4462,7 @@ async fn character_water_landing_evacuates_and_retries() {
         .remove(Flag::Wizard);
     world.objects.get_mut(&pilot).unwrap().location = Some(id);
     assign_battle_pilot(&mut world, id, pilot).unwrap();
+    support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
     world
         .objects
         .get_mut(&id)
@@ -4468,6 +4483,7 @@ async fn character_water_landing_evacuates_and_retries() {
         },
     )
     .unwrap();
+    support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
     let baseline = world.clone();
     assert!(advance_battle_jumps(&mut world, movement).is_err());
     assert_eq!(world.btech, baseline.btech);
@@ -4692,6 +4708,7 @@ async fn character_jump_commands_land_and_rollback() {
             .insert(Flag::Connected);
         base.objects.get_mut(&pilot).unwrap().location = Some(unit);
         assign_battle_pilot(&mut base, unit, pilot).unwrap();
+        support::seed_object_dice(&mut base, pilot, support::FIXTURE_DICE_SEED);
         set_battle_character(
             &mut base,
             pilot,
@@ -4706,6 +4723,7 @@ async fn character_jump_commands_land_and_rollback() {
             },
         )
         .unwrap();
+        support::seed_object_dice(&mut base, pilot, support::FIXTURE_DICE_SEED);
         for name in ["Piloting-Biped", "Piloting-Battlemech"] {
             set_battle_character_value(
                 &mut base,
@@ -5550,6 +5568,7 @@ async fn jump_fields_cross_wrapping_seams_and_restart() {
                 BattleMapAsset::from_cells(&asset).unwrap(),
             )
             .unwrap();
+            support::seed_object_dice(&mut world, other, support::FIXTURE_DICE_SEED);
             reassign_battle_map(&mut world, id, other, None).unwrap();
             let edit = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
             let before = edit.world().btech.constructed_units()[&id]

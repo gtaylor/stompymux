@@ -18,6 +18,7 @@ fn profile(world: &mut World, player: ObjectId) {
         },
     )
     .unwrap();
+    crate::support::seed_object_dice(world, player, crate::support::FIXTURE_DICE_SEED);
     for (index, skill) in [
         "Gunnery-Battlemech",
         "Gunnery-Conventional",

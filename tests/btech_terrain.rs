@@ -45,6 +45,7 @@ async fn create(config: &Config, world: &mut World, id: ObjectId) {
         BattleMapAsset::from_cells(SOURCE).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(world, id, support::FIXTURE_DICE_SEED);
     persistence::save(&config.database(), world).await.unwrap();
 }
 

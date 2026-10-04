@@ -46,6 +46,7 @@ fn unit(world: &mut World, config: &Config, map: ObjectId, chassis: &str) -> Obj
         )
         .unwrap();
     }
+    support::seed_object_dice(world, id, support::FIXTURE_DICE_SEED);
     place_battle_unit(world, id, map, 0, 0).unwrap();
     id
 }

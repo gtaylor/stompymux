@@ -113,6 +113,11 @@ async fn repair_fixability_allows_only_vehicle_turret_or_vtol_rotor_loss() {
             stompymux_rs::BattleVehicleTemplate::parse("test", template).unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(
+            &mut s.world_mut(),
+            stompymux_rs::ObjectId(14),
+            support::FIXTURE_DICE_SEED,
+        );
         s.eval_callback::<()>("assert(btech.repair.is_fixable(mux.world.object(14)))")
             .unwrap();
         stompymux_rs::damage_battle_vehicle_phase(
@@ -224,8 +229,18 @@ async fn repair_apply_reattach_restores_only_destroyed_sections_and_rolls_back_f
     .unwrap();
     stompymux_rs::create_battle_unit(&mut s.world_mut(), stompymux_rs::ObjectId(14), template)
         .unwrap();
+    support::seed_object_dice(
+        &mut s.world_mut(),
+        stompymux_rs::ObjectId(14),
+        support::FIXTURE_DICE_SEED,
+    );
     stompymux_rs::register_empty_battle_unit(&mut s.world_mut(), stompymux_rs::ObjectId(15))
         .unwrap();
+    support::seed_object_dice(
+        &mut s.world_mut(),
+        stompymux_rs::ObjectId(15),
+        support::FIXTURE_DICE_SEED,
+    );
     // C mech_re_attach (mech_maintenance.c:501-514) only restores sections that
     // read as destroyed: armor and internal both exhausted for ground hulls.
     let snapshot = serde_json::to_value(&s.world().btech).unwrap();
@@ -294,6 +309,11 @@ async fn immediate_repairs_validate_exact_shapes_and_change_only_live_material()
     .unwrap();
     stompymux_rs::create_battle_unit(&mut s.world_mut(), stompymux_rs::ObjectId(14), template)
         .unwrap();
+    support::seed_object_dice(
+        &mut s.world_mut(),
+        stompymux_rs::ObjectId(14),
+        support::FIXTURE_DICE_SEED,
+    );
     s.eval_callback::<()>(r#"
       local u=mux.world.object(14);local r=btech.repair;local o=r.operations;local sec=btech.unit.sections
       local function zero(request) assert(select('#',r.apply(u,request))==0) end

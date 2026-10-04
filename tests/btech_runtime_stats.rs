@@ -93,6 +93,7 @@ async fn digging_alone_keeps_simulation_pending_until_completion() {
             BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
         let id = world.create(&config, "Digger".into(), Kind::Thing);
         let source = include_str!("../game/mechs/Demolisher.toml").replace(
             "movement = \"track\"",
@@ -102,9 +103,11 @@ async fn digging_alone_keeps_simulation_pending_until_completion() {
             .unwrap()
             .create(&mut world, id)
             .unwrap();
+        support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut world, id, map, 0, 0).unwrap();
         world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
         assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
         for _ in 0..5 {
             advance_battle_units(&mut world, 0);

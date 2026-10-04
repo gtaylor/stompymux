@@ -213,6 +213,7 @@ pub(crate) fn shot_skill(world: &mut stompymux_rs::World, level: u8) {
         },
     )
     .unwrap();
+    support::seed_object_dice(world, ObjectId(1), support::FIXTURE_DICE_SEED);
     stompymux_rs::set_battle_character_value(
         world,
         ObjectId(1),

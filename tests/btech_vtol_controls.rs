@@ -51,9 +51,11 @@ async fn obstacle_fixture(source: &str) -> (tempfile::TempDir, Config, World, Ob
         BattleMapAsset::from_cells(source).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut base, map, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut base, id, map, 0, 2).unwrap();
     base.objects.get_mut(&id).unwrap().location = Some(map);
     assign_battle_pilot(&mut base, id, ObjectId(2)).unwrap();
+    support::seed_object_dice(&mut base, ObjectId(2), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut base, id, ObjectId(2), false).unwrap();
     for _ in 0..30 {
         advance_battle_units(&mut base, 0);
@@ -74,6 +76,7 @@ async fn obstacle_fixture(source: &str) -> (tempfile::TempDir, Config, World, Ob
         },
     )
     .unwrap();
+    support::seed_object_dice(&mut base, ObjectId(2), support::FIXTURE_DICE_SEED);
     set_battle_character_value(
         &mut base,
         ObjectId(2),

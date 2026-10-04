@@ -28,6 +28,11 @@ async fn registered_unit_defaults_are_inspectable_without_constructed_runtime() 
         stompymux_rs::ObjectId(15),
     )
     .unwrap();
+    support::seed_object_dice(
+        &mut scripts.world_mut(),
+        stompymux_rs::ObjectId(15),
+        support::FIXTURE_DICE_SEED,
+    );
     let before = scripts.world().btech.clone();
     scripts
         .eval_callback::<()>(
@@ -77,6 +82,11 @@ async fn mech_inspection_projects_exact_record_shapes_and_keeps_the_old_report()
         template,
     )
     .unwrap();
+    support::seed_object_dice(
+        &mut scripts.world_mut(),
+        stompymux_rs::ObjectId(14),
+        support::FIXTURE_DICE_SEED,
+    );
     scripts.eval_callback::<()>(r#"
       local unit=mux.world.object(14)
       btech.unit.set_assigned_pilot(unit,mux.world.object(1))
@@ -224,6 +234,11 @@ async fn vehicle_inspection_uses_vehicle_sections_and_raw_slot_inventory() {
         template,
     )
     .unwrap();
+    support::seed_object_dice(
+        &mut scripts.world_mut(),
+        stompymux_rs::ObjectId(14),
+        support::FIXTURE_DICE_SEED,
+    );
     let root = config.path(&config.database.mech_database);
     std::fs::create_dir_all(&root).unwrap();
     std::fs::write(root.join("Demolisher.toml"), source).unwrap();
@@ -284,6 +299,11 @@ async fn inspection_getters_follow_c_argument_contracts() {
         template,
     )
     .unwrap();
+    support::seed_object_dice(
+        &mut scripts.world_mut(),
+        stompymux_rs::ObjectId(14),
+        support::FIXTURE_DICE_SEED,
+    );
     let before = scripts.world().btech.clone();
     scripts.eval_callback::<()>(r#"
       local unit=mux.world.object(14)
@@ -406,6 +426,11 @@ async fn engine_suspension_factor_matches_c_susp_factor() {
         template,
     )
     .unwrap();
+    support::seed_object_dice(
+        &mut scripts.world_mut(),
+        stompymux_rs::ObjectId(14),
+        support::FIXTURE_DICE_SEED,
+    );
     scripts
         .eval_callback::<()>(
             r#"
@@ -496,11 +521,21 @@ async fn parity_probe_vehicle_templates_load_and_project() {
         stompymux_rs::ObjectId(14),
     )
     .unwrap();
+    support::seed_object_dice(
+        &mut scripts.world_mut(),
+        stompymux_rs::ObjectId(14),
+        support::FIXTURE_DICE_SEED,
+    );
     stompymux_rs::btech::register_empty_battle_unit(
         &mut scripts.world_mut(),
         stompymux_rs::ObjectId(15),
     )
     .unwrap();
+    support::seed_object_dice(
+        &mut scripts.world_mut(),
+        stompymux_rs::ObjectId(15),
+        support::FIXTURE_DICE_SEED,
+    );
     scripts
         .eval_callback::<()>(
             r#"

@@ -246,6 +246,7 @@ async fn artillery_live_payloads_hit_without_glancing() {
             },
         )
         .unwrap();
+        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         set_battle_character_value(
             &mut world,
             ObjectId(1),
@@ -666,10 +667,12 @@ async fn artillery_observed_launch_and_link_revalidation() {
                     BattleMapAsset::from_cells("3 3\n.0.0.0\n.9.9.9\n.0.0.0\n").unwrap(),
                 )
                 .unwrap();
+                support::seed_object_dice(&mut world, ridge, support::FIXTURE_DICE_SEED);
                 for (unit, pilot, y) in [(shooter, ObjectId(1), 1), (observer, ObjectId(2), 0)] {
                     stop_battle_unit(&mut world, unit, pilot, rules()).unwrap();
                     place_battle_unit(&mut world, unit, ridge, 1, y).unwrap();
                     assign_battle_pilot(&mut world, unit, pilot).unwrap();
+                    support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
                     start_battle_unit(&mut world, unit, pilot, true).unwrap();
                     for _ in 0..5 {
                         advance_battle_units(&mut world, 0);
@@ -695,9 +698,11 @@ async fn artillery_observed_launch_and_link_revalidation() {
                     BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
                 )
                 .unwrap();
+                support::seed_object_dice(&mut world, other, support::FIXTURE_DICE_SEED);
                 stop_battle_unit(&mut world, observer, ObjectId(2), rules()).unwrap();
                 place_battle_unit(&mut world, observer, other, 1, 1).unwrap();
                 assign_battle_pilot(&mut world, observer, ObjectId(2)).unwrap();
+                support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
                 start_battle_unit(&mut world, observer, ObjectId(2), true).unwrap();
                 for _ in 0..5 {
                     advance_battle_units(&mut world, 0);
@@ -862,9 +867,11 @@ async fn mech_artillery_uses_vehicle_observers_in_slot_order() {
             .unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, observer, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut world, observer, map, 2, 1).unwrap();
         world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(observer);
         assign_battle_pilot(&mut world, observer, ObjectId(2)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, observer, ObjectId(2), true).unwrap();
         for _ in 0..5 {
             advance_battle_units(&mut world, 0);

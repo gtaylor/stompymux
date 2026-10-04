@@ -30,6 +30,11 @@ async fn ground_entry_reports_live_cf_once_and_replays_after_restart() {
                 BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
             )
             .unwrap();
+            crate::support::seed_object_dice(
+                &mut world,
+                interior,
+                crate::support::FIXTURE_DICE_SEED,
+            );
             set_building_state(
                 &mut world,
                 interior,
@@ -84,6 +89,11 @@ async fn ground_entry_reports_live_cf_once_and_replays_after_restart() {
                     },
                 )
                 .unwrap();
+                crate::support::seed_object_dice(
+                    &mut world,
+                    ObjectId(1),
+                    crate::support::FIXTURE_DICE_SEED,
+                );
                 firing::edit(&mut world, id, |state| {
                     state["scanner_perception"] = target.into()
                 });
@@ -143,6 +153,7 @@ async fn aircraft_overflight_does_not_report_ground_buildings() {
         BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
+    crate::support::seed_object_dice(&mut world, interior, crate::support::FIXTURE_DICE_SEED);
     set_building_entrance(
         &mut world,
         map,
@@ -190,6 +201,11 @@ async fn interrupted_ground_steps_report_only_accepted_surface_entries() {
                 BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
             )
             .unwrap();
+            crate::support::seed_object_dice(
+                &mut world,
+                interior,
+                crate::support::FIXTURE_DICE_SEED,
+            );
             set_building_entrance(
                 &mut world,
                 map,

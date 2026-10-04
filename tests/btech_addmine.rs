@@ -92,6 +92,7 @@ async fn prepending_preserves_auxiliary_columns_and_order_survives_removal() {
         BattleMapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let mine = BattleMinefield {
         coordinate: BattleHexCoordinate { x: 1, y: 1 },
         kind: BattleMineKind::Standard,
@@ -177,6 +178,7 @@ async fn rejected_or_aborted_placement_does_not_change_order_or_publish_output()
         BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(map);
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     let before = scripts.world().btech.clone();
@@ -247,6 +249,7 @@ async fn artillery_mines_precede_existing_records_without_replacing_them() {
         BattleMapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let coordinate = BattleHexCoordinate { x: 0, y: 0 };
     set_minefield(
         &mut world,

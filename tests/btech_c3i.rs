@@ -1734,6 +1734,7 @@ async fn underwater_network_aim_keeps_the_physical_water_limit() {
             .unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     for (id, y) in [(shooter, 2), (peer, 7), (target, 8)] {
         world
             .btech

@@ -25,6 +25,7 @@ async fn fixture(template: BattleUnitTemplate) -> (tempfile::TempDir, Config, Wo
     let id = world.create(&config, "Critical inspection".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     template.create(&mut world, id).unwrap();
+    support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
     (dir, config, world, id)
 }
@@ -73,6 +74,7 @@ async fn section_reports_preserve_all_supported_chassis() {
         };
         let (_dir, config, mut world, id) = fixture(template).await;
         assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         let before = scripts.world().btech.clone();
         for (section, count) in &sections {

@@ -37,6 +37,7 @@ async fn tracked_wheeled_and_hover_vehicles_accept_and_drive_move_orders() {
                     .unwrap(),
             )
             .unwrap();
+            crate::support::seed_object_dice(&mut world, map, crate::support::FIXTURE_DICE_SEED);
             let templates = [
                 include_str!("../game/mechs/Demolisher.toml"),
                 include_str!("../game/mechs/Flatbed_Truck.toml"),
@@ -52,6 +53,7 @@ async fn tracked_wheeled_and_hover_vehicles_accept_and_drive_move_orders() {
                     BattleVehicleTemplate::parse("test",template).unwrap(),
                 )
                 .unwrap();
+                crate::support::seed_object_dice(&mut world, id, crate::support::FIXTURE_DICE_SEED);
                 place_battle_unit(&mut world, id, map, (index * 2) as i64, 5).unwrap();
                 units.push(id);
             }
@@ -394,6 +396,7 @@ async fn wrong_map_destination_blocks_the_active_order() {
                 BattleMapAsset::from_cells(&format!("3 16\n{}", ".0.0.0\n".repeat(16))).unwrap(),
             )
             .unwrap();
+            crate::support::seed_object_dice(&mut fixture.world, other_map, crate::support::FIXTURE_DICE_SEED);
 
             let scripts = Scripts::new(
                 &fixture.config,

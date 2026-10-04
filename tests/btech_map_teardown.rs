@@ -71,6 +71,7 @@ async fn external_markers_survive_unregistration_and_reactivation() {
             BattleMapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     }
     let entrance = BattleBuildingEntrance {
         coordinate: BattleHexCoordinate { x: 0, y: 0 },

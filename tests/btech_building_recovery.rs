@@ -17,6 +17,7 @@ async fn fixture(integrity: i64) -> (tempfile::TempDir, Config, World, ObjectId,
             BattleMapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     }
     for id in [interior, unrelated] {
         set_building_state(

@@ -66,6 +66,7 @@ async fn safety_controls_share_state_and_startup_resets_only_the_safety_bit() {
         .unwrap();
         assert!(!safety(&world));
         assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
         advance_battle_units(&mut world, 100);
         stop_battle_unit(
@@ -77,6 +78,7 @@ async fn safety_controls_share_state_and_startup_resets_only_the_safety_bit() {
         .unwrap();
         assert!(!safety(&world));
         assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
         for now in 101..105 {
             advance_battle_units(&mut world, now);

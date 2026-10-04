@@ -19,6 +19,7 @@ fn player(world: &mut World, config: &Config, name: &str, experience: u32) -> Ob
         },
     )
     .unwrap();
+    support::seed_object_dice(world, id, support::FIXTURE_DICE_SEED);
     set_battle_character_value(
         world,
         id,

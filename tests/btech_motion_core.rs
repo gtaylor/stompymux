@@ -352,6 +352,7 @@ async fn weapon_expenditure_is_atomic_and_recycle_pauses_through_shutdown_and_re
     persistence::save(&config.database(), &world).await.unwrap();
     world = persistence::load(&config.database()).await.unwrap();
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
         advance_battle_units(&mut world, 0);
@@ -973,6 +974,7 @@ async fn aim_breakdown_tracks_turning_equipment_and_heat_without_mutation() {
         BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, target, map, 5, 7).unwrap();
     let rules = BattleAimRules {
         woods_damage: false,
@@ -1209,6 +1211,7 @@ async fn perception_query_composes_live_terrain_and_spatial_range_without_acquir
         BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
     let map = world.btech.constructed_units()[&id].position().unwrap().map;
     place_battle_unit(&mut world, target, map, 5, 9).unwrap();
     set_battle_map_visibility(&mut world, map, BattleLight::Night, 3).unwrap();
@@ -1524,6 +1527,7 @@ async fn contacts_acquire_retain_lose_and_clear_on_administrative_placement() {
         BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, target, map, 5, 7).unwrap();
     let rules = BattleContactRules {
         hostile: true,
@@ -1714,6 +1718,7 @@ async fn tactical_scanners_use_saved_signatures_and_startup_perception() {
         },
     )
     .unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     set_battle_character_value(
         &mut world,
         ObjectId(1),
@@ -1736,6 +1741,7 @@ async fn tactical_scanners_use_saved_signatures_and_startup_perception() {
     )
     .unwrap();
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     let map = world.btech.constructed_units()[&id].position().unwrap().map;
     let target = world.create(&config, "Hidden scanner target".into(), Kind::Thing);
@@ -1745,6 +1751,7 @@ async fn tactical_scanners_use_saved_signatures_and_startup_perception() {
         BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, target, map, 5, 11).unwrap();
     assert!(battle_contact_observers(&world).is_empty());
     let before = world.btech.clone();
@@ -1824,6 +1831,7 @@ async fn automatic_stationary_contact_acquisition_retries_a_failed_save() {
         let map = world.btech.constructed_units()[&id].position().unwrap().map;
         let target = world.create(&config, "Automatic contact target".into(), Kind::Thing);
         create_battle_unit(&mut world, target, BattleTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap()).unwrap();
+        support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut world, target, map, 5, 6).unwrap();
         persistence::save(&config.database(), &world).await.unwrap();
         let before = world.btech.clone();
@@ -1860,6 +1868,7 @@ async fn contact_display_filters_unacquired_and_stale_targets_without_rerolls() 
                 .unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut world, target, map, 5, y).unwrap();
         targets.push(target);
     }
@@ -2195,6 +2204,7 @@ async fn aim_lock_penalty_follows_selected_target_and_committed_settling() {
         BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, front, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, front, map, 5, 4).unwrap();
     stompymux_rs::refresh_battle_contacts(&mut world, &[id]).unwrap();
     let penalty = |world: &stompymux_rs::World, target| {
@@ -3338,6 +3348,7 @@ async fn stand_command_inspection_and_impossible_target_guards_are_atomic() {
         },
     )
     .unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     let before = world.btech.clone(); // Target 13; careful must still refuse an impossible unmodified target.
     for mode in [
         stompymux_rs::BattleStandMode::Normal,
@@ -3444,6 +3455,7 @@ async fn first_pilot_injury_replays_from_prepared_dice_after_failed_save() {
     );
     let before = world.btech.clone();
     stompymux_rs::prepare_battle_recovery(&mut world, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     assert_eq!(world.btech, before);
     persistence::save(&config.database(), &world).await.unwrap();
     let checkpoint = world.clone();
@@ -3497,6 +3509,7 @@ async fn startup_commits_missing_character_and_pilot_dice_before_gameplay() {
                 },
             )
             .unwrap();
+            support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
             persistence::save(&config.database(), &world).await.unwrap();
             let mut sql = sqlx::SqliteConnection::connect_with(
                 &sqlx::sqlite::SqliteConnectOptions::new().filename(config.database()),
@@ -4338,6 +4351,7 @@ async fn prone_fire_cannot_cross_the_waterline_before_expenditure() {
         BattleMapAsset::from_cells(&source).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     stop_battle_unit(
         &mut world,
         id,
@@ -4348,6 +4362,7 @@ async fn prone_fire_cannot_cross_the_waterline_before_expenditure() {
     place_battle_unit(&mut world, id, map, 5, 5).unwrap();
     place_battle_unit(&mut world, target, map, 5, 4).unwrap();
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
         advance_battle_units(&mut world, 0);
@@ -5008,6 +5023,7 @@ async fn water_flooded_equipment_stays_disabled_after_restart_and_leaving_water(
         BattleMapAsset::from_cells(&source).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut loaded, map, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut loaded, id, map, 5, 5).unwrap();
     assert!(
         loaded.btech.constructed_units()[&id]

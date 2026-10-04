@@ -4758,6 +4758,7 @@ async fn firing_observers_hide_unseen_participants_and_replay_transactionally() 
                         .unwrap(),
                 )
                 .unwrap();
+                support::seed_object_dice(&mut world, observer, support::FIXTURE_DICE_SEED);
                 place_battle_unit(&mut world, observer, map, 6, 5).unwrap();
                 let witness = world.create(&config, "Fire witness".into(), Kind::Player);
                 world.objects.get_mut(&witness).unwrap().location = Some(observer);
@@ -8132,6 +8133,7 @@ async fn kick_roll_matrix(target_seeds: std::ops::Range<u8>) {
                     60
                 );
                 assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+                support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
                 start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
                 assert!(
                     world.btech.constructed_units()[&id]

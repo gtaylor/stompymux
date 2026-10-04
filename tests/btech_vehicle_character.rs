@@ -1217,6 +1217,7 @@ async fn transport_loss_shares_nested_chassis_destruction_and_transactional_dise
                             .unwrap(),
                         )
                         .unwrap();
+                        support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
                     } else {
                         create_battle_unit(
                             &mut world,
@@ -1228,6 +1229,7 @@ async fn transport_loss_shares_nested_chassis_destruction_and_transactional_dise
                             .unwrap(),
                         )
                         .unwrap();
+                        support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
                     }
                     world
                         .objects

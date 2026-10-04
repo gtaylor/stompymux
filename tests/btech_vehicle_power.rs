@@ -21,6 +21,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
         BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let id = world.create(&config, "Engine lab".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     create_battle_vehicle(
@@ -30,9 +31,11 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
             .unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     persistence::save(&config.database(), &world).await.unwrap();
     (dir, config, world, id)
 }
@@ -81,6 +84,7 @@ async fn startup_emits_six_stages_and_resumes_only_committed_seconds() {
     assert_eq!(world.btech.vehicles()[&id].power(), BattlePower::Off);
     assert_eq!(world.btech.vehicles()[&id].pilot(), None);
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..4 {
         assert!(advance_battle_units(&mut world, 0).is_empty());
@@ -129,6 +133,7 @@ async fn override_requires_wizard_and_corrupt_countdowns_fail_loading() {
         .flags
         .remove(stompymux_rs::Flag::Wizard);
     assign_battle_pilot(&mut world, id, ObjectId(2)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
     let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
     let text = support::run_text(&scripts, &config, ObjectId(2), 2, "startup override");
     assert!(text.contains("Insufficient access"), "{text}");
@@ -211,6 +216,7 @@ async fn native_vehicle_pilot_departure_and_hull_destruction_reconcile_state() {
     let mut world = scripts.world().clone();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
         advance_battle_units(&mut world, 0);

@@ -36,6 +36,7 @@ fn recipient(config: &Config, world: &mut World, target: ObjectId) -> ObjectId {
     object.location = Some(target);
     object.flags.insert(Flag::Connected);
     assign_battle_pilot(world, target, pilot).unwrap();
+    support::seed_object_dice(world, pilot, support::FIXTURE_DICE_SEED);
     firing::edit(world, target, |s| s["sixth_sense"]["enabled"] = true.into());
     pilot
 }
@@ -229,6 +230,7 @@ async fn startup_captures_the_current_pilots_advantage() {
             },
         )
         .unwrap();
+        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         set_battle_character_value(
             &mut world,
             ObjectId(1),
@@ -249,6 +251,7 @@ async fn startup_captures_the_current_pilots_advantage() {
         )
         .unwrap();
         assign_battle_pilot(&mut world, source, ObjectId(1)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, source, ObjectId(1), true).unwrap();
         for _ in 0..4 {
             advance_battle_units(&mut world, 0);
@@ -277,6 +280,7 @@ async fn startup_captures_the_current_pilots_advantage() {
         )
         .unwrap();
         assign_battle_pilot(&mut world, source, ObjectId(1)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, source, ObjectId(1), true).unwrap();
         for _ in 0..5 {
             advance_battle_units(&mut world, 0);
@@ -354,10 +358,12 @@ async fn server_retries_warning_delivery_after_failed_commit() {
             for id in [source, target] {
                 world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
                 assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+                support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
                 stop_battle_unit(&mut world, id, ObjectId(1), BattleMovementRules::STANDARD.fall).unwrap();
             }
             world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(source);
             assign_battle_pilot(&mut world, source, ObjectId(1)).unwrap();
+            support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
             firing::edit(&mut world, source, |s| s["sixth_sense"] = serde_json::json!({"enabled":true,"pending":[[1,4]]}));
             world.accounts.get_mut(&ObjectId(1)).unwrap().hash = Some(accounts::hash("secret", &config).unwrap());
             persistence::save(&config.database(), &world).await.unwrap();

@@ -25,6 +25,7 @@ async fn targeted_radio_mixed_pairs_share_visibility_delivery_and_restart() {
                 BattleMapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
             )
             .unwrap();
+            support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
             let listener = world.create(&config, "Listener".into(), Kind::Player);
             let mut ids = Vec::new();
             for (template, pilot, x) in [
@@ -36,11 +37,13 @@ async fn targeted_radio_mixed_pairs_share_visibility_delivery_and_restart() {
                     .unwrap()
                     .create(&mut world, id)
                     .unwrap();
+                support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
                 place_battle_unit(&mut world, id, map, x, 0).unwrap();
                 let player = world.objects.get_mut(&pilot).unwrap();
                 player.location = Some(id);
                 player.flags.insert(Flag::Connected);
                 assign_battle_pilot(&mut world, id, pilot).unwrap();
+                support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
                 start_battle_unit(&mut world, id, pilot, true).unwrap();
                 ids.push(id);
             }
@@ -161,6 +164,7 @@ async fn channel_radio_rotates_mixed_transmitters_relays_and_receivers() {
             BattleMapAsset::from_cells("6 2\n.0.0.0.0.0.0\n.0.0.0.0.0.0\n").unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
         let mut ids = Vec::new();
         let mut pilots = Vec::new();
         for index in 0..3 {
@@ -183,16 +187,19 @@ async fn channel_radio_rotates_mixed_transmitters_relays_and_receivers() {
                 },
             )
             .unwrap();
+            support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
             let id = world.create(&config, "Radio unit".into(), Kind::Thing);
             BattleUnitTemplate::parse("test", &templates[(index + rotation) % templates.len()])
                 .unwrap()
                 .create(&mut world, id)
                 .unwrap();
+            support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
             place_battle_unit(&mut world, id, map, (index * 2) as i64, 0).unwrap();
             let player = world.objects.get_mut(&pilot).unwrap();
             player.location = Some(id);
             player.flags.insert(Flag::Connected);
             assign_battle_pilot(&mut world, id, pilot).unwrap();
+            support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
             fact(&mut world, id, |state| {
                 state["definition"]["attributes"]["radiotype"] = "117".into();
                 state["definition"]["attributes"]["radio_range"] = "2".into();

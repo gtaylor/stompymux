@@ -24,6 +24,7 @@ async fn report_values_order_filters_and_layouts_are_explicit() {
         BattleMapAsset::from_cells("2 1\n.0.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(map);
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     let report = view_battle_map_fields_action(&scripts, &config, ObjectId(1), map, "").unwrap();

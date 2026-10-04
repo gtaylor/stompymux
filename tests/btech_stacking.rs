@@ -1983,6 +1983,7 @@ async fn airborne_critical_collision_publishes_secondary_character_effects() {
         .flags
         .insert(Flag::InCharacter);
     assign_battle_pilot(&mut base, neighbor, pilot).unwrap();
+    support::seed_object_dice(&mut base, pilot, support::FIXTURE_DICE_SEED);
     set_battle_character(
         &mut base,
         pilot,
@@ -1997,6 +1998,7 @@ async fn airborne_critical_collision_publishes_secondary_character_effects() {
         },
     )
     .unwrap();
+    support::seed_object_dice(&mut base, pilot, support::FIXTURE_DICE_SEED);
     destroy_battle_critical(
         &mut base,
         airborne,
@@ -2117,6 +2119,7 @@ async fn airborne_critical_collision_publishes_secondary_character_effects() {
             },
         )
         .unwrap();
+        support::seed_object_dice(&mut scripts.world_mut(), pilot, support::FIXTURE_DICE_SEED);
         let fatal_before = scripts.world().clone();
         scripts
             .world_mut()

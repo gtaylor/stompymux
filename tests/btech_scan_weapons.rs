@@ -13,6 +13,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId,
     .await;
     world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(scanner);
     assign_battle_pilot(&mut world, scanner, ObjectId(2)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
     firing::edit(&mut world, scanner, |state| {
         state["motion"]["heading"] = 180.into();
         state["motion"]["desired_heading"] = 180.into();

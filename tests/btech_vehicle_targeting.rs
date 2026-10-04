@@ -78,6 +78,7 @@ async fn vehicle_unit_and_coordinate_selections_settle_replay_and_drive_scans() 
         let mut world = initial.clone();
         world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(observer);
         assign_battle_pilot(&mut world, observer, ObjectId(1)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         refresh_battle_contacts(&mut world, &[observer]).unwrap();
         let before = world.btech.clone();
         assert!(select_battle_target(&mut world, observer, ObjectId(2), Some(target)).is_err());
@@ -189,6 +190,7 @@ async fn vehicle_locks_clear_on_visibility_sensor_placement_and_power_changes() 
     power(&mut initial, &[vehicle], BattlePower::Running);
     initial.objects.get_mut(&ObjectId(1)).unwrap().location = Some(observer);
     assign_battle_pilot(&mut initial, observer, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut initial, ObjectId(1), support::FIXTURE_DICE_SEED);
     refresh_battle_contacts(&mut initial, &[observer]).unwrap();
     select_battle_target(&mut initial, observer, ObjectId(1), Some(vehicle)).unwrap();
     let mut world = initial.clone();
@@ -319,6 +321,7 @@ async fn idle_vehicle_lock_countdown_retries_failed_server_commits() {
         for id in [a, b, other] { remove_battle_unit(&mut world, id, ObjectId(config.home())).unwrap(); }
         world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(observer);
         assign_battle_pilot(&mut world, observer, ObjectId(1)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         select_battle_hex_target(&mut world, observer, ObjectId(1), BattleHexCoordinate { x: 0, y: 1 }, BattleHexTargetMode::Hex).unwrap();
         assert!(battle_contact_observers(&world).is_empty());
         persistence::save(&config.database(), &world).await.unwrap();

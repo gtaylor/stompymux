@@ -238,6 +238,7 @@ async fn vehicle_artillery_correction_uses_mixed_observers_and_replays_aim() {
                     .unwrap(),
                 )
                 .unwrap();
+                support::seed_object_dice(&mut world, observer, support::FIXTURE_DICE_SEED);
             } else {
                 create_battle_unit(
                     &mut world,
@@ -246,11 +247,13 @@ async fn vehicle_artillery_correction_uses_mixed_observers_and_replays_aim() {
                         .unwrap(),
                 )
                 .unwrap();
+                support::seed_object_dice(&mut world, observer, support::FIXTURE_DICE_SEED);
             }
             place_battle_unit(&mut world, observer, map, 2, 1).unwrap();
             if running {
                 world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(observer);
                 assign_battle_pilot(&mut world, observer, ObjectId(2)).unwrap();
+                support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
                 start_battle_unit(&mut world, observer, ObjectId(2), true).unwrap();
                 for _ in 0..5 {
                     advance_battle_units(&mut world, 0);
@@ -354,6 +357,7 @@ async fn vehicle_artillery_explicit_mixed_spotters_share_targets_and_correction_
                 .unwrap(),
             )
             .unwrap();
+            support::seed_object_dice(&mut world, observer, support::FIXTURE_DICE_SEED);
         } else {
             create_battle_unit(
                 &mut world,
@@ -361,10 +365,12 @@ async fn vehicle_artillery_explicit_mixed_spotters_share_targets_and_correction_
                 BattleTemplate::parse("AS7-D", include_str!("../game/mechs/AS7-D.toml")).unwrap(),
             )
             .unwrap();
+            support::seed_object_dice(&mut world, observer, support::FIXTURE_DICE_SEED);
         }
         place_battle_unit(&mut world, observer, map, 2, 1).unwrap();
         world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(observer);
         assign_battle_pilot(&mut world, observer, ObjectId(2)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, observer, ObjectId(2), true).unwrap();
         for _ in 0..5 {
             advance_battle_units(&mut world, 0);

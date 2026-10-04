@@ -18,6 +18,7 @@ async fn map_restrictions_are_exact_read_only_and_durable() {
         BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let actor = world.create(&config, "Map reader".into(), Kind::Player);
     world.objects.get_mut(&actor).unwrap().location = Some(map);
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(map);

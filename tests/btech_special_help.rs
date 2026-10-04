@@ -31,6 +31,7 @@ async fn cockpit_help_matches_catalogue_without_mutation() {
             .unwrap()
             .create(&mut world, unit)
             .unwrap();
+        support::seed_object_dice(&mut world, unit, support::FIXTURE_DICE_SEED);
         let actor = world.create(&config, "Help reader".into(), Kind::Player);
         world.objects.get_mut(&actor).unwrap().location = Some(unit);
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
@@ -77,6 +78,7 @@ async fn actor_location_and_linked_inventory_order_survive_restart() {
         BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     world.objects.get_mut(&actor).unwrap().location = Some(map);
     let first = world.create(&config, "Autopilot help".into(), Kind::Thing);
     let second = world.create(&config, "Debug help".into(), Kind::Thing);
@@ -168,6 +170,7 @@ async fn help_respects_uncompressed_input() {
         BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(map);
     let path = dir.path().join("stompymux.toml");
     let mut settings: toml::Value =

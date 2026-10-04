@@ -285,6 +285,7 @@ async fn split_section_loss_preserves_remaining_slot_mass() {
             definition(BattleWeapon::Ac20, parent, extension),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
         let before = &world.btech.constructed_units()[&id];
         let mass = before.mass().unwrap().equipment;
         let index = before

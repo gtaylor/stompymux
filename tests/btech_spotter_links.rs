@@ -12,6 +12,7 @@ async fn fixture(
         firing::fixture_with_target(source, Some(BattleWeapon::ClanArrowIv), observer).await;
     world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(observer);
     assign_battle_pilot(&mut world, observer, ObjectId(2)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
     select_battle_spotter(&mut world, observer, ObjectId(2), Some(observer)).unwrap();
     firing::edit(&mut world, source, |state| {
         state["contacts"] = serde_json::json!({})
@@ -416,6 +417,7 @@ async fn simultaneous_requests_keep_insertion_order() {
             .unwrap()
             .create(&mut world, second)
             .unwrap();
+        support::seed_object_dice(&mut world, second, support::FIXTURE_DICE_SEED);
         let map = world.btech.units()[&source].map.unwrap();
         place_battle_unit(&mut world, second, map, 0, 10).unwrap();
         firing::edit(&mut world, second, |state| {
@@ -449,6 +451,7 @@ async fn server_retries_connection_after_failed_commit() {
             stop_battle_unit(&mut world, source, ObjectId(1), BattleFallRules::configured(&config)).unwrap();
             stop_battle_unit(&mut world, observer, ObjectId(2), BattleFallRules::configured(&config)).unwrap();
             assign_battle_pilot(&mut world, source, ObjectId(1)).unwrap();
+            support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
             firing::edit(&mut world, source, |state| state["spotter_events"]["events"][0]["remaining"] = 1.into());
             world.accounts.get_mut(&ObjectId(1)).unwrap().hash = Some(accounts::hash("secret", &config).unwrap());
             persistence::save(&config.database(), &world).await.unwrap();

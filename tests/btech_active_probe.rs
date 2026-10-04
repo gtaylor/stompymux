@@ -78,6 +78,7 @@ fn probe_vehicle(
         );
     }
     create_battle_vehicle(world, id, definition).unwrap();
+    support::seed_object_dice(world, id, support::FIXTURE_DICE_SEED);
     place_battle_unit(world, id, map, 0, y).unwrap();
     running(world, id);
     id
@@ -95,6 +96,7 @@ fn mech(
     let id = world.create(config, "Probe subject".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     create_battle_unit(world, id, BattleTemplate::parse("test", source).unwrap()).unwrap();
+    support::seed_object_dice(world, id, support::FIXTURE_DICE_SEED);
     place_battle_unit(world, id, map, 0, y).unwrap();
     running(world, id);
     set_battle_unit_signature(
@@ -147,6 +149,7 @@ fn conceal(world: &mut World, id: ObjectId) {
 fn seat(world: &mut World, id: ObjectId, pilot: ObjectId) {
     world.objects.get_mut(&pilot).unwrap().location = Some(id);
     assign_battle_pilot(world, id, pilot).unwrap();
+    support::seed_object_dice(world, pilot, support::FIXTURE_DICE_SEED);
 }
 
 /// Tactical conventional shot configuration without optional damage or arc rules.

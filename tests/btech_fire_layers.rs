@@ -23,6 +23,7 @@ async fn field(
         },
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     (dir, config, world, map)
 }
 
@@ -231,6 +232,7 @@ async fn smoky_crossing() -> (tempfile::TempDir, World, ObjectId) {
         .flags
         .insert(Flag::Ansi);
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     set_map_decoration(
         &mut world,
         map,

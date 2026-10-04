@@ -365,7 +365,9 @@ async fn occupied_melting_commits_or_restores_the_whole_map_pass() {
         },
     )
     .unwrap();
+    support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
     assign_battle_pilot(&mut world, unit, pilot).unwrap();
+    support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
     tile(&mut world, map, 0, 5, "ice", 2);
     tile(&mut world, map, 0, 11, "ice", 2);
     firing::edit(&mut world, unit, |state| {

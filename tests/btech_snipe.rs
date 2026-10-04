@@ -191,6 +191,7 @@ async fn distant_prediction_matches_live_motion_until_shell_catches_up() {
         BattleMapAsset::from_cells(&format!("1 100\n{}", ".0\n".repeat(100))).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     for id in [shooter, target] {
         firing::edit(&mut world, id, |unit| {
             unit["power"] = serde_json::to_value(BattlePower::Off).unwrap()

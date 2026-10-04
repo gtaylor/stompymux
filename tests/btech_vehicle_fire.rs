@@ -103,6 +103,7 @@ async fn engagement(template: &str) -> (tempfile::TempDir, Config, World, Object
     power(&mut world, &ids, BattlePower::Running);
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(ids[2]);
     assign_battle_pilot(&mut world, ids[2], ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     refresh_battle_contacts(&mut world, &[ids[2]]).unwrap();
     (dir, config, world, map, ids)
 }
@@ -861,6 +862,7 @@ async fn vehicle_ams_switch_shares_native_lua_control_and_callback_rollback() {
     release_battle_pilot(&mut base, shooter, ObjectId(1)).unwrap();
     base.objects.get_mut(&ObjectId(1)).unwrap().location = Some(target);
     assign_battle_pilot(&mut base, target, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut base, ObjectId(1), support::FIXTURE_DICE_SEED);
     assert!(set_battle_ams(&mut base, target, ObjectId(2), true).is_err());
     set_battle_ams(&mut base, target, ObjectId(1), false).unwrap();
     let scripts = Scripts::new(
@@ -1830,6 +1832,7 @@ async fn mech_engagement() -> (tempfile::TempDir, Config, World, ObjectId, Objec
     power(&mut world, &[shooter], BattlePower::Running);
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(shooter);
     assign_battle_pilot(&mut world, shooter, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     refresh_battle_contacts(&mut world, &[shooter, target]).unwrap();
     (dir, config, world, shooter, target)
 }
@@ -2775,6 +2778,7 @@ async fn character_direct_fire_shares_native_lua_casualties_for_both_chassis() {
                     power(&mut world, &[shooter], BattlePower::Running);
                     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(shooter);
                     assign_battle_pilot(&mut world, shooter, ObjectId(1)).unwrap();
+                    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
                 }
                 for id in [shooter, target] {
                     world
@@ -2805,7 +2809,9 @@ async fn character_direct_fire_shares_native_lua_casualties_for_both_chassis() {
                     },
                 )
                 .unwrap();
+                support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
                 assign_battle_pilot(&mut world, target, ObjectId(2)).unwrap();
+                support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
                 if vehicle_target {
                     injure_battle_character_pilot(&mut world, target, 9, false).unwrap();
                 }
@@ -2914,6 +2920,7 @@ async fn character_direct_fire_shares_native_lua_casualties_for_both_chassis() {
                     },
                 )
                 .unwrap();
+                support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
                 for skill in ["Gunnery-Laser", "Gunnery-Ballistic", "Gunnery-Battlemech"] {
                     set_battle_character_value(
                         &mut world,

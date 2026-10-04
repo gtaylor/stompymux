@@ -33,6 +33,7 @@ async fn mixed_maps_navigation_and_measurements_share_every_supported_movement_t
         .unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut base, map, support::FIXTURE_DICE_SEED);
     let stationary = include_str!("../game/mechs/Demolisher.toml")
         .replace("movement = \"track\"", "movement = \"none\"")
         .replace("walk_mp = 5", "walk_mp = 0");
@@ -52,6 +53,7 @@ async fn mixed_maps_navigation_and_measurements_share_every_supported_movement_t
             .unwrap()
             .create(&mut base, id)
             .unwrap();
+        support::seed_object_dice(&mut base, id, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut base, id, map, x as i64, 2).unwrap();
         ids.push(id);
     }
@@ -79,6 +81,7 @@ async fn mixed_maps_navigation_and_measurements_share_every_supported_movement_t
         let mut world = base.clone();
         world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(observer);
         assign_battle_pilot(&mut world, observer, ObjectId(1)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         let target = ids[(index + 1) % ids.len()];
         let _ = select_battle_target(&mut world, observer, ObjectId(1), Some(target)).unwrap();
         world.validate(&config).unwrap();
@@ -256,6 +259,11 @@ async fn mixed_maps_navigation_and_measurements_share_every_supported_movement_t
                     )
                     .unwrap();
                     assign_battle_pilot(&mut candidate, observer, ObjectId(1)).unwrap();
+                    support::seed_object_dice(
+                        &mut candidate,
+                        ObjectId(1),
+                        support::FIXTURE_DICE_SEED,
+                    );
                     ("bogus", "Start the unit first")
                 }
                 "hardware" => {

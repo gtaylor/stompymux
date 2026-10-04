@@ -19,6 +19,11 @@ async fn character_contract_uses_object_identity_catalog_codes_and_zero_return_m
         },
     )
     .unwrap();
+    support::seed_object_dice(
+        &mut s.world_mut(),
+        stompymux_rs::ObjectId(1),
+        support::FIXTURE_DICE_SEED,
+    );
     s.eval_callback::<()>(r#"
       local function argument_error(e,n,name,detail)
         local suffix="bad argument #"..n.." to '"..name.."' ("..detail..")"

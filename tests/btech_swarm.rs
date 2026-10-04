@@ -529,6 +529,7 @@ fn gunnery(world: &mut World, target: u8) {
         },
     )
     .unwrap();
+    support::seed_object_dice(world, ObjectId(1), support::FIXTURE_DICE_SEED);
 }
 
 /// A maximum first roll followed by ten misses preserves missiles through the visited-slot boundary.

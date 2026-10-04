@@ -204,6 +204,7 @@ async fn reactor_casualties_and_callback_failure_are_atomic() {
         BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let source = unit(&mut world, &config, map, "quad", 0, 0);
     unit(&mut world, &config, map, "track", 0, 0);
     world
@@ -234,7 +235,9 @@ async fn reactor_casualties_and_callback_failure_are_atomic() {
         },
     )
     .unwrap();
+    support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
     assign_battle_pilot(&mut world, source, pilot).unwrap();
+    support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
     injure_battle_character_pilot(&mut world, source, 2, false).unwrap();
     let before = world.clone();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();

@@ -34,6 +34,7 @@ async fn fixture_with_ranges(
         BattleMapAsset::from_cells(&format!("3 60\n{}", ".0.0.0\n".repeat(60))).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let mut units = Vec::new();
     for y in [1, 2] {
         let id = world.create(&config, "Scan unit".into(), Kind::Thing);
@@ -45,6 +46,7 @@ async fn fixture_with_ranges(
             template.attributes.insert(field.into(), value.into());
         }
         create_battle_unit(&mut world, id, template).unwrap();
+        support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut world, id, map, 1, y).unwrap();
         units.push(id);
     }
@@ -52,6 +54,7 @@ async fn fixture_with_ranges(
     let target = units[1];
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(source);
     assign_battle_pilot(&mut world, source, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, source, ObjectId(1), true).unwrap();
     for _ in 0..5 {
         advance_battle_units(&mut world, 0);
@@ -246,6 +249,7 @@ async fn scan_warnings_follow_target_visibility_and_rollback_with_lua() {
         .flags
         .insert(Flag::Connected);
     assign_battle_pilot(&mut world, target, ObjectId(2)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, target, ObjectId(2), true).unwrap();
     for _ in 0..5 {
         advance_battle_units(&mut world, 0);
@@ -316,6 +320,7 @@ async fn coordinate_scan_selects_visible_occupants_in_saved_order() {
         BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, other, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, other, map, 1, 2).unwrap();
     acquire(&mut world, source, other);
     let shared = std::rc::Rc::new(std::cell::RefCell::new(world));
@@ -405,6 +410,7 @@ fn scan_structure(world: &mut World, config: &Config, map: ObjectId) -> ObjectId
         BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(world, interior, support::FIXTURE_DICE_SEED);
     set_building_state(
         world,
         interior,
@@ -659,6 +665,7 @@ fn scan_perception(world: &mut World, source: ObjectId) {
         },
     )
     .unwrap();
+    support::seed_object_dice(world, ObjectId(1), support::FIXTURE_DICE_SEED);
     world
         .btech
         .rewrite_unit_record(source, |record| {
@@ -935,6 +942,7 @@ async fn brief_reports_are_silent_and_do_not_use_detailed_scan_range() {
         .flags
         .insert(Flag::Connected);
     assign_battle_pilot(&mut world, target, ObjectId(2)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, target, ObjectId(2), true).unwrap();
     for _ in 0..5 {
         advance_battle_units(&mut world, 0);
@@ -1422,6 +1430,7 @@ async fn long_range_stacked_markers_share_native_lua_and_restart_order() {
         .unwrap();
         place_battle_unit(&mut world, source, map, 1, 20).unwrap();
         assign_battle_pilot(&mut world, source, ObjectId(1)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, source, ObjectId(1), true).unwrap();
         for _ in 0..5 {
             advance_battle_units(&mut world, 0);
@@ -1436,6 +1445,7 @@ async fn long_range_stacked_markers_share_native_lua_and_restart_order() {
                 .unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, earlier, support::FIXTURE_DICE_SEED);
         place_battle_unit(
             &mut world,
             earlier,
@@ -1584,6 +1594,7 @@ async fn long_range_elevation_rows_preserve_zero_space_and_water_depth() {
         BattleMapAsset::from_cells("3 2\n.0#3~2\n.0.0.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     world
         .btech
         .rewrite_unit_record(source, |record| {
@@ -2088,6 +2099,7 @@ async fn tactical_clipping_preserves_global_hex_parity_and_elevation() {
             .unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     world
         .btech
         .rewrite_unit_record(source, |record| {
@@ -2156,6 +2168,7 @@ async fn tactical_cliffs_use_signed_depth_thresholds_and_share_native_lua_output
         BattleMapAsset::from_cells("3 3\n.0.3.0\n.0.0~2\n.0-3.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     world
         .btech
         .rewrite_unit_record(source, |record| {
@@ -2473,6 +2486,7 @@ async fn landing_suitability_checks_full_hex_neighborhood_terrain_and_fire() {
             BattleMapAsset::from_cells(&format!("3 3\n{tiles}{flags}: 100 20\n")).unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
         assert_eq!(
             world.btech.maps()[&map]
                 .landing_suitability(center, 0)
@@ -2765,6 +2779,7 @@ async fn navigation_keeps_even_center_on_single_hex_maps_with_off_map_surroundin
         BattleMapAsset::from_cells("1 1\n#3\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     world
         .btech
         .rewrite_unit_record(source, |record| {
@@ -4102,6 +4117,7 @@ async fn probe_contacts_through_terrain_hide_identity_and_friendly_categories() 
         BattleMapAsset::from_cells("3 5\n.0.0.0\n.0.0.0\n.9.9.9\n.0.0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let _ = stop_battle_unit(
         &mut world,
         source,
@@ -4111,10 +4127,12 @@ async fn probe_contacts_through_terrain_hide_identity_and_friendly_categories() 
     .unwrap();
     place_battle_unit(&mut world, source, map, 1, 1).unwrap();
     assign_battle_pilot(&mut world, source, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, source, ObjectId(1), true).unwrap();
     place_battle_unit(&mut world, target, map, 1, 3).unwrap();
     world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(target);
     assign_battle_pilot(&mut world, target, ObjectId(2)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, target, ObjectId(2), true).unwrap();
     for _ in 0..5 {
         let _ = advance_battle_units(&mut world, 0);
@@ -5825,9 +5843,11 @@ async fn ammunition_dump_low_capacity_bins_preserve_cadence_and_shutdown_cancels
         BattleTemplate::parse("AS7-D", include_str!("fixtures/btech/mechs/AS7-D.toml")).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, id, map, 1, 3).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
         advance_battle_units(&mut world, 0);

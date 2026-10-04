@@ -94,6 +94,7 @@ async fn engine_and_cockpit_losses_destroy_units_and_slot_state_survives_restart
         BattleTemplate::parse("JR7-D", JENNER).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     persistence::save(&config.database(), &world).await.unwrap();
     for slot in 0..3 {
         destroy_battle_critical(

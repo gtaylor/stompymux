@@ -51,6 +51,7 @@ async fn recovery_preserves_dice_and_timer_across_injury_restart_and_cockpit_rel
         stompymux_rs::BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let unit = world.create(&config, "Cockpit".into(), stompymux_rs::Kind::Thing);
     world.objects.get_mut(&unit).unwrap().home = Some(ObjectId(config.home()));
     stompymux_rs::create_battle_unit(
@@ -63,6 +64,7 @@ async fn recovery_preserves_dice_and_timer_across_injury_restart_and_cockpit_rel
         .unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, unit, support::FIXTURE_DICE_SEED);
     stompymux_rs::place_battle_unit(&mut world, unit, map, 0, 0).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(unit);
     stompymux_rs::assign_battle_pilot(&mut world, unit, ObjectId(1)).unwrap();

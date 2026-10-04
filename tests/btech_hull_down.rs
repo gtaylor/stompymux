@@ -317,6 +317,7 @@ async fn pickup_clears_completed_quad_cover() {
     .unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(carrier);
     assign_battle_pilot(&mut world, carrier, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, carrier, ObjectId(1), true).unwrap();
     for _ in 0..5 {
         advance_battle_units(&mut world, 0);

@@ -32,6 +32,7 @@ async fn fixture(
             .unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let id = world.create(&config, "Carrier".into(), Kind::Thing);
     let mut template = BattleUnitTemplate::parse("test", source).unwrap();
     let attributes = match &mut template {
@@ -57,6 +58,7 @@ async fn fixture(
         },
     );
     template.create(&mut world, id).unwrap();
+    support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
     (dir, config, world, map, id)
 }
@@ -239,6 +241,7 @@ async fn carried_stock_affects_live_movement_and_adds_to_tow_load() {
             .unwrap()
             .create(&mut world, target)
             .unwrap();
+        support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut world, target, map, 0, 0).unwrap();
         set_battle_tow(&mut world, id, Some(target)).unwrap();
         let empty = battle_unit_load(&world, id, true).unwrap().carried_mass;
@@ -251,6 +254,7 @@ async fn carried_stock_affects_live_movement_and_adds_to_tow_load() {
         set_battle_tow(&mut world, id, None).unwrap();
         world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
         assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
         for _ in 0..5 {
             advance_battle_units(&mut world, 0);

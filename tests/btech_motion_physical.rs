@@ -3132,6 +3132,7 @@ async fn dfa_damage_candidate_error_rolls_back() {
         BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, third, support::FIXTURE_DICE_SEED);
     world
         .btech
         .rewrite_unit_record(third, |record| {
@@ -3269,6 +3270,7 @@ async fn cockpit_flood_action_evacuates_and_replays() {
         .remove(Flag::Wizard);
     world.objects.get_mut(&pilot).unwrap().location = Some(id);
     assign_battle_pilot(&mut world, id, pilot).unwrap();
+    support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
     apply_damage_phase(
         &mut world,
         id,
@@ -4203,6 +4205,7 @@ async fn physical_experience_eligibility_and_damage_awards() {
                     },
                 )
                 .unwrap();
+                support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
             }
             let mut signature = world.btech.constructed_units()[&target].signature();
             signature.team = if mode == "friendly" { 0 } else { 1 };
@@ -5146,6 +5149,7 @@ async fn character_stand_commands_injuries_and_atomic_casualties() {
             .insert(Flag::Connected);
         release_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
         assign_battle_pilot(&mut world, id, pilot).unwrap();
+        support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
         world
             .objects
             .get_mut(&id)
@@ -5166,6 +5170,7 @@ async fn character_stand_commands_injuries_and_atomic_casualties() {
             },
         )
         .unwrap();
+        support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
         for name in ["Piloting-Biped", "Piloting-Battlemech"] {
             set_battle_character_value(
                 &mut world,
@@ -5276,6 +5281,7 @@ async fn character_stagger_ticks_replay_and_roll_back_casualties() {
                 .insert(Flag::Connected);
             release_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
             assign_battle_pilot(&mut world, id, pilot).unwrap();
+            support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
             world
                 .objects
                 .get_mut(&id)
@@ -5296,6 +5302,7 @@ async fn character_stagger_ticks_replay_and_roll_back_casualties() {
                 },
             )
             .unwrap();
+            support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
             let rules = BattleStaggerRules {
                 interval: 1,
                 ..stagger_rules(mode)
@@ -5432,6 +5439,7 @@ async fn character_ammunition_explosion_action_replays_and_rolls_back() {
                 .insert(Flag::Connected);
             release_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
             assign_battle_pilot(&mut world, id, pilot).unwrap();
+            support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
             world
                 .objects
                 .get_mut(&id)
@@ -5452,6 +5460,7 @@ async fn character_ammunition_explosion_action_replays_and_rolls_back() {
                 },
             )
             .unwrap();
+            support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
             set_battle_character_value(
                 &mut world,
                 pilot,
@@ -5706,10 +5715,12 @@ async fn character_thermal_server_retries_fatal_heat_commit() {
         world.objects.get_mut(&pilot).unwrap().flags.remove(Flag::Wizard);
         release_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
         assign_battle_pilot(&mut world, id, pilot).unwrap();
+        support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
         world.objects.get_mut(&id).unwrap().flags.insert(Flag::InCharacter);
         set_battle_character(&mut world, pilot, BattleCharacter {
             build: 5, reflexes: 5, intuition: 5, learn: 5, charisma: 5, bruise: 50, lethal: 40,
         }).unwrap();
+        support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
         destroy_battle_critical(&mut world, id, CriticalLocation { section: BattleSection::Head, slot: 0 }).unwrap();
         overheat_due(&mut world, id, 26.0, false);
         world.btech
@@ -6460,6 +6471,7 @@ async fn character_heavy_gauss_recoil_uses_shooter_health_and_toughness() {
         .insert(Flag::Connected);
     release_battle_pilot(&mut base, id, ObjectId(1)).unwrap();
     assign_battle_pilot(&mut base, id, pilot).unwrap();
+    support::seed_object_dice(&mut base, pilot, support::FIXTURE_DICE_SEED);
     base.objects
         .get_mut(&id)
         .unwrap()
@@ -6494,6 +6506,7 @@ async fn character_heavy_gauss_recoil_uses_shooter_health_and_toughness() {
             },
         )
         .unwrap();
+        support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
         let baseline = world.clone();
         let scripts =
             Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
@@ -6620,6 +6633,7 @@ async fn character_misload_rolls_back_weapon_and_shooter_casualty() {
         .insert(Flag::Connected);
     release_battle_pilot(&mut base, id, ObjectId(1)).unwrap();
     assign_battle_pilot(&mut base, id, pilot).unwrap();
+    support::seed_object_dice(&mut base, pilot, support::FIXTURE_DICE_SEED);
     base.objects
         .get_mut(&id)
         .unwrap()
@@ -6652,6 +6666,7 @@ async fn character_misload_rolls_back_weapon_and_shooter_casualty() {
             },
         )
         .unwrap();
+        support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
         let baseline = world.clone();
         let scripts =
             Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
@@ -7442,6 +7457,7 @@ async fn movement_experience_cadence_restart_and_channel_rollback() {
         let _ = stop_battle_unit(&mut world, id, ObjectId(1), RULES.fall).unwrap();
         place_battle_unit(&mut world, id, map, 5, 45).unwrap();
         assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
         for _ in 0..5 {
             advance_battle_units(&mut world, 0);
@@ -7473,6 +7489,7 @@ async fn movement_experience_cadence_restart_and_channel_rollback() {
             },
         )
         .unwrap();
+        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         set_battle_speed(&mut world, id, ObjectId(1), 118.25).unwrap();
         let scripts =
             Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
@@ -7604,6 +7621,7 @@ async fn movement_experience_eligibility_and_airborne_entries() {
                 },
             )
             .unwrap();
+            support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
             if airborne {
                 launch_battle_jump(&mut world, id, ObjectId(1), 0, 2.0).unwrap();
             } else {

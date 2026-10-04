@@ -19,15 +19,18 @@ async fn linked_map_movement_replays_for_mechs_ground_vehicles_and_aircraft() {
                 BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
             )
             .unwrap();
+            support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
             set_battle_map_wrapping(&mut world, map, true).unwrap();
             let id = world.create(&config, "Traveler".into(), Kind::Thing);
             BattleUnitTemplate::parse("test", source)
                 .unwrap()
                 .create(&mut world, id)
                 .unwrap();
+            support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
             place_battle_unit(&mut world, id, map, if heading == 90 { 2 } else { 0 }, 1).unwrap();
             world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
             assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+            support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
             start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
             for _ in 0..5 {
                 advance_battle_units(&mut world, 0);
@@ -123,6 +126,7 @@ async fn aircraft_rolls_back_when_the_opposite_edge_is_too_high() {
         BattleMapAsset::from_cells("3 1\n^9.0.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     set_battle_map_wrapping(&mut world, map, true).unwrap();
     let id = world.create(&config, "Aircraft".into(), Kind::Thing);
     create_battle_vehicle(
@@ -132,6 +136,7 @@ async fn aircraft_rolls_back_when_the_opposite_edge_is_too_high() {
             .unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, id, map, 2, 0).unwrap();
     let mut saved = serde_json::to_value(&world.btech).unwrap();
     saved["maps"][map.0.to_string()]["movement_modifier"] = 6450.into();
@@ -275,6 +280,7 @@ async fn native_and_lua_wrapping_controls_share_authority_state_and_rollback() {
         BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     world
         .objects
         .get_mut(&ObjectId(2))
@@ -352,6 +358,7 @@ async fn wrapped_jump_paths_keep_distance_and_replay_through_all_four_edges() {
             .unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
         let id = world.create(&config, "Jump traveler".into(), Kind::Thing);
         create_battle_unit(
             &mut world,
@@ -360,9 +367,11 @@ async fn wrapped_jump_paths_keep_distance_and_replay_through_all_four_edges() {
                 .unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut world, id, map, x, y).unwrap();
         world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
         assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
         for _ in 0..5 {
             advance_battle_units(&mut world, 0);

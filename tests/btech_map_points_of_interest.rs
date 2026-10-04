@@ -64,6 +64,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {
         BattleMapAsset::parse(SOURCE).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let actor = world.create(&config, "POI operator".into(), Kind::Player);
     let operator = world.objects.get_mut(&actor).unwrap();
     operator.flags.insert(Flag::Wizard);

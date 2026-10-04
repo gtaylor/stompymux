@@ -20,6 +20,7 @@ async fn tic_membership_native_lua_and_persistence() {
                 BattleVehicleTemplate::parse("test", source).unwrap(),
             )
             .unwrap();
+            support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
         } else {
             create_battle_unit(
                 &mut world,
@@ -27,9 +28,11 @@ async fn tic_membership_native_lua_and_persistence() {
                 BattleTemplate::parse("test", source).unwrap(),
             )
             .unwrap();
+            support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
         }
         world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
         assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         let scripts =
             Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
         assert!(fire_battle_tics(&scripts, &config, id, ObjectId(1), vec![2], None).is_err());

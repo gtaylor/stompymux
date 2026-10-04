@@ -2514,6 +2514,7 @@ async fn autofall_native_lua_controls_are_atomic_and_survive_restart_and_shutdow
     .unwrap();
     assert!(saved.btech.constructed_units()[&id].auto_fall());
     assign_battle_pilot(&mut saved, id, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut saved, ObjectId(1), support::FIXTURE_DICE_SEED);
     set_battle_auto_fall(&mut saved, id, ObjectId(1), false).unwrap();
     assert!(!saved.btech.constructed_units()[&id].auto_fall());
     set_battle_auto_fall(&mut saved, id, ObjectId(1), true).unwrap();
@@ -3864,6 +3865,7 @@ fn fracture_observer(
         BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(world, observer, support::FIXTURE_DICE_SEED);
     place_battle_unit(world, observer, map, 2, 1).unwrap();
     let mut state = serde_json::to_value(&world.btech).unwrap();
     let viewer = &mut state["constructed"][observer.0.to_string()];
@@ -4014,6 +4016,7 @@ async fn character_surface_actions_evacuate_and_roll_back_terrain() {
             },
         )
         .unwrap();
+        support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
         apply_damage_phase(
             &mut world,
             victim,
@@ -4246,6 +4249,7 @@ async fn upward_character_breakout_preserves_breaker_and_rolls_back() {
             },
         )
         .unwrap();
+        support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
         apply_damage_phase(
             &mut world,
             victim,
@@ -4405,6 +4409,7 @@ async fn airborne_ice_action_evacuates_neighbors_and_replays() {
             },
         )
         .unwrap();
+        support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
         apply_damage_phase(
             &mut world,
             victim,
@@ -4548,6 +4553,7 @@ async fn character_interrupted_jump_finishes_water_entry_atomically() {
             },
         )
         .unwrap();
+        support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
     }
     world
         .objects
@@ -6786,6 +6792,7 @@ async fn command_mines_match_frequency_map_and_order_with_saved_replay() {
         BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, other, support::FIXTURE_DICE_SEED);
     let mine = BattleMinefield {
         coordinate: BattleHexCoordinate { x: 1, y: 1 },
         kind: BattleMineKind::Command,
@@ -7194,6 +7201,7 @@ async fn artillery_character_arrival_is_atomic() {
             },
         )
         .unwrap();
+        support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
     }
     let center = BattleHexCoordinate { x: 1, y: 1 };
     world
@@ -7324,6 +7332,7 @@ async fn artillery_cluster_world_packets_and_random_rollback() {
                     .unwrap(),
             )
             .unwrap();
+            support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
             place_battle_unit(&mut world, id, map, x, y).unwrap();
         }
     }

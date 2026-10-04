@@ -252,6 +252,7 @@ async fn removal_handles_starting_stopped_and_unplaced_units() {
             .unwrap()
             .create(&mut world, new)
             .unwrap();
+        support::seed_object_dice(&mut world, new, support::FIXTURE_DICE_SEED);
         remove_battle_map_membership(&mut world, new).unwrap();
         world.validate(&config).unwrap();
     }
@@ -288,6 +289,7 @@ async fn detached_pose_survives_former_map_purge() {
             BattleMapAsset::from_cells(&format!("1 12\n{}", ".0\n".repeat(12))).unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut restored, new, support::FIXTURE_DICE_SEED);
         let report = reassign_battle_map(&mut restored, unit, new, Some("XY")).unwrap();
         assert_eq!(report.position.y, 11);
         restored.validate(&config).unwrap();

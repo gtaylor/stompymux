@@ -80,6 +80,7 @@ fn missile_lane(world: &mut World, shooter: ObjectId, target: ObjectId) {
         state["motion"]["desired_heading"] = 180.0.into();
     });
     assign_battle_pilot(world, shooter, ObjectId(1)).unwrap();
+    support::seed_object_dice(world, ObjectId(1), support::FIXTURE_DICE_SEED);
     refresh_battle_contacts(world, &[shooter]).unwrap();
     select_battle_target(world, shooter, ObjectId(1), Some(target)).unwrap();
 }

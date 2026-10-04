@@ -151,6 +151,7 @@ async fn debug_weapon_permissions_diagnostics_and_restart() {
         BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut scripts.world_mut(), map, support::FIXTURE_DICE_SEED);
     assert_eq!(
         support::run_text(
             &scripts,

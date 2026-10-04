@@ -31,6 +31,7 @@ async fn object_table_keeps_effect_creation_order_across_restart_and_rollback() 
             BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
         set_battle_static_decoration(
             &mut world,
             map,
