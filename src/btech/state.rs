@@ -505,7 +505,6 @@ impl BtechState {
     /// deserializing it all back, including clearing the runtime-only state that
     /// never survives serialization. It re-encodes only the one record instead of
     /// every unit and map. Fixtures use it to set fields that gameplay never writes.
-    /// Keep the cleared fields in step with this type's `#[serde(skip)]` fields.
     pub fn rewrite_unit_record(
         &mut self,
         id: ObjectId,
@@ -524,10 +523,62 @@ impl BtechState {
         } else {
             anyhow::bail!("#{} has no unit or vehicle record", id.0);
         }
+        self.clear_runtime_state();
+        Ok(())
+    }
+
+    /// Rewrite one battle map record through its serialized form.
+    ///
+    /// Like [`Self::rewrite_unit_record`], the result matches a whole-state serialize,
+    /// edit and deserialize, clearing the same runtime-only state, while re-encoding
+    /// only the one map. Fixtures use it to set fields that gameplay never writes, such
+    /// as the map's fire stream.
+    pub fn rewrite_map_record(
+        &mut self,
+        id: ObjectId,
+        edit: impl FnOnce(&mut serde_json::Value),
+    ) -> Result<()> {
+        let map = self
+            .maps
+            .get(&id)
+            .with_context(|| format!("#{} has no map record", id.0))?;
+        let mut record = serde_json::to_value(map)?;
+        edit(&mut record);
+        let map: StoredBattleMap = serde_json::from_value(record)?;
+        self.maps.insert(id, map);
+        self.clear_runtime_state();
+        Ok(())
+    }
+
+    /// Rewrite one player's consciousness recovery record through its serialized form.
+    ///
+    /// Like [`Self::rewrite_unit_record`], the result matches a whole-state serialize,
+    /// edit and deserialize, clearing the same runtime-only state, while re-encoding
+    /// only the one record. Fixtures use it to set fields that gameplay never writes,
+    /// such as the recovery's private random stream.
+    pub fn rewrite_recovery_record(
+        &mut self,
+        player: ObjectId,
+        edit: impl FnOnce(&mut serde_json::Value),
+    ) -> Result<()> {
+        let recovery = self
+            .recoveries
+            .get(&player)
+            .with_context(|| format!("#{} has no recovery record", player.0))?;
+        let mut record = serde_json::to_value(recovery)?;
+        edit(&mut record);
+        let recovery: super::BattleRecovery = serde_json::from_value(record)?;
+        self.recoveries.insert(player, recovery);
+        self.clear_runtime_state();
+        Ok(())
+    }
+
+    /// Drop the runtime-only state a serialization round trip never carries. Keep this
+    /// in step with this type's `#[serde(skip)]` fields.
+    fn clear_runtime_state(&mut self) {
         self.template_registry = Default::default();
         self.retire_sanctions = Default::default();
         self.autopilot_plans = Default::default();
-        Ok(())
     }
 
     /// Invariant check after one gameplay operation, with the same build split as
@@ -1376,5 +1427,45 @@ mod rewrite_tests {
             assert!(rewritten.retire_sanctions.borrow().is_empty());
         }
         assert!(world.btech.rewrite_unit_record(map, |_| {}).is_err());
+    }
+
+    /// Rewriting one map or recovery record matches a whole-state round trip too.
+    #[test]
+    fn map_and_recovery_record_rewrites_match_a_whole_state_round_trip() {
+        let config = Config::load("tests/fixtures/game").unwrap();
+        let mut world = World {
+            next_id: 42,
+            ..Default::default()
+        };
+        let map = world.create(&config, "Map".into(), Kind::Room);
+        let player = world.create(&config, "Pilot".into(), Kind::Player);
+        create_map(
+            &mut world,
+            map,
+            "test",
+            BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+        )
+        .unwrap();
+        super::super::prepare_recovery(&mut world, player).unwrap();
+        world.btech.retire_sanctions.borrow_mut().insert(map);
+        let dice = serde_json::to_value(super::super::BattleDice::seeded([7; 32])).unwrap();
+        let edit = |record: &mut serde_json::Value| record["fire_dice"] = dice.clone();
+        let mut rewritten = world.btech.clone();
+        rewritten.rewrite_map_record(map, edit).unwrap();
+        let mut whole = serde_json::to_value(&world.btech).unwrap();
+        edit(&mut whole["maps"][map.0.to_string()]);
+        let round_trip: BtechState = serde_json::from_value(whole).unwrap();
+        assert_eq!(rewritten, round_trip);
+        assert!(rewritten.retire_sanctions.borrow().is_empty());
+
+        let edit = |record: &mut serde_json::Value| record["dice"] = dice.clone();
+        let mut rewritten = world.btech.clone();
+        rewritten.rewrite_recovery_record(player, edit).unwrap();
+        let mut whole = serde_json::to_value(&world.btech).unwrap();
+        edit(&mut whole["recoveries"][player.0.to_string()]);
+        let round_trip: BtechState = serde_json::from_value(whole).unwrap();
+        assert_eq!(rewritten, round_trip);
+        assert!(world.btech.rewrite_map_record(player, |_| {}).is_err());
+        assert!(world.btech.rewrite_recovery_record(map, |_| {}).is_err());
     }
 }

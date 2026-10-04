@@ -10,6 +10,7 @@ pub mod btech_map_objects;
 mod client;
 mod commands;
 mod database;
+mod dice;
 mod fixtures;
 mod heartbeats;
 mod logging;
@@ -19,6 +20,7 @@ pub mod templates;
 pub use client::Client;
 pub use commands::{run_text, run_text_for_player};
 pub use database::{stable_world, store_unit_record, unit_record};
+pub use dice::{FIXTURE_DICE_SEED, seed_object_dice, seed_world_dice};
 pub use fixtures::{
     copy, isolated_scripts, isolated_world, repository_root, with_clock_save_interval,
 };
