@@ -6,7 +6,7 @@ fn landing(target: i16, roll: u8) -> BattleDropLandingInput {
     BattleDropLandingInput {
         base_target: target,
         roll: Some(roll),
-        hex: BattleHex::new(Terrain::Grassland, 0),
+        hex: Hex::new(Terrain::Grassland, 0),
         running: true,
         prone: false,
         incapacitated: false,
@@ -230,7 +230,7 @@ fn landing_margins_chassis_multipliers_and_experience_match_reference_rules() {
     );
     for (terrain, levels) in [(Terrain::Water, 8), (Terrain::Ice, 12), (Terrain::Road, 0)] {
         let mut input = landing(5, 5);
-        input.hex = BattleHex::new(terrain, 1);
+        input.hex = Hex::new(terrain, 1);
         assert_eq!(touchdown(armored, input).fall_levels, levels);
     }
     let mut absent = landing(5, 12);

@@ -15,13 +15,7 @@ fn add_map(
         "{width} {height}\n{}",
         format!("{}\n", ".0".repeat(width)).repeat(height)
     );
-    create_battle_map(
-        world,
-        id,
-        name,
-        BattleMapAsset::from_cells(&source).unwrap(),
-    )
-    .unwrap();
+    create_battle_map(world, id, name, MapAsset::from_cells(&source).unwrap()).unwrap();
     support::seed_object_dice(world, id, support::FIXTURE_DICE_SEED);
     id
 }
@@ -29,7 +23,7 @@ fn add_map(
 fn link(parent: ObjectId, entries: [BattleMapEntrance; 4]) -> BattleMapLink {
     BattleMapLink {
         parent,
-        coordinate: BattleHexCoordinate { x: 0, y: 0 },
+        coordinate: HexCoordinate { x: 0, y: 0 },
         entrances: entries,
     }
 }
@@ -51,7 +45,7 @@ async fn rebuild_order_native_lua_rollback_and_restart() {
             [
                 BattleMapEntrance::Offset { distance: 1 },
                 BattleMapEntrance::Exact {
-                    coordinate: BattleHexCoordinate { x: 4, y: 2 },
+                    coordinate: HexCoordinate { x: 4, y: 2 },
                 },
                 BattleMapEntrance::None,
                 BattleMapEntrance::Offset { distance: i32::MAX },
@@ -74,7 +68,7 @@ async fn rebuild_order_native_lua_rollback_and_restart() {
         root,
         9,
         Some(BattleBuildingEntrance {
-            coordinate: BattleHexCoordinate { x: 1, y: 1 },
+            coordinate: HexCoordinate { x: 1, y: 1 },
             interior: stale,
             data_char: 0,
             data_short: 0,
@@ -88,7 +82,7 @@ async fn rebuild_order_native_lua_rollback_and_restart() {
         root,
         7,
         Some(BattleBuildingEntryPoint {
-            coordinate: BattleHexCoordinate { x: 2, y: 2 },
+            coordinate: HexCoordinate { x: 2, y: 2 },
             direction: b'n',
             object: ObjectId(-1),
             data_short: 0,
@@ -101,7 +95,7 @@ async fn rebuild_order_native_lua_rollback_and_restart() {
         persistence::load(&config.database()).await.unwrap().btech,
         world.btech
     );
-    let stale_entrance = BattleHexCoordinate { x: 1, y: 1 };
+    let stale_entrance = HexCoordinate { x: 1, y: 1 };
     assert!(
         world.btech.maps()[&root]
             .building_at(stale_entrance)
@@ -165,8 +159,8 @@ async fn rebuild_order_native_lua_rollback_and_restart() {
         points.values().map(|p| p.direction).collect::<Vec<_>>(),
         vec![b'w', b'e', b'n']
     );
-    assert_eq!(points[&0].coordinate, BattleHexCoordinate { x: 4, y: 1 });
-    assert_eq!(points[&2].coordinate, BattleHexCoordinate { x: 2, y: 1 });
+    assert_eq!(points[&0].coordinate, HexCoordinate { x: 4, y: 1 });
+    assert_eq!(points[&2].coordinate, HexCoordinate { x: 2, y: 1 });
     assert_eq!(saved.btech.maps()[&c].building_entry_points().len(), 4);
     persistence::save(&config.database(), &saved).await.unwrap();
     assert_eq!(
@@ -260,7 +254,7 @@ async fn configuration_lua_preserves_inactive_columns_and_missing_default_rows()
     let mut definition = loaded.btech.maps()[&child].authored_link().unwrap();
     definition.entrances[0] = BattleMapEntrance::Offset { distance: 1 };
     definition.entrances[1] = BattleMapEntrance::Exact {
-        coordinate: BattleHexCoordinate { x: 2, y: 1 },
+        coordinate: HexCoordinate { x: 2, y: 1 },
     };
     set_battle_map_link(&mut loaded, child, Some(definition)).unwrap();
     persistence::save(&config.database(), &loaded)
@@ -282,7 +276,7 @@ async fn configuration_lua_preserves_inactive_columns_and_missing_default_rows()
     for bad in [
         BattleMapEntrance::Offset { distance: -1 },
         BattleMapEntrance::Exact {
-            coordinate: BattleHexCoordinate { x: 3, y: 0 },
+            coordinate: HexCoordinate { x: 3, y: 0 },
         },
     ] {
         let mut invalid = definition;
@@ -316,7 +310,7 @@ async fn rebuild_resolves_offsets_and_skips_cropped_coordinates() {
         root,
         [
             BattleMapEntrance::Exact {
-                coordinate: BattleHexCoordinate { x: 2, y: 2 },
+                coordinate: HexCoordinate { x: 2, y: 2 },
             },
             BattleMapEntrance::Offset { distance: i32::MAX },
             BattleMapEntrance::None,
@@ -325,7 +319,7 @@ async fn rebuild_resolves_offsets_and_skips_cropped_coordinates() {
     );
     set_battle_map_link(&mut world, child, Some(definition)).unwrap();
     let mut outside = link(root, Default::default());
-    outside.coordinate = BattleHexCoordinate { x: 2, y: 2 };
+    outside.coordinate = HexCoordinate { x: 2, y: 2 };
     set_battle_map_link(&mut world, cropped, Some(outside)).unwrap();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     resize_battle_map_action(&scripts, &config, ObjectId(1), root, 2, 2).unwrap();
@@ -348,7 +342,7 @@ async fn rebuild_resolves_offsets_and_skips_cropped_coordinates() {
     assert_eq!(
         points[&0],
         BattleBuildingEntryPoint {
-            coordinate: BattleHexCoordinate { x: 0, y: 0 },
+            coordinate: HexCoordinate { x: 0, y: 0 },
             direction: b'e',
             object: ObjectId(-1),
             data_short: 0,
@@ -381,7 +375,7 @@ async fn rebuild_failure_restores_routes_and_configuration() {
         root,
         7,
         Some(BattleBuildingEntrance {
-            coordinate: BattleHexCoordinate { x: 1, y: 1 },
+            coordinate: HexCoordinate { x: 1, y: 1 },
             interior: other,
             data_char: 0,
             data_short: 0,
@@ -450,7 +444,7 @@ async fn parent_metadata_is_owned_independently_of_return_routes() {
         &mut world,
         child,
         "renamed",
-        BattleMapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
+        MapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
     )
     .unwrap();
     assert_eq!(world.btech.maps()[&child].building_parent, root.0);

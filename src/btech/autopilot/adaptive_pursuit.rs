@@ -1,6 +1,6 @@
 //! Bounded, observation-only motion assessment and interception candidate selection.
 use super::interception::PursuitEvidence;
-use crate::{BattlePoint, BattlePosition};
+use crate::{BattlePosition, Point};
 
 const WINDOWS: [i64; 2] = [16, 64];
 const OFFSETS: [i64; 3] = [6, 12, 24];
@@ -10,18 +10,18 @@ type HistoricalFit = (i64, [Option<Fit>; 2]);
 /// Regression position at its cutoff, together with the fitted velocity.
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct Fit {
-    position: BattlePoint,
+    position: Point,
     velocity: (f64, f64),
 }
 
-fn center(p: BattlePosition) -> BattlePoint {
-    crate::BattleHexCoordinate {
+fn center(p: BattlePosition) -> Point {
+    crate::HexCoordinate {
         x: i32::from(p.x),
         y: i32::from(p.y),
     }
     .center()
 }
-fn distance(a: BattlePoint, b: BattlePoint) -> f64 {
+fn distance(a: Point, b: Point) -> f64 {
     (a.x - b.x).hypot(a.y - b.y)
 }
 
@@ -35,7 +35,7 @@ fn ahead(aim: BattlePosition, observed: BattlePosition, velocity: (f64, f64)) ->
 /// A fitted hypothesis, including out-of-sample error in hex units.
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct Model {
-    position: BattlePoint,
+    position: Point,
     velocity: (f64, f64),
     error: f64,
     window: i64,
@@ -54,7 +54,7 @@ fn fit(samples: &[(i64, BattlePosition)], cutoff: i64, window: i64) -> Option<Fi
     let origin = points.first()?.0;
     let mean = points.iter().map(|p| (p.0 - origin) as f64).sum::<f64>() / points.len() as f64;
     let mut sum = (0.0, 0.0, 0.0);
-    let mut position = BattlePoint { x: 0.0, y: 0.0 };
+    let mut position = Point { x: 0.0, y: 0.0 };
     let n = points.len() as f64;
     for p in points {
         let t = (p.0 - origin) as f64 - mean;
@@ -109,7 +109,7 @@ fn assess(
                 };
                 let p = center(previous.1);
                 let dt = (observed_at - previous.0) as f64;
-                let predicted = BattlePoint {
+                let predicted = Point {
                     x: fitted.position.x + fitted.velocity.0 * dt,
                     y: fitted.position.y + fitted.velocity.1 * dt,
                 };
@@ -282,19 +282,19 @@ impl AdaptivePursuit {
             p.map == own.map
                 && i64::from(p.x) < width
                 && i64::from(p.y) < height
-                && super::navigation::Hex::new(last.x, last.y)
-                    .distance(super::navigation::Hex::new(p.x, p.y))
+                && super::navigation::GridHex::new(last.x, last.y)
+                    .distance(super::navigation::GridHex::new(p.x, p.y))
                     <= 8
                 && leash.is_none_or(|o| {
                     o.map == p.map
-                        && super::navigation::Hex::new(o.x, o.y)
-                            .distance(super::navigation::Hex::new(p.x, p.y))
+                        && super::navigation::GridHex::new(o.x, o.y)
+                            .distance(super::navigation::GridHex::new(p.x, p.y))
                             <= 6
                 })
                 && (p == last
                     || self.ineffective.is_none_or(|(own, minimum, maximum)| {
-                        let distance = super::navigation::Hex::new(own.x, own.y)
-                            .distance(super::navigation::Hex::new(p.x, p.y));
+                        let distance = super::navigation::GridHex::new(own.x, own.y)
+                            .distance(super::navigation::GridHex::new(p.x, p.y));
                         distance < u32::from(minimum) || distance > u32::from(maximum)
                     }))
         };
@@ -353,7 +353,7 @@ impl AdaptivePursuit {
         let mut lead = last;
         for horizon in 1..=120 {
             let scale = (horizon as f64).min(8.0 / v.0.hypot(v.1).max(1e-9));
-            let p = BattlePoint {
+            let p = Point {
                 x: origin.x + v.0 * scale,
                 y: origin.y + v.1 * scale,
             };
@@ -378,7 +378,7 @@ impl AdaptivePursuit {
             }
         }
         let end = center(lead);
-        let half = BattlePoint {
+        let half = Point {
             x: (origin.x + end.x) * 0.5,
             y: (origin.y + end.y) * 0.5,
         }
@@ -526,11 +526,11 @@ mod tests {
         let samples: Vec<_> = (0..=64).map(|t| (t, pos(10 + (t / 18) as u16))).collect();
         let fitted = fit(&samples, 64, 64).unwrap();
         let anchored = center(samples.last().unwrap().1);
-        let error = |origin: BattlePoint| {
+        let error = |origin: Point| {
             samples
                 .iter()
                 .map(|&(t, p)| {
-                    let predicted = BattlePoint {
+                    let predicted = Point {
                         x: origin.x - fitted.velocity.0 * (64 - t) as f64,
                         y: origin.y - fitted.velocity.1 * (64 - t) as f64,
                     };
@@ -601,8 +601,8 @@ mod tests {
         let choice = p.choose(64, pos(2), 0.4, 3, 48, 48, None, |aim, _, _| {
             calls += 1;
             assert!(
-                super::super::navigation::Hex::new(26, 10)
-                    .distance(super::super::navigation::Hex::new(aim.x, aim.y))
+                super::super::navigation::GridHex::new(26, 10)
+                    .distance(super::super::navigation::GridHex::new(aim.x, aim.y))
                     <= 8
             );
             Some((10.0, 10.0))

@@ -416,7 +416,7 @@ pub(super) fn resolve_in_action(
         let target_position = super::scanner::scanner_unit(world, target)
             .and_then(|unit| unit.position)
             .context("Target is not placed")?;
-        let target_hex = super::BattleHexCoordinate {
+        let target_hex = super::HexCoordinate {
             x: i32::from(target_position.x),
             y: i32::from(target_position.y),
         };

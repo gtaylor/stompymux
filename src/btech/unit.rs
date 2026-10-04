@@ -785,7 +785,7 @@ impl BattleUnit {
         self.motion.or_else(|| {
             self.position.map(|position| {
                 super::BattleMotion::stationary(
-                    super::BattleHexCoordinate {
+                    super::HexCoordinate {
                         x: i32::from(position.x),
                         y: i32::from(position.y),
                     }

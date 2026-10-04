@@ -1,7 +1,7 @@
 //! Thunder minelaying rounds: LRM salvos fired at a hex seed minefields instead of damaging it.
 use super::{
-    BattleAmmunitionMode, BattleHexCoordinate, BattleMineKind, BattleMinefield, BattleNotice,
-    BattleWeapon,
+    BattleAmmunitionMode, BattleMineKind, BattleMinefield, BattleNotice, BattleWeapon,
+    HexCoordinate,
 };
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, bail, ensure};
@@ -180,7 +180,7 @@ pub(super) fn lay(
     world: &mut World,
     shooter: ObjectId,
     map: ObjectId,
-    coordinate: BattleHexCoordinate,
+    coordinate: HexCoordinate,
     mode: BattleAmmunitionMode,
     damage: u16,
 ) -> Result<BattleThunderReport> {
@@ -190,13 +190,8 @@ pub(super) fn lay(
         let spread = damage.div_ceil(2);
         cells.push((coordinate, spread));
         let record = world.btech.maps().get(&map).context("Map not found")?;
-        for neighbor in coordinate.neighbors()? {
-            if record
-                .base_hex(i64::from(neighbor.x), i64::from(neighbor.y))
-                .is_ok()
-            {
-                cells.push((neighbor, spread));
-            }
+        for neighbor in record.neighbors(coordinate)?.into_iter().flatten() {
+            cells.push((neighbor, spread));
         }
     } else {
         cells.push((coordinate, damage));

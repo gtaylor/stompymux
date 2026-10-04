@@ -6,7 +6,7 @@ use serde::Serialize;
 /// A detached estimate; no minutes means the unit is effectively stationary.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct BattleEtaReport {
-    pub coordinate: super::BattleHexCoordinate,
+    pub coordinate: super::HexCoordinate,
     pub range: f64,
     pub minutes: Option<u32>,
     pub text: String,
@@ -37,7 +37,7 @@ pub fn eta(
             }
             _ => anyhow::bail!("You have invalid default target for ETA!"),
         },
-        [x, y] => super::BattleHexCoordinate {
+        [x, y] => super::HexCoordinate {
             x: x.parse().context("Invalid coordinates!")?,
             y: y.parse().context("Invalid coordinates!")?,
         },

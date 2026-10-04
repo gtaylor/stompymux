@@ -45,12 +45,12 @@
 // lua-types-end
 
 // lua-types-begin btech 00006
-//|---@class BattleMapAssetSummary
+//|---@class MapAssetSummary
 //|---@field width integer
 //|---@field height integer
 //|---@field gravity integer
 //|---@field temperature integer
-//|---@field flags BattleMapFlag[] Map flags the asset enables.
+//|---@field flags MapFlag[] Map flags the asset enables.
 //|---@field points_of_interest BattleMapPointOfInterest[] Scripted points of interest in file order.
 // lua-types-end
 
@@ -64,21 +64,21 @@
 // lua-types-end
 
 // lua-types-begin btech 00007
-//|---@class BattleHex
+//|---@class Hex
 //|---@field level integer Ground height in levels; any water surface sits at this height.
-//|---@field ground BattleGroundName What the ground is made of; see btech.map.ground_types.
-//|---@field woods? BattleWoodsName Forest covering the ground; see btech.map.woods_types.
+//|---@field ground GroundName What the ground is made of; see btech.map.ground_types.
+//|---@field woods? WoodsName Forest covering the ground; see btech.map.woods_types.
 //|---@field water? {depth: integer, frozen: boolean} Standing water whose surface is at the ground level.
 //|---@field structure? {kind: "building"|"wall", height: integer}|{kind: "bridge", deck: integer} Built feature; heights are above the ground level. Kinds are in btech.map.structure_kinds.
 //|---@field overlay? "fire"|"smoke" Fire or smoke over the hex; base tiles never have one.
 // lua-types-end
 
 // lua-types-begin btech 00008
-//|---@class StoredBattleMap
+//|---@class StoredMap
 //|---@field cargo_transfer_point BattleCargoTransferPoint|nil Saved cargo location and hint policy.
 //|---@field wrapping boolean Opposite-edge wrapping is enabled.
-//|---@field linked_markers table<integer, {coordinate: BattleHexCoordinate, object: integer, data_char: integer, data_short: integer, data_int: integer}> Complete authored linked marker records.
-//|---@field building_exits table<integer, {coordinate: BattleHexCoordinate, destination: integer, data_char: integer, data_short: integer, data_int: integer}> Return-link slots; coordinates are selection metadata.
+//|---@field linked_markers table<integer, {coordinate: HexCoordinate, object: integer, data_char: integer, data_short: integer, data_int: integer}> Complete authored linked marker records.
+//|---@field building_exits table<integer, {coordinate: HexCoordinate, destination: integer, data_char: integer, data_short: integer, data_int: integer}> Return-link slots; coordinates are selection metadata.
 //|---@field name string
 //|---@field width integer
 //|---@field height integer
@@ -87,7 +87,7 @@
 // lua-types-end
 
 // lua-types-begin btech 00009
-//|---@field flags BattleMapFlag[] Enabled map flags.
+//|---@field flags MapFlag[] Enabled map flags.
 //|---@field light integer 0 night, 1 twilight, 2 day
 //|---@field visibility integer Weather range in hexes
 //|---@field sensor_flags integer Disabled perception channels: sensor band bit 0 (1), radar bit 5 (32), probes bit 6 (64).
@@ -176,13 +176,13 @@
 //|---@type BattleTerrainTypes
 //|btech_map.terrain_types = {}
 //|---Ground names for a hex's ground field.
-//|---@type BattleGroundTypes
+//|---@type GroundTypes
 //|btech_map.ground_types = {}
 //|---Woods densities for a hex's woods field.
-//|---@type BattleWoodsTypes
+//|---@type WoodsTypes
 //|btech_map.woods_types = {}
 //|---Structure kinds for the kind field of a hex's structure.
-//|---@type BattleStructureKinds
+//|---@type StructureKinds
 //|btech_map.structure_kinds = {}
 // lua-types-end
 
@@ -228,7 +228,7 @@
 // lua-types-end
 
 // lua-types-begin btech 00040
-//|---@class BattlePoint
+//|---@class Point
 //|---@field x number
 //|---@field y number
 // lua-types-end
@@ -419,8 +419,8 @@
 //|---@field gyro_damage integer Effective gyro damage after hardened protection.
 //|---@field mobility BattleMobility
 //|---@field jump_capacity {speed: number, movement_points: integer} Damage/gravity-adjusted capacity; does not authorize flight. Unplaced units use 100% gravity.
-//|---@field flight {path: {start: BattlePoint, end: BattlePoint, start_elevation: number, end_elevation: integer, movement_points: integer, continuation: boolean, projection: {bearing: integer, range: number}|nil, target_range: number|nil}, travelled: number, completed_distance: number, landing_requested: boolean, sampled_movement_points: integer, dfa_target: integer|nil}|nil
-//|---@field airborne {point: BattlePoint, elevation: number}|nil Last committed airborne sample.
+//|---@field flight {path: {start: Point, end: Point, start_elevation: number, end_elevation: integer, movement_points: integer, continuation: boolean, projection: {bearing: integer, range: number}|nil, target_range: number|nil}, travelled: number, completed_distance: number, landing_requested: boolean, sampled_movement_points: integer, dfa_target: integer|nil}|nil
+//|---@field airborne {point: Point, elevation: number}|nil Last committed airborne sample.
 //|---@field jump_stabilization integer Remaining seconds, zero through twelve.
 //|---@field engine "standard"|"light"|"xl"|"xxl"|"compact" Installed fusion-engine family.
 //|---@field destroyed boolean Core structure, cockpit or engine is destroyed.
@@ -596,7 +596,7 @@
 // lua-types-end
 
 // lua-types-begin btech 00101
-//|---@class BattleHexCoordinate
+//|---@class HexCoordinate
 //|---@field x integer
 //|---@field y integer
 // lua-types-end
@@ -604,9 +604,9 @@
 // lua-types-begin btech 00102
 //|---@class BattleSurfaceBreak
 //|---@field map integer
-//|---@field coordinate BattleHexCoordinate
-//|---@field before BattleHex
-//|---@field after BattleHex
+//|---@field coordinate HexCoordinate
+//|---@field before Hex
+//|---@field after Hex
 //|---@field fall_levels integer
 //|---@field falls table[] Ordered pairs of unit dbref and Mech fall report.
 //|---@field vehicle_falls table[] Ordered pairs of unit dbref and vehicle fall report.
@@ -617,14 +617,14 @@
 // lua-types-begin btech 00104
 //|---@class BattleMapEmitOptions
 //|---@field audience? "all"|"range"|"line_of_sight" Recipient selection; defaults to all.
-//|---@field origin? BattleHexCoordinate Required anchor for range and line_of_sight audiences.
+//|---@field origin? HexCoordinate Required anchor for range and line_of_sight audiences.
 //|---@field range? number Nonnegative hex radius; required with the range audience.
 // lua-types-end
 
 // lua-types-begin btech 00116
 //|---@class BattleAuthoredMapLink
 //|---@field parent integer Parent map.
-//|---@field coordinate BattleHexCoordinate Placement on the parent.
+//|---@field coordinate HexCoordinate Placement on the parent.
 //|---@field entrances? table[] Four cardinal modes, north/east/south/west: {kind="none"}, {kind="offset",distance=N}, or {kind="exact",coordinate={x=X,y=Y}}.
 // lua-types-end
 
@@ -651,15 +651,15 @@
 // lua-types-begin btech 00129
 //|---@class BattleMapHexChange
 //|---@field map integer
-//|---@field coordinate BattleHexCoordinate
-//|---@field before BattleHex
-//|---@field after BattleHex
+//|---@field coordinate HexCoordinate
+//|---@field before Hex
+//|---@field after Hex
 // lua-types-end
 
 // lua-types-begin btech 00131
 //|---@class BattleMapIceReport
 //|---@field map integer
-//|---@field changed BattleHexCoordinate[] Coordinates in column-major processing order.
+//|---@field changed HexCoordinate[] Coordinates in column-major processing order.
 //|---@field fractures BattleSurfaceBreak[] Melting consequences, including affected occupants.
 // lua-types-end
 
@@ -696,20 +696,20 @@
 //|---@field BUILDING "building"
 //|---@field WALL "wall"
 //|---@field SAND "sand"
-//|---@alias BattleGroundName "clear"|"road"|"rough"|"mountains"|"snow"|"sand"
-//|---@class BattleGroundTypes
+//|---@alias GroundName "clear"|"road"|"rough"|"mountains"|"snow"|"sand"
+//|---@class GroundTypes
 //|---@field CLEAR "clear"
 //|---@field ROAD "road"
 //|---@field ROUGH "rough"
 //|---@field MOUNTAINS "mountains"
 //|---@field SNOW "snow"
 //|---@field SAND "sand"
-//|---@alias BattleWoodsName "light"|"heavy"
-//|---@class BattleWoodsTypes
+//|---@alias WoodsName "light"|"heavy"
+//|---@class WoodsTypes
 //|---@field LIGHT "light"
 //|---@field HEAVY "heavy"
-//|---@alias BattleStructureKind "building"|"wall"|"bridge"
-//|---@class BattleStructureKinds
+//|---@alias StructureKind "building"|"wall"|"bridge"
+//|---@class StructureKinds
 //|---@field BUILDING "building"
 //|---@field WALL "wall"
 //|---@field BRIDGE "bridge"
@@ -725,7 +725,7 @@
 
 // lua-types-begin btech 00151
 //|---@class BattleMapUnitFilter
-//|---@field origin BattleHexCoordinate Filter anchor.
+//|---@field origin HexCoordinate Filter anchor.
 //|---@field range number Nonnegative hex radius.
 // lua-types-end
 
@@ -740,7 +740,7 @@
 // lua-types-begin btech 00157
 //|---@class BattleContactView
 //|---@field label string Battlefield label, lowercase for identified allies.
-//|---@field coordinate BattleHexCoordinate
+//|---@field coordinate HexCoordinate
 //|---@field elevation integer Current elevation.
 //|---@field short_text string Plain compact biped contact row.
 //|---@field verbose_text string Plain multiline C0 contact report.
@@ -767,7 +767,7 @@
 //|---@field order integer Global order among active events.
 //|---@field remaining integer Seconds until connection completion or maintenance.
 //|---@field observer integer Observer unit dbref.
-//|---@field positions BattlePoint[]? Captured shooter and observer coordinates during setup; nil for maintenance.
+//|---@field positions Point[]? Captured shooter and observer coordinates during setup; nil for maintenance.
 // lua-types-end
 
 // lua-types-begin btech 00162
@@ -894,7 +894,7 @@
 // lua-types-begin btech 00187
 //|---@class BattleWoodlandImpact
 //|---@field map integer
-//|---@field coordinate BattleHexCoordinate
+//|---@field coordinate HexCoordinate
 //|---@field effect {effect: "none"}|{effect: "ignite", seconds: integer}|{effect: "clear", clearing: "thin_to_light"|"cut_to_clear"|"cut_to_rough"} What the attack did to the woods.
 //|---@field notices BattleNotice[]
 // lua-types-end
@@ -1112,7 +1112,7 @@
 //|---@field weapon_index integer
 //|---@field weapon string
 //|---@field target integer|nil
-//|---@field coordinate BattleHexCoordinate|nil
+//|---@field coordinate HexCoordinate|nil
 //|---@field aim BattleAimModifiers|BattleHexAimModifiers|BattleArtilleryAim
 //|---@field target_number integer|nil Nil when out of range.
 //|---@field roll integer Attack dice consumed without launching.
@@ -1452,7 +1452,7 @@
 
 // lua-types-begin btech 00350
 //|---@class BattleHexCenterReport
-//|---@field coordinate BattleHexCoordinate
+//|---@field coordinate HexCoordinate
 //|---@field elevation integer
 //|---@field range number Horizontal range to the current hex center.
 //|---@field bearing integer Clockwise degrees; 180 at the exact center.
@@ -1461,7 +1461,7 @@
 
 // lua-types-begin btech 00352
 //|---@class BattleNavigationReport
-//|---@field center BattleHexCoordinate Requested local map center.
+//|---@field center HexCoordinate Requested local map center.
 //|---@field text string Styled local map, continuous-position plot and live readouts.
 // lua-types-end
 
@@ -1492,7 +1492,7 @@
 //|---@field short_text string Plain compact row after identification locks.
 //|---@field weapon_arc BattleContactArc Observer torso direction toward entrance.
 //|---@field interior integer
-//|---@field coordinate BattleHexCoordinate
+//|---@field coordinate HexCoordinate
 //|---@field elevation integer
 //|---@field name string Plain structure name.
 //|---@field range number
@@ -1527,7 +1527,7 @@
 
 // lua-types-begin btech 00369
 //|---@class BattleEtaReport
-//|---@field coordinate BattleHexCoordinate
+//|---@field coordinate HexCoordinate
 //|---@field range number Horizontal range.
 //|---@field minutes integer? Whole minutes, absent when effectively stationary.
 //|---@field text string
@@ -1535,8 +1535,8 @@
 
 // lua-types-begin btech 00371
 //|---@class BattleBearingReport
-//|---@field origin BattlePoint
-//|---@field destination BattlePoint
+//|---@field origin Point
+//|---@field destination Point
 //|---@field bearing integer Clockwise compass degrees, 180 for coincident points.
 //|---@field text string
 // lua-types-end
@@ -1570,7 +1570,7 @@
 //|---@field unit integer
 //|---@field label string
 //|---@field name string
-//|---@field coordinate BattleHexCoordinate
+//|---@field coordinate HexCoordinate
 //|---@field elevation integer
 //|---@field range number
 //|---@field bearing integer
@@ -1657,7 +1657,7 @@
 //|---Typed battlefield light constant from btech.map.light_levels.
 //|---@class BattleLightLevel
 //|---Typed battlefield rule switch from btech.map.flags.
-//|---@class BattleMapFlag
+//|---@class MapFlag
 //|---Typed searchlight switching policy from btech.unit.searchlight_modes.
 //|---@class BattleSearchlightMode
 // lua-types-end

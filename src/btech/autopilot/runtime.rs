@@ -12,10 +12,10 @@ use super::{
     AutopilotConfig, AutopilotOrder, AutopilotOrderRecord, AutopilotReason, AutopilotState,
 };
 use crate::btech::autopilot::combat_policy::choose_target;
-use crate::btech::autopilot::navigation::{AStarSearch, Goal, Hex, SearchStatus};
+use crate::btech::autopilot::navigation::{AStarSearch, Goal, GridHex, SearchStatus};
 use crate::btech::autopilot::observations::{self, AutopilotObservation};
 use crate::btech::autopilot::traversal;
-use crate::btech::{BattleHexCoordinate, BattleNotice, BattlePosition, BattlePower};
+use crate::btech::{BattleNotice, BattlePosition, BattlePower, HexCoordinate};
 use crate::{Config, ObjectId, World};
 use anyhow::Result;
 use std::sync::Arc;
@@ -134,15 +134,15 @@ pub(crate) struct AutopilotPlan {
     pub(crate) goal: Option<(BattlePosition, u16)>,
     pub(crate) search: Option<AStarSearch>,
     pub(crate) replacement_pending: bool,
-    pub(crate) route: Vec<Hex>,
+    pub(crate) route: Vec<GridHex>,
     pub(crate) route_index: usize,
-    pub(crate) last_hex: Option<Hex>,
+    pub(crate) last_hex: Option<GridHex>,
     pub(crate) best_waypoint_distance: Option<f64>,
     pub(crate) stagnant_ticks: u16,
     pub(crate) recovery_attempts: u8,
     pub(crate) steering_grace: u16,
     /// One bounded courtesy wait per occupied waypoint, retained across replans.
-    pub(crate) yielding: Option<(Hex, i64)>,
+    pub(crate) yielding: Option<(GridHex, i64)>,
     pub(crate) terrain_revision: usize,
     pub(crate) mobility_revision: u64,
 }
@@ -691,8 +691,8 @@ fn advance_controller(
                     == super::interception::PursuitPolicy::Adaptive;
                 if adaptive && *geometry_budget > 0 {
                     *geometry_budget -= 1;
-                    let positional = e.usable(world, o, Hex::new(own.x, own.y));
-                    let preferred = e.observed_goal(false).contains(Hex::new(own.x, own.y));
+                    let positional = e.usable(world, o, GridHex::new(own.x, own.y));
+                    let preferred = e.observed_goal(false).contains(GridHex::new(own.x, own.y));
                     // Cache positional eligibility independently of the selected
                     // band: navigation may already have admitted a fallback band.
                     checked_initial = Some(positional);
@@ -762,7 +762,7 @@ fn advance_controller(
     // as prospective goal filtering; it is not a supplemental search budget.
     let mut geometry_left = (*geometry_budget).min(16 - usize::from(checked_initial.is_some()));
     let mut geometry_used = 0u64;
-    let mut usable = |hex: Hex| -> Option<bool> {
+    let mut usable = |hex: GridHex| -> Option<bool> {
         let Some(engagement) = engagement else {
             return Some(true);
         };
@@ -778,10 +778,10 @@ fn advance_controller(
     let initial_usable = engagement
         .and_then(|e| {
             current_position(world, id)
-                .filter(|p| e.observed_goal(fallback).contains(Hex::new(p.x, p.y)))
+                .filter(|p| e.observed_goal(fallback).contains(GridHex::new(p.x, p.y)))
         })
         .is_some_and(|p| {
-            checked_initial.unwrap_or_else(|| usable(Hex::new(p.x, p.y)).unwrap_or(false))
+            checked_initial.unwrap_or_else(|| usable(GridHex::new(p.x, p.y)).unwrap_or(false))
         });
     if let Some(metrics) = metrics.as_deref_mut() {
         metrics.geometry_checks += geometry_used;
@@ -857,8 +857,8 @@ fn advance_controller(
         fail(world, id, simulation_time, AutopilotReason::MapChanged);
         return Ok(0);
     }
-    let current_hex = Hex::new(position.x, position.y);
-    let goal_hex = Hex::new(goal.x, goal.y);
+    let current_hex = GridHex::new(position.x, position.y);
+    let goal_hex = GridHex::new(goal.x, goal.y);
     let radius = u32::from(directive.arrival_radius);
     let at_goal = engagement.map_or(current_hex.distance(goal_hex) <= radius, |e| {
         e.observed_goal(fallback).contains(current_hex) && initial_usable
@@ -1091,14 +1091,14 @@ fn advance_controller(
             let allowance = budget.min(EXPANSIONS_PER_CONTROLLER);
             let search = plan.search.as_mut().expect("search initialized");
             let expanded_before = search.total_expanded();
-            let traversal_with_leash = |from: Hex, to: Hex| {
+            let traversal_with_leash = |from: GridHex, to: GridHex| {
                 if engagement.is_some_and(|e| !e.permits(to)) {
                     None
                 } else {
                     super::navigation::Traversal::traversal_cost(&traversal, from, to)
                 }
             };
-            let mut accept = |hex: Hex| {
+            let mut accept = |hex: GridHex| {
                 let Some(e) = engagement else {
                     return Some(true);
                 };
@@ -1248,7 +1248,7 @@ fn advance_controller(
         && let Some(point) =
             crate::btech::scanner::scanner_unit(world, id).and_then(|unit| unit.point)
     {
-        let center = BattleHexCoordinate {
+        let center = HexCoordinate {
             x: i32::from(next.x),
             y: i32::from(next.y),
         }
@@ -1430,13 +1430,13 @@ fn directive_for_order(
             {
                 let distance = current_position(world, id)
                     .map(|position| {
-                        Hex::new(position.x, position.y)
-                            .distance(Hex::new(contact.position.x, contact.position.y))
+                        GridHex::new(position.x, position.y)
+                            .distance(GridHex::new(contact.position.x, contact.position.y))
                     })
                     .unwrap_or(u32::MAX);
                 let origin = attack_move_origin.unwrap_or(current);
-                let origin_distance = Hex::new(origin.x, origin.y)
-                    .distance(Hex::new(contact.position.x, contact.position.y));
+                let origin_distance = GridHex::new(origin.x, origin.y)
+                    .distance(GridHex::new(contact.position.x, contact.position.y));
                 if origin.map == current.map && origin_distance <= 6 && distance > 1 {
                     return Ok(Directive {
                         goal: Some(contact.position),
@@ -1467,8 +1467,8 @@ fn directive_for_order(
             if target_position.map != current.map {
                 return Err(AutopilotReason::MapChanged);
             }
-            if Hex::new(current.x, current.y)
-                .distance(Hex::new(target_position.x, target_position.y))
+            if GridHex::new(current.x, current.y)
+                .distance(GridHex::new(target_position.x, target_position.y))
                 <= u32::from(*separation)
             {
                 return Ok(Directive {
@@ -1535,8 +1535,8 @@ fn directive_for_order(
             } else {
                 None
             };
-            let distance = Hex::new(current.x, current.y)
-                .distance(Hex::new(target_position.x, target_position.y));
+            let distance = GridHex::new(current.x, current.y)
+                .distance(GridHex::new(target_position.x, target_position.y));
             if range.is_some_and(|band| distance < u32::from(band.minimum)) {
                 let retreat = retreat_position(world, id, current, target_position)
                     .ok_or(AutopilotReason::Unreachable)?;
@@ -1665,12 +1665,10 @@ fn retreat_position(
     let map = world.btech.maps().get(&current.map)?;
     let width = u16::try_from(map.width).ok()?;
     let height = u16::try_from(map.height).ok()?;
-    let current_hex = Hex::new(current.x, current.y);
-    let target_hex = Hex::new(target.x, target.y);
+    let current_hex = GridHex::new(current.x, current.y);
+    let target_hex = GridHex::new(target.x, target.y);
     current_hex
-        .neighbors()
-        .into_iter()
-        .filter(|hex| hex.x < width && hex.y < height)
+        .neighbors_within(width, height)
         .filter(|hex| {
             traversal::assess(
                 world,
@@ -1695,11 +1693,11 @@ fn retreat_position(
 /// Lower object IDs win a known occupied hex.  A unit only yields to an
 /// occupant it can know about through team identity or an acquired contact;
 /// hidden enemy placement must not leak into path decisions.
-fn should_yield(world: &World, moving: ObjectId, map: ObjectId, next: Hex) -> bool {
+fn should_yield(world: &World, moving: ObjectId, map: ObjectId, next: GridHex) -> bool {
     let Ok(occupants) = super::super::map_slots::hex_occupants(
         world,
         map,
-        BattleHexCoordinate {
+        HexCoordinate {
             x: i32::from(next.x),
             y: i32::from(next.y),
         },
@@ -1713,7 +1711,7 @@ fn should_yield(world: &World, moving: ObjectId, map: ObjectId, next: Hex) -> bo
 
 /// Yield briefly for known traffic, then let authoritative entry rules decide.
 /// A stationary occupant must not permanently reserve a legally traversable hex.
-fn courtesy_wait(plan: &mut AutopilotPlan, next: Hex, now: i64) -> bool {
+fn courtesy_wait(plan: &mut AutopilotPlan, next: GridHex, now: i64) -> bool {
     if plan.yielding.is_none_or(|(hex, _)| hex != next) {
         plan.yielding = Some((next, now + 5));
     }
@@ -1757,7 +1755,7 @@ fn unit_mobility_revision(world: &World, id: ObjectId) -> u64 {
             .map_or(0, |scanner| u64::from(scanner.vehicle))
 }
 
-fn map_revision(map: &crate::btech::StoredBattleMap) -> usize {
+fn map_revision(map: &crate::btech::StoredMap) -> usize {
     let terrain = map
         .terrain
         .as_ref()
@@ -2068,7 +2066,7 @@ mod navigation_recovery_tests {
     #[test]
     fn courtesy_wait_is_bounded_and_checkpointed() {
         let mut plan = AutopilotPlan::default();
-        let cell = Hex::new(4, 5);
+        let cell = GridHex::new(4, 5);
         assert!(courtesy_wait(&mut plan, cell, 100));
         let checkpoint = plan.clone();
         for time in 101..105 {
@@ -2078,7 +2076,7 @@ mod navigation_recovery_tests {
             assert!(!courtesy_wait(&mut plan, cell, time));
         }
         assert_eq!(plan, checkpoint);
-        assert!(courtesy_wait(&mut plan, Hex::new(5, 5), 200));
+        assert!(courtesy_wait(&mut plan, GridHex::new(5, 5), 200));
         assert_ne!(plan, checkpoint);
         plan = checkpoint;
         assert!(!courtesy_wait(&mut plan, cell, 200));
@@ -2176,7 +2174,7 @@ mod navigation_recovery_tests {
         world.btech.autopilot_plans.insert(
             id,
             AutopilotPlan {
-                route: vec![Hex::new(1, 1), Hex::new(1, 2)],
+                route: vec![GridHex::new(1, 1), GridHex::new(1, 2)],
                 route_index: 1,
                 ..Default::default()
             },
@@ -2238,7 +2236,7 @@ fn drive_pending(
     let Some(position) = current_position(world, id) else {
         return;
     };
-    let hex = Hex::new(position.x, position.y);
+    let hex = GridHex::new(position.x, position.y);
     let Some(index) = plan.route.iter().position(|p| *p == hex) else {
         issue_stop(world, id, now, notices);
         return;
@@ -2419,7 +2417,7 @@ mod replacement_tests {
 
         let mut aim = position;
         aim.x += 1;
-        let destination = crate::BattleHexCoordinate {
+        let destination = crate::HexCoordinate {
             x: i32::from(aim.x),
             y: i32::from(aim.y),
         }
@@ -2435,7 +2433,10 @@ mod replacement_tests {
         motion.heading = motion.point.bearing(destination).unwrap().unwrap();
         motion.desired_heading = motion.heading;
         motion.speed = 0.0;
-        plan.route = vec![Hex::new(position.x, position.y), Hex::new(aim.x, aim.y)];
+        plan.route = vec![
+            GridHex::new(position.x, position.y),
+            GridHex::new(aim.x, aim.y),
+        ];
         drive_pending(
             &mut world,
             &config,

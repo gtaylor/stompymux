@@ -4,7 +4,7 @@ use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 
 /// Resolve the upper support, lower bridge surface and chassis-specific touchdown level.
-fn surface(tile: BattleHex, elevation: i32, hover: bool) -> BattleDropSurface {
+fn surface(tile: Hex, elevation: i32, hover: bool) -> BattleDropSurface {
     let upper = i32::from(tile.standing_height());
     let water_line = i32::from(tile.water_line());
     let lower = if tile.has_bridge() {
@@ -44,7 +44,7 @@ fn units(world: &World) -> std::collections::BTreeSet<ObjectId> {
 /// Current landing inputs, sampled again after a callback can edit or remove the unit.
 struct DropSite {
     drop: BattleOrbitalDrop,
-    tile: BattleHex,
+    tile: Hex,
     geometry: BattleDropSurface,
 }
 
@@ -196,7 +196,7 @@ fn set_cursor(world: &mut World, id: ObjectId, drop: Option<BattleOrbitalDrop>) 
 fn landing_input(
     world: &mut World,
     id: ObjectId,
-    hex: BattleHex,
+    hex: Hex,
     extended: bool,
 ) -> Result<(BattleDropLandingInput, Option<ObjectId>)> {
     let (mech, pilot, power, prone, safe, damage, cockpit) =
@@ -281,7 +281,7 @@ fn touchdown(
     world: &mut World,
     id: ObjectId,
     mut drop: BattleOrbitalDrop,
-    tile: BattleHex,
+    tile: Hex,
     level: i32,
     mut rules: BattleFallRules,
     character: bool,
@@ -455,7 +455,7 @@ mod tests {
             (Terrain::Bridge, 1, true, 3, -1, 0),
         ] {
             assert_eq!(
-                surface(BattleHex::new(terrain, 3), elevation, hover),
+                surface(Hex::new(terrain, 3), elevation, hover),
                 BattleDropSurface {
                     upper,
                     lower,

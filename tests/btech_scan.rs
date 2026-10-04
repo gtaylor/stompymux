@@ -31,7 +31,7 @@ async fn fixture_with_ranges(
         &mut world,
         map,
         "scan.map",
-        BattleMapAsset::from_cells(&format!("3 60\n{}", ".0.0.0\n".repeat(60))).unwrap(),
+        MapAsset::from_cells(&format!("3 60\n{}", ".0.0.0\n".repeat(60))).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -325,7 +325,7 @@ async fn coordinate_scan_selects_visible_occupants_in_saved_order() {
     acquire(&mut world, source, other);
     let shared = std::rc::Rc::new(std::cell::RefCell::new(world));
     let scripts = Scripts::new(&config, shared.clone()).unwrap();
-    let coordinate = BattleHexCoordinate { x: 1, y: 2 };
+    let coordinate = HexCoordinate { x: 1, y: 2 };
     let before = shared.borrow().btech.clone();
     let report =
         scan_battle_hex_unit_action(&scripts, source, ObjectId(1), coordinate, "").unwrap();
@@ -347,7 +347,7 @@ async fn coordinate_scan_selects_visible_occupants_in_saved_order() {
         &scripts,
         source,
         ObjectId(1),
-        BattleHexCoordinate { x: 1, y: 1 },
+        HexCoordinate { x: 1, y: 1 },
         "",
     )
     .unwrap();
@@ -387,9 +387,9 @@ async fn coordinate_scan_selects_visible_occupants_in_saved_order() {
         empty
     );
     for coordinate in [
-        BattleHexCoordinate { x: -1, y: 2 },
-        BattleHexCoordinate { x: 3, y: 2 },
-        BattleHexCoordinate { x: 1, y: 22 },
+        HexCoordinate { x: -1, y: 2 },
+        HexCoordinate { x: 3, y: 2 },
+        HexCoordinate { x: 1, y: 22 },
     ] {
         assert!(
             scan_battle_hex_unit_action(&scripts, source, ObjectId(1), coordinate, "").is_err()
@@ -407,7 +407,7 @@ fn scan_structure(world: &mut World, config: &Config, map: ObjectId) -> ObjectId
         world,
         interior,
         "hangar.map",
-        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+        MapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(world, interior, support::FIXTURE_DICE_SEED);
@@ -427,7 +427,7 @@ fn scan_structure(world: &mut World, config: &Config, map: ObjectId) -> ObjectId
         map,
         0,
         Some(BattleBuildingEntrance {
-            coordinate: BattleHexCoordinate { x: 1, y: 2 },
+            coordinate: HexCoordinate { x: 1, y: 2 },
             interior,
             data_char: 0,
             data_short: 0,
@@ -448,7 +448,7 @@ async fn building_scans_report_integrity_and_hide_unavailable_interiors() {
         .unwrap()
         .flags
         .insert(Flag::Connected);
-    let coordinate = BattleHexCoordinate { x: 1, y: 2 };
+    let coordinate = HexCoordinate { x: 1, y: 2 };
     let before = world.btech.clone();
     let report = scan_battle_building(&mut world, source, ObjectId(1), coordinate, 1000).unwrap();
     assert_eq!(report.text, "The Hangar's CF is 31.");
@@ -477,7 +477,7 @@ async fn building_scans_report_integrity_and_hide_unavailable_interiors() {
         &mut world,
         source,
         ObjectId(1),
-        BattleHexCoordinate { x: 1, y: 3 },
+        HexCoordinate { x: 1, y: 3 },
         1000,
     )
     .unwrap();
@@ -509,7 +509,7 @@ async fn building_scans_report_integrity_and_hide_unavailable_interiors() {
             &mut world,
             source,
             ObjectId(1),
-            BattleHexCoordinate { x: 1, y: 22 },
+            HexCoordinate { x: 1, y: 22 },
             1000
         )
         .is_err()
@@ -550,7 +550,7 @@ async fn concealed_building_rolls_awards_and_callback_rollback_replay() {
     )
     .unwrap();
     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
-    let coordinate = BattleHexCoordinate { x: 1, y: 2 };
+    let coordinate = HexCoordinate { x: 1, y: 2 };
     // The startup-captured target of 18 cannot succeed, but an eligible attempt spends two dice.
     let mut expected = world.clone();
     roll_unit_dice(&mut expected, source, 2).unwrap();
@@ -622,7 +622,7 @@ async fn concealed_building_rolls_awards_and_callback_rollback_replay() {
 }
 
 /// Install a field without triggering it or requiring unit movement.
-fn scan_mine(world: &mut World, map: ObjectId, coordinate: BattleHexCoordinate) {
+fn scan_mine(world: &mut World, map: ObjectId, coordinate: HexCoordinate) {
     set_minefield(
         world,
         map,
@@ -678,7 +678,7 @@ fn scan_perception(world: &mut World, source: ObjectId) {
 #[tokio::test]
 async fn mine_recognition_gates_dice_and_replays_without_revealing_configuration() {
     let (_dir, config, mut world, map, source, _) = fixture().await;
-    let coordinate = BattleHexCoordinate { x: 1, y: 2 };
+    let coordinate = HexCoordinate { x: 1, y: 2 };
     let before = world.btech.clone();
     let empty = scan_battle_mines(&mut world, source, ObjectId(1), coordinate, 1000).unwrap();
     assert!(!empty.found);
@@ -714,7 +714,7 @@ async fn mine_recognition_gates_dice_and_replays_without_revealing_configuration
     );
     assert_eq!(world.btech, restored.btech);
     assert_eq!(world.btech.maps()[&map].minefields().len(), 1);
-    let far = BattleHexCoordinate { x: 1, y: 11 };
+    let far = HexCoordinate { x: 1, y: 11 };
     scan_mine(&mut world, map, far);
     let mut expected = serde_json::to_value(&world.btech).unwrap();
     let mut dice: BattleDice =
@@ -733,7 +733,7 @@ async fn mine_recognition_gates_dice_and_replays_without_revealing_configuration
 async fn combined_hex_scan_routes_private_failure_and_rolls_back_both_phases() {
     let (_dir, config, mut world, map, source, _) = fixture().await;
     scan_structure(&mut world, &config, map);
-    let coordinate = BattleHexCoordinate { x: 1, y: 2 };
+    let coordinate = HexCoordinate { x: 1, y: 2 };
     scan_mine(&mut world, map, coordinate);
     for player in [ObjectId(1), ObjectId(2)] {
         world.objects.get_mut(&player).unwrap().location = Some(source);
@@ -804,7 +804,7 @@ async fn selected_scan_dispatches_each_lock_mode_without_changing_countdowns() {
         .unwrap()
         .flags
         .insert(Flag::Connected);
-    let coordinate = BattleHexCoordinate { x: 1, y: 2 };
+    let coordinate = HexCoordinate { x: 1, y: 2 };
     let shared = std::rc::Rc::new(std::cell::RefCell::new(world.clone()));
     let scripts = Scripts::new(&config, shared.clone()).unwrap();
     assert!(scan_battle_selected_action(&scripts, &config, source, ObjectId(1), "").is_err());
@@ -873,7 +873,7 @@ async fn selected_scan_dispatches_each_lock_mode_without_changing_countdowns() {
 async fn selected_observer_coordinates_bypass_distance_but_keep_visibility_and_rollback() {
     let (_dir, config, mut world, map, source, _) = fixture().await;
     let interior = scan_structure(&mut world, &config, map);
-    let far = BattleHexCoordinate { x: 1, y: 22 };
+    let far = HexCoordinate { x: 1, y: 22 };
     set_building_entrance(
         &mut world,
         map,
@@ -905,7 +905,7 @@ async fn selected_observer_coordinates_bypass_distance_but_keep_visibility_and_r
     set_battle_map_visibility(&mut shared.borrow_mut(), map, BattleLight::Day, 0).unwrap();
     assert!(scan_battle_selected_action(&scripts, &config, source, ObjectId(1), "").is_err());
     set_battle_map_visibility(&mut shared.borrow_mut(), map, BattleLight::Day, 30).unwrap();
-    let coordinate = BattleHexCoordinate { x: 1, y: 2 };
+    let coordinate = HexCoordinate { x: 1, y: 2 };
     scan_mine(&mut shared.borrow_mut(), map, coordinate);
     scan_perception(&mut shared.borrow_mut(), source);
     let _ = select_battle_hex_target(
@@ -1002,7 +1002,7 @@ async fn brief_coordinate_reports_follow_visible_occupants_and_saved_hex_selecti
         &mut world,
         source,
         ObjectId(1),
-        BattleHexCoordinate { x: 1, y: 2 },
+        HexCoordinate { x: 1, y: 2 },
         BattleHexTargetMode::Hex,
     )
     .unwrap();
@@ -1047,7 +1047,7 @@ async fn display_centers_project_signed_ranges_and_share_lua_grammar() {
         BattleViewCenter::OwnUnit,
     )
     .unwrap();
-    assert_eq!(own.center, BattleHexCoordinate { x: 1, y: 1 });
+    assert_eq!(own.center, HexCoordinate { x: 1, y: 1 });
     assert_eq!(own.maximum_range, 20);
     let forward = parse_battle_view_center(
         &world,
@@ -1066,7 +1066,7 @@ async fn display_centers_project_signed_ranges_and_share_lua_grammar() {
     )
     .unwrap();
     assert_eq!(forward, backward);
-    assert_eq!(forward.center, BattleHexCoordinate { x: 1, y: 22 });
+    assert_eq!(forward.center, HexCoordinate { x: 1, y: 22 });
     assert_eq!(
         parse_battle_view_center(
             &world,
@@ -1081,7 +1081,7 @@ async fn display_centers_project_signed_ranges_and_share_lua_grammar() {
     let contact =
         parse_battle_view_center(&world, source, ObjectId(1), BattleViewKind::Tactical, "ab")
             .unwrap();
-    assert_eq!(contact.center, BattleHexCoordinate { x: 1, y: 2 });
+    assert_eq!(contact.center, HexCoordinate { x: 1, y: 2 });
     assert_eq!(
         parse_battle_view_center(
             &world,
@@ -1154,7 +1154,7 @@ async fn display_center_observer_exemption_is_projection_only() {
         "180 100",
     )
     .unwrap();
-    assert_eq!(projected.center, BattleHexCoordinate { x: 1, y: 101 });
+    assert_eq!(projected.center, HexCoordinate { x: 1, y: 101 });
     assert!(
         parse_battle_view_center(
             &world,
@@ -1217,7 +1217,7 @@ async fn viewports_clip_requested_dimensions_and_match_lua_without_state_changes
     )
     .unwrap();
     assert_eq!((tactical.width, tactical.height), (3, 24));
-    assert_eq!(tactical.origin, BattleHexCoordinate { x: 0, y: 0 });
+    assert_eq!(tactical.origin, HexCoordinate { x: 0, y: 0 });
     let long = resolve_battle_viewport(
         &world,
         source,
@@ -1238,8 +1238,8 @@ async fn viewports_clip_requested_dimensions_and_match_lua_without_state_changes
         dimensions,
     )
     .unwrap();
-    assert_eq!(far.origin, BattleHexCoordinate { x: 0, y: 19 });
-    assert_eq!(far.requested_center, BattleHexCoordinate { x: 1, y: 101 });
+    assert_eq!(far.origin, HexCoordinate { x: 0, y: 19 });
+    assert_eq!(far.requested_center, HexCoordinate { x: 1, y: 101 });
     let before = world.btech.clone();
     let scripts = Scripts::new(
         &config,
@@ -1325,8 +1325,8 @@ async fn long_range_maps_render_overlays_and_visible_contacts_without_mutation()
     set_map_decoration(
         &mut world,
         map,
-        BattleHexCoordinate { x: 0, y: 3 },
-        Some(BattleDecoration::new(BattleDecorationKind::Fire, 30, None)),
+        HexCoordinate { x: 0, y: 3 },
+        Some(BattleDecoration::new(DecorationKind::Fire, 30, None)),
     )
     .unwrap();
     let before = world.btech.clone();
@@ -1592,7 +1592,7 @@ async fn long_range_elevation_rows_preserve_zero_space_and_water_depth() {
         &mut world,
         map,
         "elevation.map",
-        BattleMapAsset::from_cells("3 2\n.0#3~2\n.0.0.0\n").unwrap(),
+        MapAsset::from_cells("3 2\n.0#3~2\n.0.0.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -1628,8 +1628,8 @@ async fn long_range_colors_follow_ansi_and_keep_labels_outside_styles() {
     set_map_decoration(
         &mut world,
         map,
-        BattleHexCoordinate { x: 0, y: 3 },
-        Some(BattleDecoration::new(BattleDecorationKind::Fire, 30, None)),
+        HexCoordinate { x: 0, y: 3 },
+        Some(BattleDecoration::new(DecorationKind::Fire, 30, None)),
     )
     .unwrap();
     world
@@ -1847,21 +1847,21 @@ async fn terrain_fire_and_inferno_illumination_follow_live_sources_without_acqui
     set_battle_map_visibility(&mut world, map, BattleLight::Night, 3).unwrap();
     // Without the sensor band, only sight (and therefore illumination) reaches past three hexes.
     set_battle_map_perception(&mut world, map, BattleMapPerceptionFlag::Sensors, false).unwrap();
-    let coordinate = BattleHexCoordinate { x: 1, y: 7 };
-    let fire = BattleHexCoordinate { x: 1, y: 8 };
+    let coordinate = HexCoordinate { x: 1, y: 7 };
+    let fire = HexCoordinate { x: 1, y: 8 };
     assert!(!battle_hex_visible(&world, source, coordinate).unwrap());
     assert!(!battle_hex_illuminated(&world, map, coordinate).unwrap());
     set_map_decoration(
         &mut world,
         map,
         fire,
-        Some(BattleDecoration::new(BattleDecorationKind::Fire, 30, None)),
+        Some(BattleDecoration::new(DecorationKind::Fire, 30, None)),
     )
     .unwrap();
     let before = world.btech.clone();
     assert!(battle_hex_illuminated(&world, map, fire).unwrap());
     assert!(battle_hex_illuminated(&world, map, coordinate).unwrap());
-    assert!(!battle_hex_illuminated(&world, map, BattleHexCoordinate { x: 1, y: 6 }).unwrap());
+    assert!(!battle_hex_illuminated(&world, map, HexCoordinate { x: 1, y: 6 }).unwrap());
     assert!(battle_hex_visible(&world, source, coordinate).unwrap());
     let rendered = battle_long_range_map(
         &world,
@@ -1901,10 +1901,10 @@ async fn terrain_fire_and_inferno_illumination_follow_live_sources_without_acqui
     set_map_decoration(&mut world, map, fire, None).unwrap();
     assert!(!battle_hex_visible(&world, source, coordinate).unwrap());
     apply_inferno_burn(&mut world, target, 1).unwrap();
-    assert!(battle_hex_illuminated(&world, map, BattleHexCoordinate { x: 1, y: 3 }).unwrap());
+    assert!(battle_hex_illuminated(&world, map, HexCoordinate { x: 1, y: 3 }).unwrap());
     let _ = advance_inferno_burns(&mut world);
-    assert!(!battle_hex_illuminated(&world, map, BattleHexCoordinate { x: 1, y: 3 }).unwrap());
-    assert!(battle_hex_illuminated(&world, map, BattleHexCoordinate { x: -1, y: 0 }).is_err());
+    assert!(!battle_hex_illuminated(&world, map, HexCoordinate { x: 1, y: 3 }).unwrap());
+    assert!(battle_hex_illuminated(&world, map, HexCoordinate { x: -1, y: 0 }).is_err());
 }
 
 #[tokio::test]
@@ -1913,8 +1913,8 @@ async fn tactical_maps_render_contacts_and_underlying_terrain_with_native_lua_pa
     set_map_decoration(
         &mut world,
         map,
-        BattleHexCoordinate { x: 0, y: 3 },
-        Some(BattleDecoration::new(BattleDecorationKind::Fire, 30, None)),
+        HexCoordinate { x: 0, y: 3 },
+        Some(BattleDecoration::new(DecorationKind::Fire, 30, None)),
     )
     .unwrap();
     let before = world.btech.clone();
@@ -2096,7 +2096,7 @@ async fn tactical_clipping_preserves_global_hex_parity_and_elevation() {
         &mut world,
         map,
         "wide.map",
-        BattleMapAsset::from_cells("8 3\n.0.0.0#3~2.0.0.0\n.0.0.0.0.0.0.0.0\n.0.0.0.0.0.0.0.0\n")
+        MapAsset::from_cells("8 3\n.0.0.0#3~2.0.0.0\n.0.0.0.0.0.0.0.0\n.0.0.0.0.0.0.0.0\n")
             .unwrap(),
     )
     .unwrap();
@@ -2126,7 +2126,7 @@ async fn tactical_clipping_preserves_global_hex_parity_and_elevation() {
         },
     )
     .unwrap();
-    assert_eq!(report.viewport.origin, BattleHexCoordinate { x: 3, y: 0 });
+    assert_eq!(report.viewport.origin, HexCoordinate { x: 3, y: 0 });
     assert_eq!((report.viewport.width, report.viewport.height), (5, 3));
     let plain = text::plain(&report.text);
     let lines: Vec<_> = plain.lines().collect();
@@ -2166,7 +2166,7 @@ async fn tactical_cliffs_use_signed_depth_thresholds_and_share_native_lua_output
         &mut world,
         map,
         "cliffs.map",
-        BattleMapAsset::from_cells("3 3\n.0.3.0\n.0.0~2\n.0-3.0\n").unwrap(),
+        MapAsset::from_cells("3 3\n.0.3.0\n.0.0~2\n.0-3.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -2193,8 +2193,8 @@ async fn tactical_cliffs_use_signed_depth_thresholds_and_share_native_lua_output
     set_map_decoration(
         &mut world,
         map,
-        BattleHexCoordinate { x: 1, y: 2 },
-        Some(BattleDecoration::new(BattleDecorationKind::Smoke, 30, None)),
+        HexCoordinate { x: 1, y: 2 },
+        Some(BattleDecoration::new(DecorationKind::Smoke, 30, None)),
     )
     .unwrap();
     let before = world.btech.clone();
@@ -2305,7 +2305,7 @@ async fn tactical_cliffs_use_signed_depth_thresholds_and_share_native_lua_output
 #[tokio::test]
 async fn landing_overlays_honor_saved_team_exclusions_and_terrain() {
     let (_dir, config, mut world, map, source, _target) = fixture().await;
-    let center = BattleHexCoordinate { x: 1, y: 1 };
+    let center = HexCoordinate { x: 1, y: 1 };
     let query = |world: &World, coordinate, team| {
         world.btech.maps()[&map]
             .landing_suitability(coordinate, team)
@@ -2313,12 +2313,12 @@ async fn landing_overlays_honor_saved_team_exclusions_and_terrain() {
     };
     assert_eq!(query(&world, center, 0), BattleLandingSuitability::Ready);
     assert_eq!(
-        query(&world, BattleHexCoordinate { x: 0, y: 1 }, 0),
+        query(&world, HexCoordinate { x: 0, y: 1 }, 0),
         BattleLandingSuitability::UnevenGround
     );
     assert!(
         world.btech.maps()[&map]
-            .landing_suitability(BattleHexCoordinate { x: -1, y: 0 }, 0)
+            .landing_suitability(HexCoordinate { x: -1, y: 0 }, 0)
             .is_err()
     );
     let zone = BattleLandingExclusion {
@@ -2332,11 +2332,11 @@ async fn landing_overlays_honor_saved_team_exclusions_and_terrain() {
     assert_eq!(query(&world, center, 0), BattleLandingSuitability::Blocked);
     assert_eq!(query(&world, center, 2), BattleLandingSuitability::Ready);
     assert_eq!(
-        query(&world, BattleHexCoordinate { x: 1, y: 2 }, 0),
+        query(&world, HexCoordinate { x: 1, y: 2 }, 0),
         BattleLandingSuitability::Blocked
     );
     assert_eq!(
-        query(&world, BattleHexCoordinate { x: 1, y: 3 }, 0),
+        query(&world, HexCoordinate { x: 1, y: 3 }, 0),
         BattleLandingSuitability::Ready
     );
     let before = world.btech.clone();
@@ -2346,7 +2346,7 @@ async fn landing_overlays_honor_saved_team_exclusions_and_terrain() {
             map,
             8,
             Some(BattleLandingExclusion {
-                coordinate: BattleHexCoordinate { x: 3, y: 1 },
+                coordinate: HexCoordinate { x: 3, y: 1 },
                 ..zone
             })
         )
@@ -2456,7 +2456,7 @@ async fn landing_overlays_honor_saved_team_exclusions_and_terrain() {
 #[tokio::test]
 async fn landing_suitability_checks_full_hex_neighborhood_terrain_and_fire() {
     let (_dir, config, mut world) = support::isolated_world().await;
-    let center = BattleHexCoordinate { x: 1, y: 1 };
+    let center = HexCoordinate { x: 1, y: 1 };
     for (tiles, flags, expected) in [
         (
             "~0~0~0\n~0/0~0\n~0~0~0\n",
@@ -2484,7 +2484,7 @@ async fn landing_suitability_checks_full_hex_neighborhood_terrain_and_fire() {
             &mut world,
             map,
             "landing.map",
-            BattleMapAsset::from_cells(&format!("3 3\n{tiles}{flags}: 100 20\n")).unwrap(),
+            MapAsset::from_cells(&format!("3 3\n{tiles}{flags}: 100 20\n")).unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -2495,7 +2495,7 @@ async fn landing_suitability_checks_full_hex_neighborhood_terrain_and_fire() {
             expected
         );
         // Nothing lands in fire or smoke, whatever the ground beneath.
-        for kind in [BattleDecorationKind::Fire, BattleDecorationKind::Smoke] {
+        for kind in [DecorationKind::Fire, DecorationKind::Smoke] {
             set_map_decoration(
                 &mut world,
                 map,
@@ -2517,7 +2517,7 @@ async fn landing_suitability_checks_full_hex_neighborhood_terrain_and_fire() {
 #[tokio::test]
 async fn tactical_mines_filter_trigger_fields_and_visibility_without_recognition() {
     let (_dir, config, mut world, map, source, _target) = fixture().await;
-    let coordinate = BattleHexCoordinate { x: 1, y: 2 };
+    let coordinate = HexCoordinate { x: 1, y: 2 };
     let mine = BattleMinefield {
         coordinate,
         kind: BattleMineKind::Command,
@@ -2626,7 +2626,7 @@ async fn findcenter_measures_continuous_position_without_sensor_hardware() {
         centered.text,
         "Current hex: (1,1,0)\tRange to center: 0.00\tBearing to center: 180"
     );
-    let center = BattleHexCoordinate { x: 1, y: 1 }.center();
+    let center = HexCoordinate { x: 1, y: 1 }.center();
     world
         .btech
         .rewrite_unit_record(source, |record| {
@@ -2687,7 +2687,7 @@ async fn navigation_combines_local_map_continuous_plot_and_readouts_without_muta
     let (_dir, config, mut world, map, source, target) = fixture().await;
     place_battle_unit(&mut world, target, map, 1, 1).unwrap();
     acquire(&mut world, source, target);
-    let center = BattleHexCoordinate { x: 1, y: 1 };
+    let center = HexCoordinate { x: 1, y: 1 };
     world
         .btech
         .rewrite_unit_record(target, |record| {
@@ -2765,7 +2765,7 @@ async fn navigation_combines_local_map_continuous_plot_and_readouts_without_muta
     assert!(battle_navigate(&world, source, ObjectId(1), "0 1").is_err());
     set_battle_observer(&mut world, source, true).unwrap();
     let remote = battle_navigate(&world, source, ObjectId(1), "180 100").unwrap();
-    assert_eq!(remote.center, BattleHexCoordinate { x: 1, y: 101 });
+    assert_eq!(remote.center, HexCoordinate { x: 1, y: 101 });
     assert!(!text::plain(&remote.text).contains('*'));
 }
 
@@ -2777,7 +2777,7 @@ async fn navigation_keeps_even_center_on_single_hex_maps_with_off_map_surroundin
         &mut world,
         map,
         "one.map",
-        BattleMapAsset::from_cells("1 1\n#3\n").unwrap(),
+        MapAsset::from_cells("1 1\n#3\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -2793,7 +2793,7 @@ async fn navigation_keeps_even_center_on_single_hex_maps_with_off_map_surroundin
         advance_battle_units(&mut world, 0);
     }
     let report = battle_navigate(&world, source, ObjectId(1), "").unwrap();
-    assert_eq!(report.center, BattleHexCoordinate { x: 0, y: 0 });
+    assert_eq!(report.center, HexCoordinate { x: 0, y: 0 });
     let plain = text::plain(&report.text);
     assert!(plain.contains("Location:   0,   0,   3"));
     assert!(plain.contains("Road"));
@@ -4116,7 +4116,7 @@ async fn probe_contacts_through_terrain_hide_identity_and_friendly_categories() 
         &mut world,
         map,
         "ridge.map",
-        BattleMapAsset::from_cells("3 5\n.0.0.0\n.0.0.0\n.9.9.9\n.0.0.0\n.0.0.0\n").unwrap(),
+        MapAsset::from_cells("3 5\n.0.0.0\n.0.0.0\n.9.9.9\n.0.0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -4302,7 +4302,7 @@ async fn compact_contact_rows_have_fixed_columns_and_bounded_names() {
     let expected = "S v[ab]B Jenner       x:  1 y:  2 z:  0 r: 1.0 b:180 s:  0.0 h:  0 S:   S ";
     assert_eq!(row.short_text, expected);
     assert_eq!(row.label, "ab");
-    assert_eq!(row.coordinate, BattleHexCoordinate { x: 1, y: 2 });
+    assert_eq!(row.coordinate, HexCoordinate { x: 1, y: 2 });
     assert_eq!(row.elevation, 0);
     for mode in 1..=3 {
         battle_brief(&scripts, source, ObjectId(1), &format!("C {mode}")).unwrap();
@@ -4384,8 +4384,7 @@ async fn compact_building_rows_share_terrain_detection_channels() {
             .unwrap();
         let before = scripts.world().btech.clone();
         let detection =
-            battle_hex_perception(&scripts.world(), source, BattleHexCoordinate { x: 1, y: 2 })
-                .unwrap();
+            battle_hex_perception(&scripts.world(), source, HexCoordinate { x: 1, y: 2 }).unwrap();
         assert_eq!(detection, expected);
         let contacts = battle_building_contacts(&scripts, source, ObjectId(1)).unwrap();
         assert_eq!(contacts.is_empty(), expected.is_none());
@@ -4614,8 +4613,8 @@ async fn verbose_contacts_share_multiline_reports_with_lua_and_restart() {
     assert!(!native.contains("[fg=red]"));
 
     let mut state = serde_json::to_value(&before).unwrap();
-    let start = BattleHexCoordinate { x: 1, y: 2 }.center();
-    let end = BattleHexCoordinate { x: 1, y: 4 }.center();
+    let start = HexCoordinate { x: 1, y: 2 }.center();
+    let end = HexCoordinate { x: 1, y: 4 }.center();
     let path = BattleJumpPath::new(start, end, 0, 0, 5).unwrap();
     state["constructed"][target.0.to_string()]["flight"] =
         serde_json::to_value(BattleJumpFlight::new(path)).unwrap();
@@ -5175,7 +5174,7 @@ async fn eta_uses_horizontal_range_absolute_speed_and_only_plain_hex_defaults() 
         let mut state = serde_json::to_value(&scripts.world().btech).unwrap();
         state["constructed"][source.0.to_string()]["target_lock"] =
             serde_json::to_value(BattleTargetSelection::Hex(BattleHexLock {
-                hex: BattleHexCoordinate { x: 1, y: 2 },
+                hex: HexCoordinate { x: 1, y: 2 },
                 mode,
                 remaining: 3,
             }))
@@ -5188,7 +5187,7 @@ async fn eta_uses_horizontal_range_absolute_speed_and_only_plain_hex_defaults() 
         &mut shared.borrow_mut(),
         source,
         ObjectId(1),
-        BattleHexCoordinate { x: 1, y: 2 },
+        HexCoordinate { x: 1, y: 2 },
         BattleHexTargetMode::Hex,
     )
     .unwrap();
@@ -5290,7 +5289,7 @@ async fn bearing_queries_share_defaults_bounds_and_live_visibility_without_mutat
         let mut state = serde_json::to_value(&scripts.world().btech).unwrap();
         state["constructed"][source.0.to_string()]["target_lock"] =
             serde_json::to_value(BattleTargetSelection::Hex(BattleHexLock {
-                hex: BattleHexCoordinate { x: 1, y: 0 },
+                hex: HexCoordinate { x: 1, y: 0 },
                 mode,
                 remaining: 3,
             }))
@@ -5330,9 +5329,9 @@ async fn range_reports_mask_dark_terrain_but_preserve_live_target_elevation() {
         for dark in [false, true] {
             let mut state = baseline.clone();
             state["maps"][map.0.to_string()]["terrain"][7] =
-                serde_json::to_value(BattleHex::new(terrain, 5)).unwrap();
+                serde_json::to_value(Hex::new(terrain, 5)).unwrap();
             state["maps"][map.0.to_string()]["terrain"][10] =
-                serde_json::to_value(BattleHex::new(Terrain::Grassland, 5)).unwrap();
+                serde_json::to_value(Hex::new(Terrain::Grassland, 5)).unwrap();
             state["maps"][map.0.to_string()]["flags"] =
                 serde_json::json!(if dark { 32 } else { 0 });
             shared.borrow_mut().btech = serde_json::from_value(state).unwrap();
@@ -5503,7 +5502,7 @@ async fn vector_reports_combine_signed_heights_bearings_and_all_coordinate_forms
     let mut state = serde_json::to_value(&before).unwrap();
     state["maps"][map.0.to_string()]["flags"] = serde_json::json!(32);
     state["maps"][map.0.to_string()]["terrain"][7] =
-        serde_json::to_value(BattleHex::new(Terrain::Ice, 5)).unwrap();
+        serde_json::to_value(Hex::new(Terrain::Ice, 5)).unwrap();
     shared.borrow_mut().btech = serde_json::from_value(state).unwrap();
     let vector = battle_vector_report(&scripts.world(), source, ObjectId(1), "1 2").unwrap();
     assert_eq!(vector.vertical_bearing, -45);
@@ -6102,7 +6101,7 @@ async fn range_overrides_control_live_queries_delivery_and_restart() {
 async fn tactical_mine_markers_follow_gameplay_insertion_order() {
     let (_dir, _config, mut world, map, source, _target) = fixture().await;
     let mine = BattleMinefield {
-        coordinate: BattleHexCoordinate { x: 1, y: 2 },
+        coordinate: HexCoordinate { x: 1, y: 2 },
         kind: BattleMineKind::Standard,
         strength: 10,
         extra: 0,

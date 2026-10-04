@@ -13,9 +13,9 @@ use std::{cell::RefCell, collections::BTreeMap, rc::Rc};
 use stompymux_rs::btech::autopilot::observations;
 use stompymux_rs::btech::{AutopilotOrderState, AutopilotReason, AutopilotState, LastSighting};
 use stompymux_rs::{
-    BattleMapAsset, BattlePosition, BattlePower, BattleUnitSignature, BattleUnitTemplate,
-    BattleVehicleTemplate, Config, HeartbeatHarness, Kind, ObjectId, Scripts, World,
-    assign_battle_pilot, create_battle_map, create_battle_vehicle, persistence, place_battle_unit,
+    BattlePosition, BattlePower, BattleUnitSignature, BattleUnitTemplate, BattleVehicleTemplate,
+    Config, HeartbeatHarness, Kind, MapAsset, ObjectId, Scripts, World, assign_battle_pilot,
+    create_battle_map, create_battle_vehicle, persistence, place_battle_unit,
     refresh_battle_contacts, set_battle_speed, set_battle_unit_signature,
 };
 
@@ -33,7 +33,7 @@ async fn mech_fixture(
         &mut world,
         map,
         "autopilot.audit",
-        BattleMapAsset::from_cells(asset).unwrap(),
+        MapAsset::from_cells(asset).unwrap(),
     )
     .unwrap();
     crate::support::seed_object_dice(&mut world, map, crate::support::FIXTURE_DICE_SEED);
@@ -144,7 +144,7 @@ async fn vehicle_ground_classes_are_admitted_on_water_and_bridge_maps() {
         &mut world,
         map,
         "autopilot.surfaces",
-        BattleMapAsset::from_cells("3 4\n.0.0.0\n~0/0.0\n.0~0.0\n.0.0.0\n").unwrap(),
+        MapAsset::from_cells("3 4\n.0.0.0\n~0/0.0\n.0~0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
     crate::support::seed_object_dice(&mut world, map, crate::support::FIXTURE_DICE_SEED);

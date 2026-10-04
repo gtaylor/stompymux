@@ -6,7 +6,7 @@ use serde::Serialize;
 /// A read-only navigation measurement and its shared native/Lua text.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct BattleHexCenterReport {
-    pub coordinate: super::BattleHexCoordinate,
+    pub coordinate: super::HexCoordinate,
     pub elevation: i32,
     pub range: f64,
     pub bearing: u16,
@@ -29,7 +29,7 @@ pub fn find_center(
         "Start the unit first"
     );
     let position = record.position.context("Unit is not on a battlefield")?;
-    let coordinate = super::BattleHexCoordinate {
+    let coordinate = super::HexCoordinate {
         x: i32::from(position.x),
         y: i32::from(position.y),
     };
@@ -50,8 +50,8 @@ pub fn find_center(
 
 /// Geometry shared by cockpit navigation and administrative fields, without access checks.
 pub(super) fn measurement(
-    point: super::BattlePoint,
-    coordinate: super::BattleHexCoordinate,
+    point: super::Point,
+    coordinate: super::HexCoordinate,
 ) -> Result<(f64, u16)> {
     let range = point.range(coordinate.center())?;
     let bearing = point

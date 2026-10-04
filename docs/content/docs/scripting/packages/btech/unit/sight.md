@@ -22,7 +22,7 @@ btech.unit.sight(dbref, pilot, weapon, target)
 | `dbref` | `integer` |  |
 | `pilot` | `integer` |  |
 | `weapon` | `integer` | Zero-based weapon index. |
-| `target` | `integer\|BattleHexCoordinate\|nil` | Omitted target uses cockpit selection. |
+| `target` | `integer\|HexCoordinate\|nil` | Omitted target uses cockpit selection. |
 
 ## Returns
 

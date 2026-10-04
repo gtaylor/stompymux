@@ -21,4 +21,4 @@ btech.map.inspect(dbref)
 
 ## Returns
 
-- `StoredBattleMap`
+- `StoredMap`

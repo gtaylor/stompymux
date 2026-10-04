@@ -4550,7 +4550,7 @@ async fn observer_broadcasts_use_current_acquired_contacts_without_mutation() {
                 &mut altered,
                 map,
                 "other",
-                BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+                MapAsset::from_cells("1 1\n.0\n").unwrap(),
             )
             .unwrap();
             place_battle_unit(&mut altered, subject, map, 0, 0).unwrap();

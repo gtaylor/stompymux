@@ -6,6 +6,7 @@ use crate::path::find_path;
 use crate::report::RoadReport;
 use crate::rng::Rng;
 use crate::settlement::Settlement;
+use stompymux_map::HexCoordinate;
 
 /// Cheapest possible step cost, which keeps the routing heuristic admissible.
 const ROAD_STEP: u32 = 3;
@@ -72,9 +73,13 @@ fn pave(map: &mut HexMap, path: &[(i32, i32)], width: u8, across: (i32, i32)) ->
 /// The lane offset that widens a road heading from `from` to `to`: down a column for a road
 /// running east-west, across to the next column for one running north-south.
 fn widening(from: (i32, i32), to: (i32, i32)) -> (i32, i32) {
-    let (fx, fy) = crate::map::center(from.0, from.1);
-    let (tx, ty) = crate::map::center(to.0, to.1);
-    if (tx - fx).abs() >= (ty - fy).abs() {
+    let from = HexCoordinate {
+        x: from.0,
+        y: from.1,
+    }
+    .center();
+    let to = HexCoordinate { x: to.0, y: to.1 }.center();
+    if (to.x - from.x).abs() >= (to.y - from.y).abs() {
         (0, 1)
     } else {
         (1, 0)

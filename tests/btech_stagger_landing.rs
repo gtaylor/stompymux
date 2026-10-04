@@ -299,8 +299,7 @@ async fn map_reassignment_preserves_scalar_and_core_destruction_clears_it() {
                 &mut world,
                 map,
                 "new",
-                BattleMapAsset::from_cells(&format!("1 {height}\n{}", ".0\n".repeat(height)))
-                    .unwrap(),
+                MapAsset::from_cells(&format!("1 {height}\n{}", ".0\n".repeat(height))).unwrap(),
             )
             .unwrap();
             crate::support::seed_object_dice(&mut world, map, crate::support::FIXTURE_DICE_SEED);

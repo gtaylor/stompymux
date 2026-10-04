@@ -1,9 +1,9 @@
 //! Wind settings shared by fire propagation and map persistence.
-use super::StoredBattleMap;
+use super::StoredMap;
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 
-impl StoredBattleMap {
+impl StoredMap {
     /// Delay in committed seconds between fire spreading events.
     pub fn fire_spread_interval(&self) -> u16 {
         (60 - self.wind_speed).max(20) as u16

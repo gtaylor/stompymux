@@ -39,30 +39,30 @@ Alias: `"LeftArm"|"RightArm"|"LeftTorso"|"RightTorso"|"CenterTorso"|"LeftLeg"|"R
 - `sections`: `table<BattleSectionName, BattleSectionDefinition>`
 - `attributes`: `table<string, string>` — Unit-level source fields; not validated simulation capabilities.
 
-## BattleMapAssetSummary
+## MapAssetSummary
 
 - `width`: `integer`
 - `height`: `integer`
 - `gravity`: `integer`
 - `temperature`: `integer`
-- `flags`: `BattleMapFlag[]` — Map flags the asset enables.
+- `flags`: `MapFlag[]` — Map flags the asset enables.
 - `points_of_interest`: `BattleMapPointOfInterest[]` — Scripted points of interest in file order.
 
-## BattleHex
+## Hex
 
 - `level`: `integer` — Ground height in levels; any water surface sits at this height.
-- `ground`: `BattleGroundName` — What the ground is made of; see btech.map.ground_types.
-- `woods`: `BattleWoodsName` — Forest covering the ground; see btech.map.woods_types.
+- `ground`: `GroundName` — What the ground is made of; see btech.map.ground_types.
+- `woods`: `WoodsName` — Forest covering the ground; see btech.map.woods_types.
 - `water`: `{depth: integer, frozen: boolean}` — Standing water whose surface is at the ground level.
 - `structure`: `{kind: "building"|"wall", height: integer}|{kind: "bridge", deck: integer}` — Built feature; heights are above the ground level. Kinds are in btech.map.structure_kinds.
 - `overlay`: `"fire"|"smoke"` — Fire or smoke over the hex; base tiles never have one.
 
-## StoredBattleMap
+## StoredMap
 
 - `cargo_transfer_point`: `BattleCargoTransferPoint|nil` — Saved cargo location and hint policy.
 - `wrapping`: `boolean` — Opposite-edge wrapping is enabled.
-- `linked_markers`: `table<integer, {coordinate: BattleHexCoordinate, object: integer, data_char: integer, data_short: integer, data_int: integer}>` — Complete authored linked marker records.
-- `building_exits`: `table<integer, {coordinate: BattleHexCoordinate, destination: integer, data_char: integer, data_short: integer, data_int: integer}>` — Return-link slots; coordinates are selection metadata.
+- `linked_markers`: `table<integer, {coordinate: HexCoordinate, object: integer, data_char: integer, data_short: integer, data_int: integer}>` — Complete authored linked marker records.
+- `building_exits`: `table<integer, {coordinate: HexCoordinate, destination: integer, data_char: integer, data_short: integer, data_int: integer}>` — Return-link slots; coordinates are selection metadata.
 - `name`: `string`
 - `width`: `integer`
 - `height`: `integer`
@@ -165,7 +165,7 @@ Alias: `"normal"|"heat"|"hotload"|"ultra"|"rapid"|"rotary2"|"rotary3"|"rotary4"|
 - `state`: `"off"|"starting"|"running"`
 - `remaining`: `integer|nil` — Remaining committed seconds during startup.
 
-## BattlePoint
+## Point
 
 - `x`: `number`
 - `y`: `number`
@@ -348,8 +348,8 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 - `gyro_damage`: `integer` — Effective gyro damage after hardened protection.
 - `mobility`: `BattleMobility`
 - `jump_capacity`: `{speed: number, movement_points: integer}` — Damage/gravity-adjusted capacity; does not authorize flight. Unplaced units use 100% gravity.
-- `flight`: `{path: {start: BattlePoint, end: BattlePoint, start_elevation: number, end_elevation: integer, movement_points: integer, continuation: boolean, projection: {bearing: integer, range: number}|nil, target_range: number|nil}, travelled: number, completed_distance: number, landing_requested: boolean, sampled_movement_points: integer, dfa_target: integer|nil}|nil`
-- `airborne`: `{point: BattlePoint, elevation: number}|nil` — Last committed airborne sample.
+- `flight`: `{path: {start: Point, end: Point, start_elevation: number, end_elevation: integer, movement_points: integer, continuation: boolean, projection: {bearing: integer, range: number}|nil, target_range: number|nil}, travelled: number, completed_distance: number, landing_requested: boolean, sampled_movement_points: integer, dfa_target: integer|nil}|nil`
+- `airborne`: `{point: Point, elevation: number}|nil` — Last committed airborne sample.
 - `jump_stabilization`: `integer` — Remaining seconds, zero through twelve.
 - `engine`: `"standard"|"light"|"xl"|"xxl"|"compact"` — Installed fusion-engine family.
 - `destroyed`: `boolean` — Core structure, cockpit or engine is destroyed.
@@ -514,7 +514,7 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 - `next_level_balance`: `integer?` — Total balance needed for the next stored level; nil when disabled.
 - `remaining`: `integer?` — Additional points needed; zero if recalculation is overdue.
 
-## BattleHexCoordinate
+## HexCoordinate
 
 - `x`: `integer`
 - `y`: `integer`
@@ -522,9 +522,9 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 ## BattleSurfaceBreak
 
 - `map`: `integer`
-- `coordinate`: `BattleHexCoordinate`
-- `before`: `BattleHex`
-- `after`: `BattleHex`
+- `coordinate`: `HexCoordinate`
+- `before`: `Hex`
+- `after`: `Hex`
 - `fall_levels`: `integer`
 - `falls`: `table[]` — Ordered pairs of unit dbref and Mech fall report.
 - `vehicle_falls`: `table[]` — Ordered pairs of unit dbref and vehicle fall report.
@@ -534,13 +534,13 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 ## BattleMapEmitOptions
 
 - `audience`: `"all"|"range"|"line_of_sight"` — Recipient selection; defaults to all.
-- `origin`: `BattleHexCoordinate` — Required anchor for range and line_of_sight audiences.
+- `origin`: `HexCoordinate` — Required anchor for range and line_of_sight audiences.
 - `range`: `number` — Nonnegative hex radius; required with the range audience.
 
 ## BattleAuthoredMapLink
 
 - `parent`: `integer` — Parent map.
-- `coordinate`: `BattleHexCoordinate` — Placement on the parent.
+- `coordinate`: `HexCoordinate` — Placement on the parent.
 - `entrances`: `table[]` — Four cardinal modes, north/east/south/west: {kind="none"}, {kind="offset",distance=N}, or {kind="exact",coordinate={x=X,y=Y}}.
 
 ## BattleMapEntrance
@@ -564,14 +564,14 @@ Alias: `{mode: "offset", offset: integer}|{mode: "exact", x: integer, y: integer
 ## BattleMapHexChange
 
 - `map`: `integer`
-- `coordinate`: `BattleHexCoordinate`
-- `before`: `BattleHex`
-- `after`: `BattleHex`
+- `coordinate`: `HexCoordinate`
+- `before`: `Hex`
+- `after`: `Hex`
 
 ## BattleMapIceReport
 
 - `map`: `integer`
-- `changed`: `BattleHexCoordinate[]` — Coordinates in column-major processing order.
+- `changed`: `HexCoordinate[]` — Coordinates in column-major processing order.
 - `fractures`: `BattleSurfaceBreak[]` — Melting consequences, including affected occupants.
 
 ## BattleMapEnvironment
@@ -609,11 +609,11 @@ Alias: `"grassland"|"road"|"light_forest"|"heavy_forest"|"water"|"ice"|"bridge"|
 - `WALL`: `"wall"`
 - `SAND`: `"sand"`
 
-## BattleGroundName
+## GroundName
 
 Alias: `"clear"|"road"|"rough"|"mountains"|"snow"|"sand"`
 
-## BattleGroundTypes
+## GroundTypes
 
 - `CLEAR`: `"clear"`
 - `ROAD`: `"road"`
@@ -622,20 +622,20 @@ Alias: `"clear"|"road"|"rough"|"mountains"|"snow"|"sand"`
 - `SNOW`: `"snow"`
 - `SAND`: `"sand"`
 
-## BattleWoodsName
+## WoodsName
 
 Alias: `"light"|"heavy"`
 
-## BattleWoodsTypes
+## WoodsTypes
 
 - `LIGHT`: `"light"`
 - `HEAVY`: `"heavy"`
 
-## BattleStructureKind
+## StructureKind
 
 Alias: `"building"|"wall"|"bridge"`
 
-## BattleStructureKinds
+## StructureKinds
 
 - `BUILDING`: `"building"`
 - `WALL`: `"wall"`
@@ -651,7 +651,7 @@ Alias: `{x: integer, y: integer, z?: integer}`
 
 ## BattleMapUnitFilter
 
-- `origin`: `BattleHexCoordinate` — Filter anchor.
+- `origin`: `HexCoordinate` — Filter anchor.
 - `range`: `number` — Nonnegative hex radius.
 
 ## BattlePerceptionReport
@@ -677,7 +677,7 @@ Alias: `"front" | "right" | "rear" | "left"`
 ## BattleContactView
 
 - `label`: `string` — Battlefield label, lowercase for identified allies.
-- `coordinate`: `BattleHexCoordinate`
+- `coordinate`: `HexCoordinate`
 - `elevation`: `integer` — Current elevation.
 - `short_text`: `string` — Plain compact biped contact row.
 - `verbose_text`: `string` — Plain multiline C0 contact report.
@@ -702,7 +702,7 @@ Alias: `"front" | "right" | "rear" | "left"`
 - `order`: `integer` — Global order among active events.
 - `remaining`: `integer` — Seconds until connection completion or maintenance.
 - `observer`: `integer` — Observer unit dbref.
-- `positions`: `BattlePoint[]?` — Captured shooter and observer coordinates during setup; nil for maintenance.
+- `positions`: `Point[]?` — Captured shooter and observer coordinates during setup; nil for maintenance.
 
 ## BattleTagState
 
@@ -818,7 +818,7 @@ Alias: `"front"|"right"|"left"|"rear"|"turret"|"rotor"`
 ## BattleWoodlandImpact
 
 - `map`: `integer`
-- `coordinate`: `BattleHexCoordinate`
+- `coordinate`: `HexCoordinate`
 - `effect`: `{effect: "none"}|{effect: "ignite", seconds: integer}|{effect: "clear", clearing: "thin_to_light"|"cut_to_clear"|"cut_to_rough"}` — What the attack did to the woods.
 - `notices`: `BattleNotice[]`
 
@@ -1023,7 +1023,7 @@ Alias: `{class: "mech", section: string}|{class: "ground_vehicle"|"vtol", sectio
 - `weapon_index`: `integer`
 - `weapon`: `string`
 - `target`: `integer|nil`
-- `coordinate`: `BattleHexCoordinate|nil`
+- `coordinate`: `HexCoordinate|nil`
 - `aim`: `BattleAimModifiers|BattleHexAimModifiers|BattleArtilleryAim`
 - `target_number`: `integer|nil` — Nil when out of range.
 - `roll`: `integer` — Attack dice consumed without launching.
@@ -1304,7 +1304,7 @@ Alias: `"off"|"ecm"|"eccm"`
 
 ## BattleHexCenterReport
 
-- `coordinate`: `BattleHexCoordinate`
+- `coordinate`: `HexCoordinate`
 - `elevation`: `integer`
 - `range`: `number` — Horizontal range to the current hex center.
 - `bearing`: `integer` — Clockwise degrees; 180 at the exact center.
@@ -1312,7 +1312,7 @@ Alias: `"off"|"ecm"|"eccm"`
 
 ## BattleNavigationReport
 
-- `center`: `BattleHexCoordinate` — Requested local map center.
+- `center`: `HexCoordinate` — Requested local map center.
 - `text`: `string` — Styled local map, continuous-position plot and live readouts.
 
 ## BattleBuildingContactMode
@@ -1340,7 +1340,7 @@ Alias: `"follow_brief" | "include" | "exclude"`
 - `short_text`: `string` — Plain compact row after identification locks.
 - `weapon_arc`: `BattleContactArc` — Observer torso direction toward entrance.
 - `interior`: `integer`
-- `coordinate`: `BattleHexCoordinate`
+- `coordinate`: `HexCoordinate`
 - `elevation`: `integer`
 - `name`: `string` — Plain structure name.
 - `range`: `number`
@@ -1371,15 +1371,15 @@ Alias: `"follow_brief" | "include" | "exclude"`
 
 ## BattleEtaReport
 
-- `coordinate`: `BattleHexCoordinate`
+- `coordinate`: `HexCoordinate`
 - `range`: `number` — Horizontal range.
 - `minutes`: `integer?` — Whole minutes, absent when effectively stationary.
 - `text`: `string`
 
 ## BattleBearingReport
 
-- `origin`: `BattlePoint`
-- `destination`: `BattlePoint`
+- `origin`: `Point`
+- `destination`: `Point`
 - `bearing`: `integer` — Clockwise compass degrees, 180 for coincident points.
 - `text`: `string`
 
@@ -1409,7 +1409,7 @@ Alias: `"follow_brief" | "include" | "exclude"`
 - `unit`: `integer`
 - `label`: `string`
 - `name`: `string`
-- `coordinate`: `BattleHexCoordinate`
+- `coordinate`: `HexCoordinate`
 - `elevation`: `integer`
 - `range`: `number`
 - `bearing`: `integer`

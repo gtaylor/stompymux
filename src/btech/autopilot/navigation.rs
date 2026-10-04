@@ -3,10 +3,13 @@
 //! The search is deliberately independent of the battle model.  Callers provide
 //! the map dimensions and a traversal-cost callback (or use [`HexGrid`]); later
 //! layers can therefore apply unit mobility, terrain, occupancy, and hazard
-//! rules without making the planner depend on those rules.  A search can be
+//! rules without making the planner depend on those rules.  Adjacency and
+//! distance come from the shared hex geometry in `stompymux-map`, which holds
+//! no battle rules.  A search can be
 //! advanced in small budgets and only stores discovered records, which keeps it
 //! suitable for a heartbeat that serves many autonomous units.
 
+use crate::btech::HexCoordinate;
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap};
 use std::error::Error;
@@ -16,61 +19,45 @@ use std::fmt;
 /// a tighter per-search limit.
 pub const DEFAULT_MAX_RECORDS: usize = 1_000_000;
 
-/// A zero-based column-staggered hex coordinate.
+/// A zero-based column-staggered coordinate on the planner's grid. Unlike the map's
+/// [`HexCoordinate`], it is unsigned, hashable and ordered, so searches can key records by it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct Hex {
+pub struct GridHex {
     /// The map column.
     pub x: u16,
     /// The map row within the column.
     pub y: u16,
 }
 
-impl Hex {
+impl GridHex {
     /// Create a coordinate without checking whether it belongs to a map.
     pub const fn new(x: u16, y: u16) -> Self {
         Self { x, y }
     }
 
-    /// Return the six neighboring coordinates in clockwise order from north.
-    ///
-    /// The returned coordinates may be outside the map.  [`AStarSearch`] filters
-    /// them using its dimensions before asking the traversal provider about a
-    /// transition.
-    pub fn neighbors(self) -> [Self; 6] {
-        // Convert the column-staggered coordinates to cube coordinates before
-        // adding directions.  This matches the geometry used by the battle map
-        // while keeping this module independent of the battle model.
-        let q = i64::from(self.x);
-        let r = i64::from(self.y) - (q + q.rem_euclid(2)) / 2;
-        let directions = [(0_i64, -1_i64), (1, -1), (1, 0), (0, 1), (-1, 1), (-1, 0)];
-
-        directions.map(|(dq, dr)| {
-            let q = q + dq;
-            let row = r + dr + (q + q.rem_euclid(2)) / 2;
-            // The source coordinate is u16, so every in-range neighbor fits in
-            // i32.  Keep a signed intermediate for the two off-map directions.
-            let x = u16::try_from(q).unwrap_or(u16::MAX);
-            let y = u16::try_from(row).unwrap_or(u16::MAX);
-            Self { x, y }
-        })
+    /// The neighbors on a `width` by `height` map, clockwise from north.
+    pub fn neighbors_within(self, width: u16, height: u16) -> impl Iterator<Item = Self> {
+        HexCoordinate::from(self)
+            .neighbors_within(width, height)
+            .into_iter()
+            .flatten()
+            // On-map coordinates are below a u16 bound.
+            .map(|hex| Self::new(hex.x as u16, hex.y as u16))
     }
 
     /// Return the shortest number of hex transitions between two coordinates.
     pub fn distance(self, other: Self) -> u32 {
-        let a = self.cube();
-        let b = other.cube();
-        a.into_iter()
-            .zip(b)
-            .map(|(left, right)| left.abs_diff(right))
-            .max()
-            .map(|distance| u32::try_from(distance).expect("u16 hex distance fits in u32"))
-            .unwrap_or(0)
+        let distance = HexCoordinate::from(self).distance(other.into());
+        u32::try_from(distance).expect("u16 hex distance fits in u32")
     }
+}
 
-    fn cube(self) -> [i64; 3] {
-        let q = i64::from(self.x);
-        let r = i64::from(self.y) - (q + q.rem_euclid(2)) / 2;
-        [q, r, -q - r]
+impl From<GridHex> for HexCoordinate {
+    fn from(hex: GridHex) -> Self {
+        Self {
+            x: i32::from(hex.x),
+            y: i32::from(hex.y),
+        }
     }
 }
 
@@ -79,7 +66,7 @@ impl Hex {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Goal {
     /// Center of the goal region.
-    pub center: Hex,
+    pub center: GridHex,
     /// Inclusive radius in hex transitions.
     pub radius: u32,
     /// Inclusive inner engagement radius; zero for ordinary destinations.
@@ -88,7 +75,7 @@ pub struct Goal {
 
 impl Goal {
     /// Construct a goal region around one map hex.
-    pub const fn new(center: Hex, radius: u32) -> Self {
+    pub const fn new(center: GridHex, radius: u32) -> Self {
         Self {
             center,
             radius,
@@ -97,7 +84,7 @@ impl Goal {
     }
 
     /// An engagement annulus. Empty intervals are rejected by search construction.
-    pub const fn annulus(center: Hex, minimum: u32, maximum: u32) -> Self {
+    pub const fn annulus(center: GridHex, minimum: u32, maximum: u32) -> Self {
         Self {
             center,
             minimum,
@@ -105,12 +92,12 @@ impl Goal {
         }
     }
 
-    pub(crate) fn contains(self, position: Hex) -> bool {
+    pub(crate) fn contains(self, position: GridHex) -> bool {
         let distance = position.distance(self.center);
         distance >= self.minimum && distance <= self.radius
     }
 
-    fn heuristic(self, position: Hex) -> u32 {
+    fn heuristic(self, position: GridHex) -> u32 {
         let distance = position.distance(self.center);
         self.minimum
             .saturating_sub(distance)
@@ -123,15 +110,15 @@ pub trait Traversal {
     /// Return the cost of entering `to` from `from`, or `None` when the
     /// transition is unavailable.  Costs must be positive; a zero cost is
     /// treated as unavailable by the planner.
-    fn traversal_cost(&self, from: Hex, to: Hex) -> Option<u32>;
+    fn traversal_cost(&self, from: GridHex, to: GridHex) -> Option<u32>;
 }
 
 /// Allow a plain closure to provide unit-specific traversal rules.
 impl<F> Traversal for F
 where
-    F: Fn(Hex, Hex) -> Option<u32>,
+    F: Fn(GridHex, GridHex) -> Option<u32>,
 {
-    fn traversal_cost(&self, from: Hex, to: Hex) -> Option<u32> {
+    fn traversal_cost(&self, from: GridHex, to: GridHex) -> Option<u32> {
         self(from, to)
     }
 }
@@ -192,7 +179,11 @@ impl HexGrid {
     }
 
     /// Change the destination cost for one cell.
-    pub fn set_cost(&mut self, position: Hex, cost: Option<u32>) -> Result<(), NavigationError> {
+    pub fn set_cost(
+        &mut self,
+        position: GridHex,
+        cost: Option<u32>,
+    ) -> Result<(), NavigationError> {
         if cost == Some(0) {
             return Err(NavigationError::NonPositiveTraversalCost);
         }
@@ -203,14 +194,14 @@ impl HexGrid {
         Ok(())
     }
 
-    fn index(&self, position: Hex) -> Option<usize> {
+    fn index(&self, position: GridHex) -> Option<usize> {
         (position.x < self.width && position.y < self.height)
             .then(|| usize::from(position.y) * usize::from(self.width) + usize::from(position.x))
     }
 }
 
 impl Traversal for HexGrid {
-    fn traversal_cost(&self, _from: Hex, to: Hex) -> Option<u32> {
+    fn traversal_cost(&self, _from: GridHex, to: GridHex) -> Option<u32> {
         self.index(to).and_then(|index| self.costs[index])
     }
 }
@@ -223,7 +214,7 @@ pub enum NavigationError {
     /// The inner radius exceeded the outer radius.
     EmptyGoal,
     /// A start or goal coordinate was outside the supplied dimensions.
-    OutOfBounds(Hex),
+    OutOfBounds(GridHex),
     /// A search cannot run without at least one record slot.
     ZeroRecordLimit,
     /// A dense grid did not contain exactly one entry for every cell.
@@ -265,7 +256,7 @@ impl Error for NavigationError {}
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NavigationPath {
     /// Ordered route cells, including both endpoints.
-    pub cells: Vec<Hex>,
+    pub cells: Vec<GridHex>,
     /// Sum of the provider's edge costs along the route.
     pub cost: u64,
 }
@@ -300,7 +291,7 @@ impl SearchStatus {
 #[derive(Debug, Clone, Copy)]
 struct Record {
     cost: u64,
-    parent: Option<Hex>,
+    parent: Option<GridHex>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -308,7 +299,7 @@ struct OpenEntry {
     estimated_total: u64,
     heuristic: u32,
     cost: u64,
-    position: Hex,
+    position: GridHex,
 }
 
 impl Ord for OpenEntry {
@@ -335,10 +326,10 @@ impl PartialOrd for OpenEntry {
 pub struct AStarSearch {
     width: u16,
     height: u16,
-    start: Hex,
+    start: GridHex,
     goal: Goal,
     max_records: usize,
-    records: HashMap<Hex, Record>,
+    records: HashMap<GridHex, Record>,
     open: BinaryHeap<OpenEntry>,
     total_expanded: u64,
     terminal: Option<SearchStatus>,
@@ -346,7 +337,12 @@ pub struct AStarSearch {
 
 impl AStarSearch {
     /// Create a search using [`DEFAULT_MAX_RECORDS`].
-    pub fn new(width: u16, height: u16, start: Hex, goal: Goal) -> Result<Self, NavigationError> {
+    pub fn new(
+        width: u16,
+        height: u16,
+        start: GridHex,
+        goal: Goal,
+    ) -> Result<Self, NavigationError> {
         Self::with_record_limit(width, height, start, goal, DEFAULT_MAX_RECORDS)
     }
 
@@ -354,7 +350,7 @@ impl AStarSearch {
     pub fn with_record_limit(
         width: u16,
         height: u16,
-        start: Hex,
+        start: GridHex,
         goal: Goal,
         max_records: usize,
     ) -> Result<Self, NavigationError> {
@@ -410,7 +406,7 @@ impl AStarSearch {
     }
 
     /// Return the search's start coordinate.
-    pub const fn start(&self) -> Hex {
+    pub const fn start(&self) -> GridHex {
         self.start
     }
 
@@ -470,7 +466,7 @@ impl AStarSearch {
         &mut self,
         expansion_budget: usize,
         traversal: &T,
-        accept: &mut impl FnMut(Hex) -> Option<bool>,
+        accept: &mut impl FnMut(GridHex) -> Option<bool>,
     ) -> SearchStatus {
         if let Some(status) = &self.terminal {
             return status.clone();
@@ -513,10 +509,7 @@ impl AStarSearch {
 
             expanded += 1;
             self.total_expanded += 1;
-            for neighbor in entry.position.neighbors() {
-                if !Self::contains(self.width, self.height, neighbor) {
-                    continue;
-                }
+            for neighbor in entry.position.neighbors_within(self.width, self.height) {
                 let Some(edge_cost) = traversal.traversal_cost(entry.position, neighbor) else {
                     continue;
                 };
@@ -589,7 +582,7 @@ impl AStarSearch {
         }
     }
 
-    fn path_to(&self, destination: Hex) -> NavigationPath {
+    fn path_to(&self, destination: GridHex) -> NavigationPath {
         let mut cells = Vec::new();
         let mut current = destination;
         let cost = self.records[&destination].cost;
@@ -604,7 +597,7 @@ impl AStarSearch {
         NavigationPath { cells, cost }
     }
 
-    fn contains(width: u16, height: u16, position: Hex) -> bool {
+    fn contains(width: u16, height: u16, position: GridHex) -> bool {
         position.x < width && position.y < height
     }
 }
@@ -621,12 +614,12 @@ mod tests {
 
     #[test]
     fn annulus_costs_match_dijkstra_inside_and_outside() {
-        for start in [Hex::new(4, 4), Hex::new(0, 0), Hex::new(3, 4)] {
+        for start in [GridHex::new(4, 4), GridHex::new(0, 0), GridHex::new(3, 4)] {
             let mut grid = all_open(9, 9);
             for y in 0..8 {
-                grid.set_cost(Hex::new(5, y), Some(4)).unwrap();
+                grid.set_cost(GridHex::new(5, y), Some(4)).unwrap();
             }
-            let goal = Goal::annulus(Hex::new(4, 4), 2, 3);
+            let goal = Goal::annulus(GridHex::new(4, 4), 2, 3);
             let mut search = AStarSearch::new(9, 9, start, goal).unwrap();
             let SearchStatus::Found { path } = search.step(1000, &grid) else {
                 panic!("missing route")
@@ -639,22 +632,32 @@ mod tests {
     #[test]
     fn deferred_geometry_retains_node_and_rejected_goals_expand() {
         let grid = all_open(5, 5);
-        let mut search =
-            AStarSearch::new(5, 5, Hex::new(2, 2), Goal::annulus(Hex::new(2, 2), 0, 2)).unwrap();
+        let mut search = AStarSearch::new(
+            5,
+            5,
+            GridHex::new(2, 2),
+            Goal::annulus(GridHex::new(2, 2), 0, 2),
+        )
+        .unwrap();
         assert!(matches!(
             search.step_filtered(256, &grid, &mut |_| None),
             SearchStatus::Pending { .. }
         ));
         assert_eq!(search.total_expanded(), 0);
         let SearchStatus::Found { path } =
-            search.step_filtered(256, &grid, &mut |hex| Some(hex == Hex::new(2, 0)))
+            search.step_filtered(256, &grid, &mut |hex| Some(hex == GridHex::new(2, 0)))
         else {
             panic!("missing filtered route")
         };
-        assert_eq!(path.cells.last(), Some(&Hex::new(2, 0)));
+        assert_eq!(path.cells.last(), Some(&GridHex::new(2, 0)));
         assert_eq!(path.cost, 2);
         assert!(matches!(
-            AStarSearch::new(5, 5, Hex::new(0, 0), Goal::annulus(Hex::new(2, 2), 3, 2)),
+            AStarSearch::new(
+                5,
+                5,
+                GridHex::new(0, 0),
+                Goal::annulus(GridHex::new(2, 2), 3, 2)
+            ),
             Err(NavigationError::EmptyGoal)
         ));
     }
@@ -662,7 +665,7 @@ mod tests {
     #[test]
     fn shared_record_limit_cannot_drop_below_discovered_usage() {
         let mut search =
-            AStarSearch::new(5, 5, Hex::new(0, 0), Goal::new(Hex::new(4, 4), 0)).unwrap();
+            AStarSearch::new(5, 5, GridHex::new(0, 0), Goal::new(GridHex::new(4, 4), 0)).unwrap();
         assert!(matches!(
             search.step(1, &all_open(5, 5)),
             SearchStatus::Pending { .. }
@@ -675,7 +678,7 @@ mod tests {
         assert_eq!(search.record_limit(), used + 4);
     }
 
-    fn dijkstra(grid: &HexGrid, start: Hex, goal: Goal) -> Option<u64> {
+    fn dijkstra(grid: &HexGrid, start: GridHex, goal: Goal) -> Option<u64> {
         let mut distances = HashMap::from([(start, 0_u64)]);
         let mut queue = BinaryHeap::from([Reverse((0_u64, start))]);
         while let Some(Reverse((cost, position))) = queue.pop() {
@@ -685,7 +688,7 @@ mod tests {
             if goal.contains(position) {
                 return Some(cost);
             }
-            for neighbor in position.neighbors() {
+            for neighbor in position.neighbors_within(grid.width, grid.height) {
                 let Some(edge) = grid.traversal_cost(position, neighbor) else {
                     continue;
                 };
@@ -703,14 +706,26 @@ mod tests {
 
     #[test]
     fn coordinate_neighbors_and_distance_match_column_staggered_geometry() {
-        let center = Hex::new(2, 2);
-        assert_eq!(center.neighbors()[0], Hex::new(2, 1));
-        assert_eq!(center.neighbors()[1], Hex::new(3, 2));
-        assert_eq!(center.neighbors()[2], Hex::new(3, 3));
-        assert_eq!(center.neighbors()[3], Hex::new(2, 3));
-        assert_eq!(center.neighbors()[4], Hex::new(1, 3));
-        assert_eq!(center.neighbors()[5], Hex::new(1, 2));
-        assert_eq!(center.distance(Hex::new(5, 4)), 3);
+        let center = GridHex::new(2, 2);
+        let neighbors: Vec<_> = center.neighbors_within(5, 5).collect();
+        assert_eq!(
+            neighbors,
+            [
+                GridHex::new(2, 1),
+                GridHex::new(3, 2),
+                GridHex::new(3, 3),
+                GridHex::new(2, 3),
+                GridHex::new(1, 3),
+                GridHex::new(1, 2),
+            ]
+        );
+        assert_eq!(center.distance(GridHex::new(5, 4)), 3);
+        // Edges keep only the neighbors on the map, still clockwise from north.
+        let corner: Vec<_> = GridHex::new(0, 0).neighbors_within(5, 5).collect();
+        assert_eq!(
+            corner,
+            [GridHex::new(1, 0), GridHex::new(1, 1), GridHex::new(0, 1)]
+        );
     }
 
     #[test]
@@ -719,14 +734,14 @@ mod tests {
         let height = 7;
         let mut grid = all_open(width, height);
         for y in 1..6 {
-            grid.set_cost(Hex::new(4, y), None).unwrap();
+            grid.set_cost(GridHex::new(4, y), None).unwrap();
         }
-        grid.set_cost(Hex::new(4, 3), Some(3)).unwrap();
+        grid.set_cost(GridHex::new(4, 3), Some(3)).unwrap();
         for x in 0..width {
-            grid.set_cost(Hex::new(x, 0), Some(2)).unwrap();
+            grid.set_cost(GridHex::new(x, 0), Some(2)).unwrap();
         }
-        let start = Hex::new(1, 3);
-        let goal = Goal::new(Hex::new(7, 3), 0);
+        let start = GridHex::new(1, 3);
+        let goal = Goal::new(GridHex::new(7, 3), 0);
         let expected = dijkstra(&grid, start, goal).unwrap();
         let mut search = AStarSearch::new(width, height, start, goal).unwrap();
         let status = loop {
@@ -752,8 +767,8 @@ mod tests {
         let width = 8;
         let height = 8;
         let grid = all_open(width, height);
-        let start = Hex::new(0, 0);
-        let goal = Goal::new(Hex::new(7, 7), 0);
+        let start = GridHex::new(0, 0);
+        let goal = Goal::new(GridHex::new(7, 7), 0);
         let mut search = AStarSearch::new(width, height, start, goal).unwrap();
         let mut pending_calls = 0;
         let path = loop {
@@ -774,7 +789,7 @@ mod tests {
     fn invalidated_search_cannot_resume_old_frontier() {
         let grid = all_open(8, 8);
         let mut search =
-            AStarSearch::new(8, 8, Hex::new(0, 0), Goal::new(Hex::new(7, 7), 0)).unwrap();
+            AStarSearch::new(8, 8, GridHex::new(0, 0), Goal::new(GridHex::new(7, 7), 0)).unwrap();
         assert!(matches!(
             search.step(1, &grid),
             SearchStatus::Pending { .. }
@@ -786,8 +801,8 @@ mod tests {
     #[test]
     fn goal_radius_completes_at_the_first_region_cell() {
         let grid = all_open(8, 8);
-        let start = Hex::new(0, 0);
-        let goal = Goal::new(Hex::new(5, 4), 2);
+        let start = GridHex::new(0, 0);
+        let goal = Goal::new(GridHex::new(5, 4), 2);
         let mut search = AStarSearch::new(8, 8, start, goal).unwrap();
         let status = search.step(200, &grid);
         let SearchStatus::Found { path } = status else {
@@ -807,9 +822,14 @@ mod tests {
     #[test]
     fn record_limit_reports_resource_limit_and_preserves_cap() {
         let grid = all_open(4, 4);
-        let mut search =
-            AStarSearch::with_record_limit(4, 4, Hex::new(0, 0), Goal::new(Hex::new(3, 3), 0), 1)
-                .unwrap();
+        let mut search = AStarSearch::with_record_limit(
+            4,
+            4,
+            GridHex::new(0, 0),
+            Goal::new(GridHex::new(3, 3), 0),
+            1,
+        )
+        .unwrap();
         assert_eq!(
             search.step(1, &grid),
             SearchStatus::ResourceLimit {
@@ -831,19 +851,19 @@ mod tests {
     fn blocked_map_is_unreachable() {
         let mut grid = all_open(5, 5);
         for y in 0..5 {
-            grid.set_cost(Hex::new(2, y), None).unwrap();
+            grid.set_cost(GridHex::new(2, y), None).unwrap();
         }
         let mut search =
-            AStarSearch::new(5, 5, Hex::new(0, 2), Goal::new(Hex::new(4, 2), 0)).unwrap();
+            AStarSearch::new(5, 5, GridHex::new(0, 2), Goal::new(GridHex::new(4, 2), 0)).unwrap();
         assert_eq!(search.step(100, &grid), SearchStatus::Unreachable);
     }
 
     #[test]
     fn callback_provider_matches_dense_grid_provider() {
         let grid = all_open(6, 6);
-        let callback = |_: Hex, to: Hex| (to.x < 6 && to.y < 6).then_some(1);
+        let callback = |_: GridHex, to: GridHex| (to.x < 6 && to.y < 6).then_some(1);
         let mut from_grid =
-            AStarSearch::new(6, 6, Hex::new(0, 0), Goal::new(Hex::new(5, 5), 0)).unwrap();
+            AStarSearch::new(6, 6, GridHex::new(0, 0), Goal::new(GridHex::new(5, 5), 0)).unwrap();
         let mut from_callback = from_grid.clone();
         let first = loop {
             let status = from_grid.step(8, &grid);

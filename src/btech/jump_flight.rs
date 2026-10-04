@@ -215,18 +215,18 @@ impl BattleJumpFlight {
     }
 
     /// Administrative relocation preserves the jump path, thrust sample and progress.
-    pub(super) fn relocate(&mut self, point: super::BattlePoint, elevation: f64) {
+    pub(super) fn relocate(&mut self, point: super::Point, elevation: f64) {
         self.relocated = Some(BattleJumpSample { point, elevation });
     }
 
     /// Refresh boundary policy before advancing without changing the launch path or distance.
-    pub(super) fn set_wrapping(&mut self, map: &super::StoredBattleMap) -> Result<()> {
+    pub(super) fn set_wrapping(&mut self, map: &super::StoredMap) -> Result<()> {
         self.wrapping = map.wrapping_dimensions()?;
         Ok(())
     }
 
     /// Validate the dimensions used by the last saved sample, including a pending policy change.
-    pub(super) fn validate_wrapping(self, map: &super::StoredBattleMap) -> Result<()> {
+    pub(super) fn validate_wrapping(self, map: &super::StoredMap) -> Result<()> {
         ensure!(
             self.wrapping.is_none_or(|wrapping| wrapping.matches(map)),
             "Jump wrapping dimensions differ from map"
@@ -236,11 +236,7 @@ impl BattleJumpFlight {
 
     /// Rebind a scenario-transferred route while preserving its exact sampled altitude and progress.
     /// Compatible routes need no override; incompatible routes settle boundaries during movement.
-    pub(super) fn rebind(
-        &mut self,
-        map: &super::StoredBattleMap,
-        point: super::BattlePoint,
-    ) -> Result<bool> {
+    pub(super) fn rebind(&mut self, map: &super::StoredMap, point: super::Point) -> Result<bool> {
         let wrapping = map.wrapping_dimensions()?;
         if self.wrapping == wrapping && super::jumping::validate_route(map, self.path).is_ok() {
             return Ok(false);
@@ -253,7 +249,7 @@ impl BattleJumpFlight {
     }
 
     /// Ordinary routes retain launch admission checks; reassigned routes resolve edges during updates.
-    pub(super) fn validate_on_map(self, map: &super::StoredBattleMap) -> Result<()> {
+    pub(super) fn validate_on_map(self, map: &super::StoredMap) -> Result<()> {
         self.validate_wrapping(map)?;
         if !self.reassigned {
             super::jumping::validate_route(map, self.path)?;
@@ -338,12 +334,12 @@ impl BattleJumpFlight {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::btech::BattlePoint;
+    use crate::btech::Point;
 
     /// Course replacement retains the exact cursor, cumulative distance and attack intent.
     #[test]
     fn redirect_retains_progress_and_replays_the_shared_integrator() {
-        let start = BattlePoint { x: 4.0, y: 4.0 };
+        let start = Point { x: 4.0, y: 4.0 };
         let path = BattleJumpPath::new(start, start.project(0.0, 3.0).unwrap(), 0, 0, 4).unwrap();
         let capacity = BattleJumpCapacity::from_speed(43.0).unwrap();
         let mut flight = BattleJumpFlight::new(path).with_dfa_target(crate::ObjectId(99));
@@ -391,7 +387,7 @@ mod tests {
     /// Invalid replacement and saved progress must not move the live cursor.
     #[test]
     fn redirect_rejects_discontinuous_start_and_invalid_saved_progress() {
-        let start = BattlePoint { x: 4.0, y: 4.0 };
+        let start = Point { x: 4.0, y: 4.0 };
         let path = BattleJumpPath::new(start, start.project(0.0, 3.0).unwrap(), 0, 0, 4).unwrap();
         let mut flight = BattleJumpFlight::new(path);
         let step = flight

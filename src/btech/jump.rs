@@ -1,5 +1,5 @@
 //! Conventional jump capacity and continuous flight geometry, independent of command authorization.
-use super::{BattlePoint, BattleSystem, BattleUnit};
+use super::{BattleSystem, BattleUnit, Point};
 use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
 
@@ -58,8 +58,8 @@ impl BattleUnit {
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(try_from = "JumpPathDefinition", into = "JumpPathDefinition")]
 pub struct BattleJumpPath {
-    start: BattlePoint,
-    end: BattlePoint,
+    start: Point,
+    end: Point,
     start_elevation: f64,
     end_elevation: f64,
     distance: f64,
@@ -83,8 +83,8 @@ struct JumpProjection {
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct JumpPathDefinition {
-    start: BattlePoint,
-    end: BattlePoint,
+    start: Point,
+    end: Point,
     start_elevation: f64,
     end_elevation: i16,
     movement_points: u16,
@@ -178,7 +178,7 @@ impl TryFrom<JumpPathDefinition> for BattleJumpPath {
 /// An airborne sample; elevation is deliberately separate from the ground hex's surface.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct BattleJumpSample {
-    pub point: BattlePoint,
+    pub point: Point,
     pub elevation: f64,
 }
 
@@ -186,8 +186,8 @@ impl BattleJumpPath {
     /// Plan a nonzero center-directed jump within current horizontal and vertical capacity.
     /// Map bounds, same-hex rejection, terrain, crew state and flight events belong to the caller.
     pub fn new(
-        start: BattlePoint,
-        end: BattlePoint,
+        start: Point,
+        end: Point,
         start_elevation: i16,
         end_elevation: i16,
         movement_points: u16,
@@ -209,7 +209,7 @@ impl BattleJumpPath {
     /// Admit the requested range before snapping to its destination hex center.
     /// The actual flight may be slightly longer; the apex uses the original requested range.
     pub fn projected(
-        start: BattlePoint,
+        start: Point,
         bearing: i32,
         range: f64,
         start_elevation: i16,
@@ -240,8 +240,8 @@ impl BattleJumpPath {
 
     /// Fix a target hex center while using launch-time target range for admission and apex.
     pub fn targeted(
-        start: BattlePoint,
-        end: BattlePoint,
+        start: Point,
+        end: Point,
         range: f64,
         start_elevation: i16,
         end_elevation: i16,
@@ -271,7 +271,7 @@ impl BattleJumpPath {
     /// This only constructs geometry; the caller retains flight time, intent and collisions.
     pub fn continuation(
         start: BattleJumpSample,
-        end: BattlePoint,
+        end: Point,
         end_elevation: i16,
         movement_points: u16,
     ) -> Result<Self> {
@@ -281,7 +281,7 @@ impl BattleJumpPath {
     /// Build cached geometry from validated exact-destination or projected launch inputs.
     fn build(
         start: BattleJumpSample,
-        end: BattlePoint,
+        end: Point,
         end_elevation: i16,
         movement_points: u16,
         projection: Option<JumpProjection>,
@@ -389,7 +389,7 @@ impl BattleJumpPath {
             midpoint.powi(4)
         };
         Ok(BattleJumpSample {
-            point: BattlePoint {
+            point: Point {
                 x: self.start.x + (self.end.x - self.start.x) * progress,
                 y: self.start.y + (self.end.y - self.start.y) * progress,
             },
@@ -408,7 +408,7 @@ mod tests {
     #[test]
     fn airborne_continuation_preserves_samples_through_restart() {
         let start = BattleJumpSample {
-            point: BattlePoint { x: 1.25, y: 2.5 },
+            point: Point { x: 1.25, y: 2.5 },
             elevation: 7.125,
         };
         let end = start.point.project(90.0, 2.0).unwrap();
@@ -449,7 +449,7 @@ mod tests {
     #[test]
     fn airborne_continuation_retains_admission_bounds() {
         let start = BattleJumpSample {
-            point: BattlePoint { x: 0.0, y: 0.0 },
+            point: Point { x: 0.0, y: 0.0 },
             elevation: 8.25,
         };
         let end = start.point.project(90.0, 2.0).unwrap();
@@ -475,7 +475,7 @@ mod tests {
     /// Saved normal launches cannot opt into fractional takeoff or conflicting admission modes.
     #[test]
     fn saved_jump_origin_modes_are_validated() {
-        let start = BattlePoint { x: 1.0, y: 2.0 };
+        let start = Point { x: 1.0, y: 2.0 };
         let path = BattleJumpPath::projected(start, 90, 2.0, 0, 0, 3).unwrap();
         let original = serde_json::to_value(path).unwrap();
         for elevation in [0.25, 32768.0, -32769.0] {

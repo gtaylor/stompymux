@@ -36,7 +36,7 @@ async fn fixture(
             &mut world,
             map,
             "environment",
-            BattleMapAsset::from_cells(&format!("1 1\n{tile}\n2: 100 {temperature}\n")).unwrap(),
+            MapAsset::from_cells(&format!("1 1\n{tile}\n2: 100 {temperature}\n")).unwrap(),
         )
         .unwrap();
         place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -127,7 +127,7 @@ async fn cutoff_cockpit_transition_and_restart() {
             &mut restored,
             map,
             "startup",
-            BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+            MapAsset::from_cells("1 1\n.0\n").unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut restored, map, support::FIXTURE_DICE_SEED);

@@ -20,7 +20,7 @@ fn aircraft(combustion: bool, fuel: u32, speed: f64, seed: u8) -> BattleVehicle 
     saved["position"] = serde_json::json!({"map":0,"x":0,"y":0});
     saved["map_slot"] = 0.into();
     saved["power"] = serde_json::to_value(BattlePower::Running).unwrap();
-    let mut motion = BattleMotion::stationary(BattleHexCoordinate { x: 0, y: 0 }.center());
+    let mut motion = BattleMotion::stationary(HexCoordinate { x: 0, y: 0 }.center());
     motion.speed = speed;
     motion.desired_speed = speed;
     saved["motion"] = serde_json::to_value(motion).unwrap();

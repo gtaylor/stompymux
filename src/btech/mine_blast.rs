@@ -23,7 +23,7 @@ pub struct BattleMineBlastReport {
     pub map: ObjectId,
     pub mine: BattleMinefield,
     pub hits: Vec<BattleMineBlastHit>,
-    pub ignited: Vec<BattleHexCoordinate>,
+    pub ignited: Vec<HexCoordinate>,
     pub removed: Vec<u32>,
     pub notices: Vec<BattleNotice>,
     /// Pilot-only messages indexed into the enclosing notice stream.
@@ -93,7 +93,7 @@ fn resolve(
         // Neighbor hexes follow coordinate order after the center, including at map edges.
         for x in mine.coordinate.x - 1..=mine.coordinate.x + 1 {
             for y in mine.coordinate.y - 1..=mine.coordinate.y + 1 {
-                let point = BattleHexCoordinate { x, y };
+                let point = HexCoordinate { x, y };
                 if point != mine.coordinate
                     && point.distance(mine.coordinate) == 1
                     && record.base_hex(i64::from(x), i64::from(y)).is_ok()
@@ -140,7 +140,7 @@ fn resolve(
 fn hit_hex(
     world: &mut World,
     report: &mut BattleMineBlastReport,
-    coordinate: BattleHexCoordinate,
+    coordinate: HexCoordinate,
     damage: u16,
     rules: BattleFallRules,
     character: bool,

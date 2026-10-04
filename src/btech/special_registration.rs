@@ -111,14 +111,14 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
                     &mut world,
                     id,
                     "Default Map",
-                    super::BattleMapAsset {
+                    super::MapAsset {
                         width: 21,
                         height: 11,
                         flags: 0,
                         gravity: 0,
                         temperature: 0,
                         hexes: Arc::new(vec![
-                            super::BattleHex::new(super::Terrain::Grassland, 0);
+                            super::Hex::new(super::Terrain::Grassland, 0);
                             21 * 11
                         ]),
                         points_of_interest: Vec::new(),

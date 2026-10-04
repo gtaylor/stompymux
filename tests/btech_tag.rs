@@ -206,7 +206,7 @@ async fn tag_range_visibility_and_syntax_fail_without_mutation() {
             &mut world,
             map,
             "lane",
-            BattleMapAsset::from_cells(&format!("1 20\n{}", ".0\n".repeat(20))).unwrap(),
+            MapAsset::from_cells(&format!("1 20\n{}", ".0\n".repeat(20))).unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);

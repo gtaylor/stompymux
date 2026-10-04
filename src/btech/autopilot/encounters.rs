@@ -1,8 +1,8 @@
 //! Small seeded production-heartbeat encounters for comparing movement policies.
 use super::*;
 use crate::{
-    BattleMapAsset, BattlePower, BattleUnitTemplate, Config, HeartbeatHarness, Kind, ObjectId,
-    World, persistence,
+    BattlePower, BattleUnitTemplate, Config, HeartbeatHarness, Kind, MapAsset, ObjectId, World,
+    persistence,
 };
 use anyhow::{Result, ensure};
 use serde::Serialize;
@@ -198,8 +198,8 @@ pub async fn run_policy(
                                 .map(|c| c.position),
                         )
                         .is_some_and(|(own, target)| {
-                            let distance = navigation::Hex::new(own.x, own.y)
-                                .distance(navigation::Hex::new(target.x, target.y));
+                            let distance = navigation::GridHex::new(own.x, own.y)
+                                .distance(navigation::GridHex::new(target.x, target.y));
                             distance >= u32::from(band.minimum)
                                 && distance <= u32::from(band.maximum)
                         });
@@ -401,7 +401,7 @@ pub(super) fn fixture_with_target(
         &mut world,
         map,
         "encounter",
-        BattleMapAsset::from_cells(&terrain)?,
+        MapAsset::from_cells(&terrain)?,
     )?;
     world.btech.maps.get_mut(&map).unwrap().fire_dice = Some(crate::BattleDice::seeded([seed; 32]));
     let shooter = world.create(config, "shooter".into(), Kind::Thing);
@@ -597,7 +597,7 @@ mod tests {
             &mut world,
             &config,
             id,
-            &[navigation::Hex::new(3, 5)],
+            &[navigation::GridHex::new(3, 5)],
             0,
             maximum,
             None,
@@ -618,7 +618,7 @@ mod tests {
             &mut world,
             &config,
             id,
-            &[navigation::Hex::new(3, 2)],
+            &[navigation::GridHex::new(3, 2)],
             0,
             maximum,
             None,

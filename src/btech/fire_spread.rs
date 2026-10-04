@@ -1,5 +1,5 @@
 //! Autonomous fire spreading, smoke creation and woodland burnout on candidate map state.
-use super::{BattleDecoration, BattleDecorationKind, BattleHexCoordinate, StoredBattleMap};
+use super::{BattleDecoration, DecorationKind, HexCoordinate, StoredMap};
 use crate::World;
 use anyhow::Result;
 use std::{collections::BTreeSet, sync::Arc};
@@ -9,7 +9,7 @@ pub fn map_fire_pending(world: &World) -> bool {
     world.btech.maps().values().any(|map| {
         map.decorations
             .values()
-            .any(|effect| effect.kind == BattleDecorationKind::Fire && effect.remaining != 0)
+            .any(|effect| effect.kind == DecorationKind::Fire && effect.remaining != 0)
     })
 }
 
@@ -28,18 +28,18 @@ pub fn advance_map_fire(world: &mut World) -> Result<()> {
 }
 
 /// Step existing clocks before processing events, so new markers receive their full lifetime.
-fn advance_fire(map: &mut StoredBattleMap) -> Result<()> {
+fn advance_fire(map: &mut StoredMap) -> Result<()> {
     if !map
         .decorations
         .values()
-        .any(|effect| effect.kind == BattleDecorationKind::Fire && effect.remaining != 0)
+        .any(|effect| effect.kind == DecorationKind::Fire && effect.remaining != 0)
     {
         return Ok(());
     }
     map.validate()?;
     let mut due = Vec::new();
     for (&index, effect) in Arc::make_mut(&mut map.decorations).iter_mut() {
-        if effect.kind != BattleDecorationKind::Fire || effect.remaining == 0 {
+        if effect.kind != DecorationKind::Fire || effect.remaining == 0 {
             continue;
         }
         if let Some(seconds) = &mut effect.next_spread {
@@ -87,7 +87,7 @@ fn advance_fire(map: &mut StoredBattleMap) -> Result<()> {
 /// The hex left when a fire over it burns out, if the fire changed it. Heavy woods thin to
 /// light woods, and light woods burn away. Clear ground beneath is left rough two times in
 /// three; any other ground, such as a road or sand, keeps its own kind.
-fn burn_out(tile: super::BattleHex, dice: &mut super::BattleDice) -> Option<super::BattleHex> {
+fn burn_out(tile: super::Hex, dice: &mut super::BattleDice) -> Option<super::Hex> {
     match tile.woods()? {
         super::Woods::Heavy => Some(tile.with_woods(Some(super::Woods::Light))),
         super::Woods::Light => {
@@ -101,12 +101,12 @@ fn burn_out(tile: super::BattleHex, dice: &mut super::BattleDice) -> Option<supe
 }
 
 /// Resolve all spread checks before smoke/fire duration draws; fire replaces smoke at shared tiles.
-fn spread(map: &mut StoredBattleMap, index: u32, replaced: &mut BTreeSet<u32>) -> Result<()> {
-    let origin = BattleHexCoordinate {
+fn spread(map: &mut StoredMap, index: u32, replaced: &mut BTreeSet<u32>) -> Result<()> {
+    let origin = HexCoordinate {
         x: (i64::from(index) % map.width) as i32,
         y: (i64::from(index) / map.width) as i32,
     };
-    let targets = spread_hexes(map, origin);
+    let targets = spread_hexes(map, origin)?;
     let mut ignite = [false; 4];
     for (slot, threshold) in [9, 11, 11, 12].into_iter().enumerate() {
         let dice = map.fire_dice.as_mut().unwrap();
@@ -121,7 +121,7 @@ fn spread(map: &mut StoredBattleMap, index: u32, replaced: &mut BTreeSet<u32>) -
         super::decorations::install_decoration(
             map,
             index,
-            BattleDecoration::new(BattleDecorationKind::Smoke, i64::from(remaining), None),
+            BattleDecoration::new(DecorationKind::Smoke, i64::from(remaining), None),
         )?;
         replaced.insert(index);
     }
@@ -132,7 +132,7 @@ fn spread(map: &mut StoredBattleMap, index: u32, replaced: &mut BTreeSet<u32>) -
         let burning = map
             .decorations
             .get(&index)
-            .is_some_and(|effect| effect.kind == BattleDecorationKind::Fire);
+            .is_some_and(|effect| effect.kind == DecorationKind::Fire);
         if burning
             || !map
                 .base_hex(i64::from(index) % map.width, i64::from(index) / map.width)?
@@ -145,56 +145,31 @@ fn spread(map: &mut StoredBattleMap, index: u32, replaced: &mut BTreeSet<u32>) -
         super::decorations::install_decoration(
             map,
             index,
-            BattleDecoration::new(
-                BattleDecorationKind::Fire,
-                i64::from(remaining),
-                next_spread,
-            ),
+            BattleDecoration::new(DecorationKind::Fire, i64::from(remaining), next_spread),
         )?;
         replaced.insert(index);
     }
     Ok(())
 }
 
-/// Wind-relative candidate cells, including the second cell directly downwind.
-fn spread_hexes(map: &StoredBattleMap, origin: BattleHexCoordinate) -> [Option<u32>; 4] {
-    let bearing = ((map.wind_direction + 30) / 60 % 6) as usize;
-    let neighbor = |origin: BattleHexCoordinate, branch: usize| {
-        // Column parity determines offset coordinates; branches retain their distinct spread odds.
-        const EVEN: [[(i32, i32); 3]; 6] = [
-            [(0, -1), (-1, 0), (1, 0)],
-            [(1, 0), (0, -1), (1, 1)],
-            [(1, 1), (1, 0), (0, 1)],
-            [(0, 1), (1, 1), (-1, 1)],
-            [(-1, 1), (0, 1), (1, 0)],
-            [(-1, 0), (0, -1), (-1, 1)],
-        ];
-        const ODD: [[(i32, i32); 3]; 6] = [
-            [(0, -1), (1, -1), (-1, -1)],
-            [(1, -1), (0, -1), (1, 0)],
-            [(1, 0), (1, -1), (0, 1)],
-            [(0, 1), (1, 0), (-1, 0)],
-            [(-1, 0), (0, 1), (1, -1)],
-            [(-1, -1), (-1, 0), (0, -1)],
-        ];
-        let (dx, dy) = if origin.x.rem_euclid(2) == 0 {
-            EVEN[bearing][branch]
-        } else {
-            ODD[bearing][branch]
-        };
-        let x = origin.x + dx;
-        let y = origin.y + dy;
-        (x >= 0 && y >= 0 && i64::from(x) < map.width && i64::from(y) < map.height)
-            .then_some(BattleHexCoordinate { x, y })
+/// Wind-relative candidate cells: the downwind neighbor, the neighbors on either side of it
+/// (counter-clockwise, then clockwise), and the second cell directly downwind.
+fn spread_hexes(map: &StoredMap, origin: HexCoordinate) -> Result<[Option<u32>; 4]> {
+    // A direction index into `StoredMap::neighbors`, clockwise from north.
+    let downwind = ((map.wind_direction + 30) / 60 % 6) as usize;
+    let around = map.neighbors(origin)?;
+    let first = around[downwind];
+    let second = match first {
+        Some(first) => map.neighbors(first)?[downwind],
+        None => None,
     };
-    let first = neighbor(origin, 0);
-    [
+    Ok([
         first,
-        neighbor(origin, 1),
-        neighbor(origin, 2),
-        first.and_then(|first| neighbor(first, 0)),
+        around[(downwind + 5) % 6],
+        around[(downwind + 1) % 6],
+        second,
     ]
-    .map(|hex| hex.map(|hex| (i64::from(hex.y) * map.width + i64::from(hex.x)) as u32))
+    .map(|hex| hex.map(|hex| (i64::from(hex.y) * map.width + i64::from(hex.x)) as u32)))
 }
 
 #[cfg(test)]
@@ -203,62 +178,70 @@ mod tests {
 
     #[test]
     fn wind_targets_follow_parity_rounding_and_map_bounds() {
-        let mut map: StoredBattleMap = serde_json::from_value(serde_json::json!({
+        let mut map: StoredMap = serde_json::from_value(serde_json::json!({
             "name":"wind", "width":6, "height":6, "gravity":100, "temperature":20,
             "flags":0, "light":2, "visibility":30, "maximum_visibility":60, "cloud_base":200, "sensor_flags":0
         }))
         .unwrap();
-        let even = BattleHexCoordinate { x: 2, y: 2 };
-        let odd = BattleHexCoordinate { x: 3, y: 2 };
-        for bearing in [0, 29, 330, 359] {
-            map.wind_direction = bearing;
+        let even = HexCoordinate { x: 2, y: 2 };
+        let odd = HexCoordinate { x: 3, y: 2 };
+        // Downwind, counter-clockwise side, clockwise side, second downwind; index y * 6 + x.
+        let expected = [
+            (0, [8, 13, 15, 2], [9, 8, 10, 3]),
+            (60, [15, 8, 21, 10], [10, 9, 16, 11]),
+            (120, [21, 15, 20, 22], [16, 10, 21, 23]),
+            (180, [20, 21, 19, 26], [21, 16, 14, 27]),
+            (240, [19, 20, 13, 18], [14, 21, 8, 19]),
+            (300, [13, 19, 8, 6], [8, 14, 9, 7]),
+        ];
+        for (direction, from_even, from_odd) in expected {
+            map.wind_direction = direction;
             assert_eq!(
-                spread_hexes(&map, even),
-                [Some(8), Some(13), Some(15), Some(2)]
+                spread_hexes(&map, even).unwrap(),
+                from_even.map(Some),
+                "{direction}"
             );
             assert_eq!(
-                spread_hexes(&map, odd),
-                [Some(9), Some(10), Some(8), Some(3)]
+                spread_hexes(&map, odd).unwrap(),
+                from_odd.map(Some),
+                "{direction}"
             );
         }
+        // Bearings round to the nearest of the six directions.
+        for direction in [29, 330, 359] {
+            map.wind_direction = direction;
+            assert_eq!(spread_hexes(&map, even).unwrap(), [8, 13, 15, 2].map(Some));
+        }
         map.wind_direction = 30;
-        assert_eq!(
-            spread_hexes(&map, even),
-            [Some(15), Some(8), Some(21), Some(10)]
-        );
-        map.wind_direction = 240;
-        assert_eq!(
-            spread_hexes(&map, even),
-            [Some(19), Some(20), Some(15), Some(18)]
-        );
+        assert_eq!(spread_hexes(&map, even).unwrap(), [15, 8, 21, 10].map(Some));
         map.wind_direction = 0;
         assert_eq!(
-            spread_hexes(&map, BattleHexCoordinate { x: 0, y: 0 }),
+            spread_hexes(&map, HexCoordinate { x: 0, y: 0 }).unwrap(),
             [None, None, Some(1), None]
         );
     }
 
     #[test]
     fn burnout_thins_heavy_woods_and_keeps_the_ground_under_light_woods() {
-        use crate::btech::{BattleHex, Ground, Terrain, Woods};
+        use crate::btech::{Ground, Hex, Terrain, Woods};
         let mut dice = crate::btech::BattleDice::seeded([7; 32]);
-        let heavy = BattleHex::new(Terrain::HeavyForest, 3);
+        let heavy = Hex::new(Terrain::HeavyForest, 3);
         assert_eq!(
             burn_out(heavy, &mut dice),
             Some(heavy.with_woods(Some(Woods::Light)))
         );
         for ground in [Ground::Road, Ground::Sand, Ground::Snow, Ground::Mountains] {
-            let light = BattleHex::at_level(2)
+            let light = Hex::at_level(2)
                 .with_ground(ground)
                 .with_woods(Some(Woods::Light));
             assert_eq!(
                 burn_out(light, &mut dice),
-                Some(BattleHex::at_level(2).with_ground(ground))
+                Some(Hex::at_level(2).with_ground(ground))
             );
         }
         let mut grounds = std::collections::BTreeSet::new();
         for _ in 0..64 {
-            let burnt = burn_out(BattleHex::new(Terrain::LightForest, 1), &mut dice).unwrap();
+            let burnt = burn_out(Hex::new(Terrain::LightForest, 1), &mut dice).unwrap();
             assert_eq!((burnt.woods(), burnt.level()), (None, 1));
             grounds.insert(format!("{:?}", burnt.ground()));
         }
@@ -267,6 +250,6 @@ mod tests {
             2,
             "clear ground burns to clear or rough: {grounds:?}"
         );
-        assert_eq!(burn_out(BattleHex::new(Terrain::Rough, 0), &mut dice), None);
+        assert_eq!(burn_out(Hex::new(Terrain::Rough, 0), &mut dice), None);
     }
 }

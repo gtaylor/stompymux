@@ -1688,7 +1688,7 @@ async fn electronics_flooding_and_map_membership() {
         &mut world,
         other,
         "other.map",
-        BattleMapAsset::from_cells(&format!("12 12\n{}", format!("{row}\n").repeat(12))).unwrap(),
+        MapAsset::from_cells(&format!("12 12\n{}", format!("{row}\n").repeat(12))).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, other, support::FIXTURE_DICE_SEED);
@@ -3491,8 +3491,7 @@ async fn active_probe_contacts_behind_walls_lock_but_refuse_direct_fire() {
         place_battle_unit(&mut world, target, map, 5, 2).unwrap();
         let mut state = serde_json::to_value(&world.btech).unwrap();
         state["maps"][map.0.to_string()]["terrain"][3 * 12 + 5] =
-            serde_json::to_value(stompymux_rs::BattleHex::new(stompymux_rs::Terrain::Wall, 5))
-                .unwrap();
+            serde_json::to_value(stompymux_rs::Hex::new(stompymux_rs::Terrain::Wall, 5)).unwrap();
         world.btech = serde_json::from_value(state).unwrap();
         assert!(battle_unit_terrain_los(&world, id, target).unwrap().blocked);
         shot_skill(&mut world, 30);
@@ -3613,7 +3612,7 @@ async fn airborne_target_woods_share_height_boundary_across_channels() {
             for clearance in [2, 3] {
                 let mut state = serde_json::to_value(&world.btech).unwrap();
                 state["maps"][map.0.to_string()]["terrain"][4 * 200 + 5] =
-                    serde_json::to_value(stompymux_rs::BattleHex::new(
+                    serde_json::to_value(stompymux_rs::Hex::new(
                         stompymux_rs::Terrain::HeavyForest,
                         u8::try_from(ground).unwrap(),
                     ))
@@ -3774,10 +3773,9 @@ async fn tag_loss_geometry_damage_shutdown_and_validation() {
                 let map = world.btech.constructed_units()[&id].position().unwrap().map;
                 place_battle_unit(&mut world, target, map, 5, 2).unwrap();
                 let mut state = serde_json::to_value(&world.btech).unwrap();
-                state["maps"][map.0.to_string()]["terrain"][3 * 12 + 5] = serde_json::to_value(
-                    stompymux_rs::BattleHex::new(stompymux_rs::Terrain::Wall, 5),
-                )
-                .unwrap();
+                state["maps"][map.0.to_string()]["terrain"][3 * 12 + 5] =
+                    serde_json::to_value(stompymux_rs::Hex::new(stompymux_rs::Terrain::Wall, 5))
+                        .unwrap();
                 world.btech = serde_json::from_value(state).unwrap();
             }
         }
@@ -4646,7 +4644,7 @@ async fn indirect_spotter_experience_eligibility_and_rollback() {
 async fn indirect_hex_visibility_uses_terrain_and_perception_rules() {
     use stompymux_rs::*;
     let (_dir, config, mut world, id, _target) = radar_fixture().await;
-    let point = BattleHexCoordinate { x: 5, y: 2 };
+    let point = HexCoordinate { x: 5, y: 2 };
     let map = world.btech.constructed_units()[&id].position().unwrap().map;
     for (sensors, visibility, expected) in [
         (true, 30, Some(BattleDetectionChannel::Sensors)),
@@ -4677,7 +4675,7 @@ async fn indirect_hex_visibility_uses_terrain_and_perception_rules() {
         let mut blocked = world.clone();
         let mut state = serde_json::to_value(&blocked.btech).unwrap();
         state["maps"][map.0.to_string()]["terrain"][3 * 200 + 5] =
-            serde_json::to_value(BattleHex::new(Terrain::Wall, 8)).unwrap();
+            serde_json::to_value(Hex::new(Terrain::Wall, 8)).unwrap();
         blocked.btech = serde_json::from_value(state).unwrap();
         assert!(!battle_hex_visible(&blocked, id, point).unwrap());
         world.validate(&config).unwrap();
@@ -4781,7 +4779,7 @@ async fn hex_target_selection_lifecycle_and_validation() {
     use stompymux_rs::*;
     let (_dir, config, mut world, id, target) = shot_fixture().await;
     let map = world.btech.constructed_units()[&id].position().unwrap().map;
-    let point = BattleHexCoordinate { x: 9, y: 9 };
+    let point = HexCoordinate { x: 9, y: 9 };
     let mut state = serde_json::to_value(&world.btech).unwrap();
     state["maps"][map.0.to_string()]["sensor_flags"] = 511.into();
     state["maps"][map.0.to_string()]["visibility"] = 0.into();
@@ -4812,7 +4810,7 @@ async fn hex_target_selection_lifecycle_and_validation() {
             &mut world,
             id,
             ObjectId(1),
-            BattleHexCoordinate { x: -1, y: 0 },
+            HexCoordinate { x: -1, y: 0 },
             BattleHexTargetMode::Hex
         )
         .is_err()
@@ -4949,7 +4947,7 @@ async fn hex_target_native_lua_controls_and_fire_guard() {
 async fn hex_occupant_fire_routing_aim_and_rollback() {
     use stompymux_rs::*;
     let (_dir, config, mut world, shooter, target) = shot_fixture().await;
-    let point = BattleHexCoordinate { x: 5, y: 4 };
+    let point = HexCoordinate { x: 5, y: 4 };
     let map = world.btech.constructed_units()[&shooter]
         .position()
         .unwrap()
@@ -5055,7 +5053,7 @@ async fn hex_occupant_fire_routing_aim_and_rollback() {
 async fn hex_aim_modes_visibility_and_neutral_target_terms() {
     use stompymux_rs::*;
     let (_dir, config, mut world, shooter, target) = shot_fixture().await;
-    let point = BattleHexCoordinate { x: 5, y: 4 };
+    let point = HexCoordinate { x: 5, y: 4 };
     let map = world.btech.constructed_units()[&shooter]
         .position()
         .unwrap()
@@ -5132,8 +5130,8 @@ async fn hex_aim_modes_visibility_and_neutral_target_terms() {
 async fn hex_aim_range_and_lua_inspection_are_read_only() {
     use stompymux_rs::*;
     let (_dir, config, world, shooter, _airborne_target) = radar_fixture().await;
-    let near = BattleHexCoordinate { x: 5, y: 4 };
-    let far = BattleHexCoordinate { x: 100, y: 5 };
+    let near = HexCoordinate { x: 5, y: 4 };
+    let far = HexCoordinate { x: 100, y: 5 };
     let before = world.btech.clone();
     let report =
         battle_hex_aim_modifiers(&world, shooter, near, 0, 6, optical_aim_rules()).unwrap();
@@ -5146,7 +5144,7 @@ async fn hex_aim_range_and_lua_inspection_are_read_only() {
         battle_hex_aim_modifiers(
             &world,
             shooter,
-            BattleHexCoordinate { x: -1, y: 0 },
+            HexCoordinate { x: -1, y: 0 },
             0,
             6,
             optical_aim_rules()
@@ -5190,7 +5188,7 @@ async fn direct_hex_shots_commit_launch_terrain_and_restart_replay() {
             .position()
             .unwrap()
             .map;
-        let coordinate = BattleHexCoordinate { x: 5, y: 3 };
+        let coordinate = HexCoordinate { x: 5, y: 3 };
         let index = world.btech.constructed_units()[&shooter]
             .loadout()
             .unwrap()
@@ -5309,14 +5307,14 @@ async fn direct_hex_shot_rejection_preserves_inventory_and_dice() {
     let (_dir, _config, mut world, shooter, _target) = shot_fixture().await;
     let index = 0;
     for (point, mode) in [
-        (BattleHexCoordinate { x: -1, y: 0 }, None),
-        (BattleHexCoordinate { x: 5, y: 4 }, None),
+        (HexCoordinate { x: -1, y: 0 }, None),
+        (HexCoordinate { x: 5, y: 4 }, None),
         (
-            BattleHexCoordinate { x: 5, y: 7 },
+            HexCoordinate { x: 5, y: 7 },
             Some(BattleHexTargetMode::Ignite),
         ),
         (
-            BattleHexCoordinate { x: 5, y: 7 },
+            HexCoordinate { x: 5, y: 7 },
             Some(BattleHexTargetMode::Building),
         ),
     ] {
@@ -5356,7 +5354,7 @@ async fn direct_hex_missiles_spend_ammunition_and_only_resolve_packets_on_hits()
             .iter()
             .position(|mount| mount.weapon.profile().missiles > 0)
             .unwrap();
-        let coordinate = BattleHexCoordinate { x: 5, y: 3 };
+        let coordinate = HexCoordinate { x: 5, y: 3 };
         select_battle_hex_target(
             &mut world,
             shooter,
@@ -5426,7 +5424,7 @@ async fn hex_fire_native_lua_routing_and_character_rollback() {
                 .position()
                 .unwrap()
                 .map;
-            let coordinate = BattleHexCoordinate { x: 5, y: 3 };
+            let coordinate = HexCoordinate { x: 5, y: 3 };
             let index = world.btech.constructed_units()[&shooter]
                 .loadout()
                 .unwrap()
@@ -5585,7 +5583,7 @@ async fn hex_fire_character_recoil_native_lua_and_abort() {
         &mut world,
         shooter,
         ObjectId(1),
-        BattleHexCoordinate { x: 5, y: 3 },
+        HexCoordinate { x: 5, y: 3 },
         BattleHexTargetMode::UnitAtHex,
     )
     .unwrap();
@@ -5693,7 +5691,7 @@ async fn hex_surface_weapon_probability_and_replay() {
     for terrain in [Terrain::Ice, Terrain::Bridge] {
         for breaks in [false, true] {
             let (_dir, config, mut world, shooter, target) = shot_fixture().await;
-            let coordinate = BattleHexCoordinate { x: 5, y: 4 };
+            let coordinate = HexCoordinate { x: 5, y: 4 };
             let map = world.btech.constructed_units()[&shooter]
                 .position()
                 .unwrap()
@@ -5708,7 +5706,7 @@ async fn hex_surface_weapon_probability_and_replay() {
             let mut encoded = serde_json::to_value(&world.btech).unwrap();
             let width = world.btech.maps()[&map].width as usize;
             encoded["maps"][map.0.to_string()]["terrain"][4 * width + 5] =
-                serde_json::to_value(stompymux_rs::BattleHex::new(terrain, 1)).unwrap();
+                serde_json::to_value(stompymux_rs::Hex::new(terrain, 1)).unwrap();
             world.btech = serde_json::from_value(encoded).unwrap();
             place_battle_unit(&mut world, target, map, 5, 4).unwrap();
             shot_skill(&mut world, 20);
@@ -5885,7 +5883,7 @@ async fn hex_surface_weapon_probability_and_replay() {
 async fn hex_surface_weapon_native_lua_character_rollback() {
     use stompymux_rs::*;
     let (_dir, config, mut world, shooter, target) = shot_fixture().await;
-    let coordinate = BattleHexCoordinate { x: 5, y: 4 };
+    let coordinate = HexCoordinate { x: 5, y: 4 };
     let map = world.btech.constructed_units()[&shooter]
         .position()
         .unwrap()
@@ -5900,7 +5898,7 @@ async fn hex_surface_weapon_native_lua_character_rollback() {
     let mut encoded = serde_json::to_value(&world.btech).unwrap();
     let width = world.btech.maps()[&map].width as usize;
     encoded["maps"][map.0.to_string()]["terrain"][4 * width + 5] =
-        serde_json::to_value(stompymux_rs::BattleHex::new(stompymux_rs::Terrain::Ice, 1)).unwrap();
+        serde_json::to_value(stompymux_rs::Hex::new(stompymux_rs::Terrain::Ice, 1)).unwrap();
     world.btech = serde_json::from_value(encoded).unwrap();
     place_battle_unit(&mut world, target, map, 5, 4).unwrap();
     world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(target);
@@ -6081,11 +6079,11 @@ async fn building_fire_damage_policies_and_committed_repair() {
             &mut world,
             interior,
             "inside.map",
-            BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+            MapAsset::from_cells("1 1\n.0\n").unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, interior, support::FIXTURE_DICE_SEED);
-        let coordinate = BattleHexCoordinate { x: 5, y: 4 };
+        let coordinate = HexCoordinate { x: 5, y: 4 };
         set_building_entrance(
             &mut world,
             map,
@@ -6287,14 +6285,14 @@ async fn building_fire_native_lua_interior_messages_and_rollback() {
         &mut world,
         interior,
         "inside.map",
-        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+        MapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, interior, support::FIXTURE_DICE_SEED);
     let resident = world.create(&config, "Resident".into(), Kind::Player);
     world.objects.get_mut(&resident).unwrap().location = Some(interior);
     world.objects.get_mut(&resident).unwrap().home = Some(ObjectId(config.home()));
-    let coordinate = BattleHexCoordinate { x: 5, y: 4 };
+    let coordinate = HexCoordinate { x: 5, y: 4 };
     set_building_entrance(
         &mut world,
         map,
@@ -6701,11 +6699,11 @@ async fn inferno_ammunition_hex_hits_apply_one_zero_damage_terrain_exposure() {
     )
     .unwrap();
     let map = base.btech.constructed_units()[&id].position().unwrap().map;
-    let coordinate = BattleHexCoordinate { x: 5, y: 4 };
+    let coordinate = HexCoordinate { x: 5, y: 4 };
     let width = base.btech.maps()[&map].width as usize;
     let mut encoded = serde_json::to_value(&base.btech).unwrap();
     encoded["maps"][map.0.to_string()]["terrain"][4 * width + 5] =
-        serde_json::to_value(stompymux_rs::BattleHex::new(Terrain::HeavyForest, 0)).unwrap();
+        serde_json::to_value(stompymux_rs::Hex::new(Terrain::HeavyForest, 0)).unwrap();
     base.btech = serde_json::from_value(encoded).unwrap();
     for mode in [
         BattleHexTargetMode::Ignite,
@@ -7223,7 +7221,7 @@ async fn stinger_airborne_admission_and_shot_replay() {
         battle_hex_aim_modifiers(
             &world,
             id,
-            BattleHexCoordinate { x: 5, y: 4 },
+            HexCoordinate { x: 5, y: 4 },
             index,
             6,
             optical_aim_rules()
@@ -7709,7 +7707,7 @@ async fn weapons_hold_direct_mech_impacts_retain_shooter_and_weapon_effects() {
 /// Prediction proposals and committed movement follow the same controls across terrain and chassis.
 #[tokio::test]
 async fn ground_proposals_match_live_trajectories_without_mutating_state() {
-    use stompymux_rs::{BattleHexCoordinate, propose_battle_mech_ground_motion};
+    use stompymux_rs::{HexCoordinate, propose_battle_mech_ground_motion};
     for source in [
         include_str!("../game/mechs/JR7-D.toml"),
         include_str!("../game/mechs/GOL-1H.toml"),
@@ -7739,7 +7737,7 @@ async fn ground_proposals_match_live_trajectories_without_mutating_state() {
                                 &world,
                                 id,
                                 motion,
-                                BattleHexCoordinate {
+                                HexCoordinate {
                                     x: i32::from(position.x),
                                     y: i32::from(position.y),
                                 },
@@ -7768,19 +7766,13 @@ async fn ground_proposals_match_live_trajectories_without_mutating_state() {
 /// A prediction must reject invalid inputs without touching the live world's random or motion state.
 #[tokio::test]
 async fn ground_proposals_reject_invalid_coordinates_and_nonfinite_motion() {
-    use stompymux_rs::{BattleHexCoordinate, propose_battle_mech_ground_motion};
+    use stompymux_rs::{HexCoordinate, propose_battle_mech_ground_motion};
     let (_dir, _config, world, id) = fixture('.').await;
     let motion = world.btech.constructed_units()[&id].motion().unwrap();
     let before = world.btech.clone();
     assert!(
-        propose_battle_mech_ground_motion(
-            &world,
-            id,
-            motion,
-            BattleHexCoordinate { x: -1, y: 5 },
-            RULES
-        )
-        .is_err()
+        propose_battle_mech_ground_motion(&world, id, motion, HexCoordinate { x: -1, y: 5 }, RULES)
+            .is_err()
     );
     for bad in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
         assert!(
@@ -7791,7 +7783,7 @@ async fn ground_proposals_reject_invalid_coordinates_and_nonfinite_motion() {
                     speed: bad,
                     ..motion
                 },
-                BattleHexCoordinate { x: 5, y: 5 },
+                HexCoordinate { x: 5, y: 5 },
                 RULES
             )
             .is_err()

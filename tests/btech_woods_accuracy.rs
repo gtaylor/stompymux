@@ -23,7 +23,7 @@ fn terrain(world: &mut World, target: ObjectId, terrain: Terrain) {
     let map = world.btech.units()[&target].map.unwrap();
     let mut encoded = serde_json::to_value(&world.btech).unwrap();
     encoded["maps"][map.0.to_string()]["terrain"][10] =
-        serde_json::to_value(BattleHex::new(terrain, 0)).unwrap();
+        serde_json::to_value(Hex::new(terrain, 0)).unwrap();
     world.btech = serde_json::from_value(encoded).unwrap();
 }
 
@@ -78,8 +78,8 @@ async fn woods_canopy_boundary_overlays_and_restart() {
     for altitude in [1.0, 2.0, 3.0] {
         for overlay in [
             None,
-            Some(BattleDecorationKind::Smoke),
-            Some(BattleDecorationKind::Fire),
+            Some(DecorationKind::Smoke),
+            Some(DecorationKind::Fire),
         ] {
             let mut world = base.clone();
             terrain(&mut world, target, Terrain::HeavyForest);
@@ -92,7 +92,7 @@ async fn woods_canopy_boundary_overlays_and_restart() {
                 set_map_decoration(
                     &mut world,
                     map,
-                    BattleHexCoordinate { x: 0, y: 10 },
+                    HexCoordinate { x: 0, y: 10 },
                     Some(BattleDecoration::new(kind, 30, None)),
                 )
                 .unwrap();

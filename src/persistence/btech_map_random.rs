@@ -1,6 +1,6 @@
 //! Durable map-owned randomness, independent of unit lifetime and player sessions.
 use super::write::{Cell, Fields, purge_rows, row};
-use crate::{ObjectId, StoredBattleMap, World};
+use crate::{ObjectId, StoredMap, World};
 use anyhow::{Context, Result, ensure};
 use sqlx::{Row, SqliteConnection};
 use std::collections::{BTreeMap, BTreeSet};
@@ -8,7 +8,7 @@ use std::collections::{BTreeMap, BTreeSet};
 /// Decode typed streams and reject orphan records.
 pub(super) async fn load(
     c: &mut SqliteConnection,
-    maps: &mut BTreeMap<ObjectId, StoredBattleMap>,
+    maps: &mut BTreeMap<ObjectId, StoredMap>,
 ) -> Result<()> {
     use futures_util::TryStreamExt;
     let query = format!(

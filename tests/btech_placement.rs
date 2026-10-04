@@ -1,9 +1,8 @@
 //! Battlefield placement, persisted containment, failure atomicity and map destruction.
 use crate::support;
 use stompymux_rs::{
-    BattleMapAsset, BattleTemplate, Flag, Kind, ObjectId, Scripts, create_battle_map,
-    create_battle_unit, dbck, persistence, place_battle_unit, reload_battle_map,
-    remove_battle_unit,
+    BattleTemplate, Flag, Kind, MapAsset, ObjectId, Scripts, create_battle_map, create_battle_unit,
+    dbck, persistence, place_battle_unit, reload_battle_map, remove_battle_unit,
 };
 const JENNER: &str = include_str!("fixtures/btech/mechs/JR7-D.toml");
 const MAP: &str = "3 2\n.0.0.0\n.0~2.0\n";
@@ -16,7 +15,7 @@ async fn placement_round_trips_coordinates_and_containment_without_shared_unit_s
         &mut world,
         map,
         "test.map",
-        BattleMapAsset::from_cells(MAP).unwrap(),
+        MapAsset::from_cells(MAP).unwrap(),
     )
     .unwrap();
     let mut ids = Vec::new();
@@ -51,7 +50,7 @@ async fn placement_round_trips_coordinates_and_containment_without_shared_unit_s
             &mut loaded,
             map,
             "test.map",
-            BattleMapAsset::from_cells(MAP).unwrap()
+            MapAsset::from_cells(MAP).unwrap()
         )
         .is_err()
     );
@@ -105,7 +104,7 @@ async fn placement_callbacks_roll_back_and_native_commands_report_coordinates() 
         &mut world,
         map,
         "test.map",
-        BattleMapAsset::from_cells(MAP).unwrap(),
+        MapAsset::from_cells(MAP).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -184,7 +183,7 @@ async fn placement_callbacks_roll_back_and_native_commands_report_coordinates() 
         &mut scripts.world_mut(),
         map,
         "changed.map",
-        BattleMapAsset::from_cells(&format!("{MAP}1: 100 20\n")).unwrap(),
+        MapAsset::from_cells(&format!("{MAP}1: 100 20\n")).unwrap(),
     )
     .unwrap();
     let candidate = scripts.world().clone();
@@ -212,7 +211,7 @@ async fn map_slots_control_occupant_order_and_reuse() {
         &mut world,
         map,
         "slots.map",
-        BattleMapAsset::from_cells(MAP).unwrap(),
+        MapAsset::from_cells(MAP).unwrap(),
     )
     .unwrap();
     let mut ids = Vec::new();
@@ -231,7 +230,7 @@ async fn map_slots_control_occupant_order_and_reuse() {
     place_battle_unit(&mut world, observer, map, 0, 0).unwrap();
     place_battle_unit(&mut world, later, map, 2, 0).unwrap();
     place_battle_unit(&mut world, earlier, map, 2, 0).unwrap();
-    let hex = BattleHexCoordinate { x: 2, y: 0 };
+    let hex = HexCoordinate { x: 2, y: 0 };
     assert_eq!(
         battle_map_unit_order(&world, map).unwrap(),
         [observer, later, earlier]
@@ -288,7 +287,7 @@ async fn map_slots_control_occupant_order_and_reuse() {
         &mut world,
         other_map,
         "other.map",
-        BattleMapAsset::from_cells(MAP).unwrap(),
+        MapAsset::from_cells(MAP).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, earlier, other_map, 0, 0).unwrap();

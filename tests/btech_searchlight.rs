@@ -18,7 +18,7 @@ async fn fixture() -> (
         &mut world,
         map,
         "lamp.map",
-        BattleMapAsset::from_cells(&terrain).unwrap(),
+        MapAsset::from_cells(&terrain).unwrap(),
     )
     .unwrap();
     let mut ids = Vec::new();
@@ -391,8 +391,8 @@ async fn illumination_warnings_are_opt_in_transactional_and_restart_safe() {
 #[tokio::test]
 async fn terrain_beams_reach_beyond_unit_illumination_and_stop_at_obstructions() {
     let (_dir, config, mut world, lamp, _, map) = fixture().await;
-    let distant = BattleHexCoordinate { x: 2, y: 0 };
-    let behind = BattleHexCoordinate { x: 2, y: 36 };
+    let distant = HexCoordinate { x: 2, y: 0 };
+    let behind = HexCoordinate { x: 2, y: 36 };
     set_battle_map_visibility(&mut world, map, BattleLight::Night, 15).unwrap();
     assert!(!battle_hex_visible(&world, lamp, distant).unwrap());
     let _ = toggle_battle_searchlight(&mut world, lamp, ObjectId(1)).unwrap();
@@ -410,12 +410,12 @@ async fn terrain_beams_reach_beyond_unit_illumination_and_stop_at_obstructions()
     set_map_decoration(
         &mut world,
         map,
-        BattleHexCoordinate { x: 2, y: 20 },
-        Some(BattleDecoration::new(BattleDecorationKind::Smoke, 30, None)),
+        HexCoordinate { x: 2, y: 20 },
+        Some(BattleDecoration::new(DecorationKind::Smoke, 30, None)),
     )
     .unwrap();
     assert!(!battle_hex_illuminated(&world, map, distant).unwrap());
-    set_map_decoration(&mut world, map, BattleHexCoordinate { x: 2, y: 20 }, None).unwrap();
+    set_map_decoration(&mut world, map, HexCoordinate { x: 2, y: 20 }, None).unwrap();
     world
         .objects
         .get_mut(&lamp)
@@ -469,7 +469,7 @@ async fn automatic_lamps_follow_map_light_changes_and_transfers() {
         &mut world,
         dark,
         "dark.map",
-        BattleMapAsset::from_cells(&terrain).unwrap(),
+        MapAsset::from_cells(&terrain).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, dark, support::FIXTURE_DICE_SEED);

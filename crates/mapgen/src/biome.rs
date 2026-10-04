@@ -3,8 +3,9 @@
 //! A [`MapSpec`](crate::MapSpec) field overrides the matching default here. Landform and
 //! ground-cover tuning that has no spec field (snow lines, beaches, the shape of the ground)
 //! lives only in the profile.
-use crate::spec::{Amount, Biome, MapFlag, Relief};
+use crate::spec::{Amount, Biome, Relief};
 use serde::Serialize;
+use stompymux_map::MapFlag;
 
 /// The basic material of open ground in a biome.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

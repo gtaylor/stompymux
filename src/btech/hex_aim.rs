@@ -7,7 +7,7 @@ use serde::Serialize;
 /// Terrain aim reports visibility separately from arithmetic; firing admission remains caller-owned.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct BattleHexAimModifiers {
-    pub hex: BattleHexCoordinate,
+    pub hex: HexCoordinate,
     pub mode: BattleHexTargetMode,
     pub visible: bool,
     pub hex_bonus: i8,
@@ -29,7 +29,7 @@ impl BattleHexAimModifiers {
 pub fn hex_aim_modifiers(
     world: &World,
     shooter: ObjectId,
-    hex: BattleHexCoordinate,
+    hex: HexCoordinate,
     weapon_index: usize,
     gunnery: i16,
     rules: BattleAimRules,
@@ -41,7 +41,7 @@ pub fn hex_aim_modifiers(
 pub(super) fn modifiers_for_source(
     world: &World,
     source: super::fire_target::TargetSource,
-    hex: BattleHexCoordinate,
+    hex: HexCoordinate,
     weapon_index: usize,
     gunnery: i16,
     rules: BattleAimRules,
@@ -148,7 +148,7 @@ pub(super) fn modifiers_for_source(
 pub fn pilot_hex_aim_modifiers(
     world: &World,
     shooter: ObjectId,
-    hex: BattleHexCoordinate,
+    hex: HexCoordinate,
     weapon_index: usize,
     extended_gunnery: bool,
     rules: BattleAimRules,

@@ -18,7 +18,7 @@ btech.map.terrain(map, hex)
 | Name | Type | Description |
 | --- | --- | --- |
 | `map` | `DbRef\|Object` |  |
-| `hex` | `BattleHexCoordinate` |  |
+| `hex` | `HexCoordinate` |  |
 
 ## Returns
 

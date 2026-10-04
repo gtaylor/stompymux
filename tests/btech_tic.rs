@@ -143,7 +143,7 @@ async fn tic_firing_reuses_shots_and_rolls_back_callbacks() {
             &mut world,
             map,
             "range",
-            BattleMapAsset::from_cells("1 3\n.0\n.0\n.0\n").unwrap(),
+            MapAsset::from_cells("1 3\n.0\n.0\n.0\n").unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);

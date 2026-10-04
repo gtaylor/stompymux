@@ -20,7 +20,7 @@ async fn cross_surface(row: &str) {
         &mut world,
         map,
         "shore",
-        BattleMapAsset::from_cells(&format!("20 3\n{row}\n{row}\n{row}\n")).unwrap(),
+        MapAsset::from_cells(&format!("20 3\n{row}\n{row}\n{row}\n")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -48,10 +48,8 @@ async fn cross_surface(row: &str) {
     }
     set_battle_speed(&mut world, id, ObjectId(1), 107.5).unwrap();
     let mut smoke = serde_json::to_value(&world.btech).unwrap();
-    smoke["maps"][map.0.to_string()]["decorations"]["25"] = serde_json::to_value(
-        BattleDecoration::new(BattleDecorationKind::Smoke, 120, None),
-    )
-    .unwrap();
+    smoke["maps"][map.0.to_string()]["decorations"]["25"] =
+        serde_json::to_value(BattleDecoration::new(DecorationKind::Smoke, 120, None)).unwrap();
     world.btech = serde_json::from_value(smoke).unwrap();
     let mech = world.create(&config, "Submerged Jenner".into(), Kind::Thing);
     world.objects.get_mut(&mech).unwrap().home = Some(ObjectId(config.home()));

@@ -4,7 +4,7 @@
 //! smoking tiles cause no writes between spread, burnout and expiry events.
 use super::btech_deadlines::Clock;
 use super::write::{Cell, Fields, purge_rows, row};
-use crate::{BattleDecoration, BattleDecorationKind, ObjectId, StoredBattleMap, World};
+use crate::{BattleDecoration, DecorationKind, ObjectId, StoredMap, World};
 use anyhow::{Context, Result, bail, ensure};
 use sqlx::{Row, SqliteConnection};
 use std::{
@@ -15,7 +15,7 @@ use std::{
 /// Load bounded markers after terrain decoding, rejecting orphaned or invalid positions.
 pub(super) async fn load(
     c: &mut SqliteConnection,
-    maps: &mut BTreeMap<ObjectId, StoredBattleMap>,
+    maps: &mut BTreeMap<ObjectId, StoredMap>,
     clock: Clock,
 ) -> Result<()> {
     use futures_util::TryStreamExt;
@@ -33,8 +33,8 @@ pub(super) async fn load(
             "Invalid decoration position"
         );
         let kind = match row.try_get::<String, _>("kind")?.as_str() {
-            "fire" => BattleDecorationKind::Fire,
-            "smoke" => BattleDecorationKind::Smoke,
+            "fire" => DecorationKind::Fire,
+            "smoke" => DecorationKind::Smoke,
             _ => bail!("Invalid decoration kind"),
         };
         let remaining = match row.try_get::<Option<i64>, _>("expires_at")? {
@@ -131,8 +131,8 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
 /// Whether the marker's lifetime is counting down each second rather than held still.
 fn lifetime_running(effect: BattleDecoration) -> bool {
     match effect.kind {
-        BattleDecorationKind::Smoke => effect.remaining > 0,
-        BattleDecorationKind::Fire => effect.remaining != 0 && effect.next_spread.is_none(),
+        DecorationKind::Smoke => effect.remaining > 0,
+        DecorationKind::Fire => effect.remaining != 0 && effect.next_spread.is_none(),
     }
 }
 
@@ -145,8 +145,8 @@ fn values(effect: BattleDecoration, clock: Clock) -> Fields {
             "kind",
             Cell::Text(
                 match effect.kind {
-                    BattleDecorationKind::Fire => "fire",
-                    BattleDecorationKind::Smoke => "smoke",
+                    DecorationKind::Fire => "fire",
+                    DecorationKind::Smoke => "smoke",
                 }
                 .into(),
             ),

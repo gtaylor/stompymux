@@ -21,7 +21,7 @@ pub(crate) fn command(
             &mut ctx.scripts.world_mut(),
             map,
             ordinal,
-            Some(super::BattleHexCoordinate { x: 0, y: 0 }),
+            Some(super::HexCoordinate { x: 0, y: 0 }),
         )?;
         super::notify_message(
             ctx.scripts,

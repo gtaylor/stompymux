@@ -10,7 +10,7 @@ use serde::Serialize;
 pub struct BattleHexShotReport {
     pub shooter: ObjectId,
     pub map: ObjectId,
-    pub coordinate: BattleHexCoordinate,
+    pub coordinate: HexCoordinate,
     pub weapon_index: usize,
     pub aim: BattleHexAimModifiers,
     pub target_number: Option<i32>,
@@ -41,7 +41,7 @@ pub fn resolve_hex_shot(
     world: &mut World,
     shooter: ObjectId,
     pilot: ObjectId,
-    coordinate: BattleHexCoordinate,
+    coordinate: HexCoordinate,
     weapon_index: usize,
     rules: BattleShotRules,
 ) -> Result<BattleHexShotReport> {
@@ -61,7 +61,7 @@ pub(super) fn resolve_hex_shot_in_action(
     world: &mut World,
     shooter: ObjectId,
     pilot: ObjectId,
-    coordinate: BattleHexCoordinate,
+    coordinate: HexCoordinate,
     weapon_index: usize,
     rules: BattleShotRules,
 ) -> Result<BattleHexShotReport> {
@@ -73,7 +73,7 @@ fn resolve_hex_shot_inner(
     world: &mut World,
     shooter: ObjectId,
     pilot: ObjectId,
-    coordinate: BattleHexCoordinate,
+    coordinate: HexCoordinate,
     weapon_index: usize,
     rules: BattleShotRules,
     character: bool,

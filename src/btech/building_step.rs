@@ -29,7 +29,7 @@ pub(super) fn entered(
     if super::unit_elevation(world, id)? != Some(i32::from(tile.surface_height())) {
         return Ok((None, None));
     }
-    let Some(entrance) = map.building_at(super::BattleHexCoordinate {
+    let Some(entrance) = map.building_at(super::HexCoordinate {
         x: i32::from(position.x),
         y: i32::from(position.y),
     })?

@@ -88,7 +88,7 @@ pub(super) fn reassign_in_candidate(
     world.validate_move(id, map)?;
     let slot = super::map_slots::placement_slot(world, id, map)?;
     let position = BattlePosition { map, x, y };
-    let point = BattleHexCoordinate {
+    let point = HexCoordinate {
         x: i32::from(x),
         y: i32::from(y),
     }

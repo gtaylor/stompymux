@@ -25,9 +25,9 @@ impl BattleBlastImpact {
 
 /// One blast cell's geometry; source-specific altitude limits are exclusive.
 pub(super) struct BlastCell {
-    pub coordinate: BattleHexCoordinate,
-    pub origin: BattlePoint,
-    pub tile: BattleHex,
+    pub coordinate: HexCoordinate,
+    pub origin: Point,
+    pub tile: Hex,
     pub lower: i32,
     pub upper: i32,
 }
@@ -276,7 +276,7 @@ fn blast_arc(bearing: f64, heading: f64) -> BattleHitArc {
 pub(super) fn ignite_forest(
     world: &mut World,
     map: ObjectId,
-    coordinate: BattleHexCoordinate,
+    coordinate: HexCoordinate,
 ) -> Result<bool> {
     let record = &world.btech.maps()[&map];
     let tile = record.base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
@@ -297,7 +297,7 @@ pub(super) fn ignite_forest(
         map,
         coordinate,
         Some(BattleDecoration::new(
-            BattleDecorationKind::Fire,
+            DecorationKind::Fire,
             i64::from(remaining),
             None,
         )),

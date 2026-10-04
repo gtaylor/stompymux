@@ -1,5 +1,5 @@
 //! Ordered minefield definitions; triggering and blast resolution consume these records separately.
-use super::{BattleHexCoordinate, StoredBattleMap};
+use super::{HexCoordinate, StoredMap};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, bail, ensure};
 use serde::{Deserialize, Serialize};
@@ -61,14 +61,14 @@ impl BattleMineKind {
 /// One minefield definition. Extra is the command channel, vibra threshold or trigger radius.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BattleMinefield {
-    pub coordinate: BattleHexCoordinate,
+    pub coordinate: HexCoordinate,
     pub kind: BattleMineKind,
     pub strength: i16,
     pub extra: i32,
     pub owner: ObjectId,
 }
 
-impl StoredBattleMap {
+impl StoredMap {
     /// Persistent record identities, including multiple fields at the same coordinate.
     pub fn minefields(&self) -> &BTreeMap<u32, BattleMinefield> {
         &self.minefields

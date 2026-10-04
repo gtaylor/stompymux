@@ -33,8 +33,8 @@ fn direction(bearing: i32) -> &'static str {
 /// Launch direction uses captured hex centers, not the shooter's later continuous position.
 pub(super) fn launch_text(
     weapon: BattleWeapon,
-    origin: BattleHexCoordinate,
-    target: BattleHexCoordinate,
+    origin: HexCoordinate,
+    target: HexCoordinate,
 ) -> Result<String> {
     let origin = origin.center();
     let target = target.center();
@@ -57,7 +57,7 @@ pub(super) fn arrival_notices(
     map: ObjectId,
     weapon: BattleWeapon,
     mode: BattleArtilleryMode,
-    coordinate: BattleHexCoordinate,
+    coordinate: HexCoordinate,
 ) -> Result<Vec<BattleNotice>> {
     let name = weapon.name().split_once('.').expect("catalog namespace").1;
     super::broadcast::hex_notices(
@@ -105,12 +105,12 @@ mod tests {
         ] {
             assert_eq!(direction(heading), expected);
         }
-        let origin = BattleHexCoordinate { x: 1, y: 1 };
+        let origin = HexCoordinate { x: 1, y: 1 };
         assert_eq!(
             launch_text(
                 BattleWeapon::ClanArrowIv,
                 origin,
-                BattleHexCoordinate { x: 1, y: 0 }
+                HexCoordinate { x: 1, y: 0 }
             )
             .unwrap(),
             "shoots a missile towards the north!"

@@ -90,7 +90,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             let report = crate::battle_pilot_hex_aim_modifiers(
                 &hex_aim_world.borrow(),
                 ObjectId(unit),
-                crate::BattleHexCoordinate { x, y },
+                crate::HexCoordinate { x, y },
                 weapon,
                 config.battletech.extended_gunnery != 0,
                 crate::BattleAimRules::configured(&config.battletech),
@@ -139,7 +139,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                         &mut scripts.world.borrow_mut(),
                         ObjectId(unit),
                         ObjectId(pilot),
-                        crate::BattleHexCoordinate { x, y },
+                        crate::HexCoordinate { x, y },
                         mode,
                     )
                     .map_err(mlua::Error::external)?;

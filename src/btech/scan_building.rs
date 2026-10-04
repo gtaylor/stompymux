@@ -1,5 +1,5 @@
 //! Structure inspection with hidden-building perception, durable dice and atomic experience output.
-use super::{BattleChannelMessage, BattleHexCoordinate};
+use super::{BattleChannelMessage, HexCoordinate};
 use crate::{Config, Flag, ObjectId, Scripts, World};
 use anyhow::{Context, Result};
 use serde::Serialize;
@@ -20,7 +20,7 @@ pub fn scan_building(
     world: &mut World,
     observer: ObjectId,
     pilot: ObjectId,
-    coordinate: BattleHexCoordinate,
+    coordinate: HexCoordinate,
     now: i64,
 ) -> Result<BattleBuildingScan> {
     scan_with_range(world, observer, pilot, coordinate, now, false)
@@ -31,7 +31,7 @@ pub(super) fn scan_with_range(
     world: &mut World,
     observer: ObjectId,
     pilot: ObjectId,
-    coordinate: BattleHexCoordinate,
+    coordinate: HexCoordinate,
     now: i64,
     observer_range: bool,
 ) -> Result<BattleBuildingScan> {
@@ -49,7 +49,7 @@ fn resolve(
     world: &mut World,
     observer: ObjectId,
     pilot: ObjectId,
-    coordinate: BattleHexCoordinate,
+    coordinate: HexCoordinate,
     now: i64,
     observer_range: bool,
 ) -> Result<BattleBuildingScan> {
@@ -103,7 +103,7 @@ pub fn scan_building_action(
     config: &Config,
     observer: ObjectId,
     pilot: ObjectId,
-    coordinate: BattleHexCoordinate,
+    coordinate: HexCoordinate,
 ) -> Result<BattleBuildingScan> {
     action_with_range(scripts, config, observer, pilot, coordinate, false)
 }
@@ -114,7 +114,7 @@ pub(super) fn action_with_range(
     config: &Config,
     observer: ObjectId,
     pilot: ObjectId,
-    coordinate: BattleHexCoordinate,
+    coordinate: HexCoordinate,
     observer_range: bool,
 ) -> Result<BattleBuildingScan> {
     let source = super::combat_operator::for_owner(&scripts.world(), observer, pilot)?.source;

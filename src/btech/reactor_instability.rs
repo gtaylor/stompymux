@@ -102,7 +102,7 @@ pub(super) fn section_loss(
     let mut notices = super::broadcast::hex_notices(
         world,
         position.map,
-        super::BattleHexCoordinate {
+        super::HexCoordinate {
             x: i32::from(position.x),
             y: i32::from(position.y),
         },

@@ -9,7 +9,7 @@ use serde::Serialize;
 pub struct BattleArtilleryLaunchReport {
     pub shooter: ObjectId,
     pub map: ObjectId,
-    pub coordinate: BattleHexCoordinate,
+    pub coordinate: HexCoordinate,
     pub weapon_index: usize,
     pub aim: BattleArtilleryAim,
     pub roll: u8,
@@ -184,8 +184,8 @@ pub(super) fn resolve_in_action(
 /// Artillery geometry and aim shared by sighting and live launch, without inventory changes.
 pub(super) struct PreparedArtillery {
     pub map: ObjectId,
-    pub coordinate: BattleHexCoordinate,
-    pub origin: BattleHexCoordinate,
+    pub coordinate: HexCoordinate,
+    pub origin: HexCoordinate,
     pub weapon: BattleWeapon,
     pub ammunition: BattleAmmunitionMode,
     pub distance: f64,
@@ -295,7 +295,7 @@ pub(super) fn prepare(
         explicit_hex.is_some()
             || observer.is_some()
             || visible
-            || !record.has_flag(super::BattleMapFlag::Underground),
+            || !record.has_flag(super::MapFlag::Underground),
         "You cannot fire indirect weapons underground!"
     );
     ensure!(
@@ -357,7 +357,7 @@ pub(super) fn prepare(
         ammunition,
         distance,
         aim,
-        origin: BattleHexCoordinate {
+        origin: HexCoordinate {
             x: i32::from(position.x),
             y: i32::from(position.y),
         },

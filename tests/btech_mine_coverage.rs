@@ -11,7 +11,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
         &mut world,
         map,
         "mines",
-        BattleMapAsset::from_cells("5 3\n.0.0.0.0.0\n.0.0.0.0.0\n.0.0.0.0.0\n").unwrap(),
+        MapAsset::from_cells("5 3\n.0.0.0.0.0\n.0.0.0.0.0\n.0.0.0.0.0\n").unwrap(),
     )
     .unwrap();
     support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
@@ -22,7 +22,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
 /// Common authored mine in the field's far corner.
 fn mine() -> BattleMinefield {
     BattleMinefield {
-        coordinate: BattleHexCoordinate { x: 4, y: 2 },
+        coordinate: HexCoordinate { x: 4, y: 2 },
         kind: BattleMineKind::Standard,
         strength: 10,
         extra: 0,
@@ -31,7 +31,7 @@ fn mine() -> BattleMinefield {
 }
 
 /// Fire one mine-laying artillery shell at `center` and return the deposited field slots.
-fn shell(world: &mut World, map: ObjectId, center: BattleHexCoordinate) -> Vec<u32> {
+fn shell(world: &mut World, map: ObjectId, center: HexCoordinate) -> Vec<u32> {
     let mut flight = BattleArtilleryFlight::new(
         center,
         center,
@@ -53,7 +53,7 @@ fn shell(world: &mut World, map: ObjectId, center: BattleHexCoordinate) -> Vec<u
 async fn coverage_follows_records_through_edits_persistence_and_deletion() {
     let (_dir, config, mut world, map) = fixture().await;
     let field = mine();
-    let elsewhere = BattleHexCoordinate { x: 0, y: 0 };
+    let elsewhere = HexCoordinate { x: 0, y: 0 };
     assert!(
         !world.btech.maps()[&map]
             .mine_coverage(field.coordinate)
@@ -68,7 +68,7 @@ async fn coverage_follows_records_through_edits_persistence_and_deletion() {
     assert!(!world.btech.maps()[&map].mine_coverage(elsewhere).unwrap());
     assert!(
         world.btech.maps()[&map]
-            .mine_coverage(BattleHexCoordinate { x: 5, y: 0 })
+            .mine_coverage(HexCoordinate { x: 5, y: 0 })
             .is_err()
     );
     persistence::save(&config.database(), &world).await.unwrap();
@@ -109,7 +109,7 @@ async fn coverage_follows_records_through_edits_persistence_and_deletion() {
 #[tokio::test]
 async fn artillery_mines_are_active_at_once_and_do_not_stack() {
     let (_dir, config, mut world, map) = fixture().await;
-    let center = BattleHexCoordinate { x: 2, y: 1 };
+    let center = HexCoordinate { x: 2, y: 1 };
     assert_eq!(shell(&mut world, map, center), vec![0]);
     assert!(world.btech.maps()[&map].mine_coverage(center).unwrap());
     assert_eq!(world.btech.maps()[&map].minefields()[&0].owner, ObjectId(0));
@@ -130,7 +130,7 @@ async fn resizing_a_mined_map_clears_its_mines() {
     assert!(world.btech.maps()[&map].minefields().is_empty());
     assert!(
         !world.btech.maps()[&map]
-            .mine_coverage(BattleHexCoordinate { x: 1, y: 1 })
+            .mine_coverage(HexCoordinate { x: 1, y: 1 })
             .unwrap()
     );
 }

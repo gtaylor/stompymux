@@ -151,10 +151,8 @@ pub use landing::land_jump;
 mod ground_proposal;
 mod loadout;
 mod loadout_context;
-mod map;
 mod map_flags;
-mod terrain_rules;
-pub use map_flags::{BattleMapFlag, format_map_flags, parse_map_flags};
+pub use stompymux_map::{MapFlag, format_map_flags, parse_map_flags};
 mod mobility;
 mod motion;
 pub use ground_proposal::{
@@ -193,13 +191,13 @@ mod unit;
 
 pub use assets::{read_map, read_template, read_unit_template, read_vehicle_template};
 mod unit_template;
-pub use map::{BattleMapAsset, MapPointOfInterest, Terrain};
-mod hex;
-mod map_file;
-pub use hex::{BattleHex, Ground, MAX_DEPTH, MAX_HEIGHT, Structure, Water, Woods};
 pub use state::{
-    BtechState, StoredBattleMap, StoredBattleUnit, create_map, create_unit,
-    register_empty_battle_unit, reload_map, set_map_visibility,
+    BtechState, StoredBattleUnit, StoredMap, create_map, create_unit, register_empty_battle_unit,
+    reload_map, set_map_visibility,
+};
+pub use stompymux_map::{
+    DecorationKind, Ground, Hex, MAX_DEPTH, MAX_HEIGHT, MapAsset, MapPointOfInterest, Structure,
+    Terrain, Water, Woods,
 };
 pub use unit_template::BattleUnitTemplate;
 mod vehicle;
@@ -277,7 +275,8 @@ pub(crate) fn notify_message(
     Ok(())
 }
 
-pub use geometry::{BattleHexCoordinate, BattlePoint, BattleRange, unit_elevation, unit_range};
+pub use geometry::{BattleRange, unit_elevation, unit_range};
+pub use stompymux_map::{HexCoordinate, Point};
 
 pub(crate) use motion::set_speed_autopilot;
 pub use motion::{BattleMotion, BattleMovementRules, advance_motion, set_heading, set_speed};
@@ -633,10 +632,7 @@ mod woodland_map;
 pub use woodland_map::{BattleWoodlandChange, apply_woodland_clearing};
 
 mod decorations;
-pub use decorations::{
-    BattleDecoration, BattleDecorationKind, advance_map_smoke, map_smoke_pending,
-    set_map_decoration,
-};
+pub use decorations::{BattleDecoration, advance_map_smoke, map_smoke_pending, set_map_decoration};
 
 mod wind;
 pub use wind::set_map_wind;

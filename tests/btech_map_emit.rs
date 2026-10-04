@@ -176,7 +176,7 @@ async fn map_emit_authority_empty_maps_and_all_occupants() {
         &mut world,
         empty,
         "empty",
-        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+        MapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, empty, support::FIXTURE_DICE_SEED);

@@ -37,7 +37,7 @@ async fn signed_mines_share_burn_adjustments_neighbor_effects_and_restart() {
             &mut base,
             map,
             "signed",
-            BattleMapAsset::from_cells("3 3\n.0.0.0\n\"0.0.0\n.0.0.0\n").unwrap(),
+            MapAsset::from_cells("3 3\n.0.0.0\n\"0.0.0\n.0.0.0\n").unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut base, map, support::FIXTURE_DICE_SEED);
@@ -96,7 +96,7 @@ async fn signed_mines_share_burn_adjustments_neighbor_effects_and_restart() {
                         state[key][id.0.to_string()]["inferno_remaining"] = initial.into();
                         world.btech = serde_json::from_value(state).unwrap();
                         let mine = BattleMinefield {
-                            coordinate: BattleHexCoordinate { x: 1, y: 1 },
+                            coordinate: HexCoordinate { x: 1, y: 1 },
                             kind,
                             strength,
                             extra: 42,
@@ -117,7 +117,7 @@ async fn signed_mines_share_burn_adjustments_neighbor_effects_and_restart() {
                         assert_eq!(
                             report.ignited,
                             if neighbors {
-                                vec![BattleHexCoordinate { x: 0, y: 1 }]
+                                vec![HexCoordinate { x: 0, y: 1 }]
                             } else {
                                 vec![]
                             }

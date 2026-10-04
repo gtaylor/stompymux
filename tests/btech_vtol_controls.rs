@@ -11,7 +11,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
         &mut world,
         map,
         "controls",
-        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+        MapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     let id = world.create(&config, "Control aircraft".into(), Kind::Thing);
@@ -48,7 +48,7 @@ async fn obstacle_fixture(source: &str) -> (tempfile::TempDir, Config, World, Ob
         &mut base,
         map,
         "forest",
-        BattleMapAsset::from_cells(source).unwrap(),
+        MapAsset::from_cells(source).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut base, map, support::FIXTURE_DICE_SEED);

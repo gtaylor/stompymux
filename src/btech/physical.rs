@@ -734,7 +734,7 @@ fn attack_profile_inner(
     );
     let map = &world.btech.maps()[&position.map];
     ensure!(
-        !map.has_flag(super::BattleMapFlag::NoPhysicalAttacks),
+        !map.has_flag(super::MapFlag::NoPhysicalAttacks),
         "You cannot perform physical attacks here!"
     );
     if source.signature().team == victim.signature().team {
@@ -881,7 +881,7 @@ fn attack_profile_inner(
         super::aim::ground_physical_target_modifier(world, victim, rules.extended_movement);
     // Smoke over the target's tile obscures it like heavy woods.
     let terrain = match target_tile.overlay() {
-        Some(super::BattleDecorationKind::Smoke) => 2,
+        Some(super::DecorationKind::Smoke) => 2,
         _ => target_tile.woods_density(),
     };
     let tons = source.definition().tons;

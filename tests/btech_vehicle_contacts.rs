@@ -13,7 +13,7 @@ async fn fixture(
         &mut world,
         map,
         "sight",
-        BattleMapAsset::from_cells(&format!("1 5\n{tiles}")).unwrap(),
+        MapAsset::from_cells(&format!("1 5\n{tiles}")).unwrap(),
     )
     .unwrap();
     let mut ids = Vec::new();
@@ -203,7 +203,7 @@ async fn vehicle_contact_snapshots_reject_invalid_references() {
         &mut world,
         elsewhere,
         "elsewhere",
-        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+        MapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, d, elsewhere, 0, 0).unwrap();

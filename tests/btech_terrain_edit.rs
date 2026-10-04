@@ -20,7 +20,7 @@ fn lua_table(value: &serde_json::Value) -> String {
 }
 
 /// The ADDHEX layer words that build `hex`.
-fn layer_words(hex: BattleHex) -> String {
+fn layer_words(hex: Hex) -> String {
     let value = serde_json::to_value(hex).unwrap();
     let mut words = vec![
         format!("level={}", value["level"]),
@@ -86,7 +86,7 @@ async fn occupied_edits_share_native_lua_and_incremental_persistence() {
             Terrain::Grassland,
         ] {
             // The deepest water and a tall feature of every other kind.
-            let expected = BattleHex::new(
+            let expected = Hex::new(
                 terrain,
                 if matches!(terrain, Terrain::Water | Terrain::Ice) {
                     9
@@ -169,22 +169,19 @@ async fn occupied_edits_share_native_lua_and_incremental_persistence() {
         }
         // Several layers share a hex, such as woods on a road or a bridge over raised water;
         // anything a hex cannot hold is rejected.
-        let bridge = BattleHex::new(Terrain::Bridge, 4)
-            .with_water(Some(BattleWater {
+        let bridge = Hex::new(Terrain::Bridge, 4)
+            .with_water(Some(Water {
                 depth: 2,
                 frozen: false,
             }))
-            .with_ground(BattleGround::Sand)
+            .with_ground(Ground::Sand)
             .with_level(3);
         for (args, expected) in [
             (
                 "level=2 ground=road woods=light",
-                BattleHex::new(Terrain::Road, 2).with_woods(Some(BattleWoods::Light)),
+                Hex::new(Terrain::Road, 2).with_woods(Some(Woods::Light)),
             ),
-            (
-                "ice=2 level=4",
-                BattleHex::new(Terrain::Ice, 2).with_level(4),
-            ),
+            ("ice=2 level=4", Hex::new(Terrain::Ice, 2).with_level(4)),
             ("LEVEL=3 water=2 Bridge=4 ground=sand", bridge),
         ] {
             let output =
@@ -243,7 +240,7 @@ async fn occupied_edits_share_native_lua_and_incremental_persistence() {
                 &mut candidate,
                 map,
                 "replacement",
-                BattleMapAsset::from_cells(&format!("1 12\n{}", ".0\n".repeat(12))).unwrap()
+                MapAsset::from_cells(&format!("1 12\n{}", ".0\n".repeat(12))).unwrap()
             )
             .is_err()
         );
@@ -266,8 +263,8 @@ async fn ice_growth_commits_against_an_occupied_durable_map() {
             &config,
             actor,
             map,
-            BattleHexCoordinate { x: 0, y: 5 },
-            BattleHex::new(Terrain::Water, 2),
+            HexCoordinate { x: 0, y: 5 },
+            Hex::new(Terrain::Water, 2),
         )
         .unwrap();
         let baseline = scripts.world().clone();
@@ -277,7 +274,7 @@ async fn ice_growth_commits_against_an_occupied_durable_map() {
         let growth =
             change_battle_map_ice_action(&scripts, &config, actor, map, 100, BattleIceChange::Grow)
                 .unwrap();
-        assert_eq!(growth.changed, vec![BattleHexCoordinate { x: 0, y: 5 }]);
+        assert_eq!(growth.changed, vec![HexCoordinate { x: 0, y: 5 }]);
         let saved = scripts.world().clone();
         persistence::save(&config.database(), &saved).await.unwrap();
         let loaded = persistence::load(&config.database()).await.unwrap();
@@ -316,12 +313,12 @@ async fn edit_admission_overlays_and_extreme_elevations() {
         .unwrap()
         .flags
         .remove(Flag::Wizard);
-    let coordinate = BattleHexCoordinate { x: 0, y: 5 };
+    let coordinate = HexCoordinate { x: 0, y: 5 };
     set_map_decoration(
         &mut world,
         map,
         coordinate,
-        Some(BattleDecoration::new(BattleDecorationKind::Smoke, 30, None)),
+        Some(BattleDecoration::new(DecorationKind::Smoke, 30, None)),
     )
     .unwrap();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
@@ -346,7 +343,7 @@ async fn edit_admission_overlays_and_extreme_elevations() {
             ObjectId(2),
             map,
             coordinate,
-            BattleHex::new(Terrain::Water, 2)
+            Hex::new(Terrain::Water, 2)
         )
         .is_err()
     );
@@ -357,7 +354,7 @@ async fn edit_admission_overlays_and_extreme_elevations() {
             actor,
             unit,
             coordinate,
-            BattleHex::new(Terrain::Water, 2)
+            Hex::new(Terrain::Water, 2)
         )
         .is_err()
     );
@@ -401,10 +398,9 @@ async fn bridge_edits_and_airborne_edits_preserve_physical_position() {
         let hover = world.btech.vehicles().contains_key(&unit);
         if hover {
             let mut state = serde_json::to_value(&world.btech).unwrap();
-            state["maps"][map.0.to_string()]["terrain"][11] = serde_json::to_value(
-                stompymux_rs::BattleHex::new(stompymux_rs::Terrain::Bridge, 4),
-            )
-            .unwrap();
+            state["maps"][map.0.to_string()]["terrain"][11] =
+                serde_json::to_value(stompymux_rs::Hex::new(stompymux_rs::Terrain::Bridge, 4))
+                    .unwrap();
             world.btech = serde_json::from_value(state).unwrap();
             firing::edit(&mut world, unit, |state| {
                 state["under_bridge"] = true.into();
@@ -427,8 +423,8 @@ async fn bridge_edits_and_airborne_edits_preserve_physical_position() {
             &config,
             actor,
             map,
-            BattleHexCoordinate { x: 0, y: 11 },
-            BattleHex::new(Terrain::Grassland, 9),
+            HexCoordinate { x: 0, y: 11 },
+            Hex::new(Terrain::Grassland, 9),
         )
         .unwrap();
         assert_eq!(
@@ -482,8 +478,8 @@ async fn failed_edit_publication_restores_state() {
         &config,
         actor,
         map,
-        BattleHexCoordinate { x: 0, y: 11 },
-        BattleHex::new(Terrain::Ice, 4),
+        HexCoordinate { x: 0, y: 11 },
+        Hex::new(Terrain::Ice, 4),
     )
     .unwrap_err();
     assert!(error.to_string().contains("output limit"), "{error:#}");
@@ -506,7 +502,7 @@ async fn terrain_saves_preserve_persisted_landing_exclusions() {
         let map = world.btech.units()[&unit].map.unwrap();
         let actor = operator(&mut world, &config, map);
         let zone = BattleLandingExclusion {
-            coordinate: BattleHexCoordinate { x: 0, y: 11 },
+            coordinate: HexCoordinate { x: 0, y: 11 },
             radius: 3,
             exempt_team: 7,
             owner: actor,
@@ -552,7 +548,7 @@ async fn terrain_saves_preserve_persisted_landing_exclusions() {
             &mut reloaded,
             map,
             "replacement",
-            BattleMapAsset::from_cells(&format!("1 12\n{}", "#1\n".repeat(12))).unwrap(),
+            MapAsset::from_cells(&format!("1 12\n{}", "#1\n".repeat(12))).unwrap(),
         )
         .unwrap();
         persistence::save(&config.database(), &reloaded)

@@ -16,7 +16,7 @@ async fn fixture(sources: &[&str]) -> (tempfile::TempDir, Config, World, ObjectI
         &mut world,
         map,
         "yard",
-        BattleMapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
+        MapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -1634,7 +1634,7 @@ async fn pickup_through_ice_uses_shared_breakage_for_ground_and_airborne_carrier
             &mut world,
             map,
             "ice",
-            BattleMapAsset::from_cells(&format!("1 1\n{}1\n", Terrain::Ice.symbol())).unwrap(),
+            MapAsset::from_cells(&format!("1 1\n{}1\n", Terrain::Ice.symbol())).unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -1738,7 +1738,7 @@ async fn pickup_ice_failure_restores_the_previous_tow_and_all_material_state() {
         &mut world,
         map,
         "ice",
-        BattleMapAsset::from_cells(&format!("1 1\n{}1\n", Terrain::Ice.symbol())).unwrap(),
+        MapAsset::from_cells(&format!("1 1\n{}1\n", Terrain::Ice.symbol())).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);

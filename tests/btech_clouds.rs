@@ -148,7 +148,7 @@ async fn terrain_clouds_follow_level_and_equality_rules_without_consuming_dice()
         let map = world.btech.units()[&id].map.unwrap();
         // The observer stands at level zero and looks at an empty hex raised to level one.
         raised_hex(&mut world, map, 9);
-        let target = BattleHexCoordinate { x: 0, y: 9 };
+        let target = HexCoordinate { x: 0, y: 9 };
         set_battle_map_cloud_base(&mut world, ObjectId(1), map, 0).unwrap();
         let ordinary = battle_hex_perception(&world, id, target).unwrap();
         assert_eq!(ordinary, Some(BattleDetectionChannel::Sensors));
@@ -212,7 +212,7 @@ async fn terrain_cloud_admission_matches_native_lua_and_preserves_failed_shots()
         firing::edit(&mut privileged, id, |state| {
             state["visibility"]["clairvoyant"] = true.into()
         });
-        assert!(battle_hex_visible(&privileged, id, BattleHexCoordinate { x: 0, y: 9 }).unwrap());
+        assert!(battle_hex_visible(&privileged, id, HexCoordinate { x: 0, y: 9 }).unwrap());
         set_battle_map_cloud_base(&mut world, ObjectId(1), map, 0).unwrap();
         *lua.world_mut() = world.clone();
         *native.world_mut() = world.clone();

@@ -22,7 +22,7 @@ async fn fixture(
             &mut world,
             map,
             "entry",
-            BattleMapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
+            MapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
         )
         .unwrap();
     }
@@ -31,7 +31,7 @@ async fn fixture(
         exterior,
         0,
         Some(BattleBuildingEntrance {
-            coordinate: BattleHexCoordinate { x: 0, y: 0 },
+            coordinate: HexCoordinate { x: 0, y: 0 },
             interior,
             data_char: 0,
             data_short: 0,
@@ -44,7 +44,7 @@ async fn fixture(
         interior,
         0,
         Some(BattleBuildingEntryPoint {
-            coordinate: BattleHexCoordinate { x: 1, y: 1 },
+            coordinate: HexCoordinate { x: 1, y: 1 },
             direction: b'n',
             object: ObjectId(-1),
             data_short: 0,

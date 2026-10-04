@@ -48,7 +48,7 @@ impl BattleUnit {
     }
 
     /// Integer altitude used by terrain effects; in-flight samples use the game's rounding.
-    pub(super) fn elevation_level(&self, tile: super::BattleHex) -> i32 {
+    pub(super) fn elevation_level(&self, tile: super::Hex) -> i32 {
         if let Some(drop) = self.orbital_drop {
             return drop.elevation();
         }
@@ -74,9 +74,9 @@ impl BattleUnit {
 }
 
 /// Validate the currently supported route on launch and persisted-world loading.
-pub(super) fn validate_route(map: &super::StoredBattleMap, path: BattleJumpPath) -> Result<()> {
+pub(super) fn validate_route(map: &super::StoredMap, path: BattleJumpPath) -> Result<()> {
     ensure!(
-        !map.has_flag(super::BattleMapFlag::Underground),
+        !map.has_flag(super::MapFlag::Underground),
         "The underground ceiling prevents jumping"
     );
     let start = path.sample(0.0, path.movement_points())?;
@@ -341,7 +341,7 @@ fn launch(
     );
     ensure!(
         !map.context("Unit is not on a battlefield")?
-            .has_flag(super::BattleMapFlag::Underground),
+            .has_flag(super::MapFlag::Underground),
         "The underground ceiling prevents jumping"
     );
     let checked = unit.stagger().action_level() > 0;
@@ -483,7 +483,7 @@ fn prepare_jump(world: &World, id: ObjectId, request: JumpRequest<'_>) -> Result
                 "Target is not in line of sight!"
             );
             (
-                super::BattleHexCoordinate {
+                super::HexCoordinate {
                     x: i32::from(other.x),
                     y: i32::from(other.y),
                 },
@@ -665,7 +665,7 @@ fn advance_jumps_inner(
             // Scenario reassignment can retain a destination beyond this map's ordinary edges.
             position.x = i64::from(coordinate.x).clamp(0, map.width - 1) as u16;
             position.y = i64::from(coordinate.y).clamp(0, map.height - 1) as u16;
-            let point = super::BattleHexCoordinate {
+            let point = super::HexCoordinate {
                 x: i32::from(position.x),
                 y: i32::from(position.y),
             }
@@ -783,7 +783,7 @@ fn advance_jumps_inner(
                 || (previous_elevation >= ice_plane && next_elevation < ice_plane))
         {
             let downward = next_elevation < ice_plane;
-            let old_coordinate = super::BattleHexCoordinate {
+            let old_coordinate = super::HexCoordinate {
                 x: i32::from(position.x),
                 y: i32::from(position.y),
             };

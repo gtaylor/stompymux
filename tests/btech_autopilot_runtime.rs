@@ -2,7 +2,7 @@
 use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::{
-    BattleMapAsset, BattlePower, BattleUnitSignature, BattleUnitTemplate, Config, Kind, ObjectId,
+    BattlePower, BattleUnitSignature, BattleUnitTemplate, Config, Kind, MapAsset, ObjectId,
     Scripts, World, assign_battle_pilot, create_battle_map, persistence, place_battle_unit,
     refresh_battle_contacts, set_battle_speed, set_battle_unit_signature,
 };
@@ -17,7 +17,7 @@ async fn ground_fixture() -> (tempfile::TempDir, Config, World, ObjectId, Object
         &mut world,
         map,
         "autopilot.lane",
-        BattleMapAsset::from_cells(&format!("1 8\n{}", ".0\n".repeat(8))).unwrap(),
+        MapAsset::from_cells(&format!("1 8\n{}", ".0\n".repeat(8))).unwrap(),
     )
     .unwrap();
     let unit = world.create(&config, "Autopilot mech".into(), Kind::Thing);

@@ -17,7 +17,7 @@ async fn vehicle_commands_and_lua_share_creation_placement_and_snapshot_state() 
         &mut world,
         map,
         "test",
-        BattleMapAsset::from_cells("2 1\n.0.0\n").unwrap(),
+        MapAsset::from_cells("2 1\n.0.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -152,7 +152,7 @@ async fn operator_inspection_reports_mech_ground_and_vtol_state_without_mutation
             &mut world,
             map,
             "inspection",
-            BattleMapAsset::from_cells("2 1\n.0.0\n").unwrap(),
+            MapAsset::from_cells("2 1\n.0.0\n").unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);

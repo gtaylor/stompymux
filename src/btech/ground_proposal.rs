@@ -1,5 +1,5 @@
 //! Read-only Mech ground proposals share live movement arithmetic with trajectory prediction.
-use super::{BattleHexCoordinate, BattleMotion, BattleMovementRules, BattlePoint};
+use super::{BattleMotion, BattleMovementRules, HexCoordinate, Point};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 
@@ -8,7 +8,7 @@ use anyhow::{Context, Result, ensure};
 pub struct BattleGroundMotionProposal {
     /// Updated controls retain the starting point until the caller resolves the segment.
     pub motion: BattleMotion,
-    pub destination: BattlePoint,
+    pub destination: Point,
     /// A zero movement ceiling requires live damage reconciliation instead of traversal.
     pub immobilized: bool,
 }
@@ -20,7 +20,7 @@ pub fn propose_mech_ground_motion(
     world: &World,
     id: ObjectId,
     mut motion: BattleMotion,
-    coordinate: BattleHexCoordinate,
+    coordinate: HexCoordinate,
     rules: BattleMovementRules,
 ) -> Result<BattleGroundMotionProposal> {
     let unit = world
@@ -112,7 +112,7 @@ pub fn propose_vehicle_ground_motion(
     world: &World,
     id: ObjectId,
     old: BattleMotion,
-    coordinate: BattleHexCoordinate,
+    coordinate: HexCoordinate,
     rules: BattleMovementRules,
 ) -> Result<BattleMotion> {
     let vehicle = world
@@ -147,7 +147,7 @@ pub fn propose_vehicle_ground_motion(
     let mut next = vehicle.definition().motion_at_maximum(
         loaded,
         if vehicle.definition().is_vtol() {
-            super::BattleHex::at_level(0)
+            super::Hex::at_level(0)
         } else {
             map.hex(i64::from(coordinate.x), i64::from(coordinate.y))?
         },

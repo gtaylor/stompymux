@@ -17,7 +17,7 @@ async fn field(
         &mut world,
         map,
         "water",
-        BattleMapAsset::from_cells("1 3\n~2\n~2\n~2\n").unwrap(),
+        MapAsset::from_cells("1 3\n~2\n~2\n~2\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -208,7 +208,7 @@ async fn underwater_fire_does_not_bypass_waterline_visibility() {
     let map = world.btech.units()[&target].map.unwrap();
     let mut encoded = serde_json::to_value(&world.btech).unwrap();
     encoded["maps"][map.0.to_string()]["terrain"][0] =
-        serde_json::to_value(BattleHex::new(Terrain::Grassland, 0)).unwrap();
+        serde_json::to_value(Hex::new(Terrain::Grassland, 0)).unwrap();
     world.btech = serde_json::from_value(encoded).unwrap();
     refresh_battle_contacts(&mut world, &[shooter]).unwrap();
     let before = world.btech.clone();

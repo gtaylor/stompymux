@@ -20,7 +20,7 @@ pub struct BattleSightReport {
     pub weapon_index: usize,
     pub weapon: BattleWeapon,
     pub target: Option<ObjectId>,
-    pub coordinate: Option<BattleHexCoordinate>,
+    pub coordinate: Option<HexCoordinate>,
     pub aim: BattleSightAim,
     pub target_number: Option<i32>,
     pub roll: u8,
@@ -311,7 +311,7 @@ fn check_bearing(
     world: &World,
     targeting: super::fire_target::TargetSource,
     index: usize,
-    hex: BattleHexCoordinate,
+    hex: HexCoordinate,
     rules: BattleAimRules,
 ) -> Result<()> {
     let shooter = targeting.unit;

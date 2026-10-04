@@ -1,5 +1,5 @@
 //! Ordered battlefield entrances referencing shared interior-map construction state.
-use super::{BattleHexCoordinate, StoredBattleMap};
+use super::{HexCoordinate, StoredMap};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -8,7 +8,7 @@ use std::{collections::BTreeMap, sync::Arc};
 /// A battlefield coordinate leading to the map that owns the building's integrity.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BattleBuildingEntrance {
-    pub coordinate: BattleHexCoordinate,
+    pub coordinate: HexCoordinate,
     pub interior: ObjectId,
     /// Authored byte payload retained for map-object inspection.
     pub data_char: u8,
@@ -18,17 +18,14 @@ pub struct BattleBuildingEntrance {
     pub data_int: i64,
 }
 
-impl StoredBattleMap {
+impl StoredMap {
     /// Stable entrance order; duplicate coordinates retain first-entry selection semantics.
     pub fn building_entrances(&self) -> &BTreeMap<u32, BattleBuildingEntrance> {
         &self.building_entrances
     }
 
     /// Inspect the first entrance at a checked coordinate without selecting an occupant.
-    pub fn building_at(
-        &self,
-        coordinate: BattleHexCoordinate,
-    ) -> Result<Option<BattleBuildingEntrance>> {
+    pub fn building_at(&self, coordinate: HexCoordinate) -> Result<Option<BattleBuildingEntrance>> {
         self.base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
         Ok(self
             .building_entrances

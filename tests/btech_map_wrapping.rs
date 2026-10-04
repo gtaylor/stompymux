@@ -16,7 +16,7 @@ async fn linked_map_movement_replays_for_mechs_ground_vehicles_and_aircraft() {
                 &mut world,
                 map,
                 "wrapped",
-                BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
+                MapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
             )
             .unwrap();
             support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -93,7 +93,7 @@ async fn linked_map_movement_replays_for_mechs_ground_vehicles_and_aircraft() {
             assert!(motion.speed > 0.0);
             assert_eq!(
                 motion.point,
-                BattleHexCoordinate {
+                HexCoordinate {
                     x: i32::from(position.x),
                     y: i32::from(position.y)
                 }
@@ -123,7 +123,7 @@ async fn aircraft_rolls_back_when_the_opposite_edge_is_too_high() {
         &mut world,
         map,
         "hill",
-        BattleMapAsset::from_cells("3 1\n^9.0.0\n").unwrap(),
+        MapAsset::from_cells("3 1\n^9.0.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -177,7 +177,7 @@ async fn aircraft_rolls_back_when_the_opposite_edge_is_too_high() {
     else {
         panic!("Missing seam collision: {outcome:?}");
     };
-    assert_eq!(hex, BattleHexCoordinate { x: 0, y: 0 });
+    assert_eq!(hex, HexCoordinate { x: 0, y: 0 });
     let unit = &world.btech.vehicles()[&id];
     assert_eq!(unit.position().unwrap().x, 2);
     assert_eq!(unit.vtol_flight().unwrap().altitude, 0.0);
@@ -199,7 +199,7 @@ async fn imported_link_marker_payloads_survive_unchanged_saves() {
         &mut world,
         map,
         "import",
-        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+        MapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
@@ -221,7 +221,7 @@ async fn imported_link_marker_payloads_survive_unchanged_saves() {
     assert_eq!(loaded.btech.maps()[&map].linked_markers().len(), 2);
     assert_eq!(
         loaded.btech.maps()[&map].linked_markers()[&4].coordinate,
-        BattleHexCoordinate { x: 12, y: 13 }
+        HexCoordinate { x: 12, y: 13 }
     );
     assert!(loaded.btech.maps()[&map].wrapping());
     loaded.objects.get_mut(&map).unwrap().name = "Renamed wrapping".into();
@@ -230,13 +230,7 @@ async fn imported_link_marker_payloads_survive_unchanged_saves() {
         .unwrap();
     let payload: (i64,i64,i64,i64,i64,i64) = sqlx::query_as("SELECT ordinal,x,y,data_char,data_short,data_int FROM btech_map_objects WHERE map_dbref=? AND object_type=7 AND ordinal=4").bind(map.0).fetch_one(&mut connection).await.unwrap();
     assert_eq!(payload, (4, 12, 13, 14, 15, 16));
-    set_battle_linked_marker(
-        &mut loaded,
-        map,
-        4,
-        Some(BattleHexCoordinate { x: -10, y: 99 }),
-    )
-    .unwrap();
+    set_battle_linked_marker(&mut loaded, map, 4, Some(HexCoordinate { x: -10, y: 99 })).unwrap();
     persistence::save(&config.database(), &loaded)
         .await
         .unwrap();
@@ -277,7 +271,7 @@ async fn native_and_lua_wrapping_controls_share_authority_state_and_rollback() {
         &mut world,
         map,
         "configured",
-        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+        MapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -352,7 +346,7 @@ async fn wrapped_jump_paths_keep_distance_and_replay_through_all_four_edges() {
             &mut world,
             map,
             "jump",
-            BattleMapAsset::from_cells(
+            MapAsset::from_cells(
                 "5 5\n.0.0.0.0.0\n.0.0.0.0.0\n.0.0.0.0.0\n.0.0.0.0.0\n.0.0.0.0.0\n",
             )
             .unwrap(),
@@ -394,7 +388,7 @@ async fn wrapped_jump_paths_keep_distance_and_replay_through_all_four_edges() {
             .point
             .containing_hex()
             .unwrap();
-        let destination = BattleHexCoordinate {
+        let destination = HexCoordinate {
             x: endpoint.x.rem_euclid(5),
             y: endpoint.y.rem_euclid(5),
         };

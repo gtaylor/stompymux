@@ -19,7 +19,7 @@ pub struct BattleSurfaceWeaponImpact {
 pub(super) fn resolve(
     world: &mut World,
     shooter: ObjectId,
-    coordinate: BattleHexCoordinate,
+    coordinate: HexCoordinate,
     weapon: (BattleWeapon, BattleAmmunitionMode),
     rules: BattleFallRules,
     character: bool,
@@ -35,9 +35,7 @@ pub(super) fn resolve(
     };
     let sides = match surface {
         super::BattleSurface::Ice => 15,
-        super::BattleSurface::Bridge
-            if !record.has_flag(super::BattleMapFlag::IndestructibleBridges) =>
-        {
+        super::BattleSurface::Bridge if !record.has_flag(super::MapFlag::IndestructibleBridges) => {
             10 * (1 + u16::from(tile.deck_clearance().unwrap_or_default()))
         }
         super::BattleSurface::Bridge => return Ok(None),

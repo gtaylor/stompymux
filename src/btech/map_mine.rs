@@ -1,12 +1,12 @@
 //! Operator mine placement shares record insertion and transactional publication with map gameplay.
-use super::{BattleHexCoordinate, BattleMineKind, BattleMinefield};
+use super::{BattleMineKind, BattleMinefield, HexCoordinate};
 use crate::{Config, ObjectId, Scripts};
 use anyhow::{Context, Result, ensure};
 
 /// Requested placement retains full-width strength for confirmation before storage clamping.
 #[derive(Debug, Clone, Copy)]
 pub struct BattleMinePlacement {
-    pub coordinate: BattleHexCoordinate,
+    pub coordinate: HexCoordinate,
     pub kind: BattleMineKind,
     pub strength: i32,
     pub extra: i32,
@@ -74,7 +74,7 @@ pub(crate) fn command(
         let args: Vec<_> = input.args.split_whitespace().collect();
         ensure!((4..=5).contains(&args.len()), "Invalid arguments!");
         let placement = BattleMinePlacement {
-            coordinate: BattleHexCoordinate {
+            coordinate: HexCoordinate {
                 x: args[0].parse().context("Invalid number!")?,
                 y: args[1].parse().context("Invalid number!")?,
             },

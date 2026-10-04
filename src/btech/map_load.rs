@@ -37,8 +37,8 @@ pub fn load_map_action(
     let result = load_map_state_action(scripts, config, actor, id, name);
     let Some(error) = result.as_ref().err().filter(|error| {
         matches!(
-            error.downcast_ref::<super::map::MapFileFailure>(),
-            Some(super::map::MapFileFailure::Invalid)
+            error.downcast_ref::<super::assets::MapFileFailure>(),
+            Some(super::assets::MapFileFailure::Invalid)
         )
     }) else {
         return result;
@@ -87,7 +87,7 @@ fn load_map_state_action(
             before.btech.maps().get(&id).map_or(0, |map| map.flags),
         )
         .map_err(
-            |error| match error.downcast_ref::<super::map::MapFileFailure>() {
+            |error| match error.downcast_ref::<super::assets::MapFileFailure>() {
                 // Report the failure itself, keeping the decoder's reason beneath it.
                 Some(failure) => anyhow::anyhow!(error.root_cause().to_string()).context(*failure),
                 None => error,
@@ -117,7 +117,7 @@ fn load_map_state_action(
                 super::terrain_edit::replace_hex(
                     &mut world,
                     id,
-                    super::BattleHexCoordinate { x, y },
+                    super::HexCoordinate { x, y },
                     asset.hex(x, y).context("Map coordinates out of bounds")?,
                 )?;
             }
@@ -157,7 +157,8 @@ pub(crate) fn command(
     Ok(match result {
         Ok(()) => crate::CommandAction::Continue,
         Err(error) => {
-            let reply = if let Some(failure) = error.downcast_ref::<super::map::MapFileFailure>() {
+            let reply = if let Some(failure) = error.downcast_ref::<super::assets::MapFileFailure>()
+            {
                 let name = input
                     .args
                     .split([' ', '\t'])

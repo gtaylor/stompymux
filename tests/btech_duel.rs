@@ -3,8 +3,8 @@ use crate::support;
 use sqlx::Connection;
 use std::{cell::Cell, rc::Rc};
 use stompymux_rs::{
-    BattleCharacter, BattleCharacterValue, BattleDice, BattleMapAsset, BattlePower, BattleTemplate,
-    BattleUnit, Config, Kind, ObjectId, ShutdownRequest, World, create_battle_map,
+    BattleCharacter, BattleCharacterValue, BattleDice, BattlePower, BattleTemplate, BattleUnit,
+    Config, Kind, MapAsset, ObjectId, ShutdownRequest, World, create_battle_map,
     create_battle_unit, persistence, place_battle_unit, set_battle_character,
     set_battle_character_value,
 };
@@ -17,8 +17,7 @@ async fn battlefield() -> (tempfile::TempDir, Config, [ObjectId; 2]) {
         &mut world,
         map,
         "duel.map",
-        BattleMapAsset::from_cells(&format!("20 20\n{}", (".0".repeat(20) + "\n").repeat(20)))
-            .unwrap(),
+        MapAsset::from_cells(&format!("20 20\n{}", (".0".repeat(20) + "\n").repeat(20))).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);

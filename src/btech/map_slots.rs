@@ -100,7 +100,7 @@ pub(super) fn all_unit_order(world: &World, map: ObjectId) -> Result<Vec<ObjectI
 pub(super) fn hex_occupants(
     world: &World,
     map: ObjectId,
-    hex: BattleHexCoordinate,
+    hex: HexCoordinate,
 ) -> Result<Vec<ObjectId>> {
     world
         .btech

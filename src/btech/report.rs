@@ -26,7 +26,7 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
             },
             [target] => super::radio_targeted::target(&world, source, target)?,
             [x, y] => {
-                let coordinate = super::BattleHexCoordinate {
+                let coordinate = super::HexCoordinate {
                     x: x.parse().context("Invalid coordinates!")?,
                     y: y.parse().context("Invalid coordinates!")?,
                 };

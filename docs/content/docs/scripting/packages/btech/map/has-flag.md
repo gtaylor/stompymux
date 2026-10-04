@@ -18,7 +18,7 @@ btech.map.has_flag(dbref, flag)
 | Name | Type | Description |
 | --- | --- | --- |
 | `dbref` | `integer` | Map object dbref. |
-| `flag` | `BattleMapFlag` | Typed constant from btech.map.flags. |
+| `flag` | `MapFlag` | Typed constant from btech.map.flags. |
 
 ## Returns
 

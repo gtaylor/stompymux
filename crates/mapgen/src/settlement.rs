@@ -5,13 +5,14 @@
 //! and blended into the land around it, then filled by its layout. Streets that reach the
 //! footprint's edge become gates, which the road network links to.
 use crate::Params;
-use crate::map::{HexMap, Overlay, Terrain, center};
+use crate::map::{HexMap, Terrain};
 use crate::noise::Noise;
 use crate::report::SettlementReport;
 use crate::rng::Rng;
 use crate::spec::{SettlementKind, SettlementLayout, SettlementSize, SettlementSpec};
 use crate::terrain::open_ground;
 use std::collections::VecDeque;
+use stompymux_map::{DecorationKind, HexCoordinate, Point};
 
 /// A settlement as built, for routing roads and reporting.
 #[derive(Debug, Clone)]
@@ -320,7 +321,7 @@ fn footprint(
             let inside = if rectangular {
                 (x - site.0).abs() <= radius && (y - site.1).abs() <= rows
             } else {
-                let (cx, cy) = center(x, y);
+                let Point { x: cx, y: cy } = HexCoordinate { x, y }.center();
                 let wobble = 2.0 * (ragged.value(cx / 2.0, cy / 2.0) - 0.5);
                 f64::from(HexMap::distance(site, (x, y))) <= f64::from(radius) + wobble
             };
@@ -343,9 +344,9 @@ fn edge_hexes(map: &HexMap, footprint: &[usize]) -> Vec<usize> {
         .copied()
         .filter(|&index| {
             let (x, y) = map.coordinate(index);
-            crate::map::neighbors(x, y)
+            map.adjacent(x, y)
                 .iter()
-                .any(|&(nx, ny)| !map.contains(nx, ny) || !inside[map.index(nx, ny)])
+                .any(|neighbor| neighbor.is_none_or(|(nx, ny)| !inside[map.index(nx, ny)]))
         })
         .collect()
 }
@@ -390,10 +391,7 @@ fn level_site(map: &mut HexMap, footprint: &[usize]) {
             continue;
         }
         let (x, y) = map.coordinate(index);
-        for (nx, ny) in crate::map::neighbors(x, y) {
-            if !map.contains(nx, ny) {
-                continue;
-            }
+        for (nx, ny) in map.neighbors(x, y) {
             let next = map.index(nx, ny);
             if ring[next] != u8::MAX {
                 continue;
@@ -494,8 +492,10 @@ fn organic_plots(
             if !rng.chance(0.7) {
                 direction = (direction + if rng.chance(0.5) { 1 } else { 5 }) % 6;
             }
-            let next = crate::map::neighbors(here.0, here.1)[direction];
-            if !map.contains(next.0, next.1) || !inside[map.index(next.0, next.1)] {
+            let Some(next) = map.adjacent(here.0, here.1)[direction] else {
+                break;
+            };
+            if !inside[map.index(next.0, next.1)] {
                 break;
             }
             here = next;
@@ -561,15 +561,13 @@ fn scattered_plots(
         let height = rng.between(i32::from(scale.lowest), i32::from(scale.tallest)) as u8;
         plots[slot] = Plot::Building(height);
         placed.push(hex);
-        if rng.chance(0.35) {
-            let (nx, ny) = crate::map::neighbors(hex.0, hex.1)[rng.index(6)];
-            if map.contains(nx, ny)
-                && let Some(pair) = footprint.iter().position(|&i| i == map.index(nx, ny))
-                && plots[pair] == Plot::Open
-            {
-                plots[pair] = Plot::Building(height);
-                placed.push((nx, ny));
-            }
+        if rng.chance(0.35)
+            && let Some((nx, ny)) = map.adjacent(hex.0, hex.1)[rng.index(6)]
+            && let Some(pair) = footprint.iter().position(|&i| i == map.index(nx, ny))
+            && plots[pair] == Plot::Open
+        {
+            plots[pair] = Plot::Building(height);
+            placed.push((nx, ny));
         }
     }
     plots
@@ -718,7 +716,7 @@ fn apply(
                 buildings += 1;
                 tallest = tallest.max(height);
                 if kind == SettlementKind::Ruins && rng.chance(0.15) {
-                    hex.overlay = Some(Overlay::Smoke);
+                    hex.overlay = Some(DecorationKind::Smoke);
                 }
                 Terrain::Building { height }
             }

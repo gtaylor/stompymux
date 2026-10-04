@@ -1,7 +1,7 @@
 //! Current Mech and vehicle Battle Value from installed equipment and live defensive facts.
 use super::{
     BattleEngine, BattleGyro, BattleSection, BattleSystem, BattleUnit, BattleWeapon,
-    BattleWeaponSettings, StoredBattleMap,
+    BattleWeaponSettings, StoredMap,
 };
 use anyhow::Result;
 use serde::Serialize;
@@ -85,7 +85,7 @@ impl BattleUnit {
     /// Compute the supported biped score with catalogue weapon values, without changing state.
     /// Installed weapons and bins retain their BV contribution after damage or expenditure.
     /// Armor, structure, heat sinks, jump jets and effective running speed use current state.
-    pub fn battle_value(&self, map: Option<&StoredBattleMap>) -> Result<BattleValue> {
+    pub fn battle_value(&self, map: Option<&StoredMap>) -> Result<BattleValue> {
         self.battle_value_at_speed(
             self.effective_maximum_speed(map)?,
             &BattleWeaponSettings::default(),

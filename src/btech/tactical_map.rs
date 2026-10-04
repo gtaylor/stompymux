@@ -1,5 +1,5 @@
 //! Bounded tactical hex displays with live terrain and acquired contact labels.
-use super::{BattleHexCoordinate, BattleViewDimensions, BattleViewKind, BattleViewport, Terrain};
+use super::{BattleViewDimensions, BattleViewKind, BattleViewport, HexCoordinate, Terrain};
 use crate::{ObjectId, World};
 use anyhow::{Result, bail};
 use serde::Serialize;
@@ -90,7 +90,7 @@ fn display(
         BattleViewport {
             map: position.map,
             requested_center: position.center,
-            origin: BattleHexCoordinate {
+            origin: HexCoordinate {
                 x: position.center.x - 2,
                 y: position.center.y - 2,
             },
@@ -112,7 +112,7 @@ fn display(
         .source
         .unit;
     let map = &world.btech.maps()[&viewport.map];
-    if (cliff.is_some() || landing) && map.has_flag(super::BattleMapFlag::Dark) {
+    if (cliff.is_some() || landing) && map.has_flag(super::MapFlag::Dark) {
         bail!("You can't see that much here!");
     }
     let ansi = world.objects[&pilot].flags.contains(crate::Flag::Ansi);
@@ -180,7 +180,7 @@ fn display(
             .team;
         for y in 0..height {
             for x in 0..width {
-                let coordinate = BattleHexCoordinate {
+                let coordinate = HexCoordinate {
                     x: viewport.origin.x + x as i32,
                     y: viewport.origin.y + y as i32,
                 };
@@ -241,7 +241,7 @@ fn terrain_canvas(
     let viewer = observer.map(|observer| super::hex_visibility::HexViewer::new(world, observer));
     for y in 0..height {
         for x in 0..width {
-            let coordinate = BattleHexCoordinate {
+            let coordinate = HexCoordinate {
                 x: viewport.origin.x + x as i32,
                 y: viewport.origin.y + y as i32,
             };
@@ -256,7 +256,7 @@ fn terrain_canvas(
             let column = x * 3 + 1;
             let seen = match &viewer {
                 Some(viewer) => {
-                    !(visible || map.has_flag(super::BattleMapFlag::Dark))
+                    !(visible || map.has_flag(super::MapFlag::Dark))
                         || viewer.visible(coordinate)?
                 }
                 None => true,
@@ -288,7 +288,7 @@ fn terrain_canvas(
                 };
                 let elevation = match super::map_style::shown_height(hex) {
                     0 => bottom,
-                    elevation => super::hex::height_glyph(elevation),
+                    elevation => stompymux_map::height_glyph(elevation),
                 };
                 [
                     Pixel { glyph: top, style },
@@ -315,7 +315,7 @@ pub(super) fn map_view(
     world: &World,
     map: ObjectId,
     player: ObjectId,
-    center: BattleHexCoordinate,
+    center: HexCoordinate,
     dimensions: BattleViewDimensions,
 ) -> Result<BattleTacticalMap> {
     let record = world
@@ -340,7 +340,7 @@ fn render_local(viewport: BattleViewport, canvas: &[Vec<Pixel>]) -> String {
     let mut output = vec![vec![Pixel::plain(' '); 16]; 12];
     for y in 0..5 {
         for x in 0..5 {
-            let coordinate = BattleHexCoordinate {
+            let coordinate = HexCoordinate {
                 x: viewport.origin.x + x as i32,
                 y: viewport.origin.y + y as i32,
             };
@@ -352,7 +352,7 @@ fn render_local(viewport: BattleViewport, canvas: &[Vec<Pixel>]) -> String {
             output[row + 1][column..column + 4].copy_from_slice(&canvas[row][column..column + 4]);
             output[row + 2][column..column + 4]
                 .copy_from_slice(&canvas[row + 1][column..column + 4]);
-            let north = BattleHexCoordinate {
+            let north = HexCoordinate {
                 x: coordinate.x,
                 y: coordinate.y - 1,
             };
@@ -380,7 +380,7 @@ fn render_local(viewport: BattleViewport, canvas: &[Vec<Pixel>]) -> String {
 fn draw_mines(
     world: &World,
     observer: ObjectId,
-    map: &super::StoredBattleMap,
+    map: &super::StoredMap,
     viewport: BattleViewport,
     canvas: &mut [Vec<Pixel>],
 ) -> Result<()> {
@@ -393,7 +393,7 @@ fn draw_mines(
     let viewer = super::hex_visibility::HexViewer::new(world, observer);
     for y in 0..usize::from(viewport.height) {
         for x in 0..usize::from(viewport.width) {
-            let coordinate = BattleHexCoordinate {
+            let coordinate = HexCoordinate {
                 x: viewport.origin.x + x as i32,
                 y: viewport.origin.y + y as i32,
             };
@@ -423,7 +423,7 @@ fn draw_mines(
 /// Draw each shared southern edge once; only adjacent tiles inside the viewport participate.
 /// Water and ice depths are negative, independent of temporary surface decorations.
 fn draw_cliffs(
-    map: &super::StoredBattleMap,
+    map: &super::StoredMap,
     viewport: BattleViewport,
     canvas: &mut [Vec<Pixel>],
     threshold: i16,

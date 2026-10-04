@@ -1,19 +1,16 @@
-//! The generated map: one [`Hex`] per cell in a column-staggered hex grid, and its encoding in
-//! the stompymux TOML map file format.
+//! The generated map: one [`Hex`] per cell in a column-staggered hex grid, and its conversion
+//! to the [`MapAsset`] that `stompymux-map` writes as a map file.
 //!
 //! Columns are staggered like the game's: even columns sit half a hex south of odd ones.
 //! [`HexMap::neighbors`] and [`HexMap::distance`] follow that layout, so roads and rivers built
 //! from them connect in game.
-use crate::spec::MapFlag;
 use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::{collections::BTreeMap, fmt::Write};
-
-/// The tallest ground level, structure or bridge deck a map file allows.
-pub const MAX_HEIGHT: u8 = 35;
-
-/// The deepest water a map file allows.
-pub const MAX_DEPTH: u8 = 9;
+use std::sync::Arc;
+use stompymux_map::{
+    DecorationKind, Ground, HexCoordinate, MAX_DEPTH, MAX_HEIGHT, MapAsset, MapFlag, Structure,
+    Water, Woods,
+};
 
 /// What fills a hex. Each variant is one map-file terrain symbol.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -96,16 +93,6 @@ impl Terrain {
     }
 }
 
-/// Permanent fire or smoke laid over a hex.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum Overlay {
-    /// Permanent fire (`&`).
-    Fire,
-    /// Permanent smoke (`:`).
-    Smoke,
-}
-
 /// One hex of a generated map.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Hex {
@@ -118,7 +105,7 @@ pub struct Hex {
     pub bridge: Option<u8>,
     /// Permanent fire or smoke.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub overlay: Option<Overlay>,
+    pub overlay: Option<DecorationKind>,
 }
 
 impl Hex {
@@ -130,6 +117,41 @@ impl Hex {
             bridge: None,
             overlay: None,
         }
+    }
+
+    /// This hex as the layered [`stompymux_map::Hex`] map files and the server use. A bridge deck spans
+    /// the hex's water or ice.
+    pub fn to_map_hex(self) -> stompymux_map::Hex {
+        let (mut ground, mut woods, mut water, mut structure) = (Ground::Clear, None, None, None);
+        match self.terrain {
+            Terrain::Clear => {}
+            Terrain::Road => ground = Ground::Road,
+            Terrain::Rough => ground = Ground::Rough,
+            Terrain::Mountains => ground = Ground::Mountains,
+            Terrain::Snow => ground = Ground::Snow,
+            Terrain::Sand => ground = Ground::Sand,
+            Terrain::LightWoods => woods = Some(Woods::Light),
+            Terrain::HeavyWoods => woods = Some(Woods::Heavy),
+            Terrain::Water { depth } => {
+                water = Some(Water {
+                    depth,
+                    frozen: false,
+                })
+            }
+            Terrain::Ice { depth } => {
+                water = Some(Water {
+                    depth,
+                    frozen: true,
+                })
+            }
+            Terrain::Building { height } => structure = Some(Structure::Building { height }),
+            Terrain::Wall { height } => structure = Some(Structure::Wall { height }),
+        }
+        if let Some(deck) = self.bridge {
+            structure = Some(Structure::Bridge { deck });
+        }
+        stompymux_map::Hex::from_layers(self.level, ground, woods, water, structure)
+            .with_overlay(self.overlay)
     }
 }
 
@@ -193,18 +215,23 @@ impl HexMap {
         Some(&mut self.hexes[index])
     }
 
-    /// The up to six on-map neighbors of `(x, y)`, clockwise from north.
-    pub fn neighbors(&self, x: i32, y: i32) -> impl Iterator<Item = (i32, i32)> + '_ {
-        neighbors(x, y)
-            .into_iter()
-            .filter(|&(x, y)| self.contains(x, y))
+    /// The neighbors of `(x, y)` indexed by direction clockwise from north, with `None` for
+    /// each direction that leaves the map.
+    pub fn adjacent(&self, x: i32, y: i32) -> [Option<(i32, i32)>; 6] {
+        HexCoordinate { x, y }
+            .neighbors_within(self.width, self.height)
+            .map(|neighbor| neighbor.map(|hex| (hex.x, hex.y)))
     }
 
-    /// Number of hex steps between two hexes.
-    pub fn distance(a: (i32, i32), b: (i32, i32)) -> i32 {
-        let [aq, ar, as_] = cube(a);
-        let [bq, br, bs] = cube(b);
-        (aq - bq).abs().max((ar - br).abs()).max((as_ - bs).abs())
+    /// The up to six on-map neighbors of `(x, y)`, clockwise from north.
+    pub fn neighbors(&self, x: i32, y: i32) -> impl Iterator<Item = (i32, i32)> + use<> {
+        self.adjacent(x, y).into_iter().flatten()
+    }
+
+    /// Number of hex steps between two hexes, saturating at `i32::MAX`.
+    pub fn distance((ax, ay): (i32, i32), (bx, by): (i32, i32)) -> i32 {
+        let steps = HexCoordinate { x: ax, y: ay }.distance(HexCoordinate { x: bx, y: by });
+        i32::try_from(steps).unwrap_or(i32::MAX)
     }
 
     /// Check every hex holds values a map file can store.
@@ -240,90 +267,29 @@ impl HexMap {
         Ok(())
     }
 
-    /// Encode the map in the stompymux TOML map file format.
-    pub fn to_toml(&self) -> Result<String> {
+    /// The map as a [`MapAsset`], after checking every hex holds values a map file can
+    /// store.
+    pub fn to_asset(&self) -> Result<MapAsset> {
         self.validate()?;
-        let grid = |encode: &dyn Fn(&Hex) -> char| -> String {
-            let mut text = String::new();
-            for row in self.hexes.chunks(usize::from(self.width)) {
-                text.extend(row.iter().map(encode));
-                text.push('\n');
-            }
-            text
-        };
         let flags = self
             .flags
             .iter()
-            .map(|flag| format!("\"{}\"", flag.name()))
-            .collect::<Vec<_>>()
-            .join(", ");
-        let mut text = String::new();
-        writeln!(text, "gravity = {}", self.gravity)?;
-        writeln!(text, "temperature = {}", self.temperature)?;
-        writeln!(text, "flags = [{flags}]")?;
-        writeln!(text)?;
-        writeln!(
-            text,
-            "terrain = '''\n{}'''",
-            grid(&|hex| hex.terrain.symbol())
-        )?;
-        writeln!(text, "level = '''\n{}'''", grid(&|hex| glyph(hex.level)))?;
-        if self.hexes.iter().any(|hex| hex.terrain.is_water()) {
-            let depth = grid(&|hex| hex.terrain.depth().map_or('.', glyph));
-            writeln!(text, "depth = '''\n{depth}'''")?;
-        }
-        if self.hexes.iter().any(|hex| hex.terrain.is_structure()) {
-            let heights = grid(&|hex| hex.terrain.structure_height().map_or('.', glyph));
-            writeln!(text, "structure_height = '''\n{heights}'''")?;
-        }
-        if self.hexes.iter().any(|hex| hex.overlay.is_some()) {
-            let overlay = grid(&|hex| match hex.overlay {
-                Some(Overlay::Fire) => '&',
-                Some(Overlay::Smoke) => ':',
-                None => '.',
-            });
-            writeln!(text, "overlay = '''\n{overlay}'''")?;
-        }
-        let mut bridges: BTreeMap<u8, Vec<String>> = BTreeMap::new();
-        for (index, hex) in self.hexes.iter().enumerate() {
-            if let Some(deck) = hex.bridge {
-                let (x, y) = self.coordinate(index);
-                bridges.entry(deck).or_default().push(format!("[{x}, {y}]"));
-            }
-        }
-        for (deck, hexes) in bridges {
-            writeln!(text, "\n[[bridges]]\ndeck = {deck}")?;
-            writeln!(text, "hexes = [{}]", hexes.join(", "))?;
-        }
-        Ok(text)
+            .fold(0, |bits, flag| flag.apply(bits, true));
+        Ok(MapAsset {
+            width: self.width,
+            height: self.height,
+            flags: i32::try_from(flags)?,
+            gravity: self.gravity,
+            temperature: self.temperature,
+            hexes: Arc::new(self.hexes.iter().map(|hex| hex.to_map_hex()).collect()),
+            points_of_interest: Vec::new(),
+        })
     }
-}
 
-/// One-character height: `0`-`9`, then `a`-`z` for 10 through 35.
-fn glyph(value: u8) -> char {
-    char::from_digit(u32::from(value), 36).expect("validated height")
-}
-
-/// Cube coordinates for adjacency and distance; even columns sit half a hex south.
-fn cube((x, y): (i32, i32)) -> [i32; 3] {
-    let r = y - (x + x.rem_euclid(2)) / 2;
-    [x, r, -x - r]
-}
-
-/// The six neighbors of `(x, y)` clockwise from north, on or off the map.
-pub(crate) fn neighbors(x: i32, y: i32) -> [(i32, i32); 6] {
-    let [q, r, _] = cube((x, y));
-    [(0, -1), (1, -1), (1, 0), (0, 1), (-1, 1), (-1, 0)].map(|(dq, dr)| {
-        let q = q + dq;
-        (q, r + dr + (q + q.rem_euclid(2)) / 2)
-    })
-}
-
-/// Center of hex `(x, y)` in hex heights, for sampling smooth fields and measuring
-/// straight-line distance.
-pub(crate) fn center(x: i32, y: i32) -> (f64, f64) {
-    let half = if x.rem_euclid(2) == 0 { 0.5 } else { 0.0 };
-    (f64::from(x) * 3.0_f64.sqrt() / 2.0, f64::from(y) + half)
+    /// Encode the map in the stompymux TOML map file format.
+    pub fn to_toml(&self) -> Result<String> {
+        self.to_asset()?.to_file()
+    }
 }
 
 #[cfg(test)]
@@ -332,15 +298,19 @@ mod tests {
 
     #[test]
     fn neighbors_are_one_step_away_and_symmetric() {
+        let map = HexMap::new(8, 8);
         for (x, y) in [(4, 4), (5, 4), (0, 0), (7, 2)] {
-            for (nx, ny) in neighbors(x, y) {
+            for (nx, ny) in map.neighbors(x, y) {
                 assert_eq!(HexMap::distance((x, y), (nx, ny)), 1);
-                assert!(neighbors(nx, ny).contains(&(x, y)));
+                assert!(map.neighbors(nx, ny).any(|hex| hex == (x, y)));
             }
         }
         // Even columns sit south, so (2, 3)'s north-east neighbor is (3, 3).
-        assert_eq!(neighbors(2, 3)[1], (3, 3));
-        assert_eq!(neighbors(3, 3)[1], (4, 2));
+        assert_eq!(map.adjacent(2, 3)[1], Some((3, 3)));
+        assert_eq!(map.adjacent(3, 3)[1], Some((4, 2)));
+        // A corner keeps the directions that stay on the map.
+        assert_eq!(map.neighbors(0, 0).count(), 3);
+        assert_eq!(map.adjacent(0, 0)[0], None);
     }
 
     #[test]
@@ -350,7 +320,7 @@ mod tests {
         map.hexes[0].terrain = Terrain::Water { depth: 2 };
         map.hexes[0].bridge = Some(1);
         map.hexes[1].terrain = Terrain::Building { height: 12 };
-        map.hexes[2].overlay = Some(Overlay::Smoke);
+        map.hexes[2].overlay = Some(DecorationKind::Smoke);
         map.hexes[5].level = 11;
         let text = map.to_toml().unwrap();
         assert!(text.contains("flags = [\"dark\"]"), "{text}");

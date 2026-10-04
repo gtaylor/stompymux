@@ -120,7 +120,7 @@ async fn deletion_confirmation_failure_restores_every_kind() {
             ObjectId(1),
             map,
             None,
-            Some(BattleHexCoordinate { x: 1, y: 1 })
+            Some(HexCoordinate { x: 1, y: 1 })
         )
         .is_err()
     );

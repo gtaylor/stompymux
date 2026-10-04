@@ -9,7 +9,7 @@ use crate::btech::{
     set_cargo_transfer_point, set_map_link, update_battle_map_links_trusted_action,
 };
 use crate::{
-    BattleCargoTransferPoint, BattleHexCoordinate, BattleMapEntrance, BattleMapLink, ObjectId,
+    BattleCargoTransferPoint, BattleMapEntrance, BattleMapLink, HexCoordinate, ObjectId,
     SharedWorld,
 };
 use mlua::{Function, Lua, MultiValue, Table, Value};
@@ -99,7 +99,7 @@ fn coordinate(
     value: Value,
     argument: usize,
     allow_z: bool,
-) -> mlua::Result<(BattleHexCoordinate, Option<f64>)> {
+) -> mlua::Result<(HexCoordinate, Option<f64>)> {
     let record = table(value, argument, "value")?;
     contract::check_options(
         &record,
@@ -112,7 +112,7 @@ fn coordinate(
     )?;
     let x = contract::integer_field(&record, "x", 0, MAX_INT, argument)?;
     let y = contract::integer_field(&record, "y", 0, MAX_INT, argument)?;
-    let point = BattleHexCoordinate {
+    let point = HexCoordinate {
         x: x as i32,
         y: y as i32,
     };
@@ -633,7 +633,7 @@ fn parse_entrance(
                     argument_failure(2, "exact entrance coordinates are outside the child map")
                 })?;
             Ok(BattleMapEntrance::Exact {
-                coordinate: BattleHexCoordinate {
+                coordinate: HexCoordinate {
                     x: x as i32,
                     y: y as i32,
                 },
@@ -705,7 +705,7 @@ fn register_links(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::Resul
                 }
                 Some(BattleMapLink {
                     parent,
-                    coordinate: BattleHexCoordinate {
+                    coordinate: HexCoordinate {
                         x: x as i32,
                         y: y as i32,
                     },

@@ -3,8 +3,8 @@
 //! `mappy [MAP_DIR]` lists the `.toml` map files in `MAP_DIR` (default `game/maps`) for
 //! opening. The left mouse button paints the brush's switched-on layers; Alt+click picks up
 //! every layer of a hex. Scrolling, right or middle drag and the arrow keys pan; Ctrl+scroll
-//! zooms. Maps are read and written by the game's own map file code, so whatever Mappy saves
-//! loads the same in the server.
+//! zooms. Maps are read and written by the game's own map file code in `stompymux-map`, so
+//! whatever Mappy saves loads the same in the server.
 mod brush_panel;
 mod document;
 mod map_view;
@@ -18,10 +18,7 @@ use iced::{
         button, checkbox, column, container, row, rule, scrollable, shader, text, text_input,
     },
 };
-use stompymux_rs::{
-    BattleDecorationKind, BattleGround, BattleHex, BattleHexCoordinate, BattleMapFlag,
-    BattleStructure, BattleWoods,
-};
+use stompymux_map::{DecorationKind, Ground, Hex, HexCoordinate, MapFlag, Structure, Woods};
 
 use brush_panel::{BrushEdit, BrushPanel};
 use document::{Document, MapSettings};
@@ -49,10 +46,10 @@ fn main() -> iced::Result {
 pub enum Message {
     /// The canvas has this size, used to fit maps to the view.
     Viewport(Size),
-    Hovered(Option<BattleHexCoordinate>),
-    Paint(BattleHexCoordinate),
+    Hovered(Option<HexCoordinate>),
+    Paint(HexCoordinate),
     StrokeEnded,
-    Pick(BattleHexCoordinate),
+    Pick(HexCoordinate),
     Panned(Vector),
     /// Scale hexes by `factor`, keeping the map point under `anchor` still.
     Zoomed {
@@ -75,7 +72,7 @@ pub enum Message {
     GravityChanged(String),
     TemperatureChanged(String),
     ApplyConditions,
-    ToggleFlag(BattleMapFlag, bool),
+    ToggleFlag(MapFlag, bool),
 }
 
 /// Application state.
@@ -88,7 +85,7 @@ struct Mappy {
     viewport: Option<Size>,
     /// Fit the next reported viewport, for maps opened before the canvas has a size.
     fit_pending: bool,
-    hover: Option<BattleHexCoordinate>,
+    hover: Option<HexCoordinate>,
     brush: BrushPanel,
     new_width: String,
     new_height: String,
@@ -411,7 +408,7 @@ impl Mappy {
 
     fn inspector(&self) -> Element<'_, Message> {
         let settings = self.document.settings();
-        let flags = BattleMapFlag::ALL.into_iter().map(|flag| {
+        let flags = MapFlag::ALL.into_iter().map(|flag| {
             checkbox(flag.is_set(i64::from(settings.flags)))
                 .label(flag.name())
                 .text_size(13)
@@ -490,19 +487,19 @@ impl Mappy {
 }
 
 /// A hex's layers in words, for the hover readout.
-fn describe(hex: BattleHex) -> String {
+fn describe(hex: Hex) -> String {
     let ground = match hex.ground() {
-        BattleGround::Clear => "clear",
-        BattleGround::Road => "road",
-        BattleGround::Rough => "rough",
-        BattleGround::Mountains => "mountains",
-        BattleGround::Snow => "snow",
-        BattleGround::Sand => "sand",
+        Ground::Clear => "clear",
+        Ground::Road => "road",
+        Ground::Rough => "rough",
+        Ground::Mountains => "mountains",
+        Ground::Snow => "snow",
+        Ground::Sand => "sand",
     };
     let mut parts = vec![format!("level {} {ground}", hex.level())];
     match hex.woods() {
-        Some(BattleWoods::Light) => parts.push("light woods".into()),
-        Some(BattleWoods::Heavy) => parts.push("heavy woods".into()),
+        Some(Woods::Light) => parts.push("light woods".into()),
+        Some(Woods::Heavy) => parts.push("heavy woods".into()),
         None => {}
     }
     if let Some(water) = hex.water() {
@@ -510,14 +507,14 @@ fn describe(hex: BattleHex) -> String {
         parts.push(format!("{kind} depth {}", water.depth));
     }
     match hex.structure() {
-        Some(BattleStructure::Building { height }) => parts.push(format!("building {height}")),
-        Some(BattleStructure::Wall { height }) => parts.push(format!("wall {height}")),
-        Some(BattleStructure::Bridge { deck }) => parts.push(format!("bridge deck {deck}")),
+        Some(Structure::Building { height }) => parts.push(format!("building {height}")),
+        Some(Structure::Wall { height }) => parts.push(format!("wall {height}")),
+        Some(Structure::Bridge { deck }) => parts.push(format!("bridge deck {deck}")),
         None => {}
     }
     match hex.overlay() {
-        Some(BattleDecorationKind::Fire) => parts.push("fire".into()),
-        Some(BattleDecorationKind::Smoke) => parts.push("smoke".into()),
+        Some(DecorationKind::Fire) => parts.push("fire".into()),
+        Some(DecorationKind::Smoke) => parts.push("smoke".into()),
         None => {}
     }
     parts.join(" · ")

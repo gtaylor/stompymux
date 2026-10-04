@@ -13,7 +13,7 @@ async fn fixture(
         &mut world,
         map,
         "sight",
-        BattleMapAsset::from_cells(&format!("1 5\n{tiles}")).unwrap(),
+        MapAsset::from_cells(&format!("1 5\n{tiles}")).unwrap(),
     )
     .unwrap();
     let mut ids = Vec::new();
@@ -542,7 +542,7 @@ async fn vehicle_native_and_lua_fire_share_state_feedback_and_callback_rollback(
 async fn vehicle_occupied_hex_fire_preserves_selection_and_native_lua_parity() {
     let (_dir, config, base, map, [mech, other, shooter, vehicle]) =
         engagement(include_str!("../game/mechs/Demolisher.toml")).await;
-    let hex = BattleHexCoordinate { x: 0, y: 0 };
+    let hex = HexCoordinate { x: 0, y: 0 };
     for target in [mech, vehicle] {
         let mut world = base.clone();
         power(&mut world, &[mech, other], BattlePower::Off);
@@ -619,7 +619,7 @@ async fn vehicle_occupied_hex_fire_preserves_selection_and_native_lua_parity() {
 async fn occupied_hex_selection_does_not_skip_hidden_or_forbidden_targets() {
     let (_dir, config, mut base, map, [mech, other, shooter, vehicle]) =
         engagement(include_str!("../game/mechs/Demolisher.toml")).await;
-    let hex = BattleHexCoordinate { x: 0, y: 0 };
+    let hex = HexCoordinate { x: 0, y: 0 };
     select_battle_hex_target(
         &mut base,
         shooter,
@@ -722,7 +722,7 @@ async fn occupied_hex_selection_does_not_skip_hidden_or_forbidden_targets() {
         battle_hex_occupant(&base, shooter, hex).unwrap(),
         Some(other)
     );
-    assert!(battle_hex_occupant(&base, shooter, BattleHexCoordinate { x: 9, y: 9 }).is_err());
+    assert!(battle_hex_occupant(&base, shooter, HexCoordinate { x: 9, y: 9 }).is_err());
 }
 
 /// Replace the target's turret mount and its bin while preserving battlefield membership. Laser
@@ -2169,7 +2169,7 @@ async fn mech_vehicle_admission_hex_selection_and_lock_cleanup() {
         place_battle_unit(&mut world, id, map, 0, 4).unwrap();
     }
     refresh_battle_contacts(&mut world, &[shooter]).unwrap();
-    let hex = BattleHexCoordinate { x: 0, y: 0 };
+    let hex = HexCoordinate { x: 0, y: 0 };
     select_battle_hex_target(
         &mut world,
         shooter,
@@ -2490,7 +2490,7 @@ async fn vehicle_self_cooling_shares_host_selection_and_atomic_expenditure() {
                 &mut base,
                 shooter,
                 ObjectId(1),
-                BattleHexCoordinate { x: 0, y: 4 },
+                HexCoordinate { x: 0, y: 4 },
                 BattleHexTargetMode::Hex,
             )
             .unwrap();

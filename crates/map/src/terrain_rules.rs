@@ -1,11 +1,11 @@
 //! Shared terrain rule lookups on a hex's layers: open ground, woods density, water and
 //! ground speed divisors.
 //!
-//! Combat, movement and sensor code ask these questions of a [`BattleHex`] instead of
+//! Combat, movement and sensor code ask these questions of a [`Hex`] instead of
 //! matching on layers locally, so a rule changes in exactly one place.
-use super::{BattleHex, Ground, Woods};
+use crate::{Ground, Hex, Woods};
 
-impl BattleHex {
+impl Hex {
     /// Whether nothing stands on or covers the ground: no woods, water or structure.
     pub fn is_bare(self) -> bool {
         self.woods().is_none() && self.water().is_none() && self.structure().is_none()
@@ -70,25 +70,25 @@ impl BattleHex {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::btech::Terrain;
+    use crate::Terrain;
 
     #[test]
     fn woods_density_matches_woods_layer() {
-        let density = |terrain| BattleHex::new(terrain, 0).woods_density();
+        let density = |terrain| Hex::new(terrain, 0).woods_density();
         for terrain in [Terrain::Grassland, Terrain::Smoke, Terrain::Rough] {
             assert_eq!(density(terrain), 0);
-            assert!(!BattleHex::new(terrain, 0).is_woods());
+            assert!(!Hex::new(terrain, 0).is_woods());
         }
         assert_eq!(density(Terrain::LightForest), 1);
         assert_eq!(density(Terrain::HeavyForest), 2);
-        let burning = BattleHex::new(Terrain::HeavyForest, 0)
-            .with_overlay(Some(crate::btech::BattleDecorationKind::Fire));
+        let burning =
+            Hex::new(Terrain::HeavyForest, 0).with_overlay(Some(crate::DecorationKind::Fire));
         assert_eq!(burning.woods_density(), 2);
     }
 
     #[test]
     fn sand_slows_only_wheeled_units() {
-        let divisor = |terrain, wheeled| BattleHex::new(terrain, 0).ground_speed_divisor(wheeled);
+        let divisor = |terrain, wheeled| Hex::new(terrain, 0).ground_speed_divisor(wheeled);
         assert_eq!(divisor(Terrain::Sand, true), 2.0);
         assert_eq!(divisor(Terrain::Sand, false), 1.0);
         for wheeled in [false, true] {
@@ -102,9 +102,9 @@ mod tests {
 
     #[test]
     fn fire_and_smoke_slow_units_like_rough_ground() {
-        use crate::btech::BattleDecorationKind::{Fire, Smoke};
+        use crate::DecorationKind::{Fire, Smoke};
         for kind in [Fire, Smoke] {
-            let covered = |terrain| BattleHex::new(terrain, 1).with_overlay(Some(kind));
+            let covered = |terrain| Hex::new(terrain, 1).with_overlay(Some(kind));
             for wheeled in [false, true] {
                 assert_eq!(
                     covered(Terrain::Grassland).ground_speed_divisor(wheeled),
@@ -125,7 +125,7 @@ mod tests {
     fn open_ground_is_bare_clear_road_or_sand_without_fire_or_smoke() {
         for terrain in Terrain::ALL {
             assert_eq!(
-                BattleHex::new(terrain, 0).is_open_ground(),
+                Hex::new(terrain, 0).is_open_ground(),
                 matches!(terrain, Terrain::Grassland | Terrain::Road | Terrain::Sand),
                 "{terrain:?}"
             );
@@ -134,7 +134,7 @@ mod tests {
 
     #[test]
     fn water_columns_include_ice_and_bridges() {
-        let holds = |terrain| BattleHex::new(terrain, 1).holds_water();
+        let holds = |terrain| Hex::new(terrain, 1).holds_water();
         assert!(holds(Terrain::Water));
         assert!(holds(Terrain::Ice));
         assert!(holds(Terrain::Bridge));
@@ -143,7 +143,7 @@ mod tests {
 
     #[test]
     fn immersion_depends_on_level() {
-        let hex = |terrain| BattleHex::new(terrain, 2);
+        let hex = |terrain| Hex::new(terrain, 2);
         assert!(!hex(Terrain::Water).immerses(3));
         assert!(hex(Terrain::Water).immerses(-1));
         assert!(!hex(Terrain::Water).immerses(0));

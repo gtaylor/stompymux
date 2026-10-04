@@ -2,7 +2,7 @@
 //!
 //! Each traversal is stored as one row per step: `(map_dbref, position, ordinal)`.
 use super::write::{Cell, Fields, purge_rows, sync_rows};
-use crate::{ObjectId, StoredBattleMap, World};
+use crate::{ObjectId, StoredMap, World};
 use anyhow::{Context, Result};
 use sqlx::{Row, SqliteConnection};
 use std::{
@@ -27,7 +27,7 @@ impl Kind {
     }
 
     /// Inspect the committed traversal for a single object kind.
-    fn order(self, map: &StoredBattleMap) -> &Arc<Vec<u32>> {
+    fn order(self, map: &StoredMap) -> &Arc<Vec<u32>> {
         match self {
             Self::Mine => &map.minefield_order,
             Self::Landing => &map.landing_exclusion_order,
@@ -35,7 +35,7 @@ impl Kind {
     }
 
     /// Install loaded order before the map's membership validator runs.
-    fn order_mut(self, map: &mut StoredBattleMap) -> &mut Arc<Vec<u32>> {
+    fn order_mut(self, map: &mut StoredMap) -> &mut Arc<Vec<u32>> {
         match self {
             Self::Mine => &mut map.minefield_order,
             Self::Landing => &mut map.landing_exclusion_order,
@@ -54,7 +54,7 @@ pub(super) async fn purge(c: &mut SqliteConnection, ids: &BTreeSet<ObjectId>) ->
 /// Override imported ordinal traversal only when explicit owned order is stored.
 pub(super) async fn load(
     c: &mut SqliteConnection,
-    maps: &mut BTreeMap<ObjectId, StoredBattleMap>,
+    maps: &mut BTreeMap<ObjectId, StoredMap>,
     kind: Kind,
 ) -> Result<()> {
     let query = format!(

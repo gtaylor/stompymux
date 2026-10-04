@@ -1,8 +1,7 @@
 //! Selective persistence of return-map links and interior arrival points in map-object rows.
 use super::write::{Cell, Fields, row};
 use crate::{
-    BattleBuildingEntryPoint, BattleBuildingExit, BattleHexCoordinate, ObjectId, StoredBattleMap,
-    World,
+    BattleBuildingEntryPoint, BattleBuildingExit, HexCoordinate, ObjectId, StoredMap, World,
 };
 use anyhow::{Context, Result, ensure};
 use sqlx::{Row, SqliteConnection};
@@ -11,7 +10,7 @@ use std::{collections::BTreeMap, sync::Arc};
 /// Restore route ordering and complete authored payloads without interpreting auxiliary scalars.
 pub(super) async fn load(
     c: &mut SqliteConnection,
-    maps: &mut BTreeMap<ObjectId, StoredBattleMap>,
+    maps: &mut BTreeMap<ObjectId, StoredMap>,
 ) -> Result<()> {
     use futures_util::TryStreamExt;
     let mut records = sqlx::query("SELECT map_dbref,object_type,ordinal,x,y,object_dbref,data_char,data_short,data_int FROM btech_map_objects WHERE object_type IN (5,6) ORDER BY map_dbref,object_type,ordinal").fetch(c);
@@ -32,7 +31,7 @@ pub(super) async fn load(
                 ordinal,
                 BattleBuildingExit {
                     destination,
-                    coordinate: BattleHexCoordinate {
+                    coordinate: HexCoordinate {
                         x: record.try_get("x")?,
                         y: record.try_get("y")?,
                     },
@@ -44,7 +43,7 @@ pub(super) async fn load(
             continue;
         }
         let point = BattleBuildingEntryPoint {
-            coordinate: BattleHexCoordinate {
+            coordinate: HexCoordinate {
                 x: record.try_get("x")?,
                 y: record.try_get("y")?,
             },
@@ -70,7 +69,7 @@ pub(super) async fn load(
 }
 
 /// Produce complete route rows, sharing the same storage layout across route types.
-fn routes(map: &StoredBattleMap) -> BTreeMap<(i64, u32), Fields> {
+fn routes(map: &StoredMap) -> BTreeMap<(i64, u32), Fields> {
     let exits = map.building_exits().iter().map(|(&ordinal, exit)| {
         (
             (5, ordinal),

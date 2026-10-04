@@ -41,7 +41,7 @@ async fn tracking_modes_change_shared_aim_and_persist_without_changing_equipment
             let hex = battle_hex_aim_modifiers(
                 &scripts.world(),
                 id,
-                BattleHexCoordinate { x: 0, y: 9 },
+                HexCoordinate { x: 0, y: 9 },
                 weapon,
                 4,
                 rules(),

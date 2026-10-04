@@ -2,9 +2,9 @@
 use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::{
-    BattleDice, BattleMapAsset, BattlePower, BattleUnitSignature, BattleUnitTemplate, Config,
-    HeartbeatHarness, Kind, ObjectId, Scripts, World, assign_battle_pilot, create_battle_map,
-    persistence, place_battle_unit, refresh_battle_contacts, set_battle_unit_signature,
+    BattleDice, BattlePower, BattleUnitSignature, BattleUnitTemplate, Config, HeartbeatHarness,
+    Kind, MapAsset, ObjectId, Scripts, World, assign_battle_pilot, create_battle_map, persistence,
+    place_battle_unit, refresh_battle_contacts, set_battle_unit_signature,
 };
 
 fn install_tactical_packages(config: &Config) {
@@ -150,7 +150,7 @@ async fn encounter_fixture() -> EncounterFixture {
         &mut world,
         map,
         "tactical.director",
-        BattleMapAsset::from_cells(&format!("6 8\n{}", ".0.0.0.0.0.0\n".repeat(8))).unwrap(),
+        MapAsset::from_cells(&format!("6 8\n{}", ".0.0.0.0.0.0\n".repeat(8))).unwrap(),
     )
     .unwrap();
 
@@ -408,9 +408,12 @@ async fn production_heartbeat_completes_opt_in_director_encounter() {
                     .expect("friendly remains placed after encounter");
                 assert_eq!(position.map, map);
                 assert!(
-                    stompymux_rs::btech::autopilot::navigation::Hex::new(position.x, position.y)
-                        .distance(stompymux_rs::btech::autopilot::navigation::Hex::new(5, 3))
-                        <= 2
+                    stompymux_rs::btech::autopilot::navigation::GridHex::new(
+                        position.x, position.y
+                    )
+                    .distance(
+                        stompymux_rs::btech::autopilot::navigation::GridHex::new(5, 3)
+                    ) <= 2
                 );
             }
             return;

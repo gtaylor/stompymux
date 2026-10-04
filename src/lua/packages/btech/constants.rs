@@ -980,7 +980,7 @@ pub(super) static LIGHT_LEVELS: Catalog = Catalog {
     ],
 };
 
-/// Battlefield rule switches; values are the persisted `BattleMapFlag` bits.
+/// Battlefield rule switches; values are the persisted `MapFlag` bits.
 pub(super) static MAP_FLAGS: Catalog = Catalog {
     qualified_name: "btech.map.flags",
     entries: &[
@@ -1016,12 +1016,9 @@ pub(super) static MAP_FLAGS: Catalog = Catalog {
 };
 
 /// Decode a checked `btech.map.flags` constant.
-pub(super) fn require_map_flag(
-    value: Value,
-    argument: usize,
-) -> mlua::Result<crate::BattleMapFlag> {
+pub(super) fn require_map_flag(value: Value, argument: usize) -> mlua::Result<crate::MapFlag> {
     let bit = i64::from(require(value, argument, "flag", &MAP_FLAGS)?);
-    crate::BattleMapFlag::ALL
+    crate::MapFlag::ALL
         .into_iter()
         .find(|flag| flag.bit() == bit)
         .ok_or_else(|| mlua::Error::external("unknown map flag"))
@@ -1030,7 +1027,7 @@ pub(super) fn require_map_flag(
 /// Push every map flag set in `flags` as an array of `btech.map.flags` constants.
 pub(super) fn push_map_flags(lua: &Lua, flags: i64) -> mlua::Result<Table> {
     let result = lua.create_table()?;
-    for flag in crate::BattleMapFlag::ALL {
+    for flag in crate::MapFlag::ALL {
         if flag.is_set(flags) {
             result.raw_push(push(lua, &MAP_FLAGS, flag.bit() as i32)?)?;
         }
@@ -1596,31 +1593,27 @@ mod tests {
     /// Hex layer constants spell each layer the way hexes are serialized.
     #[test]
     fn hex_layer_catalogs_match_serialized_names() {
-        use crate::{BattleGround, BattleStructure, BattleWoods};
+        use crate::{Ground, Structure, Woods};
         let name = |value: serde_json::Value| value.as_str().unwrap().to_owned();
         let grounds = [
-            BattleGround::Clear,
-            BattleGround::Road,
-            BattleGround::Rough,
-            BattleGround::Mountains,
-            BattleGround::Snow,
-            BattleGround::Sand,
+            Ground::Clear,
+            Ground::Road,
+            Ground::Rough,
+            Ground::Mountains,
+            Ground::Snow,
+            Ground::Sand,
         ];
         assert_eq!(GROUND_TYPES.entries.len(), grounds.len());
         for (entry, ground) in GROUND_TYPES.entries.iter().zip(grounds) {
             assert_eq!(entry.value, name(serde_json::to_value(ground).unwrap()));
         }
-        for (entry, woods) in WOODS_TYPES
-            .entries
-            .iter()
-            .zip([BattleWoods::Light, BattleWoods::Heavy])
-        {
+        for (entry, woods) in WOODS_TYPES.entries.iter().zip([Woods::Light, Woods::Heavy]) {
             assert_eq!(entry.value, name(serde_json::to_value(woods).unwrap()));
         }
         for (entry, structure) in STRUCTURE_KINDS.entries.iter().zip([
-            BattleStructure::Building { height: 1 },
-            BattleStructure::Wall { height: 1 },
-            BattleStructure::Bridge { deck: 1 },
+            Structure::Building { height: 1 },
+            Structure::Wall { height: 1 },
+            Structure::Bridge { deck: 1 },
         ]) {
             assert_eq!(
                 entry.value,
@@ -1632,8 +1625,8 @@ mod tests {
     /// Map flag constants match the named Rust flags bit for bit.
     #[test]
     fn map_flag_catalog_matches_battle_map_flags() {
-        assert_eq!(MAP_FLAGS.entries.len(), crate::BattleMapFlag::ALL.len());
-        for (entry, flag) in MAP_FLAGS.entries.iter().zip(crate::BattleMapFlag::ALL) {
+        assert_eq!(MAP_FLAGS.entries.len(), crate::MapFlag::ALL.len());
+        for (entry, flag) in MAP_FLAGS.entries.iter().zip(crate::MapFlag::ALL) {
             assert_eq!(i64::from(entry.value), flag.bit());
             assert_eq!(entry.name, flag.name().to_ascii_uppercase());
         }

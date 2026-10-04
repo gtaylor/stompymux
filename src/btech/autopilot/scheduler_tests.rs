@@ -1,6 +1,6 @@
 //! Scheduler regressions under deliberately reduced shared budgets.
 use super::*;
-use crate::{BattleMapAsset, BattleUnitTemplate, Kind};
+use crate::{BattleUnitTemplate, Kind, MapAsset};
 
 fn fixture() -> (Config, World, Vec<ObjectId>) {
     let config =
@@ -12,8 +12,7 @@ fn fixture() -> (Config, World, Vec<ObjectId>) {
         &mut world,
         map,
         "scheduler",
-        BattleMapAsset::from_cells(&format!("20 20\n{}", (".0".repeat(20) + "\n").repeat(20)))
-            .unwrap(),
+        MapAsset::from_cells(&format!("20 20\n{}", (".0".repeat(20) + "\n").repeat(20))).unwrap(),
     )
     .unwrap();
     let mut units = Vec::new();
@@ -233,7 +232,7 @@ fn crowded_world(config: Config, mut world: World) -> (Config, World, Vec<Object
         &mut world,
         map,
         "corridor",
-        BattleMapAsset::from_cells(&format!("1 8\n{}", ".0\n".repeat(8))).unwrap(),
+        MapAsset::from_cells(&format!("1 8\n{}", ".0\n".repeat(8))).unwrap(),
     )
     .unwrap();
     let mut ids = Vec::new();

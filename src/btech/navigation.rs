@@ -6,7 +6,7 @@ use serde::Serialize;
 /// Read-only navigation display and its requested local map center.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct BattleNavigationReport {
-    pub center: super::BattleHexCoordinate,
+    pub center: super::HexCoordinate,
     pub text: String,
 }
 
@@ -125,10 +125,7 @@ pub fn navigate(
 }
 
 /// Convert normalized continuous coordinates into the bounded within-hex plot.
-fn plot_cell(
-    center: super::BattleHexCoordinate,
-    point: super::BattlePoint,
-) -> Option<(usize, usize)> {
+fn plot_cell(center: super::HexCoordinate, point: super::Point) -> Option<(usize, usize)> {
     let center = center.center();
     let width = 2.0 / 3.0_f64.sqrt();
     let column = ((point.x - center.x + width / 2.0) / width * 21.0 + 4.0).trunc();
@@ -186,7 +183,7 @@ mod tests {
     use super::*;
     #[test]
     fn within_hex_positions_are_bounded_and_preserve_continuous_offsets() {
-        let hex = super::super::BattleHexCoordinate { x: 2, y: 2 };
+        let hex = super::super::HexCoordinate { x: 2, y: 2 };
         assert_eq!(plot_cell(hex, hex.center()), Some((6, 14)));
         assert_eq!(
             plot_cell(hex, hex.center().project(0.0, 0.2).unwrap()),

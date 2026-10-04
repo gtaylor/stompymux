@@ -26,7 +26,7 @@ async fn fixture_on_surface(
         &mut world,
         map,
         "crew",
-        BattleMapAsset::from_cells(&format!("1 1\n{tile}\n")).unwrap(),
+        MapAsset::from_cells(&format!("1 1\n{tile}\n")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -841,7 +841,7 @@ async fn character_mine_heat_evacuates_after_packets_and_rolls_back_the_field() 
         map,
         0,
         Some(BattleMinefield {
-            coordinate: BattleHexCoordinate { x: 0, y: 0 },
+            coordinate: HexCoordinate { x: 0, y: 0 },
             kind: BattleMineKind::Standard,
             strength: 5,
             extra: 0,
@@ -1101,7 +1101,7 @@ async fn character_surface_fractures_publish_vehicle_injuries_atomically() {
                 })
                 .unwrap();
             let map = world.btech.vehicles()[&id].position().unwrap().map;
-            let coordinate = BattleHexCoordinate { x: 0, y: 0 };
+            let coordinate = HexCoordinate { x: 0, y: 0 };
             let rules = BattleMovementRules::STANDARD.fall;
             let before = world.btech.clone();
             let raw = if terrain == Terrain::Ice {
@@ -1121,7 +1121,7 @@ async fn character_surface_fractures_publish_vehicle_injuries_atomically() {
                         &config,
                         map,
                         coordinate,
-                        BattleSurface::of(BattleHex::new(terrain, 1)).unwrap(),
+                        BattleSurface::of(Hex::new(terrain, 1)).unwrap(),
                         rules
                     )
                     .is_err()
@@ -1135,7 +1135,7 @@ async fn character_surface_fractures_publish_vehicle_injuries_atomically() {
                 &config,
                 map,
                 coordinate,
-                BattleSurface::of(BattleHex::new(terrain, 1)).unwrap(),
+                BattleSurface::of(Hex::new(terrain, 1)).unwrap(),
                 rules,
             )
             .unwrap();
@@ -1166,7 +1166,7 @@ async fn character_surface_fractures_publish_vehicle_injuries_atomically() {
                     &config,
                     map,
                     coordinate,
-                    BattleSurface::of(BattleHex::new(terrain, 1)).unwrap(),
+                    BattleSurface::of(Hex::new(terrain, 1)).unwrap(),
                     rules
                 )
                 .unwrap(),

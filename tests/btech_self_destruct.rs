@@ -36,7 +36,7 @@ async fn fixture_on(chassis: &str, tile: &str) -> (tempfile::TempDir, Config, Wo
         &mut world,
         map,
         "self destruct",
-        BattleMapAsset::from_cells(&format!("1 1\n{tile}\n")).unwrap(),
+        MapAsset::from_cells(&format!("1 1\n{tile}\n")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -139,7 +139,7 @@ async fn self_destruct_airborne_vehicle_placement() {
             let world = scripts.world();
             let unit = &world.btech.vehicles()[&id];
             let falling = !(tile == "/4" && altitude < 4.0);
-            let hex = BattleMapAsset::from_cells(&format!("1 1\n{tile}\n"))
+            let hex = MapAsset::from_cells(&format!("1 1\n{tile}\n"))
                 .unwrap()
                 .hex(0, 0)
                 .unwrap();
@@ -244,10 +244,7 @@ async fn self_destruct_cross_chassis_native_lua_and_restart() {
             let vehicle = &snapshot.btech.vehicles()[&id];
             assert!(vehicle.is_destroyed());
             assert_eq!(vehicle.crew_recovery().remaining, 30);
-            assert_eq!(
-                vehicle.elevation_level(BattleHex::new(Terrain::Grassland, 0)),
-                6
-            );
+            assert_eq!(vehicle.elevation_level(Hex::new(Terrain::Grassland, 0)), 6);
             assert!(vehicle.sections()[&BattleVehicleSection::Front].internal > 0);
         }
         assert!(!battle_self_destructs_pending(&scripts.world()));
@@ -632,7 +629,7 @@ async fn self_destruct_ground_wreck_descends_after_restart() {
                 })
                 .await;
             assert_eq!(
-                loaded.btech.vehicles()[&id].elevation_level(BattleHex::new(Terrain::Grassland, 0)),
+                loaded.btech.vehicles()[&id].elevation_level(Hex::new(Terrain::Grassland, 0)),
                 0
             );
             shutdown.send(ShutdownRequest::Sigterm).unwrap();

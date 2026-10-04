@@ -1,8 +1,8 @@
 //! Reference coordinate anchors and range adapters on signed-elevation battlefields.
 use crate::support;
 use stompymux_rs::{
-    BattleHexCoordinate, BattleMapAsset, BattleTemplate, Flag, Kind, ObjectId, Scripts,
-    battle_unit_range, create_battle_map, create_battle_unit, place_battle_unit,
+    BattleTemplate, Flag, HexCoordinate, Kind, MapAsset, ObjectId, Scripts, battle_unit_range,
+    create_battle_map, create_battle_unit, place_battle_unit,
 };
 
 #[test]
@@ -14,7 +14,7 @@ fn normalized_centers_match_reference_coordinate_anchors() {
         (2, 0, 744.78184, 161.25),
         (0, 1, 186.19546, 483.75),
     ] {
-        let point = BattleHexCoordinate { x, y }.center();
+        let point = HexCoordinate { x, y }.center();
         assert!((point.x * 322.5 - real_x).abs() < 0.0001);
         assert!((point.y * 322.5 - real_y).abs() < 0.0001);
     }
@@ -28,7 +28,7 @@ async fn ranges_include_depth_and_elevation_and_reject_different_maps() {
         &mut world,
         map,
         "range.map",
-        BattleMapAsset::from_cells("3 1\n~2.0^3\n").unwrap(),
+        MapAsset::from_cells("3 1\n~2.0^3\n").unwrap(),
     )
     .unwrap();
     let mut ids = Vec::new();
@@ -106,7 +106,7 @@ async fn ranges_include_depth_and_elevation_and_reject_different_maps() {
         &mut scripts.world_mut(),
         other,
         "other.map",
-        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+        MapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut scripts.world_mut(), ids[1], other, 0, 0).unwrap();
@@ -116,14 +116,14 @@ async fn ranges_include_depth_and_elevation_and_reject_different_maps() {
 
 #[test]
 fn segment_trace_covers_intermediate_cells_and_reverses_consistently() {
-    use stompymux_rs::BattlePoint;
-    let start = BattleHexCoordinate { x: 5, y: 5 }.center();
-    let end = BattleHexCoordinate { x: 5, y: 0 }.center();
+    use stompymux_rs::Point;
+    let start = HexCoordinate { x: 5, y: 5 }.center();
+    let end = HexCoordinate { x: 5, y: 0 }.center();
     assert_eq!(
         start.trace(end).unwrap(),
         (0..=5)
             .rev()
-            .map(|y| BattleHexCoordinate { x: 5, y })
+            .map(|y| HexCoordinate { x: 5, y })
             .collect::<Vec<_>>()
     );
     // A fan of oblique paths includes both column parities and the clipped left border.
@@ -135,7 +135,7 @@ fn segment_trace_covers_intermediate_cells_and_reverses_consistently() {
         assert_eq!(trace, reverse);
         for step in 0..=400 {
             let t = f64::from(step) / 400.0;
-            let point = BattlePoint {
+            let point = Point {
                 x: start.x + (end.x - start.x) * t,
                 y: start.y + (end.y - start.y) * t,
             };
@@ -151,15 +151,15 @@ fn segment_trace_covers_intermediate_cells_and_reverses_consistently() {
 
 #[test]
 fn segment_trace_detects_a_thin_corner_crossing_between_dry_endpoints() {
-    use stompymux_rs::BattlePoint;
-    let obstacle = BattleHexCoordinate { x: 4, y: 4 };
+    use stompymux_rs::Point;
+    let obstacle = HexCoordinate { x: 4, y: 4 };
     let center = obstacle.center();
     let x = center.x + 1.0 / 3.0_f64.sqrt() - 1e-7;
-    let start = BattlePoint {
+    let start = Point {
         x,
         y: center.y - 0.213,
     };
-    let end = BattlePoint {
+    let end = Point {
         x,
         y: center.y + 0.197,
     };
@@ -167,10 +167,10 @@ fn segment_trace_detects_a_thin_corner_crossing_between_dry_endpoints() {
     assert_ne!(end.containing_hex().unwrap(), obstacle);
     assert!(start.trace(end).unwrap().contains(&obstacle));
     // Moving just outside the corner must not create a false collision.
-    let start = BattlePoint {
+    let start = Point {
         x: x + 2e-7,
         ..start
     };
-    let end = BattlePoint { x: x + 2e-7, ..end };
+    let end = Point { x: x + 2e-7, ..end };
     assert!(!start.trace(end).unwrap().contains(&obstacle));
 }

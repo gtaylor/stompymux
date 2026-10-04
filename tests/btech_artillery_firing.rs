@@ -18,7 +18,7 @@ async fn fixture_source(
         &mut world,
         map,
         "artillery.map",
-        BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
+        MapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
     let mut template = BattleTemplate::parse("test", source).unwrap();
@@ -83,7 +83,7 @@ async fn fixture_source(
         &mut world,
         shooter,
         ObjectId(1),
-        BattleHexCoordinate { x: 1, y: 0 },
+        HexCoordinate { x: 1, y: 0 },
         BattleHexTargetMode::Hex,
     )
     .unwrap();
@@ -205,7 +205,7 @@ async fn artillery_native_lua_launch_and_restart() {
         &mut finished,
         shooter,
         ObjectId(1),
-        BattleHexCoordinate { x: 2, y: 0 },
+        HexCoordinate { x: 2, y: 0 },
         BattleHexTargetMode::Hex,
     )
     .unwrap();
@@ -278,7 +278,7 @@ async fn artillery_live_payloads_hit_without_glancing() {
         assert_eq!(reports.len(), 1);
         let report = &reports[0];
         assert!(!report.pattern.missed);
-        assert_eq!(report.pattern.impact, BattleHexCoordinate { x: 1, y: 0 });
+        assert_eq!(report.pattern.impact, HexCoordinate { x: 1, y: 0 });
         let expected = match mode {
             BattleArtilleryMode::Standard => "ArrowIVSystem fire hits [fg=yellow bold]1,0[reset]!",
             BattleArtilleryMode::Cluster => {
@@ -469,7 +469,7 @@ async fn artillery_cluster_rejects_other_payloads_and_weapons() {
 #[tokio::test]
 async fn artillery_arrival_feedback_survives_shooter_removal_and_restart() {
     let (_dir, config, mut world, map, shooter, _) = fixture(&[]).await;
-    let center = BattleHexCoordinate { x: 1, y: 1 };
+    let center = HexCoordinate { x: 1, y: 1 };
     enqueue_artillery(
         &mut world,
         map,
@@ -541,7 +541,7 @@ async fn artillery_arrival_feedback_survives_shooter_removal_and_restart() {
 async fn artillery_observed_launch_and_link_revalidation() {
     let (_dir, config, mut world, map, shooter, index) = fixture(&["Smoke"]).await;
     let observer = world.objects[&ObjectId(2)].location.unwrap();
-    let target = BattleHexCoordinate { x: 1, y: 2 };
+    let target = HexCoordinate { x: 1, y: 2 };
     select_battle_hex_target(
         &mut world,
         observer,
@@ -664,7 +664,7 @@ async fn artillery_observed_launch_and_link_revalidation() {
                     &mut world,
                     ridge,
                     "ridge.map",
-                    BattleMapAsset::from_cells("3 3\n.0.0.0\n.9.9.9\n.0.0.0\n").unwrap(),
+                    MapAsset::from_cells("3 3\n.0.0.0\n.9.9.9\n.0.0.0\n").unwrap(),
                 )
                 .unwrap();
                 support::seed_object_dice(&mut world, ridge, support::FIXTURE_DICE_SEED);
@@ -695,7 +695,7 @@ async fn artillery_observed_launch_and_link_revalidation() {
                     &mut world,
                     other,
                     "other.map",
-                    BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
+                    MapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
                 )
                 .unwrap();
                 support::seed_object_dice(&mut world, other, support::FIXTURE_DICE_SEED);
@@ -733,7 +733,7 @@ async fn artillery_observed_launch_and_link_revalidation() {
         &mut world,
         observer,
         ObjectId(2),
-        BattleHexCoordinate { x: 2, y: 2 },
+        HexCoordinate { x: 2, y: 2 },
         BattleHexTargetMode::Hex,
     )
     .unwrap();
@@ -911,7 +911,7 @@ async fn artillery_fires_after_radio_observer_connection() {
             &mut world,
             observer,
             ObjectId(2),
-            BattleHexCoordinate { x: 1, y: 0 },
+            HexCoordinate { x: 1, y: 0 },
             BattleHexTargetMode::Hex,
         )
         .unwrap();

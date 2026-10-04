@@ -1,6 +1,6 @@
 //! Selective persistence of typed landing exclusions in the shared map-object table.
 use super::write::{Cell, Fields, row};
-use crate::{BattleHexCoordinate, BattleLandingExclusion, ObjectId, StoredBattleMap, World};
+use crate::{BattleLandingExclusion, HexCoordinate, ObjectId, StoredMap, World};
 use anyhow::{Context, Result, ensure};
 use sqlx::{Row, SqliteConnection};
 use std::{collections::BTreeMap, sync::Arc};
@@ -8,7 +8,7 @@ use std::{collections::BTreeMap, sync::Arc};
 /// Restore ordered definitions without interpreting entrance or decoration rows.
 pub(super) async fn load(
     c: &mut SqliteConnection,
-    maps: &mut BTreeMap<ObjectId, StoredBattleMap>,
+    maps: &mut BTreeMap<ObjectId, StoredMap>,
 ) -> Result<()> {
     use futures_util::TryStreamExt;
     let mut rows = sqlx::query("SELECT map_dbref,ordinal,x,y,object_dbref,data_char,data_short,data_int FROM btech_map_objects WHERE object_type=9 ORDER BY map_dbref,ordinal").fetch(&mut *c);
@@ -18,7 +18,7 @@ pub(super) async fn load(
             .context("Landing exclusion references missing map")?;
         let ordinal = u32::try_from(row.try_get::<i64, _>("ordinal")?)?;
         let zone = BattleLandingExclusion {
-            coordinate: BattleHexCoordinate {
+            coordinate: HexCoordinate {
                 x: row.try_get("x")?,
                 y: row.try_get("y")?,
             },

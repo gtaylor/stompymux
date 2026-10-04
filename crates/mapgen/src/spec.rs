@@ -6,9 +6,12 @@
 //! The JSON Schema from [`spec_schema`] is generated from these types and their doc comments, so
 //! keep the comments written for a reader who only sees the schema.
 use anyhow::{Context, Result, bail, ensure};
-use schemars::JsonSchema;
+use schemars::{JsonSchema, Schema, SchemaGenerator, json_schema};
 use serde::{Deserialize, Serialize};
+use serde_json::json;
+use std::borrow::Cow;
 use std::str::FromStr;
+use stompymux_map::MapFlag;
 
 /// The smallest width or height a generated map may have.
 pub const MIN_DIMENSION: u16 = 8;
@@ -405,45 +408,35 @@ pub struct EnvironmentSpec {
     pub temperature: Option<i8>,
     /// Map flags. Defaults by biome; give an empty list for none.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "Option<Vec<MapFlagSchema>>")]
     pub flags: Option<Vec<MapFlag>>,
 }
 
-/// A battlefield rule flag, as named in map files.
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
-)]
-#[cfg_attr(feature = "cli", derive(clap::ValueEnum))]
-#[cfg_attr(feature = "cli", value(rename_all = "snake_case"))]
-#[serde(rename_all = "snake_case")]
-pub enum MapFlag {
-    /// Environmental rules (gravity, temperature, vacuum) apply to units.
-    SpecialRules,
-    /// The map has no atmosphere.
-    Vacuum,
-    /// The map has a ceiling: no jumping, flight or indirect fire without an observer.
-    Underground,
-    /// Units only see terrain they have line of sight to.
-    Dark,
-    /// Weapon fire cannot break bridges.
-    IndestructibleBridges,
-    /// Teammates cannot damage each other with non-coolant weapons.
-    NoFriendlyFire,
-    /// Physical attacks are not allowed.
-    NoPhysicalAttacks,
-}
+/// The JSON Schema of a [`MapFlag`], built from the flags' own names and
+/// descriptions. `stompymux-map` carries no schema support of its own, so spec fields that
+/// hold flags borrow this one with `#[schemars(with = ...)]`.
+struct MapFlagSchema;
 
-impl MapFlag {
-    /// The flag's name in map files.
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::SpecialRules => "special_rules",
-            Self::Vacuum => "vacuum",
-            Self::Underground => "underground",
-            Self::Dark => "dark",
-            Self::IndestructibleBridges => "indestructible_bridges",
-            Self::NoFriendlyFire => "no_friendly_fire",
-            Self::NoPhysicalAttacks => "no_physical_attacks",
-        }
+impl JsonSchema for MapFlagSchema {
+    fn schema_name() -> Cow<'static, str> {
+        "MapFlag".into()
+    }
+
+    fn json_schema(_: &mut SchemaGenerator) -> Schema {
+        let flags: Vec<_> = MapFlag::ALL
+            .into_iter()
+            .map(|flag| {
+                json!({
+                    "const": flag.name(),
+                    "description": flag.description(),
+                    "type": "string",
+                })
+            })
+            .collect();
+        json_schema!({
+            "description": "A battlefield rule flag, as named in map files.",
+            "oneOf": flags,
+        })
     }
 }
 
@@ -688,5 +681,8 @@ mod tests {
         let schema = spec_schema().to_string();
         assert!(schema.contains("settlements") && schema.contains("metropolis"));
         assert!(schema.contains("Overall landscape"));
+        for flag in MapFlag::ALL {
+            assert!(schema.contains(flag.name()) && schema.contains(flag.description()));
+        }
     }
 }

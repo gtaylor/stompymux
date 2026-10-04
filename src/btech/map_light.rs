@@ -46,7 +46,7 @@ impl std::str::FromStr for BattleLight {
     }
 }
 
-impl super::StoredBattleMap {
+impl super::StoredMap {
     /// Current battlefield light level, rejecting corrupt persisted values.
     pub fn light_level(&self) -> Result<BattleLight> {
         BattleLight::from_stored(self.light)

@@ -760,7 +760,7 @@ async fn navigation_fields_share_live_services_without_advancing_them_scenario(f
     let config = &f.config;
     for source in firing::templates() {
         let (mut world, id, _, _) = f.pair(&source, &source);
-        let center = BattleHexCoordinate { x: 0, y: 11 }.center();
+        let center = HexCoordinate { x: 0, y: 11 }.center();
         firing::edit(&mut world, id, |unit| {
             unit["motion"]["point"] =
                 serde_json::to_value(center.project(270.0, 0.2).unwrap()).unwrap();
@@ -2190,7 +2190,7 @@ async fn coordinate_fields_share_scenario_placement_and_rollback_scenario(f: &Un
                 ObjectId(1),
                 id,
                 BattleScenarioPosition {
-                    coordinate: BattleHexCoordinate { x, y },
+                    coordinate: HexCoordinate { x, y },
                     elevation: Some(z),
                 },
             )

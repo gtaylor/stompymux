@@ -144,7 +144,7 @@ async fn addblock_native_argument_boundaries_and_replies() {
         &mut world,
         map,
         "grid",
-        BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
+        MapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -210,7 +210,7 @@ async fn addblock_radius_team_and_restart() {
                 &mut world,
                 map,
                 "grid",
-                BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
+                MapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
             )
             .unwrap();
             support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -250,7 +250,7 @@ async fn addblock_radius_team_and_restart() {
             };
             assert_eq!(
                 saved.btech.maps()[&map]
-                    .landing_suitability(BattleHexCoordinate { x: 1, y: 1 }, 7)
+                    .landing_suitability(HexCoordinate { x: 1, y: 1 }, 7)
                     .unwrap(),
                 expected
             );
@@ -264,7 +264,7 @@ async fn addblock_radius_team_and_restart() {
                 &config,
                 ObjectId(1),
                 map,
-                BattleHexCoordinate { x: 1, y: 1 },
+                HexCoordinate { x: 1, y: 1 },
                 radius,
                 team,
             )
@@ -284,7 +284,7 @@ async fn addblock_validation_and_full_width_saved_radii() {
         &mut world,
         map,
         "grid",
-        BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
+        MapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -313,7 +313,7 @@ async fn addblock_validation_and_full_width_saved_radii() {
             &config,
             ObjectId(2),
             map,
-            BattleHexCoordinate { x: 1, y: 1 },
+            HexCoordinate { x: 1, y: 1 },
             1,
             0
         )
@@ -349,7 +349,7 @@ async fn addblock_validation_and_full_width_saved_radii() {
         };
         assert_eq!(
             loaded.btech.maps()[&map]
-                .landing_suitability(BattleHexCoordinate { x: 1, y: 1 }, 0)
+                .landing_suitability(HexCoordinate { x: 1, y: 1 }, 0)
                 .unwrap(),
             expected
         );

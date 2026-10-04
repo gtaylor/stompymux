@@ -4,7 +4,10 @@
 //! tool definitions; `mapgen biomes` lists every biome with its defaults. Flags override the
 //! matching fields of a `--spec` file, and `--settlement` flags add to its settlements.
 use anyhow::{Context, Result};
-use clap::{Args, Parser, Subcommand};
+use clap::{
+    Args, Parser, Subcommand,
+    builder::{PossibleValue, PossibleValuesParser, TypedValueParser},
+};
 use std::{fs, io::Read, path::PathBuf};
 use stompymux_mapgen::{
     Amount, Biome, MapFlag, MapSize, MapSpec, Relief, SettlementSpec, biome_catalog, generate,
@@ -98,8 +101,15 @@ struct Generate {
     #[arg(long, allow_hyphen_values = true)]
     temperature: Option<i8>,
     /// Map flag; repeat for several. Replaces the biome's default flags.
-    #[arg(long = "flag", value_enum)]
+    #[arg(long = "flag", value_parser = map_flag_parser())]
     flags: Vec<MapFlag>,
+}
+
+/// Accept each map flag's name, listing every flag and its description in `--help`.
+fn map_flag_parser() -> impl TypedValueParser<Value = MapFlag> {
+    let names = MapFlag::ALL.map(|flag| PossibleValue::new(flag.name()).help(flag.description()));
+    PossibleValuesParser::new(names)
+        .map(|name| MapFlag::parse(&name).expect("the parser only accepts flag names"))
 }
 
 impl Generate {

@@ -1,5 +1,5 @@
 //! Read-only mine coverage and ordered activation selection for movement and landing callers.
-use super::{BattleHexCoordinate, BattleMineKind, BattleMinefield, StoredBattleMap};
+use super::{BattleMineKind, BattleMinefield, HexCoordinate, StoredMap};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
@@ -42,7 +42,7 @@ impl BattleMinefield {
     }
 
     /// Evaluate one definition during explicit cache rebuilding.
-    pub(super) fn covers(self, coordinate: BattleHexCoordinate) -> Result<bool> {
+    pub(super) fn covers(self, coordinate: HexCoordinate) -> Result<bool> {
         let dx = (i64::from(self.coordinate.x) - i64::from(coordinate.x)).abs();
         let dy = (i64::from(self.coordinate.y) - i64::from(coordinate.y)).abs();
         if self.kind == BattleMineKind::Trigger {
@@ -69,7 +69,7 @@ impl BattleMinefield {
     /// Choose a response after the map-wide coverage gate has admitted the triggering coordinate.
     fn response(
         self,
-        coordinate: BattleHexCoordinate,
+        coordinate: HexCoordinate,
         tons: i64,
         reason: BattleMineTriggerReason,
     ) -> Result<Option<BattleMineResponse>> {
@@ -112,10 +112,10 @@ impl BattleMinefield {
     }
 }
 
-impl StoredBattleMap {
+impl StoredMap {
     /// Whether any committed minefield covers `coordinate`, rejecting coordinates outside
     /// decoded terrain. Coverage is derived from the minefield records on every query.
-    pub fn mine_coverage(&self, coordinate: BattleHexCoordinate) -> Result<bool> {
+    pub fn mine_coverage(&self, coordinate: HexCoordinate) -> Result<bool> {
         self.base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
         for mine in self.minefields.values() {
             let radius = mine.coverage_radius();
@@ -163,7 +163,7 @@ pub fn mine_activations(
         .maps()
         .get(&position.map)
         .context("Map is unavailable")?;
-    let coordinate = BattleHexCoordinate {
+    let coordinate = HexCoordinate {
         x: i32::from(position.x),
         y: i32::from(position.y),
     };
@@ -207,7 +207,7 @@ mod tests {
     /// Isolated definitions keep geometry and reaction boundaries independent of unit construction.
     fn field(kind: BattleMineKind, extra: i32) -> BattleMinefield {
         BattleMinefield {
-            coordinate: BattleHexCoordinate { x: 2, y: 2 },
+            coordinate: HexCoordinate { x: 2, y: 2 },
             kind,
             strength: 30,
             extra,
@@ -218,8 +218,8 @@ mod tests {
     #[test]
     fn coverage_preserves_diamond_radius_and_trigger_rounding() {
         let vibra = field(BattleMineKind::Vibra, 80);
-        assert!(vibra.covers(BattleHexCoordinate { x: 4, y: 3 }).unwrap());
-        assert!(!vibra.covers(BattleHexCoordinate { x: 4, y: 4 }).unwrap());
+        assert!(vibra.covers(HexCoordinate { x: 4, y: 3 }).unwrap());
+        assert!(!vibra.covers(HexCoordinate { x: 4, y: 4 }).unwrap());
         assert!(
             !field(BattleMineKind::Vibra, 110)
                 .covers(vibra.coordinate)
@@ -234,7 +234,7 @@ mod tests {
         for adjacent in trigger.coordinate.neighbors().unwrap() {
             assert!(trigger.covers(adjacent).unwrap());
         }
-        assert!(!trigger.covers(BattleHexCoordinate { x: 2, y: 4 }).unwrap());
+        assert!(!trigger.covers(HexCoordinate { x: 2, y: 4 }).unwrap());
         assert!(
             !field(BattleMineKind::Trigger, -1)
                 .covers(trigger.coordinate)
@@ -242,14 +242,14 @@ mod tests {
         );
         assert!(
             !field(BattleMineKind::Standard, 100)
-                .covers(BattleHexCoordinate { x: 2, y: 3 })
+                .covers(HexCoordinate { x: 2, y: 3 })
                 .unwrap()
         );
     }
 
     #[test]
     fn activation_distinguishes_weight_reason_and_remote_fields() {
-        let point = BattleHexCoordinate { x: 2, y: 2 };
+        let point = HexCoordinate { x: 2, y: 2 };
         let trigger = field(BattleMineKind::Trigger, 2);
         assert_eq!(
             trigger
@@ -286,7 +286,7 @@ mod tests {
                 .unwrap(),
             Some(BattleMineResponse::Explode)
         );
-        let north = BattleHexCoordinate { x: 2, y: 1 };
+        let north = HexCoordinate { x: 2, y: 1 };
         assert_eq!(
             vibra
                 .response(north, 39, BattleMineTriggerReason::Step)

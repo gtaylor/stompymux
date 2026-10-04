@@ -1185,7 +1185,7 @@ impl BattleVehicle {
     }
 
     /// Ground support height; hovercraft float at water level rather than on the bed.
-    pub fn elevation_level(&self, tile: super::BattleHex) -> i32 {
+    pub fn elevation_level(&self, tile: super::Hex) -> i32 {
         if let Some(drop) = self.orbital_drop {
             return drop.elevation();
         }
@@ -1202,7 +1202,7 @@ impl BattleVehicle {
     }
 
     /// Support height at a destination, independent of retained altitude on the current hex.
-    pub(super) fn terrain_elevation(&self, tile: super::BattleHex, under_bridge: bool) -> i32 {
+    pub(super) fn terrain_elevation(&self, tile: super::Hex, under_bridge: bool) -> i32 {
         if under_bridge && tile.has_bridge() {
             return i32::from(tile.water_line());
         }
@@ -1245,7 +1245,7 @@ impl BattleVehicle {
     pub(super) fn restore_ground_position(
         &mut self,
         position: super::BattlePosition,
-        point: super::BattlePoint,
+        point: super::Point,
         height: i16,
         under_bridge: bool,
     ) {
@@ -1290,7 +1290,7 @@ impl BattleVehicle {
         }
         self.motion = placement.map(|(position, _)| {
             let mut motion = super::BattleMotion::stationary(
-                super::BattleHexCoordinate {
+                super::HexCoordinate {
                     x: i32::from(position.x),
                     y: i32::from(position.y),
                 }

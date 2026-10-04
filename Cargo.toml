@@ -5,22 +5,15 @@ edition = "2024"
 autotests = false
 
 [workspace]
-members = ["crates/lua-tools", "crates/mapgen", "tests/suites", "tests/support"]
-default-members = [".", "crates/lua-tools", "crates/mapgen", "tests/suites"]
-
-[features]
-mappy = ["dep:iced"]
-
-[[bin]]
-name = "mappy"
-path = "src/bin/mappy/main.rs"
-required-features = ["mappy"]
+members = ["crates/lua-tools", "crates/map", "crates/mapgen", "crates/mappy", "tests/suites", "tests/support"]
+default-members = [".", "crates/lua-tools", "crates/map", "crates/mapgen", "tests/suites"]
 
 [[bin]]
 name = "autopilot-bench"
 path = "src/bin/autopilot-bench.rs"
 
 [dependencies]
+stompymux-map = { path = "crates/map" }
 tempfile = "3.27.0"
 nix = { version = "0.31.3", default-features = false, features = ["resource", "feature", "signal", "process"] }
 flate2 = { version = "1.1.10", default-features = false, features = ["rust_backend"] }
@@ -51,13 +44,11 @@ sha2 = "0.11.0"
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", default-features = false, features = ["std", "fmt", "ansi", "env-filter", "json", "registry", "smallvec"] }
 tracing-appender = "0.2.5"
-iced = { version = "0.14.0", optional = true }
 
 # Keep `stompymux-test-support` out of this list. It depends on this library, so as a
 # dev-dependency it would hold the library's unit-test build until the library finished
 # compiling; the integration suites that use it live in `tests/suites` instead.
 [dev-dependencies]
-stompymux-mapgen = { path = "crates/mapgen", default-features = false }
 
 # Autopilot and contract helpers pass world, unit, and tuning state explicitly
 # rather than bundling them into single-use structs.
@@ -84,8 +75,9 @@ debug = false
 opt-level = 3
 
 # Mappy's window, input handling and GPU setup run through iced and wgpu, which are sluggish
-# unoptimized. This profile optimizes every dependency fully and this crate lightly, so
-# `just mappy` stays responsive while an edit to Mappy still rebuilds incrementally.
+# unoptimized. This profile optimizes every dependency fully and the workspace's own crates
+# (Mappy and `stompymux-map`) lightly, so `just mappy` stays responsive while an edit to
+# Mappy still rebuilds incrementally.
 [profile.mappy]
 inherits = "dev"
 opt-level = 1

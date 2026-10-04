@@ -166,7 +166,7 @@ async fn environment_validation_and_authority_are_atomic() {
         &mut world,
         map,
         "weather",
-        BattleMapAsset::from_cells("1 1\n.0\n272: 100 20\n").unwrap(),
+        MapAsset::from_cells("1 1\n.0\n272: 100 20\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -327,7 +327,7 @@ async fn environment_confirmation_failure_restores_shared_state() {
         &mut world,
         map,
         "rollback",
-        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+        MapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);

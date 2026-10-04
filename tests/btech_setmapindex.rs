@@ -286,7 +286,7 @@ async fn detached_pose_survives_former_map_purge() {
             &mut restored,
             new,
             "new",
-            BattleMapAsset::from_cells(&format!("1 12\n{}", ".0\n".repeat(12))).unwrap(),
+            MapAsset::from_cells(&format!("1 12\n{}", ".0\n".repeat(12))).unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut restored, new, support::FIXTURE_DICE_SEED);

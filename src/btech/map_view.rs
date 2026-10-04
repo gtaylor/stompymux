@@ -1,5 +1,5 @@
 //! Map-side VIEW reuses tactical terrain rendering and transactional direct publication.
-use super::{BattleHexCoordinate, BattleTacticalMap};
+use super::{BattleTacticalMap, HexCoordinate};
 use crate::{Config, ObjectId, Scripts};
 use anyhow::{Context, Result, ensure};
 
@@ -9,7 +9,7 @@ pub fn view_map_action(
     config: &Config,
     actor: ObjectId,
     map: ObjectId,
-    center: BattleHexCoordinate,
+    center: HexCoordinate,
 ) -> Result<BattleTacticalMap> {
     scripts.atomic(|before| {
         ensure!(
@@ -47,7 +47,7 @@ pub(crate) fn command(
     let result = (|| -> Result<()> {
         let args: Vec<_> = input.args.split_whitespace().collect();
         ensure!(args.len() == 2, "Usage: VIEW X Y");
-        let center = BattleHexCoordinate {
+        let center = HexCoordinate {
             x: args[0].parse().context("Invalid map coordinates!")?,
             y: args[1].parse().context("Invalid map coordinates!")?,
         };

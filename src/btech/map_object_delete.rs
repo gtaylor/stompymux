@@ -1,5 +1,5 @@
 //! Map-object deletion shares typed removal and terrain consequences across all unit classes.
-use super::BattleHexCoordinate;
+use super::HexCoordinate;
 use crate::{Config, ObjectId, Scripts, World};
 use anyhow::{Context, Result, bail, ensure};
 use serde::{Deserialize, Serialize};
@@ -64,7 +64,7 @@ pub fn delete_map_objects_action(
     actor: ObjectId,
     map: ObjectId,
     kind: Option<BattleMapObjectKind>,
-    coordinate: Option<BattleHexCoordinate>,
+    coordinate: Option<HexCoordinate>,
 ) -> Result<usize> {
     scripts.atomic(|before| {
         ensure!(
@@ -145,22 +145,23 @@ pub(super) fn restoration_kind(
 /// The hex a deleted decoration leaves: its restored terrain standing at the current hex's
 /// ground level. Water, a bridge or a structure keeps the current hex's depth, deck or height
 /// when it already has one, and is one level deep or tall otherwise.
-fn restore_terrain(current: super::BattleHex, terrain: super::Terrain) -> super::BattleHex {
-    use super::{BattleHex, Structure, Terrain, Water};
+fn restore_terrain(current: super::Hex, terrain: super::Terrain) -> super::Hex {
+    use super::{Hex, Structure, Terrain, Water};
     let depth = current.water().map_or(1, |water| water.depth.max(1));
     let height = match current.structure() {
         Some(Structure::Building { height } | Structure::Wall { height }) => height.max(1),
         _ => 1,
     };
     let restored = match terrain {
-        Terrain::Water | Terrain::Ice => BattleHex::new(terrain, depth),
-        Terrain::Bridge => BattleHex::new(terrain, current.deck_clearance().unwrap_or(1))
-            .with_water(Some(Water {
+        Terrain::Water | Terrain::Ice => Hex::new(terrain, depth),
+        Terrain::Bridge => {
+            Hex::new(terrain, current.deck_clearance().unwrap_or(1)).with_water(Some(Water {
                 depth,
                 frozen: false,
-            })),
-        Terrain::Building | Terrain::Wall => BattleHex::new(terrain, height),
-        _ => BattleHex::new(terrain, current.level()),
+            }))
+        }
+        Terrain::Building | Terrain::Wall => Hex::new(terrain, height),
+        _ => Hex::new(terrain, current.level()),
     };
     restored.with_level(current.level())
 }
@@ -170,7 +171,7 @@ fn remove_kind(
     world: &mut World,
     map: ObjectId,
     kind: BattleMapObjectKind,
-    coordinate: Option<BattleHexCoordinate>,
+    coordinate: Option<HexCoordinate>,
 ) -> Result<usize> {
     let record = world.btech.maps().get(&map).context("Map not found")?;
     let entries = object_positions(record, kind);
@@ -229,14 +230,14 @@ pub(crate) fn command(
             [kind] => (Some(BattleMapObjectKind::parse(kind)?), None),
             [x, y] => (
                 None,
-                Some(BattleHexCoordinate {
+                Some(HexCoordinate {
                     x: x.parse()?,
                     y: y.parse()?,
                 }),
             ),
             [kind, x, y] => (
                 Some(BattleMapObjectKind::parse(kind)?),
-                Some(BattleHexCoordinate {
+                Some(HexCoordinate {
                     x: x.parse()?,
                     y: y.parse()?,
                 }),
@@ -257,9 +258,9 @@ pub(crate) fn command(
 
 /// Stable typed record coordinates shared by operator listing and deletion.
 pub(super) fn object_positions(
-    record: &super::StoredBattleMap,
+    record: &super::StoredMap,
     kind: BattleMapObjectKind,
-) -> Vec<(MapObjectSlot, BattleHexCoordinate)> {
+) -> Vec<(MapObjectSlot, HexCoordinate)> {
     let mut positions: Vec<_> = match kind {
         BattleMapObjectKind::Fire | BattleMapObjectKind::Smoke => record
             .decorations
@@ -267,15 +268,15 @@ pub(super) fn object_positions(
             .filter(|(_, effect)| {
                 effect.kind
                     == if kind == BattleMapObjectKind::Fire {
-                        super::BattleDecorationKind::Fire
+                        super::DecorationKind::Fire
                     } else {
-                        super::BattleDecorationKind::Smoke
+                        super::DecorationKind::Smoke
                     }
             })
             .map(|(&tile, _)| {
                 (
                     MapObjectSlot::Overlay(tile),
-                    BattleHexCoordinate {
+                    HexCoordinate {
                         x: (i64::from(tile) % record.width) as i32,
                         y: (i64::from(tile) / record.width) as i32,
                     },
@@ -330,20 +331,20 @@ pub(super) fn object_positions(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::btech::{BattleHex, Structure, Terrain};
+    use crate::btech::{Hex, Structure, Terrain};
 
     #[test]
     fn restored_terrain_stands_at_the_current_ground_level() {
-        let raised = BattleHex::new(Terrain::Grassland, 3);
+        let raised = Hex::new(Terrain::Grassland, 3);
         assert_eq!(
             restore_terrain(raised, Terrain::Water),
-            BattleHex::new(Terrain::Water, 1).with_level(3)
+            Hex::new(Terrain::Water, 1).with_level(3)
         );
         assert_eq!(
             restore_terrain(raised, Terrain::Rough),
-            BattleHex::new(Terrain::Rough, 3)
+            Hex::new(Terrain::Rough, 3)
         );
-        let lake = BattleHex::new(Terrain::Water, 2).with_level(4);
+        let lake = Hex::new(Terrain::Water, 2).with_level(4);
         assert_eq!(restore_terrain(lake, Terrain::Ice), lake.frozen());
         let bridge = restore_terrain(lake, Terrain::Bridge);
         assert_eq!(
@@ -354,7 +355,7 @@ mod tests {
             ),
             (4, 2, Some(1))
         );
-        let tower = BattleHex::new(Terrain::Building, 7).with_level(2);
+        let tower = Hex::new(Terrain::Building, 7).with_level(2);
         let wall = restore_terrain(tower, Terrain::Wall);
         assert_eq!(wall.structure(), Some(Structure::Wall { height: 7 }));
         assert_eq!(wall.level(), 2);

@@ -1,0 +1,24 @@
+# Battlefield map data, hex geometry and the map file format, shared by the server, the
+# map generator and the Mappy editor. Keep it free of the server crate so those tools build
+# in seconds, and keep it free of optional features: a feature one package enables would
+# change this crate's build for every other package in the same `cargo` invocation, and so
+# compile a second copy of the server.
+[package]
+name = "stompymux-map"
+version = "0.1.0"
+edition = "2024"
+description = "Battlefield map data, hex geometry and the stompymux map file format"
+publish = false
+
+[[bin]]
+name = "map-check"
+path = "src/bin/map-check.rs"
+
+# Versions and features match the root manifest.
+[dependencies]
+anyhow = "1.0.104"
+serde = { version = "1.0.229", features = ["derive", "rc"] }
+toml = { version = "1.1.5", features = ["preserve_order"] }
+
+[dev-dependencies]
+serde_json = { version = "1.0.151", features = ["float_roundtrip"] }

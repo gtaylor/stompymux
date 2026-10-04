@@ -7,17 +7,17 @@ use stompymux_rs::*;
 /// A map built from `cells`, with each hex replaced by `layers` of it.
 async fn field(
     cells: &str,
-    layers: impl Fn(BattleHex) -> BattleHex,
+    layers: impl Fn(Hex) -> Hex,
 ) -> (tempfile::TempDir, Config, World, ObjectId) {
     let (dir, config, mut world) = support::isolated_world().await;
     let map = world.create(&config, "Fire field".into(), Kind::Room);
-    let asset = BattleMapAsset::from_cells(cells).unwrap();
+    let asset = MapAsset::from_cells(cells).unwrap();
     let hexes = asset.hexes.iter().map(|hex| layers(*hex)).collect();
     create_battle_map(
         &mut world,
         map,
         "fire.map",
-        BattleMapAsset {
+        MapAsset {
             hexes: Arc::new(hexes),
             ..asset
         },
@@ -39,12 +39,8 @@ fn ignite(world: &mut World, map: ObjectId, x: i32, y: i32, seconds: i64) {
     set_map_decoration(
         world,
         map,
-        BattleHexCoordinate { x, y },
-        Some(BattleDecoration::new(
-            BattleDecorationKind::Fire,
-            seconds,
-            None,
-        )),
+        HexCoordinate { x, y },
+        Some(BattleDecoration::new(DecorationKind::Fire, seconds, None)),
     )
     .unwrap();
 }
@@ -52,7 +48,7 @@ fn ignite(world: &mut World, map: ObjectId, x: i32, y: i32, seconds: i64) {
 /// The overlay at a hex.
 fn overlay(world: &World, map: ObjectId, x: i32, y: i32) -> Option<BattleDecoration> {
     world.btech.maps()[&map]
-        .decoration(BattleHexCoordinate { x, y })
+        .decoration(HexCoordinate { x, y })
         .unwrap()
 }
 
@@ -60,11 +56,11 @@ fn overlay(world: &World, map: ObjectId, x: i32, y: i32) -> Option<BattleDecorat
 #[tokio::test]
 async fn burnt_out_woods_leave_the_ground_they_grew_on() {
     let (_dir, _config, mut world, map) =
-        field("1 1\n#2\n", |hex| hex.with_woods(Some(BattleWoods::Light))).await;
-    let road = BattleHex::new(Terrain::Road, 2);
+        field("1 1\n#2\n", |hex| hex.with_woods(Some(Woods::Light))).await;
+    let road = Hex::new(Terrain::Road, 2);
     assert_eq!(
         world.btech.maps()[&map].base_hex(0, 0).unwrap(),
-        road.with_woods(Some(BattleWoods::Light))
+        road.with_woods(Some(Woods::Light))
     );
     ignite(&mut world, map, 0, 0, 30);
     for _ in 0..600 {
@@ -110,7 +106,7 @@ async fn spreading_fire_never_relights_a_burning_hex() {
 async fn new_fire_keeps_the_decorations_beneath_it() {
     let (_dir, _config, mut world, map) = field("2 1\n.0.0\n", |hex| hex).await;
     let record = BattleStaticDecoration {
-        coordinate: BattleHexCoordinate { x: 1, y: 0 },
+        coordinate: HexCoordinate { x: 1, y: 0 },
         restored_terrain: None,
         object: ObjectId(1),
         duration: 0,
@@ -217,7 +213,7 @@ async fn steam_leaves_a_fire_burning() {
     assert_eq!(world.btech.constructed_units()[&id].inferno_remaining(), 0);
     assert_eq!(
         overlay(&world, map, 0, 0).map(|effect| effect.kind),
-        Some(BattleDecorationKind::Fire)
+        Some(DecorationKind::Fire)
     );
 }
 
@@ -237,8 +233,8 @@ async fn smoky_crossing() -> (tempfile::TempDir, World, ObjectId) {
     set_map_decoration(
         &mut world,
         map,
-        BattleHexCoordinate { x: 0, y: 0 },
-        Some(BattleDecoration::new(BattleDecorationKind::Smoke, 60, None)),
+        HexCoordinate { x: 0, y: 0 },
+        Some(BattleDecoration::new(DecorationKind::Smoke, 60, None)),
     )
     .unwrap();
     ignite(&mut world, map, 1, 0, 60);

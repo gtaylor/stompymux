@@ -19,7 +19,7 @@ async fn fixture(
         &mut world,
         map,
         "lane",
-        BattleMapAsset::from_cells(&format!("1 201\n{}", ".0\n".repeat(201))).unwrap(),
+        MapAsset::from_cells(&format!("1 201\n{}", ".0\n".repeat(201))).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);

@@ -1,5 +1,5 @@
 //! Transactional maps and saved special-object identities, with shared immutable terrain.
-use super::{BattleHex, BattleMapAsset, BattleTemplate, BattleUnit};
+use super::{BattleTemplate, BattleUnit, Hex, HexCoordinate, MapAsset};
 use crate::{Kind, ObjectId, SharedMap, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -10,7 +10,7 @@ use std::{
 
 /// Identity and dimensions of a saved map. Encoded tiles are not interpreted without a dictionary.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct StoredBattleMap {
+pub struct StoredMap {
     /// Allocated membership span, including holes retained after removal.
     #[serde(default)]
     pub(crate) membership_extent: u32,
@@ -85,7 +85,7 @@ pub struct StoredBattleMap {
 
     /// Absent until the terrain dictionary has been explicitly established.
     #[serde(default)]
-    pub(crate) terrain: Option<Arc<Vec<BattleHex>>>,
+    pub(crate) terrain: Option<Arc<Vec<Hex>>>,
     /// Sparse overlays indexed by row-major tile position, independent of source terrain.
     #[serde(default)]
     pub(crate) decorations: Arc<BTreeMap<u32, super::BattleDecoration>>,
@@ -97,15 +97,15 @@ pub struct StoredBattleMap {
     pub(crate) points_of_interest: Arc<Vec<super::MapPointOfInterest>>,
 }
 
-impl StoredBattleMap {
+impl StoredMap {
     /// The saved map restriction blocks non-coolant fire between teammates.
     pub fn blocks_friendly_fire(&self) -> bool {
-        self.has_flag(super::BattleMapFlag::NoFriendlyFire)
+        self.has_flag(super::MapFlag::NoFriendlyFire)
     }
 
     /// Environmental rules are enabled by the map's persisted special-conditions flag.
     pub fn uses_special_rules(&self) -> bool {
-        self.has_flag(super::BattleMapFlag::SpecialRules)
+        self.has_flag(super::MapFlag::SpecialRules)
     }
 
     /// Whether every tile has a known terrain/elevation interpretation.
@@ -114,7 +114,7 @@ impl StoredBattleMap {
     }
 
     /// Inspect a decoded tile, rejecting ambiguous maps and invalid coordinates.
-    pub fn hex(&self, x: i64, y: i64) -> Result<BattleHex> {
+    pub fn hex(&self, x: i64, y: i64) -> Result<Hex> {
         let hex = self.base_hex(x, y)?;
         let overlay = self
             .decorations
@@ -125,7 +125,7 @@ impl StoredBattleMap {
 
     /// Install decoded terrain, turning any fire or smoke overlays it carries into permanent
     /// decorations so the terrain grid holds only the ground beneath them.
-    pub(crate) fn establish_terrain(&mut self, hexes: Arc<Vec<BattleHex>>) -> Result<()> {
+    pub(crate) fn establish_terrain(&mut self, hexes: Arc<Vec<Hex>>) -> Result<()> {
         self.decorations = Default::default();
         if hexes.iter().all(|hex| hex.overlay().is_none()) {
             self.terrain = Some(hexes);
@@ -152,7 +152,7 @@ impl StoredBattleMap {
     }
 
     /// Inspect the underlying tile without its fire or smoke overlay.
-    pub fn base_hex(&self, x: i64, y: i64) -> Result<BattleHex> {
+    pub fn base_hex(&self, x: i64, y: i64) -> Result<Hex> {
         let terrain = self
             .terrain
             .as_ref()
@@ -170,6 +170,14 @@ impl StoredBattleMap {
             .get(index)
             .copied()
             .context("Incomplete map terrain")
+    }
+
+    /// The neighbors of `coordinate` indexed by direction clockwise from north, with `None` for
+    /// each direction that leaves the map.
+    pub fn neighbors(&self, coordinate: HexCoordinate) -> Result<[Option<HexCoordinate>; 6]> {
+        let width = u16::try_from(self.width).context("Map width out of range")?;
+        let height = u16::try_from(self.height).context("Map height out of range")?;
+        Ok(coordinate.neighbors_within(width, height))
     }
 
     /// Check the complete decoded map before it can participate in a world transaction.
@@ -307,7 +315,7 @@ impl StoredBattleMap {
                 || !self
                     .decorations
                     .values()
-                    .any(|effect| effect.kind == super::BattleDecorationKind::Fire),
+                    .any(|effect| effect.kind == super::DecorationKind::Fire),
             "Fire requires a saved map random stream"
         );
         ensure!(
@@ -319,10 +327,7 @@ impl StoredBattleMap {
         ensure!(
             self.decorations
                 .values()
-                .map(|effect| (
-                    effect.kind == super::BattleDecorationKind::Fire,
-                    effect.order
-                ))
+                .map(|effect| (effect.kind == super::DecorationKind::Fire, effect.order))
                 .collect::<BTreeSet<_>>()
                 .len()
                 == self.decorations.len(),
@@ -431,7 +436,7 @@ pub struct BtechState {
     #[serde(default)]
     pub(crate) vehicles: SharedMap<ObjectId, super::BattleVehicle>,
     pub(crate) registrations: Arc<BTreeMap<ObjectId, String>>,
-    pub(crate) maps: SharedMap<ObjectId, StoredBattleMap>,
+    pub(crate) maps: SharedMap<ObjectId, StoredMap>,
     pub(crate) units: SharedMap<ObjectId, StoredBattleUnit>,
 }
 
@@ -490,7 +495,7 @@ impl BtechState {
     }
 
     /// Inspect saved map metadata without guessing at terrain codes.
-    pub fn maps(&self) -> &SharedMap<ObjectId, StoredBattleMap> {
+    pub fn maps(&self) -> &SharedMap<ObjectId, StoredMap> {
         &self.maps
     }
 
@@ -544,7 +549,7 @@ impl BtechState {
             .with_context(|| format!("#{} has no map record", id.0))?;
         let mut record = serde_json::to_value(map)?;
         edit(&mut record);
-        let map: StoredBattleMap = serde_json::from_value(record)?;
+        let map: StoredMap = serde_json::from_value(record)?;
         self.maps.insert(id, map);
         self.clear_runtime_state();
         Ok(())
@@ -1157,12 +1162,7 @@ impl BtechState {
 }
 
 /// Register an unused world container as a map with decoded source terrain.
-pub fn create_map(
-    world: &mut World,
-    id: ObjectId,
-    name: &str,
-    asset: BattleMapAsset,
-) -> Result<()> {
+pub fn create_map(world: &mut World, id: ObjectId, name: &str, asset: MapAsset) -> Result<()> {
     map_target(world, id)?;
     ensure!(
         !world.btech.registrations.contains_key(&id)
@@ -1177,12 +1177,7 @@ pub fn create_map(
 }
 
 /// Explicitly replace an unoccupied map's terrain with its source asset; dimensions must match.
-pub fn reload_map(
-    world: &mut World,
-    id: ObjectId,
-    name: &str,
-    asset: BattleMapAsset,
-) -> Result<()> {
+pub fn reload_map(world: &mut World, id: ObjectId, name: &str, asset: MapAsset) -> Result<()> {
     map_target(world, id)?;
     ensure!(
         world
@@ -1209,7 +1204,7 @@ pub(super) fn replace_map_asset(
     world: &mut World,
     id: ObjectId,
     name: &str,
-    asset: BattleMapAsset,
+    asset: MapAsset,
 ) -> Result<()> {
     let old = world.btech.maps.get(&id).context("Map not found")?;
     let modifier = old.movement_modifier;
@@ -1258,12 +1253,12 @@ fn map_target(world: &World, id: ObjectId) -> Result<()> {
 }
 
 /// Turn a parsed source into a checked persistent domain record.
-pub(super) fn map_from_asset(name: &str, asset: BattleMapAsset) -> Result<StoredBattleMap> {
+pub(super) fn map_from_asset(name: &str, asset: MapAsset) -> Result<StoredMap> {
     ensure!(
         !name.is_empty() && name.len() <= 1024 && !name.contains('\0'),
         "Invalid map asset name"
     );
-    let mut map = StoredBattleMap {
+    let mut map = StoredMap {
         membership_extent: 0,
         building_parent: 0,
         artillery_shots: Default::default(),
@@ -1412,7 +1407,7 @@ mod rewrite_tests {
             &mut world,
             map,
             "test",
-            BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+            MapAsset::from_cells("1 1\n.0\n").unwrap(),
         )
         .unwrap();
         world.btech.retire_sanctions.borrow_mut().insert(mech);
@@ -1443,7 +1438,7 @@ mod rewrite_tests {
             &mut world,
             map,
             "test",
-            BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+            MapAsset::from_cells("1 1\n.0\n").unwrap(),
         )
         .unwrap();
         super::super::prepare_recovery(&mut world, player).unwrap();

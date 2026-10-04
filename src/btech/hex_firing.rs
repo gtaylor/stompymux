@@ -1,5 +1,5 @@
 //! Configured coordinate-fire resolution and pre-impact observer feedback.
-use super::{BattleHexCoordinate, BattleShotRules};
+use super::{BattleShotRules, HexCoordinate};
 use crate::{Config, ObjectId, World};
 use anyhow::{Context, Result};
 
@@ -10,7 +10,7 @@ pub(super) fn resolve_in_action(
     shooter: ObjectId,
     pilot: ObjectId,
     index: usize,
-    coordinate: BattleHexCoordinate,
+    coordinate: HexCoordinate,
 ) -> Result<super::firing::BattleFiringAction> {
     let weapon = if let Some(unit) = world.btech.vehicles().get(&shooter) {
         unit.weapon_readiness(index)?.weapon

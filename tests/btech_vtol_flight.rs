@@ -12,7 +12,7 @@ fn aircraft() -> BattleVehicle {
     saved["position"] = serde_json::json!({"map":0,"x":0,"y":0});
     saved["map_slot"] = 0.into();
     saved["power"] = serde_json::to_value(BattlePower::Running).unwrap();
-    let mut motion = BattleMotion::stationary(BattleHexCoordinate { x: 0, y: 0 }.center());
+    let mut motion = BattleMotion::stationary(HexCoordinate { x: 0, y: 0 }.center());
     motion.speed = 21.5;
     motion.desired_speed = 21.5;
     saved["motion"] = serde_json::to_value(motion).unwrap();
@@ -97,7 +97,7 @@ fn takeoff_guards_are_atomic_and_rechecked_before_liftoff() {
     for change in ["fuel", "power", "speed"] {
         let mut saved = serde_json::to_value(&base).unwrap();
         saved["motion"] = serde_json::to_value(BattleMotion::stationary(
-            BattleHexCoordinate { x: 0, y: 0 }.center(),
+            HexCoordinate { x: 0, y: 0 }.center(),
         ))
         .unwrap();
         match change {
@@ -250,7 +250,7 @@ fn touchdown_replays_on_supported_surfaces_and_preserves_command_fuel_and_dice()
         let mut unit = at_altitude(landing_aircraft(25.0, 10.0, -10.0), 6.0);
         let mut replay = restored(&unit);
         let before = serde_json::to_value(&unit).unwrap();
-        let hex = BattleHex::new(terrain, 5);
+        let hex = Hex::new(terrain, 5);
         let report = unit.land_vtol(hex, false).unwrap();
         assert_eq!(report, BattleVtolLanding::Touchdown { elevation: 5 });
         assert_eq!(replay.land_vtol(hex, false).unwrap(), report);
@@ -276,7 +276,7 @@ fn touchdown_replays_on_supported_surfaces_and_preserves_command_fuel_and_dice()
 
 #[test]
 fn landing_checks_speed_altitude_and_terrain_boundaries_atomically() {
-    let grass = BattleHex::new(Terrain::Grassland, 0);
+    let grass = Hex::new(Terrain::Grassland, 0);
     for (speed, desired, vertical, accepted) in [
         (0.0, 15.999, 0.0, true),
         (0.0, 16.0, 0.0, false),
@@ -317,7 +317,7 @@ fn landing_checks_speed_altitude_and_terrain_boundaries_atomically() {
         Terrain::Snow,
         Terrain::Wall,
     ] {
-        assert!(unit.land_vtol(BattleHex::new(terrain, 0), false).is_err());
+        assert!(unit.land_vtol(Hex::new(terrain, 0), false).is_err());
         assert_eq!(unit, before);
     }
 }
@@ -350,7 +350,7 @@ fn landing_refusals_match_reference_output() {
     ] {
         let before = unit.clone();
         assert_eq!(
-            unit.land_vtol(BattleHex::new(terrain, 0), false)
+            unit.land_vtol(Hex::new(terrain, 0), false)
                 .unwrap_err()
                 .to_string(),
             expected
@@ -361,7 +361,7 @@ fn landing_refusals_match_reference_output() {
 
 #[test]
 fn landing_cancels_launch_but_cannot_recover_lost_lift_or_empty_fuel() {
-    let hex = BattleHex::new(Terrain::Grassland, 0);
+    let hex = Hex::new(Terrain::Grassland, 0);
     let mut unit = aircraft();
     let before = unit.clone();
     unit.begin_vtol_takeoff(false, false, 4).unwrap();
@@ -426,7 +426,7 @@ fn public_takeoff_vertical_control_and_landing_form_a_replayable_sequence() {
     let mut replay = restored(&unit);
     unit.set_vtol_vertical_speed(-5.0, false).unwrap();
     replay.set_vtol_vertical_speed(-5.0, false).unwrap();
-    let hex = BattleHex::new(Terrain::Road, 1);
+    let hex = Hex::new(Terrain::Road, 1);
     assert_eq!(
         unit.land_vtol(hex, false).unwrap(),
         BattleVtolLanding::Touchdown { elevation: 1 }
@@ -521,7 +521,7 @@ fn flight_surface_contact_distinguishes_water_bridge_clearance_and_ground_impact
             .vtol_motion_step(100)
             .unwrap();
         assert_eq!(
-            step.surface_contact(BattleHex::new(terrain, elevation)),
+            step.surface_contact(Hex::new(terrain, elevation)),
             contact,
             "{altitude}/{terrain:?}"
         );
@@ -546,10 +546,7 @@ fn altitude_commits_reject_stale_or_altered_proposals_and_preserve_height_on_lif
     assert_eq!(unit, before);
     unit.commit_vtol_motion(step).unwrap();
     assert_eq!(unit.vtol_flight().unwrap().altitude, 12.75);
-    assert_eq!(
-        unit.elevation_level(BattleHex::new(Terrain::Grassland, 0)),
-        12
-    );
+    assert_eq!(unit.elevation_level(Hex::new(Terrain::Grassland, 0)), 12);
     assert_eq!(restored(&unit), unit);
     let advanced = unit.clone();
     assert!(unit.commit_vtol_motion(step).is_err());
@@ -576,14 +573,14 @@ fn altitude_commits_reject_stale_or_altered_proposals_and_preserve_height_on_lif
 #[test]
 fn forest_entry_checks_canopy_only_when_crossing_hexes() {
     for terrain in ['`', '"'] {
-        let map = BattleMapAsset::from_cells(&format!("1 3\n.0\n{terrain}0\n.0\n")).unwrap();
+        let map = MapAsset::from_cells(&format!("1 3\n.0\n{terrain}0\n.0\n")).unwrap();
         for (altitude, obstructed) in [(0.0, true), (1.99, true), (2.0, false)] {
             let mut saved =
                 serde_json::to_value(at_altitude(landing_aircraft(129.0, 129.0, 0.0), altitude))
                     .unwrap();
             saved["position"]["y"] = 2.into();
             saved["motion"]["point"] =
-                serde_json::to_value(BattleHexCoordinate { x: 0, y: 2 }.center()).unwrap();
+                serde_json::to_value(HexCoordinate { x: 0, y: 2 }.center()).unwrap();
             let mut unit: BattleVehicle = serde_json::from_value(saved).unwrap();
             let before = unit.clone();
             let outcome = unit.advance_vtol_clear_path(&map, 1000).unwrap();
@@ -606,7 +603,7 @@ fn forest_entry_checks_canopy_only_when_crossing_hexes() {
                 assert_eq!(unit, before);
             }
         }
-        let forest = BattleMapAsset::from_cells(&format!("1 1\n{terrain}0\n")).unwrap();
+        let forest = MapAsset::from_cells(&format!("1 1\n{terrain}0\n")).unwrap();
         let mut hover = landing_aircraft(0.0, 0.0, 0.0);
         assert!(matches!(
             hover.advance_vtol_clear_path(&forest, 100).unwrap(),
@@ -618,25 +615,24 @@ fn forest_entry_checks_canopy_only_when_crossing_hexes() {
 #[test]
 fn flight_path_cannot_skip_intermediate_hills_and_map_edges_are_atomic() {
     // Northbound from row 2 to row 0: both endpoint surfaces are clear, row 1 is raised.
-    let map = BattleMapAsset::from_cells("1 3\n.0\n^9\n.0\n").unwrap();
+    let map = MapAsset::from_cells("1 3\n.0\n^9\n.0\n").unwrap();
     let mut saved =
         serde_json::to_value(at_altitude(landing_aircraft(129.0, 129.0, 0.0), 5.0)).unwrap();
     saved["position"]["y"] = 2.into();
-    saved["motion"]["point"] =
-        serde_json::to_value(BattleHexCoordinate { x: 0, y: 2 }.center()).unwrap();
+    saved["motion"]["point"] = serde_json::to_value(HexCoordinate { x: 0, y: 2 }.center()).unwrap();
     let mut unit: BattleVehicle = serde_json::from_value(saved).unwrap();
     let before = unit.clone();
     let result = unit.advance_vtol_clear_path(&map, 1000).unwrap();
     assert!(matches!(
         result,
         BattleVtolPath::Contact {
-            hex: BattleHexCoordinate { x: 0, y: 1 },
+            hex: HexCoordinate { x: 0, y: 1 },
             contact: BattleVtolSurfaceContact::Elevation,
             ..
         }
     ));
     assert_eq!(unit, before);
-    let clear = BattleMapAsset::from_cells("1 3\n.0\n.0\n.0\n").unwrap();
+    let clear = MapAsset::from_cells("1 3\n.0\n.0\n.0\n").unwrap();
     let mut replay = restored(&unit);
     let result = unit.advance_vtol_clear_path(&clear, 1000).unwrap();
     assert!(matches!(result, BattleVtolPath::Advanced { .. }));
@@ -657,7 +653,7 @@ fn flight_path_cannot_skip_intermediate_hills_and_map_edges_are_atomic() {
 
 #[test]
 fn vertical_path_detects_bridge_bands_and_water_without_committing_hazardous_motion() {
-    let bridge = BattleMapAsset::from_cells("1 1\n/5\n").unwrap();
+    let bridge = MapAsset::from_cells("1 1\n/5\n").unwrap();
     // A high material descent rate exercises a complete bridge-band crossing in one event.
     let mut unit = at_altitude(landing_aircraft(0.0, 0.0, -387.0), 6.0);
     let before = unit.clone();
@@ -671,7 +667,7 @@ fn vertical_path_detects_bridge_bands_and_water_without_committing_hazardous_mot
         under.advance_vtol_clear_path(&bridge, 100).unwrap(),
         BattleVtolPath::Advanced { .. }
     ));
-    let water = BattleMapAsset::from_cells("1 1\n~5\n").unwrap();
+    let water = MapAsset::from_cells("1 1\n~5\n").unwrap();
     let mut unit = at_altitude(landing_aircraft(0.0, 0.0, -129.0), -0.5);
     let before = unit.clone();
     assert!(matches!(
@@ -686,7 +682,7 @@ fn vertical_path_detects_bridge_bands_and_water_without_committing_hazardous_mot
 
 #[test]
 fn surface_resolution_shares_landing_and_flooding_and_defers_crashes_atomically() {
-    let ground = BattleMapAsset::from_cells("1 1\n.1\n").unwrap();
+    let ground = MapAsset::from_cells("1 1\n.1\n").unwrap();
     let mut unit = at_altitude(landing_aircraft(0.0, 0.0, -5.0), 1.01);
     let mut replay = restored(&unit);
     let result = unit.advance_vtol_environment(&ground, 100, false).unwrap();
@@ -717,7 +713,7 @@ fn surface_resolution_shares_landing_and_flooding_and_defers_crashes_atomically(
         BattleVtolEnvironment::CrashRequired { levels: 13, .. }
     ));
     assert_eq!(crash, before);
-    let water = BattleMapAsset::from_cells("1 1\n~5\n").unwrap();
+    let water = MapAsset::from_cells("1 1\n~5\n").unwrap();
     let mut unit = at_altitude(landing_aircraft(0.0, 0.0, -129.0), -0.5);
     let before = unit.clone();
     assert!(matches!(
@@ -748,19 +744,19 @@ fn horizontal_flight_entry_distinguishes_bridge_clearance_ice_and_water() {
         ("-3", 0.0, None),
         ("~3", -1.0, Some(BattleVtolSurfaceContact::Water)),
     ] {
-        let map = BattleMapAsset::from_cells(&format!("1 3\n.0\n{tile}\n/6\n")).unwrap();
+        let map = MapAsset::from_cells(&format!("1 3\n.0\n{tile}\n/6\n")).unwrap();
         let mut saved =
             serde_json::to_value(at_altitude(landing_aircraft(129.0, 129.0, 0.0), altitude))
                 .unwrap();
         saved["position"]["y"] = 2.into();
         saved["motion"]["point"] =
-            serde_json::to_value(BattleHexCoordinate { x: 0, y: 2 }.center()).unwrap();
+            serde_json::to_value(HexCoordinate { x: 0, y: 2 }.center()).unwrap();
         let mut unit: BattleVehicle = serde_json::from_value(saved).unwrap();
         let before = unit.clone();
         let path = unit.advance_vtol_clear_path(&map, 1000).unwrap();
         let actual = match path {
             BattleVtolPath::Contact { contact, hex, .. } => {
-                assert_eq!(hex, BattleHexCoordinate { x: 0, y: 1 });
+                assert_eq!(hex, HexCoordinate { x: 0, y: 1 });
                 Some(contact)
             }
             _ => None,
@@ -775,12 +771,11 @@ fn horizontal_flight_entry_distinguishes_bridge_clearance_ice_and_water() {
 /// Even a slow horizontal hill entry needs the host's piloting decision before mutation.
 #[test]
 fn slow_hill_entry_defers_landing_and_keeps_continuous_and_hex_positions_consistent() {
-    let map = BattleMapAsset::from_cells("1 2\n.2\n.0\n").unwrap();
+    let map = MapAsset::from_cells("1 2\n.2\n.0\n").unwrap();
     let mut saved =
         serde_json::to_value(at_altitude(landing_aircraft(10.0, 10.0, 0.0), 1.0)).unwrap();
     saved["position"]["y"] = 1.into();
-    saved["motion"]["point"] =
-        serde_json::to_value(BattleHexCoordinate { x: 0, y: 1 }.center()).unwrap();
+    saved["motion"]["point"] = serde_json::to_value(HexCoordinate { x: 0, y: 1 }.center()).unwrap();
     let mut unit: BattleVehicle = serde_json::from_value(saved).unwrap();
     let before = unit.clone();
     assert!(matches!(
@@ -791,7 +786,7 @@ fn slow_hill_entry_defers_landing_and_keeps_continuous_and_hex_positions_consist
     assert_eq!(unit.position().unwrap().y, 1);
     assert_eq!(
         unit.motion().unwrap().point.containing_hex().unwrap(),
-        BattleHexCoordinate { x: 0, y: 1 }
+        HexCoordinate { x: 0, y: 1 }
     );
     assert_eq!(unit.vtol_flight().unwrap().altitude, 1.0);
     assert_eq!(restored(&unit), unit);

@@ -75,7 +75,7 @@ async fn actor_location_and_linked_inventory_order_survive_restart() {
         &mut world,
         map,
         "help",
-        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+        MapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -167,7 +167,7 @@ async fn help_respects_uncompressed_input() {
         &mut world,
         map,
         "help",
-        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+        MapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);

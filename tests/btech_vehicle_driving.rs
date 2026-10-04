@@ -17,7 +17,7 @@ async fn fixture_movement(
         &mut world,
         map,
         "road",
-        BattleMapAsset::from_cells(&format!(
+        MapAsset::from_cells(&format!(
             "20 3\n{}\n{}\n{}\n",
             ".0".repeat(20),
             ".0".repeat(20),
@@ -221,17 +221,13 @@ async fn burning_corridor() -> (tempfile::TempDir, Config, World, ObjectId, Obje
     let point = world.btech.vehicles()[&id].motion().unwrap().point;
     for x in 0..20 {
         for y in 0..3 {
-            let hex = BattleHexCoordinate { x, y };
+            let hex = HexCoordinate { x, y };
             if hex != point.containing_hex().unwrap() {
                 set_map_decoration(
                     &mut world,
                     map,
                     hex,
-                    Some(BattleDecoration::new(
-                        BattleDecorationKind::Fire,
-                        120,
-                        Some(30),
-                    )),
+                    Some(BattleDecoration::new(DecorationKind::Fire, 120, Some(30))),
                 )
                 .unwrap();
             }
@@ -338,11 +334,7 @@ async fn fire_exposure_requires_entry_and_hull_loss_preserves_occupants() {
         &mut quiet,
         map,
         hex,
-        Some(BattleDecoration::new(
-            BattleDecorationKind::Fire,
-            120,
-            Some(30),
-        )),
+        Some(BattleDecoration::new(DecorationKind::Fire, 120, Some(30))),
     )
     .unwrap();
     let before = serde_json::to_value(&quiet.btech.vehicles()[&id]).unwrap();
@@ -441,7 +433,7 @@ async fn every_crossed_fire_hex_checks_once_without_adding_stationary_exposure()
 }
 
 /// Candidate travel supplies a fixture route; mine assertions independently track packet expenditure.
-fn corridor_entries(world: &World, id: ObjectId) -> Vec<BattleHexCoordinate> {
+fn corridor_entries(world: &World, id: ObjectId) -> Vec<HexCoordinate> {
     let origin = world.btech.vehicles()[&id].motion().unwrap().point;
     let mut clear = world.clone();
     advance_battle_motion(&mut clear, BattleMovementRules::STANDARD).unwrap();
@@ -462,7 +454,7 @@ fn seed_corridor_mines(
     world: &mut World,
     id: ObjectId,
     map: ObjectId,
-    entries: &[BattleHexCoordinate],
+    entries: &[HexCoordinate],
 ) -> BattleDice {
     let seed = (0u32..100000)
         .find_map(|number| {
@@ -630,7 +622,7 @@ async fn unrelated_mines_and_motion_inside_one_hex_do_not_trigger_or_stop_vehicl
         map,
         0,
         Some(BattleMinefield {
-            coordinate: BattleHexCoordinate { x: 19, y: 2 },
+            coordinate: HexCoordinate { x: 19, y: 2 },
             kind: BattleMineKind::Standard,
             strength: 10,
             extra: 0,
@@ -711,11 +703,7 @@ async fn disabling_mine_heat_precedes_terrain_fire_and_stops_at_entry() {
         &mut world,
         map,
         first,
-        Some(BattleDecoration::new(
-            BattleDecorationKind::Fire,
-            120,
-            Some(30),
-        )),
+        Some(BattleDecoration::new(DecorationKind::Fire, 120, Some(30))),
     )
     .unwrap();
     let mut dice = (0u32..100000)
@@ -1381,7 +1369,7 @@ async fn tracked_and_wheeled_ice_entry_replays_shared_fracture_and_waterproof_ro
             unit["definition"]["attributes"]["specials"] = "Waterproof_Tech".into();
         }
         saved["maps"][map.0.to_string()]["terrain"][43] =
-            serde_json::to_value(BattleHex::new(Terrain::Ice, depth)).unwrap();
+            serde_json::to_value(Hex::new(Terrain::Ice, depth)).unwrap();
         saved["maps"][map.0.to_string()]["decorations"]["43"] =
             serde_json::json!({"kind":"smoke", "remaining":120, "object_duration":120, "order":-1});
         world.btech = serde_json::from_value(saved).unwrap();
@@ -1502,7 +1490,7 @@ async fn waterproof_vehicle_stays_below_ice_without_a_surface_fracture_roll() {
     for row in 0..3 {
         for x in 0..20 {
             saved["maps"][map.0.to_string()]["terrain"][row * 20 + x] = serde_json::to_value(
-                BattleHex::new(if x < 3 { Terrain::Water } else { Terrain::Ice }, 2),
+                Hex::new(if x < 3 { Terrain::Water } else { Terrain::Ice }, 2),
             )
             .unwrap();
         }

@@ -22,23 +22,28 @@ fmt-check-lua:
 fmt-check-rust:
     cargo fmt --check
 
-# Run every test in the workspace. nextest runs each test in its own process
+# Run every test in the workspace except Mappy's, which would compile iced and
+# wgpu; `just test-mappy` runs those. nextest runs each test in its own process
 # and schedules all suites together, so one slow suite no longer serializes
 # the rest. It does not run doctests, so those follow separately.
 test:
-    cargo nextest run --workspace
-    cargo test --workspace --doc --quiet
+    cargo nextest run --workspace --exclude stompymux-mappy
+    cargo test --workspace --exclude stompymux-mappy --doc --quiet
+
+# Run the Mappy map editor's tests.
+test-mappy *filter:
+    cargo nextest run -p stompymux-mappy {{filter}}
 
 # Compile-only pass over every target; skips codegen so it is the fastest way
 # to find type errors while iterating.
 
-# Type-check the library, every binary (feature-gated ones included), and every test suite.
+# Type-check every package in the workspace (Mappy included) with all its targets.
 check:
-    cargo check --all-targets --all-features
+    cargo check --workspace --all-targets --all-features
 
-# Run clippy over every target and feature; any warning fails the recipe.
+# Run clippy over every package, target and feature; any warning fails the recipe.
 lint:
-    cargo clippy --all-targets --all-features --locked -- -D warnings
+    cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 
 # Only the library's own unit-test binary is built for this recipe.
 
@@ -101,11 +106,11 @@ mapgen *args:
 
 # Fail when any map file in game/maps would not load.
 check-maps:
-    cargo run --quiet --bin map-check -- game/maps
+    cargo run --quiet -p stompymux-map --bin map-check -- game/maps
 
 # Open the Mappy map editor on a map directory (default game/maps).
 mappy dir="game/maps":
-    cargo run --profile mappy --features mappy --bin mappy -- {{dir}}
+    cargo run --profile mappy -p stompymux-mappy --bin mappy -- {{dir}}
 
 update-lua-docs:
     cargo run --quiet -p stompymux-lua-tools --bin lua-doc-updater -- --write

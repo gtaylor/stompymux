@@ -70,7 +70,7 @@ pub struct BattleShotReport {
     pub shooter: ObjectId,
     pub target: ObjectId,
     /// Coordinate-directed fire, including observer-directed shots; the occupant remains the damage target.
-    pub coordinate: Option<super::BattleHexCoordinate>,
+    pub coordinate: Option<super::HexCoordinate>,
     pub weapon_index: usize,
     pub aim: BattleAimModifiers,
     /// None represents a physically out-of-range attempt; ordinary weapons still spend a salvo.
@@ -248,7 +248,7 @@ pub(crate) fn resolve_shot_autopilot(
 pub(super) struct ShotTarget {
     /// Damage or coolant recipient already selected by the host.
     pub unit: ObjectId,
-    pub coordinate: Option<super::BattleHexCoordinate>,
+    pub coordinate: Option<super::HexCoordinate>,
 }
 
 /// Resolve a complete shot inside a host action that publishes character consequences.
@@ -291,7 +291,7 @@ pub(super) fn resolve_shot_in_action(
 #[derive(Default)]
 struct ShotEffects<'a> {
     character: bool,
-    coordinate: Option<super::BattleHexCoordinate>,
+    coordinate: Option<super::HexCoordinate>,
     xp: Option<&'a crate::config::XpConfig>,
 }
 
@@ -337,7 +337,7 @@ fn resolve_shot_inner(
         let position = super::scanner::scanner_unit(world, target)
             .and_then(|unit| unit.position)
             .context("Target is not placed")?;
-        Some(super::BattleHexCoordinate {
+        Some(super::HexCoordinate {
             x: i32::from(position.x),
             y: i32::from(position.y),
         })

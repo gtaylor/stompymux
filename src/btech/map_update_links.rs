@@ -23,7 +23,7 @@ enum Work {
     Child {
         parent: ObjectId,
         child: ObjectId,
-        coordinate: super::BattleHexCoordinate,
+        coordinate: super::HexCoordinate,
         slot: u32,
         depth: usize,
     },

@@ -125,7 +125,7 @@ pub fn begin_building_entry_action(
             super::broadcast::hex_notices(
                 &world,
                 position.map,
-                BattleHexCoordinate {
+                HexCoordinate {
                     x: i32::from(position.x),
                     y: i32::from(position.y),
                 },

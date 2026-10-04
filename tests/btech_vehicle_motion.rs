@@ -20,13 +20,13 @@ fn vehicle_motion_reaches_terrain_adjusted_targets_and_brakes_without_overshoot(
         (Terrain::HeavyForest, 53.75 / 3.0),
         (Terrain::Mountains, 53.75 / 3.0),
     ] {
-        let mut motion = BattleMotion::stationary(BattleHexCoordinate { x: 50, y: 50 }.center());
+        let mut motion = BattleMotion::stationary(HexCoordinate { x: 50, y: 50 }.center());
         motion.desired_speed = 53.75;
         for _ in 0..30 {
             motion = template
                 .ground_motion_step(
                     motion,
-                    BattleHex::new(terrain, 0),
+                    Hex::new(terrain, 0),
                     BattleVehicleMotionRules::STANDARD,
                 )
                 .unwrap();
@@ -37,7 +37,7 @@ fn vehicle_motion_reaches_terrain_adjusted_targets_and_brakes_without_overshoot(
             motion = template
                 .ground_motion_step(
                     motion,
-                    BattleHex::new(terrain, 0),
+                    Hex::new(terrain, 0),
                     BattleVehicleMotionRules::STANDARD,
                 )
                 .unwrap();
@@ -48,7 +48,7 @@ fn vehicle_motion_reaches_terrain_adjusted_targets_and_brakes_without_overshoot(
             motion = template
                 .ground_motion_step(
                     motion,
-                    BattleHex::new(terrain, 0),
+                    Hex::new(terrain, 0),
                     BattleVehicleMotionRules::STANDARD,
                 )
                 .unwrap();
@@ -60,12 +60,12 @@ fn vehicle_motion_reaches_terrain_adjusted_targets_and_brakes_without_overshoot(
 #[test]
 fn vehicle_motion_handles_road_turning_hover_advantage_and_map_rate() {
     let mut template = template();
-    let mut motion = BattleMotion::stationary(BattleHexCoordinate { x: 50, y: 50 }.center());
+    let mut motion = BattleMotion::stationary(HexCoordinate { x: 50, y: 50 }.center());
     motion.desired_speed = template.max_speed;
     let normal = template
         .ground_motion_step(
             motion,
-            BattleHex::new(Terrain::Grassland, 0),
+            Hex::new(Terrain::Grassland, 0),
             BattleVehicleMotionRules::STANDARD,
         )
         .unwrap();
@@ -73,7 +73,7 @@ fn vehicle_motion_handles_road_turning_hover_advantage_and_map_rate() {
     let fast = template
         .ground_motion_step(
             motion,
-            BattleHex::new(Terrain::Grassland, 0),
+            Hex::new(Terrain::Grassland, 0),
             BattleVehicleMotionRules {
                 speed_demon: true,
                 ..BattleVehicleMotionRules::STANDARD
@@ -84,7 +84,7 @@ fn vehicle_motion_handles_road_turning_hover_advantage_and_map_rate() {
     let double = template
         .ground_motion_step(
             motion,
-            BattleHex::new(Terrain::Grassland, 0),
+            Hex::new(Terrain::Grassland, 0),
             BattleVehicleMotionRules {
                 movement_modifier: 200,
                 ..BattleVehicleMotionRules::STANDARD
@@ -102,7 +102,7 @@ fn vehicle_motion_handles_road_turning_hover_advantage_and_map_rate() {
     let road = template
         .ground_motion_step(
             motion,
-            BattleHex::new(Terrain::Road, 0),
+            Hex::new(Terrain::Road, 0),
             BattleVehicleMotionRules::STANDARD,
         )
         .unwrap();
@@ -110,7 +110,7 @@ fn vehicle_motion_handles_road_turning_hover_advantage_and_map_rate() {
     let fasa = template
         .ground_motion_step(
             motion,
-            BattleHex::new(Terrain::Road, 0),
+            Hex::new(Terrain::Road, 0),
             BattleVehicleMotionRules {
                 fasa_turning: true,
                 ..BattleVehicleMotionRules::STANDARD
@@ -126,7 +126,7 @@ fn vehicle_motion_handles_road_turning_hover_advantage_and_map_rate() {
         template
             .ground_motion_step(
                 motion,
-                BattleHex::new(Terrain::Road, 0),
+                Hex::new(Terrain::Road, 0),
                 BattleVehicleMotionRules::STANDARD
             )
             .unwrap()
@@ -139,7 +139,7 @@ fn vehicle_motion_handles_road_turning_hover_advantage_and_map_rate() {
         template
             .ground_motion_step(
                 motion,
-                BattleHex::new(Terrain::Grassland, 0),
+                Hex::new(Terrain::Grassland, 0),
                 BattleVehicleMotionRules::STANDARD
             )
             .is_ok()
@@ -150,7 +150,7 @@ fn vehicle_motion_handles_road_turning_hover_advantage_and_map_rate() {
             template
                 .ground_motion_step(
                     motion,
-                    BattleHex::new(Terrain::Grassland, 0),
+                    Hex::new(Terrain::Grassland, 0),
                     BattleVehicleMotionRules::STANDARD
                 )
                 .is_err()
@@ -162,7 +162,7 @@ fn vehicle_motion_handles_road_turning_hover_advantage_and_map_rate() {
         template
             .ground_motion_step(
                 motion,
-                BattleHex::new(Terrain::Grassland, 0),
+                Hex::new(Terrain::Grassland, 0),
                 BattleVehicleMotionRules::STANDARD
             )
             .is_err()

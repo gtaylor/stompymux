@@ -1,9 +1,9 @@
 //! Chassis-independent fall damage, hit direction and heading change.
-use super::{BattleHex, BattleHitArc};
+use super::{BattleHitArc, Hex};
 use anyhow::{Context, Result, ensure};
 
 /// Select the supporting surface for descent, including ice and passage below a bridge.
-pub(super) fn surface(tile: BattleHex, elevation: i32) -> i16 {
+pub(super) fn surface(tile: Hex, elevation: i32) -> i16 {
     let upper = tile.standing_height();
     if i32::from(upper) <= elevation {
         return upper;
@@ -56,7 +56,7 @@ mod tests {
             (Terrain::Bridge, 2, -1),
             (Terrain::Bridge, -2, -1),
         ] {
-            assert_eq!(surface(BattleHex::new(terrain, 3), altitude), expected);
+            assert_eq!(surface(Hex::new(terrain, 3), altitude), expected);
         }
     }
 }

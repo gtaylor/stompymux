@@ -1,5 +1,5 @@
 //! Shared tactical and long-range display centering, independent of text rendering or map overlays.
-use super::BattleHexCoordinate;
+use super::HexCoordinate;
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, bail, ensure};
 use serde::{Deserialize, Serialize};
@@ -27,7 +27,7 @@ pub struct BattleViewPosition {
     /// Battlefield containing the scanner.
     pub map: ObjectId,
     /// Requested center before the renderer clips the viewport to map bounds.
-    pub center: BattleHexCoordinate,
+    pub center: HexCoordinate,
     /// Damage-adjusted hardware radius for the chosen display.
     pub maximum_range: u8,
 }
@@ -77,7 +77,7 @@ fn resolve_center(
     );
     let position = unit.position.context("Unit is not on a battlefield")?;
     let center = match center(observer)? {
-        BattleViewCenter::OwnUnit => BattleHexCoordinate {
+        BattleViewCenter::OwnUnit => HexCoordinate {
             x: i32::from(position.x),
             y: i32::from(position.y),
         },
@@ -92,7 +92,7 @@ fn resolve_center(
                 .context("Target is unavailable")?
                 .position
                 .context("Target is not placed")?;
-            BattleHexCoordinate {
+            HexCoordinate {
                 x: i32::from(target.x),
                 y: i32::from(target.y),
             }

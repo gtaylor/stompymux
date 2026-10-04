@@ -1,5 +1,5 @@
 //! Minefield recognition and combined hex reports with shared transactional perception and output.
-use super::{BattleBuildingScan, BattleChannelMessage, BattleHexCoordinate};
+use super::{BattleBuildingScan, BattleChannelMessage, HexCoordinate};
 use crate::{Config, ObjectId, Scripts, World};
 use anyhow::Result;
 use serde::Serialize;
@@ -31,7 +31,7 @@ pub fn scan_mines(
     world: &mut World,
     observer: ObjectId,
     pilot: ObjectId,
-    coordinate: BattleHexCoordinate,
+    coordinate: HexCoordinate,
     now: i64,
 ) -> Result<BattleMineScan> {
     scan_with_range(world, observer, pilot, coordinate, now, false)
@@ -42,7 +42,7 @@ fn scan_with_range(
     world: &mut World,
     observer: ObjectId,
     pilot: ObjectId,
-    coordinate: BattleHexCoordinate,
+    coordinate: HexCoordinate,
     now: i64,
     observer_range: bool,
 ) -> Result<BattleMineScan> {
@@ -102,7 +102,7 @@ pub fn scan_hex_action(
     config: &Config,
     observer: ObjectId,
     pilot: ObjectId,
-    coordinate: BattleHexCoordinate,
+    coordinate: HexCoordinate,
 ) -> Result<BattleHexScan> {
     action_with_range(scripts, config, observer, pilot, coordinate, false)
 }
@@ -113,7 +113,7 @@ pub(super) fn action_with_range(
     config: &Config,
     observer: ObjectId,
     pilot: ObjectId,
-    coordinate: BattleHexCoordinate,
+    coordinate: HexCoordinate,
     observer_range: bool,
 ) -> Result<BattleHexScan> {
     let source = super::combat_operator::for_owner(&scripts.world(), observer, pilot)?.source;

@@ -23,4 +23,4 @@ btech.map.hex(dbref, x, y)
 
 ## Returns
 
-- `BattleHex`
+- `Hex`

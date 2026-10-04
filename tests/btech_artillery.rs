@@ -18,9 +18,9 @@ fn arrive(
 /// Flight delay truncates fractional seconds, never falls below ten, and consumes no in-flight dice.
 #[test]
 fn artillery_flight_timing_and_saved_cursor_validation() {
-    let origin = BattleHexCoordinate { x: 0, y: 0 };
+    let origin = HexCoordinate { x: 0, y: 0 };
     for (distance, delay) in [(0, 10), (49, 10), (50, 10), (54, 10), (55, 11), (999, 199)] {
-        let target = BattleHexCoordinate { x: 0, y: distance };
+        let target = HexCoordinate { x: 0, y: distance };
         let mut flight = BattleArtilleryFlight::new(
             origin,
             target,
@@ -88,7 +88,7 @@ fn artillery_flight_timing_and_saved_cursor_validation() {
 /// Ordinary blasts cover the center and six neighbors; smoke draws one duration per cell and mines stay local.
 #[test]
 fn artillery_standard_smoke_and_mine_patterns() {
-    let center = BattleHexCoordinate { x: 5, y: 5 };
+    let center = HexCoordinate { x: 5, y: 5 };
     for mode in [
         BattleArtilleryMode::Standard,
         BattleArtilleryMode::Smoke,
@@ -148,8 +148,8 @@ fn artillery_standard_smoke_and_mine_patterns() {
 fn artillery_cluster_conservation_bounds_and_replay() {
     for dimensions in [(1, 1), (2, 3), (20, 20)] {
         for center in [
-            BattleHexCoordinate { x: 0, y: 0 },
-            BattleHexCoordinate {
+            HexCoordinate { x: 0, y: 0 },
+            HexCoordinate {
                 x: i32::from(dimensions.0) - 1,
                 y: i32::from(dimensions.1) - 1,
             },
@@ -204,7 +204,7 @@ fn artillery_cluster_conservation_bounds_and_replay() {
 /// Misses scatter at arrival with current wind, clamp to map bounds and retain the original aim point.
 #[test]
 fn artillery_scatter_and_atomic_invalid_arrival() {
-    let center = BattleHexCoordinate { x: 10, y: 10 };
+    let center = HexCoordinate { x: 10, y: 10 };
     for seed in 0..32 {
         let mut flight = BattleArtilleryFlight::new(
             center,
@@ -242,7 +242,7 @@ fn artillery_scatter_and_atomic_invalid_arrival() {
         );
         assert_eq!(dice, windy_dice);
     }
-    let center = BattleHexCoordinate { x: 0, y: 0 };
+    let center = HexCoordinate { x: 0, y: 0 };
     let mut flight = BattleArtilleryFlight::new(
         center,
         center,

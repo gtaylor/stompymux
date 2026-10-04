@@ -85,7 +85,7 @@ fn direct_rotor_section_loss_uses_shared_damage_and_ground_models_reject_rotor_s
     corrupt["position"] = serde_json::json!({"map": 0, "x": 0, "y": 0});
     corrupt["map_slot"] = 0.into();
     corrupt["power"] = serde_json::to_value(BattlePower::Running).unwrap();
-    let mut motion = BattleMotion::stationary(BattleHexCoordinate { x: 0, y: 0 }.center());
+    let mut motion = BattleMotion::stationary(HexCoordinate { x: 0, y: 0 }.center());
     motion.speed = 1.0;
     motion.desired_speed = 1.0;
     corrupt["motion"] = serde_json::to_value(motion).unwrap();

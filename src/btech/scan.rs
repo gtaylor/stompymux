@@ -286,7 +286,7 @@ pub fn scan_hex_unit_action(
     scripts: &crate::Scripts,
     observer: ObjectId,
     pilot: ObjectId,
-    coordinate: super::BattleHexCoordinate,
+    coordinate: super::HexCoordinate,
     selection: &str,
 ) -> Result<String> {
     options(selection)?;
@@ -309,7 +309,7 @@ pub(super) fn occupant(
     world: &World,
     observer: ObjectId,
     map: ObjectId,
-    coordinate: super::BattleHexCoordinate,
+    coordinate: super::HexCoordinate,
 ) -> Result<Option<ObjectId>> {
     for candidate in super::map_slots::hex_occupants(world, map, coordinate)? {
         if candidate == observer {
@@ -351,7 +351,7 @@ pub(super) fn check_coordinate(
     world: &World,
     observer: ObjectId,
     pilot: ObjectId,
-    coordinate: super::BattleHexCoordinate,
+    coordinate: super::HexCoordinate,
     observer_range: bool,
 ) -> Result<ObjectId> {
     let (unit, maximum) = scanner(world, observer, pilot)?;
@@ -387,7 +387,7 @@ pub(crate) fn command(
                 mode.eq_ignore_ascii_case("b") || mode.eq_ignore_ascii_case("h"),
                 "Invalid 3rd argument!"
             );
-            let coordinate = super::BattleHexCoordinate {
+            let coordinate = super::HexCoordinate {
                 x: x.parse().context("Invalid coordinates!")?,
                 y: y.parse().context("Invalid coordinates!")?,
             };
@@ -402,7 +402,7 @@ pub(crate) fn command(
         if let [x, y] = args.as_slice()
             && let Ok(x) = x.parse::<i32>()
         {
-            let coordinate = super::BattleHexCoordinate {
+            let coordinate = super::HexCoordinate {
                 x,
                 y: y.parse().context("Invalid coordinates!")?,
             };

@@ -13,7 +13,7 @@ async fn export_terrain_effects_and_metadata_match_asset_contract() {
         &mut world,
         map,
         "export",
-        BattleMapAsset::from_cells("5 1\n.0#1`2&3.4\n").unwrap(),
+        MapAsset::from_cells("5 1\n.0#1`2&3.4\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -25,14 +25,14 @@ async fn export_terrain_effects_and_metadata_match_asset_contract() {
         state["maps"][map.0.to_string()]["temperature"] = (-40).into();
         candidate.btech = serde_json::from_value(state).unwrap();
         for (x, kind, remaining) in [
-            (0, BattleDecorationKind::Fire, 30),
-            (1, BattleDecorationKind::Smoke, 30),
-            (2, BattleDecorationKind::Smoke, 0),
+            (0, DecorationKind::Fire, 30),
+            (1, DecorationKind::Smoke, 30),
+            (2, DecorationKind::Smoke, 0),
         ] {
             set_map_decoration(
                 &mut candidate,
                 map,
-                BattleHexCoordinate { x, y: 0 },
+                HexCoordinate { x, y: 0 },
                 Some(BattleDecoration::new(kind, remaining, None)),
             )
             .unwrap();
@@ -40,16 +40,15 @@ async fn export_terrain_effects_and_metadata_match_asset_contract() {
         let before = candidate.btech.clone();
         let export = candidate.btech.maps()[&map].export_asset().unwrap();
         assert_eq!(candidate.btech, before);
-        let decoded = BattleMapAsset::parse(&export).unwrap();
+        let decoded = MapAsset::parse(&export).unwrap();
         assert_eq!(
             decoded.hexes.as_slice(),
             [
-                BattleHex::new(Terrain::Grassland, 0),
-                BattleHex::new(Terrain::Road, 1),
-                BattleHex::new(Terrain::LightForest, 2)
-                    .with_overlay(Some(BattleDecorationKind::Smoke)),
-                BattleHex::new(Terrain::Fire, 3),
-                BattleHex::new(Terrain::Grassland, 4),
+                Hex::new(Terrain::Grassland, 0),
+                Hex::new(Terrain::Road, 1),
+                Hex::new(Terrain::LightForest, 2).with_overlay(Some(DecorationKind::Smoke)),
+                Hex::new(Terrain::Fire, 3),
+                Hex::new(Terrain::Grassland, 4),
             ]
         );
         assert_eq!(decoded.flags, flags & !1);
@@ -81,20 +80,20 @@ async fn export_base_smoke_and_all_canonical_tiles() {
         &mut world,
         map,
         "export",
-        BattleMapAsset::from_cells(cells).unwrap(),
+        MapAsset::from_cells(cells).unwrap(),
     )
     .unwrap();
     assert_eq!(
         world.btech.maps()[&map].base_hex(10, 0).unwrap(),
-        BattleHex::new(Terrain::Grassland, 0)
+        Hex::new(Terrain::Grassland, 0)
     );
     for (x, remaining) in [(10, 30), (11, 0)] {
         set_map_decoration(
             &mut world,
             map,
-            BattleHexCoordinate { x, y: 0 },
+            HexCoordinate { x, y: 0 },
             Some(BattleDecoration::new(
-                BattleDecorationKind::Smoke,
+                DecorationKind::Smoke,
                 remaining,
                 None,
             )),
@@ -102,8 +101,8 @@ async fn export_base_smoke_and_all_canonical_tiles() {
         .unwrap();
     }
     let export = world.btech.maps()[&map].export_asset().unwrap();
-    let mut expected = BattleMapAsset::from_cells(cells).unwrap();
-    std::sync::Arc::make_mut(&mut expected.hexes)[10] = BattleHex::new(Terrain::Grassland, 0);
-    std::sync::Arc::make_mut(&mut expected.hexes)[11] = BattleHex::new(Terrain::Smoke, 1);
-    assert_eq!(BattleMapAsset::parse(&export).unwrap(), expected);
+    let mut expected = MapAsset::from_cells(cells).unwrap();
+    std::sync::Arc::make_mut(&mut expected.hexes)[10] = Hex::new(Terrain::Grassland, 0);
+    std::sync::Arc::make_mut(&mut expected.hexes)[11] = Hex::new(Terrain::Smoke, 1);
+    assert_eq!(MapAsset::parse(&export).unwrap(), expected);
 }

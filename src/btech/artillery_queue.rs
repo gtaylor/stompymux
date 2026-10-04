@@ -13,7 +13,7 @@ pub struct BattleArtilleryShot {
     pub flight: BattleArtilleryFlight,
 }
 
-impl StoredBattleMap {
+impl StoredMap {
     /// Stable launch order; shot identifiers remain fixed until their arrival.
     pub fn artillery_shots(&self) -> &BTreeMap<u32, BattleArtilleryShot> {
         &self.artillery_shots
@@ -80,7 +80,7 @@ pub fn enqueue_artillery(
     ensure!(
         position.map == map
             && flight.origin()
-                == (BattleHexCoordinate {
+                == (HexCoordinate {
                     x: i32::from(position.x),
                     y: i32::from(position.y)
                 }),

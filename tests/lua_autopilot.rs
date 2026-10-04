@@ -1,7 +1,7 @@
 //! In-game Lua management of a unit-attached controller.
 
 use crate::support;
-use stompymux_rs::{BattleMapAsset, Kind, ObjectId, Scripts, create_battle_map, place_battle_unit};
+use stompymux_rs::{Kind, MapAsset, ObjectId, Scripts, create_battle_map, place_battle_unit};
 
 #[tokio::test(flavor = "current_thread")]
 async fn lua_controls_a_typed_autopilot_queue() {
@@ -13,7 +13,7 @@ async fn lua_controls_a_typed_autopilot_queue() {
         &mut world,
         map,
         "autopilot.lua",
-        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+        MapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     let mut state = serde_json::to_value(&world.btech).unwrap();

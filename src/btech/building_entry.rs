@@ -1,5 +1,5 @@
 //! Shared delayed building admission; the host evaluates locks and commits movement callbacks.
-use super::{BattleHexCoordinate, BattlePosition, BattlePosture};
+use super::{BattlePosition, BattlePosture, HexCoordinate};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -117,7 +117,7 @@ pub(super) fn destination_configured(
     super::building_entry_destination(
         world,
         position.map,
-        BattleHexCoordinate {
+        HexCoordinate {
             x: i32::from(position.x),
             y: i32::from(position.y),
         },

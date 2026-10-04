@@ -10,7 +10,7 @@ async fn vehicles_share_map_slots_and_survive_placement_replay_and_map_purge() {
         &mut world,
         map,
         "test",
-        BattleMapAsset::from_cells("3 2\n.0.0.0\n.0.0.0\n").unwrap(),
+        MapAsset::from_cells("3 2\n.0.0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
     let mech = world.create(&config, "Jenner".into(), Kind::Thing);
@@ -61,7 +61,7 @@ async fn vehicles_share_map_slots_and_survive_placement_replay_and_map_purge() {
             &mut loaded,
             map,
             "test",
-            BattleMapAsset::from_cells("3 2\n.0.0.0\n.0.0.0\n").unwrap()
+            MapAsset::from_cells("3 2\n.0.0.0\n.0.0.0\n").unwrap()
         )
         .is_err()
     );

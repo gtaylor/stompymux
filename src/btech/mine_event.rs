@@ -92,7 +92,7 @@ pub(super) fn resolve(
                     });
                     if activation.mine.kind == BattleMineKind::Vibra
                         && activation.mine.coordinate
-                            != (BattleHexCoordinate {
+                            != (HexCoordinate {
                                 x: i32::from(position.x),
                                 y: i32::from(position.y),
                             })
@@ -128,7 +128,7 @@ pub(super) fn resolve(
 pub(super) fn explosion_notices(
     world: &World,
     map: ObjectId,
-    coordinate: BattleHexCoordinate,
+    coordinate: HexCoordinate,
 ) -> Result<Vec<BattleNotice>> {
     super::broadcast::hex_notices(world, map, coordinate, true, |location| {
         format!("A mine explodes in {location}!")

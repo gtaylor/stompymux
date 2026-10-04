@@ -1,7 +1,7 @@
 //! Transactional woodland impact resolution shared by terrain shots and stray weapon impacts.
 use super::{
-    BattleAmmunitionMode, BattleDecoration, BattleDecorationKind, BattleHexCoordinate,
-    BattleNotice, BattleWeapon, BattleWoodlandEffect, BattleWoodlandIntent,
+    BattleAmmunitionMode, BattleDecoration, BattleNotice, BattleWeapon, BattleWoodlandEffect,
+    BattleWoodlandIntent, DecorationKind, HexCoordinate,
 };
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
@@ -11,7 +11,7 @@ use serde::Serialize;
 #[derive(Debug, Clone, Copy)]
 pub struct BattleWoodlandAttack {
     pub shooter: ObjectId,
-    pub coordinate: BattleHexCoordinate,
+    pub coordinate: HexCoordinate,
     pub weapon: BattleWeapon,
     pub ammunition: BattleAmmunitionMode,
     pub damage: u16,
@@ -23,7 +23,7 @@ pub struct BattleWoodlandAttack {
 #[must_use = "Commit the enclosing attack and publish terrain notices together"]
 pub struct BattleWoodlandImpact {
     pub map: ObjectId,
-    pub coordinate: BattleHexCoordinate,
+    pub coordinate: HexCoordinate,
     pub effect: BattleWoodlandEffect,
     pub notices: Vec<BattleNotice>,
 }
@@ -85,7 +85,7 @@ pub fn resolve_woodland_attack(
                 map,
                 coordinate,
                 Some(BattleDecoration::new(
-                    BattleDecorationKind::Fire,
+                    DecorationKind::Fire,
                     i64::from(seconds),
                     None,
                 )),

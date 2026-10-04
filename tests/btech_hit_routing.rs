@@ -31,7 +31,7 @@ async fn fixture(
         &mut world,
         map,
         "field",
-        BattleMapAsset::from_cells("1 4\n.0\n.0\n.0\n.0\n").unwrap(),
+        MapAsset::from_cells("1 4\n.0\n.0\n.0\n.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);

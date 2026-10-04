@@ -88,7 +88,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
     let set_hex = lua.create_function(
         |lua, (actor, id, x, y, hex): (i64, i64, i32, i32, mlua::Value)| {
             crate::lua::transactions::require(lua)?;
-            let hex: crate::BattleHex = lua.from_value(hex)?;
+            let hex: crate::Hex = lua.from_value(hex)?;
             let scripts = crate::Scripts::services(lua)?;
             crate::lua::transactions::run(lua, &scripts.world, || {
                 let report = crate::set_battle_map_hex_action(
@@ -96,7 +96,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                     &crate::lua::configuration(lua),
                     ObjectId(actor),
                     ObjectId(id),
-                    crate::BattleHexCoordinate { x, y },
+                    crate::HexCoordinate { x, y },
                     hex,
                 )
                 .map_err(mlua::Error::external)?;
@@ -307,7 +307,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                     ObjectId(actor),
                     ObjectId(unit),
                     crate::BattleScenarioPosition {
-                        coordinate: crate::BattleHexCoordinate { x, y },
+                        coordinate: crate::HexCoordinate { x, y },
                         elevation,
                     },
                 )
@@ -331,7 +331,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                     ObjectId(actor),
                     ObjectId(unit),
                     crate::BattleScenarioPosition {
-                        coordinate: crate::BattleHexCoordinate { x, y },
+                        coordinate: crate::HexCoordinate { x, y },
                         elevation,
                     },
                 )

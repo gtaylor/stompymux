@@ -68,13 +68,13 @@ async fn external_markers_survive_unregistration_and_reactivation() {
             &mut world,
             id,
             "map",
-            BattleMapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
+            MapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     }
     let entrance = BattleBuildingEntrance {
-        coordinate: BattleHexCoordinate { x: 0, y: 0 },
+        coordinate: HexCoordinate { x: 0, y: 0 },
         interior: removed,
         data_char: 0,
         data_short: 0,
@@ -87,7 +87,7 @@ async fn external_markers_survive_unregistration_and_reactivation() {
         exterior,
         Some(BattleMapLink {
             parent: removed,
-            coordinate: BattleHexCoordinate { x: 1, y: 1 },
+            coordinate: HexCoordinate { x: 1, y: 1 },
             entrances: Default::default(),
         }),
     )
@@ -232,11 +232,11 @@ async fn retired_building_target_does_not_panic_or_reappear() {
         &mut world,
         interior,
         "interior",
-        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+        MapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, interior, support::FIXTURE_DICE_SEED);
-    let coordinate = BattleHexCoordinate { x: 0, y: 9 };
+    let coordinate = HexCoordinate { x: 0, y: 9 };
     set_building_entrance(
         &mut world,
         exterior,

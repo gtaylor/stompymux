@@ -1,5 +1,5 @@
 //! Operator ice growth and melting share map randomness and ordinary surface-break consequences.
-use super::{BattleFallRules, BattleHexCoordinate, BattleSurfaceBreak, StoredBattleMap};
+use super::{BattleFallRules, BattleSurfaceBreak, HexCoordinate, StoredMap};
 use crate::{Config, ObjectId, Scripts};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
@@ -15,29 +15,26 @@ pub enum BattleIceChange {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct BattleMapIceReport {
     pub map: ObjectId,
-    pub changed: Vec<BattleHexCoordinate>,
+    pub changed: Vec<HexCoordinate>,
     pub fractures: Vec<BattleSurfaceBreak>,
 }
 
 /// Apply the neighborhood probability after the percentage draw has succeeded.
 fn eligible(
-    map: &StoredBattleMap,
-    coordinate: BattleHexCoordinate,
+    map: &StoredMap,
+    coordinate: HexCoordinate,
     change: BattleIceChange,
     dice: &mut super::BattleDice,
 ) -> Result<bool> {
-    let count = coordinate
-        .neighbors()?
-        .into_iter()
-        .filter_map(|neighbor| {
-            map.base_hex(i64::from(neighbor.x), i64::from(neighbor.y))
-                .ok()
-        })
-        .filter(|tile| match change {
+    let mut count = 0_u8;
+    for neighbor in map.neighbors(coordinate)?.into_iter().flatten() {
+        let tile = map.base_hex(i64::from(neighbor.x), i64::from(neighbor.y))?;
+        let counts = match change {
             BattleIceChange::Grow => tile.is_open_water() || tile.has_bridge(),
             BattleIceChange::Melt => tile.is_ice(),
-        })
-        .count() as u8;
+        };
+        count += u8::from(counts);
+    }
     Ok(match change {
         BattleIceChange::Grow => count <= 4 && (count < 2 || dice.d6() > count),
         BattleIceChange::Melt => count <= 4 || dice.die(3)? == 1,
@@ -82,7 +79,7 @@ pub fn change_map_ice_action(
         };
         for x in 0..original.width {
             for y in 0..original.height {
-                let coordinate = BattleHexCoordinate {
+                let coordinate = HexCoordinate {
                     x: x as i32,
                     y: y as i32,
                 };

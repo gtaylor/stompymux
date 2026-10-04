@@ -111,14 +111,14 @@ jobs:
           shared-key: test
 
       - name: Build tests
-        run: cargo nextest run --workspace --locked --no-run
+        run: cargo nextest run --workspace --exclude stompymux-mappy --locked --no-run
 
       - name: Run tests
-        run: cargo nextest run --workspace --locked --partition hash:${{ matrix.partition }}/4
+        run: cargo nextest run --workspace --exclude stompymux-mappy --locked --partition hash:${{ matrix.partition }}/4
 
       - name: Run doctests
         if: matrix.partition == 1
-        run: cargo test --workspace --doc --locked --quiet
+        run: cargo test --workspace --exclude stompymux-mappy --doc --locked --quiet
 
       - name: Check maps
         if: matrix.partition == 1

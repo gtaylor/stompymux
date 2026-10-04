@@ -133,7 +133,7 @@ async fn setxy_native_lua_geometry_guards_and_restart() {
                 visitor,
                 unit,
                 BattleScenarioPosition {
-                    coordinate: BattleHexCoordinate { x: 0, y: 9 },
+                    coordinate: HexCoordinate { x: 0, y: 9 },
                     elevation: None,
                 }
             )
@@ -157,7 +157,7 @@ async fn setxy_preserves_jump_progress_and_forced_descent_clock() {
         ObjectId(1),
         unit,
         BattleScenarioPosition {
-            coordinate: BattleHexCoordinate { x: 0, y: 9 },
+            coordinate: HexCoordinate { x: 0, y: 9 },
             elevation: Some(20),
         },
     )
@@ -167,10 +167,7 @@ async fn setxy_preserves_jump_progress_and_forced_descent_clock() {
         .unwrap();
     assert_eq!(flight.path(), before.path());
     assert_eq!(flight.travelled(), before.travelled());
-    assert_eq!(
-        flight.sample().point,
-        BattleHexCoordinate { x: 0, y: 9 }.center()
-    );
+    assert_eq!(flight.sample().point, HexCoordinate { x: 0, y: 9 }.center());
     assert_eq!(flight.sample().elevation, 20.0);
     let saved = scripts.world().clone();
     persistence::save(&config.database(), &saved).await.unwrap();
@@ -197,7 +194,7 @@ async fn setxy_preserves_jump_progress_and_forced_descent_clock() {
         ObjectId(1),
         unit,
         BattleScenarioPosition {
-            coordinate: BattleHexCoordinate { x: 0, y: 7 },
+            coordinate: HexCoordinate { x: 0, y: 7 },
             elevation: Some(25),
         },
     )
@@ -231,7 +228,7 @@ async fn setxy_vtol_flight_and_atomic_notification_failure() {
         ObjectId(1),
         unit,
         BattleScenarioPosition {
-            coordinate: BattleHexCoordinate { x: 0, y: 9 },
+            coordinate: HexCoordinate { x: 0, y: 9 },
             elevation: Some(30),
         },
     )
@@ -261,7 +258,7 @@ async fn setxy_vtol_flight_and_atomic_notification_failure() {
         ObjectId(1),
         unit,
         BattleScenarioPosition {
-            coordinate: BattleHexCoordinate { x: 0, y: 8 },
+            coordinate: HexCoordinate { x: 0, y: 8 },
             elevation: Some(40),
         },
     )
@@ -282,7 +279,7 @@ async fn setxy_vtol_flight_and_atomic_notification_failure() {
         ObjectId(1),
         unit,
         BattleScenarioPosition {
-            coordinate: BattleHexCoordinate { x: 0, y: 8 },
+            coordinate: HexCoordinate { x: 0, y: 8 },
             elevation: None,
         },
     )
@@ -326,7 +323,7 @@ async fn setxy_vtol_flight_and_atomic_notification_failure() {
         ObjectId(1),
         unit,
         BattleScenarioPosition {
-            coordinate: BattleHexCoordinate { x: 0, y: 9 },
+            coordinate: HexCoordinate { x: 0, y: 9 },
             elevation: Some(30),
         },
     )
@@ -348,7 +345,7 @@ async fn setxy_moves_complete_tow_pairs() {
                 &mut world,
                 map,
                 "yard",
-                BattleMapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
+                MapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
             )
             .unwrap();
             let a = world.create(&config, "Carrier".into(), Kind::Thing);
@@ -370,7 +367,7 @@ async fn setxy_moves_complete_tow_pairs() {
                     ObjectId(1),
                     id,
                     BattleScenarioPosition {
-                        coordinate: BattleHexCoordinate { x: 1, y: 1 },
+                        coordinate: HexCoordinate { x: 1, y: 1 },
                         elevation: Some(20),
                     },
                 )

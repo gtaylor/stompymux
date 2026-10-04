@@ -1,6 +1,6 @@
 //! Selective persistence of map cargo locations in the existing game-directory table.
 use super::write::{Cell, Fields, row};
-use crate::{BattleCargoTransferPoint, ObjectId, StoredBattleMap, World};
+use crate::{BattleCargoTransferPoint, ObjectId, StoredMap, World};
 use anyhow::{Context, Result, ensure};
 use sqlx::{Row, SqliteConnection};
 use std::collections::BTreeMap;
@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 /// Restore only valid, map-owned points; loading never changes database rows.
 pub(super) async fn load(
     c: &mut SqliteConnection,
-    maps: &mut BTreeMap<ObjectId, StoredBattleMap>,
+    maps: &mut BTreeMap<ObjectId, StoredMap>,
 ) -> Result<()> {
     use futures_util::TryStreamExt;
     let mut rows = sqlx::query(
@@ -40,7 +40,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
             .btech
             .maps()
             .get(&id)
-            .and_then(StoredBattleMap::cargo_transfer_point);
+            .and_then(StoredMap::cargo_transfer_point);
         let new = map.cargo_transfer_point();
         if old == new {
             continue;

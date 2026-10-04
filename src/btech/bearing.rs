@@ -6,8 +6,8 @@ use serde::Serialize;
 /// Detached compass measurement with the same text used by the native command.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct BattleBearingReport {
-    pub origin: super::BattlePoint,
-    pub destination: super::BattlePoint,
+    pub origin: super::Point,
+    pub destination: super::Point,
     pub bearing: u16,
     pub text: String,
 }

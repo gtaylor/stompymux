@@ -89,12 +89,12 @@ async fn prepending_preserves_auxiliary_columns_and_order_survives_removal() {
         &mut world,
         map,
         "mine",
-        BattleMapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
+        MapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let mine = BattleMinefield {
-        coordinate: BattleHexCoordinate { x: 1, y: 1 },
+        coordinate: HexCoordinate { x: 1, y: 1 },
         kind: BattleMineKind::Standard,
         strength: 10,
         extra: 0,
@@ -175,7 +175,7 @@ async fn rejected_or_aborted_placement_does_not_change_order_or_publish_output()
         &mut world,
         map,
         "mine",
-        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+        MapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -215,7 +215,7 @@ async fn rejected_or_aborted_placement_does_not_change_order_or_publish_output()
     assert_eq!(scripts.world().btech, before);
     assert!(scripts.drain_outbox().is_empty());
     let placement = BattleMinePlacement {
-        coordinate: BattleHexCoordinate { x: 0, y: 0 },
+        coordinate: HexCoordinate { x: 0, y: 0 },
         kind: BattleMineKind::Standard,
         strength: 10,
         extra: 0,
@@ -246,17 +246,17 @@ async fn artillery_mines_precede_existing_records_without_replacing_them() {
         &mut world,
         map,
         "mine",
-        BattleMapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
+        MapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
-    let coordinate = BattleHexCoordinate { x: 0, y: 0 };
+    let coordinate = HexCoordinate { x: 0, y: 0 };
     set_minefield(
         &mut world,
         map,
         9,
         Some(BattleMinefield {
-            coordinate: BattleHexCoordinate { x: 1, y: 1 },
+            coordinate: HexCoordinate { x: 1, y: 1 },
             kind: BattleMineKind::Command,
             strength: 20,
             extra: 4,
@@ -268,7 +268,7 @@ async fn artillery_mines_precede_existing_records_without_replacing_them() {
         &mut world,
         map,
         coordinate,
-        Some(BattleDecoration::new(BattleDecorationKind::Fire, 0, None)),
+        Some(BattleDecoration::new(DecorationKind::Fire, 0, None)),
     )
     .unwrap();
     let rules = BattleFallRules {

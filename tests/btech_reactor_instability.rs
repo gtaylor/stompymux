@@ -15,7 +15,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
         &mut world,
         map,
         "instability",
-        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+        MapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -449,7 +449,7 @@ async fn instability_flooded_engine_compartment() {
         &mut world,
         water,
         "water",
-        BattleMapAsset::from_cells("1 1\n~3\n").unwrap(),
+        MapAsset::from_cells("1 1\n~3\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, water, support::FIXTURE_DICE_SEED);

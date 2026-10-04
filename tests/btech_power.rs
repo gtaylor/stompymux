@@ -2,9 +2,9 @@
 use crate::support;
 use sqlx::{Connection, SqliteConnection};
 use stompymux_rs::{
-    BattleMapAsset, BattlePower, BattleTemplate, Config, Kind, ObjectId, Scripts, ShutdownRequest,
-    World, advance_battle_units, assign_battle_pilot, create_battle_map, create_battle_unit,
-    persistence, place_battle_unit, remove_battle_unit, start_battle_unit, stop_battle_unit,
+    BattlePower, BattleTemplate, Config, Kind, MapAsset, ObjectId, Scripts, ShutdownRequest, World,
+    advance_battle_units, assign_battle_pilot, create_battle_map, create_battle_unit, persistence,
+    place_battle_unit, remove_battle_unit, start_battle_unit, stop_battle_unit,
 };
 
 /// A piloted, placed Jenner in an isolated database, ready for a power transition.
@@ -17,7 +17,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
         &mut world,
         map,
         "test.map",
-        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+        MapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -261,15 +261,15 @@ async fn startup_heat_limit_is_strict_durable_and_cannot_be_overridden() {
 #[tokio::test]
 async fn idle_map_smoke_ticks_retry_failed_saves_and_expire() {
     use stompymux_rs::{
-        BattleDecoration, BattleDecorationKind, BattleHexCoordinate, Terrain, set_map_decoration,
+        BattleDecoration, DecorationKind, HexCoordinate, Terrain, set_map_decoration,
     };
     tokio::task::LocalSet::new().run_until(async {
         let (_dir, config, mut world) = support::isolated_world().await;
         let map = world.create(&config, "Smoke field".into(), Kind::Room);
-        create_battle_map(&mut world, map, "smoke.map", BattleMapAsset::from_cells("1 1\n\"2\n").unwrap()).unwrap();
+        create_battle_map(&mut world, map, "smoke.map", MapAsset::from_cells("1 1\n\"2\n").unwrap()).unwrap();
         support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
-        let coordinate = BattleHexCoordinate { x: 0, y: 0 };
-        let smoke = BattleDecoration::new(BattleDecorationKind::Smoke, 2, None);
+        let coordinate = HexCoordinate { x: 0, y: 0 };
+        let smoke = BattleDecoration::new(DecorationKind::Smoke, 2, None);
         set_map_decoration(&mut world, map, coordinate, Some(smoke)).unwrap();
         persistence::save(&config.database(), &world).await.unwrap();
         let mut sql = SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database()).foreign_keys(false)).await.unwrap();
@@ -291,15 +291,15 @@ async fn idle_map_smoke_ticks_retry_failed_saves_and_expire() {
 #[tokio::test]
 async fn idle_map_fire_burnout_retries_random_state_save_failure() {
     use stompymux_rs::{
-        BattleDecoration, BattleDecorationKind, BattleHexCoordinate, Terrain, set_map_decoration,
+        BattleDecoration, DecorationKind, HexCoordinate, Terrain, set_map_decoration,
     };
     tokio::task::LocalSet::new().run_until(async {
         let (_dir, config, mut world) = support::isolated_world().await;
         let map = world.create(&config, "Burnout field".into(), Kind::Room);
-        create_battle_map(&mut world, map, "fire.map", BattleMapAsset::from_cells("1 1\n`2\n").unwrap()).unwrap();
+        create_battle_map(&mut world, map, "fire.map", MapAsset::from_cells("1 1\n`2\n").unwrap()).unwrap();
         support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
-        let coordinate = BattleHexCoordinate { x: 0, y: 0 };
-        set_map_decoration(&mut world, map, coordinate, Some(BattleDecoration::new(BattleDecorationKind::Fire, 60, None))).unwrap();
+        let coordinate = HexCoordinate { x: 0, y: 0 };
+        set_map_decoration(&mut world, map, coordinate, Some(BattleDecoration::new(DecorationKind::Fire, 60, None))).unwrap();
         // Resume the final burnout phase of an already spreading fire.
         let mut encoded = serde_json::to_value(&world.btech).unwrap();
         encoded["maps"][map.0.to_string()]["decorations"]["0"]["remaining"] = 1.into();
@@ -326,7 +326,7 @@ async fn idle_building_repair_retries_failed_world_save() {
     tokio::task::LocalSet::new().run_until(async {
         let (_dir, config, mut world) = support::isolated_world().await;
         let map = world.create(&config, "Repairing hangar".into(), Kind::Room);
-        create_battle_map(&mut world, map, "inside.map", BattleMapAsset::from_cells("1 1\n.0\n").unwrap()).unwrap();
+        create_battle_map(&mut world, map, "inside.map", MapAsset::from_cells("1 1\n.0\n").unwrap()).unwrap();
         support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
         set_building_state(&mut world, map, BattleBuildingState { integrity: 9, maximum_integrity: 10, flags: 0, regeneration: 1 }).unwrap();
         // Resume one committed second before the final repair of an otherwise idle map.

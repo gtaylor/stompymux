@@ -2,10 +2,9 @@
 use crate::support;
 use sqlx::{Connection, SqliteConnection};
 use stompymux_rs::{
-    BattleMapAsset, BattlePower, BattleVehicleTemplate, Config, Kind, ObjectId, Scripts,
-    ShutdownRequest, World, advance_battle_units, assign_battle_pilot, create_battle_map,
-    create_battle_vehicle, persistence, place_battle_unit, remove_battle_unit, start_battle_unit,
-    stop_battle_unit,
+    BattlePower, BattleVehicleTemplate, Config, Kind, MapAsset, ObjectId, Scripts, ShutdownRequest,
+    World, advance_battle_units, assign_battle_pilot, create_battle_map, create_battle_vehicle,
+    persistence, place_battle_unit, remove_battle_unit, start_battle_unit, stop_battle_unit,
 };
 
 /// A piloted, placed tracked vehicle in an isolated database, ready for a power transition.
@@ -18,7 +17,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
         &mut world,
         map,
         "test.map",
-        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+        MapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);

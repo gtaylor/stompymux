@@ -10,7 +10,7 @@ use super::{
     AutopilotOrder, AutopilotState, AutopilotSubmissionMode,
 };
 use crate::{
-    BattleMapAsset, BattlePosition, BattleUnitTemplate, Config, HeartbeatHarness, Kind, World,
+    BattlePosition, BattleUnitTemplate, Config, HeartbeatHarness, Kind, MapAsset, World,
     persistence,
 };
 use anyhow::{Context, Result, bail, ensure};
@@ -223,7 +223,7 @@ async fn run_case(
             options.controllers,
             seed,
         )?;
-        let base_terrain = BattleMapAsset::from_cells(&map_source(scenario, seed))?.hexes;
+        let base_terrain = MapAsset::from_cells(&map_source(scenario, seed))?.hexes;
         // The harness runs the normal persistence commit.  Initializing its
         // isolated database makes rollback and save validation identical to a
         // server tick while keeping the benchmark self-contained.
@@ -434,7 +434,7 @@ fn fixture_world(
         &mut world,
         map_id,
         "autopilot-benchmark",
-        BattleMapAsset::from_cells(&map_source(scenario, seed))?,
+        MapAsset::from_cells(&map_source(scenario, seed))?,
     )?;
     if let Some(map) = world.btech.maps.get_mut(&map_id) {
         map.fire_dice = Some(crate::BattleDice::seeded(seed_bytes(seed, 0)));
@@ -704,7 +704,7 @@ fn alter_benchmark_terrain(harness: &mut HeartbeatHarness, map_id: crate::Object
 fn alter_benchmark_terrain_with(
     harness: &mut HeartbeatHarness,
     map_id: crate::ObjectId,
-    terrain: std::sync::Arc<Vec<crate::BattleHex>>,
+    terrain: std::sync::Arc<Vec<crate::Hex>>,
 ) {
     let mut world = harness.scripts().world.borrow_mut();
     if let Some(map) = world.btech.maps.get_mut(&map_id) {

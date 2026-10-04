@@ -57,13 +57,7 @@ y = 0
 async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {
     let (dir, config, mut world) = support::isolated_world().await;
     let map = world.create(&config, "POI field".into(), Kind::Room);
-    create_battle_map(
-        &mut world,
-        map,
-        "poi",
-        BattleMapAsset::parse(SOURCE).unwrap(),
-    )
-    .unwrap();
+    create_battle_map(&mut world, map, "poi", MapAsset::parse(SOURCE).unwrap()).unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let actor = world.create(&config, "POI operator".into(), Kind::Player);
     let operator = world.objects.get_mut(&actor).unwrap();
@@ -127,16 +121,16 @@ async fn reload_replaces_and_save_writes_points_of_interest() {
             ))
             .unwrap()
     );
-    let reloaded = BattleMapAsset::parse(RELOADED).unwrap().points_of_interest;
+    let reloaded = MapAsset::parse(RELOADED).unwrap().points_of_interest;
     let saved = scripts.world().clone();
     assert_eq!(
         saved.btech.maps()[&map].export_asset().unwrap(),
-        BattleMapAsset::parse(RELOADED).unwrap().to_file().unwrap()
+        MapAsset::parse(RELOADED).unwrap().to_file().unwrap()
     );
     persistence::save(&config.database(), &saved).await.unwrap();
     let restored = persistence::load(&config.database()).await.unwrap();
     assert_eq!(restored.btech, saved.btech);
-    let exported = BattleMapAsset::parse(&restored.btech.maps()[&map].export_asset().unwrap())
+    let exported = MapAsset::parse(&restored.btech.maps()[&map].export_asset().unwrap())
         .unwrap()
         .points_of_interest;
     assert_eq!(exported, reloaded);

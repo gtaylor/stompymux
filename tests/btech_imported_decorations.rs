@@ -13,7 +13,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
         &mut world,
         map,
         "grid",
-        BattleMapAsset::from_cells("2 2\n.1.1\n.1&1\n").unwrap(),
+        MapAsset::from_cells("2 2\n.1.1\n.1&1\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -42,7 +42,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
 #[tokio::test]
 async fn imported_records_preserve_lookup_order_and_share_native_lua_removal() {
     let (_dir, config, mut world, map) = fixture().await;
-    let coordinate = BattleHexCoordinate { x: 1, y: 1 };
+    let coordinate = HexCoordinate { x: 1, y: 1 };
     assert_eq!(
         world.btech.maps()[&map].hex(1, 1).unwrap().terrain(),
         Terrain::Fire
@@ -68,8 +68,8 @@ async fn imported_records_preserve_lookup_order_and_share_native_lua_removal() {
     set_map_decoration(
         &mut world,
         map,
-        BattleHexCoordinate { x: 0, y: 0 },
-        Some(BattleDecoration::new(BattleDecorationKind::Fire, 0, None)),
+        HexCoordinate { x: 0, y: 0 },
+        Some(BattleDecoration::new(DecorationKind::Fire, 0, None)),
     )
     .unwrap();
     let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
@@ -143,8 +143,8 @@ async fn replacing_imported_effects_preserves_underlying_terrain_and_clears_thei
     set_map_decoration(
         &mut world,
         map,
-        BattleHexCoordinate { x: 1, y: 1 },
-        Some(BattleDecoration::new(BattleDecorationKind::Smoke, 2, None)),
+        HexCoordinate { x: 1, y: 1 },
+        Some(BattleDecoration::new(DecorationKind::Smoke, 2, None)),
     )
     .unwrap();
     // New smoke replaces the stored fire and smoke records but keeps the generic decoration.
@@ -185,8 +185,8 @@ async fn replacing_imported_effects_preserves_underlying_terrain_and_clears_thei
         &config,
         ObjectId(1),
         map,
-        BattleHexCoordinate { x: 1, y: 1 },
-        BattleHex::new(Terrain::HeavyForest, 1),
+        HexCoordinate { x: 1, y: 1 },
+        Hex::new(Terrain::HeavyForest, 1),
     )
     .unwrap();
     assert_eq!(
@@ -210,8 +210,8 @@ async fn replacing_imported_effects_preserves_underlying_terrain_and_clears_thei
             &config,
             ObjectId(1),
             map,
-            BattleHexCoordinate { x: 1, y: 1 },
-            BattleHex::new(Terrain::Fire, 1),
+            HexCoordinate { x: 1, y: 1 },
+            Hex::new(Terrain::Fire, 1),
         )
         .is_err()
     );
@@ -253,7 +253,7 @@ async fn fire_records_with_terrain_to_restore_are_rejected() {
         &mut world,
         map,
         "grid",
-        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+        MapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     persistence::save(&config.database(), &world).await.unwrap();

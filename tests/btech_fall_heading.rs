@@ -13,7 +13,7 @@ async fn falling_units_turn_without_translation_and_replay_shared_chassis_rates(
                 &mut world,
                 map,
                 "facing",
-                BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
+                MapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
             )
             .unwrap();
             support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);

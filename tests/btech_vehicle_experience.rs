@@ -449,7 +449,7 @@ fn tow_fixture(
         world,
         map,
         "yard",
-        BattleMapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
+        MapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(world, map, support::FIXTURE_DICE_SEED);

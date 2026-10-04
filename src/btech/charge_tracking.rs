@@ -168,8 +168,8 @@ pub(super) fn begin_update(
 pub(super) fn record_distance(
     world: &mut World,
     id: ObjectId,
-    from: BattlePoint,
-    to: BattlePoint,
+    from: Point,
+    to: Point,
     policy: BattleChargePolicy,
 ) {
     let unit = world.btech.constructed.get_mut(&id).unwrap();

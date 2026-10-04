@@ -1,5 +1,5 @@
 //! Live terrain edits preserve unit positions and share their mutation with seasonal ice growth.
-use super::{BattleHex, BattleHexCoordinate};
+use super::{Hex, HexCoordinate};
 use crate::{Config, ObjectId, Scripts, World};
 use anyhow::{Context, Result, bail, ensure};
 use serde::Serialize;
@@ -9,15 +9,15 @@ use std::sync::Arc;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct BattleMapHexChange {
     pub map: ObjectId,
-    pub coordinate: BattleHexCoordinate,
-    pub before: BattleHex,
-    pub after: BattleHex,
+    pub coordinate: HexCoordinate,
+    pub before: Hex,
+    pub after: Hex,
 }
 
-impl super::StoredBattleMap {
+impl super::StoredMap {
     /// The single write path for base terrain: checks bounds and elevation, then stores `hex`.
     /// Unit altitude, overlays and map objects stay with the caller; see [`replace_hex`].
-    pub(crate) fn write_hex(&mut self, x: i64, y: i64, hex: BattleHex) -> Result<()> {
+    pub(crate) fn write_hex(&mut self, x: i64, y: i64, hex: Hex) -> Result<()> {
         hex.validate()?;
         ensure!(
             hex.overlay().is_none(),
@@ -38,8 +38,8 @@ impl super::StoredBattleMap {
 pub(super) fn replace_hex(
     world: &mut World,
     map: ObjectId,
-    coordinate: BattleHexCoordinate,
-    after: BattleHex,
+    coordinate: HexCoordinate,
+    after: Hex,
 ) -> Result<BattleMapHexChange> {
     after.validate()?;
     ensure!(
@@ -105,8 +105,8 @@ pub fn set_map_hex_action(
     config: &Config,
     actor: ObjectId,
     map: ObjectId,
-    coordinate: BattleHexCoordinate,
-    hex: BattleHex,
+    coordinate: HexCoordinate,
+    hex: Hex,
 ) -> Result<BattleMapHexChange> {
     ensure!(
         hex.overlay().is_none(),
@@ -138,10 +138,10 @@ pub fn set_map_hex_action(
 }
 
 /// Parse `<x> <y> <layer>=<value> ...` into the coordinate and hex to write.
-fn parse_hex(arguments: &str) -> Result<(BattleHexCoordinate, BattleHex)> {
+fn parse_hex(arguments: &str) -> Result<(HexCoordinate, Hex)> {
     let args: Vec<_> = arguments.split_whitespace().collect();
     ensure!(args.len() >= 3, "Expected x y layer=value ...");
-    let coordinate = BattleHexCoordinate {
+    let coordinate = HexCoordinate {
         x: args[0].parse().context("Invalid x coordinate")?,
         y: args[1].parse().context("Invalid y coordinate")?,
     };
@@ -152,8 +152,8 @@ fn parse_hex(arguments: &str) -> Result<(BattleHexCoordinate, BattleHex)> {
 /// `level` (0-35), `ground` (a ground type), `woods` (`light` or `heavy`), `water` or `ice`
 /// (depth 1-9), and at most one of `bridge` (deck height), `building` or `wall` (height 1-35).
 /// Unnamed layers are absent, on clear ground at level 0. A bridge must span water or ice.
-fn layers_argument(words: &[&str]) -> Result<BattleHex> {
-    let mut hex = BattleHex::at_level(0);
+fn layers_argument(words: &[&str]) -> Result<Hex> {
+    let mut hex = Hex::at_level(0);
     let mut seen = std::collections::BTreeSet::new();
     for word in words {
         let (layer, value) = word
@@ -182,7 +182,7 @@ fn layers_argument(words: &[&str]) -> Result<BattleHex> {
             "Only one {slot} layer is allowed"
         );
         hex = match layer.as_str() {
-            "level" => hex.with_level(height(super::hex::MAX_HEIGHT, 0)?),
+            "level" => hex.with_level(height(super::MAX_HEIGHT, 0)?),
             "ground" => hex.with_ground(
                 serde_json::from_value(serde_json::Value::String(value.clone()))
                     .with_context(|| format!("Unknown ground {value:?}"))?,
@@ -192,17 +192,17 @@ fn layers_argument(words: &[&str]) -> Result<BattleHex> {
                     .with_context(|| format!("Unknown woods {value:?}"))?,
             )),
             "water" | "ice" => hex.with_water(Some(super::Water {
-                depth: height(super::hex::MAX_DEPTH, 1)?,
+                depth: height(super::MAX_DEPTH, 1)?,
                 frozen: layer == "ice",
             })),
             "bridge" => hex.with_structure(Some(super::Structure::Bridge {
-                deck: height(super::hex::MAX_HEIGHT, 1)?,
+                deck: height(super::MAX_HEIGHT, 1)?,
             })),
             "building" => hex.with_structure(Some(super::Structure::Building {
-                height: height(super::hex::MAX_HEIGHT, 1)?,
+                height: height(super::MAX_HEIGHT, 1)?,
             })),
             "wall" => hex.with_structure(Some(super::Structure::Wall {
-                height: height(super::hex::MAX_HEIGHT, 1)?,
+                height: height(super::MAX_HEIGHT, 1)?,
             })),
             "fire" | "smoke" => bail!("Fire and smoke are not terrain; use ADDFIRE or ADDSMOKE"),
             _ => bail!(
@@ -247,10 +247,10 @@ mod tests {
     fn terrain_edit_layers() {
         use super::super::{Ground, Structure, Water, Woods};
         let (coordinate, hex) = parse_hex("3 4 level=5 ground=snow woods=heavy").unwrap();
-        assert_eq!(coordinate, BattleHexCoordinate { x: 3, y: 4 });
+        assert_eq!(coordinate, HexCoordinate { x: 3, y: 4 });
         assert_eq!(
             hex,
-            BattleHex::at_level(5)
+            Hex::at_level(5)
                 .with_ground(Ground::Snow)
                 .with_woods(Some(Woods::Heavy))
         );
@@ -292,16 +292,16 @@ mod tests {
     fn write_hex_checks_bounds_and_elevation() {
         let mut map = super::super::state::map_from_asset(
             "write",
-            super::super::BattleMapAsset::from_cells("2 1\n.0.0\n").unwrap(),
+            super::super::MapAsset::from_cells("2 1\n.0.0\n").unwrap(),
         )
         .unwrap();
-        let rough = BattleHex::new(Terrain::Rough, 3);
+        let rough = Hex::new(Terrain::Rough, 3);
         map.write_hex(1, 0, rough).unwrap();
         assert_eq!(map.base_hex(1, 0).unwrap(), rough);
         let before = map.clone();
         for (x, y, elevation) in [(2, 0, 0), (0, 1, 0), (-1, 0, 0), (0, 0, 36)] {
             assert!(
-                map.write_hex(x, y, BattleHex::new(Terrain::Road, elevation))
+                map.write_hex(x, y, Hex::new(Terrain::Road, elevation))
                     .is_err()
             );
         }

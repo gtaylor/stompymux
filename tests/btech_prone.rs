@@ -16,7 +16,7 @@ async fn fixture(quad: bool, tile: &str) -> (tempfile::TempDir, Config, World, O
         &mut world,
         map,
         "drop",
-        BattleMapAsset::from_cells(&format!("1 1\n{tile}\n")).unwrap(),
+        MapAsset::from_cells(&format!("1 1\n{tile}\n")).unwrap(),
     )
     .unwrap();
     let id = world.create(&config, "Controlled drop".into(), Kind::Thing);
@@ -272,7 +272,7 @@ async fn prone_water_and_mine_callback_rollback() {
             map,
             1,
             Some(BattleMinefield {
-                coordinate: BattleHexCoordinate { x: 0, y: 0 },
+                coordinate: HexCoordinate { x: 0, y: 0 },
                 kind: BattleMineKind::Trigger,
                 strength: 1,
                 extra: 0,

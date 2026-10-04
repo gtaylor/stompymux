@@ -3231,7 +3231,7 @@ async fn dfa_damage_miss_ice_settles_below_surface() {
         + usize::from(position.x);
     let mut state = serde_json::to_value(&world.btech).unwrap();
     state["maps"][position.map.0.to_string()]["terrain"][index] =
-        serde_json::to_value(BattleHex::new(Terrain::Ice, 1)).unwrap();
+        serde_json::to_value(Hex::new(Terrain::Ice, 1)).unwrap();
     world.btech = serde_json::from_value(state).unwrap();
     let seed = (0..=255)
         .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 2)

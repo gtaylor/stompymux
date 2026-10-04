@@ -21,7 +21,7 @@ btech.map.set_hex(actor, dbref, x, y, hex)
 | `dbref` | `integer` |  |
 | `x` | `integer` |  |
 | `y` | `integer` |  |
-| `hex` | `BattleHex` |  |
+| `hex` | `Hex` |  |
 
 ## Returns
 

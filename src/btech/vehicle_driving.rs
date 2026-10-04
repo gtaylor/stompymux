@@ -5,8 +5,8 @@ use anyhow::{Context, Result, ensure};
 
 /// A traced entry retains its terrain hazards until earlier entries have resolved.
 struct VehicleStep {
-    coordinate: super::BattleHexCoordinate,
-    point: super::BattlePoint,
+    coordinate: super::HexCoordinate,
+    point: super::Point,
     under_bridge: bool,
     change: i32,
     water_check: bool,
@@ -183,7 +183,7 @@ pub(super) fn advance(
             world,
             id,
             old,
-            super::BattleHexCoordinate {
+            super::HexCoordinate {
                 x: i32::from(position.x),
                 y: i32::from(position.y),
             },

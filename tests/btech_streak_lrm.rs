@@ -91,7 +91,7 @@ async fn streak_lrm_matrix(weapon: BattleWeapon) {
         firing::edit(&mut base, target, |state| {
             state["position"]["y"] = 4.into();
             state["motion"]["point"] =
-                serde_json::to_value(BattleHexCoordinate { x: 0, y: 4 }.center()).unwrap();
+                serde_json::to_value(HexCoordinate { x: 0, y: 4 }.center()).unwrap();
         });
         refresh_battle_contacts(&mut base, &[shooter]).unwrap();
         for (shape, roll) in [2u8, 12].into_iter().enumerate() {
@@ -192,7 +192,7 @@ async fn streak_lrm_automatic_defense_across_chassis() {
             firing::edit(&mut world, target, |state| {
                 state["position"]["y"] = 4.into();
                 state["motion"]["point"] =
-                    serde_json::to_value(BattleHexCoordinate { x: 0, y: 4 }.center()).unwrap();
+                    serde_json::to_value(HexCoordinate { x: 0, y: 4 }.center()).unwrap();
                 state["ams_enabled"] = true.into();
             });
             let seed = (0..=255)

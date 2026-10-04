@@ -61,7 +61,7 @@ async fn fixture(
 ) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {
     let (dir, config, mut world) = support::isolated_world().await;
     let map = world.create(&config, "Lake".into(), Kind::Room);
-    let lake = BattleMapAsset::from_cells("1 8\n~2\n~2\n~2\n~2\n~2\n~1\n.0\n.0\n").unwrap();
+    let lake = MapAsset::from_cells("1 8\n~2\n~2\n~2\n~2\n~2\n~1\n.0\n.0\n").unwrap();
     let hexes = lake
         .hexes
         .iter()
@@ -71,7 +71,7 @@ async fn fixture(
         &mut world,
         map,
         "lake",
-        BattleMapAsset {
+        MapAsset {
             hexes: Arc::new(hexes),
             ..lake
         },

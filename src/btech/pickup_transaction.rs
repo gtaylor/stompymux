@@ -110,7 +110,7 @@ pub(super) fn pickup(
         }
     }
     let ice = if through_ice {
-        let coordinate = BattleHexCoordinate {
+        let coordinate = HexCoordinate {
             x: i32::from(position.x),
             y: i32::from(position.y),
         };

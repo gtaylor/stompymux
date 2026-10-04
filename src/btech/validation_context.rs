@@ -1,10 +1,10 @@
 //! Bounded, synchronous reuse of successful local validation by exact value.
 //!
-//! BattleUnit and StoredBattleMap derive value equality and own their inputs
+//! BattleUnit and StoredMap derive value equality and own their inputs
 //! (map Arc contents are immutable). Neither local validator reads external
 //! world state. Dice equality omits only generic-roll diagnostics, which these
 //! validators never inspect. Cross-object validation is never memoized here.
-use super::{BattleUnit, BtechState, StoredBattleMap};
+use super::{BattleUnit, BtechState, StoredMap};
 use crate::ObjectId;
 use anyhow::Result;
 use std::{cell::RefCell, collections::BTreeMap, marker::PhantomData, rc::Rc};
@@ -16,7 +16,7 @@ struct ValidatedUnit {
 
 struct Cache {
     units: BTreeMap<ObjectId, Option<ValidatedUnit>>,
-    maps: BTreeMap<ObjectId, Option<StoredBattleMap>>,
+    maps: BTreeMap<ObjectId, Option<StoredMap>>,
 }
 thread_local! { static ACTIVE: RefCell<Option<Cache>> = const { RefCell::new(None) }; }
 
@@ -133,7 +133,7 @@ pub(super) fn unit(id: ObjectId, unit: &BattleUnit) -> Result<()> {
 }
 
 /// Validate local terrain/map inputs; membership and world references still run.
-pub(super) fn map(id: ObjectId, map: &StoredBattleMap) -> Result<()> {
+pub(super) fn map(id: ObjectId, map: &StoredMap) -> Result<()> {
     let same = ACTIVE.with(|active| {
         active
             .borrow()

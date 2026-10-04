@@ -23,7 +23,7 @@ async fn fixture_with_template(
         &mut world,
         map,
         "test",
-        BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
+        MapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -68,7 +68,7 @@ async fn fixture_with_template(
         &mut world,
         shooter,
         ObjectId(1),
-        BattleHexCoordinate { x: 1, y: 0 },
+        HexCoordinate { x: 1, y: 0 },
         mode,
     )
     .unwrap();

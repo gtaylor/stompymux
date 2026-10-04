@@ -6,11 +6,12 @@
 //! requested "high woods" close to the same share of the map whatever the seed.
 use crate::Params;
 use crate::biome::{BaseGround, Landform};
-use crate::map::{HexMap, Overlay, Terrain, center};
+use crate::map::{HexMap, Terrain};
 use crate::noise::Noise;
 use crate::path::find_path;
 use crate::rng::Rng;
 use crate::spec::Relief;
+use stompymux_map::{DecorationKind, HexCoordinate, Point};
 
 /// Size in hexes of the largest hills and valleys.
 const FEATURE_SCALE: f64 = 16.0;
@@ -50,12 +51,16 @@ pub(crate) fn elevation(map: &HexMap, params: &Params) -> Vec<f64> {
     let ridges = Noise::new(params.seed, "ridges");
     let mut rng = Rng::stream(params.seed, "landform");
     let (width, height) = (f64::from(map.width), f64::from(map.height));
-    let span = center(i32::from(map.width) - 1, i32::from(map.height) - 1);
+    let span = HexCoordinate {
+        x: i32::from(map.width) - 1,
+        y: i32::from(map.height) - 1,
+    }
+    .center();
     let coast_side = rng.index(4);
     let mut field: Vec<f64> = (0..map.hexes.len())
         .map(|index| {
             let (x, y) = map.coordinate(index);
-            let (cx, cy) = center(x, y);
+            let Point { x: cx, y: cy } = HexCoordinate { x, y }.center();
             let plain =
                 base.fractal(cx, cy, FEATURE_SCALE, 4) + 0.08 * detail.fractal(cx, cy, 4.0, 2);
             match params.profile.landform {
@@ -68,10 +73,10 @@ pub(crate) fn elevation(map: &HexMap, params: &Params) -> Vec<f64> {
                 }
                 Landform::Coastal => {
                     let inland = match coast_side {
-                        0 => cy / span.1,
-                        1 => 1.0 - cx / span.0,
-                        2 => 1.0 - cy / span.1,
-                        _ => cx / span.0,
+                        0 => cy / span.y,
+                        1 => 1.0 - cx / span.x,
+                        2 => 1.0 - cy / span.y,
+                        _ => cx / span.x,
                     };
                     0.6 * inland + 0.4 * plain
                 }
@@ -87,15 +92,16 @@ pub(crate) fn elevation(map: &HexMap, params: &Params) -> Vec<f64> {
             let craters = (width * height / 300.0).max(2.0) as usize;
             let largest = (width.min(height) / 6.0).max(3.0) as i32;
             for _ in 0..craters {
-                let middle = center(
-                    rng.between(0, i32::from(map.width) - 1),
-                    rng.between(0, i32::from(map.height) - 1),
-                );
+                let middle = HexCoordinate {
+                    x: rng.between(0, i32::from(map.width) - 1),
+                    y: rng.between(0, i32::from(map.height) - 1),
+                }
+                .center();
                 let radius = f64::from(rng.between(2, largest));
                 for (index, value) in field.iter_mut().enumerate() {
                     let (x, y) = map.coordinate(index);
-                    let (cx, cy) = center(x, y);
-                    let distance = ((cx - middle.0).powi(2) + (cy - middle.1).powi(2)).sqrt();
+                    let Point { x: cx, y: cy } = HexCoordinate { x, y }.center();
+                    let distance = ((cx - middle.x).powi(2) + (cy - middle.y).powi(2)).sqrt();
                     let ratio = distance / radius;
                     if ratio < 1.0 {
                         *value -= 0.35 * (1.0 - ratio * ratio);
@@ -106,15 +112,16 @@ pub(crate) fn elevation(map: &HexMap, params: &Params) -> Vec<f64> {
             }
         }
         Landform::Volcano => {
-            let peak = center(
-                (width * (0.3 + 0.4 * rng.unit())) as i32,
-                (height * (0.3 + 0.4 * rng.unit())) as i32,
-            );
-            let radius = 0.45 * span.0.min(span.1);
+            let peak = HexCoordinate {
+                x: (width * (0.3 + 0.4 * rng.unit())) as i32,
+                y: (height * (0.3 + 0.4 * rng.unit())) as i32,
+            }
+            .center();
+            let radius = 0.45 * span.x.min(span.y);
             for (index, value) in field.iter_mut().enumerate() {
                 let (x, y) = map.coordinate(index);
-                let (cx, cy) = center(x, y);
-                let ratio = ((cx - peak.0).powi(2) + (cy - peak.1).powi(2)).sqrt() / radius;
+                let Point { x: cx, y: cy } = HexCoordinate { x, y }.center();
+                let ratio = ((cx - peak.x).powi(2) + (cy - peak.y).powi(2)).sqrt() / radius;
                 *value = 0.35 * *value + 0.9 * (1.0 - ratio).max(0.0).powf(1.6);
                 if ratio < 0.12 {
                     *value -= 0.5 * (1.0 - ratio / 0.12);
@@ -203,7 +210,7 @@ pub(crate) fn rivers(map: &mut HexMap, elevation: &[f64], params: &Params) -> us
             if map_ref.hexes[index].terrain.is_water() {
                 return Some(1);
             }
-            let (cx, cy) = center(x, y);
+            let Point { x: cx, y: cy } = HexCoordinate { x, y }.center();
             Some(4 + (40.0 * elevation[index] + 20.0 * meander.fractal(cx, cy, 6.0, 2)) as u32)
         }) else {
             continue;
@@ -251,7 +258,7 @@ pub(crate) fn cover(map: &mut HexMap, elevation: &[f64], params: &Params) {
         .collect();
     let sample = |index: usize, noise: Noise, scale: f64| {
         let (x, y) = map.coordinate(index);
-        let (cx, cy) = center(x, y);
+        let Point { x: cx, y: cy } = HexCoordinate { x, y }.center();
         noise.fractal(cx, cy, scale, 3)
     };
     let wet: Vec<f64> = (0..map.hexes.len())
@@ -343,7 +350,7 @@ pub(crate) fn burn(map: &mut HexMap, elevation: &[f64], params: &Params) {
                 return f64::NEG_INFINITY;
             }
             let (x, y) = map.coordinate(index);
-            let (cx, cy) = center(x, y);
+            let Point { x: cx, y: cy } = HexCoordinate { x, y }.center();
             heat.fractal(cx, cy, 5.0, 2) + summit_bias * elevation[index]
         })
         .collect();
@@ -351,9 +358,9 @@ pub(crate) fn burn(map: &mut HexMap, elevation: &[f64], params: &Params) {
     let fire = threshold(score.iter().copied(), fraction * 0.35);
     for (hex, &value) in map.hexes.iter_mut().zip(&score) {
         if value >= fire {
-            hex.overlay = Some(Overlay::Fire);
+            hex.overlay = Some(DecorationKind::Fire);
         } else if value >= smoke {
-            hex.overlay = Some(Overlay::Smoke);
+            hex.overlay = Some(DecorationKind::Smoke);
         }
     }
 }

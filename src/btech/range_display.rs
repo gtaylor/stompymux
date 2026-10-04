@@ -22,7 +22,7 @@ pub fn range_display(
 ) -> Result<BattleRangeReport> {
     let segment = super::navigation_measurement::resolve(world, unit, viewer, arguments, "Range")?;
     let horizontal = segment.origin.point.range(segment.destination.point)?;
-    let dark = world.btech.maps()[&segment.map].has_flag(super::BattleMapFlag::Dark);
+    let dark = world.btech.maps()[&segment.map].has_flag(super::MapFlag::Dark);
     let (origin_height, destination_height) = if dark
         && matches!(segment.origin.source, EndpointSource::Hex(_))
     {

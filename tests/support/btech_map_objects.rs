@@ -11,7 +11,7 @@ pub async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId, ObjectId)
             &mut world,
             id,
             "grid",
-            BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
+            MapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
         )
         .unwrap();
         crate::seed_object_dice(&mut world, id, crate::FIXTURE_DICE_SEED);
@@ -23,20 +23,20 @@ pub async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId, ObjectId)
         .unwrap()
         .flags
         .remove(Flag::Wizard);
-    let p = BattleHexCoordinate { x: 1, y: 1 };
-    let other = BattleHexCoordinate { x: 2, y: 2 };
+    let p = HexCoordinate { x: 1, y: 1 };
+    let other = HexCoordinate { x: 2, y: 2 };
     set_map_decoration(
         &mut world,
         map,
         p,
-        Some(BattleDecoration::new(BattleDecorationKind::Fire, 0, None)),
+        Some(BattleDecoration::new(DecorationKind::Fire, 0, None)),
     )
     .unwrap();
     set_map_decoration(
         &mut world,
         map,
         other,
-        Some(BattleDecoration::new(BattleDecorationKind::Smoke, 20, None)),
+        Some(BattleDecoration::new(DecorationKind::Smoke, 20, None)),
     )
     .unwrap();
     set_battle_static_decoration(

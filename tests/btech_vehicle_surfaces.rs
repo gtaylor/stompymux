@@ -13,7 +13,7 @@ async fn fixture(
         &mut world,
         map,
         "surface",
-        BattleMapAsset::from_cells(&format!("1 1\n{}{depth}\n", terrain.symbol())).unwrap(),
+        MapAsset::from_cells(&format!("1 1\n{}{depth}\n", terrain.symbol())).unwrap(),
     )
     .unwrap();
     let mut ids = Vec::new();
@@ -60,7 +60,7 @@ async fn ice_falls_damage_then_flood_ground_vehicles_and_leave_hovercraft_unchan
     let report = break_battle_ice(
         &mut world,
         map,
-        BattleHexCoordinate { x: 0, y: 0 },
+        HexCoordinate { x: 0, y: 0 },
         Some(ids[1]),
         BattleMovementRules::STANDARD.fall,
     )
@@ -70,7 +70,7 @@ async fn ice_falls_damage_then_flood_ground_vehicles_and_leave_hovercraft_unchan
         break_battle_ice(
             &mut restored,
             map,
-            BattleHexCoordinate { x: 0, y: 0 },
+            HexCoordinate { x: 0, y: 0 },
             Some(ids[1]),
             BattleMovementRules::STANDARD.fall
         )
@@ -99,7 +99,7 @@ async fn shallow_ice_changes_terrain_without_falls_or_flooding() {
     let report = break_battle_ice(
         &mut world,
         map,
-        BattleHexCoordinate { x: 0, y: 0 },
+        HexCoordinate { x: 0, y: 0 },
         Some(ids[1]),
         BattleMovementRules::STANDARD.fall,
     )
@@ -122,7 +122,7 @@ async fn bridge_collapse_drops_deck_vehicles_and_clears_under_span_state() {
     let report = break_battle_bridge(
         &mut world,
         map,
-        BattleHexCoordinate { x: 0, y: 0 },
+        HexCoordinate { x: 0, y: 0 },
         BattleMovementRules::STANDARD.fall,
     )
     .unwrap();
@@ -161,7 +161,7 @@ async fn unsupported_character_fall_rolls_back_prior_neighbor_damage_and_terrain
         break_battle_ice(
             &mut world,
             map,
-            BattleHexCoordinate { x: 0, y: 0 },
+            HexCoordinate { x: 0, y: 0 },
             Some(ids[1]),
             BattleMovementRules::STANDARD.fall
         )

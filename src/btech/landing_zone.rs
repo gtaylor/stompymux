@@ -1,5 +1,5 @@
 //! Terrain suitability and saved circular landing exclusions, independent of aircraft movement.
-use super::{BattleHexCoordinate, StoredBattleMap};
+use super::{HexCoordinate, StoredMap};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -8,7 +8,7 @@ use std::{collections::BTreeMap, sync::Arc};
 /// A circular exclusion; a nonzero exempt team may land within its radius.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BattleLandingExclusion {
-    pub coordinate: BattleHexCoordinate,
+    pub coordinate: HexCoordinate,
     /// Signed radius; negative values retain an inactive restriction.
     pub radius: i64,
     pub exempt_team: i32,
@@ -27,7 +27,7 @@ pub enum BattleLandingSuitability {
     Blocked,
 }
 
-impl StoredBattleMap {
+impl StoredMap {
     /// Stable restriction slots, including overlapping circles.
     pub fn landing_exclusions(&self) -> &BTreeMap<u32, BattleLandingExclusion> {
         &self.landing_exclusions
@@ -47,21 +47,17 @@ impl StoredBattleMap {
     /// neighbor terrain is unrestricted.
     pub fn landing_suitability(
         &self,
-        coordinate: BattleHexCoordinate,
+        coordinate: HexCoordinate,
         team: i32,
     ) -> Result<BattleLandingSuitability> {
         let tile = self.hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
         if !tile.is_open_ground() {
             return Ok(BattleLandingSuitability::ImproperTerrain);
         }
-        for neighbor in coordinate.neighbors()? {
-            if neighbor.x < 0
-                || neighbor.y < 0
-                || i64::from(neighbor.x) >= self.width
-                || i64::from(neighbor.y) >= self.height
-            {
+        for neighbor in self.neighbors(coordinate)? {
+            let Some(neighbor) = neighbor else {
                 return Ok(BattleLandingSuitability::UnevenGround);
-            }
+            };
             if self
                 .base_hex(i64::from(neighbor.x), i64::from(neighbor.y))?
                 .surface_height()

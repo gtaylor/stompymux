@@ -22,7 +22,7 @@ async fn targeted_radio_mixed_pairs_share_visibility_delivery_and_restart() {
                 &mut world,
                 map,
                 "radio",
-                BattleMapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
+                MapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
             )
             .unwrap();
             support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -161,7 +161,7 @@ async fn channel_radio_rotates_mixed_transmitters_relays_and_receivers() {
             &mut world,
             map,
             "channel",
-            BattleMapAsset::from_cells("6 2\n.0.0.0.0.0.0\n.0.0.0.0.0.0\n").unwrap(),
+            MapAsset::from_cells("6 2\n.0.0.0.0.0.0\n.0.0.0.0.0.0\n").unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -290,7 +290,7 @@ async fn channel_radio_rotates_mixed_transmitters_relays_and_receivers() {
             map,
             0,
             Some(BattleMinefield {
-                coordinate: BattleHexCoordinate { x: 0, y: 0 },
+                coordinate: HexCoordinate { x: 0, y: 0 },
                 kind: BattleMineKind::Command,
                 strength: 0,
                 extra: 42,

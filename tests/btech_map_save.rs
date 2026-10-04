@@ -16,15 +16,15 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
         &mut world,
         map,
         "save",
-        BattleMapAsset::from_cells("2 1\n&2#1\n0: 100 20\n").unwrap(),
+        MapAsset::from_cells("2 1\n&2#1\n0: 100 20\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     set_map_decoration(
         &mut world,
         map,
-        BattleHexCoordinate { x: 1, y: 0 },
-        Some(BattleDecoration::new(BattleDecorationKind::Fire, 60, None)),
+        HexCoordinate { x: 1, y: 0 },
+        Some(BattleDecoration::new(DecorationKind::Fire, 60, None)),
     )
     .unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(map);
@@ -35,7 +35,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
 
 /// The fixture map as saved: the permanent fire stays and the burning road saves as road.
 fn expected_file() -> String {
-    BattleMapAsset::from_cells("2 1\n&2#1\n")
+    MapAsset::from_cells("2 1\n&2#1\n")
         .unwrap()
         .to_file()
         .unwrap()
@@ -60,7 +60,7 @@ async fn authored_eternal_fire_survives_load_save_and_restart() {
     );
     assert_eq!(native.world().btech, lua.world().btech);
     assert_eq!(native.world().btech.maps()[&map].flags, 2);
-    let source = &BattleMapAsset::from_cells("2 1\n&2#1\n2: 100 20\n")
+    let source = &MapAsset::from_cells("2 1\n&2#1\n2: 100 20\n")
         .unwrap()
         .to_file()
         .unwrap();

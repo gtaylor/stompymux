@@ -633,7 +633,7 @@ pub fn break_surface_action(
     scripts: &Scripts,
     config: &Config,
     map: ObjectId,
-    coordinate: super::BattleHexCoordinate,
+    coordinate: super::HexCoordinate,
     surface: super::BattleSurface,
     rules: super::BattleFallRules,
 ) -> Result<super::BattleSurfaceBreak> {
@@ -659,7 +659,7 @@ pub fn break_ice_upward_action(
     scripts: &Scripts,
     config: &Config,
     map: ObjectId,
-    coordinate: super::BattleHexCoordinate,
+    coordinate: super::HexCoordinate,
     unit: ObjectId,
     rules: super::BattleFallRules,
 ) -> Result<super::BattleSurfaceBreak> {

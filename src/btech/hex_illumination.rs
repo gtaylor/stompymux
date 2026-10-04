@@ -1,12 +1,12 @@
 //! Terrain illumination from active battlefield fires, inferno burns and forward searchlight beams.
-use super::{BattleDecorationKind, BattleHexCoordinate};
+use super::{DecorationKind, HexCoordinate};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 
 /// Inspect whether a checked battlefield hex is lit, without identifying any emitting unit.
 /// Fires and infernos light their own hex and six neighbors. Searchlights project
 /// within their forward arc to terrain less than sixty spatial hexes away.
-pub fn hex_illuminated(world: &World, map: ObjectId, target: BattleHexCoordinate) -> Result<bool> {
+pub fn hex_illuminated(world: &World, map: ObjectId, target: HexCoordinate) -> Result<bool> {
     ensure!(
         world
             .objects
@@ -16,17 +16,11 @@ pub fn hex_illuminated(world: &World, map: ObjectId, target: BattleHexCoordinate
     );
     let record = world.btech.maps().get(&map).context("Map not found")?;
     record.base_hex(i64::from(target.x), i64::from(target.y))?;
-    for coordinate in std::iter::once(target).chain(target.neighbors()?) {
-        if coordinate.x < 0
-            || coordinate.y < 0
-            || i64::from(coordinate.x) >= record.width
-            || i64::from(coordinate.y) >= record.height
-        {
-            continue;
-        }
+    for coordinate in std::iter::once(target).chain(record.neighbors(target)?.into_iter().flatten())
+    {
         if record
             .decoration(coordinate)?
-            .is_some_and(|effect| effect.kind == BattleDecorationKind::Fire)
+            .is_some_and(|effect| effect.kind == DecorationKind::Fire)
         {
             return Ok(true);
         }
@@ -53,7 +47,7 @@ pub fn hex_illuminated(world: &World, map: ObjectId, target: BattleHexCoordinate
             continue;
         }
         if let Some(position) = position.filter(|position| position.map == map) {
-            let source = BattleHexCoordinate {
+            let source = HexCoordinate {
                 x: i32::from(position.x),
                 y: i32::from(position.y),
             };
