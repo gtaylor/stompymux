@@ -3911,7 +3911,7 @@ dependencies = [
  "sha2 0.11.0",
  "sqlx",
  "stompymux-map",
- "stompymux-template",
+ "stompymux-unit-construction",
  "tempfile",
  "tokio",
  "toml",
@@ -3944,16 +3944,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "stompymux-template"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "serde",
- "tempfile",
- "toml",
-]
-
-[[package]]
 name = "stompymux-test-support"
 version = "0.1.0"
 dependencies = [
@@ -3965,6 +3955,16 @@ dependencies = [
  "tempfile",
  "tokio",
  "tracing-subscriber",
+]
+
+[[package]]
+name = "stompymux-unit-construction"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "serde",
+ "tempfile",
+ "toml",
 ]
 
 [[package]]

@@ -278,7 +278,7 @@ pub(crate) fn notify_message(
 pub use geometry::{BattleRange, unit_elevation, unit_range};
 pub use stompymux_map::{HexCoordinate, Point};
 
-pub use stompymux_template::{
+pub use stompymux_unit_construction::{
     AMMUNITION_PART_OFFSET, AmmunitionBin, BattleAmmunitionMode, BattleDamageClass, BattleEngine,
     BattleFireMode, BattleLoadout, BattleMechChassis, BattlePart, BattlePartForm, BattlePartKind,
     BattlePartNames, BattlePartPrices, BattleRangeBracket, BattleSection, BattleSystem,

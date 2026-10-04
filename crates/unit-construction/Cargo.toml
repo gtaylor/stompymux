@@ -4,7 +4,7 @@
 # for every other package in the same `cargo` invocation, and so compile a second copy of the
 # server.
 [package]
-name = "stompymux-template"
+name = "stompymux-unit-construction"
 version = "0.1.0"
 edition = "2024"
 description = "BattleTech unit templates, the equipment catalogue and construction rules"

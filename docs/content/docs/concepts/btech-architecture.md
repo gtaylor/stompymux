@@ -10,13 +10,13 @@ in their respective crate modules. `src/lib.rs` exports the BattleTech types
 and operations used across those boundaries.
 
 Two workspace crates hold the data the gameplay code builds on. `crates/map`
-owns battlefield maps and hex geometry. `crates/template` owns unit templates,
-the weapon and system catalogue, loadouts, construction rules and cost. Neither knows
-about the world or live units; `src/btech/` re-exports their types and layers
-live state and combat rules on top. Because Rust does not allow inherent
-methods on another crate's types, combat behavior for catalogue types is
-declared as extension traits in `src/btech/`, such as `BattleWeaponSalvo` for
-cluster hits and damage grouping.
+owns battlefield maps and hex geometry. `crates/unit-construction` owns unit
+templates, the weapon and system catalogue, loadouts, construction rules and
+cost. Neither knows about the world or live units; `src/btech/` re-exports
+their types and layers live state and combat rules on top. Because Rust does
+not allow inherent methods on another crate's types, combat behavior for
+catalogue types is declared as extension traits in `src/btech/`, such as
+`BattleWeaponSalvo` for cluster hits and damage grouping.
 
 ## State and ownership
 
@@ -74,7 +74,7 @@ The gameplay modules are organized around focused rules and state transitions:
 | Area | Examples in `src/btech/` |
 | --- | --- |
 | Maps and assets | `map.rs`, `assets.rs`, `state.rs`, terrain and map lifecycle modules |
-| Units and equipment | `unit.rs`, `vehicle.rs`, `mass.rs`, `ammunition_mode.rs`, `fire_mode.rs`; templates, loadouts and the equipment catalogue live in `crates/template` |
+| Units and equipment | `unit.rs`, `vehicle.rs`, `mass.rs`, `ammunition_mode.rs`, `fire_mode.rs`; templates, loadouts and the equipment catalogue live in `crates/unit-construction` |
 | Movement and time | `motion.rs`, `jump.rs`, `power.rs`, `heat.rs`, `simulation_pending.rs` |
 | Combat | `shot.rs`, `damage.rs`, `critical.rs`, `artillery.rs`, weapon and ammunition modules |
 | Perception | `perception/` (sensor band, sight, probes, radar, acquisition), `contacts.rs`, `scanner.rs`, LOS and electronics modules |
@@ -173,11 +173,13 @@ other transaction effects and published after a successful world commit.
 
 ## Adding BattleTech behavior
 
-Place the rule and its state transition in the focused `src/btech/` module that
-owns the invariant. Rules that need only a template or catalogue entry, such as
-a weapon family or a construction requirement, belong in `crates/template`. Expose a typed operation through `src/btech/mod.rs` and,
-when it is used across the crate boundary, `src/lib.rs`. Adapt that operation
-at each needed entry point: a native command, Lua binding, or server tick.
+Place the rule and its state transition in the focused `src/btech/` module
+that owns the invariant. Rules that need only a template or catalogue entry,
+such as a weapon family or a construction requirement, belong in
+`crates/unit-construction`. Expose a typed operation through
+`src/btech/mod.rs` and, when it is used across the crate boundary,
+`src/lib.rs`. Adapt that operation at each needed entry point: a native
+command, Lua binding, or server tick.
 
 For durable state, update the `BtechState` or owned map/unit model, its
 validation, and the corresponding `src/persistence/btech_*.rs` adapter. A new

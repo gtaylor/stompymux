@@ -1,5 +1,5 @@
 //! Cockpit feedback after a weapon mode or ammunition selection, shared by native commands
-//! and Lua. The modes themselves live in `stompymux-template`; their wording lives here.
+//! and Lua. The modes themselves live in `stompymux-unit-construction`; their wording lives here.
 use super::{BattleAmmunitionMode, BattleFireMode};
 
 /// Cockpit wording for a numbered weapon after its ammunition selection changes.

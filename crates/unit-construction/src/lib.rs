@@ -8,7 +8,7 @@
 //! fields and sections without validating construction.
 //!
 //! ```
-//! use stompymux_template::{BattleTemplate, BattleUnitTemplate};
+//! use stompymux_unit_construction::{BattleTemplate, BattleUnitTemplate};
 //!
 //! let source = include_str!("../tests/fixtures/JR7-D.toml");
 //! let BattleUnitTemplate::Mech(jenner) = BattleUnitTemplate::parse("JR7-D", source).unwrap()
@@ -21,8 +21,9 @@
 //!
 //! The crate also owns what construction derives from a template: the weapon and system
 //! catalogue ([`BattleWeapon`], [`BattleSystem`]), resolved loadouts, engine ratings,
-//! mass, construction cost and the template views the inspection commands report. It knows nothing about the game world or live unit state; the server builds
-//! constructed units and combat rules on top of these types.
+//! mass, construction cost and the template views the inspection commands report. It
+//! knows nothing about the game world or live unit state; the server builds constructed
+//! units and combat rules on top of these types.
 mod administrative;
 mod ammunition;
 mod ammunition_slots;
