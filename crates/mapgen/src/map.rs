@@ -293,13 +293,6 @@ impl HexMap {
     }
 }
 
-/// Center of hex `(x, y)` in hex heights, for sampling smooth fields and measuring
-/// straight-line distance.
-pub(crate) fn center(x: i32, y: i32) -> (f64, f64) {
-    let half = if x.rem_euclid(2) == 0 { 0.5 } else { 0.0 };
-    (f64::from(x) * 3.0_f64.sqrt() / 2.0, f64::from(y) + half)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

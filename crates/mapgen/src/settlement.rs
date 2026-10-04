@@ -5,14 +5,14 @@
 //! and blended into the land around it, then filled by its layout. Streets that reach the
 //! footprint's edge become gates, which the road network links to.
 use crate::Params;
-use crate::map::{HexMap, Terrain, center};
+use crate::map::{HexMap, Terrain};
 use crate::noise::Noise;
 use crate::report::SettlementReport;
 use crate::rng::Rng;
 use crate::spec::{SettlementKind, SettlementLayout, SettlementSize, SettlementSpec};
 use crate::terrain::open_ground;
 use std::collections::VecDeque;
-use stompymux_map::BattleDecorationKind;
+use stompymux_map::{BattleDecorationKind, BattleHexCoordinate, BattlePoint};
 
 /// A settlement as built, for routing roads and reporting.
 #[derive(Debug, Clone)]
@@ -321,7 +321,7 @@ fn footprint(
             let inside = if rectangular {
                 (x - site.0).abs() <= radius && (y - site.1).abs() <= rows
             } else {
-                let (cx, cy) = center(x, y);
+                let BattlePoint { x: cx, y: cy } = BattleHexCoordinate { x, y }.center();
                 let wobble = 2.0 * (ragged.value(cx / 2.0, cy / 2.0) - 0.5);
                 f64::from(HexMap::distance(site, (x, y))) <= f64::from(radius) + wobble
             };
