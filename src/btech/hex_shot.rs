@@ -125,17 +125,12 @@ fn resolve_hex_shot_inner(
     );
     let record = world.btech.maps().get(&map).context("Map not found")?;
     record.base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
-    let ready = if let Some(unit) = world.btech.vehicles().get(&shooter) {
-        let readiness = unit.weapon_readiness(weapon_index)?;
-        unit.check_spotter_fire(shooter, weapon_index)?;
-        readiness.ready
-    } else {
-        let unit = &world.btech.constructed_units()[&shooter];
+    let ready = super::with_unit!(world.btech.unit(shooter).expect("admitted unit"), |unit| {
         unit.validate()?;
         let readiness = unit.weapon_readiness(weapon_index)?;
         unit.check_spotter_fire(shooter, weapon_index)?;
         readiness.ready
-    };
+    });
     let super::weapon_geometry::WeaponGeometry {
         weapon,
         submerged,
