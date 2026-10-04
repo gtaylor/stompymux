@@ -2,9 +2,10 @@
 use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::{
-    BattleDice, BattlePower, BattleUnitSignature, BattleUnitTemplate, Config, HeartbeatHarness,
-    Kind, MapAsset, ObjectId, Scripts, World, assign_battle_pilot, create_battle_map, persistence,
-    place_battle_unit, refresh_battle_contacts, set_battle_unit_signature,
+    BattleDice, BattlePower, BattleUnitSignature, BattleUnitTemplate, BattleUnitTemplateExt,
+    Config, HeartbeatHarness, Kind, MapAsset, ObjectId, Scripts, World, assign_battle_pilot,
+    create_battle_map, persistence, place_battle_unit, refresh_battle_contacts,
+    set_battle_unit_signature,
 };
 
 fn install_tactical_packages(config: &Config) {

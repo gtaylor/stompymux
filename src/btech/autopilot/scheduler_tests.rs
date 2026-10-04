@@ -1,5 +1,6 @@
 //! Scheduler regressions under deliberately reduced shared budgets.
 use super::*;
+use crate::btech::BattleUnitTemplateExt;
 use crate::{BattleUnitTemplate, Kind, MapAsset};
 
 fn fixture() -> (Config, World, Vec<ObjectId>) {

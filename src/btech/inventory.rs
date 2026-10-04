@@ -68,11 +68,7 @@ pub fn set_part_store_quantity(
 }
 
 pub fn part_cost(world: &World, part_id: i32) -> Result<u64> {
-    ensure!(
-        super::BattlePart::from_id(part_id).is_some(),
-        "Unknown inventory part"
-    );
-    Ok(world.btech.part_costs.get(&part_id).copied().unwrap_or(0))
+    super::part_price(&world.btech.part_costs, part_id)
 }
 
 pub fn set_part_cost(world: &mut World, part_id: i32, cost: u64) -> Result<()> {

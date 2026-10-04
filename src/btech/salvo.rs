@@ -1,5 +1,8 @@
 //! Conventional missile-cluster tables and atomic grouped weapon-hit resolution.
-use super::{BattleHit, BattleHitArc, BattleHitRules, BattleImpactReport, BattleWeapon};
+use super::{
+    BattleFlechetteDamage, BattleHit, BattleHitArc, BattleHitRules, BattleImpactReport,
+    BattleWeapon,
+};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, bail, ensure};
 use serde::Serialize;
@@ -21,9 +24,57 @@ const CLUSTER_HITS: &[(u8, [u8; 11])] = &[
     (40, [12, 12, 18, 24, 24, 24, 24, 32, 32, 40, 40]),
 ];
 
-impl BattleWeapon {
+/// Missile cluster hits and per-hit damage grouping for every weapon.
+pub trait BattleWeaponSalvo {
     /// Resolve an unmodified 2d6 cluster roll for a supported conventional launcher.
-    pub fn missile_hits(self, roll: u8) -> Result<u8> {
+    fn missile_hits(self, roll: u8) -> Result<u8>;
+
+    /// Each group receives an independent location; dead-fire missiles always hit individually.
+    fn damage_groups(self, cluster_roll: Option<u8>) -> Result<Vec<u16>>;
+
+    /// Group a hit using its actual spatial range, before any aim-bracket rounding.
+    fn damage_groups_at_range(self, cluster_roll: Option<u8>, distance: f64) -> Result<Vec<u16>>;
+
+    /// Glancing direct hits round damage up; missiles instead shift the cluster roll down four.
+    fn damage_groups_for_hit(
+        self,
+        cluster_roll: Option<u8>,
+        glancing: bool,
+        distance: Option<f64>,
+    ) -> Result<Vec<u16>>;
+
+    /// Resolve packet sizes for a selected ammunition type at the actual attack range.
+    fn damage_groups_for_ammunition(
+        self,
+        mode: super::BattleAmmunitionMode,
+        cluster_roll: Option<u8>,
+        distance: f64,
+    ) -> Result<Vec<u16>>;
+
+    /// Cluster rounds resolve individual pellets; slug rounds retain conventional direct damage.
+    fn damage_groups_for_ammunition_hit(
+        self,
+        mode: super::BattleAmmunitionMode,
+        cluster_roll: Option<u8>,
+        glancing: bool,
+        distance: Option<f64>,
+    ) -> Result<Vec<u16>>;
+
+    /// As [`Self::damage_groups_for_ammunition_hit`], with Artemis V guidance adding one more
+    /// to the Artemis cluster bonus. ATMs add their own guidance bonus unless ECM blocks it.
+    fn damage_groups_for_guided_hit(
+        self,
+        mode: super::BattleAmmunitionMode,
+        cluster_roll: Option<u8>,
+        glancing: bool,
+        distance: Option<f64>,
+        artemis_v: bool,
+        guidance_blocked: bool,
+    ) -> Result<Vec<u16>>;
+}
+
+impl BattleWeaponSalvo for BattleWeapon {
+    fn missile_hits(self, roll: u8) -> Result<u8> {
         ensure!((2..=12).contains(&roll), "Invalid missile cluster roll");
         if self.is_streak() || self.is_thunderbolt() || self.is_narc() || self == Self::INarcBeacon
         {
@@ -99,22 +150,15 @@ impl BattleWeapon {
         Ok(row[usize::from(roll - 2)])
     }
 
-    /// Each group receives an independent location; dead-fire missiles always hit individually.
-    pub fn damage_groups(self, cluster_roll: Option<u8>) -> Result<Vec<u16>> {
+    fn damage_groups(self, cluster_roll: Option<u8>) -> Result<Vec<u16>> {
         self.damage_groups_for_hit(cluster_roll, false, None)
     }
 
-    /// Group a hit using its actual spatial range, before any aim-bracket rounding.
-    pub fn damage_groups_at_range(
-        self,
-        cluster_roll: Option<u8>,
-        distance: f64,
-    ) -> Result<Vec<u16>> {
+    fn damage_groups_at_range(self, cluster_roll: Option<u8>, distance: f64) -> Result<Vec<u16>> {
         self.damage_groups_for_hit(cluster_roll, false, Some(distance))
     }
 
-    /// Glancing direct hits round damage up; missiles instead shift the cluster roll down four.
-    pub(super) fn damage_groups_for_hit(
+    fn damage_groups_for_hit(
         self,
         cluster_roll: Option<u8>,
         glancing: bool,
@@ -128,8 +172,7 @@ impl BattleWeapon {
         )
     }
 
-    /// Resolve packet sizes for a selected ammunition type at the actual attack range.
-    pub fn damage_groups_for_ammunition(
+    fn damage_groups_for_ammunition(
         self,
         mode: super::BattleAmmunitionMode,
         cluster_roll: Option<u8>,
@@ -138,8 +181,7 @@ impl BattleWeapon {
         self.damage_groups_for_ammunition_hit(mode, cluster_roll, false, Some(distance))
     }
 
-    /// Cluster rounds resolve individual pellets; slug rounds retain conventional direct damage.
-    pub(super) fn damage_groups_for_ammunition_hit(
+    fn damage_groups_for_ammunition_hit(
         self,
         mode: super::BattleAmmunitionMode,
         cluster_roll: Option<u8>,
@@ -149,9 +191,7 @@ impl BattleWeapon {
         self.damage_groups_for_guided_hit(mode, cluster_roll, glancing, distance, false, false)
     }
 
-    /// As [`Self::damage_groups_for_ammunition_hit`], with Artemis V guidance adding one more
-    /// to the Artemis cluster bonus. ATMs add their own guidance bonus unless ECM blocks it.
-    pub(super) fn damage_groups_for_guided_hit(
+    fn damage_groups_for_guided_hit(
         self,
         mode: super::BattleAmmunitionMode,
         cluster_roll: Option<u8>,
@@ -875,6 +915,7 @@ fn resolve_salvo_with_effects(
 #[cfg(test)]
 mod tests {
     use super::BattleWeapon as W;
+    use crate::btech::BattleWeaponSalvo;
 
     #[test]
     fn snub_damage_uses_exact_range_before_glancing_rounding() {
@@ -1111,6 +1152,7 @@ mod tests {
 #[cfg(test)]
 mod artemis_tests {
     use super::super::{BattleAmmunitionMode, BattleWeapon};
+    use crate::btech::BattleWeaponSalvo;
 
     /// Combine both modifiers before the below-table one-missile fallback and upper cap.
     #[test]
@@ -1177,6 +1219,24 @@ mod flechette_tests {
                         )
                         .unwrap(),
                     vec![damage]
+                );
+            }
+        }
+    }
+
+    /// Enhanced LRMs fire the same salvos as the LRMs they extend.
+    #[test]
+    fn enhanced_lrms_match_lrm_salvos() {
+        for (enhanced, standard) in [
+            (BattleWeapon::Nlrm5, BattleWeapon::Lrm5),
+            (BattleWeapon::Nlrm10, BattleWeapon::Lrm10),
+            (BattleWeapon::Nlrm15, BattleWeapon::Lrm15),
+            (BattleWeapon::Nlrm20, BattleWeapon::Lrm20),
+        ] {
+            for roll in 2..=12 {
+                assert_eq!(
+                    enhanced.damage_groups(Some(roll)).unwrap(),
+                    standard.damage_groups(Some(roll)).unwrap()
                 );
             }
         }

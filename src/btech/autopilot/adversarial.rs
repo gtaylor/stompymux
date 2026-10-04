@@ -1,5 +1,6 @@
 //! Seeded multi-participant encounters through the production heartbeat and admission rules.
 use super::*;
+use crate::btech::BattleUnitTemplateExt;
 use crate::{BattlePosition, BattlePower, Config, HeartbeatHarness, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;

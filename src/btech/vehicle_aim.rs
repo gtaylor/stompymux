@@ -1,5 +1,5 @@
 //! Vehicle direct-weapon aim composes shared range, target, perception and lock rules with vehicle controls.
-use super::{BattleAimModifiers, BattleAimRules, BattleSystem};
+use super::{BattleAimModifiers, BattleAimRules, BattleStealthRange, BattleSystem};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 

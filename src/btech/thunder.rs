@@ -1,6 +1,6 @@
 //! Thunder minelaying rounds: LRM salvos fired at a hex seed minefields instead of damaging it.
 use super::{
-    BattleAmmunitionMode, BattleMineKind, BattleMinefield, BattleNotice, BattleWeapon,
+    AmmunitionFeedback, BattleAmmunitionMode, BattleMineKind, BattleMinefield, BattleNotice,
     HexCoordinate,
 };
 use crate::{ObjectId, World};
@@ -9,49 +9,6 @@ use serde::Serialize;
 
 /// Densest field that repeated Thunder salvos may build up in one hex.
 pub const THUNDER_MAXIMUM_STRENGTH: i16 = 30;
-
-impl BattleWeapon {
-    /// LRM launchers that accept the specialized Thunder rounds.
-    pub fn supports_thunder(self) -> bool {
-        matches!(
-            self,
-            Self::Lrm5
-                | Self::Lrm10
-                | Self::Lrm15
-                | Self::Lrm20
-                | Self::Nlrm5
-                | Self::Nlrm10
-                | Self::Nlrm15
-                | Self::Nlrm20
-                | Self::ClanLrm5
-                | Self::ClanLrm10
-                | Self::ClanLrm15
-                | Self::ClanLrm20
-        )
-    }
-}
-
-impl BattleAmmunitionMode {
-    /// Missile rounds that lay a minefield when fired at a hex. Plain mine rounds are the
-    /// original Thunder munition.
-    pub fn is_thunder(self) -> bool {
-        matches!(
-            self.munition(),
-            Self::Mine | Self::ThunderAugmented | Self::ThunderVibrabomb | Self::ThunderActive
-        )
-    }
-
-    /// Cockpit feedback shared by native commands and Lua.
-    pub(crate) fn thunder_message(self, index: usize) -> String {
-        let name = match self.munition() {
-            Self::ThunderAugmented => "Thunder-Augmented",
-            Self::ThunderVibrabomb => "Thunder-Vibrabomb",
-            Self::ThunderActive => "Thunder-Active",
-            _ => return format!("Weapon {index} has been set to fire normal missiles"),
-        };
-        format!("Weapon {index} has been set to fire {name} missiles.")
-    }
-}
 
 /// Toggle a controlled, intact and recycled LRM launcher between normal rounds and one of
 /// the specialized Thunder rounds.
@@ -235,6 +192,7 @@ pub(super) fn lay(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::btech::BattleWeapon;
 
     /// Only LRM families take specialized Thunder rounds, and plain mine rounds count as Thunder.
     #[test]

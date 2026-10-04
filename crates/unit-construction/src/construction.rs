@@ -9,10 +9,10 @@ use std::collections::BTreeMap;
 use std::fmt::Write as _;
 
 /// Kilometres per hour for each movement point.
-pub(super) const SPEED_PER_MP: f64 = 10.75;
+pub const SPEED_PER_MP: f64 = 10.75;
 
 /// Critical names of every item that construction places in a mech.
-pub(super) const FIXED_ITEMS: [&str; 9] = [
+pub const FIXED_ITEMS: [&str; 9] = [
     SHOULDER_OR_HIP,
     UPPER_ACTUATOR,
     LOWER_ACTUATOR,
@@ -38,14 +38,14 @@ const SENSORS: &str = "Sensors";
 const CLAN: &str = "Clan";
 
 /// Chassis flag recording flippable arms; it always follows the arm actuator layout.
-pub(super) const FLIP_ARMS: &str = "FlipArms";
+pub const FLIP_ARMS: &str = "FlipArms";
 
 /// Declares one construction choice: its document spellings and the chassis flag each sets.
 macro_rules! choice {
     ($(#[$doc:meta])* $name:ident { $($(#[$variant_doc:meta])* $variant:ident = $spelling:literal => [$($flag:literal),*]),+ $(,)? }) => {
         $(#[$doc])*
         #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-        pub(super) enum $name {
+        pub enum $name {
             #[default]
             $($(#[$variant_doc])* $variant),+
         }
@@ -170,7 +170,7 @@ choice!(
 
 /// A chassis component that a mixed-technology unit may build from the other technology base.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub(super) enum Component {
+pub enum Component {
     Engine,
     Structure,
     Armor,
@@ -190,7 +190,7 @@ impl Component {
 
     /// The chassis flag recording that this component uses Clan (`clan`) or Inner Sphere
     /// technology on a chassis of the other base.
-    pub(super) fn flag(self, clan: bool) -> &'static str {
+    pub fn flag(self, clan: bool) -> &'static str {
         match (self, clan) {
             (Self::Engine, true) => "ClanEngine_Tech",
             (Self::Engine, false) => "ISEngine_Tech",
@@ -213,7 +213,7 @@ fn tech_base(key: &str, value: &str) -> Result<bool> {
 
 /// The `[construction]` table: technology types for the chassis and its fixed equipment.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub(super) struct Construction {
+pub struct Construction {
     pub clan: bool,
     /// Components built from the other technology base, in [`Component::ALL`] order.
     pub mixed: Vec<Component>,
@@ -433,7 +433,7 @@ fn choice<T: Default>(
 }
 
 /// Whether a flag records a component built from the other technology base.
-pub(super) fn mixed_technology_flag(flag: &str) -> bool {
+pub fn mixed_technology_flag(flag: &str) -> bool {
     Component::ALL.into_iter().any(|component| {
         [true, false]
             .into_iter()
@@ -442,7 +442,7 @@ pub(super) fn mixed_technology_flag(flag: &str) -> bool {
 }
 
 /// Whether a flag is set by a construction choice or derived, so `specials` may not list it.
-pub(super) fn owned_flag(flag: &str) -> bool {
+pub fn owned_flag(flag: &str) -> bool {
     flag.eq_ignore_ascii_case(CLAN)
         || mixed_technology_flag(flag)
         || Engine::ALL
@@ -458,7 +458,7 @@ pub(super) fn owned_flag(flag: &str) -> bool {
 }
 
 /// The canonical spelling of a `specials` flag, refusing unknown and construction-owned flags.
-pub(super) fn canonical_special(flag: &str) -> Result<&'static str> {
+pub fn canonical_special(flag: &str) -> Result<&'static str> {
     ensure!(
         !owned_flag(flag),
         "{flag} is a construction choice; declare it in [construction]"
@@ -484,7 +484,7 @@ pub(super) fn canonical_special(flag: &str) -> Result<&'static str> {
 }
 
 /// The canonical spelling of an `infantry_specials` flag.
-pub(super) fn canonical_infantry_special(flag: &str) -> Result<&'static str> {
+pub fn canonical_infantry_special(flag: &str) -> Result<&'static str> {
     technology_names(57..=66)
         .find(|known| known.eq_ignore_ascii_case(flag))
         .with_context(|| format!("unknown infantry special {flag}"))
@@ -492,14 +492,12 @@ pub(super) fn canonical_infantry_special(flag: &str) -> Result<&'static str> {
 
 /// Reference technology flag names for a range of administrative codes.
 fn technology_names(codes: std::ops::RangeInclusive<i32>) -> impl Iterator<Item = &'static str> {
-    codes.filter_map(|code| {
-        super::admin_contract::administrative_technology(code).map(|(name, _)| name)
-    })
+    codes.filter_map(|code| super::administrative_technology(code).map(|(name, _)| name))
 }
 
 /// Actuators a section may leave out of its standard installation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub(super) enum Omission {
+pub enum Omission {
     Shoulder,
     Upper,
     Lower,
@@ -538,7 +536,7 @@ impl Omission {
 
 /// How one section departs from the standard placement of its fixed equipment.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-pub(super) struct SectionPlan<'a> {
+pub struct SectionPlan<'a> {
     pub omit: &'a [Omission],
     /// Zero-based first engine slot in a side torso.
     pub engine_at: Option<u8>,
@@ -547,7 +545,7 @@ pub(super) struct SectionPlan<'a> {
 }
 
 /// Fixed equipment construction places in one mech section, by zero-based slot.
-pub(super) fn fixed_equipment(
+pub fn fixed_equipment(
     construction: &Construction,
     chassis: BattleMechChassis,
     section: BattleSection,
@@ -662,12 +660,12 @@ pub(super) fn fixed_equipment(
 }
 
 /// Whether a stored critical is an item construction places.
-pub(super) fn is_fixed_item(equipment: &str) -> bool {
+pub fn is_fixed_item(equipment: &str) -> bool {
     FIXED_ITEMS.contains(&equipment)
 }
 
 /// Biped arms flip when neither arm carries a lower or hand actuator.
-pub(super) fn arms_flip(arms: [&SectionDefinition; 2]) -> bool {
+pub fn arms_flip(arms: [&SectionDefinition; 2]) -> bool {
     arms.iter().all(|arm| {
         !arm.criticals.values().any(|critical| {
             critical.equipment.eq_ignore_ascii_case(LOWER_ACTUATOR)
@@ -681,7 +679,7 @@ pub(super) fn arms_flip(arms: [&SectionDefinition; 2]) -> bool {
 /// Rows are `[tons, center torso, side torsos, arms, legs]`; quad chassis
 /// use the leg column for arms. Head structure is always three and unknown
 /// tonnage has no chart value, matching mech_int_check.
-pub(super) fn mech_internal(tons: u16, section: BattleSection, quad: bool) -> Option<u16> {
+pub fn mech_internal(tons: u16, section: BattleSection, quad: bool) -> Option<u16> {
     const STRUCTURE: [[u16; 5]; 19] = [
         [10, 4, 3, 1, 2],
         [15, 5, 4, 2, 3],
@@ -715,12 +713,12 @@ pub(super) fn mech_internal(tons: u16, section: BattleSection, quad: bool) -> Op
 }
 
 /// Internal structure of every structured vehicle location, from tonnage (vehicle_int_check).
-pub(super) fn vehicle_internal(tons: i64) -> u16 {
+pub fn vehicle_internal(tons: i64) -> u16 {
     u16::try_from((tons + 5).max(10) / 10).unwrap_or(u16::MAX)
 }
 
 /// Whether a class takes its internal structure from tonnage rather than its document.
-pub(super) fn derives_internals(class: RawUnitClass) -> bool {
+pub fn derives_internals(class: RawUnitClass) -> bool {
     matches!(
         class,
         RawUnitClass::Mech | RawUnitClass::Vehicle | RawUnitClass::Vtol
@@ -728,7 +726,7 @@ pub(super) fn derives_internals(class: RawUnitClass) -> bool {
 }
 
 /// A speed in km/h as whole movement points, when it is one.
-pub(super) fn movement_points(speed: f64) -> Option<i64> {
+pub fn movement_points(speed: f64) -> Option<i64> {
     let points = (speed / SPEED_PER_MP).round();
     (points * SPEED_PER_MP == speed && points >= 0.0).then_some(points as i64)
 }
@@ -897,7 +895,7 @@ mod tests {
 
     #[test]
     fn small_cockpits_construct_with_their_single_life_support() {
-        let jenner = include_str!("../../tests/fixtures/btech/mechs/JR7-D.toml");
+        let jenner = include_str!("../tests/fixtures/JR7-D.toml");
         let small = jenner
             .replace(
                 "{ at = 4, item = \"HeatSink\" }",
@@ -908,7 +906,7 @@ mod tests {
                 "\n[construction]\ncockpit = \"small\"\n\n[sections.",
                 1,
             );
-        let template = super::super::BattleTemplate::parse("JR7-D", &small).unwrap();
+        let template = crate::BattleTemplate::parse("JR7-D", &small).unwrap();
         let head = &template.sections[&BattleSection::Head];
         assert_eq!(
             head.criticals
@@ -917,13 +915,6 @@ mod tests {
                 .count(),
             1
         );
-        assert!(super::super::BattleUnit::from_template(template).is_ok());
-
-        let mut flagged = super::super::BattleTemplate::parse("JR7-D", jenner).unwrap();
-        flagged
-            .attributes
-            .insert("specials".into(), "SmallCockpit_Tech".into());
-        assert!(super::super::BattleUnit::from_template(flagged).is_err());
     }
 
     #[test]

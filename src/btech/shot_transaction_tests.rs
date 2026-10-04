@@ -1,5 +1,6 @@
 //! Shot outcomes compared with and without validation shortcuts, plus failure-atomicity checks.
 use super::*;
+use crate::btech::BattleUnitTemplateExt;
 use crate::{BattleDice, BattlePower, BattleUnitTemplate, Config, Kind, MapAsset, ObjectId};
 use std::sync::Arc;
 

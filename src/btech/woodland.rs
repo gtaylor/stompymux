@@ -50,83 +50,14 @@ impl BattleWoodlandClearing {
     }
 }
 
-impl BattleWeapon {
-    /// Whether ordinary ammunition can start a woodland fire.
-    pub fn can_ignite_terrain(self) -> bool {
-        !matches!(
-            self,
-            Self::INarcBeacon
-                | Self::NarcBeacon
-                | Self::ClanNarcBeacon
-                | Self::ClanSrm2
-                | Self::ClanStreakSrm2
-                | Self::ClanGaussRifle
-                | Self::ClanMachineGun
-                | Self::ClanLightMachineGun
-                | Self::ClanHeavyMachineGun
-                | Self::ClanErSmallLaser
-                | Self::ClanHeavySmallLaser
-                | Self::ClanSmallPulseLaser
-                | Self::ClanErSmallPulseLaser
-                | Self::MachineGun
-                | Self::HeavyMachineGun
-                | Self::SmallLaser
-                | Self::ErSmallLaser
-                | Self::SmallPulseLaser
-                | Self::XSmallPulseLaser
-                | Self::Srm2
-                | Self::StreakSrm2
-                | Self::HeavyGaussRifle
-                | Self::GaussRifle
-                | Self::LightGaussRifle
-                | Self::MagshotGaussRifle
-        )
-    }
-
-    /// Whether a sufficiently damaging shot can reduce woodland density.
-    pub fn can_clear_terrain(self) -> bool {
-        !matches!(
-            self,
-            Self::ClanLbx2
-                | Self::ClanLbx5
-                | Self::ClanUltraAc2
-                | Self::ClanUltraAc5
-                | Self::ClanSrm2
-                | Self::ClanStreakSrm2
-                | Self::ClanMachineGun
-                | Self::ClanLightMachineGun
-                | Self::ClanHeavyMachineGun
-                | Self::ClanErSmallLaser
-                | Self::ClanHeavySmallLaser
-                | Self::ClanSmallPulseLaser
-                | Self::ClanErSmallPulseLaser
-                | Self::HyperAc2
-                | Self::HyperAc5
-                | Self::MachineGun
-                | Self::HeavyMachineGun
-                | Self::LightAc2
-                | Self::LightAc5
-                | Self::SmallLaser
-                | Self::ErSmallLaser
-                | Self::SmallPulseLaser
-                | Self::XSmallPulseLaser
-                | Self::Srm2
-                | Self::StreakSrm2
-                | Self::Lbx2
-                | Self::Lbx5
-                | Self::Ac2
-                | Self::Ac5
-                | Self::UltraAc2
-                | Self::UltraAc5
-                | Self::RotaryAc2
-                | Self::RotaryAc5
-                | Self::ClanRotaryAc2
-                | Self::ClanRotaryAc5
-        )
-    }
-
+/// The roll a weapon needs to ignite woodland.
+pub trait BattleTerrainIgnition {
     /// Required ignition roll. Ammunition overrides precede ordinary weapon exclusions.
-    pub fn terrain_ignition_target(self, ammunition: BattleAmmunitionMode) -> Option<u8> {
+    fn terrain_ignition_target(self, ammunition: BattleAmmunitionMode) -> Option<u8>;
+}
+
+impl BattleTerrainIgnition for BattleWeapon {
+    fn terrain_ignition_target(self, ammunition: BattleAmmunitionMode) -> Option<u8> {
         if matches!(self, Self::Flamer | Self::ClanFlamer | Self::HeavyFlamer) {
             return Some(4);
         }

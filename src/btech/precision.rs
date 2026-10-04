@@ -1,28 +1,21 @@
 //! Precision autocannon ammunition controls and target-movement adjustment.
-use super::BattleAmmunitionMode;
+use super::{AmmunitionFeedback, BattleAmmunitionMode};
 use crate::{ObjectId, World};
 use anyhow::{Result, ensure};
 
-impl BattleAmmunitionMode {
+/// Precision ammunition's reduction of the target-movement modifier.
+pub(crate) trait BattlePrecisionAim {
     /// Precision reduces the complete target-movement modifier by two, with a zero floor.
-    pub(super) fn target_movement_modifier(self, movement: i8) -> i8 {
+    fn target_movement_modifier(self, movement: i8) -> i8;
+}
+
+impl BattlePrecisionAim for BattleAmmunitionMode {
+    fn target_movement_modifier(self, movement: i8) -> i8 {
         if self == Self::Precision {
             movement.saturating_sub(2).max(0)
         } else {
             movement
         }
-    }
-
-    /// Shared cockpit feedback for normal and Precision rounds.
-    pub(crate) fn precision_message(self, index: usize) -> String {
-        format!(
-            "Weapon {index} has been set to fire {} rounds",
-            if self == Self::Precision {
-                "Precision"
-            } else {
-                "normal"
-            }
-        )
     }
 }
 

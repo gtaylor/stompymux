@@ -13,6 +13,16 @@ pub enum BattleHitArc {
 }
 
 impl BattleHitArc {
+    /// Hull face seen from an incoming attack, shared by ground vehicles and rotorcraft.
+    pub fn vehicle_section(self) -> super::BattleVehicleSection {
+        match self {
+            Self::Front => super::BattleVehicleSection::Front,
+            Self::Rear => super::BattleVehicleSection::Rear,
+            Self::Left => super::BattleVehicleSection::Left,
+            Self::Right => super::BattleVehicleSection::Right,
+        }
+    }
+
     /// Classify target-relative bearing using configured biped hit arcs.
     /// Modes 0 and 2 use 180-degree front and 60-degree rear arcs; mode 1 uses quadrants.
     pub fn from_bearing(bearing: f64, heading: f64, mode: i64) -> Result<Self> {
@@ -238,18 +248,5 @@ impl BattleHitRules {
             through_armor_critical: critical,
             crew_stun,
         })
-    }
-}
-
-impl BattleSection {
-    /// Destination of excess biped damage; head and center torso have no transfer destination.
-    pub fn damage_transfer(self) -> Option<Self> {
-        use BattleSection::*;
-        match self {
-            LeftArm | LeftLeg => Some(LeftTorso),
-            RightArm | RightLeg => Some(RightTorso),
-            LeftTorso | RightTorso => Some(CenterTorso),
-            CenterTorso | Head => None,
-        }
     }
 }

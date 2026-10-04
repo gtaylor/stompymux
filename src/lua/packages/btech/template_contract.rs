@@ -299,8 +299,11 @@ pub(super) fn register(lua: &Lua, native: &Table, shared: &SharedWorld) -> mlua:
             crate::lua::transactions::require(lua)?;
             let template = read_raw_unit(lua, arg, 1)?;
             let scripts = crate::Scripts::services(lua)?;
-            let cost = crate::btech::raw_template_base_cost(&scripts.world.borrow(), &template)
-                .map_err(mlua::Error::external)?;
+            let cost = crate::btech::raw_template_base_cost(
+                &scripts.world.borrow().btech.part_costs,
+                &template,
+            )
+            .map_err(mlua::Error::external)?;
             if cost > 9_007_199_254_740_991 {
                 return Err(error::failure(
                     "mux.internal",

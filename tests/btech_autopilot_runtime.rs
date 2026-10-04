@@ -1,6 +1,7 @@
 //! End-to-end ground-autopilot lifecycle coverage on isolated fixture worlds.
 use crate::support;
 use std::{cell::RefCell, rc::Rc};
+use stompymux_rs::BattleUnitTemplateExt;
 use stompymux_rs::{
     BattlePower, BattleUnitSignature, BattleUnitTemplate, Config, Kind, MapAsset, ObjectId,
     Scripts, World, assign_battle_pilot, create_battle_map, persistence, place_battle_unit,

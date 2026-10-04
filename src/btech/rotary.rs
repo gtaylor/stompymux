@@ -1,5 +1,5 @@
 //! Rotary autocannon burst selection and full-damage shell grouping.
-use super::{BattleFireMode, BattleWeapon};
+use super::{BattleFireMode, BattleWeapon, BattleWeaponSalvo};
 use crate::{ObjectId, World};
 use anyhow::{Result, bail, ensure};
 
@@ -16,10 +16,20 @@ fn burst_mode(rounds: u8) -> Result<BattleFireMode> {
     })
 }
 
-impl BattleWeapon {
+/// Rotary autocannon burst damage grouping.
+pub(crate) trait BattleRotaryDamage {
     /// Rotary shell counts follow the cluster hits table column for the burst length; glancing
     /// shifts its roll down four.
-    pub(super) fn rotary_damage_groups(
+    fn rotary_damage_groups(
+        self,
+        mode: BattleFireMode,
+        roll: u8,
+        glancing: bool,
+    ) -> Result<Vec<u16>>;
+}
+
+impl BattleRotaryDamage for BattleWeapon {
+    fn rotary_damage_groups(
         self,
         mode: BattleFireMode,
         roll: u8,

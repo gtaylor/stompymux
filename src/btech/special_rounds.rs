@@ -1,5 +1,5 @@
 //! Smoke and mine missile controls share inventory, authority and feedback across unit classes.
-use super::BattleAmmunitionMode;
+use super::{AmmunitionFeedback, BattleAmmunitionMode};
 use crate::{ObjectId, World};
 use anyhow::{Result, ensure};
 
@@ -33,20 +33,6 @@ pub fn toggle_missile_rounds(
     Ok(super::weapon_controls::toggle_ammunition_mode(
         world, id, index, mode,
     ))
-}
-
-impl BattleAmmunitionMode {
-    /// Both host interfaces use the same cockpit message after a successful selection.
-    pub(crate) fn special_round_message(self, index: usize) -> String {
-        let round = match self {
-            Self::Smoke => "smoke",
-            Self::Mine => "mine",
-            _ => {
-                return format!("Weapon {index} has been set to fire normal rounds");
-            }
-        };
-        format!("Weapon {index} has been set to fire {round} rounds.")
-    }
 }
 
 /// Reuse bounded multi-weapon parsing, cockpit authority and world/effect publication.

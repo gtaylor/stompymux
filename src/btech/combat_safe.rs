@@ -65,6 +65,7 @@ pub(super) fn notice(attacker: Option<ObjectId>, target: ObjectId) -> Option<sup
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::btech::BattleUnitTemplateExt;
 
     /// Damage attribution uses the source map even when the target occupies a different battlefield.
     #[test]

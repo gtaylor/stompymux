@@ -3,7 +3,7 @@ use anyhow::{Context, Result, ensure};
 use std::collections::BTreeMap;
 
 /// Parse the reference floating-point field without admitting negative or nonfinite baselines.
-pub(super) fn parse(value: &str) -> Result<f64> {
+pub fn parse_template_speed(value: &str) -> Result<f64> {
     let speed = value
         .trim()
         .parse::<f32>()
@@ -16,13 +16,13 @@ pub(super) fn parse(value: &str) -> Result<f64> {
 }
 
 /// Unedited units use their authored speed; edits retain an independent construction baseline.
-pub(super) fn read(attributes: &BTreeMap<String, String>, authored: f64) -> Result<f64> {
+pub fn read_template_speed(attributes: &BTreeMap<String, String>, authored: f64) -> Result<f64> {
     attributes
         .get("template_speed")
-        .map_or(Ok(authored), |value| parse(value))
+        .map_or(Ok(authored), |value| parse_template_speed(value))
 }
 
 /// Store one canonical baseline without changing engine, damage, throttle or actual speed.
-pub(super) fn write(attributes: &mut BTreeMap<String, String>, speed: f64) {
+pub fn write_template_speed(attributes: &mut BTreeMap<String, String>, speed: f64) {
     attributes.insert("template_speed".into(), speed.to_string());
 }

@@ -1,6 +1,7 @@
 //! Battle map viewing, terrain, links, persistence, environment, and map flag native bindings.
 
 use super::*;
+use crate::btech::BattleUnitTemplateExt;
 
 /// Register this package slice on the private native table.
 pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::Result<()> {

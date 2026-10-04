@@ -1,5 +1,5 @@
 //! Shared ground-vehicle and VTOL asset anatomy, independent of live simulation admission.
-use super::{SectionDefinition, template_document::ParsedTemplate};
+use super::{SectionDefinition, document::ParsedTemplate};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -60,16 +60,6 @@ pub enum BattleVehicleSection {
 }
 
 impl BattleVehicleSection {
-    /// Hull face seen from an incoming attack, shared by ground vehicles and rotorcraft.
-    pub fn from_hit_arc(arc: super::BattleHitArc) -> Self {
-        match arc {
-            super::BattleHitArc::Front => Self::Front,
-            super::BattleHitArc::Rear => Self::Rear,
-            super::BattleHitArc::Left => Self::Left,
-            super::BattleHitArc::Right => Self::Right,
-        }
-    }
-
     /// Stable asset headings for hull faces, turrets and rotors.
     pub fn name(self) -> &'static str {
         match self {
@@ -144,11 +134,11 @@ impl BattleVehicleTemplate {
     }
 
     /// Enforce chassis identity for parsed assets and directly edited construction definitions.
-    pub(crate) fn validate_anatomy(&self) -> Result<()> {
+    pub fn validate_anatomy(&self) -> Result<()> {
         ensure!(self.tons > 0, "Vehicle tonnage must be positive");
-        super::unit_identity::validate_metadata(&self.attributes)?;
-        super::engine_sink_override::read(&self.attributes)?;
-        super::template_speed::read(&self.attributes, self.max_speed)?;
+        super::validate_unit_metadata(&self.attributes)?;
+        super::read_engine_sink_override(&self.attributes)?;
+        super::read_template_speed(&self.attributes, self.max_speed)?;
         let kind = self
             .attributes
             .get("type")
@@ -195,7 +185,7 @@ impl BattleVehicleTemplate {
     }
 
     /// Validate decoded fields and sections as a ground vehicle or VTOL.
-    pub(super) fn from_parsed(parsed: ParsedTemplate) -> Result<Self> {
+    pub fn from_parsed(parsed: ParsedTemplate) -> Result<Self> {
         let kind = parsed.required("type")?;
         ensure!(
             kind.eq_ignore_ascii_case("Vehicle") || kind.eq_ignore_ascii_case("VTOL"),

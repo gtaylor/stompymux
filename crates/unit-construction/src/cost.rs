@@ -1,7 +1,19 @@
 //! Source-derived FASA construction cost for supported BattleMech templates.
 use super::*;
-use crate::World;
-use anyhow::Result;
+use anyhow::{Result, ensure};
+use std::collections::BTreeMap;
+
+/// Market prices of loose parts by part id. Parts without an entry cost nothing.
+pub type BattlePartPrices = BTreeMap<i32, u64>;
+
+/// The market price of one catalogued part.
+pub fn part_price(prices: &BattlePartPrices, part_id: i32) -> Result<u64> {
+    ensure!(
+        BattlePart::from_id(part_id).is_some(),
+        "Unknown inventory part"
+    );
+    Ok(prices.get(&part_id).copied().unwrap_or(0))
+}
 const WEAPON_COST: [u64; 196] = [
     1500, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 200000, 80000, 11250, 10000, 300000, 7500, 250000, 100000, 20000, 175000, 60000,
@@ -40,12 +52,11 @@ fn flag(template: &BattleTemplate, name: &str) -> bool {
         .filter_map(|key| template.attributes.get(*key))
         .any(|v| {
             v.split_ascii_whitespace()
-                .any(|v| super::technology::spells(v, name))
+                .any(|v| flag_spells_technology(v, name))
         })
         || (0..=56).any(|code| {
-            admin_contract::administrative_technology(code).is_some_and(|(candidate, _)| {
-                candidate.eq_ignore_ascii_case(name)
-                    && inspection::inspection_template_inferred_technology(template, code)
+            administrative_technology(code).is_some_and(|(candidate, _)| {
+                candidate.eq_ignore_ascii_case(name) && template.infers_technology(code)
             })
         })
 }
@@ -60,7 +71,7 @@ fn raw_flag(template: &RawTemplate, name: &str) -> bool {
         .any(|value| {
             value
                 .split_ascii_whitespace()
-                .any(|value| super::technology::spells(value, name))
+                .any(|value| flag_spells_technology(value, name))
         })
 }
 
@@ -95,7 +106,7 @@ fn raw_weapon_is_energy(id: i32) -> bool {
 fn raw_ammunition_cost(template: &RawTemplate) -> Result<f64> {
     let mut total = 0.0;
     for section in RawSectionCode::for_unit(template.class, template.movement) {
-        for row in inspection::inspect_raw_template_criticals(template, *section)? {
+        for row in inspect_raw_template_criticals(template, *section)? {
             let Some(part) = row.part else { continue };
             let Some(weapon_id) = BattlePart::ammunition_weapon_id(part.id) else {
                 continue;
@@ -121,7 +132,7 @@ fn raw_ammunition_cost(template: &RawTemplate) -> Result<f64> {
     Ok(total)
 }
 
-fn raw_equipment_cost(world: &World, template: &RawTemplate) -> Result<f64> {
+fn raw_equipment_cost(prices: &BattlePartPrices, template: &RawTemplate) -> Result<f64> {
     let mut total = 0.0;
     let mut bloodhound = 0_u64;
     for definition in template.sections.values() {
@@ -185,14 +196,14 @@ fn raw_equipment_cost(world: &World, template: &RawTemplate) -> Result<f64> {
                     | BattleSystem::LaserReflective
                     | BattleSystem::Masc
                     | BattleSystem::Sword => 0.0,
-                    _ => part_cost(world, part.part_id)? as f64,
+                    _ => part_price(prices, part.part_id)? as f64,
                 }
             } else if part.part_id == 427 {
                 175000.0
             } else if (443..=445).contains(&part.part_id) {
                 0.0
             } else {
-                part_cost(world, part.part_id)? as f64
+                part_price(prices, part.part_id)? as f64
             };
         }
     }
@@ -225,9 +236,9 @@ fn raw_mech_template(template: &RawTemplate) -> Result<BattleTemplate> {
     })
 }
 
-fn raw_vehicle_base_cost(world: &World, template: &RawTemplate) -> Result<u64> {
+fn raw_vehicle_base_cost(prices: &BattlePartPrices, template: &RawTemplate) -> Result<u64> {
     let tons = u64::try_from(template.tons)?;
-    let weapons = inspection::inspect_raw_template_weapons(template)?;
+    let weapons = inspect_raw_template_weapons(template)?;
     let mut total = (tons * 1500) as f64;
     let ice = raw_flag(template, "ICEEngine_Tech");
     let mut turret_mass = 0_u64;
@@ -254,7 +265,7 @@ fn raw_vehicle_base_cost(world: &World, template: &RawTemplate) -> Result<u64> {
     if template.movement == RawMovement::Vtol {
         total += (4000 * tons) as f64;
     }
-    let (rating, suspension) = inspection::inspect_raw_template_engine(template);
+    let (rating, suspension) = inspect_raw_template_engine(template);
     let engine_base = if raw_flag(template, "CompactEngine_Tech") {
         10000_u64
     } else if raw_flag(template, "LightEngine_Tech") {
@@ -278,9 +289,7 @@ fn raw_vehicle_base_cost(world: &World, template: &RawTemplate) -> Result<u64> {
     } else {
         sinks.saturating_sub(10)
     } * if double { 6000 } else { 2000 }) as f64;
-    let armor = inspection::inspect_raw_template_armor(template, None)?
-        .armor
-        .1;
+    let armor = inspect_raw_template_armor(template, None)?.armor.1;
     let armor = if raw_flag(template, "FerroFibrous_Tech") {
         armor * 50 / if clan { 60 } else { 56 }
     } else if raw_flag(template, "HvyFerroFibrous_Tech") {
@@ -309,7 +318,7 @@ fn raw_vehicle_base_cost(world: &World, template: &RawTemplate) -> Result<u64> {
         total += raw_weapon_cost(mount.part.id) as f64;
     }
     total += raw_ammunition_cost(template)?;
-    total += raw_equipment_cost(world, template)?;
+    total += raw_equipment_cost(prices, template)?;
     let modifier = match template.movement {
         RawMovement::Tracked => 1.0 + tons as f64 / 100.0,
         RawMovement::Wheeled | RawMovement::Hull => 1.0 + tons as f64 / 200.0,
@@ -322,14 +331,14 @@ fn raw_vehicle_base_cost(world: &World, template: &RawTemplate) -> Result<u64> {
 }
 
 /// Calculate native construction cost without requiring a combat runtime class.
-pub fn raw_template_base_cost(world: &World, template: &RawTemplate) -> Result<u64> {
+pub fn raw_template_base_cost(prices: &BattlePartPrices, template: &RawTemplate) -> Result<u64> {
     match template.class {
-        RawUnitClass::Mech => template_base_cost(world, &raw_mech_template(template)?),
+        RawUnitClass::Mech => template_base_cost(prices, &raw_mech_template(template)?),
         RawUnitClass::Vehicle | RawUnitClass::Vtol | RawUnitClass::Naval => {
-            raw_vehicle_base_cost(world, template)
+            raw_vehicle_base_cost(prices, template)
         }
         RawUnitClass::BattleSuit => {
-            let weapons: u64 = inspection::inspect_raw_template_weapons(template)?
+            let weapons: u64 = inspect_raw_template_weapons(template)?
                 .into_iter()
                 .map(|weapon| raw_weapon_cost(weapon.part.id))
                 .sum();
@@ -340,7 +349,7 @@ pub fn raw_template_base_cost(world: &World, template: &RawTemplate) -> Result<u
             };
             let mut total = (base + weapons) as f64
                 + raw_ammunition_cost(template)?
-                + raw_equipment_cost(world, template)?;
+                + raw_equipment_cost(prices, template)?;
             if raw_flag(template, "OmniMech_Tech") {
                 total *= 1.25;
             }
@@ -354,14 +363,14 @@ pub fn raw_template_base_cost(world: &World, template: &RawTemplate) -> Result<u
 }
 
 /// A catalogue part paired with the classification flags `inspection_template_part` reports.
-type InspectionFlags = (inspection::InspectionPart, bool, bool);
+type InspectionFlags = (InspectionPart, bool, bool);
 
 /// Build the combat-supported portion of a template while retaining every
 /// catalogue part that native inspection and economy code can price without a
 /// combat implementation. Structural split links remain in the clone because
 /// the supported weapon resolver consumes them.
 fn inspection_loadout(template: &BattleTemplate) -> Result<(BattleLoadout, Vec<InspectionFlags>)> {
-    let normalized = inspection::inspection_compatible_template(template);
+    let normalized = inspection_compatible_template(template);
     if let Ok(loadout) = BattleLoadout::resolve(&normalized) {
         return Ok((loadout, Vec::new()));
     }
@@ -373,12 +382,12 @@ fn inspection_loadout(template: &BattleTemplate) -> Result<(BattleLoadout, Vec<I
                 || critical.equipment.eq_ignore_ascii_case("SplitCrit_Right")
                 || BattleSystem::named(&critical.equipment).is_some()
                 || BattleWeapon::parse(&critical.equipment).is_ok()
-                || super::equipment::strip_name_prefix(&critical.equipment, "Ammo_")
+                || strip_name_prefix(&critical.equipment, "Ammo_")
                     .is_some_and(|name| BattleWeapon::parse(name).is_ok())
             {
                 return true;
             }
-            if let Some(part) = inspection::inspection_template_part(&critical.equipment) {
+            if let Some(part) = inspection_template_part(&critical.equipment) {
                 raw.push(part);
             }
             false
@@ -387,9 +396,9 @@ fn inspection_loadout(template: &BattleTemplate) -> Result<(BattleLoadout, Vec<I
     Ok((BattleLoadout::resolve(&compatible)?, raw))
 }
 /// Calculate the legacy MaxTech/FASA construction estimate from pristine material.
-pub fn template_base_cost(world: &World, template: &BattleTemplate) -> Result<u64> {
+pub fn template_base_cost(prices: &BattlePartPrices, template: &BattleTemplate) -> Result<u64> {
     let (loadout, raw_parts) = inspection_loadout(template)?;
-    let tons = u64::from(super::administrative_template_tonnage(
+    let tons = u64::from(administrative_template_tonnage(
         &template.attributes,
         template.tons,
     ));
@@ -463,9 +472,8 @@ pub fn template_base_cost(world: &World, template: &BattleTemplate) -> Result<u6
     // consume two criticals per MP and use the running-MP ceiling. Preserve
     // the source's integer `2 / 3` standard-jet multiplier as well.
     let improved_jump = flag(template, "ImprovedJJ_Tech");
-    let normalized_jump = (inspection::inspection_normalized_jump_speed(template) as f32
-        * 0.093_023_3_f32)
-        .trunc() as u64;
+    let normalized_jump =
+        (inspection_normalized_jump_speed(template) as f32 * 0.093_023_3_f32).trunc() as u64;
     total +=
         (tons * normalized_jump * normalized_jump * if improved_jump { 500 } else { 200 }) as f64;
     let double = clan || flag(template, "DoubleHS");
@@ -595,7 +603,7 @@ pub fn template_base_cost(world: &World, template: &BattleTemplate) -> Result<u6
                     &template.sections[&part.location.section].criticals[&part.location.slot]
                         .equipment,
                 ) {
-                    total += super::part_cost(world, part_id.part_id)? as f64;
+                    total += part_price(prices, part_id.part_id)? as f64;
                 }
             }
         }
@@ -607,7 +615,7 @@ pub fn template_base_cost(world: &World, template: &BattleTemplate) -> Result<u6
         total += match part.id {
             427 => 175000.0,
             443..=445 => 0.0,
-            id => super::part_cost(world, id)? as f64,
+            id => part_price(prices, id)? as f64,
         };
     }
     if clan {
@@ -619,7 +627,7 @@ pub fn template_base_cost(world: &World, template: &BattleTemplate) -> Result<u6
     total += (bloodhound / 3 * 500000 + masc * rating * 1000) as f64;
     if sword {
         total += f64::from(half(
-            super::administrative_template_tonnage(&template.attributes, template.tons) * 1024 / 20,
+            administrative_template_tonnage(&template.attributes, template.tons) * 1024 / 20,
         )) / 1024.0
             * 10000.0
     }
@@ -630,16 +638,19 @@ pub fn template_base_cost(world: &World, template: &BattleTemplate) -> Result<u6
 }
 
 /// Calculate the legacy vehicle/VTOL branch of the FASA construction estimate.
-pub fn vehicle_template_base_cost(world: &World, template: &BattleVehicleTemplate) -> Result<u64> {
-    let compatible = inspection::inspection_compatible_vehicle_template(template);
+pub fn vehicle_template_base_cost(
+    prices: &BattlePartPrices,
+    template: &BattleVehicleTemplate,
+) -> Result<u64> {
+    let compatible = inspection_compatible_vehicle_template(template);
     let loadout = BattleVehicleLoadout::resolve(&compatible)?;
-    let tons = u64::from(super::administrative_template_tonnage(
+    let tons = u64::from(administrative_template_tonnage(
         &template.attributes,
         template.tons,
     ));
     let mut total = (tons * 1000 + tons * 500) as f64;
     let ice = flag_vehicle(template, "ICEEngine_Tech");
-    let movement = super::administrative_template_movement(&template.attributes, template.movement);
+    let movement = administrative_template_movement(&template.attributes, template.movement);
     let mut turret_mass = 0u64;
     let mut amplifier_mass = 0u64;
     for mount in &loadout.weapons {
@@ -786,7 +797,7 @@ pub fn vehicle_template_base_cost(world: &World, template: &BattleVehicleTemplat
                 &template.sections[&part.location.section].criticals[&part.location.slot].equipment,
             )
             .ok()
-            .and_then(|part| super::part_cost(world, part.part_id).ok())
+            .and_then(|part| part_price(prices, part.part_id).ok())
             .unwrap_or(0) as f64,
         };
     }
@@ -806,6 +817,6 @@ fn flag_vehicle(template: &BattleVehicleTemplate, name: &str) -> bool {
         .filter_map(|key| template.attributes.get(*key))
         .any(|v| {
             v.split_ascii_whitespace()
-                .any(|v| super::technology::spells(v, name))
+                .any(|v| flag_spells_technology(v, name))
         })
 }

@@ -5,7 +5,7 @@ use anyhow::Result;
 /// Adopt owned construction and surviving equipment without combat rolls or template-file reloads.
 pub(super) fn recalculate(unit: &mut BattleUnit, gyro_protection_used: bool) -> Result<()> {
     let loadout = unit.loadout()?;
-    unit.reconstructed_cooling = Some(super::engine_sink_override::reconstructed_capacity(unit)?);
+    unit.reconstructed_cooling = Some(super::engine_sink_capacity::reconstructed_capacity(unit)?);
     unit.heat_cutoff.disabled = unit.heat_cutoff.disabled.min(unit.cooling_capacity());
     let improved = unit.definition().has_special("ImprovedJJ_Tech");
     let installed = loadout.jump_jet_groups(improved)?.len();

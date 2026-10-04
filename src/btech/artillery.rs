@@ -1,5 +1,5 @@
 //! Restartable artillery flight and impact patterns, independent of weapon admission and damage application.
-use super::{BattleDice, BattleHitTable, BattleWeapon, HexCoordinate};
+use super::{BattleAmmunitionMode, BattleDice, BattleHitTable, BattleWeapon, HexCoordinate};
 use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -12,6 +12,19 @@ pub enum BattleArtilleryMode {
     Cluster,
     Smoke,
     Mine,
+}
+
+impl BattleArtilleryMode {
+    /// Resolve a selected artillery ammunition type into its delayed arrival effect.
+    pub fn from_ammunition(ammunition: BattleAmmunitionMode) -> Result<Self> {
+        Ok(match ammunition {
+            BattleAmmunitionMode::Normal => Self::Standard,
+            BattleAmmunitionMode::Cluster => Self::Cluster,
+            BattleAmmunitionMode::Smoke => Self::Smoke,
+            BattleAmmunitionMode::Mine => Self::Mine,
+            _ => anyhow::bail!("Ammunition is not an artillery payload"),
+        })
+    }
 }
 
 /// Owned launch facts and a committed-second countdown. Impact randomness is drawn only on arrival.

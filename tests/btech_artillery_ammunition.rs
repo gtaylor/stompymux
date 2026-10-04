@@ -54,7 +54,10 @@ fn artillery_ammunition_payloads_and_round_trip() {
             let unit = BattleUnit::from_template(template).unwrap();
             let bin = unit.loadout().unwrap().ammunition[0].clone();
             assert_eq!(bin.mode, mode);
-            assert_eq!(bin.mode.artillery_payload().unwrap(), payload);
+            assert_eq!(
+                BattleArtilleryMode::from_ammunition(bin.mode).unwrap(),
+                payload
+            );
             assert_eq!(bin.capacity, u16::from(weapon.profile().ammunition_per_ton));
             assert_eq!(unit.ammunition()[0], bin.capacity);
             let restored: BattleUnit =
@@ -77,8 +80,8 @@ fn artillery_ammunition_payloads_and_round_trip() {
             );
         }
     }
-    assert!(BattleAmmunitionMode::Narc.artillery_payload().is_err());
-    assert!(BattleAmmunitionMode::Artemis.artillery_payload().is_err());
+    assert!(BattleArtilleryMode::from_ammunition(BattleAmmunitionMode::Narc).is_err());
+    assert!(BattleArtilleryMode::from_ammunition(BattleAmmunitionMode::Artemis).is_err());
 }
 
 /// Literal missile Smoke/Mine supplies stay distinct from the older combined guidance flag spellings.

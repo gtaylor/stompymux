@@ -27,6 +27,7 @@ pub use artillery_firing::BattleArtilleryLaunchReport;
 mod coordinate_launch;
 pub use coordinate_launch::BattleLaunchMisload;
 mod artillery_aim;
+pub use artillery_aim::BattleArtilleryAiming;
 pub use artillery_aim::{
     BattleArtilleryAim, BattleArtilleryAimInput, BattleArtilleryObserver, BattleArtilleryRange,
     unit_artillery_gunnery_target,
@@ -62,6 +63,7 @@ pub use vehicle_pods::{begin_pod_removal, begin_pod_removal_action};
 pub(crate) mod inarc;
 pub use inarc::set_inarc_ammunition;
 pub(crate) mod narc;
+pub(crate) use narc::BattleBeaconLaunch;
 mod vehicle_narc;
 pub use narc::{
     BattleBeaconKind, BattleNarcReport, BattleUnitSection, toggle_explosive, toggle_narc,
@@ -76,7 +78,6 @@ pub use artemis::BattleArtemisController;
 mod gyro;
 pub use gyro::BattleGyro;
 mod engine;
-pub use engine::BattleEngine;
 mod mass;
 pub use mass::BattleMass;
 mod stacking;
@@ -88,10 +89,11 @@ mod water_movement;
 pub use preferences::set_auto_fall;
 mod aim;
 mod arcs;
+pub use arcs::BattleMountArcs;
 mod assets;
 pub use aim::{
-    BattleAimModifiers, BattleAimRules, BattleIndirectAim, BattlePerceptionAim, BattleRangeBracket,
-    BattleWeaponRange, aim_modifiers, pilot_aim_modifiers, unit_target_movement_modifier,
+    BattleAimModifiers, BattleAimRules, BattleIndirectAim, BattlePerceptionAim, aim_modifiers,
+    pilot_aim_modifiers, unit_target_movement_modifier,
 };
 pub use arcs::{
     BattleContactArc, BattleFacing, BattleTorso, flip_arms, rotate_torso, weapon_bears_on,
@@ -120,9 +122,8 @@ mod dice;
 pub use damage::{BattleDamagePhase, BattleDamageResult, apply_damage_phase};
 pub(crate) use dice::BattleDiceState;
 pub use dice::{BattleDice, roll_unit_dice};
-mod equipment;
 pub(crate) mod fire_mode;
-pub use fire_mode::{BattleFireMode, toggle_flamer_heat, toggle_hotload};
+pub use fire_mode::{toggle_flamer_heat, toggle_hotload};
 mod geometry;
 mod heat;
 mod overheat;
@@ -149,7 +150,6 @@ pub use jumping::{advance_jumps, launch_jump};
 pub(crate) mod landing;
 pub use landing::land_jump;
 mod ground_proposal;
-mod loadout;
 mod loadout_context;
 mod map_flags;
 pub use stompymux_map::{MapFlag, format_map_flags, parse_map_flags};
@@ -159,7 +159,6 @@ pub use ground_proposal::{
     BattleGroundMotionProposal, propose_mech_ground_motion, propose_vehicle_ground_motion,
 };
 mod movement_report;
-mod template_ammunition;
 mod template_check;
 pub use mobility::BattleMobility;
 pub use template_check::{BattleAmmunitionAdjustment, BattleTemplateCheck, check_template};
@@ -180,6 +179,7 @@ mod readiness;
 mod weapon_admission;
 pub use readiness::{BattleWeaponReadiness, BattleWeaponUse, advance_recycle, spend_weapon};
 mod salvo;
+pub use salvo::BattleWeaponSalvo;
 mod state;
 mod stun;
 pub use salvo::{
@@ -187,9 +187,6 @@ pub use salvo::{
 };
 pub use stun::{advance_stun, stun_unit};
 mod chassis_actions;
-mod template;
-mod template_construction;
-mod template_document;
 mod unit;
 pub use chassis_actions::{
     BattleUnitFallReport, BattleUnitShotReport, ByChassis, fire_unit_shot, resolve_unit_fall,
@@ -209,28 +206,19 @@ pub use stompymux_map::{
     DecorationKind, Ground, Hex, MAX_DEPTH, MAX_HEIGHT, MapAsset, MapPointOfInterest, Structure,
     Terrain, Water, Woods,
 };
-pub use unit_template::BattleUnitTemplate;
+pub use unit_template::BattleUnitTemplateExt;
 mod vehicle;
 mod vehicle_driving;
 mod vehicle_motion;
 pub use vehicle_motion::BattleVehicleMotionRules;
+pub use vehicle_motion::BattleVehicleTemplateMotion;
 mod vehicle_placement;
 mod vehicle_power;
 pub use vehicle::{BattleVehicle, create_vehicle, damage_vehicle_motive, damage_vehicle_phase};
+mod engine_sink_capacity;
+mod mode_feedback;
 mod vehicle_mass;
-pub use vehicle_mass::BattleVehicleMass;
-mod vehicle_engine;
-mod vehicle_loadout;
-pub use vehicle_engine::{BattleVehicleEngine, BattleVehiclePowerplant};
-mod vehicle_template;
-pub use template::{BattleSection, BattleTemplate, CriticalDefinition, SectionDefinition};
-pub use vehicle_loadout::{BattleVehicleLoadout, VehicleCriticalLocation};
-pub use vehicle_template::{BattleVehicleMovement, BattleVehicleSection, BattleVehicleTemplate};
-
-pub use equipment::{BattleSystem, BattleWaterRanges, BattleWeapon, WeaponProfile};
-pub use loadout::{
-    AmmunitionBin, BattleLoadout, CriticalLocation, ResolvedLoadout, SystemCritical, WeaponMount,
-};
+pub use mode_feedback::{AmmunitionFeedback, FireModeFeedback};
 
 pub use placement::{place_unit, remove_unit};
 pub use unit::{BattlePosition, BattleSectionState, BattleUnit};
@@ -289,6 +277,37 @@ pub(crate) fn notify_message(
 
 pub use geometry::{BattleRange, unit_elevation, unit_range};
 pub use stompymux_map::{HexCoordinate, Point};
+
+pub use stompymux_unit_construction::{
+    AMMUNITION_PART_OFFSET, AmmunitionBin, BattleAmmunitionMode, BattleDamageClass, BattleEngine,
+    BattleFireMode, BattleLoadout, BattleMechChassis, BattlePart, BattlePartForm, BattlePartKind,
+    BattlePartNames, BattlePartPrices, BattleRangeBracket, BattleSection, BattleSystem,
+    BattleTechnology, BattleTemplate, BattleUnitTemplate, BattleVehicleEngine,
+    BattleVehicleLoadout, BattleVehicleMass, BattleVehicleMaterial, BattleVehicleMovement,
+    BattleVehiclePowerplant, BattleVehicleSection, BattleVehicleTemplate, BattleWaterRanges,
+    BattleWeapon, BattleWeaponRange, CriticalDefinition, CriticalLocation, InspectionArmor,
+    InspectionCritical, InspectionPart, InspectionWeapon, PART_ID_LIMIT, ParsedTemplate,
+    RawMovement, RawSectionCode, RawTemplate, RawUnitClass, ResolvedLoadout, SectionDefinition,
+    SystemCritical, TemplateRegistryCache, VehicleCriticalLocation, WEAPON_PART_IDS, WeaponMount,
+    WeaponProfile, administrative_technology, administrative_template_movement,
+    administrative_template_tonnage, armor_mass, cargo_space_mass, edit_special, engine_mass,
+    finalize_raw_load_specials, flag_spells_technology, half_ton, inspect_raw_template_armor,
+    inspect_raw_template_criticals, inspect_raw_template_engine, inspect_raw_template_weapons,
+    inspection_ammunition_modes, inspection_canonical_mech_internal,
+    inspection_compatible_template, inspection_compatible_vehicle_template,
+    inspection_configured_technology, inspection_configured_technology_attributes,
+    inspection_engine_rating, inspection_fire_modes, inspection_normalized_jump_speed,
+    inspection_raw_part, inspection_template_part, inspection_vehicle_engine_rating,
+    inspection_vehicle_engine_values, mixed_technology_flag, one_shot_mass,
+    parse_engine_sink_override, parse_template_speed, part_abbreviation, part_catalogue,
+    part_names, part_price, part_short_name, power_amplifier_mass, rated_output,
+    raw_default_mech_criticals, raw_template_base_cost, read_engine_sink_override,
+    read_resolved_raw_template, read_resolved_template, read_template_document,
+    read_template_speed, reflective_armor_slots, resolve_template_path,
+    resolve_template_path_bytes_cached, resolve_template_path_cached, strip_name_prefix,
+    structure_mass, system_slot_mass, template_base_cost, unit_metadata, validate_unit_metadata,
+    vehicle_template_base_cost, write_engine_sink_override, write_template, write_template_speed,
+};
 
 pub(crate) use motion::set_speed_autopilot;
 pub use motion::{BattleMotion, BattleMovementRules, advance_motion, set_heading, set_speed};
@@ -356,6 +375,7 @@ pub use shot::{
 
 mod piloting;
 mod vehicle_arcs;
+pub use vehicle_arcs::BattleVehicleMountArcs;
 mod vehicle_control_damage;
 pub use vehicle_control_damage::{BattleVehicleControlHit, damage_vehicle_controls};
 mod vehicle_critical_table;
@@ -397,7 +417,7 @@ mod section_exposure;
 pub use section_exposure::{BattleSectionExposure, BattleSectionExposureReport};
 
 pub(crate) mod ammunition_mode;
-pub use ammunition_mode::{BattleAmmunitionMode, toggle_artemis, toggle_cluster, toggle_lbx};
+pub use ammunition_mode::{toggle_artemis, toggle_cluster, toggle_lbx};
 
 pub(crate) mod ultra;
 pub use ultra::toggle_ultra;
@@ -406,6 +426,7 @@ pub(crate) mod rapid;
 pub use rapid::toggle_rapid;
 
 pub(crate) mod rotary;
+pub(crate) use rotary::BattleRotaryDamage;
 pub use rotary::set_rotary;
 
 pub(crate) mod gatling;
@@ -414,12 +435,15 @@ pub use gatling::toggle_gatling;
 mod weapon_controls;
 
 pub(crate) mod precision;
+pub(crate) use precision::BattlePrecisionAim;
 pub use precision::toggle_precision;
 
 pub(crate) mod flechette;
+pub(crate) use flechette::BattleFlechetteDamage;
 pub use flechette::toggle_flechette;
 
 pub(crate) mod armor_piercing;
+pub(crate) use armor_piercing::BattleArmorPiercing;
 pub use armor_piercing::toggle_armor_piercing;
 
 pub(crate) mod caseless;
@@ -592,6 +616,7 @@ pub use movement_experience::BattleMovementExperience;
 pub use evacuation::land_action;
 
 mod stealth;
+pub use stealth::BattleStealthRange;
 pub use stealth::{advance_stealth, toggle_stealth};
 
 mod signature;
@@ -610,6 +635,7 @@ mod tag;
 pub use tag::{BattleTagState, advance_tags, select_tag, tagged_by};
 
 pub(crate) mod semiguided;
+pub(crate) use semiguided::BattleSemiGuidedAim;
 pub use semiguided::toggle_semiguided;
 pub(crate) mod stinger;
 pub use stinger::toggle_stinger;
@@ -639,6 +665,7 @@ mod launch_roll;
 mod weapon_launch;
 
 mod woodland;
+pub use woodland::BattleTerrainIgnition;
 pub use woodland::{
     BattleWoodlandClearing, BattleWoodlandEffect, BattleWoodlandIntent, resolve_woodland_effect,
 };
@@ -805,11 +832,9 @@ pub use player_configuration::{
 };
 mod inspection;
 pub use inspection::{
-    InspectionArmor, InspectionCritical, InspectionPart, InspectionTechnology, InspectionWeapon,
-    compose_unit_raw_inspection, compose_vehicle_raw_inspection, inspect_composed_unit_armor,
-    inspect_composed_vehicle_armor, inspect_raw_template_armor, inspect_raw_template_battle_value,
-    inspect_raw_template_criticals, inspect_raw_template_engine, inspect_raw_template_inventory,
-    inspect_raw_template_technologies, inspect_raw_template_weapons, inspect_section_condition,
+    InspectionTechnology, compose_unit_raw_inspection, compose_vehicle_raw_inspection,
+    inspect_composed_unit_armor, inspect_composed_vehicle_armor, inspect_raw_template_battle_value,
+    inspect_raw_template_inventory, inspect_raw_template_technologies, inspect_section_condition,
     inspect_technologies, inspect_template_armor, inspect_template_critical_text,
     inspect_template_criticals, inspect_template_inventory, inspect_template_status_text,
     inspect_template_weapon_text, inspect_template_weapons, inspect_unit_armor,
@@ -820,9 +845,8 @@ pub use inspection::{
     inspect_vehicle_template_criticals, inspect_vehicle_template_inventory,
     inspect_vehicle_template_status_text, inspect_vehicle_template_weapon_text,
     inspect_vehicle_template_weapons, inspect_vehicle_tic, inspect_vehicle_weapons,
-    inspection_battle_value, inspection_effective_maximum_speed, inspection_engine_rating,
-    inspection_section, inspection_section_code, inspection_template_battle_value,
-    inspection_vehicle_engine_rating, inspection_vehicle_engine_values, inspection_vehicle_section,
+    inspection_battle_value, inspection_effective_maximum_speed, inspection_section,
+    inspection_section_code, inspection_template_battle_value, inspection_vehicle_section,
     inspection_vehicle_section_code, inspection_vehicle_section_for,
     inspection_vehicle_template_battle_value,
 };
@@ -838,26 +862,17 @@ mod admin_contract;
 pub use admin_contract::{
     AdministrativeRepairKind, ReattachHull, administrative_assigned_pilot,
     administrative_is_fixable, administrative_section_info, administrative_section_valid,
-    administrative_template_movement, administrative_template_tonnage, administrative_unit_class,
-    administrative_unit_movement, administrative_unit_tonnage, apply_administrative_repair,
-    clear_administrative_technologies, set_administrative_armor, set_administrative_assigned_pilot,
-    set_administrative_cargo, set_administrative_heat_sinks, set_administrative_movement_type,
-    set_administrative_radio_quality, set_administrative_scalar, set_administrative_technology,
-    set_administrative_unit_type,
+    administrative_unit_class, administrative_unit_movement, administrative_unit_tonnage,
+    apply_administrative_repair, clear_administrative_technologies, set_administrative_armor,
+    set_administrative_assigned_pilot, set_administrative_cargo, set_administrative_heat_sinks,
+    set_administrative_movement_type, set_administrative_radio_quality, set_administrative_scalar,
+    set_administrative_technology, set_administrative_unit_type,
 };
 mod unit_configuration;
 pub use unit_configuration::{
     BattleUnitConfiguration, set_unit_configuration, set_unit_identity_configuration,
     unit_configuration,
 };
-mod template_contract_assets;
-pub use template_contract_assets::{
-    TemplateRegistryCache, read_resolved_raw_template, read_resolved_template,
-    resolve_template_path, resolve_template_path_bytes_cached, resolve_template_path_cached,
-    write_template,
-};
-mod template_cost;
-pub use template_cost::{raw_template_base_cost, template_base_cost, vehicle_template_base_cost};
 mod event_telemetry;
 pub use event_telemetry::BattleEventTelemetry;
 mod character_value_contract;
@@ -953,7 +968,6 @@ mod radio_scanning;
 pub use radio_scanning::BattleFrequencyScan;
 
 mod chassis;
-pub use chassis::BattleMechChassis;
 
 mod motion_speed;
 
@@ -1049,6 +1063,7 @@ mod vehicle_obstacle;
 mod transport_loss;
 
 mod vtol_hit;
+pub use vtol_hit::BattleVtolHitLocation;
 pub use vtol_hit::{BattleRotorHit, BattleVtolHit};
 
 mod rotor_damage;
@@ -1250,11 +1265,7 @@ pub use inventory::{
 };
 
 mod parts;
-mod parts_catalogue;
-pub use parts::{
-    AMMUNITION_PART_OFFSET, BattlePart, BattlePartKind, PART_ID_LIMIT, WEAPON_PART_IDS,
-    inventory_mass, set_inventory_named,
-};
+pub use parts::{inventory_mass, set_inventory_named};
 
 mod cargo_bay;
 pub use cargo_bay::{
@@ -1277,7 +1288,6 @@ pub use weapon_power::disable_gauss_weapon;
 pub(crate) mod mml;
 mod technology;
 pub use mml::toggle_mml_ammunition;
-pub use technology::{BattleDamageClass, BattleTechnology, reflective_armor_slots};
 
 pub(crate) mod atm;
 pub use atm::toggle_atm_ammunition;
@@ -1351,7 +1361,7 @@ pub(crate) mod database_save;
 pub use database_save::request_database_save;
 
 pub(crate) mod forms_report;
-pub use stock_selection::{BattlePartForm, part_catalogue, part_forms};
+pub use stock_selection::part_forms;
 
 mod operator_settings;
 pub use operator_settings::{edit_skill_threshold, edit_weapon_settings};
@@ -1449,23 +1459,15 @@ pub use damage_replacement::{BattleDamageReplacement, BattleDamageSlot, prepare_
 
 mod base_movement_fields;
 
-mod engine_sink_override;
-
 mod status_fields;
 
 mod motion_fields;
-
-mod template_speed;
 
 mod registered_unit_defaults;
 pub use registered_unit_defaults::{
     ensure_registered_unit_runtime, registered_unit_default_template,
 };
 
-mod raw_template;
-pub use raw_template::{
-    RawMovement, RawSectionCode, RawTemplate, RawUnitClass, raw_default_mech_criticals,
-};
 mod administrative_raw;
 pub use administrative_raw::{AdministrativeRawSection, AdministrativeRawUnit};
 

@@ -1,4 +1,5 @@
 //! Biped mount boundaries, torso offsets, flipped arms and rear-mount precedence.
+use stompymux_rs::BattleMountArcs;
 use stompymux_rs::{
     BattleFacing, BattleSection as Section, BattleTorso, BattleWeapon, CriticalLocation,
     WeaponMount,

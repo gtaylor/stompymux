@@ -10,6 +10,7 @@ use crate::{
     support::autopilot::{heartbeat_snapshots, heartbeat_snapshots_until},
 };
 use std::{cell::RefCell, collections::BTreeMap, rc::Rc};
+use stompymux_rs::BattleUnitTemplateExt;
 use stompymux_rs::btech::autopilot::observations;
 use stompymux_rs::btech::{AutopilotOrderState, AutopilotReason, AutopilotState, LastSighting};
 use stompymux_rs::{

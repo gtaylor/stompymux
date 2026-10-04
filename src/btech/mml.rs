@@ -1,134 +1,7 @@
 //! Multi-missile launchers share ammunition profiles, controls and combat with other launchers.
-use super::{BattleAmmunitionMode, BattleWeapon, WeaponProfile};
+use super::{AmmunitionFeedback, BattleAmmunitionMode};
 use crate::{ObjectId, World};
 use anyhow::{Result, ensure};
-
-impl BattleWeapon {
-    /// Multi-missile launchers accept dedicated short- and long-range supplies.
-    pub fn is_mml(self) -> bool {
-        matches!(self, Self::Mml3 | Self::Mml5 | Self::Mml7 | Self::Mml9)
-    }
-
-    /// Resolve ballistic facts once for aim, damage, interception and ammunition hazards.
-    /// Normal MML ammunition is SRM; MML_LRM bins carry the long-range family. ATM Extended
-    /// Range and High Explosive missiles change damage and ranges.
-    pub fn profile_for_ammunition(self, ammunition: BattleAmmunitionMode) -> WeaponProfile {
-        let mut profile = self.profile();
-        if self.is_atm() {
-            return Self::atm_profile(profile, ammunition);
-        }
-        if self.is_mml() && ammunition.is_mml_lrm() {
-            profile.damage = 1;
-            profile.minimum_range = 6;
-            profile.short_range = 7;
-            profile.medium_range = 14;
-            profile.long_range = 21;
-            profile.ammunition_per_ton = 120 / profile.missiles;
-        }
-        profile
-    }
-
-    /// Observer eligibility follows the loaded family, while equipment eligibility stays weapon-based.
-    pub fn supports_indirect_ammunition(self, ammunition: BattleAmmunitionMode) -> bool {
-        self.supports_indirect_fire() && (!self.is_mml() || ammunition.is_mml_lrm())
-    }
-
-    /// Hotloaded MMLs draw their selected family; other launchers retain ordinary hotload supply.
-    pub(super) fn hotload_supply_mode(
-        self,
-        selected: BattleAmmunitionMode,
-    ) -> BattleAmmunitionMode {
-        if self.is_mml() {
-            selected
-        } else {
-            BattleAmmunitionMode::Normal
-        }
-    }
-
-    /// Internal bin damage uses its contents, independent of the launcher's selected supply.
-    pub fn ammunition_explosion_damage_for_mode(
-        self,
-        rounds: u16,
-        ammunition: BattleAmmunitionMode,
-    ) -> u32 {
-        if self.weapon_explosion_damage() > 0 || self == Self::PlasmaRifle {
-            return 0;
-        }
-        let profile = self.profile_for_ammunition(ammunition);
-        u32::from(rounds) * u32::from(profile.damage) * u32::from(profile.missiles.max(1))
-    }
-}
-
-impl BattleAmmunitionMode {
-    /// Shared cockpit feedback identifies the selected missile family explicitly.
-    pub(crate) fn mml_message(self, index: usize) -> String {
-        let family = if self.is_mml_lrm() { "LRM" } else { "SRM" };
-        format!("Weapon {index} has been set to fire {family} missiles.")
-    }
-
-    /// Whether this supply belongs to the MML long-range family, with or without a special round.
-    pub fn is_mml_lrm(self) -> bool {
-        matches!(
-            self,
-            Self::MmlLrm
-                | Self::MmlLrmArtemis
-                | Self::MmlLrmNarc
-                | Self::MmlLrmSwarm
-                | Self::MmlLrmSwarm1
-                | Self::MmlLrmSemiGuided
-                | Self::MmlLrmStinger
-        )
-    }
-
-    /// The special round independent of MML family; ordinary long-range MML rounds are normal.
-    /// Combat rules keyed on a special round consult this instead of the stored supply.
-    pub fn munition(self) -> Self {
-        match self {
-            Self::MmlLrm => Self::Normal,
-            Self::MmlLrmArtemis => Self::Artemis,
-            Self::MmlLrmNarc => Self::Narc,
-            Self::MmlLrmSwarm => Self::Swarm,
-            Self::MmlLrmSwarm1 => Self::Swarm1,
-            Self::MmlLrmSemiGuided => Self::SemiGuided,
-            Self::MmlLrmStinger => Self::Stinger,
-            mode => mode,
-        }
-    }
-
-    /// Combine this round's munition with an MML family. Returns `None` when the family
-    /// cannot carry the round: long-range supplies exclude SRM-only rounds such as Inferno,
-    /// and short-range supplies exclude LRM-only guidance and Swarm rounds.
-    pub fn with_mml_family(self, long_range: bool) -> Option<Self> {
-        let munition = self.munition();
-        if !long_range {
-            return (!matches!(
-                munition,
-                Self::Swarm | Self::Swarm1 | Self::SemiGuided | Self::Stinger
-            ) && munition.supports(BattleWeapon::Mml3))
-            .then_some(munition);
-        }
-        Some(match munition {
-            Self::Normal => Self::MmlLrm,
-            Self::Artemis => Self::MmlLrmArtemis,
-            Self::Narc => Self::MmlLrmNarc,
-            Self::Swarm => Self::MmlLrmSwarm,
-            Self::Swarm1 => Self::MmlLrmSwarm1,
-            Self::SemiGuided => Self::MmlLrmSemiGuided,
-            Self::Stinger => Self::MmlLrmStinger,
-            _ => return None,
-        })
-    }
-
-    /// Replace the special round while keeping this supply's MML family, so guidance fallbacks
-    /// such as blocked Artemis retain long-range damage and grouping.
-    pub(super) fn with_munition(self, munition: Self) -> Self {
-        if self.is_mml_lrm() {
-            munition.with_mml_family(true).unwrap_or(Self::MmlLrm)
-        } else {
-            munition
-        }
-    }
-}
 
 /// Toggle an intact recycled MML between its dedicated SRM and LRM ammunition bins.
 pub fn toggle_mml_ammunition(
@@ -160,8 +33,9 @@ pub(crate) fn command(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::btech::BattleWeaponSalvo;
     use crate::btech::weapon_groups::{WeaponGroupRequest, roll_weapon_groups};
-    use crate::btech::{AmmunitionBin, BattleDice, BattleFireMode};
+    use crate::btech::{AmmunitionBin, BattleDice, BattleFireMode, BattleWeapon};
 
     /// Capacity normalization uses the selected family before half-ton rounding.
     #[test]

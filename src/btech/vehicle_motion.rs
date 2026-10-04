@@ -22,11 +22,39 @@ impl BattleVehicleMotionRules {
     };
 }
 
-impl BattleVehicleTemplate {
+/// One-second motion proposals for intact and damaged vehicles.
+pub trait BattleVehicleTemplateMotion {
     /// Propose one second of intact vehicle motion on the supplied current hex.
     /// This does not admit terrain entry, resolve hazards or mutate world state. The
     /// movement adapter must trace the proposed segment and resolve each crossed hex.
-    pub fn ground_motion_step(
+    fn ground_motion_step(
+        &self,
+        motion: BattleMotion,
+        hex: Hex,
+        rules: BattleVehicleMotionRules,
+    ) -> Result<BattleMotion>;
+
+    /// Share motion arithmetic between intact proposals and damaged live vehicles.
+    fn motion_at_maximum(
+        &self,
+        motion: BattleMotion,
+        hex: Hex,
+        rules: BattleVehicleMotionRules,
+        maximum: f64,
+    ) -> Result<BattleMotion>;
+
+    /// Shared heading and acceleration, before either ground or flight path projection.
+    fn control_at_maximum(
+        &self,
+        motion: BattleMotion,
+        hex: Hex,
+        rules: BattleVehicleMotionRules,
+        maximum: f64,
+    ) -> Result<BattleMotion>;
+}
+
+impl BattleVehicleTemplateMotion for BattleVehicleTemplate {
+    fn ground_motion_step(
         &self,
         motion: BattleMotion,
         hex: Hex,
@@ -35,8 +63,7 @@ impl BattleVehicleTemplate {
         self.motion_at_maximum(motion, hex, rules, self.max_speed)
     }
 
-    /// Share motion arithmetic between intact proposals and damaged live vehicles.
-    pub(super) fn motion_at_maximum(
+    fn motion_at_maximum(
         &self,
         mut motion: BattleMotion,
         hex: Hex,
@@ -57,8 +84,7 @@ impl BattleVehicleTemplate {
         Ok(motion)
     }
 
-    /// Shared heading and acceleration, before either ground or flight path projection.
-    pub(super) fn control_at_maximum(
+    fn control_at_maximum(
         &self,
         mut motion: BattleMotion,
         hex: Hex,

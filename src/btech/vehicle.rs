@@ -661,7 +661,7 @@ impl BattleVehicle {
         flag: &str,
         enabled: bool,
     ) {
-        super::unit::edit_special(&mut self.definition.attributes, attribute, flag, enabled);
+        super::edit_special(&mut self.definition.attributes, attribute, flag, enabled);
     }
 
     pub(super) fn set_administrative_attribute(&mut self, name: &str, value: impl ToString) {
@@ -1353,18 +1353,18 @@ impl BattleVehicle {
 
     /// Construction baseline used by the shared attacker movement calculation.
     pub fn template_speed(&self) -> f64 {
-        super::template_speed::read(&self.definition.attributes, self.definition.max_speed)
+        super::read_template_speed(&self.definition.attributes, self.definition.max_speed)
             .expect("validated template speed")
     }
 
     /// Set the independent firing-movement baseline without changing propulsion.
     pub(super) fn set_template_speed(&mut self, speed: f64) {
-        super::template_speed::write(&mut self.definition.attributes, speed);
+        super::write_template_speed(&mut self.definition.attributes, speed);
     }
 
     /// Change only the authored engine allocation override; recalculation is a separate operation.
     pub(super) fn set_engine_sink_override(&mut self, value: i32) {
-        super::engine_sink_override::write(&mut self.definition.attributes, value);
+        super::write_engine_sink_override(&mut self.definition.attributes, value);
     }
 
     /// Keep the owned tank definition and live baseline capacity consistent, retaining fuel.

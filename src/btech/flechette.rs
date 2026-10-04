@@ -1,28 +1,21 @@
 //! Flechette autocannon ammunition controls and damage against armored units.
-use super::BattleAmmunitionMode;
+use super::{AmmunitionFeedback, BattleAmmunitionMode};
 use crate::{ObjectId, World};
 use anyhow::{Result, ensure};
 
-impl BattleAmmunitionMode {
+/// Flechette damage against armored targets.
+pub(crate) trait BattleFlechetteDamage {
     /// Current constructed targets are armored bipeds; Flechette halves shell damage rounded down.
-    pub(super) fn armored_damage(self, damage: u16) -> u16 {
+    fn armored_damage(self, damage: u16) -> u16;
+}
+
+impl BattleFlechetteDamage for BattleAmmunitionMode {
+    fn armored_damage(self, damage: u16) -> u16 {
         if self == Self::Flechette {
             damage / 2
         } else {
             damage
         }
-    }
-
-    /// Shared cockpit feedback for normal and Flechette rounds.
-    pub(crate) fn flechette_message(self, index: usize) -> String {
-        format!(
-            "Weapon {index} has been set to fire {} rounds",
-            if self == Self::Flechette {
-                "Flechette"
-            } else {
-                "normal"
-            }
-        )
     }
 }
 

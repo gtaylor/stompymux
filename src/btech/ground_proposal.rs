@@ -1,5 +1,5 @@
 //! Read-only Mech ground proposals share live movement arithmetic with trajectory prediction.
-use super::{BattleMotion, BattleMovementRules, HexCoordinate, Point};
+use super::{BattleMotion, BattleMovementRules, BattleVehicleTemplateMotion, HexCoordinate, Point};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 

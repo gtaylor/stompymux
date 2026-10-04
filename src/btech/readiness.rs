@@ -379,6 +379,7 @@ pub fn advance_recycle(world: &mut World) -> Vec<BattleNotice> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::btech::BattleUnitTemplateExt;
     use crate::{BattleUnitTemplate, Config, Kind, ObjectId, World};
 
     #[test]

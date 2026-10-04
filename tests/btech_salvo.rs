@@ -1,5 +1,6 @@
 //! Conventional cluster probabilities, packet boundaries and atomic multi-location salvos.
 use crate::support;
+use stompymux_rs::BattleWeaponSalvo;
 use stompymux_rs::{
     BattleDice, BattleHitArc, BattleHitRules, BattleTemplate, BattleWeapon as Weapon, Kind,
     ObjectId, create_battle_unit, persistence, resolve_battle_salvo,

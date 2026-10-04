@@ -1,17 +1,7 @@
 //! Inferno ammunition controls share ordinary readiness and exclusive ammunition selection.
-use super::BattleAmmunitionMode;
+use super::{AmmunitionFeedback, BattleAmmunitionMode};
 use crate::{ObjectId, World};
 use anyhow::{Result, ensure};
-
-impl BattleAmmunitionMode {
-    /// Cockpit feedback shared by native and Lua controls.
-    pub(crate) fn inferno_message(self, index: usize) -> String {
-        if self == Self::Inferno {
-            return format!("Weapon {index} has been set to fire Inferno missiles.");
-        }
-        format!("Weapon {index} has been set to fire normal missiles")
-    }
-}
 
 /// Toggle a recycled missile launcher; disposable launchers cannot change ammunition.
 pub fn toggle_inferno(

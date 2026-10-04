@@ -3,12 +3,15 @@ use anyhow::{Result, bail};
 use serde::{Deserialize, Serialize};
 
 mod catalogue;
+mod families;
+mod range;
 mod water;
 pub use catalogue::BattleWeapon;
+pub use range::{BattleRangeBracket, BattleWeaponRange};
 pub use water::BattleWaterRanges;
 
 /// Match ASCII equipment namespaces while retaining the original asset text for diagnostics.
-pub(super) fn strip_name_prefix<'a>(name: &'a str, prefix: &str) -> Option<&'a str> {
+pub fn strip_name_prefix<'a>(name: &'a str, prefix: &str) -> Option<&'a str> {
     name.get(..prefix.len())
         .filter(|head| head.eq_ignore_ascii_case(prefix))?;
     name.get(prefix.len()..)
@@ -51,7 +54,7 @@ impl BattleWeapon {
     }
 
     /// Weapons whose installations may span adjacent Mech sections through explicit links.
-    pub(super) fn supports_split_mount(self) -> bool {
+    pub fn supports_split_mount(self) -> bool {
         matches!(
             self,
             Self::Ac20
@@ -278,22 +281,6 @@ impl BattleWeapon {
         )
     }
 
-    /// Dead-fire missiles and extended LRMs below minimum range use the lowest two of three dice.
-    pub(super) fn attack_roll(self, distance: f64, dice: &mut super::BattleDice) -> u8 {
-        if self.is_dead_fire()
-            || (matches!(
-                self,
-                Self::Elrm5 | Self::Elrm10 | Self::Elrm15 | Self::Elrm20
-            ) && distance < f64::from(self.profile().minimum_range))
-        {
-            let first = dice.d6();
-            let second = dice.d6();
-            let third = dice.d6();
-            return first + second + third - first.max(second).max(third);
-        }
-        dice.generic_roll()
-    }
-
     /// Intrinsic target-number adjustment, separate from range and damaged mounting systems.
     pub fn accuracy_modifier(self) -> i8 {
         match self {
@@ -383,7 +370,7 @@ pub enum BattleSystem {
 
 impl BattleSystem {
     /// Passive equipment occupies slots but cannot receive random critical hits.
-    pub(crate) fn is_noncritical(self) -> bool {
+    pub fn is_noncritical(self) -> bool {
         matches!(
             self,
             Self::FerroFibrous
@@ -473,35 +460,6 @@ impl BattleSystem {
 #[cfg(test)]
 mod tests {
     use super::BattleWeapon as W;
-    use crate::BattleDice;
-
-    /// Dead-fire attack dice never revert to ordinary 2d6 at longer ranges.
-    #[test]
-    fn dead_fire_attack_dice_at_all_ranges() {
-        for weapon in [
-            W::LrDfm5,
-            W::LrDfm10,
-            W::LrDfm15,
-            W::LrDfm20,
-            W::SrDfm2,
-            W::SrDfm4,
-            W::SrDfm6,
-        ] {
-            for seed in 0..=255 {
-                for distance in [0.0, 4.0, 6.0, 12.0, 18.0, 24.001] {
-                    let mut expected = BattleDice::seeded([seed; 32]);
-                    let mut values = [expected.d6(), expected.d6(), expected.d6()];
-                    values.sort_unstable();
-                    let mut actual = BattleDice::seeded([seed; 32]);
-                    assert_eq!(
-                        weapon.attack_roll(distance, &mut actual),
-                        values[0] + values[1]
-                    );
-                    assert_eq!(actual, expected);
-                }
-            }
-        }
-    }
 
     /// Enhanced LRMs are heavier LRMs with a three-hex minimum range and the same salvos.
     #[test]
@@ -522,12 +480,6 @@ mod tests {
                 (lrm.heat, lrm.missiles, lrm.long_range)
             );
             assert!(enhanced.supports_indirect_fire() && enhanced.supports_semiguided());
-            for roll in 2..=12 {
-                assert_eq!(
-                    enhanced.damage_groups(Some(roll)).unwrap(),
-                    standard.damage_groups(Some(roll)).unwrap()
-                );
-            }
         }
         assert!(W::parse("IS.NLRM-15").is_ok());
     }
@@ -547,33 +499,5 @@ mod tests {
         for weapon in [W::Ac20, W::Lrm20, W::LaserAms, W::APod, W::GaussRifle] {
             assert!(!weapon.is_energy(), "{weapon:?}");
         }
-    }
-
-    /// Raw distance controls the extra attack die independently of aim-bracket rounding.
-    #[test]
-    fn elrm_minimum_range_attack_dice_and_replay() {
-        for weapon in [W::Elrm5, W::Elrm10, W::Elrm15, W::Elrm20] {
-            for seed in 0..=255 {
-                for distance in [0.0, 9.999, 10.0, 10.001, 36.0] {
-                    let mut expected = BattleDice::seeded([seed; 32]);
-                    let count = if distance < 10.0 { 3 } else { 2 };
-                    let mut values: Vec<_> = (0..count).map(|_| expected.d6()).collect();
-                    values.sort_unstable();
-                    let mut actual = BattleDice::seeded([seed; 32]);
-                    assert_eq!(
-                        weapon.attack_roll(distance, &mut actual),
-                        values[0] + values[1]
-                    );
-                    assert_eq!(actual, expected);
-                    let mut restored: BattleDice =
-                        serde_json::from_value(serde_json::to_value(&actual).unwrap()).unwrap();
-                    assert_eq!(restored.two_d6(), actual.two_d6());
-                }
-            }
-        }
-        let mut ordinary = BattleDice::seeded([1; 32]);
-        let mut expected = ordinary.clone();
-        assert_eq!(W::Lrm20.attack_roll(0.0, &mut ordinary), expected.two_d6());
-        assert_eq!(ordinary, expected);
     }
 }

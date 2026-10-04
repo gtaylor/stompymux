@@ -1,21 +1,7 @@
 //! Player controls for Ultra autocannon double-shot firing.
-use super::BattleFireMode;
+use super::{BattleFireMode, FireModeFeedback};
 use crate::{ObjectId, World};
 use anyhow::{Result, ensure};
-
-impl BattleFireMode {
-    /// Shared cockpit feedback for native and Lua mode controls.
-    pub(crate) fn ultra_message(self, index: usize) -> String {
-        format!(
-            "Weapon {index} has been set to {} fire mode",
-            if self == Self::Ultra {
-                "ultra"
-            } else {
-                "normal"
-            }
-        )
-    }
-}
 
 /// Toggle an intact, recycled Ultra autocannon between one- and two-round firing.
 pub fn toggle_ultra(

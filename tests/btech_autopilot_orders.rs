@@ -8,6 +8,7 @@ use crate::{
     support::autopilot::{heartbeat_snapshots, heartbeat_snapshots_until},
 };
 use std::{cell::RefCell, rc::Rc};
+use stompymux_rs::BattleUnitTemplateExt;
 use stompymux_rs::btech::{AutopilotOrder, AutopilotOrderState, AutopilotReason, AutopilotState};
 use stompymux_rs::{
     BattlePower, BattleUnitSignature, BattleUnitTemplate, BattleVehicleTemplate, Config, Kind,

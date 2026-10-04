@@ -253,7 +253,7 @@ fn resolve(
             )
         }
     };
-    let roll = weapon.attack_roll(distance, &mut dice);
+    let roll = super::launch_roll::attack_roll(weapon, distance, &mut dice);
     crate::btech::with_unit_mut!(world.btech.unit_mut(shooter).unwrap(), |unit| {
         unit.dice = dice;
     });

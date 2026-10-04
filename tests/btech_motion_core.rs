@@ -12,6 +12,7 @@ use crate::btech_motion_common::{
 };
 use crate::support;
 use crate::support::{install, restore_database, snapshot_database};
+use stompymux_rs::BattleWeaponSalvo;
 use stompymux_rs::{
     BattleMovementRules, BattlePower, BattleTemplate, Kind, MapAsset, ObjectId, Scripts,
     advance_battle_motion, advance_battle_units, assign_battle_pilot, create_battle_map,

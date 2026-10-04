@@ -1,30 +1,20 @@
 //! Semi-guided missile ammunition controls and friendly TAG target-movement assistance.
-use super::{BattleAmmunitionMode, BattleWeapon};
+use super::{AmmunitionFeedback, BattleAmmunitionMode};
 use crate::{ObjectId, World};
 use anyhow::{Result, ensure};
 
-impl BattleWeapon {
-    /// Supported indirect-fire missile profiles accept semi-guided ammunition; rockets and artillery do not.
-    pub fn supports_semiguided(self) -> bool {
-        self.supports_indirect_fire() && !self.is_rocket() && !self.is_mml()
-    }
+/// Semi-guided ammunition's use of friendly TAG designation.
+pub(crate) trait BattleSemiGuidedAim {
+    /// Friendly TAG from another unit removes positive movement penalties but preserves negative modifiers.
+    fn tag_movement_modifier(self, movement: i8, friendly_other_tag: bool) -> i8;
 }
 
-impl BattleAmmunitionMode {
-    /// Friendly TAG from another unit removes positive movement penalties but preserves negative modifiers.
-    pub(super) fn tag_movement_modifier(self, movement: i8, friendly_other_tag: bool) -> i8 {
+impl BattleSemiGuidedAim for BattleAmmunitionMode {
+    fn tag_movement_modifier(self, movement: i8, friendly_other_tag: bool) -> i8 {
         if self.munition() == Self::SemiGuided && friendly_other_tag {
             return movement.min(0);
         }
         movement
-    }
-
-    /// Shared native/Lua cockpit feedback.
-    pub(crate) fn semiguided_message(self, index: usize) -> String {
-        if self.munition() == Self::SemiGuided {
-            return format!("Weapon {index} has been set to fire Sguided missiles.");
-        }
-        format!("Weapon {index} has been set to fire normal missiles")
     }
 }
 

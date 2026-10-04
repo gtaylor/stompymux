@@ -106,9 +106,20 @@ impl BattleFacing {
     }
 }
 
-impl WeaponMount {
+/// Firing-arc geometry for Mech weapon mounts.
+pub trait BattleMountArcs {
     /// Test a compass bearing against mounting arcs; leg mounts ignore torso rotation.
-    pub fn bears_on(
+    fn bears_on(
+        &self,
+        chassis: BattleMechChassis,
+        heading: f64,
+        bearing: f64,
+        facing: BattleFacing,
+    ) -> Result<bool>;
+}
+
+impl BattleMountArcs for WeaponMount {
+    fn bears_on(
         &self,
         chassis: BattleMechChassis,
         heading: f64,

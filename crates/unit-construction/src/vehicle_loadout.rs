@@ -14,7 +14,7 @@ impl BattleVehicleLoadout {
         Self::resolve_with(template, false)
     }
 
-    pub(crate) fn resolve_contract(template: &BattleVehicleTemplate) -> Result<Self> {
+    pub fn resolve_contract(template: &BattleVehicleTemplate) -> Result<Self> {
         Self::resolve_with(template, true)
     }
 

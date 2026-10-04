@@ -579,6 +579,7 @@ pub(super) fn require_running_unit(world: &World, shooter: ObjectId) -> Result<(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::btech::BattleUnitTemplateExt;
     use crate::{BattleRecovery, BattleUnitTemplate, Config, Kind};
 
     fn config() -> Config {

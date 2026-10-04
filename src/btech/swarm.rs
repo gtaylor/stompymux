@@ -41,13 +41,6 @@ pub(super) struct SwarmRequest<'a> {
     pub experience: Option<super::gunnery_experience::GunneryAwardContext<'a>>,
 }
 
-impl BattleAmmunitionMode {
-    /// Swarm rounds bypass interception and retain unused missiles between targets.
-    pub(super) fn is_swarm(self) -> bool {
-        matches!(self.munition(), Self::Swarm | Self::Swarm1)
-    }
-}
-
 /// Retargeting uses retained acquisition and clear terrain, without acquiring new contacts.
 fn sees(world: &World, observer: ObjectId, target: ObjectId) -> bool {
     if observer == target {
@@ -288,20 +281,6 @@ pub fn toggle_swarm(
     Ok(super::weapon_controls::toggle_ammunition_mode(
         world, id, index, mode,
     ))
-}
-
-impl BattleAmmunitionMode {
-    /// Shared native and Lua ammunition selection feedback.
-    pub(crate) fn swarm_message(self, index: usize) -> String {
-        let name = match self.munition() {
-            Self::Swarm => "Swarm",
-            Self::Swarm1 => "Swarm1",
-            _ => {
-                return format!("Weapon {index} has been set to fire normal missiles");
-            }
-        };
-        format!("Weapon {index} has been set to fire {name} missiles.")
-    }
 }
 
 /// Both commands reuse the ordinary selector, authority checks and effect transaction.

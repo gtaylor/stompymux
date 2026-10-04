@@ -1,21 +1,7 @@
 //! Caseless autocannon ammunition controls.
-use super::BattleAmmunitionMode;
+use super::{AmmunitionFeedback, BattleAmmunitionMode};
 use crate::{ObjectId, World};
 use anyhow::{Result, ensure};
-
-impl BattleAmmunitionMode {
-    /// Shared cockpit feedback for normal and CASELESS rounds.
-    pub(crate) fn caseless_message(self, index: usize) -> String {
-        format!(
-            "Weapon {index} has been set to fire {} rounds",
-            if self == Self::Caseless {
-                "CASELESS"
-            } else {
-                "normal"
-            }
-        )
-    }
-}
 
 /// Select CASELESS or normal rounds on an authorized, intact and recycled conventional autocannon.
 pub fn toggle_caseless(

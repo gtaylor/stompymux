@@ -123,7 +123,7 @@ fn read_confined(root: &Path, path: &Path) -> Result<(String, String)> {
     ensure!(path.starts_with(&root), "template path escapes its root");
     let metadata = std::fs::metadata(&path)?;
     ensure!(
-        metadata.len() <= super::template_document::TEMPLATE_SIZE_LIMIT as u64,
+        metadata.len() <= super::document::TEMPLATE_SIZE_LIMIT as u64,
         "template exceeds size limit"
     );
     let reference = path
@@ -136,7 +136,7 @@ fn read_confined(root: &Path, path: &Path) -> Result<(String, String)> {
 
 /// Resolve a reference without a cached registry and read its document, returning the
 /// reference as spelled by the document's file stem.
-pub(super) fn read_template_document(root: &Path, reference: &str) -> Result<(String, String)> {
+pub fn read_template_document(root: &Path, reference: &str) -> Result<(String, String)> {
     let path = resolve_template_path(root, reference)?
         .with_context(|| format!("template {reference} not found"))?;
     read_confined(root, &path)
@@ -186,9 +186,9 @@ pub fn finalize_raw_load_specials(template: &mut RawTemplate) {
             .count()
             < 4
     });
-    super::unit::edit_special(&mut template.attributes, "specials", "FlipArms", flippable);
+    super::edit_special(&mut template.attributes, "specials", "FlipArms", flippable);
     if compact {
-        super::unit::edit_special(
+        super::edit_special(
             &mut template.attributes,
             "specials",
             "CompactEngine_Tech",

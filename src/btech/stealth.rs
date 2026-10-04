@@ -142,9 +142,14 @@ pub fn advance_stealth(world: &mut World) -> Vec<BattleNotice> {
     notices
 }
 
-impl BattleWeaponRange {
+/// Stealth armor's range-bracket penalties.
+pub trait BattleStealthRange {
     /// Stealth raises medium, long and extreme penalties without changing minimum range or reach.
-    pub fn against_stealth(mut self, enabled: bool) -> Self {
+    fn against_stealth(self, enabled: bool) -> Self;
+}
+
+impl BattleStealthRange for BattleWeaponRange {
+    fn against_stealth(mut self, enabled: bool) -> Self {
         if enabled {
             self.modifier += match self.bracket {
                 BattleRangeBracket::Medium => 1,

@@ -1,0 +1,20 @@
+# Unit templates, the equipment catalogue and construction rules, shared by the server and
+# template tools. Keep it free of the server crate so those tools build in seconds, and keep
+# it free of optional features: a feature one package enables would change this crate's build
+# for every other package in the same `cargo` invocation, and so compile a second copy of the
+# server.
+[package]
+name = "stompymux-unit-construction"
+version = "0.1.0"
+edition = "2024"
+description = "BattleTech unit templates, the equipment catalogue and construction rules"
+publish = false
+
+# Versions and features match the root manifest.
+[dependencies]
+anyhow = "1.0.104"
+serde = { version = "1.0.229", features = ["derive", "rc"] }
+toml = { version = "1.1.5", features = ["preserve_order"] }
+
+[dev-dependencies]
+tempfile = "3.27.0"

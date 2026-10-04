@@ -3,29 +3,6 @@ use super::{BattleVehicleMovement, BattleWeapon};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 
-impl BattleWeapon {
-    /// Long- and short-range torpedo launchers, which fire only from a submerged mount.
-    pub fn is_torpedo(self) -> bool {
-        matches!(
-            self,
-            Self::Lrt5
-                | Self::Lrt10
-                | Self::Lrt15
-                | Self::Lrt20
-                | Self::Srt2
-                | Self::Srt4
-                | Self::Srt6
-                | Self::ClanLrt5
-                | Self::ClanLrt10
-                | Self::ClanLrt15
-                | Self::ClanLrt20
-                | Self::ClanSrt2
-                | Self::ClanSrt4
-                | Self::ClanSrt6
-        )
-    }
-}
-
 /// Whether a unit sits in a water hex at or below the surface, where a torpedo can reach it.
 /// Hovercraft skim over the water and are out of reach.
 pub(super) fn target_in_water(world: &World, target: ObjectId) -> Result<bool> {
@@ -73,6 +50,7 @@ pub(super) fn check_target(world: &World, weapon: BattleWeapon, target: ObjectId
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::btech::BattleWeaponSalvo;
 
     /// Torpedo launchers keep their ordinary reach underwater and take no special munitions
     /// beyond Artemis guidance.

@@ -43,24 +43,14 @@ pub struct BattleArtilleryAim {
     pub range: BattleArtilleryRange,
 }
 
-impl BattleWeapon {
-    /// Weapons whose impacts use delayed artillery area effects rather than conventional salvos.
-    pub fn is_artillery(self) -> bool {
-        matches!(
-            self,
-            Self::ArrowIv
-                | Self::ClanArrowIv
-                | Self::LongTom
-                | Self::Sniper
-                | Self::Thumper
-                | Self::LongTomCannon
-                | Self::SniperCannon
-                | Self::ThumperCannon
-        )
-    }
-
+/// Artillery aim for launchers whose impacts use delayed area effects.
+pub trait BattleArtilleryAiming {
     /// Compute artillery aim without consulting or consuming random state.
-    pub fn artillery_aim(self, input: BattleArtilleryAimInput) -> Result<BattleArtilleryAim> {
+    fn artillery_aim(self, input: BattleArtilleryAimInput) -> Result<BattleArtilleryAim>;
+}
+
+impl BattleArtilleryAiming for BattleWeapon {
+    fn artillery_aim(self, input: BattleArtilleryAimInput) -> Result<BattleArtilleryAim> {
         ensure!(self.is_artillery(), "Weapon is not artillery");
         calculate(self, input)
     }
