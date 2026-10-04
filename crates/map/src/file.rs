@@ -40,10 +40,9 @@
 //!
 //! Points of interest are metadata for scripts, which read them through
 //! `btech.map.points_of_interest`. Units never see them and they do not change the terrain.
-use super::hex::MAX_HEIGHT;
-use super::{
-    BattleDecorationKind, BattleHex, BattleMapAsset, BattleMapFlag, Ground, MapPointOfInterest,
-    Structure, Water, Woods,
+use crate::{
+    BattleDecorationKind, BattleHex, BattleMapAsset, BattleMapFlag, Ground, MAX_HEIGHT,
+    MapPointOfInterest, Structure, Water, Woods,
 };
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -497,7 +496,7 @@ struct PointsOfInterest<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::btech::Terrain;
+    use crate::Terrain;
 
     const SAMPLE: &str = r#"
 gravity = 80
@@ -576,8 +575,6 @@ hexes = [[3, 0]]
         assert_eq!((tower.level(), tower.surface_height()), (10, 21));
         tower.validate().unwrap();
         assert_eq!(BattleMapAsset::parse(&map.to_file().unwrap()).unwrap(), map);
-        let stored = crate::btech::state::map_from_asset("tower", map).unwrap();
-        stored.validate().unwrap();
     }
 
     /// A lake and a bridge on a plateau keep their surfaces at the plateau's level.
@@ -592,14 +589,9 @@ hexes = [[3, 0]]
         let bridge = map.hex(2, 0).unwrap();
         assert_eq!((bridge.water_line(), bridge.deck_height()), (2, Some(4)));
         assert_eq!(BattleMapAsset::parse(&map.to_file().unwrap()).unwrap(), map);
-        crate::btech::state::map_from_asset("plateau", map)
-            .unwrap()
-            .validate()
-            .unwrap();
     }
 
-    /// The overlay grid places permanent fire and smoke over any hex; the map holds them as
-    /// decorations, never in its terrain.
+    /// The overlay grid places permanent fire and smoke over any hex, on top of its layers.
     #[test]
     fn overlay_grid_loads_permanent_fire_and_smoke() {
         let source = "terrain = '.`~'\nlevel = '120'\ndepth = '..2'\noverlay = '&:.'\n";
@@ -616,20 +608,6 @@ hexes = [[3, 0]]
         let text = map.to_file().unwrap();
         assert!(text.contains("overlay = '''\n&:.\n'''"), "{text}");
         assert_eq!(BattleMapAsset::parse(&text).unwrap(), map);
-        let stored = crate::btech::state::map_from_asset("burning", map).unwrap();
-        assert_eq!(
-            stored.base_hex(1, 0).unwrap(),
-            BattleHex::new(Terrain::LightForest, 2)
-        );
-        assert_eq!(stored.hex(1, 0).unwrap(), smoky);
-        let effect = stored
-            .decoration(super::super::BattleHexCoordinate { x: 1, y: 0 })
-            .unwrap()
-            .unwrap();
-        assert_eq!(
-            (effect.kind, effect.remaining),
-            (BattleDecorationKind::Smoke, 0)
-        );
         // Fire and smoke are not terrain symbols, and the overlay grid has only its own.
         for bad in [
             "terrain = '&'\nlevel = '0'\n",
@@ -640,55 +618,6 @@ hexes = [[3, 0]]
         }
         let plain = BattleMapAsset::parse("terrain = '.'\nlevel = '0'\n").unwrap();
         assert!(!plain.to_file().unwrap().contains("overlay"));
-    }
-
-    /// Every biome the map generator offers, with every kind of settlement, loads as a valid
-    /// battlefield.
-    #[test]
-    fn generated_maps_load() {
-        use stompymux_mapgen::{
-            Amount, Biome, MapSize, MapSpec, RoadSpec, SettlementKind, SettlementSize,
-            SettlementSpec, generate,
-        };
-        let settlement = |size, kind| SettlementSpec {
-            kind: Some(kind),
-            walled: Some(true),
-            ..SettlementSpec::new(size)
-        };
-        for biome in Biome::ALL {
-            let spec = MapSpec {
-                seed: Some(1),
-                biome: Some(biome),
-                size: Some(MapSize::Medium),
-                fire: Some(Amount::Low),
-                settlements: vec![
-                    settlement(SettlementSize::City, SettlementKind::Civilian),
-                    settlement(SettlementSize::Village, SettlementKind::Ruins),
-                    settlement(SettlementSize::Hamlet, SettlementKind::Industrial),
-                    settlement(SettlementSize::Outpost, SettlementKind::Military),
-                ],
-                roads: Some(RoadSpec {
-                    width: Some(2),
-                    through_roads: Some(2),
-                    ..RoadSpec::default()
-                }),
-                ..MapSpec::default()
-            };
-            let generated = generate(&spec).unwrap();
-            let map = BattleMapAsset::parse(&generated.to_toml().unwrap())
-                .unwrap_or_else(|error| panic!("{biome:?}: {error:#}"));
-            assert_eq!((map.width, map.height), (50, 50));
-            for (index, hex) in generated.map.hexes.iter().enumerate() {
-                let (x, y) = (index % 50, index / 50);
-                let loaded = map.hex(x as i32, y as i32).unwrap();
-                assert_eq!(loaded.level(), hex.level, "{biome:?} at {x},{y}");
-                assert_eq!(loaded.deck_clearance(), hex.bridge, "{biome:?} at {x},{y}");
-            }
-            crate::btech::state::map_from_asset("generated", map)
-                .unwrap()
-                .validate()
-                .unwrap_or_else(|error| panic!("{biome:?}: {error:#}"));
-        }
     }
 
     /// Points of interest keep their file order, exact type spelling and optional elevation,
@@ -721,12 +650,6 @@ hexes = [[3, 0]]
         let text = map.to_file().unwrap();
         assert_eq!(BattleMapAsset::parse(&text).unwrap(), map);
         assert_eq!(map.to_file().unwrap(), text);
-        let stored = crate::btech::state::map_from_asset("poi", map.clone()).unwrap();
-        assert_eq!(*stored.points_of_interest, map.points_of_interest);
-        assert_eq!(
-            BattleMapAsset::parse(&stored.export_asset().unwrap()).unwrap(),
-            map
-        );
         assert!(
             !BattleMapAsset::parse(SAMPLE)
                 .unwrap()

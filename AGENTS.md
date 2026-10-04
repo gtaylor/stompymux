@@ -10,7 +10,9 @@ stompymux-rs is a Rust rewrite of stompymux, a C-based MUD server that includes 
 - `docs`: Docs for the game server and its sources.
 - `src`: Location of all Rust sources for the game and its supporting utilities.
 - `src/btech`: Battletech extensions that layer on top of the base MUX game server.
-- `crates/mapgen`: Standalone map generation library and `mapgen` CLI. Keep it free of dependencies on the server crate so map editors can embed it.
+- `crates/map`: Battlefield map data shared by the server and map tools: layered hexes, terrain, map flags, hex geometry, the TOML map file format, and the `map-check` CLI. The server re-exports these types from `src/btech`. Keep it free of the server crate and of optional features.
+- `crates/mapgen`: Standalone map generation library and `mapgen` CLI. It writes map files through `crates/map`. Keep it free of dependencies on the server crate so map editors can embed it.
+- `crates/mappy`: The Mappy map editor (`just mappy`). It builds on `crates/map` and iced, and is not a default workspace member, so `cargo build` and `just test` skip it; `just test-mappy` runs its tests.
 - `crates/lua-tools`: `lua-type-updater` and `lua-doc-updater`, which read Rust sources as text. Keep them free of the server crate so they build in seconds.
 - `tests`: Integration scenario files (`tests/*.rs`) and fixtures (`tests/fixtures`).
 - `tests/suites`: The `stompymux-suites` package. Each suite binary compiles a group of scenario files from `tests/`.

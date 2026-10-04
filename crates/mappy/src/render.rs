@@ -9,9 +9,7 @@ use iced::{
     Color, Rectangle, wgpu,
     widget::shader::{self, Viewport},
 };
-use stompymux_rs::{
-    BattleDecorationKind, BattleGround, BattleHex, BattleStructure, BattleWoods, Terrain,
-};
+use stompymux_map::{BattleDecorationKind, BattleHex, Ground, Structure, Terrain, Woods};
 
 use crate::{
     document::{HexFeed, file_holds},
@@ -70,17 +68,17 @@ fn palette_index(terrain: Terrain) -> u8 {
 /// - alpha: structure (bits 6-7: none, building, wall, bridge) and its height or deck (bits 0-5).
 fn hex_texel(hex: BattleHex, storable: bool) -> [u8; 4] {
     let ground = palette_index(match hex.ground() {
-        BattleGround::Clear => Terrain::Grassland,
-        BattleGround::Road => Terrain::Road,
-        BattleGround::Rough => Terrain::Rough,
-        BattleGround::Mountains => Terrain::Mountains,
-        BattleGround::Snow => Terrain::Snow,
-        BattleGround::Sand => Terrain::Sand,
+        Ground::Clear => Terrain::Grassland,
+        Ground::Road => Terrain::Road,
+        Ground::Rough => Terrain::Rough,
+        Ground::Mountains => Terrain::Mountains,
+        Ground::Snow => Terrain::Snow,
+        Ground::Sand => Terrain::Sand,
     });
     let woods = match hex.woods() {
         None => 0,
-        Some(BattleWoods::Light) => 1,
-        Some(BattleWoods::Heavy) => 2,
+        Some(Woods::Light) => 1,
+        Some(Woods::Heavy) => 2,
     };
     let overlay = match hex.overlay() {
         None => 0,
@@ -92,9 +90,9 @@ fn hex_texel(hex: BattleHex, storable: bool) -> [u8; 4] {
     });
     let structure = match hex.structure() {
         None => 0,
-        Some(BattleStructure::Building { height }) => (1 << 6) | height.min(63),
-        Some(BattleStructure::Wall { height }) => (2 << 6) | height.min(63),
-        Some(BattleStructure::Bridge { deck }) => (3 << 6) | deck.min(63),
+        Some(Structure::Building { height }) => (1 << 6) | height.min(63),
+        Some(Structure::Wall { height }) => (2 << 6) | height.min(63),
+        Some(Structure::Bridge { deck }) => (3 << 6) | deck.min(63),
     };
     [
         ground | woods << 4 | overlay << 6,
@@ -412,7 +410,7 @@ mod tests {
         pin::pin,
         task::{Context, Poll, Waker},
     };
-    use stompymux_rs::BattleHexCoordinate;
+    use stompymux_map::BattleHexCoordinate;
 
     /// Drive a wgpu future to completion; native wgpu resolves them without a reactor.
     fn block_on<T>(future: impl Future<Output = T>) -> T {
@@ -603,7 +601,7 @@ mod tests {
         assert_eq!(palette_bytes(false).len(), PALETTE_LEN * 16);
         let rough = palette_index(Terrain::Rough);
         let hex = BattleHex::new(Terrain::Rough, 30)
-            .with_woods(Some(BattleWoods::Heavy))
+            .with_woods(Some(Woods::Heavy))
             .with_overlay(Some(BattleDecorationKind::Smoke));
         assert_eq!(
             hex_texel(hex, false),
@@ -634,7 +632,7 @@ mod tests {
         put(&mut document, 2, 1, BattleHex::new(Terrain::HeavyForest, 0));
         put(&mut document, 1, 2, BattleHex::new(Terrain::Building, 4));
         put(&mut document, 2, 2, BattleHex::at_level(20));
-        let woods_on_rough = BattleHex::new(Terrain::Rough, 0).with_woods(Some(BattleWoods::Light));
+        let woods_on_rough = BattleHex::new(Terrain::Rough, 0).with_woods(Some(Woods::Light));
         put(&mut document, 2, 0, woods_on_rough);
         let pixels = render(
             &device,

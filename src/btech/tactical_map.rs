@@ -288,7 +288,7 @@ fn terrain_canvas(
                 };
                 let elevation = match super::map_style::shown_height(hex) {
                     0 => bottom,
-                    elevation => super::hex::height_glyph(elevation),
+                    elevation => stompymux_map::height_glyph(elevation),
                 };
                 [
                     Pixel { glyph: top, style },

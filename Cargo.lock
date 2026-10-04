@@ -3857,6 +3857,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "stompymux-map"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "serde",
+ "serde_json",
+ "toml",
+]
+
+[[package]]
 name = "stompymux-mapgen"
 version = "0.1.0"
 dependencies = [
@@ -3865,7 +3875,18 @@ dependencies = [
  "schemars",
  "serde",
  "serde_json",
+ "stompymux-map",
  "toml",
+]
+
+[[package]]
+name = "stompymux-mappy"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "iced",
+ "stompymux-map",
+ "tempfile",
 ]
 
 [[package]]
@@ -3879,7 +3900,6 @@ dependencies = [
  "csv",
  "flate2",
  "futures-util",
- "iced",
  "mlua",
  "nix",
  "pulldown-cmark",
@@ -3890,7 +3910,7 @@ dependencies = [
  "serde_json",
  "sha2 0.11.0",
  "sqlx",
- "stompymux-mapgen",
+ "stompymux-map",
  "tempfile",
  "tokio",
  "toml",

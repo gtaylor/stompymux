@@ -5,13 +5,14 @@
 //! and blended into the land around it, then filled by its layout. Streets that reach the
 //! footprint's edge become gates, which the road network links to.
 use crate::Params;
-use crate::map::{HexMap, Overlay, Terrain, center};
+use crate::map::{HexMap, Terrain, center};
 use crate::noise::Noise;
 use crate::report::SettlementReport;
 use crate::rng::Rng;
 use crate::spec::{SettlementKind, SettlementLayout, SettlementSize, SettlementSpec};
 use crate::terrain::open_ground;
 use std::collections::VecDeque;
+use stompymux_map::BattleDecorationKind;
 
 /// A settlement as built, for routing roads and reporting.
 #[derive(Debug, Clone)]
@@ -718,7 +719,7 @@ fn apply(
                 buildings += 1;
                 tallest = tallest.max(height);
                 if kind == SettlementKind::Ruins && rng.chance(0.15) {
-                    hex.overlay = Some(Overlay::Smoke);
+                    hex.overlay = Some(BattleDecorationKind::Smoke);
                 }
                 Terrain::Building { height }
             }

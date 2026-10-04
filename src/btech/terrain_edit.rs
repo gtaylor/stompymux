@@ -182,7 +182,7 @@ fn layers_argument(words: &[&str]) -> Result<BattleHex> {
             "Only one {slot} layer is allowed"
         );
         hex = match layer.as_str() {
-            "level" => hex.with_level(height(super::hex::MAX_HEIGHT, 0)?),
+            "level" => hex.with_level(height(super::MAX_HEIGHT, 0)?),
             "ground" => hex.with_ground(
                 serde_json::from_value(serde_json::Value::String(value.clone()))
                     .with_context(|| format!("Unknown ground {value:?}"))?,
@@ -192,17 +192,17 @@ fn layers_argument(words: &[&str]) -> Result<BattleHex> {
                     .with_context(|| format!("Unknown woods {value:?}"))?,
             )),
             "water" | "ice" => hex.with_water(Some(super::Water {
-                depth: height(super::hex::MAX_DEPTH, 1)?,
+                depth: height(super::MAX_DEPTH, 1)?,
                 frozen: layer == "ice",
             })),
             "bridge" => hex.with_structure(Some(super::Structure::Bridge {
-                deck: height(super::hex::MAX_HEIGHT, 1)?,
+                deck: height(super::MAX_HEIGHT, 1)?,
             })),
             "building" => hex.with_structure(Some(super::Structure::Building {
-                height: height(super::hex::MAX_HEIGHT, 1)?,
+                height: height(super::MAX_HEIGHT, 1)?,
             })),
             "wall" => hex.with_structure(Some(super::Structure::Wall {
-                height: height(super::hex::MAX_HEIGHT, 1)?,
+                height: height(super::MAX_HEIGHT, 1)?,
             })),
             "fire" | "smoke" => bail!("Fire and smoke are not terrain; use ADDFIRE or ADDSMOKE"),
             _ => bail!(

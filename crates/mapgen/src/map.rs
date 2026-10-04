@@ -1,5 +1,5 @@
-//! The generated map: one [`Hex`] per cell in a column-staggered hex grid, and its encoding in
-//! the stompymux TOML map file format.
+//! The generated map: one [`Hex`] per cell in a column-staggered hex grid, and its conversion
+//! to the [`BattleMapAsset`] that `stompymux-map` writes as a map file.
 //!
 //! Columns are staggered like the game's: even columns sit half a hex south of odd ones.
 //! [`HexMap::neighbors`] and [`HexMap::distance`] follow that layout, so roads and rivers built
@@ -7,13 +7,11 @@
 use crate::spec::MapFlag;
 use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::{collections::BTreeMap, fmt::Write};
-
-/// The tallest ground level, structure or bridge deck a map file allows.
-pub const MAX_HEIGHT: u8 = 35;
-
-/// The deepest water a map file allows.
-pub const MAX_DEPTH: u8 = 9;
+use std::sync::Arc;
+use stompymux_map::{
+    BattleDecorationKind, BattleHex, BattleMapAsset, BattleMapFlag, Ground, MAX_DEPTH, MAX_HEIGHT,
+    Structure, Water, Woods,
+};
 
 /// What fills a hex. Each variant is one map-file terrain symbol.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -96,16 +94,6 @@ impl Terrain {
     }
 }
 
-/// Permanent fire or smoke laid over a hex.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum Overlay {
-    /// Permanent fire (`&`).
-    Fire,
-    /// Permanent smoke (`:`).
-    Smoke,
-}
-
 /// One hex of a generated map.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Hex {
@@ -118,7 +106,7 @@ pub struct Hex {
     pub bridge: Option<u8>,
     /// Permanent fire or smoke.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub overlay: Option<Overlay>,
+    pub overlay: Option<BattleDecorationKind>,
 }
 
 impl Hex {
@@ -130,6 +118,41 @@ impl Hex {
             bridge: None,
             overlay: None,
         }
+    }
+
+    /// This hex as the layered [`BattleHex`] map files and the server use. A bridge deck spans
+    /// the hex's water or ice.
+    pub fn to_battle_hex(self) -> BattleHex {
+        let (mut ground, mut woods, mut water, mut structure) = (Ground::Clear, None, None, None);
+        match self.terrain {
+            Terrain::Clear => {}
+            Terrain::Road => ground = Ground::Road,
+            Terrain::Rough => ground = Ground::Rough,
+            Terrain::Mountains => ground = Ground::Mountains,
+            Terrain::Snow => ground = Ground::Snow,
+            Terrain::Sand => ground = Ground::Sand,
+            Terrain::LightWoods => woods = Some(Woods::Light),
+            Terrain::HeavyWoods => woods = Some(Woods::Heavy),
+            Terrain::Water { depth } => {
+                water = Some(Water {
+                    depth,
+                    frozen: false,
+                })
+            }
+            Terrain::Ice { depth } => {
+                water = Some(Water {
+                    depth,
+                    frozen: true,
+                })
+            }
+            Terrain::Building { height } => structure = Some(Structure::Building { height }),
+            Terrain::Wall { height } => structure = Some(Structure::Wall { height }),
+        }
+        if let Some(deck) = self.bridge {
+            structure = Some(Structure::Bridge { deck });
+        }
+        BattleHex::from_layers(self.level, ground, woods, water, structure)
+            .with_overlay(self.overlay)
     }
 }
 
@@ -240,68 +263,29 @@ impl HexMap {
         Ok(())
     }
 
-    /// Encode the map in the stompymux TOML map file format.
-    pub fn to_toml(&self) -> Result<String> {
+    /// The map as a [`BattleMapAsset`], after checking every hex holds values a map file can
+    /// store.
+    pub fn to_asset(&self) -> Result<BattleMapAsset> {
         self.validate()?;
-        let grid = |encode: &dyn Fn(&Hex) -> char| -> String {
-            let mut text = String::new();
-            for row in self.hexes.chunks(usize::from(self.width)) {
-                text.extend(row.iter().map(encode));
-                text.push('\n');
-            }
-            text
-        };
         let flags = self
             .flags
             .iter()
-            .map(|flag| format!("\"{}\"", flag.name()))
-            .collect::<Vec<_>>()
-            .join(", ");
-        let mut text = String::new();
-        writeln!(text, "gravity = {}", self.gravity)?;
-        writeln!(text, "temperature = {}", self.temperature)?;
-        writeln!(text, "flags = [{flags}]")?;
-        writeln!(text)?;
-        writeln!(
-            text,
-            "terrain = '''\n{}'''",
-            grid(&|hex| hex.terrain.symbol())
-        )?;
-        writeln!(text, "level = '''\n{}'''", grid(&|hex| glyph(hex.level)))?;
-        if self.hexes.iter().any(|hex| hex.terrain.is_water()) {
-            let depth = grid(&|hex| hex.terrain.depth().map_or('.', glyph));
-            writeln!(text, "depth = '''\n{depth}'''")?;
-        }
-        if self.hexes.iter().any(|hex| hex.terrain.is_structure()) {
-            let heights = grid(&|hex| hex.terrain.structure_height().map_or('.', glyph));
-            writeln!(text, "structure_height = '''\n{heights}'''")?;
-        }
-        if self.hexes.iter().any(|hex| hex.overlay.is_some()) {
-            let overlay = grid(&|hex| match hex.overlay {
-                Some(Overlay::Fire) => '&',
-                Some(Overlay::Smoke) => ':',
-                None => '.',
-            });
-            writeln!(text, "overlay = '''\n{overlay}'''")?;
-        }
-        let mut bridges: BTreeMap<u8, Vec<String>> = BTreeMap::new();
-        for (index, hex) in self.hexes.iter().enumerate() {
-            if let Some(deck) = hex.bridge {
-                let (x, y) = self.coordinate(index);
-                bridges.entry(deck).or_default().push(format!("[{x}, {y}]"));
-            }
-        }
-        for (deck, hexes) in bridges {
-            writeln!(text, "\n[[bridges]]\ndeck = {deck}")?;
-            writeln!(text, "hexes = [{}]", hexes.join(", "))?;
-        }
-        Ok(text)
+            .fold(0, |bits, &flag| BattleMapFlag::from(flag).apply(bits, true));
+        Ok(BattleMapAsset {
+            width: self.width,
+            height: self.height,
+            flags: i32::try_from(flags)?,
+            gravity: self.gravity,
+            temperature: self.temperature,
+            hexes: Arc::new(self.hexes.iter().map(|hex| hex.to_battle_hex()).collect()),
+            points_of_interest: Vec::new(),
+        })
     }
-}
 
-/// One-character height: `0`-`9`, then `a`-`z` for 10 through 35.
-fn glyph(value: u8) -> char {
-    char::from_digit(u32::from(value), 36).expect("validated height")
+    /// Encode the map in the stompymux TOML map file format.
+    pub fn to_toml(&self) -> Result<String> {
+        self.to_asset()?.to_file()
+    }
 }
 
 /// Cube coordinates for adjacency and distance; even columns sit half a hex south.
@@ -350,7 +334,7 @@ mod tests {
         map.hexes[0].terrain = Terrain::Water { depth: 2 };
         map.hexes[0].bridge = Some(1);
         map.hexes[1].terrain = Terrain::Building { height: 12 };
-        map.hexes[2].overlay = Some(Overlay::Smoke);
+        map.hexes[2].overlay = Some(BattleDecorationKind::Smoke);
         map.hexes[5].level = 11;
         let text = map.to_toml().unwrap();
         assert!(text.contains("flags = [\"dark\"]"), "{text}");

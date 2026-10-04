@@ -7,6 +7,26 @@ use std::{
     path::{Component, Path},
 };
 
+/// Why a named map file could not be loaded, without parsing error strings.
+#[derive(Debug, Clone, Copy)]
+pub(super) enum MapFileFailure {
+    /// No map file has that name.
+    Unavailable,
+    /// The file exists but is not a valid map; the error chain carries the reason.
+    Invalid,
+}
+
+impl std::fmt::Display for MapFileFailure {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Self::Unavailable => "#-1 Map not found.",
+            Self::Invalid => "#-1 Map invalid.",
+        })
+    }
+}
+
+impl std::error::Error for MapFileFailure {}
+
 /// Read a relative asset without allowing parent traversal, symlink escape or unbounded input.
 fn read_bytes(root: &Path, name: &str, limit: usize) -> Result<Vec<u8>> {
     let path = Path::new(name);
@@ -46,11 +66,11 @@ pub(super) fn read_map_with_flags(
     inherited_flags: i64,
 ) -> Result<BattleMapAsset> {
     let bytes = read_bytes(root, &format!("{name}.toml"), 2_100_000)
-        .context(super::map::MapFileFailure::Unavailable)?;
+        .context(MapFileFailure::Unavailable)?;
     String::from_utf8(bytes)
         .context("map file is not UTF-8")
         .and_then(|source| BattleMapAsset::parse_with_flags(&source, inherited_flags))
-        .context(super::map::MapFileFailure::Invalid)
+        .context(MapFileFailure::Invalid)
         .with_context(|| format!("map {name}"))
 }
 

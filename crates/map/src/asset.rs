@@ -1,122 +1,9 @@
-//! Bounded map-file decoding with explicit terrain, elevation and environmental metadata.
-use super::BattleHex;
-use anyhow::{Context, Result, bail, ensure};
+//! Map assets: a battlefield's dimensions, environment, hexes and scripted points of
+//! interest, as read from and written to map files.
+use crate::{BattleHex, Terrain};
+use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-
-/// Terrain identity; its spelling belongs to the map-file codec.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum Terrain {
-    Grassland,
-    Road,
-    LightForest,
-    HeavyForest,
-    Water,
-    Ice,
-    Bridge,
-    Rough,
-    Mountains,
-    Fire,
-    Smoke,
-    Snow,
-    Building,
-    Wall,
-    Sand,
-}
-
-impl Terrain {
-    /// Every terrain, in symbol-table order.
-    pub const ALL: [Self; 15] = [
-        Self::Grassland,
-        Self::Road,
-        Self::LightForest,
-        Self::HeavyForest,
-        Self::Water,
-        Self::Ice,
-        Self::Bridge,
-        Self::Rough,
-        Self::Mountains,
-        Self::Fire,
-        Self::Smoke,
-        Self::Snow,
-        Self::Building,
-        Self::Wall,
-        Self::Sand,
-    ];
-
-    /// Snake_case name shared by serialization, Lua reports and Lua arguments.
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::Grassland => "grassland",
-            Self::Road => "road",
-            Self::LightForest => "light_forest",
-            Self::HeavyForest => "heavy_forest",
-            Self::Water => "water",
-            Self::Ice => "ice",
-            Self::Bridge => "bridge",
-            Self::Rough => "rough",
-            Self::Mountains => "mountains",
-            Self::Fire => "fire",
-            Self::Smoke => "smoke",
-            Self::Snow => "snow",
-            Self::Building => "building",
-            Self::Wall => "wall",
-            Self::Sand => "sand",
-        }
-    }
-
-    /// Decode a snake_case terrain name.
-    pub fn from_name(name: &str) -> Result<Self> {
-        Self::ALL
-            .into_iter()
-            .find(|terrain| terrain.name() == name)
-            .with_context(|| format!("unknown terrain {name:?}"))
-    }
-
-    /// Decode a canonical terrain symbol without applying asset-file normalization.
-    pub fn from_symbol(symbol: char) -> Result<Self> {
-        Ok(match symbol {
-            ' ' => Self::Grassland,
-            '#' => Self::Road,
-            '`' => Self::LightForest,
-            '"' => Self::HeavyForest,
-            '~' => Self::Water,
-            '-' => Self::Ice,
-            '/' => Self::Bridge,
-            '%' => Self::Rough,
-            '^' => Self::Mountains,
-            '&' => Self::Fire,
-            ':' => Self::Smoke,
-            '+' => Self::Snow,
-            '@' => Self::Building,
-            '=' => Self::Wall,
-            '}' => Self::Sand,
-            _ => bail!("unknown terrain symbol {symbol:?}"),
-        })
-    }
-
-    /// Encode the canonical symbol used by map assets.
-    pub fn symbol(self) -> char {
-        match self {
-            Self::Grassland => ' ',
-            Self::Road => '#',
-            Self::LightForest => '`',
-            Self::HeavyForest => '"',
-            Self::Water => '~',
-            Self::Ice => '-',
-            Self::Bridge => '/',
-            Self::Rough => '%',
-            Self::Mountains => '^',
-            Self::Fire => '&',
-            Self::Smoke => ':',
-            Self::Snow => '+',
-            Self::Building => '@',
-            Self::Wall => '=',
-            Self::Sand => '}',
-        }
-    }
-}
 
 /// Parsed map terrain and settings; fire and smoke drawn in the file are hex overlays.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -172,26 +59,6 @@ impl MapPointOfInterest {
         Ok(())
     }
 }
-
-/// Why a named map file could not be loaded, without parsing error strings.
-#[derive(Debug, Clone, Copy)]
-pub(super) enum MapFileFailure {
-    /// No map file has that name.
-    Unavailable,
-    /// The file exists but is not a valid map; the error chain carries the reason.
-    Invalid,
-}
-
-impl std::fmt::Display for MapFileFailure {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(match self {
-            Self::Unavailable => "#-1 Map not found.",
-            Self::Invalid => "#-1 Map invalid.",
-        })
-    }
-}
-
-impl std::error::Error for MapFileFailure {}
 
 impl BattleMapAsset {
     /// Build a map from the compact cell notation used to set up maps in code and tests: a
@@ -268,23 +135,6 @@ impl BattleMapAsset {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    /// Names and symbols are distinct for every terrain and agree with serialization.
-    #[test]
-    fn terrain_names_and_symbols_round_trip() {
-        let mut symbols = std::collections::BTreeSet::new();
-        for terrain in Terrain::ALL {
-            assert!(symbols.insert(terrain.symbol()), "{terrain:?}");
-            assert_eq!(Terrain::from_symbol(terrain.symbol()).unwrap(), terrain);
-            assert_eq!(Terrain::from_name(terrain.name()).unwrap(), terrain);
-            assert_eq!(
-                serde_json::to_value(terrain).unwrap(),
-                serde_json::Value::from(terrain.name())
-            );
-        }
-        assert!(Terrain::from_name("Heavy_Forest").is_err());
-        assert!(Terrain::from_name("\"").is_err());
-    }
 
     #[test]
     fn bridge_jump_collision_distinguishes_entry_and_vertical_integration() {

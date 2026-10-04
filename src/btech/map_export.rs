@@ -34,3 +34,68 @@ impl StoredBattleMap {
         asset.to_file()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::super::{
+        BattleDecorationKind, BattleHex, BattleHexCoordinate, BattleMapAsset, Terrain,
+        state::map_from_asset,
+    };
+
+    /// Load map-file text as a live map, requiring it to validate.
+    fn stored(source: &str) -> super::StoredBattleMap {
+        let map = map_from_asset("test", BattleMapAsset::parse(source).unwrap()).unwrap();
+        map.validate().unwrap();
+        map
+    }
+
+    /// Buildings on high ground and water and bridges on a plateau validate as live maps.
+    #[test]
+    fn raised_structures_and_water_validate() {
+        stored("terrain = '@'\nlevel = 'a'\nstructure_height = 'b'\n");
+        stored(
+            "terrain = '~-~'\nlevel = '432'\ndepth = '231'\n\n[[bridges]]\ndeck = 2\nhexes = [[2, 0]]\n",
+        );
+    }
+
+    /// Fire and smoke from the overlay grid become permanent decorations over the terrain,
+    /// and export back into the overlay grid.
+    #[test]
+    fn overlay_grid_becomes_permanent_decorations() {
+        let source = "terrain = '.`~'\nlevel = '120'\ndepth = '..2'\noverlay = '&:.'\n";
+        let map = stored(source);
+        assert_eq!(
+            map.base_hex(1, 0).unwrap(),
+            BattleHex::new(Terrain::LightForest, 2)
+        );
+        assert_eq!(
+            map.hex(1, 0).unwrap().overlay(),
+            Some(BattleDecorationKind::Smoke)
+        );
+        let effect = map
+            .decoration(BattleHexCoordinate { x: 1, y: 0 })
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            (effect.kind, effect.remaining),
+            (BattleDecorationKind::Smoke, 0)
+        );
+        assert_eq!(
+            BattleMapAsset::parse(&map.export_asset().unwrap()).unwrap(),
+            BattleMapAsset::parse(source).unwrap()
+        );
+    }
+
+    /// Points of interest survive loading as a live map and exporting it again.
+    #[test]
+    fn points_of_interest_survive_export() {
+        let source = "terrain = '..'\nlevel = '00'\n\n[[points_of_interest]]\ntype = 'objective'\nname = 'Ford'\nx = 1\ny = 0\nelevation = -2\n";
+        let asset = BattleMapAsset::parse(source).unwrap();
+        let map = stored(source);
+        assert_eq!(*map.points_of_interest, asset.points_of_interest);
+        assert_eq!(
+            BattleMapAsset::parse(&map.export_asset().unwrap()).unwrap(),
+            asset
+        );
+    }
+}

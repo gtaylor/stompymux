@@ -3,7 +3,7 @@
 //!
 //! Combat, movement and sensor code ask these questions of a [`BattleHex`] instead of
 //! matching on layers locally, so a rule changes in exactly one place.
-use super::{BattleHex, Ground, Woods};
+use crate::{BattleHex, Ground, Woods};
 
 impl BattleHex {
     /// Whether nothing stands on or covers the ground: no woods, water or structure.
@@ -70,7 +70,7 @@ impl BattleHex {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::btech::Terrain;
+    use crate::Terrain;
 
     #[test]
     fn woods_density_matches_woods_layer() {
@@ -82,7 +82,7 @@ mod tests {
         assert_eq!(density(Terrain::LightForest), 1);
         assert_eq!(density(Terrain::HeavyForest), 2);
         let burning = BattleHex::new(Terrain::HeavyForest, 0)
-            .with_overlay(Some(crate::btech::BattleDecorationKind::Fire));
+            .with_overlay(Some(crate::BattleDecorationKind::Fire));
         assert_eq!(burning.woods_density(), 2);
     }
 
@@ -102,7 +102,7 @@ mod tests {
 
     #[test]
     fn fire_and_smoke_slow_units_like_rough_ground() {
-        use crate::btech::BattleDecorationKind::{Fire, Smoke};
+        use crate::BattleDecorationKind::{Fire, Smoke};
         for kind in [Fire, Smoke] {
             let covered = |terrain| BattleHex::new(terrain, 1).with_overlay(Some(kind));
             for wheeled in [false, true] {

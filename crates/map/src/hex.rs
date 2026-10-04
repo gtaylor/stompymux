@@ -6,9 +6,27 @@
 //! replace what they burn or cover: they are an overlay the map applies from its decorations.
 //! Rules ask the layers. [`BattleHex::terrain`] names the one feature a map shows for a hex,
 //! and [`BattleHex::new`] reads the compact symbol-and-digit notation used by
-//! [`BattleMapAsset::from_cells`](super::BattleMapAsset::from_cells).
-use super::{BattleDecorationKind, Terrain};
+//! [`BattleMapAsset::from_cells`](crate::BattleMapAsset::from_cells).
+use crate::Terrain;
 use serde::{Deserialize, Serialize};
+
+/// Visible fire or smoke laid over a hex.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BattleDecorationKind {
+    Fire,
+    Smoke,
+}
+
+impl BattleDecorationKind {
+    /// Terrain identity used by movement, visibility and map inspection.
+    pub fn terrain(self) -> Terrain {
+        match self {
+            Self::Fire => Terrain::Fire,
+            Self::Smoke => Terrain::Smoke,
+        }
+    }
+}
 
 /// What the ground itself is made of, beneath any woods, water or structure.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -65,8 +83,8 @@ pub fn height_glyph(height: u8) -> char {
 
 /// A battlefield hex. Build one with [`BattleHex::new`] from its single-terrain description.
 /// Saved and scripted as its layers; absent woods, water, structure and overlay are omitted.
-/// A map's terrain grid never holds an overlay: [`StoredBattleMap::hex`](super::StoredBattleMap::hex)
-/// adds it from the map's fire and smoke decorations.
+/// A live map's terrain grid never holds an overlay: the server adds it from the map's fire
+/// and smoke decorations.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct BattleHex {

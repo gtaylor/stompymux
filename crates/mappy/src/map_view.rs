@@ -10,7 +10,7 @@ use iced::{
     mouse,
     widget::shader::{self, Action},
 };
-use stompymux_rs::{BattleHexCoordinate, BattleMapAsset, Terrain};
+use stompymux_map::{BattleHexCoordinate, BattleMapAsset, Terrain};
 
 use crate::{
     Message,

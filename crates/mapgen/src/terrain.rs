@@ -6,11 +6,12 @@
 //! requested "high woods" close to the same share of the map whatever the seed.
 use crate::Params;
 use crate::biome::{BaseGround, Landform};
-use crate::map::{HexMap, Overlay, Terrain, center};
+use crate::map::{HexMap, Terrain, center};
 use crate::noise::Noise;
 use crate::path::find_path;
 use crate::rng::Rng;
 use crate::spec::Relief;
+use stompymux_map::BattleDecorationKind;
 
 /// Size in hexes of the largest hills and valleys.
 const FEATURE_SCALE: f64 = 16.0;
@@ -351,9 +352,9 @@ pub(crate) fn burn(map: &mut HexMap, elevation: &[f64], params: &Params) {
     let fire = threshold(score.iter().copied(), fraction * 0.35);
     for (hex, &value) in map.hexes.iter_mut().zip(&score) {
         if value >= fire {
-            hex.overlay = Some(Overlay::Fire);
+            hex.overlay = Some(BattleDecorationKind::Fire);
         } else if value >= smoke {
-            hex.overlay = Some(Overlay::Smoke);
+            hex.overlay = Some(BattleDecorationKind::Smoke);
         }
     }
 }

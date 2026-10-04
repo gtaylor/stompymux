@@ -23,7 +23,9 @@ The implementation is organized by responsibility across modules.
 | `src/text/`, `src/telnet/` | Styled and Markdown documents, terminal rendering, Telnet negotiation, and transport |
 | `src/help/` | In-game help indexing and rendering (see [Help system](../help-system/)) |
 | `src/config/` | Configuration model, directives, and runtime administration |
-| `crates/mapgen/` | Procedural battlefield map generation library and the `mapgen` CLI; depends on nothing in the server so editors can embed it (see [Map generation](../map-generation/)) |
+| `crates/map/` | Battlefield map data shared by the server and map tools: layered hexes, terrain, map flags, hex geometry, the [map file](../map-files/) format, and the `map-check` CLI |
+| `crates/mapgen/` | Procedural battlefield map generation library and the `mapgen` CLI; depends on `crates/map` but nothing in the server, so editors can embed it (see [Map generation](../map-generation/)) |
+| `crates/mappy/` | The Mappy desktop map editor, built on `crates/map` and iced (`just mappy`) |
 | `tests/` | Integration scenarios and fixtures; unit tests also live beside implementations |
 
 The server owns one serialized `World`. Tokio socket tasks send connection

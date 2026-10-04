@@ -18,9 +18,9 @@ use std::{
 };
 
 use anyhow::{Context, Result, ensure};
-use stompymux_rs::{
-    BattleDecorationKind, BattleGround, BattleHex, BattleHexCoordinate, BattleMapAsset,
-    BattleStructure, BattleWater, BattleWoods,
+use stompymux_map::{
+    BattleDecorationKind, BattleHex, BattleHexCoordinate, BattleMapAsset, Ground, Structure, Water,
+    Woods,
 };
 
 /// A map's flags, gravity and temperature, edited together.
@@ -54,10 +54,10 @@ enum Edit {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct Brush {
     pub level: Option<u8>,
-    pub ground: Option<BattleGround>,
-    pub woods: Option<Option<BattleWoods>>,
-    pub water: Option<Option<BattleWater>>,
-    pub structure: Option<Option<BattleStructure>>,
+    pub ground: Option<Ground>,
+    pub woods: Option<Option<Woods>>,
+    pub water: Option<Option<Water>>,
+    pub structure: Option<Option<Structure>>,
     pub overlay: Option<Option<BattleDecorationKind>>,
     /// Hexes within this many steps of the center are painted.
     pub radius: u8,
@@ -402,7 +402,7 @@ impl Document {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use stompymux_rs::Terrain;
+    use stompymux_map::Terrain;
 
     const AT: BattleHexCoordinate = BattleHexCoordinate { x: 2, y: 2 };
     const MIDDLE: BattleHexCoordinate = BattleHexCoordinate { x: 1, y: 1 };
@@ -477,7 +477,7 @@ mod tests {
         );
         let clear = Brush {
             woods: Some(None),
-            ground: Some(BattleGround::Rough),
+            ground: Some(Ground::Rough),
             ..Brush::default()
         };
         document.paint(MIDDLE, clear);
@@ -495,8 +495,8 @@ mod tests {
         let path = directory.path().join("test.toml");
         let mut document = Document::new(3, 3).unwrap();
         let woods_on_rough = Brush {
-            ground: Some(BattleGround::Rough),
-            woods: Some(Some(BattleWoods::Light)),
+            ground: Some(Ground::Rough),
+            woods: Some(Some(Woods::Light)),
             ..Brush::default()
         };
         document.paint(MIDDLE, woods_on_rough);
@@ -513,7 +513,7 @@ mod tests {
     /// and one feature per hex: woods on rough ground are not storable.
     #[test]
     fn file_holds_follows_the_map_file_rules() {
-        let bridge = Some(BattleStructure::Bridge { deck: 2 });
+        let bridge = Some(Structure::Bridge { deck: 2 });
         assert!(file_holds(
             BattleHex::new(Terrain::Water, 1).with_structure(bridge)
         ));
@@ -526,7 +526,7 @@ mod tests {
         let water_on_a_hill = BattleHex::new(Terrain::Water, 2).with_level(6);
         assert!(file_holds(water_on_a_hill.with_structure(bridge)));
         assert!(!file_holds(
-            BattleHex::new(Terrain::Rough, 4).with_woods(Some(BattleWoods::Light))
+            BattleHex::new(Terrain::Rough, 4).with_woods(Some(Woods::Light))
         ));
         assert!(file_holds(
             BattleHex::new(Terrain::Building, 30).with_level(5)

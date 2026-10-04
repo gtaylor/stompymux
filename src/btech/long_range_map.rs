@@ -203,7 +203,7 @@ fn render_viewport(
                         {
                             ' '
                         }
-                        elevation => super::hex::height_glyph(elevation),
+                        elevation => stompymux_map::height_glyph(elevation),
                     }
                 }
                 _ => hex.terrain().symbol(),

@@ -8,9 +8,9 @@ use iced::{
     Alignment, Background, Border, Color, Element, Fill, Theme,
     widget::{button, checkbox, column, row, slider, text},
 };
-use stompymux_rs::{
-    BATTLE_MAX_DEPTH, BATTLE_MAX_HEIGHT, BattleDecorationKind, BattleGround, BattleHex,
-    BattleStructure, BattleWater, BattleWoods, Terrain,
+use stompymux_map::{
+    BattleDecorationKind, BattleHex, Ground, MAX_DEPTH, MAX_HEIGHT, Structure, Terrain, Water,
+    Woods,
 };
 
 use crate::{
@@ -55,8 +55,8 @@ pub enum StructureKind {
 pub enum BrushEdit {
     Enable(Layer, bool),
     Level(u8),
-    Ground(BattleGround),
-    Woods(Option<BattleWoods>),
+    Ground(Ground),
+    Woods(Option<Woods>),
     Water(WaterKind),
     Depth(u8),
     Structure(StructureKind),
@@ -71,8 +71,8 @@ pub enum BrushEdit {
 #[derive(Debug, Clone)]
 pub struct BrushPanel {
     pub level: u8,
-    pub ground: BattleGround,
-    pub woods: Option<BattleWoods>,
+    pub ground: Ground,
+    pub woods: Option<Woods>,
     pub water: WaterKind,
     pub depth: u8,
     pub structure: StructureKind,
@@ -88,7 +88,7 @@ impl Default for BrushPanel {
     fn default() -> Self {
         Self {
             level: 0,
-            ground: BattleGround::Clear,
+            ground: Ground::Clear,
             woods: None,
             water: WaterKind::None,
             depth: 1,
@@ -123,7 +123,7 @@ impl BrushPanel {
                 return;
             }
             BrushEdit::Level(level) => {
-                self.level = level.min(BATTLE_MAX_HEIGHT);
+                self.level = level.min(MAX_HEIGHT);
                 Layer::Level
             }
             BrushEdit::Ground(ground) => {
@@ -139,7 +139,7 @@ impl BrushPanel {
                 Layer::Water
             }
             BrushEdit::Depth(depth) => {
-                self.depth = depth.min(BATTLE_MAX_DEPTH);
+                self.depth = depth.min(MAX_DEPTH);
                 Layer::Water
             }
             BrushEdit::Structure(structure) => {
@@ -147,7 +147,7 @@ impl BrushPanel {
                 Layer::Structure
             }
             BrushEdit::StructureHeight(height) => {
-                self.structure_height = height.min(BATTLE_MAX_HEIGHT);
+                self.structure_height = height.min(MAX_HEIGHT);
                 Layer::Structure
             }
             BrushEdit::Overlay(overlay) => {
@@ -170,9 +170,9 @@ impl BrushPanel {
         };
         (self.structure, self.structure_height) = match hex.structure() {
             None => (StructureKind::None, self.structure_height),
-            Some(BattleStructure::Building { height }) => (StructureKind::Building, height),
-            Some(BattleStructure::Wall { height }) => (StructureKind::Wall, height),
-            Some(BattleStructure::Bridge { deck }) => (StructureKind::Bridge, deck),
+            Some(Structure::Building { height }) => (StructureKind::Building, height),
+            Some(Structure::Wall { height }) => (StructureKind::Wall, height),
+            Some(Structure::Bridge { deck }) => (StructureKind::Bridge, deck),
         };
         self.overlay = hex.overlay();
         self.enabled = [true; 6];
@@ -183,7 +183,7 @@ impl BrushPanel {
         let on = |layer| self.enabled(layer);
         let water = match self.water {
             WaterKind::None => None,
-            WaterKind::Open | WaterKind::Frozen => Some(BattleWater {
+            WaterKind::Open | WaterKind::Frozen => Some(Water {
                 depth: self.depth,
                 frozen: self.water == WaterKind::Frozen,
             }),
@@ -191,9 +191,9 @@ impl BrushPanel {
         let height = self.structure_height;
         let structure = match self.structure {
             StructureKind::None => None,
-            StructureKind::Building => Some(BattleStructure::Building { height }),
-            StructureKind::Wall => Some(BattleStructure::Wall { height }),
-            StructureKind::Bridge => Some(BattleStructure::Bridge { deck: height }),
+            StructureKind::Building => Some(Structure::Building { height }),
+            StructureKind::Wall => Some(Structure::Wall { height }),
+            StructureKind::Bridge => Some(Structure::Bridge { deck: height }),
         };
         Brush {
             level: on(Layer::Level).then_some(self.level),
@@ -209,12 +209,12 @@ impl BrushPanel {
     /// The inspector controls, one section per layer, each with its on switch.
     pub fn view(&self) -> Element<'_, BrushEdit> {
         let grounds = [
-            (BattleGround::Clear, Terrain::Grassland, "clear"),
-            (BattleGround::Road, Terrain::Road, "road"),
-            (BattleGround::Rough, Terrain::Rough, "rough"),
-            (BattleGround::Mountains, Terrain::Mountains, "mountains"),
-            (BattleGround::Snow, Terrain::Snow, "snow"),
-            (BattleGround::Sand, Terrain::Sand, "sand"),
+            (Ground::Clear, Terrain::Grassland, "clear"),
+            (Ground::Road, Terrain::Road, "road"),
+            (Ground::Rough, Terrain::Rough, "rough"),
+            (Ground::Mountains, Terrain::Mountains, "mountains"),
+            (Ground::Snow, Terrain::Snow, "snow"),
+            (Ground::Sand, Terrain::Sand, "sand"),
         ];
         let ground_rows = grounds.chunks(3).map(|chunk| {
             row(chunk.iter().map(|&(ground, terrain, name)| {
@@ -233,14 +233,14 @@ impl BrushPanel {
             choice(
                 "light",
                 Some(terrain_color(Terrain::LightForest)),
-                self.woods == Some(BattleWoods::Light),
-                BrushEdit::Woods(Some(BattleWoods::Light)),
+                self.woods == Some(Woods::Light),
+                BrushEdit::Woods(Some(Woods::Light)),
             ),
             choice(
                 "heavy",
                 Some(terrain_color(Terrain::HeavyForest)),
-                self.woods == Some(BattleWoods::Heavy),
-                BrushEdit::Woods(Some(BattleWoods::Heavy)),
+                self.woods == Some(Woods::Heavy),
+                BrushEdit::Woods(Some(Woods::Heavy)),
             ),
         ]
         .spacing(4);
@@ -308,20 +308,20 @@ impl BrushPanel {
         .spacing(4);
         column![
             section(self, Layer::Level, "Level"),
-            amount("Level", self.level, BATTLE_MAX_HEIGHT, BrushEdit::Level),
+            amount("Level", self.level, MAX_HEIGHT, BrushEdit::Level),
             section(self, Layer::Ground, "Ground"),
             column(ground_rows).spacing(4),
             section(self, Layer::Woods, "Woods"),
             woods,
             section(self, Layer::Water, "Water"),
             water,
-            amount("Depth", self.depth, BATTLE_MAX_DEPTH, BrushEdit::Depth),
+            amount("Depth", self.depth, MAX_DEPTH, BrushEdit::Depth),
             section(self, Layer::Structure, "Structure"),
             structure,
             amount(
                 height_label,
                 self.structure_height,
-                BATTLE_MAX_HEIGHT,
+                MAX_HEIGHT,
                 BrushEdit::StructureHeight
             ),
             section(self, Layer::Overlay, "Fire and smoke"),
@@ -413,7 +413,7 @@ mod tests {
         assert_eq!(
             panel.brush(),
             Brush {
-                ground: Some(BattleGround::Clear),
+                ground: Some(Ground::Clear),
                 ..Brush::default()
             }
         );
@@ -424,8 +424,8 @@ mod tests {
         assert_eq!(
             panel.brush(),
             Brush {
-                level: Some(BATTLE_MAX_HEIGHT),
-                structure: Some(Some(BattleStructure::Bridge { deck: 30 })),
+                level: Some(MAX_HEIGHT),
+                structure: Some(Some(Structure::Bridge { deck: 30 })),
                 ..Brush::default()
             }
         );
@@ -437,7 +437,7 @@ mod tests {
         let hexes = [
             BattleHex::new(Terrain::Ice, 6).with_level(12),
             BattleHex::new(Terrain::Bridge, 4),
-            BattleHex::new(Terrain::Rough, 3).with_woods(Some(BattleWoods::Heavy)),
+            BattleHex::new(Terrain::Rough, 3).with_woods(Some(Woods::Heavy)),
             BattleHex::new(Terrain::Wall, 35),
             BattleHex::at_level(2).with_overlay(Some(BattleDecorationKind::Smoke)),
         ];

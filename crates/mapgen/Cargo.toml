@@ -17,6 +17,7 @@ path = "src/bin/mapgen.rs"
 required-features = ["cli"]
 
 [dependencies]
+stompymux-map = { path = "../map" }
 anyhow = "1.0.104"
 clap = { version = "4.6.6", features = ["derive"], optional = true }
 schemars = "1.2.2"

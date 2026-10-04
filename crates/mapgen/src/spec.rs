@@ -9,6 +9,7 @@ use anyhow::{Context, Result, bail, ensure};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
+use stompymux_map::BattleMapFlag;
 
 /// The smallest width or height a generated map may have.
 pub const MIN_DIMENSION: u16 = 8;
@@ -408,7 +409,9 @@ pub struct EnvironmentSpec {
     pub flags: Option<Vec<MapFlag>>,
 }
 
-/// A battlefield rule flag, as named in map files.
+/// A battlefield rule flag, as named in map files. Specs and the command line name flags with
+/// this type, which carries a JSON Schema and command-line spellings; it converts to the
+/// [`BattleMapFlag`] map files store.
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
 )]
@@ -432,17 +435,16 @@ pub enum MapFlag {
     NoPhysicalAttacks,
 }
 
-impl MapFlag {
-    /// The flag's name in map files.
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::SpecialRules => "special_rules",
-            Self::Vacuum => "vacuum",
-            Self::Underground => "underground",
-            Self::Dark => "dark",
-            Self::IndestructibleBridges => "indestructible_bridges",
-            Self::NoFriendlyFire => "no_friendly_fire",
-            Self::NoPhysicalAttacks => "no_physical_attacks",
+impl From<MapFlag> for BattleMapFlag {
+    fn from(flag: MapFlag) -> Self {
+        match flag {
+            MapFlag::SpecialRules => Self::SpecialRules,
+            MapFlag::Vacuum => Self::Vacuum,
+            MapFlag::Underground => Self::Underground,
+            MapFlag::Dark => Self::Dark,
+            MapFlag::IndestructibleBridges => Self::IndestructibleBridges,
+            MapFlag::NoFriendlyFire => Self::NoFriendlyFire,
+            MapFlag::NoPhysicalAttacks => Self::NoPhysicalAttacks,
         }
     }
 }
@@ -681,6 +683,25 @@ mod tests {
         assert_eq!(spec.at, Some([3, 4]));
         assert!("megacity".parse::<SettlementSpec>().is_err());
         assert!("town,tall".parse::<SettlementSpec>().is_err());
+    }
+
+    /// Every spec flag converts to the map-file flag with the same name.
+    #[test]
+    fn flags_convert_to_map_file_flags_of_the_same_name() {
+        for flag in [
+            MapFlag::SpecialRules,
+            MapFlag::Vacuum,
+            MapFlag::Underground,
+            MapFlag::Dark,
+            MapFlag::IndestructibleBridges,
+            MapFlag::NoFriendlyFire,
+            MapFlag::NoPhysicalAttacks,
+        ] {
+            assert_eq!(
+                serde_json::to_value(flag).unwrap(),
+                serde_json::to_value(BattleMapFlag::from(flag)).unwrap()
+            );
+        }
     }
 
     #[test]

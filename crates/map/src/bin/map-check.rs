@@ -5,7 +5,7 @@
 use std::{env, fs, path::PathBuf, process::ExitCode};
 
 use anyhow::{Context, Result};
-use stompymux_rs::BattleMapAsset;
+use stompymux_map::BattleMapAsset;
 
 fn main() -> Result<ExitCode> {
     let mut dirs: Vec<PathBuf> = env::args().skip(1).map(PathBuf::from).collect();

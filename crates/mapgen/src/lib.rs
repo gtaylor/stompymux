@@ -39,7 +39,7 @@ mod spec;
 mod terrain;
 
 pub use biome::{BiomeInfo, biome_catalog};
-pub use map::{Hex, HexMap, MAX_DEPTH, MAX_HEIGHT, Overlay, Terrain};
+pub use map::{Hex, HexMap, Terrain};
 pub use report::{Coverage, Report, RoadReport, SettlementReport};
 pub use spec::{
     Amount, Biome, EnvironmentSpec, MAX_DIMENSION, MIN_DIMENSION, MapFlag, MapSize, MapSpec,
@@ -48,6 +48,7 @@ pub use spec::{
 };
 
 use anyhow::{Context, Result};
+use stompymux_map::BattleDecorationKind;
 
 /// The comment prefix that carries the resolved spec inside a generated map file.
 const SPEC_COMMENT: &str = "# mapgen-spec: ";
@@ -145,15 +146,15 @@ pub fn generate(spec: &MapSpec) -> Result<GeneratedMap> {
         rivers,
         settlements: settlements.into_iter().map(|built| built.report).collect(),
         roads,
-        fire_hexes: count_overlay(&map, Overlay::Fire),
-        smoke_hexes: count_overlay(&map, Overlay::Smoke),
+        fire_hexes: count_overlay(&map, BattleDecorationKind::Fire),
+        smoke_hexes: count_overlay(&map, BattleDecorationKind::Smoke),
         warnings,
     };
     Ok(GeneratedMap { spec, map, report })
 }
 
 /// How many hexes carry `overlay`.
-fn count_overlay(map: &HexMap, overlay: Overlay) -> usize {
+fn count_overlay(map: &HexMap, overlay: BattleDecorationKind) -> usize {
     map.hexes
         .iter()
         .filter(|hex| hex.overlay == Some(overlay))
@@ -163,6 +164,7 @@ fn count_overlay(map: &HexMap, overlay: Overlay) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use stompymux_map::BattleMapAsset;
 
     /// A spec exercising every biome, settlement kind and layout on a medium map.
     fn busy(biome: Biome, seed: u64) -> MapSpec {
@@ -225,6 +227,51 @@ mod tests {
                 generated.report.settlements
             );
             assert!(generated.report.coverage.road > 0.0, "{biome:?}");
+        }
+    }
+
+    /// Every biome, with every kind of settlement, writes a map file that loads with the same
+    /// hexes and heights within a battlefield's limits.
+    #[test]
+    fn generated_maps_load() {
+        let settlement = |size, kind| SettlementSpec {
+            kind: Some(kind),
+            walled: Some(true),
+            ..SettlementSpec::new(size)
+        };
+        for biome in Biome::ALL {
+            let spec = MapSpec {
+                seed: Some(1),
+                biome: Some(biome),
+                size: Some(MapSize::Medium),
+                fire: Some(Amount::Low),
+                settlements: vec![
+                    settlement(SettlementSize::City, SettlementKind::Civilian),
+                    settlement(SettlementSize::Village, SettlementKind::Ruins),
+                    settlement(SettlementSize::Hamlet, SettlementKind::Industrial),
+                    settlement(SettlementSize::Outpost, SettlementKind::Military),
+                ],
+                roads: Some(RoadSpec {
+                    width: Some(2),
+                    through_roads: Some(2),
+                    ..RoadSpec::default()
+                }),
+                ..MapSpec::default()
+            };
+            let generated = generate(&spec).unwrap();
+            let map = BattleMapAsset::parse(&generated.to_toml().unwrap())
+                .unwrap_or_else(|error| panic!("{biome:?}: {error:#}"));
+            assert_eq!(map, generated.map.to_asset().unwrap(), "{biome:?}");
+            for (index, hex) in generated.map.hexes.iter().enumerate() {
+                let (x, y) = generated.map.coordinate(index);
+                let loaded = map.hex(x, y).unwrap();
+                assert_eq!(loaded.level(), hex.level, "{biome:?} at {x},{y}");
+                assert_eq!(loaded.deck_clearance(), hex.bridge, "{biome:?} at {x},{y}");
+                assert_eq!(loaded.overlay(), hex.overlay, "{biome:?} at {x},{y}");
+                loaded
+                    .validate()
+                    .unwrap_or_else(|error| panic!("{biome:?} at {x},{y}: {error:#}"));
+            }
         }
     }
 

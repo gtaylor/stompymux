@@ -1,27 +1,9 @@
 //! Map-owned fire and smoke overlays; source terrain stays in the terrain dictionary.
-use super::{BattleHexCoordinate, StoredBattleMap, Terrain};
+use super::{BattleDecorationKind, BattleHexCoordinate, StoredBattleMap};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-
-/// Visible fire or smoke owned by a map effect, laid over a hex as its overlay.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum BattleDecorationKind {
-    Fire,
-    Smoke,
-}
-
-impl BattleDecorationKind {
-    /// Terrain identity used by movement, visibility and map inspection.
-    pub fn terrain(self) -> Terrain {
-        match self {
-            Self::Fire => Terrain::Fire,
-            Self::Smoke => Terrain::Smoke,
-        }
-    }
-}
 
 /// Persisted simulation lifetime and independently scheduled fire spread check.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
