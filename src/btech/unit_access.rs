@@ -602,7 +602,7 @@ impl BtechState {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{BattleMapAsset, Config, Kind, World};
+    use crate::{Config, Kind, MapAsset, World};
 
     /// A placed Mech and vehicle on a small map, with one player recovery.
     fn world() -> (World, ObjectId, ObjectId, ObjectId) {
@@ -634,7 +634,7 @@ mod tests {
             &mut world,
             map,
             "test",
-            BattleMapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
+            MapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
         )
         .unwrap();
         super::super::place_unit(&mut world, mech, map, 0, 0).unwrap();

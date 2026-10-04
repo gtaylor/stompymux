@@ -1054,7 +1054,7 @@
 //|---@field inferno BattleVehicleInfernoHit|nil Dedicated vehicle inferno outcome.
 // lua-types-end
 
-// lua-types-begin btech 00200
+// lua-types-begin btech 00199
 //|---@class BattleVehicleWeaponUse
 //|---@field weapon string
 //|---@field ammunition BattleAmmunitionDraw[] Actual live-bin expenditure.
