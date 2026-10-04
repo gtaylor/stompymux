@@ -1088,9 +1088,10 @@ async fn half_ton_native_lua_fire_capacity_and_restart() {
         }
         base.validate(&config).unwrap();
         let mut invalid = base.clone();
+        // Overfill the bin through the raw record, which skips validation.
         invalid
             .btech
-            .set_unit_ammunition_bin(id, 0, u16::from(capacity + 1))
+            .rewrite_unit_record(id, |record| record["ammunition"][0] = (capacity + 1).into())
             .unwrap();
         assert!(invalid.validate(&config).is_err());
         let native = Scripts::new(

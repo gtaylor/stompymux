@@ -45,16 +45,12 @@ async fn fixture(
 
 /// Mark units running through their saved state so contact updates may run without crews.
 fn running(world: &mut World, ids: &[ObjectId]) {
-    let mut state = serde_json::to_value(&world.btech).unwrap();
     for id in ids {
-        let key = if world.btech.vehicles().contains_key(id) {
-            "vehicles"
-        } else {
-            "constructed"
-        };
-        state[key][id.0.to_string()]["power"] = serde_json::to_value(BattlePower::Running).unwrap();
+        world
+            .btech
+            .set_unit_power(*id, BattlePower::Running)
+            .unwrap();
     }
-    world.btech = serde_json::from_value(state).unwrap();
 }
 
 /// Low vehicles lose sight over a one-level ridge that Mechs and tall installations see across.

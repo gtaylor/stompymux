@@ -188,8 +188,8 @@ mod template;
 mod template_construction;
 mod template_document;
 mod unit;
-mod unit_fixtures;
-pub use unit_fixtures::BattleUnitDefinition;
+mod unit_access;
+pub use unit_access::{BattleUnitDefinition, BattleUnitEdit, BattleUnitRef};
 
 pub use assets::{read_map, read_template, read_unit_template, read_vehicle_template};
 mod unit_template;

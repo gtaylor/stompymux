@@ -4767,7 +4767,13 @@ async fn lateral_changes_delay_cancel_persist_and_move_without_turning_weapons()
     .unwrap();
     stopped
         .btech
-        .set_unit_power(source, BattlePower::Off)
+        .edit_unit(source, |unit| {
+            unit.set_power(BattlePower::Off);
+            unit.edit_motion(|motion| {
+                motion.speed = 0.0;
+                motion.desired_speed = 0.0;
+            });
+        })
         .unwrap();
     for _ in 0..5 {
         let _ = advance_battle_units(&mut stopped, 0);

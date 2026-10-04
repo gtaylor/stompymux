@@ -145,8 +145,15 @@ async fn lane(rows: &[&str], observer: Observer<'_>) -> Lane {
 }
 
 /// Switch a unit on or off without startup countdowns by editing its saved power state.
+/// This edits the raw record because some lane targets deliberately carry an active null
+/// signature without its equipment, so perception is tested apart from that equipment.
 fn set_power(world: &mut World, id: ObjectId, power: BattlePower) {
-    world.btech.set_unit_power(id, power).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["power"] = serde_json::to_value(power).unwrap();
+        })
+        .unwrap();
 }
 
 /// Drift permanent smoke over row two of the lane.
