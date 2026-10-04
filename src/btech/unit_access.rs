@@ -106,6 +106,8 @@ impl<'a> BattleUnitRef<'a> {
     }
 
     forward! { ref:
+        /// The bin a self-destruct detonates: the most destructive one, first on a tie.
+        pub fn largest_ammunition_hazard_bin(&self) -> Result<Option<usize>>;
         /// Whether TAG is installed, and whether it still works.
         pub(super) fn tag_hardware(&self) -> Result<(bool, bool)>;
         /// Remaining complete salvos, ordered by the resolved ammunition bins.

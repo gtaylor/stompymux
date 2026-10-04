@@ -89,6 +89,11 @@ impl BattleUnit {
         self.maximum_ammunition_hazard(false)
     }
 
+    /// The bin a self-destruct detonates: the most destructive one, first on a tie.
+    pub fn largest_ammunition_hazard_bin(&self) -> Result<Option<usize>> {
+        Ok(self.ammunition_hazard_maximum()?.map(|hazard| hazard.index))
+    }
+
     /// Inferno penalties select the largest available inferno bin before other ammunition.
     pub(super) fn inferno_ammunition_hazard(&self) -> Result<Option<BattleAmmunitionHazard>> {
         self.maximum_ammunition_hazard(true)

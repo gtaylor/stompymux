@@ -138,27 +138,11 @@ fn timer_mut(world: &mut World, id: ObjectId) -> &mut Option<BattleSelfDestruct>
 
 /// Largest destructive live bin, retaining canonical order for equal hazards.
 fn ammunition(world: &World, id: ObjectId) -> Result<Option<usize>> {
-    if let Some(unit) = world.btech.constructed_units().get(&id) {
-        return Ok(unit.ammunition_hazard_maximum()?.map(|hazard| hazard.index));
-    }
-    let unit = world
+    world
         .btech
-        .vehicles()
-        .get(&id)
-        .context("Vehicle is unavailable")?;
-    let loadout = unit.loadout()?;
-    let mut largest = None;
-    let mut maximum = 0;
-    for (index, bin) in loadout.ammunition.iter().enumerate() {
-        let damage = bin
-            .weapon
-            .ammunition_explosion_damage_for_mode(unit.ammunition()[index], bin.mode);
-        if damage > maximum && !unit.critical_unavailable(bin.location) {
-            largest = Some(index);
-            maximum = damage;
-        }
-    }
-    Ok(largest)
+        .unit(id)
+        .context("Unit is unavailable")?
+        .largest_ammunition_hazard_bin()
 }
 
 /// Ordered cockpit/observer feedback and diagnostic-channel records from admission.
