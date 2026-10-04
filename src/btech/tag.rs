@@ -115,11 +115,9 @@ pub(super) fn state(world: &World, id: ObjectId) -> Option<BattleTagState> {
 
 /// Update one already-resolved participant in the enclosing transaction.
 fn set_state(world: &mut World, id: ObjectId, state: BattleTagState) {
-    if let Some(unit) = world.btech.vehicles.get_mut(&id) {
+    crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
         unit.tag = state;
-    } else {
-        world.btech.constructed.get_mut(&id).unwrap().tag = state;
-    }
+    })
 }
 
 /// Validate unique ownership across both stores, allowing stale targets until reconciliation.

@@ -36,17 +36,9 @@ pub(super) fn intercept(
     if amount == 0 {
         return Ok(None);
     }
-    let roll = if let Some(unit) = world.btech.constructed.get_mut(&id) {
+    let roll = crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
         unit.dice.generic_roll()
-    } else {
-        world
-            .btech
-            .vehicles
-            .get_mut(&id)
-            .unwrap()
-            .dice
-            .generic_roll()
-    };
+    });
     if roll <= 8 {
         return Ok(None);
     }

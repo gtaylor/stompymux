@@ -41,11 +41,8 @@ pub(super) fn assign_in_candidate(
         .flat_map(|a| (b'A'..=b'Z').map(move |b| format!("{}{}", char::from(a), char::from(b))))
         .find(|label| !used.contains(label))
         .context("No battlefield ID available")?;
-    let mut dice = if let Some(unit) = world.btech.vehicles().get(&id) {
-        unit.dice.clone()
-    } else {
-        world.btech.constructed_units()[&id].dice.clone()
-    };
+    let mut dice =
+        crate::btech::with_unit!(world.btech.unit(id).unwrap(), |unit| { unit.dice.clone() });
     let preferred = preferred
         .filter(|value| value.len() >= 2)
         .or(super::preferred_identity::preferred_id(world, id)?);

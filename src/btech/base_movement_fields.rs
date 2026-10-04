@@ -22,16 +22,10 @@ pub(super) fn set(world: &mut World, id: ObjectId, walking: bool, value: &str) -
         .trim()
         .parse::<i32>()
         .context("Expected a signed 32-bit integer")?;
-    let fields = if let Some(unit) = world.btech.constructed.get_mut(&id) {
-        &mut unit.base_movement_fields
-    } else {
-        &mut world
-            .btech
-            .vehicles
-            .get_mut(&id)
-            .context("Unit is unavailable")?
-            .base_movement_fields
-    };
+    let fields = crate::btech::with_unit_mut!(
+        world.btech.unit_mut(id).context("Unit is unavailable")?,
+        |unit| { &mut unit.base_movement_fields }
+    );
     if walking {
         fields.walk = value;
     } else {

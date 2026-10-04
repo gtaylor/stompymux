@@ -119,13 +119,10 @@ pub(super) fn set_link(
     kind: BattleCommandNetwork,
     value: Option<u64>,
 ) {
-    let (classic, improved) = if world.btech.vehicles().contains_key(&id) {
-        let unit = world.btech.vehicles.get_mut(&id).unwrap();
-        (&mut unit.c3_network, &mut unit.c3i_network)
-    } else {
-        let unit = world.btech.constructed.get_mut(&id).unwrap();
-        (&mut unit.c3_network, &mut unit.c3i_network)
-    };
+    let (classic, improved) =
+        crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
+            (&mut unit.c3_network, &mut unit.c3i_network)
+        });
     *match kind {
         BattleCommandNetwork::C3 => classic,
         BattleCommandNetwork::C3i => improved,
@@ -139,21 +136,9 @@ pub(super) fn set_automation(
     kind: BattleCommandNetwork,
     enabled: bool,
 ) {
-    let automation = if world.btech.vehicles().contains_key(&id) {
-        &mut world
-            .btech
-            .vehicles
-            .get_mut(&id)
-            .unwrap()
-            .network_automation
-    } else {
-        &mut world
-            .btech
-            .constructed
-            .get_mut(&id)
-            .unwrap()
-            .network_automation
-    };
+    let automation = crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
+        &mut unit.network_automation
+    });
     *match kind {
         BattleCommandNetwork::C3 => &mut automation.c3,
         BattleCommandNetwork::C3i => &mut automation.c3i,

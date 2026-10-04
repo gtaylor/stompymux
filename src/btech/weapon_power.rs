@@ -51,23 +51,9 @@ pub fn disable_gauss_weapon(
         ready.recycle_remaining == 0,
         "That weapon is still recharging!"
     );
-    if world.btech.vehicles().contains_key(&id) {
-        world
-            .btech
-            .vehicles
-            .get_mut(&id)
-            .unwrap()
-            .powered_down_weapons
-            .insert(index);
-    } else {
-        world
-            .btech
-            .constructed
-            .get_mut(&id)
-            .unwrap()
-            .powered_down_weapons
-            .insert(index);
-    }
+    crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
+        unit.powered_down_weapons.insert(index);
+    });
     Ok(BattleNotice {
         unit: id,
         text: format!("You power down weapon {index}."),

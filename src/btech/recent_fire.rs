@@ -40,10 +40,8 @@ pub fn clear_recent_fire(world: &mut World) {
         .map(|(id, _)| id)
         .collect();
     for id in ids {
-        if let Some(unit) = world.btech.vehicles.get_mut(&id) {
+        crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
             unit.fired_recently = false;
-        } else {
-            world.btech.constructed.get_mut(&id).unwrap().fired_recently = false;
-        }
+        })
     }
 }

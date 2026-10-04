@@ -65,16 +65,10 @@ pub(super) fn set(
 /// Refresh the shared world identity index after an owned definition changes.
 pub(super) fn refresh(world: &mut crate::World, id: crate::ObjectId) -> Result<()> {
     use anyhow::Context;
-    let identity = if let Some(unit) = world.btech.constructed_units().get(&id) {
-        unit.identity()
-    } else {
-        world
-            .btech
-            .vehicles()
-            .get(&id)
-            .context("Unit is unavailable")?
-            .identity()
-    };
+    let identity = crate::btech::with_unit!(
+        world.btech.unit(id).context("Unit is unavailable")?,
+        |unit| { unit.identity() }
+    );
     world.btech.units.insert(id, identity);
     Ok(())
 }

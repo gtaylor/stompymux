@@ -128,15 +128,9 @@ fn hardware(world: &World, id: ObjectId) -> Option<(BattleSearchlight, bool)> {
 
 /// Borrow admitted hardware without duplicating switch or damage rules.
 fn hardware_mut(world: &mut World, id: ObjectId) -> &mut BattleSearchlight {
-    if let Some(unit) = world.btech.constructed.get_mut(&id) {
-        return &mut unit.searchlight;
-    }
-    &mut world
-        .btech
-        .vehicles
-        .get_mut(&id)
-        .expect("admitted lamp")
-        .searchlight
+    super::with_unit_mut!(world.btech.unit_mut(id).expect("admitted lamp"), |unit| {
+        &mut unit.searchlight
+    })
 }
 
 /// Constructed emitter identities in stable order across anatomy stores.
@@ -599,11 +593,7 @@ pub(super) fn strike(
     if !installed || lamp.destroyed {
         return None;
     }
-    let dice = if let Some(unit) = world.btech.constructed.get_mut(&id) {
-        &mut unit.dice
-    } else {
-        &mut world.btech.vehicles.get_mut(&id)?.dice
-    };
+    let dice = crate::btech::with_unit_mut!(world.btech.unit_mut(id)?, |unit| { &mut unit.dice });
     if dice.generic_roll() <= 6 || (!lamp.on && dice.generic_roll() <= 5) {
         return None;
     }

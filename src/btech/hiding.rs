@@ -118,11 +118,9 @@ fn exposed(world: &World, id: ObjectId) -> Result<bool> {
     let position = unit.position.context("Unit is not on a map")?;
     let tile =
         world.btech.maps()[&position.map].base_hex(i64::from(position.x), i64::from(position.y))?;
-    let elevation = if let Some(vehicle) = world.btech.vehicles().get(&id) {
-        vehicle.elevation_level(tile)
-    } else {
-        world.btech.constructed_units()[&id].elevation_level(tile)
-    };
+    let elevation = crate::btech::with_unit!(world.btech.unit(id).unwrap(), |unit| {
+        unit.elevation_level(tile)
+    });
     if elevation != i32::from(super::fall_profile::surface(tile, elevation)) {
         return Ok(true);
     }

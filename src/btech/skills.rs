@@ -143,25 +143,19 @@ pub(super) fn installed_weapon(
     unit: ObjectId,
     weapon_index: usize,
 ) -> Result<super::BattleWeapon> {
-    Ok(if let Some(vehicle) = world.btech.vehicles().get(&unit) {
-        vehicle
-            .loadout()?
-            .weapons
-            .get(weapon_index)
-            .context("Weapon index out of bounds")?
-            .weapon
-    } else {
+    Ok(crate::btech::with_unit!(
         world
             .btech
-            .constructed_units()
-            .get(&unit)
-            .context("Unit construction state is unavailable")?
-            .loadout()?
-            .weapons
-            .get(weapon_index)
-            .context("Weapon index out of bounds")?
-            .weapon
-    })
+            .unit(unit)
+            .context("Unit construction state is unavailable")?,
+        |unit| {
+            unit.loadout()?
+                .weapons
+                .get(weapon_index)
+                .context("Weapon index out of bounds")?
+                .weapon
+        }
+    ))
 }
 
 /// Read a unit's skill for an attacker's weapon family, even when that weapon is not installed locally.
@@ -246,16 +240,13 @@ pub(super) fn unit_spotting_target(world: &World, unit: ObjectId) -> Result<i16>
 
 /// Present connected player crew for ordinary conventional unit skill lookup.
 pub(super) fn active_pilot(world: &World, unit: ObjectId) -> Result<Option<ObjectId>> {
-    let pilot = if let Some(vehicle) = world.btech.vehicles().get(&unit) {
-        vehicle.pilot()
-    } else {
+    let pilot = crate::btech::with_unit!(
         world
             .btech
-            .constructed_units()
-            .get(&unit)
-            .context("Unit construction state is unavailable")?
-            .pilot()
-    };
+            .unit(unit)
+            .context("Unit construction state is unavailable")?,
+        |unit| { unit.pilot() }
+    );
     Ok(pilot.filter(|pilot| {
         world.objects.get(pilot).is_some_and(|player| {
             player.kind == Kind::Player

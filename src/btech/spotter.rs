@@ -122,11 +122,9 @@ pub(super) fn observer_aim(
     spotter: ObjectId,
     fasa_turning: bool,
 ) -> Result<BattleIndirectAim> {
-    let movement = if let Some(unit) = world.btech.vehicles().get(&spotter) {
+    let movement = crate::btech::with_unit!(world.btech.unit(spotter).unwrap(), |unit| {
         unit.attacker_movement_modifier(fasa_turning)
-    } else {
-        world.btech.constructed_units()[&spotter].attacker_movement_modifier(fasa_turning)
-    };
+    });
     Ok(BattleIndirectAim {
         spotter,
         spotting: super::skills::unit_spotting_target(world, spotter)?,
@@ -217,11 +215,9 @@ pub fn select_spotter(
         }
     };
     super::artillery_adjustment::spotter_change(world, id, selected);
-    if let Some(unit) = world.btech.vehicles.get_mut(&id) {
+    crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
         unit.spotter = selected;
-    } else {
-        world.btech.constructed.get_mut(&id).unwrap().spotter = selected;
-    }
+    });
     Ok(vec![BattleNotice { unit: id, text }])
 }
 

@@ -19,15 +19,10 @@ pub(super) fn read(world: &World, id: ObjectId) -> Result<ShotCounters> {
 
 /// Borrow the owning storage only after the caller has validated a complete update.
 fn storage(world: &mut World, id: ObjectId) -> Result<&mut ShotCounters> {
-    if let Some(unit) = world.btech.constructed.get_mut(&id) {
-        return Ok(&mut unit.shot_counters);
-    }
-    Ok(&mut world
-        .btech
-        .vehicles
-        .get_mut(&id)
-        .context("Unit is unavailable")?
-        .shot_counters)
+    super::with_unit_mut!(
+        world.btech.unit_mut(id).context("Unit is unavailable")?,
+        |unit| { Ok(&mut unit.shot_counters) }
+    )
 }
 
 /// Broadcast classification includes the configured near-miss band even for beacon weapons.

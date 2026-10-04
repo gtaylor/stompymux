@@ -63,11 +63,9 @@ pub fn edit_battle_tic(
         BattleTicEdit::Remove(indices) => next.0[group].retain(|i| !indices.contains(i)),
         BattleTicEdit::Clear => next.0[group].clear(),
     }
-    if world.btech.vehicles().contains_key(&id) {
-        world.btech.vehicles.get_mut(&id).unwrap().tics = next;
-    } else {
-        world.btech.constructed.get_mut(&id).unwrap().tics = next;
-    }
+    crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
+        unit.tics = next;
+    });
     Ok(())
 }
 

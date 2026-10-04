@@ -101,11 +101,9 @@ pub(super) fn render(world: &World, id: ObjectId) -> Result<String> {
         } else {
             name.into()
         };
-        let linked = if let Some(u) = world.btech.constructed_units().get(&id) {
-            u.loadout()?.weapons[i].on_targeting_computer
-        } else {
-            world.btech.vehicles()[&id].loadout()?.weapons[i].on_targeting_computer
-        };
+        let linked = crate::btech::with_unit!(world.btech.unit(id).unwrap(), |unit| {
+            unit.loadout()?.weapons[i].on_targeting_computer
+        });
         let computer =
             linked && super::technology::device(world, id, BattleSystem::TargetingComputer)?.1;
         let modes = if weapon.is_ams() {

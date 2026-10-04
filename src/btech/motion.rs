@@ -539,11 +539,9 @@ fn advance_fall_headings(
             .get(&id)
             .map_or(1.0, |unit| unit.chassis().turn_multiplier());
         motion.turn_toward(maximum, rules.fasa_turning, multiplier);
-        if let Some(unit) = world.btech.constructed.get_mut(&id) {
+        crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
             unit.motion = Some(motion);
-        } else {
-            world.btech.vehicles.get_mut(&id).unwrap().motion = Some(motion);
-        }
+        })
     }
     Ok(notices)
 }

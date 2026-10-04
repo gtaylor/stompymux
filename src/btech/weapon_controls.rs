@@ -39,11 +39,9 @@ pub(super) fn ready_weapon(
         !feed_jammed,
         "The ammo feed mechanism for that weapon is jammed! Unable to change modes!"
     );
-    let one_shot = if let Some(vehicle) = world.btech.vehicles().get(&id) {
-        vehicle.loadout()?.weapons[index].one_shot
-    } else {
-        world.btech.constructed_units()[&id].loadout()?.weapons[index].one_shot
-    };
+    let one_shot = crate::btech::with_unit!(world.btech.unit(id).unwrap(), |unit| {
+        unit.loadout()?.weapons[index].one_shot
+    });
     ensure!(!one_shot, "One-shot weapons' mode cannot be altered!");
     if let Some(unit) = world.btech.constructed_units().get(&id) {
         ensure!(
@@ -142,11 +140,9 @@ pub(super) fn selectable_munition(
     if !weapon.is_mml() {
         return munition.supports(weapon);
     }
-    let current = if let Some(vehicle) = world.btech.vehicles().get(&id) {
-        vehicle.ammunition_mode(index)
-    } else {
-        world.btech.constructed_units()[&id].ammunition_mode(index)
-    };
+    let current = crate::btech::with_unit!(world.btech.unit(id).unwrap(), |unit| {
+        unit.ammunition_mode(index)
+    });
     current.is_ok_and(|current| munition.with_mml_family(current.is_mml_lrm()).is_some())
 }
 

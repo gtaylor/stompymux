@@ -140,27 +140,15 @@ pub(super) fn apply_contact(
         (true, true) => BattleContactTransition::Retained,
         (true, false) => BattleContactTransition::Lost,
     };
-    let contacts = if world.btech.vehicles().contains_key(&observer) {
-        let unit = world
-            .btech
-            .vehicles
-            .get_mut(&observer)
-            .expect("validated observer");
-        if contact.is_none() && unit.target_lock().is_some_and(|lock| lock.target == target) {
-            unit.target_lock = None;
+    let contacts = crate::btech::with_unit_mut!(
+        world.btech.unit_mut(observer).expect("validated observer"),
+        |unit| {
+            if contact.is_none() && unit.target_lock().is_some_and(|lock| lock.target == target) {
+                unit.target_lock = None;
+            }
+            &mut unit.contacts
         }
-        &mut unit.contacts
-    } else {
-        let unit = world
-            .btech
-            .constructed
-            .get_mut(&observer)
-            .expect("validated observer");
-        if contact.is_none() && unit.target_lock().is_some_and(|lock| lock.target == target) {
-            unit.target_lock = None;
-        }
-        &mut unit.contacts
-    };
+    );
     if let Some(contact) = contact {
         contacts.insert(target, contact);
     } else {

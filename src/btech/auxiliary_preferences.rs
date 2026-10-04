@@ -23,15 +23,10 @@ fn read(world: &World, id: ObjectId) -> Result<AuxiliaryPreferences> {
 
 /// Select the existing unit-owned preference storage after caller admission.
 fn storage(world: &mut World, id: ObjectId) -> Result<&mut AuxiliaryPreferences> {
-    if let Some(unit) = world.btech.constructed.get_mut(&id) {
-        return Ok(&mut unit.auxiliary_preferences);
-    }
-    Ok(&mut world
-        .btech
-        .vehicles
-        .get_mut(&id)
-        .context("Unit is unavailable")?
-        .auxiliary_preferences)
+    super::with_unit_mut!(
+        world.btech.unit_mut(id).context("Unit is unavailable")?,
+        |unit| { Ok(&mut unit.auxiliary_preferences) }
+    )
 }
 
 /// Project the field mask from the saved booleans.

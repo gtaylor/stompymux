@@ -350,11 +350,9 @@ pub(super) fn resolve_in_action(
     let operator = super::combat_operator::admit(world, shooter, pilot)?;
     let shooter = operator.source.unit;
     super::spotter::check_firing_role(world, shooter)?;
-    let mechanics = if let Some(unit) = world.btech.vehicles().get(&shooter) {
+    let mechanics = crate::btech::with_unit!(world.btech.unit(shooter).unwrap(), |unit| {
         unit.weapon_mechanics(index)?
-    } else {
-        world.btech.constructed_units()[&shooter].weapon_mechanics(index)?
-    };
+    });
     let weapon = mechanics.check_offensive()?;
     // Mechanical admission precedes target decoding; supply remains in fire preparation.
     let requested = request.resolve_for_source(world, operator.source, index)?;

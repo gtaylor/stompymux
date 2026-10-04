@@ -138,16 +138,15 @@ fn apply_raw_section_repair(
 
 pub fn set_administrative_heat_sinks(world: &mut World, id: ObjectId, count: u16) -> Result<()> {
     super::ensure_registered_unit_runtime(world, id)?;
-    if let Some(unit) = world.btech.constructed.get_mut(&id) {
-        unit.set_administrative_heat_sinks(count);
-    } else {
+    crate::btech::with_unit_mut!(
         world
             .btech
-            .vehicles
-            .get_mut(&id)
-            .context("Unit runtime state is unavailable")?
-            .set_administrative_heat_sinks(count);
-    }
+            .unit_mut(id)
+            .context("Unit runtime state is unavailable")?,
+        |unit| {
+            unit.set_administrative_heat_sinks(count);
+        }
+    );
     Ok(())
 }
 
@@ -812,16 +811,13 @@ pub fn set_administrative_technology(
             false,
         )?;
     }
-    if let Some(unit) = world.btech.constructed.get_mut(&id) {
-        unit.set_administrative_special(attribute, flag, enabled)
-    } else {
+    crate::btech::with_unit_mut!(
         world
             .btech
-            .vehicles
-            .get_mut(&id)
-            .context("Unit runtime state is unavailable")?
-            .set_administrative_special(attribute, flag, enabled)
-    }
+            .unit_mut(id)
+            .context("Unit runtime state is unavailable")?,
+        |unit| { unit.set_administrative_special(attribute, flag, enabled) }
+    );
     Ok(())
 }
 

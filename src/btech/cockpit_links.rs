@@ -35,16 +35,10 @@ pub(super) fn set(
     slot: usize,
     destination: ObjectId,
 ) -> Result<()> {
-    let links = if let Some(unit) = world.btech.constructed.get_mut(&id) {
-        &mut unit.cockpit_links
-    } else {
-        &mut world
-            .btech
-            .vehicles
-            .get_mut(&id)
-            .context("Unit is unavailable")?
-            .cockpit_links
-    };
+    let links = crate::btech::with_unit_mut!(
+        world.btech.unit_mut(id).context("Unit is unavailable")?,
+        |unit| { &mut unit.cockpit_links }
+    );
     *links
         .0
         .get_mut(slot)

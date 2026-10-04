@@ -40,32 +40,22 @@ pub fn display_name(world: &World, id: ObjectId) -> Result<&str> {
     {
         return Ok(value);
     }
-    if let Some(unit) = world.btech.constructed_units().get(&id) {
-        return Ok(&unit.display_name.0);
-    }
-    Ok(&world
-        .btech
-        .vehicles()
-        .get(&id)
-        .context("Unit is unavailable")?
-        .display_name
-        .0)
+    super::with_unit!(
+        world.btech.unit(id).context("Unit is unavailable")?,
+        |unit| { Ok(&unit.display_name.0) }
+    )
 }
 
 /// Assign or clear the override after the enclosing administrative action admits the caller.
 pub(super) fn set(world: &mut World, id: ObjectId, value: &str) -> Result<()> {
     let value = DisplayName::try_from(value.to_owned())?;
     let configured = (!value.0.is_empty()).then(|| value.0.clone());
-    if let Some(unit) = world.btech.constructed.get_mut(&id) {
-        unit.display_name = value;
-    } else {
-        world
-            .btech
-            .vehicles
-            .get_mut(&id)
-            .context("Unit is unavailable")?
-            .display_name = value;
-    }
+    crate::btech::with_unit_mut!(
+        world.btech.unit_mut(id).context("Unit is unavailable")?,
+        |unit| {
+            unit.display_name = value;
+        }
+    );
     super::set_unit_identity_configuration(world, id, "display_name", configured);
     Ok(())
 }

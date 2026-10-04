@@ -155,16 +155,13 @@ fn field_type(
         }
         BattleAmmunitionMode::ThunderActive => (BattleMineKind::Active, 0),
         BattleAmmunitionMode::ThunderVibrabomb => {
-            let mass = if let Some(vehicle) = world.btech.vehicles().get(&shooter) {
-                vehicle.effective_mass()?
-            } else {
+            let mass = crate::btech::with_unit!(
                 world
                     .btech
-                    .constructed_units()
-                    .get(&shooter)
-                    .context("Shooter is not constructed")?
-                    .effective_mass()?
-            };
+                    .unit(shooter)
+                    .context("Shooter is not constructed")?,
+                |unit| { unit.effective_mass()? }
+            );
             let tons = i32::try_from(mass / 1024)?;
             (BattleMineKind::Vibra, (tons + 1).clamp(10, 100))
         }

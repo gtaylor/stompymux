@@ -280,11 +280,9 @@ pub fn toggle_cluster(
     index: usize,
 ) -> Result<BattleAmmunitionMode> {
     let readiness = super::weapon_controls::ready_weapon(world, id, pilot, index)?;
-    let current = if let Some(vehicle) = world.btech.vehicles().get(&id) {
-        vehicle.ammunition_mode(index)?
-    } else {
-        world.btech.constructed_units()[&id].ammunition_mode(index)?
-    };
+    let current = crate::btech::with_unit!(world.btech.unit(id).unwrap(), |unit| {
+        unit.ammunition_mode(index)?
+    });
     ensure!(readiness.weapon.is_artillery(), "Invalid weapon type!");
     ensure!(
         matches!(
@@ -339,11 +337,9 @@ pub fn toggle_artemis(
     index: usize,
 ) -> Result<BattleAmmunitionMode> {
     let readiness = super::weapon_controls::ready_weapon(world, id, pilot, index)?;
-    let operational = if let Some(vehicle) = world.btech.vehicles().get(&id) {
-        vehicle.artemis_operational(index)?
-    } else {
-        world.btech.constructed_units()[&id].artemis_operational(index)?
-    };
+    let operational = crate::btech::with_unit!(world.btech.unit(id).unwrap(), |unit| {
+        unit.artemis_operational(index)?
+    });
     ensure!(
         operational,
         "You do not have an Artemis system for that weapon."

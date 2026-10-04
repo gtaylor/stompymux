@@ -185,11 +185,9 @@ fn touchdown_notice(id: ObjectId) -> BattleNotice {
 
 /// Commit only the shared vertical cursor; horizontal controls remain owned by normal movement.
 fn set_cursor(world: &mut World, id: ObjectId, drop: Option<BattleOrbitalDrop>) {
-    if let Some(unit) = world.btech.constructed.get_mut(&id) {
+    crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
         unit.orbital_drop = drop;
-    } else {
-        world.btech.vehicles.get_mut(&id).unwrap().orbital_drop = drop;
-    }
+    })
 }
 
 /// Read crew facts once and consume exactly one drop roll, including stopped and unconscious pilots.

@@ -48,11 +48,9 @@ pub fn assign_pilot(world: &mut World, unit: ObjectId, pilot: ObjectId) -> Resul
     );
     super::prepare_recovery(world, pilot)?;
     super::crew_recovery::assign(world, unit, pilot);
-    if let Some(vehicle) = world.btech.vehicles.get_mut(&unit) {
-        vehicle.pilot = Some(pilot);
-    } else {
-        world.btech.constructed.get_mut(&unit).unwrap().pilot = Some(pilot);
-    }
+    crate::btech::with_unit_mut!(world.btech.unit_mut(unit).unwrap(), |unit| {
+        unit.pilot = Some(pilot);
+    });
     Ok(())
 }
 
@@ -119,16 +117,10 @@ pub(super) fn set_administrative_pilot(
     unit: ObjectId,
     pilot: Option<ObjectId>,
 ) -> Result<()> {
-    let current = if let Some(vehicle) = world.btech.vehicles().get(&unit) {
-        vehicle.pilot()
-    } else {
-        world
-            .btech
-            .constructed_units()
-            .get(&unit)
-            .context("Unit is unavailable")?
-            .pilot()
-    };
+    let current = crate::btech::with_unit!(
+        world.btech.unit(unit).context("Unit is unavailable")?,
+        |unit| { unit.pilot() }
+    );
     if current == pilot {
         return Ok(());
     }

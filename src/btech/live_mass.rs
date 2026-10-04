@@ -47,16 +47,12 @@ pub(super) fn set(world: &mut World, id: ObjectId, value: &str, tsm_bonus: bool)
     let mass = value.trim().parse::<i32>().context("Invalid live mass")?;
     ensure!(mass >= 0, "Live mass cannot be negative");
     let correction = LiveMass(Some(mass as u32));
-    if let Some(unit) = world.btech.constructed.get_mut(&id) {
-        unit.live_mass = correction;
-    } else {
-        world
-            .btech
-            .vehicles
-            .get_mut(&id)
-            .context("Unit is unavailable")?
-            .live_mass = correction;
-    }
+    crate::btech::with_unit_mut!(
+        world.btech.unit_mut(id).context("Unit is unavailable")?,
+        |unit| {
+            unit.live_mass = correction;
+        }
+    );
     super::load::reconcile(world, id, tsm_bonus)?;
     if let Some(carrier) = world.btech.towed_by(id) {
         super::load::reconcile(world, carrier, tsm_bonus)?;

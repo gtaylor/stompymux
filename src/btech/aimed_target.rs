@@ -114,16 +114,15 @@ pub fn set_aimed_section(
     } else {
         (None, "Targetting disabled.".into())
     };
-    if let Some(unit) = world.btech.vehicles.get_mut(&id) {
-        unit.aimed_section = selection;
-    } else {
+    crate::btech::with_unit_mut!(
         world
             .btech
-            .constructed
-            .get_mut(&id)
-            .context("Unit construction state is unavailable")?
-            .aimed_section = selection;
-    }
+            .unit_mut(id)
+            .context("Unit construction state is unavailable")?,
+        |unit| {
+            unit.aimed_section = selection;
+        }
+    );
     Ok(BattleNotice { unit: id, text })
 }
 

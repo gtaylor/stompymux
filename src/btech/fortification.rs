@@ -51,11 +51,9 @@ pub fn set_fortified(world: &mut World, id: ObjectId, enabled: bool) -> Result<(
             );
         }
     }
-    if let Some(unit) = world.btech.vehicles.get_mut(&id) {
+    crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
         unit.fortified = enabled;
-    } else {
-        world.btech.constructed.get_mut(&id).unwrap().fortified = enabled;
-    }
+    });
     Ok(())
 }
 

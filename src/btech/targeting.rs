@@ -407,11 +407,9 @@ pub fn advance_target_locks(world: &mut World) -> Vec<BattleNotice> {
     let mut notices = Vec::new();
     for (id, mut lock, message) in updates {
         lock.advance();
-        if let Some(vehicle) = world.btech.vehicles.get_mut(&id) {
-            vehicle.target_lock = Some(lock);
-        } else {
-            world.btech.constructed.get_mut(&id).unwrap().target_lock = Some(lock);
-        }
+        crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
+            unit.target_lock = Some(lock);
+        });
         if let Some(text) = message {
             notices.push(BattleNotice { unit: id, text });
         }

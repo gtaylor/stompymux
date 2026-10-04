@@ -65,11 +65,9 @@ impl FireTargetRequest<'_> {
             Self::Target(_) => Vec::new(),
         };
         ensure!(args.len() <= 2, "Invalid number of arguments!");
-        if let Some(unit) = world.btech.vehicles().get(&shooter) {
+        crate::btech::with_unit!(world.btech.unit(shooter).unwrap(), |unit| {
             unit.check_spotter_fire(shooter, index)?;
-        } else {
-            world.btech.constructed_units()[&shooter].check_spotter_fire(shooter, index)?;
-        }
+        });
         let observed = (weapon.supports_indirect_ammunition(ammunition) || weapon.is_artillery())
             && super::spotter::selected(world, shooter).is_some()
             && !matches!(
@@ -124,11 +122,9 @@ pub(super) fn resolve_conventional_for_source(
 ) -> Result<ResolvedFireTarget> {
     let shooter = source.unit;
     let (weapon, ammunition) = super::spotter::installation(world, shooter, index)?;
-    let mode = if let Some(unit) = world.btech.vehicles().get(&shooter) {
+    let mode = crate::btech::with_unit!(world.btech.unit(shooter).unwrap(), |unit| {
         unit.fire_mode(index)?
-    } else {
-        world.btech.constructed_units()[&shooter].fire_mode(index)?
-    };
+    });
     let (unit_lock, hex_lock) = match source.selection(world) {
         Some(super::BattleTargetSelection::Unit(lock)) => (Some(lock), None),
         Some(super::BattleTargetSelection::Hex(lock)) => (None, Some(lock)),
@@ -198,11 +194,9 @@ pub(super) fn check_target_safety_for_source(
     let shooter = targeting.unit;
     let source = super::scanner::scanner_unit(world, shooter).context("Shooter is unavailable")?;
     let recipient = super::scanner::scanner_unit(world, target).context("Target is unavailable")?;
-    let safety = if let Some(unit) = world.btech.vehicles().get(&shooter) {
+    let safety = crate::btech::with_unit!(world.btech.unit(shooter).unwrap(), |unit| {
         unit.friendly_fire_safety()
-    } else {
-        world.btech.constructed_units()[&shooter].friendly_fire_safety()
-    };
+    });
     let lock = match targeting.selection(world) {
         Some(super::BattleTargetSelection::Unit(lock)) => Some(lock),
         _ => None,
