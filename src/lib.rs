@@ -1237,7 +1237,7 @@ pub use btech::{
     TacticalSubmitResult, TacticalUnitSnapshot, observe_tactical, submit_tactical,
 };
 
-pub use server::{HeartbeatHarness, HeartbeatMetrics};
+pub use server::{HeartbeatHarness, HeartbeatMetrics, RuntimeProgress};
 
 /// Isolated production-heartbeat performance diagnostics for ground controllers.
 pub use btech::autopilot::benchmark::{

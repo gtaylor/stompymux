@@ -399,7 +399,7 @@ async fn slow_help_queue_obeys_deadline_and_counters() {
     .unwrap();
     let config = Config::load(dir.path()).unwrap();
     let (output, _receiver) = tokio::sync::mpsc::channel(1);
-    let now = std::time::Instant::now();
+    let now = tokio::time::Instant::now();
     let session = Session {
         retry_remaining: 3,
         site: Default::default(),

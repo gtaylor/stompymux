@@ -14,6 +14,8 @@ mod lua_admin;
 mod maintenance;
 mod operations;
 mod presence;
+mod progress;
+pub use progress::RuntimeProgress;
 mod queue;
 mod runtime;
 mod shutdown;

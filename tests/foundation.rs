@@ -301,8 +301,8 @@ async fn bootstrap_once_and_existing_world_does_not_bootstrap() {
 }
 #[tokio::test(flavor = "current_thread")]
 async fn bounded_output_marks_slow_clients_for_disconnect() {
-    use std::time::Instant;
     use stompymux_rs::sessions::{LoginFlow, Session};
+    use tokio::time::Instant;
     let (output, _receiver) = tokio::sync::mpsc::channel(1);
     let now = Instant::now();
     let session = Session {

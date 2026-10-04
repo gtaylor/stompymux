@@ -90,6 +90,7 @@ impl Scripts {
             globals: Vec::new(),
             commands: crate::commands::CommandRegistry::new(),
             queue_enabled: std::cell::Cell::new(true),
+            progress: tokio::sync::watch::Sender::new(Default::default()),
             parents: BTreeMap::new(),
             schedules: Default::default(),
             budget,

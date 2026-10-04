@@ -2,8 +2,8 @@
 use crate::telnet::transport::Stats;
 use crate::{telnet::Decoder, world::ObjectId};
 use std::sync::{Arc, atomic::Ordering::Relaxed};
-use std::{cell::Cell, net::IpAddr, time::Instant};
-use tokio::sync::mpsc;
+use std::{cell::Cell, net::IpAddr};
+use tokio::{sync::mpsc, time::Instant};
 use zeroize::Zeroizing;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct SessionId(pub u64);
@@ -32,10 +32,13 @@ pub struct Session {
     pub player: Option<ObjectId>,
     /// Interactive login state.
     pub flow: LoginFlow,
+    /// Socket acceptance, or the last login, on the runtime clock that drives idle checks.
     pub connected: Instant,
+    /// Last command input, on the runtime clock that drives idle checks.
     pub active: Instant,
     pub decoder: Decoder,
     pub quota: usize,
+    /// Last command-quota refill, on the same runtime clock as `connected` and `active`.
     pub quota_at: Instant,
     pub failed: Cell<bool>,
     pub output_message_limit: usize,

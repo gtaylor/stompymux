@@ -55,6 +55,8 @@ pub struct Scripts {
     pub(crate) commands: crate::commands::CommandRegistry,
     /// Live queue prerequisite published by the world owner; excluded from rollback.
     pub(crate) queue_enabled: std::cell::Cell<bool>,
+    /// Periodic-work counters the world owner publishes; reloads inherit the channel.
+    pub(crate) progress: tokio::sync::watch::Sender<crate::RuntimeProgress>,
     /// Object module tables keyed by relative parent path.
     parents: BTreeMap<String, Table>,
     /// Captured, validated schedules, independent of mutable module tables.
@@ -81,6 +83,17 @@ impl Scripts {
             process_start,
             ticks,
         });
+    }
+
+    /// Subscribe to the counters the world owner publishes after each heartbeat and
+    /// maintenance tick. Take the receiver before handing these scripts to the server.
+    pub fn progress(&self) -> tokio::sync::watch::Receiver<crate::RuntimeProgress> {
+        self.progress.subscribe()
+    }
+
+    /// Publish one finished step's counters to every progress receiver.
+    pub(crate) fn record_progress(&self, update: impl FnOnce(&mut crate::RuntimeProgress)) {
+        self.progress.send_modify(update);
     }
 
     pub(crate) fn record_battle_event_tick(&self) {

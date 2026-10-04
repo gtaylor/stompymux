@@ -133,7 +133,7 @@ pub async fn run_with_clocks(
                 let id=SessionId(next);
                 tracing::info!(session = id.0, %peer, "connection accepted");
                 let (output,receiver)=mpsc::channel(server.config.runtime.session_output_queue_capacity);
-                let now=Instant::now();
+                let now=tokio::time::Instant::now();
                 let stats=std::sync::Arc::new(telnet::transport::Stats::default());
                 server.sessions.insert(id,Session { retry_remaining: server.config.mux.retry_limit,
                     palette:server.scripts.palette.clone(), color_override:Default::default(), presets_emitted:Default::default(),
@@ -178,6 +178,7 @@ pub async fn run_with_clocks(
                     .map(|(id,_)|*id).collect();
                 for id in idle { if server.sessions.get(&id).is_some_and(|s| s.player.is_none() && s.connected.elapsed()>timeout && !s.failed.get() && !s.output.is_closed()) { server.tell(id,"*** Login Timeout ***\r\n"); } server.disconnect(id).await?; }
                 server.authentication.addresses.retain(|_,b|b.at.elapsed()<Duration::from_secs(server.config.security.login_address_retention_seconds));
+                server.scripts.record_progress(crate::RuntimeProgress::record_maintenance);
             },
             _ = tokio::time::sleep_until(idle_deadline) => { server.check_idle().await?; idle_deadline = tokio::time::Instant::now() + Duration::from_secs(server.config.mux.idle_interval); },
             _ = tasks.join_next(), if !tasks.is_empty() => {}
