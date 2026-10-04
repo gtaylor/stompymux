@@ -11,6 +11,7 @@ mod client;
 mod commands;
 mod database;
 mod fixtures;
+mod heartbeats;
 mod logging;
 mod reuse;
 mod server;
@@ -21,8 +22,9 @@ pub use database::{stable_world, store_unit_record, unit_record};
 pub use fixtures::{
     copy, isolated_scripts, isolated_world, repository_root, with_clock_save_interval,
 };
+pub use heartbeats::Heartbeats;
 pub use logging::init_logging;
-pub use reuse::{attempt_heartbeat, install, restore_database, snapshot_database};
+pub use reuse::{install, restore_database, snapshot_database};
 pub use server::start;
 
 /// Write the map file `<name>.toml` into `dir`, built from the compact cell notation.

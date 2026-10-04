@@ -73,7 +73,7 @@ async fn move_order_reaches_destination_and_starts_hold_order() {
             drop(scripts);
 
             tokio::time::pause();
-            let (_address, shutdown, task, _lua) =
+            let (_address, shutdown, task, _lua, _heartbeats) =
                 support::start(&config, Rc::new(std::cell::Cell::new(1))).await;
             let mut hold_started = false;
             let mut latest = None;

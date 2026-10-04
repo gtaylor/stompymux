@@ -84,7 +84,8 @@ async fn complete_catalogue_is_delivered_over_tcp() {
             world.accounts.get_mut(&ObjectId(1)).unwrap().hash =
                 Some(accounts::hash("secret", &config).unwrap());
             persistence::save(&config.database(), &world).await.unwrap();
-            let (address, shutdown, task, _) = support::start(&config, Rc::new(Cell::new(1))).await;
+            let (address, shutdown, task, _, _heartbeats) =
+                support::start(&config, Rc::new(Cell::new(1))).await;
             let mut client = support::Client::connect(address, 1).await;
             client.send("listforms").await;
             client.until("Listing of forms:").await;

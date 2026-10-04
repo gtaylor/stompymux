@@ -306,16 +306,11 @@ async fn powered_off_turret_repair_retries_failed_server_ticks() {
         let mut sql=sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         // A running countdown keeps its timer row still; refuse the commit at the snapshot stamp.
         sqlx::raw_sql("CREATE TRIGGER deny_turret BEFORE UPDATE ON snapshot BEGIN SELECT RAISE(ABORT,'turret failure'); END;").execute(&mut sql).await.unwrap();
-        let (_address,shutdown,task,_lua)=support::start(&config,std::rc::Rc::new(std::cell::Cell::new(1))).await;
-        support::attempt_heartbeat().await;
+        let (_address,shutdown,task,_lua,mut heartbeats)=support::start(&config,std::rc::Rc::new(std::cell::Cell::new(1))).await;
+        heartbeats.attempt().await;
         assert_eq!(persistence::load(&config.database()).await.unwrap().btech.vehicles()[&id].turret_repairs(), &[2]);
         sqlx::query("DROP TRIGGER deny_turret").execute(&mut sql).await.unwrap();
-        tokio::time::timeout(std::time::Duration::from_secs(5),async {
-            loop {
-                if persistence::load(&config.database()).await.unwrap().btech.vehicles()[&id].turret_repairs().is_empty(){break;}
-                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-            }
-        }).await.unwrap();
+        heartbeats.until_saved(&config, 5, |saved| saved.btech.vehicles()[&id].turret_repairs().is_empty()).await;
         shutdown.send(ShutdownRequest::Sigterm).unwrap();
         task.await.unwrap().unwrap();
     }).await;
@@ -614,19 +609,13 @@ async fn automatic_turret_runs_after_restart() {
                 advance_battle_target_locks(&mut world);
             }
             persistence::save(&config.database(), &world).await.unwrap();
-            let (_address, shutdown, task, _lua) =
+            let (_address, shutdown, task, _lua, mut heartbeats) =
                 support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
-            tokio::time::timeout(std::time::Duration::from_secs(5), async {
-                loop {
-                    let saved = persistence::load(&config.database()).await.unwrap();
-                    if saved.btech.vehicles()[&id].turret_heading() == Some(180.0) {
-                        break;
-                    }
-                    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-                }
-            })
-            .await
-            .unwrap();
+            heartbeats
+                .until_saved(&config, 5, |saved| {
+                    saved.btech.vehicles()[&id].turret_heading() == Some(180.0)
+                })
+                .await;
             shutdown.send(ShutdownRequest::Sigterm).unwrap();
             task.await.unwrap().unwrap();
         })

@@ -8,7 +8,7 @@ use crate::btech_motion_common::{
     stagger_hit, stagger_rules, stand_fixture, water_fixture, without_xp_timestamps,
 };
 use crate::support;
-use crate::support::{attempt_heartbeat, install, restore_database, snapshot_database};
+use crate::support::{install, restore_database, snapshot_database};
 use stompymux_rs::ObjectId;
 
 /// Add a complete passive installation without changing unit identity or active equipment.
@@ -5736,19 +5736,13 @@ async fn character_thermal_server_retries_fatal_heat_commit() {
         assert_eq!(expected.objects[&pilot].location, Some(afterlife));
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         sqlx::query("CREATE TRIGGER reject_character_heat BEFORE UPDATE ON btech_units WHEN json_extract(NEW.unit,'$.character_pilot.killed') = 1 BEGIN SELECT RAISE(ABORT,'character heat save failure'); END").execute(&mut sql).await.unwrap();
-        let (_address, shutdown, task, _lua) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
-        attempt_heartbeat().await;
+        let (_address, shutdown, task, _lua, mut heartbeats) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
+        heartbeats.attempt().await;
         let rejected = persistence::load(&config.database()).await.unwrap();
         assert_eq!(rejected.btech, baseline.btech);
         assert_eq!(rejected.objects[&pilot].location, Some(id));
         sqlx::query("DROP TRIGGER reject_character_heat").execute(&mut sql).await.unwrap();
-        let saved = tokio::time::timeout(std::time::Duration::from_secs(5), async {
-            loop {
-                let saved = persistence::load(&config.database()).await.unwrap();
-                if saved.objects[&pilot].location == Some(afterlife) { break saved; }
-                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-            }
-        }).await.unwrap();
+        let saved = heartbeats.until_saved(&config, 5, |saved| saved.objects[&pilot].location == Some(afterlife)).await;
         assert_eq!(saved.btech, expected.btech);
         assert!(saved.btech.constructed_units()[&id].is_destroyed());
         shutdown.send(ShutdownRequest::Sigterm).unwrap();
@@ -9482,6 +9476,7 @@ async fn unjam_character_server_tick_retries_failed_commit() {
         persistence::save(&config.database(), &world).await.unwrap();
         let shared = std::rc::Rc::new(std::cell::RefCell::new(world));
         let scripts = Scripts::new(&config, shared.clone()).unwrap();
+        let mut heartbeats = support::Heartbeats::new(scripts.progress(), &config);
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         // Reject completion before the server starts, while allowing login and countdown saves.
         sqlx::raw_sql("CREATE TRIGGER deny_unjam BEFORE UPDATE ON btech_units WHEN json_extract(OLD.live, '$.unjam') IS NOT NULL AND json_extract(NEW.live, '$.unjam') IS NULL BEGIN SELECT RAISE(ABORT,'unjam failure'); END;").execute(&mut sql).await.unwrap();
@@ -9503,34 +9498,19 @@ async fn unjam_character_server_tick_retries_failed_commit() {
         shared.borrow_mut().btech = serde_json::from_value(state).unwrap();
         let before = shared.borrow().clone();
         persistence::save(&config.database(), &before).await.unwrap();
-        attempt_heartbeat().await;
-        // The shared world contains the candidate while the server awaits SQLite.
-        // Wait for a completed rollback rather than sampling that in-flight candidate.
-        tokio::time::timeout(std::time::Duration::from_secs(5), async {
-            loop {
-                let saved = persistence::load(&config.database()).await.unwrap();
-                assert_eq!(saved.btech, before.btech);
-                if shared.borrow().btech == before.btech {
-                    assert!(shared.borrow().channels["MechPilotXP"].history.is_empty());
-                    break;
-                }
-                tokio::time::sleep(std::time::Duration::from_millis(10)).await;
-            }
-        }).await.expect("The failed recovery must restore the complete world");
+        // The shared world holds the candidate only while the server awaits SQLite, and the
+        // attempt returns after that heartbeat's rollback, never in the middle of it.
+        heartbeats.attempt().await;
+        let saved = persistence::load(&config.database()).await.unwrap();
+        assert_eq!(saved.btech, before.btech);
+        assert!(shared.borrow().btech == before.btech, "The failed recovery must restore the complete world");
+        assert!(shared.borrow().channels["MechPilotXP"].history.is_empty());
         sqlx::query("DROP TRIGGER deny_unjam").execute(&mut sql).await.unwrap();
-        tokio::time::timeout(std::time::Duration::from_secs(5), async {
-            loop {
-                let saved = persistence::load(&config.database()).await.unwrap();
-                if saved.btech.constructed_units()[&id].unjam().is_none() {
-                    assert!(!saved.btech.constructed_units()[&id].weapon_jammed(index).unwrap());
-                    assert_eq!(saved.btech.constructed_units()[&id].ammunition()[0], before.btech.constructed_units()[&id].ammunition()[0] - 1);
-                    assert_eq!(saved.btech.character_values()[&ObjectId(1)][skill].experience_balance(), 2);
-                    assert_eq!(saved.channels["MechPilotXP"].history.len(), 1);
-                    break;
-                }
-                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-            }
-        }).await.unwrap();
+        let saved = heartbeats.until_saved(&config, 5, |saved| saved.btech.constructed_units()[&id].unjam().is_none()).await;
+        assert!(!saved.btech.constructed_units()[&id].weapon_jammed(index).unwrap());
+        assert_eq!(saved.btech.constructed_units()[&id].ammunition()[0], before.btech.constructed_units()[&id].ammunition()[0] - 1);
+        assert_eq!(saved.btech.character_values()[&ObjectId(1)][skill].experience_balance(), 2);
+        assert_eq!(saved.channels["MechPilotXP"].history.len(), 1);
         client.until(&format!("GOD gained 2 {skill} XP")).await;
         shutdown.send(ShutdownRequest::Sigterm).unwrap();
         task.await.unwrap().unwrap();

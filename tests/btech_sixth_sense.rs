@@ -367,21 +367,21 @@ async fn server_retries_warning_delivery_after_failed_commit() {
             } else {
                 sqlx::query("CREATE TRIGGER deny_warning BEFORE UPDATE ON btech_units BEGIN SELECT RAISE(ABORT,'warning failure'); END").execute(&mut sql).await.unwrap();
             }
-            let (addr, shutdown, task, _) = support::start(&config, Rc::new(Cell::new(1))).await;
+            let (addr, shutdown, task, _, mut heartbeats) = support::start(&config, Rc::new(Cell::new(1))).await;
             let mut client = support::Client { socket:tokio::net::TcpStream::connect(addr).await.unwrap(), pending:Vec::new() };
             client.until("Who are you? ").await;
             client.send("#1").await;
             client.until("Password: ").await;
             client.send("secret").await;
             client.until("Sighter").await;
-            support::attempt_heartbeat().await;
+            heartbeats.attempt().await;
             let saved = persistence::load(&config.database()).await.unwrap();
             assert_eq!(state(&saved,source)["sixth_sense"]["pending"], serde_json::json!([[1,4]]));
             client.send("look").await;
             let output = client.until("Sighter").await;
             assert!(!output.contains("You have a slightly bad feeling about this.."));
             sqlx::query("DROP TRIGGER deny_warning").execute(&mut sql).await.unwrap();
-            client.until("You have a slightly bad feeling about this..").await;
+            client.until_heartbeats("You have a slightly bad feeling about this..", &mut heartbeats, 3).await;
             let saved = persistence::load(&config.database()).await.unwrap();
             assert!(state(&saved,source)["sixth_sense"]["pending"].as_array().unwrap().is_empty());
             shutdown.send(ShutdownRequest::Sigterm).unwrap();

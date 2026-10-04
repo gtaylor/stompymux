@@ -1726,6 +1726,7 @@ async fn electronics_server_heartbeat_persists_field() {
             let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
             let (shutdown, request) = tokio::sync::oneshot::channel();
             let server_config = config.clone();
+            let mut heartbeats = support::Heartbeats::new(scripts.progress(), &config);
             let task = tokio::task::spawn_local(async move {
                 run_with_schedule_clock(
                     server_config,
@@ -1736,27 +1737,21 @@ async fn electronics_server_heartbeat_persists_field() {
                 )
                 .await
             });
-            tokio::time::timeout(std::time::Duration::from_secs(10), async {
-                loop {
-                    let saved = persistence::load(&config.database()).await.unwrap();
-                    if saved.btech.constructed_units()[&target]
+            heartbeats.ready().await;
+            let saved = heartbeats
+                .until_saved(&config, 10, |saved| {
+                    saved.btech.constructed_units()[&target]
                         .electronics()
                         .field
                         .angel_disturbed
-                    {
-                        assert!(
-                            saved.btech.constructed_units()[&id]
-                                .electronics()
-                                .field
-                                .angel_protected
-                        );
-                        break;
-                    }
-                    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-                }
-            })
-            .await
-            .unwrap();
+                })
+                .await;
+            assert!(
+                saved.btech.constructed_units()[&id]
+                    .electronics()
+                    .field
+                    .angel_protected
+            );
             shutdown.send(ShutdownRequest::Sigterm).unwrap();
             task.await.unwrap().unwrap();
         })
@@ -2629,6 +2624,7 @@ async fn stealth_server_switch_persists_field() {
             let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
             let (shutdown, request) = tokio::sync::oneshot::channel();
             let server_config = config.clone();
+            let mut heartbeats = support::Heartbeats::new(scripts.progress(), &config);
             let task = tokio::task::spawn_local(async move {
                 run_with_schedule_clock(
                     server_config,
@@ -2639,20 +2635,15 @@ async fn stealth_server_switch_persists_field() {
                 )
                 .await
             });
-            tokio::time::timeout(std::time::Duration::from_secs(10), async {
-                loop {
-                    let saved = persistence::load(&config.database()).await.unwrap();
-                    let unit = &saved.btech.constructed_units()[&id];
-                    if unit.stealth().enabled {
-                        assert!(unit.stealth().pending.is_none());
-                        assert!(unit.electronics().field.disturbed);
-                        break;
-                    }
-                    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-                }
-            })
-            .await
-            .unwrap();
+            heartbeats.ready().await;
+            let saved = heartbeats
+                .until_saved(&config, 10, |saved| {
+                    saved.btech.constructed_units()[&id].stealth().enabled
+                })
+                .await;
+            let unit = &saved.btech.constructed_units()[&id];
+            assert!(unit.stealth().pending.is_none());
+            assert!(unit.electronics().field.disturbed);
             shutdown.send(ShutdownRequest::Sigterm).unwrap();
             task.await.unwrap().unwrap();
         })
@@ -2976,6 +2967,7 @@ async fn nss_server_switch_persists_state() {
             let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
             let (shutdown, request) = tokio::sync::oneshot::channel();
             let server_config = config.clone();
+            let mut heartbeats = support::Heartbeats::new(scripts.progress(), &config);
             let task = tokio::task::spawn_local(async move {
                 run_with_schedule_clock(
                     server_config,
@@ -2986,20 +2978,17 @@ async fn nss_server_switch_persists_state() {
                 )
                 .await
             });
-            tokio::time::timeout(std::time::Duration::from_secs(10), async {
-                loop {
-                    let saved = persistence::load(&config.database()).await.unwrap();
-                    let unit = &saved.btech.constructed_units()[&id];
-                    if unit.null_signature().enabled {
-                        assert!(unit.null_signature().pending.is_none());
-                        assert!(!unit.electronics().field.disturbed);
-                        break;
-                    }
-                    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-                }
-            })
-            .await
-            .unwrap();
+            heartbeats.ready().await;
+            let saved = heartbeats
+                .until_saved(&config, 10, |saved| {
+                    saved.btech.constructed_units()[&id]
+                        .null_signature()
+                        .enabled
+                })
+                .await;
+            let unit = &saved.btech.constructed_units()[&id];
+            assert!(unit.null_signature().pending.is_none());
+            assert!(!unit.electronics().field.disturbed);
             shutdown.send(ShutdownRequest::Sigterm).unwrap();
             task.await.unwrap().unwrap();
         })

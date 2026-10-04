@@ -350,20 +350,12 @@ async fn masc_failure_retries_failed_server_saves_atomically() {
         let before = world.btech.clone();
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         sqlx::raw_sql("CREATE TRIGGER deny_masc BEFORE UPDATE ON btech_units BEGIN SELECT RAISE(ABORT,'masc failure'); END;").execute(&mut sql).await.unwrap();
-        let (_address, shutdown, task, _lua) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
-        support::attempt_heartbeat().await;
+        let (_address, shutdown, task, _lua, mut heartbeats) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
+        heartbeats.attempt().await;
         assert_eq!(persistence::load(&config.database()).await.unwrap().btech, before);
         sqlx::query("DROP TRIGGER deny_masc").execute(&mut sql).await.unwrap();
-        tokio::time::timeout(std::time::Duration::from_secs(5), async {
-            loop {
-                let restored = persistence::load(&config.database()).await.unwrap();
-                if restored.btech.constructed_units()[&id].masc().failed {
-                    assert_eq!(restored.btech.constructed_units()[&id].mobility().maximum_speed, 0.0);
-                    break;
-                }
-                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-            }
-        }).await.unwrap();
+        let restored = heartbeats.until_saved(&config, 5, |restored| restored.btech.constructed_units()[&id].masc().failed).await;
+        assert_eq!(restored.btech.constructed_units()[&id].mobility().maximum_speed, 0.0);
         shutdown.send(ShutdownRequest::Sigterm).unwrap();
         task.await.unwrap().unwrap();
     }).await;

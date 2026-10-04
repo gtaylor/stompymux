@@ -211,21 +211,13 @@ async fn empty_crew_server_recovery_retries_without_spending_unsaved_dice() {
         persistence::save(&config.database(), &world).await.unwrap();
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         sqlx::raw_sql("CREATE TRIGGER deny_crew BEFORE UPDATE ON btech_vehicles BEGIN SELECT RAISE(ABORT,'crew recovery failure'); END;").execute(&mut sql).await.unwrap();
-        let (_address, shutdown, server, _lua) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
-        support::attempt_heartbeat().await;
+        let (_address, shutdown, server, _lua, mut heartbeats) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
+        heartbeats.attempt().await;
         let saved = persistence::load(&config.database()).await.unwrap();
         assert_eq!(recovery(&saved,id), &before);
         sqlx::raw_sql("DROP TRIGGER deny_crew").execute(&mut sql).await.unwrap();
-        tokio::time::timeout(std::time::Duration::from_secs(5), async {
-            loop {
-                let saved = persistence::load(&config.database()).await.unwrap();
-                if recovery(&saved,id).remaining == 0 {
-                    assert_eq!(recovery(&saved,id), recovery(&expected,id));
-                    break;
-                }
-                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-            }
-        }).await.unwrap();
+        let saved = heartbeats.until_saved(&config, 5, |saved| recovery(saved,id).remaining == 0).await;
+        assert_eq!(recovery(&saved,id), recovery(&expected,id));
         shutdown.send(ShutdownRequest::Sigterm).unwrap();
         server.await.unwrap().unwrap();
     }).await;

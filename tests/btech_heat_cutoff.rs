@@ -3,7 +3,6 @@ use crate::support;
 use std::{
     cell::{Cell, RefCell},
     rc::Rc,
-    time::Duration,
 };
 use stompymux_rs::*;
 
@@ -297,28 +296,21 @@ async fn idle_cutoff_transition_runs_on_server_heartbeat() {
             );
             assert_eq!(scripts.world().btech, world.btech);
             persistence::save(&config.database(), &world).await.unwrap();
-            let (_address, shutdown, task, _lua) =
+            let (_address, shutdown, task, _lua, mut heartbeats) =
                 support::start(&config, Rc::new(Cell::new(1))).await;
-            // Each attempt advances the paused clock one heartbeat, so the bound counts
-            // heartbeats rather than real seconds.
-            tokio::time::timeout(Duration::from_secs(30), async {
-                loop {
-                    let saved = persistence::load(&config.database()).await.unwrap();
+            let saved = heartbeats
+                .until_saved(&config, 30, |saved| {
                     let unit = &saved.btech.constructed_units()[&id];
                     assert_eq!(unit.power(), BattlePower::Off);
-                    if unit.heat_cutoff().enabled {
-                        assert_eq!(unit.heat_cutoff().disabled, 0);
-                        assert_eq!(
-                            unit.overheat_clock(),
-                            world.btech.constructed_units()[&id].overheat_clock()
-                        );
-                        break;
-                    }
-                    support::attempt_heartbeat().await;
-                }
-            })
-            .await
-            .unwrap();
+                    unit.heat_cutoff().enabled
+                })
+                .await;
+            let unit = &saved.btech.constructed_units()[&id];
+            assert_eq!(unit.heat_cutoff().disabled, 0);
+            assert_eq!(
+                unit.overheat_clock(),
+                world.btech.constructed_units()[&id].overheat_clock()
+            );
             shutdown.send(ShutdownRequest::Sigterm).unwrap();
             task.await.unwrap().unwrap();
         })

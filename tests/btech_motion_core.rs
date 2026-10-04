@@ -11,7 +11,7 @@ use crate::btech_motion_common::{
     water_fall_seed, water_fixture,
 };
 use crate::support;
-use crate::support::{attempt_heartbeat, install, restore_database, snapshot_database};
+use crate::support::{install, restore_database, snapshot_database};
 use stompymux_rs::{
     BattleMapAsset, BattleMovementRules, BattlePower, BattleTemplate, Kind, ObjectId, Scripts,
     advance_battle_motion, advance_battle_units, assign_battle_pilot, create_battle_map,
@@ -391,17 +391,12 @@ async fn stationary_weapon_recycle_uses_server_commit_and_retries_failed_ticks()
         persistence::save(&config.database(),&world).await.unwrap();
         let mut sql=sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         sqlx::raw_sql("CREATE TRIGGER deny_recycle BEFORE UPDATE ON btech_units BEGIN SELECT RAISE(ABORT,'recycle failure'); END;").execute(&mut sql).await.unwrap();
-        let (_address,shutdown,task,_lua)=support::start(&config,std::rc::Rc::new(std::cell::Cell::new(1))).await;
-        attempt_heartbeat().await;
+        let (_address,shutdown,task,_lua,mut heartbeats)=support::start(&config,std::rc::Rc::new(std::cell::Cell::new(1))).await;
+        heartbeats.attempt().await;
         assert_eq!(persistence::load(&config.database()).await.unwrap().btech.constructed_units()[&id].weapon_recycle()[&0],2);
         assert_eq!(persistence::load(&config.database()).await.unwrap().btech.constructed_units()[&id].heat().stored,3.0);
         sqlx::query("DROP TRIGGER deny_recycle").execute(&mut sql).await.unwrap();
-        tokio::time::timeout(std::time::Duration::from_secs(5),async {
-            loop {
-                if persistence::load(&config.database()).await.unwrap().btech.constructed_units()[&id].weapon_recycle().is_empty(){break;}
-                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-            }
-        }).await.unwrap();
+        heartbeats.until_saved(&config, 5, |saved| saved.btech.constructed_units()[&id].weapon_recycle().is_empty()).await;
         shutdown.send(stompymux_rs::ShutdownRequest::Sigterm).unwrap();
         task.await.unwrap().unwrap();
     }).await;
@@ -500,22 +495,16 @@ async fn shutdown_unit_receives_server_cooling_without_active_recycle() {
             )
             .unwrap();
             persistence::save(&config.database(), &world).await.unwrap();
-            let (_address, shutdown, task, _lua) =
+            let (_address, shutdown, task, _lua, mut heartbeats) =
                 support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
-            tokio::time::timeout(std::time::Duration::from_secs(5), async {
-                loop {
-                    let saved = persistence::load(&config.database()).await.unwrap();
+            heartbeats
+                .until_saved(&config, 5, |saved| {
                     let unit = &saved.btech.constructed_units()[&id];
                     assert_eq!(unit.power(), BattlePower::Off);
                     assert_eq!(unit.weapon_recycle()[&0], 20);
-                    if unit.heat().stored < 3.0 {
-                        break;
-                    }
-                    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-                }
-            })
-            .await
-            .unwrap();
+                    unit.heat().stored < 3.0
+                })
+                .await;
             shutdown
                 .send(stompymux_rs::ShutdownRequest::Sigterm)
                 .unwrap();
@@ -693,19 +682,13 @@ async fn environmental_heat_wakes_stationary_server_simulation() {
             .unwrap();
             assert!(!off.btech.constructed_units()[&id].heat_active(&off));
             persistence::save(&config.database(), &world).await.unwrap();
-            let (_address, shutdown, task, _lua) =
+            let (_address, shutdown, task, _lua, mut heartbeats) =
                 support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
-            tokio::time::timeout(std::time::Duration::from_secs(5), async {
-                loop {
-                    let saved = persistence::load(&config.database()).await.unwrap();
-                    if saved.btech.constructed_units()[&id].heat().stored > 0.0 {
-                        break;
-                    }
-                    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-                }
-            })
-            .await
-            .unwrap();
+            heartbeats
+                .until_saved(&config, 5, |saved| {
+                    saved.btech.constructed_units()[&id].heat().stored > 0.0
+                })
+                .await;
             shutdown
                 .send(stompymux_rs::ShutdownRequest::Sigterm)
                 .unwrap();
@@ -919,16 +902,11 @@ async fn stationary_stun_recovery_uses_server_commit_and_retries_failed_saves() 
         let before = world.btech.clone();
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         sqlx::raw_sql("CREATE TRIGGER deny_stun BEFORE UPDATE ON btech_units BEGIN SELECT RAISE(ABORT,'stun failure'); END;").execute(&mut sql).await.unwrap();
-        let (_address, shutdown, task, _lua) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
-        attempt_heartbeat().await;
+        let (_address, shutdown, task, _lua, mut heartbeats) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
+        heartbeats.attempt().await;
         assert_eq!(persistence::load(&config.database()).await.unwrap().btech, before);
         sqlx::query("DROP TRIGGER deny_stun").execute(&mut sql).await.unwrap();
-        tokio::time::timeout(std::time::Duration::from_secs(5), async {
-            loop {
-                if persistence::load(&config.database()).await.unwrap().btech.constructed_units()[&id].stun_remaining() == 0 { break; }
-                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-            }
-        }).await.unwrap();
+        heartbeats.until_saved(&config, 5, |saved| saved.btech.constructed_units()[&id].stun_remaining() == 0).await;
         shutdown.send(stompymux_rs::ShutdownRequest::Sigterm).unwrap();
         task.await.unwrap().unwrap();
     }).await;
@@ -1851,16 +1829,11 @@ async fn automatic_stationary_contact_acquisition_retries_a_failed_save() {
         let before = world.btech.clone();
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         sqlx::query("CREATE TRIGGER deny_contact BEFORE UPDATE ON btech_units BEGIN SELECT RAISE(ABORT,'contact failure'); END").execute(&mut sql).await.unwrap();
-        let (_address, shutdown, task, _lua) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
-        attempt_heartbeat().await;
+        let (_address, shutdown, task, _lua, mut heartbeats) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
+        heartbeats.attempt().await;
         assert_eq!(persistence::load(&config.database()).await.unwrap().btech, before);
         sqlx::query("DROP TRIGGER deny_contact").execute(&mut sql).await.unwrap();
-        tokio::time::timeout(std::time::Duration::from_secs(5), async {
-            loop {
-                if persistence::load(&config.database()).await.unwrap().btech.constructed_units()[&id].contacts().contains_key(&target) { break; }
-                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-            }
-        }).await.unwrap();
+        heartbeats.until_saved(&config, 5, |saved| saved.btech.constructed_units()[&id].contacts().contains_key(&target)).await;
         shutdown.send(stompymux_rs::ShutdownRequest::Sigterm).unwrap();
         task.await.unwrap().unwrap();
         assert!(persistence::load(&config.database()).await.unwrap().btech.constructed_units()[&id].contacts().contains_key(&target));
@@ -2172,16 +2145,11 @@ async fn target_lock_server_completion_retries_failed_commit() {
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         // The lock settling removes a timer row; refuse the commit at the snapshot stamp.
         sqlx::query("CREATE TRIGGER deny_lock BEFORE UPDATE ON snapshot BEGIN SELECT RAISE(ABORT,'lock failure'); END").execute(&mut sql).await.unwrap();
-        let (_address, shutdown, task, _lua) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
-        attempt_heartbeat().await;
+        let (_address, shutdown, task, _lua, mut heartbeats) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
+        heartbeats.attempt().await;
         assert_eq!(persistence::load(&config.database()).await.unwrap().btech, before);
         sqlx::query("DROP TRIGGER deny_lock").execute(&mut sql).await.unwrap();
-        tokio::time::timeout(std::time::Duration::from_secs(5), async {
-            loop {
-                if persistence::load(&config.database()).await.unwrap().btech.constructed_units()[&id].target_lock().unwrap().remaining == 0 { break; }
-                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-            }
-        }).await.unwrap();
+        heartbeats.until_saved(&config, 5, |saved| saved.btech.constructed_units()[&id].target_lock().unwrap().remaining == 0).await;
         shutdown.send(stompymux_rs::ShutdownRequest::Sigterm).unwrap();
         task.await.unwrap().unwrap();
     }).await;
@@ -3407,16 +3375,11 @@ async fn stand_completion_retries_failed_server_save_without_losing_timer() {
         let before = world.btech.clone();
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         sqlx::query("CREATE TRIGGER deny_stand BEFORE UPDATE ON btech_units BEGIN SELECT RAISE(ABORT,'stand failure'); END").execute(&mut sql).await.unwrap();
-        let (_address, shutdown, task, _lua) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
-        attempt_heartbeat().await;
+        let (_address, shutdown, task, _lua, mut heartbeats) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
+        heartbeats.attempt().await;
         assert_eq!(persistence::load(&config.database()).await.unwrap().btech, before);
         sqlx::query("DROP TRIGGER deny_stand").execute(&mut sql).await.unwrap();
-        tokio::time::timeout(std::time::Duration::from_secs(5), async {
-            loop {
-                if persistence::load(&config.database()).await.unwrap().btech.constructed_units()[&id].stand_timer().is_none() { break; }
-                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-            }
-        }).await.unwrap();
+        heartbeats.until_saved(&config, 5, |saved| saved.btech.constructed_units()[&id].stand_timer().is_none()).await;
         shutdown.send(stompymux_rs::ShutdownRequest::Sigterm).unwrap();
         task.await.unwrap().unwrap();
     }).await;
@@ -3552,7 +3515,7 @@ async fn startup_commits_missing_character_and_pilot_dice_before_gameplay() {
                     .recoveries()
                     .is_empty()
             );
-            let (_address, shutdown, task, _lua) =
+            let (_address, shutdown, task, _lua, _heartbeats) =
                 support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
             let loaded = persistence::load(&config.database()).await.unwrap();
             for player in [ObjectId(1), ObjectId(2)] {
@@ -3567,7 +3530,7 @@ async fn startup_commits_missing_character_and_pilot_dice_before_gameplay() {
                 .send(stompymux_rs::ShutdownRequest::Sigterm)
                 .unwrap();
             task.await.unwrap().unwrap();
-            let (_address, shutdown, task, _lua) =
+            let (_address, shutdown, task, _lua, _heartbeats) =
                 support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
             assert_eq!(
                 persistence::load(&config.database())
@@ -4723,17 +4686,12 @@ async fn stagger_server_water_fall_retries_failed_save_without_losing_history() 
         let expected = world.btech.clone();
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         sqlx::raw_sql("CREATE TRIGGER reject_stagger BEFORE UPDATE ON btech_units BEGIN SELECT RAISE(ABORT,'stagger failure'); END;").execute(&mut sql).await.unwrap();
-        let (_address, shutdown, task, _scripts) = support::start(&config, Rc::new(Cell::new(0))).await;
-        attempt_heartbeat().await;
+        let (_address, shutdown, task, _scripts, mut heartbeats) = support::start(&config, Rc::new(Cell::new(0))).await;
+        heartbeats.attempt().await;
         assert_eq!(persistence::load(&config.database()).await.unwrap().btech, before);
         sqlx::query("DROP TRIGGER reject_stagger").execute(&mut sql).await.unwrap();
-        tokio::time::timeout(std::time::Duration::from_secs(5), async {
-            loop {
-                let current = persistence::load(&config.database()).await.unwrap().btech;
-                if current.constructed_units()[&id].posture() == BattlePosture::Prone { assert_eq!(current, expected); break; }
-                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-            }
-        }).await.unwrap();
+        let current = heartbeats.until_saved(&config, 5, |saved| saved.btech.constructed_units()[&id].posture() == BattlePosture::Prone).await.btech;
+        assert_eq!(current, expected);
         shutdown.send(stompymux_rs::ShutdownRequest::Sigterm).unwrap();
         task.await.unwrap().unwrap();
     }).await;
@@ -5378,7 +5336,7 @@ async fn fire_command_matrix(cases: &[(bool, bool)]) {
             std::fs::write(config.path("lua/global_logic/test_btech_fire.lua"), source).unwrap();
         }
         let command = if use_lua { "test-btech-fire".to_owned() } else { format!("fire {index} #{}", target.0) };
-        let (address, shutdown, task, _lua) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
+        let (address, shutdown, task, _lua, _heartbeats) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
         let mut client = support::Client { socket: tokio::net::TcpStream::connect(address).await.unwrap(), pending: Vec::new() };
         client.until("Who are you? ").await;
         client.send("#1").await;
@@ -5971,17 +5929,11 @@ async fn overheat_server_retries_shutdown_without_advancing_the_failed_clock_or_
         let expected = world.btech.clone();
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         sqlx::query("CREATE TRIGGER reject_overheat BEFORE UPDATE ON btech_units WHEN COALESCE(json_extract(NEW.live,'$.power.state'), 'off') = 'off' BEGIN SELECT RAISE(ABORT,'overheat save failure'); END").execute(&mut sql).await.unwrap();
-        let (_address, shutdown, task, _lua) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
-        attempt_heartbeat().await;
+        let (_address, shutdown, task, _lua, mut heartbeats) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
+        heartbeats.attempt().await;
         assert_eq!(persistence::load(&config.database()).await.unwrap().btech, before);
         sqlx::query("DROP TRIGGER reject_overheat").execute(&mut sql).await.unwrap();
-        let saved = tokio::time::timeout(std::time::Duration::from_secs(5), async {
-            loop {
-                let saved = persistence::load(&config.database()).await.unwrap();
-                if saved.btech.constructed_units()[&id].power() == BattlePower::Off { break saved; }
-                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-            }
-        }).await.unwrap();
+        let saved = heartbeats.until_saved(&config, 5, |saved| saved.btech.constructed_units()[&id].power() == BattlePower::Off).await;
         assert_eq!(saved.btech, expected);
         shutdown.send(stompymux_rs::ShutdownRequest::Sigterm).unwrap();
         task.await.unwrap().unwrap();

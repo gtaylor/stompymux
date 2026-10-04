@@ -513,7 +513,7 @@ async fn self_destruct_server_restart_retries_failed_commit() {
         self_destruct_action(&scripts,&config,id,ObjectId(1),"reactor").unwrap();
         let saved=scripts.world().clone();
         persistence::save(&config.database(),&saved).await.unwrap();
-        let (address,shutdown,task,_lua)=support::start(&config,Rc::new(std::cell::Cell::new(1))).await;
+        let (address,shutdown,task,_lua,mut heartbeats)=support::start(&config,Rc::new(std::cell::Cell::new(1))).await;
         let mut client=support::Client {socket:tokio::net::TcpStream::connect(address).await.unwrap(),pending:Vec::new()};
         client.until("Who are you? ").await;
         client.send("#1").await;
@@ -522,27 +522,18 @@ async fn self_destruct_server_restart_retries_failed_commit() {
         client.until("biped").await;
         let mut sql=sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         sqlx::query("CREATE TRIGGER deny_self_destruct BEFORE UPDATE ON btech_units BEGIN SELECT RAISE(ABORT,'self-destruct commit failure'); END").execute(&mut sql).await.unwrap();
-        support::attempt_heartbeat().await;
+        heartbeats.attempt().await;
         let persisted=persistence::load(&config.database()).await.unwrap();
         assert_eq!(persisted.btech.constructed_units()[&id].self_destruct().unwrap().remaining,2);
         client.send("status").await;
         let output=client.until("Self-destruction: 2s remaining").await;
         assert!(!output.contains("Self-destruction in 1 second"));
         sqlx::query("DROP TRIGGER deny_self_destruct").execute(&mut sql).await.unwrap();
-        let finished=tokio::time::timeout(std::time::Duration::from_secs(6),async {
-            loop {
-                let loaded=persistence::load(&config.database()).await.unwrap();
-                if loaded.btech.constructed_units()[&id].is_destroyed() {
-                    assert!(loaded.btech.constructed_units()[&id].self_destruct().is_none());
-                    assert_eq!(loaded.btech.constructed_units()[&id].pilot_injuries(),4);
-                    break;
-                }
-                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-            }
-        }).await;
+        let loaded=heartbeats.until_saved(&config,6,|loaded| loaded.btech.constructed_units()[&id].is_destroyed()).await;
+        assert!(loaded.btech.constructed_units()[&id].self_destruct().is_none());
+        assert_eq!(loaded.btech.constructed_units()[&id].pilot_injuries(),4);
         shutdown.send(ShutdownRequest::Sigterm).unwrap();
         task.await.unwrap().unwrap();
-        finished.unwrap();
     }).await;
 }
 
@@ -614,26 +605,19 @@ async fn self_destruct_ground_wreck_descends_after_restart() {
             assert_eq!(unit.crew_recovery().remaining, 0);
             assert_eq!(unit.free_fall(), Some(BattleFreeFall::new(6)));
             persistence::save(&config.database(), &saved).await.unwrap();
-            let (_, shutdown, task, _) =
+            let (_, shutdown, task, _, mut heartbeats) =
                 support::start(&config, Rc::new(std::cell::Cell::new(1))).await;
-            let result = tokio::time::timeout(std::time::Duration::from_secs(15), async {
-                loop {
-                    let loaded = persistence::load(&config.database()).await.unwrap();
-                    let unit = &loaded.btech.vehicles()[&id];
-                    if unit.free_fall().is_none() {
-                        assert_eq!(
-                            unit.elevation_level(BattleHex::new(Terrain::Grassland, 0)),
-                            0
-                        );
-                        break;
-                    }
-                    support::attempt_heartbeat().await;
-                }
-            })
-            .await;
+            let loaded = heartbeats
+                .until_saved(&config, 30, |loaded| {
+                    loaded.btech.vehicles()[&id].free_fall().is_none()
+                })
+                .await;
+            assert_eq!(
+                loaded.btech.vehicles()[&id].elevation_level(BattleHex::new(Terrain::Grassland, 0)),
+                0
+            );
             shutdown.send(ShutdownRequest::Sigterm).unwrap();
             task.await.unwrap().unwrap();
-            result.unwrap();
         })
         .await;
 }

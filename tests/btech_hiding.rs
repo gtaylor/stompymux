@@ -399,7 +399,7 @@ async fn hiding_movement_waits_for_a_hex_crossing() {
 /// An idle vehicle keeps its hide event alive through the real persisted server heartbeat.
 #[tokio::test(flavor = "current_thread")]
 async fn hiding_idle_server_heartbeat_finishes_saved_event() {
-    use std::{cell::Cell, time::Duration};
+    use std::cell::Cell;
     tokio::task::LocalSet::new()
         .run_until(async {
             let (_dir, config, mut world, _, id) =
@@ -409,19 +409,11 @@ async fn hiding_idle_server_heartbeat_finishes_saved_event() {
                 unit["hide_elapsed"] = serde_json::json!(49)
             });
             persistence::save(&config.database(), &world).await.unwrap();
-            let (_address, shutdown, task, _) =
+            let (_address, shutdown, task, _, mut heartbeats) =
                 support::start(&config, Rc::new(Cell::new(1))).await;
-            tokio::time::timeout(Duration::from_secs(8), async {
-                loop {
-                    let saved = persistence::load(&config.database()).await.unwrap();
-                    if hiding(&saved, id) == (None, true) {
-                        break;
-                    }
-                    tokio::time::sleep(Duration::from_millis(50)).await;
-                }
-            })
-            .await
-            .unwrap();
+            heartbeats
+                .until_saved(&config, 8, |saved| hiding(saved, id) == (None, true))
+                .await;
             shutdown.send(ShutdownRequest::Sigterm).unwrap();
             task.await.unwrap().unwrap();
         })

@@ -459,14 +459,14 @@ async fn server_retries_connection_after_failed_commit() {
                 "CREATE TRIGGER deny_spotter BEFORE UPDATE ON btech_units BEGIN SELECT RAISE(ABORT,'spotter failure'); END"
             };
             sqlx::query(trigger).execute(&mut sql).await.unwrap();
-            let (addr, shutdown, task, _) = support::start(&config, Rc::new(Cell::new(1))).await;
+            let (addr, shutdown, task, _, mut heartbeats) = support::start(&config, Rc::new(Cell::new(1))).await;
             let mut client = support::Client { socket:tokio::net::TcpStream::connect(addr).await.unwrap(), pending:Vec::new() };
             client.until("Who are you? ").await;
             client.send("#1").await;
             client.until("Password: ").await;
             client.send("secret").await;
             client.until("Sighter").await;
-            support::attempt_heartbeat().await;
+            heartbeats.attempt().await;
             let saved = persistence::load(&config.database()).await.unwrap();
             assert_eq!(selected(&saved, source), None);
             assert!(pending(&saved, source));
@@ -474,7 +474,7 @@ async fn server_retries_connection_after_failed_commit() {
             let output = client.until("Sighter").await;
             assert!(!output.contains("Data link established with"));
             sqlx::query("DROP TRIGGER deny_spotter").execute(&mut sql).await.unwrap();
-            client.until(", you now have a forward observer.").await;
+            client.until_heartbeats(", you now have a forward observer.", &mut heartbeats, 3).await;
             let saved = persistence::load(&config.database()).await.unwrap();
             assert_eq!(selected(&saved, source), Some(observer));
             shutdown.send(ShutdownRequest::Sigterm).unwrap();

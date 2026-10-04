@@ -130,20 +130,12 @@ async fn recovery_ticks_without_a_unit_and_failed_save_replays_the_same_roll() {
         expected.btech = serde_json::from_value(phase_state).unwrap();
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         sqlx::raw_sql("CREATE TRIGGER deny_recovery BEFORE UPDATE ON btech_character_recovery BEGIN SELECT RAISE(ABORT,'recovery failure'); END;").execute(&mut sql).await.unwrap();
-        let (_address, shutdown, task, _lua) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
-        support::attempt_heartbeat().await;
+        let (_address, shutdown, task, _lua, mut heartbeats) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
+        heartbeats.attempt().await;
         assert_eq!(persistence::load(&config.database()).await.unwrap().btech, before);
         sqlx::query("DROP TRIGGER deny_recovery").execute(&mut sql).await.unwrap();
-        tokio::time::timeout(std::time::Duration::from_secs(5), async {
-            loop {
-                let loaded = persistence::load(&config.database()).await.unwrap();
-                if !loaded.btech.unconscious(ObjectId(1)) {
-                    assert_eq!(loaded.btech, expected.btech);
-                    break;
-                }
-                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-            }
-        }).await.unwrap();
+        let loaded = heartbeats.until_saved(&config, 5, |loaded| !loaded.btech.unconscious(ObjectId(1))).await;
+        assert_eq!(loaded.btech, expected.btech);
         shutdown.send(stompymux_rs::ShutdownRequest::Sigterm).unwrap();
         task.await.unwrap().unwrap();
     }).await;

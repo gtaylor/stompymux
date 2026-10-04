@@ -73,41 +73,69 @@ impl Client {
         })
     }
 
-    /// Consume through a marker that only a later server heartbeat produces, driving each
-    /// heartbeat with [`crate::attempt_heartbeat`] instead of waiting out real seconds.
+    /// Consume through a marker that only a later server heartbeat produces, firing each
+    /// heartbeat through `heartbeats` instead of waiting out real seconds.
     ///
-    /// Between attempts this reads only bytes that have already arrived, so the paused
-    /// clock is always resumed before the next read. `heartbeats` bounds the attempts.
-    pub async fn until_heartbeats(&mut self, needle: &str, heartbeats: usize) -> String {
-        for _ in 0..heartbeats {
-            self.read_available();
+    /// Before each attempt a [`Self::fence`] collects everything the server has already
+    /// sent, so a marker from one heartbeat is always seen before the next one runs.
+    /// `count` bounds the attempts.
+    pub async fn until_heartbeats(
+        &mut self,
+        needle: &str,
+        heartbeats: &mut crate::Heartbeats,
+        count: usize,
+    ) -> String {
+        for _ in 0..count {
+            self.fence().await;
             if let Some(text) = self.take(needle) {
                 return text;
             }
-            crate::attempt_heartbeat().await;
+            heartbeats.attempt().await;
         }
-        self.read_available();
+        self.fence().await;
         self.take(needle).unwrap_or_else(|| {
             panic!(
-                "{needle} not seen after {heartbeats} heartbeats: {:?}",
+                "{needle} not seen after {count} heartbeats: {:?}",
                 String::from_utf8_lossy(&self.pending)
             )
         })
     }
 
-    /// Append every byte the socket already holds without waiting for more.
-    fn read_available(&mut self) {
-        let mut bytes = [0; 8192];
-        loop {
-            match self.socket.try_read(&mut bytes) {
-                Ok(0) => panic!(
-                    "closed while reading: {:?}",
+    /// Wait until everything the server queued for this session so far has arrived.
+    ///
+    /// The server refuses the unsupported telnet TIMING-MARK option with `WONT`, and that
+    /// reply follows all earlier output through the session's ordered output queue. The
+    /// reply itself is dropped so it never shows up in later text.
+    pub async fn fence(&mut self) {
+        const DO_TIMING_MARK: [u8; 3] = [255, 253, 6];
+        const WONT_TIMING_MARK: [u8; 3] = [255, 252, 6];
+        self.socket.write_all(&DO_TIMING_MARK).await.unwrap();
+        tokio::time::timeout(Duration::from_secs(10), async {
+            loop {
+                if let Some(index) = self
+                    .pending
+                    .windows(WONT_TIMING_MARK.len())
+                    .position(|bytes| bytes == WONT_TIMING_MARK)
+                {
+                    self.pending.drain(index..index + WONT_TIMING_MARK.len());
+                    return;
+                }
+                let mut bytes = [0; 8192];
+                let count = self.socket.read(&mut bytes).await.unwrap();
+                assert!(
+                    count > 0,
+                    "closed waiting for fence: {:?}",
                     String::from_utf8_lossy(&self.pending)
-                ),
-                Ok(count) => self.pending.extend_from_slice(&bytes[..count]),
-                Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => return,
-                Err(error) => panic!("socket read failed: {error}"),
+                );
+                self.pending.extend_from_slice(&bytes[..count]);
             }
-        }
+        })
+        .await
+        .unwrap_or_else(|_| {
+            panic!(
+                "timeout waiting for fence: {:?}",
+                String::from_utf8_lossy(&self.pending)
+            )
+        })
     }
 }

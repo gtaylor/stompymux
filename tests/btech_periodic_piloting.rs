@@ -371,10 +371,10 @@ async fn server_clock_and_fall_retry_are_one_transaction() {
         let before = world.btech.constructed_units()[&unit].clone();
         let mut sql = SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database()).foreign_keys(false)).await.unwrap();
         sqlx::query("CREATE TRIGGER deny_phase BEFORE UPDATE ON btech_simulation_clock BEGIN SELECT RAISE(ABORT,'phase failure'); END").execute(&mut sql).await.unwrap();
-        let (addr,shutdown,task,_) = support::start(&config,Rc::new(Cell::new(1))).await;
+        let (addr,shutdown,task,_,mut heartbeats) = support::start(&config,Rc::new(Cell::new(1))).await;
         let mut client = support::Client {socket:tokio::net::TcpStream::connect(addr).await.unwrap(),pending:Vec::new()};
         client.until("Who are you? ").await; client.send("#1").await; client.until("Password: ").await; client.send("secret").await; client.until("Sighter").await;
-        support::attempt_heartbeat().await;
+        heartbeats.attempt().await;
         let loaded = persistence::load(&config.database()).await.unwrap();
         assert_eq!(serde_json::to_value(&loaded.btech).unwrap()["turn_clock"],28);
         assert_eq!(&loaded.btech.constructed_units()[&unit],&before);
@@ -384,7 +384,7 @@ async fn server_clock_and_fall_retry_are_one_transaction() {
         assert!(!rejected.contains("You make a piloting skill roll!"));
         assert!(!rejected.contains("Modified Pilot Skill:"));
         sqlx::query("DROP TRIGGER deny_phase").execute(&mut sql).await.unwrap();
-        let accepted = client.until("Your damaged mech falls as you try to run!").await;
+        let accepted = client.until_heartbeats("Your damaged mech falls as you try to run!", &mut heartbeats, 3).await;
         assert!(accepted.contains("You make a piloting skill roll!"));
         assert!(accepted.contains("Modified Pilot Skill:"));
         let loaded = persistence::load(&config.database()).await.unwrap();
@@ -488,7 +488,7 @@ async fn gravity_success_and_disabled_special_rules_preserve_material() {
 #[tokio::test(flavor = "current_thread")]
 async fn idle_clock_wraps_is_stored_at_shutdown_and_resumes_from_saved_phase() {
     use sqlx::{Connection, SqliteConnection};
-    use std::{cell::Cell, rc::Rc, time::Duration};
+    use std::{cell::Cell, rc::Rc};
     tokio::task::LocalSet::new()
         .run_until(async {
             let (dir, _, mut world) = support::isolated_world().await;
@@ -512,10 +512,10 @@ async fn idle_clock_wraps_is_stored_at_shutdown_and_resumes_from_saved_phase() {
                 .fetch_one(&mut sql)
                 .await
                 .unwrap();
-            let (_, shutdown, task, _) = support::start(&config, Rc::new(Cell::new(1))).await;
-            // The stored idle clock follows elapsed real time, so this waits out
-            // two real heartbeats rather than advancing a paused clock.
-            tokio::time::sleep(Duration::from_millis(2200)).await;
+            let (_, shutdown, task, _, mut heartbeats) =
+                support::start(&config, Rc::new(Cell::new(1))).await;
+            // Each heartbeat advances the stored idle clock one second.
+            heartbeats.commit_n(2).await;
             let current: i64 = sqlx::query_scalar("PRAGMA data_version")
                 .fetch_one(&mut sql)
                 .await
@@ -537,8 +537,9 @@ async fn idle_clock_wraps_is_stored_at_shutdown_and_resumes_from_saved_phase() {
             };
             assert_eq!(phase_at(&stored), (29 + seconds) % 30);
             // A large wall-clock change must not simulate thousands of offline turns.
-            let (_, shutdown, task, _) = support::start(&config, Rc::new(Cell::new(900_000))).await;
-            tokio::time::sleep(Duration::from_millis(1200)).await;
+            let (_, shutdown, task, _, mut heartbeats) =
+                support::start(&config, Rc::new(Cell::new(900_000))).await;
+            heartbeats.commit().await;
             shutdown.send(ShutdownRequest::Sigterm).unwrap();
             task.await.unwrap().unwrap();
             let resumed = persistence::load(&config.database()).await.unwrap();

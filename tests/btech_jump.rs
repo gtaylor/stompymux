@@ -248,34 +248,23 @@ async fn jump_client(address: std::net::SocketAddr) -> support::Client {
     client
 }
 
-/// Advance the ordinary server clock and wait for its committed unit update.
+/// Run committed heartbeats until one changes the unit, and return the saved world.
 async fn jump_tick(
     config: &stompymux_rs::Config,
     id: stompymux_rs::ObjectId,
+    heartbeats: &mut support::Heartbeats,
 ) -> stompymux_rs::World {
-    use std::time::Duration;
     let before = stompymux_rs::persistence::load(&config.database())
         .await
         .unwrap()
         .btech
         .constructed_units()[&id]
         .clone();
-    tokio::time::pause();
-    tokio::time::advance(Duration::from_secs(1)).await;
-    tokio::time::resume();
-    tokio::time::timeout(Duration::from_secs(5), async {
-        loop {
-            let world = stompymux_rs::persistence::load(&config.database())
-                .await
-                .unwrap();
-            if world.btech.constructed_units()[&id] != before {
-                return world;
-            }
-            tokio::time::sleep(Duration::from_millis(5)).await;
-        }
-    })
-    .await
-    .expect("jump heartbeat did not commit")
+    heartbeats
+        .until_saved(config, 5, |world| {
+            world.btech.constructed_units()[&id] != before
+        })
+        .await
 }
 
 #[tokio::test]
@@ -287,7 +276,7 @@ async fn tcp_jump_retries_failed_launch_and_flight_saves_then_resumes_after_rest
         persistence::save(&config.database(), &world).await.unwrap();
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         sqlx::query("UPDATE player_state SET password_hash=? WHERE object_dbref=1").bind(accounts::hash("secret", &config).unwrap()).execute(&mut sql).await.unwrap();
-        let (address, shutdown, task, _lua) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
+        let (address, shutdown, task, _lua, mut heartbeats) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
         let mut client = jump_client(address).await;
         sqlx::query(sqlx::AssertSqlSafe(format!("CREATE TRIGGER reject_launch BEFORE UPDATE ON btech_units WHEN NEW.dbref={} AND json_extract(NEW.live,'$.flight.travelled')=0 BEGIN SELECT RAISE(ABORT,'launch failure'); END",id.0))).execute(&mut sql).await.unwrap();
         client.send("jump 0 2").await;
@@ -299,11 +288,11 @@ async fn tcp_jump_retries_failed_launch_and_flight_saves_then_resumes_after_rest
         client.send("jump 0 2").await;
         client.until("You engage your jump jets.").await;
         let launched = persistence::load(&config.database()).await.unwrap();
-        support::attempt_heartbeat().await;
+        heartbeats.attempt().await;
         let failed = persistence::load(&config.database()).await.unwrap();
         assert_eq!(failed.btech.constructed_units()[&id], launched.btech.constructed_units()[&id]);
         sqlx::query("DROP TRIGGER reject_flight").execute(&mut sql).await.unwrap();
-        for _ in 0..10 { jump_tick(&config, id).await; }
+        for _ in 0..10 { jump_tick(&config, id, &mut heartbeats).await; }
         shutdown.send(ShutdownRequest::Sigterm).unwrap();
         task.await.unwrap().unwrap();
         let saved = persistence::load(&config.database()).await.unwrap();
@@ -311,19 +300,19 @@ async fn tcp_jump_retries_failed_launch_and_flight_saves_then_resumes_after_rest
         assert!(cursor.travelled() > 0.0 && !cursor.arrived());
         // Hold the restored cursor while login runs; real heartbeat time can advance during I/O.
         sqlx::query(sqlx::AssertSqlSafe(format!("CREATE TRIGGER hold_resume BEFORE UPDATE ON btech_units WHEN NEW.dbref={} AND json_extract(NEW.live,'$.flight') IS NOT json_extract(OLD.live,'$.flight') BEGIN SELECT RAISE(ABORT,'resume held'); END",id.0))).execute(&mut sql).await.unwrap();
-        let (address, shutdown, task, _lua) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
+        let (address, shutdown, task, _lua, mut heartbeats) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
         let mut client = jump_client(address).await;
         let mut world = persistence::load(&config.database()).await.unwrap();
         assert_eq!(world.btech.constructed_units()[&id].flight(), Some(cursor));
         sqlx::query("DROP TRIGGER hold_resume").execute(&mut sql).await.unwrap();
         for _ in 0..30 {
             if world.btech.constructed_units()[&id].flight().is_none() { break; }
-            world = jump_tick(&config, id).await;
+            world = jump_tick(&config, id, &mut heartbeats).await;
         }
         assert!(world.btech.constructed_units()[&id].flight().is_none());
         assert_eq!(world.btech.constructed_units()[&id].position().unwrap().y, 3);
         client.until("You finish your jump.").await;
-        for _ in 0..12 { world = jump_tick(&config, id).await; }
+        for _ in 0..12 { world = jump_tick(&config, id, &mut heartbeats).await; }
         assert_eq!(world.btech.constructed_units()[&id].jump_stabilization(), 0);
         client.until("You have finally stabilized after your jump.").await;
         shutdown.send(ShutdownRequest::Sigterm).unwrap();
@@ -1896,7 +1885,7 @@ async fn tcp_early_landing_save_failure_restores_flight_and_dice_before_retry() 
         sqlx::query("UPDATE player_state SET password_hash=? WHERE object_dbref=1").bind(accounts::hash("secret", &config).unwrap()).execute(&mut sql).await.unwrap();
         // Also freeze flight ticks so a rejected action can be compared with the exact saved cursor.
         sqlx::query(sqlx::AssertSqlSafe(format!("CREATE TRIGGER reject_landing BEFORE UPDATE ON btech_units WHEN NEW.dbref={} BEGIN SELECT RAISE(ABORT,'landing failure'); END",id.0))).execute(&mut sql).await.unwrap();
-        let (address, shutdown, task, _lua) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
+        let (address, shutdown, task, _lua, _heartbeats) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
         let mut client = jump_client(address).await;
         let before = persistence::load(&config.database()).await.unwrap().btech.constructed_units()[&id].clone();
         client.send("land").await;
@@ -3077,7 +3066,7 @@ async fn tcp_free_fall_retries_shutdown_and_impact_saves_across_restart() {
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         sqlx::query("UPDATE player_state SET password_hash=? WHERE object_dbref=1").bind(accounts::hash("secret", &config).unwrap()).execute(&mut sql).await.unwrap();
         sqlx::query(sqlx::AssertSqlSafe(format!("CREATE TRIGGER reject_shutdown BEFORE UPDATE ON btech_units WHEN NEW.dbref={} BEGIN SELECT RAISE(ABORT,'shutdown failure'); END",id.0))).execute(&mut sql).await.unwrap();
-        let (address, shutdown, task, _lua) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
+        let (address, shutdown, task, _lua, _heartbeats) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
         let mut client = jump_client(address).await;
         let before = persistence::load(&config.database()).await.unwrap().btech.constructed_units()[&id].clone();
         client.send("shutdown").await;
@@ -3099,17 +3088,17 @@ async fn tcp_free_fall_retries_shutdown_and_impact_saves_across_restart() {
         assert!(saved.btech.constructed_units()[&id].pilot().is_none());
         // Hold the resumed timer through login so a live tick cannot outrun the restart assertion.
         sqlx::query(sqlx::AssertSqlSafe(format!("CREATE TRIGGER hold_restart BEFORE UPDATE ON btech_units WHEN NEW.dbref={} BEGIN SELECT RAISE(ABORT,'restart checkpoint'); END",id.0))).execute(&mut sql).await.unwrap();
-        let (address, shutdown, task, _lua) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
+        let (address, shutdown, task, _lua, mut heartbeats) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
         let mut client = jump_client(address).await;
         let mut saved = persistence::load(&config.database()).await.unwrap();
         assert_eq!(saved.btech.constructed_units()[&id].free_fall(), Some(cursor));
         sqlx::query("DROP TRIGGER hold_restart").execute(&mut sql).await.unwrap();
         for _ in 0..3 {
             if serde_json::to_value(saved.btech.constructed_units()[&id].free_fall()).unwrap()["remaining"] == 1 { break; }
-            saved = jump_tick(&config, id).await;
+            saved = jump_tick(&config, id, &mut heartbeats).await;
         }
         let before = saved.btech.constructed_units()[&id].clone();
-        support::attempt_heartbeat().await;
+        heartbeats.attempt().await;
         client.send("say impact-fence").await;
         let output = client.until("You say \"impact-fence\"").await;
         assert!(!output.contains("You hit the ground!"), "{output}");
@@ -3119,7 +3108,7 @@ async fn tcp_free_fall_retries_shutdown_and_impact_saves_across_restart() {
         expected_fall.hit = stompymux_rs::BattleFallRules::configured(&config).hit;
         advance_battle_jumps(&mut expected, stompymux_rs::BattleMovementRules {fall: expected_fall,  ..stompymux_rs::BattleMovementRules::STANDARD }).unwrap();
         sqlx::query("DROP TRIGGER reject_impact").execute(&mut sql).await.unwrap();
-        let landed = jump_tick(&config, id).await;
+        let landed = jump_tick(&config, id, &mut heartbeats).await;
         client.until("You hit the ground!").await;
         let unit = &landed.btech.constructed_units()[&id];
         assert!(unit.free_fall().is_none());

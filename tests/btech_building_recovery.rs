@@ -154,21 +154,16 @@ async fn startup_resumes_missing_repair_without_any_active_units() {
         .run_until(async {
             let (_dir, config, world, interior, _) = fixture(4).await;
             assert!(!building_repair_pending(&world));
-            let (_address, shutdown, task, _scripts) =
+            let (_address, shutdown, task, _scripts, mut heartbeats) =
                 support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
-            tokio::time::timeout(std::time::Duration::from_secs(6), async {
-                loop {
-                    let loaded = persistence::load(&config.database()).await.unwrap();
-                    let map = &loaded.btech.maps()[&interior];
-                    if map.building_repair.is_some_and(|remaining| remaining < 120) {
-                        assert_eq!(map.building.integrity, 4);
-                        break;
-                    }
-                    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-                }
-            })
-            .await
-            .unwrap();
+            let loaded = heartbeats
+                .until_saved(&config, 6, |loaded| {
+                    loaded.btech.maps()[&interior]
+                        .building_repair
+                        .is_some_and(|remaining| remaining < 120)
+                })
+                .await;
+            assert_eq!(loaded.btech.maps()[&interior].building.integrity, 4);
             shutdown.send(ShutdownRequest::Sigterm).unwrap();
             task.await.unwrap().unwrap();
         })

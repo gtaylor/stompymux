@@ -404,7 +404,7 @@ async fn tcp_schedules_commit_before_output_private_inspection_restart_and_shutd
             local state=object:state('scheduled');local count=state:get('count',0)+1;state:set('count',count)
             mux.world.pemit(1,'Scheduled delivery '..count)
         end}}}"#);
-        let clock=Rc::new(Cell::new(120));let (address,shutdown,task,_vm)=start(&c,clock.clone()).await;
+        let clock=Rc::new(Cell::new(120));let (address,shutdown,task,_vm,_heartbeats)=start(&c,clock.clone()).await;
         let mut first=Client::connect(address,1).await;let mut second=Client::connect(address,1).await;let mut ordinary=Client::connect(address,2).await;
         first.send("@lsched global_logic/tcp.lua").await;first.until("delivery: * * * * *").await;
         ordinary.send("@lua/schedule").await;ordinary.until("Permission denied.").await;
@@ -417,7 +417,7 @@ async fn tcp_schedules_commit_before_output_private_inspection_restart_and_shutd
         assert!(TcpStream::connect(address).await.is_err());
         let saved=persistence::load(&c.database()).await.unwrap();assert!(!saved.objects[&ObjectId(1)].flags.contains(Flag::Connected));
         // Restart in the same minute neither repeats the job nor catches up earlier minutes.
-        let (address,shutdown,task,_vm)=start(&c,clock.clone()).await;let mut client=Client::connect(address,1).await;
+        let (address,shutdown,task,_vm,_heartbeats)=start(&c,clock.clone()).await;let mut client=Client::connect(address,1).await;
         clock.set(294);client.until("Scheduled delivery 2").await;
         assert_eq!(persistence::load(&c.database()).await.unwrap().objects[&ObjectId(1)].state["scheduled"]["count"],Scalar::Integer(2));
         shutdown.send(ShutdownRequest::Sigint).unwrap();task.await.unwrap().unwrap();
@@ -432,7 +432,7 @@ async fn tcp_scheduled_persistence_failure_consumes_job_and_discards_messages() 
         module(&c,"global_logic/write.lua",r#"return {schedules={{name='write',cron='* * * * *',handler=function()
             assert(mux.log('schedule.log','scheduled commit'));attempts.n=attempts.n+1;local state=mux.world.object(1):state('scheduled');state:set('written',state:get('written',0)+1);mux.world.pemit(1,'SCHEDULE SAVED')
         end}}}"#);
-        let clock=Rc::new(Cell::new(120));let (address,shutdown,task,vm)=start(&c,clock.clone()).await;let mut client=Client::connect(address,1).await;
+        let clock=Rc::new(Cell::new(120));let (address,shutdown,task,vm,mut heartbeats)=start(&c,clock.clone()).await;let mut client=Client::connect(address,1).await;
         let attempts=vm.create_table().unwrap();attempts.set("n",0).unwrap();vm.globals().set("attempts",attempts).unwrap();
         let mut db=sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(c.database()).foreign_keys(false)).await.unwrap();
         sqlx::raw_sql("CREATE TRIGGER reject_schedule BEFORE INSERT ON object_state WHEN NEW.namespace='scheduled' BEGIN SELECT RAISE(ABORT,'schedule blocked'); END").execute(&mut db).await.unwrap();
@@ -448,12 +448,12 @@ async fn tcp_scheduled_persistence_failure_consumes_job_and_discards_messages() 
         assert_eq!(std::fs::read_to_string(c.root.join("logs/schedule.log")).unwrap(), "");
         client.send("@examine me").await;client.until("CONNECTED").await;
         sqlx::raw_sql("DROP TRIGGER reject_schedule").execute(&mut db).await.unwrap();
-        tokio::time::sleep(Duration::from_millis(50)).await;
+        heartbeats.maintenance().await;
         client.send("@state/examine #1/scheduled").await;client.until("No state namespace named scheduled.").await; // no retry within the same minute
         clock.set(294);client.until("SCHEDULE SAVED").await;
         // Queue the next minute at its beginning, then shut down before this job's jitter deadline.
         let next=(6..100).find(|minute|jitter("write.lua","write",None,*minute)>5).unwrap();
-        clock.set(next*60);tokio::time::sleep(Duration::from_millis(50)).await;
+        clock.set(next*60);heartbeats.maintenance().await;
         client.send("@shutdown").await;client.until("Game: Shutdown by").await;task.await.unwrap().unwrap();drop(shutdown);
         clock.set(next*60+54);
         assert_eq!(persistence::load(&c.database()).await.unwrap().objects[&ObjectId(1)].state["scheduled"]["written"],Scalar::Integer(1));
@@ -473,16 +473,16 @@ async fn tcp_reload_schedule_queue_is_atomic() {
         end}}}}}}"#);
         module(&c,"global_logic/reload_queue.lua",&source("OLD"));
         let clock=Rc::new(Cell::new(120));
-        let (address,shutdown,task,_vm)=start(&c,clock.clone()).await;
+        let (address,shutdown,task,_vm,mut heartbeats)=start(&c,clock.clone()).await;
         let mut client=Client::connect(address,1).await;
-        clock.set(180);tokio::time::sleep(Duration::from_millis(80)).await;
+        clock.set(180);heartbeats.maintenance().await;
         module(&c,"global_logic/reload_queue.lua","return {broken =");
         client.send("@lua/reload").await;client.until("Lua reload failed:").await;
         clock.set(234);client.until("OLD_JOB").await;
-        clock.set(240);tokio::time::sleep(Duration::from_millis(80)).await;
+        clock.set(240);heartbeats.maintenance().await;
         module(&c,"global_logic/reload_queue.lua",&source("NEW"));
         client.send("@lua/reload").await;client.until("Lua reloaded.").await;
-        clock.set(294);tokio::time::sleep(Duration::from_millis(80)).await;
+        clock.set(294);heartbeats.maintenance().await;
         let world=persistence::load(&c.database()).await.unwrap();
         assert_eq!(world.objects[&ObjectId(1)].state["reload_queue"]["OLD"],Scalar::Integer(1));
         assert!(!world.objects[&ObjectId(1)].state["reload_queue"].contains_key("NEW"));
@@ -509,6 +509,7 @@ async fn tcp_cleaning_controls_purge_failure_and_connected_players() {
         persistence::save(&c.database(), &world).await.unwrap();
         let scripts = server::prepare(&c).await.unwrap();
         let shared = scripts.inspect_world();
+        let mut heartbeats = support::Heartbeats::new(scripts.progress(), &c);
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let address = listener.local_addr().unwrap();
         let now = tokio::time::Instant::now();
@@ -534,13 +535,13 @@ async fn tcp_cleaning_controls_purge_failure_and_connected_players() {
         god.send(&format!("@destroy #{}",item.0)).await;god.until("begins to crumble.").await;
         assert!(persistence::load(&c.database()).await.unwrap().objects[&item].flags.contains(Flag::Going));
         clock.set(now + Duration::from_secs(10000));
-        tokio::time::sleep(Duration::from_millis(60)).await;
+        heartbeats.maintenance().await;
         assert_eq!(shared.world().objects[&item].kind, Kind::Thing);
         god.send("@list globals").await;god.until("cleaning...disabled").await;
         let mut db = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(c.database()).foreign_keys(false)).await.unwrap();
         sqlx::raw_sql("CREATE TRIGGER reject_cleaning BEFORE UPDATE ON objects WHEN NEW.type=5 BEGIN SELECT RAISE(ABORT,'cleaning failure'); END;").execute(&mut db).await.unwrap();
         god.send("@enable cleaning").await;god.until("Enabled.").await;
-        tokio::time::sleep(Duration::from_millis(80)).await;
+        heartbeats.maintenance().await;
         assert_eq!(shared.world().objects[&item].kind, Kind::Thing);
         god.send("@list globals").await;
         let status = god.until("cleaning...enabled").await;
@@ -592,7 +593,7 @@ async fn tcp_admission_controls_cache_and_existing_queue() {
             std::fs::write(d.path().join("text/down.txt"), "DOWN MESSAGE").unwrap();
             let c = Config::load(d.path()).unwrap();
             let clock = Rc::new(Cell::new(0));
-            let (address, shutdown, task, _) = start(&c, clock).await;
+            let (address, shutdown, task, _, _heartbeats) = start(&c, clock).await;
             let mut god = Client::connect(address, 1).await;
             let mut player = Client::connect(address, 2).await;
             async fn attempt(address: std::net::SocketAddr, name: &str, end: &str) -> String {
@@ -708,7 +709,7 @@ async fn tcp_site_rejection_and_private_inspection() {
                 "[bold]DENIED[/bold]\r\n\u{1b}]0;unsafe\u{7}",
             )
             .unwrap();
-            let (address, shutdown, task, _) = start(&c, Rc::new(Cell::new(0))).await;
+            let (address, shutdown, task, _, _heartbeats) = start(&c, Rc::new(Cell::new(0))).await;
             let mut god = Client::connect(address, 1).await;
             let mut ordinary = Client::connect(address, 2).await;
             let before = stable_world(&c.database()).await;
@@ -772,7 +773,7 @@ async fn tcp_site_monitor_and_suspect_lifecycle() {
         let player_name = s.world().objects[&ObjectId(2)].name.clone();
         let saved = s.world().clone();
         persistence::save(&c.database(), &saved).await.unwrap();
-        let (address, shutdown, task, vm) = start(&c, Rc::new(Cell::new(0))).await;
+        let (address, shutdown, task, vm, _heartbeats) = start(&c, Rc::new(Cell::new(0))).await;
         let mut god = Client::connect(address, 1).await;
         let mut other_monitor = Client::connect(address, 1).await;
         let player = Client::connect(address, 2).await;
@@ -846,7 +847,7 @@ permissions="!wizard"
         let c=Config::load(d.path()).unwrap();
         let source=|label:&str|format!(r#"return {{commands={{{{name='acl-probe',permission='everyone',pattern='^acl%-probe$',handler=function(ctx) mux.world.pemit(ctx.enactor,'ACL_{label}');return true end}}}}}}"#);
         module(&c,"global_logic/access_tcp.lua",&source("OLD"));
-        let (address,shutdown,task,_)=start(&c,Rc::new(Cell::new(0))).await;
+        let (address,shutdown,task,_,_heartbeats)=start(&c,Rc::new(Cell::new(0))).await;
         let mut god=Client::connect(address,1).await;
         let mut player=Client::connect(address,2).await;
         let mut other=Client::connect(address,2).await;
@@ -891,7 +892,7 @@ async fn tcp_runtime_administration_and_reload() {
         let (d,c)=fixture().await; credentials(&c).await;
         let source=|label:&str| format!("return {{commands={{{{name='livecfg',permission='everyone',pattern='^livecfg$',handler=function(ctx) mux.world.pemit(ctx.enactor,'{label}:'..mux.config.get('max_players')); return true end}}}}}} ");
         module(&c,"global_logic/livecfg.lua",&source("OLD"));
-        let (address,shutdown,task,_)=start(&c,Rc::new(Cell::new(0))).await;
+        let (address,shutdown,task,_,_heartbeats)=start(&c,Rc::new(Cell::new(0))).await;
         let mut god=Client::connect(address,1).await;
         let mut other=Client::connect(address,1).await;
         let mut player=Client::connect(address,2).await;

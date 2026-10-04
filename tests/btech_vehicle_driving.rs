@@ -909,25 +909,17 @@ async fn vehicle_mine_movement_retries_a_failed_server_save() {
         persistence::save(&config.database(), &world).await.unwrap();
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         sqlx::raw_sql("CREATE TRIGGER deny_vehicle_mine_delete BEFORE DELETE ON btech_map_objects WHEN OLD.object_type=3 BEGIN SELECT RAISE(ABORT,'vehicle mine save failure'); END;").execute(&mut sql).await.unwrap();
-        let (_address, shutdown, server, _lua) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
-        support::attempt_heartbeat().await;
+        let (_address, shutdown, server, _lua, mut heartbeats) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
+        heartbeats.attempt().await;
         let failed = persistence::load(&config.database()).await.unwrap();
         assert_eq!(failed.btech.vehicles()[&id], world.btech.vehicles()[&id]);
         assert_eq!(failed.btech.maps()[&map].minefields(), world.btech.maps()[&map].minefields());
         sqlx::raw_sql("DROP TRIGGER deny_vehicle_mine_delete;").execute(&mut sql).await.unwrap();
-        tokio::time::timeout(std::time::Duration::from_secs(5), async {
-            loop {
-                let committed = persistence::load(&config.database()).await.unwrap();
-                if committed.btech.maps()[&map].minefields().is_empty() {
-                    let unit = &committed.btech.vehicles()[&id];
-                    assert!(unit.is_destroyed());
-                    assert_eq!(unit.motion().unwrap().point.containing_hex().unwrap(), first);
-                    assert_eq!(unit.motion().unwrap().speed, 0.0);
-                    break;
-                }
-                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-            }
-        }).await.unwrap();
+        let committed = heartbeats.until_saved(&config, 5, |committed| committed.btech.maps()[&map].minefields().is_empty()).await;
+        let unit = &committed.btech.vehicles()[&id];
+        assert!(unit.is_destroyed());
+        assert_eq!(unit.motion().unwrap().point.containing_hex().unwrap(), first);
+        assert_eq!(unit.motion().unwrap().speed, 0.0);
         shutdown.send(ShutdownRequest::Sigterm).unwrap();
         server.await.unwrap().unwrap();
     }).await;

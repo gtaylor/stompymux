@@ -236,7 +236,7 @@ async fn tcp_private_reports_counts_idle_and_queue() {
                 },
             );
             persistence::save(&c.database(), &world).await.unwrap();
-            let (address, shutdown, task, _) = start(&c, Rc::new(Cell::new(0))).await;
+            let (address, shutdown, task, _, _heartbeats) = start(&c, Rc::new(Cell::new(0))).await;
             let mut first = Client::connect(address, 1).await;
             let mut second = Client::connect(address, 1).await;
             let mut player = Client::connect(address, 2).await;

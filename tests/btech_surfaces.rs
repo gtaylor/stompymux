@@ -7531,17 +7531,9 @@ async fn artillery_flight_in_progress_leaves_its_row_unchanged() {
         persistence::save(&config.database(), &world_snapshot).await.unwrap();
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         sqlx::raw_sql("CREATE TABLE artillery_updates(n INTEGER); CREATE TRIGGER count_artillery_updates AFTER UPDATE ON btech_artillery BEGIN INSERT INTO artillery_updates VALUES(1); END;").execute(&mut sql).await.unwrap();
-        let (_address, shutdown, task, _lua) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
-        tokio::time::timeout(std::time::Duration::from_secs(6), async {
-            loop {
-                let loaded = persistence::load(&config.database()).await.unwrap();
-                if loaded.btech.maps()[&map].artillery_shots().is_empty() {
-                    assert_eq!(loaded.btech.maps()[&map].minefields().len(), 1);
-                    break;
-                }
-                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-            }
-        }).await.unwrap();
+        let (_address, shutdown, task, _lua, mut heartbeats) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
+        let loaded = heartbeats.until_saved(&config, 6, |loaded| loaded.btech.maps()[&map].artillery_shots().is_empty()).await;
+        assert_eq!(loaded.btech.maps()[&map].minefields().len(), 1);
         let updates: i64 = sqlx::query_scalar("SELECT count(*) FROM artillery_updates").fetch_one(&mut sql).await.unwrap();
         assert_eq!(updates, 0);
         shutdown.send(ShutdownRequest::Sigterm).unwrap();
@@ -7567,20 +7559,12 @@ async fn artillery_queue_server_save_failure_and_retry() {
         persistence::save(&config.database(), &before).await.unwrap();
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         sqlx::query("CREATE TRIGGER deny_artillery BEFORE DELETE ON btech_artillery BEGIN SELECT RAISE(ABORT,'artillery failure'); END").execute(&mut sql).await.unwrap();
-        let (_address, shutdown, task, _lua) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
-        support::attempt_heartbeat().await;
+        let (_address, shutdown, task, _lua, mut heartbeats) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
+        heartbeats.attempt().await;
         assert_eq!(persistence::load(&config.database()).await.unwrap().btech, before.btech);
         sqlx::query("DROP TRIGGER deny_artillery").execute(&mut sql).await.unwrap();
-        tokio::time::timeout(std::time::Duration::from_secs(5), async {
-            loop {
-                let saved = persistence::load(&config.database()).await.unwrap();
-                if saved.btech.maps()[&map].artillery_shots().is_empty() {
-                    assert_eq!(saved.btech.maps()[&map].minefields().len(), 1);
-                    break;
-                }
-                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-            }
-        }).await.unwrap();
+        let saved = heartbeats.until_saved(&config, 5, |saved| saved.btech.maps()[&map].artillery_shots().is_empty()).await;
+        assert_eq!(saved.btech.maps()[&map].minefields().len(), 1);
         shutdown.send(ShutdownRequest::Sigterm).unwrap();
         task.await.unwrap().unwrap();
     }).await;

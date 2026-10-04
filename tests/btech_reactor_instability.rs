@@ -311,24 +311,15 @@ async fn instability_idle_server_clock_commit_retry() {
         persistence::save(&config.database(), &world).await.unwrap();
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         sqlx::query("CREATE TRIGGER deny_reactor_clock BEFORE UPDATE ON btech_reactor_clock BEGIN SELECT RAISE(ABORT,'reactor clock commit failure'); END").execute(&mut sql).await.unwrap();
-        let (_, shutdown, task, _) = support::start(&config, Rc::new(Cell::new(1))).await;
-        support::attempt_heartbeat().await;
+        let (_, shutdown, task, _, mut heartbeats) = support::start(&config, Rc::new(Cell::new(1))).await;
+        heartbeats.attempt().await;
         let loaded = persistence::load(&config.database()).await.unwrap();
         assert_eq!(loaded.btech, world.btech);
         sqlx::query("DROP TRIGGER deny_reactor_clock").execute(&mut sql).await.unwrap();
-        let result = tokio::time::timeout(std::time::Duration::from_secs(4), async {
-            loop {
-                let loaded = persistence::load(&config.database()).await.unwrap();
-                if !battle_reactor_windows_pending(&loaded) {
-                    assert_eq!(loaded.btech.constructed_units()[&id].reactor_instability_remaining(), Some(0));
-                    break;
-                }
-                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-            }
-        }).await;
+        let loaded = heartbeats.until_saved(&config, 4, |loaded| !battle_reactor_windows_pending(loaded)).await;
+        assert_eq!(loaded.btech.constructed_units()[&id].reactor_instability_remaining(), Some(0));
         shutdown.send(ShutdownRequest::Sigterm).unwrap();
         task.await.unwrap().unwrap();
-        result.unwrap();
     }).await;
 }
 
