@@ -1,5 +1,8 @@
 //! Shared launch outcomes for every unit class; adapters own inventory and anatomy-specific damage.
-use super::{BattleAmmunitionMode, BattleDice, BattleFireMode, BattleGlancingMode, BattleWeapon};
+use super::{
+    BattleAmmunitionMode, BattleBeaconLaunch, BattleDice, BattleFireMode, BattleGlancingMode,
+    BattleWeapon,
+};
 use anyhow::{Result, ensure};
 
 /// Current weapon and admitted target facts after gatling preparation and ammunition fallback.
@@ -48,7 +51,7 @@ pub(super) fn roll_launch(request: LaunchRollRequest, dice: &mut BattleDice) -> 
         target_number != Some(i32::MIN) || glancing != BattleGlancingMode::BelowTarget,
         "Invalid glancing target number"
     );
-    let roll = weapon.attack_roll(distance, dice);
+    let roll = attack_roll(weapon, distance, dice);
     let propellant_roll =
         (ammunition == BattleAmmunitionMode::Caseless && roll <= 3).then(|| dice.generic_roll());
     let (mut loader_destroyed, mut jammed) = propellant_roll.map_or_else(
@@ -97,9 +100,29 @@ pub(super) fn roll_launch(request: LaunchRollRequest, dice: &mut BattleDice) -> 
     })
 }
 
+/// Dead-fire missiles and extended LRMs below minimum range use the lowest two of three dice.
+pub(super) fn attack_roll(weapon: BattleWeapon, distance: f64, dice: &mut BattleDice) -> u8 {
+    if weapon.is_dead_fire()
+        || (matches!(
+            weapon,
+            BattleWeapon::Elrm5
+                | BattleWeapon::Elrm10
+                | BattleWeapon::Elrm15
+                | BattleWeapon::Elrm20
+        ) && distance < f64::from(weapon.profile().minimum_range))
+    {
+        let first = dice.d6();
+        let second = dice.d6();
+        let third = dice.d6();
+        return first + second + third - first.max(second).max(third);
+    }
+    dice.generic_roll()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use BattleWeapon as W;
 
     /// Generic attack checks count once; direct three-die attacks do not, and caseless failure adds one check.
     #[test]
@@ -206,5 +229,61 @@ mod tests {
             assert_eq!(result.launched, !explosion && !jam);
             assert_eq!(dice, expected);
         }
+    }
+
+    /// Dead-fire attack dice never revert to ordinary 2d6 at longer ranges.
+    #[test]
+    fn dead_fire_attack_dice_at_all_ranges() {
+        for weapon in [
+            W::LrDfm5,
+            W::LrDfm10,
+            W::LrDfm15,
+            W::LrDfm20,
+            W::SrDfm2,
+            W::SrDfm4,
+            W::SrDfm6,
+        ] {
+            for seed in 0..=255 {
+                for distance in [0.0, 4.0, 6.0, 12.0, 18.0, 24.001] {
+                    let mut expected = BattleDice::seeded([seed; 32]);
+                    let mut values = [expected.d6(), expected.d6(), expected.d6()];
+                    values.sort_unstable();
+                    let mut actual = BattleDice::seeded([seed; 32]);
+                    assert_eq!(
+                        attack_roll(weapon, distance, &mut actual),
+                        values[0] + values[1]
+                    );
+                    assert_eq!(actual, expected);
+                }
+            }
+        }
+    }
+
+    /// Raw distance controls the extra attack die independently of aim-bracket rounding.
+    #[test]
+    fn elrm_minimum_range_attack_dice_and_replay() {
+        for weapon in [W::Elrm5, W::Elrm10, W::Elrm15, W::Elrm20] {
+            for seed in 0..=255 {
+                for distance in [0.0, 9.999, 10.0, 10.001, 36.0] {
+                    let mut expected = BattleDice::seeded([seed; 32]);
+                    let count = if distance < 10.0 { 3 } else { 2 };
+                    let mut values: Vec<_> = (0..count).map(|_| expected.d6()).collect();
+                    values.sort_unstable();
+                    let mut actual = BattleDice::seeded([seed; 32]);
+                    assert_eq!(
+                        attack_roll(weapon, distance, &mut actual),
+                        values[0] + values[1]
+                    );
+                    assert_eq!(actual, expected);
+                    let mut restored: BattleDice =
+                        serde_json::from_value(serde_json::to_value(&actual).unwrap()).unwrap();
+                    assert_eq!(restored.two_d6(), actual.two_d6());
+                }
+            }
+        }
+        let mut ordinary = BattleDice::seeded([1; 32]);
+        let mut expected = ordinary.clone();
+        assert_eq!(attack_roll(W::Lrm20, 0.0, &mut ordinary), expected.two_d6());
+        assert_eq!(ordinary, expected);
     }
 }

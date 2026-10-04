@@ -72,24 +72,3 @@ pub(super) fn refresh(world: &mut crate::World, id: crate::ObjectId) -> Result<(
     world.btech.units.insert(id, identity);
     Ok(())
 }
-
-/// Metadata stays in the owned template and shares bounds across construction and named edits.
-pub(super) fn validate_metadata(
-    attributes: &std::collections::BTreeMap<String, String>,
-) -> Result<()> {
-    ensure!(
-        ["unit_era", "unit_tro"]
-            .into_iter()
-            .all(|key| attributes.get(key).is_none_or(|value| value.len() <= 24)),
-        "Unit metadata exceeds 24 bytes"
-    );
-    Ok(())
-}
-
-/// Absent source metadata has the same visible default on every chassis.
-pub(super) fn metadata<'a>(
-    attributes: &'a std::collections::BTreeMap<String, String>,
-    field: &str,
-) -> &'a str {
-    attributes.get(field).map_or("Undefined", String::as_str)
-}

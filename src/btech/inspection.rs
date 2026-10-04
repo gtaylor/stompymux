@@ -473,7 +473,7 @@ pub(crate) fn inspection_template_part(name: &str) -> Option<(InspectionPart, bo
             true,
         ));
     }
-    if let Some(name) = super::equipment::strip_name_prefix(name, "Ammo_") {
+    if let Some(name) = super::strip_name_prefix(name, "Ammo_") {
         let weapon = super::BattleWeapon::parse(name).ok()?;
         return Some((
             InspectionPart {
@@ -2031,68 +2031,14 @@ fn configured_technology_attributes(
     })
 }
 
-fn template_system_at(
-    template: &BattleTemplate,
-    section: BattleSection,
-    slot: u8,
-) -> Option<super::BattleSystem> {
-    let critical = template.sections.get(&section)?.criticals.get(&slot)?;
-    super::BattleSystem::named(&critical.equipment)
-}
-
-/// Equipment-derived native technology flags produced during template loading.
-pub(crate) fn inspection_template_inferred_technology(
-    template: &BattleTemplate,
-    code: i32,
-) -> bool {
-    match code {
-        // The loader permits arm flipping only when both arms omit their lower
-        // and hand actuators from the conventional third and fourth slots.
-        6 => {
-            !matches!(
-                template_system_at(template, BattleSection::LeftArm, 2),
-                Some(super::BattleSystem::LowerActuator)
-            ) && !matches!(
-                template_system_at(template, BattleSection::RightArm, 2),
-                Some(super::BattleSystem::LowerActuator)
-            ) && !matches!(
-                template_system_at(template, BattleSection::LeftArm, 3),
-                Some(super::BattleSystem::HandOrFootActuator)
-            ) && !matches!(
-                template_system_at(template, BattleSection::RightArm, 3),
-                Some(super::BattleSystem::HandOrFootActuator)
-            )
-        }
-        // Fewer than four center-torso engine criticals identify a compact
-        // engine, including sparse but valid inspection templates.
-        26 => {
-            template
-                .sections
-                .get(&BattleSection::CenterTorso)
-                .map_or(0, |section| {
-                    section
-                        .criticals
-                        .values()
-                        .filter(|critical| {
-                            super::BattleSystem::named(&critical.equipment)
-                                .is_some_and(|system| system == super::BattleSystem::Engine)
-                        })
-                        .count()
-                })
-                < 4
-        }
-        _ => false,
-    }
-}
-
 /// Resolve the supported primary technology flags from authored features and installed systems.
 pub fn inspect_technologies(template: &BattleTemplate) -> Result<Vec<InspectionTechnology>> {
     let mut rows = Vec::new();
     for code in 0..=66 {
-        let (flag, group) = super::admin_contract::administrative_technology(code)
-            .expect("complete unit technology catalogue");
+        let (flag, group) =
+            super::administrative_technology(code).expect("complete unit technology catalogue");
         let configured = configured_technology(template, flag, group);
-        let loaded = inspection_template_inferred_technology(template, code);
+        let loaded = template.infers_technology(code);
         if configured || loaded {
             rows.push(InspectionTechnology {
                 code,
@@ -2144,8 +2090,8 @@ pub fn inspect_raw_template_technologies(
 ) -> Result<Vec<InspectionTechnology>> {
     let mut rows = Vec::new();
     for code in 0..=66 {
-        let (flag, group) = super::admin_contract::administrative_technology(code)
-            .expect("complete unit technology catalogue");
+        let (flag, group) =
+            super::administrative_technology(code).expect("complete unit technology catalogue");
         if configured_technology_attributes(&template.attributes, flag, group) {
             rows.push(InspectionTechnology {
                 code,
@@ -2224,8 +2170,8 @@ pub fn inspect_vehicle_technologies(
         .unwrap_or("");
     let mut rows = Vec::new();
     for code in 0..=66 {
-        let (flag, group) = super::admin_contract::administrative_technology(code)
-            .expect("complete unit technology catalogue");
+        let (flag, group) =
+            super::administrative_technology(code).expect("complete unit technology catalogue");
         if specials
             .split_ascii_whitespace()
             .any(|item| item.eq_ignore_ascii_case(flag))

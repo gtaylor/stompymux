@@ -1,21 +1,7 @@
 //! Incendiary autocannon ammunition controls.
-use super::BattleAmmunitionMode;
+use super::{AmmunitionFeedback, BattleAmmunitionMode};
 use crate::{ObjectId, World};
 use anyhow::{Result, ensure};
-
-impl BattleAmmunitionMode {
-    /// Shared cockpit feedback for normal and Incendiary rounds.
-    pub(crate) fn incendiary_message(self, index: usize) -> String {
-        format!(
-            "Weapon {index} has been set to fire {} rounds",
-            if self == Self::Incendiary {
-                "Incendiary"
-            } else {
-                "normal"
-            }
-        )
-    }
-}
 
 /// Select Incendiary or normal rounds on an authorized, intact and recycled conventional autocannon.
 pub fn toggle_incendiary(

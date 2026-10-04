@@ -1,37 +1,11 @@
 //! Constructed BattleMechs with an owned definition and mutable armor/ammunition state.
-use super::{BattleLoadout, BattleSection, BattleSystem, BattleTemplate, StoredBattleUnit};
+use super::{
+    BattleLoadout, BattleSection, BattleSystem, BattleTemplate, StoredBattleUnit, edit_special,
+};
 use crate::ObjectId;
 use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-
-/// Toggle one technology flag in the named specials attribute ("specials",
-/// "specials2", or "infantry_specials"), mirroring the native per-group flags.
-pub(super) fn edit_special(
-    attributes: &mut BTreeMap<String, String>,
-    attribute: &str,
-    flag: &str,
-    enabled: bool,
-) {
-    let mut values: Vec<String> = attributes
-        .get(attribute)
-        .into_iter()
-        .flat_map(|value| value.split_ascii_whitespace())
-        .filter(|value| *value != "-" && !value.eq_ignore_ascii_case(flag))
-        .map(str::to_owned)
-        .collect();
-    if enabled {
-        values.push(flag.to_owned());
-    }
-    attributes.insert(
-        attribute.into(),
-        if values.is_empty() {
-            "-".into()
-        } else {
-            values.join(" ")
-        },
-    );
-}
 
 /// Ground hex occupied by a unit; coordinates are zero-based columns and rows.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -654,8 +628,8 @@ impl BattleUnit {
         let mut resolvable = self.definition.clone();
         for section in resolvable.sections.values_mut() {
             for critical in section.criticals.values_mut() {
-                if super::equipment::strip_name_prefix(&critical.equipment, "IS.").is_some()
-                    || super::equipment::strip_name_prefix(&critical.equipment, "CL.").is_some()
+                if super::strip_name_prefix(&critical.equipment, "IS.").is_some()
+                    || super::strip_name_prefix(&critical.equipment, "CL.").is_some()
                 {
                     // C stores mount modes on the first critical while the remaining
                     // slots can retain older raw values. Emptying weapon modes in the
@@ -866,9 +840,9 @@ impl BattleUnit {
 
     fn from_template_mode(mut definition: BattleTemplate, contract_loadout: bool) -> Result<Self> {
         if contract_loadout {
-            super::template_ammunition::normalize_contract(&mut definition)?;
+            definition.normalize_contract_ammunition()?;
         } else {
-            super::template_ammunition::normalize(&mut definition)?;
+            definition.normalize_ammunition()?;
         }
         // The tonnage-chart internal structure (mech_int_check) is forced while
         // the template file is read; construction and saved-definition restore
@@ -1056,18 +1030,18 @@ impl BattleUnit {
 
     /// Construction baseline used by the shared attacker movement calculation.
     pub fn template_speed(&self) -> f64 {
-        super::template_speed::read(&self.definition.attributes, self.definition.max_speed)
+        super::read_template_speed(&self.definition.attributes, self.definition.max_speed)
             .expect("validated template speed")
     }
 
     /// Set the independent firing-movement baseline without changing propulsion.
     pub(super) fn set_template_speed(&mut self, speed: f64) {
-        super::template_speed::write(&mut self.definition.attributes, speed);
+        super::write_template_speed(&mut self.definition.attributes, speed);
     }
 
     /// Change only the authored engine allocation override; recalculation is a separate operation.
     pub(super) fn set_engine_sink_override(&mut self, value: i32) {
-        super::engine_sink_override::write(&mut self.definition.attributes, value);
+        super::write_engine_sink_override(&mut self.definition.attributes, value);
     }
 
     /// Change limb roles while retaining their installed equipment and damage.
@@ -1200,7 +1174,7 @@ impl BattleUnit {
             ensure!(
                 capacity
                     <= self.definition.heat_sinks
-                        + super::engine_sink_override::external_capacity(self)?,
+                        + super::engine_sink_capacity::external_capacity(self)?,
                 "Invalid reconstructed cooling capacity"
             );
         }
@@ -1716,9 +1690,9 @@ fn validate_unsupported_technology(definition: &BattleTemplate) -> Result<()> {
 
 /// Gate the initial conventional chassis features without silently discarding unknown fields.
 fn validate_definition(definition: &BattleTemplate) -> Result<()> {
-    super::unit_identity::validate_metadata(&definition.attributes)?;
-    super::engine_sink_override::read(&definition.attributes)?;
-    super::template_speed::read(&definition.attributes, definition.max_speed)?;
+    super::validate_unit_metadata(&definition.attributes)?;
+    super::read_engine_sink_override(&definition.attributes)?;
+    super::read_template_speed(&definition.attributes, definition.max_speed)?;
     ensure!(
         (20..=100).contains(&definition.tons) && definition.tons.is_multiple_of(5),
         "Unsupported biped tonnage"
@@ -1818,13 +1792,13 @@ fn validate_definition(definition: &BattleTemplate) -> Result<()> {
                             || flag.eq_ignore_ascii_case("HvyFerroFibrous_Tech")
                             || flag.eq_ignore_ascii_case("LtFerroFibrous_Tech")
                             || flag.eq_ignore_ascii_case("XLEngine_Tech")
-                            || super::template_construction::mixed_technology_flag(flag)
+                            || super::mixed_technology_flag(flag)
                             || flag.eq_ignore_ascii_case("LightEngine_Tech")
                             || flag.eq_ignore_ascii_case("XXL_Tech")
                             || flag.eq_ignore_ascii_case("CompactEngine_Tech")
                             || super::BattleTechnology::recognizes(flag)
                             || (0..=56).any(|code| {
-                                super::admin_contract::administrative_technology(code)
+                                super::administrative_technology(code)
                                     .is_some_and(|(name, _)| flag.eq_ignore_ascii_case(name))
                             }))),
                 "Unsupported chassis specials {value}"

@@ -2,17 +2,20 @@
 use super::{AmmunitionBin, BattleTemplate, BattleWeapon};
 use anyhow::{Context, Result};
 
-/// Infer small bins and normalize initial salvo counts using the biped template-loader rules.
-pub(super) fn normalize(template: &mut BattleTemplate) -> Result<()> {
-    normalize_with(template, false)
+impl BattleTemplate {
+    /// Infer small bins and normalize initial salvo counts using the biped template-loader rules.
+    pub fn normalize_ammunition(&mut self) -> Result<()> {
+        normalize_with(self, false)
+    }
+
+    /// Apply the native administrator's broader ammunition flag admission while
+    /// preserving the strict constructor's compatibility checks.
+    pub fn normalize_contract_ammunition(&mut self) -> Result<()> {
+        normalize_with(self, true)
+    }
 }
 
-/// Apply the native administrator's broader ammunition flag admission while
-/// preserving the strict constructor's compatibility checks.
-pub(super) fn normalize_contract(template: &mut BattleTemplate) -> Result<()> {
-    normalize_with(template, true)
-}
-
+/// Size and fill every ammunition critical, admitting administrator flags when `contract`.
 fn normalize_with(template: &mut BattleTemplate, contract: bool) -> Result<()> {
     for (location, section) in &mut template.sections {
         for (slot, part) in &mut section.criticals {

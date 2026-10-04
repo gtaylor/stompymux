@@ -20,10 +20,15 @@ pub struct BattleVtolHit {
     pub rotor: Option<BattleRotorHit>,
 }
 
-impl BattleVehicleTemplate {
+/// VTOL hit-location selection from a supplied roll.
+pub trait BattleVtolHitLocation {
     /// Select a VTOL location from a supplied 2d6 roll without drawing dice or mutating material.
     /// Critical-proof equipment uses standard locations and suppresses all secondary effects.
-    pub fn vtol_hit(&self, arc: BattleHitArc, roll: u8) -> Result<BattleVtolHit> {
+    fn vtol_hit(&self, arc: BattleHitArc, roll: u8) -> Result<BattleVtolHit>;
+}
+
+impl BattleVtolHitLocation for BattleVehicleTemplate {
+    fn vtol_hit(&self, arc: BattleHitArc, roll: u8) -> Result<BattleVtolHit> {
         ensure!(
             self.is_vtol(),
             "VTOL hit selection requires a VTOL template"
@@ -37,7 +42,7 @@ impl BattleVehicleTemplate {
         let section = if rotor_hit {
             BattleVehicleSection::Rotor
         } else {
-            BattleVehicleSection::from_hit_arc(arc)
+            arc.vehicle_section()
         };
         let rotor = if proof || !rotor_hit {
             None
@@ -119,7 +124,7 @@ impl super::BattleVehicle {
                 _ => S::Rear,
             },
             10..=12 => S::Rotor,
-            _ => S::from_hit_arc(arc),
+            _ => arc.vehicle_section(),
         };
         let eligible = self.critical_candidate(section, critical_mode, critical_level, dice)?;
         Ok(BattleVtolHit {

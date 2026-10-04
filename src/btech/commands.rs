@@ -1,4 +1,5 @@
 //! Wizard map operations and asset and saved-world inspection through the native command registry.
+use super::BattleUnitTemplateExt;
 use crate::{CommandAction, CommandContext, CommandInput, CommandReport, ObjectId};
 use anyhow::{Context, Result, bail, ensure};
 

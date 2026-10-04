@@ -700,7 +700,13 @@ pub use btech::create_vehicle as create_battle_vehicle;
 pub use btech::damage_vehicle_phase as damage_battle_vehicle_phase;
 
 /// Explicit Mech/ground-vehicle construction asset dispatch.
-pub use btech::{BattleUnitTemplate, read_unit_template as read_battle_unit_template};
+pub use btech::{
+    BattleArtilleryAiming, BattleMountArcs, BattleStealthRange, BattleTerrainIgnition,
+    BattleVehicleMountArcs, BattleVehicleTemplateMotion, BattleVtolHitLocation, BattleWeaponSalvo,
+};
+pub use btech::{
+    BattleUnitTemplate, BattleUnitTemplateExt, read_unit_template as read_battle_unit_template,
+};
 
 /// World and pilot inputs for intact ground-vehicle motion proposals.
 pub use btech::BattleVehicleMotionRules;

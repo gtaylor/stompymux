@@ -104,6 +104,7 @@ pub fn choose_target(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::btech::BattleUnitTemplateExt;
     use crate::btech::{BattlePosition, autopilot::observations::AutopilotContact};
 
     fn reference_choose_target(

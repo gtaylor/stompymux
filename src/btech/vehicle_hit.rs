@@ -71,7 +71,7 @@ impl BattleVehicle {
     /// Standard location selection after validating the primary roll.
     fn hit_section(&self, arc: BattleHitArc, roll: u8) -> BattleVehicleSection {
         use BattleVehicleSection as S;
-        let hull = S::from_hit_arc(arc);
+        let hull = arc.vehicle_section();
         let turret = self
             .sections()
             .get(&S::Turret)

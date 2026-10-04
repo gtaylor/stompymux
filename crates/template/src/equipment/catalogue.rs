@@ -70,7 +70,7 @@ macro_rules! weapon_catalogue {
             }
 
             /// Static cockpit feedback used by committed-second recycle processing.
-            pub(crate) fn recycle_notice(self) -> &'static str {
+            pub fn recycle_notice(self) -> &'static str {
                 match self { $(Self::$variant => concat!($label, " finished recycling.")),+ }
             }
         }

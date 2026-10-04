@@ -2,15 +2,15 @@
 use super::{BattleVehicle, BattleVehicleSection, VehicleCriticalLocation, WeaponMount};
 use anyhow::{Context, Result, ensure};
 
-impl WeaponMount<VehicleCriticalLocation> {
+/// Firing-arc geometry for vehicle weapon mounts.
+pub trait BattleVehicleMountArcs {
     /// Test vehicle mounting geometry; rear-mount flags do not override a vehicle's hull face.
     /// Bearings use nearest whole degrees, facing uses whole degrees, and turret arcs span 60 degrees.
-    pub fn bears_on(
-        &self,
-        heading: f64,
-        bearing: f64,
-        turret_heading: Option<f64>,
-    ) -> Result<bool> {
+    fn bears_on(&self, heading: f64, bearing: f64, turret_heading: Option<f64>) -> Result<bool>;
+}
+
+impl BattleVehicleMountArcs for WeaponMount<VehicleCriticalLocation> {
+    fn bears_on(&self, heading: f64, bearing: f64, turret_heading: Option<f64>) -> Result<bool> {
         ensure!(
             heading.is_finite() && bearing.is_finite() && turret_heading.is_none_or(f64::is_finite),
             "Invalid firing direction"

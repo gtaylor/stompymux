@@ -139,6 +139,7 @@ pub(super) fn remember_vehicle(unit: &BattleVehicle, projection: &BattleVehicleL
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::btech::BattleUnitTemplateExt;
     #[test]
     fn scopes_do_not_reuse_projections_for_clones_or_after_drop() {
         let config = crate::Config::load("tests/fixtures/game").unwrap();

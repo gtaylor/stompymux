@@ -9,6 +9,15 @@ lives in `src/btech/`, while the server, Lua bindings, and SQLite adapter live
 in their respective crate modules. `src/lib.rs` exports the BattleTech types
 and operations used across those boundaries.
 
+Two workspace crates hold the data the gameplay code builds on. `crates/map`
+owns battlefield maps and hex geometry. `crates/template` owns unit templates,
+the weapon and system catalogue, loadouts and construction rules. Neither knows
+about the world or live units; `src/btech/` re-exports their types and layers
+live state and combat rules on top. Because Rust does not allow inherent
+methods on another crate's types, combat behavior for catalogue types is
+declared as extension traits in `src/btech/`, such as `BattleWeaponSalvo` for
+cluster hits and damage grouping.
+
 ## State and ownership
 
 `World` owns a `BtechState` alongside ordinary MUX objects and accounts. The
@@ -65,7 +74,7 @@ The gameplay modules are organized around focused rules and state transitions:
 | Area | Examples in `src/btech/` |
 | --- | --- |
 | Maps and assets | `map.rs`, `assets.rs`, `state.rs`, terrain and map lifecycle modules |
-| Units and equipment | `unit.rs`, `vehicle.rs`, `template.rs`, `template_document.rs`, `loadout.rs`, `equipment.rs` |
+| Units and equipment | `unit.rs`, `vehicle.rs`, `mass.rs`, `ammunition_mode.rs`, `fire_mode.rs`; templates, loadouts and the equipment catalogue live in `crates/template` |
 | Movement and time | `motion.rs`, `jump.rs`, `power.rs`, `heat.rs`, `simulation_pending.rs` |
 | Combat | `shot.rs`, `damage.rs`, `critical.rs`, `artillery.rs`, weapon and ammunition modules |
 | Perception | `perception/` (sensor band, sight, probes, radar, acquisition), `contacts.rs`, `scanner.rs`, LOS and electronics modules |
@@ -165,7 +174,8 @@ other transaction effects and published after a successful world commit.
 ## Adding BattleTech behavior
 
 Place the rule and its state transition in the focused `src/btech/` module that
-owns the invariant. Expose a typed operation through `src/btech/mod.rs` and,
+owns the invariant. Rules that need only a template or catalogue entry, such as
+a weapon family or a construction requirement, belong in `crates/template`. Expose a typed operation through `src/btech/mod.rs` and,
 when it is used across the crate boundary, `src/lib.rs`. Adapt that operation
 at each needed entry point: a native command, Lua binding, or server tick.
 

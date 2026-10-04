@@ -24,6 +24,7 @@ The implementation is organized by responsibility across modules.
 | `src/help/` | In-game help indexing and rendering (see [Help system](../help-system/)) |
 | `src/config/` | Configuration model, directives, and runtime administration |
 | `crates/map/` | Battlefield map data shared by the server and map tools: layered hexes, terrain, map flags, hex geometry, the [map file](../map-files/) format, and the `map-check` CLI |
+| `crates/template/` | BattleTech unit templates shared by the server and template tools: the [unit template](../unit-templates/) document format, the weapon and system catalogue, loadouts, construction rules and construction mass |
 | `crates/mapgen/` | Procedural battlefield map generation library and the `mapgen` CLI; depends on `crates/map` but nothing in the server, so editors can embed it (see [Map generation](../map-generation/)) |
 | `crates/mappy/` | The Mappy desktop map editor, built on `crates/map` and iced (`just mappy`) |
 | `tests/` | Integration scenarios and fixtures; unit tests also live beside implementations |

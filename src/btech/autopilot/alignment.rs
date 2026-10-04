@@ -1,5 +1,6 @@
 //! Pure mount-arc scoring and admitted torso/turret alignment for observed targets.
 use super::observations::AutopilotObservation;
+use crate::btech::{BattleMountArcs, BattleVehicleMountArcs};
 use crate::{BattleNotice, BattlePosition, BattleTorso, ObjectId, World};
 
 /// Persistent mount capability ignores temporary recycle/heat to avoid maneuver oscillation.

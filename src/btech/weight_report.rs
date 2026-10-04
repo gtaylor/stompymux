@@ -161,7 +161,7 @@ pub fn weight_report(world: &World, actor: ObjectId, id: ObjectId) -> Result<Bat
                 &mut equipment,
                 name,
                 1,
-                super::mass::system_slot_mass(definition, part.system),
+                super::system_slot_mass(definition, part.system),
             );
         }
         for bin in &loadout.ammunition {

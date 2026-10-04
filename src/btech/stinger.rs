@@ -1,17 +1,7 @@
 //! Stinger ammunition selection uses the ordinary transactional weapon controls.
-use super::BattleAmmunitionMode;
+use super::{AmmunitionFeedback, BattleAmmunitionMode};
 use crate::{ObjectId, World};
 use anyhow::{Result, ensure};
-
-impl BattleAmmunitionMode {
-    /// Cockpit feedback shared by native commands and Lua.
-    pub(crate) fn stinger_message(self, index: usize) -> String {
-        if self.munition() == Self::Stinger {
-            return format!("Weapon {index} has been set to fire stinger missiles.");
-        }
-        format!("Weapon {index} has been set to fire normal missiles")
-    }
-}
 
 /// Toggle a controlled, intact and recycled launcher between normal and Stinger rounds.
 pub fn toggle_stinger(

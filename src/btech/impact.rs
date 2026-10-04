@@ -1,7 +1,7 @@
 //! Atomic conventional hit resolution, including immediate critical and ammunition damage cascades.
 use super::{
-    BattleCriticalLoss, BattleDamagePhase, BattleDamageResult, BattleHit, BattleSection,
-    BattleUnit, CriticalLocation,
+    BattleArmorPiercing, BattleCriticalLoss, BattleDamagePhase, BattleDamageResult, BattleHit,
+    BattleSection, BattleUnit, CriticalLocation,
 };
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};

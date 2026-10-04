@@ -1,5 +1,8 @@
 //! Target-independent weapon packet sizing after a successful launch and hit.
-use super::{BattleAmmunitionMode, BattleDice, BattleFireMode, BattleWeapon};
+use super::{
+    BattleAmmunitionMode, BattleDice, BattleFireMode, BattleFlechetteDamage, BattleRotaryDamage,
+    BattleWeapon, BattleWeaponSalvo,
+};
 use anyhow::{Context, Result, ensure};
 
 /// Damage inputs resolved by the enclosing unit or terrain attack.

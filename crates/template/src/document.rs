@@ -33,7 +33,7 @@
 //!     { section = "left_torso", at = "4-11" },
 //! ]
 //! ```
-use super::template_construction::{
+use super::construction::{
     Construction, FLIP_ARMS, Omission, SPEED_PER_MP, SectionPlan, arms_flip,
     canonical_infantry_special, canonical_special, derives_internals, fixed_equipment,
     is_fixed_item, mech_internal, movement_points, vehicle_internal,
@@ -48,13 +48,13 @@ use std::collections::BTreeMap;
 use std::fmt::Write as _;
 
 /// Largest template source accepted from disk or scripts.
-pub(super) const TEMPLATE_SIZE_LIMIT: usize = 1_048_576;
+pub const TEMPLATE_SIZE_LIMIT: usize = 1_048_576;
 
 /// Equipment name of the internal slot that extends a split mount into a left-side section.
-pub(super) const SPLIT_LEFT: &str = "SplitCrit_Left";
+pub const SPLIT_LEFT: &str = "SplitCrit_Left";
 
 /// Equipment name of the internal slot that extends a split mount into a right-side section.
-pub(super) const SPLIT_RIGHT: &str = "SplitCrit_Right";
+pub const SPLIT_RIGHT: &str = "SplitCrit_Right";
 
 /// How a unit-level document value is typed.
 #[derive(Clone, Copy)]
@@ -194,7 +194,7 @@ impl SlotRange {
 ///
 /// Field keys use the internal attribute names in [`FIELDS`]; section keys are
 /// lowercase template headings such as `left_arm` or `front_left_leg`.
-pub(super) struct ParsedTemplate {
+pub struct ParsedTemplate {
     pub fields: BTreeMap<String, String>,
     pub sections: BTreeMap<String, SectionDefinition>,
 }
@@ -621,7 +621,7 @@ fn mech_section(heading: &str) -> Result<BattleSection> {
 }
 
 /// Whether a split mount may continue from one section into the other.
-pub(super) fn split_adjacent(primary: BattleSection, extension: BattleSection) -> bool {
+pub fn split_adjacent(primary: BattleSection, extension: BattleSection) -> bool {
     use BattleSection::*;
     matches!(
         (primary, extension),
@@ -633,7 +633,7 @@ pub(super) fn split_adjacent(primary: BattleSection, extension: BattleSection) -
 }
 
 /// The extension marker names the side of the body the mount occupies.
-pub(super) fn split_proxy_name(primary: BattleSection, extension: BattleSection) -> &'static str {
+pub fn split_proxy_name(primary: BattleSection, extension: BattleSection) -> &'static str {
     use BattleSection::*;
     if [primary, extension]
         .iter()
@@ -646,12 +646,12 @@ pub(super) fn split_proxy_name(primary: BattleSection, extension: BattleSection)
 }
 
 /// Encode an extension slot's link to the primary section and its first zero-based slot.
-pub(super) fn split_link_data(section: BattleSection, slot: u8) -> String {
+pub fn split_link_data(section: BattleSection, slot: u8) -> String {
     format!("{}:{slot}", section.name())
 }
 
 /// Decode an extension slot's link to the primary section and its first zero-based slot.
-pub(super) fn parse_split_link(data: &str) -> Result<(BattleSection, u8)> {
+pub fn parse_split_link(data: &str) -> Result<(BattleSection, u8)> {
     let (section, slot) = data
         .split_once(':')
         .context("Invalid split critical parent")?;
@@ -662,7 +662,7 @@ pub(super) fn parse_split_link(data: &str) -> Result<(BattleSection, u8)> {
 }
 
 /// One section to render, in document order.
-pub(super) struct RenderSection<'a> {
+pub struct RenderSection<'a> {
     /// Lowercase document heading such as `left_arm`.
     pub heading: String,
     /// The stable mech section, so split links and fixed equipment can name it.
@@ -672,7 +672,7 @@ pub(super) struct RenderSection<'a> {
 
 /// Render internal attributes and section layouts as a TOML template document,
 /// stating construction choices and leaving out everything they imply.
-pub(super) fn render(
+pub fn render(
     attributes: &BTreeMap<String, String>,
     sections: &[RenderSection<'_>],
 ) -> Result<String> {
@@ -938,7 +938,7 @@ fn is_ammunition(item: &str) -> bool {
 }
 
 /// Whether a stored critical is a split-mount extension marker.
-pub(super) fn is_split_proxy(equipment: &str) -> bool {
+pub fn is_split_proxy(equipment: &str) -> bool {
     equipment.eq_ignore_ascii_case(SPLIT_LEFT) || equipment.eq_ignore_ascii_case(SPLIT_RIGHT)
 }
 

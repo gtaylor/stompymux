@@ -1,21 +1,7 @@
 //! Player controls for rapid firing of conventional and light autocannons.
-use super::BattleFireMode;
+use super::{BattleFireMode, FireModeFeedback};
 use crate::{ObjectId, World};
 use anyhow::{Result, ensure};
-
-impl BattleFireMode {
-    /// Shared cockpit feedback for native and Lua mode controls.
-    pub(crate) fn rapid_message(self, index: usize) -> String {
-        format!(
-            "Weapon {index} has been set to {} mode",
-            if self == Self::Rapid {
-                "Rapid Fire"
-            } else {
-                "normal fire"
-            }
-        )
-    }
-}
 
 /// Toggle an intact, recycled conventional or light autocannon between one- and two-round firing.
 pub fn toggle_rapid(

@@ -1,5 +1,5 @@
 //! Passive Triple Strength Myomer installation and distinct runtime speed calculations.
-use super::{BattleTemplate, BattleUnit};
+use super::BattleUnit;
 
 /// One extra walking MP, rounded back to whole running MP with ties-to-even walking conversion.
 fn boost(maximum: f64) -> f64 {
@@ -7,19 +7,6 @@ fn boost(maximum: f64) -> f64 {
         return 0.0;
     }
     (((maximum / 1.5 / 10.75).round_ties_even() + 1.0) * 1.5).ceil() * 10.75
-}
-
-impl BattleTemplate {
-    /// Installed slots determine TSM technology; loss or flooding does not remove passive myomer.
-    pub fn has_triple_myomer(&self) -> bool {
-        self.sections
-            .values()
-            .flat_map(|section| section.criticals.values())
-            .filter(|part| part.equipment.eq_ignore_ascii_case("TripleStrengthMyomer"))
-            .take(6)
-            .count()
-            >= 6
-    }
 }
 
 impl BattleUnit {

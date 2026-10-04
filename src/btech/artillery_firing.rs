@@ -65,7 +65,7 @@ pub(super) fn resolve_in_action(
         aim,
     } = prepare(world, config, shooter, pilot, index, requested)?;
     let rules = BattleShotRules::configured(&config.battletech, false);
-    let mode = ammunition.artillery_payload()?;
+    let mode = BattleArtilleryMode::from_ammunition(ammunition)?;
     let character_shooter = world.objects[&shooter].flags.contains(Flag::InCharacter);
     let fall = BattleFallRules {
         vehicle_impact: rules.vehicle_impact,

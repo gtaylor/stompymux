@@ -1,5 +1,7 @@
 //! Atomic direct tactical shots, glancing hits and immediate damage consequences.
-use super::{BattleAimModifiers, BattleAimRules, BattleHitRules, BattleWeaponUse};
+use super::{
+    BattleAimModifiers, BattleAimRules, BattleBeaconLaunch, BattleHitRules, BattleWeaponUse,
+};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;

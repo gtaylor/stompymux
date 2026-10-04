@@ -1,5 +1,5 @@
 //! Class-neutral BattleTech template state used by administrative and inspection contracts.
-use super::template_document::ParsedTemplate;
+use super::document::ParsedTemplate;
 use super::{
     BattleSection, BattleTemplate, BattleVehicleMovement, BattleVehicleSection,
     BattleVehicleTemplate, CriticalDefinition, SectionDefinition,
@@ -355,7 +355,7 @@ impl RawTemplate {
     }
 
     /// Place decoded sections by class anatomy, narrowing values to native storage.
-    pub(super) fn from_parsed(parsed: ParsedTemplate) -> Result<Self> {
+    pub fn from_parsed(parsed: ParsedTemplate) -> Result<Self> {
         let ParsedTemplate { fields, sections } = parsed;
         let class = fields
             .get("type")

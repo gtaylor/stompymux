@@ -40,12 +40,11 @@ fn flag(template: &BattleTemplate, name: &str) -> bool {
         .filter_map(|key| template.attributes.get(*key))
         .any(|v| {
             v.split_ascii_whitespace()
-                .any(|v| super::technology::spells(v, name))
+                .any(|v| super::flag_spells_technology(v, name))
         })
         || (0..=56).any(|code| {
-            admin_contract::administrative_technology(code).is_some_and(|(candidate, _)| {
-                candidate.eq_ignore_ascii_case(name)
-                    && inspection::inspection_template_inferred_technology(template, code)
+            administrative_technology(code).is_some_and(|(candidate, _)| {
+                candidate.eq_ignore_ascii_case(name) && template.infers_technology(code)
             })
         })
 }
@@ -60,7 +59,7 @@ fn raw_flag(template: &RawTemplate, name: &str) -> bool {
         .any(|value| {
             value
                 .split_ascii_whitespace()
-                .any(|value| super::technology::spells(value, name))
+                .any(|value| super::flag_spells_technology(value, name))
         })
 }
 
@@ -373,7 +372,7 @@ fn inspection_loadout(template: &BattleTemplate) -> Result<(BattleLoadout, Vec<I
                 || critical.equipment.eq_ignore_ascii_case("SplitCrit_Right")
                 || BattleSystem::named(&critical.equipment).is_some()
                 || BattleWeapon::parse(&critical.equipment).is_ok()
-                || super::equipment::strip_name_prefix(&critical.equipment, "Ammo_")
+                || super::strip_name_prefix(&critical.equipment, "Ammo_")
                     .is_some_and(|name| BattleWeapon::parse(name).is_ok())
             {
                 return true;
@@ -806,6 +805,6 @@ fn flag_vehicle(template: &BattleVehicleTemplate, name: &str) -> bool {
         .filter_map(|key| template.attributes.get(*key))
         .any(|v| {
             v.split_ascii_whitespace()
-                .any(|v| super::technology::spells(v, name))
+                .any(|v| super::flag_spells_technology(v, name))
         })
 }

@@ -9,6 +9,7 @@ use super::{
     AutopilotConfig, AutopilotController, AutopilotFeedbackEvent, AutopilotFireMode,
     AutopilotOrder, AutopilotState, AutopilotSubmissionMode,
 };
+use crate::btech::BattleUnitTemplateExt;
 use crate::{
     BattlePosition, BattleUnitTemplate, Config, HeartbeatHarness, Kind, MapAsset, World,
     persistence,

@@ -1,5 +1,6 @@
 //! Small seeded production-heartbeat encounters for comparing movement policies.
 use super::*;
+use crate::btech::BattleUnitTemplateExt;
 use crate::{
     BattlePower, BattleUnitTemplate, Config, HeartbeatHarness, Kind, MapAsset, ObjectId, World,
     persistence,

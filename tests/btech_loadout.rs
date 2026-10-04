@@ -1,5 +1,6 @@
 //! Conventional weapon catalogs, ammunition limits and existing biped asset loadouts.
 use crate::support;
+use stompymux_rs::BattleWeaponSalvo;
 use stompymux_rs::{
     BattleLoadout, BattleSection, BattleSystem, BattleTemplate, BattleWeapon, ObjectId,
 };

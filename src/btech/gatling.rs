@@ -1,21 +1,7 @@
 //! Player controls for gatling firing of machine guns.
-use super::BattleFireMode;
+use super::{BattleFireMode, FireModeFeedback};
 use crate::{ObjectId, World};
 use anyhow::{Result, ensure};
-
-impl BattleFireMode {
-    /// Shared cockpit feedback for native and Lua mode controls.
-    pub(crate) fn gatling_message(self, index: usize) -> String {
-        format!(
-            "Weapon {index} has been set to {} mode",
-            if self == Self::Gatling {
-                "Gattling"
-            } else {
-                "normal fire"
-            }
-        )
-    }
-}
 
 /// Toggle an intact, recycled machine gun between normal and gatling firing.
 pub fn toggle_gatling(

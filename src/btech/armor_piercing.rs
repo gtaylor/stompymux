@@ -1,21 +1,7 @@
 //! Armor-piercing autocannon controls and critical-roll adjustment.
-use super::BattleAmmunitionMode;
+use super::{AmmunitionFeedback, BattleAmmunitionMode};
 use crate::{ObjectId, World};
 use anyhow::{Result, ensure};
-
-impl BattleAmmunitionMode {
-    /// Shared cockpit feedback for normal and AP rounds.
-    pub(crate) fn armor_piercing_message(self, index: usize) -> String {
-        format!(
-            "Weapon {index} has been set to fire {} rounds",
-            if self == Self::ArmorPiercing {
-                "AP"
-            } else {
-                "normal"
-            }
-        )
-    }
-}
 
 /// Select AP or normal rounds on an authorized, intact and recycled conventional autocannon.
 pub fn toggle_armor_piercing(
@@ -48,9 +34,14 @@ pub(crate) fn command(
     })
 }
 
-impl super::BattleWeapon {
+/// Armor-piercing critical-roll rules for autocannons.
+pub(crate) trait BattleArmorPiercing {
     /// AP critical-roll reduction for conventional and light autocannons.
-    pub(super) fn armor_piercing_penalty(self) -> u8 {
+    fn armor_piercing_penalty(self) -> u8;
+}
+
+impl BattleArmorPiercing for super::BattleWeapon {
+    fn armor_piercing_penalty(self) -> u8 {
         match self {
             Self::Ac2 | Self::LightAc2 => 4,
             Self::Ac5 | Self::LightAc5 => 3,

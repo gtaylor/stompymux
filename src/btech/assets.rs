@@ -76,20 +76,20 @@ pub(super) fn read_map_with_flags(
 
 /// Decode a biped template from a configured mech directory.
 pub fn read_template(root: &Path, name: &str) -> Result<BattleTemplate> {
-    let (reference, source) = super::template_contract_assets::read_template_document(root, name)?;
+    let (reference, source) = super::read_template_document(root, name)?;
     BattleTemplate::parse(&reference, &source).with_context(|| format!("template {name}"))
 }
 
 /// Decode a ground-vehicle definition from the configured game asset directory.
 pub fn read_vehicle_template(root: &Path, name: &str) -> Result<super::BattleVehicleTemplate> {
-    let (reference, source) = super::template_contract_assets::read_template_document(root, name)?;
+    let (reference, source) = super::read_template_document(root, name)?;
     super::BattleVehicleTemplate::parse(&reference, &source)
         .with_context(|| format!("vehicle template {name}"))
 }
 
 /// Read an explicitly typed construction asset from the configured unit directory.
 pub fn read_unit_template(root: &Path, name: &str) -> Result<super::BattleUnitTemplate> {
-    let (reference, source) = super::template_contract_assets::read_template_document(root, name)?;
+    let (reference, source) = super::read_template_document(root, name)?;
     super::BattleUnitTemplate::parse(&reference, &source)
         .with_context(|| format!("unit template {name}"))
 }

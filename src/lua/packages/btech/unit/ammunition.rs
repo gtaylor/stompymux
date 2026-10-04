@@ -1,6 +1,7 @@
 //! Special munition commands: incendiary, inferno, precision, swarm, semi-guided, MML, ATM, and other rounds.
 
 use super::super::*;
+use crate::btech::AmmunitionFeedback;
 
 /// Register this package slice on the private native table.
 pub(super) fn register(lua: &Lua, native: &Table, _world: &SharedWorld) -> mlua::Result<()> {

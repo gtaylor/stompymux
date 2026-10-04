@@ -775,6 +775,7 @@ pub(crate) fn acquired_contact_facts(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::btech::BattleUnitTemplateExt;
 
     /// Facts for one pair through a freshly built reader, as single-target callers read them.
     fn contact_facts(

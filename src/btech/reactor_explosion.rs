@@ -103,7 +103,7 @@ pub(super) fn detonate(
     // The reactor must stand on a valid map hex before any blast cells are resolved.
     map.base_hex(i64::from(position.x), i64::from(position.y))?;
     let definition = unit.definition();
-    let rating = super::engine::rated_output(definition.tons, definition.max_speed)?;
+    let rating = super::rated_output(definition.tons, definition.max_speed)?;
     let damage = u16::try_from((u32::from(definition.tons) / 5).max(rating / 10))?;
     let heat = i32::try_from((u32::from(definition.tons) / 10).max(rating / 25))?;
     let mut cells = vec![(origin, 1)];

@@ -1,6 +1,7 @@
 //! Weapon operation commands: firing-mode toggles, rotary bursts, unjamming, turret automation, and ammunition bins.
 
 use super::super::*;
+use crate::btech::{AmmunitionFeedback, FireModeFeedback};
 
 /// Register this package slice on the private native table.
 pub(super) fn register(lua: &Lua, native: &Table, _world: &SharedWorld) -> mlua::Result<()> {

@@ -3,28 +3,6 @@ use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
 
-/// Construction mass for authored cargo space, shared by Mechs and vehicles.
-/// This measures the cargo installation; loose stock is accounted for separately.
-pub(super) fn cargo_space_mass(space: Option<&str>, carrier: bool, cargo: bool) -> Result<u32> {
-    let space = space
-        .map(|value| value.parse::<u32>().context("Invalid cargo space"))
-        .transpose()?
-        .unwrap_or(0);
-    let divisor = if carrier {
-        1000.0
-    } else if cargo {
-        100.0
-    } else {
-        500.0
-    };
-    let mass = (space as f32 / divisor * 1024.0).trunc();
-    ensure!(
-        f64::from(mass) <= f64::from(u32::MAX),
-        "Cargo space mass overflow"
-    );
-    Ok(mass as u32)
-}
-
 /// A derived load snapshot in 1/1024-ton mass units; never stored or cached in the world.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct BattleUnitLoad {

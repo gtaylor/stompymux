@@ -15,19 +15,6 @@ pub struct BattleAmsReport {
     pub shot_down: u8,
 }
 
-impl BattleWeapon {
-    /// Defensive-only anti-missile systems; ballistic AMS draws from a matching bin, laser AMS from heat.
-    pub fn is_ams(self) -> bool {
-        matches!(
-            self,
-            Self::AntiMissileSystem
-                | Self::ClanAntiMissileSystem
-                | Self::LaserAms
-                | Self::ClanLaserAms
-        )
-    }
-}
-
 impl BattleUnit {
     /// Pilot-selected automatic defense state, initially disabled.
     pub fn ams_enabled(&self) -> bool {

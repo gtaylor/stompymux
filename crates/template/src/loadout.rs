@@ -45,7 +45,7 @@ pub struct AmmunitionBin<L = CriticalLocation> {
 
 impl AmmunitionBin {
     /// Validate supported bin flags and derive capacity without inspecting live contents.
-    pub(super) fn configuration(
+    pub fn configuration(
         weapon: BattleWeapon,
         flags: &[String],
     ) -> Result<(u16, bool, super::BattleAmmunitionMode)> {
@@ -83,7 +83,7 @@ impl AmmunitionBin {
         Ok((capacity, half_ton, mode))
     }
 
-    pub(super) fn configuration_contract(
+    pub fn configuration_contract(
         weapon: BattleWeapon,
         flags: &[String],
     ) -> Result<(u16, bool, super::BattleAmmunitionMode)> {
@@ -142,7 +142,7 @@ pub struct SystemCritical<L = CriticalLocation> {
 impl<L> WeaponMount<L> {
     /// Explicit links survive without computer slots; automatic links require installed hardware.
     /// Any unavailable computer slot disables assistance, and cluster ammunition never benefits.
-    pub(super) fn computer_assists(
+    pub fn computer_assists(
         &self,
         ammunition: super::BattleAmmunitionMode,
         available_slots: impl Iterator<Item = bool>,
@@ -161,7 +161,7 @@ impl<L> WeaponMount<L> {
     }
 
     /// Validate shared weapon flags independently of chassis-specific slot allocation.
-    pub(super) fn from_critical(
+    pub fn from_critical(
         weapon: BattleWeapon,
         critical: &super::CriticalDefinition,
         criticals: Vec<L>,
@@ -213,7 +213,7 @@ impl<L> WeaponMount<L> {
         Ok(Self::project(weapon, critical, criticals))
     }
 
-    pub(super) fn from_critical_contract(
+    pub fn from_critical_contract(
         weapon: BattleWeapon,
         critical: &super::CriticalDefinition,
         criticals: Vec<L>,
@@ -339,7 +339,7 @@ fn is_contract_fire_mode(mode: &str) -> bool {
 
 impl<L> AmmunitionBin<L> {
     /// Resolve a bin using common catalogue capacity and ammunition flag rules.
-    pub(super) fn from_critical(
+    pub fn from_critical(
         name: &str,
         critical: &super::CriticalDefinition,
         location: L,
@@ -359,7 +359,7 @@ impl<L> AmmunitionBin<L> {
         })
     }
 
-    pub(super) fn from_critical_contract(
+    pub fn from_critical_contract(
         name: &str,
         critical: &super::CriticalDefinition,
         location: L,
@@ -396,12 +396,12 @@ pub type BattleLoadout = ResolvedLoadout<CriticalLocation>;
 
 impl BattleLoadout {
     /// Group complete contiguous sink installations using the chassis slot count.
-    pub(super) fn heat_sink_groups(&self, slots: usize) -> Result<Vec<Vec<CriticalLocation>>> {
+    pub fn heat_sink_groups(&self, slots: usize) -> Result<Vec<Vec<CriticalLocation>>> {
         self.system_groups(BattleSystem::HeatSink, slots, "heat sink")
     }
 
     /// Improved jump jets occupy two contiguous, matching slots per unit of thrust.
-    pub(super) fn jump_jet_groups(&self, improved: bool) -> Result<Vec<Vec<CriticalLocation>>> {
+    pub fn jump_jet_groups(&self, improved: bool) -> Result<Vec<Vec<CriticalLocation>>> {
         self.system_groups(
             BattleSystem::JumpJet,
             if improved { 2 } else { 1 },
@@ -563,7 +563,7 @@ impl BattleLoadout {
         Ok(loadout)
     }
 
-    pub(crate) fn resolve_contract(template: &BattleTemplate) -> Result<Self> {
+    pub fn resolve_contract(template: &BattleTemplate) -> Result<Self> {
         let chassis = template.chassis()?;
         let mut loadout = Self {
             weapons: Vec::new(),
@@ -709,7 +709,7 @@ impl BattleLoadout {
 /// C registers these raw infantry weapon identities even though the simulator has no
 /// corresponding combat enum yet.  Contract construction retains their criticals for
 /// administration, inspection and persistence while strict construction still rejects them.
-pub(super) fn contract_raw_weapon(name: &str) -> bool {
+pub fn contract_raw_weapon(name: &str) -> bool {
     let name = super::equipment::strip_name_prefix(name, "IS.")
         .or_else(|| super::equipment::strip_name_prefix(name, "CL."));
     name.is_some_and(|name| {
@@ -732,9 +732,7 @@ pub(super) fn contract_raw_weapon(name: &str) -> bool {
 fn split_criticals(
     template: &BattleTemplate,
 ) -> Result<BTreeMap<CriticalLocation, Vec<CriticalLocation>>> {
-    use super::template_document::{
-        is_split_proxy, parse_split_link, split_adjacent, split_proxy_name,
-    };
+    use super::document::{is_split_proxy, parse_split_link, split_adjacent, split_proxy_name};
     let mut links: BTreeMap<CriticalLocation, Vec<CriticalLocation>> = BTreeMap::new();
     for (&section, layout) in &template.sections {
         for (&slot, part) in &layout.criticals {
@@ -823,13 +821,13 @@ mod tests {
                         && (linked || (!slots.is_empty() && weapon.supports_targeting_computer()));
                     assert_eq!(
                         mount.computer_assists(
-                            super::super::BattleAmmunitionMode::Normal,
+                            crate::BattleAmmunitionMode::Normal,
                             slots.iter().copied()
                         ),
                         expected
                     );
                     assert!(!mount.computer_assists(
-                        super::super::BattleAmmunitionMode::Cluster,
+                        crate::BattleAmmunitionMode::Cluster,
                         slots.iter().copied()
                     ));
                 }

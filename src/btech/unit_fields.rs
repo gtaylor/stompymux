@@ -173,7 +173,7 @@ fn value(world: &World, config: &Config, id: ObjectId, field: &str) -> Result<Op
                 || &vehicle.unwrap().definition().attributes,
                 |unit| &unit.definition().attributes,
             );
-            Some(super::unit_identity::metadata(attributes, field).into())
+            Some(super::unit_metadata(attributes, field).into())
         }
         "displayname" => Some(super::display_name::display_name(world, id)?.into()),
         "bv" => float(
@@ -202,7 +202,7 @@ fn value(world: &World, config: &Config, id: ObjectId, field: &str) -> Result<Op
         "StaggerDamage" => integer(mech.map_or(0, |unit| i64::from(unit.stagger().action_damage))),
         // Weapon admission derives physical arcs.
         "unusablearcs" => integer(0),
-        "hsengoverride" => integer(i64::from(super::engine_sink_override::read(
+        "hsengoverride" => integer(i64::from(super::read_engine_sink_override(
             mech.map_or_else(
                 || &vehicle.unwrap().definition().attributes,
                 |unit| &unit.definition().attributes,
@@ -559,7 +559,7 @@ pub fn set_unit_field_action(
                 }
             }
             "templatesp" => {
-                let speed = super::template_speed::parse(value)?;
+                let speed = super::parse_template_speed(value)?;
                 let mut world = scripts.world_mut();
                 crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
                     unit.set_template_speed(speed);
@@ -639,7 +639,7 @@ pub fn set_unit_field_action(
                 )?;
             }
             "hsengoverride" => {
-                let value = super::engine_sink_override::parse(value)?;
+                let value = super::parse_engine_sink_override(value)?;
                 let mut world = scripts.world_mut();
                 crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
                     unit.set_engine_sink_override(value);

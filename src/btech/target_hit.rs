@@ -1,5 +1,5 @@
 //! Target-side missile admission is distinct from the launcher's near-miss feedback threshold.
-use super::{BattleAmmunitionMode, BattleGlancingMode, BattleWeapon};
+use super::{BattleAmmunitionMode, BattleBeaconLaunch, BattleGlancingMode, BattleWeapon};
 
 /// Whether a launched roll reaches defenses/material and how it modifies those damage packets.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

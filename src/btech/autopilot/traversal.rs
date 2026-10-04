@@ -518,6 +518,7 @@ fn team(world: &World, id: ObjectId) -> Option<i32> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::btech::BattleUnitTemplateExt;
     use crate::btech::Terrain;
 
     #[test]

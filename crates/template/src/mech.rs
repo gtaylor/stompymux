@@ -1,5 +1,5 @@
 //! Typed BattleMech templates decoded from TOML documents; equipment awaits catalogue validation.
-use super::template_document::ParsedTemplate;
+use super::document::ParsedTemplate;
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -106,36 +106,36 @@ impl BattleTemplate {
 
     /// Whether a component is Clan technology: the chassis base unless a mixed-technology flag
     /// names the other base.
-    fn clan_component(&self, component: super::template_construction::Component) -> bool {
+    fn clan_component(&self, component: super::construction::Component) -> bool {
         let clan = self.has_special("Clan");
         clan != self.has_special(component.flag(!clan))
     }
 
     /// Whether the engine is a Clan engine, which governs XL and XXL side slots and mass.
-    pub(crate) fn clan_engine(&self) -> bool {
-        self.clan_component(super::template_construction::Component::Engine)
+    pub fn clan_engine(&self) -> bool {
+        self.clan_component(super::construction::Component::Engine)
     }
 
     /// Whether the internal structure is Clan technology, which governs endo steel slots.
-    pub(crate) fn clan_structure(&self) -> bool {
-        self.clan_component(super::template_construction::Component::Structure)
+    pub fn clan_structure(&self) -> bool {
+        self.clan_component(super::construction::Component::Structure)
     }
 
     /// Whether the armor is Clan technology, which governs ferro-fibrous and reflective slots
     /// and ferro-fibrous protection per ton.
-    pub(crate) fn clan_armor(&self) -> bool {
-        self.clan_component(super::template_construction::Component::Armor)
+    pub fn clan_armor(&self) -> bool {
+        self.clan_component(super::construction::Component::Armor)
     }
 
     /// Test a chassis technology by its full name or the reference's abbreviation, which
     /// templates use interchangeably.
-    pub(crate) fn has_technology(&self, technology: super::BattleTechnology) -> bool {
+    pub fn has_technology(&self, technology: super::BattleTechnology) -> bool {
         let (name, abbreviation) = technology.names();
         self.has_special(name) || self.has_special(abbreviation)
     }
 
     /// Test a whitespace-separated chassis feature using the asset's case-insensitive spelling.
-    pub(crate) fn has_special(&self, name: &str) -> bool {
+    pub fn has_special(&self, name: &str) -> bool {
         self.attributes.get("specials").is_some_and(|value| {
             value
                 .split_ascii_whitespace()
@@ -149,7 +149,7 @@ impl BattleTemplate {
     }
 
     /// Validate decoded fields and sections as a BattleMech.
-    pub(super) fn from_parsed(parsed: ParsedTemplate) -> Result<Self> {
+    pub fn from_parsed(parsed: ParsedTemplate) -> Result<Self> {
         let ParsedTemplate { fields, sections } = parsed;
         let required = |name: &str| -> Result<String> {
             fields
@@ -205,13 +205,38 @@ impl BattleTemplate {
         // saved definitions and later construction edits restored verbatim.
         let quad = chassis == super::BattleMechChassis::Quad;
         for section in BattleSection::ALL {
-            if let Some(expected) =
-                super::template_construction::mech_internal(template.tons, section, quad)
+            if let Some(expected) = super::construction::mech_internal(template.tons, section, quad)
                 && let Some(layout) = template.sections.get_mut(&section)
             {
                 layout.internal = expected;
             }
         }
         Ok(template)
+    }
+}
+
+impl BattleSection {
+    /// Destination of excess biped damage; head and center torso have no transfer destination.
+    pub fn damage_transfer(self) -> Option<Self> {
+        use BattleSection::*;
+        match self {
+            LeftArm | LeftLeg => Some(LeftTorso),
+            RightArm | RightLeg => Some(RightTorso),
+            LeftTorso | RightTorso => Some(CenterTorso),
+            CenterTorso | Head => None,
+        }
+    }
+}
+
+impl BattleTemplate {
+    /// Installed slots determine TSM technology; loss or flooding does not remove passive myomer.
+    pub fn has_triple_myomer(&self) -> bool {
+        self.sections
+            .values()
+            .flat_map(|section| section.criticals.values())
+            .filter(|part| part.equipment.eq_ignore_ascii_case("TripleStrengthMyomer"))
+            .take(6)
+            .count()
+            >= 6
     }
 }

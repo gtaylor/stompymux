@@ -1,0 +1,59 @@
+name = "Jenner"
+class = "mech"
+movement = "biped"
+tons = 35
+walk_mp = 11
+jump_mp = 5
+radio = 2
+tac_range = 20
+lrs_range = 40
+scan_range = 20
+
+[sections.left_arm]
+armor = 4
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-4", item = "IS.MediumLaser" },
+]
+
+[sections.right_arm]
+armor = 4
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-4", item = "IS.MediumLaser" },
+]
+
+[sections.left_torso]
+armor = 8
+rear = 4
+slots = [
+    { at = "1-2", item = "JumpJet" },
+]
+
+[sections.right_torso]
+armor = 8
+rear = 4
+slots = [
+    { at = 1, item = "Ammo_IS.SRM-4", rounds = 25 },
+    { at = "2-3", item = "JumpJet" },
+]
+
+[sections.center_torso]
+armor = 10
+rear = 3
+slots = [
+    { at = 11, item = "IS.SRM-4" },
+    { at = 12, item = "JumpJet" },
+]
+
+[sections.left_leg]
+armor = 6
+
+[sections.right_leg]
+armor = 6
+
+[sections.head]
+armor = 7
+slots = [
+    { at = 4, item = "HeatSink" },
+]

@@ -3,7 +3,7 @@ use super::BattlePartKind;
 
 /// Other weapon stock, components, commodities and bombs in stable database order.
 /// Structural split/hardpoint markers have no physical mass; Light BAP stock weighs half a ton.
-pub(super) const STOCK: &[(i32, &str, u32, BattlePartKind)] = &[
+pub const STOCK: &[(i32, &str, u32, BattlePartKind)] = &[
     (6, "PC.Blazer", 0, BattlePartKind::Weapon),
     (7, "PC.Crossbow", 0, BattlePartKind::Weapon),
     (8, "PC.FederatedLongRifle", 0, BattlePartKind::Weapon),

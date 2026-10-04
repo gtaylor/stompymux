@@ -1,6 +1,6 @@
 //! Underwater weapon catalogue and rounded range brackets, independent of unit anatomy.
-use super::BattleWeapon;
-use crate::btech::{BattleRangeBracket, BattleWeaponRange};
+use crate::BattleWeapon;
+use crate::{BattleRangeBracket, BattleWeaponRange};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
 

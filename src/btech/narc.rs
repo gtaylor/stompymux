@@ -39,13 +39,6 @@ pub struct BattleNarcReport<S = BattleSection> {
     pub broadcasts: Vec<BattleNotice>,
 }
 
-impl BattleWeapon {
-    /// Conventional IS and Clan Narc launchers, with normal beacons or explosive rounds.
-    pub fn is_narc(self) -> bool {
-        matches!(self, Self::NarcBeacon | Self::ClanNarcBeacon)
-    }
-}
-
 impl BattleUnit {
     /// Attached pod kinds grouped by surviving section, with no team or expiry ownership.
     pub fn beacons(&self) -> &BTreeMap<BattleSection, BTreeSet<BattleBeaconKind>> {
@@ -67,9 +60,14 @@ impl BattleUnit {
     }
 }
 
-impl BattleWeapon {
+/// Beacon effects that Narc and iNarc launchers attach on a hit.
+pub(crate) trait BattleBeaconLaunch {
     /// Select the attached effect; explosive ammunition uses ordinary salvo damage instead.
-    pub(super) fn beacon_kind(self, mode: BattleAmmunitionMode) -> Option<BattleBeaconKind> {
+    fn beacon_kind(self, mode: BattleAmmunitionMode) -> Option<BattleBeaconKind>;
+}
+
+impl BattleBeaconLaunch for BattleWeapon {
+    fn beacon_kind(self, mode: BattleAmmunitionMode) -> Option<BattleBeaconKind> {
         if self.is_narc() {
             return (mode.munition() != BattleAmmunitionMode::Narc)
                 .then_some(BattleBeaconKind::Narc);
