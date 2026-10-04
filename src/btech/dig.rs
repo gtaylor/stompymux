@@ -48,6 +48,11 @@ impl BattleVehicle {
         self.dig.clone()
     }
 
+    /// Whether the vehicle is neither dug in nor digging.
+    pub(super) fn clear_of_stationary_cover(&self) -> bool {
+        self.dig.exposed()
+    }
+
     /// Reject impossible construction and countdowns in both saved and live state.
     pub(super) fn validate_dig(&self) -> Result<()> {
         ensure!(

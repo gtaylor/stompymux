@@ -226,14 +226,8 @@ pub(super) fn detach(world: &mut World, carrier: ObjectId) -> Option<ObjectId> {
 fn require_uncovered_target(world: &World, id: ObjectId) -> Result<()> {
     let uncovered = world
         .btech
-        .constructed_units()
-        .get(&id)
-        .is_none_or(|unit| unit.hull_down() == super::BattleHullDownState::default())
-        && world
-            .btech
-            .vehicles()
-            .get(&id)
-            .is_none_or(|unit| unit.dig_state().exposed());
+        .unit(id)
+        .is_none_or(|unit| super::with_unit!(unit, |unit| unit.clear_of_stationary_cover()));
     ensure!(
         uncovered,
         "Prepare the target for pickup before attaching tow cables"
