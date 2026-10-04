@@ -103,7 +103,7 @@ async fn fixture(
         &mut world,
         map,
         "sensors",
-        BattleMapAsset::from_cells(&format!("1 {}\n{}", distance + 1, rows.concat())).unwrap(),
+        MapAsset::from_cells(&format!("1 {}\n{}", distance + 1, rows.concat())).unwrap(),
     )
     .unwrap();
     let mut ids = Vec::new();

@@ -10,7 +10,7 @@ async fn vehicle_mine_queries_use_live_mass_and_preserve_saved_state() {
         &mut world,
         map,
         "test",
-        BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
+        MapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -36,7 +36,7 @@ async fn vehicle_mine_queries_use_live_mass_and_preserve_saved_state() {
             map,
             ordinal,
             Some(BattleMinefield {
-                coordinate: BattleHexCoordinate { x: 1, y: 1 },
+                coordinate: HexCoordinate { x: 1, y: 1 },
                 kind,
                 strength: 80,
                 extra,
@@ -115,7 +115,7 @@ async fn mine_queries_share_surface_gates_across_ground_vehicle_types() {
         &mut world,
         map,
         "test",
-        BattleMapAsset::from_cells("3 1\n.2~2-2\n").unwrap(),
+        MapAsset::from_cells("3 1\n.2~2-2\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -125,7 +125,7 @@ async fn mine_queries_share_surface_gates_across_ground_vehicle_types() {
             map,
             x as u32,
             Some(BattleMinefield {
-                coordinate: BattleHexCoordinate { x, y: 0 },
+                coordinate: HexCoordinate { x, y: 0 },
                 kind: BattleMineKind::Standard,
                 strength: 5,
                 extra: 0,
@@ -171,7 +171,7 @@ async fn blast_fixture(
         &mut world,
         map,
         "test",
-        BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
+        MapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
     let mut ids = Vec::new();
@@ -227,7 +227,7 @@ async fn mixed_mine_blasts_preserve_packets_slots_fields_and_restart() {
         for strength in [4, 11] {
             let mut world = base.clone();
             let mine = BattleMinefield {
-                coordinate: BattleHexCoordinate { x: 1, y: 1 },
+                coordinate: HexCoordinate { x: 1, y: 1 },
                 kind,
                 strength,
                 extra: 0,
@@ -334,7 +334,7 @@ async fn inferno_mine_heat_uses_blast_duration_and_vehicle_fire_policy() {
                     map,
                     0,
                     Some(BattleMinefield {
-                        coordinate: BattleHexCoordinate { x: 1, y: 1 },
+                        coordinate: HexCoordinate { x: 1, y: 1 },
                         kind: BattleMineKind::Inferno,
                         strength: 2,
                         extra: 0,
@@ -402,7 +402,7 @@ async fn vehicle_mine_events_and_command_detonation_are_atomic() {
     let (_dir, config, mut world, map, ids) =
         blast_fixture(BattleVehicleMovement::Stationary).await;
     let mine = BattleMinefield {
-        coordinate: BattleHexCoordinate { x: 1, y: 1 },
+        coordinate: HexCoordinate { x: 1, y: 1 },
         kind: BattleMineKind::Command,
         strength: 4,
         extra: 42,
@@ -470,7 +470,7 @@ async fn mine_vehicle_hit_policy_controls_location_dice_and_safe_damage() {
             map,
             0,
             Some(BattleMinefield {
-                coordinate: BattleHexCoordinate { x: 1, y: 1 },
+                coordinate: HexCoordinate { x: 1, y: 1 },
                 kind: BattleMineKind::Standard,
                 strength: 6,
                 extra: 0,
@@ -551,7 +551,7 @@ async fn mine_packets_finish_after_hull_loss_and_retain_wreck_material_damage() 
             map,
             0,
             Some(BattleMinefield {
-                coordinate: BattleHexCoordinate { x: 1, y: 1 },
+                coordinate: HexCoordinate { x: 1, y: 1 },
                 kind: BattleMineKind::Standard,
                 strength: 11,
                 extra: 0,
@@ -683,7 +683,7 @@ async fn mine_followups_reselect_locations_after_turret_and_hull_loss() {
             map,
             0,
             Some(BattleMinefield {
-                coordinate: BattleHexCoordinate { x: 1, y: 1 },
+                coordinate: HexCoordinate { x: 1, y: 1 },
                 kind: BattleMineKind::Standard,
                 strength: 16,
                 extra: 0,
@@ -778,7 +778,7 @@ async fn mine_heat_explodes_remaining_wreck_sections() {
             map,
             0,
             Some(BattleMinefield {
-                coordinate: BattleHexCoordinate { x: 1, y: 1 },
+                coordinate: HexCoordinate { x: 1, y: 1 },
                 kind: if inferno {
                     BattleMineKind::Inferno
                 } else {
@@ -845,7 +845,7 @@ async fn command_blast_feedback_is_private_ordered_and_replayable() {
         map,
         0,
         Some(BattleMinefield {
-            coordinate: BattleHexCoordinate { x: 1, y: 1 },
+            coordinate: HexCoordinate { x: 1, y: 1 },
             kind: BattleMineKind::Command,
             strength: 150,
             extra: 42,

@@ -12,7 +12,7 @@ async fn operator_decoration_reference_argument_replies() {
         &mut world,
         map,
         "plain",
-        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+        MapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -65,7 +65,7 @@ async fn operator_decoration_reference_argument_replies() {
         assert!(reply.contains("at (0,0) with duration of 20s."), "{reply}");
         assert_eq!(
             scripts.world().btech.maps()[&map]
-                .decoration(BattleHexCoordinate { x: 0, y: 0 })
+                .decoration(HexCoordinate { x: 0, y: 0 })
                 .unwrap()
                 .unwrap()
                 .remaining,
@@ -77,8 +77,8 @@ async fn operator_decoration_reference_argument_replies() {
 #[tokio::test]
 async fn operator_decoration_duration_and_restart() {
     for (command, lua_name, kind) in [
-        ("addfire", "add_fire", BattleDecorationKind::Fire),
-        ("addsmoke", "add_smoke", BattleDecorationKind::Smoke),
+        ("addfire", "add_fire", DecorationKind::Fire),
+        ("addsmoke", "add_smoke", DecorationKind::Smoke),
     ] {
         for duration in [i32::MIN, -1, 0, 1, 60, 61, 120, 32767, 65536, i32::MAX] {
             let (_dir, config, mut world) = support::isolated_world().await;
@@ -87,7 +87,7 @@ async fn operator_decoration_duration_and_restart() {
                 &mut world,
                 map,
                 "plain",
-                BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+                MapAsset::from_cells("1 1\n.0\n").unwrap(),
             )
             .unwrap();
             support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -121,12 +121,12 @@ async fn operator_decoration_duration_and_restart() {
             let mut saved = native.world().clone();
             let expected = if duration == 0 {
                 0
-            } else if kind == BattleDecorationKind::Fire {
+            } else if kind == DecorationKind::Fire {
                 i64::from(duration.clamp(-32768, 32767))
             } else {
                 i64::from(duration.max(1))
             };
-            let coordinate = BattleHexCoordinate { x: 0, y: 0 };
+            let coordinate = HexCoordinate { x: 0, y: 0 };
             let effect = saved.btech.maps()[&map]
                 .decoration(coordinate)
                 .unwrap()
@@ -136,12 +136,12 @@ async fn operator_decoration_duration_and_restart() {
             assert_eq!(effect.object_duration, object_duration);
             assert_eq!(
                 effect.next_spread,
-                (kind == BattleDecorationKind::Fire && duration != 0).then_some(60)
+                (kind == DecorationKind::Fire && duration != 0).then_some(60)
             );
             persistence::save(&config.database(), &saved).await.unwrap();
             let mut replay = persistence::load(&config.database()).await.unwrap();
             assert_eq!(saved.btech, replay.btech);
-            let expiry = if kind == BattleDecorationKind::Fire && expected != 0 {
+            let expiry = if kind == DecorationKind::Fire && expected != 0 {
                 60 + i64::from((expected as i16).wrapping_sub(60)).max(1)
             } else {
                 expected
@@ -156,7 +156,7 @@ async fn operator_decoration_duration_and_restart() {
                     assert_eq!(marker, Some(effect));
                 } else if tick < expiry {
                     assert!(marker.is_some());
-                    if kind == BattleDecorationKind::Smoke {
+                    if kind == DecorationKind::Smoke {
                         assert_eq!(marker.unwrap().remaining, expected - tick);
                         assert_eq!(marker.unwrap().object_duration, object_duration);
                     }
@@ -171,7 +171,7 @@ async fn operator_decoration_duration_and_restart() {
                     replay = persistence::load(&config.database()).await.unwrap();
                     assert_eq!(saved.btech, replay.btech);
                 }
-                if kind == BattleDecorationKind::Fire && tick == 60 && expected != 0 {
+                if kind == DecorationKind::Fire && tick == 60 && expected != 0 {
                     assert_eq!(
                         marker.unwrap().object_duration,
                         object_duration.wrapping_sub(60)
@@ -187,7 +187,7 @@ async fn operator_decoration_duration_and_restart() {
             } else {
                 assert_eq!(
                     remaining.unwrap().remaining,
-                    if kind == BattleDecorationKind::Smoke {
+                    if kind == DecorationKind::Smoke {
                         expected - 1
                     } else {
                         expected
@@ -206,7 +206,7 @@ async fn operator_decoration_replacement_and_admission() {
         &mut world,
         map,
         "plain",
-        BattleMapAsset::from_cells("1 1\n~2\n").unwrap(),
+        MapAsset::from_cells("1 1\n~2\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -235,8 +235,8 @@ async fn operator_decoration_replacement_and_admission() {
             &config,
             ObjectId(2),
             map,
-            BattleHexCoordinate { x: 0, y: 0 },
-            BattleDecorationKind::Fire,
+            HexCoordinate { x: 0, y: 0 },
+            DecorationKind::Fire,
             1
         )
         .is_err()
@@ -265,17 +265,17 @@ async fn changing_wind_preserves_pending_deadlines_and_restart() {
             &mut world,
             map,
             "plain",
-            BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+            MapAsset::from_cells("1 1\n.0\n").unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
         set_map_wind(&mut world, map, 0, initial_speed).unwrap();
-        let coordinate = BattleHexCoordinate { x: 0, y: 0 };
+        let coordinate = HexCoordinate { x: 0, y: 0 };
         set_map_decoration(
             &mut world,
             map,
             coordinate,
-            Some(BattleDecoration::new(BattleDecorationKind::Fire, 120, None)),
+            Some(BattleDecoration::new(DecorationKind::Fire, 120, None)),
         )
         .unwrap();
         for _ in 0..10 {
@@ -337,19 +337,19 @@ async fn extreme_negative_fire_budgets_use_the_current_wind_interval() {
             &mut world,
             map,
             "plain",
-            BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+            MapAsset::from_cells("1 1\n.0\n").unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-        let coordinate = BattleHexCoordinate { x: 0, y: 0 };
+        let coordinate = HexCoordinate { x: 0, y: 0 };
         add_battle_map_decoration_action(
             &scripts,
             &config,
             ObjectId(1),
             map,
             coordinate,
-            BattleDecorationKind::Fire,
+            DecorationKind::Fire,
             duration,
         )
         .unwrap();

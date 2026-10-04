@@ -1,8 +1,8 @@
 //! Stored decoration ownership preserves auxiliary map-object payloads during terrain edits.
 use super::write::{Cell, Fields, row};
 use crate::{
-    BattleHexCoordinate, BattleStaticDecoration, BattleStaticDecorationKind, ObjectId,
-    StoredBattleMap, Terrain, World,
+    BattleStaticDecoration, BattleStaticDecorationKind, HexCoordinate, ObjectId, StoredBattleMap,
+    Terrain, World,
 };
 use anyhow::{Context, Result, ensure};
 use sqlx::{Row, SqliteConnection};
@@ -25,7 +25,7 @@ pub(super) async fn load(
             map.static_decorations(kind).len() < 1_000_000,
             "Too many stored decorations"
         );
-        let coordinate = BattleHexCoordinate {
+        let coordinate = HexCoordinate {
             x: row.try_get("x")?,
             y: row.try_get("y")?,
         };

@@ -62,7 +62,7 @@ pub(super) fn unit_unblocked(world: &World, observer: ObjectId, target: ObjectId
 pub(super) fn hex_unblocked(
     world: &World,
     observer: ObjectId,
-    target: super::BattleHexCoordinate,
+    target: super::HexCoordinate,
 ) -> Result<bool> {
     let (terrain, _) = super::los::unit_hex_los(world, observer, target)?;
     Ok(battle_visibility(world, observer)?.clairvoyant || !terrain.blocked)

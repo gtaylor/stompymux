@@ -16,7 +16,7 @@ async fn transfer_preserves_running_controls_and_crew_across_all_admitted_chassi
             &mut world,
             exterior,
             "outside",
-            BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
+            MapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, exterior, support::FIXTURE_DICE_SEED);
@@ -24,7 +24,7 @@ async fn transfer_preserves_running_controls_and_crew_across_all_admitted_chassi
             &mut world,
             interior,
             "inside",
-            BattleMapAsset::from_cells("2 2\n.3.3\n.3.3\n").unwrap(),
+            MapAsset::from_cells("2 2\n.3.3\n.3.3\n").unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, interior, support::FIXTURE_DICE_SEED);
@@ -56,7 +56,7 @@ async fn transfer_preserves_running_controls_and_crew_across_all_admitted_chassi
             &mut world,
             id,
             ObjectId(1),
-            BattleHexCoordinate { x: 2, y: 2 },
+            HexCoordinate { x: 2, y: 2 },
             BattleHexTargetMode::Hex,
         )
         .unwrap();
@@ -193,7 +193,7 @@ async fn transfer_preserves_running_controls_and_crew_across_all_admitted_chassi
         assert!(after["target_lock"].is_null());
         assert_eq!(
             after["motion"]["point"],
-            serde_json::to_value(BattleHexCoordinate { x: 1, y: 1 }.center()).unwrap()
+            serde_json::to_value(HexCoordinate { x: 1, y: 1 }.center()).unwrap()
         );
         if let Some(unit) = world.btech.vehicles().get(&id)
             && let Some(flight) = unit.vtol_flight()

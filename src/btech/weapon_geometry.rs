@@ -15,7 +15,7 @@ pub(super) fn geometry(
     world: &World,
     shooter: ObjectId,
     index: usize,
-    target: BattlePoint,
+    target: Point,
 ) -> Result<WeaponGeometry> {
     let submerged = submerged(world, shooter, index)?;
     if let Some(unit) = world.btech.vehicles().get(&shooter) {

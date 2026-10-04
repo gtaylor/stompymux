@@ -1,5 +1,5 @@
 //! Mech ground motion and independent jump facing; unsupported hazards stop before entry.
-use super::{BattleNotice, BattlePoint, BattlePower};
+use super::{BattleNotice, BattlePower, Point};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 /// Durable sub-hex position and commanded versus actual motion.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct BattleMotion {
-    pub point: BattlePoint,
+    pub point: Point,
     pub heading: f64,
     pub desired_heading: f64,
     pub speed: f64,
@@ -16,7 +16,7 @@ pub struct BattleMotion {
 
 impl BattleMotion {
     /// A stationary unit facing north at the supplied position.
-    pub fn stationary(point: BattlePoint) -> Self {
+    pub fn stationary(point: Point) -> Self {
         Self {
             point,
             heading: 0.0,
@@ -27,7 +27,7 @@ impl BattleMotion {
     }
 
     /// Project one movement event, preserving reverse travel and shared map scaling.
-    pub(super) fn project_step(self, rate: f64) -> Result<BattlePoint> {
+    pub(super) fn project_step(self, rate: f64) -> Result<Point> {
         ensure!(rate.is_finite() && rate >= 0.0, "Invalid movement rate");
         self.point.project(
             self.heading + if self.speed < 0.0 { 180.0 } else { 0.0 },
@@ -194,10 +194,10 @@ impl BattleMovementRules {
 
 /// A checked crossing carries both map elevation and the selected physical bridge surface.
 struct GroundStep {
-    hex: super::BattleHexCoordinate,
+    hex: super::HexCoordinate,
     change: i16,
     old_position: super::BattlePosition,
-    old_point: BattlePoint,
+    old_point: Point,
     elevation: Option<f64>,
     old_elevation: Option<f64>,
     ice_check: bool,
@@ -604,7 +604,7 @@ fn advance_motion_inner(
             world,
             id,
             motion,
-            super::BattleHexCoordinate {
+            super::HexCoordinate {
                 x: i32::from(position.x),
                 y: i32::from(position.y),
             },
@@ -707,7 +707,7 @@ fn advance_motion_inner(
 pub(super) fn finish_interrupted_jump(
     world: &mut World,
     id: ObjectId,
-    point: (BattlePoint, BattlePoint),
+    point: (Point, Point),
     fall: super::BattleFallRules,
 ) -> Result<Vec<BattleNotice>> {
     finish_interrupted_jump_inner(world, id, point, fall, None).map(|segment| segment.notices)
@@ -717,7 +717,7 @@ pub(super) fn finish_interrupted_jump(
 pub(super) fn finish_interrupted_jump_in_action(
     world: &mut World,
     id: ObjectId,
-    point: (BattlePoint, BattlePoint),
+    point: (Point, Point),
     fall: super::BattleFallRules,
     falls: &mut Vec<super::BattleFallReport>,
 ) -> Result<GroundSegmentReport> {
@@ -728,7 +728,7 @@ pub(super) fn finish_interrupted_jump_in_action(
 fn finish_interrupted_jump_inner(
     world: &mut World,
     id: ObjectId,
-    point: (BattlePoint, BattlePoint),
+    point: (Point, Point),
     fall: super::BattleFallRules,
     falls: Option<&mut Vec<super::BattleFallReport>>,
 ) -> Result<GroundSegmentReport> {
@@ -764,7 +764,7 @@ fn resolve_ground_segment(
     world: &mut World,
     id: ObjectId,
     mut motion: BattleMotion,
-    (trace_start, mut proposed): (BattlePoint, BattlePoint),
+    (trace_start, mut proposed): (Point, Point),
     rules: BattleMovementRules,
     settle: bool,
     mut falls: Option<&mut Vec<super::BattleFallReport>>,
@@ -1191,13 +1191,13 @@ fn cliff_fall_levels(speed: f64, skid: bool) -> i16 {
 fn restore_ground_position(
     unit: &mut super::BattleUnit,
     position: super::BattlePosition,
-    point: BattlePoint,
+    point: Point,
     elevation: Option<f64>,
 ) {
     unit.position = Some(position);
     unit.ground_elevation = elevation;
     unit.hex_sync_pending = point.containing_hex().ok()
-        != Some(super::BattleHexCoordinate {
+        != Some(super::HexCoordinate {
             x: i32::from(position.x),
             y: i32::from(position.y),
         });

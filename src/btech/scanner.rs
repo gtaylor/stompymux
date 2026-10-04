@@ -187,7 +187,7 @@ pub(super) struct ScannerUnit<'a> {
     pub(super) travel_heading: Option<f64>,
     pub(super) destroyed: bool,
     pub(super) slot: Option<u32>,
-    pub(super) point: Option<super::BattlePoint>,
+    pub(super) point: Option<super::Point>,
 }
 
 impl ScannerUnit<'_> {

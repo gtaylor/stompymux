@@ -118,7 +118,7 @@ pub fn set_map_flag_action(
     config: &Config,
     actor: ObjectId,
     map: ObjectId,
-    flag: super::BattleMapFlag,
+    flag: super::MapFlag,
     enabled: bool,
 ) -> Result<()> {
     let flags = scripts

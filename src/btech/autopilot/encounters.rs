@@ -1,8 +1,8 @@
 //! Small seeded production-heartbeat encounters for comparing movement policies.
 use super::*;
 use crate::{
-    BattleMapAsset, BattlePower, BattleUnitTemplate, Config, HeartbeatHarness, Kind, ObjectId,
-    World, persistence,
+    BattlePower, BattleUnitTemplate, Config, HeartbeatHarness, Kind, MapAsset, ObjectId, World,
+    persistence,
 };
 use anyhow::{Result, ensure};
 use serde::Serialize;
@@ -401,7 +401,7 @@ pub(super) fn fixture_with_target(
         &mut world,
         map,
         "encounter",
-        BattleMapAsset::from_cells(&terrain)?,
+        MapAsset::from_cells(&terrain)?,
     )?;
     world.btech.maps.get_mut(&map).unwrap().fire_dice = Some(crate::BattleDice::seeded([seed; 32]));
     let shooter = world.create(config, "shooter".into(), Kind::Thing);

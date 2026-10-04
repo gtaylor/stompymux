@@ -81,7 +81,7 @@ async fn core_damage_survives_restart_and_rejects_invalid_phase_targets_atomical
         &mut world,
         map,
         "damage.map",
-        stompymux_rs::BattleMapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
+        stompymux_rs::MapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);

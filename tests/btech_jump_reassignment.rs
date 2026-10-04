@@ -27,11 +27,8 @@ async fn transferred_jumps_rebind_boundaries_and_replay_to_landing() {
                         &mut world,
                         destination,
                         "destination",
-                        BattleMapAsset::from_cells(&format!(
-                            "1 {height}\n{}",
-                            ".0\n".repeat(height)
-                        ))
-                        .unwrap(),
+                        MapAsset::from_cells(&format!("1 {height}\n{}", ".0\n".repeat(height)))
+                            .unwrap(),
                     )
                     .unwrap();
                     support::seed_object_dice(&mut world, destination, support::FIXTURE_DICE_SEED);
@@ -103,7 +100,7 @@ async fn rebound_jump_assignment_uses_host_rollback() {
         &mut world,
         map,
         "small",
-        BattleMapAsset::from_cells("1 2\n.0\n.0\n").unwrap(),
+        MapAsset::from_cells("1 2\n.0\n.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);

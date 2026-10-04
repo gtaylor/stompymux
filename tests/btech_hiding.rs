@@ -29,7 +29,7 @@ async fn fixture(
         &mut world,
         map,
         "cover",
-        BattleMapAsset::from_cells(&format!("3 3\n{}", row.repeat(3))).unwrap(),
+        MapAsset::from_cells(&format!("3 3\n{}", row.repeat(3))).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -498,7 +498,7 @@ async fn hiding_admission_and_elevation_checks_are_atomic() {
         let mut terrain = world.clone();
         let mut state = serde_json::to_value(&terrain.btech).unwrap();
         state["maps"][map.0.to_string()]["terrain"][7] =
-            serde_json::to_value(BattleHex::new(Terrain::Grassland, 0)).unwrap();
+            serde_json::to_value(Hex::new(Terrain::Grassland, 0)).unwrap();
         terrain.btech = serde_json::from_value(state).unwrap();
         let before = terrain.btech.clone();
         assert!(
@@ -562,9 +562,9 @@ async fn hiding_aircraft_crash_orders_crossing_before_damage_and_replays() {
         let mut state = serde_json::to_value(&world.btech).unwrap();
         state["maps"][map.0.to_string()]["movement_modifier"] = 10000.into();
         state["maps"][map.0.to_string()]["terrain"][4] =
-            serde_json::to_value(BattleHex::new(Terrain::LightForest, 0)).unwrap();
+            serde_json::to_value(Hex::new(Terrain::LightForest, 0)).unwrap();
         state["maps"][map.0.to_string()]["terrain"][7] =
-            serde_json::to_value(BattleHex::new(Terrain::Grassland, 1)).unwrap();
+            serde_json::to_value(Hex::new(Terrain::Grassland, 1)).unwrap();
         world.btech = serde_json::from_value(state).unwrap();
         edit(&mut world, id, |unit| {
             unit["signature"]["hidden"] = true.into();

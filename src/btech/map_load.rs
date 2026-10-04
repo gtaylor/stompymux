@@ -117,7 +117,7 @@ fn load_map_state_action(
                 super::terrain_edit::replace_hex(
                     &mut world,
                     id,
-                    super::BattleHexCoordinate { x, y },
+                    super::HexCoordinate { x, y },
                     asset.hex(x, y).context("Map coordinates out of bounds")?,
                 )?;
             }

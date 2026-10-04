@@ -204,8 +204,8 @@ async fn report_shows_live_jump_heading_without_advancing_flight() {
     )
     .await;
     let path = BattleJumpPath::new(
-        BattleHexCoordinate { x: 0, y: 10 }.center(),
-        BattleHexCoordinate { x: 0, y: 8 }.center(),
+        HexCoordinate { x: 0, y: 10 }.center(),
+        HexCoordinate { x: 0, y: 8 }.center(),
         0,
         0,
         5,

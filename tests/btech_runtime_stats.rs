@@ -90,7 +90,7 @@ async fn digging_alone_keeps_simulation_pending_until_completion() {
             &mut world,
             map,
             "dig",
-            BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+            MapAsset::from_cells("1 1\n.0\n").unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);

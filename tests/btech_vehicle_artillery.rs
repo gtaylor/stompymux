@@ -12,7 +12,7 @@ async fn fixture(
         &mut world,
         map,
         "test",
-        BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
+        MapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
     let mut ids = Vec::new();
@@ -63,7 +63,7 @@ fn approaching(
     map: ObjectId,
     mode: BattleArtilleryMode,
 ) -> BattleArtilleryFlight {
-    let center = BattleHexCoordinate { x: 1, y: 1 };
+    let center = HexCoordinate { x: 1, y: 1 };
     let mut flight =
         BattleArtilleryFlight::new(center, center, BattleWeapon::LongTom, mode, true).unwrap();
     for _ in 0..9 {
@@ -247,7 +247,7 @@ async fn artillery_water_depth_excludes_submerged_hulls_but_not_hovercraft() {
             &mut world,
             map,
             "water",
-            BattleMapAsset::from_cells(&format!("3 3\n{}", row.repeat(3))).unwrap(),
+            MapAsset::from_cells(&format!("3 3\n{}", row.repeat(3))).unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -350,7 +350,7 @@ async fn blast_rear_selection_redirects_later_vehicle_faces_and_preserves_dice()
                         map,
                         0,
                         Some(BattleMinefield {
-                            coordinate: BattleHexCoordinate { x: 1, y: 1 },
+                            coordinate: HexCoordinate { x: 1, y: 1 },
                             kind: BattleMineKind::Standard,
                             strength: 1,
                             extra: 0,

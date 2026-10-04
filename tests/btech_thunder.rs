@@ -60,7 +60,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {
         &mut world,
         map,
         "thunder",
-        BattleMapAsset::from_cells(&format!("3 12\n{rows}\n")).unwrap(),
+        MapAsset::from_cells(&format!("3 12\n{rows}\n")).unwrap(),
     )
     .unwrap();
     let id = world.create(&config, "Launcher".into(), Kind::Thing);
@@ -140,7 +140,7 @@ fn shot_rules() -> BattleShotRules {
 }
 
 /// Fire the launcher at a hex with the first dice seed that hits.
-fn fire_until_hit(world: &mut World, shooter: ObjectId, coordinate: BattleHexCoordinate) {
+fn fire_until_hit(world: &mut World, shooter: ObjectId, coordinate: HexCoordinate) {
     select_battle_hex_target(
         world,
         shooter,
@@ -193,7 +193,7 @@ fn recycle(world: &mut World, shooter: ObjectId) {
 #[tokio::test]
 async fn thunder_rounds_lay_their_minefields() {
     let (_dir, config, initial, shooter, map) = fixture().await;
-    let target = BattleHexCoordinate { x: 1, y: 3 };
+    let target = HexCoordinate { x: 1, y: 3 };
     for (mode, kind, extra, cells) in [
         (BattleAmmunitionMode::Mine, BattleMineKind::Standard, 0, 1),
         (
@@ -299,7 +299,7 @@ async fn active_mines_catch_hovercraft_over_water() {
         &mut world,
         map,
         "ford",
-        BattleMapAsset::from_cells("3 3\n.0.0.0\n.0~1.0\n.0.0.0\n").unwrap(),
+        MapAsset::from_cells("3 3\n.0.0.0\n.0~1.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -318,7 +318,7 @@ async fn active_mines_catch_hovercraft_over_water() {
     .unwrap();
     support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, id, map, 1, 1).unwrap();
-    let coordinate = BattleHexCoordinate { x: 1, y: 1 };
+    let coordinate = HexCoordinate { x: 1, y: 1 };
     for (ordinal, kind) in [(0, BattleMineKind::Standard), (1, BattleMineKind::Active)] {
         set_minefield(
             &mut world,

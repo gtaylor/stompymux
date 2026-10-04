@@ -1,6 +1,6 @@
 //! Named battlefield rule switches stored in a map's `flags` bitmask.
 //!
-//! Callers test and change map rules through [`BattleMapFlag`] instead of bare bit literals.
+//! Callers test and change map rules through [`MapFlag`] instead of bare bit literals.
 //! Bit positions are the persisted encoding shared by map files and saved state.
 use anyhow::{Result, bail};
 use serde::{Deserialize, Serialize};
@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 /// One battlefield rule switch an operator can enable on a map.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleMapFlag {
+pub enum MapFlag {
     /// Environmental rules (gravity, temperature, vacuum) apply to units on the map.
     SpecialRules,
     /// The map has no atmosphere.
@@ -25,7 +25,7 @@ pub enum BattleMapFlag {
     NoPhysicalAttacks,
 }
 
-impl BattleMapFlag {
+impl MapFlag {
     /// Every flag, in bit order.
     pub const ALL: [Self; 7] = [
         Self::SpecialRules,
@@ -110,9 +110,9 @@ impl BattleMapFlag {
     }
 }
 
-impl crate::BattleMapAsset {
+impl crate::MapAsset {
     /// Whether this map asset has `flag` switched on.
-    pub fn has_flag(&self, flag: BattleMapFlag) -> bool {
+    pub fn has_flag(&self, flag: MapFlag) -> bool {
         flag.is_set(i64::from(self.flags))
     }
 }
@@ -126,17 +126,15 @@ pub fn parse_map_flags(value: &str) -> Result<i64> {
     value
         .split([' ', '\t', ','])
         .filter(|name| !name.is_empty())
-        .try_fold(0, |flags, name| {
-            Ok(flags | BattleMapFlag::parse(name)?.bit())
-        })
+        .try_fold(0, |flags, name| Ok(flags | MapFlag::parse(name)?.bit()))
 }
 
 /// Display the named flags in `flags` in bit order; `-` when none are set.
 pub fn format_map_flags(flags: i64) -> String {
-    let names: Vec<_> = BattleMapFlag::ALL
+    let names: Vec<_> = MapFlag::ALL
         .into_iter()
         .filter(|flag| flag.is_set(flags))
-        .map(BattleMapFlag::name)
+        .map(MapFlag::name)
         .collect();
     if names.is_empty() {
         return "-".into();
@@ -151,18 +149,18 @@ mod tests {
     #[test]
     fn bits_are_distinct_and_names_round_trip() {
         let mut seen = 0;
-        for flag in BattleMapFlag::ALL {
+        for flag in MapFlag::ALL {
             assert_eq!(seen & flag.bit(), 0, "{flag:?}");
             seen |= flag.bit();
-            assert_eq!(BattleMapFlag::parse(flag.name()).unwrap(), flag);
+            assert_eq!(MapFlag::parse(flag.name()).unwrap(), flag);
             assert_eq!(
-                BattleMapFlag::parse(&flag.name().to_ascii_uppercase()).unwrap(),
+                MapFlag::parse(&flag.name().to_ascii_uppercase()).unwrap(),
                 flag
             );
             assert!(flag.is_set(flag.apply(0, true)));
             assert!(!flag.is_set(flag.apply(-1, false)));
         }
-        assert_eq!(seen, BattleMapFlag::mask());
+        assert_eq!(seen, MapFlag::mask());
         assert_eq!(seen & 1, 0);
     }
 

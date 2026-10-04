@@ -1,5 +1,5 @@
 //! Stored decoration records retain restoration terrain and the complete operator-visible payload.
-use super::{BattleHexCoordinate, StoredBattleMap, Terrain};
+use super::{HexCoordinate, StoredBattleMap, Terrain};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -29,7 +29,7 @@ impl BattleStaticDecorationKind {
 /// A stored map-object record without a scheduled event.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BattleStaticDecoration {
-    pub coordinate: BattleHexCoordinate,
+    pub coordinate: HexCoordinate,
     /// Terrain a generic decoration restores when it is deleted. Fire and smoke records have
     /// none, since fire and smoke never change the terrain they cover.
     pub restored_terrain: Option<Terrain>,

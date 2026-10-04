@@ -5,8 +5,8 @@
 use super::btech_deadlines::Clock;
 use super::write::{Cell, Fields, Rows, purge_rows, sync_changed_rows};
 use crate::{
-    BattleArtilleryFlight, BattleArtilleryMode, BattleArtilleryShot, BattleHexCoordinate,
-    BattleWeapon, ObjectId, StoredBattleMap, World,
+    BattleArtilleryFlight, BattleArtilleryMode, BattleArtilleryShot, BattleWeapon, HexCoordinate,
+    ObjectId, StoredBattleMap, World,
 };
 use anyhow::{Context, Result, bail};
 use sqlx::{Row, SqliteConnection, sqlite::SqliteRow};
@@ -67,8 +67,8 @@ fn encode(shot: &BattleArtilleryShot, clock: Clock) -> Fields {
 
 /// Rebuild one shot, revalidating its flight.
 fn decode(entry: &SqliteRow, clock: Clock) -> Result<BattleArtilleryShot> {
-    let coordinate = |x: &str, y: &str| -> Result<BattleHexCoordinate> {
-        Ok(BattleHexCoordinate {
+    let coordinate = |x: &str, y: &str| -> Result<HexCoordinate> {
+        Ok(HexCoordinate {
             x: i32::try_from(entry.try_get::<i64, _>(x)?)?,
             y: i32::try_from(entry.try_get::<i64, _>(y)?)?,
         })

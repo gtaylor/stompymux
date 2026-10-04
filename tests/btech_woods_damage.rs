@@ -21,7 +21,7 @@ fn prepare(world: &mut World, shooter: ObjectId, target: ObjectId, terrain: Terr
     let map = world.btech.units()[&target].map.unwrap();
     let mut state = serde_json::to_value(&world.btech).unwrap();
     state["maps"][map.0.to_string()]["terrain"][10] =
-        serde_json::to_value(BattleHex::new(terrain, 0)).unwrap();
+        serde_json::to_value(Hex::new(terrain, 0)).unwrap();
     world.btech = serde_json::from_value(state).unwrap();
     let seed = (0..=255)
         .find(|&value| BattleDice::seeded([value; 32]).two_d6() == roll)
@@ -44,7 +44,7 @@ fn prepare_seeded(
     let map = world.btech.units()[&target].map.unwrap();
     let mut state = serde_json::to_value(&world.btech).unwrap();
     state["maps"][map.0.to_string()]["terrain"][10] =
-        serde_json::to_value(BattleHex::new(terrain, 0)).unwrap();
+        serde_json::to_value(Hex::new(terrain, 0)).unwrap();
     world.btech = serde_json::from_value(state).unwrap();
     firing::edit(world, shooter, |state| {
         state["dice"] = serde_json::to_value(BattleDice::seeded(seed)).unwrap()
@@ -1164,7 +1164,7 @@ async fn missed_direct_shots_share_incidental_terrain_and_preserve_targets() {
             continue;
         }
         let effect = resolve_woodland_effect(
-            BattleHex::new(Terrain::HeavyForest, 0),
+            Hex::new(Terrain::HeavyForest, 0),
             BattleWeapon::Flamer,
             BattleAmmunitionMode::Normal,
             3,
@@ -1235,7 +1235,7 @@ async fn missed_direct_shots_share_incidental_terrain_and_preserve_targets() {
                             &mut expected,
                             BattleWoodlandAttack {
                                 shooter,
-                                coordinate: BattleHexCoordinate { x: 0, y: 10 },
+                                coordinate: HexCoordinate { x: 0, y: 10 },
                                 weapon,
                                 ammunition: if cluster {
                                     BattleAmmunitionMode::Cluster

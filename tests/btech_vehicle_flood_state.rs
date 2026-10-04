@@ -75,7 +75,7 @@ async fn water_destruction_clears_controls_and_survives_sqlite_and_lua() {
         &mut world,
         map,
         "test",
-        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+        MapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);

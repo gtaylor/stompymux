@@ -1,7 +1,7 @@
 //! Cockpit claims through normal entry/exit, persisted pilots and callback rollback.
 use crate::support;
 use stompymux_rs::{
-    BattleMapAsset, BattleTemplate, Flag, Kind, ObjectId, Scripts, assign_battle_pilot,
+    BattleTemplate, Flag, Kind, MapAsset, ObjectId, Scripts, assign_battle_pilot,
     create_battle_map, create_battle_unit, dbck, persistence, place_battle_unit,
 };
 const JENNER: &str = include_str!("fixtures/btech/mechs/JR7-D.toml");
@@ -14,7 +14,7 @@ async fn enter_pilot_restart_and_leave_preserve_ordinary_movement() {
         &mut world,
         map,
         "test.map",
-        BattleMapAsset::from_cells("2 1\n.0.0\n").unwrap(),
+        MapAsset::from_cells("2 1\n.0.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);

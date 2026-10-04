@@ -21,8 +21,8 @@ impl super::StoredBattleMap {
         BattleMapEnvironment {
             gravity: self.gravity as u8,
             temperature: self.temperature as i8,
-            vacuum: self.has_flag(super::BattleMapFlag::Vacuum),
-            underground: self.has_flag(super::BattleMapFlag::Underground),
+            vacuum: self.has_flag(super::MapFlag::Vacuum),
+            underground: self.has_flag(super::MapFlag::Underground),
         }
     }
 }
@@ -55,13 +55,13 @@ pub fn set_map_environment(
         .clone();
     map.gravity = i64::from(conditions.gravity);
     map.temperature = i64::from(conditions.temperature);
-    map.set_flag(super::BattleMapFlag::Vacuum, conditions.vacuum);
+    map.set_flag(super::MapFlag::Vacuum, conditions.vacuum);
     // Underground is retained once enabled, including for an explicit false.
     if conditions.underground {
-        map.set_flag(super::BattleMapFlag::Underground, true);
+        map.set_flag(super::MapFlag::Underground, true);
     }
     map.set_flag(
-        super::BattleMapFlag::SpecialRules,
+        super::MapFlag::SpecialRules,
         conditions.vacuum
             || conditions.gravity != 100
             || !(-30..=50).contains(&conditions.temperature),

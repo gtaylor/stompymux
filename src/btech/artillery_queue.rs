@@ -80,7 +80,7 @@ pub fn enqueue_artillery(
     ensure!(
         position.map == map
             && flight.origin()
-                == (BattleHexCoordinate {
+                == (HexCoordinate {
                     x: i32::from(position.x),
                     y: i32::from(position.y)
                 }),

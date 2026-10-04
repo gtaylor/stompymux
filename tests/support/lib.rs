@@ -32,17 +32,17 @@ pub use server::start;
 /// Write the map file `<name>.toml` into `dir`, built from the compact cell notation.
 pub fn write_map(dir: &std::path::Path, name: &str, cells: &str) {
     std::fs::create_dir_all(dir).unwrap();
-    let text = stompymux_rs::BattleMapAsset::from_cells(cells)
+    let text = stompymux_rs::MapAsset::from_cells(cells)
         .unwrap()
         .to_file()
         .unwrap();
     std::fs::write(dir.join(format!("{name}.toml")), text).unwrap();
 }
 
-/// Rewrite one hex of serialized world state through [`stompymux_rs::BattleHex`].
+/// Rewrite one hex of serialized world state through [`stompymux_rs::Hex`].
 pub fn edit_hex(
     tile: &mut serde_json::Value,
-    change: impl FnOnce(stompymux_rs::BattleHex) -> stompymux_rs::BattleHex,
+    change: impl FnOnce(stompymux_rs::Hex) -> stompymux_rs::Hex,
 ) {
     let hex = serde_json::from_value(tile.take()).expect("serialized hex");
     *tile = serde_json::to_value(change(hex)).unwrap();
@@ -50,12 +50,12 @@ pub fn edit_hex(
 
 /// Replace one serialized hex outright with the hex a terrain and elevation digit describe.
 pub fn set_hex(tile: &mut serde_json::Value, terrain: stompymux_rs::Terrain, elevation: u8) {
-    *tile = serde_json::to_value(stompymux_rs::BattleHex::new(terrain, elevation)).unwrap();
+    *tile = serde_json::to_value(stompymux_rs::Hex::new(terrain, elevation)).unwrap();
 }
 
-/// The digit the compact notation of [`stompymux_rs::BattleHex::new`] gives `hex`: water
+/// The digit the compact notation of [`stompymux_rs::Hex::new`] gives `hex`: water
 /// depth, structure top or bridge deck, or ground height.
-pub fn notation_digit(hex: stompymux_rs::BattleHex) -> u8 {
+pub fn notation_digit(hex: stompymux_rs::Hex) -> u8 {
     if hex.is_water_surface() {
         return hex.water_depth();
     }
@@ -65,15 +65,13 @@ pub fn notation_digit(hex: stompymux_rs::BattleHex) -> u8 {
 /// Rebuild one serialized hex from the compact notation with a new terrain, keeping its digit.
 pub fn set_hex_terrain(tile: &mut serde_json::Value, terrain: stompymux_rs::Terrain) {
     edit_hex(tile, |hex| {
-        stompymux_rs::BattleHex::new(terrain, notation_digit(hex))
+        stompymux_rs::Hex::new(terrain, notation_digit(hex))
     });
 }
 
 /// Rebuild one serialized hex from the compact notation with a new digit, keeping its terrain.
 pub fn set_hex_elevation(tile: &mut serde_json::Value, elevation: u8) {
-    edit_hex(tile, |hex| {
-        stompymux_rs::BattleHex::new(hex.terrain(), elevation)
-    });
+    edit_hex(tile, |hex| stompymux_rs::Hex::new(hex.terrain(), elevation));
 }
 
 /// Make a later neighboring-wood ignition fail after preceding mine effects have run.

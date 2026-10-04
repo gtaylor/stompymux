@@ -30,7 +30,7 @@ async fn advanced_rotor_criticals_commit_saved_dice_and_material_effects_togethe
         saved["map_slot"] = 0.into();
         saved["power"] = serde_json::to_value(BattlePower::Running).unwrap();
         saved["motion"] = serde_json::to_value(BattleMotion::stationary(
-            BattleHexCoordinate { x: 0, y: 0 }.center(),
+            HexCoordinate { x: 0, y: 0 }.center(),
         ))
         .unwrap();
         saved["vtol_flight"] = serde_json::to_value(BattleVtolFlight {
@@ -328,7 +328,7 @@ async fn airborne_engine_critical_requires_emergency_resolution_without_partial_
     saved["map_slot"] = 0.into();
     saved["power"] = serde_json::to_value(BattlePower::Running).unwrap();
     saved["motion"] = serde_json::to_value(BattleMotion::stationary(
-        BattleHexCoordinate { x: 0, y: 0 }.center(),
+        HexCoordinate { x: 0, y: 0 }.center(),
     ))
     .unwrap();
     saved["vtol_flight"] = serde_json::to_value(BattleVtolFlight {
@@ -450,7 +450,7 @@ async fn aircraft_explosions_settle_at_surface_and_share_case_containment_atomic
         &mut world,
         map,
         "explosion",
-        BattleMapAsset::from_cells("1 1\n.3\n").unwrap(),
+        MapAsset::from_cells("1 1\n.3\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -484,7 +484,7 @@ async fn aircraft_explosions_settle_at_surface_and_share_case_containment_atomic
         saved["map_slot"] = 0.into();
         saved["power"] = serde_json::to_value(BattlePower::Running).unwrap();
         saved["motion"] = serde_json::to_value(BattleMotion::stationary(
-            BattleHexCoordinate { x: 0, y: 0 }.center(),
+            HexCoordinate { x: 0, y: 0 }.center(),
         ))
         .unwrap();
         saved["vtol_flight"] = serde_json::to_value(BattleVtolFlight {
@@ -542,7 +542,7 @@ async fn engine_emergency_landings_use_shared_checks_and_commit_failed_attempts_
         &mut world,
         map,
         "emergency",
-        BattleMapAsset::from_cells("1 1\n.3\n").unwrap(),
+        MapAsset::from_cells("1 1\n.3\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -570,7 +570,7 @@ async fn engine_emergency_landings_use_shared_checks_and_commit_failed_attempts_
             saved["map_slot"] = 0.into();
             saved["power"] = serde_json::to_value(BattlePower::Running).unwrap();
             saved["motion"] = serde_json::to_value(BattleMotion::stationary(
-                BattleHexCoordinate { x: 0, y: 0 }.center(),
+                HexCoordinate { x: 0, y: 0 }.center(),
             ))
             .unwrap();
             saved["vtol_flight"] = serde_json::to_value(BattleVtolFlight {
@@ -693,7 +693,7 @@ async fn engine_loss_over_water_starts_falling_without_a_landing_roll() {
         &mut world,
         map,
         "water",
-        BattleMapAsset::from_cells("1 1\n~3\n").unwrap(),
+        MapAsset::from_cells("1 1\n~3\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -711,7 +711,7 @@ async fn engine_loss_over_water_starts_falling_without_a_landing_roll() {
     saved["map_slot"] = 0.into();
     saved["power"] = serde_json::to_value(BattlePower::Running).unwrap();
     saved["motion"] = serde_json::to_value(BattleMotion::stationary(
-        BattleHexCoordinate { x: 0, y: 0 }.center(),
+        HexCoordinate { x: 0, y: 0 }.center(),
     ))
     .unwrap();
     saved["vtol_flight"] = serde_json::to_value(BattleVtolFlight {
@@ -763,7 +763,7 @@ async fn emergency_landing_feedback_is_private_and_replayable() {
         &mut world,
         map,
         "test",
-        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+        MapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);

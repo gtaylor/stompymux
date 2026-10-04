@@ -1,20 +1,20 @@
 //! Map assets: a battlefield's dimensions, environment, hexes and scripted points of
 //! interest, as read from and written to map files.
-use crate::{BattleHex, Terrain};
+use crate::{Hex, Terrain};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 /// Parsed map terrain and settings; fire and smoke drawn in the file are hex overlays.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BattleMapAsset {
+pub struct MapAsset {
     pub width: u16,
     pub height: u16,
     pub flags: i32,
     pub gravity: u8,
     pub temperature: i8,
     /// Row-major immutable tiles shared by transaction checkpoints.
-    pub hexes: Arc<Vec<BattleHex>>,
+    pub hexes: Arc<Vec<Hex>>,
     /// Scripted points of interest in file order.
     pub points_of_interest: Vec<MapPointOfInterest>,
 }
@@ -60,7 +60,7 @@ impl MapPointOfInterest {
     }
 }
 
-impl BattleMapAsset {
+impl MapAsset {
     /// Build a map from the compact cell notation used to set up maps in code and tests: a
     /// `width height` line, then one line per row of terrain-symbol and elevation-digit pairs
     /// (`.` is grassland), then optionally `flags: gravity temperature`.
@@ -92,7 +92,7 @@ impl BattleMapAsset {
                         .with_context(|| format!("at {x},{y}"))?,
                 };
                 ensure!(pair[1].is_ascii_digit(), "invalid elevation at {x},{y}");
-                hexes.push(BattleHex::new(terrain, pair[1] - b'0'));
+                hexes.push(Hex::new(terrain, pair[1] - b'0'));
             }
         }
         let (mut flags, mut gravity, mut temperature) = (0, 100, 20);
@@ -122,7 +122,7 @@ impl BattleMapAsset {
     }
 
     /// Resolve a tile without wrapping negative or out-of-range coordinates.
-    pub fn hex(&self, x: i32, y: i32) -> Option<BattleHex> {
+    pub fn hex(&self, x: i32, y: i32) -> Option<Hex> {
         if x < 0 || y < 0 || x >= i32::from(self.width) || y >= i32::from(self.height) {
             return None;
         }
@@ -139,7 +139,7 @@ mod tests {
     #[test]
     fn bridge_jump_collision_distinguishes_entry_and_vertical_integration() {
         for deck in 0..=9 {
-            let bridge = BattleHex::new(Terrain::Bridge, deck);
+            let bridge = Hex::new(Terrain::Bridge, deck);
             for altitude in -3..=12 {
                 assert_eq!(
                     bridge.blocks_jump_entry(altitude),
@@ -151,7 +151,7 @@ mod tests {
                 );
             }
         }
-        let high_span = BattleHex::new(Terrain::Bridge, 9);
+        let high_span = Hex::new(Terrain::Bridge, 9);
         assert!(!high_span.blocks_jump_entry(4));
         assert!(high_span.blocks_jump_entry(8));
         assert!(!high_span.blocks_jump_entry(9));
@@ -160,9 +160,9 @@ mod tests {
     #[test]
     fn jump_entry_uses_ground_height_and_preserves_water_entry() {
         for altitude in -4..=4 {
-            let ground = BattleHex::new(Terrain::Grassland, 3);
-            let ice = BattleHex::new(Terrain::Ice, 3);
-            let water = BattleHex::new(Terrain::Water, 3);
+            let ground = Hex::new(Terrain::Grassland, 3);
+            let ice = Hex::new(Terrain::Ice, 3);
+            let water = Hex::new(Terrain::Water, 3);
             assert_eq!(ground.blocks_jump_entry(altitude), altitude < 3);
             assert_eq!(ice.blocks_jump_entry(altitude), altitude < -3);
             assert!(!water.blocks_jump_entry(altitude));
@@ -174,7 +174,7 @@ mod tests {
 
     #[test]
     fn rectangular_map_preserves_axes_depth_and_environment() {
-        let map = BattleMapAsset::from_cells("3 2\n.0~2`1\n#0-3^9\n32: 75 -12\n").unwrap();
+        let map = MapAsset::from_cells("3 2\n.0~2`1\n#0-3^9\n32: 75 -12\n").unwrap();
         assert_eq!((map.width, map.height), (3, 2));
         assert_eq!(map.hex(1, 0).unwrap().surface_height(), -2);
         assert_eq!(map.hex(1, 1).unwrap().surface_height(), -3);
@@ -189,7 +189,7 @@ mod tests {
     #[test]
     fn invalid_input_is_an_error_without_partial_maps() {
         for source in ["", "0 1", "1 1001", "2 1\n.0", "1 1\n.:"] {
-            assert!(BattleMapAsset::from_cells(source).is_err(), "{source:?}");
+            assert!(MapAsset::from_cells(source).is_err(), "{source:?}");
         }
     }
 }

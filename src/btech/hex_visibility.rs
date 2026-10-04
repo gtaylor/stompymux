@@ -1,11 +1,11 @@
 //! Sight and sensor visibility of terrain coordinates without acquiring or identifying their occupants.
-use super::{BattleDetectionChannel, BattleHexCoordinate, BattlePerceptionProfile};
+use super::{BattleDetectionChannel, BattlePerceptionProfile, HexCoordinate};
 use crate::{ObjectId, World};
 use anyhow::Result;
 use std::cell::OnceCell;
 
 /// Inspect an empty terrain target on the observer's map without contacts, randomness or mutation.
-pub fn hex_visible(world: &World, observer: ObjectId, target: BattleHexCoordinate) -> Result<bool> {
+pub fn hex_visible(world: &World, observer: ObjectId, target: HexCoordinate) -> Result<bool> {
     Ok(hex_detection(world, observer, target)?.is_some())
 }
 
@@ -13,7 +13,7 @@ pub fn hex_visible(world: &World, observer: ObjectId, target: BattleHexCoordinat
 pub fn hex_detection(
     world: &World,
     observer: ObjectId,
-    target: BattleHexCoordinate,
+    target: HexCoordinate,
 ) -> Result<Option<BattleDetectionChannel>> {
     super::hex_perception(world, observer, target)
 }
@@ -22,7 +22,7 @@ pub fn hex_detection(
 pub(super) fn observation_visible(
     world: &World,
     observer: ObjectId,
-    target: BattleHexCoordinate,
+    target: HexCoordinate,
 ) -> Result<bool> {
     let profile = super::perception_profile(world, observer)?;
     Ok(
@@ -49,7 +49,7 @@ impl<'w> HexViewer<'w> {
     }
 
     /// Whether the observer's sensor band or sight currently reaches this hex.
-    pub(super) fn visible(&self, target: BattleHexCoordinate) -> Result<bool> {
+    pub(super) fn visible(&self, target: HexCoordinate) -> Result<bool> {
         let profile = match self.profile.get() {
             Some(profile) => profile,
             None => {

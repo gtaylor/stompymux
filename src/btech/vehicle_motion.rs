@@ -1,5 +1,5 @@
 //! Ground-vehicle motion proposals share turning and acceleration with the Mech motion engine.
-use super::{BattleHex, BattleMotion, BattleVehicleMovement, BattleVehicleTemplate};
+use super::{BattleMotion, BattleVehicleMovement, BattleVehicleTemplate, Hex};
 use anyhow::{Result, ensure};
 
 /// Inputs independent of vehicle construction, supplied by world configuration and pilot state.
@@ -29,7 +29,7 @@ impl BattleVehicleTemplate {
     pub fn ground_motion_step(
         &self,
         motion: BattleMotion,
-        hex: BattleHex,
+        hex: Hex,
         rules: BattleVehicleMotionRules,
     ) -> Result<BattleMotion> {
         self.motion_at_maximum(motion, hex, rules, self.max_speed)
@@ -39,7 +39,7 @@ impl BattleVehicleTemplate {
     pub(super) fn motion_at_maximum(
         &self,
         mut motion: BattleMotion,
-        hex: BattleHex,
+        hex: Hex,
         rules: BattleVehicleMotionRules,
         maximum: f64,
     ) -> Result<BattleMotion> {
@@ -61,7 +61,7 @@ impl BattleVehicleTemplate {
     pub(super) fn control_at_maximum(
         &self,
         mut motion: BattleMotion,
-        hex: BattleHex,
+        hex: Hex,
         rules: BattleVehicleMotionRules,
         maximum: f64,
     ) -> Result<BattleMotion> {
@@ -129,7 +129,7 @@ impl super::BattleVehicle {
     pub fn ground_motion_step(
         &self,
         motion: BattleMotion,
-        hex: BattleHex,
+        hex: Hex,
         rules: BattleVehicleMotionRules,
     ) -> Result<BattleMotion> {
         self.definition()
@@ -138,7 +138,7 @@ impl super::BattleVehicle {
 }
 
 /// Speed divisor a vehicle's hex imposes on its desired throttle.
-fn terrain_divisor(hex: BattleHex, movement: BattleVehicleMovement) -> f64 {
+fn terrain_divisor(hex: Hex, movement: BattleVehicleMovement) -> f64 {
     hex.ground_speed_divisor(movement == BattleVehicleMovement::Wheeled)
 }
 
@@ -151,23 +151,14 @@ mod tests {
     #[test]
     fn sand_slows_only_wheeled_vehicles() {
         assert_eq!(
-            terrain_divisor(
-                BattleHex::new(Terrain::Sand, 0),
-                BattleVehicleMovement::Wheeled
-            ),
+            terrain_divisor(Hex::new(Terrain::Sand, 0), BattleVehicleMovement::Wheeled),
             2.0
         );
         for movement in [BattleVehicleMovement::Tracked, BattleVehicleMovement::Hover] {
-            assert_eq!(
-                terrain_divisor(BattleHex::new(Terrain::Sand, 0), movement),
-                1.0
-            );
+            assert_eq!(terrain_divisor(Hex::new(Terrain::Sand, 0), movement), 1.0);
         }
         assert_eq!(
-            terrain_divisor(
-                BattleHex::new(Terrain::Rough, 0),
-                BattleVehicleMovement::Tracked
-            ),
+            terrain_divisor(Hex::new(Terrain::Rough, 0), BattleVehicleMovement::Tracked),
             2.0
         );
     }

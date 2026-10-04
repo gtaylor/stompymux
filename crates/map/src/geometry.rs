@@ -5,22 +5,22 @@ use serde::{Deserialize, Serialize};
 
 /// Zero-based offset coordinates; signed values allow examining neighbors outside a map.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BattleHexCoordinate {
+pub struct HexCoordinate {
     pub x: i32,
     pub y: i32,
 }
 
 /// Continuous map position measured in hex heights, with positive y pointing south.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-pub struct BattlePoint {
+pub struct Point {
     pub x: f64,
     pub y: f64,
 }
 
-impl BattleHexCoordinate {
+impl HexCoordinate {
     /// Center of a column-staggered hex; even columns are offset half a hex south.
-    pub fn center(self) -> BattlePoint {
-        BattlePoint {
+    pub fn center(self) -> Point {
+        Point {
             x: (2.0 + 3.0 * f64::from(self.x)) / (2.0 * 3.0_f64.sqrt()),
             y: f64::from(self.y) + if self.x.rem_euclid(2) == 0 { 0.5 } else { 0.0 },
         }
@@ -83,7 +83,7 @@ impl BattleHexCoordinate {
     }
 }
 
-impl BattlePoint {
+impl Point {
     /// Reject non-finite inputs before trigonometry or distance calculations.
     fn validate(self) -> Result<()> {
         ensure!(
@@ -95,14 +95,14 @@ impl BattlePoint {
 
     /// Locate the closest hex center, with south/east ownership of exact shared boundaries.
     /// The left map border retains the rectangular first-column clipping convention.
-    pub fn containing_hex(self) -> Result<BattleHexCoordinate> {
+    pub fn containing_hex(self) -> Result<HexCoordinate> {
         self.validate()?;
         ensure!(
             self.x.abs() < 1e8 && self.y.abs() < 1e8,
             "Map point exceeds coordinate limits"
         );
         if self.x < 3.0_f64.sqrt() / 6.0 {
-            return Ok(BattleHexCoordinate {
+            return Ok(HexCoordinate {
                 x: if self.x < 0.0 { -1 } else { 0 },
                 y: self.y.floor() as i32,
             });
@@ -116,12 +116,12 @@ impl BattlePoint {
             let offset = if x.rem_euclid(2) == 0 { 0.5 } else { 0.0 };
             let row = (self.y - offset).floor() as i32;
             for y in row..=row + 1 {
-                let hex = BattleHexCoordinate { x, y };
+                let hex = HexCoordinate { x, y };
                 let center = hex.center();
                 let dx = center.x - self.x;
                 let dy = center.y - self.y;
                 let squared = dx * dx + dy * dy;
-                if best.is_none_or(|(old_squared, old): (f64, BattleHexCoordinate)| {
+                if best.is_none_or(|(old_squared, old): (f64, HexCoordinate)| {
                     // All four candidate centers are less than three hex heights
                     // away. Outside this conservative squared-distance margin,
                     // ordering cannot be affected by the 1e-12 boundary tolerance.
@@ -146,7 +146,7 @@ impl BattlePoint {
     /// Intersections with the three families of hex-edge lines partition the segment
     /// exactly; midpoint classification avoids fixed sampling that can miss narrow crossings.
     /// The bound covers any segment inside a supported 1000-by-1000 battlefield.
-    pub fn trace(self, end: Self) -> Result<Vec<BattleHexCoordinate>> {
+    pub fn trace(self, end: Self) -> Result<Vec<HexCoordinate>> {
         Ok(self
             .trace_positions(end)?
             .into_iter()
@@ -155,7 +155,7 @@ impl BattlePoint {
     }
 
     /// A representative point on the segment inside each crossed hex, for movement-triggered effects.
-    pub fn trace_positions(self, end: Self) -> Result<Vec<(BattleHexCoordinate, BattlePoint)>> {
+    pub fn trace_positions(self, end: Self) -> Result<Vec<(HexCoordinate, Point)>> {
         let cuts = self.trace_cuts(end)?;
         let dx = end.x - self.x;
         let dy = end.y - self.y;
@@ -231,7 +231,7 @@ impl BattlePoint {
 
     /// Exact parameter intervals occupied by each hex along a movement segment.
     /// Zero-length endpoint intervals retain boundary ownership used by ordinary tracing.
-    pub fn trace_intervals(self, end: Self) -> Result<Vec<(BattleHexCoordinate, f64, f64)>> {
+    pub fn trace_intervals(self, end: Self) -> Result<Vec<(HexCoordinate, f64, f64)>> {
         let cuts = self.trace_cuts(end)?;
         let mut result = vec![(self.containing_hex()?, 0.0, 0.0)];
         for pair in cuts.windows(2) {
@@ -272,7 +272,7 @@ impl BattlePoint {
     }
 
     /// Both points and their range must already have passed `range` validation.
-    /// [`BattlePoint::bearing`] is the checked entry point; this skips repeating the checks.
+    /// [`Point::bearing`] is the checked entry point; this skips repeating the checks.
     pub fn bearing_after_range(self, other: Self) -> Option<f64> {
         if self == other {
             return None;
@@ -307,19 +307,19 @@ mod tests {
     use super::*;
 
     /// Independent Euclidean-distance oracle for the optimized nearest-center query.
-    fn reference_containment(point: BattlePoint) -> BattleHexCoordinate {
+    fn reference_containment(point: Point) -> HexCoordinate {
         if point.x < 3.0_f64.sqrt() / 6.0 {
-            return BattleHexCoordinate {
+            return HexCoordinate {
                 x: if point.x < 0.0 { -1 } else { 0 },
                 y: point.y.floor() as i32,
             };
         }
         let column = ((point.x - 1.0 / 3.0_f64.sqrt()) / (3.0_f64.sqrt() / 2.0)).floor() as i32;
-        let mut best: Option<(f64, BattleHexCoordinate)> = None;
+        let mut best: Option<(f64, HexCoordinate)> = None;
         for x in column - 1..=column + 2 {
             let row = (point.y - if x.rem_euclid(2) == 0 { 0.5 } else { 0.0 }).floor() as i32;
             for y in row..=row + 1 {
-                let hex = BattleHexCoordinate { x, y };
+                let hex = HexCoordinate { x, y };
                 let distance = point.range(hex.center()).unwrap();
                 if best.is_none_or(|(old_distance, old)| {
                     distance < old_distance - 1e-12
@@ -334,7 +334,7 @@ mod tests {
 
     #[test]
     fn fast_containment_preserves_euclidean_boundary_ownership() {
-        let check = |point: BattlePoint| {
+        let check = |point: Point| {
             assert_eq!(
                 point.containing_hex().unwrap(),
                 reference_containment(point),
@@ -347,17 +347,17 @@ mod tests {
             let x = (seed >> 32) as u32;
             seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1);
             let y = (seed >> 32) as u32;
-            check(BattlePoint {
+            check(Point {
                 x: f64::from(x) / 43.0,
                 y: f64::from(y) / 43.0 - 5e7,
             });
         }
         for x in [0, 1, 2, 99, 999, 10_000_000] {
-            let center = BattleHexCoordinate { x, y: 10 }.center();
-            for neighbor in (BattleHexCoordinate { x, y: 10 }).neighbors().unwrap() {
+            let center = HexCoordinate { x, y: 10 }.center();
+            for neighbor in (HexCoordinate { x, y: 10 }).neighbors().unwrap() {
                 let other = neighbor.center();
                 for offset in [-1e-10, -1e-12, -1e-14, 0.0, 1e-14, 1e-12, 1e-10] {
-                    check(BattlePoint {
+                    check(Point {
                         x: (center.x + other.x) / 2.0 + offset,
                         y: (center.y + other.y) / 2.0 + offset,
                     });
@@ -370,7 +370,7 @@ mod tests {
     #[test]
     fn staggered_neighbors_and_projection_share_a_compass() {
         for x in -3..=3 {
-            let origin = BattleHexCoordinate { x, y: 4 };
+            let origin = HexCoordinate { x, y: 4 };
             for (index, neighbor) in origin.neighbors().unwrap().into_iter().enumerate() {
                 assert_eq!(origin.distance(neighbor), 1);
                 assert!(neighbor.neighbors().unwrap().contains(&origin));
@@ -388,15 +388,15 @@ mod tests {
     #[test]
     fn neighbors_within_keep_directions_and_drop_off_map_cells() {
         // Even columns sit half a hex south of odd ones.
-        let corner = BattleHexCoordinate { x: 0, y: 0 };
-        let east = BattleHexCoordinate { x: 1, y: 0 };
+        let corner = HexCoordinate { x: 0, y: 0 };
+        let east = HexCoordinate { x: 1, y: 0 };
         assert_eq!(
             corner.neighbors_within(3, 3),
             [
                 None,
                 Some(east),
-                Some(BattleHexCoordinate { x: 1, y: 1 }),
-                Some(BattleHexCoordinate { x: 0, y: 1 }),
+                Some(HexCoordinate { x: 1, y: 1 }),
+                Some(HexCoordinate { x: 0, y: 1 }),
                 None,
                 None,
             ]
@@ -406,15 +406,15 @@ mod tests {
             [
                 None,
                 None,
-                Some(BattleHexCoordinate { x: 2, y: 0 }),
-                Some(BattleHexCoordinate { x: 1, y: 1 }),
+                Some(HexCoordinate { x: 2, y: 0 }),
+                Some(HexCoordinate { x: 1, y: 1 }),
                 Some(corner),
                 None,
             ]
         );
         for x in -2..=6 {
             for y in -2..=6 {
-                let hex = BattleHexCoordinate { x, y };
+                let hex = HexCoordinate { x, y };
                 for (bounded, unbounded) in hex
                     .neighbors_within(5, 4)
                     .into_iter()
@@ -425,21 +425,21 @@ mod tests {
                 }
             }
         }
-        let far = BattleHexCoordinate {
+        let far = HexCoordinate {
             x: i32::MAX,
             y: i32::MIN,
         };
         assert_eq!(far.neighbors_within(u16::MAX, u16::MAX), [None; 6]);
         assert_eq!(
-            BattleHexCoordinate { x: 0, y: 0 }.neighbors_within(0, 0),
+            HexCoordinate { x: 0, y: 0 }.neighbors_within(0, 0),
             [None; 6]
         );
     }
 
     #[test]
     fn graph_distance_and_euclidean_range_are_distinct() {
-        let a = BattleHexCoordinate { x: 0, y: 0 };
-        let b = BattleHexCoordinate { x: 2, y: 0 };
+        let a = HexCoordinate { x: 0, y: 0 };
+        let b = HexCoordinate { x: 2, y: 0 };
         assert_eq!(a.distance(b), 2);
         assert!((a.center().range(b.center()).unwrap() - 3.0_f64.sqrt()).abs() < 1e-12);
         assert_eq!(a.center().bearing(a.center()).unwrap(), None);
@@ -447,24 +447,20 @@ mod tests {
         assert!(a.center().project(f64::NAN, 1.0).is_err());
         assert!(a.center().project(0.0, -1.0).is_err());
         assert!(
-            BattlePoint {
+            Point {
                 x: f64::INFINITY,
                 y: 0.0
             }
             .range(a.center())
             .is_err()
         );
+        assert!(HexCoordinate { x: i32::MAX, y: 0 }.neighbors().is_err());
         assert!(
-            BattleHexCoordinate { x: i32::MAX, y: 0 }
-                .neighbors()
-                .is_err()
-        );
-        assert!(
-            BattleHexCoordinate {
+            HexCoordinate {
                 x: i32::MIN,
                 y: i32::MIN
             }
-            .distance(BattleHexCoordinate {
+            .distance(HexCoordinate {
                 x: i32::MAX,
                 y: i32::MAX
             }) > u64::from(u32::MAX)

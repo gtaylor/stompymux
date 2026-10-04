@@ -1,7 +1,7 @@
 //! The hex map view: camera geometry, terrain colors, and pan, zoom and paint input.
 //!
 //! Hexes are flat-topped in staggered columns, with even columns offset half a hex south, the
-//! same layout as [`BattleHexCoordinate::center`]. Map-space pixels put the top-left of the
+//! same layout as [`HexCoordinate::center`]. Map-space pixels put the top-left of the
 //! map's bounding box at the origin; the [`Camera`] places that origin on screen. Drawing
 //! happens on the GPU in [`crate::render`].
 use iced::{
@@ -10,7 +10,7 @@ use iced::{
     mouse,
     widget::shader::{self, Action},
 };
-use stompymux_map::{BattleHexCoordinate, BattleMapAsset, Terrain};
+use stompymux_map::{HexCoordinate, MapAsset, Terrain};
 
 use crate::{
     Message,
@@ -82,7 +82,7 @@ impl Camera {
     }
 
     /// Screen center of a hex.
-    fn center(self, coordinate: BattleHexCoordinate) -> Point {
+    fn center(self, coordinate: HexCoordinate) -> Point {
         let height = SQRT_3 * self.radius;
         let stagger = if coordinate.x.rem_euclid(2) == 0 {
             1.0
@@ -97,17 +97,17 @@ impl Camera {
 
     /// The hex containing a screen point, whether or not it is on the map. The shader's
     /// `hex_at` makes the same choice for every pixel it draws.
-    fn hex_at(self, point: Point) -> BattleHexCoordinate {
+    fn hex_at(self, point: Point) -> HexCoordinate {
         let height = SQRT_3 * self.radius;
         let column = ((point.x - self.offset.x - self.radius) / (1.5 * self.radius)).round() as i32;
-        let mut best = (f32::INFINITY, BattleHexCoordinate { x: 0, y: 0 });
+        let mut best = (f32::INFINITY, HexCoordinate { x: 0, y: 0 });
         // The containing hex is the one with the nearest center, which is always within one
         // column and one row of the rough estimate.
         for x in column - 1..=column + 1 {
             let stagger = if x.rem_euclid(2) == 0 { 1.0 } else { 0.5 };
             let row = ((point.y - self.offset.y) / height - stagger).round() as i32;
             for y in row - 1..=row + 1 {
-                let coordinate = BattleHexCoordinate { x, y };
+                let coordinate = HexCoordinate { x, y };
                 let distance = point.distance(self.center(coordinate));
                 if distance < best.0 {
                     best = (distance, coordinate);
@@ -165,7 +165,7 @@ enum Drag {
     #[default]
     None,
     Painting {
-        last: BattleHexCoordinate,
+        last: HexCoordinate,
     },
     Panning {
         last: Point,
@@ -173,7 +173,7 @@ enum Drag {
 }
 
 /// Whether a coordinate is on the map.
-fn contains(map: &BattleMapAsset, coordinate: BattleHexCoordinate) -> bool {
+fn contains(map: &MapAsset, coordinate: HexCoordinate) -> bool {
     (0..i32::from(map.width)).contains(&coordinate.x)
         && (0..i32::from(map.height)).contains(&coordinate.y)
 }
@@ -182,13 +182,13 @@ fn contains(map: &BattleMapAsset, coordinate: BattleHexCoordinate) -> bool {
 pub struct MapView<'a> {
     pub document: &'a Document,
     pub camera: Camera,
-    pub hover: Option<BattleHexCoordinate>,
+    pub hover: Option<HexCoordinate>,
     pub brush_radius: u8,
 }
 
 impl MapView<'_> {
     /// The on-map hex under a screen position relative to the view.
-    fn on_map(&self, position: Point) -> Option<BattleHexCoordinate> {
+    fn on_map(&self, position: Point) -> Option<HexCoordinate> {
         Some(self.camera.hex_at(position))
             .filter(|coordinate| contains(&self.document.map, *coordinate))
     }
@@ -349,7 +349,7 @@ mod tests {
             };
             for x in -2..12 {
                 for y in -2..12 {
-                    let coordinate = BattleHexCoordinate { x, y };
+                    let coordinate = HexCoordinate { x, y };
                     assert_eq!(camera.hex_at(camera.center(coordinate)), coordinate);
                 }
             }
@@ -365,7 +365,7 @@ mod tests {
         };
         let height = SQRT_3;
         for (x, y) in [(0, 0), (1, 0), (4, 7), (5, 3)] {
-            let coordinate = BattleHexCoordinate { x, y };
+            let coordinate = HexCoordinate { x, y };
             let game = coordinate.center();
             let screen = camera.center(coordinate);
             // Game units are hex heights; the stagger and column spacing must agree.

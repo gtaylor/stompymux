@@ -15,7 +15,7 @@ use crate::btech::autopilot::combat_policy::choose_target;
 use crate::btech::autopilot::navigation::{AStarSearch, Goal, Hex, SearchStatus};
 use crate::btech::autopilot::observations::{self, AutopilotObservation};
 use crate::btech::autopilot::traversal;
-use crate::btech::{BattleHexCoordinate, BattleNotice, BattlePosition, BattlePower};
+use crate::btech::{BattleNotice, BattlePosition, BattlePower, HexCoordinate};
 use crate::{Config, ObjectId, World};
 use anyhow::Result;
 use std::sync::Arc;
@@ -1248,7 +1248,7 @@ fn advance_controller(
         && let Some(point) =
             crate::btech::scanner::scanner_unit(world, id).and_then(|unit| unit.point)
     {
-        let center = BattleHexCoordinate {
+        let center = HexCoordinate {
             x: i32::from(next.x),
             y: i32::from(next.y),
         }
@@ -1697,7 +1697,7 @@ fn should_yield(world: &World, moving: ObjectId, map: ObjectId, next: Hex) -> bo
     let Ok(occupants) = super::super::map_slots::hex_occupants(
         world,
         map,
-        BattleHexCoordinate {
+        HexCoordinate {
             x: i32::from(next.x),
             y: i32::from(next.y),
         },
@@ -2417,7 +2417,7 @@ mod replacement_tests {
 
         let mut aim = position;
         aim.x += 1;
-        let destination = crate::BattleHexCoordinate {
+        let destination = crate::HexCoordinate {
             x: i32::from(aim.x),
             y: i32::from(aim.y),
         }

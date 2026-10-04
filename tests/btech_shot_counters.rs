@@ -159,7 +159,7 @@ async fn coordinate_fire_and_counter_overflow_keep_their_transaction_boundaries(
             &mut world,
             id,
             ObjectId(1),
-            BattleHexCoordinate { x: 0, y: 10 },
+            HexCoordinate { x: 0, y: 10 },
             BattleHexTargetMode::UnitAtHex,
         )
         .unwrap();
@@ -219,7 +219,7 @@ async fn out_of_range_direct_attempts_count_once() {
         firing::edit(&mut world, target, |unit| {
             unit["position"]["y"] = 0.into();
             unit["motion"]["point"] =
-                serde_json::to_value(BattleHexCoordinate { x: 0, y: 0 }.center()).unwrap();
+                serde_json::to_value(HexCoordinate { x: 0, y: 0 }.center()).unwrap();
         });
         world.validate(&config).unwrap();
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();

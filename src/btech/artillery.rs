@@ -1,5 +1,5 @@
 //! Restartable artillery flight and impact patterns, independent of weapon admission and damage application.
-use super::{BattleDice, BattleHexCoordinate, BattleHitTable, BattleWeapon};
+use super::{BattleDice, BattleHitTable, BattleWeapon, HexCoordinate};
 use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -18,8 +18,8 @@ pub enum BattleArtilleryMode {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(try_from = "FlightRecord")]
 pub struct BattleArtilleryFlight {
-    origin: BattleHexCoordinate,
-    target: BattleHexCoordinate,
+    origin: HexCoordinate,
+    target: HexCoordinate,
     weapon: BattleWeapon,
     mode: BattleArtilleryMode,
     hit: bool,
@@ -30,8 +30,8 @@ pub struct BattleArtilleryFlight {
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct FlightRecord {
-    origin: BattleHexCoordinate,
-    target: BattleHexCoordinate,
+    origin: HexCoordinate,
+    target: HexCoordinate,
     weapon: BattleWeapon,
     mode: BattleArtilleryMode,
     hit: bool,
@@ -73,7 +73,7 @@ pub enum BattleArtilleryEffect {
 /// Ordered impact cell; direct distinguishes the center from ordinary fragments.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct BattleArtilleryCell {
-    pub position: BattleHexCoordinate,
+    pub position: HexCoordinate,
     pub direct: bool,
     pub effect: BattleArtilleryEffect,
 }
@@ -82,15 +82,15 @@ pub struct BattleArtilleryCell {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[must_use = "Apply impact effects and publish feedback in the same transaction as the flight and dice"]
 pub struct BattleArtilleryImpactPattern {
-    pub target: BattleHexCoordinate,
-    pub impact: BattleHexCoordinate,
+    pub target: HexCoordinate,
+    pub impact: HexCoordinate,
     /// A failed attack can scatter back into its original target hex and still permits adjustment.
     pub missed: bool,
     pub cells: Vec<BattleArtilleryCell>,
 }
 
 /// Check coordinates against the supported maximum map dimensions before computing flight time.
-fn validate_coordinate(position: BattleHexCoordinate) -> Result<()> {
+fn validate_coordinate(position: HexCoordinate) -> Result<()> {
     ensure!(
         (0..1000).contains(&position.x) && (0..1000).contains(&position.y),
         "Invalid artillery coordinate"
@@ -101,8 +101,8 @@ fn validate_coordinate(position: BattleHexCoordinate) -> Result<()> {
 impl BattleArtilleryFlight {
     /// Capture launch facts; rounds fly five hexes per second with a ten-second minimum.
     pub fn new(
-        origin: BattleHexCoordinate,
-        target: BattleHexCoordinate,
+        origin: HexCoordinate,
+        target: HexCoordinate,
         weapon: BattleWeapon,
         mode: BattleArtilleryMode,
         hit: bool,
@@ -123,8 +123,8 @@ impl BattleArtilleryFlight {
 
     /// Rebuild a saved flight, refusing a countdown longer than the launch allows.
     pub(crate) fn from_saved(
-        origin: BattleHexCoordinate,
-        target: BattleHexCoordinate,
+        origin: HexCoordinate,
+        target: HexCoordinate,
         weapon: BattleWeapon,
         mode: BattleArtilleryMode,
         hit: bool,
@@ -152,12 +152,12 @@ impl BattleArtilleryFlight {
     }
 
     /// Captured launch hex, independent of subsequent shooter movement.
-    pub fn origin(&self) -> BattleHexCoordinate {
+    pub fn origin(&self) -> HexCoordinate {
         self.origin
     }
 
     /// Original aim point, before any arrival scatter.
-    pub fn target(&self) -> BattleHexCoordinate {
+    pub fn target(&self) -> HexCoordinate {
         self.target
     }
 
@@ -229,7 +229,7 @@ impl BattleArtilleryFlight {
             }
             for ((x, y), total) in totals {
                 cells.push(BattleArtilleryCell {
-                    position: BattleHexCoordinate { x, y },
+                    position: HexCoordinate { x, y },
                     direct: true,
                     effect: BattleArtilleryEffect::Damage {
                         total,
@@ -278,7 +278,7 @@ impl BattleArtilleryFlight {
 }
 
 /// Test current rectangular map bounds without materializing terrain.
-fn contains((width, height): (u16, u16), position: BattleHexCoordinate) -> bool {
+fn contains((width, height): (u16, u16), position: HexCoordinate) -> bool {
     (0..i32::from(width)).contains(&position.x) && (0..i32::from(height)).contains(&position.y)
 }
 
@@ -303,10 +303,7 @@ fn cluster_axis(center: i32, size: u16, dice: &mut BattleDice) -> Result<i32> {
 }
 
 /// Shared timing for queued shells and moving-target prediction, including sub-hex positions.
-pub(super) fn flight_seconds(
-    origin: super::BattlePoint,
-    target: super::BattlePoint,
-) -> Result<u16> {
+pub(super) fn flight_seconds(origin: super::Point, target: super::Point) -> Result<u16> {
     let range = origin.range(target)? as f32;
     Ok(((range / 5.0) as u16).max(10))
 }

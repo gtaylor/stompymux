@@ -4,21 +4,21 @@
 //! Each layer answers one question, so a hex can hold woods on a hill, ice over deep water or a
 //! bridge deck above a river without one value standing in for another. Fire and smoke never
 //! replace what they burn or cover: they are an overlay the map applies from its decorations.
-//! Rules ask the layers. [`BattleHex::terrain`] names the one feature a map shows for a hex,
-//! and [`BattleHex::new`] reads the compact symbol-and-digit notation used by
-//! [`BattleMapAsset::from_cells`](crate::BattleMapAsset::from_cells).
+//! Rules ask the layers. [`Hex::terrain`] names the one feature a map shows for a hex,
+//! and [`Hex::new`] reads the compact symbol-and-digit notation used by
+//! [`MapAsset::from_cells`](crate::MapAsset::from_cells).
 use crate::Terrain;
 use serde::{Deserialize, Serialize};
 
 /// Visible fire or smoke laid over a hex.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BattleDecorationKind {
+pub enum DecorationKind {
     Fire,
     Smoke,
 }
 
-impl BattleDecorationKind {
+impl DecorationKind {
     /// Terrain identity used by movement, visibility and map inspection.
     pub fn terrain(self) -> Terrain {
         match self {
@@ -81,13 +81,13 @@ pub fn height_glyph(height: u8) -> char {
     char::from_digit(u32::from(height), 36).unwrap_or('?')
 }
 
-/// A battlefield hex. Build one with [`BattleHex::new`] from its single-terrain description.
+/// A battlefield hex. Build one with [`Hex::new`] from its single-terrain description.
 /// Saved and scripted as its layers; absent woods, water, structure and overlay are omitted.
 /// A live map's terrain grid never holds an overlay: the server adds it from the map's fire
 /// and smoke decorations.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct BattleHex {
+pub struct Hex {
     level: u8,
     ground: Ground,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -97,10 +97,10 @@ pub struct BattleHex {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     structure: Option<Structure>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    overlay: Option<BattleDecorationKind>,
+    overlay: Option<DecorationKind>,
 }
 
-impl BattleHex {
+impl Hex {
     /// Build the hex the compact notation describes: a terrain symbol and one digit. The digit
     /// is the ground height, except for water and ice (depth), bridges (deck height) and
     /// buildings and walls (their height). Bridges span water one level deep; fire and smoke
@@ -121,12 +121,8 @@ impl BattleHex {
             Terrain::Mountains => (hex.level, hex.ground) = (elevation, Ground::Mountains),
             Terrain::Snow => (hex.level, hex.ground) = (elevation, Ground::Snow),
             Terrain::Sand => (hex.level, hex.ground) = (elevation, Ground::Sand),
-            Terrain::Fire => {
-                (hex.level, hex.overlay) = (elevation, Some(BattleDecorationKind::Fire))
-            }
-            Terrain::Smoke => {
-                (hex.level, hex.overlay) = (elevation, Some(BattleDecorationKind::Smoke))
-            }
+            Terrain::Fire => (hex.level, hex.overlay) = (elevation, Some(DecorationKind::Fire)),
+            Terrain::Smoke => (hex.level, hex.overlay) = (elevation, Some(DecorationKind::Smoke)),
             Terrain::LightForest => (hex.level, hex.woods) = (elevation, Some(Woods::Light)),
             Terrain::HeavyForest => (hex.level, hex.woods) = (elevation, Some(Woods::Heavy)),
             Terrain::Water | Terrain::Ice => {
@@ -167,7 +163,7 @@ impl BattleHex {
     }
 
     /// This hex with fire or smoke laid over it, or with its overlay removed.
-    pub const fn with_overlay(self, overlay: Option<BattleDecorationKind>) -> Self {
+    pub const fn with_overlay(self, overlay: Option<DecorationKind>) -> Self {
         Self { overlay, ..self }
     }
 
@@ -241,7 +237,7 @@ impl BattleHex {
     }
 
     /// Fire or smoke over this hex, if any.
-    pub const fn overlay(self) -> Option<BattleDecorationKind> {
+    pub const fn overlay(self) -> Option<DecorationKind> {
         self.overlay
     }
 
@@ -249,8 +245,8 @@ impl BattleHex {
     /// woods, then ground. Rules ask the layers instead.
     pub const fn terrain(self) -> Terrain {
         match self.overlay {
-            Some(BattleDecorationKind::Fire) => return Terrain::Fire,
-            Some(BattleDecorationKind::Smoke) => return Terrain::Smoke,
+            Some(DecorationKind::Fire) => return Terrain::Fire,
+            Some(DecorationKind::Smoke) => return Terrain::Smoke,
             None => {}
         }
         match (self.structure, self.water, self.woods) {
@@ -296,7 +292,7 @@ impl BattleHex {
 
     /// Whether fire is burning over this hex.
     pub const fn is_burning(self) -> bool {
-        matches!(self.overlay, Some(BattleDecorationKind::Fire))
+        matches!(self.overlay, Some(DecorationKind::Fire))
     }
 
     /// Whether this hex is road with nothing else on it.
@@ -430,7 +426,7 @@ mod tests {
 
     /// The layer the notation's digit sets: water depth, structure top or bridge deck, or
     /// ground height.
-    fn digit(hex: BattleHex) -> u8 {
+    fn digit(hex: Hex) -> u8 {
         if hex.is_water_surface() {
             return hex.water_depth();
         }
@@ -442,10 +438,10 @@ mod tests {
     fn notation_round_trips_through_layers() {
         for terrain in Terrain::ALL {
             for elevation in 0..=9 {
-                let hex = BattleHex::new(terrain, elevation);
+                let hex = Hex::new(terrain, elevation);
                 assert_eq!((hex.terrain(), digit(hex)), (terrain, elevation));
                 let saved = serde_json::to_value(hex).unwrap();
-                assert_eq!(serde_json::from_value::<BattleHex>(saved).unwrap(), hex);
+                assert_eq!(serde_json::from_value::<Hex>(saved).unwrap(), hex);
             }
         }
     }
@@ -455,7 +451,7 @@ mod tests {
     fn heights_match_the_single_symbol_rules() {
         for terrain in Terrain::ALL {
             for elevation in 0..=9 {
-                let hex = BattleHex::new(terrain, elevation);
+                let hex = Hex::new(terrain, elevation);
                 let digit = i16::from(elevation);
                 let surface = if matches!(terrain, Terrain::Water | Terrain::Ice) {
                     -digit
@@ -485,12 +481,12 @@ mod tests {
 
     #[test]
     fn layers_separate_what_the_digit_used_to_mean() {
-        let forest = BattleHex::new(Terrain::HeavyForest, 3);
+        let forest = Hex::new(Terrain::HeavyForest, 3);
         assert_eq!(
             (forest.level(), forest.woods(), forest.water()),
             (3, Some(Woods::Heavy), None)
         );
-        let ice = BattleHex::new(Terrain::Ice, 4);
+        let ice = Hex::new(Terrain::Ice, 4);
         assert_eq!(ice.level(), 0);
         assert_eq!(
             ice.water(),
@@ -499,18 +495,18 @@ mod tests {
                 frozen: true
             })
         );
-        let bridge = BattleHex::new(Terrain::Bridge, 2);
+        let bridge = Hex::new(Terrain::Bridge, 2);
         assert_eq!(bridge.structure(), Some(Structure::Bridge { deck: 2 }));
         assert_eq!(bridge.water().map(|water| water.depth), Some(1));
         assert_eq!(
-            BattleHex::new(Terrain::Ice, 4).with_surface_broken(),
-            BattleHex::new(Terrain::Water, 4)
+            Hex::new(Terrain::Ice, 4).with_surface_broken(),
+            Hex::new(Terrain::Water, 4)
         );
         assert_eq!(
-            BattleHex::new(Terrain::Bridge, 3).with_surface_broken(),
-            BattleHex::new(Terrain::Water, 1)
+            Hex::new(Terrain::Bridge, 3).with_surface_broken(),
+            Hex::new(Terrain::Water, 1)
         );
-        let building = BattleHex::new(Terrain::Building, 5);
+        let building = Hex::new(Terrain::Building, 5);
         assert_eq!(
             building.structure(),
             Some(Structure::Building { height: 5 })
@@ -521,7 +517,7 @@ mod tests {
     /// A structure stands on its ground, so its top can rise past what one digit could say.
     #[test]
     fn structures_stand_on_raised_ground() {
-        let tower = BattleHex::from_layers(
+        let tower = Hex::from_layers(
             8,
             Ground::Clear,
             None,
@@ -535,9 +531,9 @@ mod tests {
         tower.validate().unwrap();
         assert_eq!(height_glyph(15), 'f');
         assert_eq!(height_glyph(36), '?');
-        let too_high = BattleHex::from_layers(36, Ground::Clear, None, None, None);
+        let too_high = Hex::from_layers(36, Ground::Clear, None, None, None);
         assert!(too_high.validate().is_err());
-        let too_deep = BattleHex::from_layers(
+        let too_deep = Hex::from_layers(
             0,
             Ground::Clear,
             None,
@@ -553,17 +549,16 @@ mod tests {
     /// Fire and smoke lie over a hex's layers without replacing them.
     #[test]
     fn overlays_keep_the_layers_they_cover() {
-        let woods = BattleHex::new(Terrain::HeavyForest, 3);
-        let burning = woods.with_overlay(Some(BattleDecorationKind::Fire));
+        let woods = Hex::new(Terrain::HeavyForest, 3);
+        let burning = woods.with_overlay(Some(DecorationKind::Fire));
         assert_eq!((burning.terrain(), burning.level()), (Terrain::Fire, 3));
         assert_eq!(burning.woods(), Some(Woods::Heavy));
         assert_eq!(burning.with_overlay(None), woods);
-        let smoky =
-            BattleHex::new(Terrain::Building, 4).with_overlay(Some(BattleDecorationKind::Smoke));
+        let smoky = Hex::new(Terrain::Building, 4).with_overlay(Some(DecorationKind::Smoke));
         assert_eq!(smoky.structure(), Some(Structure::Building { height: 4 }));
         assert_eq!(smoky.surface_height(), 4);
         assert_eq!(
-            serde_json::to_value(BattleHex::new(Terrain::Fire, 1)).unwrap(),
+            serde_json::to_value(Hex::new(Terrain::Fire, 1)).unwrap(),
             serde_json::json!({"level": 1, "ground": "clear", "overlay": "fire"})
         );
     }
@@ -572,15 +567,15 @@ mod tests {
     #[test]
     fn saved_shape_names_each_layer() {
         assert_eq!(
-            serde_json::to_value(BattleHex::new(Terrain::Grassland, 2)).unwrap(),
+            serde_json::to_value(Hex::new(Terrain::Grassland, 2)).unwrap(),
             serde_json::json!({"level": 2, "ground": "clear"})
         );
         assert_eq!(
-            serde_json::to_value(BattleHex::new(Terrain::HeavyForest, 1)).unwrap(),
+            serde_json::to_value(Hex::new(Terrain::HeavyForest, 1)).unwrap(),
             serde_json::json!({"level": 1, "ground": "clear", "woods": "heavy"})
         );
         assert_eq!(
-            serde_json::to_value(BattleHex::new(Terrain::Bridge, 3)).unwrap(),
+            serde_json::to_value(Hex::new(Terrain::Bridge, 3)).unwrap(),
             serde_json::json!({
                 "level": 0,
                 "ground": "clear",
@@ -589,10 +584,8 @@ mod tests {
             })
         );
         assert!(
-            serde_json::from_value::<BattleHex>(
-                serde_json::json!({"terrain": "road", "elevation": 1})
-            )
-            .is_err()
+            serde_json::from_value::<Hex>(serde_json::json!({"terrain": "road", "elevation": 1}))
+                .is_err()
         );
     }
 }

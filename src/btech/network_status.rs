@@ -1,5 +1,5 @@
 //! Command-network status as a pure typed report and private cockpit display.
-use super::BattleHexCoordinate;
+use super::HexCoordinate;
 use super::network_unit::unit as network_unit;
 use crate::{BattleCommandNetwork, ObjectId, World};
 use anyhow::{Context, Result, ensure};
@@ -11,7 +11,7 @@ pub struct BattleNetworkStatusRow {
     pub unit: ObjectId,
     pub label: String,
     pub name: String,
-    pub coordinate: BattleHexCoordinate,
+    pub coordinate: HexCoordinate,
     pub elevation: i32,
     pub range: f64,
     pub bearing: u16,
@@ -73,7 +73,7 @@ fn report(
                 .context("Peer has no battlefield ID")?
                 .to_ascii_lowercase(),
             name: crate::text::plain(unit.name()),
-            coordinate: BattleHexCoordinate {
+            coordinate: HexCoordinate {
                 x: i32::from(position.x),
                 y: i32::from(position.y),
             },

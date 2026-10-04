@@ -6,7 +6,7 @@
 
 use crate::support;
 use stompymux_rs::{
-    BattleMapAsset, BattleMovementRules, BattleTemplate, Kind, ObjectId, advance_battle_units,
+    BattleMovementRules, BattleTemplate, Kind, MapAsset, ObjectId, advance_battle_units,
     assign_battle_pilot, create_battle_map, create_battle_unit, place_battle_unit,
     start_battle_unit,
 };
@@ -68,7 +68,7 @@ pub(crate) async fn fixture_assets(
         &mut world,
         map,
         "motion.map",
-        BattleMapAsset::from_cells(source).unwrap(),
+        MapAsset::from_cells(source).unwrap(),
     )
     .unwrap();
     let id = world.create(&config, "Jenner".into(), Kind::Thing);

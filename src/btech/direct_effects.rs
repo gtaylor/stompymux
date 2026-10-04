@@ -23,7 +23,7 @@ pub(super) struct DirectEffectRequest {
     pub damage_penalty: u8,
     pub distance: f64,
     pub gatling_damage: Option<u8>,
-    pub coordinate: Option<BattleHexCoordinate>,
+    pub coordinate: Option<HexCoordinate>,
 }
 
 /// Immediate attachment or heat changes, separate from ordinary damage packets.
@@ -81,7 +81,7 @@ pub(super) fn resolve(world: &mut World, request: DirectEffectRequest) -> Result
                 let position = super::scanner::scanner_unit(world, request.target)
                     .and_then(|unit| unit.position)
                     .context("Target is not placed")?;
-                BattleHexCoordinate {
+                HexCoordinate {
                     x: position.x.into(),
                     y: position.y.into(),
                 }

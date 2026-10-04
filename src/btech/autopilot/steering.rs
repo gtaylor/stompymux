@@ -1,8 +1,7 @@
 //! Deterministic ground steering with route lookahead and ordinary motion forecasts.
 use super::{navigation::Hex, observations::AutopilotObservation};
 use crate::{
-    BattleHexCoordinate, BattleMotion, BattleNotice, BattlePoint, BattlePosition, Config, ObjectId,
-    World,
+    BattleMotion, BattleNotice, BattlePosition, Config, HexCoordinate, ObjectId, Point, World,
 };
 use anyhow::{Context, Result};
 
@@ -38,8 +37,8 @@ pub(crate) fn motion(world: &World, id: ObjectId) -> Option<BattleMotion> {
 fn angle(left: f64, right: f64) -> f64 {
     ((left - right + 180.0).rem_euclid(360.0) - 180.0).abs()
 }
-fn center(hex: Hex) -> BattlePoint {
-    BattleHexCoordinate {
+fn center(hex: Hex) -> Point {
+    HexCoordinate {
         x: i32::from(hex.x),
         y: i32::from(hex.y),
     }
@@ -73,13 +72,7 @@ fn project(
 }
 
 /// Validate every crossed hex; a lookahead segment cannot jump across blocked terrain.
-fn safe_segment(
-    world: &World,
-    id: ObjectId,
-    map: ObjectId,
-    start: BattlePoint,
-    end: BattlePoint,
-) -> bool {
+fn safe_segment(world: &World, id: ObjectId, map: ObjectId, start: Point, end: Point) -> bool {
     let Ok(cells) = start.trace(end) else {
         return false;
     };
@@ -115,10 +108,10 @@ fn safe_segment(
 fn lookahead(
     route: &[Hex],
     index: usize,
-    point: BattlePoint,
+    point: Point,
     heading: f64,
     smooth: bool,
-) -> Result<BattlePoint> {
+) -> Result<Point> {
     let mut goal = center(*route.get(index).context("Missing route waypoint")?);
     let mut previous = goal;
     let first = point.bearing(goal)?.unwrap_or(heading);
@@ -155,7 +148,7 @@ fn direction(
 ) -> Result<bool> {
     let mut reverse = false;
     if let Some((observation, target)) = combat {
-        let target_point = BattleHexCoordinate {
+        let target_point = HexCoordinate {
             x: i32::from(target.x),
             y: i32::from(target.y),
         }
@@ -240,7 +233,7 @@ pub(crate) fn actual_arc(
     id: ObjectId,
     observation: &AutopilotObservation,
     motion: BattleMotion,
-    target: BattlePoint,
+    target: Point,
 ) -> bool {
     let Ok(range) = motion.point.range(target) else {
         return false;
@@ -451,7 +444,7 @@ pub(crate) fn pursuit_score(
     let mut turning: f64 = 0.0;
     for _ in 0..16 {
         let range = simulated.point.range(goal).ok()?;
-        let forecast_target = BattlePoint {
+        let forecast_target = Point {
             x: target.x + velocity.0 * elapsed,
             y: target.y + velocity.1 * elapsed,
         };
@@ -508,11 +501,11 @@ pub(crate) fn pursuit_score(
     } else {
         0.0
     };
-    let terminal = BattlePoint {
+    let terminal = Point {
         x: simulated.point.x + (goal.x - simulated.point.x) * fraction,
         y: simulated.point.y + (goal.y - simulated.point.y) * fraction,
     };
-    let future = BattlePoint {
+    let future = Point {
         x: target.x + velocity.0 * arrival.min(120.0),
         y: target.y + velocity.1 * arrival.min(120.0),
     };
@@ -546,12 +539,7 @@ pub(crate) fn pursuit_score(
 }
 
 /// First entry into a stationary firing region along a bounded straight segment.
-fn segment_entry(
-    start: BattlePoint,
-    end: BattlePoint,
-    target: BattlePoint,
-    radius: f64,
-) -> Option<f64> {
+fn segment_entry(start: Point, end: Point, target: Point, radius: f64) -> Option<f64> {
     let x = start.x - target.x;
     let y = start.y - target.y;
     let c = x * x + y * y - radius * radius;
@@ -576,8 +564,8 @@ fn segment_entry(
 /// Constant-speed pure-pursuit closure estimate after the bounded physical forecast.
 /// This is an open-terrain estimate, not a route-optimality or reachability claim.
 fn remaining_pursuit_seconds(
-    own: BattlePoint,
-    target: BattlePoint,
+    own: Point,
+    target: Point,
     velocity: (f64, f64),
     speed: f64,
     radius: f64,
@@ -643,7 +631,7 @@ mod pursuit_estimate_tests {
         assert_eq!(world.btech, before);
         let point = center(Hex::new(own.x, own.y));
         let motion = motion(&world, id).unwrap();
-        let target_point = BattlePoint {
+        let target_point = Point {
             x: point.x,
             y: point.y - 2.0,
         };
@@ -691,23 +679,23 @@ mod pursuit_estimate_tests {
     }
     #[test]
     fn stationary_region_entry_stops_before_a_farther_navigation_goal() {
-        let start = BattlePoint { x: 0.0, y: 0.0 };
-        let end = BattlePoint { x: 10.0, y: 0.0 };
+        let start = Point { x: 0.0, y: 0.0 };
+        let end = Point { x: 10.0, y: 0.0 };
         assert_eq!(
-            segment_entry(start, end, BattlePoint { x: 5.0, y: 0.0 }, 1.0),
+            segment_entry(start, end, Point { x: 5.0, y: 0.0 }, 1.0),
             Some(0.4)
         );
         assert_eq!(
-            segment_entry(start, end, BattlePoint { x: 5.0, y: 1.0 }, 1.0),
+            segment_entry(start, end, Point { x: 5.0, y: 1.0 }, 1.0),
             Some(0.5)
         );
-        assert!(segment_entry(start, end, BattlePoint { x: 5.0, y: 2.0 }, 1.0).is_none());
+        assert!(segment_entry(start, end, Point { x: 5.0, y: 2.0 }, 1.0).is_none());
         assert_eq!(segment_entry(start, end, start, 1.0), Some(0.0));
     }
     #[test]
     fn remaining_closure_accounts_for_retreat_and_crossing() {
-        let own = BattlePoint { x: 0.0, y: 0.0 };
-        let target = BattlePoint { x: 10.0, y: 0.0 };
+        let own = Point { x: 0.0, y: 0.0 };
+        let target = Point { x: 10.0, y: 0.0 };
         assert_eq!(
             remaining_pursuit_seconds(own, target, (0.0, 0.0), 1.0, 0.0),
             Some(10.0)

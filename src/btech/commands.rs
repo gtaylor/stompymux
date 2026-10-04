@@ -1100,7 +1100,7 @@ pub(crate) fn lock_command(
                     super::select_target(&mut world, unit, ctx.player, Some(target))?
                 }
                 [x, y] | [x, y, _] => {
-                    let hex = super::BattleHexCoordinate {
+                    let hex = super::HexCoordinate {
                         x: x.parse().context("Invalid coordinates")?,
                         y: y.parse().context("Invalid coordinates")?,
                     };

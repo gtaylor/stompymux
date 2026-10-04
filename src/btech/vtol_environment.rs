@@ -1,7 +1,5 @@
 //! Aircraft surface resolution reuses deliberate landing and shared vehicle flooding.
-use super::{
-    BattleMapAsset, BattleVehicle, BattleVtolLanding, BattleVtolPath, BattleVtolSurfaceContact,
-};
+use super::{BattleVehicle, BattleVtolLanding, BattleVtolPath, BattleVtolSurfaceContact, MapAsset};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
 
@@ -56,7 +54,7 @@ impl BattleVehicle {
     /// The host owns map identity, landing mines, notifications, callbacks and casualty publication.
     pub fn advance_vtol_environment(
         &mut self,
-        map: &BattleMapAsset,
+        map: &MapAsset,
         movement_modifier: i64,
         free_fusion_fuel: bool,
     ) -> Result<BattleVtolEnvironment> {
@@ -71,7 +69,7 @@ impl BattleVehicle {
     /// Resolve contact against current terrain using the same classifier as decoded assets.
     fn advance_environment_with(
         &mut self,
-        lookup: &impl Fn(super::BattleHexCoordinate) -> Result<Option<super::BattleHex>>,
+        lookup: &impl Fn(super::HexCoordinate) -> Result<Option<super::Hex>>,
         movement_modifier: i64,
         free_fusion_fuel: bool,
         boundary: Option<&super::StoredBattleMap>,
@@ -135,8 +133,8 @@ impl BattleVehicle {
     /// Commit a resolved flight position after tracing contact or the map boundary.
     fn place_at(
         &mut self,
-        hex: super::BattleHexCoordinate,
-        point: super::BattlePoint,
+        hex: super::HexCoordinate,
+        point: super::Point,
         altitude: f64,
     ) -> Result<()> {
         let mut motion = self.motion().context("Aircraft has no motion")?;
@@ -209,7 +207,7 @@ pub(super) fn advance_in_candidate(
         .maps()
         .get(&position.map)
         .context("Aircraft map is unavailable")?;
-    let lookup = |hex: super::BattleHexCoordinate| {
+    let lookup = |hex: super::HexCoordinate| {
         let hex = map.motion_hex(hex)?;
         let (x, y) = (i64::from(hex.x), i64::from(hex.y));
         if x < 0 || y < 0 || x >= map.width || y >= map.height {

@@ -239,7 +239,7 @@ fn invalidate_observations(state: &mut super::BtechState, id: ObjectId, preserve
 pub struct BattleContactView {
     /// Battlefield label, lowercase only for identified friendly contacts.
     pub label: String,
-    pub coordinate: super::BattleHexCoordinate,
+    pub coordinate: super::HexCoordinate,
     pub elevation: i32,
     /// Plain compact row shared by native C1/C2/C3 and Lua.
     pub short_text: String,
@@ -595,7 +595,7 @@ fn view_from_facts(
     }
     let mut view = BattleContactView {
         label,
-        coordinate: super::BattleHexCoordinate {
+        coordinate: super::HexCoordinate {
             x: i32::from(facts.position.x),
             y: i32::from(facts.position.y),
         },
@@ -800,8 +800,8 @@ mod tests {
         ContactReader::new(world, observer)?.facts(target)
     }
     use crate::{
-        BattleMapAsset, BattlePower, BattleUnitSignature, BattleUnitTemplate, Config, Kind,
-        ObjectId, World, create_battle_map, place_battle_unit, set_battle_unit_signature,
+        BattlePower, BattleUnitSignature, BattleUnitTemplate, Config, Kind, MapAsset, ObjectId,
+        World, create_battle_map, place_battle_unit, set_battle_unit_signature,
     };
 
     fn facts_fixture(blocked: bool) -> (World, ObjectId, ObjectId) {
@@ -813,7 +813,7 @@ mod tests {
             &mut world,
             map,
             "contact.facts",
-            BattleMapAsset::from_cells(&format!("1 3\n.0\n{middle}\n.0\n")).unwrap(),
+            MapAsset::from_cells(&format!("1 3\n.0\n{middle}\n.0\n")).unwrap(),
         )
         .unwrap();
         let observer = world.create(&config, "Contact facts observer".into(), Kind::Thing);

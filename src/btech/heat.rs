@@ -190,7 +190,7 @@ impl BattleUnit {
     /// Whether a Mech at `elevation` in a burning hex stands in the flames, which burn on the
     /// hex's topmost surface: water, a bridge deck, a roof or the ground. A Mech under the
     /// water, beneath a bridge deck or flying above the flames is clear of them.
-    fn reaches_flames(&self, tile: super::BattleHex, elevation: i32) -> bool {
+    fn reaches_flames(&self, tile: super::Hex, elevation: i32) -> bool {
         let surface = i32::from(tile.top_height());
         let height = if self.posture() == super::BattlePosture::Prone {
             1

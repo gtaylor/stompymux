@@ -53,7 +53,7 @@ async fn shared_lamps_switch_light_units_and_terrain_and_resume_after_restart() 
         assert!(battle_unit_illuminated(&world, id));
         assert!(battle_unit_illuminated(&world, target));
         let map = world.objects[&id].location.unwrap();
-        assert!(battle_hex_illuminated(&world, map, BattleHexCoordinate { x: 0, y: 9 }).unwrap());
+        assert!(battle_hex_illuminated(&world, map, HexCoordinate { x: 0, y: 9 }).unwrap());
         assert!(
             battle_unit_status(&world, id, "")
                 .unwrap()
@@ -69,9 +69,7 @@ async fn shared_lamps_switch_light_units_and_terrain_and_resume_after_restart() 
                 unit["motion"]["heading"] = serde_json::json!(180.0)
             });
             assert!(!battle_unit_illuminated(&world, target));
-            assert!(
-                !battle_hex_illuminated(&world, map, BattleHexCoordinate { x: 0, y: 9 }).unwrap()
-            );
+            assert!(!battle_hex_illuminated(&world, map, HexCoordinate { x: 0, y: 9 }).unwrap());
         }
         let notices = stop_battle_unit(
             &mut world,

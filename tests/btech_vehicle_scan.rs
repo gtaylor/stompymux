@@ -13,7 +13,7 @@ async fn fixture(
         &mut world,
         map,
         "sight",
-        BattleMapAsset::from_cells(&format!("1 5\n{tiles}")).unwrap(),
+        MapAsset::from_cells(&format!("1 5\n{tiles}")).unwrap(),
     )
     .unwrap();
     let mut ids = Vec::new();
@@ -283,7 +283,7 @@ fn terrain_targets(world: &mut World, config: &Config, map: ObjectId) -> ObjectI
         world,
         interior,
         "hangar",
-        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+        MapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(world, interior, support::FIXTURE_DICE_SEED);
@@ -298,7 +298,7 @@ fn terrain_targets(world: &mut World, config: &Config, map: ObjectId) -> ObjectI
         },
     )
     .unwrap();
-    let coordinate = BattleHexCoordinate { x: 0, y: 1 };
+    let coordinate = HexCoordinate { x: 0, y: 1 };
     set_building_entrance(
         world,
         map,
@@ -339,7 +339,7 @@ async fn vehicle_coordinate_and_structure_scans_share_native_lua_admission() {
     assign_battle_pilot(&mut world, observer, ObjectId(1)).unwrap();
     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     refresh_battle_contacts(&mut world, &[observer]).unwrap();
-    let coordinate = BattleHexCoordinate { x: 0, y: 1 };
+    let coordinate = HexCoordinate { x: 0, y: 1 };
     assert!(battle_hex_visible(&world, observer, coordinate).unwrap());
     let expected = scan_battle_unit(&world, observer, ObjectId(1), mech, "").unwrap();
     let before = world.btech.clone();
@@ -371,7 +371,7 @@ async fn vehicle_coordinate_and_structure_scans_share_native_lua_admission() {
             &mut world,
             observer,
             ObjectId(1),
-            BattleHexCoordinate { x: 1, y: 9 },
+            HexCoordinate { x: 1, y: 9 },
             1000
         )
         .is_err()
@@ -389,7 +389,7 @@ async fn vehicle_coordinate_and_structure_scans_share_native_lua_admission() {
             &mut world,
             observer,
             ObjectId(1),
-            BattleHexCoordinate { x: 0, y: 4 },
+            HexCoordinate { x: 0, y: 4 },
             1000
         )
         .unwrap_err()
@@ -421,7 +421,7 @@ async fn vehicle_terrain_perception_owns_dice_and_rolls_back_experience() {
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(observer);
     assign_battle_pilot(&mut world, observer, ObjectId(1)).unwrap();
     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
-    let coordinate = BattleHexCoordinate { x: 0, y: 1 };
+    let coordinate = HexCoordinate { x: 0, y: 1 };
     let before = world.btech.clone();
     assert!(
         scan_battle_building(&mut world, observer, ObjectId(1), coordinate, 1000)

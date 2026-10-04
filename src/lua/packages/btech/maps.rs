@@ -13,7 +13,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                 &crate::lua::configuration(lua),
                 ObjectId(actor),
                 ObjectId(map),
-                crate::BattleHexCoordinate { x, y },
+                crate::HexCoordinate { x, y },
             )
             .map_err(mlua::Error::external)?;
             detached(lua, &report)
@@ -43,7 +43,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                     ObjectId(actor),
                     ObjectId(map),
                     crate::BattleMinePlacement {
-                        coordinate: crate::BattleHexCoordinate { x, y },
+                        coordinate: crate::HexCoordinate { x, y },
                         kind: crate::BattleMineKind::parse(&kind).map_err(mlua::Error::external)?,
                         strength,
                         extra: extra.unwrap_or(0),
@@ -58,8 +58,8 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
         error::wrap(lua, add_mine, "btech.operation.failed")?,
     )?;
     for (name, kind) in [
-        ("map_add_fire", crate::BattleDecorationKind::Fire),
-        ("map_add_smoke", crate::BattleDecorationKind::Smoke),
+        ("map_add_fire", crate::DecorationKind::Fire),
+        ("map_add_smoke", crate::DecorationKind::Smoke),
     ] {
         let action = lua.create_function(
             move |lua, (actor, id, x, y, duration): (i64, i64, i32, i32, i32)| {
@@ -71,7 +71,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                         &crate::lua::configuration(lua),
                         ObjectId(actor),
                         ObjectId(id),
-                        crate::BattleHexCoordinate { x, y },
+                        crate::HexCoordinate { x, y },
                         kind,
                         duration,
                     )
@@ -159,7 +159,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                 .transpose()
                 .map_err(mlua::Error::external)?;
             let coordinate = match (x, y) {
-                (Some(x), Some(y)) => Some(crate::BattleHexCoordinate { x, y }),
+                (Some(x), Some(y)) => Some(crate::HexCoordinate { x, y }),
                 (None, None) => None,
                 _ => return Err(mlua::Error::external("Both X and Y are required")),
             };
@@ -191,7 +191,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                     &crate::lua::configuration(lua),
                     ObjectId(actor),
                     ObjectId(id),
-                    crate::BattleHexCoordinate { x, y },
+                    crate::HexCoordinate { x, y },
                     radius,
                     team.unwrap_or(0),
                 )

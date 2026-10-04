@@ -1,6 +1,6 @@
 //! Selective ownership of linked-map marker identity and coordinates; auxiliary payloads remain intact.
 use super::write::{Cell, Fields, row};
-use crate::{BattleHexCoordinate, BattleLinkedMarker, ObjectId, StoredBattleMap, World};
+use crate::{BattleLinkedMarker, HexCoordinate, ObjectId, StoredBattleMap, World};
 use anyhow::{Context, Result, ensure};
 use sqlx::{Row, SqliteConnection};
 use std::{collections::BTreeMap, sync::Arc};
@@ -24,7 +24,7 @@ pub(super) async fn load(
         Arc::make_mut(&mut map.linked_markers).insert(
             ordinal,
             BattleLinkedMarker {
-                coordinate: BattleHexCoordinate {
+                coordinate: HexCoordinate {
                     x: row.try_get("x")?,
                     y: row.try_get("y")?,
                 },

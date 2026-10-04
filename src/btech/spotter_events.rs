@@ -1,5 +1,5 @@
 //! Durable, ordered forward-observer requests and radio maintenance shared by unit families.
-use super::{BattleNotice, BattlePoint};
+use super::{BattleNotice, Point};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -11,7 +11,7 @@ struct Event {
     order: u64,
     remaining: u16,
     observer: ObjectId,
-    positions: Option<[BattlePoint; 2]>,
+    positions: Option<[Point; 2]>,
 }
 
 /// Pending events retain insertion order independently of the current selected spotter.
@@ -144,7 +144,7 @@ pub(super) fn validate(state: &super::BtechState) -> Result<()> {
 }
 
 /// The reference compares float coordinates scaled to real map units, requiring all four changes.
-fn moved(original: [BattlePoint; 2], current: [BattlePoint; 2]) -> bool {
+fn moved(original: [Point; 2], current: [Point; 2]) -> bool {
     original.into_iter().zip(current).all(|(old, new)| {
         let differs = |a: f64, b: f64| ((a * 322.5) as f32 - (b * 322.5) as f32).abs() > 0.0001;
         differs(old.x, new.x) && differs(old.y, new.y)

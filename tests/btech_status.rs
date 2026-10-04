@@ -204,7 +204,7 @@ async fn coordinate_target_labels_keep_reference_spacing() {
                 &mut world,
                 id,
                 ObjectId(1),
-                BattleHexCoordinate { x: 1, y: 0 },
+                HexCoordinate { x: 1, y: 0 },
                 mode,
             )
             .unwrap();
@@ -331,7 +331,7 @@ async fn named_fixture(
         &mut world,
         map,
         "yard",
-        BattleMapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
+        MapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
     )
     .unwrap();
     let id = world.create(&config, "Vehicle".into(), Kind::Thing);

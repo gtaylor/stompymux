@@ -1,5 +1,5 @@
 //! Shared building destinations independent of chassis, entry timers and host movement publication.
-use super::{BattleHexCoordinate, BattlePosition, StoredBattleMap};
+use super::{BattlePosition, HexCoordinate, StoredBattleMap};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -8,7 +8,7 @@ use std::{collections::BTreeMap, sync::Arc};
 /// An interior arrival coordinate and its saved single-byte direction selector.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BattleBuildingEntryPoint {
-    pub coordinate: BattleHexCoordinate,
+    pub coordinate: HexCoordinate,
     pub direction: u8,
     /// Authored object reference; route selection uses the direction and coordinate.
     pub object: ObjectId,
@@ -21,7 +21,7 @@ pub struct BattleBuildingEntryPoint {
 /// A return-map record; its coordinate is selection metadata, not the exterior arrival point.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BattleBuildingExit {
-    pub coordinate: BattleHexCoordinate,
+    pub coordinate: HexCoordinate,
     pub destination: ObjectId,
     /// Authored byte payload retained for map-object inspection.
     pub data_char: u8,
@@ -98,7 +98,7 @@ pub fn set_building_exit(
         id,
         ordinal,
         destination.map(|destination| BattleBuildingExit {
-            coordinate: previous.map_or(BattleHexCoordinate { x: 0, y: 0 }, |exit| exit.coordinate),
+            coordinate: previous.map_or(HexCoordinate { x: 0, y: 0 }, |exit| exit.coordinate),
             destination,
             data_char: previous.map_or(0, |exit| exit.data_char),
             data_short: previous.map_or(0, |exit| exit.data_short),
@@ -140,7 +140,7 @@ pub fn set_building_return_link(
 pub fn building_entry_destination(
     world: &World,
     exterior: ObjectId,
-    coordinate: BattleHexCoordinate,
+    coordinate: HexCoordinate,
     direction: Option<u8>,
 ) -> Result<BattlePosition> {
     let entrance = map(world, exterior)?

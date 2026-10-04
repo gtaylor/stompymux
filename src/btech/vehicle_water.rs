@@ -10,7 +10,7 @@ pub(super) struct WaterEntry {
 }
 
 /// Ground vehicles with waterproof equipment and hovercraft do not need water avoidance.
-pub(super) fn requires_check(unit: &BattleVehicle, tile: BattleHex, height: i32) -> bool {
+pub(super) fn requires_check(unit: &BattleVehicle, tile: Hex, height: i32) -> bool {
     unit.definition().movement != BattleVehicleMovement::Hover
         && !unit.definition().has_special("Waterproof_Tech")
         && height < i32::from(tile.water_line())

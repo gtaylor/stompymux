@@ -14,7 +14,7 @@ async fn fixture(
         &mut world,
         map,
         "slopes",
-        BattleMapAsset::from_cells(&format!("12 3\n{row}\n{row}\n{row}\n")).unwrap(),
+        MapAsset::from_cells(&format!("12 3\n{row}\n{row}\n{row}\n")).unwrap(),
     )
     .unwrap();
     let id = world.create(&config, "Vehicle".into(), Kind::Thing);
@@ -72,7 +72,7 @@ async fn vehicle_slopes_reduce_speed_once_per_step_and_replay_mid_climb() {
                 .definition()
                 .ground_motion_step(
                     unit.motion().unwrap(),
-                    BattleHex::new(Terrain::Grassland, 0),
+                    Hex::new(Terrain::Grassland, 0),
                     BattleVehicleMotionRules::STANDARD,
                 )
                 .unwrap();
@@ -154,7 +154,7 @@ async fn reverse_slope_checks_replay_success_and_failed_climbs_and_descents() {
                 let proposed = previous
                     .ground_motion_step(
                         previous.motion().unwrap(),
-                        BattleHex::new(Terrain::Grassland, 0),
+                        Hex::new(Terrain::Grassland, 0),
                         BattleVehicleMotionRules::STANDARD,
                     )
                     .unwrap();
@@ -275,7 +275,7 @@ async fn retained_height_applies_only_to_the_departure_hex() {
         let proposed = unit
             .ground_motion_step(
                 unit.motion().unwrap(),
-                BattleHex::new(Terrain::Grassland, 0),
+                Hex::new(Terrain::Grassland, 0),
                 BattleVehicleMotionRules::STANDARD,
             )
             .unwrap();

@@ -41,8 +41,8 @@
 //! Points of interest are metadata for scripts, which read them through
 //! `btech.map.points_of_interest`. Units never see them and they do not change the terrain.
 use crate::{
-    BattleDecorationKind, BattleHex, BattleMapAsset, BattleMapFlag, Ground, MAX_HEIGHT,
-    MapPointOfInterest, Structure, Water, Woods,
+    DecorationKind, Ground, Hex, MAX_HEIGHT, MapAsset, MapFlag, MapPointOfInterest, Structure,
+    Water, Woods,
 };
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -60,7 +60,7 @@ struct MapFile {
     #[serde(default = "default_temperature")]
     temperature: i8,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    flags: Option<Vec<BattleMapFlag>>,
+    flags: Option<Vec<MapFlag>>,
     terrain: String,
     level: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -123,7 +123,7 @@ fn cell(symbol: char) -> Option<Cell> {
 }
 
 /// The terrain-grid character for a hex; bridges show the water beneath them.
-fn symbol(hex: BattleHex) -> char {
+fn symbol(hex: Hex) -> char {
     match (hex.structure(), hex.water(), hex.woods()) {
         (Some(Structure::Building { .. }), _, _) => '@',
         (Some(Structure::Wall { .. }), _, _) => '=',
@@ -143,20 +143,20 @@ fn symbol(hex: BattleHex) -> char {
 }
 
 /// Decode an overlay-grid character: `&` fire, `:` smoke, `.` neither.
-fn overlay(symbol: char) -> Option<Option<BattleDecorationKind>> {
+fn overlay(symbol: char) -> Option<Option<DecorationKind>> {
     Some(match symbol {
         '.' => None,
-        '&' => Some(BattleDecorationKind::Fire),
-        ':' => Some(BattleDecorationKind::Smoke),
+        '&' => Some(DecorationKind::Fire),
+        ':' => Some(DecorationKind::Smoke),
         _ => return None,
     })
 }
 
 /// The overlay-grid character for a hex.
-fn overlay_symbol(hex: BattleHex) -> char {
+fn overlay_symbol(hex: Hex) -> char {
     match hex.overlay() {
-        Some(BattleDecorationKind::Fire) => '&',
-        Some(BattleDecorationKind::Smoke) => ':',
+        Some(DecorationKind::Fire) => '&',
+        Some(DecorationKind::Smoke) => ':',
         None => '.',
     }
 }
@@ -211,7 +211,7 @@ fn matching_grid(
     Ok(Some(rows))
 }
 
-impl BattleMapAsset {
+impl MapAsset {
     /// Decode a map file. `inherited_flags` are kept when the file has no `flags` key, so a
     /// reload does not clear flags an operator set on the live map.
     pub fn parse(source: &str) -> Result<Self> {
@@ -263,18 +263,14 @@ impl BattleMapAsset {
                         .with_context(|| format!("invalid structure height {value:?} {}", at()))
                 };
                 let hex = match cell {
-                    Cell::Ground(kind) => BattleHex::from_layers(ground, kind, None, None, None),
+                    Cell::Ground(kind) => Hex::from_layers(ground, kind, None, None, None),
                     Cell::Woods(woods) => {
-                        BattleHex::from_layers(ground, Ground::Clear, Some(woods), None, None)
+                        Hex::from_layers(ground, Ground::Clear, Some(woods), None, None)
                     }
-                    Cell::Water { frozen } => BattleHex::from_layers(
-                        ground,
-                        Ground::Clear,
-                        None,
-                        Some(water(frozen)?),
-                        None,
-                    ),
-                    Cell::Building => BattleHex::from_layers(
+                    Cell::Water { frozen } => {
+                        Hex::from_layers(ground, Ground::Clear, None, Some(water(frozen)?), None)
+                    }
+                    Cell::Building => Hex::from_layers(
                         ground,
                         Ground::Clear,
                         None,
@@ -283,7 +279,7 @@ impl BattleMapAsset {
                             height: structure_height()?,
                         }),
                     ),
-                    Cell::Wall => BattleHex::from_layers(
+                    Cell::Wall => Hex::from_layers(
                         ground,
                         Ground::Clear,
                         None,
@@ -368,7 +364,7 @@ impl BattleMapAsset {
     /// Encode this map in the map file format. Absent optional grids are left out.
     pub fn to_file(&self) -> Result<String> {
         let width = usize::from(self.width);
-        let rows = |encode: &dyn Fn(BattleHex) -> char| -> String {
+        let rows = |encode: &dyn Fn(Hex) -> char| -> String {
             let mut text = String::with_capacity((width + 1) * usize::from(self.height));
             for row in self.hexes.chunks(width) {
                 text.extend(row.iter().map(|&hex| encode(hex)));
@@ -408,7 +404,7 @@ impl BattleMapAsset {
                     .push([(index % width) as u16, (index / width) as u16]);
             }
         }
-        let flags = BattleMapFlag::ALL
+        let flags = MapFlag::ALL
             .into_iter()
             .filter(|flag| flag.is_set(i64::from(self.flags)))
             .collect::<Vec<_>>();
@@ -483,7 +479,7 @@ impl BattleMapAsset {
 /// Helper so the flag list is written with TOML's own string quoting.
 #[derive(Serialize)]
 struct Flags {
-    flags: Vec<BattleMapFlag>,
+    flags: Vec<MapFlag>,
 }
 
 /// Helper so points of interest are written as `[[points_of_interest]]` tables with TOML's
@@ -527,96 +523,90 @@ hexes = [[3, 0]]
 
     #[test]
     fn parses_every_layer() {
-        let map = BattleMapAsset::parse(SAMPLE).unwrap();
+        let map = MapAsset::parse(SAMPLE).unwrap();
         assert_eq!((map.width, map.height), (5, 2));
         assert_eq!((map.gravity, map.temperature), (80, -10));
         assert_eq!(i64::from(map.flags), 2 | 32);
         let hex = |x, y| map.hex(x, y).unwrap();
-        assert_eq!(hex(0, 0), BattleHex::new(Terrain::Grassland, 0));
-        assert_eq!(hex(1, 0), BattleHex::new(Terrain::LightForest, 1));
-        assert_eq!(hex(2, 0), BattleHex::new(Terrain::HeavyForest, 2));
+        assert_eq!(hex(0, 0), Hex::new(Terrain::Grassland, 0));
+        assert_eq!(hex(1, 0), Hex::new(Terrain::LightForest, 1));
+        assert_eq!(hex(2, 0), Hex::new(Terrain::HeavyForest, 2));
         assert_eq!(hex(3, 0).deck_clearance(), Some(2));
         assert_eq!(hex(3, 0).water_depth(), 2);
-        assert_eq!(hex(4, 0), BattleHex::new(Terrain::Ice, 3));
-        assert_eq!(hex(0, 1), BattleHex::new(Terrain::Road, 1));
+        assert_eq!(hex(4, 0), Hex::new(Terrain::Ice, 3));
+        assert_eq!(hex(0, 1), Hex::new(Terrain::Road, 1));
         assert_eq!(hex(1, 1).level(), 10);
-        assert_eq!(hex(2, 1), BattleHex::new(Terrain::Mountains, 0));
-        assert_eq!(hex(3, 1), BattleHex::new(Terrain::Building, 4));
-        assert_eq!(hex(4, 1), BattleHex::new(Terrain::Wall, 5));
+        assert_eq!(hex(2, 1), Hex::new(Terrain::Mountains, 0));
+        assert_eq!(hex(3, 1), Hex::new(Terrain::Building, 4));
+        assert_eq!(hex(4, 1), Hex::new(Terrain::Wall, 5));
     }
 
     #[test]
     fn writes_what_it_reads() {
-        let map = BattleMapAsset::parse(SAMPLE).unwrap();
+        let map = MapAsset::parse(SAMPLE).unwrap();
         let text = map.to_file().unwrap();
-        assert_eq!(BattleMapAsset::parse(&text).unwrap(), map);
+        assert_eq!(MapAsset::parse(&text).unwrap(), map);
         assert_eq!(map.to_file().unwrap(), text);
         // Three heavy-woods hexes in a row would end a basic multi-line string.
-        let woods = BattleMapAsset::from_cells("3 1\n\"0\"0\"0\n").unwrap();
-        assert_eq!(
-            BattleMapAsset::parse(&woods.to_file().unwrap()).unwrap(),
-            woods
-        );
-        let plain = BattleMapAsset::parse("terrain = \"..\\n\"\nlevel = \"01\\n\"").unwrap();
+        let woods = MapAsset::from_cells("3 1\n\"0\"0\"0\n").unwrap();
+        assert_eq!(MapAsset::parse(&woods.to_file().unwrap()).unwrap(), woods);
+        let plain = MapAsset::parse("terrain = \"..\\n\"\nlevel = \"01\\n\"").unwrap();
         let text = plain.to_file().unwrap();
         assert!(
             !text.contains("depth") && !text.contains("bridges"),
             "{text}"
         );
-        assert_eq!(BattleMapAsset::parse(&text).unwrap(), plain);
+        assert_eq!(MapAsset::parse(&text).unwrap(), plain);
     }
 
     /// A building on high ground keeps both heights; its top is their sum.
     #[test]
     fn structures_on_raised_ground_load_and_validate() {
         let source = "terrain = '@'\nlevel = 'a'\nstructure_height = 'b'\n";
-        let map = BattleMapAsset::parse(source).unwrap();
+        let map = MapAsset::parse(source).unwrap();
         let tower = map.hex(0, 0).unwrap();
         assert_eq!((tower.level(), tower.surface_height()), (10, 21));
         tower.validate().unwrap();
-        assert_eq!(BattleMapAsset::parse(&map.to_file().unwrap()).unwrap(), map);
+        assert_eq!(MapAsset::parse(&map.to_file().unwrap()).unwrap(), map);
     }
 
     /// A lake and a bridge on a plateau keep their surfaces at the plateau's level.
     #[test]
     fn water_and_bridges_sit_on_raised_ground() {
         let source = "terrain = '~-~'\nlevel = '432'\ndepth = '231'\n\n[[bridges]]\ndeck = 2\nhexes = [[2, 0]]\n";
-        let map = BattleMapAsset::parse(source).unwrap();
+        let map = MapAsset::parse(source).unwrap();
         let lake = map.hex(0, 0).unwrap();
         assert_eq!((lake.water_line(), lake.surface_height()), (4, 2));
         let ice = map.hex(1, 0).unwrap();
         assert_eq!((ice.standing_height(), ice.surface_height()), (3, 0));
         let bridge = map.hex(2, 0).unwrap();
         assert_eq!((bridge.water_line(), bridge.deck_height()), (2, Some(4)));
-        assert_eq!(BattleMapAsset::parse(&map.to_file().unwrap()).unwrap(), map);
+        assert_eq!(MapAsset::parse(&map.to_file().unwrap()).unwrap(), map);
     }
 
     /// The overlay grid places permanent fire and smoke over any hex, on top of its layers.
     #[test]
     fn overlay_grid_loads_permanent_fire_and_smoke() {
         let source = "terrain = '.`~'\nlevel = '120'\ndepth = '..2'\noverlay = '&:.'\n";
-        let map = BattleMapAsset::parse(source).unwrap();
+        let map = MapAsset::parse(source).unwrap();
         let fire = map.hex(0, 0).unwrap();
-        assert_eq!(fire, BattleHex::new(Terrain::Fire, 1));
+        assert_eq!(fire, Hex::new(Terrain::Fire, 1));
         let smoky = map.hex(1, 0).unwrap();
-        assert_eq!(smoky.overlay(), Some(BattleDecorationKind::Smoke));
-        assert_eq!(
-            smoky.with_overlay(None),
-            BattleHex::new(Terrain::LightForest, 2)
-        );
+        assert_eq!(smoky.overlay(), Some(DecorationKind::Smoke));
+        assert_eq!(smoky.with_overlay(None), Hex::new(Terrain::LightForest, 2));
         assert_eq!(map.hex(2, 0).unwrap().overlay(), None);
         let text = map.to_file().unwrap();
         assert!(text.contains("overlay = '''\n&:.\n'''"), "{text}");
-        assert_eq!(BattleMapAsset::parse(&text).unwrap(), map);
+        assert_eq!(MapAsset::parse(&text).unwrap(), map);
         // Fire and smoke are not terrain symbols, and the overlay grid has only its own.
         for bad in [
             "terrain = '&'\nlevel = '0'\n",
             "terrain = '.'\nlevel = '0'\noverlay = '~'\n",
             "terrain = '..'\nlevel = '00'\noverlay = '&'\n",
         ] {
-            assert!(BattleMapAsset::parse(bad).is_err(), "{bad}");
+            assert!(MapAsset::parse(bad).is_err(), "{bad}");
         }
-        let plain = BattleMapAsset::parse("terrain = '.'\nlevel = '0'\n").unwrap();
+        let plain = MapAsset::parse("terrain = '.'\nlevel = '0'\n").unwrap();
         assert!(!plain.to_file().unwrap().contains("overlay"));
     }
 
@@ -627,7 +617,7 @@ hexes = [[3, 0]]
         let source = format!(
             "{SAMPLE}\n[[points_of_interest]]\ntype = \"Objective\"\nname = \"Comms \\\"Tower\\\"\"\nx = 3\ny = 1\nelevation = -2\n\n[[points_of_interest]]\ntype = \"objective\"\nname = \"Ford\"\nx = 4\ny = 0\n"
         );
-        let map = BattleMapAsset::parse(&source).unwrap();
+        let map = MapAsset::parse(&source).unwrap();
         assert_eq!(
             map.points_of_interest,
             [
@@ -648,10 +638,10 @@ hexes = [[3, 0]]
             ]
         );
         let text = map.to_file().unwrap();
-        assert_eq!(BattleMapAsset::parse(&text).unwrap(), map);
+        assert_eq!(MapAsset::parse(&text).unwrap(), map);
         assert_eq!(map.to_file().unwrap(), text);
         assert!(
-            !BattleMapAsset::parse(SAMPLE)
+            !MapAsset::parse(SAMPLE)
                 .unwrap()
                 .to_file()
                 .unwrap()
@@ -689,7 +679,7 @@ hexes = [[3, 0]]
             ),
         ] {
             let source = format!("{base}{extra}\n");
-            let error = format!("{:#}", BattleMapAsset::parse(&source).unwrap_err());
+            let error = format!("{:#}", MapAsset::parse(&source).unwrap_err());
             assert!(error.contains(message), "{message:?} not in {error:?}");
         }
     }
@@ -697,17 +687,9 @@ hexes = [[3, 0]]
     #[test]
     fn missing_flags_keep_inherited_ones() {
         let source = "terrain = \".\\n\"\nlevel = \"0\\n\"";
-        assert_eq!(
-            BattleMapAsset::parse_with_flags(source, 32).unwrap().flags,
-            32
-        );
+        assert_eq!(MapAsset::parse_with_flags(source, 32).unwrap().flags, 32);
         let explicit = format!("flags = []\n{source}");
-        assert_eq!(
-            BattleMapAsset::parse_with_flags(&explicit, 32)
-                .unwrap()
-                .flags,
-            0
-        );
+        assert_eq!(MapAsset::parse_with_flags(&explicit, 32).unwrap().flags, 0);
     }
 
     #[test]
@@ -741,7 +723,7 @@ hexes = [[3, 0]]
             ),
             (base(".\n", "0\n", "colour = 1"), "invalid map file"),
         ] {
-            let error = format!("{:#}", BattleMapAsset::parse(&source).unwrap_err());
+            let error = format!("{:#}", MapAsset::parse(&source).unwrap_err());
             assert!(error.contains(message), "{message:?} not in {error:?}");
         }
     }

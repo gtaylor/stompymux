@@ -62,7 +62,7 @@ async fn fixture(
         &mut world,
         map,
         "wreck",
-        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+        MapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -103,7 +103,7 @@ async fn fixture(
         map,
         42,
         Some(BattleMinefield {
-            coordinate: BattleHexCoordinate { x: 0, y: 0 },
+            coordinate: HexCoordinate { x: 0, y: 0 },
             kind: BattleMineKind::Command,
             strength: 5,
             extra: 0,

@@ -10,8 +10,8 @@ use crate::{
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::btech::{AutopilotOrder, AutopilotOrderState, AutopilotReason, AutopilotState};
 use stompymux_rs::{
-    BattleMapAsset, BattlePower, BattleUnitSignature, BattleUnitTemplate, BattleVehicleTemplate,
-    Config, Kind, ObjectId, Scripts, World, assign_battle_pilot, create_battle_map,
+    BattlePower, BattleUnitSignature, BattleUnitTemplate, BattleVehicleTemplate, Config, Kind,
+    MapAsset, ObjectId, Scripts, World, assign_battle_pilot, create_battle_map,
     create_battle_vehicle, place_battle_unit, refresh_battle_contacts, set_battle_unit_signature,
 };
 
@@ -33,7 +33,7 @@ async fn tracked_wheeled_and_hover_vehicles_accept_and_drive_move_orders() {
                 &mut world,
                 map,
                 "autopilot.vehicle",
-                BattleMapAsset::from_cells(&format!("6 8\n{}", ".0.0.0.0.0.0\n".repeat(8)))
+                MapAsset::from_cells(&format!("6 8\n{}", ".0.0.0.0.0.0\n".repeat(8)))
                     .unwrap(),
             )
             .unwrap();
@@ -105,7 +105,7 @@ async fn ground_fixture(positions: &[(u16, u16)], pilot_first: bool) -> GroundFi
         &mut world,
         map,
         "autopilot.orders",
-        BattleMapAsset::from_cells(&format!("3 16\n{rows}")).unwrap(),
+        MapAsset::from_cells(&format!("3 16\n{rows}")).unwrap(),
     )
     .unwrap();
 
@@ -393,7 +393,7 @@ async fn wrong_map_destination_blocks_the_active_order() {
                 &mut fixture.world,
                 other_map,
                 "autopilot.other",
-                BattleMapAsset::from_cells(&format!("3 16\n{}", ".0.0.0\n".repeat(16))).unwrap(),
+                MapAsset::from_cells(&format!("3 16\n{}", ".0.0.0\n".repeat(16))).unwrap(),
             )
             .unwrap();
             crate::support::seed_object_dice(&mut fixture.world, other_map, crate::support::FIXTURE_DICE_SEED);

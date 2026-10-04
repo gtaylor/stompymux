@@ -1,5 +1,5 @@
 //! Terrain line-of-sight reports at live unit eye heights, independent of sensor acquisition.
-use super::{BattleHexCoordinate, StoredBattleMap};
+use super::{HexCoordinate, StoredBattleMap};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
@@ -21,8 +21,8 @@ pub struct BattleTerrainLos {
 /// Intact ice endpoints use zero; bridge endpoints use deck height.
 pub fn ground_terrain_los(
     map: &StoredBattleMap,
-    observer: BattleHexCoordinate,
-    target: BattleHexCoordinate,
+    observer: HexCoordinate,
+    target: HexCoordinate,
 ) -> Result<BattleTerrainLos> {
     ground_posture_los(map, observer, target, false, false, (None, None))
 }
@@ -30,8 +30,8 @@ pub fn ground_terrain_los(
 /// Shared terrain trace at the units' current standing or prone eye heights.
 fn ground_posture_los(
     map: &StoredBattleMap,
-    observer: BattleHexCoordinate,
-    target: BattleHexCoordinate,
+    observer: HexCoordinate,
+    target: HexCoordinate,
     observer_prone: bool,
     target_prone: bool,
     airborne: (Option<f64>, Option<f64>),
@@ -51,8 +51,8 @@ fn ground_posture_los(
 /// Trace with explicit eye offsets so empty hexes do not acquire a standing unit's height.
 fn terrain_los_at_heights(
     map: &StoredBattleMap,
-    observer: BattleHexCoordinate,
-    target: BattleHexCoordinate,
+    observer: HexCoordinate,
+    target: HexCoordinate,
     eyes: (f64, f64),
     airborne: (Option<f64>, Option<f64>),
 ) -> Result<BattleTerrainLos> {
@@ -62,14 +62,14 @@ fn terrain_los_at_heights(
 /// Coordinate fire at the ice surface permits the final cell to meet the sightline.
 fn terrain_los_with_endpoint(
     map: &StoredBattleMap,
-    observer: BattleHexCoordinate,
-    target: BattleHexCoordinate,
+    observer: HexCoordinate,
+    target: HexCoordinate,
     eyes: (f64, f64),
     airborne: (Option<f64>, Option<f64>),
     ice_surface: bool,
 ) -> Result<BattleTerrainLos> {
-    let hex = |point: BattleHexCoordinate| map.hex(i64::from(point.x), i64::from(point.y));
-    let base = |point: BattleHexCoordinate| map.base_hex(i64::from(point.x), i64::from(point.y));
+    let hex = |point: HexCoordinate| map.hex(i64::from(point.x), i64::from(point.y));
+    let base = |point: HexCoordinate| map.base_hex(i64::from(point.x), i64::from(point.y));
     let source = base(observer)?;
     let destination = base(target)?;
     let visible_destination = hex(target)?;
@@ -78,7 +78,7 @@ fn terrain_los_with_endpoint(
     let start_height = airborne.0.unwrap_or(start_ground) + eyes.0;
     let end_height = airborne.1.unwrap_or(end_ground) + eyes.1;
     // Water surfaces sit at each hex's level; "both worlds" is a unit one level below one.
-    let surface = |hex: super::BattleHex| f64::from(hex.level());
+    let surface = |hex: super::Hex| f64::from(hex.level());
     let underwater = source.holds_water() && start_height < surface(source);
     let target_underwater = destination.holds_water() && end_height < surface(destination);
     let both_worlds = source.holds_water() && start_ground == surface(source) - 1.0;
@@ -134,8 +134,8 @@ fn terrain_los_with_endpoint(
             if intervening {
                 report.woods = (report.woods + tile.woods_density()).min(15);
                 match tile.overlay() {
-                    Some(super::BattleDecorationKind::Smoke) => report.smoke = true,
-                    Some(super::BattleDecorationKind::Fire) => report.fire = true,
+                    Some(super::DecorationKind::Smoke) => report.smoke = true,
+                    Some(super::DecorationKind::Fire) => report.fire = true,
                     None => {}
                 }
             }
@@ -158,7 +158,7 @@ fn terrain_los_with_endpoint(
 /// Shared placed-unit geometry for terrain and perception queries.
 pub(super) struct UnitSightPoint {
     pub position: super::BattlePosition,
-    pub point: super::BattlePoint,
+    pub point: super::Point,
     pub eye: f64,
     /// Explicit altitude preserves flight precision and vehicle bridge/water position.
     pub height: Option<f64>,
@@ -177,7 +177,7 @@ impl UnitSightPoint {
 }
 
 /// The water surface a unit in `tile` can be below.
-fn water_surface(tile: super::BattleHex) -> Option<i32> {
+fn water_surface(tile: super::Hex) -> Option<i32> {
     tile.holds_water().then(|| i32::from(tile.level()))
 }
 
@@ -306,11 +306,11 @@ pub(super) fn unit_terrain_geometry(
     }
     let mut report = terrain_los_at_heights(
         map,
-        BattleHexCoordinate {
+        HexCoordinate {
             x: i32::from(observer.position.x),
             y: i32::from(observer.position.y),
         },
-        BattleHexCoordinate {
+        HexCoordinate {
             x: i32::from(target.position.x),
             y: i32::from(target.position.y),
         },
@@ -328,11 +328,11 @@ pub(super) fn unit_terrain_geometry(
 pub(super) fn unit_hex_los(
     world: &World,
     observer: ObjectId,
-    target: BattleHexCoordinate,
+    target: HexCoordinate,
 ) -> Result<(BattleTerrainLos, f64)> {
     let unit = unit_sight_point(world, observer)?;
     let map = &world.btech.maps()[&unit.position.map];
-    let source = BattleHexCoordinate {
+    let source = HexCoordinate {
         x: i32::from(unit.position.x),
         y: i32::from(unit.position.y),
     };
@@ -369,7 +369,7 @@ pub(super) fn unit_hex_los(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{BattleHex, Terrain};
+    use crate::{Hex, Terrain};
     use std::sync::Arc;
 
     /// Empty-hex LOS has only an observer hardware exception, even on maps with a larger ceiling.
@@ -398,13 +398,13 @@ mod tests {
                     y: 0,
                 });
                 unit.motion = Some(crate::BattleMotion::stationary(
-                    BattleHexCoordinate { x: 0, y: 0 }.center(),
+                    HexCoordinate { x: 0, y: 0 }.center(),
                 ));
                 world.btech.constructed.insert(ObjectId(1), unit);
                 let before = world.btech.clone();
                 for y in [10, 11, 180, 181, 200] {
                     let (los, distance) =
-                        unit_hex_los(&world, ObjectId(1), BattleHexCoordinate { x: 0, y }).unwrap();
+                        unit_hex_los(&world, ObjectId(1), HexCoordinate { x: 0, y }).unwrap();
                     assert_eq!(distance, f64::from(y));
                     assert_eq!(
                         los.blocked,
@@ -457,7 +457,7 @@ mod tests {
         map.establish_terrain(Arc::new(
             tiles
                 .iter()
-                .flat_map(|&(terrain, elevation)| [BattleHex::new(terrain, elevation); 3])
+                .flat_map(|&(terrain, elevation)| [Hex::new(terrain, elevation); 3])
                 .collect(),
         ))
         .unwrap();
@@ -467,8 +467,8 @@ mod tests {
     fn sight(tiles: &[(Terrain, u8)]) -> BattleTerrainLos {
         ground_terrain_los(
             &lane(tiles),
-            BattleHexCoordinate { x: 1, y: 0 },
-            BattleHexCoordinate {
+            HexCoordinate { x: 1, y: 0 },
+            HexCoordinate {
                 x: 1,
                 y: tiles.len() as i32 - 1,
             },
@@ -479,8 +479,8 @@ mod tests {
     #[test]
     fn cached_topology_still_reads_current_terrain_and_eye_heights() {
         use Terrain::*;
-        let from = BattleHexCoordinate { x: 1, y: 0 };
-        let to = BattleHexCoordinate { x: 1, y: 2 };
+        let from = HexCoordinate { x: 1, y: 0 };
+        let to = HexCoordinate { x: 1, y: 2 };
         super::super::los_trace::clear();
         assert!(!sight(&[(Grassland, 0); 3]).blocked);
         assert!(sight(&[(Grassland, 0), (Grassland, 2), (Grassland, 0)]).blocked);
@@ -557,8 +557,8 @@ mod tests {
 
     #[test]
     fn coordinate_ice_endpoint_is_visible_without_ignoring_intervening_ground() {
-        let from = BattleHexCoordinate { x: 1, y: 0 };
-        let to = BattleHexCoordinate { x: 1, y: 2 };
+        let from = HexCoordinate { x: 1, y: 0 };
+        let to = HexCoordinate { x: 1, y: 2 };
         for eye in [0.5, 1.5] {
             let clear = lane(&[
                 (Terrain::Grassland, 0),
@@ -602,7 +602,7 @@ mod tests {
             assert!(sight(&[(Water, 3), (Water, 3), (Ice, depth)]).blocked);
         }
         let map = lane(&[(Ice, 9); 3]);
-        let point = BattleHexCoordinate { x: 1, y: 0 };
+        let point = HexCoordinate { x: 1, y: 0 };
         assert!(!ground_terrain_los(&map, point, point).unwrap().blocked);
     }
 
@@ -621,8 +621,8 @@ mod tests {
             2
         );
         let map = lane(&[(Bridge, 9); 3]);
-        let source = BattleHexCoordinate { x: 1, y: 0 };
-        let target = BattleHexCoordinate { x: 1, y: 2 };
+        let source = HexCoordinate { x: 1, y: 0 };
+        let target = HexCoordinate { x: 1, y: 2 };
         let submerged =
             ground_posture_los(&map, source, target, false, false, (Some(-3.0), Some(-3.0)))
                 .unwrap();
@@ -639,12 +639,12 @@ mod tests {
     fn same_hex_is_clear_and_out_of_map_endpoints_return_errors() {
         use Terrain::*;
         let map = lane(&[(HeavyForest, 0)]);
-        let point = BattleHexCoordinate { x: 1, y: 0 };
+        let point = HexCoordinate { x: 1, y: 0 };
         let report = ground_terrain_los(&map, point, point).unwrap();
         assert!(!report.blocked);
         assert_eq!(report.woods, 0);
         assert_eq!(report.target_woods, 2);
-        assert!(ground_terrain_los(&map, point, BattleHexCoordinate { x: 1, y: 1 }).is_err());
+        assert!(ground_terrain_los(&map, point, HexCoordinate { x: 1, y: 1 }).is_err());
         assert!(
             !ground_terrain_los(&lane(&[(Bridge, 1)]), point, point)
                 .unwrap()

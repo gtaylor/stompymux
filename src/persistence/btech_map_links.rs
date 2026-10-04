@@ -1,8 +1,6 @@
 //! Selective persistence of authored links and cardinal entrance modes, separate from runtime routes.
 use super::write::{Cell, Fields, row};
-use crate::{
-    BattleHexCoordinate, BattleMapEntrance, BattleMapLink, ObjectId, StoredBattleMap, World,
-};
+use crate::{BattleMapEntrance, BattleMapLink, HexCoordinate, ObjectId, StoredBattleMap, World};
 use anyhow::{Context, Result, bail, ensure};
 use sqlx::{Row, SqliteConnection};
 use std::collections::BTreeMap;
@@ -27,7 +25,7 @@ pub(super) async fn load(
             .context("Authored link references missing child map")?
             .authored_link = Some(BattleMapLink {
             parent,
-            coordinate: BattleHexCoordinate {
+            coordinate: HexCoordinate {
                 x: record.try_get("x")?,
                 y: record.try_get("y")?,
             },
@@ -53,7 +51,7 @@ pub(super) async fn load(
                 distance: record.try_get("offset")?,
             },
             2 => BattleMapEntrance::Exact {
-                coordinate: BattleHexCoordinate {
+                coordinate: HexCoordinate {
                     x: record.try_get("x")?,
                     y: record.try_get("y")?,
                 },

@@ -77,7 +77,7 @@ pub fn supply_fixture_on(
         &mut world,
         map,
         "sight",
-        BattleMapAsset::from_cells(&format!("1 12\n{}", ".0\n".repeat(12))).unwrap(),
+        MapAsset::from_cells(&format!("1 12\n{}", ".0\n".repeat(12))).unwrap(),
     )
     .unwrap();
     crate::seed_object_dice(&mut world, map, crate::FIXTURE_DICE_SEED);

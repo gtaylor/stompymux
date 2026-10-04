@@ -128,7 +128,7 @@ pub fn extinguish_inferno_in_water(world: &mut World, id: ObjectId) -> Result<Ve
         super::decorations::raise_smoke(
             world,
             position.map,
-            super::BattleHexCoordinate {
+            super::HexCoordinate {
                 x: i32::from(position.x),
                 y: i32::from(position.y),
             },

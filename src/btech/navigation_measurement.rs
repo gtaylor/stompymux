@@ -5,12 +5,12 @@ use anyhow::{Context, Result, ensure};
 /// Source of an endpoint's live elevation.
 pub(super) enum EndpointSource {
     Unit(ObjectId),
-    Hex(super::BattleHexCoordinate),
+    Hex(super::HexCoordinate),
 }
 
 /// Continuous location plus the data needed for vertical measurements.
 pub(super) struct Endpoint {
-    pub point: super::BattlePoint,
+    pub point: super::Point,
     pub source: EndpointSource,
 }
 
@@ -68,8 +68,8 @@ pub(super) fn resolve(
             "Invalid map coordinates!"
         );
         Ok(Endpoint {
-            point: super::BattleHexCoordinate { x, y }.center(),
-            source: EndpointSource::Hex(super::BattleHexCoordinate { x, y }),
+            point: super::HexCoordinate { x, y }.center(),
+            source: EndpointSource::Hex(super::HexCoordinate { x, y }),
         })
     };
     let (destination, prefix) = match values.as_slice() {

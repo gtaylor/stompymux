@@ -174,7 +174,7 @@ fn terrain_effect(
         world,
         BattleWoodlandAttack {
             shooter,
-            coordinate: BattleHexCoordinate {
+            coordinate: HexCoordinate {
                 x: position.x.into(),
                 y: position.y.into(),
             },

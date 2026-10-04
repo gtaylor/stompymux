@@ -14,7 +14,7 @@ async fn fixture(
         &mut world,
         map,
         "targets",
-        BattleMapAsset::from_cells("3 5\n.0.0.0\n.0.0.0\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
+        MapAsset::from_cells("3 5\n.0.0.0\n.0.0.0\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -60,7 +60,7 @@ async fn fixture(
         &mut world,
         shooter,
         ObjectId(1),
-        BattleHexCoordinate { x: 2, y: 0 },
+        HexCoordinate { x: 2, y: 0 },
         mode,
     )
     .unwrap();
@@ -139,7 +139,7 @@ async fn coordinates_share_all_chassis_single_tic_and_restart() {
                 }
                 let grouped = scripts(&config, &world);
                 let request = BattleFireTarget::Hex {
-                    coordinate: BattleHexCoordinate { x: 1, y },
+                    coordinate: HexCoordinate { x: 1, y },
                 };
                 let reports =
                     fire_battle_tics(&grouped, &config, shooter, ObjectId(1), vec![0], request)

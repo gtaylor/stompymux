@@ -1,5 +1,5 @@
 //! Operator ice growth and melting share map randomness and ordinary surface-break consequences.
-use super::{BattleFallRules, BattleHexCoordinate, BattleSurfaceBreak, StoredBattleMap};
+use super::{BattleFallRules, BattleSurfaceBreak, HexCoordinate, StoredBattleMap};
 use crate::{Config, ObjectId, Scripts};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
@@ -15,14 +15,14 @@ pub enum BattleIceChange {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct BattleMapIceReport {
     pub map: ObjectId,
-    pub changed: Vec<BattleHexCoordinate>,
+    pub changed: Vec<HexCoordinate>,
     pub fractures: Vec<BattleSurfaceBreak>,
 }
 
 /// Apply the neighborhood probability after the percentage draw has succeeded.
 fn eligible(
     map: &StoredBattleMap,
-    coordinate: BattleHexCoordinate,
+    coordinate: HexCoordinate,
     change: BattleIceChange,
     dice: &mut super::BattleDice,
 ) -> Result<bool> {
@@ -82,7 +82,7 @@ pub fn change_map_ice_action(
         };
         for x in 0..original.width {
             for y in 0..original.height {
-                let coordinate = BattleHexCoordinate {
+                let coordinate = HexCoordinate {
                     x: x as i32,
                     y: y as i32,
                 };

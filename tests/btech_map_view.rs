@@ -26,7 +26,7 @@ async fn map_views_clip_both_parities_and_preserve_terrain_cells_and_preferences
             &mut world,
             map,
             "view",
-            BattleMapAsset::from_cells(&format!(
+            MapAsset::from_cells(&format!(
                 "{width} {height}\n{}",
                 format!("{row}\n").repeat(height)
             ))
@@ -55,13 +55,13 @@ async fn map_views_clip_both_parities_and_preserve_terrain_cells_and_preferences
         let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
         let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         for center in [
-            BattleHexCoordinate {
+            HexCoordinate {
                 x: i32::MIN,
                 y: i32::MIN,
             },
-            BattleHexCoordinate { x: 3, y: 3 },
-            BattleHexCoordinate { x: 4, y: 4 },
-            BattleHexCoordinate {
+            HexCoordinate { x: 3, y: 3 },
+            HexCoordinate { x: 4, y: 4 },
+            HexCoordinate {
                 x: i32::MAX,
                 y: i32::MAX,
             },
@@ -169,20 +169,15 @@ async fn map_views_ignore_unit_markers_and_leave_all_supported_chassis_unchanged
         set_map_decoration(
             &mut world,
             map,
-            BattleHexCoordinate { x: 0, y: 0 },
-            Some(BattleDecoration::new(BattleDecorationKind::Fire, 0, None)),
+            HexCoordinate { x: 0, y: 0 },
+            Some(BattleDecoration::new(DecorationKind::Fire, 0, None)),
         )
         .unwrap();
         let before = world.btech.clone();
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-        let report = view_battle_map_action(
-            &scripts,
-            &config,
-            actor,
-            map,
-            BattleHexCoordinate { x: 0, y: 0 },
-        )
-        .unwrap();
+        let report =
+            view_battle_map_action(&scripts, &config, actor, map, HexCoordinate { x: 0, y: 0 })
+                .unwrap();
         let text = text::plain(&report.text);
         assert!(text.contains("&&"));
         assert!(!text.contains("**") && !text.contains("AA") && !text.contains("AB"));
@@ -198,14 +193,14 @@ async fn view_rejection_callback_and_partial_publication_leave_no_effects() {
         &mut world,
         map,
         "view",
-        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+        MapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(map);
     let before = world.btech.clone();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-    let center = BattleHexCoordinate { x: 0, y: 0 };
+    let center = HexCoordinate { x: 0, y: 0 };
     assert!(view_battle_map_action(&scripts, &config, map, map, center).is_err());
     assert!(view_battle_map_action(&scripts, &config, ObjectId(1), ObjectId(-1), center).is_err());
     assert!(

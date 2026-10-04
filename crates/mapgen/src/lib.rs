@@ -47,7 +47,7 @@ pub use spec::{
     spec_schema,
 };
 
-pub use stompymux_map::{BattleDecorationKind, BattleMapAsset, BattleMapFlag};
+pub use stompymux_map::{DecorationKind, MapAsset, MapFlag};
 
 use anyhow::{Context, Result};
 
@@ -147,15 +147,15 @@ pub fn generate(spec: &MapSpec) -> Result<GeneratedMap> {
         rivers,
         settlements: settlements.into_iter().map(|built| built.report).collect(),
         roads,
-        fire_hexes: count_overlay(&map, BattleDecorationKind::Fire),
-        smoke_hexes: count_overlay(&map, BattleDecorationKind::Smoke),
+        fire_hexes: count_overlay(&map, DecorationKind::Fire),
+        smoke_hexes: count_overlay(&map, DecorationKind::Smoke),
         warnings,
     };
     Ok(GeneratedMap { spec, map, report })
 }
 
 /// How many hexes carry `overlay`.
-fn count_overlay(map: &HexMap, overlay: BattleDecorationKind) -> usize {
+fn count_overlay(map: &HexMap, overlay: DecorationKind) -> usize {
     map.hexes
         .iter()
         .filter(|hex| hex.overlay == Some(overlay))
@@ -259,7 +259,7 @@ mod tests {
                 ..MapSpec::default()
             };
             let generated = generate(&spec).unwrap();
-            let map = BattleMapAsset::parse(&generated.to_toml().unwrap())
+            let map = MapAsset::parse(&generated.to_toml().unwrap())
                 .unwrap_or_else(|error| panic!("{biome:?}: {error:#}"));
             assert_eq!(map, generated.map.to_asset().unwrap(), "{biome:?}");
             for (index, hex) in generated.map.hexes.iter().enumerate() {
@@ -340,7 +340,7 @@ mod tests {
         let desert = report(Biome::Desert);
         assert!(desert.report.coverage.sand > 30.0);
         let lunar = report(Biome::Lunar);
-        assert!(lunar.map.flags.contains(&BattleMapFlag::Vacuum));
+        assert!(lunar.map.flags.contains(&MapFlag::Vacuum));
         let volcanic = report(Biome::Volcanic);
         assert!(volcanic.report.fire_hexes > 0 && volcanic.report.smoke_hexes > 0);
     }

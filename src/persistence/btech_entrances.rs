@@ -1,6 +1,6 @@
 //! Selective ownership of building entrance rows in the shared map-object table.
 use super::write::{Cell, Fields, row};
-use crate::{BattleBuildingEntrance, BattleHexCoordinate, ObjectId, StoredBattleMap, World};
+use crate::{BattleBuildingEntrance, HexCoordinate, ObjectId, StoredBattleMap, World};
 use anyhow::{Context, Result, ensure};
 use sqlx::{Row, SqliteConnection};
 use std::{
@@ -22,7 +22,7 @@ pub(super) async fn load(
             .get_mut(&ObjectId(row.try_get("map_dbref")?))
             .context("Entrance references missing battlefield")?;
         let ordinal = u32::try_from(row.try_get::<i64, _>("ordinal")?)?;
-        let coordinate = BattleHexCoordinate {
+        let coordinate = HexCoordinate {
             x: row.try_get("x")?,
             y: row.try_get("y")?,
         };

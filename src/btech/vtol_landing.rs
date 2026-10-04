@@ -1,5 +1,5 @@
 //! Deliberate rotorcraft landing checks and material touchdown, separate from crash damage.
-use super::{BattleHex, BattleVehicle, BattleVtolFlight, BattleVtolFlightPhase, Structure};
+use super::{BattleVehicle, BattleVtolFlight, BattleVtolFlightPhase, Hex, Structure};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
 
@@ -16,11 +16,7 @@ impl BattleVehicle {
     /// Land on the supplied current map surface, or cancel an outstanding launch.
     /// The host owns map lookup, cockpit authority, messages, callbacks and landing mines.
     /// Failed admission does not spend fuel, draw dice, or alter motion.
-    pub fn land_vtol(
-        &mut self,
-        hex: BattleHex,
-        free_fusion_fuel: bool,
-    ) -> Result<BattleVtolLanding> {
+    pub fn land_vtol(&mut self, hex: Hex, free_fusion_fuel: bool) -> Result<BattleVtolLanding> {
         ensure!(self.definition().is_vtol(), "Landing requires a VTOL");
         ensure!(
             self.has_vtol_fuel(free_fusion_fuel),
@@ -78,7 +74,7 @@ impl BattleVehicle {
 
 /// Both deliberate and emergency landings require a supported surface: open ground or a
 /// building roof, with no fire or smoke over it.
-pub(super) fn supported_surface(hex: BattleHex) -> bool {
+pub(super) fn supported_surface(hex: Hex) -> bool {
     hex.is_open_ground()
         || (hex.overlay().is_none() && matches!(hex.structure(), Some(Structure::Building { .. })))
 }
@@ -86,20 +82,20 @@ pub(super) fn supported_surface(hex: BattleHex) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::btech::{BattleDecorationKind, Terrain};
+    use crate::btech::{DecorationKind, Terrain};
 
     #[test]
     fn aircraft_land_on_open_ground_or_roofs_clear_of_fire_and_smoke() {
         for terrain in [Terrain::Grassland, Terrain::Road, Terrain::Building] {
-            let hex = BattleHex::new(terrain, 1);
+            let hex = Hex::new(terrain, 1);
             assert!(supported_surface(hex), "{terrain:?}");
-            for kind in [BattleDecorationKind::Fire, BattleDecorationKind::Smoke] {
+            for kind in [DecorationKind::Fire, DecorationKind::Smoke] {
                 assert!(
                     !supported_surface(hex.with_overlay(Some(kind))),
                     "{terrain:?}"
                 );
             }
         }
-        assert!(!supported_surface(BattleHex::new(Terrain::LightForest, 0)));
+        assert!(!supported_surface(Hex::new(Terrain::LightForest, 0)));
     }
 }

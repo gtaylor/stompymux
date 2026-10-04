@@ -1,8 +1,8 @@
 //! Shared command-network range selection without changing physical distance or firing permission.
 use super::network_unit::unit as network_unit;
 use super::{
-    BattleAimModifiers, BattleHexCoordinate, BattlePower, BattleRangeBracket, BattleWeapon,
-    BattleWeaponRange,
+    BattleAimModifiers, BattlePower, BattleRangeBracket, BattleWeapon, BattleWeaponRange,
+    HexCoordinate,
 };
 use crate::{BattleCommandNetwork, ObjectId, World};
 use anyhow::Result;
@@ -23,7 +23,7 @@ pub struct BattleNetworkRange {
 #[derive(Clone, Copy)]
 pub(super) enum NetworkTarget {
     Unit(ObjectId),
-    Hex(BattleHexCoordinate),
+    Hex(HexCoordinate),
 }
 
 /// Apply command-network assistance only after physical reach and raw minimum-range checks have admitted network use.

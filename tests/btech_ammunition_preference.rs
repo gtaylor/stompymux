@@ -116,7 +116,7 @@ async fn preferred_sections_controls_feed_and_restart() {
             &mut world,
             map,
             "field",
-            BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+            MapAsset::from_cells("1 1\n.0\n").unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -274,7 +274,7 @@ async fn laser_defense_rejects_preferred_ammunition() {
             &mut world,
             map,
             "field",
-            BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+            MapAsset::from_cells("1 1\n.0\n").unwrap(),
         )
         .unwrap();
         place_battle_unit(&mut world, id, map, 0, 0).unwrap();

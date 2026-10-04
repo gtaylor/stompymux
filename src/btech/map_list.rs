@@ -80,7 +80,7 @@ fn object_fields(
     map: &StoredBattleMap,
     kind: BattleMapObjectKind,
     slot: super::map_object_delete::MapObjectSlot,
-    coordinate: super::BattleHexCoordinate,
+    coordinate: super::HexCoordinate,
 ) -> Result<[i64; 4]> {
     if let (super::map_object_delete::MapObjectSlot::Stored(ordinal), Some(stored_kind)) =
         (slot, super::map_object_delete::restoration_kind(kind))

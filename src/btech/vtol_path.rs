@@ -1,7 +1,6 @@
 //! Ordered aircraft terrain traversal and atomic clear-path movement commits.
 use super::{
-    BattleHexCoordinate, BattleMapAsset, BattlePoint, BattleVehicle, BattleVtolMotionStep,
-    BattleVtolSurfaceContact,
+    BattleVehicle, BattleVtolMotionStep, BattleVtolSurfaceContact, HexCoordinate, MapAsset, Point,
 };
 use anyhow::{Context, Result};
 use serde::Serialize;
@@ -15,16 +14,16 @@ pub enum BattleVtolPath {
         step: BattleVtolMotionStep,
     },
     MapEdge {
-        hex: BattleHexCoordinate,
+        hex: HexCoordinate,
         /// Last traced in-bounds hex, before the first attempted exit.
-        last: BattleHexCoordinate,
+        last: HexCoordinate,
         /// Continuous altitude at the first attempted exit.
         altitude: f64,
     },
     Contact {
-        hex: BattleHexCoordinate,
+        hex: HexCoordinate,
         /// Representative point at or just inside the contact band.
-        point: BattlePoint,
+        point: Point,
         altitude: f64,
         contact: BattleVtolSurfaceContact,
     },
@@ -35,7 +34,7 @@ impl BattleVtolMotionStep {
     /// Integer-altitude boundaries are sampled on both sides to retain truncation semantics.
     fn first_obstruction(
         self,
-        lookup: &impl Fn(BattleHexCoordinate) -> Result<Option<super::BattleHex>>,
+        lookup: &impl Fn(HexCoordinate) -> Result<Option<super::Hex>>,
     ) -> Result<Option<BattleVtolPath>> {
         let start = self.origin.0.point;
         let end = self.motion.point;
@@ -70,7 +69,7 @@ impl BattleVtolMotionStep {
             if let Some(contact) = entry_contact.filter(|_| entered) {
                 return Ok(Some(BattleVtolPath::Contact {
                     hex,
-                    point: BattlePoint {
+                    point: Point {
                         x: start.x + (end.x - start.x) * from,
                         y: start.y + (end.y - start.y) * from,
                     },
@@ -118,7 +117,7 @@ impl BattleVtolMotionStep {
                 }
                 return Ok(Some(BattleVtolPath::Contact {
                     hex,
-                    point: BattlePoint {
+                    point: Point {
                         x: start.x + (end.x - start.x) * time,
                         y: start.y + (end.y - start.y) * time,
                     },
@@ -137,7 +136,7 @@ impl BattleVehicle {
     /// Any obstruction returns before mutation; failures also preserve position and saved altitude.
     pub fn advance_vtol_clear_path(
         &mut self,
-        map: &BattleMapAsset,
+        map: &MapAsset,
         movement_modifier: i64,
     ) -> Result<BattleVtolPath> {
         self.advance_vtol_clear_path_with(&|hex| Ok(map.hex(hex.x, hex.y)), movement_modifier, None)
@@ -146,7 +145,7 @@ impl BattleVehicle {
     /// Trace either decoded assets or current world terrain without copying a map.
     pub(super) fn advance_vtol_clear_path_with(
         &mut self,
-        lookup: &impl Fn(BattleHexCoordinate) -> Result<Option<super::BattleHex>>,
+        lookup: &impl Fn(HexCoordinate) -> Result<Option<super::Hex>>,
         movement_modifier: i64,
         boundary: Option<&super::StoredBattleMap>,
     ) -> Result<BattleVtolPath> {

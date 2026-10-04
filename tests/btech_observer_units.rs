@@ -16,7 +16,7 @@ async fn observers_share_admin_disclosure_radio_and_saved_role() {
             &mut world,
             map,
             "observer",
-            BattleMapAsset::from_cells("1 5\n.0\n.0\n.0\n.0\n.0\n").unwrap(),
+            MapAsset::from_cells("1 5\n.0\n.0\n.0\n.0\n.0\n").unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);

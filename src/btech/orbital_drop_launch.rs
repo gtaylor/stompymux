@@ -164,7 +164,7 @@ pub(crate) fn command(
         let args: Vec<_> = input.args.split_whitespace().take(3).collect();
         ensure!(args.len() >= 2, "Invalid attributes!");
         let request = BattleScenarioPosition {
-            coordinate: BattleHexCoordinate {
+            coordinate: HexCoordinate {
                 x: args[0].parse().context("Invalid number! (x)")?,
                 y: args[1].parse().context("Invalid number! (y)")?,
             },

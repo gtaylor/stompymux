@@ -22,15 +22,13 @@ async fn fixture_field(
     height: usize,
 ) -> (tempfile::TempDir, Config, World, ObjectId, [ObjectId; 2]) {
     let row = format!("{}{depth}", terrain.symbol()).repeat(3) + "\n";
-    fixture_asset(
-        BattleMapAsset::from_cells(&format!("3 {height}\n{}", row.repeat(height))).unwrap(),
-    )
-    .await
+    fixture_asset(MapAsset::from_cells(&format!("3 {height}\n{}", row.repeat(height))).unwrap())
+        .await
 }
 
 /// Construct two running bipeds on an isolated, caller-defined terrain asset.
 async fn fixture_asset(
-    asset: BattleMapAsset,
+    asset: MapAsset,
 ) -> (tempfile::TempDir, Config, World, ObjectId, [ObjectId; 2]) {
     let (dir, config, mut world) = support::isolated_world().await;
     let map = world.create(&config, "Surface field".into(), Kind::Room);
@@ -87,7 +85,7 @@ async fn ice_fracture_drops_neighbors_before_trigger_and_replays_after_restart()
     let (_dir, config, mut world, map, units) = fixture(3).await;
     persistence::save(&config.database(), &world).await.unwrap();
     let mut restarted = persistence::load(&config.database()).await.unwrap();
-    let coordinate = BattleHexCoordinate { x: 1, y: 1 };
+    let coordinate = HexCoordinate { x: 1, y: 1 };
     let report = break_battle_ice(&mut world, map, coordinate, Some(units[0]), rules()).unwrap();
     assert_eq!(
         report,
@@ -101,7 +99,7 @@ async fn ice_fracture_drops_neighbors_before_trigger_and_replays_after_restart()
     assert!(report.falls.iter().all(|(_, fall)| fall.damage == 6));
     assert_eq!(
         world.btech.maps()[&map].hex(1, 1).unwrap(),
-        BattleHex::new(Terrain::Water, 3)
+        Hex::new(Terrain::Water, 3)
     );
     for id in units {
         assert_eq!(
@@ -135,7 +133,7 @@ async fn fracture_failure_restores_terrain_neighbor_damage_and_dice() {
         break_battle_ice(
             &mut world,
             map,
-            BattleHexCoordinate { x: 1, y: 1 },
+            HexCoordinate { x: 1, y: 1 },
             Some(units[0]),
             rules()
         )
@@ -151,14 +149,8 @@ async fn fracture_save_failure_keeps_occupied_terrain_and_units_atomic() {
     let (_dir, config, mut world, map, units) = fixture(3).await;
     persistence::save(&config.database(), &world).await.unwrap();
     let before = world.btech.clone();
-    let report = break_battle_ice(
-        &mut world,
-        map,
-        BattleHexCoordinate { x: 1, y: 1 },
-        None,
-        rules(),
-    )
-    .unwrap();
+    let report =
+        break_battle_ice(&mut world, map, HexCoordinate { x: 1, y: 1 }, None, rules()).unwrap();
     assert_eq!(report.falls.len(), 2);
     let mut sql = sqlx::SqliteConnection::connect_with(
         &sqlx::sqlite::SqliteConnectOptions::new().filename(config.database()),
@@ -189,14 +181,8 @@ async fn zero_depth_ice_changes_terrain_without_fall_dice() {
         .iter()
         .map(|id| world.btech.constructed_units()[id].clone())
         .collect();
-    let report = break_battle_ice(
-        &mut world,
-        map,
-        BattleHexCoordinate { x: 1, y: 1 },
-        None,
-        rules(),
-    )
-    .unwrap();
+    let report =
+        break_battle_ice(&mut world, map, HexCoordinate { x: 1, y: 1 }, None, rules()).unwrap();
     assert!(report.falls.is_empty());
     for (id, expected) in units.into_iter().zip(before) {
         assert_eq!(world.btech.constructed_units()[&id], expected);
@@ -360,14 +346,8 @@ async fn destination_fracture_during_flight_preserves_the_saved_launch_path() {
         .flight()
         .unwrap()
         .path();
-    let fracture = break_battle_ice(
-        &mut world,
-        map,
-        BattleHexCoordinate { x: 1, y: 0 },
-        None,
-        rules(),
-    )
-    .unwrap();
+    let fracture =
+        break_battle_ice(&mut world, map, HexCoordinate { x: 1, y: 0 }, None, rules()).unwrap();
     assert!(fracture.falls.is_empty());
     persistence::save(&config.database(), &world).await.unwrap();
     let mut loaded = persistence::load(&config.database()).await.unwrap();
@@ -462,15 +442,15 @@ async fn bridge_collapse_drops_deck_occupants_to_the_river_bed() {
         let (_dir, config, mut world, map, units) = fixture_surface(Terrain::Bridge, height).await;
         persistence::save(&config.database(), &world).await.unwrap();
         let mut restarted = persistence::load(&config.database()).await.unwrap();
-        let coordinate = BattleHexCoordinate { x: 1, y: 1 };
+        let coordinate = HexCoordinate { x: 1, y: 1 };
         let report = break_battle_bridge(&mut world, map, coordinate, rules()).unwrap();
         assert_eq!(
             report,
             break_battle_bridge(&mut restarted, map, coordinate, rules()).unwrap()
         );
         assert_eq!(world.btech, restarted.btech);
-        assert_eq!(report.before, BattleHex::new(Terrain::Bridge, height));
-        assert_eq!(report.after, BattleHex::new(Terrain::Water, 1));
+        assert_eq!(report.before, Hex::new(Terrain::Bridge, height));
+        assert_eq!(report.after, Hex::new(Terrain::Water, 1));
         // Both units stand on the deck and fall past it into the depth-one water below.
         assert_eq!(report.fall_levels, height + 1);
         assert_eq!(
@@ -507,9 +487,7 @@ async fn bridge_collapse_rejects_incomplete_effects_and_rolls_back_failed_writes
         .unwrap()
         .flags
         .insert(Flag::InCharacter);
-    assert!(
-        break_battle_bridge(&mut world, map, BattleHexCoordinate { x: 1, y: 1 }, rules()).is_err()
-    );
+    assert!(break_battle_bridge(&mut world, map, HexCoordinate { x: 1, y: 1 }, rules()).is_err());
     assert_eq!(world.btech, before);
     world
         .objects
@@ -518,7 +496,7 @@ async fn bridge_collapse_rejects_incomplete_effects_and_rolls_back_failed_writes
         .flags
         .remove(Flag::InCharacter);
     let report =
-        break_battle_bridge(&mut world, map, BattleHexCoordinate { x: 1, y: 1 }, rules()).unwrap();
+        break_battle_bridge(&mut world, map, HexCoordinate { x: 1, y: 1 }, rules()).unwrap();
     assert_eq!(report.falls.len(), 2);
     let mut sql = sqlx::SqliteConnection::connect_with(
         &sqlx::sqlite::SqliteConnectOptions::new().filename(config.database()),
@@ -961,8 +939,7 @@ async fn bridge_deck_contacts_refresh_after_collapse_and_restart() {
         assert_eq!(lua_target, target.0);
         assert_eq!(scripts.world().btech, world.btech);
         let collapse =
-            break_battle_bridge(&mut world, map, BattleHexCoordinate { x: 1, y: 0 }, rules())
-                .unwrap();
+            break_battle_bridge(&mut world, map, HexCoordinate { x: 1, y: 0 }, rules()).unwrap();
         // The target stood on the deck, so it falls into the water and drops out of sight.
         assert_eq!(collapse.falls.len(), 1);
         persistence::save(&config.database(), &world).await.unwrap();
@@ -1043,7 +1020,7 @@ async fn elevation_inspection_tracks_surface_collapse_flight_and_unplaced_state(
         assert_elevation_inspection(&config, &world, id, Some(elevation));
         if terrain == Terrain::Bridge {
             let report =
-                break_battle_bridge(&mut world, map, BattleHexCoordinate { x: 1, y: 1 }, rules())
+                break_battle_bridge(&mut world, map, HexCoordinate { x: 1, y: 1 }, rules())
                     .unwrap();
             // Both units stood on the deck and fall to the bed of the depth-one water.
             assert_eq!(report.falls.len(), 2);
@@ -1337,7 +1314,7 @@ async fn bridge_jump_entry_underpass_and_interrupted_hex_update_replay_after_res
     for (deck, rate, outcome) in [(9, 100, "clear"), (6, 100, "entry"), (5, 160, "span")] {
         let source = format!("3 5\n.0.0.0\n.0.0.0\n/{deck}/{deck}/{deck}\n.0.0.0\n.0.0.0\n");
         let (_dir, config, mut world, map, units) =
-            fixture_asset(BattleMapAsset::from_cells(&source).unwrap()).await;
+            fixture_asset(MapAsset::from_cells(&source).unwrap()).await;
         let id = units[0];
         let mut state = serde_json::to_value(&world.btech).unwrap();
         state["maps"][map.0.to_string()]["movement_modifier"] = serde_json::json!(rate);
@@ -1594,7 +1571,7 @@ async fn bridge_jump_vertical_collision_inside_the_starting_hex_uses_the_deck() 
 async fn lost_jump_thrust_beneath_bridge_preserves_altitude_for_the_fall() {
     let source = "3 3\n.0.0.0\n/9/9/9\n.0.0.0\n";
     let (_dir, config, mut world, _map, units) =
-        fixture_asset(BattleMapAsset::from_cells(source).unwrap()).await;
+        fixture_asset(MapAsset::from_cells(source).unwrap()).await;
     let id = units[0];
     world
         .btech
@@ -1781,7 +1758,7 @@ async fn level_bridge_deck_motion_matches_native_lua_and_replays_both_directions
                 format!("/{deck}").repeat(3)
             );
             let (_dir, config, mut world, _map, units) =
-                fixture_asset(BattleMapAsset::from_cells(&source).unwrap()).await;
+                fixture_asset(MapAsset::from_cells(&source).unwrap()).await;
             let id = units[0];
             let heading = if reverse { 0.0 } else { 180.0 };
             let speed = if reverse { -21.5 } else { 21.5 };
@@ -1914,7 +1891,7 @@ async fn forward_ground_steps_charge_each_height_change_and_replay_mid_slope() {
                 })
                 .collect();
             let (_dir, config, mut world, _map, units) =
-                fixture_asset(BattleMapAsset::from_cells(&format!("3 5\n{rows}")).unwrap()).await;
+                fixture_asset(MapAsset::from_cells(&format!("3 5\n{rows}")).unwrap()).await;
             let id = units[0];
             world
                 .btech
@@ -1992,7 +1969,7 @@ async fn forward_ground_steps_charge_each_height_change_and_replay_mid_slope() {
 async fn pending_hex_sync_completes_an_allowed_step_without_retaining_the_old_height() {
     let source = "3 4\n/5/5/5\n/5/5/5\n.4.4.4\n.4.4.4\n";
     let (_dir, config, mut world, _map, units) =
-        fixture_asset(BattleMapAsset::from_cells(source).unwrap()).await;
+        fixture_asset(MapAsset::from_cells(source).unwrap()).await;
     let id = units[0];
     world
         .btech
@@ -2001,7 +1978,7 @@ async fn pending_hex_sync_completes_an_allowed_step_without_retaining_the_old_he
             unit["ground_elevation"] = serde_json::json!(5);
             unit["hex_sync_pending"] = serde_json::json!(true);
             unit["motion"]["point"] =
-                serde_json::to_value(BattleHexCoordinate { x: 1, y: 2 }.center()).unwrap();
+                serde_json::to_value(HexCoordinate { x: 1, y: 2 }.center()).unwrap();
         })
         .unwrap();
     world.validate(&config).unwrap();
@@ -2036,9 +2013,9 @@ fn prepare_reverse_step(world: &mut World, id: ObjectId, roll: u8) {
         .btech
         .rewrite_unit_record(id, |record| {
             let unit = record;
-            unit["motion"]["point"] = serde_json::to_value(BattlePoint {
+            unit["motion"]["point"] = serde_json::to_value(Point {
                 y: 1.49,
-                ..BattleHexCoordinate { x: 1, y: 1 }.center()
+                ..HexCoordinate { x: 1, y: 1 }.center()
             })
             .unwrap();
             unit["motion"]["speed"] = serde_json::json!(-21.5);
@@ -2056,7 +2033,7 @@ async fn reverse_ground_steps_matrix(symbol: char) {
         let row = format!("{symbol}{destination}").repeat(3);
         let source = format!("3 4\n.3.3.3\n.3.3.3\n{row}\n{row}\n");
         let (_dir, config, base, _, units) =
-            fixture_asset(BattleMapAsset::from_cells(&source).unwrap()).await;
+            fixture_asset(MapAsset::from_cells(&source).unwrap()).await;
         let id = units[0];
         let mut probed_fidelity = [false; 3];
         for (shape, (enabled, success)) in [(false, true), (true, true), (true, false)]
@@ -2191,7 +2168,7 @@ async fn reverse_ground_steps_apply_configured_checks_falls_and_restart_replay_e
 async fn failed_reverse_fall_restores_the_entire_movement_tick() {
     let source = "3 4\n.0.0.0\n.0.0.0\n.1.1.1\n.1.1.1\n";
     let (_dir, config, mut world, _, units) =
-        fixture_asset(BattleMapAsset::from_cells(source).unwrap()).await;
+        fixture_asset(MapAsset::from_cells(source).unwrap()).await;
     for id in units {
         prepare_reverse_step(&mut world, id, 2);
     }
@@ -2216,7 +2193,7 @@ async fn failed_reverse_fall_restores_the_entire_movement_tick() {
 async fn unpiloted_reverse_step_bypasses_control_dice_and_preserves_speed() {
     let source = "3 4\n.0.0.0\n.0.0.0\n.2.2.2\n.2.2.2\n";
     let (_dir, config, mut world, _, units) =
-        fixture_asset(BattleMapAsset::from_cells(source).unwrap()).await;
+        fixture_asset(MapAsset::from_cells(source).unwrap()).await;
     let id = units[0];
     prepare_reverse_step(&mut world, id, 2);
     world
@@ -2247,7 +2224,7 @@ async fn cliffs_apply_speed_checks_matrix(symbol: char, downhill: bool) {
     let old_row = format!(".{old}").repeat(3);
     let source = format!("3 4\n{old_row}\n{old_row}\n{row}\n{row}\n");
     let (_dir, config, base, _, units) =
-        fixture_asset(BattleMapAsset::from_cells(&source).unwrap()).await;
+        fixture_asset(MapAsset::from_cells(&source).unwrap()).await;
     let id = units[0];
     let mut probed_fidelity = [false; 2];
     for skid in [false, true] {
@@ -2415,7 +2392,7 @@ async fn first_cliff_stops_unpiloted_fast_motion_without_consuming_dice() {
         let row = format!(".{new}").repeat(3);
         let source = format!("3 4\n{old_row}\n{old_row}\n{row}\n{row}\n");
         let (_dir, config, mut world, map, units) =
-            fixture_asset(BattleMapAsset::from_cells(&source).unwrap()).await;
+            fixture_asset(MapAsset::from_cells(&source).unwrap()).await;
         let id = units[0];
         prepare_reverse_step(&mut world, id, 2);
         let mut state = serde_json::to_value(&world.btech).unwrap();
@@ -2542,7 +2519,7 @@ async fn autofall_skips_only_the_piloted_downhill_avoidance_roll() {
             let row = format!(".{new}").repeat(3);
             let source = format!("3 4\n{old_row}\n{old_row}\n{row}\n{row}\n");
             let (_dir, config, mut world, _, units) =
-                fixture_asset(BattleMapAsset::from_cells(&source).unwrap()).await;
+                fixture_asset(MapAsset::from_cells(&source).unwrap()).await;
             let id = units[0];
             prepare_reverse_step(&mut world, id, 12);
             set_battle_auto_fall(&mut world, id, ObjectId(1), true).unwrap();
@@ -2682,7 +2659,7 @@ async fn running_into_water_caps_throttle_and_adds_two_to_the_control_check() {
         let row = format!("~{depth}").repeat(3);
         let source = format!("3 4\n.0.0.0\n.0.0.0\n{row}\n{row}\n");
         let (_dir, config, mut world, _, units) =
-            fixture_asset(BattleMapAsset::from_cells(&source).unwrap()).await;
+            fixture_asset(MapAsset::from_cells(&source).unwrap()).await;
         let id = units[0];
         prepare_reverse_step(&mut world, id, 6 + depth);
         let maximum = world.btech.constructed_units()[&id]
@@ -2730,7 +2707,7 @@ async fn running_into_water_caps_throttle_and_adds_two_to_the_control_check() {
 async fn entering_water_floods_a_breached_leg_and_keeps_the_fall_stopped() {
     let source = "3 4\n.0.0.0\n.0.0.0\n~1~1~1\n~1~1~1\n";
     let (_dir, config, mut world, _, units) =
-        fixture_asset(BattleMapAsset::from_cells(source).unwrap()).await;
+        fixture_asset(MapAsset::from_cells(source).unwrap()).await;
     let id = units[0];
     let leg = BattleSection::LeftLeg;
     let armor = world.btech.constructed_units()[&id].sections()[&leg].armor;
@@ -2805,7 +2782,7 @@ async fn invalid_water_entry_restores_position_throttle_and_dice() {
 async fn leaving_shallow_water_restores_land_height_and_charges_the_upward_step() {
     let source = "3 4\n~1~1~1\n~1~1~1\n.0.0.0\n.0.0.0\n";
     let (_dir, config, mut world, _, units) =
-        fixture_asset(BattleMapAsset::from_cells(source).unwrap()).await;
+        fixture_asset(MapAsset::from_cells(source).unwrap()).await;
     let id = units[0];
     prepare_reverse_step(&mut world, id, 12);
     world
@@ -2851,7 +2828,7 @@ async fn bridge_ground_routes_select_lower_or_deck_surface_and_replay() {
             let row = format!("{}{new_deck}", terrain.symbol()).repeat(3);
             let source = format!("3 4\n{old_row}\n{old_row}\n{row}\n{row}\n");
             let (_dir, config, mut world, _, units) =
-                fixture_asset(BattleMapAsset::from_cells(&source).unwrap()).await;
+                fixture_asset(MapAsset::from_cells(&source).unwrap()).await;
             let id = units[0];
             prepare_reverse_step(&mut world, id, 12);
             world
@@ -2962,7 +2939,7 @@ async fn exiting_below_bridge_retains_mapped_cliff_checks_and_lower_rollback() {
     for success in [false, true] {
         let source = "3 4\n/3/3/3\n/3/3/3\n~1~1~1\n~1~1~1\n";
         let (_dir, config, mut world, _, units) =
-            fixture_asset(BattleMapAsset::from_cells(source).unwrap()).await;
+            fixture_asset(MapAsset::from_cells(source).unwrap()).await;
         let id = units[0];
         prepare_reverse_step(&mut world, id, if success { 6 } else { 5 });
         world
@@ -3031,7 +3008,7 @@ async fn ground_ice_entry_fractures_neighbors_and_replays_without_repeated_check
                 neighbor["dice"] = serde_json::to_value(BattleDice::seeded([19; 32])).unwrap();
                 neighbor["position"]["y"] = serde_json::json!(2);
                 neighbor["motion"]["point"] =
-                    serde_json::to_value(BattleHexCoordinate { x: 1, y: 2 }.center()).unwrap();
+                    serde_json::to_value(HexCoordinate { x: 1, y: 2 }.center()).unwrap();
                 world.btech = serde_json::from_value(state).unwrap();
                 ice_seed(&mut world, id, fracture, false);
                 let before = world.clone();
@@ -3112,7 +3089,7 @@ async fn submerged_ice_routes_use_bottom_depth_and_depth_one_surface_transition(
         let row = format!("{}{new_depth}", new_terrain.symbol()).repeat(3);
         let source = format!("3 4\n{old_row}\n{old_row}\n{row}\n{row}\n");
         let (_dir, config, mut world, map, units) =
-            fixture_asset(BattleMapAsset::from_cells(&source).unwrap()).await;
+            fixture_asset(MapAsset::from_cells(&source).unwrap()).await;
         let id = units[0];
         prepare_reverse_step(&mut world, id, 12);
         world
@@ -3243,7 +3220,7 @@ async fn failed_neighbor_fall_during_ground_ice_fracture_restores_the_tick() {
     let neighbor = &mut state["constructed"][units[1].0.to_string()];
     neighbor["position"]["y"] = serde_json::json!(2);
     neighbor["motion"]["point"] =
-        serde_json::to_value(BattleHexCoordinate { x: 1, y: 2 }.center()).unwrap();
+        serde_json::to_value(HexCoordinate { x: 1, y: 2 }.center()).unwrap();
     world.btech = serde_json::from_value(state).unwrap();
     world
         .objects
@@ -3262,13 +3239,13 @@ async fn failed_neighbor_fall_during_ground_ice_fracture_restores_the_tick() {
 async fn descending_jump_breaks_previous_ice_before_finishing_horizontal_entry() {
     let source = "3 5\n.0.0.0\n.0.0.0\n-3-3-3\n~5~5~5\n~5~5~5\n";
     let (_dir, config, mut world, map, units) =
-        fixture_asset(BattleMapAsset::from_cells(source).unwrap()).await;
+        fixture_asset(MapAsset::from_cells(source).unwrap()).await;
     let id = units[0];
     let mut state = serde_json::to_value(&world.btech).unwrap();
     state["maps"][map.0.to_string()]["movement_modifier"] = serde_json::json!(800);
     state["constructed"][units[1].0.to_string()]["position"]["y"] = serde_json::json!(2);
     state["constructed"][units[1].0.to_string()]["motion"]["point"] =
-        serde_json::to_value(BattleHexCoordinate { x: 1, y: 2 }.center()).unwrap();
+        serde_json::to_value(HexCoordinate { x: 1, y: 2 }.center()).unwrap();
     // Protect both pilots and avoid random critical cascades in this geometry fixture.
     let safe = (0..=255)
         .find(|seed| {
@@ -3376,7 +3353,7 @@ async fn descending_jump_breaks_previous_ice_before_finishing_horizontal_entry()
     assert_eq!(unit.position().unwrap().y, 3);
     assert_eq!(
         unit.motion().unwrap().point,
-        BattleHexCoordinate { x: 1, y: 3 }.center()
+        HexCoordinate { x: 1, y: 3 }.center()
     );
     assert_eq!(unit.jump_stabilization(), 12);
     assert_eq!(battle_unit_elevation(&world, id).unwrap(), Some(-3));
@@ -3461,7 +3438,7 @@ async fn airborne_under_ice_fixture() -> (tempfile::TempDir, Config, World, Obje
 {
     let source = "3 5\n.0.0.0\n.0.0.0\n.0.0.0\n~5~5~5\n~5~5~5\n";
     let (_dir, config, mut world, map, units) =
-        fixture_asset(BattleMapAsset::from_cells(source).unwrap()).await;
+        fixture_asset(MapAsset::from_cells(source).unwrap()).await;
     let id = units[0];
     launch_battle_jump(&mut world, id, ObjectId(1), 180, 2.0).unwrap();
     // A lower-capacity sample followed by restored gravity can cross the ice plane upward.
@@ -3487,10 +3464,10 @@ async fn airborne_under_ice_fixture() -> (tempfile::TempDir, Config, World, Obje
     state["maps"][map.0.to_string()]["gravity"] = serde_json::json!(100);
     state["maps"][map.0.to_string()]["movement_modifier"] = serde_json::json!(20);
     state["maps"][map.0.to_string()]["terrain"][10] =
-        serde_json::to_value(BattleHex::new(Terrain::Ice, 5)).unwrap();
+        serde_json::to_value(Hex::new(Terrain::Ice, 5)).unwrap();
     state["constructed"][units[1].0.to_string()]["position"]["y"] = serde_json::json!(3);
     state["constructed"][units[1].0.to_string()]["motion"]["point"] =
-        serde_json::to_value(BattleHexCoordinate { x: 1, y: 3 }.center()).unwrap();
+        serde_json::to_value(HexCoordinate { x: 1, y: 3 }.center()).unwrap();
     world.btech = serde_json::from_value(state).unwrap();
     world.validate(&config).unwrap();
     (_dir, config, world, map, units)
@@ -3553,8 +3530,8 @@ async fn landing_in_existing_ice_precedes_the_final_upward_breakout() {
             world.btech.maps()[&map].hex(1, 3).unwrap().terrain(),
             Terrain::Water,
             "fracture={fracture}; before={:?}; after={:?}; notices={notices:?}",
-            before.btech.maps()[&map].decoration(BattleHexCoordinate { x: 1, y: 3 }),
-            world.btech.maps()[&map].decoration(BattleHexCoordinate { x: 1, y: 3 }),
+            before.btech.maps()[&map].decoration(HexCoordinate { x: 1, y: 3 }),
+            world.btech.maps()[&map].decoration(HexCoordinate { x: 1, y: 3 }),
         );
         let unit = &world.btech.constructed_units()[&id];
         assert!(unit.flight().is_none());
@@ -3728,7 +3705,7 @@ async fn structure_jump_controls_land_and_collide_with_saved_replay() {
             let row = format!("{symbol}{height}").repeat(3);
             let source = format!("3 5\n.0.0.0\n.0.0.0\n{row}\n.0.0.0\n.0.0.0\n");
             let (_dir, config, mut world, map, units) =
-                fixture_asset(BattleMapAsset::from_cells(&source).unwrap()).await;
+                fixture_asset(MapAsset::from_cells(&source).unwrap()).await;
             let id = units[0];
             let mut state = serde_json::to_value(&world.btech).unwrap();
             state["maps"][map.0.to_string()]["movement_modifier"] = serde_json::json!(400);
@@ -3817,13 +3794,13 @@ async fn live_fire_and_smoke_tiles_allow_ground_crossings_without_control_dice()
         let id = units[0];
         prepare_reverse_step(&mut world, id, 6);
         let kind = match terrain {
-            Terrain::Fire => BattleDecorationKind::Fire,
-            _ => BattleDecorationKind::Smoke,
+            Terrain::Fire => DecorationKind::Fire,
+            _ => DecorationKind::Smoke,
         };
         set_map_decoration(
             &mut world,
             map,
-            BattleHexCoordinate { x: 1, y: 2 },
+            HexCoordinate { x: 1, y: 2 },
             Some(BattleDecoration::new(kind, 0, None)),
         )
         .unwrap();
@@ -3941,7 +3918,7 @@ async fn fracture_observers_capture_breaker_and_occupants_before_submersion() {
                     visible && (triggered || expected_falls)
                 );
                 let resolve = |world: &mut World| {
-                    let coordinate = BattleHexCoordinate { x: 1, y: 1 };
+                    let coordinate = HexCoordinate { x: 1, y: 1 };
                     if terrain == Terrain::Bridge {
                         break_battle_bridge(world, map, coordinate, rules())
                     } else {
@@ -4027,7 +4004,7 @@ async fn character_surface_actions_evacuate_and_roll_back_terrain() {
             BattleDamagePhase::Armor { rear: false },
         )
         .unwrap();
-        let coordinate = BattleHexCoordinate { x: 1, y: 1 };
+        let coordinate = HexCoordinate { x: 1, y: 1 };
         for pilot in [ObjectId(1), ObjectId(2)] {
             world
                 .objects
@@ -4062,7 +4039,7 @@ async fn character_surface_actions_evacuate_and_roll_back_terrain() {
                 &config,
                 map,
                 coordinate,
-                BattleSurface::of(BattleHex::new(terrain, 1)).unwrap(),
+                BattleSurface::of(Hex::new(terrain, 1)).unwrap(),
                 rules()
             )
             .is_err()
@@ -4076,7 +4053,7 @@ async fn character_surface_actions_evacuate_and_roll_back_terrain() {
             &config,
             map,
             coordinate,
-            BattleSurface::of(BattleHex::new(terrain, 1)).unwrap(),
+            BattleSurface::of(Hex::new(terrain, 1)).unwrap(),
             rules(),
         )
         .unwrap();
@@ -4261,7 +4238,7 @@ async fn upward_character_breakout_preserves_breaker_and_rolls_back() {
             BattleDamagePhase::Armor { rear: false },
         )
         .unwrap();
-        let coordinate = BattleHexCoordinate { x: 1, y: 1 };
+        let coordinate = HexCoordinate { x: 1, y: 1 };
         let baseline = world.clone();
         let breaker_before = world.btech.constructed_units()[&units[0]].clone();
         let breaker_height = battle_unit_elevation(&world, units[0]).unwrap();
@@ -4488,13 +4465,13 @@ async fn airborne_ice_action_evacuates_neighbors_and_replays() {
 async fn character_interrupted_jump_finishes_water_entry_atomically() {
     let source = "3 5\n.0.0.0\n.0.0.0\n-3-3-3\n~5~5~5\n~5~5~5\n";
     let (_dir, config, mut world, map, units) =
-        fixture_asset(BattleMapAsset::from_cells(source).unwrap()).await;
+        fixture_asset(MapAsset::from_cells(source).unwrap()).await;
     let id = units[0];
     let mut state = serde_json::to_value(&world.btech).unwrap();
     state["maps"][map.0.to_string()]["movement_modifier"] = serde_json::json!(800);
     state["constructed"][units[1].0.to_string()]["position"]["y"] = serde_json::json!(2);
     state["constructed"][units[1].0.to_string()]["motion"]["point"] =
-        serde_json::to_value(BattleHexCoordinate { x: 1, y: 2 }.center()).unwrap();
+        serde_json::to_value(HexCoordinate { x: 1, y: 2 }.center()).unwrap();
     // Protect both pilots and avoid random critical cascades in this geometry fixture.
     let safe = (0..=255)
         .find(|seed| {
@@ -4606,7 +4583,7 @@ async fn character_interrupted_jump_finishes_water_entry_atomically() {
     assert_eq!(unit.position().unwrap().y, 3);
     assert_eq!(
         unit.motion().unwrap().point,
-        BattleHexCoordinate { x: 1, y: 3 }.center()
+        HexCoordinate { x: 1, y: 3 }.center()
     );
     assert_eq!(unit.posture(), BattlePosture::Prone);
     assert_eq!(battle_unit_elevation(&candidate, id).unwrap(), Some(-3));
@@ -4729,7 +4706,7 @@ async fn character_ground_water_entry_replays_and_rolls_back() {
 async fn woodland_clearing_on_occupied_map_is_durable_and_rejects_stale_results() {
     let (_dir, config, mut world, map, units) = fixture_field(Terrain::HeavyForest, 2, 3).await;
     persistence::save(&config.database(), &world).await.unwrap();
-    let coordinate = BattleHexCoordinate { x: 1, y: 1 };
+    let coordinate = HexCoordinate { x: 1, y: 1 };
     let original = world.clone();
     let before = world.btech.maps()[&map].hex(1, 1).unwrap();
     assert!(
@@ -4746,7 +4723,7 @@ async fn woodland_clearing_on_occupied_map_is_durable_and_rejects_stale_results(
         apply_woodland_clearing(
             &mut world,
             map,
-            BattleHexCoordinate { x: -1, y: 1 },
+            HexCoordinate { x: -1, y: 1 },
             before,
             BattleWoodlandClearing::ThinToLight
         )
@@ -4762,7 +4739,7 @@ async fn woodland_clearing_on_occupied_map_is_durable_and_rejects_stale_results(
     )
     .unwrap();
     assert_eq!(report.before, before);
-    assert_eq!(report.after, BattleHex::new(Terrain::LightForest, 2));
+    assert_eq!(report.after, Hex::new(Terrain::LightForest, 2));
     assert!(
         apply_woodland_clearing(
             &mut world,
@@ -4812,7 +4789,7 @@ async fn woodland_clearing_on_occupied_map_is_durable_and_rejects_stale_results(
     );
     assert_eq!(world.btech, unchanged);
     // Two reductions in a single saved transaction are also valid with occupants present.
-    let coordinate = BattleHexCoordinate { x: 0, y: 0 };
+    let coordinate = HexCoordinate { x: 0, y: 0 };
     let first = apply_woodland_clearing(
         &mut world,
         map,
@@ -4842,12 +4819,12 @@ async fn map_decorations_preserve_base_terrain_checkpoints_and_saved_state() {
     let (_dir, config, mut world, map, units) = fixture_field(Terrain::HeavyForest, 2, 3).await;
     persistence::save(&config.database(), &world).await.unwrap();
     let original = world.clone();
-    let coordinate = BattleHexCoordinate { x: 1, y: 1 };
-    let fire = BattleDecoration::new(BattleDecorationKind::Fire, 120, Some(60));
+    let coordinate = HexCoordinate { x: 1, y: 1 };
+    let fire = BattleDecoration::new(DecorationKind::Fire, 120, Some(60));
     set_map_decoration(&mut world, map, coordinate, Some(fire)).unwrap();
     assert_eq!(
         world.btech.maps()[&map].hex(1, 1).unwrap(),
-        BattleHex::new(Terrain::HeavyForest, 2).with_overlay(Some(BattleDecorationKind::Fire))
+        Hex::new(Terrain::HeavyForest, 2).with_overlay(Some(DecorationKind::Fire))
     );
     assert_eq!(
         world.btech.maps()[&map].base_hex(1, 1).unwrap().terrain(),
@@ -4886,17 +4863,9 @@ async fn map_decorations_preserve_base_terrain_checkpoints_and_saved_state() {
         )
         .is_err()
     );
-    assert!(
-        set_map_decoration(
-            &mut world,
-            map,
-            BattleHexCoordinate { x: 3, y: 1 },
-            Some(fire)
-        )
-        .is_err()
-    );
+    assert!(set_map_decoration(&mut world, map, HexCoordinate { x: 3, y: 1 }, Some(fire)).is_err());
     assert_eq!(world.btech, before);
-    let smoke = BattleDecoration::new(BattleDecorationKind::Smoke, 90, None);
+    let smoke = BattleDecoration::new(DecorationKind::Smoke, 90, None);
     set_map_decoration(&mut world, map, coordinate, Some(smoke)).unwrap();
     assert_eq!(
         world.btech.maps()[&map].hex(1, 1).unwrap().terrain(),
@@ -4930,10 +4899,10 @@ async fn map_decorations_preserve_base_terrain_checkpoints_and_saved_state() {
 #[tokio::test]
 async fn smoke_expiration_restores_terrain_and_resumes_only_saved_seconds() {
     let (_dir, config, mut world, map, _units) = fixture_field(Terrain::HeavyForest, 2, 3).await;
-    let coordinate = BattleHexCoordinate { x: 1, y: 1 };
-    let fire_coordinate = BattleHexCoordinate { x: 0, y: 0 };
-    let smoke = BattleDecoration::new(BattleDecorationKind::Smoke, 3, None);
-    let fire = BattleDecoration::new(BattleDecorationKind::Fire, 60, Some(60));
+    let coordinate = HexCoordinate { x: 1, y: 1 };
+    let fire_coordinate = HexCoordinate { x: 0, y: 0 };
+    let smoke = BattleDecoration::new(DecorationKind::Smoke, 3, None);
+    let fire = BattleDecoration::new(DecorationKind::Fire, 60, Some(60));
     set_map_decoration(&mut world, map, coordinate, Some(smoke)).unwrap();
     set_map_decoration(&mut world, map, fire_coordinate, Some(fire)).unwrap();
     let initial = world.clone();
@@ -4962,7 +4931,7 @@ async fn smoke_expiration_restores_terrain_and_resumes_only_saved_seconds() {
     assert!(!map_smoke_pending(&world));
     assert_eq!(
         world.btech.maps()[&map].hex(1, 1).unwrap(),
-        BattleHex::new(Terrain::HeavyForest, 2)
+        Hex::new(Terrain::HeavyForest, 2)
     );
     assert_eq!(
         world.btech.maps()[&map]
@@ -4987,12 +4956,12 @@ async fn smoke_expiration_restores_terrain_and_resumes_only_saved_seconds() {
 #[tokio::test]
 async fn calm_fire_spreads_smoke_then_burns_out_with_saved_replay() {
     let (_dir, config, mut world, map, units) = fixture_field(Terrain::HeavyForest, 2, 3).await;
-    let coordinate = BattleHexCoordinate { x: 1, y: 1 };
+    let coordinate = HexCoordinate { x: 1, y: 1 };
     set_map_decoration(
         &mut world,
         map,
         coordinate,
-        Some(BattleDecoration::new(BattleDecorationKind::Fire, 60, None)),
+        Some(BattleDecoration::new(DecorationKind::Fire, 60, None)),
     )
     .unwrap();
     let original = world.clone();
@@ -5027,13 +4996,13 @@ async fn calm_fire_spreads_smoke_then_burns_out_with_saved_replay() {
     assert!(map_smoke_pending(&world));
     // Heavy woods thin to light woods when the fire burns out.
     let burnt = world.btech.maps()[&map].hex(1, 1).unwrap();
-    assert_eq!(burnt, BattleHex::new(Terrain::LightForest, 2));
+    assert_eq!(burnt, Hex::new(Terrain::LightForest, 2));
     for x in 0..3 {
         let smoke = world.btech.maps()[&map]
-            .decoration(BattleHexCoordinate { x, y: 0 })
+            .decoration(HexCoordinate { x, y: 0 })
             .unwrap()
             .unwrap();
-        assert_eq!(smoke.kind, BattleDecorationKind::Smoke);
+        assert_eq!(smoke.kind, DecorationKind::Smoke);
         assert!((89..=149).contains(&smoke.remaining));
         assert_eq!(smoke.next_spread, None);
     }
@@ -5066,12 +5035,12 @@ async fn calm_fire_spreads_smoke_then_burns_out_with_saved_replay() {
 async fn strong_wind_fire_replays_new_ignition_and_retains_scheduled_delay() {
     let (_dir, config, mut world, map, _units) = fixture_field(Terrain::LightForest, 1, 5).await;
     set_map_wind(&mut world, map, 0, 0).unwrap();
-    let coordinate = BattleHexCoordinate { x: 1, y: 3 };
+    let coordinate = HexCoordinate { x: 1, y: 3 };
     set_map_decoration(
         &mut world,
         map,
         coordinate,
-        Some(BattleDecoration::new(BattleDecorationKind::Fire, 120, None)),
+        Some(BattleDecoration::new(DecorationKind::Fire, 120, None)),
     )
     .unwrap();
     // Select a reproducible map stream whose first spread roll ignites the forward cell.
@@ -5100,10 +5069,10 @@ async fn strong_wind_fire_replays_new_ignition_and_retains_scheduled_delay() {
         .unwrap();
     assert_eq!((original.remaining, original.next_spread), (100, Some(20)));
     let forward = world.btech.maps()[&map]
-        .decoration(BattleHexCoordinate { x: 1, y: 2 })
+        .decoration(HexCoordinate { x: 1, y: 2 })
         .unwrap()
         .unwrap();
-    assert_eq!(forward.kind, BattleDecorationKind::Fire);
+    assert_eq!(forward.kind, DecorationKind::Fire);
     assert!((60..=180).contains(&forward.remaining));
     assert_eq!(forward.next_spread, Some(20));
     persistence::save(&config.database(), &world).await.unwrap();
@@ -5127,12 +5096,8 @@ async fn smoke_over_water_preserves_altitude_cooling_los_range_and_flooding() {
     set_map_decoration(
         &mut world,
         map,
-        BattleHexCoordinate { x: 1, y: 1 },
-        Some(BattleDecoration::new(
-            BattleDecorationKind::Smoke,
-            120,
-            None,
-        )),
+        HexCoordinate { x: 1, y: 1 },
+        Some(BattleDecoration::new(DecorationKind::Smoke, 120, None)),
     )
     .unwrap();
     assert_eq!(
@@ -5181,17 +5146,13 @@ async fn smoke_over_water_preserves_altitude_cooling_los_range_and_flooding() {
 async fn smoke_keeps_ice_surface_height_and_bridge_fracture_available() {
     for (terrain, depth) in [(Terrain::Ice, 3), (Terrain::Bridge, 2)] {
         let (_dir, config, mut world, map, units) = fixture_field(terrain, depth, 3).await;
-        let coordinate = BattleHexCoordinate { x: 1, y: 1 };
+        let coordinate = HexCoordinate { x: 1, y: 1 };
         let elevation = battle_unit_elevation(&world, units[0]).unwrap();
         set_map_decoration(
             &mut world,
             map,
             coordinate,
-            Some(BattleDecoration::new(
-                BattleDecorationKind::Smoke,
-                120,
-                None,
-            )),
+            Some(BattleDecoration::new(DecorationKind::Smoke, 120, None)),
         )
         .unwrap();
         assert_eq!(battle_unit_elevation(&world, units[0]).unwrap(), elevation);
@@ -5222,7 +5183,7 @@ async fn smoke_keeps_ice_surface_height_and_bridge_fracture_available() {
 async fn entering_smoke_covered_water_keeps_movement_and_immersion_checks() {
     let source = "3 4\n.0.0.0\n.0.0.0\n~1~1~1\n~1~1~1\n";
     let (_dir, config, mut world, map, units) =
-        fixture_asset(BattleMapAsset::from_cells(source).unwrap()).await;
+        fixture_asset(MapAsset::from_cells(source).unwrap()).await;
     let id = units[0];
     let leg = BattleSection::LeftLeg;
     let armor = world.btech.constructed_units()[&id].sections()[&leg].armor;
@@ -5241,12 +5202,8 @@ async fn entering_smoke_covered_water_keeps_movement_and_immersion_checks() {
             set_map_decoration(
                 &mut world,
                 map,
-                BattleHexCoordinate { x, y },
-                Some(BattleDecoration::new(
-                    BattleDecorationKind::Smoke,
-                    120,
-                    None,
-                )),
+                HexCoordinate { x, y },
+                Some(BattleDecoration::new(DecorationKind::Smoke, 120, None)),
             )
             .unwrap();
         }
@@ -5296,7 +5253,7 @@ async fn woodland_impacts_commit_dice_terrain_and_notices_with_restart_replay() 
         let original = world.clone();
         let request = BattleWoodlandAttack {
             shooter,
-            coordinate: BattleHexCoordinate { x: 1, y: 0 },
+            coordinate: HexCoordinate { x: 1, y: 0 },
             weapon: if intent == BattleWoodlandIntent::Ignite {
                 BattleWeapon::Flamer
             } else {
@@ -5351,7 +5308,7 @@ async fn woodland_impacts_commit_dice_terrain_and_notices_with_restart_replay() 
             resolve_woodland_attack(
                 &mut world,
                 BattleWoodlandAttack {
-                    coordinate: BattleHexCoordinate { x: -1, y: 0 },
+                    coordinate: HexCoordinate { x: -1, y: 0 },
                     ..request
                 }
             )
@@ -5467,7 +5424,7 @@ async fn building_integrity_configuration_persistence_and_rejection() {
         &mut world,
         map,
         "interior.map",
-        BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
+        MapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
     assert_eq!(
@@ -5495,10 +5452,10 @@ async fn building_entrances_preserve_order_identity_and_unowned_data() {
         &mut world,
         interior,
         "inside.map",
-        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+        MapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
-    let point = BattleHexCoordinate { x: 1, y: 1 };
+    let point = HexCoordinate { x: 1, y: 1 };
     let entrance = BattleBuildingEntrance {
         coordinate: point,
         interior,
@@ -5530,7 +5487,7 @@ async fn building_entrances_preserve_order_identity_and_unowned_data() {
     let before = world.clone();
     for invalid in [
         BattleBuildingEntrance {
-            coordinate: BattleHexCoordinate { x: -1, y: 1 },
+            coordinate: HexCoordinate { x: -1, y: 1 },
             ..entrance
         },
         BattleBuildingEntrance {
@@ -5568,7 +5525,7 @@ async fn building_entrances_preserve_order_identity_and_unowned_data() {
         BattleStaticDecorationKind::Smoke,
         0,
         Some(BattleStaticDecoration {
-            coordinate: BattleHexCoordinate { x: 0, y: 0 },
+            coordinate: HexCoordinate { x: 0, y: 0 },
             restored_terrain: None,
             object: ObjectId(-1),
             duration: 12,
@@ -5582,7 +5539,7 @@ async fn building_entrances_preserve_order_identity_and_unowned_data() {
         map,
         2,
         Some(BattleBuildingEntrance {
-            coordinate: BattleHexCoordinate { x: 0, y: 0 },
+            coordinate: HexCoordinate { x: 0, y: 0 },
             ..retained_entrance
         }),
     )
@@ -5637,7 +5594,7 @@ async fn building_entrances_preserve_order_identity_and_unowned_data() {
 async fn minefields_persist_all_kinds_and_survive_woodland_clearing() {
     use sqlx::Connection;
     let (_dir, config, mut world, map, units) = fixture_field(Terrain::HeavyForest, 0, 3).await;
-    let coordinate = BattleHexCoordinate { x: 1, y: 1 };
+    let coordinate = HexCoordinate { x: 1, y: 1 };
     for (ordinal, kind) in [
         BattleMineKind::Standard,
         BattleMineKind::Inferno,
@@ -5666,7 +5623,7 @@ async fn minefields_persist_all_kinds_and_survive_woodland_clearing() {
     let mine = world.btech.maps()[&map].minefields()[&0];
     for invalid in [
         BattleMinefield {
-            coordinate: BattleHexCoordinate { x: 3, y: 1 },
+            coordinate: HexCoordinate { x: 3, y: 1 },
             ..mine
         },
         BattleMinefield {
@@ -5779,7 +5736,7 @@ async fn minefields_persist_all_kinds_and_survive_woodland_clearing() {
 async fn mine_activation_queries_preserve_state_and_saved_order() {
     let (_dir, config, mut world, map, units) = fixture(3).await;
     let unit = units[0];
-    let coordinate = BattleHexCoordinate { x: 1, y: 1 };
+    let coordinate = HexCoordinate { x: 1, y: 1 };
     let tons = (world.btech.constructed_units()[&unit].mass().unwrap().total / 1024) as i16;
     let field = BattleMinefield {
         coordinate,
@@ -5844,7 +5801,7 @@ async fn mine_activation_queries_preserve_state_and_saved_order() {
         &mut world,
         map,
         coordinate,
-        Some(BattleDecoration::new(BattleDecorationKind::Smoke, 30, None)),
+        Some(BattleDecoration::new(DecorationKind::Smoke, 30, None)),
     )
     .unwrap();
     assert_eq!(
@@ -5884,7 +5841,7 @@ async fn mine_activation_queries_preserve_state_and_saved_order() {
     );
     assert!(
         world.btech.maps()[&map]
-            .mine_coverage(BattleHexCoordinate { x: -1, y: 1 })
+            .mine_coverage(HexCoordinate { x: -1, y: 1 })
             .is_err()
     );
     assert!(mine_activations(&world, ObjectId(-1), BattleMineTriggerReason::Step).is_err());
@@ -5899,8 +5856,8 @@ async fn conventional_mine_blasts_packets_neighbors_removal_and_restart() {
         (BattleMineKind::Vibra, 6),
     ] {
         let (_dir, config, mut world, map, units) = fixture_field(Terrain::HeavyForest, 0, 3).await;
-        let coordinate = BattleHexCoordinate { x: 1, y: 1 };
-        let neighbor = BattleHexCoordinate { x: 1, y: 0 };
+        let coordinate = HexCoordinate { x: 1, y: 1 };
+        let neighbor = HexCoordinate { x: 1, y: 0 };
         let mut encoded = serde_json::to_value(&world.btech).unwrap();
         encoded["constructed"][units[1].0.to_string()]["position"]["y"] = 0.into();
         encoded["constructed"][units[1].0.to_string()]["motion"]["point"] =
@@ -5985,7 +5942,7 @@ async fn mine_blast_character_action_and_late_rejection_are_atomic() {
         map,
         0,
         Some(BattleMinefield {
-            coordinate: BattleHexCoordinate { x: 1, y: 1 },
+            coordinate: HexCoordinate { x: 1, y: 1 },
             kind: BattleMineKind::Standard,
             strength: 4,
             extra: 0,
@@ -6028,7 +5985,7 @@ async fn mine_activation_water_uses_bottom_depth_and_blast_height_bounds() {
         map,
         0,
         Some(BattleMinefield {
-            coordinate: BattleHexCoordinate { x: 1, y: 1 },
+            coordinate: HexCoordinate { x: 1, y: 1 },
             kind: BattleMineKind::Standard,
             strength: 4,
             extra: 0,
@@ -6064,7 +6021,7 @@ async fn inferno_duration_cooling_extension_and_saved_expiry() {
     let mut encoded = serde_json::to_value(&world.btech).unwrap();
     encoded["constructed"][units[1].0.to_string()]["position"]["y"] = 0.into();
     encoded["constructed"][units[1].0.to_string()]["motion"]["point"] =
-        serde_json::to_value(BattleHexCoordinate { x: 1, y: 0 }.center()).unwrap();
+        serde_json::to_value(HexCoordinate { x: 1, y: 0 }.center()).unwrap();
     world.btech = serde_json::from_value(encoded).unwrap();
     let baseline = world.btech.constructed_units()[&id].heat_rates(&world);
     let heat = world.btech.constructed_units()[&id].heat();
@@ -6115,7 +6072,7 @@ async fn inferno_mines_split_damage_and_burn_duration_atomically() {
             map,
             0,
             Some(BattleMinefield {
-                coordinate: BattleHexCoordinate { x: 1, y: 1 },
+                coordinate: HexCoordinate { x: 1, y: 1 },
                 kind: BattleMineKind::Inferno,
                 strength,
                 extra: 0,
@@ -6189,7 +6146,7 @@ async fn inferno_water_extinction_and_fall_publish_saved_steam() {
         assert_eq!(world.btech.constructed_units()[&id].inferno_remaining(), 0);
         assert_eq!(
             world.btech.maps()[&map]
-                .decoration(BattleHexCoordinate { x: 1, y: 1 })
+                .decoration(HexCoordinate { x: 1, y: 1 })
                 .unwrap()
                 .unwrap()
                 .remaining,
@@ -6314,7 +6271,7 @@ async fn inferno_missile_immersion_extinguishes_after_ignition_and_rolls_back_la
             assert!(cockpit[1].text.contains("roar of steam"));
             assert_eq!(
                 world.btech.maps()[&map]
-                    .decoration(BattleHexCoordinate { x: 1, y: 1 })
+                    .decoration(HexCoordinate { x: 1, y: 1 })
                     .unwrap()
                     .unwrap()
                     .remaining,
@@ -6436,7 +6393,7 @@ async fn mine_event_ground_entry_spotting_burning_removal_and_restart() {
             map,
             0,
             Some(BattleMinefield {
-                coordinate: BattleHexCoordinate { x: 1, y: 2 },
+                coordinate: HexCoordinate { x: 1, y: 2 },
                 kind,
                 strength: 4,
                 extra: 0,
@@ -6499,7 +6456,7 @@ async fn mine_event_fall_and_jump_landing_activate_at_surface_once() {
     for jump in [false, true] {
         let (_dir, config, mut world, map, units) = fixture_field(Terrain::Grassland, 0, 4).await;
         let id = units[0];
-        let coordinate = BattleHexCoordinate {
+        let coordinate = HexCoordinate {
             x: 1,
             y: if jump { 2 } else { 1 },
         };
@@ -6589,7 +6546,7 @@ async fn mine_event_scripted_entry_and_late_callback_failure_are_atomic() {
             map,
             ordinal,
             Some(BattleMinefield {
-                coordinate: BattleHexCoordinate { x: 1, y: 2 },
+                coordinate: HexCoordinate { x: 1, y: 2 },
                 kind,
                 strength,
                 extra: 0,
@@ -6655,7 +6612,7 @@ async fn mine_event_nested_support_falls_and_deleted_definitions_are_ordered() {
     }
     world.btech = serde_json::from_value(encoded).unwrap();
     let mine = BattleMinefield {
-        coordinate: BattleHexCoordinate { x: 1, y: 1 },
+        coordinate: HexCoordinate { x: 1, y: 1 },
         kind: BattleMineKind::Standard,
         strength: 6,
         extra: 0,
@@ -6730,7 +6687,7 @@ async fn mine_event_late_blast_failure_restores_the_whole_ground_step() {
     let id = units[0];
     prepare_reverse_step(&mut world, id, 7);
     let mine = BattleMinefield {
-        coordinate: BattleHexCoordinate { x: 1, y: 2 },
+        coordinate: HexCoordinate { x: 1, y: 2 },
         kind: BattleMineKind::Inferno,
         strength: 6,
         extra: 0,
@@ -6762,7 +6719,7 @@ async fn mine_event_remote_vibra_reports_visible_explosion_and_neighbor_damage()
         map,
         0,
         Some(BattleMinefield {
-            coordinate: BattleHexCoordinate { x: 1, y: 0 },
+            coordinate: HexCoordinate { x: 1, y: 0 },
             kind: BattleMineKind::Vibra,
             strength: 6,
             extra: 0,
@@ -6794,12 +6751,12 @@ async fn command_mines_match_frequency_map_and_order_with_saved_replay() {
         &mut world,
         other,
         "other-mine.map",
-        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+        MapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, other, support::FIXTURE_DICE_SEED);
     let mine = BattleMinefield {
-        coordinate: BattleHexCoordinate { x: 1, y: 1 },
+        coordinate: HexCoordinate { x: 1, y: 1 },
         kind: BattleMineKind::Command,
         strength: 4,
         extra: 42,
@@ -6818,7 +6775,7 @@ async fn command_mines_match_frequency_map_and_order_with_saved_replay() {
         (
             5,
             BattleMinefield {
-                coordinate: BattleHexCoordinate { x: 0, y: 5 },
+                coordinate: HexCoordinate { x: 0, y: 5 },
                 extra: 77,
                 ..mine
             },
@@ -6826,7 +6783,7 @@ async fn command_mines_match_frequency_map_and_order_with_saved_replay() {
         (
             6,
             BattleMinefield {
-                coordinate: BattleHexCoordinate { x: 2, y: 4 },
+                coordinate: HexCoordinate { x: 2, y: 4 },
                 kind: BattleMineKind::Inferno,
                 ..mine
             },
@@ -6834,7 +6791,7 @@ async fn command_mines_match_frequency_map_and_order_with_saved_replay() {
         (
             9,
             BattleMinefield {
-                coordinate: BattleHexCoordinate { x: 1, y: 5 },
+                coordinate: HexCoordinate { x: 1, y: 5 },
                 ..mine
             },
         ),
@@ -6846,7 +6803,7 @@ async fn command_mines_match_frequency_map_and_order_with_saved_replay() {
         other,
         0,
         Some(BattleMinefield {
-            coordinate: BattleHexCoordinate { x: 0, y: 0 },
+            coordinate: HexCoordinate { x: 0, y: 0 },
             ..mine
         }),
     )
@@ -6916,7 +6873,7 @@ async fn command_mines_character_publication_and_late_rejection_are_atomic() {
         .rewrite_unit_record(target, |record| {
             record["position"]["y"] = 5.into();
             record["motion"]["point"] =
-                serde_json::to_value(BattleHexCoordinate { x: 1, y: 5 }.center()).unwrap();
+                serde_json::to_value(HexCoordinate { x: 1, y: 5 }.center()).unwrap();
         })
         .unwrap();
     world
@@ -6926,7 +6883,7 @@ async fn command_mines_character_publication_and_late_rejection_are_atomic() {
         .flags
         .insert(Flag::InCharacter);
     let mine = BattleMinefield {
-        coordinate: BattleHexCoordinate { x: 1, y: 1 },
+        coordinate: HexCoordinate { x: 1, y: 1 },
         kind: BattleMineKind::Command,
         strength: 4,
         extra: 5,
@@ -6938,7 +6895,7 @@ async fn command_mines_character_publication_and_late_rejection_are_atomic() {
         map,
         1,
         Some(BattleMinefield {
-            coordinate: BattleHexCoordinate { x: 1, y: 5 },
+            coordinate: HexCoordinate { x: 1, y: 5 },
             ..mine
         }),
     )
@@ -6980,7 +6937,7 @@ async fn command_mines_character_publication_and_late_rejection_are_atomic() {
         map,
         1,
         Some(BattleMinefield {
-            coordinate: BattleHexCoordinate { x: 1, y: 5 },
+            coordinate: HexCoordinate { x: 1, y: 5 },
             strength: 2,
             ..mine
         }),
@@ -7008,7 +6965,7 @@ async fn command_mines_frequency_values_and_invalid_senders_do_not_spend_dice() 
             map,
             0,
             Some(BattleMinefield {
-                coordinate: BattleHexCoordinate { x: 0, y: 0 },
+                coordinate: HexCoordinate { x: 0, y: 0 },
                 kind: BattleMineKind::Command,
                 strength: 0,
                 extra: frequency,
@@ -7047,8 +7004,8 @@ async fn command_mines_frequency_values_and_invalid_senders_do_not_spend_dice() 
 #[tokio::test]
 async fn artillery_world_damage_and_restart() {
     let (_dir, config, mut world, map, units) = fixture_field(Terrain::Grassland, 0, 3).await;
-    let center = BattleHexCoordinate { x: 1, y: 1 };
-    let neighbor = BattleHexCoordinate { x: 1, y: 0 };
+    let center = HexCoordinate { x: 1, y: 1 };
+    let neighbor = HexCoordinate { x: 1, y: 0 };
     let mut encoded = serde_json::to_value(&world.btech).unwrap();
     encoded["constructed"][units[1].0.to_string()]["position"]["y"] = 0.into();
     encoded["constructed"][units[1].0.to_string()]["motion"]["point"] =
@@ -7123,12 +7080,12 @@ async fn artillery_world_damage_and_restart() {
 #[tokio::test]
 async fn artillery_world_smoke_and_mines() {
     let (_dir, config, mut world, map, _) = fixture_field(Terrain::Grassland, 0, 3).await;
-    let center = BattleHexCoordinate { x: 1, y: 1 };
+    let center = HexCoordinate { x: 1, y: 1 };
     set_map_decoration(
         &mut world,
         map,
         center,
-        Some(BattleDecoration::new(BattleDecorationKind::Fire, 200, None)),
+        Some(BattleDecoration::new(DecorationKind::Fire, 200, None)),
     )
     .unwrap();
     for mode in [
@@ -7151,10 +7108,10 @@ async fn artillery_world_smoke_and_mines() {
                     .unwrap()
                     .unwrap();
                 if cell.position == center {
-                    assert_eq!(decoration.kind, BattleDecorationKind::Fire);
+                    assert_eq!(decoration.kind, DecorationKind::Fire);
                     continue;
                 }
-                assert_eq!(decoration.kind, BattleDecorationKind::Smoke);
+                assert_eq!(decoration.kind, DecorationKind::Smoke);
                 assert!((90..=150).contains(&decoration.remaining));
                 assert_eq!(
                     world.btech.maps()[&map]
@@ -7208,7 +7165,7 @@ async fn artillery_character_arrival_is_atomic() {
         .unwrap();
         support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
     }
-    let center = BattleHexCoordinate { x: 1, y: 1 };
+    let center = HexCoordinate { x: 1, y: 1 };
     world
         .objects
         .get_mut(&units[1])
@@ -7284,7 +7241,7 @@ async fn artillery_blast_height_limits() {
         }
         world.btech = serde_json::from_value(encoded).unwrap();
         let untouched = world.btech.constructed_units()[&units[1]].clone();
-        let center = BattleHexCoordinate { x: 1, y: 1 };
+        let center = HexCoordinate { x: 1, y: 1 };
         let mut flight = BattleArtilleryFlight::new(
             center,
             center,
@@ -7319,7 +7276,7 @@ async fn artillery_cluster_world_packets_and_random_rollback() {
     encoded["constructed"][units[1].0.to_string()]["position"]["x"] = 0.into();
     encoded["constructed"][units[1].0.to_string()]["position"]["y"] = 0.into();
     encoded["constructed"][units[1].0.to_string()]["motion"]["point"] =
-        serde_json::to_value(BattleHexCoordinate { x: 0, y: 0 }.center()).unwrap();
+        serde_json::to_value(HexCoordinate { x: 0, y: 0 }.center()).unwrap();
     encoded["maps"][map.0.to_string()]["fire_dice"] =
         serde_json::to_value(BattleDice::seeded([7; 32])).unwrap();
     world.btech = serde_json::from_value(encoded).unwrap();
@@ -7341,7 +7298,7 @@ async fn artillery_cluster_world_packets_and_random_rollback() {
             place_battle_unit(&mut world, id, map, x, y).unwrap();
         }
     }
-    let center = BattleHexCoordinate { x: 1, y: 1 };
+    let center = HexCoordinate { x: 1, y: 1 };
     let mut flight = BattleArtilleryFlight::new(
         center,
         center,
@@ -7406,7 +7363,7 @@ async fn artillery_cluster_world_packets_and_random_rollback() {
 #[tokio::test]
 async fn artillery_queue_order_and_database_replay() {
     let (_dir, config, mut world, map, units) = fixture_field(Terrain::Grassland, 0, 3).await;
-    let center = BattleHexCoordinate { x: 1, y: 1 };
+    let center = HexCoordinate { x: 1, y: 1 };
     for (index, mode) in [BattleArtilleryMode::Smoke, BattleArtilleryMode::Mine]
         .into_iter()
         .enumerate()
@@ -7484,7 +7441,7 @@ async fn artillery_queue_order_and_database_replay() {
 #[tokio::test]
 async fn artillery_queue_late_arrival_rolls_back_all_shots() {
     let (_dir, config, mut world, map, units) = fixture_field(Terrain::Grassland, 0, 3).await;
-    let center = BattleHexCoordinate { x: 1, y: 1 };
+    let center = HexCoordinate { x: 1, y: 1 };
     world
         .objects
         .get_mut(&units[1])
@@ -7537,7 +7494,7 @@ async fn artillery_flight_in_progress_leaves_its_row_unchanged() {
         for (unit, pilot) in units.into_iter().zip([ObjectId(1), ObjectId(2)]) {
             stop_battle_unit(&mut world, unit, pilot, rules()).unwrap();
         }
-        let center = BattleHexCoordinate { x: 1, y: 1 };
+        let center = HexCoordinate { x: 1, y: 1 };
         enqueue_artillery(&mut world, map, units[0], BattleArtilleryFlight::new(center, center, BattleWeapon::LongTom, BattleArtilleryMode::Mine, true).unwrap()).unwrap();
         let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
         for _ in 0..7 { assert!(advance_artillery_action(&scripts, &config, rules()).unwrap().is_empty()); }
@@ -7565,7 +7522,7 @@ async fn artillery_queue_server_save_failure_and_retry() {
                 let _notices = stop_battle_unit(&mut world, unit, pilot, rules()).unwrap();
                 assert_eq!(world.btech.constructed_units()[&unit].power(), BattlePower::Off);
             }
-            let center = BattleHexCoordinate { x: 1, y: 1 };
+            let center = HexCoordinate { x: 1, y: 1 };
         enqueue_artillery(&mut world, map, units[0], BattleArtilleryFlight::new(center, center, BattleWeapon::LongTom, BattleArtilleryMode::Mine, true).unwrap()).unwrap();
         let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
         for _ in 0..9 { assert!(advance_artillery_action(&scripts, &config, rules()).unwrap().is_empty()); }
@@ -7589,7 +7546,7 @@ async fn artillery_queue_server_save_failure_and_retry() {
 async fn artillery_queue_rejects_corrupt_saved_cursor() {
     use sqlx::Connection;
     let (_dir, config, mut world, map, units) = fixture_field(Terrain::Grassland, 0, 3).await;
-    let center = BattleHexCoordinate { x: 1, y: 1 };
+    let center = HexCoordinate { x: 1, y: 1 };
     enqueue_artillery(
         &mut world,
         map,
@@ -7718,7 +7675,7 @@ async fn fracture_cascade_matrix(vehicle: bool, trigger_last: bool) {
     world.btech = serde_json::from_value(state).unwrap();
     // Select a collapse whose first fall detonates a reactor and interrupts the next fall.
     let trigger = trigger_last.then_some(units[0]);
-    let coordinate = BattleHexCoordinate { x: 1, y: 1 };
+    let coordinate = HexCoordinate { x: 1, y: 1 };
     let template = serde_json::to_value(&world.btech).unwrap();
     let seeded = |state: &mut serde_json::Value, bytes: [u8; 32]| {
         for id in units {

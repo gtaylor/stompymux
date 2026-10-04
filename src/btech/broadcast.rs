@@ -153,7 +153,7 @@ pub(super) fn interaction_notices(
 pub(super) fn hex_fire_messages(
     world: &World,
     actor: ObjectId,
-    target: super::BattleHexCoordinate,
+    target: super::HexCoordinate,
     weapon: super::BattleWeapon,
 ) -> Vec<(ObjectId, String)> {
     let Some(position) = super::scanner::scanner_unit(world, actor).and_then(|unit| unit.position)
@@ -194,7 +194,7 @@ pub(super) fn hex_fire_messages(
 pub(super) fn hex_notices(
     world: &World,
     map: ObjectId,
-    coordinate: super::BattleHexCoordinate,
+    coordinate: super::HexCoordinate,
     alarming: bool,
     message: impl Fn(&str) -> String,
 ) -> anyhow::Result<Vec<super::BattleNotice>> {

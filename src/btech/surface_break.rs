@@ -1,5 +1,5 @@
 //! Atomic ice and bridge breakage: terrain changes before occupant immersion and falls.
-use super::{BattleFallReport, BattleFallRules, BattleHex, BattleHexCoordinate, BattleNotice};
+use super::{BattleFallReport, BattleFallRules, BattleNotice, Hex, HexCoordinate};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
@@ -9,9 +9,9 @@ use serde::Serialize;
 #[must_use = "Commit terrain, unit effects and notices together"]
 pub struct BattleSurfaceBreak {
     pub map: ObjectId,
-    pub coordinate: BattleHexCoordinate,
-    pub before: BattleHex,
-    pub after: BattleHex,
+    pub coordinate: HexCoordinate,
+    pub before: Hex,
+    pub after: Hex,
     pub fall_levels: u8,
     pub falls: Vec<(ObjectId, BattleFallReport)>,
     pub vehicle_falls: Vec<(ObjectId, super::BattleVehicleFallReport)>,
@@ -33,7 +33,7 @@ pub enum BattleSurface {
 
 impl BattleSurface {
     /// The breakable surface of `hex`, if it has one.
-    pub fn of(hex: BattleHex) -> Option<Self> {
+    pub fn of(hex: Hex) -> Option<Self> {
         if hex.has_bridge() {
             return Some(Self::Bridge);
         }
@@ -53,7 +53,7 @@ struct SurfaceBreakPolicy {
 pub fn break_ice(
     world: &mut World,
     map: ObjectId,
-    coordinate: BattleHexCoordinate,
+    coordinate: HexCoordinate,
     trigger: Option<ObjectId>,
     rules: BattleFallRules,
 ) -> Result<BattleSurfaceBreak> {
@@ -75,7 +75,7 @@ pub fn break_ice(
 pub(super) fn break_ice_in_action(
     world: &mut World,
     map: ObjectId,
-    coordinate: BattleHexCoordinate,
+    coordinate: HexCoordinate,
     trigger: Option<ObjectId>,
     rules: BattleFallRules,
 ) -> Result<BattleSurfaceBreak> {
@@ -99,7 +99,7 @@ pub(super) fn break_ice_in_action(
 pub fn break_bridge(
     world: &mut World,
     map: ObjectId,
-    coordinate: BattleHexCoordinate,
+    coordinate: HexCoordinate,
     rules: BattleFallRules,
 ) -> Result<BattleSurfaceBreak> {
     break_surface(
@@ -120,7 +120,7 @@ pub fn break_bridge(
 pub(super) fn break_ice_upward(
     world: &mut World,
     map: ObjectId,
-    coordinate: BattleHexCoordinate,
+    coordinate: HexCoordinate,
     id: ObjectId,
     rules: BattleFallRules,
 ) -> Result<BattleSurfaceBreak> {
@@ -131,7 +131,7 @@ pub(super) fn break_ice_upward(
 pub(super) fn break_ice_upward_in_action(
     world: &mut World,
     map: ObjectId,
-    coordinate: BattleHexCoordinate,
+    coordinate: HexCoordinate,
     id: ObjectId,
     rules: BattleFallRules,
 ) -> Result<BattleSurfaceBreak> {
@@ -142,7 +142,7 @@ pub(super) fn break_ice_upward_in_action(
 fn break_ice_upward_inner(
     world: &mut World,
     map: ObjectId,
-    coordinate: BattleHexCoordinate,
+    coordinate: HexCoordinate,
     id: ObjectId,
     rules: BattleFallRules,
     character: bool,
@@ -207,7 +207,7 @@ fn break_ice_upward_inner(
 fn break_surface(
     world: &mut World,
     map: ObjectId,
-    coordinate: BattleHexCoordinate,
+    coordinate: HexCoordinate,
     trigger: Option<ObjectId>,
     exclude: Option<ObjectId>,
     rules: BattleFallRules,
@@ -478,7 +478,7 @@ fn check_ice_landing_inner(
     break_surface(
         world,
         position.map,
-        BattleHexCoordinate {
+        HexCoordinate {
             x: i32::from(position.x),
             y: i32::from(position.y),
         },
@@ -497,7 +497,7 @@ fn check_ice_landing_inner(
 pub(super) fn break_surface_in_action(
     world: &mut World,
     map: ObjectId,
-    coordinate: BattleHexCoordinate,
+    coordinate: HexCoordinate,
     surface: BattleSurface,
     rules: BattleFallRules,
 ) -> Result<BattleSurfaceBreak> {

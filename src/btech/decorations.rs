@@ -1,5 +1,5 @@
 //! Map-owned fire and smoke overlays; source terrain stays in the terrain dictionary.
-use super::{BattleDecorationKind, BattleHexCoordinate, StoredBattleMap};
+use super::{DecorationKind, HexCoordinate, StoredBattleMap};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -9,7 +9,7 @@ use std::sync::Arc;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct BattleDecoration {
-    pub kind: BattleDecorationKind,
+    pub kind: DecorationKind,
     /// Signed map-object duration: constant for smoke, spent at fire spread events.
     /// Expiry countdowns advance independently and must not overwrite this value.
     pub object_duration: i16,
@@ -27,7 +27,7 @@ pub struct BattleDecoration {
 
 impl StoredBattleMap {
     /// Inspect an overlay independently of the underlying tile.
-    pub fn decoration(&self, coordinate: BattleHexCoordinate) -> Result<Option<BattleDecoration>> {
+    pub fn decoration(&self, coordinate: HexCoordinate) -> Result<Option<BattleDecoration>> {
         self.base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
         let index = (i64::from(coordinate.y) * self.width + i64::from(coordinate.x)) as u32;
         Ok(self.decorations.get(&index).copied())
@@ -40,7 +40,7 @@ impl StoredBattleMap {
 pub fn set_map_decoration(
     world: &mut World,
     map: ObjectId,
-    coordinate: BattleHexCoordinate,
+    coordinate: HexCoordinate,
     decoration: Option<BattleDecoration>,
 ) -> Result<()> {
     ensure!(
@@ -59,14 +59,14 @@ pub fn set_map_decoration(
     );
     let index = (i64::from(coordinate.y) * record.width + i64::from(coordinate.x)) as u32;
     let decoration = decoration.map(|mut effect| {
-        if effect.kind == BattleDecorationKind::Fire && effect.remaining != 0 {
+        if effect.kind == DecorationKind::Fire && effect.remaining != 0 {
             effect.next_spread = Some(record.fire_spread_interval());
         }
         effect
     });
     world.attempt(|world| {
         let record = world.btech.maps.get_mut(&map).unwrap();
-        if decoration.is_some_and(|effect| effect.kind == BattleDecorationKind::Fire)
+        if decoration.is_some_and(|effect| effect.kind == DecorationKind::Fire)
             && record.fire_dice.is_none()
         {
             record.fire_dice = Some(super::BattleDice::fresh());
@@ -86,7 +86,7 @@ pub fn set_map_decoration(
 pub(super) fn raise_smoke(
     world: &mut World,
     map: ObjectId,
-    coordinate: BattleHexCoordinate,
+    coordinate: HexCoordinate,
     seconds: i64,
 ) -> Result<()> {
     let burning = world
@@ -95,7 +95,7 @@ pub(super) fn raise_smoke(
         .get(&map)
         .context("Map not found")?
         .decoration(coordinate)?
-        .is_some_and(|effect| effect.kind == BattleDecorationKind::Fire);
+        .is_some_and(|effect| effect.kind == DecorationKind::Fire);
     if burning {
         return Ok(());
     }
@@ -103,11 +103,7 @@ pub(super) fn raise_smoke(
         world,
         map,
         coordinate,
-        Some(BattleDecoration::new(
-            BattleDecorationKind::Smoke,
-            seconds,
-            None,
-        )),
+        Some(BattleDecoration::new(DecorationKind::Smoke, seconds, None)),
     )
 }
 
@@ -128,7 +124,7 @@ pub(super) fn install_decoration(
         .min(0)
         .checked_sub(1)
         .context("Decoration creation order exhausted")?;
-    let coordinate = BattleHexCoordinate {
+    let coordinate = HexCoordinate {
         x: (i64::from(index) % map.width) as i32,
         y: (i64::from(index) / map.width) as i32,
     };
@@ -149,7 +145,7 @@ pub fn map_smoke_pending(world: &World) -> bool {
     world.btech.maps().values().any(|map| {
         map.decorations
             .values()
-            .any(|effect| effect.kind == BattleDecorationKind::Smoke && effect.remaining > 0)
+            .any(|effect| effect.kind == DecorationKind::Smoke && effect.remaining > 0)
     })
 }
 
@@ -164,12 +160,12 @@ pub fn advance_map_smoke(world: &mut World) {
         if !map
             .decorations
             .values()
-            .any(|effect| effect.kind == BattleDecorationKind::Smoke && effect.remaining > 0)
+            .any(|effect| effect.kind == DecorationKind::Smoke && effect.remaining > 0)
         {
             continue;
         }
         Arc::make_mut(&mut map.decorations).retain(|_, effect| {
-            if effect.kind != BattleDecorationKind::Smoke || effect.remaining == 0 {
+            if effect.kind != DecorationKind::Smoke || effect.remaining == 0 {
                 return true;
             }
             effect.remaining = effect.remaining.saturating_sub(1);
@@ -180,7 +176,7 @@ pub fn advance_map_smoke(world: &mut World) {
 
 impl BattleDecoration {
     /// Create a marker with its retained signed-short duration and independent event clock.
-    pub fn new(kind: BattleDecorationKind, remaining: i64, next_spread: Option<u16>) -> Self {
+    pub fn new(kind: DecorationKind, remaining: i64, next_spread: Option<u16>) -> Self {
         Self {
             kind,
             object_duration: remaining.clamp(i64::from(i16::MIN), i64::from(i16::MAX)) as i16,
@@ -195,11 +191,11 @@ impl BattleDecoration {
         self.order < 0
             && (i64::from(i16::MIN)..=i64::from(u32::MAX)).contains(&self.remaining)
             && (self.remaining >= 0
-                || (self.kind == BattleDecorationKind::Fire && self.next_spread.is_some()))
+                || (self.kind == DecorationKind::Fire && self.next_spread.is_some()))
             && (self.remaining != 0 || self.next_spread.is_none())
             && self
                 .next_spread
                 .is_none_or(|seconds| (1..=60).contains(&seconds))
-            && (self.kind == BattleDecorationKind::Fire || self.next_spread.is_none())
+            && (self.kind == DecorationKind::Fire || self.next_spread.is_none())
     }
 }

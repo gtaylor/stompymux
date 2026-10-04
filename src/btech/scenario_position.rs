@@ -7,7 +7,7 @@ use serde::Serialize;
 /// An optional explicit altitude is clamped to the unit's signed-short coordinate range.
 #[derive(Debug, Clone, Copy)]
 pub struct BattleScenarioPosition {
-    pub coordinate: BattleHexCoordinate,
+    pub coordinate: HexCoordinate,
     pub elevation: Option<i32>,
 }
 
@@ -112,7 +112,7 @@ pub(super) fn set_field_action(
             .and_then(|unit| unit.position)
             .context("Unit is not on a battlefield")?;
         BattleScenarioPosition {
-            coordinate: BattleHexCoordinate {
+            coordinate: HexCoordinate {
                 x: i32::from(position.x),
                 y: i32::from(position.y),
             },
@@ -188,10 +188,10 @@ pub(super) fn relocate(
     world: &mut World,
     id: ObjectId,
     position: BattlePosition,
-    tile: BattleHex,
+    tile: Hex,
     elevation: Option<i32>,
 ) -> Result<()> {
-    let point = BattleHexCoordinate {
+    let point = HexCoordinate {
         x: i32::from(position.x),
         y: i32::from(position.y),
     }
@@ -206,8 +206,8 @@ fn relocate_precise(
     world: &mut World,
     id: ObjectId,
     position: BattlePosition,
-    tile: BattleHex,
-    point: BattlePoint,
+    tile: Hex,
+    point: Point,
     elevation: Option<f64>,
 ) -> Result<()> {
     let hover = world
@@ -302,7 +302,7 @@ pub(crate) fn command(
             (2..=3).contains(&args.len()),
             "Invalid number of arguments to SETXY!"
         );
-        let coordinate = BattleHexCoordinate {
+        let coordinate = HexCoordinate {
             x: args[0].parse().context("Invalid coordinates!")?,
             y: args[1].parse().context("Invalid coordinates!")?,
         };

@@ -265,7 +265,7 @@ fn value(world: &World, config: &Config, id: ObjectId, field: &str) -> Result<Op
             if let (Some(position), Some(point)) = (position, scanner.point) {
                 let (range, bearing) = super::find_center::measurement(
                     point,
-                    BattleHexCoordinate {
+                    HexCoordinate {
                         x: i32::from(position.x),
                         y: i32::from(position.y),
                     },

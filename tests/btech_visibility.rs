@@ -36,7 +36,7 @@ async fn fixture(
         &mut world,
         map,
         "visibility",
-        BattleMapAsset::from_cells(if blocked {
+        MapAsset::from_cells(if blocked {
             "1 3\n.0\n.9\n.0\n"
         } else {
             "1 3\n.0\n.0\n.0\n"
@@ -240,7 +240,7 @@ async fn clairvoyance_preserves_physical_los_and_unacquired_aim() {
     for source in templates() {
         let (_dir, config, mut world, observer, target) =
             fixture(&source, include_str!("../game/mechs/JR7-D.toml"), true).await;
-        let hex = BattleHexCoordinate { x: 0, y: 0 };
+        let hex = HexCoordinate { x: 0, y: 0 };
         assert!(
             battle_unit_terrain_los(&world, observer, target)
                 .unwrap()
@@ -268,7 +268,7 @@ async fn clairvoyance_preserves_physical_los_and_unacquired_aim() {
             Some(BattleDetectionChannel::Sight)
         );
         assert!(battle_perceive(&world, observer, target).unwrap().is_none());
-        assert!(battle_hex_visible(&world, observer, BattleHexCoordinate { x: 9, y: 9 }).is_err());
+        assert!(battle_hex_visible(&world, observer, HexCoordinate { x: 9, y: 9 }).is_err());
         let view = visible_battle_contact(&world, observer, target)
             .unwrap()
             .unwrap();

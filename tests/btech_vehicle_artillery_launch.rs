@@ -24,7 +24,7 @@ async fn fixture_template(
         &mut world,
         map,
         "test",
-        BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
+        MapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
     let shooter = world.create(&config, "Marksman".into(), Kind::Thing);
@@ -49,7 +49,7 @@ async fn fixture_template(
         &mut world,
         shooter,
         ObjectId(1),
-        BattleHexCoordinate { x: 1, y: 0 },
+        HexCoordinate { x: 1, y: 0 },
         BattleHexTargetMode::Hex,
     )
     .unwrap();
@@ -132,7 +132,7 @@ async fn vehicle_artillery_rejections_and_failed_callback_are_atomic() {
         &mut rear,
         shooter,
         ObjectId(1),
-        BattleHexCoordinate { x: 1, y: 2 },
+        HexCoordinate { x: 1, y: 2 },
         BattleHexTargetMode::Hex,
     )
     .unwrap();
@@ -329,7 +329,7 @@ async fn vehicle_artillery_correction_uses_mixed_observers_and_replays_aim() {
                 &mut ready,
                 shooter,
                 ObjectId(1),
-                BattleHexCoordinate { x: 2, y: 0 },
+                HexCoordinate { x: 2, y: 0 },
                 BattleHexTargetMode::Hex,
             )
             .unwrap();
@@ -382,7 +382,7 @@ async fn vehicle_artillery_explicit_mixed_spotters_share_targets_and_correction_
             &mut world,
             observer,
             ObjectId(2),
-            BattleHexCoordinate { x: 0, y: 2 },
+            HexCoordinate { x: 0, y: 2 },
             BattleHexTargetMode::Hex,
         )
         .unwrap();
@@ -426,7 +426,7 @@ async fn vehicle_artillery_explicit_mixed_spotters_share_targets_and_correction_
             &mut state,
             observer,
             ObjectId(2),
-            BattleHexCoordinate { x: 1, y: 0 },
+            HexCoordinate { x: 1, y: 0 },
             BattleHexTargetMode::Hex,
         )
         .unwrap();

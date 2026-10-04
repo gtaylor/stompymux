@@ -1,5 +1,5 @@
 //! Terrain suitability and saved circular landing exclusions, independent of aircraft movement.
-use super::{BattleHexCoordinate, StoredBattleMap};
+use super::{HexCoordinate, StoredBattleMap};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -8,7 +8,7 @@ use std::{collections::BTreeMap, sync::Arc};
 /// A circular exclusion; a nonzero exempt team may land within its radius.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BattleLandingExclusion {
-    pub coordinate: BattleHexCoordinate,
+    pub coordinate: HexCoordinate,
     /// Signed radius; negative values retain an inactive restriction.
     pub radius: i64,
     pub exempt_team: i32,
@@ -47,7 +47,7 @@ impl StoredBattleMap {
     /// neighbor terrain is unrestricted.
     pub fn landing_suitability(
         &self,
-        coordinate: BattleHexCoordinate,
+        coordinate: HexCoordinate,
         team: i32,
     ) -> Result<BattleLandingSuitability> {
         let tile = self.hex(i64::from(coordinate.x), i64::from(coordinate.y))?;

@@ -14,7 +14,7 @@ async fn terrain_zones_cargo_links_and_strict_errors_match_c_shapes() {
         &mut world,
         map,
         "map",
-        BattleMapAsset::from_cells("3 2\n.0~1^2\n@3#4+5\n").unwrap(),
+        MapAsset::from_cells("3 2\n.0~1^2\n@3#4+5\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -22,7 +22,7 @@ async fn terrain_zones_cargo_links_and_strict_errors_match_c_shapes() {
         &mut world,
         parent,
         "parent",
-        BattleMapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
+        MapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, parent, support::FIXTURE_DICE_SEED);
@@ -31,7 +31,7 @@ async fn terrain_zones_cargo_links_and_strict_errors_match_c_shapes() {
         map,
         0,
         Some(BattleLandingExclusion {
-            coordinate: BattleHexCoordinate { x: 1, y: 0 },
+            coordinate: HexCoordinate { x: 1, y: 0 },
             radius: 2,
             exempt_team: 0,
             owner: ObjectId(1),
@@ -197,8 +197,8 @@ async fn mixed_membership_range_lookup_los_and_exact_placement_are_canonical() {
         &config,
         ObjectId(1),
         map,
-        BattleHexCoordinate { x: 0, y: 10 },
-        BattleHex::new(Terrain::Mountains, 9),
+        HexCoordinate { x: 0, y: 10 },
+        Hex::new(Terrain::Mountains, 9),
     )
     .unwrap();
     scripts.drain_outbox();
@@ -272,7 +272,7 @@ async fn going_handles_and_checking_mode_preserve_object_and_mutation_boundaries
         &mut world,
         map,
         "map",
-        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+        MapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();

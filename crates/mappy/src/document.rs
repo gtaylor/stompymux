@@ -19,8 +19,7 @@ use std::{
 
 use anyhow::{Context, Result, ensure};
 use stompymux_map::{
-    BattleDecorationKind, BattleHex, BattleHexCoordinate, BattleMapAsset, Ground, Structure, Water,
-    Woods,
+    DecorationKind, Ground, Hex, HexCoordinate, MapAsset, Structure, Water, Woods,
 };
 
 /// A map's flags, gravity and temperature, edited together.
@@ -35,8 +34,8 @@ pub struct MapSettings {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct HexChange {
     index: usize,
-    before: BattleHex,
-    after: BattleHex,
+    before: Hex,
+    after: Hex,
 }
 
 /// One undoable change.
@@ -58,7 +57,7 @@ pub struct Brush {
     pub woods: Option<Option<Woods>>,
     pub water: Option<Option<Water>>,
     pub structure: Option<Option<Structure>>,
-    pub overlay: Option<Option<BattleDecorationKind>>,
+    pub overlay: Option<Option<DecorationKind>>,
     /// Hexes within this many steps of the center are painted.
     pub radius: u8,
 }
@@ -66,7 +65,7 @@ pub struct Brush {
 impl Brush {
     /// A brush that paints every layer of `hex`; what the eyedropper should produce.
     #[cfg(test)]
-    pub fn matching(hex: BattleHex, radius: u8) -> Self {
+    pub fn matching(hex: Hex, radius: u8) -> Self {
         Self {
             level: Some(hex.level()),
             ground: Some(hex.ground()),
@@ -79,7 +78,7 @@ impl Brush {
     }
 
     /// The hex this brush turns `hex` into.
-    fn apply(self, mut hex: BattleHex) -> BattleHex {
+    fn apply(self, mut hex: Hex) -> Hex {
         if let Some(level) = self.level {
             hex = hex.with_level(level);
         }
@@ -105,13 +104,13 @@ impl Brush {
 /// Whether a map file stores `hex` exactly, found by saving and reloading a one-hex map
 /// through the game's map file encoder and decoder. Answers are remembered, since a map has
 /// few distinct hexes.
-pub fn file_holds(hex: BattleHex) -> bool {
-    static ANSWERS: LazyLock<Mutex<BTreeMap<BattleHex, bool>>> = LazyLock::new(Mutex::default);
+pub fn file_holds(hex: Hex) -> bool {
+    static ANSWERS: LazyLock<Mutex<BTreeMap<Hex, bool>>> = LazyLock::new(Mutex::default);
     let mut answers = ANSWERS
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner());
     *answers.entry(hex).or_insert_with(|| {
-        let map = BattleMapAsset {
+        let map = MapAsset {
             width: 1,
             height: 1,
             flags: 0,
@@ -121,7 +120,7 @@ pub fn file_holds(hex: BattleHex) -> bool {
             points_of_interest: Vec::new(),
         };
         map.to_file()
-            .and_then(|source| BattleMapAsset::parse(&source))
+            .and_then(|source| MapAsset::parse(&source))
             .is_ok_and(|decoded| decoded.hexes[0] == hex)
     })
 }
@@ -130,7 +129,7 @@ pub fn file_holds(hex: BattleHex) -> bool {
 pub struct Document {
     /// File the map was loaded from or last saved to; `None` for a new map.
     pub path: Option<PathBuf>,
-    pub map: BattleMapAsset,
+    pub map: MapAsset,
     /// Whether the map differs from the file at `path`.
     pub dirty: bool,
     undo: Vec<Edit>,
@@ -154,7 +153,7 @@ pub struct Document {
 #[derive(Debug, Clone)]
 pub struct HexFeed {
     pub id: u64,
-    pub hexes: Weak<Vec<BattleHex>>,
+    pub hexes: Weak<Vec<Hex>>,
     pub changes: Weak<Vec<u32>>,
 }
 
@@ -173,10 +172,10 @@ impl Document {
             (1..=1000).contains(&width) && (1..=1000).contains(&height),
             "map dimensions must be between 1 and 1000"
         );
-        let hexes = vec![BattleHex::at_level(0); usize::from(width) * usize::from(height)];
+        let hexes = vec![Hex::at_level(0); usize::from(width) * usize::from(height)];
         Ok(Self::from_map(
             None,
-            BattleMapAsset {
+            MapAsset {
                 width,
                 height,
                 flags: 0,
@@ -192,12 +191,12 @@ impl Document {
     pub fn open(path: &Path) -> Result<Self> {
         let source =
             std::fs::read_to_string(path).with_context(|| format!("reading {}", path.display()))?;
-        let map = BattleMapAsset::parse(&source)
-            .with_context(|| format!("decoding {}", path.display()))?;
+        let map =
+            MapAsset::parse(&source).with_context(|| format!("decoding {}", path.display()))?;
         Ok(Self::from_map(Some(path.to_path_buf()), map))
     }
 
-    fn from_map(path: Option<PathBuf>, map: BattleMapAsset) -> Self {
+    fn from_map(path: Option<PathBuf>, map: MapAsset) -> Self {
         let unsavable = map
             .hexes
             .iter()
@@ -231,7 +230,7 @@ impl Document {
             );
         }
         let source = self.map.to_file()?;
-        let decoded = BattleMapAsset::parse(&source).context("the saved map would not load")?;
+        let decoded = MapAsset::parse(&source).context("the saved map would not load")?;
         ensure!(
             decoded == self.map,
             "the saved map would not load back unchanged"
@@ -248,7 +247,7 @@ impl Document {
     }
 
     /// The hex at a coordinate, or `None` off the map.
-    pub fn hex(&self, coordinate: BattleHexCoordinate) -> Option<BattleHex> {
+    pub fn hex(&self, coordinate: HexCoordinate) -> Option<Hex> {
         self.map.hex(coordinate.x, coordinate.y)
     }
 
@@ -262,13 +261,13 @@ impl Document {
     }
 
     /// Paint `brush` centered on `center` as part of the current stroke.
-    pub fn paint(&mut self, center: BattleHexCoordinate, brush: Brush) {
+    pub fn paint(&mut self, center: HexCoordinate, brush: Brush) {
         let radius = i32::from(brush.radius);
         let width = i32::from(self.map.width);
         let height = i32::from(self.map.height);
         for y in (center.y - radius).max(0)..=(center.y + radius).min(height - 1) {
             for x in (center.x - radius).max(0)..=(center.x + radius).min(width - 1) {
-                let coordinate = BattleHexCoordinate { x, y };
+                let coordinate = HexCoordinate { x, y };
                 if coordinate.distance(center) > u64::from(brush.radius) {
                     continue;
                 }
@@ -366,7 +365,7 @@ impl Document {
     /// Only weak references are handed out, so `make_mut` never clones. Once the log is as
     /// long as the map, rereading every hex costs a renderer no more than replaying the log,
     /// so it starts over under a new id instead of growing without bound.
-    fn set_hex(&mut self, index: usize, hex: BattleHex) {
+    fn set_hex(&mut self, index: usize, hex: Hex) {
         if self.changes.len() >= self.map.hexes.len() {
             self.hexes_id = next_hexes_id();
             self.changes = Arc::default();
@@ -404,12 +403,12 @@ mod tests {
     use super::*;
     use stompymux_map::Terrain;
 
-    const AT: BattleHexCoordinate = BattleHexCoordinate { x: 2, y: 2 };
-    const MIDDLE: BattleHexCoordinate = BattleHexCoordinate { x: 1, y: 1 };
+    const AT: HexCoordinate = HexCoordinate { x: 2, y: 2 };
+    const MIDDLE: HexCoordinate = HexCoordinate { x: 1, y: 1 };
 
     /// A brush painting every layer of the hex the compact symbol-and-digit notation describes.
     fn brush(terrain: Terrain, value: u8, radius: u8) -> Brush {
-        Brush::matching(BattleHex::new(terrain, value), radius)
+        Brush::matching(Hex::new(terrain, value), radius)
     }
 
     /// A drag across many hexes undoes and redoes as one step.
@@ -418,14 +417,11 @@ mod tests {
         let mut document = Document::new(5, 5).unwrap();
         let blank = document.map.clone();
         document.paint(AT, brush(Terrain::Water, 2, 0));
-        document.paint(
-            BattleHexCoordinate { x: 3, y: 2 },
-            brush(Terrain::Water, 2, 0),
-        );
+        document.paint(HexCoordinate { x: 3, y: 2 }, brush(Terrain::Water, 2, 0));
         document.paint(AT, brush(Terrain::Road, 1, 0));
         document.end_stroke();
         let painted = document.map.clone();
-        assert_eq!(document.hex(AT), Some(BattleHex::new(Terrain::Road, 1)));
+        assert_eq!(document.hex(AT), Some(Hex::new(Terrain::Road, 1)));
         document.undo();
         assert_eq!(document.map, blank);
         document.redo();
@@ -446,10 +442,7 @@ mod tests {
             .count();
         assert_eq!(painted, 7);
         let mut corner = Document::new(5, 5).unwrap();
-        corner.paint(
-            BattleHexCoordinate { x: 0, y: 0 },
-            brush(Terrain::Rough, 0, 1),
-        );
+        corner.paint(HexCoordinate { x: 0, y: 0 }, brush(Terrain::Rough, 0, 1));
         assert!(
             corner
                 .map
@@ -473,7 +466,7 @@ mod tests {
         document.paint(MIDDLE, raise);
         assert_eq!(
             document.hex(MIDDLE),
-            Some(BattleHex::new(Terrain::HeavyForest, 20))
+            Some(Hex::new(Terrain::HeavyForest, 20))
         );
         let clear = Brush {
             woods: Some(None),
@@ -481,10 +474,7 @@ mod tests {
             ..Brush::default()
         };
         document.paint(MIDDLE, clear);
-        assert_eq!(
-            document.hex(MIDDLE),
-            Some(BattleHex::new(Terrain::Rough, 20))
-        );
+        assert_eq!(document.hex(MIDDLE), Some(Hex::new(Terrain::Rough, 20)));
     }
 
     /// Hexes whose layers a map file cannot store are tracked as they are painted, and
@@ -515,22 +505,18 @@ mod tests {
     fn file_holds_follows_the_map_file_rules() {
         let bridge = Some(Structure::Bridge { deck: 2 });
         assert!(file_holds(
-            BattleHex::new(Terrain::Water, 1).with_structure(bridge)
+            Hex::new(Terrain::Water, 1).with_structure(bridge)
         ));
-        assert!(!file_holds(BattleHex::at_level(0).with_structure(bridge)));
-        let fire = Some(BattleDecorationKind::Fire);
-        assert!(file_holds(BattleHex::at_level(4).with_overlay(fire)));
-        assert!(file_holds(
-            BattleHex::new(Terrain::Rough, 4).with_overlay(fire)
-        ));
-        let water_on_a_hill = BattleHex::new(Terrain::Water, 2).with_level(6);
+        assert!(!file_holds(Hex::at_level(0).with_structure(bridge)));
+        let fire = Some(DecorationKind::Fire);
+        assert!(file_holds(Hex::at_level(4).with_overlay(fire)));
+        assert!(file_holds(Hex::new(Terrain::Rough, 4).with_overlay(fire)));
+        let water_on_a_hill = Hex::new(Terrain::Water, 2).with_level(6);
         assert!(file_holds(water_on_a_hill.with_structure(bridge)));
         assert!(!file_holds(
-            BattleHex::new(Terrain::Rough, 4).with_woods(Some(Woods::Light))
+            Hex::new(Terrain::Rough, 4).with_woods(Some(Woods::Light))
         ));
-        assert!(file_holds(
-            BattleHex::new(Terrain::Building, 30).with_level(5)
-        ));
+        assert!(file_holds(Hex::new(Terrain::Building, 30).with_level(5)));
     }
 
     /// Settings changes are undoable and a new edit clears the redo history.

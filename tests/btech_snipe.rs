@@ -112,7 +112,7 @@ async fn prediction_stops_at_map_edge_without_consuming_live_state() {
         predict_battle_artillery_target(&world, shooter, target, BattleMovementRules::STANDARD)
             .unwrap();
     assert!(prediction.stopped);
-    assert_eq!(prediction.coordinate, BattleHexCoordinate { x: 0, y: 11 });
+    assert_eq!(prediction.coordinate, HexCoordinate { x: 0, y: 11 });
     assert_eq!(
         prediction.point.containing_hex().unwrap(),
         prediction.coordinate
@@ -154,8 +154,8 @@ async fn prediction_handles_vehicle_targets_and_blocking_terrain() {
             &config,
             ObjectId(1),
             map,
-            BattleHexCoordinate { x: 0, y: 9 },
-            BattleHex::new(Terrain::Mountains, 9),
+            HexCoordinate { x: 0, y: 9 },
+            Hex::new(Terrain::Mountains, 9),
         )
         .unwrap();
         let world = scripts.world();
@@ -188,7 +188,7 @@ async fn distant_prediction_matches_live_motion_until_shell_catches_up() {
         &mut world,
         map,
         "long",
-        BattleMapAsset::from_cells(&format!("1 100\n{}", ".0\n".repeat(100))).unwrap(),
+        MapAsset::from_cells(&format!("1 100\n{}", ".0\n".repeat(100))).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);

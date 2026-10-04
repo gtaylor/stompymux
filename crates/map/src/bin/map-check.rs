@@ -5,7 +5,7 @@
 use std::{env, fs, path::PathBuf, process::ExitCode};
 
 use anyhow::{Context, Result};
-use stompymux_map::BattleMapAsset;
+use stompymux_map::MapAsset;
 
 fn main() -> Result<ExitCode> {
     let mut dirs: Vec<PathBuf> = env::args().skip(1).map(PathBuf::from).collect();
@@ -26,7 +26,7 @@ fn main() -> Result<ExitCode> {
         } else {
             fs::read_to_string(path)
                 .context("reading")
-                .and_then(|source| BattleMapAsset::parse(&source))
+                .and_then(|source| MapAsset::parse(&source))
                 .err()
                 .map(|error| format!("{error:#}"))
         };

@@ -10,7 +10,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {
         &mut world,
         map,
         "road",
-        BattleMapAsset::from_cells(&format!(
+        MapAsset::from_cells(&format!(
             "20 3\n{}\n{}\n{}\n",
             ".0".repeat(20),
             ".0".repeat(20),

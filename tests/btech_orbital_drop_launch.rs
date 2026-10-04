@@ -262,7 +262,7 @@ async fn insertion_output_failure_restores_prior_pose_and_existing_messages() {
         ObjectId(1),
         unit,
         BattleScenarioPosition {
-            coordinate: BattleHexCoordinate { x: 0, y: 9 },
+            coordinate: HexCoordinate { x: 0, y: 9 },
             elevation: Some(10),
         },
     )
@@ -274,7 +274,7 @@ async fn insertion_output_failure_restores_prior_pose_and_existing_messages() {
         ObjectId(1),
         unit,
         BattleScenarioPosition {
-            coordinate: BattleHexCoordinate { x: 0, y: 8 },
+            coordinate: HexCoordinate { x: 0, y: 8 },
             elevation: None,
         },
     )

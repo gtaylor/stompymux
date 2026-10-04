@@ -27,7 +27,7 @@ async fn ground_entry_reports_live_cf_once_and_replays_after_restart() {
                 &mut world,
                 interior,
                 "interior",
-                BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+                MapAsset::from_cells("1 1\n.0\n").unwrap(),
             )
             .unwrap();
             crate::support::seed_object_dice(
@@ -53,7 +53,7 @@ async fn ground_entry_reports_live_cf_once_and_replays_after_restart() {
                     map,
                     ordinal,
                     Some(BattleBuildingEntrance {
-                        coordinate: BattleHexCoordinate { x: 0, y: 10 },
+                        coordinate: HexCoordinate { x: 0, y: 10 },
                         interior,
                         data_char: 0,
                         data_short: 0,
@@ -150,7 +150,7 @@ async fn aircraft_overflight_does_not_report_ground_buildings() {
         &mut world,
         interior,
         "inside",
-        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+        MapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     crate::support::seed_object_dice(&mut world, interior, crate::support::FIXTURE_DICE_SEED);
@@ -159,7 +159,7 @@ async fn aircraft_overflight_does_not_report_ground_buildings() {
         map,
         0,
         Some(BattleBuildingEntrance {
-            coordinate: BattleHexCoordinate { x: 0, y: 10 },
+            coordinate: HexCoordinate { x: 0, y: 10 },
             interior,
             data_char: 0,
             data_short: 0,
@@ -198,7 +198,7 @@ async fn interrupted_ground_steps_report_only_accepted_surface_entries() {
                 &mut world,
                 interior,
                 "shelter",
-                BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+                MapAsset::from_cells("1 1\n.0\n").unwrap(),
             )
             .unwrap();
             crate::support::seed_object_dice(
@@ -211,7 +211,7 @@ async fn interrupted_ground_steps_report_only_accepted_surface_entries() {
                 map,
                 0,
                 Some(BattleBuildingEntrance {
-                    coordinate: BattleHexCoordinate { x: 0, y: 10 },
+                    coordinate: HexCoordinate { x: 0, y: 10 },
                     interior,
                     data_char: 0,
                     data_short: 0,

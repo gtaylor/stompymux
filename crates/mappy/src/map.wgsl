@@ -99,7 +99,7 @@ fn hex_at(point: vec2<f32>) -> vec2<i32> {
     return best;
 }
 
-// Cube coordinates for hex distance, matching `BattleHexCoordinate::distance`.
+// Cube coordinates for hex distance, matching `HexCoordinate::distance`.
 fn cube(hex: vec2<i32>) -> vec3<i32> {
     let q = hex.x;
     let r = hex.y - (q + (q & 1)) / 2;

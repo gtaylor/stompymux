@@ -1,7 +1,7 @@
 //! Jump thrust, gravity, continuous trajectory boundaries and detached persisted inspection.
 use crate::support;
 use stompymux_rs::{
-    BattleJumpPath, BattlePoint, BattleSection, BattleSystem, BattleTemplate, BattleUnit,
+    BattleJumpPath, BattleSection, BattleSystem, BattleTemplate, BattleUnit, Point,
 };
 
 /// Loose stock uses the shared load calculation for both projected and targeted jumps.
@@ -109,7 +109,7 @@ async fn runtime_fixture() -> (
         &mut world,
         map,
         "jump.map",
-        BattleMapAsset::from_cells(&source).unwrap(),
+        MapAsset::from_cells(&source).unwrap(),
     )
     .unwrap();
     let id = world.create(&config, "Jump Jenner".into(), Kind::Thing);
@@ -393,8 +393,8 @@ async fn connected_jump_domain_updates_height_heat_landing_and_stabilization_aft
     assert!(
         ground_terrain_los(
             &world.btech.maps()[&map],
-            BattleHexCoordinate { x: 3, y: 4 },
-            BattleHexCoordinate { x: 5, y: 4 }
+            HexCoordinate { x: 3, y: 4 },
+            HexCoordinate { x: 5, y: 4 }
         )
         .unwrap()
         .blocked
@@ -604,14 +604,7 @@ async fn losing_all_jets_ends_flight_with_a_fall_and_saved_cursor_corruption_is_
 
 /// A five-hex path with enough height variation to detect lost trajectory state.
 fn flight_path() -> BattleJumpPath {
-    BattleJumpPath::new(
-        BattlePoint { x: 2.0, y: 3.0 },
-        BattlePoint { x: 2.0, y: 8.0 },
-        -1,
-        4,
-        5,
-    )
-    .unwrap()
+    BattleJumpPath::new(Point { x: 2.0, y: 3.0 }, Point { x: 2.0, y: 8.0 }, -1, 4, 5).unwrap()
 }
 
 #[tokio::test]
@@ -694,7 +687,7 @@ fn timed_flight_replays_after_serialization_and_snaps_to_the_endpoint() {
         }
         assert!(flight.arrived());
         assert_eq!(flight.travelled(), 5.0);
-        assert_eq!(flight.sample().point, BattlePoint { x: 2.0, y: 8.0 });
+        assert_eq!(flight.sample().point, Point { x: 2.0, y: 8.0 });
         assert_eq!(flight.sample().elevation, 4.0);
         let before = flight;
         assert!(flight.advance(capacity, modifier).is_err());
@@ -766,7 +759,7 @@ fn flight_uses_current_thrust_without_rewriting_the_previous_airborne_sample() {
     }
     let step = flight.advance(full, i64::MAX).unwrap();
     assert_eq!(step.outcome, BattleJumpOutcome::Landing);
-    assert_eq!(step.to.point, BattlePoint { x: 2.0, y: 8.0 });
+    assert_eq!(step.to.point, Point { x: 2.0, y: 8.0 });
 }
 
 #[test]
@@ -861,8 +854,8 @@ fn gravity_and_effective_jet_losses_bound_jump_capacity() {
 
 #[test]
 fn trajectory_preserves_endpoints_apex_and_lost_thrust_curve() {
-    let start = BattlePoint { x: 2.0, y: 3.0 };
-    let end = BattlePoint { x: 2.0, y: 8.0 };
+    let start = Point { x: 2.0, y: 3.0 };
+    let end = Point { x: 2.0, y: 8.0 };
     for (from, to) in [(0, 0), (-1, 4), (5, 0)] {
         let path = BattleJumpPath::new(start, end, from, to, 5).unwrap();
         assert_eq!(path.distance(), 5.0);
@@ -890,7 +883,7 @@ fn trajectory_preserves_endpoints_apex_and_lost_thrust_curve() {
     assert!(
         BattleJumpPath::new(
             start,
-            BattlePoint {
+            Point {
                 x: f64::NAN,
                 y: 0.0
             },
@@ -900,15 +893,15 @@ fn trajectory_preserves_endpoints_apex_and_lost_thrust_curve() {
         )
         .is_err()
     );
-    let short = BattleJumpPath::new(start, BattlePoint { x: 2.0, y: 4.0 }, 0, 0, 8).unwrap();
+    let short = BattleJumpPath::new(start, Point { x: 2.0, y: 4.0 }, 0, 0, 8).unwrap();
     assert_eq!(short.apex(), 4); // Short jumps use the twice-range-plus-two cap.
 }
 
 #[tokio::test]
 async fn flooded_capacity_and_lua_inspection_survive_restart_without_mutation() {
     use stompymux_rs::{
-        BattleMapAsset, Kind, ObjectId, Scripts, create_battle_map, create_battle_unit,
-        persistence, place_battle_unit,
+        Kind, MapAsset, ObjectId, Scripts, create_battle_map, create_battle_unit, persistence,
+        place_battle_unit,
     };
     let (_dir, config, mut world) = support::isolated_world().await;
     let map = world.create(&config, "Jump field".into(), Kind::Room);
@@ -916,7 +909,7 @@ async fn flooded_capacity_and_lua_inspection_survive_restart_without_mutation() 
         &mut world,
         map,
         "jump.map",
-        BattleMapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
+        MapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -2072,7 +2065,7 @@ fn jump_hills(
         world,
         map,
         "hills.map",
-        BattleMapAsset::from_cells(&source).unwrap(),
+        MapAsset::from_cells(&source).unwrap(),
     )
     .unwrap();
     place_battle_unit(world, id, map, 5, 5).unwrap();
@@ -2283,7 +2276,7 @@ async fn dry_terrain_jump_routes_share_adapters_heat_and_restartable_landing() {
             &mut world,
             map,
             "dry.map",
-            BattleMapAsset::from_cells(&format!("12 12\n{}", row.repeat(12))).unwrap(),
+            MapAsset::from_cells(&format!("12 12\n{}", row.repeat(12))).unwrap(),
         )
         .unwrap();
         place_battle_unit(&mut world, id, map, 5, 5).unwrap();
@@ -2411,7 +2404,7 @@ async fn water_jump_fixture(
         &mut world,
         map,
         "water-jump.map",
-        BattleMapAsset::from_cells(&source).unwrap(),
+        MapAsset::from_cells(&source).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 5, 5).unwrap();
@@ -2797,7 +2790,7 @@ async fn free_fall_surface_contact_and_engine_restart_keep_the_event_cadence() {
         field["gravity"] = 200.into();
         field["movement_modifier"] = 800.into();
         for tile in field["terrain"].as_array_mut().unwrap() {
-            *tile = serde_json::to_value(BattleHex::new(terrain, elevation)).unwrap();
+            *tile = serde_json::to_value(Hex::new(terrain, elevation)).unwrap();
         }
         world.btech = serde_json::from_value(state).unwrap();
         assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
@@ -3918,7 +3911,7 @@ async fn dfa_launch_fixed_destination_and_saved_intent() {
     world
         .btech
         .rewrite_unit_record(target, |record| {
-            record["motion"]["point"] = serde_json::to_value(BattlePoint {
+            record["motion"]["point"] = serde_json::to_value(Point {
                 x: center.x + (start.x - center.x) * 0.25,
                 y: center.y + (start.y - center.y) * 0.25,
             })
@@ -4016,8 +4009,8 @@ async fn dfa_launch_rejection_and_shutdown() {
 #[test]
 fn dfa_launch_path_validation() {
     use stompymux_rs::*;
-    let start = BattleHexCoordinate { x: 5, y: 5 }.center();
-    let end = BattleHexCoordinate { x: 6, y: 5 }.center();
+    let start = HexCoordinate { x: 5, y: 5 }.center();
+    let end = HexCoordinate { x: 6, y: 5 }.center();
     for range in [f64::NAN, f64::INFINITY, 0.0, -1.0, 6.0] {
         assert!(BattleJumpPath::targeted(start, end, range, 0, 0, 5).is_err());
     }
@@ -5579,7 +5572,7 @@ async fn jump_fields_cross_wrapping_seams_and_restart() {
                 &mut world,
                 other,
                 "redirect.map",
-                BattleMapAsset::from_cells(&asset).unwrap(),
+                MapAsset::from_cells(&asset).unwrap(),
             )
             .unwrap();
             support::seed_object_dice(&mut world, other, support::FIXTURE_DICE_SEED);

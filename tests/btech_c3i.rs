@@ -34,8 +34,7 @@ async fn field_with_equipment(
         &mut world,
         map,
         "network.map",
-        BattleMapAsset::from_cells(&format!("20 20\n{}", (".0".repeat(20) + "\n").repeat(20)))
-            .unwrap(),
+        MapAsset::from_cells(&format!("20 20\n{}", (".0".repeat(20) + "\n").repeat(20))).unwrap(),
     )
     .unwrap();
     let mut units = Vec::new();
@@ -346,7 +345,7 @@ async fn interference_is_temporary_but_hardware_team_and_map_loss_disconnect() {
         &mut world,
         other_map,
         "other.map",
-        BattleMapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
+        MapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, first, other_map, 0, 0).unwrap();
@@ -400,7 +399,7 @@ async fn unidentified_friendly_contact_can_join_without_disclosing_its_name() {
     let mut encoded = serde_json::to_value(&world.btech).unwrap();
     for x in 0..20 {
         encoded["maps"][map.0.to_string()]["terrain"][11 * 20 + x] =
-            serde_json::to_value(BattleHex::new(Terrain::Grassland, 9)).unwrap();
+            serde_json::to_value(Hex::new(Terrain::Grassland, 9)).unwrap();
     }
     world.btech = serde_json::from_value(encoded).unwrap();
     let contact = visible_battle_contact(&world, first, target)
@@ -433,7 +432,7 @@ fn relocate(world: &mut World, id: ObjectId, y: u16) {
             let unit = record;
             unit["position"]["y"] = y.into();
             unit["motion"]["point"] = serde_json::to_value(
-                BattleHexCoordinate {
+                HexCoordinate {
                     x: 10,
                     y: i32::from(y),
                 }
@@ -665,7 +664,7 @@ async fn shared_range_applies_to_hex_aim_and_replays_in_actual_shots() {
     let aim = battle_hex_aim_modifiers(
         &world,
         first,
-        BattleHexCoordinate { x: 10, y: 18 },
+        HexCoordinate { x: 10, y: 18 },
         index,
         4,
         aim_rules(),
@@ -1090,7 +1089,7 @@ async fn network_target_visibility_is_recomputed_for_every_row() {
     }
     for x in 0..20 {
         encoded["maps"][map.0.to_string()]["terrain"][5 * 20 + x] =
-            serde_json::to_value(BattleHex::new(Terrain::Grassland, 9)).unwrap();
+            serde_json::to_value(Hex::new(Terrain::Grassland, 9)).unwrap();
     }
     world.btech = serde_json::from_value(encoded).unwrap();
     let contacts = displayed_battle_contacts(&world, first).unwrap();
@@ -1470,7 +1469,7 @@ async fn classic_assisted_unit_and_hex_shots_share_limits_and_restart_replay() {
     let hex = battle_hex_aim_modifiers(
         &world,
         first,
-        BattleHexCoordinate { x: 10, y: 18 },
+        HexCoordinate { x: 10, y: 18 },
         lrm,
         4,
         aim_rules(),
@@ -1730,8 +1729,7 @@ async fn underwater_network_aim_keeps_the_physical_water_limit() {
         &mut world,
         map,
         "water",
-        BattleMapAsset::from_cells(&format!("20 20\n{}", ("~2".repeat(20) + "\n").repeat(20)))
-            .unwrap(),
+        MapAsset::from_cells(&format!("20 20\n{}", ("~2".repeat(20) + "\n").repeat(20))).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -1780,7 +1778,7 @@ async fn underwater_network_aim_keeps_the_physical_water_limit() {
     let coordinate = battle_hex_aim_modifiers(
         &world,
         shooter,
-        BattleHexCoordinate { x: 10, y: 8 },
+        HexCoordinate { x: 10, y: 8 },
         index,
         4,
         rules,

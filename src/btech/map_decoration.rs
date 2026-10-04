@@ -1,5 +1,5 @@
 //! Wizard fire and smoke commands share installation, duration admission and transactional publication.
-use super::{BattleDecoration, BattleDecorationKind, BattleHexCoordinate};
+use super::{BattleDecoration, DecorationKind, HexCoordinate};
 use crate::{Config, ObjectId, Scripts};
 use anyhow::{Context, Result, ensure};
 
@@ -10,8 +10,8 @@ pub fn add_map_decoration_action(
     config: &Config,
     actor: ObjectId,
     map: ObjectId,
-    coordinate: BattleHexCoordinate,
-    kind: BattleDecorationKind,
+    coordinate: HexCoordinate,
+    kind: DecorationKind,
     duration: i32,
 ) -> Result<()> {
     scripts.atomic(|before| {
@@ -35,8 +35,8 @@ pub fn add_map_decoration_action(
         {
             let remaining = match (kind, duration) {
                 (_, 0) => 0,
-                (BattleDecorationKind::Smoke, seconds) => i64::from(seconds.max(1)),
-                (BattleDecorationKind::Fire, seconds) => {
+                (DecorationKind::Smoke, seconds) => i64::from(seconds.max(1)),
+                (DecorationKind::Fire, seconds) => {
                     // The first spread is scheduled independently of this budget.
                     i64::from(seconds.clamp(i32::from(i16::MIN), i32::from(i16::MAX)))
                 }
@@ -51,8 +51,8 @@ pub fn add_map_decoration_action(
             super::set_map_decoration(&mut scripts.world_mut(), map, coordinate, Some(effect))?;
         }
         let label = match kind {
-            BattleDecorationKind::Fire => "Fire",
-            BattleDecorationKind::Smoke => "Smoke",
+            DecorationKind::Fire => "Fire",
+            DecorationKind::Smoke => "Smoke",
         };
         super::notify_message(
             scripts,
@@ -75,9 +75,9 @@ pub(crate) fn command(
 ) -> Result<crate::CommandAction> {
     let result = (|| -> Result<()> {
         let kind = if input.name.eq_ignore_ascii_case("addfire") {
-            BattleDecorationKind::Fire
+            DecorationKind::Fire
         } else {
-            BattleDecorationKind::Smoke
+            DecorationKind::Smoke
         };
         let (coordinate, duration) = parse(&input.args, kind)?;
         let map = super::special_dispatch::object(ctx)?;
@@ -100,10 +100,10 @@ pub(crate) fn command(
 }
 
 /// Consume the reference's three space/tab-delimited fields and checked signed integers.
-fn parse(arguments: &str, kind: BattleDecorationKind) -> Result<(BattleHexCoordinate, i32)> {
+fn parse(arguments: &str, kind: DecorationKind) -> Result<(HexCoordinate, i32)> {
     let name = match kind {
-        BattleDecorationKind::Fire => "addfire",
-        BattleDecorationKind::Smoke => "addsmoke",
+        DecorationKind::Fire => "addfire",
+        DecorationKind::Smoke => "addsmoke",
     };
     let args: Vec<_> = arguments
         .split([' ', '\t'])
@@ -121,7 +121,7 @@ fn parse(arguments: &str, kind: BattleDecorationKind) -> Result<(BattleHexCoordi
             .map_err(|_| anyhow::anyhow!("Error: Invalid numeric {name} argument."))
     };
     Ok((
-        BattleHexCoordinate {
+        HexCoordinate {
             x: number(args[0])?,
             y: number(args[1])?,
         },

@@ -115,7 +115,7 @@ async fn damaged_weapon_controls_and_reservations_share_saved_state() {
             &mut world,
             map,
             "field",
-            BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+            MapAsset::from_cells("1 1\n.0\n").unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -261,7 +261,7 @@ async fn critical_launch_failures_are_atomic_and_distinguish_permanent_jams() {
             &mut world,
             map,
             "field",
-            BattleMapAsset::from_cells("1 3\n.0\n.0\n.0\n").unwrap(),
+            MapAsset::from_cells("1 3\n.0\n.0\n.0\n").unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);

@@ -20,10 +20,7 @@ pub use btech::{
 };
 pub use btech::{BattleCommandClass, BattleSpecialCommand, BattleSpecialType};
 pub use btech::{BattleMinePlacement, add_mine_action as add_battle_mine_action};
-pub use btech::{
-    Ground as BattleGround, MAX_DEPTH as BATTLE_MAX_DEPTH, MAX_HEIGHT as BATTLE_MAX_HEIGHT,
-    Structure as BattleStructure, Water as BattleWater, Woods as BattleWoods,
-};
+pub use btech::{Ground, MAX_DEPTH, MAX_HEIGHT, Structure, Water, Woods};
 
 pub use btech::{
     AmmunitionBin, BattleAimModifiers, BattleAimRules, BattleAmmunitionAdjustment,
@@ -36,18 +33,17 @@ pub use btech::{
     BattleElectronicMode, BattleElectronicSource, BattleElectronicSuite, BattleElectronics,
     BattleEngine, BattleFacing, BattleFallReport, BattleFallRules, BattleFireMode, BattleFreeFall,
     BattleFreeFallStep, BattleGlancingMode, BattleGyro, BattleHeat, BattleHeatCheck,
-    BattleHeatRates, BattleHex, BattleHexCoordinate, BattleHit, BattleHitArc, BattleHitRules,
-    BattleHitTable, BattleImpactEffect, BattleImpactReport, BattleIndirectAim, BattleJumpCapacity,
-    BattleJumpFlight, BattleJumpOutcome, BattleJumpPath, BattleJumpSample, BattleJumpStep,
-    BattleLight, BattleLoadout, BattleMapAsset, BattleMass, BattleMessageTarget, BattleMobility,
-    BattleMotion, BattleMovementRules, BattleNarcReport, BattleNotice, BattleOverheatClock,
-    BattleOverheatReport, BattleOverheatRules, BattlePerceptionAim, BattlePersonalEquipment,
-    BattlePersonalLoadout, BattlePilotInjury, BattlePilotNotice, BattlePilotingCheck,
-    BattlePlayerConfiguration, BattlePodRemoval, BattlePodRow, BattlePoint, BattlePosition,
-    BattlePosture, BattlePower, BattleRange, BattleRangeBracket, BattleRecoilReport,
-    BattleRecovery, BattleRecoveryMode, BattleSalvoGroup, BattleSalvoReport, BattleSection,
-    BattleSectionExposure, BattleSectionExposureReport, BattleSectionState, BattleSensorArc,
-    BattleShotReport, BattleShotRules, BattleSkillCategory, BattleStackingEntry,
+    BattleHeatRates, BattleHit, BattleHitArc, BattleHitRules, BattleHitTable, BattleImpactEffect,
+    BattleImpactReport, BattleIndirectAim, BattleJumpCapacity, BattleJumpFlight, BattleJumpOutcome,
+    BattleJumpPath, BattleJumpSample, BattleJumpStep, BattleLight, BattleLoadout, BattleMass,
+    BattleMessageTarget, BattleMobility, BattleMotion, BattleMovementRules, BattleNarcReport,
+    BattleNotice, BattleOverheatClock, BattleOverheatReport, BattleOverheatRules,
+    BattlePerceptionAim, BattlePersonalEquipment, BattlePersonalLoadout, BattlePilotInjury,
+    BattlePilotNotice, BattlePilotingCheck, BattlePlayerConfiguration, BattlePodRemoval,
+    BattlePodRow, BattlePosition, BattlePosture, BattlePower, BattleRange, BattleRangeBracket,
+    BattleRecoilReport, BattleRecovery, BattleRecoveryMode, BattleSalvoGroup, BattleSalvoReport,
+    BattleSection, BattleSectionExposure, BattleSectionExposureReport, BattleSectionState,
+    BattleSensorArc, BattleShotReport, BattleShotRules, BattleSkillCategory, BattleStackingEntry,
     BattleStackingInput, BattleStackingRules, BattleStagger, BattleStaggerHit, BattleStaggerMode,
     BattleStaggerReport, BattleStaggerRules, BattleStandAttempt, BattleStandMode, BattleStandTimer,
     BattleSurface, BattleSurfaceBreak, BattleSystem, BattleTacticalImpact, BattleTargetLock,
@@ -55,15 +51,16 @@ pub use btech::{
     BattleUnitConfiguration, BattleUnitSignature, BattleUnjam, BattleVehicleHit,
     BattleVehicleHitRules, BattleVehicleMotiveHit, BattleWaterRanges, BattleWeapon,
     BattleWeaponDamage, BattleWeaponDamageEffects, BattleWeaponDamageKind, BattleWeaponRange,
-    BattleWeaponReadiness, BattleWeaponUse, BtechState, CriticalDefinition, CriticalLocation,
-    MapPointOfInterest, RawMovement, RawSectionCode, RawTemplate, RawUnitClass, SectionDefinition,
-    StoredBattleMap, StoredBattleUnit, SystemCritical, Terrain, WeaponMount, WeaponProfile,
-    advance_heat as advance_battle_heat, advance_jumps as advance_battle_jumps,
-    advance_motion as advance_battle_motion, advance_overheat as advance_battle_overheat,
-    advance_recovery as advance_battle_recovery, advance_recycle as advance_battle_recycle,
-    advance_stagger as advance_battle_stagger, advance_standing as advance_battle_standing,
-    advance_stun as advance_battle_stun, advance_target_locks as advance_battle_target_locks,
-    advance_units as advance_battle_units, advance_unjamming as advance_battle_unjamming,
+    BattleWeaponReadiness, BattleWeaponUse, BtechState, CriticalDefinition, CriticalLocation, Hex,
+    HexCoordinate, MapAsset, MapPointOfInterest, Point, RawMovement, RawSectionCode, RawTemplate,
+    RawUnitClass, SectionDefinition, StoredBattleMap, StoredBattleUnit, SystemCritical, Terrain,
+    WeaponMount, WeaponProfile, advance_heat as advance_battle_heat,
+    advance_jumps as advance_battle_jumps, advance_motion as advance_battle_motion,
+    advance_overheat as advance_battle_overheat, advance_recovery as advance_battle_recovery,
+    advance_recycle as advance_battle_recycle, advance_stagger as advance_battle_stagger,
+    advance_standing as advance_battle_standing, advance_stun as advance_battle_stun,
+    advance_target_locks as advance_battle_target_locks, advance_units as advance_battle_units,
+    advance_unjamming as advance_battle_unjamming,
     advance_unjamming_action as advance_battle_unjamming_action,
     aim_modifiers as battle_aim_modifiers, apply_damage_phase, assign_pilot as assign_battle_pilot,
     begin_stand as begin_battle_stand, begin_unjam as begin_battle_unjam,
@@ -397,13 +394,13 @@ pub use btech::clear_recent_fire as clear_battle_recent_fire;
 /// Automatic perception: sensor band, sight, active probes and radar.
 pub use btech::{
     AUTOMATIC_DETECTION_RANGE, BattleAcquisitionRules, BattleActiveProbe, BattleDetectionChannel,
-    BattleMapFlag, BattleMapPerceptionFlag, BattlePerception, BattlePerceptionProfile,
-    BattlePerceptionReport, BattlePerceptionStatus, BattleProbeProfile, BattleRadarProfile,
-    BattleRadarTarget, BattleSensorRange, DEFAULT_SENSOR_RANGE, HIDDEN_DETECTION_RANGE,
-    RADAR_RANGE, configure_perception as configure_battle_perception,
-    hex_perception as battle_hex_perception, perceive as battle_perceive,
-    perception_factor as battle_perception_factor, perception_profile as battle_perception_profile,
-    perception_report as battle_perception_report, set_map_perception as set_battle_map_perception,
+    BattleMapPerceptionFlag, BattlePerception, BattlePerceptionProfile, BattlePerceptionReport,
+    BattlePerceptionStatus, BattleProbeProfile, BattleRadarProfile, BattleRadarTarget,
+    BattleSensorRange, DEFAULT_SENSOR_RANGE, HIDDEN_DETECTION_RANGE, MapFlag, RADAR_RANGE,
+    configure_perception as configure_battle_perception, hex_perception as battle_hex_perception,
+    perceive as battle_perceive, perception_factor as battle_perception_factor,
+    perception_profile as battle_perception_profile, perception_report as battle_perception_report,
+    set_map_perception as set_battle_map_perception,
 };
 
 pub use btech::{
@@ -441,8 +438,7 @@ pub use btech::{
 pub use btech::{BattleWoodlandChange, apply_woodland_clearing};
 
 pub use btech::{
-    BattleDecoration, BattleDecorationKind, advance_map_smoke, map_smoke_pending,
-    set_map_decoration,
+    BattleDecoration, DecorationKind, advance_map_smoke, map_smoke_pending, set_map_decoration,
 };
 
 pub use btech::set_map_wind;

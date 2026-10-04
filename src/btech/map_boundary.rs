@@ -1,5 +1,5 @@
 //! Shared opposite-edge coordinate resolution preserves traversal order across map seams.
-use super::{BattleHexCoordinate, BattlePoint, StoredBattleMap};
+use super::{HexCoordinate, Point, StoredBattleMap};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use std::sync::Arc;
@@ -7,7 +7,7 @@ use std::sync::Arc;
 /// Authored wrapping marker; its presence enables wrapping independently of its payload.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct BattleLinkedMarker {
-    pub coordinate: BattleHexCoordinate,
+    pub coordinate: HexCoordinate,
     pub object: ObjectId,
     pub data_char: u8,
     pub data_short: i16,
@@ -16,7 +16,7 @@ pub struct BattleLinkedMarker {
 
 impl BattleLinkedMarker {
     /// Create the marker used by SETLINKED, with the reference's initialized payload.
-    pub fn new(coordinate: BattleHexCoordinate) -> Self {
+    pub fn new(coordinate: HexCoordinate) -> Self {
         Self {
             coordinate,
             object: ObjectId(0),
@@ -39,7 +39,7 @@ impl StoredBattleMap {
     }
 
     /// Resolve a virtual tile to its opposite-edge tile when wrapping is enabled.
-    pub(super) fn motion_hex(&self, hex: BattleHexCoordinate) -> Result<BattleHexCoordinate> {
+    pub(super) fn motion_hex(&self, hex: HexCoordinate) -> Result<HexCoordinate> {
         match self.wrapping_dimensions()? {
             Some(wrapping) => Ok(wrapping.hex(hex)),
             None => Ok(hex),
@@ -55,7 +55,7 @@ impl StoredBattleMap {
     }
 
     /// Boundary crossings settle at the destination hex center; ordinary motion stays continuous.
-    pub(super) fn motion_destination(&self, point: BattlePoint) -> Result<BattlePoint> {
+    pub(super) fn motion_destination(&self, point: Point) -> Result<Point> {
         match self.wrapping_dimensions()? {
             Some(wrapping) => wrapping.point(point),
             None => Ok(point),
@@ -65,9 +65,9 @@ impl StoredBattleMap {
     /// Trace in virtual coordinates before resolving tiles, avoiding a false path across the map interior.
     pub(super) fn trace_motion(
         &self,
-        start: BattlePoint,
-        end: BattlePoint,
-    ) -> Result<Vec<(BattleHexCoordinate, BattlePoint)>> {
+        start: Point,
+        end: Point,
+    ) -> Result<Vec<(HexCoordinate, Point)>> {
         start
             .trace_positions(end)?
             .into_iter()
@@ -102,10 +102,8 @@ pub fn set_map_wrapping(world: &mut World, id: ObjectId, wrapping: bool) -> Resu
         .context("Map not found")?
         .clone();
     if wrapping && !candidate.wrapping() {
-        Arc::make_mut(&mut candidate.linked_markers).insert(
-            0,
-            BattleLinkedMarker::new(BattleHexCoordinate { x: 0, y: 0 }),
-        );
+        Arc::make_mut(&mut candidate.linked_markers)
+            .insert(0, BattleLinkedMarker::new(HexCoordinate { x: 0, y: 0 }));
     } else if !wrapping {
         candidate.linked_markers = Default::default();
     }
@@ -117,7 +115,7 @@ pub fn set_linked_marker(
     world: &mut World,
     id: ObjectId,
     ordinal: u32,
-    coordinate: Option<BattleHexCoordinate>,
+    coordinate: Option<HexCoordinate>,
 ) -> Result<()> {
     ensure!(
         world
@@ -199,15 +197,15 @@ impl MapWrapping {
     }
 
     /// Resolve both axes, including negative coordinates and multiple crossings.
-    fn hex(self, hex: BattleHexCoordinate) -> BattleHexCoordinate {
-        BattleHexCoordinate {
+    fn hex(self, hex: HexCoordinate) -> HexCoordinate {
+        HexCoordinate {
             x: hex.x.rem_euclid(self.width),
             y: hex.y.rem_euclid(self.height),
         }
     }
 
     /// Keep continuous positions until a virtual sample crosses a boundary.
-    pub(super) fn point(self, point: BattlePoint) -> Result<BattlePoint> {
+    pub(super) fn point(self, point: Point) -> Result<Point> {
         let hex = point.containing_hex()?;
         let resolved = self.hex(hex);
         Ok(if resolved == hex {
@@ -239,11 +237,11 @@ mod tests {
         }
         let wrapping = MapWrapping::new(3, 4)?;
         for hex in [
-            BattleHexCoordinate { x: -1, y: -1 },
-            BattleHexCoordinate { x: 7, y: 9 },
-            BattleHexCoordinate { x: -7, y: -9 },
+            HexCoordinate { x: -1, y: -1 },
+            HexCoordinate { x: 7, y: 9 },
+            HexCoordinate { x: -7, y: -9 },
         ] {
-            let expected = BattleHexCoordinate {
+            let expected = HexCoordinate {
                 x: hex.x.rem_euclid(3),
                 y: hex.y.rem_euclid(4),
             };

@@ -13,8 +13,8 @@ const LANE: &str =
     "3 10\n.0.0.0\n.0.0.0\n-2-2-2\n.0.0.0\n~1~1~1\n~2~2~2\n.0.0.0\n`0`0`0\n/1/1/1\n.0.0.0\n";
 
 /// The lane with every hex's ground, and so every water surface and deck, lifted.
-fn lifted(asset: &BattleMapAsset) -> BattleMapAsset {
-    BattleMapAsset {
+fn lifted(asset: &MapAsset) -> MapAsset {
+    MapAsset {
         hexes: Arc::new(
             asset
                 .hexes
@@ -27,7 +27,7 @@ fn lifted(asset: &BattleMapAsset) -> BattleMapAsset {
 }
 
 /// Two running bipeds at 1,1: the first walks south through the lane, the second watches.
-async fn field(asset: BattleMapAsset) -> (tempfile::TempDir, World, [ObjectId; 2]) {
+async fn field(asset: MapAsset) -> (tempfile::TempDir, World, [ObjectId; 2]) {
     let (dir, config, mut world) = support::isolated_world().await;
     let map = world.create(&config, "Raised field".into(), Kind::Room);
     create_battle_map(&mut world, map, "raised.map", asset).unwrap();
@@ -87,7 +87,7 @@ fn outcome(world: &World, id: ObjectId) -> serde_json::Value {
 
 #[tokio::test]
 async fn lifting_a_map_lifts_units_without_changing_what_happens() {
-    let low = BattleMapAsset::from_cells(LANE).unwrap();
+    let low = MapAsset::from_cells(LANE).unwrap();
     let high = lifted(&low);
     assert_eq!(high.hex(1, 5).unwrap().water_line(), i16::from(LIFT));
     assert_eq!(
@@ -139,14 +139,14 @@ async fn lifting_a_map_keeps_ground_sight() {
     let (_dir, config, mut world) = support::isolated_world().await;
     let low = world.create(&config, "Low".into(), Kind::Room);
     let high = world.create(&config, "High".into(), Kind::Room);
-    let asset = BattleMapAsset::from_cells(LANE).unwrap();
+    let asset = MapAsset::from_cells(LANE).unwrap();
     create_battle_map(&mut world, low, "low.map", asset.clone()).unwrap();
     create_battle_map(&mut world, high, "high.map", lifted(&asset)).unwrap();
     let maps = world.btech.maps();
     for from in 0..9 {
         for to in 0..9 {
-            let observer = BattleHexCoordinate { x: 1, y: from };
-            let target = BattleHexCoordinate { x: 1, y: to };
+            let observer = HexCoordinate { x: 1, y: from };
+            let target = HexCoordinate { x: 1, y: to };
             assert_eq!(
                 ground_terrain_los(&maps[&low], observer, target).unwrap(),
                 ground_terrain_los(&maps[&high], observer, target).unwrap(),
@@ -164,7 +164,7 @@ async fn vehicle_field(
 ) -> (tempfile::TempDir, World, ObjectId) {
     let (dir, config, mut world) = support::isolated_world().await;
     let map = world.create(&config, "Raised crossing".into(), Kind::Room);
-    let asset = BattleMapAsset::from_cells(&format!("12 3\n{row}\n{row}\n{row}\n")).unwrap();
+    let asset = MapAsset::from_cells(&format!("12 3\n{row}\n{row}\n{row}\n")).unwrap();
     let asset = if lift { lifted(&asset) } else { asset };
     create_battle_map(&mut world, map, "crossing", asset).unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -284,7 +284,7 @@ fn shot_rules() -> BattleShotRules {
 
 /// A shooter and a target placed at fixed hexes and postures on `asset`.
 async fn duel(
-    asset: BattleMapAsset,
+    asset: MapAsset,
     placements: [(i64, i64, bool); 2],
 ) -> (tempfile::TempDir, World, [ObjectId; 2]) {
     let (dir, config, mut world) = support::isolated_world().await;
@@ -329,7 +329,7 @@ async fn duel(
 /// as the same fight at level 0.
 #[tokio::test]
 async fn lifting_a_map_keeps_combat_in_water_unchanged() {
-    let lane = BattleMapAsset::from_cells("3 5\n.0.0.0\n~1~1~1\n~2~2~2\n.0.0.0\n.0.0.0\n").unwrap();
+    let lane = MapAsset::from_cells("3 5\n.0.0.0\n~1~1~1\n~2~2~2\n.0.0.0\n.0.0.0\n").unwrap();
     // (x, y, prone) for the shooter and then the target.
     let mut fired = false;
     for placements in [
@@ -447,10 +447,7 @@ fn rules_fall() -> BattleFallRules {
 /// An LRM boat and a spotter on the shore south of a lake, a deep hex and then a shallow one,
 /// with a target at `target_row`. A target under the surface hides from units ashore, so the
 /// water cases use a Mech wading in the shallows. Returns the shooter, spotter and target.
-async fn barrage(
-    asset: BattleMapAsset,
-    target_row: i64,
-) -> (tempfile::TempDir, World, [ObjectId; 3]) {
+async fn barrage(asset: MapAsset, target_row: i64) -> (tempfile::TempDir, World, [ObjectId; 3]) {
     let (dir, config, mut world) = support::isolated_world().await;
     let map = world.create(&config, "Raised barrage".into(), Kind::Room);
     create_battle_map(&mut world, map, "barrage.map", asset).unwrap();
@@ -535,8 +532,7 @@ async fn barrage(
 /// ashore, with the same aim and shot whether the lake lies at level 0 or higher.
 #[tokio::test]
 async fn lifting_a_map_keeps_indirect_fire_into_water_unchanged() {
-    let lake =
-        BattleMapAsset::from_cells("1 10\n~2\n~1\n.0\n.0\n.0\n.0\n.0\n.0\n.0\n.0\n").unwrap();
+    let lake = MapAsset::from_cells("1 10\n~2\n~1\n.0\n.0\n.0\n.0\n.0\n.0\n.0\n.0\n").unwrap();
     let rules = shot_rules();
     let mut outcomes = Vec::new();
     for target_row in [1, 2] {

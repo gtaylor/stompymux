@@ -18,7 +18,7 @@ async fn lane(rows: &[&str]) -> (tempfile::TempDir, Config, World, ObjectId) {
         &mut world,
         map,
         "probe",
-        BattleMapAsset::from_cells(&format!("1 {}\n{}\n", rows.len(), rows.join("\n"))).unwrap(),
+        MapAsset::from_cells(&format!("1 {}\n{}\n", rows.len(), rows.join("\n"))).unwrap(),
     )
     .unwrap();
     support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);

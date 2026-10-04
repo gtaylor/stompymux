@@ -32,8 +32,8 @@ pub use radar::{BattleRadarTarget, RADAR_RANGE};
 pub use report::{BattlePerceptionReport, perception_report};
 
 use crate::btech::{
-    BattleHexCoordinate, BattleLight, BattlePower, BattleRange, BattleSystem, BattleTerrainLos,
-    BattleVehicleMovement, StoredBattleMap,
+    BattleLight, BattlePower, BattleRange, BattleSystem, BattleTerrainLos, BattleVehicleMovement,
+    HexCoordinate, StoredBattleMap,
 };
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
@@ -563,7 +563,7 @@ pub(crate) fn perceive_prepared(
 pub fn hex_perception(
     world: &World,
     observer: ObjectId,
-    target: BattleHexCoordinate,
+    target: HexCoordinate,
 ) -> Result<Option<BattleDetectionChannel>> {
     let profile = perception_profile(world, observer)?;
     hex_perception_prepared(world, observer, &profile, target, true)
@@ -577,7 +577,7 @@ pub(crate) fn hex_perception_prepared(
     world: &World,
     observer: ObjectId,
     profile: &BattlePerceptionProfile,
-    target: BattleHexCoordinate,
+    target: HexCoordinate,
     require_running: bool,
 ) -> Result<Option<BattleDetectionChannel>> {
     ensure!(

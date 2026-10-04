@@ -14,7 +14,7 @@ struct Obstacle {
 /// Trees stand in woods; rocks lie in bare rough ground.
 fn profile(
     movement: BattleVehicleMovement,
-    hex: BattleHex,
+    hex: Hex,
     speed: f64,
     new_terrain: bool,
 ) -> Option<Obstacle> {
@@ -45,7 +45,7 @@ fn profile(
 pub(super) fn resolve(
     world: &mut World,
     id: ObjectId,
-    hex: BattleHex,
+    hex: Hex,
     rules: BattleMovementRules,
     character: bool,
 ) -> Result<super::movement_report::MovementReport> {
@@ -134,22 +134,8 @@ mod tests {
             BattleVehicleMovement::Wheeled,
             BattleVehicleMovement::Hover,
         ] {
-            assert!(
-                profile(
-                    movement,
-                    BattleHex::new(Terrain::HeavyForest, 0),
-                    10.75,
-                    true
-                )
-                .is_none()
-            );
-            let hit = profile(
-                movement,
-                BattleHex::new(Terrain::HeavyForest, 0),
-                -86.0,
-                true,
-            )
-            .unwrap();
+            assert!(profile(movement, Hex::new(Terrain::HeavyForest, 0), 10.75, true).is_none());
+            let hit = profile(movement, Hex::new(Terrain::HeavyForest, 0), -86.0, true).unwrap();
             assert_eq!(
                 hit.modifier,
                 if movement == BattleVehicleMovement::Tracked {
@@ -161,27 +147,15 @@ mod tests {
             assert_eq!(hit.levels, 2);
             assert!(!hit.rocks);
             assert_eq!(
-                profile(
-                    movement,
-                    BattleHex::new(Terrain::HeavyForest, 0),
-                    86.0,
-                    false
-                )
-                .is_some(),
+                profile(movement, Hex::new(Terrain::HeavyForest, 0), 86.0, false).is_some(),
                 movement == BattleVehicleMovement::Hover
             );
             assert_eq!(
-                profile(
-                    movement,
-                    BattleHex::new(Terrain::LightForest, 0),
-                    86.0,
-                    true
-                )
-                .is_some(),
+                profile(movement, Hex::new(Terrain::LightForest, 0), 86.0, true).is_some(),
                 movement != BattleVehicleMovement::Tracked
             );
             assert_eq!(
-                profile(movement, BattleHex::new(Terrain::Rough, 0), 86.0, true).is_some(),
+                profile(movement, Hex::new(Terrain::Rough, 0), 86.0, true).is_some(),
                 movement == BattleVehicleMovement::Wheeled
             );
         }

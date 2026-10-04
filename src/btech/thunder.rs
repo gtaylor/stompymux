@@ -1,7 +1,7 @@
 //! Thunder minelaying rounds: LRM salvos fired at a hex seed minefields instead of damaging it.
 use super::{
-    BattleAmmunitionMode, BattleHexCoordinate, BattleMineKind, BattleMinefield, BattleNotice,
-    BattleWeapon,
+    BattleAmmunitionMode, BattleMineKind, BattleMinefield, BattleNotice, BattleWeapon,
+    HexCoordinate,
 };
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, bail, ensure};
@@ -180,7 +180,7 @@ pub(super) fn lay(
     world: &mut World,
     shooter: ObjectId,
     map: ObjectId,
-    coordinate: BattleHexCoordinate,
+    coordinate: HexCoordinate,
     mode: BattleAmmunitionMode,
     damage: u16,
 ) -> Result<BattleThunderReport> {

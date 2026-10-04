@@ -18,9 +18,7 @@ use iced::{
         button, checkbox, column, container, row, rule, scrollable, shader, text, text_input,
     },
 };
-use stompymux_map::{
-    BattleDecorationKind, BattleHex, BattleHexCoordinate, BattleMapFlag, Ground, Structure, Woods,
-};
+use stompymux_map::{DecorationKind, Ground, Hex, HexCoordinate, MapFlag, Structure, Woods};
 
 use brush_panel::{BrushEdit, BrushPanel};
 use document::{Document, MapSettings};
@@ -48,10 +46,10 @@ fn main() -> iced::Result {
 pub enum Message {
     /// The canvas has this size, used to fit maps to the view.
     Viewport(Size),
-    Hovered(Option<BattleHexCoordinate>),
-    Paint(BattleHexCoordinate),
+    Hovered(Option<HexCoordinate>),
+    Paint(HexCoordinate),
     StrokeEnded,
-    Pick(BattleHexCoordinate),
+    Pick(HexCoordinate),
     Panned(Vector),
     /// Scale hexes by `factor`, keeping the map point under `anchor` still.
     Zoomed {
@@ -74,7 +72,7 @@ pub enum Message {
     GravityChanged(String),
     TemperatureChanged(String),
     ApplyConditions,
-    ToggleFlag(BattleMapFlag, bool),
+    ToggleFlag(MapFlag, bool),
 }
 
 /// Application state.
@@ -87,7 +85,7 @@ struct Mappy {
     viewport: Option<Size>,
     /// Fit the next reported viewport, for maps opened before the canvas has a size.
     fit_pending: bool,
-    hover: Option<BattleHexCoordinate>,
+    hover: Option<HexCoordinate>,
     brush: BrushPanel,
     new_width: String,
     new_height: String,
@@ -410,7 +408,7 @@ impl Mappy {
 
     fn inspector(&self) -> Element<'_, Message> {
         let settings = self.document.settings();
-        let flags = BattleMapFlag::ALL.into_iter().map(|flag| {
+        let flags = MapFlag::ALL.into_iter().map(|flag| {
             checkbox(flag.is_set(i64::from(settings.flags)))
                 .label(flag.name())
                 .text_size(13)
@@ -489,7 +487,7 @@ impl Mappy {
 }
 
 /// A hex's layers in words, for the hover readout.
-fn describe(hex: BattleHex) -> String {
+fn describe(hex: Hex) -> String {
     let ground = match hex.ground() {
         Ground::Clear => "clear",
         Ground::Road => "road",
@@ -515,8 +513,8 @@ fn describe(hex: BattleHex) -> String {
         None => {}
     }
     match hex.overlay() {
-        Some(BattleDecorationKind::Fire) => parts.push("fire".into()),
-        Some(BattleDecorationKind::Smoke) => parts.push("smoke".into()),
+        Some(DecorationKind::Fire) => parts.push("fire".into()),
+        Some(DecorationKind::Smoke) => parts.push("smoke".into()),
         None => {}
     }
     parts.join(" · ")

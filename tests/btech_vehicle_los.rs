@@ -13,7 +13,7 @@ async fn fixture(
         &mut world,
         map,
         "sight",
-        BattleMapAsset::from_cells(&format!("1 5\n{tiles}")).unwrap(),
+        MapAsset::from_cells(&format!("1 5\n{tiles}")).unwrap(),
     )
     .unwrap();
     let mut ids = Vec::new();
@@ -195,7 +195,7 @@ async fn mech_searchlights_illuminate_vehicle_targets_and_replay_perception() {
         &mut world,
         other,
         "other",
-        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+        MapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, other, support::FIXTURE_DICE_SEED);

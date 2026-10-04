@@ -12,7 +12,7 @@ async fn fixture(create: bool) -> (tempfile::TempDir, Config, World, ObjectId) {
             &mut world,
             map,
             "blank",
-            BattleMapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
+            MapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -90,11 +90,8 @@ async fn native_and_lua_map_activation_agree_and_inherit_unnamed_flags() {
                 let state = scripts.world();
                 let field = &state.btech.maps()[&map];
                 assert_eq!((field.flags, field.gravity, field.temperature), expected);
-                assert_eq!(field.hex(1, 0).unwrap(), BattleHex::new(Terrain::Fire, 2));
-                assert_eq!(
-                    field.hex(1, 1).unwrap(),
-                    BattleHex::new(Terrain::Grassland, 4)
-                );
+                assert_eq!(field.hex(1, 0).unwrap(), Hex::new(Terrain::Fire, 2));
+                assert_eq!(field.hex(1, 1).unwrap(), Hex::new(Terrain::Grassland, 4));
                 assert_eq!(state.channels["MapErrors"].messages, 0);
             }
             let saved = lua.world().clone();

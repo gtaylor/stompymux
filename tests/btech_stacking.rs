@@ -10,7 +10,7 @@ async fn fixture(teams: &[i32]) -> (tempfile::TempDir, Config, World, Vec<Object
         &mut world,
         map,
         "crowding.map",
-        BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
+        MapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
     let mut ids = Vec::new();
@@ -375,9 +375,9 @@ async fn ground_entry_collisions_use_current_mass_and_replay_the_whole_tick() {
             .rewrite_unit_record(id, |record| {
                 let moving = record;
                 moving["position"]["y"] = 0.into();
-                moving["motion"]["point"] = serde_json::to_value(BattlePoint {
+                moving["motion"]["point"] = serde_json::to_value(Point {
                     y: 0.49,
-                    ..BattleHexCoordinate { x: 1, y: 0 }.center()
+                    ..HexCoordinate { x: 1, y: 0 }.center()
                 })
                 .unwrap();
                 moving["motion"]["heading"] = 180.0.into();
@@ -468,7 +468,7 @@ async fn landing_fixture(neighbors: usize) -> (tempfile::TempDir, Config, World,
     for id in &ids[1..] {
         state["constructed"][id.0.to_string()]["position"]["y"] = 2.into();
         state["constructed"][id.0.to_string()]["motion"]["point"] =
-            serde_json::to_value(BattleHexCoordinate { x: 1, y: 2 }.center()).unwrap();
+            serde_json::to_value(HexCoordinate { x: 1, y: 2 }.center()).unwrap();
     }
     world.btech = serde_json::from_value(state).unwrap();
     launch_battle_jump(&mut world, ids[0], ObjectId(1), 180, 1.0).unwrap();
@@ -781,12 +781,12 @@ async fn jump_obstacle_falls_resolve_crowding_after_fall_damage() {
     state["maps"][map.0.to_string()]["movement_modifier"] = 800.into();
     for index in 3..6 {
         state["maps"][map.0.to_string()]["terrain"][index] =
-            serde_json::to_value(BattleHex::new(Terrain::Wall, 9)).unwrap();
+            serde_json::to_value(Hex::new(Terrain::Wall, 9)).unwrap();
     }
     for unit in &ids {
         state["constructed"][unit.0.to_string()]["position"]["y"] = 0.into();
         state["constructed"][unit.0.to_string()]["motion"]["point"] =
-            serde_json::to_value(BattleHexCoordinate { x: 1, y: 0 }.center()).unwrap();
+            serde_json::to_value(HexCoordinate { x: 1, y: 0 }.center()).unwrap();
     }
     state["constructed"][id.0.to_string()]["dice"] =
         serde_json::to_value(BattleDice::seeded([chosen; 32])).unwrap();
@@ -1221,7 +1221,7 @@ async fn collision_observers_filter_each_participant_and_replay_all_entry_modes(
             record["position"]["x"] = 2.into();
             record["position"]["y"] = 2.into();
             record["motion"]["point"] =
-                serde_json::to_value(BattleHexCoordinate { x: 2, y: 2 }.center()).unwrap();
+                serde_json::to_value(HexCoordinate { x: 2, y: 2 }.center()).unwrap();
         })
         .unwrap();
     base.validate(&config).unwrap();

@@ -86,7 +86,7 @@ async fn reshape_persists_grid_and_removes_map_objects() {
         &mut world,
         map,
         "grid",
-        BattleMapAsset::from_cells("1 4\n.0\n.0\n.0\n.0\n").unwrap(),
+        MapAsset::from_cells("1 4\n.0\n.0\n.0\n.0\n").unwrap(),
     )
     .unwrap();
     let actor = operator(&mut world, &config, map);
@@ -95,7 +95,7 @@ async fn reshape_persists_grid_and_removes_map_objects() {
         map,
         7,
         Some(BattleLandingExclusion {
-            coordinate: BattleHexCoordinate { x: 0, y: 3 },
+            coordinate: HexCoordinate { x: 0, y: 3 },
             radius: 2,
             exempt_team: 1,
             owner: actor,
@@ -124,7 +124,7 @@ async fn reshape_persists_grid_and_removes_map_objects() {
     assert!(saved.btech.maps()[&map].landing_exclusions().is_empty());
     assert_eq!(
         saved.btech.maps()[&map].base_hex(1, 1).unwrap(),
-        BattleHex::new(Terrain::Grassland, 0)
+        Hex::new(Terrain::Grassland, 0)
     );
     persistence::save(&config.database(), &saved).await.unwrap();
     assert_eq!(
@@ -161,7 +161,7 @@ async fn resize_keeps_effects_on_remaining_hexes_and_clears_building_routes() {
             &mut world,
             id,
             "grid",
-            BattleMapAsset::from_cells("2 2\n`2#1\n.0.0\n").unwrap(),
+            MapAsset::from_cells("2 2\n`2#1\n.0.0\n").unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
@@ -172,7 +172,7 @@ async fn resize_keeps_effects_on_remaining_hexes_and_clears_building_routes() {
         map,
         4,
         Some(BattleBuildingEntrance {
-            coordinate: BattleHexCoordinate { x: 1, y: 1 },
+            coordinate: HexCoordinate { x: 1, y: 1 },
             interior,
             data_char: 0,
             data_short: 0,
@@ -182,13 +182,13 @@ async fn resize_keeps_effects_on_remaining_hexes_and_clears_building_routes() {
     .unwrap();
     set_battle_building_exit(&mut world, interior, 5, Some(map)).unwrap();
     for ((x, y), kind) in [
-        ((0, 1), BattleDecorationKind::Fire),
-        ((1, 0), BattleDecorationKind::Smoke),
+        ((0, 1), DecorationKind::Fire),
+        ((1, 0), DecorationKind::Smoke),
     ] {
         set_map_decoration(
             &mut world,
             map,
-            BattleHexCoordinate { x, y },
+            HexCoordinate { x, y },
             Some(BattleDecoration::new(kind, 30, None)),
         )
         .unwrap();
@@ -202,23 +202,19 @@ async fn resize_keeps_effects_on_remaining_hexes_and_clears_building_routes() {
     assert!(saved.btech.maps()[&interior].building_exits().is_empty());
     assert_eq!(
         field.base_hex(0, 1).unwrap(),
-        BattleHex::new(Terrain::Grassland, 0)
+        Hex::new(Terrain::Grassland, 0)
     );
     // The fire keeps its hex although the narrower map numbers its hexes differently.
     let kinds: Vec<_> = (0..3)
         .map(|y| {
             field
-                .decoration(BattleHexCoordinate { x: 0, y })
+                .decoration(HexCoordinate { x: 0, y })
                 .unwrap()
                 .map(|effect| effect.kind)
         })
         .collect();
-    assert_eq!(kinds, [None, Some(BattleDecorationKind::Fire), None]);
-    assert!(
-        field
-            .decoration(BattleHexCoordinate { x: 1, y: 0 })
-            .is_err()
-    );
+    assert_eq!(kinds, [None, Some(DecorationKind::Fire), None]);
+    assert!(field.decoration(HexCoordinate { x: 1, y: 0 }).is_err());
     persistence::save(&config.database(), &saved).await.unwrap();
     assert_eq!(
         persistence::load(&config.database()).await.unwrap().btech,

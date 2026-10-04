@@ -10,7 +10,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
         &mut world,
         map,
         "test",
-        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+        MapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     set_battle_map_visibility(&mut world, map, BattleLight::Night, 30).unwrap();

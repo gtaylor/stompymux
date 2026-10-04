@@ -65,7 +65,7 @@ impl World {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{BattleMapAsset, BattleTemplate, BattleVehicleTemplate, Config, Kind};
+    use crate::{BattleTemplate, BattleVehicleTemplate, Config, Kind, MapAsset};
 
     /// Live streams, map replacement, retirement and a discarded candidate share one exact total.
     #[test]
@@ -98,7 +98,7 @@ mod tests {
             &mut world,
             map,
             "test",
-            BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+            MapAsset::from_cells("1 1\n.0\n").unwrap(),
         )
         .unwrap();
         let mut expected = BattleRollStatistics::default();
@@ -127,7 +127,7 @@ mod tests {
             &mut world,
             map,
             "replacement",
-            BattleMapAsset::from_cells("1 1\n~1\n").unwrap(),
+            MapAsset::from_cells("1 1\n~1\n").unwrap(),
         )
         .unwrap();
         assert_eq!(world.battle_roll_statistics().unwrap(), expected);

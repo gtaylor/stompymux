@@ -152,7 +152,7 @@ mod ground_proposal;
 mod loadout;
 mod loadout_context;
 mod map_flags;
-pub use stompymux_map::{BattleMapFlag, format_map_flags, parse_map_flags};
+pub use stompymux_map::{MapFlag, format_map_flags, parse_map_flags};
 mod mobility;
 mod motion;
 pub use ground_proposal::{
@@ -196,8 +196,8 @@ pub use state::{
     register_empty_battle_unit, reload_map, set_map_visibility,
 };
 pub use stompymux_map::{
-    BattleDecorationKind, BattleHex, BattleMapAsset, Ground, MAX_DEPTH, MAX_HEIGHT,
-    MapPointOfInterest, Structure, Terrain, Water, Woods,
+    DecorationKind, Ground, Hex, MAX_DEPTH, MAX_HEIGHT, MapAsset, MapPointOfInterest, Structure,
+    Terrain, Water, Woods,
 };
 pub use unit_template::BattleUnitTemplate;
 mod vehicle;
@@ -276,7 +276,7 @@ pub(crate) fn notify_message(
 }
 
 pub use geometry::{BattleRange, unit_elevation, unit_range};
-pub use stompymux_map::{BattleHexCoordinate, BattlePoint};
+pub use stompymux_map::{HexCoordinate, Point};
 
 pub(crate) use motion::set_speed_autopilot;
 pub use motion::{BattleMotion, BattleMovementRules, advance_motion, set_heading, set_speed};

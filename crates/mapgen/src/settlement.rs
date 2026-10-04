@@ -12,7 +12,7 @@ use crate::rng::Rng;
 use crate::spec::{SettlementKind, SettlementLayout, SettlementSize, SettlementSpec};
 use crate::terrain::open_ground;
 use std::collections::VecDeque;
-use stompymux_map::{BattleDecorationKind, BattleHexCoordinate, BattlePoint};
+use stompymux_map::{DecorationKind, HexCoordinate, Point};
 
 /// A settlement as built, for routing roads and reporting.
 #[derive(Debug, Clone)]
@@ -321,7 +321,7 @@ fn footprint(
             let inside = if rectangular {
                 (x - site.0).abs() <= radius && (y - site.1).abs() <= rows
             } else {
-                let BattlePoint { x: cx, y: cy } = BattleHexCoordinate { x, y }.center();
+                let Point { x: cx, y: cy } = HexCoordinate { x, y }.center();
                 let wobble = 2.0 * (ragged.value(cx / 2.0, cy / 2.0) - 0.5);
                 f64::from(HexMap::distance(site, (x, y))) <= f64::from(radius) + wobble
             };
@@ -716,7 +716,7 @@ fn apply(
                 buildings += 1;
                 tallest = tallest.max(height);
                 if kind == SettlementKind::Ruins && rng.chance(0.15) {
-                    hex.overlay = Some(BattleDecorationKind::Smoke);
+                    hex.overlay = Some(DecorationKind::Smoke);
                 }
                 Terrain::Building { height }
             }

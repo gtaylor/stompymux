@@ -73,7 +73,7 @@ struct Participant {
     id: ObjectId,
     target: ObjectId,
     result: ParticipantResult,
-    previous: crate::BattlePoint,
+    previous: crate::Point,
     direction: i8,
     stationary: usize,
     stagnant: usize,
@@ -171,7 +171,7 @@ fn script(world: &mut World, id: ObjectId, tick: usize, cap: f64) -> Result<bool
         return Ok(false);
     }
     let motion = steering::motion(world, id).context("Scripted unit has no motion")?;
-    let goal = crate::BattleHexCoordinate {
+    let goal = crate::HexCoordinate {
         x: if (tick / 60).is_multiple_of(2) { 9 } else { 2 },
         y: 3,
     }
@@ -360,7 +360,7 @@ pub async fn run_policy(
                     &mut world,
                     map,
                     "adversarial",
-                    crate::BattleMapAsset::from_cells(&terrain)?,
+                    crate::MapAsset::from_cells(&terrain)?,
                 )?;
                 let dice = world.btech.maps()[&old_map].fire_dice.clone();
                 world.btech.maps.get_mut(&map).unwrap().fire_dice = dice;
@@ -903,7 +903,7 @@ pub async fn run_policy(
                             .destination
                             .map(|g| {
                                 point.range(
-                                    crate::BattleHexCoordinate {
+                                    crate::HexCoordinate {
                                         x: i32::from(g.x),
                                         y: i32::from(g.y),
                                     }

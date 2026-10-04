@@ -1,5 +1,5 @@
 //! Bounded tactical and long-range viewport dimensions and edge clipping for map renderers.
-use super::{BattleHexCoordinate, BattleViewKind};
+use super::{BattleViewKind, HexCoordinate};
 use crate::{ObjectId, World};
 use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -52,9 +52,9 @@ pub struct BattleViewport {
     pub map: ObjectId,
     /// Selected center; map-only views clamp it before resolving the rectangle.
     /// Scanner views may retain a center outside map bounds.
-    pub requested_center: BattleHexCoordinate,
+    pub requested_center: HexCoordinate,
     /// Upper-left in-bounds coordinate.
-    pub origin: BattleHexCoordinate,
+    pub origin: HexCoordinate,
     /// Number of visible columns.
     pub width: u16,
     /// Number of visible rows.
@@ -88,7 +88,7 @@ pub fn resolve_viewport(
     Ok(BattleViewport {
         map: view.map,
         requested_center: view.center,
-        origin: BattleHexCoordinate {
+        origin: HexCoordinate {
             x: i32::try_from(x)?,
             y: i32::try_from(y)?,
         },
@@ -100,7 +100,7 @@ pub fn resolve_viewport(
 
 /// Compute in widened arithmetic so extreme projected centers cannot overflow clipping.
 fn rectangle(
-    center: BattleHexCoordinate,
+    center: HexCoordinate,
     map_width: i64,
     map_height: i64,
     radius: i64,
@@ -131,7 +131,7 @@ fn rectangle(
 
 /// Clip an already bounded rectangle without applying a scanner hardware limit.
 fn clip_rectangle(
-    center: BattleHexCoordinate,
+    center: HexCoordinate,
     map_width: i64,
     map_height: i64,
     width: i64,
@@ -146,13 +146,13 @@ fn clip_rectangle(
 pub(super) fn map_viewport(
     map: ObjectId,
     record: &super::StoredBattleMap,
-    center: BattleHexCoordinate,
+    center: HexCoordinate,
     dimensions: BattleViewDimensions,
 ) -> Result<BattleViewport> {
     dimensions.validate()?;
     record.validate()?;
     ensure!(record.terrain_ready(), "Map terrain is unavailable");
-    let center = BattleHexCoordinate {
+    let center = HexCoordinate {
         x: i32::try_from(i64::from(center.x).clamp(0, record.width - 1))?,
         y: i32::try_from(i64::from(center.y).clamp(0, record.height - 1))?,
     };
@@ -166,7 +166,7 @@ pub(super) fn map_viewport(
     Ok(BattleViewport {
         map,
         requested_center: center,
-        origin: BattleHexCoordinate {
+        origin: HexCoordinate {
             x: i32::try_from(x)?,
             y: i32::try_from(y)?,
         },
@@ -194,7 +194,7 @@ mod tests {
         ] {
             for y in [0, map_height / 2, map_height - 1] {
                 let (_, _, top, height) = rectangle(
-                    BattleHexCoordinate { x: 0, y: y as i32 },
+                    HexCoordinate { x: 0, y: y as i32 },
                     100,
                     map_height,
                     radius,
@@ -218,11 +218,11 @@ mod tests {
             long_range_height: 40,
         };
         for center in [
-            BattleHexCoordinate {
+            HexCoordinate {
                 x: i32::MIN,
                 y: i32::MIN,
             },
-            BattleHexCoordinate {
+            HexCoordinate {
                 x: i32::MAX,
                 y: i32::MAX,
             },
@@ -232,7 +232,7 @@ mod tests {
                 assert_eq!((x, width, y, height), (0, 3, 0, 2));
             }
         }
-        let center = BattleHexCoordinate { x: 100, y: 100 };
+        let center = HexCoordinate { x: 100, y: 100 };
         assert_eq!(
             rectangle(center, 300, 300, 8, BattleViewKind::Tactical, dimensions),
             (92, 16, 92, 16)

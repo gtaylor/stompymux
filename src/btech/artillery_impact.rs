@@ -8,7 +8,7 @@ use serde::Serialize;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct BattleArtilleryHit {
     pub unit: ObjectId,
-    pub coordinate: BattleHexCoordinate,
+    pub coordinate: HexCoordinate,
     pub arc: BattleHitArc,
     pub impacts: Vec<BattleBlastImpact>,
     pub vehicle_heat: Option<BattleVehicleHeatExposure>,
@@ -125,7 +125,7 @@ pub(super) fn advance(
 fn deposit_mine(
     world: &mut World,
     map: ObjectId,
-    coordinate: BattleHexCoordinate,
+    coordinate: HexCoordinate,
     strength: u16,
 ) -> Result<Option<u32>> {
     world.btech.maps()[&map].base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;

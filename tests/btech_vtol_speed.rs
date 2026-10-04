@@ -44,7 +44,7 @@ fn tail_rotor_limits_commands_without_erasing_momentum_or_reverse_motion() {
     saved["position"] = serde_json::json!({"map":0,"x":0,"y":0});
     saved["map_slot"] = 0.into();
     saved["power"] = serde_json::to_value(BattlePower::Running).unwrap();
-    let mut motion = BattleMotion::stationary(BattleHexCoordinate { x: 0, y: 0 }.center());
+    let mut motion = BattleMotion::stationary(HexCoordinate { x: 0, y: 0 }.center());
     motion.speed = 150.0;
     motion.desired_speed = 180.0;
     saved["motion"] = serde_json::to_value(motion).unwrap();

@@ -1,5 +1,5 @@
 //! Anti-aircraft radar: long-range tracking of airborne targets using absolute altitude.
-use crate::btech::{BattleHex, BattleTerrainLos, BattleUnit, BattleVehicle};
+use crate::btech::{BattleTerrainLos, BattleUnit, BattleVehicle, Hex};
 use anyhow::{Result, ensure};
 
 /// Radar reach on every chassis; the line-of-sight trace caps radar-equipped pairs here too.
@@ -52,7 +52,7 @@ impl BattleRadarTarget {
     }
 
     /// Water and bridge surfaces use negative depth; intact ice uses sea level above the sheet.
-    pub(crate) fn above_tile(elevation: i32, tile: BattleHex, flying_type: bool) -> Self {
+    pub(crate) fn above_tile(elevation: i32, tile: Hex, flying_type: bool) -> Self {
         // Targets on or above ice are measured from the ice; everything else from the datum.
         let lower = surface_datum(tile);
         let upper = if tile.is_ice() {
@@ -71,7 +71,7 @@ impl BattleRadarTarget {
 
 /// Terrain datum for radar's surface-clearance calculation.
 /// Water, including the river under a bridge, is measured from its bed.
-fn surface_datum(tile: BattleHex) -> i32 {
+fn surface_datum(tile: Hex) -> i32 {
     if tile.holds_water() {
         return i32::from(tile.bottom_height());
     }
@@ -110,7 +110,7 @@ mod tests {
             (Terrain::Bridge, -5, -4),
         ] {
             assert_eq!(
-                BattleRadarTarget::above_tile(elevation, BattleHex::new(terrain, 4), false)
+                BattleRadarTarget::above_tile(elevation, Hex::new(terrain, 4), false)
                     .height_above_surface,
                 expected
             );

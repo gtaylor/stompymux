@@ -1,6 +1,6 @@
 //! Opt-in long-distance pursuit experiments with legally driven, reproducible opponents.
 use super::*;
-use crate::{BattleHexCoordinate, BattlePosition, Config, HeartbeatHarness, ObjectId};
+use crate::{BattlePosition, Config, HeartbeatHarness, HexCoordinate, ObjectId};
 use anyhow::{Result, ensure};
 use serde::Serialize;
 use std::{io::Write, path::Path};
@@ -92,8 +92,8 @@ pub struct PursuitResult {
     pub episodes: Vec<Episode>,
 }
 
-fn center(x: u16, y: u16) -> crate::BattlePoint {
-    BattleHexCoordinate {
+fn center(x: u16, y: u16) -> crate::Point {
+    HexCoordinate {
         x: i32::from(x),
         y: i32::from(y),
     }
@@ -171,11 +171,11 @@ fn shortest_firing_route(
     let width = u16::try_from(map.width).ok()?;
     let height = u16::try_from(map.height).ok()?;
     while let Some((h, d)) = queue.pop_front() {
-        let here = BattleHexCoordinate {
+        let here = HexCoordinate {
             x: i32::from(h.x),
             y: i32::from(h.y),
         };
-        let there = BattleHexCoordinate {
+        let there = HexCoordinate {
             x: i32::from(target.x),
             y: i32::from(target.y),
         };
@@ -302,7 +302,7 @@ pub async fn run(
                         &mut world,
                         map,
                         "pursuit",
-                        crate::BattleMapAsset::from_cells(&terrain)?,
+                        crate::MapAsset::from_cells(&terrain)?,
                     )?;
                     let dice = world.btech.maps()[&old_map].fire_dice.clone();
                     world.btech.maps.get_mut(&map).unwrap().fire_dice = dice;

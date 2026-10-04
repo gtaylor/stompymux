@@ -1,5 +1,5 @@
 //! Shared firing requests defer native target decoding until per-weapon dispatch.
-use super::{BattleHexCoordinate, BattleWeapon};
+use super::{BattleWeapon, HexCoordinate};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -14,7 +14,7 @@ pub enum BattleFireTarget {
     /// Supply a unit without changing the cockpit lock.
     Unit { unit: ObjectId },
     /// Fire at map coordinates, selecting an occupant for conventional weapons.
-    Hex { coordinate: BattleHexCoordinate },
+    Hex { coordinate: HexCoordinate },
 }
 
 impl From<Option<ObjectId>> for BattleFireTarget {
@@ -95,7 +95,7 @@ impl FireTargetRequest<'_> {
                 })
             }
             [x, y] => Ok(BattleFireTarget::Hex {
-                coordinate: BattleHexCoordinate {
+                coordinate: HexCoordinate {
                     x: x.parse().context("Invalid map coordinates!")?,
                     y: y.parse().context("Invalid map coordinates!")?,
                 },
@@ -110,9 +110,9 @@ impl FireTargetRequest<'_> {
 pub(super) enum ResolvedFireTarget {
     Unit {
         unit: ObjectId,
-        coordinate: Option<BattleHexCoordinate>,
+        coordinate: Option<HexCoordinate>,
     },
-    Hex(BattleHexCoordinate),
+    Hex(HexCoordinate),
 }
 
 /// Resolve a conventional target without substituting another operator's selection.
@@ -176,7 +176,7 @@ pub(super) fn resolve_conventional_for_source(
         let position = super::scanner::scanner_unit(world, unit)
             .and_then(|unit| unit.position)
             .context("Target is not placed")?;
-        coordinate = Some(BattleHexCoordinate {
+        coordinate = Some(HexCoordinate {
             x: i32::from(position.x),
             y: i32::from(position.y),
         });

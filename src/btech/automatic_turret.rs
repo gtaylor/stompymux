@@ -83,7 +83,7 @@ fn desired(world: &World, id: ObjectId) -> Option<f64> {
 }
 
 /// Quantize signed tenth-degrees before producing the integer compass bearing.
-fn integer_bearing(start: super::BattlePoint, end: super::BattlePoint) -> Option<f64> {
+fn integer_bearing(start: super::Point, end: super::Point) -> Option<f64> {
     if start.x == end.x {
         return Some(if end.y < start.y { 0.0 } else { 180.0 });
     }

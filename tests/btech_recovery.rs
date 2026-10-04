@@ -48,7 +48,7 @@ async fn recovery_preserves_dice_and_timer_across_injury_restart_and_cockpit_rel
         &mut world,
         map,
         "recovery.map",
-        stompymux_rs::BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+        stompymux_rs::MapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);

@@ -14,7 +14,7 @@ async fn map_assignment_preserves_running_chassis_and_restarts() {
             &mut world,
             map,
             "destination",
-            BattleMapAsset::from_cells(&format!("1 12\n{}", ".2\n".repeat(12))).unwrap(),
+            MapAsset::from_cells(&format!("1 12\n{}", ".2\n".repeat(12))).unwrap(),
         )
         .unwrap();
         let key = if world.btech.vehicles().contains_key(&unit) {
@@ -86,7 +86,7 @@ async fn map_assignment_preserves_running_chassis_and_restarts() {
             &mut world,
             small,
             "small",
-            BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+            MapAsset::from_cells("1 1\n.0\n").unwrap(),
         )
         .unwrap();
         let report = reassign_battle_map(&mut world, unit, small, Some("QX")).unwrap();
@@ -105,7 +105,7 @@ async fn new_units_use_destination_surface() {
         &mut world,
         map,
         "small",
-        BattleMapAsset::from_cells("1 1\n.2\n").unwrap(),
+        MapAsset::from_cells("1 1\n.2\n").unwrap(),
     )
     .unwrap();
     for source in firing::templates() {
@@ -131,7 +131,7 @@ async fn map_capacity_counts_all_chassis_and_allows_existing_members() {
         &mut world,
         map,
         "full",
-        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+        MapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     let sources = firing::templates();
@@ -178,7 +178,7 @@ async fn map_assignment_preserves_airborne_progress_and_restart() {
             &mut world,
             map,
             "airspace",
-            BattleMapAsset::from_cells(&format!("1 12\n{}", ".0\n".repeat(12))).unwrap(),
+            MapAsset::from_cells(&format!("1 12\n{}", ".0\n".repeat(12))).unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -222,7 +222,7 @@ async fn map_assignment_releases_tows_across_all_chassis_pairings() {
                     &mut world,
                     map,
                     "map",
-                    BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+                    MapAsset::from_cells("1 1\n.0\n").unwrap(),
                 )
                 .unwrap();
             }

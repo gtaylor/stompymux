@@ -13,7 +13,7 @@ async fn fixture(
         &mut world,
         map,
         "sight",
-        BattleMapAsset::from_cells(&format!("1 5\n{tiles}")).unwrap(),
+        MapAsset::from_cells(&format!("1 5\n{tiles}")).unwrap(),
     )
     .unwrap();
     let mut ids = Vec::new();
@@ -247,7 +247,7 @@ async fn vehicle_locks_clear_on_visibility_sensor_placement_and_power_changes() 
         &mut world,
         observer,
         ObjectId(1),
-        BattleHexCoordinate { x: 0, y: 1 },
+        HexCoordinate { x: 0, y: 1 },
         BattleHexTargetMode::Building,
     )
     .unwrap();
@@ -322,7 +322,7 @@ async fn idle_vehicle_lock_countdown_retries_failed_server_commits() {
         world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(observer);
         assign_battle_pilot(&mut world, observer, ObjectId(1)).unwrap();
         support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
-        select_battle_hex_target(&mut world, observer, ObjectId(1), BattleHexCoordinate { x: 0, y: 1 }, BattleHexTargetMode::Hex).unwrap();
+        select_battle_hex_target(&mut world, observer, ObjectId(1), HexCoordinate { x: 0, y: 1 }, BattleHexTargetMode::Hex).unwrap();
         assert!(battle_contact_observers(&world).is_empty());
         persistence::save(&config.database(), &world).await.unwrap();
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();

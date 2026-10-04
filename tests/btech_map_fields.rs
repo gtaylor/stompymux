@@ -82,7 +82,7 @@ async fn invalid_fields_and_callback_failure_restore_state_without_output() {
         &mut world,
         map,
         "test",
-        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+        MapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -158,12 +158,12 @@ async fn lua_map_flags_use_typed_constants_and_preserve_other_flags() {
         &mut world,
         map,
         "test",
-        BattleMapAsset::from_cells("1 1\n&0\n2: 100 20\n").unwrap(),
+        MapAsset::from_cells("1 1\n&0\n2: 100 20\n").unwrap(),
     )
     .unwrap();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     let flags = |scripts: &Scripts| scripts.world().btech.maps()[&map].flags;
-    assert_eq!(flags(&scripts), BattleMapFlag::SpecialRules.bit());
+    assert_eq!(flags(&scripts), MapFlag::SpecialRules.bit());
     let enabled: (bool, bool, usize) = scripts
         .eval_callback(&format!(
             "btech.map.set_flag(1, {0}, btech.map.flags.DARK, true)
@@ -176,7 +176,7 @@ async fn lua_map_flags_use_typed_constants_and_preserve_other_flags() {
     assert_eq!(enabled, (true, false, 2));
     assert_eq!(
         flags(&scripts),
-        BattleMapFlag::SpecialRules.bit() | BattleMapFlag::Dark.bit()
+        MapFlag::SpecialRules.bit() | MapFlag::Dark.bit()
     );
     scripts
         .eval_callback::<()>(&format!(
@@ -184,7 +184,7 @@ async fn lua_map_flags_use_typed_constants_and_preserve_other_flags() {
             map = map.0
         ))
         .unwrap();
-    assert_eq!(flags(&scripts), BattleMapFlag::Dark.bit());
+    assert_eq!(flags(&scripts), MapFlag::Dark.bit());
     let before = scripts.world().btech.clone();
     for script in [
         format!("btech.map.set_flag(1, {}, 32, true)", map.0),

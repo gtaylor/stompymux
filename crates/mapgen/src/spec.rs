@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::borrow::Cow;
 use std::str::FromStr;
-use stompymux_map::BattleMapFlag;
+use stompymux_map::MapFlag;
 
 /// The smallest width or height a generated map may have.
 pub const MIN_DIMENSION: u16 = 8;
@@ -409,10 +409,10 @@ pub struct EnvironmentSpec {
     /// Map flags. Defaults by biome; give an empty list for none.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "Option<Vec<MapFlagSchema>>")]
-    pub flags: Option<Vec<BattleMapFlag>>,
+    pub flags: Option<Vec<MapFlag>>,
 }
 
-/// The JSON Schema of a [`BattleMapFlag`], built from the flags' own names and
+/// The JSON Schema of a [`MapFlag`], built from the flags' own names and
 /// descriptions. `stompymux-map` carries no schema support of its own, so spec fields that
 /// hold flags borrow this one with `#[schemars(with = ...)]`.
 struct MapFlagSchema;
@@ -423,7 +423,7 @@ impl JsonSchema for MapFlagSchema {
     }
 
     fn json_schema(_: &mut SchemaGenerator) -> Schema {
-        let flags: Vec<_> = BattleMapFlag::ALL
+        let flags: Vec<_> = MapFlag::ALL
             .into_iter()
             .map(|flag| {
                 json!({
@@ -657,7 +657,7 @@ mod tests {
         assert_eq!(resolved.woods, Some(Amount::High));
         let environment = resolved.environment.clone().unwrap();
         assert!(environment.gravity.unwrap() < 50);
-        assert!(environment.flags.unwrap().contains(&BattleMapFlag::Vacuum));
+        assert!(environment.flags.unwrap().contains(&MapFlag::Vacuum));
         assert_eq!(resolved.resolve().unwrap(), resolved);
     }
 
@@ -681,7 +681,7 @@ mod tests {
         let schema = spec_schema().to_string();
         assert!(schema.contains("settlements") && schema.contains("metropolis"));
         assert!(schema.contains("Overall landscape"));
-        for flag in BattleMapFlag::ALL {
+        for flag in MapFlag::ALL {
             assert!(schema.contains(flag.name()) && schema.contains(flag.description()));
         }
     }

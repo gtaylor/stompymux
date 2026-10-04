@@ -9,7 +9,7 @@
 //! advanced in small budgets and only stores discovered records, which keeps it
 //! suitable for a heartbeat that serves many autonomous units.
 
-use crate::btech::BattleHexCoordinate;
+use crate::btech::HexCoordinate;
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap};
 use std::error::Error;
@@ -36,7 +36,7 @@ impl Hex {
 
     /// The neighbors on a `width` by `height` map, clockwise from north.
     pub fn neighbors_within(self, width: u16, height: u16) -> impl Iterator<Item = Self> {
-        BattleHexCoordinate::from(self)
+        HexCoordinate::from(self)
             .neighbors_within(width, height)
             .into_iter()
             .flatten()
@@ -46,12 +46,12 @@ impl Hex {
 
     /// Return the shortest number of hex transitions between two coordinates.
     pub fn distance(self, other: Self) -> u32 {
-        let distance = BattleHexCoordinate::from(self).distance(other.into());
+        let distance = HexCoordinate::from(self).distance(other.into());
         u32::try_from(distance).expect("u16 hex distance fits in u32")
     }
 }
 
-impl From<Hex> for BattleHexCoordinate {
+impl From<Hex> for HexCoordinate {
     fn from(hex: Hex) -> Self {
         Self {
             x: i32::from(hex.x),

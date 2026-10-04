@@ -11,7 +11,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, [ObjectId; 3]) {
         &mut world,
         map,
         "test",
-        BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
+        MapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
     let mut ids = Vec::new();

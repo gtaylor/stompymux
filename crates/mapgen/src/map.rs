@@ -1,5 +1,5 @@
 //! The generated map: one [`Hex`] per cell in a column-staggered hex grid, and its conversion
-//! to the [`BattleMapAsset`] that `stompymux-map` writes as a map file.
+//! to the [`MapAsset`] that `stompymux-map` writes as a map file.
 //!
 //! Columns are staggered like the game's: even columns sit half a hex south of odd ones.
 //! [`HexMap::neighbors`] and [`HexMap::distance`] follow that layout, so roads and rivers built
@@ -8,8 +8,8 @@ use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use stompymux_map::{
-    BattleDecorationKind, BattleHex, BattleHexCoordinate, BattleMapAsset, BattleMapFlag, Ground,
-    MAX_DEPTH, MAX_HEIGHT, Structure, Water, Woods,
+    DecorationKind, Ground, HexCoordinate, MAX_DEPTH, MAX_HEIGHT, MapAsset, MapFlag, Structure,
+    Water, Woods,
 };
 
 /// What fills a hex. Each variant is one map-file terrain symbol.
@@ -105,7 +105,7 @@ pub struct Hex {
     pub bridge: Option<u8>,
     /// Permanent fire or smoke.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub overlay: Option<BattleDecorationKind>,
+    pub overlay: Option<DecorationKind>,
 }
 
 impl Hex {
@@ -119,9 +119,9 @@ impl Hex {
         }
     }
 
-    /// This hex as the layered [`BattleHex`] map files and the server use. A bridge deck spans
+    /// This hex as the layered [`stompymux_map::Hex`] map files and the server use. A bridge deck spans
     /// the hex's water or ice.
-    pub fn to_battle_hex(self) -> BattleHex {
+    pub fn to_map_hex(self) -> stompymux_map::Hex {
         let (mut ground, mut woods, mut water, mut structure) = (Ground::Clear, None, None, None);
         match self.terrain {
             Terrain::Clear => {}
@@ -150,7 +150,7 @@ impl Hex {
         if let Some(deck) = self.bridge {
             structure = Some(Structure::Bridge { deck });
         }
-        BattleHex::from_layers(self.level, ground, woods, water, structure)
+        stompymux_map::Hex::from_layers(self.level, ground, woods, water, structure)
             .with_overlay(self.overlay)
     }
 }
@@ -167,7 +167,7 @@ pub struct HexMap {
     /// Temperature in degrees Celsius.
     pub temperature: i8,
     /// Battlefield rule flags.
-    pub flags: Vec<BattleMapFlag>,
+    pub flags: Vec<MapFlag>,
     /// Hexes in row-major order: index `y * width + x`.
     pub hexes: Vec<Hex>,
 }
@@ -218,7 +218,7 @@ impl HexMap {
     /// The neighbors of `(x, y)` indexed by direction clockwise from north, with `None` for
     /// each direction that leaves the map.
     pub fn adjacent(&self, x: i32, y: i32) -> [Option<(i32, i32)>; 6] {
-        BattleHexCoordinate { x, y }
+        HexCoordinate { x, y }
             .neighbors_within(self.width, self.height)
             .map(|neighbor| neighbor.map(|hex| (hex.x, hex.y)))
     }
@@ -230,8 +230,7 @@ impl HexMap {
 
     /// Number of hex steps between two hexes, saturating at `i32::MAX`.
     pub fn distance((ax, ay): (i32, i32), (bx, by): (i32, i32)) -> i32 {
-        let steps =
-            BattleHexCoordinate { x: ax, y: ay }.distance(BattleHexCoordinate { x: bx, y: by });
+        let steps = HexCoordinate { x: ax, y: ay }.distance(HexCoordinate { x: bx, y: by });
         i32::try_from(steps).unwrap_or(i32::MAX)
     }
 
@@ -268,21 +267,21 @@ impl HexMap {
         Ok(())
     }
 
-    /// The map as a [`BattleMapAsset`], after checking every hex holds values a map file can
+    /// The map as a [`MapAsset`], after checking every hex holds values a map file can
     /// store.
-    pub fn to_asset(&self) -> Result<BattleMapAsset> {
+    pub fn to_asset(&self) -> Result<MapAsset> {
         self.validate()?;
         let flags = self
             .flags
             .iter()
             .fold(0, |bits, flag| flag.apply(bits, true));
-        Ok(BattleMapAsset {
+        Ok(MapAsset {
             width: self.width,
             height: self.height,
             flags: i32::try_from(flags)?,
             gravity: self.gravity,
             temperature: self.temperature,
-            hexes: Arc::new(self.hexes.iter().map(|hex| hex.to_battle_hex()).collect()),
+            hexes: Arc::new(self.hexes.iter().map(|hex| hex.to_map_hex()).collect()),
             points_of_interest: Vec::new(),
         })
     }
@@ -317,11 +316,11 @@ mod tests {
     #[test]
     fn writes_every_grid_and_bridge() {
         let mut map = HexMap::new(3, 2);
-        map.flags = vec![BattleMapFlag::Dark];
+        map.flags = vec![MapFlag::Dark];
         map.hexes[0].terrain = Terrain::Water { depth: 2 };
         map.hexes[0].bridge = Some(1);
         map.hexes[1].terrain = Terrain::Building { height: 12 };
-        map.hexes[2].overlay = Some(BattleDecorationKind::Smoke);
+        map.hexes[2].overlay = Some(DecorationKind::Smoke);
         map.hexes[5].level = 11;
         let text = map.to_toml().unwrap();
         assert!(text.contains("flags = [\"dark\"]"), "{text}");

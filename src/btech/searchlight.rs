@@ -153,7 +153,7 @@ pub(super) fn emitter_ids(world: &World) -> impl Iterator<Item = ObjectId> + '_ 
 pub(super) fn beam(
     world: &World,
     id: ObjectId,
-) -> Option<(super::BattlePosition, super::BattlePoint, f64)> {
+) -> Option<(super::BattlePosition, super::Point, f64)> {
     let lamp = lamp_state(world, id)?;
     // Most battlefield units have no active beam. Reject them before building
     // a full scanner view; illumination is queried for every observed pair.
@@ -497,11 +497,11 @@ fn external_sources_illuminate(
         let Some(source_position) = scanner.position.filter(|p| p.map == position.map) else {
             return false;
         };
-        let source_hex = super::BattleHexCoordinate {
+        let source_hex = super::HexCoordinate {
             x: i32::from(source_position.x),
             y: i32::from(source_position.y),
         };
-        let target_hex = super::BattleHexCoordinate {
+        let target_hex = super::HexCoordinate {
             x: i32::from(position.x),
             y: i32::from(position.y),
         };

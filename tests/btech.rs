@@ -3,8 +3,8 @@ use crate::support;
 use sqlx::{Connection, Row, SqliteConnection};
 use std::path::Path;
 use stompymux_rs::{
-    BattleMapAsset, BattleSection, BattleTemplate, BtechState, Flag, Kind, ObjectId, Scripts,
-    Terrain, dbck, persistence, read_battle_map, read_battle_template,
+    BattleSection, BattleTemplate, BtechState, Flag, Kind, MapAsset, ObjectId, Scripts, Terrain,
+    dbck, persistence, read_battle_map, read_battle_template,
 };
 
 /// Install only isolated BattleTech fixture assets into a temporary game directory.
@@ -86,7 +86,7 @@ fn malformed_templates_do_not_become_partially_supported_units() {
         "Jenner"
     );
     // A malformed settings line rejects the map instead of being ignored.
-    assert!(BattleMapAsset::from_cells("1 1\n.0\n42: 88 19 extra\n").is_err());
+    assert!(MapAsset::from_cells("1 1\n.0\n42: 88 19 extra\n").is_err());
 }
 
 #[tokio::test]

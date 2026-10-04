@@ -37,7 +37,7 @@ async fn fixture(
         &mut world,
         map,
         "visibility",
-        BattleMapAsset::from_cells(if blocked {
+        MapAsset::from_cells(if blocked {
             "1 5\n.0\n.9\n.0\n.0\n.0\n"
         } else {
             "1 5\n.0\n.0\n.0\n.0\n.0\n"
@@ -237,7 +237,7 @@ async fn swarm_woods_absorption_preserves_pre_cover_flight_accounting() {
             let map = world.btech.units()[&target].map.unwrap();
             let mut encoded = serde_json::to_value(&world.btech).unwrap();
             encoded["maps"][map.0.to_string()]["terrain"][0] =
-                serde_json::to_value(BattleHex::new(Terrain::HeavyForest, 0)).unwrap();
+                serde_json::to_value(Hex::new(Terrain::HeavyForest, 0)).unwrap();
             world.btech = serde_json::from_value(encoded).unwrap();
             acquire(&mut world, shooter, target);
             set_battle_visibility(
@@ -609,7 +609,7 @@ async fn swarm_cumulative_range_stops_before_spending_another_attack_roll() {
         &mut world,
         map,
         "long-flight",
-        BattleMapAsset::from_cells(&format!("1 32\n{}", ".0\n".repeat(32))).unwrap(),
+        MapAsset::from_cells(&format!("1 32\n{}", ".0\n".repeat(32))).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);

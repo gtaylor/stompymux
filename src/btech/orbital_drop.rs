@@ -1,5 +1,5 @@
 //! Shared orbital-drop descent, cocoon interception and landing arithmetic; world adapters own effects.
-use super::BattleHex;
+use super::Hex;
 use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
 
@@ -292,7 +292,7 @@ pub struct BattleDropLandingInput {
     pub base_target: i16,
     pub roll: Option<u8>,
     /// The hex the unit lands in.
-    pub hex: BattleHex,
+    pub hex: Hex,
     pub running: bool,
     pub prone: bool,
     /// Unconsciousness or blindness; the host resolves these from shared condition services.

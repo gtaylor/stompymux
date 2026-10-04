@@ -54,7 +54,7 @@ impl std::str::FromStr for BattleHexTargetMode {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct BattleHexLock {
-    pub hex: super::BattleHexCoordinate,
+    pub hex: super::HexCoordinate,
     pub mode: BattleHexTargetMode,
     pub remaining: u8,
 }
@@ -326,7 +326,7 @@ pub fn select_hex_target(
     world: &mut World,
     unit: ObjectId,
     pilot: ObjectId,
-    hex: super::BattleHexCoordinate,
+    hex: super::HexCoordinate,
     mode: BattleHexTargetMode,
 ) -> Result<BattleNotice> {
     let source = controlled_source(world, unit, pilot)?;
@@ -424,7 +424,7 @@ pub fn advance_target_locks(world: &mut World) -> Vec<BattleNotice> {
 pub fn hex_occupant(
     world: &World,
     observer: ObjectId,
-    hex: super::BattleHexCoordinate,
+    hex: super::HexCoordinate,
 ) -> Result<Option<ObjectId>> {
     let position = super::scanner::scanner_unit(world, observer)
         .context("Observer is not constructed")?

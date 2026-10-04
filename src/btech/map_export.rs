@@ -22,10 +22,10 @@ impl StoredBattleMap {
                 hexes.push(permanent.unwrap_or(base));
             }
         }
-        let asset = super::BattleMapAsset {
+        let asset = super::MapAsset {
             width: u16::try_from(self.width)?,
             height: u16::try_from(self.height)?,
-            flags: i32::try_from(self.flags & super::BattleMapFlag::mask())?,
+            flags: i32::try_from(self.flags & super::MapFlag::mask())?,
             gravity: u8::try_from(self.gravity)?,
             temperature: i8::try_from(self.temperature)?,
             hexes: Arc::new(hexes),
@@ -38,13 +38,12 @@ impl StoredBattleMap {
 #[cfg(test)]
 mod tests {
     use super::super::{
-        BattleDecorationKind, BattleHex, BattleHexCoordinate, BattleMapAsset, Terrain,
-        state::map_from_asset,
+        DecorationKind, Hex, HexCoordinate, MapAsset, Terrain, state::map_from_asset,
     };
 
     /// Load map-file text as a live map, requiring it to validate.
     fn stored(source: &str) -> super::StoredBattleMap {
-        let map = map_from_asset("test", BattleMapAsset::parse(source).unwrap()).unwrap();
+        let map = map_from_asset("test", MapAsset::parse(source).unwrap()).unwrap();
         map.validate().unwrap();
         map
     }
@@ -66,23 +65,20 @@ mod tests {
         let map = stored(source);
         assert_eq!(
             map.base_hex(1, 0).unwrap(),
-            BattleHex::new(Terrain::LightForest, 2)
+            Hex::new(Terrain::LightForest, 2)
         );
         assert_eq!(
             map.hex(1, 0).unwrap().overlay(),
-            Some(BattleDecorationKind::Smoke)
+            Some(DecorationKind::Smoke)
         );
         let effect = map
-            .decoration(BattleHexCoordinate { x: 1, y: 0 })
+            .decoration(HexCoordinate { x: 1, y: 0 })
             .unwrap()
             .unwrap();
+        assert_eq!((effect.kind, effect.remaining), (DecorationKind::Smoke, 0));
         assert_eq!(
-            (effect.kind, effect.remaining),
-            (BattleDecorationKind::Smoke, 0)
-        );
-        assert_eq!(
-            BattleMapAsset::parse(&map.export_asset().unwrap()).unwrap(),
-            BattleMapAsset::parse(source).unwrap()
+            MapAsset::parse(&map.export_asset().unwrap()).unwrap(),
+            MapAsset::parse(source).unwrap()
         );
     }
 
@@ -90,11 +86,11 @@ mod tests {
     #[test]
     fn points_of_interest_survive_export() {
         let source = "terrain = '..'\nlevel = '00'\n\n[[points_of_interest]]\ntype = 'objective'\nname = 'Ford'\nx = 1\ny = 0\nelevation = -2\n";
-        let asset = BattleMapAsset::parse(source).unwrap();
+        let asset = MapAsset::parse(source).unwrap();
         let map = stored(source);
         assert_eq!(*map.points_of_interest, asset.points_of_interest);
         assert_eq!(
-            BattleMapAsset::parse(&map.export_asset().unwrap()).unwrap(),
+            MapAsset::parse(&map.export_asset().unwrap()).unwrap(),
             asset
         );
     }

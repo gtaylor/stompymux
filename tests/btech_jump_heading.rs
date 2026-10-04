@@ -14,7 +14,7 @@ async fn jump_heading_rates_preserve_trajectory_and_replay_across_chassis() {
                     &mut world,
                     map,
                     "jump",
-                    BattleMapAsset::from_cells(&format!(
+                    MapAsset::from_cells(&format!(
                         "12 12\n{}",
                         format!("{}\n", ".0".repeat(12)).repeat(12)
                     ))

@@ -7,7 +7,7 @@
 //! segment through the ordinary movement transaction before committing it.
 
 use super::super::{
-    BattleHex, BattleHexCoordinate, BattlePosition, BattleUnit, BattleVehicleMovement, Structure,
+    BattlePosition, BattleUnit, BattleVehicleMovement, Hex, HexCoordinate, Structure,
 };
 use crate::{ObjectId, World};
 use std::collections::BTreeMap;
@@ -96,11 +96,11 @@ fn assess_with_occupancy(
     if from.x == to.x && from.y == to.y {
         return TraversalAssessment::blocked(TraversalReason::NotAdjacent);
     }
-    let from_coordinate = BattleHexCoordinate {
+    let from_coordinate = HexCoordinate {
         x: i32::from(from.x),
         y: i32::from(from.y),
     };
-    let to_coordinate = BattleHexCoordinate {
+    let to_coordinate = HexCoordinate {
         x: i32::from(to.x),
         y: i32::from(to.y),
     };
@@ -285,7 +285,7 @@ fn in_bounds(width: i64, height: i64, x: u16, y: u16) -> bool {
 }
 
 /// Relative route cost of entering a tile, or `None` when the tile is impassable.
-fn terrain_cost(hex: BattleHex, kind: GroundUnitKind) -> Option<u32> {
+fn terrain_cost(hex: Hex, kind: GroundUnitKind) -> Option<u32> {
     if matches!(hex.structure(), Some(Structure::Wall { .. })) {
         return None;
     }
@@ -302,8 +302,8 @@ fn support_heights(
     world: &World,
     id: ObjectId,
     kind: GroundUnitKind,
-    from: BattleHex,
-    to: BattleHex,
+    from: Hex,
+    to: Hex,
 ) -> (i32, i32) {
     let from_height = match kind {
         GroundUnitKind::Mech => world.btech.constructed_units()[&id].elevation_level(from),
@@ -334,8 +334,8 @@ fn support_heights(
 
 fn transition_reason(
     kind: GroundUnitKind,
-    from: BattleHex,
-    to: BattleHex,
+    from: Hex,
+    to: Hex,
     to_height: i32,
 ) -> (TraversalReason, u32) {
     if to.overlay().is_some() {
@@ -369,7 +369,7 @@ fn transition_reason(
 fn occupancy(
     world: &World,
     map: ObjectId,
-    coordinate: BattleHexCoordinate,
+    coordinate: HexCoordinate,
     moving: ObjectId,
 ) -> Result<(usize, usize), ()> {
     let occupants =
@@ -539,12 +539,12 @@ mod tests {
             Terrain::Sand,
         ] {
             assert!(
-                terrain_cost(BattleHex::new(terrain, 0), GroundUnitKind::Mech)
+                terrain_cost(Hex::new(terrain, 0), GroundUnitKind::Mech)
                     .is_some_and(|cost| cost > 0)
             );
         }
         assert_eq!(
-            terrain_cost(BattleHex::new(Terrain::Wall, 0), GroundUnitKind::Mech),
+            terrain_cost(Hex::new(Terrain::Wall, 0), GroundUnitKind::Mech),
             None
         );
     }
@@ -553,7 +553,7 @@ mod tests {
     #[test]
     fn sand_costs_extra_only_for_wheeled_units() {
         assert_eq!(
-            terrain_cost(BattleHex::new(Terrain::Sand, 0), GroundUnitKind::Wheeled),
+            terrain_cost(Hex::new(Terrain::Sand, 0), GroundUnitKind::Wheeled),
             Some(2)
         );
         for kind in [
@@ -562,8 +562,8 @@ mod tests {
             GroundUnitKind::Hover,
         ] {
             assert_eq!(
-                terrain_cost(BattleHex::new(Terrain::Sand, 0), kind),
-                terrain_cost(BattleHex::new(Terrain::Grassland, 0), kind)
+                terrain_cost(Hex::new(Terrain::Sand, 0), kind),
+                terrain_cost(Hex::new(Terrain::Grassland, 0), kind)
             );
         }
     }
@@ -572,16 +572,16 @@ mod tests {
     fn transition_risks_are_explicit_and_do_not_query_mines() {
         let (reason, _) = transition_reason(
             GroundUnitKind::Tracked,
-            BattleHex::new(Terrain::Grassland, 0),
-            BattleHex::new(Terrain::Water, 1),
+            Hex::new(Terrain::Grassland, 0),
+            Hex::new(Terrain::Water, 1),
             -1,
         );
         assert_eq!(reason, TraversalReason::WaterRisk);
 
         let (reason, _) = transition_reason(
             GroundUnitKind::Hover,
-            BattleHex::new(Terrain::Water, 1),
-            BattleHex::new(Terrain::Ice, 1),
+            Hex::new(Terrain::Water, 1),
+            Hex::new(Terrain::Ice, 1),
             0,
         );
         assert_eq!(reason, TraversalReason::IceRisk);
@@ -597,7 +597,7 @@ mod tests {
             &mut world,
             map,
             "occupancy",
-            crate::BattleMapAsset::from_cells("1 5\n.0\n.0\n.0\n.0\n.0\n").unwrap(),
+            crate::MapAsset::from_cells("1 5\n.0\n.0\n.0\n.0\n.0\n").unwrap(),
         )
         .unwrap();
         let observer = world.create(&config, "Observer".into(), Kind::Thing);
@@ -671,9 +671,9 @@ mod tests {
 
     #[test]
     fn support_height_respects_ice_and_bridge_surfaces() {
-        let source = BattleHex::new(Terrain::Water, 2);
-        let ice = BattleHex::new(Terrain::Ice, 2);
-        let bridge = BattleHex::new(Terrain::Bridge, 4);
+        let source = Hex::new(Terrain::Water, 2);
+        let ice = Hex::new(Terrain::Ice, 2);
+        let bridge = Hex::new(Terrain::Bridge, 4);
         assert_eq!(ice.surface_height(), -2);
         assert_eq!(bridge.standing_height(), 4);
         // The pure map values establish the same surfaces used by the

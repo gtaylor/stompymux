@@ -9,8 +9,7 @@ use iced::{
     widget::{button, checkbox, column, row, slider, text},
 };
 use stompymux_map::{
-    BattleDecorationKind, BattleHex, Ground, MAX_DEPTH, MAX_HEIGHT, Structure, Terrain, Water,
-    Woods,
+    DecorationKind, Ground, Hex, MAX_DEPTH, MAX_HEIGHT, Structure, Terrain, Water, Woods,
 };
 
 use crate::{
@@ -61,7 +60,7 @@ pub enum BrushEdit {
     Depth(u8),
     Structure(StructureKind),
     StructureHeight(u8),
-    Overlay(Option<BattleDecorationKind>),
+    Overlay(Option<DecorationKind>),
     Radius(u8),
     /// Grow or shrink the brush by one step.
     RadiusStep(i8),
@@ -77,7 +76,7 @@ pub struct BrushPanel {
     pub depth: u8,
     pub structure: StructureKind,
     pub structure_height: u8,
-    pub overlay: Option<BattleDecorationKind>,
+    pub overlay: Option<DecorationKind>,
     pub radius: u8,
     /// Layers switched on, in [`Layer`] order.
     enabled: [bool; 6],
@@ -159,7 +158,7 @@ impl BrushPanel {
     }
 
     /// Take every layer's selection from `hex` and switch them all on, for the eyedropper.
-    pub fn pick(&mut self, hex: BattleHex) {
+    pub fn pick(&mut self, hex: Hex) {
         self.level = hex.level();
         self.ground = hex.ground();
         self.woods = hex.woods();
@@ -295,14 +294,14 @@ impl BrushPanel {
             choice(
                 "fire",
                 Some(terrain_color(Terrain::Fire)),
-                self.overlay == Some(BattleDecorationKind::Fire),
-                BrushEdit::Overlay(Some(BattleDecorationKind::Fire)),
+                self.overlay == Some(DecorationKind::Fire),
+                BrushEdit::Overlay(Some(DecorationKind::Fire)),
             ),
             choice(
                 "smoke",
                 Some(terrain_color(Terrain::Smoke)),
-                self.overlay == Some(BattleDecorationKind::Smoke),
-                BrushEdit::Overlay(Some(BattleDecorationKind::Smoke)),
+                self.overlay == Some(DecorationKind::Smoke),
+                BrushEdit::Overlay(Some(DecorationKind::Smoke)),
             ),
         ]
         .spacing(4);
@@ -435,11 +434,11 @@ mod tests {
     #[test]
     fn picking_a_hex_reproduces_it() {
         let hexes = [
-            BattleHex::new(Terrain::Ice, 6).with_level(12),
-            BattleHex::new(Terrain::Bridge, 4),
-            BattleHex::new(Terrain::Rough, 3).with_woods(Some(Woods::Heavy)),
-            BattleHex::new(Terrain::Wall, 35),
-            BattleHex::at_level(2).with_overlay(Some(BattleDecorationKind::Smoke)),
+            Hex::new(Terrain::Ice, 6).with_level(12),
+            Hex::new(Terrain::Bridge, 4),
+            Hex::new(Terrain::Rough, 3).with_woods(Some(Woods::Heavy)),
+            Hex::new(Terrain::Wall, 35),
+            Hex::at_level(2).with_overlay(Some(DecorationKind::Smoke)),
         ];
         for hex in hexes {
             let mut panel = BrushPanel::default();

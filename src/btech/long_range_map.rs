@@ -171,14 +171,14 @@ fn render_viewport(
                 cells.push(cell);
                 continue;
             }
-            if (map.has_flag(super::BattleMapFlag::Dark)
+            if (map.has_flag(super::MapFlag::Dark)
                 || matches!(
                     mode,
                     BattleLongRangeMode::VisibleTerrain
                         | BattleLongRangeMode::VisibleElevation
                         | BattleLongRangeMode::VisibleUnits
                 ))
-                && !viewer.visible(super::BattleHexCoordinate { x, y })?
+                && !viewer.visible(super::HexCoordinate { x, y })?
             {
                 cells.push(Cell {
                     glyph: '?',
@@ -395,7 +395,7 @@ mod tests {
     #[test]
     fn coordinate_labels_keep_reference_three_row_layout() {
         use super::{BattleViewport, Cell, render};
-        use crate::{ObjectId, btech::BattleHexCoordinate};
+        use crate::{ObjectId, btech::HexCoordinate};
 
         for (x, labels) in [
             (8, ["    ", "  11", "8901"]),
@@ -403,7 +403,7 @@ mod tests {
             (998, ["9911", "9900", "8900"]),
             (9998, ["9911", "9900", "9900"]),
         ] {
-            let origin = BattleHexCoordinate { x, y: 7 };
+            let origin = HexCoordinate { x, y: 7 };
             let viewport = BattleViewport {
                 map: ObjectId(1),
                 requested_center: origin,

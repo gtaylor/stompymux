@@ -8,7 +8,7 @@ use serde::Serialize;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct BattleReactorBlastHit {
     pub unit: ObjectId,
-    pub coordinate: BattleHexCoordinate,
+    pub coordinate: HexCoordinate,
     pub damage: u16,
     pub heat: i32,
     pub arc: BattleHitArc,
@@ -24,7 +24,7 @@ pub struct BattleReactorExplosion {
     pub unit: ObjectId,
     pub map: ObjectId,
     pub hits: Vec<BattleReactorBlastHit>,
-    pub ignited: Vec<BattleHexCoordinate>,
+    pub ignited: Vec<HexCoordinate>,
     /// Final unit-owned injury, applied after all radial blast effects.
     pub crew_injury: Option<BattlePilotInjury>,
     pub notices: Vec<BattleNotice>,
@@ -83,7 +83,7 @@ pub(super) fn detonate(
         .motion()
         .context("Reactor has no battlefield position")?
         .point;
-    let origin = BattleHexCoordinate {
+    let origin = HexCoordinate {
         x: i32::from(position.x),
         y: i32::from(position.y),
     };
@@ -109,7 +109,7 @@ pub(super) fn detonate(
     let mut cells = vec![(origin, 1)];
     for x in origin.x - 2..=origin.x + 2 {
         for y in origin.y - 2..=origin.y + 2 {
-            let coordinate = BattleHexCoordinate { x, y };
+            let coordinate = HexCoordinate { x, y };
             let distance = origin.distance(coordinate);
             if distance == 0 || distance > 2 || map.base_hex(i64::from(x), i64::from(y)).is_err() {
                 continue;
@@ -189,8 +189,8 @@ pub(super) fn detonate(
 fn hit_cell(
     world: &mut World,
     report: &mut BattleReactorExplosion,
-    coordinate: BattleHexCoordinate,
-    point: BattlePoint,
+    coordinate: HexCoordinate,
+    point: Point,
     (damage, heat): (u16, i32),
     rules: BattleFallRules,
     punch: bool,

@@ -9,7 +9,7 @@ use iced::{
     Color, Rectangle, wgpu,
     widget::shader::{self, Viewport},
 };
-use stompymux_map::{BattleDecorationKind, BattleHex, Ground, Structure, Terrain, Woods};
+use stompymux_map::{DecorationKind, Ground, Hex, Structure, Terrain, Woods};
 
 use crate::{
     document::{HexFeed, file_holds},
@@ -66,7 +66,7 @@ fn palette_index(terrain: Terrain) -> u8 {
 /// - blue: water depth plus one, or zero for none (bits 0-3), frozen (bit 4), and whether a
 ///   map file cannot store the hex (bit 7);
 /// - alpha: structure (bits 6-7: none, building, wall, bridge) and its height or deck (bits 0-5).
-fn hex_texel(hex: BattleHex, storable: bool) -> [u8; 4] {
+fn hex_texel(hex: Hex, storable: bool) -> [u8; 4] {
     let ground = palette_index(match hex.ground() {
         Ground::Clear => Terrain::Grassland,
         Ground::Road => Terrain::Road,
@@ -82,8 +82,8 @@ fn hex_texel(hex: BattleHex, storable: bool) -> [u8; 4] {
     };
     let overlay = match hex.overlay() {
         None => 0,
-        Some(BattleDecorationKind::Fire) => 1,
-        Some(BattleDecorationKind::Smoke) => 2,
+        Some(DecorationKind::Fire) => 1,
+        Some(DecorationKind::Smoke) => 2,
     };
     let water = hex.water().map_or(0, |water| {
         (water.depth.min(14) + 1) | if water.frozen { 1 << 4 } else { 0 }
@@ -344,7 +344,7 @@ impl shader::Primitive for MapPrimitive {
         };
         // Neighboring hexes are usually identical, so reuse the last storability answer
         // rather than asking the shared memo for every hex.
-        let mut last: Option<(BattleHex, bool)> = None;
+        let mut last: Option<(Hex, bool)> = None;
         let texels: Vec<u8> = hexes[rows.start * width..rows.end * width]
             .iter()
             .flat_map(|&hex| {
@@ -410,7 +410,7 @@ mod tests {
         pin::pin,
         task::{Context, Poll, Waker},
     };
-    use stompymux_map::BattleHexCoordinate;
+    use stompymux_map::HexCoordinate;
 
     /// Drive a wgpu future to completion; native wgpu resolves them without a reactor.
     fn block_on<T>(future: impl Future<Output = T>) -> T {
@@ -576,8 +576,8 @@ mod tests {
     }
 
     /// Paint the hex the compact notation describes at a coordinate, as one stroke.
-    fn put(document: &mut Document, x: i32, y: i32, hex: BattleHex) {
-        document.paint(BattleHexCoordinate { x, y }, Brush::matching(hex, 0));
+    fn put(document: &mut Document, x: i32, y: i32, hex: Hex) {
+        document.paint(HexCoordinate { x, y }, Brush::matching(hex, 0));
         document.end_stroke();
     }
 
@@ -600,18 +600,18 @@ mod tests {
         }
         assert_eq!(palette_bytes(false).len(), PALETTE_LEN * 16);
         let rough = palette_index(Terrain::Rough);
-        let hex = BattleHex::new(Terrain::Rough, 30)
+        let hex = Hex::new(Terrain::Rough, 30)
             .with_woods(Some(Woods::Heavy))
-            .with_overlay(Some(BattleDecorationKind::Smoke));
+            .with_overlay(Some(DecorationKind::Smoke));
         assert_eq!(
             hex_texel(hex, false),
             [rough | 2 << 4 | 2 << 6, 30, 1 << 7, 0]
         );
-        let ice = BattleHex::new(Terrain::Ice, 9).with_level(4);
+        let ice = Hex::new(Terrain::Ice, 9).with_level(4);
         assert_eq!(hex_texel(ice, true), [0, 4, 10 | 1 << 4, 0]);
-        let bridge = BattleHex::new(Terrain::Bridge, 3);
+        let bridge = Hex::new(Terrain::Bridge, 3);
         assert_eq!(hex_texel(bridge, true)[3], 3 << 6 | 3);
-        let wall = BattleHex::new(Terrain::Wall, 35);
+        let wall = Hex::new(Terrain::Wall, 35);
         assert_eq!(hex_texel(wall, true)[3], 2 << 6 | 35);
     }
 
@@ -627,12 +627,12 @@ mod tests {
         let size = Size::new(128, 128);
         let mut pipeline = MapPipeline::new(&device, &queue, FORMAT);
         let mut document = Document::new(3, 3).unwrap();
-        put(&mut document, 0, 0, BattleHex::new(Terrain::Water, 0));
-        put(&mut document, 1, 0, BattleHex::new(Terrain::Road, 0));
-        put(&mut document, 2, 1, BattleHex::new(Terrain::HeavyForest, 0));
-        put(&mut document, 1, 2, BattleHex::new(Terrain::Building, 4));
-        put(&mut document, 2, 2, BattleHex::at_level(20));
-        let woods_on_rough = BattleHex::new(Terrain::Rough, 0).with_woods(Some(Woods::Light));
+        put(&mut document, 0, 0, Hex::new(Terrain::Water, 0));
+        put(&mut document, 1, 0, Hex::new(Terrain::Road, 0));
+        put(&mut document, 2, 1, Hex::new(Terrain::HeavyForest, 0));
+        put(&mut document, 1, 2, Hex::new(Terrain::Building, 4));
+        put(&mut document, 2, 2, Hex::at_level(20));
+        let woods_on_rough = Hex::new(Terrain::Rough, 0).with_woods(Some(Woods::Light));
         put(&mut document, 2, 0, woods_on_rough);
         let pixels = render(
             &device,
@@ -666,7 +666,7 @@ mod tests {
         assert_eq!(pixels[pixels.len() - 4..], [0, 0, 0, 0]);
 
         let applied = pipeline.hexes.as_ref().unwrap().applied;
-        put(&mut document, 0, 1, BattleHex::new(Terrain::Snow, 0));
+        put(&mut document, 0, 1, Hex::new(Terrain::Snow, 0));
         let pixels = render(
             &device,
             &queue,
@@ -688,7 +688,7 @@ mod tests {
     fn label_ink(
         device: &wgpu::Device,
         queue: &wgpu::Queue,
-        hex: BattleHex,
+        hex: Hex,
     ) -> impl Fn(f32, f32) -> bool {
         let (size, radius) = (LABEL_FRAME, LABEL_RADIUS);
         let mut document = Document::new(1, 1).unwrap();
@@ -709,7 +709,7 @@ mod tests {
     }
 
     /// Which of the three label rows (top, middle, bottom) are written on a lone `hex`.
-    fn inked_rows(device: &wgpu::Device, queue: &wgpu::Queue, hex: BattleHex) -> [bool; 3] {
+    fn inked_rows(device: &wgpu::Device, queue: &wgpu::Queue, hex: Hex) -> [bool; 3] {
         let inked = label_ink(device, queue, hex);
         let steps =
             |from: f32, to: f32| (0..=20).map(move |step| from + (to - from) * step as f32 / 20.0);
@@ -726,14 +726,14 @@ mod tests {
             return;
         };
         let rows = |hex| inked_rows(&device, &queue, hex);
-        let bridge = BattleHex::new(Terrain::Bridge, 2).with_level(4);
+        let bridge = Hex::new(Terrain::Bridge, 2).with_level(4);
         assert_eq!(rows(bridge), [true, true, true]);
-        let water = BattleHex::new(Terrain::Water, 3).with_level(2);
+        let water = Hex::new(Terrain::Water, 3).with_level(2);
         assert_eq!(rows(water), [true, false, true]);
-        let building = BattleHex::new(Terrain::Building, 3);
+        let building = Hex::new(Terrain::Building, 3);
         assert_eq!(rows(building), [true, true, false]);
-        assert_eq!(rows(BattleHex::at_level(5)), [true, false, false]);
-        assert_eq!(rows(BattleHex::at_level(0)), [false, false, false]);
+        assert_eq!(rows(Hex::at_level(5)), [true, false, false]);
+        assert_eq!(rows(Hex::at_level(0)), [false, false, false]);
     }
 
     /// Depth is written with a minus sign and a bridge deck, building or wall height with a plus
@@ -751,15 +751,15 @@ mod tests {
         let inked =
             |hex, row: f32, (dx, dy): (f32, f32)| label_ink(&device, &queue, hex)(dx, row + dy);
         let (middle, bottom) = (0.0, 0.5);
-        let deep = BattleHex::new(Terrain::Water, 3);
+        let deep = Hex::new(Terrain::Water, 3);
         assert!(inked(deep, bottom, bar));
         assert!(!inked(deep, bottom, stem));
-        assert!(!inked(BattleHex::new(Terrain::Water, 0), bottom, bar));
-        let bridge = BattleHex::new(Terrain::Bridge, 3).with_level(4);
+        assert!(!inked(Hex::new(Terrain::Water, 0), bottom, bar));
+        let bridge = Hex::new(Terrain::Bridge, 3).with_level(4);
         assert!(inked(bridge, middle, bar));
         assert!(inked(bridge, middle, stem));
-        assert!(!inked(BattleHex::new(Terrain::Bridge, 0), middle, bar));
-        let building = BattleHex::new(Terrain::Building, 3).with_level(5);
+        assert!(!inked(Hex::new(Terrain::Bridge, 0), middle, bar));
+        let building = Hex::new(Terrain::Building, 3).with_level(5);
         assert!(inked(building, middle, stem));
     }
 }

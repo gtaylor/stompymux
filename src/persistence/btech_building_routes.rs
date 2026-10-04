@@ -1,8 +1,7 @@
 //! Selective persistence of return-map links and interior arrival points in map-object rows.
 use super::write::{Cell, Fields, row};
 use crate::{
-    BattleBuildingEntryPoint, BattleBuildingExit, BattleHexCoordinate, ObjectId, StoredBattleMap,
-    World,
+    BattleBuildingEntryPoint, BattleBuildingExit, HexCoordinate, ObjectId, StoredBattleMap, World,
 };
 use anyhow::{Context, Result, ensure};
 use sqlx::{Row, SqliteConnection};
@@ -32,7 +31,7 @@ pub(super) async fn load(
                 ordinal,
                 BattleBuildingExit {
                     destination,
-                    coordinate: BattleHexCoordinate {
+                    coordinate: HexCoordinate {
                         x: record.try_get("x")?,
                         y: record.try_get("y")?,
                     },
@@ -44,7 +43,7 @@ pub(super) async fn load(
             continue;
         }
         let point = BattleBuildingEntryPoint {
-            coordinate: BattleHexCoordinate {
+            coordinate: HexCoordinate {
                 x: record.try_get("x")?,
                 y: record.try_get("y")?,
             },

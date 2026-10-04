@@ -18,8 +18,7 @@ async fn field_with_classic(
         &mut world,
         map,
         "network.map",
-        BattleMapAsset::from_cells(&format!("20 20\n{}", (".0".repeat(20) + "\n").repeat(20)))
-            .unwrap(),
+        MapAsset::from_cells(&format!("20 20\n{}", (".0".repeat(20) + "\n").repeat(20))).unwrap(),
     )
     .unwrap();
     let mut units = Vec::new();
@@ -445,7 +444,7 @@ async fn vehicle_hex_aim_reuses_weapon_terms_modes_and_read_only_lua() {
     let (shooter, pilot) = units[0];
     let target = units[6].0;
     let position = world.btech.vehicles()[&target].position().unwrap();
-    let hex = BattleHexCoordinate {
+    let hex = HexCoordinate {
         x: i32::from(position.x),
         y: i32::from(position.y),
     };
@@ -529,7 +528,7 @@ async fn vehicle_hex_aim_reuses_weapon_terms_modes_and_read_only_lua() {
         battle_hex_aim_modifiers(
             &world,
             shooter,
-            BattleHexCoordinate { x: -1, y: 0 },
+            HexCoordinate { x: -1, y: 0 },
             index,
             4,
             rules
@@ -562,7 +561,7 @@ async fn vehicle_hex_aim_shares_mixed_network_range_and_rejects_stinger() {
         hotload_half_minimum: false,
         override_weapon_arcs: false,
     };
-    let hex = BattleHexCoordinate { x: 10, y: 14 };
+    let hex = HexCoordinate { x: 10, y: 14 };
     let aim = battle_hex_aim_modifiers(&world, shooter, hex, index, 4, rules).unwrap();
     assert_eq!(
         aim.modifiers.network_range.unwrap().source,

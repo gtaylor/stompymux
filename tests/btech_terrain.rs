@@ -3,7 +3,7 @@ use crate::support;
 use sqlx::{Connection, SqliteConnection};
 use std::{cell::Cell, rc::Rc};
 use stompymux_rs::{
-    BattleMapAsset, Config, Flag, Kind, ObjectId, Scripts, ShutdownRequest, Terrain, World,
+    Config, Flag, Kind, MapAsset, ObjectId, Scripts, ShutdownRequest, Terrain, World,
     create_battle_map, dbck, persistence, reload_battle_map,
 };
 
@@ -42,7 +42,7 @@ async fn create(config: &Config, world: &mut World, id: ObjectId) {
         world,
         id,
         "asymmetric.map",
-        BattleMapAsset::from_cells(SOURCE).unwrap(),
+        MapAsset::from_cells(SOURCE).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(world, id, support::FIXTURE_DICE_SEED);
@@ -96,7 +96,7 @@ async fn dictionary_round_trip_is_per_map_and_preserves_unowned_columns() {
         &mut loaded,
         id,
         "reload.map",
-        BattleMapAsset::from_cells(RELOAD).unwrap(),
+        MapAsset::from_cells(RELOAD).unwrap(),
     )
     .unwrap();
     assert_eq!(
@@ -162,7 +162,7 @@ async fn dictionary_round_trip_is_per_map_and_preserves_unowned_columns() {
         &mut loaded,
         second,
         "water.map",
-        BattleMapAsset::from_cells("1 1\n~9\n").unwrap(),
+        MapAsset::from_cells("1 1\n~9\n").unwrap(),
     )
     .unwrap();
     persistence::save(&config.database(), &loaded)
@@ -392,7 +392,7 @@ async fn lua_map_operations_participate_in_callback_rollback_and_checking_guards
             &mut world,
             id,
             "different.map",
-            BattleMapAsset::from_cells("1 1\n.0\n").unwrap()
+            MapAsset::from_cells("1 1\n.0\n").unwrap()
         )
         .is_err()
     );
@@ -464,7 +464,7 @@ async fn reload_rejects_unowned_objects_and_preserves_deferred_rows() {
         &mut world,
         id,
         "reload.map",
-        BattleMapAsset::from_cells(RELOAD).unwrap(),
+        MapAsset::from_cells(RELOAD).unwrap(),
     )
     .unwrap();
     let error = persistence::save(&config.database(), &world)
@@ -582,13 +582,11 @@ async fn map_condition_commands_and_lua_validate_and_rollback() {
 
 #[tokio::test]
 async fn decoration_rows_preserve_extensions_and_reject_corrupt_lifetimes() {
-    use stompymux_rs::{
-        BattleDecoration, BattleDecorationKind, BattleHexCoordinate, set_map_decoration,
-    };
+    use stompymux_rs::{BattleDecoration, DecorationKind, HexCoordinate, set_map_decoration};
     let (_dir, config, mut world, id, mut sql) = fixture().await;
     create(&config, &mut world, id).await;
-    let coordinate = BattleHexCoordinate { x: 0, y: 0 };
-    let smoke = BattleDecoration::new(BattleDecorationKind::Smoke, 100, None);
+    let coordinate = HexCoordinate { x: 0, y: 0 };
+    let smoke = BattleDecoration::new(DecorationKind::Smoke, 100, None);
     set_map_decoration(&mut world, id, coordinate, Some(smoke)).unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
     sqlx::raw_sql("ALTER TABLE btech_map_decorations ADD COLUMN opaque TEXT DEFAULT 'retained'")
@@ -637,8 +635,7 @@ async fn decoration_rows_preserve_extensions_and_reject_corrupt_lifetimes() {
 #[tokio::test]
 async fn wind_and_fire_randomness_survive_reload_and_reject_missing_streams() {
     use stompymux_rs::{
-        BattleDecoration, BattleDecorationKind, BattleHexCoordinate, set_map_decoration,
-        set_map_wind,
+        BattleDecoration, DecorationKind, HexCoordinate, set_map_decoration, set_map_wind,
     };
     let (_dir, config, mut world, id, mut sql) = fixture().await;
     create(&config, &mut world, id).await;
@@ -652,16 +649,12 @@ async fn wind_and_fire_randomness_survive_reload_and_reject_missing_streams() {
         assert_eq!(world.btech.maps()[&id].fire_spread_interval(), interval);
     }
     set_map_wind(&mut world, id, 240, 35).unwrap();
-    let coordinate = BattleHexCoordinate { x: 0, y: 0 };
+    let coordinate = HexCoordinate { x: 0, y: 0 };
     set_map_decoration(
         &mut world,
         id,
         coordinate,
-        Some(BattleDecoration::new(
-            BattleDecorationKind::Fire,
-            120,
-            Some(60),
-        )),
+        Some(BattleDecoration::new(DecorationKind::Fire, 120, Some(60))),
     )
     .unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
@@ -679,7 +672,7 @@ async fn wind_and_fire_randomness_survive_reload_and_reject_missing_streams() {
         &mut world,
         id,
         "reload.map",
-        BattleMapAsset::from_cells(RELOAD).unwrap(),
+        MapAsset::from_cells(RELOAD).unwrap(),
     )
     .unwrap();
     assert_eq!(
@@ -706,11 +699,7 @@ async fn wind_and_fire_randomness_survive_reload_and_reject_missing_streams() {
         &mut world,
         id,
         coordinate,
-        Some(BattleDecoration::new(
-            BattleDecorationKind::Fire,
-            60,
-            Some(60),
-        )),
+        Some(BattleDecoration::new(DecorationKind::Fire, 60, Some(60))),
     )
     .unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
@@ -728,17 +717,14 @@ async fn wind_and_fire_randomness_survive_reload_and_reject_missing_streams() {
 #[tokio::test]
 async fn permanent_decorations_survive_idle_and_mixed_timer_service() {
     use stompymux_rs::{
-        BattleDecoration, BattleDecorationKind, BattleHexCoordinate, advance_map_fire,
-        advance_map_smoke, map_fire_pending, map_smoke_pending, set_map_decoration,
+        BattleDecoration, DecorationKind, HexCoordinate, advance_map_fire, advance_map_smoke,
+        map_fire_pending, map_smoke_pending, set_map_decoration,
     };
     let (_dir, config, mut world, id, _sql) = fixture().await;
     create(&config, &mut world, id).await;
-    let fire = BattleHexCoordinate { x: 0, y: 0 };
-    let smoke = BattleHexCoordinate { x: 1, y: 0 };
-    for (coordinate, kind) in [
-        (fire, BattleDecorationKind::Fire),
-        (smoke, BattleDecorationKind::Smoke),
-    ] {
+    let fire = HexCoordinate { x: 0, y: 0 };
+    let smoke = HexCoordinate { x: 1, y: 0 };
+    for (coordinate, kind) in [(fire, DecorationKind::Fire), (smoke, DecorationKind::Smoke)] {
         set_map_decoration(
             &mut world,
             id,
@@ -760,14 +746,8 @@ async fn permanent_decorations_survive_idle_and_mixed_timer_service() {
     assert_eq!(replay.btech, permanent);
     for candidate in [&mut world, &mut replay] {
         for (coordinate, kind) in [
-            (
-                BattleHexCoordinate { x: 0, y: 1 },
-                BattleDecorationKind::Fire,
-            ),
-            (
-                BattleHexCoordinate { x: 1, y: 1 },
-                BattleDecorationKind::Smoke,
-            ),
+            (HexCoordinate { x: 0, y: 1 }, DecorationKind::Fire),
+            (HexCoordinate { x: 1, y: 1 }, DecorationKind::Smoke),
         ] {
             set_map_decoration(
                 candidate,
@@ -806,11 +786,7 @@ async fn permanent_decorations_survive_idle_and_mixed_timer_service() {
             &mut world,
             id,
             fire,
-            Some(BattleDecoration::new(
-                BattleDecorationKind::Fire,
-                0,
-                Some(1)
-            ))
+            Some(BattleDecoration::new(DecorationKind::Fire, 0, Some(1)))
         )
         .is_err()
     );
@@ -820,7 +796,7 @@ async fn permanent_decorations_survive_idle_and_mixed_timer_service() {
         &mut world,
         id,
         fire,
-        Some(BattleDecoration::new(BattleDecorationKind::Smoke, 1, None)),
+        Some(BattleDecoration::new(DecorationKind::Smoke, 1, None)),
     )
     .unwrap();
     advance_map_smoke(&mut world);

@@ -19,7 +19,7 @@ fn aircraft(world: &mut World, id: ObjectId, map: ObjectId, falling: bool) {
     })
     .unwrap();
     saved["motion"] = serde_json::to_value(BattleMotion::stationary(
-        BattleHexCoordinate { x: 0, y: 0 }.center(),
+        HexCoordinate { x: 0, y: 0 }.center(),
     ))
     .unwrap();
     saved["vtol_flight"] = serde_json::to_value(BattleVtolFlight {
@@ -50,7 +50,7 @@ async fn crashes_share_packets_water_reduction_and_saved_replay() {
             &mut base,
             map,
             "crash",
-            BattleMapAsset::from_cells(&format!("1 1\n{terrain}\n")).unwrap(),
+            MapAsset::from_cells(&format!("1 1\n{terrain}\n")).unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut base, map, support::FIXTURE_DICE_SEED);
@@ -107,7 +107,7 @@ async fn safe_crash_stops_descent_without_damage_and_invalid_crashes_are_atomic(
         &mut world,
         map,
         "safe",
-        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+        MapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -156,7 +156,7 @@ async fn nested_mine_admission_failure_rolls_back_crash_damage_and_dice() {
         &mut world,
         map,
         "mined",
-        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+        MapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -165,7 +165,7 @@ async fn nested_mine_admission_failure_rolls_back_crash_damage_and_dice() {
         map,
         0,
         Some(BattleMinefield {
-            coordinate: BattleHexCoordinate { x: 0, y: 0 },
+            coordinate: HexCoordinate { x: 0, y: 0 },
             kind: BattleMineKind::Command,
             strength: 1,
             extra: 0,
@@ -215,7 +215,7 @@ async fn descent_commits_crashes_at_shared_clock_boundaries_and_survives_reload(
             &mut world,
             map,
             "descent",
-            BattleMapAsset::from_cells(&format!("1 1\n{terrain}\n")).unwrap(),
+            MapAsset::from_cells(&format!("1 1\n{terrain}\n")).unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -295,7 +295,7 @@ async fn movement_dispatch_advances_falls_and_powered_flight_exactly_once() {
         &mut world,
         map,
         "dispatch",
-        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+        MapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -355,7 +355,7 @@ async fn host_movement_uses_character_path_and_rolls_back_invalid_placement() {
         &mut world,
         map,
         "host",
-        BattleMapAsset::from_cells("1 1\n.3\n").unwrap(),
+        MapAsset::from_cells("1 1\n.3\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -415,7 +415,7 @@ async fn world_contacts_commit_clear_flight_landing_crash_and_water_with_replay(
             &mut world,
             map,
             "contact",
-            BattleMapAsset::from_cells(&format!("1 1\n{tile}\n")).unwrap(),
+            MapAsset::from_cells(&format!("1 1\n{tile}\n")).unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -512,7 +512,7 @@ async fn world_contact_failure_restores_precontact_height_position_and_dice() {
         &mut world,
         map,
         "contact",
-        BattleMapAsset::from_cells("1 1\n.1\n").unwrap(),
+        MapAsset::from_cells("1 1\n.1\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -521,7 +521,7 @@ async fn world_contact_failure_restores_precontact_height_position_and_dice() {
         map,
         0,
         Some(BattleMinefield {
-            coordinate: BattleHexCoordinate { x: 0, y: 0 },
+            coordinate: HexCoordinate { x: 0, y: 0 },
             kind: BattleMineKind::Command,
             strength: 1,
             extra: 0,
@@ -561,7 +561,7 @@ async fn launch_flight_and_fuel_exhaustion_share_one_restartable_tick() {
         &mut base,
         map,
         "launch",
-        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+        MapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut base, map, support::FIXTURE_DICE_SEED);
@@ -642,7 +642,7 @@ async fn launch_rechecks_ceiling_and_unlinked_boundaries_stop_horizontal_flight(
         &mut world,
         map,
         "ceiling",
-        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+        MapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -709,7 +709,7 @@ async fn shared_control_commands_apply_aircraft_velocity_and_rotor_limits() {
         &mut world,
         map,
         "controls",
-        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+        MapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -797,7 +797,7 @@ async fn shared_control_commands_apply_aircraft_velocity_and_rotor_limits() {
 async fn boundary_resolution_reuses_the_first_exit_and_preserves_saved_replay() {
     let (_dir, config, mut base) = support::isolated_world().await;
     let map = base.create(&config, "Boundary field".into(), Kind::Room);
-    let asset = BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap();
+    let asset = MapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap();
     create_battle_map(&mut base, map, "boundary", asset.clone()).unwrap();
     support::seed_object_dice(&mut base, map, support::FIXTURE_DICE_SEED);
     let id = base.create(&config, "Boundary aircraft".into(), Kind::Thing);
@@ -809,7 +809,7 @@ async fn boundary_resolution_reuses_the_first_exit_and_preserves_saved_replay() 
         state["vehicles"][id.0.to_string()]["position"]["x"] = 1.into();
         state["vehicles"][id.0.to_string()]["position"]["y"] = 1.into();
         state["vehicles"][id.0.to_string()]["motion"] = serde_json::to_value(BattleMotion {
-            point: BattleHexCoordinate { x: 1, y: 1 }.center(),
+            point: HexCoordinate { x: 1, y: 1 }.center(),
             heading,
             desired_heading: heading,
             speed: 193.5,
@@ -829,7 +829,7 @@ async fn boundary_resolution_reuses_the_first_exit_and_preserves_saved_replay() 
         };
         assert!(asset.hex(hex.x, hex.y).is_none());
         assert!(asset.hex(last.x, last.y).is_some());
-        assert_ne!(last, BattleHexCoordinate { x: 1, y: 1 });
+        assert_ne!(last, HexCoordinate { x: 1, y: 1 });
         let before = world.btech.clone();
         assert_eq!(pure, before.vehicles()[&id]);
         let mut replay = world.clone();
@@ -878,7 +878,7 @@ async fn an_intermediate_ground_collision_takes_precedence_over_a_map_exit() {
         &mut world,
         map,
         "hill",
-        BattleMapAsset::from_cells("1 3\n.0\n^9\n.0\n").unwrap(),
+        MapAsset::from_cells("1 3\n.0\n^9\n.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -888,7 +888,7 @@ async fn an_intermediate_ground_collision_takes_precedence_over_a_map_exit() {
     state["maps"][map.0.to_string()]["movement_modifier"] = 10000.into();
     state["vehicles"][id.0.to_string()]["position"]["y"] = 2.into();
     state["vehicles"][id.0.to_string()]["motion"] = serde_json::to_value(BattleMotion {
-        point: BattleHexCoordinate { x: 0, y: 2 }.center(),
+        point: HexCoordinate { x: 0, y: 2 }.center(),
         heading: 0.0,
         desired_heading: 0.0,
         speed: 100.0,
@@ -903,7 +903,7 @@ async fn an_intermediate_ground_collision_takes_precedence_over_a_map_exit() {
         result,
         BattleVtolEnvironment::Obstacle {
             path: BattleVtolPath::Contact {
-                hex: BattleHexCoordinate { x: 0, y: 1 },
+                hex: HexCoordinate { x: 0, y: 1 },
                 contact: BattleVtolSurfaceContact::Elevation,
                 ..
             },
@@ -935,7 +935,7 @@ async fn movement_dispatch_recovers_powered_aircraft_without_impact_or_dice() {
         &mut world,
         map,
         "recovery",
-        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+        MapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -988,7 +988,7 @@ async fn destroyed_aircraft_descend_and_settle_with_replay_and_no_second_pilot_l
             &mut world,
             map,
             "wreck",
-            BattleMapAsset::from_cells(&format!("1 1\n{terrain}\n")).unwrap(),
+            MapAsset::from_cells(&format!("1 1\n{terrain}\n")).unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);

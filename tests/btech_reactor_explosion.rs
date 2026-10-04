@@ -74,8 +74,7 @@ async fn reactor_blast_cross_chassis_and_atomic_replay() {
         &mut world,
         map,
         "blast",
-        BattleMapAsset::from_cells(&format!("7 7\n{}", "\"0\"0\"0\"0\"0\"0\"0\n".repeat(7)))
-            .unwrap(),
+        MapAsset::from_cells(&format!("7 7\n{}", "\"0\"0\"0\"0\"0\"0\"0\n".repeat(7))).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -118,13 +117,13 @@ async fn reactor_blast_cross_chassis_and_atomic_replay() {
             .any(|h| [source, outside, high, low].contains(&h.unit))
     );
     assert_eq!(report.ignited.len(), 18);
-    assert!(!report.ignited.contains(&BattleHexCoordinate { x: 3, y: 3 }));
+    assert!(!report.ignited.contains(&HexCoordinate { x: 3, y: 3 }));
     for coordinate in &report.ignited {
         let decoration = scripts.world().btech.maps()[&map]
             .decoration(*coordinate)
             .unwrap()
             .unwrap();
-        assert_eq!(decoration.kind, BattleDecorationKind::Fire);
+        assert_eq!(decoration.kind, DecorationKind::Fire);
         assert!((60..=180).contains(&decoration.remaining));
     }
     for id in targets {
@@ -203,7 +202,7 @@ async fn reactor_casualties_and_callback_failure_are_atomic() {
         &mut world,
         map,
         "crew",
-        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+        MapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -300,7 +299,7 @@ async fn chain_fixture() -> (
         &mut world,
         map,
         "chain",
-        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+        MapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);

@@ -1,6 +1,6 @@
 //! Measurements between placed units: range, bearing, elevation and altitude. The hex
 //! geometry they build on lives in `stompymux-map`.
-use super::BattleHexCoordinate;
+use super::HexCoordinate;
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
@@ -55,11 +55,11 @@ pub fn unit_range(world: &World, first: ObjectId, second: ObjectId) -> Result<Ba
     let height = |x, y| -> Result<f64> {
         Ok(f64::from(map.base_hex(i64::from(x), i64::from(y))?.standing_height()) / 5.0)
     };
-    let a = BattleHexCoordinate {
+    let a = HexCoordinate {
         x: i32::from(first.x),
         y: i32::from(first.y),
     };
-    let b = BattleHexCoordinate {
+    let b = HexCoordinate {
         x: i32::from(second.x),
         y: i32::from(second.y),
     };
@@ -129,7 +129,7 @@ pub(super) fn unit_submerged(world: &World, id: ObjectId) -> Result<bool> {
 
 impl super::BattleUnit {
     /// Continuous altitude for geometry and external transport; terrain effects retain their integer resolver.
-    pub(super) fn altitude(&self, tile: super::BattleHex) -> f64 {
+    pub(super) fn altitude(&self, tile: super::Hex) -> f64 {
         self.retained_altitude()
             .unwrap_or_else(|| f64::from(tile.standing_height()))
     }
@@ -150,7 +150,7 @@ impl super::BattleUnit {
 
 impl super::BattleVehicle {
     /// Continuous aircraft or carried height, falling back to the chassis-specific terrain support.
-    pub(super) fn altitude(&self, tile: super::BattleHex) -> f64 {
+    pub(super) fn altitude(&self, tile: super::Hex) -> f64 {
         self.vtol_flight()
             .map(|flight| flight.altitude)
             .or_else(|| self.orbital_drop().map(|drop| f64::from(drop.elevation())))

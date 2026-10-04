@@ -11,7 +11,7 @@ async fn generic_decoration_records_survive_reload_and_resizes_that_keep_their_h
         &mut world,
         map,
         "grid",
-        BattleMapAsset::from_cells("2 2\n#1#1\n#1#1\n").unwrap(),
+        MapAsset::from_cells("2 2\n#1#1\n#1#1\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -48,7 +48,7 @@ async fn generic_decoration_records_survive_reload_and_resizes_that_keep_their_h
             BattleStaticDecorationKind::Decoration,
             5,
             Some(BattleStaticDecoration {
-                coordinate: BattleHexCoordinate { x: -1, y: 1 },
+                coordinate: HexCoordinate { x: -1, y: 1 },
                 ..definition
             })
         )
@@ -61,7 +61,7 @@ async fn generic_decoration_records_survive_reload_and_resizes_that_keep_their_h
         BattleStaticDecorationKind::Decoration,
         5,
         Some(BattleStaticDecoration {
-            coordinate: BattleHexCoordinate { x: 0, y: 1 },
+            coordinate: HexCoordinate { x: 0, y: 1 },
             restored_terrain: Some(Terrain::Grassland),
             ..definition
         }),
@@ -89,7 +89,7 @@ async fn generic_decoration_records_survive_reload_and_resizes_that_keep_their_h
         &mut world,
         map,
         "ice",
-        BattleMapAsset::from_cells("2 2\n-3-3\n-3-3\n").unwrap(),
+        MapAsset::from_cells("2 2\n-3-3\n-3-3\n").unwrap(),
     )
     .unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
@@ -108,7 +108,7 @@ async fn generic_decoration_records_survive_reload_and_resizes_that_keep_their_h
         .values()
         .map(|record| record.coordinate)
         .collect();
-    assert_eq!(kept, [BattleHexCoordinate { x: 0, y: 1 }], "{response}");
+    assert_eq!(kept, [HexCoordinate { x: 0, y: 1 }], "{response}");
     assert_eq!(
         saved.btech.maps()[&map].hex(0, 1).unwrap().terrain(),
         Terrain::Ice

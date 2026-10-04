@@ -1,5 +1,5 @@
 //! Shared visible firing messages for Mech and vehicle actions.
-use super::{BattleHexCoordinate, BattleNotice, BattleWeapon};
+use super::{BattleNotice, BattleWeapon, HexCoordinate};
 use crate::ObjectId;
 
 /// Target-independent report facts used by the common formatter.
@@ -13,7 +13,7 @@ pub(super) struct ShotFeedback {
     pub glancing: bool,
     pub hit: bool,
     pub observer_hit: bool,
-    pub coordinate: Option<BattleHexCoordinate>,
+    pub coordinate: Option<HexCoordinate>,
     pub pilot_notices: Vec<super::BattlePilotNotice>,
     pub notices: Vec<BattleNotice>,
 }
@@ -42,7 +42,7 @@ pub(super) fn messages(
     let coordinate_fire = report.coordinate.is_some();
     let target_hex = report
         .coordinate
-        .unwrap_or(super::BattleHexCoordinate { x: 0, y: 0 });
+        .unwrap_or(super::HexCoordinate { x: 0, y: 0 });
     let catalog_name = report.weapon.name();
     let weapon_name = if coordinate_fire {
         catalog_name.split_once('.').expect("catalog namespace").1

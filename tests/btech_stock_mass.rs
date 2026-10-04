@@ -28,8 +28,7 @@ async fn fixture(
         &mut world,
         map,
         "stock",
-        BattleMapAsset::from_cells(&format!("10 10\n{}", (".0".repeat(10) + "\n").repeat(10)))
-            .unwrap(),
+        MapAsset::from_cells(&format!("10 10\n{}", (".0".repeat(10) + "\n").repeat(10))).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);

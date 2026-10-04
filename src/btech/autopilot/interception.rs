@@ -1,6 +1,6 @@
 //! Bounded motion estimates from visible hex-center samples only; no world or dice access.
 use super::navigation::Hex;
-use crate::{BattleHexCoordinate, BattlePoint, BattlePosition, ObjectId};
+use crate::{BattlePosition, HexCoordinate, ObjectId, Point};
 
 /// Fixed, bounded policies for isolated pursuit comparisons; not a game setting.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, serde::Serialize)]
@@ -70,8 +70,8 @@ pub(crate) struct Pursuit {
     engaged: bool,
 }
 
-fn center(p: BattlePosition) -> BattlePoint {
-    BattleHexCoordinate {
+fn center(p: BattlePosition) -> Point {
+    HexCoordinate {
         x: i32::from(p.x),
         y: i32::from(p.y),
     }
@@ -275,7 +275,7 @@ impl Pursuit {
         let own = center(own);
         for horizon in 1..=horizon_limit {
             let scale = (horizon as f64).min(f64::from(lead_limit) / v.0.hypot(v.1));
-            let point = BattlePoint {
+            let point = Point {
                 x: b.x + v.0 * scale,
                 y: b.y + v.1 * scale,
             };

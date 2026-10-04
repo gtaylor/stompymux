@@ -1,5 +1,5 @@
 //! Bounded, read-only artillery interception prediction using the live chassis motion proposals.
-use super::{BattleHexCoordinate, BattleMovementRules, BattlePoint, BattleVehicleMovement};
+use super::{BattleMovementRules, BattleVehicleMovement, HexCoordinate, Point};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
@@ -7,8 +7,8 @@ use serde::Serialize;
 /// Predicted horizontal impact point; terrain stops freeze the last valid predicted location.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct BattleArtilleryPrediction {
-    pub coordinate: BattleHexCoordinate,
-    pub point: BattlePoint,
+    pub coordinate: HexCoordinate,
+    pub point: Point,
     pub seconds: u16,
     pub stopped: bool,
 }
@@ -41,7 +41,7 @@ pub fn predict_artillery_target(
         .and_then(|unit| unit.motion())
         .or_else(|| vehicle.and_then(|unit| unit.motion()))
         .context("Target motion is unavailable")?;
-    let mut coordinate = BattleHexCoordinate {
+    let mut coordinate = HexCoordinate {
         x: i32::from(position.x),
         y: i32::from(position.y),
     };
@@ -90,7 +90,7 @@ pub fn predict_artillery_target(
             coordinate = cell;
             motion.point = point;
             let movement = vehicle.map(|unit| unit.definition().movement);
-            let elevation = |tile: super::BattleHex| {
+            let elevation = |tile: super::Hex| {
                 let height = tile.surface_height();
                 if movement == Some(BattleVehicleMovement::Hover) {
                     height.max(tile.water_line())

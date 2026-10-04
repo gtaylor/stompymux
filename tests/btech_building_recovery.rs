@@ -14,7 +14,7 @@ async fn fixture(integrity: i64) -> (tempfile::TempDir, Config, World, ObjectId,
             &mut world,
             id,
             "workshop",
-            BattleMapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
+            MapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
@@ -38,7 +38,7 @@ async fn fixture(integrity: i64) -> (tempfile::TempDir, Config, World, ObjectId,
             exterior,
             ordinal,
             Some(BattleBuildingEntrance {
-                coordinate: BattleHexCoordinate { x, y: 0 },
+                coordinate: HexCoordinate { x, y: 0 },
                 interior,
                 data_char: 0,
                 data_short: 0,

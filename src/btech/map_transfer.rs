@@ -167,7 +167,7 @@ pub(super) fn place(
     world.validate_move(id, position.map)?;
     let slot = super::map_slots::placement_slot(world, id, position.map)?;
     let label = super::map_slots::placement_label(world, id, position.map, slot)?;
-    let point = BattleHexCoordinate {
+    let point = HexCoordinate {
         x: i32::from(position.x),
         y: i32::from(position.y),
     }

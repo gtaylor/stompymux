@@ -237,7 +237,7 @@ async fn relay_fixture() -> (tempfile::TempDir, Config, World, ObjectId, Vec<Obj
         &mut world,
         map,
         "radio.map",
-        BattleMapAsset::from_cells(&format!("3 300\n{}", ".0.0.0\n".repeat(300))).unwrap(),
+        MapAsset::from_cells(&format!("3 300\n{}", ".0.0.0\n".repeat(300))).unwrap(),
     )
     .unwrap();
     let mut units = Vec::new();
@@ -641,7 +641,7 @@ async fn radio_communication_skill_is_captured_only_on_startup_completion() {
         &mut world,
         map,
         "skill.map",
-        BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
+        MapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -733,7 +733,7 @@ async fn sendchannel_native_lua_modes_and_frequency_mines_share_one_action() {
             map,
             0,
             Some(BattleMinefield {
-                coordinate: BattleHexCoordinate { x: 1, y: 250 },
+                coordinate: HexCoordinate { x: 1, y: 250 },
                 kind: BattleMineKind::Command,
                 strength,
                 extra: 42,
@@ -792,7 +792,7 @@ async fn transmission_failure_restores_delivery_dice_mines_and_outbox() {
         u["radio"][0]["mode"]["digital"] = false.into()
     });
     let mine = BattleMinefield {
-        coordinate: BattleHexCoordinate { x: 1, y: 60 },
+        coordinate: HexCoordinate { x: 1, y: 60 },
         kind: BattleMineKind::Command,
         strength: 0,
         extra: 42,
@@ -804,7 +804,7 @@ async fn transmission_failure_restores_delivery_dice_mines_and_outbox() {
         map,
         1,
         Some(BattleMinefield {
-            coordinate: BattleHexCoordinate { x: 1, y: 250 },
+            coordinate: HexCoordinate { x: 1, y: 250 },
             strength: 2,
             ..mine
         }),
@@ -1000,7 +1000,7 @@ async fn zero_frequency_audits_follow_map_character_flag_and_rollback_with_mines
         map,
         0,
         Some(BattleMinefield {
-            coordinate: BattleHexCoordinate { x: 1, y: 250 },
+            coordinate: HexCoordinate { x: 1, y: 250 },
             kind: BattleMineKind::Command,
             strength: 2,
             extra: 0,

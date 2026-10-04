@@ -4,7 +4,7 @@ use super::{
     navigation::{Goal, Hex},
     observations::AutopilotObservation,
 };
-use crate::{BattleHexCoordinate, BattlePosition, ObjectId, World};
+use crate::{BattlePosition, HexCoordinate, ObjectId, World};
 
 /// Temporary weapon readiness does not change the preferred position.
 pub(crate) fn preferred(observation: &AutopilotObservation) -> AutopilotRangeBand {
@@ -68,7 +68,7 @@ impl Engagement {
         let Some(motion) = super::steering::motion(world, id) else {
             return false;
         };
-        let target = BattleHexCoordinate {
+        let target = HexCoordinate {
             x: i32::from(self.target.x),
             y: i32::from(self.target.y),
         }
@@ -131,11 +131,11 @@ impl Engagement {
         let Some(map) = world.btech.maps().get(&self.target.map) else {
             return false;
         };
-        let here = BattleHexCoordinate {
+        let here = HexCoordinate {
             x: i32::from(hex.x),
             y: i32::from(hex.y),
         };
-        let there = BattleHexCoordinate {
+        let there = HexCoordinate {
             x: i32::from(self.target.x),
             y: i32::from(self.target.y),
         };

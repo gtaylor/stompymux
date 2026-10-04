@@ -10,8 +10,8 @@ use clap::{
 };
 use std::{fs, io::Read, path::PathBuf};
 use stompymux_mapgen::{
-    Amount, BattleMapFlag, Biome, MapSize, MapSpec, Relief, SettlementSpec, biome_catalog,
-    generate, spec_schema,
+    Amount, Biome, MapFlag, MapSize, MapSpec, Relief, SettlementSpec, biome_catalog, generate,
+    spec_schema,
 };
 
 /// Generate BattleTech battlefield maps for stompymux.
@@ -102,15 +102,14 @@ struct Generate {
     temperature: Option<i8>,
     /// Map flag; repeat for several. Replaces the biome's default flags.
     #[arg(long = "flag", value_parser = map_flag_parser())]
-    flags: Vec<BattleMapFlag>,
+    flags: Vec<MapFlag>,
 }
 
 /// Accept each map flag's name, listing every flag and its description in `--help`.
-fn map_flag_parser() -> impl TypedValueParser<Value = BattleMapFlag> {
-    let names =
-        BattleMapFlag::ALL.map(|flag| PossibleValue::new(flag.name()).help(flag.description()));
+fn map_flag_parser() -> impl TypedValueParser<Value = MapFlag> {
+    let names = MapFlag::ALL.map(|flag| PossibleValue::new(flag.name()).help(flag.description()));
     PossibleValuesParser::new(names)
-        .map(|name| BattleMapFlag::parse(&name).expect("the parser only accepts flag names"))
+        .map(|name| MapFlag::parse(&name).expect("the parser only accepts flag names"))
 }
 
 impl Generate {

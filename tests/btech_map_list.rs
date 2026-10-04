@@ -10,13 +10,13 @@ use stompymux_rs::*;
 async fn object_table_keeps_effect_creation_order_across_restart_and_rollback() {
     for (kind, stored, name, lua_name) in [
         (
-            BattleDecorationKind::Fire,
+            DecorationKind::Fire,
             BattleStaticDecorationKind::Fire,
             "FIRE",
             "add_fire",
         ),
         (
-            BattleDecorationKind::Smoke,
+            DecorationKind::Smoke,
             BattleStaticDecorationKind::Smoke,
             "SMOKE",
             "add_smoke",
@@ -28,7 +28,7 @@ async fn object_table_keeps_effect_creation_order_across_restart_and_rollback() 
             &mut world,
             map,
             "plain",
-            BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
+            MapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -38,7 +38,7 @@ async fn object_table_keeps_effect_creation_order_across_restart_and_rollback() 
             stored,
             0,
             Some(BattleStaticDecoration {
-                coordinate: BattleHexCoordinate { x: 2, y: 2 },
+                coordinate: HexCoordinate { x: 2, y: 2 },
                 restored_terrain: None,
                 object: ObjectId(1),
                 duration: 99,
@@ -50,7 +50,7 @@ async fn object_table_keeps_effect_creation_order_across_restart_and_rollback() 
             set_map_decoration(
                 &mut world,
                 map,
-                BattleHexCoordinate { x, y: 0 },
+                HexCoordinate { x, y: 0 },
                 Some(BattleDecoration::new(kind, 20, None)),
             )
             .unwrap();
@@ -63,7 +63,7 @@ async fn object_table_keeps_effect_creation_order_across_restart_and_rollback() 
                 set_map_decoration(
                     &mut world,
                     map,
-                    BattleHexCoordinate { x: 2, y: 0 },
+                    HexCoordinate { x: 2, y: 0 },
                     Some(BattleDecoration::new(kind, 30, None)),
                 )
                 .unwrap();

@@ -23,7 +23,7 @@ async fn fixture_movement(
         &mut world,
         map,
         "fire",
-        BattleMapAsset::from_cells("1 2\n.0\n.0\n").unwrap(),
+        MapAsset::from_cells("1 2\n.0\n.0\n").unwrap(),
     )
     .unwrap();
     let id = world.create(&config, "Burning vehicle".into(), Kind::Thing);
@@ -212,7 +212,7 @@ async fn standard_explosions_and_stationary_jelly_preserve_distinct_rules() {
         let _ = resolve_battle_vehicle_inferno_hit(&mut world, id, 1, rules).unwrap();
         assert_eq!(world.btech.vehicles()[&id].inferno_remaining(), 540);
         let map = world.btech.vehicles()[&id].position().unwrap().map;
-        assert!(battle_hex_illuminated(&world, map, BattleHexCoordinate { x: 0, y: 1 }).unwrap());
+        assert!(battle_hex_illuminated(&world, map, HexCoordinate { x: 0, y: 1 }).unwrap());
         assert!(begin_battle_vehicle_extinguishing(&mut world, id, ObjectId(1)).is_err());
         persistence::save(&config.database(), &world).await.unwrap();
         let mut restored = persistence::load(&config.database()).await.unwrap();
@@ -232,9 +232,7 @@ async fn standard_explosions_and_stationary_jelly_preserve_distinct_rules() {
                 .any(|notice| notice.text.contains("fires finally die"))
         );
         assert_eq!(restored.btech, base.btech);
-        assert!(
-            !battle_hex_illuminated(&restored, map, BattleHexCoordinate { x: 0, y: 1 }).unwrap()
-        );
+        assert!(!battle_hex_illuminated(&restored, map, HexCoordinate { x: 0, y: 1 }).unwrap());
     }
 }
 

@@ -9,7 +9,7 @@ fn tile(world: &mut World, map: ObjectId, x: usize, y: usize, terrain: &str, ele
     let mut state = serde_json::to_value(&world.btech).unwrap();
     let map = &mut state["maps"][map.0.to_string()];
     let width = map["width"].as_u64().unwrap() as usize;
-    map["terrain"][y * width + x] = serde_json::to_value(stompymux_rs::BattleHex::new(
+    map["terrain"][y * width + x] = serde_json::to_value(stompymux_rs::Hex::new(
         Terrain::from_name(terrain).unwrap(),
         elevation,
     ))
@@ -70,7 +70,7 @@ async fn melting_matches_combat_fractures_native_lua_and_restart() {
             &ordinary,
             &config,
             map,
-            BattleHexCoordinate { x: 0, y: 11 },
+            HexCoordinate { x: 0, y: 11 },
             BattleSurface::Ice,
             BattleFallRules::configured(&config),
         )
@@ -112,7 +112,7 @@ async fn freezing_water_preserves_submerged_mechs() {
         let report =
             change_battle_map_ice_action(&scripts, &config, actor, map, 100, BattleIceChange::Grow)
                 .unwrap();
-        assert_eq!(report.changed, vec![BattleHexCoordinate { x: 0, y: 11 }]);
+        assert_eq!(report.changed, vec![HexCoordinate { x: 0, y: 11 }]);
         assert!(report.fractures.is_empty());
         assert_eq!(scripts.world().btech.constructed_units()[&unit], before);
         assert_eq!(
@@ -237,13 +237,13 @@ async fn shoreline_passes_have_distinct_growth_and_melt_ordering() {
     state["maps"][map.0.to_string()]["width"] = 3.into();
     state["maps"][map.0.to_string()]["terrain"] = serde_json::json!(vec![
         serde_json::to_value(
-            stompymux_rs::BattleHex::new(stompymux_rs::Terrain::Grassland, 0)
+            stompymux_rs::Hex::new(stompymux_rs::Terrain::Grassland, 0)
         )
         .unwrap();
         36
     ]);
     world.btech = serde_json::from_value(state).unwrap();
-    let center = BattleHexCoordinate { x: 1, y: 5 };
+    let center = HexCoordinate { x: 1, y: 5 };
     let circle: Vec<_> = std::iter::once(center)
         .chain(center.neighbors().unwrap())
         .collect();

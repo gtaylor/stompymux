@@ -1,5 +1,5 @@
 //! Authored child-to-parent map links remain separate from rebuilt traversal objects.
-use super::{BattleHexCoordinate, StoredBattleMap};
+use super::{HexCoordinate, StoredBattleMap};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -14,17 +14,13 @@ pub enum BattleMapEntrance {
         distance: i32,
     },
     Exact {
-        coordinate: BattleHexCoordinate,
+        coordinate: HexCoordinate,
     },
 }
 
 impl BattleMapEntrance {
     /// Resolve an arrival on current dimensions; stale exact coordinates are skipped.
-    pub fn coordinate(
-        self,
-        map: &StoredBattleMap,
-        direction: usize,
-    ) -> Option<BattleHexCoordinate> {
+    pub fn coordinate(self, map: &StoredBattleMap, direction: usize) -> Option<HexCoordinate> {
         if map.width <= 0 || map.height <= 0 || direction >= 4 {
             return None;
         }
@@ -43,7 +39,7 @@ impl BattleMapEntrance {
                     2 => (map.width / 2, map.height - 1 - distance),
                     _ => (distance, map.height / 2),
                 };
-                Some(BattleHexCoordinate {
+                Some(HexCoordinate {
                     x: x.clamp(0, map.width - 1) as i32,
                     y: y.clamp(0, map.height - 1) as i32,
                 })
@@ -57,7 +53,7 @@ impl BattleMapEntrance {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BattleMapLink {
     pub parent: ObjectId,
-    pub coordinate: BattleHexCoordinate,
+    pub coordinate: HexCoordinate,
     #[serde(default)]
     pub entrances: [BattleMapEntrance; 4],
 }

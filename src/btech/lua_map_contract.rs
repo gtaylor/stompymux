@@ -11,7 +11,7 @@ pub struct BattleMapMember {
     pub id: ObjectId,
     pub label: String,
     pub position: BattlePosition,
-    pub point: BattlePoint,
+    pub point: Point,
     /// Continuous altitude in the C API's map-coordinate scale.
     pub z: f64,
 }
@@ -78,7 +78,7 @@ pub struct BattleMapSpatialPoint {
 }
 
 /// Project a hex center with the reference runtime's exact float32 arithmetic.
-pub fn battle_map_hex_point(coordinate: BattleHexCoordinate, z: f64) -> BattleMapSpatialPoint {
+pub fn battle_map_hex_point(coordinate: HexCoordinate, z: f64) -> BattleMapSpatialPoint {
     const ALPHA: f32 = 93.09773;
     const SCALE_MAP: f32 = 322.5;
     BattleMapSpatialPoint {
@@ -141,7 +141,7 @@ pub enum BattleMapLos {
 pub fn battle_map_hex_los(
     world: &World,
     observer: ObjectId,
-    target: BattleHexCoordinate,
+    target: HexCoordinate,
 ) -> Result<BattleMapLos> {
     let (terrain, _) = super::los::unit_hex_los(world, observer, target)?;
     Ok(if terrain.blocked {
@@ -185,7 +185,7 @@ pub fn place_battle_map_unit(
     world: &mut World,
     unit: ObjectId,
     map: ObjectId,
-    coordinate: BattleHexCoordinate,
+    coordinate: HexCoordinate,
     z: Option<i32>,
 ) -> Result<()> {
     world.attempt(|world| {
@@ -269,7 +269,7 @@ pub fn update_battle_map_links_trusted_action(
         Child {
             parent: ObjectId,
             child: ObjectId,
-            coordinate: BattleHexCoordinate,
+            coordinate: HexCoordinate,
             slot: u32,
             depth: usize,
         },
@@ -407,11 +407,7 @@ pub fn update_battle_map_links_trusted_action(
     Ok(())
 }
 
-fn substitute_hex_message(
-    text: &str,
-    origin: BattleHexCoordinate,
-    recipient: BattlePosition,
-) -> String {
+fn substitute_hex_message(text: &str, origin: HexCoordinate, recipient: BattlePosition) -> String {
     let current = origin.x == i32::from(recipient.x) && origin.y == i32::from(recipient.y);
     let mut output = String::new();
     let mut characters = text.chars().peekable();
@@ -442,12 +438,12 @@ fn substitute_hex_message(
 pub enum BattleMapEmitAudience {
     All,
     Range {
-        origin: BattlePoint,
+        origin: Point,
         z: Option<f64>,
         range: f64,
     },
     LineOfSight {
-        origin: BattleHexCoordinate,
+        origin: HexCoordinate,
     },
 }
 

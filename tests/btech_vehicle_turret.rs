@@ -10,7 +10,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
         &mut world,
         map,
         "test",
-        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+        MapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     let id = world.create(&config, "Vehicle".into(), Kind::Thing);
@@ -354,7 +354,7 @@ async fn automatic_turret_controls_tracking_gates_and_restart() {
         &mut world,
         id,
         ObjectId(1),
-        BattleHexCoordinate { x: 0, y: 0 },
+        HexCoordinate { x: 0, y: 0 },
         BattleHexTargetMode::Hex,
     )
     .unwrap();
@@ -446,7 +446,7 @@ async fn automatic_turret_tracks_moving_units_and_hexes() {
         &mut world,
         map,
         "tracking",
-        BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
+        MapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -485,7 +485,7 @@ async fn automatic_turret_tracks_moving_units_and_hexes() {
         .rewrite_unit_record(target, |record| {
             record["position"]["y"] = 2.into();
             record["motion"]["point"] =
-                serde_json::to_value(BattleHexCoordinate { x: 1, y: 2 }.center()).unwrap();
+                serde_json::to_value(HexCoordinate { x: 1, y: 2 }.center()).unwrap();
         })
         .unwrap();
     world.validate(&config).unwrap();
@@ -496,7 +496,7 @@ async fn automatic_turret_tracks_moving_units_and_hexes() {
         &mut world,
         elsewhere,
         "other",
-        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+        MapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, elsewhere, support::FIXTURE_DICE_SEED);
@@ -508,7 +508,7 @@ async fn automatic_turret_tracks_moving_units_and_hexes() {
         &mut world,
         id,
         ObjectId(1),
-        BattleHexCoordinate { x: 2, y: 1 },
+        HexCoordinate { x: 2, y: 1 },
         BattleHexTargetMode::Hex,
     )
     .unwrap();
@@ -537,7 +537,7 @@ async fn automatic_tracking_is_shared_by_ground_and_rotorcraft() {
             &mut world,
             map,
             "field",
-            BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+            MapAsset::from_cells("1 1\n.0\n").unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -570,7 +570,7 @@ async fn automatic_tracking_is_shared_by_ground_and_rotorcraft() {
             &mut world,
             id,
             ObjectId(1),
-            BattleHexCoordinate { x: 0, y: 0 },
+            HexCoordinate { x: 0, y: 0 },
             BattleHexTargetMode::Hex,
         )
         .unwrap();
@@ -610,7 +610,7 @@ async fn automatic_turret_runs_after_restart() {
                 &mut world,
                 id,
                 ObjectId(1),
-                BattleHexCoordinate { x: 0, y: 0 },
+                HexCoordinate { x: 0, y: 0 },
                 BattleHexTargetMode::Hex,
             )
             .unwrap();

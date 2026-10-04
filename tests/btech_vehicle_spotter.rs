@@ -37,7 +37,7 @@ async fn fixture_with_mml(
         &mut world,
         map,
         "test",
-        BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
+        MapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
     let mut ids = Vec::new();
@@ -339,7 +339,7 @@ async fn occupied_spotter_hexes_share_mixed_firing_without_sensor_aim_dice() {
             &mut world,
             observer,
             ObjectId(2),
-            BattleHexCoordinate { x: 1, y: 0 },
+            HexCoordinate { x: 1, y: 0 },
             BattleHexTargetMode::Hex,
         )
         .unwrap();
@@ -451,7 +451,7 @@ async fn empty_spotter_hexes_fire_through_blocked_firer_sightlines() {
             refresh_battle_contacts(&mut world, &[shooter, observer]).unwrap();
         }
 
-        let hex = BattleHexCoordinate { x: 1, y: 0 };
+        let hex = HexCoordinate { x: 1, y: 0 };
         select_battle_spotter(&mut world, observer, ObjectId(2), Some(observer)).unwrap();
         select_battle_spotter(&mut world, shooter, ObjectId(1), Some(observer)).unwrap();
         select_battle_hex_target(
@@ -662,7 +662,7 @@ async fn mixed_indirect_experience_shares_eligibility_levels_and_rollback() {
                         &mut trial,
                         observer,
                         ObjectId(2),
-                        BattleHexCoordinate { x: 1, y: 0 },
+                        HexCoordinate { x: 1, y: 0 },
                         BattleHexTargetMode::Hex,
                     )
                     .unwrap();

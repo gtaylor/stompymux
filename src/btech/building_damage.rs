@@ -19,7 +19,7 @@ pub struct BattleBuildingImpact {
 pub(super) fn resolve(
     world: &mut World,
     shooter: ObjectId,
-    coordinate: BattleHexCoordinate,
+    coordinate: HexCoordinate,
     damage: u16,
 ) -> Result<Option<BattleBuildingImpact>> {
     let map = super::scanner::scanner_unit(world, shooter)

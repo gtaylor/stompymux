@@ -1,5 +1,5 @@
 //! Size-bounded reads of named map and template assets confined to their configured directory.
-use super::{BattleMapAsset, BattleTemplate};
+use super::{BattleTemplate, MapAsset};
 use anyhow::{Context, Result, ensure};
 use std::{
     fs::File,
@@ -55,7 +55,7 @@ fn read_bytes(root: &Path, name: &str, limit: usize) -> Result<Vec<u8>> {
 }
 
 /// Decode the map file `NAME.toml` from a configured map directory.
-pub fn read_map(root: &Path, name: &str) -> Result<BattleMapAsset> {
+pub fn read_map(root: &Path, name: &str) -> Result<MapAsset> {
     read_map_with_flags(root, name, 0)
 }
 
@@ -64,12 +64,12 @@ pub(super) fn read_map_with_flags(
     root: &Path,
     name: &str,
     inherited_flags: i64,
-) -> Result<BattleMapAsset> {
+) -> Result<MapAsset> {
     let bytes = read_bytes(root, &format!("{name}.toml"), 2_100_000)
         .context(MapFileFailure::Unavailable)?;
     String::from_utf8(bytes)
         .context("map file is not UTF-8")
-        .and_then(|source| BattleMapAsset::parse_with_flags(&source, inherited_flags))
+        .and_then(|source| MapAsset::parse_with_flags(&source, inherited_flags))
         .context(MapFileFailure::Invalid)
         .with_context(|| format!("map {name}"))
 }

@@ -9,7 +9,7 @@ pub fn add_landing_exclusion_action(
     config: &Config,
     actor: ObjectId,
     map: ObjectId,
-    coordinate: super::BattleHexCoordinate,
+    coordinate: super::HexCoordinate,
     radius: i32,
     team: i32,
 ) -> Result<u32> {
@@ -82,7 +82,7 @@ pub(crate) fn command(
                 .parse::<i32>()
                 .map_err(|_| anyhow::anyhow!("Invalid number!"))
         };
-        let coordinate = super::BattleHexCoordinate {
+        let coordinate = super::HexCoordinate {
             x: number(args[0])?,
             y: number(args[1])?,
         };

@@ -339,7 +339,7 @@ pub(super) fn indirect_hex_for_source(
     world: &World,
     source: super::fire_target::TargetSource,
     index: usize,
-) -> Result<Option<(ObjectId, BattleHexCoordinate)>> {
+) -> Result<Option<(ObjectId, HexCoordinate)>> {
     let firer = source.unit;
     if !uses_observer(world, source, index)? {
         return Ok(None);

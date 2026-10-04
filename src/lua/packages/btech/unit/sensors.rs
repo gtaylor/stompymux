@@ -77,7 +77,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                 &config,
                 ObjectId(unit),
                 ObjectId(pilot),
-                crate::BattleHexCoordinate { x, y },
+                crate::HexCoordinate { x, y },
             )
             .map_err(|e| error::failure("btech.operation.failed", format!("{e:#}")))?;
             detached(lua, &report)
@@ -96,7 +96,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                 &config,
                 ObjectId(unit),
                 ObjectId(pilot),
-                crate::BattleHexCoordinate { x, y },
+                crate::HexCoordinate { x, y },
             )
             .map_err(|e| error::failure("btech.operation.failed", format!("{e:#}")))?;
             detached(lua, &report)
@@ -113,7 +113,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                 &scripts,
                 ObjectId(unit),
                 ObjectId(pilot),
-                crate::BattleHexCoordinate { x, y },
+                crate::HexCoordinate { x, y },
                 options.as_deref().unwrap_or(""),
             )
             .map_err(|e| error::failure("btech.operation.failed", format!("{e:#}")))

@@ -569,7 +569,7 @@ async fn locust_machine_guns_and_case_insensitive_arm_flipping_survive_restart()
         &mut world,
         map,
         "locust.map",
-        BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
+        MapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);

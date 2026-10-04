@@ -14,7 +14,7 @@ pub struct BattleBuildingContact {
     /// General observer torso direction toward the entrance.
     pub weapon_arc: super::BattleContactArc,
     pub interior: ObjectId,
-    pub coordinate: super::BattleHexCoordinate,
+    pub coordinate: super::HexCoordinate,
     pub elevation: i32,
     pub name: String,
     pub range: f64,

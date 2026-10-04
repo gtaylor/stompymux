@@ -20,7 +20,7 @@ pub struct BattleVehicleShotReport {
     pub weapon_index: usize,
     pub aim: BattleAimModifiers,
     /// Selected occupied hex, when the host directs fire through a coordinate lock.
-    pub coordinate: Option<BattleHexCoordinate>,
+    pub coordinate: Option<HexCoordinate>,
     pub launch: BattleVehicleLaunch,
     pub streak_confused: bool,
     pub ams: Option<BattleAmsReport>,
@@ -141,7 +141,7 @@ fn fire_shot(
         let position = super::scanner::scanner_unit(world, target)
             .and_then(|unit| unit.position)
             .context("Target is not placed")?;
-        Some(BattleHexCoordinate {
+        Some(HexCoordinate {
             x: i32::from(position.x),
             y: i32::from(position.y),
         })

@@ -94,7 +94,7 @@ pub(crate) fn align(
         return;
     };
     let Some(point) = scanner.point else { return };
-    let target_point = crate::BattleHexCoordinate {
+    let target_point = crate::HexCoordinate {
         x: i32::from(target.x),
         y: i32::from(target.y),
     }

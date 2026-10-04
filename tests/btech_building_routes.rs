@@ -64,7 +64,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {
             &mut world,
             id,
             "routes",
-            BattleMapAsset::from_cells("3 2\n.0.0.0\n.0.0.0\n").unwrap(),
+            MapAsset::from_cells("3 2\n.0.0.0\n.0.0.0\n").unwrap(),
         )
         .unwrap();
     }
@@ -75,7 +75,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {
             exterior,
             ordinal,
             Some(BattleBuildingEntrance {
-                coordinate: BattleHexCoordinate { x, y: 0 },
+                coordinate: HexCoordinate { x, y: 0 },
                 interior,
                 data_char: 0,
                 data_short: 0,
@@ -90,7 +90,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {
             interior,
             ordinal,
             Some(BattleBuildingEntryPoint {
-                coordinate: BattleHexCoordinate { x, y },
+                coordinate: HexCoordinate { x, y },
                 direction,
                 object: ObjectId(-1),
                 data_short: 0,
@@ -106,7 +106,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {
 #[tokio::test]
 async fn building_routes_select_first_slots_validate_and_replay() {
     let (_dir, config, mut world, exterior, interior) = fixture().await;
-    let coordinate = BattleHexCoordinate { x: 1, y: 0 };
+    let coordinate = HexCoordinate { x: 1, y: 0 };
     for direction in [None, Some(0), Some(b'n'), Some(b'N')] {
         assert_eq!(
             battle_building_entry_destination(&world, exterior, coordinate, direction).unwrap(),
@@ -142,7 +142,7 @@ async fn building_routes_select_first_slots_validate_and_replay() {
             interior,
             0,
             Some(BattleBuildingEntryPoint {
-                coordinate: BattleHexCoordinate { x: 3, y: 0 },
+                coordinate: HexCoordinate { x: 3, y: 0 },
                 direction: b's',
                 object: ObjectId(-1),
                 data_short: 0,
@@ -206,7 +206,7 @@ async fn route_updates_preserve_authored_payloads_and_terrain_reload_keeps_route
         interior,
         1,
         Some(BattleBuildingEntryPoint {
-            coordinate: BattleHexCoordinate { x: 1, y: 0 },
+            coordinate: HexCoordinate { x: 1, y: 0 },
             direction: b's',
             ..retained
         }),
@@ -216,7 +216,7 @@ async fn route_updates_preserve_authored_payloads_and_terrain_reload_keeps_route
         &mut world,
         interior,
         "new terrain",
-        BattleMapAsset::from_cells("3 2\n.1.0.0\n.0.0.0\n").unwrap(),
+        MapAsset::from_cells("3 2\n.1.0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
@@ -226,9 +226,9 @@ async fn route_updates_preserve_authored_payloads_and_terrain_reload_keeps_route
     assert_eq!(exit, (19, 20, 21, 22, 23));
     assert_eq!(
         world.btech.maps()[&interior].building_exits()[&4].coordinate,
-        BattleHexCoordinate { x: 19, y: 20 }
+        HexCoordinate { x: 19, y: 20 }
     );
-    let coordinate = BattleHexCoordinate { x: -5, y: 100 };
+    let coordinate = HexCoordinate { x: -5, y: 100 };
     let retained_exit = world.btech.maps()[&interior].building_exits()[&4];
     set_battle_building_return_link(
         &mut world,
@@ -322,13 +322,8 @@ async fn entrance_removal_clears_interior_returns_and_replays() {
     assert_eq!(world.btech.maps()[&exterior].building_entrances().len(), 1);
     assert!(battle_building_exit_destination(&world, interior).is_err());
     assert!(
-        battle_building_entry_destination(
-            &world,
-            exterior,
-            BattleHexCoordinate { x: 1, y: 0 },
-            None
-        )
-        .is_ok()
+        battle_building_entry_destination(&world, exterior, HexCoordinate { x: 1, y: 0 }, None)
+            .is_ok()
     );
     world.validate(&config).unwrap();
     persistence::save(&config.database(), &world).await.unwrap();

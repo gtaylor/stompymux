@@ -134,7 +134,7 @@ async fn mml_modes_firing_and_restart_across_chassis() {
                 firing::edit(&mut world, target, |state| {
                     state["position"]["y"] = 4.into();
                     state["motion"]["point"] =
-                        serde_json::to_value(BattleHexCoordinate { x: 0, y: 4 }.center()).unwrap();
+                        serde_json::to_value(HexCoordinate { x: 0, y: 4 }.center()).unwrap();
                 });
                 let specifications = battle_weapon_specifications(&world, shooter, true).unwrap();
                 let mml: Vec<_> = specifications
@@ -263,7 +263,7 @@ async fn mml_ams_and_missing_supply() {
                     state["ams_enabled"] = true.into();
                     state["position"]["y"] = 4.into();
                     state["motion"]["point"] =
-                        serde_json::to_value(BattleHexCoordinate { x: 0, y: 4 }.center()).unwrap();
+                        serde_json::to_value(HexCoordinate { x: 0, y: 4 }.center()).unwrap();
                 });
                 let seed = (0..=255)
                     .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 12)
@@ -539,7 +539,7 @@ async fn mml_long_range_special_rounds_select_fire_and_persist() {
             firing::edit(&mut world, target, |state| {
                 state["position"]["y"] = 4.into();
                 state["motion"]["point"] =
-                    serde_json::to_value(BattleHexCoordinate { x: 0, y: 4 }.center()).unwrap();
+                    serde_json::to_value(HexCoordinate { x: 0, y: 4 }.center()).unwrap();
             });
             let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
             let fire = format!(

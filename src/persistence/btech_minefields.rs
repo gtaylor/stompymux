@@ -1,8 +1,6 @@
 //! Selective persistence of typed minefields in the shared map-object table.
 use super::write::{Cell, Fields, row};
-use crate::{
-    BattleHexCoordinate, BattleMineKind, BattleMinefield, ObjectId, StoredBattleMap, World,
-};
+use crate::{BattleMineKind, BattleMinefield, HexCoordinate, ObjectId, StoredBattleMap, World};
 use anyhow::{Context, Result, ensure};
 use sqlx::{Row, SqliteConnection};
 use std::{collections::BTreeMap, sync::Arc};
@@ -20,7 +18,7 @@ pub(super) async fn load(
             .context("Minefield references missing map")?;
         let ordinal = u32::try_from(row.try_get::<i64, _>("ordinal")?)?;
         let mine = BattleMinefield {
-            coordinate: BattleHexCoordinate {
+            coordinate: HexCoordinate {
                 x: row.try_get("x")?,
                 y: row.try_get("y")?,
             },

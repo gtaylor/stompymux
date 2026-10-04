@@ -77,8 +77,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, [ObjectId; 3]) {
         &mut world,
         map,
         "network.hunt",
-        BattleMapAsset::from_cells(&format!("7 26\n{}", (".0".repeat(7) + "\n").repeat(26)))
-            .unwrap(),
+        MapAsset::from_cells(&format!("7 26\n{}", (".0".repeat(7) + "\n").repeat(26))).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
