@@ -13,6 +13,7 @@ async fn fixture(vehicle: bool) -> (tempfile::TempDir, Config, World, ObjectId, 
         BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let id = world.create(&config, "Empty unit".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     if vehicle {
@@ -26,6 +27,7 @@ async fn fixture(vehicle: bool) -> (tempfile::TempDir, Config, World, ObjectId, 
             .unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     } else {
         create_battle_unit(
             &mut world,
@@ -34,6 +36,7 @@ async fn fixture(vehicle: bool) -> (tempfile::TempDir, Config, World, ObjectId, 
                 .unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     }
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
     let value = (0..=255)
@@ -126,6 +129,7 @@ async fn cockpit_assignment_transfers_pending_recovery_and_death_clears_empty_cr
         destroyed.validate(&config).unwrap();
         let owned = recovery(&world, id).clone();
         prepare_battle_recovery(&mut world, ObjectId(1)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         let parked =
             serde_json::to_value(&world.btech.recoveries()[&ObjectId(1)]).unwrap()["dice"].clone();
         world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);

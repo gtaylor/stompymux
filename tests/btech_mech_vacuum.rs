@@ -250,7 +250,9 @@ async fn cockpit_exposure_rolls_back_failed_evacuation_and_survives_restart() {
         },
     )
     .unwrap();
+    crate::support::seed_object_dice(&mut world, pilot, crate::support::FIXTURE_DICE_SEED);
     assign_battle_pilot(&mut world, id, pilot).unwrap();
+    crate::support::seed_object_dice(&mut world, pilot, crate::support::FIXTURE_DICE_SEED);
     environment(&mut world, id, 100, true);
     let mut mechanical = world.clone();
     seed(&mut mechanical, id, 10);

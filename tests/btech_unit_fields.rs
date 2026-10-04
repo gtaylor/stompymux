@@ -1548,12 +1548,14 @@ async fn crew_and_target_fields_share_native_lua_validation_and_restart_scenario
         world.objects.get_mut(&replacement).unwrap().home = Some(ObjectId(config.home()));
         // Both interface runs start with the same private recovery random stream.
         prepare_battle_recovery(&mut world, replacement).unwrap();
+        support::seed_object_dice(&mut world, replacement, support::FIXTURE_DICE_SEED);
         let unplaced = world.create(config, "Unplaced unit".into(), Kind::Thing);
         world.objects.get_mut(&unplaced).unwrap().home = Some(ObjectId(config.home()));
         BattleUnitTemplate::parse("test", &source)
             .unwrap()
             .create(&mut world, unplaced)
             .unwrap();
+        support::seed_object_dice(&mut world, unplaced, support::FIXTURE_DICE_SEED);
         firing::edit(&mut world, id, |unit| {
             unit["contacts"] = serde_json::json!({})
         });

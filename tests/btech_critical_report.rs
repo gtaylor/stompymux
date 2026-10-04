@@ -334,6 +334,7 @@ async fn critical_equipment_labels() {
         .modes = vec!["Halfton".into(), "Inferno".into()];
     let (_dir, config, mut world, id) = fixture(BattleUnitTemplate::Mech(template)).await;
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     assert!(
         battle_critical_status(&world, id, "rt")
             .unwrap()

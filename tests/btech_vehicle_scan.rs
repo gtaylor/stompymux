@@ -420,6 +420,7 @@ async fn vehicle_terrain_perception_owns_dice_and_rolls_back_experience() {
     set_building_state(&mut world, interior, building).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(observer);
     assign_battle_pilot(&mut world, observer, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     let coordinate = BattleHexCoordinate { x: 0, y: 1 };
     let before = world.btech.clone();
     assert!(
@@ -466,6 +467,7 @@ async fn vehicle_terrain_perception_owns_dice_and_rolls_back_experience() {
         },
     )
     .unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     world
         .btech
         .rewrite_unit_record(observer, |record| {

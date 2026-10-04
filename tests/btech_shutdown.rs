@@ -198,7 +198,9 @@ async fn shutdown_fall_casualties_and_failed_evacuation_are_atomic() {
         },
     )
     .unwrap();
+    support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
     assign_battle_pilot(&mut world, id, pilot).unwrap();
+    support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
     apply_damage_phase(
         &mut world,
         id,

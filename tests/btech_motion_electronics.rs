@@ -95,6 +95,7 @@ async fn ams_interception_matrix(entries: &[(stompymux_rs::BattleWeapon, bool, f
             let (ams_index, bin) = install_test_ams(&mut world, target, weapon);
             world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(target);
             assign_battle_pilot(&mut world, target, ObjectId(2)).unwrap();
+            support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
             start_battle_unit(&mut world, target, ObjectId(2), true).unwrap();
             for _ in 0..5 {
                 advance_battle_units(&mut world, 0);
@@ -431,6 +432,7 @@ async fn ams_cluster_packets_and_streak_lock() {
         install_test_ams(&mut world, target, BattleWeapon::AntiMissileSystem);
         world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(target);
         assign_battle_pilot(&mut world, target, ObjectId(2)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, target, ObjectId(2), true).unwrap();
         for _ in 0..5 {
             advance_battle_units(&mut world, 0);
@@ -552,6 +554,7 @@ async fn ams_multiple_mount_selection_and_capability_loss() {
         let (first_bin, second_bin) = (first_bin.unwrap(), second_bin.unwrap());
         world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(target);
         assign_battle_pilot(&mut world, target, ObjectId(2)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, target, ObjectId(2), true).unwrap();
         for _ in 0..5 {
             advance_battle_units(&mut world, 0);
@@ -744,6 +747,7 @@ async fn narc_pod_outcomes_and_restart() {
                 install_test_ams(&mut world, target, BattleWeapon::AntiMissileSystem);
                 world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(target);
                 assign_battle_pilot(&mut world, target, ObjectId(2)).unwrap();
+                support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
                 start_battle_unit(&mut world, target, ObjectId(2), true).unwrap();
                 for _ in 0..5 {
                     advance_battle_units(&mut world, 0);
@@ -1293,6 +1297,7 @@ async fn electronics_suppress_narc_and_artemis_guidance() {
                 );
                 world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(target);
                 assign_battle_pilot(&mut world, target, ObjectId(2)).unwrap();
+                support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
                 start_battle_unit(&mut world, target, ObjectId(2), true).unwrap();
                 for _ in 0..5 {
                     advance_battle_units(&mut world, 0);
@@ -1449,6 +1454,7 @@ async fn electronics_angel_disables_streak_homing() {
                 install_test_electronics(&mut world, target, suite);
                 world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(target);
                 assign_battle_pilot(&mut world, target, ObjectId(2)).unwrap();
+                support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
                 start_battle_unit(&mut world, target, ObjectId(2), true).unwrap();
                 for _ in 0..5 {
                     advance_battle_units(&mut world, 0);
@@ -1850,6 +1856,7 @@ async fn inarc_outcomes_supply_and_restart() {
                 install_test_ams(&mut world, target, BattleWeapon::AntiMissileSystem);
                 world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(target);
                 assign_battle_pilot(&mut world, target, ObjectId(2)).unwrap();
+                support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
                 start_battle_unit(&mut world, target, ObjectId(2), true).unwrap();
                 for _ in 0..5 {
                     advance_battle_units(&mut world, 0);
@@ -4471,6 +4478,7 @@ async fn indirect_spotter_experience_eligibility_and_rollback() {
         .flags
         .insert(Flag::Connected);
     assign_battle_pilot(&mut world, observer, observer_pilot).unwrap();
+    support::seed_object_dice(&mut world, observer_pilot, support::FIXTURE_DICE_SEED);
     set_battle_character(
         &mut world,
         observer_pilot,
@@ -4485,6 +4493,7 @@ async fn indirect_spotter_experience_eligibility_and_rollback() {
         },
     )
     .unwrap();
+    support::seed_object_dice(&mut world, observer_pilot, support::FIXTURE_DICE_SEED);
     for id in [shooter, observer, target] {
         world
             .objects
@@ -5902,6 +5911,7 @@ async fn hex_surface_weapon_native_lua_character_rollback() {
         .flags
         .insert(Flag::Connected);
     assign_battle_pilot(&mut world, target, ObjectId(2)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
     set_battle_character(
         &mut world,
         ObjectId(2),
@@ -5916,6 +5926,7 @@ async fn hex_surface_weapon_native_lua_character_rollback() {
         },
     )
     .unwrap();
+    support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
     world
         .btech
         .rewrite_unit_record(target, |record| {
@@ -6073,6 +6084,7 @@ async fn building_fire_damage_policies_and_committed_repair() {
             BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, interior, support::FIXTURE_DICE_SEED);
         let coordinate = BattleHexCoordinate { x: 5, y: 4 };
         set_building_entrance(
             &mut world,
@@ -6278,6 +6290,7 @@ async fn building_fire_native_lua_interior_messages_and_rollback() {
         BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, interior, support::FIXTURE_DICE_SEED);
     let resident = world.create(&config, "Resident".into(), Kind::Player);
     world.objects.get_mut(&resident).unwrap().location = Some(interior);
     world.objects.get_mut(&resident).unwrap().home = Some(ObjectId(config.home()));
@@ -6561,6 +6574,7 @@ async fn inferno_ammunition_interception_and_overflow_preserve_firing_transactio
     install_test_ams(&mut base, target, BattleWeapon::AntiMissileSystem);
     base.objects.get_mut(&ObjectId(2)).unwrap().location = Some(target);
     assign_battle_pilot(&mut base, target, ObjectId(2)).unwrap();
+    support::seed_object_dice(&mut base, ObjectId(2), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut base, target, ObjectId(2), true).unwrap();
     for _ in 0..5 {
         advance_battle_units(&mut base, 0);
@@ -6909,6 +6923,7 @@ async fn quad_live_weapon_and_front_leg_combat() {
     let target = world.create(&config, "Target quad".into(), Kind::Thing);
     world.objects.get_mut(&target).unwrap().home = Some(ObjectId(config.home()));
     create_battle_unit(&mut world, target, template).unwrap();
+    support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, target, map, 5, 5).unwrap();
     set_battle_heading(&mut world, id, ObjectId(1), 180.0).unwrap();
     for _ in 0..40 {
@@ -7107,6 +7122,7 @@ async fn apod_live_fire_and_restart() {
         let target = world.create(&config, "A-Pod target".into(), Kind::Thing);
         world.objects.get_mut(&target).unwrap().home = Some(ObjectId(config.home()));
         create_battle_unit(&mut world, target, template).unwrap();
+        support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut world, target, map, 5, 5).unwrap();
         set_battle_heading(&mut world, id, ObjectId(1), 180.0).unwrap();
         for _ in 0..40 {
@@ -7911,6 +7927,7 @@ async fn firing_keeps_critical_balance_rolls_private_to_target_pilot() {
     shot_skill(&mut base, 30);
     base.objects.get_mut(&ObjectId(2)).unwrap().location = Some(target);
     assign_battle_pilot(&mut base, target, ObjectId(2)).unwrap();
+    support::seed_object_dice(&mut base, ObjectId(2), support::FIXTURE_DICE_SEED);
     base.btech
         .rewrite_unit_record(target, |record| {
             record["power"] = serde_json::json!({"state":"running"});
@@ -8110,6 +8127,7 @@ async fn charge_control_feedback_is_private_for_single_and_mutual_collisions() {
         prepare_test_charge(&mut world, first);
         world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(second);
         assign_battle_pilot(&mut world, second, ObjectId(2)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
         for pilot in [ObjectId(1), ObjectId(2)] {
             world
                 .objects

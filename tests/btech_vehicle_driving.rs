@@ -1357,6 +1357,7 @@ async fn tracked_and_wheeled_ice_entry_replays_shared_fracture_and_waterproof_ro
             .attributes
             .insert("specials".into(), "Waterproof_Tech".into());
         create_battle_vehicle(&mut world, neighbor, template).unwrap();
+        support::seed_object_dice(&mut world, neighbor, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut world, neighbor, map, 3, 2).unwrap();
         let mech = world.create(&config, "Neighbor Mech".into(), Kind::Thing);
         world.objects.get_mut(&mech).unwrap().home = Some(ObjectId(config.home()));
@@ -1367,6 +1368,7 @@ async fn tracked_and_wheeled_ice_entry_replays_shared_fracture_and_waterproof_ro
                 .unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, mech, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut world, mech, map, 3, 2).unwrap();
         let mut saved = serde_json::to_value(&world.btech).unwrap();
         let unit = &mut saved["vehicles"][id.0.to_string()];
@@ -1640,7 +1642,9 @@ async fn character_movement_collisions_publish_falls_and_rollback_casualties() {
                 },
             )
             .unwrap();
+            support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
             assign_battle_pilot(&mut world, id, ObjectId(2)).unwrap();
+            support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
             if initial > 0 {
                 injure_battle_character_pilot(&mut world, id, initial, false).unwrap();
             }
@@ -1822,7 +1826,9 @@ async fn character_water_entry_preserves_occupants_and_replays_flooding() {
                 },
             )
             .unwrap();
+            support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
             assign_battle_pilot(&mut world, id, ObjectId(2)).unwrap();
+            support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
             let seed = (0..=255)
                 .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 12)
                 .unwrap();

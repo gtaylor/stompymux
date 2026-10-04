@@ -26,6 +26,7 @@ async fn fixture_with_template(
         BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let shooter = world.create(&config, "Demolisher".into(), Kind::Thing);
     world.objects.get_mut(&shooter).unwrap().home = Some(ObjectId(config.home()));
     create_battle_vehicle(
@@ -34,9 +35,11 @@ async fn fixture_with_template(
         BattleVehicleTemplate::parse("test", template).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, shooter, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, shooter, map, 1, 1).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(shooter);
     assign_battle_pilot(&mut world, shooter, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, shooter, ObjectId(1), true).unwrap();
     for _ in 0..5 {
         advance_battle_units(&mut world, 0);

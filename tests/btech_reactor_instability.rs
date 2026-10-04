@@ -211,6 +211,7 @@ async fn instability_nested_ammunition_blast_callback_rollback() {
             .unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, neighbor, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, neighbor, map, 0, 0).unwrap();
     let seed = (0..=255)
         .find(|seed| {
@@ -451,6 +452,7 @@ async fn instability_flooded_engine_compartment() {
         BattleMapAsset::from_cells("1 1\n~3\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, water, support::FIXTURE_DICE_SEED);
     edit(&mut world, id, |state| {
         state["power"] = serde_json::to_value(BattlePower::Off).unwrap()
     });

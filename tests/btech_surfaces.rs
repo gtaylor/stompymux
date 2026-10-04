@@ -35,6 +35,7 @@ async fn fixture_asset(
     let (dir, config, mut world) = support::isolated_world().await;
     let map = world.create(&config, "Surface field".into(), Kind::Room);
     create_battle_map(&mut world, map, "surface.map", asset).unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let mut units = Vec::new();
     for pilot in [ObjectId(1), ObjectId(2)] {
         let id = world.create(&config, format!("Surface unit {}", pilot.0), Kind::Thing);
@@ -46,6 +47,7 @@ async fn fixture_asset(
                 .unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut world, id, map, 1, 1).unwrap();
         world.objects.get_mut(&pilot).unwrap().location = Some(id);
         assign_battle_pilot(&mut world, id, pilot).unwrap();
@@ -4166,6 +4168,7 @@ async fn character_fall_fractures_ice_with_nested_evacuation() {
         },
     )
     .unwrap();
+    support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
     apply_damage_phase(
         &mut world,
         trigger,
@@ -4640,6 +4643,7 @@ async fn character_ground_water_entry_replays_and_rolls_back() {
             .remove(Flag::Wizard);
         world.objects.get_mut(&pilot).unwrap().location = Some(id);
         assign_battle_pilot(&mut world, id, pilot).unwrap();
+        support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
         world
             .objects
             .get_mut(&id)
@@ -4660,6 +4664,7 @@ async fn character_ground_water_entry_replays_and_rolls_back() {
             },
         )
         .unwrap();
+        support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
         if fatal {
             apply_damage_phase(
                 &mut world,
@@ -7694,6 +7699,7 @@ async fn fracture_cascade_matrix(vehicle: bool, trigger_last: bool) {
                 .unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut world, id, map, 1, 1).unwrap();
         assert!(!world.btech.vehicles()[&id].is_destroyed());
         id

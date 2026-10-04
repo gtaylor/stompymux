@@ -186,9 +186,11 @@ async fn encounter_fixture() -> EncounterFixture {
         },
     )
     .unwrap();
+    // New holders draw their dice from OS entropy. Seed every map, crew and pilot stream, then
+    // give each unit the fixed stream the encounter was tuned against, so every run rolls the
+    // same opportunistic shots and the encounter ends on the same heartbeat.
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     let mut state = serde_json::to_value(&world.btech).unwrap();
-    // A new unit seeds its dice from OS entropy. Give each one a fixed stream so every run
-    // rolls the same opportunistic shots and the encounter ends on the same heartbeat.
     for (index, unit) in units.into_iter().chain([enemy]).enumerate() {
         state["constructed"][unit.0.to_string()]["dice"] =
             serde_json::to_value(BattleDice::seeded([index as u8 + 1; 32])).unwrap();

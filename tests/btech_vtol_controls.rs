@@ -884,6 +884,7 @@ async fn live_character_crash_publishes_shared_crew_injury() {
         },
     )
     .unwrap();
+    support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
     let _ = begin_battle_vtol_takeoff(&mut world, id, ObjectId(2), 0, false).unwrap();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     for _ in 0..12 {

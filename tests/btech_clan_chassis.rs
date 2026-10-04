@@ -111,6 +111,7 @@ async fn clan_ammunition_containment_and_sink_losses_survive_restart() {
     let id = base.create(&config, "Clan target".into(), Kind::Thing);
     base.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     create_battle_unit(&mut base, id, definition()).unwrap();
+    support::seed_object_dice(&mut base, id, support::FIXTURE_DICE_SEED);
     let mut corrupt = base.clone();
     corrupt
         .btech

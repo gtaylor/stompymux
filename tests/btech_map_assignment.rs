@@ -181,6 +181,7 @@ async fn map_assignment_preserves_airborne_progress_and_restart() {
             BattleMapAsset::from_cells(&format!("1 12\n{}", ".0\n".repeat(12))).unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
         let key = if index == 0 {
             "constructed"
         } else {

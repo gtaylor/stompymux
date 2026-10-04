@@ -613,6 +613,7 @@ async fn changed_target_class_preserves_selection_and_numeric_immobile_hits() {
                 .unwrap()
                 .create(&mut base, actual)
                 .unwrap();
+            support::seed_object_dice(&mut base, actual, support::FIXTURE_DICE_SEED);
             place_battle_unit(&mut base, actual, map, 0, 10).unwrap();
             edit(&mut base, shooter, |state| {
                 state["dice"] =

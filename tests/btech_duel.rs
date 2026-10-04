@@ -21,6 +21,7 @@ async fn battlefield() -> (tempfile::TempDir, Config, [ObjectId; 2]) {
             .unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let mut units = Vec::new();
     for (player, name, template, y) in [
         (
@@ -44,6 +45,7 @@ async fn battlefield() -> (tempfile::TempDir, Config, [ObjectId; 2]) {
             BattleTemplate::parse("test", template).unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut world, id, map, 10, y).unwrap();
         world.objects.get_mut(&player).unwrap().location = Some(map);
         set_battle_character(

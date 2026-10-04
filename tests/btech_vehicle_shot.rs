@@ -324,6 +324,7 @@ async fn vehicle_shot_checks_reject_submerged_weapons_and_depleted_ammunition() 
     .await;
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(shooter);
     assign_battle_pilot(&mut world, shooter, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     power(&mut world, &[shooter, target], BattlePower::Running);
     let before = world.btech.clone();
     assert!(

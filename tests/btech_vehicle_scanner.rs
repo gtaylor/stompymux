@@ -355,6 +355,7 @@ async fn hostile_character_acquisition_shares_perception_awards_and_exact_dice()
                     .remove(Flag::Connected);
             }
             assign_battle_pilot(&mut world, observer, ObjectId(1)).unwrap();
+            support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
             set_battle_character(
                 &mut world,
                 ObjectId(1),
@@ -369,6 +370,7 @@ async fn hostile_character_acquisition_shares_perception_awards_and_exact_dice()
                 },
             )
             .unwrap();
+            support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
             if case == "throttle" {
                 set_battle_character_value(
                     &mut world,

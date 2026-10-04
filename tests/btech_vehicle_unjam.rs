@@ -208,6 +208,7 @@ async fn vehicle_feed_clearing_character_xp_and_output_roll_back_together() {
         },
     )
     .unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     set_battle_character_value(
         &mut world,
         ObjectId(1),
@@ -295,6 +296,7 @@ async fn vehicle_feed_clearing_broadcasts_only_to_current_contacts() {
             .unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, observer, support::FIXTURE_DICE_SEED);
     let map = world.btech.vehicles()[&id].position().unwrap().map;
     place_battle_unit(&mut world, observer, map, 0, 0).unwrap();
     world

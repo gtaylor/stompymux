@@ -5168,6 +5168,7 @@ async fn stand_attempt_observers_share_native_lua_order_and_saved_replay() {
         BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut base, observer, support::FIXTURE_DICE_SEED);
     let map = base.btech.constructed_units()[&subject]
         .position()
         .unwrap()

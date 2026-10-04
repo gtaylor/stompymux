@@ -20,6 +20,7 @@ async fn field(
         BattleMapAsset::from_cells("1 3\n~2\n~2\n~2\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     select_battle_target(&mut world, shooter, ObjectId(1), None).unwrap();
     for (id, y) in [(shooter, 2), (target, 0)] {
         firing::edit(&mut world, id, |state| {
@@ -31,6 +32,7 @@ async fn field(
         });
     }
     assign_battle_pilot(&mut world, shooter, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     refresh_battle_contacts(&mut world, &[shooter]).unwrap();
     select_battle_target(&mut world, shooter, ObjectId(1), Some(target)).unwrap();
     let seed = (0..=255)

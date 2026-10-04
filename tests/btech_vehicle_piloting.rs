@@ -58,6 +58,7 @@ async fn vehicle_control_uses_configured_skills_cockpit_and_saved_dice() {
         },
     )
     .unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     for (name, value) in [
         ("Drive", 5),
         ("Piloting-Tracked", 4),

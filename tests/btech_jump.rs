@@ -1348,6 +1348,7 @@ async fn second_airborne_gyro_forces_a_fall_even_with_zero_whole_jump_points() {
         },
     )
     .unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     set_battle_character_value(
         &mut world,
         ObjectId(1),
@@ -1720,6 +1721,7 @@ async fn early_landing_native_lua_success_failure_and_rollback_share_current_poi
             },
         )
         .unwrap();
+        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         set_battle_character_value(
             &mut world,
             ObjectId(1),
@@ -1884,6 +1886,7 @@ async fn tcp_early_landing_save_failure_restores_flight_and_dice_before_retry() 
     tokio::task::LocalSet::new().run_until(async {
         let (_dir, config, mut world, id) = runtime_fixture().await;
         set_battle_character(&mut world, ObjectId(1), BattleCharacter { build: 5, reflexes: 4, intuition: 3, learn: 2, charisma: 1, bruise: 0, lethal: 0 }).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         set_battle_character_value(&mut world, ObjectId(1), "Piloting-Biped", BattleCharacterValue { value: 30, experience: 0, last_used: 0 }).unwrap();
         launch_battle_jump(&mut world, id, ObjectId(1), 0, 2.0).unwrap();
         for _ in 0..6 { advance_battle_jumps(&mut world, stompymux_rs::BattleMovementRules {fall: stompymux_rs::BattleFallRules { stacking: stompymux_rs::BattleStackingRules::STANDARD, ..jump_rules() },  ..stompymux_rs::BattleMovementRules::STANDARD }).unwrap(); }
@@ -2285,6 +2288,7 @@ async fn dry_terrain_jump_routes_share_adapters_heat_and_restartable_landing() {
         .unwrap();
         place_battle_unit(&mut world, id, map, 5, 5).unwrap();
         assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
         for _ in 0..5 {
             advance_battle_units(&mut world, 0);
@@ -2859,6 +2863,7 @@ async fn restarted_free_fall_can_land_and_retains_its_pending_impact() {
             })
             .unwrap();
         assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         let before = world.btech.clone();
         assert!(
             land_battle_jump(
@@ -4054,6 +4059,7 @@ async fn dfa_landing_dispatch_and_saved_replay() {
         },
     )
     .unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     set_battle_character_value(
         &mut world,
         ObjectId(1),
@@ -4349,6 +4355,7 @@ async fn character_free_fall_action_replays_and_rolls_back_casualties() {
             .remove(Flag::Wizard);
         world.objects.get_mut(&pilot).unwrap().location = Some(id);
         assign_battle_pilot(&mut world, id, pilot).unwrap();
+        support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
         set_battle_character(
             &mut world,
             pilot,
@@ -4363,6 +4370,7 @@ async fn character_free_fall_action_replays_and_rolls_back_casualties() {
             },
         )
         .unwrap();
+        support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
         world
             .objects
             .get_mut(&id)
@@ -4551,6 +4559,7 @@ async fn character_dfa_landing_dispatch_rolls_back_and_replays() {
         },
     )
     .unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     set_battle_character_value(
         &mut world,
         ObjectId(1),
@@ -4602,6 +4611,7 @@ async fn character_dfa_landing_dispatch_rolls_back_and_replays() {
         .insert(Flag::Connected);
     world.objects.get_mut(&pilot).unwrap().location = Some(target);
     assign_battle_pilot(&mut world, target, pilot).unwrap();
+    support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
     world
         .objects
         .get_mut(&target)
@@ -4622,6 +4632,7 @@ async fn character_dfa_landing_dispatch_rolls_back_and_replays() {
         },
     )
     .unwrap();
+    support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
     let mut state = serde_json::to_value(&world.btech).unwrap();
     for unit in [id, target] {
         let seed = (0..=255)
@@ -4870,6 +4881,7 @@ async fn character_landing_control_experience_and_restart() {
                     },
                 )
                 .unwrap();
+                support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
                 let skill = if extended {
                     "Piloting-Biped"
                 } else {
@@ -5084,6 +5096,7 @@ async fn character_manual_landing_adapters_and_casualty_rollback() {
                 .remove(Flag::Wizard);
             release_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
             assign_battle_pilot(&mut world, id, pilot).unwrap();
+            support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
             world
                 .objects
                 .get_mut(&id)
@@ -5105,6 +5118,7 @@ async fn character_manual_landing_adapters_and_casualty_rollback() {
                 },
             )
             .unwrap();
+            support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
             launch_battle_jump(&mut world, id, pilot, 0, 2.0).unwrap();
             if case == "gear" {
                 destroy_battle_critical(

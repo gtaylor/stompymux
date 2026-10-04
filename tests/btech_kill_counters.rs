@@ -216,6 +216,7 @@ async fn shot_induced_water_and_vacuum_exposure_use_distinct_attribution() {
                 .unwrap(),
             )
             .unwrap();
+            support::seed_object_dice(&mut base, map, support::FIXTURE_DICE_SEED);
             for (unit, y) in [(id, 11), (target, 10)] {
                 firing::edit(&mut base, unit, |state| {
                     state["power"] = serde_json::to_value(BattlePower::Off).unwrap()

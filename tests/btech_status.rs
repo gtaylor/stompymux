@@ -489,6 +489,7 @@ async fn vehicle_status_tracks_live_load_damage_ammunition_and_flight() {
     .unwrap()
     .create(&mut world, target)
     .unwrap();
+    support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
     let position = world.btech.vehicles()[&id].position().unwrap();
     place_battle_unit(
         &mut world,

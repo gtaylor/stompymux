@@ -523,6 +523,7 @@ async fn character_pilot_health_recovery_and_fatal_evacuation() {
         BattleTemplate::parse("JR7-D", JENNER).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, unit, support::FIXTURE_DICE_SEED);
     world
         .objects
         .get_mut(&unit)

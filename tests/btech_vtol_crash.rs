@@ -53,6 +53,7 @@ async fn crashes_share_packets_water_reduction_and_saved_replay() {
             BattleMapAsset::from_cells(&format!("1 1\n{terrain}\n")).unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut base, map, support::FIXTURE_DICE_SEED);
         for falling in [false, true] {
             for levels in [0, 1, 3, 300] {
                 let mut world = base.clone();
@@ -109,6 +110,7 @@ async fn safe_crash_stops_descent_without_damage_and_invalid_crashes_are_atomic(
         BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let id = world.create(&config, "Safe aircraft".into(), Kind::Thing);
     aircraft(&mut world, id, map, true);
     let original = world.btech.clone();
@@ -157,6 +159,7 @@ async fn nested_mine_admission_failure_rolls_back_crash_damage_and_dice() {
         BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     set_minefield(
         &mut world,
         map,
@@ -215,6 +218,7 @@ async fn descent_commits_crashes_at_shared_clock_boundaries_and_survives_reload(
             BattleMapAsset::from_cells(&format!("1 1\n{terrain}\n")).unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
         aircraft(&mut world, id, map, true);
         let mut clock = BattleFreeFall::new(5);
         let mut rules = BattleMovementRules::STANDARD.fall;
@@ -294,6 +298,7 @@ async fn movement_dispatch_advances_falls_and_powered_flight_exactly_once() {
         BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let falling = world.create(&config, "Unpowered aircraft".into(), Kind::Thing);
     let flying = world.create(&config, "Flying aircraft".into(), Kind::Thing);
     aircraft(&mut world, falling, map, true);
@@ -353,6 +358,7 @@ async fn host_movement_uses_character_path_and_rolls_back_invalid_placement() {
         BattleMapAsset::from_cells("1 1\n.3\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let id = world.create(&config, "Host aircraft".into(), Kind::Thing);
     aircraft(&mut world, id, map, true);
     for _ in 0..2 {
@@ -412,6 +418,7 @@ async fn world_contacts_commit_clear_flight_landing_crash_and_water_with_replay(
             BattleMapAsset::from_cells(&format!("1 1\n{tile}\n")).unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
         aircraft(&mut world, id, map, false);
         world
             .btech
@@ -508,6 +515,7 @@ async fn world_contact_failure_restores_precontact_height_position_and_dice() {
         BattleMapAsset::from_cells("1 1\n.1\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     set_minefield(
         &mut world,
         map,
@@ -556,6 +564,7 @@ async fn launch_flight_and_fuel_exhaustion_share_one_restartable_tick() {
         BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut base, map, support::FIXTURE_DICE_SEED);
     let id = base.create(&config, "Launching aircraft".into(), Kind::Thing);
     for free_fuel in [false, true] {
         let mut world = base.clone();
@@ -636,6 +645,7 @@ async fn launch_rechecks_ceiling_and_unlinked_boundaries_stop_horizontal_flight(
         BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let id = world.create(&config, "Ceiling aircraft".into(), Kind::Thing);
     aircraft(&mut world, id, map, false);
     let mut state = serde_json::to_value(&world.btech).unwrap();
@@ -702,11 +712,13 @@ async fn shared_control_commands_apply_aircraft_velocity_and_rotor_limits() {
         BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let id = world.create(&config, "Controlled aircraft".into(), Kind::Thing);
     BattleUnitTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml"))
         .unwrap()
         .create(&mut world, id)
         .unwrap();
+    support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
     aircraft(&mut world, id, map, false);
     world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(id);
@@ -787,6 +799,7 @@ async fn boundary_resolution_reuses_the_first_exit_and_preserves_saved_replay() 
     let map = base.create(&config, "Boundary field".into(), Kind::Room);
     let asset = BattleMapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap();
     create_battle_map(&mut base, map, "boundary", asset.clone()).unwrap();
+    support::seed_object_dice(&mut base, map, support::FIXTURE_DICE_SEED);
     let id = base.create(&config, "Boundary aircraft".into(), Kind::Thing);
     for heading in [0.0, 45.0, 90.0, 135.0, 180.0, 225.0, 270.0, 315.0] {
         let mut world = base.clone();
@@ -868,6 +881,7 @@ async fn an_intermediate_ground_collision_takes_precedence_over_a_map_exit() {
         BattleMapAsset::from_cells("1 3\n.0\n^9\n.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let id = world.create(&config, "Hill aircraft".into(), Kind::Thing);
     aircraft(&mut world, id, map, false);
     let mut state = serde_json::to_value(&world.btech).unwrap();
@@ -924,6 +938,7 @@ async fn movement_dispatch_recovers_powered_aircraft_without_impact_or_dice() {
         BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     aircraft(&mut world, id, map, true);
     world
         .btech
@@ -976,6 +991,7 @@ async fn destroyed_aircraft_descend_and_settle_with_replay_and_no_second_pilot_l
             BattleMapAsset::from_cells(&format!("1 1\n{terrain}\n")).unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
         aircraft(&mut world, id, map, false);
         let mut unit = world.btech.vehicles()[&id].clone();
         let hit = unit

@@ -31,6 +31,7 @@ async fn field(asset: BattleMapAsset) -> (tempfile::TempDir, World, [ObjectId; 2
     let (dir, config, mut world) = support::isolated_world().await;
     let map = world.create(&config, "Raised field".into(), Kind::Room);
     create_battle_map(&mut world, map, "raised.map", asset).unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let mut units = Vec::new();
     for pilot in [ObjectId(1), ObjectId(2)] {
         let id = world.create(&config, format!("Lane unit {}", pilot.0), Kind::Thing);
@@ -42,6 +43,7 @@ async fn field(asset: BattleMapAsset) -> (tempfile::TempDir, World, [ObjectId; 2
                 .unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut world, id, map, 1, 1).unwrap();
         world.objects.get_mut(&pilot).unwrap().location = Some(id);
         assign_battle_pilot(&mut world, id, pilot).unwrap();
@@ -165,6 +167,7 @@ async fn vehicle_field(
     let asset = BattleMapAsset::from_cells(&format!("12 3\n{row}\n{row}\n{row}\n")).unwrap();
     let asset = if lift { lifted(&asset) } else { asset };
     create_battle_map(&mut world, map, "crossing", asset).unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let id = world.create(&config, "Vehicle".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     create_battle_vehicle(
@@ -173,6 +176,7 @@ async fn vehicle_field(
         BattleVehicleTemplate::parse("test", template).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, id, map, 0, 1).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
@@ -286,6 +290,7 @@ async fn duel(
     let (dir, config, mut world) = support::isolated_world().await;
     let map = world.create(&config, "Raised duel".into(), Kind::Room);
     create_battle_map(&mut world, map, "duel.map", asset).unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let mut units = Vec::new();
     for (pilot, (x, y, prone)) in [ObjectId(1), ObjectId(2)].into_iter().zip(placements) {
         let id = world.create(&config, format!("Duelist {}", pilot.0), Kind::Thing);
@@ -297,6 +302,7 @@ async fn duel(
                 .unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut world, id, map, x, y).unwrap();
         world.objects.get_mut(&pilot).unwrap().location = Some(id);
         assign_battle_pilot(&mut world, id, pilot).unwrap();
@@ -448,6 +454,7 @@ async fn barrage(
     let (dir, config, mut world) = support::isolated_world().await;
     let map = world.create(&config, "Raised barrage".into(), Kind::Room);
     create_battle_map(&mut world, map, "barrage.map", asset).unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let mut units = Vec::new();
     for (pilot, source, row, team) in [
         (
@@ -477,6 +484,7 @@ async fn barrage(
             BattleTemplate::parse("test", source).unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut world, id, map, 0, row).unwrap();
         if let Some(pilot) = pilot {
             world.objects.get_mut(&pilot).unwrap().location = Some(id);

@@ -322,6 +322,7 @@ fn candidate(
         .unwrap()
         .create(world, id)
         .unwrap();
+    support::seed_object_dice(world, id, support::FIXTURE_DICE_SEED);
     place_battle_unit(world, id, map, 0, 0).unwrap();
     edit(world, id, |unit| {
         unit["signature"]["team"] = team.into();
@@ -611,6 +612,7 @@ async fn swarm_cumulative_range_stops_before_spending_another_attack_roll() {
         BattleMapAsset::from_cells(&format!("1 32\n{}", ".0\n".repeat(32))).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     for (id, y) in [(shooter, 20), (target, 0)] {
         edit(&mut world, id, |unit| {
             unit["power"] = serde_json::to_value(BattlePower::Off).unwrap()
@@ -982,6 +984,7 @@ async fn swarm_secondary_balance_feedback_is_private_and_atomic() {
         let secondary = candidate(&mut base, &config, target, &templates()[0], 1);
         base.objects.get_mut(&ObjectId(2)).unwrap().location = Some(secondary);
         assign_battle_pilot(&mut base, secondary, ObjectId(2)).unwrap();
+        support::seed_object_dice(&mut base, ObjectId(2), support::FIXTURE_DICE_SEED);
         edit(&mut base, secondary, |unit| {
             unit["power"] = serde_json::to_value(BattlePower::Running).unwrap()
         });

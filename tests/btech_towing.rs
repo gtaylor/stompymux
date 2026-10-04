@@ -204,6 +204,7 @@ async fn towing_follows_position_facing_and_height_for_every_chassis_pair() {
             let [a, b] = ids[..] else { unreachable!() };
             world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(a);
             assign_battle_pilot(&mut world, a, ObjectId(1)).unwrap();
+            support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
             start_battle_unit(&mut world, a, ObjectId(1), true).unwrap();
             for _ in 0..5 {
                 advance_battle_units(&mut world, 0);
@@ -1636,6 +1637,7 @@ async fn pickup_through_ice_uses_shared_breakage_for_ground_and_airborne_carrier
             BattleMapAsset::from_cells(&format!("1 1\n{}1\n", Terrain::Ice.symbol())).unwrap(),
         )
         .unwrap();
+        support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
         for id in [carrier, target] {
             place_battle_unit(&mut world, id, map, 0, 0).unwrap();
         }
@@ -1739,6 +1741,7 @@ async fn pickup_ice_failure_restores_the_previous_tow_and_all_material_state() {
         BattleMapAsset::from_cells(&format!("1 1\n{}1\n", Terrain::Ice.symbol())).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     for id in ids {
         place_battle_unit(&mut world, id, map, 0, 0).unwrap();
     }

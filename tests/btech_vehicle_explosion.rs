@@ -126,6 +126,7 @@ async fn fuel_explosions_ignore_case_and_do_not_damage_nearby_units() {
             .unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, neighbor, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, neighbor, map, 0, 0).unwrap();
     let before = world.btech.vehicles()[&neighbor].clone();
     let value = (0..=255)

@@ -215,6 +215,7 @@ async fn vehicle_shutdown_ice_cascade_keeps_each_pilots_feedback_private() {
             .flags
             .insert(Flag::Connected);
         assign_battle_pilot(&mut world, unit, pilot).unwrap();
+        support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, unit, pilot, true).unwrap();
         for _ in 0..5 {
             advance_battle_units(&mut world, 0);

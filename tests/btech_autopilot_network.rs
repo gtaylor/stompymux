@@ -81,6 +81,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, [ObjectId; 3]) {
             .unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     set_battle_map_visibility(&mut world, map, BattleLight::Day, REACH).unwrap();
     let hunter = place(
         &mut world,

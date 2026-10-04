@@ -453,6 +453,7 @@ async fn aircraft_explosions_settle_at_surface_and_share_case_containment_atomic
         BattleMapAsset::from_cells("1 1\n.3\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let id = world.create(&config, "Exploding aircraft".into(), Kind::Thing);
     let seed = (0..=255)
         .find(|seed| BattleDice::seeded([*seed; 32]).d6() == 6)
@@ -544,6 +545,7 @@ async fn engine_emergency_landings_use_shared_checks_and_commit_failed_attempts_
         BattleMapAsset::from_cells("1 1\n.3\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let id = world.create(&config, "Emergency aircraft".into(), Kind::Thing);
     let unit = BattleVehicle::new(
         BattleVehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml"))
@@ -694,6 +696,7 @@ async fn engine_loss_over_water_starts_falling_without_a_landing_roll() {
         BattleMapAsset::from_cells("1 1\n~3\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let id = world.create(&config, "Aircraft".into(), Kind::Thing);
     let unit = BattleVehicle::new(
         BattleVehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml"))
@@ -763,6 +766,7 @@ async fn emergency_landing_feedback_is_private_and_replayable() {
         BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let id = world.create(&config, "Aircraft".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     create_battle_vehicle(
@@ -772,6 +776,7 @@ async fn emergency_landing_feedback_is_private_and_replayable() {
             .unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
     world
@@ -781,6 +786,7 @@ async fn emergency_landing_feedback_is_private_and_replayable() {
         .flags
         .insert(Flag::Connected);
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     let passenger = world.create(&config, "Passenger".into(), Kind::Player);
     world.objects.get_mut(&passenger).unwrap().location = Some(id);
     world
@@ -803,6 +809,7 @@ async fn emergency_landing_feedback_is_private_and_replayable() {
         },
     )
     .unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     set_battle_character_value(
         &mut world,
         ObjectId(1),

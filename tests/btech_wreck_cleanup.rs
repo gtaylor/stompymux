@@ -65,6 +65,7 @@ async fn fixture(
         BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let id = unit(&mut world, &config, map, chassis);
     let source = if world.btech.vehicles().contains_key(&id) {
         let mut vehicle = world.btech.vehicles()[&id].clone();

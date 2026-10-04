@@ -549,6 +549,7 @@ async fn concealed_building_rolls_awards_and_callback_rollback_replay() {
         },
     )
     .unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     let coordinate = BattleHexCoordinate { x: 1, y: 2 };
     // The startup-captured target of 18 cannot succeed, but an eligible attempt spends two dice.
     let mut expected = world.clone();
@@ -3664,6 +3665,7 @@ async fn contact_modes_order_buildings_wrecks_and_units_without_changing_lua_que
         BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, near, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, near, map, 1, 2).unwrap();
     acquire(&mut world, source, near);
     let building = scan_structure(&mut world, &config, map);
@@ -5040,6 +5042,7 @@ async fn bootlegger_character_checks_award_xp_and_preserve_failed_action_rollbac
         },
     )
     .unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     for skill in ["Piloting-Biped", "Piloting-Battlemech"] {
         set_battle_character_value(
             &mut world,

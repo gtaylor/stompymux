@@ -235,6 +235,7 @@ async fn retired_building_target_does_not_panic_or_reappear() {
         BattleMapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, interior, support::FIXTURE_DICE_SEED);
     let coordinate = BattleHexCoordinate { x: 0, y: 9 };
     set_building_entrance(
         &mut world,

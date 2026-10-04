@@ -1348,6 +1348,7 @@ async fn hidden_contact_search_resumes_observer_dice_after_restart_and_rejects_m
         BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
     let map = world.btech.constructed_units()[&id].position().unwrap().map;
     let dice = |world: &stompymux_rs::World| {
         serde_json::to_value(&world.btech).unwrap()["constructed"][id.0.to_string()]["dice"].clone()
@@ -2672,6 +2673,7 @@ async fn direct_shot_partial_cover_uses_one_upper_body_die_per_group() {
         BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, target, map, 5, 3).unwrap();
     stompymux_rs::refresh_battle_contacts(&mut world, &[id]).unwrap();
     world
@@ -2772,6 +2774,7 @@ async fn direct_out_of_range_shot_still_rolls_and_spends_without_target_damage()
         BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, target, map, 5, 20).unwrap();
     shot_seed(&mut world, id, 23);
     for _ in 0..100 {
@@ -3159,6 +3162,7 @@ async fn prone_posture_changes_los_and_aim_at_adjacent_and_distant_ranges() {
         BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, target, map, 5, 3).unwrap();
     let standing = stompymux_rs::battle_unit_terrain_los(&world, id, target).unwrap();
     assert!(!standing.blocked);
@@ -3994,6 +3998,7 @@ async fn damage_balance_ammunition_fall_precedes_explosion_pilot_injury() {
     )
     .unwrap();
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     let _injury = stompymux_rs::injure_battle_tactical_pilot(&mut world, id, 3, false).unwrap();
     let seed = (0..=255)
         .find(|seed| {
@@ -5336,6 +5341,7 @@ async fn fire_command_matrix(cases: &[(bool, bool)]) {
             stompymux_rs::apply_damage_phase(&mut world, target, stompymux_rs::BattleSection::CenterTorso, structure - 1, stompymux_rs::BattleDamagePhase::Internal).unwrap();
             world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(target);
             assign_battle_pilot(&mut world, target, ObjectId(2)).unwrap();
+            support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
             let seed = (0..=255).find(|seed| {
                 let mut probe = world.clone();
                 shot_seed(&mut probe, target, *seed);
@@ -6902,9 +6908,11 @@ async fn snub_ppc_range_damage_native_lua_and_restart() {
         BattleMapAsset::from_cells(&source).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut base, map, support::FIXTURE_DICE_SEED);
     stop_battle_unit(&mut base, id, ObjectId(1), fall_rules()).unwrap();
     place_battle_unit(&mut base, id, map, 1, 25).unwrap();
     assign_battle_pilot(&mut base, id, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut base, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut base, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
         advance_battle_units(&mut base, 0);
@@ -8003,9 +8011,11 @@ async fn heavy_gauss_range_damage_native_lua_and_restart() {
         BattleMapAsset::from_cells(&source).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut base, map, support::FIXTURE_DICE_SEED);
     stop_battle_unit(&mut base, id, ObjectId(1), fall_rules()).unwrap();
     place_battle_unit(&mut base, id, map, 1, 25).unwrap();
     assign_battle_pilot(&mut base, id, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut base, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut base, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
         advance_battle_units(&mut base, 0);
@@ -8136,6 +8146,7 @@ async fn relocated_cestus_engine_damage_native_lua_fire_and_restart() {
         BattleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
     )
     .unwrap();
+    support::seed_object_dice(&mut base, target, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut base, target, map, 5, 4).unwrap();
     base.objects
         .get_mut(&ObjectId(1))
