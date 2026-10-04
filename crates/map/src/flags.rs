@@ -63,6 +63,23 @@ impl BattleMapFlag {
         }
     }
 
+    /// One-sentence explanation of the rule, for help text and schemas.
+    pub const fn description(self) -> &'static str {
+        match self {
+            Self::SpecialRules => {
+                "Environmental rules (gravity, temperature, vacuum) apply to units on the map."
+            }
+            Self::Vacuum => "The map has no atmosphere.",
+            Self::Underground => {
+                "The map has a ceiling: no jumping, flight or indirect fire without an observer."
+            }
+            Self::Dark => "Units only see terrain they have line of sight to.",
+            Self::IndestructibleBridges => "Weapon fire cannot break bridges.",
+            Self::NoFriendlyFire => "Teammates cannot damage each other with non-coolant weapons.",
+            Self::NoPhysicalAttacks => "Physical attacks are not allowed.",
+        }
+    }
+
     /// Decode an operator-facing flag name, ignoring ASCII case.
     pub fn parse(name: &str) -> Result<Self> {
         Self::ALL

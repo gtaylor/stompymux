@@ -4,13 +4,12 @@
 //! Columns are staggered like the game's: even columns sit half a hex south of odd ones.
 //! [`HexMap::neighbors`] and [`HexMap::distance`] follow that layout, so roads and rivers built
 //! from them connect in game.
-use crate::spec::MapFlag;
 use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use stompymux_map::{
-    BattleDecorationKind, BattleHex, BattleMapAsset, BattleMapFlag, Ground, MAX_DEPTH, MAX_HEIGHT,
-    Structure, Water, Woods,
+    BattleDecorationKind, BattleHex, BattleHexCoordinate, BattleMapAsset, BattleMapFlag, Ground,
+    MAX_DEPTH, MAX_HEIGHT, Structure, Water, Woods,
 };
 
 /// What fills a hex. Each variant is one map-file terrain symbol.
@@ -168,7 +167,7 @@ pub struct HexMap {
     /// Temperature in degrees Celsius.
     pub temperature: i8,
     /// Battlefield rule flags.
-    pub flags: Vec<MapFlag>,
+    pub flags: Vec<BattleMapFlag>,
     /// Hexes in row-major order: index `y * width + x`.
     pub hexes: Vec<Hex>,
 }
@@ -216,18 +215,24 @@ impl HexMap {
         Some(&mut self.hexes[index])
     }
 
-    /// The up to six on-map neighbors of `(x, y)`, clockwise from north.
-    pub fn neighbors(&self, x: i32, y: i32) -> impl Iterator<Item = (i32, i32)> + '_ {
-        neighbors(x, y)
-            .into_iter()
-            .filter(|&(x, y)| self.contains(x, y))
+    /// The neighbors of `(x, y)` indexed by direction clockwise from north, with `None` for
+    /// each direction that leaves the map.
+    pub fn adjacent(&self, x: i32, y: i32) -> [Option<(i32, i32)>; 6] {
+        BattleHexCoordinate { x, y }
+            .neighbors_within(self.width, self.height)
+            .map(|neighbor| neighbor.map(|hex| (hex.x, hex.y)))
     }
 
-    /// Number of hex steps between two hexes.
-    pub fn distance(a: (i32, i32), b: (i32, i32)) -> i32 {
-        let [aq, ar, as_] = cube(a);
-        let [bq, br, bs] = cube(b);
-        (aq - bq).abs().max((ar - br).abs()).max((as_ - bs).abs())
+    /// The up to six on-map neighbors of `(x, y)`, clockwise from north.
+    pub fn neighbors(&self, x: i32, y: i32) -> impl Iterator<Item = (i32, i32)> + use<> {
+        self.adjacent(x, y).into_iter().flatten()
+    }
+
+    /// Number of hex steps between two hexes, saturating at `i32::MAX`.
+    pub fn distance((ax, ay): (i32, i32), (bx, by): (i32, i32)) -> i32 {
+        let steps =
+            BattleHexCoordinate { x: ax, y: ay }.distance(BattleHexCoordinate { x: bx, y: by });
+        i32::try_from(steps).unwrap_or(i32::MAX)
     }
 
     /// Check every hex holds values a map file can store.
@@ -270,7 +275,7 @@ impl HexMap {
         let flags = self
             .flags
             .iter()
-            .fold(0, |bits, &flag| BattleMapFlag::from(flag).apply(bits, true));
+            .fold(0, |bits, flag| flag.apply(bits, true));
         Ok(BattleMapAsset {
             width: self.width,
             height: self.height,
@@ -288,21 +293,6 @@ impl HexMap {
     }
 }
 
-/// Cube coordinates for adjacency and distance; even columns sit half a hex south.
-fn cube((x, y): (i32, i32)) -> [i32; 3] {
-    let r = y - (x + x.rem_euclid(2)) / 2;
-    [x, r, -x - r]
-}
-
-/// The six neighbors of `(x, y)` clockwise from north, on or off the map.
-pub(crate) fn neighbors(x: i32, y: i32) -> [(i32, i32); 6] {
-    let [q, r, _] = cube((x, y));
-    [(0, -1), (1, -1), (1, 0), (0, 1), (-1, 1), (-1, 0)].map(|(dq, dr)| {
-        let q = q + dq;
-        (q, r + dr + (q + q.rem_euclid(2)) / 2)
-    })
-}
-
 /// Center of hex `(x, y)` in hex heights, for sampling smooth fields and measuring
 /// straight-line distance.
 pub(crate) fn center(x: i32, y: i32) -> (f64, f64) {
@@ -316,21 +306,25 @@ mod tests {
 
     #[test]
     fn neighbors_are_one_step_away_and_symmetric() {
+        let map = HexMap::new(8, 8);
         for (x, y) in [(4, 4), (5, 4), (0, 0), (7, 2)] {
-            for (nx, ny) in neighbors(x, y) {
+            for (nx, ny) in map.neighbors(x, y) {
                 assert_eq!(HexMap::distance((x, y), (nx, ny)), 1);
-                assert!(neighbors(nx, ny).contains(&(x, y)));
+                assert!(map.neighbors(nx, ny).any(|hex| hex == (x, y)));
             }
         }
         // Even columns sit south, so (2, 3)'s north-east neighbor is (3, 3).
-        assert_eq!(neighbors(2, 3)[1], (3, 3));
-        assert_eq!(neighbors(3, 3)[1], (4, 2));
+        assert_eq!(map.adjacent(2, 3)[1], Some((3, 3)));
+        assert_eq!(map.adjacent(3, 3)[1], Some((4, 2)));
+        // A corner keeps the directions that stay on the map.
+        assert_eq!(map.neighbors(0, 0).count(), 3);
+        assert_eq!(map.adjacent(0, 0)[0], None);
     }
 
     #[test]
     fn writes_every_grid_and_bridge() {
         let mut map = HexMap::new(3, 2);
-        map.flags = vec![MapFlag::Dark];
+        map.flags = vec![BattleMapFlag::Dark];
         map.hexes[0].terrain = Terrain::Water { depth: 2 };
         map.hexes[0].bridge = Some(1);
         map.hexes[1].terrain = Terrain::Building { height: 12 };

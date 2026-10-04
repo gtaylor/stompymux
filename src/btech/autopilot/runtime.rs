@@ -1668,9 +1668,7 @@ fn retreat_position(
     let current_hex = Hex::new(current.x, current.y);
     let target_hex = Hex::new(target.x, target.y);
     current_hex
-        .neighbors()
-        .into_iter()
-        .filter(|hex| hex.x < width && hex.y < height)
+        .neighbors_within(width, height)
         .filter(|hex| {
             traversal::assess(
                 world,

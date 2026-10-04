@@ -42,13 +42,14 @@ pub use biome::{BiomeInfo, biome_catalog};
 pub use map::{Hex, HexMap, Terrain};
 pub use report::{Coverage, Report, RoadReport, SettlementReport};
 pub use spec::{
-    Amount, Biome, EnvironmentSpec, MAX_DIMENSION, MIN_DIMENSION, MapFlag, MapSize, MapSpec,
-    Position, Relief, RoadSpec, SettlementKind, SettlementLayout, SettlementSize, SettlementSpec,
+    Amount, Biome, EnvironmentSpec, MAX_DIMENSION, MIN_DIMENSION, MapSize, MapSpec, Position,
+    Relief, RoadSpec, SettlementKind, SettlementLayout, SettlementSize, SettlementSpec,
     spec_schema,
 };
 
+pub use stompymux_map::{BattleDecorationKind, BattleMapAsset, BattleMapFlag};
+
 use anyhow::{Context, Result};
-use stompymux_map::BattleDecorationKind;
 
 /// The comment prefix that carries the resolved spec inside a generated map file.
 const SPEC_COMMENT: &str = "# mapgen-spec: ";
@@ -164,7 +165,6 @@ fn count_overlay(map: &HexMap, overlay: BattleDecorationKind) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use stompymux_map::BattleMapAsset;
 
     /// A spec exercising every biome, settlement kind and layout on a medium map.
     fn busy(biome: Biome, seed: u64) -> MapSpec {
@@ -340,7 +340,7 @@ mod tests {
         let desert = report(Biome::Desert);
         assert!(desert.report.coverage.sand > 30.0);
         let lunar = report(Biome::Lunar);
-        assert!(lunar.map.flags.contains(&MapFlag::Vacuum));
+        assert!(lunar.map.flags.contains(&BattleMapFlag::Vacuum));
         let volcanic = report(Biome::Volcanic);
         assert!(volcanic.report.fire_hexes > 0 && volcanic.report.smoke_hexes > 0);
     }

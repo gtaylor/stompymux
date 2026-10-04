@@ -168,6 +168,8 @@ fn shortest_firing_route(
     let mut queue = VecDeque::from([(start, 0_u32)]);
     let mut seen = BTreeSet::from([start]);
     let map = &world.btech.maps()[&own.map];
+    let width = u16::try_from(map.width).ok()?;
+    let height = u16::try_from(map.height).ok()?;
     while let Some((h, d)) = queue.pop_front() {
         let here = BattleHexCoordinate {
             x: i32::from(h.x),
@@ -182,7 +184,7 @@ fn shortest_firing_route(
         {
             return Some(f64::from(d));
         }
-        for next in h.neighbors() {
+        for next in h.neighbors_within(width, height) {
             if seen.contains(&next) {
                 continue;
             }

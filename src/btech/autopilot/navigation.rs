@@ -3,10 +3,13 @@
 //! The search is deliberately independent of the battle model.  Callers provide
 //! the map dimensions and a traversal-cost callback (or use [`HexGrid`]); later
 //! layers can therefore apply unit mobility, terrain, occupancy, and hazard
-//! rules without making the planner depend on those rules.  A search can be
+//! rules without making the planner depend on those rules.  Adjacency and
+//! distance come from the shared hex geometry in `stompymux-map`, which holds
+//! no battle rules.  A search can be
 //! advanced in small budgets and only stores discovered records, which keeps it
 //! suitable for a heartbeat that serves many autonomous units.
 
+use crate::btech::BattleHexCoordinate;
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap};
 use std::error::Error;
@@ -31,46 +34,29 @@ impl Hex {
         Self { x, y }
     }
 
-    /// Return the six neighboring coordinates in clockwise order from north.
-    ///
-    /// The returned coordinates may be outside the map.  [`AStarSearch`] filters
-    /// them using its dimensions before asking the traversal provider about a
-    /// transition.
-    pub fn neighbors(self) -> [Self; 6] {
-        // Convert the column-staggered coordinates to cube coordinates before
-        // adding directions.  This matches the geometry used by the battle map
-        // while keeping this module independent of the battle model.
-        let q = i64::from(self.x);
-        let r = i64::from(self.y) - (q + q.rem_euclid(2)) / 2;
-        let directions = [(0_i64, -1_i64), (1, -1), (1, 0), (0, 1), (-1, 1), (-1, 0)];
-
-        directions.map(|(dq, dr)| {
-            let q = q + dq;
-            let row = r + dr + (q + q.rem_euclid(2)) / 2;
-            // The source coordinate is u16, so every in-range neighbor fits in
-            // i32.  Keep a signed intermediate for the two off-map directions.
-            let x = u16::try_from(q).unwrap_or(u16::MAX);
-            let y = u16::try_from(row).unwrap_or(u16::MAX);
-            Self { x, y }
-        })
+    /// The neighbors on a `width` by `height` map, clockwise from north.
+    pub fn neighbors_within(self, width: u16, height: u16) -> impl Iterator<Item = Self> {
+        BattleHexCoordinate::from(self)
+            .neighbors_within(width, height)
+            .into_iter()
+            .flatten()
+            // On-map coordinates are below a u16 bound.
+            .map(|hex| Self::new(hex.x as u16, hex.y as u16))
     }
 
     /// Return the shortest number of hex transitions between two coordinates.
     pub fn distance(self, other: Self) -> u32 {
-        let a = self.cube();
-        let b = other.cube();
-        a.into_iter()
-            .zip(b)
-            .map(|(left, right)| left.abs_diff(right))
-            .max()
-            .map(|distance| u32::try_from(distance).expect("u16 hex distance fits in u32"))
-            .unwrap_or(0)
+        let distance = BattleHexCoordinate::from(self).distance(other.into());
+        u32::try_from(distance).expect("u16 hex distance fits in u32")
     }
+}
 
-    fn cube(self) -> [i64; 3] {
-        let q = i64::from(self.x);
-        let r = i64::from(self.y) - (q + q.rem_euclid(2)) / 2;
-        [q, r, -q - r]
+impl From<Hex> for BattleHexCoordinate {
+    fn from(hex: Hex) -> Self {
+        Self {
+            x: i32::from(hex.x),
+            y: i32::from(hex.y),
+        }
     }
 }
 
@@ -513,10 +499,7 @@ impl AStarSearch {
 
             expanded += 1;
             self.total_expanded += 1;
-            for neighbor in entry.position.neighbors() {
-                if !Self::contains(self.width, self.height, neighbor) {
-                    continue;
-                }
+            for neighbor in entry.position.neighbors_within(self.width, self.height) {
                 let Some(edge_cost) = traversal.traversal_cost(entry.position, neighbor) else {
                     continue;
                 };
@@ -685,7 +668,7 @@ mod tests {
             if goal.contains(position) {
                 return Some(cost);
             }
-            for neighbor in position.neighbors() {
+            for neighbor in position.neighbors_within(grid.width, grid.height) {
                 let Some(edge) = grid.traversal_cost(position, neighbor) else {
                     continue;
                 };
@@ -704,13 +687,22 @@ mod tests {
     #[test]
     fn coordinate_neighbors_and_distance_match_column_staggered_geometry() {
         let center = Hex::new(2, 2);
-        assert_eq!(center.neighbors()[0], Hex::new(2, 1));
-        assert_eq!(center.neighbors()[1], Hex::new(3, 2));
-        assert_eq!(center.neighbors()[2], Hex::new(3, 3));
-        assert_eq!(center.neighbors()[3], Hex::new(2, 3));
-        assert_eq!(center.neighbors()[4], Hex::new(1, 3));
-        assert_eq!(center.neighbors()[5], Hex::new(1, 2));
+        let neighbors: Vec<_> = center.neighbors_within(5, 5).collect();
+        assert_eq!(
+            neighbors,
+            [
+                Hex::new(2, 1),
+                Hex::new(3, 2),
+                Hex::new(3, 3),
+                Hex::new(2, 3),
+                Hex::new(1, 3),
+                Hex::new(1, 2),
+            ]
+        );
         assert_eq!(center.distance(Hex::new(5, 4)), 3);
+        // Edges keep only the neighbors on the map, still clockwise from north.
+        let corner: Vec<_> = Hex::new(0, 0).neighbors_within(5, 5).collect();
+        assert_eq!(corner, [Hex::new(1, 0), Hex::new(1, 1), Hex::new(0, 1)]);
     }
 
     #[test]

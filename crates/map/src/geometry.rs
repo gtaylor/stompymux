@@ -44,21 +44,42 @@ impl BattleHexCoordinate {
             .unwrap()
     }
 
-    /// Adjacent cells clockwise from north. The caller applies actual map bounds.
-    pub fn neighbors(self) -> Result<[Self; 6]> {
+    /// Offset coordinates of the six adjacent cells, clockwise from north, widened so no
+    /// neighbor of an `i32` coordinate overflows.
+    fn adjacent(self) -> [(i64, i64); 6] {
         let [q, r, _] = self.cube();
-        let mut result = [self; 6];
-        for (index, (dq, dr)) in [(0, -1), (1, -1), (1, 0), (0, 1), (-1, 1), (-1, 0)]
-            .into_iter()
-            .enumerate()
-        {
+        [(0, -1), (1, -1), (1, 0), (0, 1), (-1, 1), (-1, 0)].map(|(dq, dr)| {
             let q = q + dq;
-            result[index] = Self {
-                x: i32::try_from(q)?,
-                y: i32::try_from(r + dr + (q + q.rem_euclid(2)) / 2)?,
+            (q, r + dr + (q + q.rem_euclid(2)) / 2)
+        })
+    }
+
+    /// The six adjacent cells clockwise from north, on or off any map. Fails only when a
+    /// neighbor's coordinates fall outside `i32`; use [`Self::neighbors_within`] to stay on a
+    /// map.
+    pub fn neighbors(self) -> Result<[Self; 6]> {
+        let mut result = [self; 6];
+        for (slot, (x, y)) in result.iter_mut().zip(self.adjacent()) {
+            *slot = Self {
+                x: i32::try_from(x)?,
+                y: i32::try_from(y)?,
             };
         }
         Ok(result)
+    }
+
+    /// The adjacent cells on a `width` by `height` map, indexed by direction clockwise from
+    /// north, with `None` for each direction that leaves the map. Use
+    /// `.into_iter().flatten()` to visit only the neighbors that exist.
+    pub fn neighbors_within(self, width: u16, height: u16) -> [Option<Self>; 6] {
+        self.adjacent().map(|(x, y)| {
+            let on_map = (0..i64::from(width)).contains(&x) && (0..i64::from(height)).contains(&y);
+            // Both coordinates are below a u16 bound, so they fit in i32.
+            on_map.then_some(Self {
+                x: x as i32,
+                y: y as i32,
+            })
+        })
     }
 }
 
@@ -360,6 +381,59 @@ mod tests {
                 assert!(projected.range(neighbor.center()).unwrap() < 1e-12);
             }
         }
+    }
+
+    /// Bounded neighbors keep their directions, drop the ones off the map and agree with the
+    /// unbounded list everywhere else.
+    #[test]
+    fn neighbors_within_keep_directions_and_drop_off_map_cells() {
+        // Even columns sit half a hex south of odd ones.
+        let corner = BattleHexCoordinate { x: 0, y: 0 };
+        let east = BattleHexCoordinate { x: 1, y: 0 };
+        assert_eq!(
+            corner.neighbors_within(3, 3),
+            [
+                None,
+                Some(east),
+                Some(BattleHexCoordinate { x: 1, y: 1 }),
+                Some(BattleHexCoordinate { x: 0, y: 1 }),
+                None,
+                None,
+            ]
+        );
+        assert_eq!(
+            east.neighbors_within(3, 3),
+            [
+                None,
+                None,
+                Some(BattleHexCoordinate { x: 2, y: 0 }),
+                Some(BattleHexCoordinate { x: 1, y: 1 }),
+                Some(corner),
+                None,
+            ]
+        );
+        for x in -2..=6 {
+            for y in -2..=6 {
+                let hex = BattleHexCoordinate { x, y };
+                for (bounded, unbounded) in hex
+                    .neighbors_within(5, 4)
+                    .into_iter()
+                    .zip(hex.neighbors().unwrap())
+                {
+                    let on_map = (0..5).contains(&unbounded.x) && (0..4).contains(&unbounded.y);
+                    assert_eq!(bounded, on_map.then_some(unbounded), "{hex:?}");
+                }
+            }
+        }
+        let far = BattleHexCoordinate {
+            x: i32::MAX,
+            y: i32::MIN,
+        };
+        assert_eq!(far.neighbors_within(u16::MAX, u16::MAX), [None; 6]);
+        assert_eq!(
+            BattleHexCoordinate { x: 0, y: 0 }.neighbors_within(0, 0),
+            [None; 6]
+        );
     }
 
     #[test]

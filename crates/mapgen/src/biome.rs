@@ -3,8 +3,9 @@
 //! A [`MapSpec`](crate::MapSpec) field overrides the matching default here. Landform and
 //! ground-cover tuning that has no spec field (snow lines, beaches, the shape of the ground)
 //! lives only in the profile.
-use crate::spec::{Amount, Biome, MapFlag, Relief};
+use crate::spec::{Amount, Biome, Relief};
 use serde::Serialize;
+use stompymux_map::BattleMapFlag;
 
 /// The basic material of open ground in a biome.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -46,7 +47,7 @@ pub(crate) struct Profile {
     pub(crate) frozen: bool,
     pub(crate) gravity: u8,
     pub(crate) temperature: i8,
-    pub(crate) flags: &'static [MapFlag],
+    pub(crate) flags: &'static [BattleMapFlag],
     pub(crate) landform: Landform,
     pub(crate) ground: BaseGround,
     /// Share of open ground that is plain clear instead of the base ground.
@@ -192,7 +193,7 @@ pub(crate) const fn profile(biome: Biome) -> Profile {
             rivers: 0,
             gravity: 17,
             temperature: -120,
-            flags: &[MapFlag::SpecialRules, MapFlag::Vacuum],
+            flags: &[BattleMapFlag::SpecialRules, BattleMapFlag::Vacuum],
             landform: Landform::Cratered,
             mountain_share: 0.03,
             ..BASE
@@ -227,7 +228,7 @@ pub struct BiomeInfo {
     pub frozen: bool,
     pub gravity: u8,
     pub temperature: i8,
-    pub flags: Vec<MapFlag>,
+    pub flags: Vec<BattleMapFlag>,
 }
 
 /// Every biome with its description and defaults.

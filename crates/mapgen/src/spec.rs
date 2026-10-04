@@ -6,8 +6,10 @@
 //! The JSON Schema from [`spec_schema`] is generated from these types and their doc comments, so
 //! keep the comments written for a reader who only sees the schema.
 use anyhow::{Context, Result, bail, ensure};
-use schemars::JsonSchema;
+use schemars::{JsonSchema, Schema, SchemaGenerator, json_schema};
 use serde::{Deserialize, Serialize};
+use serde_json::json;
+use std::borrow::Cow;
 use std::str::FromStr;
 use stompymux_map::BattleMapFlag;
 
@@ -406,46 +408,35 @@ pub struct EnvironmentSpec {
     pub temperature: Option<i8>,
     /// Map flags. Defaults by biome; give an empty list for none.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub flags: Option<Vec<MapFlag>>,
+    #[schemars(with = "Option<Vec<MapFlagSchema>>")]
+    pub flags: Option<Vec<BattleMapFlag>>,
 }
 
-/// A battlefield rule flag, as named in map files. Specs and the command line name flags with
-/// this type, which carries a JSON Schema and command-line spellings; it converts to the
-/// [`BattleMapFlag`] map files store.
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
-)]
-#[cfg_attr(feature = "cli", derive(clap::ValueEnum))]
-#[cfg_attr(feature = "cli", value(rename_all = "snake_case"))]
-#[serde(rename_all = "snake_case")]
-pub enum MapFlag {
-    /// Environmental rules (gravity, temperature, vacuum) apply to units.
-    SpecialRules,
-    /// The map has no atmosphere.
-    Vacuum,
-    /// The map has a ceiling: no jumping, flight or indirect fire without an observer.
-    Underground,
-    /// Units only see terrain they have line of sight to.
-    Dark,
-    /// Weapon fire cannot break bridges.
-    IndestructibleBridges,
-    /// Teammates cannot damage each other with non-coolant weapons.
-    NoFriendlyFire,
-    /// Physical attacks are not allowed.
-    NoPhysicalAttacks,
-}
+/// The JSON Schema of a [`BattleMapFlag`], built from the flags' own names and
+/// descriptions. `stompymux-map` carries no schema support of its own, so spec fields that
+/// hold flags borrow this one with `#[schemars(with = ...)]`.
+struct MapFlagSchema;
 
-impl From<MapFlag> for BattleMapFlag {
-    fn from(flag: MapFlag) -> Self {
-        match flag {
-            MapFlag::SpecialRules => Self::SpecialRules,
-            MapFlag::Vacuum => Self::Vacuum,
-            MapFlag::Underground => Self::Underground,
-            MapFlag::Dark => Self::Dark,
-            MapFlag::IndestructibleBridges => Self::IndestructibleBridges,
-            MapFlag::NoFriendlyFire => Self::NoFriendlyFire,
-            MapFlag::NoPhysicalAttacks => Self::NoPhysicalAttacks,
-        }
+impl JsonSchema for MapFlagSchema {
+    fn schema_name() -> Cow<'static, str> {
+        "MapFlag".into()
+    }
+
+    fn json_schema(_: &mut SchemaGenerator) -> Schema {
+        let flags: Vec<_> = BattleMapFlag::ALL
+            .into_iter()
+            .map(|flag| {
+                json!({
+                    "const": flag.name(),
+                    "description": flag.description(),
+                    "type": "string",
+                })
+            })
+            .collect();
+        json_schema!({
+            "description": "A battlefield rule flag, as named in map files.",
+            "oneOf": flags,
+        })
     }
 }
 
@@ -666,7 +657,7 @@ mod tests {
         assert_eq!(resolved.woods, Some(Amount::High));
         let environment = resolved.environment.clone().unwrap();
         assert!(environment.gravity.unwrap() < 50);
-        assert!(environment.flags.unwrap().contains(&MapFlag::Vacuum));
+        assert!(environment.flags.unwrap().contains(&BattleMapFlag::Vacuum));
         assert_eq!(resolved.resolve().unwrap(), resolved);
     }
 
@@ -685,29 +676,13 @@ mod tests {
         assert!("town,tall".parse::<SettlementSpec>().is_err());
     }
 
-    /// Every spec flag converts to the map-file flag with the same name.
-    #[test]
-    fn flags_convert_to_map_file_flags_of_the_same_name() {
-        for flag in [
-            MapFlag::SpecialRules,
-            MapFlag::Vacuum,
-            MapFlag::Underground,
-            MapFlag::Dark,
-            MapFlag::IndestructibleBridges,
-            MapFlag::NoFriendlyFire,
-            MapFlag::NoPhysicalAttacks,
-        ] {
-            assert_eq!(
-                serde_json::to_value(flag).unwrap(),
-                serde_json::to_value(BattleMapFlag::from(flag)).unwrap()
-            );
-        }
-    }
-
     #[test]
     fn schema_describes_fields() {
         let schema = spec_schema().to_string();
         assert!(schema.contains("settlements") && schema.contains("metropolis"));
         assert!(schema.contains("Overall landscape"));
+        for flag in BattleMapFlag::ALL {
+            assert!(schema.contains(flag.name()) && schema.contains(flag.description()));
+        }
     }
 }
