@@ -1,6 +1,5 @@
 //! Shared stock labels, wildcard reports and catalogue-first transfer selection.
-use super::{BattleInventoryEntry, BattlePart};
-use std::{collections::BTreeMap, sync::OnceLock};
+use super::{BattleInventoryEntry, BattlePart, BattlePartForm, part_names, part_short_name};
 
 /// Resolve a display name without losing the identity of unrecognized stored rows.
 pub(super) fn name(entry: &BattleInventoryEntry) -> String {
@@ -54,53 +53,14 @@ pub(super) fn selected(entry: &BattleInventoryEntry, pattern: &str) -> bool {
     let Some(part) = BattlePart::from_id(entry.part_id) else {
         return matches(pattern, &name(entry));
     };
-    matches(pattern, &part.name) || matches(pattern, &short_name(&part.name))
+    matches(pattern, &part.name) || matches(pattern, &part_short_name(&part.name))
 }
 
-/// Compact catalogue spelling retains capitals, digits and underscores.
-fn abbreviation(name: &str) -> String {
-    if name.len() <= 4 && !name.contains('/') {
-        return name.into();
-    }
-    let mut result: String = name
-        .chars()
-        .filter(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || *c == '_')
-        .collect();
-    if result.len() == 1
-        && let Some(second) = name.chars().nth(1)
-    {
-        result.push(second);
-    }
-    result
-}
-
-/// Inner Sphere stock labels omit the technology prefix in their short display form.
-fn short_name(name: &str) -> String {
-    if let Some(name) = name.strip_prefix("IS.") {
-        return name.into();
-    }
-    if let Some(name) = name.strip_prefix("Ammo_IS.") {
-        return format!("Ammo_{name}");
-    }
-    name.into()
-}
-
-/// The three catalogue spellings of one part identity.
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
-pub struct BattlePartForm {
-    pub part_id: i32,
-    pub short_name: String,
-    pub long_name: String,
-    pub very_long_name: String,
-}
-
-impl BattlePartForm {
-    /// Inventory selection uses the same identity behind the reported names.
-    fn entry(&self) -> BattleInventoryEntry {
-        BattleInventoryEntry {
-            part_id: self.part_id,
-            quantity: 1,
-        }
+/// Inventory selection uses the same identity behind the reported names.
+fn form_entry(form: &BattlePartForm) -> BattleInventoryEntry {
+    BattleInventoryEntry {
+        part_id: form.part_id,
+        quantity: 1,
     }
 }
 
@@ -113,60 +73,14 @@ pub fn part_forms(
         crate::authority::is_wizard(world, actor),
         "Permission denied."
     );
-    let mut forms = exact_names().forms.clone();
+    let mut forms = part_names().forms.clone();
     forms.sort_by(|a, b| (&a.short_name, a.part_id).cmp(&(&b.short_name, b.part_id)));
     Ok(forms)
 }
 
-/// Enumerate the immutable catalogue without command authority checks, sorted by
-/// short name and part. Built once; template parsing, validation, and every Lua
-/// VM's package registration read it.
-pub fn part_catalogue() -> &'static [BattlePartForm] {
-    static SORTED: OnceLock<Vec<BattlePartForm>> = OnceLock::new();
-    SORTED.get_or_init(|| {
-        let mut forms = exact_names().forms.clone();
-        forms.sort_by(|a, b| (&a.short_name, a.part_id).cmp(&(&b.short_name, b.part_id)));
-        forms
-    })
-}
-
-/// Exact catalogue indexes choose the lowest part ID for colliding names.
-#[derive(Default)]
-struct ExactNames {
-    abbreviations: BTreeMap<String, i32>,
-    canonical: BTreeMap<String, i32>,
-    forms: Vec<BattlePartForm>,
-}
-
-/// Build immutable indexes once; selection must not depend on the stock currently present.
-fn exact_names() -> &'static ExactNames {
-    static NAMES: OnceLock<ExactNames> = OnceLock::new();
-    NAMES.get_or_init(|| {
-        let mut names = ExactNames::default();
-        for part in BattlePart::all() {
-            let alias = abbreviation(&short_name(&part.name));
-            names.forms.push(BattlePartForm {
-                part_id: part.part_id,
-                short_name: alias.clone(),
-                long_name: short_name(&part.name),
-                very_long_name: part.name.clone(),
-            });
-            names
-                .abbreviations
-                .entry(alias.to_ascii_lowercase())
-                .or_insert(part.part_id);
-            names
-                .canonical
-                .entry(part.name.to_ascii_lowercase())
-                .or_insert(part.part_id);
-        }
-        names
-    })
-}
-
 /// DEBUG controls use exact very-long catalogue names.
 pub(super) fn canonical_part(name: &str) -> Option<i32> {
-    exact_names()
+    part_names()
         .canonical
         .get(&name.to_ascii_lowercase())
         .copied()
@@ -181,7 +95,7 @@ pub(super) struct TransferSelector<'a> {
 impl<'a> TransferSelector<'a> {
     /// Exact names select one catalogue identity even when its stock is empty.
     pub(super) fn new(pattern: &'a str) -> Self {
-        let names = exact_names();
+        let names = part_names();
         let folded = pattern.to_ascii_lowercase();
         let exact = names
             .abbreviations
@@ -193,10 +107,10 @@ impl<'a> TransferSelector<'a> {
 
     /// Enumerate catalogue matches even when no corresponding stock currently exists.
     pub(super) fn catalogue(&self) -> Vec<BattleInventoryEntry> {
-        exact_names()
+        part_names()
             .forms
             .iter()
-            .map(BattlePartForm::entry)
+            .map(form_entry)
             .filter(|entry| self.contains(entry))
             .collect()
     }
@@ -205,7 +119,7 @@ impl<'a> TransferSelector<'a> {
     pub(super) fn first(&self) -> Option<BattleInventoryEntry> {
         self.catalogue().into_iter().min_by_key(|entry| {
             let part = BattlePart::from_id(entry.part_id).expect("catalogue stock identity");
-            short_name(&part.name)
+            part_short_name(&part.name)
         })
     }
 
@@ -220,20 +134,9 @@ impl<'a> TransferSelector<'a> {
 mod tests {
     use super::*;
 
-    /// Abbreviations preserve equipment spelling rules, including collisions.
+    /// Exact abbreviations and catalogue names select one identity; numeric ids do not.
     #[test]
-    fn stock_abbreviations_and_catalogue_priority() {
-        for (name, expected) in [
-            ("MediumLaser", "ML"),
-            ("AC/20", "AC20"),
-            ("Ammo_LRM-10", "A_LRM10"),
-            ("CL.ERLargeLaser", "CLERLL"),
-            ("Fuel_Tank", "F_T"),
-            ("Steel", "St"),
-            ("Gold", "Gold"),
-        ] {
-            assert_eq!(abbreviation(name), expected);
-        }
+    fn exact_names_select_catalogue_identities() {
         let laser = super::super::BattleWeapon::MediumLaser.part_id();
         assert_eq!(TransferSelector::new("mL").exact, Some(laser));
         assert_eq!(TransferSelector::new("IS.MediumLaser").exact, Some(laser));

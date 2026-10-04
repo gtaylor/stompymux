@@ -280,23 +280,33 @@ pub use stompymux_map::{HexCoordinate, Point};
 
 pub use stompymux_template::{
     AMMUNITION_PART_OFFSET, AmmunitionBin, BattleAmmunitionMode, BattleDamageClass, BattleEngine,
-    BattleFireMode, BattleLoadout, BattleMechChassis, BattlePart, BattlePartKind,
-    BattleRangeBracket, BattleSection, BattleSystem, BattleTechnology, BattleTemplate,
-    BattleUnitTemplate, BattleVehicleEngine, BattleVehicleLoadout, BattleVehicleMass,
-    BattleVehicleMaterial, BattleVehicleMovement, BattleVehiclePowerplant, BattleVehicleSection,
-    BattleVehicleTemplate, BattleWaterRanges, BattleWeapon, BattleWeaponRange, CriticalDefinition,
-    CriticalLocation, PART_ID_LIMIT, ParsedTemplate, RawMovement, RawSectionCode, RawTemplate,
-    RawUnitClass, ResolvedLoadout, SectionDefinition, SystemCritical, TemplateRegistryCache,
-    VehicleCriticalLocation, WEAPON_PART_IDS, WeaponMount, WeaponProfile,
-    administrative_technology, administrative_template_movement, administrative_template_tonnage,
-    armor_mass, cargo_space_mass, edit_special, engine_mass, finalize_raw_load_specials,
-    flag_spells_technology, half_ton, mixed_technology_flag, one_shot_mass,
-    parse_engine_sink_override, parse_template_speed, power_amplifier_mass, rated_output,
-    raw_default_mech_criticals, read_engine_sink_override, read_resolved_raw_template,
-    read_resolved_template, read_template_document, read_template_speed, reflective_armor_slots,
-    resolve_template_path, resolve_template_path_bytes_cached, resolve_template_path_cached,
-    strip_name_prefix, structure_mass, system_slot_mass, unit_metadata, validate_unit_metadata,
-    write_engine_sink_override, write_template, write_template_speed,
+    BattleFireMode, BattleLoadout, BattleMechChassis, BattlePart, BattlePartForm, BattlePartKind,
+    BattlePartNames, BattlePartPrices, BattleRangeBracket, BattleSection, BattleSystem,
+    BattleTechnology, BattleTemplate, BattleUnitTemplate, BattleVehicleEngine,
+    BattleVehicleLoadout, BattleVehicleMass, BattleVehicleMaterial, BattleVehicleMovement,
+    BattleVehiclePowerplant, BattleVehicleSection, BattleVehicleTemplate, BattleWaterRanges,
+    BattleWeapon, BattleWeaponRange, CriticalDefinition, CriticalLocation, InspectionArmor,
+    InspectionCritical, InspectionPart, InspectionWeapon, PART_ID_LIMIT, ParsedTemplate,
+    RawMovement, RawSectionCode, RawTemplate, RawUnitClass, ResolvedLoadout, SectionDefinition,
+    SystemCritical, TemplateRegistryCache, VehicleCriticalLocation, WEAPON_PART_IDS, WeaponMount,
+    WeaponProfile, administrative_technology, administrative_template_movement,
+    administrative_template_tonnage, armor_mass, cargo_space_mass, edit_special, engine_mass,
+    finalize_raw_load_specials, flag_spells_technology, half_ton, inspect_raw_template_armor,
+    inspect_raw_template_criticals, inspect_raw_template_engine, inspect_raw_template_weapons,
+    inspection_ammunition_modes, inspection_canonical_mech_internal,
+    inspection_compatible_template, inspection_compatible_vehicle_template,
+    inspection_configured_technology, inspection_configured_technology_attributes,
+    inspection_engine_rating, inspection_fire_modes, inspection_normalized_jump_speed,
+    inspection_raw_part, inspection_template_part, inspection_vehicle_engine_rating,
+    inspection_vehicle_engine_values, mixed_technology_flag, one_shot_mass,
+    parse_engine_sink_override, parse_template_speed, part_abbreviation, part_catalogue,
+    part_names, part_price, part_short_name, power_amplifier_mass, rated_output,
+    raw_default_mech_criticals, raw_template_base_cost, read_engine_sink_override,
+    read_resolved_raw_template, read_resolved_template, read_template_document,
+    read_template_speed, reflective_armor_slots, resolve_template_path,
+    resolve_template_path_bytes_cached, resolve_template_path_cached, strip_name_prefix,
+    structure_mass, system_slot_mass, template_base_cost, unit_metadata, validate_unit_metadata,
+    vehicle_template_base_cost, write_engine_sink_override, write_template, write_template_speed,
 };
 
 pub(crate) use motion::set_speed_autopilot;
@@ -822,11 +832,9 @@ pub use player_configuration::{
 };
 mod inspection;
 pub use inspection::{
-    InspectionArmor, InspectionCritical, InspectionPart, InspectionTechnology, InspectionWeapon,
-    compose_unit_raw_inspection, compose_vehicle_raw_inspection, inspect_composed_unit_armor,
-    inspect_composed_vehicle_armor, inspect_raw_template_armor, inspect_raw_template_battle_value,
-    inspect_raw_template_criticals, inspect_raw_template_engine, inspect_raw_template_inventory,
-    inspect_raw_template_technologies, inspect_raw_template_weapons, inspect_section_condition,
+    InspectionTechnology, compose_unit_raw_inspection, compose_vehicle_raw_inspection,
+    inspect_composed_unit_armor, inspect_composed_vehicle_armor, inspect_raw_template_battle_value,
+    inspect_raw_template_inventory, inspect_raw_template_technologies, inspect_section_condition,
     inspect_technologies, inspect_template_armor, inspect_template_critical_text,
     inspect_template_criticals, inspect_template_inventory, inspect_template_status_text,
     inspect_template_weapon_text, inspect_template_weapons, inspect_unit_armor,
@@ -837,9 +845,8 @@ pub use inspection::{
     inspect_vehicle_template_criticals, inspect_vehicle_template_inventory,
     inspect_vehicle_template_status_text, inspect_vehicle_template_weapon_text,
     inspect_vehicle_template_weapons, inspect_vehicle_tic, inspect_vehicle_weapons,
-    inspection_battle_value, inspection_effective_maximum_speed, inspection_engine_rating,
-    inspection_section, inspection_section_code, inspection_template_battle_value,
-    inspection_vehicle_engine_rating, inspection_vehicle_engine_values, inspection_vehicle_section,
+    inspection_battle_value, inspection_effective_maximum_speed, inspection_section,
+    inspection_section_code, inspection_template_battle_value, inspection_vehicle_section,
     inspection_vehicle_section_code, inspection_vehicle_section_for,
     inspection_vehicle_template_battle_value,
 };
@@ -866,8 +873,6 @@ pub use unit_configuration::{
     BattleUnitConfiguration, set_unit_configuration, set_unit_identity_configuration,
     unit_configuration,
 };
-mod template_cost;
-pub use template_cost::{raw_template_base_cost, template_base_cost, vehicle_template_base_cost};
 mod event_telemetry;
 pub use event_telemetry::BattleEventTelemetry;
 mod character_value_contract;
@@ -1356,7 +1361,7 @@ pub(crate) mod database_save;
 pub use database_save::request_database_save;
 
 pub(crate) mod forms_report;
-pub use stock_selection::{BattlePartForm, part_catalogue, part_forms};
+pub use stock_selection::part_forms;
 
 mod operator_settings;
 pub use operator_settings::{edit_skill_threshold, edit_weapon_settings};

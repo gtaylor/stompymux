@@ -11,7 +11,7 @@ and operations used across those boundaries.
 
 Two workspace crates hold the data the gameplay code builds on. `crates/map`
 owns battlefield maps and hex geometry. `crates/template` owns unit templates,
-the weapon and system catalogue, loadouts and construction rules. Neither knows
+the weapon and system catalogue, loadouts, construction rules and cost. Neither knows
 about the world or live units; `src/btech/` re-exports their types and layers
 live state and combat rules on top. Because Rust does not allow inherent
 methods on another crate's types, combat behavior for catalogue types is
