@@ -8,17 +8,17 @@ use stompymux_rs::*;
 #[tokio::test]
 async fn cockpit_help_matches_catalogue_without_mutation() {
     for (template, class) in [
-        (include_str!("../game/mechs/JR7-D.toml"), CommandClass::Mech),
+        (include_str!("../game/units/JR7-D.toml"), CommandClass::Mech),
         (
-            include_str!("../game/mechs/GOL-1H.toml"),
+            include_str!("../game/units/GOL-1H.toml"),
             CommandClass::Mech,
         ),
         (
-            include_str!("../game/mechs/Demolisher.toml"),
+            include_str!("../game/units/Demolisher.toml"),
             CommandClass::Ground,
         ),
         (
-            include_str!("../game/mechs/Kestrel.toml"),
+            include_str!("../game/units/Kestrel.toml"),
             CommandClass::Vtol,
         ),
     ] {

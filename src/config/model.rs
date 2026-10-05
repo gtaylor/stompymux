@@ -8,8 +8,8 @@ use std::{collections::BTreeMap, net::IpAddr, path::PathBuf};
 pub struct DatabaseConfig {
     /// Configuration value for `game_database`; defaults are centralized below.
     pub game_database: PathBuf,
-    /// Configuration value for `mech_database`; defaults are centralized below.
-    pub mech_database: PathBuf,
+    /// Configuration value for `unit_database`; defaults are centralized below.
+    pub unit_database: PathBuf,
     /// Configuration value for `map_database`; defaults are centralized below.
     pub map_database: PathBuf,
     /// Configuration value for `dump_interval`; defaults are centralized below.
@@ -35,7 +35,7 @@ impl Default for DatabaseConfig {
     fn default() -> Self {
         Self {
             game_database: PathBuf::from("data/stompymux.db"),
-            mech_database: PathBuf::from("mechs"),
+            unit_database: PathBuf::from("units"),
             map_database: PathBuf::from("maps"),
             dump_interval: 3600,
             fork_dump: true,

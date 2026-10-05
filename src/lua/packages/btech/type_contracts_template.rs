@@ -3,28 +3,28 @@
 
 // lua-types-begin btech 00020
 //|---Read a biped asset without instantiating or activating a unit.
-//|---@param name string Template reference: the file stem of a `.toml` document anywhere under database.mech_database.
+//|---@param name string Template reference: the file stem of a `.toml` document anywhere under database.unit_database.
 //|---@return MechTemplate
 //|function btech_template.inspect(name) end
 // lua-types-end
 
 // lua-types-begin btech 00021
 //|---Resolve supported equipment; does not validate chassis construction or enable simulation.
-//|---@param name string Template reference: the file stem of a `.toml` document anywhere under database.mech_database.
+//|---@param name string Template reference: the file stem of a `.toml` document anywhere under database.unit_database.
 //|---@return MechLoadout
 //|function btech_template.loadout(name) end
 // lua-types-end
 
 // lua-types-begin btech 00253
 //|---Preview construction without registering a unit or modifying the source asset.
-//|---@param name string Template reference: the file stem of a `.toml` document anywhere under database.mech_database.
+//|---@param name string Template reference: the file stem of a `.toml` document anywhere under database.unit_database.
 //|---@return TemplateCheck
 //|function btech_template.check(name) end
 // lua-types-end
 
 // lua-types-begin btech 00461
 //|---Read current, original and rear armor values; an omitted section reports the totals.
-//|---@param reference string Template reference: the file stem of a `.toml` document anywhere under database.mech_database.
+//|---@param reference string Template reference: the file stem of a `.toml` document anywhere under database.unit_database.
 //|---@param section? UnitSection Typed section constant from btech.unit.sections.
 //|---@return ArmorStatus status
 //|function btech_template.armor(reference, section) end

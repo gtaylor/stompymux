@@ -6,7 +6,7 @@ use stompymux_rs::*;
 /// Two distinct tank slots share the left hull face without replacing weapon equipment.
 fn aircraft(cargo_tech: bool) -> VehicleTemplate {
     let mut template =
-        VehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml")).unwrap();
+        VehicleTemplate::parse("Kestrel", include_str!("../game/units/Kestrel.toml")).unwrap();
     if !cargo_tech {
         template
             .attributes
@@ -129,7 +129,7 @@ async fn damaged_installed_tanks_retain_capacity_and_cargo_contribution() {
 fn tank_equipment_uses_shared_identity_without_creating_ground_fuel_state() {
     assert_eq!(System::parse("fuel_tank").unwrap(), System::FuelTank);
     let mut template =
-        VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+        VehicleTemplate::parse("Demolisher", include_str!("../game/units/Demolisher.toml"))
             .unwrap();
     let before = template.mass().unwrap();
     template

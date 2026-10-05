@@ -41,9 +41,9 @@ async fn fixture(
 #[tokio::test]
 async fn cutoff_cockpit_transition_and_restart() {
     for source in [
-        include_str!("../game/mechs/JR7-D.toml"),
-        include_str!("../game/mechs/GOL-1H.toml"),
-        include_str!("../game/mechs/Daishi-H.toml"),
+        include_str!("../game/units/JR7-D.toml"),
+        include_str!("../game/units/GOL-1H.toml"),
+        include_str!("../game/units/Daishi-H.toml"),
     ] {
         let (_dir, config, world, id) = fixture(source, None).await;
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
@@ -199,7 +199,7 @@ async fn cutoff_environment_samples_and_damaged_capacity() {
         (".0", -41, 0, 16.0, 6, 6.0, 6.0),
     ] {
         let (_dir, config, mut world, id) = fixture(
-            include_str!("../game/mechs/JR7-D.toml"),
+            include_str!("../game/units/JR7-D.toml"),
             Some((tile, temperature)),
         )
         .await;
@@ -226,7 +226,7 @@ async fn cutoff_environment_samples_and_damaged_capacity() {
         assert_eq!(unit.heat_rates(&world).dissipation, inspected_cooling);
     }
     let (_dir, config, mut world, id) =
-        fixture(include_str!("../game/mechs/JR7-D.toml"), None).await;
+        fixture(include_str!("../game/units/JR7-D.toml"), None).await;
     world
         .btech
         .rewrite_unit_record(id, |record| {
@@ -263,7 +263,7 @@ async fn idle_cutoff_transition_runs_on_server_heartbeat() {
     tokio::task::LocalSet::new()
         .run_until(async {
             let (dir, _config, mut world, id) =
-                fixture(include_str!("../game/mechs/JR7-D.toml"), None).await;
+                fixture(include_str!("../game/units/JR7-D.toml"), None).await;
             toggle_battle_heat_cutoff(&mut world, id, ObjectId(1), true).unwrap();
             let path = dir.path().join("stompymux.toml");
             let mut settings: toml::Value =

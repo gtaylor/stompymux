@@ -18,7 +18,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
     create_battle_vehicle(
         &mut world,
         id,
-        VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+        VehicleTemplate::parse("Demolisher", include_str!("../game/units/Demolisher.toml"))
             .unwrap(),
     )
     .unwrap();
@@ -447,7 +447,7 @@ async fn automatic_turret_tracks_moving_units_and_hexes() {
     create_battle_unit(
         &mut world,
         target,
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
@@ -497,8 +497,8 @@ async fn automatic_turret_tracks_moving_units_and_hexes() {
 /// Tracking uses vehicle anatomy rather than propulsion type; rotorcraft without a turret reject it.
 #[tokio::test]
 async fn automatic_tracking_is_shared_by_ground_and_rotorcraft() {
-    let ground = include_str!("../game/mechs/Demolisher.toml");
-    let vtol = include_str!("../game/mechs/Kestrel.toml");
+    let ground = include_str!("../game/units/Demolisher.toml");
+    let vtol = include_str!("../game/units/Kestrel.toml");
     for source in [
         ground.into(),
         ground.replace("movement = \"track\"", "movement = \"wheel\""),

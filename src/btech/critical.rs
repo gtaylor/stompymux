@@ -599,7 +599,7 @@ mod tests {
 
     /// The test Atlas with its AC/20 swapped for `item` and a bin of its ammunition.
     fn atlas(item: &str, slots: &str, rounds: u16) -> Mech {
-        let source = include_str!("../../tests/fixtures/btech/mechs/AS7-D.toml")
+        let source = include_str!("../../tests/fixtures/btech/units/AS7-D.toml")
             .replace(
                 "{ at = \"1-10\", item = \"IS.AC/20\" }",
                 &format!("{{ at = \"{slots}\", item = \"{item}\" }}"),

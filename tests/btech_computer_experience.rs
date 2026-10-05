@@ -63,12 +63,12 @@ async fn fixture(source: &str) -> (tempfile::TempDir, Config, World, ObjectId) {
         .unwrap()
         .flags
         .insert(Flag::InCharacter);
-    let mut channel = Channel::new("MechXP".into());
+    let mut channel = Channel::new("XPInfo".into());
     channel.users.push(communication::Membership {
         who: ObjectId(1),
         listening: true,
     });
-    world.channels.insert("MechXP".into(), channel);
+    world.channels.insert("XPInfo".into(), channel);
     (dir, config, world, id)
 }
 
@@ -76,8 +76,8 @@ async fn fixture(source: &str) -> (tempfile::TempDir, Config, World, ObjectId) {
 #[tokio::test]
 async fn computer_override_xp_obeys_character_success_and_heat_gates() {
     for source in [
-        include_str!("../game/mechs/JR7-D.toml"),
-        include_str!("../game/mechs/GOL-1H.toml"),
+        include_str!("../game/units/JR7-D.toml"),
+        include_str!("../game/units/GOL-1H.toml"),
     ] {
         let (_dir, config, base, id) = fixture(source).await;
         for ic in [false, true] {
@@ -146,7 +146,7 @@ async fn computer_override_xp_obeys_character_success_and_heat_gates() {
 /// Restored cooldowns suppress duplicate awards without suppressing the successful override itself.
 #[tokio::test]
 async fn computer_override_xp_interval_survives_restart() {
-    let (_dir, config, mut world, id) = fixture(include_str!("../game/mechs/JR7-D.toml")).await;
+    let (_dir, config, mut world, id) = fixture(include_str!("../game/units/JR7-D.toml")).await;
     due(&mut world, id, 14.0, 12);
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     let report = advance_battle_overheat_action(&scripts, &config, rules())
@@ -176,9 +176,9 @@ async fn computer_override_xp_interval_survives_restart() {
 /// A late channel failure restores the award together with heat cadence, dice and pending output.
 #[tokio::test]
 async fn computer_override_channel_failure_restores_the_entire_heat_action() {
-    let (_dir, config, mut world, id) = fixture(include_str!("../game/mechs/GOL-1H.toml")).await;
+    let (_dir, config, mut world, id) = fixture(include_str!("../game/units/GOL-1H.toml")).await;
     due(&mut world, id, 14.0, 12);
-    world.channels.get_mut("MechXP").unwrap().messages = i64::MAX;
+    world.channels.get_mut("XPInfo").unwrap().messages = i64::MAX;
     let before = world.clone();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     assert!(advance_battle_overheat_action(&scripts, &config, rules()).is_err());
@@ -191,7 +191,7 @@ async fn computer_override_channel_failure_restores_the_entire_heat_action() {
     scripts
         .world_mut()
         .channels
-        .get_mut("MechXP")
+        .get_mut("XPInfo")
         .unwrap()
         .messages = 0;
     let report = advance_battle_overheat_action(&scripts, &config, rules())

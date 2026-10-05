@@ -83,7 +83,7 @@ mod tests {
     fn hardened_hits_count_armor_points_toward_piloting_checks() {
         let mut template = MechTemplate::parse(
             "JR7-D",
-            include_str!("../../tests/fixtures/btech/mechs/JR7-D.toml"),
+            include_str!("../../tests/fixtures/btech/units/JR7-D.toml"),
         )
         .unwrap();
         let specials = template.attributes.entry("specials".into()).or_default();
@@ -106,7 +106,7 @@ mod tests {
         let jenner = |slots: u8| {
             let mut template = MechTemplate::parse(
                 "JR7-D",
-                include_str!("../../tests/fixtures/btech/mechs/JR7-D.toml"),
+                include_str!("../../tests/fixtures/btech/units/JR7-D.toml"),
             )
             .unwrap();
             let flags = template.attributes.entry("specials".into()).or_default();
@@ -132,7 +132,7 @@ mod tests {
     /// for it on a unit whose head keeps standard life support.
     #[test]
     fn small_cockpits_construct_only_from_their_construction_choice() {
-        let jenner = include_str!("../../tests/fixtures/btech/mechs/JR7-D.toml");
+        let jenner = include_str!("../../tests/fixtures/btech/units/JR7-D.toml");
         let small = jenner
             .replace(
                 "{ at = 4, item = \"HeatSink\" }",

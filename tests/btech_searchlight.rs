@@ -26,7 +26,7 @@ async fn fixture() -> (
         let id = world.create(&config, name.into(), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         let mut definition =
-            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
         definition
             .attributes
             .insert("specials".into(), "FlipArms Searchlight".into());

@@ -4,7 +4,7 @@ use stompymux_rs::*;
 /// Use one slot per non-head section; retain all existing weapons and relocate a jump jet.
 fn equipped() -> MechTemplate {
     let mut template =
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
     let jet = template
         .sections
         .get_mut(&MechSection::CenterTorso)

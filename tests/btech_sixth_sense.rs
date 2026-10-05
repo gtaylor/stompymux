@@ -353,7 +353,7 @@ async fn server_retries_warning_delivery_after_failed_commit() {
     use sqlx::{Connection, SqliteConnection};
     use std::{cell::Cell, rc::Rc};
     tokio::task::LocalSet::new().run_until(async {
-        for template in [include_str!("../game/mechs/JR7-D.toml"), include_str!("../game/mechs/Demolisher.toml")] {
+        for template in [include_str!("../game/units/JR7-D.toml"), include_str!("../game/units/Demolisher.toml")] {
             let (_dir, config, mut world, source, target, _) = firing::fixture_with_target(template, None, template).await;
             for id in [source, target] {
                 world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);

@@ -6,7 +6,7 @@ use support::isolated_scripts;
 async fn repair_queries_use_section_anatomy_and_persisted_technician_time() {
     let (_d, _c, s) = isolated_scripts().await;
     let template =
-        stompymux_rs::MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+        stompymux_rs::MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml"))
             .unwrap();
     stompymux_rs::create_battle_unit(&mut s.world_mut(), stompymux_rs::ObjectId(14), template)
         .unwrap();
@@ -94,12 +94,12 @@ async fn repair_queries_use_section_anatomy_and_persisted_technician_time() {
 async fn repair_fixability_allows_only_vehicle_turret_or_vtol_rotor_loss() {
     for (template, allowed, forbidden) in [
         (
-            include_str!("../game/mechs/Demolisher.toml"),
+            include_str!("../game/units/Demolisher.toml"),
             "Turret",
             "Front_Side",
         ),
         (
-            include_str!("../game/mechs/Kestrel.toml"),
+            include_str!("../game/units/Kestrel.toml"),
             "Rotor",
             "Front_Side",
         ),
@@ -145,7 +145,7 @@ async fn repair_fixability_allows_only_vehicle_turret_or_vtol_rotor_loss() {
 async fn repair_apply_admits_only_five_immediate_operations_with_c_field_shapes() {
     let (_d, _c, s) = isolated_scripts().await;
     let template =
-        stompymux_rs::MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+        stompymux_rs::MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml"))
             .unwrap();
     stompymux_rs::create_battle_unit(&mut s.world_mut(), stompymux_rs::ObjectId(14), template)
         .unwrap();
@@ -219,7 +219,7 @@ async fn repair_apply_admits_only_five_immediate_operations_with_c_field_shapes(
 async fn repair_apply_reattach_restores_only_destroyed_sections_and_rolls_back_failures() {
     let (_d, _c, s) = isolated_scripts().await;
     let template =
-        stompymux_rs::MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+        stompymux_rs::MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml"))
             .unwrap();
     stompymux_rs::create_battle_unit(&mut s.world_mut(), stompymux_rs::ObjectId(14), template)
         .unwrap();
@@ -297,7 +297,7 @@ async fn repair_apply_reattach_restores_only_destroyed_sections_and_rolls_back_f
 async fn immediate_repairs_validate_exact_shapes_and_change_only_live_material() {
     let (_d, _c, s) = isolated_scripts().await;
     let template =
-        stompymux_rs::MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+        stompymux_rs::MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml"))
             .unwrap();
     stompymux_rs::create_battle_unit(&mut s.world_mut(), stompymux_rs::ObjectId(14), template)
         .unwrap();

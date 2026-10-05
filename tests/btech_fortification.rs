@@ -2,10 +2,10 @@
 use crate::support;
 use stompymux_rs::*;
 const CHASSIS: [&str; 4] = [
-    include_str!("fixtures/btech/mechs/JR7-D.toml"),
-    include_str!("../game/mechs/SCP-1N.toml"),
-    include_str!("../game/mechs/Demolisher.toml"),
-    include_str!("../game/mechs/Kestrel.toml"),
+    include_str!("fixtures/btech/units/JR7-D.toml"),
+    include_str!("../game/units/SCP-1N.toml"),
+    include_str!("../game/units/Demolisher.toml"),
+    include_str!("../game/units/Kestrel.toml"),
 ];
 
 /// A stationary unit and its assigned running pilot, ready for shared control admission.

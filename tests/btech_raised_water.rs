@@ -39,7 +39,7 @@ async fn field(asset: MapAsset) -> (tempfile::TempDir, World, [ObjectId; 2]) {
         create_battle_unit(
             &mut world,
             id,
-            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
@@ -202,8 +202,8 @@ async fn vehicle_field(
 /// level 0.
 #[tokio::test]
 async fn lifting_a_map_lifts_vehicles_without_changing_what_happens() {
-    let hover = include_str!("../game/mechs/Fulcrum.toml");
-    let truck = include_str!("../game/mechs/Flatbed_Truck.toml");
+    let hover = include_str!("../game/units/Fulcrum.toml");
+    let truck = include_str!("../game/units/Flatbed_Truck.toml");
     // The truck halts at the water's edge rather than drive in.
     for (template, row, reach) in [
         (hover, ".0.0~5/3/4/3/2/3~7.0.0.0", 4),
@@ -297,7 +297,7 @@ async fn duel(
         create_battle_unit(
             &mut world,
             id,
-            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
@@ -454,19 +454,19 @@ async fn barrage(asset: MapAsset, target_row: i64) -> (tempfile::TempDir, World,
     for (pilot, source, row, team) in [
         (
             Some(ObjectId(1)),
-            include_str!("fixtures/btech/mechs/AS7-D.toml"),
+            include_str!("fixtures/btech/units/AS7-D.toml"),
             9,
             0,
         ),
         (
             Some(ObjectId(2)),
-            include_str!("fixtures/btech/mechs/JR7-D.toml"),
+            include_str!("fixtures/btech/units/JR7-D.toml"),
             3,
             0,
         ),
         (
             None,
-            include_str!("fixtures/btech/mechs/JR7-D.toml"),
+            include_str!("fixtures/btech/units/JR7-D.toml"),
             target_row,
             2,
         ),

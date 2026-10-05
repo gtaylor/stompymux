@@ -4,7 +4,7 @@ use stompymux_rs::*;
 /// Four installed gyro slots with the explicit hardened technology flag.
 fn definition() -> MechTemplate {
     let mut template =
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
     template
         .attributes
         .insert("specials".into(), "HDGYRO".into());
@@ -15,7 +15,7 @@ fn definition() -> MechTemplate {
 #[test]
 fn hardened_gyro_mass_and_damage_thresholds() {
     let ordinary = Mech::from_template(
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     let unit = Mech::from_template(definition()).unwrap();
@@ -68,7 +68,7 @@ fn hardened_gyro_mass_and_damage_thresholds() {
 #[test]
 fn xl_and_compact_gyro_construction_damage_and_restore() {
     let standard = Mech::from_template(
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     for (flag, family, count, mass) in [
@@ -157,8 +157,8 @@ fn xl_and_compact_gyro_construction_damage_and_restore() {
 #[test]
 fn hardened_gyro_piloting_preserves_damage_and_recalculation_order() {
     for source in [
-        include_str!("../game/mechs/JR7-D.toml"),
-        include_str!("../game/mechs/GOL-1H.toml"),
+        include_str!("../game/units/JR7-D.toml"),
+        include_str!("../game/units/GOL-1H.toml"),
     ] {
         for hardened in [false, true] {
             let mut template = MechTemplate::parse("test", source).unwrap();
@@ -223,8 +223,8 @@ fn hardened_gyro_piloting_preserves_damage_and_recalculation_order() {
 #[test]
 fn hardened_gyro_recalculation_follows_section_loss_anatomy() {
     for source in [
-        include_str!("../game/mechs/JR7-D.toml"),
-        include_str!("../game/mechs/GOL-1H.toml"),
+        include_str!("../game/units/JR7-D.toml"),
+        include_str!("../game/units/GOL-1H.toml"),
     ] {
         let mut template = MechTemplate::parse("test", source).unwrap();
         template

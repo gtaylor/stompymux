@@ -379,7 +379,7 @@ mod tests {
                 world.btech.maps.insert(ObjectId(99), map);
                 let mut template = crate::MechTemplate::parse(
                     "JR7-D",
-                    include_str!("../../tests/fixtures/btech/mechs/JR7-D.toml"),
+                    include_str!("../../tests/fixtures/btech/units/JR7-D.toml"),
                 )
                 .unwrap();
                 if radar {

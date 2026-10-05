@@ -47,7 +47,7 @@ pub(crate) async fn fixture_source(
 ) {
     fixture_assets(
         source,
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .await
 }
@@ -100,7 +100,7 @@ pub(crate) async fn lock_fixture() -> (
     create_battle_unit(
         &mut world,
         target,
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
@@ -320,7 +320,7 @@ pub(crate) async fn stagger_fixture() -> (
     let source = format!("12 12\n{}", format!("{}\n", ".0".repeat(12)).repeat(12));
     let (dir, config, mut world, id) = fixture_assets(
         &source,
-        MechTemplate::parse("AS7-D", include_str!("fixtures/btech/mechs/AS7-D.toml")).unwrap(),
+        MechTemplate::parse("AS7-D", include_str!("fixtures/btech/units/AS7-D.toml")).unwrap(),
     )
     .await;
     balance_skill(&mut world);

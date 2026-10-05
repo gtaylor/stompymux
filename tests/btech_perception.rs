@@ -101,26 +101,26 @@ async fn lane(rows: &[&str], observer: Observer<'_>) -> Lane {
         Observer::Vehicle(equipment) => create_battle_vehicle(
             &mut world,
             observer_id,
-            vehicle(include_str!("../game/mechs/Demolisher.toml"), equipment),
+            vehicle(include_str!("../game/units/Demolisher.toml"), equipment),
         )
         .unwrap(),
         Observer::Installation(equipment) => create_battle_vehicle(
             &mut world,
             observer_id,
-            vehicle(include_str!("../game/mechs/RadioTower.toml"), equipment),
+            vehicle(include_str!("../game/units/RadioTower.toml"), equipment),
         )
         .unwrap(),
         Observer::Mech => create_battle_unit(
             &mut world,
             observer_id,
-            MechTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap(),
+            MechTemplate::parse("JR7-D", include_str!("../game/units/JR7-D.toml")).unwrap(),
         )
         .unwrap(),
     }
     create_battle_unit(
         &mut world,
         target,
-        MechTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("../game/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
@@ -373,7 +373,7 @@ async fn hostile_ecm_leaves_only_sight() {
     create_battle_unit(
         &mut lane.world,
         jammer,
-        MechTemplate::parse("RVN-1X", include_str!("../game/mechs/RVN-1X.toml")).unwrap(),
+        MechTemplate::parse("RVN-1X", include_str!("../game/units/RVN-1X.toml")).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut lane.world, jammer, lane.map, 0, 6).unwrap();

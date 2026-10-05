@@ -13,7 +13,7 @@ fn caseless_bins_have_double_capacity_and_half_ton_sizing() {
     ] {
         for half in [false, true] {
             let mut definition =
-                MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml"))
                     .unwrap();
             let mut part = definition.sections[&MechSection::LeftArm].criticals[&2].clone();
             part.equipment = weapon.name().into();

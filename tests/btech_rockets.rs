@@ -4,7 +4,7 @@ use stompymux_rs::*;
 /// Put one launcher in a conventional torso while retaining the fixture's external ammunition.
 fn definition(weapon: Weapon, modes: &[&str]) -> MechTemplate {
     let mut template =
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
     let mut part = template.sections[&MechSection::LeftArm].criticals[&2].clone();
     part.equipment = weapon.name().into();
     part.modes = modes.iter().map(|s| s.to_string()).collect();
@@ -89,7 +89,7 @@ fn rocket_catalog_clusters_and_one_shot_templates() {
 #[test]
 fn rocket_commando_constructs_unchanged() {
     let source =
-        std::fs::read_to_string(crate::support::repository_root().join("game/mechs/COM-4H.toml"))
+        std::fs::read_to_string(crate::support::repository_root().join("game/units/COM-4H.toml"))
             .unwrap();
     let unit = Mech::from_template(MechTemplate::parse("test", &source).unwrap()).unwrap();
     let loadout = unit.loadout().unwrap();

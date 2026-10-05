@@ -42,7 +42,7 @@ async fn native_and_lua_vehicle_firing_controls_share_state_and_rollback() {
         ("IS.MachineGun", "Gattling", "gattling", FireMode::Gatling),
         ("IS.RotaryAC/2", "Rotary_FourShot", "rac", FireMode::Rotary4),
     ] {
-        let template = include_str!("../game/mechs/Demolisher.toml").replace(
+        let template = include_str!("../game/units/Demolisher.toml").replace(
             "item = \"IS.AC/20\" }",
             &format!("item = \"{weapon}\", modes = [\"{flag}\"] }}"),
         );
@@ -193,7 +193,7 @@ async fn native_and_lua_vehicle_firing_controls_share_state_and_rollback() {
 
 #[tokio::test]
 async fn vehicle_firing_mode_guards_and_snapshot_validation_preserve_state() {
-    let template = include_str!("../game/mechs/Demolisher.toml").replace(
+    let template = include_str!("../game/units/Demolisher.toml").replace(
         "item = \"IS.AC/20\" }",
         "item = \"IS.Flamer\", modes = [\"Heat\"] }",
     );
@@ -240,7 +240,7 @@ async fn vehicle_firing_mode_guards_and_snapshot_validation_preserve_state() {
         state["vehicles"][id.0.to_string()]["fire_modes"] = invalid;
         assert!(serde_json::from_value::<BtechState>(state).is_err());
     }
-    let template = include_str!("../game/mechs/Demolisher.toml").replace(
+    let template = include_str!("../game/units/Demolisher.toml").replace(
         "item = \"IS.AC/20\" }",
         "item = \"IS.LRM-5\", modes = [\"OneShot\"] }",
     );
@@ -257,7 +257,7 @@ async fn vehicle_firing_mode_guards_and_snapshot_validation_preserve_state() {
 
 #[tokio::test]
 async fn live_modes_control_reservations_and_hotloaded_critical_eligibility() {
-    let template = include_str!("../game/mechs/Demolisher.toml")
+    let template = include_str!("../game/units/Demolisher.toml")
         .replace(
             "[sections.front_side]\n",
             "[sections.front_side]\nslots = [{ at = 1, item = \"IS.LRM-5\", modes = [\"Hotload\"] }]\n",
@@ -344,7 +344,7 @@ async fn temporary_weapon_failures_keep_recycle_admission_and_firing_lock() {
         ("IS.AC/2", "rapidfire", EquipmentFailure::Jammed),
         ("IS.AC/2", "rapidfire", EquipmentFailure::Disabled),
     ] {
-        let source = include_str!("../game/mechs/Demolisher.toml")
+        let source = include_str!("../game/units/Demolisher.toml")
             .replace("item = \"IS.AC/20\" }", &format!("item = \"{weapon}\" }}"));
         let (_dir, config, mut world, id) = fixture(&source).await;
         world

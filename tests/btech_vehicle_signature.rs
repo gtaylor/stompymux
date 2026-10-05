@@ -37,7 +37,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
 #[tokio::test]
 async fn vehicle_perception_captures_completion_and_replays_until_next_startup() {
     let (_dir, config, mut world, id) =
-        fixture(include_str!("../game/mechs/Demolisher.toml")).await;
+        fixture(include_str!("../game/units/Demolisher.toml")).await;
     assert_eq!(world.btech.vehicles()[&id].scanner_perception(), 18);
     stop_battle_unit(&mut world, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
@@ -106,14 +106,14 @@ async fn vehicle_perception_captures_completion_and_replays_until_next_startup()
 #[tokio::test]
 async fn vehicle_signature_drives_scenario_lighting_and_detached_lua_state() {
     let (_dir, config, mut world, observer) =
-        fixture(include_str!("../game/mechs/Demolisher.toml")).await;
+        fixture(include_str!("../game/units/Demolisher.toml")).await;
     let map = world.btech.vehicles()[&observer].position().unwrap().map;
     let target = world.create(&config, "Target".into(), Kind::Thing);
     world.objects.get_mut(&target).unwrap().home = Some(ObjectId(config.home()));
     create_battle_vehicle(
         &mut world,
         target,
-        VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+        VehicleTemplate::parse("Demolisher", include_str!("../game/units/Demolisher.toml"))
             .unwrap(),
     )
     .unwrap();

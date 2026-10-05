@@ -29,9 +29,9 @@ async fn fixture_movement(
     let id = world.create(&config, "Burning vehicle".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     let mut text = if movement == VehicleMovement::Vtol {
-        include_str!("../game/mechs/Kestrel.toml")
+        include_str!("../game/units/Kestrel.toml")
     } else {
-        include_str!("../game/mechs/Demolisher.toml")
+        include_str!("../game/units/Demolisher.toml")
     }
     .to_owned();
     if movement == VehicleMovement::Stationary {

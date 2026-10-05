@@ -30,7 +30,7 @@ async fn fixture_movement(
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     let mut template = VehicleTemplate::parse(
         "Flatbed_Truck",
-        include_str!("../game/mechs/Flatbed_Truck.toml"),
+        include_str!("../game/units/Flatbed_Truck.toml"),
     )
     .unwrap();
     template.movement = movement;
@@ -755,7 +755,7 @@ async fn mine_blast_disables_a_later_vehicle_before_its_scheduled_movement() {
         other,
         VehicleTemplate::parse(
             "Flatbed_Truck",
-            include_str!("../game/mechs/Flatbed_Truck.toml"),
+            include_str!("../game/units/Flatbed_Truck.toml"),
         )
         .unwrap(),
     )
@@ -987,7 +987,7 @@ async fn ground_vehicles_cross_crowded_hexes_without_stacking_effects() {
                 other,
                 VehicleTemplate::parse(
                     "Flatbed_Truck",
-                    include_str!("../game/mechs/Flatbed_Truck.toml"),
+                    include_str!("../game/units/Flatbed_Truck.toml"),
                 )
                 .unwrap(),
             )
@@ -997,7 +997,7 @@ async fn ground_vehicles_cross_crowded_hexes_without_stacking_effects() {
             create_battle_unit(
                 &mut world,
                 other,
-                MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml"))
                     .unwrap(),
             )
             .unwrap();
@@ -1305,7 +1305,7 @@ async fn tracked_and_wheeled_ice_entry_replays_shared_fracture_and_waterproof_ro
         world.objects.get_mut(&neighbor).unwrap().home = Some(ObjectId(config.home()));
         let mut template = VehicleTemplate::parse(
             "Flatbed_Truck",
-            include_str!("../game/mechs/Flatbed_Truck.toml"),
+            include_str!("../game/units/Flatbed_Truck.toml"),
         )
         .unwrap();
         template
@@ -1319,7 +1319,7 @@ async fn tracked_and_wheeled_ice_entry_replays_shared_fracture_and_waterproof_ro
         create_battle_unit(
             &mut world,
             mech,
-            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, mech, support::FIXTURE_DICE_SEED);

@@ -28,7 +28,7 @@ busy_timeout_ms = 5000
 # most this much idle time. Zero saves the clock only alongside other changes.
 clock_save_interval = 60
 # Directory containing BattleTech unit template files.
-mech_database = "mechs"
+unit_database = "units"
 # Directory containing map template files.
 map_database = "maps"
 # Seconds between automatic database dumps.

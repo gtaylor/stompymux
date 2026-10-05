@@ -445,7 +445,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             };
             contract::validate_resource_name(&reference, "reference", 2)?;
             let config = crate::lua::configuration(lua);
-            let root = config.path(&config.database.mech_database);
+            let root = config.path(&config.database.unit_database);
             let path = crate::btech::resolve_template_path_cached(
                 &mut shared.borrow_mut().btech.template_registry,
                 &root,
@@ -485,7 +485,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                 })
             };
             let config = crate::lua::configuration(lua);
-            let root = config.path(&config.database.mech_database);
+            let root = config.path(&config.database.unit_database);
             let path = crate::btech::resolve_template_path_cached(
                 &mut shared.borrow_mut().btech.template_registry,
                 &root,
@@ -546,7 +546,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             contract::validate_resource_name(&reference, "reference", 2)?;
             materialize(&shared, id)?;
             let config = crate::lua::configuration(lua);
-            let root = config.path(&config.database.mech_database);
+            let root = config.path(&config.database.unit_database);
             let source = {
                 let world = shared.borrow();
                 crate::btech::with_unit!(world.btech.unit(id).unwrap(), |unit| {

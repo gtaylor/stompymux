@@ -1,6 +1,6 @@
 # BattleTech characterization assets
 
-`mechs/JR7-D`, `mechs/AS7-D` and `maps/test.map` were copied unchanged from the
+`units/JR7-D`, `units/AS7-D` and `maps/test.map` were copied unchanged from the
 reference checkout's `tests/fixtures/game` directory. `maps/environment.map` was
 copied from `tests/fixtures/unit/map_load/environment.map`.
 

@@ -82,7 +82,7 @@ async fn streak_lrm_matrix(weapon: Weapon) {
             &config,
             &source,
             Some(weapon),
-            include_str!("../game/mechs/AS7-D.toml"),
+            include_str!("../game/units/AS7-D.toml"),
             false,
             Some(""),
         );
@@ -222,7 +222,7 @@ async fn streak_lrm_requires_matching_ammunition() {
         let (_dir, config, world, shooter, target, index) = firing::fixture_with_target(
             &source,
             Some(Weapon::ClanStreakLrm10),
-            include_str!("../game/mechs/AS7-D.toml"),
+            include_str!("../game/units/AS7-D.toml"),
         )
         .await;
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();

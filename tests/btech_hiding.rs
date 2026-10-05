@@ -63,20 +63,20 @@ async fn fixture(
 /// Both interfaces schedule the same inclusive timer, and saved events replay identically.
 #[tokio::test]
 async fn hiding_native_lua_all_chassis_timing_and_restart() {
-    let tracked = include_str!("../game/mechs/Demolisher.toml");
+    let tracked = include_str!("../game/units/Demolisher.toml");
     let wheel = tracked.replace("movement = \"track\"", "movement = \"wheel\"");
     let hover = tracked.replace("movement = \"track\"", "movement = \"hover\"");
     let stationary = tracked
         .replace("movement = \"track\"", "movement = \"none\"")
         .replace("walk_mp = 5", "walk_mp = 0");
     for source in [
-        include_str!("../game/mechs/JR7-D.toml"),
-        include_str!("../game/mechs/GOL-1H.toml"),
+        include_str!("../game/units/JR7-D.toml"),
+        include_str!("../game/units/GOL-1H.toml"),
         tracked,
         wheel.as_str(),
         hover.as_str(),
         stationary.as_str(),
-        include_str!("../game/mechs/Kestrel.toml"),
+        include_str!("../game/units/Kestrel.toml"),
     ] {
         for camouflage in [false, true] {
             let (_dir, config, world, _map, id) = fixture(source, camouflage).await;
@@ -155,8 +155,8 @@ async fn hiding_native_lua_all_chassis_timing_and_restart() {
 #[tokio::test]
 async fn hiding_authority_and_cached_observer_rules() {
     for source in [
-        include_str!("../game/mechs/JR7-D.toml"),
-        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/units/JR7-D.toml"),
+        include_str!("../game/units/Demolisher.toml"),
     ] {
         for camouflage in [false, true] {
             let (_dir, config, mut world, map, id) = fixture(source, camouflage).await;
@@ -180,7 +180,7 @@ async fn hiding_authority_and_cached_observer_rules() {
             result.unwrap();
             let observer = world.create(&config, "Observer".into(), Kind::Thing);
             world.objects.get_mut(&observer).unwrap().home = Some(ObjectId(config.home()));
-            UnitTemplate::parse("Hunter", include_str!("../game/mechs/Hunter.toml"))
+            UnitTemplate::parse("Hunter", include_str!("../game/units/Hunter.toml"))
                 .unwrap()
                 .create(&mut world, observer)
                 .unwrap();
@@ -243,9 +243,9 @@ async fn hiding_authority_and_cached_observer_rules() {
 #[tokio::test]
 async fn hiding_fire_intent_survives_rejection_and_rolls_back_with_callbacks() {
     for source in [
-        include_str!("../game/mechs/JR7-D.toml"),
-        include_str!("../game/mechs/Demolisher.toml"),
-        include_str!("../game/mechs/Kestrel.toml"),
+        include_str!("../game/units/JR7-D.toml"),
+        include_str!("../game/units/Demolisher.toml"),
+        include_str!("../game/units/Kestrel.toml"),
     ] {
         let (_dir, config, mut world, _, id) = fixture(source, false).await;
         edit(&mut world, id, |unit| {
@@ -283,10 +283,10 @@ async fn hiding_fire_intent_survives_rejection_and_rolls_back_with_callbacks() {
 #[tokio::test]
 async fn hiding_damage_and_shutdown_distinguish_cover_from_preparation() {
     for source in [
-        include_str!("../game/mechs/JR7-D.toml"),
-        include_str!("../game/mechs/GOL-1H.toml"),
-        include_str!("../game/mechs/Demolisher.toml"),
-        include_str!("../game/mechs/Kestrel.toml"),
+        include_str!("../game/units/JR7-D.toml"),
+        include_str!("../game/units/GOL-1H.toml"),
+        include_str!("../game/units/Demolisher.toml"),
+        include_str!("../game/units/Kestrel.toml"),
     ] {
         let (_dir, config, mut world, _, id) = fixture(source, false).await;
         edit(&mut world, id, |unit| {
@@ -347,10 +347,10 @@ async fn hiding_damage_and_shutdown_distinguish_cover_from_preparation() {
 #[tokio::test]
 async fn hiding_movement_waits_for_a_hex_crossing() {
     for source in [
-        include_str!("../game/mechs/JR7-D.toml"),
-        include_str!("../game/mechs/GOL-1H.toml"),
-        include_str!("../game/mechs/Demolisher.toml"),
-        include_str!("../game/mechs/Kestrel.toml"),
+        include_str!("../game/units/JR7-D.toml"),
+        include_str!("../game/units/GOL-1H.toml"),
+        include_str!("../game/units/Demolisher.toml"),
+        include_str!("../game/units/Kestrel.toml"),
     ] {
         let (_dir, config, mut world, _, id) = fixture(source, false).await;
         let vtol = world
@@ -403,7 +403,7 @@ async fn hiding_idle_server_heartbeat_finishes_saved_event() {
     tokio::task::LocalSet::new()
         .run_until(async {
             let (_dir, config, mut world, _, id) =
-                fixture(include_str!("../game/mechs/Demolisher.toml"), true).await;
+                fixture(include_str!("../game/units/Demolisher.toml"), true).await;
             begin_battle_hiding(&mut world, id, ObjectId(1)).unwrap();
             edit(&mut world, id, |unit| {
                 unit["hide_elapsed"] = serde_json::json!(49)
@@ -425,8 +425,8 @@ async fn hiding_idle_server_heartbeat_finishes_saved_event() {
 async fn hiding_failed_save_preserves_pending_event_for_retry() {
     use sqlx::Connection;
     for source in [
-        include_str!("../game/mechs/JR7-D.toml"),
-        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/units/JR7-D.toml"),
+        include_str!("../game/units/Demolisher.toml"),
     ] {
         let (_dir, config, mut world, _, id) = fixture(source, true).await;
         begin_battle_hiding(&mut world, id, ObjectId(1)).unwrap();
@@ -471,9 +471,9 @@ async fn hiding_failed_save_preserves_pending_event_for_retry() {
 #[tokio::test]
 async fn hiding_admission_and_elevation_checks_are_atomic() {
     for source in [
-        include_str!("../game/mechs/JR7-D.toml"),
-        include_str!("../game/mechs/Demolisher.toml"),
-        include_str!("../game/mechs/Kestrel.toml"),
+        include_str!("../game/units/JR7-D.toml"),
+        include_str!("../game/units/Demolisher.toml"),
+        include_str!("../game/units/Kestrel.toml"),
     ] {
         let (_dir, config, world, map, id) = fixture(source, false).await;
         for (speed, accepted) in [(10.75, true), (10.7501, false)] {
@@ -552,7 +552,7 @@ async fn hiding_admission_and_elevation_checks_are_atomic() {
 async fn hiding_aircraft_crash_orders_crossing_before_damage_and_replays() {
     for crossed in [false, true] {
         let (_dir, config, mut world, map, id) =
-            fixture(include_str!("../game/mechs/Kestrel.toml"), false).await;
+            fixture(include_str!("../game/units/Kestrel.toml"), false).await;
         world
             .btech
             .rewrite_map_record(map, |record| {
@@ -659,17 +659,17 @@ async fn hiding_aircraft_crash_orders_crossing_before_damage_and_replays() {
 /// Operator hold rejects native/Lua/Rust firing before parsing or revealing across every chassis.
 #[tokio::test]
 async fn weapons_hold_controls_admission_cover_and_saved_state() {
-    let tracked = include_str!("../game/mechs/Demolisher.toml");
+    let tracked = include_str!("../game/units/Demolisher.toml");
     let chassis = [
-        include_str!("../game/mechs/JR7-D.toml").to_owned(),
-        include_str!("../game/mechs/GOL-1H.toml").to_owned(),
+        include_str!("../game/units/JR7-D.toml").to_owned(),
+        include_str!("../game/units/GOL-1H.toml").to_owned(),
         tracked.to_owned(),
         tracked.replace("movement = \"track\"", "movement = \"wheel\""),
         tracked.replace("movement = \"track\"", "movement = \"hover\""),
         tracked
             .replace("movement = \"track\"", "movement = \"none\"")
             .replace("walk_mp = 5", "walk_mp = 0"),
-        include_str!("../game/mechs/Kestrel.toml").to_owned(),
+        include_str!("../game/units/Kestrel.toml").to_owned(),
     ];
     for source in chassis {
         let (_dir, config, mut world, _, id) = fixture(&source, false).await;
@@ -783,9 +783,9 @@ async fn weapons_hold_controls_admission_cover_and_saved_state() {
 #[tokio::test]
 async fn weapons_hold_authority_and_rejected_edits_are_atomic() {
     for source in [
-        include_str!("../game/mechs/JR7-D.toml"),
-        include_str!("../game/mechs/Demolisher.toml"),
-        include_str!("../game/mechs/Kestrel.toml"),
+        include_str!("../game/units/JR7-D.toml"),
+        include_str!("../game/units/Demolisher.toml"),
+        include_str!("../game/units/Kestrel.toml"),
     ] {
         let (_dir, config, mut world, map, id) = fixture(source, false).await;
         world

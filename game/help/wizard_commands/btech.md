@@ -331,7 +331,7 @@ limits. CargoTech halves its movement penalty; ordinary Mechs carry twice the
 physical stock mass for speed accounting, while ordinary vehicles carry its full
 mass. Towing bonuses do not discount cargo. Removing stock restores the unloaded
 ceiling. Wizard corrections immediately reconcile the unit's speed limits and
-log the actual addition or removal to an existing `MechEconInfo` channel.
+log the actual addition or removal to an existing `EconInfo` channel.
 Assigning an unchanged quantity emits no record. Stock, speed changes, channel
 history and notifications roll back together if correction or publication fails.
 These controls do not install equipment or perform cargo loading.
@@ -367,7 +367,7 @@ unit remain unsupported.
 
 
 Successful cockpit cargo transfers emit two records to an existing
-`MechEconInfo` channel: the unit's stock change, then the hangar's stock change.
+`EconInfo` channel: the unit's stock change, then the hangar's stock change.
 The records use the actual quantity moved. Ordinary channel listeners and
 history settings apply. The commands do not create the channel automatically.
 Transfer failures publish no records; channel publication failures also roll
@@ -409,7 +409,7 @@ may select at most 20 entries. Removal floors stock at zero; its confirmation an
 economy records retain the capped requested count, even if less stock existed.
 Actuator component balances follow the economy's generic `Actuator` stock rule.
 
-The whole selected batch, resulting unit speed limits, and `MechEconInfo` messages
+The whole selected batch, resulting unit speed limits, and `EconInfo` messages
 commit together. Errors leave no partial batch or diagnostics. Clearing emits
 one reset record, including when the inventory was already empty.
 

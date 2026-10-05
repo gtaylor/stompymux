@@ -5,9 +5,9 @@ use stompymux_rs::*;
 #[tokio::test]
 async fn transfer_preserves_running_controls_and_crew_across_all_admitted_chassis() {
     for source in [
-        include_str!("fixtures/btech/mechs/JR7-D.toml"),
-        include_str!("../game/mechs/Demolisher.toml"),
-        include_str!("../game/mechs/Kestrel.toml"),
+        include_str!("fixtures/btech/units/JR7-D.toml"),
+        include_str!("../game/units/Demolisher.toml"),
+        include_str!("../game/units/Kestrel.toml"),
     ] {
         let (_dir, config, mut world) = support::isolated_world().await;
         let exterior = world.create(&config, "Outside".into(), Kind::Room);
@@ -32,7 +32,7 @@ async fn transfer_preserves_running_controls_and_crew_across_all_admitted_chassi
         create_battle_unit(
             &mut world,
             occupant,
-            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, occupant, support::FIXTURE_DICE_SEED);

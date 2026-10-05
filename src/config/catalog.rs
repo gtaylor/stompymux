@@ -16,8 +16,8 @@ pub const KEYS: &[KeySpec] = &[
         bounds: None,
     },
     KeySpec {
-        path: "database.mech_database",
-        legacy: "mech_database",
+        path: "database.unit_database",
+        legacy: "unit_database",
         kind: "PathBuf",
         bounds: None,
     },

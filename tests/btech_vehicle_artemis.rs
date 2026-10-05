@@ -5,8 +5,8 @@ use stompymux_rs::*;
 
 /// Ground movement classes and rotorcraft, including stationary rotorcraft anatomy.
 fn templates() -> Vec<String> {
-    let ground = include_str!("../game/mechs/Demolisher.toml");
-    let vtol = include_str!("../game/mechs/Kestrel.toml");
+    let ground = include_str!("../game/units/Demolisher.toml");
+    let vtol = include_str!("../game/units/Kestrel.toml");
     vec![
         ground.into(),
         ground.replace("movement = \"track\"", "movement = \"wheel\""),

@@ -51,17 +51,17 @@ mod tests {
     #[test]
     fn direct_direction_tracks_heading_and_position_across_chassis() {
         let config = Config::load("tests/fixtures/game").unwrap();
-        let tracked = include_str!("../../game/mechs/Demolisher.toml");
+        let tracked = include_str!("../../game/units/Demolisher.toml");
         let templates = [
-            include_str!("../../game/mechs/JR7-D.toml").to_owned(),
-            include_str!("../../game/mechs/GOL-1H.toml").to_owned(),
+            include_str!("../../game/units/JR7-D.toml").to_owned(),
+            include_str!("../../game/units/GOL-1H.toml").to_owned(),
             tracked.to_owned(),
             tracked.replace("movement = \"track\"", "movement = \"wheel\""),
             tracked.replace("movement = \"track\"", "movement = \"hover\""),
             tracked
                 .replace("movement = \"track\"", "movement = \"none\"")
                 .replace("walk_mp = 5", "walk_mp = 0"),
-            include_str!("../../game/mechs/Kestrel.toml").to_owned(),
+            include_str!("../../game/units/Kestrel.toml").to_owned(),
         ];
         for source in &templates {
             for recipient in &templates {

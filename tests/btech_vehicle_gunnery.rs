@@ -9,7 +9,7 @@ async fn fixture(weapon: &str) -> (tempfile::TempDir, Config, World, ObjectId) {
     let object = world.objects.get_mut(&id).unwrap();
     object.home = Some(ObjectId(config.home()));
     object.location = Some(ObjectId(config.start()));
-    let text = include_str!("../game/mechs/Demolisher.toml")
+    let text = include_str!("../game/units/Demolisher.toml")
         .replace("\"IS.AC/20\"", &format!("\"{weapon}\""));
     create_battle_vehicle(
         &mut world,

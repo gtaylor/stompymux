@@ -1197,7 +1197,7 @@ mod rewrite_tests {
         create_unit(
             &mut world,
             mech,
-            MechTemplate::parse("JR7-D", include_str!("../../game/mechs/JR7-D.toml")).unwrap(),
+            MechTemplate::parse("JR7-D", include_str!("../../game/units/JR7-D.toml")).unwrap(),
         )
         .unwrap();
         crate::create_battle_vehicle(
@@ -1205,7 +1205,7 @@ mod rewrite_tests {
             vehicle,
             VehicleTemplate::parse(
                 "Demolisher",
-                include_str!("../../game/mechs/Demolisher.toml"),
+                include_str!("../../game/units/Demolisher.toml"),
             )
             .unwrap(),
         )

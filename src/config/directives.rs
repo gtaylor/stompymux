@@ -640,7 +640,7 @@ pub const DIRECTIVES: &[Directive] = &[
         permission: P::GOD,
     },
     Directive {
-        name: "mech_database",
+        name: "unit_database",
         parser: "cf_string",
         permission: P::GOD,
     },

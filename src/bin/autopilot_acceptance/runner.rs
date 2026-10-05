@@ -834,7 +834,7 @@ fn fixture_hashes() -> Result<Value> {
         Ok(())
     }
     let mut hashes = serde_json::Map::new();
-    for path in ["tests/fixtures/game", "game/lua", "game/mechs", "game/maps"] {
+    for path in ["tests/fixtures/game", "game/lua", "game/units", "game/maps"] {
         visit(Path::new(path), &mut hashes)?;
     }
     Ok(Value::Object(hashes))

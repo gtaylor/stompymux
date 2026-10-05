@@ -4,7 +4,7 @@ use stompymux_rs::*;
 /// Place and power a material aircraft without admitting it to the ground simulation.
 fn aircraft() -> Vehicle {
     let unit = Vehicle::new(
-        VehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml")).unwrap(),
+        VehicleTemplate::parse("Kestrel", include_str!("../game/units/Kestrel.toml")).unwrap(),
     )
     .unwrap();
     let mut saved = serde_json::to_value(unit).unwrap();
@@ -112,9 +112,9 @@ fn takeoff_guards_are_atomic_and_rechecked_before_liftoff() {
         assert_eq!(unit, before);
     }
     for source in [
-        include_str!("../game/mechs/Demolisher.toml"),
-        include_str!("../game/mechs/ObservationVTOL.toml"),
-        include_str!("../game/mechs/Kestrel.toml"),
+        include_str!("../game/units/Demolisher.toml"),
+        include_str!("../game/units/ObservationVTOL.toml"),
+        include_str!("../game/units/Kestrel.toml"),
     ] {
         let mut unit = Vehicle::new(VehicleTemplate::parse("test", source).unwrap()).unwrap();
         let before = unit.clone();
@@ -208,7 +208,7 @@ fn saved_flight_rejects_invalid_timers_and_surface_motion() {
         assert!(serde_json::from_value::<Vehicle>(saved).is_err());
     }
     let ground = Vehicle::new(
-        VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+        VehicleTemplate::parse("Demolisher", include_str!("../game/units/Demolisher.toml"))
             .unwrap(),
     )
     .unwrap();

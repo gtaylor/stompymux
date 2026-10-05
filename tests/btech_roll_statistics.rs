@@ -38,8 +38,8 @@ async fn rolls_command_admission_and_empty_report() {
 #[tokio::test]
 async fn rolls_command_reports_live_checks_and_resets_on_restart() {
     for source in [
-        include_str!("../game/mechs/JR7-D.toml"),
-        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/units/JR7-D.toml"),
+        include_str!("../game/units/Demolisher.toml"),
     ] {
         let (_dir, config, mut world, unit, target, index) =
             firing::fixture_with_target(source, None, source).await;

@@ -131,9 +131,9 @@ async fn terrain_zones_cargo_links_and_strict_errors_match_c_shapes() {
 #[tokio::test]
 async fn mixed_membership_range_lookup_los_and_exact_placement_are_canonical() {
     let (_dir, config, mut world, vehicle, mech, _) = firing::fixture_with_target(
-        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/units/Demolisher.toml"),
         None,
-        include_str!("../game/mechs/AS7-D.toml"),
+        include_str!("../game/units/AS7-D.toml"),
     )
     .await;
     let map = world.btech.vehicles()[&vehicle].position().unwrap().map;

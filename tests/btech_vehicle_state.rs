@@ -4,7 +4,7 @@ use stompymux_rs::*;
 /// An intact tracked fixture with two turret weapons and four ammunition bins.
 fn vehicle() -> Vehicle {
     Vehicle::new(
-        VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+        VehicleTemplate::parse("Demolisher", include_str!("../game/units/Demolisher.toml"))
             .unwrap(),
     )
     .unwrap()
@@ -105,7 +105,7 @@ fn vehicle_snapshot_rejects_inconsistent_material_state() {
     let mut truck = Vehicle::new(
         VehicleTemplate::parse(
             "Flatbed_Truck",
-            include_str!("../game/mechs/Flatbed_Truck.toml"),
+            include_str!("../game/units/Flatbed_Truck.toml"),
         )
         .unwrap(),
     )

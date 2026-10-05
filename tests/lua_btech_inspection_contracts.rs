@@ -11,7 +11,7 @@ use support::isolated_scripts;
 #[tokio::test(flavor = "current_thread")]
 async fn missing_template_root_is_a_lookup_miss() {
     let (_directory, config, scripts) = isolated_scripts().await;
-    let root = config.path(&config.database.mech_database);
+    let root = config.path(&config.database.unit_database);
     assert!(!root.exists());
     scripts
         .eval_callback::<()>(
@@ -72,7 +72,7 @@ async fn registered_unit_defaults_are_inspectable_without_constructed_runtime() 
 async fn mech_inspection_projects_exact_record_shapes_and_keeps_the_old_report() {
     let (_directory, _config, scripts) = isolated_scripts().await;
     let template =
-        stompymux_rs::MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+        stompymux_rs::MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml"))
             .unwrap();
     stompymux_rs::create_battle_unit(
         &mut scripts.world_mut(),
@@ -149,20 +149,20 @@ async fn mech_inspection_projects_exact_record_shapes_and_keeps_the_old_report()
 #[tokio::test(flavor = "current_thread")]
 async fn template_lookup_is_case_insensitive_bounded_and_registry_gated() {
     let (_directory, config, scripts) = isolated_scripts().await;
-    let root = config.path(&config.database.mech_database);
+    let root = config.path(&config.database.unit_database);
     std::fs::create_dir_all(root.join("stock")).unwrap();
     std::fs::write(
         root.join("stock/JR7-D.toml"),
-        include_str!("fixtures/btech/mechs/JR7-D.toml"),
+        include_str!("fixtures/btech/units/JR7-D.toml"),
     )
     .unwrap();
-    let modes = include_str!("fixtures/btech/mechs/JR7-D.toml")
+    let modes = include_str!("fixtures/btech/units/JR7-D.toml")
         .replace(
             "item = \"Ammo_IS.SRM-4\", rounds = 25",
             "item = \"Ammo_IS.SRM-4\", rounds = 25, modes = [\"Destroyed\", \"Disabled\", \"Broken\", \"Damaged\", \"BackPack\", \"Jettisoned\", \"OmniBase\", \"RocketFired\", \"Inferno\", \"Precision\"]",
         );
     std::fs::write(root.join("stock/MODES.toml"), modes).unwrap();
-    let unknown = include_str!("fixtures/btech/mechs/JR7-D.toml").replacen(
+    let unknown = include_str!("fixtures/btech/units/JR7-D.toml").replacen(
         "IS.MediumLaser",
         "IS.NoSuchLaser",
         1,
@@ -170,7 +170,7 @@ async fn template_lookup_is_case_insensitive_bounded_and_registry_gated() {
     std::fs::write(root.join("stock/UNKNOWN.toml"), unknown).unwrap();
     std::fs::write(
         root.join("PARITY.toml"),
-        include_str!("fixtures/btech/mechs/PARITY.toml"),
+        include_str!("fixtures/btech/units/PARITY.toml"),
     )
     .unwrap();
     scripts
@@ -207,7 +207,7 @@ async fn template_lookup_is_case_insensitive_bounded_and_registry_gated() {
         .unwrap();
     std::fs::write(
         root.join("stock/LateTemplate.toml"),
-        include_str!("fixtures/btech/mechs/PARITY.toml"),
+        include_str!("fixtures/btech/units/PARITY.toml"),
     )
     .unwrap();
     scripts
@@ -224,7 +224,7 @@ async fn template_lookup_is_case_insensitive_bounded_and_registry_gated() {
 #[tokio::test(flavor = "current_thread")]
 async fn vehicle_inspection_uses_vehicle_sections_and_raw_slot_inventory() {
     let (_directory, config, scripts) = isolated_scripts().await;
-    let source = include_str!("../game/mechs/Demolisher.toml");
+    let source = include_str!("../game/units/Demolisher.toml");
     let template = stompymux_rs::VehicleTemplate::parse("Demolisher", source).unwrap();
     stompymux_rs::create_battle_vehicle(
         &mut scripts.world_mut(),
@@ -237,7 +237,7 @@ async fn vehicle_inspection_uses_vehicle_sections_and_raw_slot_inventory() {
         stompymux_rs::ObjectId(14),
         support::FIXTURE_DICE_SEED,
     );
-    let root = config.path(&config.database.mech_database);
+    let root = config.path(&config.database.unit_database);
     std::fs::create_dir_all(&root).unwrap();
     std::fs::write(root.join("Demolisher.toml"), source).unwrap();
     scripts
@@ -287,7 +287,7 @@ async fn vehicle_inspection_uses_vehicle_sections_and_raw_slot_inventory() {
 async fn inspection_getters_follow_c_argument_contracts() {
     let (_directory, _config, scripts) = isolated_scripts().await;
     let template =
-        stompymux_rs::MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+        stompymux_rs::MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml"))
             .unwrap();
     stompymux_rs::create_battle_unit(
         &mut scripts.world_mut(),
@@ -412,7 +412,7 @@ async fn inspection_getters_follow_c_argument_contracts() {
 async fn engine_suspension_factor_matches_c_susp_factor() {
     let (_directory, _config, scripts) = isolated_scripts().await;
     let template =
-        stompymux_rs::MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+        stompymux_rs::MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml"))
             .unwrap();
     stompymux_rs::create_battle_unit(
         &mut scripts.world_mut(),
@@ -498,7 +498,7 @@ fn parity_probe_templates_parse_through_unit_construction() {
 #[tokio::test(flavor = "current_thread")]
 async fn parity_probe_vehicle_templates_load_and_project() {
     let (_directory, config, scripts) = isolated_scripts().await;
-    let root = config.path(&config.database.mech_database);
+    let root = config.path(&config.database.unit_database);
     std::fs::create_dir_all(&root).unwrap();
     std::fs::write(
         root.join("PARITY-GROUND.toml"),

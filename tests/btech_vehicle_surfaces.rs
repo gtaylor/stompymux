@@ -24,7 +24,7 @@ async fn fixture(
             create_battle_unit(
                 &mut world,
                 id,
-                MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml"))
                     .unwrap(),
             )
             .unwrap();
@@ -35,9 +35,9 @@ async fn fixture(
                 VehicleTemplate::parse(
                     "test",
                     if index == 1 {
-                        include_str!("../game/mechs/Demolisher.toml")
+                        include_str!("../game/units/Demolisher.toml")
                     } else {
-                        include_str!("../game/mechs/Fulcrum.toml")
+                        include_str!("../game/units/Fulcrum.toml")
                     },
                 )
                 .unwrap(),

@@ -24,9 +24,9 @@ impl DiagnosticChannel {
         match self {
             Self::MapErrors => "MapErrors",
             Self::Debug => "MechDebugInfo",
-            Self::Economy => "MechEconInfo",
+            Self::Economy => "EconInfo",
             Self::AttackExperience => "MechAttackXP",
-            Self::Experience => "MechXP",
+            Self::Experience => "XPInfo",
             Self::PilotingExperience => "MechPilotXP",
             Self::Frequencies => "MechFreqs",
             Self::ZeroFrequencies => "ZeroFrequencies",

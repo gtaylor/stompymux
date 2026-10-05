@@ -355,7 +355,7 @@ mod tests {
         let mut unit = Mech::from_template(
             super::super::MechTemplate::parse(
                 "AS7-D",
-                include_str!("../../tests/fixtures/btech/mechs/AS7-D.toml"),
+                include_str!("../../tests/fixtures/btech/units/AS7-D.toml"),
             )
             .unwrap(),
         )

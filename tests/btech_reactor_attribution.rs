@@ -20,12 +20,12 @@ fn kills(world: &World, id: ObjectId) -> i64 {
 #[tokio::test]
 async fn reactor_shot_and_neighbor_death_have_distinct_attribution() {
     for shooter in [
-        include_str!("../game/mechs/JR7-D.toml"),
-        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/units/JR7-D.toml"),
+        include_str!("../game/units/Demolisher.toml"),
     ] {
         for target_source in [
-            include_str!("../game/mechs/JR7-D.toml"),
-            include_str!("../game/mechs/GOL-1H.toml"),
+            include_str!("../game/units/JR7-D.toml"),
+            include_str!("../game/units/GOL-1H.toml"),
         ] {
             let (_dir, config, mut base, id, target, index) =
                 firing::fixture_with_target(shooter, Some(Weapon::MediumLaser), target_source)
@@ -44,7 +44,7 @@ async fn reactor_shot_and_neighbor_death_have_distinct_attribution() {
             create_battle_vehicle(
                 &mut base,
                 neighbor,
-                VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+                VehicleTemplate::parse("Demolisher", include_str!("../game/units/Demolisher.toml"))
                     .unwrap(),
             )
             .unwrap();

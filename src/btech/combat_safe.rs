@@ -72,8 +72,8 @@ mod tests {
     fn source_map_and_target_flag_are_independent_for_both_anatomies() {
         let config = crate::Config::load("tests/fixtures/game").unwrap();
         let sources = [
-            include_str!("../../game/mechs/JR7-D.toml"),
-            include_str!("../../game/mechs/Demolisher.toml"),
+            include_str!("../../game/units/JR7-D.toml"),
+            include_str!("../../game/units/Demolisher.toml"),
         ];
         for source in sources {
             for target in sources {

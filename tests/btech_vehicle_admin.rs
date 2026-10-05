@@ -6,10 +6,10 @@ use stompymux_rs::*;
 #[tokio::test]
 async fn vehicle_commands_and_lua_share_creation_placement_and_snapshot_state() {
     let (dir, config, mut world) = support::isolated_world().await;
-    std::fs::create_dir_all(dir.path().join("mechs")).unwrap();
+    std::fs::create_dir_all(dir.path().join("units")).unwrap();
     std::fs::write(
-        dir.path().join("mechs/Demolisher.toml"),
-        include_str!("../game/mechs/Demolisher.toml"),
+        dir.path().join("units/Demolisher.toml"),
+        include_str!("../game/units/Demolisher.toml"),
     )
     .unwrap();
     let map = world.create(&config, "Battlefield".into(), Kind::Room);
@@ -85,7 +85,7 @@ async fn vehicle_commands_and_lua_share_creation_placement_and_snapshot_state() 
     persistence::save(&config.database(), &candidate)
         .await
         .unwrap();
-    std::fs::remove_file(dir.path().join("mechs/Demolisher.toml")).unwrap();
+    std::fs::remove_file(dir.path().join("units/Demolisher.toml")).unwrap();
     let loaded = persistence::load(&config.database()).await.unwrap();
     assert_eq!(loaded.btech, candidate.btech);
     scripts
@@ -104,8 +104,8 @@ async fn vehicle_commands_and_lua_share_creation_placement_and_snapshot_state() 
 
 #[test]
 fn construction_dispatch_uses_declared_class_and_confines_assets() {
-    let mech = include_str!("fixtures/btech/mechs/JR7-D.toml");
-    let vehicle = include_str!("../game/mechs/Demolisher.toml");
+    let mech = include_str!("fixtures/btech/units/JR7-D.toml");
+    let vehicle = include_str!("../game/units/Demolisher.toml");
     assert!(matches!(
         UnitTemplate::parse("JR7-D", mech).unwrap(),
         UnitTemplate::Mech(_)
@@ -142,9 +142,9 @@ fn construction_dispatch_uses_declared_class_and_confines_assets() {
 #[tokio::test]
 async fn operator_inspection_reports_mech_ground_and_vtol_state_without_mutation() {
     for (asset, vehicle) in [
-        (include_str!("../game/mechs/JR7-D.toml"), false),
-        (include_str!("../game/mechs/Demolisher.toml"), true),
-        (include_str!("../game/mechs/Kestrel.toml"), true),
+        (include_str!("../game/units/JR7-D.toml"), false),
+        (include_str!("../game/units/Demolisher.toml"), true),
+        (include_str!("../game/units/Kestrel.toml"), true),
     ] {
         let (_dir, config, mut world) = support::isolated_world().await;
         let map = world.create(&config, "Inspection field".into(), Kind::Room);

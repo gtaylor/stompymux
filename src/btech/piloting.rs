@@ -405,7 +405,7 @@ mod tests {
         let id = world.create(&config, "Mech".into(), crate::Kind::Thing);
         let template = crate::MechTemplate::parse(
             "JR7-D",
-            include_str!("../../tests/fixtures/btech/mechs/JR7-D.toml"),
+            include_str!("../../tests/fixtures/btech/units/JR7-D.toml"),
         )
         .unwrap();
         let mut unit = crate::Mech::from_template(template).unwrap();

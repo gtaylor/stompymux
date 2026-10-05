@@ -26,7 +26,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {
         id,
         VehicleTemplate::parse(
             "Flatbed_Truck",
-            include_str!("../game/mechs/Flatbed_Truck.toml"),
+            include_str!("../game/units/Flatbed_Truck.toml"),
         )
         .unwrap(),
     )

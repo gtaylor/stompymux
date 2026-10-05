@@ -8,7 +8,7 @@ async fn fixture(
     mode: HexTargetMode,
     terrain: &str,
 ) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId, usize) {
-    fixture_with_template(mode, terrain, include_str!("../game/mechs/Demolisher.toml")).await
+    fixture_with_template(mode, terrain, include_str!("../game/units/Demolisher.toml")).await
 }
 
 /// Supply a weapon variant while retaining the same coordinate setup.
@@ -171,7 +171,7 @@ async fn vehicle_surface_shots_use_shooter_dice_and_shared_fracture() {
 
 #[tokio::test]
 async fn vehicle_coordinate_misload_is_tagged_and_rolls_back_with_terrain_action() {
-    let template = include_str!("../game/mechs/Demolisher.toml")
+    let template = include_str!("../game/units/Demolisher.toml")
         .replace("IS.AC/20", "IS.AC/2")
         .replace("\"IS.AC/2\" }", "\"IS.AC/2\", modes = [\"RapidFire\"] }");
     let (_dir, config, mut world, shooter, _map, index) =
@@ -249,8 +249,8 @@ fn character_crew(world: &mut World, shooter: ObjectId) {
 #[tokio::test]
 async fn character_vehicle_terrain_fire_shares_commands_replay_and_rollback() {
     for template in [
-        include_str!("../game/mechs/Demolisher.toml"),
-        include_str!("../game/mechs/Kestrel.toml"),
+        include_str!("../game/units/Demolisher.toml"),
+        include_str!("../game/units/Kestrel.toml"),
     ] {
         for mode in [
             HexTargetMode::UnitAtHex,
@@ -322,7 +322,7 @@ async fn character_vehicle_terrain_fire_shares_commands_replay_and_rollback() {
 
 #[tokio::test]
 async fn character_coordinate_misload_publishes_injuries_and_rolls_back_failed_evacuation() {
-    let template = include_str!("../game/mechs/Demolisher.toml")
+    let template = include_str!("../game/units/Demolisher.toml")
         .replace("IS.AC/20", "IS.AC/2")
         .replace("\"IS.AC/2\" }", "\"IS.AC/2\", modes = [\"RapidFire\"] }");
     for fatal in [false, true] {

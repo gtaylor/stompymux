@@ -40,7 +40,7 @@ async fn fixture_with_ranges(
         let id = world.create(&config, "Scan unit".into(), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         let mut template =
-            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
         for &(field, value) in ranges {
             template.attributes.insert(field.into(), value.into());
         }
@@ -88,7 +88,7 @@ fn acquire(world: &mut World, source: ObjectId, target: ObjectId) {
 fn sensor_defaults_follow_technology_base_and_critical_halving() {
     for (clan, base) in [(false, 25), (true, 35)] {
         let mut template =
-            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
         for field in ["tac_range", "lrs_range", "scan_range"] {
             template.attributes.remove(field);
         }
@@ -315,7 +315,7 @@ async fn coordinate_scan_selects_visible_occupants_in_saved_order() {
     create_battle_unit(
         &mut world,
         other,
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, other, support::FIXTURE_DICE_SEED);
@@ -1386,7 +1386,7 @@ async fn long_range_stacked_markers_share_native_lua_and_restart_order() {
         create_battle_unit(
             &mut world,
             earlier,
-            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, earlier, support::FIXTURE_DICE_SEED);
@@ -3464,7 +3464,7 @@ async fn contact_modes_order_buildings_wrecks_and_units_without_changing_lua_que
     create_battle_unit(
         &mut world,
         near,
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, near, support::FIXTURE_DICE_SEED);
@@ -5643,7 +5643,7 @@ async fn ammunition_dump_low_capacity_bins_preserve_cadence_and_shutdown_cancels
     create_battle_unit(
         &mut world,
         id,
-        MechTemplate::parse("AS7-D", include_str!("fixtures/btech/mechs/AS7-D.toml")).unwrap(),
+        MechTemplate::parse("AS7-D", include_str!("fixtures/btech/units/AS7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
@@ -5721,7 +5721,7 @@ async fn ammunition_dump_server_retries_failed_commits_without_losing_rounds() {
 fn explicit_template_ranges_preserve_defaults_and_damage_limits() {
     for value in ["0", "1", "127"] {
         let mut template =
-            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
         for field in ["scan_range", "tac_range", "lrs_range"] {
             template.attributes.insert(field.into(), value.into());
         }
@@ -5786,7 +5786,7 @@ fn explicit_template_ranges_preserve_defaults_and_damage_limits() {
             },
         ] {
             let mut template =
-                MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml"))
                     .unwrap();
             template.attributes.insert(field.into(), value.into());
             assert!(Mech::from_template(template).is_err(), "{field}={value}");

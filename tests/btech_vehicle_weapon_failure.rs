@@ -35,7 +35,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
 #[tokio::test]
 async fn critical_jams_select_unaffected_weapons_and_replay_powered_recovery() {
     let (_dir, config, mut world, id) =
-        fixture(include_str!("../game/mechs/Demolisher.toml")).await;
+        fixture(include_str!("../game/units/Demolisher.toml")).await;
     world
         .btech
         .set_unit_dice(id, Dice::seeded([31; 32]))
@@ -124,7 +124,7 @@ async fn critical_jams_select_unaffected_weapons_and_replay_powered_recovery() {
 
 #[tokio::test]
 async fn critical_shorts_validate_snapshots_and_disappear_with_destroyed_mounts() {
-    let text = include_str!("../game/mechs/Demolisher.toml").replace(
+    let text = include_str!("../game/units/Demolisher.toml").replace(
         "[sections.front_side]\n",
         "[sections.front_side]\nslots = [{ at = 1, item = \"IS.MediumLaser\" }]\n",
     );

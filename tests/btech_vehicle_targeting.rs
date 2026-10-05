@@ -22,7 +22,7 @@ async fn fixture(
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         if index < 2 {
             let mut definition =
-                MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml"))
                     .unwrap();
             definition
                 .attributes
@@ -54,7 +54,7 @@ fn power(world: &mut World, ids: &[ObjectId], value: Power) {
 async fn formation() -> (tempfile::TempDir, Config, World, [ObjectId; 4]) {
     let (dir, config, mut world, map, ids) = fixture(
         ".0\n.0\n.0\n.0\n.0\n",
-        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/units/Demolisher.toml"),
     )
     .await;
     for id in ids {

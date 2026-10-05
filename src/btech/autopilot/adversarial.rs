@@ -285,20 +285,20 @@ pub async fn run_policy(
         for (chassis, mut source) in [
             (
                 "mech",
-                include_str!("../../../game/mechs/JR7-D.toml").to_owned(),
+                include_str!("../../../game/units/JR7-D.toml").to_owned(),
             ),
             (
                 "tracked",
-                include_str!("../../../game/mechs/Demolisher.toml").to_owned(),
+                include_str!("../../../game/units/Demolisher.toml").to_owned(),
             ),
             (
                 "wheeled",
-                include_str!("../../../game/mechs/Demolisher.toml")
+                include_str!("../../../game/units/Demolisher.toml")
                     .replace("movement = \"track\"", "movement = \"wheel\""),
             ),
             (
                 "hover",
-                include_str!("../../../game/mechs/Demolisher.toml")
+                include_str!("../../../game/units/Demolisher.toml")
                     .replace("movement = \"track\"", "movement = \"hover\""),
             ),
         ] {

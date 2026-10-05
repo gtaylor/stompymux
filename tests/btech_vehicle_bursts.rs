@@ -52,7 +52,7 @@ async fn vehicle_bursts_span_bins_and_persist_single_shot_supply_fallback() {
         ("IS.RotaryAC/2", "Rotary_FourShot", FireMode::Rotary4, 4),
         ("IS.RotaryAC/2", "Rotary_SixShot", FireMode::Rotary6, 6),
     ] {
-        let template = include_str!("../game/mechs/Demolisher.toml")
+        let template = include_str!("../game/units/Demolisher.toml")
             .replace("IS.AC/20", weapon)
             .replace(
                 &format!("item = \"{weapon}\" }}"),
@@ -136,7 +136,7 @@ async fn vehicle_bursts_span_bins_and_persist_single_shot_supply_fallback() {
 
 #[tokio::test]
 async fn vehicle_gatling_caps_damage_by_supply_and_replays_its_single_roll() {
-    let template = include_str!("../game/mechs/Demolisher.toml")
+    let template = include_str!("../game/units/Demolisher.toml")
         .replace("IS.AC/20", "IS.MachineGun")
         .replace(
             "item = \"IS.MachineGun\" }",
@@ -180,7 +180,7 @@ async fn vehicle_gatling_caps_damage_by_supply_and_replays_its_single_roll() {
 
 #[tokio::test]
 async fn vehicle_feed_skips_lost_and_incompatible_bins_and_heat_cycles_need_no_ammo() {
-    let template = include_str!("../game/mechs/Demolisher.toml").replace(
+    let template = include_str!("../game/units/Demolisher.toml").replace(
         "item = \"Ammo_IS.AC/20\", rounds = 5 }",
         "item = \"Ammo_IS.AC/20\", rounds = 1, modes = [\"Precision\"] }",
     );
@@ -209,7 +209,7 @@ async fn vehicle_feed_skips_lost_and_incompatible_bins_and_heat_cycles_need_no_a
         draws.iter().map(|draw| draw.bin_index).collect::<Vec<_>>(),
         [1, 2, 3]
     );
-    let template = include_str!("../game/mechs/Demolisher.toml").replace(
+    let template = include_str!("../game/units/Demolisher.toml").replace(
         "item = \"IS.AC/20\" }",
         "item = \"IS.Flamer\", modes = [\"Heat\"] }",
     );

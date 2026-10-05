@@ -40,7 +40,7 @@ async fn field_with_equipment(
     let mut units = Vec::new();
     for (i, &master_count) in master_counts.iter().enumerate() {
         let mut template =
-            MechTemplate::parse("AS7-D", include_str!("fixtures/btech/mechs/AS7-D.toml")).unwrap();
+            MechTemplate::parse("AS7-D", include_str!("fixtures/btech/units/AS7-D.toml")).unwrap();
         for slot in [10, 11] {
             template
                 .sections

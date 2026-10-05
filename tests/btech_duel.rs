@@ -25,13 +25,13 @@ async fn battlefield() -> (tempfile::TempDir, Config, [ObjectId; 2]) {
         (
             ObjectId(1),
             "Alpha Atlas",
-            include_str!("fixtures/btech/mechs/AS7-D.toml"),
+            include_str!("fixtures/btech/units/AS7-D.toml"),
             10,
         ),
         (
             ObjectId(2),
             "Bravo Jenner",
-            include_str!("fixtures/btech/mechs/JR7-D.toml"),
+            include_str!("fixtures/btech/units/JR7-D.toml"),
             8,
         ),
     ] {

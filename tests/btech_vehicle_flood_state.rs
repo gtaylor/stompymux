@@ -6,7 +6,7 @@ use stompymux_rs::*;
 /// Intact vehicle with a working electronic suite and command computer.
 fn template() -> VehicleTemplate {
     let mut template =
-        VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+        VehicleTemplate::parse("Demolisher", include_str!("../game/units/Demolisher.toml"))
             .unwrap();
     for (slot, equipment) in [(0, "Ecm"), (1, "C3Master")] {
         template

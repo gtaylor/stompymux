@@ -58,12 +58,12 @@ async fn ground_powerplant_explosions_ignore_case_and_persist() {
     use VehicleCriticalTable as T;
     for case in [false, true] {
         let text = if case {
-            include_str!("../game/mechs/Demolisher.toml").replace(
+            include_str!("../game/units/Demolisher.toml").replace(
                 "[sections.aft_side]\n",
                 "[sections.aft_side]\nslots = [{ at = 1, item = \"CASE\" }]\n",
             )
         } else {
-            include_str!("../game/mechs/Demolisher.toml").into()
+            include_str!("../game/units/Demolisher.toml").into()
         };
         let (_dir, config, mut world, id) = fixture(&text).await;
         let value = (0..=255)
@@ -109,7 +109,7 @@ async fn ground_powerplant_explosions_ignore_case_and_persist() {
 
 #[tokio::test]
 async fn fuel_explosions_ignore_case_and_do_not_damage_nearby_units() {
-    let text = include_str!("../game/mechs/Demolisher.toml").replace(
+    let text = include_str!("../game/units/Demolisher.toml").replace(
         "[sections.aft_side]\n",
         "[sections.aft_side]\nslots = [{ at = 1, item = \"CASE\" }]\n",
     );
@@ -120,7 +120,7 @@ async fn fuel_explosions_ignore_case_and_do_not_damage_nearby_units() {
     create_battle_vehicle(
         &mut world,
         neighbor,
-        VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+        VehicleTemplate::parse("Demolisher", include_str!("../game/units/Demolisher.toml"))
             .unwrap(),
     )
     .unwrap();
@@ -155,7 +155,7 @@ async fn fuel_explosions_ignore_case_and_do_not_damage_nearby_units() {
 async fn case_requires_installed_equipment_and_character_explosions_record_crew_loss() {
     for extra in ["", "Clan"] {
         let text =
-            support::templates::with_flags(include_str!("../game/mechs/Demolisher.toml"), &[extra])
+            support::templates::with_flags(include_str!("../game/units/Demolisher.toml"), &[extra])
                 .replace(
                     "[sections.aft_side]\n",
                     "[sections.aft_side]\nconfig = \"CASE\"\n",
@@ -164,7 +164,7 @@ async fn case_requires_installed_equipment_and_character_explosions_record_crew_
         assert!(!world.btech.vehicles()[&id].has_powerplant_containment());
     }
     let (_dir, _config, mut world, id) =
-        fixture(include_str!("../game/mechs/Demolisher.toml")).await;
+        fixture(include_str!("../game/units/Demolisher.toml")).await;
     let value = (0..=255)
         .find(|value| {
             let mut dice = Dice::seeded([*value; 32]);
@@ -198,7 +198,7 @@ async fn case_requires_installed_equipment_and_character_explosions_record_crew_
 #[tokio::test]
 async fn carried_battlesuits_require_casualty_handling_before_explosion_commit() {
     let (_dir, config, mut world, id) =
-        fixture(include_str!("../game/mechs/Demolisher.toml")).await;
+        fixture(include_str!("../game/units/Demolisher.toml")).await;
     let child = world.create(&config, "Carried squad".into(), Kind::Thing);
     let object = world.objects.get_mut(&child).unwrap();
     object.home = Some(ObjectId(config.home()));

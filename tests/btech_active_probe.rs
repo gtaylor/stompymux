@@ -51,9 +51,9 @@ fn probe_vehicle(
     let mut definition = VehicleTemplate::parse(
         "test",
         if stationary {
-            include_str!("../game/mechs/RadioTower.toml")
+            include_str!("../game/units/RadioTower.toml")
         } else {
-            include_str!("../game/mechs/Demolisher.toml")
+            include_str!("../game/units/Demolisher.toml")
         },
     )
     .unwrap();
@@ -109,7 +109,7 @@ fn target(world: &mut World, config: &Config, map: ObjectId, y: i64) -> ObjectId
         world,
         config,
         map,
-        include_str!("../game/mechs/JR7-D.toml"),
+        include_str!("../game/units/JR7-D.toml"),
         2,
         y,
     )
@@ -262,7 +262,7 @@ async fn hostile_ecm_map_switch_and_angel_protection_reject_probes() {
             &mut world,
             &config,
             map,
-            include_str!("../game/mechs/RVN-1X.toml"),
+            include_str!("../game/units/RVN-1X.toml"),
             2,
             6,
         );
@@ -303,7 +303,7 @@ async fn hostile_ecm_map_switch_and_angel_protection_reject_probes() {
     // Angel ECM beyond its six-hex field leaves the observer clear, so only protection remains.
     let (_dir, config, mut world, map) = hill_lane(9).await;
     let observer = probe_vehicle(&mut world, &config, map, Some("BloodhoundProbe"), false, 0);
-    let source = include_str!("../game/mechs/JR7-D.toml").replace(
+    let source = include_str!("../game/units/JR7-D.toml").replace(
         r#"{ at = "1-2", item = "JumpJet" },"#,
         r#"{ at = "1-2", item = "JumpJet" }, { at = "3-4", item = "AngelEcm" },"#,
     );
@@ -401,7 +401,7 @@ async fn probes_acquire_hidden_hostiles_without_a_search() {
 async fn probe_contacts_behind_hills_lock_and_spot_but_refuse_direct_fire_and_scans() {
     let (_dir, config, mut world, map) = lane(&[".0", ".0", ".9", ".0", ".0", ".0", ".0"]).await;
     let target = target(&mut world, &config, map, 0);
-    let observer_source = include_str!("../game/mechs/JR7-D.toml").replace(
+    let observer_source = include_str!("../game/units/JR7-D.toml").replace(
         r#"{ at = "1-2", item = "JumpJet" },"#,
         r#"{ at = "1-2", item = "JumpJet" }, { at = 3, item = "BeagleProbe" },"#,
     );
@@ -410,7 +410,7 @@ async fn probe_contacts_behind_hills_lock_and_spot_but_refuse_direct_fire_and_sc
         &mut world,
         &config,
         map,
-        include_str!("../game/mechs/AS7-D.toml"),
+        include_str!("../game/units/AS7-D.toml"),
         0,
         6,
     );

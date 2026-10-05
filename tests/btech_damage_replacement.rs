@@ -99,7 +99,7 @@ async fn replacement_material_is_shared_across_all_chassis() {
 async fn replacement_critical_groups_and_weapon_failures_resolve_installed_slots() {
     let (_dir, config, mut world) = support::isolated_world().await;
     let mut template =
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
     for section in template.sections.values_mut() {
         section
             .criticals

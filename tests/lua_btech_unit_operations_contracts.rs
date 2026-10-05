@@ -14,11 +14,11 @@ async fn damage_piloting_and_template_lifecycle_match_zero_return_contracts() {
     world.btech = serde_json::from_value(btech).unwrap();
     let pilot = world.create(&config, "Pilot".into(), Kind::Player);
     world.objects.get_mut(&pilot).unwrap().location = Some(id);
-    let root = config.path(&config.database.mech_database);
+    let root = config.path(&config.database.unit_database);
     std::fs::create_dir_all(&root).unwrap();
     std::fs::write(
         root.join("PARITY.toml"),
-        include_str!("fixtures/btech/mechs/PARITY.toml"),
+        include_str!("fixtures/btech/units/PARITY.toml"),
     )
     .unwrap();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
@@ -91,11 +91,11 @@ async fn critical_weapon_ammunition_modes_and_special_edits_are_strict() {
     create_battle_unit(
         &mut world,
         id,
-        MechTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("../game/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
-    let root = config.path(&config.database.mech_database);
+    let root = config.path(&config.database.unit_database);
     std::fs::create_dir_all(&root).unwrap();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     scripts
@@ -176,7 +176,7 @@ async fn unit_operation_boundaries_reject_going_objects() {
     create_battle_unit(
         &mut world,
         id,
-        MechTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("../game/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
@@ -244,9 +244,9 @@ async fn unit_operation_boundaries_reject_going_objects() {
 #[tokio::test]
 async fn vehicle_operations_cover_live_damage_falls_templates_and_equipment() {
     let (_dir, config, mut world, id, target, _) = firing::fixture_with_target(
-        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/units/Demolisher.toml"),
         None,
-        include_str!("../game/mechs/JR7-D.toml"),
+        include_str!("../game/units/JR7-D.toml"),
     )
     .await;
     let observer = world.create(&config, "Observer".into(), Kind::Player);
@@ -260,7 +260,7 @@ async fn vehicle_operations_cover_live_damage_falls_templates_and_equipment() {
     assign_battle_pilot(&mut world, target, observer).unwrap();
     support::seed_object_dice(&mut world, observer, support::FIXTURE_DICE_SEED);
     refresh_battle_contacts(&mut world, &[target]).unwrap();
-    let root = config.path(&config.database.mech_database);
+    let root = config.path(&config.database.unit_database);
     std::fs::create_dir_all(&root).unwrap();
     std::fs::write(
         root.join("PARITY-GROUND.toml"),
@@ -320,7 +320,7 @@ async fn off_map_vehicle_piloting_failure_still_applies_fall_damage() {
     create_battle_vehicle(
         &mut world,
         id,
-        VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+        VehicleTemplate::parse("Demolisher", include_str!("../game/units/Demolisher.toml"))
             .unwrap(),
     )
     .unwrap();
@@ -372,9 +372,9 @@ async fn off_map_vehicle_piloting_failure_still_applies_fall_damage() {
 #[tokio::test]
 async fn editing_one_slot_preserves_unrelated_live_weapon_and_ammunition_state() {
     let (_dir, config, mut world, id, _, _) = firing::fixture_with_target(
-        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/units/Demolisher.toml"),
         None,
-        include_str!("../game/mechs/JR7-D.toml"),
+        include_str!("../game/units/JR7-D.toml"),
     )
     .await;
     world
@@ -416,7 +416,7 @@ async fn mech_slot_edit_preserves_unrelated_live_weapon_and_ammunition_state() {
     create_battle_unit(
         &mut world,
         id,
-        MechTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("../game/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     world
@@ -454,9 +454,9 @@ async fn mech_slot_edit_preserves_unrelated_live_weapon_and_ammunition_state() {
 #[tokio::test]
 async fn restock_allows_environmental_disable_but_rejects_destroyed_ammunition() {
     let (_dir, config, mut world, id, _, _) = firing::fixture_with_target(
-        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/units/Demolisher.toml"),
         None,
-        include_str!("../game/mechs/JR7-D.toml"),
+        include_str!("../game/units/JR7-D.toml"),
     )
     .await;
     world
@@ -507,7 +507,7 @@ async fn signed_integer_boundaries_and_array_holes_follow_c_contracts() {
     create_battle_unit(
         &mut world,
         id,
-        MechTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("../game/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
@@ -556,7 +556,7 @@ async fn weapon_install_accepts_native_slot_layouts() {
     create_battle_unit(
         &mut world,
         id,
-        MechTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("../game/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
@@ -645,7 +645,7 @@ async fn raw_registered_criticals_survive_restart() {
     create_battle_unit(
         &mut world,
         id,
-        MechTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("../game/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
@@ -700,11 +700,11 @@ async fn load_template_initializes_a_registered_unit_without_runtime_constructio
     let mut btech = serde_json::to_value(&world.btech).unwrap();
     btech["registrations"][id.0.to_string()] = serde_json::json!("MECH");
     world.btech = serde_json::from_value(btech).unwrap();
-    let root = config.path(&config.database.mech_database);
+    let root = config.path(&config.database.unit_database);
     std::fs::create_dir_all(&root).unwrap();
     std::fs::write(
         root.join("PARITY.toml"),
-        include_str!("fixtures/btech/mechs/PARITY.toml"),
+        include_str!("fixtures/btech/units/PARITY.toml"),
     )
     .unwrap();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
@@ -747,9 +747,9 @@ async fn load_template_accepts_stock_parts() {
     let mut btech = serde_json::to_value(&world.btech).unwrap();
     btech["registrations"][id.0.to_string()] = serde_json::json!("MECH");
     world.btech = serde_json::from_value(btech).unwrap();
-    let root = config.path(&config.database.mech_database);
+    let root = config.path(&config.database.unit_database);
     std::fs::create_dir_all(&root).unwrap();
-    let stock = include_str!("fixtures/btech/mechs/JR7-D.toml");
+    let stock = include_str!("fixtures/btech/units/JR7-D.toml");
     std::fs::write(root.join("JR7-D.toml"), stock).unwrap();
     let unknown = stock.replacen("IS.MediumLaser", "IS.NoSuchLaser", 1);
     assert_ne!(unknown, stock);
@@ -785,11 +785,11 @@ async fn option_field_edges_extra_arguments_and_rollback_match_c_shapes() {
     let mut btech = serde_json::to_value(&world.btech).unwrap();
     btech["registrations"][id.0.to_string()] = serde_json::json!("MECH");
     world.btech = serde_json::from_value(btech).unwrap();
-    let root = config.path(&config.database.mech_database);
+    let root = config.path(&config.database.unit_database);
     std::fs::create_dir_all(&root).unwrap();
     std::fs::write(
         root.join("PARITY.toml"),
-        include_str!("fixtures/btech/mechs/PARITY.toml"),
+        include_str!("fixtures/btech/units/PARITY.toml"),
     )
     .unwrap();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
@@ -902,7 +902,7 @@ async fn every_unit_operation_is_unavailable_while_checking() {
     create_battle_unit(
         &mut world,
         id,
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
@@ -956,11 +956,11 @@ async fn deterministic_direction_codes_pin_sections_and_rear_arc() {
     let mut btech = serde_json::to_value(&world.btech).unwrap();
     btech["registrations"][id.0.to_string()] = serde_json::json!("MECH");
     world.btech = serde_json::from_value(btech).unwrap();
-    let root = config.path(&config.database.mech_database);
+    let root = config.path(&config.database.unit_database);
     std::fs::create_dir_all(&root).unwrap();
     std::fs::write(
         root.join("PARITY.toml"),
-        include_str!("fixtures/btech/mechs/PARITY.toml"),
+        include_str!("fixtures/btech/units/PARITY.toml"),
     )
     .unwrap();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();

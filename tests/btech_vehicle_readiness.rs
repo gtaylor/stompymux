@@ -35,7 +35,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
 #[tokio::test]
 async fn vehicle_cycles_reserve_ammunition_replay_and_pause_when_shutdown() {
     let (_dir, config, mut world, id) =
-        fixture(include_str!("../game/mechs/Demolisher.toml")).await;
+        fixture(include_str!("../game/units/Demolisher.toml")).await;
     assert!(
         world.btech.vehicles()[&id]
             .weapon_readiness(0)
@@ -92,7 +92,7 @@ async fn vehicle_cycles_reserve_ammunition_replay_and_pause_when_shutdown() {
 
 #[tokio::test]
 async fn vehicle_one_shots_energy_and_empty_bins_obey_readiness() {
-    let base = include_str!("../game/mechs/Demolisher.toml");
+    let base = include_str!("../game/units/Demolisher.toml");
     for (weapon, oneshot) in [
         ("\"IS.SRM-4\", modes = [\"OneShot\"]", true),
         ("\"IS.MediumLaser\"", false),
@@ -153,7 +153,7 @@ async fn vehicle_one_shots_energy_and_empty_bins_obey_readiness() {
 async fn idle_vehicle_recycle_retries_failed_server_ticks() {
     use sqlx::Connection;
     tokio::task::LocalSet::new().run_until(async {
-        let (_dir,config,mut world,id)=fixture(include_str!("../game/mechs/Demolisher.toml")).await;
+        let (_dir,config,mut world,id)=fixture(include_str!("../game/units/Demolisher.toml")).await;
         let cycle=reserve_battle_vehicle_weapon(&mut world,id,ObjectId(1),0, true).unwrap();
         for _ in 0..cycle.weapon.profile().recycle_seconds-2 {advance_battle_recycle(&mut world);}
         persistence::save(&config.database(),&world).await.unwrap();
@@ -171,7 +171,7 @@ async fn idle_vehicle_recycle_retries_failed_server_ticks() {
 
 #[tokio::test]
 async fn vehicle_ammunition_prefers_mount_section_before_other_live_bins() {
-    let text = include_str!("../game/mechs/Demolisher.toml").replace(
+    let text = include_str!("../game/units/Demolisher.toml").replace(
         "[sections.left_side]\n",
         "[sections.left_side]\nslots = [{ at = 1, item = \"Ammo_IS.AC/20\", rounds = 5 }]\n",
     );
@@ -205,7 +205,7 @@ async fn vehicle_ammunition_prefers_mount_section_before_other_live_bins() {
 /// Failed locks retain both external rounds and integral one-shot charges across replay.
 #[tokio::test]
 async fn vehicle_failed_streak_locks_recycle_without_expenditure() {
-    let base = include_str!("../game/mechs/Demolisher.toml");
+    let base = include_str!("../game/units/Demolisher.toml");
     let streak = Weapon::StreakSrm4.name();
     for one_shot in [false, true] {
         let mode = if one_shot {
@@ -275,7 +275,7 @@ async fn vehicle_failed_streak_locks_recycle_without_expenditure() {
 #[tokio::test]
 async fn vehicle_stinger_selection_controls_live_ammunition() {
     let (_dir, config, mut world, id) =
-        fixture(include_str!("../game/mechs/RadioTower.toml")).await;
+        fixture(include_str!("../game/units/RadioTower.toml")).await;
     let loadout = world.btech.vehicles()[&id].loadout().unwrap();
     let index = loadout
         .weapons
@@ -428,7 +428,7 @@ async fn vehicle_ammunition_controls_share_admission_supply_and_transactions() {
             Weapon::Lrm5,
         ),
     ] {
-        let template = include_str!("../game/mechs/Demolisher.toml")
+        let template = include_str!("../game/units/Demolisher.toml")
             .replace("IS.AC/20", weapon.name())
             .replace(
                 "rounds = 5 }",
@@ -493,7 +493,7 @@ async fn vehicle_ammunition_controls_share_admission_supply_and_transactions() {
 #[tokio::test]
 async fn vehicle_equipment_losses_disable_mounts_and_matching_supply() {
     let (_dir, config, mut world, id) =
-        fixture(include_str!("../game/mechs/Demolisher.toml")).await;
+        fixture(include_str!("../game/units/Demolisher.toml")).await;
     let loadout = world.btech.vehicles()[&id].loadout().unwrap();
     let definition = world.btech.vehicles()[&id].definition().clone();
     let protection = world.btech.vehicles()[&id].sections().clone();
@@ -560,7 +560,7 @@ async fn vehicle_equipment_losses_disable_mounts_and_matching_supply() {
 #[tokio::test]
 async fn vehicle_weapon_critical_selection_excludes_losses_and_replays() {
     let (_dir, config, mut world, id) =
-        fixture(include_str!("../game/mechs/Demolisher.toml")).await;
+        fixture(include_str!("../game/units/Demolisher.toml")).await;
     world
         .btech
         .set_unit_dice(id, Dice::seeded([31; 32]))

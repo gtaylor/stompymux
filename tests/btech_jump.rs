@@ -115,7 +115,7 @@ async fn runtime_fixture() -> (
     create_battle_unit(
         &mut world,
         id,
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 5, 5).unwrap();
@@ -329,7 +329,7 @@ async fn connected_jump_domain_updates_height_heat_landing_and_stabilization_aft
     create_battle_unit(
         &mut world,
         observer,
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, observer, support::FIXTURE_DICE_SEED);
@@ -791,7 +791,7 @@ fn saved_flight_rejects_corrupt_progress_and_reconstructs_launch_geometry() {
 /// Intact Jenner with five conventional jump jets.
 fn jenner() -> Mech {
     Mech::from_template(
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap()
 }
@@ -835,7 +835,7 @@ fn gravity_and_effective_jet_losses_bound_jump_capacity() {
         );
     }
     let atlas = Mech::from_template(
-        MechTemplate::parse("AS7-D", include_str!("fixtures/btech/mechs/AS7-D.toml")).unwrap(),
+        MechTemplate::parse("AS7-D", include_str!("fixtures/btech/units/AS7-D.toml")).unwrap(),
     )
     .unwrap();
     assert_eq!(atlas.jump_capacity(50).unwrap().speed, 0.0);
@@ -914,7 +914,7 @@ async fn flooded_capacity_and_lua_inspection_survive_restart_without_mutation() 
     create_battle_unit(
         &mut world,
         id,
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
@@ -1242,7 +1242,7 @@ async fn airborne_target_modifier_uses_current_thrust_and_gravity_without_consum
     create_battle_unit(
         &mut world,
         observer,
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, observer, map, 5, 8).unwrap();
@@ -1570,7 +1570,7 @@ async fn airborne_fire_uses_shared_native_lua_transactions_and_saved_trajectorie
     create_battle_unit(
         &mut base,
         target,
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut base, target, support::FIXTURE_DICE_SEED);
@@ -2521,7 +2521,7 @@ async fn shallow_water_launches_and_airborne_fire_above_deep_water_are_supported
     create_battle_unit(
         &mut world,
         target,
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
@@ -3206,7 +3206,7 @@ fn jump_observer(
     create_battle_unit(
         world,
         observer,
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(world, observer, support::FIXTURE_DICE_SEED);
@@ -3401,7 +3401,7 @@ async fn jump_observers_cover_launch_landings_damage_and_transaction_replay() {
 /// Five improved jets use ten contiguous slots while retaining the template's five MP thrust.
 fn improved_jet_template() -> MechTemplate {
     let mut template =
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
     let jet = template.sections[&MechSection::LeftTorso].criticals[&0].clone();
     for section in template.sections.values_mut() {
         section
@@ -3428,7 +3428,7 @@ fn improved_jet_construction_pairs_and_mass() {
     let template = improved_jet_template();
     let improved = Mech::from_template(template.clone()).unwrap();
     let ordinary = Mech::from_template(
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     assert_eq!(improved.jump_capacity(100).unwrap().movement_points, 5);

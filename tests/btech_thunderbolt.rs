@@ -4,7 +4,7 @@ use stompymux_rs::*;
 /// Build a launcher in an arm with a matching torso magazine.
 fn definition(weapon: Weapon, hotload: bool) -> MechTemplate {
     let mut template =
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
     let arm = template.sections.get_mut(&MechSection::LeftArm).unwrap();
     let mut part = arm.criticals[&2].clone();
     part.equipment = weapon.name().into();

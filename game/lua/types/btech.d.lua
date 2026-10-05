@@ -120,12 +120,12 @@
 local btech_template = {}
 
 ---Read a biped asset without instantiating or activating a unit.
----@param name string Template reference: the file stem of a `.toml` document anywhere under database.mech_database.
+---@param name string Template reference: the file stem of a `.toml` document anywhere under database.unit_database.
 ---@return MechTemplate
 function btech_template.inspect(name) end
 
 ---Resolve supported equipment; does not validate chassis construction or enable simulation.
----@param name string Template reference: the file stem of a `.toml` document anywhere under database.mech_database.
+---@param name string Template reference: the file stem of a `.toml` document anywhere under database.unit_database.
 ---@return MechLoadout
 function btech_template.loadout(name) end
 
@@ -514,7 +514,7 @@ function btech_unit.inspect(dbref) end
 
 ---Construct a persistent Mech or ground vehicle on an unused live thing. Transactional.
 ---@param dbref integer
----@param name string Template reference: the file stem of a `.toml` document anywhere under database.mech_database.
+---@param name string Template reference: the file stem of a `.toml` document anywhere under database.unit_database.
 ---@return boolean
 function btech_unit.create(dbref, name) end
 
@@ -1888,7 +1888,7 @@ function btech_inventory.set_named(actor, object, name, quantity) end
 function btech_inventory.read(object) end
 
 ---Wizard stock correction using stored identifiers; zero quantity removes the entry.
----Stock, immediate load correction and MechEconInfo diagnostics participate in callback rollback.
+---Stock, immediate load correction and EconInfo diagnostics participate in callback rollback.
 ---Unchanged quantities emit no record. Does not install equipment or perform cargo loading.
 ---@param actor integer
 ---@param object integer
@@ -1915,7 +1915,7 @@ function btech_cargo.stores(actor, pattern) end
 
 ---Load matching hangar stock into a stationary, running CargoTech unit.
 ---Exact abbreviations precede exact catalogue names, then wildcard names; selection is independent of available stock.
----Transfers, throttle correction and MechEconInfo diagnostics are atomic and participate in callback rollback.
+---Transfers, throttle correction and EconInfo diagnostics are atomic and participate in callback rollback.
 ---@param actor integer
 ---@param pattern string
 ---@param quantity integer Positive request per matched row, capped at 50000 and available stock.
@@ -2010,7 +2010,7 @@ function btech_unit.cluster(dbref, pilot, weapon) end
 ---@field ammunition_adjustments AmmunitionAdjustment[] Changes on successful construction.
 
 ---Preview construction without registering a unit or modifying the source asset.
----@param name string Template reference: the file stem of a `.toml` document anywhere under database.mech_database.
+---@param name string Template reference: the file stem of a `.toml` document anywhere under database.unit_database.
 ---@return TemplateCheck
 function btech_template.check(name) end
 
@@ -3453,7 +3453,7 @@ function btech_player.set_ui_preferences(player, preferences) end
 -- C-parity template inspection contracts.
 
 ---Read current, original and rear armor values; an omitted section reports the totals.
----@param reference string Template reference: the file stem of a `.toml` document anywhere under database.mech_database.
+---@param reference string Template reference: the file stem of a `.toml` document anywhere under database.unit_database.
 ---@param section? UnitSection Typed section constant from btech.unit.sections.
 ---@return ArmorStatus status
 function btech_template.armor(reference, section) end
@@ -3587,12 +3587,12 @@ function btech_unit.payload(unit) end
 
 ---Replace the unit definition from a saved template reference.
 ---@param unit DbRef|Object
----@param reference string Template reference: the file stem of a `.toml` document anywhere under database.mech_database.
+---@param reference string Template reference: the file stem of a `.toml` document anywhere under database.unit_database.
 function btech_unit.load_template(unit, reference) end
 
 ---Save the unit definition under a template reference in the mech database.
 ---@param unit DbRef|Object
----@param reference string Template reference: the file stem of a `.toml` document anywhere under database.mech_database.
+---@param reference string Template reference: the file stem of a `.toml` document anywhere under database.unit_database.
 function btech_unit.save_template(unit, reference) end
 
 ---Run one shared piloting check; returns whether it succeeded.

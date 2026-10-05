@@ -6,7 +6,7 @@ use stompymux_rs::*;
 fn apod_assets_construct_and_round_trip() {
     for asset in ["FireScorpion-1", "FireScorpion-2", "SRC-3C", "SRC-5C"] {
         let template =
-            read_battle_template(&crate::support::repository_root().join("game/mechs"), asset)
+            read_battle_template(&crate::support::repository_root().join("game/units"), asset)
                 .unwrap();
         let unit = Mech::from_template(template).unwrap();
         let loadout = unit.loadout().unwrap();
@@ -36,7 +36,7 @@ fn apod_assets_construct_and_round_trip() {
 #[test]
 fn apod_mass_and_battle_value() {
     let mut template =
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
     for section in template.sections.values_mut() {
         section.criticals.retain(|_, part| {
             Weapon::parse(&part.equipment).is_err() && !part.equipment.starts_with("Ammo_")

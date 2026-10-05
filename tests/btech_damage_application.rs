@@ -321,7 +321,7 @@ async fn mech_native_lua_replacement_and_hull_lifecycle_agree() {
 #[tokio::test]
 async fn hardened_gyro_replacement_rebuilds_damage_without_stale_loss_baselines() {
     let source =
-        support::templates::with_flags(include_str!("../game/mechs/JR7-D.toml"), &["HDGyro_Tech"]);
+        support::templates::with_flags(include_str!("../game/units/JR7-D.toml"), &["HDGyro_Tech"]);
     let (_dir, config, world, id, _, _) = firing::fixture_with_target(&source, None, &source).await;
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     set_battle_unit_field_action(

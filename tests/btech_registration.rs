@@ -353,7 +353,7 @@ async fn mech_registration_teardown_is_idempotent_and_forgets_configuration() {
 async fn unregister_constructed_unit_releases_map_and_pilot_references() {
     for source in firing::templates() {
         let (_dir, config, world, unit, target, _) =
-            firing::fixture_with_target(&source, None, include_str!("../game/mechs/AS7-D.toml"))
+            firing::fixture_with_target(&source, None, include_str!("../game/units/AS7-D.toml"))
                 .await;
         let map = world.btech.units()[&unit].map.unwrap();
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();

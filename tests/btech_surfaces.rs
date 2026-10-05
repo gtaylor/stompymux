@@ -41,7 +41,7 @@ async fn fixture_asset(
         create_battle_unit(
             &mut world,
             id,
-            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
@@ -3837,7 +3837,7 @@ fn fracture_observer(
     create_battle_unit(
         world,
         observer,
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(world, observer, support::FIXTURE_DICE_SEED);
@@ -7280,7 +7280,7 @@ async fn artillery_cluster_world_packets_and_random_rollback() {
             create_battle_unit(
                 &mut world,
                 id,
-                MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml"))
                     .unwrap(),
             )
             .unwrap();
@@ -7636,7 +7636,7 @@ async fn fracture_cascade_matrix(vehicle: bool, trigger_last: bool) {
         create_battle_vehicle(
             &mut world,
             id,
-            VehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml")).unwrap(),
+            VehicleTemplate::parse("Kestrel", include_str!("../game/units/Kestrel.toml")).unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);

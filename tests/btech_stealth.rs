@@ -4,7 +4,7 @@ use stompymux_rs::*;
 /// Armor uses two passive slots in each limb and side torso, plus a Guardian suite.
 fn template() -> MechTemplate {
     let mut template =
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
     for section in MechSection::ALL {
         if matches!(section, MechSection::Head | MechSection::CenterTorso) {
             continue;

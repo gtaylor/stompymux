@@ -34,7 +34,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
 
 #[tokio::test]
 async fn vehicle_weapon_inspection_preserves_indices_failure_details_and_replay() {
-    let (_dir, config, initial, id) = fixture(include_str!("../game/mechs/Demolisher.toml")).await;
+    let (_dir, config, initial, id) = fixture(include_str!("../game/units/Demolisher.toml")).await;
     for (condition, word) in [
         ("ready", "ready"),
         ("recycle", "not ready"),
@@ -115,7 +115,7 @@ async fn vehicle_weapon_inspection_preserves_indices_failure_details_and_replay(
 
 #[tokio::test]
 async fn electrical_vehicle_failures_display_shorted_without_claiming_physical_loss() {
-    let template = include_str!("../game/mechs/Demolisher.toml")
+    let template = include_str!("../game/units/Demolisher.toml")
         .lines()
         .filter(|line| !line.contains("Ammo_"))
         .collect::<Vec<_>>()

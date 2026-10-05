@@ -17,7 +17,7 @@ fn inferno_ammunition_templates_preserve_capacity_modes_and_mass() {
     ] {
         for half in [false, true] {
             let mut definition =
-                MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml"))
                     .unwrap();
             let arm = definition.sections.get_mut(&MechSection::LeftArm).unwrap();
             let mut part = arm.criticals[&2].clone();

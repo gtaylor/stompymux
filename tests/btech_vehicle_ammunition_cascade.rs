@@ -34,7 +34,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
 
 /// Mixed bins in separate hull and turret sections, including an inert Gauss supply.
 fn template() -> String {
-    include_str!("../game/mechs/Demolisher.toml").replace(
+    include_str!("../game/units/Demolisher.toml").replace(
         "[sections.left_side]\n",
         "[sections.left_side]\nslots = [\n    { at = 1, item = \"Ammo_IS.GaussRifle\", rounds = 3 },\n    { at = 2, item = \"Ammo_IS.PlasmaRifle\", rounds = 3 },\n    { at = 3, item = \"Ammo_IS.LRM-5\", rounds = 2 },\n    { at = 4, item = \"Ammo_IS.AC/20\", rounds = 2, modes = [\"Precision\"] },\n    { at = 5, item = \"Ammo_IS.NarcBeacon\", rounds = 2 },\n]\n",
     )

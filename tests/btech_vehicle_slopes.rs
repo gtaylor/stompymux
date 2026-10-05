@@ -21,7 +21,7 @@ async fn fixture(
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     let mut template = VehicleTemplate::parse(
         "Flatbed_Truck",
-        include_str!("../game/mechs/Flatbed_Truck.toml"),
+        include_str!("../game/units/Flatbed_Truck.toml"),
     )
     .unwrap();
     template.movement = movement;

@@ -1,8 +1,8 @@
 //! Battle Value characterization for conventional constructed bipeds and damaged installations.
 use stompymux_rs::*;
 
-const JENNER: &str = include_str!("fixtures/btech/mechs/JR7-D.toml");
-const ATLAS: &str = include_str!("fixtures/btech/mechs/AS7-D.toml");
+const JENNER: &str = include_str!("fixtures/btech/units/JR7-D.toml");
+const ATLAS: &str = include_str!("fixtures/btech/units/AS7-D.toml");
 
 /// Construct a supported fixture without map or pilot dependencies.
 fn unit(source: &str) -> Mech {

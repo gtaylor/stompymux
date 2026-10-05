@@ -396,7 +396,7 @@ pub(super) fn copy_game_root() -> Result<tempfile::TempDir> {
     // The test fixture carries the complete Lua surface but intentionally
     // omits the large asset catalog.  Copy only the read-only asset trees
     // required by the benchmark; never copy the repository's database.
-    for asset_dir in ["lua", "mechs", "maps"] {
+    for asset_dir in ["lua", "units", "maps"] {
         copy_tree(
             &repository.join("game").join(asset_dir),
             &directory.path().join(asset_dir),
@@ -440,16 +440,16 @@ fn fixture_world(
 
     let count = controller_count.min(DEFAULT_CONTROLLERS);
     let templates = [
-        ("JR7-D", include_str!("../../../game/mechs/JR7-D.toml")),
+        ("JR7-D", include_str!("../../../game/units/JR7-D.toml")),
         (
             "Demolisher",
-            include_str!("../../../game/mechs/Demolisher.toml"),
+            include_str!("../../../game/units/Demolisher.toml"),
         ),
         (
             "Flatbed_Truck",
-            include_str!("../../../game/mechs/Flatbed_Truck.toml"),
+            include_str!("../../../game/units/Flatbed_Truck.toml"),
         ),
-        ("Fulcrum", include_str!("../../../game/mechs/Fulcrum.toml")),
+        ("Fulcrum", include_str!("../../../game/units/Fulcrum.toml")),
     ];
     for index in 0..count {
         let unit_id = world.create(config, format!("autopilot-benchmark-{index}"), Kind::Thing);

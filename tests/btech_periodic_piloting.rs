@@ -213,8 +213,8 @@ async fn damaged_running_checks_use_each_heartbeat_and_preserve_reverse_and_walk
 #[tokio::test]
 async fn gravity_stress_obeys_global_boundary_and_hits_each_chassis_leg_in_order() {
     for template in [
-        include_str!("../game/mechs/CTF-3L.toml"),
-        include_str!("../game/mechs/StalkingSpider-1.toml"),
+        include_str!("../game/units/CTF-3L.toml"),
+        include_str!("../game/units/StalkingSpider-1.toml"),
     ] {
         let (_dir, config, mut base, unit, _, _) =
             firing::fixture_with_target(template, None, template).await;
@@ -291,7 +291,7 @@ async fn gravity_stress_obeys_global_boundary_and_hits_each_chassis_leg_in_order
 /// The hot-myomer running threshold changes only on the guarded turn ticks.
 #[tokio::test]
 async fn hot_myomer_turn_threshold_and_shutdown_crew_gates() {
-    let template = include_str!("../game/mechs/OTL-6D.toml");
+    let template = include_str!("../game/units/OTL-6D.toml");
     let (_dir, config, mut base, unit, _, _) =
         firing::fixture_with_target(template, None, template).await;
     damage_gyro(&mut base, unit);
@@ -359,7 +359,7 @@ async fn server_clock_and_fall_retry_are_one_transaction() {
     use sqlx::{Connection, SqliteConnection};
     use std::{cell::Cell, rc::Rc};
     tokio::task::LocalSet::new().run_until(async {
-        let template = include_str!("../game/mechs/JR7-D.toml");
+        let template = include_str!("../game/units/JR7-D.toml");
         let (_dir,config,mut world,unit,_,_) = firing::fixture_with_target(template,None,template).await;
         damage_gyro(&mut world,unit); phase(&mut world,28); seed(&mut world,unit,false);
         firing::edit(&mut world,unit,|s| {s["motion"]["speed"] = 100.0.into();s["motion"]["desired_speed"] = 100.0.into();});
@@ -441,8 +441,8 @@ async fn damaged_hips_use_running_threshold_for_both_mech_chassis() {
 #[tokio::test]
 async fn gravity_success_and_disabled_special_rules_preserve_material() {
     for template in [
-        include_str!("../game/mechs/CTF-3L.toml"),
-        include_str!("../game/mechs/StalkingSpider-1.toml"),
+        include_str!("../game/units/CTF-3L.toml"),
+        include_str!("../game/units/StalkingSpider-1.toml"),
     ] {
         let (_dir, config, base, unit, _, _) =
             firing::fixture_with_target(template, None, template).await;

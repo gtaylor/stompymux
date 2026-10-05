@@ -25,11 +25,11 @@ async fn parity_scripts() -> (
     btech["registrations"][unit.0.to_string()] = serde_json::json!("MECH");
     btech["registrations"][deferred.0.to_string()] = serde_json::json!("MECH");
     world.btech = serde_json::from_value(btech).unwrap();
-    let root = config.path(&config.database.mech_database);
+    let root = config.path(&config.database.unit_database);
     std::fs::create_dir_all(&root).unwrap();
     std::fs::write(
         root.join("PARITY.toml"),
-        include_str!("fixtures/btech/mechs/PARITY.toml"),
+        include_str!("fixtures/btech/units/PARITY.toml"),
     )
     .unwrap();
     let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
@@ -523,13 +523,13 @@ async fn unit_unregister_extension_matches_native_teardown_contract() {
     );
     assert_eq!(restored.objects[&unit].kind, stompymux_rs::Kind::Thing);
     // The deleted roles agree at the row level with the native command's saves
-    // (this fixture keeps unit state in the legacy btech_mechs table).
+    // (this fixture keeps unit state in the legacy btech_stored_units table).
     let mut db = SqliteConnection::connect(&format!("sqlite://{}", config.database().display()))
         .await
         .unwrap();
     for sql in [
         "SELECT COUNT(*) FROM btech_special_registrations WHERE dbref IN (?,?)",
-        "SELECT COUNT(*) FROM btech_mechs WHERE dbref IN (?,?)",
+        "SELECT COUNT(*) FROM btech_stored_units WHERE dbref IN (?,?)",
     ] {
         let count: i64 = sqlx::query_scalar(sql)
             .bind(unit.0)
@@ -581,7 +581,7 @@ fn deferred_unit(s: &Scripts) -> stompymux_rs::ObjectId {
 async fn c_schema_unit_configuration_normalizes_empty_invalid_and_stale_rows() {
     let (_d, config, s) = isolated_scripts().await;
     let template =
-        stompymux_rs::MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+        stompymux_rs::MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml"))
             .unwrap();
     stompymux_rs::create_battle_unit(&mut s.world_mut(), stompymux_rs::ObjectId(14), template)
         .unwrap();

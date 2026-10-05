@@ -139,7 +139,7 @@ async fn ground_entry_reports_live_cf_once_and_replays_after_restart() {
 /// Flying above an entrance does not disclose its construction factor.
 #[tokio::test]
 async fn aircraft_overflight_does_not_report_ground_buildings() {
-    let source = include_str!("../game/mechs/Kestrel.toml");
+    let source = include_str!("../game/units/Kestrel.toml");
     let (_dir, config, mut world, id, _, _) =
         firing::fixture_with_target(source, None, source).await;
     let map = world.btech.vehicles()[&id].position().unwrap().map;

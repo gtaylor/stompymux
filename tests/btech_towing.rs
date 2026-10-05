@@ -3,9 +3,9 @@ use crate::support;
 use stompymux_rs::*;
 
 const CHASSIS: [&str; 3] = [
-    include_str!("fixtures/btech/mechs/JR7-D.toml"),
-    include_str!("../game/mechs/Demolisher.toml"),
-    include_str!("../game/mechs/Kestrel.toml"),
+    include_str!("fixtures/btech/units/JR7-D.toml"),
+    include_str!("../game/units/Demolisher.toml"),
+    include_str!("../game/units/Kestrel.toml"),
 ];
 
 /// Construct stationary units together without imposing pickup equipment policy.
@@ -281,7 +281,7 @@ async fn external_speed_exceeds_disabled_target_limits_but_requires_a_tow() {
     for speed in [160.0_f64, -100.0] {
         let (_dir, config, mut world, _, ids) = fixture(&[
             CHASSIS[2],
-            include_str!("../game/mechs/Savannah_Master.toml"),
+            include_str!("../game/units/Savannah_Master.toml"),
         ])
         .await;
         let [a, b] = ids[..] else { unreachable!() };
@@ -520,7 +520,7 @@ async fn loaded_acceleration_and_reverse_motion_use_the_same_ceiling_for_all_cha
     for (index, source) in CHASSIS.into_iter().enumerate() {
         for reverse in [false, true] {
             let (_dir, config, mut world, _, ids) =
-                fixture(&[source, include_str!("../game/mechs/Savannah_Master.toml")]).await;
+                fixture(&[source, include_str!("../game/units/Savannah_Master.toml")]).await;
             let [a, b] = ids[..] else { unreachable!() };
             world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(a);
             assign_battle_pilot(&mut world, a, ObjectId(1)).unwrap();
@@ -584,7 +584,7 @@ async fn loaded_acceleration_and_reverse_motion_use_the_same_ceiling_for_all_cha
 async fn native_and_lua_tow_speed_limits_and_reports_agree() {
     for (index, source) in CHASSIS.into_iter().enumerate() {
         let (_dir, config, mut world, _, ids) =
-            fixture(&[source, include_str!("../game/mechs/Savannah_Master.toml")]).await;
+            fixture(&[source, include_str!("../game/units/Savannah_Master.toml")]).await;
         let [a, b] = ids[..] else { unreachable!() };
         // This throttle-envelope test includes reverse, which requires towing equipment.
         world
@@ -694,14 +694,14 @@ async fn reverse_towing_guard_is_shared_by_native_lua_and_direct_controls() {
     let ground = CHASSIS[1];
     for source in [
         CHASSIS[0].to_owned(),
-        include_str!("../game/mechs/GOL-1H.toml").to_owned(),
+        include_str!("../game/units/GOL-1H.toml").to_owned(),
         ground.to_owned(),
         ground.replace("movement = \"track\"", "movement = \"wheel\""),
         ground.replace("movement = \"track\"", "movement = \"hover\""),
         CHASSIS[2].to_owned(),
     ] {
         let (_dir, config, mut world, _, ids) =
-            fixture(&[&source, include_str!("../game/mechs/Savannah_Master.toml")]).await;
+            fixture(&[&source, include_str!("../game/units/Savannah_Master.toml")]).await;
         let [carrier, target] = ids[..] else {
             unreachable!()
         };
@@ -800,7 +800,7 @@ async fn reverse_towing_guard_is_shared_by_native_lua_and_direct_controls() {
 #[tokio::test]
 async fn vertical_commands_share_loaded_budget_and_atomic_native_lua_behavior() {
     for target in [
-        include_str!("../game/mechs/Savannah_Master.toml"),
+        include_str!("../game/units/Savannah_Master.toml"),
         CHASSIS[1],
     ] {
         let (_dir, config, mut world, _, ids) = fixture(&[CHASSIS[2], target]).await;
@@ -957,7 +957,7 @@ fn prepare_pickup(world: &mut World, carrier: ObjectId, target: ObjectId) {
 #[tokio::test]
 async fn pickup_admission_and_towable_permission_are_shared_and_persisted() {
     for source in [
-        include_str!("fixtures/btech/mechs/AS7-D.toml"),
+        include_str!("fixtures/btech/units/AS7-D.toml"),
         CHASSIS[1],
         CHASSIS[2],
     ] {
@@ -1001,7 +1001,7 @@ async fn pickup_admission_and_towable_permission_are_shared_and_persisted() {
 #[tokio::test]
 async fn pickup_admission_rejects_motion_hidden_targets_enemies_and_overlap_without_mutation() {
     for source in [
-        include_str!("fixtures/btech/mechs/AS7-D.toml"),
+        include_str!("fixtures/btech/units/AS7-D.toml"),
         CHASSIS[1],
         CHASSIS[2],
     ] {
@@ -1058,7 +1058,7 @@ async fn pickup_admission_rejects_motion_hidden_targets_enemies_and_overlap_with
 #[tokio::test]
 async fn pickup_equipment_requires_both_arms_and_one_working_shoulder_hand_pair() {
     let (_dir, _, mut world, _, ids) =
-        fixture(&[include_str!("fixtures/btech/mechs/AS7-D.toml"), CHASSIS[1]]).await;
+        fixture(&[include_str!("fixtures/btech/units/AS7-D.toml"), CHASSIS[1]]).await;
     let [carrier, target] = ids[..] else {
         unreachable!()
     };
@@ -1152,7 +1152,7 @@ async fn pickup_vtol_height_and_vertical_speed_boundaries_are_read_only() {
 #[tokio::test]
 async fn pickup_preparation_shares_shutdown_for_all_chassis_without_target_pilot_authority() {
     for carrier_source in [
-        include_str!("fixtures/btech/mechs/AS7-D.toml"),
+        include_str!("fixtures/btech/units/AS7-D.toml"),
         CHASSIS[1],
         CHASSIS[2],
     ] {
@@ -1227,7 +1227,7 @@ async fn pickup_preparation_shares_shutdown_for_all_chassis_without_target_pilot
 #[tokio::test]
 async fn rejected_pickup_preparation_preserves_motion_power_and_relationships() {
     for source in [
-        include_str!("fixtures/btech/mechs/AS7-D.toml"),
+        include_str!("fixtures/btech/units/AS7-D.toml"),
         CHASSIS[1],
         CHASSIS[2],
     ] {
@@ -1487,7 +1487,7 @@ async fn released_mech_wrecks_finish_descent_before_and_after_destruction() {
 #[tokio::test]
 async fn pickup_composes_prior_tow_release_attachment_and_replay_for_all_chassis() {
     for source in [
-        include_str!("fixtures/btech/mechs/AS7-D.toml"),
+        include_str!("fixtures/btech/units/AS7-D.toml"),
         CHASSIS[1],
         CHASSIS[2],
     ] {
@@ -1536,7 +1536,7 @@ async fn pickup_composes_prior_tow_release_attachment_and_replay_for_all_chassis
 #[tokio::test]
 async fn native_and_lua_pickup_dropoff_share_state_and_rollback() {
     for source in [
-        include_str!("fixtures/btech/mechs/AS7-D.toml"),
+        include_str!("fixtures/btech/units/AS7-D.toml"),
         CHASSIS[1],
         CHASSIS[2],
     ] {
@@ -1608,10 +1608,10 @@ async fn native_and_lua_pickup_dropoff_share_state_and_rollback() {
 #[tokio::test]
 async fn pickup_through_ice_uses_shared_breakage_for_ground_and_airborne_carriers() {
     for (source, height) in [
-        (include_str!("fixtures/btech/mechs/AS7-D.toml"), 0),
+        (include_str!("fixtures/btech/units/AS7-D.toml"), 0),
         (CHASSIS[1], 0),
         (CHASSIS[2], 1),
-        (include_str!("../game/mechs/J_Edgar.toml"), 0),
+        (include_str!("../game/units/J_Edgar.toml"), 0),
     ] {
         let (_dir, config, mut world, _, ids) = fixture(&[source, CHASSIS[0]]).await;
         let [carrier, target] = ids[..] else {
@@ -1713,7 +1713,7 @@ async fn pickup_through_ice_uses_shared_breakage_for_ground_and_airborne_carrier
 #[tokio::test]
 async fn pickup_ice_failure_restores_the_previous_tow_and_all_material_state() {
     let (_dir, config, mut world, _, ids) = fixture(&[
-        include_str!("fixtures/btech/mechs/AS7-D.toml"),
+        include_str!("fixtures/btech/units/AS7-D.toml"),
         CHASSIS[0],
         CHASSIS[0],
     ])
@@ -1766,7 +1766,7 @@ async fn pickup_ice_failure_restores_the_previous_tow_and_all_material_state() {
 async fn native_and_lua_scenario_permission_share_inspection_persistence_and_rollback() {
     for target_source in CHASSIS {
         let (_dir, config, mut world, _, ids) = fixture(&[
-            include_str!("fixtures/btech/mechs/AS7-D.toml"),
+            include_str!("fixtures/btech/units/AS7-D.toml"),
             target_source,
         ])
         .await;

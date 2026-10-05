@@ -594,7 +594,7 @@ mod tests {
         let config = config();
         let mut world = World::default();
         let unit = world.create(&config, "Autopilot health mech".into(), Kind::Thing);
-        UnitTemplate::parse("JR7-D", include_str!("../../game/mechs/JR7-D.toml"))
+        UnitTemplate::parse("JR7-D", include_str!("../../game/units/JR7-D.toml"))
             .unwrap()
             .create(&mut world, unit)
             .unwrap();
@@ -616,7 +616,7 @@ mod tests {
         let unit = world.create(&config, "Autopilot health vehicle".into(), Kind::Thing);
         UnitTemplate::parse(
             "Demolisher",
-            include_str!("../../game/mechs/Demolisher.toml"),
+            include_str!("../../game/units/Demolisher.toml"),
         )
         .unwrap()
         .create(&mut world, unit)

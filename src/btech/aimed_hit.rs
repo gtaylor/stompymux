@@ -156,8 +156,8 @@ mod tests {
     #[test]
     fn immobile_aim_preserves_numeric_anatomy_and_cover() {
         for source in [
-            include_str!("../../game/mechs/JR7-D.toml"),
-            include_str!("../../game/mechs/GOL-1H.toml"),
+            include_str!("../../game/units/JR7-D.toml"),
+            include_str!("../../game/units/GOL-1H.toml"),
         ] {
             let mut world = World::default();
             target(&mut world, source, false);
@@ -202,8 +202,8 @@ mod tests {
             }
         }
         for source in [
-            include_str!("../../game/mechs/Demolisher.toml"),
-            include_str!("../../game/mechs/Kestrel.toml"),
+            include_str!("../../game/units/Demolisher.toml"),
+            include_str!("../../game/units/Kestrel.toml"),
         ] {
             let mut world = World::default();
             target(&mut world, source, false);
@@ -246,7 +246,7 @@ mod tests {
                     let mut world = World::default();
                     target(
                         &mut world,
-                        include_str!("../../game/mechs/JR7-D.toml"),
+                        include_str!("../../game/units/JR7-D.toml"),
                         running,
                     );
                     let mut dice = Dice::seeded([byte; 32]);

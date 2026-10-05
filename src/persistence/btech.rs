@@ -70,8 +70,8 @@ pub(super) async fn load(c: &mut SqliteConnection) -> Result<BtechState> {
     }
     let mut units = BTreeMap::new();
     for row in sqlx::query(
-        "SELECT dbref,mech_name,mech_type,unit_class,movement_type,tons,map_dbref \
-         FROM btech_mechs ORDER BY dbref",
+        "SELECT dbref,unit_name,unit_template,unit_class,movement_type,tons,map_dbref \
+         FROM btech_stored_units ORDER BY dbref",
     )
     .fetch_all(&mut *c)
     .await?
@@ -80,8 +80,8 @@ pub(super) async fn load(c: &mut SqliteConnection) -> Result<BtechState> {
         units.insert(
             ObjectId(row.try_get("dbref")?),
             StoredBattleUnit {
-                name: row.try_get("mech_name")?,
-                template: row.try_get("mech_type")?,
+                name: row.try_get("unit_name")?,
+                template: row.try_get("unit_template")?,
                 class_code: row.try_get("unit_class")?,
                 movement_code: row.try_get("movement_type")?,
                 tons: row.try_get("tons")?,
@@ -318,7 +318,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
         super::btech_units::purge(c, &unregistered).await?;
         super::btech_vehicles::purge(c, &unregistered).await?;
         for id in &unregistered {
-            sqlx::query("DELETE FROM btech_mechs WHERE dbref=?")
+            sqlx::query("DELETE FROM btech_stored_units WHERE dbref=?")
                 .bind(id.0)
                 .execute(&mut *c)
                 .await?;

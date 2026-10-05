@@ -317,7 +317,7 @@ mod tests {
     /// A single test mount in a free torso, retaining normal engines and crew equipment.
     fn unit(weapon: Weapon) -> (Mech, usize, Vec<CriticalLocation>) {
         let mut template =
-            MechTemplate::parse("JR7-D", include_str!("../../game/mechs/JR7-D.toml")).unwrap();
+            MechTemplate::parse("JR7-D", include_str!("../../game/units/JR7-D.toml")).unwrap();
         let section = template.sections.get_mut(&MechSection::LeftTorso).unwrap();
         section.criticals.clear();
         for slot in 0..weapon.profile().critical_slots {

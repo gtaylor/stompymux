@@ -6,7 +6,7 @@ use stompymux_rs::*;
 /// Install independent computers in a turret and surviving hull face.
 fn design() -> VehicleTemplate {
     let mut template =
-        VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+        VehicleTemplate::parse("Demolisher", include_str!("../game/units/Demolisher.toml"))
             .unwrap();
     for section in template.sections.values_mut() {
         section.criticals.clear();
@@ -136,7 +136,7 @@ async fn vehicle_hardware_survives_storage_and_is_exposed_to_lua() {
 #[test]
 fn shipped_vehicle_master_and_slave_templates_have_live_hardware() {
     let master = Vehicle::new(
-        VehicleTemplate::parse("Schiltron", include_str!("../game/mechs/Schiltron.toml")).unwrap(),
+        VehicleTemplate::parse("Schiltron", include_str!("../game/units/Schiltron.toml")).unwrap(),
     )
     .unwrap();
     assert_eq!(master.c3_hardware().unwrap().working_masters, 1);
@@ -144,7 +144,7 @@ fn shipped_vehicle_master_and_slave_templates_have_live_hardware() {
     let slave = Vehicle::new(
         VehicleTemplate::parse(
             "Demolisher-MRM",
-            include_str!("../game/mechs/Demolisher-MRM.toml"),
+            include_str!("../game/units/Demolisher-MRM.toml"),
         )
         .unwrap(),
     )
@@ -152,7 +152,7 @@ fn shipped_vehicle_master_and_slave_templates_have_live_hardware() {
     assert!(slave.c3_hardware().unwrap().slave_operational);
     assert!(slave.c3_operational().unwrap());
     let empty = Vehicle::new(
-        VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+        VehicleTemplate::parse("Demolisher", include_str!("../game/units/Demolisher.toml"))
             .unwrap(),
     )
     .unwrap();

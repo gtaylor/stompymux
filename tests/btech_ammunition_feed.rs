@@ -4,7 +4,7 @@ use stompymux_rs::*;
 /// Three ordinary bins and one Artemis bin, including a preferred bin in the launcher section.
 fn unit() -> Mech {
     let mut template =
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
     let bin = template.sections[&MechSection::RightTorso].criticals[&0].clone();
     template
         .sections

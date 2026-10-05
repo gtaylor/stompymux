@@ -6,17 +6,17 @@ use stompymux_rs::*;
 
 /// Representative construction for every supported movement class.
 fn templates() -> Vec<String> {
-    let tracked = include_str!("../game/mechs/Demolisher.toml");
+    let tracked = include_str!("../game/units/Demolisher.toml");
     vec![
-        include_str!("../game/mechs/JR7-D.toml").into(),
-        include_str!("../game/mechs/GOL-1H.toml").into(),
+        include_str!("../game/units/JR7-D.toml").into(),
+        include_str!("../game/units/GOL-1H.toml").into(),
         tracked.into(),
         tracked.replace("movement = \"track\"", "movement = \"wheel\""),
         tracked.replace("movement = \"track\"", "movement = \"hover\""),
         tracked
             .replace("movement = \"track\"", "movement = \"none\"")
             .replace("walk_mp = 5", "walk_mp = 0"),
-        include_str!("../game/mechs/Kestrel.toml").into(),
+        include_str!("../game/units/Kestrel.toml").into(),
     ]
 }
 
@@ -111,7 +111,7 @@ fn shot_rules() -> ShotRules {
 /// Install the same Clan LRM-20 and full Swarm bin in either construction anatomy.
 fn launcher(source: &str, mode: &str) -> UnitTemplate {
     let mut definition = UnitTemplate::parse("test", source).unwrap();
-    let part = MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+    let part = MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml"))
         .unwrap()
         .sections[&MechSection::LeftArm]
         .criticals[&2]
@@ -700,8 +700,8 @@ async fn swarm_can_return_to_its_launcher() {
 async fn swarm_skips_installed_ams_on_hits_and_misses() {
     for source in [templates()[0].clone(), templates()[2].clone()] {
         for target_source in [
-            include_str!("../game/mechs/Daishi-A.toml"),
-            include_str!("../game/mechs/Goblin-58.toml"),
+            include_str!("../game/units/Daishi-A.toml"),
+            include_str!("../game/units/Goblin-58.toml"),
         ] {
             let (_dir, _config, mut initial, shooter, target) =
                 fixture(&source, target_source, false).await;
@@ -758,7 +758,7 @@ fn swarm_template_modes_cover_compatible_catalogue() {
                 continue;
             }
             let mut template =
-                MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml"))
                     .unwrap();
             let arm = template.sections.get_mut(&MechSection::LeftArm).unwrap();
             let mut mount = arm.criticals[&2].clone();

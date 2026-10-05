@@ -35,7 +35,7 @@ fn operator(world: &mut World, config: &Config, map: ObjectId) -> ObjectId {
 async fn melting_matches_combat_fractures_native_lua_and_restart() {
     for source in firing::templates() {
         let (_dir, config, mut world, unit, _, _) =
-            firing::fixture_with_target(&source, None, include_str!("../game/mechs/AS7-D.toml"))
+            firing::fixture_with_target(&source, None, include_str!("../game/units/AS7-D.toml"))
                 .await;
         let map = world.btech.units()[&unit].map.unwrap();
         let actor = operator(&mut world, &config, map);
@@ -99,7 +99,7 @@ async fn melting_matches_combat_fractures_native_lua_and_restart() {
 async fn freezing_water_preserves_submerged_mechs() {
     for source in firing::templates().into_iter().take(2) {
         let (_dir, config, mut world, unit, _, _) =
-            firing::fixture_with_target(&source, None, include_str!("../game/mechs/AS7-D.toml"))
+            firing::fixture_with_target(&source, None, include_str!("../game/units/AS7-D.toml"))
                 .await;
         let map = world.btech.units()[&unit].map.unwrap();
         let actor = operator(&mut world, &config, map);
@@ -137,7 +137,7 @@ async fn ice_thresholds_authority_and_rolls() {
     let (_dir, config, mut world, unit, _, _) = firing::fixture_with_target(
         &firing::templates()[0],
         None,
-        include_str!("../game/mechs/AS7-D.toml"),
+        include_str!("../game/units/AS7-D.toml"),
     )
     .await;
     let map = world.btech.units()[&unit].map.unwrap();
@@ -211,7 +211,7 @@ async fn shoreline_passes_have_distinct_growth_and_melt_ordering() {
     let (_dir, config, mut world, unit, _, _) = firing::fixture_with_target(
         &firing::templates()[0],
         None,
-        include_str!("../game/mechs/AS7-D.toml"),
+        include_str!("../game/units/AS7-D.toml"),
     )
     .await;
     let map = world.btech.units()[&unit].map.unwrap();
@@ -299,7 +299,7 @@ async fn failed_confirmation_restores_ice_and_dice() {
     let (dir, config, mut world, unit, _, _) = firing::fixture_with_target(
         &firing::templates()[0],
         None,
-        include_str!("../game/mechs/AS7-D.toml"),
+        include_str!("../game/units/AS7-D.toml"),
     )
     .await;
     let map = world.btech.units()[&unit].map.unwrap();
@@ -319,9 +319,9 @@ async fn failed_confirmation_restores_ice_and_dice() {
 #[tokio::test]
 async fn occupied_melting_commits_or_restores_the_whole_map_pass() {
     let (dir, config, mut world, unit, _, _) = firing::fixture_with_target(
-        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/units/Demolisher.toml"),
         None,
-        include_str!("../game/mechs/AS7-D.toml"),
+        include_str!("../game/units/AS7-D.toml"),
     )
     .await;
     let map = world.btech.units()[&unit].map.unwrap();

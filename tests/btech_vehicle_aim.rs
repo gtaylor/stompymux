@@ -48,7 +48,7 @@ fn motion(world: &mut World, id: ObjectId, speed: f64, turning: bool) {
 #[tokio::test]
 async fn vehicle_attack_and_target_movement_follow_speed_turning_and_replay() {
     let (_dir, config, mut world, id) =
-        fixture(include_str!("../game/mechs/Flatbed_Truck.toml")).await;
+        fixture(include_str!("../game/units/Flatbed_Truck.toml")).await;
     for (speed, target, attack) in [
         (0.0, 0, 0),
         (21.5, 0, 1),
@@ -111,7 +111,7 @@ async fn vehicle_attack_and_target_movement_follow_speed_turning_and_replay() {
 #[tokio::test]
 async fn vehicle_immobility_stacks_with_speed_without_treating_stopped_as_disabled() {
     let (_dir, _config, mut world, id) =
-        fixture(include_str!("../game/mechs/Flatbed_Truck.toml")).await;
+        fixture(include_str!("../game/units/Flatbed_Truck.toml")).await;
     assert_eq!(
         battle_unit_target_movement_modifier(&world, id, 0.0, false).unwrap(),
         0
@@ -171,7 +171,7 @@ async fn vehicle_immobility_stacks_with_speed_without_treating_stopped_as_disabl
 #[tokio::test]
 async fn stationary_construction_and_turret_rotation_use_distinct_modifiers() {
     let (_dir, config, mut world, id) =
-        fixture(include_str!("../game/mechs/RadioTower.toml")).await;
+        fixture(include_str!("../game/units/RadioTower.toml")).await;
     assert_eq!(world.btech.vehicles()[&id].power(), Power::Running);
     assert_eq!(
         battle_unit_target_movement_modifier(&world, id, 2.0, false).unwrap(),
@@ -205,7 +205,7 @@ async fn stationary_construction_and_turret_rotation_use_distinct_modifiers() {
             .ready
     );
     let (_dir, _config, mut world, id) =
-        fixture(include_str!("../game/mechs/Demolisher.toml")).await;
+        fixture(include_str!("../game/units/Demolisher.toml")).await;
     set_battle_turret(&mut world, id, ObjectId(1), 90.0).unwrap();
     assert_eq!(
         world.btech.vehicles()[&id].attacker_movement_modifier(true),

@@ -445,7 +445,7 @@ async fn server_retries_connection_after_failed_commit() {
     use sqlx::{Connection, SqliteConnection};
     use std::{cell::Cell, rc::Rc};
     tokio::task::LocalSet::new().run_until(async {
-        for template in [include_str!("../game/mechs/JR7-D.toml"), include_str!("../game/mechs/Demolisher.toml")] {
+        for template in [include_str!("../game/units/JR7-D.toml"), include_str!("../game/units/Demolisher.toml")] {
             let (_dir, config, mut world, source, observer, _) = fixture(template, template).await;
             select_battle_spotter(&mut world, source, ObjectId(1), Some(observer)).unwrap();
             stop_battle_unit(&mut world, source, ObjectId(1), FallRules::configured(&config)).unwrap();

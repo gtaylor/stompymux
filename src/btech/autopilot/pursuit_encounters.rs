@@ -247,20 +247,20 @@ pub async fn run(
         for (chassis, source) in [
             (
                 "mech",
-                include_str!("../../../game/mechs/JR7-D.toml").to_owned(),
+                include_str!("../../../game/units/JR7-D.toml").to_owned(),
             ),
             (
                 "tracked",
-                include_str!("../../../game/mechs/Demolisher.toml").to_owned(),
+                include_str!("../../../game/units/Demolisher.toml").to_owned(),
             ),
             (
                 "wheeled",
-                include_str!("../../../game/mechs/Demolisher.toml")
+                include_str!("../../../game/units/Demolisher.toml")
                     .replace("movement = \"track\"", "movement = \"wheel\""),
             ),
             (
                 "hover",
-                include_str!("../../../game/mechs/Demolisher.toml")
+                include_str!("../../../game/units/Demolisher.toml")
                     .replace("movement = \"track\"", "movement = \"hover\""),
             ),
         ] {
@@ -277,9 +277,9 @@ pub async fn run(
                         base,
                         &source,
                         if name == "short_occlusions" {
-                            include_str!("../../../game/mechs/JR7-D.toml")
+                            include_str!("../../../game/units/JR7-D.toml")
                         } else {
-                            include_str!("../../../game/mechs/AS7-S2.toml")
+                            include_str!("../../../game/units/AS7-S2.toml")
                         },
                         "approach",
                         seed,

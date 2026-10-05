@@ -213,7 +213,7 @@ mod tests {
         let config = crate::Config::load("tests/fixtures/game").unwrap();
         let mut world = crate::World::default();
         let unit = world.create(&config, "Policy weapon fixture".into(), crate::Kind::Thing);
-        crate::UnitTemplate::parse("JR7-D", include_str!("../../../game/mechs/JR7-D.toml"))
+        crate::UnitTemplate::parse("JR7-D", include_str!("../../../game/units/JR7-D.toml"))
             .unwrap()
             .create(&mut world, unit)
             .unwrap();
@@ -293,7 +293,7 @@ mod tests {
         let config = crate::Config::load("tests/fixtures/game").unwrap();
         let mut world = crate::World::default();
         let unit = world.create(&config, "Network policy fixture".into(), crate::Kind::Thing);
-        crate::UnitTemplate::parse("JR7-D", include_str!("../../../game/mechs/JR7-D.toml"))
+        crate::UnitTemplate::parse("JR7-D", include_str!("../../../game/units/JR7-D.toml"))
             .unwrap()
             .create(&mut world, unit)
             .unwrap();

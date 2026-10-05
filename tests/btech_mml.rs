@@ -85,7 +85,7 @@ async fn mml_modes_firing_and_restart_across_chassis() {
                     firing::fixture_with_supply(
                         &source,
                         Some(weapon),
-                        include_str!("../game/mechs/AS7-D.toml"),
+                        include_str!("../game/units/AS7-D.toml"),
                         false,
                         Some(flag),
                     )
@@ -255,7 +255,7 @@ async fn mml_ams_and_missing_supply() {
         let (_dir, config, world, shooter, target, index) = firing::fixture_with_target(
             &source,
             Some(Weapon::Mml3),
-            include_str!("../game/mechs/AS7-D.toml"),
+            include_str!("../game/units/AS7-D.toml"),
         )
         .await;
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
@@ -280,7 +280,7 @@ async fn mml_controls_require_ready_launchers_and_matching_supply() {
             let (_dir, config, mut world, shooter, target, index) = firing::fixture_with_supply(
                 &source,
                 Some(weapon),
-                include_str!("../game/mechs/AS7-D.toml"),
+                include_str!("../game/units/AS7-D.toml"),
                 false,
                 Some(""),
             )
@@ -353,7 +353,7 @@ async fn mml_ammunition_hazards_follow_bin_contents() {
             let (_dir, _config, mut world, id, _, index) = firing::fixture_with_supply(
                 &source,
                 Some(Weapon::Mml9),
-                include_str!("../game/mechs/AS7-D.toml"),
+                include_str!("../game/units/AS7-D.toml"),
                 false,
                 Some(flag),
             )
@@ -457,7 +457,7 @@ async fn mml_long_range_special_rounds_select_fire_and_persist() {
             let (_dir, config, mut world, shooter, target, index) = firing::fixture_with_supply(
                 &source,
                 Some(Weapon::Mml9),
-                include_str!("../game/mechs/AS7-D.toml"),
+                include_str!("../game/units/AS7-D.toml"),
                 false,
                 Some(&format!("MML_LRM {flag}")),
             )

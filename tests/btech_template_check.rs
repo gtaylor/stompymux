@@ -5,7 +5,7 @@ use stompymux_rs::*;
 /// Template checks share construction rejection and retain the original source facts.
 #[test]
 fn template_check_reports_normalization_and_construction_failures() {
-    let source = include_str!("fixtures/btech/mechs/JR7-D.toml").replace(
+    let source = include_str!("fixtures/btech/units/JR7-D.toml").replace(
         "item = \"Ammo_IS.SRM-4\", rounds = 25",
         "item = \"Ammo_IS.SRM-4\", rounds = 7",
     );
@@ -62,14 +62,14 @@ fn template_check_reports_normalization_and_construction_failures() {
 #[tokio::test(flavor = "current_thread")]
 async fn template_check_native_lua_read_only_and_bounded_asset_access() {
     let (dir, config, world) = support::isolated_world().await;
-    std::fs::create_dir_all(dir.path().join("mechs")).unwrap();
-    let source = include_str!("fixtures/btech/mechs/JR7-D.toml").replace(
+    std::fs::create_dir_all(dir.path().join("units")).unwrap();
+    let source = include_str!("fixtures/btech/units/JR7-D.toml").replace(
         "item = \"Ammo_IS.SRM-4\", rounds = 25",
         "item = \"Ammo_IS.SRM-4\", rounds = 7",
     );
-    std::fs::write(dir.path().join("mechs/partial.toml"), &source).unwrap();
+    std::fs::write(dir.path().join("units/partial.toml"), &source).unwrap();
     std::fs::write(
-        dir.path().join("mechs/unsupported.toml"),
+        dir.path().join("units/unsupported.toml"),
         source.replace("IS.MediumLaser", "IS.Unknown"),
     )
     .unwrap();
@@ -138,7 +138,7 @@ async fn template_check_native_lua_read_only_and_bounded_asset_access() {
     assert_eq!(scripts.world().objects.len(), world.objects.len());
     assert!(scripts.drain_outbox().is_empty());
     assert_eq!(
-        std::fs::read_to_string(dir.path().join("mechs/partial.toml")).unwrap(),
+        std::fs::read_to_string(dir.path().join("units/partial.toml")).unwrap(),
         source
     );
 }
@@ -147,7 +147,7 @@ async fn template_check_native_lua_read_only_and_bounded_asset_access() {
 #[test]
 fn ammunition_rejections_include_location_equipment_and_flags() {
     let original =
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
     for (equipment, data, flags, expected) in [
         (
             "Ammo_IS.SRM-4",
@@ -196,7 +196,7 @@ fn ammunition_rejections_include_location_equipment_and_flags() {
 #[test]
 fn narc_ammunition_is_constructible() {
     let mut template =
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
     template
         .sections
         .get_mut(&MechSection::RightTorso)
@@ -217,7 +217,7 @@ fn narc_ammunition_is_constructible() {
 #[test]
 fn quad_anatomy_decodes_and_constructs_assets() {
     let template =
-        MechTemplate::parse("SCP-1N", include_str!("../game/mechs/SCP-1N.toml")).unwrap();
+        MechTemplate::parse("SCP-1N", include_str!("../game/units/SCP-1N.toml")).unwrap();
     let chassis = template.chassis().unwrap();
     assert_eq!(chassis, MechChassis::Quad);
     assert_eq!(chassis.legs().len(), 4);
@@ -249,7 +249,7 @@ fn quad_anatomy_decodes_and_constructs_assets() {
 /// Chassis fields and sections can appear in any order, but mixed, duplicate or missing limb tables are rejected.
 #[test]
 fn chassis_section_parsing_is_order_independent_and_rejects_mixed_anatomy() {
-    let source = include_str!("../game/mechs/SCP-1N.toml");
+    let source = include_str!("../game/units/SCP-1N.toml");
     let movement = "movement = \"quad\"\n";
     let (fields, sections) = source.split_at(source.find("[sections.").unwrap());
     let mut sections: Vec<_> = sections.trim_end().split("\n\n").collect();
@@ -274,7 +274,7 @@ fn chassis_section_parsing_is_order_independent_and_rejects_mixed_anatomy() {
         assert!(MechTemplate::parse("SCP-1N", &bad).is_err());
     }
     let biped =
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
     let chassis = biped.chassis().unwrap();
     assert_eq!(chassis, MechChassis::Biped);
     assert!(!chassis.is_leg(MechSection::LeftArm));

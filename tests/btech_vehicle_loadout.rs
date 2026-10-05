@@ -5,7 +5,7 @@ use stompymux_rs::*;
 #[test]
 fn vehicle_slots_are_complete_weapons_and_independent_bins() {
     let template =
-        VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+        VehicleTemplate::parse("Demolisher", include_str!("../game/units/Demolisher.toml"))
             .unwrap();
     let loadout = VehicleLoadout::resolve(&template).unwrap();
     assert_eq!(loadout.weapons.len(), 2);
@@ -30,12 +30,12 @@ fn vehicle_slots_are_complete_weapons_and_independent_bins() {
     assert_eq!(VehicleLoadout::resolve(&template).unwrap(), loadout);
     let truck = VehicleTemplate::parse(
         "Flatbed_Truck",
-        include_str!("../game/mechs/Flatbed_Truck.toml"),
+        include_str!("../game/units/Flatbed_Truck.toml"),
     )
     .unwrap();
     assert!(VehicleLoadout::resolve(&truck).unwrap().weapons.is_empty());
     let hover =
-        VehicleTemplate::parse("Fulcrum", include_str!("../game/mechs/Fulcrum.toml")).unwrap();
+        VehicleTemplate::parse("Fulcrum", include_str!("../game/units/Fulcrum.toml")).unwrap();
     let loadout = VehicleLoadout::resolve(&hover).unwrap();
     assert_eq!(loadout.weapons.len(), 3);
     assert_eq!(loadout.systems.len(), 2);
@@ -47,7 +47,7 @@ fn vehicle_slots_are_complete_weapons_and_independent_bins() {
 #[test]
 fn vehicle_catalogue_uses_shared_modes_and_supply() {
     let mut template =
-        VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+        VehicleTemplate::parse("Demolisher", include_str!("../game/units/Demolisher.toml"))
             .unwrap();
     for &weapon in Weapon::ALL {
         let turret = template.sections.get_mut(&VehicleSection::Turret).unwrap();
@@ -153,7 +153,7 @@ fn vehicle_loadout_rejects_unknown_equipment_and_bad_slots() {
         ("IS.MediumLaser", "-", vec![], 12),
     ] {
         let mut template =
-            VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+            VehicleTemplate::parse("Demolisher", include_str!("../game/units/Demolisher.toml"))
                 .unwrap();
         let turret = template.sections.get_mut(&VehicleSection::Turret).unwrap();
         turret.criticals.clear();

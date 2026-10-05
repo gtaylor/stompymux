@@ -22,7 +22,7 @@ async fn direct_shots_count_the_launch_result_for_every_chassis() {
         let (_dir, config, world, id, target, index) = firing::fixture_with_target(
             &source,
             Some(Weapon::MediumLaser),
-            include_str!("../game/mechs/AS7-D.toml"),
+            include_str!("../game/units/AS7-D.toml"),
         )
         .await;
         for seed in 0..6 {
@@ -131,7 +131,7 @@ async fn coordinate_fire_and_counter_overflow_keep_their_transaction_boundaries(
         let (_dir, config, mut world, id, target, index) = firing::fixture_with_target(
             &source,
             Some(Weapon::MediumLaser),
-            include_str!("../game/mechs/AS7-D.toml"),
+            include_str!("../game/units/AS7-D.toml"),
         )
         .await;
         let direct = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
@@ -188,7 +188,7 @@ async fn failed_streak_locks_do_not_count_as_misses() {
         let (_dir, config, mut world, id, target, index) = firing::fixture_with_supply(
             &source,
             Some(Weapon::StreakSrm2),
-            include_str!("../game/mechs/AS7-D.toml"),
+            include_str!("../game/units/AS7-D.toml"),
             false,
             Some(""),
         )
@@ -218,7 +218,7 @@ async fn out_of_range_direct_attempts_count_once() {
         let (_dir, config, mut world, id, target, index) = firing::fixture_with_target(
             &source,
             Some(Weapon::MediumLaser),
-            include_str!("../game/mechs/AS7-D.toml"),
+            include_str!("../game/units/AS7-D.toml"),
         )
         .await;
         firing::edit(&mut world, target, |unit| {

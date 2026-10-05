@@ -4,7 +4,7 @@ use stompymux_rs::*;
 /// Material-only aircraft; the host flight lifecycle remains responsible for world admission.
 fn aircraft() -> Vehicle {
     Vehicle::new(
-        VehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml")).unwrap(),
+        VehicleTemplate::parse("Kestrel", include_str!("../game/units/Kestrel.toml")).unwrap(),
     )
     .unwrap()
 }

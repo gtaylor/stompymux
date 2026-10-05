@@ -8,9 +8,9 @@ use stompymux_rs::*;
 #[tokio::test]
 async fn vtol_pod_removal_requires_landing_and_preserves_rejection_order() {
     let (_dir, config, mut base, id, _, _) = firing::fixture_with_target(
-        include_str!("../game/mechs/Kestrel.toml"),
+        include_str!("../game/units/Kestrel.toml"),
         None,
-        include_str!("../game/mechs/AS7-D.toml"),
+        include_str!("../game/units/AS7-D.toml"),
     )
     .await;
     firing::edit(&mut base, id, |unit| {

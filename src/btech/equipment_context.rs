@@ -173,7 +173,7 @@ mod tests {
     #[test]
     fn exact_inputs_contract_mode_eviction_and_failures_match_the_parser() {
         let template =
-            MechTemplate::parse("JR7-D", include_str!("../../game/mechs/JR7-D.toml")).unwrap();
+            MechTemplate::parse("JR7-D", include_str!("../../game/units/JR7-D.toml")).unwrap();
         let scope = Scope::with_limits(1, 0);
         let expected = MechLoadout::resolve(&template).unwrap();
         assert_eq!(mech(&template, false).unwrap(), expected);

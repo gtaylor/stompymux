@@ -22,7 +22,7 @@ async fn fixture(
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         if index < 2 {
             let mut definition =
-                MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml"))
                     .unwrap();
             definition
                 .attributes
@@ -66,7 +66,7 @@ fn rules(acquire: bool) -> ContactRules {
 async fn vehicle_contacts_acquire_retain_lose_and_replay_without_extra_rolls() {
     let (_dir, config, mut world, map, [_, mech, vehicle, other]) = fixture(
         ".0\n.0\n.0\n.0\n.0\n",
-        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/units/Demolisher.toml"),
     )
     .await;
     power(&mut world, &[vehicle], Power::Running);
@@ -124,7 +124,7 @@ async fn vehicle_contacts_acquire_retain_lose_and_replay_without_extra_rolls() {
 async fn mixed_contacts_follow_placement_removal_and_database_purge() {
     let (_dir, config, mut world, _map, ids) = fixture(
         ".0\n.0\n.0\n.0\n.0\n",
-        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/units/Demolisher.toml"),
     )
     .await;
     let [a, b, c, d] = ids;
@@ -171,7 +171,7 @@ async fn mixed_contacts_follow_placement_removal_and_database_purge() {
 async fn vehicle_contact_snapshots_reject_invalid_references() {
     let (_dir, config, mut world, map, [a, b, c, d]) = fixture(
         ".0\n.0\n.0\n.0\n.0\n",
-        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/units/Demolisher.toml"),
     )
     .await;
     let good = Contact { identified: true };

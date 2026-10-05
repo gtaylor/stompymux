@@ -16,8 +16,8 @@ fn hit(section: MechSection) -> Hit {
 #[tokio::test]
 async fn biped_and_quad_material_entries_consume_exact_dice_and_replay() {
     for source in [
-        include_str!("../game/mechs/JR7-D.toml"),
-        include_str!("../game/mechs/GOL-1H.toml"),
+        include_str!("../game/units/JR7-D.toml"),
+        include_str!("../game/units/GOL-1H.toml"),
     ] {
         let (_dir, config, mut base) = support::isolated_world().await;
         let id = base.create(&config, "Material target".into(), Kind::Thing);

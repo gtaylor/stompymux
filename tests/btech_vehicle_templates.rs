@@ -1,7 +1,7 @@
 //! Typed ground-vehicle assets preserve equipment and metadata without entering Mech construction.
 use stompymux_rs::*;
 
-const DEMOLISHER: &str = include_str!("../game/mechs/Demolisher.toml");
+const DEMOLISHER: &str = include_str!("../game/units/Demolisher.toml");
 
 /// Existing tracked, wheeled, hover and stationary assets retain distinct anatomy and metadata.
 #[test]
@@ -9,15 +9,15 @@ fn vehicle_assets_decode_without_mech_anatomy() {
     for (source, movement) in [
         (DEMOLISHER, VehicleMovement::Tracked),
         (
-            include_str!("../game/mechs/Flatbed_Truck.toml"),
+            include_str!("../game/units/Flatbed_Truck.toml"),
             VehicleMovement::Wheeled,
         ),
         (
-            include_str!("../game/mechs/Fulcrum.toml"),
+            include_str!("../game/units/Fulcrum.toml"),
             VehicleMovement::Hover,
         ),
         (
-            include_str!("../game/mechs/RadioTower.toml"),
+            include_str!("../game/units/RadioTower.toml"),
             VehicleMovement::Stationary,
         ),
     ] {
@@ -41,7 +41,7 @@ fn vehicle_assets_decode_without_mech_anatomy() {
     assert_eq!(turret.criticals[&2].data, "5");
     let truck = VehicleTemplate::parse(
         "Flatbed_Truck",
-        include_str!("../game/mechs/Flatbed_Truck.toml"),
+        include_str!("../game/units/Flatbed_Truck.toml"),
     )
     .unwrap();
     assert!(!truck.sections.contains_key(&VehicleSection::Turret));
@@ -71,7 +71,7 @@ fn vehicle_template_validation_and_shared_syntax() {
         assert!(VehicleTemplate::parse("Demolisher", &source).is_err());
     }
     assert!(
-        VehicleTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).is_err()
+        VehicleTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).is_err()
     );
     let custom = DEMOLISHER
         .replace(
@@ -107,8 +107,8 @@ fn vehicle_asset_reader_is_confined() {
 #[test]
 fn vehicle_assets_accept_multiple_ammunition_mode_words() {
     for source in [
-        include_str!("../game/mechs/Jeep.toml"),
-        include_str!("../game/mechs/HTracked_APC.toml"),
+        include_str!("../game/units/Jeep.toml"),
+        include_str!("../game/units/HTracked_APC.toml"),
     ] {
         let definition = VehicleTemplate::parse("test", source).unwrap();
         let unit = Vehicle::new(definition).unwrap();
@@ -131,8 +131,8 @@ fn vehicle_assets_accept_multiple_ammunition_mode_words() {
 #[test]
 fn artillery_vehicle_assets_decode_abbreviated_ecm() {
     for source in [
-        include_str!("../game/mechs/Huey.toml"),
-        include_str!("../game/mechs/Huitzilopochtli.toml"),
+        include_str!("../game/units/Huey.toml"),
+        include_str!("../game/units/Huitzilopochtli.toml"),
     ] {
         let definition = VehicleTemplate::parse("test", source).unwrap();
         let vehicle = Vehicle::new(definition).unwrap();
@@ -152,7 +152,7 @@ fn artillery_vehicle_assets_decode_abbreviated_ecm() {
 fn svantovit_streak_records_valid_full_bin_capacity() {
     let definition = VehicleTemplate::parse(
         "Svantovit-Streak",
-        include_str!("../game/mechs/Svantovit-Streak.toml"),
+        include_str!("../game/units/Svantovit-Streak.toml"),
     )
     .unwrap();
     let vehicle = Vehicle::new(definition).unwrap();
@@ -171,7 +171,7 @@ fn svantovit_streak_records_valid_full_bin_capacity() {
 fn tracked_transport_asset_has_only_ground_sections() {
     let definition = VehicleTemplate::parse(
         "J-27_Transport",
-        include_str!("../game/mechs/J-27_Transport.toml"),
+        include_str!("../game/units/J-27_Transport.toml"),
     )
     .unwrap();
     assert_eq!(definition.movement, VehicleMovement::Tracked);
@@ -185,7 +185,7 @@ fn tracked_transport_asset_has_only_ground_sections() {
 #[test]
 fn vtol_assets_share_vehicle_anatomy_and_equipment_without_ground_admission() {
     let mut count = 0;
-    for entry in std::fs::read_dir(crate::support::repository_root().join("game/mechs")).unwrap() {
+    for entry in std::fs::read_dir(crate::support::repository_root().join("game/units")).unwrap() {
         let path = entry.unwrap().path();
         if !path.is_file() {
             continue;
@@ -224,7 +224,7 @@ fn vtol_assets_share_vehicle_anatomy_and_equipment_without_ground_admission() {
 /// Type/locomotion mismatches and missing rotors must not create ambiguous chassis definitions.
 #[test]
 fn vtol_anatomy_requires_matching_type_movement_and_rotor() {
-    let source = include_str!("../game/mechs/Kestrel.toml");
+    let source = include_str!("../game/units/Kestrel.toml");
     for invalid in [
         source.replace("class = \"vtol\"", "class = \"vehicle\""),
         source.replace("movement = \"vtol\"", "movement = \"track\""),

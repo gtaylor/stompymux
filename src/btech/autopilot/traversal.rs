@@ -605,7 +605,7 @@ mod tests {
             world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
             UnitTemplate::parse(
                 "JR7-D",
-                include_str!("../../../tests/fixtures/btech/mechs/JR7-D.toml"),
+                include_str!("../../../tests/fixtures/btech/units/JR7-D.toml"),
             )
             .unwrap()
             .create(&mut world, id)

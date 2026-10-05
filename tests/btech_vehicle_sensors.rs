@@ -36,7 +36,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
 /// Demolisher with radar, a two-slot Beagle probe in front slots 0-1 and a Bloodhound in slot 2.
 fn equipped() -> String {
     support::templates::with_flags(
-        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/units/Demolisher.toml"),
         &["AntiAircraft"],
     )
     .replace(
@@ -58,7 +58,7 @@ fn probe(world: &World, id: ObjectId) -> Option<ProbeProfile> {
 /// The `sensor` command and Lua share one read-only report and reject mode arguments.
 #[tokio::test]
 async fn vehicle_sensor_command_and_lua_share_the_perception_report() {
-    let (_dir, config, world, id) = fixture(include_str!("../game/mechs/Demolisher.toml")).await;
+    let (_dir, config, world, id) = fixture(include_str!("../game/units/Demolisher.toml")).await;
     let scripts = Scripts::new(
         &config,
         std::rc::Rc::new(std::cell::RefCell::new(world.clone())),

@@ -6,10 +6,10 @@ use stompymux_rs::*;
 /// Representative assets as (reference, document) pairs, including stationary construction
 /// authored from a tracked chassis.
 fn templates() -> Vec<(&'static str, String)> {
-    let vehicle = include_str!("../game/mechs/Demolisher.toml");
+    let vehicle = include_str!("../game/units/Demolisher.toml");
     vec![
-        ("JR7-D", include_str!("../game/mechs/JR7-D.toml").into()),
-        ("GOL-1H", include_str!("../game/mechs/GOL-1H.toml").into()),
+        ("JR7-D", include_str!("../game/units/JR7-D.toml").into()),
+        ("GOL-1H", include_str!("../game/units/GOL-1H.toml").into()),
         ("Demolisher", vehicle.into()),
         (
             "Demolisher",
@@ -25,7 +25,7 @@ fn templates() -> Vec<(&'static str, String)> {
                 .replace("movement = \"track\"", "movement = \"none\"")
                 .replace("walk_mp = 5", "walk_mp = 0"),
         ),
-        ("Kestrel", include_str!("../game/mechs/Kestrel.toml").into()),
+        ("Kestrel", include_str!("../game/units/Kestrel.toml").into()),
     ]
 }
 
@@ -162,8 +162,8 @@ async fn reports_share_chassis_state_and_preserve_empty_ammunition() {
 #[tokio::test]
 async fn report_access_and_artillery_ranges() {
     for (reference, source) in [
-        ("Daishi-H", include_str!("../game/mechs/Daishi-H.toml")),
-        ("Naga-A", include_str!("../game/mechs/Naga-A.toml")),
+        ("Daishi-H", include_str!("../game/units/Daishi-H.toml")),
+        ("Naga-A", include_str!("../game/units/Naga-A.toml")),
     ] {
         let (_dir, config, world, id) = fixture(reference, source, false).await;
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
@@ -190,7 +190,7 @@ async fn report_access_and_artillery_ranges() {
 #[tokio::test]
 async fn damage_and_vehicle_failures_are_distinct_from_readiness() {
     let (_dir, config, mut world, id) =
-        fixture("GOL-1H", include_str!("../game/mechs/GOL-1H.toml"), true).await;
+        fixture("GOL-1H", include_str!("../game/units/GOL-1H.toml"), true).await;
     let loadout = world.btech.constructed_units()[&id].loadout().unwrap();
     let index = loadout
         .weapons
@@ -242,7 +242,7 @@ async fn damage_and_vehicle_failures_are_distinct_from_readiness() {
 
     let (_dir, _config, mut world, id) = fixture(
         "Demolisher",
-        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/units/Demolisher.toml"),
         true,
     )
     .await;

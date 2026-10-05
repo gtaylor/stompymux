@@ -26,9 +26,9 @@ async fn jump_heading_rates_preserve_trajectory_and_replay_across_chassis() {
                 let mut definition = MechTemplate::parse(
                     "test",
                     if quad {
-                        include_str!("../game/mechs/SCP-1N.toml")
+                        include_str!("../game/units/SCP-1N.toml")
                     } else {
-                        include_str!("fixtures/btech/mechs/JR7-D.toml")
+                        include_str!("fixtures/btech/units/JR7-D.toml")
                     },
                 )
                 .unwrap();

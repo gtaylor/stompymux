@@ -3050,7 +3050,7 @@ async fn radar_fixture() -> (
 ) {
     use stompymux_rs::*;
     let mut template =
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
     template
         .attributes
         .insert("specials".into(), "AntiAircraft".into());
@@ -3061,7 +3061,7 @@ async fn radar_fixture() -> (
     create_battle_unit(
         &mut world,
         target,
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
@@ -3867,7 +3867,7 @@ async fn semiguided_fixture() -> (
     world.btech = serde_json::from_value(state).unwrap();
     select_battle_tag(&mut world, tagger, ObjectId(1), Some(target)).unwrap();
     let mut definition =
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
     definition
         .sections
         .get_mut(&MechSection::CenterTorso)
@@ -6782,7 +6782,7 @@ async fn quad_live_movement_standing_and_restart() {
     use stompymux_rs::*;
     let source = format!("12 12\n{}", format!("{}\n", ".0".repeat(12)).repeat(12));
     let template =
-        MechTemplate::parse("SCP-1N", include_str!("../game/mechs/SCP-1N.toml")).unwrap();
+        MechTemplate::parse("SCP-1N", include_str!("../game/units/SCP-1N.toml")).unwrap();
     let (_dir, config, mut world, id) = fixture_assets(&source, template).await;
     assert_eq!(
         world.btech.constructed_units()[&id].chassis(),
@@ -6842,7 +6842,7 @@ async fn quad_live_weapon_and_front_leg_combat() {
     use stompymux_rs::*;
     let source = format!("12 12\n{}", format!("{}\n", ".0".repeat(12)).repeat(12));
     let template =
-        MechTemplate::parse("SCP-1N", include_str!("../game/mechs/SCP-1N.toml")).unwrap();
+        MechTemplate::parse("SCP-1N", include_str!("../game/units/SCP-1N.toml")).unwrap();
     let (_dir, config, mut world, id) = fixture_assets(&source, template.clone()).await;
     let map = world.btech.constructed_units()[&id].position().unwrap().map;
     let target = world.create(&config, "Target quad".into(), Kind::Thing);
@@ -6893,7 +6893,7 @@ async fn quad_club_rejection_is_atomic_across_command_paths() {
     use stompymux_rs::*;
     let source = format!("12 12\n{}", format!("{}\n", "`0".repeat(12)).repeat(12));
     let template =
-        MechTemplate::parse("SCP-1N", include_str!("../game/mechs/SCP-1N.toml")).unwrap();
+        MechTemplate::parse("SCP-1N", include_str!("../game/units/SCP-1N.toml")).unwrap();
     let (_dir, config, mut world, id) = fixture_assets(&source, template).await;
     let before = world.btech.clone();
     for selection in [None, Some("left"), Some("right")] {
@@ -6928,7 +6928,7 @@ async fn quad_dump_location_selectors_use_live_anatomy() {
     use stompymux_rs::*;
     let source = format!("12 12\n{}", format!("{}\n", ".0".repeat(12)).repeat(12));
     let mut template =
-        MechTemplate::parse("SCP-1N", include_str!("../game/mechs/SCP-1N.toml")).unwrap();
+        MechTemplate::parse("SCP-1N", include_str!("../game/units/SCP-1N.toml")).unwrap();
     let bin = template
         .sections
         .get_mut(&MechSection::LeftTorso)
@@ -6971,7 +6971,7 @@ async fn quad_pods_inspect_anatomy_and_reject_swatting() {
     use stompymux_rs::*;
     let source = format!("12 12\n{}", format!("{}\n", ".0".repeat(12)).repeat(12));
     let template =
-        MechTemplate::parse("SCP-1N", include_str!("../game/mechs/SCP-1N.toml")).unwrap();
+        MechTemplate::parse("SCP-1N", include_str!("../game/units/SCP-1N.toml")).unwrap();
     let (_dir, config, mut world, id) = fixture_assets(&source, template).await;
     world
         .btech
@@ -7027,7 +7027,7 @@ async fn apod_live_fire_and_restart() {
     for weapon in [Weapon::APod, Weapon::ClanAPod] {
         let source = format!("12 12\n{}", format!("{}\n", ".0".repeat(12)).repeat(12));
         let mut template =
-            MechTemplate::parse("SCP-1N", include_str!("../game/mechs/SCP-1N.toml")).unwrap();
+            MechTemplate::parse("SCP-1N", include_str!("../game/units/SCP-1N.toml")).unwrap();
         template
             .sections
             .get_mut(&MechSection::LeftArm)
@@ -7099,7 +7099,7 @@ async fn stinger_airborne_admission_and_shot_replay() {
     use stompymux_rs::*;
     let template = MechTemplate::parse(
         "test",
-        &include_str!("fixtures/btech/mechs/JR7-D.toml").replace("IS.SRM-4", "IS.LRM-5"),
+        &include_str!("fixtures/btech/units/JR7-D.toml").replace("IS.SRM-4", "IS.LRM-5"),
     )
     .unwrap();
     let mut template = template;
@@ -7124,7 +7124,7 @@ async fn stinger_airborne_admission_and_shot_replay() {
     create_battle_unit(
         &mut world,
         target,
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
@@ -7626,8 +7626,8 @@ async fn weapons_hold_direct_mech_impacts_retain_shooter_and_weapon_effects() {
 async fn ground_proposals_match_live_trajectories_without_mutating_state() {
     use stompymux_rs::{HexCoordinate, propose_battle_mech_ground_motion};
     for source in [
-        include_str!("../game/mechs/JR7-D.toml"),
-        include_str!("../game/mechs/GOL-1H.toml"),
+        include_str!("../game/units/JR7-D.toml"),
+        include_str!("../game/units/GOL-1H.toml"),
     ] {
         for terrain in ['.', '"', '%'] {
             let row = format!("{terrain}0").repeat(12);

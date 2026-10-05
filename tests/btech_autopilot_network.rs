@@ -10,7 +10,7 @@ const REACH: u8 = 5;
 /// A JR7-D carrying a C3i computer in its otherwise empty left-torso slots.
 fn networked_jenner() -> MechTemplate {
     let mut template =
-        MechTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("../game/units/JR7-D.toml")).unwrap();
     let torso = template.sections.get_mut(&MechSection::LeftTorso).unwrap();
     for slot in [4, 5] {
         torso.criticals.insert(
@@ -98,7 +98,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, [ObjectId; 3]) {
         &config,
         map,
         "Enemy",
-        MechTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("../game/units/JR7-D.toml")).unwrap(),
         (3, 20),
         None,
     );

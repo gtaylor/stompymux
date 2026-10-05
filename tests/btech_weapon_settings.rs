@@ -101,7 +101,7 @@ async fn recycle_overrides_apply_across_chassis_and_preserve_existing_timers() {
         let (_dir, config, mut world, shooter, target, index) = firing::fixture_with_target(
             &source,
             Some(Weapon::SmallLaser),
-            include_str!("../game/mechs/AS7-D.toml"),
+            include_str!("../game/units/AS7-D.toml"),
         )
         .await;
         set_battle_weapon_recycle(&mut world, ObjectId(1), "IS.SmallLaser", 127).unwrap();
@@ -241,7 +241,7 @@ async fn offensive_value_and_experience_follow_runtime_overrides() {
         let (_dir, config, mut world, shooter, target, _) = firing::fixture_with_target(
             &source,
             Some(Weapon::SmallLaser),
-            include_str!("../game/mechs/AS7-D.toml"),
+            include_str!("../game/units/AS7-D.toml"),
         )
         .await;
         set_battle_weapon_battle_value(&mut world, ObjectId(1), "IS.SmallLaser", 1001).unwrap();

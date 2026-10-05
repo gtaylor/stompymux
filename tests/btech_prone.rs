@@ -27,9 +27,9 @@ async fn fixture(quad: bool, tile: &str) -> (tempfile::TempDir, Config, World, O
         MechTemplate::parse(
             "test",
             if quad {
-                include_str!("../game/mechs/SCP-1N.toml")
+                include_str!("../game/units/SCP-1N.toml")
             } else {
-                include_str!("../game/mechs/JR7-D.toml")
+                include_str!("../game/units/JR7-D.toml")
             },
         )
         .unwrap(),
@@ -392,9 +392,9 @@ async fn prone_rejects_vehicle_chassis() {
         let id = world.create(&config, "Vehicle".into(), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         let text = if movement == "vtol" {
-            include_str!("../game/mechs/Kestrel.toml").to_owned()
+            include_str!("../game/units/Kestrel.toml").to_owned()
         } else {
-            include_str!("../game/mechs/Demolisher.toml").replace(
+            include_str!("../game/units/Demolisher.toml").replace(
                 "movement = \"track\"",
                 &format!("movement = \"{movement}\""),
             )

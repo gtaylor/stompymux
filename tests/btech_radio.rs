@@ -10,7 +10,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
     create_battle_unit(
         &mut world,
         id,
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
@@ -31,7 +31,7 @@ fn radio_hardware_quality_and_chassis_defaults() {
             (5, 11, 140),
         ] {
             let mut definition =
-                MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml"))
                     .unwrap();
             definition
                 .attributes
@@ -95,7 +95,7 @@ fn radio_hardware_quality_and_chassis_defaults() {
         }
     }
     let mut definition =
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
     definition.attributes.insert("radio".into(), "6".into());
     assert!(Mech::from_template(definition).is_err());
 }
@@ -242,7 +242,7 @@ async fn relay_fixture() -> (tempfile::TempDir, Config, World, ObjectId, Vec<Obj
         let id = world.create(&config, "Radio unit".into(), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         let mut definition =
-            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
         definition
             .attributes
             .insert("radio".into(), quality.to_string());
@@ -1204,9 +1204,9 @@ async fn radio_xp_ineligible_reception_consumes_gate_and_publication_rolls_back(
         ooc.btech.constructed_units()[&receiver].radio_experience_remaining(),
         0
     );
-    let mut channel = Channel::new("MechXP".into());
+    let mut channel = Channel::new("XPInfo".into());
     channel.messages = i64::MAX;
-    world.channels.insert("MechXP".into(), channel);
+    world.channels.insert("XPInfo".into(), channel);
     let scripts = Scripts::new(
         &config,
         std::rc::Rc::new(std::cell::RefCell::new(world.clone())),
@@ -1215,7 +1215,7 @@ async fn radio_xp_ineligible_reception_consumes_gate_and_publication_rolls_back(
     assert!(send_radio_action(&scripts, &config, units[0], ObjectId(2), 0, "XP failure").is_err());
     assert_eq!(scripts.world().btech, world.btech);
     assert!(scripts.drain_outbox().is_empty());
-    world.channels.get_mut("MechXP").unwrap().messages = 0;
+    world.channels.get_mut("XPInfo").unwrap().messages = 0;
     let scripts = Scripts::new(
         &config,
         std::rc::Rc::new(std::cell::RefCell::new(world.clone())),
@@ -1224,7 +1224,7 @@ async fn radio_xp_ineligible_reception_consumes_gate_and_publication_rolls_back(
     let transmission =
         send_radio_action(&scripts, &config, units[0], ObjectId(2), 0, "XP success").unwrap();
     assert_eq!(transmission.experience_messages.len(), 1);
-    assert_eq!(scripts.world().channels["MechXP"].messages, 1);
+    assert_eq!(scripts.world().channels["XPInfo"].messages, 1);
     assert_eq!(
         scripts.world().btech.constructed_units()[&receiver].radio_experience_remaining(),
         61
@@ -1243,7 +1243,7 @@ async fn radio_xp_ineligible_reception_consumes_gate_and_publication_rolls_back(
             .is_err()
     );
     assert_eq!(scripts.world().btech, world.btech);
-    assert_eq!(scripts.world().channels["MechXP"].messages, 0);
+    assert_eq!(scripts.world().channels["XPInfo"].messages, 0);
     assert!(scripts.drain_outbox().is_empty());
 }
 
@@ -1636,7 +1636,7 @@ fn radio_type_decodes_capabilities_and_gates_modes() {
         (255, 15, true, true, true, false),
     ] {
         let mut template =
-            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
         template
             .attributes
             .insert("radiotype".into(), configuration.to_string());
@@ -1664,7 +1664,7 @@ fn radio_type_decodes_capabilities_and_gates_modes() {
     }
     for value in ["-1", "256", "invalid"] {
         let mut template =
-            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
         template.attributes.insert("radiotype".into(), value.into());
         assert!(Mech::from_template(template).is_err());
     }

@@ -5,7 +5,7 @@ use stompymux_rs::*;
 /// Install booster slots only in genuinely vacant torso/arm positions.
 fn with_masc(count: usize, clan: bool) -> (MechTemplate, Vec<CriticalLocation>) {
     let mut template =
-        MechTemplate::parse("AS7-D", include_str!("fixtures/btech/mechs/AS7-D.toml")).unwrap();
+        MechTemplate::parse("AS7-D", include_str!("fixtures/btech/units/AS7-D.toml")).unwrap();
     template.attributes.insert(
         "specials".into(),
         if clan { "Clan Masc" } else { "Masc" }.into(),
@@ -572,7 +572,7 @@ fn supercharger_technology_flag_and_critical_mass_match_construction_behavior() 
 /// A fast biped with both boosters and passive myomer; vacant slots carry the test equipment.
 fn myomer_booster_design() -> MechTemplate {
     let mut template =
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
     template.attributes.insert(
         "specials".into(),
         "Masc SuperCharger_Tech TripleMyomerTech".into(),

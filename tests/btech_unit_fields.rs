@@ -2741,7 +2741,7 @@ async fn pilot_damage_fields_share_recovery_and_fatal_cleanup_scenario(f: &UnitF
 /// Saved propulsion must satisfy the same low-gravity capacity bounds as administrative edits.
 async fn saved_jump_override_rejects_capacity_overflow_before_runtime_scenario(f: &UnitFields) {
     let config = &f.config;
-    let source = include_str!("../game/mechs/JR7-D.toml");
+    let source = include_str!("../game/units/JR7-D.toml");
     let (mut world, id, _, _) = f.pair(source, source);
     let location = world.btech.constructed_units()[&id]
         .loadout()
@@ -2821,7 +2821,7 @@ async fn live_mass_fields_share_load_and_expire_on_material_changes_scenario(f: 
         let (world, id, target, index) = f.supply(
             &source,
             Some(Weapon::Mml3),
-            include_str!("../game/mechs/AS7-D.toml"),
+            include_str!("../game/units/AS7-D.toml"),
             Some(""),
         );
         let original = battle_unit_load(&world, id, false).unwrap();

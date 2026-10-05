@@ -44,7 +44,7 @@ async fn water_modifier_is_attacker_owned_and_shared_by_supported_chassis() {
         let (_dir, config, base, shooter, target, index) = firing::fixture_with_target(
             &source,
             Some(Weapon::MediumLaser),
-            include_str!("../game/mechs/JR7-D.toml"),
+            include_str!("../game/units/JR7-D.toml"),
         )
         .await;
         for (shooter_tile, target_tile) in [(".0", ".0"), ("~0", ".0"), ("~1", ".0"), (".0", "~1")]
@@ -114,7 +114,7 @@ async fn deep_water_ranges_are_shared_across_chassis_and_coordinate_aim() {
         let (_dir, config, mut world, shooter, target, index) = firing::fixture_with_target(
             &source,
             Some(Weapon::MediumLaser),
-            include_str!("../game/mechs/JR7-D.toml"),
+            include_str!("../game/units/JR7-D.toml"),
         )
         .await;
         let map = world.create(&config, "Deep water range".into(), Kind::Room);
@@ -179,11 +179,11 @@ async fn deep_water_ranges_are_shared_across_chassis_and_coordinate_aim() {
 async fn shallow_water_aim_uses_mount_anatomy_and_posture() {
     for (source, headings) in [
         (
-            include_str!("../game/mechs/JR7-D.toml"),
+            include_str!("../game/units/JR7-D.toml"),
             ["left_arm", "left_leg", "left_torso"],
         ),
         (
-            include_str!("../game/mechs/GOL-1H.toml"),
+            include_str!("../game/units/GOL-1H.toml"),
             ["front_left_leg", "rear_left_leg", "left_torso"],
         ),
     ] {
@@ -192,7 +192,7 @@ async fn shallow_water_aim_uses_mount_anatomy_and_posture() {
             let (_dir, config, mut world, shooter, target, _) = firing::fixture_with_target(
                 &source,
                 None,
-                include_str!("../game/mechs/JR7-D.toml"),
+                include_str!("../game/units/JR7-D.toml"),
             )
             .await;
             let index = world.btech.constructed_units()[&shooter]
@@ -252,9 +252,9 @@ async fn shallow_water_aim_uses_mount_anatomy_and_posture() {
 #[tokio::test]
 async fn underwater_ppc_keeps_the_enclosing_zero_range_penalty() {
     let (_dir, config, mut world, shooter, target, index) = firing::fixture_with_target(
-        include_str!("../game/mechs/JR7-D.toml"),
+        include_str!("../game/units/JR7-D.toml"),
         Some(Weapon::Ppc),
-        include_str!("../game/mechs/JR7-D.toml"),
+        include_str!("../game/units/JR7-D.toml"),
     )
     .await;
     let map = world.create(&config, "PPC water test".into(), Kind::Room);

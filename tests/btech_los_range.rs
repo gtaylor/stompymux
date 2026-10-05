@@ -30,7 +30,7 @@ async fn fixture(
         .create(&mut world, observer)
         .unwrap();
     support::seed_object_dice(&mut world, observer, support::FIXTURE_DICE_SEED);
-    UnitTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml"))
+    UnitTemplate::parse("JR7-D", include_str!("../game/units/JR7-D.toml"))
         .unwrap()
         .create(&mut world, target)
         .unwrap();
@@ -47,15 +47,15 @@ fn edit(world: &mut World, id: ObjectId, update: impl FnOnce(&mut serde_json::Va
 
 #[tokio::test]
 async fn all_chassis_share_symmetric_map_and_radar_cutoffs_without_mutation() {
-    let ground = include_str!("../game/mechs/Demolisher.toml");
+    let ground = include_str!("../game/units/Demolisher.toml");
     for source in [
-        include_str!("../game/mechs/JR7-D.toml").to_owned(),
-        include_str!("../game/mechs/GOL-1H.toml").to_owned(),
+        include_str!("../game/units/JR7-D.toml").to_owned(),
+        include_str!("../game/units/GOL-1H.toml").to_owned(),
         ground.to_owned(),
         ground.replace("movement = \"track\"", "movement = \"wheel\""),
         ground.replace("movement = \"track\"", "movement = \"hover\""),
-        include_str!("../game/mechs/RadioTower.toml").to_owned(),
-        include_str!("../game/mechs/Kestrel.toml").to_owned(),
+        include_str!("../game/units/RadioTower.toml").to_owned(),
+        include_str!("../game/units/Kestrel.toml").to_owned(),
     ] {
         let (_dir, config, base, map, observer, target) = fixture(&source).await;
         for radar_endpoint in [None, Some(observer), Some(target)] {
@@ -114,7 +114,7 @@ async fn all_chassis_share_symmetric_map_and_radar_cutoffs_without_mutation() {
 #[tokio::test]
 async fn spatial_height_and_live_map_ceiling_apply_before_the_high_altitude_shortcut() {
     let (_dir, _config, mut world, map, observer, target) =
-        fixture(include_str!("../game/mechs/JR7-D.toml")).await;
+        fixture(include_str!("../game/units/JR7-D.toml")).await;
     place_battle_unit(&mut world, target, map, 0, 0).unwrap();
     for height in [299.999, 300.0, 300.001] {
         edit(&mut world, target, |unit| {

@@ -411,7 +411,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
         crate::lua::transactions::require(lua)?;
         let config = crate::lua::configuration(lua);
         let definition =
-            crate::btech::read_unit_template(&config.path(&config.database.mech_database), &name)
+            crate::btech::read_unit_template(&config.path(&config.database.unit_database), &name)
                 .map_err(|e| error::failure("btech.template.invalid", format!("{e:#}")))?;
         definition
             .create(&mut shared.borrow_mut(), ObjectId(id))

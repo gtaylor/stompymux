@@ -110,12 +110,12 @@ async fn accounting_uses_the_admitted_packet_before_material_reductions() {
     for rotor in [false, true] {
         let source = if rotor {
             crate::support::templates::with_flags(
-                include_str!("../game/mechs/Kestrel.toml"),
+                include_str!("../game/units/Kestrel.toml"),
                 &["ReinforcedInternal_Tech"],
             )
         } else {
             crate::support::templates::with_flags(
-                include_str!("../game/mechs/Demolisher.toml"),
+                include_str!("../game/units/Demolisher.toml"),
                 &["HardenedArmor_Tech", "ReinforcedInternal_Tech"],
             )
         };

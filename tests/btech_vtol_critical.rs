@@ -8,7 +8,7 @@ async fn advanced_rotor_criticals_commit_saved_dice_and_material_effects_togethe
     let id = world.create(&config, "Rotor critical fixture".into(), Kind::Thing);
     // Install material directly for the critical transaction; this does not admit a live VTOL.
     let aircraft = Vehicle::new(
-        VehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml")).unwrap(),
+        VehicleTemplate::parse("Kestrel", include_str!("../game/units/Kestrel.toml")).unwrap(),
     )
     .unwrap();
     let rules = VehicleCriticalRules {
@@ -109,10 +109,10 @@ async fn suppressed_rotor_criticals_do_not_draw_dice_or_change_material() {
     let id = world.create(&config, "Protected rotor".into(), Kind::Thing);
     for suppression in ["disabled", "safe", "proof"] {
         let source = if suppression == "proof" {
-            include_str!("../game/mechs/Kestrel.toml")
+            include_str!("../game/units/Kestrel.toml")
                 .replace("\"CargoTech\"", "\"CargoTech\", \"CritProof_Tech\"")
         } else {
-            include_str!("../game/mechs/Kestrel.toml").into()
+            include_str!("../game/units/Kestrel.toml").into()
         };
         let aircraft = Vehicle::new(VehicleTemplate::parse("Kestrel", &source).unwrap()).unwrap();
         let mut state = serde_json::to_value(&world.btech).unwrap();
@@ -147,7 +147,7 @@ async fn stationary_observation_aircraft_still_use_the_rotor_critical_table() {
     let unit = Vehicle::new(
         VehicleTemplate::parse(
             "ObservationVTOL",
-            include_str!("../game/mechs/ObservationVTOL.toml"),
+            include_str!("../game/units/ObservationVTOL.toml"),
         )
         .unwrap(),
     )
@@ -248,8 +248,8 @@ async fn advanced_aircraft_hull_rows_share_selection_dice_and_control_effects() 
         ),
     ];
     for source in [
-        include_str!("../game/mechs/Kestrel.toml"),
-        include_str!("../game/mechs/ObservationVTOL.toml"),
+        include_str!("../game/units/Kestrel.toml"),
+        include_str!("../game/units/ObservationVTOL.toml"),
     ] {
         let unit = Vehicle::new(VehicleTemplate::parse("test", source).unwrap()).unwrap();
         for (section, row) in rows {
@@ -305,7 +305,7 @@ async fn airborne_engine_critical_requires_emergency_resolution_without_partial_
     let (_dir, config, mut world) = support::isolated_world().await;
     let id = world.create(&config, "Airborne engine".into(), Kind::Thing);
     let unit = Vehicle::new(
-        VehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml")).unwrap(),
+        VehicleTemplate::parse("Kestrel", include_str!("../game/units/Kestrel.toml")).unwrap(),
     )
     .unwrap();
     let seed = (0..=255)
@@ -354,8 +354,8 @@ async fn standard_vtol_criticals_share_common_effects_without_ground_preliminary
     let (_dir, config, mut world) = support::isolated_world().await;
     let id = world.create(&config, "Standard aircraft criticals".into(), Kind::Thing);
     for source in [
-        include_str!("../game/mechs/Kestrel.toml"),
-        include_str!("../game/mechs/ObservationVTOL.toml"),
+        include_str!("../game/units/Kestrel.toml"),
+        include_str!("../game/units/ObservationVTOL.toml"),
     ] {
         let aircraft = Vehicle::new(VehicleTemplate::parse("test", source).unwrap()).unwrap();
         for table in [VehicleCriticalTable::Standard] {
@@ -445,12 +445,12 @@ async fn aircraft_explosions_settle_at_surface_and_share_case_containment_atomic
     };
     for case in [false, true] {
         let source = if case {
-            include_str!("../game/mechs/Kestrel.toml").replace(
+            include_str!("../game/units/Kestrel.toml").replace(
                 "[sections.aft_side]\n",
                 "[sections.aft_side]\nslots = [{ at = 1, item = \"CASE\" }]\n",
             )
         } else {
-            include_str!("../game/mechs/Kestrel.toml").into()
+            include_str!("../game/units/Kestrel.toml").into()
         };
         let unit = Vehicle::new(VehicleTemplate::parse("Kestrel", &source).unwrap()).unwrap();
         assert_eq!(unit.has_powerplant_containment(), case);
@@ -519,7 +519,7 @@ async fn engine_emergency_landings_use_shared_checks_and_commit_failed_attempts_
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let id = world.create(&config, "Emergency aircraft".into(), Kind::Thing);
     let unit = Vehicle::new(
-        VehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml")).unwrap(),
+        VehicleTemplate::parse("Kestrel", include_str!("../game/units/Kestrel.toml")).unwrap(),
     )
     .unwrap();
     for advanced in [false, true] {
@@ -655,7 +655,7 @@ async fn engine_loss_over_water_starts_falling_without_a_landing_roll() {
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let id = world.create(&config, "Aircraft".into(), Kind::Thing);
     let unit = Vehicle::new(
-        VehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml")).unwrap(),
+        VehicleTemplate::parse("Kestrel", include_str!("../game/units/Kestrel.toml")).unwrap(),
     )
     .unwrap();
     let seed = (0..=255)
@@ -722,7 +722,7 @@ async fn emergency_landing_feedback_is_private_and_replayable() {
     create_battle_vehicle(
         &mut world,
         id,
-        VehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml")).unwrap(),
+        VehicleTemplate::parse("Kestrel", include_str!("../game/units/Kestrel.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);

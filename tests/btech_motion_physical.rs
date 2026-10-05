@@ -3003,7 +3003,7 @@ async fn dfa_damage_candidate_error_rolls_back() {
     create_battle_unit(
         &mut world,
         third,
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, third, support::FIXTURE_DICE_SEED);
@@ -6231,7 +6231,7 @@ async fn character_firing_commands_match_and_rollback() {
                 assert!(accepted > 0);
                 for (name, count) in [
                     ("MechAttackXP", accepted),
-                    ("MechXP", if classic { 0 } else { accepted }),
+                    ("XPInfo", if classic { 0 } else { accepted }),
                 ] {
                     let state = native.world();
                     let channel = &state.channels[name];
@@ -6255,7 +6255,7 @@ async fn character_firing_commands_match_and_rollback() {
                 let diagnostic: Vec<_> = notices
                     .iter()
                     .filter(|(_, text)| {
-                        text.starts_with("[[MechAttackXP]") || text.starts_with("[[MechXP]")
+                        text.starts_with("[[MechAttackXP]") || text.starts_with("[[XPInfo]")
                     })
                     .collect();
                 assert_eq!(diagnostic.len(), accepted * if classic { 1 } else { 2 });
@@ -6794,7 +6794,7 @@ fn noisy_shot_config(dir: &std::path::Path) -> stompymux_rs::Config {
 
 /// Only the connected wizard subscribes; the target crew is not a diagnostic recipient.
 fn install_xp_channels(world: &mut stompymux_rs::World) {
-    for name in ["MechAttackXP", "MechXP", "MechPilotXP"] {
+    for name in ["MechAttackXP", "XPInfo", "MechPilotXP"] {
         let mut channel = stompymux_rs::Channel::new(name.into());
         channel.users.push(stompymux_rs::communication::Membership {
             who: ObjectId(1),
@@ -7310,16 +7310,16 @@ async fn gunnery_xp_trivial_hit_diagnostics_obey_suppression() {
         assert_eq!(salvo.experience_messages.len(), usize::from(!suppressed));
         assert_eq!(scripts.world().channels["MechAttackXP"].messages, 0);
         assert_eq!(
-            scripts.world().channels["MechXP"].messages,
+            scripts.world().channels["XPInfo"].messages,
             i64::from(!suppressed)
         );
         if !suppressed {
             let expected = format!("#1 in #{} 1 noxp #{}", shooter.0, target.0);
             assert_eq!(salvo.experience_messages[0].text, expected);
-            let message = &scripts.world().channels["MechXP"].history[0].message;
+            let message = &scripts.world().channels["XPInfo"].history[0].message;
             assert_eq!(
                 text::plain_with(scripts.palette(), message),
-                format!("[MechXP] {expected}")
+                format!("[XPInfo] {expected}")
             );
         }
     }
