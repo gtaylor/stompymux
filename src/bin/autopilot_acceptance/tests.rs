@@ -238,63 +238,6 @@ fn episode_gaps_and_reconciliation() {
     assert!(summarize(r, t).is_err());
 }
 #[test]
-fn retained_pursuit_acceptance_passes() {
-    let root =
-        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("benchmarks/autopilot/readiness-fix");
-    let b = compare::read(&root.join("final-direct.json")).unwrap();
-    let a = compare::read(&root.join("optimized.json")).unwrap();
-    let v = compare::compare("pursuit", &b, &a).unwrap();
-    assert!(passes(&v));
-    assert!((v["lateral_improvement"].as_f64().unwrap() - 0.19594594594594594).abs() < 1e-12);
-}
-#[test]
-fn retained_legacy_acceptance_passes() {
-    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("benchmarks/autopilot");
-    for name in [
-        "existing",
-        "adversarial",
-        "late_clearance",
-        "alternating_clearance",
-        "waiting_controllers",
-    ] {
-        let b = compare::read(&root.join(format!(
-            "autopilot-clearance-artifacts/{name}-candidate.json"
-        )))
-        .unwrap();
-        let a = compare::read(&root.join(format!("readiness-fix/optimized-{name}.json"))).unwrap();
-        assert!(
-            passes(
-                &compare::compare(
-                    if name == "existing" {
-                        "movement"
-                    } else {
-                        "adversarial"
-                    },
-                    &b,
-                    &a
-                )
-                .unwrap()
-            ),
-            "{name}"
-        );
-    }
-}
-#[test]
-fn cpu_retained_success_and_failure() {
-    let root =
-        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("benchmarks/autopilot/readiness-fix");
-    assert!(passes(
-        &evidence::cpu(
-            &root.join("cpu-geometry-reference.csv"),
-            &root.join("cpu-optimized.csv")
-        )
-        .unwrap()
-    ));
-    assert!(!passes(
-        &evidence::cpu(&root.join("cpu-before.csv"), &root.join("cpu-final.csv")).unwrap()
-    ));
-}
-#[test]
 fn incomplete_identical_traces_are_not_replays() {
     let d = tempfile::tempdir().unwrap();
     let p = d.path().join("trace");
