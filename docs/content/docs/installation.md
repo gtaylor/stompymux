@@ -16,7 +16,8 @@ separately.
 
 The optional [`just`](https://github.com/casey/just) task runner provides
 shortcuts for common commands. To build the documentation site, also install
-Node.js/npm, Go, and Hugo Extended 0.164.0 or newer.
+Node.js/npm, Go, Hugo Extended 0.167.0 or newer, and Dart Sass 1.95.0 or
+newer as the `sass` command.
 
 If you plan to work on StompyMUX itself, see
 [Development workflows](./development/#set-up-your-environment) for the
