@@ -1,6 +1,0 @@
-cpu-before
-Traceback (most recent call last):
-  File "/tmp/autopilot-ready/timing.py", line 10, in <module>
-    assert float(row['p95_autopilot_ms']) < limit, (name,row['scenario'],row['fire'],row['p95_autopilot_ms'],limit)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-AssertionError: ('cpu-final', 'open', 'true', '83.335', 75)

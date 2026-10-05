@@ -1,6 +1,0 @@
-{
-  "reference_review_validation": "Exact hashes and all changed-case reasons validated by preserved finalizer before rejecting the moving CPU gate",
-  "finalizer_result": "Non-reference acceptance gate failed; review cannot waive it",
-  "measured_verdict": "failed",
-  "performance_evaluated": true
-}

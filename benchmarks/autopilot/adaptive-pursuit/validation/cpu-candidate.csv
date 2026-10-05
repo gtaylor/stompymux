@@ -1,7 +1,0 @@
-scenario,fire,repetitions,warmup_ticks,measured_ticks,p50_heartbeat_ms,p95_heartbeat_ms,max_heartbeat_ms,p50_autopilot_ms,p95_autopilot_ms,max_autopilot_ms,p95_navigation_ms,p95_observation_ms,p50_persistence_ms,p95_persistence_ms,max_persistence_ms,expansions,max_controller_expansions,peak_search_records,replans,completed,blocked,shots,p95_completion_tick,min_enabled,max_service_delay_ticks,renewals,p95_movement_ms,p95_combat_ms,peak_trace_entries,peak_trace_cells
-open,false,3,35,60,165.817,195.614,223.736,29.926,35.063,43.737,0.000,20.027,73.399,79.924,88.494,0,0,0,0,0,0,0,-,100,1,0,15.080,20.546,32768,600464
-open,true,3,35,60,199.850,257.957,336.096,37.731,73.157,99.690,0.000,23.124,76.297,87.448,104.253,25,25,0,1,0,0,435,-,100,1,0,18.876,60.624,32768,599576
-obstacles,false,3,35,60,180.816,207.321,292.121,34.818,40.895,51.205,6.161,19.489,75.301,83.213,107.195,449300,256,89770,56,0,29,0,-,100,1,29,21.273,20.023,32768,587310
-obstacles,true,3,35,60,210.746,269.676,364.338,46.162,73.389,88.584,9.538,22.149,76.681,87.760,150.657,451058,256,89770,62,0,30,421,-,100,1,33,28.522,49.269,32768,583485
-moving_congestion,false,3,35,60,179.473,197.821,228.073,30.919,36.213,40.655,0.143,20.286,77.070,82.568,98.044,996,256,333,12,0,0,0,-,100,1,0,15.208,20.802,32768,576624
-moving_congestion,true,3,35,60,205.106,253.045,301.801,39.696,59.773,85.965,0.178,22.525,77.615,86.985,132.247,1263,256,658,15,0,0,433,-,100,1,2,20.564,45.210,32768,575749

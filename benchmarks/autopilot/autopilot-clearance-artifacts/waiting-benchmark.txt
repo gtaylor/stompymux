@@ -1,8 +1,0 @@
-
-running 1 test
-waiting_polling=false,samples=500,p50_ms=0.447,p95_ms=0.498,poll_tick_p95_ms=None
-waiting_polling=true,samples=500,p50_ms=0.450,p95_ms=2.211,poll_tick_p95_ms=Some(2.221807)
-test btech::autopilot::runtime::scheduler_tests::waiting_controller_polling_benchmark ... ok
-
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 335 filtered out; finished in 0.76s
-

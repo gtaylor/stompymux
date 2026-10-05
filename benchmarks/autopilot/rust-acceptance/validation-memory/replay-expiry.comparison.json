@@ -1,8 +1,0 @@
-{
-  "candidate_sha256": "cf947975cf8cb311229c2e5330e88fb293be20dd924d6b7acab890c8b767f52e",
-  "changed_cases": {},
-  "failures": [],
-  "first_difference": null,
-  "records": 2172,
-  "reference_sha256": "cf947975cf8cb311229c2e5330e88fb293be20dd924d6b7acab890c8b767f52e"
-}

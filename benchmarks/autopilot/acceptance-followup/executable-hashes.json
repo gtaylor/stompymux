@@ -1,8 +1,0 @@
-{
-  "reference/autopilot-encounters": "d2550b8741f8796efd2fbdf17dca295899d531330511fe6541641698749c4719",
-  "reference/autopilot-bench": "450c5b15ff6b73c7a45054677688cffdf0c66efc89efab2c687d30798d5170df",
-  "screen2-encounters": "9804a11d87075b277291deba95dad1c6697b4eadca7317db9419d2de1c91fc50",
-  "behavior-bench": "46534ad1275cd13ffa5ea120b9dc83f3d4595a68d72102efb5af1cf3d3175a38",
-  "final-encounters": "0d92ab38e97c123a1fac35307b679b8cb5ca365cebf09ace3c2174cb2c029792",
-  "final-bench": "26b3e878f464bb8b8aa55e76c2ae79d7c6163a12e339f59c375684b4bf07acb1"
-}
