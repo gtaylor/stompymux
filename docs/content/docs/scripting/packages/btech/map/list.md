@@ -19,7 +19,7 @@ btech.map.list(actor, dbref, target)
 | --- | --- | --- |
 | `actor` | `integer` |  |
 | `dbref` | `integer` |  |
-| `target` | `string` | MECHS or OBJS; complete case-insensitive name required. |
+| `target` | `string` | UNITS or OBJS; complete case-insensitive name required. |
 
 ## Returns
 

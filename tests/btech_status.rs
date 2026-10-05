@@ -624,7 +624,7 @@ async fn status_diagram_damage_and_selectors_preserve_live_state() {
     let (_dir, config, world, id, _) = fixture(include_str!("../game/units/JR7-D.toml")).await;
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     let intact = battle_unit_status(&scripts.world(), id, "a").unwrap();
-    set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "mechdamage", "A:0/3")
+    set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "unitdamage", "A:0/3")
         .unwrap();
     let damaged = battle_unit_status(&scripts.world(), id, "a").unwrap();
     assert_ne!(damaged, intact);
@@ -636,7 +636,7 @@ async fn status_diagram_damage_and_selectors_preserve_live_state() {
         &config,
         ObjectId(1),
         id,
-        "mechdamage",
+        "unitdamage",
         &format!("A:0/{},I:0/{}", section.armor, section.internal),
     )
     .unwrap();

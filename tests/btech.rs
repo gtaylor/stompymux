@@ -209,7 +209,7 @@ async fn saved_identities_are_inspectable_preserved_and_cleaned_atomically() {
         .execute(&mut sql)
         .await
         .unwrap();
-    for (id, kind) in [(map, "MAP"), (unit, "MECH")] {
+    for (id, kind) in [(map, "MAP"), (unit, "UNIT")] {
         sqlx::query("INSERT INTO btech_special_registrations VALUES(?,?)")
             .bind(id.0)
             .bind(kind)

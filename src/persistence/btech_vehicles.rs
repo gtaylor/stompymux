@@ -31,8 +31,8 @@ pub(super) async fn load(
             state
                 .registrations
                 .get(&id)
-                .is_some_and(|kind| kind == "MECH"),
-            "Unit #{} lacks MECH registration",
+                .is_some_and(|kind| kind == "UNIT"),
+            "Unit #{} lacks UNIT registration",
             id.0
         );
         state.units.insert(id, unit.identity());
@@ -53,15 +53,15 @@ pub(super) fn validate_changes(expected: &mut BtechState, after: &BtechState) ->
 
         if !expected.vehicles.contains_key(&id) {
             // A registered raw unit gains its construction here; only its own
-            // earlier MECH registration may precede the vehicle row.
+            // earlier UNIT registration may precede the vehicle row.
             ensure!(
                 (!expected.registrations.contains_key(&id)
-                    || expected.registrations().get(&id).map(String::as_str) == Some("MECH"))
+                    || expected.registrations().get(&id).map(String::as_str) == Some("UNIT"))
                     && !expected.units.contains_key(&id)
                     && !expected.maps.contains_key(&id),
                 "Object already has BattleTech state"
             );
-            Arc::make_mut(&mut expected.registrations).insert(id, "MECH".into());
+            Arc::make_mut(&mut expected.registrations).insert(id, "UNIT".into());
         }
         expected.units.insert(id, unit.identity());
         expected.vehicles.share_entry_from(&after.vehicles, &id);

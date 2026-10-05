@@ -4040,7 +4040,7 @@ async fn shutdown_contact_notice_preference_is_independent_and_durable() {
         &config,
         ObjectId(1),
         1,
-        "mechprefs AutoconShutdown ON",
+        "unitprefs AutoconShutdown ON",
     );
     assert!(
         native.contains("Autocon on shutdown units turned ON"),

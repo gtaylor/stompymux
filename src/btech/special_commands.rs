@@ -6,8 +6,7 @@ use std::{collections::BTreeMap, sync::LazyLock};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum SpecialType {
-    /// Combat units of every chassis, registered under the native `MECH` special type.
-    #[serde(rename = "MECH")]
+    /// Combat units of every chassis.
     Unit,
     Debug,
     Map,

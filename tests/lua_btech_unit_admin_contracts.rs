@@ -22,8 +22,8 @@ async fn parity_scripts() -> (
     let unit = world.create(&config, "Admin unit".into(), stompymux_rs::Kind::Thing);
     let deferred = world.create(&config, "Deferred unit".into(), stompymux_rs::Kind::Thing);
     let mut btech = serde_json::to_value(&world.btech).unwrap();
-    btech["registrations"][unit.0.to_string()] = serde_json::json!("MECH");
-    btech["registrations"][deferred.0.to_string()] = serde_json::json!("MECH");
+    btech["registrations"][unit.0.to_string()] = serde_json::json!("UNIT");
+    btech["registrations"][deferred.0.to_string()] = serde_json::json!("UNIT");
     world.btech = serde_json::from_value(btech).unwrap();
     let root = config.path(&config.database.unit_database);
     std::fs::create_dir_all(&root).unwrap();
@@ -138,8 +138,8 @@ async fn supported_unit_admin_setters_match_zero_return_validation_and_effects()
     assert_eq!(field("tons"), Some("70000"));
     assert_eq!(field("maxspeed"), Some("53.75"));
     assert_eq!(field("maxjumpspeed"), Some("32.25"));
-    assert_eq!(field("mechtype"), Some("Battlesuit"));
-    assert_eq!(field("mechmovetype"), Some("Biped"));
+    assert_eq!(field("unittype"), Some("Battlesuit"));
+    assert_eq!(field("unitmovetype"), Some("Biped"));
     assert_eq!(field("radiotype"), Some("24"));
     assert_eq!(field("radiorange"), Some("0"));
     assert_eq!(field("cargospace"), Some("200"));

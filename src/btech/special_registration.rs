@@ -32,12 +32,12 @@ pub(crate) fn unregister_special(
         // membership, contacts, tow links and scheduled events before the tree
         // entry disappears; wreck_cleanup::forget performs the same disposal.
         // The stamped sanction admits the removal at the next save.
-        Some("MECH") => {
+        Some("UNIT") => {
             super::wreck_cleanup::forget(&mut world.btech, id);
             world.btech.retire_sanctions.borrow_mut().insert(id);
         }
         // DEBUG and legacy AUTOPILOT registrations carry no domain record. The
-        // new controller is attached directly to a MECH unit through Lua.
+        // new controller is attached directly to a UNIT registration through Lua.
         None | Some("DEBUG" | "AUTOPILOT") => {
             Arc::make_mut(&mut world.btech.registrations).remove(&id);
         }
@@ -79,7 +79,7 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
         }
         ensure!(
             !kind.trim().is_empty(),
-            "Specify MECH, DEBUG, MAP, or AUTOPILOT."
+            "Specify UNIT, DEBUG, MAP, or AUTOPILOT."
         );
         ensure!(
             world.objects.get(&id).is_some_and(
@@ -90,7 +90,7 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
         let requested = kind.trim();
         let kind = requested.to_ascii_uppercase();
         ensure!(
-            matches!(kind.as_str(), "MECH" | "DEBUG" | "MAP" | "AUTOPILOT"),
+            matches!(kind.as_str(), "UNIT" | "DEBUG" | "MAP" | "AUTOPILOT"),
             "invalid BTech type {}.",
             requested
         );
@@ -125,7 +125,7 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
                     },
                 )?;
             }
-            "MECH" => super::register_empty_battle_unit(&mut world, id)?,
+            "UNIT" => super::register_empty_battle_unit(&mut world, id)?,
             _ => bail!("Initialization for this BTech type is not implemented."),
         }
         Ok(format!("Registered #{} as BTech type {kind}.", id.0))

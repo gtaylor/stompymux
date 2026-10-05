@@ -5197,7 +5197,7 @@ async fn jump_course_fields_redirect_without_moving_the_committed_cursor() {
     for chassis in ["Biped", "Quad"] {
         let (_dir, config, world, id) = runtime_fixture().await;
         let setup = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-        set_battle_unit_field_action(&setup, &config, ObjectId(1), id, "mechmovetype", chassis)
+        set_battle_unit_field_action(&setup, &config, ObjectId(1), id, "unitmovetype", chassis)
             .unwrap();
         for (field, value) in [("jumpheading", "123"), ("jumplength", "-3")] {
             set_battle_unit_field_action(&setup, &config, ObjectId(1), id, field, value).unwrap();
@@ -5244,7 +5244,7 @@ async fn jump_course_fields_redirect_without_moving_the_committed_cursor() {
                 &config,
                 ObjectId(1),
                 1,
-                &format!("@setmech {field} {value}"),
+                &format!("@setunit {field} {value}"),
             )
             .unwrap();
             lua.eval_callback::<()>(&format!(
@@ -5467,7 +5467,7 @@ async fn damage_replacement_during_jump_defers_lost_thrust_and_replays_restorati
     for chassis in ["Biped", "Quad"] {
         let (_dir, config, world, id) = runtime_fixture().await;
         let setup = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-        set_battle_unit_field_action(&setup, &config, ObjectId(1), id, "mechmovetype", chassis)
+        set_battle_unit_field_action(&setup, &config, ObjectId(1), id, "unitmovetype", chassis)
             .unwrap();
         let mut world = setup.world().clone();
         launch_battle_jump(&mut world, id, ObjectId(1), 0, 4.0).unwrap();
@@ -5487,7 +5487,7 @@ async fn damage_replacement_during_jump_defers_lost_thrust_and_replays_restorati
             &config,
             ObjectId(1),
             id,
-            "mechdamage",
+            "unitdamage",
             "C:2/0,C:2/1,C:3/1,C:3/2,C:4/11",
         )
         .unwrap();
@@ -5514,7 +5514,7 @@ async fn damage_replacement_during_jump_defers_lost_thrust_and_replays_restorati
         assert!(falling.btech.constructed_units()[&id].flight().is_none());
         falling.validate(&config).unwrap();
 
-        set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "mechdamage", "").unwrap();
+        set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "unitdamage", "").unwrap();
         let mut restored = scripts.world().clone();
         assert_eq!(
             restored.btech.constructed_units()[&id].flight(),

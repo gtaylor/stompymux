@@ -33,7 +33,7 @@ async fn map_restrictions_are_exact_read_only_and_durable() {
         "@VIEWMAP",
         "LOADMAP missing",
         "FIXMAP",
-        "LIST MECHS",
+        "LIST UNITS",
     ] {
         assert_eq!(
             support::run_text(&scripts, &config, actor, 1, input),

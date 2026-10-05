@@ -45,7 +45,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                             .btech
                             .registrations()
                             .get(&id)
-                            .is_some_and(|kind| kind == "MECH"))
+                            .is_some_and(|kind| kind == "UNIT"))
                     .then_some(id)
                 })
                 .collect();

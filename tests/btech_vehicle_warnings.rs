@@ -127,7 +127,7 @@ async fn vehicle_ammunition_warnings_match_supply_and_native_lua_controls() {
                         &config,
                         ObjectId(1),
                         1,
-                        &format!("mechprefs {name} OFF")
+                        &format!("unitprefs {name} OFF")
                     )
                     .contains("OFF")
                 );

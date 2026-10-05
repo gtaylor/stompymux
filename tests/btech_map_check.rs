@@ -194,8 +194,8 @@ async fn membership_span_survives_holes_reuse_and_restart() {
             let before = scripts.world().btech.clone();
             let check = support::run_text(&scripts, &config, ObjectId(1), 1, "FIXMAP");
             assert_eq!(check, format!("Checking {span} entries..\nDone."));
-            let list = support::run_text(&scripts, &config, ObjectId(1), 1, "LIST MECHS");
-            assert!(list.contains(&format!("{count} Mechs On Map")));
+            let list = support::run_text(&scripts, &config, ObjectId(1), 1, "LIST UNITS");
+            assert!(list.contains(&format!("{count} Units On Map")));
             assert!(list.contains(&format!("{span} is first free slot, according to db.")));
             assert_eq!(scripts.world().btech, before);
             let world_snapshot = scripts.world().clone();
@@ -219,7 +219,7 @@ async fn membership_span_survives_holes_reuse_and_restart() {
         for id in [first, middle] {
             place_battle_unit(&mut scripts.world_mut(), id, map, 0, 0).unwrap();
         }
-        let filled = support::run_text(&scripts, &config, ObjectId(1), 1, "LIST MECHS");
+        let filled = support::run_text(&scripts, &config, ObjectId(1), 1, "LIST UNITS");
         assert!(!filled.contains("is first free slot"));
         for id in [middle, first] {
             remove_battle_unit(&mut scripts.world_mut(), id, ObjectId(config.home())).unwrap();

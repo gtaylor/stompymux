@@ -40,7 +40,7 @@ async fn unregister_map_shuts_down_all_chassis_and_survives_restart() {
         for id in [unit, target] {
             assert_eq!(saved.objects[&id].location, Some(map));
             assert_eq!(saved.btech.units()[&id].map, None);
-            assert_eq!(saved.btech.registrations()[&id], "MECH");
+            assert_eq!(saved.btech.registrations()[&id], "UNIT");
             let state = serde_json::to_value(&saved.btech).unwrap();
             let store = if saved.btech.vehicles().contains_key(&id) {
                 "vehicles"

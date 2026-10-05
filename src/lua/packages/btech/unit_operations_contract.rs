@@ -23,7 +23,7 @@ fn table(value: Value, argument: usize) -> mlua::Result<Table> {
     }
 }
 fn unit(lua: &Lua, shared: &SharedWorld, value: Value) -> mlua::Result<ObjectId> {
-    contract::require_special(lua, &shared.borrow(), value, 1, "mech", "unit")
+    contract::require_special(lua, &shared.borrow(), value, 1, "unit", "unit")
 }
 fn materialize(shared: &SharedWorld, id: ObjectId) -> mlua::Result<()> {
     crate::btech::ensure_registered_unit_runtime(&mut shared.borrow_mut(), id)
@@ -64,7 +64,7 @@ fn section(
                 )
             });
     }
-    if world.btech.registrations().get(&id).map(String::as_str) == Some("MECH") {
+    if world.btech.registrations().get(&id).map(String::as_str) == Some("UNIT") {
         return crate::btech::registered_unit_default_template(&world, id)
             .and_then(|definition| crate::btech::inspection_section(&definition, code).ok())
             .map(Section::Mech)
@@ -432,7 +432,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
         "load_template",
         lua.create_function(move |lua, args: MultiValue| {
             let id =
-                contract::require_special(lua, &shared.borrow(), arg(&args, 0), 1, "mech", "unit")?;
+                contract::require_special(lua, &shared.borrow(), arg(&args, 0), 1, "unit", "unit")?;
             let reference = match arg(&args, 1) {
                 Value::String(v) if !v.as_bytes().is_empty() => c_string(&v),
                 _ => {

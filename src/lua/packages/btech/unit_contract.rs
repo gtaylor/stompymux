@@ -13,7 +13,7 @@ fn value(args: &MultiValue, index: usize) -> Value {
 /// Require a registered unit with Mech or vehicle runtime state, or a registered default template.
 fn require_unit_runtime(lua: &Lua, shared: &SharedWorld, value: Value) -> mlua::Result<ObjectId> {
     let world = shared.borrow();
-    let id = contract::require_special(lua, &world, value, 1, "mech", "unit")?;
+    let id = contract::require_special(lua, &world, value, 1, "unit", "unit")?;
     if !world.btech.constructed_units().contains_key(&id)
         && !world.btech.vehicles().contains_key(&id)
         && crate::btech::registered_unit_default_template(&world, id).is_none()
@@ -28,7 +28,7 @@ fn require_unit_runtime(lua: &Lua, shared: &SharedWorld, value: Value) -> mlua::
 }
 
 fn require_unit(lua: &Lua, shared: &SharedWorld, value: Value) -> mlua::Result<ObjectId> {
-    contract::require_special(lua, &shared.borrow(), value, 1, "mech", "unit")
+    contract::require_special(lua, &shared.borrow(), value, 1, "unit", "unit")
 }
 
 fn raw_live_section(

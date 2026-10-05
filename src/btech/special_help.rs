@@ -97,7 +97,7 @@ impl SpecialType {
     /// Reference type name used by ungrouped command menus.
     fn label(self) -> &'static str {
         match self {
-            Self::Unit => "MECH",
+            Self::Unit => "UNIT",
             Self::Debug => "DEBUG",
             Self::Map => "MAP",
             Self::Autopilot => "AUTOPILOT",

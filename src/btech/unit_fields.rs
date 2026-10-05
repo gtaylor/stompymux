@@ -27,7 +27,7 @@ const FIELDS: &[&str] = &[
     "displayname",
     "mapindex",
     "id",
-    "mechname",
+    "unitname",
     "maxspeed",
     "unit_era",
     "unit_tro",
@@ -64,13 +64,13 @@ const FIELDS: &[&str] = &[
     "C3iNetworkSize",
     "realweight",
     "StaggerDamage",
-    "MechPrefs",
-    "mechtype",
-    "mechmovetype",
-    "mechdamage",
+    "UnitPrefs",
+    "unittype",
+    "unitmovetype",
+    "unitdamage",
     "centdist",
     "centbearing",
-    "mechref",
+    "unitref",
     "fuel",
     "fuel_orig",
     "cocoon",
@@ -180,10 +180,10 @@ fn value(world: &World, config: &Config, id: ObjectId, field: &str) -> Result<Op
             super::battle_value::configured(world, id, super::SpeedPolicy::configured(config))?
                 .total,
         ),
-        "MechPrefs" => Some(super::field_bits::format(i64::from(
+        "UnitPrefs" => Some(super::field_bits::format(i64::from(
             super::preference_fields::read(world, id)?,
         ))),
-        "mechdamage" => Some(super::unit_damage_field(world, id)?),
+        "unitdamage" => Some(super::unit_damage_field(world, id)?),
         "critstatus" => Some(super::field_bits::format(i64::from(
             super::status_fields::primary_criticals(world, id)?,
         ))),
@@ -208,8 +208,8 @@ fn value(world: &World, config: &Config, id: ObjectId, field: &str) -> Result<Op
                 |unit| &unit.definition().attributes,
             ),
         )?)),
-        "mechname" => Some(definition.into()),
-        "mechref" => Some(reference.into()),
+        "unitname" => Some(definition.into()),
+        "unitref" => Some(reference.into()),
         "maxspeed" => float(mech.map_or_else(
             || vehicle.unwrap().maximum_speed(),
             |u| u.mobility().maximum_speed,
@@ -325,7 +325,7 @@ fn value(world: &World, config: &Config, id: ObjectId, field: &str) -> Result<Op
             },
         ),
         "maxjumpspeed" => float(super::jump_thrust::speed(world, id)?),
-        "mechtype" => Some(
+        "unittype" => Some(
             if let Some(value) = mech
                 .and_then(|unit| unit.administrative_attribute("administrative_unit_type"))
                 .or_else(|| {
@@ -343,7 +343,7 @@ fn value(world: &World, config: &Config, id: ObjectId, field: &str) -> Result<Op
             }
             .into(),
         ),
-        "mechmovetype" => Some(
+        "unitmovetype" => Some(
             if let Some(value) = mech
                 .and_then(|unit| unit.administrative_attribute("administrative_movement_type"))
                 .or_else(|| {
@@ -399,7 +399,7 @@ pub fn view_unit_fields_action(
             .collect::<Result<Vec<_>>>()?;
         let text = super::field_report::render(
             &world.objects[&id].name,
-            "MECH",
+            "UNIT",
             columns,
             fields
                 .iter()
@@ -481,10 +481,10 @@ pub fn set_unit_field_action(
             "Field {field} is read-only"
         );
         match field.to_ascii_lowercase().as_str() {
-            "status" | "critstatus" | "mechtype" => {
+            "status" | "critstatus" | "unittype" => {
                 bail!("Field {field} is inspectable but direct writes are not supported.");
             }
-            "mechdamage" => super::damage_application::set(
+            "unitdamage" => super::damage_application::set(
                 &mut scripts.world_mut(),
                 id,
                 value,
@@ -496,7 +496,7 @@ pub fn set_unit_field_action(
                 field.eq_ignore_ascii_case("jumpheading"),
                 value,
             )?,
-            "mechmovetype" => super::construction_fields::set_movement(
+            "unitmovetype" => super::construction_fields::set_movement(
                 &mut scripts.world_mut(),
                 id,
                 value,
@@ -594,7 +594,7 @@ pub fn set_unit_field_action(
                 value,
                 config.battletech.tsm_tow_bonus != 0,
             )?,
-            "mechprefs" => {
+            "unitprefs" => {
                 let bits = super::field_bits::parse(value.trim())? as u32;
                 super::preference_fields::set(&mut scripts.world_mut(), id, bits)?;
             }
@@ -660,10 +660,10 @@ pub fn set_unit_field_action(
                 }
             }
             "displayname" => super::display_name::set(&mut scripts.world_mut(), id, value)?,
-            "mechname" | "mechref" | "unit_era" | "unit_tro" => {
+            "unitname" | "unitref" | "unit_era" | "unit_tro" => {
                 let identity = match field.to_ascii_lowercase().as_str() {
-                    "mechname" => IdentityField::Name,
-                    "mechref" => IdentityField::Reference,
+                    "unitname" => IdentityField::Name,
+                    "unitref" => IdentityField::Reference,
                     "unit_era" => IdentityField::Era,
                     _ => IdentityField::Tro,
                 };

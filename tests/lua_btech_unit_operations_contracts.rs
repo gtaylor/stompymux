@@ -10,7 +10,7 @@ async fn damage_piloting_and_template_lifecycle_match_zero_return_contracts() {
     let (_dir, config, mut world) = support::isolated_world().await;
     let id = world.create(&config, "Unit".into(), Kind::Thing);
     let mut btech = serde_json::to_value(&world.btech).unwrap();
-    btech["registrations"][id.0.to_string()] = serde_json::json!("MECH");
+    btech["registrations"][id.0.to_string()] = serde_json::json!("UNIT");
     world.btech = serde_json::from_value(btech).unwrap();
     let pilot = world.create(&config, "Pilot".into(), Kind::Player);
     world.objects.get_mut(&pilot).unwrap().location = Some(id);
@@ -698,7 +698,7 @@ async fn load_template_initializes_a_registered_unit_without_runtime_constructio
     let (_dir, config, mut world) = support::isolated_world().await;
     let id = world.create(&config, "Deferred unit".into(), Kind::Thing);
     let mut btech = serde_json::to_value(&world.btech).unwrap();
-    btech["registrations"][id.0.to_string()] = serde_json::json!("MECH");
+    btech["registrations"][id.0.to_string()] = serde_json::json!("UNIT");
     world.btech = serde_json::from_value(btech).unwrap();
     let root = config.path(&config.database.unit_database);
     std::fs::create_dir_all(&root).unwrap();
@@ -745,7 +745,7 @@ async fn load_template_accepts_stock_parts() {
     let (_dir, config, mut world) = support::isolated_world().await;
     let id = world.create(&config, "Stock unit".into(), Kind::Thing);
     let mut btech = serde_json::to_value(&world.btech).unwrap();
-    btech["registrations"][id.0.to_string()] = serde_json::json!("MECH");
+    btech["registrations"][id.0.to_string()] = serde_json::json!("UNIT");
     world.btech = serde_json::from_value(btech).unwrap();
     let root = config.path(&config.database.unit_database);
     std::fs::create_dir_all(&root).unwrap();
@@ -783,7 +783,7 @@ async fn option_field_edges_extra_arguments_and_rollback_match_c_shapes() {
     let (_dir, config, mut world) = support::isolated_world().await;
     let id = world.create(&config, "Unit".into(), Kind::Thing);
     let mut btech = serde_json::to_value(&world.btech).unwrap();
-    btech["registrations"][id.0.to_string()] = serde_json::json!("MECH");
+    btech["registrations"][id.0.to_string()] = serde_json::json!("UNIT");
     world.btech = serde_json::from_value(btech).unwrap();
     let root = config.path(&config.database.unit_database);
     std::fs::create_dir_all(&root).unwrap();
@@ -871,7 +871,7 @@ async fn uncaught_rejection_rolls_back_lazy_materialization() {
     let (_dir, config, mut world) = support::isolated_world().await;
     let id = world.create(&config, "Raw unit".into(), Kind::Thing);
     let mut btech = serde_json::to_value(&world.btech).unwrap();
-    btech["registrations"][id.0.to_string()] = serde_json::json!("MECH");
+    btech["registrations"][id.0.to_string()] = serde_json::json!("UNIT");
     world.btech = serde_json::from_value(btech).unwrap();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     scripts
@@ -954,7 +954,7 @@ async fn deterministic_direction_codes_pin_sections_and_rear_arc() {
     let (_dir, config, mut world) = support::isolated_world().await;
     let id = world.create(&config, "Unit".into(), Kind::Thing);
     let mut btech = serde_json::to_value(&world.btech).unwrap();
-    btech["registrations"][id.0.to_string()] = serde_json::json!("MECH");
+    btech["registrations"][id.0.to_string()] = serde_json::json!("UNIT");
     world.btech = serde_json::from_value(btech).unwrap();
     let root = config.path(&config.database.unit_database);
     std::fs::create_dir_all(&root).unwrap();

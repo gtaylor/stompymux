@@ -264,11 +264,11 @@ async fn vehicle_friendly_fire_preferences_native_lua_and_map_policy_survive_res
     let scripts =
         Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(initial))).unwrap();
     assert_eq!(
-        support::run_text(&scripts, &config, ObjectId(1), 1, "mechprefs"),
+        support::run_text(&scripts, &config, ObjectId(1), 1, "unitprefs"),
         "MWSafety: ON\r\nBTHDebug: OFF\r\nAutoFall: OFF\r\nFFSafety: OFF\r\nSLWarn: OFF\r\nAutoconShutdown: OFF\r\nArmorWarn: ON\r\nAmmoWarn: ON"
     );
     assert!(
-        support::run_text(&scripts, &config, ObjectId(1), 1, "mechprefs ffsafety on")
+        support::run_text(&scripts, &config, ObjectId(1), 1, "unitprefs ffsafety on")
             .contains("ON")
     );
     assert!(scripts.world().btech.vehicles()[&shooter].friendly_fire_safety());

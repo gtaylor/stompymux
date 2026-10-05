@@ -987,7 +987,7 @@
   },
   "btech.repair.is_fixable": {
    "acceptance": "Mech head/center-torso and vehicle turret/rotor/hull anatomy",
-   "contract": "Requires a supported live MECH registration and returns whether no original nonexempt section is destroyed: Mechs exempt all but center torso, ground vehicles exempt turret, and VTOLs exempt rotor.",
+   "contract": "Requires a supported live UNIT registration and returns whether no original nonexempt section is destroyed: Mechs exempt all but center torso, ground vehicles exempt turret, and VTOLs exempt rotor.",
    "prerequisite": "",
    "rust_evidence": "tests/lua_btech_repair_contracts.rs",
    "status": "verified"

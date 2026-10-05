@@ -274,7 +274,7 @@ async fn mech_damage_failure_codes_preserve_gauss_explosion_rules() {
                     &config,
                     ObjectId(1),
                     id,
-                    "mechdamage",
+                    "unitdamage",
                     &format!("G:2/0({code})"),
                 )
                 .unwrap();

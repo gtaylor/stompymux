@@ -125,7 +125,7 @@ fn load_map_state_action(
             super::notify_message(
                 scripts,
                 super::MessageTarget::Player(actor),
-                "Clearing Mechs off Newly Loaded Map",
+                "Clearing Units off Newly Loaded Map",
             )?;
             super::clear_map_units_action(scripts, config, actor, id)?;
             super::map_objects::clear(&mut scripts.world_mut(), id)?;

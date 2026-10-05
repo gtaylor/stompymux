@@ -14,7 +14,7 @@ async fn retained_preferences_share_controls_and_leave_attack_results_unchanged(
         let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
         let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         assert!(
-            support::run_text(&native, &config, ObjectId(1), 1, "mechprefs BTHDebug ON")
+            support::run_text(&native, &config, ObjectId(1), 1, "unitprefs BTHDebug ON")
                 .contains("BTH Debugging is now ON")
         );
         lua.eval_callback::<()>(&format!("btech.unit.bth_debug({},1,true)", id.0))
@@ -32,9 +32,9 @@ async fn retained_preferences_share_controls_and_leave_attack_results_unchanged(
             .is_err()
         );
         assert_eq!(native.world().btech, lua.world().btech);
-        set_battle_unit_field_action(&native, &config, ObjectId(1), id, "MechPrefs", "fj").unwrap();
+        set_battle_unit_field_action(&native, &config, ObjectId(1), id, "UnitPrefs", "fj").unwrap();
         let report =
-            view_battle_unit_fields_action(&native, &config, ObjectId(1), id, "MechPrefs").unwrap();
+            view_battle_unit_fields_action(&native, &config, ObjectId(1), id, "UnitPrefs").unwrap();
         assert_eq!(report.fields[0].value.as_deref(), Some("fj"));
         native.drain_outbox();
         let saved = native.world().clone();
@@ -50,7 +50,7 @@ async fn retained_preferences_share_controls_and_leave_attack_results_unchanged(
             .eval_callback::<()>(&format!("btech.unit.bth_debug({},1,false)", id.0))
             .unwrap();
         let report =
-            view_battle_unit_fields_action(&restored, &config, ObjectId(1), id, "MechPrefs")
+            view_battle_unit_fields_action(&restored, &config, ObjectId(1), id, "UnitPrefs")
                 .unwrap();
         assert_eq!(report.fields[0].value.as_deref(), Some("f"));
         restored.drain_outbox();
@@ -59,7 +59,7 @@ async fn retained_preferences_share_controls_and_leave_attack_results_unchanged(
             support::run_text(&native, &config, ObjectId(1), 1, &command),
             support::run_text(&normal, &config, ObjectId(1), 1, &command)
         );
-        set_battle_unit_field_action(&native, &config, ObjectId(1), id, "MechPrefs", "0").unwrap();
+        set_battle_unit_field_action(&native, &config, ObjectId(1), id, "UnitPrefs", "0").unwrap();
         assert_eq!(native.world().btech, normal.world().btech);
     }
 }

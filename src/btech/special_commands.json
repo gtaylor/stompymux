@@ -1,5 +1,5 @@
 {
-  "MECH": [
+  "UNIT": [
     {
       "class_mask": 0,
       "syntax": "Movement",
@@ -695,7 +695,7 @@
     },
     {
       "class_mask": 0,
-      "syntax": "MECHPREFS [SETTING [ON|OFF]]",
+      "syntax": "UNITPREFS [SETTING [ON|OFF]]",
       "description": "Toggle the mechpref setting of SETTING",
       "restricted": false,
       "category": false
@@ -1290,14 +1290,14 @@
     },
     {
       "class_mask": 0,
-      "syntax": "@SETMECH <NAME> <VALUE|DATA>",
+      "syntax": "@SETUNIT <NAME> <VALUE|DATA>",
       "description": "Sets a unit field",
       "restricted": true,
       "category": false
     },
     {
       "class_mask": 0,
-      "syntax": "@VIEWMECH",
+      "syntax": "@VIEWUNIT",
       "description": "Views unit fields",
       "restricted": true,
       "category": false
@@ -1412,7 +1412,7 @@
     {
       "class_mask": 0,
       "syntax": "SHUTDOWN <MAP#>",
-      "description": "Shutdown all mechs on the map and clear it.",
+      "description": "Shutdown all units on the map and clear it.",
       "restricted": true,
       "category": false
     },
@@ -1525,15 +1525,15 @@
     },
     {
       "class_mask": 0,
-      "syntax": "LIST [MECHS | OBJS]",
-      "description": "Lists mechs/objects on the map",
+      "syntax": "LIST [UNITS | OBJS]",
+      "description": "Lists units/objects on the map",
       "restricted": true,
       "category": false
     },
     {
       "class_mask": 0,
-      "syntax": "CLEARMECHS [DBNUM]",
-      "description": "Clears mechs from the map",
+      "syntax": "CLEARUNITS [DBNUM]",
+      "description": "Clears units from the map",
       "restricted": true,
       "category": false
     },

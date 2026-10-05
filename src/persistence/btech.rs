@@ -230,10 +230,10 @@ pub(super) fn validate_changes(
     }
     super::btech_units::validate_changes(&mut expected, &after.btech)?;
     super::btech_vehicles::validate_changes(&mut expected, &after.btech)?;
-    // A standalone @btech MECH registration carries no unit row until a template
+    // A standalone @btech UNIT registration carries no unit row until a template
     // loads, mirroring the reference registrar's raw special object.
     for (id, kind) in after.btech.registrations() {
-        if kind != "MECH" || expected.registrations().get(id).map(String::as_str) == Some("MECH") {
+        if kind != "UNIT" || expected.registrations().get(id).map(String::as_str) == Some("UNIT") {
             continue;
         }
         ensure!(
@@ -244,9 +244,9 @@ pub(super) fn validate_changes(
             after.objects.get(id).is_some_and(|object| {
                 object.kind == crate::Kind::Thing && !object.flags.contains(crate::Flag::Going)
             }),
-            "MECH registration requires a live thing object"
+            "UNIT registration requires a live thing object"
         );
-        std::sync::Arc::make_mut(&mut expected.registrations).insert(*id, "MECH".into());
+        std::sync::Arc::make_mut(&mut expected.registrations).insert(*id, "UNIT".into());
     }
     for id in after.btech.recoveries().keys() {
         expected
@@ -283,7 +283,7 @@ pub(super) fn validate_changes(
     Ok(())
 }
 
-/// Insert the MECH registration row for a Mech or vehicle when no registration exists yet.
+/// Insert the UNIT registration row for a Mech or vehicle when no registration exists yet.
 ///
 /// Both standalone @btech registrations and first construction persist the same
 /// row, so the write is idempotent and never replaces another special type.
@@ -299,7 +299,7 @@ pub(super) async fn ensure_unit_registration(
     if existing.is_some() {
         return Ok(false);
     }
-    sqlx::query("INSERT INTO btech_special_registrations(dbref,special_type) VALUES(?,'MECH')")
+    sqlx::query("INSERT INTO btech_special_registrations(dbref,special_type) VALUES(?,'UNIT')")
         .bind(id.0)
         .execute(&mut *c)
         .await?;
@@ -310,7 +310,7 @@ pub(super) async fn ensure_unit_registration(
 pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World) -> Result<bool> {
     use super::write::{Cell, Fields, row};
     let mut changed = super::btech_map_lifecycle::save(c, before, after).await?;
-    // MECH-role teardown removes the whole unit record: the reference snapshot rebuild
+    // UNIT-role teardown removes the whole unit record: the reference snapshot rebuild
     // drops registration, unit and identity rows together when the special object is
     // disposed (snapshot_store.c walks the live special-object tree only).
     let unregistered = crate::btech::unit_lifecycle::unregistered(before, after);
@@ -323,7 +323,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
                 .execute(&mut *c)
                 .await?;
             sqlx::query(
-                "DELETE FROM btech_special_registrations WHERE dbref=? AND special_type='MECH'",
+                "DELETE FROM btech_special_registrations WHERE dbref=? AND special_type='UNIT'",
             )
             .bind(id.0)
             .execute(&mut *c)
@@ -358,8 +358,8 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
         }
     }
     for (id, kind) in after.btech.registrations() {
-        if kind == "MECH"
-            && before.btech.registrations().get(id).map(String::as_str) != Some("MECH")
+        if kind == "UNIT"
+            && before.btech.registrations().get(id).map(String::as_str) != Some("UNIT")
         {
             changed |= ensure_unit_registration(c, *id).await?;
         }

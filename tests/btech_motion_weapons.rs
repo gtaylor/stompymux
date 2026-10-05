@@ -7410,7 +7410,7 @@ async fn armor_warning_thresholds_preferences_and_restart() {
             .is_err()
     );
     assert_eq!(scripts.world().btech, base.btech);
-    support::run_text(&scripts, &config, ObjectId(1), 1, "mechprefs ArmorWarn OFF");
+    support::run_text(&scripts, &config, ObjectId(1), 1, "unitprefs ArmorWarn OFF");
     set_battle_armor_warning(&mut base, id, ObjectId(1), false).unwrap();
     assert_eq!(scripts.world().btech, base.btech);
     persistence::save(&config.database(), &base).await.unwrap();
@@ -7569,7 +7569,7 @@ async fn friendly_fire_safety_native_lua_map_rules_and_restart() {
         std::rc::Rc::new(std::cell::RefCell::new(baseline.clone())),
     )
     .unwrap();
-    let text = support::run_text(&native, &config, ObjectId(1), 1, "mechprefs FFSafety ON");
+    let text = support::run_text(&native, &config, ObjectId(1), 1, "unitprefs FFSafety ON");
     assert!(text.contains("Friendly Fire Safeties flipped ON"));
     assert!(
         lua.eval_callback::<()>(&format!(
@@ -7582,7 +7582,7 @@ async fn friendly_fire_safety_native_lua_map_rules_and_restart() {
     lua.eval_callback::<()>(&format!("btech.unit.friendly_fire_safety({},1,true)", id.0))
         .unwrap();
     assert_eq!(native.world().btech, lua.world().btech);
-    support::run_text(&native, &config, ObjectId(1), 1, "mechprefs ffsafety");
+    support::run_text(&native, &config, ObjectId(1), 1, "unitprefs ffsafety");
     assert!(!native.world().btech.constructed_units()[&id].friendly_fire_safety());
 }
 

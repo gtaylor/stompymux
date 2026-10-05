@@ -16,7 +16,7 @@ async fn safety_controls_share_state_and_startup_resets_only_the_safety_bit() {
         assert!(support::run_text(&native, &config, ObjectId(1), 1, "safety").contains("ON"));
         assert!(support::run_text(&native, &config, ObjectId(1), 1, "safety off").contains("OFF"));
         assert!(
-            support::run_text(&prefs, &config, ObjectId(1), 1, "mechprefs MWSafety OFF")
+            support::run_text(&prefs, &config, ObjectId(1), 1, "unitprefs MWSafety OFF")
                 .contains("OFF")
         );
         lua.eval_callback::<()>(&format!("btech.unit.mw_safety({},1,false)", id.0))
@@ -49,7 +49,7 @@ async fn safety_controls_share_state_and_startup_resets_only_the_safety_bit() {
             support::run_text(&native, &config, ObjectId(1), 1, "safety unknown").contains("OFF")
         );
         assert_eq!(native.world().btech, before);
-        set_battle_unit_field_action(&native, &config, ObjectId(1), id, "MechPrefs", "aj").unwrap();
+        set_battle_unit_field_action(&native, &config, ObjectId(1), id, "UnitPrefs", "aj").unwrap();
         let mut world = native.world().clone();
         let safety = |world: &World| {
             world.btech.constructed_units().get(&id).map_or_else(
@@ -82,7 +82,7 @@ async fn safety_controls_share_state_and_startup_resets_only_the_safety_bit() {
         assert_eq!(world.btech, loaded.btech);
         let restored = Scripts::new(&config, Rc::new(RefCell::new(loaded))).unwrap();
         let report =
-            view_battle_unit_fields_action(&restored, &config, ObjectId(1), id, "MechPrefs")
+            view_battle_unit_fields_action(&restored, &config, ObjectId(1), id, "UnitPrefs")
                 .unwrap();
         assert_eq!(report.fields[0].value.as_deref(), Some("j"));
     }

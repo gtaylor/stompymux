@@ -1275,7 +1275,7 @@ pub(crate) fn preferences_command(
             [_] => !preference.enabled,
             [_, value] if value.eq_ignore_ascii_case("on") => true,
             [_, value] if value.eq_ignore_ascii_case("off") => false,
-            _ => anyhow::bail!("Usage: mechprefs {} [ON|OFF]", preference.name),
+            _ => anyhow::bail!("Usage: unitprefs {} [ON|OFF]", preference.name),
         };
         (preference.set)(&mut world, unit, ctx.player, enabled)?;
         Ok(format!(

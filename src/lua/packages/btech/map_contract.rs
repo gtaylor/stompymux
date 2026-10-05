@@ -86,7 +86,7 @@ fn unit_id(
     argument: usize,
     label: &str,
 ) -> mlua::Result<ObjectId> {
-    contract::require_special(lua, &shared.borrow(), value, argument, "mech", label)
+    contract::require_special(lua, &shared.borrow(), value, argument, "unit", label)
 }
 
 fn coordinate(
@@ -207,7 +207,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
         };
         let registration = shared.borrow().btech.registrations().get(&origin).cloned();
         if registration.as_deref().is_none_or(|kind| {
-            !kind.eq_ignore_ascii_case("map") && !kind.eq_ignore_ascii_case("mech")
+            !kind.eq_ignore_ascii_case("map") && !kind.eq_ignore_ascii_case("unit")
         }) {
             return Err(error::failure_with_detail(
                 "mux.object.invalid",

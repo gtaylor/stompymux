@@ -624,7 +624,7 @@ impl BtechState {
         }
         for (unit, configuration) in self.unit_configuration.iter() {
             ensure!(
-                self.registrations.get(unit).map(String::as_str) == Some("MECH"),
+                self.registrations.get(unit).map(String::as_str) == Some("UNIT"),
                 "Unit configuration references an unavailable unit"
             );
             ensure!(
@@ -1124,7 +1124,7 @@ pub fn create_unit(world: &mut World, id: ObjectId, definition: MechTemplate) ->
     let unit = Mech::from_template(definition)?;
     world.btech.units.insert(id, unit.identity());
     world.btech.constructed.insert(id, unit);
-    Arc::make_mut(&mut world.btech.registrations).insert(id, "MECH".into());
+    Arc::make_mut(&mut world.btech.registrations).insert(id, "UNIT".into());
     Ok(())
 }
 
@@ -1149,7 +1149,7 @@ pub fn register_empty_battle_unit(world: &mut World, id: ObjectId) -> Result<()>
         "Object already has BattleTech state"
     );
     super::inventory_mass(world, id)?;
-    Arc::make_mut(&mut world.btech.registrations).insert(id, "MECH".into());
+    Arc::make_mut(&mut world.btech.registrations).insert(id, "UNIT".into());
     Ok(())
 }
 

@@ -33,7 +33,7 @@ pub(super) fn normalize(world: &mut World) {
         .copied()
         .collect();
     world.btech.unit_configuration.retain_mut(|id, value| {
-        if registrations.get(id).map(String::as_str) != Some("MECH") || !runtime.contains(id) {
+        if registrations.get(id).map(String::as_str) != Some("UNIT") || !runtime.contains(id) {
             return false;
         }
         for text in [

@@ -17,13 +17,13 @@ async fn component_failures_round_trip_without_changing_gameplay_on_any_chassis(
         });
         world.validate(&config).unwrap();
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-        set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "mechdamage", "").unwrap();
+        set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "unitdamage", "").unwrap();
         let pristine = scripts.world().btech.clone();
         for code in 1..=7 {
             let value = format!("G:2/11({code})");
             scripts
                 .eval_callback::<()>(&format!(
-                    "btech.unit.set_field(1,{},'mechdamage','{value}')",
+                    "btech.unit.set_field(1,{},'unitdamage','{value}')",
                     id.0
                 ))
                 .unwrap();
@@ -72,7 +72,7 @@ async fn component_failures_round_trip_without_changing_gameplay_on_any_chassis(
                 persistence::load(&config.database()).await.unwrap().btech,
                 saved.btech
             );
-            set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "mechdamage", "")
+            set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "unitdamage", "")
                 .unwrap();
             assert_eq!(scripts.world().btech, pristine);
         }
@@ -81,7 +81,7 @@ async fn component_failures_round_trip_without_changing_gameplay_on_any_chassis(
             &config,
             ObjectId(1),
             id,
-            "mechdamage",
+            "unitdamage",
             "G:2/11(6),G:2/11(2)",
         )
         .unwrap();
@@ -97,7 +97,7 @@ async fn component_failures_round_trip_without_changing_gameplay_on_any_chassis(
                 &config,
                 ObjectId(1),
                 id,
-                "mechdamage",
+                "unitdamage",
                 "G:2/11(8)"
             )
             .is_err()
@@ -108,7 +108,7 @@ async fn component_failures_round_trip_without_changing_gameplay_on_any_chassis(
             &config,
             ObjectId(1),
             id,
-            "mechdamage",
+            "unitdamage",
             "G:2/11(6),C:2/11",
         )
         .unwrap();

@@ -19,7 +19,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                     &world,
                     args.front().cloned().unwrap_or(Value::Nil),
                     1,
-                    "MECH",
+                    "UNIT",
                     "unit",
                 )?
             };
@@ -157,7 +157,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                 &world,
                 args.front().cloned().unwrap_or(Value::Nil),
                 1,
-                "MECH",
+                "UNIT",
                 "unit",
             )?;
             crate::btech::administrative_is_fixable(&world, unit).ok_or_else(|| {

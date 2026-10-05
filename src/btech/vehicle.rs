@@ -2190,7 +2190,7 @@ pub fn create_vehicle(
     let vehicle = Vehicle::new(definition)?;
     world.btech.units.insert(id, vehicle.identity());
     world.btech.vehicles.insert(id, vehicle);
-    std::sync::Arc::make_mut(&mut world.btech.registrations).insert(id, "MECH".into());
+    std::sync::Arc::make_mut(&mut world.btech.registrations).insert(id, "UNIT".into());
     Ok(())
 }
 

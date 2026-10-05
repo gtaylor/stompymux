@@ -2,7 +2,7 @@
 use super::*;
 
 fn unit(lua: &Lua, world: &crate::World, value: Value) -> mlua::Result<ObjectId> {
-    contract::require_special(lua, world, value, 1, "MECH", "unit")
+    contract::require_special(lua, world, value, 1, "UNIT", "unit")
 }
 fn admit(lua: &Lua, args: &mlua::MultiValue) -> mlua::Result<()> {
     let scripts = crate::Scripts::services(lua)?;

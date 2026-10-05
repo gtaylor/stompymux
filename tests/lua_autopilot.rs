@@ -17,7 +17,7 @@ async fn lua_controls_a_typed_autopilot_queue() {
     )
     .unwrap();
     let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["registrations"][unit.0.to_string()] = serde_json::json!("MECH");
+    state["registrations"][unit.0.to_string()] = serde_json::json!("UNIT");
     world.btech = serde_json::from_value(state).unwrap();
     let root = config.path(&config.database.unit_database);
     std::fs::create_dir_all(&root).unwrap();

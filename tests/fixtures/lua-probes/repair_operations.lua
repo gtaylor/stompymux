@@ -6,8 +6,8 @@
 -- PARITY-PROBE template inside page one, the other stays pristine for
 -- the raw-unit page.
 -- PARITY_SETUP: luaparity0
--- PARITY_SETUP: @btech/register Parity Repair Unit=MECH
--- PARITY_SETUP: @btech/register Parity Raw Unit=MECH
+-- PARITY_SETUP: @btech/register Parity Repair Unit=UNIT
+-- PARITY_SETUP: @btech/register Parity Raw Unit=UNIT
 
 local function quote(value)
   return '"' .. value:gsub('[%z\1-\31\\"]', function(byte)

@@ -81,7 +81,7 @@ impl Fields {
                 &self.config,
                 ObjectId(1),
                 1,
-                &format!("@setmech STATUS2 {expected}"),
+                &format!("@setunit STATUS2 {expected}"),
             )
             .unwrap();
             assert_eq!(self.scripts.world().btech, before);
@@ -648,7 +648,7 @@ async fn secondary_critical_edits_preserve_material_and_follow_later_hits() {
                 &config,
                 ObjectId(1),
                 1,
-                &format!("@setmech CRITSTATUS2 {bits}"),
+                &format!("@setunit CRITSTATUS2 {bits}"),
             )
             .unwrap();
             lua.eval_callback::<()>(&format!(
@@ -872,7 +872,7 @@ async fn vehicle_critical_edits_share_conditions_and_preserve_timers() {
                 &config,
                 ObjectId(1),
                 1,
-                &format!("@setmech TANKCRITSTATUS {bits}"),
+                &format!("@setunit TANKCRITSTATUS {bits}"),
             )
             .unwrap();
             lua.eval_callback::<()>(&format!(

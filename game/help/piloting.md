@@ -1,7 +1,7 @@
 +++
 title = "Piloting BattleMechs"
 description = "Enter a unit and take or release its cockpit"
-keywords = ["status", "view", "markings", "ap", "safety", "mwsafety", "mml", "hide", "explode", "self-destruct", "usebin", "heatcutoff", "addtic", "deltic", "cleartic", "listtic", "firetic", "hulldown", "dig", "pickup", "dropoff", "enterbase", "pilot", "unpilot", "piloting", "cockpit", "startup", "shutdown", "heading", "speed", "rottorso", "fliparms", "slite", "searchlight", "sensor", "contacts", "lock", "stand", "prone", "lrs", "lrsmap", "fire", "sight", "target", "weapons", "weaponstatus", "weaponspecs", "critstatus", "flamerheat", "heat", "inferno", "lbx", "cluster", "firecluster", "firesmoke", "firemine", "fireswarm", "fireswarm1", "artemis", "unjam", "stinger", "hotload", "ultra", "rapidfire", "rac", "gattling", "armorpiercing", "caseless", "incendiary", "precision", "flechette", "jump", "dfa", "death from above", "land", "mechprefs", "autofall", "ams", "pods", "removepod", "removepods", "extinguish", "melee", "axe", "sword", "mace", "saw", "claw", "lance", "flail", "wrecking ball", "chain whip", "vibroblade", "retractable blade"]
+keywords = ["status", "view", "markings", "ap", "safety", "mwsafety", "mml", "hide", "explode", "self-destruct", "usebin", "heatcutoff", "addtic", "deltic", "cleartic", "listtic", "firetic", "hulldown", "dig", "pickup", "dropoff", "enterbase", "pilot", "unpilot", "piloting", "cockpit", "startup", "shutdown", "heading", "speed", "rottorso", "fliparms", "slite", "searchlight", "sensor", "contacts", "lock", "stand", "prone", "lrs", "lrsmap", "fire", "sight", "target", "weapons", "weaponstatus", "weaponspecs", "critstatus", "flamerheat", "heat", "inferno", "lbx", "cluster", "firecluster", "firesmoke", "firemine", "fireswarm", "fireswarm1", "artemis", "unjam", "stinger", "hotload", "ultra", "rapidfire", "rac", "gattling", "armorpiercing", "caseless", "incendiary", "precision", "flechette", "jump", "dfa", "death from above", "land", "unitprefs", "autofall", "ams", "pods", "removepod", "removepods", "extinguish", "melee", "axe", "sword", "mace", "saw", "claw", "lance", "flail", "wrecking ball", "chain whip", "vibroblade", "retractable blade"]
 article_tags = ["show_in_index"]
 +++
 
@@ -61,11 +61,11 @@ breaking. A break can drop everyone on that hex into the water. Below intact ice
 you follow the bottom and make water checks; falls and standing keep you below it.
 Moving from elevation -1 into depth-one ice brings you onto its surface without
 a fracture roll on that entry.
-Use `mechprefs` to inspect AutoFall. `mechprefs AutoFall ON` skips the stop check
-at downhill cliffs; `OFF` restores it. `mechprefs AutoFall` toggles the setting.
+Use `unitprefs` to inspect AutoFall. `unitprefs AutoFall ON` skips the stop check
+at downhill cliffs; `OFF` restores it. `unitprefs AutoFall` toggles the setting.
 The setting stays with the unit through shutdown and restart. The assigned pilot
 can change it with the engine off. Uphill checks and falls still work normally.
-Only AutoFall is currently supported by `mechprefs`.
+Only AutoFall is currently supported by `unitprefs`.
 
 `pilot`, `unpilot` and `shutdown` take no arguments; these commands take no switches.
 
@@ -457,11 +457,11 @@ An intact active lamp illuminates its carrier and targets within 30 hexes in its
 
 Clan rotary autocannons (`CL.RotaryAC/2`, `/5`, `/10`, `/20`) support the same `rac` burst controls and `unjam` recovery as Inner Sphere rotary mounts. Burst size, remaining ammunition and the attack roll determine ammunition expenditure, heat and jams; each shell that hits applies its weapon's full damage.
 
-Use `mechprefs SLWarn ON` to receive external searchlight entry/exit warnings, `OFF` to silence them, or `mechprefs SLWarn` to toggle. The preference defaults to off and persists with the unit. Lua provides `btech.unit.searchlight_warning(unit, pilot, enabled)`. Multiple beams produce a single illuminated state; warnings resume after restart without repeating an already observed transition.
+Use `unitprefs SLWarn ON` to receive external searchlight entry/exit warnings, `OFF` to silence them, or `unitprefs SLWarn` to toggle. The preference defaults to off and persists with the unit. Lua provides `btech.unit.searchlight_warning(unit, pilot, enabled)`. Multiple beams produce a single illuminated state; warnings resume after restart without repeating an already observed transition.
 
-`mechprefs ArmorWarn` and `mechprefs AmmoWarn` toggle combat warnings; append `ON` or `OFF` to choose explicitly. Both default to on and persist with the unit. Armor warnings report transitions to low, critical or breached protection separately for front and rear armor. Ammunition warnings use installed-bin weighting and the firing mode's warning window, including shots that miss. Lua exposes `btech.unit.armor_warning(unit, pilot, enabled)` and `btech.unit.ammunition_warning(unit, pilot, enabled)`.
+`unitprefs ArmorWarn` and `unitprefs AmmoWarn` toggle combat warnings; append `ON` or `OFF` to choose explicitly. Both default to on and persist with the unit. Armor warnings report transitions to low, critical or breached protection separately for front and rear armor. Ammunition warnings use installed-bin weighting and the firing mode's warning window, including shots that miss. Lua exposes `btech.unit.armor_warning(unit, pilot, enabled)` and `btech.unit.ammunition_warning(unit, pilot, enabled)`.
 
-`mechprefs FFSafety ON` blocks non-coolant weapon fire at units on your team. Use `OFF` to disable it or omit the setting to toggle; the default is off. A battlefield with the no-friendly-fire flag (256) independently blocks these attacks. Coolant guns can still cool teammates or their own carrier. Lua provides `btech.unit.friendly_fire_safety(unit, pilot, enabled)`.
+`unitprefs FFSafety ON` blocks non-coolant weapon fire at units on your team. Use `OFF` to disable it or omit the setting to toggle; the default is off. A battlefield with the no-friendly-fire flag (256) independently blocks these attacks. Coolant guns can still cool teammates or their own carrier. Lua provides `btech.unit.friendly_fire_safety(unit, pilot, enabled)`.
 
 ### Viewing unit markings
 
@@ -969,7 +969,7 @@ A probe contact behind blocking terrain appears as "something". Its condition
 columns stay blank, and it is not classified as friendly until identified.
 
 
-Routine notices normally skip shutdown targets. Use `mechprefs AutoconShutdown ON`
+Routine notices normally skip shutdown targets. Use `unitprefs AutoconShutdown ON`
 to include them, or OFF to restore the default. This changes notices, not which
 contacts appear in your list, and never suppresses weapon-lock loss warnings.
 
@@ -1384,7 +1384,7 @@ controls; combined LRM special-ammunition flags are not supported.
 `weaponspecs` lists both MML ammunition profiles, labelled SRM and LRM.
 
 `safety [on|off]` reads or sets MechWarrior safety. You must be the assigned
-pilot in the cockpit. `mechprefs MWSafety ON|OFF` changes the same setting.
+pilot in the cockpit. `unitprefs MWSafety ON|OFF` changes the same setting.
 Completed startup turns safety on; shutdown and interrupted startup retain its
 setting. This preference concerns MechWarrior targets, which are not currently
 supported combat targets. It does not change friendly-fire safety.

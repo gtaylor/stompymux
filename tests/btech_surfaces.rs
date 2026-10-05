@@ -2427,10 +2427,10 @@ async fn autofall_native_lua_controls_are_atomic_and_survive_restart_and_shutdow
     )
     .unwrap();
     assert!(
-        support::run_text(&native, &config, ObjectId(1), 1, "mechprefs").contains("AutoFall: OFF")
+        support::run_text(&native, &config, ObjectId(1), 1, "unitprefs").contains("AutoFall: OFF")
     );
     assert!(
-        support::run_text(&native, &config, ObjectId(1), 1, "mechprefs aUtOfAlL on")
+        support::run_text(&native, &config, ObjectId(1), 1, "unitprefs aUtOfAlL on")
             .contains("toggled ON")
     );
     lua.eval_callback::<()>(&format!(
@@ -2454,10 +2454,10 @@ async fn autofall_native_lua_controls_are_atomic_and_survive_restart_and_shutdow
     );
     assert_eq!(lua.world().btech, before);
     for command in [
-        "mechprefs AutoFall maybe",
-        "mechprefs AutoFall on extra",
-        "mechprefs Unknown on",
-        "mechprefs/bad AutoFall off",
+        "unitprefs AutoFall maybe",
+        "unitprefs AutoFall on extra",
+        "unitprefs Unknown on",
+        "unitprefs/bad AutoFall off",
     ] {
         support::run_text(&native, &config, ObjectId(1), 1, command);
         assert_eq!(native.world().btech, before);
@@ -2488,7 +2488,7 @@ async fn autofall_native_lua_controls_are_atomic_and_survive_restart_and_shutdow
         saved.btech
     );
     assert!(
-        support::run_text(&native, &config, ObjectId(1), 1, "mechprefs AutoFall")
+        support::run_text(&native, &config, ObjectId(1), 1, "unitprefs AutoFall")
             .contains("toggled OFF")
     );
     assert!(!native.world().btech.constructed_units()[&id].auto_fall());
