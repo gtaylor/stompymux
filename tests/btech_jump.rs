@@ -4851,13 +4851,6 @@ async fn character_landing_control_experience_and_restart() {
                     .btech
                     .set_unit_dice(id, Dice::seeded([seed; 32]))
                     .unwrap();
-                let mut channel = Channel::new("MechPilotXP".into());
-                channel.users.push(communication::Membership {
-                    who: ObjectId(1),
-                    listening: true,
-                });
-                channel.messages = if obstacle { i64::MAX - 1 } else { i64::MAX };
-                world.channels.insert("MechPilotXP".into(), channel);
                 let scripts =
                     Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world)))
                         .unwrap();
@@ -4868,24 +4861,9 @@ async fn character_landing_control_experience_and_restart() {
                     },
                     ..MovementRules::STANDARD
                 };
-                let mut rejected = false;
                 let mut restarted = false;
                 for tick in 0..80 {
-                    let before = scripts.world().clone();
-                    if advance_battle_jumps_action(&scripts, &config, rules).is_err() {
-                        assert!(!rejected);
-                        rejected = true;
-                        assert_eq!(scripts.world().btech, before.btech);
-                        assert!(scripts.world().channels["MechPilotXP"].history.is_empty());
-                        assert!(scripts.drain_outbox().is_empty());
-                        scripts
-                            .world_mut()
-                            .channels
-                            .get_mut("MechPilotXP")
-                            .unwrap()
-                            .messages = 0;
-                        advance_battle_jumps_action(&scripts, &config, rules).unwrap();
-                    }
+                    advance_battle_jumps_action(&scripts, &config, rules).unwrap();
                     if tick == 1 {
                         let saved = scripts.world().clone();
                         persistence::save(&config.database(), &saved).await.unwrap();
@@ -4905,7 +4883,7 @@ async fn character_landing_control_experience_and_restart() {
                     }
                     scripts.drain_outbox();
                 }
-                assert!(rejected && restarted);
+                assert!(restarted);
                 let output = scripts.drain_outbox();
                 let pilot_output: Vec<_> = output
                     .iter()
@@ -4954,17 +4932,10 @@ async fn character_landing_control_experience_and_restart() {
                     candidate.btech.character_values()[&ObjectId(1)][skill].experience_balance(),
                     if obstacle { 4 } else { 2 }
                 );
-                assert_eq!(
-                    candidate.channels["MechPilotXP"].history.len(),
-                    if obstacle { 2 } else { 1 }
-                );
-                assert_eq!(
-                    text::plain_with(
-                        scripts.palette(),
-                        &candidate.channels["MechPilotXP"].history[0].message
-                    ),
-                    format!("[MechPilotXP] GOD gained 2 {skill} XP")
-                );
+                let traces =
+                    support::drain_traces(&scripts, logging::TraceTopic::PilotingExperience);
+                assert_eq!(traces.len(), if obstacle { 2 } else { 1 });
+                assert_eq!(traces[0], format!("GOD gained 2 {skill} XP"));
                 persistence::save(&config.database(), &candidate)
                     .await
                     .unwrap();
@@ -5078,12 +5049,6 @@ async fn character_manual_landing_adapters_and_casualty_rollback() {
                 })
                 .unwrap();
             world.btech.set_unit_dice(id, dice).unwrap();
-            let mut channel = Channel::new("MechPilotXP".into());
-            channel.users.push(communication::Membership {
-                who: pilot,
-                listening: true,
-            });
-            world.channels.insert("MechPilotXP".into(), channel);
             let before = world.clone();
             assert!(land_battle_jump(&mut world, id, pilot, MovementRules::STANDARD).is_err());
             assert_eq!(world.btech, before.btech);
@@ -5100,27 +5065,8 @@ async fn character_manual_landing_adapters_and_casualty_rollback() {
                     .is_err()
             );
             assert_eq!(lua.world().btech, before.btech);
-            assert!(lua.world().channels["MechPilotXP"].history.is_empty());
+            assert!(support::drain_traces(&lua, logging::TraceTopic::PilotingExperience).is_empty());
             assert!(lua.drain_outbox().is_empty());
-            if successful {
-                lua.world_mut()
-                    .channels
-                    .get_mut("MechPilotXP")
-                    .unwrap()
-                    .messages = if case == "gear" {
-                    i64::MAX - 1
-                } else {
-                    i64::MAX
-                };
-                assert!(
-                    lua.eval_callback::<bool>(&format!("return {call}"))
-                        .is_err()
-                );
-                assert_eq!(lua.world().btech, before.btech);
-                assert!(lua.world().channels["MechPilotXP"].history.is_empty());
-                assert!(lua.drain_outbox().is_empty());
-                *lua.world_mut() = before.clone();
-            }
             let afterlife = ObjectId(config.battletech.afterlife_dbref);
             if case == "fatal" {
                 lua.world_mut().objects.remove(&afterlife);
@@ -5178,14 +5124,17 @@ async fn character_manual_landing_adapters_and_casualty_rollback() {
                     0
                 }
             );
-            assert_eq!(
-                candidate.channels["MechPilotXP"].history.len(),
-                if case == "gear" {
-                    2
-                } else {
-                    usize::from(successful)
-                }
-            );
+            let awards = if case == "gear" {
+                2
+            } else {
+                usize::from(successful)
+            };
+            for scripts in [&native, &lua] {
+                assert_eq!(
+                    support::drain_traces(scripts, logging::TraceTopic::PilotingExperience).len(),
+                    awards
+                );
+            }
             persistence::save(&config.database(), &candidate)
                 .await
                 .unwrap();

@@ -241,13 +241,13 @@ pub(crate) fn publish_unjamming(
             .is_some_and(|(before, _)| *before == index)
         {
             let (_, diagnostic) = diagnostics.next().unwrap();
-            super::channels::publish(scripts, config, std::slice::from_ref(diagnostic))?;
+            super::diagnostics::publish(scripts, config, std::slice::from_ref(diagnostic))?;
         }
         if let Some((recipient, text)) = report.messages.get(index) {
             super::notify_message(scripts, *recipient, text)?;
         }
     }
-    super::channels::publish(scripts, config, &report.experience_messages)
+    super::diagnostics::publish(scripts, config, &report.experience_messages)
 }
 
 /// Advance and publish recovery, restoring countdowns, ammunition, XP and output on failure.

@@ -1,5 +1,5 @@
 //! Shared in-character perception attempts and accepted experience diagnostics for scan actions.
-use super::{DiagnosticChannel, DiagnosticMessage};
+use super::{DiagnosticTopic, DiagnosticMessage};
 use crate::{Flag, Kind, ObjectId, World};
 use anyhow::{Context, Result};
 
@@ -33,7 +33,7 @@ pub(super) fn attempt(
     let award = super::award_skill_experience(world, pilot, "Perception", 1, now, false)?;
     let message = award.accepted.then(|| {
         DiagnosticMessage::new(
-            DiagnosticChannel::Experience,
+            DiagnosticTopic::Experience,
             format!("{} gained 1 perception XP", world.objects[&pilot].name),
         )
     });

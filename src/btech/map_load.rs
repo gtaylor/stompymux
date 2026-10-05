@@ -46,11 +46,11 @@ pub fn load_map_action(
     let reason = error.root_cause().to_string();
     let text = format!("Map #{}: {name} is not a valid map file: {reason}", id.0);
     scripts.atomic(|_| {
-        super::channels::publish(
+        super::diagnostics::publish(
             scripts,
             config,
             &[super::DiagnosticMessage::new(
-                super::DiagnosticChannel::MapErrors,
+                super::DiagnosticTopic::MapErrors,
                 text,
             )],
         )?;

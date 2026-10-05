@@ -33,7 +33,7 @@ impl PilotingCheck {
     /// Awarding checks use the `(noxp)` diagnostic label.
     pub(super) fn diagnostic(&self, awards_experience: bool) -> Option<super::DiagnosticMessage> {
         self.roll.map(|_| super::DiagnosticMessage::new(
-            super::DiagnosticChannel::Debug,
+            super::DiagnosticTopic::PilotingRolls,
             format!("Attempting to make pilot{} skill roll. SPilot: {}, mods: {}, MechPilot: {}, BTH: {}",
                 if awards_experience { " (noxp)" } else { "" },
                 self.skill, self.situational, self.damage, self.target),
@@ -142,7 +142,7 @@ pub(super) fn publish_diagnostic_feedback(
         if let Some((position, diagnostic)) = &diagnostic
             && index == *position
         {
-            super::channels::publish(scripts, config, std::slice::from_ref(diagnostic))?;
+            super::diagnostics::publish(scripts, config, std::slice::from_ref(diagnostic))?;
         }
         Ok(())
     })
@@ -355,7 +355,7 @@ pub(super) fn award_reason(
     )?;
     let message = award.accepted.then(|| {
         super::DiagnosticMessage::new(
-            super::DiagnosticChannel::PilotingExperience,
+            super::DiagnosticTopic::PilotingExperience,
             format!("{} gained {amount} {skill} XP", world.objects[&pilot].name),
         )
     });
@@ -383,7 +383,7 @@ mod tests {
         };
         for (awards, label) in [(false, ""), (true, " (noxp)")] {
             let message = check.diagnostic(awards).unwrap();
-            assert_eq!(message.channel, super::super::DiagnosticChannel::Debug);
+            assert_eq!(message.topic, super::super::DiagnosticTopic::PilotingRolls);
             assert_eq!(
                 message.text,
                 format!(

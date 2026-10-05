@@ -58,7 +58,7 @@ pub(super) fn record_entry(
         super::award_skill_experience(world, pilot, skill, 1, crate::clock::wall_time(), false)?;
     Ok(award.accepted.then(|| {
         super::DiagnosticMessage::new(
-            super::DiagnosticChannel::PilotingExperience,
+            super::DiagnosticTopic::PilotingExperience,
             format!("{} gained 1 {skill} XP", world.objects[&pilot].name),
         )
     }))

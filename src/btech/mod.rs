@@ -565,8 +565,8 @@ pub use battle_value_experience::{
 
 pub use gunnery_experience::{ShotExperienceAward, award_gunnery_experience};
 
-mod channels;
-pub use channels::{DiagnosticChannel, DiagnosticMessage};
+mod diagnostics;
+pub use diagnostics::{DiagnosticMessage, DiagnosticTopic};
 
 mod movement_experience;
 pub use movement_experience::MovementExperience;

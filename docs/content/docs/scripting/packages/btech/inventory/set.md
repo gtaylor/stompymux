@@ -6,7 +6,7 @@ manualLinkTitle: "set"
 ---
 
 Wizard stock correction using stored identifiers; zero quantity removes the entry.
-Stock, immediate load correction and EconInfo diagnostics participate in callback rollback.
+Stock, immediate load correction and economy log records participate in callback rollback.
 Unchanged quantities emit no record. Does not install equipment or perform cargo loading.
 
 ## Signature

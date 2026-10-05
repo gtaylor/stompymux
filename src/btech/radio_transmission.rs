@@ -73,7 +73,7 @@ pub fn send_radio_action(
             let notices = report.notices();
             (RadioDelivery::Analog(report), notices)
         };
-        super::channels::publish(scripts, config, &audit_messages)?;
+        super::diagnostics::publish(scripts, config, &audit_messages)?;
         for notice in notices {
             super::notify_unit(scripts, notice)?;
         }
@@ -85,7 +85,7 @@ pub fn send_radio_action(
             )?,
             RadioDelivery::Digital(_) => Vec::new(),
         };
-        super::channels::publish(scripts, config, &experience_messages)?;
+        super::diagnostics::publish(scripts, config, &experience_messages)?;
         let settings = &config.battletech;
         let rules = FallRules {
             vehicle_impact: crate::VehicleImpactRules::configured(settings, false),

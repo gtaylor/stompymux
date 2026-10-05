@@ -145,18 +145,18 @@ fn ammunition(world: &World, id: ObjectId) -> Result<Option<usize>> {
         .largest_ammunition_hazard_bin()
 }
 
-/// Ordered cockpit/observer feedback and diagnostic-channel records from admission.
+/// Ordered cockpit/observer feedback and debug trace records from admission.
 enum Feedback {
     Notice(Notice),
     Debug(String),
 }
 
-/// Diagnostic channels are optional and share the enclosing world/effects transaction.
+/// Self-destruct traces wait for the enclosing world/effects transaction to commit.
 fn debug(scripts: &Scripts, config: &Config, text: String) -> Result<()> {
-    super::channels::publish(
+    super::diagnostics::publish(
         scripts,
         config,
-        &[DiagnosticMessage::new(DiagnosticChannel::Debug, text)],
+        &[DiagnosticMessage::new(DiagnosticTopic::SelfDestruct, text)],
     )
 }
 

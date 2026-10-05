@@ -41,6 +41,21 @@ pub mod targets {
     pub const SHOUTS: &str = "audit::shouts";
     /// Operator changes to BattleTech settings.
     pub const WIZARD: &str = "audit::wizard";
+    /// Pilot experience awards for skills other than gunnery and piloting, and the
+    /// battle-value formula's noisy gain details.
+    pub const BTECH_EXPERIENCE: &str = "btech::experience";
+    /// Accepted gunnery experience awards.
+    pub const BTECH_GUNNERY_EXPERIENCE: &str = "btech::experience::gunnery";
+    /// Accepted piloting experience awards.
+    pub const BTECH_PILOTING_EXPERIENCE: &str = "btech::experience::piloting";
+    /// Piloting skill roll inputs: base skill, modifiers, damage and target number.
+    pub const BTECH_PILOTING_ROLLS: &str = "btech::piloting::rolls";
+    /// Self-destruct detonations.
+    pub const BTECH_SELF_DESTRUCT: &str = "btech::self_destruct";
+    /// Parts stock additions and removals.
+    pub const BTECH_ECONOMY: &str = "btech::economy";
+    /// Radio frequency settings that match an opposing team's channel.
+    pub const BTECH_RADIO_FREQUENCIES: &str = "btech::radio::frequencies";
 }
 
 /// Filter used when neither `logging.filter` nor `RUST_LOG` says otherwise: everything at
@@ -113,6 +128,53 @@ impl AuditRecord {
     /// Emit the committed audit to [`targets::WIZARD`].
     pub fn emit(&self) {
         tracing::info!(target: targets::WIZARD, "{}", self.message);
+    }
+}
+
+/// Debug-level BattleTech topics, each written to its own fixed target in [`targets`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TraceTopic {
+    Experience,
+    GunneryExperience,
+    PilotingExperience,
+    PilotingRolls,
+    SelfDestruct,
+    Economy,
+    RadioFrequencies,
+}
+
+/// A debug trace held until its transaction commits, so rolled-back actions leave no trace.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TraceRecord {
+    pub topic: TraceTopic,
+    pub message: String,
+}
+
+impl TraceRecord {
+    /// Emit the committed trace at debug level to its topic's target.
+    pub fn emit(&self) {
+        let message = &self.message;
+        match self.topic {
+            TraceTopic::Experience => {
+                tracing::debug!(target: targets::BTECH_EXPERIENCE, "{message}")
+            }
+            TraceTopic::GunneryExperience => {
+                tracing::debug!(target: targets::BTECH_GUNNERY_EXPERIENCE, "{message}")
+            }
+            TraceTopic::PilotingExperience => {
+                tracing::debug!(target: targets::BTECH_PILOTING_EXPERIENCE, "{message}")
+            }
+            TraceTopic::PilotingRolls => {
+                tracing::debug!(target: targets::BTECH_PILOTING_ROLLS, "{message}")
+            }
+            TraceTopic::SelfDestruct => {
+                tracing::debug!(target: targets::BTECH_SELF_DESTRUCT, "{message}")
+            }
+            TraceTopic::Economy => tracing::debug!(target: targets::BTECH_ECONOMY, "{message}"),
+            TraceTopic::RadioFrequencies => {
+                tracing::debug!(target: targets::BTECH_RADIO_FREQUENCIES, "{message}")
+            }
+        }
     }
 }
 

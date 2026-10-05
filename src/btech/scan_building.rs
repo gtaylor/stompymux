@@ -127,7 +127,7 @@ pub(super) fn action_with_range(
             crate::clock::wall_time(),
             observer_range,
         )?;
-        super::channels::publish(scripts, config, &report.experience_messages)?;
+        super::diagnostics::publish(scripts, config, &report.experience_messages)?;
         super::notify_unit_text(scripts, source.unit, &report.text)?;
         Ok(report)
     })

@@ -19,12 +19,6 @@ async fn control_feedback_is_ordered_and_respects_pilot_audience() {
                 .flags
                 .insert(Flag::Connected);
         }
-        let mut channel = Channel::new("MechDebugInfo".into());
-        channel.users.push(communication::Membership {
-            who: ObjectId(2),
-            listening: true,
-        });
-        base.channels.insert("MechDebugInfo".into(), channel);
         for assigned in [false, true] {
             for success in [false, true] {
                 let mut world = base.clone();
@@ -40,7 +34,6 @@ async fn control_feedback_is_ordered_and_respects_pilot_audience() {
                     state["motion"]["desired_speed"] = speed.into();
                 });
                 seed(&mut world, unit, success);
-                let before = world.clone();
                 let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
                 let reports = advance_battle_periodic_piloting_action(&scripts, &config).unwrap();
                 assert_eq!(reports.len(), 1);
@@ -60,23 +53,14 @@ async fn control_feedback_is_ordered_and_respects_pilot_audience() {
                     "Attempting to make pilot (noxp) skill roll. SPilot: {}, mods: {}, MechPilot: {}, BTH: {}",
                     check.skill, check.situational, check.damage, check.target
                 );
-                assert_eq!(scripts.world().channels["MechDebugInfo"].messages, 1);
-                let debug_index = messages
-                    .iter()
-                    .position(|(who, text)| {
-                        *who == ObjectId(2) && text.source().contains(&diagnostic)
-                    })
-                    .unwrap();
-                let cockpit_index = messages
-                    .iter()
-                    .position(|(_, text)| text.source() == expected[0])
-                    .unwrap();
-                assert!(debug_index < cockpit_index);
+                assert_eq!(
+                    support::drain_traces(&scripts, logging::TraceTopic::PilotingRolls),
+                    [diagnostic.clone()]
+                );
                 assert!(
                     !messages
                         .iter()
-                        .any(|(who, text)| *who == ObjectId(1)
-                            && text.source().contains(&diagnostic))
+                        .any(|(_, text)| text.source().contains(&diagnostic))
                 );
 
                 for player in [ObjectId(1), ObjectId(2)] {
@@ -102,18 +86,6 @@ async fn control_feedback_is_ordered_and_respects_pilot_audience() {
                     .collect();
                 assert_eq!(pilot_messages[0], expected[0]);
                 assert_eq!(pilot_messages[1], expected[1]);
-                *scripts.world_mut() = before.clone();
-                scripts
-                    .world_mut()
-                    .channels
-                    .get_mut("MechDebugInfo")
-                    .unwrap()
-                    .messages = i64::MAX;
-                let error = advance_battle_periodic_piloting_action(&scripts, &config).unwrap_err();
-                assert!(format!("{error:#}").contains("channel message counter overflow"));
-                assert_eq!(scripts.world().btech, before.btech);
-                assert_eq!(scripts.world().channels["MechDebugInfo"].messages, i64::MAX);
-                assert!(scripts.drain_outbox().is_empty());
             }
         }
     }

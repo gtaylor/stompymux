@@ -276,10 +276,9 @@ Sustained firing can overheat the reactor. Thermal checks run on saved simulatio
 timers. At high heat, ammunition can explode before the reactor attempts to shut
 down. Your Computer skill can override shutdown; the cockpit shows its target
 number and roll. A successful override in an in-character unit awards one
-Computer XP when the normal skill cooldown permits it; accepted awards appear
-on XPInfo. Heat can also injure the pilot, especially with damaged life
-support. A reactor shutdown clears your cockpit assignment and target and stops
-the unit. If you were moving faster than 10.75 kph, a failed piloting check can
+Computer XP when the normal skill cooldown permits it. Heat can also injure the
+pilot, especially with damaged life support. A reactor shutdown clears your
+cockpit assignment and target and stops the unit. If you were moving faster than 10.75 kph, a failed piloting check can
 also knock the unit prone. Take the cockpit again and wait for safe startup heat
 before restarting. These checks currently cover supported tactical units.
 

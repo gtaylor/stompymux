@@ -20,7 +20,7 @@
 // lua-types-begin btech 00242
 //|---Load matching hangar stock into a stationary, running CargoTech unit.
 //|---Exact abbreviations precede exact catalogue names, then wildcard names; selection is independent of available stock.
-//|---Transfers, throttle correction and EconInfo diagnostics are atomic and participate in callback rollback.
+//|---Transfers, throttle correction and economy log records are atomic and participate in callback rollback.
 //|---@param actor integer
 //|---@param pattern string
 //|---@param quantity integer Positive request per matched row, capped at 50000 and available stock.

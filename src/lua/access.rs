@@ -156,6 +156,11 @@ impl Scripts {
         self.effects.drain_records()
     }
 
+    /// Drain staged debug traces during embedding transaction inspection.
+    pub fn drain_traces_for_inspection(&self) -> Vec<crate::logging::TraceRecord> {
+        self.effects.drain_traces()
+    }
+
     /// Drain staged transaction log effects during integration inspection.
     pub fn drain_logs_for_inspection(&self) -> Vec<crate::logging::FileRequest> {
         self.effects.drain_logs()

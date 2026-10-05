@@ -131,6 +131,9 @@ impl Server {
         for record in self.scripts.effects.drain_records() {
             record.emit();
         }
+        for trace in self.scripts.effects.drain_traces() {
+            trace.emit();
+        }
         for request in self.scripts.effects.drain_logs() {
             self.config.logger.submit(&self.config, request);
         }

@@ -127,7 +127,7 @@ pub(super) fn action_with_range(
             now,
             observer_range,
         )?;
-        super::channels::publish(scripts, config, &building.experience_messages)?;
+        super::diagnostics::publish(scripts, config, &building.experience_messages)?;
         super::notify_unit_text(scripts, source.unit, &building.text)?;
         let mines = scan_with_range(
             &mut scripts.world.borrow_mut(),
@@ -137,7 +137,7 @@ pub(super) fn action_with_range(
             now,
             observer_range,
         )?;
-        super::channels::publish(scripts, config, &mines.experience_messages)?;
+        super::diagnostics::publish(scripts, config, &mines.experience_messages)?;
         let recipient = if mines.found {
             super::MessageTarget::Unit(source.unit)
         } else {

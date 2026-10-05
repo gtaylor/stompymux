@@ -1574,7 +1574,7 @@ function btech_unit.autoturret(dbref, pilot) end
 ---@field initial_woods WoodsAbsorption|nil Nominal LBX terrain check before pellet counting and absorption.
 ---@field woods WoodsAbsorption|nil Occupied-woods consequences for direct shells (including bursts) or missile/pellet armor damage, after missile interception.
 ---@field experience table[] Per-packet optional pre-impact XP awards.
----@field experience_messages table[] Ordered XP channel diagnostics.
+---@field experience_messages table[] Ordered experience diagnostics.
 ---@field cluster_roll integer|nil
 ---@field missiles_before_defense integer|nil
 ---@field groups table[] Located conventional damage packets.
@@ -1888,7 +1888,7 @@ function btech_inventory.set_named(actor, object, name, quantity) end
 function btech_inventory.read(object) end
 
 ---Wizard stock correction using stored identifiers; zero quantity removes the entry.
----Stock, immediate load correction and EconInfo diagnostics participate in callback rollback.
+---Stock, immediate load correction and economy log records participate in callback rollback.
 ---Unchanged quantities emit no record. Does not install equipment or perform cargo loading.
 ---@param actor integer
 ---@param object integer
@@ -1915,7 +1915,7 @@ function btech_cargo.stores(actor, pattern) end
 
 ---Load matching hangar stock into a stationary, running CargoTech unit.
 ---Exact abbreviations precede exact catalogue names, then wildcard names; selection is independent of available stock.
----Transfers, throttle correction and EconInfo diagnostics are atomic and participate in callback rollback.
+---Transfers, throttle correction and economy log records are atomic and participate in callback rollback.
 ---@param actor integer
 ---@param pattern string
 ---@param quantity integer Positive request per matched row, capped at 50000 and available stock.
@@ -2543,7 +2543,7 @@ function btech_unit.radio_mode(dbref, pilot, channel, mode) end
 ---@field text string Formatted cockpit message.
 
 ---@class DiagnosticMessage
----@field channel "debug"|"economy"|"attack_experience"|"experience"|"piloting_experience"|"frequencies"|"zero_frequencies"|"map_errors"
+---@field topic "map_errors"|"piloting_rolls"|"self_destruct"|"economy"|"gunnery_experience"|"experience"|"piloting_experience"|"radio_frequencies"|"zero_frequencies"
 ---@field text string
 
 ---@class RadioTransmission

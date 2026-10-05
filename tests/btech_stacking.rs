@@ -1656,12 +1656,6 @@ async fn character_crowding_experience_and_delivery_rollback() {
                 })
                 .unwrap();
             seed(&mut world, id, 3, 1, Some(12));
-            let mut channel = Channel::new("MechPilotXP".into());
-            channel.users.push(communication::Membership {
-                who: ObjectId(1),
-                listening: true,
-            });
-            world.channels.insert("MechPilotXP".into(), channel);
             // A connected passenger hears the collision warning, but not the pilot's roll.
             world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(id);
             world
@@ -1681,20 +1675,6 @@ async fn character_crowding_experience_and_delivery_rollback() {
                 extended_piloting: extended,
                 ..fall()
             };
-            scripts
-                .world_mut()
-                .channels
-                .get_mut("MechPilotXP")
-                .unwrap()
-                .messages = i64::MAX;
-            assert!(
-                resolve_battle_stacking_action(&scripts, &config, id, input(entry), rules, fall)
-                    .is_err()
-            );
-            assert_eq!(scripts.world().btech, before.btech);
-            assert!(scripts.world().channels["MechPilotXP"].history.is_empty());
-            assert!(scripts.drain_outbox().is_empty());
-            *scripts.world_mut() = before.clone();
             let _ =
                 resolve_battle_stacking_action(&scripts, &config, id, input(entry), rules, fall)
                     .unwrap();
@@ -1744,13 +1724,9 @@ async fn character_crowding_experience_and_delivery_rollback() {
                 candidate.btech.constructed_units()[&ids[1]],
                 before.btech.constructed_units()[&ids[1]]
             );
-            assert_eq!(candidate.channels["MechPilotXP"].history.len(), 1);
             assert_eq!(
-                text::plain_with(
-                    scripts.palette(),
-                    &candidate.channels["MechPilotXP"].history[0].message
-                ),
-                format!("[MechPilotXP] GOD gained {amount} {skill} XP")
+                support::drain_traces(&scripts, logging::TraceTopic::PilotingExperience),
+                [format!("GOD gained {amount} {skill} XP")]
             );
             persistence::save(&config.database(), &candidate)
                 .await
@@ -1774,7 +1750,9 @@ async fn character_crowding_experience_and_delivery_rollback() {
                 scripts.world().btech.character_values()[&ObjectId(1)][skill].experience_balance(),
                 0
             );
-            assert!(scripts.world().channels["MechPilotXP"].history.is_empty());
+            assert!(
+                support::drain_traces(&scripts, logging::TraceTopic::PilotingExperience).is_empty()
+            );
         }
     }
 }

@@ -270,6 +270,21 @@ trails use fixed targets that can be switched individually:
 | `audit::shouts` | Wizard shouts. |
 | `audit::wizard` | Operator changes to BattleTech settings, written only once they commit. |
 
+BattleTech game diagnostics are written at `debug` level, so the default filter
+hides them. Like the wizard audit, each is written only once its action
+commits. Enable one with a directive such as `info,btech::experience=debug`;
+`btech::experience=debug` also enables its `gunnery` and `piloting` children.
+
+| Target | Records |
+|---|---|
+| `btech::experience` | Experience awards for skills other than gunnery and piloting, and noisy battle-value gain details. |
+| `btech::experience::gunnery` | Accepted gunnery experience awards. |
+| `btech::experience::piloting` | Accepted piloting experience awards. |
+| `btech::piloting::rolls` | Piloting skill roll inputs: base skill, modifiers, damage and target number. |
+| `btech::self_destruct` | Self-destruct detonations. |
+| `btech::economy` | Parts stock additions and removals by cargo transfers and operator edits. |
+| `btech::radio::frequencies` | Radio frequency settings that match an opposing team's channel. |
+
 The default filter writes everything at `info` and above except the
 high-volume command and accounting audits. When the `RUST_LOG` environment
 variable is set, it replaces `logging.filter` at startup. GOD can replace the

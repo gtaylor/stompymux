@@ -138,10 +138,10 @@ component breakdown in 1/1024-ton units, derived from construction and damage.
 `skill-threshold` reads or changes a runtime XP threshold. Names and short aliases are case-insensitive. Values range from 0 through 2147483647; zero disables earned skill levels. Changes apply when experience is next awarded, and defaults return after a database reload.
 
 
-Radio diagnostics use ordinary administrator channels when those channels exist.
-`MechFreqs` reports positive frequency settings that match a different-team unit on
-the same map. `ZeroFrequencies` records transmissions on frequency zero when the
-battlefield map is in-character. Failed actions leave no partial diagnostic history.
+Positive frequency settings that match a different-team unit on the same map are
+logged at debug level to `btech::radio::frequencies`. The `ZeroFrequencies`
+channel, when it exists, records transmissions on frequency zero when the
+battlefield map is in-character. Failed actions leave no partial diagnostics.
 
 
 Mechs and ground vehicles share C3/C3i connections, messages, reports and range
@@ -331,9 +331,9 @@ limits. CargoTech halves its movement penalty; ordinary Mechs carry twice the
 physical stock mass for speed accounting, while ordinary vehicles carry its full
 mass. Towing bonuses do not discount cargo. Removing stock restores the unloaded
 ceiling. Wizard corrections immediately reconcile the unit's speed limits and
-log the actual addition or removal to an existing `EconInfo` channel.
-Assigning an unchanged quantity emits no record. Stock, speed changes, channel
-history and notifications roll back together if correction or publication fails.
+log the actual addition or removal at debug level to `btech::economy`.
+Assigning an unchanged quantity emits no record. Stock, speed changes, log records
+and notifications roll back together if correction fails.
 These controls do not install equipment or perform cargo loading.
 Use `manifest`, `stores`, `loadcargo` and `unloadcargo` for cockpit stock handling;
 see `help cargo`.
@@ -366,12 +366,10 @@ load-based movement limits even while empty. Suit capacity and loading another
 unit remain unsupported.
 
 
-Successful cockpit cargo transfers emit two records to an existing
-`EconInfo` channel: the unit's stock change, then the hangar's stock change.
-The records use the actual quantity moved. Ordinary channel listeners and
-history settings apply. The commands do not create the channel automatically.
-Transfer failures publish no records; channel publication failures also roll
-back the transfer. Lua cargo transfers use the same transactional behavior.
+Successful cockpit cargo transfers log two debug records to `btech::economy`:
+the unit's stock change, then the hangar's stock change. The records use the
+actual quantity moved. Transfer failures log no records. Lua cargo transfers use
+the same transactional behavior.
 
 
 ## VTOL fuel
@@ -409,8 +407,8 @@ may select at most 20 entries. Removal floors stock at zero; its confirmation an
 economy records retain the capped requested count, even if less stock existed.
 Actuator component balances follow the economy's generic `Actuator` stock rule.
 
-The whole selected batch, resulting unit speed limits, and `EconInfo` messages
-commit together. Errors leave no partial batch or diagnostics. Clearing emits
+The whole selected batch, resulting unit speed limits, and `btech::economy` log
+records commit together. Errors leave no partial batch or diagnostics. Clearing emits
 one reset record, including when the inventory was already empty.
 
 

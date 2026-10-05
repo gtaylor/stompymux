@@ -1052,7 +1052,7 @@
 //|---@field initial_woods WoodsAbsorption|nil Nominal LBX terrain check before pellet counting and absorption.
 //|---@field woods WoodsAbsorption|nil Occupied-woods consequences for direct shells (including bursts) or missile/pellet armor damage, after missile interception.
 //|---@field experience table[] Per-packet optional pre-impact XP awards.
-//|---@field experience_messages table[] Ordered XP channel diagnostics.
+//|---@field experience_messages table[] Ordered experience diagnostics.
 //|---@field cluster_roll integer|nil
 //|---@field missiles_before_defense integer|nil
 //|---@field groups table[] Located conventional damage packets.
@@ -1403,7 +1403,7 @@
 
 // lua-types-begin btech 00325
 //|---@class DiagnosticMessage
-//|---@field channel "debug"|"economy"|"attack_experience"|"experience"|"piloting_experience"|"frequencies"|"zero_frequencies"|"map_errors"
+//|---@field topic "map_errors"|"piloting_rolls"|"self_destruct"|"economy"|"gunnery_experience"|"experience"|"piloting_experience"|"radio_frequencies"|"zero_frequencies"
 //|---@field text string
 // lua-types-end
 

@@ -1,5 +1,5 @@
 //! Catalogue-based Wizard stock additions, removals and clearing share atomic inventory edits.
-use super::{CargoRow, DiagnosticChannel, DiagnosticMessage};
+use super::{CargoRow, DiagnosticTopic, DiagnosticMessage};
 use crate::{Config, ObjectId, Scripts};
 use anyhow::{Context, Result, ensure};
 
@@ -31,7 +31,7 @@ pub fn change_inventory_action(
         if change == InventoryChange::Clear {
             candidate.btech.inventories.remove(&object);
             messages.push(DiagnosticMessage::new(
-                DiagnosticChannel::Economy,
+                DiagnosticTopic::Economy,
                 format!("#{} reset #{}'s stuff.", actor.0, object.0),
             ));
         } else {
@@ -60,7 +60,7 @@ pub fn change_inventory_action(
                     if add { quantity } else { -quantity },
                 )?;
                 let name = super::stock_selection::name(&entry);
-                messages.push(super::channels::stock_message(
+                messages.push(super::diagnostics::stock_message(
                     actor,
                     object,
                     &name,
@@ -80,7 +80,7 @@ pub fn change_inventory_action(
         }
         candidate.btech.validate(&candidate)?;
         *scripts.world_mut() = candidate;
-        super::channels::publish(scripts, config, &messages)?;
+        super::diagnostics::publish(scripts, config, &messages)?;
         scripts.effects.validate()?;
         Ok(rows)
     })
@@ -200,7 +200,7 @@ pub fn add_stores_action(
         candidate.btech.validate(&candidate)?;
         *scripts.world_mut() = candidate;
         let message = DiagnosticMessage::new(
-            DiagnosticChannel::Economy,
+            DiagnosticTopic::Economy,
             format!(
                 "#{} added {} {} to #{}",
                 actor.0,
@@ -209,7 +209,7 @@ pub fn add_stores_action(
                 object.0
             ),
         );
-        super::channels::publish(scripts, config, &[message])?;
+        super::diagnostics::publish(scripts, config, &[message])?;
         scripts.effects.validate()?;
         Ok(true)
     })

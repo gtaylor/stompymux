@@ -194,7 +194,7 @@ pub fn transfer_cargo(
 }
 
 /// Transfer stock and publish economy diagnostics under one world/effects checkpoint.
-/// Missing diagnostic channels are ignored; existing channels retain normal delivery and history.
+/// Economy traces wait for the enclosing transaction to commit.
 pub fn transfer_cargo_action(
     scripts: &crate::Scripts,
     config: &Config,
@@ -226,7 +226,7 @@ pub fn transfer_cargo_action(
             .iter()
             .flat_map(|row| {
                 [(unit, load), (map, !load)].map(|(holder, added)| {
-                    super::channels::stock_message(
+                    super::diagnostics::stock_message(
                         actor,
                         holder,
                         &row.name,
@@ -235,7 +235,7 @@ pub fn transfer_cargo_action(
                 })
             })
             .collect::<Vec<_>>();
-        super::channels::publish(scripts, config, &messages)?;
+        super::diagnostics::publish(scripts, config, &messages)?;
         scripts.effects.validate()?;
         Ok(rows)
     })

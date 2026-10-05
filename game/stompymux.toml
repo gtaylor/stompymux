@@ -323,6 +323,12 @@ maximum_length = 30
 #   audit::config             runtime configuration edits
 #   audit::shouts             wizard shouts
 #   audit::wizard             operator changes to BattleTech settings
+# BattleTech diagnostics are written at debug level under these targets:
+#   btech::experience         experience awards (::gunnery and ::piloting children)
+#   btech::piloting::rolls    piloting skill roll inputs
+#   btech::self_destruct      self-destruct detonations
+#   btech::economy            parts stock changes
+#   btech::radio::frequencies frequency settings matching an opposing team
 # Example: "info,audit::commands=info" also records every command entered.
 filter = "info,audit::commands=off,audit::bad_commands=off,audit::accounting=off"
 # Line layout: "full" (default), "compact", or "json" (one object per line).

@@ -259,7 +259,7 @@ fn launch_action(
             Some(&mut effects),
         )?;
         super::piloting::publish_ordered_notices(scripts, &notices, &effects.pilot_notices)?;
-        super::channels::publish(scripts, config, &effects.experience_messages)?;
+        super::diagnostics::publish(scripts, config, &effects.experience_messages)?;
         if let Some(rejection) = &effects.rejection {
             super::notify_message(scripts, super::MessageTarget::Player(pilot), rejection)?;
         }

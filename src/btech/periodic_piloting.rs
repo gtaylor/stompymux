@@ -215,7 +215,7 @@ pub fn advance_periodic_piloting_action(
         let reports = advance_periodic_piloting(&mut scripts.world_mut(), config)?;
         for report in &reports {
             if let Some(diagnostic) = report.check.diagnostic(true) {
-                super::channels::publish(scripts, config, std::slice::from_ref(&diagnostic))?;
+                super::diagnostics::publish(scripts, config, std::slice::from_ref(&diagnostic))?;
             }
             if let Some(messages) = report.check.messages() {
                 let recipient = report
@@ -231,7 +231,7 @@ pub fn advance_periodic_piloting_action(
                 &report.notices,
                 &report.pilot_notices,
             )?;
-            super::channels::publish(scripts, config, &report.experience_messages)?;
+            super::diagnostics::publish(scripts, config, &report.experience_messages)?;
             if let Some(fall) = &report.fall {
                 super::evacuation::publish_fall_consequences(scripts, config, fall)?;
             }

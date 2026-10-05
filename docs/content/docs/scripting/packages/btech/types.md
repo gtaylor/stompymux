@@ -999,7 +999,7 @@ Alias: `"narc"|"homing"|"haywire"|"ecm"`
 - `initial_woods`: `WoodsAbsorption|nil` — Nominal LBX terrain check before pellet counting and absorption.
 - `woods`: `WoodsAbsorption|nil` — Occupied-woods consequences for direct shells (including bursts) or missile/pellet armor damage, after missile interception.
 - `experience`: `table[]` — Per-packet optional pre-impact XP awards.
-- `experience_messages`: `table[]` — Ordered XP channel diagnostics.
+- `experience_messages`: `table[]` — Ordered experience diagnostics.
 - `cluster_roll`: `integer|nil`
 - `missiles_before_defense`: `integer|nil`
 - `groups`: `table[]` — Located conventional damage packets.
@@ -1301,7 +1301,7 @@ Alias: `"off"|"ecm"|"eccm"`
 
 ## DiagnosticMessage
 
-- `channel`: `"debug"|"economy"|"attack_experience"|"experience"|"piloting_experience"|"frequencies"|"zero_frequencies"|"map_errors"`
+- `topic`: `"map_errors"|"piloting_rolls"|"self_destruct"|"economy"|"gunnery_experience"|"experience"|"piloting_experience"|"radio_frequencies"|"zero_frequencies"`
 - `text`: `string`
 
 ## RadioTransmission

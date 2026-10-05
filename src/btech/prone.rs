@@ -40,7 +40,7 @@ pub fn prone_action(
             report.check.as_ref(),
             true,
         )?;
-        super::channels::publish(scripts, config, &report.experience_messages)?;
+        super::diagnostics::publish(scripts, config, &report.experience_messages)?;
         if let Some(fall) = &report.fall {
             super::evacuation::publish_fall_consequences(scripts, config, fall)?;
         }

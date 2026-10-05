@@ -187,7 +187,7 @@ pub fn bootlegger(
             Some(fall)
         };
         drop(world);
-        super::channels::publish(scripts, config, &experience)?;
+        super::diagnostics::publish(scripts, config, &experience)?;
         super::piloting::publish_maneuver_feedback(
             scripts,
             config,
