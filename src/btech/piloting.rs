@@ -34,7 +34,7 @@ impl PilotingCheck {
     pub(super) fn diagnostic(&self, awards_experience: bool) -> Option<super::DiagnosticMessage> {
         self.roll.map(|_| super::DiagnosticMessage::new(
             super::TraceTopic::PilotingRolls,
-            format!("Attempting to make pilot{} skill roll. SPilot: {}, mods: {}, MechPilot: {}, BTH: {}",
+            format!("Attempting to make pilot{} skill roll. SPilot: {}, mods: {}, Damage: {}, BTH: {}",
                 if awards_experience { " (noxp)" } else { "" },
                 self.skill, self.situational, self.damage, self.target),
         ))
@@ -384,7 +384,7 @@ mod tests {
             assert_eq!(
                 message.text,
                 format!(
-                    "Attempting to make pilot{label} skill roll. SPilot: 6, mods: -1, MechPilot: 2, BTH: 13"
+                    "Attempting to make pilot{label} skill roll. SPilot: 6, mods: -1, Damage: 2, BTH: 13"
                 )
             );
         }

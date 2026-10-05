@@ -429,7 +429,7 @@ mod tests {
                 Mode::ColoredElevation,
                 ["C", "colored_elevation", "Combined"],
             ),
-            (Mode::Units, ["M", "units", "Mechs"]),
+            (Mode::Units, ["M", "units", "Units"]),
             (Mode::VisibleTerrain, ["L", "visible_terrain", "LOS"]),
             (Mode::VisibleElevation, ["H", "visible_elevation", "Height"]),
             (Mode::VisibleUnits, ["S", "visible_units", "Sensors"]),

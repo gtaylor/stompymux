@@ -84,7 +84,7 @@ async fn maneuver_checks_publish_diagnostics_at_the_roll_boundary() {
             assert!(check.roll.is_some());
             let label = if action == 2 { "" } else { " (noxp)" };
             let expected = format!(
-                "Attempting to make pilot{label} skill roll. SPilot: {}, mods: {}, MechPilot: {}, BTH: {}",
+                "Attempting to make pilot{label} skill roll. SPilot: {}, mods: {}, Damage: {}, BTH: {}",
                 check.skill, check.situational, check.damage, check.target
             );
             assert_eq!(traces, [expected]);

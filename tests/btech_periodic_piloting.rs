@@ -50,7 +50,7 @@ async fn control_feedback_is_ordered_and_respects_pilot_audience() {
                 let messages = scripts.drain_outbox();
                 let check = reports[0].check;
                 let diagnostic = format!(
-                    "Attempting to make pilot (noxp) skill roll. SPilot: {}, mods: {}, MechPilot: {}, BTH: {}",
+                    "Attempting to make pilot (noxp) skill roll. SPilot: {}, mods: {}, Damage: {}, BTH: {}",
                     check.skill, check.situational, check.damage, check.target
                 );
                 assert_eq!(

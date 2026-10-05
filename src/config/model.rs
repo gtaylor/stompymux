@@ -193,8 +193,8 @@ pub struct BattleTechConfig {
     pub exile_stun_code: i64,
     /// Configuration value for `roll_on_backwalk`; defaults are centralized below.
     pub roll_on_backwalk: i64,
-    /// Configuration value for `usedmechstore`; defaults are centralized below.
-    pub usedmechstore: i64,
+    /// Configuration value for `usedunitstore`; defaults are centralized below.
+    pub usedunitstore: i64,
     /// Configuration value for `ooc_comsys`; defaults are centralized below.
     pub ooc_comsys: i64,
     /// Configuration value for `idf_requires_spotter`; defaults are centralized below.
@@ -292,7 +292,7 @@ impl Default for BattleTechConfig {
             mw_losmap: 1,
             exile_stun_code: 0,
             roll_on_backwalk: 1,
-            usedmechstore: 3,
+            usedunitstore: 3,
             ooc_comsys: 0,
             idf_requires_spotter: 1,
             tsm_tow_bonus: 1,

@@ -265,7 +265,7 @@ pub const DIRECTIVES: &[Directive] = &[
         permission: P::GOD,
     },
     Directive {
-        name: "btech_usedmechstore",
+        name: "btech_usedunitstore",
         parser: "cf_int",
         permission: P::GOD,
     },

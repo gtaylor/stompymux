@@ -181,7 +181,7 @@ async fn wreck_retirement_cross_chassis_and_restart() {
         assert_eq!(after.objects[&id].kind, Kind::Thing);
         assert_eq!(
             after.objects[&id].location,
-            Some(ObjectId(config.battletech.usedmechstore))
+            Some(ObjectId(config.battletech.usedunitstore))
         );
         for flag in [Flag::Going, Flag::Dark, Flag::Zombie] {
             assert!(after.objects[&id].flags.contains(flag));
@@ -415,7 +415,7 @@ async fn wreck_idle_server_commit_retry() {
         assert!(!loaded.objects[&id].flags.contains(Flag::Going));
         sqlx::query("DROP TRIGGER deny_wreck").execute(&mut sql).await.unwrap();
         let loaded = heartbeats.until_saved(&config, 4, |loaded| !loaded.btech.units().contains_key(&id)).await;
-        assert_eq!(loaded.objects[&id].location, Some(ObjectId(config.battletech.usedmechstore)));
+        assert_eq!(loaded.objects[&id].location, Some(ObjectId(config.battletech.usedunitstore)));
         assert!(!wrecks_pending(&loaded));
         shutdown.send(ShutdownRequest::Sigterm).unwrap();
         task.await.unwrap().unwrap();

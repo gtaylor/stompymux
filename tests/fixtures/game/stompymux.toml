@@ -132,7 +132,7 @@ skidcliff = 1
 # Require units to be stalled before non-wizard players can perform serious repairs.
 limitedrepairs = 1
 # Database object that stores destroyed units.
-usedmechstore = 3
+usedunitstore = 3
 # Enable catastrophic explosions after a third engine critical hit.
 stackpole = 1
 # Database object to which players are moved after death.

@@ -93,7 +93,7 @@ pub(super) fn transmission(
     Ok(vec![DiagnosticMessage::new(
         TraceTopic::RadioZeroFrequency,
         format!(
-            "Player #{} ({}) in mech #{} (channel {}) on map #{} 0-freqs \"{message}\"",
+            "Player #{} ({}) in unit #{} (channel {}) on map #{} 0-freqs \"{message}\"",
             pilot.0,
             player.name,
             sender.0,

@@ -193,7 +193,7 @@ async fn mixed_maps_navigation_and_measurements_share_every_supported_movement_t
             (LongRangeMode::Terrain, "Terrain-map"),
             (LongRangeMode::Elevation, "Elevation-map"),
             (LongRangeMode::ColoredElevation, "Combined"),
-            (LongRangeMode::Units, "Mechs"),
+            (LongRangeMode::Units, "Units"),
             (LongRangeMode::VisibleTerrain, "LOS"),
             (LongRangeMode::VisibleElevation, "Height"),
             (LongRangeMode::VisibleUnits, "Sensors"),

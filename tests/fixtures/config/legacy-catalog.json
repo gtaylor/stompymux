@@ -374,8 +374,8 @@
     "default": 1
   },
   {
-    "path": "battletech.usedmechstore",
-    "legacy_name": "btech_usedmechstore",
+    "path": "battletech.usedunitstore",
+    "legacy_name": "btech_usedunitstore",
     "registry_type": "cf_int",
     "rust_type": "i64",
     "default": 3

@@ -809,7 +809,8 @@ must remain within scanner range. Reports do not alert the target.
 ## Long-range maps
 
 `lrs` and `lrsmap` invoke the same display. The first letter selects the mode,
-so `lrs Terrain`, `lrs Mechs` and `lrs Combined` select T, M and C respectively.
+so `lrs Terrain` and `lrs Combined` select T and C. `lrs Units` selects M, the
+units mode; other words beginning with U select underlying terrain.
 
 Use `lrs T` for terrain, `lrs E` for elevation/depth, or `lrs M` for
 terrain with visible units. Your unit appears as `*`, friendly bipeds as `b`, and

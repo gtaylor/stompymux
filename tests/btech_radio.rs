@@ -930,7 +930,7 @@ async fn zero_frequency_audits_follow_map_character_flag_and_rollback_with_mines
     assert_eq!(
         report.audit_messages[0].text,
         format!(
-            "Player #1 (GOD) in mech #{} (channel B) on map #{} 0-freqs \"zero text\"",
+            "Player #1 (GOD) in unit #{} (channel B) on map #{} 0-freqs \"zero text\"",
             source.0, map.0
         )
     );

@@ -119,7 +119,7 @@ to fail.
 5 = { type = "room", name = "Afterlife" }
 ```
 
-The stock configuration uses `#3` for `usedmechstore`, `#4` for both player
+The stock configuration uses `#3` for `usedunitstore`, `#4` for both player
 starting directives, and `#5` for `afterlife_dbref`. Bootstrap fails before
 writing if the required dbrefs are missing or have incompatible types. Seeded
 objects receive the configured default flags and Lua parents for their types.

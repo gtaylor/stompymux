@@ -1,7 +1,7 @@
 -- Limbo: #0
 -- God: #1
 -- Wizard: #2
--- Used mech store: #3
+-- Used unit store: #3
 -- Player starting room: #4
 -- Player starting home: #4
 -- Afterlife room: #5
@@ -62,18 +62,18 @@ Please be sure to read the room descriptions for details on the contents of each
     destination = new_player_starting_room,
   })
 
-  local used_mech_store_room = mux.world.object(mux.config.get("btech_usedmechstore") --[[@as integer]])
+  local used_unit_store_room = mux.world.object(mux.config.get("btech_usedunitstore") --[[@as integer]])
   mux.world.create_object({
     type = mux.world.types.EXIT,
     name = "Used Mech Store;us;ums",
     location = limbo_room,
     zone = limbo_room,
-    destination = used_mech_store_room,
+    destination = used_unit_store_room,
   })
   mux.world.create_object({
     type = mux.world.types.EXIT,
     name = "Out;o",
-    location = used_mech_store_room,
+    location = used_unit_store_room,
     zone = limbo_room,
     destination = limbo_room,
   })
