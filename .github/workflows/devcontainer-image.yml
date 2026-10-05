@@ -69,6 +69,7 @@ jobs:
             npm --version
             go version
             hugo version | grep -F "+extended"
+            sass --version
             test -w /opt/lua-language-server-3.19.1/meta
           '
 

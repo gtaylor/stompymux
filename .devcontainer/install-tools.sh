@@ -13,7 +13,8 @@ STYLUA_VERSION="${STYLUA_VERSION:-2.5.2}"
 NEXTEST_VERSION="${NEXTEST_VERSION:-0.9.146}"
 LUA_LANGUAGE_SERVER_VERSION="${LUA_LANGUAGE_SERVER_VERSION:-3.19.1}"
 NODE_VERSION="${NODE_VERSION:-24.13.0}"
-HUGO_VERSION="${HUGO_VERSION:-0.164.0}"
+HUGO_VERSION="${HUGO_VERSION:-0.167.0}"
+DART_SASS_VERSION="${DART_SASS_VERSION:-1.105.1}"
 NODE_PREFIX="${NODE_PREFIX:-/usr/local}"
 
 case "$(uname -m)" in
@@ -24,6 +25,7 @@ case "$(uname -m)" in
     LUA_LANGUAGE_SERVER_ARCH=x64
     NODE_ARCH=x64
     HUGO_ARCH=amd64
+    DART_SASS_ARCH=x64
     ;;
   aarch64)
     RUST_ARCH=aarch64
@@ -32,6 +34,7 @@ case "$(uname -m)" in
     LUA_LANGUAGE_SERVER_ARCH=arm64
     NODE_ARCH=arm64
     HUGO_ARCH=arm64
+    DART_SASS_ARCH=arm64
     ;;
   *)
     die "unsupported architecture: $(uname -m)"
@@ -120,3 +123,18 @@ else
     --output "$download_dir/hugo.tar.gz"
   tar -xzf "$download_dir/hugo.tar.gz" -C /usr/local/bin hugo
 fi
+
+# Docsy compiles its stylesheets with Dart Sass. Its `sass` launcher finds the
+# bundled Dart runtime next to itself, so the whole release directory is kept.
+dart_sass_dir="/opt/dart-sass-${DART_SASS_VERSION}"
+if [[ -x "$dart_sass_dir/sass" ]]; then
+  log "Dart Sass $DART_SASS_VERSION already installed"
+else
+  log "Installing Dart Sass $DART_SASS_VERSION"
+  curl "${CURL_OPTIONS[@]}" \
+    "https://github.com/sass/dart-sass/releases/download/${DART_SASS_VERSION}/dart-sass-${DART_SASS_VERSION}-linux-${DART_SASS_ARCH}.tar.gz" \
+    --output "$download_dir/dart-sass.tar.gz"
+  install -d -m 0755 "$dart_sass_dir"
+  tar -xzf "$download_dir/dart-sass.tar.gz" --strip-components=1 -C "$dart_sass_dir"
+fi
+ln -sf "$dart_sass_dir/sass" /usr/local/bin/sass

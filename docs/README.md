@@ -1,8 +1,10 @@
 # StompyMUX documentation site
 
-This Hugo site uses the Docsy theme through a Hugo module. Install the Node
-dependencies once for Docsy's PostCSS step, then build or serve it from the
-`stompymux-rs` directory with:
+This Hugo site uses the Docsy theme through a Hugo module. Docsy compiles its
+stylesheets with [Dart Sass](https://sass-lang.com/dart-sass/), so the `sass`
+command must be on your `PATH`; `.devcontainer/install-tools.sh` installs it
+alongside Hugo. Install the Node dependencies once for Docsy's PostCSS step,
+then build or serve it from the `stompymux-rs` directory with:
 
 ```sh
 npm --prefix docs ci

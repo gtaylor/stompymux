@@ -40,8 +40,17 @@ jobs:
       - name: Set up Hugo
         uses: peaceiris/actions-hugo@v3.2.1
         with:
-          hugo-version: 0.164.0
+          hugo-version: 0.167.0
           extended: true
+
+      - name: Set up Dart Sass
+        env:
+          DART_SASS_VERSION: 1.105.1
+        run: |
+          curl --location --fail --silent --show-error --retry 5 \
+            "https://github.com/sass/dart-sass/releases/download/${DART_SASS_VERSION}/dart-sass-${DART_SASS_VERSION}-linux-x64.tar.gz" \
+            | tar -xz -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/dart-sass" >> "$GITHUB_PATH"
 
       - name: Install documentation dependencies
         run: npm ci

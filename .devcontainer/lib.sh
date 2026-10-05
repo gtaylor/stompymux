@@ -6,7 +6,7 @@ REPOSITORY_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 DEVCONTAINER_DIR="$REPOSITORY_ROOT/.devcontainer"
 
 # Tools every environment needs to build, test, and check the project.
-REQUIRED_TOOLS=(cargo cargo-nextest rustfmt just stylua node npm go hugo)
+REQUIRED_TOOLS=(cargo cargo-nextest rustfmt just stylua node npm go hugo sass)
 
 # Rust toolchain pinned by rust-toolchain.toml at the repository root. The
 # devcontainer image is built without the repository, so the version is repeated
