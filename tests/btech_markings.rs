@@ -129,9 +129,9 @@ async fn markings_map_view_is_wizard_only() {
 #[tokio::test]
 async fn markings_recheck_visibility_and_running_admission_without_side_effects() {
     let (_dir, config, mut world, observer, target, _) = firing::fixture_with_target(
-        include_str!("../game/mechs/JR7-D.toml"),
+        include_str!("../game/units/JR7-D.toml"),
         None,
-        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/units/Demolisher.toml"),
     )
     .await;
     set_battle_unit_markings(&mut world, ObjectId(1), target, "Secret insignia").unwrap();

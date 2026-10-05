@@ -462,13 +462,9 @@ fn acquisition_experience(
 }
 
 /// Stage contact feedback and experience diagnostics before the server commit.
-pub(crate) fn notify_contact(
-    scripts: &crate::Scripts,
-    config: &crate::Config,
-    event: ContactEvent,
-) -> Result<()> {
+pub(crate) fn notify_contact(scripts: &crate::Scripts, event: ContactEvent) -> Result<()> {
     if let Some(message) = &event.experience_message {
-        super::channels::publish(scripts, config, std::slice::from_ref(message))?;
+        super::diagnostics::publish(scripts, std::slice::from_ref(message));
     }
     let Some(notice) = event.notice(&scripts.world.borrow()) else {
         return Ok(());

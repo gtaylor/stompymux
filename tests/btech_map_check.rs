@@ -8,7 +8,7 @@ use stompymux_rs::*;
 async fn map_check_preserves_each_chassis_and_matches_lua_after_restart() {
     for template in firing::templates() {
         let (_dir, config, mut world, source, target, _) =
-            firing::fixture_with_target(&template, None, include_str!("../game/mechs/AS7-D.toml"))
+            firing::fixture_with_target(&template, None, include_str!("../game/units/AS7-D.toml"))
                 .await;
         let map = world.btech.units()[&source].map.unwrap();
         let actor = world.create(&config, "Map checker".into(), Kind::Player);
@@ -53,7 +53,7 @@ async fn map_check_preserves_each_chassis_and_matches_lua_after_restart() {
 async fn invalid_membership_rejects_without_success_or_destructive_repair() {
     for template in firing::templates() {
         let (_dir, config, world, source, target, _) =
-            firing::fixture_with_target(&template, None, include_str!("../game/mechs/AS7-D.toml"))
+            firing::fixture_with_target(&template, None, include_str!("../game/units/AS7-D.toml"))
                 .await;
         let map = world.btech.units()[&source].map.unwrap();
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
@@ -194,8 +194,8 @@ async fn membership_span_survives_holes_reuse_and_restart() {
             let before = scripts.world().btech.clone();
             let check = support::run_text(&scripts, &config, ObjectId(1), 1, "FIXMAP");
             assert_eq!(check, format!("Checking {span} entries..\nDone."));
-            let list = support::run_text(&scripts, &config, ObjectId(1), 1, "LIST MECHS");
-            assert!(list.contains(&format!("{count} Mechs On Map")));
+            let list = support::run_text(&scripts, &config, ObjectId(1), 1, "LIST UNITS");
+            assert!(list.contains(&format!("{count} Units On Map")));
             assert!(list.contains(&format!("{span} is first free slot, according to db.")));
             assert_eq!(scripts.world().btech, before);
             let world_snapshot = scripts.world().clone();
@@ -219,7 +219,7 @@ async fn membership_span_survives_holes_reuse_and_restart() {
         for id in [first, middle] {
             place_battle_unit(&mut scripts.world_mut(), id, map, 0, 0).unwrap();
         }
-        let filled = support::run_text(&scripts, &config, ObjectId(1), 1, "LIST MECHS");
+        let filled = support::run_text(&scripts, &config, ObjectId(1), 1, "LIST UNITS");
         assert!(!filled.contains("is first free slot"));
         for id in [middle, first] {
             remove_battle_unit(&mut scripts.world_mut(), id, ObjectId(config.home())).unwrap();

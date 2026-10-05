@@ -4,7 +4,7 @@ use stompymux_rs::*;
 /// The tracked Demolisher supplies a fixed 80-ton chassis and two whole turret weapons.
 fn vehicle(flags: &str) -> VehicleTemplate {
     let mut template =
-        VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+        VehicleTemplate::parse("Demolisher", include_str!("../game/units/Demolisher.toml"))
             .unwrap();
     template.attributes.insert("specials".into(), flags.into());
     template
@@ -58,13 +58,13 @@ fn intact_vehicle_mass_separates_design_bins_from_loaded_rounds() {
     assert_eq!(half_bin.total, empty_bin.total);
     let truck = VehicleTemplate::parse(
         "Flatbed_Truck",
-        include_str!("../game/mechs/Flatbed_Truck.toml"),
+        include_str!("../game/units/Flatbed_Truck.toml"),
     )
     .unwrap()
     .mass()
     .unwrap();
     assert_eq!((truck.total, truck.turret), (4 * 1024, 0));
-    let hover = VehicleTemplate::parse("Fulcrum", include_str!("../game/mechs/Fulcrum.toml"))
+    let hover = VehicleTemplate::parse("Fulcrum", include_str!("../game/units/Fulcrum.toml"))
         .unwrap()
         .mass()
         .unwrap();
@@ -212,7 +212,7 @@ fn stationary_construction_has_no_propulsion_mass() {
 #[test]
 fn hovercraft_missing_catalogue_rating_uses_mass_floor() {
     let template =
-        VehicleTemplate::parse("Shamash", include_str!("../game/mechs/Shamash.toml")).unwrap();
+        VehicleTemplate::parse("Shamash", include_str!("../game/units/Shamash.toml")).unwrap();
     let engine = template.engine().unwrap();
     assert_eq!(engine.weight_rating, 58);
     assert_eq!(engine.standard_mass, None);

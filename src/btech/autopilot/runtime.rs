@@ -2136,7 +2136,7 @@ mod navigation_recovery_tests {
         let (mut world, id, _, _) = super::super::encounters::fixture(
             &config,
             base,
-            include_str!("../../../game/mechs/JR7-D.toml"),
+            include_str!("../../../game/units/JR7-D.toml"),
             "behind",
             1,
         )
@@ -2192,7 +2192,7 @@ mod navigation_recovery_tests {
         let (mut world, id, _, _) = super::super::encounters::fixture(
             &config,
             base,
-            include_str!("../../../game/mechs/JR7-D.toml"),
+            include_str!("../../../game/units/JR7-D.toml"),
             "long_approach",
             1,
         )
@@ -2302,7 +2302,7 @@ mod replacement_tests {
         let (mut world, id, _, _) = super::super::encounters::fixture(
             &config,
             base,
-            include_str!("../../../game/mechs/JR7-D.toml"),
+            include_str!("../../../game/units/JR7-D.toml"),
             "fallback",
             1,
         )
@@ -2348,7 +2348,7 @@ mod replacement_tests {
         let (mut world, id, _, _) = super::super::encounters::fixture(
             &config,
             base,
-            include_str!("../../../game/mechs/JR7-D.toml"),
+            include_str!("../../../game/units/JR7-D.toml"),
             "approach",
             1,
         )

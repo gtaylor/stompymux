@@ -125,7 +125,7 @@ async fn startup_health_replays_without_premature_crew_death() {
                     );
                 }
                 let native =
-                    support::run_text(&inspection, &config, ObjectId(1), 1, "@viewmech pilotdam");
+                    support::run_text(&inspection, &config, ObjectId(1), 1, "@viewunit pilotdam");
                 assert!(
                     native.contains("pilotdam") && native.contains('7'),
                     "{native}"

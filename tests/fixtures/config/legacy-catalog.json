@@ -7,11 +7,11 @@
     "default": ""
   },
   {
-    "path": "database.mech_database",
-    "legacy_name": "mech_database",
+    "path": "database.unit_database",
+    "legacy_name": "unit_database",
     "registry_type": "cf_string",
     "rust_type": "PathBuf",
-    "default": "mechs"
+    "default": "units"
   },
   {
     "path": "database.map_database",
@@ -374,8 +374,8 @@
     "default": 1
   },
   {
-    "path": "battletech.usedmechstore",
-    "legacy_name": "btech_usedmechstore",
+    "path": "battletech.usedunitstore",
+    "legacy_name": "btech_usedunitstore",
     "registry_type": "cf_int",
     "rust_type": "i64",
     "default": 3

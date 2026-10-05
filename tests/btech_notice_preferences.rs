@@ -44,7 +44,7 @@ async fn notice_preferences_share_delivery_and_persistence_across_chassis() {
                 &config,
                 ObjectId(1),
                 1,
-                &format!("mechprefs {command} ON"),
+                &format!("unitprefs {command} ON"),
             );
             assert!(text.contains("ON"), "{text}");
             lua.eval_callback::<()>(&format!("btech.unit.{method}({},1,true)", id.0))

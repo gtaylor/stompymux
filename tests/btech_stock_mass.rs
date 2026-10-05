@@ -5,15 +5,15 @@ use stompymux_rs::*;
 
 /// Every supported movement class uses the same inventory and load projection.
 fn templates() -> Vec<String> {
-    let vehicle = include_str!("../game/mechs/Demolisher.toml");
+    let vehicle = include_str!("../game/units/Demolisher.toml");
     vec![
-        include_str!("../game/mechs/JR7-D.toml").into(),
-        include_str!("../game/mechs/GOL-1H.toml").into(),
+        include_str!("../game/units/JR7-D.toml").into(),
+        include_str!("../game/units/GOL-1H.toml").into(),
         vehicle.into(),
         vehicle.replace("Tracked", "Wheeled"),
         vehicle.replace("Tracked", "Hover"),
         vehicle.replace("Tracked", "None"),
-        include_str!("../game/mechs/Kestrel.toml").into(),
+        include_str!("../game/units/Kestrel.toml").into(),
     ]
 }
 
@@ -179,7 +179,7 @@ async fn cargo_mass_and_throttle_are_shared_across_every_chassis() {
 #[tokio::test]
 async fn named_stock_controls_and_inspection_agree() {
     let (_dir, config, world, _, id) =
-        fixture(include_str!("../game/mechs/JR7-D.toml"), false).await;
+        fixture(include_str!("../game/units/JR7-D.toml"), false).await;
     let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
     let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     let command = format!("@btech inventory-set #{} Gold 2", id.0);
@@ -233,7 +233,7 @@ async fn carried_stock_affects_live_movement_and_adds_to_tow_load() {
         let (_dir, config, mut world, map, id) = fixture(&source, false).await;
         let unloaded = battle_throttle_maximum(&world, id, true).unwrap();
         let target = world.create(&config, "Tow target".into(), Kind::Thing);
-        UnitTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml"))
+        UnitTemplate::parse("JR7-D", include_str!("../game/units/JR7-D.toml"))
             .unwrap()
             .create(&mut world, target)
             .unwrap();

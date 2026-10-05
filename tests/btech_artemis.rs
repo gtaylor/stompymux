@@ -4,7 +4,7 @@ use stompymux_rs::*;
 /// Install a controller with an explicit reference to the Jenner's center-torso missile mount.
 fn definition(section: MechSection, link: &str) -> MechTemplate {
     let mut template =
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
     template
         .sections
         .get_mut(&section)
@@ -86,7 +86,7 @@ fn artemis_links_damage_and_restoration() {
 #[test]
 fn artemis_unassigned_links_and_mass() {
     let standard = Mech::from_template(
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     for link in ["-", "0", "1", "255"] {
@@ -188,7 +188,7 @@ fn artemis_missile_tables_and_existing_archer() {
             .is_err()
     );
     let source =
-        std::fs::read_to_string(crate::support::repository_root().join("game/mechs/ARC-5R.toml"))
+        std::fs::read_to_string(crate::support::repository_root().join("game/units/ARC-5R.toml"))
             .unwrap();
     let unit = Mech::from_template(MechTemplate::parse("test", &source).unwrap()).unwrap();
     for (index, mount) in unit.loadout().unwrap().weapons.iter().enumerate() {

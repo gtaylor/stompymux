@@ -5,17 +5,17 @@ use stompymux_rs::*;
 
 /// Representative construction for every supported movement class.
 fn templates() -> Vec<String> {
-    let tracked = include_str!("../game/mechs/Demolisher.toml");
+    let tracked = include_str!("../game/units/Demolisher.toml");
     vec![
-        include_str!("../game/mechs/JR7-D.toml").into(),
-        include_str!("../game/mechs/GOL-1H.toml").into(),
+        include_str!("../game/units/JR7-D.toml").into(),
+        include_str!("../game/units/GOL-1H.toml").into(),
         tracked.into(),
         tracked.replace("movement = \"track\"", "movement = \"wheel\""),
         tracked.replace("movement = \"track\"", "movement = \"hover\""),
         tracked
             .replace("movement = \"track\"", "movement = \"none\"")
             .replace("walk_mp = 5", "walk_mp = 0"),
-        include_str!("../game/mechs/Kestrel.toml").into(),
+        include_str!("../game/units/Kestrel.toml").into(),
     ]
 }
 

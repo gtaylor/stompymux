@@ -1,14 +1,13 @@
 //! Captured radio audit diagnostics and atomic frequency-setting publication.
 use super::map_slots::all_unit_order;
-use super::{DiagnosticChannel, DiagnosticMessage};
-use crate::{Config, Flag, ObjectId, Scripts, World};
+use super::{DiagnosticMessage, TraceTopic};
+use crate::{Flag, ObjectId, Scripts, World};
 use anyhow::{Context, Result};
 
 /// Set a channel and publish opposing-team frequency matches under one host checkpoint.
-/// Missing diagnostic channels are harmless; a publication error restores the original setting.
+/// Frequency-match traces wait for commit; a failure restores the original setting.
 pub fn set_radio_frequency_action(
     scripts: &Scripts,
-    config: &Config,
     unit: ObjectId,
     pilot: ObjectId,
     channel: u8,
@@ -23,7 +22,7 @@ pub fn set_radio_frequency_action(
             frequency,
         )?;
         let messages = frequency_matches(&scripts.world.borrow(), unit, frequency)?;
-        super::channels::publish(scripts, config, &messages)?;
+        super::diagnostics::publish(scripts, &messages);
         Ok(messages)
     })
 }
@@ -62,7 +61,7 @@ fn frequency_matches(
             .iter()
             .filter(|c| c.frequency == frequency && !c.mode.scan)
         {
-            messages.push(DiagnosticMessage::new(DiagnosticChannel::Frequencies,
+            messages.push(DiagnosticMessage::new(TraceTopic::RadioFrequencies,
                 format!("ALERT: Possible abuse by #{} (Team {team}) setting freq {frequency} matching #{} (Team {other_team})!", sender.0, id.0)));
         }
     }
@@ -92,9 +91,9 @@ pub(super) fn transmission(
     }
     let player = world.objects.get(&pilot).context("Pilot is unavailable")?;
     Ok(vec![DiagnosticMessage::new(
-        DiagnosticChannel::ZeroFrequencies,
+        TraceTopic::RadioZeroFrequency,
         format!(
-            "Player #{} ({}) in mech #{} (channel {}) on map #{} 0-freqs \"{message}\"",
+            "Player #{} ({}) in unit #{} (channel {}) on map #{} 0-freqs \"{message}\"",
             pilot.0,
             player.name,
             sender.0,

@@ -46,7 +46,7 @@ async fn critical_resolution_applies_all_tables_for_tactical_crews() {
     use VehicleCriticalTable as T;
     use VehicleSection as S;
     let fusion = support::templates::without_flags(
-        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/units/Demolisher.toml"),
         &["ICEEngine_Tech"],
     );
     assert!(!fusion.contains("engine = \"ice\""));
@@ -173,7 +173,7 @@ async fn critical_resolution_applies_all_tables_for_tactical_crews() {
 #[tokio::test]
 async fn critical_resolution_suppression_and_replay_preserve_world_boundaries() {
     let (_dir, config, mut world, id) =
-        fixture(include_str!("../game/mechs/Demolisher.toml")).await;
+        fixture(include_str!("../game/units/Demolisher.toml")).await;
     let mut rules = VehicleCriticalRules {
         rotor_damage_divisor: 0,
         extended_piloting: false,
@@ -231,7 +231,7 @@ async fn critical_resolution_suppression_and_replay_preserve_world_boundaries() 
 #[tokio::test]
 async fn combustion_fuel_critical_destroys_the_vehicle_instead_of_only_its_engine() {
     let (_dir, _config, mut world, id) =
-        fixture(include_str!("../game/mechs/Demolisher.toml")).await;
+        fixture(include_str!("../game/units/Demolisher.toml")).await;
     let value = (0..=255)
         .find(|value| Dice::seeded([*value; 32]).two_d6() == 12)
         .unwrap();

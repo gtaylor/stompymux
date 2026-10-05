@@ -180,7 +180,7 @@ fn retire(scripts: &Scripts, config: &Config, id: ObjectId) -> Result<()> {
             None,
         )?;
     }
-    let destination = ObjectId(config.battletech.usedmechstore);
+    let destination = ObjectId(config.battletech.usedunitstore);
     {
         let mut world = scripts.world.borrow_mut();
         let object = world

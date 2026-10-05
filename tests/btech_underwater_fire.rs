@@ -64,8 +64,8 @@ async fn submerged_shots_share_damage_native_lua_rollback_and_restart() {
         .filter_map(|(i, s)| (![4, 6].contains(&i)).then_some(s))
     {
         for recipient in [
-            include_str!("../game/mechs/JR7-D.toml"),
-            include_str!("../game/mechs/Demolisher.toml"),
+            include_str!("../game/units/JR7-D.toml"),
+            include_str!("../game/units/Demolisher.toml"),
         ] {
             let (dir, _, base, shooter, target, index) =
                 field(&source, recipient, Weapon::SmallLaser).await;
@@ -115,12 +115,12 @@ async fn submerged_shots_share_damage_native_lua_rollback_and_restart() {
 #[tokio::test]
 async fn submerged_ineligible_weapons_fail_before_launch() {
     for source in [
-        include_str!("../game/mechs/JR7-D.toml"),
-        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/units/JR7-D.toml"),
+        include_str!("../game/units/Demolisher.toml"),
     ] {
         let (_dir, config, world, shooter, target, index) = field(
             source,
-            include_str!("../game/mechs/JR7-D.toml"),
+            include_str!("../game/units/JR7-D.toml"),
             Weapon::Flamer,
         )
         .await;
@@ -158,12 +158,12 @@ async fn submerged_ineligible_weapons_fail_before_launch() {
 #[tokio::test]
 async fn underwater_coordinate_fire_matches_native_and_lua() {
     for source in [
-        include_str!("../game/mechs/JR7-D.toml"),
-        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/units/JR7-D.toml"),
+        include_str!("../game/units/Demolisher.toml"),
     ] {
         let (dir, _, world, shooter, _, index) = field(
             source,
-            include_str!("../game/mechs/JR7-D.toml"),
+            include_str!("../game/units/JR7-D.toml"),
             Weapon::SmallLaser,
         )
         .await;
@@ -200,8 +200,8 @@ async fn underwater_coordinate_fire_matches_native_and_lua() {
 #[tokio::test]
 async fn underwater_fire_does_not_bypass_waterline_visibility() {
     let (_dir, config, mut world, shooter, target, index) = field(
-        include_str!("../game/mechs/JR7-D.toml"),
-        include_str!("../game/mechs/JR7-D.toml"),
+        include_str!("../game/units/JR7-D.toml"),
+        include_str!("../game/units/JR7-D.toml"),
         Weapon::SmallLaser,
     )
     .await;

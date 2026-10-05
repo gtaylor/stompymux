@@ -88,7 +88,7 @@ fn request(weapon: Weapon) -> VehicleSalvoRequest {
 
 #[tokio::test]
 async fn vehicle_salvos_share_packet_rules_and_order_every_impact() {
-    let template = include_str!("../game/mechs/Demolisher.toml")
+    let template = include_str!("../game/units/Demolisher.toml")
         .replace("armor = 30\n", "armor = 200\n")
         .replace("armor = 40\n", "armor = 200\n")
         .replace("armor = 20\n", "armor = 200\n");
@@ -180,7 +180,7 @@ async fn vehicle_salvos_share_packet_rules_and_order_every_impact() {
 
 #[tokio::test]
 async fn vehicle_salvos_apply_interception_glancing_and_streak_confusion() {
-    let (_dir, _config, base, id) = fixture(include_str!("../game/mechs/Demolisher.toml")).await;
+    let (_dir, _config, base, id) = fixture(include_str!("../game/units/Demolisher.toml")).await;
     for intercepted in [6, 20] {
         let mut world = base.clone();
         let seed = matching_seed(|dice| dice.two_d6() == 12);
@@ -263,7 +263,7 @@ async fn vehicle_salvos_apply_interception_glancing_and_streak_confusion() {
 
 #[tokio::test]
 async fn vehicle_salvos_finish_after_hull_loss_and_reject_invalid_effects_atomically() {
-    let (_dir, config, mut base, id) = fixture(include_str!("../game/mechs/Demolisher.toml")).await;
+    let (_dir, config, mut base, id) = fixture(include_str!("../game/units/Demolisher.toml")).await;
     base.btech
         .rewrite_unit_record(id, |record| {
             record["sections"]["front"]["armor"] = serde_json::json!(0);

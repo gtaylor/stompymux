@@ -157,7 +157,7 @@ fn mech(world: &mut World, config: &Config, map: ObjectId, x: i64, y: i64) -> Ob
     create_battle_unit(
         world,
         id,
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(world, id, support::FIXTURE_DICE_SEED);

@@ -85,7 +85,7 @@ fn hit(amount: u32) -> VehicleArmorHit {
 #[tokio::test]
 async fn reflective_armor_depends_on_the_damage_class() {
     let text = support::templates::with_flags(
-        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/units/Demolisher.toml"),
         &["LaserRefArmor_Tech"],
     );
     // The Demolisher's front carries forty armor points over eight internal.
@@ -133,7 +133,7 @@ async fn armor_penetration_uses_one_entry_roll_and_applies_material_modifiers() 
         ("ReinforcedInternal_Tech", 43, 43, 3, 2),
         ("CompositeInternal_Tech", 43, 43, 3, 6),
     ] {
-        let text = include_str!("../game/mechs/Demolisher.toml");
+        let text = include_str!("../game/units/Demolisher.toml");
         let text = if special.is_empty() {
             text.to_owned()
         } else {
@@ -194,7 +194,7 @@ async fn armor_penetration_uses_one_entry_roll_and_applies_material_modifiers() 
 
 #[tokio::test]
 async fn through_armor_criticals_suppress_only_additional_internal_dispatch() {
-    let (_dir, _config, base, id) = fixture(include_str!("../game/mechs/Demolisher.toml")).await;
+    let (_dir, _config, base, id) = fixture(include_str!("../game/units/Demolisher.toml")).await;
     for dispatched in [true, false] {
         let stream = matching_seed(|dice| {
             dice.two_d6();
@@ -234,7 +234,7 @@ async fn through_armor_criticals_suppress_only_additional_internal_dispatch() {
 
 #[tokio::test]
 async fn armor_piercing_uses_remaining_armor_threshold_and_weapon_penalty() {
-    let (_dir, _config, base, id) = fixture(include_str!("../game/mechs/Demolisher.toml")).await;
+    let (_dir, _config, base, id) = fixture(include_str!("../game/units/Demolisher.toml")).await;
     let stream = matching_seed(|dice| {
         dice.two_d6();
         dice.two_d6() == 12
@@ -276,7 +276,7 @@ async fn armor_piercing_uses_remaining_armor_threshold_and_weapon_penalty() {
 
 #[tokio::test]
 async fn armor_destruction_preserves_occupants_and_safe_hits_only_advance_entry_dice() {
-    let (_dir, config, base, id) = fixture(include_str!("../game/mechs/Demolisher.toml")).await;
+    let (_dir, config, base, id) = fixture(include_str!("../game/units/Demolisher.toml")).await;
     let mut world = base.clone();
     world
         .objects
@@ -370,7 +370,7 @@ fn saved_dice(world: &World, id: ObjectId) -> serde_json::Value {
 /// Vacuum disables equipment on every supported vehicle chassis without inventing hull/crew loss.
 #[tokio::test]
 async fn vacuum_penetration_disables_equipment_and_survives_environment_change_and_restart() {
-    let tracked = include_str!("../game/mechs/Demolisher.toml");
+    let tracked = include_str!("../game/units/Demolisher.toml");
     let templates = [
         tracked.to_owned(),
         tracked.replace("movement = \"track\"", "movement = \"wheel\""),
@@ -378,7 +378,7 @@ async fn vacuum_penetration_disables_equipment_and_survives_environment_change_a
         tracked
             .replace("movement = \"track\"", "movement = \"none\"")
             .replace("walk_mp = 5", "walk_mp = 0"),
-        include_str!("../game/mechs/Kestrel.toml").to_owned(),
+        include_str!("../game/units/Kestrel.toml").to_owned(),
     ];
     for template in templates {
         let (_dir, config, mut world, id) = fixture(&template).await;
@@ -464,7 +464,7 @@ async fn vacuum_penetration_disables_equipment_and_survives_environment_change_a
 /// Nonpenetrating damage consumes special-condition dice even outside vacuum, including repeated breaches.
 #[tokio::test]
 async fn vacuum_armor_checks_follow_threshold_and_special_condition_dice_order() {
-    let (_dir, config, initial, id) = fixture(include_str!("../game/mechs/Demolisher.toml")).await;
+    let (_dir, config, initial, id) = fixture(include_str!("../game/units/Demolisher.toml")).await;
     for threshold in [9, 10, 12] {
         let seed = matching_seed(|dice| {
             dice.two_d6();
@@ -509,7 +509,7 @@ async fn vacuum_armor_checks_follow_threshold_and_special_condition_dice_order()
 /// Internal explosions check surviving sections; destroyed sections and combat-safe hits skip breaches.
 #[tokio::test]
 async fn vacuum_internal_damage_and_safety_preserve_check_boundaries() {
-    let (_dir, config, initial, id) = fixture(include_str!("../game/mechs/Demolisher.toml")).await;
+    let (_dir, config, initial, id) = fixture(include_str!("../game/units/Demolisher.toml")).await;
     for amount in [1, 8, 9] {
         let mut world = initial.clone();
         environment(&mut world, id, 100, true);
@@ -555,7 +555,7 @@ async fn vacuum_internal_damage_and_safety_preserve_check_boundaries() {
 /// Section-local supply and electronics failures leave weapons in other sections physically intact.
 #[tokio::test]
 async fn vacuum_disables_remote_supply_and_electronics_without_destroying_them() {
-    let template = include_str!("../game/mechs/Demolisher.toml")
+    let template = include_str!("../game/units/Demolisher.toml")
         .replace(
             "    { at = \"3-6\", item = \"Ammo_IS.AC/20\", rounds = 5 },\n",
             "",
@@ -630,7 +630,7 @@ async fn vacuum_disables_remote_supply_and_electronics_without_destroying_them()
 #[tokio::test]
 async fn vacuum_disabled_ams_preserves_whole_unit_capability() {
     let name = Weapon::AntiMissileSystem.name();
-    let template = include_str!("../game/mechs/Demolisher.toml")
+    let template = include_str!("../game/units/Demolisher.toml")
         .replace(
             "[sections.front_side]\narmor = 40\n",
             &format!(
@@ -664,7 +664,7 @@ async fn vacuum_disabled_ams_preserves_whole_unit_capability() {
 #[tokio::test]
 async fn rotor_divisor_preserves_minimum_internal_damage_and_restart() {
     let template =
-        include_str!("../game/mechs/Kestrel.toml").replace("armor = 2\n", "armor = 40\n");
+        include_str!("../game/units/Kestrel.toml").replace("armor = 2\n", "armor = 40\n");
     let (_dir, config, base, id) = fixture(&template).await;
     for (divisor, amount, expected) in [
         (0, 7, 7),
@@ -724,7 +724,7 @@ async fn rotor_divisor_preserves_minimum_internal_damage_and_restart() {
 /// Hardened armor leaves vehicle speed alone and adds one to driving rolls.
 #[tokio::test]
 async fn hardened_armor_hampers_vehicle_driving() {
-    let standard = include_str!("../game/mechs/Demolisher.toml");
+    let standard = include_str!("../game/units/Demolisher.toml");
     let hardened = support::templates::with_flags(standard, &["HardenedArmor_Tech"]);
     let (_dir, _config, mut plain, plain_id) = fixture(standard).await;
     let (_dir, _config, mut world, id) = fixture(&hardened).await;
@@ -741,7 +741,7 @@ async fn hardened_armor_hampers_vehicle_driving() {
 /// Hovercraft and VTOLs cannot carry hardened armor; ground vehicles can.
 #[test]
 fn hardened_armor_is_barred_from_hovercraft_and_vtols() {
-    let tracked = include_str!("../game/mechs/Demolisher.toml");
+    let tracked = include_str!("../game/units/Demolisher.toml");
     let harden = |source: &str| support::templates::with_flags(source, &["HardenedArmor_Tech"]);
     assert!(VehicleTemplate::parse("test", &harden(tracked)).is_ok());
     assert!(
@@ -753,7 +753,7 @@ fn hardened_armor_is_barred_from_hovercraft_and_vtols() {
     );
     for source in [
         tracked.replace("movement = \"track\"", "movement = \"hover\""),
-        include_str!("../game/mechs/Kestrel.toml").to_owned(),
+        include_str!("../game/units/Kestrel.toml").to_owned(),
     ] {
         let hardened = harden(&source);
         assert!(hardened.contains("armor = \"hardened\""));

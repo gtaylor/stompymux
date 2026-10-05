@@ -336,6 +336,42 @@ mod tests {
         );
     }
 
+    /// Diagnostic traces wait for commit, reach their fixed target on flush, and vanish on a rejected write.
+    #[tokio::test]
+    async fn diagnostic_traces_wait_for_commit_and_discard_failed_changes() {
+        use crate::logging::{TraceRecord, TraceTopic};
+        let (_dir, mut server) = fixture().await;
+        let (capture, _guard) = crate::logging::Capture::install("info,btech=debug");
+        let stage = |server: &Server, message: &str| {
+            server.scripts.effects.stage_trace(TraceRecord {
+                topic: TraceTopic::Economy,
+                message: message.into(),
+            });
+            server
+                .scripts
+                .world_mut()
+                .objects
+                .get_mut(&ObjectId(1))
+                .unwrap()
+                .name = message.into();
+        };
+        let before = server.scripts.world().clone();
+        stage(&server, "rejected trace");
+        sql(&server, "CREATE TRIGGER reject_trace BEFORE UPDATE ON objects BEGIN SELECT RAISE(FAIL,'trace write failure'); END").await;
+        assert!(!server.commit(before.clone()).await);
+        assert!(server.scripts.effects.drain_traces().is_empty());
+        sql(&server, "DROP TRIGGER reject_trace").await;
+        stage(&server, "committed trace");
+        assert!(server.commit(before).await);
+        assert!(capture.lines_containing("btech::economy").is_empty());
+        server.flush();
+        assert!(server.scripts.effects.drain_traces().is_empty());
+        let traces = capture.lines_containing("btech::economy");
+        assert_eq!(traces.len(), 1, "{}", capture.text());
+        assert!(traces[0].contains("DEBUG"), "{}", traces[0]);
+        assert!(traces[0].contains("committed trace"), "{}", traces[0]);
+    }
+
     #[tokio::test]
     async fn queued_lua_and_persistence_failure_consume_work_and_rollback_output() {
         let (_d, mut s) = fixture().await;

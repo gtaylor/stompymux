@@ -9,11 +9,11 @@ use stompymux_rs::{
 fn unit(source: &str) -> Mech {
     Mech::from_template(MechTemplate::parse("test", source).unwrap()).unwrap()
 }
-const JENNER: &str = include_str!("fixtures/btech/mechs/JR7-D.toml");
+const JENNER: &str = include_str!("fixtures/btech/units/JR7-D.toml");
 
 #[test]
 fn multi_slot_weapon_fails_once_but_remaining_slots_can_absorb_more_criticals() {
-    let mut atlas = unit(include_str!("fixtures/btech/mechs/AS7-D.toml"));
+    let mut atlas = unit(include_str!("fixtures/btech/units/AS7-D.toml"));
     let loadout = atlas.loadout().unwrap();
     let (index, weapon) = loadout
         .weapons

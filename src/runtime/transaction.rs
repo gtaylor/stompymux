@@ -73,6 +73,9 @@ pub struct EffectBatch {
     pub logs: Vec<crate::logging::FileRequest>,
     /// Categorized diagnostics published only after world commit.
     pub records: Vec<crate::logging::AuditRecord>,
+    /// Diagnostic traces published only after world commit. They are operator diagnostics, not
+    /// script output, so they stay outside the Lua output allowance.
+    pub traces: Vec<crate::logging::TraceRecord>,
     /// Prepared map replacements, published only after world commit.
     pub map_writes: Vec<super::MapAssetWrite>,
     /// Merged semantic maintenance request.
@@ -246,6 +249,16 @@ impl Effects {
         std::mem::take(&mut self.state.borrow_mut().pending.records)
     }
 
+    /// Hold a diagnostic trace until the enclosing transaction commits.
+    pub fn stage_trace(&self, record: crate::logging::TraceRecord) {
+        self.state.borrow_mut().pending.traces.push(record);
+    }
+
+    /// Consume diagnostic traces after successful persistence.
+    pub fn drain_traces(&self) -> Vec<crate::logging::TraceRecord> {
+        std::mem::take(&mut self.state.borrow_mut().pending.traces)
+    }
+
     /// Stage a map replacement under the same savepoint and aggregate limits as other effects.
     pub fn stage_map_write(&self, request: super::MapAssetWrite) -> anyhow::Result<()> {
         let before = self.checkpoint();
@@ -313,6 +326,7 @@ impl Effects {
         let mut state = self.state.borrow_mut();
         let logs = std::mem::take(&mut state.pending.logs);
         let records = std::mem::take(&mut state.pending.records);
+        let traces = std::mem::take(&mut state.pending.traces);
         let map_writes = std::mem::take(&mut state.pending.map_writes);
         let maintenance = state.pending.maintenance.take();
         state.sessions = previous.sessions.clone();
@@ -321,6 +335,7 @@ impl Effects {
             flows: state.durable.clone(),
             logs,
             records,
+            traces,
             map_writes,
             maintenance,
             ..Default::default()

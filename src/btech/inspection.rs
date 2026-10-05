@@ -1588,7 +1588,7 @@ fn detached_template_world(
     let unit = super::Mech::from_contract_template(inspection_compatible_template(template))?;
     detached.btech.units.insert(id, unit.identity());
     detached.btech.constructed.insert(id, unit);
-    std::sync::Arc::make_mut(&mut detached.btech.registrations).insert(id, "MECH".into());
+    std::sync::Arc::make_mut(&mut detached.btech.registrations).insert(id, "UNIT".into());
     Ok((detached, id))
 }
 

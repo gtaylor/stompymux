@@ -22,7 +22,7 @@ async fn fixture(
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         if index < 2 {
             let mut definition =
-                MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml"))
                     .unwrap();
             definition
                 .attributes
@@ -53,10 +53,10 @@ fn power(world: &mut World, ids: &[ObjectId], value: Power) {
 #[tokio::test]
 async fn vehicle_contact_rows_use_movement_labels_and_match_native_lua() {
     for (template, movement) in [
-        (include_str!("../game/mechs/Demolisher.toml"), "TRACKED"),
-        (include_str!("../game/mechs/Jeep.toml"), "WHEELED"),
-        (include_str!("../game/mechs/Fulcrum.toml"), "HOVER"),
-        (include_str!("../game/mechs/RadioTower.toml"), "Unknown"),
+        (include_str!("../game/units/Demolisher.toml"), "TRACKED"),
+        (include_str!("../game/units/Jeep.toml"), "WHEELED"),
+        (include_str!("../game/units/Fulcrum.toml"), "HOVER"),
+        (include_str!("../game/units/RadioTower.toml"), "Unknown"),
     ] {
         let (_dir, config, mut world, map, ids) = fixture(".0\n.0\n.0\n.0\n.0\n", template).await;
         let [a, _, c, d] = ids;
@@ -137,7 +137,7 @@ async fn vehicle_contact_rows_use_movement_labels_and_match_native_lua() {
 async fn vehicle_contact_views_filter_conditions_and_recheck_visibility_without_rerolls() {
     let (_dir, _config, mut world, map, ids) = fixture(
         ".0\n.0\n.0\n.0\n.0\n",
-        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/units/Demolisher.toml"),
     )
     .await;
     let [a, _, c, d] = ids;
@@ -221,7 +221,7 @@ async fn vehicle_contact_views_filter_conditions_and_recheck_visibility_without_
 async fn newly_visible_vehicle_targets_do_not_panic_in_mech_consumers() {
     let (_dir, config, mut world, map, ids) = fixture(
         ".0\n.0\n.0\n.0\n.0\n",
-        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/units/Demolisher.toml"),
     )
     .await;
     let [a, _, c, _] = ids;

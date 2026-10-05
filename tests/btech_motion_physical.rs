@@ -3003,7 +3003,7 @@ async fn dfa_damage_candidate_error_rolls_back() {
     create_battle_unit(
         &mut world,
         third,
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, third, support::FIXTURE_DICE_SEED);
@@ -3858,7 +3858,6 @@ async fn character_punch_native_lua_casualty_and_abort_parity() {
                 .unwrap();
             shot_seed(&mut base, id, attack_seed);
             shot_seed(&mut base, target, head_seed);
-            install_xp_channels(&mut base);
             let native = Scripts::new(
                 &config,
                 std::rc::Rc::new(std::cell::RefCell::new(base.clone())),
@@ -3877,24 +3876,9 @@ async fn character_punch_native_lua_casualty_and_abort_parity() {
             assert_eq!(lua.world().btech, base.btech);
             assert_eq!(lua.world().objects[&pilot].location, Some(target));
             assert!(lua.drain_outbox().is_empty());
-            assert_eq!(
-                serde_json::to_value(&lua.world().channels).unwrap(),
-                serde_json::to_value(&base.channels).unwrap()
-            );
-            lua.world_mut()
-                .channels
-                .get_mut("MechPilotXP")
-                .unwrap()
-                .messages = i64::MAX - 1;
             assert!(
-                lua.eval_callback::<mlua::Table>(&format!("return {call}"))
-                    .is_err()
+                support::drain_traces(&lua, logging::TraceTopic::PilotingExperience).is_empty()
             );
-            assert_eq!(lua.world().btech, base.btech);
-            assert_eq!(lua.world().channels["MechPilotXP"].messages, i64::MAX - 1);
-            assert!(lua.world().channels["MechPilotXP"].history.is_empty());
-            assert!(lua.drain_outbox().is_empty());
-            *lua.world_mut() = base.clone();
             commands::run(
                 &native,
                 &config,
@@ -3958,26 +3942,12 @@ async fn character_punch_native_lua_casualty_and_abort_parity() {
             };
             let values = &candidate.btech.character_values()[&ObjectId(1)];
             assert_eq!(values[skill].experience_balance(), 2);
-            let channel = &candidate.channels["MechPilotXP"];
-            assert_eq!(channel.messages, 2);
-            assert_eq!(channel.history.len(), 2);
-            for entry in &channel.history {
-                assert_eq!(
-                    text::plain_with(native.palette(), &entry.message),
-                    format!("[MechPilotXP] GOD gained 1 {skill} XP")
-                );
-            }
+            let native_traces =
+                support::drain_traces(&native, logging::TraceTopic::PilotingExperience);
+            assert_eq!(native_traces, vec![format!("GOD gained 1 {skill} XP"); 2]);
             assert_eq!(
-                channel
-                    .history
-                    .iter()
-                    .map(|entry| &entry.message)
-                    .collect::<Vec<_>>(),
-                lua.world().channels["MechPilotXP"]
-                    .history
-                    .iter()
-                    .map(|entry| &entry.message)
-                    .collect::<Vec<_>>()
+                native_traces,
+                support::drain_traces(&lua, logging::TraceTopic::PilotingExperience)
             );
 
             assert_eq!(
@@ -3995,10 +3965,6 @@ async fn character_punch_native_lua_casualty_and_abort_parity() {
                 .unwrap();
             let loaded = persistence::load(&config.database()).await.unwrap();
             assert_eq!(loaded.btech, candidate.btech);
-            assert_eq!(
-                serde_json::to_value(&loaded.channels).unwrap(),
-                serde_json::to_value(&candidate.channels).unwrap()
-            );
             assert_eq!(loaded.objects[&pilot].location, Some(expected));
         }
     }
@@ -4315,7 +4281,6 @@ async fn character_charge_action_packets_xp_and_casualty_rollback() {
                 technology_level_three: false,
                 physical,
             };
-            install_xp_channels(&mut world);
             let baseline = world.clone();
             assert!(resolve_battle_charge(&mut world, id, target, rules).is_err());
             assert_eq!(world.btech, baseline.btech);
@@ -4330,9 +4295,9 @@ async fn character_charge_action_packets_xp_and_casualty_rollback() {
                 assert_eq!(scripts.world().btech, baseline.btech);
                 assert_eq!(scripts.world().objects[&pilot].location, Some(target));
                 assert!(scripts.drain_outbox().is_empty());
-                assert_eq!(
-                    serde_json::to_value(&scripts.world().channels).unwrap(),
-                    serde_json::to_value(&baseline.channels).unwrap()
+                assert!(
+                    support::drain_traces(&scripts, logging::TraceTopic::PilotingExperience)
+                        .is_empty()
                 );
                 *scripts.world_mut() = baseline;
             }
@@ -4358,7 +4323,7 @@ async fn character_charge_action_packets_xp_and_casualty_rollback() {
             );
             assert_eq!(report.target_impacts[0].impact.character_injuries.len(), 1);
             let candidate = scripts.world().clone();
-            let channel = &candidate.channels["MechPilotXP"];
+            let traces = support::drain_traces(&scripts, logging::TraceTopic::PilotingExperience);
             let protection_messages: usize = report
                 .balance
                 .iter()
@@ -4366,11 +4331,11 @@ async fn character_charge_action_packets_xp_and_casualty_rollback() {
                 .map(|fall| fall.experience_messages.len())
                 .sum();
             assert_eq!(
-                channel.messages as usize,
+                traces.len(),
                 report.experience_messages.len() + protection_messages
             );
             assert_eq!(
-                channel.history.len(),
+                traces.len(),
                 report
                     .experience
                     .iter()
@@ -4387,7 +4352,7 @@ async fn character_charge_action_packets_xp_and_casualty_rollback() {
                     + protection_messages
             );
             for message in &report.experience_messages[..report.experience.len()] {
-                assert_eq!(message.channel, DiagnosticChannel::PilotingExperience);
+                assert_eq!(message.topic, TraceTopic::PilotingExperience);
                 assert_eq!(
                     message.text,
                     format!(
@@ -4678,7 +4643,6 @@ async fn character_charge_movement_dispatch_replays_and_rolls_back() {
         let mut signature = world.btech.constructed_units()[&second].signature();
         signature.team = 1;
         set_battle_unit_signature(&mut world, second, signature).unwrap();
-        install_xp_channels(&mut world);
         let xp_before: Vec<_> = [ObjectId(1), pilot]
             .into_iter()
             .map(|player| {
@@ -4699,9 +4663,8 @@ async fn character_charge_movement_dispatch_replays_and_rolls_back() {
         assert_eq!(scripts.world().btech, baseline.btech);
         assert_eq!(scripts.world().objects[&pilot].location, Some(second));
         assert!(scripts.drain_outbox().is_empty());
-        assert_eq!(
-            serde_json::to_value(&scripts.world().channels).unwrap(),
-            serde_json::to_value(&baseline.channels).unwrap()
+        assert!(
+            support::drain_traces(&scripts, logging::TraceTopic::PilotingExperience).is_empty()
         );
         persistence::save(&config.database(), &baseline)
             .await
@@ -4721,16 +4684,13 @@ async fn character_charge_movement_dispatch_replays_and_rolls_back() {
             without_xp_timestamps(&replay.world().btech)
         );
         let candidate = scripts.world().clone();
-        let channel = &candidate.channels["MechPilotXP"];
-        assert!(channel.messages >= 2);
-        assert_eq!(channel.history.len() as i64, channel.messages);
-        let awarded: u32 = channel
-            .history
+        let traces = support::drain_traces(&scripts, logging::TraceTopic::PilotingExperience);
+        assert!(traces.len() >= 2);
+        let awarded: u32 = traces
             .iter()
-            .map(|entry| {
-                assert!(entry.message.contains("Piloting-Biped XP"));
-                entry
-                    .message
+            .map(|message| {
+                assert!(message.contains("Piloting-Biped XP"));
+                message
                     .split(" gained ")
                     .nth(1)
                     .unwrap()
@@ -4756,16 +4716,8 @@ async fn character_charge_movement_dispatch_replays_and_rolls_back() {
             .sum();
         assert_eq!(awarded, earned);
         assert_eq!(
-            channel
-                .history
-                .iter()
-                .map(|entry| &entry.message)
-                .collect::<Vec<_>>(),
-            replay.world().channels["MechPilotXP"]
-                .history
-                .iter()
-                .map(|entry| &entry.message)
-                .collect::<Vec<_>>()
+            traces,
+            support::drain_traces(&replay, logging::TraceTopic::PilotingExperience)
         );
 
         for id in [first, second] {
@@ -4893,7 +4845,6 @@ async fn character_dfa_action_hit_miss_and_casualty_rollback() {
             }
             let mut rules = kick_rules();
             rules.fall.extended_piloting = extended;
-            install_xp_channels(&mut world);
             let baseline = world.clone();
             assert!(resolve_battle_dfa(&mut world, attacker, target, rules).is_err());
             assert_eq!(world.btech, baseline.btech);
@@ -4908,9 +4859,9 @@ async fn character_dfa_action_hit_miss_and_casualty_rollback() {
                 assert_eq!(scripts.world().btech, baseline.btech);
                 assert_eq!(scripts.world().objects[&pilot].location, Some(injured_unit));
                 assert!(scripts.drain_outbox().is_empty());
-                assert_eq!(
-                    serde_json::to_value(&scripts.world().channels).unwrap(),
-                    serde_json::to_value(&baseline.channels).unwrap()
+                assert!(
+                    support::drain_traces(&scripts, logging::TraceTopic::PilotingExperience)
+                        .is_empty()
                 );
                 *scripts.world_mut() = baseline.clone();
             }
@@ -4947,10 +4898,14 @@ async fn character_dfa_action_hit_miss_and_casualty_rollback() {
                 );
             }
             let candidate = scripts.world().clone();
-            let channel = &candidate.channels["MechPilotXP"];
-            assert_eq!(channel.messages as usize, report.experience_messages.len());
+            let traces = support::drain_traces(&scripts, logging::TraceTopic::PilotingExperience);
+            assert_eq!(traces.len(), report.experience_messages.len());
             assert_eq!(
-                channel.history.len(),
+                traces,
+                support::drain_traces(&replay, logging::TraceTopic::PilotingExperience)
+            );
+            assert_eq!(
+                traces.len(),
                 report
                     .experience
                     .iter()
@@ -4958,7 +4913,7 @@ async fn character_dfa_action_hit_miss_and_casualty_rollback() {
                     .count()
             );
             for message in &report.experience_messages {
-                assert_eq!(message.channel, DiagnosticChannel::PilotingExperience);
+                assert_eq!(message.topic, TraceTopic::PilotingExperience);
                 assert_eq!(
                     message.text,
                     format!(
@@ -6129,7 +6084,6 @@ async fn character_firing_commands_match_and_rollback() {
                     })
                     .unwrap();
 
-                install_xp_channels(&mut world);
                 let baseline = world.clone();
                 let native =
                     Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world)))
@@ -6147,24 +6101,7 @@ async fn character_firing_commands_match_and_rollback() {
                 assert_eq!(lua.world().btech, baseline.btech);
                 assert_eq!(lua.world().objects[&pilot].location, Some(target));
                 assert!(lua.drain_outbox().is_empty());
-                assert_eq!(
-                    serde_json::to_value(&lua.world().channels).unwrap(),
-                    serde_json::to_value(&baseline.channels).unwrap()
-                );
-                lua.world_mut()
-                    .channels
-                    .get_mut("MechAttackXP")
-                    .unwrap()
-                    .messages = i64::MAX;
-                assert!(
-                    lua.eval_callback::<mlua::Table>(&format!("return {call}"))
-                        .is_err()
-                );
-                assert_eq!(lua.world().btech, baseline.btech);
-                assert_eq!(lua.world().channels["MechAttackXP"].messages, i64::MAX);
-                assert!(lua.world().channels["MechAttackXP"].history.is_empty());
-                assert!(lua.drain_outbox().is_empty());
-                *lua.world_mut() = baseline.clone();
+                assert!(lua.drain_traces_for_inspection().is_empty());
                 let afterlife = ObjectId(config.battletech.afterlife_dbref);
                 if fatal {
                     lua.world_mut().objects.remove(&afterlife);
@@ -6175,10 +6112,7 @@ async fn character_firing_commands_match_and_rollback() {
                     assert_eq!(lua.world().btech, baseline.btech);
                     assert_eq!(lua.world().objects[&pilot].location, Some(target));
                     assert!(lua.drain_outbox().is_empty());
-                    assert_eq!(
-                        serde_json::to_value(&lua.world().channels).unwrap(),
-                        serde_json::to_value(&baseline.channels).unwrap()
-                    );
+                    assert!(lua.drain_traces_for_inspection().is_empty());
                     *lua.world_mut() = baseline;
                 }
                 commands::run(
@@ -6229,37 +6163,22 @@ async fn character_firing_commands_match_and_rollback() {
                     .filter(|accepted| *accepted)
                     .count();
                 assert!(accepted > 0);
-                for (name, count) in [
-                    ("MechAttackXP", accepted),
-                    ("MechXP", if classic { 0 } else { accepted }),
+                let traces = native.drain_traces_for_inspection();
+                assert_eq!(traces, lua.drain_traces_for_inspection());
+                for (topic, count) in [
+                    (logging::TraceTopic::GunneryExperience, accepted),
+                    (
+                        logging::TraceTopic::Experience,
+                        if classic { 0 } else { accepted },
+                    ),
                 ] {
-                    let state = native.world();
-                    let channel = &state.channels[name];
-                    assert_eq!(channel.messages as usize, count);
-                    assert_eq!(channel.history.len(), count);
                     assert_eq!(
-                        channel
-                            .history
-                            .iter()
-                            .map(|entry| &entry.message)
-                            .collect::<Vec<_>>(),
-                        lua.world().channels[name]
-                            .history
-                            .iter()
-                            .map(|entry| &entry.message)
-                            .collect::<Vec<_>>()
+                        traces.iter().filter(|record| record.topic == topic).count(),
+                        count
                     );
                 }
                 let notices = messages(&native);
                 assert_eq!(notices, messages(&lua));
-                let diagnostic: Vec<_> = notices
-                    .iter()
-                    .filter(|(_, text)| {
-                        text.starts_with("[[MechAttackXP]") || text.starts_with("[[MechXP]")
-                    })
-                    .collect();
-                assert_eq!(diagnostic.len(), accepted * if classic { 1 } else { 2 });
-                assert!(diagnostic.iter().all(|(to, _)| *to == ObjectId(1)));
 
                 assert_eq!(
                     notices
@@ -6285,11 +6204,6 @@ async fn character_firing_commands_match_and_rollback() {
                 assert_eq!(
                     persistence::load(&config.database()).await.unwrap().btech,
                     candidate.btech
-                );
-                let restored = persistence::load(&config.database()).await.unwrap();
-                assert_eq!(
-                    serde_json::to_value(&restored.channels).unwrap(),
-                    serde_json::to_value(&candidate.channels).unwrap()
                 );
             }
         }
@@ -6792,18 +6706,6 @@ fn noisy_shot_config(dir: &std::path::Path) -> stompymux_rs::Config {
     stompymux_rs::Config::load(dir).unwrap()
 }
 
-/// Only the connected wizard subscribes; the target crew is not a diagnostic recipient.
-fn install_xp_channels(world: &mut stompymux_rs::World) {
-    for name in ["MechAttackXP", "MechXP", "MechPilotXP"] {
-        let mut channel = stompymux_rs::Channel::new(name.into());
-        channel.users.push(stompymux_rs::communication::Membership {
-            who: ObjectId(1),
-            listening: true,
-        });
-        world.channels.insert(name.into(), channel);
-    }
-}
-
 /// Train both fixture crews to finite BV modifiers while keeping the shot difficult enough for XP.
 fn train_battle_value_shot_crews(world: &mut stompymux_rs::World, target_pilot: ObjectId) {
     for (pilot, level) in [(ObjectId(1), 6), (target_pilot, 3)] {
@@ -7280,7 +7182,6 @@ async fn gunnery_xp_trivial_hit_diagnostics_obey_suppression() {
             record["signature"]["team"] = 1.into();
         })
         .unwrap();
-    install_xp_channels(&mut base);
     for suppressed in [false, true] {
         let mut world = base.clone();
         set_battle_unit_experience(
@@ -7308,26 +7209,29 @@ async fn gunnery_xp_trivial_hit_diagnostics_obey_suppression() {
         let salvo = report.salvo.unwrap().into_mech().unwrap();
         assert!(salvo.experience.iter().all(Option::is_none));
         assert_eq!(salvo.experience_messages.len(), usize::from(!suppressed));
-        assert_eq!(scripts.world().channels["MechAttackXP"].messages, 0);
-        assert_eq!(
-            scripts.world().channels["MechXP"].messages,
-            i64::from(!suppressed)
-        );
+        let traces = scripts.drain_traces_for_inspection();
+        let topic = |topic: logging::TraceTopic| {
+            traces
+                .iter()
+                .filter(|record| record.topic == topic)
+                .map(|record| record.message.clone())
+                .collect::<Vec<_>>()
+        };
+        assert!(topic(logging::TraceTopic::GunneryExperience).is_empty());
+        let expected = format!("#1 in #{} 1 noxp #{}", shooter.0, target.0);
         if !suppressed {
-            let expected = format!("#1 in #{} 1 noxp #{}", shooter.0, target.0);
             assert_eq!(salvo.experience_messages[0].text, expected);
-            let message = &scripts.world().channels["MechXP"].history[0].message;
-            assert_eq!(
-                text::plain_with(scripts.palette(), message),
-                format!("[MechXP] {expected}")
-            );
         }
+        assert_eq!(
+            topic(logging::TraceTopic::Experience),
+            if suppressed { vec![] } else { vec![expected] }
+        );
     }
 }
 
-/// Movement XP counts committed crossings, survives restart, and rolls back failed channel delivery.
+/// Movement XP counts committed crossings, survives restart, and traces only the award crossing.
 #[tokio::test]
-async fn movement_experience_cadence_restart_and_channel_rollback() {
+async fn movement_experience_cadence_and_restart() {
     use stompymux_rs::*;
     for extended in [false, true] {
         let source = format!("12 60\n{}", format!("{}\n", ".0".repeat(12)).repeat(60));
@@ -7347,7 +7251,6 @@ async fn movement_experience_cadence_restart_and_channel_rollback() {
             .unwrap()
             .flags
             .insert(Flag::InCharacter);
-        install_xp_channels(&mut world);
         world
             .objects
             .get_mut(&ObjectId(1))
@@ -7387,37 +7290,17 @@ async fn movement_experience_cadence_restart_and_channel_rollback() {
         let mut restarted = false;
         let mut crossed = 0;
         for _ in 0..150 {
-            let before = scripts.world().clone();
-            let old_position = before.btech.constructed_units()[&id].position();
-            // The next crossing after nine is the first award. Overflow must restore that entire tick.
-            if crossed == 9 {
-                scripts
-                    .world_mut()
-                    .channels
-                    .get_mut("MechPilotXP")
-                    .unwrap()
-                    .messages = i64::MAX;
-            }
-            let attempted = advance_battle_motion_action(&scripts, &config, rules);
-            if attempted.is_err() {
-                assert_eq!(crossed, 9);
-                assert_eq!(scripts.world().btech, before.btech);
-                assert!(scripts.world().channels["MechPilotXP"].history.is_empty());
-                assert!(scripts.drain_outbox().is_empty());
-                scripts
-                    .world_mut()
-                    .channels
-                    .get_mut("MechPilotXP")
-                    .unwrap()
-                    .messages = 0;
-                advance_battle_motion_action(&scripts, &config, rules).unwrap();
-            }
+            let old_position = scripts.world().btech.constructed_units()[&id].position();
+            advance_battle_motion_action(&scripts, &config, rules).unwrap();
             let changed = scripts.world().btech.constructed_units()[&id].position() != old_position;
             crossed += u64::from(changed);
             let progress = scripts.world().btech.constructed_units()[&id].movement_experience();
             assert_eq!(progress.hexes_walked, crossed);
             if crossed < 10 {
-                assert!(scripts.world().channels["MechPilotXP"].history.is_empty());
+                assert!(
+                    support::drain_traces(&scripts, logging::TraceTopic::PilotingExperience)
+                        .is_empty()
+                );
             }
             if crossed == 9 && !restarted {
                 let saved = scripts.world().clone();
@@ -7440,14 +7323,11 @@ async fn movement_experience_cadence_restart_and_channel_rollback() {
                         .experience_balance(),
                     1
                 );
-                let state = scripts.world();
-                let channel = &state.channels["MechPilotXP"];
-                assert_eq!(channel.messages, 1);
-                assert_eq!(channel.history.len(), 1);
                 assert_eq!(
-                    text::plain_with(scripts.palette(), &channel.history[0].message),
-                    format!("[MechPilotXP] GOD gained 1 {skill} XP")
+                    support::drain_traces(&scripts, logging::TraceTopic::PilotingExperience),
+                    [format!("GOD gained 1 {skill} XP")]
                 );
+                let state = scripts.world();
                 let position = state.btech.constructed_units()[&id].position().unwrap();
                 assert_eq!(progress.last_award_position, (position.x, position.y));
                 break;
@@ -7479,7 +7359,6 @@ async fn movement_experience_eligibility_and_airborne_entries() {
                     .flags
                     .insert(Flag::InCharacter);
             }
-            install_xp_channels(&mut world);
             world
                 .objects
                 .get_mut(&ObjectId(1))
@@ -7551,7 +7430,7 @@ async fn movement_experience_eligibility_and_airborne_entries() {
                 }
             );
             assert_eq!(
-                world.channels["MechPilotXP"].history.len(),
+                support::drain_traces(&scripts, logging::TraceTopic::PilotingExperience).len(),
                 usize::from(case == "eligible")
             );
             assert_eq!(
@@ -7566,9 +7445,9 @@ async fn movement_experience_eligibility_and_airborne_entries() {
     }
 }
 
-/// Trip balance awards use real successful rolls, preserve movement marks, and roll back with delivery.
+/// Trip balance awards use real successful rolls, preserve movement marks, and match native and Lua.
 #[tokio::test]
-async fn physical_control_experience_policy_and_atomic_delivery() {
+async fn physical_control_experience_policy_and_lua_parity() {
     use stompymux_rs::*;
     for extended in [false, true] {
         for case in ["success", "failed", "trivial", "disconnected", "tactical"] {
@@ -7654,7 +7533,6 @@ async fn physical_control_experience_policy_and_atomic_delivery() {
                 target,
                 seed(if case == "failed" { 2 } else { 12 }),
             );
-            install_xp_channels(&mut world);
             world
                 .btech
                 .rewrite_unit_record(target, |record| {
@@ -7668,30 +7546,6 @@ async fn physical_control_experience_policy_and_atomic_delivery() {
             let mut rules = kick_rules();
             rules.fall.extended_piloting = extended;
             let attack = PhysicalAttack::Trip { leg: Leg::Right };
-            if case == "success" {
-                scripts
-                    .world_mut()
-                    .channels
-                    .get_mut("MechPilotXP")
-                    .unwrap()
-                    .messages = i64::MAX;
-                assert!(
-                    resolve_battle_physical_attack_action(
-                        &scripts,
-                        &config,
-                        source,
-                        ObjectId(1),
-                        target,
-                        attack,
-                        rules
-                    )
-                    .is_err()
-                );
-                assert_eq!(scripts.world().btech, before.btech);
-                assert!(scripts.world().channels["MechPilotXP"].history.is_empty());
-                assert!(scripts.drain_outbox().is_empty());
-                *scripts.world_mut() = before.clone();
-            }
             let report = resolve_battle_physical_attack_action(
                 &scripts,
                 &config,
@@ -7721,7 +7575,7 @@ async fn physical_control_experience_policy_and_atomic_delivery() {
                 }
             );
             assert_eq!(
-                candidate.channels["MechPilotXP"].history.len(),
+                support::drain_traces(&scripts, logging::TraceTopic::PilotingExperience).len(),
                 usize::from(matches!(case, "success" | "failed"))
             );
             if case == "failed" {
@@ -7746,7 +7600,9 @@ async fn physical_control_experience_policy_and_atomic_delivery() {
                         .is_err()
                 );
                 assert_eq!(lua.world().btech, before.btech);
-                assert!(lua.world().channels["MechPilotXP"].history.is_empty());
+                assert!(
+                    support::drain_traces(&lua, logging::TraceTopic::PilotingExperience).is_empty()
+                );
                 assert!(lua.drain_outbox().is_empty());
                 commands::run(
                     &native,
@@ -7765,10 +7621,18 @@ async fn physical_control_experience_policy_and_atomic_delivery() {
                     native.world().btech.character_values()[&pilot][skill].experience_balance(),
                     2
                 );
-                assert_eq!(native.world().channels["MechPilotXP"].history.len(), 1);
+                let native_traces =
+                    support::drain_traces(&native, logging::TraceTopic::PilotingExperience);
                 assert_eq!(
-                    native.world().channels["MechPilotXP"].history[0].message,
-                    lua.world().channels["MechPilotXP"].history[0].message
+                    native_traces,
+                    [format!(
+                        "{} gained 2 {skill} XP",
+                        before.objects[&pilot].name
+                    )]
+                );
+                assert_eq!(
+                    native_traces,
+                    support::drain_traces(&lua, logging::TraceTopic::PilotingExperience)
                 );
                 assert_eq!(check.target, 9);
                 assert_eq!(check.roll, Some(12));
@@ -7828,7 +7692,6 @@ async fn dfa_control_experience_hit_and_miss() {
         )
         .unwrap();
         launch_battle_jump(&mut world, attacker, ObjectId(1), 0, 2.0).unwrap();
-        install_xp_channels(&mut world);
         world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(attacker);
         world
             .objects
@@ -7847,8 +7710,8 @@ async fn dfa_control_experience_hit_and_miss() {
                 continue;
             }
             *scripts.world_mut() = before.clone();
+            scripts.drain_traces_for_inspection();
             shot_seed(&mut scripts.world_mut(), attacker, seed);
-            let seeded = scripts.world().clone();
             let report =
                 resolve_battle_dfa_action(&scripts, &config, attacker, target, rules).unwrap();
             assert_eq!(report.hit, hit);
@@ -7872,7 +7735,10 @@ async fn dfa_control_experience_hit_and_miss() {
                 report.experience_messages[0].text,
                 "GOD gained 1 Piloting-Biped XP"
             );
-            assert_eq!(scripts.world().channels["MechPilotXP"].history.len(), 1);
+            assert_eq!(
+                support::drain_traces(&scripts, logging::TraceTopic::PilotingExperience),
+                ["GOD gained 1 Piloting-Biped XP"]
+            );
             let candidate = scripts.world().clone();
             let output = scripts.drain_outbox();
             let expected = format!(
@@ -7894,18 +7760,6 @@ async fn dfa_control_experience_hit_and_miss() {
             assert!(!output.iter().any(|(who, message)| *who == ObjectId(2)
                 && (message.source().starts_with("Modified Pilot Skill:")
                     || message.source() == "You make a piloting skill roll!")));
-            *scripts.world_mut() = seeded;
-            scripts
-                .world_mut()
-                .channels
-                .get_mut("MechPilotXP")
-                .unwrap()
-                .messages = i64::MAX;
-            let failed = scripts.world().clone();
-            assert!(resolve_battle_dfa_action(&scripts, &config, attacker, target, rules).is_err());
-            assert_eq!(scripts.world().btech, failed.btech);
-            assert!(scripts.world().channels["MechPilotXP"].history.is_empty());
-            assert!(scripts.drain_outbox().is_empty());
             persistence::save(&config.database(), &candidate)
                 .await
                 .unwrap();
@@ -7923,9 +7777,9 @@ async fn dfa_control_experience_hit_and_miss() {
     }
 }
 
-/// Fall protection XP precedes damage and shares the complete fall's delivery/restart transaction.
+/// Fall protection XP precedes damage and replays identically after a restart.
 #[tokio::test]
-async fn fall_protection_experience_policy_and_rollback() {
+async fn fall_protection_experience_policy_and_restart() {
     use stompymux_rs::*;
     for extended in [false, true] {
         for case in ["success", "failed", "trivial", "prone", "disconnected"] {
@@ -7995,7 +7849,6 @@ async fn fall_protection_experience_policy_and_rollback() {
                 })
                 .unwrap();
             shot_seed(&mut world, id, seed);
-            install_xp_channels(&mut world);
             world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(id);
             world
                 .objects
@@ -8010,19 +7863,6 @@ async fn fall_protection_experience_policy_and_rollback() {
                 extended_piloting: extended,
                 ..fall_rules()
             };
-            if case == "success" {
-                scripts
-                    .world_mut()
-                    .channels
-                    .get_mut("MechPilotXP")
-                    .unwrap()
-                    .messages = i64::MAX;
-                assert!(fall_battle_unit_action(&scripts, &config, id, 1, rules).is_err());
-                assert_eq!(scripts.world().btech, before.btech);
-                assert!(scripts.world().channels["MechPilotXP"].history.is_empty());
-                assert!(scripts.drain_outbox().is_empty());
-                *scripts.world_mut() = before.clone();
-            }
             let report = fall_battle_unit_action(&scripts, &config, id, 1, rules).unwrap();
             let output = scripts.drain_outbox();
             assert_eq!(report.pilot, Some(ObjectId(1)));
@@ -8061,8 +7901,12 @@ async fn fall_protection_experience_policy_and_rollback() {
                 if case == "success" { 2 } else { 0 }
             );
             assert_eq!(
-                candidate.channels["MechPilotXP"].history.len(),
-                usize::from(case == "success")
+                support::drain_traces(&scripts, logging::TraceTopic::PilotingExperience),
+                if case == "success" {
+                    vec![format!("GOD gained 2 {skill} XP")]
+                } else {
+                    vec![]
+                }
             );
             if case == "success" {
                 assert_eq!(report.avoidance.unwrap().target, 10);
@@ -8103,9 +7947,9 @@ async fn fall_protection_experience_policy_and_rollback() {
     }
 }
 
-/// A failed trip balance roll can still earn protection XP in its nested fall, published exactly once.
+/// A failed trip balance roll can still earn protection XP in its nested fall, traced exactly once.
 #[tokio::test]
-async fn nested_trip_fall_protection_experience_is_transactional() {
+async fn nested_trip_fall_protection_experience_traced_once() {
     use stompymux_rs::*;
     let (_dir, config, mut world, source, target) = kick_fixture().await;
     let pilot = ObjectId(2);
@@ -8157,34 +8001,10 @@ async fn nested_trip_fall_protection_experience_is_transactional() {
         })
         .unwrap();
     world.btech.set_unit_dice(target, dice).unwrap();
-    install_xp_channels(&mut world);
-    let before = world.clone();
     let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
     let mut rules = kick_rules();
     rules.fall.extended_piloting = true;
     let attack = PhysicalAttack::Trip { leg: Leg::Right };
-    scripts
-        .world_mut()
-        .channels
-        .get_mut("MechPilotXP")
-        .unwrap()
-        .messages = i64::MAX;
-    assert!(
-        resolve_battle_physical_attack_action(
-            &scripts,
-            &config,
-            source,
-            ObjectId(1),
-            target,
-            attack,
-            rules
-        )
-        .is_err()
-    );
-    assert_eq!(scripts.world().btech, before.btech);
-    assert!(scripts.world().channels["MechPilotXP"].history.is_empty());
-    assert!(scripts.drain_outbox().is_empty());
-    *scripts.world_mut() = before;
     let report = resolve_battle_physical_attack_action(
         &scripts,
         &config,
@@ -8202,16 +8022,19 @@ async fn nested_trip_fall_protection_experience_is_transactional() {
     assert_eq!(fall.avoidance.unwrap().target, 10);
     assert!(fall.avoidance.unwrap().experience.unwrap().accepted);
     assert_eq!(fall.experience_messages.len(), 1);
-    assert_eq!(scripts.world().channels["MechPilotXP"].history.len(), 1);
+    assert_eq!(
+        support::drain_traces(&scripts, logging::TraceTopic::PilotingExperience),
+        [fall.experience_messages[0].text.clone()]
+    );
     assert_eq!(
         scripts.world().btech.character_values()[&pilot]["Piloting-Biped"].experience_balance(),
         2
     );
 }
 
-/// A penetrating hit's successful damage balance check earns XP through the salvo host transaction.
+/// A penetrating hit's successful damage balance check earns XP and traces it through the salvo action.
 #[tokio::test]
-async fn damage_balance_experience_publication_and_rollback() {
+async fn damage_balance_experience_award_and_restart() {
     use stompymux_rs::*;
     for extended in [false, true] {
         let (_dir, config, mut world, id) = fixture('.').await;
@@ -8267,7 +8090,6 @@ async fn damage_balance_experience_publication_and_rollback() {
                 }
             })
             .unwrap();
-        install_xp_channels(&mut world);
         let base = world.clone();
         let scripts =
             Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
@@ -8278,6 +8100,7 @@ async fn damage_balance_experience_publication_and_rollback() {
         let mut verified = false;
         for seed in 0..=255 {
             *scripts.world_mut() = base.clone();
+            scripts.drain_traces_for_inspection();
             shot_seed(&mut scripts.world_mut(), id, seed);
             let before = scripts.world().clone();
             let report = resolve_battle_salvo_action(
@@ -8313,30 +8136,12 @@ async fn damage_balance_experience_publication_and_rollback() {
                 balance.experience_messages[0].text,
                 format!("GOD gained 1 {skill} XP")
             );
-            assert_eq!(scripts.world().channels["MechPilotXP"].history.len(), 1);
+            assert_eq!(
+                support::drain_traces(&scripts, logging::TraceTopic::PilotingExperience),
+                [format!("GOD gained 1 {skill} XP")]
+            );
             let candidate = scripts.world().clone();
             scripts.drain_outbox();
-            *scripts.world_mut() = before.clone();
-            scripts
-                .world_mut()
-                .channels
-                .get_mut("MechPilotXP")
-                .unwrap()
-                .messages = i64::MAX;
-            assert!(
-                resolve_battle_salvo_action(
-                    &scripts,
-                    &config,
-                    id,
-                    Weapon::SmallLaser,
-                    HitArc::Front,
-                    rules
-                )
-                .is_err()
-            );
-            assert_eq!(scripts.world().btech, before.btech);
-            assert!(scripts.world().channels["MechPilotXP"].history.is_empty());
-            assert!(scripts.drain_outbox().is_empty());
             persistence::save(&config.database(), &before)
                 .await
                 .unwrap();
@@ -8365,6 +8170,10 @@ async fn damage_balance_experience_publication_and_rollback() {
                 without_xp_timestamps(&candidate.btech),
                 without_xp_timestamps(&scripts.world().btech)
             );
+            assert_eq!(
+                support::drain_traces(&scripts, logging::TraceTopic::PilotingExperience),
+                [format!("GOD gained 1 {skill} XP")]
+            );
             *scripts.world_mut() = before;
             scripts
                 .world_mut()
@@ -8382,7 +8191,9 @@ async fn damage_balance_experience_publication_and_rollback() {
                 rules,
             )
             .unwrap();
-            assert!(scripts.world().channels["MechPilotXP"].history.is_empty());
+            assert!(
+                support::drain_traces(&scripts, logging::TraceTopic::PilotingExperience).is_empty()
+            );
             assert_eq!(
                 scripts.world().btech.character_values()[&ObjectId(1)][skill].experience_balance(),
                 0
@@ -8394,9 +8205,9 @@ async fn damage_balance_experience_publication_and_rollback() {
     }
 }
 
-/// Each stagger history mode awards successful-control XP once and restores its consumed history on failure.
+/// Each stagger history mode awards successful-control XP once and replays identically after a restart.
 #[tokio::test]
-async fn stagger_control_experience_modes_and_rollback() {
+async fn stagger_control_experience_modes_and_restart() {
     use stompymux_rs::*;
     for extended in [false, true] {
         for mode in [
@@ -8444,7 +8255,6 @@ async fn stagger_control_experience_modes_and_rollback() {
                 .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
                 .unwrap();
             shot_seed(&mut world, id, seed);
-            install_xp_channels(&mut world);
             let before = world.clone();
             let scripts =
                 Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
@@ -8453,17 +8263,6 @@ async fn stagger_control_experience_modes_and_rollback() {
                 interval: 1,
                 ..stagger_rules(mode)
             };
-            scripts
-                .world_mut()
-                .channels
-                .get_mut("MechPilotXP")
-                .unwrap()
-                .messages = i64::MAX;
-            assert!(advance_battle_stagger_action(&scripts, &config, rules).is_err());
-            assert_eq!(scripts.world().btech, before.btech);
-            assert!(scripts.world().channels["MechPilotXP"].history.is_empty());
-            assert!(scripts.drain_outbox().is_empty());
-            *scripts.world_mut() = before.clone();
             let reports = advance_battle_stagger_action(&scripts, &config, rules).unwrap();
             assert_eq!(reports.len(), 1);
             let report = &reports[0];
@@ -8515,14 +8314,20 @@ async fn stagger_control_experience_modes_and_rollback() {
                 report.experience_messages[0].text,
                 format!("GOD gained {amount} {skill} XP")
             );
-            assert_eq!(scripts.world().channels["MechPilotXP"].history.len(), 1);
+            let expected = [format!("GOD gained {amount} {skill} XP")];
+            assert_eq!(
+                support::drain_traces(&scripts, logging::TraceTopic::PilotingExperience),
+                expected
+            );
             let candidate = scripts.world().clone();
             assert!(
                 advance_battle_stagger_action(&scripts, &config, rules)
                     .unwrap()
                     .is_empty()
             );
-            assert_eq!(scripts.world().channels["MechPilotXP"].history.len(), 1);
+            assert!(
+                support::drain_traces(&scripts, logging::TraceTopic::PilotingExperience).is_empty()
+            );
             persistence::save(&config.database(), &before)
                 .await
                 .unwrap();
@@ -8543,6 +8348,10 @@ async fn stagger_control_experience_modes_and_rollback() {
                 without_xp_timestamps(&candidate.btech),
                 without_xp_timestamps(&scripts.world().btech)
             );
+            assert_eq!(
+                support::drain_traces(&scripts, logging::TraceTopic::PilotingExperience),
+                expected
+            );
             *scripts.world_mut() = before;
             scripts
                 .world_mut()
@@ -8553,12 +8362,14 @@ async fn stagger_control_experience_modes_and_rollback() {
                 .remove(Flag::Connected);
             let reports = advance_battle_stagger_action(&scripts, &config, rules).unwrap();
             assert!(reports[0].check.experience.is_none());
-            assert!(scripts.world().channels["MechPilotXP"].history.is_empty());
+            assert!(
+                support::drain_traces(&scripts, logging::TraceTopic::PilotingExperience).is_empty()
+            );
         }
     }
 }
 
-/// Successful thermal-shutdown balance awards XP before power-down and restores the whole thermal tick on failure.
+/// Successful thermal-shutdown balance awards XP before power-down and replays after a restart.
 #[tokio::test]
 async fn shutdown_balance_experience_precedes_power_down() {
     use stompymux_rs::*;
@@ -8618,7 +8429,6 @@ async fn shutdown_balance_experience_precedes_power_down() {
                 motion.desired_speed = 21.5;
             })
             .unwrap();
-        install_xp_channels(&mut world);
         let before = world.clone();
         let scripts =
             Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
@@ -8626,17 +8436,6 @@ async fn shutdown_balance_experience_precedes_power_down() {
             extended_piloting: extended,
             ..overheat_rules()
         };
-        scripts
-            .world_mut()
-            .channels
-            .get_mut("MechPilotXP")
-            .unwrap()
-            .messages = i64::MAX;
-        assert!(advance_battle_overheat_action(&scripts, &config, rules).is_err());
-        assert_eq!(scripts.world().btech, before.btech);
-        assert!(scripts.world().channels["MechPilotXP"].history.is_empty());
-        assert!(scripts.drain_outbox().is_empty());
-        *scripts.world_mut() = before.clone();
         let reports = advance_battle_overheat_action(&scripts, &config, rules).unwrap();
         assert_eq!(reports.len(), 1);
         let report = &reports[0];
@@ -8677,7 +8476,10 @@ async fn shutdown_balance_experience_precedes_power_down() {
             scripts.world().btech.constructed_units()[&id].power(),
             Power::Off
         );
-        assert_eq!(scripts.world().channels["MechPilotXP"].history.len(), 1);
+        assert_eq!(
+            support::drain_traces(&scripts, logging::TraceTopic::PilotingExperience),
+            [format!("GOD gained 4 {skill} XP")]
+        );
         let candidate = scripts.world().clone();
         persistence::save(&config.database(), &before)
             .await
@@ -8704,7 +8506,7 @@ async fn shutdown_balance_experience_precedes_power_down() {
 
 /// Terrain control awards follow accepted movement and avoid a duplicate water check after reverse slopes.
 #[tokio::test]
-async fn terrain_control_experience_and_movement_rollback() {
+async fn terrain_control_experience_follows_movement() {
     use stompymux_rs::*;
     for extended in [false, true] {
         for case in ["water", "reverse", "reverse_water"] {
@@ -8770,8 +8572,6 @@ async fn terrain_control_experience_and_movement_rollback() {
                 .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
                 .unwrap();
             shot_seed(&mut world, id, seed);
-            install_xp_channels(&mut world);
-            world.channels.get_mut("MechPilotXP").unwrap().messages = i64::MAX;
             let scripts =
                 Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
             let rules = MovementRules {
@@ -8781,23 +8581,8 @@ async fn terrain_control_experience_and_movement_rollback() {
                 },
                 ..RULES
             };
-            let mut rejected = false;
             for _ in 0..40 {
-                let before = scripts.world().clone();
-                if advance_battle_motion_action(&scripts, &config, rules).is_err() {
-                    assert!(!rejected);
-                    rejected = true;
-                    assert_eq!(scripts.world().btech, before.btech);
-                    assert!(scripts.world().channels["MechPilotXP"].history.is_empty());
-                    assert!(scripts.drain_outbox().is_empty());
-                    scripts
-                        .world_mut()
-                        .channels
-                        .get_mut("MechPilotXP")
-                        .unwrap()
-                        .messages = 0;
-                    advance_battle_motion_action(&scripts, &config, rules).unwrap();
-                }
+                advance_battle_motion_action(&scripts, &config, rules).unwrap();
                 if scripts.world().btech.constructed_units()[&id]
                     .position()
                     .unwrap()
@@ -8808,7 +8593,6 @@ async fn terrain_control_experience_and_movement_rollback() {
                 }
                 scripts.drain_outbox();
             }
-            assert!(rejected, "{case}");
             let output = scripts.drain_outbox();
             let pilot_output: Vec<_> = output
                 .iter()
@@ -8852,13 +8636,10 @@ async fn terrain_control_experience_and_movement_rollback() {
                 candidate.btech.character_values()[&ObjectId(1)][skill].experience_balance(),
                 amount
             );
-            assert_eq!(candidate.channels["MechPilotXP"].history.len(), 1);
             assert_eq!(
-                text::plain_with(
-                    scripts.palette(),
-                    &candidate.channels["MechPilotXP"].history[0].message
-                ),
-                format!("[MechPilotXP] GOD gained {amount} {skill} XP")
+                support::drain_traces(&scripts, logging::TraceTopic::PilotingExperience),
+                [format!("GOD gained {amount} {skill} XP")],
+                "{case}"
             );
             let mut expected = Dice::seeded([seed; 32]);
             expected.two_d6();
@@ -8877,9 +8658,9 @@ async fn terrain_control_experience_and_movement_rollback() {
     }
 }
 
-/// A missed moving shot can earn recoil XP; failed publication restores the entire shot.
+/// A missed moving shot can earn recoil XP, traced once and persisted with the shot.
 #[tokio::test]
-async fn heavy_gauss_recoil_experience_and_delivery_rollback() {
+async fn heavy_gauss_recoil_experience_policy() {
     use stompymux_rs::*;
     for extended in [false, true] {
         for case in ["moving", "stationary", "disconnected", "tactical"] {
@@ -8984,7 +8765,6 @@ async fn heavy_gauss_recoil_experience_and_delivery_rollback() {
                     record["motion"]["speed"] = if case == "stationary" { 0.0 } else { 1.0 }.into();
                 })
                 .unwrap();
-            install_xp_channels(&mut world);
             let before = world.clone();
             let scripts =
                 Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
@@ -8994,30 +8774,6 @@ async fn heavy_gauss_recoil_experience_and_delivery_rollback() {
                 extended_piloting: extended,
                 ..shot_rules()
             };
-            if case == "moving" {
-                scripts
-                    .world_mut()
-                    .channels
-                    .get_mut("MechPilotXP")
-                    .unwrap()
-                    .messages = i64::MAX;
-                assert!(
-                    resolve_battle_shot_action(
-                        &scripts,
-                        &config,
-                        id,
-                        ObjectId(1),
-                        target,
-                        index,
-                        rules
-                    )
-                    .is_err()
-                );
-                assert_eq!(scripts.world().btech, before.btech);
-                assert!(scripts.world().channels["MechPilotXP"].history.is_empty());
-                assert!(scripts.drain_outbox().is_empty());
-                *scripts.world_mut() = before.clone();
-            }
             let report = resolve_battle_shot_action(
                 &scripts,
                 &config,
@@ -9071,8 +8827,12 @@ async fn heavy_gauss_recoil_experience_and_delivery_rollback() {
                 expected
             );
             assert_eq!(
-                candidate.channels["MechPilotXP"].history.len(),
-                usize::from(expected > 0)
+                support::drain_traces(&scripts, logging::TraceTopic::PilotingExperience),
+                if expected > 0 {
+                    vec![format!("GOD gained {expected} {skill} XP")]
+                } else {
+                    vec![]
+                }
             );
             assert_eq!(candidate.btech.constructed_units()[&id].ammunition()[0], 3);
             assert_eq!(
@@ -9090,7 +8850,7 @@ async fn heavy_gauss_recoil_experience_and_delivery_rollback() {
 
 /// Timed feed recovery awards only the successful non-rotary control check, within one host commit.
 #[tokio::test]
-async fn unjam_control_experience_and_delivery_rollback() {
+async fn unjam_control_experience_and_roll_traces() {
     use stompymux_rs::*;
     let (_dir, config, pristine, _id) = fixture('.').await;
     let scripts = Scripts::new(
@@ -9217,13 +8977,6 @@ async fn unjam_control_experience_and_delivery_rollback() {
                 })
                 .unwrap();
             shot_seed(&mut world, id, seed);
-            install_xp_channels(&mut world);
-            let mut debug = Channel::new("MechDebugInfo".into());
-            debug.users.push(communication::Membership {
-                who: ObjectId(1),
-                listening: true,
-            });
-            world.channels.insert("MechDebugInfo".into(), debug);
             install(&scripts, world);
             if case != "tactical" {
                 let before = scripts.world().btech.clone();
@@ -9257,24 +9010,16 @@ async fn unjam_control_experience_and_delivery_rollback() {
             restored.objects.get_mut(&ObjectId(1)).unwrap().flags =
                 before.objects[&ObjectId(1)].flags.clone();
             *scripts.world_mut() = restored;
-            if case == "success" {
-                scripts
-                    .world_mut()
-                    .channels
-                    .get_mut("MechPilotXP")
-                    .unwrap()
-                    .messages = i64::MAX;
-                assert!(
-                    advance_battle_unjamming_action(&scripts, &config, extended, extended).is_err()
-                );
-                assert_eq!(scripts.world().btech, before.btech);
-                assert!(scripts.world().channels["MechPilotXP"].history.is_empty());
-                assert_eq!(scripts.world().channels["MechDebugInfo"].messages, 0);
-                assert!(scripts.world().channels["MechDebugInfo"].history.is_empty());
-                assert!(scripts.drain_outbox().is_empty());
-                *scripts.world_mut() = before.clone();
-            }
+            scripts.drain_traces_for_inspection();
             advance_battle_unjamming_action(&scripts, &config, extended, extended).unwrap();
+            let traces = scripts.drain_traces_for_inspection();
+            let topic = |topic: logging::TraceTopic| {
+                traces
+                    .iter()
+                    .filter(|record| record.topic == topic)
+                    .map(|record| record.message.as_str())
+                    .collect::<Vec<_>>()
+            };
             let candidate = scripts.world().clone();
             let unit = &candidate.btech.constructed_units()[&id];
             assert!(unit.unjam().is_none());
@@ -9289,7 +9034,7 @@ async fn unjam_control_experience_and_delivery_rollback() {
                 if case == "success" { 2 } else { 0 }
             );
             assert_eq!(
-                candidate.channels["MechPilotXP"].history.len(),
+                topic(logging::TraceTopic::PilotingExperience).len(),
                 usize::from(case == "success")
             );
             persistence::save(&config.database(), &candidate)
@@ -9301,23 +9046,17 @@ async fn unjam_control_experience_and_delivery_rollback() {
             );
             let output = scripts.drain_outbox();
             let rolled = !matches!(case, "empty" | "rotary" | "prone");
-            assert_eq!(
-                candidate.channels["MechDebugInfo"].messages,
-                i64::from(rolled)
-            );
+            let rolls = topic(logging::TraceTopic::PilotingRolls);
+            assert_eq!(rolls.len(), usize::from(rolled));
+            if rolled {
+                assert!(rolls[0].contains("Attempting to make pilot (noxp) skill roll."));
+            }
             if rolled && case != "disconnected" {
-                let diagnostic = output
-                    .iter()
-                    .position(|(_, text)| {
-                        text.source()
-                            .contains("Attempting to make pilot (noxp) skill roll.")
-                    })
-                    .unwrap();
-                let cockpit = output
-                    .iter()
-                    .position(|(_, text)| text.source() == "You make a piloting skill roll!")
-                    .unwrap();
-                assert!(diagnostic < cockpit);
+                assert!(
+                    output
+                        .iter()
+                        .any(|(_, text)| text.source() == "You make a piloting skill roll!")
+                );
             }
             advance_battle_unjamming_action(&scripts, &config, extended, extended).unwrap();
             assert_eq!(scripts.world().btech, candidate.btech);
@@ -9355,7 +9094,6 @@ async fn unjam_character_server_tick_retries_failed_commit() {
             .unwrap();
         let seed = (0..=255).find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12).unwrap();
         shot_seed(&mut world, id, seed);
-        install_xp_channels(&mut world);
         world.accounts.get_mut(&ObjectId(1)).unwrap().hash = Some(accounts::hash("secret", &config).unwrap());
         persistence::save(&config.database(), &world).await.unwrap();
         let shared = std::rc::Rc::new(std::cell::RefCell::new(world));
@@ -9389,14 +9127,11 @@ async fn unjam_character_server_tick_retries_failed_commit() {
         let saved = persistence::load(&config.database()).await.unwrap();
         assert_eq!(saved.btech, before.btech);
         assert!(shared.borrow().btech == before.btech, "The failed recovery must restore the complete world");
-        assert!(shared.borrow().channels["MechPilotXP"].history.is_empty());
         sqlx::query("DROP TRIGGER deny_unjam").execute(&mut sql).await.unwrap();
         let saved = heartbeats.until_saved(&config, 5, |saved| saved.btech.constructed_units()[&id].unjam().is_none()).await;
         assert!(!saved.btech.constructed_units()[&id].weapon_jammed(index).unwrap());
         assert_eq!(saved.btech.constructed_units()[&id].ammunition()[0], before.btech.constructed_units()[&id].ammunition()[0] - 1);
         assert_eq!(saved.btech.character_values()[&ObjectId(1)][skill].experience_balance(), 2);
-        assert_eq!(saved.channels["MechPilotXP"].history.len(), 1);
-        client.until(&format!("GOD gained 2 {skill} XP")).await;
         shutdown.send(ShutdownRequest::Sigterm).unwrap();
         task.await.unwrap().unwrap();
     }).await;

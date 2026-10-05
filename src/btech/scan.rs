@@ -390,9 +390,9 @@ pub(crate) fn command(
             };
             drop(world);
             if mode.eq_ignore_ascii_case("h") {
-                super::scan_hex_action(ctx.scripts, ctx.config, unit, ctx.player, coordinate)?;
+                super::scan_hex_action(ctx.scripts, unit, ctx.player, coordinate)?;
             } else {
-                super::scan_building_action(ctx.scripts, ctx.config, unit, ctx.player, coordinate)?;
+                super::scan_building_action(ctx.scripts, unit, ctx.player, coordinate)?;
             }
             return Ok(String::new());
         }
@@ -419,13 +419,7 @@ pub(crate) fn command(
         if let Some(option) = selected_option {
             drop(world);
             return Ok(
-                match super::scan_selected_action(
-                    ctx.scripts,
-                    ctx.config,
-                    unit,
-                    ctx.player,
-                    option,
-                )? {
+                match super::scan_selected_action(ctx.scripts, unit, ctx.player, option)? {
                     super::SelectedScan::Unit(text) => text,
                     _ => String::new(),
                 },

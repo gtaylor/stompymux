@@ -33,8 +33,8 @@ impl PilotingCheck {
     /// Awarding checks use the `(noxp)` diagnostic label.
     pub(super) fn diagnostic(&self, awards_experience: bool) -> Option<super::DiagnosticMessage> {
         self.roll.map(|_| super::DiagnosticMessage::new(
-            super::DiagnosticChannel::Debug,
-            format!("Attempting to make pilot{} skill roll. SPilot: {}, mods: {}, MechPilot: {}, BTH: {}",
+            super::TraceTopic::PilotingRolls,
+            format!("Attempting to make pilot{} skill roll. SPilot: {}, mods: {}, Damage: {}, BTH: {}",
                 if awards_experience { " (noxp)" } else { "" },
                 self.skill, self.situational, self.damage, self.target),
         ))
@@ -112,7 +112,6 @@ pub(super) fn publish_ordered_notices(
 /// These maneuver callers always capture their assigned pilot before applying consequences.
 pub(super) fn publish_maneuver_feedback(
     scripts: &crate::Scripts,
-    config: &crate::Config,
     notices: &[super::Notice],
     private: &[PilotNotice],
     check: Option<&PilotingCheck>,
@@ -121,7 +120,6 @@ pub(super) fn publish_maneuver_feedback(
     let position = private.first().map_or(0, |notice| notice.before_notice);
     publish_diagnostic_feedback(
         scripts,
-        config,
         notices,
         private,
         check
@@ -133,7 +131,6 @@ pub(super) fn publish_maneuver_feedback(
 /// Reports with cockpit fallback retain an explicit diagnostic position independent of pilot presence.
 pub(super) fn publish_diagnostic_feedback(
     scripts: &crate::Scripts,
-    config: &crate::Config,
     notices: &[super::Notice],
     private: &[PilotNotice],
     diagnostic: Option<(usize, super::DiagnosticMessage)>,
@@ -142,7 +139,7 @@ pub(super) fn publish_diagnostic_feedback(
         if let Some((position, diagnostic)) = &diagnostic
             && index == *position
         {
-            super::channels::publish(scripts, config, std::slice::from_ref(diagnostic))?;
+            super::diagnostics::publish(scripts, std::slice::from_ref(diagnostic));
         }
         Ok(())
     })
@@ -355,7 +352,7 @@ pub(super) fn award_reason(
     )?;
     let message = award.accepted.then(|| {
         super::DiagnosticMessage::new(
-            super::DiagnosticChannel::PilotingExperience,
+            super::TraceTopic::PilotingExperience,
             format!("{} gained {amount} {skill} XP", world.objects[&pilot].name),
         )
     });
@@ -383,11 +380,11 @@ mod tests {
         };
         for (awards, label) in [(false, ""), (true, " (noxp)")] {
             let message = check.diagnostic(awards).unwrap();
-            assert_eq!(message.channel, super::super::DiagnosticChannel::Debug);
+            assert_eq!(message.topic, super::super::TraceTopic::PilotingRolls);
             assert_eq!(
                 message.text,
                 format!(
-                    "Attempting to make pilot{label} skill roll. SPilot: 6, mods: -1, MechPilot: 2, BTH: 13"
+                    "Attempting to make pilot{label} skill roll. SPilot: 6, mods: -1, Damage: 2, BTH: 13"
                 )
             );
         }
@@ -405,7 +402,7 @@ mod tests {
         let id = world.create(&config, "Mech".into(), crate::Kind::Thing);
         let template = crate::MechTemplate::parse(
             "JR7-D",
-            include_str!("../../tests/fixtures/btech/mechs/JR7-D.toml"),
+            include_str!("../../tests/fixtures/btech/units/JR7-D.toml"),
         )
         .unwrap();
         let mut unit = crate::Mech::from_template(template).unwrap();

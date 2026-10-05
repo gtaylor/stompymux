@@ -41,6 +41,25 @@ pub mod targets {
     pub const SHOUTS: &str = "audit::shouts";
     /// Operator changes to BattleTech settings.
     pub const WIZARD: &str = "audit::wizard";
+    /// Pilot experience awards for skills other than gunnery and piloting, and the
+    /// battle-value formula's noisy gain details.
+    pub const BTECH_EXPERIENCE: &str = "btech::experience";
+    /// Accepted gunnery experience awards.
+    pub const BTECH_GUNNERY_EXPERIENCE: &str = "btech::experience::gunnery";
+    /// Accepted piloting experience awards.
+    pub const BTECH_PILOTING_EXPERIENCE: &str = "btech::experience::piloting";
+    /// Piloting skill roll inputs: base skill, modifiers, damage and target number.
+    pub const BTECH_PILOTING_ROLLS: &str = "btech::piloting::rolls";
+    /// Self-destruct detonations.
+    pub const BTECH_SELF_DESTRUCT: &str = "btech::self_destruct";
+    /// Parts stock additions and removals.
+    pub const BTECH_ECONOMY: &str = "btech::economy";
+    /// Radio frequency settings that match an opposing team's channel.
+    pub const BTECH_RADIO_FREQUENCIES: &str = "btech::radio::frequencies";
+    /// Radio transmissions on frequency zero over an in-character battlefield, with their text.
+    pub const BTECH_RADIO_ZERO_FREQUENCY: &str = "btech::radio::zero_frequency";
+    /// Map files rejected when loading, with the reason.
+    pub const BTECH_MAP_LOAD: &str = "btech::map::load";
 }
 
 /// Filter used when neither `logging.filter` nor `RUST_LOG` says otherwise: everything at
@@ -113,6 +132,61 @@ impl AuditRecord {
     /// Emit the committed audit to [`targets::WIZARD`].
     pub fn emit(&self) {
         tracing::info!(target: targets::WIZARD, "{}", self.message);
+    }
+}
+
+/// BattleTech diagnostic topics, each written to its own fixed target in [`targets`] at its
+/// own level.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TraceTopic {
+    Experience,
+    GunneryExperience,
+    PilotingExperience,
+    PilotingRolls,
+    SelfDestruct,
+    Economy,
+    RadioFrequencies,
+    RadioZeroFrequency,
+    MapLoad,
+}
+
+/// A diagnostic held until its transaction commits, so rolled-back actions leave no trace.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TraceRecord {
+    pub topic: TraceTopic,
+    pub message: String,
+}
+
+impl TraceRecord {
+    /// Emit the committed record to its topic's target, as one inert line.
+    pub fn emit(&self) {
+        let message = clean(&self.message);
+        match self.topic {
+            TraceTopic::Experience => {
+                tracing::debug!(target: targets::BTECH_EXPERIENCE, "{message}")
+            }
+            TraceTopic::GunneryExperience => {
+                tracing::debug!(target: targets::BTECH_GUNNERY_EXPERIENCE, "{message}")
+            }
+            TraceTopic::PilotingExperience => {
+                tracing::debug!(target: targets::BTECH_PILOTING_EXPERIENCE, "{message}")
+            }
+            TraceTopic::PilotingRolls => {
+                tracing::debug!(target: targets::BTECH_PILOTING_ROLLS, "{message}")
+            }
+            TraceTopic::SelfDestruct => {
+                tracing::debug!(target: targets::BTECH_SELF_DESTRUCT, "{message}")
+            }
+            TraceTopic::Economy => tracing::debug!(target: targets::BTECH_ECONOMY, "{message}"),
+            TraceTopic::RadioFrequencies => {
+                tracing::debug!(target: targets::BTECH_RADIO_FREQUENCIES, "{message}")
+            }
+            TraceTopic::RadioZeroFrequency => {
+                tracing::info!(target: targets::BTECH_RADIO_ZERO_FREQUENCY, "{message}")
+            }
+            TraceTopic::MapLoad => tracing::error!(target: targets::BTECH_MAP_LOAD, "{message}"),
+        }
     }
 }
 
@@ -220,6 +294,43 @@ impl<'a> MakeWriter<'a> for Capture {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Each trace topic keeps its level: the default filter writes zero-frequency radio and
+    /// map-load errors but hides debug topics, and player text stays one inert line.
+    #[test]
+    fn trace_topics_use_their_levels_and_clean_player_text() {
+        let (capture, _guard) = Capture::install(DEFAULT_FILTER);
+        for (topic, message) in [
+            (TraceTopic::Economy, "stock"),
+            (
+                TraceTopic::RadioZeroFrequency,
+                "said \"hi\u{1b}[31m\"\rthere",
+            ),
+            (TraceTopic::MapLoad, "bad map"),
+        ] {
+            TraceRecord {
+                topic,
+                message: message.into(),
+            }
+            .emit();
+        }
+        assert!(capture.lines_containing(targets::BTECH_ECONOMY).is_empty());
+        let radio = capture.lines_containing(targets::BTECH_RADIO_ZERO_FREQUENCY);
+        assert_eq!(radio.len(), 1, "{}", capture.text());
+        assert!(radio[0].contains("INFO"), "{}", radio[0]);
+        assert!(
+            !radio[0].contains('\u{1b}') && !radio[0].contains('\r'),
+            "{}",
+            radio[0]
+        );
+        let map = capture.lines_containing(targets::BTECH_MAP_LOAD);
+        assert_eq!(map.len(), 1, "{}", capture.text());
+        assert!(
+            map[0].contains("ERROR") && map[0].contains("bad map"),
+            "{}",
+            map[0]
+        );
+    }
 
     /// Filters parse with `RUST_LOG` syntax and reject malformed directives.
     #[test]

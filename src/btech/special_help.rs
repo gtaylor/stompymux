@@ -97,7 +97,7 @@ impl SpecialType {
     /// Reference type name used by ungrouped command menus.
     fn label(self) -> &'static str {
         match self {
-            Self::Mech => "MECH",
+            Self::Unit => "UNIT",
             Self::Debug => "DEBUG",
             Self::Map => "MAP",
             Self::Autopilot => "AUTOPILOT",
@@ -190,29 +190,29 @@ mod tests {
     fn categorized_help_obeys_class_and_authority() {
         for privileged in [false, true] {
             for class in [CommandClass::Mech, CommandClass::Ground] {
-                let help = SpecialType::Mech.help(Some(class), privileged, "");
+                let help = SpecialType::Unit.help(Some(class), privileged, "");
                 assert!(help.find("Movement").unwrap() < help.find("Radio").unwrap());
                 assert_eq!(help.contains("Physical"), class == CommandClass::Mech);
                 assert_eq!(help.contains("Restricted"), privileged);
                 assert!(help.contains("HELP SUBTOPIC"));
                 assert!(
-                    SpecialType::Mech
+                    SpecialType::Unit
                         .help(Some(class), privileged, "ALL")
                         .contains("ALL not available")
                 );
                 assert!(
-                    SpecialType::Mech
+                    SpecialType::Unit
                         .help(Some(class), privileged, "Mov")
                         .contains("Subcategory not found.")
                 );
-                let detail = SpecialType::Mech.help(Some(class), privileged, "mOvEmEnT");
+                let detail = SpecialType::Unit.help(Some(class), privileged, "mOvEmEnT");
                 assert!(detail.contains(&text::truncate("[fg=blue bold]HEADING[reset]", 78)));
                 assert!(!detail.contains("HELP SUBTOPIC"));
                 assert!(detail.lines().all(|line| text::width(line) == 78));
             }
         }
         assert!(
-            SpecialType::Mech
+            SpecialType::Unit
                 .help(None, true, "")
                 .contains("There are no commands")
         );

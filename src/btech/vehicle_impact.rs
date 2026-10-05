@@ -350,20 +350,20 @@ mod policy_tests {
         let ground = Vehicle::new(
             VehicleTemplate::parse(
                 "Demolisher",
-                include_str!("../../game/mechs/Demolisher.toml"),
+                include_str!("../../game/units/Demolisher.toml"),
             )
             .unwrap(),
         )
         .unwrap();
         let aircraft = Vehicle::new(
-            VehicleTemplate::parse("Kestrel", include_str!("../../game/mechs/Kestrel.toml"))
+            VehicleTemplate::parse("Kestrel", include_str!("../../game/units/Kestrel.toml"))
                 .unwrap(),
         )
         .unwrap();
         let observation = Vehicle::new(
             VehicleTemplate::parse(
                 "ObservationVTOL",
-                include_str!("../../game/mechs/ObservationVTOL.toml"),
+                include_str!("../../game/units/ObservationVTOL.toml"),
             )
             .unwrap(),
         )

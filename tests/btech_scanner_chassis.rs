@@ -4,17 +4,17 @@ use stompymux_rs::*;
 
 /// Representative supported chassis with stationary movement explicitly authored.
 fn templates() -> Vec<String> {
-    let tracked = include_str!("../game/mechs/Demolisher.toml");
+    let tracked = include_str!("../game/units/Demolisher.toml");
     vec![
-        include_str!("../game/mechs/JR7-D.toml").into(),
-        include_str!("../game/mechs/GOL-1H.toml").into(),
+        include_str!("../game/units/JR7-D.toml").into(),
+        include_str!("../game/units/GOL-1H.toml").into(),
         tracked.into(),
         tracked.replace("movement = \"track\"", "movement = \"wheel\""),
         tracked.replace("movement = \"track\"", "movement = \"hover\""),
         tracked
             .replace("movement = \"track\"", "movement = \"none\"")
             .replace("walk_mp = 5", "walk_mp = 0"),
-        include_str!("../game/mechs/Kestrel.toml").into(),
+        include_str!("../game/units/Kestrel.toml").into(),
     ]
 }
 
@@ -318,7 +318,7 @@ async fn probe_contacts_cross_obstacles_and_reconcile_after_equipment_loss() {
     for source in templates() {
         let (_dir, config, world, observer, target) = fixture(
             &source,
-            include_str!("../game/mechs/Demolisher.toml"),
+            include_str!("../game/units/Demolisher.toml"),
             3,
             true,
         )
@@ -424,7 +424,7 @@ async fn probe_contacts_cross_obstacles_and_reconcile_after_equipment_loss() {
 /// A launch countdown keeps the target on the sensor band; radar tracks it only after liftoff.
 #[tokio::test]
 async fn radar_tracks_launching_vtols_only_after_liftoff() {
-    let source = include_str!("../game/mechs/Kestrel.toml");
+    let source = include_str!("../game/units/Kestrel.toml");
     let (_dir, config, mut base, observer, target) = fixture(source, source, 3, false).await;
     edit(&mut base, observer, |state| {
         state["contacts"] = serde_json::json!({target.0.to_string():{"identified":true}});
@@ -592,7 +592,7 @@ async fn gatling_attack_order_replays_across_chassis() {
     for source in templates() {
         for supply in [2, 200] {
             let (_dir, config, mut world, shooter, target) =
-                fixture(&source, include_str!("../game/mechs/JR7-D.toml"), 1, false).await;
+                fixture(&source, include_str!("../game/units/JR7-D.toml"), 1, false).await;
             let index = install_gatling(&mut world, shooter, supply);
             edit(&mut world, shooter, |state| {
                 state["dice"] = serde_json::to_value(Dice::seeded([17; 32])).unwrap();

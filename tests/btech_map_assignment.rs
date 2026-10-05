@@ -154,7 +154,7 @@ async fn map_capacity_counts_all_chassis_and_allows_existing_members() {
     }
     let before = world.clone();
     let error = reassign_battle_map(&mut world, overflow.unwrap(), map, None).unwrap_err();
-    assert!(error.to_string().contains("too many mechs"), "{error:#}");
+    assert!(error.to_string().contains("too many units"), "{error:#}");
     assert_eq!(world.btech, before.btech);
     reassign_battle_map(&mut world, first.unwrap(), map, Some("ZZ")).unwrap();
     world.validate(&config).unwrap();

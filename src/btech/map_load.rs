@@ -25,8 +25,8 @@ pub(crate) fn initialize_map_action(
     })
 }
 
-/// Load a map or publish its structural preflight failure after restoring map state.
-/// Diagnostic publication is atomic; an enclosing failed callback also restores it.
+/// Load a map, or restore map state and log why an invalid file was rejected.
+/// The error log waits for commit, so an enclosing failed callback discards it.
 pub fn load_map_action(
     scripts: &Scripts,
     config: &Config,
@@ -45,17 +45,13 @@ pub fn load_map_action(
     };
     let reason = error.root_cause().to_string();
     let text = format!("Map #{}: {name} is not a valid map file: {reason}", id.0);
-    scripts.atomic(|_| {
-        super::channels::publish(
-            scripts,
-            config,
-            &[super::DiagnosticMessage::new(
-                super::DiagnosticChannel::MapErrors,
-                text,
-            )],
-        )?;
-        scripts.effects.validate()
-    })?;
+    super::diagnostics::publish(
+        scripts,
+        &[super::DiagnosticMessage::new(
+            super::TraceTopic::MapLoad,
+            text,
+        )],
+    );
     result
 }
 
@@ -129,7 +125,7 @@ fn load_map_state_action(
             super::notify_message(
                 scripts,
                 super::MessageTarget::Player(actor),
-                "Clearing Mechs off Newly Loaded Map",
+                "Clearing Units off Newly Loaded Map",
             )?;
             super::clear_map_units_action(scripts, config, actor, id)?;
             super::map_objects::clear(&mut scripts.world_mut(), id)?;

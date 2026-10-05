@@ -119,7 +119,7 @@ to fail.
 5 = { type = "room", name = "Afterlife" }
 ```
 
-The stock configuration uses `#3` for `usedmechstore`, `#4` for both player
+The stock configuration uses `#3` for `usedunitstore`, `#4` for both player
 starting directives, and `#5` for `afterlife_dbref`. Bootstrap fails before
 writing if the required dbrefs are missing or have incompatible types. Seeded
 objects receive the configured default flags and Lua parents for their types.
@@ -269,6 +269,25 @@ trails use fixed targets that can be switched individually:
 | `audit::config` | Runtime configuration edits. |
 | `audit::shouts` | Wizard shouts. |
 | `audit::wizard` | Operator changes to BattleTech settings, written only once they commit. |
+
+BattleTech game diagnostics use their own fixed targets. Like the wizard audit,
+each is written only once its action commits. Most are `debug` level, so the
+default filter hides them; enable one with a directive such as
+`info,btech::experience=debug`, which also enables its `gunnery` and `piloting`
+children. Zero-frequency radio traffic is `info` and rejected map files are
+`error`, so the default filter writes both.
+
+| Target | Records |
+|---|---|
+| `btech::experience` | Experience awards for skills other than gunnery and piloting, and noisy battle-value gain details. |
+| `btech::experience::gunnery` | Accepted gunnery experience awards. |
+| `btech::experience::piloting` | Accepted piloting experience awards. |
+| `btech::piloting::rolls` | Piloting skill roll inputs: base skill, modifiers, damage and target number. |
+| `btech::self_destruct` | Self-destruct detonations. |
+| `btech::economy` | Parts stock additions and removals by cargo transfers and operator edits. |
+| `btech::radio::frequencies` | Radio frequency settings that match an opposing team's channel. |
+| `btech::radio::zero_frequency` | `info`: transmissions on frequency zero over an in-character battlefield, with their text. |
+| `btech::map::load` | `error`: map files `LOADMAP` rejected, with the reason. |
 
 The default filter writes everything at `info` and above except the
 high-volume command and accounting audits. When the `RUST_LOG` environment

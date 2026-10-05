@@ -40,7 +40,7 @@ async fn fixture_with_ranges(
         let id = world.create(&config, "Scan unit".into(), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         let mut template =
-            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
         for &(field, value) in ranges {
             template.attributes.insert(field.into(), value.into());
         }
@@ -88,7 +88,7 @@ fn acquire(world: &mut World, source: ObjectId, target: ObjectId) {
 fn sensor_defaults_follow_technology_base_and_critical_halving() {
     for (clan, base) in [(false, 25), (true, 35)] {
         let mut template =
-            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
         for field in ["tac_range", "lrs_range", "scan_range"] {
             template.attributes.remove(field);
         }
@@ -315,7 +315,7 @@ async fn coordinate_scan_selects_visible_occupants_in_saved_order() {
     create_battle_unit(
         &mut world,
         other,
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, other, support::FIXTURE_DICE_SEED);
@@ -744,8 +744,7 @@ async fn combined_hex_scan_routes_private_failure_and_rolls_back_both_phases() {
     }
     let shared = std::rc::Rc::new(std::cell::RefCell::new(world.clone()));
     let scripts = Scripts::new(&config, shared.clone()).unwrap();
-    let failed =
-        scan_battle_hex_action(&scripts, &config, source, ObjectId(1), coordinate).unwrap();
+    let failed = scan_battle_hex_action(&scripts, source, ObjectId(1), coordinate).unwrap();
     assert!(!failed.mines.found);
     let notices = scripts.drain_outbox();
     assert_eq!(
@@ -805,7 +804,7 @@ async fn selected_scan_dispatches_each_lock_mode_without_changing_countdowns() {
     let coordinate = HexCoordinate { x: 1, y: 2 };
     let shared = std::rc::Rc::new(std::cell::RefCell::new(world.clone()));
     let scripts = Scripts::new(&config, shared.clone()).unwrap();
-    assert!(scan_battle_selected_action(&scripts, &config, source, ObjectId(1), "").is_err());
+    assert!(scan_battle_selected_action(&scripts, source, ObjectId(1), "").is_err());
     for mode in [
         HexTargetMode::UnitAtHex,
         HexTargetMode::Ignite,
@@ -817,8 +816,7 @@ async fn selected_scan_dispatches_each_lock_mode_without_changing_countdowns() {
             select_battle_hex_target(&mut world, source, ObjectId(1), coordinate, mode).unwrap();
         *shared.borrow_mut() = world.clone();
         let before = world.btech.clone();
-        let report =
-            scan_battle_selected_action(&scripts, &config, source, ObjectId(1), "").unwrap();
+        let report = scan_battle_selected_action(&scripts, source, ObjectId(1), "").unwrap();
         match (&report, mode) {
             (SelectedScan::Building(report), HexTargetMode::Building) => {
                 assert!(report.text.contains("CF is 31"))
@@ -862,7 +860,7 @@ async fn selected_scan_dispatches_each_lock_mode_without_changing_countdowns() {
     );
     *shared.borrow_mut() = restored;
     assert!(matches!(
-        scan_battle_selected_action(&scripts, &config, source, ObjectId(1), "").unwrap(),
+        scan_battle_selected_action(&scripts, source, ObjectId(1), "").unwrap(),
         SelectedScan::Hex(_)
     ));
 }
@@ -889,13 +887,13 @@ async fn selected_observer_coordinates_bypass_distance_but_keep_visibility_and_r
         select_battle_hex_target(&mut world, source, ObjectId(1), far, HexTargetMode::Hex).unwrap();
     let shared = std::rc::Rc::new(std::cell::RefCell::new(world));
     let scripts = Scripts::new(&config, shared.clone()).unwrap();
-    assert!(scan_battle_selected_action(&scripts, &config, source, ObjectId(1), "").is_err());
+    assert!(scan_battle_selected_action(&scripts, source, ObjectId(1), "").is_err());
     set_battle_observer(&mut shared.borrow_mut(), source, true).unwrap();
-    let report = scan_battle_selected_action(&scripts, &config, source, ObjectId(1), "").unwrap();
+    let report = scan_battle_selected_action(&scripts, source, ObjectId(1), "").unwrap();
     assert!(matches!(report, SelectedScan::Hex(_)));
-    assert!(scan_battle_hex_action(&scripts, &config, source, ObjectId(1), far).is_err());
+    assert!(scan_battle_hex_action(&scripts, source, ObjectId(1), far).is_err());
     set_battle_map_visibility(&mut shared.borrow_mut(), map, Light::Day, 0).unwrap();
-    assert!(scan_battle_selected_action(&scripts, &config, source, ObjectId(1), "").is_err());
+    assert!(scan_battle_selected_action(&scripts, source, ObjectId(1), "").is_err());
     set_battle_map_visibility(&mut shared.borrow_mut(), map, Light::Day, 30).unwrap();
     let coordinate = HexCoordinate { x: 1, y: 2 };
     scan_mine(&mut shared.borrow_mut(), map, coordinate);
@@ -1386,7 +1384,7 @@ async fn long_range_stacked_markers_share_native_lua_and_restart_order() {
         create_battle_unit(
             &mut world,
             earlier,
-            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, earlier, support::FIXTURE_DICE_SEED);
@@ -3464,7 +3462,7 @@ async fn contact_modes_order_buildings_wrecks_and_units_without_changing_lua_que
     create_battle_unit(
         &mut world,
         near,
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, near, support::FIXTURE_DICE_SEED);
@@ -4042,7 +4040,7 @@ async fn shutdown_contact_notice_preference_is_independent_and_durable() {
         &config,
         ObjectId(1),
         1,
-        "mechprefs AutoconShutdown ON",
+        "unitprefs AutoconShutdown ON",
     );
     assert!(
         native.contains("Autocon on shutdown units turned ON"),
@@ -5643,7 +5641,7 @@ async fn ammunition_dump_low_capacity_bins_preserve_cadence_and_shutdown_cancels
     create_battle_unit(
         &mut world,
         id,
-        MechTemplate::parse("AS7-D", include_str!("fixtures/btech/mechs/AS7-D.toml")).unwrap(),
+        MechTemplate::parse("AS7-D", include_str!("fixtures/btech/units/AS7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
@@ -5721,7 +5719,7 @@ async fn ammunition_dump_server_retries_failed_commits_without_losing_rounds() {
 fn explicit_template_ranges_preserve_defaults_and_damage_limits() {
     for value in ["0", "1", "127"] {
         let mut template =
-            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
         for field in ["scan_range", "tac_range", "lrs_range"] {
             template.attributes.insert(field.into(), value.into());
         }
@@ -5786,7 +5784,7 @@ fn explicit_template_ranges_preserve_defaults_and_damage_limits() {
             },
         ] {
             let mut template =
-                MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml"))
                     .unwrap();
             template.attributes.insert(field.into(), value.into());
             assert!(Mech::from_template(template).is_err(), "{field}={value}");

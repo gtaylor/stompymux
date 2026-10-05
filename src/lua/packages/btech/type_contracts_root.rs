@@ -339,8 +339,8 @@
 //|---@field null_signature SignatureState
 //|---@field stealth SignatureState
 //|---@field electronics Electronics Selected suite modes and last committed field.
-//|---@field beacons table<MechSection, BeaconKind[]> Attached effects grouped by section.
-//|---@field narc_sections MechSection[] Sections carrying homing beacons.
+//|---@field beacons table<UnitSection, BeaconKind[]> Attached effects grouped by section.
+//|---@field narc_sections UnitSection[] Sections carrying homing beacons.
 //|---@field ams_enabled boolean Automatic anti-missile defense switch.
 //|---@field auto_fall boolean Skip downhill cliff avoidance when piloted.
 //|---@field hex_sync_pending boolean A collision interrupted synchronization of motion.point and position.
@@ -970,7 +970,7 @@
 //|---@field notices Notice[] Cockpit effects from the hit-location roll.
 //|---@field hit boolean Whether the beacon met the full attack target.
 //|---@field intercepted boolean Whether AMS intercepted the pod.
-//|---@field section MechSection|VehicleSectionName|nil Surviving attachment section.
+//|---@field section UnitSection|VehicleSectionName|nil Surviving attachment section.
 //|---@field rear boolean Rear-facing attachment notice.
 // lua-types-end
 
@@ -1052,7 +1052,7 @@
 //|---@field initial_woods WoodsAbsorption|nil Nominal LBX terrain check before pellet counting and absorption.
 //|---@field woods WoodsAbsorption|nil Occupied-woods consequences for direct shells (including bursts) or missile/pellet armor damage, after missile interception.
 //|---@field experience table[] Per-packet optional pre-impact XP awards.
-//|---@field experience_messages table[] Ordered XP channel diagnostics.
+//|---@field experience_messages table[] Ordered experience diagnostics.
 //|---@field cluster_roll integer|nil
 //|---@field missiles_before_defense integer|nil
 //|---@field groups table[] Located conventional damage packets.
@@ -1352,11 +1352,11 @@
 
 // lua-types-begin btech 00307
 //|---@class PodRow
-//|---@field section MechSection|VehicleSectionName
+//|---@field section UnitSection|VehicleSectionName
 //|---@field destroyed boolean
 //|---@field kinds BeaconKind[]
 //|---@class PodRemoval
-//|---@field section MechSection
+//|---@field section UnitSection
 //|---@field kind BeaconKind
 //|---@field arm "left"|"right"
 //|---@field target_number integer
@@ -1403,7 +1403,7 @@
 
 // lua-types-begin btech 00325
 //|---@class DiagnosticMessage
-//|---@field channel "debug"|"economy"|"attack_experience"|"experience"|"piloting_experience"|"frequencies"|"zero_frequencies"|"map_errors"
+//|---@field topic "experience"|"gunnery_experience"|"piloting_experience"|"piloting_rolls"|"self_destruct"|"economy"|"radio_frequencies"|"radio_zero_frequency"|"map_load"
 //|---@field text string
 // lua-types-end
 
@@ -1672,7 +1672,7 @@
 
 // lua-types-begin btech 00424
 //|---Typed unit-layout section constant from btech.unit.sections.
-//|---@class MechSection
+//|---@class UnitSection
 //|---Typed unit class constant from btech.unit.types.
 //|---@class UnitType
 //|---Typed movement class constant from btech.unit.movement_types.
@@ -1703,7 +1703,7 @@
 
 // lua-types-begin btech 00426
 //|---@class ArmorStatus
-//|---@field section? MechSection Omitted when the request did not select one.
+//|---@field section? UnitSection Omitted when the request did not select one.
 //|---@field armor BattleValuePair
 //|---@field internal BattleValuePair
 //|---@field rear_armor BattleValuePair
@@ -1760,7 +1760,7 @@
 
 // lua-types-begin btech 00433
 //|---@class CriticalSlot
-//|---@field section MechSection
+//|---@field section UnitSection
 //|---@field slot integer
 //|---@field kind string
 //|---@field part? PartDefinition
@@ -1775,7 +1775,7 @@
 // lua-types-begin btech 00434
 //|---@class MountedWeapon
 //|---@field number integer Zero-based stable weapon number.
-//|---@field section MechSection
+//|---@field section UnitSection
 //|---@field first_slot integer Zero-based first occupied critical slot.
 //|---@field part PartDefinition
 //|---@field slot_count integer
@@ -1884,7 +1884,7 @@
 // lua-types-begin btech 00496
 //|---@class WeaponInstall
 //|---@field part PartRef Weapon part reference.
-//|---@field section MechSection
+//|---@field section UnitSection
 //|---@field slots integer[] Zero-based critical slots.
 //|---@field rear_facing? boolean
 //|---@field targeting_computer? boolean
@@ -1894,7 +1894,7 @@
 // lua-types-begin btech 00497
 //|---@class AmmunitionConfiguration
 //|---@field weapon PartRef Launcher part reference.
-//|---@field section MechSection
+//|---@field section UnitSection
 //|---@field slot integer Zero-based critical slot.
 //|---@field half_ton? boolean
 //|---@field ammunition_modes? AmmunitionModeConstant[]
@@ -1909,7 +1909,7 @@
 // lua-types-begin btech 00499
 //|---@class SpecialInstall
 //|---@field part? PartRef Omit to empty the slot.
-//|---@field section MechSection
+//|---@field section UnitSection
 //|---@field slot integer Zero-based critical slot.
 //|---@field auxiliary_data? integer
 // lua-types-end
@@ -1933,23 +1933,23 @@
 // lua-types-begin btech 00534
 //|---@class RepairArmorRequest
 //|---@field operation RepairOperation
-//|---@field section MechSection
+//|---@field section UnitSection
 //|---@field value integer
 //|---@class RepairInternalRequest
 //|---@field operation RepairOperation
-//|---@field section MechSection
+//|---@field section UnitSection
 //|---@field value integer
 //|---@class RepairRearArmorRequest
 //|---@field operation RepairOperation
-//|---@field section MechSection
+//|---@field section UnitSection
 //|---@field value integer
 //|---@class RepairPartRequest
 //|---@field operation RepairOperation
-//|---@field section MechSection
+//|---@field section UnitSection
 //|---@field slot integer
 //|---@class RepairReattachRequest
 //|---@field operation RepairOperation
-//|---@field section MechSection
+//|---@field section UnitSection
 // lua-types-end
 
 // lua-types-begin btech 00535

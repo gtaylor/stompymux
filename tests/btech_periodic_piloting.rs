@@ -19,12 +19,6 @@ async fn control_feedback_is_ordered_and_respects_pilot_audience() {
                 .flags
                 .insert(Flag::Connected);
         }
-        let mut channel = Channel::new("MechDebugInfo".into());
-        channel.users.push(communication::Membership {
-            who: ObjectId(2),
-            listening: true,
-        });
-        base.channels.insert("MechDebugInfo".into(), channel);
         for assigned in [false, true] {
             for success in [false, true] {
                 let mut world = base.clone();
@@ -40,7 +34,6 @@ async fn control_feedback_is_ordered_and_respects_pilot_audience() {
                     state["motion"]["desired_speed"] = speed.into();
                 });
                 seed(&mut world, unit, success);
-                let before = world.clone();
                 let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
                 let reports = advance_battle_periodic_piloting_action(&scripts, &config).unwrap();
                 assert_eq!(reports.len(), 1);
@@ -57,26 +50,17 @@ async fn control_feedback_is_ordered_and_respects_pilot_audience() {
                 let messages = scripts.drain_outbox();
                 let check = reports[0].check;
                 let diagnostic = format!(
-                    "Attempting to make pilot (noxp) skill roll. SPilot: {}, mods: {}, MechPilot: {}, BTH: {}",
+                    "Attempting to make pilot (noxp) skill roll. SPilot: {}, mods: {}, Damage: {}, BTH: {}",
                     check.skill, check.situational, check.damage, check.target
                 );
-                assert_eq!(scripts.world().channels["MechDebugInfo"].messages, 1);
-                let debug_index = messages
-                    .iter()
-                    .position(|(who, text)| {
-                        *who == ObjectId(2) && text.source().contains(&diagnostic)
-                    })
-                    .unwrap();
-                let cockpit_index = messages
-                    .iter()
-                    .position(|(_, text)| text.source() == expected[0])
-                    .unwrap();
-                assert!(debug_index < cockpit_index);
+                assert_eq!(
+                    support::drain_traces(&scripts, logging::TraceTopic::PilotingRolls),
+                    [diagnostic.as_str()]
+                );
                 assert!(
                     !messages
                         .iter()
-                        .any(|(who, text)| *who == ObjectId(1)
-                            && text.source().contains(&diagnostic))
+                        .any(|(_, text)| text.source().contains(&diagnostic))
                 );
 
                 for player in [ObjectId(1), ObjectId(2)] {
@@ -102,18 +86,6 @@ async fn control_feedback_is_ordered_and_respects_pilot_audience() {
                     .collect();
                 assert_eq!(pilot_messages[0], expected[0]);
                 assert_eq!(pilot_messages[1], expected[1]);
-                *scripts.world_mut() = before.clone();
-                scripts
-                    .world_mut()
-                    .channels
-                    .get_mut("MechDebugInfo")
-                    .unwrap()
-                    .messages = i64::MAX;
-                let error = advance_battle_periodic_piloting_action(&scripts, &config).unwrap_err();
-                assert!(format!("{error:#}").contains("channel message counter overflow"));
-                assert_eq!(scripts.world().btech, before.btech);
-                assert_eq!(scripts.world().channels["MechDebugInfo"].messages, i64::MAX);
-                assert!(scripts.drain_outbox().is_empty());
             }
         }
     }
@@ -213,8 +185,8 @@ async fn damaged_running_checks_use_each_heartbeat_and_preserve_reverse_and_walk
 #[tokio::test]
 async fn gravity_stress_obeys_global_boundary_and_hits_each_chassis_leg_in_order() {
     for template in [
-        include_str!("../game/mechs/CTF-3L.toml"),
-        include_str!("../game/mechs/StalkingSpider-1.toml"),
+        include_str!("../game/units/CTF-3L.toml"),
+        include_str!("../game/units/StalkingSpider-1.toml"),
     ] {
         let (_dir, config, mut base, unit, _, _) =
             firing::fixture_with_target(template, None, template).await;
@@ -291,7 +263,7 @@ async fn gravity_stress_obeys_global_boundary_and_hits_each_chassis_leg_in_order
 /// The hot-myomer running threshold changes only on the guarded turn ticks.
 #[tokio::test]
 async fn hot_myomer_turn_threshold_and_shutdown_crew_gates() {
-    let template = include_str!("../game/mechs/OTL-6D.toml");
+    let template = include_str!("../game/units/OTL-6D.toml");
     let (_dir, config, mut base, unit, _, _) =
         firing::fixture_with_target(template, None, template).await;
     damage_gyro(&mut base, unit);
@@ -359,7 +331,7 @@ async fn server_clock_and_fall_retry_are_one_transaction() {
     use sqlx::{Connection, SqliteConnection};
     use std::{cell::Cell, rc::Rc};
     tokio::task::LocalSet::new().run_until(async {
-        let template = include_str!("../game/mechs/JR7-D.toml");
+        let template = include_str!("../game/units/JR7-D.toml");
         let (_dir,config,mut world,unit,_,_) = firing::fixture_with_target(template,None,template).await;
         damage_gyro(&mut world,unit); phase(&mut world,28); seed(&mut world,unit,false);
         firing::edit(&mut world,unit,|s| {s["motion"]["speed"] = 100.0.into();s["motion"]["desired_speed"] = 100.0.into();});
@@ -441,8 +413,8 @@ async fn damaged_hips_use_running_threshold_for_both_mech_chassis() {
 #[tokio::test]
 async fn gravity_success_and_disabled_special_rules_preserve_material() {
     for template in [
-        include_str!("../game/mechs/CTF-3L.toml"),
-        include_str!("../game/mechs/StalkingSpider-1.toml"),
+        include_str!("../game/units/CTF-3L.toml"),
+        include_str!("../game/units/StalkingSpider-1.toml"),
     ] {
         let (_dir, config, base, unit, _, _) =
             firing::fixture_with_target(template, None, template).await;

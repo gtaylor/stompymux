@@ -14,7 +14,7 @@ async fn vehicles_save_damage_replay_and_purge_with_their_objects() {
     create_battle_vehicle(
         &mut world,
         id,
-        VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+        VehicleTemplate::parse("Demolisher", include_str!("../game/units/Demolisher.toml"))
             .unwrap(),
     )
     .unwrap();
@@ -28,7 +28,7 @@ async fn vehicles_save_damage_replay_and_purge_with_their_objects() {
         create_battle_vehicle(
             &mut world,
             id,
-            VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+            VehicleTemplate::parse("Demolisher", include_str!("../game/units/Demolisher.toml"))
                 .unwrap()
         )
         .is_err()
@@ -116,7 +116,7 @@ async fn vehicle_storage_rejects_corrupt_and_oversized_records() {
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     let definition = VehicleTemplate::parse(
         "Flatbed_Truck",
-        include_str!("../game/mechs/Flatbed_Truck.toml"),
+        include_str!("../game/units/Flatbed_Truck.toml"),
     )
     .unwrap();
     assert!(create_battle_vehicle(&mut world, ObjectId(1), definition.clone()).is_err());

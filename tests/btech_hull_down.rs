@@ -1,9 +1,9 @@
 //! Quad hull-down timing, action rollback, movement admission and shared perception cover.
 use crate::support;
 use stompymux_rs::*;
-const QUAD: &str = include_str!("../game/mechs/SCP-1N.toml");
-const MECH: &str = include_str!("fixtures/btech/mechs/JR7-D.toml");
-const VEHICLE: &str = include_str!("../game/mechs/Demolisher.toml");
+const QUAD: &str = include_str!("../game/units/SCP-1N.toml");
+const MECH: &str = include_str!("fixtures/btech/units/JR7-D.toml");
+const VEHICLE: &str = include_str!("../game/units/Demolisher.toml");
 
 /// A quad pilot and a separate observer looking across a one-level ridge.
 async fn fixture(
@@ -293,7 +293,7 @@ async fn hull_down_cover_is_shared_between_attackers_by_sensors_and_sight() {
 #[tokio::test]
 async fn pickup_clears_completed_quad_cover() {
     let (_dir, config, mut world, id, carrier) =
-        fixture(QUAD, include_str!("fixtures/btech/mechs/AS7-D.toml")).await;
+        fixture(QUAD, include_str!("fixtures/btech/units/AS7-D.toml")).await;
     lower(&mut world, id);
     stop_battle_unit(&mut world, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
     let position = world.btech.constructed_units()[&id].position().unwrap();

@@ -5,7 +5,7 @@
 -- binary). The setup prelude below creates the fixture objects through a
 -- probe command and registers the unit before the measured pages run:
 -- PARITY_SETUP: luaparity0
--- PARITY_SETUP: @btech/register Parity Mutation Unit=MECH
+-- PARITY_SETUP: @btech/register Parity Mutation Unit=UNIT
 
 local function quote(value)
   return '"' .. value:gsub('[%z\1-\31\\"]', function(byte)

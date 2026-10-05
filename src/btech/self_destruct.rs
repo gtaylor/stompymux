@@ -145,19 +145,18 @@ fn ammunition(world: &World, id: ObjectId) -> Result<Option<usize>> {
         .largest_ammunition_hazard_bin()
 }
 
-/// Ordered cockpit/observer feedback and diagnostic-channel records from admission.
+/// Ordered cockpit/observer feedback and diagnostic trace records from admission.
 enum Feedback {
     Notice(Notice),
     Debug(String),
 }
 
-/// Diagnostic channels are optional and share the enclosing world/effects transaction.
-fn debug(scripts: &Scripts, config: &Config, text: String) -> Result<()> {
-    super::channels::publish(
+/// Self-destruct traces wait for the enclosing world/effects transaction to commit.
+fn debug(scripts: &Scripts, text: String) {
+    super::diagnostics::publish(
         scripts,
-        config,
-        &[DiagnosticMessage::new(DiagnosticChannel::Debug, text)],
-    )
+        &[DiagnosticMessage::new(TraceTopic::SelfDestruct, text)],
+    );
 }
 
 /// Admit controls once; the event does not require the original pilot to remain assigned.
@@ -339,7 +338,7 @@ pub fn self_destruct_action(
         for feedback in notices {
             match feedback {
                 Feedback::Notice(notice) => super::notify_unit(scripts, notice)?,
-                Feedback::Debug(text) => debug(scripts, config, text)?,
+                Feedback::Debug(text) => debug(scripts, text),
             }
         }
         scripts.world.borrow().validate_action(config)
@@ -430,11 +429,11 @@ pub fn advance_battle_self_destructs_action(
                 continue;
             }
             *timer_mut(&mut scripts.world.borrow_mut(), id) = None;
-            debug(scripts, config, format!("#{} explodes.", id.0))?;
+            debug(scripts, format!("#{} explodes.", id.0));
             if scripts.world.borrow().btech.vehicles().contains_key(&id) {
                 reports.push(immolate(scripts, id)?);
             } else if timer.ammunition {
-                debug(scripts, config, format!("#{} explodes [ammo]", id.0))?;
+                debug(scripts, format!("#{} explodes [ammo]", id.0));
                 super::notify_unit(
                     scripts,
                     Notice {
@@ -458,7 +457,7 @@ pub fn advance_battle_self_destructs_action(
                 }
                 reports.push(SelfDestructOutcome::Ammunition { unit: id, impacts });
             } else {
-                debug(scripts, config, format!("#{} explodes [reactor]", id.0))?;
+                debug(scripts, format!("#{} explodes [reactor]", id.0));
                 reports.push(SelfDestructOutcome::Reactor {
                     report: Box::new(super::reactor_explosion_action(scripts, config, id)?),
                 });

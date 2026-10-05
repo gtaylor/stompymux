@@ -220,7 +220,7 @@ async fn completely_absorbed_missiles_skip_damage_and_roll_back_with_the_callbac
         let (mut world, shooter, target, index) = firing::supply_fixture_on(
             booted.clone(),
             &fixture_config,
-            include_str!("../game/mechs/JR7-D.toml"),
+            include_str!("../game/units/JR7-D.toml"),
             Some(Weapon::Srm2),
             &recipient,
             false,
@@ -270,8 +270,8 @@ async fn missile_ammunition_controls_woods_payload_and_inferno_bypass() {
     let configs = [false, true].map(|enabled| configured(&dir, enabled, false));
     let (pairs, booted) = boot_pairs(&configs, &base);
     for recipient in [
-        include_str!("../game/mechs/AS7-D.toml"),
-        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/units/AS7-D.toml"),
+        include_str!("../game/units/Demolisher.toml"),
     ] {
         for (weapon, flag, payload) in [
             (Weapon::Mml5, "", 2_u64),
@@ -282,7 +282,7 @@ async fn missile_ammunition_controls_woods_payload_and_inferno_bypass() {
             let (mut fixture, shooter, target, index) = firing::supply_fixture_on(
                 booted.clone(),
                 &fixture_config,
-                include_str!("../game/mechs/JR7-D.toml"),
+                include_str!("../game/units/JR7-D.toml"),
                 Some(weapon),
                 recipient,
                 false,
@@ -348,18 +348,18 @@ async fn missile_woods_absorption_follows_live_ams_interception() {
     let scripts = boot(&config, base);
     let booted = scripts.world().clone();
     for source in [
-        include_str!("../game/mechs/JR7-D.toml"),
-        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/units/JR7-D.toml"),
+        include_str!("../game/units/Demolisher.toml"),
     ] {
         for ams in [Weapon::AntiMissileSystem, Weapon::ClanAntiMissileSystem] {
             for recipient in [
-                include_str!("../game/mechs/JR7-D.toml")
+                include_str!("../game/units/JR7-D.toml")
                     .replace("IS.MediumLaser", ams.name())
                     .replace(
                         r#""Ammo_IS.SRM-4", rounds = 25"#,
                         &format!(r#""Ammo_{}", rounds = 24"#, ams.name()),
                     ),
-                include_str!("../game/mechs/Demolisher.toml").replace("IS.AC/20", ams.name()),
+                include_str!("../game/units/Demolisher.toml").replace("IS.AC/20", ams.name()),
             ] {
                 for weapon in [Weapon::Lrm5, Weapon::Lrm20] {
                     let (mut world, shooter, target, index) = firing::supply_fixture_on(
@@ -475,8 +475,8 @@ async fn single_hit_woods_damage_floor_and_glancing_order() {
     let scripts = boot(&config, base);
     let booted = scripts.world().clone();
     for recipient in [
-        include_str!("../game/mechs/AS7-D.toml"),
-        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/units/AS7-D.toml"),
+        include_str!("../game/units/Demolisher.toml"),
     ] {
         for (weapon, base_damage) in [
             (Weapon::SmallLaser, 3_u64),
@@ -486,7 +486,7 @@ async fn single_hit_woods_damage_floor_and_glancing_order() {
             let (fixture, shooter, target, index) = firing::supply_fixture_on(
                 booted.clone(),
                 &fixture_config,
-                include_str!("../game/mechs/JR7-D.toml"),
+                include_str!("../game/units/JR7-D.toml"),
                 Some(weapon),
                 recipient,
                 false,
@@ -532,9 +532,9 @@ async fn single_hit_woods_damage_floor_and_glancing_order() {
 #[tokio::test]
 async fn woods_impact_callback_failure_restores_damage_terrain_dice_and_notices() {
     let (dir, _config, mut world, shooter, target, index) = firing::fixture_with_target(
-        include_str!("../game/mechs/JR7-D.toml"),
+        include_str!("../game/units/JR7-D.toml"),
         Some(Weapon::Ppc),
-        include_str!("../game/mechs/AS7-D.toml"),
+        include_str!("../game/units/AS7-D.toml"),
     )
     .await;
     let config = configured(&dir, true, false);
@@ -557,9 +557,9 @@ async fn woods_impact_callback_failure_restores_damage_terrain_dice_and_notices(
 #[tokio::test]
 async fn woodland_clearing_uses_damage_before_absorption() {
     let (dir, _config, mut world, shooter, target, index) = firing::fixture_with_target(
-        include_str!("../game/mechs/JR7-D.toml"),
+        include_str!("../game/units/JR7-D.toml"),
         Some(Weapon::Ppc),
-        include_str!("../game/mechs/AS7-D.toml"),
+        include_str!("../game/units/AS7-D.toml"),
     )
     .await;
     let config = configured(&dir, true, false);
@@ -601,12 +601,12 @@ async fn burst_matrix(weapon: Weapon) {
     let (pairs, booted) = boot_pairs(&configs, &base);
     let mut sequence = 0;
     for source in [
-        include_str!("../game/mechs/JR7-D.toml"),
-        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/units/JR7-D.toml"),
+        include_str!("../game/units/Demolisher.toml"),
     ] {
         for recipient in [
-            include_str!("../game/mechs/AS7-D.toml"),
-            include_str!("../game/mechs/Demolisher.toml"),
+            include_str!("../game/units/AS7-D.toml"),
+            include_str!("../game/units/Demolisher.toml"),
         ] {
             {
                 let (mut fixture, shooter, target, index) = firing::supply_fixture_on(
@@ -756,12 +756,12 @@ async fn thermal_woods_share_heat_terrain_feedback_and_rollback() {
     let (pairs, booted) = boot_pairs(&configs, &base);
     let mut sequence = 0;
     for source in [
-        include_str!("../game/mechs/JR7-D.toml"),
-        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/units/JR7-D.toml"),
+        include_str!("../game/units/Demolisher.toml"),
     ] {
         for recipient in [
-            include_str!("../game/mechs/AS7-D.toml"),
-            include_str!("../game/mechs/Demolisher.toml"),
+            include_str!("../game/units/AS7-D.toml"),
+            include_str!("../game/units/Demolisher.toml"),
         ] {
             for weapon in [
                 Weapon::Flamer,
@@ -1013,8 +1013,8 @@ async fn pellet_matrix(
 #[tokio::test]
 async fn pellet_woods_two_stage_terrain_mech_v_mech_lbx2() {
     let (_cleared, _thinned, absorbed_all) = pellet_matrix(
-        include_str!("../game/mechs/JR7-D.toml"),
-        include_str!("../game/mechs/AS7-D.toml"),
+        include_str!("../game/units/JR7-D.toml"),
+        include_str!("../game/units/AS7-D.toml"),
         Weapon::Lbx2,
         &[Terrain::LightForest, Terrain::HeavyForest],
     )
@@ -1031,8 +1031,8 @@ async fn pellet_woods_two_stage_terrain_mech_v_mech_lbx2() {
 #[tokio::test]
 async fn pellet_woods_two_stage_terrain_mech_v_mech_lbx20_heavy_forest() {
     pellet_matrix(
-        include_str!("../game/mechs/JR7-D.toml"),
-        include_str!("../game/mechs/AS7-D.toml"),
+        include_str!("../game/units/JR7-D.toml"),
+        include_str!("../game/units/AS7-D.toml"),
         Weapon::Lbx20,
         &[Terrain::HeavyForest],
     )
@@ -1042,8 +1042,8 @@ async fn pellet_woods_two_stage_terrain_mech_v_mech_lbx20_heavy_forest() {
 #[tokio::test]
 async fn pellet_woods_two_stage_terrain_mech_v_mech_lbx20_light_forest() {
     pellet_matrix(
-        include_str!("../game/mechs/JR7-D.toml"),
-        include_str!("../game/mechs/AS7-D.toml"),
+        include_str!("../game/units/JR7-D.toml"),
+        include_str!("../game/units/AS7-D.toml"),
         Weapon::Lbx20,
         &[Terrain::LightForest],
     )
@@ -1053,8 +1053,8 @@ async fn pellet_woods_two_stage_terrain_mech_v_mech_lbx20_light_forest() {
 #[tokio::test]
 async fn pellet_woods_two_stage_terrain_mech_v_vehicle_lbx2() {
     let (_cleared, _thinned, absorbed_all) = pellet_matrix(
-        include_str!("../game/mechs/JR7-D.toml"),
-        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/units/JR7-D.toml"),
+        include_str!("../game/units/Demolisher.toml"),
         Weapon::Lbx2,
         &[Terrain::LightForest, Terrain::HeavyForest],
     )
@@ -1068,8 +1068,8 @@ async fn pellet_woods_two_stage_terrain_mech_v_vehicle_lbx2() {
 #[tokio::test]
 async fn pellet_woods_two_stage_terrain_mech_v_vehicle_lbx20() {
     let (cleared, thinned, _absorbed_all) = pellet_matrix(
-        include_str!("../game/mechs/JR7-D.toml"),
-        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/units/JR7-D.toml"),
+        include_str!("../game/units/Demolisher.toml"),
         Weapon::Lbx20,
         &[Terrain::LightForest, Terrain::HeavyForest],
     )
@@ -1083,8 +1083,8 @@ async fn pellet_woods_two_stage_terrain_mech_v_vehicle_lbx20() {
 #[tokio::test]
 async fn pellet_woods_two_stage_terrain_vehicle_v_mech_lbx2() {
     let (_cleared, _thinned, absorbed_all) = pellet_matrix(
-        include_str!("../game/mechs/Demolisher.toml"),
-        include_str!("../game/mechs/AS7-D.toml"),
+        include_str!("../game/units/Demolisher.toml"),
+        include_str!("../game/units/AS7-D.toml"),
         Weapon::Lbx2,
         &[Terrain::LightForest, Terrain::HeavyForest],
     )
@@ -1098,8 +1098,8 @@ async fn pellet_woods_two_stage_terrain_vehicle_v_mech_lbx2() {
 #[tokio::test]
 async fn pellet_woods_two_stage_terrain_vehicle_v_mech_lbx20_heavy_forest() {
     pellet_matrix(
-        include_str!("../game/mechs/Demolisher.toml"),
-        include_str!("../game/mechs/AS7-D.toml"),
+        include_str!("../game/units/Demolisher.toml"),
+        include_str!("../game/units/AS7-D.toml"),
         Weapon::Lbx20,
         &[Terrain::HeavyForest],
     )
@@ -1109,8 +1109,8 @@ async fn pellet_woods_two_stage_terrain_vehicle_v_mech_lbx20_heavy_forest() {
 #[tokio::test]
 async fn pellet_woods_two_stage_terrain_vehicle_v_mech_lbx20_light_forest() {
     pellet_matrix(
-        include_str!("../game/mechs/Demolisher.toml"),
-        include_str!("../game/mechs/AS7-D.toml"),
+        include_str!("../game/units/Demolisher.toml"),
+        include_str!("../game/units/AS7-D.toml"),
         Weapon::Lbx20,
         &[Terrain::LightForest],
     )
@@ -1120,8 +1120,8 @@ async fn pellet_woods_two_stage_terrain_vehicle_v_mech_lbx20_light_forest() {
 #[tokio::test]
 async fn pellet_woods_two_stage_terrain_vehicle_v_vehicle_lbx2() {
     let (_cleared, _thinned, absorbed_all) = pellet_matrix(
-        include_str!("../game/mechs/Demolisher.toml"),
-        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/units/Demolisher.toml"),
+        include_str!("../game/units/Demolisher.toml"),
         Weapon::Lbx2,
         &[Terrain::LightForest, Terrain::HeavyForest],
     )
@@ -1135,8 +1135,8 @@ async fn pellet_woods_two_stage_terrain_vehicle_v_vehicle_lbx2() {
 #[tokio::test]
 async fn pellet_woods_two_stage_terrain_vehicle_v_vehicle_lbx20() {
     let (cleared, thinned, _absorbed_all) = pellet_matrix(
-        include_str!("../game/mechs/Demolisher.toml"),
-        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/units/Demolisher.toml"),
+        include_str!("../game/units/Demolisher.toml"),
         Weapon::Lbx20,
         &[Terrain::LightForest, Terrain::HeavyForest],
     )
@@ -1189,12 +1189,12 @@ async fn missed_direct_shots_share_incidental_terrain_and_preserve_targets() {
     let (pairs, booted) = boot_pairs(&configs, &base);
     let mut sequence = 0;
     for source in [
-        include_str!("../game/mechs/JR7-D.toml"),
-        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/units/JR7-D.toml"),
+        include_str!("../game/units/Demolisher.toml"),
     ] {
         for recipient in [
-            include_str!("../game/mechs/AS7-D.toml"),
-            include_str!("../game/mechs/Demolisher.toml"),
+            include_str!("../game/units/AS7-D.toml"),
+            include_str!("../game/units/Demolisher.toml"),
         ] {
             for weapon in [Weapon::Ppc, Weapon::Lbx20, Weapon::Flamer] {
                 let cluster = weapon == Weapon::Lbx20;

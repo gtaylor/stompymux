@@ -37,9 +37,9 @@ async fn system_contract_exposes_real_lag_and_sorted_zone_units() {
             .unwrap()
             .zone = Some(stompymux_rs::ObjectId(0));
         let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["registrations"]["14"] = "MECH".into();
-        state["registrations"]["15"] = "MECH".into();
-        state["registrations"][excluded[1].to_string()] = "MECH".into();
+        state["registrations"]["14"] = "UNIT".into();
+        state["registrations"]["15"] = "UNIT".into();
+        state["registrations"][excluded[1].to_string()] = "UNIT".into();
         world.btech = serde_json::from_value(state).unwrap();
     }
     s.eval_callback::<()>(r#"local lag=btech.system.event_lag();assert(lag>=100 and lag<=110);local z=mux.world.object(0);local units=btech.system.units_in_zone(z,'ignored');assert(#units==2 and tostring(units[1])=='object(#14)' and tostring(units[2])=='object(#15)')"#).unwrap();

@@ -301,7 +301,7 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
             }
             "template-check" => {
                 let template = super::read_template(
-                    &ctx.config.path(&ctx.config.database.mech_database),
+                    &ctx.config.path(&ctx.config.database.unit_database),
                     argument,
                 )?;
                 let report = super::check_template(&template);
@@ -333,7 +333,7 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
             }
             "loadout" => {
                 let template = super::read_template(
-                    &ctx.config.path(&ctx.config.database.mech_database),
+                    &ctx.config.path(&ctx.config.database.unit_database),
                     argument,
                 )?;
                 let loadout = super::MechLoadout::resolve(&template)?;
@@ -366,7 +366,7 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
             }
             "template" => {
                 let template = super::read_template(
-                    &ctx.config.path(&ctx.config.database.mech_database),
+                    &ctx.config.path(&ctx.config.database.unit_database),
                     argument,
                 )?;
                 let slots: usize = template
@@ -744,7 +744,7 @@ fn mutate_object(ctx: &CommandContext<'_>, operation: &str, argument: &str) -> R
     let name = name.trim();
     if operation.eq_ignore_ascii_case("unit-create") {
         let definition =
-            super::read_unit_template(&ctx.config.path(&ctx.config.database.mech_database), name)?;
+            super::read_unit_template(&ctx.config.path(&ctx.config.database.unit_database), name)?;
         definition.create(&mut ctx.scripts.world.borrow_mut(), id)?;
         return Ok(format!("Unit #{} constructed from {name}.", id.0));
     }
@@ -1275,7 +1275,7 @@ pub(crate) fn preferences_command(
             [_] => !preference.enabled,
             [_, value] if value.eq_ignore_ascii_case("on") => true,
             [_, value] if value.eq_ignore_ascii_case("off") => false,
-            _ => anyhow::bail!("Usage: mechprefs {} [ON|OFF]", preference.name),
+            _ => anyhow::bail!("Usage: unitprefs {} [ON|OFF]", preference.name),
         };
         (preference.set)(&mut world, unit, ctx.player, enabled)?;
         Ok(format!(

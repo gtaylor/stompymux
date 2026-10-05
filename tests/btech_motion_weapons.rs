@@ -1128,7 +1128,7 @@ async fn half_ton_native_lua_fire_capacity_and_restart() {
 async fn small_cockpit_piloting_mass_and_restart() {
     use stompymux_rs::{CriticalLocation, MechSection, roll_battle_piloting};
     let mut template =
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
     let standard = stompymux_rs::Mech::from_template(template.clone()).unwrap();
     support::templates::small_cockpit(&mut template, "SMCPIT");
     let (_dir, config, mut world, id) = fixture_assets(
@@ -4682,7 +4682,7 @@ async fn firing_observers_hide_unseen_participants_and_replay_transactionally() 
                 create_battle_unit(
                     &mut world,
                     observer,
-                    MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                    MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml"))
                         .unwrap(),
                 )
                 .unwrap();
@@ -5093,7 +5093,7 @@ async fn stand_attempt_observers_share_native_lua_order_and_saved_replay() {
     create_battle_unit(
         &mut base,
         observer,
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut base, observer, support::FIXTURE_DICE_SEED);
@@ -7410,7 +7410,7 @@ async fn armor_warning_thresholds_preferences_and_restart() {
             .is_err()
     );
     assert_eq!(scripts.world().btech, base.btech);
-    support::run_text(&scripts, &config, ObjectId(1), 1, "mechprefs ArmorWarn OFF");
+    support::run_text(&scripts, &config, ObjectId(1), 1, "unitprefs ArmorWarn OFF");
     set_battle_armor_warning(&mut base, id, ObjectId(1), false).unwrap();
     assert_eq!(scripts.world().btech, base.btech);
     persistence::save(&config.database(), &base).await.unwrap();
@@ -7569,7 +7569,7 @@ async fn friendly_fire_safety_native_lua_map_rules_and_restart() {
         std::rc::Rc::new(std::cell::RefCell::new(baseline.clone())),
     )
     .unwrap();
-    let text = support::run_text(&native, &config, ObjectId(1), 1, "mechprefs FFSafety ON");
+    let text = support::run_text(&native, &config, ObjectId(1), 1, "unitprefs FFSafety ON");
     assert!(text.contains("Friendly Fire Safeties flipped ON"));
     assert!(
         lua.eval_callback::<()>(&format!(
@@ -7582,7 +7582,7 @@ async fn friendly_fire_safety_native_lua_map_rules_and_restart() {
     lua.eval_callback::<()>(&format!("btech.unit.friendly_fire_safety({},1,true)", id.0))
         .unwrap();
     assert_eq!(native.world().btech, lua.world().btech);
-    support::run_text(&native, &config, ObjectId(1), 1, "mechprefs ffsafety");
+    support::run_text(&native, &config, ObjectId(1), 1, "unitprefs ffsafety");
     assert!(!native.world().btech.constructed_units()[&id].friendly_fire_safety());
 }
 
@@ -8049,7 +8049,7 @@ async fn kick_roll_boundaries_replay_and_shutdown_recovery_seeds_24_32() {
 async fn kick_recovery_blocks_leg_weapons_until_expiry() {
     use stompymux_rs::*;
     let mut template =
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
     let weapon = template
         .sections
         .get_mut(&MechSection::LeftArm)
@@ -8648,7 +8648,7 @@ async fn status_rendering_preserves_literal_fields_and_ammunition_colors() {
     use stompymux_rs::*;
     let label = "[fg=red]Jenner[/]";
     let mut template =
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
     template.name = label.into();
     template
         .sections

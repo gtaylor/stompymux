@@ -4,7 +4,7 @@ use stompymux_rs::*;
 /// Preserve a complete biped while redistributing engine slots among its three torso sections.
 fn definition(center: u8, left: u8, right: u8) -> MechTemplate {
     let mut template =
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
     template.max_speed = 96.75;
     let engine = template.sections[&MechSection::CenterTorso].criticals[&0].clone();
     for (section, count) in [
@@ -93,7 +93,7 @@ fn relocated_engine_families_mass_and_invalid_layouts() {
 #[test]
 fn relocated_cestus_constructs_without_asset_changes() {
     let template =
-        MechTemplate::parse("CES-4S", include_str!("../game/mechs/CES-4S.toml")).unwrap();
+        MechTemplate::parse("CES-4S", include_str!("../game/units/CES-4S.toml")).unwrap();
     let unit = Mech::from_template(template).unwrap();
     assert_eq!(unit.engine().unwrap(), Engine::Light);
     let loadout = unit.loadout().unwrap();
@@ -179,8 +179,8 @@ fn battle_value_engine_factors() {
 #[test]
 fn asymmetric_quad_engines_use_effective_family_and_live_damage() {
     for (source, expected) in [
-        (include_str!("../game/mechs/BGS-1T.toml"), Engine::Xl),
-        (include_str!("../game/mechs/BGS-2T.toml"), Engine::Xxl),
+        (include_str!("../game/units/BGS-1T.toml"), Engine::Xl),
+        (include_str!("../game/units/BGS-2T.toml"), Engine::Xxl),
     ] {
         let template = MechTemplate::parse("test", source).unwrap();
         assert!(check_battle_template(&template).constructible);
@@ -209,7 +209,7 @@ fn asymmetric_quad_engines_use_effective_family_and_live_damage() {
         assert!(unit.is_destroyed());
     }
     let mut template =
-        MechTemplate::parse("GOL-3S", include_str!("../game/mechs/GOL-3S.toml")).unwrap();
+        MechTemplate::parse("GOL-3S", include_str!("../game/units/GOL-3S.toml")).unwrap();
     let unit = Mech::from_template(template.clone()).unwrap();
     assert_eq!(unit.engine().unwrap(), Engine::Light);
     let loadout = unit.loadout().unwrap();
@@ -242,11 +242,11 @@ fn asymmetric_quad_engines_use_effective_family_and_live_damage() {
 #[test]
 fn mixed_relocated_asset_engines_construct_and_preserve_saved_damage() {
     for source in [
-        include_str!("../game/mechs/AXM-3S.toml"),
-        include_str!("../game/mechs/HBK-5S.toml"),
-        include_str!("../game/mechs/MAD-4S.toml"),
-        include_str!("../game/mechs/STK-8S.toml"),
-        include_str!("../game/mechs/BTZ-3F.toml"),
+        include_str!("../game/units/AXM-3S.toml"),
+        include_str!("../game/units/HBK-5S.toml"),
+        include_str!("../game/units/MAD-4S.toml"),
+        include_str!("../game/units/STK-8S.toml"),
+        include_str!("../game/units/BTZ-3F.toml"),
     ] {
         let definition = MechTemplate::parse("test", source).unwrap();
         assert!(check_battle_template(&definition).constructible);

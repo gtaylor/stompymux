@@ -115,7 +115,7 @@ async fn runtime_fixture() -> (
     create_battle_unit(
         &mut world,
         id,
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 5, 5).unwrap();
@@ -329,7 +329,7 @@ async fn connected_jump_domain_updates_height_heat_landing_and_stabilization_aft
     create_battle_unit(
         &mut world,
         observer,
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, observer, support::FIXTURE_DICE_SEED);
@@ -791,7 +791,7 @@ fn saved_flight_rejects_corrupt_progress_and_reconstructs_launch_geometry() {
 /// Intact Jenner with five conventional jump jets.
 fn jenner() -> Mech {
     Mech::from_template(
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap()
 }
@@ -835,7 +835,7 @@ fn gravity_and_effective_jet_losses_bound_jump_capacity() {
         );
     }
     let atlas = Mech::from_template(
-        MechTemplate::parse("AS7-D", include_str!("fixtures/btech/mechs/AS7-D.toml")).unwrap(),
+        MechTemplate::parse("AS7-D", include_str!("fixtures/btech/units/AS7-D.toml")).unwrap(),
     )
     .unwrap();
     assert_eq!(atlas.jump_capacity(50).unwrap().speed, 0.0);
@@ -914,7 +914,7 @@ async fn flooded_capacity_and_lua_inspection_survive_restart_without_mutation() 
     create_battle_unit(
         &mut world,
         id,
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
@@ -1242,7 +1242,7 @@ async fn airborne_target_modifier_uses_current_thrust_and_gravity_without_consum
     create_battle_unit(
         &mut world,
         observer,
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, observer, map, 5, 8).unwrap();
@@ -1570,7 +1570,7 @@ async fn airborne_fire_uses_shared_native_lua_transactions_and_saved_trajectorie
     create_battle_unit(
         &mut base,
         target,
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut base, target, support::FIXTURE_DICE_SEED);
@@ -2521,7 +2521,7 @@ async fn shallow_water_launches_and_airborne_fire_above_deep_water_are_supported
     create_battle_unit(
         &mut world,
         target,
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
@@ -3206,7 +3206,7 @@ fn jump_observer(
     create_battle_unit(
         world,
         observer,
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(world, observer, support::FIXTURE_DICE_SEED);
@@ -3401,7 +3401,7 @@ async fn jump_observers_cover_launch_landings_damage_and_transaction_replay() {
 /// Five improved jets use ten contiguous slots while retaining the template's five MP thrust.
 fn improved_jet_template() -> MechTemplate {
     let mut template =
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
     let jet = template.sections[&MechSection::LeftTorso].criticals[&0].clone();
     for section in template.sections.values_mut() {
         section
@@ -3428,7 +3428,7 @@ fn improved_jet_construction_pairs_and_mass() {
     let template = improved_jet_template();
     let improved = Mech::from_template(template.clone()).unwrap();
     let ordinary = Mech::from_template(
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     assert_eq!(improved.jump_capacity(100).unwrap().movement_points, 5);
@@ -4851,13 +4851,6 @@ async fn character_landing_control_experience_and_restart() {
                     .btech
                     .set_unit_dice(id, Dice::seeded([seed; 32]))
                     .unwrap();
-                let mut channel = Channel::new("MechPilotXP".into());
-                channel.users.push(communication::Membership {
-                    who: ObjectId(1),
-                    listening: true,
-                });
-                channel.messages = if obstacle { i64::MAX - 1 } else { i64::MAX };
-                world.channels.insert("MechPilotXP".into(), channel);
                 let scripts =
                     Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world)))
                         .unwrap();
@@ -4868,24 +4861,9 @@ async fn character_landing_control_experience_and_restart() {
                     },
                     ..MovementRules::STANDARD
                 };
-                let mut rejected = false;
                 let mut restarted = false;
                 for tick in 0..80 {
-                    let before = scripts.world().clone();
-                    if advance_battle_jumps_action(&scripts, &config, rules).is_err() {
-                        assert!(!rejected);
-                        rejected = true;
-                        assert_eq!(scripts.world().btech, before.btech);
-                        assert!(scripts.world().channels["MechPilotXP"].history.is_empty());
-                        assert!(scripts.drain_outbox().is_empty());
-                        scripts
-                            .world_mut()
-                            .channels
-                            .get_mut("MechPilotXP")
-                            .unwrap()
-                            .messages = 0;
-                        advance_battle_jumps_action(&scripts, &config, rules).unwrap();
-                    }
+                    advance_battle_jumps_action(&scripts, &config, rules).unwrap();
                     if tick == 1 {
                         let saved = scripts.world().clone();
                         persistence::save(&config.database(), &saved).await.unwrap();
@@ -4905,7 +4883,7 @@ async fn character_landing_control_experience_and_restart() {
                     }
                     scripts.drain_outbox();
                 }
-                assert!(rejected && restarted);
+                assert!(restarted);
                 let output = scripts.drain_outbox();
                 let pilot_output: Vec<_> = output
                     .iter()
@@ -4954,17 +4932,10 @@ async fn character_landing_control_experience_and_restart() {
                     candidate.btech.character_values()[&ObjectId(1)][skill].experience_balance(),
                     if obstacle { 4 } else { 2 }
                 );
-                assert_eq!(
-                    candidate.channels["MechPilotXP"].history.len(),
-                    if obstacle { 2 } else { 1 }
-                );
-                assert_eq!(
-                    text::plain_with(
-                        scripts.palette(),
-                        &candidate.channels["MechPilotXP"].history[0].message
-                    ),
-                    format!("[MechPilotXP] GOD gained 2 {skill} XP")
-                );
+                let traces =
+                    support::drain_traces(&scripts, logging::TraceTopic::PilotingExperience);
+                assert_eq!(traces.len(), if obstacle { 2 } else { 1 });
+                assert_eq!(traces[0], format!("GOD gained 2 {skill} XP"));
                 persistence::save(&config.database(), &candidate)
                     .await
                     .unwrap();
@@ -5078,12 +5049,6 @@ async fn character_manual_landing_adapters_and_casualty_rollback() {
                 })
                 .unwrap();
             world.btech.set_unit_dice(id, dice).unwrap();
-            let mut channel = Channel::new("MechPilotXP".into());
-            channel.users.push(communication::Membership {
-                who: pilot,
-                listening: true,
-            });
-            world.channels.insert("MechPilotXP".into(), channel);
             let before = world.clone();
             assert!(land_battle_jump(&mut world, id, pilot, MovementRules::STANDARD).is_err());
             assert_eq!(world.btech, before.btech);
@@ -5100,27 +5065,10 @@ async fn character_manual_landing_adapters_and_casualty_rollback() {
                     .is_err()
             );
             assert_eq!(lua.world().btech, before.btech);
-            assert!(lua.world().channels["MechPilotXP"].history.is_empty());
+            assert!(
+                support::drain_traces(&lua, logging::TraceTopic::PilotingExperience).is_empty()
+            );
             assert!(lua.drain_outbox().is_empty());
-            if successful {
-                lua.world_mut()
-                    .channels
-                    .get_mut("MechPilotXP")
-                    .unwrap()
-                    .messages = if case == "gear" {
-                    i64::MAX - 1
-                } else {
-                    i64::MAX
-                };
-                assert!(
-                    lua.eval_callback::<bool>(&format!("return {call}"))
-                        .is_err()
-                );
-                assert_eq!(lua.world().btech, before.btech);
-                assert!(lua.world().channels["MechPilotXP"].history.is_empty());
-                assert!(lua.drain_outbox().is_empty());
-                *lua.world_mut() = before.clone();
-            }
             let afterlife = ObjectId(config.battletech.afterlife_dbref);
             if case == "fatal" {
                 lua.world_mut().objects.remove(&afterlife);
@@ -5178,14 +5126,17 @@ async fn character_manual_landing_adapters_and_casualty_rollback() {
                     0
                 }
             );
-            assert_eq!(
-                candidate.channels["MechPilotXP"].history.len(),
-                if case == "gear" {
-                    2
-                } else {
-                    usize::from(successful)
-                }
-            );
+            let awards = if case == "gear" {
+                2
+            } else {
+                usize::from(successful)
+            };
+            for scripts in [&native, &lua] {
+                assert_eq!(
+                    support::drain_traces(scripts, logging::TraceTopic::PilotingExperience).len(),
+                    awards
+                );
+            }
             persistence::save(&config.database(), &candidate)
                 .await
                 .unwrap();
@@ -5246,7 +5197,7 @@ async fn jump_course_fields_redirect_without_moving_the_committed_cursor() {
     for chassis in ["Biped", "Quad"] {
         let (_dir, config, world, id) = runtime_fixture().await;
         let setup = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-        set_battle_unit_field_action(&setup, &config, ObjectId(1), id, "mechmovetype", chassis)
+        set_battle_unit_field_action(&setup, &config, ObjectId(1), id, "unitmovetype", chassis)
             .unwrap();
         for (field, value) in [("jumpheading", "123"), ("jumplength", "-3")] {
             set_battle_unit_field_action(&setup, &config, ObjectId(1), id, field, value).unwrap();
@@ -5293,7 +5244,7 @@ async fn jump_course_fields_redirect_without_moving_the_committed_cursor() {
                 &config,
                 ObjectId(1),
                 1,
-                &format!("@setmech {field} {value}"),
+                &format!("@setunit {field} {value}"),
             )
             .unwrap();
             lua.eval_callback::<()>(&format!(
@@ -5516,7 +5467,7 @@ async fn damage_replacement_during_jump_defers_lost_thrust_and_replays_restorati
     for chassis in ["Biped", "Quad"] {
         let (_dir, config, world, id) = runtime_fixture().await;
         let setup = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-        set_battle_unit_field_action(&setup, &config, ObjectId(1), id, "mechmovetype", chassis)
+        set_battle_unit_field_action(&setup, &config, ObjectId(1), id, "unitmovetype", chassis)
             .unwrap();
         let mut world = setup.world().clone();
         launch_battle_jump(&mut world, id, ObjectId(1), 0, 4.0).unwrap();
@@ -5536,7 +5487,7 @@ async fn damage_replacement_during_jump_defers_lost_thrust_and_replays_restorati
             &config,
             ObjectId(1),
             id,
-            "mechdamage",
+            "unitdamage",
             "C:2/0,C:2/1,C:3/1,C:3/2,C:4/11",
         )
         .unwrap();
@@ -5563,7 +5514,7 @@ async fn damage_replacement_during_jump_defers_lost_thrust_and_replays_restorati
         assert!(falling.btech.constructed_units()[&id].flight().is_none());
         falling.validate(&config).unwrap();
 
-        set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "mechdamage", "").unwrap();
+        set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "unitdamage", "").unwrap();
         let mut restored = scripts.world().clone();
         assert_eq!(
             restored.btech.constructed_units()[&id].flight(),

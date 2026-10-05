@@ -23,12 +23,12 @@ async fn single_sink_reconstruction_preserves_samples_and_applies_later_damage()
             scripts.world().btech.constructed_units()[&id].cooling_capacity(),
             original
         );
-        set(&scripts, &config, id, "mechdamage", "A:2/1");
+        set(&scripts, &config, id, "unitdamage", "A:2/1");
         assert_eq!(
             scripts.world().btech.constructed_units()[&id].cooling_capacity(),
             original
         );
-        set(&scripts, &config, id, "mechdamage", "C:7/0");
+        set(&scripts, &config, id, "unitdamage", "C:7/0");
         let first = external + 1;
         assert_eq!(
             scripts.world().btech.constructed_units()[&id].cooling_capacity(),
@@ -39,7 +39,7 @@ async fn single_sink_reconstruction_preserves_samples_and_applies_later_damage()
             scripts.world().btech.constructed_units()[&id].cooling_capacity(),
             first
         );
-        set(&scripts, &config, id, "mechdamage", "C:7/1");
+        set(&scripts, &config, id, "unitdamage", "C:7/1");
         {
             let world = scripts.world();
             let unit = &world.btech.constructed_units()[&id];
@@ -75,12 +75,12 @@ async fn single_sink_reconstruction_preserves_samples_and_applies_later_damage()
         set(&scripts, &config, id, "hsengoverride", "-1");
         let before = scripts.world().btech.clone();
         assert!(
-            set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "mechdamage", "")
+            set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "unitdamage", "")
                 .is_err()
         );
         assert_eq!(scripts.world().btech, before);
         set(&scripts, &config, id, "hsengoverride", "0");
-        set(&scripts, &config, id, "mechdamage", "");
+        set(&scripts, &config, id, "unitdamage", "");
         assert_eq!(
             scripts.world().btech.constructed_units()[&id].cooling_capacity(),
             original
@@ -94,7 +94,7 @@ async fn double_sinks_count_complete_installations_and_two_points_per_internal_s
     for clan in [false, true] {
         let (_dir, config, mut world) = support::isolated_world().await;
         let mut definition =
-            MechTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap();
+            MechTemplate::parse("JR7-D", include_str!("../game/units/JR7-D.toml")).unwrap();
         definition.heat_sinks = 20;
         definition.attributes.insert(
             "specials".into(),
@@ -125,23 +125,23 @@ async fn double_sinks_count_complete_installations_and_two_points_per_internal_s
         create_battle_unit(&mut world, id, definition).unwrap();
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         set(&scripts, &config, id, "hsengoverride", "1");
-        set(&scripts, &config, id, "mechdamage", "C:7/0");
+        set(&scripts, &config, id, "unitdamage", "C:7/0");
         assert_eq!(
             scripts.world().btech.constructed_units()[&id].cooling_capacity(),
             4
         );
-        set(&scripts, &config, id, "mechdamage", "C:1/6");
+        set(&scripts, &config, id, "unitdamage", "C:1/6");
         assert_eq!(
             scripts.world().btech.constructed_units()[&id].cooling_capacity(),
             2
         );
-        set(&scripts, &config, id, "mechdamage", "");
+        set(&scripts, &config, id, "unitdamage", "");
         assert_eq!(
             scripts.world().btech.constructed_units()[&id].cooling_capacity(),
             4
         );
         set(&scripts, &config, id, "hsengoverride", "2147483647");
-        set(&scripts, &config, id, "mechdamage", "C:7/0");
+        set(&scripts, &config, id, "unitdamage", "C:7/0");
         assert_eq!(
             scripts.world().btech.constructed_units()[&id].cooling_capacity(),
             22

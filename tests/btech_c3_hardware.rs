@@ -4,7 +4,7 @@ use stompymux_rs::*;
 /// Replace arm equipment with explicitly positioned computer slots.
 fn design(parts: &[(MechSection, u8, &str)]) -> Mech {
     let mut template =
-        MechTemplate::parse("AS7-D", include_str!("fixtures/btech/mechs/AS7-D.toml")).unwrap();
+        MechTemplate::parse("AS7-D", include_str!("fixtures/btech/units/AS7-D.toml")).unwrap();
     template.attributes.insert(
         "specials".into(),
         "C3MasterTech C3SlaveTech C3I_Tech".into(),

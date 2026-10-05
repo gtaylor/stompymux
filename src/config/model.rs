@@ -8,8 +8,8 @@ use std::{collections::BTreeMap, net::IpAddr, path::PathBuf};
 pub struct DatabaseConfig {
     /// Configuration value for `game_database`; defaults are centralized below.
     pub game_database: PathBuf,
-    /// Configuration value for `mech_database`; defaults are centralized below.
-    pub mech_database: PathBuf,
+    /// Configuration value for `unit_database`; defaults are centralized below.
+    pub unit_database: PathBuf,
     /// Configuration value for `map_database`; defaults are centralized below.
     pub map_database: PathBuf,
     /// Configuration value for `dump_interval`; defaults are centralized below.
@@ -35,7 +35,7 @@ impl Default for DatabaseConfig {
     fn default() -> Self {
         Self {
             game_database: PathBuf::from("data/stompymux.db"),
-            mech_database: PathBuf::from("mechs"),
+            unit_database: PathBuf::from("units"),
             map_database: PathBuf::from("maps"),
             dump_interval: 3600,
             fork_dump: true,
@@ -193,8 +193,8 @@ pub struct BattleTechConfig {
     pub exile_stun_code: i64,
     /// Configuration value for `roll_on_backwalk`; defaults are centralized below.
     pub roll_on_backwalk: i64,
-    /// Configuration value for `usedmechstore`; defaults are centralized below.
-    pub usedmechstore: i64,
+    /// Configuration value for `usedunitstore`; defaults are centralized below.
+    pub usedunitstore: i64,
     /// Configuration value for `ooc_comsys`; defaults are centralized below.
     pub ooc_comsys: i64,
     /// Configuration value for `idf_requires_spotter`; defaults are centralized below.
@@ -292,7 +292,7 @@ impl Default for BattleTechConfig {
             mw_losmap: 1,
             exile_stun_code: 0,
             roll_on_backwalk: 1,
-            usedmechstore: 3,
+            usedunitstore: 3,
             ooc_comsys: 0,
             idf_requires_spotter: 1,
             tsm_tow_bonus: 1,

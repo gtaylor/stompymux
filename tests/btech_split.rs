@@ -6,7 +6,7 @@ use stompymux_rs::*;
 fn definition(weapon: Weapon, parent: MechSection, extension: MechSection) -> MechTemplate {
     use MechSection::*;
     let mut template =
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
     let count = weapon.profile().critical_slots;
     let first = if parent == CenterTorso {
         10
@@ -294,7 +294,7 @@ async fn split_section_loss_preserves_remaining_slot_mass() {
 #[test]
 fn arrow_mount_can_end_before_the_primary_section_boundary() {
     let template =
-        MechTemplate::parse("CPLT-C5", include_str!("../game/mechs/CPLT-C5.toml")).unwrap();
+        MechTemplate::parse("CPLT-C5", include_str!("../game/units/CPLT-C5.toml")).unwrap();
     let unit = Mech::from_template(template.clone()).unwrap();
     let loadout = unit.loadout().unwrap();
     let index = loadout
@@ -554,7 +554,7 @@ async fn repeated_split_proxy_criticals_accumulate_once_and_replay() {
 #[test]
 fn center_torso_split_mounts_load_and_round_trip_from_documents() {
     use MechSection::*;
-    let source = include_str!("fixtures/btech/mechs/JR7-D.toml")
+    let source = include_str!("fixtures/btech/units/JR7-D.toml")
         .replace(
             "    { at = 11, item = \"IS.SRM-4\" },\n    { at = 12, item = \"JumpJet\" },\n",
             "",

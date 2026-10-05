@@ -35,7 +35,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
 #[tokio::test]
 async fn vehicle_injury_recovery_and_scenario_death_replay_without_material_damage() {
     let (_dir, config, mut world, id) =
-        fixture(include_str!("../game/mechs/Demolisher.toml")).await;
+        fixture(include_str!("../game/units/Demolisher.toml")).await;
     let mut state = serde_json::to_value(&world.btech).unwrap();
     let value = (0..=255)
         .find(|value| Dice::seeded([*value; 32]).two_d6() < 11)
@@ -82,7 +82,7 @@ async fn vehicle_injury_recovery_and_scenario_death_replay_without_material_dama
 
 #[tokio::test]
 async fn vehicle_injury_guards_and_critical_casualties_are_atomic() {
-    let (_dir, _config, base, id) = fixture(include_str!("../game/mechs/Demolisher.toml")).await;
+    let (_dir, _config, base, id) = fixture(include_str!("../game/units/Demolisher.toml")).await;
     let rules = VehicleCriticalRules {
         rotor_damage_divisor: 0,
         extended_piloting: false,

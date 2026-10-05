@@ -527,13 +527,13 @@ impl CommandRegistry {
                 false,
             ),
             CommandDefinition::native(
-                "@setmech",
+                "@setunit",
                 P::WIZARD,
                 crate::btech::unit_fields::set_command,
             )
-            .policy(SwitchPolicy::Reject("@SETMECH takes no switches."), false),
-            CommandDefinition::native("@viewmech", P::WIZARD, crate::btech::unit_fields::command)
-                .policy(SwitchPolicy::Reject("@VIEWMECH takes no switches."), false),
+            .policy(SwitchPolicy::Reject("@SETUNIT takes no switches."), false),
+            CommandDefinition::native("@viewunit", P::WIZARD, crate::btech::unit_fields::command)
+                .policy(SwitchPolicy::Reject("@VIEWUNIT takes no switches."), false),
             CommandDefinition::native(
                 "@viewmap",
                 P::WIZARD,
@@ -577,8 +577,8 @@ impl CommandRegistry {
                 .policy(SwitchPolicy::Reject("SAVEMAP takes no switches."), false),
             CommandDefinition::native("setmapsize", P::WIZARD, crate::btech::map_resize::command)
                 .policy(SwitchPolicy::Reject("SETMAPSIZE takes no switches."), false),
-            CommandDefinition::native("clearmechs", P::WIZARD, crate::btech::map_clear::command)
-                .policy(SwitchPolicy::Reject("CLEARMECHS takes no switches."), false),
+            CommandDefinition::native("clearunits", P::WIZARD, crate::btech::map_clear::command)
+                .policy(SwitchPolicy::Reject("CLEARUNITS takes no switches."), false),
             CommandDefinition::native("@mapemit", P::WIZARD, crate::btech::map_emit::command)
                 .policy(SwitchPolicy::Reject("@mapemit takes no switches."), false),
             CommandDefinition::native("addhex", P::WIZARD, crate::btech::terrain_edit::command)
@@ -949,11 +949,11 @@ impl CommandRegistry {
                 crate::btech::commands::motion_command,
             ),
             CommandDefinition::native(
-                "mechprefs",
+                "unitprefs",
                 P::EVERYONE,
                 crate::btech::commands::preferences_command,
             )
-            .policy(SwitchPolicy::Reject("mechprefs takes no switches."), false),
+            .policy(SwitchPolicy::Reject("unitprefs takes no switches."), false),
             CommandDefinition::native(
                 "turret",
                 P::EVERYONE,

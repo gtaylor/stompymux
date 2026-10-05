@@ -18,7 +18,7 @@ btech.unit.restock_ammunition(unit, section, slot)
 | Name | Type | Description |
 | --- | --- | --- |
 | `unit` | `DbRef\|Object` |  |
-| `section` | `MechSection` | Typed section constant from btech.unit.sections. |
+| `section` | `UnitSection` | Typed section constant from btech.unit.sections. |
 | `slot` | `integer` | One-based critical slot. |
 
 ## Returns

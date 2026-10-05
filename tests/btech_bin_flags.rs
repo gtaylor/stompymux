@@ -9,7 +9,7 @@ fn bin_hotload_does_not_change_supply_or_launcher_behavior() {
         .filter(|weapon| weapon.profile().ammunition_per_ton > 0)
     {
         let mut template =
-            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
         let bin = template
             .sections
             .get_mut(&MechSection::RightTorso)
@@ -62,7 +62,7 @@ fn bin_hotload_does_not_change_supply_or_launcher_behavior() {
 #[test]
 fn bin_hotload_half_ton_and_artemis_remain_independent() {
     let mut template =
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
     let part = template
         .sections
         .get_mut(&MechSection::RightTorso)

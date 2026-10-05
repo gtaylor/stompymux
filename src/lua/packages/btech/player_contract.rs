@@ -51,7 +51,7 @@ fn validate_template_reference(lua: &Lua, reference: &[u8]) -> mlua::Result<()> 
         ));
     }
     let config = crate::lua::configuration(lua);
-    let root = config.path(&config.database.mech_database);
+    let root = config.path(&config.database.unit_database);
     let shared = crate::Scripts::services(lua)?.world;
     let path = {
         let mut world = shared.borrow_mut();

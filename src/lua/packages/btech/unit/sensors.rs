@@ -51,10 +51,8 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
         move |lua, (unit, pilot, options): (i64, i64, Option<String>)| {
             crate::lua::transactions::require(lua)?;
             let scripts = crate::Scripts::services(lua)?;
-            let config = crate::lua::configuration(lua);
             let report = crate::scan_battle_selected_action(
                 &scripts,
-                &config,
                 ObjectId(unit),
                 ObjectId(pilot),
                 options.as_deref().unwrap_or(""),
@@ -71,10 +69,8 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
         lua.create_function(move |lua, (unit, pilot, x, y): (i64, i64, i32, i32)| {
             crate::lua::transactions::require(lua)?;
             let scripts = crate::Scripts::services(lua)?;
-            let config = crate::lua::configuration(lua);
             let report = crate::scan_battle_hex_action(
                 &scripts,
-                &config,
                 ObjectId(unit),
                 ObjectId(pilot),
                 crate::HexCoordinate { x, y },
@@ -90,10 +86,8 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
         lua.create_function(move |lua, (unit, pilot, x, y): (i64, i64, i32, i32)| {
             crate::lua::transactions::require(lua)?;
             let scripts = crate::Scripts::services(lua)?;
-            let config = crate::lua::configuration(lua);
             let report = crate::scan_battle_building_action(
                 &scripts,
-                &config,
                 ObjectId(unit),
                 ObjectId(pilot),
                 crate::HexCoordinate { x, y },

@@ -135,7 +135,7 @@ async fn report_values_order_filters_and_layouts_are_explicit() {
 async fn field_reports_leave_every_chassis_unchanged_and_survive_restart() {
     for template in firing::templates() {
         let (_dir, config, mut world, source, _, _) =
-            firing::fixture_with_target(&template, None, include_str!("../game/mechs/AS7-D.toml"))
+            firing::fixture_with_target(&template, None, include_str!("../game/units/AS7-D.toml"))
                 .await;
         let map = world.btech.units()[&source].map.unwrap();
         let actor = world.create(&config, "Inspector".into(), Kind::Player);

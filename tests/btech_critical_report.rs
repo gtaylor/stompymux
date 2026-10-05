@@ -5,17 +5,17 @@ use stompymux_rs::*;
 
 /// Supported chassis share the same report fixtures, including an authored stationary vehicle.
 fn templates() -> Vec<String> {
-    let vehicle = include_str!("../game/mechs/Demolisher.toml");
+    let vehicle = include_str!("../game/units/Demolisher.toml");
     vec![
-        include_str!("../game/mechs/JR7-D.toml").into(),
-        include_str!("../game/mechs/GOL-1H.toml").into(),
+        include_str!("../game/units/JR7-D.toml").into(),
+        include_str!("../game/units/GOL-1H.toml").into(),
         vehicle.into(),
         vehicle.replace("movement = \"track\"", "movement = \"wheel\""),
         vehicle.replace("movement = \"track\"", "movement = \"hover\""),
         vehicle
             .replace("movement = \"track\"", "movement = \"none\"")
             .replace("walk_mp = 5", "walk_mp = 0"),
-        include_str!("../game/mechs/Kestrel.toml").into(),
+        include_str!("../game/units/Kestrel.toml").into(),
     ]
 }
 
@@ -194,7 +194,7 @@ async fn critical_report_native_access_and_anatomy() {
         assert_eq!(scripts.world().btech, before);
     }
     let (_dir, _config, world, id) =
-        fixture(UnitTemplate::parse("GOL-1H", include_str!("../game/mechs/GOL-1H.toml")).unwrap())
+        fixture(UnitTemplate::parse("GOL-1H", include_str!("../game/units/GOL-1H.toml")).unwrap())
             .await;
     let front = battle_critical_report(&world, id, "fll").unwrap();
     assert_eq!(front.slots.len(), 6);
@@ -208,7 +208,7 @@ async fn critical_report_native_access_and_anatomy() {
 #[tokio::test]
 async fn critical_report_material_conditions() {
     let (_dir, config, mut world, id) =
-        fixture(UnitTemplate::parse("GOL-1H", include_str!("../game/mechs/GOL-1H.toml")).unwrap())
+        fixture(UnitTemplate::parse("GOL-1H", include_str!("../game/units/GOL-1H.toml")).unwrap())
             .await;
     let mount = world.btech.constructed_units()[&id]
         .loadout()
@@ -272,7 +272,7 @@ async fn critical_report_material_conditions() {
     world.validate(&config).unwrap();
 
     let (_dir, _config, mut world, id) = fixture(
-        UnitTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml")).unwrap(),
+        UnitTemplate::parse("Demolisher", include_str!("../game/units/Demolisher.toml")).unwrap(),
     )
     .await;
     let bin = world.btech.vehicles()[&id].loadout().unwrap().ammunition[0].clone();
@@ -296,7 +296,7 @@ async fn critical_report_material_conditions() {
 #[tokio::test]
 async fn critical_equipment_labels() {
     let mut template =
-        MechTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("../game/units/JR7-D.toml")).unwrap();
     support::templates::small_cockpit(&mut template, "SMCPIT");
     let missile = template
         .sections
@@ -369,7 +369,7 @@ async fn critical_equipment_labels() {
     assert!(!text.contains("Controls Slot"));
 
     let (_dir, _config, world, id) = fixture(
-        UnitTemplate::parse("Daishi-H", include_str!("../game/mechs/Daishi-H.toml")).unwrap(),
+        UnitTemplate::parse("Daishi-H", include_str!("../game/units/Daishi-H.toml")).unwrap(),
     )
     .await;
     assert!(

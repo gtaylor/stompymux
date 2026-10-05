@@ -6,7 +6,8 @@ use std::{collections::BTreeMap, sync::LazyLock};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum SpecialType {
-    Mech,
+    /// Combat units of every chassis.
+    Unit,
     Debug,
     Map,
     Autopilot,
@@ -50,7 +51,7 @@ impl SpecialCommand {
         self.syntax.split(' ').next().unwrap_or("")
     }
 
-    /// A missing Mech record cannot admit commands, even ones without a class restriction.
+    /// A missing unit record cannot admit commands, even ones without a class restriction.
     pub fn allows_class(&self, class: Option<CommandClass>) -> bool {
         let Some(class) = class else {
             return false;
@@ -91,7 +92,7 @@ impl SpecialType {
         let command = self.commands().iter().find(|entry| {
             !entry.category
                 && entry.name().eq_ignore_ascii_case(word)
-                && (self != Self::Mech || entry.allows_class(class))
+                && (self != Self::Unit || entry.allows_class(class))
         })?;
         Some((command, arguments.trim_start_matches(' ')))
     }
@@ -103,7 +104,7 @@ impl SpecialType {
         privileged: bool,
     ) -> impl Iterator<Item = &'static SpecialCommand> {
         self.commands().iter().filter(move |entry| {
-            entry.visible(privileged) && (self != Self::Mech || entry.allows_class(class))
+            entry.visible(privileged) && (self != Self::Unit || entry.allows_class(class))
         })
     }
 }
@@ -116,7 +117,7 @@ mod tests {
     #[test]
     fn catalogue_order_restrictions_and_dispatch_are_shared() {
         for (kind, count) in [
-            (SpecialType::Mech, 194),
+            (SpecialType::Unit, 194),
             (SpecialType::Debug, 9),
             (SpecialType::Map, 25),
             (SpecialType::Autopilot, 7),
@@ -153,7 +154,7 @@ mod tests {
                 .visible(false)
         );
         assert!(
-            SpecialType::Mech
+            SpecialType::Unit
                 .find_command("Movement", Some(CommandClass::Mech))
                 .is_none()
         );
@@ -190,12 +191,12 @@ mod tests {
             }
         }
         assert!(
-            SpecialType::Mech
+            SpecialType::Unit
                 .find_command("STAND", Some(CommandClass::Mech))
                 .is_some()
         );
         assert!(
-            SpecialType::Mech
+            SpecialType::Unit
                 .find_command("STAND", Some(CommandClass::Ground))
                 .is_none()
         );

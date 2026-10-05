@@ -4,7 +4,7 @@ use stompymux_rs::{Dice, HitArc as Arc, Vehicle, VehicleSection as S, VehicleTem
 /// Normalize armor to percentages while preserving valid vehicle anatomy and equipment.
 fn vehicle(armor: u16) -> Vehicle {
     let vehicle = Vehicle::new(
-        VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+        VehicleTemplate::parse("Demolisher", include_str!("../game/units/Demolisher.toml"))
             .unwrap(),
     )
     .unwrap();
@@ -25,7 +25,7 @@ fn standard_vehicle_locations_cover_every_arc_roll_and_turret_state() {
     let turretless = Vehicle::new(
         VehicleTemplate::parse(
             "Flatbed_Truck",
-            include_str!("../game/mechs/Flatbed_Truck.toml"),
+            include_str!("../game/units/Flatbed_Truck.toml"),
         )
         .unwrap(),
     )

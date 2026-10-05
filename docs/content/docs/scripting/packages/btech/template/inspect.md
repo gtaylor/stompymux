@@ -17,7 +17,7 @@ btech.template.inspect(name)
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `name` | `string` | Template reference: the file stem of a `.toml` document anywhere under database.mech_database. |
+| `name` | `string` | Template reference: the file stem of a `.toml` document anywhere under database.unit_database. |
 
 ## Returns
 

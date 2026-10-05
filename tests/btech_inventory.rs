@@ -58,9 +58,9 @@ async fn stock_loads_existing_rows_and_selectively_persists_corrections() {
     let (_dir, config, mut world) = support::isolated_world().await;
     let mut holders = vec![ObjectId(0)];
     for source in [
-        include_str!("fixtures/btech/mechs/JR7-D.toml"),
-        include_str!("../game/mechs/Demolisher.toml"),
-        include_str!("../game/mechs/Kestrel.toml"),
+        include_str!("fixtures/btech/units/JR7-D.toml"),
+        include_str!("../game/units/Demolisher.toml"),
+        include_str!("../game/units/Kestrel.toml"),
     ] {
         let id = world.create(&config, "Stock holder".into(), Kind::Thing);
         UnitTemplate::parse("test", source)

@@ -1,6 +1,6 @@
 # Every legacy mapping, including shapes absent from the shipped file.
 database.game_database = "data/custom-rust.db"
-database.mech_database = "mechs"
+database.unit_database = "units"
 database.map_database = "maps"
 database.dump_interval = 3600
 database.fork_dump = true
@@ -48,7 +48,7 @@ battletech.stackdamage = 100
 battletech.mw_losmap = 1
 battletech.exile_stun_code = 0
 battletech.roll_on_backwalk = 1
-battletech.usedmechstore = 3
+battletech.usedunitstore = 3
 battletech.ooc_comsys = 0
 battletech.idf_requires_spotter = 1
 battletech.tsm_tow_bonus = 1

@@ -5,10 +5,10 @@ use stompymux_rs::*;
 #[tokio::test]
 async fn observers_share_admin_disclosure_radio_and_saved_role() {
     for template in [
-        include_str!("fixtures/btech/mechs/JR7-D.toml"),
-        include_str!("../game/mechs/SCP-1N.toml"),
-        include_str!("../game/mechs/Demolisher.toml"),
-        include_str!("../game/mechs/Kestrel.toml"),
+        include_str!("fixtures/btech/units/JR7-D.toml"),
+        include_str!("../game/units/SCP-1N.toml"),
+        include_str!("../game/units/Demolisher.toml"),
+        include_str!("../game/units/Kestrel.toml"),
     ] {
         let (_dir, config, mut world) = support::isolated_world().await;
         let map = world.create(&config, "Observer field".into(), Kind::Room);
@@ -27,7 +27,7 @@ async fn observers_share_admin_disclosure_radio_and_saved_role() {
             .create(&mut world, id)
             .unwrap();
         support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
-        UnitTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+        UnitTemplate::parse("Demolisher", include_str!("../game/units/Demolisher.toml"))
             .unwrap()
             .create(&mut world, target)
             .unwrap();

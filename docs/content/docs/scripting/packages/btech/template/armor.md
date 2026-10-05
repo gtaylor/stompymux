@@ -17,8 +17,8 @@ btech.template.armor(reference, section)
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `reference` | `string` | Template reference: the file stem of a `.toml` document anywhere under database.mech_database. |
-| `section?` | `MechSection` | Typed section constant from btech.unit.sections. |
+| `reference` | `string` | Template reference: the file stem of a `.toml` document anywhere under database.unit_database. |
+| `section?` | `UnitSection` | Typed section constant from btech.unit.sections. |
 
 ## Returns
 

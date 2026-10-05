@@ -27,9 +27,9 @@ async fn falling_units_turn_without_translation_and_replay_shared_chassis_rates(
                     MechTemplate::parse(
                         "test",
                         if chassis == "quad" {
-                            include_str!("../game/mechs/SCP-1N.toml")
+                            include_str!("../game/units/SCP-1N.toml")
                         } else {
-                            include_str!("../game/mechs/JR7-D.toml")
+                            include_str!("../game/units/JR7-D.toml")
                         },
                     )
                     .unwrap(),
@@ -38,12 +38,12 @@ async fn falling_units_turn_without_translation_and_replay_shared_chassis_rates(
                 support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
             } else {
                 let text = match chassis {
-                    "vtol" => include_str!("../game/mechs/Kestrel.toml").to_owned(),
-                    "wheeled" => include_str!("../game/mechs/Demolisher.toml")
+                    "vtol" => include_str!("../game/units/Kestrel.toml").to_owned(),
+                    "wheeled" => include_str!("../game/units/Demolisher.toml")
                         .replace("movement = \"track\"", "movement = \"wheel\""),
-                    "hover" => include_str!("../game/mechs/Demolisher.toml")
+                    "hover" => include_str!("../game/units/Demolisher.toml")
                         .replace("movement = \"track\"", "movement = \"hover\""),
-                    _ => include_str!("../game/mechs/Demolisher.toml").to_owned(),
+                    _ => include_str!("../game/units/Demolisher.toml").to_owned(),
                 };
                 create_battle_vehicle(
                     &mut world,

@@ -26,7 +26,7 @@ async fn fixture() -> (
         let id = world.create(&config, name.into(), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         let mut definition =
-            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
         definition
             .attributes
             .insert("specials".into(), "FlipArms Searchlight".into());
@@ -296,7 +296,7 @@ async fn illumination_warnings_are_opt_in_transactional_and_restart_safe() {
     );
     assert_eq!(scripts.world().btech, world.btech);
     assert!(scripts.drain_outbox().is_empty());
-    let message = support::run_text(&scripts, &config, ObjectId(1), 1, "mechprefs SLWarn ON");
+    let message = support::run_text(&scripts, &config, ObjectId(1), 1, "unitprefs SLWarn ON");
     assert!(message.contains("warning when lit by searchlight is now ON"));
     set_battle_searchlight_warning(&mut world, lamp, ObjectId(1), true).unwrap();
     assert_eq!(scripts.world().btech, world.btech);

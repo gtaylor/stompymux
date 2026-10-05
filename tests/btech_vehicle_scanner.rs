@@ -22,7 +22,7 @@ async fn fixture(
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         if index < 2 {
             let mut definition =
-                MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml"))
                     .unwrap();
             definition
                 .attributes
@@ -54,7 +54,7 @@ fn power(world: &mut World, ids: &[ObjectId], value: Power) {
 async fn formation() -> (tempfile::TempDir, Config, World, [ObjectId; 4]) {
     let (dir, config, mut world, map, ids) = fixture(
         ".0\n.0\n.0\n.0\n.0\n",
-        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/units/Demolisher.toml"),
     )
     .await;
     for id in ids {
@@ -69,7 +69,7 @@ async fn formation() -> (tempfile::TempDir, Config, World, [ObjectId; 4]) {
 async fn spread() -> (tempfile::TempDir, Config, World, ObjectId, [ObjectId; 4]) {
     let (dir, config, mut world, map, ids) = fixture(
         ".0\n.0\n.0\n.0\n.0\n",
-        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/units/Demolisher.toml"),
     )
     .await;
     for (y, id) in ids.into_iter().enumerate() {
@@ -405,7 +405,7 @@ async fn hostile_character_acquisition_shares_perception_awards_and_exact_dice()
                 .collect();
             assert_eq!(messages.len(), usize::from(awarded), "{case}");
             if awarded {
-                assert_eq!(messages[0].channel, DiagnosticChannel::Experience);
+                assert_eq!(messages[0].topic, TraceTopic::Experience);
                 assert!(messages[0].text.contains("gained 1 perception XP"));
                 assert_eq!(
                     world.btech.character_values()[&ObjectId(1)]["Perception"].experience_balance(),

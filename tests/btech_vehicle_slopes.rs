@@ -21,7 +21,7 @@ async fn fixture(
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     let mut template = VehicleTemplate::parse(
         "Flatbed_Truck",
-        include_str!("../game/mechs/Flatbed_Truck.toml"),
+        include_str!("../game/units/Flatbed_Truck.toml"),
     )
     .unwrap();
     template.movement = movement;
@@ -493,7 +493,7 @@ async fn vehicle_auto_fall_native_lua_and_storage_share_control_and_rollback() {
     let (_dir, config, world, id) = fixture(VehicleMovement::Tracked, false).await;
     let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
     assert!(
-        support::run_text(&scripts, &config, ObjectId(1), 1, "mechprefs").contains("AutoFall: OFF")
+        support::run_text(&scripts, &config, ObjectId(1), 1, "unitprefs").contains("AutoFall: OFF")
     );
     let initial = scripts.world().btech.clone();
     assert!(
@@ -503,7 +503,7 @@ async fn vehicle_auto_fall_native_lua_and_storage_share_control_and_rollback() {
     );
     assert_eq!(initial, scripts.world().btech);
     assert!(
-        support::run_text(&scripts, &config, ObjectId(1), 1, "mechprefs autofall on")
+        support::run_text(&scripts, &config, ObjectId(1), 1, "unitprefs autofall on")
             .contains("ON")
     );
     assert!(scripts.world().btech.vehicles()[&id].auto_fall());
@@ -526,7 +526,7 @@ async fn vehicle_auto_fall_native_lua_and_storage_share_control_and_rollback() {
         .unwrap();
     assert_eq!(initial, scripts.world().btech);
     assert!(
-        support::run_text(&scripts, &config, ObjectId(1), 1, "mechprefs autofall").contains("ON")
+        support::run_text(&scripts, &config, ObjectId(1), 1, "unitprefs autofall").contains("ON")
     );
     let snapshot = scripts.world().clone();
     persistence::save(&config.database(), &snapshot)

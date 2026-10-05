@@ -17,13 +17,13 @@ async fn lua_controls_a_typed_autopilot_queue() {
     )
     .unwrap();
     let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["registrations"][unit.0.to_string()] = serde_json::json!("MECH");
+    state["registrations"][unit.0.to_string()] = serde_json::json!("UNIT");
     world.btech = serde_json::from_value(state).unwrap();
-    let root = config.path(&config.database.mech_database);
+    let root = config.path(&config.database.unit_database);
     std::fs::create_dir_all(&root).unwrap();
     std::fs::write(
         root.join("PARITY.toml"),
-        include_str!("fixtures/btech/mechs/PARITY.toml"),
+        include_str!("fixtures/btech/units/PARITY.toml"),
     )
     .unwrap();
     let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();

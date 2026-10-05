@@ -20,7 +20,7 @@ pub(crate) fn forget_configuration(state: &mut BtechState, id: ObjectId) {
     }
 }
 
-/// MECH-role removals visible to persistence: the registration disappears or
+/// UNIT-role removals visible to persistence: the registration disappears or
 /// changes type while the container object survives, and the removal carries
 /// the runtime sanction stamped by the `@btech unregister` command. Without
 /// the sanction a disappearing MECH role is accidental state loss and stays
@@ -34,8 +34,8 @@ pub(crate) fn unregistered(before: &World, after: &World) -> BTreeSet<ObjectId> 
         .registrations()
         .iter()
         .filter(|(id, kind)| {
-            kind.as_str() == "MECH"
-                && after.btech.registrations().get(id).map(String::as_str) != Some("MECH")
+            kind.as_str() == "UNIT"
+                && after.btech.registrations().get(id).map(String::as_str) != Some("UNIT")
                 && after.btech.retire_sanctions.borrow().contains(id)
                 && after
                     .objects

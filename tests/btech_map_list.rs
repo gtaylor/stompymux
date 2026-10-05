@@ -160,7 +160,7 @@ fn output(scripts: &Scripts) -> Vec<String> {
 async fn mixed_unit_lists_follow_slots_without_mutating_simulation() {
     for source in firing::templates() {
         let (_dir, config, mut world, id, target, _) =
-            firing::fixture_with_target(&source, None, include_str!("../game/mechs/AS7-D.toml"))
+            firing::fixture_with_target(&source, None, include_str!("../game/units/AS7-D.toml"))
                 .await;
         let map = world.btech.units()[&id].map.unwrap();
         firing::edit(&mut world, id, |unit| unit["map_slot"] = 5.into());
@@ -176,19 +176,19 @@ async fn mixed_unit_lists_follow_slots_without_mutating_simulation() {
         let before = world.btech.clone();
         let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
         let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-        let text = support::run_text(&native, &config, actor, 1, "list mEcHs ignored");
+        let text = support::run_text(&native, &config, actor, 1, "list uNiTs ignored");
         assert!(
-            text.find(&format!("Mech DB Number: {} : [AC]", target.0))
+            text.find(&format!("Unit DB Number: {} : [AC]", target.0))
                 .unwrap()
                 < text
-                    .find(&format!("Mech DB Number: {} : [AF]", id.0))
+                    .find(&format!("Unit DB Number: {} : [AF]", id.0))
                     .unwrap()
         );
-        assert!(text.contains("2 Mechs On Map"));
+        assert!(text.contains("2 Units On Map"));
         assert!(text.contains("248 positions open"));
         assert!(
             lua.eval_callback::<bool>(&format!(
-                "return btech.map.list({},{},'MECHS')",
+                "return btech.map.list({},{},'UNITS')",
                 actor.0, map.0
             ))
             .unwrap()
@@ -285,7 +285,7 @@ async fn list_target_admission_matches_reference_replies() {
         "obj",
         "iNvAlId",
         "objs\u{a0}suffix",
-        "mechs\u{2003}suffix",
+        "units\u{2003}suffix",
     ] {
         let expected = format!("Invalid argument ({argument})!");
         let text = support::run_text(
@@ -304,7 +304,7 @@ async fn list_target_admission_matches_reference_replies() {
     }
     let text = support::run_text(&scripts, &config, ObjectId(1), 1, "list");
     assert!(text.contains("Supply target type too!"));
-    for target in ["MeChS", "ObJs"] {
+    for target in ["UnItS", "ObJs"] {
         let plain = support::run_text(&scripts, &config, ObjectId(1), 1, &format!("list {target}"));
         let extra = support::run_text(
             &scripts,

@@ -70,7 +70,7 @@ fn with_modes(template: &str, item: &str, modes: &[&str]) -> String {
 
 /// The Demolisher with its turret AC/20 replaced by `weapon`, including the turret ammunition.
 fn demolisher_with(weapon: &str) -> String {
-    include_str!("../game/mechs/Demolisher.toml").replace("IS.AC/20", weapon)
+    include_str!("../game/units/Demolisher.toml").replace("IS.AC/20", weapon)
 }
 
 /// Ordinary admitted direct-shot inputs; the launch stage is independent of target damage.
@@ -97,7 +97,7 @@ fn request(id: ObjectId) -> VehicleLaunchRequest {
 
 #[tokio::test]
 async fn vehicle_launch_glancing_misses_and_out_of_range_attempts_replay_expenditure() {
-    let (_dir, config, mut base, id) = fixture(include_str!("../game/mechs/Demolisher.toml")).await;
+    let (_dir, config, mut base, id) = fixture(include_str!("../game/units/Demolisher.toml")).await;
     seed(&mut base, id, 17);
     for kind in ["distance", "glancing", "pilot"] {
         let mut world = base.clone();
@@ -176,7 +176,7 @@ async fn vehicle_launch_glancing_misses_and_out_of_range_attempts_replay_expendi
 #[tokio::test]
 async fn vehicle_streak_failure_recycles_without_ammunition_and_confusion_allows_misses() {
     let (_dir, _config, mut base, id) =
-        fixture(include_str!("../game/mechs/Svantovit-Streak.toml")).await;
+        fixture(include_str!("../game/units/Svantovit-Streak.toml")).await;
     seed(&mut base, id, 17);
     let index = base.btech.vehicles()[&id]
         .loadout()
@@ -259,7 +259,7 @@ async fn vehicle_gatling_preparation_precedes_attack_and_burst_supply_falls_back
     );
     assert_eq!(roll_unit_dice(&mut world, id, 1).unwrap(), [dice.d6()]);
     let template = with_modes(
-        include_str!("../game/mechs/Demolisher.toml"),
+        include_str!("../game/units/Demolisher.toml"),
         "IS.AC/20",
         &["RapidFire"],
     );
@@ -565,7 +565,7 @@ async fn vehicle_misloads_clamp_destroyed_bins_and_spend_surviving_supply_after_
         .unwrap();
     for front in [false, true] {
         let mut template = with_modes(
-            include_str!("../game/mechs/Demolisher.toml"),
+            include_str!("../game/units/Demolisher.toml"),
             "IS.AC/20",
             &["RapidFire"],
         );

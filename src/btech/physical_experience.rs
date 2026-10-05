@@ -46,7 +46,7 @@ pub(super) fn award(
     let award = super::award_skill_experience(world, pilot, skill, amount, now, false)?;
     let message = award.accepted.then(|| {
         super::DiagnosticMessage::new(
-            super::DiagnosticChannel::PilotingExperience,
+            super::TraceTopic::PilotingExperience,
             format!("{} gained {amount} {skill} XP", world.objects[&pilot].name),
         )
     });

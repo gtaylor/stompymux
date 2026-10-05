@@ -48,10 +48,8 @@ pub(super) fn register(lua: &Lua, native: &Table, _world: &SharedWorld) -> mlua:
         move |lua, (unit, pilot, channel, frequency): (i64, i64, u8, u32)| {
             crate::lua::transactions::require(lua)?;
             let scripts = crate::Scripts::services(lua)?;
-            let config = crate::lua::configuration(lua);
             crate::set_radio_frequency_action(
                 &scripts,
-                &config,
                 ObjectId(unit),
                 ObjectId(pilot),
                 channel,

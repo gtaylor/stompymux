@@ -23,7 +23,7 @@ async fn shutdown_speed_boundaries_share_native_lua_and_restart() {
             let (_dir, config, mut world, id, _, _) = firing::fixture_with_target(
                 &source,
                 None,
-                include_str!("../game/mechs/AS7-D.toml"),
+                include_str!("../game/units/AS7-D.toml"),
             )
             .await;
             speed(&mut world, id, value);
@@ -92,7 +92,7 @@ async fn airborne_shutdown_preserves_descent_and_startup_abort_does_not_fall() {
         let (_dir, config, mut world, id, _, _) = firing::fixture_with_target(
             &firing::templates()[chassis],
             None,
-            include_str!("../game/mechs/AS7-D.toml"),
+            include_str!("../game/units/AS7-D.toml"),
         )
         .await;
         if chassis == 0 {
@@ -142,7 +142,7 @@ async fn airborne_shutdown_preserves_descent_and_startup_abort_does_not_fall() {
     }
     for source in firing::templates() {
         let (_dir, config, mut world, id, _, _) =
-            firing::fixture_with_target(&source, None, include_str!("../game/mechs/AS7-D.toml"))
+            firing::fixture_with_target(&source, None, include_str!("../game/units/AS7-D.toml"))
                 .await;
         firing::edit(&mut world, id, |state| {
             state["target_lock"] = serde_json::Value::Null;
@@ -166,7 +166,7 @@ async fn shutdown_fall_casualties_and_failed_evacuation_are_atomic() {
     let (_dir, config, mut world, id, _, _) = firing::fixture_with_target(
         &firing::templates()[0],
         None,
-        include_str!("../game/mechs/AS7-D.toml"),
+        include_str!("../game/units/AS7-D.toml"),
     )
     .await;
     release_battle_pilot(&mut world, id, ObjectId(1)).unwrap();

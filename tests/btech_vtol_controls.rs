@@ -22,7 +22,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
     create_battle_vehicle(
         &mut world,
         id,
-        VehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml")).unwrap(),
+        VehicleTemplate::parse("Kestrel", include_str!("../game/units/Kestrel.toml")).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -885,12 +885,12 @@ async fn live_character_crash_publishes_shared_crew_injury() {
 #[tokio::test]
 async fn native_and_lua_asset_loading_admit_flying_and_stationary_aircraft() {
     let (dir, config, mut world) = support::isolated_world().await;
-    std::fs::create_dir_all(dir.path().join("mechs")).unwrap();
+    std::fs::create_dir_all(dir.path().join("units")).unwrap();
     let mut ids = Vec::new();
     for name in ["Kestrel", "ObservationVTOL"] {
         std::fs::copy(
-            support::repository_root().join(format!("game/mechs/{name}.toml")),
-            dir.path().join("mechs").join(format!("{name}.toml")),
+            support::repository_root().join(format!("game/units/{name}.toml")),
+            dir.path().join("units").join(format!("{name}.toml")),
         )
         .unwrap();
         let native = world.create(&config, format!("Native {name}"), Kind::Thing);

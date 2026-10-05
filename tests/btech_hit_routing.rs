@@ -43,9 +43,9 @@ async fn fixture(
     UnitTemplate::parse(
         "test",
         if vehicle {
-            include_str!("../game/mechs/Demolisher.toml")
+            include_str!("../game/units/Demolisher.toml")
         } else {
-            include_str!("fixtures/btech/mechs/JR7-D.toml")
+            include_str!("fixtures/btech/units/JR7-D.toml")
         },
     )
     .unwrap()
@@ -55,9 +55,9 @@ async fn fixture(
     let mut template = MechTemplate::parse(
         "test",
         if quad {
-            include_str!("../game/mechs/GOL-1H.toml")
+            include_str!("../game/units/GOL-1H.toml")
         } else {
-            include_str!("fixtures/btech/mechs/JR7-D.toml")
+            include_str!("fixtures/btech/units/JR7-D.toml")
         },
     )
     .unwrap();

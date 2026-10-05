@@ -75,20 +75,20 @@ pub async fn run_policy(
         for (chassis, source) in [
             (
                 "mech",
-                include_str!("../../../game/mechs/JR7-D.toml").to_owned(),
+                include_str!("../../../game/units/JR7-D.toml").to_owned(),
             ),
             (
                 "tracked",
-                include_str!("../../../game/mechs/Demolisher.toml").to_owned(),
+                include_str!("../../../game/units/Demolisher.toml").to_owned(),
             ),
             (
                 "wheeled",
-                include_str!("../../../game/mechs/Demolisher.toml")
+                include_str!("../../../game/units/Demolisher.toml")
                     .replace("movement = \"track\"", "movement = \"wheel\""),
             ),
             (
                 "hover",
-                include_str!("../../../game/mechs/Demolisher.toml")
+                include_str!("../../../game/units/Demolisher.toml")
                     .replace("movement = \"track\"", "movement = \"hover\""),
             ),
         ] {
@@ -365,7 +365,7 @@ pub(super) fn fixture(
         config,
         world,
         source,
-        include_str!("../../../game/mechs/AS7-S2.toml"),
+        include_str!("../../../game/units/AS7-S2.toml"),
         scenario,
         seed,
     )
@@ -510,8 +510,8 @@ mod tests {
         let config = Config::load(&root).unwrap();
         let base = persistence::load(&config.database()).await.unwrap();
         for source in [
-            include_str!("../../../game/mechs/JR7-D.toml"),
-            include_str!("../../../game/mechs/Demolisher.toml"),
+            include_str!("../../../game/units/JR7-D.toml"),
+            include_str!("../../../game/units/Demolisher.toml"),
         ] {
             let (mut world, id, target, _) =
                 fixture(&config, base.clone(), source, "behind", 1).unwrap();
@@ -562,7 +562,7 @@ mod tests {
         let (mut world, id, _, _) = fixture(
             &config,
             base,
-            include_str!("../../../game/mechs/JR7-D.toml"),
+            include_str!("../../../game/units/JR7-D.toml"),
             "obstacle_pursuit",
             1,
         )
@@ -638,7 +638,7 @@ mod tests {
         let (mut world, id, _, _) = fixture(
             &config,
             base,
-            include_str!("../../../game/mechs/Demolisher.toml"),
+            include_str!("../../../game/units/Demolisher.toml"),
             "behind",
             1,
         )
@@ -670,7 +670,7 @@ mod tests {
         let (mut world, id, target, _) = fixture(
             &config,
             base,
-            include_str!("../../../game/mechs/Demolisher.toml"),
+            include_str!("../../../game/units/Demolisher.toml"),
             "jammed",
             1,
         )

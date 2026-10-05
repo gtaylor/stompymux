@@ -599,7 +599,7 @@ async fn occupied_environment_changes_heat_and_survives_restart() {
 async fn shallow_water_counts_only_surviving_leg_sinks() {
     use stompymux_rs::{CriticalLocation, MechSection, destroy_battle_critical};
     let mut template =
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
     let sink = template.sections[&MechSection::Head].criticals[&3].clone();
     for section in [MechSection::LeftLeg, MechSection::RightLeg] {
         for slot in [4, 5] {
@@ -966,7 +966,7 @@ async fn aim_breakdown_tracks_turning_equipment_and_heat_without_mutation() {
     create_battle_unit(
         &mut world,
         target,
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
@@ -1168,7 +1168,7 @@ async fn terrain_los_queries_follow_placement_and_leave_world_unchanged() {
     create_battle_unit(
         &mut world,
         target,
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     assert!(stompymux_rs::battle_unit_terrain_los(&world, id, target).is_err());
@@ -1203,7 +1203,7 @@ async fn perception_query_composes_live_terrain_and_spatial_range_without_acquir
     create_battle_unit(
         &mut world,
         target,
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
@@ -1280,7 +1280,7 @@ async fn saved_map_visibility_changes_occupied_battlefields_and_perception_queri
     create_battle_unit(
         &mut world,
         target,
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, target, map, 5, 9).unwrap();
@@ -1340,7 +1340,7 @@ async fn hidden_contact_search_resumes_observer_dice_after_restart_and_rejects_m
     create_battle_unit(
         &mut world,
         target,
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
@@ -1520,7 +1520,7 @@ async fn contacts_acquire_retain_lose_and_clear_on_administrative_placement() {
     create_battle_unit(
         &mut world,
         target,
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
@@ -1620,7 +1620,7 @@ async fn saved_perception_disable_flags_gate_contacts_and_preserve_other_sensor_
     create_battle_unit(
         &mut world,
         target,
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, target, map, 5, 7).unwrap();
@@ -1743,7 +1743,7 @@ async fn tactical_scanners_use_saved_signatures_and_startup_perception() {
     create_battle_unit(
         &mut world,
         target,
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
@@ -1825,7 +1825,7 @@ async fn automatic_stationary_contact_acquisition_retries_a_failed_save() {
         let (_dir, config, mut world, id) = fixture('.').await;
         let map = world.btech.constructed_units()[&id].position().unwrap().map;
         let target = world.create(&config, "Automatic contact target".into(), Kind::Thing);
-        create_battle_unit(&mut world, target, MechTemplate::parse("JR7-D",include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap()).unwrap();
+        create_battle_unit(&mut world, target, MechTemplate::parse("JR7-D",include_str!("fixtures/btech/units/JR7-D.toml")).unwrap()).unwrap();
         support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut world, target, map, 5, 6).unwrap();
         persistence::save(&config.database(), &world).await.unwrap();
@@ -1859,7 +1859,7 @@ async fn contact_display_filters_unacquired_and_stale_targets_without_rerolls() 
         create_battle_unit(
             &mut world,
             target,
-            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
@@ -2195,7 +2195,7 @@ async fn aim_lock_penalty_follows_selected_target_and_committed_settling() {
     create_battle_unit(
         &mut world,
         front,
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, front, support::FIXTURE_DICE_SEED);
@@ -2317,7 +2317,7 @@ async fn perception_aim_includes_target_woods_and_shallow_water_cover() {
         create_battle_unit(
             &mut world,
             target,
-            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
         )
         .unwrap();
         place_battle_unit(&mut world, target, map, 5, target_y).unwrap();
@@ -2646,7 +2646,7 @@ async fn direct_shot_partial_cover_uses_one_upper_body_die_per_group() {
     create_battle_unit(
         &mut world,
         target,
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
@@ -2747,7 +2747,7 @@ async fn direct_out_of_range_shot_still_rolls_and_spends_without_target_damage()
     create_battle_unit(
         &mut world,
         target,
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
@@ -3125,7 +3125,7 @@ async fn prone_posture_changes_los_and_aim_at_adjacent_and_distant_ranges() {
     create_battle_unit(
         &mut world,
         target,
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
@@ -3932,7 +3932,7 @@ async fn damage_balance_direct_salvo_uses_fallen_facing_and_replays_after_failed
 async fn damage_balance_ammunition_fall_precedes_explosion_pilot_injury() {
     use stompymux_rs::{Dice, MechSection as Section, resolve_battle_tactical_impact};
     let mut template =
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
     let ammunition = template
         .sections
         .get_mut(&Section::RightTorso)
@@ -4251,7 +4251,7 @@ async fn prone_fire_support_depends_on_surviving_arms_and_all_their_weapon_timer
 async fn prone_fire_forbids_leg_mounts_until_upright() {
     use stompymux_rs::{MechSection as S, StandMode, begin_battle_stand};
     let mut template =
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
     let weapon = template
         .sections
         .get_mut(&S::LeftArm)
@@ -4487,7 +4487,7 @@ async fn stagger_failed_checks_fall_and_clear_history_on_ground_and_bridge_decks
         );
         let (_dir, config, mut world, id) = fixture_assets(
             &source,
-            MechTemplate::parse("AS7-D", include_str!("fixtures/btech/mechs/AS7-D.toml")).unwrap(),
+            MechTemplate::parse("AS7-D", include_str!("fixtures/btech/units/AS7-D.toml")).unwrap(),
         )
         .await;
         stop_battle_unit(
@@ -4642,7 +4642,7 @@ async fn stagger_server_water_fall_retries_failed_save_without_losing_history() 
     use stompymux_rs::{MechSection as S, Posture, StaggerMode as M, advance_battle_stagger};
     tokio::task::LocalSet::new().run_until(async {
         let source = format!("12 12\n{}", format!("{}\n", "~1".repeat(12)).repeat(12));
-        let (_dir, config, mut world, id) = fixture_assets(&source, MechTemplate::parse("AS7-D",include_str!("fixtures/btech/mechs/AS7-D.toml")).unwrap()).await;
+        let (_dir, config, mut world, id) = fixture_assets(&source, MechTemplate::parse("AS7-D",include_str!("fixtures/btech/units/AS7-D.toml")).unwrap()).await;
         shot_seed(&mut world, id, water_fall_seed(false));
         stop_battle_unit(&mut world, id, ObjectId(1), stompymux_rs::MovementRules::STANDARD.fall).unwrap();
         stagger_hit(&mut world, id, S::LeftTorso, 20, M::Retain);
@@ -5381,7 +5381,7 @@ async fn ammunition_hazard_selection_prefers_damage_then_first_bin_and_skips_una
     use stompymux_rs::{CriticalLoss, MechSection as S};
     let (_dir, _config, mut world, id) = fixture_assets(
         &format!("12 12\n{}", (".0".repeat(12) + "\n").repeat(12)),
-        MechTemplate::parse("AS7-D", include_str!("fixtures/btech/mechs/AS7-D.toml")).unwrap(),
+        MechTemplate::parse("AS7-D", include_str!("fixtures/btech/units/AS7-D.toml")).unwrap(),
     )
     .await;
     let before = world.btech.clone();
@@ -5487,7 +5487,7 @@ async fn ammunition_detonation_bypasses_armor_replays_and_honors_pain_resistance
 async fn ammunition_detonation_leg_falls_on_ground_and_bridge_decks() {
     use stompymux_rs::{MechSection as S, explode_battle_ammunition};
     let mut template =
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
     let bin = template
         .sections
         .get_mut(&S::RightTorso)
@@ -6911,7 +6911,7 @@ async fn snub_ppc_range_damage_native_lua_and_restart() {
 async fn double_heat_sinks_group_damage_mass_cooling_and_restart() {
     use stompymux_rs::*;
     let mut template =
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
     let sink = template
         .sections
         .get_mut(&MechSection::Head)
@@ -7054,7 +7054,7 @@ async fn fusion_engine_layout_mass_damage_and_restart() {
         (Engine::Compact, 0, true, 13824, "compact"),
     ] {
         let mut template =
-            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
         template.max_speed = 96.75;
         let part = template.sections[&MechSection::CenterTorso].criticals[&0].clone();
         if compact {
@@ -8024,7 +8024,7 @@ async fn heavy_gauss_range_damage_native_lua_and_restart() {
 async fn relocated_cestus_engine_damage_native_lua_fire_and_restart() {
     use stompymux_rs::*;
     let template =
-        MechTemplate::parse("CES-4S", include_str!("../game/mechs/CES-4S.toml")).unwrap();
+        MechTemplate::parse("CES-4S", include_str!("../game/units/CES-4S.toml")).unwrap();
     let source = format!("12 12\n{}", format!("{}\n", ".0".repeat(12)).repeat(12));
     let (_dir, config, mut base, id) = fixture_assets(&source, template).await;
     let map = base.btech.constructed_units()[&id].position().unwrap().map;
@@ -8032,7 +8032,7 @@ async fn relocated_cestus_engine_damage_native_lua_fire_and_restart() {
     create_battle_unit(
         &mut base,
         target,
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut base, target, support::FIXTURE_DICE_SEED);

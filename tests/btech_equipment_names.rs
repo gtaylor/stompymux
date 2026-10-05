@@ -28,10 +28,10 @@ fn weapon_names_fold_ascii_case_without_accepting_unknown_identities() {
 async fn mixed_case_equipment_shares_construction_mass_and_saved_identity() {
     let (_dir, config, mut world) = support::isolated_world().await;
     for source in [
-        include_str!("../game/mechs/JR7-D.toml"),
-        include_str!("../game/mechs/AS7-D.toml"),
-        include_str!("../game/mechs/SCP-1N.toml"),
-        include_str!("../game/mechs/BJ-TSM.toml"),
+        include_str!("../game/units/JR7-D.toml"),
+        include_str!("../game/units/AS7-D.toml"),
+        include_str!("../game/units/SCP-1N.toml"),
+        include_str!("../game/units/BJ-TSM.toml"),
     ] {
         // Exercise source decoding as well as typed construction.
         let source = source.replace("Ammo_IS.SRM-4 25 -", "Ammo_IS.SRM-4 12 Hotload Halfton -");
@@ -60,9 +60,9 @@ async fn mixed_case_equipment_shares_construction_mass_and_saved_identity() {
         );
     }
     for source in [
-        include_str!("../game/mechs/Demolisher.toml"),
-        include_str!("../game/mechs/Hunter.toml"),
-        include_str!("../game/mechs/Kestrel.toml"),
+        include_str!("../game/units/Demolisher.toml"),
+        include_str!("../game/units/Hunter.toml"),
+        include_str!("../game/units/Kestrel.toml"),
     ] {
         let canonical = VehicleTemplate::parse("test", source).unwrap();
         let expected = Vehicle::new(canonical).unwrap();

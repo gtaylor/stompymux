@@ -9,7 +9,7 @@ fn semiguided_templates_and_capacity() {
         .filter(|weapon| weapon.supports_semiguided())
     {
         let mut definition =
-            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
         let mut part = definition.sections[&MechSection::LeftArm].criticals[&2].clone();
         part.equipment = weapon.name().into();
         part.modes = vec!["Sguided".into()];

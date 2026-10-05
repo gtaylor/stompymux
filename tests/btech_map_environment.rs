@@ -11,7 +11,7 @@ async fn environment_controls_share_flags_rollback_and_restart() {
         let (_dir, config, mut world, unit, _, _) = firing::fixture_with_target(
             &source,
             Some(Weapon::MediumLaser),
-            include_str!("../game/mechs/AS7-D.toml"),
+            include_str!("../game/units/AS7-D.toml"),
         )
         .await;
         let map = world.btech.units()[&unit].map.unwrap();
@@ -92,7 +92,7 @@ async fn changed_environment_reaches_live_movement_heat_and_flight() {
         let (_dir, config, mut world, unit, _, _) = firing::fixture_with_target(
             &source,
             Some(Weapon::MediumLaser),
-            include_str!("../game/mechs/AS7-D.toml"),
+            include_str!("../game/units/AS7-D.toml"),
         )
         .await;
         let map = world.btech.units()[&unit].map.unwrap();
@@ -271,9 +271,9 @@ async fn environment_validation_and_authority_are_atomic() {
 #[tokio::test]
 async fn in_flight_gravity_changes_resume_without_resetting_the_route() {
     let (_dir, config, mut world, unit, _, _) = firing::fixture_with_target(
-        include_str!("../game/mechs/JR7-D.toml"),
+        include_str!("../game/units/JR7-D.toml"),
         Some(Weapon::MediumLaser),
-        include_str!("../game/mechs/AS7-D.toml"),
+        include_str!("../game/units/AS7-D.toml"),
     )
     .await;
     let map = world.btech.units()[&unit].map.unwrap();

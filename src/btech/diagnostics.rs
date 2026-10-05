@@ -1,51 +1,24 @@
-//! BattleTech diagnostic messages staged through the ordinary transactional channel service.
+//! BattleTech diagnostics, captured into action reports and logged once the action commits.
 use super::{GunneryAwardRequest, GunneryExperienceMode, ShotExperienceAward};
-use crate::{Config, Scripts, World, config::XpConfig};
-use anyhow::Result;
+use crate::{
+    Scripts, World,
+    config::XpConfig,
+    logging::{TraceRecord, TraceTopic},
+};
 use serde::Serialize;
-
-/// Implemented diagnostic destinations; ordinary channel administration owns their existence.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum DiagnosticChannel {
-    MapErrors,
-    Debug,
-    Economy,
-    AttackExperience,
-    Experience,
-    PilotingExperience,
-    Frequencies,
-    ZeroFrequencies,
-}
-
-impl DiagnosticChannel {
-    /// Canonical channel spelling used in diagnostic headers.
-    pub fn name(self) -> &'static str {
-        match self {
-            Self::MapErrors => "MapErrors",
-            Self::Debug => "MechDebugInfo",
-            Self::Economy => "MechEconInfo",
-            Self::AttackExperience => "MechAttackXP",
-            Self::Experience => "MechXP",
-            Self::PilotingExperience => "MechPilotXP",
-            Self::Frequencies => "MechFreqs",
-            Self::ZeroFrequencies => "ZeroFrequencies",
-        }
-    }
-}
 
 /// An immutable diagnostic captured before damage or host callbacks can change participant names.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct DiagnosticMessage {
-    pub channel: DiagnosticChannel,
+    pub topic: TraceTopic,
     pub text: String,
 }
 
 impl DiagnosticMessage {
-    /// Diagnostic channel records are single-line even when a participant name contains a newline.
-    pub(super) fn new(channel: DiagnosticChannel, text: String) -> Self {
+    /// Diagnostics are single-line even when a participant name contains a newline.
+    pub(super) fn new(topic: TraceTopic, text: String) -> Self {
         Self {
-            channel,
+            topic,
             text: text.replace('\n', " "),
         }
     }
@@ -59,7 +32,7 @@ pub(super) fn stock_message(
     change: i32,
 ) -> DiagnosticMessage {
     DiagnosticMessage::new(
-        DiagnosticChannel::Economy,
+        TraceTopic::Economy,
         format!(
             "#{} {} {} {} {} #{}.",
             actor.0,
@@ -97,7 +70,7 @@ pub(super) fn gunnery_messages(
             )
         {
             return vec![DiagnosticMessage::new(
-                DiagnosticChannel::Experience,
+                TraceTopic::Experience,
                 format!(
                     "#{} in #{} 1 noxp #{}",
                     request.pilot.0, request.attacker.0, request.target.0
@@ -130,12 +103,12 @@ pub(super) fn gunnery_messages(
         }
     };
     let mut messages = vec![DiagnosticMessage::new(
-        DiagnosticChannel::AttackExperience,
+        TraceTopic::GunneryExperience,
         message,
     )];
     if matches!(attempt, ShotExperienceAward::BattleValue(_)) && config.noisy_xpgain != 0 {
         messages.push(DiagnosticMessage::new(
-            DiagnosticChannel::Experience,
+            TraceTopic::Experience,
             format!(
                 "#{} in #{} {} damage #{}",
                 request.pilot.0, request.attacker.0, request.damage, request.target.0
@@ -145,30 +118,18 @@ pub(super) fn gunnery_messages(
     messages
 }
 
-/// Publish a shot's diagnostics under its enclosing world/effects checkpoint, ignoring absent channels.
-pub(super) fn publish_shot(
-    scripts: &Scripts,
-    config: &Config,
-    report: &super::MechShotReport,
-) -> Result<()> {
-    publish(scripts, config, &report.experience_messages)
+/// Stage a shot's diagnostics under its enclosing world/effects checkpoint.
+pub(super) fn publish_shot(scripts: &Scripts, report: &super::MechShotReport) {
+    publish(scripts, &report.experience_messages);
 }
 
-/// Shared delivery for captured combat diagnostics; the enclosing host action owns rollback.
-pub(super) fn publish(
-    scripts: &Scripts,
-    config: &Config,
-    messages: &[DiagnosticMessage],
-) -> Result<()> {
-    if messages.is_empty() {
-        return Ok(());
-    }
-    let service = scripts.communication(config);
+/// Stage captured diagnostics for logging once the enclosing host action commits; a
+/// rolled-back action discards them with its other effects.
+pub(super) fn publish(scripts: &Scripts, messages: &[DiagnosticMessage]) {
     for message in messages {
-        if service.name(message.channel.name()).is_err() {
-            continue;
-        }
-        service.emit(message.channel.name(), &message.text, false)?;
+        scripts.effects.stage_trace(TraceRecord {
+            topic: message.topic,
+            message: message.text.clone(),
+        });
     }
-    Ok(())
 }

@@ -101,7 +101,7 @@ mod tests {
         let biped = Mech::from_template(
             super::super::MechTemplate::parse(
                 "JR7-D",
-                include_str!("../../tests/fixtures/btech/mechs/JR7-D.toml"),
+                include_str!("../../tests/fixtures/btech/units/JR7-D.toml"),
             )
             .unwrap(),
         )
@@ -112,7 +112,7 @@ mod tests {
                 encoded["definition"] = serde_json::to_value(
                     super::super::MechTemplate::parse(
                         "SCP-1N",
-                        include_str!("../../game/mechs/SCP-1N.toml"),
+                        include_str!("../../game/units/SCP-1N.toml"),
                     )
                     .unwrap(),
                 )

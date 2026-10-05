@@ -116,8 +116,8 @@ fn fire(
 
 #[test]
 fn shot_transactions_match_reference_across_chassis_and_rejections() {
-    let mech = include_str!("../../game/mechs/JR7-D.toml");
-    let tracked = include_str!("../../game/mechs/Demolisher.toml");
+    let mech = include_str!("../../game/units/JR7-D.toml");
+    let tracked = include_str!("../../game/units/Demolisher.toml");
     let mut accepted = 0;
     let mut rejected = 0;
     let mut hits = 0;
@@ -172,12 +172,12 @@ fn shot_transactions_match_reference_across_chassis_and_rejections() {
 #[test]
 fn shot_transactions_discard_expenditure_damage_and_validation_failures() {
     for source in [
-        include_str!("../../game/mechs/JR7-D.toml"),
-        include_str!("../../game/mechs/Demolisher.toml"),
+        include_str!("../../game/units/JR7-D.toml"),
+        include_str!("../../game/units/Demolisher.toml"),
     ] {
         for recipient in [
-            include_str!("../../game/mechs/JR7-D.toml"),
-            include_str!("../../game/mechs/Demolisher.toml"),
+            include_str!("../../game/units/JR7-D.toml"),
+            include_str!("../../game/units/Demolisher.toml"),
         ] {
             let (config, initial, shooter, target) = fixture(source, recipient, 42);
             for point in [
@@ -216,8 +216,8 @@ fn shot_transactions_discard_expenditure_damage_and_validation_failures() {
 fn validation_reuse_matches_full_checks_after_mutations_and_scope_exit() {
     use crate::btech::validation_context::{Scope, retained};
     let (_, initial, shooter, target) = fixture(
-        include_str!("../../game/mechs/JR7-D.toml"),
-        include_str!("../../game/mechs/JR7-D.toml"),
+        include_str!("../../game/units/JR7-D.toml"),
+        include_str!("../../game/units/JR7-D.toml"),
         42,
     );
     let scope = Scope::begin(&initial.btech);
@@ -298,8 +298,8 @@ fn validation_reuse_matches_full_checks_after_mutations_and_scope_exit() {
 
 #[test]
 fn special_shot_effects_match_reference_validation() {
-    let mech = include_str!("../../game/mechs/JR7-D.toml");
-    let vehicle = include_str!("../../game/mechs/Demolisher.toml");
+    let mech = include_str!("../../game/units/JR7-D.toml");
+    let vehicle = include_str!("../../game/units/Demolisher.toml");
     let cases = [
         (
             mech.replace(
@@ -316,7 +316,7 @@ fn special_shot_effects_match_reference_validation() {
             crate::Weapon::Flamer,
         ),
         (
-            include_str!("../../game/mechs/AS7-S2.toml").to_owned(),
+            include_str!("../../game/units/AS7-S2.toml").to_owned(),
             crate::Weapon::HeavyGaussRifle,
         ),
     ];
@@ -369,8 +369,8 @@ fn special_shot_effects_match_reference_validation() {
 fn validation_projection_requires_exact_equipment_and_roster_membership() {
     use crate::btech::validation_context::{Scope, cached_loadout, retained, unit};
     let (_, world, shooter, _) = fixture(
-        include_str!("../../game/mechs/JR7-D.toml"),
-        include_str!("../../game/mechs/JR7-D.toml"),
+        include_str!("../../game/units/JR7-D.toml"),
+        include_str!("../../game/units/JR7-D.toml"),
         3,
     );
     let _scope = Scope::begin(&world.btech);
@@ -402,8 +402,8 @@ fn validation_projection_requires_exact_equipment_and_roster_membership() {
 fn contact_position_index_handles_missing_unplaced_sparse_and_duplicate_records() {
     use crate::btech::validation_contacts::Positions;
     let (_, mut world, shooter, target) = fixture(
-        include_str!("../../game/mechs/JR7-D.toml"),
-        include_str!("../../game/mechs/Demolisher.toml"),
+        include_str!("../../game/units/JR7-D.toml"),
+        include_str!("../../game/units/Demolisher.toml"),
         3,
     );
     let positions = Positions::prepare(&world.btech).unwrap();
@@ -446,11 +446,11 @@ fn contact_position_index_handles_missing_unplaced_sparse_and_duplicate_records(
 
 #[test]
 fn missile_defenses_match_reference_for_both_chassis() {
-    let mech = include_str!("../../game/mechs/JR7-D.toml");
-    let vehicle = include_str!("../../game/mechs/Goblin-58.toml");
+    let mech = include_str!("../../game/units/JR7-D.toml");
+    let vehicle = include_str!("../../game/units/Goblin-58.toml");
     let mut defenses = 0;
     for source in [mech, vehicle] {
-        for recipient in [include_str!("../../game/mechs/Daishi-A.toml"), vehicle] {
+        for recipient in [include_str!("../../game/units/Daishi-A.toml"), vehicle] {
             let (config, mut initial, shooter, target) = fixture(source, recipient, 3);
             // Guarantee an admitted missile hit so every pairing exercises defense expenditure.
             let dice = (0u8..=255)

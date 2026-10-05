@@ -51,7 +51,7 @@ fn clear(
                 scripts,
                 super::MessageTarget::Player(recipient),
                 &format!(
-                    "Shutting down Mech #{} and resetting map index to -1....",
+                    "Shutting down unit #{} and resetting map index to -1....",
                     id.0
                 ),
             )?;
@@ -100,7 +100,7 @@ fn clear(
     })
 }
 
-/// CLEARMECHS operates on the wizard's selected map; the reference ignores its argument.
+/// CLEARUNITS operates on the wizard's selected map; the reference ignores its argument.
 pub(crate) fn command(
     ctx: &crate::CommandContext<'_>,
     _input: &crate::CommandInput,

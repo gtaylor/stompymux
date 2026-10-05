@@ -57,7 +57,7 @@ async fn debug_registration_round_trip_and_idempotence() {
     for (command, expected) in [
         (
             format!("@btech/register #{}", tool.0),
-            "Specify MECH, DEBUG, MAP, or AUTOPILOT.".to_owned(),
+            "Specify UNIT, DEBUG, MAP, or AUTOPILOT.".to_owned(),
         ),
         (
             format!("@btech/register #{}=MAP", tool.0),
@@ -261,18 +261,18 @@ async fn map_registration_defaults_view_load_and_restart() {
     assert_eq!(restored.btech, saved.btech);
 }
 
-/// MECH teardown disposes the raw registration, forgets administrative identity, and
+/// UNIT teardown disposes the raw registration, forgets administrative identity, and
 /// succeeds identically for a second unregister (C registry.c:512-527 always returns
 /// true after the control check and runs btech_configuration_forget on both paths).
 #[tokio::test]
-async fn mech_registration_teardown_is_idempotent_and_forgets_configuration() {
+async fn unit_registration_teardown_is_idempotent_and_forgets_configuration() {
     let (_dir, config, mut world) = support::isolated_world().await;
     let unit = world.create(&config, "Bare mech".into(), Kind::Thing);
     world.objects.get_mut(&unit).unwrap().location = Some(ObjectId(1));
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     assert_eq!(
-        support::run_text(&scripts, &config, ObjectId(1), 1, "@btech/r Bare mech=MECH"),
-        format!("Registered #{} as BTech type MECH.", unit.0)
+        support::run_text(&scripts, &config, ObjectId(1), 1, "@btech/r Bare mech=UNIT"),
+        format!("Registered #{} as BTech type UNIT.", unit.0)
     );
     assert_eq!(
         support::run_text(
@@ -282,7 +282,7 @@ async fn mech_registration_teardown_is_idempotent_and_forgets_configuration() {
             1,
             &format!("@btech #{}", unit.0)
         ),
-        format!("#{} BTech type: MECH", unit.0)
+        format!("#{} BTech type: UNIT", unit.0)
     );
     btech::set_unit_identity_configuration(
         &mut scripts.world_mut(),
@@ -340,9 +340,9 @@ async fn mech_registration_teardown_is_idempotent_and_forgets_configuration() {
             &config,
             ObjectId(1),
             1,
-            &format!("@btech/register #{}=MECH", unit.0)
+            &format!("@btech/register #{}=UNIT", unit.0)
         ),
-        format!("Registered #{} as BTech type MECH.", unit.0)
+        format!("Registered #{} as BTech type UNIT.", unit.0)
     );
 }
 
@@ -353,7 +353,7 @@ async fn mech_registration_teardown_is_idempotent_and_forgets_configuration() {
 async fn unregister_constructed_unit_releases_map_and_pilot_references() {
     for source in firing::templates() {
         let (_dir, config, world, unit, target, _) =
-            firing::fixture_with_target(&source, None, include_str!("../game/mechs/AS7-D.toml"))
+            firing::fixture_with_target(&source, None, include_str!("../game/units/AS7-D.toml"))
                 .await;
         let map = world.btech.units()[&unit].map.unwrap();
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();

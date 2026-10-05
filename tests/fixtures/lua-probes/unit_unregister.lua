@@ -8,9 +8,9 @@
 -- succeeds for an already-plain object), and post-teardown inspect output.
 -- PARITY_SETUP: @pemit me=LUA_PARITY_OUTPUT_BEGIN
 -- PARITY_SETUP: luaparity0
--- PARITY_SETUP: @btech/register Parity Unregister Bare=MECH
--- PARITY_SETUP: @btech/register Parity Unregister Loaded=MECH
--- PARITY_SETUP: @btech/register Parity Unregister Control=MECH
+-- PARITY_SETUP: @btech/register Parity Unregister Bare=UNIT
+-- PARITY_SETUP: @btech/register Parity Unregister Loaded=UNIT
+-- PARITY_SETUP: @btech/register Parity Unregister Control=UNIT
 -- PARITY_SETUP: @btech/info Parity Unregister Bare
 -- PARITY_SETUP: luaparity9
 -- PARITY_SETUP: @btech/unregister Parity Unregister Bare
@@ -107,7 +107,7 @@ local function page_post_teardown()
     loaded_identity = capture(unit.preferred_id, state.loaded),
     loaded_handle = capture(unit.assigned_pilot, state.loaded),
     bare_handle = capture(unit.display_name, state.bare),
-    -- The never-unregistered control unit keeps its MECH registration and still
+    -- The never-unregistered control unit keeps its UNIT registration and still
     -- constructs; the zone scan sees exactly that one registered thing.
     zone_units = capture(btech.system.units_in_zone, mux.world.object(0)),
     control_load = capture(unit.load_template, state.control, 'PARITY-PROBE'),

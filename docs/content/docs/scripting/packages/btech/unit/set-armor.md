@@ -18,7 +18,7 @@ btech.unit.set_armor(unit, section, patch)
 | Name | Type | Description |
 | --- | --- | --- |
 | `unit` | `DbRef\|Object` |  |
-| `section` | `MechSection` | Typed section constant from btech.unit.sections. |
+| `section` | `UnitSection` | Typed section constant from btech.unit.sections. |
 | `patch` | `table` | Current-armor, internal or rear-armor integers, each 0 through 255. |
 
 ## Returns

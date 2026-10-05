@@ -159,7 +159,7 @@ async fn multi_target_side_arc_penalty_is_independent_of_lock_and_arc_override()
             state["target_lock"]["remaining"] = 0.into();
         });
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-        let output = support::run_text(&scripts, &config, ObjectId(1), 1, "@setmech targcomp 3");
+        let output = support::run_text(&scripts, &config, ObjectId(1), 1, "@setunit targcomp 3");
         assert!(output.is_empty(), "{output}");
         for override_weapon_arcs in [false, true] {
             let mut selected_rules = rules();

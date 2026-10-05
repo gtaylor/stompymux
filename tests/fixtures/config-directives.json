@@ -255,7 +255,7 @@
     "permission": "CA_GOD"
   },
   {
-    "name": "btech_usedmechstore",
+    "name": "btech_usedunitstore",
     "parser": "cf_int",
     "permission": "CA_GOD"
   },
@@ -630,7 +630,7 @@
     "permission": "CA_GOD"
   },
   {
-    "name": "mech_database",
+    "name": "unit_database",
     "parser": "cf_string",
     "permission": "CA_GOD"
   },

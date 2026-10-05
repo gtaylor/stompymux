@@ -241,7 +241,7 @@
 //|---Publish a wizard map listing without advancing simulation or changing contacts.
 //|---@param actor integer
 //|---@param dbref integer
-//|---@param target string MECHS or OBJS; complete case-insensitive name required.
+//|---@param target string UNITS or OBJS; complete case-insensitive name required.
 //|---@return boolean
 //|function btech_map.list(actor, dbref, target) end
 // lua-types-end

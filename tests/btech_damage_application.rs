@@ -19,11 +19,11 @@ async fn vehicle_material_replacement_matches_native_lua_and_restart() {
             &config,
             ObjectId(1),
             1,
-            &format!("@setmech mechdamage {value}"),
+            &format!("@setunit unitdamage {value}"),
         );
         assert!(output.is_empty(), "{output}");
         lua.eval_callback::<()>(&format!(
-            "btech.unit.set_field(1,{},'mechdamage','{value}')",
+            "btech.unit.set_field(1,{},'unitdamage','{value}')",
             id.0
         ))
         .unwrap();
@@ -53,14 +53,14 @@ async fn vehicle_material_replacement_matches_native_lua_and_restart() {
             "G:2/0(8)", "C:7/11", "R:2/0(1)", "A:2/999", "I:2/999", "garbage",
         ] {
             assert!(
-                set_battle_unit_field_action(&lua, &config, ObjectId(1), id, "mechdamage", bad)
+                set_battle_unit_field_action(&lua, &config, ObjectId(1), id, "unitdamage", bad)
                     .is_err()
             );
             assert_eq!(lua.world().btech, before);
         }
         assert!(
             lua.eval_callback::<()>(&format!(
-                "btech.unit.set_field(1,{},'mechdamage',''); error('rollback')",
+                "btech.unit.set_field(1,{},'unitdamage',''); error('rollback')",
                 id.0
             ))
             .is_err()
@@ -72,7 +72,7 @@ async fn vehicle_material_replacement_matches_native_lua_and_restart() {
             persistence::load(&config.database()).await.unwrap().btech,
             saved.btech
         );
-        set_battle_unit_field_action(&lua, &config, ObjectId(1), id, "mechdamage", "").unwrap();
+        set_battle_unit_field_action(&lua, &config, ObjectId(1), id, "unitdamage", "").unwrap();
         assert_eq!(lua.world().btech.vehicles()[&id], original);
     }
 }
@@ -90,7 +90,7 @@ async fn vehicle_section_loss_and_restoration_use_material_lifecycle_without_com
             &config,
             ObjectId(1),
             id,
-            "mechdamage",
+            "unitdamage",
             &description,
         )
         .unwrap();
@@ -102,7 +102,7 @@ async fn vehicle_section_loss_and_restoration_use_material_lifecycle_without_com
             assert!(unit.pilot().is_none());
             world.validate(&config).unwrap();
         }
-        set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "mechdamage", "").unwrap();
+        set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "unitdamage", "").unwrap();
         let world = scripts.world();
         let unit = &world.btech.vehicles()[&id];
         assert!(!unit.is_destroyed());
@@ -135,7 +135,7 @@ async fn restoring_a_launcher_clears_its_spent_state_without_resetting_vehicle_c
             &config,
             ObjectId(1),
             id,
-            "mechdamage",
+            "unitdamage",
             "C:2/0,G:2/0(6)",
         )
         .unwrap();
@@ -146,7 +146,7 @@ async fn restoring_a_launcher_clears_its_spent_state_without_resetting_vehicle_c
             assert!(unit.weapon_failures().is_empty());
             assert!(unit.spent_launchers().contains(&index));
         }
-        set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "mechdamage", "").unwrap();
+        set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "unitdamage", "").unwrap();
         let world = scripts.world();
         let unit = &world.btech.vehicles()[&id];
         assert!(unit.lost_criticals().is_empty());
@@ -188,7 +188,7 @@ async fn mech_replacement_recalculates_only_after_critical_changes() {
             &config,
             ObjectId(1),
             id,
-            "mechdamage",
+            "unitdamage",
             "A:2/1,R:2/2(1),G:2/0(6)",
         )
         .unwrap();
@@ -215,7 +215,7 @@ async fn mech_replacement_recalculates_only_after_critical_changes() {
             }
             world.validate(&config).unwrap();
         }
-        set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "mechdamage", "C:2/0")
+        set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "unitdamage", "C:2/0")
             .unwrap();
         {
             let world = scripts.world();
@@ -239,7 +239,7 @@ async fn mech_replacement_recalculates_only_after_critical_changes() {
             persistence::load(&config.database()).await.unwrap().btech,
             saved.btech
         );
-        set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "mechdamage", "").unwrap();
+        set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "unitdamage", "").unwrap();
         let world = scripts.world();
         let unit = &world.btech.constructed_units()[&id];
         assert!(unit.weapon_intact(index).unwrap());
@@ -267,11 +267,11 @@ async fn mech_native_lua_replacement_and_hull_lifecycle_agree() {
                 &config,
                 ObjectId(1),
                 1,
-                &format!("@setmech mechdamage {value}"),
+                &format!("@setunit unitdamage {value}"),
             );
             assert!(output.is_empty(), "{output}");
             lua.eval_callback::<()>(&format!(
-                "btech.unit.set_field(1,{},'mechdamage','{value}')",
+                "btech.unit.set_field(1,{},'unitdamage','{value}')",
                 id.0
             ))
             .unwrap();
@@ -288,7 +288,7 @@ async fn mech_native_lua_replacement_and_hull_lifecycle_agree() {
         let before = lua.world().btech.clone();
         assert!(
             lua.eval_callback::<()>(&format!(
-                "btech.unit.set_field(1,{},'mechdamage',''); error('rollback')",
+                "btech.unit.set_field(1,{},'unitdamage',''); error('rollback')",
                 id.0
             ))
             .is_err()
@@ -296,12 +296,12 @@ async fn mech_native_lua_replacement_and_hull_lifecycle_agree() {
         assert_eq!(lua.world().btech, before);
         for value in ["C:7/11", "G:0/0(8)", "I:7/999"] {
             assert!(
-                set_battle_unit_field_action(&lua, &config, ObjectId(1), id, "mechdamage", value)
+                set_battle_unit_field_action(&lua, &config, ObjectId(1), id, "unitdamage", value)
                     .is_err()
             );
             assert_eq!(lua.world().btech, before);
         }
-        set_battle_unit_field_action(&lua, &config, ObjectId(1), id, "mechdamage", "").unwrap();
+        set_battle_unit_field_action(&lua, &config, ObjectId(1), id, "unitdamage", "").unwrap();
         let saved = lua.world().clone();
         let unit = &saved.btech.constructed_units()[&id];
         assert!(!unit.is_destroyed());
@@ -321,7 +321,7 @@ async fn mech_native_lua_replacement_and_hull_lifecycle_agree() {
 #[tokio::test]
 async fn hardened_gyro_replacement_rebuilds_damage_without_stale_loss_baselines() {
     let source =
-        support::templates::with_flags(include_str!("../game/mechs/JR7-D.toml"), &["HDGyro_Tech"]);
+        support::templates::with_flags(include_str!("../game/units/JR7-D.toml"), &["HDGyro_Tech"]);
     let (_dir, config, world, id, _, _) = firing::fixture_with_target(&source, None, &source).await;
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     set_battle_unit_field_action(
@@ -329,7 +329,7 @@ async fn hardened_gyro_replacement_rebuilds_damage_without_stale_loss_baselines(
         &config,
         ObjectId(1),
         id,
-        "mechdamage",
+        "unitdamage",
         "C:4/3,C:4/4",
     )
     .unwrap();
@@ -344,7 +344,7 @@ async fn hardened_gyro_replacement_rebuilds_damage_without_stale_loss_baselines(
         &config,
         ObjectId(1),
         id,
-        "mechdamage",
+        "unitdamage",
         "A:2/1,C:4/3,C:4/4",
     )
     .unwrap();
@@ -354,13 +354,13 @@ async fn hardened_gyro_replacement_rebuilds_damage_without_stale_loss_baselines(
         previous["critical_conditions"],
         current["critical_conditions"]
     );
-    set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "mechdamage", "").unwrap();
+    set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "unitdamage", "").unwrap();
     assert_eq!(
         scripts.world().btech.constructed_units()[&id].gyro_damage(),
         0
     );
     scripts.world().validate(&config).unwrap();
-    set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "mechdamage", "C:4/3")
+    set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "unitdamage", "C:4/3")
         .unwrap();
     assert_eq!(
         scripts.world().btech.constructed_units()[&id].gyro_damage(),
@@ -393,7 +393,7 @@ async fn gyro_reconstruction_preserves_secondary_protection_and_future_hit_behav
                     &config,
                     ObjectId(1),
                     id,
-                    "mechdamage",
+                    "unitdamage",
                     material,
                 )
                 .unwrap();
@@ -474,7 +474,7 @@ async fn material_replacement_preserves_light_probe_conditions_across_chassis() 
                     &config,
                     ObjectId(1),
                     id,
-                    "mechdamage",
+                    "unitdamage",
                     damage,
                 )
                 .unwrap();
@@ -537,7 +537,7 @@ async fn material_replacement_preserves_light_probe_conditions_across_chassis() 
                 Some("b"),
                 "chassis={chassis} initial_failure={failed}"
             );
-            set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "mechdamage", "")
+            set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "unitdamage", "")
                 .unwrap();
             let report =
                 view_battle_unit_fields_action(&scripts, &config, ObjectId(1), id, "critstatus2")
@@ -589,7 +589,7 @@ async fn replacement_retains_exposure_and_keeps_breached_equipment_unavailable()
                 &config,
                 ObjectId(1),
                 id,
-                "mechdamage",
+                "unitdamage",
                 material,
             )
             .unwrap();
@@ -642,7 +642,7 @@ async fn replacement_reconciles_active_feed_recovery_without_consuming_early_rol
         }
         let before = world.btech.clone();
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-        set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "mechdamage", "G:2/0(6)")
+        set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "unitdamage", "G:2/0(6)")
             .unwrap();
         assert_eq!(scripts.world().btech, before);
         let saved = scripts.world().clone();
@@ -672,7 +672,7 @@ async fn replacement_reconciles_active_feed_recovery_without_consuming_early_rol
         assert_eq!(continuing.btech, replay.btech);
         continuing.validate(&config).unwrap();
 
-        set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "mechdamage", "C:2/0")
+        set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "unitdamage", "C:2/0")
             .unwrap();
         let mut cancelled = scripts.world().clone();
         let pending = cancelled
@@ -729,7 +729,7 @@ async fn critical_replacement_preserves_dump_cadence_and_defers_empty_bin_comple
         let pending = world.btech.constructed_units()[&id].dumping().unwrap();
         assert_eq!(pending.phase, 5);
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-        set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "mechdamage", "C:2/0")
+        set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "unitdamage", "C:2/0")
             .unwrap();
         assert_eq!(
             scripts.world().btech.constructed_units()[&id].dumping(),
@@ -763,7 +763,7 @@ async fn critical_replacement_preserves_dump_cadence_and_defers_empty_bin_comple
             &config,
             ObjectId(1),
             id,
-            "mechdamage",
+            "unitdamage",
             &format!("C:2/{}", location.slot),
         )
         .unwrap();

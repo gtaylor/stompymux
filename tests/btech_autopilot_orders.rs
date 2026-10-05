@@ -40,9 +40,9 @@ async fn tracked_wheeled_and_hover_vehicles_accept_and_drive_move_orders() {
             .unwrap();
             crate::support::seed_object_dice(&mut world, map, crate::support::FIXTURE_DICE_SEED);
             let templates = [
-                include_str!("../game/mechs/Demolisher.toml"),
-                include_str!("../game/mechs/Flatbed_Truck.toml"),
-                include_str!("../game/mechs/Fulcrum.toml"),
+                include_str!("../game/units/Demolisher.toml"),
+                include_str!("../game/units/Flatbed_Truck.toml"),
+                include_str!("../game/units/Fulcrum.toml"),
             ];
             let mut units = Vec::new();
             for (index, template) in templates.into_iter().enumerate() {
@@ -114,7 +114,7 @@ async fn ground_fixture(positions: &[(u16, u16)], pilot_first: bool) -> GroundFi
     for (index, &(x, y)) in positions.iter().enumerate() {
         let id = world.create(&config, format!("Autopilot unit {index}"), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-        UnitTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml"))
+        UnitTemplate::parse("JR7-D", include_str!("../game/units/JR7-D.toml"))
             .unwrap()
             .create(&mut world, id)
             .unwrap();

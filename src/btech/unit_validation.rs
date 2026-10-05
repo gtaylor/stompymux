@@ -120,8 +120,8 @@ impl BtechState {
         ensure!(
             self.registrations
                 .get(&id)
-                .is_some_and(|kind| kind == "MECH"),
-            "{noun} lacks MECH registration"
+                .is_some_and(|kind| kind == "UNIT"),
+            "{noun} lacks UNIT registration"
         );
         ensure!(
             world

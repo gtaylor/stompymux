@@ -4,7 +4,7 @@ use stompymux_rs::*;
 /// Replace one conventional mount and its bin with the requested ballistic weapon.
 fn definition(weapon: Weapon) -> MechTemplate {
     let mut template =
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
     let arm = template.sections.get_mut(&MechSection::LeftArm).unwrap();
     let mut part = arm.criticals[&2].clone();
     part.equipment = weapon.name().into();

@@ -10,9 +10,10 @@ fn value(args: &MultiValue, index: usize) -> Value {
     args.get(index).cloned().unwrap_or(Value::Nil)
 }
 
-fn require_mech(lua: &Lua, shared: &SharedWorld, value: Value) -> mlua::Result<ObjectId> {
+/// Require a registered unit with Mech or vehicle runtime state, or a registered default template.
+fn require_unit_runtime(lua: &Lua, shared: &SharedWorld, value: Value) -> mlua::Result<ObjectId> {
     let world = shared.borrow();
-    let id = contract::require_special(lua, &world, value, 1, "mech", "unit")?;
+    let id = contract::require_special(lua, &world, value, 1, "unit", "unit")?;
     if !world.btech.constructed_units().contains_key(&id)
         && !world.btech.vehicles().contains_key(&id)
         && crate::btech::registered_unit_default_template(&world, id).is_none()
@@ -27,7 +28,7 @@ fn require_mech(lua: &Lua, shared: &SharedWorld, value: Value) -> mlua::Result<O
 }
 
 fn require_unit(lua: &Lua, shared: &SharedWorld, value: Value) -> mlua::Result<ObjectId> {
-    contract::require_special(lua, &shared.borrow(), value, 1, "mech", "unit")
+    contract::require_special(lua, &shared.borrow(), value, 1, "unit", "unit")
 }
 
 fn raw_live_section(
@@ -214,7 +215,7 @@ pub(super) fn register(lua: &Lua, native: &Table, shared: &SharedWorld) -> mlua:
         "armor",
         lua.create_function(move |lua, args: MultiValue| {
             crate::lua::transactions::require(lua)?;
-            let id = require_mech(lua, &world, value(&args, 0))?;
+            let id = require_unit_runtime(lua, &world, value(&args, 0))?;
             let borrowed = world.borrow();
             if let Some(unit) = borrowed.btech.vehicles().get(&id) {
                 let raw = crate::btech::compose_vehicle_raw_inspection(unit);
@@ -255,7 +256,7 @@ pub(super) fn register(lua: &Lua, native: &Table, shared: &SharedWorld) -> mlua:
         "critical_slots",
         lua.create_function(move |lua, args: MultiValue| {
             crate::lua::transactions::require(lua)?;
-            let id = require_mech(lua, &world, value(&args, 0))?;
+            let id = require_unit_runtime(lua, &world, value(&args, 0))?;
             let borrowed = world.borrow();
             let catalogue = parts_contract::registered_catalogue();
             if let Some(unit) = borrowed.btech.vehicles().get(&id) {
@@ -298,7 +299,7 @@ pub(super) fn register(lua: &Lua, native: &Table, shared: &SharedWorld) -> mlua:
         "weapons",
         lua.create_function(move |lua, args: MultiValue| {
             crate::lua::transactions::require(lua)?;
-            let id = require_mech(lua, &world, value(&args, 0))?;
+            let id = require_unit_runtime(lua, &world, value(&args, 0))?;
             let borrowed = world.borrow();
             if let Some(unit) = borrowed.btech.vehicles().get(&id) {
                 let selected = vehicle_section(&borrowed, id, unit, value(&args, 1), false, 2)?;
@@ -349,7 +350,7 @@ pub(super) fn register(lua: &Lua, native: &Table, shared: &SharedWorld) -> mlua:
         "radio_channels",
         lua.create_function(move |lua, arg: Value| {
             crate::lua::transactions::require(lua)?;
-            let id = require_mech(lua, &world, arg)?;
+            let id = require_unit_runtime(lua, &world, arg)?;
             let borrowed = world.borrow();
             let result = lua.create_table()?;
             let channels = borrowed
@@ -402,7 +403,7 @@ pub(super) fn register(lua: &Lua, native: &Table, shared: &SharedWorld) -> mlua:
         "engine",
         lua.create_function(move |lua, arg: Value| {
             crate::lua::transactions::require(lua)?;
-            let id = require_mech(lua, &world, arg)?;
+            let id = require_unit_runtime(lua, &world, arg)?;
             let borrowed = world.borrow();
             let result = lua.create_table()?;
             if let Some(unit) = borrowed.btech.vehicles().get(&id) {
@@ -457,7 +458,7 @@ pub(super) fn register(lua: &Lua, native: &Table, shared: &SharedWorld) -> mlua:
                 ));
             }
             crate::lua::transactions::require(lua)?;
-            let id = require_mech(lua, &world, value(&args, 0))?;
+            let id = require_unit_runtime(lua, &world, value(&args, 0))?;
             let borrowed = world.borrow();
             let config = crate::lua::configuration(lua);
             let bv = if borrowed.btech.constructed_units().contains_key(&id)
@@ -492,7 +493,7 @@ pub(super) fn register(lua: &Lua, native: &Table, shared: &SharedWorld) -> mlua:
             name,
             lua.create_function(move |lua, arg: Value| {
                 crate::lua::transactions::require(lua)?;
-                let id = require_mech(lua, &world, arg)?;
+                let id = require_unit_runtime(lua, &world, arg)?;
                 let borrowed = world.borrow();
                 if let Some(unit) = borrowed.btech.vehicles().get(&id) {
                     return inspection_records::inventory(
@@ -601,7 +602,7 @@ pub(super) fn register(lua: &Lua, native: &Table, shared: &SharedWorld) -> mlua:
             name,
             lua.create_function(move |lua, arg: Value| {
                 crate::lua::transactions::require(lua)?;
-                let id = require_mech(lua, &world, arg)?;
+                let id = require_unit_runtime(lua, &world, arg)?;
                 let config = crate::lua::configuration(lua);
                 let borrowed = world.borrow();
                 let speed = if borrowed.btech.constructed_units().contains_key(&id)
@@ -625,7 +626,7 @@ pub(super) fn register(lua: &Lua, native: &Table, shared: &SharedWorld) -> mlua:
         "section_condition",
         lua.create_function(move |lua, args: MultiValue| {
             crate::lua::transactions::require(lua)?;
-            let id = require_mech(lua, &world, value(&args, 0))?;
+            let id = require_unit_runtime(lua, &world, value(&args, 0))?;
             let borrowed = world.borrow();
             if let Some(unit) = borrowed.btech.vehicles().get(&id) {
                 let selected =
@@ -660,7 +661,7 @@ pub(super) fn register(lua: &Lua, native: &Table, shared: &SharedWorld) -> mlua:
         "tic_weapons",
         lua.create_function(move |lua, args: MultiValue| {
             crate::lua::transactions::require(lua)?;
-            let id = require_mech(lua, &world, value(&args, 0))?;
+            let id = require_unit_runtime(lua, &world, value(&args, 0))?;
             let tic = match value(&args, 1) {
                 Value::Integer(value) => value as f64,
                 Value::Number(value) => value,
@@ -727,7 +728,7 @@ pub(super) fn register(lua: &Lua, native: &Table, shared: &SharedWorld) -> mlua:
         "technologies",
         lua.create_function(move |lua, arg: Value| {
             crate::lua::transactions::require(lua)?;
-            let id = require_mech(lua, &world, arg)?;
+            let id = require_unit_runtime(lua, &world, arg)?;
             let borrowed = world.borrow();
             let result = lua.create_table()?;
             let default = crate::btech::registered_unit_default_template(&borrowed, id);

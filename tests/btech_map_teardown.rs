@@ -9,7 +9,7 @@ use stompymux_rs::*;
 async fn unregister_map_shuts_down_all_chassis_and_survives_restart() {
     for source in firing::templates() {
         let (_dir, config, world, unit, target, _) =
-            firing::fixture_with_target(&source, None, include_str!("../game/mechs/AS7-D.toml"))
+            firing::fixture_with_target(&source, None, include_str!("../game/units/AS7-D.toml"))
                 .await;
         let map = world.btech.units()[&unit].map.unwrap();
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
@@ -40,7 +40,7 @@ async fn unregister_map_shuts_down_all_chassis_and_survives_restart() {
         for id in [unit, target] {
             assert_eq!(saved.objects[&id].location, Some(map));
             assert_eq!(saved.btech.units()[&id].map, None);
-            assert_eq!(saved.btech.registrations()[&id], "MECH");
+            assert_eq!(saved.btech.registrations()[&id], "UNIT");
             let state = serde_json::to_value(&saved.btech).unwrap();
             let store = if saved.btech.vehicles().contains_key(&id) {
                 "vehicles"
@@ -151,9 +151,9 @@ async fn external_markers_survive_unregistration_and_reactivation() {
 #[tokio::test]
 async fn teardown_failure_restores_world_and_notifications() {
     let (dir, _config, world, unit, _, _) = firing::fixture_with_target(
-        include_str!("../game/mechs/JR7-D.toml"),
+        include_str!("../game/units/JR7-D.toml"),
         None,
-        include_str!("../game/mechs/AS7-D.toml"),
+        include_str!("../game/units/AS7-D.toml"),
     )
     .await;
     let map = world.btech.units()[&unit].map.unwrap();
@@ -186,9 +186,9 @@ async fn teardown_failure_restores_world_and_notifications() {
 async fn failed_map_save_keeps_the_previous_database_intact() {
     use sqlx::{Connection, SqliteConnection};
     let (_dir, config, world, unit, _, _) = firing::fixture_with_target(
-        include_str!("../game/mechs/JR7-D.toml"),
+        include_str!("../game/units/JR7-D.toml"),
         None,
-        include_str!("../game/mechs/AS7-D.toml"),
+        include_str!("../game/units/AS7-D.toml"),
     )
     .await;
     let map = world.btech.units()[&unit].map.unwrap();
@@ -221,9 +221,9 @@ async fn failed_map_save_keeps_the_previous_database_intact() {
 #[tokio::test]
 async fn retired_building_target_does_not_panic_or_reappear() {
     let (_dir, config, mut world, shooter, _, index) = firing::fixture_with_target(
-        include_str!("../game/mechs/JR7-D.toml"),
+        include_str!("../game/units/JR7-D.toml"),
         Some(Weapon::SmallLaser),
-        include_str!("../game/mechs/AS7-D.toml"),
+        include_str!("../game/units/AS7-D.toml"),
     )
     .await;
     let exterior = world.btech.units()[&shooter].map.unwrap();

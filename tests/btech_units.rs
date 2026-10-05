@@ -5,8 +5,8 @@ use stompymux_rs::{
     Flag, Kind, Mech, MechSection, MechTemplate, ObjectId, Scripts, create_battle_unit, dbck,
     persistence,
 };
-const JENNER: &str = include_str!("fixtures/btech/mechs/JR7-D.toml");
-const ATLAS: &str = include_str!("fixtures/btech/mechs/AS7-D.toml");
+const JENNER: &str = include_str!("fixtures/btech/units/JR7-D.toml");
+const ATLAS: &str = include_str!("fixtures/btech/units/AS7-D.toml");
 
 #[test]
 fn construction_sets_original_protection_and_independent_ammunition() {
@@ -48,8 +48,8 @@ fn construction_sets_original_protection_and_independent_ammunition() {
 #[tokio::test]
 async fn constructed_units_survive_source_removal_and_purge_atomically() {
     let (dir, config, mut world) = support::isolated_world().await;
-    std::fs::create_dir_all(dir.path().join("mechs")).unwrap();
-    std::fs::write(dir.path().join("mechs/JR7-D.toml"), JENNER).unwrap();
+    std::fs::create_dir_all(dir.path().join("units")).unwrap();
+    std::fs::write(dir.path().join("units/JR7-D.toml"), JENNER).unwrap();
     let first = world.create(&config, "First Jenner".into(), Kind::Thing);
     let second = world.create(&config, "Second Jenner".into(), Kind::Thing);
     for id in [first, second] {
@@ -107,7 +107,7 @@ async fn constructed_units_survive_source_removal_and_purge_atomically() {
         .unwrap();
     let armor: u16 = scripts.eval_callback(&format!("local u=btech.unit.state({}); u.sections.CenterTorso.armor=0; return btech.unit.state({}).sections.CenterTorso.armor", first.0, first.0)).unwrap();
     assert_eq!(armor, 10);
-    std::fs::remove_file(dir.path().join("mechs/JR7-D.toml")).unwrap();
+    std::fs::remove_file(dir.path().join("units/JR7-D.toml")).unwrap();
     let mut loaded = persistence::load(&config.database()).await.unwrap();
     assert_eq!(loaded.btech.constructed_units().len(), 2);
     assert_eq!(loaded.btech, candidate.btech);

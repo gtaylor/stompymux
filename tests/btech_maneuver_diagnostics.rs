@@ -1,4 +1,4 @@
-//! Maneuver diagnostics preserve their reference label, ordering, subscriber audience and rollback.
+//! Maneuver roll diagnostics preserve their reference label as debug traces, and roll back with the action.
 use crate::support;
 use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
@@ -65,47 +65,35 @@ async fn maneuver_checks_publish_diagnostics_at_the_roll_boundary() {
                     .flags
                     .insert(Flag::Connected);
             }
-            let mut channel = Channel::new("MechDebugInfo".into());
-            channel.users.push(communication::Membership {
-                who: ObjectId(2),
-                listening: true,
-            });
-            world.channels.insert("MechDebugInfo".into(), channel);
             let before = world.clone();
             let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
             let check = attempt(&scripts, &config, unit, action).unwrap();
             let output = scripts.drain_outbox();
-            let diagnostics: Vec<_> = output
-                .iter()
-                .filter(|(_, text)| text.source().contains("Attempting to make pilot"))
-                .collect();
+            let traces = support::drain_traces(&scripts, logging::TraceTopic::PilotingRolls);
+            assert!(
+                !output
+                    .iter()
+                    .any(|(_, text)| text.source().contains("Attempting to make pilot"))
+            );
             if automatic {
                 assert!(check.is_none_or(|check| check.roll.is_none()));
-                assert!(diagnostics.is_empty());
-                assert_eq!(scripts.world().channels["MechDebugInfo"].messages, 0);
+                assert!(traces.is_empty());
                 continue;
             }
             let check = check.unwrap();
             assert!(check.roll.is_some());
-            assert_eq!(diagnostics.len(), 1);
-            assert_eq!(diagnostics[0].0, ObjectId(2));
             let label = if action == 2 { "" } else { " (noxp)" };
             let expected = format!(
-                "Attempting to make pilot{label} skill roll. SPilot: {}, mods: {}, MechPilot: {}, BTH: {}",
+                "Attempting to make pilot{label} skill roll. SPilot: {}, mods: {}, Damage: {}, BTH: {}",
                 check.skill, check.situational, check.damage, check.target
             );
-            assert!(diagnostics[0].1.source().contains(&expected));
-            let diagnostic_position = output
-                .iter()
-                .position(|(_, text)| text.source().contains(&expected))
-                .unwrap();
+            assert_eq!(traces, [expected]);
             let roll_position = output
                 .iter()
                 .position(|(who, text)| {
                     *who == ObjectId(1) && text.source() == "You make a piloting skill roll!"
                 })
                 .unwrap();
-            assert!(diagnostic_position < roll_position);
             if action == 1 {
                 let warning = output
                     .iter()
@@ -113,7 +101,7 @@ async fn maneuver_checks_publish_diagnostics_at_the_roll_boundary() {
                         text.source().starts_with("You attempt a controlled drop")
                     })
                     .unwrap();
-                assert!(warning < diagnostic_position);
+                assert!(warning < roll_position);
             }
             assert!(!output.iter().any(|(who, text)| *who == ObjectId(2)
                 && text.source() == "You make a piloting skill roll!"));
@@ -124,19 +112,6 @@ async fn maneuver_checks_publish_diagnostics_at_the_roll_boundary() {
                 .unwrap();
             let loaded = persistence::load(&config.database()).await.unwrap();
             assert_eq!(loaded.btech, after);
-            assert_eq!(loaded.channels["MechDebugInfo"].messages, 1);
-            *scripts.world_mut() = before.clone();
-            scripts
-                .world_mut()
-                .channels
-                .get_mut("MechDebugInfo")
-                .unwrap()
-                .messages = i64::MAX;
-            let error = attempt(&scripts, &config, unit, action).unwrap_err();
-            assert!(format!("{error:#}").contains("channel message counter overflow"));
-            assert_eq!(scripts.world().btech, before.btech);
-            assert_eq!(scripts.world().channels["MechDebugInfo"].messages, i64::MAX);
-            assert!(scripts.drain_outbox().is_empty());
             *scripts.world_mut() = before.clone();
             let command = match action {
                 0 => "bootlegger right",
@@ -145,7 +120,10 @@ async fn maneuver_checks_publish_diagnostics_at_the_roll_boundary() {
             };
             support::run_text(&scripts, &config, ObjectId(1), 1, command);
             assert_eq!(scripts.world().btech, after);
-            assert_eq!(scripts.world().channels["MechDebugInfo"].messages, 1);
+            assert_eq!(
+                support::drain_traces(&scripts, logging::TraceTopic::PilotingRolls).len(),
+                1
+            );
             *scripts.world_mut() = before;
             let lua = match action {
                 0 => format!("btech.unit.bootlegger({},1,'right')", unit.0),
@@ -155,11 +133,14 @@ async fn maneuver_checks_publish_diagnostics_at_the_roll_boundary() {
             scripts
                 .eval_callback::<()>(&format!("{lua}; error('undo diagnostic')"))
                 .unwrap_err();
-            assert_eq!(scripts.world().channels["MechDebugInfo"].messages, 0);
+            assert!(support::drain_traces(&scripts, logging::TraceTopic::PilotingRolls).is_empty());
             assert!(scripts.drain_outbox().is_empty());
             scripts.eval_callback::<()>(&lua).unwrap();
             assert_eq!(scripts.world().btech, after);
-            assert_eq!(scripts.world().channels["MechDebugInfo"].messages, 1);
+            assert_eq!(
+                support::drain_traces(&scripts, logging::TraceTopic::PilotingRolls).len(),
+                1
+            );
         }
     }
 }

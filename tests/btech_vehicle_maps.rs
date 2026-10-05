@@ -34,16 +34,16 @@ async fn mixed_maps_navigation_and_measurements_share_every_supported_movement_t
     )
     .unwrap();
     support::seed_object_dice(&mut base, map, support::FIXTURE_DICE_SEED);
-    let stationary = include_str!("../game/mechs/Demolisher.toml")
+    let stationary = include_str!("../game/units/Demolisher.toml")
         .replace("movement = \"track\"", "movement = \"none\"")
         .replace("walk_mp = 5", "walk_mp = 0");
     let sources = [
-        (include_str!("fixtures/btech/mechs/JR7-D.toml"), 'b'),
-        (include_str!("../game/mechs/SCP-1N.toml"), 'q'),
-        (include_str!("../game/mechs/Demolisher.toml"), 't'),
-        (include_str!("../game/mechs/Jeep.toml"), 'w'),
-        (include_str!("../game/mechs/Savannah_Master.toml"), 'h'),
-        (include_str!("../game/mechs/Kestrel.toml"), 'v'),
+        (include_str!("fixtures/btech/units/JR7-D.toml"), 'b'),
+        (include_str!("../game/units/SCP-1N.toml"), 'q'),
+        (include_str!("../game/units/Demolisher.toml"), 't'),
+        (include_str!("../game/units/Jeep.toml"), 'w'),
+        (include_str!("../game/units/Savannah_Master.toml"), 'h'),
+        (include_str!("../game/units/Kestrel.toml"), 'v'),
         (stationary.as_str(), 'u'),
     ];
     let mut ids = Vec::new();
@@ -193,7 +193,7 @@ async fn mixed_maps_navigation_and_measurements_share_every_supported_movement_t
             (LongRangeMode::Terrain, "Terrain-map"),
             (LongRangeMode::Elevation, "Elevation-map"),
             (LongRangeMode::ColoredElevation, "Combined"),
-            (LongRangeMode::Units, "Mechs"),
+            (LongRangeMode::Units, "Units"),
             (LongRangeMode::VisibleTerrain, "LOS"),
             (LongRangeMode::VisibleElevation, "Height"),
             (LongRangeMode::VisibleUnits, "Sensors"),

@@ -11,7 +11,7 @@ fn edit(world: &mut World, id: ObjectId, change: impl FnOnce(&mut serde_json::Va
 fn launcher() -> UnitTemplate {
     let weapon = Weapon::Lrm20;
     let mut definition =
-        UnitTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap();
+        UnitTemplate::parse("JR7-D", include_str!("../game/units/JR7-D.toml")).unwrap();
     let UnitTemplate::Mech(unit) = &mut definition else {
         panic!("The Jenner is a Mech");
     };
@@ -281,7 +281,7 @@ async fn active_mines_catch_hovercraft_over_water() {
         id,
         VehicleTemplate::parse(
             "test",
-            &include_str!("../game/mechs/Demolisher.toml")
+            &include_str!("../game/units/Demolisher.toml")
                 .replace("movement = \"track\"", "movement = \"hover\""),
         )
         .unwrap(),

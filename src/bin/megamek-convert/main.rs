@@ -2,7 +2,7 @@
 //!
 //! ```text
 //! megamek-convert "Atlas AS7-D.mtf"                      # print the template
-//! megamek-convert -o game/mechs mechs/*.mtf tanks/*.blk  # write <reference>.toml files
+//! megamek-convert -o game/units mechs/*.mtf tanks/*.blk  # write <reference>.toml files
 //! ```
 //!
 //! Each unit is read into a draft template, then checked by the game itself: the draft must

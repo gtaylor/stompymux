@@ -1,6 +1,6 @@
 //! Minefield recognition and combined hex reports with shared transactional perception and output.
 use super::{BuildingScan, DiagnosticMessage, HexCoordinate};
-use crate::{Config, ObjectId, Scripts, World};
+use crate::{ObjectId, Scripts, World};
 use anyhow::Result;
 use serde::Serialize;
 
@@ -99,18 +99,16 @@ fn scan_with_range(
 /// Failed mine recognition is private to the pilot; successful recognition reaches the cockpit.
 pub fn scan_hex_action(
     scripts: &Scripts,
-    config: &Config,
     observer: ObjectId,
     pilot: ObjectId,
     coordinate: HexCoordinate,
 ) -> Result<HexScan> {
-    action_with_range(scripts, config, observer, pilot, coordinate, false)
+    action_with_range(scripts, observer, pilot, coordinate, false)
 }
 
 /// Publish both phases with one selected-target observer distance policy.
 pub(super) fn action_with_range(
     scripts: &Scripts,
-    config: &Config,
     observer: ObjectId,
     pilot: ObjectId,
     coordinate: HexCoordinate,
@@ -127,7 +125,7 @@ pub(super) fn action_with_range(
             now,
             observer_range,
         )?;
-        super::channels::publish(scripts, config, &building.experience_messages)?;
+        super::diagnostics::publish(scripts, &building.experience_messages);
         super::notify_unit_text(scripts, source.unit, &building.text)?;
         let mines = scan_with_range(
             &mut scripts.world.borrow_mut(),
@@ -137,7 +135,7 @@ pub(super) fn action_with_range(
             now,
             observer_range,
         )?;
-        super::channels::publish(scripts, config, &mines.experience_messages)?;
+        super::diagnostics::publish(scripts, &mines.experience_messages);
         let recipient = if mines.found {
             super::MessageTarget::Unit(source.unit)
         } else {

@@ -5,17 +5,17 @@ use stompymux_rs::*;
 
 /// Supported carrier constructions exercise shared rules rather than separate transfer implementations.
 fn templates() -> Vec<String> {
-    let ground = include_str!("../game/mechs/Demolisher.toml");
+    let ground = include_str!("../game/units/Demolisher.toml");
     vec![
-        include_str!("../game/mechs/JR7-D.toml").into(),
-        include_str!("../game/mechs/GOL-1H.toml").into(),
+        include_str!("../game/units/JR7-D.toml").into(),
+        include_str!("../game/units/GOL-1H.toml").into(),
         ground.into(),
         ground.replace("movement = \"track\"", "movement = \"wheel\""),
         ground.replace("movement = \"track\"", "movement = \"hover\""),
         ground
             .replace("movement = \"track\"", "movement = \"none\"")
             .replace("walk_mp = 5", "walk_mp = 0"),
-        include_str!("../game/mechs/Kestrel.toml").into(),
+        include_str!("../game/units/Kestrel.toml").into(),
     ]
 }
 
@@ -147,7 +147,7 @@ async fn all_chassis_share_load_unload_gates_and_restart() {
 #[tokio::test]
 async fn multi_part_transfers_are_atomic_and_quantity_bounded() {
     let (_dir, config, mut world, map, unit) =
-        fixture(include_str!("../game/mechs/JR7-D.toml")).await;
+        fixture(include_str!("../game/units/JR7-D.toml")).await;
     set_battle_inventory_named(&mut world, ObjectId(1), map, "Medical_Supplies", 3).unwrap();
     set_battle_inventory_named(&mut world, ObjectId(1), unit, "Medical_Supplies", i32::MAX)
         .unwrap();
@@ -185,7 +185,7 @@ async fn multi_part_transfers_are_atomic_and_quantity_bounded() {
 #[tokio::test]
 async fn cargo_authority_and_location_gates_match_the_operation() {
     let (dir, config, mut world, map, unit) =
-        fixture(include_str!("../game/mechs/JR7-D.toml")).await;
+        fixture(include_str!("../game/units/JR7-D.toml")).await;
     let passenger = world.create(&config, "Passenger".into(), Kind::Player);
     world.objects.get_mut(&passenger).unwrap().location = Some(unit);
     world
@@ -306,7 +306,7 @@ async fn cargo_commands_and_lua_share_state_and_callback_rollback() {
 #[tokio::test]
 async fn cargo_patterns_select_multiple_part_types() {
     let (_dir, config, mut world, map, unit) =
-        fixture(include_str!("../game/mechs/JR7-D.toml")).await;
+        fixture(include_str!("../game/units/JR7-D.toml")).await;
     set_battle_inventory_named(&mut world, ObjectId(1), map, "IS.MediumLaser", 5).unwrap();
     let rows =
         transfer_battle_cargo(&mut world, &config, ObjectId(1), true, "IS.MediumLaser", 1).unwrap();
@@ -434,14 +434,8 @@ async fn cargo_abbreviations_resolve_before_stock() {
     }
 }
 
-/// Diagnostic channels are ordinary administrator-created channels with normal listeners.
-fn economy_channel(world: &mut World) {
-    let mut channel = Channel::new("MechEconInfo".into());
-    channel.users.push(stompymux_rs::communication::Membership {
-        who: ObjectId(1),
-        listening: true,
-    });
-    world.channels.insert(channel.name.clone(), channel);
+/// Connect the GOD operator so command and callback output reaches it.
+fn connect_operator(world: &mut World) {
     world
         .objects
         .get_mut(&ObjectId(1))
@@ -450,16 +444,15 @@ fn economy_channel(world: &mut World) {
         .insert(Flag::Connected);
 }
 
-/// Native and Lua transfers record both stock changes in order and roll back late callback failures.
+/// Native and Lua transfers trace both stock changes in order and roll back late callback failures.
 #[tokio::test]
-async fn cargo_economy_channels_share_transfer_order_and_callback_rollback() {
+async fn cargo_economy_traces_share_transfer_order_and_callback_rollback() {
     for source in templates() {
         let (_dir, config, mut world, map, unit) = fixture(&source).await;
-        economy_channel(&mut world);
+        connect_operator(&mut world);
         let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
         let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-        let text = support::run_text(&native, &config, ObjectId(1), 1, "loadcargo Gold 3");
-        assert!(text.contains("MechEconInfo"), "{text}");
+        support::run_text(&native, &config, ObjectId(1), 1, "loadcargo Gold 3");
         lua.eval_callback::<()>("btech.cargo.load(1, 'Gold', 3)")
             .unwrap();
         support::run_text(&native, &config, ObjectId(1), 1, "unloadcargo Gold 2");
@@ -473,13 +466,10 @@ async fn cargo_economy_channels_share_transfer_order_and_callback_rollback() {
             format!("#1 added 2 Gold to #{}.", map.0),
         ];
         for scripts in [&native, &lua] {
-            let state = scripts.world();
-            let channel = &state.channels["MechEconInfo"];
-            assert_eq!(channel.messages, 4);
-            assert_eq!(channel.history.len(), 4);
-            for (message, expected) in channel.history.iter().zip(&expected) {
-                assert!(message.message.contains(expected), "{}", message.message);
-            }
+            assert_eq!(
+                support::drain_traces(scripts, logging::TraceTopic::Economy),
+                expected
+            );
         }
         lua.drain_outbox();
         let before = lua.world().clone();
@@ -488,53 +478,16 @@ async fn cargo_economy_channels_share_transfer_order_and_callback_rollback() {
                 .is_err()
         );
         assert_eq!(lua.world().btech, before.btech);
-        assert_eq!(
-            serde_json::to_value(&lua.world().channels).unwrap(),
-            serde_json::to_value(&before.channels).unwrap()
-        );
+        assert!(support::drain_traces(&lua, logging::TraceTopic::Economy).is_empty());
         assert!(lua.drain_outbox().is_empty());
         lua.eval_callback::<()>("btech.cargo.manifest(1); btech.cargo.stores(1)")
             .unwrap();
-        assert_eq!(lua.world().channels["MechEconInfo"].messages, 4);
+        assert!(support::drain_traces(&lua, logging::TraceTopic::Economy).is_empty());
         persistence::save(&config.database(), &before)
             .await
             .unwrap();
         let loaded = persistence::load(&config.database()).await.unwrap();
         assert_eq!(loaded.btech, before.btech);
-        assert_eq!(loaded.channels["MechEconInfo"].messages, 4);
-        assert_eq!(loaded.channels["MechEconInfo"].history.len(), 4);
-    }
-}
-
-/// A failure on the second channel record restores stock, prior history and staged notifications.
-#[tokio::test]
-async fn cargo_economy_failure_is_atomic_for_native_lua_and_direct_actions() {
-    for source in templates() {
-        let (_dir, config, mut world, _map, _unit) = fixture(&source).await;
-        economy_channel(&mut world);
-        world.channels.get_mut("MechEconInfo").unwrap().messages = i64::MAX - 1;
-        let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-        let before = scripts.world().clone();
-        assert!(
-            transfer_battle_cargo_action(&scripts, &config, ObjectId(1), true, "Gold", 1).is_err()
-        );
-        assert_eq!(scripts.world().btech, before.btech);
-        assert!(scripts.drain_outbox().is_empty());
-        let output = support::run_text(&scripts, &config, ObjectId(1), 1, "loadcargo Gold 1");
-        assert!(!output.contains("You load"), "{output}");
-        assert!(!output.contains("#1 added"), "{output}");
-        let code: String = scripts
-            .eval_callback(
-                "local ok,e=pcall(btech.cargo.load,1,'Gold',1); assert(not ok); return e.code",
-            )
-            .unwrap();
-        assert_eq!(code, "btech.operation.failed");
-        assert_eq!(scripts.world().btech, before.btech);
-        assert_eq!(
-            serde_json::to_value(&scripts.world().channels).unwrap(),
-            serde_json::to_value(&before.channels).unwrap()
-        );
-        assert!(scripts.drain_outbox().is_empty());
     }
 }
 
@@ -542,7 +495,7 @@ async fn cargo_economy_failure_is_atomic_for_native_lua_and_direct_actions() {
 #[tokio::test]
 async fn vtol_auxiliary_tanks_share_capacity_mass_and_saved_surplus_fuel() {
     let (_dir, config, mut world, map, unit) =
-        fixture(include_str!("../game/mechs/Kestrel.toml")).await;
+        fixture(include_str!("../game/units/Kestrel.toml")).await;
     let original_speed = battle_throttle_maximum(&world, unit, true).unwrap();
     set_battle_inventory_quantity(&mut world, ObjectId(1), map, 422, 3).unwrap();
     transfer_battle_cargo(&mut world, &config, ObjectId(1), true, "#422", 3).unwrap();
@@ -622,7 +575,7 @@ async fn vtol_auxiliary_tanks_share_capacity_mass_and_saved_surplus_fuel() {
 #[tokio::test]
 async fn vtol_fuel_corrections_are_bounded_authorized_and_transactional() {
     let (_dir, config, mut world, _map, unit) =
-        fixture(include_str!("../game/mechs/Kestrel.toml")).await;
+        fixture(include_str!("../game/units/Kestrel.toml")).await;
     let passenger = world.create(&config, "Passenger".into(), Kind::Player);
     let before = world.btech.clone();
     assert!(set_battle_vtol_fuel(&mut world, &config, passenger, unit, 1).is_err());
@@ -670,7 +623,7 @@ async fn vtol_fuel_corrections_are_bounded_authorized_and_transactional() {
 #[tokio::test]
 async fn vtol_tank_capacity_uses_wide_inventory_totals() {
     let (_dir, config, mut world, _map, unit) =
-        fixture(include_str!("../game/mechs/Kestrel.toml")).await;
+        fixture(include_str!("../game/units/Kestrel.toml")).await;
     set_battle_inventory_quantity(&mut world, ObjectId(1), unit, 422, i32::MAX).unwrap();
     let fuel = battle_vtol_fuel_status(&world, unit).unwrap();
     assert_eq!(fuel.capacity, 4000 + i32::MAX as u64 * 2000);
@@ -687,7 +640,7 @@ async fn vtol_tank_capacity_uses_wide_inventory_totals() {
 async fn wizard_stock_actions_share_audits_and_immediate_load_limits() {
     for source in templates() {
         let (_dir, config, mut world, _map, unit) = fixture(&source).await;
-        economy_channel(&mut world);
+        connect_operator(&mut world);
         let maximum = battle_throttle_maximum(&world, unit, true).unwrap();
         let registry = if world.btech.vehicles().contains_key(&unit) {
             "vehicles"
@@ -709,7 +662,11 @@ async fn wizard_stock_actions_share_audits_and_immediate_load_limits() {
             1,
             &format!("@btech inventory-set #{} Gold 50000", unit.0),
         );
-        assert!(output.contains("added 50000 Gold"), "{output}");
+        assert!(output.contains("quantity 50000."), "{output}");
+        assert_eq!(
+            support::drain_traces(&scripts, logging::TraceTopic::Economy),
+            [format!("#1 added 50000 Gold to #{}.", unit.0)]
+        );
         let encoded = serde_json::to_value(&scripts.world().btech).unwrap();
         assert_eq!(
             encoded[registry][unit.0.to_string()]["motion"]["speed"],
@@ -725,14 +682,13 @@ async fn wizard_stock_actions_share_audits_and_immediate_load_limits() {
         scripts
             .eval_callback::<()>(&format!("btech.inventory.set(1,{},528,2)", unit.0))
             .unwrap();
-        assert_eq!(scripts.world().channels["MechEconInfo"].messages, 2);
         scripts
             .eval_callback::<()>(&format!("btech.inventory.set(1,{},528,0)", unit.0))
             .unwrap();
-        let channel = scripts.world().channels["MechEconInfo"].clone();
-        assert_eq!(channel.messages, 3);
-        assert!(channel.history[1].message.contains("removed 49998 Gold"));
-        assert!(channel.history[2].message.contains("removed 2 Gold"));
+        let traces = support::drain_traces(&scripts, logging::TraceTopic::Economy);
+        assert_eq!(traces.len(), 2);
+        assert!(traces[0].contains("removed 49998 Gold"));
+        assert!(traces[1].contains("removed 2 Gold"));
         assert_eq!(
             battle_throttle_maximum(&scripts.world(), unit, true).unwrap(),
             maximum
@@ -748,45 +704,13 @@ async fn wizard_stock_actions_share_audits_and_immediate_load_limits() {
                 .is_err()
         );
         assert_eq!(scripts.world().btech, before.btech);
-        assert_eq!(
-            serde_json::to_value(&scripts.world().channels).unwrap(),
-            serde_json::to_value(&before.channels).unwrap()
-        );
+        assert!(support::drain_traces(&scripts, logging::TraceTopic::Economy).is_empty());
         assert!(scripts.drain_outbox().is_empty());
         persistence::save(&config.database(), &before)
             .await
             .unwrap();
         let loaded = persistence::load(&config.database()).await.unwrap();
         assert_eq!(loaded.btech, before.btech);
-        assert_eq!(loaded.channels["MechEconInfo"].messages, 3);
-    }
-}
-
-/// A failed economy record restores the inventory and throttle even when Lua catches the failure.
-#[tokio::test]
-async fn wizard_stock_publication_failure_restores_both_adapters() {
-    for source in templates() {
-        let (_dir, config, mut world, _map, unit) = fixture(&source).await;
-        economy_channel(&mut world);
-        world.channels.get_mut("MechEconInfo").unwrap().messages = i64::MAX;
-        let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-        let before = scripts.world().clone();
-        let output = support::run_text(
-            &scripts,
-            &config,
-            ObjectId(1),
-            1,
-            &format!("@btech inventory-set #{} Gold 50000", unit.0),
-        );
-        assert!(!output.contains("quantity 50000."), "{output}");
-        let code: String = scripts.eval_callback(&format!("local ok,e=pcall(btech.inventory.set_named,1,{},'Gold',50000); assert(not ok); return e.code",unit.0)).unwrap();
-        assert_eq!(code, "btech.operation.failed");
-        assert_eq!(scripts.world().btech, before.btech);
-        assert_eq!(
-            serde_json::to_value(&scripts.world().channels).unwrap(),
-            serde_json::to_value(&before.channels).unwrap()
-        );
-        assert!(scripts.drain_outbox().is_empty());
     }
 }
 
@@ -795,7 +719,7 @@ async fn wizard_stock_publication_failure_restores_both_adapters() {
 async fn operator_stock_commands_and_lua_share_catalogue_edits() {
     for source in templates() {
         let (_dir, config, mut world, _map, unit) = fixture(&source).await;
-        economy_channel(&mut world);
+        connect_operator(&mut world);
         let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
         let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         for (command, call) in [
@@ -837,29 +761,18 @@ async fn operator_stock_commands_and_lua_share_catalogue_edits() {
                 .iter()
                 .any(|row| row.part_id == Weapon::MediumLaser.part_id() && row.quantity == 2)
         );
-        assert!(
-            lua.world().channels["MechEconInfo"].history[0]
-                .message
-                .contains("added 50000 Gold")
-        );
-        assert!(
-            lua.world().channels["MechEconInfo"].history[2]
-                .message
-                .contains("removed 10 Gold")
-        );
+        let traces = support::drain_traces(&lua, logging::TraceTopic::Economy);
+        assert!(traces[0].contains("added 50000 Gold"));
+        assert!(traces[2].contains("removed 10 Gold"));
         let output = support::run_text(&native, &config, ObjectId(1), 1, "clearstuff");
         assert!(output.contains("Inventory cleaned!"), "{output}");
         lua.eval_callback::<()>(&format!("btech.inventory.clear(1,{})", unit.0))
             .unwrap();
         assert_eq!(native.world().btech, lua.world().btech);
         assert!(battle_inventory(&lua.world(), unit).unwrap().is_empty());
-        assert!(
-            lua.world().channels["MechEconInfo"]
-                .history
-                .last()
-                .unwrap()
-                .message
-                .contains(&format!("#1 reset #{}'s stuff.", unit.0))
+        assert_eq!(
+            support::drain_traces(&lua, logging::TraceTopic::Economy),
+            [format!("#1 reset #{}'s stuff.", unit.0)]
         );
         let saved = lua.world().clone();
         persistence::save(&config.database(), &saved).await.unwrap();
@@ -870,12 +783,12 @@ async fn operator_stock_commands_and_lua_share_catalogue_edits() {
     }
 }
 
-/// Authority, catalogue match limits and multi-row publication failures cannot partially change stock.
+/// Authority, catalogue match limits and aborted batches cannot partially change stock.
 #[tokio::test]
 async fn operator_stock_limits_and_batch_rollback_are_shared() {
     let (_dir, config, mut world, map, unit) =
-        fixture(include_str!("../game/mechs/Kestrel.toml")).await;
-    economy_channel(&mut world);
+        fixture(include_str!("../game/units/Kestrel.toml")).await;
+    connect_operator(&mut world);
     let wizard = world.create(&config, "StockWizard".into(), Kind::Player);
     world
         .objects
@@ -909,33 +822,6 @@ async fn operator_stock_limits_and_batch_rollback_are_shared() {
         );
         assert_eq!(scripts.world().btech, before);
     }
-    scripts
-        .world_mut()
-        .channels
-        .get_mut("MechEconInfo")
-        .unwrap()
-        .messages = i64::MAX;
-    let before = scripts.world().clone();
-    assert!(
-        scripts
-            .eval_callback::<()>(&format!(
-                "btech.inventory.add(1,{},'MediumLas?r',1)",
-                unit.0
-            ))
-            .is_err()
-    );
-    assert_eq!(scripts.world().btech, before.btech);
-    assert_eq!(
-        serde_json::to_value(&scripts.world().channels).unwrap(),
-        serde_json::to_value(&before.channels).unwrap()
-    );
-    assert!(scripts.drain_outbox().is_empty());
-    scripts
-        .world_mut()
-        .channels
-        .get_mut("MechEconInfo")
-        .unwrap()
-        .messages = 0;
     let before = scripts.world().btech.clone();
     assert!(
         scripts
@@ -972,7 +858,7 @@ async fn operator_stock_limits_and_batch_rollback_are_shared() {
 async fn scripted_add_stores_uses_first_match_signed_counts_and_atomic_logging() {
     for source in templates() {
         let (_dir, config, mut world, _map, unit) = fixture(&source).await;
-        economy_channel(&mut world);
+        connect_operator(&mut world);
         set_battle_inventory_quantity(&mut world, ObjectId(1), unit, 528, 80000).unwrap();
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         let added: bool = scripts
@@ -994,11 +880,9 @@ async fn scripted_add_stores_uses_first_match_signed_counts_and_atomic_logging()
         );
         assert_eq!(count(&scripts.world(), unit, 528), 10000);
         assert!(
-            scripts.world().channels["MechEconInfo"]
-                .history
+            support::drain_traces(&scripts, logging::TraceTopic::Economy)
                 .last()
                 .unwrap()
-                .message
                 .contains("added -70000 Gold")
         );
         assert!(
@@ -1007,6 +891,7 @@ async fn scripted_add_stores_uses_first_match_signed_counts_and_atomic_logging()
         );
         assert_eq!(count(&scripts.world(), unit, 528), 0);
         scripts.drain_outbox();
+        support::drain_traces(&scripts, logging::TraceTopic::Economy);
         let before = scripts.world().clone();
         assert!(
             !scripts
@@ -1025,10 +910,7 @@ async fn scripted_add_stores_uses_first_match_signed_counts_and_atomic_logging()
                 .unwrap()
         );
         assert_eq!(scripts.world().btech, before.btech);
-        assert_eq!(
-            serde_json::to_value(&scripts.world().channels).unwrap(),
-            serde_json::to_value(&before.channels).unwrap()
-        );
+        assert!(support::drain_traces(&scripts, logging::TraceTopic::Economy).is_empty());
         assert!(scripts.drain_outbox().is_empty());
         persistence::save(&config.database(), &before)
             .await
@@ -1038,12 +920,12 @@ async fn scripted_add_stores_uses_first_match_signed_counts_and_atomic_logging()
     }
 }
 
-/// Single-store edits protect permission, name bounds and stock against callback and channel failures.
+/// Single-store edits protect permission, name bounds and stock against callback failures.
 #[tokio::test]
 async fn scripted_add_stores_guards_and_failure_rollback() {
     let (_dir, config, mut world, _map, unit) =
-        fixture(include_str!("../game/mechs/Kestrel.toml")).await;
-    economy_channel(&mut world);
+        fixture(include_str!("../game/units/Kestrel.toml")).await;
+    connect_operator(&mut world);
     let ordinary = world.create(&config, "Ordinary".into(), Kind::Player);
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     assert!(!add_battle_stores_action(&scripts, &config, ObjectId(1), unit, "", 1).unwrap());
@@ -1078,21 +960,7 @@ async fn scripted_add_stores_guards_and_failure_rollback() {
             .is_err()
     );
     assert_eq!(scripts.world().btech, before.btech);
-    assert!(scripts.drain_outbox().is_empty());
-    scripts
-        .world_mut()
-        .channels
-        .get_mut("MechEconInfo")
-        .unwrap()
-        .messages = i64::MAX;
-    let before = scripts.world().clone();
-    let code:String=scripts.eval_callback(&format!("local ok,e=pcall(btech.inventory.add_stores,1,{},'Gold',1); assert(not ok); return e.code",unit.0)).unwrap();
-    assert_eq!(code, "btech.operation.failed");
-    assert_eq!(scripts.world().btech, before.btech);
-    assert_eq!(
-        serde_json::to_value(&scripts.world().channels).unwrap(),
-        serde_json::to_value(&before.channels).unwrap()
-    );
+    assert!(support::drain_traces(&scripts, logging::TraceTopic::Economy).is_empty());
     assert!(scripts.drain_outbox().is_empty());
 }
 
@@ -1170,7 +1038,7 @@ async fn inventory_cleanup_preserves_installed_units_and_stock() {
 #[tokio::test]
 async fn inventory_cleanup_unknown_stock_authority_and_publication_rollback() {
     let (dir, config, mut world, room, unit) =
-        fixture(include_str!("../game/mechs/JR7-D.toml")).await;
+        fixture(include_str!("../game/units/JR7-D.toml")).await;
     release_battle_pilot(&mut world, unit, ObjectId(1)).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(room);
     set_battle_inventory_quantity(&mut world, ObjectId(1), room, i32::MAX, 4).unwrap();

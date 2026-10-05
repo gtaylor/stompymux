@@ -804,7 +804,7 @@ mod tests {
                 "JR7-D",
                 &format!(
                     "specials = [\"SearchLight\"]\n{}",
-                    include_str!("../../tests/fixtures/btech/mechs/JR7-D.toml")
+                    include_str!("../../tests/fixtures/btech/units/JR7-D.toml")
                 ),
             )
             .unwrap()
@@ -878,10 +878,10 @@ mod tests {
     fn batch_observation_matches_scalar_across_chassis_conditions_and_live_changes() {
         let config = Config::load("tests/fixtures/game").unwrap();
         let templates = [
-            include_str!("../../game/mechs/JR7-D.toml"),
-            include_str!("../../game/mechs/Demolisher.toml"),
-            include_str!("../../game/mechs/Flatbed_Truck.toml"),
-            include_str!("../../game/mechs/Fulcrum.toml"),
+            include_str!("../../game/units/JR7-D.toml"),
+            include_str!("../../game/units/Demolisher.toml"),
+            include_str!("../../game/units/Flatbed_Truck.toml"),
+            include_str!("../../game/units/Fulcrum.toml"),
         ];
         for template in templates {
             let (mut world, _, target) = facts_fixture(false);

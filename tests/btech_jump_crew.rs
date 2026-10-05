@@ -6,8 +6,8 @@ use stompymux_rs::*;
 #[tokio::test]
 async fn landing_distinguishes_empty_cockpits_from_unconscious_crews() {
     for template in [
-        include_str!("../game/mechs/JR7-D.toml"),
-        include_str!("../game/mechs/StalkingSpider-1.toml"),
+        include_str!("../game/units/JR7-D.toml"),
+        include_str!("../game/units/StalkingSpider-1.toml"),
     ] {
         let (_dir, config, base, unit, _, _) =
             firing::fixture_with_target(template, None, template).await;

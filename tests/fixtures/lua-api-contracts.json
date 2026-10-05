@@ -2030,7 +2030,7 @@
         "boolean fixable"
       ],
       "reference": "src/mux/lua/packages/btech/repair/btech_repair_bindings.c",
-      "contract": "Requires a supported live MECH registration and returns whether no original nonexempt section is destroyed: Mechs exempt all but center torso, ground vehicles exempt turret, and VTOLs exempt rotor.",
+      "contract": "Requires a supported live UNIT registration and returns whether no original nonexempt section is destroyed: Mechs exempt all but center torso, ground vehicles exempt turret, and VTOLs exempt rotor.",
       "status": "verified",
       "prerequisite": "",
       "rust_evidence": "tests/lua_btech_repair_contracts.rs",

@@ -370,7 +370,7 @@ pub fn administrative_unit_class(world: &World, id: ObjectId) -> Option<String> 
                 .to_owned(),
         );
     }
-    (world.btech.registrations().get(&id).map(String::as_str) == Some("MECH"))
+    (world.btech.registrations().get(&id).map(String::as_str) == Some("UNIT"))
         .then(|| "Mech".to_owned())
 }
 
@@ -396,7 +396,7 @@ pub fn administrative_unit_movement(world: &World, id: ObjectId) -> Option<Strin
                 .to_owned(),
         );
     }
-    (world.btech.registrations().get(&id).map(String::as_str) == Some("MECH"))
+    (world.btech.registrations().get(&id).map(String::as_str) == Some("UNIT"))
         .then(|| "Biped".to_owned())
 }
 
@@ -520,7 +520,7 @@ pub fn administrative_is_fixable(world: &World, id: ObjectId) -> Option<bool> {
     }
     // A native registration owns a zero-initialized default Mech. With no positive
     // original internals, no destroyed section makes it unfixable.
-    (world.btech.registrations().get(&id).map(String::as_str) == Some("MECH")).then_some(true)
+    (world.btech.registrations().get(&id).map(String::as_str) == Some("UNIT")).then_some(true)
 }
 
 /// Apply raw C administration fields without actor notifications or construction admission.

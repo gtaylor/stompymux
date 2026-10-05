@@ -231,7 +231,7 @@ async fn scenario_packets_work_without_placement_and_preserve_safe_material() {
 /// Damage-induced balance checks stay private and transactional across packet boundaries.
 #[tokio::test]
 async fn scenario_packets_preserve_private_balance_feedback() {
-    let source = include_str!("../game/mechs/JR7-D.toml");
+    let source = include_str!("../game/units/JR7-D.toml");
     let (_dir, config, mut baseline, unit, _, _) =
         firing::fixture_with_target(source, Some(Weapon::MediumLaser), source).await;
     baseline

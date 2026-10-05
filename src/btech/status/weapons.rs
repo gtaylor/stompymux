@@ -286,7 +286,7 @@ mod tests {
             ("Medium_Vibroblade", "MVibro", true, true),
             ("Large_Vibroblade", "LVibro", true, true),
         ] {
-            let original = include_str!("../../../game/mechs/AXM-2N.toml");
+            let original = include_str!("../../../game/units/AXM-2N.toml");
             let source = original
                 .replace("    { at = \"5-7\", item = \"IS.MediumLaser\" },\n", "")
                 .replace(

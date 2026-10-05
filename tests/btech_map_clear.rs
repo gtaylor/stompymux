@@ -31,7 +31,7 @@ async fn clear_map_units_shares_chassis_shutdown_and_restart() {
             let (_dir, config, mut world, id, target, _) = firing::fixture_with_target(
                 &source,
                 None,
-                include_str!("../game/mechs/AS7-D.toml"),
+                include_str!("../game/units/AS7-D.toml"),
             )
             .await;
             let map = world.btech.units()[&id].map.unwrap();
@@ -80,7 +80,7 @@ async fn clear_map_units_shares_chassis_shutdown_and_restart() {
                 .eval_callback::<Vec<i64>>(&format!("return {call}"))
                 .unwrap();
             assert_eq!(ids, vec![target.0, id.0]);
-            let output = support::run_text(&native, &config, actor, 1, "clearmechs ignored");
+            let output = support::run_text(&native, &config, actor, 1, "clearunits ignored");
             assert!(output.contains("Map Cleared"), "{chassis} {mode}: {output}");
             assert_eq!(native.world().btech, lua.world().btech);
             let remote_output = support::run_text(
@@ -138,7 +138,7 @@ async fn clear_map_units_authority_empty_map_and_output_rollback() {
     let (dir, config, mut world, id, target, _) = firing::fixture_with_target(
         &firing::templates()[0],
         None,
-        include_str!("../game/mechs/AS7-D.toml"),
+        include_str!("../game/units/AS7-D.toml"),
     )
     .await;
     let map = world.btech.units()[&id].map.unwrap();
@@ -228,7 +228,7 @@ async fn clear_map_tows_in_either_slot_order() {
             let (_dir, config, mut world, id, target, _) = firing::fixture_with_target(
                 &source,
                 None,
-                include_str!("../game/mechs/AS7-D.toml"),
+                include_str!("../game/units/AS7-D.toml"),
             )
             .await;
             let map = world.btech.units()[&id].map.unwrap();
@@ -276,9 +276,9 @@ async fn clear_map_tows_in_either_slot_order() {
 #[tokio::test]
 async fn selected_map_shutdown_is_guarded_and_bare_shutdown_remains_local() {
     let (_dir, config, world, source, target, _) = firing::fixture_with_target(
-        include_str!("../game/mechs/JR7-D.toml"),
+        include_str!("../game/units/JR7-D.toml"),
         None,
-        include_str!("../game/mechs/AS7-D.toml"),
+        include_str!("../game/units/AS7-D.toml"),
     )
     .await;
     let map = world.btech.units()[&source].map.unwrap();

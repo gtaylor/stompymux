@@ -4,16 +4,16 @@ use support::isolated_scripts;
 
 /// The PARITY fixture's projections match the reference values captured by the
 /// template_catalog and template_inspection probes.
-const LOADABLE: &str = include_str!("fixtures/btech/mechs/PARITY.toml");
+const LOADABLE: &str = include_str!("fixtures/btech/units/PARITY.toml");
 
 fn seed(config: &stompymux_rs::Config) {
-    let root = config.path(&config.database.mech_database);
+    let root = config.path(&config.database.unit_database);
     std::fs::create_dir_all(root.join("stock")).unwrap();
     std::fs::write(root.join("PARITY.toml"), LOADABLE).unwrap();
     // Stock templates name parts without a manufacturer and still load.
     std::fs::write(
         root.join("stock/JR7-D.toml"),
-        include_str!("fixtures/btech/mechs/JR7-D.toml"),
+        include_str!("fixtures/btech/units/JR7-D.toml"),
     )
     .unwrap();
     std::fs::write(root.join("BROKEN.toml"), "not a template at all").unwrap();

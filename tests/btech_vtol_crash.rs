@@ -5,7 +5,7 @@ use stompymux_rs::*;
 /// Install placed material for component tests without admitting an aircraft to live simulation.
 fn aircraft(world: &mut World, id: ObjectId, map: ObjectId, falling: bool) {
     let unit = Vehicle::new(
-        VehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml")).unwrap(),
+        VehicleTemplate::parse("Kestrel", include_str!("../game/units/Kestrel.toml")).unwrap(),
     )
     .unwrap();
     let mut saved = serde_json::to_value(unit).unwrap();
@@ -689,7 +689,7 @@ async fn shared_control_commands_apply_aircraft_velocity_and_rotor_limits() {
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let id = world.create(&config, "Controlled aircraft".into(), Kind::Thing);
-    UnitTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml"))
+    UnitTemplate::parse("Kestrel", include_str!("../game/units/Kestrel.toml"))
         .unwrap()
         .create(&mut world, id)
         .unwrap();

@@ -63,12 +63,6 @@ async fn fixture(source: &str) -> (tempfile::TempDir, Config, World, ObjectId) {
         .unwrap()
         .flags
         .insert(Flag::InCharacter);
-    let mut channel = Channel::new("MechXP".into());
-    channel.users.push(communication::Membership {
-        who: ObjectId(1),
-        listening: true,
-    });
-    world.channels.insert("MechXP".into(), channel);
     (dir, config, world, id)
 }
 
@@ -76,8 +70,8 @@ async fn fixture(source: &str) -> (tempfile::TempDir, Config, World, ObjectId) {
 #[tokio::test]
 async fn computer_override_xp_obeys_character_success_and_heat_gates() {
     for source in [
-        include_str!("../game/mechs/JR7-D.toml"),
-        include_str!("../game/mechs/GOL-1H.toml"),
+        include_str!("../game/units/JR7-D.toml"),
+        include_str!("../game/units/GOL-1H.toml"),
     ] {
         let (_dir, config, base, id) = fixture(source).await;
         for ic in [false, true] {
@@ -114,6 +108,11 @@ async fn computer_override_xp_obeys_character_success_and_heat_gates() {
                     let eligible = ic && heat >= 14.0 && roll == 12;
                     assert_eq!(report.computer_experience.is_some(), eligible);
                     assert_eq!(report.experience_messages.len(), usize::from(eligible));
+                    let traces = crate::support::drain_traces(
+                        &scripts,
+                        stompymux_rs::logging::TraceTopic::Experience,
+                    );
+                    assert_eq!(traces.len(), usize::from(eligible));
                     assert_eq!(
                         scripts.world().btech.character_values()[&ObjectId(1)]["Computer"]
                             .experience_balance(),
@@ -127,14 +126,12 @@ async fn computer_override_xp_obeys_character_success_and_heat_gates() {
                                 .unwrap()["dice"],
                         );
                         assert!(report.computer_experience.unwrap().accepted);
-                        assert_eq!(
-                            report.experience_messages[0].channel,
-                            DiagnosticChannel::Experience
-                        );
+                        assert_eq!(report.experience_messages[0].topic, TraceTopic::Experience);
                         assert_eq!(
                             report.experience_messages[0].text,
                             format!("GOD gained 1 computer XP (mech #{})", id.0)
                         );
+                        assert_eq!(traces[0], report.experience_messages[0].text);
                         assert!(!report.shutdown);
                     }
                 }
@@ -146,7 +143,7 @@ async fn computer_override_xp_obeys_character_success_and_heat_gates() {
 /// Restored cooldowns suppress duplicate awards without suppressing the successful override itself.
 #[tokio::test]
 async fn computer_override_xp_interval_survives_restart() {
-    let (_dir, config, mut world, id) = fixture(include_str!("../game/mechs/JR7-D.toml")).await;
+    let (_dir, config, mut world, id) = fixture(include_str!("../game/units/JR7-D.toml")).await;
     due(&mut world, id, 14.0, 12);
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     let report = advance_battle_overheat_action(&scripts, &config, rules())
@@ -171,32 +168,4 @@ async fn computer_override_xp_interval_survives_restart() {
             1
         );
     }
-}
-
-/// A late channel failure restores the award together with heat cadence, dice and pending output.
-#[tokio::test]
-async fn computer_override_channel_failure_restores_the_entire_heat_action() {
-    let (_dir, config, mut world, id) = fixture(include_str!("../game/mechs/GOL-1H.toml")).await;
-    due(&mut world, id, 14.0, 12);
-    world.channels.get_mut("MechXP").unwrap().messages = i64::MAX;
-    let before = world.clone();
-    let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-    assert!(advance_battle_overheat_action(&scripts, &config, rules()).is_err());
-    assert_eq!(scripts.world().btech, before.btech);
-    assert_eq!(
-        serde_json::to_value(&scripts.world().channels).unwrap(),
-        serde_json::to_value(&before.channels).unwrap()
-    );
-    assert!(scripts.drain_outbox().is_empty());
-    scripts
-        .world_mut()
-        .channels
-        .get_mut("MechXP")
-        .unwrap()
-        .messages = 0;
-    let report = advance_battle_overheat_action(&scripts, &config, rules())
-        .unwrap()
-        .remove(0);
-    assert!(report.computer_experience.unwrap().accepted);
-    assert_eq!(report.shutdown_check.unwrap().roll, Some(12));
 }

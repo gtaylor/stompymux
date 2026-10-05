@@ -295,7 +295,7 @@ mod anatomy_tests {
     fn control_bonus_does_not_change_raw_attack_or_valuation_skill() {
         let template = super::super::MechTemplate::parse(
             "JR7-D",
-            include_str!("../../tests/fixtures/btech/mechs/JR7-D.toml"),
+            include_str!("../../tests/fixtures/btech/units/JR7-D.toml"),
         )
         .unwrap();
         let unit = super::super::Mech::from_template(template).unwrap();

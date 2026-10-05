@@ -63,7 +63,7 @@ async fn inventory_map_commands_share_handlers_and_preserve_location() {
         "SAVEMAP saved.map",
         "SETMAPSIZE 3 3",
         "LIST OBJS",
-        "CLEARMECHS",
+        "CLEARUNITS",
         "ADDFIRE 1 1 30",
         "ADDSMOKE 1 1 30",
         "DELOBJ",

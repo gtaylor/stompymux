@@ -310,7 +310,7 @@ pub(crate) fn load_unit_template(
         }
         definition if !configured => {
             ensure!(
-                world.btech.registrations().get(&id).map(String::as_str) == Some("MECH"),
+                world.btech.registrations().get(&id).map(String::as_str) == Some("UNIT"),
                 "unit is not registered"
             );
             super::inventory_mass(world, id)?;

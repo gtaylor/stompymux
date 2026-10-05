@@ -83,7 +83,7 @@ pub(super) fn reassign_in_candidate(
     let members = super::map_slots::all_unit_order(world, map)?;
     ensure!(
         members.len() < 250 || members.contains(&id),
-        "There are too many mechs on that map!"
+        "There are too many units on that map!"
     );
     world.validate_move(id, map)?;
     let slot = super::map_slots::placement_slot(world, id, map)?;

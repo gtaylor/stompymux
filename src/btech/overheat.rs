@@ -488,7 +488,7 @@ fn ammunition_target(heat: f64, inferno: bool) -> Option<i16> {
     }
 }
 
-/// Successful in-character overrides use the ordinary skill interval, threshold and channel.
+/// Successful in-character overrides use the ordinary skill interval, threshold and experience trace.
 /// Shutdown admission has already established a player pilot with a successful Computer roll.
 fn award_computer_override(
     world: &mut World,
@@ -507,7 +507,7 @@ fn award_computer_override(
     )?;
     let message = award.accepted.then(|| {
         super::DiagnosticMessage::new(
-            super::DiagnosticChannel::Experience,
+            super::TraceTopic::Experience,
             format!(
                 "{} gained 1 computer XP (mech #{})",
                 world.objects[&pilot].name, id.0

@@ -52,12 +52,12 @@ async fn damage_fields_share_material_order_native_lua_and_restart() {
         assert_eq!(battle_unit_damage_field(&world, id).unwrap(), expected);
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         let report =
-            view_battle_unit_fields_action(&scripts, &config, ObjectId(1), id, "mechdamage")
+            view_battle_unit_fields_action(&scripts, &config, ObjectId(1), id, "unitdamage")
                 .unwrap();
         assert_eq!(report.fields[0].value.as_deref(), Some(expected.as_str()));
         let lua: mlua::Table = scripts
             .eval_callback(&format!(
-                "return btech.unit.fields(1,{},'mechdamage')",
+                "return btech.unit.fields(1,{},'unitdamage')",
                 id.0
             ))
             .unwrap();
@@ -66,14 +66,14 @@ async fn damage_fields_share_material_order_native_lua_and_restart() {
             serde_json::to_value(report).unwrap()
         );
         assert!(
-            support::run_text(&scripts, &config, ObjectId(1), 1, "@viewmech mechdamage")
+            support::run_text(&scripts, &config, ObjectId(1), 1, "@viewunit unitdamage")
                 .contains(&expected)
         );
         scripts.drain_outbox();
         assert!(
             scripts
                 .eval_callback::<()>(&format!(
-                    "btech.unit.fields(1,{},'mechdamage'); error('abort')",
+                    "btech.unit.fields(1,{},'unitdamage'); error('abort')",
                     id.0
                 ))
                 .is_err()

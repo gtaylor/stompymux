@@ -9,7 +9,7 @@ async fn transferred_jumps_rebind_boundaries_and_replay_to_landing() {
     let templates = firing::templates();
     let sources = [
         templates[0].as_str(),
-        include_str!("../game/mechs/StalkingSpider-1.toml"),
+        include_str!("../game/units/StalkingSpider-1.toml"),
     ];
     for source in sources {
         for height in [2, 12] {

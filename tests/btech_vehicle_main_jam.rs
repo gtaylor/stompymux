@@ -42,7 +42,7 @@ fn seed(world: &mut World, id: ObjectId, value: u8) {
 
 #[tokio::test]
 async fn main_jam_ranks_intact_mounts_and_persists_without_a_recycle_timer() {
-    let text = include_str!("../game/mechs/Demolisher.toml").replace(
+    let text = include_str!("../game/units/Demolisher.toml").replace(
         "[sections.front_side]\n",
         "[sections.front_side]\nslots = [{ at = 1, item = \"IS.MediumLaser\" }]\n",
     );
@@ -112,7 +112,7 @@ async fn main_jam_ranks_intact_mounts_and_persists_without_a_recycle_timer() {
 async fn main_jam_recovers_on_next_powered_update_only_when_already_recycling() {
     for temporary_failure in [false, true] {
         let (_dir, config, mut world, id) =
-            fixture(include_str!("../game/mechs/Demolisher.toml")).await;
+            fixture(include_str!("../game/units/Demolisher.toml")).await;
         if temporary_failure {
             assert!(
                 jam_battle_vehicle_weapon(&mut world, id, VehicleSection::Turret)

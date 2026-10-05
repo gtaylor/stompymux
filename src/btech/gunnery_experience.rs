@@ -429,7 +429,7 @@ impl GunneryAwardContext<'_> {
         damage: u16,
         attempt: Option<&ShotExperienceAward>,
     ) -> Vec<super::DiagnosticMessage> {
-        super::channels::gunnery_messages(
+        super::diagnostics::gunnery_messages(
             world,
             GunneryAwardRequest {
                 damage,

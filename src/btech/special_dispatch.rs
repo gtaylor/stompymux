@@ -89,7 +89,7 @@ fn select(ctx: &CommandContext<'_>, line: &str) -> Option<Selection> {
             continue;
         }
         let kind = match world.btech.registrations().get(&id).map(String::as_str) {
-            Some("MECH") => Special::Mech,
+            Some("UNIT") => Special::Unit,
             Some("MAP") => Special::Map,
             Some("DEBUG") => Special::Debug,
             Some("AUTOPILOT") => Special::Autopilot,

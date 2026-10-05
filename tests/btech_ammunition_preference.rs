@@ -7,10 +7,10 @@ use stompymux_rs::*;
 #[tokio::test]
 async fn preferred_sections_controls_feed_and_restart() {
     for (source, vehicle) in [
-        (include_str!("../game/mechs/JR7-D.toml"), false),
-        (include_str!("../game/mechs/GOL-1H.toml"), false),
-        (include_str!("../game/mechs/Demolisher.toml"), true),
-        (include_str!("../game/mechs/Kestrel.toml"), true),
+        (include_str!("../game/units/JR7-D.toml"), false),
+        (include_str!("../game/units/GOL-1H.toml"), false),
+        (include_str!("../game/units/Demolisher.toml"), true),
+        (include_str!("../game/units/Kestrel.toml"), true),
     ] {
         let (_dir, config, mut world) = support::isolated_world().await;
         let id = world.create(&config, "Ammo preference".into(), Kind::Thing);
@@ -262,7 +262,7 @@ async fn laser_defense_rejects_preferred_ammunition() {
         let (_dir, config, mut world) = support::isolated_world().await;
         let id = world.create(&config, "Laser defense".into(), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-        let source = include_str!("../game/mechs/Demolisher.toml")
+        let source = include_str!("../game/units/Demolisher.toml")
             .replace(
                 "    { at = \"3-6\", item = \"Ammo_IS.AC/20\", rounds = 5 },\n",
                 "",

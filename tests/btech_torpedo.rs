@@ -16,7 +16,7 @@ fn edit(world: &mut World, id: ObjectId, change: impl FnOnce(&mut serde_json::Va
 fn launcher() -> UnitTemplate {
     let weapon = Weapon::Srt6;
     let mut definition =
-        UnitTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap();
+        UnitTemplate::parse("JR7-D", include_str!("../game/units/JR7-D.toml")).unwrap();
     let UnitTemplate::Mech(unit) = &mut definition else {
         panic!("The Jenner is a Mech");
     };
@@ -85,7 +85,7 @@ async fn fixture(
         if index == 0 {
             launcher()
         } else {
-            UnitTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap()
+            UnitTemplate::parse("JR7-D", include_str!("../game/units/JR7-D.toml")).unwrap()
         }
         .create(&mut world, id)
         .unwrap();

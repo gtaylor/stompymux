@@ -258,7 +258,7 @@ fn c_catalog_defaults() {
                 | "startup"
                 | "shutdown"
                 | "heading"
-                | "mechprefs"
+                | "unitprefs"
                 | "speed"
                 | "fire"
                 | "sight"

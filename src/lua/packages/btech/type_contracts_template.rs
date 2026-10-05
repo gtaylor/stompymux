@@ -3,29 +3,29 @@
 
 // lua-types-begin btech 00020
 //|---Read a biped asset without instantiating or activating a unit.
-//|---@param name string Template reference: the file stem of a `.toml` document anywhere under database.mech_database.
+//|---@param name string Template reference: the file stem of a `.toml` document anywhere under database.unit_database.
 //|---@return MechTemplate
 //|function btech_template.inspect(name) end
 // lua-types-end
 
 // lua-types-begin btech 00021
 //|---Resolve supported equipment; does not validate chassis construction or enable simulation.
-//|---@param name string Template reference: the file stem of a `.toml` document anywhere under database.mech_database.
+//|---@param name string Template reference: the file stem of a `.toml` document anywhere under database.unit_database.
 //|---@return MechLoadout
 //|function btech_template.loadout(name) end
 // lua-types-end
 
 // lua-types-begin btech 00253
 //|---Preview construction without registering a unit or modifying the source asset.
-//|---@param name string Template reference: the file stem of a `.toml` document anywhere under database.mech_database.
+//|---@param name string Template reference: the file stem of a `.toml` document anywhere under database.unit_database.
 //|---@return TemplateCheck
 //|function btech_template.check(name) end
 // lua-types-end
 
 // lua-types-begin btech 00461
 //|---Read current, original and rear armor values; an omitted section reports the totals.
-//|---@param reference string Template reference: the file stem of a `.toml` document anywhere under database.mech_database.
-//|---@param section? MechSection Typed section constant from btech.unit.sections.
+//|---@param reference string Template reference: the file stem of a `.toml` document anywhere under database.unit_database.
+//|---@param section? UnitSection Typed section constant from btech.unit.sections.
 //|---@return ArmorStatus status
 //|function btech_template.armor(reference, section) end
 // lua-types-end
@@ -47,7 +47,7 @@
 // lua-types-begin btech 00464
 //|---List one section's critical slots with resolved parts, modes and ammunition state.
 //|---@param reference string
-//|---@param section MechSection Typed section constant from btech.unit.sections.
+//|---@param section UnitSection Typed section constant from btech.unit.sections.
 //|---@return CriticalSlot[] slots
 //|function btech_template.critical_slots(reference, section) end
 // lua-types-end
@@ -98,7 +98,7 @@
 //|---Publish one section's critical status report to a player.
 //|---@param reference string
 //|---@param player DbRef|Object
-//|---@param section MechSection Typed section constant from btech.unit.sections.
+//|---@param section UnitSection Typed section constant from btech.unit.sections.
 //|function btech_template.show_critical_status(reference, player, section) end
 // lua-types-end
 
@@ -112,7 +112,7 @@
 // lua-types-begin btech 00473
 //|---List mounted weapons in mounting order; an optional section restricts the result.
 //|---@param reference string
-//|---@param section? MechSection Typed section constant from btech.unit.sections.
+//|---@param section? UnitSection Typed section constant from btech.unit.sections.
 //|---@return MountedWeapon[] weapons
 //|function btech_template.weapons(reference, section) end
 // lua-types-end

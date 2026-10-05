@@ -4,7 +4,7 @@ use stompymux_rs::*;
 /// A tracked 80-ton chassis with three walking movement points has a 240-rating powerplant.
 fn tracked(flags: &str) -> VehicleTemplate {
     let mut template =
-        VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+        VehicleTemplate::parse("Demolisher", include_str!("../game/units/Demolisher.toml"))
             .unwrap();
     template.attributes.insert("specials".into(), flags.into());
     template
@@ -74,14 +74,14 @@ fn vehicle_suspension_and_missing_engine_diagnostics() {
     }
     let truck = VehicleTemplate::parse(
         "Flatbed_Truck",
-        include_str!("../game/mechs/Flatbed_Truck.toml"),
+        include_str!("../game/units/Flatbed_Truck.toml"),
     )
     .unwrap()
     .engine()
     .unwrap();
     assert_eq!((truck.nominal_rating, truck.weight_rating), (50, 30));
     assert_eq!(truck.installed_mass, 2 * 1024);
-    let hover = VehicleTemplate::parse("Fulcrum", include_str!("../game/mechs/Fulcrum.toml"))
+    let hover = VehicleTemplate::parse("Fulcrum", include_str!("../game/units/Fulcrum.toml"))
         .unwrap()
         .engine()
         .unwrap();

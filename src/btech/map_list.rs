@@ -49,15 +49,15 @@ pub fn list_map_action(
             }
             notify("--------------------------------------------")?;
         } else {
-            notify("--- Mechs on Map ---")?;
+            notify("--- Units on Map ---")?;
             let units = super::map_slots::all_unit_order(before, map)?;
             for id in &units {
                 let unit =
                     super::scanner::scanner_unit(before, *id).context("Unit is unavailable")?;
                 let label = unit.label().context("Unit has no battlefield ID")?;
-                notify(&format!("Mech DB Number: {} : [{label}]\tValid Data", id.0))?;
+                notify(&format!("Unit DB Number: {} : [{label}]\tValid Data", id.0))?;
             }
-            notify(&format!("{} Mechs On Map", units.len()))?;
+            notify(&format!("{} Units On Map", units.len()))?;
             notify(&format!(
                 "{} positions open",
                 250_i64 - i64::try_from(units.len())?
@@ -188,7 +188,7 @@ pub(crate) fn command(
 /// Share exact, case-insensitive target names and literal diagnostics with Lua callers.
 pub(crate) fn parse_target(argument: &str) -> Result<bool> {
     ensure!(!argument.is_empty(), "Supply target type too!");
-    if argument.eq_ignore_ascii_case("MECHS") {
+    if argument.eq_ignore_ascii_case("UNITS") {
         return Ok(false);
     }
     if argument.eq_ignore_ascii_case("OBJS") {

@@ -336,7 +336,6 @@ pub(crate) fn command(
                 drop(world);
                 super::set_radio_frequency_action(
                     ctx.scripts,
-                    ctx.config,
                     unit,
                     ctx.player,
                     channel,

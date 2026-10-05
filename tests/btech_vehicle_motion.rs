@@ -3,7 +3,7 @@ use stompymux_rs::*;
 
 /// An intact tracked chassis with a 53.75 kph nominal flank speed.
 fn template() -> VehicleTemplate {
-    VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml")).unwrap()
+    VehicleTemplate::parse("Demolisher", include_str!("../game/units/Demolisher.toml")).unwrap()
 }
 
 #[test]

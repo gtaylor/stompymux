@@ -41,7 +41,7 @@ async fn fixture_asset(
         create_battle_unit(
             &mut world,
             id,
-            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
@@ -2427,10 +2427,10 @@ async fn autofall_native_lua_controls_are_atomic_and_survive_restart_and_shutdow
     )
     .unwrap();
     assert!(
-        support::run_text(&native, &config, ObjectId(1), 1, "mechprefs").contains("AutoFall: OFF")
+        support::run_text(&native, &config, ObjectId(1), 1, "unitprefs").contains("AutoFall: OFF")
     );
     assert!(
-        support::run_text(&native, &config, ObjectId(1), 1, "mechprefs aUtOfAlL on")
+        support::run_text(&native, &config, ObjectId(1), 1, "unitprefs aUtOfAlL on")
             .contains("toggled ON")
     );
     lua.eval_callback::<()>(&format!(
@@ -2454,10 +2454,10 @@ async fn autofall_native_lua_controls_are_atomic_and_survive_restart_and_shutdow
     );
     assert_eq!(lua.world().btech, before);
     for command in [
-        "mechprefs AutoFall maybe",
-        "mechprefs AutoFall on extra",
-        "mechprefs Unknown on",
-        "mechprefs/bad AutoFall off",
+        "unitprefs AutoFall maybe",
+        "unitprefs AutoFall on extra",
+        "unitprefs Unknown on",
+        "unitprefs/bad AutoFall off",
     ] {
         support::run_text(&native, &config, ObjectId(1), 1, command);
         assert_eq!(native.world().btech, before);
@@ -2488,7 +2488,7 @@ async fn autofall_native_lua_controls_are_atomic_and_survive_restart_and_shutdow
         saved.btech
     );
     assert!(
-        support::run_text(&native, &config, ObjectId(1), 1, "mechprefs AutoFall")
+        support::run_text(&native, &config, ObjectId(1), 1, "unitprefs AutoFall")
             .contains("toggled OFF")
     );
     assert!(!native.world().btech.constructed_units()[&id].auto_fall());
@@ -3837,7 +3837,7 @@ fn fracture_observer(
     create_battle_unit(
         world,
         observer,
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(world, observer, support::FIXTURE_DICE_SEED);
@@ -7280,7 +7280,7 @@ async fn artillery_cluster_world_packets_and_random_rollback() {
             create_battle_unit(
                 &mut world,
                 id,
-                MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml"))
                     .unwrap(),
             )
             .unwrap();
@@ -7636,7 +7636,7 @@ async fn fracture_cascade_matrix(vehicle: bool, trigger_last: bool) {
         create_battle_vehicle(
             &mut world,
             id,
-            VehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml")).unwrap(),
+            VehicleTemplate::parse("Kestrel", include_str!("../game/units/Kestrel.toml")).unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);

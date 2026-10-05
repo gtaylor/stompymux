@@ -43,7 +43,7 @@ fn seed(world: &mut World, id: ObjectId, value: u8) {
 #[tokio::test]
 async fn advanced_ground_tables_cover_every_face_and_roll() {
     use VehicleSection as S;
-    let (_dir, _config, base, id) = fixture(include_str!("../game/mechs/Demolisher.toml")).await;
+    let (_dir, _config, base, id) = fixture(include_str!("../game/units/Demolisher.toml")).await;
     let rules = VehicleCriticalRules {
         rotor_damage_divisor: 0,
         extended_piloting: false,
@@ -113,7 +113,7 @@ async fn advanced_ground_tables_cover_every_face_and_roll() {
 async fn standard_branches_preserve_suppression_and_replay() {
     use VehicleCriticalEffect as E;
     use VehicleCriticalTable as T;
-    let (_dir, config, base, id) = fixture(include_str!("../game/mechs/Demolisher.toml")).await;
+    let (_dir, config, base, id) = fixture(include_str!("../game/units/Demolisher.toml")).await;
     for table in [T::Standard] {
         for section in [VehicleSection::Front, VehicleSection::Turret] {
             for damaged in [false, true] {
@@ -208,20 +208,20 @@ async fn disabled_safe_critproof_and_stationary_criticals_preserve_draw_order() 
     assert_eq!(T::from_settings(false), T::Standard);
     for (template, critproof, stationary) in [
         (
-            include_str!("../game/mechs/Demolisher.toml").to_owned(),
+            include_str!("../game/units/Demolisher.toml").to_owned(),
             false,
             false,
         ),
         (
             support::templates::with_flags(
-                include_str!("../game/mechs/Demolisher.toml"),
+                include_str!("../game/units/Demolisher.toml"),
                 &["CritProof_Tech"],
             ),
             true,
             false,
         ),
         (
-            include_str!("../game/mechs/Demolisher.toml")
+            include_str!("../game/units/Demolisher.toml")
                 .replace("movement = \"track\"", "movement = \"none\"")
                 .replace("walk_mp = 5", "walk_mp = 0"),
             false,

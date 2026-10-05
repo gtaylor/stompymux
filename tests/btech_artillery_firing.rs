@@ -4,7 +4,7 @@ use stompymux_rs::*;
 
 /// A running artillery platform and friendly observer on an open field.
 async fn fixture(flags: &[&str]) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId, usize) {
-    fixture_source(flags, include_str!("fixtures/btech/mechs/JR7-D.toml")).await
+    fixture_source(flags, include_str!("fixtures/btech/units/JR7-D.toml")).await
 }
 
 /// Build either supported Mech anatomy with a full-size artillery mount.
@@ -851,7 +851,7 @@ async fn mech_artillery_uses_vehicle_observers_in_slot_order() {
         create_battle_vehicle(
             &mut world,
             observer,
-            VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+            VehicleTemplate::parse("Demolisher", include_str!("../game/units/Demolisher.toml"))
                 .unwrap(),
         )
         .unwrap();
@@ -889,8 +889,8 @@ async fn mech_artillery_uses_vehicle_observers_in_slot_order() {
 async fn artillery_fires_after_radio_observer_connection() {
     use std::{cell::RefCell, rc::Rc};
     for template in [
-        include_str!("fixtures/btech/mechs/JR7-D.toml"),
-        include_str!("../game/mechs/GOL-1H.toml"),
+        include_str!("fixtures/btech/units/JR7-D.toml"),
+        include_str!("../game/units/GOL-1H.toml"),
     ] {
         let (_dir, config, mut world, map, shooter, index) =
             fixture_source(&["Smoke"], template).await;

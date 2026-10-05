@@ -5,15 +5,15 @@ use stompymux_rs::*;
 
 /// All admitted movement classes use the same cargo-space definition.
 fn templates() -> Vec<String> {
-    let ground = include_str!("../game/mechs/Demolisher.toml");
+    let ground = include_str!("../game/units/Demolisher.toml");
     vec![
-        include_str!("../game/mechs/JR7-D.toml").into(),
-        include_str!("../game/mechs/GOL-1H.toml").into(),
+        include_str!("../game/units/JR7-D.toml").into(),
+        include_str!("../game/units/GOL-1H.toml").into(),
         ground.into(),
         ground.replace("Tracked", "Wheeled"),
         ground.replace("Tracked", "Hover"),
         ground.replace("Tracked", "None"),
-        include_str!("../game/mechs/Kestrel.toml").into(),
+        include_str!("../game/units/Kestrel.toml").into(),
     ]
 }
 

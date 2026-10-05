@@ -46,7 +46,7 @@ fn reference(value: Value, argument_number: usize) -> mlua::Result<Vec<u8>> {
 
 fn root(lua: &Lua) -> PathBuf {
     let config = crate::lua::configuration(lua);
-    config.path(&config.database.mech_database)
+    config.path(&config.database.unit_database)
 }
 fn read_unit(lua: &Lua, value: Value, argument_number: usize) -> mlua::Result<crate::UnitTemplate> {
     // Every critical must name a known part; validate through the raw path

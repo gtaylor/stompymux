@@ -73,7 +73,7 @@ fn rules(table: VehicleCriticalTable) -> VehicleImpactRules {
 fn advanced_locations_cover_all_arcs_and_turretless_fallbacks() {
     use VehicleSection as S;
     let intact = Vehicle::new(
-        VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+        VehicleTemplate::parse("Demolisher", include_str!("../game/units/Demolisher.toml"))
             .unwrap(),
     )
     .unwrap();
@@ -180,7 +180,7 @@ fn advanced_locations_cover_all_arcs_and_turretless_fallbacks() {
 #[test]
 fn advanced_motive_rolls_apply_class_modifiers_and_critical_immunity() {
     for (movement, modifier) in [("track", 0), ("wheel", 2), ("hover", 4)] {
-        let text = include_str!("../game/mechs/Demolisher.toml")
+        let text = include_str!("../game/units/Demolisher.toml")
             .replace(
                 "movement = \"track\"",
                 &format!("movement = \"{movement}\""),
@@ -252,7 +252,7 @@ async fn complete_impacts_apply_hit_effects_and_damage_with_saved_replay() {
         ),
     ] {
         let (_dir, config, mut world, id) =
-            fixture(include_str!("../game/mechs/Demolisher.toml")).await;
+            fixture(include_str!("../game/units/Demolisher.toml")).await;
         let stream = matching_seed(|dice| {
             let first = dice.two_d6();
             let selected = if table == T::Standard {
@@ -304,7 +304,7 @@ async fn complete_impacts_apply_hit_effects_and_damage_with_saved_replay() {
 #[tokio::test]
 async fn hull_impacts_preserve_occupants_and_combat_safety_preserves_material() {
     let (_dir, _config, mut world, id) =
-        fixture(include_str!("../game/mechs/Demolisher.toml")).await;
+        fixture(include_str!("../game/units/Demolisher.toml")).await;
     let stream = matching_seed(|dice| dice.two_d6() == 3);
     set_seed(&mut world, id, stream);
     world
@@ -357,7 +357,7 @@ async fn hull_impacts_preserve_occupants_and_combat_safety_preserves_material() 
 
 #[tokio::test]
 async fn advanced_motive_impacts_commit_steering_speed_and_penetration_together() {
-    let text = include_str!("../game/mechs/Demolisher.toml").replace("armor = 40", "armor = 0");
+    let text = include_str!("../game/units/Demolisher.toml").replace("armor = 40", "armor = 0");
     let (_dir, config, mut world, id) = fixture(&text).await;
     let stream = matching_seed(|dice| {
         dice.two_d6();

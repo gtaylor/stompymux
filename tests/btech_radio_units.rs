@@ -10,9 +10,9 @@ fn fact(world: &mut World, id: ObjectId, update: impl FnOnce(&mut serde_json::Va
 #[tokio::test]
 async fn targeted_radio_mixed_pairs_share_visibility_delivery_and_restart() {
     const CHASSIS: [&str; 3] = [
-        include_str!("fixtures/btech/mechs/JR7-D.toml"),
-        include_str!("../game/mechs/Demolisher.toml"),
-        include_str!("../game/mechs/Kestrel.toml"),
+        include_str!("fixtures/btech/units/JR7-D.toml"),
+        include_str!("../game/units/Demolisher.toml"),
+        include_str!("../game/units/Kestrel.toml"),
     ];
     for sender_template in CHASSIS {
         for target_template in CHASSIS {
@@ -144,15 +144,15 @@ async fn targeted_radio_mixed_pairs_share_visibility_delivery_and_restart() {
 
 #[tokio::test]
 async fn channel_radio_rotates_mixed_transmitters_relays_and_receivers() {
-    let ground = include_str!("../game/mechs/Demolisher.toml");
+    let ground = include_str!("../game/units/Demolisher.toml");
     let templates = [
-        include_str!("fixtures/btech/mechs/JR7-D.toml").to_string(),
-        include_str!("../game/mechs/GOL-1H.toml").to_string(),
+        include_str!("fixtures/btech/units/JR7-D.toml").to_string(),
+        include_str!("../game/units/GOL-1H.toml").to_string(),
         ground.to_string(),
         ground.replace("Tracked", "Wheeled"),
         ground.replace("Tracked", "Hover"),
         ground.replace("Tracked", "None"),
-        include_str!("../game/mechs/Kestrel.toml").to_string(),
+        include_str!("../game/units/Kestrel.toml").to_string(),
     ];
     for rotation in 0..templates.len() {
         let (_dir, config, mut world) = support::isolated_world().await;

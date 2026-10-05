@@ -26,7 +26,7 @@ async fn field(
     let mut units = Vec::new();
     for (i, &master_count) in masters.iter().enumerate() {
         let mut template =
-            MechTemplate::parse("AS7-D", include_str!("fixtures/btech/mechs/AS7-D.toml")).unwrap();
+            MechTemplate::parse("AS7-D", include_str!("fixtures/btech/units/AS7-D.toml")).unwrap();
         let torso = template
             .sections
             .get_mut(&MechSection::CenterTorso)

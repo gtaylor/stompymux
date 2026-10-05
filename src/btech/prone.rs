@@ -34,13 +34,12 @@ pub fn prone_action(
         let report = resolve(&mut scripts.world.borrow_mut(), config, id, pilot)?;
         super::piloting::publish_maneuver_feedback(
             scripts,
-            config,
             &report.notices,
             &report.pilot_notices,
             report.check.as_ref(),
             true,
         )?;
-        super::channels::publish(scripts, config, &report.experience_messages)?;
+        super::diagnostics::publish(scripts, &report.experience_messages);
         if let Some(fall) = &report.fall {
             super::evacuation::publish_fall_consequences(scripts, config, fall)?;
         }

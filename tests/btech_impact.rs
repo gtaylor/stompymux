@@ -28,7 +28,7 @@ async fn fixture() -> (
     create_battle_unit(
         &mut world,
         id,
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
@@ -405,7 +405,7 @@ async fn case_ii_vents_ammunition_explosion_through_local_armor() {
     let object = baseline.objects.get_mut(&id).unwrap();
     object.location = Some(ObjectId(config.start()));
     object.home = Some(ObjectId(config.home()));
-    let source = include_str!("fixtures/btech/mechs/JR7-D.toml").replace(
+    let source = include_str!("fixtures/btech/units/JR7-D.toml").replace(
         "    { at = \"2-3\", item = \"JumpJet\" },\n]\n\n[sections.center_torso]",
         "    { at = \"2-3\", item = \"JumpJet\" },\n    { at = 4, item = \"CASE-II\" },\n]\n\n[sections.center_torso]",
     );
@@ -489,7 +489,7 @@ async fn technology_fixture(
     let object = world.objects.get_mut(&id).unwrap();
     object.location = Some(ObjectId(config.start()));
     object.home = Some(ObjectId(config.home()));
-    let source = include_str!("fixtures/btech/mechs/JR7-D.toml");
+    let source = include_str!("fixtures/btech/units/JR7-D.toml");
     let template = if matches!(specials, "SmallCockpit_Tech" | "SMCPIT") {
         let mut template = MechTemplate::parse("JR7-D", source).unwrap();
         support::templates::small_cockpit(&mut template, specials);
@@ -578,7 +578,7 @@ async fn technology_flags_change_mech_mass() {
 /// with laser heat sinks; the abbreviation behaves the same and removing the flag stops the glow.
 #[tokio::test]
 async fn laser_heat_sinks_glow_while_running() {
-    let original = include_str!("../game/mechs/NightGyr-A.toml");
+    let original = include_str!("../game/units/NightGyr-A.toml");
     assert!(original.contains("heat_sinks = \"laser\"\n"));
     for (source, glows) in [
         (original.to_string(), true),

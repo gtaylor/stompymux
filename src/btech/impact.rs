@@ -1751,7 +1751,7 @@ mod tests {
     fn armored_world(special: &str, seed: u8) -> (World, ObjectId) {
         let mut template = super::super::MechTemplate::parse(
             "JR7-D",
-            include_str!("../../tests/fixtures/btech/mechs/JR7-D.toml"),
+            include_str!("../../tests/fixtures/btech/units/JR7-D.toml"),
         )
         .unwrap();
         if !special.is_empty() {

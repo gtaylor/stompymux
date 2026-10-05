@@ -29,9 +29,9 @@ fn unit(
             MechTemplate::parse(
                 "test",
                 if chassis == "quad" {
-                    include_str!("../game/mechs/GOL-1H.toml")
+                    include_str!("../game/units/GOL-1H.toml")
                 } else {
-                    include_str!("../game/mechs/Daishi-H.toml")
+                    include_str!("../game/units/Daishi-H.toml")
                 },
             )
             .unwrap(),
@@ -39,15 +39,15 @@ fn unit(
         .unwrap(),
         other => {
             let source = match other {
-                "vtol" => include_str!("../game/mechs/Kestrel.toml").to_owned(),
-                "wheel" => include_str!("../game/mechs/Demolisher.toml")
+                "vtol" => include_str!("../game/units/Kestrel.toml").to_owned(),
+                "wheel" => include_str!("../game/units/Demolisher.toml")
                     .replace("movement = \"track\"", "movement = \"wheel\""),
-                "hover" => include_str!("../game/mechs/Demolisher.toml")
+                "hover" => include_str!("../game/units/Demolisher.toml")
                     .replace("movement = \"track\"", "movement = \"hover\""),
-                "stationary" => include_str!("../game/mechs/Demolisher.toml")
+                "stationary" => include_str!("../game/units/Demolisher.toml")
                     .replace("movement = \"track\"", "movement = \"none\"")
                     .replace("walk_mp = 5", "walk_mp = 0"),
-                _ => include_str!("../game/mechs/Demolisher.toml").to_owned(),
+                _ => include_str!("../game/units/Demolisher.toml").to_owned(),
             };
             create_battle_vehicle(world, id, VehicleTemplate::parse("test", &source).unwrap())
                 .unwrap();

@@ -345,7 +345,7 @@ fn artillery_aim_ranges_observers_and_corrections() {
 #[test]
 fn artillery_catalogue_admits_delayed_launchers() {
     let mut template =
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
     let section = template.sections.get_mut(&MechSection::LeftTorso).unwrap();
     section.criticals.clear();
     for slot in 0..12 {

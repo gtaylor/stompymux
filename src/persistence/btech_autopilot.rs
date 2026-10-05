@@ -517,8 +517,8 @@ pub(super) fn validate_changes(expected: &mut BtechState, after: &BtechState) ->
             .validate()
             .with_context(|| format!("validating autopilot controller for #{}", id.0))?;
         ensure!(
-            after.registrations().get(&id).map(String::as_str) == Some("MECH"),
-            "Autopilot controller #{} requires a MECH registration",
+            after.registrations().get(&id).map(String::as_str) == Some("UNIT"),
+            "Autopilot controller #{} requires a UNIT registration",
             id.0
         );
     }

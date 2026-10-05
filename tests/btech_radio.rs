@@ -10,7 +10,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
     create_battle_unit(
         &mut world,
         id,
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
@@ -31,7 +31,7 @@ fn radio_hardware_quality_and_chassis_defaults() {
             (5, 11, 140),
         ] {
             let mut definition =
-                MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml"))
+                MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml"))
                     .unwrap();
             definition
                 .attributes
@@ -95,7 +95,7 @@ fn radio_hardware_quality_and_chassis_defaults() {
         }
     }
     let mut definition =
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
     definition.attributes.insert("radio".into(), "6".into());
     assert!(Mech::from_template(definition).is_err());
 }
@@ -242,7 +242,7 @@ async fn relay_fixture() -> (tempfile::TempDir, Config, World, ObjectId, Vec<Obj
         let id = world.create(&config, "Radio unit".into(), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         let mut definition =
-            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
         definition
             .attributes
             .insert("radio".into(), quality.to_string());
@@ -853,24 +853,12 @@ async fn transmission_failure_restores_delivery_dice_mines_and_outbox() {
     assert!(scripts.drain_outbox().is_empty());
 }
 
-/// Existing administrator channels receive radio diagnostics through normal channel membership.
-fn radio_audit_channels(world: &mut World) {
-    for name in ["MechFreqs", "ZeroFrequencies"] {
-        let mut channel = Channel::new(name.into());
-        channel.users.push(stompymux_rs::communication::Membership {
-            who: ObjectId(1),
-            listening: true,
-        });
-        world.channels.insert(name.into(), channel);
-    }
-}
-
+/// Zero-frequency transmissions over an in-character map are logged with their text, only on commit.
 #[tokio::test]
 async fn radio_frequency_audits_match_each_enemy_channel_with_native_lua_parity() {
     let (_dir, config, mut world, _map, units) = relay_fixture().await;
     let source = units[0];
     radio_sender(&mut world, source);
-    radio_audit_channels(&mut world);
     radio_fact(&mut world, units[1], |u| {
         u["signature"]["team"] = 7.into();
         u["radio"][1]["frequency"] = 42.into();
@@ -887,51 +875,34 @@ async fn radio_frequency_audits_match_each_enemy_channel_with_native_lua_parity(
         std::rc::Rc::new(std::cell::RefCell::new(world.clone())),
     )
     .unwrap();
-    let reply = support::run_text(&native, &config, ObjectId(1), 1, "setchannelfreq A=42");
-    assert!(reply.contains("ALERT: Possible abuse"), "{reply}");
+    support::run_text(&native, &config, ObjectId(1), 1, "setchannelfreq A=42");
     lua.eval_callback::<()>(&format!("btech.unit.radio_frequency({},1,0,42)", source.0))
         .unwrap();
     assert_eq!(native.world().btech, lua.world().btech);
     for scripts in [&native, &lua] {
-        let state = scripts.world();
-        let channel = &state.channels["MechFreqs"];
-        assert_eq!(channel.messages, 2);
-        assert_eq!(channel.history.len(), 2);
-        assert!(channel.history.iter().all(|m| {
-            m.message
-                .contains(&format!("matching #{} (Team 7)!", units[1].0))
+        let traces = support::drain_traces(scripts, logging::TraceTopic::RadioFrequencies);
+        assert_eq!(traces.len(), 2);
+        assert!(traces.iter().all(|message| {
+            message.starts_with("ALERT: Possible abuse")
+                && message.contains(&format!("matching #{} (Team 7)!", units[1].0))
         }));
     }
     // Setting the same frequency again still audits; zero never audits matching unset channels.
     assert_eq!(
-        set_radio_frequency_action(&lua, &config, source, ObjectId(1), 0, 42)
+        set_radio_frequency_action(&lua, source, ObjectId(1), 0, 42)
             .unwrap()
             .len(),
         2
     );
     assert!(
-        set_radio_frequency_action(&lua, &config, source, ObjectId(1), 0, 0)
+        set_radio_frequency_action(&lua, source, ObjectId(1), 0, 0)
             .unwrap()
             .is_empty()
     );
-    assert_eq!(lua.world().channels["MechFreqs"].messages, 4);
-    // A later channel overflow restores the setting and the earlier publication in that action.
-    world.channels.get_mut("MechFreqs").unwrap().messages = i64::MAX - 1;
-    radio_fact(&mut world, source, |u| {
-        u["radio"][0]["frequency"] = 9.into()
-    });
-    let failing = Scripts::new(
-        &config,
-        std::rc::Rc::new(std::cell::RefCell::new(world.clone())),
-    )
-    .unwrap();
-    assert!(set_radio_frequency_action(&failing, &config, source, ObjectId(1), 0, 42).is_err());
-    assert_eq!(failing.world().btech, world.btech);
     assert_eq!(
-        serde_json::to_value(&failing.world().channels).unwrap(),
-        serde_json::to_value(&world.channels).unwrap()
+        support::drain_traces(&lua, logging::TraceTopic::RadioFrequencies).len(),
+        2
     );
-    assert!(failing.drain_outbox().is_empty());
 }
 
 #[tokio::test]
@@ -939,7 +910,6 @@ async fn zero_frequency_audits_follow_map_character_flag_and_rollback_with_mines
     let (_dir, config, mut world, map, units) = relay_fixture().await;
     let source = units[0];
     radio_sender(&mut world, source);
-    radio_audit_channels(&mut world);
     world
         .objects
         .get_mut(&map)
@@ -954,26 +924,19 @@ async fn zero_frequency_audits_follow_map_character_flag_and_rollback_with_mines
     let report = send_radio_action(&scripts, &config, source, ObjectId(1), 1, "zero text").unwrap();
     assert_eq!(report.audit_messages.len(), 1);
     assert_eq!(
-        report.audit_messages[0].channel,
-        DiagnosticChannel::ZeroFrequencies
+        report.audit_messages[0].topic,
+        TraceTopic::RadioZeroFrequency
     );
     assert_eq!(
         report.audit_messages[0].text,
         format!(
-            "Player #1 (GOD) in mech #{} (channel B) on map #{} 0-freqs \"zero text\"",
+            "Player #1 (GOD) in unit #{} (channel B) on map #{} 0-freqs \"zero text\"",
             source.0, map.0
         )
     );
-    assert_eq!(scripts.world().channels["ZeroFrequencies"].messages, 1);
-    let saved = scripts.world().clone();
-    persistence::save(&config.database(), &saved).await.unwrap();
     assert_eq!(
-        persistence::load(&config.database())
-            .await
-            .unwrap()
-            .channels["ZeroFrequencies"]
-            .messages,
-        1
+        support::drain_traces(&scripts, TraceTopic::RadioZeroFrequency),
+        [report.audit_messages[0].text.clone()]
     );
     let before = scripts.world().clone();
     scripts.drain_outbox();
@@ -985,10 +948,7 @@ async fn zero_frequency_audits_follow_map_character_flag_and_rollback_with_mines
             ))
             .is_err()
     );
-    assert_eq!(
-        serde_json::to_value(&scripts.world().channels).unwrap(),
-        serde_json::to_value(&before.channels).unwrap()
-    );
+    assert!(support::drain_traces(&scripts, TraceTopic::RadioZeroFrequency).is_empty());
     assert_eq!(scripts.world().btech, before.btech);
     assert!(scripts.drain_outbox().is_empty());
     set_minefield(
@@ -1011,10 +971,7 @@ async fn zero_frequency_audits_follow_map_character_flag_and_rollback_with_mines
     )
     .unwrap();
     assert!(send_radio_action(&scripts, &config, source, ObjectId(1), 1, "mine failure").is_err());
-    assert_eq!(
-        serde_json::to_value(&scripts.world().channels).unwrap(),
-        serde_json::to_value(&world.channels).unwrap()
-    );
+    assert!(support::drain_traces(&scripts, TraceTopic::RadioZeroFrequency).is_empty());
     assert_eq!(scripts.world().btech, world.btech);
     assert!(scripts.drain_outbox().is_empty());
     set_minefield(&mut world, map, 0, None).unwrap();
@@ -1037,7 +994,7 @@ async fn zero_frequency_audits_follow_map_character_flag_and_rollback_with_mines
             .audit_messages
             .is_empty()
     );
-    assert_eq!(scripts.world().channels["ZeroFrequencies"].messages, 0);
+    assert!(support::drain_traces(&scripts, TraceTopic::RadioZeroFrequency).is_empty());
 }
 
 /// A distant connected character receives analog traffic; source control belongs to the other player.
@@ -1204,18 +1161,6 @@ async fn radio_xp_ineligible_reception_consumes_gate_and_publication_rolls_back(
         ooc.btech.constructed_units()[&receiver].radio_experience_remaining(),
         0
     );
-    let mut channel = Channel::new("MechXP".into());
-    channel.messages = i64::MAX;
-    world.channels.insert("MechXP".into(), channel);
-    let scripts = Scripts::new(
-        &config,
-        std::rc::Rc::new(std::cell::RefCell::new(world.clone())),
-    )
-    .unwrap();
-    assert!(send_radio_action(&scripts, &config, units[0], ObjectId(2), 0, "XP failure").is_err());
-    assert_eq!(scripts.world().btech, world.btech);
-    assert!(scripts.drain_outbox().is_empty());
-    world.channels.get_mut("MechXP").unwrap().messages = 0;
     let scripts = Scripts::new(
         &config,
         std::rc::Rc::new(std::cell::RefCell::new(world.clone())),
@@ -1224,7 +1169,10 @@ async fn radio_xp_ineligible_reception_consumes_gate_and_publication_rolls_back(
     let transmission =
         send_radio_action(&scripts, &config, units[0], ObjectId(2), 0, "XP success").unwrap();
     assert_eq!(transmission.experience_messages.len(), 1);
-    assert_eq!(scripts.world().channels["MechXP"].messages, 1);
+    assert_eq!(
+        support::drain_traces(&scripts, logging::TraceTopic::Experience),
+        [transmission.experience_messages[0].text.clone()]
+    );
     assert_eq!(
         scripts.world().btech.constructed_units()[&receiver].radio_experience_remaining(),
         61
@@ -1243,7 +1191,7 @@ async fn radio_xp_ineligible_reception_consumes_gate_and_publication_rolls_back(
             .is_err()
     );
     assert_eq!(scripts.world().btech, world.btech);
-    assert_eq!(scripts.world().channels["MechXP"].messages, 0);
+    assert!(support::drain_traces(&scripts, logging::TraceTopic::Experience).is_empty());
     assert!(scripts.drain_outbox().is_empty());
 }
 
@@ -1636,7 +1584,7 @@ fn radio_type_decodes_capabilities_and_gates_modes() {
         (255, 15, true, true, true, false),
     ] {
         let mut template =
-            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
         template
             .attributes
             .insert("radiotype".into(), configuration.to_string());
@@ -1664,7 +1612,7 @@ fn radio_type_decodes_capabilities_and_gates_modes() {
     }
     for value in ["-1", "256", "invalid"] {
         let mut template =
-            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
         template.attributes.insert("radiotype".into(), value.into());
         assert!(Mech::from_template(template).is_err());
     }

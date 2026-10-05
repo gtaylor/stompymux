@@ -21,7 +21,7 @@ clock_save_interval = 1
 # SQLite database file holding persistent game state.
 game_database = "data/stompymux.db"
 # Directory containing BattleTech unit template files.
-mech_database = "mechs"
+unit_database = "units"
 # Directory containing map template files.
 map_database = "maps"
 # Seconds between automatic database dumps.
@@ -132,7 +132,7 @@ skidcliff = 1
 # Require units to be stalled before non-wizard players can perform serious repairs.
 limitedrepairs = 1
 # Database object that stores destroyed units.
-usedmechstore = 3
+usedunitstore = 3
 # Enable catastrophic explosions after a third engine critical hit.
 stackpole = 1
 # Database object to which players are moved after death.

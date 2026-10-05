@@ -7,7 +7,7 @@ use stompymux_rs::*;
 async fn fixture(flags: &[&str]) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId, usize) {
     fixture_template(
         flags,
-        VehicleTemplate::parse("Marksman", include_str!("../game/mechs/Marksman.toml")).unwrap(),
+        VehicleTemplate::parse("Marksman", include_str!("../game/units/Marksman.toml")).unwrap(),
     )
     .await
 }
@@ -226,7 +226,7 @@ async fn vehicle_artillery_correction_uses_mixed_observers_and_replays_aim() {
                     observer,
                     VehicleTemplate::parse(
                         "Demolisher",
-                        include_str!("../game/mechs/Demolisher.toml"),
+                        include_str!("../game/units/Demolisher.toml"),
                     )
                     .unwrap(),
                 )
@@ -236,7 +236,7 @@ async fn vehicle_artillery_correction_uses_mixed_observers_and_replays_aim() {
                 create_battle_unit(
                     &mut world,
                     observer,
-                    MechTemplate::parse("AS7-D", include_str!("../game/mechs/AS7-D.toml")).unwrap(),
+                    MechTemplate::parse("AS7-D", include_str!("../game/units/AS7-D.toml")).unwrap(),
                 )
                 .unwrap();
                 support::seed_object_dice(&mut world, observer, support::FIXTURE_DICE_SEED);
@@ -337,7 +337,7 @@ async fn vehicle_artillery_explicit_mixed_spotters_share_targets_and_correction_
             create_battle_vehicle(
                 &mut world,
                 observer,
-                VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+                VehicleTemplate::parse("Demolisher", include_str!("../game/units/Demolisher.toml"))
                     .unwrap(),
             )
             .unwrap();
@@ -346,7 +346,7 @@ async fn vehicle_artillery_explicit_mixed_spotters_share_targets_and_correction_
             create_battle_unit(
                 &mut world,
                 observer,
-                MechTemplate::parse("AS7-D", include_str!("../game/mechs/AS7-D.toml")).unwrap(),
+                MechTemplate::parse("AS7-D", include_str!("../game/units/AS7-D.toml")).unwrap(),
             )
             .unwrap();
             support::seed_object_dice(&mut world, observer, support::FIXTURE_DICE_SEED);

@@ -3,8 +3,8 @@ use crate::support;
 use stompymux_rs::WeaponSalvo;
 use stompymux_rs::{MechLoadout, MechSection, MechTemplate, ObjectId, System, Weapon};
 
-const JENNER: &str = include_str!("fixtures/btech/mechs/JR7-D.toml");
-const ATLAS: &str = include_str!("fixtures/btech/mechs/AS7-D.toml");
+const JENNER: &str = include_str!("fixtures/btech/units/JR7-D.toml");
+const ATLAS: &str = include_str!("fixtures/btech/units/AS7-D.toml");
 
 #[test]
 fn jenner_has_five_weapons_and_one_bin_not_one_weapon_per_run() {
@@ -123,8 +123,8 @@ fn unresolved_equipment_modes_counts_and_incomplete_mounts_fail_with_locations()
 #[tokio::test]
 async fn adapters_report_resolved_equipment_and_preserve_callback_guards() {
     let (dir, config, scripts) = support::isolated_scripts().await;
-    std::fs::create_dir_all(dir.path().join("mechs")).unwrap();
-    std::fs::write(dir.path().join("mechs/JR7-D.toml"), JENNER).unwrap();
+    std::fs::create_dir_all(dir.path().join("units")).unwrap();
+    std::fs::write(dir.path().join("units/JR7-D.toml"), JENNER).unwrap();
     let text = support::run_text(&scripts, &config, ObjectId(1), 1, "@btech loadout JR7-D");
     assert!(text.contains("5 weapons, 1 ammunition bins"), "{text}");
     let counts: (usize, usize, String) = scripts.eval_callback("local l=btech.template.loadout('JR7-D'); return #l.weapons,#l.ammunition,l.weapons[1].weapon").unwrap();
@@ -157,7 +157,7 @@ async fn adapters_report_resolved_equipment_and_preserve_callback_guards() {
 #[test]
 fn awesome_and_hunchback_resolve_conventional_energy_loadouts() {
     use stompymux_rs::Mech;
-    let cargo = include_str!("../game/mechs/HBK-4P.toml");
+    let cargo = include_str!("../game/units/HBK-4P.toml");
     for invalid in ["1.5", "-1", "\"invalid\""] {
         let source = cargo.replace("cargo_space = 0", &format!("cargo_space = {invalid}"));
         assert_ne!(source, cargo);
@@ -176,8 +176,8 @@ fn awesome_and_hunchback_resolve_conventional_energy_loadouts() {
         .is_err()
     );
     for (source, ppcs, small, count) in [
-        (include_str!("../game/mechs/AWS-8Q.toml"), 3, 1, 4),
-        (include_str!("../game/mechs/HBK-4P.toml"), 0, 1, 9),
+        (include_str!("../game/units/AWS-8Q.toml"), 3, 1, 4),
+        (include_str!("../game/units/HBK-4P.toml"), 0, 1, 9),
     ] {
         let unit = Mech::from_template(MechTemplate::parse("test", source).unwrap()).unwrap();
         let loadout = unit.loadout().unwrap();
@@ -276,7 +276,7 @@ fn conventional_energy_profiles_and_ranges_match_reference_catalog() {
 #[test]
 fn conventional_autocannon_profiles_bins_and_enforcer_construction() {
     use stompymux_rs::{Mech, RangeBracket};
-    let source = MechTemplate::parse("ENF-4R", include_str!("../game/mechs/ENF-4R.toml")).unwrap();
+    let source = MechTemplate::parse("ENF-4R", include_str!("../game/units/ENF-4R.toml")).unwrap();
     let enforcer = Mech::from_template(source.clone()).unwrap();
     assert_eq!(enforcer.loadout().unwrap().weapons.len(), 3);
     for (weapon, heat, damage, slots, tons, capacity, recycle, minimum, ranges) in [
@@ -404,19 +404,19 @@ fn conventional_missile_profiles_and_game_assets_resolve() {
     }
     for (source, launcher, count, weapons) in [
         (
-            include_str!("../game/mechs/GRF-1N.toml"),
+            include_str!("../game/units/GRF-1N.toml"),
             Weapon::Lrm10,
             1,
             2,
         ),
         (
-            include_str!("../game/mechs/CPLT-C1.toml"),
+            include_str!("../game/units/CPLT-C1.toml"),
             Weapon::Lrm15,
             2,
             6,
         ),
         (
-            include_str!("../game/mechs/TBT-5N.toml"),
+            include_str!("../game/units/TBT-5N.toml"),
             Weapon::Lrm15,
             2,
             5,
@@ -475,7 +475,7 @@ fn machine_gun_and_flamer_profiles_and_firestarter_asset() {
         );
         assert_eq!(weapon.damage_groups(None).unwrap(), vec![2]);
     }
-    let source = include_str!("../game/mechs/FS9-H.toml");
+    let source = include_str!("../game/units/FS9-H.toml");
     let unit = Mech::from_template(MechTemplate::parse("test", source).unwrap()).unwrap();
     let loadout = unit.loadout().unwrap();
     assert_eq!(loadout.weapons.len(), 8);
@@ -559,7 +559,7 @@ async fn locust_machine_guns_and_case_insensitive_arm_flipping_survive_restart()
     create_battle_unit(
         &mut world,
         id,
-        MechTemplate::parse("LCT-1V", include_str!("../game/mechs/LCT-1V.toml")).unwrap(),
+        MechTemplate::parse("LCT-1V", include_str!("../game/units/LCT-1V.toml")).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
@@ -592,7 +592,7 @@ async fn locust_machine_guns_and_case_insensitive_arm_flipping_survive_restart()
 #[test]
 fn flamer_template_heat_flags_initialize_live_modes() {
     use stompymux_rs::{FireMode, Mech};
-    let source = include_str!("../game/mechs/FS9-H.toml")
+    let source = include_str!("../game/units/FS9-H.toml")
         .replace(
             "item = \"IS.Flamer\" }",
             "item = \"IS.Flamer\", modes = [\"Heat\"] }",
@@ -705,8 +705,8 @@ fn advanced_energy_catalog_and_range_boundaries() {
 async fn existing_double_sink_designs_construct() {
     let (_dir, config, mut world) = support::isolated_world().await;
     for source in [
-        include_str!("../game/mechs/BJ-3.toml"),
-        include_str!("../game/mechs/APL-1R.toml"),
+        include_str!("../game/units/BJ-3.toml"),
+        include_str!("../game/units/APL-1R.toml"),
     ] {
         let template = MechTemplate::parse("test", source).unwrap();
         let capacity = template.heat_sinks;
@@ -727,7 +727,7 @@ async fn ferro_fibrous_asset_mass_and_critical_candidates_survive_restart() {
     use stompymux_rs::*;
     let (_dir, config, mut world) = support::isolated_world().await;
     let template =
-        MechTemplate::parse("CRB-28", include_str!("../game/mechs/CRB-28.toml")).unwrap();
+        MechTemplate::parse("CRB-28", include_str!("../game/units/CRB-28.toml")).unwrap();
     assert!(template.attributes["specials"].contains("FerroFibrous_Tech"));
     let id = world.create(&config, "Ferro Crab".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
@@ -770,7 +770,7 @@ async fn ferro_fibrous_asset_mass_and_critical_candidates_survive_restart() {
 async fn existing_arctic_fox_xl_engine_constructs() {
     use stompymux_rs::*;
     let (_dir, config, mut world) = support::isolated_world().await;
-    let template = MechTemplate::parse("AF1", include_str!("../game/mechs/AF1.toml")).unwrap();
+    let template = MechTemplate::parse("AF1", include_str!("../game/units/AF1.toml")).unwrap();
     assert_eq!(
         template.attributes["specials"],
         "XLEngine_Tech EndoSteel_Tech DoubleHS"
@@ -799,7 +799,7 @@ async fn existing_case_hunchback_constructs() {
     use stompymux_rs::*;
     let (_dir, config, mut world) = support::isolated_world().await;
     let template =
-        MechTemplate::parse("HBK-5M", include_str!("../game/mechs/HBK-5M.toml")).unwrap();
+        MechTemplate::parse("HBK-5M", include_str!("../game/units/HBK-5M.toml")).unwrap();
     let id = world.create(&config, "CASE Hunchback".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     create_battle_unit(&mut world, id, template).unwrap();
@@ -858,7 +858,7 @@ async fn streak_catalog_and_existing_blackjack() {
     create_battle_unit(
         &mut world,
         id,
-        MechTemplate::parse("BJ-2", include_str!("../game/mechs/BJ-2.toml")).unwrap(),
+        MechTemplate::parse("BJ-2", include_str!("../game/units/BJ-2.toml")).unwrap(),
     )
     .unwrap();
     assert_eq!(
@@ -949,7 +949,7 @@ async fn mrm_catalog_and_existing_quickdraw() {
     create_battle_unit(
         &mut world,
         id,
-        MechTemplate::parse("QKD-8K", include_str!("../game/mechs/QKD-8K.toml")).unwrap(),
+        MechTemplate::parse("QKD-8K", include_str!("../game/units/QKD-8K.toml")).unwrap(),
     )
     .unwrap();
     assert!(
@@ -1023,7 +1023,7 @@ fn elrm_catalog_and_ranges() {
 #[test]
 fn dead_fire_catalog_bins_and_individual_packets() {
     use stompymux_rs::*;
-    let source = MechTemplate::parse("ENF-4R", include_str!("../game/mechs/ENF-4R.toml")).unwrap();
+    let source = MechTemplate::parse("ENF-4R", include_str!("../game/units/ENF-4R.toml")).unwrap();
     for (weapon, heat, damage, missiles, slots, tons, capacity, recycle, minimum, ranges) in [
         (Weapon::LrDfm5, 2, 2, 5, 1, 2, 24, 15, 4, [6, 12, 18]),
         (Weapon::LrDfm10, 4, 2, 10, 2, 5, 12, 20, 4, [6, 12, 18]),

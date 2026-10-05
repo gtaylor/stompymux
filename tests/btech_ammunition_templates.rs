@@ -5,7 +5,7 @@ use stompymux_rs::*;
 /// A bounded ammunition template with independently supplied quantity and bin flags.
 fn definition(weapon: Weapon, quantity: u16, flags: &[&str]) -> MechTemplate {
     let mut template =
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
     let bin = template
         .sections
         .get_mut(&MechSection::RightTorso)
@@ -86,12 +86,12 @@ fn ammunition_template_normalization_boundaries() {
 #[tokio::test(flavor = "current_thread")]
 async fn ammunition_template_native_lua_creation_and_empty_restart() {
     let (dir, config, mut world) = support::isolated_world().await;
-    std::fs::create_dir_all(dir.path().join("mechs")).unwrap();
-    let source = include_str!("fixtures/btech/mechs/JR7-D.toml").replace(
+    std::fs::create_dir_all(dir.path().join("units")).unwrap();
+    let source = include_str!("fixtures/btech/units/JR7-D.toml").replace(
         "item = \"Ammo_IS.SRM-4\", rounds = 25",
         "item = \"Ammo_IS.SRM-4\", rounds = 7",
     );
-    std::fs::write(dir.path().join("mechs/partial.toml"), &source).unwrap();
+    std::fs::write(dir.path().join("units/partial.toml"), &source).unwrap();
     let id = world.create(&config, "Normalized Jenner".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     let native = Scripts::new(
@@ -149,7 +149,7 @@ async fn ammunition_template_native_lua_creation_and_empty_restart() {
         12
     );
     assert_eq!(
-        std::fs::read_to_string(dir.path().join("mechs/partial.toml")).unwrap(),
+        std::fs::read_to_string(dir.path().join("units/partial.toml")).unwrap(),
         source
     );
 }

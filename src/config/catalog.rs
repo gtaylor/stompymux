@@ -16,8 +16,8 @@ pub const KEYS: &[KeySpec] = &[
         bounds: None,
     },
     KeySpec {
-        path: "database.mech_database",
-        legacy: "mech_database",
+        path: "database.unit_database",
+        legacy: "unit_database",
         kind: "PathBuf",
         bounds: None,
     },
@@ -304,8 +304,8 @@ pub const KEYS: &[KeySpec] = &[
         bounds: Some((-2147483648.0, 2147483647.0)),
     },
     KeySpec {
-        path: "battletech.usedmechstore",
-        legacy: "btech_usedmechstore",
+        path: "battletech.usedunitstore",
+        legacy: "btech_usedunitstore",
         kind: "i64",
         bounds: Some((-2147483648.0, 2147483647.0)),
     },

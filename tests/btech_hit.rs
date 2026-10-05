@@ -6,7 +6,7 @@ use stompymux_rs::{
 /// Build an undamaged conventional biped; owned JSON permits isolated damaged-state fixtures.
 fn unit(armor: u16) -> Mech {
     let unit = Mech::from_template(
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     let mut state = serde_json::to_value(unit).unwrap();

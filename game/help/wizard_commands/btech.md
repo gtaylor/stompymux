@@ -1,7 +1,7 @@
 +++
 title = "@btech"
 description = "Manage BattleTech assets, maps, runtime settings and inventory"
-keywords = ["snipe", "@setmech", "@viewmech", "@setspecial", "@viewspecial", "@ood", "setmapindx", "setxy", "@weight", "@damage", "@damagesection", "@losemit", "setteam", "eventstats", "memstats", "listforms", "savedb", "xptop", "setxplevel", "@viewmap", "fixmap", "@setmap", "addmine", "list", "delobj", "addfire", "addsmoke", "addblock", "loadmap", "savemap", "setmapsize", "clearmechs", "@mapemit", "addhex", "addice", "delice", "setcond", "addstuff", "removestuff", "clearstuff", "@btech", "btech inspection", "setvrt", "setwbv", "cargo-point"]
+keywords = ["snipe", "@setunit", "@viewunit", "@setspecial", "@viewspecial", "@ood", "setmapindx", "setxy", "@weight", "@damage", "@damagesection", "@losemit", "setteam", "eventstats", "memstats", "listforms", "savedb", "xptop", "setxplevel", "@viewmap", "fixmap", "@setmap", "addmine", "list", "delobj", "addfire", "addsmoke", "addblock", "loadmap", "savemap", "setmapsize", "clearunits", "@mapemit", "addhex", "addice", "delice", "setcond", "addstuff", "removestuff", "clearstuff", "@btech", "btech inspection", "setvrt", "setwbv", "cargo-point"]
 article_tags = ["wizard_commands"]
 wizard_only = true
 +++
@@ -39,8 +39,8 @@ configured map directory; `test` reads `test.toml`. `inspect` reports saved map 
 Map files are TOML documents with a terrain grid, a level grid, depth and
 structure-height grids where needed, and an explicit list of bridges; see the
 "Map files" page of the documentation for the format. Any error in a map file
-rejects the whole file; `LOADMAP` also reports the reason to the `MapErrors`
-channel, when that channel exists.
+rejects the whole file; `LOADMAP` also logs the reason at error level to
+`btech::map::load`.
 
 Inspection commands are read-only. All `@btech` operations require Wizard authority.
 No unit or map becomes active as a result of inspection.
@@ -138,10 +138,10 @@ component breakdown in 1/1024-ton units, derived from construction and damage.
 `skill-threshold` reads or changes a runtime XP threshold. Names and short aliases are case-insensitive. Values range from 0 through 2147483647; zero disables earned skill levels. Changes apply when experience is next awarded, and defaults return after a database reload.
 
 
-Radio diagnostics use ordinary administrator channels when those channels exist.
-`MechFreqs` reports positive frequency settings that match a different-team unit on
-the same map. `ZeroFrequencies` records transmissions on frequency zero when the
-battlefield map is in-character. Failed actions leave no partial diagnostic history.
+Positive frequency settings that match a different-team unit on the same map are
+logged at debug level to `btech::radio::frequencies`. Transmissions on frequency
+zero over an in-character battlefield are logged with their text at info level to
+`btech::radio::zero_frequency`. Failed actions leave no partial diagnostics.
 
 
 Mechs and ground vehicles share C3/C3i connections, messages, reports and range
@@ -331,9 +331,9 @@ limits. CargoTech halves its movement penalty; ordinary Mechs carry twice the
 physical stock mass for speed accounting, while ordinary vehicles carry its full
 mass. Towing bonuses do not discount cargo. Removing stock restores the unloaded
 ceiling. Wizard corrections immediately reconcile the unit's speed limits and
-log the actual addition or removal to an existing `MechEconInfo` channel.
-Assigning an unchanged quantity emits no record. Stock, speed changes, channel
-history and notifications roll back together if correction or publication fails.
+log the actual addition or removal at debug level to `btech::economy`.
+Assigning an unchanged quantity emits no record. Stock, speed changes, log records
+and notifications roll back together if correction fails.
 These controls do not install equipment or perform cargo loading.
 Use `manifest`, `stores`, `loadcargo` and `unloadcargo` for cockpit stock handling;
 see `help cargo`.
@@ -366,12 +366,10 @@ load-based movement limits even while empty. Suit capacity and loading another
 unit remain unsupported.
 
 
-Successful cockpit cargo transfers emit two records to an existing
-`MechEconInfo` channel: the unit's stock change, then the hangar's stock change.
-The records use the actual quantity moved. Ordinary channel listeners and
-history settings apply. The commands do not create the channel automatically.
-Transfer failures publish no records; channel publication failures also roll
-back the transfer. Lua cargo transfers use the same transactional behavior.
+Successful cockpit cargo transfers log two debug records to `btech::economy`:
+the unit's stock change, then the hangar's stock change. The records use the
+actual quantity moved. Transfer failures log no records. Lua cargo transfers use
+the same transactional behavior.
 
 
 ## VTOL fuel
@@ -409,8 +407,8 @@ may select at most 20 entries. Removal floors stock at zero; its confirmation an
 economy records retain the capped requested count, even if less stock existed.
 Actuator component balances follow the economy's generic `Actuator` stock rule.
 
-The whole selected batch, resulting unit speed limits, and `MechEconInfo` messages
-commit together. Errors leave no partial batch or diagnostics. Clearing emits
+The whole selected batch, resulting unit speed limits, and `btech::economy` log
+records commit together. Errors leave no partial batch or diagnostics. Clearing emits
 one reset record, including when the inventory was already empty.
 
 
@@ -519,7 +517,7 @@ staged messages are discarded together.
 
 ## Clear tactical map membership
 
-`CLEARMECHS` shuts down every unit on your current map and removes its tactical
+`CLEARUNITS` shuts down every unit on your current map and removes its tactical
 coordinates and contacts. Units and their occupants remain in the map room.
 External tow links are released. Moving shutdown can cause falls and crew injury;
 all changes and messages roll back together if the operation fails. Terrain,
@@ -557,7 +555,7 @@ the map; other wizards shut down and clear units after loading. Shutdown falls
 therefore use the newly loaded terrain and conditions. Units keep their physical
 altitude until movement resolves it. Other map settings, including cloud base,
 remain intact. Invalid assets or crops that exclude placed units fail atomically;
-use `CLEARMECHS` first for such crops. Lua uses `btech.map.load_as(actor, map, name)`.
+use `CLEARUNITS` first for such crops. Lua uses `btech.map.load_as(actor, map, name)`.
 
 ## Restrict landing
 
@@ -599,7 +597,7 @@ records, so a new minefield (including one laid by artillery) is live at once.
 
 ## List map contents
 
-`LIST MECHS` shows supported units in saved battlefield-slot order, including
+`LIST UNITS` shows supported units in saved battlefield-slot order, including
 vehicles and VTOLs. `LIST OBJS` shows owned map objects in type and slot order,
 with coordinates and relevant timer, restoration, destination or restriction
 details. Prefixes such as `LIST M` and `LIST O` are accepted. Listing does not
@@ -734,7 +732,7 @@ Both interfaces require wizard authority and do not change XP or last-use times.
 ## Shut down a selected map
 
 `SHUTDOWN map-number` shuts down and removes all tactical members of the selected
-map. It requires wizard authority and uses the same action as `CLEARMECHS` and
+map. It requires wizard authority and uses the same action as `CLEARUNITS` and
 Lua `btech.map.clear_units(actor, map)`, including shutdown consequences, towing
 cleanup and transactional rollback. Supply the numeric database ID without `#`.
 Trailing arguments are ignored. Units retain their world-container locations.
@@ -895,21 +893,21 @@ restores the whole airborne tick, including earlier arrivals and their output.
 
 ## Named fields
 
-`@viewmech [1|4][prefix]` displays fields of your occupied unit. The default is two
+`@viewunit [1|4][prefix]` displays fields of your occupied unit. The default is two
 columns; `1` or `4` selects another layout, and the prefix filters names without
 regard to case. `n/a` means that field has no available projection.
 
-`status`, `critstatus` and `mechtype` are inspectable fields whose direct writes
+`status`, `critstatus` and `unittype` are inspectable fields whose direct writes
 are not supported. Use the implemented gameplay and administrative controls for
 their supported transitions; writing these fields reports an error without
 changing the unit.
 
-`@setmech team <integer>` changes the unit's team and clears stale command-network
-membership. This named field accepts a signed 32-bit team value. `@setmech xpmod
+`@setunit team <integer>` changes the unit's team and clears stale command-network
+membership. This named field accepts a signed 32-bit team value. `@setunit xpmod
 <number>` changes its finite, nonnegative shooting-XP multiplier. Successful edits
-are silent and preserve other settings. `@setmech fuel <amount>` sets VTOL fuel
+are silent and preserve other settings. `@setunit fuel <amount>` sets VTOL fuel
 within its current tank capacity and updates carried mass through the shared fuel
-service. `@setmech mechname <name>` and `@setmech mechref <reference>` change
+service. `@setunit unitname <name>` and `@setunit unitref <reference>` change
 the saved unit identity, preserving combat state. Each accepts 1 to 128 bytes.
 `tacrange`, `lrsrange`, and `scanrange` accept 0 to 127 hexes; `radiorange`
 accepts 0 to 32767; `radiotype` accepts the hardware bit mask from 0 to 255.
@@ -929,7 +927,7 @@ Lua `btech.unit.fields(actor, unit, arguments)` returns the detached report and
 publishes it. `btech.unit.set_field(actor, unit, field, value)` uses the same named
 edits. Errors preserve state and previously staged output.
 
-`@setmech targcomp <mode>` selects normal (0), short-range bias (1), long-range
+`@setunit targcomp <mode>` selects normal (0), short-range bias (1), long-range
 bias (2), multiple-target tracking (3), or anti-air tracking (4). Range biases
 trade a one-point benefit for a one-point penalty across the medium-range
 boundary. Multiple-target tracking removes settling delay on the selected unit
@@ -944,7 +942,7 @@ excess heat. `disabled_hs` reports intentionally disabled cooling; `heatsinks`
 reports surviving physical cooling capacity. Ground vehicles and VTOLs do not
 accumulate thermal samples and report zero for the heat fields.
 
-Mechs also accept `@setmech heat <number>`, `dissheat <number>`,
+Mechs also accept `@setunit heat <number>`, `dissheat <number>`,
 and `overheat <number>`. Heat and dissipation edits change
 the last reported sample; they do not add stored weapon heat. Excess heat must
 be nonnegative and immediately affects heat penalties. `disabled_hs` is read-only;
@@ -964,7 +962,7 @@ while normal movement continues to use hex distances. Units that have never
 jumped report zero. Turning during flight does not rewrite the launch bearing.
 
 `unit_era` and `unit_tro` inspect saved template metadata. Missing values display
-`Undefined`. `@setmech unit_era <text>` and `@setmech unit_tro <text>` update them
+`Undefined`. `@setunit unit_era <text>` and `@setunit unit_tro <text>` update them
 without rebuilding the unit; each accepts at most 24 bytes. Lua named edits
 also accept an empty string, which remains empty after restart.
 
@@ -972,28 +970,28 @@ also accept an empty string, which remains empty after restart.
 identity is unknown. Friendly contacts do not count. The field reads saved
 observations without triggering a scan or consuming random state.
 
-`@setmech turret0 <dbref>`, `turret1`, and `turret2` add explicit cockpit-notice
+`@setunit turret0 <dbref>`, `turret1`, and `turret2` add explicit cockpit-notice
 destinations. Their initial value is -1. Positive references to available rooms
 or things receive the unit's cockpit notices. Private player reports remain
 private. Duplicate and self-links do not add copies, and relaying is nonrecursive.
 Unresolved references remain saved and inspectable; assigning a destination does
 not grant control of weapons.
 
-`@setmech displayname Silver Fox` sets the unit's presentation name, independently
-of `mechname` and `mechref`. Status and identified contacts use the override;
+`@setunit displayname Silver Fox` sets the unit's presentation name, independently
+of `unitname` and `unitref`. Status and identified contacts use the override;
 unidentified contacts retain their concealed name. Names can contain up to 120
 bytes and survive database reload. `btech.unit.set_display_name(actor, unit, "")`
 clears the override, restoring the template-name fallback. The Lua getter and
-`@viewmech displayname` report the configured override, empty when unset.
+`@viewunit displayname` report the configured override, empty when unset.
 
 `last_startup` reports the Unix time of the most recent completed startup, initially
-zero. Beginning or aborting a startup does not change it. `@setmech last_startup
+zero. Beginning or aborting a startup does not change it. `@setunit last_startup
 <timestamp>` permits a signed integer history edit without changing engine power;
 the next successful startup replaces that value. Lua named-field edits use the
 same validation and transaction boundary.
 
-Ground vehicles and VTOLs also support `mechprefs SLWarn ON` and
-`mechprefs AutoconShutdown ON`. SLWarn announces changes in external illumination;
+Ground vehicles and VTOLs also support `unitprefs SLWarn ON` and
+`unitprefs AutoconShutdown ON`. SLWarn announces changes in external illumination;
 AutoconShutdown includes shutdown targets in routine contact notices. Both default
 to OFF and persist with the unit. These settings do not change sensor acquisition,
 contact-list filtering or loss-of-lock warnings. The corresponding Lua unit
@@ -1005,15 +1003,15 @@ and terrain; status shows lamp damage and switch timing. Shutdown cuts lamp powe
 Front hits can destroy ground-vehicle lamps, canceling pending switching; VTOL
 lamps do not use that ground-only hit rule.
 
-Vehicles and VTOLs support `mechprefs ArmorWarn` and `mechprefs AmmoWarn`, both ON
+Vehicles and VTOLs support `unitprefs ArmorWarn` and `unitprefs AmmoWarn`, both ON
 by default. ArmorWarn reports transitions to low, critical and breached armor;
 AmmoWarn reports low supply when firing, using all installed bins for that weapon.
 Turning either OFF suppresses its notices without changing damage, ammunition use
 or sensor contacts. Existing Lua warning setters support the same chassis and
 cockpit checks, and preferences survive reload.
 
-`@viewmech MechPrefs` projects the unit's saved gameplay preferences as letter
-bits. `@setmech MechPrefs <bits>` replaces the supported settings; decimal masks
+`@viewunit UnitPrefs` projects the unit's saved gameplay preferences as letter
+bits. `@setunit UnitPrefs <bits>` replaces the supported settings; decimal masks
 are also accepted. Use `0` to clear them. Letters `b`, `c`, `d`, `e`, `g`, and `h`
 mean searchlight warnings, automatic cliff falls, disabled armor warnings,
 disabled ammunition warnings, shutdown-contact notices, and friendly-fire safety.
@@ -1023,8 +1021,8 @@ For example, `bcdegh!b!g` sets
 Bits for unimplemented settings are rejected atomically. This field edits the
 same values as cockpit preferences; it does not maintain an independent mask.
 
-`mechprefs BTHDebug [ON|OFF]` and `btech.unit.bth_debug(unit, pilot, enabled)`
-control the retained debug preference. `MechPrefs` bit `j` exposes the same value;
+`unitprefs BTHDebug [ON|OFF]` and `btech.unit.bth_debug(unit, pilot, enabled)`
+control the retained debug preference. `UnitPrefs` bit `j` exposes the same value;
 bit `f` retains StandAnyway. Both survive reload. These flags currently have no
 combat or standing effects in the reference, and Rust preserves that behavior.
 Toggling BTHDebug leaves StandAnyway and other preferences unchanged.
@@ -1038,11 +1036,11 @@ stops at blocking terrain or the map edge; it does not anticipate new orders,
 future damage, vertical movement, or map transfers. Each weapon still needs its
 usual ammunition and readiness. Queued artillery survives a server restart.
 
-`@viewmech bv` reports current Battle Value to two decimal places. It uses live
+`@viewunit bv` reports current Battle Value to two decimal places. It uses live
 armor, equipment, load and configured weapon values. The field is read-only;
 `setwbv` changes the weapon values used by the calculation.
 
-`@viewmech mechdamage` reads a compact damage report: `A:section/loss` for armor,
+`@viewunit unitdamage` reads a compact damage report: `A:section/loss` for armor,
 `A(R):section/loss` for rear armor, `I:section/loss` for internal structure,
 `C:section/slot` for destroyed equipment, `R:section/slot(rounds)` for ammunition
 spent, and `G:section/slot(code)` for temporary weapon failures. Records are
@@ -1050,13 +1048,13 @@ comma-separated; an empty value means no represented losses. Section and slot
 numbers start at zero. This field also appears in `btech.unit.fields`.
 It is read-only and does not represent every combat condition.
 
-`@setmech basewalkspeed <integer>` and `@setmech baserunspeed <integer>` store
+`@setunit basewalkspeed <integer>` and `@setunit baserunspeed <integer>` store
 reserved administrative values. Both start at zero, accept signed 32-bit integers,
 and survive restart. They do not change a unit's movement limits or throttle.
-Inspect them with `@viewmech base`; Lua uses the same unit field accessors.
+Inspect them with `@viewunit base`; Lua uses the same unit field accessors.
 
-`@viewmech hsengoverride` reads the template's engine heat-sink allocation override.
-`@setmech hsengoverride <integer>` stores a signed 32-bit override, shared with Lua
+`@viewunit hsengoverride` reads the template's engine heat-sink allocation override.
+`@setunit hsengoverride <integer>` stores a signed 32-bit override, shared with Lua
 unit field access. It defaults to zero and survives restart. Updating it does not
 recalculate current cooling or repair damaged heat sinks.
 
@@ -1066,32 +1064,32 @@ Positive twenty-point levels add to controlled-drop piloting rolls and produce
 the `STAGGERING` status banner. `unusablearcs` remains a read-only zero; it does
 not report a weapon's current firing eligibility. Normal combat checks apply.
 
-`@viewmech tankcritstatus` reports vehicle critical conditions as letters:
+`@viewunit tankcritstatus` reports vehicle critical conditions as letters:
 `a` turret locked, `b` turret jammed, `c` dug in, `d` digging, `e` crew stunned,
-and `f` tail rotor destroyed. `@viewmech critstatus2` reports `a` for a damaged
+and `f` tail rotor destroyed. `@viewunit critstatus2` reports `a` for a damaged
 hardened gyro and `b` for an unavailable installed light probe. A dash means none
 of those conditions apply. Lua unit fields expose the same values.
 
-`@viewmech status2` reads secondary status letters: `a/b` Guardian ECM/ECCM,
+`@viewunit status2` reads secondary status letters: `a/b` Guardian ECM/ECCM,
 `c/d/e` observed disturbance/protection/countering, `f` searchlight on,
 `g/h` stealth/null signature, `i/j` Angel ECM/ECCM, `k/l` Angel
 protection/disturbance, `o` automatic turret, `w` fortified, `x` weapons held,
 and `y` gunnery experience suppressed. Electronic observations are the last
 committed values; inspecting them does not run a new electronic-warfare check.
-Lua unit fields expose the same value. `@setmech status2 <letters>` edits these
+Lua unit fields expose the same value. `@setunit status2 <letters>` edits these
 settings atomically; use `-` to clear them. Equipment and chassis constraints
 still apply, and each ECM suite can select only one mode. Observation edits last
 until the next field refresh and do not create an ECM emitter. Pending switch
 timers retain their normal behavior.
 
-`@viewmech status` reports main lifecycle flags from current unit state, including
+`@viewunit status` reports main lifecycle flags from current unit state, including
 power, destruction, posture, facing, targeting purpose, safety, boosters and map
 conditions. It uses the same letter format as `status2`; Lua unit fields expose
 the same inspection-only value. The observer-dependent partial-cover bit `e`
 stays clear: inspect sight results for cover against a particular target.
 Reading unit status does not run or change a line-of-sight observation.
 
-`@viewmech critstatus` reports equipment failures and critical conditions:
+`@viewunit critstatus` reports equipment failures and critical conditions:
 `a/e` destroyed/damaged gyro, `b` damaged sensors, `c` TAG, `d` hidden,
 `f/r` damaged/both destroyed biped hips, `g` life support, `h` Angel ECM,
 `i` C3i, `j` null signature hardware, `k` destroyed searchlight,
@@ -1102,66 +1100,66 @@ Reading unit status does not run or change a line-of-sight observation.
 unavailable hardware, not equipment absence. Cache and per-update bookkeeping
 bits remain clear. This field currently supports inspection only.
 
-`@setmech pilotnum <player number>` assigns a live, conscious player who is
+`@setunit pilotnum <player number>` assigns a live, conscious player who is
 physically inside the unit. It can replace the current pilot; `-1` clears the
 assignment. Invalid replacements leave the existing pilot assigned.
-`@setmech target <unit number>` selects another placed unit on the same map,
+`@setunit target <unit number>` selects another placed unit on the same map,
 restarts sensor settling and clears artillery adjustment. This administrative
 selection does not require an acquired contact; ordinary firing checks still
 apply. `-1` clears all targeting modes. Both fields use the same operations through
 Lua unit field access and participate in callback rollback.
 
-`@setmech cargospace <capacity>` updates the cargo installation on a Mech, ground
+`@setunit cargospace <capacity>` updates the cargo installation on a Mech, ground
 vehicle or VTOL. Capacity must be a nonnegative 32-bit integer whose installation
 mass fits the unit mass representation. Mass and movement limits update
 immediately. Existing loose stock remains aboard when capacity is reduced. Lua
 unit-field edits use the same operation.
 
-`@setmech fuel_orig <capacity>` changes a VTOL's original fuel capacity. Use a
+`@setunit fuel_orig <capacity>` changes a VTOL's original fuel capacity. Use a
 nonnegative signed 32-bit integer. Current fuel is retained, so reducing capacity
 can increase excess-fuel load. Increasing capacity does not refuel an exhausted
 aircraft. Lua unit-field edits use the same operation.
 
-`@setmech speed <kph>` and `@setmech heading <degrees>` edit actual motion on
+`@setunit speed <kph>` and `@setunit heading <degrees>` edit actual motion on
 a placed unit, preserving its requested speed and heading. Use finite speeds
 and integer compass headings from 0 through 359. The resulting motion must
 satisfy the unit's speed, power and mobility constraints; invalid edits leave
 state unchanged. Lua unit-field edits use the same operation.
 
-`@setmech x <column>`, `@setmech y <row>` and `@setmech z <height>` use
+`@setunit x <column>`, `@setunit y <row>` and `@setunit z <height>` use
 scenario positioning on the current map. They retain the other integer
 coordinates, recenter continuous XY within the hex, and use integer elevation.
 Requested controls are retained, and attached tow pairs move together. Values
 must fit a signed 16-bit integer; horizontal coordinates must be on the map.
 Lua unit-field edits share the same positioning operation.
 
-`@setmech fx <value>`, `@setmech fy <value>` and `@setmech fz <value>` edit
+`@setunit fx <value>`, `@setunit fy <value>` and `@setunit fz <value>` edit
 precise position using 322.5 units per horizontal map unit and 64.5 units per
 elevation level. The other axes retain their fractional values; the containing
 hex updates automatically. Values must be finite and remain on the map, with
 altitude between -32768 and 32767 levels. Fractional orbital-drop altitude is
 rejected. Tow pairs move together. Lua uses the same operation.
 
-`@setmech templatesp <speed>` changes the template speed used to distinguish
+`@setunit templatesp <speed>` changes the template speed used to distinguish
 walking from running when calculating firing penalties. It accepts finite,
 nonnegative values and does not change live mobility, actual speed or throttle.
 The value survives restart. Lua unit-field edits use the same operation.
 
-`@setmech maxspeed <speed>` edits live maximum speed without changing
+`@setunit maxspeed <speed>` edits live maximum speed without changing
 construction mass or the template firing baseline. Use a finite nonnegative
 value consistent with the unit's material condition and current controls.
 Actuator recalculation replaces a Mech's live correction using template speed;
 vehicle motive hits reduce the live value. Edits survive restart, and Lua uses
 the same operation.
 
-`@setmech maxjumpspeed <speed>` edits available jump thrust at standard
+`@setunit maxjumpspeed <speed>` edits available jump thrust at standard
 gravity without changing installed equipment or construction mass. Existing
 jet damage remains; later losses reduce thrust. Mech jump limits and orbital
 compensation share this value. Use a finite nonnegative speed; destroyed units
 cannot receive positive thrust. Values that exceed the flight model at low
 gravity are rejected. Lua uses the same operation.
 
-`@setmech pilotdam <0–6>` edits tactical crew injuries. Nonfatal edits retain
+`@setunit pilotdam <0–6>` edits tactical crew injuries. Nonfatal edits retain
 consciousness and pending recovery timing without rolling dice. Six injuries
 apply ordinary fatal crew cleanup. This cannot revive a destroyed unit or edit
 an assigned in-character pilot's RPG health. Lua uses the same operation.
@@ -1170,7 +1168,7 @@ an assigned in-character pilot's RPG health. Lua uses the same operation.
 observations and teams; it cannot be changed independently of contacts.
 
 
-`@setmech realweight <integer>` sets current gameplay mass in 1/1024-ton units
+`@setunit realweight <integer>` sets current gameplay mass in 1/1024-ton units
 (0 through 2,147,483,647). The correction affects movement load, towing and
 mass-dependent combat, and survives restart. Protection damage or ammunition use
 and loss discard it; mass then follows surviving construction again. Component
@@ -1178,14 +1176,14 @@ weight reports continue to show physical material. Lua unit field access uses
 the same edit and validation.
 
 
-`@setmech tons <integer>` changes nominal tonnage while retaining equipment,
+`@setunit tons <integer>` changes nominal tonnage while retaining equipment,
 protection, damage and crew. Construction mass and movement load are recalculated;
 a separate `realweight` correction is retained. Tonnage must be positive and fit
 the supported construction rules (Mechs: 20–100 in increments of five). Invalid
 edits leave the unit unchanged. Native and Lua edits survive restart.
 
 
-`@setmech critstatus2 <letters>` edits hardened-gyro protection (`a`) and
+`@setunit critstatus2 <letters>` edits hardened-gyro protection (`a`) and
 light-probe failure (`b`); `-` clears both. Gyro edits retain existing impairment
 and change whether the next hit consumes the extra protection. Probe edits
 change operation without replacing damaged slots; a fresh critical disables the
@@ -1193,7 +1191,7 @@ probe again. Restoring operation requires installed hardware in usable sections.
 Edits retain material, survive restart, and share validation with Lua unit fields.
 
 
-`@setmech tankcritstatus <letters>` edits vehicle conditions: `a` turret locked,
+`@setunit tankcritstatus <letters>` edits vehicle conditions: `a` turret locked,
 `b` turret jammed, `c` dug in, `d` digging, `e` crew stunned, and `f` tail rotor
 destroyed. `-` clears them. Flags retain material, turret heading and pending
 completion/recovery events. Setting digging or stun without a timer leaves that
@@ -1202,14 +1200,14 @@ Cover and digging can coexist, as can turret lock and jam. Chassis and hardware
 constraints still apply. Native and Lua edits share rollback and persistence.
 
 
-`@setmech mechmovetype <name>` changes locomotion while retaining equipment,
+`@setunit unitmovetype <name>` changes locomotion while retaining equipment,
 damage and crew. Mechs accept Biped or Quad; ground vehicles accept Track, Wheel,
 Hover or None; VTOLs accept VTOL or None. Names ignore case. Equipment must fit
 the new anatomy and current live state must remain valid. Invalid edits leave
 the world unchanged. Native and Lua edits share validation and persistence.
 
 
-`@setmech jumpheading <0–359>` and `@setmech jumplength <integer>` edit a Mech's
+`@setunit jumpheading <0–359>` and `@setunit jumplength <integer>` edit a Mech's
 course. Length uses 322.5 units per hex and accepts signed 16-bit integers. During
 a jump, edits redirect the remaining route without moving the current position
 or resetting progress. Length means total distance, including distance already

@@ -17,19 +17,19 @@ fn comments_are_ignored_and_do_not_relax_unit_fields() {
     for (reference, source, section, mech) in [
         (
             "JR7-D",
-            include_str!("../game/mechs/JR7-D.toml"),
+            include_str!("../game/units/JR7-D.toml"),
             "left_arm",
             true,
         ),
         (
             "Demolisher",
-            include_str!("../game/mechs/Demolisher.toml"),
+            include_str!("../game/units/Demolisher.toml"),
             "turret",
             false,
         ),
         (
             "Kestrel",
-            include_str!("../game/mechs/Kestrel.toml"),
+            include_str!("../game/units/Kestrel.toml"),
             "rotor",
             false,
         ),
@@ -69,19 +69,19 @@ fn comments_are_ignored_and_do_not_relax_unit_fields() {
 #[tokio::test]
 async fn asset_comments_are_not_exposed_through_native_or_lua_inspection() {
     let (dir, config, scripts) = support::isolated_scripts().await;
-    std::fs::create_dir_all(dir.path().join("mechs")).unwrap();
+    std::fs::create_dir_all(dir.path().join("units")).unwrap();
     let source = commented(
-        include_str!("../game/mechs/Grendel-Prime.toml"),
+        include_str!("../game/units/Grendel-Prime.toml"),
         "left_torso",
     );
-    std::fs::write(dir.path().join("mechs/Grendel-Prime.toml"), &source).unwrap();
+    std::fs::write(dir.path().join("units/Grendel-Prime.toml"), &source).unwrap();
     let expected = MechTemplate::parse("Grendel-Prime", &source).unwrap();
     assert!(!expected.attributes.contains_key("comment"));
     assert_eq!(
         expected,
         MechTemplate::parse(
             "Grendel-Prime",
-            include_str!("../game/mechs/Grendel-Prime.toml")
+            include_str!("../game/units/Grendel-Prime.toml")
         )
         .unwrap()
     );

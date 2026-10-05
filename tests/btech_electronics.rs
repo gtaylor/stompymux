@@ -4,7 +4,7 @@ use stompymux_rs::*;
 /// Install electronic slots in otherwise empty torso positions.
 fn installed(name: &str, slots: u8, clan: bool) -> Mech {
     let mut template =
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
     if clan {
         template.attributes.insert("specials".into(), "Clan".into());
         template.heat_sinks = 20;

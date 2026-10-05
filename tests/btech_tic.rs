@@ -6,9 +6,9 @@ use stompymux_rs::*;
 #[tokio::test]
 async fn tic_membership_native_lua_and_persistence() {
     for source in [
-        include_str!("../game/mechs/JR7-D.toml"),
-        include_str!("../game/mechs/Demolisher.toml"),
-        include_str!("../game/mechs/Kestrel.toml"),
+        include_str!("../game/units/JR7-D.toml"),
+        include_str!("../game/units/Demolisher.toml"),
+        include_str!("../game/units/Kestrel.toml"),
     ] {
         let (_dir, config, mut world) = support::isolated_world().await;
         let id = world.create(&config, "TIC unit".into(), Kind::Thing);
@@ -112,17 +112,17 @@ async fn tic_membership_native_lua_and_persistence() {
 /// Groups behave like ordered ordinary shots across chassis, including rejection and callback abort.
 #[tokio::test]
 async fn tic_firing_reuses_shots_and_rolls_back_callbacks() {
-    let tracked = include_str!("../game/mechs/Demolisher.toml");
+    let tracked = include_str!("../game/units/Demolisher.toml");
     let wheeled = tracked.replace("movement = \"track\"", "movement = \"wheel\"");
     let hover = tracked.replace("movement = \"track\"", "movement = \"hover\"");
     let stationary = tracked
         .replace("movement = \"track\"", "movement = \"none\"")
         .replace("walk_mp = 5", "walk_mp = 0");
     for (source, vehicle) in [
-        (include_str!("../game/mechs/JR7-D.toml"), false),
-        (include_str!("../game/mechs/GOL-1H.toml"), false),
-        (include_str!("../game/mechs/Demolisher.toml"), true),
-        (include_str!("../game/mechs/Kestrel.toml"), true),
+        (include_str!("../game/units/JR7-D.toml"), false),
+        (include_str!("../game/units/GOL-1H.toml"), false),
+        (include_str!("../game/units/Demolisher.toml"), true),
+        (include_str!("../game/units/Kestrel.toml"), true),
         (wheeled.as_str(), true),
         (hover.as_str(), true),
         (stationary.as_str(), true),
@@ -162,7 +162,7 @@ async fn tic_firing_reuses_shots_and_rolls_back_callbacks() {
         create_battle_unit(
             &mut world,
             target,
-            MechTemplate::parse("JR7-D", include_str!("../game/mechs/JR7-D.toml")).unwrap(),
+            MechTemplate::parse("JR7-D", include_str!("../game/units/JR7-D.toml")).unwrap(),
         )
         .unwrap();
         support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);

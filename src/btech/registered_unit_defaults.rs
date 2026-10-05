@@ -20,7 +20,7 @@ pub fn registered_unit_default_template(world: &World, id: ObjectId) -> Option<M
     let object = world.objects.get(&id)?;
     if object.kind != Kind::Thing
         || object.flags.contains(Flag::Going)
-        || world.btech.registrations().get(&id).map(String::as_str) != Some("MECH")
+        || world.btech.registrations().get(&id).map(String::as_str) != Some("UNIT")
         || world.btech.constructed.contains_key(&id)
         || world.btech.vehicles.contains_key(&id)
     {

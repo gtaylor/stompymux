@@ -7,11 +7,11 @@
 -- that variant is blocked on the load_template owner.
 --
 -- PARITY_SETUP: @create Parity Surface Mech
--- PARITY_SETUP: @btech/register Parity Surface Mech=MECH
+-- PARITY_SETUP: @btech/register Parity Surface Mech=UNIT
 -- PARITY_SETUP: @create Parity Surface Ground
--- PARITY_SETUP: @btech/register Parity Surface Ground=MECH
+-- PARITY_SETUP: @btech/register Parity Surface Ground=UNIT
 -- PARITY_SETUP: @create Parity Surface VTOL
--- PARITY_SETUP: @btech/register Parity Surface VTOL=MECH
+-- PARITY_SETUP: @btech/register Parity Surface VTOL=UNIT
 
 local function quote(value)
   return '"' .. value:gsub('[%z\1-\31\\"]', function(byte)

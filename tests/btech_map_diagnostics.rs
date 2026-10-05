@@ -1,9 +1,9 @@
-//! Map files load whole or not at all, and rejected loads report why on the MapErrors channel.
+//! Map files load whole or not at all, and rejected loads log why as a map-load error.
 use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 
-/// A map-error listener, a blank 2x2 map unless `create`, and a valid 2x2 map file.
+/// A connected operator, a blank 2x2 map unless `create`, and a valid 2x2 map file.
 async fn fixture(create: bool) -> (tempfile::TempDir, Config, World, ObjectId) {
     let (dir, config, mut world) = support::isolated_world().await;
     let map = world.create(&config, "Terrain diagnostics".into(), Kind::Room);
@@ -24,12 +24,6 @@ async fn fixture(create: bool) -> (tempfile::TempDir, Config, World, ObjectId) {
         .unwrap()
         .flags
         .insert(Flag::Connected);
-    let mut channel = Channel::new("MapErrors".into());
-    channel.users.push(communication::Membership {
-        who: ObjectId(1),
-        listening: true,
-    });
-    world.channels.insert(channel.name.clone(), channel);
     support::write_map(
         &config.path(&config.database.map_database),
         "field.map",
@@ -95,7 +89,9 @@ async fn native_and_lua_map_activation_agree_and_inherit_unnamed_flags() {
                 assert_eq!((field.flags, field.gravity, field.temperature), expected);
                 assert_eq!(field.hex(1, 0).unwrap(), Hex::new(Terrain::Fire, 2));
                 assert_eq!(field.hex(1, 1).unwrap(), Hex::new(Terrain::Grassland, 4));
-                assert_eq!(state.channels["MapErrors"].messages, 0);
+            }
+            for scripts in [&native, &lua] {
+                assert!(support::drain_traces(scripts, TraceTopic::MapLoad).is_empty());
             }
             let saved = lua.world().clone();
             persistence::save(&config.database(), &saved).await.unwrap();
@@ -107,29 +103,9 @@ async fn native_and_lua_map_activation_agree_and_inherit_unnamed_flags() {
     }
 }
 
-/// Loading works without a MapErrors channel; an invalid file is still rejected whole.
+/// Rejected loads log their reason without changing terrain or escaping callback rollback.
 #[tokio::test]
-async fn invalid_files_are_rejected_without_a_diagnostic_channel() {
-    let (_dir, config, mut world, map) = fixture(false).await;
-    world.channels.clear();
-    let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-    load_battle_map_action(&scripts, &config, ObjectId(1), map, "field.map").unwrap();
-    let before = scripts.world().btech.clone();
-    std::fs::write(
-        config
-            .path(&config.database.map_database)
-            .join("bad.map.toml"),
-        "terrain = '''\n!.\n..\n'''\nlevel = '''\n10\n00\n'''\n",
-    )
-    .unwrap();
-    assert!(load_battle_map_action(&scripts, &config, ObjectId(1), map, "bad.map").is_err());
-    assert_eq!(scripts.world().btech, before);
-    assert!(scripts.world().channels.is_empty());
-}
-
-/// Rejected loads publish their reason without changing terrain or escaping callback rollback.
-#[tokio::test]
-async fn failed_load_diagnostics_commit_only_with_the_enclosing_callback() {
+async fn failed_load_errors_commit_only_with_the_enclosing_callback() {
     for (name, source, diagnostic) in [
         (
             "ragged.map",
@@ -165,28 +141,16 @@ async fn failed_load_diagnostics_commit_only_with_the_enclosing_callback() {
         );
         for scripts in [&native, &lua] {
             assert_eq!(scripts.world().btech, world.btech);
-            let state = scripts.world();
-            let channel = &state.channels["MapErrors"];
-            assert_eq!(channel.messages, i64::from(diagnostic.is_some()));
-            assert_eq!(channel.history.len(), usize::from(diagnostic.is_some()));
+            let errors = support::drain_traces(scripts, TraceTopic::MapLoad);
+            assert_eq!(errors.len(), usize::from(diagnostic.is_some()));
             if let Some(diagnostic) = diagnostic {
                 assert!(
-                    channel.history[0]
-                        .message
-                        .contains(&format!("Map #{}: {diagnostic}", map.0)),
+                    errors[0].starts_with(&format!("Map #{}: {diagnostic}", map.0)),
                     "{}",
-                    channel.history[0].message
+                    errors[0]
                 );
             }
         }
-        let saved = lua.world().clone();
-        persistence::save(&config.database(), &saved).await.unwrap();
-        let restored = persistence::load(&config.database()).await.unwrap();
-        assert_eq!(restored.btech, saved.btech);
-        assert_eq!(
-            serde_json::to_value(&restored.channels).unwrap(),
-            serde_json::to_value(&saved.channels).unwrap()
-        );
         let aborted = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
         assert!(
             aborted
@@ -194,33 +158,7 @@ async fn failed_load_diagnostics_commit_only_with_the_enclosing_callback() {
                 .is_err()
         );
         assert_eq!(aborted.world().btech, world.btech);
-        assert_eq!(
-            serde_json::to_value(&aborted.world().channels).unwrap(),
-            serde_json::to_value(&world.channels).unwrap()
-        );
+        assert!(support::drain_traces(&aborted, TraceTopic::MapLoad).is_empty());
         assert!(aborted.drain_outbox().is_empty());
-        if diagnostic.is_some() {
-            let mut limited = world.clone();
-            limited.channels.get_mut("MapErrors").unwrap().messages = i64::MAX;
-            let scripts = Scripts::new(&config, Rc::new(RefCell::new(limited.clone()))).unwrap();
-            support::run_text(
-                &scripts,
-                &config,
-                ObjectId(1),
-                1,
-                &format!("loadmap {name}"),
-            );
-            assert!(
-                !scripts
-                    .eval_callback::<bool>(&format!("return pcall(function() {call} end)"))
-                    .unwrap()
-            );
-            assert_eq!(scripts.world().btech, limited.btech);
-            assert_eq!(
-                serde_json::to_value(&scripts.world().channels).unwrap(),
-                serde_json::to_value(&limited.channels).unwrap()
-            );
-            assert!(scripts.drain_outbox().is_empty());
-        }
     }
 }

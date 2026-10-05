@@ -7,8 +7,8 @@ use support::{copy, isolated_scripts};
 async fn player_preferences_and_loadout_are_atomic_and_resettable() {
     let (directory, config, s) = isolated_scripts().await;
     copy(
-        &support::repository_root().join("tests/fixtures/btech/mechs"),
-        &directory.path().join("mechs"),
+        &support::repository_root().join("tests/fixtures/btech/units"),
+        &directory.path().join("units"),
     );
     s.eval_callback::<()>(r#"
  local p=mux.world.object(1);local d=btech.player.ui_preferences(p);assert(not d.configured and d.tactical_width==21,'defaults')
@@ -71,11 +71,11 @@ async fn player_preferences_and_loadout_are_atomic_and_resettable() {
 async fn player_configuration_errors_match_the_c_argument_shapes() {
     let (directory, _config, s) = isolated_scripts().await;
     copy(
-        &support::repository_root().join("tests/fixtures/btech/mechs"),
-        &directory.path().join("mechs"),
+        &support::repository_root().join("tests/fixtures/btech/units"),
+        &directory.path().join("units"),
     );
     std::fs::write(
-        directory.path().join("mechs/BROKEN.toml"),
+        directory.path().join("units/BROKEN.toml"),
         "not a template at all",
     )
     .unwrap();

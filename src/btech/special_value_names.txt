@@ -1,7 +1,7 @@
 BTech fields available to view and set:
 	0	mapindex
 	0	id
-	0	mechname
+	0	unitname
 	0	maxspeed
 	0	unit_era
 	0	unit_tro
@@ -36,17 +36,17 @@ BTech fields available to view and set:
 	0	MaxSuits
 	0	realweight
 	0	StaggerDamage
-	0	MechPrefs
+	0	UnitPrefs
 	0	SwarmTarget
 	0	SwarmedBy
-	0	mechtype
-	0	mechmovetype
-	0	mechdamage
+	0	unittype
+	0	unitmovetype
+	0	unitdamage
 	0	techtime
 	0	centdist
 	0	centbearing
 	0	sensors
-	0	mechref
+	0	unitref
 	0	fuel
 	0	fuel_orig
 	0	cocoon

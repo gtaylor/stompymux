@@ -4,7 +4,7 @@ use stompymux_rs::*;
 #[test]
 fn vtol_tables_cover_every_arc_roll_and_critical_proof_override() {
     let base =
-        VehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml")).unwrap();
+        VehicleTemplate::parse("Kestrel", include_str!("../game/units/Kestrel.toml")).unwrap();
     for proof in [false, true] {
         let mut template = base.clone();
         if proof {
@@ -69,13 +69,13 @@ fn rotor_critical_ranges_and_invalid_requests_are_explicit() {
         );
     }
     let template =
-        VehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml")).unwrap();
+        VehicleTemplate::parse("Kestrel", include_str!("../game/units/Kestrel.toml")).unwrap();
     for roll in [0, 1, 13, 255] {
         assert!(RotorHit::from_critical_roll(roll).is_err());
         assert!(template.vtol_hit(HitArc::Front, roll).is_err());
     }
     let ground =
-        VehicleTemplate::parse("Demolisher", include_str!("../game/mechs/Demolisher.toml"))
+        VehicleTemplate::parse("Demolisher", include_str!("../game/units/Demolisher.toml"))
             .unwrap();
     assert!(ground.vtol_hit(HitArc::Front, 7).is_err());
 }
@@ -85,13 +85,13 @@ fn advanced_aircraft_locations_share_armor_gate_draws_without_direct_rotor_effec
     use VehicleSection as S;
     for proof in [false, true] {
         let source = if proof {
-            include_str!("../game/mechs/Kestrel.toml").replacen(
+            include_str!("../game/units/Kestrel.toml").replacen(
                 "\"CargoTech\"",
                 "\"CargoTech\", \"CritProof_Tech\"",
                 1,
             )
         } else {
-            include_str!("../game/mechs/Kestrel.toml").into()
+            include_str!("../game/units/Kestrel.toml").into()
         };
         let unit = Vehicle::new(VehicleTemplate::parse("Kestrel", &source).unwrap()).unwrap();
         for (arc, row) in [
@@ -144,7 +144,7 @@ fn advanced_aircraft_locations_share_armor_gate_draws_without_direct_rotor_effec
 fn advanced_aircraft_turret_fallback_and_damaged_armor_gate_use_material_state() {
     use VehicleSection as S;
     let mut template =
-        VehicleTemplate::parse("Kestrel", include_str!("../game/mechs/Kestrel.toml")).unwrap();
+        VehicleTemplate::parse("Kestrel", include_str!("../game/units/Kestrel.toml")).unwrap();
     template
         .sections
         .insert(S::Turret, template.sections[&S::Front].clone());

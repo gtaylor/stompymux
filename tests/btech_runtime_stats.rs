@@ -94,7 +94,7 @@ async fn digging_alone_keeps_simulation_pending_until_completion() {
         .unwrap();
         support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
         let id = world.create(&config, "Digger".into(), Kind::Thing);
-        let source = include_str!("../game/mechs/Demolisher.toml").replace(
+        let source = include_str!("../game/units/Demolisher.toml").replace(
             "movement = \"track\"",
             &format!("movement = \"{movement}\""),
         );

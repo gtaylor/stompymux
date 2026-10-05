@@ -19,7 +19,7 @@ fn assets(root: &Path) {
 fn supplied_templates_and_maps_decode_without_asset_conversion() {
     let dir = tempfile::tempdir().unwrap();
     assets(dir.path());
-    let jenner = read_battle_template(&dir.path().join("mechs"), "JR7-D").unwrap();
+    let jenner = read_battle_template(&dir.path().join("units"), "JR7-D").unwrap();
     assert_eq!(
         (
             jenner.name.as_str(),
@@ -35,7 +35,7 @@ fn supplied_templates_and_maps_decode_without_asset_conversion() {
     assert_eq!(torso.criticals[&10].equipment, "IS.SRM-4");
     assert_eq!(torso.criticals[&0].equipment, "Engine");
     assert_eq!(torso.criticals[&2].equipment, "Engine");
-    let atlas = read_battle_template(&dir.path().join("mechs"), "AS7-D").unwrap();
+    let atlas = read_battle_template(&dir.path().join("units"), "AS7-D").unwrap();
     assert_eq!(
         atlas.sections[&MechSection::CenterTorso].criticals[&10].modes,
         ["RearMount"]
@@ -56,7 +56,7 @@ fn supplied_templates_and_maps_decode_without_asset_conversion() {
 
 #[test]
 fn malformed_templates_do_not_become_partially_supported_units() {
-    let source = include_str!("fixtures/btech/mechs/JR7-D.toml");
+    let source = include_str!("fixtures/btech/units/JR7-D.toml");
     for malformed in [
         source.replace("walk_mp = 11", "max_speed = nan"),
         source.replace("movement = \"biped\"", "movement = \"quad\""),
@@ -202,14 +202,14 @@ async fn saved_identities_are_inspectable_preserved_and_cleaned_atomically() {
     .await
     .unwrap();
     seed_row(&mut sql, "btech_maps", map).await;
-    seed_row(&mut sql, "btech_mechs", unit).await;
-    sqlx::query("UPDATE btech_mechs SET mech_name='Jenner',mech_type='JR7-D',tons=35,map_dbref=? WHERE dbref=?").bind(map.0).bind(unit.0).execute(&mut sql).await.unwrap();
+    seed_row(&mut sql, "btech_stored_units", unit).await;
+    sqlx::query("UPDATE btech_stored_units SET unit_name='Jenner',unit_template='JR7-D',tons=35,map_dbref=? WHERE dbref=?").bind(map.0).bind(unit.0).execute(&mut sql).await.unwrap();
     sqlx::query("UPDATE btech_maps SET width=1,height=1,gravity=75,temperature=-12 WHERE dbref=?")
         .bind(map.0)
         .execute(&mut sql)
         .await
         .unwrap();
-    for (id, kind) in [(map, "MAP"), (unit, "MECH")] {
+    for (id, kind) in [(map, "MAP"), (unit, "UNIT")] {
         sqlx::query("INSERT INTO btech_special_registrations VALUES(?,?)")
             .bind(id.0)
             .bind(kind)

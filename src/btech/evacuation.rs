@@ -469,7 +469,7 @@ pub(super) fn publish_movement_consequences(
     config: &Config,
     report: &super::movement_report::MovementReport,
 ) -> Result<()> {
-    super::channels::publish(scripts, config, &report.experience_messages)?;
+    super::diagnostics::publish(scripts, &report.experience_messages);
     super::piloting::publish_ordered_notices(scripts, &report.notices, &report.pilot_notices)?;
     for injury in &report.character_injuries {
         super::character_pilot::notify_injury(scripts, injury)?;
@@ -517,7 +517,7 @@ fn publish_balance_consequences(
     config: &Config,
     report: &super::BalanceReport,
 ) -> Result<()> {
-    super::channels::publish(scripts, config, &report.experience_messages)?;
+    super::diagnostics::publish(scripts, &report.experience_messages);
     if let Some(fall) = &report.fall {
         publish_fall_consequences(scripts, config, fall)?;
     }
@@ -536,7 +536,7 @@ pub(super) fn publish_fall_consequences(
     config: &Config,
     report: &super::MechFallReport,
 ) -> Result<()> {
-    super::channels::publish(scripts, config, &report.experience_messages)?;
+    super::diagnostics::publish(scripts, &report.experience_messages);
     if let Some(injury) = &report.character_injury {
         super::character_pilot::notify_injury(scripts, injury)?;
     }
@@ -745,7 +745,7 @@ pub(super) fn publish_stacking_consequences(
     config: &Config,
     effects: &super::stacking::StackingEffects,
 ) -> Result<()> {
-    super::channels::publish(scripts, config, &effects.experience_messages)?;
+    super::diagnostics::publish(scripts, &effects.experience_messages);
     for report in &effects.impacts {
         publish_impact_consequences(scripts, config, report)?;
     }
@@ -842,7 +842,7 @@ fn publish_physical_consequences(
     config: &Config,
     report: &super::PhysicalReport,
 ) -> Result<()> {
-    super::channels::publish(scripts, config, &report.experience_messages)?;
+    super::diagnostics::publish(scripts, &report.experience_messages);
     if let Some(impact) = &report.impact {
         publish_impact_consequences(scripts, config, impact)?;
     }
@@ -911,7 +911,7 @@ fn publish_charge_consequences(
     config: &Config,
     report: &super::ChargeReport,
 ) -> Result<()> {
-    super::channels::publish(scripts, config, &report.experience_messages)?;
+    super::diagnostics::publish(scripts, &report.experience_messages);
     for impact in report.target_impacts.iter().chain(&report.attacker_impacts) {
         publish_impact_consequences(scripts, config, impact)?;
     }
@@ -981,7 +981,7 @@ fn publish_dfa_consequences(
     config: &Config,
     report: &super::DfaReport,
 ) -> Result<()> {
-    super::channels::publish(scripts, config, &report.experience_messages)?;
+    super::diagnostics::publish(scripts, &report.experience_messages);
     if let Some(injury) = &report.character_injury {
         super::character_pilot::notify_injury(scripts, injury)?;
     }
@@ -1020,7 +1020,6 @@ pub fn stand_action(
         )?;
         super::piloting::publish_maneuver_feedback(
             scripts,
-            config,
             &report.notices,
             &report.pilot_notices,
             Some(&report.check),
@@ -1045,10 +1044,9 @@ pub fn stagger_action(
         let reports =
             super::stagger::advance_stagger_in_action(&mut scripts.world.borrow_mut(), rules)?;
         for report in &reports {
-            super::channels::publish(scripts, config, &report.experience_messages)?;
+            super::diagnostics::publish(scripts, &report.experience_messages);
             super::piloting::publish_diagnostic_feedback(
                 scripts,
-                config,
                 &report.notices,
                 &report.pilot_notices,
                 report
@@ -1099,7 +1097,7 @@ pub fn overheat_action(
         let reports =
             super::overheat::advance_overheat_in_action(&mut scripts.world.borrow_mut(), rules)?;
         for report in &reports {
-            super::channels::publish(scripts, config, &report.experience_messages)?;
+            super::diagnostics::publish(scripts, &report.experience_messages);
             let mut private = Vec::new();
             let notices: Vec<_> = report
                 .messages_with_feedback(&mut private)
@@ -1214,7 +1212,7 @@ pub fn shot_action(
         let mut private = Vec::new();
         let notices = report.notices_with_feedback(&mut private);
         super::piloting::publish_ordered_notices(scripts, &notices, &private)?;
-        super::channels::publish_shot(scripts, config, &report)?;
+        super::diagnostics::publish_shot(scripts, &report);
         publish_shot_consequences(scripts, config, &report)?;
         publish_new_casualties(scripts, config, before)?;
         scripts.world.borrow().validate_action(config)?;
@@ -1235,7 +1233,7 @@ fn publish_shot_consequences(
         publish_impact_consequences(scripts, config, impact)?;
     }
     if let Some(recoil) = &report.recoil {
-        super::channels::publish(scripts, config, &recoil.experience_messages)?;
+        super::diagnostics::publish(scripts, &recoil.experience_messages);
         if let Some(fall) = &recoil.fall {
             publish_fall_consequences(scripts, config, fall)?;
         }
@@ -1259,11 +1257,11 @@ fn publish_target_salvo(
             Ok(())
         }
         super::TargetSalvo::Mech(salvo) => {
-            super::channels::publish(scripts, config, &salvo.experience_messages)?;
+            super::diagnostics::publish(scripts, &salvo.experience_messages);
             publish_salvo_consequences(scripts, config, salvo, false)
         }
         super::TargetSalvo::Vehicle(salvo) => {
-            super::channels::publish(scripts, config, &salvo.experience_messages)?;
+            super::diagnostics::publish(scripts, &salvo.experience_messages);
             let mut injuries = Vec::new();
             super::vehicle_injuries::collect_salvo(salvo, &mut injuries);
             for injury in injuries {
@@ -1351,11 +1349,11 @@ pub(super) fn attempt_configured_firing_action(
         super::piloting::publish_ordered_notices(scripts, &notices, &action.pilot_notices)?;
         match &action.report {
             super::FireReport::Unit(report) => {
-                super::channels::publish_shot(scripts, config, report)?;
+                super::diagnostics::publish_shot(scripts, report);
                 publish_shot_consequences(scripts, config, report)?;
             }
             super::FireReport::Vehicle(report) => {
-                super::channels::publish(scripts, config, &report.experience_messages)?;
+                super::diagnostics::publish(scripts, &report.experience_messages);
                 if let Some(salvo) = &report.salvo {
                     publish_target_salvo(scripts, config, salvo)?;
                 }
@@ -1378,7 +1376,7 @@ pub(super) fn attempt_configured_firing_action(
                     publish_launch_misload(scripts, config, misload)?;
                 }
                 if let Some(recoil) = &report.recoil {
-                    super::channels::publish(scripts, config, &recoil.experience_messages)?;
+                    super::diagnostics::publish(scripts, &recoil.experience_messages);
                     if let Some(fall) = &recoil.fall {
                         publish_fall_consequences(scripts, config, fall)?;
                     }
@@ -1629,7 +1627,7 @@ pub(super) fn publish_vehicle_fall_consequences(
     config: &Config,
     report: &super::VehicleFallReport,
 ) -> Result<()> {
-    super::channels::publish(scripts, config, &report.experience_messages)?;
+    super::diagnostics::publish(scripts, &report.experience_messages);
     if let Some(injury) = &report.character_injury {
         super::character_pilot::notify_injury(scripts, injury)?;
     }

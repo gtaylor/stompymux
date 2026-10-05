@@ -4,7 +4,7 @@ use stompymux_rs::*;
 /// Install a distributed computer; any individual computer slot loss disables assistance globally.
 fn definition() -> MechTemplate {
     let mut template =
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap();
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
     for section in [MechSection::LeftTorso, MechSection::RightTorso] {
         let mut part = template.sections[&section].criticals[&1].clone();
         part.equipment = "TargetingComputer".into();
@@ -22,7 +22,7 @@ fn definition() -> MechTemplate {
 #[test]
 fn targeting_computer_slots_mass_damage_and_flooding() {
     let ordinary = Mech::from_template(
-        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/mechs/JR7-D.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
     assert!(!ordinary.targeting_computer_operational().unwrap());
@@ -90,7 +90,7 @@ fn targeting_computer_slots_mass_damage_and_flooding() {
 #[test]
 fn targeting_computer_black_knight_constructs_unchanged() {
     let source =
-        std::fs::read_to_string(crate::support::repository_root().join("game/mechs/BL12-KNT.toml"))
+        std::fs::read_to_string(crate::support::repository_root().join("game/units/BL12-KNT.toml"))
             .unwrap();
     let unit = Mech::from_template(MechTemplate::parse("test", &source).unwrap()).unwrap();
     assert!(unit.targeting_computer_operational().unwrap());
@@ -109,10 +109,10 @@ fn targeting_computer_black_knight_constructs_unchanged() {
 #[test]
 fn authored_links_construct_without_changing_automatic_eligibility() {
     for source in [
-        include_str!("../game/mechs/Goshawk-1.toml"),
-        include_str!("../game/mechs/Goshawk-2.toml"),
-        include_str!("../game/mechs/Viper-2.toml"),
-        include_str!("../game/mechs/Thor-D.toml"),
+        include_str!("../game/units/Goshawk-1.toml"),
+        include_str!("../game/units/Goshawk-2.toml"),
+        include_str!("../game/units/Viper-2.toml"),
+        include_str!("../game/units/Thor-D.toml"),
     ] {
         let unit = Mech::from_template(MechTemplate::parse("test", source).unwrap()).unwrap();
         assert!(unit.targeting_computer_operational().unwrap());
@@ -128,7 +128,7 @@ fn authored_links_construct_without_changing_automatic_eligibility() {
         assert_eq!(restored.loadout().unwrap(), unit.loadout().unwrap());
     }
     let mut template =
-        MechTemplate::parse("Mas-A", include_str!("../game/mechs/Mas-A.toml")).unwrap();
+        MechTemplate::parse("Mas-A", include_str!("../game/units/Mas-A.toml")).unwrap();
     let with_flag = Mech::from_template(template.clone()).unwrap();
     for section in template.sections.values_mut() {
         for critical in section.criticals.values_mut() {

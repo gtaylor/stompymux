@@ -186,7 +186,7 @@ impl Config {
             0,
             self.mux.player_starting_room,
             self.mux.player_starting_home,
-            self.battletech.usedmechstore,
+            self.battletech.usedunitstore,
             self.battletech.afterlife_dbref,
         ] {
             ensure!(

@@ -1,6 +1,6 @@
 //! Saved target selection dispatch for scans without replacing locks or advancing their countdowns.
 use super::{BuildingScan, HexScan, HexTargetMode, TargetSelection};
-use crate::{Config, ObjectId, Scripts};
+use crate::{ObjectId, Scripts};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
 
@@ -20,7 +20,6 @@ pub enum SelectedScan {
 /// Ignition and clearing selections inspect occupants, as does a unit-at-hex lock.
 pub fn scan_selected_action(
     scripts: &Scripts,
-    config: &Config,
     observer: ObjectId,
     pilot: ObjectId,
     selection: &str,
@@ -46,14 +45,14 @@ pub fn scan_selected_action(
                 .map(SelectedScan::Unit)
         }
         TargetSelection::Hex(lock) => match lock.mode {
-            HexTargetMode::Building => super::scan_building::action_with_range(
-                scripts, config, observer, pilot, lock.hex, true,
-            )
-            .map(SelectedScan::Building),
-            HexTargetMode::Hex => super::scan_mines::action_with_range(
-                scripts, config, observer, pilot, lock.hex, true,
-            )
-            .map(SelectedScan::Hex),
+            HexTargetMode::Building => {
+                super::scan_building::action_with_range(scripts, observer, pilot, lock.hex, true)
+                    .map(SelectedScan::Building)
+            }
+            HexTargetMode::Hex => {
+                super::scan_mines::action_with_range(scripts, observer, pilot, lock.hex, true)
+                    .map(SelectedScan::Hex)
+            }
             _ => super::scan_hex_unit_action(scripts, observer, pilot, lock.hex, selection)
                 .map(SelectedScan::Unit),
         },

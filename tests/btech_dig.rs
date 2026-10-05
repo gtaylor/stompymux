@@ -1,8 +1,8 @@
 //! Digging cover shares timers, controls, firing readiness, target aim and hit routing.
 use crate::support;
 use stompymux_rs::*;
-const VEHICLE: &str = include_str!("../game/mechs/Demolisher.toml");
-const MECH: &str = include_str!("fixtures/btech/mechs/JR7-D.toml");
+const VEHICLE: &str = include_str!("../game/units/Demolisher.toml");
+const MECH: &str = include_str!("fixtures/btech/units/JR7-D.toml");
 
 /// A piloted target and an optional uncrewed running shooter with an acquired contact.
 async fn fixture(
@@ -322,8 +322,8 @@ async fn dug_in_turret_routing_uses_the_41_42_boundary_for_each_hit_table() {
 async fn unsupported_chassis_and_invalid_saved_countdowns_are_rejected() {
     for source in [
         MECH,
-        include_str!("../game/mechs/J_Edgar.toml"),
-        include_str!("../game/mechs/Kestrel.toml"),
+        include_str!("../game/units/J_Edgar.toml"),
+        include_str!("../game/units/Kestrel.toml"),
     ] {
         let (_dir, _, mut world, id, _) = fixture(source, MECH).await;
         let before = world.btech.clone();
@@ -356,7 +356,7 @@ async fn unsupported_chassis_and_invalid_saved_countdowns_are_rejected() {
 #[tokio::test]
 async fn pickup_clears_completed_cover_but_shutdown_preserves_it() {
     let (_dir, config, mut world, target, carrier) =
-        fixture(VEHICLE, include_str!("fixtures/btech/mechs/AS7-D.toml")).await;
+        fixture(VEHICLE, include_str!("fixtures/btech/units/AS7-D.toml")).await;
     complete(&mut world, target);
     stop_battle_unit(
         &mut world,

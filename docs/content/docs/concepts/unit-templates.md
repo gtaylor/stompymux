@@ -6,14 +6,14 @@ description: The TOML format for BattleTech mech, vehicle and other unit templat
 
 Unit templates describe a unit's construction: its class, movement, tonnage,
 per-section armor and the equipment in each critical slot. Stock templates live
-in `game/mechs`, the directory named by `database.mech_database`.
+in `game/units`, the directory named by `database.unit_database`.
 
 ## Files and references
 
 Each template is a TOML document named `<reference>.toml`. The file stem is the
 unit's reference; the document does not repeat it. Lookups match the whole
 reference case-insensitively, and documents may sit in subdirectories of the
-template root, so `game/mechs/clan/Daishi-A.toml` answers to `daishi-a`. When
+template root, so `game/units/clan/Daishi-A.toml` answers to `daishi-a`. When
 two documents share a reference, the lexically first path wins.
 
 Saving a unit replaces the existing document for its reference, wherever it
@@ -190,7 +190,7 @@ The `megamek-convert` tool turns MegaMek BattleMech (`.mtf`) and combat vehicle
 cargo run --bin megamek-convert -- "Atlas AS7-D.mtf"
 
 # Write <reference>.toml files; --force replaces existing ones.
-cargo run --bin megamek-convert -- --output-dir game/mechs units/*.mtf units/*.blk
+cargo run --bin megamek-convert -- --output-dir game/units units/*.mtf units/*.blk
 ```
 
 The reference is the mech's model when that is a designation such as `AS7-D`,

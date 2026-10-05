@@ -4,7 +4,7 @@ use stompymux_rs::{
     Flag, Kind, MapAsset, MechTemplate, ObjectId, Scripts, assign_battle_pilot, create_battle_map,
     create_battle_unit, dbck, persistence, place_battle_unit,
 };
-const JENNER: &str = include_str!("fixtures/btech/mechs/JR7-D.toml");
+const JENNER: &str = include_str!("fixtures/btech/units/JR7-D.toml");
 
 #[tokio::test]
 async fn enter_pilot_restart_and_leave_preserve_ordinary_movement() {

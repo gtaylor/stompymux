@@ -1,6 +1,6 @@
 //! Technology flag lists merge repeats without relaxing duplicate scalar or section validation.
 use stompymux_rs::*;
-const SOURCE: &str = include_str!("fixtures/btech/mechs/JR7-D.toml");
+const SOURCE: &str = include_str!("fixtures/btech/units/JR7-D.toml");
 
 /// Feature flags form a case-insensitive union in their canonical spelling, after the flags
 /// construction choices set.

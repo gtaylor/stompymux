@@ -8,7 +8,7 @@ pub(super) fn register(lua: &Lua, native: &Table, _world: &SharedWorld) -> mlua:
         crate::lua::transactions::require(lua)?;
         let config = crate::lua::configuration(lua);
         let template =
-            crate::btech::read_template(&config.path(&config.database.mech_database), &name)
+            crate::btech::read_template(&config.path(&config.database.unit_database), &name)
                 .map_err(|e| error::failure("btech.template.invalid", format!("{e:#}")))?;
         detached(lua, &template)
     })?;
@@ -20,7 +20,7 @@ pub(super) fn register(lua: &Lua, native: &Table, _world: &SharedWorld) -> mlua:
         crate::lua::transactions::require(lua)?;
         let config = crate::lua::configuration(lua);
         let template =
-            crate::btech::read_template(&config.path(&config.database.mech_database), &name)
+            crate::btech::read_template(&config.path(&config.database.unit_database), &name)
                 .map_err(|e| error::failure("btech.template.invalid", format!("{e:#}")))?;
         detached(lua, &crate::check_battle_template(&template))
     })?;
@@ -32,7 +32,7 @@ pub(super) fn register(lua: &Lua, native: &Table, _world: &SharedWorld) -> mlua:
         crate::lua::transactions::require(lua)?;
         let config = crate::lua::configuration(lua);
         let result =
-            crate::btech::read_template(&config.path(&config.database.mech_database), &name)
+            crate::btech::read_template(&config.path(&config.database.unit_database), &name)
                 .and_then(|template| crate::MechLoadout::resolve(&template))
                 .map_err(|e| error::failure("btech.template.invalid", format!("{e:#}")))?;
         detached(lua, &result)

@@ -17,6 +17,7 @@ mod logging;
 mod reuse;
 mod server;
 pub mod templates;
+mod traces;
 pub use client::Client;
 pub use commands::{run_text, run_text_for_player};
 pub use database::{stable_world, store_unit_record, unit_record};
@@ -28,6 +29,7 @@ pub use heartbeats::Heartbeats;
 pub use logging::init_logging;
 pub use reuse::{install, restore_database, snapshot_database};
 pub use server::start;
+pub use traces::drain_traces;
 
 /// Write the map file `<name>.toml` into `dir`, built from the compact cell notation.
 pub fn write_map(dir: &std::path::Path, name: &str, cells: &str) {
