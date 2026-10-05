@@ -336,9 +336,9 @@ mod tests {
         );
     }
 
-    /// Debug traces wait for commit, reach their fixed target on flush, and vanish on a rejected write.
+    /// Diagnostic traces wait for commit, reach their fixed target on flush, and vanish on a rejected write.
     #[tokio::test]
-    async fn debug_traces_wait_for_commit_and_discard_failed_changes() {
+    async fn diagnostic_traces_wait_for_commit_and_discard_failed_changes() {
         use crate::logging::{TraceRecord, TraceTopic};
         let (_dir, mut server) = fixture().await;
         let (capture, _guard) = crate::logging::Capture::install("info,btech=debug");

@@ -118,7 +118,7 @@ pub fn set_inventory_quantity_action(
             quantity: 1,
         });
         let message = super::diagnostics::stock_message(actor, object, &name, change);
-        super::diagnostics::publish(scripts, config, &[message])?;
+        super::diagnostics::publish(scripts, &[message]);
         scripts.effects.validate()?;
         Ok(())
     })

@@ -156,7 +156,7 @@ impl Scripts {
         self.effects.drain_records()
     }
 
-    /// Drain staged debug traces during embedding transaction inspection.
+    /// Drain staged diagnostic traces during embedding transaction inspection.
     pub fn drain_traces_for_inspection(&self) -> Vec<crate::logging::TraceRecord> {
         self.effects.drain_traces()
     }

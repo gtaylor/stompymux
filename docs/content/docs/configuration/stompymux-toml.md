@@ -270,10 +270,12 @@ trails use fixed targets that can be switched individually:
 | `audit::shouts` | Wizard shouts. |
 | `audit::wizard` | Operator changes to BattleTech settings, written only once they commit. |
 
-BattleTech game diagnostics are written at `debug` level, so the default filter
-hides them. Like the wizard audit, each is written only once its action
-commits. Enable one with a directive such as `info,btech::experience=debug`;
-`btech::experience=debug` also enables its `gunnery` and `piloting` children.
+BattleTech game diagnostics use their own fixed targets. Like the wizard audit,
+each is written only once its action commits. Most are `debug` level, so the
+default filter hides them; enable one with a directive such as
+`info,btech::experience=debug`, which also enables its `gunnery` and `piloting`
+children. Zero-frequency radio traffic is `info` and rejected map files are
+`error`, so the default filter writes both.
 
 | Target | Records |
 |---|---|
@@ -284,6 +286,8 @@ commits. Enable one with a directive such as `info,btech::experience=debug`;
 | `btech::self_destruct` | Self-destruct detonations. |
 | `btech::economy` | Parts stock additions and removals by cargo transfers and operator edits. |
 | `btech::radio::frequencies` | Radio frequency settings that match an opposing team's channel. |
+| `btech::radio::zero_frequency` | `info`: transmissions on frequency zero over an in-character battlefield, with their text. |
+| `btech::map::load` | `error`: map files `LOADMAP` rejected, with the reason. |
 
 The default filter writes everything at `info` and above except the
 high-volume command and accounting audits. When the `RUST_LOG` environment

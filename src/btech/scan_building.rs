@@ -1,6 +1,6 @@
 //! Structure inspection with hidden-building perception, durable dice and atomic experience output.
 use super::{DiagnosticMessage, HexCoordinate};
-use crate::{Config, Flag, ObjectId, Scripts, World};
+use crate::{Flag, ObjectId, Scripts, World};
 use anyhow::{Context, Result};
 use serde::Serialize;
 
@@ -100,18 +100,16 @@ fn resolve(
 /// Publish structure results to the cockpit and diagnostics together; restore all effects on failure.
 pub fn scan_building_action(
     scripts: &Scripts,
-    config: &Config,
     observer: ObjectId,
     pilot: ObjectId,
     coordinate: HexCoordinate,
 ) -> Result<BuildingScan> {
-    action_with_range(scripts, config, observer, pilot, coordinate, false)
+    action_with_range(scripts, observer, pilot, coordinate, false)
 }
 
 /// Publish a selected or explicit building scan with the matching observer distance policy.
 pub(super) fn action_with_range(
     scripts: &Scripts,
-    config: &Config,
     observer: ObjectId,
     pilot: ObjectId,
     coordinate: HexCoordinate,
@@ -127,7 +125,7 @@ pub(super) fn action_with_range(
             crate::clock::wall_time(),
             observer_range,
         )?;
-        super::diagnostics::publish(scripts, config, &report.experience_messages)?;
+        super::diagnostics::publish(scripts, &report.experience_messages);
         super::notify_unit_text(scripts, source.unit, &report.text)?;
         Ok(report)
     })

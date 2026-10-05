@@ -1,10 +1,10 @@
-//! Read the debug traces a test transaction staged for commit.
+//! Read the diagnostic traces a test transaction staged for commit.
 use stompymux_rs::{
     Scripts,
     logging::{TraceRecord, TraceTopic},
 };
 
-/// Drain every staged debug trace and keep the messages for one topic, in staging order.
+/// Drain every staged diagnostic trace and keep the messages for one topic, in staging order.
 pub fn drain_traces(scripts: &Scripts, topic: TraceTopic) -> Vec<String> {
     scripts
         .drain_traces_for_inspection()

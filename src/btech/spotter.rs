@@ -377,13 +377,13 @@ pub(super) fn award_indirect_experience(
         (
             link.spotter,
             "Gunnery-Spotting",
-            DiagnosticTopic::Experience,
+            TraceTopic::Experience,
             "spotting XP",
         ),
         (
             firer,
             "Gunnery-Artillery",
-            DiagnosticTopic::GunneryExperience,
+            TraceTopic::GunneryExperience,
             "1 artillery XP",
         ),
     ] {

@@ -126,10 +126,7 @@ async fn computer_override_xp_obeys_character_success_and_heat_gates() {
                                 .unwrap()["dice"],
                         );
                         assert!(report.computer_experience.unwrap().accepted);
-                        assert_eq!(
-                            report.experience_messages[0].topic,
-                            DiagnosticTopic::Experience
-                        );
+                        assert_eq!(report.experience_messages[0].topic, TraceTopic::Experience);
                         assert_eq!(
                             report.experience_messages[0].text,
                             format!("GOD gained 1 computer XP (mech #{})", id.0)

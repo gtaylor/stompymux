@@ -405,7 +405,7 @@ async fn hostile_character_acquisition_shares_perception_awards_and_exact_dice()
                 .collect();
             assert_eq!(messages.len(), usize::from(awarded), "{case}");
             if awarded {
-                assert_eq!(messages[0].topic, DiagnosticTopic::Experience);
+                assert_eq!(messages[0].topic, TraceTopic::Experience);
                 assert!(messages[0].text.contains("gained 1 perception XP"));
                 assert_eq!(
                     world.btech.character_values()[&ObjectId(1)]["Perception"].experience_balance(),

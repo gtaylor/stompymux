@@ -187,10 +187,9 @@ pub fn bootlegger(
             Some(fall)
         };
         drop(world);
-        super::diagnostics::publish(scripts, config, &experience)?;
+        super::diagnostics::publish(scripts, &experience);
         super::piloting::publish_maneuver_feedback(
             scripts,
-            config,
             &notices,
             &pilot_notices,
             Some(&check),

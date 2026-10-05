@@ -1301,7 +1301,7 @@ Alias: `"off"|"ecm"|"eccm"`
 
 ## DiagnosticMessage
 
-- `topic`: `"map_errors"|"piloting_rolls"|"self_destruct"|"economy"|"gunnery_experience"|"experience"|"piloting_experience"|"radio_frequencies"|"zero_frequencies"`
+- `topic`: `"experience"|"gunnery_experience"|"piloting_experience"|"piloting_rolls"|"self_destruct"|"economy"|"radio_frequencies"|"radio_zero_frequency"|"map_load"`
 - `text`: `string`
 
 ## RadioTransmission

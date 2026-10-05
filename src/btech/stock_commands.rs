@@ -1,5 +1,5 @@
 //! Catalogue-based Wizard stock additions, removals and clearing share atomic inventory edits.
-use super::{CargoRow, DiagnosticMessage, DiagnosticTopic};
+use super::{CargoRow, DiagnosticMessage, TraceTopic};
 use crate::{Config, ObjectId, Scripts};
 use anyhow::{Context, Result, ensure};
 
@@ -31,7 +31,7 @@ pub fn change_inventory_action(
         if change == InventoryChange::Clear {
             candidate.btech.inventories.remove(&object);
             messages.push(DiagnosticMessage::new(
-                DiagnosticTopic::Economy,
+                TraceTopic::Economy,
                 format!("#{} reset #{}'s stuff.", actor.0, object.0),
             ));
         } else {
@@ -80,7 +80,7 @@ pub fn change_inventory_action(
         }
         candidate.btech.validate(&candidate)?;
         *scripts.world_mut() = candidate;
-        super::diagnostics::publish(scripts, config, &messages)?;
+        super::diagnostics::publish(scripts, &messages);
         scripts.effects.validate()?;
         Ok(rows)
     })
@@ -200,7 +200,7 @@ pub fn add_stores_action(
         candidate.btech.validate(&candidate)?;
         *scripts.world_mut() = candidate;
         let message = DiagnosticMessage::new(
-            DiagnosticTopic::Economy,
+            TraceTopic::Economy,
             format!(
                 "#{} added {} {} to #{}",
                 actor.0,
@@ -209,7 +209,7 @@ pub fn add_stores_action(
                 object.0
             ),
         );
-        super::diagnostics::publish(scripts, config, &[message])?;
+        super::diagnostics::publish(scripts, &[message]);
         scripts.effects.validate()?;
         Ok(true)
     })

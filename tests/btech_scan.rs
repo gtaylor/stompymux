@@ -744,8 +744,7 @@ async fn combined_hex_scan_routes_private_failure_and_rolls_back_both_phases() {
     }
     let shared = std::rc::Rc::new(std::cell::RefCell::new(world.clone()));
     let scripts = Scripts::new(&config, shared.clone()).unwrap();
-    let failed =
-        scan_battle_hex_action(&scripts, &config, source, ObjectId(1), coordinate).unwrap();
+    let failed = scan_battle_hex_action(&scripts, source, ObjectId(1), coordinate).unwrap();
     assert!(!failed.mines.found);
     let notices = scripts.drain_outbox();
     assert_eq!(
@@ -805,7 +804,7 @@ async fn selected_scan_dispatches_each_lock_mode_without_changing_countdowns() {
     let coordinate = HexCoordinate { x: 1, y: 2 };
     let shared = std::rc::Rc::new(std::cell::RefCell::new(world.clone()));
     let scripts = Scripts::new(&config, shared.clone()).unwrap();
-    assert!(scan_battle_selected_action(&scripts, &config, source, ObjectId(1), "").is_err());
+    assert!(scan_battle_selected_action(&scripts, source, ObjectId(1), "").is_err());
     for mode in [
         HexTargetMode::UnitAtHex,
         HexTargetMode::Ignite,
@@ -817,8 +816,7 @@ async fn selected_scan_dispatches_each_lock_mode_without_changing_countdowns() {
             select_battle_hex_target(&mut world, source, ObjectId(1), coordinate, mode).unwrap();
         *shared.borrow_mut() = world.clone();
         let before = world.btech.clone();
-        let report =
-            scan_battle_selected_action(&scripts, &config, source, ObjectId(1), "").unwrap();
+        let report = scan_battle_selected_action(&scripts, source, ObjectId(1), "").unwrap();
         match (&report, mode) {
             (SelectedScan::Building(report), HexTargetMode::Building) => {
                 assert!(report.text.contains("CF is 31"))
@@ -862,7 +860,7 @@ async fn selected_scan_dispatches_each_lock_mode_without_changing_countdowns() {
     );
     *shared.borrow_mut() = restored;
     assert!(matches!(
-        scan_battle_selected_action(&scripts, &config, source, ObjectId(1), "").unwrap(),
+        scan_battle_selected_action(&scripts, source, ObjectId(1), "").unwrap(),
         SelectedScan::Hex(_)
     ));
 }
@@ -889,13 +887,13 @@ async fn selected_observer_coordinates_bypass_distance_but_keep_visibility_and_r
         select_battle_hex_target(&mut world, source, ObjectId(1), far, HexTargetMode::Hex).unwrap();
     let shared = std::rc::Rc::new(std::cell::RefCell::new(world));
     let scripts = Scripts::new(&config, shared.clone()).unwrap();
-    assert!(scan_battle_selected_action(&scripts, &config, source, ObjectId(1), "").is_err());
+    assert!(scan_battle_selected_action(&scripts, source, ObjectId(1), "").is_err());
     set_battle_observer(&mut shared.borrow_mut(), source, true).unwrap();
-    let report = scan_battle_selected_action(&scripts, &config, source, ObjectId(1), "").unwrap();
+    let report = scan_battle_selected_action(&scripts, source, ObjectId(1), "").unwrap();
     assert!(matches!(report, SelectedScan::Hex(_)));
-    assert!(scan_battle_hex_action(&scripts, &config, source, ObjectId(1), far).is_err());
+    assert!(scan_battle_hex_action(&scripts, source, ObjectId(1), far).is_err());
     set_battle_map_visibility(&mut shared.borrow_mut(), map, Light::Day, 0).unwrap();
-    assert!(scan_battle_selected_action(&scripts, &config, source, ObjectId(1), "").is_err());
+    assert!(scan_battle_selected_action(&scripts, source, ObjectId(1), "").is_err());
     set_battle_map_visibility(&mut shared.borrow_mut(), map, Light::Day, 30).unwrap();
     let coordinate = HexCoordinate { x: 1, y: 2 };
     scan_mine(&mut shared.borrow_mut(), map, coordinate);

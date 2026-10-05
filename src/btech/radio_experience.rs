@@ -1,5 +1,5 @@
 //! Saved reception cadence and communication skill awards within radio transactions.
-use super::{AnalogRadioReport, DiagnosticMessage, DiagnosticTopic};
+use super::{AnalogRadioReport, DiagnosticMessage, TraceTopic};
 use crate::{Flag, ObjectId, World};
 use anyhow::Result;
 
@@ -56,7 +56,7 @@ fn attempt(world: &mut World, receiver: ObjectId, now: i64) -> Result<Option<Dia
     let award = super::award_skill_experience(world, pilot, "Comm-Conventional", 1, now, false)?;
     Ok(award.accepted.then(|| {
         DiagnosticMessage::new(
-            DiagnosticTopic::Experience,
+            TraceTopic::Experience,
             format!(
                 "{} gained 1 Comm-Conventional XP (in #{})",
                 world.objects[&pilot].name, receiver.0

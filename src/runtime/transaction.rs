@@ -73,7 +73,7 @@ pub struct EffectBatch {
     pub logs: Vec<crate::logging::FileRequest>,
     /// Categorized diagnostics published only after world commit.
     pub records: Vec<crate::logging::AuditRecord>,
-    /// Debug traces published only after world commit. They are operator diagnostics, not
+    /// Diagnostic traces published only after world commit. They are operator diagnostics, not
     /// script output, so they stay outside the Lua output allowance.
     pub traces: Vec<crate::logging::TraceRecord>,
     /// Prepared map replacements, published only after world commit.
@@ -249,12 +249,12 @@ impl Effects {
         std::mem::take(&mut self.state.borrow_mut().pending.records)
     }
 
-    /// Hold a debug trace until the enclosing transaction commits.
+    /// Hold a diagnostic trace until the enclosing transaction commits.
     pub fn stage_trace(&self, record: crate::logging::TraceRecord) {
         self.state.borrow_mut().pending.traces.push(record);
     }
 
-    /// Consume debug traces after successful persistence.
+    /// Consume diagnostic traces after successful persistence.
     pub fn drain_traces(&self) -> Vec<crate::logging::TraceRecord> {
         std::mem::take(&mut self.state.borrow_mut().pending.traces)
     }

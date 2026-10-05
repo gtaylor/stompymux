@@ -566,7 +566,8 @@ pub use battle_value_experience::{
 pub use gunnery_experience::{ShotExperienceAward, award_gunnery_experience};
 
 mod diagnostics;
-pub use diagnostics::{DiagnosticMessage, DiagnosticTopic};
+use crate::logging::TraceTopic;
+pub use diagnostics::DiagnosticMessage;
 
 mod movement_experience;
 pub use movement_experience::MovementExperience;

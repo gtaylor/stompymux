@@ -427,9 +427,7 @@ impl Server {
                 return false;
             }
         }
-        if let Err(error) =
-            crate::btech::unjam::publish_unjamming(&self.scripts, &self.config, &unjam_report)
-        {
+        if let Err(error) = crate::btech::unjam::publish_unjamming(&self.scripts, &unjam_report) {
             tracing::error!(error = %format_args!("{error:#}"), "BattleTech update failed");
             *self.scripts.world.borrow_mut() = before;
             self.scripts
@@ -644,7 +642,7 @@ impl Server {
             }
         }
         for event in contact_events {
-            if let Err(error) = crate::btech::notify_contact(&self.scripts, &self.config, event) {
+            if let Err(error) = crate::btech::notify_contact(&self.scripts, event) {
                 tracing::error!(error = %format_args!("{error:#}"), "BattleTech update failed");
                 *self.scripts.world.borrow_mut() = before;
                 self.scripts

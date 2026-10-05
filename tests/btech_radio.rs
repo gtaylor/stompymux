@@ -853,16 +853,7 @@ async fn transmission_failure_restores_delivery_dice_mines_and_outbox() {
     assert!(scripts.drain_outbox().is_empty());
 }
 
-/// An existing administrator channel receives zero-frequency audits through normal membership.
-fn zero_frequency_channel(world: &mut World) {
-    let mut channel = Channel::new("ZeroFrequencies".into());
-    channel.users.push(stompymux_rs::communication::Membership {
-        who: ObjectId(1),
-        listening: true,
-    });
-    world.channels.insert("ZeroFrequencies".into(), channel);
-}
-
+/// Zero-frequency transmissions over an in-character map are logged with their text, only on commit.
 #[tokio::test]
 async fn radio_frequency_audits_match_each_enemy_channel_with_native_lua_parity() {
     let (_dir, config, mut world, _map, units) = relay_fixture().await;
@@ -898,13 +889,13 @@ async fn radio_frequency_audits_match_each_enemy_channel_with_native_lua_parity(
     }
     // Setting the same frequency again still audits; zero never audits matching unset channels.
     assert_eq!(
-        set_radio_frequency_action(&lua, &config, source, ObjectId(1), 0, 42)
+        set_radio_frequency_action(&lua, source, ObjectId(1), 0, 42)
             .unwrap()
             .len(),
         2
     );
     assert!(
-        set_radio_frequency_action(&lua, &config, source, ObjectId(1), 0, 0)
+        set_radio_frequency_action(&lua, source, ObjectId(1), 0, 0)
             .unwrap()
             .is_empty()
     );
@@ -919,7 +910,6 @@ async fn zero_frequency_audits_follow_map_character_flag_and_rollback_with_mines
     let (_dir, config, mut world, map, units) = relay_fixture().await;
     let source = units[0];
     radio_sender(&mut world, source);
-    zero_frequency_channel(&mut world);
     world
         .objects
         .get_mut(&map)
@@ -935,7 +925,7 @@ async fn zero_frequency_audits_follow_map_character_flag_and_rollback_with_mines
     assert_eq!(report.audit_messages.len(), 1);
     assert_eq!(
         report.audit_messages[0].topic,
-        DiagnosticTopic::ZeroFrequencies
+        TraceTopic::RadioZeroFrequency
     );
     assert_eq!(
         report.audit_messages[0].text,
@@ -944,16 +934,9 @@ async fn zero_frequency_audits_follow_map_character_flag_and_rollback_with_mines
             source.0, map.0
         )
     );
-    assert_eq!(scripts.world().channels["ZeroFrequencies"].messages, 1);
-    let saved = scripts.world().clone();
-    persistence::save(&config.database(), &saved).await.unwrap();
     assert_eq!(
-        persistence::load(&config.database())
-            .await
-            .unwrap()
-            .channels["ZeroFrequencies"]
-            .messages,
-        1
+        support::drain_traces(&scripts, TraceTopic::RadioZeroFrequency),
+        [report.audit_messages[0].text.clone()]
     );
     let before = scripts.world().clone();
     scripts.drain_outbox();
@@ -965,10 +948,7 @@ async fn zero_frequency_audits_follow_map_character_flag_and_rollback_with_mines
             ))
             .is_err()
     );
-    assert_eq!(
-        serde_json::to_value(&scripts.world().channels).unwrap(),
-        serde_json::to_value(&before.channels).unwrap()
-    );
+    assert!(support::drain_traces(&scripts, TraceTopic::RadioZeroFrequency).is_empty());
     assert_eq!(scripts.world().btech, before.btech);
     assert!(scripts.drain_outbox().is_empty());
     set_minefield(
@@ -991,10 +971,7 @@ async fn zero_frequency_audits_follow_map_character_flag_and_rollback_with_mines
     )
     .unwrap();
     assert!(send_radio_action(&scripts, &config, source, ObjectId(1), 1, "mine failure").is_err());
-    assert_eq!(
-        serde_json::to_value(&scripts.world().channels).unwrap(),
-        serde_json::to_value(&world.channels).unwrap()
-    );
+    assert!(support::drain_traces(&scripts, TraceTopic::RadioZeroFrequency).is_empty());
     assert_eq!(scripts.world().btech, world.btech);
     assert!(scripts.drain_outbox().is_empty());
     set_minefield(&mut world, map, 0, None).unwrap();
@@ -1017,7 +994,7 @@ async fn zero_frequency_audits_follow_map_character_flag_and_rollback_with_mines
             .audit_messages
             .is_empty()
     );
-    assert_eq!(scripts.world().channels["ZeroFrequencies"].messages, 0);
+    assert!(support::drain_traces(&scripts, TraceTopic::RadioZeroFrequency).is_empty());
 }
 
 /// A distant connected character receives analog traffic; source control belongs to the other player.

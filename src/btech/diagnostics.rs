@@ -1,64 +1,22 @@
-//! BattleTech diagnostics: debug traces staged until commit, and the few topics still
-//! published through the ordinary transactional channel service.
+//! BattleTech diagnostics, captured into action reports and logged once the action commits.
 use super::{GunneryAwardRequest, GunneryExperienceMode, ShotExperienceAward};
 use crate::{
-    Config, Scripts, World,
+    Scripts, World,
     config::XpConfig,
     logging::{TraceRecord, TraceTopic},
 };
-use anyhow::Result;
 use serde::Serialize;
-
-/// What a captured diagnostic is about, which also decides where it is delivered.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum DiagnosticTopic {
-    MapErrors,
-    PilotingRolls,
-    SelfDestruct,
-    Economy,
-    GunneryExperience,
-    Experience,
-    PilotingExperience,
-    RadioFrequencies,
-    ZeroFrequencies,
-}
-
-impl DiagnosticTopic {
-    /// The channel that receives this topic, for topics players and staff subscribe to.
-    pub fn channel(self) -> Option<&'static str> {
-        match self {
-            Self::MapErrors => Some("MapErrors"),
-            Self::ZeroFrequencies => Some("ZeroFrequencies"),
-            _ => None,
-        }
-    }
-
-    /// The debug trace topic, for topics written to the server log.
-    pub fn trace(self) -> Option<TraceTopic> {
-        match self {
-            Self::MapErrors | Self::ZeroFrequencies => None,
-            Self::PilotingRolls => Some(TraceTopic::PilotingRolls),
-            Self::SelfDestruct => Some(TraceTopic::SelfDestruct),
-            Self::Economy => Some(TraceTopic::Economy),
-            Self::GunneryExperience => Some(TraceTopic::GunneryExperience),
-            Self::Experience => Some(TraceTopic::Experience),
-            Self::PilotingExperience => Some(TraceTopic::PilotingExperience),
-            Self::RadioFrequencies => Some(TraceTopic::RadioFrequencies),
-        }
-    }
-}
 
 /// An immutable diagnostic captured before damage or host callbacks can change participant names.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct DiagnosticMessage {
-    pub topic: DiagnosticTopic,
+    pub topic: TraceTopic,
     pub text: String,
 }
 
 impl DiagnosticMessage {
     /// Diagnostics are single-line even when a participant name contains a newline.
-    pub(super) fn new(topic: DiagnosticTopic, text: String) -> Self {
+    pub(super) fn new(topic: TraceTopic, text: String) -> Self {
         Self {
             topic,
             text: text.replace('\n', " "),
@@ -74,7 +32,7 @@ pub(super) fn stock_message(
     change: i32,
 ) -> DiagnosticMessage {
     DiagnosticMessage::new(
-        DiagnosticTopic::Economy,
+        TraceTopic::Economy,
         format!(
             "#{} {} {} {} {} #{}.",
             actor.0,
@@ -112,7 +70,7 @@ pub(super) fn gunnery_messages(
             )
         {
             return vec![DiagnosticMessage::new(
-                DiagnosticTopic::Experience,
+                TraceTopic::Experience,
                 format!(
                     "#{} in #{} 1 noxp #{}",
                     request.pilot.0, request.attacker.0, request.target.0
@@ -145,12 +103,12 @@ pub(super) fn gunnery_messages(
         }
     };
     let mut messages = vec![DiagnosticMessage::new(
-        DiagnosticTopic::GunneryExperience,
+        TraceTopic::GunneryExperience,
         message,
     )];
     if matches!(attempt, ShotExperienceAward::BattleValue(_)) && config.noisy_xpgain != 0 {
         messages.push(DiagnosticMessage::new(
-            DiagnosticTopic::Experience,
+            TraceTopic::Experience,
             format!(
                 "#{} in #{} {} damage #{}",
                 request.pilot.0, request.attacker.0, request.damage, request.target.0
@@ -160,39 +118,18 @@ pub(super) fn gunnery_messages(
     messages
 }
 
-/// Deliver a shot's diagnostics under its enclosing world/effects checkpoint.
-pub(super) fn publish_shot(
-    scripts: &Scripts,
-    config: &Config,
-    report: &super::MechShotReport,
-) -> Result<()> {
-    publish(scripts, config, &report.experience_messages)
+/// Stage a shot's diagnostics under its enclosing world/effects checkpoint.
+pub(super) fn publish_shot(scripts: &Scripts, report: &super::MechShotReport) {
+    publish(scripts, &report.experience_messages);
 }
 
-/// Shared delivery for captured diagnostics; the enclosing host action owns rollback.
-/// Debug traces wait for commit, and channel topics skip channels that do not exist.
-pub(super) fn publish(
-    scripts: &Scripts,
-    config: &Config,
-    messages: &[DiagnosticMessage],
-) -> Result<()> {
-    let mut service = None;
+/// Stage captured diagnostics for logging once the enclosing host action commits; a
+/// rolled-back action discards them with its other effects.
+pub(super) fn publish(scripts: &Scripts, messages: &[DiagnosticMessage]) {
     for message in messages {
-        if let Some(topic) = message.topic.trace() {
-            scripts.effects.stage_trace(TraceRecord {
-                topic,
-                message: message.text.clone(),
-            });
-            continue;
-        }
-        let Some(channel) = message.topic.channel() else {
-            continue;
-        };
-        let service = service.get_or_insert_with(|| scripts.communication(config));
-        if service.name(channel).is_err() {
-            continue;
-        }
-        service.emit(channel, &message.text, false)?;
+        scripts.effects.stage_trace(TraceRecord {
+            topic: message.topic,
+            message: message.text.clone(),
+        });
     }
-    Ok(())
 }

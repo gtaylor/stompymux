@@ -56,6 +56,10 @@ pub mod targets {
     pub const BTECH_ECONOMY: &str = "btech::economy";
     /// Radio frequency settings that match an opposing team's channel.
     pub const BTECH_RADIO_FREQUENCIES: &str = "btech::radio::frequencies";
+    /// Radio transmissions on frequency zero over an in-character battlefield, with their text.
+    pub const BTECH_RADIO_ZERO_FREQUENCY: &str = "btech::radio::zero_frequency";
+    /// Map files rejected when loading, with the reason.
+    pub const BTECH_MAP_LOAD: &str = "btech::map::load";
 }
 
 /// Filter used when neither `logging.filter` nor `RUST_LOG` says otherwise: everything at
@@ -131,8 +135,10 @@ impl AuditRecord {
     }
 }
 
-/// Debug-level BattleTech topics, each written to its own fixed target in [`targets`].
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+/// BattleTech diagnostic topics, each written to its own fixed target in [`targets`] at its
+/// own level.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum TraceTopic {
     Experience,
     GunneryExperience,
@@ -141,9 +147,11 @@ pub enum TraceTopic {
     SelfDestruct,
     Economy,
     RadioFrequencies,
+    RadioZeroFrequency,
+    MapLoad,
 }
 
-/// A debug trace held until its transaction commits, so rolled-back actions leave no trace.
+/// A diagnostic held until its transaction commits, so rolled-back actions leave no trace.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TraceRecord {
     pub topic: TraceTopic,
@@ -151,9 +159,9 @@ pub struct TraceRecord {
 }
 
 impl TraceRecord {
-    /// Emit the committed trace at debug level to its topic's target.
+    /// Emit the committed record to its topic's target, as one inert line.
     pub fn emit(&self) {
-        let message = &self.message;
+        let message = clean(&self.message);
         match self.topic {
             TraceTopic::Experience => {
                 tracing::debug!(target: targets::BTECH_EXPERIENCE, "{message}")
@@ -174,6 +182,10 @@ impl TraceRecord {
             TraceTopic::RadioFrequencies => {
                 tracing::debug!(target: targets::BTECH_RADIO_FREQUENCIES, "{message}")
             }
+            TraceTopic::RadioZeroFrequency => {
+                tracing::info!(target: targets::BTECH_RADIO_ZERO_FREQUENCY, "{message}")
+            }
+            TraceTopic::MapLoad => tracing::error!(target: targets::BTECH_MAP_LOAD, "{message}"),
         }
     }
 }
@@ -282,6 +294,43 @@ impl<'a> MakeWriter<'a> for Capture {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Each trace topic keeps its level: the default filter writes zero-frequency radio and
+    /// map-load errors but hides debug topics, and player text stays one inert line.
+    #[test]
+    fn trace_topics_use_their_levels_and_clean_player_text() {
+        let (capture, _guard) = Capture::install(DEFAULT_FILTER);
+        for (topic, message) in [
+            (TraceTopic::Economy, "stock"),
+            (
+                TraceTopic::RadioZeroFrequency,
+                "said \"hi\u{1b}[31m\"\rthere",
+            ),
+            (TraceTopic::MapLoad, "bad map"),
+        ] {
+            TraceRecord {
+                topic,
+                message: message.into(),
+            }
+            .emit();
+        }
+        assert!(capture.lines_containing(targets::BTECH_ECONOMY).is_empty());
+        let radio = capture.lines_containing(targets::BTECH_RADIO_ZERO_FREQUENCY);
+        assert_eq!(radio.len(), 1, "{}", capture.text());
+        assert!(radio[0].contains("INFO"), "{}", radio[0]);
+        assert!(
+            !radio[0].contains('\u{1b}') && !radio[0].contains('\r'),
+            "{}",
+            radio[0]
+        );
+        let map = capture.lines_containing(targets::BTECH_MAP_LOAD);
+        assert_eq!(map.len(), 1, "{}", capture.text());
+        assert!(
+            map[0].contains("ERROR") && map[0].contains("bad map"),
+            "{}",
+            map[0]
+        );
+    }
 
     /// Filters parse with `RUST_LOG` syntax and reject malformed directives.
     #[test]

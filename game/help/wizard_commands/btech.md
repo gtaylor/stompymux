@@ -39,8 +39,8 @@ configured map directory; `test` reads `test.toml`. `inspect` reports saved map 
 Map files are TOML documents with a terrain grid, a level grid, depth and
 structure-height grids where needed, and an explicit list of bridges; see the
 "Map files" page of the documentation for the format. Any error in a map file
-rejects the whole file; `LOADMAP` also reports the reason to the `MapErrors`
-channel, when that channel exists.
+rejects the whole file; `LOADMAP` also logs the reason at error level to
+`btech::map::load`.
 
 Inspection commands are read-only. All `@btech` operations require Wizard authority.
 No unit or map becomes active as a result of inspection.
@@ -139,9 +139,9 @@ component breakdown in 1/1024-ton units, derived from construction and damage.
 
 
 Positive frequency settings that match a different-team unit on the same map are
-logged at debug level to `btech::radio::frequencies`. The `ZeroFrequencies`
-channel, when it exists, records transmissions on frequency zero when the
-battlefield map is in-character. Failed actions leave no partial diagnostics.
+logged at debug level to `btech::radio::frequencies`. Transmissions on frequency
+zero over an in-character battlefield are logged with their text at info level to
+`btech::radio::zero_frequency`. Failed actions leave no partial diagnostics.
 
 
 Mechs and ground vehicles share C3/C3i connections, messages, reports and range

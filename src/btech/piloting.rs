@@ -33,7 +33,7 @@ impl PilotingCheck {
     /// Awarding checks use the `(noxp)` diagnostic label.
     pub(super) fn diagnostic(&self, awards_experience: bool) -> Option<super::DiagnosticMessage> {
         self.roll.map(|_| super::DiagnosticMessage::new(
-            super::DiagnosticTopic::PilotingRolls,
+            super::TraceTopic::PilotingRolls,
             format!("Attempting to make pilot{} skill roll. SPilot: {}, mods: {}, MechPilot: {}, BTH: {}",
                 if awards_experience { " (noxp)" } else { "" },
                 self.skill, self.situational, self.damage, self.target),
@@ -112,7 +112,6 @@ pub(super) fn publish_ordered_notices(
 /// These maneuver callers always capture their assigned pilot before applying consequences.
 pub(super) fn publish_maneuver_feedback(
     scripts: &crate::Scripts,
-    config: &crate::Config,
     notices: &[super::Notice],
     private: &[PilotNotice],
     check: Option<&PilotingCheck>,
@@ -121,7 +120,6 @@ pub(super) fn publish_maneuver_feedback(
     let position = private.first().map_or(0, |notice| notice.before_notice);
     publish_diagnostic_feedback(
         scripts,
-        config,
         notices,
         private,
         check
@@ -133,7 +131,6 @@ pub(super) fn publish_maneuver_feedback(
 /// Reports with cockpit fallback retain an explicit diagnostic position independent of pilot presence.
 pub(super) fn publish_diagnostic_feedback(
     scripts: &crate::Scripts,
-    config: &crate::Config,
     notices: &[super::Notice],
     private: &[PilotNotice],
     diagnostic: Option<(usize, super::DiagnosticMessage)>,
@@ -142,7 +139,7 @@ pub(super) fn publish_diagnostic_feedback(
         if let Some((position, diagnostic)) = &diagnostic
             && index == *position
         {
-            super::diagnostics::publish(scripts, config, std::slice::from_ref(diagnostic))?;
+            super::diagnostics::publish(scripts, std::slice::from_ref(diagnostic));
         }
         Ok(())
     })
@@ -355,7 +352,7 @@ pub(super) fn award_reason(
     )?;
     let message = award.accepted.then(|| {
         super::DiagnosticMessage::new(
-            super::DiagnosticTopic::PilotingExperience,
+            super::TraceTopic::PilotingExperience,
             format!("{} gained {amount} {skill} XP", world.objects[&pilot].name),
         )
     });
@@ -383,7 +380,7 @@ mod tests {
         };
         for (awards, label) in [(false, ""), (true, " (noxp)")] {
             let message = check.diagnostic(awards).unwrap();
-            assert_eq!(message.topic, super::super::DiagnosticTopic::PilotingRolls);
+            assert_eq!(message.topic, super::super::TraceTopic::PilotingRolls);
             assert_eq!(
                 message.text,
                 format!(

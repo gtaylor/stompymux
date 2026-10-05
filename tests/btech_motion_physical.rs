@@ -4352,7 +4352,7 @@ async fn character_charge_action_packets_xp_and_casualty_rollback() {
                     + protection_messages
             );
             for message in &report.experience_messages[..report.experience.len()] {
-                assert_eq!(message.topic, DiagnosticTopic::PilotingExperience);
+                assert_eq!(message.topic, TraceTopic::PilotingExperience);
                 assert_eq!(
                     message.text,
                     format!(
@@ -4913,7 +4913,7 @@ async fn character_dfa_action_hit_miss_and_casualty_rollback() {
                     .count()
             );
             for message in &report.experience_messages {
-                assert_eq!(message.topic, DiagnosticTopic::PilotingExperience);
+                assert_eq!(message.topic, TraceTopic::PilotingExperience);
                 assert_eq!(
                     message.text,
                     format!(

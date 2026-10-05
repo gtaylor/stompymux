@@ -507,7 +507,7 @@ fn award_computer_override(
     )?;
     let message = award.accepted.then(|| {
         super::DiagnosticMessage::new(
-            super::DiagnosticTopic::Experience,
+            super::TraceTopic::Experience,
             format!(
                 "{} gained 1 computer XP (mech #{})",
                 world.objects[&pilot].name, id.0

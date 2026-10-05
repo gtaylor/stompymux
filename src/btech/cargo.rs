@@ -235,7 +235,7 @@ pub fn transfer_cargo_action(
                 })
             })
             .collect::<Vec<_>>();
-        super::diagnostics::publish(scripts, config, &messages)?;
+        super::diagnostics::publish(scripts, &messages);
         scripts.effects.validate()?;
         Ok(rows)
     })

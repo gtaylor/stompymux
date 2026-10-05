@@ -229,11 +229,7 @@ fn advance_unjamming_inner(
 }
 
 /// Publish feedback and diagnostics under the caller's checkpoint.
-pub(crate) fn publish_unjamming(
-    scripts: &crate::Scripts,
-    config: &crate::Config,
-    report: &UnjamReport,
-) -> Result<()> {
+pub(crate) fn publish_unjamming(scripts: &crate::Scripts, report: &UnjamReport) -> Result<()> {
     let mut diagnostics = report.diagnostics.iter().peekable();
     for index in 0..=report.messages.len() {
         while diagnostics
@@ -241,13 +237,14 @@ pub(crate) fn publish_unjamming(
             .is_some_and(|(before, _)| *before == index)
         {
             let (_, diagnostic) = diagnostics.next().unwrap();
-            super::diagnostics::publish(scripts, config, std::slice::from_ref(diagnostic))?;
+            super::diagnostics::publish(scripts, std::slice::from_ref(diagnostic));
         }
         if let Some((recipient, text)) = report.messages.get(index) {
             super::notify_message(scripts, *recipient, text)?;
         }
     }
-    super::diagnostics::publish(scripts, config, &report.experience_messages)
+    super::diagnostics::publish(scripts, &report.experience_messages);
+    Ok(())
 }
 
 /// Advance and publish recovery, restoring countdowns, ammunition, XP and output on failure.
@@ -263,7 +260,7 @@ pub fn advance_unjamming_action(
             extended_piloting,
             extended_gunnery,
         )?;
-        publish_unjamming(scripts, config, &report)?;
+        publish_unjamming(scripts, &report)?;
         scripts.world.borrow().validate_action(config)
     })
 }

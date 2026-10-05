@@ -1403,7 +1403,7 @@
 
 // lua-types-begin btech 00325
 //|---@class DiagnosticMessage
-//|---@field topic "map_errors"|"piloting_rolls"|"self_destruct"|"economy"|"gunnery_experience"|"experience"|"piloting_experience"|"radio_frequencies"|"zero_frequencies"
+//|---@field topic "experience"|"gunnery_experience"|"piloting_experience"|"piloting_rolls"|"self_destruct"|"economy"|"radio_frequencies"|"radio_zero_frequency"|"map_load"
 //|---@field text string
 // lua-types-end
 
