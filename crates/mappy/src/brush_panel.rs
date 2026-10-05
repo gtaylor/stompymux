@@ -1,42 +1,85 @@
-//! The layer brush: which of a hex's layers to paint, what to paint into each, and the
-//! inspector controls for choosing them.
+//! The brushes and their inspector controls.
 //!
-//! A hex is ground at a level, optionally covered by woods or water, optionally carrying a
-//! building, wall or bridge, and optionally burning or smoking. Each of those layers can be
-//! switched on in the brush independently; painting changes only the switched-on layers.
+//! Each brush paints one thing: Elevation sets ground height, Terrain the ground or water,
+//! Overlays woods, snow and ice, Structures buildings, walls and bridges, and Conditions fire
+//! and smoke. The panel
+//! keeps every brush's selection, so switching brushes and back keeps the choices made.
 use iced::{
     Alignment, Background, Border, Color, Element, Fill, Theme,
-    widget::{button, checkbox, column, row, slider, text},
+    widget::{button, column, row, slider, text},
 };
 use stompymux_map::{
-    DecorationKind, Ground, Hex, MAX_DEPTH, MAX_HEIGHT, Structure, Terrain, Water, Woods,
+    DecorationKind, Ground, Hex, MAX_DEPTH, MAX_HEIGHT, Structure, Terrain, Woods,
 };
 
 use crate::{
-    document::Brush,
+    document::{Brush, Cover, Paint, TerrainFeature},
     map_view::{contrast, terrain_color},
 };
 
 /// Largest brush radius, in hexes from the center.
 pub const MAX_RADIUS: u8 = 5;
 
-/// One layer of a hex the brush can paint.
+/// Which brush paints, and so which layer of a hex changes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Layer {
-    Level,
-    Ground,
-    Woods,
-    Water,
-    Structure,
-    Overlay,
+pub enum BrushMode {
+    Elevation,
+    Terrain,
+    Overlays,
+    Structures,
+    Conditions,
 }
 
-/// Water choices: none, open water or ice.
+impl BrushMode {
+    /// Every brush, in toolbar order.
+    pub const ALL: [Self; 5] = [
+        Self::Elevation,
+        Self::Terrain,
+        Self::Overlays,
+        Self::Structures,
+        Self::Conditions,
+    ];
+
+    /// The brush's name in the toolbar and inspector.
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Elevation => "Elevation",
+            Self::Terrain => "Terrain",
+            Self::Overlays => "Overlays",
+            Self::Structures => "Structures",
+            Self::Conditions => "Conditions",
+        }
+    }
+
+    /// What painting with the brush does, for the inspector.
+    fn summary(self) -> &'static str {
+        match self {
+            Self::Elevation => {
+                "Sets ground height and leaves everything on it. Keys 0-9 pick a level."
+            }
+            Self::Terrain => {
+                "Sets the ground or water. Woods and snow stay on clear ground and ice on water; \
+                 other terrain clears them. Knocks down buildings and walls; bridges stay over \
+                 water."
+            }
+            Self::Overlays => {
+                "Woods and snow cover dry hexes without structures; ice freezes water. Remove \
+                 clears woods and snow and thaws ice."
+            }
+            Self::Structures => {
+                "Buildings and walls clear the terrain under them; bridges bring water. Removing \
+                 a structure leaves the terrain."
+            }
+            Self::Conditions => "Starts or puts out fire and smoke over any hex.",
+        }
+    }
+}
+
+/// Terrain choices: one kind of ground, or water.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum WaterKind {
-    None,
-    Open,
-    Frozen,
+pub enum TerrainKind {
+    Ground(Ground),
+    Water,
 }
 
 /// Structure choices; the brush's structure height is the building or wall height, or the
@@ -52,12 +95,12 @@ pub enum StructureKind {
 /// A change to the brush from its controls or the keyboard.
 #[derive(Debug, Clone)]
 pub enum BrushEdit {
-    Enable(Layer, bool),
+    Mode(BrushMode),
+    /// Pick a level, switching to the Elevation brush.
     Level(u8),
-    Ground(Ground),
-    Woods(Option<Woods>),
-    Water(WaterKind),
+    Terrain(TerrainKind),
     Depth(u8),
+    Cover(Option<Cover>),
     Structure(StructureKind),
     StructureHeight(u8),
     Overlay(Option<DecorationKind>),
@@ -66,107 +109,70 @@ pub enum BrushEdit {
     RadiusStep(i8),
 }
 
-/// The brush's selections, kept for every layer whether or not it is switched on.
+/// The selected brush and every brush's selections.
 #[derive(Debug, Clone)]
 pub struct BrushPanel {
+    pub mode: BrushMode,
     pub level: u8,
-    pub ground: Ground,
-    pub woods: Option<Woods>,
-    pub water: WaterKind,
+    pub terrain: TerrainKind,
     pub depth: u8,
+    pub cover: Option<Cover>,
     pub structure: StructureKind,
     pub structure_height: u8,
     pub overlay: Option<DecorationKind>,
     pub radius: u8,
-    /// Layers switched on, in [`Layer`] order.
-    enabled: [bool; 6],
 }
 
 impl Default for BrushPanel {
-    /// Paints clear ground, leaving everything else alone.
+    /// The Terrain brush painting clear ground.
     fn default() -> Self {
         Self {
+            mode: BrushMode::Terrain,
             level: 0,
-            ground: Ground::Clear,
-            woods: None,
-            water: WaterKind::None,
+            terrain: TerrainKind::Ground(Ground::Clear),
             depth: 1,
-            structure: StructureKind::None,
+            cover: Some(Cover::Woods(Woods::Light)),
+            structure: StructureKind::Building,
             structure_height: 1,
-            overlay: None,
+            overlay: Some(DecorationKind::Fire),
             radius: 0,
-            enabled: [false, true, false, false, false, false],
         }
     }
 }
 
 impl BrushPanel {
-    /// Whether painting changes `layer`.
-    pub fn enabled(&self, layer: Layer) -> bool {
-        self.enabled[layer as usize]
-    }
-
-    /// Apply a change; choosing a value for a layer also switches that layer on.
+    /// Apply a change.
     pub fn edit(&mut self, edit: BrushEdit) {
-        let layer = match edit {
-            BrushEdit::Enable(layer, enabled) => {
-                self.enabled[layer as usize] = enabled;
-                return;
+        match edit {
+            BrushEdit::Mode(mode) => self.mode = mode,
+            BrushEdit::Level(level) => {
+                self.mode = BrushMode::Elevation;
+                self.level = level.min(MAX_HEIGHT);
             }
-            BrushEdit::Radius(radius) => {
-                self.radius = radius.min(MAX_RADIUS);
-                return;
-            }
+            BrushEdit::Terrain(terrain) => self.terrain = terrain,
+            BrushEdit::Depth(depth) => self.depth = depth.min(MAX_DEPTH),
+            BrushEdit::Cover(cover) => self.cover = cover,
+            BrushEdit::Structure(structure) => self.structure = structure,
+            BrushEdit::StructureHeight(height) => self.structure_height = height.min(MAX_HEIGHT),
+            BrushEdit::Overlay(overlay) => self.overlay = overlay,
+            BrushEdit::Radius(radius) => self.radius = radius.min(MAX_RADIUS),
             BrushEdit::RadiusStep(step) => {
                 self.radius = self.radius.saturating_add_signed(step).min(MAX_RADIUS);
-                return;
             }
-            BrushEdit::Level(level) => {
-                self.level = level.min(MAX_HEIGHT);
-                Layer::Level
-            }
-            BrushEdit::Ground(ground) => {
-                self.ground = ground;
-                Layer::Ground
-            }
-            BrushEdit::Woods(woods) => {
-                self.woods = woods;
-                Layer::Woods
-            }
-            BrushEdit::Water(water) => {
-                self.water = water;
-                Layer::Water
-            }
-            BrushEdit::Depth(depth) => {
-                self.depth = depth.min(MAX_DEPTH);
-                Layer::Water
-            }
-            BrushEdit::Structure(structure) => {
-                self.structure = structure;
-                Layer::Structure
-            }
-            BrushEdit::StructureHeight(height) => {
-                self.structure_height = height.min(MAX_HEIGHT);
-                Layer::Structure
-            }
-            BrushEdit::Overlay(overlay) => {
-                self.overlay = overlay;
-                Layer::Overlay
-            }
-        };
-        self.enabled[layer as usize] = true;
+        }
     }
 
-    /// Take every layer's selection from `hex` and switch them all on, for the eyedropper.
+    /// Take every brush's selection from `hex`, for the eyedropper, keeping the selected brush.
     pub fn pick(&mut self, hex: Hex) {
         self.level = hex.level();
-        self.ground = hex.ground();
-        self.woods = hex.woods();
-        (self.water, self.depth) = match hex.water() {
-            None => (WaterKind::None, self.depth),
-            Some(water) if water.frozen => (WaterKind::Frozen, water.depth),
-            Some(water) => (WaterKind::Open, water.depth),
+        self.terrain = match TerrainFeature::of(hex) {
+            TerrainFeature::Ground(ground) => TerrainKind::Ground(ground),
+            TerrainFeature::Water { depth } => {
+                self.depth = depth;
+                TerrainKind::Water
+            }
         };
+        self.cover = Cover::of(hex);
         (self.structure, self.structure_height) = match hex.structure() {
             None => (StructureKind::None, self.structure_height),
             Some(Structure::Building { height }) => (StructureKind::Building, height),
@@ -174,103 +180,131 @@ impl BrushPanel {
             Some(Structure::Bridge { deck }) => (StructureKind::Bridge, deck),
         };
         self.overlay = hex.overlay();
-        self.enabled = [true; 6];
     }
 
-    /// The brush to paint with: the selections of the switched-on layers.
+    /// The selected brush with its selections.
     pub fn brush(&self) -> Brush {
-        let on = |layer| self.enabled(layer);
-        let water = match self.water {
-            WaterKind::None => None,
-            WaterKind::Open | WaterKind::Frozen => Some(Water {
-                depth: self.depth,
-                frozen: self.water == WaterKind::Frozen,
-            }),
-        };
-        let height = self.structure_height;
-        let structure = match self.structure {
-            StructureKind::None => None,
-            StructureKind::Building => Some(Structure::Building { height }),
-            StructureKind::Wall => Some(Structure::Wall { height }),
-            StructureKind::Bridge => Some(Structure::Bridge { deck: height }),
+        let paint = match self.mode {
+            BrushMode::Elevation => Paint::Level(self.level),
+            BrushMode::Terrain => Paint::Terrain(self.terrain_feature()),
+            BrushMode::Overlays => Paint::Cover(self.cover),
+            BrushMode::Structures => Paint::Structure(self.structure()),
+            BrushMode::Conditions => Paint::Overlay(self.overlay),
         };
         Brush {
-            level: on(Layer::Level).then_some(self.level),
-            ground: on(Layer::Ground).then_some(self.ground),
-            woods: on(Layer::Woods).then_some(self.woods),
-            water: on(Layer::Water).then_some(water),
-            structure: on(Layer::Structure).then_some(structure),
-            overlay: on(Layer::Overlay).then_some(self.overlay),
+            paint,
             radius: self.radius,
         }
     }
 
-    /// The inspector controls, one section per layer, each with its on switch.
+    fn terrain_feature(&self) -> TerrainFeature {
+        match self.terrain {
+            TerrainKind::Ground(ground) => TerrainFeature::Ground(ground),
+            TerrainKind::Water => TerrainFeature::Water { depth: self.depth },
+        }
+    }
+
+    fn structure(&self) -> Option<Structure> {
+        let height = self.structure_height;
+        match self.structure {
+            StructureKind::None => None,
+            StructureKind::Building => Some(Structure::Building { height }),
+            StructureKind::Wall => Some(Structure::Wall { height }),
+            StructureKind::Bridge => Some(Structure::Bridge { deck: height }),
+        }
+    }
+
+    /// The selected brush's controls, then the brush size.
     pub fn view(&self) -> Element<'_, BrushEdit> {
-        let grounds = [
-            (Ground::Clear, Terrain::Grassland, "clear"),
-            (Ground::Road, Terrain::Road, "road"),
-            (Ground::Rough, Terrain::Rough, "rough"),
-            (Ground::Mountains, Terrain::Mountains, "mountains"),
-            (Ground::Snow, Terrain::Snow, "snow"),
-            (Ground::Sand, Terrain::Sand, "sand"),
+        let options = match self.mode {
+            BrushMode::Elevation => amount("Level", self.level, MAX_HEIGHT, BrushEdit::Level),
+            BrushMode::Terrain => self.terrain_options(),
+            BrushMode::Overlays => self.cover_options(),
+            BrushMode::Structures => self.structure_options(),
+            BrushMode::Conditions => self.condition_options(),
+        };
+        column![
+            text(format!("{} brush", self.mode.name())).size(15),
+            text(self.mode.summary()).size(12),
+            options,
+            text("Size").size(15),
+            amount("Radius", self.radius, MAX_RADIUS, BrushEdit::Radius),
+        ]
+        .spacing(8)
+        .into()
+    }
+
+    fn terrain_options(&self) -> Element<'_, BrushEdit> {
+        let ground = |ground, terrain, name| (TerrainKind::Ground(ground), terrain, name);
+        let rows = [
+            [
+                ground(Ground::Clear, Terrain::Grassland, "clear"),
+                ground(Ground::Road, Terrain::Road, "road"),
+                ground(Ground::Rough, Terrain::Rough, "rough"),
+            ],
+            [
+                ground(Ground::Mountains, Terrain::Mountains, "mountains"),
+                ground(Ground::Sand, Terrain::Sand, "sand"),
+                (TerrainKind::Water, Terrain::Water, "water"),
+            ],
         ];
-        let ground_rows = grounds.chunks(3).map(|chunk| {
-            row(chunk.iter().map(|&(ground, terrain, name)| {
+        let rows = rows.into_iter().map(|choices| {
+            row(choices.into_iter().map(|(kind, terrain, name)| {
                 choice(
                     name,
                     Some(terrain_color(terrain)),
-                    self.ground == ground,
-                    BrushEdit::Ground(ground),
+                    self.terrain == kind,
+                    BrushEdit::Terrain(kind),
                 )
             }))
             .spacing(4)
             .into()
         });
-        let woods = row![
-            choice("none", None, self.woods.is_none(), BrushEdit::Woods(None)),
-            choice(
-                "light",
-                Some(terrain_color(Terrain::LightForest)),
-                self.woods == Some(Woods::Light),
-                BrushEdit::Woods(Some(Woods::Light)),
-            ),
-            choice(
-                "heavy",
-                Some(terrain_color(Terrain::HeavyForest)),
-                self.woods == Some(Woods::Heavy),
-                BrushEdit::Woods(Some(Woods::Heavy)),
-            ),
-        ]
-        .spacing(4);
-        let water = row![
-            choice(
-                "none",
-                None,
-                self.water == WaterKind::None,
-                BrushEdit::Water(WaterKind::None)
-            ),
-            choice(
-                "water",
-                Some(terrain_color(Terrain::Water)),
-                self.water == WaterKind::Open,
-                BrushEdit::Water(WaterKind::Open),
-            ),
-            choice(
-                "ice",
-                Some(terrain_color(Terrain::Ice)),
-                self.water == WaterKind::Frozen,
-                BrushEdit::Water(WaterKind::Frozen),
-            ),
-        ]
-        .spacing(4);
+        let mut options = column(rows).spacing(4);
+        if self.terrain == TerrainKind::Water {
+            options = options.push(amount("Depth", self.depth, MAX_DEPTH, BrushEdit::Depth));
+        }
+        options.spacing(8).into()
+    }
+
+    fn cover_options(&self) -> Element<'_, BrushEdit> {
+        let rows: [&[Option<Cover>]; 2] = [
+            &[None, Some(Cover::Snow), Some(Cover::Ice)],
+            &[
+                Some(Cover::Woods(Woods::Light)),
+                Some(Cover::Woods(Woods::Heavy)),
+            ],
+        ];
+        let rows = rows.into_iter().map(|covers| {
+            row(covers.iter().map(|&cover| {
+                let (terrain, name) = match cover {
+                    None => (None, "remove"),
+                    Some(Cover::Snow) => (Some(Terrain::Snow), "snow"),
+                    Some(Cover::Ice) => (Some(Terrain::Ice), "ice"),
+                    Some(Cover::Woods(Woods::Light)) => (Some(Terrain::LightForest), "light woods"),
+                    Some(Cover::Woods(Woods::Heavy)) => (Some(Terrain::HeavyForest), "heavy woods"),
+                };
+                choice(
+                    name,
+                    terrain.map(terrain_color),
+                    self.cover == cover,
+                    BrushEdit::Cover(cover),
+                )
+            }))
+            .spacing(4)
+            .into()
+        });
+        column(rows).spacing(4).into()
+    }
+
+    fn structure_options(&self) -> Element<'_, BrushEdit> {
         let structures = [
-            (StructureKind::None, None, "none"),
+            (StructureKind::None, None, "remove"),
             (StructureKind::Building, Some(Terrain::Building), "building"),
             (StructureKind::Wall, Some(Terrain::Wall), "wall"),
             (StructureKind::Bridge, Some(Terrain::Bridge), "bridge"),
         ];
-        let structure = row(structures.into_iter().map(|(kind, terrain, name)| {
+        let choices = row(structures.into_iter().map(|(kind, terrain, name)| {
             choice(
                 name,
                 terrain.map(terrain_color),
@@ -279,67 +313,41 @@ impl BrushPanel {
             )
         }))
         .spacing(4);
-        let height_label = if self.structure == StructureKind::Bridge {
-            "Deck"
-        } else {
-            "Height"
+        let height_label = match self.structure {
+            StructureKind::None => return choices.into(),
+            StructureKind::Bridge => "Deck",
+            StructureKind::Building | StructureKind::Wall => "Height",
         };
-        let overlay = row![
-            choice(
-                "none",
-                None,
-                self.overlay.is_none(),
-                BrushEdit::Overlay(None)
-            ),
-            choice(
-                "fire",
-                Some(terrain_color(Terrain::Fire)),
-                self.overlay == Some(DecorationKind::Fire),
-                BrushEdit::Overlay(Some(DecorationKind::Fire)),
-            ),
-            choice(
-                "smoke",
-                Some(terrain_color(Terrain::Smoke)),
-                self.overlay == Some(DecorationKind::Smoke),
-                BrushEdit::Overlay(Some(DecorationKind::Smoke)),
-            ),
-        ]
-        .spacing(4);
         column![
-            section(self, Layer::Level, "Level"),
-            amount("Level", self.level, MAX_HEIGHT, BrushEdit::Level),
-            section(self, Layer::Ground, "Ground"),
-            column(ground_rows).spacing(4),
-            section(self, Layer::Woods, "Woods"),
-            woods,
-            section(self, Layer::Water, "Water"),
-            water,
-            amount("Depth", self.depth, MAX_DEPTH, BrushEdit::Depth),
-            section(self, Layer::Structure, "Structure"),
-            structure,
+            choices,
             amount(
                 height_label,
                 self.structure_height,
                 MAX_HEIGHT,
                 BrushEdit::StructureHeight
             ),
-            section(self, Layer::Overlay, "Fire and smoke"),
-            overlay,
-            text("Brush").size(15),
-            amount("Radius", self.radius, MAX_RADIUS, BrushEdit::Radius),
         ]
         .spacing(8)
         .into()
     }
-}
 
-/// A layer's heading with the switch that turns painting it on or off.
-fn section<'a>(panel: &BrushPanel, layer: Layer, label: &'a str) -> Element<'a, BrushEdit> {
-    checkbox(panel.enabled(layer))
-        .label(label)
-        .text_size(15)
-        .on_toggle(move |enabled| BrushEdit::Enable(layer, enabled))
+    fn condition_options(&self) -> Element<'_, BrushEdit> {
+        let overlays = [
+            (None, None, "none"),
+            (Some(DecorationKind::Fire), Some(Terrain::Fire), "fire"),
+            (Some(DecorationKind::Smoke), Some(Terrain::Smoke), "smoke"),
+        ];
+        row(overlays.into_iter().map(|(overlay, terrain, name)| {
+            choice(
+                name,
+                terrain.map(terrain_color),
+                self.overlay == overlay,
+                BrushEdit::Overlay(overlay),
+            )
+        }))
+        .spacing(4)
         .into()
+    }
 }
 
 /// A labelled slider for a height, depth or radius.
@@ -405,45 +413,58 @@ fn choice<'a>(
 mod tests {
     use super::*;
 
-    /// Only switched-on layers reach the brush, and choosing a value switches its layer on.
+    /// Each brush paints only its own selection, and picking a level switches to Elevation.
     #[test]
-    fn brushes_carry_only_switched_on_layers() {
+    fn brushes_paint_their_own_selection() {
         let mut panel = BrushPanel::default();
         assert_eq!(
-            panel.brush(),
-            Brush {
-                ground: Some(Ground::Clear),
-                ..Brush::default()
-            }
+            panel.brush().paint,
+            Paint::Terrain(TerrainFeature::Ground(Ground::Clear))
         );
-        panel.edit(BrushEdit::Enable(Layer::Ground, false));
-        panel.edit(BrushEdit::StructureHeight(30));
-        panel.edit(BrushEdit::Structure(StructureKind::Bridge));
-        panel.edit(BrushEdit::Level(99));
+        panel.edit(BrushEdit::Terrain(TerrainKind::Water));
+        panel.edit(BrushEdit::Depth(99));
         assert_eq!(
-            panel.brush(),
-            Brush {
-                level: Some(MAX_HEIGHT),
-                structure: Some(Some(Structure::Bridge { deck: 30 })),
-                ..Brush::default()
-            }
+            panel.brush().paint,
+            Paint::Terrain(TerrainFeature::Water { depth: MAX_DEPTH })
         );
+        panel.edit(BrushEdit::Mode(BrushMode::Overlays));
+        panel.edit(BrushEdit::Cover(Some(Cover::Ice)));
+        assert_eq!(panel.brush().paint, Paint::Cover(Some(Cover::Ice)));
+        panel.edit(BrushEdit::Mode(BrushMode::Structures));
+        panel.edit(BrushEdit::Structure(StructureKind::Bridge));
+        panel.edit(BrushEdit::StructureHeight(3));
+        assert_eq!(
+            panel.brush().paint,
+            Paint::Structure(Some(Structure::Bridge { deck: 3 }))
+        );
+        panel.edit(BrushEdit::Level(99));
+        assert_eq!(panel.mode, BrushMode::Elevation);
+        assert_eq!(panel.brush().paint, Paint::Level(MAX_HEIGHT));
     }
 
-    /// The eyedropper copies every layer, so painting reproduces the picked hex exactly.
+    /// The eyedropper fills every brush, so painting each in toolbar order onto a blank hex
+    /// rebuilds the picked one.
     #[test]
-    fn picking_a_hex_reproduces_it() {
+    fn picking_a_hex_fills_every_brush() {
         let hexes = [
             Hex::new(Terrain::Ice, 6).with_level(12),
-            Hex::new(Terrain::Bridge, 4),
-            Hex::new(Terrain::Rough, 3).with_woods(Some(Woods::Heavy)),
+            Hex::new(Terrain::Bridge, 4).with_level(2),
+            Hex::new(Terrain::HeavyForest, 3),
+            Hex::new(Terrain::Snow, 5),
+            Hex::new(Terrain::Mountains, 7),
             Hex::new(Terrain::Wall, 35),
             Hex::at_level(2).with_overlay(Some(DecorationKind::Smoke)),
         ];
         for hex in hexes {
             let mut panel = BrushPanel::default();
             panel.pick(hex);
-            assert_eq!(panel.brush(), Brush::matching(hex, 0), "{hex:?}");
+            let mut document = crate::document::Document::new(1, 1).unwrap();
+            let at = stompymux_map::HexCoordinate { x: 0, y: 0 };
+            for mode in BrushMode::ALL {
+                panel.edit(BrushEdit::Mode(mode));
+                document.paint(at, panel.brush());
+            }
+            assert_eq!(document.hex(at), Some(hex), "{hex:?}");
         }
     }
 }

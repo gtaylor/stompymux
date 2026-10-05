@@ -4,10 +4,11 @@
 //! replay edits in either direction. Brush strokes accumulate into one edit until the stroke
 //! ends, so a drag across many hexes undoes in one step.
 //!
-//! Hexes are edited layer by layer, which can build hexes the map file format cannot store:
-//! the file keeps one feature per hex, so woods on rough ground, or a bridge with no water
-//! under it, would not survive a save. [`file_holds`] asks the game's own encoder and
-//! decoder, the document keeps the set of hexes that fail, and saving refuses while any do.
+//! Brushes keep hexes within what the map file format can store, but maps loaded from
+//! elsewhere may not be: the file keeps one feature per hex, so woods on rough ground, or a
+//! bridge with no water under it, would not survive a save. [`file_holds`] asks the game's own
+//! encoder and decoder, the document keeps the set of hexes that fail, and saving refuses
+//! while any do.
 use std::{
     collections::{BTreeMap, BTreeSet},
     path::{Path, PathBuf},
@@ -48,57 +49,143 @@ enum Edit {
     },
 }
 
-/// What a brush application writes into each hex it touches. Each layer is `None` to leave
-/// that layer of every hex alone; optional layers are `Some(None)` to clear them.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub struct Brush {
-    pub level: Option<u8>,
-    pub ground: Option<Ground>,
-    pub woods: Option<Option<Woods>>,
-    pub water: Option<Option<Water>>,
-    pub structure: Option<Option<Structure>>,
-    pub overlay: Option<Option<DecorationKind>>,
-    /// Hexes within this many steps of the center are painted.
-    pub radius: u8,
+/// What a brush does to each hex it touches.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Paint {
+    /// Set the ground height, keeping everything on the ground.
+    Level(u8),
+    /// Replace the hex's base terrain. Woods and snow stay on clear ground and ice stays on
+    /// water; other terrain clears them. A map file keeps one feature per hex, so this also
+    /// knocks down buildings and walls, and bridges unless the new terrain is water.
+    Terrain(TerrainFeature),
+    /// Lay a cover over the base terrain, or clear it with `None`; see [`Cover`].
+    Cover(Option<Cover>),
+    /// Build or remove a structure. Buildings and walls stand on clear ground, so building one
+    /// clears the hex's terrain; a bridge spans water, so it floods a dry hex one level deep.
+    /// Removing a structure leaves the terrain under it.
+    Structure(Option<Structure>),
+    /// Start or put out fire or smoke.
+    Overlay(Option<DecorationKind>),
 }
 
-impl Brush {
-    /// A brush that paints every layer of `hex`; what the eyedropper should produce.
-    #[cfg(test)]
-    pub fn matching(hex: Hex, radius: u8) -> Self {
-        Self {
-            level: Some(hex.level()),
-            ground: Some(hex.ground()),
-            woods: Some(hex.woods()),
-            water: Some(hex.water()),
-            structure: Some(hex.structure()),
-            overlay: Some(hex.overlay()),
-            radius,
-        }
-    }
+/// A hex's base terrain: a kind of ground, or water of some depth. Snow is a [`Cover`]
+/// instead.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TerrainFeature {
+    Ground(Ground),
+    Water { depth: u8 },
+}
 
-    /// The hex this brush turns `hex` into.
-    fn apply(self, mut hex: Hex) -> Hex {
-        if let Some(level) = self.level {
-            hex = hex.with_level(level);
+impl TerrainFeature {
+    /// The base terrain under `hex`'s cover, structure and overlay.
+    pub fn of(hex: Hex) -> Self {
+        if let Some(water) = hex.water() {
+            return Self::Water { depth: water.depth };
         }
-        if let Some(ground) = self.ground {
-            hex = hex.with_ground(ground);
+        match hex.ground() {
+            Ground::Snow => Self::Ground(Ground::Clear),
+            ground => Self::Ground(ground),
         }
-        if let Some(woods) = self.woods {
-            hex = hex.with_woods(woods);
-        }
-        if let Some(water) = self.water {
-            hex = hex.with_water(water);
-        }
-        if let Some(structure) = self.structure {
-            hex = hex.with_structure(structure);
-        }
-        if let Some(overlay) = self.overlay {
-            hex = hex.with_overlay(overlay);
-        }
-        hex
     }
+}
+
+/// What can lie over a hex's base terrain, shown in Mappy as overlays. Woods and snow cover dry
+/// ground, which a map file then stores as clear; ice freezes water. Fire and smoke are the
+/// map's own overlays and are painted separately.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Cover {
+    Woods(Woods),
+    Snow,
+    Ice,
+}
+
+impl Cover {
+    /// The cover over `hex`, if any.
+    pub fn of(hex: Hex) -> Option<Self> {
+        if let Some(water) = hex.water() {
+            return water.frozen.then_some(Self::Ice);
+        }
+        if let Some(woods) = hex.woods() {
+            return Some(Self::Woods(woods));
+        }
+        (hex.ground() == Ground::Snow).then_some(Self::Snow)
+    }
+}
+
+impl Paint {
+    /// The hex this paint turns `hex` into. Level and overlay always carry over.
+    fn apply(self, hex: Hex) -> Hex {
+        let rebuilt = |ground, woods, water, structure| {
+            Hex::from_layers(hex.level(), ground, woods, water, structure)
+                .with_overlay(hex.overlay())
+        };
+        match self {
+            Self::Level(level) => hex.with_level(level),
+            Self::Terrain(TerrainFeature::Ground(ground)) => {
+                let (ground, woods) = match Cover::of(hex) {
+                    Some(Cover::Woods(woods)) if ground == Ground::Clear => (ground, Some(woods)),
+                    Some(Cover::Snow) if ground == Ground::Clear => (Ground::Snow, None),
+                    _ => (ground, None),
+                };
+                rebuilt(ground, woods, None, None)
+            }
+            Self::Terrain(TerrainFeature::Water { depth }) => {
+                let water = Water {
+                    depth,
+                    frozen: Cover::of(hex) == Some(Cover::Ice),
+                };
+                let bridge = hex.structure().filter(|_| hex.has_bridge());
+                rebuilt(Ground::Clear, None, Some(water), bridge)
+            }
+            Self::Cover(None) => {
+                let ground = match hex.ground() {
+                    Ground::Snow => Ground::Clear,
+                    ground => ground,
+                };
+                let water = hex.water().map(|water| Water {
+                    frozen: false,
+                    ..water
+                });
+                rebuilt(ground, None, water, hex.structure())
+            }
+            Self::Cover(Some(Cover::Ice)) => {
+                let Some(water) = hex.water() else {
+                    return hex;
+                };
+                hex.with_water(Some(Water {
+                    frozen: true,
+                    ..water
+                }))
+            }
+            Self::Cover(Some(Cover::Woods(_) | Cover::Snow))
+                if hex.water().is_some() || hex.structure().is_some() =>
+            {
+                hex
+            }
+            Self::Cover(Some(Cover::Woods(woods))) => {
+                rebuilt(Ground::Clear, Some(woods), None, None)
+            }
+            Self::Cover(Some(Cover::Snow)) => rebuilt(Ground::Snow, None, None, None),
+            Self::Structure(None) => hex.with_structure(None),
+            Self::Structure(Some(bridge @ Structure::Bridge { .. })) => {
+                let water = hex.water().unwrap_or(Water {
+                    depth: 1,
+                    frozen: false,
+                });
+                rebuilt(Ground::Clear, None, Some(water), Some(bridge))
+            }
+            Self::Structure(Some(structure)) => rebuilt(Ground::Clear, None, None, Some(structure)),
+            Self::Overlay(overlay) => hex.with_overlay(overlay),
+        }
+    }
+}
+
+/// A paint and the area it covers.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Brush {
+    pub paint: Paint,
+    /// Hexes within this many steps of the center are painted.
+    pub radius: u8,
 }
 
 /// Whether a map file stores `hex` exactly, found by saving and reloading a one-hex map
@@ -262,18 +349,25 @@ impl Document {
 
     /// Paint `brush` centered on `center` as part of the current stroke.
     pub fn paint(&mut self, center: HexCoordinate, brush: Brush) {
-        let radius = i32::from(brush.radius);
+        self.paint_with(center, brush.radius, |hex| brush.paint.apply(hex));
+    }
+
+    /// Replace each hex within `radius` steps of `center` with `apply` of it, as part of the
+    /// current stroke.
+    pub fn paint_with(&mut self, center: HexCoordinate, radius: u8, apply: impl Fn(Hex) -> Hex) {
+        let steps = u64::from(radius);
+        let radius = i32::from(radius);
         let width = i32::from(self.map.width);
         let height = i32::from(self.map.height);
         for y in (center.y - radius).max(0)..=(center.y + radius).min(height - 1) {
             for x in (center.x - radius).max(0)..=(center.x + radius).min(width - 1) {
                 let coordinate = HexCoordinate { x, y };
-                if coordinate.distance(center) > u64::from(brush.radius) {
+                if coordinate.distance(center) > steps {
                     continue;
                 }
                 let index = y as usize * self.map.width as usize + x as usize;
                 let before = self.map.hexes[index];
-                let after = brush.apply(before);
+                let after = apply(before);
                 if before == after {
                     continue;
                 }
@@ -406,9 +500,21 @@ mod tests {
     const AT: HexCoordinate = HexCoordinate { x: 2, y: 2 };
     const MIDDLE: HexCoordinate = HexCoordinate { x: 1, y: 1 };
 
-    /// A brush painting every layer of the hex the compact symbol-and-digit notation describes.
-    fn brush(terrain: Terrain, value: u8, radius: u8) -> Brush {
-        Brush::matching(Hex::new(terrain, value), radius)
+    /// Paint the hex the compact symbol-and-digit notation describes over every hex within
+    /// `radius` of `center`.
+    fn place(
+        document: &mut Document,
+        center: HexCoordinate,
+        terrain: Terrain,
+        value: u8,
+        radius: u8,
+    ) {
+        document.paint_with(center, radius, |_| Hex::new(terrain, value));
+    }
+
+    /// A brush of `paint` covering one hex.
+    fn brush(paint: Paint) -> Brush {
+        Brush { paint, radius: 0 }
     }
 
     /// A drag across many hexes undoes and redoes as one step.
@@ -416,9 +522,15 @@ mod tests {
     fn strokes_undo_and_redo_as_one_edit() {
         let mut document = Document::new(5, 5).unwrap();
         let blank = document.map.clone();
-        document.paint(AT, brush(Terrain::Water, 2, 0));
-        document.paint(HexCoordinate { x: 3, y: 2 }, brush(Terrain::Water, 2, 0));
-        document.paint(AT, brush(Terrain::Road, 1, 0));
+        place(&mut document, AT, Terrain::Water, 2, 0);
+        place(
+            &mut document,
+            HexCoordinate { x: 3, y: 2 },
+            Terrain::Water,
+            2,
+            0,
+        );
+        place(&mut document, AT, Terrain::Road, 1, 0);
         document.end_stroke();
         let painted = document.map.clone();
         assert_eq!(document.hex(AT), Some(Hex::new(Terrain::Road, 1)));
@@ -433,7 +545,7 @@ mod tests {
     #[test]
     fn brush_radius_follows_hex_distance_and_map_bounds() {
         let mut document = Document::new(5, 5).unwrap();
-        document.paint(AT, brush(Terrain::Rough, 0, 1));
+        place(&mut document, AT, Terrain::Rough, 0, 1);
         let painted = document
             .map
             .hexes
@@ -442,7 +554,13 @@ mod tests {
             .count();
         assert_eq!(painted, 7);
         let mut corner = Document::new(5, 5).unwrap();
-        corner.paint(HexCoordinate { x: 0, y: 0 }, brush(Terrain::Rough, 0, 1));
+        place(
+            &mut corner,
+            HexCoordinate { x: 0, y: 0 },
+            Terrain::Rough,
+            0,
+            1,
+        );
         assert!(
             corner
                 .map
@@ -454,42 +572,176 @@ mod tests {
         );
     }
 
-    /// A brush changes only the layers it sets and leaves the rest of each hex alone.
+    /// Each paint changes only its own layer, and level and overlay survive every other paint.
     #[test]
-    fn brushes_change_only_their_layers() {
+    fn paints_change_only_their_layers() {
         let mut document = Document::new(3, 3).unwrap();
-        document.paint(MIDDLE, brush(Terrain::HeavyForest, 3, 0));
-        let raise = Brush {
-            level: Some(20),
-            ..Brush::default()
-        };
-        document.paint(MIDDLE, raise);
+        place(&mut document, MIDDLE, Terrain::HeavyForest, 3, 0);
+        document.paint(MIDDLE, brush(Paint::Level(20)));
+        let woods = Hex::new(Terrain::HeavyForest, 20);
+        assert_eq!(document.hex(MIDDLE), Some(woods));
+        let smoke = Some(DecorationKind::Smoke);
+        document.paint(MIDDLE, brush(Paint::Overlay(smoke)));
+        assert_eq!(document.hex(MIDDLE), Some(woods.with_overlay(smoke)));
+        document.paint(
+            MIDDLE,
+            brush(Paint::Terrain(TerrainFeature::Ground(Ground::Rough))),
+        );
         assert_eq!(
             document.hex(MIDDLE),
-            Some(Hex::new(Terrain::HeavyForest, 20))
+            Some(Hex::new(Terrain::Rough, 20).with_overlay(smoke))
         );
-        let clear = Brush {
-            woods: Some(None),
-            ground: Some(Ground::Rough),
-            ..Brush::default()
-        };
-        document.paint(MIDDLE, clear);
-        assert_eq!(document.hex(MIDDLE), Some(Hex::new(Terrain::Rough, 20)));
     }
 
-    /// Hexes whose layers a map file cannot store are tracked as they are painted, and
-    /// saving refuses until none remain.
+    /// Terrain replaces the base, keeping covers that suit it and bridges only over water.
+    #[test]
+    fn terrain_replaces_the_base_and_what_cannot_stand_on_it() {
+        let clear = Paint::Terrain(TerrainFeature::Ground(Ground::Clear));
+        let rough = Paint::Terrain(TerrainFeature::Ground(Ground::Rough));
+        let water = Paint::Terrain(TerrainFeature::Water { depth: 3 });
+        let bridge = Some(Structure::Bridge { deck: 4 });
+        let cases = [
+            (
+                Hex::new(Terrain::LightForest, 2),
+                rough,
+                Hex::new(Terrain::Rough, 2),
+            ),
+            (
+                Hex::new(Terrain::LightForest, 2),
+                clear,
+                Hex::new(Terrain::LightForest, 2),
+            ),
+            (
+                Hex::new(Terrain::Snow, 2),
+                clear,
+                Hex::new(Terrain::Snow, 2),
+            ),
+            (
+                Hex::new(Terrain::Snow, 2),
+                water,
+                Hex::new(Terrain::Water, 3).with_level(2),
+            ),
+            (Hex::new(Terrain::Ice, 1), water, Hex::new(Terrain::Ice, 3)),
+            (
+                Hex::new(Terrain::Ice, 1),
+                rough,
+                Hex::new(Terrain::Rough, 0),
+            ),
+            (
+                Hex::new(Terrain::Building, 9),
+                rough,
+                Hex::new(Terrain::Rough, 0),
+            ),
+            (
+                Hex::new(Terrain::Bridge, 4),
+                rough,
+                Hex::new(Terrain::Rough, 0),
+            ),
+            (
+                Hex::new(Terrain::Bridge, 4),
+                water,
+                Hex::new(Terrain::Water, 3).with_structure(bridge),
+            ),
+        ];
+        for (before, paint, after) in cases {
+            assert_eq!(paint.apply(before), after, "{paint:?} over {before:?}");
+            assert!(file_holds(after), "{paint:?} over {before:?}");
+        }
+    }
+
+    /// Woods and snow cover dry, unbuilt hexes, ice freezes water, and clearing a cover
+    /// leaves the base terrain.
+    #[test]
+    fn covers_lie_only_where_they_fit() {
+        let snow = Paint::Cover(Some(Cover::Snow));
+        let woods = Paint::Cover(Some(Cover::Woods(Woods::Heavy)));
+        let ice = Paint::Cover(Some(Cover::Ice));
+        let none = Paint::Cover(None);
+        let wall = Hex::new(Terrain::Wall, 3);
+        let bridge = Hex::new(Terrain::Bridge, 2);
+        let frozen_bridge = bridge.with_water(Some(Water {
+            depth: 1,
+            frozen: true,
+        }));
+        let cases = [
+            (
+                Hex::new(Terrain::Rough, 2),
+                woods,
+                Hex::new(Terrain::HeavyForest, 2),
+            ),
+            (
+                Hex::new(Terrain::LightForest, 2),
+                snow,
+                Hex::new(Terrain::Snow, 2),
+            ),
+            (
+                Hex::new(Terrain::Water, 2),
+                snow,
+                Hex::new(Terrain::Water, 2),
+            ),
+            (wall, woods, wall),
+            (Hex::new(Terrain::Water, 2), ice, Hex::new(Terrain::Ice, 2)),
+            (
+                Hex::new(Terrain::Rough, 2),
+                ice,
+                Hex::new(Terrain::Rough, 2),
+            ),
+            (bridge, ice, frozen_bridge),
+            (frozen_bridge, none, bridge),
+            (
+                Hex::new(Terrain::Snow, 2),
+                none,
+                Hex::new(Terrain::Grassland, 2),
+            ),
+            (
+                Hex::new(Terrain::HeavyForest, 2),
+                none,
+                Hex::new(Terrain::Grassland, 2),
+            ),
+        ];
+        for (before, paint, after) in cases {
+            assert_eq!(paint.apply(before), after, "{paint:?} over {before:?}");
+            assert!(file_holds(after), "{paint:?} over {before:?}");
+        }
+    }
+
+    /// Buildings and walls clear the terrain under them, bridges bring water with them, and
+    /// removing a structure leaves the terrain.
+    #[test]
+    fn structures_keep_hexes_storable() {
+        let building = Paint::Structure(Some(Structure::Building { height: 5 }));
+        let bridge = Paint::Structure(Some(Structure::Bridge { deck: 2 }));
+        let woods = Hex::new(Terrain::LightForest, 3);
+        assert_eq!(
+            building.apply(woods),
+            Hex::new(Terrain::Building, 5).with_level(3)
+        );
+        assert_eq!(
+            bridge.apply(woods),
+            Hex::new(Terrain::Bridge, 2).with_level(3)
+        );
+        let deep = Hex::new(Terrain::Water, 4);
+        assert_eq!(
+            bridge.apply(deep),
+            deep.with_structure(Some(Structure::Bridge { deck: 2 }))
+        );
+        assert_eq!(Paint::Structure(None).apply(bridge.apply(deep)), deep);
+        for hex in [woods, deep, Hex::new(Terrain::Ice, 2)] {
+            for paint in [building, bridge, Paint::Structure(None)] {
+                assert!(file_holds(paint.apply(hex)), "{paint:?} over {hex:?}");
+            }
+        }
+    }
+
+    /// Hexes a map file cannot store are tracked as they are painted, and saving refuses until
+    /// none remain.
     #[test]
     fn unsavable_hexes_are_tracked_and_block_saving() {
         let directory = tempfile::tempdir().unwrap();
         let path = directory.path().join("test.toml");
         let mut document = Document::new(3, 3).unwrap();
-        let woods_on_rough = Brush {
-            ground: Some(Ground::Rough),
-            woods: Some(Some(Woods::Light)),
-            ..Brush::default()
-        };
-        document.paint(MIDDLE, woods_on_rough);
+        let woods_on_rough = Hex::new(Terrain::Rough, 0).with_woods(Some(Woods::Light));
+        document.paint_with(MIDDLE, 0, |_| woods_on_rough);
         assert_eq!(*document.unsavable(), BTreeSet::from([4]));
         let error = document.save_to(&path).unwrap_err().to_string();
         assert!(error.contains("1,1"), "{error}");
@@ -497,26 +749,6 @@ mod tests {
         document.undo();
         assert!(document.unsavable().is_empty());
         document.save_to(&path).unwrap();
-    }
-
-    /// Bridges are storable over water and not over dry ground, fire and smoke over anything,
-    /// and one feature per hex: woods on rough ground are not storable.
-    #[test]
-    fn file_holds_follows_the_map_file_rules() {
-        let bridge = Some(Structure::Bridge { deck: 2 });
-        assert!(file_holds(
-            Hex::new(Terrain::Water, 1).with_structure(bridge)
-        ));
-        assert!(!file_holds(Hex::at_level(0).with_structure(bridge)));
-        let fire = Some(DecorationKind::Fire);
-        assert!(file_holds(Hex::at_level(4).with_overlay(fire)));
-        assert!(file_holds(Hex::new(Terrain::Rough, 4).with_overlay(fire)));
-        let water_on_a_hill = Hex::new(Terrain::Water, 2).with_level(6);
-        assert!(file_holds(water_on_a_hill.with_structure(bridge)));
-        assert!(!file_holds(
-            Hex::new(Terrain::Rough, 4).with_woods(Some(Woods::Light))
-        ));
-        assert!(file_holds(Hex::new(Terrain::Building, 30).with_level(5)));
     }
 
     /// Settings changes are undoable and a new edit clears the redo history.
@@ -534,7 +766,7 @@ mod tests {
         document.undo();
         assert_eq!(document.settings(), original);
         assert!(document.can_redo());
-        document.paint(MIDDLE, brush(Terrain::Sand, 0, 0));
+        place(&mut document, MIDDLE, Terrain::Sand, 0, 0);
         document.end_stroke();
         assert!(!document.can_redo());
     }
@@ -549,8 +781,8 @@ mod tests {
         );
         let feed = document.hex_feed();
         let buffer = document.map.hexes.as_ptr();
-        document.paint(MIDDLE, brush(Terrain::Grassland, 0, 0));
-        document.paint(MIDDLE, brush(Terrain::Rough, 0, 0));
+        place(&mut document, MIDDLE, Terrain::Grassland, 0, 0);
+        place(&mut document, MIDDLE, Terrain::Rough, 0, 0);
         assert_eq!(document.map.hexes.as_ptr(), buffer);
         let after = document.hex_feed();
         assert_eq!(after.id, feed.id);
@@ -566,8 +798,8 @@ mod tests {
         let mut document = Document::new(3, 3).unwrap();
         let id = document.hex_feed().id;
         for _ in 0..5 {
-            document.paint(MIDDLE, brush(Terrain::Rough, 0, 1));
-            document.paint(MIDDLE, brush(Terrain::Sand, 0, 1));
+            place(&mut document, MIDDLE, Terrain::Rough, 0, 1);
+            place(&mut document, MIDDLE, Terrain::Sand, 0, 1);
         }
         let feed = document.hex_feed();
         assert_ne!(feed.id, id);
@@ -580,7 +812,7 @@ mod tests {
         let directory = tempfile::tempdir().unwrap();
         let path = directory.path().join("test.toml");
         let mut document = Document::new(4, 3).unwrap();
-        document.paint(MIDDLE, brush(Terrain::Fire, 1, 1));
+        place(&mut document, MIDDLE, Terrain::Fire, 1, 1);
         document.save_to(&path).unwrap();
         assert!(!document.dirty);
         let reloaded = Document::open(&path).unwrap();
