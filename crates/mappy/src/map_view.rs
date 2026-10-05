@@ -70,6 +70,20 @@ impl Camera {
         }
     }
 
+    /// The camera a newly opened map starts with: the whole map when its hexes are large enough
+    /// to carry labels, otherwise the middle of the map at the smallest zoom that labels them.
+    pub fn opening(width: u16, height: u16, viewport: Size) -> Self {
+        let fit = Self::fit(width, height, viewport);
+        if fit.radius >= LABEL_RADIUS {
+            return fit;
+        }
+        let center = Vector::new(viewport.width / 2.0, viewport.height / 2.0);
+        Self {
+            offset: center + (fit.offset - center) * (LABEL_RADIUS / fit.radius),
+            radius: LABEL_RADIUS,
+        }
+    }
+
     /// The camera after scaling by `factor` while keeping the map point under `anchor` still.
     pub fn zoomed(self, factor: f32, anchor: Point) -> Self {
         let radius = (self.radius * factor).clamp(MIN_RADIUS, MAX_RADIUS);
@@ -263,21 +277,7 @@ impl shader::Program<Message> for MapView<'_> {
                 self.hover.map(|_| Action::publish(Message::Hovered(None)))
             }
             (mouse::Event::WheelScrolled { delta }, Some(position)) => {
-                // Scrolling pans in both directions; Ctrl+scroll zooms around the cursor.
-                // Line deltas from mouse wheels count as this many pixels.
-                const LINE: f32 = 40.0;
-                let scroll = match delta {
-                    mouse::ScrollDelta::Lines { x, y } => Vector::new(x * LINE, y * LINE),
-                    mouse::ScrollDelta::Pixels { x, y } => Vector::new(*x, *y),
-                };
-                let message = if state.modifiers.control() {
-                    Message::Zoomed {
-                        factor: 1.15_f32.powf(scroll.y / LINE),
-                        anchor: position,
-                    }
-                } else {
-                    Message::Panned(scroll)
-                };
+                let message = wheel_message(*delta, state.modifiers, position);
                 Some(Action::publish(message).and_capture())
             }
             _ => None,
@@ -335,6 +335,28 @@ impl shader::Program<Message> for MapView<'_> {
     }
 }
 
+/// What a wheel or touchpad scroll does over the map: it pans in both directions, Shift turns a
+/// plain wheel's vertical scroll sideways, and Ctrl zooms around the cursor at `position`.
+fn wheel_message(delta: mouse::ScrollDelta, modifiers: Modifiers, position: Point) -> Message {
+    // Line deltas from mouse wheels count as this many pixels.
+    const LINE: f32 = 40.0;
+    let scroll = match delta {
+        mouse::ScrollDelta::Lines { x, y } => Vector::new(x * LINE, y * LINE),
+        mouse::ScrollDelta::Pixels { x, y } => Vector::new(x, y),
+    };
+    if modifiers.control() {
+        return Message::Zoomed {
+            factor: 1.15_f32.powf(scroll.y / LINE),
+            anchor: position,
+        };
+    }
+    // Some systems already turn Shift+wheel sideways; only swap a purely vertical scroll.
+    if modifiers.shift() && scroll.x == 0.0 {
+        return Message::Panned(Vector::new(scroll.y, 0.0));
+    }
+    Message::Panned(scroll)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -375,6 +397,40 @@ mod tests {
             );
             assert!((screen.x / height - game.x as f32).abs() < 1e-4, "{x},{y}");
         }
+    }
+
+    /// Large maps open zoomed in far enough for labels, centered as the fitted view was; small
+    /// maps that already show labels open fitted.
+    #[test]
+    fn maps_open_close_enough_for_labels() {
+        let viewport = Size::new(900.0, 700.0);
+        let small = Camera::opening(8, 6, viewport);
+        assert_eq!(small, Camera::fit(8, 6, viewport));
+        assert!(small.radius >= LABEL_RADIUS);
+        let fit = Camera::fit(120, 90, viewport);
+        let large = Camera::opening(120, 90, viewport);
+        assert!(fit.radius < LABEL_RADIUS);
+        assert_eq!(large.radius, LABEL_RADIUS);
+        // The same map point, in hex radii from the map origin, sits at the view's middle.
+        let middle = Vector::new(viewport.width / 2.0, viewport.height / 2.0);
+        let under_middle = |camera: Camera| (middle - camera.offset) * (1.0 / camera.radius);
+        let shift = under_middle(large) - under_middle(fit);
+        assert!(shift.x.abs() < 1e-3 && shift.y.abs() < 1e-3, "{shift:?}");
+    }
+
+    /// Shift turns a vertical wheel scroll into a sideways pan, and leaves sideways scrolls be.
+    #[test]
+    fn shift_scrolls_sideways() {
+        let at = Point::new(10.0, 10.0);
+        let pan = |delta, modifiers| match wheel_message(delta, modifiers, at) {
+            Message::Panned(pan) => pan,
+            message => panic!("{message:?}"),
+        };
+        let wheel = mouse::ScrollDelta::Lines { x: 0.0, y: -1.0 };
+        assert_eq!(pan(wheel, Modifiers::empty()), Vector::new(0.0, -40.0));
+        assert_eq!(pan(wheel, Modifiers::SHIFT), Vector::new(-40.0, 0.0));
+        let sideways = mouse::ScrollDelta::Pixels { x: 12.0, y: 0.0 };
+        assert_eq!(pan(sideways, Modifiers::SHIFT), Vector::new(12.0, 0.0));
     }
 
     /// Zooming keeps the map point under the cursor fixed.

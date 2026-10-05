@@ -1,10 +1,12 @@
 //! Mappy: a desktop viewer and editor for BattleTech map assets.
 //!
-//! `mappy [MAP_DIR]` lists the `.toml` map files in `MAP_DIR` (default `game/maps`) for
-//! opening. The left mouse button paints the brush's switched-on layers; Alt+click picks up
-//! every layer of a hex. Scrolling, right or middle drag and the arrow keys pan; Ctrl+scroll
-//! zooms. Maps are read and written by the game's own map file code in `stompymux-map`, so
-//! whatever Mappy saves loads the same in the server.
+//! `mappy [MAP_DIR]` edits the `.toml` map files in `MAP_DIR` (default `game/maps`). The File
+//! menu creates maps, opens them from that directory and saves them back into it. The toolbar
+//! picks a brush, which paints one layer: elevation, terrain, overlays (woods, snow and ice),
+//! structures, or fire and smoke. The left mouse button paints; Alt+click picks up a hex's
+//! layers into every brush. Scrolling, right or middle drag and the arrow keys pan;
+//! Shift+scroll pans sideways and Ctrl+scroll zooms. Maps are read and written by the game's
+//! own map file code in `stompymux-map`, so whatever Mappy saves loads the same in the server.
 mod brush_panel;
 mod document;
 mod map_view;
@@ -15,12 +17,13 @@ use std::path::PathBuf;
 use iced::{
     Alignment, Color, Element, Fill, Point, Size, Subscription, Task, Theme, Vector, keyboard,
     widget::{
-        button, checkbox, column, container, row, rule, scrollable, shader, text, text_input,
+        button, center, checkbox, column, container, mouse_area, opaque, operation, row, rule,
+        scrollable, shader, space, stack, text, text_input,
     },
 };
 use stompymux_map::{DecorationKind, Ground, Hex, HexCoordinate, MapFlag, Structure, Woods};
 
-use brush_panel::{BrushEdit, BrushPanel};
+use brush_panel::{BrushEdit, BrushMode, BrushPanel};
 use document::{Document, MapSettings};
 use map_view::{Camera, MapView};
 use render::LABEL_LEGEND;
@@ -60,6 +63,13 @@ pub enum Message {
     Brush(BrushEdit),
     Undo,
     Redo,
+    /// Show or hide the File menu.
+    ToggleFileMenu,
+    CloseMenu,
+    ShowDialog(Dialog),
+    CloseDialog,
+    /// Close the open dialog, or else the open menu.
+    Escape,
     FilterChanged(String),
     RefreshList,
     Open(String),
@@ -67,7 +77,9 @@ pub enum Message {
     NewHeight(String),
     CreateNew,
     SaveNameChanged(String),
+    /// Save to the map's file, or ask for a name if it has none.
     Save,
+    /// Save under the name in the Save As dialog.
     SaveAs,
     GravityChanged(String),
     TemperatureChanged(String),
@@ -75,16 +87,39 @@ pub enum Message {
     ToggleFlag(MapFlag, bool),
 }
 
+/// A modal dialog opened from the File menu or the toolbar.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Dialog {
+    New,
+    Open,
+    SaveAs,
+    /// The map's flags, which apply as they are toggled.
+    Options,
+}
+
+/// Height of the menu bar, which the File menu drops down below.
+const MENU_BAR_HEIGHT: f32 = 30.0;
+
+/// Widget ids of the inputs dialogs focus when they open.
+const NEW_WIDTH_INPUT: &str = "new-width";
+const OPEN_FILTER_INPUT: &str = "open-filter";
+const SAVE_NAME_INPUT: &str = "save-name";
+
 /// Application state.
 struct Mappy {
     map_dir: PathBuf,
     maps: Vec<String>,
     filter: String,
+    file_menu_open: bool,
+    dialog: Option<Dialog>,
+    /// Why the open dialog's last action failed.
+    dialog_error: String,
     document: Document,
     camera: Camera,
     viewport: Option<Size>,
-    /// Fit the next reported viewport, for maps opened before the canvas has a size.
-    fit_pending: bool,
+    /// Frame the map in the next reported viewport, for maps opened before the canvas has a
+    /// size.
+    frame_pending: bool,
     hover: Option<HexCoordinate>,
     brush: BrushPanel,
     new_width: String,
@@ -102,10 +137,13 @@ impl Mappy {
             map_dir,
             maps: Vec::new(),
             filter: String::new(),
+            file_menu_open: false,
+            dialog: None,
+            dialog_error: String::new(),
             document: Document::new(30, 30).expect("default map size is valid"),
             camera: Camera::default(),
             viewport: None,
-            fit_pending: true,
+            frame_pending: true,
             hover: None,
             brush: BrushPanel::default(),
             new_width: "30".into(),
@@ -137,8 +175,8 @@ impl Mappy {
         match message {
             Message::Viewport(size) => {
                 self.viewport = Some(size);
-                if self.fit_pending {
-                    self.fit();
+                if self.frame_pending {
+                    self.frame_new_map();
                 }
             }
             Message::Hovered(hover) => self.hover = hover,
@@ -168,42 +206,43 @@ impl Mappy {
                 self.document.redo();
                 self.sync_conditions();
             }
+            Message::ToggleFileMenu => self.file_menu_open = !self.file_menu_open,
+            Message::CloseMenu => self.file_menu_open = false,
+            Message::ShowDialog(dialog) => return self.show_dialog(dialog),
+            Message::CloseDialog => self.dialog = None,
+            Message::Escape => {
+                if self.dialog.is_some() {
+                    self.dialog = None;
+                } else {
+                    self.file_menu_open = false;
+                }
+            }
             Message::FilterChanged(filter) => self.filter = filter,
             Message::RefreshList => self.refresh_list(),
-            Message::Open(name) => match Document::open(&self.map_dir.join(&name)) {
-                Ok(document) => {
-                    self.status = format!("Opened {name}");
-                    self.save_name = name;
-                    self.replace_document(document);
-                }
-                Err(error) => self.status = format!("{error:#}"),
-            },
+            Message::Open(name) => {
+                let result = self.open(name);
+                self.finish_dialog(result);
+            }
             Message::NewWidth(value) => self.new_width = value,
             Message::NewHeight(value) => self.new_height = value,
             Message::CreateNew => {
-                let created = self
-                    .new_width
-                    .trim()
-                    .parse()
-                    .ok()
-                    .zip(self.new_height.trim().parse().ok())
-                    .ok_or_else(|| anyhow::anyhow!("width and height must be numbers"))
-                    .and_then(|(width, height)| Document::new(width, height));
-                match created {
-                    Ok(document) => {
-                        self.status = "New map".into();
-                        self.save_name.clear();
-                        self.replace_document(document);
-                    }
-                    Err(error) => self.status = format!("{error:#}"),
-                }
+                let result = self.create_new();
+                self.finish_dialog(result);
             }
             Message::SaveNameChanged(name) => self.save_name = name,
-            Message::Save => match self.document.path.clone() {
-                Some(path) => self.save(path),
-                None => self.save_as(),
-            },
-            Message::SaveAs => self.save_as(),
+            Message::Save => {
+                self.file_menu_open = false;
+                let Some(path) = self.document.path.clone() else {
+                    return self.show_dialog(Dialog::SaveAs);
+                };
+                if let Err(error) = self.save(path) {
+                    self.status = format!("{error:#}");
+                }
+            }
+            Message::SaveAs => {
+                let result = self.save_as();
+                self.finish_dialog(result);
+            }
             Message::GravityChanged(value) => self.gravity = value,
             Message::TemperatureChanged(value) => self.temperature = value,
             Message::ApplyConditions => {
@@ -231,21 +270,80 @@ impl Mappy {
         Task::none()
     }
 
-    /// Fit the map to the canvas, or once the canvas reports its size.
+    /// Close the menu and open `dialog`, focusing its first input if it has one.
+    fn show_dialog(&mut self, dialog: Dialog) -> Task<Message> {
+        self.file_menu_open = false;
+        self.dialog = Some(dialog);
+        self.dialog_error.clear();
+        let input = match dialog {
+            Dialog::New => NEW_WIDTH_INPUT,
+            Dialog::Open => {
+                self.refresh_list();
+                OPEN_FILTER_INPUT
+            }
+            Dialog::SaveAs => SAVE_NAME_INPUT,
+            Dialog::Options => return Task::none(),
+        };
+        operation::focus(input)
+    }
+
+    /// Close the dialog after its action succeeded, or show why it failed.
+    fn finish_dialog(&mut self, result: anyhow::Result<()>) {
+        match result {
+            Ok(()) => self.dialog = None,
+            Err(error) => self.dialog_error = format!("{error:#}"),
+        }
+    }
+
+    /// Open the map file `name` from the map directory.
+    fn open(&mut self, name: String) -> anyhow::Result<()> {
+        let document = Document::open(&self.map_dir.join(&name))?;
+        self.status = format!("Opened {name}");
+        self.save_name = name;
+        self.replace_document(document);
+        Ok(())
+    }
+
+    /// Replace the map with a blank one of the size in the New dialog.
+    fn create_new(&mut self) -> anyhow::Result<()> {
+        let (Ok(width), Ok(height)) = (
+            self.new_width.trim().parse(),
+            self.new_height.trim().parse(),
+        ) else {
+            anyhow::bail!("width and height must be numbers");
+        };
+        let document = Document::new(width, height)?;
+        self.status = "New map".into();
+        self.save_name.clear();
+        self.replace_document(document);
+        Ok(())
+    }
+
+    /// Show the whole map.
     fn fit(&mut self) {
         let Some(viewport) = self.viewport else {
-            self.fit_pending = true;
             return;
         };
-        self.fit_pending = false;
         self.camera = Camera::fit(self.document.map.width, self.document.map.height, viewport);
+    }
+
+    /// Frame a newly opened map close enough to read its labels, now or once the canvas
+    /// reports its size.
+    fn frame_new_map(&mut self) {
+        let Some(viewport) = self.viewport else {
+            self.frame_pending = true;
+            return;
+        };
+        self.frame_pending = false;
+        let map = &self.document.map;
+        self.camera = Camera::opening(map.width, map.height, viewport);
     }
 
     fn replace_document(&mut self, document: Document) {
         self.document = document;
         self.hover = None;
         self.sync_conditions();
-        self.fit();
+        self.frame_new_map();
     }
 
     /// Reset the gravity and temperature inputs to the map's values.
@@ -278,20 +376,18 @@ impl Mappy {
         self.maps.sort_by_key(|name| name.to_lowercase());
     }
 
-    fn save(&mut self, path: PathBuf) {
-        self.status = match self.document.save_to(&path) {
-            Ok(()) => format!("Saved {}", path.display()),
-            Err(error) => format!("{error:#}"),
-        };
+    fn save(&mut self, path: PathBuf) -> anyhow::Result<()> {
+        self.document.save_to(&path)?;
+        self.status = format!("Saved {}", path.display());
+        Ok(())
     }
 
-    /// Save under the name in the save box, adding `.toml` if it is missing, and refusing to
-    /// replace a different existing file.
-    fn save_as(&mut self) {
+    /// Save under the name in the Save As dialog, adding `.toml` if it is missing, and refusing
+    /// to replace a different existing file.
+    fn save_as(&mut self) -> anyhow::Result<()> {
         let name = self.save_name.trim();
         if name.is_empty() || name.contains(['/', '\\']) || name.starts_with('.') {
-            self.status = "Enter a plain file name to save as".into();
-            return;
+            anyhow::bail!("Enter a plain file name to save as");
         }
         let name = if name.ends_with(".toml") {
             name.to_owned()
@@ -300,14 +396,19 @@ impl Mappy {
         };
         let path = self.map_dir.join(&name);
         if path.exists() && self.document.path.as_deref() != Some(path.as_path()) {
-            self.status = format!("{name} already exists; open it to overwrite it");
-            return;
+            anyhow::bail!("{name} already exists; open it to overwrite it");
         }
-        self.save(path);
+        self.save(path)?;
         self.refresh_list();
+        Ok(())
     }
 
+    /// Key bindings, with only Escape while a dialog is open so typing there leaves the map
+    /// alone.
     fn subscription(&self) -> Subscription<Message> {
+        if self.dialog.is_some() {
+            return keyboard::listen().filter_map(dialog_key_binding);
+        }
         keyboard::listen().filter_map(key_binding)
     }
 
@@ -319,57 +420,151 @@ impl Mappy {
             brush_radius: self.brush.radius,
         };
         let body = row![
-            self.map_list(),
-            rule::vertical(1),
             shader(map).width(Fill).height(Fill),
             rule::vertical(1),
             self.inspector(),
         ];
-        column![
+        let editor = column![
+            self.menu_bar(),
+            rule::horizontal(1),
             self.toolbar(),
             rule::horizontal(1),
             body,
             rule::horizontal(1),
             self.status_bar()
-        ]
-        .into()
+        ];
+        // The editor stays the stack's first layer so opening an overlay keeps its widget state.
+        let layers = stack![editor];
+        if let Some(dialog) = self.dialog {
+            return layers.push(modal(self.dialog_view(dialog))).into();
+        }
+        if self.file_menu_open {
+            return layers.push(self.file_menu()).into();
+        }
+        layers.into()
     }
 
-    fn toolbar(&self) -> Element<'_, Message> {
+    fn menu_bar(&self) -> Element<'_, Message> {
+        let file = button(text("File").size(14))
+            .padding([4, 10])
+            .style(if self.file_menu_open {
+                button::primary
+            } else {
+                button::text
+            })
+            .on_press(Message::ToggleFileMenu);
+        row![file]
+            .padding([0, 4])
+            .height(MENU_BAR_HEIGHT)
+            .align_y(Alignment::Center)
+            .into()
+    }
+
+    /// The File menu, dropped down below the menu bar over a backdrop that closes it when
+    /// clicked.
+    fn file_menu(&self) -> Element<'_, Message> {
+        let item = |label, shortcut, message| {
+            button(
+                row![
+                    text(label).size(14),
+                    space::horizontal(),
+                    text(shortcut).size(12)
+                ]
+                .align_y(Alignment::Center),
+            )
+            .width(Fill)
+            .style(button::text)
+            .on_press(message)
+        };
+        let menu = container(
+            column![
+                item("New…", "Ctrl+N", Message::ShowDialog(Dialog::New)),
+                item("Open…", "Ctrl+O", Message::ShowDialog(Dialog::Open)),
+                rule::horizontal(1),
+                item("Save", "Ctrl+S", Message::Save),
+                item(
+                    "Save As…",
+                    "Ctrl+Shift+S",
+                    Message::ShowDialog(Dialog::SaveAs)
+                ),
+            ]
+            .spacing(2),
+        )
+        .padding(4)
+        .width(240)
+        .style(container::bordered_box);
+        let placed = column![space().height(MENU_BAR_HEIGHT), menu]
+            .padding([0, 4])
+            .width(Fill)
+            .height(Fill);
+        opaque(mouse_area(placed).on_press(Message::CloseMenu))
+    }
+
+    fn dialog_view(&self, dialog: Dialog) -> Element<'_, Message> {
+        let (title, body, confirm) = match dialog {
+            Dialog::New => (
+                "New map",
+                self.new_dialog(),
+                Some(("Create", Message::CreateNew)),
+            ),
+            Dialog::Open => ("Open map", self.open_dialog(), None),
+            Dialog::SaveAs => (
+                "Save map as",
+                self.save_as_dialog(),
+                Some(("Save", Message::SaveAs)),
+            ),
+            Dialog::Options => ("Map options", self.options_dialog(), None),
+        };
+        // Options apply as they change, so that dialog is closed rather than cancelled.
+        let dismiss = if dialog == Dialog::Options {
+            "Close"
+        } else {
+            "Cancel"
+        };
+        let mut buttons = row![
+            space::horizontal(),
+            button(dismiss)
+                .style(button::secondary)
+                .on_press(Message::CloseDialog)
+        ]
+        .spacing(8);
+        if let Some((label, message)) = confirm {
+            buttons = buttons.push(button(label).on_press(message));
+        }
+        let mut content = column![text(title).size(18), body].spacing(12);
+        if !self.dialog_error.is_empty() {
+            content = content.push(
+                text(&self.dialog_error)
+                    .size(13)
+                    .color(Color::from_rgb(1.0, 0.45, 0.4)),
+            );
+        }
+        container(content.push(buttons))
+            .padding(16)
+            .width(440)
+            .style(container::bordered_box)
+            .into()
+    }
+
+    fn new_dialog(&self) -> Element<'_, Message> {
         let size_input = |value: &str, on_input: fn(String) -> Message| {
             text_input("", value)
                 .on_input(on_input)
                 .on_submit(Message::CreateNew)
-                .width(56)
+                .width(64)
         };
         row![
-            text("New"),
-            size_input(&self.new_width, Message::NewWidth),
-            text("×"),
+            text("Width"),
+            size_input(&self.new_width, Message::NewWidth).id(NEW_WIDTH_INPUT),
+            text("Height"),
             size_input(&self.new_height, Message::NewHeight),
-            button("Create").on_press(Message::CreateNew),
-            rule::vertical(1),
-            button("Save").on_press(Message::Save),
-            text_input("file name", &self.save_name)
-                .on_input(Message::SaveNameChanged)
-                .on_submit(Message::SaveAs)
-                .width(180),
-            button("Save as").on_press(Message::SaveAs),
-            rule::vertical(1),
-            button("Undo").on_press_maybe(self.document.can_undo().then_some(Message::Undo)),
-            button("Redo").on_press_maybe(self.document.can_redo().then_some(Message::Redo)),
-            button("Fit").on_press(Message::Fit),
-            rule::vertical(1),
-            text(format!("Labels — {LABEL_LEGEND}")).size(12),
         ]
         .spacing(8)
-        .padding(8)
-        .height(52)
         .align_y(Alignment::Center)
         .into()
     }
 
-    fn map_list(&self) -> Element<'_, Message> {
+    fn open_dialog(&self) -> Element<'_, Message> {
         let filter = self.filter.to_lowercase();
         let open = self
             .document
@@ -393,28 +588,76 @@ impl Mappy {
                     .into()
             });
         column![
+            text(self.map_dir.display().to_string()).size(12),
             row![
-                text_input("filter maps", &self.filter).on_input(Message::FilterChanged),
+                text_input("filter maps", &self.filter)
+                    .id(OPEN_FILTER_INPUT)
+                    .on_input(Message::FilterChanged),
                 button("↻").on_press(Message::RefreshList),
             ]
             .spacing(4),
-            scrollable(column(entries)).height(Fill),
+            scrollable(column(entries)).height(360),
         ]
         .spacing(8)
-        .padding(8)
-        .width(220)
         .into()
     }
 
-    fn inspector(&self) -> Element<'_, Message> {
-        let settings = self.document.settings();
+    fn save_as_dialog(&self) -> Element<'_, Message> {
+        column![
+            text(format!("Saved in {}", self.map_dir.display())).size(12),
+            text_input("file name", &self.save_name)
+                .id(SAVE_NAME_INPUT)
+                .on_input(Message::SaveNameChanged)
+                .on_submit(Message::SaveAs),
+        ]
+        .spacing(8)
+        .into()
+    }
+
+    fn options_dialog(&self) -> Element<'_, Message> {
+        let flags = i64::from(self.document.settings().flags);
         let flags = MapFlag::ALL.into_iter().map(|flag| {
-            checkbox(flag.is_set(i64::from(settings.flags)))
+            checkbox(flag.is_set(flags))
                 .label(flag.name())
                 .text_size(13)
                 .on_toggle(move |enabled| Message::ToggleFlag(flag, enabled))
                 .into()
         });
+        column![heading("Flags"), column(flags).spacing(6)]
+            .spacing(8)
+            .into()
+    }
+
+    fn toolbar(&self) -> Element<'_, Message> {
+        let brushes = BrushMode::ALL.into_iter().map(|mode| {
+            button(mode.name())
+                .style(if self.brush.mode == mode {
+                    button::primary
+                } else {
+                    button::secondary
+                })
+                .on_press(Message::Brush(BrushEdit::Mode(mode)))
+                .into()
+        });
+        row![
+            text("Brush"),
+            row(brushes).spacing(4),
+            rule::vertical(1),
+            button("Undo").on_press_maybe(self.document.can_undo().then_some(Message::Undo)),
+            button("Redo").on_press_maybe(self.document.can_redo().then_some(Message::Redo)),
+            button("Fit").on_press(Message::Fit),
+            button("Options").on_press(Message::ShowDialog(Dialog::Options)),
+            rule::vertical(1),
+            text(format!("Labels — {LABEL_LEGEND}")).size(12),
+        ]
+        .spacing(8)
+        .padding(8)
+        .height(52)
+        .align_y(Alignment::Center)
+        .into()
+    }
+
+    fn inspector(&self) -> Element<'_, Message> {
         let condition = |label, value: &str, on_input: fn(String) -> Message| {
             row![
                 text(label).width(100),
@@ -439,7 +682,7 @@ impl Mappy {
         }
         let panel = panel
             .push(self.brush.view().map(Message::Brush))
-            .push(heading("Conditions"))
+            .push(heading("Environment"))
             .push(condition(
                 "Gravity (%)",
                 &self.gravity,
@@ -450,8 +693,6 @@ impl Mappy {
                 &self.temperature,
                 Message::TemperatureChanged,
             ))
-            .push(heading("Flags"))
-            .push(column(flags).spacing(4))
             .spacing(8);
         scrollable(panel.padding(12)).width(320).height(Fill).into()
     }
@@ -520,14 +761,32 @@ fn describe(hex: Hex) -> String {
     parts.join(" · ")
 }
 
+/// A dimmed backdrop that blocks the editor and centres `content`, closing the dialog when it
+/// is clicked.
+fn modal(content: Element<'_, Message>) -> Element<'_, Message> {
+    let backdrop = center(opaque(content)).style(|_| container::Style {
+        background: Some(
+            Color {
+                a: 0.7,
+                ..Color::BLACK
+            }
+            .into(),
+        ),
+        ..container::Style::default()
+    });
+    opaque(mouse_area(backdrop).on_press(Message::CloseDialog))
+}
+
 /// A section heading in the inspector.
 fn heading(label: &str) -> Element<'_, Message> {
     text(label).size(15).into()
 }
 
-/// Keyboard shortcuts: Ctrl+Z/Ctrl+Shift+Z/Ctrl+Y for history, Ctrl+S to save, digits for
-/// the brush level, `[` and `]` for brush size, F to fit and the arrow keys (faster with Shift) to
-/// pan. Keys typed into text inputs are not seen.
+/// Keyboard shortcuts: Ctrl+Z/Ctrl+Shift+Z/Ctrl+Y for history, Ctrl+N, Ctrl+O, Ctrl+S and
+/// Ctrl+Shift+S for the File menu, Escape to close the menu, E, T, O, S and C for the
+/// Elevation, Terrain, Overlays, Structures and Conditions brushes, digits for the elevation
+/// level, `[` and `]` for brush size, F to fit and the arrow keys (faster with Shift) to pan.
+/// Keys typed into text inputs are not seen.
 fn key_binding(event: keyboard::Event) -> Option<Message> {
     let keyboard::Event::KeyPressed { key, modifiers, .. } = event else {
         return None;
@@ -539,6 +798,7 @@ fn key_binding(event: keyboard::Event) -> Option<Message> {
             let step = if modifiers.shift() { 240.0 } else { 60.0 };
             // The map moves opposite to the arrow, so the view travels in its direction.
             let pan = match named {
+                Named::Escape => return Some(Message::Escape),
                 Named::ArrowLeft => Vector::new(step, 0.0),
                 Named::ArrowRight => Vector::new(-step, 0.0),
                 Named::ArrowUp => Vector::new(0.0, step),
@@ -554,17 +814,37 @@ fn key_binding(event: keyboard::Event) -> Option<Message> {
         return match (character.as_str(), modifiers.shift()) {
             ("z", false) => Some(Message::Undo),
             ("z", true) | ("y", _) => Some(Message::Redo),
-            ("s", _) => Some(Message::Save),
+            ("n", _) => Some(Message::ShowDialog(Dialog::New)),
+            ("o", _) => Some(Message::ShowDialog(Dialog::Open)),
+            ("s", false) => Some(Message::Save),
+            ("s", true) => Some(Message::ShowDialog(Dialog::SaveAs)),
             _ => None,
         };
     }
     match character.as_str() {
         "f" => Some(Message::Fit),
+        "e" => Some(Message::Brush(BrushEdit::Mode(BrushMode::Elevation))),
+        "t" => Some(Message::Brush(BrushEdit::Mode(BrushMode::Terrain))),
+        "o" => Some(Message::Brush(BrushEdit::Mode(BrushMode::Overlays))),
+        "s" => Some(Message::Brush(BrushEdit::Mode(BrushMode::Structures))),
+        "c" => Some(Message::Brush(BrushEdit::Mode(BrushMode::Conditions))),
         "[" => Some(Message::Brush(BrushEdit::RadiusStep(-1))),
         "]" => Some(Message::Brush(BrushEdit::RadiusStep(1))),
         digit if digit.len() == 1 && digit.as_bytes()[0].is_ascii_digit() => {
             Some(Message::Brush(BrushEdit::Level(digit.as_bytes()[0] - b'0')))
         }
+        _ => None,
+    }
+}
+
+/// The one key binding while a dialog is open: Escape closes it. An input that has focus takes
+/// the first Escape to drop its focus.
+fn dialog_key_binding(event: keyboard::Event) -> Option<Message> {
+    match event {
+        keyboard::Event::KeyPressed {
+            key: keyboard::Key::Named(keyboard::key::Named::Escape),
+            ..
+        } => Some(Message::Escape),
         _ => None,
     }
 }

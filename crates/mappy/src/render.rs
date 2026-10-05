@@ -397,7 +397,7 @@ impl shader::Primitive for MapPrimitive {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::document::{Brush, Document};
+    use crate::document::Document;
 
     /// Palette entries: one color per terrain, then the label ink threshold.
     const PALETTE_LEN: usize = Terrain::ALL.len() + 1;
@@ -577,7 +577,7 @@ mod tests {
 
     /// Paint the hex the compact notation describes at a coordinate, as one stroke.
     fn put(document: &mut Document, x: i32, y: i32, hex: Hex) {
-        document.paint(HexCoordinate { x, y }, Brush::matching(hex, 0));
+        document.paint_with(HexCoordinate { x, y }, 0, |_| hex);
         document.end_stroke();
     }
 
