@@ -466,7 +466,10 @@ async fn cargo_economy_traces_share_transfer_order_and_callback_rollback() {
             format!("#1 added 2 Gold to #{}.", map.0),
         ];
         for scripts in [&native, &lua] {
-            assert_eq!(support::drain_traces(scripts, logging::TraceTopic::Economy), expected);
+            assert_eq!(
+                support::drain_traces(scripts, logging::TraceTopic::Economy),
+                expected
+            );
         }
         lua.drain_outbox();
         let before = lua.world().clone();

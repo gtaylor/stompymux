@@ -5065,7 +5065,9 @@ async fn character_manual_landing_adapters_and_casualty_rollback() {
                     .is_err()
             );
             assert_eq!(lua.world().btech, before.btech);
-            assert!(support::drain_traces(&lua, logging::TraceTopic::PilotingExperience).is_empty());
+            assert!(
+                support::drain_traces(&lua, logging::TraceTopic::PilotingExperience).is_empty()
+            );
             assert!(lua.drain_outbox().is_empty());
             let afterlife = ObjectId(config.battletech.afterlife_dbref);
             if case == "fatal" {

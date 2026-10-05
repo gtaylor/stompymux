@@ -54,7 +54,10 @@ async fn stagger_diagnostic_trace_and_feedback_audience() {
                 let check = report.check;
                 assert_eq!(
                     crate::support::drain_traces(&scripts, logging::TraceTopic::PilotingRolls),
-                    [format!("Attempting to make pilot (noxp) skill roll. SPilot: {}, mods: {}, MechPilot: {}, BTH: {}", check.skill, check.situational, check.damage, check.target)]
+                    [format!(
+                        "Attempting to make pilot (noxp) skill roll. SPilot: {}, mods: {}, MechPilot: {}, BTH: {}",
+                        check.skill, check.situational, check.damage, check.target
+                    )]
                 );
                 let warning = output
                     .iter()

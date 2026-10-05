@@ -1,6 +1,6 @@
 //! Captured radio audit diagnostics and atomic frequency-setting publication.
 use super::map_slots::all_unit_order;
-use super::{DiagnosticTopic, DiagnosticMessage};
+use super::{DiagnosticMessage, DiagnosticTopic};
 use crate::{Config, Flag, ObjectId, Scripts, World};
 use anyhow::{Context, Result};
 

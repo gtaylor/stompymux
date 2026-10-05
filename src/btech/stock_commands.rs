@@ -1,5 +1,5 @@
 //! Catalogue-based Wizard stock additions, removals and clearing share atomic inventory edits.
-use super::{CargoRow, DiagnosticTopic, DiagnosticMessage};
+use super::{CargoRow, DiagnosticMessage, DiagnosticTopic};
 use crate::{Config, ObjectId, Scripts};
 use anyhow::{Context, Result, ensure};
 

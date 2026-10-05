@@ -359,7 +359,7 @@ pub use btech::{
 
 pub use btech::{ShotExperienceAward, award_gunnery_experience as award_battle_gunnery_experience};
 
-pub use btech::{DiagnosticTopic, DiagnosticMessage};
+pub use btech::{DiagnosticMessage, DiagnosticTopic};
 
 pub use btech::land_action as land_battle_jump_action;
 

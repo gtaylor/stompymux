@@ -1,5 +1,5 @@
 //! Saved reception cadence and communication skill awards within radio transactions.
-use super::{AnalogRadioReport, DiagnosticTopic, DiagnosticMessage};
+use super::{AnalogRadioReport, DiagnosticMessage, DiagnosticTopic};
 use crate::{Flag, ObjectId, World};
 use anyhow::Result;
 

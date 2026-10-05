@@ -1,5 +1,5 @@
 //! Shared in-character perception attempts and accepted experience diagnostics for scan actions.
-use super::{DiagnosticTopic, DiagnosticMessage};
+use super::{DiagnosticMessage, DiagnosticTopic};
 use crate::{Flag, Kind, ObjectId, World};
 use anyhow::{Context, Result};
 

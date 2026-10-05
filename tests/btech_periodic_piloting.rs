@@ -55,7 +55,7 @@ async fn control_feedback_is_ordered_and_respects_pilot_audience() {
                 );
                 assert_eq!(
                     support::drain_traces(&scripts, logging::TraceTopic::PilotingRolls),
-                    [diagnostic.clone()]
+                    [diagnostic.as_str()]
                 );
                 assert!(
                     !messages
