@@ -15,3 +15,4 @@ The numbers below are native identifiers; pass the typed constants to Lua APIs.
 | `btech.map.flags.INDESTRUCTIBLE_STRUCTURES` | `64` |  |
 | `btech.map.flags.NO_FRIENDLY_FIRE` | `256` |  |
 | `btech.map.flags.NO_PHYSICAL_ATTACKS` | `512` |  |
+| `btech.map.flags.NO_STACKING` | `1024` |  |

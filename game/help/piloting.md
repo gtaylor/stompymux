@@ -50,6 +50,7 @@ units, or more than six total units, can trigger the configured collision rules.
 Ground damage depends on current mass and relative speed; avoidance rules can
 stop you or cause a fall. Landing among three friendly ground units can also
 trigger crowding; landing impacts use current mass and remaining jump thrust.
+Maps with the `no_stacking` flag have no crowding collisions.
 
 Water depth affects piloting checks. Entering a submerged hex requires a
 piloting check; running into water makes the check
