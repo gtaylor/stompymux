@@ -4,7 +4,9 @@
 //! menu creates maps, opens them from that directory and saves them back into it, offering to
 //! save unsaved changes first, as closing the window does. The Map menu's Options dialog sets
 //! the map's rule flags, gravity, temperature, light, visibility and wind, and its Resize
-//! dialog changes the map's size at the chosen edges. The toolbar picks a brush, which paints
+//! dialog changes the map's size at the chosen edges. Its Map generator panel describes a
+//! battlefield for `stompymux-mapgen` and previews it live in place of the map; applying it
+//! replaces the map as one undoable edit. The toolbar picks a brush, which paints
 //! one layer: elevation, terrain (ground or water), foliage, routes, structures, or conditions
 //! (weather, or fire and smoke). The left mouse button
 //! paints; Alt+click picks up a hex's layers into every brush. Scrolling, right or middle drag
@@ -12,10 +14,11 @@
 //! own map file code in `stompymux-map`, so whatever Mappy saves loads the same in the server.
 mod brush_panel;
 mod document;
+mod generator_panel;
 mod map_view;
 mod render;
 
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
 
 use iced::{
     Alignment, Color, Element, Fill, Point, Size, Subscription, Task, Theme, Vector, keyboard,
@@ -29,6 +32,7 @@ use stompymux_map::{Hex, HexCoordinate, Light, MAX_VISIBILITY, MapFlag, Structur
 
 use brush_panel::{BrushEdit, BrushMode, BrushPanel};
 use document::{Document, MapSettings, ResizeEdge};
+use generator_panel::{GenerationResult, GeneratorEdit, GeneratorPanel};
 use map_view::{Camera, MapView};
 use render::LABEL_LEGEND;
 
@@ -106,6 +110,15 @@ pub enum Message {
     SaveThen(Pending),
     /// Carry on with the waiting action, dropping unsaved changes.
     Discard(Pending),
+    /// Open the map generator panel, previewing a generated map in place of this one.
+    ShowGenerator,
+    Generator(GeneratorEdit),
+    /// Generation number `.0` finished.
+    Generated(u64, GenerationResult),
+    /// Replace the map with the generator's preview.
+    ApplyGenerator,
+    /// Close the generator, showing the map as it was.
+    CancelGenerator,
 }
 
 /// A menu in the menu bar.
@@ -192,6 +205,11 @@ struct Mappy {
     resize_rows: ResizeEdge,
     /// Result of the last file operation.
     status: String,
+    /// The map generator, while it is open. Its preview stands in for the map, which
+    /// cannot be edited or saved until the preview is applied or cancelled.
+    generator: Option<GeneratorPanel>,
+    /// Number of the last generation started, which tells late results from current ones.
+    generation: u64,
 }
 
 impl Mappy {
@@ -219,6 +237,8 @@ impl Mappy {
             resize_columns: ResizeEdge::End,
             resize_rows: ResizeEdge::End,
             status: String::new(),
+            generator: None,
+            generation: 0,
         };
         mappy.refresh_list();
         mappy
@@ -238,6 +258,9 @@ impl Mappy {
     }
 
     fn update(&mut self, message: Message) -> Task<Message> {
+        if self.generator.is_some() && edits_the_map(&message) {
+            return Task::none();
+        }
         match message {
             Message::Viewport(size) => {
                 self.viewport = Some(size);
@@ -264,8 +287,16 @@ impl Mappy {
             }
             Message::Fit => self.fit(),
             Message::Brush(edit) => self.brush.edit(edit),
-            Message::Undo => self.document.undo(),
-            Message::Redo => self.document.redo(),
+            Message::Undo => {
+                let shown = self.shown_size();
+                self.document.undo();
+                self.refit_if_resized(shown);
+            }
+            Message::Redo => {
+                let shown = self.shown_size();
+                self.document.redo();
+                self.refit_if_resized(shown);
+            }
             Message::ToggleMenu(menu) => {
                 self.menu = (self.menu != Some(menu)).then_some(menu);
             }
@@ -285,8 +316,10 @@ impl Mappy {
             Message::Escape => {
                 if self.dialog.is_some() {
                     self.close_dialog();
-                } else {
+                } else if self.menu.is_some() {
                     self.menu = None;
+                } else if self.generator.is_some() {
+                    self.close_generator();
                 }
             }
             Message::FilterChanged(filter) => self.filter = filter,
@@ -349,8 +382,112 @@ impl Mappy {
                 return self.proceed(pending);
             }
             Message::Discard(pending) => return self.proceed(pending),
+            Message::ShowGenerator => {
+                self.menu = None;
+                let map = &self.document.map;
+                self.generator = Some(GeneratorPanel::new(
+                    self.document.spec.as_ref(),
+                    map.width,
+                    map.height,
+                ));
+                self.fit();
+                return self.generate_preview();
+            }
+            Message::Generator(edit) => {
+                let Some(generator) = &mut self.generator else {
+                    return Task::none();
+                };
+                if generator.edit(edit) {
+                    return self.generate_preview();
+                }
+            }
+            Message::Generated(id, result) => {
+                let shown = self.shown_size();
+                let Some(generator) = &mut self.generator else {
+                    return Task::none();
+                };
+                let again = generator.finish(id, result);
+                self.refit_if_resized(shown);
+                if again {
+                    return self.generate_preview();
+                }
+            }
+            Message::ApplyGenerator => self.apply_generator(),
+            Message::CancelGenerator => self.close_generator(),
         }
         Task::none()
+    }
+
+    /// Generate the generator's current choices in the background, unless a generation is
+    /// running already, in which case it follows that one.
+    fn generate_preview(&mut self) -> Task<Message> {
+        let Some(generator) = &mut self.generator else {
+            return Task::none();
+        };
+        self.generation += 1;
+        let id = self.generation;
+        let Some(spec) = generator.request(id) else {
+            return Task::none();
+        };
+        Task::perform(
+            async move {
+                stompymux_mapgen::generate(&spec)
+                    .map(Arc::new)
+                    .map_err(|error| format!("{error:#}"))
+            },
+            move |result| Message::Generated(id, result),
+        )
+    }
+
+    /// Replace the map with the generator's preview and close the generator, if the preview
+    /// matches its current choices.
+    fn apply_generator(&mut self) {
+        let Some(preview) = self.generator.as_ref().and_then(GeneratorPanel::ready) else {
+            return;
+        };
+        let generated = &preview.generated;
+        let report = &generated.report;
+        self.status = format!(
+            "Generated map: {}×{} {}",
+            report.width,
+            report.height,
+            report.biome.label().to_lowercase()
+        );
+        self.document
+            .generate(preview.document.map.clone(), generated.spec.clone());
+        self.generator = None;
+    }
+
+    /// Close the generator, dropping its preview, and frame the map again if the preview was
+    /// a different size.
+    fn close_generator(&mut self) {
+        let shown = self.shown_size();
+        self.generator = None;
+        self.refit_if_resized(shown);
+    }
+
+    /// Show the whole map if it is no longer the `shown` size, as after undoing a resize or
+    /// swapping in a generated preview.
+    fn refit_if_resized(&mut self, shown: (u16, u16)) {
+        if self.shown_size() == shown {
+            return;
+        }
+        self.hover = None;
+        self.fit();
+    }
+
+    /// The document on screen: the generator's preview while there is one, else the map.
+    fn shown(&self) -> &Document {
+        self.generator
+            .as_ref()
+            .and_then(|generator| generator.preview.as_ref())
+            .map_or(&self.document, |preview| &preview.document)
+    }
+
+    /// Width and height of the map on screen.
+    fn shown_size(&self) -> (u16, u16) {
+        let map = &self.shown().map;
+        (map.width, map.height)
     }
 
     /// Carry on with `pending` now if the map has no unsaved changes, or else ask whether to
@@ -470,7 +607,8 @@ impl Mappy {
         let Some(viewport) = self.viewport else {
             return;
         };
-        self.camera = Camera::fit(self.document.map.width, self.document.map.height, viewport);
+        let (width, height) = self.shown_size();
+        self.camera = Camera::fit(width, height, viewport);
     }
 
     /// Frame a newly opened map close enough to read its labels, now or once the canvas
@@ -557,15 +695,19 @@ impl Mappy {
 
     fn view(&self) -> Element<'_, Message> {
         let map = MapView {
-            document: &self.document,
+            document: self.shown(),
             camera: self.camera,
             hover: self.hover,
             brush_radius: self.brush.radius,
         };
+        let side = match &self.generator {
+            Some(generator) => self.generator_view(generator),
+            None => self.inspector(),
+        };
         let body = row![
             shader(map).width(Fill).height(Fill),
             rule::vertical(1),
-            self.inspector(),
+            side,
         ];
         let editor = column![
             self.menu_bar(),
@@ -587,6 +729,7 @@ impl Mappy {
         layers.into()
     }
 
+    /// The menu bar, whose menus wait while the generator is open.
     fn menu_bar(&self) -> Element<'_, Message> {
         let buttons = Menu::ALL.into_iter().map(|menu| {
             button(text(menu.label()).size(14).center().width(Fill))
@@ -597,7 +740,11 @@ impl Mappy {
                 } else {
                     button::text
                 })
-                .on_press(Message::ToggleMenu(menu))
+                .on_press_maybe(
+                    self.generator
+                        .is_none()
+                        .then_some(Message::ToggleMenu(menu)),
+                )
                 .into()
         });
         row(buttons)
@@ -638,6 +785,8 @@ impl Mappy {
             Menu::Map => column![
                 item("Options…", "", Message::ShowDialog(Dialog::Options)),
                 item("Resize…", "", Message::ShowDialog(Dialog::Resize)),
+                rule::horizontal(1),
+                item("Map generator…", "Ctrl+G", Message::ShowGenerator),
             ],
         };
         let index = Menu::ALL.iter().position(|&each| each == menu).unwrap_or(0);
@@ -996,23 +1145,54 @@ impl Mappy {
         .into()
     }
 
+    /// The generator form above its Cancel and Apply buttons, in place of the inspector.
+    fn generator_view<'a>(&'a self, generator: &'a GeneratorPanel) -> Element<'a, Message> {
+        let form = generator.view().map(Message::Generator);
+        let apply = generator.ready().map(|_| Message::ApplyGenerator);
+        let buttons = row![
+            space::horizontal(),
+            button("Cancel")
+                .style(button::secondary)
+                .on_press(Message::CancelGenerator),
+            button("Apply").on_press_maybe(apply),
+        ]
+        .spacing(8)
+        .padding(12);
+        column![
+            scrollable(container(form).padding(12)).height(Fill),
+            rule::horizontal(1),
+            buttons,
+        ]
+        .width(GENERATOR_WIDTH)
+        .height(Fill)
+        .into()
+    }
+
+    /// The brush picker, history buttons and label legend. While the generator is open no
+    /// brush is highlighted and none can be picked, since the canvas shows its preview; the
+    /// brush in use comes back when the generator closes.
     fn toolbar(&self) -> Element<'_, Message> {
+        let painting = self.generator.is_none();
         let brushes = BrushMode::ALL.into_iter().map(|mode| {
             button(mode.name())
-                .style(if self.brush.mode == mode {
+                .style(if painting && self.brush.mode == mode {
                     button::primary
                 } else {
                     button::secondary
                 })
-                .on_press(Message::Brush(BrushEdit::Mode(mode)))
+                .on_press_maybe(painting.then_some(Message::Brush(BrushEdit::Mode(mode))))
                 .into()
         });
         row![
             text("Brush"),
             row(brushes).spacing(4),
             rule::vertical(1),
-            button("Undo").on_press_maybe(self.document.can_undo().then_some(Message::Undo)),
-            button("Redo").on_press_maybe(self.document.can_redo().then_some(Message::Redo)),
+            button("Undo").on_press_maybe(
+                (self.generator.is_none() && self.document.can_undo()).then_some(Message::Undo)
+            ),
+            button("Redo").on_press_maybe(
+                (self.generator.is_none() && self.document.can_redo()).then_some(Message::Redo)
+            ),
             button("Fit").on_press(Message::Fit),
             rule::vertical(1),
             text(format!("Labels — {LABEL_LEGEND}")).size(12),
@@ -1049,9 +1229,10 @@ impl Mappy {
     }
 
     fn status_bar(&self) -> Element<'_, Message> {
-        let map = &self.document.map;
+        let shown = self.shown();
+        let map = &shown.map;
         let hover = self.hover.and_then(|coordinate| {
-            let hex = self.document.hex(coordinate)?;
+            let hex = shown.hex(coordinate)?;
             Some(format!(
                 "{},{}  {}",
                 coordinate.x,
@@ -1144,6 +1325,26 @@ const LIGHT_CHOICE_WIDTH: f32 = 140.0;
 /// Width of the labels beside the Options dialog's controls.
 const SETTING_LABEL_WIDTH: f32 = 150.0;
 
+/// Width of the generator panel, which needs more room than the inspector.
+const GENERATOR_WIDTH: f32 = 380.0;
+
+/// Whether `message` changes or replaces the map, or opens a menu or dialog that would, which
+/// waits while the generator's preview is on screen.
+fn edits_the_map(message: &Message) -> bool {
+    matches!(
+        message,
+        Message::Paint(_)
+            | Message::Pick(_)
+            | Message::Brush(_)
+            | Message::Undo
+            | Message::Redo
+            | Message::ToggleMenu(_)
+            | Message::ShowDialog(_)
+            | Message::Save
+            | Message::ShowGenerator
+    )
+}
+
 /// The fastest wind the Options dialog's slider sets.
 const MAX_WIND_SPEED: u16 = 100;
 
@@ -1179,10 +1380,10 @@ fn heading(label: &str) -> Element<'_, Message> {
 }
 
 /// Keyboard shortcuts: Ctrl+Z/Ctrl+Shift+Z/Ctrl+Y for history, Ctrl+N, Ctrl+O, Ctrl+S and
-/// Ctrl+Shift+S for the File menu, Escape to close the menu, E, T, F, R, S and C for the
-/// Elevation, Terrain, Foliage, Routes, Structures and Conditions brushes, digits for the
-/// elevation level, `[` and `]` for brush size, Home to fit and the arrow keys (faster with
-/// Shift) to pan.
+/// Ctrl+Shift+S for the File menu, Ctrl+G for the map generator, Escape to close the menu
+/// or cancel the generator, E, T, F, R, S and C for the Elevation, Terrain, Foliage, Routes,
+/// Structures and Conditions brushes, digits for the elevation level, `[` and `]` for brush
+/// size, Home to fit and the arrow keys (faster with Shift) to pan.
 /// Keys typed into text inputs are not seen.
 fn key_binding(event: keyboard::Event) -> Option<Message> {
     let keyboard::Event::KeyPressed { key, modifiers, .. } = event else {
@@ -1216,6 +1417,7 @@ fn key_binding(event: keyboard::Event) -> Option<Message> {
             ("o", _) => Some(Message::ShowDialog(Dialog::Open)),
             ("s", false) => Some(Message::Save),
             ("s", true) => Some(Message::ShowDialog(Dialog::SaveAs)),
+            ("g", _) => Some(Message::ShowGenerator),
             _ => None,
         };
     }

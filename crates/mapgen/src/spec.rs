@@ -115,6 +115,28 @@ impl Biome {
         Self::Lunar,
         Self::Volcanic,
     ];
+
+    /// The biome's name for people.
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Temperate => "Temperate",
+            Self::Forest => "Forest",
+            Self::Jungle => "Jungle",
+            Self::Desert => "Desert",
+            Self::Arctic => "Arctic",
+            Self::Mountains => "Mountains",
+            Self::Badlands => "Badlands",
+            Self::Swamp => "Swamp",
+            Self::Coastal => "Coastal",
+            Self::Lunar => "Lunar",
+            Self::Volcanic => "Volcanic",
+        }
+    }
+
+    /// What the biome's landscape looks like.
+    pub fn description(self) -> &'static str {
+        crate::biome::profile(self).description
+    }
 }
 
 /// Map size presets.
@@ -133,6 +155,19 @@ pub enum MapSize {
 }
 
 impl MapSize {
+    /// Every size preset, smallest first.
+    pub const ALL: [Self; 4] = [Self::Small, Self::Medium, Self::Large, Self::Huge];
+
+    /// The preset's name for people.
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Small => "Small",
+            Self::Medium => "Medium",
+            Self::Large => "Large",
+            Self::Huge => "Huge",
+        }
+    }
+
     /// Width and height in hexes.
     pub const fn dimensions(self) -> (u16, u16) {
         match self {
@@ -162,6 +197,19 @@ pub enum Relief {
 }
 
 impl Relief {
+    /// Every relief, flattest first.
+    pub const ALL: [Self; 4] = [Self::Flat, Self::Rolling, Self::Hilly, Self::Mountainous];
+
+    /// The relief's name for people.
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Flat => "Flat",
+            Self::Rolling => "Rolling",
+            Self::Hilly => "Hilly",
+            Self::Mountainous => "Mountainous",
+        }
+    }
+
     /// The highest ground level this relief produces.
     pub const fn max_level(self) -> u8 {
         match self {
@@ -193,6 +241,26 @@ pub enum Amount {
 }
 
 impl Amount {
+    /// Every amount, least first.
+    pub const ALL: [Self; 5] = [
+        Self::None,
+        Self::Low,
+        Self::Medium,
+        Self::High,
+        Self::Extreme,
+    ];
+
+    /// The amount's name for people.
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::None => "None",
+            Self::Low => "Low",
+            Self::Medium => "Medium",
+            Self::High => "High",
+            Self::Extreme => "Extreme",
+        }
+    }
+
     /// Fraction of the map covered by water.
     pub(crate) const fn water_fraction(self) -> f64 {
         match self {
@@ -304,6 +372,30 @@ pub enum SettlementSize {
     Metropolis,
 }
 
+impl SettlementSize {
+    /// Every settlement size, smallest first.
+    pub const ALL: [Self; 6] = [
+        Self::Outpost,
+        Self::Hamlet,
+        Self::Village,
+        Self::Town,
+        Self::City,
+        Self::Metropolis,
+    ];
+
+    /// The size's name for people.
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Outpost => "Outpost",
+            Self::Hamlet => "Hamlet",
+            Self::Village => "Village",
+            Self::Town => "Town",
+            Self::City => "City",
+            Self::Metropolis => "Metropolis",
+        }
+    }
+}
+
 /// What a settlement is for.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[cfg_attr(feature = "cli", derive(clap::ValueEnum))]
@@ -319,6 +411,26 @@ pub enum SettlementKind {
     Ruins,
 }
 
+impl SettlementKind {
+    /// Every settlement kind.
+    pub const ALL: [Self; 4] = [
+        Self::Civilian,
+        Self::Industrial,
+        Self::Military,
+        Self::Ruins,
+    ];
+
+    /// The kind's name for people.
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Civilian => "Civilian",
+            Self::Industrial => "Industrial",
+            Self::Military => "Military",
+            Self::Ruins => "Ruins",
+        }
+    }
+}
+
 /// How a settlement's streets and buildings are arranged.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[cfg_attr(feature = "cli", derive(clap::ValueEnum))]
@@ -332,6 +444,21 @@ pub enum SettlementLayout {
     Scattered,
     /// A rectangular compound with a perimeter road and rows of buildings.
     Compound,
+}
+
+impl SettlementLayout {
+    /// Every settlement layout.
+    pub const ALL: [Self; 4] = [Self::Grid, Self::Organic, Self::Scattered, Self::Compound];
+
+    /// The layout's name for people.
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Grid => "Grid",
+            Self::Organic => "Organic",
+            Self::Scattered => "Scattered",
+            Self::Compound => "Compound",
+        }
+    }
 }
 
 /// A region of the map.
@@ -362,6 +489,36 @@ pub enum Position {
 }
 
 impl Position {
+    /// Every region, with anywhere first and then clockwise from the middle and the top.
+    pub const ALL: [Self; 10] = [
+        Self::Random,
+        Self::Center,
+        Self::North,
+        Self::Northeast,
+        Self::East,
+        Self::Southeast,
+        Self::South,
+        Self::Southwest,
+        Self::West,
+        Self::Northwest,
+    ];
+
+    /// The region's name for people.
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Random => "Anywhere",
+            Self::Center => "Center",
+            Self::North => "North",
+            Self::Northeast => "Northeast",
+            Self::East => "East",
+            Self::Southeast => "Southeast",
+            Self::South => "South",
+            Self::Southwest => "Southwest",
+            Self::West => "West",
+            Self::Northwest => "Northwest",
+        }
+    }
+
     /// Where this region's center lies as fractions of the map's width and height, or `None`
     /// for anywhere.
     pub(crate) const fn anchor(self) -> Option<(f64, f64)> {
@@ -615,6 +772,46 @@ pub fn spec_schema() -> serde_json::Value {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Each enum's `ALL` list holds every variant the schema offers, once, each with its own
+    /// label, so editors building choices from them miss none.
+    #[test]
+    fn choice_lists_cover_every_variant() {
+        fn check<T: Serialize + Copy>(name: &str, all: &[T], label: fn(T) -> &'static str) {
+            let schema = spec_schema();
+            let variants = schema["$defs"][name]["oneOf"].as_array().unwrap();
+            let mut names: Vec<_> = all
+                .iter()
+                .map(|value| serde_json::to_value(value).unwrap())
+                .collect();
+            names.dedup();
+            assert_eq!(names.len(), variants.len(), "{name}");
+            let mut labels: Vec<_> = all.iter().map(|value| label(*value)).collect();
+            labels.sort_unstable();
+            labels.dedup();
+            assert_eq!(labels.len(), all.len(), "{name} labels");
+        }
+        check("Biome", &Biome::ALL, Biome::label);
+        check("MapSize", &MapSize::ALL, MapSize::label);
+        check("Relief", &Relief::ALL, Relief::label);
+        check("Amount", &Amount::ALL, Amount::label);
+        check(
+            "SettlementSize",
+            &SettlementSize::ALL,
+            SettlementSize::label,
+        );
+        check(
+            "SettlementKind",
+            &SettlementKind::ALL,
+            SettlementKind::label,
+        );
+        check(
+            "SettlementLayout",
+            &SettlementLayout::ALL,
+            SettlementLayout::label,
+        );
+        check("Position", &Position::ALL, Position::label);
+    }
 
     #[test]
     fn parses_json_and_toml() {
