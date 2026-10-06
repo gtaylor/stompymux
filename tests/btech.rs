@@ -50,7 +50,7 @@ fn supplied_templates_and_maps_decode_without_asset_conversion() {
             environment.gravity,
             environment.temperature
         ),
-        (34, 88, 19)
+        (32, 88, 19)
     );
 }
 

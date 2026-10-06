@@ -3,17 +3,14 @@ use super::{Dice, Notice, StoredMap, VehicleSection};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result};
 
-/// Armor penetration breaches directly; other eligible damage events check 10+ on 2d6.
-/// Special conditions consume this roll even when the map is not a vacuum.
+/// On a vacuum map, armor penetration breaches directly and other eligible damage events
+/// check 10+ on 2d6. Maps with air roll nothing.
 fn trigger(map: &StoredMap, dice: &mut Dice, penetrating: bool) -> (Option<u8>, bool) {
-    if !map.uses_special_rules() {
+    if !map.environment().vacuum {
         return (None, false);
     }
     let roll = (!penetrating).then(|| dice.generic_roll());
-    (
-        roll,
-        map.environment().vacuum && roll.is_none_or(|roll| roll >= 10),
-    )
+    (roll, roll.is_none_or(|roll| roll >= 10))
 }
 
 /// Resolve one eligible vehicle damage event inside its owner's rollback checkpoint.

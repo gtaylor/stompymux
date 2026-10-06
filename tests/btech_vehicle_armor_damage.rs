@@ -461,16 +461,16 @@ async fn vacuum_penetration_disables_equipment_and_survives_environment_change_a
     }
 }
 
-/// Nonpenetrating damage consumes special-condition dice even outside vacuum, including repeated breaches.
+/// Nonpenetrating damage rolls a breach check only in vacuum, including repeated breaches.
 #[tokio::test]
-async fn vacuum_armor_checks_follow_threshold_and_special_condition_dice_order() {
+async fn vacuum_armor_checks_follow_threshold_and_dice_order() {
     let (_dir, config, initial, id) = fixture(include_str!("../game/units/Demolisher.toml")).await;
     for threshold in [9, 10, 12] {
         let seed = matching_seed(|dice| {
             dice.two_d6();
             dice.two_d6() == threshold
         });
-        for (gravity, vacuum, expected_rolls) in [(100, false, 1), (50, false, 2), (100, true, 2)] {
+        for (gravity, vacuum, expected_rolls) in [(100, false, 1), (50, false, 1), (100, true, 2)] {
             let mut world = initial.clone();
             environment(&mut world, id, gravity, vacuum);
             set_seed(&mut world, id, seed);

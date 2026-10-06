@@ -100,11 +100,6 @@ impl StoredMap {
         self.has_flag(super::MapFlag::NoFriendlyFire)
     }
 
-    /// Environmental rules are enabled by the map's persisted special-conditions flag.
-    pub fn uses_special_rules(&self) -> bool {
-        self.has_flag(super::MapFlag::SpecialRules)
-    }
-
     /// Whether every tile has a known terrain/elevation interpretation.
     pub fn terrain_ready(&self) -> bool {
         self.terrain.is_some()
@@ -289,7 +284,7 @@ impl StoredMap {
             return Ok(());
         };
         ensure!(
-            (0..=2).contains(&self.light)
+            super::Light::from_stored(self.light).is_ok()
                 && (0..=60).contains(&self.visibility)
                 && (0..=i64::from(i16::MAX)).contains(&self.maximum_visibility),
             "Invalid map visibility conditions"
@@ -1096,7 +1091,7 @@ pub(super) fn map_from_asset(name: &str, asset: MapAsset) -> Result<StoredMap> {
         building_exits: Default::default(),
         authored_link: None,
         movement_modifier: 0,
-        light: asset.light.map_or(2, super::Light::stored),
+        light: asset.light.unwrap_or(super::Light::Day).stored(),
         visibility: asset.visibility.map_or(30, i64::from),
         maximum_visibility: 60,
         cloud_base: 200,

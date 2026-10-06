@@ -175,15 +175,13 @@ impl Mech {
             rates.dissipation = (rates.dissipation + bonus).min(rates.dissipation * 2.0);
         }
         rates = inferno(rates);
-        if map.uses_special_rules() {
-            rates.dissipation += if map.temperature < -30 {
-                ((-30 - map.temperature + 9) / 10) as f64
-            } else if map.temperature > 50 {
-                -((map.temperature - 50 + 9) / 10) as f64
-            } else {
-                0.0
-            };
-        }
+        rates.dissipation += if map.temperature < -30 {
+            ((-30 - map.temperature + 9) / 10) as f64
+        } else if map.temperature > 50 {
+            -((map.temperature - 50 + 9) / 10) as f64
+        } else {
+            0.0
+        };
         rates
     }
 

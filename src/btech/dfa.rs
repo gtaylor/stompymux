@@ -11,6 +11,8 @@ pub struct DfaProfile {
     pub base: i32,
     pub attacker_movement: i32,
     pub target_movement: i32,
+    /// Darkness on the target's map, less what searchlights offset.
+    pub light: i32,
     pub inflicted_damage: u16,
     pub received_damage: u16,
     pub target_arc: HitArc,
@@ -154,7 +156,8 @@ fn dfa_profile_inner(
         victim,
         rules.extended_movement,
     ));
-    let target_number = base + attacker_movement + target_movement;
+    let light = i32::from(super::light_aim::modifier(world, target, true)?);
+    let target_number = base + attacker_movement + target_movement + light;
     ensure!(
         target_number <= 12,
         "DFA: BTH {target_number}\tYou choose not to attack and land from your jump."
@@ -170,6 +173,7 @@ fn dfa_profile_inner(
         base,
         attacker_movement,
         target_movement,
+        light,
         inflicted_damage,
         received_damage,
         target_arc: HitArc::from_bearing(

@@ -17,7 +17,7 @@ async fn export_terrain_effects_and_metadata_match_asset_contract() {
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
-    for flags in [0, 1, 2, 4, 5, 6] {
+    for flags in [0, 1, 4, 5, 16, 17] {
         let mut candidate = world.clone();
         candidate
             .btech

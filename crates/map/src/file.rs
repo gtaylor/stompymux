@@ -631,10 +631,10 @@ mod tests {
     const SAMPLE: &str = r#"
 gravity = 80
 temperature = -10
-light = "night"
+light = "moonless_night"
 visibility = 12
 wind = { direction = 270, speed = 15 }
-flags = ["dark", "special_rules"]
+flags = ["dark", "vacuum"]
 
 terrain = '''
 ....~~
@@ -683,7 +683,7 @@ hexes = [[2, 1]]
         let map = MapAsset::parse(SAMPLE).unwrap();
         assert_eq!((map.width, map.height), (6, 2));
         assert_eq!((map.gravity, map.temperature), (80, -10));
-        assert_eq!(map.light, Some(Light::Night));
+        assert_eq!(map.light, Some(Light::MoonlessNight));
         assert_eq!(map.visibility, Some(12));
         assert_eq!(
             map.wind,
@@ -692,7 +692,7 @@ hexes = [[2, 1]]
                 speed: 15
             })
         );
-        assert_eq!(i64::from(map.flags), 2 | 32);
+        assert_eq!(i64::from(map.flags), 4 | 32);
         let hex = |x, y| map.hex(x, y).unwrap();
         assert_eq!(hex(0, 0), Hex::new(Terrain::Clear, 0));
         assert_eq!(hex(1, 0), Hex::new(Terrain::LightWoods, 1));
@@ -978,7 +978,7 @@ hexes = [[2, 1]]
                 base(".\n", "0\n", "wind = { direction = 400, speed = 1 }"),
                 "Wind direction",
             ),
-            (base(".\n", "0\n", "light = 'dusk'"), "invalid map file"),
+            (base(".\n", "0\n", "light = 'twilight'"), "invalid map file"),
             (base(".\n", "0\n", "colour = 1"), "invalid map file"),
         ] {
             let error = format!("{:#}", MapAsset::parse(&source).unwrap_err());

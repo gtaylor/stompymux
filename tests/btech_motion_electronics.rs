@@ -3530,7 +3530,7 @@ async fn airborne_target_woods_share_height_boundary_across_channels() {
             } else {
                 30
             };
-            set_battle_map_visibility(&mut world, map, Light::Night, visibility).unwrap();
+            set_battle_map_visibility(&mut world, map, Light::MoonlessNight, visibility).unwrap();
             for (flag, enabled) in [
                 (
                     MapPerceptionFlag::Sensors,

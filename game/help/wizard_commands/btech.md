@@ -117,12 +117,14 @@ moving them through ordinary world commands. Placement preserves unit condition.
 It distinguishes horizontal range, spatial range including height/depth, and
 adjacent hex steps. It does not perform line-of-sight or weapon checks.
 
-`map-conditions <map>=<night|twilight|day>,<visibility>` sets saved battlefield
-lighting and weather visibility (0–60 hexes). For example,
-`@btech map-conditions #43=night,15`. This requires Wizard authority and control
-of the map. Units may remain on the map; terrain is unchanged. `inspect` displays
-light as 0 (night), 1 (twilight), or 2 (day), plus visibility and the line-of-sight
-ceiling. Sensors reach fifteen hexes in any conditions; beyond that, visibility
+`map-conditions <map>=<light>,<visibility>` sets saved battlefield
+lighting and weather visibility (0–60 hexes). The light is `day`, `dawn`,
+`dusk`, `full_moon_night`, `moonless_night` or `pitch_black`; see `help night`.
+For example, `@btech map-conditions #43=moonless_night,15`. This requires
+Wizard authority and control of the map. Units may remain on the map; terrain
+is unchanged. `inspect` displays light as 0 (day), 1 (dawn), 2 (dusk), 3 (full
+moon night), 4 (moonless night) or 5 (pitch black), plus visibility and the
+line-of-sight ceiling. Sensors reach fifteen hexes in any conditions; beyond that, visibility
 sets how far units see (see `help line of sight`). Failed saves leave the previous conditions in effect. Moving a map into or out of night switches running automatic searchlights on that map on or off.
 
 `@btech inspect` includes a placed unit's signed elevation. This follows its
@@ -682,7 +684,6 @@ names. Map `flags` are:
 
 | Name | Effect |
 | --- | --- |
-| `special_rules` | Environmental rules (gravity, temperature, vacuum) apply. |
 | `vacuum` | The map has no atmosphere. |
 | `underground` | A ceiling blocks jumping and flight; artillery needs a spotter. |
 | `dark` | Units see only terrain in their line of sight. |
@@ -692,7 +693,7 @@ names. Map `flags` are:
 
 `sensorflags` switches perception off for everyone on the map: `sensors`
 disables the sensor band, `radar` radar and `probes` active probes.
-Light accepts 0–2 and visibility 0–60. Wind direction must be 0–359 and speed
+Light accepts 0–5 (day through pitch black, as for `map-conditions`) and visibility 0–60. Wind direction must be 0–359 and speed
 nonnegative. Integrity must stay between zero and its maximum; set the maximum
 first when creating a structure. Numeric input must fit a signed 32-bit integer.
 Short fields clamp to signed 16-bit before domain checks; temperature clamps

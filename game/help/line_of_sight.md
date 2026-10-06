@@ -1,7 +1,7 @@
 +++
 title = "Line of Sight"
 description = "How BattleTech units see and detect each other"
-keywords = ["line of sight", "los", "terrain", "ice", "sensors", "perception", "visibility", "darkness", "probe", "radar", "ecm"]
+keywords = ["line of sight", "los", "terrain", "ice", "sensors", "perception", "visibility", "darkness", "light levels", "night", "dawn", "dusk", "probe", "radar", "ecm"]
 article_tags = ["battletech"]
 +++
 
@@ -23,8 +23,27 @@ also has a maximum visibility beyond which nothing is seen.
 - Sensors: within fifteen hexes you detect anything with a clear line, whatever
   the darkness or weather.
 - Sight: beyond your sensors, the map's weather visibility sets how far you see.
-  At night an unlit target costs +1 to hit. A target lit by a searchlight, fire or
-  scenario lighting has no darkness penalty and can be seen three times as far.
+  At night a target lit by a searchlight, fire or scenario lighting can be seen
+  three times as far.
+
+## Light
+
+The map's light follows the Tactical Operations light conditions. Darkness adds
+to the to-hit number of every weapon attack against a unit, and at night of
+physical attacks too, whether you perceive the target by sensors or by sight:
+
+| Light | Weapon | Physical | Lit target | Heat step |
+| --- | --- | --- | --- | --- |
+| Day | +0 | +0 | +0 | none |
+| Dawn or dusk | +1 | +0 | +1 | 25 |
+| Full moon night | +2 | +0 | +0 | 20 |
+| Moonless night | +3 | +1 | +0 | 15 |
+| Pitch black | +4 | +2 | +1 | 10 |
+
+At night, a target lit by a searchlight, fire or scenario lighting, or one with
+its own searchlight on, takes the "lit target" weapon modifier and no physical
+modifier. Searchlights do not help at dawn or dusk. Hot Mechs stand out: a
+weapon attack gets -1 for every full heat step of heat the target carries.
 
 Contacts appear as soon as you perceive them and stay until nothing reaches them
 any longer. Only hidden enemies take time to find: you cannot find them beyond

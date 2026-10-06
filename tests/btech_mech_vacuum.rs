@@ -127,7 +127,7 @@ async fn penetration_shares_mech_equipment_effects_and_restart() {
     }
 }
 
-/// Armor checks consume exactly one extra roll under special conditions, including dry maps.
+/// Armor checks consume exactly one extra roll on vacuum maps and none on maps with air.
 #[tokio::test]
 async fn armor_checks_follow_shared_threshold_dice_and_repeat_policy() {
     for template in firing::templates().into_iter().take(2) {
@@ -143,7 +143,7 @@ async fn armor_checks_follow_shared_threshold_dice_and_repeat_policy() {
                 environment(&mut world, id, gravity, vacuum);
                 let mut dice = seed(&mut world, id, wanted);
                 dice.two_d6();
-                if vacuum || gravity != 100 {
+                if vacuum {
                     dice.two_d6();
                 }
                 let report =

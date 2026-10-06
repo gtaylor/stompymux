@@ -211,7 +211,7 @@ pub(crate) const fn profile(biome: Biome) -> Profile {
             rivers: 0,
             gravity: 17,
             temperature: -120,
-            flags: &[MapFlag::SpecialRules, MapFlag::Vacuum],
+            flags: &[MapFlag::Vacuum],
             landform: Landform::Cratered,
             mountain_share: 0.03,
             ..BASE

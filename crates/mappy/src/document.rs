@@ -23,9 +23,9 @@ use stompymux_map::{
     Structure, Water, Wind,
 };
 
-/// A map's battlefield-wide settings, edited together: rule flags, gravity, temperature, and
-/// the optional light, visibility and wind, where `None` keeps a live map's own value when the
-/// map is reloaded.
+/// A map's battlefield-wide settings, edited together: rule flags, gravity, temperature,
+/// light, visibility and wind. Mappy always writes every setting, so a reload never keeps a
+/// live map's own light, visibility or wind.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct MapSettings {
     pub flags: i32,
@@ -33,11 +33,23 @@ pub struct MapSettings {
     pub gravity: u8,
     /// Degrees Celsius.
     pub temperature: i8,
-    pub light: Option<Light>,
+    pub light: Light,
     /// Weather visibility in hexes, up to [`stompymux_map::MAX_VISIBILITY`].
-    pub visibility: Option<u8>,
-    pub wind: Option<Wind>,
+    pub visibility: u8,
+    pub wind: Wind,
 }
+
+/// Light for a map whose file does not set it, matching the server's default.
+const DEFAULT_LIGHT: Light = Light::Day;
+
+/// Visibility in hexes for a map whose file does not set it, matching the server's default.
+const DEFAULT_VISIBILITY: u8 = 30;
+
+/// Wind for a map whose file does not set it: calm.
+const DEFAULT_WIND: Wind = Wind {
+    direction: 0,
+    speed: 0,
+};
 
 /// One hex's value before and after a change, by row-major index.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -218,8 +230,7 @@ fn next_hexes_id() -> u64 {
 }
 
 impl Document {
-    /// A blank map of clear ground at level zero, keeping a live map's light, visibility and
-    /// wind.
+    /// A blank map of clear ground at level zero in daylight, clear weather and calm air.
     pub fn new(width: u16, height: u16) -> Result<Self> {
         ensure!(
             (1..=1000).contains(&width) && (1..=1000).contains(&height),
@@ -252,7 +263,12 @@ impl Document {
         Ok(Self::from_map(Some(path.to_path_buf()), map))
     }
 
-    fn from_map(path: Option<PathBuf>, map: MapAsset) -> Self {
+    /// A document for `map`, filling in the default light, visibility and wind where the map
+    /// leaves them unset.
+    fn from_map(path: Option<PathBuf>, mut map: MapAsset) -> Self {
+        map.light.get_or_insert(DEFAULT_LIGHT);
+        map.visibility.get_or_insert(DEFAULT_VISIBILITY);
+        map.wind.get_or_insert(DEFAULT_WIND);
         Self {
             path,
             map,
@@ -292,9 +308,9 @@ impl Document {
             flags: self.map.flags,
             gravity: self.map.gravity,
             temperature: self.map.temperature,
-            light: self.map.light,
-            visibility: self.map.visibility,
-            wind: self.map.wind,
+            light: self.map.light.unwrap_or(DEFAULT_LIGHT),
+            visibility: self.map.visibility.unwrap_or(DEFAULT_VISIBILITY),
+            wind: self.map.wind.unwrap_or(DEFAULT_WIND),
         }
     }
 
@@ -463,9 +479,9 @@ impl Document {
                 self.map.flags = settings.flags;
                 self.map.gravity = settings.gravity;
                 self.map.temperature = settings.temperature;
-                self.map.light = settings.light;
-                self.map.visibility = settings.visibility;
-                self.map.wind = settings.wind;
+                self.map.light = Some(settings.light);
+                self.map.visibility = Some(settings.visibility);
+                self.map.wind = Some(settings.wind);
             }
         }
     }
@@ -788,15 +804,15 @@ mod tests {
         let mut document = Document::new(2, 2).unwrap();
         let original = document.settings();
         let changed = MapSettings {
-            flags: 2,
+            flags: 4,
             gravity: 50,
             temperature: -40,
-            light: Some(Light::Night),
-            visibility: Some(12),
-            wind: Some(Wind {
+            light: Light::MoonlessNight,
+            visibility: 12,
+            wind: Wind {
                 direction: 270,
                 speed: 15,
-            }),
+            },
         };
         document.set_settings(changed);
         assert_eq!(document.settings(), changed);
@@ -806,6 +822,32 @@ mod tests {
         place(&mut document, MIDDLE, Terrain::Sand, 0, 0);
         document.end_stroke();
         assert!(!document.can_redo());
+    }
+
+    /// A map file without light, visibility or wind opens with the defaults, which a save
+    /// then writes out.
+    #[test]
+    fn unset_environment_opens_with_defaults() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("plain.map.toml");
+        let plain = MapAsset::from_cells("1 1\n.0\n").unwrap();
+        std::fs::write(&path, plain.to_file().unwrap()).unwrap();
+        let mut document = Document::open(&path).unwrap();
+        let settings = document.settings();
+        assert_eq!(
+            (settings.light, settings.visibility, settings.wind),
+            (DEFAULT_LIGHT, DEFAULT_VISIBILITY, DEFAULT_WIND)
+        );
+        document.save_to(&path).unwrap();
+        let saved = MapAsset::parse(&std::fs::read_to_string(&path).unwrap()).unwrap();
+        assert_eq!(
+            (saved.light, saved.visibility, saved.wind),
+            (
+                Some(DEFAULT_LIGHT),
+                Some(DEFAULT_VISIBILITY),
+                Some(DEFAULT_WIND)
+            )
+        );
     }
 
     /// A settings drag, like a slider being moved, undoes as one edit.
@@ -889,12 +931,12 @@ mod tests {
             )));
         document.paint_with(HexCoordinate { x: 3, y: 2 }, 0, |_| rapids);
         document.set_settings(MapSettings {
-            light: Some(Light::Twilight),
-            visibility: Some(30),
-            wind: Some(Wind {
+            light: Light::Dusk,
+            visibility: 30,
+            wind: Wind {
                 direction: 90,
                 speed: 10,
-            }),
+            },
             ..document.settings()
         });
         document.save_to(&path).unwrap();

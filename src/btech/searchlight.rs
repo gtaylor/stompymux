@@ -260,7 +260,7 @@ fn desired(world: &World, id: ObjectId, mode: SearchlightMode) -> Option<bool> {
         SearchlightMode::Auto => {
             let position = super::scanner::scanner_unit(world, id)?.position?;
             let light = world.btech.maps().get(&position.map)?.light_level().ok()?;
-            Some(light == super::Light::Night)
+            Some(light.is_night())
         }
     }
 }

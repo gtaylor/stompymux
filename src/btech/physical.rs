@@ -447,6 +447,8 @@ pub struct PhysicalProfile {
     pub attacker_movement: i16,
     pub target_movement: i8,
     pub terrain: u8,
+    /// Darkness on the target's map, less what searchlights offset.
+    pub light: i16,
     /// Direct material damage; trips always have zero.
     pub damage: u16,
     /// Location table for direct impacts; unused by trips and fixed-location attacks.
@@ -875,6 +877,7 @@ fn attack_profile_inner(
         Some(super::DecorationKind::Smoke) => 2,
         _ => target_tile.woods_density(),
     };
+    let light = super::light_aim::modifier(world, target, true)?;
     let tons = source.definition().tons;
     let mut damage = match attack {
         PhysicalAttack::Punch { .. } => ArmAttack::Punch.damage(tons),
@@ -907,13 +910,15 @@ fn attack_profile_inner(
             + i32::from(weapon_modifier)
             + i32::from(attacker_movement)
             + i32::from(target_movement)
-            + i32::from(terrain),
+            + i32::from(terrain)
+            + i32::from(light),
         base,
         actuators,
         weapon_modifier,
         attacker_movement,
         target_movement,
         terrain,
+        light,
         damage,
         hit_table: if victim.posture() == Posture::Prone {
             HitTable::Weapon

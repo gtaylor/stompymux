@@ -35,7 +35,7 @@ async fn report_values_order_filters_and_layouts_are_explicit() {
         ("gravity", Some("100")),
         ("firstfree", None),
         ("mapheight", Some("1")),
-        ("maplight", Some("2")),
+        ("maplight", Some("0")),
         ("mapname", Some("[reset]海")),
         ("mapvis", Some("30")),
         ("mapwidth", Some("2")),

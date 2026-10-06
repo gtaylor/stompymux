@@ -9,7 +9,6 @@ The numbers below are native identifiers; pass the typed constants to Lua APIs.
 
 | Constant | Type or native code | Description |
 | --- | --- | --- |
-| `btech.map.flags.SPECIAL_RULES` | `2` |  |
 | `btech.map.flags.VACUUM` | `4` |  |
 | `btech.map.flags.UNDERGROUND` | `16` |  |
 | `btech.map.flags.DARK` | `32` |  |

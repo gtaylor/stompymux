@@ -215,7 +215,7 @@ fn resolve_material_with_tonnage(
             .context("Map not found")?;
         (
             Some(map.base_hex(i64::from(position.x), i64::from(position.y))?),
-            map.uses_special_rules().then_some(map.gravity),
+            Some(map.gravity),
         )
     } else {
         (None, None)

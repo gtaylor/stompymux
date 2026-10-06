@@ -42,7 +42,7 @@ async fn native_and_lua_map_activation_agree_and_inherit_unnamed_flags() {
             "gravity = 50\ntemperature = -40\nflags = []\n",
             Some((0, 50, -40)),
         ),
-        ("flags = [\"special_rules\"]\n", Some((2, 100, 20))),
+        ("flags = [\"vacuum\"]\n", Some((4, 100, 20))),
     ] {
         for operation in ["create", "reload", "load"] {
             let (_dir, config, mut world, map) = fixture(operation == "create").await;

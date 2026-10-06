@@ -65,8 +65,8 @@ pub(super) fn partial_cover(terrain: TerrainLos, hull_down: i16) -> i16 {
 /// Resolve the sensor band and sight for one clear line, returning the channel and its aim.
 ///
 /// Inside the sensor band darkness and weather do not matter. Beyond it, weather visibility
-/// sets the reach; at night an unlit target costs +1 and a lit one can be seen three times
-/// as far. `lit` is only consulted when the answer depends on it.
+/// sets the reach; at night a lit target can be seen three times as far. Darkness costs to hit
+/// through the map's light, not here. `lit` is only consulted when the answer depends on it.
 pub(super) fn perceive(
     facts: &SightFacts,
     lit: impl FnOnce() -> Result<bool>,
@@ -78,18 +78,14 @@ pub(super) fn perceive(
     if facts.sensor_range > 0 && facts.distance <= f64::from(facts.sensor_range) {
         return Ok(Some((DetectionChannel::Sensors, cover)));
     }
-    if facts.light != Light::Night {
+    if !facts.light.is_night() || facts.distance <= f64::from(facts.sight_range) {
         return Ok((facts.distance <= f64::from(facts.sight_range))
             .then_some((DetectionChannel::Sight, cover)));
     }
-    if facts.distance > f64::from(facts.lit_sight_range.max(facts.sight_range)) {
+    if facts.distance > f64::from(facts.lit_sight_range) {
         return Ok(None);
     }
-    if lit()? {
-        return Ok(Some((DetectionChannel::Sight, cover)));
-    }
-    Ok((facts.distance <= f64::from(facts.sight_range))
-        .then_some((DetectionChannel::Sight, cover + 1)))
+    Ok(lit()?.then_some((DetectionChannel::Sight, cover)))
 }
 
 #[cfg(test)]
@@ -121,7 +117,7 @@ mod tests {
     #[test]
     fn bands_follow_distance_light_and_illumination() {
         let night = |distance| SightFacts {
-            light: Light::Night,
+            light: Light::MoonlessNight,
             sight_range: 5,
             lit_sight_range: 15,
             sensor_range: 10,
@@ -143,7 +139,7 @@ mod tests {
                     ..night(5.0)
                 },
                 false,
-                Some((Sight, 1)),
+                Some((Sight, 0)),
             ),
             (
                 SightFacts {
@@ -155,7 +151,7 @@ mod tests {
             ),
             (
                 SightFacts {
-                    light: Light::Twilight,
+                    light: Light::Dusk,
                     ..night(12.0)
                 },
                 true,
@@ -167,7 +163,7 @@ mod tests {
                     ..night(0.0)
                 },
                 false,
-                Some((Sight, 1)),
+                Some((Sight, 0)),
             ),
         ] {
             assert_eq!(resolve(facts, lit), expected, "{facts:?} lit={lit}");
@@ -281,7 +277,7 @@ mod tests {
         assert!(
             perceive(
                 &SightFacts {
-                    light: Light::Night,
+                    light: Light::MoonlessNight,
                     ..facts(5.0)
                 },
                 unused
@@ -293,8 +289,9 @@ mod tests {
         assert!(
             perceive(
                 &SightFacts {
-                    light: Light::Night,
-                    ..facts(20.0)
+                    light: Light::MoonlessNight,
+                    lit_sight_range: 60,
+                    ..facts(35.0)
                 },
                 failing
             )

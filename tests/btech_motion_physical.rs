@@ -6885,26 +6885,25 @@ async fn classic_gunnery_awards_are_atomic_and_replayable() {
     assert_eq!(world.btech, before);
 }
 
-/// Effective XP speed derives live mass, sampled myomer heat and enabled map gravity without mutation.
+/// Effective XP speed derives live mass, sampled myomer heat and map gravity without mutation.
 #[tokio::test]
 async fn effective_speed_tracks_mass_myomer_and_map_conditions() {
     use stompymux_rs::*;
     let (_dir, config, mut world, id) = fixture('.').await;
     install_test_myomer(&mut world, id);
     let map_id = world.btech.constructed_units()[&id].position().unwrap().map;
-    for (heat, flags, gravity, expected) in [
-        (8.999, 0, 50, 118.25),
-        (9.0, 0, 50, 129.0),
-        (9.0, 2, 50, 258.0),
-        (9.0, 2, 0, 258.0),
-        (9.0, 2, 200, 64.5),
-        (8.999, 2, 200, 59.125),
+    for (heat, gravity, expected) in [
+        (8.999, 100, 118.25),
+        (9.0, 100, 129.0),
+        (9.0, 50, 258.0),
+        (9.0, 0, 258.0),
+        (9.0, 200, 64.5),
+        (8.999, 200, 59.125),
     ] {
         myomer_test_heat(&mut world, id, 30.0, heat);
         world
             .btech
             .rewrite_map_record(map_id, |record| {
-                record["flags"] = flags.into();
                 record["gravity"] = gravity.into();
             })
             .unwrap();
@@ -6918,7 +6917,7 @@ async fn effective_speed_tracks_mass_myomer_and_map_conditions() {
         let value = unit.battle_value(world.btech.maps().get(&map_id)).unwrap();
         let defensive = if expected == 258.0 {
             399.2
-        } else if flags == 2 && gravity == 200 {
+        } else if gravity == 200 {
             324.35
         } else {
             349.3

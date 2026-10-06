@@ -18,8 +18,8 @@ use std::path::PathBuf;
 use iced::{
     Alignment, Color, Element, Fill, Point, Size, Subscription, Task, Theme, Vector, keyboard,
     widget::{
-        button, center, checkbox, column, container, mouse_area, opaque, operation, row, rule,
-        scrollable, shader, slider, space, stack, text, text_input,
+        button, center, checkbox, column, container, mouse_area, opaque, operation, radio, row,
+        rule, scrollable, shader, slider, space, stack, text, text_input, tooltip,
     },
 };
 use stompymux_map::{Hex, HexCoordinate, Light, MAX_VISIBILITY, MapFlag, StructureKind, Wind};
@@ -501,8 +501,8 @@ impl Mappy {
                     .color(Color::from_rgb(1.0, 0.45, 0.4)),
             );
         }
-        // The Options dialog's labelled sliders and light buttons need more room.
-        let width = if dialog == Dialog::Options { 560 } else { 440 };
+        // The Options dialog's labelled sliders and light choices need more room.
+        let width = if dialog == Dialog::Options { 600 } else { 440 };
         container(content.push(buttons))
             .padding(16)
             .width(width)
@@ -584,14 +584,22 @@ impl Mappy {
         let settings = self.document.settings();
         let flags = i64::from(settings.flags);
         let flags = MapFlag::ALL.into_iter().map(|flag| {
-            checkbox(flag.is_set(flags))
+            let toggle = checkbox(flag.is_set(flags))
                 .label(flag.name())
                 .text_size(13)
                 .on_toggle(move |enabled| {
                     let flags = flag.apply(flags, enabled) as i32;
                     Message::SetSettings(MapSettings { flags, ..settings })
-                })
-                .into()
+                });
+            tooltip(
+                toggle,
+                container(text(flag.description()).size(13))
+                    .padding(6)
+                    .style(container::rounded_box),
+                tooltip::Position::Right,
+            )
+            .gap(8)
+            .into()
         });
         let drag = move |change: MapSettings| Message::DragSettings(change);
         let gravity = slider(0..=u8::MAX, settings.gravity, move |gravity| {
@@ -613,86 +621,59 @@ impl Mappy {
             },
         )
         .on_release(Message::StrokeEnded);
-        let lights = [
-            None,
-            Some(Light::Day),
-            Some(Light::Twilight),
-            Some(Light::Night),
-        ];
-        let lights = lights.into_iter().map(|light| {
-            button(text(light_label(light)).size(13))
-                .style(if settings.light == light {
-                    button::primary
-                } else {
-                    button::secondary
-                })
-                .on_press(Message::SetSettings(MapSettings { light, ..settings }))
-                .into()
-        });
-        let mut environment = column![
+        // Daylight levels on one row and the night levels below them.
+        let light_choice = |light: Light| -> Element<'_, Message> {
+            radio(light.label(), light, Some(settings.light), move |light| {
+                Message::SetSettings(MapSettings { light, ..settings })
+            })
+            .size(14)
+            .text_size(13)
+            .width(LIGHT_CHOICE_WIDTH)
+            .into()
+        };
+        let (daylight, night) = Light::ALL.split_at(3);
+        let lights = column![
+            row(daylight.iter().copied().map(light_choice)),
+            row(night.iter().copied().map(light_choice)),
+        ]
+        .spacing(6);
+        let visibility = slider(0..=MAX_VISIBILITY, settings.visibility, move |visibility| {
+            drag(MapSettings {
+                visibility,
+                ..settings
+            })
+        })
+        .on_release(Message::StrokeEnded);
+        let wind = settings.wind;
+        let direction = slider(0..=359_u16, wind.direction, move |direction| {
+            drag(MapSettings {
+                wind: Wind { direction, ..wind },
+                ..settings
+            })
+        })
+        .on_release(Message::StrokeEnded);
+        let speed = slider(0..=MAX_WIND_SPEED, wind.speed, move |speed| {
+            drag(MapSettings {
+                wind: Wind { speed, ..wind },
+                ..settings
+            })
+        })
+        .on_release(Message::StrokeEnded);
+        let environment = column![
             setting(format!("Gravity {}%", settings.gravity), gravity),
             setting(
                 format!("Temperature {} °C", settings.temperature),
                 temperature
             ),
-            row![
-                text("Light").size(13).width(SETTING_LABEL_WIDTH),
-                row(lights).spacing(4)
-            ]
-            .align_y(Alignment::Center),
-            checkbox(settings.visibility.is_some())
-                .label("Set visibility (otherwise keep the live map's)")
-                .text_size(13)
-                .on_toggle(move |set| Message::SetSettings(MapSettings {
-                    visibility: set.then_some(MAX_VISIBILITY),
-                    ..settings
-                })),
+            row![text("Light").size(13).width(SETTING_LABEL_WIDTH), lights],
+            setting(
+                format!("Visibility {} hexes", settings.visibility),
+                visibility
+            ),
+            setting(format!("Wind from {}°", wind.direction), direction),
+            setting(format!("Wind speed {}", wind.speed), speed),
         ]
         .spacing(8);
-        if let Some(visibility) = settings.visibility {
-            let control = slider(0..=MAX_VISIBILITY, visibility, move |visibility| {
-                drag(MapSettings {
-                    visibility: Some(visibility),
-                    ..settings
-                })
-            })
-            .on_release(Message::StrokeEnded);
-            environment =
-                environment.push(setting(format!("Visibility {visibility} hexes"), control));
-        }
-        environment = environment.push(
-            checkbox(settings.wind.is_some())
-                .label("Set wind (otherwise keep the live map's)")
-                .text_size(13)
-                .on_toggle(move |set| {
-                    Message::SetSettings(MapSettings {
-                        wind: set.then_some(Wind {
-                            direction: 0,
-                            speed: 0,
-                        }),
-                        ..settings
-                    })
-                }),
-        );
-        if let Some(wind) = settings.wind {
-            let direction = slider(0..=359_u16, wind.direction, move |direction| {
-                drag(MapSettings {
-                    wind: Some(Wind { direction, ..wind }),
-                    ..settings
-                })
-            })
-            .on_release(Message::StrokeEnded);
-            let speed = slider(0..=MAX_WIND_SPEED, wind.speed, move |speed| {
-                drag(MapSettings {
-                    wind: Some(Wind { speed, ..wind }),
-                    ..settings
-                })
-            })
-            .on_release(Message::StrokeEnded);
-            environment = environment
-                .push(setting(format!("Wind from {}°", wind.direction), direction))
-                .push(setting(format!("Wind speed {}", wind.speed), speed));
-        }
         column![
             heading("Environment"),
             environment,
@@ -817,15 +798,8 @@ fn hex_layers(hex: Hex) -> Vec<String> {
     layers
 }
 
-/// The Options dialog's name for a light setting.
-fn light_label(light: Option<Light>) -> &'static str {
-    match light {
-        None => "Keep current",
-        Some(Light::Day) => "Day",
-        Some(Light::Twilight) => "Twilight",
-        Some(Light::Night) => "Night",
-    }
-}
+/// Width of each light choice in the Options dialog, so the two rows line up.
+const LIGHT_CHOICE_WIDTH: f32 = 140.0;
 
 /// Width of the labels beside the Options dialog's controls.
 const SETTING_LABEL_WIDTH: f32 = 150.0;

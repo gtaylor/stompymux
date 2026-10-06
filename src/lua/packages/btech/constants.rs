@@ -966,16 +966,28 @@ pub(super) static LIGHT_LEVELS: Catalog = Catalog {
     qualified_name: "btech.map.light_levels",
     entries: &[
         Entry {
-            name: "NIGHT",
+            name: "DAY",
             value: 0,
         },
         Entry {
-            name: "TWILIGHT",
+            name: "DAWN",
             value: 1,
         },
         Entry {
-            name: "DAY",
+            name: "DUSK",
             value: 2,
+        },
+        Entry {
+            name: "FULL_MOON_NIGHT",
+            value: 3,
+        },
+        Entry {
+            name: "MOONLESS_NIGHT",
+            value: 4,
+        },
+        Entry {
+            name: "PITCH_BLACK",
+            value: 5,
         },
     ],
 };
@@ -984,10 +996,6 @@ pub(super) static LIGHT_LEVELS: Catalog = Catalog {
 pub(super) static MAP_FLAGS: Catalog = Catalog {
     qualified_name: "btech.map.flags",
     entries: &[
-        Entry {
-            name: "SPECIAL_RULES",
-            value: 2,
-        },
         Entry {
             name: "VACUUM",
             value: 4,
@@ -1780,7 +1788,7 @@ mod tests {
                 light
             );
         }
-        assert_eq!(LIGHT_LEVELS.entries.len(), 3);
+        assert_eq!(LIGHT_LEVELS.entries.len(), crate::Light::ALL.len());
     }
 
     /// Terrain constants name every Rust terrain in order.

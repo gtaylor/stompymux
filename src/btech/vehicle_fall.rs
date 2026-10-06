@@ -108,10 +108,7 @@ pub(super) fn resolve_material_signed_with_tonnage(
     let below_ice =
         tile.is_some_and(|tile| tile.is_ice() && tile.immerses(unit.elevation_level(tile)));
     let tons = tonnage.unwrap_or(u32::from(unit.definition().tons));
-    let gravity = position.and_then(|position| {
-        let map = &world.btech.maps()[&position.map];
-        map.uses_special_rules().then_some(map.gravity)
-    });
+    let gravity = position.map(|position| world.btech.maps()[&position.map].gravity);
     let pilot = unit.pilot();
     let has_pilot = pilot.is_some();
     let safe = rules.vehicle_impact.criticals.combat_safe || unit.combat_safe;

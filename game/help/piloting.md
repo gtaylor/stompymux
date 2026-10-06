@@ -131,8 +131,9 @@ what means your unit can perceive right now:
 
 - Sensors: within fifteen hexes you detect anything with a clear line, whatever
   the darkness or weather.
-- Sight: beyond that, weather visibility sets how far you see. At night an unlit
-  target costs +1 to hit, and a lit one can be seen three times as far.
+- Sight: beyond that, weather visibility sets how far you see. At night a lit
+  target can be seen three times as far. Darkness also costs to hit; see
+  `help night`.
 - Probe and radar: special equipment, if your unit carries it.
 
 See `help line of sight` for the full rules. `sensor` takes no arguments or
@@ -451,7 +452,7 @@ remains, destroying the mount and causing internal damage.
 
 ### Searchlights
 
-Units fitted with `Searchlight` start in automatic mode: the lamp switches on when the battlefield is at night and off in twilight or daylight, where it gives no benefit. Automatic lamps react when an administrator changes the map's light, when the unit moves to another battlefield, and when the unit finishes starting up. Every switch takes five seconds.
+Units fitted with `Searchlight` start in automatic mode: the lamp switches on when the battlefield is at night (full moon, moonless or pitch black) and off at dawn, dusk or in daylight, where it gives no benefit. Automatic lamps react when an administrator changes the map's light, when the unit moves to another battlefield, and when the unit finishes starting up. Every switch takes five seconds.
 
 - `slite auto` returns to automatic switching.
 - `slite on` and `slite off` hold the lamp on or off regardless of light.

@@ -9,8 +9,6 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum MapFlag {
-    /// Environmental rules (gravity, temperature, vacuum) apply to units on the map.
-    SpecialRules,
     /// The map has no atmosphere.
     Vacuum,
     /// The map has a ceiling: no jumping, flight or indirect fire without an observer.
@@ -27,8 +25,7 @@ pub enum MapFlag {
 
 impl MapFlag {
     /// Every flag, in bit order.
-    pub const ALL: [Self; 7] = [
-        Self::SpecialRules,
+    pub const ALL: [Self; 6] = [
         Self::Vacuum,
         Self::Underground,
         Self::Dark,
@@ -40,7 +37,6 @@ impl MapFlag {
     /// Persisted bit for this flag.
     pub const fn bit(self) -> i64 {
         match self {
-            Self::SpecialRules => 2,
             Self::Vacuum => 4,
             Self::Underground => 16,
             Self::Dark => 32,
@@ -53,7 +49,6 @@ impl MapFlag {
     /// Operator-facing spelling used by `@SETMAP flags` and `@VIEWMAP`.
     pub const fn name(self) -> &'static str {
         match self {
-            Self::SpecialRules => "special_rules",
             Self::Vacuum => "vacuum",
             Self::Underground => "underground",
             Self::Dark => "dark",
@@ -66,9 +61,6 @@ impl MapFlag {
     /// One-sentence explanation of the rule, for help text and schemas.
     pub const fn description(self) -> &'static str {
         match self {
-            Self::SpecialRules => {
-                "Environmental rules (gravity, temperature, vacuum) apply to units on the map."
-            }
             Self::Vacuum => "The map has no atmosphere.",
             Self::Underground => {
                 "The map has a ceiling: no jumping, flight or indirect fire without an observer."
@@ -170,12 +162,9 @@ mod tests {
     fn flag_lists_parse_and_display() {
         assert_eq!(parse_map_flags("-").unwrap(), 0);
         assert_eq!(parse_map_flags("").unwrap(), 0);
-        let flags = parse_map_flags("dark, special_rules  NO_FRIENDLY_FIRE").unwrap();
-        assert_eq!(flags, 2 | 32 | 256);
-        assert_eq!(
-            format_map_flags(flags),
-            "special_rules dark no_friendly_fire"
-        );
+        let flags = parse_map_flags("dark, vacuum  NO_FRIENDLY_FIRE").unwrap();
+        assert_eq!(flags, 4 | 32 | 256);
+        assert_eq!(format_map_flags(flags), "vacuum dark no_friendly_fire");
         assert_eq!(parse_map_flags(&format_map_flags(flags)).unwrap(), flags);
         assert_eq!(format_map_flags(0), "-");
         assert_eq!(format_map_flags(1), "-");

@@ -69,7 +69,7 @@ Alias: `"LeftArm"|"RightArm"|"LeftTorso"|"RightTorso"|"CenterTorso"|"LeftLeg"|"R
 - `gravity`: `integer`
 - `temperature`: `integer`
 - `flags`: `MapFlag[]` — Enabled map flags.
-- `light`: `integer` — 0 night, 1 twilight, 2 day
+- `light`: `integer` — 0 day, 1 dawn, 2 dusk, 3 full moon night, 4 moonless night, 5 pitch black
 - `visibility`: `integer` — Weather range in hexes
 - `sensor_flags`: `integer` — Disabled perception channels: sensor band bit 0 (1), radar bit 5 (32), probes bit 6 (64).
 - `maximum_visibility`: `integer` — Saved map sensor range ceiling
@@ -751,7 +751,7 @@ Alias: `{x: integer, y: integer, z?: integer}`
 
 ## PerceptionReport
 
-- `light`: `"night"|"twilight"|"day"` — Current battlefield light.
+- `light`: `"day"|"dawn"|"dusk"|"full_moon_night"|"moonless_night"|"pitch_black"` — Current battlefield light.
 - `sight_range`: `integer` — Weather visibility in hexes, capped by the map ceiling.
 - `lit_sight_range`: `integer` — Reach to illuminated targets; triple sight at night.
 - `sensor_range`: `integer` — Effective all-conditions sensor band; zero while unavailable.
@@ -846,6 +846,7 @@ Alias: `"front"|"right"|"left"|"rear"|"turret"|"rotor"`
 - `target_movement`: `integer` — Movement contribution, including +1 for a VTOL with nonzero horizontal or vertical speed.
 - `dug_in`: `integer` — Configured cover modifier, shared by Mech and vehicle attackers.
 - `orbital_drop`: `integer` — Minus two while the target has an intact cocoon; zero after a breach.
+- `light`: `integer` — Darkness on the target's map, less what searchlights and target heat offset.
 - `heat`: `integer`
 - `sensors`: `integer`
 - `control_damage`: `integer` — Vehicle commander/sensor critical penalties.

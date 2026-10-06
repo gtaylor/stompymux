@@ -705,9 +705,10 @@ async fn early_landing_uses_configured_crowding_in_native_and_lua_transactions()
     }
 }
 
+/// Collision thrust scales with the map's gravity.
 #[tokio::test]
-async fn landing_collision_thrust_uses_gravity_only_with_special_conditions() {
-    for special in [false, true] {
+async fn landing_collision_thrust_uses_map_gravity() {
+    for gravity in [100, 200] {
         let (_dir, config, mut world, ids) = landing_fixture(3).await;
         let id = ids[0];
         let map = world.btech.constructed_units()[&id].position().unwrap().map;
@@ -726,8 +727,7 @@ async fn landing_collision_thrust_uses_gravity_only_with_special_conditions() {
             })
             .unwrap();
         let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["maps"][map.0.to_string()]["gravity"] = 200.into();
-        state["maps"][map.0.to_string()]["flags"] = if special { 2 } else { 0 }.into();
+        state["maps"][map.0.to_string()]["gravity"] = gravity.into();
         for (unit, value) in [(id, mover_seed), (ids[1], target_seed)] {
             state["constructed"][unit.0.to_string()]["dice"] =
                 serde_json::to_value(Dice::seeded([value; 32])).unwrap();
@@ -754,7 +754,7 @@ async fn landing_collision_thrust_uses_gravity_only_with_special_conditions() {
         .unwrap();
         let after =
             world.btech.constructed_units()[&ids[1]].sections()[&MechSection::CenterTorso].armor;
-        assert_eq!(before - after, if special { 4 } else { 6 });
+        assert_eq!(before - after, if gravity == 200 { 4 } else { 6 });
         world.validate(&config).unwrap();
     }
 }

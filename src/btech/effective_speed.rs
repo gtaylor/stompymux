@@ -35,8 +35,7 @@ impl Mech {
         .apply(load.maximum_speed(maximum)?)?;
         super::speed_bonus::gravity(
             speed,
-            map.filter(|map| map.uses_special_rules() && map.gravity != 100)
-                .map(|map| map.gravity),
+            map.filter(|map| map.gravity != 100).map(|map| map.gravity),
         )
     }
 }
@@ -44,7 +43,7 @@ impl Mech {
 /// Effective transfer speed includes live external load without caching chassis state.
 /// Mechs retain their mass, booster, myomer and environmental conversions; vehicles
 /// use the damage-adjusted movement ceiling with the shared external-load penalty.
-/// Both chassis families apply enabled map gravity after load.
+/// Both chassis families apply map gravity after load.
 pub fn unit_effective_maximum_speed(
     world: &crate::World,
     id: crate::ObjectId,

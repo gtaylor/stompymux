@@ -278,7 +278,7 @@ fn charge_profile_for(
             world,
             victim,
             rules.physical.extended_movement,
-        ));
+        )) + i32::from(super::light_aim::modifier(world, target, true)?);
     ensure!(
         target_number <= 12,
         "Charge: BTH {target_number}\tYou choose not to charge."

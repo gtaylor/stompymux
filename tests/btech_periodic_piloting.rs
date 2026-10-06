@@ -195,16 +195,39 @@ async fn gravity_stress_obeys_global_boundary_and_hits_each_chassis_leg_in_order
             .mobility()
             .maximum_speed;
         let legs = base.btech.constructed_units()[&unit].chassis().legs().len();
-        let seed = (0..=255)
-            .find(|&seed| {
-                let mut dice = Dice::seeded([seed; 32]);
-                dice.two_d6() <= 4 && (0..legs).all(|_| dice.two_d6() < 8)
-            })
-            .unwrap();
         firing::edit(&mut base, unit, |s| {
             s["motion"]["speed"] = (maximum + 1.0).into();
             s["motion"]["desired_speed"] = (maximum + 1.0).into();
-            s["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
+        });
+        // A seed that fails the control check at low gravity without a critical hit or lost limb.
+        let seeded = |n: u16| {
+            let mut bytes = [0; 32];
+            bytes[..2].copy_from_slice(&n.to_le_bytes());
+            Dice::seeded(bytes)
+        };
+        let seed = (0..u16::MAX)
+            .find(|&seed| {
+                let mut world = base.clone();
+                firing::edit(&mut world, unit, |s| {
+                    s["dice"] = serde_json::to_value(seeded(seed)).unwrap();
+                });
+                world
+                    .btech
+                    .rewrite_map_record(map, |record| record["gravity"] = 50.into())
+                    .unwrap();
+                phase(&mut world, 0);
+                let reports = advance_battle_periodic_piloting(&mut world, &config).unwrap();
+                reports.first().is_some_and(|report| {
+                    !report.check.success
+                        && report.impacts.iter().all(|impact| {
+                            impact.impact.criticals.is_empty()
+                                && impact.impact.pending_effects.is_empty()
+                        })
+                })
+            })
+            .unwrap();
+        firing::edit(&mut base, unit, |s| {
+            s["dice"] = serde_json::to_value(seeded(seed)).unwrap();
         });
         for gravity in [50, 100, 150] {
             for tick in [0, 1, 28, 29] {
@@ -212,7 +235,6 @@ async fn gravity_stress_obeys_global_boundary_and_hits_each_chassis_leg_in_order
                 world
                     .btech
                     .rewrite_map_record(map, |record| {
-                        record["flags"] = 2.into();
                         record["gravity"] = gravity.into();
                     })
                     .unwrap();
@@ -409,9 +431,10 @@ async fn damaged_hips_use_running_threshold_for_both_mech_chassis() {
     }
 }
 
-/// Special rules gate gravity stress, and a successful control check does not apply leg damage.
+/// Only non-standard gravity stresses an overspeed unit, and a successful control check does
+/// not apply leg damage.
 #[tokio::test]
-async fn gravity_success_and_disabled_special_rules_preserve_material() {
+async fn gravity_success_and_standard_gravity_preserve_material() {
     for template in [
         include_str!("../game/units/CTF-3L.toml"),
         include_str!("../game/units/StalkingSpider-1.toml"),
@@ -422,13 +445,13 @@ async fn gravity_success_and_disabled_special_rules_preserve_material() {
         let maximum = base.btech.constructed_units()[&unit]
             .mobility()
             .maximum_speed;
-        for special in [false, true] {
+        for gravity in [100, 50] {
+            let special = gravity != 100;
             let mut world = base.clone();
             world
                 .btech
                 .rewrite_map_record(map, |record| {
-                    record["flags"] = if special { 2 } else { 0 }.into();
-                    record["gravity"] = 50.into();
+                    record["gravity"] = gravity.into();
                 })
                 .unwrap();
             phase(&mut world, 29);

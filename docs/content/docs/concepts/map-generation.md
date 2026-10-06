@@ -99,7 +99,7 @@ spec's settlements.
 | `badlands` | hilly | none | none | high | 1 | 100 | 35 | — |
 | `swamp` | flat | high | high | none | 2 | 100 | 28 | — |
 | `coastal` | rolling | high | low | low | 1 | 100 | 20 | — |
-| `lunar` | rolling | none | none | high | 0 | 17 | -120 | `special_rules`, `vacuum` |
+| `lunar` | rolling | none | none | high | 0 | 17 | -120 | `vacuum` |
 | `volcanic` | hilly | none | low | high | 0 | 100 | 40 | — |
 
 Biomes also shape the land in ways no flag controls:

@@ -69,7 +69,7 @@ mod tests {
     /// and export back into the overlay grid.
     #[test]
     fn overlay_grid_becomes_permanent_decorations() {
-        let source = "light = 'night'\nvisibility = 12\nwind = { direction = 90, speed = 5 }\n\
+        let source = "light = 'moonless_night'\nvisibility = 12\nwind = { direction = 90, speed = 5 }\n\
             terrain = '..~'\nlevel = '120'\ndepth = '..2'\nfoliage = '.`.'\noverlay = '&:.'\n";
         let map = stored(source);
         assert_eq!(

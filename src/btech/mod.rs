@@ -304,6 +304,7 @@ mod los;
 mod los_trace;
 pub use los::{TerrainLos, ground_terrain_los, unit_terrain_los};
 
+mod light_aim;
 mod map_light;
 pub use stompymux_map::Light;
 

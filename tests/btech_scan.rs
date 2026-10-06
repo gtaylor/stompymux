@@ -1780,7 +1780,7 @@ async fn explicit_long_range_visibility_modes_filter_ordinary_maps() {
 #[tokio::test]
 async fn terrain_fire_and_inferno_illumination_follow_live_sources_without_acquisition() {
     let (_dir, config, mut world, map, source, target) = fixture().await;
-    set_battle_map_visibility(&mut world, map, Light::Night, 3).unwrap();
+    set_battle_map_visibility(&mut world, map, Light::MoonlessNight, 3).unwrap();
     // Without the sensor band, only sight (and therefore illumination) reaches past three hexes.
     set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, false).unwrap();
     let coordinate = HexCoordinate { x: 1, y: 7 };

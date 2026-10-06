@@ -14,7 +14,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
         MapAsset::from_cells(&format!("1 20\n{}", ".0\n".repeat(20))).unwrap(),
     )
     .unwrap();
-    set_battle_map_visibility(&mut world, map, Light::Night, 30).unwrap();
+    set_battle_map_visibility(&mut world, map, Light::MoonlessNight, 30).unwrap();
     let id = world.create(&config, "Vehicle".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     create_battle_vehicle(
@@ -127,7 +127,7 @@ async fn vehicle_signature_drives_scenario_lighting_and_detached_lua_state() {
     let unlit = battle_perceive(&world, observer, target).unwrap().unwrap();
     assert_eq!(
         (unlit.channel, unlit.aim_modifier),
-        (DetectionChannel::Sight, 1)
+        (DetectionChannel::Sight, 0)
     );
     let signature = UnitSignature {
         team: -17,

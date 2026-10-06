@@ -76,7 +76,7 @@
 //|---@field gravity integer
 //|---@field temperature integer
 //|---@field flags MapFlag[] Enabled map flags.
-//|---@field light integer 0 night, 1 twilight, 2 day
+//|---@field light integer 0 day, 1 dawn, 2 dusk, 3 full moon night, 4 moonless night, 5 pitch black
 //|---@field visibility integer Weather range in hexes
 //|---@field sensor_flags integer Disabled perception channels: sensor band bit 0 (1), radar bit 5 (32), probes bit 6 (64).
 //|---@field maximum_visibility integer Saved map sensor range ceiling
@@ -864,6 +864,7 @@
 //|---@field target_movement integer Movement contribution, including +1 for a VTOL with nonzero horizontal or vertical speed.
 //|---@field dug_in integer Configured cover modifier, shared by Mech and vehicle attackers.
 //|---@field orbital_drop integer Minus two while the target has an intact cocoon; zero after a breach.
+//|---@field light integer Darkness on the target's map, less what searchlights and target heat offset.
 //|---@field heat integer
 //|---@field sensors integer
 //|---@field control_damage integer Vehicle commander/sensor critical penalties.

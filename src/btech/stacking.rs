@@ -60,11 +60,7 @@ pub(super) fn physical_input(
         .context("Unit is unavailable")?;
     let position = unit.position().context("Collision requires placement")?;
     let map = &world.btech.maps()[&position.map];
-    let gravity = if map.uses_special_rules() {
-        map.gravity.max(50)
-    } else {
-        100
-    };
+    let gravity = map.gravity.max(50);
     let thrust = (unit.definition().jump_speed
         - f64::from(unit.system_hits(super::System::JumpJet)) * 10.75)
         .max(0.0);

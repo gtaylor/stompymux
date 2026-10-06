@@ -1,6 +1,6 @@
 //! The read-only perception summary printed by the `sensor` command and returned to Lua.
 use super::{PerceptionProfile, PerceptionStatus, perception_profile};
-use crate::btech::{Light, Power};
+use crate::btech::Power;
 use crate::{ObjectId, World};
 use anyhow::{Context, Result};
 use serde::Serialize;
@@ -56,16 +56,27 @@ fn sensors_line(profile: &PerceptionProfile) -> String {
     format!("Sensors: {detail}")
 }
 
-/// Explain weather reach and the night-time darkness rule.
+/// Explain weather reach, the light and what darkness costs to hit.
 fn sight_line(profile: &PerceptionProfile) -> String {
-    match profile.light {
-        Light::Day => format!("Sight:   {} hexes", profile.sight_range),
-        Light::Twilight => format!("Sight:   {} hexes (twilight)", profile.sight_range),
-        Light::Night => format!(
-            "Sight:   {} hexes at night, +1 to hit unless the target is lit; lit targets to {}",
-            profile.sight_range, profile.lit_sight_range
-        ),
+    let light = profile.light;
+    let penalty = light.aim_modifier(false, false, None);
+    if penalty == 0 {
+        return format!("Sight:   {} hexes", profile.sight_range);
     }
+    let lit = light.aim_modifier(false, true, None);
+    if !light.is_night() {
+        return format!(
+            "Sight:   {} hexes, {}: +{penalty} to hit",
+            profile.sight_range,
+            light.label().to_lowercase()
+        );
+    }
+    format!(
+        "Sight:   {} hexes, {}: +{penalty} to hit, +{lit} if lit; lit targets to {}",
+        profile.sight_range,
+        light.label().to_lowercase(),
+        profile.lit_sight_range
+    )
 }
 
 /// Name the working probe, or the reason it cannot see.
@@ -107,11 +118,11 @@ fn status_suffix(status: PerceptionStatus) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::btech::{ActiveProbe, ProbeProfile, RadarProfile};
+    use crate::btech::{ActiveProbe, Light, ProbeProfile, RadarProfile};
 
     fn profile() -> PerceptionProfile {
         PerceptionProfile {
-            light: Light::Night,
+            light: Light::MoonlessNight,
             sight_range: 10,
             lit_sight_range: 30,
             sensor_range: 15,
@@ -139,7 +150,7 @@ mod tests {
         );
         assert_eq!(
             sight_line(&profile),
-            "Sight:   10 hexes at night, +1 to hit unless the target is lit; lit targets to 30"
+            "Sight:   10 hexes, moonless night: +3 to hit, +0 if lit; lit targets to 30"
         );
         assert_eq!(
             probe_line(&profile),

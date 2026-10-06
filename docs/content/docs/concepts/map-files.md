@@ -51,7 +51,7 @@ bridge over rapids. A hex is rejected when its layers contradict each other:
 ```toml
 gravity = 100
 temperature = -5
-light = "twilight"
+light = "dusk"
 visibility = 20
 wind = { direction = 270, speed = 15 }
 flags = ["dark"]
@@ -112,7 +112,7 @@ elevation = 3
 | --- | --- | --- |
 | `gravity` | `100` | Gravity in percent of standard, 0 to 255. |
 | `temperature` | `20` | Temperature in degrees Celsius, -128 to 127. |
-| `light` | keep current | `"day"`, `"twilight"` or `"night"`. A new map starts in daylight. |
+| `light` | keep current | `"day"`, `"dawn"`, `"dusk"`, `"full_moon_night"`, `"moonless_night"` or `"pitch_black"`; see [Light](#light). A new map starts in daylight. |
 | `visibility` | keep current | Weather visibility in hexes, 0 to 60. A new map starts at 30. |
 | `wind` | keep current | `{ direction, speed }`: the bearing the wind blows from, 0 to 359, and its strength, where 0 is calm. Wind carries smoke and spreads fire. A new map starts calm. |
 | `flags` | keep current | Map flags by name, such as `"dark"` or `"underground"`. `flags = []` clears them. See `help @setmap` for the list. |
@@ -120,6 +120,28 @@ elevation = 3
 Keys marked "keep current" leave a loaded map's value alone when they are
 absent, so reloading a map file does not reset light or wind that a scene
 changed.
+
+### Light
+
+Light follows the light conditions of Tactical Operations. Darkness adds to
+the to-hit number of weapon attacks against units, and at night of physical
+attacks too:
+
+| Light | Weapon | Physical | Lit target | Heat step |
+| --- | --- | --- | --- | --- |
+| `day` | +0 | +0 | +0 | none |
+| `dawn`, `dusk` | +1 | +0 | +1 | 25 |
+| `full_moon_night` | +2 | +0 | +0 | 20 |
+| `moonless_night` | +3 | +1 | +0 | 15 |
+| `pitch_black` | +4 | +2 | +1 | 10 |
+
+At night a target lit by a searchlight, fire or other light, or one with its
+own searchlight on, takes the "lit target" weapon modifier and no physical
+modifier; searchlights do not help at dawn or dusk. A Mech target is also
+easier to hit by one for every full heat step of heat it carries. At night a
+lit target can be seen three times as far, and automatic searchlights switch
+on. Glare plays as a full moon night and a solar flare as
+a moonless one.
 
 ## Grids
 
