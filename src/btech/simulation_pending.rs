@@ -48,6 +48,7 @@ pub(crate) fn pending(world: &World, config: &Config, has_scanner_observers: boo
         || crate::artillery_pending(world)
         || crate::map_fire_pending(world)
         || crate::map_smoke_pending(world)
+        || super::magma::pending(world)
         || crate::battle_illumination_pending(world)
         || crate::battle_electronic_fields_pending(world)
         || world

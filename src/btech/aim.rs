@@ -95,6 +95,9 @@ pub struct AimModifiers {
     pub orbital_drop: i16,
     /// Darkness on the target's map, less what searchlights and target heat offset.
     pub light: i16,
+    /// Wind and gravity on the shooter's map for this weapon's class; `None` when the wind is
+    /// too strong for the weapon to fire, which leaves the shot without a target number.
+    pub environment: Option<i16>,
     pub heat: u8,
     pub sensors: u8,
     /// Accumulated vehicle commander and sensor critical penalties, separate from Mech sensor hits.
@@ -142,6 +145,7 @@ impl AimModifiers {
                 + i32::from(self.woods_cover)
                 + i32::from(self.orbital_drop)
                 + i32::from(self.light)
+                + i32::from(self.environment?)
                 + i32::from(self.heat)
                 + i32::from(self.sensors)
                 + i32::from(self.control_damage)
@@ -503,6 +507,7 @@ pub(super) fn aim_modifiers_for_source(
     modifiers.woods_cover = target_terms.woods_cover;
     modifiers.orbital_drop = target_terms.orbital_drop;
     modifiers.light = target_terms.light;
+    modifiers.environment = super::planetary_conditions::aim_modifier(world, shooter, mount.weapon);
     modifiers.beacon_accuracy += target_terms.beacon_accuracy;
     modifiers.target_lock = if indirect.is_some() {
         0
@@ -599,6 +604,7 @@ pub(super) fn weapon_base(
         woods_cover: 0,
         orbital_drop: 0,
         light: 0,
+        environment: Some(0),
         heat: 0,
         sensors: 0,
         control_damage: 0,

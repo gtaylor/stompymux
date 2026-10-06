@@ -99,6 +99,7 @@ pub(super) fn check_with_dice(
         mount.weapon,
         super::weapon_geometry::submerged(world, shooter, weapon_index)?,
     )?;
+    super::planetary_conditions::check_wind(world, shooter, mount.weapon)?;
     super::torpedo::check_target(world, mount.weapon, target)?;
     if indirect.is_some() {
         super::spotter::check_indirect_water(world, shooter, target)?;

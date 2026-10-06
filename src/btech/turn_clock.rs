@@ -28,6 +28,10 @@ impl TurnClock {
     pub(super) fn due(self) -> bool {
         self.0 == 29 || self.0 == 0
     }
+    /// Whether this is the first phase of a turn, for effects that happen once a turn.
+    pub(super) fn starts_turn(self) -> bool {
+        self.0 == 0
+    }
 }
 
 #[cfg(test)]

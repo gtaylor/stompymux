@@ -132,7 +132,7 @@ pub fn propose_vehicle_ground_motion(
         .is_some_and(|pilot| super::skills::boolean_advantage(world, pilot, "Speed_Demon"));
     let maximum =
         super::load::movement_maximum(world, id, vehicle.maximum_speed(), rules.tsm_tow_bonus)?;
-    let maximum = super::speed_bonus::on_map(world, Some(position), maximum)?;
+    let maximum = super::speed_bonus::vehicle_on_map(world, Some(position), maximum)?;
     let mut loaded = old;
     if super::load::carries_load(world, id) {
         loaded.limit_load(

@@ -552,6 +552,14 @@ pub(super) fn advance(
                     ));
                 }
             }
+            report.notices.extend(super::magma::crack_crust(
+                world,
+                id,
+                super::magma::MagmaEntry::Ground,
+            )?);
+            report
+                .notices
+                .extend(super::magma::engulf_if_molten(world, id, character)?);
             let unit = &world.btech.vehicles()[&id];
             let changed = unit.motion().unwrap();
             next.speed = changed.speed;

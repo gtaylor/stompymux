@@ -95,7 +95,7 @@ pub(super) fn advance_all(
         let mut motion = unit.motion().context("Aircraft motion is unavailable")?;
         let maximum =
             super::load::movement_maximum(world, id, unit.maximum_speed(), rules.tsm_tow_bonus)?;
-        let maximum = super::speed_bonus::on_map(world, Some(position), maximum)?;
+        let maximum = super::speed_bonus::vehicle_on_map(world, Some(position), maximum)?;
         if super::load::carries_load(world, id) {
             motion.limit_load(maximum, maximum);
         }

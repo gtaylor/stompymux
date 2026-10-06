@@ -4,6 +4,9 @@ use crate::{Flag, World};
 use anyhow::{Context, Result, bail, ensure};
 use serde::{Deserialize, Serialize};
 
+/// Most heat a turn that outside sources other than magma, such as fire, can add to a 'Mech.
+const MAX_OUTSIDE_HEAT: f64 = 15.0;
+
 /// Weapon heat (including temporary coolant credit) and the last sampled excess.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
 pub struct Heat {
@@ -152,37 +155,42 @@ impl Mech {
             .hex(i64::from(position.x), i64::from(position.y))
             .expect("validated placed unit terrain");
         let elevation = self.elevation_level(tile);
+        let mut outside_heat: f64 = 0.0;
         if tile.is_burning() && self.reaches_flames(tile, elevation) {
-            rates.production += 5.0;
+            outside_heat += 5.0;
         }
+        // Magma's heat is the one outside source the cap does not limit.
+        rates.production +=
+            outside_heat.min(MAX_OUTSIDE_HEAT) + f64::from(tile.ground_heat(elevation));
         if tile.immerses(elevation) {
             let wading = elevation == i32::from(tile.water_line()) - 1;
             let bonus = if wading && self.posture() != super::Posture::Prone {
-                self.loadout()
-                    .expect("validated unit loadout")
-                    .systems
-                    .iter()
-                    .filter(|part| {
-                        part.system == System::HeatSink
-                            && self.chassis().is_leg(part.location.section)
-                            && !self.critical_unavailable(part.location)
-                    })
-                    .count()
-                    .min(4) as f64
+                self.leg_heat_sinks().min(4) as f64
             } else {
                 6.0
             };
             rates.dissipation = (rates.dissipation + bonus).min(rates.dissipation * 2.0);
         }
+        if tile.chills(elevation) && self.leg_heat_sinks() > 0 {
+            rates.dissipation += 1.0;
+        }
         rates = inferno(rates);
-        rates.dissipation += if map.temperature < -30 {
-            ((-30 - map.temperature + 9) / 10) as f64
-        } else if map.temperature > 50 {
-            -((map.temperature - 50 + 9) / 10) as f64
-        } else {
-            0.0
-        };
+        rates.dissipation -= f64::from(super::extreme_temperature_steps(map.temperature()));
         rates
+    }
+
+    /// Working heat sinks mounted in the legs, which water and snow around the feet cool.
+    fn leg_heat_sinks(&self) -> usize {
+        self.loadout()
+            .expect("validated unit loadout")
+            .systems
+            .iter()
+            .filter(|part| {
+                part.system == System::HeatSink
+                    && self.chassis().is_leg(part.location.section)
+                    && !self.critical_unavailable(part.location)
+            })
+            .count()
     }
 
     /// Whether a Mech at `elevation` in a burning hex stands in the flames, which burn on the

@@ -1176,6 +1176,11 @@ pub use btech::{
     advance_periodic_piloting_action as advance_battle_periodic_piloting_action,
 };
 
+pub use btech::{
+    MagmaSnapshot, advance_magma_action as advance_battle_magma_action,
+    magma_snapshot as battle_magma_snapshot,
+};
+
 /// Typed advantage names and interpretation, shared with gameplay and Lua inspection.
 pub use btech::{
     AdvantageDefinition, AdvantageKind, BATTLE_ADVANTAGES,

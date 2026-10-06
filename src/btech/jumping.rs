@@ -1377,6 +1377,13 @@ fn finish_landing_inner(
         mines.push(event);
     }
     if !world.btech.constructed_units()[&id].is_destroyed() {
+        notices.extend(super::magma::crack_crust(
+            world,
+            id,
+            super::magma::MagmaEntry::JumpLanding,
+        )?);
+    }
+    if !world.btech.constructed_units()[&id].is_destroyed() {
         notices.extend(flood_after_jump(world, id, rules, character, falls)?);
     }
     let unit = world.btech.constructed.get_mut(&id).unwrap();

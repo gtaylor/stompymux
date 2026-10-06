@@ -308,6 +308,7 @@ fn check_bearing(
         bears,
     } = super::weapon_geometry::geometry(world, shooter, index, hex.center())?;
     super::weapon_geometry::check_water(weapon, submerged)?;
+    super::planetary_conditions::check_wind(world, shooter, weapon)?;
     ensure!(
         rules.override_weapon_arcs
             || super::spotter::indirect_hex_for_source(world, targeting, index)?.is_some()
@@ -359,6 +360,7 @@ fn check_unit_target(
         recipient.point.context("Target is not placed")?,
     )?;
     super::weapon_geometry::check_water(geometry.weapon, geometry.submerged)?;
+    super::planetary_conditions::check_wind(world, shooter, geometry.weapon)?;
     ensure!(
         (coolant && shooter == target)
             || indirect.is_some()

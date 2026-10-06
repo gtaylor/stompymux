@@ -170,6 +170,7 @@ impl Server {
             self.scripts.effects.rollback();
             return false;
         }
+        let magma_before = crate::battle_magma_snapshot(&self.scripts.world.borrow());
         crate::clear_battle_recent_fire(&mut self.scripts.world.borrow_mut());
         let mut notices = crate::advance_battle_units(&mut self.scripts.world.borrow_mut(), now);
         notices.extend(crate::advance_battle_standing(
@@ -263,6 +264,20 @@ impl Server {
                 self.scripts.effects.rollback();
                 return false;
             }
+        }
+        if let Err(error) =
+            crate::advance_battle_magma_action(&self.scripts, &self.config, &magma_before)
+        {
+            tracing::error!(system = "magma", error = %format_args!("{error:#}"), "BattleTech update failed");
+            *self.scripts.world.borrow_mut() = before;
+            self.scripts
+                .world
+                .borrow_mut()
+                .btech
+                .autopilot_plans
+                .clear();
+            self.scripts.effects.rollback();
+            return false;
         }
         notices.extend(crate::advance_battle_null_signature(
             &mut self.scripts.world.borrow_mut(),

@@ -61,7 +61,7 @@ pub(crate) fn configured(
     if let Some(unit) = world.btech.vehicles().get(&id) {
         let base =
             super::load::movement_maximum(world, id, unit.maximum_speed(), policy.tsm_tow_bonus)?;
-        return super::speed_bonus::on_map(world, unit.position(), f64::from(base as f32));
+        return super::speed_bonus::vehicle_on_map(world, unit.position(), f64::from(base as f32));
     }
     let unit = world
         .btech

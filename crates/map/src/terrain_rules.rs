@@ -1,10 +1,11 @@
-//! Shared terrain rule lookups on a hex's layers: open ground, foliage density, water and
-//! ground movement cost.
+//! Shared terrain rule lookups on a hex's layers: open ground, foliage density, water, ground
+//! movement cost, piloting modifiers and the heat the ground gives off.
 //!
 //! Combat, movement and sensor code ask these questions of a [`Hex`] instead of matching on
-//! layers locally, so a rule changes in exactly one place. Movement costs follow Tactical
-//! Operations' expanded movement cost table: each hex costs one point plus what its terrain
-//! adds, and the realtime game divides a unit's speed by that total.
+//! layers locally, so a rule changes in exactly one place. Movement costs and piloting
+//! modifiers follow Tactical Operations' expanded movement costs and planetary conditions
+//! tables: each hex costs one point plus what its terrain adds, and the realtime game divides a
+//! unit's speed by that total.
 use crate::{Condition, Density, Flow, Foliage, Ground, Hex, Route};
 use serde::{Deserialize, Serialize};
 
@@ -150,12 +151,110 @@ impl Hex {
     pub fn immerses(self, level: i32) -> bool {
         self.holds_water() && level < i32::from(self.level())
     }
+
+    /// Whether a unit at `level` stands on this hex's bare ground: dry, with no structure
+    /// to stand on, and not in the air. Ground hazards such as magma and deep snow reach it.
+    pub fn touches_ground(self, level: i32) -> bool {
+        self.water().is_none() && self.structure().is_none() && level <= i32::from(self.level())
+    }
+
+    /// Whether a unit at `level` stands in molten magma.
+    pub fn in_liquid_magma(self, level: i32) -> bool {
+        self.ground() == Ground::Magma && self.touches_ground(level)
+    }
+
+    /// Whether a unit at `level` stands on magma crust that may break beneath it.
+    pub fn on_magma_crust(self, level: i32) -> bool {
+        self.ground() == Ground::MagmaCrust && self.touches_ground(level)
+    }
+
+    /// Heat a 'Mech at `level` picks up each turn from the ground it stands on: five on magma
+    /// crust and ten in liquid magma. Unlike other outside heat this is never capped.
+    pub fn ground_heat(self, level: i32) -> u8 {
+        if !self.touches_ground(level) {
+            return 0;
+        }
+        match self.ground() {
+            Ground::MagmaCrust => 5,
+            Ground::Magma => 10,
+            _ => 0,
+        }
+    }
+
+    /// Whether a unit at `level` stands in deep snow, which draws a point of heat a turn from
+    /// a 'Mech with heat sinks in its legs.
+    pub fn chills(self, level: i32) -> bool {
+        self.condition() == Some(Condition::DeepSnow) && self.touches_ground(level)
+    }
+
+    /// Modifier the terrain under a ground unit at `level` adds to every piloting or driving
+    /// roll it makes there, from the PSR column of Tactical Operations' expanded movement
+    /// costs table. Units in the air, or on a roof, wall or bridge deck, take none. Hovercraft
+    /// skim over ice, snow, mud, swamp and fast water; a road replaces the ground and foliage it
+    /// runs through, as it does for movement.
+    pub fn piloting_modifier(self, movement: GroundMovement, level: i32) -> i16 {
+        let hover = movement == GroundMovement::Hover;
+        if level > i32::from(self.standing_height()) {
+            return 0;
+        }
+        if let Some(water) = self.water() {
+            if self.is_ice() && level >= i32::from(self.water_line()) {
+                return if hover { 0 } else { 4 };
+            }
+            if hover || !self.immerses(level) {
+                return 0;
+            }
+            return match water.flow {
+                Flow::Still => 0,
+                Flow::Rapids => 2,
+                Flow::Torrent => 3,
+            };
+        }
+        if self.structure().is_some() {
+            return 0;
+        }
+        let terrain = if self.is_road() {
+            0
+        } else {
+            let ground = match (self.ground(), movement) {
+                (Ground::Sand | Ground::Tundra | Ground::MagmaCrust, _) => 1,
+                (Ground::HeavyIndustrial, _) => 1,
+                (Ground::Magma, _) => 4,
+                (Ground::Swamp, GroundMovement::Legged) => 1,
+                (Ground::Swamp, GroundMovement::Hover) => 0,
+                (Ground::Swamp, _) => 2,
+                _ => 0,
+            };
+            let foliage = match self.foliage() {
+                Some(foliage) if foliage.is_jungle() => {
+                    foliage.density().map_or(0, Density::points)
+                }
+                _ => 0,
+            };
+            ground + i16::from(foliage)
+        };
+        let condition = match self.condition() {
+            _ if hover => 0,
+            Some(Condition::Ice) => 4,
+            Some(Condition::DeepSnow | Condition::Mud) => 1,
+            Some(Condition::ThinSnow) if movement == GroundMovement::Wheeled => 1,
+            _ => 0,
+        };
+        terrain + condition
+    }
+
+    /// Modifier for the piloting roll a ground unit must make just to enter this hex, or
+    /// `None` when entering takes no roll. Ultra rubble is the only such terrain: shattered
+    /// hardened construction takes a +1 roll to cross unless a road has been cleared through.
+    pub fn entry_piloting_modifier(self) -> Option<i16> {
+        (self.ground() == Ground::UltraRubble && self.is_bare() && !self.is_road()).then_some(1)
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{DecorationKind, Terrain, Water};
+    use crate::{DecorationKind, Structure, Terrain, Water};
     use GroundMovement::{Hover, Legged, Tracked, Wheeled};
 
     #[test]
@@ -283,6 +382,108 @@ mod tests {
         assert!(holds(Terrain::Bridge));
         assert!(!holds(Terrain::Clear));
         assert!(!holds(Terrain::Swamp));
+    }
+
+    /// The PSR column of the expanded movement costs tables, for a unit standing on the hex.
+    #[test]
+    fn piloting_modifiers_follow_the_expanded_table() {
+        let psr = |terrain, movement| Hex::new(terrain, 0).piloting_modifier(movement, 0);
+        for movement in [Legged, Tracked, Wheeled, Hover] {
+            assert_eq!(psr(Terrain::Clear, movement), 0);
+            assert_eq!(psr(Terrain::Rough, movement), 0);
+            assert_eq!(psr(Terrain::UltraRubble, movement), 0);
+            assert_eq!(psr(Terrain::LightWoods, movement), 0);
+            assert_eq!(psr(Terrain::Sand, movement), 1);
+            assert_eq!(psr(Terrain::Tundra, movement), 1);
+            assert_eq!(psr(Terrain::MagmaCrust, movement), 1);
+            assert_eq!(psr(Terrain::Magma, movement), 4);
+            assert_eq!(psr(Terrain::HeavyIndustrial, movement), 1);
+            assert_eq!(psr(Terrain::LightJungle, movement), 1);
+            assert_eq!(psr(Terrain::HeavyJungle, movement), 2);
+            assert_eq!(psr(Terrain::UltraHeavyJungle, movement), 3);
+        }
+        assert_eq!(psr(Terrain::Swamp, Legged), 1);
+        assert_eq!(psr(Terrain::Swamp, Tracked), 2);
+        assert_eq!(psr(Terrain::Swamp, Hover), 0);
+        assert_eq!(psr(Terrain::DeepSnow, Legged), 1);
+        assert_eq!(psr(Terrain::Mud, Tracked), 1);
+        assert_eq!(psr(Terrain::ThinSnow, Wheeled), 1);
+        assert_eq!(psr(Terrain::ThinSnow, Legged), 0);
+        let icy_field = Hex::new(Terrain::Clear, 0).with_condition(Some(Condition::Ice));
+        assert_eq!(icy_field.piloting_modifier(Legged, 0), 4);
+        assert_eq!(icy_field.piloting_modifier(Hover, 0), 0);
+        for terrain in [Terrain::DeepSnow, Terrain::Mud] {
+            assert_eq!(psr(terrain, Hover), 0);
+        }
+    }
+
+    /// Fast water troubles units wading in it, ice units standing on it, and nothing in the
+    /// air or on a structure takes a ground modifier.
+    #[test]
+    fn piloting_modifiers_depend_on_where_the_unit_is() {
+        let river = |flow| Hex::at_level(2).with_water(Some(Water { depth: 2, flow }));
+        assert_eq!(river(Flow::Rapids).piloting_modifier(Legged, 0), 2);
+        assert_eq!(river(Flow::Torrent).piloting_modifier(Legged, 0), 3);
+        assert_eq!(river(Flow::Torrent).piloting_modifier(Hover, 2), 0);
+        assert_eq!(river(Flow::Still).piloting_modifier(Legged, 0), 0);
+        let ice = Hex::new(Terrain::Ice, 2);
+        assert_eq!(ice.piloting_modifier(Legged, i32::from(ice.level())), 4);
+        assert_eq!(ice.piloting_modifier(Legged, -1), 0, "beneath the ice");
+        let magma = Hex::new(Terrain::Magma, 1);
+        assert_eq!(magma.piloting_modifier(Legged, 3), 0, "jumping overhead");
+        let roof = Hex::new(Terrain::Magma, 1).with_structure(Some(Structure::building(2)));
+        assert_eq!(roof.piloting_modifier(Legged, 3), 0);
+        let road = Hex::new(Terrain::HeavyJungle, 0).with_route(Some(Route::DirtRoad));
+        assert_eq!(road.piloting_modifier(Tracked, 0), 0);
+        let snowy_road = road.with_condition(Some(Condition::DeepSnow));
+        assert_eq!(snowy_road.piloting_modifier(Tracked, 0), 1);
+    }
+
+    /// Ultra rubble alone takes a roll to enter, unless a road crosses it.
+    #[test]
+    fn only_ultra_rubble_takes_an_entry_roll() {
+        for terrain in Terrain::ALL {
+            let expected = (terrain == Terrain::UltraRubble).then_some(1);
+            assert_eq!(
+                Hex::new(terrain, 0).entry_piloting_modifier(),
+                expected,
+                "{terrain:?}"
+            );
+        }
+        let cleared = Hex::new(Terrain::UltraRubble, 0).with_route(Some(Route::PavedRoad));
+        assert_eq!(cleared.entry_piloting_modifier(), None);
+    }
+
+    /// Magma heats only units standing on it; deep snow chills them.
+    #[test]
+    fn magma_heat_and_snow_chill_reach_units_on_the_ground() {
+        let crust = Hex::new(Terrain::MagmaCrust, 2);
+        let magma = Hex::new(Terrain::Magma, 2);
+        assert_eq!(crust.ground_heat(2), 5);
+        assert_eq!(magma.ground_heat(2), 10);
+        assert_eq!(magma.ground_heat(3), 0, "airborne");
+        assert_eq!(Hex::new(Terrain::Clear, 2).ground_heat(2), 0);
+        assert!(magma.in_liquid_magma(2) && !crust.in_liquid_magma(2));
+        assert!(crust.on_magma_crust(2) && !crust.on_magma_crust(4));
+        assert!(Hex::new(Terrain::DeepSnow, 1).chills(1));
+        assert!(!Hex::new(Terrain::ThinSnow, 1).chills(1));
+        assert!(!Hex::new(Terrain::DeepSnow, 1).chills(2));
+    }
+
+    /// Broken crust turns to liquid magma and swallows whatever lay on it.
+    #[test]
+    fn broken_crust_becomes_liquid_magma() {
+        let crust = Hex::new(Terrain::MagmaCrust, 3)
+            .with_foliage(Some(Foliage::LightWoods))
+            .with_condition(Some(Condition::ThinSnow));
+        let broken = crust.with_crust_broken();
+        assert_eq!(broken.terrain(), Terrain::Magma);
+        assert_eq!(broken.level(), 3);
+        broken.validate().unwrap();
+        assert_eq!(
+            Hex::new(Terrain::Clear, 1).with_crust_broken().terrain(),
+            Terrain::Clear
+        );
     }
 
     #[test]

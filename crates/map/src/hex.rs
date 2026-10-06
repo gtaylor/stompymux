@@ -439,6 +439,18 @@ impl Hex {
         hex
     }
 
+    /// This hex after its magma crust breaks open: liquid magma at the same height, with
+    /// anything that lay on the crust swallowed. Other hexes are unchanged.
+    pub const fn with_crust_broken(self) -> Self {
+        if !matches!(self.ground, Ground::MagmaCrust) {
+            return self;
+        }
+        self.with_ground(Ground::Magma)
+            .with_foliage(None)
+            .with_route(None)
+            .with_condition(None)
+    }
+
     /// This hex after its building or wall collapses: rubble at ground level, ultra rubble for
     /// heavy and hardened construction. Bridges collapse into their water instead; see
     /// [`Hex::with_surface_broken`].

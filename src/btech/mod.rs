@@ -184,9 +184,10 @@ pub use state::{
     reload_map, set_map_visibility,
 };
 pub use stompymux_map::{
-    Condition, ConstructionClass, DecorationKind, Density, Flow, Foliage, Ground, GroundMovement,
-    Hex, MAX_CONSTRUCTION_FACTOR, MAX_DEPTH, MAX_HEIGHT, MAX_VISIBILITY, MapAsset,
-    MapPointOfInterest, Route, Structure, StructureKind, Terrain, Water, Wind,
+    AttackKind, Condition, ConstructionClass, DecorationKind, Density, Flow, Foliage, Ground,
+    GroundMovement, Hex, MAX_CONSTRUCTION_FACTOR, MAX_DEPTH, MAX_HEIGHT, MAX_VISIBILITY, MapAsset,
+    MapPointOfInterest, Route, Structure, StructureKind, Terrain, Water, Wind, WindStrength,
+    extreme_temperature_steps, gravity_aim_modifier,
 };
 pub use unit_template::UnitTemplateExt;
 mod vehicle;
@@ -348,7 +349,11 @@ mod validation_contacts;
 mod validation_context;
 pub use shot::{GlancingMode, MechShotReport, RecoilReport, ShotReport, ShotRules, resolve_shot};
 
+mod magma;
 mod piloting;
+mod planetary_conditions;
+mod terrain_entry;
+pub use magma::{MagmaSnapshot, advance_magma_action, magma_snapshot};
 mod vehicle_arcs;
 pub use vehicle_arcs::VehicleMountArcs;
 mod vehicle_control_damage;

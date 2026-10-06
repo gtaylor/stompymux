@@ -126,6 +126,7 @@ pub(super) fn modifiers_for_source(
             .weapon_damage_effects(weapon_index)?
             .accuracy(modifiers.range.map(|range| range.bracket));
     }
+    modifiers.environment = super::planetary_conditions::aim_modifier(world, shooter, weapon);
     super::targeting_mode::apply(world, source, None, weapon, ammunition, &mut modifiers)?;
     Ok(HexAimModifiers {
         hex,

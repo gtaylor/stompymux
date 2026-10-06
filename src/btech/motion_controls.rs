@@ -76,7 +76,7 @@ pub(crate) fn throttle_configured(
     if let Some(unit) = world.btech.vehicles().get(&id) {
         let maximum =
             super::load::movement_maximum(world, id, unit.maximum_speed(), policy.tsm_tow_bonus)?;
-        return super::speed_bonus::on_map(world, unit.position(), maximum);
+        return super::speed_bonus::vehicle_on_map(world, unit.position(), maximum);
     }
     let unit = world
         .btech
