@@ -865,6 +865,7 @@
 //|---@field dug_in integer Configured cover modifier, shared by Mech and vehicle attackers.
 //|---@field orbital_drop integer Minus two while the target has an intact cocoon; zero after a breach.
 //|---@field light integer Darkness on the target's map, less what searchlights and target heat offset.
+//|---@field environment integer|nil Wind and gravity on the shooter's map for this weapon class; nil when the wind keeps the weapon from firing.
 //|---@field heat integer
 //|---@field sensors integer
 //|---@field control_damage integer Vehicle commander/sensor critical penalties.
@@ -982,6 +983,7 @@
 //|---@field damage integer Penalty from physical damage.
 //|---@field cockpit integer Small cockpit construction penalty, independent of damage.
 //|---@field situational integer Caller-supplied modifier.
+//|---@field environment integer Terrain and wind modifier from Tactical Operations planetary conditions.
 //|---@field absent_character_pilot integer Penalty for an absent in-character pilot.
 //|---@field target integer Total required roll.
 //|---@field roll integer|nil No dice when already prone or unable to act.

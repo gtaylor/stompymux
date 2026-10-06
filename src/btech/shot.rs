@@ -383,6 +383,7 @@ fn resolve_shot_inner(
     }
     let submerged = super::weapon_geometry::submerged(world, shooter, weapon_index)?;
     super::weapon_geometry::check_water(selected_weapon, submerged)?;
+    super::planetary_conditions::check_wind(world, shooter, selected_weapon)?;
     super::torpedo::check_target(world, selected_weapon, target)?;
     if indirect.is_some() {
         super::spotter::check_indirect_water(world, shooter, target)?;

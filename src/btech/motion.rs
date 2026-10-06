@@ -504,7 +504,11 @@ fn advance_fall_headings(world: &mut World, rules: MovementRules) -> Result<Vec<
             )?;
             unit.turning_from_maximum(effective)
         } else {
-            super::speed_bonus::on_map(world, world.btech.vehicles()[&id].position(), maximum)?
+            super::speed_bonus::vehicle_on_map(
+                world,
+                world.btech.vehicles()[&id].position(),
+                maximum,
+            )?
         };
         let multiplier = world
             .btech
@@ -827,7 +831,14 @@ fn resolve_ground_segment(
                 change.abs() > 2 || (change != 0 && motion.speed < 0.0 && rules.roll_on_backwalk);
             let enters_water =
                 tile.is_open_water() || (tile.has_bridge() && next_height < tile.water_line());
-            if checked_height || enters_water || tile.is_ice() || map.mine_coverage(hex)? {
+            let hazardous_ground = tile.entry_piloting_modifier().is_some()
+                || tile.on_magma_crust(i32::from(next_height));
+            if checked_height
+                || enters_water
+                || tile.is_ice()
+                || hazardous_ground
+                || map.mine_coverage(hex)?
+            {
                 checked_steps.push(GroundStep {
                     hex,
                     change,
@@ -1046,6 +1057,14 @@ fn resolve_ground_segment(
             );
             notices.extend(event.notices.iter().cloned());
             mines.push(event);
+            let entry = super::terrain_entry::enter(world, id, fall_rules, falls.as_deref_mut())?;
+            super::piloting::append_feedback(
+                &mut pilot_notices,
+                entry.pilot_notices,
+                notices.len(),
+            );
+            notices.extend(entry.notices);
+            experience_messages.extend(entry.experience_messages);
             let unit = &world.btech.constructed_units()[&id];
             motion = unit.motion().unwrap();
             if unit.is_destroyed()
@@ -1101,6 +1120,14 @@ fn resolve_ground_segment(
             );
             notices.extend(event.notices.iter().cloned());
             mines.push(event);
+            let entry = super::terrain_entry::enter(world, id, fall_rules, falls.as_deref_mut())?;
+            super::piloting::append_feedback(
+                &mut pilot_notices,
+                entry.pilot_notices,
+                notices.len(),
+            );
+            notices.extend(entry.notices);
+            experience_messages.extend(entry.experience_messages);
             let unit = &world.btech.constructed_units()[&id];
             motion = unit.motion().unwrap();
             if unit.is_destroyed()

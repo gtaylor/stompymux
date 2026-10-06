@@ -847,6 +847,7 @@ Alias: `"front"|"right"|"left"|"rear"|"turret"|"rotor"`
 - `dug_in`: `integer` — Configured cover modifier, shared by Mech and vehicle attackers.
 - `orbital_drop`: `integer` — Minus two while the target has an intact cocoon; zero after a breach.
 - `light`: `integer` — Darkness on the target's map, less what searchlights and target heat offset.
+- `environment`: `integer|nil` — Wind and gravity on the shooter's map for this weapon class; nil when the wind keeps the weapon from firing.
 - `heat`: `integer`
 - `sensors`: `integer`
 - `control_damage`: `integer` — Vehicle commander/sensor critical penalties.
@@ -952,6 +953,7 @@ Alias: `"front"|"right"|"left"|"rear"|"turret"|"rotor"`
 - `damage`: `integer` — Penalty from physical damage.
 - `cockpit`: `integer` — Small cockpit construction penalty, independent of damage.
 - `situational`: `integer` — Caller-supplied modifier.
+- `environment`: `integer` — Terrain and wind modifier from Tactical Operations planetary conditions.
 - `absent_character_pilot`: `integer` — Penalty for an absent in-character pilot.
 - `target`: `integer` — Total required roll.
 - `roll`: `integer|nil` — No dice when already prone or unable to act.

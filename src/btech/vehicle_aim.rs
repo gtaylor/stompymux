@@ -56,6 +56,7 @@ pub(super) fn modifiers(
     aim.woods_cover = target_terms.woods_cover;
     aim.orbital_drop = target_terms.orbital_drop;
     aim.light = target_terms.light;
+    aim.environment = super::planetary_conditions::aim_modifier(world, shooter, mount.weapon);
     aim.beacon_accuracy += target_terms.beacon_accuracy;
     aim.target_lock = if indirect.is_some() {
         0

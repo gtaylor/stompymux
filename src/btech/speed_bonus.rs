@@ -77,6 +77,32 @@ pub(super) fn on_map(
     }
 }
 
+/// Apply map gravity and then extreme temperature to a vehicle's speed: beyond −30 °C or
+/// 50 °C a vehicle loses a cruising MP for every started ten degrees, and its flank speed is
+/// recomputed from the cruising speed left.
+pub(super) fn vehicle_on_map(
+    world: &crate::World,
+    position: Option<super::Position>,
+    speed: f64,
+) -> Result<f64> {
+    let speed = on_map(world, position, speed)?;
+    let Some(map) = position.and_then(|position| world.btech.maps().get(&position.map)) else {
+        return Ok(speed);
+    };
+    Ok(temperature_limited(speed, map.temperature()))
+}
+
+/// A vehicle's top speed in km/h at `temperature`, starting from `speed`.
+fn temperature_limited(speed: f64, temperature: i8) -> f64 {
+    let steps = super::extreme_temperature_steps(temperature).unsigned_abs();
+    if steps == 0 || speed <= 0.0 {
+        return speed;
+    }
+    let cruising = (speed / 1.5 / 10.75).round_ties_even();
+    let remaining = (cruising - f64::from(steps)).max(0.0);
+    ((remaining * 1.5).ceil() * 10.75).min(speed)
+}
+
 /// Environmental rules operate last and retain single-precision arithmetic.
 pub(super) fn gravity(speed: f32, gravity: Option<i64>) -> Result<f64> {
     let speed = if let Some(gravity) = gravity {
@@ -92,6 +118,20 @@ pub(super) fn gravity(speed: f32, gravity: Option<i64>) -> Result<f64> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Each started ten degrees beyond the comfortable band costs a vehicle one cruising MP,
+    /// with flank speed recomputed from what is left.
+    #[test]
+    fn extreme_temperatures_cost_vehicles_cruising_mp() {
+        // A 5/8 vehicle: 86 km/h flank.
+        assert_eq!(temperature_limited(86.0, 20), 86.0);
+        assert_eq!(temperature_limited(86.0, 50), 86.0);
+        assert_eq!(temperature_limited(86.0, 55), 64.5);
+        assert_eq!(temperature_limited(86.0, -40), 64.5);
+        assert_eq!(temperature_limited(86.0, -41), 53.75);
+        assert_eq!(temperature_limited(86.0, i8::MIN), 0.0);
+        assert_eq!(temperature_limited(0.0, i8::MIN), 0.0);
+    }
 
     /// Both equipment boosts add before environmental gravity scales the result.
     #[test]

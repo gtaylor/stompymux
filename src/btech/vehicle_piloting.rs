@@ -39,11 +39,13 @@ pub(super) fn roll(
             .definition()
             .has_technology(super::Technology::HardenedArmor),
     );
+    let environment = super::planetary_conditions::piloting_modifier(world, id);
     let target = i32::from(skill)
         .wrapping_add(i32::from(damage))
         .wrapping_add(i32::from(cockpit))
         .wrapping_add(i32::from(armor))
         .wrapping_add(modifier)
+        .wrapping_add(i32::from(environment))
         .wrapping_add(i32::from(absent_character_pilot));
     let blocked =
         super::piloting::controls_blocked(world, id, vehicle.power()) || vehicle.is_destroyed();
@@ -66,6 +68,7 @@ pub(super) fn roll(
         cockpit,
         armor,
         situational: modifier,
+        environment,
         absent_character_pilot,
         target,
         roll,

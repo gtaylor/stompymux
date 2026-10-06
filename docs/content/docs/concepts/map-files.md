@@ -110,11 +110,11 @@ elevation = 3
 
 | Key | Default | Meaning |
 | --- | --- | --- |
-| `gravity` | `100` | Gravity in percent of standard, 0 to 255. |
-| `temperature` | `20` | Temperature in degrees Celsius, -128 to 127. |
+| `gravity` | `100` | Gravity in percent of standard, 0 to 255. Missile and ballistic fire takes +1 to hit for every full 20 points away from 100. |
+| `temperature` | `20` | Temperature in degrees Celsius, -128 to 127. Each started 10 degrees beyond -30 or 50 costs Mechs a point of cooling (or gives them one) and vehicles a cruising MP. |
 | `light` | keep current | `"day"`, `"dawn"`, `"dusk"`, `"full_moon_night"`, `"moonless_night"` or `"pitch_black"`; see [Light](#light). A new map starts in daylight. |
 | `visibility` | keep current | Weather visibility in hexes, 0 to 60. A new map starts at 30. |
-| `wind` | keep current | `{ direction, speed }`: the bearing the wind blows from, 0 to 359, and its strength, where 0 is calm. Wind carries smoke and spreads fire. A new map starts calm. |
+| `wind` | keep current | `{ direction, speed }`: the bearing the wind blows from, 0 to 359, and its speed in km/h, where 0 is calm. Wind carries smoke and spreads fire. From 62 km/h it spoils missile and then ballistic fire, and from 75 km/h it makes piloting harder; see [Wind](#wind). A new map starts calm. |
 | `flags` | keep current | Map flags by name, such as `"dark"` or `"underground"`. `flags = []` clears them. See `help @setmap` for the list. |
 
 Keys marked "keep current" leave a loaded map's value alone when they are
@@ -142,6 +142,26 @@ easier to hit by one for every full heat step of heat it carries. At night a
 lit target can be seen three times as far, and automatic searchlights switch
 on. Glare plays as a full moon night and a solar flare as
 a moonless one.
+
+### Wind
+
+Wind speed falls into the wind weather conditions of Tactical Operations,
+using the Beaufort scale for gales and storms and the Fujita scale for
+tornadoes. Stronger wind adds to the to-hit number of missile and direct-fire
+ballistic attacks and to piloting checks:
+
+| Speed (km/h) | Category | Missile | Ballistic | Energy | Mech piloting | Hover/VTOL piloting |
+| --- | --- | --- | --- | --- | --- | --- |
+| 0-49 | calm | +0 | +0 | +0 | +0 | +0 |
+| 50-61 | light gale | +0 | +0 | +0 | +0 | +0 |
+| 62-74 | moderate gale | +1 | +0 | +0 | +0 | +0 |
+| 75-88 | strong gale | +2 | +1 | +0 | +1 | +2 |
+| 89-116 | storm | +3 | +2 | +0 | +3 | +3 |
+| 117-332 | tornado (F1-F3) | cannot fire | +3 | +2 | +3 | +3 |
+| 333+ | tornado (F4+) | cannot fire | cannot fire | +3 | +5 | +5 |
+
+Tracked and wheeled vehicles feel only tornadoes, which add +3 to their
+piloting checks (+5 in an F4 tornado).
 
 ## Grids
 

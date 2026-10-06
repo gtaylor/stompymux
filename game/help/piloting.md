@@ -1,7 +1,7 @@
 +++
 title = "Piloting BattleMechs"
 description = "Enter a unit and take or release its cockpit"
-keywords = ["status", "view", "markings", "ap", "safety", "mwsafety", "mml", "hide", "explode", "self-destruct", "usebin", "heatcutoff", "addtic", "deltic", "cleartic", "listtic", "firetic", "hulldown", "dig", "pickup", "dropoff", "enterbase", "pilot", "unpilot", "piloting", "cockpit", "startup", "shutdown", "heading", "speed", "rottorso", "fliparms", "slite", "searchlight", "sensor", "contacts", "lock", "stand", "prone", "lrs", "lrsmap", "fire", "sight", "target", "weapons", "weaponstatus", "weaponspecs", "critstatus", "flamerheat", "heat", "inferno", "lbx", "cluster", "firecluster", "firesmoke", "firemine", "fireswarm", "fireswarm1", "artemis", "unjam", "stinger", "hotload", "ultra", "rapidfire", "rac", "gattling", "armorpiercing", "caseless", "incendiary", "precision", "flechette", "jump", "dfa", "death from above", "land", "unitprefs", "autofall", "ams", "pods", "removepod", "removepods", "extinguish", "melee", "axe", "sword", "mace", "saw", "claw", "lance", "flail", "wrecking ball", "chain whip", "vibroblade", "retractable blade"]
+keywords = ["status", "view", "markings", "ap", "safety", "mwsafety", "mml", "hide", "explode", "self-destruct", "usebin", "heatcutoff", "addtic", "deltic", "cleartic", "listtic", "firetic", "hulldown", "dig", "pickup", "dropoff", "enterbase", "pilot", "unpilot", "piloting", "cockpit", "startup", "shutdown", "heading", "speed", "rottorso", "fliparms", "slite", "searchlight", "sensor", "contacts", "lock", "stand", "prone", "lrs", "lrsmap", "fire", "sight", "target", "weapons", "weaponstatus", "weaponspecs", "critstatus", "flamerheat", "heat", "inferno", "lbx", "cluster", "firecluster", "firesmoke", "firemine", "fireswarm", "fireswarm1", "artemis", "unjam", "stinger", "hotload", "ultra", "rapidfire", "rac", "gattling", "armorpiercing", "caseless", "incendiary", "precision", "flechette", "jump", "dfa", "death from above", "land", "unitprefs", "autofall", "ams", "pods", "removepod", "removepods", "extinguish", "melee", "axe", "sword", "mace", "saw", "claw", "lance", "flail", "wrecking ball", "chain whip", "vibroblade", "retractable blade", "magma", "lava", "wind", "gravity", "temperature"]
 article_tags = ["show_in_index"]
 +++
 
@@ -68,6 +68,30 @@ breaking. A break can drop everyone on that hex into the water. Below intact ice
 you follow the bottom and make water checks; falls and standing keep you below it.
 Moving from elevation -1 into depth-one ice brings you onto its surface without
 a fracture roll on that entry.
+
+Terrain and weather make every piloting check you take there harder. Sand, tundra,
+magma crust, heavy industrial ground, deep snow and mud each add one, and so does thin
+snow for wheeled vehicles. Light, heavy and ultra-heavy jungle add one, two and three,
+and swamp adds one for Mechs and two for tracked and wheeled vehicles. Ice adds four,
+rapids two, torrents three and liquid magma four. Hovercraft ignore the swamp, ice, snow,
+mud and fast-water penalties. A strong gale adds one for Mechs and two for hovercraft and
+VTOLs, a storm three, a tornado three for everyone and an F4 tornado five. Entering
+ultra rubble takes a piloting check; failure is a fall.
+
+Magma crust can crack under you: each crust hex you walk or drive into breaks into
+liquid magma on a one-in-six chance, and landing a jump on it breaks it half the time.
+Crust adds five to a Mech's heat, liquid magma ten, and unlike flames that heat has no
+cap. Liquid magma burns a Mech's legs for 2D6 each when it enters, and again at the start
+of every turn it stays there; a fallen Mech burns everywhere. Any vehicle that enters liquid
+magma is destroyed. Deep snow draws one point of heat a turn from a Mech with heat sinks
+in its legs. Beyond -30 or 50 degrees, vehicles lose a cruising MP for every started ten
+degrees.
+
+Wind and gravity also affect weapon fire. A moderate gale adds one to missile fire; a
+strong gale two to missiles and one to ballistic weapons; a storm three and two. In a
+tornado missiles cannot fire, ballistic weapons take three and energy weapons two; an F4
+tornado leaves only energy weapons, at three. Missiles and ballistic weapons also take one
+for every full 0.2 G the gravity differs from normal.
 Use `unitprefs` to inspect AutoFall. `unitprefs AutoFall ON` skips the stop check
 at downhill cliffs; `OFF` restores it. `unitprefs AutoFall` toggles the setting.
 The setting stays with the unit through shutdown and restart. The assigned pilot

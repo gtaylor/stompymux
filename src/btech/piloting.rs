@@ -20,6 +20,9 @@ pub struct PilotingCheck {
     /// Hardened armor adds one to Mech piloting and vehicle driving rolls.
     pub armor: u8,
     pub situational: i32,
+    /// What the terrain under the unit and the wind add, from Tactical Operations' planetary
+    /// conditions.
+    pub environment: i16,
     pub absent_character_pilot: u8,
     pub target: i32,
     pub roll: Option<u8>,
@@ -36,7 +39,7 @@ impl PilotingCheck {
             super::TraceTopic::PilotingRolls,
             format!("Attempting to make pilot{} skill roll. SPilot: {}, mods: {}, Damage: {}, BTH: {}",
                 if awards_experience { " (noxp)" } else { "" },
-                self.skill, self.situational, self.damage, self.target),
+                self.skill, self.situational + i32::from(self.environment), self.damage, self.target),
         ))
     }
 
@@ -244,11 +247,13 @@ fn roll_check(
     } else {
         0
     };
+    let environment = super::planetary_conditions::piloting_modifier(world, unit);
     let target = i32::from(skill)
         .wrapping_add(i32::from(damage))
         .wrapping_add(i32::from(cockpit))
         .wrapping_add(i32::from(armor))
         .wrapping_add(modifier)
+        .wrapping_add(i32::from(environment))
         .wrapping_add(i32::from(absent_character_pilot));
     let blocked = controls_blocked(world, unit, state.power());
     let prone = state.posture() == super::Posture::Prone;
@@ -272,6 +277,7 @@ fn roll_check(
         cockpit,
         armor,
         situational: modifier,
+        environment,
         absent_character_pilot,
         target,
         roll,
@@ -295,7 +301,8 @@ fn experience_amount(check: &PilotingCheck) -> Option<u32> {
     if !check.success || check.roll.is_none() || check.target <= 2 {
         return None;
     }
-    Some((check.target - 7).clamp(1, (1 + check.situational).max(2)) as u32)
+    let difficulty = check.situational + i32::from(check.environment);
+    Some((check.target - 7).clamp(1, (1 + difficulty).max(2)) as u32)
 }
 
 /// Apply successful-check XP within the caller's candidate and snapshot its diagnostic.
@@ -372,6 +379,7 @@ mod tests {
             cockpit: 1,
             armor: 0,
             situational: -1,
+            environment: 0,
             absent_character_pilot: 5,
             target: 13,
             roll: Some(8),
@@ -466,6 +474,7 @@ mod tests {
             cockpit: 0,
             armor: 0,
             situational: 0,
+            environment: 0,
             absent_character_pilot: 0,
             target: 6,
             roll: Some(12),

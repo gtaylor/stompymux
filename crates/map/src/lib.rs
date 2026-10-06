@@ -32,7 +32,10 @@ mod terrain;
 mod terrain_rules;
 
 pub use asset::{MapAsset, MapPointOfInterest};
-pub use environment::{Light, MAX_VISIBILITY, Wind};
+pub use environment::{
+    AttackKind, Light, MAX_VISIBILITY, STANDARD_GRAVITY, Wind, WindStrength,
+    extreme_temperature_steps, gravity_aim_modifier,
+};
 pub use flags::{MapFlag, format_map_flags, parse_map_flags};
 pub use geometry::{HexCoordinate, Point};
 pub use hex::{Hex, MAX_DEPTH, MAX_HEIGHT, height_glyph};

@@ -745,7 +745,8 @@ async fn ice_standing_native_lua_and_restart_cover_success_failure_and_fracture(
         let seed = (0..=255)
             .find(|seed| {
                 let mut dice = Dice::seeded([*seed; 32]);
-                if (dice.two_d6() >= if mode == "careful" { 4 } else { 6 }) != success {
+                // Standing on ice takes the four-point ice modifier.
+                if (dice.two_d6() >= if mode == "careful" { 8 } else { 10 }) != success {
                     return false;
                 }
                 success || (dice.two_d6() >= 7 && (dice.d6() == 1) == fracture)

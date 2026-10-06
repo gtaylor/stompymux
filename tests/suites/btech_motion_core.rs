@@ -7,3 +7,6 @@ pub(crate) mod btech_motion_common;
 
 #[path = "../btech_motion_core.rs"]
 mod btech_motion_core;
+
+#[path = "../btech_planetary_conditions.rs"]
+mod btech_planetary_conditions;

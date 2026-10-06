@@ -306,12 +306,16 @@ fn in_bounds(width: i64, height: i64, x: u16, y: u16) -> bool {
     i64::from(x) < width && i64::from(y) < height
 }
 
-/// Relative route cost of entering a tile, or `None` when the tile is impassable.
+/// Relative route cost of entering a tile, or `None` when the tile is impassable. Liquid
+/// magma destroys any vehicle that enters it, so vehicles never route through it.
 fn terrain_cost(hex: Hex, kind: GroundUnitKind) -> Option<u32> {
     if hex
         .structure()
         .is_some_and(|structure| structure.kind == StructureKind::Wall)
     {
+        return None;
+    }
+    if kind != GroundUnitKind::Mech && hex.in_liquid_magma(i32::from(hex.level())) {
         return None;
     }
     Some(if hex.is_water_surface() {
@@ -368,6 +372,12 @@ fn transition_reason(
     }
     if to.is_ice() {
         return (TraversalReason::IceRisk, 8);
+    }
+    if to.in_liquid_magma(to_height) {
+        return (TraversalReason::KnownHazard, 12);
+    }
+    if to.on_magma_crust(to_height) {
+        return (TraversalReason::KnownHazard, 4);
     }
     if to.has_bridge() {
         let under_bridge = to_height < i32::from(to.water_line())

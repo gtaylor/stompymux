@@ -431,6 +431,42 @@ pub(super) fn resolve_internal_stress(
     Ok(context.report)
 }
 
+/// Environmental damage to a section's front armor, such as a burn from liquid magma, with
+/// the ordinary transfer, critical, CASE and injury cascade. `character` lets the cascade
+/// injure an in-character pilot; only a host action that publishes casualties may set it.
+pub(super) fn resolve_environmental_damage(
+    world: &mut World,
+    id: ObjectId,
+    section: MechSection,
+    damage: u16,
+    rules: super::FallRules,
+    character: bool,
+) -> Result<super::TacticalImpact> {
+    let in_character = world.objects[&id].flags.contains(Flag::InCharacter);
+    let mut context = ImpactContext::new(world, id, Some(rules))?;
+    context.character_effects = character;
+    context.character_toughness = (character && in_character).then_some(rules.toughness);
+    context.attacker = Some(id);
+    resolve_path(
+        &mut context,
+        DamagePacket {
+            announced: false,
+            direct_hit: false,
+            section,
+            damage,
+            internal_only: false,
+            transfer: true,
+            rear: false,
+            tac: false,
+            weapon_effect: None,
+            critical_penalty: 0,
+        },
+    )?;
+    context.unit().validate()?;
+    context.report.impact.destroyed = context.unit().is_destroyed();
+    Ok(context.report)
+}
+
 /// Resolve a misload or propellant ignition inside its mounting section; nested explosions retain their own rules.
 /// The shot transaction has already disabled the weapon and owns commit or rollback.
 pub(super) fn resolve_misload_in_candidate(
