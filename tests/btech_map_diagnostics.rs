@@ -88,7 +88,7 @@ async fn native_and_lua_map_activation_agree_and_inherit_unnamed_flags() {
                 let field = &state.btech.maps()[&map];
                 assert_eq!((field.flags, field.gravity, field.temperature), expected);
                 assert_eq!(field.hex(1, 0).unwrap(), Hex::new(Terrain::Fire, 2));
-                assert_eq!(field.hex(1, 1).unwrap(), Hex::new(Terrain::Grassland, 4));
+                assert_eq!(field.hex(1, 1).unwrap(), Hex::new(Terrain::Clear, 4));
             }
             for scripts in [&native, &lua] {
                 assert!(support::drain_traces(scripts, TraceTopic::MapLoad).is_empty());

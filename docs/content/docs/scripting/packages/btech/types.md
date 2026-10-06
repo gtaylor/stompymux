@@ -52,9 +52,11 @@ Alias: `"LeftArm"|"RightArm"|"LeftTorso"|"RightTorso"|"CenterTorso"|"LeftLeg"|"R
 
 - `level`: `integer` — Ground height in levels; any water surface sits at this height.
 - `ground`: `GroundName` — What the ground is made of; see btech.map.ground_types.
-- `woods`: `WoodsName` — Forest covering the ground; see btech.map.woods_types.
-- `water`: `{depth: integer, frozen: boolean}` — Standing water whose surface is at the ground level.
-- `structure`: `{kind: "building"|"wall", height: integer}|{kind: "bridge", deck: integer}` — Built feature; heights are above the ground level. Kinds are in btech.map.structure_kinds.
+- `water`: `{depth: integer, flow?: FlowName}` — Water whose surface is at the ground level; flow is absent for still water. See btech.map.flow_types.
+- `foliage`: `FoliageName` — Woods, jungle or planted fields over the ground; see btech.map.foliage_types.
+- `route`: `RouteName` — Road or rail line through the hex; see btech.map.route_types.
+- `structure`: `{kind: StructureKind, class: ConstructionClassName, height: integer, cf: integer}` — Building, wall or bridge. Height is above the ground level (a bridge's deck); cf is the construction factor left, at most the class's full value. Kinds are in btech.map.structure_kinds and classes in btech.map.construction_classes.
+- `condition`: `ConditionName` — Ice, snow or mud over the hex; only ice can lie on water. See btech.map.condition_types.
 - `overlay`: `"fire"|"smoke"` — Fire or smoke over the hex; base tiles never have one.
 
 ## StoredMap
@@ -149,8 +151,12 @@ Alias: `"normal"|"heat"|"hotload"|"ultra"|"rapid"|"rotary2"|"rotary3"|"rotary4"|
 
 - `terrain_types`: `TerrainTypes` — Terrain names reported by btech.map.terrain.
 - `ground_types`: `GroundTypes` — Ground names for a hex's ground field.
-- `woods_types`: `WoodsTypes` — Woods densities for a hex's woods field.
+- `foliage_types`: `FoliageTypes` — Woods, jungle and field names for a hex's foliage field.
+- `flow_types`: `FlowTypes` — Flow names for the flow field of a hex's water.
+- `route_types`: `RouteTypes` — Road and rail names for a hex's route field.
+- `condition_types`: `ConditionTypes` — Ice, snow and mud names for a hex's condition field.
 - `structure_kinds`: `StructureKinds` — Structure kinds for the kind field of a hex's structure.
+- `construction_classes`: `ConstructionClasses` — Construction classes for the class field of a hex's structure.
 
 ## RadioChannel
 
@@ -608,47 +614,106 @@ Alias: `{mode: "offset", offset: integer}|{mode: "exact", x: integer, y: integer
 
 ## TerrainName
 
-Alias: `"grassland"|"road"|"light_forest"|"heavy_forest"|"water"|"ice"|"bridge"|"rough"|"mountains"|"fire"|"smoke"|"snow"|"building"|"wall"|"sand"`
+Alias: `"clear"|"pavement"|"road"|"rail"|"rough"|"ultra_rough"|"rubble"|"ultra_rubble"|"sand"|"tundra"|"swamp"|"magma_crust"|"magma"|"heavy_industrial"|"light_woods"|"heavy_woods"|"ultra_heavy_woods"|"light_jungle"|"heavy_jungle"|"ultra_heavy_jungle"|"planted_fields"|"water"|"ice"|"thin_snow"|"deep_snow"|"mud"|"bridge"|"building"|"wall"|"fire"|"smoke"`
 
 ## TerrainTypes
 
-- `GRASSLAND`: `"grassland"`
+- `CLEAR`: `"clear"`
+- `PAVEMENT`: `"pavement"`
 - `ROAD`: `"road"`
-- `LIGHT_FOREST`: `"light_forest"`
-- `HEAVY_FOREST`: `"heavy_forest"`
+- `RAIL`: `"rail"`
+- `ROUGH`: `"rough"`
+- `ULTRA_ROUGH`: `"ultra_rough"`
+- `RUBBLE`: `"rubble"`
+- `ULTRA_RUBBLE`: `"ultra_rubble"`
+- `SAND`: `"sand"`
+- `TUNDRA`: `"tundra"`
+- `SWAMP`: `"swamp"`
+- `MAGMA_CRUST`: `"magma_crust"`
+- `MAGMA`: `"magma"`
+- `HEAVY_INDUSTRIAL`: `"heavy_industrial"`
+- `LIGHT_WOODS`: `"light_woods"`
+- `HEAVY_WOODS`: `"heavy_woods"`
+- `ULTRA_HEAVY_WOODS`: `"ultra_heavy_woods"`
+- `LIGHT_JUNGLE`: `"light_jungle"`
+- `HEAVY_JUNGLE`: `"heavy_jungle"`
+- `ULTRA_HEAVY_JUNGLE`: `"ultra_heavy_jungle"`
+- `PLANTED_FIELDS`: `"planted_fields"`
 - `WATER`: `"water"`
 - `ICE`: `"ice"`
+- `THIN_SNOW`: `"thin_snow"`
+- `DEEP_SNOW`: `"deep_snow"`
+- `MUD`: `"mud"`
 - `BRIDGE`: `"bridge"`
-- `ROUGH`: `"rough"`
-- `MOUNTAINS`: `"mountains"`
-- `FIRE`: `"fire"`
-- `SMOKE`: `"smoke"`
-- `SNOW`: `"snow"`
 - `BUILDING`: `"building"`
 - `WALL`: `"wall"`
-- `SAND`: `"sand"`
+- `FIRE`: `"fire"`
+- `SMOKE`: `"smoke"`
 
 ## GroundName
 
-Alias: `"clear"|"road"|"rough"|"mountains"|"snow"|"sand"`
+Alias: `"clear"|"pavement"|"rough"|"ultra_rough"|"rubble"|"ultra_rubble"|"sand"|"tundra"|"swamp"|"magma_crust"|"magma"|"heavy_industrial"`
 
 ## GroundTypes
 
 - `CLEAR`: `"clear"`
-- `ROAD`: `"road"`
+- `PAVEMENT`: `"pavement"`
 - `ROUGH`: `"rough"`
-- `MOUNTAINS`: `"mountains"`
-- `SNOW`: `"snow"`
+- `ULTRA_ROUGH`: `"ultra_rough"`
+- `RUBBLE`: `"rubble"`
+- `ULTRA_RUBBLE`: `"ultra_rubble"`
 - `SAND`: `"sand"`
+- `TUNDRA`: `"tundra"`
+- `SWAMP`: `"swamp"`
+- `MAGMA_CRUST`: `"magma_crust"`
+- `MAGMA`: `"magma"`
+- `HEAVY_INDUSTRIAL`: `"heavy_industrial"`
 
-## WoodsName
+## FoliageName
 
-Alias: `"light"|"heavy"`
+Alias: `"light_woods"|"heavy_woods"|"ultra_heavy_woods"|"light_jungle"|"heavy_jungle"|"ultra_heavy_jungle"|"planted_fields"`
 
-## WoodsTypes
+## FoliageTypes
 
-- `LIGHT`: `"light"`
-- `HEAVY`: `"heavy"`
+- `LIGHT_WOODS`: `"light_woods"`
+- `HEAVY_WOODS`: `"heavy_woods"`
+- `ULTRA_HEAVY_WOODS`: `"ultra_heavy_woods"`
+- `LIGHT_JUNGLE`: `"light_jungle"`
+- `HEAVY_JUNGLE`: `"heavy_jungle"`
+- `ULTRA_HEAVY_JUNGLE`: `"ultra_heavy_jungle"`
+- `PLANTED_FIELDS`: `"planted_fields"`
+
+## FlowName
+
+Alias: `"still"|"rapids"|"torrent"`
+
+## FlowTypes
+
+- `STILL`: `"still"`
+- `RAPIDS`: `"rapids"`
+- `TORRENT`: `"torrent"`
+
+## RouteName
+
+Alias: `"paved_road"|"gravel_road"|"dirt_road"|"rail"`
+
+## RouteTypes
+
+- `PAVED_ROAD`: `"paved_road"`
+- `GRAVEL_ROAD`: `"gravel_road"`
+- `DIRT_ROAD`: `"dirt_road"`
+- `RAIL`: `"rail"`
+
+## ConditionName
+
+Alias: `"ice"|"thin_snow"|"deep_snow"|"mud"`
+
+## ConditionTypes
+
+- `ICE`: `"ice"`
+- `THIN_SNOW`: `"thin_snow"`
+- `DEEP_SNOW`: `"deep_snow"`
+- `MUD`: `"mud"`
 
 ## StructureKind
 
@@ -659,6 +724,17 @@ Alias: `"building"|"wall"|"bridge"`
 - `BUILDING`: `"building"`
 - `WALL`: `"wall"`
 - `BRIDGE`: `"bridge"`
+
+## ConstructionClassName
+
+Alias: `"light"|"medium"|"heavy"|"hardened"`
+
+## ConstructionClasses
+
+- `LIGHT`: `"light"`
+- `MEDIUM`: `"medium"`
+- `HEAVY`: `"heavy"`
+- `HARDENED`: `"hardened"`
 
 ## LineOfSight
 
@@ -838,7 +914,7 @@ Alias: `"front"|"right"|"left"|"rear"|"turret"|"rotor"`
 
 - `map`: `integer`
 - `coordinate`: `HexCoordinate`
-- `effect`: `{effect: "none"}|{effect: "ignite", seconds: integer}|{effect: "clear", clearing: "thin_to_light"|"cut_to_clear"|"cut_to_rough"}` — What the attack did to the woods.
+- `effect`: `{effect: "none"}|{effect: "ignite", seconds: integer}|{effect: "clear", clearing: "thin"|"cut_to_clear"|"cut_to_rough"}` — What the attack did to the woods.
 - `notices`: `Notice[]`
 
 ## WoodsAbsorption

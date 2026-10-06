@@ -84,20 +84,33 @@ fn advance_fire(map: &mut StoredMap) -> Result<()> {
     Ok(())
 }
 
-/// The hex left when a fire over it burns out, if the fire changed it. Heavy woods thin to
-/// light woods, and light woods burn away. Clear ground beneath is left rough two times in
-/// three; any other ground, such as a road or sand, keeps its own kind.
+/// The hex left when a fire over it burns out, if the fire changed it. Woods and jungle thin
+/// one density, light woods and jungle burn away, and planted fields burn to stubble. Clear
+/// ground beneath burnt-away woods or jungle is left rough two times in three; any other ground,
+/// such as sand, keeps its own kind. Ice and snow melt to mud under a fire.
 fn burn_out(tile: super::Hex, dice: &mut super::Dice) -> Option<super::Hex> {
-    match tile.woods()? {
-        super::Woods::Heavy => Some(tile.with_woods(Some(super::Woods::Light))),
-        super::Woods::Light => {
-            let ground = match tile.ground() {
-                super::Ground::Clear if dice.d6() >= 3 => super::Ground::Rough,
-                ground => ground,
-            };
-            Some(tile.with_woods(None).with_ground(ground))
-        }
+    let melted =
+        match tile.condition() {
+            Some(
+                super::Condition::Ice | super::Condition::ThinSnow | super::Condition::DeepSnow,
+            ) if tile.water().is_none() => Some(tile.with_condition(Some(super::Condition::Mud))),
+            Some(super::Condition::Ice) => Some(tile.thawed()),
+            _ => None,
+        };
+    let tile = melted.unwrap_or(tile);
+    let Some(foliage) = tile.foliage() else {
+        return melted;
+    };
+    if let Some(thinner) = foliage.thinned() {
+        return Some(tile.with_foliage(Some(thinner)));
     }
+    let ground = match tile.ground() {
+        super::Ground::Clear if foliage.density().is_some() && dice.d6() >= 3 => {
+            super::Ground::Rough
+        }
+        ground => ground,
+    };
+    Some(tile.with_foliage(None).with_ground(ground))
 }
 
 /// Resolve all spread checks before smoke/fire duration draws; fire replaces smoke at shared tiles.
@@ -223,17 +236,22 @@ mod tests {
 
     #[test]
     fn burnout_thins_heavy_woods_and_keeps_the_ground_under_light_woods() {
-        use crate::btech::{Ground, Hex, Terrain, Woods};
+        use crate::btech::{Foliage, Ground, Hex, Terrain};
         let mut dice = crate::btech::Dice::seeded([7; 32]);
-        let heavy = Hex::new(Terrain::HeavyForest, 3);
+        let heavy = Hex::new(Terrain::HeavyWoods, 3);
         assert_eq!(
             burn_out(heavy, &mut dice),
-            Some(heavy.with_woods(Some(Woods::Light)))
+            Some(heavy.with_foliage(Some(Foliage::LightWoods)))
         );
-        for ground in [Ground::Road, Ground::Sand, Ground::Snow, Ground::Mountains] {
+        let jungle = Hex::new(Terrain::UltraHeavyJungle, 0);
+        assert_eq!(
+            burn_out(jungle, &mut dice),
+            Some(jungle.with_foliage(Some(Foliage::HeavyJungle)))
+        );
+        for ground in [Ground::Swamp, Ground::Sand, Ground::Tundra, Ground::Rough] {
             let light = Hex::at_level(2)
                 .with_ground(ground)
-                .with_woods(Some(Woods::Light));
+                .with_foliage(Some(Foliage::LightWoods));
             assert_eq!(
                 burn_out(light, &mut dice),
                 Some(Hex::at_level(2).with_ground(ground))
@@ -241,8 +259,8 @@ mod tests {
         }
         let mut grounds = std::collections::BTreeSet::new();
         for _ in 0..64 {
-            let burnt = burn_out(Hex::new(Terrain::LightForest, 1), &mut dice).unwrap();
-            assert_eq!((burnt.woods(), burnt.level()), (None, 1));
+            let burnt = burn_out(Hex::new(Terrain::LightWoods, 1), &mut dice).unwrap();
+            assert_eq!((burnt.foliage(), burnt.level()), (None, 1));
             grounds.insert(format!("{:?}", burnt.ground()));
         }
         assert_eq!(
@@ -250,6 +268,24 @@ mod tests {
             2,
             "clear ground burns to clear or rough: {grounds:?}"
         );
+        assert_eq!(
+            burn_out(Hex::new(Terrain::PlantedFields, 0), &mut dice),
+            Some(Hex::new(Terrain::Clear, 0))
+        );
         assert_eq!(burn_out(Hex::new(Terrain::Rough, 0), &mut dice), None);
+    }
+
+    /// Fire melts ice and snow on land to mud and thaws frozen water.
+    #[test]
+    fn burnout_melts_ice_and_snow() {
+        use crate::btech::{Condition, Hex, Terrain};
+        let mut dice = crate::btech::Dice::seeded([7; 32]);
+        let snowy = Hex::new(Terrain::DeepSnow, 0);
+        assert_eq!(
+            burn_out(snowy, &mut dice),
+            Some(snowy.with_condition(Some(Condition::Mud)))
+        );
+        let ice = Hex::new(Terrain::Ice, 2);
+        assert_eq!(burn_out(ice, &mut dice), Some(Hex::new(Terrain::Water, 2)));
     }
 }

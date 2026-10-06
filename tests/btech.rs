@@ -42,7 +42,7 @@ fn supplied_templates_and_maps_decode_without_asset_conversion() {
     );
     let map = read_battle_map(&dir.path().join("maps"), "test.map").unwrap();
     assert_eq!((map.width, map.height, map.hexes.len()), (50, 50, 2500));
-    assert_eq!(map.hex(0, 0).unwrap().terrain(), Terrain::Grassland);
+    assert_eq!(map.hex(0, 0).unwrap().terrain(), Terrain::Clear);
     let environment = read_battle_map(&dir.path().join("maps"), "environment.map").unwrap();
     assert_eq!(
         (

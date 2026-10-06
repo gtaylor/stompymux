@@ -1,12 +1,22 @@
 //! The road network: roads linking settlements and highways crossing the map, routed around
 //! steep climbs, deep water and buildings, with bridges wherever they cross water.
+//!
+//! A road is a route laid through the hexes it crosses: woods, rough ground and fields stay
+//! where they are, and units travelling along the road pay for the road instead. Roads are
+//! kept clear of snow. Highways are paved; a road linking two settlements is gravel when
+//! both are towns or larger, or one is a military base, and dirt otherwise. Where roads share
+//! hexes the better surface wins. Bridges are built to suit the road: heavy for paved roads,
+//! medium for gravel and light for dirt.
 use crate::Params;
-use crate::map::{HexMap, Terrain};
+use crate::map::HexMap;
 use crate::path::find_path;
 use crate::report::RoadReport;
 use crate::rng::Rng;
 use crate::settlement::Settlement;
-use stompymux_map::HexCoordinate;
+use crate::spec::{SettlementKind, SettlementSize};
+use stompymux_map::{
+    ConstructionClass, Foliage, Ground, HexCoordinate, Route, Structure, StructureKind,
+};
 
 /// Cheapest possible step cost, which keeps the routing heuristic admissible.
 const ROAD_STEP: u32 = 3;
@@ -16,32 +26,70 @@ const ROAD_STEP: u32 = 3;
 fn step_cost(map: &HexMap, reserved: &[bool], from: (i32, i32), to: (i32, i32)) -> Option<u32> {
     let target = map.hex(to.0, to.1)?;
     let source = map.hex(from.0, from.1)?;
-    let mut cost = match target.terrain {
-        Terrain::Building { .. } | Terrain::Wall { .. } => return None,
-        Terrain::Road => ROAD_STEP,
-        _ if target.bridge.is_some() => ROAD_STEP,
-        Terrain::Clear | Terrain::Sand | Terrain::Snow => 10,
-        Terrain::LightWoods => 18,
-        Terrain::Rough => 22,
-        Terrain::HeavyWoods => 30,
-        Terrain::Mountains => 60,
-        Terrain::Water { depth } | Terrain::Ice { depth } => 50 + 15 * u32::from(depth),
+    if target.has_standing_structure() {
+        return None;
+    }
+    let mut cost = if target.is_road() || target.has_bridge() {
+        ROAD_STEP
+    } else if let Some(water) = target.water() {
+        50 + 15 * u32::from(water.depth)
+    } else {
+        let ground = match target.ground() {
+            Ground::Rough | Ground::Rubble => 22,
+            Ground::Swamp => 30,
+            Ground::UltraRough | Ground::UltraRubble | Ground::Magma => 60,
+            _ => 10,
+        };
+        let foliage = match target.foliage() {
+            Some(Foliage::LightWoods) => 18,
+            Some(Foliage::HeavyWoods | Foliage::LightJungle) => 30,
+            Some(Foliage::UltraHeavyWoods | Foliage::HeavyJungle) => 45,
+            Some(Foliage::UltraHeavyJungle) => 60,
+            Some(Foliage::PlantedFields) | None => 10,
+        };
+        ground.max(foliage)
     };
     // A row is a connected east-west line, so a small charge for changing rows keeps
     // east-west roads straight instead of zigzagging between two equally short rows.
     if to.1 != from.1 {
         cost += 1;
     }
-    let climb = u32::from(target.level.abs_diff(source.level));
+    let climb = u32::from(target.level().abs_diff(source.level()));
     cost += 12 * climb + if climb > 2 { 80 } else { 0 };
-    if reserved[map.index(to.0, to.1)] && target.terrain != Terrain::Road {
+    if reserved[map.index(to.0, to.1)] && !target.is_road() {
         cost += 25;
     }
     Some(cost)
 }
 
-/// Pave `path`, bridging water, and widen it to `width` hexes on the side `across` points to.
-fn pave(map: &mut HexMap, path: &[(i32, i32)], width: u8, across: (i32, i32)) -> usize {
+/// The construction class of a bridge carrying a road of `surface`.
+const fn bridge_class(surface: Route) -> ConstructionClass {
+    match surface {
+        Route::PavedRoad => ConstructionClass::Heavy,
+        Route::GravelRoad | Route::Rail => ConstructionClass::Medium,
+        Route::DirtRoad => ConstructionClass::Light,
+    }
+}
+
+/// The surface of a road linking settlements `a` and `b`.
+fn link_surface(a: &Settlement, b: &Settlement) -> Route {
+    let military = |settlement: &Settlement| settlement.report.kind == SettlementKind::Military;
+    if military(a) || military(b) || a.report.size.min(b.report.size) >= SettlementSize::Town {
+        Route::GravelRoad
+    } else {
+        Route::DirtRoad
+    }
+}
+
+/// Lay a road of `surface` along `path`, bridging water, and widen it to `width` hexes on the
+/// side `across` points to. Returns the bridge hexes added.
+fn pave(
+    map: &mut HexMap,
+    path: &[(i32, i32)],
+    width: u8,
+    across: (i32, i32),
+    surface: Route,
+) -> usize {
     let mut bridges = 0;
     for &(x, y) in path {
         for lane in 0..i32::from(width) {
@@ -54,17 +102,23 @@ fn pave(map: &mut HexMap, path: &[(i32, i32)], width: u8, across: (i32, i32)) ->
             let Some(hex) = map.hex_mut(x + across.0 * offset, y + across.1 * offset) else {
                 continue;
             };
-            if hex.terrain.is_structure() {
+            if hex.has_standing_structure() {
                 continue;
             }
-            if hex.terrain.is_water() {
-                if hex.bridge.is_none() {
-                    hex.bridge = Some(1);
+            if hex.holds_water() {
+                if !hex.has_bridge() {
+                    let bridge = Structure::new(StructureKind::Bridge, 1, bridge_class(surface));
+                    *hex = hex.with_structure(Some(bridge));
                     bridges += 1;
                 }
                 continue;
             }
-            hex.terrain = Terrain::Road;
+            // Route variants run from the best surface to the worst.
+            let route = hex
+                .route()
+                .filter(|route| route.is_road())
+                .map_or(surface, |existing| existing.min(surface));
+            *hex = hex.with_route(Some(route)).with_condition(None);
         }
     }
     bridges
@@ -119,12 +173,20 @@ pub(crate) fn build(
                 ));
                 continue;
             };
-            let bridges = pave(map, &path, params.road_width, widening(start, goal));
+            let surface = link_surface(from, to);
+            let bridges = pave(
+                map,
+                &path,
+                params.road_width,
+                widening(start, goal),
+                surface,
+            );
             roads.push(RoadReport {
                 from: from.name.clone(),
                 to: to.name.clone(),
                 hexes: path.len(),
                 bridges,
+                surface,
             });
         }
     }
@@ -207,7 +269,7 @@ fn through_road(
         };
         let dry = |(x, y): (i32, i32)| {
             map.hex(x, y)
-                .is_some_and(|hex| !hex.terrain.is_structure() && !hex.terrain.is_water())
+                .is_some_and(|hex| !hex.has_standing_structure() && !hex.holds_water())
         };
         let middle = length / 6..length - length / 6;
         if !middle.clone().any(|along| dry(at(along, to_line))) {
@@ -230,7 +292,13 @@ fn through_road(
             continue;
         };
         let end = *path.last().expect("path has a start");
-        let bridges = pave(map, &path, params.road_width, widening(start, end));
+        let bridges = pave(
+            map,
+            &path,
+            params.road_width,
+            widening(start, end),
+            Route::PavedRoad,
+        );
         let edge = |line: i32| match (east_west, line == 0) {
             (true, true) => "west edge",
             (true, false) => "east edge",
@@ -242,6 +310,7 @@ fn through_road(
             to: edge(to_line).to_owned(),
             hexes: path.len(),
             bridges,
+            surface: Route::PavedRoad,
         });
     }
     None

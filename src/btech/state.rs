@@ -1017,16 +1017,24 @@ pub(super) fn replace_map_asset(
 ) -> Result<()> {
     let old = world.btech.maps.get(&id).context("Map not found")?;
     let modifier = old.movement_modifier;
+    // Conditions the file leaves out keep the live map's current ones.
+    let (light, visibility, wind) = (asset.light, asset.visibility, asset.wind);
     let mut map = map_from_asset(name, asset)?;
     map.movement_modifier = modifier;
     map.cargo_transfer_point = old.cargo_transfer_point;
-    map.light = old.light;
-    map.visibility = old.visibility;
+    if light.is_none() {
+        map.light = old.light;
+    }
+    if visibility.is_none() {
+        map.visibility = old.visibility;
+    }
     map.maximum_visibility = old.maximum_visibility;
     map.cloud_base = old.cloud_base;
     map.sensor_flags = old.sensor_flags;
-    map.wind_direction = old.wind_direction;
-    map.wind_speed = old.wind_speed;
+    if wind.is_none() {
+        map.wind_direction = old.wind_direction;
+        map.wind_speed = old.wind_speed;
+    }
     map.building_parent = old.building_parent;
     map.building = old.building;
     map.building_repair = old.building_repair;
@@ -1088,13 +1096,13 @@ pub(super) fn map_from_asset(name: &str, asset: MapAsset) -> Result<StoredMap> {
         building_exits: Default::default(),
         authored_link: None,
         movement_modifier: 0,
-        light: 2,
-        visibility: 30,
+        light: asset.light.map_or(2, super::Light::stored),
+        visibility: asset.visibility.map_or(30, i64::from),
         maximum_visibility: 60,
         cloud_base: 200,
         sensor_flags: 0,
-        wind_direction: 0,
-        wind_speed: 0,
+        wind_direction: asset.wind.map_or(0, |wind| i64::from(wind.direction)),
+        wind_speed: asset.wind.map_or(0, |wind| i64::from(wind.speed)),
         fire_dice: Some(super::Dice::fresh()),
         terrain: None,
         decorations: Default::default(),

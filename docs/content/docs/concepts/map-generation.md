@@ -56,11 +56,11 @@ Every setting is optional. A setting you leave out takes the biome's default.
 | `--width N`, `--height N` | `width`, `height` | 8 to 1000 hexes; override `size`. |
 | `--relief R` | `relief` | `flat` (levels 0–2), `rolling` (0–4), `hilly` (0–8), `mountainous` (0–16). |
 | `--water A` | `water` | An amount: `none`, `low`, `medium`, `high` or `extreme`. Roughly 0, 5, 15, 30 and 50% of the map. |
-| `--woods A` | `woods` | An amount. Roughly 0, 10, 25, 45 and 70% of the land. |
+| `--woods A` | `woods` | An amount of woods (jungle in the `jungle` biome). Roughly 0, 10, 25, 45 and 70% of the land. |
 | `--rough A` | `rough` | An amount. Roughly 0, 5, 12, 25 and 40% of the land. |
 | `--fire A` | `fire` | An amount of permanent fire and smoke. Roughly 0, 1, 3, 6 and 12% of the map. |
 | `--rivers N` | `rivers` | 0 to 8 rivers crossing the map. |
-| `--frozen BOOL` | `frozen` | Freeze lakes and rivers to ice. |
+| `--frozen BOOL` | `frozen` | Lay the ice condition over every lake and river, bridged or not. |
 | `--settlement SPEC` | `settlements` | Repeatable; see [Settlements](#settlements). |
 | `--through-roads N` | `roads.through_roads` | 0 to 8 highways crossing the map edge to edge. Default 1 when there are settlements. |
 | `--no-connecting-roads` | `roads.connect_settlements` | Do not link settlements with roads. |
@@ -102,12 +102,43 @@ spec's settlements.
 | `lunar` | rolling | none | none | high | 0 | 17 | -120 | `special_rules`, `vacuum` |
 | `volcanic` | hilly | none | low | high | 0 | 100 | 40 | — |
 
-Biomes also shape the land in ways no flag controls. Desert and badlands open
-ground is sand, and arctic is snow. Mountains have ridgelines, rocky peaks and
-snow above the tree line. Badlands are terraced into mesas. Coastal maps slope
-down to a sea along one edge, with beaches. Swamps are pocked with shallow
-pools. Lunar maps are cratered, and volcanic maps have a cone with a caldera
-that burns hottest near the summit. Arctic water freezes over.
+Biomes also shape the land in ways no flag controls:
+
+- **Desert** and **badlands** open ground is sand. Badlands are terraced into
+  mesas.
+- **Arctic** open ground is tundra. Snowfields cover most of the land, woods
+  and rough ground included. Most of it is deep snow, with patches of thin
+  snow. Lakes and rivers freeze over.
+- **Mountains** have ridgelines and ultra-rough peaks. Deep snow lies over
+  everything at and above the snow line, which is 60% of the way up the
+  relief. The level just below it gets thin snow.
+- **Jungle** trees are light, heavy and ultra-heavy jungle rather than woods.
+  **Forest** has stands of ultra-heavy woods among its light and heavy woods.
+- **Swamp** maps are flat and pocked with shallow pools. Their low, wet ground
+  is swamp, and woods can grow on it.
+- **Coastal** maps slope down to a sea along one edge, with beaches.
+- **Lunar** maps are cratered.
+- **Volcanic** maps have a cone with a caldera that burns hottest near the
+  summit.
+- In **temperate**, **forest**, **mountains** and **coastal** maps, civilian
+  settlements are ringed by planted fields.
+
+## What a generated map holds
+
+Generated maps use the same hex layers as every other [map file](../map-files/):
+
+| Layer | What mapgen puts there |
+| --- | --- |
+| Ground | Clear, sand or tundra open ground, rough ground, ultra-rough peaks, swamp, pavement in settlements, and rubble in ruins. |
+| Water | Seas, lakes and rivers. A river runs as rapids where its surface drops a level, and as a torrent where it drops two or more. |
+| Foliage | Light, heavy and ultra-heavy woods or jungle, park trees, and planted fields around farming settlements. Woods never share a hex with rough ground. |
+| Route | Paved streets and highways, and gravel or dirt roads between settlements. |
+| Structure | Buildings, walls and bridges, each with a construction class. |
+| Condition | Deep and thin snow, and ice over frozen water. |
+| Overlay | Permanent fire and smoke. |
+
+Generated maps leave light, visibility and wind unset, so loading one keeps the
+live map's current values.
 
 ## Settlements
 
@@ -137,22 +168,57 @@ position, away from other settlements. Its site is levelled and blended into
 the surrounding land. Streets that cross water become bridges. A settlement too
 large for the map is shrunk to fit, with a warning.
 
+Streets are paved roads. Towns and larger, industrial estates and military
+bases also pave their open lots. Streets, buildings and walls are kept clear of
+snow. Snow still lies in yards and parks. Construction classes suit the
+settlement:
+
+| Structure | Class |
+| --- | --- |
+| Buildings two levels or lower in hamlets, villages and outposts | Light |
+| Other civilian buildings | Medium; heavy at eight levels or taller |
+| Industrial buildings | Medium; heavy at three levels or taller |
+| Military buildings | Heavy |
+| Walls | Heavy; hardened around military bases |
+| Settlement bridges | Heavy in paved settlements, medium elsewhere |
+
+Ruins leave rubble where buildings, walls and streets fell. Their remaining
+buildings and walls have lost a third to nine tenths of their construction
+factor.
+
 ## Roads
 
 Roads link every settlement into one network using the shortest set of links.
 Through roads are highways from one map edge to the opposite edge that run
-through settlements on their way. Roads avoid steep climbs, heavy woods,
-mountains and deep water, share existing roads where they can, and bridge the
-water they must cross.
+through settlements on their way. Roads avoid steep climbs, dense woods and
+jungle, swamp, ultra-rough peaks and deep water. They share existing roads
+where they can, and bridge the water they must cross.
+
+A road is a route laid through the hexes it crosses. Woods, rough ground and
+fields stay in place under it, and units travelling along the road pay only for
+the road. Roads are kept clear of snow.
+
+| Road | Surface |
+| --- | --- |
+| Through roads | Paved |
+| Links where both settlements are towns or larger, or one is a military base | Gravel |
+| Other links | Dirt |
+
+Where roads overlap, the better surface wins. Bridges suit the road: heavy for
+paved roads, medium for gravel and light for dirt. The report gives each road's
+surface.
 
 ## Using it from an LLM
 
 `mapgen schema` prints a JSON Schema whose descriptions explain every field, so
 it can be used directly as an LLM tool's input schema. Write the tool's result
-to a file and run `mapgen generate --spec FILE --report -`. The report lists the
-terrain mix, each settlement's center, size and building count, the roads, and
-warnings for anything that could not be done exactly, so the model can check the
-result and adjust the spec.
+to a file and run `mapgen generate --spec FILE --report -`. The report lists
+the terrain mix, each settlement's center, size and building count, the roads
+and their surfaces, and warnings for anything that could not be done exactly.
+The model can check the result against the spec and adjust it. The terrain mix
+gives the percent of hexes holding each ground, water, foliage, road surface,
+structure and snow. Layers overlap, so a snowy wood counts toward its ground,
+its woods and its snow. The ground percentages and `water` add up to 100.
 
 ## Embedding
 
@@ -164,7 +230,7 @@ let generated = generate(&MapSpec {
     settlements: vec![SettlementSpec::new(SettlementSize::Town)],
     ..MapSpec::default()
 })?;
-let hex = generated.map.hex(10, 4); // level, terrain, bridge and overlay
+let hex = generated.map.hex(10, 4); // a stompymux_map::Hex with all its layers
 let file = generated.to_toml()?;
 ```
 

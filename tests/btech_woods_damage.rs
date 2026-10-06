@@ -159,7 +159,7 @@ async fn missile_woods_absorption_matches_native_lua_and_restart() {
             for (&enabled, pair) in [false, true].iter().zip(&pairs) {
                 let mut world = fixture.clone();
                 missile_lane(&mut world, shooter, target);
-                prepare(&mut world, shooter, target, Terrain::HeavyForest, 12);
+                prepare(&mut world, shooter, target, Terrain::HeavyWoods, 12);
                 pair.install(world);
                 let report = fire(&pair.lua, shooter, index, target);
                 let salvo = &report["salvo"]["report"];
@@ -226,7 +226,7 @@ async fn completely_absorbed_missiles_skip_damage_and_roll_back_with_the_callbac
             false,
             Some(""),
         );
-        prepare(&mut world, shooter, target, Terrain::HeavyForest, 12);
+        prepare(&mut world, shooter, target, Terrain::HeavyWoods, 12);
         let before = world.btech.clone();
         install(&scripts, world);
         assert!(
@@ -297,7 +297,7 @@ async fn missile_ammunition_controls_woods_payload_and_inferno_bypass() {
             if weapon == Weapon::Thunderbolt20 {
                 missile_lane(&mut fixture, shooter, target);
             }
-            prepare(&mut fixture, shooter, target, Terrain::HeavyForest, 12);
+            prepare(&mut fixture, shooter, target, Terrain::HeavyWoods, 12);
             let mut outcomes = Vec::new();
             for (&enabled, pair) in [false, true].iter().zip(&pairs) {
                 pair.install(fixture.clone());
@@ -372,7 +372,7 @@ async fn missile_woods_absorption_follows_live_ams_interception() {
                         Some(""),
                     );
                     missile_lane(&mut world, shooter, target);
-                    prepare(&mut world, shooter, target, Terrain::HeavyForest, 12);
+                    prepare(&mut world, shooter, target, Terrain::HeavyWoods, 12);
                     firing::edit(&mut world, target, |state| {
                         state["ams_enabled"] = true.into()
                     });
@@ -423,7 +423,7 @@ async fn single_hit_woods_absorption_matches_native_lua_and_restart() {
             let probe = probe_database(&fixture_config, sequence);
             for (&enabled, pair) in [false, true].iter().zip(&pairs) {
                 let mut world = fixture.clone();
-                prepare(&mut world, shooter, target, Terrain::HeavyForest, 12);
+                prepare(&mut world, shooter, target, Terrain::HeavyWoods, 12);
                 pair.install(world);
                 let report = fire(&pair.lua, shooter, index, target);
                 let salvo = &report["salvo"]["report"];
@@ -493,9 +493,9 @@ async fn single_hit_woods_damage_floor_and_glancing_order() {
                 Some(""),
             );
             for (terrain, absorption) in [
-                (Terrain::Grassland, 0),
-                (Terrain::LightForest, 2),
-                (Terrain::HeavyForest, 4),
+                (Terrain::Clear, 0),
+                (Terrain::LightWoods, 2),
+                (Terrain::HeavyWoods, 4),
             ] {
                 let mut world = fixture.clone();
                 prepare(&mut world, shooter, target, terrain, 12);
@@ -538,7 +538,7 @@ async fn woods_impact_callback_failure_restores_damage_terrain_dice_and_notices(
     )
     .await;
     let config = configured(&dir, true, false);
-    prepare(&mut world, shooter, target, Terrain::HeavyForest, 12);
+    prepare(&mut world, shooter, target, Terrain::HeavyWoods, 12);
     let before = world.btech.clone();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     assert!(
@@ -563,7 +563,7 @@ async fn woodland_clearing_uses_damage_before_absorption() {
     )
     .await;
     let config = configured(&dir, true, false);
-    prepare(&mut world, shooter, target, Terrain::HeavyForest, 12);
+    prepare(&mut world, shooter, target, Terrain::HeavyWoods, 12);
     let seed = (0..=255)
         .find(|&seed| {
             let mut dice = Dice::seeded([seed; 32]);
@@ -585,7 +585,7 @@ async fn woodland_clearing_uses_damage_before_absorption() {
             .base_hex(0, 10)
             .unwrap()
             .terrain(),
-        Terrain::LightForest
+        Terrain::LightWoods
     );
 }
 
@@ -629,10 +629,10 @@ async fn burst_matrix(weapon: Weapon) {
                     set_battle_rotary(&mut fixture, shooter, ObjectId(1), index, 6).unwrap();
                 }
                 for (enabled, terrain, reduction) in [
-                    (true, Terrain::LightForest, 2_u64),
-                    (true, Terrain::HeavyForest, 4),
-                    (true, Terrain::Grassland, 0),
-                    (false, Terrain::HeavyForest, 0),
+                    (true, Terrain::LightWoods, 2_u64),
+                    (true, Terrain::HeavyWoods, 4),
+                    (true, Terrain::Clear, 0),
+                    (false, Terrain::HeavyWoods, 0),
                 ] {
                     for glancing in [false, true] {
                         let pair = &pairs[toggles
@@ -785,7 +785,7 @@ async fn thermal_woods_share_heat_terrain_feedback_and_rollback() {
                 for (pair_index, &(enabled, glancing)) in toggles.iter().enumerate() {
                     let pair = &pairs[pair_index];
                     let mut world = fixture.clone();
-                    prepare(&mut world, shooter, target, Terrain::HeavyForest, 12);
+                    prepare(&mut world, shooter, target, Terrain::HeavyWoods, 12);
                     if glancing {
                         pair.install(world.clone());
                         let threshold: u8 = pair
@@ -795,7 +795,7 @@ async fn thermal_woods_share_heat_terrain_feedback_and_rollback() {
                                 shooter.0, index, target.0
                             ))
                             .unwrap();
-                        prepare(&mut world, shooter, target, Terrain::HeavyForest, threshold);
+                        prepare(&mut world, shooter, target, Terrain::HeavyWoods, threshold);
                     }
                     let before = world.btech.clone();
                     pair.install(world);
@@ -948,14 +948,14 @@ async fn pellet_matrix(
                                 assert_eq!(initial["damage_before"], weapon.profile().damage);
                                 let effect = &initial["terrain"]["effect"];
                                 if effect["effect"] == "clear" {
-                                    if effect["clearing"] == "thin_to_light" {
+                                    if effect["clearing"] == "thin" {
                                         thinned = true;
                                         2
                                     } else {
                                         cleared = true;
                                         0
                                     }
-                                } else if terrain == Terrain::HeavyForest {
+                                } else if terrain == Terrain::HeavyWoods {
                                     4
                                 } else {
                                     2
@@ -1016,7 +1016,7 @@ async fn pellet_woods_two_stage_terrain_mech_v_mech_lbx2() {
         include_str!("../game/units/JR7-D.toml"),
         include_str!("../game/units/AS7-D.toml"),
         Weapon::Lbx2,
-        &[Terrain::LightForest, Terrain::HeavyForest],
+        &[Terrain::LightWoods, Terrain::HeavyWoods],
     )
     .await;
     // Two-point shells never clear or thin a forest first; their small pellet
@@ -1034,7 +1034,7 @@ async fn pellet_woods_two_stage_terrain_mech_v_mech_lbx20_heavy_forest() {
         include_str!("../game/units/JR7-D.toml"),
         include_str!("../game/units/AS7-D.toml"),
         Weapon::Lbx20,
-        &[Terrain::HeavyForest],
+        &[Terrain::HeavyWoods],
     )
     .await;
 }
@@ -1045,7 +1045,7 @@ async fn pellet_woods_two_stage_terrain_mech_v_mech_lbx20_light_forest() {
         include_str!("../game/units/JR7-D.toml"),
         include_str!("../game/units/AS7-D.toml"),
         Weapon::Lbx20,
-        &[Terrain::LightForest],
+        &[Terrain::LightWoods],
     )
     .await;
 }
@@ -1056,7 +1056,7 @@ async fn pellet_woods_two_stage_terrain_mech_v_vehicle_lbx2() {
         include_str!("../game/units/JR7-D.toml"),
         include_str!("../game/units/Demolisher.toml"),
         Weapon::Lbx2,
-        &[Terrain::LightForest, Terrain::HeavyForest],
+        &[Terrain::LightWoods, Terrain::HeavyWoods],
     )
     .await;
     // Two-point shells never clear or thin a forest first; their small pellet
@@ -1071,7 +1071,7 @@ async fn pellet_woods_two_stage_terrain_mech_v_vehicle_lbx20() {
         include_str!("../game/units/JR7-D.toml"),
         include_str!("../game/units/Demolisher.toml"),
         Weapon::Lbx20,
-        &[Terrain::LightForest, Terrain::HeavyForest],
+        &[Terrain::LightWoods, Terrain::HeavyWoods],
     )
     .await;
     // Twenty-rack pellets always survive the woods reduction, but the
@@ -1086,7 +1086,7 @@ async fn pellet_woods_two_stage_terrain_vehicle_v_mech_lbx2() {
         include_str!("../game/units/Demolisher.toml"),
         include_str!("../game/units/AS7-D.toml"),
         Weapon::Lbx2,
-        &[Terrain::LightForest, Terrain::HeavyForest],
+        &[Terrain::LightWoods, Terrain::HeavyWoods],
     )
     .await;
     // Two-point shells never clear or thin a forest first; their small pellet
@@ -1101,7 +1101,7 @@ async fn pellet_woods_two_stage_terrain_vehicle_v_mech_lbx20_heavy_forest() {
         include_str!("../game/units/Demolisher.toml"),
         include_str!("../game/units/AS7-D.toml"),
         Weapon::Lbx20,
-        &[Terrain::HeavyForest],
+        &[Terrain::HeavyWoods],
     )
     .await;
 }
@@ -1112,7 +1112,7 @@ async fn pellet_woods_two_stage_terrain_vehicle_v_mech_lbx20_light_forest() {
         include_str!("../game/units/Demolisher.toml"),
         include_str!("../game/units/AS7-D.toml"),
         Weapon::Lbx20,
-        &[Terrain::LightForest],
+        &[Terrain::LightWoods],
     )
     .await;
 }
@@ -1123,7 +1123,7 @@ async fn pellet_woods_two_stage_terrain_vehicle_v_vehicle_lbx2() {
         include_str!("../game/units/Demolisher.toml"),
         include_str!("../game/units/Demolisher.toml"),
         Weapon::Lbx2,
-        &[Terrain::LightForest, Terrain::HeavyForest],
+        &[Terrain::LightWoods, Terrain::HeavyWoods],
     )
     .await;
     // Two-point shells never clear or thin a forest first; their small pellet
@@ -1138,7 +1138,7 @@ async fn pellet_woods_two_stage_terrain_vehicle_v_vehicle_lbx20() {
         include_str!("../game/units/Demolisher.toml"),
         include_str!("../game/units/Demolisher.toml"),
         Weapon::Lbx20,
-        &[Terrain::LightForest, Terrain::HeavyForest],
+        &[Terrain::LightWoods, Terrain::HeavyWoods],
     )
     .await;
     // Twenty-rack pellets always survive the woods reduction, but the
@@ -1159,7 +1159,7 @@ async fn missed_direct_shots_share_incidental_terrain_and_preserve_targets() {
             continue;
         }
         let effect = resolve_woodland_effect(
-            Hex::new(Terrain::HeavyForest, 0),
+            Hex::new(Terrain::HeavyWoods, 0),
             Weapon::Flamer,
             AmmunitionMode::Normal,
             3,
@@ -1218,7 +1218,7 @@ async fn missed_direct_shots_share_incidental_terrain_and_preserve_targets() {
                 for (&_enabled, pair) in [false, true].iter().zip(&pairs) {
                     for &seed in &seeds {
                         let mut world = fixture.clone();
-                        prepare_seeded(&mut world, shooter, target, Terrain::HeavyForest, seed);
+                        prepare_seeded(&mut world, shooter, target, Terrain::HeavyWoods, seed);
                         let mut dice = Dice::seeded(seed);
                         let before = world.btech.clone();
                         assert_eq!(dice.two_d6(), 3);

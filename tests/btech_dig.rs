@@ -432,7 +432,7 @@ async fn digging_checks_the_current_surface_before_starting() {
         Terrain::Wall,
         Terrain::Water,
         Terrain::Ice,
-        Terrain::Grassland,
+        Terrain::Clear,
     ] {
         let (_dir, _, mut world, id, _) = fixture(VEHICLE, MECH).await;
         let map = world.btech.vehicles()[&id].position().unwrap().map;
@@ -444,7 +444,7 @@ async fn digging_checks_the_current_surface_before_starting() {
             .unwrap();
         let before = world.btech.clone();
         let result = dig_battle_unit(&mut world, id, ObjectId(1));
-        if matches!(terrain, Terrain::Ice | Terrain::Grassland) {
+        if matches!(terrain, Terrain::Ice | Terrain::Clear) {
             result.unwrap();
             assert_eq!(
                 world.btech.vehicles()[&id].dig_state(),

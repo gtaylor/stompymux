@@ -17,8 +17,8 @@ pub enum MapFlag {
     Underground,
     /// Units only see terrain they have line of sight to.
     Dark,
-    /// Weapon fire cannot break bridges.
-    IndestructibleBridges,
+    /// Weapon fire cannot damage buildings, walls or bridges.
+    IndestructibleStructures,
     /// Teammates cannot damage each other with non-coolant weapons.
     NoFriendlyFire,
     /// Physical attacks are not allowed.
@@ -32,7 +32,7 @@ impl MapFlag {
         Self::Vacuum,
         Self::Underground,
         Self::Dark,
-        Self::IndestructibleBridges,
+        Self::IndestructibleStructures,
         Self::NoFriendlyFire,
         Self::NoPhysicalAttacks,
     ];
@@ -44,7 +44,7 @@ impl MapFlag {
             Self::Vacuum => 4,
             Self::Underground => 16,
             Self::Dark => 32,
-            Self::IndestructibleBridges => 64,
+            Self::IndestructibleStructures => 64,
             Self::NoFriendlyFire => 256,
             Self::NoPhysicalAttacks => 512,
         }
@@ -57,7 +57,7 @@ impl MapFlag {
             Self::Vacuum => "vacuum",
             Self::Underground => "underground",
             Self::Dark => "dark",
-            Self::IndestructibleBridges => "indestructible_bridges",
+            Self::IndestructibleStructures => "indestructible_structures",
             Self::NoFriendlyFire => "no_friendly_fire",
             Self::NoPhysicalAttacks => "no_physical_attacks",
         }
@@ -74,7 +74,9 @@ impl MapFlag {
                 "The map has a ceiling: no jumping, flight or indirect fire without an observer."
             }
             Self::Dark => "Units only see terrain they have line of sight to.",
-            Self::IndestructibleBridges => "Weapon fire cannot break bridges.",
+            Self::IndestructibleStructures => {
+                "Weapon fire cannot damage buildings, walls or bridges."
+            }
             Self::NoFriendlyFire => "Teammates cannot damage each other with non-coolant weapons.",
             Self::NoPhysicalAttacks => "Physical attacks are not allowed.",
         }

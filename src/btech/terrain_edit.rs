@@ -145,31 +145,38 @@ fn parse_hex(arguments: &str) -> Result<(HexCoordinate, Hex)> {
 }
 
 /// Build a hex from `layer=value` words, the way `btech.map.set_hex` takes a hex's layers:
-/// `level` (0-35), `ground` (a ground type), `woods` (`light` or `heavy`), `water` or `ice`
-/// (depth 1-9), and at most one of `bridge` (deck height), `building` or `wall` (height 1-35).
-/// Unnamed layers are absent, on clear ground at level 0. A bridge must span water or ice.
+/// `level` (0-35), `ground` (a ground type), `water` (depth 0-9) and `flow` (`still`,
+/// `rapids` or `torrent`), `foliage` (a foliage type), `route` (`paved_road`, `gravel_road`,
+/// `dirt_road` or `rail`), `condition` (`ice`, `thin_snow`, `deep_snow` or `mud`), and at most
+/// one of `bridge` (deck height), `building` or `wall` (height 1-35), optionally with `class`
+/// (`light`, `medium`, `heavy` or `hardened`) and `cf`. Unnamed layers are absent, on clear
+/// ground at level 0, and structures are medium at full construction factor. The result must
+/// pass [`Hex::validate`].
 fn layers_argument(words: &[&str]) -> Result<Hex> {
     let mut hex = Hex::at_level(0);
     let mut seen = std::collections::BTreeSet::new();
+    let mut flow = None;
+    let mut class = None;
+    let mut cf = None;
     for word in words {
         let (layer, value) = word
             .split_once('=')
             .with_context(|| format!("Expected layer=value, got {word:?}"))?;
         let layer = layer.to_ascii_lowercase();
         let value = value.to_ascii_lowercase();
-        let height = |limit: u8, least: u8| -> Result<u8> {
-            let height: u8 = value
+        let number = |limit: u16, least: u16| -> Result<u16> {
+            let number: u16 = value
                 .parse()
                 .with_context(|| format!("Invalid {layer} {value:?}"))?;
             ensure!(
-                (least..=limit).contains(&height),
+                (least..=limit).contains(&number),
                 "{layer} must be from {least} to {limit}"
             );
-            Ok(height)
+            Ok(number)
         };
-        // Water and ice share a layer, as do the three structures.
+        let named = || serde_json::Value::String(value.clone());
+        // The three structures share a layer.
         let slot = match layer.as_str() {
-            "water" | "ice" => "water",
             "bridge" | "building" | "wall" => "structure",
             other => other,
         };
@@ -177,39 +184,80 @@ fn layers_argument(words: &[&str]) -> Result<Hex> {
             seen.insert(slot.to_owned()),
             "Only one {slot} layer is allowed"
         );
+        let structure = |kind| -> Result<Option<super::Structure>> {
+            Ok(Some(super::Structure::new(
+                kind,
+                number(u16::from(super::MAX_HEIGHT), 1)? as u8,
+                super::ConstructionClass::Medium,
+            )))
+        };
         hex = match layer.as_str() {
-            "level" => hex.with_level(height(super::MAX_HEIGHT, 0)?),
+            "level" => hex.with_level(number(u16::from(super::MAX_HEIGHT), 0)? as u8),
             "ground" => hex.with_ground(
-                serde_json::from_value(serde_json::Value::String(value.clone()))
+                serde_json::from_value(named())
                     .with_context(|| format!("Unknown ground {value:?}"))?,
             ),
-            "woods" => hex.with_woods(Some(
-                serde_json::from_value(serde_json::Value::String(value.clone()))
-                    .with_context(|| format!("Unknown woods {value:?}"))?,
+            "water" => hex
+                .with_water(Some(super::Water::still(
+                    number(u16::from(super::MAX_DEPTH), 0)? as u8,
+                ))),
+            "flow" => {
+                flow = Some(
+                    serde_json::from_value::<super::Flow>(named())
+                        .with_context(|| format!("Unknown flow {value:?}"))?,
+                );
+                hex
+            }
+            "foliage" => hex.with_foliage(Some(
+                serde_json::from_value(named())
+                    .with_context(|| format!("Unknown foliage {value:?}"))?,
             )),
-            "water" | "ice" => hex.with_water(Some(super::Water {
-                depth: height(super::MAX_DEPTH, 1)?,
-                frozen: layer == "ice",
-            })),
-            "bridge" => hex.with_structure(Some(super::Structure::Bridge {
-                deck: height(super::MAX_HEIGHT, 1)?,
-            })),
-            "building" => hex.with_structure(Some(super::Structure::Building {
-                height: height(super::MAX_HEIGHT, 1)?,
-            })),
-            "wall" => hex.with_structure(Some(super::Structure::Wall {
-                height: height(super::MAX_HEIGHT, 1)?,
-            })),
+            "route" => hex.with_route(Some(
+                serde_json::from_value(named())
+                    .with_context(|| format!("Unknown route {value:?}"))?,
+            )),
+            "condition" => hex.with_condition(Some(
+                serde_json::from_value(named())
+                    .with_context(|| format!("Unknown condition {value:?}"))?,
+            )),
+            "bridge" => hex.with_structure(structure(super::StructureKind::Bridge)?),
+            "building" => hex.with_structure(structure(super::StructureKind::Building)?),
+            "wall" => hex.with_structure(structure(super::StructureKind::Wall)?),
+            "class" => {
+                class = Some(
+                    serde_json::from_value::<super::ConstructionClass>(named())
+                        .with_context(|| format!("Unknown construction class {value:?}"))?,
+                );
+                hex
+            }
+            "cf" => {
+                cf = Some(number(super::MAX_CONSTRUCTION_FACTOR, 1)?);
+                hex
+            }
             "fire" | "smoke" => bail!("Fire and smoke are not terrain; use ADDFIRE or ADDSMOKE"),
             _ => bail!(
-                "Unknown layer {layer:?}; use level, ground, woods, water, ice, bridge, building or wall"
+                "Unknown layer {layer:?}; use level, ground, water, flow, foliage, route, \
+                 condition, bridge, building, wall, class or cf"
             ),
         };
     }
-    ensure!(
-        hex.deck_clearance().is_none() || hex.water().is_some(),
-        "A bridge must span water or ice"
-    );
+    if let Some(flow) = flow {
+        let water = hex.water().context("flow needs water")?;
+        hex = hex.with_water(Some(super::Water { flow, ..water }));
+    }
+    if class.is_some() || cf.is_some() {
+        let mut structure = hex
+            .structure()
+            .context("class and cf need a bridge, building or wall")?;
+        if let Some(class) = class {
+            structure.class = class;
+            structure.cf = class.construction_factor();
+        }
+        if let Some(cf) = cf {
+            structure.cf = cf;
+        }
+        hex = hex.with_structure(Some(structure));
+    }
     hex.validate()?;
     Ok(hex)
 }
@@ -241,26 +289,43 @@ mod tests {
     /// ADDHEX names each layer, so a hex can hold several at once.
     #[test]
     fn terrain_edit_layers() {
-        use super::super::{Ground, Structure, Water, Woods};
-        let (coordinate, hex) = parse_hex("3 4 level=5 ground=snow woods=heavy").unwrap();
+        use super::super::{
+            Condition, ConstructionClass, Flow, Foliage, Ground, Route, Structure, StructureKind,
+            Water,
+        };
+        let (coordinate, hex) =
+            parse_hex("3 4 level=5 ground=rough foliage=heavy_jungle condition=deep_snow").unwrap();
         assert_eq!(coordinate, HexCoordinate { x: 3, y: 4 });
         assert_eq!(
             hex,
             Hex::at_level(5)
-                .with_ground(Ground::Snow)
-                .with_woods(Some(Woods::Heavy))
+                .with_ground(Ground::Rough)
+                .with_foliage(Some(Foliage::HeavyJungle))
+                .with_condition(Some(Condition::DeepSnow))
         );
-        let (_, tower) = parse_hex("0 0 building=30 level=5 ground=road").unwrap();
-        assert_eq!(tower.structure(), Some(Structure::Building { height: 30 }));
-        assert_eq!((tower.ground(), tower.top_height()), (Ground::Road, 35));
-        let (_, lake) = parse_hex("0 0 ice=9").unwrap();
+        let (_, tower) =
+            parse_hex("0 0 building=30 level=5 ground=pavement class=hardened cf=99").unwrap();
+        assert_eq!(
+            tower.structure(),
+            Some(Structure {
+                kind: StructureKind::Building,
+                class: ConstructionClass::Hardened,
+                height: 30,
+                cf: 99,
+            })
+        );
+        assert_eq!((tower.ground(), tower.top_height()), (Ground::Pavement, 35));
+        let (_, lake) = parse_hex("0 0 water=9 condition=ice flow=torrent").unwrap();
         assert_eq!(
             lake.water(),
             Some(Water {
                 depth: 9,
-                frozen: true
+                flow: Flow::Torrent
             })
         );
+        assert!(lake.is_ice());
+        let (_, road) = parse_hex("0 0 route=dirt_road foliage=light_woods").unwrap();
+        assert_eq!(road.route(), Some(Route::DirtRoad));
         // Water, bridges and structures stand on raised ground.
         let (_, bridge) = parse_hex("0 0 level=5 water=1 bridge=3").unwrap();
         assert_eq!((bridge.water_line(), bridge.deck_height()), (5, Some(8)));
@@ -271,7 +336,13 @@ mod tests {
             "0 0 building=0",
             "0 0 bridge=1",
             "0 0 water=2 wall=1 wall=2",
+            "0 0 water=2 bridge=1 wall=2",
             "0 0 water=2 =1",
+            "0 0 water=2 foliage=light_woods",
+            "0 0 flow=rapids",
+            "0 0 cf=10",
+            "0 0 wall=1 class=light cf=40",
+            "0 0 ground=mountains",
             "0 0 smoke=1",
             "0 0 level=1 x",
             "x 0 level=1",

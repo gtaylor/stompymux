@@ -403,7 +403,7 @@ async fn unidentified_friendly_contact_can_join_without_disclosing_its_name() {
         .rewrite_map_record(map, |record| {
             for x in 0..20 {
                 record["terrain"][11 * 20 + x] =
-                    serde_json::to_value(Hex::new(Terrain::Grassland, 9)).unwrap();
+                    serde_json::to_value(Hex::new(Terrain::Clear, 9)).unwrap();
             }
         })
         .unwrap();
@@ -1082,7 +1082,7 @@ async fn network_target_visibility_is_recomputed_for_every_row() {
     }
     for x in 0..20 {
         encoded["maps"][map.0.to_string()]["terrain"][5 * 20 + x] =
-            serde_json::to_value(Hex::new(Terrain::Grassland, 9)).unwrap();
+            serde_json::to_value(Hex::new(Terrain::Clear, 9)).unwrap();
     }
     world.btech = serde_json::from_value(encoded).unwrap();
     let contacts = displayed_battle_contacts(&world, first).unwrap();

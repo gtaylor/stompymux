@@ -1658,7 +1658,7 @@ fn prepare_test_club(world: &mut stompymux_rs::World, id: ObjectId) {
         + usize::from(position.x);
     crate::support::set_hex_terrain(
         &mut state["maps"][position.map.0.to_string()]["terrain"][index],
-        Terrain::LightForest,
+        Terrain::LightWoods,
     );
     world.btech = serde_json::from_value(state).unwrap();
 }
@@ -1698,7 +1698,7 @@ async fn club_carry_lifecycle_and_guards() {
     outside
         .btech
         .rewrite_map_record(position.map, |record| {
-            crate::support::set_hex_terrain(&mut record["terrain"][index], Terrain::Grassland);
+            crate::support::set_hex_terrain(&mut record["terrain"][index], Terrain::Clear);
         })
         .unwrap();
     assert!(battle_club_profile(&outside, id, ObjectId(1), target, kick_rules()).is_ok());

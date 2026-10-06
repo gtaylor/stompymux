@@ -227,7 +227,7 @@ async fn hull_down_cover_is_shared_between_attackers_by_sensors_and_sight() {
                     crate::support::set_hex_terrain(
                         &mut record["terrain"][index],
                         if index == 3 {
-                            stompymux_rs::Terrain::Grassland
+                            stompymux_rs::Terrain::Clear
                         } else {
                             stompymux_rs::Terrain::Water
                         },
@@ -271,7 +271,7 @@ async fn hull_down_cover_is_shared_between_attackers_by_sensors_and_sight() {
                 for index in 0..9 {
                     crate::support::set_hex_terrain(
                         &mut record["terrain"][index],
-                        stompymux_rs::Terrain::Grassland,
+                        stompymux_rs::Terrain::Clear,
                     );
                     crate::support::set_hex_elevation(&mut record["terrain"][index], 0);
                 }

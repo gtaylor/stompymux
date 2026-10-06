@@ -1,6 +1,6 @@
 //! Map assets: a battlefield's dimensions, environment, hexes and scripted points of
 //! interest, as read from and written to map files.
-use crate::{Hex, Terrain};
+use crate::{Hex, Light, Terrain, Wind};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -13,6 +13,13 @@ pub struct MapAsset {
     pub flags: i32,
     pub gravity: u8,
     pub temperature: i8,
+    /// Battlefield light; `None` keeps a live map's current light when the map is reloaded.
+    pub light: Option<Light>,
+    /// Weather visibility in hexes, up to [`MAX_VISIBILITY`](crate::MAX_VISIBILITY); `None`
+    /// keeps a live map's current visibility when the map is reloaded.
+    pub visibility: Option<u8>,
+    /// Prevailing wind; `None` keeps a live map's current wind when the map is reloaded.
+    pub wind: Option<Wind>,
     /// Row-major immutable tiles shared by transaction checkpoints.
     pub hexes: Arc<Vec<Hex>>,
     /// Scripted points of interest in file order.
@@ -63,7 +70,7 @@ impl MapPointOfInterest {
 impl MapAsset {
     /// Build a map from the compact cell notation used to set up maps in code and tests: a
     /// `width height` line, then one line per row of terrain-symbol and elevation-digit pairs
-    /// (`.` is grassland), then optionally `flags: gravity temperature`.
+    /// (`.` is clear ground; see [`Hex::new`]), then optionally `flags: gravity temperature`.
     pub fn from_cells(source: &str) -> Result<Self> {
         let mut lines = source.lines();
         let header = lines.next().context("missing map dimensions")?;
@@ -87,7 +94,7 @@ impl MapAsset {
             );
             for (x, pair) in row.as_chunks::<2>().0.iter().enumerate() {
                 let terrain = match pair[0] {
-                    b'.' => Terrain::Grassland,
+                    b'.' => Terrain::Clear,
                     symbol => Terrain::from_symbol(char::from(symbol))
                         .with_context(|| format!("at {x},{y}"))?,
                 };
@@ -116,6 +123,9 @@ impl MapAsset {
             flags,
             gravity,
             temperature,
+            light: None,
+            visibility: None,
+            wind: None,
             hexes: Arc::new(hexes),
             points_of_interest: Vec::new(),
         })
@@ -160,7 +170,7 @@ mod tests {
     #[test]
     fn jump_entry_uses_ground_height_and_preserves_water_entry() {
         for altitude in -4..=4 {
-            let ground = Hex::new(Terrain::Grassland, 3);
+            let ground = Hex::new(Terrain::Clear, 3);
             let ice = Hex::new(Terrain::Ice, 3);
             let water = Hex::new(Terrain::Water, 3);
             assert_eq!(ground.blocks_jump_entry(altitude), altitude < 3);
@@ -178,7 +188,7 @@ mod tests {
         assert_eq!((map.width, map.height), (3, 2));
         assert_eq!(map.hex(1, 0).unwrap().surface_height(), -2);
         assert_eq!(map.hex(1, 1).unwrap().surface_height(), -3);
-        assert_eq!(map.hex(2, 0).unwrap().terrain(), Terrain::LightForest);
+        assert_eq!(map.hex(2, 0).unwrap().terrain(), Terrain::LightWoods);
         assert_eq!((map.flags, map.gravity, map.temperature), (32, 75, -12));
         assert!(map.hex(-1, 0).is_none());
         assert!(map.hex(3, 0).is_none());

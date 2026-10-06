@@ -49,7 +49,7 @@ async fn imported_records_preserve_lookup_order_and_share_native_lua_removal() {
     );
     assert_eq!(
         world.btech.maps()[&map].base_hex(1, 1).unwrap().terrain(),
-        Terrain::Grassland
+        Terrain::Clear
     );
     assert!(!map_fire_pending(&world));
     assert!(!map_smoke_pending(&world));
@@ -108,7 +108,7 @@ async fn imported_records_preserve_lookup_order_and_share_native_lua_removal() {
             .hex(1, 1)
             .unwrap()
             .terrain(),
-        Terrain::Grassland
+        Terrain::Clear
     );
     assert_eq!(
         delete_battle_map_objects_action(
@@ -127,7 +127,7 @@ async fn imported_records_preserve_lookup_order_and_share_native_lua_removal() {
             .hex(1, 1)
             .unwrap()
             .terrain(),
-        Terrain::Grassland
+        Terrain::Clear
     );
     let saved = native.world().clone();
     persistence::save(&config.database(), &saved).await.unwrap();
@@ -163,7 +163,7 @@ async fn replacing_imported_effects_preserves_underlying_terrain_and_clears_thei
     );
     assert_eq!(
         world.btech.maps()[&map].base_hex(1, 1).unwrap().terrain(),
-        Terrain::Grassland
+        Terrain::Clear
     );
     persistence::save(&config.database(), &world).await.unwrap();
     let mut restored = persistence::load(&config.database()).await.unwrap();
@@ -172,7 +172,7 @@ async fn replacing_imported_effects_preserves_underlying_terrain_and_clears_thei
     advance_map_smoke(&mut restored);
     assert_eq!(
         restored.btech.maps()[&map].hex(1, 1).unwrap().terrain(),
-        Terrain::Grassland
+        Terrain::Clear
     );
     let (_dir, config, world, map) = fixture().await;
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
@@ -183,7 +183,7 @@ async fn replacing_imported_effects_preserves_underlying_terrain_and_clears_thei
         ObjectId(1),
         map,
         HexCoordinate { x: 1, y: 1 },
-        Hex::new(Terrain::HeavyForest, 1),
+        Hex::new(Terrain::HeavyWoods, 1),
     )
     .unwrap();
     assert_eq!(
@@ -198,7 +198,7 @@ async fn replacing_imported_effects_preserves_underlying_terrain_and_clears_thei
             .base_hex(1, 1)
             .unwrap()
             .terrain(),
-        Terrain::HeavyForest
+        Terrain::HeavyWoods
     );
     // Fire is not terrain, so it cannot be written into the map.
     assert!(
@@ -224,10 +224,7 @@ async fn replacing_imported_effects_preserves_underlying_terrain_and_clears_thei
     let world = scripts.world().clone();
     let field = &world.btech.maps()[&map];
     assert_eq!(field.hex(1, 1).unwrap().terrain(), Terrain::Fire);
-    assert_eq!(
-        field.base_hex(1, 1).unwrap().terrain(),
-        Terrain::HeavyForest
-    );
+    assert_eq!(field.base_hex(1, 1).unwrap().terrain(), Terrain::HeavyWoods);
     let after: Vec<_> = StaticDecorationKind::ALL
         .map(|kind| field.static_decorations(kind).len())
         .into();

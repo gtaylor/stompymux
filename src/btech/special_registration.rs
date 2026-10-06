@@ -117,10 +117,10 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
                         flags: 0,
                         gravity: 0,
                         temperature: 0,
-                        hexes: Arc::new(vec![
-                            super::Hex::new(super::Terrain::Grassland, 0);
-                            21 * 11
-                        ]),
+                        light: None,
+                        visibility: None,
+                        wind: None,
+                        hexes: Arc::new(vec![super::Hex::at_level(0); 21 * 11]),
                         points_of_interest: Vec::new(),
                     },
                 )?;

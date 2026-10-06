@@ -1138,42 +1138,42 @@ async fn vehicle_obstacles_share_checks_falls_configuration_and_replay() {
     for (movement, terrain, enabled, success, checked) in [
         (
             VehicleMovement::Tracked,
-            Terrain::HeavyForest,
+            Terrain::HeavyWoods,
             true,
             false,
             true,
         ),
         (
             VehicleMovement::Tracked,
-            Terrain::HeavyForest,
+            Terrain::HeavyWoods,
             true,
             true,
             true,
         ),
         (
             VehicleMovement::Tracked,
-            Terrain::HeavyForest,
+            Terrain::HeavyWoods,
             false,
             true,
             false,
         ),
         (
             VehicleMovement::Tracked,
-            Terrain::LightForest,
+            Terrain::LightWoods,
             true,
             true,
             false,
         ),
         (
             VehicleMovement::Wheeled,
-            Terrain::LightForest,
+            Terrain::LightWoods,
             true,
             false,
             true,
         ),
         (
             VehicleMovement::Wheeled,
-            Terrain::HeavyForest,
+            Terrain::HeavyWoods,
             true,
             true,
             true,
@@ -1182,14 +1182,14 @@ async fn vehicle_obstacles_share_checks_falls_configuration_and_replay() {
         (VehicleMovement::Wheeled, Terrain::Rough, false, true, false),
         (
             VehicleMovement::Hover,
-            Terrain::HeavyForest,
+            Terrain::HeavyWoods,
             false,
             false,
             true,
         ),
         (
             VehicleMovement::Hover,
-            Terrain::LightForest,
+            Terrain::LightWoods,
             false,
             true,
             true,
@@ -1624,12 +1624,12 @@ async fn character_movement_collisions_publish_falls_and_rollback_casualties() {
                     let (terrain, elevation) = match (hazard, x >= 3) {
                         ("bridge", false) => (Terrain::Bridge, 3),
                         ("bridge", true) => (Terrain::Bridge, 1),
-                        ("forest", true) => (Terrain::HeavyForest, 0),
-                        ("cliff", true) => (Terrain::Grassland, 3),
+                        ("forest", true) => (Terrain::HeavyWoods, 0),
+                        ("cliff", true) => (Terrain::Clear, 3),
                         ("ice", true) => (Terrain::Ice, 1),
-                        ("water_cliff", false) => (Terrain::Grassland, 2),
+                        ("water_cliff", false) => (Terrain::Clear, 2),
                         ("water_cliff", true) => (Terrain::Water, 1),
-                        _ => (Terrain::Grassland, 0),
+                        _ => (Terrain::Clear, 0),
                     };
                     crate::support::set_hex(tile, terrain, elevation);
                 }

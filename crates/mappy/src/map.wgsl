@@ -1,7 +1,9 @@
 // Draws the whole hex map in one pass: every pixel finds its hex, reads that hex's layers from
-// the hex texture, and composes its color from the terrain palette, with grid gaps, labels,
-// the brush outline and unsavable-hex hatching computed per pixel. Panning and zooming only
-// change the uniforms.
+// the hex texture, and composes its color from the layer palette, with grid gaps, labels and
+// the brush outline computed per pixel. Panning and zooming only change the uniforms.
+//
+// Layers are drawn bottom up: ground, foliage, elevation shading, water, a road or rail band,
+// the structure, the weather condition, then fire or smoke.
 //
 // Hexes are flat-topped in staggered columns, even columns offset half a hex south. Map
 // units are hex vertex radii, with the top-left of the map's bounding box at the origin.
@@ -26,26 +28,43 @@ struct Uniforms {
 };
 
 @group(0) @binding(0) var<uniform> u: Uniforms;
-// One color per terrain in `Terrain::ALL` order, then the ink threshold in entry 15's red.
-@group(0) @binding(1) var<uniform> palette: array<vec4<f32>, 16>;
+// Layer colors in the order of `palette_colors` in render.rs, then the ink threshold in the
+// last entry's red.
+@group(0) @binding(1) var<uniform> palette: array<vec4<f32>, 34>;
 // One texel of packed layers per hex, indexed by hex coordinate; see `hex_texel` in render.rs.
 @group(0) @binding(2) var hexes: texture_2d<u32>;
 
-// Palette positions, matching `Terrain::ALL`.
-const LIGHT_FOREST: u32 = 2u;
-const WATER: u32 = 4u;
-const ICE: u32 = 5u;
-const BRIDGE: u32 = 6u;
-const FIRE: u32 = 9u;
-const SMOKE: u32 = 10u;
-const BUILDING: u32 = 12u;
-const WALL: u32 = 13u;
-const INK_THRESHOLD: u32 = 15u;
+// Where each layer's colors start in the palette, matching the `PALETTE_` constants in
+// render.rs.
+const GROUND: u32 = 0u;
+const FOLIAGE: u32 = 12u;
+const ROUTE: u32 = 19u;
+const WATER: u32 = 23u;
+const CONDITION: u32 = 24u;
+const STRUCTURE: u32 = 28u;
+const OVERLAY: u32 = 31u;
+const INK_THRESHOLD: u32 = 33u;
 
-// Structure kinds in the texel's alpha.
-const STRUCTURE_BUILDING: u32 = 1u;
-const STRUCTURE_WALL: u32 = 2u;
-const STRUCTURE_BRIDGE: u32 = 3u;
+// Positions within their layers, matching each layer's `ALL` order.
+const PLANTED_FIELDS: u32 = 6u;
+const RAIL: u32 = 3u;
+const ICE: u32 = 0u;
+const THIN_SNOW: u32 = 1u;
+const DEEP_SNOW: u32 = 2u;
+const MUD: u32 = 3u;
+const BRIDGE: u32 = 2u;
+const FIRE: u32 = 0u;
+const SMOKE: u32 = 1u;
+const RAPIDS: u32 = 1u;
+const TORRENT: u32 = 2u;
+
+// How much each construction class above light darkens a structure, matching `CLASS_SHADE` in
+// map_view.rs.
+const CLASS_SHADE: f32 = 0.12;
+
+// Half widths, in map units, of a road or rail band and a bridge deck band.
+const ROUTE_HALF_WIDTH: f32 = 0.16;
+const BRIDGE_HALF_WIDTH: f32 = 0.3;
 
 // Digit half height in map units for the label rows, and how far the top and bottom rows sit
 // from the hex center.
@@ -210,6 +229,82 @@ fn lighten(color: vec3<f32>, amount: f32) -> vec3<f32> {
     return mix(color, vec3<f32>(1.0), clamp(amount, 0.0, 0.7));
 }
 
+// A layer stored as one plus its position, or zero for none, as its position.
+fn present(stored: u32) -> bool {
+    return stored != 0u;
+}
+
+// A pseudo-random value in [0, 1) for a cell, for snow speckle.
+fn hash(cell: vec2<f32>) -> f32 {
+    return fract(sin(dot(cell, vec2<f32>(12.9898, 78.233))) * 43758.5453);
+}
+
+// `color` with foliage drawn over it: woods and jungle as round canopies with the ground
+// showing faintly between them, planted fields as rows. A canopy or row is centered on the
+// hex center.
+fn draw_foliage(color: vec3<f32>, local: vec2<f32>, foliage: u32) -> vec3<f32> {
+    let leaf = palette[FOLIAGE + foliage].rgb;
+    if foliage == PLANTED_FIELDS {
+        let row = fract(local.y * 5.0 + 0.5) < 0.6;
+        return select(mix(color, leaf, 0.4), leaf, row);
+    }
+    let cell = fract(local * 3.0 + 0.5) - 0.5;
+    return select(mix(color, leaf, 0.6), leaf, length(cell) < 0.38);
+}
+
+// `color` under water `depth` levels deep, darker the deeper, with white streaks across rapids
+// and heavier ones across torrents.
+fn draw_water(local: vec2<f32>, level: u32, depth: u32, flow: u32) -> vec3<f32> {
+    var color = mix(lighten(palette[WATER].rgb, 0.01 * f32(level)), vec3<f32>(0.0), 0.08 * f32(depth));
+    if flow == RAPIDS || flow == TORRENT {
+        let torrent = flow == TORRENT;
+        let stripe = fract((local.x * 0.6 + local.y) * select(5.0, 7.0, torrent));
+        if stripe < select(0.18, 0.35, torrent) {
+            color = mix(color, vec3<f32>(1.0), select(0.35, 0.55, torrent));
+        }
+    }
+    return color;
+}
+
+// `color` with a road band across the hex, or dashed dark rail track.
+fn draw_route(color: vec3<f32>, local: vec2<f32>, route: u32) -> vec3<f32> {
+    if abs(local.y) >= ROUTE_HALF_WIDTH {
+        return color;
+    }
+    let surface = palette[ROUTE + route].rgb;
+    if route != RAIL {
+        return surface;
+    }
+    let dash = fract(local.x * 4.0 + 0.25) < 0.6;
+    return select(mix(color, surface, 0.35), surface, dash);
+}
+
+// `color` with a structure of `kind` and construction class `grade` over it: buildings and walls
+// fill the hex and a bridge deck crosses it as a band, darker for stronger classes.
+fn draw_structure(color: vec3<f32>, local: vec2<f32>, kind: u32, grade: u32) -> vec3<f32> {
+    if kind == BRIDGE && abs(local.y) >= BRIDGE_HALF_WIDTH {
+        return color;
+    }
+    return palette[STRUCTURE + kind].rgb * (1.0 - CLASS_SHADE * f32(grade));
+}
+
+// `color` tinted by a weather condition: ice pale cyan, thin snow a light speckle, deep snow
+// white and mud brown.
+fn draw_condition(color: vec3<f32>, local: vec2<f32>, condition: u32) -> vec3<f32> {
+    let tint = palette[CONDITION + condition].rgb;
+    if condition == ICE {
+        return mix(color, tint, 0.7);
+    }
+    if condition == THIN_SNOW {
+        let speck = hash(floor(local * 9.0)) > 0.5;
+        return mix(color, tint, select(0.3, 0.9, speck));
+    }
+    if condition == DEEP_SNOW {
+        return mix(color, tint, 0.85);
+    }
+    return mix(color, tint, 0.75);
+}
+
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let point = (in.pixel - u.offset) / u.radius;
@@ -219,57 +314,51 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     }
     let texel = textureLoad(hexes, hex, 0);
     let ground = texel.r & 15u;
-    let woods = (texel.r >> 4u) & 3u;
-    let overlay = (texel.r >> 6u) & 3u;
-    let level = texel.g;
-    let water = texel.b & 15u;
-    let frozen = ((texel.b >> 4u) & 1u) == 1u;
-    let unsavable = ((texel.b >> 7u) & 1u) == 1u;
-    let structure = texel.a >> 6u;
-    let structure_height = texel.a & 63u;
+    let foliage = (texel.r >> 4u) & 7u;
+    let route = (texel.r >> 7u) & 7u;
+    let condition = (texel.r >> 10u) & 7u;
+    let overlay = (texel.r >> 13u) & 3u;
+    let level = texel.g & 255u;
+    let water = (texel.g >> 8u) & 15u;
+    let flow = (texel.g >> 12u) & 3u;
+    let structure = texel.b & 3u;
+    let grade = (texel.b >> 2u) & 3u;
+    let structure_height = (texel.b >> 8u) & 63u;
     let local = point - center(hex);
 
-    // Ground, then woods over it; higher ground is lighter.
-    var color = palette[ground].rgb;
-    if woods != 0u {
-        color = palette[LIGHT_FOREST + woods - 1u].rgb;
+    // Ground and foliage over it; higher ground is lighter.
+    var color = palette[GROUND + ground].rgb;
+    if present(foliage) {
+        color = draw_foliage(color, local, foliage - 1u);
     }
     color = lighten(color, 0.02 * f32(level));
-    // Water and ice over that, darker the deeper they are.
-    if water != 0u {
-        let depth = f32(water - 1u);
-        let surface = palette[select(WATER, ICE, frozen)].rgb;
-        color = mix(lighten(surface, 0.01 * f32(level)), vec3<f32>(0.0), 0.08 * depth);
+    if present(water) {
+        color = draw_water(local, level, water - 1u, flow);
     }
-    // Buildings and walls fill the hex; a bridge deck crosses it as a band.
-    if structure == STRUCTURE_BUILDING {
-        color = palette[BUILDING].rgb;
-    } else if structure == STRUCTURE_WALL {
-        color = palette[WALL].rgb;
-    } else if structure == STRUCTURE_BRIDGE && abs(local.y) < 0.3 {
-        color = palette[BRIDGE].rgb;
+    if present(route) {
+        color = draw_route(color, local, route - 1u);
+    }
+    if present(structure) {
+        color = draw_structure(color, local, structure - 1u, grade);
+    }
+    if present(condition) {
+        color = draw_condition(color, local, condition - 1u);
     }
     // Fire and smoke tint whatever they cover.
-    if overlay == 1u {
-        color = mix(color, palette[FIRE].rgb, 0.7);
-    } else if overlay == 2u {
-        color = mix(color, palette[SMOKE].rgb, 0.6);
+    if overlay == FIRE + 1u {
+        color = mix(color, palette[OVERLAY + FIRE].rgb, 0.7);
+    } else if overlay == SMOKE + 1u {
+        color = mix(color, palette[OVERLAY + SMOKE].rgb, 0.6);
     }
 
     // Distance in pixels to the visible edge of the hex, inside its share of the grid gap.
     let edge = edge_distance(local) * u.radius - u.grid_gap * 0.5;
 
-    // Hexes a map file cannot store are hatched red.
-    if unsavable {
-        let stripe = fract((in.pixel.x + in.pixel.y) / 8.0);
-        color = mix(color, vec3<f32>(0.85, 0.05, 0.05), select(0.0, 0.75, stripe < 0.4));
-    }
-
     // Labels. Ground level is the one elevation; every other layer is an offset from it,
     // signed to say which way: water depth below the surface (which sits at ground level),
     // and a bridge deck, building or wall above.
-    let has_water = water != 0u;
-    let has_structure = structure != 0u;
+    let has_water = present(water);
+    let has_structure = present(structure);
     let depth = water - 1u;
     let top = structure_height;
     let top_sign = sign_for(top, SIGN_PLUS);

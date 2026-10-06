@@ -209,7 +209,7 @@ async fn underwater_fire_does_not_bypass_waterline_visibility() {
     world
         .btech
         .rewrite_map_record(map, |record| {
-            record["terrain"][0] = serde_json::to_value(Hex::new(Terrain::Grassland, 0)).unwrap();
+            record["terrain"][0] = serde_json::to_value(Hex::new(Terrain::Clear, 0)).unwrap();
         })
         .unwrap();
     refresh_battle_contacts(&mut world, &[shooter]).unwrap();

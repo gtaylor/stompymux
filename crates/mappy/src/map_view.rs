@@ -1,4 +1,5 @@
-//! The hex map view: camera geometry, terrain colors, and pan, zoom and paint input.
+//! The hex map view: camera geometry, the colors of every hex layer, and pan, zoom and paint
+//! input.
 //!
 //! Hexes are flat-topped in staggered columns, with even columns offset half a hex south, the
 //! same layout as [`HexCoordinate::center`]. Map-space pixels put the top-left of the
@@ -10,7 +11,10 @@ use iced::{
     mouse,
     widget::shader::{self, Action},
 };
-use stompymux_map::{HexCoordinate, MapAsset, Terrain};
+use stompymux_map::{
+    Condition, ConstructionClass, DecorationKind, Foliage, Ground, HexCoordinate, MapAsset, Route,
+    StructureKind,
+};
 
 use crate::{
     Message,
@@ -132,26 +136,98 @@ impl Camera {
     }
 }
 
-/// The base color for a terrain, before elevation shading.
-pub fn terrain_color(terrain: Terrain) -> Color {
-    let (red, green, blue) = match terrain {
-        Terrain::Grassland => (0.47, 0.64, 0.31),
-        Terrain::Road => (0.64, 0.60, 0.52),
-        Terrain::LightForest => (0.30, 0.52, 0.22),
-        Terrain::HeavyForest => (0.12, 0.35, 0.14),
-        Terrain::Water => (0.22, 0.46, 0.80),
-        Terrain::Ice => (0.74, 0.88, 0.96),
-        Terrain::Bridge => (0.56, 0.38, 0.22),
-        Terrain::Rough => (0.58, 0.51, 0.37),
-        Terrain::Mountains => (0.47, 0.41, 0.39),
-        Terrain::Fire => (0.93, 0.38, 0.10),
-        Terrain::Smoke => (0.56, 0.56, 0.60),
-        Terrain::Snow => (0.94, 0.95, 0.98),
-        Terrain::Building => (0.42, 0.42, 0.48),
-        Terrain::Wall => (0.20, 0.20, 0.24),
-        Terrain::Sand => (0.88, 0.80, 0.55),
-    };
-    Color::from_rgb(red, green, blue)
+/// A color from its red, green and blue channels.
+const fn rgb((r, g, b): (f32, f32, f32)) -> Color {
+    Color { r, g, b, a: 1.0 }
+}
+
+/// The color of bare ground, before elevation shading.
+pub fn ground_color(ground: Ground) -> Color {
+    rgb(match ground {
+        Ground::Clear => (0.74, 0.71, 0.64),
+        Ground::Pavement => (0.66, 0.66, 0.68),
+        Ground::Rough => (0.62, 0.53, 0.37),
+        Ground::UltraRough => (0.46, 0.37, 0.25),
+        Ground::Rubble => (0.60, 0.50, 0.46),
+        Ground::UltraRubble => (0.43, 0.34, 0.32),
+        Ground::Sand => (0.88, 0.80, 0.55),
+        Ground::Tundra => (0.62, 0.68, 0.58),
+        Ground::Swamp => (0.36, 0.44, 0.28),
+        Ground::MagmaCrust => (0.30, 0.20, 0.19),
+        Ground::Magma => (0.82, 0.14, 0.04),
+        Ground::HeavyIndustrial => (0.42, 0.37, 0.50),
+    })
+}
+
+/// The color of foliage: woods in greens, jungle in teal greens, planted fields in yellow,
+/// denser stands darker.
+pub fn foliage_color(foliage: Foliage) -> Color {
+    rgb(match foliage {
+        Foliage::LightWoods => (0.30, 0.52, 0.20),
+        Foliage::HeavyWoods => (0.16, 0.38, 0.13),
+        Foliage::UltraHeavyWoods => (0.07, 0.24, 0.07),
+        Foliage::LightJungle => (0.18, 0.58, 0.46),
+        Foliage::HeavyJungle => (0.08, 0.43, 0.36),
+        Foliage::UltraHeavyJungle => (0.02, 0.29, 0.25),
+        Foliage::PlantedFields => (0.83, 0.76, 0.30),
+    })
+}
+
+/// The color of a road's surface or of rail track.
+pub fn route_color(route: Route) -> Color {
+    rgb(match route {
+        Route::PavedRoad => (0.27, 0.27, 0.30),
+        Route::GravelRoad => (0.55, 0.54, 0.51),
+        Route::DirtRoad => (0.55, 0.41, 0.27),
+        Route::Rail => (0.13, 0.10, 0.10),
+    })
+}
+
+/// The color of shallow still water, which the map darkens with depth.
+pub fn water_color() -> Color {
+    rgb((0.22, 0.46, 0.80))
+}
+
+/// The tint of ice, snow or mud.
+pub fn condition_color(condition: Condition) -> Color {
+    rgb(match condition {
+        Condition::Ice => (0.70, 0.92, 0.98),
+        Condition::ThinSnow => (0.90, 0.93, 0.97),
+        Condition::DeepSnow => (1.0, 1.0, 1.0),
+        Condition::Mud => (0.40, 0.28, 0.16),
+    })
+}
+
+/// The tint of fire or smoke.
+pub fn overlay_color(overlay: DecorationKind) -> Color {
+    rgb(match overlay {
+        DecorationKind::Fire => (0.96, 0.52, 0.10),
+        DecorationKind::Smoke => (0.56, 0.56, 0.60),
+    })
+}
+
+/// How much each construction class darkens a structure's color, per class above light.
+pub const CLASS_SHADE: f32 = 0.12;
+
+/// The color of a structure: a building or wall filling its hex, or a bridge deck, darker for
+/// stronger construction classes.
+pub fn structure_color(kind: StructureKind, class: ConstructionClass) -> Color {
+    let base = structure_base_color(kind);
+    let step = ConstructionClass::ALL
+        .iter()
+        .position(|candidate| *candidate == class)
+        .unwrap_or(0) as f32;
+    let scale = 1.0 - CLASS_SHADE * step;
+    Color::from_rgb(base.r * scale, base.g * scale, base.b * scale)
+}
+
+/// The color of a light structure of `kind`.
+pub fn structure_base_color(kind: StructureKind) -> Color {
+    rgb(match kind {
+        StructureKind::Building => (0.58, 0.58, 0.66),
+        StructureKind::Wall => (0.36, 0.33, 0.38),
+        StructureKind::Bridge => (0.62, 0.42, 0.24),
+    })
 }
 
 /// Black or white, whichever reads better on `background`.

@@ -2251,11 +2251,11 @@ async fn hill_collision_rolls_back_the_transition_then_lands_or_falls() {
 async fn dry_terrain_jump_routes_share_adapters_heat_and_restartable_landing() {
     use stompymux_rs::*;
     for terrain in [
-        Terrain::LightForest,
-        Terrain::HeavyForest,
+        Terrain::LightWoods,
+        Terrain::HeavyWoods,
         Terrain::Rough,
-        Terrain::Mountains,
-        Terrain::Snow,
+        Terrain::UltraRough,
+        Terrain::DeepSnow,
         Terrain::Smoke,
         Terrain::Fire,
     ] {
@@ -2770,7 +2770,7 @@ async fn free_fall_impact_failure_is_atomic_and_removal_cancels_descent() {
 async fn free_fall_surface_contact_and_engine_restart_keep_the_event_cadence() {
     use stompymux_rs::*;
     for (terrain, elevation, impact_second) in [
-        (Terrain::Grassland, 0, 6),
+        (Terrain::Clear, 0, 6),
         (Terrain::Water, 3, 9),
         (Terrain::Ice, 3, 6),
         (Terrain::Bridge, 9, 9),

@@ -44,8 +44,8 @@ mod tests {
     #[test]
     fn descent_surface_preserves_decks_ice_and_submerged_passage() {
         for (terrain, altitude, expected) in [
-            (Terrain::Grassland, 5, 3),
-            (Terrain::Grassland, 1, 3),
+            (Terrain::Clear, 5, 3),
+            (Terrain::Clear, 1, 3),
             (Terrain::Water, 5, -3),
             (Terrain::Water, -4, -3),
             (Terrain::Ice, 5, 0),

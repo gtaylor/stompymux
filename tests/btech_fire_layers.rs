@@ -55,15 +55,17 @@ fn overlay(world: &World, map: ObjectId, x: i32, y: i32) -> Option<Decoration> {
         .unwrap()
 }
 
-/// Light woods over a road burn away to the road, not to clear or rough ground.
+/// Light woods over sand burn away to the sand, not to clear or rough ground.
 #[tokio::test]
 async fn burnt_out_woods_leave_the_ground_they_grew_on() {
-    let (_dir, _config, mut world, map) =
-        field("1 1\n#2\n", |hex| hex.with_woods(Some(Woods::Light))).await;
-    let road = Hex::new(Terrain::Road, 2);
+    let (_dir, _config, mut world, map) = field("1 1\n}2\n", |hex| {
+        hex.with_foliage(Some(Foliage::LightWoods))
+    })
+    .await;
+    let sand = Hex::new(Terrain::Sand, 2);
     assert_eq!(
         world.btech.maps()[&map].base_hex(0, 0).unwrap(),
-        road.with_woods(Some(Woods::Light))
+        sand.with_foliage(Some(Foliage::LightWoods))
     );
     ignite(&mut world, map, 0, 0, 30);
     for _ in 0..600 {
@@ -73,7 +75,7 @@ async fn burnt_out_woods_leave_the_ground_they_grew_on() {
         }
     }
     assert_eq!(overlay(&world, map, 0, 0), None);
-    assert_eq!(world.btech.maps()[&map].base_hex(0, 0).unwrap(), road);
+    assert_eq!(world.btech.maps()[&map].base_hex(0, 0).unwrap(), sand);
 }
 
 /// A fire spreading into woods that are already burning leaves that fire's own record and
@@ -297,6 +299,6 @@ async fn long_range_u_mode_shows_the_terrain_beneath_fire_and_smoke() {
 async fn navigation_names_terrain_and_smoke_separately() {
     let (_dir, world, id) = smoky_crossing().await;
     let text = text::plain(&battle_navigate(&world, id, ObjectId(1), "").unwrap().text);
-    assert!(text.contains("Terrain:   Heavy Forest"), "{text}");
+    assert!(text.contains("Terrain:    Heavy Woods"), "{text}");
     assert!(text.contains("Effect:           Smoke"), "{text}");
 }

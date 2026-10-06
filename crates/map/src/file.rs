@@ -1,27 +1,45 @@
-//! The TOML map file format: environment settings, one-character-per-hex layer grids and an
-//! explicit list of bridges.
+//! The TOML map file format: battlefield conditions, one grid per hex layer and an explicit list
+//! of structures.
 //!
 //! ```toml
 //! gravity = 100              # optional, default 100
 //! temperature = 20           # optional, default 20 (Celsius)
+//! light = "day"              # optional: day, twilight or night
+//! visibility = 30            # optional, weather visibility in hexes, 0 to 60
+//! wind = { direction = 90, speed = 10 }  # optional
 //! flags = ["dark"]           # optional; when absent a reload keeps the map's current flags
 //!
+//! # Ground or water: one character per hex.
 //! terrain = '''
-//! ..""~~#.
-//! .^^"~~#.
+//! ...%~~..
+//! ..^^~~__
 //! '''
 //! level = '''
 //! 00110000
 //! 02210000
 //! '''
-//! # Water depth under every ~ and - hex; . elsewhere.
+//! # Water depth under every ~ hex; . elsewhere.
 //! depth = '''
 //! ....23..
 //! ....34..
 //! '''
+//! foliage = '''
+//! ."".....
+//! ...`....
+//! '''
+//! route = '''
+//! ......##
+//! ........
+//! '''
+//! condition = '''
+//! ....--..
+//! ........
+//! '''
 //!
-//! [[bridges]]
-//! deck = 2
+//! [[structures]]
+//! kind = "bridge"            # building, wall or bridge
+//! class = "heavy"            # optional: light, medium (the default), heavy or hardened
+//! height = 2                 # roof, wall top or deck height above the ground
 //! hexes = [[4, 0], [5, 0]]
 //!
 //! [[points_of_interest]]
@@ -32,17 +50,21 @@
 //! elevation = 3              # optional, levels above (or below) the hex's ground level
 //! ```
 //!
-//! Grids are TOML literal strings (`'''`), since `"` is the heavy-woods symbol.
-//! `structure_height` gives the height of every `@` (building) and `=` (wall) hex the same way
-//! `depth` does for water. The optional `overlay` grid places permanent fire (`&`) and smoke
-//! (`:`) over any hex. Heights use `0`-`9` then `a`-`z`. Width and height come from the
-//! grids, whose rows must all be the same length.
+//! Grids are TOML literal strings (`'''`), since `"` is the heavy-woods symbol. `terrain` and
+//! `level` are required; `depth` is required when the map has water. The optional `flow`,
+//! `foliage`, `route`, `condition` and `overlay` grids each hold one layer, with `.` where a
+//! hex has none. Heights use `0`-`9` then `a`-`z`. Width and height come from the grids, whose
+//! rows must all be the same length. Every hex must pass [`Hex::validate`].
+//!
+//! A structure entry may give `cf` for a damaged structure with less than its class's full
+//! construction factor.
 //!
 //! Points of interest are metadata for scripts, which read them through
 //! `btech.map.points_of_interest`. Units never see them and they do not change the terrain.
 use crate::{
-    DecorationKind, Ground, Hex, MAX_HEIGHT, MapAsset, MapFlag, MapPointOfInterest, Structure,
-    Water, Woods,
+    Condition, ConstructionClass, DecorationKind, Flow, Foliage, Ground, Hex, Light, MAX_HEIGHT,
+    MAX_VISIBILITY, MapAsset, MapFlag, MapPointOfInterest, Route, Structure, StructureKind, Water,
+    Wind,
 };
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -59,30 +81,76 @@ struct MapFile {
     gravity: u8,
     #[serde(default = "default_temperature")]
     temperature: i8,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
+    light: Option<Light>,
+    #[serde(default)]
+    visibility: Option<u8>,
+    #[serde(default)]
+    wind: Option<Wind>,
+    #[serde(default)]
     flags: Option<Vec<MapFlag>>,
     terrain: String,
     level: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     depth: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    structure_height: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
+    flow: Option<String>,
+    #[serde(default)]
+    foliage: Option<String>,
+    #[serde(default)]
+    route: Option<String>,
+    #[serde(default)]
+    condition: Option<String>,
+    #[serde(default)]
     overlay: Option<String>,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    bridges: Vec<Bridge>,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[serde(default)]
+    structures: Vec<StructureEntry>,
+    #[serde(default)]
     points_of_interest: Vec<MapPointOfInterest>,
 }
 
-/// A bridge deck spanning water hexes.
+/// One building, wall or bridge: hexes sharing a kind, height and construction factor.
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
-struct Bridge {
-    /// Deck height above the water surface.
-    deck: u8,
-    /// `[x, y]` hexes the deck covers.
+struct StructureEntry {
+    kind: StructureKind,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    class: Option<ConstructionClass>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    cf: Option<u16>,
+    /// Levels above the ground: roof, wall top or deck.
+    height: u8,
+    /// `[x, y]` hexes the structure covers.
     hexes: Vec<[u16; 2]>,
+}
+
+impl StructureEntry {
+    /// The structure each of this entry's hexes holds.
+    fn structure(&self) -> Result<Structure> {
+        let class = self.class.unwrap_or(ConstructionClass::Medium);
+        let full = class.construction_factor();
+        let cf = self.cf.unwrap_or(full);
+        ensure!(
+            (1..=full).contains(&cf),
+            "structure cf {cf} must be between 1 and {full} for a {} structure",
+            class.label().to_ascii_lowercase()
+        );
+        ensure!(
+            self.height <= MAX_HEIGHT,
+            "structure height {} is too high",
+            self.height
+        );
+        ensure!(
+            !self.hexes.is_empty(),
+            "a structure must cover at least one hex"
+        );
+        Ok(Structure {
+            kind: self.kind,
+            class,
+            height: self.height,
+            cf,
+        })
+    }
 }
 
 fn default_gravity() -> u8 {
@@ -93,72 +161,119 @@ fn default_temperature() -> i8 {
     20
 }
 
-/// What a terrain-grid character puts in a hex, before heights are applied.
-#[derive(Clone, Copy)]
-enum Cell {
-    Ground(Ground),
-    Woods(Woods),
-    Water { frozen: bool },
-    Building,
-    Wall,
-}
-
-/// Decode one terrain-grid character.
-fn cell(symbol: char) -> Option<Cell> {
-    Some(match symbol {
-        '.' => Cell::Ground(Ground::Clear),
-        '#' => Cell::Ground(Ground::Road),
-        '%' => Cell::Ground(Ground::Rough),
-        '^' => Cell::Ground(Ground::Mountains),
-        '+' => Cell::Ground(Ground::Snow),
-        '}' => Cell::Ground(Ground::Sand),
-        '`' => Cell::Woods(Woods::Light),
-        '"' => Cell::Woods(Woods::Heavy),
-        '~' => Cell::Water { frozen: false },
-        '-' => Cell::Water { frozen: true },
-        '@' => Cell::Building,
-        '=' => Cell::Wall,
+/// A terrain-grid character: the ground, or water.
+fn ground(symbol: char) -> Option<Option<Ground>> {
+    Some(Some(match symbol {
+        '~' => return Some(None),
+        '.' => Ground::Clear,
+        '_' => Ground::Pavement,
+        '%' => Ground::Rough,
+        '^' => Ground::UltraRough,
+        ';' => Ground::Rubble,
+        '!' => Ground::UltraRubble,
+        '}' => Ground::Sand,
+        '{' => Ground::Tundra,
+        'w' => Ground::Swamp,
+        'm' => Ground::MagmaCrust,
+        'M' => Ground::Magma,
+        '$' => Ground::HeavyIndustrial,
         _ => return None,
-    })
+    }))
 }
 
-/// The terrain-grid character for a hex; bridges show the water beneath them.
-fn symbol(hex: Hex) -> char {
-    match (hex.structure(), hex.water(), hex.woods()) {
-        (Some(Structure::Building { .. }), _, _) => '@',
-        (Some(Structure::Wall { .. }), _, _) => '=',
-        (_, Some(Water { frozen: true, .. }), _) => '-',
-        (_, Some(Water { frozen: false, .. }), _) => '~',
-        (_, None, Some(Woods::Light)) => '`',
-        (_, None, Some(Woods::Heavy)) => '"',
-        (_, None, None) => match hex.ground() {
-            Ground::Clear => '.',
-            Ground::Road => '#',
-            Ground::Rough => '%',
-            Ground::Mountains => '^',
-            Ground::Snow => '+',
-            Ground::Sand => '}',
-        },
+/// The terrain-grid character for a hex.
+fn ground_symbol(hex: Hex) -> char {
+    if hex.water().is_some() {
+        return '~';
+    }
+    match hex.ground() {
+        Ground::Clear => '.',
+        Ground::Pavement => '_',
+        Ground::Rough => '%',
+        Ground::UltraRough => '^',
+        Ground::Rubble => ';',
+        Ground::UltraRubble => '!',
+        Ground::Sand => '}',
+        Ground::Tundra => '{',
+        Ground::Swamp => 'w',
+        Ground::MagmaCrust => 'm',
+        Ground::Magma => 'M',
+        Ground::HeavyIndustrial => '$',
     }
 }
 
-/// Decode an overlay-grid character: `&` fire, `:` smoke, `.` neither.
-fn overlay(symbol: char) -> Option<Option<DecorationKind>> {
-    Some(match symbol {
-        '.' => None,
-        '&' => Some(DecorationKind::Fire),
-        ':' => Some(DecorationKind::Smoke),
-        _ => return None,
-    })
+/// Symbols of one optional layer grid, `.` meaning the layer is absent.
+trait LayerSymbol: Sized + Copy + 'static {
+    /// The layer's grid name.
+    const GRID: &'static str;
+    /// Every value with its grid character.
+    const SYMBOLS: &'static [(Self, char)];
 }
 
-/// The overlay-grid character for a hex.
-fn overlay_symbol(hex: Hex) -> char {
-    match hex.overlay() {
-        Some(DecorationKind::Fire) => '&',
-        Some(DecorationKind::Smoke) => ':',
-        None => '.',
+impl LayerSymbol for Flow {
+    const GRID: &'static str = "flow";
+    const SYMBOLS: &'static [(Self, char)] = &[(Flow::Rapids, 'r'), (Flow::Torrent, 't')];
+}
+
+impl LayerSymbol for Foliage {
+    const GRID: &'static str = "foliage";
+    const SYMBOLS: &'static [(Self, char)] = &[
+        (Foliage::LightWoods, '`'),
+        (Foliage::HeavyWoods, '"'),
+        (Foliage::UltraHeavyWoods, 'W'),
+        (Foliage::LightJungle, 'j'),
+        (Foliage::HeavyJungle, 'J'),
+        (Foliage::UltraHeavyJungle, 'U'),
+        (Foliage::PlantedFields, 'f'),
+    ];
+}
+
+impl LayerSymbol for Route {
+    const GRID: &'static str = "route";
+    const SYMBOLS: &'static [(Self, char)] = &[
+        (Route::PavedRoad, '#'),
+        (Route::GravelRoad, 'g'),
+        (Route::DirtRoad, 'd'),
+        (Route::Rail, '|'),
+    ];
+}
+
+impl LayerSymbol for Condition {
+    const GRID: &'static str = "condition";
+    const SYMBOLS: &'static [(Self, char)] = &[
+        (Condition::Ice, '-'),
+        (Condition::ThinSnow, '*'),
+        (Condition::DeepSnow, '+'),
+        (Condition::Mud, ','),
+    ];
+}
+
+impl LayerSymbol for DecorationKind {
+    const GRID: &'static str = "overlay";
+    const SYMBOLS: &'static [(Self, char)] =
+        &[(DecorationKind::Fire, '&'), (DecorationKind::Smoke, ':')];
+}
+
+/// Decode a layer-grid character: `.` for none, otherwise one of the layer's symbols.
+fn decode<T: LayerSymbol>(symbol: char) -> Option<Option<T>> {
+    if symbol == '.' {
+        return Some(None);
     }
+    T::SYMBOLS
+        .iter()
+        .find(|(_, candidate)| *candidate == symbol)
+        .map(|(value, _)| Some(*value))
+}
+
+/// Encode a layer value as its grid character.
+fn encode<T: LayerSymbol + PartialEq>(value: Option<T>) -> char {
+    let Some(value) = value else {
+        return '.';
+    };
+    T::SYMBOLS
+        .iter()
+        .find(|(candidate, _)| *candidate == value)
+        .map_or('.', |(_, symbol)| *symbol)
 }
 
 /// Decode a height character: `0`-`9`, then `a`-`z` for 10 through 35.
@@ -211,138 +326,127 @@ fn matching_grid(
     Ok(Some(rows))
 }
 
+/// An optional layer grid, decoded hex by hex.
+struct LayerGrid<T> {
+    rows: Option<Vec<Vec<char>>>,
+    layer: std::marker::PhantomData<T>,
+}
+
+impl<T: LayerSymbol> LayerGrid<T> {
+    fn new(text: Option<&str>, width: usize, height: usize) -> Result<Self> {
+        Ok(Self {
+            rows: matching_grid(T::GRID, text, width, height)?,
+            layer: std::marker::PhantomData,
+        })
+    }
+
+    /// The layer at `x`, `y`; absent when the grid is.
+    fn at(&self, x: usize, y: usize) -> Result<Option<T>> {
+        let Some(rows) = &self.rows else {
+            return Ok(None);
+        };
+        let symbol = rows[y][x];
+        decode(symbol).with_context(|| format!("unknown {} symbol {symbol:?} at {x},{y}", T::GRID))
+    }
+}
+
 impl MapAsset {
-    /// Decode a map file. `inherited_flags` are kept when the file has no `flags` key, so a
-    /// reload does not clear flags an operator set on the live map.
+    /// Decode a map file.
     pub fn parse(source: &str) -> Result<Self> {
         Self::parse_with_flags(source, 0)
     }
 
-    /// Decode a map file, keeping `inherited_flags` when the file has no `flags` key.
+    /// Decode a map file, keeping `inherited_flags` when the file has no `flags` key, so a
+    /// reload does not clear flags an operator set on the live map.
     pub fn parse_with_flags(source: &str, inherited_flags: i64) -> Result<Self> {
         let file: MapFile = toml::from_str(source).context("invalid map file")?;
         let terrain = grid("terrain", &file.terrain)?;
         let (width, rows) = (terrain[0].len(), terrain.len());
         let level = matching_grid("level", Some(&file.level), width, rows)?.unwrap();
         let depth = matching_grid("depth", file.depth.as_deref(), width, rows)?;
-        let stature = matching_grid(
-            "structure_height",
-            file.structure_height.as_deref(),
-            width,
-            rows,
-        )?;
-        let overlays = matching_grid("overlay", file.overlay.as_deref(), width, rows)?;
+        let flow = LayerGrid::<Flow>::new(file.flow.as_deref(), width, rows)?;
+        let foliage = LayerGrid::<Foliage>::new(file.foliage.as_deref(), width, rows)?;
+        let route = LayerGrid::<Route>::new(file.route.as_deref(), width, rows)?;
+        let condition = LayerGrid::<Condition>::new(file.condition.as_deref(), width, rows)?;
+        let overlay = LayerGrid::<DecorationKind>::new(file.overlay.as_deref(), width, rows)?;
         let mut hexes = Vec::with_capacity(width * rows);
         for y in 0..rows {
             for x in 0..width {
                 let at = || format!("at {x},{y}");
                 let symbol = terrain[y][x];
-                let cell = cell(symbol)
+                let ground = ground(symbol)
                     .with_context(|| format!("unknown terrain symbol {symbol:?} {}", at()))?;
-                let ground = height(level[y][x])
+                let level = height(level[y][x])
                     .with_context(|| format!("invalid level {:?} {}", level[y][x], at()))?;
-                let water = |frozen| -> Result<Water> {
-                    let depth = depth
-                        .as_ref()
-                        .map(|rows| rows[y][x])
-                        .with_context(|| format!("missing depth for water {}", at()))?;
-                    let depth = depth
-                        .to_digit(10)
-                        .with_context(|| format!("invalid depth {depth:?} {}", at()))?;
-                    Ok(Water {
-                        depth: depth as u8,
-                        frozen,
-                    })
-                };
-                let structure_height = || -> Result<u8> {
-                    let value = stature
-                        .as_ref()
-                        .map(|rows| rows[y][x])
-                        .with_context(|| format!("missing structure height {}", at()))?;
-                    height(value)
-                        .with_context(|| format!("invalid structure height {value:?} {}", at()))
-                };
-                let hex = match cell {
-                    Cell::Ground(kind) => Hex::from_layers(ground, kind, None, None, None),
-                    Cell::Woods(woods) => {
-                        Hex::from_layers(ground, Ground::Clear, Some(woods), None, None)
+                let depth = depth.as_ref().map(|rows| rows[y][x]);
+                let water = match (ground, depth) {
+                    (Some(_), None | Some('.')) => None,
+                    (Some(_), Some(_)) => {
+                        anyhow::bail!("depth given for a hex without water {}", at())
                     }
-                    Cell::Water { frozen } => {
-                        Hex::from_layers(ground, Ground::Clear, None, Some(water(frozen)?), None)
+                    (None, None | Some('.')) => {
+                        anyhow::bail!("missing depth for water {}", at())
                     }
-                    Cell::Building => Hex::from_layers(
-                        ground,
-                        Ground::Clear,
-                        None,
-                        None,
-                        Some(Structure::Building {
-                            height: structure_height()?,
-                        }),
-                    ),
-                    Cell::Wall => Hex::from_layers(
-                        ground,
-                        Ground::Clear,
-                        None,
-                        None,
-                        Some(Structure::Wall {
-                            height: structure_height()?,
-                        }),
-                    ),
+                    (None, Some(depth)) => Some(Water {
+                        depth: depth
+                            .to_digit(10)
+                            .with_context(|| format!("invalid depth {depth:?} {}", at()))?
+                            as u8,
+                        flow: Flow::Still,
+                    }),
                 };
-                let water_cell = matches!(cell, Cell::Water { .. });
-                if let Some(depth) = &depth
-                    && !water_cell
-                {
-                    ensure!(
-                        depth[y][x] == '.',
-                        "depth given for a hex without water {}",
-                        at()
-                    );
-                }
-                if let Some(stature) = &stature
-                    && !matches!(cell, Cell::Building | Cell::Wall)
-                {
-                    ensure!(
-                        stature[y][x] == '.',
-                        "structure height given for a hex without a structure {}",
-                        at()
-                    );
-                }
-                let hex = match &overlays {
-                    Some(rows) => {
-                        let symbol = rows[y][x];
-                        hex.with_overlay(overlay(symbol).with_context(|| {
-                            format!("unknown overlay symbol {symbol:?} {}", at())
-                        })?)
-                    }
-                    None => hex,
-                };
-                hexes.push(hex);
+                let flow = flow.at(x, y)?;
+                ensure!(
+                    flow.is_none() || water.is_some(),
+                    "flow given for a hex without water {}",
+                    at()
+                );
+                let water = water.map(|water| Water {
+                    flow: flow.unwrap_or_default(),
+                    ..water
+                });
+                hexes.push(
+                    Hex::at_level(level)
+                        .with_ground(ground.unwrap_or(Ground::Clear))
+                        .with_water(water)
+                        .with_foliage(foliage.at(x, y)?)
+                        .with_route(route.at(x, y)?)
+                        .with_condition(condition.at(x, y)?)
+                        .with_overlay(overlay.at(x, y)?),
+                );
             }
         }
-        for bridge in &file.bridges {
-            ensure!(
-                bridge.deck <= MAX_HEIGHT,
-                "bridge deck {} is too high",
-                bridge.deck
-            );
-            ensure!(
-                !bridge.hexes.is_empty(),
-                "a bridge must cover at least one hex"
-            );
-            for &[x, y] in &bridge.hexes {
+        for entry in &file.structures {
+            let structure = entry.structure()?;
+            for &[x, y] in &entry.hexes {
                 let (x, y) = (usize::from(x), usize::from(y));
-                ensure!(x < width && y < rows, "bridge hex {x},{y} is off the map");
+                ensure!(
+                    x < width && y < rows,
+                    "structure hex {x},{y} is off the map"
+                );
                 let hex = &mut hexes[y * width + x];
                 ensure!(
-                    hex.water().is_some() && hex.structure().is_none(),
-                    "bridge hex {x},{y} must be water or ice without another structure"
+                    hex.structure().is_none(),
+                    "structure hex {x},{y} already has a structure"
                 );
-                *hex = hex.with_structure(Some(Structure::Bridge { deck: bridge.deck }));
+                *hex = hex.with_structure(Some(structure));
             }
+        }
+        for (index, hex) in hexes.iter().enumerate() {
+            hex.validate()
+                .with_context(|| format!("at {},{}", index % width, index / width))?;
         }
         for point in &file.points_of_interest {
             point.validate(width as i64, rows as i64)?;
+        }
+        if let Some(visibility) = file.visibility {
+            ensure!(
+                visibility <= MAX_VISIBILITY,
+                "visibility must be at most {MAX_VISIBILITY}"
+            );
+        }
+        if let Some(wind) = file.wind {
+            wind.validate()?;
         }
         let flags = match file.flags {
             Some(flags) => flags
@@ -356,12 +460,15 @@ impl MapAsset {
             flags: i32::try_from(flags).context("invalid map flags")?,
             gravity: file.gravity,
             temperature: file.temperature,
+            light: file.light,
+            visibility: file.visibility,
+            wind: file.wind,
             hexes: Arc::new(hexes),
             points_of_interest: file.points_of_interest,
         })
     }
 
-    /// Encode this map in the map file format. Absent optional grids are left out.
+    /// Encode this map in the map file format. Layers no hex has are left out.
     pub fn to_file(&self) -> Result<String> {
         let width = usize::from(self.width);
         let rows = |encode: &dyn Fn(Hex) -> char| -> String {
@@ -372,34 +479,16 @@ impl MapAsset {
             }
             text
         };
-        for hex in self.hexes.iter() {
-            ensure!(
-                hex.level() <= MAX_HEIGHT,
-                "level {} is too high",
-                hex.level()
-            );
-            if let Some(Structure::Building { height } | Structure::Wall { height }) =
-                hex.structure()
-            {
-                ensure!(
-                    height <= MAX_HEIGHT,
-                    "structure height {height} is too high"
-                );
-            }
-        }
-        let has_water = self.hexes.iter().any(|hex| hex.water().is_some());
-        let has_overlays = self.hexes.iter().any(|hex| hex.overlay().is_some());
-        let has_structures = self.hexes.iter().any(|hex| {
-            matches!(
-                hex.structure(),
-                Some(Structure::Building { .. } | Structure::Wall { .. })
-            )
-        });
-        let mut bridges: BTreeMap<u8, Vec<[u16; 2]>> = BTreeMap::new();
         for (index, hex) in self.hexes.iter().enumerate() {
-            if let Some(deck) = hex.deck_clearance() {
-                bridges
-                    .entry(deck)
+            hex.validate()
+                .with_context(|| format!("at {},{}", index % width, index / width))?;
+        }
+        let any = |has: &dyn Fn(Hex) -> bool| self.hexes.iter().any(|&hex| has(hex));
+        let mut structures: BTreeMap<Structure, Vec<[u16; 2]>> = BTreeMap::new();
+        for (index, hex) in self.hexes.iter().enumerate() {
+            if let Some(structure) = hex.structure() {
+                structures
+                    .entry(structure)
                     .or_default()
                     .push([(index % width) as u16, (index / width) as u16]);
             }
@@ -411,6 +500,19 @@ impl MapAsset {
         let mut text = String::new();
         writeln!(text, "gravity = {}", self.gravity)?;
         writeln!(text, "temperature = {}", self.temperature)?;
+        if let Some(light) = self.light {
+            writeln!(text, "light = \"{}\"", light.name())?;
+        }
+        if let Some(visibility) = self.visibility {
+            writeln!(text, "visibility = {visibility}")?;
+        }
+        if let Some(wind) = self.wind {
+            writeln!(
+                text,
+                "wind = {{ direction = {}, speed = {} }}",
+                wind.direction, wind.speed
+            )?;
+        }
         writeln!(
             text,
             "flags = {}",
@@ -419,39 +521,62 @@ impl MapAsset {
                 .trim_end()
         )?;
         writeln!(text)?;
-        writeln!(text, "terrain = '''\n{}'''", rows(&symbol))?;
+        writeln!(text, "terrain = '''\n{}'''", rows(&ground_symbol))?;
         writeln!(
             text,
             "level = '''\n{}'''",
             rows(&|hex| height_symbol(hex.level()))
         )?;
-        if has_water {
+        if any(&|hex| hex.water().is_some()) {
             writeln!(
                 text,
                 "depth = '''\n{}'''",
-                rows(&|hex| match hex.water() {
-                    Some(water) => height_symbol(water.depth),
-                    None => '.',
-                })
+                rows(&|hex| hex.water().map_or('.', |water| height_symbol(water.depth)))
             )?;
         }
-        if has_structures {
+        if any(&|hex| hex.water().is_some_and(|water| !water.flow.is_still())) {
             writeln!(
                 text,
-                "structure_height = '''\n{}'''",
-                rows(&|hex| match hex.structure() {
-                    Some(Structure::Building { height } | Structure::Wall { height }) => {
-                        height_symbol(height)
-                    }
-                    _ => '.',
-                })
+                "flow = '''\n{}'''",
+                rows(&|hex| encode(hex.water().map(|water| water.flow)))
             )?;
         }
-        if has_overlays {
-            writeln!(text, "overlay = '''\n{}'''", rows(&overlay_symbol))?;
+        if any(&|hex| hex.foliage().is_some()) {
+            writeln!(
+                text,
+                "foliage = '''\n{}'''",
+                rows(&|hex| encode(hex.foliage()))
+            )?;
         }
-        for (deck, hexes) in bridges {
-            writeln!(text, "\n[[bridges]]\ndeck = {deck}")?;
+        if any(&|hex| hex.route().is_some()) {
+            writeln!(text, "route = '''\n{}'''", rows(&|hex| encode(hex.route())))?;
+        }
+        if any(&|hex| hex.condition().is_some()) {
+            writeln!(
+                text,
+                "condition = '''\n{}'''",
+                rows(&|hex| encode(hex.condition()))
+            )?;
+        }
+        if any(&|hex| hex.overlay().is_some()) {
+            writeln!(
+                text,
+                "overlay = '''\n{}'''",
+                rows(&|hex| encode(hex.overlay()))
+            )?;
+        }
+        for (structure, hexes) in structures {
+            let class = structure.class;
+            writeln!(
+                text,
+                "\n[[structures]]\nkind = \"{}\"\nclass = \"{}\"",
+                kind_name(structure.kind),
+                class.label().to_ascii_lowercase()
+            )?;
+            if structure.cf != class.construction_factor() {
+                writeln!(text, "cf = {}", structure.cf)?;
+            }
+            writeln!(text, "height = {}", structure.height)?;
             let hexes = hexes
                 .iter()
                 .map(|[x, y]| format!("[{x}, {y}]"))
@@ -476,6 +601,15 @@ impl MapAsset {
     }
 }
 
+/// The file spelling of a structure kind.
+fn kind_name(kind: StructureKind) -> &'static str {
+    match kind {
+        StructureKind::Building => "building",
+        StructureKind::Wall => "wall",
+        StructureKind::Bridge => "bridge",
+    }
+}
+
 /// Helper so the flag list is written with TOML's own string quoting.
 #[derive(Serialize)]
 struct Flags {
@@ -497,48 +631,101 @@ mod tests {
     const SAMPLE: &str = r#"
 gravity = 80
 temperature = -10
+light = "night"
+visibility = 12
+wind = { direction = 270, speed = 15 }
 flags = ["dark", "special_rules"]
 
 terrain = '''
-.`"~-
-#%^@=
+....~~
+._%^w~
 '''
 level = '''
-01200
-1a000
+012000
+1a0000
 '''
 depth = '''
-...23
-.....
+....23
+.....1
 '''
-structure_height = '''
-.....
-...45
+flow = '''
+.....r
+......
+'''
+foliage = '''
+.`"...
+...U..
+'''
+route = '''
+......
+#.....
+'''
+condition = '''
+...+-.
+,.....
 '''
 
-[[bridges]]
-deck = 2
-hexes = [[3, 0]]
+[[structures]]
+kind = "bridge"
+height = 2
+hexes = [[4, 0]]
+
+[[structures]]
+kind = "building"
+class = "hardened"
+cf = 120
+height = 4
+hexes = [[2, 1]]
 "#;
 
     #[test]
     fn parses_every_layer() {
         let map = MapAsset::parse(SAMPLE).unwrap();
-        assert_eq!((map.width, map.height), (5, 2));
+        assert_eq!((map.width, map.height), (6, 2));
         assert_eq!((map.gravity, map.temperature), (80, -10));
+        assert_eq!(map.light, Some(Light::Night));
+        assert_eq!(map.visibility, Some(12));
+        assert_eq!(
+            map.wind,
+            Some(Wind {
+                direction: 270,
+                speed: 15
+            })
+        );
         assert_eq!(i64::from(map.flags), 2 | 32);
         let hex = |x, y| map.hex(x, y).unwrap();
-        assert_eq!(hex(0, 0), Hex::new(Terrain::Grassland, 0));
-        assert_eq!(hex(1, 0), Hex::new(Terrain::LightForest, 1));
-        assert_eq!(hex(2, 0), Hex::new(Terrain::HeavyForest, 2));
-        assert_eq!(hex(3, 0).deck_clearance(), Some(2));
-        assert_eq!(hex(3, 0).water_depth(), 2);
-        assert_eq!(hex(4, 0), Hex::new(Terrain::Ice, 3));
-        assert_eq!(hex(0, 1), Hex::new(Terrain::Road, 1));
+        assert_eq!(hex(0, 0), Hex::new(Terrain::Clear, 0));
+        assert_eq!(hex(1, 0), Hex::new(Terrain::LightWoods, 1));
+        assert_eq!(hex(2, 0), Hex::new(Terrain::HeavyWoods, 2));
+        assert_eq!(hex(3, 0), Hex::new(Terrain::DeepSnow, 0));
+        assert_eq!(hex(4, 0).deck_clearance(), Some(2));
+        assert!(hex(4, 0).is_frozen());
+        assert_eq!(hex(4, 0).water_depth(), 2);
+        assert_eq!(
+            hex(5, 0).water(),
+            Some(Water {
+                depth: 3,
+                flow: Flow::Rapids
+            })
+        );
+        assert_eq!(
+            hex(0, 1),
+            Hex::new(Terrain::Road, 1).with_condition(Some(Condition::Mud))
+        );
         assert_eq!(hex(1, 1).level(), 10);
-        assert_eq!(hex(2, 1), Hex::new(Terrain::Mountains, 0));
-        assert_eq!(hex(3, 1), Hex::new(Terrain::Building, 4));
-        assert_eq!(hex(4, 1), Hex::new(Terrain::Wall, 5));
+        assert_eq!(hex(1, 1).ground(), Ground::Pavement);
+        let tower = hex(2, 1).structure().unwrap();
+        assert_eq!(
+            (tower.kind, tower.height, tower.cf),
+            (StructureKind::Building, 4, 120)
+        );
+        assert_eq!(tower.class, ConstructionClass::Hardened);
+        assert_eq!(
+            hex(3, 1),
+            Hex::new(Terrain::UltraRough, 0).with_foliage(Some(Foliage::UltraHeavyJungle))
+        );
+        assert_eq!(hex(4, 1).ground(), Ground::Swamp);
+        assert_eq!(hex(5, 1), Hex::new(Terrain::Water, 1));
     }
 
     #[test]
@@ -547,33 +734,68 @@ hexes = [[3, 0]]
         let text = map.to_file().unwrap();
         assert_eq!(MapAsset::parse(&text).unwrap(), map);
         assert_eq!(map.to_file().unwrap(), text);
+        assert!(text.contains("class = \"hardened\"\ncf = 120\n"), "{text}");
+        assert!(text.contains("kind = \"bridge\"\nclass = \"medium\"\nheight"));
         // Three heavy-woods hexes in a row would end a basic multi-line string.
         let woods = MapAsset::from_cells("3 1\n\"0\"0\"0\n").unwrap();
         assert_eq!(MapAsset::parse(&woods.to_file().unwrap()).unwrap(), woods);
         let plain = MapAsset::parse("terrain = \"..\\n\"\nlevel = \"01\\n\"").unwrap();
         let text = plain.to_file().unwrap();
-        assert!(
-            !text.contains("depth") && !text.contains("bridges"),
-            "{text}"
-        );
+        for absent in [
+            "depth",
+            "structures",
+            "foliage",
+            "route",
+            "condition",
+            "flow",
+            "light",
+            "wind",
+            "visibility",
+        ] {
+            assert!(!text.contains(absent), "{absent} in {text}");
+        }
         assert_eq!(MapAsset::parse(&text).unwrap(), plain);
+    }
+
+    /// Every terrain of the compact notation, on every digit, saves and loads unchanged.
+    #[test]
+    fn every_terrain_survives_a_save() {
+        for terrain in Terrain::ALL {
+            for digit in [0, 1, 9] {
+                let hex = Hex::new(terrain, digit);
+                let map = MapAsset {
+                    width: 1,
+                    height: 1,
+                    flags: 0,
+                    gravity: 100,
+                    temperature: 20,
+                    light: None,
+                    visibility: None,
+                    wind: None,
+                    hexes: Arc::new(vec![hex]),
+                    points_of_interest: Vec::new(),
+                };
+                let text = map.to_file().unwrap();
+                assert_eq!(MapAsset::parse(&text).unwrap(), map, "{text}");
+            }
+        }
     }
 
     /// A building on high ground keeps both heights; its top is their sum.
     #[test]
     fn structures_on_raised_ground_load_and_validate() {
-        let source = "terrain = '@'\nlevel = 'a'\nstructure_height = 'b'\n";
+        let source = "terrain = '.'\nlevel = 'a'\n[[structures]]\nkind = 'building'\nheight = 11\nhexes = [[0, 0]]\n";
         let map = MapAsset::parse(source).unwrap();
         let tower = map.hex(0, 0).unwrap();
         assert_eq!((tower.level(), tower.surface_height()), (10, 21));
-        tower.validate().unwrap();
+        assert_eq!(tower.construction_class(), Some(ConstructionClass::Medium));
         assert_eq!(MapAsset::parse(&map.to_file().unwrap()).unwrap(), map);
     }
 
     /// A lake and a bridge on a plateau keep their surfaces at the plateau's level.
     #[test]
     fn water_and_bridges_sit_on_raised_ground() {
-        let source = "terrain = '~-~'\nlevel = '432'\ndepth = '231'\n\n[[bridges]]\ndeck = 2\nhexes = [[2, 0]]\n";
+        let source = "terrain = '~~~'\nlevel = '432'\ndepth = '231'\ncondition = '.-.'\n\n[[structures]]\nkind = 'bridge'\nheight = 2\nhexes = [[2, 0]]\n";
         let map = MapAsset::parse(source).unwrap();
         let lake = map.hex(0, 0).unwrap();
         assert_eq!((lake.water_line(), lake.surface_height()), (4, 2));
@@ -587,18 +809,18 @@ hexes = [[3, 0]]
     /// The overlay grid places permanent fire and smoke over any hex, on top of its layers.
     #[test]
     fn overlay_grid_loads_permanent_fire_and_smoke() {
-        let source = "terrain = '.`~'\nlevel = '120'\ndepth = '..2'\noverlay = '&:.'\n";
+        let source =
+            "terrain = '..~'\nfoliage = '.`.'\nlevel = '120'\ndepth = '..2'\noverlay = '&:.'\n";
         let map = MapAsset::parse(source).unwrap();
         let fire = map.hex(0, 0).unwrap();
         assert_eq!(fire, Hex::new(Terrain::Fire, 1));
         let smoky = map.hex(1, 0).unwrap();
         assert_eq!(smoky.overlay(), Some(DecorationKind::Smoke));
-        assert_eq!(smoky.with_overlay(None), Hex::new(Terrain::LightForest, 2));
+        assert_eq!(smoky.with_overlay(None), Hex::new(Terrain::LightWoods, 2));
         assert_eq!(map.hex(2, 0).unwrap().overlay(), None);
         let text = map.to_file().unwrap();
         assert!(text.contains("overlay = '''\n&:.\n'''"), "{text}");
         assert_eq!(MapAsset::parse(&text).unwrap(), map);
-        // Fire and smoke are not terrain symbols, and the overlay grid has only its own.
         for bad in [
             "terrain = '&'\nlevel = '0'\n",
             "terrain = '.'\nlevel = '0'\noverlay = '~'\n",
@@ -697,6 +919,9 @@ hexes = [[3, 0]]
         let base = |terrain: &str, level: &str, extra: &str| {
             format!("terrain = \"\"\"\n{terrain}\"\"\"\nlevel = \"\"\"\n{level}\"\"\"\n{extra}")
         };
+        let structure = |kind: &str, extra: &str| {
+            format!("[[structures]]\nkind = '{kind}'\nheight = 1\n{extra}")
+        };
         for (source, message) in [
             (base("..\n.\n", "00\n0\n", ""), "row 1 has 1"),
             (base("..\n", "000\n", ""), "level grid is 3x1"),
@@ -704,23 +929,56 @@ hexes = [[3, 0]]
             (base(".\n", "!\n", ""), "invalid level"),
             (base("~\n", "0\n", ""), "missing depth"),
             (base(".\n", "0\n", "depth = \"2\\n\""), "without water"),
-            (base("@\n", "0\n", ""), "missing structure height"),
+            (base(".\n", "0\n", "flow = \"r\\n\""), "without water"),
             (
-                base(".\n", "0\n", "[[bridges]]\ndeck = 1\nhexes = [[0, 0]]"),
-                "must be water",
+                base(".\n", "0\n", "foliage = \"~\\n\""),
+                "unknown foliage symbol",
+            ),
+            (
+                base("~\n", "0\n", "depth = \"1\\n\"\nfoliage = \"`\\n\""),
+                "under water",
+            ),
+            (
+                base(".\n", "0\n", &structure("bridge", "hexes = [[0, 0]]")),
+                "must span water",
             ),
             (
                 base(
                     "~\n",
                     "0\n",
-                    "depth = \"1\\n\"\n[[bridges]]\ndeck = 1\nhexes = [[1, 0]]",
+                    &format!(
+                        "depth = \"1\\n\"\n{}",
+                        structure("bridge", "hexes = [[1, 0]]")
+                    ),
                 ),
                 "off the map",
+            ),
+            (
+                base(
+                    ".\n",
+                    "0\n",
+                    &structure("wall", "class = 'light'\ncf = 30\nhexes = [[0, 0]]"),
+                ),
+                "between 1 and 15 for a light",
+            ),
+            (
+                base(".\n", "0\n", &structure("wall", "cf = 0\nhexes = [[0, 0]]")),
+                "between 1 and",
+            ),
+            (
+                base(".\n", "0\n", &structure("wall", "hexes = []")),
+                "at least one hex",
             ),
             (
                 base(".\n", "0\n", "flags = [\"bogus\"]"),
                 "invalid map file",
             ),
+            (base(".\n", "0\n", "visibility = 61"), "visibility"),
+            (
+                base(".\n", "0\n", "wind = { direction = 400, speed = 1 }"),
+                "Wind direction",
+            ),
+            (base(".\n", "0\n", "light = 'dusk'"), "invalid map file"),
             (base(".\n", "0\n", "colour = 1"), "invalid map file"),
         ] {
             let error = format!("{:#}", MapAsset::parse(&source).unwrap_err());

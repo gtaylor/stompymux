@@ -10,14 +10,14 @@ fn template() -> VehicleTemplate {
 fn vehicle_motion_reaches_terrain_adjusted_targets_and_brakes_without_overshoot() {
     let template = template();
     for (terrain, target) in [
-        (Terrain::Grassland, 53.75),
+        (Terrain::Clear, 53.75),
         (Terrain::Road, 64.5),
         (Terrain::Bridge, 64.5),
         (Terrain::Rough, 26.875),
-        (Terrain::Snow, 26.875),
-        (Terrain::LightForest, 26.875),
-        (Terrain::HeavyForest, 53.75 / 3.0),
-        (Terrain::Mountains, 53.75 / 3.0),
+        (Terrain::DeepSnow, 26.875),
+        (Terrain::LightWoods, 26.875),
+        (Terrain::HeavyWoods, 53.75 / 3.0),
+        (Terrain::UltraRough, 53.75 / 3.0),
     ] {
         let mut motion = Motion::stationary(HexCoordinate { x: 50, y: 50 }.center());
         motion.desired_speed = 53.75;
@@ -52,7 +52,7 @@ fn vehicle_motion_handles_road_turning_hover_advantage_and_map_rate() {
     let normal = template
         .ground_motion_step(
             motion,
-            Hex::new(Terrain::Grassland, 0),
+            Hex::new(Terrain::Clear, 0),
             VehicleMotionRules::STANDARD,
         )
         .unwrap();
@@ -60,7 +60,7 @@ fn vehicle_motion_handles_road_turning_hover_advantage_and_map_rate() {
     let fast = template
         .ground_motion_step(
             motion,
-            Hex::new(Terrain::Grassland, 0),
+            Hex::new(Terrain::Clear, 0),
             VehicleMotionRules {
                 speed_demon: true,
                 ..VehicleMotionRules::STANDARD
@@ -71,7 +71,7 @@ fn vehicle_motion_handles_road_turning_hover_advantage_and_map_rate() {
     let double = template
         .ground_motion_step(
             motion,
-            Hex::new(Terrain::Grassland, 0),
+            Hex::new(Terrain::Clear, 0),
             VehicleMotionRules {
                 movement_modifier: 200,
                 ..VehicleMotionRules::STANDARD
@@ -126,7 +126,7 @@ fn vehicle_motion_handles_road_turning_hover_advantage_and_map_rate() {
         template
             .ground_motion_step(
                 motion,
-                Hex::new(Terrain::Grassland, 0),
+                Hex::new(Terrain::Clear, 0),
                 VehicleMotionRules::STANDARD
             )
             .is_ok()
@@ -137,7 +137,7 @@ fn vehicle_motion_handles_road_turning_hover_advantage_and_map_rate() {
             template
                 .ground_motion_step(
                     motion,
-                    Hex::new(Terrain::Grassland, 0),
+                    Hex::new(Terrain::Clear, 0),
                     VehicleMotionRules::STANDARD
                 )
                 .is_err()
@@ -149,7 +149,7 @@ fn vehicle_motion_handles_road_turning_hover_advantage_and_map_rate() {
         template
             .ground_motion_step(
                 motion,
-                Hex::new(Terrain::Grassland, 0),
+                Hex::new(Terrain::Clear, 0),
                 VehicleMotionRules::STANDARD
             )
             .is_err()

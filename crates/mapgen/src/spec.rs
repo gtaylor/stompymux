@@ -45,7 +45,7 @@ pub struct MapSpec {
     /// How much of the map is lakes, seas or swamp water.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub water: Option<Amount>,
-    /// How much of the land is light or heavy woods.
+    /// How much of the land is woods, or jungle in the jungle biome.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub woods: Option<Amount>,
     /// How much of the land is rough ground (rubble, scree, broken rock).
@@ -57,7 +57,7 @@ pub struct MapSpec {
     /// Number of rivers crossing the map (0 to 8).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub rivers: Option<u8>,
-    /// Whether lakes and rivers are frozen over.
+    /// Whether lakes and rivers are frozen over with ice.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub frozen: Option<bool>,
     /// Cities, towns, bases and other clusters of buildings, placed in order.
@@ -78,19 +78,19 @@ pub struct MapSpec {
 pub enum Biome {
     /// Rolling grassland, scattered woods, lakes and rivers.
     Temperate,
-    /// Dense light and heavy woods broken by clearings.
+    /// Dense woods broken by clearings, with stands of ultra-heavy old growth.
     Forest,
-    /// Hot, wet and choked with heavy woods and rivers.
+    /// Hot, wet and choked with jungle and rivers.
     Jungle,
     /// Hot sand and hardpan with rocky outcrops and rare oases.
     Desert,
-    /// Snowfields, frozen lakes and bitter cold.
+    /// Snowfields over frozen tundra, frozen lakes and bitter cold.
     Arctic,
-    /// High ridges, rocky peaks and snow above the tree line.
+    /// High ridges, ultra-rough peaks and deep snow above the snow line.
     Mountains,
     /// Terraced mesas, canyons and broken rock.
     Badlands,
-    /// Flat, waterlogged ground with shallow pools and heavy woods.
+    /// Flat, waterlogged swamp with shallow pools and heavy woods.
     Swamp,
     /// Land running down to a sea along one edge of the map, with beaches.
     Coastal,
@@ -204,7 +204,7 @@ impl Amount {
         }
     }
 
-    /// Fraction of the land covered by woods.
+    /// Fraction of the land covered by woods or jungle.
     pub(crate) const fn woods_fraction(self) -> f64 {
         match self {
             Self::None => 0.0,

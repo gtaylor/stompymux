@@ -141,20 +141,16 @@ pub(super) fn restoration_kind(kind: MapObjectKind) -> Option<super::StaticDecor
 /// ground level. Water, a bridge or a structure keeps the current hex's depth, deck or height
 /// when it already has one, and is one level deep or tall otherwise.
 fn restore_terrain(current: super::Hex, terrain: super::Terrain) -> super::Hex {
-    use super::{Hex, Structure, Terrain, Water};
+    use super::{Hex, Terrain, Water};
     let depth = current.water().map_or(1, |water| water.depth.max(1));
     let height = match current.structure() {
-        Some(Structure::Building { height } | Structure::Wall { height }) => height.max(1),
+        Some(structure) if structure.is_standing() => structure.height.max(1),
         _ => 1,
     };
     let restored = match terrain {
         Terrain::Water | Terrain::Ice => Hex::new(terrain, depth),
-        Terrain::Bridge => {
-            Hex::new(terrain, current.deck_clearance().unwrap_or(1)).with_water(Some(Water {
-                depth,
-                frozen: false,
-            }))
-        }
+        Terrain::Bridge => Hex::new(terrain, current.deck_clearance().unwrap_or(1))
+            .with_water(Some(Water::still(depth))),
         Terrain::Building | Terrain::Wall => Hex::new(terrain, height),
         _ => Hex::new(terrain, current.level()),
     };
@@ -320,7 +316,7 @@ mod tests {
 
     #[test]
     fn restored_terrain_stands_at_the_current_ground_level() {
-        let raised = Hex::new(Terrain::Grassland, 3);
+        let raised = Hex::new(Terrain::Clear, 3);
         assert_eq!(
             restore_terrain(raised, Terrain::Water),
             Hex::new(Terrain::Water, 1).with_level(3)
@@ -342,7 +338,7 @@ mod tests {
         );
         let tower = Hex::new(Terrain::Building, 7).with_level(2);
         let wall = restore_terrain(tower, Terrain::Wall);
-        assert_eq!(wall.structure(), Some(Structure::Wall { height: 7 }));
+        assert_eq!(wall.structure(), Some(Structure::wall(7)));
         assert_eq!(wall.level(), 2);
     }
 }

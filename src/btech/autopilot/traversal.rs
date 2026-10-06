@@ -6,7 +6,9 @@
 //! records, or mutate a unit.  The heartbeat must still revalidate the selected
 //! segment through the ordinary movement transaction before committing it.
 
-use super::super::{Hex, HexCoordinate, Mech, Position, Structure, VehicleMovement};
+use super::super::{
+    GroundMovement, Hex, HexCoordinate, Mech, Position, StructureKind, VehicleMovement,
+};
 use crate::{ObjectId, World};
 use std::collections::BTreeMap;
 
@@ -247,6 +249,18 @@ enum GroundUnitKind {
     Hover,
 }
 
+impl GroundUnitKind {
+    /// How the map's terrain rules see this kind of unit move.
+    fn ground_movement(self) -> GroundMovement {
+        match self {
+            Self::Mech => GroundMovement::Legged,
+            Self::Tracked => GroundMovement::Tracked,
+            Self::Wheeled => GroundMovement::Wheeled,
+            Self::Hover => GroundMovement::Hover,
+        }
+    }
+}
+
 fn unit_kind(world: &World, id: ObjectId) -> Option<GroundUnitKind> {
     if let Some(unit) = world.btech.constructed_units().get(&id) {
         return (!unit.is_destroyed() && !unit.airborne()).then_some(GroundUnitKind::Mech);
@@ -284,7 +298,10 @@ fn in_bounds(width: i64, height: i64, x: u16, y: u16) -> bool {
 
 /// Relative route cost of entering a tile, or `None` when the tile is impassable.
 fn terrain_cost(hex: Hex, kind: GroundUnitKind) -> Option<u32> {
-    if matches!(hex.structure(), Some(Structure::Wall { .. })) {
+    if hex
+        .structure()
+        .is_some_and(|structure| structure.kind == StructureKind::Wall)
+    {
         return None;
     }
     Some(if hex.is_water_surface() {
@@ -292,7 +309,7 @@ fn terrain_cost(hex: Hex, kind: GroundUnitKind) -> Option<u32> {
     } else {
         // Elsewhere a route prefers terrain in proportion to the speed it costs, which counts
         // any fire or smoke over it.
-        hex.ground_speed_divisor(kind == GroundUnitKind::Wheeled) as u32
+        hex.ground_speed_divisor(kind.ground_movement()) as u32
     })
 }
 
@@ -522,18 +539,18 @@ mod tests {
     #[test]
     fn terrain_costs_are_positive_and_walls_are_blocked() {
         for terrain in [
-            Terrain::Grassland,
+            Terrain::Clear,
             Terrain::Road,
-            Terrain::LightForest,
-            Terrain::HeavyForest,
+            Terrain::LightWoods,
+            Terrain::HeavyWoods,
             Terrain::Water,
             Terrain::Ice,
             Terrain::Bridge,
             Terrain::Rough,
-            Terrain::Mountains,
+            Terrain::UltraRough,
             Terrain::Fire,
             Terrain::Smoke,
-            Terrain::Snow,
+            Terrain::DeepSnow,
             Terrain::Building,
             Terrain::Sand,
         ] {
@@ -562,7 +579,7 @@ mod tests {
         ] {
             assert_eq!(
                 terrain_cost(Hex::new(Terrain::Sand, 0), kind),
-                terrain_cost(Hex::new(Terrain::Grassland, 0), kind)
+                terrain_cost(Hex::new(Terrain::Clear, 0), kind)
             );
         }
     }
@@ -571,7 +588,7 @@ mod tests {
     fn transition_risks_are_explicit_and_do_not_query_mines() {
         let (reason, _) = transition_reason(
             GroundUnitKind::Tracked,
-            Hex::new(Terrain::Grassland, 0),
+            Hex::new(Terrain::Clear, 0),
             Hex::new(Terrain::Water, 1),
             -1,
         );

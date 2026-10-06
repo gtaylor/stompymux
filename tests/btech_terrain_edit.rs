@@ -26,21 +26,22 @@ fn layer_words(hex: Hex) -> String {
         format!("level={}", value["level"]),
         format!("ground={}", value["ground"].as_str().unwrap()),
     ];
-    if let Some(woods) = value["woods"].as_str() {
-        words.push(format!("woods={woods}"));
+    for layer in ["foliage", "route", "condition"] {
+        if let Some(name) = value[layer].as_str() {
+            words.push(format!("{layer}={name}"));
+        }
     }
     if let Some(water) = value.get("water") {
-        let layer = if water["frozen"] == true {
-            "ice"
-        } else {
-            "water"
-        };
-        words.push(format!("{layer}={}", water["depth"]));
+        words.push(format!("water={}", water["depth"]));
+        if let Some(flow) = water["flow"].as_str() {
+            words.push(format!("flow={flow}"));
+        }
     }
     if let Some(structure) = value.get("structure") {
         let kind = structure["kind"].as_str().unwrap();
-        let height = structure.get("deck").unwrap_or(&structure["height"]);
-        words.push(format!("{kind}={height}"));
+        words.push(format!("{kind}={}", structure["height"]));
+        words.push(format!("class={}", structure["class"].as_str().unwrap()));
+        words.push(format!("cf={}", structure["cf"]));
     }
     words.join(" ")
 }
@@ -72,18 +73,18 @@ async fn occupied_edits_share_native_lua_and_incremental_persistence() {
         let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
         let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         for terrain in [
-            Terrain::Mountains,
+            Terrain::UltraRough,
             Terrain::Water,
             Terrain::Ice,
             Terrain::Bridge,
             Terrain::Road,
-            Terrain::LightForest,
-            Terrain::HeavyForest,
+            Terrain::LightWoods,
+            Terrain::HeavyWoods,
             Terrain::Rough,
-            Terrain::Snow,
+            Terrain::DeepSnow,
             Terrain::Building,
             Terrain::Wall,
-            Terrain::Grassland,
+            Terrain::Clear,
         ] {
             // The deepest water and a tall feature of every other kind.
             let expected = Hex::new(
@@ -172,17 +173,28 @@ async fn occupied_edits_share_native_lua_and_incremental_persistence() {
         let bridge = Hex::new(Terrain::Bridge, 4)
             .with_water(Some(Water {
                 depth: 2,
-                frozen: false,
+                flow: Flow::Rapids,
             }))
-            .with_ground(Ground::Sand)
             .with_level(3);
+        let damaged_wall = Hex::new(Terrain::Wall, 2).with_structure(Some(Structure {
+            cf: 60,
+            ..Structure::new(StructureKind::Wall, 2, ConstructionClass::Heavy)
+        }));
         for (args, expected) in [
             (
-                "level=2 ground=road woods=light",
-                Hex::new(Terrain::Road, 2).with_woods(Some(Woods::Light)),
+                "level=2 route=paved_road foliage=light_woods",
+                Hex::new(Terrain::Road, 2).with_foliage(Some(Foliage::LightWoods)),
             ),
-            ("ice=2 level=4", Hex::new(Terrain::Ice, 2).with_level(4)),
-            ("LEVEL=3 water=2 Bridge=4 ground=sand", bridge),
+            (
+                "water=2 condition=ice level=4",
+                Hex::new(Terrain::Ice, 2).with_level(4),
+            ),
+            (
+                "ground=rough condition=deep_snow",
+                Hex::new(Terrain::Rough, 0).with_condition(Some(Condition::DeepSnow)),
+            ),
+            ("LEVEL=3 water=2 flow=rapids Bridge=4", bridge),
+            ("wall=2 class=heavy cf=60", damaged_wall),
         ] {
             let output =
                 support::run_text(&native, &config, actor, 1, &format!("addhex 0 11 {args}"));
@@ -195,17 +207,24 @@ async fn occupied_edits_share_native_lua_and_incremental_persistence() {
         }
         for args in [
             "level=36",
-            "water=0",
             "water=10",
-            "water=1 ice=1",
+            "water=0 flow=rapids",
+            "flow=rapids",
+            "water=1 condition=mud",
+            "water=1 ground=sand",
+            "water=1 foliage=light_woods",
+            "ground=pavement foliage=heavy_woods",
+            "ground=magma condition=deep_snow",
             "level=1 level=2",
             "bridge=2",
             "water=1 building=2 bridge=1",
+            "building=2 class=light cf=40",
+            "class=heavy",
             "fire=1",
             "ground=lava",
-            "woods=dense",
+            "foliage=dense",
             "depth=2",
-            "level=1 woods",
+            "level=1 foliage",
         ] {
             let before = native.world().btech.clone();
             let output =
@@ -217,7 +236,7 @@ async fn occupied_edits_share_native_lua_and_incremental_persistence() {
         let before = lua.world().btech.clone();
         for hex in [
             "'^'",
-            "btech.map.terrain_types.MOUNTAINS",
+            "btech.map.terrain_types.ULTRA_ROUGH",
             "{level=1}",
             "{level=1,ground='bogus'}",
             "{level=36,ground=btech.map.ground_types.CLEAR}",
@@ -364,7 +383,7 @@ async fn edit_admission_overlays_and_extreme_elevations() {
     let lake = scripts.world().btech.maps()[&map].base_hex(0, 5).unwrap();
     assert_eq!((lake.water_line(), lake.water_depth()), (4, 2));
     let output = support::run_text(&scripts, &config, actor, 1, "addhex 0 5 water=10");
-    assert!(output.contains("water must be from 1 to 9"), "{output}");
+    assert!(output.contains("water must be from 0 to 9"), "{output}");
     let output = support::run_text(&scripts, &config, actor, 1, "addhex 0 5 water=9");
     assert!(output.contains("Hex set!"), "{output}");
     let world = scripts.world();
@@ -428,7 +447,7 @@ async fn bridge_edits_and_airborne_edits_preserve_physical_position() {
             actor,
             map,
             HexCoordinate { x: 0, y: 11 },
-            Hex::new(Terrain::Grassland, 9),
+            Hex::new(Terrain::Clear, 9),
         )
         .unwrap();
         assert_eq!(
@@ -531,7 +550,7 @@ async fn terrain_saves_preserve_persisted_landing_exclusions() {
             &config,
             actor,
             1,
-            "addhex 0 11 level=2 ground=mountains",
+            "addhex 0 11 level=2 ground=ultra_rough",
         );
         assert!(output.contains("Hex set"), "{output}");
         let edited = scripts.world().clone();

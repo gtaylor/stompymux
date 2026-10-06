@@ -202,7 +202,7 @@ async fn map_registration_defaults_view_load_and_restart() {
         assert_eq!(field.building.regeneration, 1);
         for y in 0..11 {
             for x in 0..21 {
-                assert_eq!(field.hex(x, y).unwrap(), Hex::new(Terrain::Grassland, 0));
+                assert_eq!(field.hex(x, y).unwrap(), Hex::new(Terrain::Clear, 0));
             }
         }
     }

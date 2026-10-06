@@ -462,7 +462,7 @@ async fn empty_spotter_hexes_fire_through_blocked_firer_sightlines() {
         crate::support::set_hex_elevation(&mut saved["maps"][map.0.to_string()]["terrain"][4], 8);
         crate::support::set_hex_terrain(
             &mut saved["maps"][map.0.to_string()]["terrain"][1],
-            stompymux_rs::Terrain::HeavyForest,
+            stompymux_rs::Terrain::HeavyWoods,
         );
         saved[class][shooter.0.to_string()]["contacts"] = serde_json::json!({});
         saved[class][shooter.0.to_string()]["motion"]["heading"] = serde_json::json!(180.0);

@@ -6,7 +6,7 @@ fn landing(target: i16, roll: u8) -> DropLandingInput {
     DropLandingInput {
         base_target: target,
         roll: Some(roll),
-        hex: Hex::new(Terrain::Grassland, 0),
+        hex: Hex::new(Terrain::Clear, 0),
         running: true,
         prone: false,
         incapacitated: false,

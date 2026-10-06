@@ -13,6 +13,6 @@ The numbers below are native identifiers; pass the typed constants to Lua APIs.
 | `btech.map.flags.VACUUM` | `4` |  |
 | `btech.map.flags.UNDERGROUND` | `16` |  |
 | `btech.map.flags.DARK` | `32` |  |
-| `btech.map.flags.INDESTRUCTIBLE_BRIDGES` | `64` |  |
+| `btech.map.flags.INDESTRUCTIBLE_STRUCTURES` | `64` |  |
 | `btech.map.flags.NO_FRIENDLY_FIRE` | `256` |  |
 | `btech.map.flags.NO_PHYSICAL_ATTACKS` | `512` |  |

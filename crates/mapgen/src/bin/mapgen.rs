@@ -75,7 +75,7 @@ struct Generate {
     /// Rivers crossing the map (0 to 8).
     #[arg(long)]
     rivers: Option<u8>,
-    /// Freeze lakes and rivers (true or false).
+    /// Freeze lakes and rivers over with ice (true or false).
     #[arg(long)]
     frozen: Option<bool>,
     /// Add a settlement: SIZE[@POSITION][,OPTION...]. Sizes: outpost, hamlet, village, town,

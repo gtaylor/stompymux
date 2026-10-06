@@ -76,10 +76,14 @@ pub fn begin_battle_hiding(world: &mut World, id: ObjectId, pilot: ObjectId) -> 
     }
     let tile =
         world.btech.maps()[&position.map].base_hex(i64::from(position.x), i64::from(position.y))?;
-    let text = match (tile.is_woods(), tile.is_bare(), tile.ground()) {
-        (true, _, _) => "You start to hide amongst the trees...",
-        (false, true, Ground::Mountains) => "You start to hide behind some rocky outcroppings...",
-        (false, true, Ground::Rough) => "You find some boulders to try to hide behind...",
+    let text = match (tile.foliage(), tile.is_rocky(), tile.ground()) {
+        (Some(super::Foliage::PlantedFields), _, _) => "You start to hide amongst the crops...",
+        (Some(_), _, _) => "You start to hide amongst the trees...",
+        (None, true, Ground::UltraRough) => "You start to hide behind some rocky outcroppings...",
+        (None, true, Ground::Rubble | Ground::UltraRubble) => {
+            "You find some wreckage to try to hide behind..."
+        }
+        (None, true, _) => "You find some boulders to try to hide behind...",
         _ => anyhow::bail!(
             "You begin to hide in this terrain...\n... then realize that just isn't going to work!"
         ),

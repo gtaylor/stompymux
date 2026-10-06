@@ -1,5 +1,5 @@
 ---
-title: "btech.map.woods_types"
+title: "btech.map.flow_types"
 type: docs
 ---
 
@@ -9,5 +9,6 @@ The numbers below are native identifiers; pass the typed constants to Lua APIs.
 
 | Constant | Type or native code | Description |
 | --- | --- | --- |
-| `btech.map.woods_types.LIGHT` | `"light"` |  |
-| `btech.map.woods_types.HEAVY` | `"heavy"` |  |
+| `btech.map.flow_types.STILL` | `"still"` |  |
+| `btech.map.flow_types.RAPIDS` | `"rapids"` |  |
+| `btech.map.flow_types.TORRENT` | `"torrent"` |  |

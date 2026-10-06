@@ -88,7 +88,7 @@ pub use aim::{
 };
 pub use arcs::{ContactArc, Facing, Torso, flip_arms, rotate_torso, weapon_bears_on};
 mod surface_break;
-pub use surface_break::{Surface, SurfaceBreak, break_bridge, break_ice};
+pub use surface_break::{Surface, SurfaceBreak, break_bridge, break_ice, collapse_structure};
 mod balance;
 pub use balance::{BalanceCause, BalanceReport};
 mod character;
@@ -184,8 +184,9 @@ pub use state::{
     reload_map, set_map_visibility,
 };
 pub use stompymux_map::{
-    DecorationKind, Ground, Hex, MAX_DEPTH, MAX_HEIGHT, MapAsset, MapPointOfInterest, Structure,
-    Terrain, Water, Woods,
+    Condition, ConstructionClass, DecorationKind, Density, Flow, Foliage, Ground, GroundMovement,
+    Hex, MAX_CONSTRUCTION_FACTOR, MAX_DEPTH, MAX_HEIGHT, MAX_VISIBILITY, MapAsset,
+    MapPointOfInterest, Route, Structure, StructureKind, Terrain, Water, Wind,
 };
 pub use unit_template::UnitTemplateExt;
 mod vehicle;
@@ -304,7 +305,7 @@ mod los_trace;
 pub use los::{TerrainLos, ground_terrain_los, unit_terrain_los};
 
 mod map_light;
-pub use map_light::Light;
+pub use stompymux_map::Light;
 
 mod perception;
 pub use perception::{

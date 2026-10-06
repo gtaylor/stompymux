@@ -125,7 +125,9 @@ async fn reload_replaces_and_save_writes_points_of_interest() {
     let saved = scripts.world().clone();
     assert_eq!(
         saved.btech.maps()[&map].export_asset().unwrap(),
-        MapAsset::parse(RELOADED).unwrap().to_file().unwrap()
+        support::as_exported(MapAsset::parse(RELOADED).unwrap())
+            .to_file()
+            .unwrap()
     );
     persistence::save(&config.database(), &saved).await.unwrap();
     let restored = persistence::load(&config.database()).await.unwrap();

@@ -10,21 +10,32 @@ pub(super) fn shown_height(hex: Hex) -> u8 {
     u8::try_from(hex.top_height()).unwrap_or(u8::MAX)
 }
 
-/// Colors shared by tactical and long-range displays; grassland keeps the default style.
-/// Shallow water is brighter than deep water.
+/// Colors shared by tactical and long-range displays; clear ground keeps the default style.
+/// Shallow water is brighter than deep water, and lighter foliage brighter than denser.
 pub(super) fn terrain(hex: Hex) -> &'static str {
     match hex.terrain() {
         Terrain::Water if hex.water_depth() < 2 => "[fg=blue bold]",
         Terrain::Water => "[fg=blue]",
-        Terrain::Building | Terrain::Ice | Terrain::Wall | Terrain::Snow => "[fg=white bold]",
-        Terrain::Road | Terrain::Smoke => "[fg=black bold]",
-        Terrain::Rough | Terrain::Sand => "[fg=yellow bold]",
-        Terrain::Mountains => "[fg=yellow]",
-        Terrain::Fire => "[fg=red bold]",
-        Terrain::LightForest => "[fg=green bold]",
-        Terrain::HeavyForest => "[fg=green]",
-        Terrain::Bridge => "",
-        Terrain::Grassland => "",
+        Terrain::Building
+        | Terrain::Wall
+        | Terrain::Ice
+        | Terrain::ThinSnow
+        | Terrain::DeepSnow => "[fg=white bold]",
+        Terrain::Road | Terrain::Pavement | Terrain::Rail | Terrain::Smoke => "[fg=black bold]",
+        Terrain::Rough | Terrain::Rubble | Terrain::Sand => "[fg=yellow bold]",
+        Terrain::UltraRough | Terrain::UltraRubble | Terrain::Mud | Terrain::Tundra => {
+            "[fg=yellow]"
+        }
+        Terrain::Fire | Terrain::Magma => "[fg=red bold]",
+        Terrain::MagmaCrust => "[fg=red]",
+        Terrain::HeavyIndustrial => "[fg=magenta]",
+        Terrain::LightWoods | Terrain::LightJungle | Terrain::PlantedFields => "[fg=green bold]",
+        Terrain::HeavyWoods
+        | Terrain::UltraHeavyWoods
+        | Terrain::HeavyJungle
+        | Terrain::UltraHeavyJungle => "[fg=green]",
+        Terrain::Swamp => "[fg=cyan]",
+        Terrain::Bridge | Terrain::Clear => "",
     }
 }
 

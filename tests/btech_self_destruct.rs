@@ -238,7 +238,7 @@ async fn self_destruct_cross_chassis_native_lua_and_restart() {
             let vehicle = &snapshot.btech.vehicles()[&id];
             assert!(vehicle.is_destroyed());
             assert_eq!(vehicle.crew_recovery().remaining, 30);
-            assert_eq!(vehicle.elevation_level(Hex::new(Terrain::Grassland, 0)), 6);
+            assert_eq!(vehicle.elevation_level(Hex::new(Terrain::Clear, 0)), 6);
             assert!(vehicle.sections()[&VehicleSection::Front].internal > 0);
         }
         assert!(!self_destructs_pending(&scripts.world()));
@@ -623,7 +623,7 @@ async fn self_destruct_ground_wreck_descends_after_restart() {
                 })
                 .await;
             assert_eq!(
-                loaded.btech.vehicles()[&id].elevation_level(Hex::new(Terrain::Grassland, 0)),
+                loaded.btech.vehicles()[&id].elevation_level(Hex::new(Terrain::Clear, 0)),
                 0
             );
             shutdown.send(ShutdownRequest::Sigterm).unwrap();

@@ -61,13 +61,16 @@ pub(crate) fn find_path(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::map::Terrain;
+    use stompymux_map::{Hex, Structure};
+
+    /// A wall two levels tall.
+    const WALL: Hex = Hex::at_level(0).with_structure(Some(Structure::wall(2)));
 
     #[test]
     fn routes_around_walls() {
         let mut map = HexMap::new(9, 9);
         for y in 0..8 {
-            map.hex_mut(4, y).unwrap().terrain = Terrain::Wall { height: 2 };
+            *map.hex_mut(4, y).unwrap() = WALL;
         }
         let goal = (8, 0);
         let path = find_path(
@@ -75,7 +78,7 @@ mod tests {
             (0, 0),
             |hex| hex == goal,
             |hex| HexMap::distance(hex, goal) as u32,
-            |_, to| (!map.hex(to.0, to.1)?.terrain.is_structure()).then_some(1),
+            |_, to| (!map.hex(to.0, to.1)?.has_standing_structure()).then_some(1),
         )
         .unwrap();
         assert_eq!((path[0], *path.last().unwrap()), ((0, 0), goal));
@@ -89,14 +92,14 @@ mod tests {
     fn reports_blocked_routes() {
         let mut map = HexMap::new(5, 5);
         for y in 0..5 {
-            map.hex_mut(2, y).unwrap().terrain = Terrain::Wall { height: 2 };
+            *map.hex_mut(2, y).unwrap() = WALL;
         }
         let blocked = find_path(
             &map,
             (0, 0),
             |hex| hex == (4, 4),
             |_| 0,
-            |_, to| (!map.hex(to.0, to.1)?.terrain.is_structure()).then_some(1),
+            |_, to| (!map.hex(to.0, to.1)?.has_standing_structure()).then_some(1),
         );
         assert!(blocked.is_none());
     }

@@ -1,19 +1,25 @@
 //! GPU drawing of the hex map with a single fragment shader pass (`map.wgsl`).
 //!
-//! Each hex becomes one RGBA texel holding its layers (see [`hex_texel`]) in an integer
-//! texture, and the shader composes its look from them. The texture follows the document's [`HexFeed`], so an edit uploads only the rows it
-//! touched. The camera, brush and grid settings travel as a small uniform block every frame, so
-//! panning and zooming cost the same however large the map is.
+//! Each hex becomes one `Rgba16Uint` texel holding every one of its layers (see
+//! [`hex_texel`]), and the shader composes its look from them and a palette of layer colors
+//! (see [`palette_colors`]). The texture follows the document's [`HexFeed`], so an edit
+//! uploads only the rows it touched. The camera, brush and grid settings travel as a small
+//! uniform block every frame, so panning and zooming cost the same however large the map is.
 
 use iced::{
     Color, Rectangle, wgpu,
     widget::shader::{self, Viewport},
 };
-use stompymux_map::{DecorationKind, Ground, Hex, Structure, Terrain, Woods};
+use stompymux_map::{
+    Condition, ConstructionClass, DecorationKind, Flow, Foliage, Ground, Hex, Route, StructureKind,
+};
 
 use crate::{
-    document::{HexFeed, file_holds},
-    map_view::terrain_color,
+    document::HexFeed,
+    map_view::{
+        condition_color, foliage_color, ground_color, overlay_color, route_color,
+        structure_base_color, water_color,
+    },
 };
 
 /// Values the shader reads every frame; see `Uniforms` in `map.wgsl`.
@@ -50,62 +56,112 @@ impl Uniforms {
     }
 }
 
-/// Position of a terrain's color in the palette.
-fn palette_index(terrain: Terrain) -> u8 {
-    Terrain::ALL
-        .iter()
-        .position(|candidate| *candidate == terrain)
-        .expect("every terrain is in Terrain::ALL") as u8
+/// Where each layer's colors start in the palette, which `map.wgsl` names with the same
+/// constants (`FOLIAGE`, `ROUTE` and so on). Each block lists its layer's values in that
+/// layer's `ALL` order: [`Ground::ALL`], [`Foliage::ALL`], [`Route::ALL`], the one water color,
+/// [`Condition::ALL`], [`StructureKind::ALL`] (light construction; the shader darkens stronger
+/// classes), then fire and smoke. The label ink threshold follows in the red channel of
+/// [`PALETTE_INK`].
+pub const PALETTE_GROUND: usize = 0;
+pub const PALETTE_FOLIAGE: usize = PALETTE_GROUND + Ground::ALL.len();
+pub const PALETTE_ROUTE: usize = PALETTE_FOLIAGE + Foliage::ALL.len();
+pub const PALETTE_WATER: usize = PALETTE_ROUTE + Route::ALL.len();
+pub const PALETTE_CONDITION: usize = PALETTE_WATER + 1;
+pub const PALETTE_STRUCTURE: usize = PALETTE_CONDITION + Condition::ALL.len();
+pub const PALETTE_OVERLAY: usize = PALETTE_STRUCTURE + StructureKind::ALL.len();
+pub const PALETTE_INK: usize = PALETTE_OVERLAY + 2;
+/// Palette entries, the ink threshold included.
+pub const PALETTE_LEN: usize = PALETTE_INK + 1;
+
+/// Every layer color, in palette order; see [`PALETTE_GROUND`].
+pub fn palette_colors() -> [Color; PALETTE_INK] {
+    let mut colors = [Color::BLACK; PALETTE_INK];
+    let mut fill = |start: usize, layer: &mut dyn Iterator<Item = Color>| {
+        for (offset, color) in layer.enumerate() {
+            colors[start + offset] = color;
+        }
+    };
+    fill(
+        PALETTE_GROUND,
+        &mut Ground::ALL.into_iter().map(ground_color),
+    );
+    fill(
+        PALETTE_FOLIAGE,
+        &mut Foliage::ALL.into_iter().map(foliage_color),
+    );
+    fill(PALETTE_ROUTE, &mut Route::ALL.into_iter().map(route_color));
+    fill(PALETTE_WATER, &mut [water_color()].into_iter());
+    fill(
+        PALETTE_CONDITION,
+        &mut Condition::ALL.into_iter().map(condition_color),
+    );
+    fill(
+        PALETTE_STRUCTURE,
+        &mut StructureKind::ALL.into_iter().map(structure_base_color),
+    );
+    fill(
+        PALETTE_OVERLAY,
+        &mut [DecorationKind::Fire, DecorationKind::Smoke]
+            .into_iter()
+            .map(overlay_color),
+    );
+    colors
 }
 
-/// A hex's layers packed for `map.wgsl`:
+/// Position of `value` in a layer's `ALL` list.
+fn position<T: PartialEq>(all: &[T], value: T) -> u16 {
+    all.iter()
+        .position(|candidate| *candidate == value)
+        .expect("every layer value is in its ALL list") as u16
+}
+
+/// One plus the position of `value` in `all`, or zero for none.
+fn optional<T: PartialEq>(all: &[T], value: Option<T>) -> u16 {
+    value.map_or(0, |value| position(all, value) + 1)
+}
+
+/// Bytes in one hex texel: four `u16` channels.
+const TEXEL_BYTES: u32 = 8;
+
+/// A hex's layers packed for `map.wgsl`, one `u16` per channel:
 ///
-/// - red: ground as a palette index (bits 0-3), woods (bits 4-5: none, light, heavy) and
-///   overlay (bits 6-7: none, fire, smoke);
-/// - green: ground level;
-/// - blue: water depth plus one, or zero for none (bits 0-3), frozen (bit 4), and whether a
-///   map file cannot store the hex (bit 7);
-/// - alpha: structure (bits 6-7: none, building, wall, bridge) and its height or deck (bits 0-5).
-fn hex_texel(hex: Hex, storable: bool) -> [u8; 4] {
-    let ground = palette_index(match hex.ground() {
-        Ground::Clear => Terrain::Grassland,
-        Ground::Road => Terrain::Road,
-        Ground::Rough => Terrain::Rough,
-        Ground::Mountains => Terrain::Mountains,
-        Ground::Snow => Terrain::Snow,
-        Ground::Sand => Terrain::Sand,
-    });
-    let woods = match hex.woods() {
-        None => 0,
-        Some(Woods::Light) => 1,
-        Some(Woods::Heavy) => 2,
-    };
-    let overlay = match hex.overlay() {
-        None => 0,
-        Some(DecorationKind::Fire) => 1,
-        Some(DecorationKind::Smoke) => 2,
-    };
+/// - red: ground position in [`Ground::ALL`] (bits 0-3), then one plus the position in its
+///   `ALL` list, or zero for none, of foliage (bits 4-6), route (bits 7-9) and condition
+///   (bits 10-12), and the overlay (bits 13-14: none, fire, smoke);
+/// - green: ground level (bits 0-7), water depth plus one or zero for none (bits 8-11) and
+///   its flow (bits 12-13: still, rapids, torrent);
+/// - blue: one plus the structure kind or zero for none (bits 0-1), its construction class
+///   (bits 2-3) and its height or deck (bits 8-13);
+/// - alpha: the structure's construction factor.
+pub fn hex_texel(hex: Hex) -> [u16; 4] {
+    let ground = position(&Ground::ALL, hex.ground());
+    let foliage = optional(&Foliage::ALL, hex.foliage());
+    let route = optional(&Route::ALL, hex.route());
+    let condition = optional(&Condition::ALL, hex.condition());
+    let overlay = optional(
+        &[DecorationKind::Fire, DecorationKind::Smoke],
+        hex.overlay(),
+    );
     let water = hex.water().map_or(0, |water| {
-        (water.depth.min(14) + 1) | if water.frozen { 1 << 4 } else { 0 }
+        (u16::from(water.depth.min(14)) + 1) | position(&Flow::ALL, water.flow) << 4
     });
-    let structure = match hex.structure() {
-        None => 0,
-        Some(Structure::Building { height }) => (1 << 6) | height.min(63),
-        Some(Structure::Wall { height }) => (2 << 6) | height.min(63),
-        Some(Structure::Bridge { deck }) => (3 << 6) | deck.min(63),
-    };
+    let structure = hex.structure().map_or(0, |structure| {
+        (position(&StructureKind::ALL, structure.kind) + 1)
+            | position(&ConstructionClass::ALL, structure.class) << 2
+            | u16::from(structure.height.min(63)) << 8
+    });
+    let cf = hex.structure().map_or(0, |structure| structure.cf);
     [
-        ground | woods << 4 | overlay << 6,
-        hex.level(),
-        water | if storable { 0 } else { 1 << 7 },
+        ground | foliage << 4 | route << 7 | condition << 10 | overlay << 13,
+        u16::from(hex.level()) | water << 8,
         structure,
+        cf,
     ]
 }
 
-/// `map.wgsl` names the palette entries it needs by their [`Terrain::ALL`] positions.
-/// Palette bytes: each terrain's color, then the luminance above which labels are drawn in
-/// black rather than white. Colors and the threshold are converted to linear when the target
-/// applies sRGB encoding itself, so they match the swatches iced draws.
+/// Palette bytes: each color of [`palette_colors`], then the luminance above which labels are
+/// drawn in black rather than white. Colors and the threshold are converted to linear when the
+/// target applies sRGB encoding itself, so they match the swatches iced draws.
 fn palette_bytes(srgb_target: bool) -> Vec<u8> {
     let channels = |color: Color| {
         if srgb_target {
@@ -115,15 +171,14 @@ fn palette_bytes(srgb_target: bool) -> Vec<u8> {
         }
     };
     let threshold = channels(Color::from_rgb(0.55, 0.55, 0.55))[0];
-    Terrain::ALL
+    let mut bytes = Vec::with_capacity(PALETTE_LEN * 16);
+    let entries = palette_colors()
         .into_iter()
-        .map(|terrain| channels(terrain_color(terrain)))
-        .chain([[threshold, 0.0, 0.0, 0.0]])
-        .flatten()
-        .flat_map(f32::to_ne_bytes)
-        .collect()
+        .map(channels)
+        .chain([[threshold, 0.0, 0.0, 0.0]]);
+    bytes.extend(entries.flatten().flat_map(f32::to_ne_bytes));
+    bytes
 }
-
 /// One frame of the map: where to read the hexes and their changes, and the uniforms.
 #[derive(Debug)]
 pub struct MapPrimitive {
@@ -277,7 +332,7 @@ impl MapPipeline {
             mip_level_count: 1,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
-            format: wgpu::TextureFormat::Rgba8Uint,
+            format: wgpu::TextureFormat::Rgba16Uint,
             usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
             view_formats: &[],
         });
@@ -342,19 +397,11 @@ impl shader::Primitive for MapPrimitive {
                 *first as usize / width..*last as usize / width + 1
             }
         };
-        // Neighboring hexes are usually identical, so reuse the last storability answer
-        // rather than asking the shared memo for every hex.
-        let mut last: Option<(Hex, bool)> = None;
         let texels: Vec<u8> = hexes[rows.start * width..rows.end * width]
             .iter()
-            .flat_map(|&hex| {
-                let storable = match last {
-                    Some((previous, storable)) if previous == hex => storable,
-                    _ => file_holds(hex),
-                };
-                last = Some((hex, storable));
-                hex_texel(hex, storable)
-            })
+            .copied()
+            .flat_map(hex_texel)
+            .flat_map(u16::to_ne_bytes)
             .collect();
         queue.write_texture(
             wgpu::TexelCopyTextureInfo {
@@ -370,7 +417,7 @@ impl shader::Primitive for MapPrimitive {
             &texels,
             wgpu::TexelCopyBufferLayout {
                 offset: 0,
-                bytes_per_row: Some(width as u32 * 4),
+                bytes_per_row: Some(width as u32 * TEXEL_BYTES),
                 rows_per_image: Some(rows.len() as u32),
             },
             wgpu::Extent3d {
@@ -399,8 +446,6 @@ mod tests {
     use super::*;
     use crate::document::Document;
 
-    /// Palette entries: one color per terrain, then the label ink threshold.
-    const PALETTE_LEN: usize = Terrain::ALL.len() + 1;
     use iced::{
         Size,
         widget::shader::{Pipeline, Primitive},
@@ -410,7 +455,7 @@ mod tests {
         pin::pin,
         task::{Context, Poll, Waker},
     };
-    use stompymux_map::HexCoordinate;
+    use stompymux_map::{HexCoordinate, Structure, Terrain, Water};
 
     /// Drive a wgpu future to completion; native wgpu resolves them without a reactor.
     fn block_on<T>(future: impl Future<Output = T>) -> T {
@@ -575,49 +620,113 @@ mod tests {
         assert_eq!(actual[3], 255, "{x},{y}");
     }
 
-    /// Paint the hex the compact notation describes at a coordinate, as one stroke.
+    /// Texels pack each layer where `map.wgsl` reads it.
+    #[test]
+    fn texels_pack_every_layer() {
+        let hex = Hex::at_level(30)
+            .with_ground(Ground::Rough)
+            .with_foliage(Some(Foliage::HeavyJungle))
+            .with_route(Some(Route::DirtRoad))
+            .with_condition(Some(Condition::Mud))
+            .with_overlay(Some(DecorationKind::Smoke));
+        assert_eq!(
+            hex_texel(hex),
+            [2 | 5 << 4 | 3 << 7 | 4 << 10 | 2 << 13, 30, 0, 0]
+        );
+        let torrent = Hex::at_level(4)
+            .with_water(Some(Water {
+                depth: 9,
+                flow: Flow::Torrent,
+            }))
+            .with_condition(Some(Condition::Ice))
+            .with_structure(Some(Structure::new(
+                StructureKind::Bridge,
+                3,
+                ConstructionClass::Hardened,
+            )));
+        assert_eq!(
+            hex_texel(torrent),
+            [1 << 10, 4 | (10 | 2 << 4) << 8, 3 | 3 << 2 | 3 << 8, 150]
+        );
+        let wall = Hex::new(Terrain::Wall, 35);
+        assert_eq!(hex_texel(wall)[2], 2 | 1 << 2 | 35 << 8);
+        assert_eq!(hex_texel(wall)[3], 40);
+        let fire = Hex::at_level(0)
+            .with_ground(Ground::HeavyIndustrial)
+            .with_overlay(Some(DecorationKind::Fire));
+        assert_eq!(hex_texel(fire)[0], 11 | 1 << 13);
+    }
+
+    /// The palette holds one color per layer value, the shader's palette constants match
+    /// render.rs, and no two layer colors are alike.
+    #[test]
+    fn palette_matches_the_shader() {
+        let shader = include_str!("map.wgsl");
+        for (name, value) in [
+            ("GROUND", PALETTE_GROUND),
+            ("FOLIAGE", PALETTE_FOLIAGE),
+            ("ROUTE", PALETTE_ROUTE),
+            ("WATER", PALETTE_WATER),
+            ("CONDITION", PALETTE_CONDITION),
+            ("STRUCTURE", PALETTE_STRUCTURE),
+            ("OVERLAY", PALETTE_OVERLAY),
+            ("INK_THRESHOLD", PALETTE_INK),
+        ] {
+            let declaration = format!("const {name}: u32 = {value}u;");
+            assert!(
+                shader.contains(&declaration),
+                "map.wgsl lacks {declaration}"
+            );
+        }
+        for (name, value) in [
+            (
+                "PLANTED_FIELDS",
+                position(&Foliage::ALL, Foliage::PlantedFields),
+            ),
+            ("RAIL", position(&Route::ALL, Route::Rail)),
+            ("ICE", position(&Condition::ALL, Condition::Ice)),
+            ("THIN_SNOW", position(&Condition::ALL, Condition::ThinSnow)),
+            ("DEEP_SNOW", position(&Condition::ALL, Condition::DeepSnow)),
+            ("MUD", position(&Condition::ALL, Condition::Mud)),
+            (
+                "BRIDGE",
+                position(&StructureKind::ALL, StructureKind::Bridge),
+            ),
+            ("RAPIDS", position(&Flow::ALL, Flow::Rapids)),
+            ("TORRENT", position(&Flow::ALL, Flow::Torrent)),
+        ] {
+            let declaration = format!("const {name}: u32 = {value}u;");
+            assert!(
+                shader.contains(&declaration),
+                "map.wgsl lacks {declaration}"
+            );
+        }
+        assert!(shader.contains(&format!("array<vec4<f32>, {PALETTE_LEN}>")));
+        assert!(shader.contains(&format!(
+            "const CLASS_SHADE: f32 = {};",
+            crate::map_view::CLASS_SHADE
+        )));
+        let colors = palette_colors();
+        assert_eq!(colors.len() + 1, PALETTE_LEN);
+        assert_eq!(palette_bytes(false).len(), PALETTE_LEN * 16);
+        for (index, a) in colors.iter().enumerate() {
+            for b in &colors[index + 1..] {
+                let distance = (a.r - b.r).abs() + (a.g - b.g).abs() + (a.b - b.b).abs();
+                assert!(distance > 0.08, "{a:?} and {b:?} look alike");
+            }
+        }
+    }
+
+    /// Paint the hex at a coordinate, as one stroke.
     fn put(document: &mut Document, x: i32, y: i32, hex: Hex) {
         document.paint_with(HexCoordinate { x, y }, 0, |_| hex);
         document.end_stroke();
     }
 
-    /// Texels pack each layer where `map.wgsl` reads it, and the shader's palette positions
-    /// match `Terrain::ALL`.
-    #[test]
-    fn texels_and_palette_match_the_shader() {
-        for (terrain, position) in [
-            (Terrain::LightForest, 2),
-            (Terrain::HeavyForest, 3),
-            (Terrain::Water, 4),
-            (Terrain::Ice, 5),
-            (Terrain::Bridge, 6),
-            (Terrain::Fire, 9),
-            (Terrain::Smoke, 10),
-            (Terrain::Building, 12),
-            (Terrain::Wall, 13),
-        ] {
-            assert_eq!(palette_index(terrain), position, "{terrain:?}");
-        }
-        assert_eq!(palette_bytes(false).len(), PALETTE_LEN * 16);
-        let rough = palette_index(Terrain::Rough);
-        let hex = Hex::new(Terrain::Rough, 30)
-            .with_woods(Some(Woods::Heavy))
-            .with_overlay(Some(DecorationKind::Smoke));
-        assert_eq!(
-            hex_texel(hex, false),
-            [rough | 2 << 4 | 2 << 6, 30, 1 << 7, 0]
-        );
-        let ice = Hex::new(Terrain::Ice, 9).with_level(4);
-        assert_eq!(hex_texel(ice, true), [0, 4, 10 | 1 << 4, 0]);
-        let bridge = Hex::new(Terrain::Bridge, 3);
-        assert_eq!(hex_texel(bridge, true)[3], 3 << 6 | 3);
-        let wall = Hex::new(Terrain::Wall, 35);
-        assert_eq!(hex_texel(wall, true)[3], 2 << 6 | 35);
-    }
-
-    /// Hexes render in their palette colors, higher ground is lighter, unsavable hexes are
-    /// hatched, off-map pixels stay transparent, and an edit after the first upload reaches
-    /// the screen through a partial upload. Skipped on machines without a graphics adapter.
+    /// Hexes render in their layers' palette colors, stronger structures are darker, higher
+    /// ground is lighter, flowing water is streaked, off-map pixels stay transparent, and an
+    /// edit after the first upload reaches the screen through a partial upload. Skipped on
+    /// machines without a graphics adapter.
     #[test]
     fn shader_draws_layers_and_follows_edits() {
         let Some((device, queue)) = device() else {
@@ -627,13 +736,30 @@ mod tests {
         let size = Size::new(128, 128);
         let mut pipeline = MapPipeline::new(&device, &queue, FORMAT);
         let mut document = Document::new(3, 3).unwrap();
+        let light_building = Structure::new(StructureKind::Building, 4, ConstructionClass::Light);
+        let hardened_wall = Structure::new(StructureKind::Wall, 2, ConstructionClass::Hardened);
         put(&mut document, 0, 0, Hex::new(Terrain::Water, 0));
         put(&mut document, 1, 0, Hex::new(Terrain::Road, 0));
-        put(&mut document, 2, 1, Hex::new(Terrain::HeavyForest, 0));
-        put(&mut document, 1, 2, Hex::new(Terrain::Building, 4));
+        put(&mut document, 2, 1, Hex::new(Terrain::HeavyWoods, 0));
+        put(
+            &mut document,
+            1,
+            2,
+            Hex::at_level(0).with_structure(Some(light_building)),
+        );
         put(&mut document, 2, 2, Hex::at_level(20));
-        let woods_on_rough = Hex::new(Terrain::Rough, 0).with_woods(Some(Woods::Light));
-        put(&mut document, 2, 0, woods_on_rough);
+        put(
+            &mut document,
+            2,
+            0,
+            Hex::at_level(0).with_structure(Some(hardened_wall)),
+        );
+        put(
+            &mut document,
+            1,
+            1,
+            Hex::at_level(0).with_ground(Ground::Magma),
+        );
         let pixels = render(
             &device,
             &queue,
@@ -641,32 +767,41 @@ mod tests {
             &frame(&document, size),
             size,
         );
-        assert_color(&pixels, size, 0, 0, terrain_color(Terrain::Water));
-        assert_color(&pixels, size, 1, 0, terrain_color(Terrain::Road));
-        assert_color(&pixels, size, 2, 1, terrain_color(Terrain::HeavyForest));
-        assert_color(&pixels, size, 1, 2, terrain_color(Terrain::Building));
-        assert_color(&pixels, size, 0, 1, terrain_color(Terrain::Grassland));
+        assert_color(&pixels, size, 0, 0, water_color());
+        assert_color(&pixels, size, 1, 0, route_color(Route::PavedRoad));
+        assert_color(&pixels, size, 2, 1, foliage_color(Foliage::HeavyWoods));
+        assert_color(
+            &pixels,
+            size,
+            1,
+            2,
+            structure_base_color(StructureKind::Building),
+        );
+        assert_color(
+            &pixels,
+            size,
+            2,
+            0,
+            crate::map_view::structure_color(StructureKind::Wall, ConstructionClass::Hardened),
+        );
+        assert_color(&pixels, size, 0, 1, ground_color(Ground::Clear));
+        assert_color(&pixels, size, 1, 1, ground_color(Ground::Magma));
         let low = center_pixel(&pixels, size, 0, 1);
         let high = center_pixel(&pixels, size, 2, 2);
         assert!(
             (0..3).all(|channel| high[channel] > low[channel]),
             "{high:?} vs {low:?}"
         );
-        let hatched = (0..12).any(|step| {
-            let x = OFFSET[0] + RADIUS * 4.0 + step as f32 - 6.0;
-            let y = OFFSET[1] + RADIUS * 3.0_f32.sqrt();
-            let index = ((y as u32 * size.width + x as u32) * 4) as usize;
-            pixels[index] > 150 && pixels[index + 1] < 80
-        });
-        assert!(
-            hatched,
-            "woods on rough ground should be hatched as unsavable"
-        );
         assert_eq!(pixels[..4], [0, 0, 0, 0]);
         assert_eq!(pixels[pixels.len() - 4..], [0, 0, 0, 0]);
 
         let applied = pipeline.hexes.as_ref().unwrap().applied;
-        put(&mut document, 0, 1, Hex::new(Terrain::Snow, 0));
+        let torrent = Hex::at_level(0).with_water(Some(Water {
+            depth: 2,
+            flow: Flow::Torrent,
+        }));
+        put(&mut document, 0, 1, torrent);
+        put(&mut document, 0, 0, Hex::new(Terrain::DeepSnow, 0));
         let pixels = render(
             &device,
             &queue,
@@ -674,9 +809,33 @@ mod tests {
             &frame(&document, size),
             size,
         );
-        assert_eq!(pipeline.hexes.as_ref().unwrap().applied, applied + 1);
-        assert_color(&pixels, size, 0, 1, terrain_color(Terrain::Snow));
-        assert_color(&pixels, size, 1, 0, terrain_color(Terrain::Road));
+        assert_eq!(pipeline.hexes.as_ref().unwrap().applied, applied + 2);
+        let still = {
+            let water = water_color();
+            let shade = 1.0 - 0.08 * 2.0;
+            Color::from_rgb(water.r * shade, water.g * shade, water.b * shade)
+        };
+        let streaked = center_pixel(&pixels, size, 0, 1);
+        assert!(
+            (0..3).all(|channel| f32::from(streaked[channel])
+                > [still.r, still.g, still.b][channel] * 255.0 + 20.0),
+            "torrent streak missing: {streaked:?}"
+        );
+        let snow = condition_color(Condition::DeepSnow);
+        let clear = ground_color(Ground::Clear);
+        let mix = |a: f32, b: f32| a + (b - a) * 0.85;
+        assert_color(
+            &pixels,
+            size,
+            0,
+            0,
+            Color::from_rgb(
+                mix(clear.r, snow.r),
+                mix(clear.g, snow.g),
+                mix(clear.b, snow.b),
+            ),
+        );
+        assert_color(&pixels, size, 1, 0, route_color(Route::PavedRoad));
     }
 
     /// Hex radius and frame size for the label tests, large enough for the small row digits.

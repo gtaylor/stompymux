@@ -96,7 +96,7 @@ mod tests {
     #[test]
     fn radar_surface_clearance() {
         for (terrain, elevation, expected) in [
-            (Terrain::Grassland, 5, 1),
+            (Terrain::Clear, 5, 1),
             (Terrain::Water, 5, 9),
             (Terrain::Ice, 5, 5),
             (Terrain::Ice, -2, 2),

@@ -2,10 +2,11 @@
 //!
 //! `mappy [MAP_DIR]` edits the `.toml` map files in `MAP_DIR` (default `game/maps`). The File
 //! menu creates maps, opens them from that directory and saves them back into it. The toolbar
-//! picks a brush, which paints one layer: elevation, terrain, overlays (woods, snow and ice),
-//! structures, or fire and smoke. The left mouse button paints; Alt+click picks up a hex's
-//! layers into every brush. Scrolling, right or middle drag and the arrow keys pan;
-//! Shift+scroll pans sideways and Ctrl+scroll zooms. Maps are read and written by the game's
+//! picks a brush, which paints one layer: elevation, terrain (ground or water), foliage,
+//! routes, structures, or conditions (weather, or fire and smoke). The Options dialog sets the
+//! map's rule flags, gravity, temperature, light, visibility and wind. The left mouse button
+//! paints; Alt+click picks up a hex's layers into every brush. Scrolling, right or middle drag
+//! and the arrow keys pan; Shift+scroll pans sideways and Ctrl+scroll zooms. Maps are read and written by the game's
 //! own map file code in `stompymux-map`, so whatever Mappy saves loads the same in the server.
 mod brush_panel;
 mod document;
@@ -18,10 +19,10 @@ use iced::{
     Alignment, Color, Element, Fill, Point, Size, Subscription, Task, Theme, Vector, keyboard,
     widget::{
         button, center, checkbox, column, container, mouse_area, opaque, operation, row, rule,
-        scrollable, shader, space, stack, text, text_input,
+        scrollable, shader, slider, space, stack, text, text_input,
     },
 };
-use stompymux_map::{DecorationKind, Ground, Hex, HexCoordinate, MapFlag, Structure, Woods};
+use stompymux_map::{Hex, HexCoordinate, Light, MAX_VISIBILITY, MapFlag, StructureKind, Wind};
 
 use brush_panel::{BrushEdit, BrushMode, BrushPanel};
 use document::{Document, MapSettings};
@@ -81,10 +82,11 @@ pub enum Message {
     Save,
     /// Save under the name in the Save As dialog.
     SaveAs,
-    GravityChanged(String),
-    TemperatureChanged(String),
-    ApplyConditions,
-    ToggleFlag(MapFlag, bool),
+    /// Replace the map's settings as one undoable edit.
+    SetSettings(MapSettings),
+    /// Replace the map's settings as part of a slider drag, which `StrokeEnded` closes into
+    /// one undoable edit.
+    DragSettings(MapSettings),
 }
 
 /// A modal dialog opened from the File menu or the toolbar.
@@ -93,7 +95,7 @@ pub enum Dialog {
     New,
     Open,
     SaveAs,
-    /// The map's flags, which apply as they are toggled.
+    /// The map's settings, which apply as they change.
     Options,
 }
 
@@ -125,8 +127,6 @@ struct Mappy {
     new_width: String,
     new_height: String,
     save_name: String,
-    gravity: String,
-    temperature: String,
     /// Result of the last file operation.
     status: String,
 }
@@ -149,12 +149,9 @@ impl Mappy {
             new_width: "30".into(),
             new_height: "30".into(),
             save_name: String::new(),
-            gravity: String::new(),
-            temperature: String::new(),
             status: String::new(),
         };
         mappy.refresh_list();
-        mappy.sync_conditions();
         mappy
     }
 
@@ -198,14 +195,8 @@ impl Mappy {
             }
             Message::Fit => self.fit(),
             Message::Brush(edit) => self.brush.edit(edit),
-            Message::Undo => {
-                self.document.undo();
-                self.sync_conditions();
-            }
-            Message::Redo => {
-                self.document.redo();
-                self.sync_conditions();
-            }
+            Message::Undo => self.document.undo(),
+            Message::Redo => self.document.redo(),
             Message::ToggleFileMenu => self.file_menu_open = !self.file_menu_open,
             Message::CloseMenu => self.file_menu_open = false,
             Message::ShowDialog(dialog) => return self.show_dialog(dialog),
@@ -243,29 +234,8 @@ impl Mappy {
                 let result = self.save_as();
                 self.finish_dialog(result);
             }
-            Message::GravityChanged(value) => self.gravity = value,
-            Message::TemperatureChanged(value) => self.temperature = value,
-            Message::ApplyConditions => {
-                let (Ok(gravity), Ok(temperature)) = (
-                    self.gravity.trim().parse::<u8>(),
-                    self.temperature.trim().parse::<i8>(),
-                ) else {
-                    self.status = "Gravity must be 0-255 and temperature -128 to 127".into();
-                    self.sync_conditions();
-                    return Task::none();
-                };
-                self.document.set_settings(MapSettings {
-                    gravity,
-                    temperature,
-                    ..self.document.settings()
-                });
-            }
-            Message::ToggleFlag(flag, enabled) => {
-                let settings = self.document.settings();
-                let flags = flag.apply(i64::from(settings.flags), enabled) as i32;
-                self.document
-                    .set_settings(MapSettings { flags, ..settings });
-            }
+            Message::SetSettings(settings) => self.document.set_settings(settings),
+            Message::DragSettings(settings) => self.document.drag_settings(settings),
         }
         Task::none()
     }
@@ -342,15 +312,7 @@ impl Mappy {
     fn replace_document(&mut self, document: Document) {
         self.document = document;
         self.hover = None;
-        self.sync_conditions();
         self.frame_new_map();
-    }
-
-    /// Reset the gravity and temperature inputs to the map's values.
-    fn sync_conditions(&mut self) {
-        let settings = self.document.settings();
-        self.gravity = settings.gravity.to_string();
-        self.temperature = settings.temperature.to_string();
     }
 
     /// Reread the map directory's file names.
@@ -539,9 +501,11 @@ impl Mappy {
                     .color(Color::from_rgb(1.0, 0.45, 0.4)),
             );
         }
+        // The Options dialog's labelled sliders and light buttons need more room.
+        let width = if dialog == Dialog::Options { 560 } else { 440 };
         container(content.push(buttons))
             .padding(16)
-            .width(440)
+            .width(width)
             .style(container::bordered_box)
             .into()
     }
@@ -614,18 +578,129 @@ impl Mappy {
         .into()
     }
 
+    /// The map's settings, each change applied as one undoable edit; a slider drag undoes as
+    /// one edit when it is released.
     fn options_dialog(&self) -> Element<'_, Message> {
-        let flags = i64::from(self.document.settings().flags);
+        let settings = self.document.settings();
+        let flags = i64::from(settings.flags);
         let flags = MapFlag::ALL.into_iter().map(|flag| {
             checkbox(flag.is_set(flags))
                 .label(flag.name())
                 .text_size(13)
-                .on_toggle(move |enabled| Message::ToggleFlag(flag, enabled))
+                .on_toggle(move |enabled| {
+                    let flags = flag.apply(flags, enabled) as i32;
+                    Message::SetSettings(MapSettings { flags, ..settings })
+                })
                 .into()
         });
-        column![heading("Flags"), column(flags).spacing(6)]
-            .spacing(8)
-            .into()
+        let drag = move |change: MapSettings| Message::DragSettings(change);
+        let gravity = slider(0..=u8::MAX, settings.gravity, move |gravity| {
+            drag(MapSettings {
+                gravity,
+                ..settings
+            })
+        })
+        .on_release(Message::StrokeEnded);
+        let temperature = slider(
+            i16::from(i8::MIN)..=i16::from(i8::MAX),
+            i16::from(settings.temperature),
+            move |temperature| {
+                let temperature = i8::try_from(temperature).unwrap_or(settings.temperature);
+                drag(MapSettings {
+                    temperature,
+                    ..settings
+                })
+            },
+        )
+        .on_release(Message::StrokeEnded);
+        let lights = [
+            None,
+            Some(Light::Day),
+            Some(Light::Twilight),
+            Some(Light::Night),
+        ];
+        let lights = lights.into_iter().map(|light| {
+            button(text(light_label(light)).size(13))
+                .style(if settings.light == light {
+                    button::primary
+                } else {
+                    button::secondary
+                })
+                .on_press(Message::SetSettings(MapSettings { light, ..settings }))
+                .into()
+        });
+        let mut environment = column![
+            setting(format!("Gravity {}%", settings.gravity), gravity),
+            setting(
+                format!("Temperature {} °C", settings.temperature),
+                temperature
+            ),
+            row![
+                text("Light").size(13).width(SETTING_LABEL_WIDTH),
+                row(lights).spacing(4)
+            ]
+            .align_y(Alignment::Center),
+            checkbox(settings.visibility.is_some())
+                .label("Set visibility (otherwise keep the live map's)")
+                .text_size(13)
+                .on_toggle(move |set| Message::SetSettings(MapSettings {
+                    visibility: set.then_some(MAX_VISIBILITY),
+                    ..settings
+                })),
+        ]
+        .spacing(8);
+        if let Some(visibility) = settings.visibility {
+            let control = slider(0..=MAX_VISIBILITY, visibility, move |visibility| {
+                drag(MapSettings {
+                    visibility: Some(visibility),
+                    ..settings
+                })
+            })
+            .on_release(Message::StrokeEnded);
+            environment =
+                environment.push(setting(format!("Visibility {visibility} hexes"), control));
+        }
+        environment = environment.push(
+            checkbox(settings.wind.is_some())
+                .label("Set wind (otherwise keep the live map's)")
+                .text_size(13)
+                .on_toggle(move |set| {
+                    Message::SetSettings(MapSettings {
+                        wind: set.then_some(Wind {
+                            direction: 0,
+                            speed: 0,
+                        }),
+                        ..settings
+                    })
+                }),
+        );
+        if let Some(wind) = settings.wind {
+            let direction = slider(0..=359_u16, wind.direction, move |direction| {
+                drag(MapSettings {
+                    wind: Some(Wind { direction, ..wind }),
+                    ..settings
+                })
+            })
+            .on_release(Message::StrokeEnded);
+            let speed = slider(0..=MAX_WIND_SPEED, wind.speed, move |speed| {
+                drag(MapSettings {
+                    wind: Some(Wind { speed, ..wind }),
+                    ..settings
+                })
+            })
+            .on_release(Message::StrokeEnded);
+            environment = environment
+                .push(setting(format!("Wind from {}°", wind.direction), direction))
+                .push(setting(format!("Wind speed {}", wind.speed), speed));
+        }
+        column![
+            heading("Environment"),
+            environment,
+            heading("Flags"),
+            column(flags).spacing(6)
+        ]
+        .spacing(8)
+        .into()
     }
 
     fn toolbar(&self) -> Element<'_, Message> {
@@ -658,42 +733,26 @@ impl Mappy {
     }
 
     fn inspector(&self) -> Element<'_, Message> {
-        let condition = |label, value: &str, on_input: fn(String) -> Message| {
-            row![
-                text(label).width(100),
-                text_input("", value)
-                    .on_input(on_input)
-                    .on_submit(Message::ApplyConditions)
-                    .width(Fill),
-            ]
-            .align_y(Alignment::Center)
+        let hovered = self.hover.and_then(|coordinate| {
+            let hex = self.document.hex(coordinate)?;
+            Some((coordinate, hex))
+        });
+        let hex_info: Element<'_, Message> = match hovered {
+            None => text("Hover over a hex to see its layers.").size(12).into(),
+            Some((coordinate, hex)) => column(
+                std::iter::once(format!("At {},{}", coordinate.x, coordinate.y))
+                    .chain(hex_layers(hex))
+                    .map(|line| text(line).size(12).into()),
+            )
+            .spacing(2)
+            .into(),
         };
-        let mut panel = column![];
-        let unsavable = self.document.unsavable().len();
-        if unsavable > 0 {
-            panel = panel.push(
-                text(format!(
-                    "{unsavable} hex(es), hatched red, can't be saved. A map file holds one of \
-                     ground, woods, water, building or wall per hex, and bridges only over water."
-                ))
-                .size(12)
-                .color(Color::from_rgb(1.0, 0.45, 0.4)),
-            );
-        }
-        let panel = panel
-            .push(self.brush.view().map(Message::Brush))
-            .push(heading("Environment"))
-            .push(condition(
-                "Gravity (%)",
-                &self.gravity,
-                Message::GravityChanged,
-            ))
-            .push(condition(
-                "Temperature",
-                &self.temperature,
-                Message::TemperatureChanged,
-            ))
-            .spacing(8);
+        let panel = column![
+            self.brush.view().map(Message::Brush),
+            heading("Hex"),
+            hex_info
+        ]
+        .spacing(8);
         scrollable(panel.padding(12)).width(320).height(Fill).into()
     }
 
@@ -701,23 +760,17 @@ impl Mappy {
         let map = &self.document.map;
         let hover = self.hover.and_then(|coordinate| {
             let hex = self.document.hex(coordinate)?;
-            let index = coordinate.y as usize * usize::from(map.width) + coordinate.x as usize;
-            let unsavable = if self.document.unsavable().contains(&index) {
-                " · can't be saved"
-            } else {
-                ""
-            };
             Some(format!(
-                "{},{}  {}{unsavable}",
+                "{},{}  {}",
                 coordinate.x,
                 coordinate.y,
-                describe(hex)
+                hex_layers(hex).join(" · ")
             ))
         });
         container(
             row![
                 text(format!("{}×{}", map.width, map.height)).width(90),
-                text(hover.unwrap_or_default()).width(520),
+                text(hover.unwrap_or_default()).width(620),
                 text(&self.status),
             ]
             .spacing(16),
@@ -727,38 +780,67 @@ impl Mappy {
     }
 }
 
-/// A hex's layers in words, for the hover readout.
-fn describe(hex: Hex) -> String {
-    let ground = match hex.ground() {
-        Ground::Clear => "clear",
-        Ground::Road => "road",
-        Ground::Rough => "rough",
-        Ground::Mountains => "mountains",
-        Ground::Snow => "snow",
-        Ground::Sand => "sand",
-    };
-    let mut parts = vec![format!("level {} {ground}", hex.level())];
-    match hex.woods() {
-        Some(Woods::Light) => parts.push("light woods".into()),
-        Some(Woods::Heavy) => parts.push("heavy woods".into()),
-        None => {}
+/// A hex's layers in words, one per entry, for the hover readouts.
+fn hex_layers(hex: Hex) -> Vec<String> {
+    let mut layers = vec![format!("Level {}", hex.level())];
+    match hex.water() {
+        Some(water) => layers.push(format!(
+            "Water {} deep, {}",
+            water.depth,
+            water.flow.label().to_lowercase()
+        )),
+        None => layers.push(hex.ground().label().to_owned()),
     }
-    if let Some(water) = hex.water() {
-        let kind = if water.frozen { "ice" } else { "water" };
-        parts.push(format!("{kind} depth {}", water.depth));
+    layers.extend(hex.foliage().map(|foliage| foliage.label().to_owned()));
+    layers.extend(hex.route().map(|route| route.label().to_owned()));
+    if let Some(structure) = hex.structure() {
+        let height = match structure.kind {
+            StructureKind::Bridge => "deck",
+            StructureKind::Building | StructureKind::Wall => "height",
+        };
+        layers.push(format!(
+            "{} {}, {height} {}, CF {}",
+            structure.class.label(),
+            structure.kind.label().to_lowercase(),
+            structure.height,
+            structure.cf
+        ));
     }
-    match hex.structure() {
-        Some(Structure::Building { height }) => parts.push(format!("building {height}")),
-        Some(Structure::Wall { height }) => parts.push(format!("wall {height}")),
-        Some(Structure::Bridge { deck }) => parts.push(format!("bridge deck {deck}")),
-        None => {}
+    layers.extend(
+        hex.condition()
+            .map(|condition| condition.label().to_owned()),
+    );
+    layers.extend(
+        hex.overlay()
+            .map(|overlay| overlay.terrain().label().to_owned()),
+    );
+    layers
+}
+
+/// The Options dialog's name for a light setting.
+fn light_label(light: Option<Light>) -> &'static str {
+    match light {
+        None => "Keep current",
+        Some(Light::Day) => "Day",
+        Some(Light::Twilight) => "Twilight",
+        Some(Light::Night) => "Night",
     }
-    match hex.overlay() {
-        Some(DecorationKind::Fire) => parts.push("fire".into()),
-        Some(DecorationKind::Smoke) => parts.push("smoke".into()),
-        None => {}
-    }
-    parts.join(" · ")
+}
+
+/// Width of the labels beside the Options dialog's controls.
+const SETTING_LABEL_WIDTH: f32 = 150.0;
+
+/// The fastest wind the Options dialog's slider sets.
+const MAX_WIND_SPEED: u16 = 100;
+
+/// A labelled control in the Options dialog.
+fn setting<'a>(label: String, control: impl Into<Element<'a, Message>>) -> Element<'a, Message> {
+    row![
+        text(label).size(13).width(SETTING_LABEL_WIDTH),
+        control.into()
+    ]
+    .align_y(Alignment::Center)
+    .into()
 }
 
 /// A dimmed backdrop that blocks the editor and centres `content`, closing the dialog when it
@@ -783,9 +865,10 @@ fn heading(label: &str) -> Element<'_, Message> {
 }
 
 /// Keyboard shortcuts: Ctrl+Z/Ctrl+Shift+Z/Ctrl+Y for history, Ctrl+N, Ctrl+O, Ctrl+S and
-/// Ctrl+Shift+S for the File menu, Escape to close the menu, E, T, O, S and C for the
-/// Elevation, Terrain, Overlays, Structures and Conditions brushes, digits for the elevation
-/// level, `[` and `]` for brush size, F to fit and the arrow keys (faster with Shift) to pan.
+/// Ctrl+Shift+S for the File menu, Escape to close the menu, E, T, F, R, S and C for the
+/// Elevation, Terrain, Foliage, Routes, Structures and Conditions brushes, digits for the
+/// elevation level, `[` and `]` for brush size, Home to fit and the arrow keys (faster with
+/// Shift) to pan.
 /// Keys typed into text inputs are not seen.
 fn key_binding(event: keyboard::Event) -> Option<Message> {
     let keyboard::Event::KeyPressed { key, modifiers, .. } = event else {
@@ -799,6 +882,7 @@ fn key_binding(event: keyboard::Event) -> Option<Message> {
             // The map moves opposite to the arrow, so the view travels in its direction.
             let pan = match named {
                 Named::Escape => return Some(Message::Escape),
+                Named::Home => return Some(Message::Fit),
                 Named::ArrowLeft => Vector::new(step, 0.0),
                 Named::ArrowRight => Vector::new(-step, 0.0),
                 Named::ArrowUp => Vector::new(0.0, step),
@@ -822,10 +906,10 @@ fn key_binding(event: keyboard::Event) -> Option<Message> {
         };
     }
     match character.as_str() {
-        "f" => Some(Message::Fit),
         "e" => Some(Message::Brush(BrushEdit::Mode(BrushMode::Elevation))),
         "t" => Some(Message::Brush(BrushEdit::Mode(BrushMode::Terrain))),
-        "o" => Some(Message::Brush(BrushEdit::Mode(BrushMode::Overlays))),
+        "f" => Some(Message::Brush(BrushEdit::Mode(BrushMode::Foliage))),
+        "r" => Some(Message::Brush(BrushEdit::Mode(BrushMode::Routes))),
         "s" => Some(Message::Brush(BrushEdit::Mode(BrushMode::Structures))),
         "c" => Some(Message::Brush(BrushEdit::Mode(BrushMode::Conditions))),
         "[" => Some(Message::Brush(BrushEdit::RadiusStep(-1))),

@@ -4,15 +4,24 @@
 //! ones) on the flattest dry ground near its requested position. The footprint is levelled
 //! and blended into the land around it, then filled by its layout. Streets that reach the
 //! footprint's edge become gates, which the road network links to.
+//!
+//! Streets are paved roads. Towns and larger, industrial estates and military bases pave
+//! their open lots as well. Buildings and walls are structures whose construction class
+//! suits the settlement: light cottages and medium town buildings, heavy downtown towers,
+//! industrial plants and military buildings, heavy walls, and hardened military walls. Ruins
+//! are damaged structures among rubble. Civilian settlements in farming biomes are ringed by
+//! planted fields.
 use crate::Params;
-use crate::map::{HexMap, Terrain};
+use crate::map::HexMap;
 use crate::noise::Noise;
 use crate::report::SettlementReport;
 use crate::rng::Rng;
 use crate::spec::{SettlementKind, SettlementLayout, SettlementSize, SettlementSpec};
-use crate::terrain::open_ground;
 use std::collections::VecDeque;
-use stompymux_map::{DecorationKind, HexCoordinate, Point};
+use stompymux_map::{
+    ConstructionClass, DecorationKind, Density, Foliage, Ground, Hex, HexCoordinate, Point, Route,
+    Structure, StructureKind,
+};
 
 /// A settlement as built, for routing roads and reporting.
 #[derive(Debug, Clone)]
@@ -61,7 +70,7 @@ enum Plot {
     Street,
     Building(u8),
     Wall(u8),
-    /// Collapsed buildings, walls or debris, laid as rough ground.
+    /// Collapsed buildings, walls or debris, laid as rubble ground.
     Rubble,
 }
 
@@ -190,7 +199,10 @@ fn build(
     if gates.is_empty() {
         gates.push(site);
     }
-    let (buildings, tallest) = apply(map, &footprint, &plots, params, kind, rng);
+    let (buildings, tallest) = apply(map, &footprint, &plots, params, kind, spec.size, rng);
+    if kind == SettlementKind::Civilian && params.profile.farmland {
+        plant_fields(map, site, scale.radius, &footprint, params.seed);
+    }
     Settlement {
         report: SettlementReport {
             name: name.clone(),
@@ -267,10 +279,10 @@ fn choose_site(
                     continue;
                 }
                 total += 1;
-                if hex.terrain.is_water() {
+                if hex.holds_water() {
                     wet += 1;
                 } else {
-                    levels.push(f64::from(hex.level));
+                    levels.push(f64::from(hex.level()));
                 }
             }
         }
@@ -365,8 +377,8 @@ fn membership(map: &HexMap, hexes: &[usize]) -> Vec<bool> {
 fn level_site(map: &mut HexMap, footprint: &[usize]) {
     let mut levels: Vec<u8> = footprint
         .iter()
-        .filter(|&&index| !map.hexes[index].terrain.is_water())
-        .map(|&index| map.hexes[index].level)
+        .filter(|&&index| !map.hexes[index].holds_water())
+        .map(|&index| map.hexes[index].level())
         .collect();
     if levels.is_empty() {
         return;
@@ -379,11 +391,12 @@ fn level_site(map: &mut HexMap, footprint: &[usize]) {
         ring[index] = 0;
         queue.push_back(index);
         let hex = &mut map.hexes[index];
-        hex.level = if hex.terrain.is_water() {
-            hex.level.min(target)
+        let level = if hex.holds_water() {
+            hex.level().min(target)
         } else {
             target
         };
+        *hex = hex.with_level(level);
     }
     while let Some(index) = queue.pop_front() {
         let distance = ring[index];
@@ -400,10 +413,11 @@ fn level_site(map: &mut HexMap, footprint: &[usize]) {
             queue.push_back(next);
             let slack = 2 * (distance + 1);
             let hex = &mut map.hexes[next];
-            if !hex.terrain.is_water() {
-                hex.level = hex
-                    .level
+            if !hex.holds_water() {
+                let level = hex
+                    .level()
                     .clamp(target.saturating_sub(slack), target.saturating_add(slack));
+                *hex = hex.with_level(level);
             }
         }
     }
@@ -553,7 +567,7 @@ fn scattered_plots(
         let slot = rng.index(footprint.len());
         let hex = map.coordinate(footprint[slot]);
         if plots[slot] != Plot::Open
-            || map.hexes[footprint[slot]].terrain.is_water()
+            || map.hexes[footprint[slot]].holds_water()
             || placed.iter().any(|&other| HexMap::distance(hex, other) < 2)
         {
             continue;
@@ -680,47 +694,142 @@ fn ruin(plots: &mut [Plot], keep: &[usize], rng: &mut Rng) {
     }
 }
 
+/// The construction class of a building `height` levels tall in a settlement of `kind` and
+/// `size`: light cottages, medium town buildings and heavy towers, heavy industrial plants
+/// and military buildings.
+fn building_class(kind: SettlementKind, size: SettlementSize, height: u8) -> ConstructionClass {
+    match kind {
+        SettlementKind::Military => ConstructionClass::Heavy,
+        SettlementKind::Industrial if height >= 3 => ConstructionClass::Heavy,
+        SettlementKind::Industrial => ConstructionClass::Medium,
+        _ if height >= 8 => ConstructionClass::Heavy,
+        _ if height <= 2 && size <= SettlementSize::Village => ConstructionClass::Light,
+        _ => ConstructionClass::Medium,
+    }
+}
+
+/// A structure of `kind`, `height` and `class`; in ruins it has lost between a third and
+/// nine tenths of its construction factor.
+fn structure(
+    kind: StructureKind,
+    height: u8,
+    class: ConstructionClass,
+    ruined: bool,
+    rng: &mut Rng,
+) -> Structure {
+    let mut structure = Structure::new(kind, height, class);
+    if ruined {
+        let full = f64::from(structure.cf);
+        let left = full * (0.1 + 0.57 * rng.unit());
+        structure.cf = (left.round() as u16).clamp(1, structure.cf);
+    }
+    structure
+}
+
 /// Write the plots into the map, returning the number of buildings and the tallest. Streets
-/// over water become bridges; buildings and walls are not built on water.
+/// over water become bridges; buildings and walls are not built on water. Streets, buildings
+/// and walls are kept clear of snow, which still lies in yards and parks.
 fn apply(
     map: &mut HexMap,
     footprint: &[usize],
     plots: &[Plot],
     params: &Params,
     kind: SettlementKind,
+    size: SettlementSize,
     rng: &mut Rng,
 ) -> (usize, u8) {
     let (mut buildings, mut tallest) = (0, 0);
-    let open = open_ground(params.profile.ground);
+    let open = params.profile.ground;
+    let paved = size >= SettlementSize::Town
+        || matches!(kind, SettlementKind::Industrial | SettlementKind::Military);
+    let lot = if paved { Ground::Pavement } else { open };
+    let ruined = kind == SettlementKind::Ruins;
+    let wall_class = if kind == SettlementKind::Military {
+        ConstructionClass::Hardened
+    } else {
+        ConstructionClass::Heavy
+    };
+    let bridge_class = if paved {
+        ConstructionClass::Heavy
+    } else {
+        ConstructionClass::Medium
+    };
     for (&index, &plot) in footprint.iter().zip(plots) {
         let hex = &mut map.hexes[index];
-        if hex.terrain.is_water() {
-            if plot == Plot::Street {
-                hex.bridge = Some(1);
+        if hex.holds_water() {
+            if plot == Plot::Street && !hex.has_bridge() {
+                let bridge = Structure::new(StructureKind::Bridge, 1, bridge_class);
+                *hex = hex.with_structure(Some(bridge));
             }
             continue;
         }
-        hex.terrain = match plot {
-            Plot::Open => open,
+        let snow = hex.condition();
+        let base = Hex::at_level(hex.level());
+        *hex = match plot {
+            Plot::Open => base.with_ground(lot).with_condition(snow),
             Plot::Park => {
-                if rng.chance(0.6) {
-                    Terrain::LightWoods
-                } else {
-                    open
-                }
+                let trees = rng
+                    .chance(0.6)
+                    .then(|| params.profile.trees(Density::Light));
+                base.with_ground(open)
+                    .with_foliage(trees)
+                    .with_condition(snow)
             }
-            Plot::Street => Terrain::Road,
-            Plot::Rubble => Terrain::Rough,
-            Plot::Wall(height) => Terrain::Wall { height },
+            Plot::Street => base.with_ground(lot).with_route(Some(Route::PavedRoad)),
+            Plot::Rubble => base.with_ground(Ground::Rubble).with_condition(snow),
+            Plot::Wall(height) => base.with_ground(lot).with_structure(Some(structure(
+                StructureKind::Wall,
+                height,
+                wall_class,
+                ruined,
+                rng,
+            ))),
             Plot::Building(height) => {
                 buildings += 1;
                 tallest = tallest.max(height);
-                if kind == SettlementKind::Ruins && rng.chance(0.15) {
-                    hex.overlay = Some(DecorationKind::Smoke);
-                }
-                Terrain::Building { height }
+                let class = building_class(kind, size, height);
+                let smoke = (ruined && rng.chance(0.15)).then_some(DecorationKind::Smoke);
+                base.with_ground(lot)
+                    .with_structure(Some(structure(
+                        StructureKind::Building,
+                        height,
+                        class,
+                        ruined,
+                        rng,
+                    )))
+                    .with_overlay(smoke)
             }
         };
     }
     (buildings, tallest)
+}
+
+/// Ring a farming settlement with planted fields: blocky patches of crops on the bare, clear
+/// ground within a few hexes of its footprint.
+fn plant_fields(map: &mut HexMap, site: (i32, i32), radius: i32, footprint: &[usize], seed: u64) {
+    let fields = Noise::new(seed, "fields");
+    let inside = membership(map, footprint);
+    let reach = radius + 2 + radius / 3;
+    for y in site.1 - reach - 2..=site.1 + reach + 2 {
+        for x in site.0 - reach - 2..=site.0 + reach + 2 {
+            if !map.contains(x, y) || HexMap::distance(site, (x, y)) > reach + 1 {
+                continue;
+            }
+            let index = map.index(x, y);
+            let hex = map.hexes[index];
+            if inside[index]
+                || !hex.is_bare()
+                || hex.ground() != Ground::Clear
+                || hex.condition().is_some()
+                || hex.overlay().is_some()
+            {
+                continue;
+            }
+            let Point { x: cx, y: cy } = HexCoordinate { x, y }.center();
+            if fields.value((cx / 3.0).floor(), (cy / 3.0).floor()) < 0.45 {
+                continue;
+            }
+            map.hexes[index] = hex.with_foliage(Some(Foliage::PlantedFields));
+        }
+    }
 }

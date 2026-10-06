@@ -41,6 +41,18 @@ pub fn write_map(dir: &std::path::Path, name: &str, cells: &str) {
     std::fs::write(dir.join(format!("{name}.toml")), text).unwrap();
 }
 
+/// `asset` as a live map exports it: with the light, visibility and wind a new map starts
+/// with filled in where the asset leaves them unset.
+pub fn as_exported(mut asset: stompymux_rs::MapAsset) -> stompymux_rs::MapAsset {
+    asset.light.get_or_insert(stompymux_rs::Light::Day);
+    asset.visibility.get_or_insert(30);
+    asset.wind.get_or_insert(stompymux_rs::Wind {
+        direction: 0,
+        speed: 0,
+    });
+    asset
+}
+
 /// Rewrite one hex of serialized world state through [`stompymux_rs::Hex`].
 pub fn edit_hex(
     tile: &mut serde_json::Value,
@@ -84,7 +96,7 @@ pub fn fail_mine_ignition(world: &mut stompymux_rs::World, map: stompymux_rs::Ob
     let width = record["width"].as_u64().unwrap() as usize;
     set_hex_terrain(
         &mut record["terrain"][y * width],
-        stompymux_rs::Terrain::LightForest,
+        stompymux_rs::Terrain::LightWoods,
     );
     record["fire_dice"] = serde_json::Value::Null;
     world.btech = serde_json::from_value(state).unwrap();
