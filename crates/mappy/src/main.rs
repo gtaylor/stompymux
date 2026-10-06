@@ -1,10 +1,12 @@
 //! Mappy: a desktop viewer and editor for BattleTech map assets.
 //!
 //! `mappy [MAP_DIR]` edits the `.toml` map files in `MAP_DIR` (default `game/maps`). The File
-//! menu creates maps, opens them from that directory and saves them back into it. The toolbar
-//! picks a brush, which paints one layer: elevation, terrain (ground or water), foliage,
-//! routes, structures, or conditions (weather, or fire and smoke). The Options dialog sets the
-//! map's rule flags, gravity, temperature, light, visibility and wind. The left mouse button
+//! menu creates maps, opens them from that directory and saves them back into it, offering to
+//! save unsaved changes first, as closing the window does. The Map menu's Options dialog sets
+//! the map's rule flags, gravity, temperature, light, visibility and wind, and its Resize
+//! dialog changes the map's size at the chosen edges. The toolbar picks a brush, which paints
+//! one layer: elevation, terrain (ground or water), foliage, routes, structures, or conditions
+//! (weather, or fire and smoke). The left mouse button
 //! paints; Alt+click picks up a hex's layers into every brush. Scrolling, right or middle drag
 //! and the arrow keys pan; Shift+scroll pans sideways and Ctrl+scroll zooms. Maps are read and written by the game's
 //! own map file code in `stompymux-map`, so whatever Mappy saves loads the same in the server.
@@ -21,11 +23,12 @@ use iced::{
         button, center, checkbox, column, container, mouse_area, opaque, operation, radio, row,
         rule, scrollable, shader, slider, space, stack, text, text_input, tooltip,
     },
+    window,
 };
 use stompymux_map::{Hex, HexCoordinate, Light, MAX_VISIBILITY, MapFlag, StructureKind, Wind};
 
 use brush_panel::{BrushEdit, BrushMode, BrushPanel};
-use document::{Document, MapSettings};
+use document::{Document, MapSettings, ResizeEdge};
 use map_view::{Camera, MapView};
 use render::LABEL_LEGEND;
 
@@ -42,6 +45,7 @@ fn main() -> iced::Result {
     .subscription(Mappy::subscription)
     .theme(|_: &Mappy| Theme::Dark)
     .window_size(Size::new(1440.0, 900.0))
+    .exit_on_close_request(false)
     .run()
 }
 
@@ -64,9 +68,10 @@ pub enum Message {
     Brush(BrushEdit),
     Undo,
     Redo,
-    /// Show or hide the File menu.
-    ToggleFileMenu,
+    /// Show or hide a menu from the menu bar.
+    ToggleMenu(Menu),
     CloseMenu,
+    /// Open a dialog; New and Open first offer to save unsaved changes.
     ShowDialog(Dialog),
     CloseDialog,
     /// Close the open dialog, or else the open menu.
@@ -87,9 +92,52 @@ pub enum Message {
     /// Replace the map's settings as part of a slider drag, which `StrokeEnded` closes into
     /// one undoable edit.
     DragSettings(MapSettings),
+    ResizeWidth(String),
+    ResizeHeight(String),
+    /// Whether the Resize dialog spreads the change over every edge.
+    ResizeEvenly(bool),
+    ResizeColumns(ResizeEdge),
+    ResizeRows(ResizeEdge),
+    /// Resize the map as the Resize dialog says.
+    Resize,
+    /// The window's close button was pressed.
+    CloseRequested,
+    /// Save the map, then carry on with the action that was waiting on that answer.
+    SaveThen(Pending),
+    /// Carry on with the waiting action, dropping unsaved changes.
+    Discard(Pending),
 }
 
-/// A modal dialog opened from the File menu or the toolbar.
+/// A menu in the menu bar.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Menu {
+    File,
+    Map,
+}
+
+impl Menu {
+    const ALL: [Self; 2] = [Self::File, Self::Map];
+
+    fn label(self) -> &'static str {
+        match self {
+            Self::File => "File",
+            Self::Map => "Map",
+        }
+    }
+}
+
+/// An action that would drop unsaved changes, held while the user says whether to save.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Pending {
+    /// Show the New dialog.
+    New,
+    /// Show the Open dialog.
+    Open,
+    /// Quit Mappy.
+    Exit,
+}
+
+/// A modal dialog opened from a menu.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Dialog {
     New,
@@ -97,22 +145,29 @@ pub enum Dialog {
     SaveAs,
     /// The map's settings, which apply as they change.
     Options,
+    Resize,
+    /// Whether to save unsaved changes before the waiting action.
+    Unsaved(Pending),
 }
 
-/// Height of the menu bar, which the File menu drops down below.
+/// Height of the menu bar, which menus drop down below.
 const MENU_BAR_HEIGHT: f32 = 30.0;
+
+/// Width of each menu bar button, which places each menu under its button.
+const MENU_BUTTON_WIDTH: f32 = 56.0;
 
 /// Widget ids of the inputs dialogs focus when they open.
 const NEW_WIDTH_INPUT: &str = "new-width";
 const OPEN_FILTER_INPUT: &str = "open-filter";
 const SAVE_NAME_INPUT: &str = "save-name";
+const RESIZE_WIDTH_INPUT: &str = "resize-width";
 
 /// Application state.
 struct Mappy {
     map_dir: PathBuf,
     maps: Vec<String>,
     filter: String,
-    file_menu_open: bool,
+    menu: Option<Menu>,
     dialog: Option<Dialog>,
     /// Why the open dialog's last action failed.
     dialog_error: String,
@@ -127,6 +182,14 @@ struct Mappy {
     new_width: String,
     new_height: String,
     save_name: String,
+    /// Action to carry on with once the Save As dialog saves.
+    after_save: Option<Pending>,
+    resize_width: String,
+    resize_height: String,
+    /// Whether a resize spreads over every edge rather than `resize_columns` and `resize_rows`.
+    resize_evenly: bool,
+    resize_columns: ResizeEdge,
+    resize_rows: ResizeEdge,
     /// Result of the last file operation.
     status: String,
 }
@@ -137,7 +200,7 @@ impl Mappy {
             map_dir,
             maps: Vec::new(),
             filter: String::new(),
-            file_menu_open: false,
+            menu: None,
             dialog: None,
             dialog_error: String::new(),
             document: Document::new(30, 30).expect("default map size is valid"),
@@ -149,6 +212,12 @@ impl Mappy {
             new_width: "30".into(),
             new_height: "30".into(),
             save_name: String::new(),
+            after_save: None,
+            resize_width: String::new(),
+            resize_height: String::new(),
+            resize_evenly: true,
+            resize_columns: ResizeEdge::End,
+            resize_rows: ResizeEdge::End,
             status: String::new(),
         };
         mappy.refresh_list();
@@ -197,15 +266,27 @@ impl Mappy {
             Message::Brush(edit) => self.brush.edit(edit),
             Message::Undo => self.document.undo(),
             Message::Redo => self.document.redo(),
-            Message::ToggleFileMenu => self.file_menu_open = !self.file_menu_open,
-            Message::CloseMenu => self.file_menu_open = false,
-            Message::ShowDialog(dialog) => return self.show_dialog(dialog),
-            Message::CloseDialog => self.dialog = None,
+            Message::ToggleMenu(menu) => {
+                self.menu = (self.menu != Some(menu)).then_some(menu);
+            }
+            Message::CloseMenu => self.menu = None,
+            Message::ShowDialog(dialog) => {
+                let pending = match dialog {
+                    Dialog::New => Some(Pending::New),
+                    Dialog::Open => Some(Pending::Open),
+                    _ => None,
+                };
+                return match pending {
+                    Some(pending) => self.request(pending),
+                    None => self.show_dialog(dialog),
+                };
+            }
+            Message::CloseDialog => self.close_dialog(),
             Message::Escape => {
                 if self.dialog.is_some() {
-                    self.dialog = None;
+                    self.close_dialog();
                 } else {
-                    self.file_menu_open = false;
+                    self.menu = None;
                 }
             }
             Message::FilterChanged(filter) => self.filter = filter,
@@ -222,7 +303,7 @@ impl Mappy {
             }
             Message::SaveNameChanged(name) => self.save_name = name,
             Message::Save => {
-                self.file_menu_open = false;
+                self.menu = None;
                 let Some(path) = self.document.path.clone() else {
                     return self.show_dialog(Dialog::SaveAs);
                 };
@@ -232,17 +313,67 @@ impl Mappy {
             }
             Message::SaveAs => {
                 let result = self.save_as();
+                let saved = result.is_ok();
                 self.finish_dialog(result);
+                if let Some(pending) = self.after_save.take_if(|_| saved) {
+                    return self.proceed(pending);
+                }
             }
             Message::SetSettings(settings) => self.document.set_settings(settings),
             Message::DragSettings(settings) => self.document.drag_settings(settings),
+            Message::ResizeWidth(value) => self.resize_width = value,
+            Message::ResizeHeight(value) => self.resize_height = value,
+            Message::ResizeEvenly(evenly) => self.resize_evenly = evenly,
+            Message::ResizeColumns(edge) => {
+                self.resize_columns = edge;
+                self.resize_evenly = false;
+            }
+            Message::ResizeRows(edge) => {
+                self.resize_rows = edge;
+                self.resize_evenly = false;
+            }
+            Message::Resize => {
+                let result = self.resize();
+                self.finish_dialog(result);
+            }
+            Message::CloseRequested => return self.request(Pending::Exit),
+            Message::SaveThen(pending) => {
+                let Some(path) = self.document.path.clone() else {
+                    self.after_save = Some(pending);
+                    return self.show_dialog(Dialog::SaveAs);
+                };
+                if let Err(error) = self.save(path) {
+                    self.dialog_error = format!("{error:#}");
+                    return Task::none();
+                }
+                return self.proceed(pending);
+            }
+            Message::Discard(pending) => return self.proceed(pending),
         }
         Task::none()
     }
 
+    /// Carry on with `pending` now if the map has no unsaved changes, or else ask whether to
+    /// save them first.
+    fn request(&mut self, pending: Pending) -> Task<Message> {
+        if self.document.dirty {
+            return self.show_dialog(Dialog::Unsaved(pending));
+        }
+        self.proceed(pending)
+    }
+
+    /// Do the action that was waiting on unsaved changes.
+    fn proceed(&mut self, pending: Pending) -> Task<Message> {
+        match pending {
+            Pending::New => self.show_dialog(Dialog::New),
+            Pending::Open => self.show_dialog(Dialog::Open),
+            Pending::Exit => iced::exit(),
+        }
+    }
+
     /// Close the menu and open `dialog`, focusing its first input if it has one.
     fn show_dialog(&mut self, dialog: Dialog) -> Task<Message> {
-        self.file_menu_open = false;
+        self.menu = None;
         self.dialog = Some(dialog);
         self.dialog_error.clear();
         let input = match dialog {
@@ -251,10 +382,31 @@ impl Mappy {
                 self.refresh_list();
                 OPEN_FILTER_INPUT
             }
-            Dialog::SaveAs => SAVE_NAME_INPUT,
-            Dialog::Options => return Task::none(),
+            Dialog::SaveAs => {
+                if let Some(name) = self
+                    .document
+                    .path
+                    .as_deref()
+                    .and_then(|path| path.file_name())
+                {
+                    self.save_name = name.to_string_lossy().into_owned();
+                }
+                SAVE_NAME_INPUT
+            }
+            Dialog::Resize => {
+                self.resize_width = self.document.map.width.to_string();
+                self.resize_height = self.document.map.height.to_string();
+                RESIZE_WIDTH_INPUT
+            }
+            Dialog::Options | Dialog::Unsaved(_) => return Task::none(),
         };
         operation::focus(input)
+    }
+
+    /// Close the dialog, dropping any action that was waiting on it.
+    fn close_dialog(&mut self) {
+        self.dialog = None;
+        self.after_save = None;
     }
 
     /// Close the dialog after its action succeeded, or show why it failed.
@@ -286,6 +438,30 @@ impl Mappy {
         self.status = "New map".into();
         self.save_name.clear();
         self.replace_document(document);
+        Ok(())
+    }
+
+    /// Resize the map to the size and edges in the Resize dialog, then frame it again.
+    fn resize(&mut self) -> anyhow::Result<()> {
+        let (Ok(width), Ok(height)) = (
+            self.resize_width.trim().parse(),
+            self.resize_height.trim().parse(),
+        ) else {
+            anyhow::bail!("width and height must be numbers");
+        };
+        let (columns, rows) = if self.resize_evenly {
+            (ResizeEdge::Both, ResizeEdge::Both)
+        } else {
+            (self.resize_columns, self.resize_rows)
+        };
+        let map = &self.document.map;
+        if (width, height) == (map.width, map.height) {
+            return Ok(());
+        }
+        self.document.resize(width, height, columns, rows)?;
+        self.hover = None;
+        self.frame_new_map();
+        self.status = format!("Resized to {width}×{height}");
         Ok(())
     }
 
@@ -365,13 +541,18 @@ impl Mappy {
         Ok(())
     }
 
-    /// Key bindings, with only Escape while a dialog is open so typing there leaves the map
-    /// alone.
+    /// Window close requests and key bindings, with only Escape while a dialog is open so
+    /// typing there leaves the map alone.
     fn subscription(&self) -> Subscription<Message> {
-        if self.dialog.is_some() {
-            return keyboard::listen().filter_map(dialog_key_binding);
-        }
-        keyboard::listen().filter_map(key_binding)
+        let keys = if self.dialog.is_some() {
+            keyboard::listen().filter_map(dialog_key_binding)
+        } else {
+            keyboard::listen().filter_map(key_binding)
+        };
+        Subscription::batch([
+            keys,
+            window::close_requests().map(|_| Message::CloseRequested),
+        ])
     }
 
     fn view(&self) -> Element<'_, Message> {
@@ -400,31 +581,35 @@ impl Mappy {
         if let Some(dialog) = self.dialog {
             return layers.push(modal(self.dialog_view(dialog))).into();
         }
-        if self.file_menu_open {
-            return layers.push(self.file_menu()).into();
+        if let Some(menu) = self.menu {
+            return layers.push(self.menu_view(menu)).into();
         }
         layers.into()
     }
 
     fn menu_bar(&self) -> Element<'_, Message> {
-        let file = button(text("File").size(14))
-            .padding([4, 10])
-            .style(if self.file_menu_open {
-                button::primary
-            } else {
-                button::text
-            })
-            .on_press(Message::ToggleFileMenu);
-        row![file]
+        let buttons = Menu::ALL.into_iter().map(|menu| {
+            button(text(menu.label()).size(14).center().width(Fill))
+                .padding([4, 10])
+                .width(MENU_BUTTON_WIDTH)
+                .style(if self.menu == Some(menu) {
+                    button::primary
+                } else {
+                    button::text
+                })
+                .on_press(Message::ToggleMenu(menu))
+                .into()
+        });
+        row(buttons)
             .padding([0, 4])
             .height(MENU_BAR_HEIGHT)
             .align_y(Alignment::Center)
             .into()
     }
 
-    /// The File menu, dropped down below the menu bar over a backdrop that closes it when
-    /// clicked.
-    fn file_menu(&self) -> Element<'_, Message> {
+    /// An open menu, dropped down below its menu bar button over a backdrop that closes it
+    /// when clicked. The menu bar stays uncovered, so another menu's button switches to it.
+    fn menu_view(&self, menu: Menu) -> Element<'_, Message> {
         let item = |label, shortcut, message| {
             button(
                 row![
@@ -438,8 +623,8 @@ impl Mappy {
             .style(button::text)
             .on_press(message)
         };
-        let menu = container(
-            column![
+        let items = match menu {
+            Menu::File => column![
                 item("New…", "Ctrl+N", Message::ShowDialog(Dialog::New)),
                 item("Open…", "Ctrl+O", Message::ShowDialog(Dialog::Open)),
                 rule::horizontal(1),
@@ -449,33 +634,55 @@ impl Mappy {
                     "Ctrl+Shift+S",
                     Message::ShowDialog(Dialog::SaveAs)
                 ),
-            ]
-            .spacing(2),
-        )
-        .padding(4)
-        .width(240)
-        .style(container::bordered_box);
-        let placed = column![space().height(MENU_BAR_HEIGHT), menu]
+            ],
+            Menu::Map => column![
+                item("Options…", "", Message::ShowDialog(Dialog::Options)),
+                item("Resize…", "", Message::ShowDialog(Dialog::Resize)),
+            ],
+        };
+        let index = Menu::ALL.iter().position(|&each| each == menu).unwrap_or(0);
+        let dropdown = container(items.spacing(2))
+            .padding(4)
+            .width(240)
+            .style(container::bordered_box);
+        let placed = row![space().width(MENU_BUTTON_WIDTH * index as f32), dropdown]
             .padding([0, 4])
             .width(Fill)
             .height(Fill);
-        opaque(mouse_area(placed).on_press(Message::CloseMenu))
+        column![
+            space().height(MENU_BAR_HEIGHT),
+            opaque(mouse_area(placed).on_press(Message::CloseMenu))
+        ]
+        .into()
     }
 
     fn dialog_view(&self, dialog: Dialog) -> Element<'_, Message> {
-        let (title, body, confirm) = match dialog {
+        let (title, body, actions): (&str, _, Vec<(&str, Message)>) = match dialog {
             Dialog::New => (
                 "New map",
                 self.new_dialog(),
-                Some(("Create", Message::CreateNew)),
+                vec![("Create", Message::CreateNew)],
             ),
-            Dialog::Open => ("Open map", self.open_dialog(), None),
+            Dialog::Open => ("Open map", self.open_dialog(), Vec::new()),
             Dialog::SaveAs => (
                 "Save map as",
                 self.save_as_dialog(),
-                Some(("Save", Message::SaveAs)),
+                vec![("Save", Message::SaveAs)],
             ),
-            Dialog::Options => ("Map options", self.options_dialog(), None),
+            Dialog::Options => ("Map options", self.options_dialog(), Vec::new()),
+            Dialog::Resize => (
+                "Resize map",
+                self.resize_dialog(),
+                vec![("Resize", Message::Resize)],
+            ),
+            Dialog::Unsaved(pending) => (
+                "Unsaved changes",
+                self.unsaved_dialog(pending),
+                vec![
+                    ("Don't save", Message::Discard(pending)),
+                    ("Save", Message::SaveThen(pending)),
+                ],
+            ),
         };
         // Options apply as they change, so that dialog is closed rather than cancelled.
         let dismiss = if dialog == Dialog::Options {
@@ -490,8 +697,15 @@ impl Mappy {
                 .on_press(Message::CloseDialog)
         ]
         .spacing(8);
-        if let Some((label, message)) = confirm {
-            buttons = buttons.push(button(label).on_press(message));
+        // The last action is the dialog's main one.
+        let last = actions.len().saturating_sub(1);
+        for (index, (label, message)) in actions.into_iter().enumerate() {
+            let style = if index == last {
+                button::primary
+            } else {
+                button::secondary
+            };
+            buttons = buttons.push(button(label).style(style).on_press(message));
         }
         let mut content = column![text(title).size(18), body].spacing(12);
         if !self.dialog_error.is_empty() {
@@ -566,6 +780,95 @@ impl Mappy {
         .into()
     }
 
+    /// The new size, and whether it spreads over every edge or which edges it changes.
+    fn resize_dialog(&self) -> Element<'_, Message> {
+        let map = &self.document.map;
+        let size_input = |value: &str, on_input: fn(String) -> Message| {
+            text_input("", value)
+                .on_input(on_input)
+                .on_submit(Message::Resize)
+                .width(64)
+        };
+        let size = row![
+            text("Width"),
+            size_input(&self.resize_width, Message::ResizeWidth).id(RESIZE_WIDTH_INPUT),
+            text("Height"),
+            size_input(&self.resize_height, Message::ResizeHeight),
+            text(format!("now {}×{}", map.width, map.height)).size(12),
+        ]
+        .spacing(8)
+        .align_y(Alignment::Center);
+        let mode = |label, evenly| {
+            radio(
+                label,
+                evenly,
+                Some(self.resize_evenly),
+                Message::ResizeEvenly,
+            )
+            .size(14)
+            .text_size(13)
+        };
+        let mut content = column![
+            size,
+            mode("Equally from every edge", true),
+            mode("From the chosen edges", false),
+        ]
+        .spacing(8);
+        // The edge choices always show, so the dialog keeps its layout as the mode changes;
+        // picking one switches to the chosen edges.
+        let evenly = self.resize_evenly;
+        let edges = |label: &'static str,
+                     names: [&'static str; 3],
+                     chosen: ResizeEdge,
+                     on_choose: fn(ResizeEdge) -> Message| {
+            let choices = [ResizeEdge::Start, ResizeEdge::End, ResizeEdge::Both]
+                .into_iter()
+                .zip(names)
+                .map(move |(edge, name)| {
+                    radio(name, edge, (!evenly).then_some(chosen), on_choose)
+                        .size(14)
+                        .text_size(13)
+                        .width(110)
+                        .into()
+                });
+            row![text(label).size(13).width(90), row(choices)].align_y(Alignment::Center)
+        };
+        content = content
+            .push(edges(
+                "Columns at",
+                ["Left", "Right", "Both"],
+                self.resize_columns,
+                Message::ResizeColumns,
+            ))
+            .push(edges(
+                "Rows at",
+                ["Top", "Bottom", "Both"],
+                self.resize_rows,
+                Message::ResizeRows,
+            ));
+        content.into()
+    }
+
+    /// What will happen to unsaved changes before `pending`.
+    fn unsaved_dialog(&self, pending: Pending) -> Element<'_, Message> {
+        let name = self
+            .document
+            .path
+            .as_deref()
+            .and_then(|path| path.file_name())
+            .map_or("the untitled map".into(), |name| {
+                name.to_string_lossy().into_owned()
+            });
+        let before = match pending {
+            Pending::New => "creating a new map",
+            Pending::Open => "opening another map",
+            Pending::Exit => "quitting",
+        };
+        text(format!("Save your changes to {name} before {before}?"))
+            .size(14)
+            .into()
+    }
+
     fn save_as_dialog(&self) -> Element<'_, Message> {
         column![
             text(format!("Saved in {}", self.map_dir.display())).size(12),
@@ -623,12 +926,21 @@ impl Mappy {
         .on_release(Message::StrokeEnded);
         // Daylight levels on one row and the night levels below them.
         let light_choice = |light: Light| -> Element<'_, Message> {
-            radio(light.label(), light, Some(settings.light), move |light| {
+            let choice = radio(light.label(), light, Some(settings.light), move |light| {
                 Message::SetSettings(MapSettings { light, ..settings })
             })
             .size(14)
             .text_size(13)
-            .width(LIGHT_CHOICE_WIDTH)
+            .width(LIGHT_CHOICE_WIDTH);
+            tooltip(
+                choice,
+                container(text(light_effects(light)).size(13))
+                    .padding(6)
+                    .max_width(320)
+                    .style(container::rounded_box),
+                tooltip::Position::Bottom,
+            )
+            .gap(6)
             .into()
         };
         let (daylight, night) = Light::ALL.split_at(3);
@@ -702,7 +1014,6 @@ impl Mappy {
             button("Undo").on_press_maybe(self.document.can_undo().then_some(Message::Undo)),
             button("Redo").on_press_maybe(self.document.can_redo().then_some(Message::Redo)),
             button("Fit").on_press(Message::Fit),
-            button("Options").on_press(Message::ShowDialog(Dialog::Options)),
             rule::vertical(1),
             text(format!("Labels — {LABEL_LEGEND}")).size(12),
         ]
@@ -796,6 +1107,35 @@ fn hex_layers(hex: Hex) -> Vec<String> {
             .map(|overlay| overlay.terrain().label().to_owned()),
     );
     layers
+}
+
+/// What a light level does to attacks and sight, for its choice's tooltip in the Options
+/// dialog.
+fn light_effects(light: Light) -> String {
+    let Some(heat_step) = light.heat_step() else {
+        return "No to-hit modifiers. Units see as far as the map's visibility.".into();
+    };
+    let weapon = light.aim_modifier(false, false, None);
+    let lit = light.aim_modifier(false, true, None);
+    let physical = light.aim_modifier(true, false, None);
+    if !light.is_night() {
+        return format!(
+            "Weapon attacks +{weapon} to hit, -1 for every {heat_step} heat the target has. \
+             Physical attacks +{physical}.\nUnits see as far as the map's visibility; \
+             searchlights do not help."
+        );
+    }
+    let physical = if physical > 0 {
+        format!("+{physical} (+0 against lit targets)")
+    } else {
+        "+0".into()
+    };
+    format!(
+        "Weapon attacks +{weapon} to hit (+{lit} against lit targets or ones with their \
+         searchlight on), -1 for every {heat_step} heat the target has. Physical attacks \
+         {physical}.\nUnits see as far as the map's visibility, and lit targets up to three \
+         times as far."
+    )
 }
 
 /// Width of each light choice in the Options dialog, so the two rows line up.
@@ -904,5 +1244,27 @@ fn dialog_key_binding(event: keyboard::Event) -> Option<Message> {
             ..
         } => Some(Message::Escape),
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Each light tooltip states the modifiers the server applies at that level.
+    #[test]
+    fn light_effects_describe_the_modifiers() {
+        assert!(light_effects(Light::Day).starts_with("No to-hit modifiers"));
+        let dawn = light_effects(Light::Dawn);
+        assert!(dawn.contains("+1 to hit, -1 for every 25 heat"), "{dawn}");
+        assert!(dawn.contains("searchlights do not help"), "{dawn}");
+        let moonless = light_effects(Light::MoonlessNight);
+        assert!(
+            moonless.contains("+3 to hit (+0 against lit targets"),
+            "{moonless}"
+        );
+        assert!(moonless.contains("Physical attacks +1 (+0"), "{moonless}");
+        let pitch = light_effects(Light::PitchBlack);
+        assert!(pitch.contains("+4 to hit (+1 against lit"), "{pitch}");
     }
 }

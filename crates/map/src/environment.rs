@@ -83,19 +83,32 @@ impl Light {
     /// `target_heat` is the heat of a target that tracks heat; every full step of heat for
     /// this level takes one off a weapon attack's modifier.
     pub fn aim_modifier(self, physical: bool, lit: bool, target_heat: Option<u16>) -> i16 {
-        let (weapon, unarmed, lit_weapon, heat_step) = match self {
+        let (weapon, unarmed, lit_weapon) = match self {
             Self::Day => return 0,
-            Self::Dawn | Self::Dusk => (1, 0, 1, 25),
-            Self::FullMoonNight => (2, 0, 0, 20),
-            Self::MoonlessNight => (3, 1, 0, 15),
-            Self::PitchBlack => (4, 2, 1, 10),
+            Self::Dawn | Self::Dusk => (1, 0, 1),
+            Self::FullMoonNight => (2, 0, 0),
+            Self::MoonlessNight => (3, 1, 0),
+            Self::PitchBlack => (4, 2, 1),
         };
+        let heat_step = self.heat_step().unwrap_or(u16::MAX);
         let searchlight = lit && self.is_night();
         if physical {
             return if searchlight { 0 } else { unarmed };
         }
         let darkness = if searchlight { lit_weapon } else { weapon };
         darkness - target_heat.map_or(0, |heat| (heat / heat_step) as i16)
+    }
+
+    /// Heat a target needs for each point taken off a weapon attack's darkness modifier, or
+    /// `None` in daylight, where there is no modifier to offset.
+    pub const fn heat_step(self) -> Option<u16> {
+        match self {
+            Self::Day => None,
+            Self::Dawn | Self::Dusk => Some(25),
+            Self::FullMoonNight => Some(20),
+            Self::MoonlessNight => Some(15),
+            Self::PitchBlack => Some(10),
+        }
     }
 }
 

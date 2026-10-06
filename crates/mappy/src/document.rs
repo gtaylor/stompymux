@@ -8,6 +8,9 @@
 //! with, and never produces a hex that fails [`Hex::validate`]: a paint that would is skipped
 //! for that hex. Since a map file stores every layer of a valid hex, whatever the brushes make
 //! can be saved.
+//!
+//! A resize is undoable too: it records the map's hexes and points of interest from before and
+//! after it.
 use std::{
     collections::BTreeMap,
     path::{Path, PathBuf},
@@ -19,8 +22,8 @@ use std::{
 
 use anyhow::{Context, Result, ensure};
 use stompymux_map::{
-    Condition, DecorationKind, Foliage, Ground, Hex, HexCoordinate, Light, MapAsset, Route,
-    Structure, Water, Wind,
+    Condition, DecorationKind, Foliage, Ground, Hex, HexCoordinate, Light, MapAsset,
+    MapPointOfInterest, Route, Structure, Water, Wind,
 };
 
 /// A map's battlefield-wide settings, edited together: rule flags, gravity, temperature,
@@ -67,6 +70,45 @@ enum Edit {
         before: MapSettings,
         after: MapSettings,
     },
+    Resize {
+        before: Box<Extent>,
+        after: Box<Extent>,
+    },
+}
+
+/// Everything a resize changes: the map's size, its hexes and its points of interest.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Extent {
+    width: u16,
+    height: u16,
+    hexes: Vec<Hex>,
+    points_of_interest: Vec<MapPointOfInterest>,
+}
+
+/// Which edges of the map a resize adds or removes columns or rows at.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ResizeEdge {
+    /// The left edge for columns, the top edge for rows.
+    Start,
+    /// The right edge for columns, the bottom edge for rows.
+    End,
+    /// Both edges, as evenly as possible.
+    Both,
+}
+
+impl ResizeEdge {
+    /// Columns or rows to add before the first existing one (negative to remove) when going
+    /// from `old` to `new` along this axis. Splitting `columns` between both edges keeps the
+    /// leading share even, so the stagger between odd and even columns stays where it was.
+    fn leading(self, old: u16, new: u16, columns: bool) -> i32 {
+        let change = i32::from(new) - i32::from(old);
+        match self {
+            Self::Start => change,
+            Self::End => 0,
+            Self::Both if columns => change / 4 * 2,
+            Self::Both => change / 2,
+        }
+    }
 }
 
 /// What a brush does to each hex it touches. Level and the fire or smoke overlay carry over
@@ -435,6 +477,76 @@ impl Document {
         self.dirty = true;
     }
 
+    /// Change the map to `width` by `height`, adding or removing columns at the `columns`
+    /// edges and rows at the `rows` edges, as one undoable edit. New hexes are clear ground at
+    /// level zero, and points of interest move with their hexes or go when their hex does.
+    pub fn resize(
+        &mut self,
+        width: u16,
+        height: u16,
+        columns: ResizeEdge,
+        rows: ResizeEdge,
+    ) -> Result<()> {
+        ensure!(
+            (1..=1000).contains(&width) && (1..=1000).contains(&height),
+            "map dimensions must be between 1 and 1000"
+        );
+        self.end_stroke();
+        if (width, height) == (self.map.width, self.map.height) {
+            return Ok(());
+        }
+        let left = columns.leading(self.map.width, width, true);
+        let top = rows.leading(self.map.height, height, false);
+        let before = self.extent();
+        let moved = |x: u16, y: u16| {
+            let x = u16::try_from(i32::from(x) + left).ok()?;
+            let y = u16::try_from(i32::from(y) + top).ok()?;
+            (x < width && y < height).then_some((x, y))
+        };
+        let mut hexes = vec![Hex::at_level(0); usize::from(width) * usize::from(height)];
+        for (index, hex) in before.hexes.iter().enumerate() {
+            let x = (index % usize::from(before.width)) as u16;
+            let y = (index / usize::from(before.width)) as u16;
+            if let Some((x, y)) = moved(x, y) {
+                hexes[usize::from(y) * usize::from(width) + usize::from(x)] = *hex;
+            }
+        }
+        let points_of_interest = before
+            .points_of_interest
+            .iter()
+            .filter_map(|point| {
+                let (x, y) = moved(point.x, point.y)?;
+                Some(MapPointOfInterest {
+                    x,
+                    y,
+                    ..point.clone()
+                })
+            })
+            .collect();
+        let edit = Edit::Resize {
+            before: Box::new(before),
+            after: Box::new(Extent {
+                width,
+                height,
+                hexes,
+                points_of_interest,
+            }),
+        };
+        self.apply(&edit, true);
+        self.record(edit);
+        Ok(())
+    }
+
+    /// The map's current size, hexes and points of interest.
+    fn extent(&self) -> Extent {
+        Extent {
+            width: self.map.width,
+            height: self.map.height,
+            hexes: self.map.hexes.to_vec(),
+            points_of_interest: self.map.points_of_interest.clone(),
+        }
+    }
+
     /// Push a finished edit, which invalidates anything that could be redone.
     fn record(&mut self, edit: Edit) {
         self.undo.push(edit);
@@ -482,6 +594,16 @@ impl Document {
                 self.map.light = Some(settings.light);
                 self.map.visibility = Some(settings.visibility);
                 self.map.wind = Some(settings.wind);
+            }
+            Edit::Resize { before, after } => {
+                let extent = if forward { after } else { before };
+                self.map.width = extent.width;
+                self.map.height = extent.height;
+                self.map.hexes = Arc::new(extent.hexes.clone());
+                self.map.points_of_interest = extent.points_of_interest.clone();
+                // Every hex may have moved, so a renderer must reread them all.
+                self.hexes_id = next_hexes_id();
+                self.changes = Arc::default();
             }
         }
     }
@@ -943,5 +1065,120 @@ mod tests {
         assert!(!document.dirty);
         let reloaded = Document::open(&path).unwrap();
         assert_eq!(reloaded.map, document.map);
+    }
+
+    /// A 4×3 map with a distinct level in every hex, and a point of interest at `(x, y)`.
+    fn numbered(x: u16, y: u16) -> Document {
+        let mut document = Document::new(4, 3).unwrap();
+        for index in 0..12_i32 {
+            let coordinate = HexCoordinate {
+                x: index % 4,
+                y: index / 4,
+            };
+            document.paint_with(coordinate, 0, |_| Hex::at_level(index as u8));
+        }
+        document.end_stroke();
+        document.map.points_of_interest.push(MapPointOfInterest {
+            kind: "objective".into(),
+            name: "Tower".into(),
+            x,
+            y,
+            elevation: None,
+        });
+        document
+    }
+
+    /// Hex levels by row, `None` for the clear hexes a resize added.
+    fn levels(document: &Document) -> Vec<Vec<u8>> {
+        document
+            .map
+            .hexes
+            .chunks(usize::from(document.map.width))
+            .map(|row| row.iter().map(|hex| hex.level()).collect())
+            .collect()
+    }
+
+    /// Growing at the start edges shifts the hexes and points of interest; growing at the end
+    /// edges leaves them; new hexes are clear level zero ground.
+    #[test]
+    fn resizing_grows_at_the_chosen_edges() {
+        let mut document = numbered(1, 2);
+        document
+            .resize(5, 4, ResizeEdge::Start, ResizeEdge::End)
+            .unwrap();
+        assert_eq!(
+            levels(&document),
+            [
+                vec![0, 0, 1, 2, 3],
+                vec![0, 4, 5, 6, 7],
+                vec![0, 8, 9, 10, 11],
+                vec![0, 0, 0, 0, 0]
+            ]
+        );
+        let point = &document.map.points_of_interest[0];
+        assert_eq!((point.x, point.y), (2, 2));
+        assert_eq!(
+            document.hex(HexCoordinate { x: 0, y: 3 }),
+            Some(Hex::at_level(0))
+        );
+    }
+
+    /// Shrinking crops at the chosen edges and drops points of interest on removed hexes.
+    #[test]
+    fn resizing_crops_at_the_chosen_edges() {
+        let mut document = numbered(0, 0);
+        document
+            .resize(2, 2, ResizeEdge::Start, ResizeEdge::Start)
+            .unwrap();
+        assert_eq!(levels(&document), [vec![6, 7], vec![10, 11]]);
+        assert!(document.map.points_of_interest.is_empty());
+        let mut document = numbered(1, 1);
+        document
+            .resize(2, 2, ResizeEdge::End, ResizeEdge::End)
+            .unwrap();
+        assert_eq!(levels(&document), [vec![0, 1], vec![4, 5]]);
+        assert_eq!(document.map.points_of_interest.len(), 1);
+    }
+
+    /// Resizing at both edges splits the change, keeping the leading column share even so
+    /// the column stagger does not flip.
+    #[test]
+    fn resizing_from_both_edges_splits_the_change() {
+        let mut document = numbered(0, 0);
+        document
+            .resize(8, 5, ResizeEdge::Both, ResizeEdge::Both)
+            .unwrap();
+        let point = &document.map.points_of_interest[0];
+        assert_eq!((point.x, point.y), (2, 1));
+        let mut document = numbered(0, 0);
+        document
+            .resize(6, 3, ResizeEdge::Both, ResizeEdge::Both)
+            .unwrap();
+        assert_eq!(levels(&document)[0], [0, 1, 2, 3, 0, 0]);
+        assert_eq!(ResizeEdge::Both.leading(10, 4, true), -2);
+        assert_eq!(ResizeEdge::Both.leading(10, 7, false), -1);
+    }
+
+    /// A resize undoes and redoes as one edit, and gives the renderer a new feed.
+    #[test]
+    fn resizing_undoes_as_one_edit() {
+        let mut document = numbered(3, 2);
+        let original = document.map.clone();
+        let feed = document.hex_feed().id;
+        document
+            .resize(2, 6, ResizeEdge::Both, ResizeEdge::End)
+            .unwrap();
+        assert_ne!(document.hex_feed().id, feed);
+        assert!(document.dirty);
+        let resized = document.map.clone();
+        document.undo();
+        assert_eq!(document.map, original);
+        document.redo();
+        assert_eq!(document.map, resized);
+        assert!(
+            document
+                .resize(0, 6, ResizeEdge::End, ResizeEdge::End)
+                .is_err()
+        );
     }
 }
