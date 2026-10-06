@@ -1780,7 +1780,7 @@ async fn explicit_long_range_visibility_modes_filter_ordinary_maps() {
 #[tokio::test]
 async fn terrain_fire_and_inferno_illumination_follow_live_sources_without_acquisition() {
     let (_dir, config, mut world, map, source, target) = fixture().await;
-    set_battle_map_visibility(&mut world, map, Light::Night, 3).unwrap();
+    set_battle_map_visibility(&mut world, map, Light::MoonlessNight, 3).unwrap();
     // Without the sensor band, only sight (and therefore illumination) reaches past three hexes.
     set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, false).unwrap();
     let coordinate = HexCoordinate { x: 1, y: 7 };
@@ -2510,7 +2510,7 @@ async fn navigation_combines_local_map_continuous_plot_and_readouts_without_muta
     assert_eq!(lines[4].chars().nth(14), Some('x'));
     assert_eq!(lines[6].chars().nth(14), Some('*'));
     assert!(lines[2].contains("Location:   1,   1,   0"));
-    assert!(lines[3].contains("Grassland"));
+    assert!(lines[3].contains("Clear"));
     assert!(lines[6].contains("Speed:"));
     assert!(lines[8].contains("Heading:"));
     assert_eq!(report.center, center);
@@ -5124,13 +5124,13 @@ async fn range_reports_mask_dark_terrain_but_preserve_live_target_elevation() {
     let shared = std::rc::Rc::new(std::cell::RefCell::new(world));
     let scripts = Scripts::new(&config, shared.clone()).unwrap();
     let baseline = serde_json::to_value(&scripts.world().btech).unwrap();
-    for terrain in [Terrain::Water, Terrain::Ice, Terrain::Grassland] {
+    for terrain in [Terrain::Water, Terrain::Ice, Terrain::Clear] {
         for dark in [false, true] {
             let mut state = baseline.clone();
             state["maps"][map.0.to_string()]["terrain"][7] =
                 serde_json::to_value(Hex::new(terrain, 5)).unwrap();
             state["maps"][map.0.to_string()]["terrain"][10] =
-                serde_json::to_value(Hex::new(Terrain::Grassland, 5)).unwrap();
+                serde_json::to_value(Hex::new(Terrain::Clear, 5)).unwrap();
             state["maps"][map.0.to_string()]["flags"] =
                 serde_json::json!(if dark { 32 } else { 0 });
             shared.borrow_mut().btech = serde_json::from_value(state).unwrap();
@@ -5150,7 +5150,7 @@ async fn range_reports_mask_dark_terrain_but_preserve_live_target_elevation() {
                 battle_range_report(&scripts.world(), source, ObjectId(1), "1 2 1 3").unwrap();
             assert_eq!(
                 across.spatial,
-                if !dark && terrain != Terrain::Grassland {
+                if !dark && terrain != Terrain::Clear {
                     5.0_f64.sqrt()
                 } else {
                     1.0

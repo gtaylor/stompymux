@@ -28,6 +28,12 @@ impl StoredMap {
             flags: i32::try_from(self.flags & super::MapFlag::mask())?,
             gravity: u8::try_from(self.gravity)?,
             temperature: i8::try_from(self.temperature)?,
+            light: Some(self.light_level()?),
+            visibility: Some(u8::try_from(self.visibility)?),
+            wind: Some(super::Wind {
+                direction: u16::try_from(self.wind_direction)?,
+                speed: u16::try_from(self.wind_speed)?,
+            }),
             hexes: Arc::new(hexes),
             points_of_interest: self.points_of_interest.to_vec(),
         };
@@ -51,9 +57,11 @@ mod tests {
     /// Buildings on high ground and water and bridges on a plateau validate as live maps.
     #[test]
     fn raised_structures_and_water_validate() {
-        stored("terrain = '@'\nlevel = 'a'\nstructure_height = 'b'\n");
         stored(
-            "terrain = '~-~'\nlevel = '432'\ndepth = '231'\n\n[[bridges]]\ndeck = 2\nhexes = [[2, 0]]\n",
+            "terrain = '.'\nlevel = 'a'\n\n[[structures]]\nkind = 'building'\nclass = 'heavy'\nheight = 11\nhexes = [[0, 0]]\n",
+        );
+        stored(
+            "terrain = '~~~'\nlevel = '432'\ndepth = '231'\ncondition = '.-.'\n\n[[structures]]\nkind = 'bridge'\nheight = 2\nhexes = [[2, 0]]\n",
         );
     }
 
@@ -61,11 +69,12 @@ mod tests {
     /// and export back into the overlay grid.
     #[test]
     fn overlay_grid_becomes_permanent_decorations() {
-        let source = "terrain = '.`~'\nlevel = '120'\ndepth = '..2'\noverlay = '&:.'\n";
+        let source = "light = 'moonless_night'\nvisibility = 12\nwind = { direction = 90, speed = 5 }\n\
+            terrain = '..~'\nlevel = '120'\ndepth = '..2'\nfoliage = '.`.'\noverlay = '&:.'\n";
         let map = stored(source);
         assert_eq!(
             map.base_hex(1, 0).unwrap(),
-            Hex::new(Terrain::LightForest, 2)
+            Hex::new(Terrain::LightWoods, 2)
         );
         assert_eq!(
             map.hex(1, 0).unwrap().overlay(),
@@ -85,7 +94,8 @@ mod tests {
     /// Points of interest survive loading as a live map and exporting it again.
     #[test]
     fn points_of_interest_survive_export() {
-        let source = "terrain = '..'\nlevel = '00'\n\n[[points_of_interest]]\ntype = 'objective'\nname = 'Ford'\nx = 1\ny = 0\nelevation = -2\n";
+        let source = "light = 'day'\nvisibility = 30\nwind = { direction = 0, speed = 0 }\n\
+            terrain = '..'\nlevel = '00'\n\n[[points_of_interest]]\ntype = 'objective'\nname = 'Ford'\nx = 1\ny = 0\nelevation = -2\n";
         let asset = MapAsset::parse(source).unwrap();
         let map = stored(source);
         assert_eq!(*map.points_of_interest, asset.points_of_interest);

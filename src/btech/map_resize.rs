@@ -35,8 +35,7 @@ pub fn resize_map_action(
             "Map dimensions must be between 1 and 1000"
         );
         ensure!(old.terrain_ready(), "Map terrain is unavailable");
-        let mut tiles =
-            vec![super::Hex::new(super::Terrain::Grassland, 0); (width * height) as usize];
+        let mut tiles = vec![super::Hex::at_level(0); (width * height) as usize];
         for y in 0..height.min(old.height) {
             for x in 0..width.min(old.width) {
                 tiles[(y * width + x) as usize] = old.base_hex(x, y)?;

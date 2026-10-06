@@ -1,5 +1,5 @@
 //! Ground-vehicle motion proposals share turning and acceleration with the Mech motion engine.
-use super::{Hex, Motion, VehicleMovement, VehicleTemplate};
+use super::{GroundMovement, Hex, Motion, VehicleMovement, VehicleTemplate};
 use anyhow::{Result, ensure};
 
 /// Inputs independent of vehicle construction, supplied by world configuration and pilot state.
@@ -165,7 +165,19 @@ impl super::Vehicle {
 
 /// Speed divisor a vehicle's hex imposes on its desired throttle.
 fn terrain_divisor(hex: Hex, movement: VehicleMovement) -> f64 {
-    hex.ground_speed_divisor(movement == VehicleMovement::Wheeled)
+    hex.ground_speed_divisor(ground_movement(movement))
+}
+
+/// The terrain cost column a vehicle's motive system uses; fixed installations and grounded
+/// VTOLs count as tracked.
+pub(super) fn ground_movement(movement: VehicleMovement) -> GroundMovement {
+    match movement {
+        VehicleMovement::Wheeled => GroundMovement::Wheeled,
+        VehicleMovement::Hover => GroundMovement::Hover,
+        VehicleMovement::Tracked | VehicleMovement::Stationary | VehicleMovement::Vtol => {
+            GroundMovement::Tracked
+        }
+    }
 }
 
 #[cfg(test)]

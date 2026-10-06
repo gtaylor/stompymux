@@ -274,7 +274,7 @@ async fn idle_map_smoke_ticks_retry_failed_saves_and_expire() {
         assert_eq!(loaded.btech.maps()[&map].decoration(coordinate).unwrap(), Some(Decoration { remaining: 1, ..smoke }));
         sqlx::raw_sql("DROP TRIGGER deny_smoke_update; DROP TRIGGER deny_smoke_delete;").execute(&mut sql).await.unwrap();
         let loaded = heartbeats.until_saved(&config, 20, |loaded| loaded.btech.maps()[&map].decoration(coordinate).unwrap().is_none()).await;
-        assert_eq!(loaded.btech.maps()[&map].hex(0, 0).unwrap().terrain(), Terrain::HeavyForest);
+        assert_eq!(loaded.btech.maps()[&map].hex(0, 0).unwrap().terrain(), Terrain::HeavyWoods);
         shutdown.send(ShutdownRequest::Sigterm).unwrap();
         task.await.unwrap().unwrap();
     }).await;
@@ -306,7 +306,7 @@ async fn idle_map_fire_burnout_retries_random_state_save_failure() {
         assert_eq!(persistence::load(&config.database()).await.unwrap().btech, expected);
         sqlx::query("DROP TRIGGER deny_fire_random").execute(&mut sql).await.unwrap();
         let loaded = heartbeats.until_saved(&config, 20, |loaded| loaded.btech.maps()[&map].decoration(coordinate).unwrap().is_none()).await;
-        assert!(matches!(loaded.btech.maps()[&map].hex(0, 0).unwrap().terrain(), Terrain::Rough | Terrain::Grassland));
+        assert!(matches!(loaded.btech.maps()[&map].hex(0, 0).unwrap().terrain(), Terrain::Rough | Terrain::Clear));
         shutdown.send(ShutdownRequest::Sigterm).unwrap();
         task.await.unwrap().unwrap();
     }).await;

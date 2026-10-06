@@ -240,7 +240,7 @@ async fn front_torso_damage_uses_lamp_state_and_exact_dice() {
 async fn searchlights_extend_night_sight_to_lit_targets() {
     let (_dir, _config, mut world, lamp, target, map) = fixture().await;
     place_battle_unit(&mut world, target, map, 2, 31).unwrap();
-    set_battle_map_visibility(&mut world, map, Light::Night, 3).unwrap();
+    set_battle_map_visibility(&mut world, map, Light::MoonlessNight, 3).unwrap();
     let perceived = |world: &World| {
         battle_perceive(world, lamp, target)
             .unwrap()
@@ -250,7 +250,7 @@ async fn searchlights_extend_night_sight_to_lit_targets() {
     set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, false).unwrap();
     assert_eq!(perceived(&world), None);
     place_battle_unit(&mut world, target, map, 2, 33).unwrap();
-    assert_eq!(perceived(&world), Some((DetectionChannel::Sight, 1)));
+    assert_eq!(perceived(&world), Some((DetectionChannel::Sight, 0)));
     toggle_battle_searchlight(&mut world, lamp, ObjectId(1)).unwrap();
     for _ in 0..5 {
         advance_battle_searchlights(&mut world);
@@ -383,7 +383,7 @@ async fn terrain_beams_reach_beyond_unit_illumination_and_stop_at_obstructions()
     let (_dir, config, mut world, lamp, _, map) = fixture().await;
     let distant = HexCoordinate { x: 2, y: 0 };
     let behind = HexCoordinate { x: 2, y: 36 };
-    set_battle_map_visibility(&mut world, map, Light::Night, 15).unwrap();
+    set_battle_map_visibility(&mut world, map, Light::MoonlessNight, 15).unwrap();
     assert!(!battle_hex_visible(&world, lamp, distant).unwrap());
     let _ = toggle_battle_searchlight(&mut world, lamp, ObjectId(1)).unwrap();
     for _ in 0..5 {
@@ -426,9 +426,9 @@ async fn automatic_lamps_follow_map_light_changes_and_transfers() {
     let (_dir, config, mut world, lamp, _, map) = fixture().await;
     assert_eq!(lamp_state(&world, lamp).mode, SearchlightMode::Auto);
     assert_eq!(lamp_state(&world, lamp).remaining, 0);
-    set_battle_map_visibility(&mut world, map, Light::Twilight, 30).unwrap();
+    set_battle_map_visibility(&mut world, map, Light::Dusk, 30).unwrap();
     assert_eq!(lamp_state(&world, lamp).remaining, 0);
-    set_battle_map_visibility(&mut world, map, Light::Night, 30).unwrap();
+    set_battle_map_visibility(&mut world, map, Light::MoonlessNight, 30).unwrap();
     assert_eq!(lamp_state(&world, lamp).remaining, 5);
     for _ in 0..4 {
         advance_battle_searchlights(&mut world);
@@ -437,13 +437,13 @@ async fn automatic_lamps_follow_map_light_changes_and_transfers() {
     assert!(notices.iter().any(|n| n.text.contains("full power")));
     assert!(lamp_state(&world, lamp).on);
     // Visibility-only edits leave the lamp alone.
-    set_battle_map_visibility(&mut world, map, Light::Night, 10).unwrap();
+    set_battle_map_visibility(&mut world, map, Light::MoonlessNight, 10).unwrap();
     assert_eq!(lamp_state(&world, lamp).remaining, 0);
     // Daylight starts a cool-down; nightfall before it expires cancels it.
     set_battle_map_visibility(&mut world, map, Light::Day, 30).unwrap();
     assert_eq!(lamp_state(&world, lamp).remaining, 5);
     advance_battle_searchlights(&mut world);
-    set_battle_map_visibility(&mut world, map, Light::Night, 30).unwrap();
+    set_battle_map_visibility(&mut world, map, Light::MoonlessNight, 30).unwrap();
     assert_eq!(lamp_state(&world, lamp).remaining, 0);
     assert!(lamp_state(&world, lamp).on);
     set_battle_map_visibility(&mut world, map, Light::Day, 30).unwrap();
@@ -463,7 +463,7 @@ async fn automatic_lamps_follow_map_light_changes_and_transfers() {
     )
     .unwrap();
     support::seed_object_dice(&mut world, dark, support::FIXTURE_DICE_SEED);
-    set_battle_map_visibility(&mut world, dark, Light::Night, 30).unwrap();
+    set_battle_map_visibility(&mut world, dark, Light::MoonlessNight, 30).unwrap();
     transfer_battle_unit(
         &mut world,
         lamp,
@@ -513,7 +513,7 @@ async fn manual_modes_override_automatic_switching() {
         lamp_state(&scripts.world(), lamp).mode,
         SearchlightMode::Off
     );
-    set_battle_map_visibility(&mut scripts.world_mut(), map, Light::Night, 30).unwrap();
+    set_battle_map_visibility(&mut scripts.world_mut(), map, Light::MoonlessNight, 30).unwrap();
     assert_eq!(lamp_state(&scripts.world(), lamp).remaining, 0);
     let text = support::run_text(&scripts, &config, ObjectId(1), 1, "slite auto");
     assert!(

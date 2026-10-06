@@ -111,7 +111,7 @@ pub fn predict_artillery_target(
                                     && unit.definition().sections[section].rear > 0))
                     })
             });
-            stopped = (tile.woods() == Some(super::Woods::Heavy) && vehicle.is_some())
+            stopped = (tile.woods_density() >= 2 && vehicle.is_some())
                 || (tile.is_open_water()
                     && matches!(
                         movement,

@@ -234,7 +234,7 @@ async fn swarm_woods_absorption_preserves_pre_cover_flight_accounting() {
                 .btech
                 .rewrite_map_record(map, |record| {
                     record["terrain"][0] =
-                        serde_json::to_value(Hex::new(Terrain::HeavyForest, 0)).unwrap();
+                        serde_json::to_value(Hex::new(Terrain::HeavyWoods, 0)).unwrap();
                 })
                 .unwrap();
             acquire(&mut world, shooter, target);

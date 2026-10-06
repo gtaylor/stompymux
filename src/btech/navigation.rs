@@ -84,6 +84,7 @@ pub fn navigate(
         }
     }
     let map_lines: Vec<_> = local.text.lines().collect();
+    let layers = layer_lines(tile);
     let mut lines = Vec::new();
     for (row, compass) in compass.into_iter().enumerate() {
         let readout = match row {
@@ -104,6 +105,7 @@ pub fn navigate(
             6 => format!("Speed:           {:6.1}", unit.speed),
             7 => format!("Vertical Speed:  {:6.1}", vertical_speed),
             8 => format!("Heading:           {:4.0}", heading),
+            9..=12 => layers.get(row - 9).cloned().unwrap_or_default(),
             _ => String::new(),
         };
         let compass: String = compass.into_iter().collect();
@@ -136,26 +138,49 @@ fn plot_cell(center: super::HexCoordinate, point: super::Point) -> Option<(usize
     Some((row as usize, column as usize))
 }
 
+/// The readout lines naming each layer of `hex` the terrain line can hide: its ground or
+/// water, foliage, road or rail, structure and construction factor, and ice, snow or mud. A
+/// hex holds at most four of them.
+fn layer_lines(hex: super::Hex) -> Vec<String> {
+    let mut layers: Vec<(String, String)> = Vec::new();
+    match hex.water() {
+        Some(water) if water.flow.is_still() => {
+            layers.push(("Water:".into(), format!("Depth {}", water.depth)));
+        }
+        Some(water) => layers.push((
+            "Water:".into(),
+            format!("Depth {} {}", water.depth, water.flow.label()),
+        )),
+        None => layers.push(("Ground:".into(), hex.ground().label().into())),
+    }
+    if let Some(foliage) = hex.foliage() {
+        layers.push(("Foliage:".into(), foliage.label().into()));
+    }
+    if let Some(route) = hex.route() {
+        layers.push(("Route:".into(), route.label().into()));
+    }
+    if let Some(structure) = hex.structure() {
+        layers.push((
+            format!("{}:", structure.kind.label()),
+            structure.class.label().into(),
+        ));
+        layers.push((
+            "CF:".into(),
+            format!("{}/{}", structure.cf, structure.class.construction_factor()),
+        ));
+    }
+    if let Some(condition) = hex.condition() {
+        layers.push(("Surface:".into(), condition.label().into()));
+    }
+    layers
+        .into_iter()
+        .map(|(label, value)| format!("{label:<8}{value:>18}"))
+        .collect()
+}
+
 /// Display names for terrain features, and for the fire and smoke shown on the effect line.
 fn terrain_name(terrain: super::Terrain) -> &'static str {
-    use super::Terrain::*;
-    match terrain {
-        Grassland => "Grassland",
-        Road => "Road",
-        LightForest => "Light Forest",
-        HeavyForest => "Heavy Forest",
-        Water => "Water",
-        Ice => "Ice",
-        Bridge => "Bridge",
-        Rough => "Rough",
-        Mountains => "Mountains",
-        Fire => "Fire",
-        Smoke => "Smoke",
-        Snow => "Snow",
-        Building => "Building",
-        Wall => "Wall",
-        Sand => "Sand",
-    }
+    terrain.label()
 }
 
 /// Native cockpit entry point for navigation centering and rendering.
@@ -181,6 +206,51 @@ pub(crate) fn command(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::btech::{
+        Condition, ConstructionClass, Flow, Hex, Route, Structure, StructureKind, Terrain, Water,
+    };
+
+    /// Each layer the one-symbol terrain line can hide gets its own readout line, at most 26
+    /// characters wide.
+    #[test]
+    fn layer_lines_name_every_layer() {
+        let woods_road = Hex::new(Terrain::UltraHeavyJungle, 0)
+            .with_route(Some(Route::DirtRoad))
+            .with_condition(Some(Condition::DeepSnow));
+        assert_eq!(
+            layer_lines(woods_road),
+            [
+                "Ground:              Clear",
+                "Foliage:Ultra-heavy jungle",
+                "Route:           Dirt road",
+                "Surface:         Deep snow",
+            ]
+        );
+        let bridge = Hex::new(Terrain::Bridge, 2)
+            .with_water(Some(Water {
+                depth: 3,
+                flow: Flow::Rapids,
+            }))
+            .with_structure(Some(Structure {
+                cf: 35,
+                ..Structure::new(StructureKind::Bridge, 2, ConstructionClass::Heavy)
+            }));
+        assert_eq!(
+            layer_lines(bridge),
+            [
+                "Water:      Depth 3 Rapids",
+                "Bridge:              Heavy",
+                "CF:                  35/90",
+            ]
+        );
+        for line in layer_lines(woods_road)
+            .into_iter()
+            .chain(layer_lines(bridge))
+        {
+            assert!(line.chars().count() <= 26, "{line}");
+        }
+    }
+
     #[test]
     fn within_hex_positions_are_bounded_and_preserve_continuous_offsets() {
         let hex = super::super::HexCoordinate { x: 2, y: 2 };

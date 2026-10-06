@@ -232,7 +232,7 @@ async fn vehicle_locks_clear_on_visibility_sensor_placement_and_power_changes() 
     );
     let mut world = initial.clone();
     // Light changes wait for the next scan, where the sensor band still reaches the target.
-    set_battle_map_visibility(&mut world, map, Light::Night, 30).unwrap();
+    set_battle_map_visibility(&mut world, map, Light::MoonlessNight, 30).unwrap();
     assert!(world.btech.vehicles()[&observer].target_lock().is_some());
     refresh_battle_contacts(&mut world, &[observer]).unwrap();
     assert!(world.btech.vehicles()[&observer].target_lock().is_some());

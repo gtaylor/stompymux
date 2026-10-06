@@ -61,7 +61,7 @@ pub(super) fn saved_limit(base: f64, masc: bool, supercharger: bool, myomer: boo
     .unwrap_or(f64::NAN)
 }
 
-/// Apply enabled map gravity after chassis bonuses, preserving ordinary-map precision.
+/// Apply map gravity after chassis bonuses, preserving ordinary-map precision.
 pub(super) fn on_map(
     world: &crate::World,
     position: Option<super::Position>,
@@ -70,7 +70,7 @@ pub(super) fn on_map(
     ensure!(speed.is_finite() && speed >= 0.0, "Invalid effective speed");
     let map = position
         .and_then(|position| world.btech.maps().get(&position.map))
-        .filter(|map| map.uses_special_rules() && map.gravity != 100);
+        .filter(|map| map.gravity != 100);
     match map {
         Some(map) => gravity(speed as f32, Some(map.gravity)),
         None => Ok(speed),

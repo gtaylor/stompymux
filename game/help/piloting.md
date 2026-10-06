@@ -26,10 +26,16 @@ Startup progress survives restart. It pauses while the server is offline or
 unable to save progress. A running unit accepts `heading <degrees>` and
 `speed <kph|stop|walk|run|back>`. Turns and speed changes are gradual. Shutting down above 10.75 kph forward
 causes a fall and can cause crowding collisions. Reverse or slower motion stops
-without that shutdown fall. Motion supports grassland, roads, forests, rough ground, mountains, snow, sand and
-bridge decks, including one- and two-level elevation changes. Sand halves the speed
-of wheeled vehicles; Mechs, tracked vehicles and hovercraft cross it like grassland. Fire and smoke slow
-every ground unit as much as rough ground. Standing in flames adds five to a Mech's heat production,
+without that shutdown fall. Each hex costs movement for its ground, foliage, route, water flow and any ice,
+snow or mud, and your speed is divided by that cost. A road or rail line replaces the
+ground and foliage it crosses. Rough ground, rubble, light woods and rail cost one
+extra; ultra rough ground, ultra rubble and heavy woods two; ultra-heavy woods three.
+Jungle costs one more than woods of the same density. Swamp costs Mechs one extra,
+hovercraft nothing, and other vehicles two. Magma costs one extra, and heavy industrial
+ground one extra for Mechs. Sand and thin snow slow only wheeled
+vehicles. Deep snow, mud and ice cost one extra, except for hovercraft. Rapids add
+one and torrents two. Fire and smoke slow every ground unit at least as much as rough
+ground. Standing in flames adds five to a Mech's heat production,
 unless it is under the water or beneath the bridge deck the fire burns on. Forward steps reduce
 speed by 10.75 kph per level while preserving your requested throttle. Backing
 across a step normally requires a piloting check: failure causes a fall, with an
@@ -125,8 +131,9 @@ what means your unit can perceive right now:
 
 - Sensors: within fifteen hexes you detect anything with a clear line, whatever
   the darkness or weather.
-- Sight: beyond that, weather visibility sets how far you see. At night an unlit
-  target costs +1 to hit, and a lit one can be seen three times as far.
+- Sight: beyond that, weather visibility sets how far you see. At night a lit
+  target can be seen three times as far. Darkness also costs to hit; see
+  `help night`.
 - Probe and radar: special equipment, if your unit carries it.
 
 See `help line of sight` for the full rules. `sensor` takes no arguments or
@@ -445,7 +452,7 @@ remains, destroying the mount and causing internal damage.
 
 ### Searchlights
 
-Units fitted with `Searchlight` start in automatic mode: the lamp switches on when the battlefield is at night and off in twilight or daylight, where it gives no benefit. Automatic lamps react when an administrator changes the map's light, when the unit moves to another battlefield, and when the unit finishes starting up. Every switch takes five seconds.
+Units fitted with `Searchlight` start in automatic mode: the lamp switches on when the battlefield is at night (full moon, moonless or pitch black) and off at dawn, dusk or in daylight, where it gives no benefit. Automatic lamps react when an administrator changes the map's light, when the unit moves to another battlefield, and when the unit finishes starting up. Every switch takes five seconds.
 
 - `slite auto` returns to automatic switching.
 - `slite on` and `slite off` hold the lamp on or off regardless of light.
@@ -874,7 +881,11 @@ center, the bearing readout is 180 degrees.
 `navigate [target | bearing range]` combines a local hex map with a compass plot
 of positions inside the selected center hex. The compass shows your unit as *,
 friendly contacts as x and enemies as X. The readouts always show your own position,
-terrain, speed and heading, plus an effect line when fire or smoke covers your hex. Omit arguments to center on yourself. This view remains
+terrain, speed and heading, plus an effect line when fire or smoke covers your hex.
+Below the heading, one line per layer of your hex spells out what the terrain symbol can
+hide: its ground or water depth and flow, any woods, jungle or fields, a road or rail line,
+a building, wall or bridge with its construction class and remaining CF, and any ice, snow
+or mud. Omit arguments to center on yourself. This view remains
 centered near map edges and can show your own hex with failed scanners.
 
 

@@ -561,20 +561,20 @@ async fn heat_slows_motion_gradually_preserves_throttle_and_recovers_after_cooli
 
 #[tokio::test]
 async fn occupied_environment_changes_heat_and_survives_restart() {
-    for (tile, flags, temperature, production, dissipation) in [
-        ("&0", 0, 20, 5.0, 10.0),
-        ("~1", 0, 20, 0.0, 10.0),
-        ("~2", 0, 20, 0.0, 16.0),
-        (".0", 0, 100, 0.0, 10.0),
-        (".0", 2, 50, 0.0, 10.0),
-        (".0", 2, 51, 0.0, 9.0),
-        (".0", 2, 61, 0.0, 8.0),
-        (".0", 2, -30, 0.0, 10.0),
-        (".0", 2, -31, 0.0, 11.0),
-        ("~2", 2, -41, 0.0, 18.0),
+    for (tile, temperature, production, dissipation) in [
+        ("&0", 20, 5.0, 10.0),
+        ("~1", 20, 0.0, 10.0),
+        ("~2", 20, 0.0, 16.0),
+        (".0", 100, 0.0, 5.0),
+        (".0", 50, 0.0, 10.0),
+        (".0", 51, 0.0, 9.0),
+        (".0", 61, 0.0, 8.0),
+        (".0", -30, 0.0, 10.0),
+        (".0", -31, 0.0, 11.0),
+        ("~2", -41, 0.0, 18.0),
     ] {
         let source = format!(
-            "12 12\n{}{flags}: 100 {temperature}\n",
+            "12 12\n{}0: 100 {temperature}\n",
             format!("{}\n", tile.repeat(12)).repeat(12)
         );
         let (_dir, config, mut world, id) = fixture_source(&source).await;
@@ -1209,7 +1209,7 @@ async fn perception_query_composes_live_terrain_and_spatial_range_without_acquir
     support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
     let map = world.btech.constructed_units()[&id].position().unwrap().map;
     place_battle_unit(&mut world, target, map, 5, 9).unwrap();
-    set_battle_map_visibility(&mut world, map, Light::Night, 3).unwrap();
+    set_battle_map_visibility(&mut world, map, Light::MoonlessNight, 3).unwrap();
     let before = world.btech.clone();
     // Four hexes away is inside the sensor band, where darkness does not matter.
     let perceived = battle_perceive(&world, id, target).unwrap().unwrap();
@@ -1225,11 +1225,11 @@ async fn perception_query_composes_live_terrain_and_spatial_range_without_acquir
     let mut sight = world.clone();
     configure_battle_perception(&mut sight, 0);
     assert_eq!(battle_perceive(&sight, id, target).unwrap(), None);
-    // Within night visibility sight reaches it, at +1 for darkness.
-    set_battle_map_visibility(&mut sight, map, Light::Night, 4).unwrap();
+    // Within night visibility sight reaches it.
+    set_battle_map_visibility(&mut sight, map, Light::MoonlessNight, 4).unwrap();
     let seen = battle_perceive(&sight, id, target).unwrap().unwrap();
     assert_eq!(seen.channel, DetectionChannel::Sight);
-    assert_eq!(seen.aim_modifier, 1);
+    assert_eq!(seen.aim_modifier, 0);
     assert!(sight.btech.constructed_units()[&id].contacts().is_empty());
     assert_eq!(world.btech, before);
     stop_battle_unit(
@@ -1291,7 +1291,7 @@ async fn saved_map_visibility_changes_occupied_battlefields_and_perception_queri
     .await
     .unwrap();
     sqlx::query("CREATE TRIGGER prevent_terrain_change BEFORE DELETE ON btech_map_hexes BEGIN SELECT RAISE(ABORT,'terrain must not change'); END").execute(&mut sql).await.unwrap();
-    set_battle_map_visibility(&mut world, map, Light::Night, 3).unwrap();
+    set_battle_map_visibility(&mut world, map, Light::MoonlessNight, 3).unwrap();
     assert_eq!(
         battle_perceive(&world, id, target)
             .unwrap()
@@ -1319,7 +1319,7 @@ async fn saved_map_visibility_changes_occupied_battlefields_and_perception_queri
     let loaded = persistence::load(&config.database()).await.unwrap();
     // Even the sensor band needs a clear line inside the battlefield ceiling.
     assert_eq!(battle_perceive(&loaded, id, target).unwrap(), None);
-    sqlx::query("UPDATE btech_maps SET light=3 WHERE dbref=?")
+    sqlx::query("UPDATE btech_maps SET light=6 WHERE dbref=?")
         .bind(map.0)
         .execute(&mut sql)
         .await
@@ -1455,7 +1455,7 @@ async fn sensor_command_and_lua_report_read_only_perception() {
     use stompymux_rs::{Light, set_battle_map_visibility};
     let (_dir, config, mut world, id) = fixture('.').await;
     let map = world.btech.constructed_units()[&id].position().unwrap().map;
-    set_battle_map_visibility(&mut world, map, Light::Night, 10).unwrap();
+    set_battle_map_visibility(&mut world, map, Light::MoonlessNight, 10).unwrap();
     world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(id);
     let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
     let run = |player, line| {
@@ -1469,7 +1469,7 @@ async fn sensor_command_and_lua_report_read_only_perception() {
     };
     let expected = [
         "Sensors: 15 hexes in any light or weather",
-        "Sight:   10 hexes at night, +1 to hit unless the target is lit; lit targets to 30",
+        "Sight:   10 hexes, moonless night: +3 to hit, +0 if lit; lit targets to 30",
         "Probe:   none",
         "Radar:   none",
     ]
@@ -2048,7 +2048,7 @@ async fn target_selection_survives_light_changes_and_clears_on_shutdown_and_expl
     select_battle_target(&mut world, id, ObjectId(1), Some(target)).unwrap();
     let selected = world.btech.constructed_units()[&id].target_lock();
     assert!(selected.is_some());
-    for light in [Light::Night, Light::Twilight, Light::Day] {
+    for light in [Light::MoonlessNight, Light::Dusk, Light::Day] {
         set_battle_map_visibility(&mut world, map, light, 30).unwrap();
         assert_eq!(world.btech.constructed_units()[&id].target_lock(), selected);
     }
@@ -2253,7 +2253,7 @@ async fn perception_aim_chooses_the_best_channel_and_never_uses_stale_contacts()
     };
     let (_dir, _config, mut world, id, target) = lock_fixture().await;
     let map = world.btech.constructed_units()[&id].position().unwrap().map;
-    set_battle_map_visibility(&mut world, map, Light::Night, 30).unwrap();
+    set_battle_map_visibility(&mut world, map, Light::MoonlessNight, 30).unwrap();
     let aim = |world: &stompymux_rs::World| {
         battle_aim_modifiers(world, id, target, 0, 4, optical_aim_rules()).unwrap()
     };
@@ -2264,14 +2264,17 @@ async fn perception_aim_chooses_the_best_channel_and_never_uses_stale_contacts()
             modifier,
         })
     };
-    // Darkness does not matter inside the sensor band.
+    // Perception costs nothing inside the sensor band, but the night still costs to hit.
     assert_eq!(aim(&world).perception, perceived(Channel::Sensors, 0));
-    // Sight alone pays +1 at night for an unlit target.
+    assert_eq!(aim(&world).light, 3);
+    // Sight perceives an unlit target at no cost; the night's darkness is its own term.
     set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, false).unwrap();
-    assert_eq!(aim(&world).perception, perceived(Channel::Sight, 1));
-    set_battle_map_visibility(&mut world, map, Light::Twilight, 30).unwrap();
     assert_eq!(aim(&world).perception, perceived(Channel::Sight, 0));
-    set_battle_map_visibility(&mut world, map, Light::Night, 30).unwrap();
+    assert_eq!(aim(&world).light, 3);
+    set_battle_map_visibility(&mut world, map, Light::Dusk, 30).unwrap();
+    assert_eq!(aim(&world).perception, perceived(Channel::Sight, 0));
+    assert_eq!(aim(&world).light, 1);
+    set_battle_map_visibility(&mut world, map, Light::MoonlessNight, 30).unwrap();
     stompymux_rs::set_battle_unit_signature(
         &mut world,
         target,
@@ -2283,6 +2286,8 @@ async fn perception_aim_chooses_the_best_channel_and_never_uses_stale_contacts()
     )
     .unwrap();
     assert_eq!(aim(&world).perception, perceived(Channel::Sight, 0));
+    // A lit target cancels a moonless night's penalty.
+    assert_eq!(aim(&world).light, 0);
     // With nothing reaching the target, the saved contact is not used.
     set_battle_map_visibility(&mut world, map, Light::Day, 0).unwrap();
     let before = world.btech.clone();
@@ -2321,8 +2326,13 @@ async fn perception_aim_includes_target_woods_and_shallow_water_cover() {
         )
         .unwrap();
         place_battle_unit(&mut world, target, map, 5, target_y).unwrap();
-        stompymux_rs::set_battle_map_visibility(&mut world, map, stompymux_rs::Light::Night, 30)
-            .unwrap();
+        stompymux_rs::set_battle_map_visibility(
+            &mut world,
+            map,
+            stompymux_rs::Light::MoonlessNight,
+            30,
+        )
+        .unwrap();
         stompymux_rs::refresh_battle_contacts(&mut world, &[id]).unwrap();
         let terrain = stompymux_rs::battle_unit_terrain_los(&world, id, target).unwrap();
         // Sensor-band cover: path woods, target woods and three for partial cover.
@@ -2341,8 +2351,9 @@ async fn perception_aim_includes_target_woods_and_shallow_water_cover() {
             Some(stompymux_rs::DetectionChannel::Sensors)
         );
         assert_eq!(perception.modifier, expected, "{tile}");
-        // Gunnery 4 + off target -4 + no lock 2 + perception contribution.
-        assert_eq!(aim.subtotal(), Some(2 + i32::from(expected)));
+        // Gunnery 4 + off target -4 + no lock 2 + moonless night 3 + perception contribution.
+        assert_eq!(aim.light, 3);
+        assert_eq!(aim.subtotal(), Some(5 + i32::from(expected)));
     }
 }
 
@@ -3164,15 +3175,14 @@ async fn prone_posture_changes_los_and_aim_at_adjacent_and_distant_ranges() {
 }
 
 #[tokio::test]
-async fn fall_gravity_only_reduces_damage_under_special_map_rules() {
+async fn fall_gravity_only_reduces_damage() {
     let (_dir, _config, base, id) = fixture('.').await;
     let map = base.btech.constructed_units()[&id].position().unwrap().map;
-    for (flags, gravity, expected) in [(0, 50, 4), (2, 50, 2), (2, 200, 4)] {
+    for (gravity, expected) in [(100, 4), (50, 2), (200, 4)] {
         let mut world = base.clone();
         world
             .btech
             .rewrite_map_record(map, |record| {
-                record["flags"] = serde_json::json!(flags);
                 record["gravity"] = serde_json::json!(gravity);
             })
             .unwrap();

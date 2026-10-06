@@ -4,8 +4,9 @@
 //!
 //! * **Sensors**: every unit detects anything with a clear line inside a short band
 //!   ([`DEFAULT_SENSOR_RANGE`] hexes unless configured), whatever the darkness or weather.
-//! * **Sight**: beyond the band, weather visibility sets the reach. At night an unlit target
-//!   costs +1 to hit, and an illuminated one can be seen three times as far.
+//! * **Sight**: beyond the band, weather visibility sets the reach. At night an illuminated
+//!   target can be seen three times as far. Darkness itself costs to hit through the map's
+//!   light, not through perception.
 //! * **Probe**: an active probe sees through terrain, woods, smoke and darkness within its
 //!   radius and reveals hidden units. Behind blocking terrain the contact can be locked,
 //!   spotted and shared, but not engaged with direct fire.
@@ -334,7 +335,7 @@ pub fn perception_profile(world: &World, observer: ObjectId) -> Result<Perceptio
     let ceiling = u16::try_from(map.maximum_visibility.clamp(0, 60))?;
     let visibility = u16::try_from(map.visibility.clamp(0, 60))?;
     let sight_range = visibility.min(ceiling);
-    let lit_sight_range = if light == Light::Night {
+    let lit_sight_range = if light.is_night() {
         (visibility * 3).min(ceiling)
     } else {
         sight_range

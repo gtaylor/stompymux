@@ -60,12 +60,6 @@ pub fn set_map_environment(
     if conditions.underground {
         map.set_flag(super::MapFlag::Underground, true);
     }
-    map.set_flag(
-        super::MapFlag::SpecialRules,
-        conditions.vacuum
-            || conditions.gravity != 100
-            || !(-30..=50).contains(&conditions.temperature),
-    );
     map.validate()?;
     let actual = map.environment();
     world.btech.maps.insert(id, map);

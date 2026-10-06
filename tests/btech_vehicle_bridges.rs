@@ -139,7 +139,7 @@ async fn low_spans_stop_hovercraft_and_inconsistent_saved_underpass_state_is_rej
         .rewrite_map_record(map, |record| {
             crate::support::set_hex_terrain(
                 &mut record["terrain"][usize::from(position.y) * 12 + usize::from(position.x)],
-                Terrain::Grassland,
+                Terrain::Clear,
             );
         })
         .unwrap();

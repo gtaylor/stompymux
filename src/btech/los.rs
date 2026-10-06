@@ -8,7 +8,8 @@ use serde::Serialize;
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct TerrainLos {
     pub blocked: bool,
-    /// Intervening light woods count once and heavy woods twice; target woods are separate.
+    /// Intervening woods or jungle the line passes through below the canopy: light counts once,
+    /// heavy twice and ultra-heavy three times. Target woods are separate.
     pub woods: u8,
     pub target_woods: u8,
     pub water: u8,
@@ -132,7 +133,9 @@ fn terrain_los_with_endpoint(
                 report.water = report.water.saturating_add(1).min(7);
             }
             if intervening {
-                report.woods = (report.woods + tile.woods_density()).min(15);
+                if sight_height < height + f64::from(tile.foliage_height()) {
+                    report.woods = (report.woods + tile.woods_density()).min(15);
+                }
                 match tile.overlay() {
                     Some(super::DecorationKind::Smoke) => report.smoke = true,
                     Some(super::DecorationKind::Fire) => report.fire = true,
@@ -314,7 +317,7 @@ pub(super) fn unit_terrain_geometry(
         (observer.height, target.height),
     )?;
     let tile = map.base_hex(i64::from(target.position.x), i64::from(target.position.y))?;
-    if target.level > i32::from(tile.level()) + 2 {
+    if target.level > i32::from(tile.level()) + i32::from(tile.foliage_height()) {
         report.target_woods = 0;
     }
     Ok((report, range))
@@ -374,7 +377,7 @@ mod tests {
         for radar in [false, true] {
             for maximum in [10, 200] {
                 let mut world = World::default();
-                let mut map = lane(&[(Terrain::Grassland, 0); 201]);
+                let mut map = lane(&[(Terrain::Clear, 0); 201]);
                 map.maximum_visibility = maximum;
                 world.btech.maps.insert(ObjectId(99), map);
                 let mut template = crate::MechTemplate::parse(
@@ -477,10 +480,10 @@ mod tests {
         let from = HexCoordinate { x: 1, y: 0 };
         let to = HexCoordinate { x: 1, y: 2 };
         super::super::los_trace::clear();
-        assert!(!sight(&[(Grassland, 0); 3]).blocked);
-        assert!(sight(&[(Grassland, 0), (Grassland, 2), (Grassland, 0)]).blocked);
-        assert!(!sight(&[(Grassland, 0); 3]).blocked);
-        let map = lane(&[(Grassland, 0), (Grassland, 1), (Grassland, 0)]);
+        assert!(!sight(&[(Clear, 0); 3]).blocked);
+        assert!(sight(&[(Clear, 0), (Clear, 2), (Clear, 0)]).blocked);
+        assert!(!sight(&[(Clear, 0); 3]).blocked);
+        let map = lane(&[(Clear, 0), (Clear, 1), (Clear, 0)]);
         assert!(
             !ground_posture_los(&map, from, to, false, false, (None, None))
                 .unwrap()
@@ -502,19 +505,19 @@ mod tests {
     fn woods_and_obscurants_exclude_endpoints() {
         use Terrain::*;
         let report = sight(&[
-            (HeavyForest, 0),
-            (LightForest, 0),
-            (HeavyForest, 0),
+            (HeavyWoods, 0),
+            (LightWoods, 0),
+            (HeavyWoods, 0),
             (Smoke, 0),
             (Fire, 0),
-            (Mountains, 0),
-            (HeavyForest, 0),
+            (UltraRough, 0),
+            (HeavyWoods, 0),
         ]);
         assert_eq!(report.woods, 3);
         assert_eq!(report.target_woods, 2);
         assert!(report.smoke && report.fire);
         assert!(!report.blocked);
-        let report = sight(&[(Fire, 0), (Grassland, 0), (Smoke, 0)]);
+        let report = sight(&[(Fire, 0), (Clear, 0), (Smoke, 0)]);
         assert!(!report.fire && !report.smoke);
         assert_eq!(report.woods, 0);
     }
@@ -522,16 +525,13 @@ mod tests {
     #[test]
     fn ridges_block_or_cover_and_high_sight_clears_woods() {
         use Terrain::*;
-        assert!(sight(&[(Grassland, 0), (Grassland, 2), (Grassland, 0)]).blocked);
-        let report = sight(&[(Grassland, 0), (Grassland, 1), (Grassland, 0)]);
+        assert!(sight(&[(Clear, 0), (Clear, 2), (Clear, 0)]).blocked);
+        let report = sight(&[(Clear, 0), (Clear, 1), (Clear, 0)]);
         assert!(!report.blocked);
         assert!(report.partial_cover);
-        assert_eq!(
-            sight(&[(Grassland, 3), (HeavyForest, 0), (Grassland, 3)]).woods,
-            0
-        );
+        assert_eq!(sight(&[(Clear, 3), (HeavyWoods, 0), (Clear, 3)]).woods, 0);
         // Equality with terrain blocks: the halfway eye height is exactly three.
-        assert!(sight(&[(Grassland, 0), (Grassland, 3), (Grassland, 3)]).blocked);
+        assert!(sight(&[(Clear, 0), (Clear, 3), (Clear, 3)]).blocked);
     }
 
     #[test]
@@ -542,10 +542,10 @@ mod tests {
         assert_eq!(report.water, 7);
         assert!(report.fire);
         assert!(!sight(&[(Water, 3), (Ice, 3), (Water, 3)]).blocked);
-        assert!(sight(&[(Water, 3), (Grassland, 0), (Water, 3)]).blocked);
+        assert!(sight(&[(Water, 3), (Clear, 0), (Water, 3)]).blocked);
         assert!(sight(&[(Water, 3), (Water, 1), (Water, 3)]).blocked);
-        assert!(sight(&[(Water, 3), (Water, 3), (Grassland, 0)]).blocked);
-        let report = sight(&[(Grassland, 0), (Water, 1), (Water, 1)]);
+        assert!(sight(&[(Water, 3), (Water, 3), (Clear, 0)]).blocked);
+        let report = sight(&[(Clear, 0), (Water, 1), (Water, 1)]);
         assert!(!report.blocked);
         assert!(report.partial_cover);
     }
@@ -555,11 +555,7 @@ mod tests {
         let from = HexCoordinate { x: 1, y: 0 };
         let to = HexCoordinate { x: 1, y: 2 };
         for eye in [0.5, 1.5] {
-            let clear = lane(&[
-                (Terrain::Grassland, 0),
-                (Terrain::Grassland, 0),
-                (Terrain::Ice, 0),
-            ]);
+            let clear = lane(&[(Terrain::Clear, 0), (Terrain::Clear, 0), (Terrain::Ice, 0)]);
             assert!(
                 !terrain_los_with_endpoint(&clear, from, to, (eye, 0.0), (None, None), true)
                     .unwrap()
@@ -570,11 +566,7 @@ mod tests {
                     .unwrap()
                     .blocked
             );
-            let ridge = lane(&[
-                (Terrain::Grassland, 0),
-                (Terrain::Grassland, 2),
-                (Terrain::Ice, 0),
-            ]);
+            let ridge = lane(&[(Terrain::Clear, 0), (Terrain::Clear, 2), (Terrain::Ice, 0)]);
             assert!(
                 terrain_los_with_endpoint(&ridge, from, to, (eye, 0.0), (None, None), true)
                     .unwrap()
@@ -590,9 +582,9 @@ mod tests {
             let report = sight(&[(Ice, depth); 3]);
             assert!(!report.blocked);
             assert!(!report.partial_cover);
-            assert!(!sight(&[(Grassland, 0), (Ice, depth), (Ice, depth)]).blocked);
-            assert!(!sight(&[(Ice, depth), (Ice, depth), (Grassland, 0)]).blocked);
-            assert!(sight(&[(Ice, depth), (Grassland, 2), (Ice, depth)]).blocked);
+            assert!(!sight(&[(Clear, 0), (Ice, depth), (Ice, depth)]).blocked);
+            assert!(!sight(&[(Ice, depth), (Ice, depth), (Clear, 0)]).blocked);
+            assert!(sight(&[(Ice, depth), (Clear, 2), (Ice, depth)]).blocked);
             assert!(sight(&[(Ice, depth), (Water, 3), (Water, 3)]).blocked);
             assert!(sight(&[(Water, 3), (Water, 3), (Ice, depth)]).blocked);
         }
@@ -606,15 +598,12 @@ mod tests {
         use Terrain::*;
         for height in [0, 1, 3, 9] {
             assert!(!sight(&[(Bridge, height); 3]).blocked);
-            assert!(!sight(&[(Grassland, height), (Bridge, height), (Bridge, height)]).blocked);
-            assert!(!sight(&[(Bridge, height), (Bridge, height), (Grassland, height)]).blocked);
+            assert!(!sight(&[(Clear, height), (Bridge, height), (Bridge, height)]).blocked);
+            assert!(!sight(&[(Bridge, height), (Bridge, height), (Clear, height)]).blocked);
         }
-        assert!(sight(&[(Bridge, 0), (Grassland, 2), (Bridge, 0)]).blocked);
+        assert!(sight(&[(Bridge, 0), (Clear, 2), (Bridge, 0)]).blocked);
         assert!(!sight(&[(Bridge, 0), (Bridge, 9), (Bridge, 0)]).blocked);
-        assert_eq!(
-            sight(&[(Bridge, 0), (HeavyForest, 0), (Bridge, 0)]).woods,
-            2
-        );
+        assert_eq!(sight(&[(Bridge, 0), (HeavyWoods, 0), (Bridge, 0)]).woods, 2);
         let map = lane(&[(Bridge, 9); 3]);
         let source = HexCoordinate { x: 1, y: 0 };
         let target = HexCoordinate { x: 1, y: 2 };
@@ -633,7 +622,7 @@ mod tests {
     #[test]
     fn same_hex_is_clear_and_out_of_map_endpoints_return_errors() {
         use Terrain::*;
-        let map = lane(&[(HeavyForest, 0)]);
+        let map = lane(&[(HeavyWoods, 0)]);
         let point = HexCoordinate { x: 1, y: 0 };
         let report = ground_terrain_los(&map, point, point).unwrap();
         assert!(!report.blocked);

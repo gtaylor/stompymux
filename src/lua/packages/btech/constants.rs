@@ -966,16 +966,28 @@ pub(super) static LIGHT_LEVELS: Catalog = Catalog {
     qualified_name: "btech.map.light_levels",
     entries: &[
         Entry {
-            name: "NIGHT",
+            name: "DAY",
             value: 0,
         },
         Entry {
-            name: "TWILIGHT",
+            name: "DAWN",
             value: 1,
         },
         Entry {
-            name: "DAY",
+            name: "DUSK",
             value: 2,
+        },
+        Entry {
+            name: "FULL_MOON_NIGHT",
+            value: 3,
+        },
+        Entry {
+            name: "MOONLESS_NIGHT",
+            value: 4,
+        },
+        Entry {
+            name: "PITCH_BLACK",
+            value: 5,
         },
     ],
 };
@@ -984,10 +996,6 @@ pub(super) static LIGHT_LEVELS: Catalog = Catalog {
 pub(super) static MAP_FLAGS: Catalog = Catalog {
     qualified_name: "btech.map.flags",
     entries: &[
-        Entry {
-            name: "SPECIAL_RULES",
-            value: 2,
-        },
         Entry {
             name: "VACUUM",
             value: 4,
@@ -1001,7 +1009,7 @@ pub(super) static MAP_FLAGS: Catalog = Catalog {
             value: 32,
         },
         Entry {
-            name: "INDESTRUCTIBLE_BRIDGES",
+            name: "INDESTRUCTIBLE_STRUCTURES",
             value: 64,
         },
         Entry {
@@ -1077,6 +1085,137 @@ pub(super) static DETECTION_CHANNELS: StringCatalog = StringCatalog {
     ],
 };
 
+/// Terrain names `btech.map.terrain` reports, one per hex: the feature the map shows.
+pub(super) static TERRAIN_TYPES: StringCatalog = StringCatalog {
+    qualified_name: "btech.map.terrain_types",
+    entries: &[
+        StringEntry {
+            name: "CLEAR",
+            value: "clear",
+        },
+        StringEntry {
+            name: "PAVEMENT",
+            value: "pavement",
+        },
+        StringEntry {
+            name: "ROAD",
+            value: "road",
+        },
+        StringEntry {
+            name: "RAIL",
+            value: "rail",
+        },
+        StringEntry {
+            name: "ROUGH",
+            value: "rough",
+        },
+        StringEntry {
+            name: "ULTRA_ROUGH",
+            value: "ultra_rough",
+        },
+        StringEntry {
+            name: "RUBBLE",
+            value: "rubble",
+        },
+        StringEntry {
+            name: "ULTRA_RUBBLE",
+            value: "ultra_rubble",
+        },
+        StringEntry {
+            name: "SAND",
+            value: "sand",
+        },
+        StringEntry {
+            name: "TUNDRA",
+            value: "tundra",
+        },
+        StringEntry {
+            name: "SWAMP",
+            value: "swamp",
+        },
+        StringEntry {
+            name: "MAGMA_CRUST",
+            value: "magma_crust",
+        },
+        StringEntry {
+            name: "MAGMA",
+            value: "magma",
+        },
+        StringEntry {
+            name: "HEAVY_INDUSTRIAL",
+            value: "heavy_industrial",
+        },
+        StringEntry {
+            name: "LIGHT_WOODS",
+            value: "light_woods",
+        },
+        StringEntry {
+            name: "HEAVY_WOODS",
+            value: "heavy_woods",
+        },
+        StringEntry {
+            name: "ULTRA_HEAVY_WOODS",
+            value: "ultra_heavy_woods",
+        },
+        StringEntry {
+            name: "LIGHT_JUNGLE",
+            value: "light_jungle",
+        },
+        StringEntry {
+            name: "HEAVY_JUNGLE",
+            value: "heavy_jungle",
+        },
+        StringEntry {
+            name: "ULTRA_HEAVY_JUNGLE",
+            value: "ultra_heavy_jungle",
+        },
+        StringEntry {
+            name: "PLANTED_FIELDS",
+            value: "planted_fields",
+        },
+        StringEntry {
+            name: "WATER",
+            value: "water",
+        },
+        StringEntry {
+            name: "ICE",
+            value: "ice",
+        },
+        StringEntry {
+            name: "THIN_SNOW",
+            value: "thin_snow",
+        },
+        StringEntry {
+            name: "DEEP_SNOW",
+            value: "deep_snow",
+        },
+        StringEntry {
+            name: "MUD",
+            value: "mud",
+        },
+        StringEntry {
+            name: "BRIDGE",
+            value: "bridge",
+        },
+        StringEntry {
+            name: "BUILDING",
+            value: "building",
+        },
+        StringEntry {
+            name: "WALL",
+            value: "wall",
+        },
+        StringEntry {
+            name: "FIRE",
+            value: "fire",
+        },
+        StringEntry {
+            name: "SMOKE",
+            value: "smoke",
+        },
+    ],
+};
+
 /// Ground names in the `ground` field of the hexes `btech.map.hex` returns and `set_hex` takes.
 pub(super) static GROUND_TYPES: StringCatalog = StringCatalog {
     qualified_name: "btech.map.ground_types",
@@ -1086,39 +1225,148 @@ pub(super) static GROUND_TYPES: StringCatalog = StringCatalog {
             value: "clear",
         },
         StringEntry {
-            name: "ROAD",
-            value: "road",
+            name: "PAVEMENT",
+            value: "pavement",
         },
         StringEntry {
             name: "ROUGH",
             value: "rough",
         },
         StringEntry {
-            name: "MOUNTAINS",
-            value: "mountains",
+            name: "ULTRA_ROUGH",
+            value: "ultra_rough",
         },
         StringEntry {
-            name: "SNOW",
-            value: "snow",
+            name: "RUBBLE",
+            value: "rubble",
+        },
+        StringEntry {
+            name: "ULTRA_RUBBLE",
+            value: "ultra_rubble",
         },
         StringEntry {
             name: "SAND",
             value: "sand",
         },
+        StringEntry {
+            name: "TUNDRA",
+            value: "tundra",
+        },
+        StringEntry {
+            name: "SWAMP",
+            value: "swamp",
+        },
+        StringEntry {
+            name: "MAGMA_CRUST",
+            value: "magma_crust",
+        },
+        StringEntry {
+            name: "MAGMA",
+            value: "magma",
+        },
+        StringEntry {
+            name: "HEAVY_INDUSTRIAL",
+            value: "heavy_industrial",
+        },
     ],
 };
 
-/// Woods densities in the `woods` field of a hex.
-pub(super) static WOODS_TYPES: StringCatalog = StringCatalog {
-    qualified_name: "btech.map.woods_types",
+/// Foliage names in the `foliage` field of a hex.
+pub(super) static FOLIAGE_TYPES: StringCatalog = StringCatalog {
+    qualified_name: "btech.map.foliage_types",
     entries: &[
         StringEntry {
-            name: "LIGHT",
-            value: "light",
+            name: "LIGHT_WOODS",
+            value: "light_woods",
         },
         StringEntry {
-            name: "HEAVY",
-            value: "heavy",
+            name: "HEAVY_WOODS",
+            value: "heavy_woods",
+        },
+        StringEntry {
+            name: "ULTRA_HEAVY_WOODS",
+            value: "ultra_heavy_woods",
+        },
+        StringEntry {
+            name: "LIGHT_JUNGLE",
+            value: "light_jungle",
+        },
+        StringEntry {
+            name: "HEAVY_JUNGLE",
+            value: "heavy_jungle",
+        },
+        StringEntry {
+            name: "ULTRA_HEAVY_JUNGLE",
+            value: "ultra_heavy_jungle",
+        },
+        StringEntry {
+            name: "PLANTED_FIELDS",
+            value: "planted_fields",
+        },
+    ],
+};
+
+/// Water flow names in the `flow` field of a hex's `water`.
+pub(super) static FLOW_TYPES: StringCatalog = StringCatalog {
+    qualified_name: "btech.map.flow_types",
+    entries: &[
+        StringEntry {
+            name: "STILL",
+            value: "still",
+        },
+        StringEntry {
+            name: "RAPIDS",
+            value: "rapids",
+        },
+        StringEntry {
+            name: "TORRENT",
+            value: "torrent",
+        },
+    ],
+};
+
+/// Road and rail names in the `route` field of a hex.
+pub(super) static ROUTE_TYPES: StringCatalog = StringCatalog {
+    qualified_name: "btech.map.route_types",
+    entries: &[
+        StringEntry {
+            name: "PAVED_ROAD",
+            value: "paved_road",
+        },
+        StringEntry {
+            name: "GRAVEL_ROAD",
+            value: "gravel_road",
+        },
+        StringEntry {
+            name: "DIRT_ROAD",
+            value: "dirt_road",
+        },
+        StringEntry {
+            name: "RAIL",
+            value: "rail",
+        },
+    ],
+};
+
+/// Ice, snow and mud names in the `condition` field of a hex.
+pub(super) static CONDITION_TYPES: StringCatalog = StringCatalog {
+    qualified_name: "btech.map.condition_types",
+    entries: &[
+        StringEntry {
+            name: "ICE",
+            value: "ice",
+        },
+        StringEntry {
+            name: "THIN_SNOW",
+            value: "thin_snow",
+        },
+        StringEntry {
+            name: "DEEP_SNOW",
+            value: "deep_snow",
+        },
+        StringEntry {
+            name: "MUD",
+            value: "mud",
         },
     ],
 };
@@ -1142,69 +1390,25 @@ pub(super) static STRUCTURE_KINDS: StringCatalog = StringCatalog {
     ],
 };
 
-/// Terrain names reported by `btech.map.terrain`: the one feature a map shows for a hex.
-pub(super) static TERRAIN_TYPES: StringCatalog = StringCatalog {
-    qualified_name: "btech.map.terrain_types",
+/// Construction classes in the `class` field of a hex's `structure`.
+pub(super) static CONSTRUCTION_CLASSES: StringCatalog = StringCatalog {
+    qualified_name: "btech.map.construction_classes",
     entries: &[
         StringEntry {
-            name: "GRASSLAND",
-            value: "grassland",
+            name: "LIGHT",
+            value: "light",
         },
         StringEntry {
-            name: "ROAD",
-            value: "road",
+            name: "MEDIUM",
+            value: "medium",
         },
         StringEntry {
-            name: "LIGHT_FOREST",
-            value: "light_forest",
+            name: "HEAVY",
+            value: "heavy",
         },
         StringEntry {
-            name: "HEAVY_FOREST",
-            value: "heavy_forest",
-        },
-        StringEntry {
-            name: "WATER",
-            value: "water",
-        },
-        StringEntry {
-            name: "ICE",
-            value: "ice",
-        },
-        StringEntry {
-            name: "BRIDGE",
-            value: "bridge",
-        },
-        StringEntry {
-            name: "ROUGH",
-            value: "rough",
-        },
-        StringEntry {
-            name: "MOUNTAINS",
-            value: "mountains",
-        },
-        StringEntry {
-            name: "FIRE",
-            value: "fire",
-        },
-        StringEntry {
-            name: "SMOKE",
-            value: "smoke",
-        },
-        StringEntry {
-            name: "SNOW",
-            value: "snow",
-        },
-        StringEntry {
-            name: "BUILDING",
-            value: "building",
-        },
-        StringEntry {
-            name: "WALL",
-            value: "wall",
-        },
-        StringEntry {
-            name: "SAND",
-            value: "sand",
+            name: "HARDENED",
+            value: "hardened",
         },
     ],
 };
@@ -1532,8 +1736,15 @@ pub(super) fn install(lua: &Lua, package: &Table) -> mlua::Result<()> {
     map.raw_set("flags", namespace(lua, &MAP_FLAGS)?)?;
     map.raw_set("terrain_types", string_namespace(lua, &TERRAIN_TYPES)?)?;
     map.raw_set("ground_types", string_namespace(lua, &GROUND_TYPES)?)?;
-    map.raw_set("woods_types", string_namespace(lua, &WOODS_TYPES)?)?;
+    map.raw_set("foliage_types", string_namespace(lua, &FOLIAGE_TYPES)?)?;
+    map.raw_set("flow_types", string_namespace(lua, &FLOW_TYPES)?)?;
+    map.raw_set("route_types", string_namespace(lua, &ROUTE_TYPES)?)?;
+    map.raw_set("condition_types", string_namespace(lua, &CONDITION_TYPES)?)?;
     map.raw_set("structure_kinds", string_namespace(lua, &STRUCTURE_KINDS)?)?;
+    map.raw_set(
+        "construction_classes",
+        string_namespace(lua, &CONSTRUCTION_CLASSES)?,
+    )?;
     package.raw_set("map", map)?;
 
     let repair = table(lua, package, "repair")?;
@@ -1577,7 +1788,7 @@ mod tests {
                 light
             );
         }
-        assert_eq!(LIGHT_LEVELS.entries.len(), 3);
+        assert_eq!(LIGHT_LEVELS.entries.len(), crate::Light::ALL.len());
     }
 
     /// Terrain constants name every Rust terrain in order.
@@ -1593,33 +1804,26 @@ mod tests {
     /// Hex layer constants spell each layer the way hexes are serialized.
     #[test]
     fn hex_layer_catalogs_match_serialized_names() {
-        use crate::{Ground, Structure, Woods};
-        let name = |value: serde_json::Value| value.as_str().unwrap().to_owned();
-        let grounds = [
-            Ground::Clear,
-            Ground::Road,
-            Ground::Rough,
-            Ground::Mountains,
-            Ground::Snow,
-            Ground::Sand,
-        ];
-        assert_eq!(GROUND_TYPES.entries.len(), grounds.len());
-        for (entry, ground) in GROUND_TYPES.entries.iter().zip(grounds) {
-            assert_eq!(entry.value, name(serde_json::to_value(ground).unwrap()));
-        }
-        for (entry, woods) in WOODS_TYPES.entries.iter().zip([Woods::Light, Woods::Heavy]) {
-            assert_eq!(entry.value, name(serde_json::to_value(woods).unwrap()));
-        }
-        for (entry, structure) in STRUCTURE_KINDS.entries.iter().zip([
-            Structure::Building { height: 1 },
-            Structure::Wall { height: 1 },
-            Structure::Bridge { deck: 1 },
-        ]) {
+        use crate::{Condition, ConstructionClass, Flow, Foliage, Ground, Route, StructureKind};
+        fn check<T: serde::Serialize>(catalog: &StringCatalog, values: &[T]) {
             assert_eq!(
-                entry.value,
-                name(serde_json::to_value(structure).unwrap()["kind"].clone())
+                catalog.entries.len(),
+                values.len(),
+                "{}",
+                catalog.qualified_name
             );
+            for (entry, value) in catalog.entries.iter().zip(values) {
+                assert_eq!(serde_json::to_value(value).unwrap(), entry.value);
+                assert_eq!(entry.name, entry.value.to_ascii_uppercase());
+            }
         }
+        check(&GROUND_TYPES, &Ground::ALL);
+        check(&FOLIAGE_TYPES, &Foliage::ALL);
+        check(&FLOW_TYPES, &Flow::ALL);
+        check(&ROUTE_TYPES, &Route::ALL);
+        check(&CONDITION_TYPES, &Condition::ALL);
+        check(&STRUCTURE_KINDS, &StructureKind::ALL);
+        check(&CONSTRUCTION_CLASSES, &ConstructionClass::ALL);
     }
 
     /// Map flag constants match the named Rust flags bit for bit.

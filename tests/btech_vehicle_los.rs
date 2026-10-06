@@ -159,9 +159,9 @@ async fn mech_searchlights_illuminate_vehicle_targets_and_replay_perception() {
             .unwrap()
             .map(|perception| (perception.channel, perception.aim_modifier))
     };
-    assert_eq!(sight(&world), Some((DetectionChannel::Sight, 1)));
+    assert_eq!(sight(&world), Some((DetectionChannel::Sight, 0)));
     let mut short = world.clone();
-    set_battle_map_visibility(&mut short, map, Light::Night, 2).unwrap();
+    set_battle_map_visibility(&mut short, map, Light::MoonlessNight, 2).unwrap();
     assert_eq!(sight(&short), None);
     assert_eq!(world.btech, before);
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(lamp);
@@ -180,7 +180,7 @@ async fn mech_searchlights_illuminate_vehicle_targets_and_replay_perception() {
     assert_eq!(lit, Some((DetectionChannel::Sight, 0)));
     // A lit target stays visible out to three times the night visibility.
     let mut short = world.clone();
-    set_battle_map_visibility(&mut short, map, Light::Night, 2).unwrap();
+    set_battle_map_visibility(&mut short, map, Light::MoonlessNight, 2).unwrap();
     assert_eq!(sight(&short), lit);
     persistence::save(&config.database(), &world).await.unwrap();
     let restored = persistence::load(&config.database()).await.unwrap();
@@ -321,7 +321,7 @@ async fn vehicle_acquisition_rolls_only_for_hidden_hostiles_beyond_automatic_ran
         include_str!("../game/units/Demolisher.toml"),
     )
     .await;
-    set_battle_map_visibility(&mut world, map, Light::Night, 30).unwrap();
+    set_battle_map_visibility(&mut world, map, Light::MoonlessNight, 30).unwrap();
     running(&mut world, &[vehicle_a]);
     world
         .btech

@@ -900,7 +900,7 @@ mod tests {
                 unit.power = Power::Running;
                 unit.contacts.insert(target, contact);
             });
-            for light in 0..=2 {
+            for light in 0..=5 {
                 for visibility in [0, 10, 60] {
                     let map = world.btech.maps.get_mut(&map).unwrap();
                     map.light = light;

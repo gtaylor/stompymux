@@ -270,7 +270,7 @@ fn terrain_canvas(
                 let hex = map.hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
                 let base = map.base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
                 let (base_top, bottom) = match base.terrain() {
-                    Terrain::Grassland => (' ', '_'),
+                    Terrain::Clear => (' ', '_'),
                     Terrain::Bridge => ('#', '+'),
                     terrain => (terrain.symbol(), terrain.symbol()),
                 };

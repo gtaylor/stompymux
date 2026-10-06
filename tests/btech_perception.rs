@@ -184,7 +184,7 @@ fn aim_rules() -> AimRules {
 #[tokio::test]
 async fn sensor_band_ignores_darkness_and_sight_follows_visibility() {
     let mut lane = lane(&grass(62), Observer::Vehicle(None)).await;
-    lane.conditions(Light::Night, 10);
+    lane.conditions(Light::MoonlessNight, 10);
     // Night visibility 10 sets a thirty-hex map ceiling.
     for (distance, lit, expected) in [
         (1, false, Some((Sensors, 0))),
@@ -205,12 +205,12 @@ async fn sensor_band_ignores_darkness_and_sight_follows_visibility() {
     // A shorter band leaves sight inside visibility, with darkness costing +1 unless lit.
     configure_battle_perception(&mut lane.world, 5);
     lane.place_target(8);
-    for (lit, aim) in [(false, 1), (true, 0)] {
+    for (lit, aim) in [(false, 0), (true, 0)] {
         lane.target_signature(false, lit);
         assert_eq!(lane.perceived(), Some((Sight, aim)), "lit={lit}");
     }
-    // Twilight has no darkness penalty and no lighting bonus.
-    lane.conditions(Light::Twilight, 10);
+    // Dusk sight works as by day; its darkness costs to hit through the light term.
+    lane.conditions(Light::Dusk, 10);
     lane.target_signature(false, true);
     assert_eq!(lane.perceived(), Some((Sight, 0)));
     lane.place_target(16);
@@ -353,7 +353,7 @@ async fn damage_installations_and_map_switches_shape_the_band() {
         ),
         (PerceptionStatus::Disabled, 0, PerceptionStatus::Disabled)
     );
-    switched.conditions(Light::Night, 1);
+    switched.conditions(Light::MoonlessNight, 1);
     switched.place_target(3);
     assert_eq!(switched.perceived(), None);
     assert_eq!(
@@ -389,7 +389,7 @@ async fn hostile_ecm_leaves_only_sight() {
     .unwrap();
     lane.world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(jammer);
     assign_battle_pilot(&mut lane.world, jammer, ObjectId(2)).unwrap();
-    lane.conditions(Light::Night, 2);
+    lane.conditions(Light::MoonlessNight, 2);
     lane.place_target(4);
     assert_eq!(lane.perceived(), Some((Sensors, 0)));
     toggle_battle_electronics(
@@ -411,7 +411,7 @@ async fn hostile_ecm_leaves_only_sight() {
     );
     assert_eq!(lane.perceived(), None);
     lane.place_target(2);
-    assert_eq!(lane.perceived(), Some((Sight, 1)));
+    assert_eq!(lane.perceived(), Some((Sight, 0)));
 }
 
 /// Stealth armor and null signature hide a unit from enemy sensors and ordinary probes, but
@@ -427,7 +427,7 @@ async fn concealed_targets_hide_from_sensors_and_ordinary_probes() {
         let mut state = serde_json::to_value(&lane.world.btech).unwrap();
         state["constructed"][lane.target.0.to_string()]["null_signature"]["enabled"] = true.into();
         lane.world.btech = serde_json::from_value(state).unwrap();
-        lane.conditions(Light::Night, 2);
+        lane.conditions(Light::MoonlessNight, 2);
         lane.place_target(5);
         assert_eq!(lane.perceived(), expected, "{equipment:?}");
         lane.conditions(Light::Day, 30);

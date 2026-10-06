@@ -64,9 +64,13 @@ no_list: true
 
 ## Constants
 
+- [`btech.map.condition_types`](condition_types/)
+- [`btech.map.construction_classes`](construction_classes/)
 - [`btech.map.flags`](flags/)
+- [`btech.map.flow_types`](flow_types/)
+- [`btech.map.foliage_types`](foliage_types/)
 - [`btech.map.ground_types`](ground_types/)
 - [`btech.map.light_levels`](light_levels/)
+- [`btech.map.route_types`](route_types/)
 - [`btech.map.structure_kinds`](structure_kinds/)
 - [`btech.map.terrain_types`](terrain_types/)
-- [`btech.map.woods_types`](woods_types/)

@@ -35,8 +35,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
 
 /// The fixture map as saved: the permanent fire stays and the burning road saves as road.
 fn expected_file() -> String {
-    MapAsset::from_cells("2 1\n&2#1\n")
-        .unwrap()
+    support::as_exported(MapAsset::from_cells("2 1\n&2#1\n").unwrap())
         .to_file()
         .unwrap()
 }
@@ -46,7 +45,7 @@ fn expected_file() -> String {
 async fn authored_eternal_fire_survives_load_save_and_restart() {
     let (_dir, config, world, map) = fixture().await;
     let root = config.path(&config.database.map_database);
-    support::write_map(&root, "fire.map", "2 1\n&2#1\n2: 100 20\n");
+    support::write_map(&root, "fire.map", "2 1\n&2#1\n4: 100 20\n");
     let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
     let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     let output = support::run_text(&native, &config, ObjectId(1), 1, "loadmap fire.map");
@@ -59,9 +58,8 @@ async fn authored_eternal_fire_survives_load_save_and_restart() {
         .unwrap()
     );
     assert_eq!(native.world().btech, lua.world().btech);
-    assert_eq!(native.world().btech.maps()[&map].flags, 2);
-    let source = &MapAsset::from_cells("2 1\n&2#1\n2: 100 20\n")
-        .unwrap()
+    assert_eq!(native.world().btech.maps()[&map].flags, 4);
+    let source = &support::as_exported(MapAsset::from_cells("2 1\n&2#1\n4: 100 20\n").unwrap())
         .to_file()
         .unwrap();
     for scripts in [&native, &lua] {
@@ -88,7 +86,7 @@ async fn authored_eternal_fire_survives_load_save_and_restart() {
         .publish(&config)
         .unwrap();
     let decoded = read_battle_map(&root, "saved-fire.map").unwrap();
-    assert_eq!(decoded.flags, 2);
+    assert_eq!(decoded.flags, 4);
     assert_eq!(decoded.hex(0, 0).unwrap().terrain(), Terrain::Fire);
 }
 

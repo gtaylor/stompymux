@@ -443,7 +443,7 @@ mod tests {
     #[test]
     fn drop_surfaces_keep_bridge_and_water_support_separate() {
         for (terrain, elevation, hover, upper, lower, landing) in [
-            (Terrain::Grassland, 10, false, 3, 3, 3),
+            (Terrain::Clear, 10, false, 3, 3, 3),
             (Terrain::Water, 10, false, -3, -3, -3),
             (Terrain::Water, 10, true, -3, -3, 0),
             (Terrain::Ice, 10, false, 0, -3, 0),

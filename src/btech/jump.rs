@@ -36,7 +36,7 @@ impl JumpCapacity {
 }
 
 impl Mech {
-    /// Template thrust minus effective jet losses; gravity is independent of the special-rules flag.
+    /// Template thrust minus effective jet losses at `gravity` percent of standard.
     /// This is capacity, not permission to jump while shut down, prone or otherwise restricted.
     pub fn jump_capacity(&self, gravity: i64) -> Result<JumpCapacity> {
         ensure!((0..=255).contains(&gravity), "Invalid jump gravity");

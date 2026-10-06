@@ -13,7 +13,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
         MapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
-    set_battle_map_visibility(&mut world, map, Light::Night, 30).unwrap();
+    set_battle_map_visibility(&mut world, map, Light::MoonlessNight, 30).unwrap();
     let id = world.create(&config, "Vehicle".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     create_battle_vehicle(
@@ -66,7 +66,7 @@ async fn vehicle_sensor_command_and_lua_share_the_perception_report() {
     .unwrap();
     let report = battle_perception_report(&world, id).unwrap();
     assert!(report.running);
-    assert_eq!(report.profile.light, Light::Night);
+    assert_eq!(report.profile.light, Light::MoonlessNight);
     assert_eq!(report.profile.sensors, PerceptionStatus::Ready);
     assert_eq!(
         (
@@ -81,7 +81,7 @@ async fn vehicle_sensor_command_and_lua_share_the_perception_report() {
         report.text,
         [
             "Sensors: 15 hexes in any light or weather",
-            "Sight:   30 hexes at night, +1 to hit unless the target is lit; lit targets to 60",
+            "Sight:   30 hexes, moonless night: +3 to hit, +0 if lit; lit targets to 60",
             "Probe:   none",
             "Radar:   none",
         ]
@@ -237,7 +237,7 @@ async fn vehicle_map_perception_switches_persist() {
         battle_perception_report(&world, id).unwrap().text,
         [
             "Sensors: disabled on this battlefield",
-            "Sight:   30 hexes at night, +1 to hit unless the target is lit; lit targets to 60",
+            "Sight:   30 hexes, moonless night: +3 to hit, +0 if lit; lit targets to 60",
             "Probe:   Bloodhound Active Probe, 8 hexes (disabled on this battlefield)",
             "Radar:   180 hexes against airborne targets (disabled on this battlefield)",
         ]

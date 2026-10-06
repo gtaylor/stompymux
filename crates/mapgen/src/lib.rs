@@ -27,6 +27,12 @@
 //!
 //! Generation runs in stages, each drawing from its own seeded random stream: elevation and
 //! water, rivers, ground cover, settlements, roads, then fire and freezing.
+//!
+//! The map is made of `stompymux-map`'s layered [`Hex`]es, so it uses the same layers as the
+//! game: [`Ground`] (clear, pavement, rough, ultra-rough peaks, rubble, sand, tundra, swamp),
+//! [`Water`] with its [`Flow`], [`Foliage`] (woods, jungle and planted fields), road
+//! [`Route`]s, [`Structure`]s (buildings, walls and bridges with a construction class) and
+//! weather [`Condition`]s (deep and thin snow, and ice over frozen water).
 mod biome;
 mod map;
 mod noise;
@@ -39,7 +45,7 @@ mod spec;
 mod terrain;
 
 pub use biome::{BiomeInfo, biome_catalog};
-pub use map::{Hex, HexMap, Terrain};
+pub use map::HexMap;
 pub use report::{Coverage, Report, RoadReport, SettlementReport};
 pub use spec::{
     Amount, Biome, EnvironmentSpec, MAX_DIMENSION, MIN_DIMENSION, MapSize, MapSpec, Position,
@@ -47,7 +53,10 @@ pub use spec::{
     spec_schema,
 };
 
-pub use stompymux_map::{DecorationKind, MapAsset, MapFlag};
+pub use stompymux_map::{
+    Condition, ConstructionClass, DecorationKind, Flow, Foliage, Ground, Hex, MapAsset, MapFlag,
+    Route, Structure, StructureKind, Terrain, Water,
+};
 
 use anyhow::{Context, Result};
 
@@ -158,7 +167,7 @@ pub fn generate(spec: &MapSpec) -> Result<GeneratedMap> {
 fn count_overlay(map: &HexMap, overlay: DecorationKind) -> usize {
     map.hexes
         .iter()
-        .filter(|hex| hex.overlay == Some(overlay))
+        .filter(|hex| hex.overlay() == Some(overlay))
         .count()
 }
 
@@ -226,7 +235,7 @@ mod tests {
                 "{biome:?}: {:?}",
                 generated.report.settlements
             );
-            assert!(generated.report.coverage.road > 0.0, "{biome:?}");
+            assert!(generated.report.coverage.road() > 0.0, "{biome:?}");
         }
     }
 
@@ -265,9 +274,7 @@ mod tests {
             for (index, hex) in generated.map.hexes.iter().enumerate() {
                 let (x, y) = generated.map.coordinate(index);
                 let loaded = map.hex(x, y).unwrap();
-                assert_eq!(loaded.level(), hex.level, "{biome:?} at {x},{y}");
-                assert_eq!(loaded.deck_clearance(), hex.bridge, "{biome:?} at {x},{y}");
-                assert_eq!(loaded.overlay(), hex.overlay, "{biome:?} at {x},{y}");
+                assert_eq!(loaded, *hex, "{biome:?} at {x},{y}");
                 loaded
                     .validate()
                     .unwrap_or_else(|error| panic!("{biome:?} at {x},{y}: {error:#}"));
@@ -317,9 +324,9 @@ mod tests {
             .report
             .coverage;
         assert_eq!(dry.water, 0.0);
-        assert!(dry.light_woods + dry.heavy_woods > 50.0, "{dry:?}");
+        assert!(dry.trees() > 50.0, "{dry:?}");
         assert!((25.0..35.0).contains(&wet.water), "{wet:?}");
-        assert_eq!(wet.light_woods + wet.heavy_woods, 0.0);
+        assert_eq!(wet.trees(), 0.0);
     }
 
     #[test]
@@ -334,11 +341,28 @@ mod tests {
         };
         let arctic = report(Biome::Arctic);
         assert!(arctic.map.temperature < 0);
-        assert!(arctic.report.coverage.snow > 30.0);
-        assert_eq!(arctic.report.coverage.water, 0.0);
-        assert!(arctic.report.coverage.ice > 0.0);
+        let coverage = &arctic.report.coverage;
+        assert!(coverage.snow() > 30.0, "{coverage:?}");
+        assert!(coverage.deep_snow > coverage.thin_snow, "{coverage:?}");
+        assert!(coverage.tundra > coverage.clear, "{coverage:?}");
+        assert!(
+            coverage.ice > 0.0 && coverage.ice == coverage.water,
+            "{coverage:?}"
+        );
         let desert = report(Biome::Desert);
         assert!(desert.report.coverage.sand > 30.0);
+        let jungle = report(Biome::Jungle).report.coverage;
+        assert!(
+            jungle.light_jungle > 0.0 && jungle.heavy_jungle > 0.0,
+            "{jungle:?}"
+        );
+        assert!(jungle.ultra_heavy_jungle > 0.0, "{jungle:?}");
+        assert_eq!(jungle.light_woods + jungle.heavy_woods, 0.0, "{jungle:?}");
+        let forest = report(Biome::Forest).report.coverage;
+        assert!(forest.ultra_heavy_woods > 0.0, "{forest:?}");
+        assert!(forest.ultra_heavy_woods < forest.heavy_woods, "{forest:?}");
+        let swamp = report(Biome::Swamp).report.coverage;
+        assert!(swamp.swamp > 20.0, "{swamp:?}");
         let lunar = report(Biome::Lunar);
         assert!(lunar.map.flags.contains(&MapFlag::Vacuum));
         let volcanic = report(Biome::Volcanic);
@@ -361,10 +385,22 @@ mod tests {
         assert_eq!(town.center, [20, 22]);
         assert!(town.walled && !town.gates.is_empty());
         assert!(generated.report.coverage.wall > 0.0);
-        // Each gate is a road or bridge hex on the wall line.
+        // Each gate is a paved street or a bridge on the wall line, and the wall is heavy.
         for &[x, y] in &town.gates {
             let hex = generated.map.hex(i32::from(x), i32::from(y)).unwrap();
-            assert!(hex.terrain == Terrain::Road || hex.bridge.is_some());
+            assert!(
+                hex.route() == Some(Route::PavedRoad) || hex.has_bridge(),
+                "{hex:?}"
+            );
+        }
+        let walls = generated
+            .map
+            .hexes
+            .iter()
+            .filter_map(|hex| hex.structure())
+            .filter(|structure| structure.kind == StructureKind::Wall);
+        for wall in walls {
+            assert_eq!(wall.class, ConstructionClass::Heavy);
         }
     }
 
@@ -408,5 +444,213 @@ mod tests {
         assert!(report.roads.iter().any(|road| road.from == "north edge"));
         let names: Vec<_> = report.settlements.iter().map(|s| s.name.as_str()).collect();
         assert_eq!(names, ["village 1", "village 2", "village 3"]);
+    }
+
+    /// Mountain peaks are ultra-rough, and snow lies over peaks, woods and rough ground alike
+    /// above the snow line, with thin snow just below it.
+    #[test]
+    fn mountains_have_ultra_rough_peaks_under_snow() {
+        let generated = generate(&MapSpec {
+            seed: Some(6),
+            biome: Some(Biome::Mountains),
+            ..MapSpec::default()
+        })
+        .unwrap();
+        let coverage = &generated.report.coverage;
+        assert!(coverage.ultra_rough > 5.0, "{coverage:?}");
+        assert!(
+            coverage.deep_snow > 0.0 && coverage.thin_snow > 0.0,
+            "{coverage:?}"
+        );
+        let hexes = &generated.map.hexes;
+        let snowy = |hex: &&Hex| hex.condition() == Some(Condition::DeepSnow);
+        assert!(
+            hexes
+                .iter()
+                .filter(snowy)
+                .any(|hex| hex.foliage().is_some())
+        );
+        assert!(
+            hexes
+                .iter()
+                .filter(snowy)
+                .any(|hex| hex.ground() == Ground::Rough)
+        );
+        assert!(
+            hexes
+                .iter()
+                .filter(snowy)
+                .any(|hex| hex.ground() == Ground::UltraRough)
+        );
+        let snow_line = hexes.iter().filter(snowy).map(|hex| hex.level()).min();
+        assert!(
+            hexes
+                .iter()
+                .filter(|hex| !hex.holds_water() && Some(hex.level()) >= snow_line)
+                .all(|hex| hex.condition() == Some(Condition::DeepSnow) || hex.is_road()),
+            "deep snow covers all dry land above the snow line except plowed roads"
+        );
+    }
+
+    /// `frozen` lays ice over every lake and river, bridged or not, and nothing else.
+    #[test]
+    fn frozen_maps_ice_over_their_water() {
+        let with = |biome, frozen| {
+            generate(&MapSpec {
+                seed: Some(12),
+                biome: Some(biome),
+                frozen: Some(frozen),
+                settlements: vec![SettlementSpec::new(SettlementSize::Town)],
+                ..MapSpec::default()
+            })
+            .unwrap()
+            .map
+        };
+        let frozen = with(Biome::Temperate, true);
+        assert!(frozen.hexes.iter().any(|hex| hex.holds_water()));
+        for hex in &frozen.hexes {
+            assert_eq!(hex.is_frozen(), hex.holds_water(), "{hex:?}");
+            assert_eq!(hex.is_icy(), hex.holds_water(), "{hex:?}");
+        }
+        let thawed = with(Biome::Arctic, false);
+        assert!(thawed.hexes.iter().all(|hex| !hex.is_icy()));
+    }
+
+    /// Roads are routes through the terrain they cross: woods stay standing, highways are
+    /// paved, links between villages are dirt, and bridges match the road.
+    #[test]
+    fn roads_run_through_the_land_they_cross() {
+        let generated = generate(&MapSpec {
+            seed: Some(4),
+            biome: Some(Biome::Forest),
+            size: Some(MapSize::Large),
+            rivers: Some(2),
+            settlements: vec![SettlementSpec {
+                count: Some(3),
+                ..SettlementSpec::new(SettlementSize::Village)
+            }],
+            roads: Some(RoadSpec {
+                through_roads: Some(2),
+                ..RoadSpec::default()
+            }),
+            ..MapSpec::default()
+        })
+        .unwrap();
+        for road in &generated.report.roads {
+            let expected = if road.from.contains("edge") {
+                Route::PavedRoad
+            } else {
+                Route::DirtRoad
+            };
+            assert_eq!(road.surface, expected, "{road:?}");
+        }
+        let coverage = &generated.report.coverage;
+        assert!(
+            coverage.dirt_road > 0.0 && coverage.paved_road > 0.0,
+            "{coverage:?}"
+        );
+        let hexes = &generated.map.hexes;
+        assert!(
+            hexes
+                .iter()
+                .any(|hex| hex.route().is_some() && hex.is_woods()),
+            "a road runs through woods"
+        );
+        for hex in hexes.iter().filter(|hex| hex.has_bridge()) {
+            let class = hex.construction_class().unwrap();
+            assert!(class != ConstructionClass::Hardened, "{hex:?}");
+        }
+    }
+
+    /// Settlements pave their lots when large, build to a construction class that suits them,
+    /// leave rubble and damaged buildings when ruined, and farm the land around them.
+    #[test]
+    fn settlements_build_to_suit_their_kind() {
+        let generated = generate(&MapSpec {
+            seed: Some(21),
+            biome: Some(Biome::Temperate),
+            size: Some(MapSize::Large),
+            settlements: vec![
+                SettlementSpec {
+                    position: Some(Position::West),
+                    ..SettlementSpec::new(SettlementSize::City)
+                },
+                SettlementSpec {
+                    kind: Some(SettlementKind::Military),
+                    position: Some(Position::Northeast),
+                    ..SettlementSpec::new(SettlementSize::Village)
+                },
+                SettlementSpec {
+                    kind: Some(SettlementKind::Ruins),
+                    position: Some(Position::Southeast),
+                    ..SettlementSpec::new(SettlementSize::Town)
+                },
+                SettlementSpec {
+                    position: Some(Position::North),
+                    ..SettlementSpec::new(SettlementSize::Hamlet)
+                },
+            ],
+            ..MapSpec::default()
+        })
+        .unwrap();
+        let map = &generated.map;
+        let report = &generated.report;
+        let structures_in = |index: usize| {
+            let settlement = &report.settlements[index];
+            let [cx, cy] = settlement.center;
+            let center = (i32::from(cx), i32::from(cy));
+            let radius = i32::from(settlement.radius);
+            map.hexes
+                .iter()
+                .enumerate()
+                .filter(move |&(at, _)| HexMap::distance(map.coordinate(at), center) <= radius)
+                .filter_map(|(_, hex)| hex.structure())
+                .filter(|structure| structure.is_standing())
+                .collect::<Vec<_>>()
+        };
+        let city = structures_in(0);
+        assert!(city.iter().any(|s| s.class == ConstructionClass::Heavy));
+        assert!(city.iter().all(|s| s.class != ConstructionClass::Light));
+        let base = structures_in(1);
+        let walls = base.iter().filter(|s| s.kind == StructureKind::Wall);
+        assert!(walls.clone().count() > 0);
+        assert!(
+            walls
+                .into_iter()
+                .all(|s| s.class == ConstructionClass::Hardened)
+        );
+        assert!(
+            base.iter()
+                .filter(|s| s.kind == StructureKind::Building)
+                .all(|s| s.class == ConstructionClass::Heavy)
+        );
+        assert!(structures_in(2).iter().any(|s| !s.is_intact()));
+        assert!(
+            structures_in(3)
+                .iter()
+                .all(|s| s.class == ConstructionClass::Light)
+        );
+        let coverage = &report.coverage;
+        assert!(
+            coverage.pavement > 0.0 && coverage.rubble > 0.0,
+            "{coverage:?}"
+        );
+        assert!(coverage.planted_fields > 0.0, "{coverage:?}");
+    }
+
+    /// Rivers dropping down mountainsides run as rapids or torrents.
+    #[test]
+    fn mountain_rivers_run_fast() {
+        let rapids = (0..8).any(|seed| {
+            let generated = generate(&MapSpec {
+                seed: Some(seed),
+                biome: Some(Biome::Mountains),
+                rivers: Some(2),
+                ..MapSpec::default()
+            })
+            .unwrap();
+            generated.report.coverage.rapids > 0.0
+        });
+        assert!(rapids);
     }
 }

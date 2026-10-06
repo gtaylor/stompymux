@@ -280,7 +280,7 @@ fn resolve_hex_shot_inner(
                                 world,
                                 shooter,
                                 coordinate,
-                                (weapon, launch.expenditure.ammunition_mode),
+                                ((weapon, launch.expenditure.ammunition_mode), damage),
                                 fall,
                                 character,
                             )?

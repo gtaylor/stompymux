@@ -559,7 +559,7 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
                 ))
             }
             _ => bail!(
-                "Usage: @btech status | range #unit,#unit | template <name> | template-check <name> | loadout <name> | mapfile <name> | inspect #object | unit-place <unit>=<map>,<x>,<y> | unit-remove <unit>=<destination> | unit-create <object>=<template> | map-create <object>=<asset> | map-reload <object>=<asset> | map-conditions <map>=<night|twilight|day>,<visibility 0-60> | map-cloud <map>=<altitude>"
+                "Usage: @btech status | range #unit,#unit | template <name> | template-check <name> | loadout <name> | mapfile <name> | inspect #object | unit-place <unit>=<map>,<x>,<y> | unit-remove <unit>=<destination> | unit-create <object>=<template> | map-create <object>=<asset> | map-reload <object>=<asset> | map-conditions <map>=<light>,<visibility 0-60> | map-cloud <map>=<altitude>"
             ),
         }
     })();
@@ -687,11 +687,12 @@ fn mutate_object(ctx: &CommandContext<'_>, operation: &str, argument: &str) -> R
     if operation.eq_ignore_ascii_case("map-conditions") {
         let (light, visibility) = name
             .split_once(',')
-            .context("Usage: @btech map-conditions <map>=<night|twilight|day>,<visibility 0-60>")?;
+            .context("Usage: @btech map-conditions <map>=<light>,<visibility 0-60>")?;
+        let light: super::Light = light.parse()?;
         super::set_map_visibility(
             &mut ctx.scripts.world.borrow_mut(),
             id,
-            light.parse()?,
+            light,
             visibility
                 .trim()
                 .parse()
@@ -700,7 +701,7 @@ fn mutate_object(ctx: &CommandContext<'_>, operation: &str, argument: &str) -> R
         return Ok(format!(
             "Map #{} conditions saved: {}, visibility {} hexes.",
             id.0,
-            light.trim().to_ascii_lowercase(),
+            light.name(),
             visibility.trim()
         ));
     }

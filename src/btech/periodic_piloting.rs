@@ -62,7 +62,7 @@ fn required(world: &World, id: ObjectId, config: &Config) -> Result<Option<(i16,
             maximum = (((maximum / 1.5 / 10.75).round_ties_even() + 1.0) * 1.5).ceil() * 10.75;
         }
         let map = &world.btech.maps()[&unit.position().unwrap().map];
-        if map.uses_special_rules() && map.gravity != 100 && speed > unloaded {
+        if map.gravity != 100 && speed > unloaded {
             modifier = Some(0);
             gravity_damage =
                 (((speed - unloaded) / 10.75).trunc() + 1.0).min(f64::from(u16::MAX)) as u16;

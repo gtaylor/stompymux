@@ -15,7 +15,10 @@ pub use btech::{
 pub use btech::{ArtilleryLaunchReport, LaunchMisload};
 pub use btech::{ArtilleryShot, advance_artillery_action, artillery_pending, enqueue_artillery};
 pub use btech::{CommandClass, SpecialCommand, SpecialType};
-pub use btech::{Ground, MAX_DEPTH, MAX_HEIGHT, Structure, Water, Woods};
+pub use btech::{
+    Condition, ConstructionClass, Density, Flow, Foliage, Ground, MAX_DEPTH, MAX_HEIGHT, Route,
+    Structure, StructureKind, Water, Wind,
+};
 pub use btech::{MinePlacement, add_mine_action as add_battle_mine_action};
 
 pub use btech::{
@@ -54,8 +57,9 @@ pub use btech::{
     begin_stand as begin_battle_stand, begin_unjam as begin_battle_unjam,
     break_bridge as break_battle_bridge, break_ice as break_battle_ice,
     check_character_consciousness, check_template as check_battle_template,
-    contact_observers as battle_contact_observers, create_map as create_battle_map,
-    create_unit as create_battle_unit, destroy_unit_critical as destroy_battle_critical,
+    collapse_structure as collapse_battle_structure, contact_observers as battle_contact_observers,
+    create_map as create_battle_map, create_unit as create_battle_unit,
+    destroy_unit_critical as destroy_battle_critical,
     displayed_contact as displayed_battle_contact, displayed_contacts as displayed_battle_contacts,
     electronic_field as battle_electronic_field,
     electronic_fields_pending as battle_electronic_fields_pending,

@@ -229,7 +229,7 @@ async fn shoreline_passes_have_distinct_growth_and_melt_ordering() {
     state["maps"][map.0.to_string()]["width"] = 3.into();
     state["maps"][map.0.to_string()]["terrain"] = serde_json::json!(vec![
         serde_json::to_value(
-            stompymux_rs::Hex::new(stompymux_rs::Terrain::Grassland, 0)
+            stompymux_rs::Hex::new(stompymux_rs::Terrain::Clear, 0)
         )
         .unwrap();
         36

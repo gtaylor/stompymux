@@ -25,15 +25,15 @@ async fn environment_controls_share_flags_rollback_and_restart() {
         world.objects.get_mut(&operator).unwrap().location = Some(map);
         let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
         let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-        for (arguments, gravity, temperature, vacuum, underground, special) in [
-            ("50 -40 1 1", 50, -40, true, true, true),
-            ("100 20", 100, 20, false, true, false),
-            ("255 127 0 0", 255, 127, false, true, true),
-            ("100 -30", 100, -30, false, true, false),
-            ("100 50", 100, 50, false, true, false),
-            ("100 51", 100, 51, false, true, true),
-            ("-0 +0 -0 +0", 0, 0, false, true, true),
-            ("100 20 0 0 ignored arguments", 100, 20, false, true, false),
+        for (arguments, gravity, temperature, vacuum, underground) in [
+            ("50 -40 1 1", 50, -40, true, true),
+            ("100 20", 100, 20, false, true),
+            ("255 127 0 0", 255, 127, false, true),
+            ("100 -30", 100, -30, false, true),
+            ("100 50", 100, 50, false, true),
+            ("100 51", 100, 51, false, true),
+            ("-0 +0 -0 +0", 0, 0, false, true),
+            ("100 20 0 0 ignored arguments", 100, 20, false, true),
         ] {
             let before = lua.world().btech.clone();
             let call = format!(
@@ -71,7 +71,6 @@ async fn environment_controls_share_flags_rollback_and_restart() {
                     underground
                 }
             );
-            assert_eq!(record.uses_special_rules(), special);
             assert_eq!(world.btech.constructed_units(), before.constructed_units());
             assert_eq!(world.btech.vehicles(), before.vehicles());
             world.validate(&config).unwrap();
@@ -264,7 +263,7 @@ async fn environment_validation_and_authority_are_atomic() {
     assert!(output.contains("takes no switches"), "{output}");
     assert_eq!(scripts.world().btech, before);
     support::run_text(&scripts, &config, ObjectId(1), 1, "setcond 100 20 1 0");
-    assert_eq!(scripts.world().btech.maps()[&map].flags, 272 | 2 | 4);
+    assert_eq!(scripts.world().btech.maps()[&map].flags, 272 | 4);
 }
 
 /// An airborne flight keeps its route, samples changed gravity on the next tick and replays after restart.

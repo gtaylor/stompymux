@@ -168,7 +168,9 @@ pub(super) fn primary_status(world: &World, id: ObjectId) -> Result<u32> {
     let environment = scanner
         .position
         .and_then(|position| world.btech.maps().get(&position.map));
-    let special = environment.is_some_and(|map| map.uses_special_rules());
+    let odd_gravity = environment.is_some_and(|map| map.gravity != 100);
+    let extreme_heat = environment.is_some_and(|map| map.temperature < -30 || map.temperature > 50);
+    let vacuum = environment.is_some_and(|map| map.environment().vacuum);
     let flags = [
         (3, scanner.power == Power::Running),
         (5, scanner.destroyed),
@@ -182,19 +184,10 @@ pub(super) fn primary_status(world: &World, id: ObjectId) -> Result<u32> {
         (22, combat_safe),
         (23, scanner.autocon_shutdown),
         (24, scanner.fired_recently),
-        (27, special),
-        (
-            28,
-            special && environment.is_some_and(|map| map.gravity != 100),
-        ),
-        (
-            29,
-            special && environment.is_some_and(|map| map.temperature < -30 || map.temperature > 50),
-        ),
-        (
-            30,
-            special && environment.is_some_and(|map| map.environment().vacuum),
-        ),
+        (27, odd_gravity || extreme_heat || vacuum),
+        (28, odd_gravity),
+        (29, extreme_heat),
+        (30, vacuum),
     ];
     Ok(flags
         .into_iter()

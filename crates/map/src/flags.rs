@@ -9,16 +9,14 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum MapFlag {
-    /// Environmental rules (gravity, temperature, vacuum) apply to units on the map.
-    SpecialRules,
     /// The map has no atmosphere.
     Vacuum,
     /// The map has a ceiling: no jumping, flight or indirect fire without an observer.
     Underground,
     /// Units only see terrain they have line of sight to.
     Dark,
-    /// Weapon fire cannot break bridges.
-    IndestructibleBridges,
+    /// Weapon fire cannot damage buildings, walls or bridges.
+    IndestructibleStructures,
     /// Teammates cannot damage each other with non-coolant weapons.
     NoFriendlyFire,
     /// Physical attacks are not allowed.
@@ -27,12 +25,11 @@ pub enum MapFlag {
 
 impl MapFlag {
     /// Every flag, in bit order.
-    pub const ALL: [Self; 7] = [
-        Self::SpecialRules,
+    pub const ALL: [Self; 6] = [
         Self::Vacuum,
         Self::Underground,
         Self::Dark,
-        Self::IndestructibleBridges,
+        Self::IndestructibleStructures,
         Self::NoFriendlyFire,
         Self::NoPhysicalAttacks,
     ];
@@ -40,11 +37,10 @@ impl MapFlag {
     /// Persisted bit for this flag.
     pub const fn bit(self) -> i64 {
         match self {
-            Self::SpecialRules => 2,
             Self::Vacuum => 4,
             Self::Underground => 16,
             Self::Dark => 32,
-            Self::IndestructibleBridges => 64,
+            Self::IndestructibleStructures => 64,
             Self::NoFriendlyFire => 256,
             Self::NoPhysicalAttacks => 512,
         }
@@ -53,11 +49,10 @@ impl MapFlag {
     /// Operator-facing spelling used by `@SETMAP flags` and `@VIEWMAP`.
     pub const fn name(self) -> &'static str {
         match self {
-            Self::SpecialRules => "special_rules",
             Self::Vacuum => "vacuum",
             Self::Underground => "underground",
             Self::Dark => "dark",
-            Self::IndestructibleBridges => "indestructible_bridges",
+            Self::IndestructibleStructures => "indestructible_structures",
             Self::NoFriendlyFire => "no_friendly_fire",
             Self::NoPhysicalAttacks => "no_physical_attacks",
         }
@@ -66,15 +61,14 @@ impl MapFlag {
     /// One-sentence explanation of the rule, for help text and schemas.
     pub const fn description(self) -> &'static str {
         match self {
-            Self::SpecialRules => {
-                "Environmental rules (gravity, temperature, vacuum) apply to units on the map."
-            }
             Self::Vacuum => "The map has no atmosphere.",
             Self::Underground => {
                 "The map has a ceiling: no jumping, flight or indirect fire without an observer."
             }
             Self::Dark => "Units only see terrain they have line of sight to.",
-            Self::IndestructibleBridges => "Weapon fire cannot break bridges.",
+            Self::IndestructibleStructures => {
+                "Weapon fire cannot damage buildings, walls or bridges."
+            }
             Self::NoFriendlyFire => "Teammates cannot damage each other with non-coolant weapons.",
             Self::NoPhysicalAttacks => "Physical attacks are not allowed.",
         }
@@ -168,12 +162,9 @@ mod tests {
     fn flag_lists_parse_and_display() {
         assert_eq!(parse_map_flags("-").unwrap(), 0);
         assert_eq!(parse_map_flags("").unwrap(), 0);
-        let flags = parse_map_flags("dark, special_rules  NO_FRIENDLY_FIRE").unwrap();
-        assert_eq!(flags, 2 | 32 | 256);
-        assert_eq!(
-            format_map_flags(flags),
-            "special_rules dark no_friendly_fire"
-        );
+        let flags = parse_map_flags("dark, vacuum  NO_FRIENDLY_FIRE").unwrap();
+        assert_eq!(flags, 4 | 32 | 256);
+        assert_eq!(format_map_flags(flags), "vacuum dark no_friendly_fire");
         assert_eq!(parse_map_flags(&format_map_flags(flags)).unwrap(), flags);
         assert_eq!(format_map_flags(0), "-");
         assert_eq!(format_map_flags(1), "-");

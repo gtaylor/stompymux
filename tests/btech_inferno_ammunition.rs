@@ -85,7 +85,7 @@ fn inferno_ammunition_ignites_small_missiles_without_offering_armor_packets() {
     for seed in 0..32 {
         let mut dice = Dice::seeded([seed; 32]);
         let effect = resolve_woodland_effect(
-            Hex::new(Terrain::HeavyForest, 0),
+            Hex::new(Terrain::HeavyWoods, 0),
             Weapon::Srm2,
             AmmunitionMode::Inferno,
             0,

@@ -1,5 +1,5 @@
 //! Woodland attack outcomes, independent of map storage and command publication.
-use super::{AmmunitionMode, Dice, Ground, Hex, Weapon, Woods};
+use super::{AmmunitionMode, Dice, Foliage, Ground, Hex, Weapon};
 use serde::{Deserialize, Serialize};
 
 /// Purpose of a terrain effect; incidental effects use the lower accidental ignition chance.
@@ -30,21 +30,23 @@ pub enum WoodlandEffect {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum WoodlandClearing {
-    /// Heavy woods thin to light woods.
-    ThinToLight,
-    /// Light woods are cut down to clear ground.
+    /// Heavy or ultra-heavy woods or jungle thin by one density.
+    Thin,
+    /// Light woods or jungle, or planted fields, are cut down to clear ground.
     CutToClear,
-    /// Light woods are cut down, leaving rough ground.
+    /// Light woods or jungle, or planted fields, are cut down, leaving rough ground.
     CutToRough,
 }
 
 impl WoodlandClearing {
-    /// The hex after clearing, or `None` when its woods cannot be cleared this way.
+    /// The hex after clearing, or `None` when its foliage cannot be cleared this way.
     pub fn apply(self, hex: Hex) -> Option<Hex> {
-        Some(match (self, hex.woods()?) {
-            (Self::ThinToLight, Woods::Heavy) => hex.with_woods(Some(Woods::Light)),
-            (Self::CutToClear, Woods::Light) => hex.with_woods(None),
-            (Self::CutToRough, Woods::Light) => hex.with_woods(None).with_ground(Ground::Rough),
+        let foliage = hex.foliage()?;
+        let thinned = foliage.thinned();
+        Some(match (self, thinned) {
+            (Self::Thin, Some(thinner)) => hex.with_foliage(Some(thinner)),
+            (Self::CutToClear, None) => hex.with_foliage(None),
+            (Self::CutToRough, None) => hex.with_foliage(None).with_ground(Ground::Rough),
             _ => return None,
         })
     }
@@ -106,8 +108,8 @@ pub fn resolve_woodland_effect(
             if !woods || !weapon.can_clear_terrain() || u16::from(clearing_roll) > damage {
                 return WoodlandEffect::None;
             }
-            let clearing = if hex.woods() == Some(Woods::Heavy) {
-                WoodlandClearing::ThinToLight
+            let clearing = if hex.foliage().and_then(Foliage::thinned).is_some() {
+                WoodlandClearing::Thin
             } else if dice.die(2).expect("nonzero die") == 1 {
                 WoodlandClearing::CutToRough
             } else {
@@ -139,11 +141,7 @@ mod tests {
     fn woodland_journal_counts_checks_without_counting_effect_dice() {
         let mut observed = std::collections::BTreeSet::new();
         for seed in 0..=255 {
-            for terrain in [
-                Terrain::Grassland,
-                Terrain::LightForest,
-                Terrain::HeavyForest,
-            ] {
+            for terrain in [Terrain::Clear, Terrain::LightWoods, Terrain::HeavyWoods] {
                 for intent in [
                     WoodlandIntent::Ignite,
                     WoodlandIntent::Clear,
@@ -168,10 +166,10 @@ mod tests {
                     if ignition {
                         let roll = expected.two_d6();
                         histogram.record(roll).unwrap();
-                        if terrain != Terrain::Grassland && roll >= 5 {
+                        if terrain != Terrain::Clear && roll >= 5 {
                             expected.die(121).unwrap();
                         }
-                    } else if terrain == Terrain::LightForest {
+                    } else if terrain == Terrain::LightWoods {
                         expected.die(2).unwrap();
                     }
                     resolve_woodland_effect(
@@ -240,7 +238,7 @@ mod tests {
             let mut expected = original.clone();
             let roll = expected.two_d6();
             let result = resolve_woodland_effect(
-                Hex::new(Terrain::HeavyForest, 0),
+                Hex::new(Terrain::HeavyWoods, 0),
                 Weapon::MediumLaser,
                 AmmunitionMode::Normal,
                 5,
@@ -259,7 +257,7 @@ mod tests {
             for terrain in [
                 Terrain::Building,
                 Terrain::Water,
-                Terrain::Grassland,
+                Terrain::Clear,
                 Terrain::Fire,
             ] {
                 let mut dice = original.clone();
@@ -295,7 +293,7 @@ mod tests {
                 let mut dice = original.clone();
                 // Gauss can clear woods but cannot ignite them, even on the ignition branch.
                 let effect = resolve_woodland_effect(
-                    Hex::new(Terrain::HeavyForest, 0),
+                    Hex::new(Terrain::HeavyWoods, 0),
                     Weapon::GaussRifle,
                     AmmunitionMode::Normal,
                     15,
@@ -314,7 +312,7 @@ mod tests {
                     assert_eq!(
                         effect,
                         WoodlandEffect::Clear {
-                            clearing: WoodlandClearing::ThinToLight
+                            clearing: WoodlandClearing::Thin
                         }
                     );
                     cleared = true;
@@ -323,7 +321,7 @@ mod tests {
                 assert_eq!(
                     effect,
                     resolve_woodland_effect(
-                        Hex::new(Terrain::HeavyForest, 0),
+                        Hex::new(Terrain::HeavyWoods, 0),
                         Weapon::GaussRifle,
                         AmmunitionMode::Normal,
                         15,
@@ -333,7 +331,7 @@ mod tests {
                 );
                 assert_eq!(dice, replay);
                 let light = resolve_woodland_effect(
-                    Hex::new(Terrain::LightForest, 0),
+                    Hex::new(Terrain::LightWoods, 0),
                     Weapon::GaussRifle,
                     AmmunitionMode::Normal,
                     15,

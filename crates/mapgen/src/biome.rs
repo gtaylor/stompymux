@@ -5,15 +5,7 @@
 //! lives only in the profile.
 use crate::spec::{Amount, Biome, Relief};
 use serde::Serialize;
-use stompymux_map::MapFlag;
-
-/// The basic material of open ground in a biome.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum BaseGround {
-    Clear,
-    Sand,
-    Snow,
-}
+use stompymux_map::{Density, Foliage, Ground, MapFlag};
 
 /// The large-scale shape of the ground.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -49,15 +41,27 @@ pub(crate) struct Profile {
     pub(crate) temperature: i8,
     pub(crate) flags: &'static [MapFlag],
     pub(crate) landform: Landform,
-    pub(crate) ground: BaseGround,
+    /// The ground of open land: clear, sand or tundra.
+    pub(crate) ground: Ground,
     /// Share of open ground that is plain clear instead of the base ground.
     pub(crate) clear_patches: f64,
-    /// Share of woods that are heavy.
+    /// Whether the biome's trees are jungle rather than woods.
+    pub(crate) jungle: bool,
+    /// Share of woods or jungle that is heavy or denser.
     pub(crate) heavy_share: f64,
-    /// Share of the highest land that is mountains.
+    /// Share of woods or jungle that is ultra-heavy.
+    pub(crate) ultra_share: f64,
+    /// Share of the highest land that is ultra-rough peaks.
     pub(crate) mountain_share: f64,
-    /// Fraction of the maximum level above which open ground is snow.
+    /// Fraction of the maximum level at and above which deep snow lies over everything; the
+    /// level just below it gets a dusting of thin snow.
     pub(crate) snow_line: Option<f64>,
+    /// Share of the land under snowfields, deep snow with patches of thin snow.
+    pub(crate) snowfields: f64,
+    /// Share of the land that is waterlogged swamp ground.
+    pub(crate) swamp_share: f64,
+    /// Whether civilian settlements are ringed by planted fields.
+    pub(crate) farmland: bool,
     /// Deepest water the biome's lakes reach.
     pub(crate) max_depth: u8,
     /// Whether low land touching water is sand.
@@ -78,11 +82,16 @@ const BASE: Profile = Profile {
     temperature: 20,
     flags: &[],
     landform: Landform::Plain,
-    ground: BaseGround::Clear,
+    ground: Ground::Clear,
     clear_patches: 0.0,
+    jungle: false,
     heavy_share: 0.4,
+    ultra_share: 0.0,
     mountain_share: 0.0,
     snow_line: None,
+    snowfields: 0.0,
+    swamp_share: 0.0,
+    farmland: false,
     max_depth: 3,
     beaches: false,
 };
@@ -92,22 +101,27 @@ pub(crate) const fn profile(biome: Biome) -> Profile {
     match biome {
         Biome::Temperate => Profile {
             description: "Rolling grassland, scattered woods, lakes and rivers.",
+            farmland: true,
             ..BASE
         },
         Biome::Forest => Profile {
-            description: "Dense light and heavy woods broken by clearings.",
+            description: "Dense woods broken by clearings, with stands of ultra-heavy old growth.",
             woods: Amount::High,
             heavy_share: 0.5,
+            ultra_share: 0.1,
+            farmland: true,
             ..BASE
         },
         Biome::Jungle => Profile {
-            description: "Hot, wet and choked with heavy woods and rivers.",
+            description: "Hot, wet and choked with jungle and rivers.",
             relief: Relief::Hilly,
             water: Amount::Medium,
             woods: Amount::Extreme,
             rivers: 2,
             temperature: 35,
+            jungle: true,
             heavy_share: 0.7,
+            ultra_share: 0.2,
             ..BASE
         },
         Biome::Desert => Profile {
@@ -117,25 +131,26 @@ pub(crate) const fn profile(biome: Biome) -> Profile {
             rough: Amount::Medium,
             rivers: 0,
             temperature: 45,
-            ground: BaseGround::Sand,
+            ground: Ground::Sand,
             clear_patches: 0.3,
             mountain_share: 0.04,
             ..BASE
         },
         Biome::Arctic => Profile {
-            description: "Snowfields, frozen lakes and bitter cold.",
+            description: "Snowfields over frozen tundra, frozen lakes and bitter cold.",
             water: Amount::Medium,
             woods: Amount::Low,
             rivers: 1,
             frozen: true,
             temperature: -30,
-            ground: BaseGround::Snow,
+            ground: Ground::Tundra,
             clear_patches: 0.15,
             heavy_share: 0.2,
+            snowfields: 0.85,
             ..BASE
         },
         Biome::Mountains => Profile {
-            description: "High ridges, rocky peaks and snow above the tree line.",
+            description: "High ridges, ultra-rough peaks and deep snow above the snow line.",
             relief: Relief::Mountainous,
             woods: Amount::Medium,
             rough: Amount::Medium,
@@ -143,8 +158,9 @@ pub(crate) const fn profile(biome: Biome) -> Profile {
             temperature: 5,
             landform: Landform::Ridged,
             mountain_share: 0.15,
-            snow_line: Some(0.75),
+            snow_line: Some(0.6),
             max_depth: 4,
+            farmland: true,
             ..BASE
         },
         Biome::Badlands => Profile {
@@ -156,13 +172,13 @@ pub(crate) const fn profile(biome: Biome) -> Profile {
             rivers: 1,
             temperature: 35,
             landform: Landform::Terraced,
-            ground: BaseGround::Sand,
+            ground: Ground::Sand,
             clear_patches: 0.6,
             mountain_share: 0.05,
             ..BASE
         },
         Biome::Swamp => Profile {
-            description: "Flat, waterlogged ground with shallow pools and heavy woods.",
+            description: "Flat, waterlogged swamp with shallow pools and heavy woods.",
             relief: Relief::Flat,
             water: Amount::High,
             woods: Amount::High,
@@ -170,6 +186,7 @@ pub(crate) const fn profile(biome: Biome) -> Profile {
             rivers: 2,
             temperature: 28,
             heavy_share: 0.6,
+            swamp_share: 0.45,
             max_depth: 1,
             landform: Landform::Marsh,
             ..BASE
@@ -182,6 +199,7 @@ pub(crate) const fn profile(biome: Biome) -> Profile {
             landform: Landform::Coastal,
             max_depth: 6,
             beaches: true,
+            farmland: true,
             ..BASE
         },
         Biome::Lunar => Profile {
@@ -193,7 +211,7 @@ pub(crate) const fn profile(biome: Biome) -> Profile {
             rivers: 0,
             gravity: 17,
             temperature: -120,
-            flags: &[MapFlag::SpecialRules, MapFlag::Vacuum],
+            flags: &[MapFlag::Vacuum],
             landform: Landform::Cratered,
             mountain_share: 0.03,
             ..BASE
@@ -211,6 +229,17 @@ pub(crate) const fn profile(biome: Biome) -> Profile {
             mountain_share: 0.08,
             ..BASE
         },
+    }
+}
+
+impl Profile {
+    /// The biome's trees at `density`: jungle in the jungle, woods elsewhere.
+    pub(crate) const fn trees(&self, density: Density) -> Foliage {
+        if self.jungle {
+            Foliage::jungle(density)
+        } else {
+            Foliage::woods(density)
+        }
     }
 }
 

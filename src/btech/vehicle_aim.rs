@@ -55,6 +55,7 @@ pub(super) fn modifiers(
     aim.dug_in = target_terms.dug_in;
     aim.woods_cover = target_terms.woods_cover;
     aim.orbital_drop = target_terms.orbital_drop;
+    aim.light = target_terms.light;
     aim.beacon_accuracy += target_terms.beacon_accuracy;
     aim.target_lock = if indirect.is_some() {
         0

@@ -1,17 +1,19 @@
-//! Natural terrain: the elevation field and ground levels, seas and lakes, rivers, ground cover,
-//! permanent fire and smoke, and freezing.
+//! Natural terrain: the elevation field and ground levels, seas and lakes, rivers with rapids,
+//! ground, foliage and snow, permanent fire and smoke, and freezing.
 //!
 //! Amounts in the spec are fractions of the map, so each feature takes the hexes that score
 //! highest on its own smooth noise field until that fraction is covered. That keeps a
 //! requested "high woods" close to the same share of the map whatever the seed.
 use crate::Params;
-use crate::biome::{BaseGround, Landform};
-use crate::map::{HexMap, Terrain};
+use crate::biome::Landform;
+use crate::map::HexMap;
 use crate::noise::Noise;
 use crate::path::find_path;
 use crate::rng::Rng;
 use crate::spec::Relief;
-use stompymux_map::{DecorationKind, HexCoordinate, Point};
+use stompymux_map::{
+    Condition, DecorationKind, Density, Flow, Ground, Hex, HexCoordinate, Point, Water,
+};
 
 /// Size in hexes of the largest hills and valleys.
 const FEATURE_SCALE: f64 = 16.0;
@@ -153,19 +155,18 @@ pub(crate) fn shape(map: &mut HexMap, elevation: &[f64], params: &Params) {
     for (hex, &value) in map.hexes.iter_mut().zip(elevation) {
         if value < sea {
             let depth = 1.0 + ((sea - value) / sea.max(f64::EPSILON)) * (max_depth - 1.0);
-            hex.level = 0;
-            hex.terrain = Terrain::Water {
-                depth: depth.round().clamp(1.0, max_depth) as u8,
-            };
+            let depth = depth.round().clamp(1.0, max_depth) as u8;
+            *hex = Hex::at_level(0).with_water(Some(Water::still(depth)));
             continue;
         }
         let height = ((value - sea) / (1.0 - sea).max(f64::EPSILON)).clamp(0.0, 1.0);
-        hex.level = (height.powf(curve) * max_level).round() as u8;
+        *hex = Hex::at_level((height.powf(curve) * max_level).round() as u8);
     }
 }
 
 /// Trace rivers from high ground on one edge down to the far edge, carving their beds and
-/// banks into the ground. Returns how many rivers were drawn.
+/// banks into the ground. Where a river's surface drops a level it runs as rapids, and where
+/// it drops two or more as a torrent. Returns how many rivers were drawn.
 pub(crate) fn rivers(map: &mut HexMap, elevation: &[f64], params: &Params) -> usize {
     let mut rng = Rng::stream(params.seed, "rivers");
     let meander = Noise::new(params.seed, "meander");
@@ -207,7 +208,7 @@ pub(crate) fn rivers(map: &mut HexMap, elevation: &[f64], params: &Params) -> us
         let map_ref = &*map;
         let Some(path) = find_path(map_ref, start, reached, remaining, |_, (x, y)| {
             let index = map_ref.index(x, y);
-            if map_ref.hexes[index].terrain.is_water() {
+            if map_ref.hexes[index].holds_water() {
                 return Some(1);
             }
             let Point { x: cx, y: cy } = HexCoordinate { x, y }.center();
@@ -216,18 +217,33 @@ pub(crate) fn rivers(map: &mut HexMap, elevation: &[f64], params: &Params) -> us
             continue;
         };
         drawn += 1;
-        let mut surface = map.hexes[map.index(start.0, start.1)].level;
-        for &(x, y) in &path {
+        let mut surface = map.hexes[map.index(start.0, start.1)].level();
+        let surfaces: Vec<u8> = path
+            .iter()
+            .map(|&(x, y)| {
+                surface = surface.min(map.hexes[map.index(x, y)].level());
+                surface
+            })
+            .collect();
+        for (step, &(x, y)) in path.iter().enumerate() {
+            let surface = surfaces[step];
+            let drop = surfaces
+                .get(step + 1)
+                .map_or(0, |&next| surface.saturating_sub(next));
             let hex = map.hex_mut(x, y).expect("path on map");
-            surface = surface.min(hex.level);
-            hex.level = surface;
-            if !hex.terrain.is_water() {
-                hex.terrain = Terrain::Water { depth };
+            if !hex.holds_water() {
+                let flow = match drop {
+                    0 => Flow::Still,
+                    1 => Flow::Rapids,
+                    _ => Flow::Torrent,
+                };
+                *hex = Hex::at_level(surface).with_water(Some(Water { depth, flow }));
             }
+            *hex = hex.with_level(surface);
             for (nx, ny) in neighbors_on(map, x, y) {
                 let bank = map.hex_mut(nx, ny).expect("neighbor on map");
-                if !bank.terrain.is_water() {
-                    bank.level = bank.level.min(surface + 2);
+                if !bank.holds_water() {
+                    *bank = bank.with_level(bank.level().min(surface + 2));
                 }
             }
         }
@@ -243,18 +259,20 @@ fn neighbors_on(map: &HexMap, x: i32, y: i32) -> Vec<(i32, i32)> {
 /// Whether any neighbor of `(x, y)` is water.
 fn touches_water(map: &HexMap, x: i32, y: i32) -> bool {
     map.neighbors(x, y)
-        .any(|(nx, ny)| map.hexes[map.index(nx, ny)].terrain.is_water())
+        .any(|(nx, ny)| map.hexes[map.index(nx, ny)].holds_water())
 }
 
-/// Cover the land with mountains, snow, woods, rough ground, beaches and the biome's open
-/// ground.
+/// Cover the land: ultra-rough peaks, woods or jungle, rough ground, swamp, beaches and the
+/// biome's open ground, then snow above the snow line and across snowfields. Woods and rough
+/// ground take separate hexes, but snow lies over whatever is there.
 pub(crate) fn cover(map: &mut HexMap, elevation: &[f64], params: &Params) {
     let profile = &params.profile;
     let moisture = Noise::new(params.seed, "moisture");
     let roughness = Noise::new(params.seed, "roughness");
     let patches = Noise::new(params.seed, "patches");
+    let drifts = Noise::new(params.seed, "snow");
     let land: Vec<usize> = (0..map.hexes.len())
-        .filter(|&index| !map.hexes[index].terrain.is_water())
+        .filter(|&index| !map.hexes[index].holds_water())
         .collect();
     let sample = |index: usize, noise: Noise, scale: f64| {
         let (x, y) = map.coordinate(index);
@@ -270,64 +288,81 @@ pub(crate) fn cover(map: &mut HexMap, elevation: &[f64], params: &Params) {
     let rugged: Vec<f64> = (0..map.hexes.len())
         .map(|index| {
             let (x, y) = map.coordinate(index);
-            let level = i32::from(map.hexes[index].level);
+            let level = i32::from(map.hexes[index].level());
             let slope = map
                 .neighbors(x, y)
-                .map(|(nx, ny)| (i32::from(map.hexes[map.index(nx, ny)].level) - level).abs())
+                .map(|(nx, ny)| (i32::from(map.hexes[map.index(nx, ny)].level()) - level).abs())
                 .max()
                 .unwrap_or(0);
             sample(index, roughness, 6.0) + 0.05 * f64::from(slope)
         })
         .collect();
+    // Swamps collect in low, wet ground.
+    let soggy: Vec<f64> = (0..map.hexes.len())
+        .map(|index| wet[index] - 0.5 * elevation[index])
+        .collect();
+    let snow: Vec<f64> = (0..map.hexes.len())
+        .map(|index| sample(index, drifts, 7.0))
+        .collect();
+    let share =
+        |values: &[f64], fraction: f64| threshold(land.iter().map(|&i| values[i]), fraction);
     let woods_fraction = params.woods.woods_fraction();
-    let mountains = threshold(land.iter().map(|&i| elevation[i]), profile.mountain_share);
-    let woods = threshold(land.iter().map(|&i| wet[i]), woods_fraction);
-    let heavy = threshold(
-        land.iter().map(|&i| wet[i]),
-        woods_fraction * profile.heavy_share,
-    );
-    let rough = threshold(
-        land.iter().map(|&i| rugged[i]),
-        params.rough.rough_fraction(),
-    );
+    let mountains = share(elevation, profile.mountain_share);
+    let woods = share(&wet, woods_fraction);
+    let heavy = share(&wet, woods_fraction * profile.heavy_share);
+    let ultra = share(&wet, woods_fraction * profile.ultra_share);
+    let rough = share(&rugged, params.rough.rough_fraction());
+    let swamp = share(&soggy, profile.swamp_share);
+    let snowfield = share(&snow, profile.snowfields);
+    let deep_snow = share(&snow, profile.snowfields * 0.7);
     let snow_level = profile
         .snow_line
         .map(|line| (line * f64::from(params.relief.max_level())).ceil() as u8);
-    let mut terrain = Vec::with_capacity(land.len());
+    let mut covered = Vec::with_capacity(land.len());
     for &index in &land {
         let (x, y) = map.coordinate(index);
-        let level = map.hexes[index].level;
-        terrain.push(
-            if elevation[index] >= mountains && params.relief >= Relief::Hilly {
-                Terrain::Mountains
-            } else if snow_level.is_some_and(|snow| level >= snow.max(1)) {
-                Terrain::Snow
-            } else if wet[index] >= heavy {
-                Terrain::HeavyWoods
-            } else if wet[index] >= woods {
-                Terrain::LightWoods
-            } else if rugged[index] >= rough {
-                Terrain::Rough
-            } else if profile.beaches && level <= 1 && touches_water(map, x, y) {
-                Terrain::Sand
-            } else if sample(index, patches, 5.0) < profile.clear_patches {
-                Terrain::Clear
-            } else {
-                open_ground(profile.ground)
-            },
+        let hex = map.hexes[index];
+        let level = hex.level();
+        let peak = elevation[index] >= mountains && params.relief >= Relief::Hilly;
+        let density = if peak {
+            None
+        } else if wet[index] >= ultra {
+            Some(Density::UltraHeavy)
+        } else if wet[index] >= heavy {
+            Some(Density::Heavy)
+        } else if wet[index] >= woods {
+            Some(Density::Light)
+        } else {
+            None
+        };
+        let ground = if peak {
+            Ground::UltraRough
+        } else if density.is_none() && rugged[index] >= rough {
+            Ground::Rough
+        } else if soggy[index] >= swamp {
+            Ground::Swamp
+        } else if density.is_none() && profile.beaches && level <= 1 && touches_water(map, x, y) {
+            Ground::Sand
+        } else if sample(index, patches, 5.0) < profile.clear_patches {
+            Ground::Clear
+        } else {
+            profile.ground
+        };
+        let condition = match snow_level {
+            Some(line) if level >= line.max(1) => Some(Condition::DeepSnow),
+            Some(line) if level + 1 >= line.max(2) => Some(Condition::ThinSnow),
+            _ if snow[index] >= deep_snow => Some(Condition::DeepSnow),
+            _ if snow[index] >= snowfield => Some(Condition::ThinSnow),
+            _ => None,
+        };
+        covered.push(
+            hex.with_ground(ground)
+                .with_foliage(density.map(|density| profile.trees(density)))
+                .with_condition(condition),
         );
     }
-    for (&index, terrain) in land.iter().zip(terrain) {
-        map.hexes[index].terrain = terrain;
-    }
-}
-
-/// The terrain for open ground of a biome's base material.
-pub(crate) fn open_ground(ground: BaseGround) -> Terrain {
-    match ground {
-        BaseGround::Clear => Terrain::Clear,
-        BaseGround::Sand => Terrain::Sand,
-        BaseGround::Snow => Terrain::Snow,
+    for (&index, hex) in land.iter().zip(covered) {
+        map.hexes[index] = hex;
     }
 }
 
@@ -346,7 +381,7 @@ pub(crate) fn burn(map: &mut HexMap, elevation: &[f64], params: &Params) {
     };
     let score: Vec<f64> = (0..map.hexes.len())
         .map(|index| {
-            if map.hexes[index].terrain.is_water() {
+            if map.hexes[index].holds_water() {
                 return f64::NEG_INFINITY;
             }
             let (x, y) = map.coordinate(index);
@@ -358,19 +393,17 @@ pub(crate) fn burn(map: &mut HexMap, elevation: &[f64], params: &Params) {
     let fire = threshold(score.iter().copied(), fraction * 0.35);
     for (hex, &value) in map.hexes.iter_mut().zip(&score) {
         if value >= fire {
-            hex.overlay = Some(DecorationKind::Fire);
+            *hex = hex.with_overlay(Some(DecorationKind::Fire));
         } else if value >= smoke {
-            hex.overlay = Some(DecorationKind::Smoke);
+            *hex = hex.with_overlay(Some(DecorationKind::Smoke));
         }
     }
 }
 
-/// Freeze every lake and river over.
+/// Freeze every lake and river over with the ice condition, under bridges too.
 pub(crate) fn freeze(map: &mut HexMap) {
     for hex in &mut map.hexes {
-        if let Terrain::Water { depth } = hex.terrain {
-            hex.terrain = Terrain::Ice { depth };
-        }
+        *hex = hex.frozen();
     }
 }
 

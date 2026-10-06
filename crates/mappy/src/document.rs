@@ -2,34 +2,57 @@
 //!
 //! Every change is recorded as an [`Edit`] holding before and after values, so undo and redo
 //! replay edits in either direction. Brush strokes accumulate into one edit until the stroke
-//! ends, so a drag across many hexes undoes in one step.
+//! ends, so a drag across many hexes undoes in one step; a settings slider drag does the same.
 //!
-//! Brushes keep hexes within what the map file format can store, but maps loaded from
-//! elsewhere may not be: the file keeps one feature per hex, so woods on rough ground, or a
-//! bridge with no water under it, would not survive a save. [`file_holds`] asks the game's own
-//! encoder and decoder, the document keeps the set of hexes that fail, and saving refuses
-//! while any do.
+//! Each [`Paint`] changes one layer of a hex, clearing whatever the new layer cannot stand
+//! with, and never produces a hex that fails [`Hex::validate`]: a paint that would is skipped
+//! for that hex. Since a map file stores every layer of a valid hex, whatever the brushes make
+//! can be saved.
+//!
+//! A resize is undoable too: it records the map's hexes and points of interest from before and
+//! after it.
 use std::{
-    collections::{BTreeMap, BTreeSet},
+    collections::BTreeMap,
     path::{Path, PathBuf},
     sync::{
-        Arc, LazyLock, Mutex, Weak,
+        Arc, Weak,
         atomic::{AtomicU64, Ordering},
     },
 };
 
 use anyhow::{Context, Result, ensure};
 use stompymux_map::{
-    DecorationKind, Ground, Hex, HexCoordinate, MapAsset, Structure, Water, Woods,
+    Condition, DecorationKind, Foliage, Ground, Hex, HexCoordinate, Light, MapAsset,
+    MapPointOfInterest, Route, Structure, Water, Wind,
 };
 
-/// A map's flags, gravity and temperature, edited together.
+/// A map's battlefield-wide settings, edited together: rule flags, gravity, temperature,
+/// light, visibility and wind. Mappy always writes every setting, so a reload never keeps a
+/// live map's own light, visibility or wind.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct MapSettings {
     pub flags: i32,
+    /// Percent of standard gravity.
     pub gravity: u8,
+    /// Degrees Celsius.
     pub temperature: i8,
+    pub light: Light,
+    /// Weather visibility in hexes, up to [`stompymux_map::MAX_VISIBILITY`].
+    pub visibility: u8,
+    pub wind: Wind,
 }
+
+/// Light for a map whose file does not set it, matching the server's default.
+const DEFAULT_LIGHT: Light = Light::Day;
+
+/// Visibility in hexes for a map whose file does not set it, matching the server's default.
+const DEFAULT_VISIBILITY: u8 = 30;
+
+/// Wind for a map whose file does not set it: calm.
+const DEFAULT_WIND: Wind = Wind {
+    direction: 0,
+    speed: 0,
+};
 
 /// One hex's value before and after a change, by row-major index.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -47,137 +70,157 @@ enum Edit {
         before: MapSettings,
         after: MapSettings,
     },
+    Resize {
+        before: Box<Extent>,
+        after: Box<Extent>,
+    },
 }
 
-/// What a brush does to each hex it touches.
+/// Everything a resize changes: the map's size, its hexes and its points of interest.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Extent {
+    width: u16,
+    height: u16,
+    hexes: Vec<Hex>,
+    points_of_interest: Vec<MapPointOfInterest>,
+}
+
+/// Which edges of the map a resize adds or removes columns or rows at.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ResizeEdge {
+    /// The left edge for columns, the top edge for rows.
+    Start,
+    /// The right edge for columns, the bottom edge for rows.
+    End,
+    /// Both edges, as evenly as possible.
+    Both,
+}
+
+impl ResizeEdge {
+    /// Columns or rows to add before the first existing one (negative to remove) when going
+    /// from `old` to `new` along this axis. Splitting `columns` between both edges keeps the
+    /// leading share even, so the stagger between odd and even columns stays where it was.
+    fn leading(self, old: u16, new: u16, columns: bool) -> i32 {
+        let change = i32::from(new) - i32::from(old);
+        match self {
+            Self::Start => change,
+            Self::End => 0,
+            Self::Both if columns => change / 4 * 2,
+            Self::Both => change / 2,
+        }
+    }
+}
+
+/// What a brush does to each hex it touches. Level and the fire or smoke overlay carry over
+/// every other paint.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Paint {
     /// Set the ground height, keeping everything on the ground.
     Level(u8),
-    /// Replace the hex's base terrain. Woods and snow stay on clear ground and ice stays on
-    /// water; other terrain clears them. A map file keeps one feature per hex, so this also
-    /// knocks down buildings and walls, and bridges unless the new terrain is water.
+    /// Replace the ground or water; see [`Paint::apply`] for what each clears.
     Terrain(TerrainFeature),
-    /// Lay a cover over the base terrain, or clear it with `None`; see [`Cover`].
-    Cover(Option<Cover>),
-    /// Build or remove a structure. Buildings and walls stand on clear ground, so building one
-    /// clears the hex's terrain; a bridge spans water, so it floods a dry hex one level deep.
-    /// Removing a structure leaves the terrain under it.
+    /// Grow or clear foliage, where the ground supports it and no building or wall stands.
+    Foliage(Option<Foliage>),
+    /// Lay or remove a road or rail line, on dry hexes without a building or wall.
+    Route(Option<Route>),
+    /// Build or remove a structure. Buildings and walls drain water and clear foliage and
+    /// routes; a bridge brings still water one level deep to a dry hex. Removing a structure
+    /// leaves the terrain under it.
     Structure(Option<Structure>),
+    /// Lay or clear ice, snow or mud.
+    Condition(Option<Condition>),
     /// Start or put out fire or smoke.
     Overlay(Option<DecorationKind>),
 }
 
-/// A hex's base terrain: a kind of ground, or water of some depth. Snow is a [`Cover`]
-/// instead.
+/// A hex's base terrain: a kind of ground, or water.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TerrainFeature {
     Ground(Ground),
-    Water { depth: u8 },
+    Water(Water),
 }
 
 impl TerrainFeature {
-    /// The base terrain under `hex`'s cover, structure and overlay.
+    /// The base terrain under `hex`'s foliage, route, structure and conditions.
     pub fn of(hex: Hex) -> Self {
-        if let Some(water) = hex.water() {
-            return Self::Water { depth: water.depth };
+        match hex.water() {
+            Some(water) => Self::Water(water),
+            None => Self::Ground(hex.ground()),
         }
-        match hex.ground() {
-            Ground::Snow => Self::Ground(Ground::Clear),
-            ground => Self::Ground(ground),
-        }
-    }
-}
-
-/// What can lie over a hex's base terrain, shown in Mappy as overlays. Woods and snow cover dry
-/// ground, which a map file then stores as clear; ice freezes water. Fire and smoke are the
-/// map's own overlays and are painted separately.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Cover {
-    Woods(Woods),
-    Snow,
-    Ice,
-}
-
-impl Cover {
-    /// The cover over `hex`, if any.
-    pub fn of(hex: Hex) -> Option<Self> {
-        if let Some(water) = hex.water() {
-            return water.frozen.then_some(Self::Ice);
-        }
-        if let Some(woods) = hex.woods() {
-            return Some(Self::Woods(woods));
-        }
-        (hex.ground() == Ground::Snow).then_some(Self::Snow)
     }
 }
 
 impl Paint {
-    /// The hex this paint turns `hex` into. Level and overlay always carry over.
-    fn apply(self, hex: Hex) -> Hex {
-        let rebuilt = |ground, woods, water, structure| {
-            Hex::from_layers(hex.level(), ground, woods, water, structure)
-                .with_overlay(hex.overlay())
-        };
+    /// The hex this paint turns `hex` into, or `hex` unchanged when the result would not be a
+    /// valid hex.
+    pub fn apply(self, hex: Hex) -> Hex {
+        let painted = self.paint(hex);
+        if painted.validate().is_err() {
+            return hex;
+        }
+        painted
+    }
+
+    /// The hex this paint makes of `hex`, valid or not.
+    fn paint(self, hex: Hex) -> Hex {
         match self {
             Self::Level(level) => hex.with_level(level),
-            Self::Terrain(TerrainFeature::Ground(ground)) => {
-                let (ground, woods) = match Cover::of(hex) {
-                    Some(Cover::Woods(woods)) if ground == Ground::Clear => (ground, Some(woods)),
-                    Some(Cover::Snow) if ground == Ground::Clear => (Ground::Snow, None),
-                    _ => (ground, None),
-                };
-                rebuilt(ground, woods, None, None)
-            }
-            Self::Terrain(TerrainFeature::Water { depth }) => {
-                let water = Water {
-                    depth,
-                    frozen: Cover::of(hex) == Some(Cover::Ice),
-                };
-                let bridge = hex.structure().filter(|_| hex.has_bridge());
-                rebuilt(Ground::Clear, None, Some(water), bridge)
-            }
-            Self::Cover(None) => {
-                let ground = match hex.ground() {
-                    Ground::Snow => Ground::Clear,
-                    ground => ground,
-                };
-                let water = hex.water().map(|water| Water {
-                    frozen: false,
-                    ..water
-                });
-                rebuilt(ground, None, water, hex.structure())
-            }
-            Self::Cover(Some(Cover::Ice)) => {
-                let Some(water) = hex.water() else {
-                    return hex;
-                };
-                hex.with_water(Some(Water {
-                    frozen: true,
-                    ..water
-                }))
-            }
-            Self::Cover(Some(Cover::Woods(_) | Cover::Snow))
-                if hex.water().is_some() || hex.structure().is_some() =>
-            {
-                hex
-            }
-            Self::Cover(Some(Cover::Woods(woods))) => {
-                rebuilt(Ground::Clear, Some(woods), None, None)
-            }
-            Self::Cover(Some(Cover::Snow)) => rebuilt(Ground::Snow, None, None, None),
+            Self::Terrain(TerrainFeature::Ground(ground)) => paint_ground(hex, ground),
+            Self::Terrain(TerrainFeature::Water(water)) => flood(hex, water),
+            Self::Foliage(foliage) => hex.with_foliage(foliage),
+            Self::Route(route) => hex.with_route(route),
             Self::Structure(None) => hex.with_structure(None),
-            Self::Structure(Some(bridge @ Structure::Bridge { .. })) => {
-                let water = hex.water().unwrap_or(Water {
-                    depth: 1,
-                    frozen: false,
-                });
-                rebuilt(Ground::Clear, None, Some(water), Some(bridge))
+            Self::Structure(Some(bridge)) if bridge.is_bridge() => {
+                let wet = match hex.water() {
+                    Some(_) => hex,
+                    None => flood(hex, Water::still(1)),
+                };
+                wet.with_structure(Some(bridge))
             }
-            Self::Structure(Some(structure)) => rebuilt(Ground::Clear, None, None, Some(structure)),
+            Self::Structure(Some(structure)) => hex
+                .with_water(None)
+                .with_foliage(None)
+                .with_route(None)
+                .with_structure(Some(structure)),
+            Self::Condition(condition) => hex.with_condition(condition),
             Self::Overlay(overlay) => hex.with_overlay(overlay),
         }
     }
+}
+
+/// `hex` with its ground made of `ground`: any water drains, taking a bridge with it, and
+/// whatever cannot lie on the new ground goes: foliage on pavement, heavy industry and magma,
+/// and routes and conditions on magma.
+fn paint_ground(hex: Hex, ground: Ground) -> Hex {
+    let mut hex = hex.with_ground(ground);
+    if hex.water().is_some() {
+        hex = hex.with_water(None);
+        if hex.has_bridge() {
+            hex = hex.with_structure(None);
+        }
+    }
+    if !ground.supports_foliage() {
+        hex = hex.with_foliage(None);
+    }
+    if ground == Ground::Magma {
+        hex = hex.with_route(None).with_condition(None);
+    }
+    hex
+}
+
+/// `hex` under `water`: clear ground beneath, no foliage, route, building or wall, a bridge
+/// kept, and ice kept as the water's frozen surface while snow and mud wash away.
+fn flood(hex: Hex, water: Water) -> Hex {
+    let structure = hex.structure().filter(|structure| structure.is_bridge());
+    let condition = hex
+        .condition()
+        .filter(|condition| *condition == Condition::Ice);
+    hex.with_ground(Ground::Clear)
+        .with_water(Some(water))
+        .with_foliage(None)
+        .with_route(None)
+        .with_structure(structure)
+        .with_condition(condition)
 }
 
 /// A paint and the area it covers.
@@ -186,30 +229,6 @@ pub struct Brush {
     pub paint: Paint,
     /// Hexes within this many steps of the center are painted.
     pub radius: u8,
-}
-
-/// Whether a map file stores `hex` exactly, found by saving and reloading a one-hex map
-/// through the game's map file encoder and decoder. Answers are remembered, since a map has
-/// few distinct hexes.
-pub fn file_holds(hex: Hex) -> bool {
-    static ANSWERS: LazyLock<Mutex<BTreeMap<Hex, bool>>> = LazyLock::new(Mutex::default);
-    let mut answers = ANSWERS
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner());
-    *answers.entry(hex).or_insert_with(|| {
-        let map = MapAsset {
-            width: 1,
-            height: 1,
-            flags: 0,
-            gravity: 100,
-            temperature: 20,
-            hexes: Arc::new(vec![hex]),
-            points_of_interest: Vec::new(),
-        };
-        map.to_file()
-            .and_then(|source| MapAsset::parse(&source))
-            .is_ok_and(|decoded| decoded.hexes[0] == hex)
-    })
 }
 
 /// An open map with its edit history.
@@ -223,8 +242,8 @@ pub struct Document {
     redo: Vec<Edit>,
     /// Changes made by the brush stroke in progress, by hex index.
     stroke: BTreeMap<usize, HexChange>,
-    /// Indices of hexes a map file cannot store; see [`file_holds`].
-    unsavable: BTreeSet<usize>,
+    /// Settings from before the settings drag in progress, if one is.
+    settings_drag: Option<MapSettings>,
     /// Names the hex contents that `changes` starts from; see [`HexFeed`].
     hexes_id: u64,
     /// Index of every hex written since `hexes_id` was assigned, in order.
@@ -253,7 +272,7 @@ fn next_hexes_id() -> u64 {
 }
 
 impl Document {
-    /// A blank map of clear ground at level zero.
+    /// A blank map of clear ground at level zero in daylight, clear weather and calm air.
     pub fn new(width: u16, height: u16) -> Result<Self> {
         ensure!(
             (1..=1000).contains(&width) && (1..=1000).contains(&height),
@@ -268,6 +287,9 @@ impl Document {
                 flags: 0,
                 gravity: 100,
                 temperature: 20,
+                light: None,
+                visibility: None,
+                wind: None,
                 hexes: Arc::new(hexes),
                 points_of_interest: Vec::new(),
             },
@@ -283,14 +305,12 @@ impl Document {
         Ok(Self::from_map(Some(path.to_path_buf()), map))
     }
 
-    fn from_map(path: Option<PathBuf>, map: MapAsset) -> Self {
-        let unsavable = map
-            .hexes
-            .iter()
-            .enumerate()
-            .filter(|(_, hex)| !file_holds(**hex))
-            .map(|(index, _)| index)
-            .collect();
+    /// A document for `map`, filling in the default light, visibility and wind where the map
+    /// leaves them unset.
+    fn from_map(path: Option<PathBuf>, mut map: MapAsset) -> Self {
+        map.light.get_or_insert(DEFAULT_LIGHT);
+        map.visibility.get_or_insert(DEFAULT_VISIBILITY);
+        map.wind.get_or_insert(DEFAULT_WIND);
         Self {
             path,
             map,
@@ -298,7 +318,7 @@ impl Document {
             undo: Vec::new(),
             redo: Vec::new(),
             stroke: BTreeMap::new(),
-            unsavable,
+            settings_drag: None,
             hexes_id: next_hexes_id(),
             changes: Arc::default(),
         }
@@ -307,15 +327,6 @@ impl Document {
     /// Write the map to `path` after checking that the file will load back as this map.
     pub fn save_to(&mut self, path: &Path) -> Result<()> {
         self.end_stroke();
-        if let Some(&first) = self.unsavable.first() {
-            let width = usize::from(self.map.width);
-            anyhow::bail!(
-                "{} hex(es) have layers a map file cannot store, the first at {},{}",
-                self.unsavable.len(),
-                first % width,
-                first / width
-            );
-        }
         let source = self.map.to_file()?;
         let decoded = MapAsset::parse(&source).context("the saved map would not load")?;
         ensure!(
@@ -328,22 +339,20 @@ impl Document {
         Ok(())
     }
 
-    /// Hexes a map file cannot store, by row-major index.
-    pub fn unsavable(&self) -> &BTreeSet<usize> {
-        &self.unsavable
-    }
-
     /// The hex at a coordinate, or `None` off the map.
     pub fn hex(&self, coordinate: HexCoordinate) -> Option<Hex> {
         self.map.hex(coordinate.x, coordinate.y)
     }
 
-    /// Current flags, gravity and temperature.
+    /// Current battlefield-wide settings.
     pub fn settings(&self) -> MapSettings {
         MapSettings {
             flags: self.map.flags,
             gravity: self.map.gravity,
             temperature: self.map.temperature,
+            light: self.map.light.unwrap_or(DEFAULT_LIGHT),
+            visibility: self.map.visibility.unwrap_or(DEFAULT_VISIBILITY),
+            wind: self.map.wind.unwrap_or(DEFAULT_WIND),
         }
     }
 
@@ -355,6 +364,7 @@ impl Document {
     /// Replace each hex within `radius` steps of `center` with `apply` of it, as part of the
     /// current stroke.
     pub fn paint_with(&mut self, center: HexCoordinate, radius: u8, apply: impl Fn(Hex) -> Hex) {
+        self.end_settings_drag();
         let steps = u64::from(radius);
         let radius = i32::from(radius);
         let width = i32::from(self.map.width);
@@ -384,8 +394,9 @@ impl Document {
         }
     }
 
-    /// Close the current stroke into one undoable edit.
+    /// Close the current brush stroke or settings drag into one undoable edit.
     pub fn end_stroke(&mut self) {
+        self.end_settings_drag();
         let changes: Vec<_> = std::mem::take(&mut self.stroke)
             .into_values()
             .filter(|change| change.before != change.after)
@@ -396,7 +407,7 @@ impl Document {
         self.record(Edit::Hexes(changes));
     }
 
-    /// Replace the flags, gravity and temperature as one undoable edit.
+    /// Replace the settings as one undoable edit.
     pub fn set_settings(&mut self, after: MapSettings) {
         self.end_stroke();
         let before = self.settings();
@@ -407,9 +418,36 @@ impl Document {
         self.record(Edit::Settings { before, after });
     }
 
+    /// Replace the settings as part of a drag, such as a slider being moved, which
+    /// [`Document::end_stroke`] closes into one undoable edit.
+    pub fn drag_settings(&mut self, after: MapSettings) {
+        let before = self.settings();
+        if self.settings_drag.is_none() {
+            self.end_stroke();
+            self.settings_drag = Some(before);
+        }
+        self.apply(&Edit::Settings { before, after }, true);
+    }
+
+    /// Record the settings drag in progress, if it changed anything.
+    fn end_settings_drag(&mut self) {
+        let Some(before) = self.settings_drag.take() else {
+            return;
+        };
+        let after = self.settings();
+        if before == after {
+            return;
+        }
+        self.record(Edit::Settings { before, after });
+    }
+
     /// Whether there is an edit to undo.
     pub fn can_undo(&self) -> bool {
-        !self.undo.is_empty() || !self.stroke.is_empty()
+        !self.undo.is_empty()
+            || !self.stroke.is_empty()
+            || self
+                .settings_drag
+                .is_some_and(|before| before != self.settings())
     }
 
     /// Whether there is an undone edit to redo.
@@ -430,12 +468,83 @@ impl Document {
 
     /// Reapply the most recently undone edit.
     pub fn redo(&mut self) {
+        self.end_stroke();
         let Some(edit) = self.redo.pop() else {
             return;
         };
         self.apply(&edit, true);
         self.undo.push(edit);
         self.dirty = true;
+    }
+
+    /// Change the map to `width` by `height`, adding or removing columns at the `columns`
+    /// edges and rows at the `rows` edges, as one undoable edit. New hexes are clear ground at
+    /// level zero, and points of interest move with their hexes or go when their hex does.
+    pub fn resize(
+        &mut self,
+        width: u16,
+        height: u16,
+        columns: ResizeEdge,
+        rows: ResizeEdge,
+    ) -> Result<()> {
+        ensure!(
+            (1..=1000).contains(&width) && (1..=1000).contains(&height),
+            "map dimensions must be between 1 and 1000"
+        );
+        self.end_stroke();
+        if (width, height) == (self.map.width, self.map.height) {
+            return Ok(());
+        }
+        let left = columns.leading(self.map.width, width, true);
+        let top = rows.leading(self.map.height, height, false);
+        let before = self.extent();
+        let moved = |x: u16, y: u16| {
+            let x = u16::try_from(i32::from(x) + left).ok()?;
+            let y = u16::try_from(i32::from(y) + top).ok()?;
+            (x < width && y < height).then_some((x, y))
+        };
+        let mut hexes = vec![Hex::at_level(0); usize::from(width) * usize::from(height)];
+        for (index, hex) in before.hexes.iter().enumerate() {
+            let x = (index % usize::from(before.width)) as u16;
+            let y = (index / usize::from(before.width)) as u16;
+            if let Some((x, y)) = moved(x, y) {
+                hexes[usize::from(y) * usize::from(width) + usize::from(x)] = *hex;
+            }
+        }
+        let points_of_interest = before
+            .points_of_interest
+            .iter()
+            .filter_map(|point| {
+                let (x, y) = moved(point.x, point.y)?;
+                Some(MapPointOfInterest {
+                    x,
+                    y,
+                    ..point.clone()
+                })
+            })
+            .collect();
+        let edit = Edit::Resize {
+            before: Box::new(before),
+            after: Box::new(Extent {
+                width,
+                height,
+                hexes,
+                points_of_interest,
+            }),
+        };
+        self.apply(&edit, true);
+        self.record(edit);
+        Ok(())
+    }
+
+    /// The map's current size, hexes and points of interest.
+    fn extent(&self) -> Extent {
+        Extent {
+            width: self.map.width,
+            height: self.map.height,
+            hexes: self.map.hexes.to_vec(),
+            points_of_interest: self.map.points_of_interest.clone(),
+        }
     }
 
     /// Push a finished edit, which invalidates anything that could be redone.
@@ -466,11 +575,6 @@ impl Document {
         }
         Arc::make_mut(&mut self.map.hexes)[index] = hex;
         Arc::make_mut(&mut self.changes).push(index as u32);
-        if file_holds(hex) {
-            self.unsavable.remove(&index);
-        } else {
-            self.unsavable.insert(index);
-        }
     }
 
     /// Set the map to an edit's after (`forward`) or before values.
@@ -487,6 +591,19 @@ impl Document {
                 self.map.flags = settings.flags;
                 self.map.gravity = settings.gravity;
                 self.map.temperature = settings.temperature;
+                self.map.light = Some(settings.light);
+                self.map.visibility = Some(settings.visibility);
+                self.map.wind = Some(settings.wind);
+            }
+            Edit::Resize { before, after } => {
+                let extent = if forward { after } else { before };
+                self.map.width = extent.width;
+                self.map.height = extent.height;
+                self.map.hexes = Arc::new(extent.hexes.clone());
+                self.map.points_of_interest = extent.points_of_interest.clone();
+                // Every hex may have moved, so a renderer must reread them all.
+                self.hexes_id = next_hexes_id();
+                self.changes = Arc::default();
             }
         }
     }
@@ -495,7 +612,7 @@ impl Document {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use stompymux_map::Terrain;
+    use stompymux_map::{ConstructionClass, Flow, StructureKind, Terrain};
 
     const AT: HexCoordinate = HexCoordinate { x: 2, y: 2 };
     const MIDDLE: HexCoordinate = HexCoordinate { x: 1, y: 1 };
@@ -515,6 +632,22 @@ mod tests {
     /// A brush of `paint` covering one hex.
     fn brush(paint: Paint) -> Brush {
         Brush { paint, radius: 0 }
+    }
+
+    /// Check each `(before, paint, after)` case, and that every result is a valid hex.
+    fn check(cases: &[(Hex, Paint, Hex)]) {
+        for &(before, paint, after) in cases {
+            let painted = paint.apply(before);
+            assert_eq!(painted, after, "{paint:?} over {before:?}");
+            painted
+                .validate()
+                .unwrap_or_else(|error| panic!("{paint:?} over {before:?}: {error}"));
+        }
+    }
+
+    /// Clear ground at level 2 with the given layers.
+    fn dry() -> Hex {
+        Hex::at_level(2)
     }
 
     /// A drag across many hexes undoes and redoes as one step.
@@ -544,15 +677,17 @@ mod tests {
     /// A radius-one brush paints the center and its six neighbors, clipped to the map.
     #[test]
     fn brush_radius_follows_hex_distance_and_map_bounds() {
+        let rough = |document: &Document| {
+            document
+                .map
+                .hexes
+                .iter()
+                .filter(|hex| hex.terrain() == Terrain::Rough)
+                .count()
+        };
         let mut document = Document::new(5, 5).unwrap();
         place(&mut document, AT, Terrain::Rough, 0, 1);
-        let painted = document
-            .map
-            .hexes
-            .iter()
-            .filter(|hex| hex.terrain() == Terrain::Rough)
-            .count();
-        assert_eq!(painted, 7);
+        assert_eq!(rough(&document), 7);
         let mut corner = Document::new(5, 5).unwrap();
         place(
             &mut corner,
@@ -561,24 +696,16 @@ mod tests {
             0,
             1,
         );
-        assert!(
-            corner
-                .map
-                .hexes
-                .iter()
-                .filter(|hex| hex.terrain() == Terrain::Rough)
-                .count()
-                < 7
-        );
+        assert!(rough(&corner) < 7);
     }
 
-    /// Each paint changes only its own layer, and level and overlay survive every other paint.
+    /// Level and overlay survive every other paint, and each paint changes its own layer.
     #[test]
     fn paints_change_only_their_layers() {
         let mut document = Document::new(3, 3).unwrap();
-        place(&mut document, MIDDLE, Terrain::HeavyForest, 3, 0);
+        place(&mut document, MIDDLE, Terrain::HeavyWoods, 3, 0);
         document.paint(MIDDLE, brush(Paint::Level(20)));
-        let woods = Hex::new(Terrain::HeavyForest, 20);
+        let woods = Hex::new(Terrain::HeavyWoods, 20);
         assert_eq!(document.hex(MIDDLE), Some(woods));
         let smoke = Some(DecorationKind::Smoke);
         document.paint(MIDDLE, brush(Paint::Overlay(smoke)));
@@ -589,166 +716,208 @@ mod tests {
         );
         assert_eq!(
             document.hex(MIDDLE),
-            Some(Hex::new(Terrain::Rough, 20).with_overlay(smoke))
+            Some(woods.with_ground(Ground::Rough).with_overlay(smoke))
+        );
+        document.paint(MIDDLE, brush(Paint::Route(Some(Route::DirtRoad))));
+        document.paint(MIDDLE, brush(Paint::Condition(Some(Condition::Mud))));
+        assert_eq!(
+            document.hex(MIDDLE),
+            Some(
+                woods
+                    .with_ground(Ground::Rough)
+                    .with_route(Some(Route::DirtRoad))
+                    .with_condition(Some(Condition::Mud))
+                    .with_overlay(smoke)
+            )
         );
     }
 
-    /// Terrain replaces the base, keeping covers that suit it and bridges only over water.
+    /// Ground drains water and its bridge, and clears what cannot lie on it; water clears
+    /// what cannot stand in it but keeps bridges and ice.
     #[test]
     fn terrain_replaces_the_base_and_what_cannot_stand_on_it() {
-        let clear = Paint::Terrain(TerrainFeature::Ground(Ground::Clear));
-        let rough = Paint::Terrain(TerrainFeature::Ground(Ground::Rough));
-        let water = Paint::Terrain(TerrainFeature::Water { depth: 3 });
-        let bridge = Some(Structure::Bridge { deck: 4 });
-        let cases = [
+        let ground = |ground| Paint::Terrain(TerrainFeature::Ground(ground));
+        let water = |depth, flow| Paint::Terrain(TerrainFeature::Water(Water { depth, flow }));
+        let woods = dry().with_foliage(Some(Foliage::LightWoods));
+        let road = dry().with_route(Some(Route::PavedRoad));
+        let snowy = dry().with_condition(Some(Condition::DeepSnow));
+        let bridge = Hex::new(Terrain::Bridge, 4);
+        let ice = Hex::new(Terrain::Ice, 1);
+        let building = Hex::new(Terrain::Building, 9);
+        let deep = Water::still(3);
+        check(&[
             (
-                Hex::new(Terrain::LightForest, 2),
-                rough,
-                Hex::new(Terrain::Rough, 2),
-            ),
-            (
-                Hex::new(Terrain::LightForest, 2),
-                clear,
-                Hex::new(Terrain::LightForest, 2),
-            ),
-            (
-                Hex::new(Terrain::Snow, 2),
-                clear,
-                Hex::new(Terrain::Snow, 2),
-            ),
-            (
-                Hex::new(Terrain::Snow, 2),
-                water,
-                Hex::new(Terrain::Water, 3).with_level(2),
-            ),
-            (Hex::new(Terrain::Ice, 1), water, Hex::new(Terrain::Ice, 3)),
-            (
-                Hex::new(Terrain::Ice, 1),
-                rough,
-                Hex::new(Terrain::Rough, 0),
-            ),
-            (
-                Hex::new(Terrain::Building, 9),
-                rough,
-                Hex::new(Terrain::Rough, 0),
-            ),
-            (
-                Hex::new(Terrain::Bridge, 4),
-                rough,
-                Hex::new(Terrain::Rough, 0),
-            ),
-            (
-                Hex::new(Terrain::Bridge, 4),
-                water,
-                Hex::new(Terrain::Water, 3).with_structure(bridge),
-            ),
-        ];
-        for (before, paint, after) in cases {
-            assert_eq!(paint.apply(before), after, "{paint:?} over {before:?}");
-            assert!(file_holds(after), "{paint:?} over {before:?}");
-        }
-    }
-
-    /// Woods and snow cover dry, unbuilt hexes, ice freezes water, and clearing a cover
-    /// leaves the base terrain.
-    #[test]
-    fn covers_lie_only_where_they_fit() {
-        let snow = Paint::Cover(Some(Cover::Snow));
-        let woods = Paint::Cover(Some(Cover::Woods(Woods::Heavy)));
-        let ice = Paint::Cover(Some(Cover::Ice));
-        let none = Paint::Cover(None);
-        let wall = Hex::new(Terrain::Wall, 3);
-        let bridge = Hex::new(Terrain::Bridge, 2);
-        let frozen_bridge = bridge.with_water(Some(Water {
-            depth: 1,
-            frozen: true,
-        }));
-        let cases = [
-            (
-                Hex::new(Terrain::Rough, 2),
                 woods,
-                Hex::new(Terrain::HeavyForest, 2),
+                ground(Ground::Rough),
+                woods.with_ground(Ground::Rough),
             ),
             (
-                Hex::new(Terrain::LightForest, 2),
-                snow,
-                Hex::new(Terrain::Snow, 2),
+                woods,
+                ground(Ground::Pavement),
+                dry().with_ground(Ground::Pavement),
             ),
             (
-                Hex::new(Terrain::Water, 2),
-                snow,
-                Hex::new(Terrain::Water, 2),
+                woods,
+                ground(Ground::HeavyIndustrial),
+                dry().with_ground(Ground::HeavyIndustrial),
             ),
-            (wall, woods, wall),
-            (Hex::new(Terrain::Water, 2), ice, Hex::new(Terrain::Ice, 2)),
             (
-                Hex::new(Terrain::Rough, 2),
+                road.with_foliage(Some(Foliage::PlantedFields))
+                    .with_condition(Some(Condition::ThinSnow)),
+                ground(Ground::Magma),
+                dry().with_ground(Ground::Magma),
+            ),
+            (snowy, ground(Ground::Sand), snowy.with_ground(Ground::Sand)),
+            (
+                bridge,
+                ground(Ground::Rough),
+                Hex::at_level(0).with_ground(Ground::Rough),
+            ),
+            (
                 ice,
-                Hex::new(Terrain::Rough, 2),
-            ),
-            (bridge, ice, frozen_bridge),
-            (frozen_bridge, none, bridge),
-            (
-                Hex::new(Terrain::Snow, 2),
-                none,
-                Hex::new(Terrain::Grassland, 2),
+                ground(Ground::Tundra),
+                Hex::at_level(0)
+                    .with_ground(Ground::Tundra)
+                    .with_condition(Some(Condition::Ice)),
             ),
             (
-                Hex::new(Terrain::HeavyForest, 2),
-                none,
-                Hex::new(Terrain::Grassland, 2),
+                building,
+                ground(Ground::Rubble),
+                building.with_ground(Ground::Rubble),
             ),
-        ];
-        for (before, paint, after) in cases {
-            assert_eq!(paint.apply(before), after, "{paint:?} over {before:?}");
-            assert!(file_holds(after), "{paint:?} over {before:?}");
-        }
+            (
+                woods
+                    .with_route(Some(Route::Rail))
+                    .with_ground(Ground::Swamp),
+                water(3, Flow::Still),
+                dry().with_water(Some(deep)),
+            ),
+            (building, water(3, Flow::Still), Hex::new(Terrain::Water, 3)),
+            (snowy, water(3, Flow::Still), dry().with_water(Some(deep))),
+            (
+                ice,
+                water(2, Flow::Torrent),
+                ice.with_water(Some(Water {
+                    depth: 2,
+                    flow: Flow::Torrent,
+                })),
+            ),
+            (
+                bridge,
+                water(3, Flow::Rapids),
+                bridge.with_water(Some(Water {
+                    depth: 3,
+                    flow: Flow::Rapids,
+                })),
+            ),
+            (dry(), water(0, Flow::Rapids), dry()),
+        ]);
     }
 
-    /// Buildings and walls clear the terrain under them, bridges bring water with them, and
-    /// removing a structure leaves the terrain.
+    /// Foliage only grows on dry ground that supports it with no building or wall.
     #[test]
-    fn structures_keep_hexes_storable() {
-        let building = Paint::Structure(Some(Structure::Building { height: 5 }));
-        let bridge = Paint::Structure(Some(Structure::Bridge { deck: 2 }));
-        let woods = Hex::new(Terrain::LightForest, 3);
-        assert_eq!(
-            building.apply(woods),
-            Hex::new(Terrain::Building, 5).with_level(3)
-        );
-        assert_eq!(
-            bridge.apply(woods),
-            Hex::new(Terrain::Bridge, 2).with_level(3)
-        );
-        let deep = Hex::new(Terrain::Water, 4);
-        assert_eq!(
-            bridge.apply(deep),
-            deep.with_structure(Some(Structure::Bridge { deck: 2 }))
-        );
-        assert_eq!(Paint::Structure(None).apply(bridge.apply(deep)), deep);
-        for hex in [woods, deep, Hex::new(Terrain::Ice, 2)] {
-            for paint in [building, bridge, Paint::Structure(None)] {
-                assert!(file_holds(paint.apply(hex)), "{paint:?} over {hex:?}");
-            }
-        }
+    fn foliage_grows_only_where_it_can() {
+        let jungle = Paint::Foliage(Some(Foliage::HeavyJungle));
+        let grown = |hex: Hex| hex.with_foliage(Some(Foliage::HeavyJungle));
+        let rough = dry().with_ground(Ground::Rough);
+        let road = dry().with_route(Some(Route::GravelRoad));
+        let pavement = dry().with_ground(Ground::Pavement);
+        let water = Hex::new(Terrain::Water, 2);
+        let wall = Hex::new(Terrain::Wall, 3);
+        let woods = grown(rough);
+        check(&[
+            (rough, jungle, grown(rough)),
+            (road, jungle, grown(road)),
+            (pavement, jungle, pavement),
+            (water, jungle, water),
+            (wall, jungle, wall),
+            (woods, Paint::Foliage(None), rough),
+        ]);
     }
 
-    /// Hexes a map file cannot store are tracked as they are painted, and saving refuses until
-    /// none remain.
+    /// Routes run only through dry hexes without a building or wall, and not over magma.
     #[test]
-    fn unsavable_hexes_are_tracked_and_block_saving() {
-        let directory = tempfile::tempdir().unwrap();
-        let path = directory.path().join("test.toml");
-        let mut document = Document::new(3, 3).unwrap();
-        let woods_on_rough = Hex::new(Terrain::Rough, 0).with_woods(Some(Woods::Light));
-        document.paint_with(MIDDLE, 0, |_| woods_on_rough);
-        assert_eq!(*document.unsavable(), BTreeSet::from([4]));
-        let error = document.save_to(&path).unwrap_err().to_string();
-        assert!(error.contains("1,1"), "{error}");
-        assert!(!path.exists());
-        document.undo();
-        assert!(document.unsavable().is_empty());
-        document.save_to(&path).unwrap();
+    fn routes_run_only_over_dry_open_hexes() {
+        let rail = Paint::Route(Some(Route::Rail));
+        let laid = |hex: Hex| hex.with_route(Some(Route::Rail));
+        let woods = Hex::new(Terrain::UltraHeavyWoods, 1);
+        let magma = dry().with_ground(Ground::Magma);
+        let bridge = Hex::new(Terrain::Bridge, 2);
+        let building = Hex::new(Terrain::Building, 2);
+        check(&[
+            (woods, rail, laid(woods)),
+            (magma, rail, magma),
+            (bridge, rail, bridge),
+            (building, rail, building),
+            (laid(woods), Paint::Route(None), woods),
+        ]);
+    }
+
+    /// Buildings and walls drain water and clear foliage and routes, bridges bring water to
+    /// dry hexes, and removing a structure leaves the terrain.
+    #[test]
+    fn structures_clear_what_they_cannot_stand_with() {
+        let heavy = |kind, height| Structure::new(kind, height, ConstructionClass::Heavy);
+        let building = Paint::Structure(Some(heavy(StructureKind::Building, 5)));
+        let bridge = Paint::Structure(Some(heavy(StructureKind::Bridge, 2)));
+        let woods = dry()
+            .with_ground(Ground::Rough)
+            .with_foliage(Some(Foliage::LightWoods))
+            .with_route(Some(Route::DirtRoad));
+        let deep = Hex::new(Terrain::Ice, 4);
+        let spanned = deep.with_structure(Some(heavy(StructureKind::Bridge, 2)));
+        check(&[
+            (
+                woods,
+                building,
+                dry()
+                    .with_ground(Ground::Rough)
+                    .with_structure(Some(heavy(StructureKind::Building, 5))),
+            ),
+            (
+                deep,
+                building,
+                Hex::at_level(0)
+                    .with_condition(Some(Condition::Ice))
+                    .with_structure(Some(heavy(StructureKind::Building, 5))),
+            ),
+            (
+                woods,
+                bridge,
+                dry()
+                    .with_water(Some(Water::still(1)))
+                    .with_structure(Some(heavy(StructureKind::Bridge, 2))),
+            ),
+            (deep, bridge, spanned),
+            (spanned, Paint::Structure(None), deep),
+            (woods, Paint::Structure(None), woods),
+        ]);
+    }
+
+    /// Snow and mud lie only on dry ground that is not magma; ice also freezes water.
+    #[test]
+    fn conditions_lie_only_where_they_fit() {
+        let condition = |condition| Paint::Condition(Some(condition));
+        let water = Hex::new(Terrain::Water, 2);
+        let magma = dry().with_ground(Ground::Magma);
+        let roof = Hex::new(Terrain::Building, 3);
+        check(&[
+            (
+                dry(),
+                condition(Condition::Mud),
+                dry().with_condition(Some(Condition::Mud)),
+            ),
+            (water, condition(Condition::DeepSnow), water),
+            (magma, condition(Condition::ThinSnow), magma),
+            (magma, condition(Condition::Ice), magma),
+            (water, condition(Condition::Ice), Hex::new(Terrain::Ice, 2)),
+            (
+                roof,
+                condition(Condition::ThinSnow),
+                roof.with_condition(Some(Condition::ThinSnow)),
+            ),
+            (Hex::new(Terrain::Ice, 2), Paint::Condition(None), water),
+        ]);
     }
 
     /// Settings changes are undoable and a new edit clears the redo history.
@@ -757,9 +926,15 @@ mod tests {
         let mut document = Document::new(2, 2).unwrap();
         let original = document.settings();
         let changed = MapSettings {
-            flags: 2,
+            flags: 4,
             gravity: 50,
             temperature: -40,
+            light: Light::MoonlessNight,
+            visibility: 12,
+            wind: Wind {
+                direction: 270,
+                speed: 15,
+            },
         };
         document.set_settings(changed);
         assert_eq!(document.settings(), changed);
@@ -769,6 +944,51 @@ mod tests {
         place(&mut document, MIDDLE, Terrain::Sand, 0, 0);
         document.end_stroke();
         assert!(!document.can_redo());
+    }
+
+    /// A map file without light, visibility or wind opens with the defaults, which a save
+    /// then writes out.
+    #[test]
+    fn unset_environment_opens_with_defaults() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("plain.map.toml");
+        let plain = MapAsset::from_cells("1 1\n.0\n").unwrap();
+        std::fs::write(&path, plain.to_file().unwrap()).unwrap();
+        let mut document = Document::open(&path).unwrap();
+        let settings = document.settings();
+        assert_eq!(
+            (settings.light, settings.visibility, settings.wind),
+            (DEFAULT_LIGHT, DEFAULT_VISIBILITY, DEFAULT_WIND)
+        );
+        document.save_to(&path).unwrap();
+        let saved = MapAsset::parse(&std::fs::read_to_string(&path).unwrap()).unwrap();
+        assert_eq!(
+            (saved.light, saved.visibility, saved.wind),
+            (
+                Some(DEFAULT_LIGHT),
+                Some(DEFAULT_VISIBILITY),
+                Some(DEFAULT_WIND)
+            )
+        );
+    }
+
+    /// A settings drag, like a slider being moved, undoes as one edit.
+    #[test]
+    fn settings_drags_undo_as_one_edit() {
+        let mut document = Document::new(2, 2).unwrap();
+        let original = document.settings();
+        for gravity in [90, 80, 70] {
+            document.drag_settings(MapSettings {
+                gravity,
+                ..document.settings()
+            });
+        }
+        assert!(document.can_undo());
+        document.end_stroke();
+        assert_eq!(document.settings().gravity, 70);
+        document.undo();
+        assert_eq!(document.settings(), original);
+        assert!(!document.can_undo());
     }
 
     /// The feed logs each written hex, and a renderer holding it never makes edits copy the map.
@@ -781,7 +1001,7 @@ mod tests {
         );
         let feed = document.hex_feed();
         let buffer = document.map.hexes.as_ptr();
-        place(&mut document, MIDDLE, Terrain::Grassland, 0, 0);
+        place(&mut document, MIDDLE, Terrain::Clear, 0, 0);
         place(&mut document, MIDDLE, Terrain::Rough, 0, 0);
         assert_eq!(document.map.hexes.as_ptr(), buffer);
         let after = document.hex_feed();
@@ -806,17 +1026,159 @@ mod tests {
         assert!(feed.changes.upgrade().unwrap().len() < 9);
     }
 
-    /// Saved maps load back unchanged and the document is no longer dirty.
+    /// Saved maps, every layer and setting included, load back unchanged and the document is
+    /// no longer dirty.
     #[test]
     fn saved_maps_reload_identically() {
         let directory = tempfile::tempdir().unwrap();
         let path = directory.path().join("test.toml");
         let mut document = Document::new(4, 3).unwrap();
         place(&mut document, MIDDLE, Terrain::Fire, 1, 1);
+        let layered = Hex::at_level(3)
+            .with_ground(Ground::Rough)
+            .with_foliage(Some(Foliage::HeavyJungle))
+            .with_route(Some(Route::DirtRoad))
+            .with_condition(Some(Condition::ThinSnow));
+        document.paint_with(HexCoordinate { x: 3, y: 0 }, 0, |_| layered);
+        let rapids = Hex::at_level(1)
+            .with_water(Some(Water {
+                depth: 2,
+                flow: Flow::Rapids,
+            }))
+            .with_condition(Some(Condition::Ice))
+            .with_structure(Some(Structure::new(
+                StructureKind::Bridge,
+                3,
+                ConstructionClass::Hardened,
+            )));
+        document.paint_with(HexCoordinate { x: 3, y: 2 }, 0, |_| rapids);
+        document.set_settings(MapSettings {
+            light: Light::Dusk,
+            visibility: 30,
+            wind: Wind {
+                direction: 90,
+                speed: 10,
+            },
+            ..document.settings()
+        });
         document.save_to(&path).unwrap();
         assert!(!document.dirty);
         let reloaded = Document::open(&path).unwrap();
         assert_eq!(reloaded.map, document.map);
-        assert!(reloaded.unsavable().is_empty());
+    }
+
+    /// A 4×3 map with a distinct level in every hex, and a point of interest at `(x, y)`.
+    fn numbered(x: u16, y: u16) -> Document {
+        let mut document = Document::new(4, 3).unwrap();
+        for index in 0..12_i32 {
+            let coordinate = HexCoordinate {
+                x: index % 4,
+                y: index / 4,
+            };
+            document.paint_with(coordinate, 0, |_| Hex::at_level(index as u8));
+        }
+        document.end_stroke();
+        document.map.points_of_interest.push(MapPointOfInterest {
+            kind: "objective".into(),
+            name: "Tower".into(),
+            x,
+            y,
+            elevation: None,
+        });
+        document
+    }
+
+    /// Hex levels by row, `None` for the clear hexes a resize added.
+    fn levels(document: &Document) -> Vec<Vec<u8>> {
+        document
+            .map
+            .hexes
+            .chunks(usize::from(document.map.width))
+            .map(|row| row.iter().map(|hex| hex.level()).collect())
+            .collect()
+    }
+
+    /// Growing at the start edges shifts the hexes and points of interest; growing at the end
+    /// edges leaves them; new hexes are clear level zero ground.
+    #[test]
+    fn resizing_grows_at_the_chosen_edges() {
+        let mut document = numbered(1, 2);
+        document
+            .resize(5, 4, ResizeEdge::Start, ResizeEdge::End)
+            .unwrap();
+        assert_eq!(
+            levels(&document),
+            [
+                vec![0, 0, 1, 2, 3],
+                vec![0, 4, 5, 6, 7],
+                vec![0, 8, 9, 10, 11],
+                vec![0, 0, 0, 0, 0]
+            ]
+        );
+        let point = &document.map.points_of_interest[0];
+        assert_eq!((point.x, point.y), (2, 2));
+        assert_eq!(
+            document.hex(HexCoordinate { x: 0, y: 3 }),
+            Some(Hex::at_level(0))
+        );
+    }
+
+    /// Shrinking crops at the chosen edges and drops points of interest on removed hexes.
+    #[test]
+    fn resizing_crops_at_the_chosen_edges() {
+        let mut document = numbered(0, 0);
+        document
+            .resize(2, 2, ResizeEdge::Start, ResizeEdge::Start)
+            .unwrap();
+        assert_eq!(levels(&document), [vec![6, 7], vec![10, 11]]);
+        assert!(document.map.points_of_interest.is_empty());
+        let mut document = numbered(1, 1);
+        document
+            .resize(2, 2, ResizeEdge::End, ResizeEdge::End)
+            .unwrap();
+        assert_eq!(levels(&document), [vec![0, 1], vec![4, 5]]);
+        assert_eq!(document.map.points_of_interest.len(), 1);
+    }
+
+    /// Resizing at both edges splits the change, keeping the leading column share even so
+    /// the column stagger does not flip.
+    #[test]
+    fn resizing_from_both_edges_splits_the_change() {
+        let mut document = numbered(0, 0);
+        document
+            .resize(8, 5, ResizeEdge::Both, ResizeEdge::Both)
+            .unwrap();
+        let point = &document.map.points_of_interest[0];
+        assert_eq!((point.x, point.y), (2, 1));
+        let mut document = numbered(0, 0);
+        document
+            .resize(6, 3, ResizeEdge::Both, ResizeEdge::Both)
+            .unwrap();
+        assert_eq!(levels(&document)[0], [0, 1, 2, 3, 0, 0]);
+        assert_eq!(ResizeEdge::Both.leading(10, 4, true), -2);
+        assert_eq!(ResizeEdge::Both.leading(10, 7, false), -1);
+    }
+
+    /// A resize undoes and redoes as one edit, and gives the renderer a new feed.
+    #[test]
+    fn resizing_undoes_as_one_edit() {
+        let mut document = numbered(3, 2);
+        let original = document.map.clone();
+        let feed = document.hex_feed().id;
+        document
+            .resize(2, 6, ResizeEdge::Both, ResizeEdge::End)
+            .unwrap();
+        assert_ne!(document.hex_feed().id, feed);
+        assert!(document.dirty);
+        let resized = document.map.clone();
+        document.undo();
+        assert_eq!(document.map, original);
+        document.redo();
+        assert_eq!(document.map, resized);
+        assert!(
+            document
+                .resize(0, 6, ResizeEdge::End, ResizeEdge::End)
+                .is_err()
+        );
     }
 }

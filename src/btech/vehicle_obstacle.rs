@@ -11,10 +11,10 @@ struct Obstacle {
 }
 
 /// Select the reference terrain checks without duplicating the control or fall logic.
-/// Trees stand in woods; rocks lie in bare rough ground.
+/// Trees stand in woods and jungle; rocks lie in bare rough or rubble-strewn ground.
 fn profile(movement: VehicleMovement, hex: Hex, speed: f64, new_terrain: bool) -> Option<Obstacle> {
-    let heavy_woods = hex.woods() == Some(Woods::Heavy);
-    let rocks = hex.is_bare() && hex.ground() == Ground::Rough;
+    let heavy_woods = hex.is_woods() && hex.woods_density() >= 2;
+    let rocks = hex.is_rocky();
     let speed = speed.abs();
     if speed <= 10.75 {
         return None;
@@ -129,8 +129,8 @@ mod tests {
             VehicleMovement::Wheeled,
             VehicleMovement::Hover,
         ] {
-            assert!(profile(movement, Hex::new(Terrain::HeavyForest, 0), 10.75, true).is_none());
-            let hit = profile(movement, Hex::new(Terrain::HeavyForest, 0), -86.0, true).unwrap();
+            assert!(profile(movement, Hex::new(Terrain::HeavyWoods, 0), 10.75, true).is_none());
+            let hit = profile(movement, Hex::new(Terrain::HeavyWoods, 0), -86.0, true).unwrap();
             assert_eq!(
                 hit.modifier,
                 if movement == VehicleMovement::Tracked {
@@ -142,11 +142,11 @@ mod tests {
             assert_eq!(hit.levels, 2);
             assert!(!hit.rocks);
             assert_eq!(
-                profile(movement, Hex::new(Terrain::HeavyForest, 0), 86.0, false).is_some(),
+                profile(movement, Hex::new(Terrain::HeavyWoods, 0), 86.0, false).is_some(),
                 movement == VehicleMovement::Hover
             );
             assert_eq!(
-                profile(movement, Hex::new(Terrain::LightForest, 0), 86.0, true).is_some(),
+                profile(movement, Hex::new(Terrain::LightWoods, 0), 86.0, true).is_some(),
                 movement != VehicleMovement::Tracked
             );
             assert_eq!(

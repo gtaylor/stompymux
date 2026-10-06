@@ -60,7 +60,7 @@ it is the actor, the actor's location, or carried by the actor. Its `SETWBV`
 command is public, as in the reference; other DEBUG controls require Wizard access.
 Registration and removal survive saving and restart.
 
-`@btech/register #43=MAP` initializes a live Thing as a 21 by 11 grassland map
+`@btech/register #43=MAP` initializes a live Thing as a 21 by 11 map of clear ground
 named Default Map. Carry it or enter it to use `VIEW 10 5`, `LOADMAP <filename>`
 and other map commands. Registering the same type again preserves the existing
 map, including edited terrain. The initial map and subsequently loaded terrain
@@ -117,12 +117,14 @@ moving them through ordinary world commands. Placement preserves unit condition.
 It distinguishes horizontal range, spatial range including height/depth, and
 adjacent hex steps. It does not perform line-of-sight or weapon checks.
 
-`map-conditions <map>=<night|twilight|day>,<visibility>` sets saved battlefield
-lighting and weather visibility (0–60 hexes). For example,
-`@btech map-conditions #43=night,15`. This requires Wizard authority and control
-of the map. Units may remain on the map; terrain is unchanged. `inspect` displays
-light as 0 (night), 1 (twilight), or 2 (day), plus visibility and the line-of-sight
-ceiling. Sensors reach fifteen hexes in any conditions; beyond that, visibility
+`map-conditions <map>=<light>,<visibility>` sets saved battlefield
+lighting and weather visibility (0–60 hexes). The light is `day`, `dawn`,
+`dusk`, `full_moon_night`, `moonless_night` or `pitch_black`; see `help night`.
+For example, `@btech map-conditions #43=moonless_night,15`. This requires
+Wizard authority and control of the map. Units may remain on the map; terrain
+is unchanged. `inspect` displays light as 0 (day), 1 (dawn), 2 (dusk), 3 (full
+moon night), 4 (moonless night) or 5 (pitch black), plus visibility and the
+line-of-sight ceiling. Sensors reach fifteen hexes in any conditions; beyond that, visibility
 sets how far units see (see `help line of sight`). Failed saves leave the previous conditions in effect. Moving a map into or out of night switches running automatic searchlights on that map on or off.
 
 `@btech inspect` includes a placed unit's signed elevation. This follows its
@@ -468,44 +470,78 @@ roll back together if the action fails.
 
 `ADDHEX <x> <y> <layer>=<value> ...` changes one base tile on the wizard's current
 map by naming its layers, so one hex can hold several: `ADDHEX 4 7 level=2
-ground=road woods=light` is light woods on a road two levels up, and `ADDHEX 4 8
-level=3 water=2 bridge=4` is a bridge deck four levels over water two deep whose
-surface is at level 3. The layers are `level` (0 to 35), `ground` (`clear`, `road`,
-`rough`, `mountains`, `snow` or `sand`), `woods` (`light` or `heavy`), `water` or `ice`
-(depth 1 to 9), and one of `bridge`, `building` or `wall` (height 1 to 35, above the
-ground level). Layers you leave out are absent, on clear ground at level 0. A bridge
-must span water or ice.
+route=dirt_road foliage=heavy_woods` is a dirt road through heavy woods two levels up,
+and `ADDHEX 4 8 level=3 water=2 flow=rapids bridge=4` is a bridge deck four levels over
+rapids two deep whose surface is at level 3. The layers are:
+
+| Layer | Values |
+| --- | --- |
+| `level` | 0 to 35 |
+| `ground` | `clear`, `pavement`, `rough`, `ultra_rough`, `rubble`, `ultra_rubble`, `sand`, `tundra`, `swamp`, `magma_crust`, `magma` or `heavy_industrial` |
+| `water` | depth 0 to 9, over clear ground |
+| `flow` | `still`, `rapids` or `torrent`, with `water` |
+| `foliage` | `light_woods`, `heavy_woods`, `ultra_heavy_woods`, `light_jungle`, `heavy_jungle`, `ultra_heavy_jungle` or `planted_fields` |
+| `route` | `paved_road`, `gravel_road`, `dirt_road` or `rail` |
+| `condition` | `ice`, `thin_snow`, `deep_snow` or `mud`; only ice can lie on water |
+| `bridge`, `building` or `wall` | height 1 to 35 above the ground level; at most one |
+| `class` | `light`, `medium` (the default), `heavy` or `hardened`, with a structure |
+| `cf` | construction factor left, up to the class's full value (15, 40, 90 or 150) |
+
+Layers you leave out are absent, on clear ground at level 0. A bridge must span
+water, and the result must be a hex the manuals allow: nothing grows on pavement,
+heavy industrial ground or magma, and buildings and walls stand on dry ground with no
+foliage or route.
 
 Units keep their physical altitude and their current movement or flight state.
-Editing ice into water is a direct terrain edit; use `DELICE` to melt ice with normal
+Editing ice off water is a direct terrain edit; use `DELICE` to melt ice with normal
 occupant falls and flooding. Fire and smoke are not terrain: they lie over a tile
 without changing it, so use `ADDFIRE` and `ADDSMOKE` for them. Lua offers
 `btech.map.set_hex(actor, map, x, y, hex)`, which takes the same layers in the shape
-`btech.map.hex` returns (for example `{level = 2, ground = btech.map.ground_types.ROAD}`)
+`btech.map.hex` returns (for example `{level = 2, ground = btech.map.ground_types.ROUGH,
+foliage = btech.map.foliage_types.LIGHT_WOODS}`)
 and returns the previous and resulting tiles. Occupied maps can be edited and saved
 without reloading their source assets.
 
-Maps show each hex as one terrain symbol, and `btech.map.terrain` reports its name:
+Maps show each hex as one terrain symbol, and `btech.map.terrain` reports its name.
+The symbol is the hex's most important layer: fire or smoke, then a structure, then
+water or ice on water, then a road or rail line, then foliage, then a condition, then
+the ground.
 
 | Symbol | Terrain | Lua name |
 | --- | --- | --- |
-| `.` | Grassland | `grassland` |
+| (blank) | Clear | `clear` |
+| `_` | Pavement | `pavement` |
 | `#` | Road | `road` |
-| `` ` `` | Light forest | `light_forest` |
-| `"` | Heavy forest | `heavy_forest` |
+| `\|` | Rail | `rail` |
+| `%` | Rough | `rough` |
+| `^` | Ultra rough | `ultra_rough` |
+| `;` | Rubble | `rubble` |
+| `!` | Ultra rubble | `ultra_rubble` |
+| `}` | Sand | `sand` |
+| `{` | Tundra | `tundra` |
+| `w` | Swamp | `swamp` |
+| `m` | Magma crust | `magma_crust` |
+| `M` | Magma | `magma` |
+| `$` | Heavy industrial | `heavy_industrial` |
+| `` ` `` | Light woods | `light_woods` |
+| `"` | Heavy woods | `heavy_woods` |
+| `W` | Ultra-heavy woods | `ultra_heavy_woods` |
+| `j` | Light jungle | `light_jungle` |
+| `J` | Heavy jungle | `heavy_jungle` |
+| `U` | Ultra-heavy jungle | `ultra_heavy_jungle` |
+| `f` | Planted fields | `planted_fields` |
 | `~` | Water | `water` |
 | `-` | Ice | `ice` |
+| `*` | Thin snow | `thin_snow` |
+| `+` | Deep snow | `deep_snow` |
+| `,` | Mud | `mud` |
 | `/` | Bridge | `bridge` |
-| `%` | Rough | `rough` |
-| `^` | Mountains | `mountains` |
-| `+` | Snow | `snow` |
 | `@` | Building | `building` |
 | `=` | Wall | `wall` |
-| `}` | Sand | `sand` |
+| `&` | Fire | `fire` |
+| `:` | Smoke | `smoke` |
 
-Map files use the same symbols, except that bridges are listed separately and
-buildings, walls and water take their heights from their own grids. A map file's
-`overlay` grid places permanent fire (`&`) and smoke (`:`) over any hex.
+Map files keep each layer in its own grid; see the map file documentation.
 
 `@MAPEMIT <message>` broadcasts to the occupants of running units on the wizard's
 current map and privately confirms `Message sent!`. Unconscious crews do not receive
@@ -648,17 +684,16 @@ names. Map `flags` are:
 
 | Name | Effect |
 | --- | --- |
-| `special_rules` | Environmental rules (gravity, temperature, vacuum) apply. |
 | `vacuum` | The map has no atmosphere. |
 | `underground` | A ceiling blocks jumping and flight; artillery needs a spotter. |
 | `dark` | Units see only terrain in their line of sight. |
-| `indestructible_bridges` | Weapon fire cannot break bridges. |
+| `indestructible_structures` | Weapon fire cannot damage buildings, walls or bridges. |
 | `no_friendly_fire` | Teammates cannot damage each other with non-coolant weapons. |
 | `no_physical_attacks` | Physical attacks are not allowed. |
 
 `sensorflags` switches perception off for everyone on the map: `sensors`
 disables the sensor band, `radar` radar and `probes` active probes.
-Light accepts 0–2 and visibility 0–60. Wind direction must be 0–359 and speed
+Light accepts 0–5 (day through pitch black, as for `map-conditions`) and visibility 0–60. Wind direction must be 0–359 and speed
 nonnegative. Integrity must stay between zero and its maximum; set the maximum
 first when creating a structure. Numeric input must fit a signed 32-bit integer.
 Short fields clamp to signed 16-bit before domain checks; temperature clamps

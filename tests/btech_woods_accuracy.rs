@@ -38,9 +38,9 @@ async fn occupied_woods_accuracy_is_shared_across_shooter_and_target_chassis() {
                 firing::fixture_with_target(&source, Some(Weapon::MediumLaser), &target_source)
                     .await;
             for (kind, expected) in [
-                (Terrain::Grassland, 0),
-                (Terrain::LightForest, -1),
-                (Terrain::HeavyForest, -2),
+                (Terrain::Clear, 0),
+                (Terrain::LightWoods, -1),
+                (Terrain::HeavyWoods, -2),
             ] {
                 let mut world = base.clone();
                 terrain(&mut world, target, kind);
@@ -81,7 +81,7 @@ async fn woods_canopy_boundary_overlays_and_restart() {
             Some(DecorationKind::Fire),
         ] {
             let mut world = base.clone();
-            terrain(&mut world, target, Terrain::HeavyForest);
+            terrain(&mut world, target, Terrain::HeavyWoods);
             firing::edit(&mut world, target, |state| {
                 state["vtol_flight"]["phase"] = serde_json::json!({"kind":"airborne"});
                 state["vtol_flight"]["altitude"] = altitude.into();
@@ -123,7 +123,7 @@ async fn configured_sighting_uses_woods_accuracy_for_every_shooter() {
             include_str!("../game/units/JR7-D.toml"),
         )
         .await;
-        terrain(&mut world, target, Terrain::HeavyForest);
+        terrain(&mut world, target, Terrain::HeavyWoods);
         refresh_battle_contacts(&mut world, &[shooter]).unwrap();
         let path = dir.path().join("stompymux.toml");
         let original = std::fs::read_to_string(&path).unwrap();

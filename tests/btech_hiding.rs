@@ -24,7 +24,7 @@ async fn fixture(
 ) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {
     let (dir, config, mut world) = support::isolated_world().await;
     let map = world.create(&config, "Camouflage field".into(), Kind::Room);
-    let row = format!("{}0", Terrain::LightForest.symbol()).repeat(3) + "\n";
+    let row = format!("{}0", Terrain::LightWoods.symbol()).repeat(3) + "\n";
     create_battle_map(
         &mut world,
         map,
@@ -492,7 +492,7 @@ async fn hiding_admission_and_elevation_checks_are_atomic() {
         let mut terrain = world.clone();
         let mut state = serde_json::to_value(&terrain.btech).unwrap();
         state["maps"][map.0.to_string()]["terrain"][7] =
-            serde_json::to_value(Hex::new(Terrain::Grassland, 0)).unwrap();
+            serde_json::to_value(Hex::new(Terrain::Clear, 0)).unwrap();
         terrain.btech = serde_json::from_value(state).unwrap();
         let before = terrain.btech.clone();
         assert!(
@@ -558,9 +558,8 @@ async fn hiding_aircraft_crash_orders_crossing_before_damage_and_replays() {
             .rewrite_map_record(map, |record| {
                 record["movement_modifier"] = 10000.into();
                 record["terrain"][4] =
-                    serde_json::to_value(Hex::new(Terrain::LightForest, 0)).unwrap();
-                record["terrain"][7] =
-                    serde_json::to_value(Hex::new(Terrain::Grassland, 1)).unwrap();
+                    serde_json::to_value(Hex::new(Terrain::LightWoods, 0)).unwrap();
+                record["terrain"][7] = serde_json::to_value(Hex::new(Terrain::Clear, 1)).unwrap();
             })
             .unwrap();
         edit(&mut world, id, |unit| {

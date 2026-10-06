@@ -234,7 +234,7 @@ fn landing_aircraft(speed: f64, desired: f64, vertical: f64) -> Vehicle {
 
 #[test]
 fn touchdown_replays_on_supported_surfaces_and_preserves_command_fuel_and_dice() {
-    for terrain in [Terrain::Grassland, Terrain::Road, Terrain::Building] {
+    for terrain in [Terrain::Clear, Terrain::Road, Terrain::Building] {
         let mut unit = at_altitude(landing_aircraft(25.0, 10.0, -10.0), 6.0);
         let mut replay = restored(&unit);
         let before = serde_json::to_value(&unit).unwrap();
@@ -264,7 +264,7 @@ fn touchdown_replays_on_supported_surfaces_and_preserves_command_fuel_and_dice()
 
 #[test]
 fn landing_checks_speed_altitude_and_terrain_boundaries_atomically() {
-    let grass = Hex::new(Terrain::Grassland, 0);
+    let grass = Hex::new(Terrain::Clear, 0);
     for (speed, desired, vertical, accepted) in [
         (0.0, 15.999, 0.0, true),
         (0.0, 16.0, 0.0, false),
@@ -296,13 +296,13 @@ fn landing_checks_speed_altitude_and_terrain_boundaries_atomically() {
         Terrain::Water,
         Terrain::Ice,
         Terrain::Bridge,
-        Terrain::LightForest,
-        Terrain::HeavyForest,
+        Terrain::LightWoods,
+        Terrain::HeavyWoods,
         Terrain::Rough,
-        Terrain::Mountains,
+        Terrain::UltraRough,
         Terrain::Fire,
         Terrain::Smoke,
-        Terrain::Snow,
+        Terrain::DeepSnow,
         Terrain::Wall,
     ] {
         assert!(unit.land_vtol(Hex::new(terrain, 0), false).is_err());
@@ -314,20 +314,20 @@ fn landing_checks_speed_altitude_and_terrain_boundaries_atomically() {
 #[test]
 fn landing_refusals_match_reference_output() {
     for (mut unit, terrain, expected) in [
-        (aircraft(), Terrain::Grassland, "You're already landed!"),
+        (aircraft(), Terrain::Clear, "You're already landed!"),
         (
             at_altitude(landing_aircraft(0.0, 0.0, 0.0), 2.0),
-            Terrain::Grassland,
+            Terrain::Clear,
             "You are too high to land here.",
         ),
         (
             landing_aircraft(0.0, 16.0, 0.0),
-            Terrain::Grassland,
+            Terrain::Clear,
             "You're moving too fast to land.",
         ),
         (
             landing_aircraft(0.0, 61.0, -61.0),
-            Terrain::Grassland,
+            Terrain::Clear,
             "You are moving too fast to land. ",
         ),
         (
@@ -349,7 +349,7 @@ fn landing_refusals_match_reference_output() {
 
 #[test]
 fn landing_cancels_launch_but_cannot_recover_lost_lift_or_empty_fuel() {
-    let hex = Hex::new(Terrain::Grassland, 0);
+    let hex = Hex::new(Terrain::Clear, 0);
     let mut unit = aircraft();
     let before = unit.clone();
     unit.begin_vtol_takeoff(false, false, 4).unwrap();
@@ -479,10 +479,10 @@ fn flight_surface_contact_distinguishes_water_bridge_clearance_and_ground_impact
     let unit = landing_aircraft(0.0, 0.0, -21.5);
     // Back out this event's vertical increment to inspect exact destination altitudes.
     for (altitude, terrain, elevation, contact) in [
-        (0.0, Terrain::Grassland, 0, VtolSurfaceContact::Clear),
+        (0.0, Terrain::Clear, 0, VtolSurfaceContact::Clear),
         (
             -1.0,
-            Terrain::Grassland,
+            Terrain::Clear,
             0,
             VtolSurfaceContact::Ground { fall_levels: 3 },
         ),
@@ -532,7 +532,7 @@ fn altitude_commits_reject_stale_or_altered_proposals_and_preserve_height_on_lif
     assert_eq!(unit, before);
     unit.commit_vtol_motion(step).unwrap();
     assert_eq!(unit.vtol_flight().unwrap().altitude, 12.75);
-    assert_eq!(unit.elevation_level(Hex::new(Terrain::Grassland, 0)), 12);
+    assert_eq!(unit.elevation_level(Hex::new(Terrain::Clear, 0)), 12);
     assert_eq!(restored(&unit), unit);
     let advanced = unit.clone();
     assert!(unit.commit_vtol_motion(step).is_err());

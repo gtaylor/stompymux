@@ -62,7 +62,7 @@ async fn generic_decoration_records_survive_reload_and_resizes_that_keep_their_h
         5,
         Some(StaticDecoration {
             coordinate: HexCoordinate { x: 0, y: 1 },
-            restored_terrain: Some(Terrain::Grassland),
+            restored_terrain: Some(Terrain::Clear),
             ..definition
         }),
     )

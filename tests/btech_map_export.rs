@@ -17,7 +17,7 @@ async fn export_terrain_effects_and_metadata_match_asset_contract() {
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
-    for flags in [0, 1, 2, 4, 5, 6] {
+    for flags in [0, 1, 4, 5, 16, 17] {
         let mut candidate = world.clone();
         candidate
             .btech
@@ -47,11 +47,11 @@ async fn export_terrain_effects_and_metadata_match_asset_contract() {
         assert_eq!(
             decoded.hexes.as_slice(),
             [
-                Hex::new(Terrain::Grassland, 0),
+                Hex::new(Terrain::Clear, 0),
                 Hex::new(Terrain::Road, 1),
-                Hex::new(Terrain::LightForest, 2).with_overlay(Some(DecorationKind::Smoke)),
+                Hex::new(Terrain::LightWoods, 2).with_overlay(Some(DecorationKind::Smoke)),
                 Hex::new(Terrain::Fire, 3),
-                Hex::new(Terrain::Grassland, 4),
+                Hex::new(Terrain::Clear, 4),
             ]
         );
         assert_eq!(decoded.flags, flags & !1);
@@ -88,7 +88,7 @@ async fn export_base_smoke_and_all_canonical_tiles() {
     .unwrap();
     assert_eq!(
         world.btech.maps()[&map].base_hex(10, 0).unwrap(),
-        Hex::new(Terrain::Grassland, 0)
+        Hex::new(Terrain::Clear, 0)
     );
     for (x, remaining) in [(10, 30), (11, 0)] {
         set_map_decoration(
@@ -100,8 +100,8 @@ async fn export_base_smoke_and_all_canonical_tiles() {
         .unwrap();
     }
     let export = world.btech.maps()[&map].export_asset().unwrap();
-    let mut expected = MapAsset::from_cells(cells).unwrap();
-    std::sync::Arc::make_mut(&mut expected.hexes)[10] = Hex::new(Terrain::Grassland, 0);
+    let mut expected = support::as_exported(MapAsset::from_cells(cells).unwrap());
+    std::sync::Arc::make_mut(&mut expected.hexes)[10] = Hex::new(Terrain::Clear, 0);
     std::sync::Arc::make_mut(&mut expected.hexes)[11] = Hex::new(Terrain::Smoke, 1);
     assert_eq!(MapAsset::parse(&export).unwrap(), expected);
 }

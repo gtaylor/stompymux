@@ -1008,7 +1008,7 @@ async fn elevation_inspection_tracks_surface_collapse_flight_and_unplaced_state(
     for (terrain, depth, elevation) in [
         (Terrain::Water, 3, -3),
         (Terrain::Ice, 9, 0),
-        (Terrain::Grassland, 4, 4),
+        (Terrain::Clear, 4, 4),
         (Terrain::Bridge, 3, 3),
     ] {
         let (_dir, config, mut world, map, units) = fixture_surface(terrain, depth).await;
@@ -1024,7 +1024,7 @@ async fn elevation_inspection_tracks_surface_collapse_flight_and_unplaced_state(
             world = persistence::load(&config.database()).await.unwrap();
             assert_elevation_inspection(&config, &world, id, Some(-1));
         }
-        if terrain == Terrain::Grassland {
+        if terrain == Terrain::Clear {
             launch_battle_jump(&mut world, id, ObjectId(1), 0, 1.0).unwrap();
             assert_elevation_inspection(&config, &world, id, Some(4));
             for _ in 0..6 {
@@ -2414,7 +2414,7 @@ async fn first_cliff_stops_unpiloted_fast_motion_without_consuming_dice() {
 
 #[tokio::test]
 async fn autofall_native_lua_controls_are_atomic_and_survive_restart_and_shutdown() {
-    let (_dir, config, world, _, units) = fixture_surface(Terrain::Grassland, 0).await;
+    let (_dir, config, world, _, units) = fixture_surface(Terrain::Clear, 0).await;
     let id = units[0];
     let native = Scripts::new(
         &config,
@@ -3786,7 +3786,7 @@ async fn structure_jump_controls_land_and_collide_with_saved_replay() {
 #[tokio::test]
 async fn live_fire_and_smoke_tiles_allow_ground_crossings_without_control_dice() {
     for terrain in [Terrain::Fire, Terrain::Smoke] {
-        let (_dir, config, mut world, map, units) = fixture_field(Terrain::Grassland, 0, 5).await;
+        let (_dir, config, mut world, map, units) = fixture_field(Terrain::Clear, 0, 5).await;
         let id = units[0];
         prepare_reverse_step(&mut world, id, 6);
         let kind = match terrain {
@@ -4701,7 +4701,7 @@ async fn character_ground_water_entry_replays_and_rolls_back() {
 
 #[tokio::test]
 async fn woodland_clearing_on_occupied_map_is_durable_and_rejects_stale_results() {
-    let (_dir, config, mut world, map, units) = fixture_field(Terrain::HeavyForest, 2, 3).await;
+    let (_dir, config, mut world, map, units) = fixture_field(Terrain::HeavyWoods, 2, 3).await;
     persistence::save(&config.database(), &world).await.unwrap();
     let coordinate = HexCoordinate { x: 1, y: 1 };
     let original = world.clone();
@@ -4722,30 +4722,19 @@ async fn woodland_clearing_on_occupied_map_is_durable_and_rejects_stale_results(
             map,
             HexCoordinate { x: -1, y: 1 },
             before,
-            WoodlandClearing::ThinToLight
+            WoodlandClearing::Thin
         )
         .is_err()
     );
     assert_eq!(world.btech, original.btech);
-    let report = apply_woodland_clearing(
-        &mut world,
-        map,
-        coordinate,
-        before,
-        WoodlandClearing::ThinToLight,
-    )
-    .unwrap();
+    let report =
+        apply_woodland_clearing(&mut world, map, coordinate, before, WoodlandClearing::Thin)
+            .unwrap();
     assert_eq!(report.before, before);
-    assert_eq!(report.after, Hex::new(Terrain::LightForest, 2));
+    assert_eq!(report.after, Hex::new(Terrain::LightWoods, 2));
     assert!(
-        apply_woodland_clearing(
-            &mut world,
-            map,
-            coordinate,
-            before,
-            WoodlandClearing::ThinToLight
-        )
-        .is_err()
+        apply_woodland_clearing(&mut world, map, coordinate, before, WoodlandClearing::Thin)
+            .is_err()
     );
     for id in units {
         assert_eq!(
@@ -4787,14 +4776,9 @@ async fn woodland_clearing_on_occupied_map_is_durable_and_rejects_stale_results(
     assert_eq!(world.btech, unchanged);
     // Two reductions in a single saved transaction are also valid with occupants present.
     let coordinate = HexCoordinate { x: 0, y: 0 };
-    let first = apply_woodland_clearing(
-        &mut world,
-        map,
-        coordinate,
-        before,
-        WoodlandClearing::ThinToLight,
-    )
-    .unwrap();
+    let first =
+        apply_woodland_clearing(&mut world, map, coordinate, before, WoodlandClearing::Thin)
+            .unwrap();
     let _second = apply_woodland_clearing(
         &mut world,
         map,
@@ -4813,7 +4797,7 @@ async fn woodland_clearing_on_occupied_map_is_durable_and_rejects_stale_results(
 
 #[tokio::test]
 async fn map_decorations_preserve_base_terrain_checkpoints_and_saved_state() {
-    let (_dir, config, mut world, map, units) = fixture_field(Terrain::HeavyForest, 2, 3).await;
+    let (_dir, config, mut world, map, units) = fixture_field(Terrain::HeavyWoods, 2, 3).await;
     persistence::save(&config.database(), &world).await.unwrap();
     let original = world.clone();
     let coordinate = HexCoordinate { x: 1, y: 1 };
@@ -4821,11 +4805,11 @@ async fn map_decorations_preserve_base_terrain_checkpoints_and_saved_state() {
     set_map_decoration(&mut world, map, coordinate, Some(fire)).unwrap();
     assert_eq!(
         world.btech.maps()[&map].hex(1, 1).unwrap(),
-        Hex::new(Terrain::HeavyForest, 2).with_overlay(Some(DecorationKind::Fire))
+        Hex::new(Terrain::HeavyWoods, 2).with_overlay(Some(DecorationKind::Fire))
     );
     assert_eq!(
         world.btech.maps()[&map].base_hex(1, 1).unwrap().terrain(),
-        Terrain::HeavyForest
+        Terrain::HeavyWoods
     );
     assert_eq!(
         world.btech.maps()[&map].decoration(coordinate).unwrap(),
@@ -4833,7 +4817,7 @@ async fn map_decorations_preserve_base_terrain_checkpoints_and_saved_state() {
     );
     assert_eq!(
         original.btech.maps()[&map].hex(1, 1).unwrap().terrain(),
-        Terrain::HeavyForest
+        Terrain::HeavyWoods
     );
     for id in units {
         assert_eq!(
@@ -4870,7 +4854,7 @@ async fn map_decorations_preserve_base_terrain_checkpoints_and_saved_state() {
     );
     assert_eq!(
         world.btech.maps()[&map].base_hex(1, 1).unwrap().terrain(),
-        Terrain::HeavyForest
+        Terrain::HeavyWoods
     );
     persistence::save(&config.database(), &world).await.unwrap();
     assert_eq!(
@@ -4895,7 +4879,7 @@ async fn map_decorations_preserve_base_terrain_checkpoints_and_saved_state() {
 
 #[tokio::test]
 async fn smoke_expiration_restores_terrain_and_resumes_only_saved_seconds() {
-    let (_dir, config, mut world, map, _units) = fixture_field(Terrain::HeavyForest, 2, 3).await;
+    let (_dir, config, mut world, map, _units) = fixture_field(Terrain::HeavyWoods, 2, 3).await;
     let coordinate = HexCoordinate { x: 1, y: 1 };
     let fire_coordinate = HexCoordinate { x: 0, y: 0 };
     let smoke = Decoration::new(DecorationKind::Smoke, 3, None);
@@ -4928,7 +4912,7 @@ async fn smoke_expiration_restores_terrain_and_resumes_only_saved_seconds() {
     assert!(!map_smoke_pending(&world));
     assert_eq!(
         world.btech.maps()[&map].hex(1, 1).unwrap(),
-        Hex::new(Terrain::HeavyForest, 2)
+        Hex::new(Terrain::HeavyWoods, 2)
     );
     assert_eq!(
         world.btech.maps()[&map]
@@ -4952,7 +4936,7 @@ async fn smoke_expiration_restores_terrain_and_resumes_only_saved_seconds() {
 
 #[tokio::test]
 async fn calm_fire_spreads_smoke_then_burns_out_with_saved_replay() {
-    let (_dir, config, mut world, map, units) = fixture_field(Terrain::HeavyForest, 2, 3).await;
+    let (_dir, config, mut world, map, units) = fixture_field(Terrain::HeavyWoods, 2, 3).await;
     let coordinate = HexCoordinate { x: 1, y: 1 };
     set_map_decoration(
         &mut world,
@@ -4993,7 +4977,7 @@ async fn calm_fire_spreads_smoke_then_burns_out_with_saved_replay() {
     assert!(map_smoke_pending(&world));
     // Heavy woods thin to light woods when the fire burns out.
     let burnt = world.btech.maps()[&map].hex(1, 1).unwrap();
-    assert_eq!(burnt, Hex::new(Terrain::LightForest, 2));
+    assert_eq!(burnt, Hex::new(Terrain::LightWoods, 2));
     for x in 0..3 {
         let smoke = world.btech.maps()[&map]
             .decoration(HexCoordinate { x, y: 0 })
@@ -5024,13 +5008,13 @@ async fn calm_fire_spreads_smoke_then_burns_out_with_saved_replay() {
     assert!(!map_smoke_pending(&world));
     assert_eq!(
         world.btech.maps()[&map].hex(1, 0).unwrap().terrain(),
-        Terrain::HeavyForest
+        Terrain::HeavyWoods
     );
 }
 
 #[tokio::test]
 async fn strong_wind_fire_replays_new_ignition_and_retains_scheduled_delay() {
-    let (_dir, config, mut world, map, _units) = fixture_field(Terrain::LightForest, 1, 5).await;
+    let (_dir, config, mut world, map, _units) = fixture_field(Terrain::LightWoods, 1, 5).await;
     set_map_wind(&mut world, map, 0, 0).unwrap();
     let coordinate = HexCoordinate { x: 1, y: 3 };
     set_map_decoration(
@@ -5229,7 +5213,7 @@ async fn woodland_impacts_commit_dice_terrain_and_notices_with_restart_replay() 
         WoodlandIntent::Clear,
         WoodlandIntent::Incidental,
     ] {
-        let (_dir, config, mut world, map, units) = fixture_field(Terrain::HeavyForest, 2, 3).await;
+        let (_dir, config, mut world, map, units) = fixture_field(Terrain::HeavyWoods, 2, 3).await;
         let shooter = units[0];
         let seed = (0..=255)
             .find(|seed| {
@@ -5282,7 +5266,7 @@ async fn woodland_impacts_commit_dice_terrain_and_notices_with_restart_replay() 
         let expected = if intent == WoodlandIntent::Ignite {
             Terrain::Fire
         } else {
-            Terrain::LightForest
+            Terrain::LightWoods
         };
         assert_eq!(
             world.btech.maps()[&map].hex(1, 0).unwrap().terrain(),
@@ -5301,7 +5285,7 @@ async fn woodland_impacts_commit_dice_terrain_and_notices_with_restart_replay() 
         assert_eq!(expected_unit, actual_unit);
         assert_eq!(
             original.btech.maps()[&map].hex(1, 0).unwrap().terrain(),
-            Terrain::HeavyForest
+            Terrain::HeavyWoods
         );
         let before_invalid = world.btech.clone();
         assert!(
@@ -5593,7 +5577,7 @@ async fn building_entrances_preserve_order_identity_and_unowned_data() {
 #[tokio::test]
 async fn minefields_persist_all_kinds_and_survive_woodland_clearing() {
     use sqlx::Connection;
-    let (_dir, config, mut world, map, units) = fixture_field(Terrain::HeavyForest, 0, 3).await;
+    let (_dir, config, mut world, map, units) = fixture_field(Terrain::HeavyWoods, 0, 3).await;
     let coordinate = HexCoordinate { x: 1, y: 1 };
     for (ordinal, kind) in [
         MineKind::Standard,
@@ -5668,7 +5652,7 @@ async fn minefields_persist_all_kinds_and_survive_woodland_clearing() {
     world = cleared.unwrap();
     assert_eq!(
         world.btech.maps()[&map].base_hex(1, 1).unwrap().terrain(),
-        Terrain::LightForest
+        Terrain::LightWoods
     );
     assert_eq!(
         world.btech.maps()[&map].minefields(),
@@ -5857,7 +5841,7 @@ async fn conventional_mine_blasts_packets_neighbors_removal_and_restart() {
         (MineKind::Command, 6),
         (MineKind::Vibra, 6),
     ] {
-        let (_dir, config, mut world, map, units) = fixture_field(Terrain::HeavyForest, 0, 3).await;
+        let (_dir, config, mut world, map, units) = fixture_field(Terrain::HeavyWoods, 0, 3).await;
         let coordinate = HexCoordinate { x: 1, y: 1 };
         let neighbor = HexCoordinate { x: 1, y: 0 };
         world
@@ -5943,7 +5927,7 @@ async fn conventional_mine_blasts_packets_neighbors_removal_and_restart() {
 
 #[tokio::test]
 async fn mine_blast_character_action_and_late_rejection_are_atomic() {
-    let (_dir, config, mut world, map, units) = fixture_field(Terrain::Grassland, 0, 3).await;
+    let (_dir, config, mut world, map, units) = fixture_field(Terrain::Clear, 0, 3).await;
     set_minefield(
         &mut world,
         map,
@@ -6023,7 +6007,7 @@ async fn mine_activation_water_uses_bottom_depth_and_blast_height_bounds() {
 
 #[tokio::test]
 async fn inferno_duration_cooling_extension_and_saved_expiry() {
-    let (_dir, config, mut world, _map, units) = fixture_field(Terrain::Grassland, 0, 3).await;
+    let (_dir, config, mut world, _map, units) = fixture_field(Terrain::Clear, 0, 3).await;
     let id = units[0];
     world
         .btech
@@ -6076,7 +6060,7 @@ async fn inferno_duration_cooling_extension_and_saved_expiry() {
 #[tokio::test]
 async fn inferno_mines_split_damage_and_burn_duration_atomically() {
     for strength in [1, 4, 6] {
-        let (_dir, config, mut world, map, units) = fixture_field(Terrain::Grassland, 0, 3).await;
+        let (_dir, config, mut world, map, units) = fixture_field(Terrain::Clear, 0, 3).await;
         set_minefield(
             &mut world,
             map,
@@ -6186,7 +6170,7 @@ async fn inferno_water_extinction_and_fall_publish_saved_steam() {
 
 #[tokio::test]
 async fn inferno_missile_exposure_rounds_pairs_and_replays_without_damage_or_dice() {
-    let (_dir, config, mut base, _map, units) = fixture_field(Terrain::Grassland, 0, 3).await;
+    let (_dir, config, mut base, _map, units) = fixture_field(Terrain::Clear, 0, 3).await;
     let target = units[0];
     update_battle_contact(
         &mut base,
@@ -6252,7 +6236,7 @@ async fn inferno_missile_exposure_rounds_pairs_and_replays_without_damage_or_dic
 #[tokio::test]
 async fn inferno_missile_immersion_extinguishes_after_ignition_and_rolls_back_late_failure() {
     for (terrain, depth, prone, extinguished) in [
-        (Terrain::Grassland, 0, false, false),
+        (Terrain::Clear, 0, false, false),
         (Terrain::Water, 1, false, false),
         (Terrain::Water, 1, true, true),
         (Terrain::Water, 2, false, true),
@@ -6314,7 +6298,7 @@ async fn inferno_missile_immersion_extinguishes_after_ignition_and_rolls_back_la
 
 #[tokio::test]
 async fn inferno_missile_rejects_invalid_exposures_without_mutation() {
-    let (_dir, _config, mut world, _map, units) = fixture_field(Terrain::Grassland, 0, 3).await;
+    let (_dir, _config, mut world, _map, units) = fixture_field(Terrain::Clear, 0, 3).await;
     let target = units[0];
     let checkpoint = world.clone();
     assert!(resolve_inferno_hit(&mut world, target, 0).is_err());
@@ -6342,7 +6326,7 @@ async fn inferno_missile_rejects_invalid_exposures_without_mutation() {
 
 #[tokio::test]
 async fn inferno_ammunition_explosion_halves_damage_and_applies_configured_heat() {
-    for (terrain, depth) in [(Terrain::Grassland, 0), (Terrain::Water, 2)] {
+    for (terrain, depth) in [(Terrain::Clear, 0), (Terrain::Water, 2)] {
         for penalty in [false, true] {
             let (_dir, config, mut world, _map, units) = fixture_field(terrain, depth, 3).await;
             let id = units[0];
@@ -6394,7 +6378,7 @@ async fn inferno_ammunition_explosion_halves_damage_and_applies_configured_heat(
 #[tokio::test]
 async fn mine_event_ground_entry_spotting_burning_removal_and_restart() {
     for kind in [MineKind::Standard, MineKind::Inferno, MineKind::Command] {
-        let (_dir, config, mut world, map, units) = fixture_field(Terrain::Grassland, 0, 4).await;
+        let (_dir, config, mut world, map, units) = fixture_field(Terrain::Clear, 0, 4).await;
         let id = units[0];
         prepare_reverse_step(&mut world, id, 7);
         set_minefield(
@@ -6459,7 +6443,7 @@ async fn mine_event_ground_entry_spotting_burning_removal_and_restart() {
 #[tokio::test]
 async fn mine_event_fall_and_jump_landing_activate_at_surface_once() {
     for jump in [false, true] {
-        let (_dir, config, mut world, map, units) = fixture_field(Terrain::Grassland, 0, 4).await;
+        let (_dir, config, mut world, map, units) = fixture_field(Terrain::Clear, 0, 4).await;
         let id = units[0];
         let coordinate = HexCoordinate {
             x: 1,
@@ -6519,7 +6503,7 @@ async fn mine_event_fall_and_jump_landing_activate_at_surface_once() {
 
 #[tokio::test]
 async fn mine_event_scripted_entry_and_late_callback_failure_are_atomic() {
-    let (dir, config, mut world, map, units) = fixture_field(Terrain::Grassland, 0, 4).await;
+    let (dir, config, mut world, map, units) = fixture_field(Terrain::Clear, 0, 4).await;
     let id = units[0];
     prepare_reverse_step(&mut world, id, 7);
     world
@@ -6602,7 +6586,7 @@ async fn mine_event_scripted_entry_and_late_callback_failure_are_atomic() {
 
 #[tokio::test]
 async fn mine_event_nested_support_falls_and_deleted_definitions_are_ordered() {
-    let (_dir, config, mut world, map, units) = fixture_field(Terrain::Grassland, 0, 3).await;
+    let (_dir, config, mut world, map, units) = fixture_field(Terrain::Clear, 0, 3).await;
     let mut encoded = serde_json::to_value(&world.btech).unwrap();
     for id in units {
         for leg in ["LeftLeg", "RightLeg"] {
@@ -6675,7 +6659,7 @@ async fn mine_event_nested_support_falls_and_deleted_definitions_are_ordered() {
 
 #[tokio::test]
 async fn mine_event_late_blast_failure_restores_the_whole_ground_step() {
-    let (_dir, _config, mut world, map, units) = fixture_field(Terrain::Grassland, 0, 4).await;
+    let (_dir, _config, mut world, map, units) = fixture_field(Terrain::Clear, 0, 4).await;
     let id = units[0];
     prepare_reverse_step(&mut world, id, 7);
     let mine = Minefield {
@@ -6705,7 +6689,7 @@ async fn mine_event_late_blast_failure_restores_the_whole_ground_step() {
 
 #[tokio::test]
 async fn mine_event_remote_vibra_reports_visible_explosion_and_neighbor_damage() {
-    let (_dir, _config, mut world, map, units) = fixture_field(Terrain::Grassland, 0, 3).await;
+    let (_dir, _config, mut world, map, units) = fixture_field(Terrain::Clear, 0, 3).await;
     set_minefield(
         &mut world,
         map,
@@ -6735,7 +6719,7 @@ async fn mine_event_remote_vibra_reports_visible_explosion_and_neighbor_damage()
 
 #[tokio::test]
 async fn command_mines_match_frequency_map_and_order_with_saved_replay() {
-    let (_dir, config, mut world, map, units) = fixture_field(Terrain::Grassland, 0, 7).await;
+    let (_dir, config, mut world, map, units) = fixture_field(Terrain::Clear, 0, 7).await;
     let sender = units[0];
     let other = world.create(&config, "Other mine map".into(), Kind::Room);
     create_battle_map(
@@ -6856,7 +6840,7 @@ async fn command_mines_match_frequency_map_and_order_with_saved_replay() {
 
 #[tokio::test]
 async fn command_mines_character_publication_and_late_rejection_are_atomic() {
-    let (_dir, config, mut world, map, units) = fixture_field(Terrain::Grassland, 0, 7).await;
+    let (_dir, config, mut world, map, units) = fixture_field(Terrain::Clear, 0, 7).await;
     let sender = units[0];
     let target = units[1];
     world
@@ -6947,7 +6931,7 @@ async fn command_mines_character_publication_and_late_rejection_are_atomic() {
 
 #[tokio::test]
 async fn command_mines_frequency_values_and_invalid_senders_do_not_spend_dice() {
-    let (_dir, _config, base, map, units) = fixture_field(Terrain::Grassland, 0, 3).await;
+    let (_dir, _config, base, map, units) = fixture_field(Terrain::Clear, 0, 3).await;
     let sender = units[0];
     for frequency in [0, -1, i32::MAX] {
         let mut world = base.clone();
@@ -6994,7 +6978,7 @@ async fn command_mines_frequency_values_and_invalid_senders_do_not_spend_dice() 
 /// Artillery commits ordered center/neighbor packets and saved map/unit dice together.
 #[tokio::test]
 async fn artillery_world_damage_and_restart() {
-    let (_dir, config, mut world, map, units) = fixture_field(Terrain::Grassland, 0, 3).await;
+    let (_dir, config, mut world, map, units) = fixture_field(Terrain::Clear, 0, 3).await;
     let center = HexCoordinate { x: 1, y: 1 };
     let neighbor = HexCoordinate { x: 1, y: 0 };
     let mut encoded = serde_json::to_value(&world.btech).unwrap();
@@ -7070,7 +7054,7 @@ async fn artillery_world_damage_and_restart() {
 /// neither reinforce nor replace existing fields.
 #[tokio::test]
 async fn artillery_world_smoke_and_mines() {
-    let (_dir, config, mut world, map, _) = fixture_field(Terrain::Grassland, 0, 3).await;
+    let (_dir, config, mut world, map, _) = fixture_field(Terrain::Clear, 0, 3).await;
     let center = HexCoordinate { x: 1, y: 1 };
     set_map_decoration(
         &mut world,
@@ -7108,7 +7092,7 @@ async fn artillery_world_smoke_and_mines() {
                         .base_hex(i64::from(cell.position.x), i64::from(cell.position.y))
                         .unwrap()
                         .terrain(),
-                    Terrain::Grassland
+                    Terrain::Clear
                 );
             }
         } else {
@@ -7137,7 +7121,7 @@ async fn artillery_world_smoke_and_mines() {
 /// A late character guard restores earlier packets, map randomness and the flight cursor; the host action publishes them.
 #[tokio::test]
 async fn artillery_character_arrival_is_atomic() {
-    let (_dir, config, mut world, map, units) = fixture_field(Terrain::Grassland, 0, 3).await;
+    let (_dir, config, mut world, map, units) = fixture_field(Terrain::Clear, 0, 3).await;
     for pilot in [ObjectId(1), ObjectId(2)] {
         set_battle_character(
             &mut world,
@@ -7211,8 +7195,7 @@ async fn artillery_character_arrival_is_atomic() {
 /// Artillery reaches three levels underwater but excludes four; its upper height limit is ten levels.
 #[tokio::test]
 async fn artillery_blast_height_limits() {
-    for (terrain, depth, first, second) in
-        [(Terrain::Water, 4, -3, -4), (Terrain::Grassland, 0, 9, 10)]
+    for (terrain, depth, first, second) in [(Terrain::Water, 4, -3, -4), (Terrain::Clear, 0, 9, 10)]
     {
         let (_dir, config, mut world, map, units) = fixture_field(terrain, depth, 3).await;
         let mut encoded = serde_json::to_value(&world.btech).unwrap();
@@ -7261,7 +7244,7 @@ async fn artillery_blast_height_limits() {
 /// Occupants across the complete cluster area receive two-point punch packets; failed character admission restores scatter dice.
 #[tokio::test]
 async fn artillery_cluster_world_packets_and_random_rollback() {
-    let (_dir, config, mut world, map, units) = fixture_field(Terrain::Grassland, 0, 3).await;
+    let (_dir, config, mut world, map, units) = fixture_field(Terrain::Clear, 0, 3).await;
     let mut encoded = serde_json::to_value(&world.btech).unwrap();
     encoded["constructed"][units[1].0.to_string()]["position"]["x"] = 0.into();
     encoded["constructed"][units[1].0.to_string()]["position"]["y"] = 0.into();
@@ -7352,7 +7335,7 @@ async fn artillery_cluster_world_packets_and_random_rollback() {
 /// Launch order and remaining seconds survive storage, and rounds outlive a pending-removal shooter.
 #[tokio::test]
 async fn artillery_queue_order_and_database_replay() {
-    let (_dir, config, mut world, map, units) = fixture_field(Terrain::Grassland, 0, 3).await;
+    let (_dir, config, mut world, map, units) = fixture_field(Terrain::Clear, 0, 3).await;
     let center = HexCoordinate { x: 1, y: 1 };
     for (index, mode) in [ArtilleryMode::Smoke, ArtilleryMode::Mine]
         .into_iter()
@@ -7429,7 +7412,7 @@ async fn artillery_queue_order_and_database_replay() {
 /// A rejected later round rolls back earlier smoke, queue removal, random draws and published notices.
 #[tokio::test]
 async fn artillery_queue_late_arrival_rolls_back_all_shots() {
-    let (_dir, config, mut world, map, units) = fixture_field(Terrain::Grassland, 0, 3).await;
+    let (_dir, config, mut world, map, units) = fixture_field(Terrain::Clear, 0, 3).await;
     let center = HexCoordinate { x: 1, y: 1 };
     world
         .objects
@@ -7481,7 +7464,7 @@ async fn artillery_queue_late_arrival_rolls_back_all_shots() {
 async fn artillery_flight_in_progress_leaves_its_row_unchanged() {
     tokio::task::LocalSet::new().run_until(async {
         use sqlx::Connection;
-        let (_dir, config, mut world, map, units) = fixture_field(Terrain::Grassland, 0, 3).await;
+        let (_dir, config, mut world, map, units) = fixture_field(Terrain::Clear, 0, 3).await;
         for (unit, pilot) in units.into_iter().zip([ObjectId(1), ObjectId(2)]) {
             stop_battle_unit(&mut world, unit, pilot, rules()).unwrap();
         }
@@ -7508,7 +7491,7 @@ async fn artillery_flight_in_progress_leaves_its_row_unchanged() {
 async fn artillery_queue_server_save_failure_and_retry() {
     tokio::task::LocalSet::new().run_until(async {
         use sqlx::Connection;
-        let (_dir, config, mut world, map, units) = fixture_field(Terrain::Grassland, 0, 3).await;
+        let (_dir, config, mut world, map, units) = fixture_field(Terrain::Clear, 0, 3).await;
         for (unit, pilot) in units.into_iter().zip([ObjectId(1), ObjectId(2)]) {
                 let _notices = stop_battle_unit(&mut world, unit, pilot, rules()).unwrap();
                 assert_eq!(world.btech.constructed_units()[&unit].power(), Power::Off);
@@ -7536,7 +7519,7 @@ async fn artillery_queue_server_save_failure_and_retry() {
 #[tokio::test]
 async fn artillery_queue_rejects_corrupt_saved_cursor() {
     use sqlx::Connection;
-    let (_dir, config, mut world, map, units) = fixture_field(Terrain::Grassland, 0, 3).await;
+    let (_dir, config, mut world, map, units) = fixture_field(Terrain::Clear, 0, 3).await;
     let center = HexCoordinate { x: 1, y: 1 };
     enqueue_artillery(
         &mut world,
@@ -7573,7 +7556,7 @@ async fn artillery_queue_rejects_corrupt_saved_cursor() {
 /// Artillery always reads its dedicated connected-pilot skill and otherwise uses the default target of eight.
 #[tokio::test]
 async fn artillery_gunnery_uses_dedicated_skill_without_mutation() {
-    let (_dir, _config, mut world, _, units) = fixture_field(Terrain::Grassland, 0, 3).await;
+    let (_dir, _config, mut world, _, units) = fixture_field(Terrain::Clear, 0, 3).await;
     let pilot = ObjectId(1);
     world
         .objects

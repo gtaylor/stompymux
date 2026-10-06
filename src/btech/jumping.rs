@@ -299,9 +299,10 @@ fn launch(
     let map = unit
         .position()
         .and_then(|position| world.btech.maps().get(&position.map));
-    // Towing was rejected above, so the configured myomer towing discount cannot apply.
+    // Only cargo may block a jump, so map gravity is left out of the loaded speed. Towing was
+    // rejected above, so the configured myomer towing discount cannot apply.
     let loaded = unit.effective_speed_with_load(
-        map,
+        None,
         super::unit_load(world, id, speed.tsm_tow_bonus)?,
         maximum,
     )?;

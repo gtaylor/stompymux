@@ -1,4 +1,5 @@
-//! Atomic ice and bridge breakage: terrain changes before occupant immersion and falls.
+//! Atomic ice, bridge and structure breakage: terrain changes before occupant immersion and
+//! falls.
 use super::{FallRules, Hex, HexCoordinate, MechFallReport, Notice};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
@@ -21,7 +22,8 @@ pub struct SurfaceBreak {
     pub notices: Vec<Notice>,
 }
 
-/// A surface that can break and drop its occupants into the water below.
+/// A surface that can break and drop its occupants: into the water below, or with a
+/// collapsing building or wall, to the rubble at its foot.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Surface {
@@ -29,15 +31,27 @@ pub enum Surface {
     Ice,
     /// A bridge deck spanning water.
     Bridge,
+    /// The top of a building or wall, which collapses into rubble.
+    Roof,
 }
 
 impl Surface {
-    /// The breakable surface of `hex`, if it has one.
+    /// The surface of `hex` that can break under weight or fire, if it has one: a bridge
+    /// deck or ice. Building and wall roofs only fall when their structure collapses; see
+    /// [`Surface::struck`].
     pub fn of(hex: Hex) -> Option<Self> {
         if hex.has_bridge() {
             return Some(Self::Bridge);
         }
         hex.is_ice().then_some(Self::Ice)
+    }
+
+    /// The surface a shot at `hex` can break: a bridge deck, ice, or a building or wall.
+    pub fn struck(hex: Hex) -> Option<Self> {
+        if hex.has_standing_structure() {
+            return Some(Self::Roof);
+        }
+        Self::of(hex)
     }
 }
 
@@ -111,6 +125,28 @@ pub fn break_bridge(
         rules,
         SurfaceBreakPolicy {
             surface: Surface::Bridge,
+            character: false,
+        },
+    )
+}
+
+/// Collapse a building or wall into rubble. Occupants standing on its top fall to the ground;
+/// other occupants keep their altitude. Damage and authority belong to the caller.
+pub fn collapse_structure(
+    world: &mut World,
+    map: ObjectId,
+    coordinate: HexCoordinate,
+    rules: FallRules,
+) -> Result<SurfaceBreak> {
+    break_surface(
+        world,
+        map,
+        coordinate,
+        None,
+        None,
+        rules,
+        SurfaceBreakPolicy {
+            surface: Surface::Roof,
             character: false,
         },
     )
@@ -225,17 +261,36 @@ fn break_surface(
     record.validate()?;
     let tile = record.base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
     ensure!(
-        Surface::of(tile) == Some(expected),
+        Surface::struck(tile) == Some(expected),
         "Tile is not the requested breakable surface"
     );
     let bridge = expected == Surface::Bridge;
-    // Occupants stand on the deck or the ice. A collapsing deck drops them to the river bed.
-    let surface_height = i32::from(tile.deck_height().unwrap_or(tile.water_line()));
-    let fall_levels = match tile.deck_clearance() {
-        Some(deck) => deck + tile.water_depth(),
-        None => tile.water_depth(),
+    let roof = expected == Surface::Roof;
+    // Occupants stand on the deck, the ice or the roof. A collapsing deck drops them to the
+    // river bed, and a collapsing building or wall to the rubble at its foot.
+    let (surface_height, fall_levels, replacement) = match tile.structure() {
+        Some(structure) if roof => (
+            i32::from(tile.surface_height()),
+            structure.height,
+            tile.collapsed(),
+        ),
+        _ => (
+            i32::from(tile.deck_height().unwrap_or(tile.water_line())),
+            tile.deck_clearance().unwrap_or_default() + tile.water_depth(),
+            tile.with_surface_broken(),
+        ),
     };
-    let replacement = tile.with_surface_broken();
+    let collapse_text = match tile.structure() {
+        Some(structure) if roof => format!(
+            "falls as the {} collapses!",
+            if structure.kind == super::StructureKind::Wall {
+                "wall"
+            } else {
+                "building"
+            }
+        ),
+        _ => String::new(),
+    };
     let on_tile = |id| {
         super::scanner::scanner_unit(world, id)
             .and_then(|unit| unit.position)
@@ -261,7 +316,7 @@ fn break_surface(
         }
         let eligible = if let Some(unit) = world.btech.vehicles().get(&id) {
             !unit.is_destroyed()
-                && (bridge || unit.definition().movement != super::VehicleMovement::Hover)
+                && (bridge || roof || unit.definition().movement != super::VehicleMovement::Hover)
                 && (unit.elevation_level(tile) == surface_height || Some(id) == trigger)
         } else {
             let unit = &world.btech.constructed_units()[&id];
@@ -302,7 +357,9 @@ fn break_surface(
                 super::broadcast::observer_notices(
                     world,
                     id,
-                    if bridge {
+                    if roof {
+                        collapse_text.as_str()
+                    } else if bridge {
                         "goes swimming as the bridge is blown apart!"
                     } else if trigger.is_some() || exclude.is_some() {
                         "goes swimming!"
@@ -314,14 +371,14 @@ fn break_surface(
         })
         .collect();
     let mut candidate = world.clone();
-    if bridge {
+    if bridge || roof {
         for (&id, unit) in candidate.btech.constructed.iter_mut() {
             if on_tile(id) && !unit.airborne() {
                 unit.ground_elevation = Some(unit.altitude(tile));
             }
         }
     }
-    if bridge {
+    if bridge || roof {
         for (&id, unit) in candidate.btech.vehicles.iter_mut() {
             if on_tile(id) {
                 unit.ground_elevation = Some(unit.altitude(tile));
@@ -387,7 +444,7 @@ fn break_surface(
                 let protected_trigger = !bridge
                     && Some(id) == trigger
                     && vehicle.definition().has_special("Waterproof_Tech");
-                if !vehicle.is_destroyed() && !protected_trigger {
+                if !roof && !vehicle.is_destroyed() && !protected_trigger {
                     report.notices.push(Notice {
                         unit: id,
                         text: "Water renders your vehicle inoperable.".into(),

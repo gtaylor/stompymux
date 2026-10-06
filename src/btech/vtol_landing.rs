@@ -1,5 +1,5 @@
 //! Deliberate rotorcraft landing checks and material touchdown, separate from crash damage.
-use super::{Hex, Structure, Vehicle, VtolFlight, VtolFlightPhase};
+use super::{Hex, StructureKind, Vehicle, VtolFlight, VtolFlightPhase};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
 
@@ -76,7 +76,10 @@ impl Vehicle {
 /// building roof, with no fire or smoke over it.
 pub(super) fn supported_surface(hex: Hex) -> bool {
     hex.is_open_ground()
-        || (hex.overlay().is_none() && matches!(hex.structure(), Some(Structure::Building { .. })))
+        || (hex.overlay().is_none()
+            && hex
+                .structure()
+                .is_some_and(|structure| structure.kind == StructureKind::Building))
 }
 
 #[cfg(test)]
@@ -86,7 +89,7 @@ mod tests {
 
     #[test]
     fn aircraft_land_on_open_ground_or_roofs_clear_of_fire_and_smoke() {
-        for terrain in [Terrain::Grassland, Terrain::Road, Terrain::Building] {
+        for terrain in [Terrain::Clear, Terrain::Road, Terrain::Building] {
             let hex = Hex::new(terrain, 1);
             assert!(supported_surface(hex), "{terrain:?}");
             for kind in [DecorationKind::Fire, DecorationKind::Smoke] {
@@ -96,6 +99,6 @@ mod tests {
                 );
             }
         }
-        assert!(!supported_surface(Hex::new(Terrain::LightForest, 0)));
+        assert!(!supported_surface(Hex::new(Terrain::LightWoods, 0)));
     }
 }

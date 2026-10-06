@@ -149,7 +149,7 @@ async fn prediction_handles_vehicle_targets_and_blocking_terrain() {
             ObjectId(1),
             map,
             HexCoordinate { x: 0, y: 9 },
-            Hex::new(Terrain::Mountains, 9),
+            Hex::new(Terrain::UltraRough, 9),
         )
         .unwrap();
         let world = scripts.world();

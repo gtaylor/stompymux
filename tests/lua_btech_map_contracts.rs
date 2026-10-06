@@ -198,7 +198,7 @@ async fn mixed_membership_range_lookup_los_and_exact_placement_are_canonical() {
         ObjectId(1),
         map,
         HexCoordinate { x: 0, y: 10 },
-        Hex::new(Terrain::Mountains, 9),
+        Hex::new(Terrain::UltraRough, 9),
     )
     .unwrap();
     scripts.drain_outbox();

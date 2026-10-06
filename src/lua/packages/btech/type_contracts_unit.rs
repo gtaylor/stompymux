@@ -300,7 +300,7 @@
 
 // lua-types-begin btech 00153
 //|---@class PerceptionReport
-//|---@field light "night"|"twilight"|"day" Current battlefield light.
+//|---@field light "day"|"dawn"|"dusk"|"full_moon_night"|"moonless_night"|"pitch_black" Current battlefield light.
 //|---@field sight_range integer Weather visibility in hexes, capped by the map ceiling.
 //|---@field lit_sight_range integer Reach to illuminated targets; triple sight at night.
 //|---@field sensor_range integer Effective all-conditions sensor band; zero while unavailable.

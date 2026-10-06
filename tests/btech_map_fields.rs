@@ -28,7 +28,7 @@ async fn every_writable_field_matches_lua_and_restarts_across_chassis() {
             ("winddir", "359"),
             ("windspeed", "50000"),
             ("cloudbase", "-50000"),
-            ("flags", "dark special_rules"),
+            ("flags", "dark vacuum"),
             ("sensorflags", "radar,probes"),
             ("MaPnAmE", "A map with spaces and unicode 海海海海"),
             ("mapname", "海海海海海海海海海海"),
@@ -62,7 +62,7 @@ async fn every_writable_field_matches_lua_and_restarts_across_chassis() {
         );
         assert_eq!((record.wind_direction, record.wind_speed), (359, 32767));
         assert_eq!(record.cloud_base, -32768);
-        assert_eq!(record.flags, 2 | 32);
+        assert_eq!(record.flags, 4 | 32);
         assert_eq!(record.sensor_flags, 32 | 64);
         assert!(record.name.len() <= 29);
         assert_eq!(record.name, "海海海海海海海海海");
@@ -90,7 +90,7 @@ async fn invalid_fields_and_callback_failure_restore_state_without_output() {
     let before = world.btech.clone();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     for (field, value) in [
-        ("maplight", "3"),
+        ("maplight", "6"),
         ("mapvis", "61"),
         ("winddir", "360"),
         ("windspeed", "-1"),
@@ -158,12 +158,12 @@ async fn lua_map_flags_use_typed_constants_and_preserve_other_flags() {
         &mut world,
         map,
         "test",
-        MapAsset::from_cells("1 1\n&0\n2: 100 20\n").unwrap(),
+        MapAsset::from_cells("1 1\n&0\n16: 100 20\n").unwrap(),
     )
     .unwrap();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     let flags = |scripts: &Scripts| scripts.world().btech.maps()[&map].flags;
-    assert_eq!(flags(&scripts), MapFlag::SpecialRules.bit());
+    assert_eq!(flags(&scripts), MapFlag::Underground.bit());
     let enabled: (bool, bool, usize) = scripts
         .eval_callback(&format!(
             "btech.map.set_flag(1, {0}, btech.map.flags.DARK, true)
@@ -176,11 +176,11 @@ async fn lua_map_flags_use_typed_constants_and_preserve_other_flags() {
     assert_eq!(enabled, (true, false, 2));
     assert_eq!(
         flags(&scripts),
-        MapFlag::SpecialRules.bit() | MapFlag::Dark.bit()
+        MapFlag::Underground.bit() | MapFlag::Dark.bit()
     );
     scripts
         .eval_callback::<()>(&format!(
-            "btech.map.set_flag(1, {map}, btech.map.flags.SPECIAL_RULES, false)",
+            "btech.map.set_flag(1, {map}, btech.map.flags.UNDERGROUND, false)",
             map = map.0
         ))
         .unwrap();

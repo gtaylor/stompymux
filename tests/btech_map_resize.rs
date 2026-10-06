@@ -124,7 +124,7 @@ async fn reshape_persists_grid_and_removes_map_objects() {
     assert!(saved.btech.maps()[&map].landing_exclusions().is_empty());
     assert_eq!(
         saved.btech.maps()[&map].base_hex(1, 1).unwrap(),
-        Hex::new(Terrain::Grassland, 0)
+        Hex::new(Terrain::Clear, 0)
     );
     persistence::save(&config.database(), &saved).await.unwrap();
     assert_eq!(
@@ -200,10 +200,7 @@ async fn resize_keeps_effects_on_remaining_hexes_and_clears_building_routes() {
     let field = &saved.btech.maps()[&map];
     assert!(field.building_entrances().is_empty());
     assert!(saved.btech.maps()[&interior].building_exits().is_empty());
-    assert_eq!(
-        field.base_hex(0, 1).unwrap(),
-        Hex::new(Terrain::Grassland, 0)
-    );
+    assert_eq!(field.base_hex(0, 1).unwrap(), Hex::new(Terrain::Clear, 0));
     // The fire keeps its hex although the narrower map numbers its hexes differently.
     let kinds: Vec<_> = (0..3)
         .map(|y| {

@@ -79,7 +79,7 @@ async fn vehicle_coordinate_modes_share_native_lua_expenditure_and_restart() {
         HexTargetMode::Ignite,
         HexTargetMode::Building,
     ] {
-        let (_dir, config, world, shooter, _map, index) = fixture(mode, "heavy_forest").await;
+        let (_dir, config, world, shooter, _map, index) = fixture(mode, "heavy_woods").await;
         persistence::save(&config.database(), &world).await.unwrap();
         let original = world.btech.vehicles()[&shooter].clone();
         let lua = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
@@ -132,7 +132,7 @@ async fn vehicle_coordinate_modes_share_native_lua_expenditure_and_restart() {
 #[tokio::test]
 async fn vehicle_hex_fire_rollback_restores_inventory_terrain_and_dice() {
     let (_dir, config, world, shooter, _map, index) =
-        fixture(HexTargetMode::Clear, "heavy_forest").await;
+        fixture(HexTargetMode::Clear, "heavy_woods").await;
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     let before = scripts.world().btech.clone();
     assert!(
@@ -175,7 +175,7 @@ async fn vehicle_coordinate_misload_is_tagged_and_rolls_back_with_terrain_action
         .replace("IS.AC/20", "IS.AC/2")
         .replace("\"IS.AC/2\" }", "\"IS.AC/2\", modes = [\"RapidFire\"] }");
     let (_dir, config, mut world, shooter, _map, index) =
-        fixture_with_template(HexTargetMode::Hex, "heavy_forest", &template).await;
+        fixture_with_template(HexTargetMode::Hex, "heavy_woods", &template).await;
     let seed = (0..=255)
         .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 2)
         .unwrap();
@@ -260,7 +260,7 @@ async fn character_vehicle_terrain_fire_shares_commands_replay_and_rollback() {
             HexTargetMode::Building,
         ] {
             let (_dir, config, mut world, shooter, _, index) =
-                fixture_with_template(mode, "heavy_forest", template).await;
+                fixture_with_template(mode, "heavy_woods", template).await;
             character_crew(&mut world, shooter);
             if world.btech.vehicles()[&shooter].definition().is_vtol() {
                 world
@@ -327,7 +327,7 @@ async fn character_coordinate_misload_publishes_injuries_and_rolls_back_failed_e
         .replace("\"IS.AC/2\" }", "\"IS.AC/2\", modes = [\"RapidFire\"] }");
     for fatal in [false, true] {
         let (dir, _config, mut world, shooter, _, index) =
-            fixture_with_template(HexTargetMode::Hex, "heavy_forest", &template).await;
+            fixture_with_template(HexTargetMode::Hex, "heavy_woods", &template).await;
         let path = dir.path().join("stompymux.toml");
         let mut settings: toml::Value =
             toml::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();

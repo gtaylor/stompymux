@@ -93,6 +93,8 @@ pub struct AimModifiers {
     pub woods_cover: i8,
     /// An intact orbital cocoon makes the target easier to hit.
     pub orbital_drop: i16,
+    /// Darkness on the target's map, less what searchlights and target heat offset.
+    pub light: i16,
     pub heat: u8,
     pub sensors: u8,
     /// Accumulated vehicle commander and sensor critical penalties, separate from Mech sensor hits.
@@ -139,6 +141,7 @@ impl AimModifiers {
                 + i32::from(self.dug_in)
                 + i32::from(self.woods_cover)
                 + i32::from(self.orbital_drop)
+                + i32::from(self.light)
                 + i32::from(self.heat)
                 + i32::from(self.sensors)
                 + i32::from(self.control_damage)
@@ -499,6 +502,7 @@ pub(super) fn aim_modifiers_for_source(
     modifiers.dug_in = target_terms.dug_in;
     modifiers.woods_cover = target_terms.woods_cover;
     modifiers.orbital_drop = target_terms.orbital_drop;
+    modifiers.light = target_terms.light;
     modifiers.beacon_accuracy += target_terms.beacon_accuracy;
     modifiers.target_lock = if indirect.is_some() {
         0
@@ -594,6 +598,7 @@ pub(super) fn weapon_base(
         dug_in: 0,
         woods_cover: 0,
         orbital_drop: 0,
+        light: 0,
         heat: 0,
         sensors: 0,
         control_damage: 0,
@@ -668,6 +673,8 @@ pub(super) struct TargetAimModifiers {
     pub woods_cover: i8,
     /// An intact orbital cocoon makes the target easier to hit.
     pub orbital_drop: i16,
+    /// Darkness on the target's map, less what searchlights and target heat offset.
+    pub light: i16,
     pub movement: i8,
     pub beacon_accuracy: i8,
     pub concealed: bool,
@@ -732,6 +739,7 @@ pub(super) fn target_modifiers(
         },
         orbital_drop: super::orbital_drop_state::current(world, target)
             .map_or(0, super::OrbitalDrop::target_modifier),
+        light: super::light_aim::modifier(world, target, false)?,
         movement: ammunition.tag_movement_modifier(movement, friendly_tag)
             + i8::from(moving_aircraft),
         // Homing beacons and Artemis V guidance each make the shot one easier.

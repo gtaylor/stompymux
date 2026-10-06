@@ -58,9 +58,11 @@
 //|---@class Hex
 //|---@field level integer Ground height in levels; any water surface sits at this height.
 //|---@field ground GroundName What the ground is made of; see btech.map.ground_types.
-//|---@field woods? WoodsName Forest covering the ground; see btech.map.woods_types.
-//|---@field water? {depth: integer, frozen: boolean} Standing water whose surface is at the ground level.
-//|---@field structure? {kind: "building"|"wall", height: integer}|{kind: "bridge", deck: integer} Built feature; heights are above the ground level. Kinds are in btech.map.structure_kinds.
+//|---@field water? {depth: integer, flow?: FlowName} Water whose surface is at the ground level; flow is absent for still water. See btech.map.flow_types.
+//|---@field foliage? FoliageName Woods, jungle or planted fields over the ground; see btech.map.foliage_types.
+//|---@field route? RouteName Road or rail line through the hex; see btech.map.route_types.
+//|---@field structure? {kind: StructureKind, class: ConstructionClassName, height: integer, cf: integer} Building, wall or bridge. Height is above the ground level (a bridge's deck); cf is the construction factor left, at most the class's full value. Kinds are in btech.map.structure_kinds and classes in btech.map.construction_classes.
+//|---@field condition? ConditionName Ice, snow or mud over the hex; only ice can lie on water. See btech.map.condition_types.
 //|---@field overlay? "fire"|"smoke" Fire or smoke over the hex; base tiles never have one.
 // lua-types-end
 
@@ -74,7 +76,7 @@
 //|---@field gravity integer
 //|---@field temperature integer
 //|---@field flags MapFlag[] Enabled map flags.
-//|---@field light integer 0 night, 1 twilight, 2 day
+//|---@field light integer 0 day, 1 dawn, 2 dusk, 3 full moon night, 4 moonless night, 5 pitch black
 //|---@field visibility integer Weather range in hexes
 //|---@field sensor_flags integer Disabled perception channels: sensor band bit 0 (1), radar bit 5 (32), probes bit 6 (64).
 //|---@field maximum_visibility integer Saved map sensor range ceiling
@@ -169,8 +171,12 @@
 //|---@class BtechMapAPI
 //|---@field terrain_types TerrainTypes Terrain names reported by btech.map.terrain.
 //|---@field ground_types GroundTypes Ground names for a hex's ground field.
-//|---@field woods_types WoodsTypes Woods densities for a hex's woods field.
+//|---@field foliage_types FoliageTypes Woods, jungle and field names for a hex's foliage field.
+//|---@field flow_types FlowTypes Flow names for the flow field of a hex's water.
+//|---@field route_types RouteTypes Road and rail names for a hex's route field.
+//|---@field condition_types ConditionTypes Ice, snow and mud names for a hex's condition field.
 //|---@field structure_kinds StructureKinds Structure kinds for the kind field of a hex's structure.
+//|---@field construction_classes ConstructionClasses Construction classes for the class field of a hex's structure.
 //|local btech_map = {}
 // lua-types-end
 
@@ -667,40 +673,90 @@
 // lua-types-end
 
 // lua-types-begin btech 00141
-//|---@alias TerrainName "grassland"|"road"|"light_forest"|"heavy_forest"|"water"|"ice"|"bridge"|"rough"|"mountains"|"fire"|"smoke"|"snow"|"building"|"wall"|"sand"
+//|---@alias TerrainName "clear"|"pavement"|"road"|"rail"|"rough"|"ultra_rough"|"rubble"|"ultra_rubble"|"sand"|"tundra"|"swamp"|"magma_crust"|"magma"|"heavy_industrial"|"light_woods"|"heavy_woods"|"ultra_heavy_woods"|"light_jungle"|"heavy_jungle"|"ultra_heavy_jungle"|"planted_fields"|"water"|"ice"|"thin_snow"|"deep_snow"|"mud"|"bridge"|"building"|"wall"|"fire"|"smoke"
 //|---@class TerrainTypes
-//|---@field GRASSLAND "grassland"
+//|---@field CLEAR "clear"
+//|---@field PAVEMENT "pavement"
 //|---@field ROAD "road"
-//|---@field LIGHT_FOREST "light_forest"
-//|---@field HEAVY_FOREST "heavy_forest"
+//|---@field RAIL "rail"
+//|---@field ROUGH "rough"
+//|---@field ULTRA_ROUGH "ultra_rough"
+//|---@field RUBBLE "rubble"
+//|---@field ULTRA_RUBBLE "ultra_rubble"
+//|---@field SAND "sand"
+//|---@field TUNDRA "tundra"
+//|---@field SWAMP "swamp"
+//|---@field MAGMA_CRUST "magma_crust"
+//|---@field MAGMA "magma"
+//|---@field HEAVY_INDUSTRIAL "heavy_industrial"
+//|---@field LIGHT_WOODS "light_woods"
+//|---@field HEAVY_WOODS "heavy_woods"
+//|---@field ULTRA_HEAVY_WOODS "ultra_heavy_woods"
+//|---@field LIGHT_JUNGLE "light_jungle"
+//|---@field HEAVY_JUNGLE "heavy_jungle"
+//|---@field ULTRA_HEAVY_JUNGLE "ultra_heavy_jungle"
+//|---@field PLANTED_FIELDS "planted_fields"
 //|---@field WATER "water"
 //|---@field ICE "ice"
+//|---@field THIN_SNOW "thin_snow"
+//|---@field DEEP_SNOW "deep_snow"
+//|---@field MUD "mud"
 //|---@field BRIDGE "bridge"
-//|---@field ROUGH "rough"
-//|---@field MOUNTAINS "mountains"
-//|---@field FIRE "fire"
-//|---@field SMOKE "smoke"
-//|---@field SNOW "snow"
 //|---@field BUILDING "building"
 //|---@field WALL "wall"
-//|---@field SAND "sand"
-//|---@alias GroundName "clear"|"road"|"rough"|"mountains"|"snow"|"sand"
+//|---@field FIRE "fire"
+//|---@field SMOKE "smoke"
+//|---@alias GroundName "clear"|"pavement"|"rough"|"ultra_rough"|"rubble"|"ultra_rubble"|"sand"|"tundra"|"swamp"|"magma_crust"|"magma"|"heavy_industrial"
 //|---@class GroundTypes
 //|---@field CLEAR "clear"
-//|---@field ROAD "road"
+//|---@field PAVEMENT "pavement"
 //|---@field ROUGH "rough"
-//|---@field MOUNTAINS "mountains"
-//|---@field SNOW "snow"
+//|---@field ULTRA_ROUGH "ultra_rough"
+//|---@field RUBBLE "rubble"
+//|---@field ULTRA_RUBBLE "ultra_rubble"
 //|---@field SAND "sand"
-//|---@alias WoodsName "light"|"heavy"
-//|---@class WoodsTypes
-//|---@field LIGHT "light"
-//|---@field HEAVY "heavy"
+//|---@field TUNDRA "tundra"
+//|---@field SWAMP "swamp"
+//|---@field MAGMA_CRUST "magma_crust"
+//|---@field MAGMA "magma"
+//|---@field HEAVY_INDUSTRIAL "heavy_industrial"
+//|---@alias FoliageName "light_woods"|"heavy_woods"|"ultra_heavy_woods"|"light_jungle"|"heavy_jungle"|"ultra_heavy_jungle"|"planted_fields"
+//|---@class FoliageTypes
+//|---@field LIGHT_WOODS "light_woods"
+//|---@field HEAVY_WOODS "heavy_woods"
+//|---@field ULTRA_HEAVY_WOODS "ultra_heavy_woods"
+//|---@field LIGHT_JUNGLE "light_jungle"
+//|---@field HEAVY_JUNGLE "heavy_jungle"
+//|---@field ULTRA_HEAVY_JUNGLE "ultra_heavy_jungle"
+//|---@field PLANTED_FIELDS "planted_fields"
+//|---@alias FlowName "still"|"rapids"|"torrent"
+//|---@class FlowTypes
+//|---@field STILL "still"
+//|---@field RAPIDS "rapids"
+//|---@field TORRENT "torrent"
+//|---@alias RouteName "paved_road"|"gravel_road"|"dirt_road"|"rail"
+//|---@class RouteTypes
+//|---@field PAVED_ROAD "paved_road"
+//|---@field GRAVEL_ROAD "gravel_road"
+//|---@field DIRT_ROAD "dirt_road"
+//|---@field RAIL "rail"
+//|---@alias ConditionName "ice"|"thin_snow"|"deep_snow"|"mud"
+//|---@class ConditionTypes
+//|---@field ICE "ice"
+//|---@field THIN_SNOW "thin_snow"
+//|---@field DEEP_SNOW "deep_snow"
+//|---@field MUD "mud"
 //|---@alias StructureKind "building"|"wall"|"bridge"
 //|---@class StructureKinds
 //|---@field BUILDING "building"
 //|---@field WALL "wall"
 //|---@field BRIDGE "bridge"
+//|---@alias ConstructionClassName "light"|"medium"|"heavy"|"hardened"
+//|---@class ConstructionClasses
+//|---@field LIGHT "light"
+//|---@field MEDIUM "medium"
+//|---@field HEAVY "heavy"
+//|---@field HARDENED "hardened"
 // lua-types-end
 
 // lua-types-begin btech 00144
@@ -808,6 +864,7 @@
 //|---@field target_movement integer Movement contribution, including +1 for a VTOL with nonzero horizontal or vertical speed.
 //|---@field dug_in integer Configured cover modifier, shared by Mech and vehicle attackers.
 //|---@field orbital_drop integer Minus two while the target has an intact cocoon; zero after a breach.
+//|---@field light integer Darkness on the target's map, less what searchlights and target heat offset.
 //|---@field heat integer
 //|---@field sensors integer
 //|---@field control_damage integer Vehicle commander/sensor critical penalties.
@@ -883,7 +940,7 @@
 //|---@class WoodlandImpact
 //|---@field map integer
 //|---@field coordinate HexCoordinate
-//|---@field effect {effect: "none"}|{effect: "ignite", seconds: integer}|{effect: "clear", clearing: "thin_to_light"|"cut_to_clear"|"cut_to_rough"} What the attack did to the woods.
+//|---@field effect {effect: "none"}|{effect: "ignite", seconds: integer}|{effect: "clear", clearing: "thin"|"cut_to_clear"|"cut_to_rough"} What the attack did to the woods.
 //|---@field notices Notice[]
 // lua-types-end
 

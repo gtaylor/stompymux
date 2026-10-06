@@ -189,7 +189,10 @@ async fn map_registration_defaults_view_load_and_restart() {
         let field = &world.btech.maps()[&map];
         assert_eq!(field.name, "Default Map");
         assert_eq!((field.width, field.height), (21, 11));
-        assert_eq!((field.gravity, field.temperature, field.flags), (0, 0, 0));
+        assert_eq!(
+            (field.gravity, field.temperature, field.flags),
+            (100, 20, 0)
+        );
         assert_eq!(
             (
                 field.light,
@@ -197,12 +200,12 @@ async fn map_registration_defaults_view_load_and_restart() {
                 field.maximum_visibility,
                 field.cloud_base
             ),
-            (2, 30, 60, 200)
+            (0, 30, 60, 200)
         );
         assert_eq!(field.building.regeneration, 1);
         for y in 0..11 {
             for x in 0..21 {
-                assert_eq!(field.hex(x, y).unwrap(), Hex::new(Terrain::Grassland, 0));
+                assert_eq!(field.hex(x, y).unwrap(), Hex::new(Terrain::Clear, 0));
             }
         }
     }

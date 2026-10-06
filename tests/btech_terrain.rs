@@ -60,7 +60,7 @@ async fn dictionary_round_trip_is_per_map_and_preserves_unowned_columns() {
     assert!(map.terrain_ready());
     assert_eq!(map.hex(1, 0).unwrap().surface_height(), -2);
     assert_eq!(map.hex(1, 1).unwrap().surface_height(), -3);
-    assert_eq!(map.hex(2, 1).unwrap().terrain(), Terrain::Mountains);
+    assert_eq!(map.hex(2, 1).unwrap().terrain(), Terrain::UltraRough);
     assert_eq!(
         (
             map.width,
@@ -85,7 +85,7 @@ async fn dictionary_round_trip_is_per_map_and_preserves_unowned_columns() {
     );
     sqlx::raw_sql("ALTER TABLE btech_map_hexes ADD COLUMN opaque BLOB DEFAULT x'00ff42'; ALTER TABLE btech_map_terrain_codes ADD COLUMN opaque TEXT DEFAULT 'dictionary extension'; ALTER TABLE btech_maps ADD COLUMN opaque TEXT DEFAULT 'map extension'; CREATE TRIGGER prohibit_hex_delete BEFORE DELETE ON btech_map_hexes BEGIN SELECT RAISE(ABORT,'grid rows must retain extension data'); END;").execute(&mut sql).await.unwrap();
     let code: i64 = sqlx::query_scalar(
-        "SELECT code FROM btech_map_terrain_codes WHERE map_dbref=? AND json_extract(hex,'$.water.frozen')=0 AND json_extract(hex,'$.structure') IS NULL",
+        "SELECT code FROM btech_map_terrain_codes WHERE map_dbref=? AND json_extract(hex,'$.water') IS NOT NULL AND json_extract(hex,'$.condition') IS NULL AND json_extract(hex,'$.structure') IS NULL",
     )
     .bind(id.0)
     .fetch_one(&mut sql)
@@ -101,7 +101,7 @@ async fn dictionary_round_trip_is_per_map_and_preserves_unowned_columns() {
     .unwrap();
     assert_eq!(
         before.btech.maps()[&id].hex(2, 1).unwrap().terrain(),
-        Terrain::Mountains
+        Terrain::UltraRough
     );
     persistence::save(&config.database(), &loaded)
         .await
@@ -115,7 +115,7 @@ async fn dictionary_round_trip_is_per_map_and_preserves_unowned_columns() {
     assert_eq!(map.hex(2, 1).unwrap().terrain(), Terrain::Rough);
     assert_eq!(
         sqlx::query_scalar::<_, i64>(
-            "SELECT code FROM btech_map_terrain_codes WHERE map_dbref=? AND json_extract(hex,'$.water.frozen')=0 AND json_extract(hex,'$.structure') IS NULL"
+            "SELECT code FROM btech_map_terrain_codes WHERE map_dbref=? AND json_extract(hex,'$.water') IS NOT NULL AND json_extract(hex,'$.condition') IS NULL AND json_extract(hex,'$.structure') IS NULL"
         )
         .bind(id.0)
         .fetch_one(&mut sql)
@@ -423,19 +423,19 @@ async fn server_rolls_back_schema_and_output_on_failed_creation_then_recovers() 
         assert!(!text.contains("terrain reloaded"));
         client.send(&format!("@btech inspect #{}",id.0)).await;
         client.until("temperature -12").await;
-        assert_eq!(persistence::load(&config.database()).await.unwrap().btech.maps()[&id].hex(2,1).unwrap().terrain(),Terrain::Mountains);
+        assert_eq!(persistence::load(&config.database()).await.unwrap().btech.maps()[&id].hex(2,1).unwrap().terrain(),Terrain::UltraRough);
         sqlx::query("DROP TRIGGER reject_reload").execute(&mut sql).await.unwrap();
         sqlx::query("CREATE TRIGGER reject_conditions BEFORE UPDATE OF light ON btech_maps BEGIN SELECT RAISE(ABORT,'condition failure'); END").execute(&mut sql).await.unwrap();
-        client.send(&format!("@btech map-conditions #{}=night,10", id.0)).await;
+        client.send(&format!("@btech map-conditions #{}=moonless_night,10", id.0)).await;
         let text = client.until("Unable to save your changes.").await;
         assert!(!text.contains("conditions saved"));
         client.send(&format!("@btech inspect #{}", id.0)).await;
-        client.until("Light 2; visibility 30; maximum visibility 60 hexes").await;
-        assert_eq!(persistence::load(&config.database()).await.unwrap().btech.maps()[&id].light, 2);
-        sqlx::query("DROP TRIGGER reject_conditions").execute(&mut sql).await.unwrap();
-        client.send(&format!("@btech map-conditions #{}=night,10", id.0)).await;
-        client.until("conditions saved: night, visibility 10 hexes.").await;
+        client.until("Light 0; visibility 30; maximum visibility 60 hexes").await;
         assert_eq!(persistence::load(&config.database()).await.unwrap().btech.maps()[&id].light, 0);
+        sqlx::query("DROP TRIGGER reject_conditions").execute(&mut sql).await.unwrap();
+        client.send(&format!("@btech map-conditions #{}=moonless_night,10", id.0)).await;
+        client.until("conditions saved: moonless_night, visibility 10 hexes.").await;
+        assert_eq!(persistence::load(&config.database()).await.unwrap().btech.maps()[&id].light, 4);
 
         shutdown.send(ShutdownRequest::Sigterm).unwrap();
         task.await.unwrap().unwrap();
@@ -520,7 +520,7 @@ async fn map_condition_commands_and_lua_validate_and_rollback() {
         &config,
         ObjectId(2),
         2,
-        &format!("@btech map-conditions #{}=night,10", id.0),
+        &format!("@btech map-conditions #{}=moonless_night,10", id.0),
     );
     assert_eq!(scripts.world().btech, before);
     let run = |args: &str| {
@@ -536,8 +536,8 @@ async fn map_condition_commands_and_lua_validate_and_rollback() {
         run(invalid);
         assert_eq!(scripts.world().btech, before, "{invalid}");
     }
-    assert!(run("NiGhT, 10").contains("conditions saved"));
-    assert_eq!(scripts.world().btech.maps()[&id].light, 0);
+    assert!(run("Moonless Night, 10").contains("conditions saved"));
+    assert_eq!(scripts.world().btech.maps()[&id].light, 4);
     assert_eq!(scripts.world().btech.maps()[&id].maximum_visibility, 30);
     let changed = scripts.world().btech.clone();
     assert!(
@@ -551,9 +551,9 @@ async fn map_condition_commands_and_lua_validate_and_rollback() {
     assert_eq!(scripts.world().btech, changed);
     // Plain strings and constants from other catalogs are rejected like out-of-range visibility.
     for invalid in [
-        "btech.map.light_levels.NIGHT, -1",
-        "btech.map.light_levels.NIGHT, 256",
-        "btech.map.light_levels.NIGHT, 61",
+        "btech.map.light_levels.MOONLESS_NIGHT, -1",
+        "btech.map.light_levels.MOONLESS_NIGHT, 256",
+        "btech.map.light_levels.MOONLESS_NIGHT, 61",
         "'night', 10",
         "btech.unit.types.MECH, 10",
     ] {
@@ -566,11 +566,11 @@ async fn map_condition_commands_and_lua_validate_and_rollback() {
     }
     let light: i64 = scripts
         .eval_callback(&format!(
-            "btech.map.conditions({}, btech.map.light_levels.TWILIGHT, 20); return btech.map.inspect({}).light",
+            "btech.map.conditions({}, btech.map.light_levels.DUSK, 20); return btech.map.inspect({}).light",
             id.0, id.0
         ))
         .unwrap();
-    assert_eq!(light, 1);
+    assert_eq!(light, 2);
     let saved = scripts.world().clone();
     persistence::save(&config.database(), &saved).await.unwrap();
     assert_eq!(
@@ -803,7 +803,7 @@ async fn permanent_decorations_survive_idle_and_mixed_timer_service() {
     set_map_decoration(&mut world, id, smoke, None).unwrap();
     assert_eq!(
         world.btech.maps()[&id].hex(0, 0).unwrap().terrain(),
-        Terrain::Grassland
+        Terrain::Clear
     );
     assert_eq!(
         world.btech.maps()[&id].hex(1, 0).unwrap().terrain(),
