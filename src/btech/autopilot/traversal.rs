@@ -7,7 +7,7 @@
 //! segment through the ordinary movement transaction before committing it.
 
 use super::super::{
-    GroundMovement, Hex, HexCoordinate, Mech, Position, StructureKind, VehicleMovement,
+    GroundMovement, Hex, HexCoordinate, MapFlag, Mech, Position, StructureKind, VehicleMovement,
 };
 use crate::{ObjectId, World};
 use std::collections::BTreeMap;
@@ -150,6 +150,13 @@ fn assess_with_occupancy(
     }
     cost = cost.saturating_add(change.unsigned_abs().saturating_mul(10));
 
+    let (reason, hazard_cost) = transition_reason(unit_kind, from_tile, to_tile, to_height);
+    cost = cost.saturating_add(hazard_cost);
+    // Without stacking collisions, other units neither block nor slow a route.
+    if map.has_flag(MapFlag::NoStacking) {
+        return TraversalAssessment::allowed(cost, reason);
+    }
+
     let (occupants, friendly) = if let Some(cached) = cached_occupancy {
         cached.get(&(to.x, to.y)).copied().unwrap_or_default()
     } else {
@@ -166,18 +173,11 @@ fn assess_with_occupancy(
     if crowded((occupants, friendly)) {
         return TraversalAssessment::blocked(TraversalReason::Congested);
     }
-    if occupants > 0 {
-        cost = cost.saturating_add(occupants.saturating_mul(4) as u32);
+    if occupants == 0 {
+        return TraversalAssessment::allowed(cost, reason);
     }
-
-    let (reason, hazard_cost) = transition_reason(unit_kind, from_tile, to_tile, to_height);
-    cost = cost.saturating_add(hazard_cost);
-    let reason = if occupants > 0 {
-        TraversalReason::Occupied
-    } else {
-        reason
-    };
-    TraversalAssessment::allowed(cost, reason)
+    cost = cost.saturating_add(occupants.saturating_mul(4) as u32);
+    TraversalAssessment::allowed(cost, TraversalReason::Occupied)
 }
 
 /// Adapter for [`crate::btech::autopilot::navigation::Traversal`].
@@ -202,12 +202,22 @@ impl<'a> GroundTraversal<'a> {
     /// Build a traversal provider with one stable occupancy snapshot.  A* calls
     /// this provider once per edge, so rebuilding map membership or sorting all
     /// battlefield slots in that hot path would violate the heartbeat budget.
+    /// Maps without stacking collisions need no snapshot.
     pub fn new(world: &'a World, unit_id: ObjectId, map: ObjectId) -> Self {
+        let stacking = world
+            .btech
+            .maps()
+            .get(&map)
+            .is_some_and(|stored| !stored.has_flag(MapFlag::NoStacking));
         Self {
             world,
             unit_id,
             map,
-            occupancy: known_occupancy(world, unit_id, map),
+            occupancy: if stacking {
+                known_occupancy(world, unit_id, map)
+            } else {
+                OccupancyCounts::new()
+            },
             congested: Default::default(),
         }
     }
@@ -683,6 +693,64 @@ mod tests {
         assert!(watched_clearance(&world, observer, map, &watched));
         assert!(filtered_occupancy(&world, observer, map, Some(&watched)).is_empty());
         assert!(!known_occupant(&world, observer, target));
+    }
+
+    /// A friendly crowd blocks a route until the map switches stacking off, after which
+    /// the crowded hex costs the same as an empty one.
+    #[test]
+    fn no_stacking_maps_route_through_crowds() {
+        use crate::btech::autopilot::navigation::{GridHex, Traversal};
+        use crate::{Config, Kind, Power, UnitTemplate};
+        let config = Config::load("tests/fixtures/game").unwrap();
+        let mut world = World::default();
+        let map = world.create(&config, "Crowded map".into(), Kind::Room);
+        crate::create_battle_map(
+            &mut world,
+            map,
+            "crowded",
+            crate::MapAsset::from_cells("1 3\n.0\n.0\n.0\n").unwrap(),
+        )
+        .unwrap();
+        let mut units = Vec::new();
+        for y in [0, 1, 1, 1] {
+            let id = world.create(&config, "Jenner".into(), Kind::Thing);
+            world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
+            UnitTemplate::parse(
+                "JR7-D",
+                include_str!("../../../tests/fixtures/btech/units/JR7-D.toml"),
+            )
+            .unwrap()
+            .create(&mut world, id)
+            .unwrap();
+            crate::place_battle_unit(&mut world, id, map, 0, y).unwrap();
+            world.btech.constructed.get_mut(&id).unwrap().power = Power::Running;
+            units.push(id);
+        }
+        let mover = units[0];
+        let at = |y| Position { map, x: 0, y };
+        let (from, crowd) = (GridHex::new(0, 0), GridHex::new(0, 1));
+        let crowded = assess(&world, mover, at(0), at(1));
+        assert!(!crowded.eligible);
+        assert_eq!(crowded.reason, TraversalReason::Congested);
+        assert_eq!(
+            GroundTraversal::new(&world, mover, map).traversal_cost(from, crowd),
+            None
+        );
+
+        world
+            .btech
+            .maps
+            .get_mut(&map)
+            .unwrap()
+            .set_flag(MapFlag::NoStacking, true);
+        let open = assess(&world, mover, at(0), at(1));
+        assert!(open.eligible);
+        assert_eq!(open.reason, TraversalReason::Eligible);
+        assert_eq!(open, assess(&world, mover, at(1), at(2)));
+        let traversal = GroundTraversal::new(&world, mover, map);
+        assert!(traversal.occupancy.is_empty());
+        assert_eq!(traversal.traversal_cost(from, crowd), Some(open.cost));
+        assert!(traversal.congested_cells().is_empty());
     }
 
     #[test]

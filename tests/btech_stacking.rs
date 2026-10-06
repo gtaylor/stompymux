@@ -4,15 +4,21 @@ use stompymux_rs::*;
 
 /// A supplied team roster shares one hex; the first unit has the active cockpit.
 async fn fixture(teams: &[i32]) -> (tempfile::TempDir, Config, World, Vec<ObjectId>) {
+    fixture_with_flags(teams, &[]).await
+}
+
+/// [`fixture`] on a map with `flags` switched on.
+async fn fixture_with_flags(
+    teams: &[i32],
+    flags: &[MapFlag],
+) -> (tempfile::TempDir, Config, World, Vec<ObjectId>) {
     let (dir, config, mut world) = support::isolated_world().await;
     let map = world.create(&config, "Crowded field".into(), Kind::Room);
-    create_battle_map(
-        &mut world,
-        map,
-        "crowding.map",
-        MapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
-    )
-    .unwrap();
+    let mut asset = MapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap();
+    for flag in flags {
+        asset.flags = flag.apply(i64::from(asset.flags), true) as i32;
+    }
+    create_battle_map(&mut world, map, "crowding.map", asset).unwrap();
     let mut ids = Vec::new();
     for &team in teams {
         let id = world.create(&config, "Jenner".into(), Kind::Thing);
@@ -109,6 +115,32 @@ async fn crowding_thresholds_and_disabled_mode_do_not_consume_dice() {
         .is_empty()
     );
     assert_eq!(world.btech, before);
+}
+
+#[tokio::test]
+async fn no_stacking_maps_never_collide() {
+    for entry in [
+        StackingEntry::Ground,
+        StackingEntry::Jump,
+        StackingEntry::Fall,
+    ] {
+        let (_dir, _, mut world, ids) =
+            fixture_with_flags(&[0, 1, 0, 0, 1, 1, 1, 0], &[MapFlag::NoStacking]).await;
+        seed(&mut world, ids[0], 3, 1, None);
+        let before = world.btech.clone();
+        assert!(
+            resolve_battle_stacking(
+                &mut world,
+                ids[0],
+                input(entry),
+                StackingRules::STANDARD,
+                fall()
+            )
+            .unwrap()
+            .is_empty()
+        );
+        assert_eq!(world.btech, before);
+    }
 }
 
 #[tokio::test]
