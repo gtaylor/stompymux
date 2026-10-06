@@ -3,7 +3,8 @@
 // the brush outline computed per pixel. Panning and zooming only change the uniforms.
 //
 // Layers are drawn bottom up: ground, foliage, elevation shading, water, a road or rail band,
-// the structure, the weather condition, then fire or smoke.
+// the structure, the weather condition, then fire as flames or smoke as rising puffs, and
+// labels last, over every layer.
 //
 // Hexes are flat-topped in staggered columns, even columns offset half a hex south. Map
 // units are hex vertex radii, with the top-left of the map's bounding box at the origin.
@@ -65,6 +66,13 @@ const CLASS_SHADE: f32 = 0.12;
 // Half widths, in map units, of a road or rail band and a bridge deck band.
 const ROUTE_HALF_WIDTH: f32 = 0.16;
 const BRIDGE_HALF_WIDTH: f32 = 0.3;
+
+// Flame cell size in map units, and the color of a flame's hot core.
+const FLAME_CELL: f32 = 0.46;
+const FLAME_CORE: vec3<f32> = vec3<f32>(1.0, 0.88, 0.35);
+// Smoke cell size in map units, and how much darker than the smoke tint its puffs draw.
+const SMOKE_CELL: f32 = 0.5;
+const SMOKE_SHADE: f32 = 0.62;
 
 // Digit half height in map units for the label rows, and how far the top and bottom rows sit
 // from the hex center.
@@ -204,11 +212,14 @@ fn number_distance(p: vec2<f32>, value: u32, sign: u32) -> f32 {
     return d;
 }
 
-// `color` with `value` written over it in black or white, whichever contrasts, centered
-// `y` map units below the hex center, led by `sign` (a SIGN_ value). `size` is the half
-// height of a lone digit in map units; longer numbers are drawn smaller to fit.
+// `color` with `value` written over it, centered `y` map units below the hex center and led
+// by `sign` (a SIGN_ value). `size` is the half height of a lone digit in map units; longer
+// numbers are drawn smaller to fit. The ink is black or white, whichever contrasts with the
+// hex's `backdrop`, so a whole number keeps one ink over patterned foliage, fire or smoke, and
+// a halo of the other shade keeps it readable over the pattern.
 fn ink_number(
     color: vec3<f32>,
+    backdrop: vec3<f32>,
     local: vec2<f32>,
     y: f32,
     size: f32,
@@ -219,9 +230,13 @@ fn ink_number(
     let half_height = u.radius * size * scales[glyph_count(value, sign) - 1u];
     let p = (local - vec2<f32>(0.0, y)) * u.radius / half_height;
     let stroke = (number_distance(p, value, sign) - 0.16) * half_height;
-    let luminance = dot(color, vec3<f32>(0.299, 0.587, 0.114));
-    let ink = select(vec3<f32>(1.0), vec3<f32>(0.0), luminance > palette[INK_THRESHOLD].r);
-    return mix(color, ink, clamp(0.5 - stroke, 0.0, 1.0));
+    let luminance = dot(backdrop, vec3<f32>(0.299, 0.587, 0.114));
+    let dark = luminance > palette[INK_THRESHOLD].r;
+    let ink = select(vec3<f32>(1.0), vec3<f32>(0.0), dark);
+    let halo = select(vec3<f32>(0.0), vec3<f32>(1.0), dark);
+    let halo_width = max(1.0, half_height * 0.18);
+    let haloed = mix(color, halo, 0.8 * clamp(0.5 + halo_width - stroke, 0.0, 1.0));
+    return mix(haloed, ink, clamp(0.5 - stroke, 0.0, 1.0));
 }
 
 // `color` mixed toward white by `amount`.
@@ -305,6 +320,93 @@ fn draw_condition(color: vec3<f32>, local: vec2<f32>, condition: u32) -> vec3<f3
     return mix(color, tint, 0.75);
 }
 
+// How much of a smoke puff covers this pixel, and how strongly that puff shows. Puffs rise in
+// trails of three from staggered rows of cells `SMOKE_CELL` map units square, each puff larger
+// and fainter than the one below it, with every trail drifting left or right and scaled by its
+// own random thickness.
+fn puff_coverage(local: vec2<f32>) -> f32 {
+    let row = floor(local.y / SMOKE_CELL);
+    let shifted = vec2<f32>(local.x / SMOKE_CELL + 0.5 * (row % 2.0), local.y / SMOKE_CELL);
+    let cell = floor(shifted);
+    let q = shifted - cell - vec2<f32>(0.5, 0.5);
+    let drift = select(-1.0, 1.0, hash(cell) > 0.5);
+    let thickness = mix(0.55, 1.5, hash(cell + vec2<f32>(3.0, 1.0)));
+    var coverage = 0.0;
+    for (var i = 0; i < 3; i++) {
+        let k = f32(i);
+        let center = vec2<f32>(drift * (0.1 * k - 0.1), 0.28 - 0.28 * k);
+        let radius = thickness * (0.07 + 0.045 * k);
+        let outside = (length(q - center) - radius) * SMOKE_CELL * u.radius;
+        coverage = max(coverage, (1.0 - 0.15 * k) * clamp(0.5 - outside, 0.0, 1.0));
+    }
+    return coverage;
+}
+
+// How much of a flame covers this pixel. Flames stand in staggered rows of cells
+// `FLAME_CELL` map units square, each a tongue that tapers to a flickering tip; `core` asks
+// for the hotter inner tongue instead.
+fn flame_coverage(local: vec2<f32>, core: bool) -> f32 {
+    let row = floor(local.y / FLAME_CELL);
+    let shifted = vec2<f32>(local.x / FLAME_CELL + 0.5 * (row % 2.0), local.y / FLAME_CELL);
+    let cell = floor(shifted);
+    let q = shifted - cell - vec2<f32>(0.5, 0.5);
+    // t runs from the tip (0) at the top of the cell to the base (1) near its bottom.
+    let t = (q.y + 0.45) / 0.85;
+    if t <= 0.0 || t >= 1.0 {
+        return 0.0;
+    }
+    let flicker = 0.07 * sin(t * 7.0 + hash(cell) * 6.2832) * (1.0 - t);
+    var half_width = 0.34 * pow(t, 0.7) * sqrt(1.0 - t * t * t);
+    if core {
+        half_width = select(0.0, half_width * 0.45, t > 0.35);
+    }
+    let outside = (abs(q.x - flicker) - half_width) * FLAME_CELL * u.radius;
+    return clamp(0.5 - outside, 0.0, 1.0);
+}
+
+// `color` with fire or smoke drawn over it, leaving the terrain beneath visible: fire as rows
+// of flames with yellow cores, smoke as trails of
+// rising puffs.
+fn draw_overlay(color: vec3<f32>, local: vec2<f32>, overlay: u32) -> vec3<f32> {
+    let ink = palette[OVERLAY + overlay].rgb;
+    if overlay == FIRE {
+        let flames = mix(color, ink, flame_coverage(local, false));
+        return mix(flames, FLAME_CORE, flame_coverage(local, true));
+    }
+    return mix(color, ink * SMOKE_SHADE, puff_coverage(local));
+}
+
+// The layers' color with every pattern evened out: what a label's ink has to contrast with.
+fn backdrop_color(
+    ground: u32,
+    foliage: u32,
+    level: u32,
+    water: u32,
+    structure: u32,
+    grade: u32,
+    condition: u32,
+    overlay: u32,
+) -> vec3<f32> {
+    var color = palette[GROUND + ground].rgb;
+    if present(foliage) {
+        color = mix(color, palette[FOLIAGE + foliage - 1u].rgb, 0.8);
+    }
+    color = lighten(color, 0.02 * f32(level));
+    if present(water) {
+        color = draw_water(vec2<f32>(0.0), level, water - 1u, 0u);
+    }
+    if present(structure) && structure - 1u != BRIDGE {
+        color = draw_structure(color, vec2<f32>(0.0), structure - 1u, grade);
+    }
+    if present(condition) && condition - 1u != THIN_SNOW {
+        color = draw_condition(color, vec2<f32>(0.0), condition - 1u);
+    }
+    if present(overlay) {
+        color = mix(color, palette[OVERLAY + overlay - 1u].rgb, 0.3);
+    }
+    return color;
+}
+
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let point = (in.pixel - u.offset) / u.radius;
@@ -344,11 +446,8 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     if present(condition) {
         color = draw_condition(color, local, condition - 1u);
     }
-    // Fire and smoke tint whatever they cover.
-    if overlay == FIRE + 1u {
-        color = mix(color, palette[OVERLAY + FIRE].rgb, 0.7);
-    } else if overlay == SMOKE + 1u {
-        color = mix(color, palette[OVERLAY + SMOKE].rgb, 0.6);
+    if present(overlay) {
+        color = draw_overlay(color, local, overlay - 1u);
     }
 
     // Distance in pixels to the visible edge of the hex, inside its share of the grid gap.
@@ -364,16 +463,26 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let top_sign = sign_for(top, SIGN_PLUS);
     let depth_sign = sign_for(depth, SIGN_MINUS);
     if u.labels != 0.0 {
+        let backdrop = backdrop_color(
+            ground,
+            foliage,
+            level,
+            water,
+            structure,
+            grade,
+            condition,
+            overlay,
+        );
         // Fixed rows, so a lone number still says which layer it belongs to: ground level on
         // top, the structure above it in the middle, the water below it at the bottom.
         if level != 0u || has_water || has_structure {
-            color = ink_number(color, local, -ROW_OFFSET, ROW_SIZE, level, SIGN_NONE);
+            color = ink_number(color, backdrop, local, -ROW_OFFSET, ROW_SIZE, level, SIGN_NONE);
         }
         if has_structure {
-            color = ink_number(color, local, 0.0, ROW_SIZE, top, top_sign);
+            color = ink_number(color, backdrop, local, 0.0, ROW_SIZE, top, top_sign);
         }
         if has_water {
-            color = ink_number(color, local, ROW_OFFSET, ROW_SIZE, depth, depth_sign);
+            color = ink_number(color, backdrop, local, ROW_OFFSET, ROW_SIZE, depth, depth_sign);
         }
     }
 

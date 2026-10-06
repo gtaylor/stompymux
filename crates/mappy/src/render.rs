@@ -842,8 +842,9 @@ mod tests {
     const LABEL_RADIUS: f32 = 80.0;
     const LABEL_FRAME: Size<u32> = Size::new(256, 256);
 
-    /// Whether labels change the pixel at `(dx, dy)` from the center of a lone `hex`, in hex
-    /// radii, compared with the same hex drawn without them. Returns a lookup for any offset.
+    /// Whether labels put ink (pure black or white, not their halo) at `(dx, dy)` from the
+    /// center of a lone `hex`, in hex radii, where the same hex drawn without them has none.
+    /// Returns a lookup for any offset.
     fn label_ink(
         device: &wgpu::Device,
         queue: &wgpu::Queue,
@@ -863,7 +864,10 @@ mod tests {
             let x = (center_x + dx * radius) as u32;
             let y = (center_y + dy * radius) as u32;
             let index = ((y * size.width + x) * 4) as usize;
-            plain[index..index + 3] != labelled[index..index + 3]
+            // Ink is pure black or white; its halo only shades the backdrop toward the other.
+            let pixel = &labelled[index..index + 3];
+            let pure = pixel.iter().all(|&v| v <= 24) || pixel.iter().all(|&v| v >= 231);
+            pure && plain[index..index + 3] != *pixel
         }
     }
 
@@ -920,5 +924,75 @@ mod tests {
         assert!(!inked(Hex::new(Terrain::Bridge, 0), middle, bar));
         let building = Hex::new(Terrain::Building, 3).with_level(5);
         assert!(inked(building, middle, stem));
+    }
+
+    /// Fire draws as flames and smoke as rising puffs, and the terrain beneath shows
+    /// between them.
+    #[test]
+    fn fire_and_smoke_leave_the_terrain_visible() {
+        let Some((device, queue)) = device() else {
+            eprintln!("no graphics adapter; skipping");
+            return;
+        };
+        let size = Size::new(128, 128);
+        let mut pipeline = MapPipeline::new(&device, &queue, FORMAT);
+        let mut document = Document::new(2, 1).unwrap();
+        put(
+            &mut document,
+            0,
+            0,
+            Hex::at_level(0).with_overlay(Some(DecorationKind::Fire)),
+        );
+        put(
+            &mut document,
+            1,
+            0,
+            Hex::at_level(0).with_overlay(Some(DecorationKind::Smoke)),
+        );
+        let pixels = render(
+            &device,
+            &queue,
+            &mut pipeline,
+            &frame(&document, size),
+            size,
+        );
+        // Count, over the middle of each hex, pixels in the overlay's ink and in the bare
+        // ground: both must show.
+        let to_bytes =
+            |color: Color| [color.r, color.g, color.b].map(|v| (v * 255.0).round() as i32);
+        let near = |pixel: &[u8], color: [i32; 3]| {
+            (0..3).all(|channel| (i32::from(pixel[channel]) - color[channel]).abs() <= 2)
+        };
+        let clear = to_bytes(ground_color(Ground::Clear));
+        for (x, kind) in [(0, DecorationKind::Fire), (1, DecorationKind::Smoke)] {
+            // Smoke puffs are small at this zoom and antialiased into the ground, so any pixel
+            // clearly darker than the ground counts as smoke.
+            let ink = to_bytes(overlay_color(kind));
+            let inked_pixel = |pixel: &[u8]| match kind {
+                DecorationKind::Fire => near(pixel, ink),
+                DecorationKind::Smoke => {
+                    (0..3).all(|channel| i32::from(pixel[channel]) < clear[channel] - 20)
+                }
+            };
+            let stagger = if x % 2 == 0 { 1.0 } else { 0.5 };
+            let center_x = OFFSET[0] + RADIUS * (1.0 + 1.5 * x as f32);
+            let center_y = OFFSET[1] + RADIUS * 3.0_f32.sqrt() * stagger;
+            let (mut inked, mut bare) = (0, 0);
+            let reach = (RADIUS * 0.6) as i32;
+            for dy in -reach..=reach {
+                for dx in -reach..=reach {
+                    let px = (center_x as i32 + dx) as u32;
+                    let py = (center_y as i32 + dy) as u32;
+                    let index = ((py * size.width + px) * 4) as usize;
+                    let pixel = &pixels[index..index + 4];
+                    inked += usize::from(inked_pixel(pixel));
+                    bare += usize::from(near(pixel, clear));
+                }
+            }
+            assert!(
+                inked > 10 && bare > 20,
+                "{kind:?}: {inked} inked, {bare} bare"
+            );
+        }
     }
 }

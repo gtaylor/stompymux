@@ -202,7 +202,7 @@ pub fn condition_color(condition: Condition) -> Color {
 pub fn overlay_color(overlay: DecorationKind) -> Color {
     rgb(match overlay {
         DecorationKind::Fire => (0.96, 0.52, 0.10),
-        DecorationKind::Smoke => (0.56, 0.56, 0.60),
+        DecorationKind::Smoke => (0.6, 0.59, 0.56),
     })
 }
 
