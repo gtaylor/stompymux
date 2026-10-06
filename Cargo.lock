@@ -3886,6 +3886,7 @@ dependencies = [
  "anyhow",
  "iced",
  "stompymux-map",
+ "stompymux-mapgen",
  "tempfile",
 ]
 

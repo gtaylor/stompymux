@@ -1,7 +1,7 @@
 # Mappy, the desktop map viewer and editor. It reads and writes maps through
-# `stompymux-map`, so it never waits on a server build. It is a workspace member but not a
-# default member, so plain `cargo build` and `cargo test` do not compile iced and wgpu;
-# `just mappy` runs it and `just test-mappy` tests it.
+# `stompymux-map` and generates them with `stompymux-mapgen`, so it never waits on a server
+# build. It is a workspace member but not a default member, so plain `cargo build` and
+# `cargo test` do not compile iced and wgpu; `just mappy` runs it and `just test-mappy` tests it.
 [package]
 name = "stompymux-mappy"
 version = "0.1.0"
@@ -16,6 +16,7 @@ path = "src/main.rs"
 # Versions and features match the root manifest.
 [dependencies]
 stompymux-map = { path = "../map" }
+stompymux-mapgen = { path = "../mapgen", default-features = false }
 anyhow = "1.0.104"
 iced = "0.14.0"
 
