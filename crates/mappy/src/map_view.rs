@@ -209,8 +209,8 @@ pub fn overlay_color(overlay: DecorationKind) -> Color {
 /// How much each construction class darkens a structure's color, per class above light.
 pub const CLASS_SHADE: f32 = 0.12;
 
-/// The color of a structure: a building or wall filling its hex, or a bridge deck, darker for
-/// stronger construction classes.
+/// The color of a structure: a building filling its hex, or a wall or bridge deck running toward
+/// its neighbors, darker for stronger construction classes.
 pub fn structure_color(kind: StructureKind, class: ConstructionClass) -> Color {
     let base = structure_base_color(kind);
     let step = ConstructionClass::ALL
@@ -225,8 +225,8 @@ pub fn structure_color(kind: StructureKind, class: ConstructionClass) -> Color {
 pub fn structure_base_color(kind: StructureKind) -> Color {
     rgb(match kind {
         StructureKind::Building => (0.58, 0.58, 0.66),
-        StructureKind::Wall => (0.36, 0.33, 0.38),
-        StructureKind::Bridge => (0.62, 0.42, 0.24),
+        StructureKind::Wall => (0.52, 0.5, 0.56),
+        StructureKind::Bridge => (0.72, 0.72, 0.75),
     })
 }
 

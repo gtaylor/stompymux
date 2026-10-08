@@ -598,26 +598,65 @@ mod tests {
         }
     }
 
-    /// The RGBA bytes at the center of a hex.
-    fn center_pixel(pixels: &[u8], size: Size<u32>, x: i32, y: i32) -> [u8; 4] {
+    /// The RGBA bytes `(dx, dy)` hex radii from the center of a hex, with hexes of `radius`
+    /// pixels.
+    fn hex_pixel(
+        pixels: &[u8],
+        size: Size<u32>,
+        radius: f32,
+        (x, y): (i32, i32),
+        (dx, dy): (f32, f32),
+    ) -> [u8; 4] {
         let stagger = if x % 2 == 0 { 1.0 } else { 0.5 };
-        let pixel_x = OFFSET[0] + RADIUS * (1.0 + 1.5 * x as f32);
-        let pixel_y = OFFSET[1] + RADIUS * 3.0_f32.sqrt() * (y as f32 + stagger);
+        let pixel_x = OFFSET[0] + radius * (1.0 + 1.5 * x as f32 + dx);
+        let pixel_y = OFFSET[1] + radius * (3.0_f32.sqrt() * (y as f32 + stagger) + dy);
         let index = ((pixel_y as u32 * size.width + pixel_x as u32) * 4) as usize;
         pixels[index..index + 4].try_into().unwrap()
     }
 
-    /// Assert that a hex's center is drawn in exactly `expected`.
-    fn assert_color(pixels: &[u8], size: Size<u32>, x: i32, y: i32, expected: Color) {
-        let actual = center_pixel(pixels, size, x, y);
+    /// The RGBA bytes at the center of a hex, at the test camera.
+    fn center_pixel(pixels: &[u8], size: Size<u32>, x: i32, y: i32) -> [u8; 4] {
+        hex_pixel(pixels, size, RADIUS, (x, y), (0.0, 0.0))
+    }
+
+    /// Assert that an opaque pixel is drawn in exactly `expected`.
+    fn assert_pixel(actual: [u8; 4], expected: Color, place: &str) {
         for (channel, value) in [expected.r, expected.g, expected.b].into_iter().enumerate() {
             let value = (value * 255.0).round() as i32;
             assert!(
                 (i32::from(actual[channel]) - value).abs() <= 1,
-                "{x},{y} channel {channel}: {actual:?} vs {value}"
+                "{place} channel {channel}: {actual:?} vs {value}"
             );
         }
-        assert_eq!(actual[3], 255, "{x},{y}");
+        assert_eq!(actual[3], 255, "{place}");
+    }
+
+    /// The color of a rendered pixel.
+    fn pixel_color(pixel: [u8; 4]) -> Color {
+        Color::from_rgb8(pixel[0], pixel[1], pixel[2])
+    }
+
+    /// An opaque pixel of `color`.
+    fn pixel_bytes(color: Color) -> [u8; 4] {
+        let bytes = color_bytes(color);
+        [bytes[0] as u8, bytes[1] as u8, bytes[2] as u8, 255]
+    }
+
+    /// Assert that a pixel shows water: far bluer than it is red.
+    fn assert_blue(pixel: [u8; 4], place: &str) {
+        assert!(
+            i32::from(pixel[2]) > i32::from(pixel[0]) + 60,
+            "{place} is not water: {pixel:?}"
+        );
+    }
+
+    /// Assert that a hex's center is drawn in exactly `expected`.
+    fn assert_color(pixels: &[u8], size: Size<u32>, x: i32, y: i32, expected: Color) {
+        assert_pixel(
+            center_pixel(pixels, size, x, y),
+            expected,
+            &format!("{x},{y}"),
+        );
     }
 
     /// Texels pack each layer where `map.wgsl` reads it.
@@ -679,15 +718,41 @@ mod tests {
             );
         }
         for (name, value) in [
+            ("ROUGH", position(&Ground::ALL, Ground::Rough)),
+            ("ULTRA_ROUGH", position(&Ground::ALL, Ground::UltraRough)),
+            ("RUBBLE", position(&Ground::ALL, Ground::Rubble)),
+            ("ULTRA_RUBBLE", position(&Ground::ALL, Ground::UltraRubble)),
+            ("SAND", position(&Ground::ALL, Ground::Sand)),
+            ("CLEAR", position(&Ground::ALL, Ground::Clear)),
+            ("PAVEMENT", position(&Ground::ALL, Ground::Pavement)),
+            ("TUNDRA", position(&Ground::ALL, Ground::Tundra)),
+            ("SWAMP", position(&Ground::ALL, Ground::Swamp)),
+            ("MAGMA_CRUST", position(&Ground::ALL, Ground::MagmaCrust)),
+            ("MAGMA", position(&Ground::ALL, Ground::Magma)),
+            (
+                "HEAVY_INDUSTRIAL",
+                position(&Ground::ALL, Ground::HeavyIndustrial),
+            ),
+            (
+                "LIGHT_JUNGLE",
+                position(&Foliage::ALL, Foliage::LightJungle),
+            ),
             (
                 "PLANTED_FIELDS",
                 position(&Foliage::ALL, Foliage::PlantedFields),
             ),
+            ("PAVED_ROAD", position(&Route::ALL, Route::PavedRoad)),
+            ("GRAVEL_ROAD", position(&Route::ALL, Route::GravelRoad)),
+            ("DIRT_ROAD", position(&Route::ALL, Route::DirtRoad)),
             ("RAIL", position(&Route::ALL, Route::Rail)),
             ("ICE", position(&Condition::ALL, Condition::Ice)),
             ("THIN_SNOW", position(&Condition::ALL, Condition::ThinSnow)),
             ("DEEP_SNOW", position(&Condition::ALL, Condition::DeepSnow)),
             ("MUD", position(&Condition::ALL, Condition::Mud)),
+            (
+                "BUILDING",
+                position(&StructureKind::ALL, StructureKind::Building),
+            ),
             (
                 "BRIDGE",
                 position(&StructureKind::ALL, StructureKind::Bridge),
@@ -724,7 +789,7 @@ mod tests {
     }
 
     /// Hexes render in their layers' palette colors, stronger structures are darker, higher
-    /// ground is lighter, flowing water is streaked, off-map pixels stay transparent, and an
+    /// ground is lighter, water is blue, off-map pixels stay transparent, and an
     /// edit after the first upload reaches the screen through a partial upload. Skipped on
     /// machines without a graphics adapter.
     #[test]
@@ -739,8 +804,12 @@ mod tests {
         let light_building = Structure::new(StructureKind::Building, 4, ConstructionClass::Light);
         let hardened_wall = Structure::new(StructureKind::Wall, 2, ConstructionClass::Hardened);
         put(&mut document, 0, 0, Hex::new(Terrain::Water, 0));
-        put(&mut document, 1, 0, Hex::new(Terrain::Road, 0));
-        put(&mut document, 2, 1, Hex::new(Terrain::HeavyWoods, 0));
+        put(
+            &mut document,
+            1,
+            0,
+            Hex::at_level(0).with_route(Some(Route::DirtRoad)),
+        );
         put(
             &mut document,
             1,
@@ -754,12 +823,6 @@ mod tests {
             0,
             Hex::at_level(0).with_structure(Some(hardened_wall)),
         );
-        put(
-            &mut document,
-            1,
-            1,
-            Hex::at_level(0).with_ground(Ground::Magma),
-        );
         let pixels = render(
             &device,
             &queue,
@@ -767,25 +830,29 @@ mod tests {
             &frame(&document, size),
             size,
         );
-        assert_color(&pixels, size, 0, 0, water_color());
-        assert_color(&pixels, size, 1, 0, route_color(Route::PavedRoad));
-        assert_color(&pixels, size, 2, 1, foliage_color(Foliage::HeavyWoods));
-        assert_color(
-            &pixels,
-            size,
-            1,
-            2,
-            structure_base_color(StructureKind::Building),
-        );
-        assert_color(
-            &pixels,
-            size,
-            2,
-            0,
+        assert_blue(center_pixel(&pixels, size, 0, 0), "water");
+        assert_color(&pixels, size, 1, 0, route_color(Route::DirtRoad));
+        // A lone wall crosses its hex east to west with a pillar at the middle; between pillars
+        // its top is the wall color.
+        assert_pixel(
+            hex_pixel(&pixels, size, RADIUS, (2, 0), (-0.2, 0.0)),
             crate::map_view::structure_color(StructureKind::Wall, ConstructionClass::Hardened),
+            "wall",
         );
-        assert_color(&pixels, size, 0, 1, ground_color(Ground::Clear));
-        assert_color(&pixels, size, 1, 1, ground_color(Ground::Magma));
+        // Clear ground rolls gently, so it is compared with the same map left bare.
+        let bare_document = Document::new(3, 3).unwrap();
+        let bare_frame = frame(&bare_document, size);
+        let mut bare_pipeline = MapPipeline::new(&device, &queue, FORMAT);
+        let bare = render(&device, &queue, &mut bare_pipeline, &bare_frame, size);
+        let bare_at = |x, y| pixel_color(center_pixel(&bare, size, x, y));
+        assert_color(&pixels, size, 0, 1, bare_at(0, 1));
+        // A building's skyline stands on its ground, which shows below it.
+        let below = |pixels: &[u8]| hex_pixel(pixels, size, RADIUS, (1, 2), (0.0, 0.65));
+        assert_pixel(
+            below(&pixels),
+            pixel_color(below(&bare)),
+            "ground below a building",
+        );
         let low = center_pixel(&pixels, size, 0, 1);
         let high = center_pixel(&pixels, size, 2, 2);
         assert!(
@@ -810,19 +877,9 @@ mod tests {
             size,
         );
         assert_eq!(pipeline.hexes.as_ref().unwrap().applied, applied + 2);
-        let still = {
-            let water = water_color();
-            let shade = 1.0 - 0.08 * 2.0;
-            Color::from_rgb(water.r * shade, water.g * shade, water.b * shade)
-        };
-        let streaked = center_pixel(&pixels, size, 0, 1);
-        assert!(
-            (0..3).all(|channel| f32::from(streaked[channel])
-                > [still.r, still.g, still.b][channel] * 255.0 + 20.0),
-            "torrent streak missing: {streaked:?}"
-        );
+        assert_blue(center_pixel(&pixels, size, 0, 1), "torrent");
         let snow = condition_color(Condition::DeepSnow);
-        let clear = ground_color(Ground::Clear);
+        let clear = bare_at(0, 0);
         let mix = |a: f32, b: f32| a + (b - a) * 0.85;
         assert_color(
             &pixels,
@@ -835,7 +892,7 @@ mod tests {
                 mix(clear.b, snow.b),
             ),
         );
-        assert_color(&pixels, size, 1, 0, route_color(Route::PavedRoad));
+        assert_color(&pixels, size, 1, 0, route_color(Route::DirtRoad));
     }
 
     /// Hex radius and frame size for the label tests, large enough for the small row digits.
@@ -926,72 +983,910 @@ mod tests {
         assert!(inked(building, middle, stem));
     }
 
-    /// Fire draws as flames and smoke as rising puffs, and the terrain beneath shows
-    /// between them.
+    /// A building carries a skyline icon over the ground it stands on: blocks of the building
+    /// color with lit windows, which labels fade so their numbers stay legible. Away from the
+    /// icon, the hex shows the same ground it would without the building.
     #[test]
-    fn fire_and_smoke_leave_the_terrain_visible() {
+    fn buildings_draw_a_skyline_over_their_ground() {
         let Some((device, queue)) = device() else {
             eprintln!("no graphics adapter; skipping");
             return;
         };
-        let size = Size::new(128, 128);
-        let mut pipeline = MapPipeline::new(&device, &queue, FORMAT);
-        let mut document = Document::new(2, 1).unwrap();
-        put(
-            &mut document,
-            0,
-            0,
-            Hex::at_level(0).with_overlay(Some(DecorationKind::Fire)),
+        let stone = structure_base_color(StructureKind::Building);
+        let block = Color::from_rgb(stone.r * 0.72, stone.g * 0.72, stone.b * 0.72);
+        // In the left block: a window and the wall between window rows; and below the skyline,
+        // clear of its shadow.
+        let (window, wall, below) = ((-0.39, 0.15), (-0.34, 0.21), (0.0, 0.65));
+        let building = Structure::new(StructureKind::Building, 3, ConstructionClass::Light);
+        for ground in [Ground::Clear, Ground::HeavyIndustrial] {
+            let bare = Hex::at_level(0).with_ground(ground);
+            let built = bare.with_structure(Some(building));
+            let probe = |hex, offset| middle_pixel(&device, &queue, &[((1, 1), hex)], offset);
+            let window_color = Color::from_rgb(0.95, 0.9, 0.62);
+            assert_pixel(
+                probe(built, window),
+                window_color,
+                &format!("{ground:?} window"),
+            );
+            assert_pixel(probe(built, wall), block, &format!("{ground:?} wall"));
+            let ground_there = pixel_color(probe(bare, below));
+            assert_pixel(
+                probe(built, below),
+                ground_there,
+                &format!("{ground:?} ground"),
+            );
+        }
+        // With labels on, the icon fades toward the ground beneath it.
+        let pixel = |hex, labels| {
+            let (size, radius) = (LABEL_FRAME, LABEL_RADIUS);
+            let mut document = Document::new(1, 1).unwrap();
+            put(&mut document, 0, 0, hex);
+            let mut pipeline = MapPipeline::new(&device, &queue, FORMAT);
+            let frame = labelled_frame(&document, size, radius, labels);
+            let pixels = render(&device, &queue, &mut pipeline, &frame, size);
+            pixel_color(hex_pixel(&pixels, size, radius, (0, 0), wall))
+        };
+        let ground = pixel(Hex::at_level(0), false);
+        let faded = |g: f32, b: f32| g + (b - g) * 0.3;
+        let expected = Color::from_rgb(
+            faded(ground.r, block.r),
+            faded(ground.g, block.g),
+            faded(ground.b, block.b),
         );
-        put(
-            &mut document,
-            1,
-            0,
-            Hex::at_level(0).with_overlay(Some(DecorationKind::Smoke)),
+        let built = Hex::at_level(0).with_structure(Some(building));
+        assert_pixel(pixel_bytes(pixel(built, true)), expected, "labelled wall");
+    }
+
+    /// Woods and jungle grow as stands of separate plants, green over the ground, covering more
+    /// of it the denser the stand, with light stands leaving bare ground between plants. At a
+    /// small zoom a stand takes one flat color.
+    #[test]
+    fn woods_and_jungle_grow_as_stands() {
+        let Some((device, queue)) = device() else {
+            eprintln!("no graphics adapter; skipping");
+            return;
+        };
+        let clear = || Plain::Hex(Hex::at_level(0));
+        let stands = [
+            [
+                Foliage::LightWoods,
+                Foliage::HeavyWoods,
+                Foliage::UltraHeavyWoods,
+            ],
+            [
+                Foliage::LightJungle,
+                Foliage::HeavyJungle,
+                Foliage::UltraHeavyJungle,
+            ],
+        ];
+        for stand in stands {
+            let mut last_cover = 0;
+            for foliage in stand {
+                let hex = Hex::at_level(0).with_foliage(Some(foliage));
+                let (marks, bare) = hex_texture(&device, &queue, hex, clear(), 40.0);
+                // Leaves, lit or shaded, are clearly greener than they are red.
+                let cover = marks.iter().filter(|m| m[1] > m[0] + 25).count();
+                assert!(
+                    cover > last_cover,
+                    "{foliage:?} covers {cover}, not over {last_cover}"
+                );
+                if foliage == stand[0] {
+                    assert!(bare > 50, "{foliage:?} leaves {bare} bare");
+                }
+                last_cover = cover;
+                let (marks, _) = hex_texture(&device, &queue, hex, clear(), 8.0);
+                let flat = marks
+                    .first()
+                    .copied()
+                    .expect("a stand changes the ground's color");
+                assert!(
+                    marks
+                        .iter()
+                        .all(|m| (0..3).all(|c| (m[c] - flat[c]).abs() <= 1)),
+                    "{foliage:?} is not flat at a small zoom"
+                );
+            }
+        }
+    }
+
+    /// Planted fields grow in plots edged by dark hedgerows, sown in rows of plants lit from
+    /// the upper left, with the hedgerows and plants fading out at a small zoom.
+    #[test]
+    fn planted_fields_grow_in_plots() {
+        let Some((device, queue)) = device() else {
+            eprintln!("no graphics adapter; skipping");
+            return;
+        };
+        let field = Hex::at_level(0).with_foliage(Some(Foliage::PlantedFields));
+        let count = |radius| {
+            let bare = Plain::Hex(Hex::at_level(0));
+            let (marks, _) = hex_texture(&device, &queue, field, bare, radius);
+            let hedges = marks.iter().filter(|m| m.iter().all(|&v| v < 120)).count();
+            let lit_plants = marks.iter().filter(|m| m[1] > 190).count();
+            (hedges, lit_plants)
+        };
+        let (hedges, lit_plants) = count(40.0);
+        assert!(
+            hedges > 5 && lit_plants > 3,
+            "{hedges} hedge, {lit_plants} lit plant"
         );
-        let pixels = render(
+        assert_eq!(count(8.0), (0, 0), "hedges or plants at a small zoom");
+    }
+
+    /// The pixel `offset` hex radii from the center of the middle hex of a 3 by 3 map of clear
+    /// ground with `hexes` painted on it.
+    fn middle_pixel(
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        hexes: &[((i32, i32), Hex)],
+        offset: (f32, f32),
+    ) -> [u8; 4] {
+        let (size, radius) = (LABEL_FRAME, 40.0);
+        let mut document = Document::new(3, 3).unwrap();
+        for &((x, y), hex) in hexes {
+            put(&mut document, x, y, hex);
+        }
+        let mut pipeline = MapPipeline::new(device, queue, FORMAT);
+        let frame = labelled_frame(&document, size, radius, false);
+        let pixels = render(device, queue, &mut pipeline, &frame, size);
+        hex_pixel(&pixels, size, radius, (1, 1), offset)
+    }
+
+    /// Roads, rail and bridges run from the hex center toward each neighbor they join: straight
+    /// through, around elbows, to a dead end in the middle of the hex, or straight across when
+    /// joining nothing. Rail does not join roads, and a bridge joining one neighbor spans its
+    /// whole hex.
+    #[test]
+    fn ways_join_their_neighbors() {
+        let Some((device, queue)) = device() else {
+            eprintln!("no graphics adapter; skipping");
+            return;
+        };
+        // Dirt, whose middle runs plain between its ruts, so nothing covers the probes along
+        // each line's middle.
+        let road = Hex::at_level(0).with_route(Some(Route::DirtRoad));
+        let rail = Hex::at_level(0).with_route(Some(Route::Rail));
+        let bridge = Hex::at_level(0)
+            .with_water(Some(Water {
+                depth: 1,
+                flow: Flow::Still,
+            }))
+            .with_structure(Some(Structure::new(
+                StructureKind::Bridge,
+                1,
+                ConstructionClass::Light,
+            )));
+        let dirt = route_color(Route::DirtRoad);
+        // Clear ground rolls gently, so each probe of it is compared with the bare map.
+        let clear = |offset| pixel_color(middle_pixel(&device, &queue, &[], offset));
+        let deck = structure_base_color(StructureKind::Bridge);
+        // Points 0.6 hex radii from the middle hex's center toward its north, southeast, south
+        // and west, the last between two edges.
+        let (north, southeast, south, west) = ((0.0, -0.6), (0.52, 0.3), (0.0, 0.6), (-0.6, 0.0));
+        let probe =
+            |hexes: &[((i32, i32), Hex)], offset| middle_pixel(&device, &queue, hexes, offset);
+        let check = |hexes: &[((i32, i32), Hex)], expected: [(_, Color, &str); 4]| {
+            for (offset, color, place) in expected {
+                assert_pixel(probe(hexes, offset), color, place);
+            }
+        };
+        // The middle hex (1, 1) sits in an odd column: (1, 0) is north of it, (2, 1) southeast
+        // and (1, 2) south.
+        let vertical = [((1, 0), road), ((1, 1), road), ((1, 2), road)];
+        check(
+            &vertical,
+            [
+                (north, dirt, "straight north"),
+                (south, dirt, "straight south"),
+                (west, clear(west), "straight west"),
+                (southeast, clear(southeast), "straight southeast"),
+            ],
+        );
+        let elbow = [((1, 0), road), ((1, 1), road), ((2, 1), road)];
+        check(
+            &elbow,
+            [
+                (north, dirt, "elbow north"),
+                (southeast, dirt, "elbow southeast"),
+                (south, clear(south), "elbow south"),
+                (west, clear(west), "elbow west"),
+            ],
+        );
+        // The elbow curves through the hex rather than turning at its middle, which stays bare.
+        let middle = (0.0, 0.0);
+        assert_pixel(probe(&elbow, middle), clear(middle), "elbow middle");
+        // A sharp elbow, north to northeast, curves around the corner between them: through the
+        // point half a radius in from that corner, leaving the middle bare.
+        let sharp = [((1, 0), road), ((1, 1), road), ((2, 0), road)];
+        assert_pixel(probe(&sharp, (0.25, -0.433)), dirt, "sharp elbow bend");
+        assert_pixel(probe(&sharp, middle), clear(middle), "sharp elbow middle");
+        let dead_end = [((1, 0), road), ((1, 1), road)];
+        check(
+            &dead_end,
+            [
+                (north, dirt, "dead end north"),
+                ((0.0, 0.0), dirt, "dead end middle"),
+                (south, clear(south), "dead end south"),
+                (west, clear(west), "dead end west"),
+            ],
+        );
+        let rail_by_road = [((1, 0), road), ((1, 1), rail), ((1, 2), road)];
+        assert_pixel(probe(&rail_by_road, north), clear(north), "rail north");
+        assert_pixel(probe(&rail_by_road, south), clear(south), "rail south");
+        let bridge_end = [((1, 0), road), ((1, 1), bridge)];
+        for (offset, place) in [
+            (north, "bridge north"),
+            ((0.0, 0.0), "bridge middle"),
+            (south, "bridge south"),
+        ] {
+            assert_pixel(probe(&bridge_end, offset), deck, place);
+        }
+        let beside = probe(&bridge_end, west);
+        let deck_bytes = color_bytes(deck);
+        assert!(
+            (0..3).any(|c| (i32::from(beside[c]) - deck_bytes[c]).abs() > 30),
+            "the deck spreads west: {beside:?}"
+        );
+    }
+
+    /// Walls run from the hex center toward each neighboring wall, like roads, leaving the
+    /// ground beside them bare, and join only other walls.
+    #[test]
+    fn walls_join_their_neighbors() {
+        let Some((device, queue)) = device() else {
+            eprintln!("no graphics adapter; skipping");
+            return;
+        };
+        let class = ConstructionClass::Medium;
+        let wall =
+            Hex::at_level(0).with_structure(Some(Structure::new(StructureKind::Wall, 2, class)));
+        let road = Hex::at_level(0).with_route(Some(Route::DirtRoad));
+        let stone = crate::map_view::structure_color(StructureKind::Wall, class);
+        // Probes along the wall sit in the middle of a block, clear of the joints between
+        // blocks, which fall every 0.12 hex radii from the hex edge.
+        let (north, southeast) = ((0.0, -0.566), (0.49, 0.283));
+        let (south, west) = ((0.0, 0.6), (-0.6, 0.0));
+        let probe =
+            |hexes: &[((i32, i32), Hex)], offset| middle_pixel(&device, &queue, hexes, offset);
+        let bare = |offset| pixel_color(middle_pixel(&device, &queue, &[], offset));
+        // The middle hex (1, 1) sits in an odd column: (1, 0) is north of it, (2, 1) southeast
+        // and (1, 2) south.
+        let elbow = [((1, 0), wall), ((1, 1), wall), ((2, 1), wall)];
+        assert_pixel(probe(&elbow, north), stone, "elbow north");
+        assert_pixel(probe(&elbow, southeast), stone, "elbow southeast");
+        assert_pixel(probe(&elbow, south), bare(south), "elbow south");
+        assert_pixel(probe(&elbow, west), bare(west), "elbow west");
+        // A pillar stands where the arms meet, its top lighter than the wall.
+        let lift = |v: f32| v + (1.0 - v) * 0.14;
+        let pillar_top = Color::from_rgb(lift(stone.r), lift(stone.g), lift(stone.b));
+        assert_pixel(probe(&elbow, (0.0, 0.0)), pillar_top, "elbow pillar");
+        // A road beside a wall does not join it: the lone wall crosses its hex east to west.
+        let beside_road = [((1, 0), road), ((1, 1), wall)];
+        assert_pixel(probe(&beside_road, north), bare(north), "wall toward road");
+        assert_pixel(probe(&beside_road, (0.514, 0.0)), stone, "lone wall east");
+    }
+
+    /// Renders a lone `hex` with hexes `LABEL_RADIUS` pixels across and returns a lookup of the
+    /// RGB bytes `(dx, dy)` hex radii from its center. A way in a lone hex joins nothing, so it
+    /// crosses the hex east to west.
+    fn lone_hex(
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        hex: Hex,
+    ) -> impl Fn(f32, f32) -> [i32; 3] {
+        let (size, radius) = (LABEL_FRAME, LABEL_RADIUS);
+        let mut document = Document::new(1, 1).unwrap();
+        put(&mut document, 0, 0, hex);
+        let mut pipeline = MapPipeline::new(device, queue, FORMAT);
+        let frame = labelled_frame(&document, size, radius, false);
+        let pixels = render(device, queue, &mut pipeline, &frame, size);
+        move |dx, dy| {
+            let pixel = hex_pixel(&pixels, size, radius, (0, 0), (dx, dy));
+            [0, 1, 2].map(|c| i32::from(pixel[c]))
+        }
+    }
+
+    /// Offsets every 0.01 hex radii from -0.5 to 0.5 along a way crossing a lone hex, `across`
+    /// from its middle.
+    fn along_way(across: f32) -> impl Iterator<Item = (f32, f32)> {
+        (-50..=50).map(move |step| (step as f32 * 0.01, across))
+    }
+
+    /// Dirt roads have two darker wheel ruts either side of a plain middle, and ragged edges
+    /// that wander in and out.
+    #[test]
+    fn dirt_roads_have_ruts_and_ragged_edges() {
+        let Some((device, queue)) = device() else {
+            eprintln!("no graphics adapter; skipping");
+            return;
+        };
+        let road = Hex::at_level(0).with_route(Some(Route::DirtRoad));
+        let pixel = lone_hex(&device, &queue, road);
+        let dirt = color_bytes(route_color(Route::DirtRoad));
+        let rut = dirt.map(|v| (v as f32 * 0.72).round() as i32);
+        let bare = lone_hex(&device, &queue, Hex::at_level(0));
+        let near =
+            |bytes: [i32; 3], color: [i32; 3]| (0..3).all(|c| (bytes[c] - color[c]).abs() <= 1);
+        assert!(near(pixel(0.0, 0.0), dirt), "plain middle");
+        assert!(near(pixel(0.0, 0.07), rut), "rut");
+        // Near the edge, the road reaches past some points and falls short of others.
+        let edge: Vec<_> = along_way(0.15).map(|(dx, dy)| pixel(dx, dy)).collect();
+        assert!(
+            edge.iter().any(|&p| near(p, dirt)),
+            "the edge never reaches out"
+        );
+        assert!(
+            along_way(0.15).any(|(dx, dy)| near(pixel(dx, dy), bare(dx, dy))),
+            "the edge never pulls in"
+        );
+    }
+
+    /// Gravel roads have a bed speckled with darker stones between pale shoulders.
+    #[test]
+    fn gravel_roads_have_specks_and_shoulders() {
+        let Some((device, queue)) = device() else {
+            eprintln!("no graphics adapter; skipping");
+            return;
+        };
+        let road = Hex::at_level(0).with_route(Some(Route::GravelRoad));
+        let pixel = lone_hex(&device, &queue, road);
+        let gravel = color_bytes(route_color(Route::GravelRoad));
+        let speck = gravel.map(|v| (v as f32 * 0.75).round() as i32);
+        let near =
+            |bytes: [i32; 3], color: [i32; 3]| (0..3).all(|c| (bytes[c] - color[c]).abs() <= 1);
+        let bed: Vec<_> = along_way(0.0).map(|(dx, dy)| pixel(dx, dy)).collect();
+        assert!(bed.iter().any(|&p| near(p, gravel)), "no plain gravel");
+        assert!(bed.iter().any(|&p| near(p, speck)), "no darker stones");
+        let shoulder = route_color(Route::GravelRoad);
+        let lift = |v: f32| v + (1.0 - v) * 0.35;
+        let shoulder = color_bytes(Color::from_rgb(
+            lift(shoulder.r),
+            lift(shoulder.g),
+            lift(shoulder.b),
+        ));
+        for (dx, dy) in along_way(0.14) {
+            assert!(near(pixel(dx, dy), shoulder), "no shoulder at {dx}");
+        }
+    }
+
+    /// Rail track is two dark steel rails on wooden ties over a ballast bed, with the ground
+    /// showing beyond the bed.
+    #[test]
+    fn rail_is_track_on_ties() {
+        let Some((device, queue)) = device() else {
+            eprintln!("no graphics adapter; skipping");
+            return;
+        };
+        let pixel = lone_hex(
             &device,
             &queue,
-            &mut pipeline,
-            &frame(&document, size),
-            size,
+            Hex::at_level(0).with_route(Some(Route::Rail)),
         );
-        // Count, over the middle of each hex, pixels in the overlay's ink and in the bare
-        // ground: both must show.
-        let to_bytes =
-            |color: Color| [color.r, color.g, color.b].map(|v| (v * 255.0).round() as i32);
-        let near = |pixel: &[u8], color: [i32; 3]| {
-            (0..3).all(|channel| (i32::from(pixel[channel]) - color[channel]).abs() <= 2)
+        // The rails, thin at this zoom, still come out far darker than anything around them.
+        for (dx, dy) in along_way(0.055) {
+            assert!(pixel(dx, dy)[0] < 80, "no rail at {dx}");
+        }
+        // Between the rails, the warm brown ties alternate with the grayer ballast.
+        let middle: Vec<_> = along_way(0.0).map(|(dx, dy)| pixel(dx, dy)).collect();
+        let tie = |p: &&[i32; 3]| p[0] > p[2] + 40;
+        let ballast = |p: &&[i32; 3]| p[0] < p[2] + 20 && p[0] > 100;
+        assert!(middle.iter().any(|p| tie(&p)), "no ties");
+        assert!(middle.iter().any(|p| ballast(&p)), "no ballast");
+        let bare = lone_hex(&device, &queue, Hex::at_level(0));
+        assert_eq!(pixel(0.0, 0.25), bare(0.0, 0.25), "the bed spreads too far");
+    }
+
+    /// Bridge decks are concrete crossed by darker expansion joints, with dark railings along
+    /// both edges.
+    #[test]
+    fn bridges_have_joints_and_railings() {
+        let Some((device, queue)) = device() else {
+            eprintln!("no graphics adapter; skipping");
+            return;
         };
-        let clear = to_bytes(ground_color(Ground::Clear));
-        for (x, kind) in [(0, DecorationKind::Fire), (1, DecorationKind::Smoke)] {
-            // Smoke puffs are small at this zoom and antialiased into the ground, so any pixel
-            // clearly darker than the ground counts as smoke.
-            let ink = to_bytes(overlay_color(kind));
-            let inked_pixel = |pixel: &[u8]| match kind {
-                DecorationKind::Fire => near(pixel, ink),
-                DecorationKind::Smoke => {
-                    (0..3).all(|channel| i32::from(pixel[channel]) < clear[channel] - 20)
+        let bridge = Hex::at_level(0)
+            .with_water(Some(Water {
+                depth: 1,
+                flow: Flow::Still,
+            }))
+            .with_structure(Some(Structure::new(
+                StructureKind::Bridge,
+                1,
+                ConstructionClass::Light,
+            )));
+        let pixel = lone_hex(&device, &queue, bridge);
+        let deck = color_bytes(structure_base_color(StructureKind::Bridge));
+        assert_eq!(pixel(0.0, 0.0), deck, "plain deck");
+        // A deck that joins nothing enters at the hex's western vertex, so joints fall a third
+        // of the way in from either edge's middle.
+        let joint = pixel(-0.289, 0.0);
+        assert!(
+            (0..3).all(|c| joint[c] < deck[c] - 10),
+            "no joint: {joint:?}"
+        );
+        for (dx, dy) in along_way(0.148) {
+            let railing = pixel(dx, dy);
+            assert!(
+                (0..3).all(|c| railing[c] < deck[c] - 40),
+                "no railing at {dx}"
+            );
+        }
+    }
+
+    /// Paved roads carry a dashed white line down their middle, with a dash centered on each
+    /// hex of a straight road and gaps across its edges.
+    #[test]
+    fn paved_roads_have_lane_markings() {
+        let Some((device, queue)) = device() else {
+            eprintln!("no graphics adapter; skipping");
+            return;
+        };
+        let road = Hex::at_level(0).with_route(Some(Route::PavedRoad));
+        let vertical = [((1, 0), road), ((1, 1), road), ((1, 2), road)];
+        let paved = route_color(Route::PavedRoad);
+        let lane = Color::from_rgb(0.95, 0.95, 0.9);
+        // Dashes are two thirds of the way from a hex edge to its center apart, so along the
+        // middle of the road a dash sits at the center and a third of the way in from an edge,
+        // with a gap halfway between them.
+        for (offset, expected, place) in [
+            ((0.0, 0.0), lane, "dash at the center"),
+            ((0.0, -0.577), lane, "dash near the edge"),
+            ((0.0, -0.289), paved, "gap"),
+            ((0.1, 0.0), paved, "beside the dash"),
+        ] {
+            assert_pixel(
+                middle_pixel(&device, &queue, &vertical, offset),
+                expected,
+                place,
+            );
+        }
+    }
+
+    /// Water runs from the middle of its hex toward each neighboring water hex, leaving banks
+    /// beside it: straight through a river, around an elbow, into a round pond when it has no
+    /// water beside it, and across the whole hex in a lake.
+    #[test]
+    fn water_runs_toward_neighboring_water() {
+        let Some((device, queue)) = device() else {
+            eprintln!("no graphics adapter; skipping");
+            return;
+        };
+        let lake = Hex::at_level(0).with_water(Some(Water {
+            depth: 1,
+            flow: Flow::Still,
+        }));
+        let wet = |pixel: [u8; 4]| i32::from(pixel[2]) > i32::from(pixel[0]) + 60;
+        let (north, southeast, south, west) = ((0.0, -0.6), (0.52, 0.3), (0.0, 0.6), (-0.6, 0.0));
+        // The middle hex (1, 1) sits in an odd column: (1, 0) is north of it, (2, 1) southeast
+        // and (1, 2) south.
+        let river = [((1, 0), lake), ((1, 1), lake), ((1, 2), lake)];
+        let elbow = [((1, 0), lake), ((1, 1), lake), ((2, 1), lake)];
+        let pond = [((1, 1), lake)];
+        let all: Vec<_> = (0..3)
+            .flat_map(|x| (0..3).map(move |y| ((x, y), lake)))
+            .collect();
+        for (hexes, offset, water, place) in [
+            (&river[..], north, true, "river north"),
+            (&river[..], south, true, "river south"),
+            (&river[..], west, false, "river west"),
+            (&elbow[..], north, true, "elbow north"),
+            (&elbow[..], southeast, true, "elbow southeast"),
+            (&elbow[..], south, false, "elbow south"),
+            (&pond[..], (0.0, 0.0), true, "pond middle"),
+            (&pond[..], (0.75, 0.0), false, "pond bank"),
+            (&all[..], (0.8, 0.0), true, "lake east"),
+            (&all[..], (0.0, -0.8), true, "lake north"),
+        ] {
+            let pixel = middle_pixel(&device, &queue, hexes, offset);
+            assert_eq!(wet(pixel), water, "{place}: {pixel:?}");
+        }
+    }
+
+    /// Ice covers the water in a hex as a pale sheet and leaves its banks bare.
+    #[test]
+    fn ice_covers_only_the_water() {
+        let Some((device, queue)) = device() else {
+            eprintln!("no graphics adapter; skipping");
+            return;
+        };
+        let river = Hex::at_level(0).with_water(Some(Water {
+            depth: 1,
+            flow: Flow::Still,
+        }));
+        let frozen = river.with_condition(Some(Condition::Ice));
+        let hexes = [((1, 0), river), ((1, 1), frozen), ((1, 2), river)];
+        let ice = middle_pixel(&device, &queue, &hexes, (0.0, -0.6));
+        assert!(ice[0] > 120 && ice[2] > 200, "no ice on the water: {ice:?}");
+        let bank = middle_pixel(&device, &queue, &hexes, (-0.7, 0.0));
+        let bare = middle_pixel(&device, &queue, &[], (-0.7, 0.0));
+        assert_pixel(bank, pixel_color(bare), "bank");
+    }
+
+    /// Still water ripples, rapids streak, and torrents streak hardest, with their marks fading
+    /// out when the hexes are too small to show them.
+    #[test]
+    fn faster_water_streaks_more() {
+        let Some((device, queue)) = device() else {
+            eprintln!("no graphics adapter; skipping");
+            return;
+        };
+        let water = water_color();
+        let plain = Color::from_rgb(water.r * 0.92, water.g * 0.92, water.b * 0.92);
+        let plain_red = color_bytes(plain)[0];
+        let marks = |flow, radius| {
+            let hex = Hex::at_level(0).with_water(Some(Water { depth: 1, flow }));
+            let (marks, _) = hex_texture(&device, &queue, hex, Plain::Color(plain), radius);
+            // Ripples and streaks lighten the water far more than a torrent's froth does.
+            marks.iter().filter(|m| m[0] > plain_red + 60).count()
+        };
+        let (still, rapids, torrent) = (
+            marks(Flow::Still, 40.0),
+            marks(Flow::Rapids, 40.0),
+            marks(Flow::Torrent, 40.0),
+        );
+        assert!(
+            0 < still && still < rapids && rapids < torrent,
+            "{still} still, {rapids} rapids, {torrent} torrent"
+        );
+        assert_eq!(marks(Flow::Torrent, 8.0), 0, "streaks at a small zoom");
+    }
+
+    /// How far, on average over `marks` and `bare` unmarked pixels, a texture moves the pixels
+    /// of `ground` from its color, and how many of the marks are lighter and darker than it.
+    fn relief_spread(marks: &[[i32; 3]], bare: usize, ground: Ground) -> (f32, usize, usize) {
+        let bytes = color_bytes(ground_color(ground));
+        let shift = |m: &[i32; 3]| (0..3).map(|c| m[c] - bytes[c]).sum::<i32>();
+        let total: i32 = marks.iter().map(|m| shift(m).abs()).sum();
+        let lighter = marks.iter().filter(|m| shift(m) > 6).count();
+        let darker = marks.iter().filter(|m| shift(m) < -6).count();
+        (total as f32 / (marks.len() + bare) as f32, lighter, darker)
+    }
+
+    /// Rough ground is shaded into hummocks, lit on some slopes and shadowed on others, and ultra
+    /// rough ground into rougher ones; both fade to plain ground at a small zoom.
+    #[test]
+    fn rough_ground_has_hummocks() {
+        let Some((device, queue)) = device() else {
+            eprintln!("no graphics adapter; skipping");
+            return;
+        };
+        let mut last_spread = 0.0;
+        for ground in [Ground::Rough, Ground::UltraRough] {
+            let (marks, bare) = ground_texture(&device, &queue, ground, 40.0);
+            let (spread, lighter, darker) = relief_spread(&marks, bare, ground);
+            assert!(
+                lighter > 20 && darker > 20,
+                "{ground:?}: {lighter} lit, {darker} shadowed"
+            );
+            assert!(
+                spread > last_spread,
+                "{ground:?} spreads {spread}, not over {last_spread}"
+            );
+            last_spread = spread;
+            let (marks, _) = ground_texture(&device, &queue, ground, 8.0);
+            assert!(marks.is_empty(), "{ground:?} shaded at a small zoom");
+        }
+    }
+
+    /// Rubble carries ruined walls and debris, dark walls and block edges with lighter tops and
+    /// faces, and ultra rubble more of them; both fade to plain ground at a small zoom.
+    #[test]
+    fn rubble_has_ruins_and_debris() {
+        let Some((device, queue)) = device() else {
+            eprintln!("no graphics adapter; skipping");
+            return;
+        };
+        let mut last_marks = 0;
+        for ground in [Ground::Rubble, Ground::UltraRubble] {
+            let (marks, bare) = ground_texture(&device, &queue, ground, 40.0);
+            let (_, lighter, darker) = relief_spread(&marks, bare, ground);
+            assert!(
+                lighter > 0 && darker > 20,
+                "{ground:?}: {lighter} light, {darker} dark"
+            );
+            assert!(
+                marks.len() > last_marks,
+                "{ground:?} marks {}, not over {last_marks}",
+                marks.len()
+            );
+            last_marks = marks.len();
+            let (marks, _) = ground_texture(&device, &queue, ground, 8.0);
+            assert!(marks.is_empty(), "{ground:?} marked at a small zoom");
+        }
+    }
+
+    /// Samples the middle of the middle hex of a 3 by 3 map of bare `ground` drawn with hexes
+    /// `radius` pixels across, returning the colors of the pixels its texture marks and the
+    /// count of pixels of bare ground.
+    fn ground_texture(
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        ground: Ground,
+        radius: f32,
+    ) -> (Vec<[i32; 3]>, usize) {
+        let hex = Hex::at_level(0).with_ground(ground);
+        hex_texture(
+            device,
+            queue,
+            hex,
+            Plain::Color(ground_color(ground)),
+            radius,
+        )
+    }
+
+    /// What a sampled pixel counts as unmarked against: one flat color, or the same pixel of
+    /// the same map filled with a bare hex.
+    enum Plain {
+        Color(Color),
+        Hex(Hex),
+    }
+
+    /// Renders a 3 by 3 map filled with `hex`, with hexes `radius` pixels across.
+    fn filled_map(device: &wgpu::Device, queue: &wgpu::Queue, hex: Hex, radius: f32) -> Vec<u8> {
+        let mut document = Document::new(3, 3).unwrap();
+        for x in 0..3 {
+            for y in 0..3 {
+                put(&mut document, x, y, hex);
+            }
+        }
+        let mut pipeline = MapPipeline::new(device, queue, FORMAT);
+        let frame = labelled_frame(&document, LABEL_FRAME, radius, false);
+        render(device, queue, &mut pipeline, &frame, LABEL_FRAME)
+    }
+
+    /// Samples the middle of the middle hex of a 3 by 3 map of `hex` drawn with hexes `radius`
+    /// pixels across, returning the colors of the pixels that differ from `plain` and the count
+    /// of pixels that match it.
+    fn hex_texture(
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        hex: Hex,
+        plain: Plain,
+        radius: f32,
+    ) -> (Vec<[i32; 3]>, usize) {
+        let size = LABEL_FRAME;
+        let pixels = filled_map(device, queue, hex, radius);
+        let reference = match plain {
+            Plain::Hex(bare) => Some(filled_map(device, queue, bare, radius)),
+            Plain::Color(_) => None,
+        };
+        let flat = match plain {
+            Plain::Color(color) => color_bytes(color),
+            Plain::Hex(_) => [0; 3],
+        };
+        let (mut marks, mut bare) = (Vec::new(), 0);
+        for step_y in -10..=10 {
+            for step_x in -10..=10 {
+                let offset = (step_x as f32 * 0.05, step_y as f32 * 0.05);
+                let pixel = hex_pixel(&pixels, size, radius, (1, 1), offset);
+                // Skip the hex's antialiased border, which a small zoom brings in range.
+                if pixel[3] != 255 {
+                    continue;
                 }
-            };
-            let stagger = if x % 2 == 0 { 1.0 } else { 0.5 };
-            let center_x = OFFSET[0] + RADIUS * (1.0 + 1.5 * x as f32);
-            let center_y = OFFSET[1] + RADIUS * 3.0_f32.sqrt() * stagger;
-            let (mut inked, mut bare) = (0, 0);
-            let reach = (RADIUS * 0.6) as i32;
-            for dy in -reach..=reach {
-                for dx in -reach..=reach {
-                    let px = (center_x as i32 + dx) as u32;
-                    let py = (center_y as i32 + dy) as u32;
-                    let index = ((py * size.width + px) * 4) as usize;
-                    let pixel = &pixels[index..index + 4];
-                    inked += usize::from(inked_pixel(pixel));
-                    bare += usize::from(near(pixel, clear));
+                let channels = [0, 1, 2].map(|c| i32::from(pixel[c]));
+                let bytes = reference.as_ref().map_or(flat, |reference| {
+                    let there = hex_pixel(reference, size, radius, (1, 1), offset);
+                    [0, 1, 2].map(|c| i32::from(there[c]))
+                });
+                if (0..3).all(|c| (channels[c] - bytes[c]).abs() <= 1) {
+                    bare += 1;
+                } else {
+                    marks.push(channels);
                 }
             }
+        }
+        (marks, bare)
+    }
+
+    /// A color's channels as bytes.
+    fn color_bytes(color: Color) -> [i32; 3] {
+        [color.r, color.g, color.b].map(|v| (v * 255.0).round() as i32)
+    }
+
+    /// Sand is shaded into dunes, lit on their long windward slopes and shadowed on their lee
+    /// faces, with wind ripples over them, all fading to plain sand at a small zoom.
+    #[test]
+    fn sand_has_dunes() {
+        let Some((device, queue)) = device() else {
+            eprintln!("no graphics adapter; skipping");
+            return;
+        };
+        let (marks, bare) = ground_texture(&device, &queue, Ground::Sand, 40.0);
+        let (_, lighter, darker) = relief_spread(&marks, bare, Ground::Sand);
+        assert!(
+            lighter > 20 && darker > 20,
+            "{lighter} lit, {darker} shadowed"
+        );
+        let (marks, _) = ground_texture(&device, &queue, Ground::Sand, 8.0);
+        assert!(marks.is_empty(), "dunes at a small zoom");
+    }
+
+    /// Tundra carries patches of pale lichen and dark moss over lit tussocks, all fading to
+    /// plain tundra at a small zoom.
+    #[test]
+    fn tundra_has_lichen_and_moss() {
+        let Some((device, queue)) = device() else {
+            eprintln!("no graphics adapter; skipping");
+            return;
+        };
+        let tundra = color_bytes(ground_color(Ground::Tundra));
+        let (marks, _) = ground_texture(&device, &queue, Ground::Tundra, 40.0);
+        let lichen = marks
+            .iter()
+            .filter(|m| (0..3).all(|c| m[c] > tundra[c] + 10))
+            .count();
+        let moss = marks
+            .iter()
+            .filter(|m| (0..3).all(|c| m[c] < tundra[c] - 20))
+            .count();
+        assert!(lichen > 5 && moss > 5, "{lichen} lichen, {moss} moss");
+        let (marks, _) = ground_texture(&device, &queue, Ground::Tundra, 8.0);
+        assert!(marks.is_empty(), "tundra textured at a small zoom");
+    }
+
+    /// Pavement is laid as a concrete lot: slabs of slightly different shades, some lighter
+    /// and some darker than the pavement's color, between darker joints, all fading to plain
+    /// pavement at a small zoom.
+    #[test]
+    fn pavement_is_a_concrete_lot() {
+        let Some((device, queue)) = device() else {
+            eprintln!("no graphics adapter; skipping");
+            return;
+        };
+        let (marks, bare) = ground_texture(&device, &queue, Ground::Pavement, 40.0);
+        let (_, lighter, darker) = relief_spread(&marks, bare, Ground::Pavement);
+        let pavement = color_bytes(ground_color(Ground::Pavement));
+        let joints = marks
+            .iter()
+            .filter(|m| (0..3).all(|c| m[c] < pavement[c] - 20))
+            .count();
+        assert!(
+            lighter > 20 && darker > 20 && joints > 5,
+            "{lighter} lighter, {darker} darker, {joints} joint"
+        );
+        let (marks, _) = ground_texture(&device, &queue, Ground::Pavement, 8.0);
+        assert!(marks.is_empty(), "pavement textured at a small zoom");
+    }
+
+    /// Swamp is a bog of murky pools, bluer than the swamp, among darker mud and reeds, all
+    /// fading to plain swamp at a small zoom.
+    #[test]
+    fn swamp_is_a_bog_with_pools() {
+        let Some((device, queue)) = device() else {
+            eprintln!("no graphics adapter; skipping");
+            return;
+        };
+        let swamp = color_bytes(ground_color(Ground::Swamp));
+        let (marks, _) = ground_texture(&device, &queue, Ground::Swamp, 40.0);
+        let pools = marks.iter().filter(|m| m[2] > swamp[2] + 10).count();
+        let dark = marks
+            .iter()
+            .filter(|m| (0..3).all(|c| m[c] < swamp[c] - 15))
+            .count();
+        assert!(pools > 5 && dark > 5, "{pools} pool, {dark} mud or reed");
+        let (marks, _) = ground_texture(&device, &queue, Ground::Swamp, 8.0);
+        assert!(marks.is_empty(), "swamp textured at a small zoom");
+    }
+
+    /// Molten magma glows yellow toward the middle of its lava cells and darkens along the
+    /// seams between them; magma crust is split by bright orange cracks. Both fade to their
+    /// plain colors when the hexes are too small to show them.
+    #[test]
+    fn magma_glows() {
+        let Some((device, queue)) = device() else {
+            eprintln!("no graphics adapter; skipping");
+            return;
+        };
+        let magma = color_bytes(ground_color(Ground::Magma));
+        let (marks, _) = ground_texture(&device, &queue, Ground::Magma, 40.0);
+        let hot = marks.iter().filter(|m| m[1] > magma[1] + 60).count();
+        let cool = marks
+            .iter()
+            .filter(|m| (0..3).all(|c| m[c] < magma[c]))
+            .count();
+        assert!(hot > 10 && cool > 10, "{hot} hot, {cool} cool");
+        let crust = color_bytes(ground_color(Ground::MagmaCrust));
+        let (marks, _) = ground_texture(&device, &queue, Ground::MagmaCrust, 40.0);
+        let cracks = marks.iter().filter(|m| m[0] > crust[0] + 80).count();
+        assert!(cracks > 10, "{cracks} cracks");
+        for ground in [Ground::Magma, Ground::MagmaCrust] {
+            let (marks, _) = ground_texture(&device, &queue, ground, 8.0);
+            assert!(marks.is_empty(), "{ground:?} textured at a small zoom");
+        }
+    }
+
+    /// Heavy industrial ground is built up with structures lit from the upper left and casting
+    /// shadows over a concrete yard, all fading to the plain ground color at a small zoom.
+    #[test]
+    fn heavy_industry_is_built_up() {
+        let Some((device, queue)) = device() else {
+            eprintln!("no graphics adapter; skipping");
+            return;
+        };
+        let ground = Ground::HeavyIndustrial;
+        let (marks, bare) = ground_texture(&device, &queue, ground, 40.0);
+        let (_, lighter, darker) = relief_spread(&marks, bare, ground);
+        assert!(
+            lighter > 20 && darker > 20,
+            "{lighter} lit, {darker} shadowed"
+        );
+        let (marks, _) = ground_texture(&device, &queue, ground, 8.0);
+        assert!(marks.is_empty(), "industry drawn at a small zoom");
+    }
+
+    /// Fire draws as a flame icon, outlined in deep red and filled with the fire color, over
+    /// scorched ground darker than the same ground unburned.
+    #[test]
+    fn fire_draws_a_flame_over_scorched_ground() {
+        let Some((device, queue)) = device() else {
+            eprintln!("no graphics adapter; skipping");
+            return;
+        };
+        let fire = Hex::at_level(0).with_overlay(Some(DecorationKind::Fire));
+        let pixel = lone_hex(&device, &queue, fire);
+        let bare = lone_hex(&device, &queue, Hex::at_level(0));
+        let ink = color_bytes(overlay_color(DecorationKind::Fire));
+        let near =
+            |bytes: [i32; 3], color: [i32; 3]| (0..3).all(|c| (bytes[c] - color[c]).abs() <= 2);
+        let samples: Vec<_> = (-25..=25)
+            .flat_map(|y| (-25..=25).map(move |x| (x as f32 * 0.02, y as f32 * 0.02)))
+            .collect();
+        let inked = samples
+            .iter()
+            .filter(|&&(dx, dy)| near(pixel(dx, dy), ink))
+            .count();
+        let outline = samples
+            .iter()
+            .filter(|&&(dx, dy)| {
+                let p = pixel(dx, dy);
+                p[0] > 120 && p[1] < 50 && p[2] < 30
+            })
+            .count();
+        assert!(
+            inked > 10 && outline > 5,
+            "{inked} fire-colored, {outline} outline"
+        );
+        // Well clear of the flames, the ground is scorched darker than it would be unburned.
+        for offset in [(-0.6, 0.0), (0.6, 0.0), (0.0, -0.6)] {
+            let (burned, unburned) = (pixel(offset.0, offset.1), bare(offset.0, offset.1));
             assert!(
-                inked > 10 && bare > 20,
-                "{kind:?}: {inked} inked, {bare} bare"
+                (0..3).all(|c| burned[c] < unburned[c] - 8),
+                "{offset:?}: {burned:?} is not scorched from {unburned:?}"
+            );
+        }
+    }
+
+    /// Smoke draws as bands streaming across the hex: lighter and darker than the smoke color,
+    /// outlined in dark gray, with the terrain beyond them untouched.
+    #[test]
+    fn smoke_draws_streaming_bands() {
+        let Some((device, queue)) = device() else {
+            eprintln!("no graphics adapter; skipping");
+            return;
+        };
+        let smoke = Hex::at_level(0).with_overlay(Some(DecorationKind::Smoke));
+        let pixel = lone_hex(&device, &queue, smoke);
+        let bare = lone_hex(&device, &queue, Hex::at_level(0));
+        let ink = color_bytes(overlay_color(DecorationKind::Smoke));
+        let (mut lit, mut shaded, mut outline) = (0, 0, 0);
+        for y in -25..=25 {
+            for x in -25..=25 {
+                let p = pixel(x as f32 * 0.02, y as f32 * 0.02);
+                let gray = (p[0] - p[2]).abs() < 20;
+                lit += usize::from(gray && (0..3).all(|c| p[c] > ink[c] + 10));
+                shaded += usize::from(gray && (0..3).all(|c| p[c] < ink[c] - 10 && p[c] > 100));
+                outline += usize::from(p.iter().all(|&v| v < 90));
+            }
+        }
+        assert!(
+            lit > 10 && shaded > 10 && outline > 5,
+            "{lit} lit, {shaded} shaded, {outline} outline"
+        );
+        for offset in [(-0.75, 0.0), (0.0, 0.7)] {
+            assert_eq!(
+                pixel(offset.0, offset.1),
+                bare(offset.0, offset.1),
+                "{offset:?}"
             );
         }
     }
