@@ -450,6 +450,7 @@ mod tests {
             decorations: Default::default(),
             static_decorations: Default::default(),
             points_of_interest: Default::default(),
+            regions: Default::default(),
             terrain: None,
         };
         map.establish_terrain(Arc::new(

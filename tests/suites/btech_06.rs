@@ -38,6 +38,9 @@ mod btech_map_fields;
 #[path = "../btech_map_points_of_interest.rs"]
 mod btech_map_points_of_interest;
 
+#[path = "../btech_map_regions.rs"]
+mod btech_map_regions;
+
 #[path = "../btech_map_save.rs"]
 mod btech_map_save;
 

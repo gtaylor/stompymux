@@ -48,6 +48,11 @@
 //! x = 6
 //! y = 1
 //! elevation = 3              # optional, levels above (or below) the hex's ground level
+//!
+//! [[regions]]
+//! type = "deployment"        # case-sensitive; any non-empty text
+//! name = "North LZ"
+//! corners = [[1, 0], [6, 0], [6, 1], [1, 1]]  # outline, in order
 //! ```
 //!
 //! Grids are TOML literal strings (`'''`), since `"` is the heavy-woods symbol. `terrain` and
@@ -61,10 +66,13 @@
 //!
 //! Points of interest are metadata for scripts, which read them through
 //! `btech.map.points_of_interest`. Units never see them and they do not change the terrain.
+//!
+//! Regions are script metadata too. Each lists its corner hexes in outline order, and its
+//! members are the outline plus every hex inside it; see [`MapRegion`].
 use crate::{
     Condition, ConstructionClass, DecorationKind, Flow, Foliage, Ground, Hex, Light, MAX_HEIGHT,
-    MAX_VISIBILITY, MapAsset, MapFlag, MapPointOfInterest, Route, Structure, StructureKind, Water,
-    Wind,
+    MAX_VISIBILITY, MapAsset, MapFlag, MapPointOfInterest, MapRegion, Route, Structure,
+    StructureKind, Water, Wind,
 };
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -107,6 +115,8 @@ struct MapFile {
     structures: Vec<StructureEntry>,
     #[serde(default)]
     points_of_interest: Vec<MapPointOfInterest>,
+    #[serde(default)]
+    regions: Vec<MapRegion>,
 }
 
 /// One building, wall or bridge: hexes sharing a kind, height and construction factor.
@@ -439,6 +449,9 @@ impl MapAsset {
         for point in &file.points_of_interest {
             point.validate(width as i64, rows as i64)?;
         }
+        for region in &file.regions {
+            region.validate(width as i64, rows as i64)?;
+        }
         if let Some(visibility) = file.visibility {
             ensure!(
                 visibility <= MAX_VISIBILITY,
@@ -465,6 +478,7 @@ impl MapAsset {
             wind: file.wind,
             hexes: Arc::new(hexes),
             points_of_interest: file.points_of_interest,
+            regions: file.regions,
         })
     }
 
@@ -597,6 +611,19 @@ impl MapAsset {
                 .trim_end()
             )?;
         }
+        for region in &self.regions {
+            region.validate(i64::from(self.width), i64::from(self.height))?;
+        }
+        if !self.regions.is_empty() {
+            writeln!(
+                text,
+                "\n{}",
+                toml::to_string(&Regions {
+                    regions: &self.regions,
+                })?
+                .trim_end()
+            )?;
+        }
         Ok(text)
     }
 }
@@ -621,6 +648,12 @@ struct Flags {
 #[derive(Serialize)]
 struct PointsOfInterest<'a> {
     points_of_interest: &'a [MapPointOfInterest],
+}
+
+/// Helper so regions are written as `[[regions]]` tables with TOML's own string quoting.
+#[derive(Serialize)]
+struct Regions<'a> {
+    regions: &'a [MapRegion],
 }
 
 #[cfg(test)]
@@ -774,6 +807,7 @@ hexes = [[2, 1]]
                     wind: None,
                     hexes: Arc::new(vec![hex]),
                     points_of_interest: Vec::new(),
+                    regions: Vec::new(),
                 };
                 let text = map.to_file().unwrap();
                 assert_eq!(MapAsset::parse(&text).unwrap(), map, "{text}");
@@ -869,6 +903,85 @@ hexes = [[2, 1]]
                 .unwrap()
                 .contains("points_of_interest")
         );
+    }
+
+    /// Regions keep their file order, type spelling and corner order, and survive a save and
+    /// reload; a map without regions writes none.
+    #[test]
+    fn regions_round_trip() {
+        let source = format!(
+            "{SAMPLE}\n[[regions]]\ntype = \"deployment\"\nname = \"North \\\"LZ\\\"\"\ncorners = [[4, 0], [0, 1], [3, 1]]\n\n[[regions]]\ntype = \"Deployment\"\nname = \"Ford\"\ncorners = [[4, 0]]\n"
+        );
+        let map = MapAsset::parse(&source).unwrap();
+        assert_eq!(
+            map.regions,
+            [
+                MapRegion {
+                    kind: "deployment".into(),
+                    name: "North \"LZ\"".into(),
+                    corners: vec![[4, 0], [0, 1], [3, 1]],
+                },
+                MapRegion {
+                    kind: "Deployment".into(),
+                    name: "Ford".into(),
+                    corners: vec![[4, 0]],
+                },
+            ]
+        );
+        let text = map.to_file().unwrap();
+        assert!(
+            text.contains("corners = [[4, 0], [0, 1], [3, 1]]"),
+            "{text}"
+        );
+        assert_eq!(MapAsset::parse(&text).unwrap(), map);
+        assert!(
+            !MapAsset::parse(SAMPLE)
+                .unwrap()
+                .to_file()
+                .unwrap()
+                .contains("regions")
+        );
+    }
+
+    #[test]
+    fn rejects_malformed_regions() {
+        let base = "terrain = '..'\nlevel = '00'\n[[regions]]\n";
+        for (extra, message) in [
+            ("type = 'a'\nname = 'b'\ncorners = [[2, 0]]", "off the map"),
+            (
+                "type = 'a'\nname = 'b'\ncorners = [[0, 0], [0, 1]]",
+                "off the map",
+            ),
+            (
+                "type = 'a'\nname = 'b'\ncorners = []",
+                "at least one corner",
+            ),
+            (
+                "type = ''\nname = 'b'\ncorners = [[0, 0]]",
+                "type must be non-empty",
+            ),
+            (
+                "type = 'a'\nname = ''\ncorners = [[0, 0]]",
+                "name must be non-empty",
+            ),
+            ("type = 'a'\nname = 'b'", "invalid map file"),
+            (
+                "type = 'a'\nname = 'b'\ncorners = [[0]]",
+                "invalid map file",
+            ),
+            (
+                "type = 'a'\nname = 'b'\ncorners = [[0, -1]]",
+                "invalid map file",
+            ),
+            (
+                "type = 'a'\nname = 'b'\ncorners = [[0, 0]]\nhexes = 1",
+                "invalid map file",
+            ),
+        ] {
+            let source = format!("{base}{extra}\n");
+            let error = format!("{:#}", MapAsset::parse(&source).unwrap_err());
+            assert!(error.contains(message), "{message:?} not in {error:?}");
+        }
     }
 
     #[test]
@@ -984,5 +1097,30 @@ hexes = [[2, 1]]
             let error = format!("{:#}", MapAsset::parse(&source).unwrap_err());
             assert!(error.contains(message), "{message:?} not in {error:?}");
         }
+    }
+
+    /// The example in the map file documentation loads and survives a save, so the docs
+    /// cannot drift from the format.
+    #[test]
+    fn documented_example_loads() {
+        let docs = include_str!("../../../docs/content/docs/concepts/map-files.md");
+        let example = docs
+            .split_once("## Example")
+            .and_then(|(_, rest)| rest.split_once("```toml\n"))
+            .and_then(|(_, rest)| rest.split_once("```"))
+            .map(|(block, _)| block)
+            .expect("map-files.md has a toml block under ## Example");
+        let map = MapAsset::parse(example).unwrap();
+        assert_eq!((map.width, map.height), (8, 2));
+        assert!(map.hex(4, 0).unwrap().structure().is_some());
+        assert!(map.hex(7, 1).unwrap().structure().is_some());
+        assert_eq!(map.hex(2, 0).unwrap().overlay(), Some(DecorationKind::Fire));
+        assert_eq!(
+            map.hex(3, 1).unwrap().overlay(),
+            Some(DecorationKind::Smoke)
+        );
+        assert_eq!(map.points_of_interest.len(), 1);
+        assert_eq!(map.regions.len(), 1);
+        assert_eq!(MapAsset::parse(&map.to_file().unwrap()).unwrap(), map);
     }
 }

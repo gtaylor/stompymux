@@ -1,5 +1,6 @@
 //! The hex map view: camera geometry, the colors of every hex layer, and pan, zoom and paint
-//! input.
+//! input. A left press reports [`Message::Press`] and dragging onto further hexes reports
+//! [`Message::Paint`], so the selected tool decides what each does.
 //!
 //! Hexes are flat-topped in staggered columns, with even columns offset half a hex south, the
 //! same layout as [`HexCoordinate::center`]. Map-space pixels put the top-left of the
@@ -100,7 +101,7 @@ impl Camera {
     }
 
     /// Screen center of a hex.
-    fn center(self, coordinate: HexCoordinate) -> Point {
+    pub fn center(self, coordinate: HexCoordinate) -> Point {
         let height = SQRT_3 * self.radius;
         let stagger = if coordinate.x.rem_euclid(2) == 0 {
             1.0
@@ -274,6 +275,8 @@ pub struct MapView<'a> {
     pub camera: Camera,
     pub hover: Option<HexCoordinate>,
     pub brush_radius: u8,
+    /// Index of the region to mark as selected.
+    pub selected_region: Option<usize>,
 }
 
 impl MapView<'_> {
@@ -314,7 +317,7 @@ impl shader::Program<Message> for MapView<'_> {
                     return Some(Action::publish(Message::Pick(coordinate)).and_capture());
                 }
                 state.drag = Drag::Painting { last: coordinate };
-                Some(Action::publish(Message::Paint(coordinate)).and_capture())
+                Some(Action::publish(Message::Press(coordinate)).and_capture())
             }
             (
                 mouse::Event::ButtonPressed(mouse::Button::Right | mouse::Button::Middle),
@@ -375,6 +378,8 @@ impl shader::Program<Message> for MapView<'_> {
             feed: self.document.hex_feed(),
             width: map.width,
             height: map.height,
+            regions: self.document.region_feed(),
+            selected_region: self.selected_region,
             uniforms: Uniforms {
                 size: [bounds.width, bounds.height],
                 offset: [camera.offset.x, camera.offset.y],

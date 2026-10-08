@@ -117,6 +117,29 @@ CREATE TABLE btech_map_points_of_interest (
     PRIMARY KEY (map_dbref, position)
 ) STRICT, WITHOUT ROWID;
 
+-- btech_regions.rs.
+-- Scripted regions from a map file, in file order. `type` is case-sensitive.
+CREATE TABLE btech_map_regions (
+    map_dbref INTEGER NOT NULL REFERENCES objects(dbref) ON DELETE CASCADE,
+    position INTEGER NOT NULL CHECK (position >= 0),
+    type TEXT NOT NULL CHECK (length(type) > 0),
+    name TEXT NOT NULL CHECK (length(name) > 0),
+    PRIMARY KEY (map_dbref, position)
+) STRICT, WITHOUT ROWID;
+
+-- btech_regions.rs.
+-- Each region's corner hexes in outline order; `region` is the region's `position`.
+CREATE TABLE btech_map_region_corners (
+    map_dbref INTEGER NOT NULL,
+    region INTEGER NOT NULL,
+    position INTEGER NOT NULL CHECK (position >= 0),
+    x INTEGER NOT NULL CHECK (x BETWEEN 0 AND 999),
+    y INTEGER NOT NULL CHECK (y BETWEEN 0 AND 999),
+    PRIMARY KEY (map_dbref, region, position),
+    FOREIGN KEY (map_dbref, region)
+        REFERENCES btech_map_regions(map_dbref, position) ON DELETE CASCADE
+) STRICT, WITHOUT ROWID;
+
 -- btech_map_random.rs.
 -- Map-owned random stream for autonomous fire events, stored as typed generator state.
 CREATE TABLE btech_map_random (

@@ -34,6 +34,12 @@ struct Uniforms {
 @group(0) @binding(1) var<uniform> palette: array<vec4<f32>, 34>;
 // One texel of packed layers per hex, indexed by hex coordinate; see `hex_texel` in render.rs.
 @group(0) @binding(2) var hexes: texture_2d<u32>;
+// One byte per hex marking region membership; see `RegionMask` in render.rs.
+@group(0) @binding(3) var regions: texture_2d<u32>;
+
+// Region mask bits, matching `RegionMask` in render.rs.
+const REGION_MEMBER: u32 = 1u;
+const REGION_SELECTED: u32 = 2u;
 
 // Where each layer's colors start in the palette, matching the `PALETTE_` constants in
 // render.rs.
@@ -1899,6 +1905,40 @@ fn backdrop_color(
     return color;
 }
 
+// The region mask byte of a hex, or zero off the map.
+fn region_bits(hex: vec2<i32>) -> u32 {
+    if any(hex < vec2<i32>(0)) || any(hex >= vec2<i32>(u.map_size)) {
+        return 0u;
+    }
+    return textureLoad(regions, hex, 0).r;
+}
+
+// Region hexes are tinted, the selected region's more strongly, and each region is outlined
+// along the hex edges where it meets hexes outside it. Only the edge nearest the pixel needs
+// checking, by looking up the neighbor across it.
+fn draw_regions(color: vec3<f32>, hex: vec2<i32>, local: vec2<f32>) -> vec3<f32> {
+    let bits = region_bits(hex);
+    if bits == 0u {
+        return color;
+    }
+    let selected = (bits & REGION_SELECTED) != 0u;
+    let bit = select(REGION_MEMBER, REGION_SELECTED, selected);
+    let tint = select(vec3<f32>(0.70, 0.45, 1.0), vec3<f32>(0.20, 0.85, 1.0), selected);
+    var result = mix(color, tint, select(0.16, 0.30, selected));
+    // Edge midpoints of a flat-topped hex lie at 30 degrees plus multiples of 60.
+    let sixth = 1.0471976;
+    let side = round((atan2(local.y, local.x) - sixth * 0.5) / sixth);
+    let angle = sixth * (side + 0.5);
+    let normal = vec2<f32>(cos(angle), sin(angle));
+    let neighbor = hex_at(center(hex) + normal * SQRT_3);
+    if (region_bits(neighbor) & bit) != 0u {
+        return result;
+    }
+    let width = select(1.5, 3.0, selected);
+    let inside = (APOTHEM - dot(local, normal)) * u.radius - u.grid_gap * 0.5;
+    return mix(result, tint, clamp(width + 0.5 - inside, 0.0, 1.0) * 0.95);
+}
+
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let point = (in.pixel - u.offset) / u.radius;
@@ -1992,6 +2032,8 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             color = ink_number(color, backdrop, local, ROW_OFFSET, ROW_SIZE, depth, depth_sign);
         }
     }
+
+    color = draw_regions(color, hex, local);
 
     if u.brush >= 0.0 && hex_distance(hex, vec2<i32>(u.hover)) <= i32(u.brush) {
         color = mix(color, vec3<f32>(1.0), clamp(2.5 - edge, 0.0, 1.0));

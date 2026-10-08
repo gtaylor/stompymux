@@ -28,6 +28,7 @@ mod btech_player_configuration;
 mod btech_points_of_interest;
 mod btech_reactor;
 mod btech_recovery;
+mod btech_regions;
 mod btech_static_decorations;
 mod btech_terrain;
 mod btech_tows;
@@ -66,6 +67,8 @@ const TABLES: &[&str] = &[
     "btech_landing_order",
     "btech_map_decorations",
     "btech_map_points_of_interest",
+    "btech_map_regions",
+    "btech_map_region_corners",
     "btech_map_random",
     "btech_building_repair",
     "btech_artillery",

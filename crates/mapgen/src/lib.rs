@@ -28,11 +28,15 @@
 //! Generation runs in stages, each drawing from its own seeded random stream: elevation and
 //! water, rivers, ground cover, settlements, roads, then fire and freezing.
 //!
+//! Each settlement is also marked for scripts: the map gets a point of interest at its center
+//! and a region covering it, both of type [`SETTLEMENT_TYPE`] and named after the settlement.
+//!
 //! The map is made of `stompymux-map`'s layered [`Hex`]es, so it uses the same layers as the
 //! game: [`Ground`] (clear, pavement, rough, ultra-rough peaks, rubble, sand, tundra, swamp),
 //! [`Water`] with its [`Flow`], [`Foliage`] (woods, jungle and planted fields), road
 //! [`Route`]s, [`Structure`]s (buildings, walls and bridges with a construction class) and
 //! weather [`Condition`]s (deep and thin snow, and ice over frozen water).
+mod annotate;
 mod biome;
 mod map;
 mod noise;
@@ -44,6 +48,7 @@ mod settlement;
 mod spec;
 mod terrain;
 
+pub use annotate::SETTLEMENT_TYPE;
 pub use biome::{BiomeInfo, biome_catalog};
 pub use map::HexMap;
 pub use report::{Coverage, Report, RoadReport, SettlementReport};
@@ -147,6 +152,7 @@ pub fn generate(spec: &MapSpec) -> Result<GeneratedMap> {
     terrain::cover(&mut map, &elevation, &params);
     let settlements = settlement::build_all(&mut map, &spec.settlements, &params, &mut warnings);
     let roads = roads::build(&mut map, &settlements, &params, &mut warnings);
+    annotate::annotate(&mut map, &settlements, &mut warnings);
     terrain::burn(&mut map, &elevation, &params);
     if spec.frozen.expect("resolved") {
         terrain::freeze(&mut map);

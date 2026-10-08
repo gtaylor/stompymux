@@ -186,8 +186,8 @@ pub use state::{
 pub use stompymux_map::{
     AttackKind, Condition, ConstructionClass, DecorationKind, Density, Flow, Foliage, Ground,
     GroundMovement, Hex, MAX_CONSTRUCTION_FACTOR, MAX_DEPTH, MAX_HEIGHT, MAX_VISIBILITY, MapAsset,
-    MapPointOfInterest, Route, Structure, StructureKind, Terrain, Water, Wind, WindStrength,
-    extreme_temperature_steps, gravity_aim_modifier,
+    MapPointOfInterest, MapRegion, Route, Structure, StructureKind, Terrain, Water, Wind,
+    WindStrength, extreme_temperature_steps, gravity_aim_modifier,
 };
 pub use unit_template::UnitTemplateExt;
 mod vehicle;

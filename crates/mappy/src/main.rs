@@ -9,13 +9,18 @@
 //! replaces the map as one undoable edit. The toolbar picks a brush, which paints
 //! one layer: elevation, terrain (ground or water), foliage, routes, structures, or conditions
 //! (weather, or fire and smoke). The left mouse button
-//! paints; Alt+click picks up a hex's layers into every brush. Scrolling, right or middle drag
+//! paints; Alt+click picks up a hex's layers into every brush. Beside the brushes, the Points
+//! tool adds, selects, moves and edits the map's scripted points of interest, and the Regions
+//! tool outlines its scripted regions corner by corner. Points show as markers and regions as
+//! tinted, outlined areas over the map whichever tool is selected. Scrolling, right or middle drag
 //! and the arrow keys pan; Shift+scroll pans sideways and Ctrl+scroll zooms. Maps are read and written by the game's
 //! own map file code in `stompymux-map`, so whatever Mappy saves loads the same in the server.
 mod brush_panel;
 mod document;
 mod generator_panel;
 mod map_view;
+mod points_panel;
+mod regions_panel;
 mod render;
 
 use std::{path::PathBuf, sync::Arc};
@@ -34,6 +39,8 @@ use brush_panel::{BrushEdit, BrushMode, BrushPanel};
 use document::{Document, MapSettings, ResizeEdge};
 use generator_panel::{GenerationResult, GeneratorEdit, GeneratorPanel};
 use map_view::{Camera, MapView};
+use points_panel::{PointEdit, PointsPanel};
+use regions_panel::{RegionEdit, RegionsPanel};
 use render::LABEL_LEGEND;
 
 fn main() -> iced::Result {
@@ -59,6 +66,9 @@ pub enum Message {
     /// The canvas has this size, used to fit maps to the view.
     Viewport(Size),
     Hovered(Option<HexCoordinate>),
+    /// The left button went down on a hex.
+    Press(HexCoordinate),
+    /// The left button was dragged onto another hex.
     Paint(HexCoordinate),
     StrokeEnded,
     Pick(HexCoordinate),
@@ -70,6 +80,14 @@ pub enum Message {
     },
     Fit,
     Brush(BrushEdit),
+    /// Select the Points tool.
+    PointsTool,
+    Points(PointEdit),
+    /// Select the Regions tool.
+    RegionsTool,
+    Regions(RegionEdit),
+    /// Delete what the selected tool has selected.
+    Delete,
     Undo,
     Redo,
     /// Show or hide a menu from the menu bar.
@@ -119,6 +137,17 @@ pub enum Message {
     ApplyGenerator,
     /// Close the generator, showing the map as it was.
     CancelGenerator,
+}
+
+/// What the left mouse button does on the map.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Tool {
+    /// Paint with the selected brush.
+    Brush,
+    /// Add, select and move points of interest.
+    Points,
+    /// Outline regions and move their corners.
+    Regions,
 }
 
 /// A menu in the menu bar.
@@ -191,7 +220,10 @@ struct Mappy {
     /// size.
     frame_pending: bool,
     hover: Option<HexCoordinate>,
+    tool: Tool,
     brush: BrushPanel,
+    points: PointsPanel,
+    regions: RegionsPanel,
     new_width: String,
     new_height: String,
     save_name: String,
@@ -226,7 +258,10 @@ impl Mappy {
             viewport: None,
             frame_pending: true,
             hover: None,
+            tool: Tool::Brush,
             brush: BrushPanel::default(),
+            points: PointsPanel::default(),
+            regions: RegionsPanel::default(),
             new_width: "30".into(),
             new_height: "30".into(),
             save_name: String::new(),
@@ -269,9 +304,33 @@ impl Mappy {
                 }
             }
             Message::Hovered(hover) => self.hover = hover,
+            Message::Press(coordinate) => {
+                self.hover = Some(coordinate);
+                let name_input = match self.tool {
+                    Tool::Brush => {
+                        self.document.paint(coordinate, self.brush.brush());
+                        None
+                    }
+                    Tool::Points => self
+                        .points
+                        .press(&mut self.document, coordinate)
+                        .then_some(points_panel::NAME_INPUT),
+                    Tool::Regions => self
+                        .regions
+                        .press(&mut self.document, coordinate)
+                        .then_some(regions_panel::NAME_INPUT),
+                };
+                if let Some(input) = name_input {
+                    return operation::focus(input).chain(operation::select_all(input));
+                }
+            }
             Message::Paint(coordinate) => {
                 self.hover = Some(coordinate);
-                self.document.paint(coordinate, self.brush.brush());
+                match self.tool {
+                    Tool::Brush => self.document.paint(coordinate, self.brush.brush()),
+                    Tool::Points => self.points.drag(&mut self.document, coordinate),
+                    Tool::Regions => self.regions.drag(&mut self.document, coordinate),
+                }
             }
             Message::StrokeEnded => self.document.end_stroke(),
             Message::Pick(coordinate) => {
@@ -286,15 +345,33 @@ impl Mappy {
                 self.camera = self.camera.zoomed(factor, anchor);
             }
             Message::Fit => self.fit(),
-            Message::Brush(edit) => self.brush.edit(edit),
+            Message::Brush(edit) => {
+                if matches!(edit, BrushEdit::Mode(_) | BrushEdit::Level(_)) {
+                    self.tool = Tool::Brush;
+                }
+                self.brush.edit(edit);
+            }
+            Message::PointsTool => self.tool = Tool::Points,
+            Message::Points(edit) => self.points.edit(&mut self.document, edit),
+            Message::RegionsTool => self.tool = Tool::Regions,
+            Message::Regions(edit) => self.regions.edit(&mut self.document, edit),
+            Message::Delete => match self.tool {
+                Tool::Brush => {}
+                Tool::Points => self.points.edit(&mut self.document, PointEdit::Delete),
+                Tool::Regions => self.regions.edit(&mut self.document, RegionEdit::Delete),
+            },
             Message::Undo => {
                 let shown = self.shown_size();
                 self.document.undo();
+                self.points.forget_typing();
+                self.regions.forget_typing();
                 self.refit_if_resized(shown);
             }
             Message::Redo => {
                 let shown = self.shown_size();
                 self.document.redo();
+                self.points.forget_typing();
+                self.regions.forget_typing();
                 self.refit_if_resized(shown);
             }
             Message::ToggleMenu(menu) => {
@@ -318,6 +395,10 @@ impl Mappy {
                     self.close_dialog();
                 } else if self.menu.is_some() {
                     self.menu = None;
+                } else if self.tool == Tool::Regions
+                    && self.regions.selected(&self.document).is_some()
+                {
+                    self.regions.edit(&mut self.document, RegionEdit::Done);
                 } else if self.generator.is_some() {
                     self.close_generator();
                 }
@@ -455,6 +536,8 @@ impl Mappy {
         );
         self.document
             .generate(preview.document.map.clone(), generated.spec.clone());
+        self.points.clear();
+        self.regions.clear();
         self.generator = None;
     }
 
@@ -625,6 +708,8 @@ impl Mappy {
 
     fn replace_document(&mut self, document: Document) {
         self.document = document;
+        self.points.clear();
+        self.regions.clear();
         self.hover = None;
         self.frame_new_map();
     }
@@ -694,18 +779,43 @@ impl Mappy {
     }
 
     fn view(&self) -> Element<'_, Message> {
+        let editing = self.generator.is_none();
+        let tool = |tool| editing && self.tool == tool;
+        let selected_region = tool(Tool::Regions)
+            .then(|| self.regions.selected(&self.document))
+            .flatten();
         let map = MapView {
             document: self.shown(),
             camera: self.camera,
             hover: self.hover,
-            brush_radius: self.brush.radius,
+            // The Points and Regions tools work on single hexes, so they outline only the
+            // hovered one.
+            brush_radius: if tool(Tool::Brush) || !editing {
+                self.brush.radius
+            } else {
+                0
+            },
+            selected_region,
         };
+        let viewport = self.viewport.unwrap_or(Size::INFINITE);
+        let regions = regions_panel::overlay(
+            self.shown(),
+            self.camera,
+            viewport,
+            selected_region,
+            selected_region.and(self.regions.corner(&self.document)),
+        );
+        let selected_point = tool(Tool::Points)
+            .then(|| self.points.selected(&self.document))
+            .flatten();
+        let markers =
+            points_panel::markers(&self.shown().map, self.camera, viewport, selected_point);
         let side = match &self.generator {
             Some(generator) => self.generator_view(generator),
             None => self.inspector(),
         };
         let body = row![
-            shader(map).width(Fill).height(Fill),
+            stack![shader(map).width(Fill).height(Fill), regions, markers].clip(true),
             rule::vertical(1),
             side,
         ];
@@ -1168,24 +1278,34 @@ impl Mappy {
         .into()
     }
 
-    /// The brush picker, history buttons and label legend. While the generator is open no
-    /// brush is highlighted and none can be picked, since the canvas shows its preview; the
-    /// brush in use comes back when the generator closes.
+    /// The brush picker, the Points tool, history buttons and label legend. While the
+    /// generator is open no tool is highlighted and none can be picked, since the canvas shows
+    /// its preview; the tool in use comes back when the generator closes.
     fn toolbar(&self) -> Element<'_, Message> {
-        let painting = self.generator.is_none();
-        let brushes = BrushMode::ALL.into_iter().map(|mode| {
-            button(mode.name())
-                .style(if painting && self.brush.mode == mode {
+        let editing = self.generator.is_none();
+        let tool_button = |label, chosen: bool, message| {
+            button(label)
+                .style(if editing && chosen {
                     button::primary
                 } else {
                     button::secondary
                 })
-                .on_press_maybe(painting.then_some(Message::Brush(BrushEdit::Mode(mode))))
-                .into()
+                .on_press_maybe(editing.then_some(message))
+        };
+        let brushes = BrushMode::ALL.into_iter().map(|mode| {
+            tool_button(
+                mode.name(),
+                self.tool == Tool::Brush && self.brush.mode == mode,
+                Message::Brush(BrushEdit::Mode(mode)),
+            )
+            .into()
         });
         row![
             text("Brush"),
             row(brushes).spacing(4),
+            rule::vertical(1),
+            tool_button("Points", self.tool == Tool::Points, Message::PointsTool),
+            tool_button("Regions", self.tool == Tool::Regions, Message::RegionsTool),
             rule::vertical(1),
             button("Undo").on_press_maybe(
                 (self.generator.is_none() && self.document.can_undo()).then_some(Message::Undo)
@@ -1214,17 +1334,18 @@ impl Mappy {
             Some((coordinate, hex)) => column(
                 std::iter::once(format!("At {},{}", coordinate.x, coordinate.y))
                     .chain(hex_layers(hex))
+                    .chain(annotation_lines(&self.document, coordinate))
                     .map(|line| text(line).size(12).into()),
             )
             .spacing(2)
             .into(),
         };
-        let panel = column![
-            self.brush.view().map(Message::Brush),
-            heading("Hex"),
-            hex_info
-        ]
-        .spacing(8);
+        let tool = match self.tool {
+            Tool::Brush => self.brush.view().map(Message::Brush),
+            Tool::Points => self.points.view(&self.document).map(Message::Points),
+            Tool::Regions => self.regions.view(&self.document).map(Message::Regions),
+        };
+        let panel = column![tool, heading("Hex"), hex_info].spacing(8);
         scrollable(panel.padding(12)).width(320).height(Fill).into()
     }
 
@@ -1233,11 +1354,13 @@ impl Mappy {
         let map = &shown.map;
         let hover = self.hover.and_then(|coordinate| {
             let hex = shown.hex(coordinate)?;
+            let mut layers = hex_layers(hex);
+            layers.extend(annotation_lines(shown, coordinate));
             Some(format!(
                 "{},{}  {}",
                 coordinate.x,
                 coordinate.y,
-                hex_layers(hex).join(" · ")
+                layers.join(" · ")
             ))
         });
         container(
@@ -1290,6 +1413,34 @@ fn hex_layers(hex: Hex) -> Vec<String> {
     layers
 }
 
+/// The points of interest on a hex and the regions it belongs to in words, one per entry, for
+/// the hover readouts.
+fn annotation_lines(document: &Document, coordinate: HexCoordinate) -> Vec<String> {
+    // Blank fields are named as blank rather than shown as empty text.
+    let name = |name: &str| match name {
+        "" => "(blank name)".to_owned(),
+        name => format!("\"{name}\""),
+    };
+    let kind = |kind: &str| match kind {
+        "" => "blank type".to_owned(),
+        kind => kind.to_owned(),
+    };
+    let points = document.points_at(coordinate).map(|(_, point)| {
+        let height = point.elevation.map_or_else(String::new, |elevation| {
+            format!(", elevation {elevation:+}")
+        });
+        format!(
+            "Point {} ({}{height})",
+            name(&point.name),
+            kind(&point.kind)
+        )
+    });
+    let regions = document
+        .regions_at(coordinate)
+        .map(|(_, region)| format!("Region {} ({})", name(&region.name), kind(&region.kind)));
+    points.chain(regions).collect()
+}
+
 /// What a light level does to attacks and sight, for its choice's tooltip in the Options
 /// dialog.
 fn light_effects(light: Light) -> String {
@@ -1333,9 +1484,15 @@ const GENERATOR_WIDTH: f32 = 380.0;
 fn edits_the_map(message: &Message) -> bool {
     matches!(
         message,
-        Message::Paint(_)
+        Message::Press(_)
+            | Message::Paint(_)
             | Message::Pick(_)
             | Message::Brush(_)
+            | Message::PointsTool
+            | Message::Points(_)
+            | Message::RegionsTool
+            | Message::Regions(_)
+            | Message::Delete
             | Message::Undo
             | Message::Redo
             | Message::ToggleMenu(_)
@@ -1380,10 +1537,12 @@ fn heading(label: &str) -> Element<'_, Message> {
 }
 
 /// Keyboard shortcuts: Ctrl+Z/Ctrl+Shift+Z/Ctrl+Y for history, Ctrl+N, Ctrl+O, Ctrl+S and
-/// Ctrl+Shift+S for the File menu, Ctrl+G for the map generator, Escape to close the menu
-/// or cancel the generator, E, T, F, R, S and C for the Elevation, Terrain, Foliage, Routes,
-/// Structures and Conditions brushes, digits for the elevation level, `[` and `]` for brush
-/// size, Home to fit and the arrow keys (faster with Shift) to pan.
+/// Ctrl+Shift+S for the File menu, Ctrl+G for the map generator, Escape to close the menu,
+/// let go of the selected region or cancel the generator, E, T, F, R, S and C for the
+/// Elevation, Terrain, Foliage, Routes, Structures and Conditions brushes, P for the Points
+/// tool, G for the Regions tool, Delete to remove the selected point or region corner, digits
+/// for the elevation level, `[` and `]` for brush size, Home to fit and the arrow keys (faster
+/// with Shift) to pan.
 /// Keys typed into text inputs are not seen.
 fn key_binding(event: keyboard::Event) -> Option<Message> {
     let keyboard::Event::KeyPressed { key, modifiers, .. } = event else {
@@ -1398,6 +1557,7 @@ fn key_binding(event: keyboard::Event) -> Option<Message> {
             let pan = match named {
                 Named::Escape => return Some(Message::Escape),
                 Named::Home => return Some(Message::Fit),
+                Named::Delete => return Some(Message::Delete),
                 Named::ArrowLeft => Vector::new(step, 0.0),
                 Named::ArrowRight => Vector::new(-step, 0.0),
                 Named::ArrowUp => Vector::new(0.0, step),
@@ -1428,6 +1588,8 @@ fn key_binding(event: keyboard::Event) -> Option<Message> {
         "r" => Some(Message::Brush(BrushEdit::Mode(BrushMode::Routes))),
         "s" => Some(Message::Brush(BrushEdit::Mode(BrushMode::Structures))),
         "c" => Some(Message::Brush(BrushEdit::Mode(BrushMode::Conditions))),
+        "p" => Some(Message::PointsTool),
+        "g" => Some(Message::RegionsTool),
         "[" => Some(Message::Brush(BrushEdit::RadiusStep(-1))),
         "]" => Some(Message::Brush(BrushEdit::RadiusStep(1))),
         digit if digit.len() == 1 && digit.as_bytes()[0].is_ascii_digit() => {
@@ -1452,6 +1614,34 @@ fn dialog_key_binding(event: keyboard::Event) -> Option<Message> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Hover readouts quote point and region names and mark a blank name or type.
+    #[test]
+    fn annotation_lines_mark_blank_fields() {
+        let mut document = Document::new(3, 3).unwrap();
+        let point = |kind: &str, name: &str| stompymux_map::MapPointOfInterest {
+            kind: kind.into(),
+            name: name.into(),
+            x: 1,
+            y: 1,
+            elevation: None,
+        };
+        document.set_points(vec![point("objective", "Tower"), point("", "")]);
+        document.set_regions(vec![stompymux_map::MapRegion {
+            kind: "deployment".into(),
+            name: "North".into(),
+            corners: vec![[0, 1], [2, 1]],
+        }]);
+        assert_eq!(
+            annotation_lines(&document, HexCoordinate { x: 1, y: 1 }),
+            [
+                "Point \"Tower\" (objective)",
+                "Point (blank name) (blank type)",
+                "Region \"North\" (deployment)"
+            ]
+        );
+        assert!(annotation_lines(&document, HexCoordinate { x: 1, y: 0 }).is_empty());
+    }
 
     /// Each light tooltip states the modifiers the server applies at that level.
     #[test]

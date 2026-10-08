@@ -9,8 +9,14 @@
 //! for that hex. Since a map file stores every layer of a valid hex, whatever the brushes make
 //! can be saved.
 //!
-//! A resize is undoable too: it records the map's hexes and points of interest from before and
-//! after it. So is replacing the whole map with a generated one, which also records the
+//! Points of interest and regions, the map's [`Annotations`] for scripts, are edited as whole
+//! lists: each edit records both lists from before and after it. Dragging a point or a region
+//! corner, or typing into one of their fields, accumulates into one edit the way a brush stroke
+//! does. The document keeps every region's member hexes worked out for the renderer; see
+//! [`RegionFeed`].
+//!
+//! A resize is undoable too: it records the map's hexes and annotations from before and after
+//! it. So is replacing the whole map with a generated one, which also records the
 //! settings and the generator spec on either side.
 //!
 //! A map made by the generator keeps the resolved [`MapSpec`] it came from. Saving writes it
@@ -27,9 +33,9 @@ use std::{
 use anyhow::{Context, Result, ensure};
 use stompymux_map::{
     Condition, DecorationKind, Foliage, Ground, Hex, HexCoordinate, Light, MapAsset,
-    MapPointOfInterest, Route, Structure, Water, Wind,
+    MapPointOfInterest, MapRegion, Route, Structure, Water, Wind,
 };
-use stompymux_mapgen::{MapSpec, embed_spec, embedded_spec};
+use stompymux_mapgen::{MapSpec, SETTLEMENT_TYPE, embed_spec, embedded_spec};
 
 /// The comment Mappy writes above the spec of a generated map, which may have been edited since.
 const GENERATED_HEADER: &str =
@@ -79,6 +85,10 @@ enum Edit {
         before: MapSettings,
         after: MapSettings,
     },
+    Annotations {
+        before: Annotations,
+        after: Annotations,
+    },
     Resize {
         before: Box<Extent>,
         after: Box<Extent>,
@@ -97,13 +107,54 @@ struct Generation {
     spec: Option<MapSpec>,
 }
 
-/// Everything a resize changes: the map's size, its hexes and its points of interest.
+/// Everything a resize changes: the map's size, its hexes and its annotations.
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct Extent {
     width: u16,
     height: u16,
     hexes: Vec<Hex>,
-    points_of_interest: Vec<MapPointOfInterest>,
+    annotations: Annotations,
+}
+
+/// A map's metadata for scripts: its points of interest and regions.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Annotations {
+    pub points: Vec<MapPointOfInterest>,
+    pub regions: Vec<MapRegion>,
+}
+
+impl Annotations {
+    /// These annotations on a map `width` by `height`, after moving every hex by `moved`:
+    /// points go when their hex does, region corners go when theirs does, and so do regions
+    /// left without corners.
+    fn moved(&self, moved: impl Fn(u16, u16) -> Option<(u16, u16)>) -> Self {
+        let points = self
+            .points
+            .iter()
+            .filter_map(|point| {
+                let (x, y) = moved(point.x, point.y)?;
+                Some(MapPointOfInterest {
+                    x,
+                    y,
+                    ..point.clone()
+                })
+            })
+            .collect();
+        let regions = self
+            .regions
+            .iter()
+            .map(|region| MapRegion {
+                corners: region
+                    .corners
+                    .iter()
+                    .filter_map(|&[x, y]| moved(x, y).map(|(x, y)| [x, y]))
+                    .collect(),
+                ..region.clone()
+            })
+            .filter(|region| !region.corners.is_empty())
+            .collect();
+        Self { points, regions }
+    }
 }
 
 /// Which edges of the map a resize adds or removes columns or rows at.
@@ -267,10 +318,24 @@ pub struct Document {
     stroke: BTreeMap<usize, HexChange>,
     /// Settings from before the settings drag in progress, if one is.
     settings_drag: Option<MapSettings>,
+    /// Annotations from before the point or corner drag or typing in progress, if one is.
+    annotations_drag: Option<Annotations>,
     /// Names the hex contents that `changes` starts from; see [`HexFeed`].
     hexes_id: u64,
     /// Index of every hex written since `hexes_id` was assigned, in order.
     changes: Arc<Vec<u32>>,
+    /// Every region's member hexes, in region order; see [`RegionFeed`].
+    region_hexes: Arc<Vec<Vec<HexCoordinate>>>,
+    /// Names the regions `region_hexes` was worked out from.
+    regions_id: u64,
+}
+
+/// Every region's member hexes, for a renderer to draw, named by an id that changes whenever
+/// they do. Each region's hexes are in row-major order, as [`MapRegion::hexes`] gives them.
+#[derive(Debug, Clone)]
+pub struct RegionFeed {
+    pub id: u64,
+    pub hexes: Arc<Vec<Vec<HexCoordinate>>>,
 }
 
 /// What a renderer needs to keep its own copy of the hexes current without cloning them.
@@ -315,6 +380,7 @@ impl Document {
                 wind: None,
                 hexes: Arc::new(hexes),
                 points_of_interest: Vec::new(),
+                regions: Vec::new(),
             },
         ))
     }
@@ -352,9 +418,19 @@ impl Document {
             redo: Vec::new(),
             stroke: BTreeMap::new(),
             settings_drag: None,
+            annotations_drag: None,
             hexes_id: next_hexes_id(),
             changes: Arc::default(),
+            region_hexes: Arc::default(),
+            regions_id: 0,
         }
+        .with_region_hexes()
+    }
+
+    /// This document with its region hexes worked out.
+    fn with_region_hexes(mut self) -> Self {
+        self.regions_changed();
+        self
     }
 
     /// Write the map to `path` after checking that the file will load back as this map. A
@@ -393,6 +469,60 @@ impl Document {
         }
     }
 
+    /// The points of interest on a hex, with their indexes, in file order.
+    pub fn points_at(
+        &self,
+        coordinate: HexCoordinate,
+    ) -> impl Iterator<Item = (usize, &MapPointOfInterest)> {
+        self.map
+            .points_of_interest
+            .iter()
+            .enumerate()
+            .filter(move |(_, point)| {
+                i32::from(point.x) == coordinate.x && i32::from(point.y) == coordinate.y
+            })
+    }
+
+    /// The regions a hex belongs to, with their indexes, in file order.
+    pub fn regions_at(
+        &self,
+        coordinate: HexCoordinate,
+    ) -> impl Iterator<Item = (usize, &MapRegion)> {
+        let key = (coordinate.y, coordinate.x);
+        self.map
+            .regions
+            .iter()
+            .zip(self.region_hexes.iter())
+            .enumerate()
+            .filter(move |(_, (_, hexes))| {
+                hexes
+                    .binary_search_by_key(&key, |hex| (hex.y, hex.x))
+                    .is_ok()
+            })
+            .map(|(index, (region, _))| (index, region))
+    }
+
+    /// The member hexes of the region with this index, or none if there is no such region.
+    pub fn region_hexes(&self, index: usize) -> &[HexCoordinate] {
+        self.region_hexes.get(index).map_or(&[], Vec::as_slice)
+    }
+
+    /// Every region's member hexes, for a renderer; see [`RegionFeed`].
+    pub fn region_feed(&self) -> RegionFeed {
+        RegionFeed {
+            id: self.regions_id,
+            hexes: Arc::clone(&self.region_hexes),
+        }
+    }
+
+    /// The current points of interest and regions.
+    pub fn annotations(&self) -> Annotations {
+        Annotations {
+            points: self.map.points_of_interest.clone(),
+            regions: self.map.regions.clone(),
+        }
+    }
+
     /// Paint `brush` centered on `center` as part of the current stroke.
     pub fn paint(&mut self, center: HexCoordinate, brush: Brush) {
         self.paint_with(center, brush.radius, |hex| brush.paint.apply(hex));
@@ -402,6 +532,7 @@ impl Document {
     /// current stroke.
     pub fn paint_with(&mut self, center: HexCoordinate, radius: u8, apply: impl Fn(Hex) -> Hex) {
         self.end_settings_drag();
+        self.end_annotations_drag();
         let steps = u64::from(radius);
         let radius = i32::from(radius);
         let width = i32::from(self.map.width);
@@ -431,9 +562,10 @@ impl Document {
         }
     }
 
-    /// Close the current brush stroke or settings drag into one undoable edit.
+    /// Close the current brush stroke, settings drag or annotation drag into one undoable edit.
     pub fn end_stroke(&mut self) {
         self.end_settings_drag();
+        self.end_annotations_drag();
         let changes: Vec<_> = std::mem::take(&mut self.stroke)
             .into_values()
             .filter(|change| change.before != change.after)
@@ -478,6 +610,65 @@ impl Document {
         self.record(Edit::Settings { before, after });
     }
 
+    /// Replace the points of interest as one undoable edit.
+    pub fn set_points(&mut self, points: Vec<MapPointOfInterest>) {
+        let regions = self.map.regions.clone();
+        self.set_annotations(Annotations { points, regions });
+    }
+
+    /// Replace the points of interest as part of a drag, such as a point being moved or one of
+    /// its fields being typed into, which [`Document::end_stroke`] closes into one undoable
+    /// edit.
+    pub fn drag_points(&mut self, points: Vec<MapPointOfInterest>) {
+        let regions = self.map.regions.clone();
+        self.drag_annotations(Annotations { points, regions });
+    }
+
+    /// Replace the regions as one undoable edit.
+    pub fn set_regions(&mut self, regions: Vec<MapRegion>) {
+        let points = self.map.points_of_interest.clone();
+        self.set_annotations(Annotations { points, regions });
+    }
+
+    /// Replace the regions as part of a drag, such as a corner being moved or a field being
+    /// typed into, which [`Document::end_stroke`] closes into one undoable edit.
+    pub fn drag_regions(&mut self, regions: Vec<MapRegion>) {
+        let points = self.map.points_of_interest.clone();
+        self.drag_annotations(Annotations { points, regions });
+    }
+
+    /// Replace the annotations as one undoable edit.
+    fn set_annotations(&mut self, after: Annotations) {
+        self.end_stroke();
+        let before = self.annotations();
+        if before == after {
+            return;
+        }
+        self.set_annotation_values(&after);
+        self.record(Edit::Annotations { before, after });
+    }
+
+    /// Replace the annotations as part of a drag that [`Document::end_stroke`] closes.
+    fn drag_annotations(&mut self, after: Annotations) {
+        if self.annotations_drag.is_none() {
+            self.end_stroke();
+            self.annotations_drag = Some(self.annotations());
+        }
+        self.set_annotation_values(&after);
+    }
+
+    /// Record the annotation drag in progress, if it changed anything.
+    fn end_annotations_drag(&mut self) {
+        let Some(before) = self.annotations_drag.take() else {
+            return;
+        };
+        let after = self.annotations();
+        if before == after {
+            return;
+        }
+        self.record(Edit::Annotations { before, after });
+    }
+
     /// Whether there is an edit to undo.
     pub fn can_undo(&self) -> bool {
         !self.undo.is_empty()
@@ -485,6 +676,10 @@ impl Document {
             || self
                 .settings_drag
                 .is_some_and(|before| before != self.settings())
+            || self
+                .annotations_drag
+                .as_ref()
+                .is_some_and(|before| *before != self.annotations())
     }
 
     /// Whether there is an undone edit to redo.
@@ -516,7 +711,8 @@ impl Document {
 
     /// Change the map to `width` by `height`, adding or removing columns at the `columns`
     /// edges and rows at the `rows` edges, as one undoable edit. New hexes are clear ground at
-    /// level zero, and points of interest move with their hexes or go when their hex does.
+    /// level zero. Points of interest and region corners move with their hexes or go when
+    /// their hex does, and a region left without corners goes too.
     pub fn resize(
         &mut self,
         width: u16,
@@ -548,25 +744,14 @@ impl Document {
                 hexes[usize::from(y) * usize::from(width) + usize::from(x)] = *hex;
             }
         }
-        let points_of_interest = before
-            .points_of_interest
-            .iter()
-            .filter_map(|point| {
-                let (x, y) = moved(point.x, point.y)?;
-                Some(MapPointOfInterest {
-                    x,
-                    y,
-                    ..point.clone()
-                })
-            })
-            .collect();
+        let annotations = before.annotations.moved(moved);
         let edit = Edit::Resize {
             before: Box::new(before),
             after: Box::new(Extent {
                 width,
                 height,
                 hexes,
-                points_of_interest,
+                annotations,
             }),
         };
         self.apply(&edit, true);
@@ -576,8 +761,10 @@ impl Document {
 
     /// Replace the map with the generated `map` as one undoable edit, remembering the resolved
     /// `spec` it came from. The map takes the generated size, hexes, rule flags, gravity and
-    /// temperature, keeps its light, visibility and wind, and keeps the points of interest that
-    /// still lie on it.
+    /// temperature, and keeps its light, visibility and wind. It keeps the points of interest
+    /// and region corners that still lie on it, except those of the generator's own
+    /// [`SETTLEMENT_TYPE`], which belong to the settlements of an earlier generation, and adds
+    /// the generated map's own points and regions after them.
     pub fn generate(&mut self, map: MapAsset, spec: MapSpec) {
         self.end_stroke();
         let before = Generation {
@@ -585,19 +772,25 @@ impl Document {
             settings: self.settings(),
             spec: self.spec.clone(),
         };
-        let points_of_interest = self
-            .map
-            .points_of_interest
-            .iter()
-            .filter(|point| point.x < map.width && point.y < map.height)
-            .cloned()
-            .collect();
+        let mut annotations = self.annotations();
+        annotations
+            .points
+            .retain(|point| point.kind != SETTLEMENT_TYPE);
+        annotations
+            .regions
+            .retain(|region| region.kind != SETTLEMENT_TYPE);
+        let mut annotations =
+            annotations.moved(|x, y| (x < map.width && y < map.height).then_some((x, y)));
+        annotations
+            .points
+            .extend(map.points_of_interest.iter().cloned());
+        annotations.regions.extend(map.regions.iter().cloned());
         let after = Generation {
             extent: Extent {
                 width: map.width,
                 height: map.height,
                 hexes: map.hexes.to_vec(),
-                points_of_interest,
+                annotations,
             },
             settings: MapSettings {
                 flags: map.flags,
@@ -615,13 +808,13 @@ impl Document {
         self.record(edit);
     }
 
-    /// The map's current size, hexes and points of interest.
+    /// The map's current size, hexes and annotations.
     fn extent(&self) -> Extent {
         Extent {
             width: self.map.width,
             height: self.map.height,
             hexes: self.map.hexes.to_vec(),
-            points_of_interest: self.map.points_of_interest.clone(),
+            annotations: self.annotations(),
         }
     }
 
@@ -667,6 +860,9 @@ impl Document {
             Edit::Settings { before, after } => {
                 self.set_settings_values(if forward { after } else { before });
             }
+            Edit::Annotations { before, after } => {
+                self.set_annotation_values(if forward { after } else { before });
+            }
             Edit::Resize { before, after } => {
                 self.set_extent(if forward { after } else { before });
             }
@@ -689,15 +885,39 @@ impl Document {
         self.map.wind = Some(settings.wind);
     }
 
-    /// Replace the map's size, hexes and points of interest.
+    /// Replace the map's size, hexes and annotations.
     fn set_extent(&mut self, extent: &Extent) {
         self.map.width = extent.width;
         self.map.height = extent.height;
         self.map.hexes = Arc::new(extent.hexes.clone());
-        self.map.points_of_interest = extent.points_of_interest.clone();
+        self.set_annotation_values(&extent.annotations);
         // Every hex may have moved, so a renderer must reread them all.
         self.hexes_id = next_hexes_id();
         self.changes = Arc::default();
+    }
+
+    /// Write the points of interest and regions, working out the regions' hexes again if they
+    /// changed.
+    fn set_annotation_values(&mut self, annotations: &Annotations) {
+        self.map.points_of_interest = annotations.points.clone();
+        if self.map.regions == annotations.regions {
+            return;
+        }
+        self.map.regions = annotations.regions.clone();
+        self.regions_changed();
+    }
+
+    /// Work out every region's member hexes for the current regions under a new id. A region
+    /// whose hexes cannot be worked out, which a valid region never is, has none.
+    fn regions_changed(&mut self) {
+        self.region_hexes = Arc::new(
+            self.map
+                .regions
+                .iter()
+                .map(|region| region.hexes().unwrap_or_default())
+                .collect(),
+        );
+        self.regions_id = next_hexes_id();
     }
 }
 
@@ -1251,14 +1471,16 @@ mod tests {
         assert_eq!(ResizeEdge::Both.leading(10, 7, false), -1);
     }
 
-    /// A resize undoes and redoes as one edit, and gives the renderer a new feed.
-    /// A small generated lunar map, which has its own gravity and flags.
+    /// A small generated lunar map with an outpost, which has its own gravity and flags.
     fn generated() -> (MapAsset, MapSpec) {
         let generated = stompymux_mapgen::generate(&MapSpec {
             seed: Some(4),
             biome: Some(stompymux_mapgen::Biome::Lunar),
             width: Some(12),
             height: Some(9),
+            settlements: vec![stompymux_mapgen::SettlementSpec::new(
+                stompymux_mapgen::SettlementSize::Outpost,
+            )],
             ..MapSpec::default()
         })
         .unwrap();
@@ -1266,8 +1488,8 @@ mod tests {
     }
 
     /// Generating replaces the size, hexes, gravity, temperature and flags and records the
-    /// spec, keeps light, visibility, wind and points of interest still on the map, and undoes
-    /// as one edit.
+    /// spec, keeps light, visibility, wind and points of interest still on the map, swaps the
+    /// old settlement annotations for the generated ones, and undoes as one edit.
     #[test]
     fn generating_replaces_the_map_as_one_edit() {
         let mut document = Document::new(20, 20).unwrap();
@@ -1275,16 +1497,21 @@ mod tests {
             light: Light::Dusk,
             ..document.settings()
         });
-        let point = |x, y| MapPointOfInterest {
-            kind: "objective".into(),
+        let point = |kind: &str, x, y| MapPointOfInterest {
+            kind: kind.into(),
             name: "Tower".into(),
             x,
             y,
             elevation: None,
         };
-        document.map.points_of_interest = vec![point(3, 3), point(15, 3)];
+        document.set_points(vec![
+            point("objective", 3, 3),
+            point("objective", 15, 3),
+            point(SETTLEMENT_TYPE, 4, 4),
+        ]);
         let original = document.map.clone();
         let (map, spec) = generated();
+        assert!(!map.regions.is_empty());
         document.generate(map.clone(), spec.clone());
         assert!(document.dirty);
         assert_eq!((document.map.width, document.map.height), (12, 9));
@@ -1298,7 +1525,15 @@ mod tests {
             (map.flags, map.gravity, map.temperature)
         );
         assert_eq!(document.map.light, Some(Light::Dusk));
-        assert_eq!(document.map.points_of_interest, vec![point(3, 3)]);
+        let mut kept = vec![point("objective", 3, 3)];
+        kept.extend(map.points_of_interest.iter().cloned());
+        assert_eq!(document.map.points_of_interest, kept);
+        assert_eq!(document.map.regions, map.regions);
+        assert_eq!(
+            document.region_feed().hexes.len(),
+            map.regions.len(),
+            "region hexes not worked out"
+        );
         assert_eq!(document.spec.as_ref(), Some(&spec));
         let generated = document.map.clone();
         document.undo();
@@ -1329,6 +1564,7 @@ mod tests {
         assert_eq!(Document::open(&plain).unwrap().spec, None);
     }
 
+    /// A resize undoes and redoes as one edit, and gives the renderer a new feed.
     #[test]
     fn resizing_undoes_as_one_edit() {
         let mut document = numbered(3, 2);

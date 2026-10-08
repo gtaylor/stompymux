@@ -5,6 +5,10 @@
 //! (see [`palette_colors`]). The texture follows the document's [`HexFeed`], so an edit
 //! uploads only the rows it touched. The camera, brush and grid settings travel as a small
 //! uniform block every frame, so panning and zooming cost the same however large the map is.
+//!
+//! A second texture holds one [`RegionMask`] byte per hex saying whether it belongs to a
+//! region, and to the selected one, which the shader tints and outlines. It is rebuilt only
+//! when the regions or the selection change.
 
 use iced::{
     Color, Rectangle, wgpu,
@@ -15,7 +19,7 @@ use stompymux_map::{
 };
 
 use crate::{
-    document::HexFeed,
+    document::{HexFeed, RegionFeed},
     map_view::{
         condition_color, foliage_color, ground_color, overlay_color, route_color,
         structure_base_color, water_color,
@@ -179,13 +183,52 @@ fn palette_bytes(srgb_target: bool) -> Vec<u8> {
     bytes.extend(entries.flatten().flat_map(f32::to_ne_bytes));
     bytes
 }
-/// One frame of the map: where to read the hexes and their changes, and the uniforms.
+/// One frame of the map: where to read the hexes and their changes, the regions to mark, and
+/// the uniforms.
 #[derive(Debug)]
 pub struct MapPrimitive {
     pub feed: HexFeed,
     pub width: u16,
     pub height: u16,
+    pub regions: RegionFeed,
+    /// Index of the region to mark as selected.
+    pub selected_region: Option<usize>,
     pub uniforms: Uniforms,
+}
+
+/// Bits of a hex's byte in the region mask texture, which `map.wgsl` names the same way.
+pub struct RegionMask;
+
+impl RegionMask {
+    /// The hex belongs to a region other than the selected one.
+    pub const MEMBER: u8 = 1;
+    /// The hex belongs to the selected region.
+    pub const SELECTED: u8 = 2;
+
+    /// One byte per hex of a `width` by `height` map, row-major, marking the hexes of every
+    /// region and of the `selected` one.
+    pub fn build(
+        width: u16,
+        height: u16,
+        regions: &RegionFeed,
+        selected: Option<usize>,
+    ) -> Vec<u8> {
+        let (width, height) = (i32::from(width), i32::from(height));
+        let mut mask = vec![0; (width * height) as usize];
+        for (index, hexes) in regions.hexes.iter().enumerate() {
+            let bit = if Some(index) == selected {
+                Self::SELECTED
+            } else {
+                Self::MEMBER
+            };
+            for hex in hexes {
+                if (0..width).contains(&hex.x) && (0..height).contains(&hex.y) {
+                    mask[(hex.y * width + hex.x) as usize] |= bit;
+                }
+            }
+        }
+        mask
+    }
 }
 
 /// GPU state shared by every frame: the pipeline, buffers and the uploaded hex texture.
@@ -197,9 +240,14 @@ pub struct MapPipeline {
     hexes: Option<HexTexture>,
 }
 
-/// The uploaded hexes, the bind group using them, and how far into which feed they are current.
+/// The uploaded hexes and region mask, the bind group using them, and how far into which
+/// feeds they are current.
 struct HexTexture {
     texture: wgpu::Texture,
+    regions: wgpu::Texture,
+    /// [`RegionFeed::id`] and selection of the mask in `regions`, or `None` before the first
+    /// upload.
+    regions_key: Option<(u64, Option<usize>)>,
     size: (u16, u16),
     bind_group: wgpu::BindGroup,
     /// [`HexFeed::id`] of the hexes in the texture, or `None` before the first upload.
@@ -240,6 +288,16 @@ impl shader::Pipeline for MapPipeline {
                 uniform_entry(1, palette.len()),
                 wgpu::BindGroupLayoutEntry {
                     binding: 2,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Texture {
+                        sample_type: wgpu::TextureSampleType::Uint,
+                        view_dimension: wgpu::TextureViewDimension::D2,
+                        multisampled: false,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 3,
                     visibility: wgpu::ShaderStages::FRAGMENT,
                     ty: wgpu::BindingType::Texture {
                         sample_type: wgpu::TextureSampleType::Uint,
@@ -322,21 +380,26 @@ impl MapPipeline {
         if self.hexes.as_ref().is_some_and(|hexes| hexes.size == size) {
             return self.hexes.as_mut().expect("checked above");
         }
-        let texture = device.create_texture(&wgpu::TextureDescriptor {
-            label: Some("mappy hexes"),
-            size: wgpu::Extent3d {
-                width: u32::from(size.0),
-                height: u32::from(size.1),
-                depth_or_array_layers: 1,
-            },
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: wgpu::TextureDimension::D2,
-            format: wgpu::TextureFormat::Rgba16Uint,
-            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
-            view_formats: &[],
-        });
+        let create = |label, format| {
+            device.create_texture(&wgpu::TextureDescriptor {
+                label: Some(label),
+                size: wgpu::Extent3d {
+                    width: u32::from(size.0),
+                    height: u32::from(size.1),
+                    depth_or_array_layers: 1,
+                },
+                mip_level_count: 1,
+                sample_count: 1,
+                dimension: wgpu::TextureDimension::D2,
+                format,
+                usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+                view_formats: &[],
+            })
+        };
+        let texture = create("mappy hexes", wgpu::TextureFormat::Rgba16Uint);
+        let regions = create("mappy regions", wgpu::TextureFormat::R8Uint);
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let regions_view = regions.create_view(&wgpu::TextureViewDescriptor::default());
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("mappy hex map bind group"),
             layout: &self.layout,
@@ -353,10 +416,16 @@ impl MapPipeline {
                     binding: 2,
                     resource: wgpu::BindingResource::TextureView(&view),
                 },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: wgpu::BindingResource::TextureView(&regions_view),
+                },
             ],
         });
         self.hexes.insert(HexTexture {
             texture,
+            regions,
+            regions_key: None,
             size,
             bind_group,
             feed_id: None,
@@ -384,6 +453,31 @@ impl shader::Primitive for MapPrimitive {
             return;
         };
         let texture = pipeline.texture(device, (self.width, self.height));
+        let regions_key = Some((self.regions.id, self.selected_region));
+        if texture.regions_key != regions_key {
+            let mask =
+                RegionMask::build(self.width, self.height, &self.regions, self.selected_region);
+            queue.write_texture(
+                wgpu::TexelCopyTextureInfo {
+                    texture: &texture.regions,
+                    mip_level: 0,
+                    origin: wgpu::Origin3d::ZERO,
+                    aspect: wgpu::TextureAspect::All,
+                },
+                &mask,
+                wgpu::TexelCopyBufferLayout {
+                    offset: 0,
+                    bytes_per_row: Some(u32::from(self.width)),
+                    rows_per_image: Some(u32::from(self.height)),
+                },
+                wgpu::Extent3d {
+                    width: u32::from(self.width),
+                    height: u32::from(self.height),
+                    depth_or_array_layers: 1,
+                },
+            );
+            texture.regions_key = regions_key;
+        }
         let width = usize::from(self.width);
         let pending = (texture.feed_id == Some(self.feed.id))
             .then(|| changes.get(texture.applied..))
@@ -585,6 +679,8 @@ mod tests {
             feed: document.hex_feed(),
             width: map.width,
             height: map.height,
+            regions: document.region_feed(),
+            selected_region: None,
             uniforms: Uniforms {
                 size: [size.width as f32, size.height as f32],
                 offset: OFFSET,
@@ -657,6 +753,69 @@ mod tests {
             expected,
             &format!("{x},{y}"),
         );
+    }
+
+    /// The mask marks every member of each region, and the selected region's with its own bit.
+    #[test]
+    fn region_mask_marks_members_and_the_selection() {
+        let mut document = Document::new(4, 3).unwrap();
+        document.set_regions(vec![
+            stompymux_map::MapRegion {
+                kind: "zone".into(),
+                name: "Row".into(),
+                corners: vec![[0, 1], [2, 1]],
+            },
+            stompymux_map::MapRegion {
+                kind: "zone".into(),
+                name: "Spot".into(),
+                corners: vec![[2, 1]],
+            },
+        ]);
+        let mask = RegionMask::build(4, 3, &document.region_feed(), Some(1));
+        let at = |x: usize, y: usize| mask[y * 4 + x];
+        assert_eq!(
+            (at(0, 1), at(1, 1)),
+            (RegionMask::MEMBER, RegionMask::MEMBER)
+        );
+        assert_eq!(at(2, 1), RegionMask::MEMBER | RegionMask::SELECTED);
+        assert_eq!((at(3, 1), at(0, 0), at(2, 2)), (0, 0, 0));
+    }
+
+    /// Region hexes are tinted, the selected region's toward its own color, and outlined along
+    /// edges facing hexes outside the region; other hexes are untouched.
+    #[test]
+    fn shader_tints_and_outlines_regions() {
+        let Some((device, queue)) = device() else {
+            eprintln!("no graphics adapter; skipping");
+            return;
+        };
+        let size = Size::new(192, 128);
+        let mut pipeline = MapPipeline::new(&device, &queue, FORMAT);
+        let mut document = Document::new(5, 3).unwrap();
+        let mut draw = |document: &Document, selected| {
+            let mut frame = frame(document, size);
+            frame.selected_region = selected;
+            render(&device, &queue, &mut pipeline, &frame, size)
+        };
+        let plain = draw(&document, None);
+        document.set_regions(vec![stompymux_map::MapRegion {
+            kind: "zone".into(),
+            name: "Spot".into(),
+            corners: vec![[1, 1]],
+        }]);
+        let member = draw(&document, None);
+        let selected = draw(&document, Some(0));
+        let middle = |pixels: &[u8], x| center_pixel(pixels, size, x, 1);
+        assert_eq!(middle(&member, 3), middle(&plain, 3), "outside the region");
+        assert_ne!(middle(&member, 1), middle(&plain, 1), "member not tinted");
+        let blueness = |pixel: [u8; 4]| i32::from(pixel[2]) - i32::from(pixel[0]);
+        assert!(
+            blueness(middle(&selected, 1)) > blueness(middle(&member, 1)),
+            "selected region not tinted toward its color"
+        );
+        // Just inside the bottom edge, which faces a hex outside the region.
+        let edge = hex_pixel(&selected, size, RADIUS, (1, 1), (0.0, 0.78));
+        assert!(edge[2] > 200 && edge[0] < 110, "no outline: {edge:?}");
     }
 
     /// Texels pack each layer where `map.wgsl` reads it.
