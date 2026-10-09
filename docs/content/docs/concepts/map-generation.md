@@ -140,6 +140,12 @@ Generated maps use the same hex layers as every other [map file](../map-files/):
 Generated maps leave light, visibility and wind unset, so loading one keeps the
 live map's current values.
 
+Each settlement is also marked for scripts. The map gets a
+[point of interest](../map-files/#points-of-interest) at the settlement's center
+and a [region](../map-files/#regions) holding exactly the hexes the settlement
+covers, both of type `settlement` and named after the settlement (its `name`,
+or its size and number, such as `village 2`).
+
 ## Settlements
 
 A settlement is a cluster of buildings with its own streets. On the command line
@@ -220,8 +226,10 @@ Every change regenerates the map in the background and shows it on the canvas
 in place of the open map. A blank seed gets a new random one, which then fills
 the seed field, so later changes keep the same landscape until **New seed** is
 pressed. **Apply** replaces the open map's size, hexes, gravity, temperature and
-flags as one step that undo reverses; light, visibility, wind and points of
-interest still on the map are kept. **Cancel** or Escape goes back to the map as
+flags as one step that undo reverses; light, visibility and wind are kept. Points
+of interest and region corners still on the map are kept too, except those of
+type `settlement` from an earlier generation, which give way to the new map's
+settlement points and regions. **Cancel** or Escape goes back to the map as
 it was. The menus, brushes and undo wait while the generator is open.
 
 Mappy saves the generator's spec in the map file's header, and reopening the

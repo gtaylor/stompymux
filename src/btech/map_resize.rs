@@ -77,6 +77,15 @@ pub fn resize_map_action(
             // Points of interest cropped off the map are dropped with the terrain under them.
             Arc::make_mut(&mut map.points_of_interest)
                 .retain(|point| inside(i64::from(point.x), i64::from(point.y)));
+            // Region corners cropped off the map are dropped, and so is a region left with
+            // none; the region's outline then runs through the corners that remain.
+            let regions = Arc::make_mut(&mut map.regions);
+            for region in regions.iter_mut() {
+                region
+                    .corners
+                    .retain(|&[x, y]| inside(i64::from(x), i64::from(y)));
+            }
+            regions.retain(|region| !region.corners.is_empty());
             world.validate(config)?;
         }
         super::notify_message(scripts, super::MessageTarget::Player(actor), "Size set.")?;

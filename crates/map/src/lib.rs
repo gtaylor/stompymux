@@ -28,6 +28,7 @@ mod flags;
 mod geometry;
 mod hex;
 mod layers;
+mod region;
 mod terrain;
 mod terrain_rules;
 
@@ -43,5 +44,6 @@ pub use layers::{
     Condition, ConstructionClass, DecorationKind, Density, Flow, Foliage, Ground,
     MAX_CONSTRUCTION_FACTOR, Route, Structure, StructureKind, Water,
 };
+pub use region::MapRegion;
 pub use terrain::Terrain;
 pub use terrain_rules::GroundMovement;

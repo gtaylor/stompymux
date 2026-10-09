@@ -10,7 +10,7 @@
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use stompymux_map::{Hex, HexCoordinate, MapAsset, MapFlag};
+use stompymux_map::{Hex, HexCoordinate, MapAsset, MapFlag, MapPointOfInterest, MapRegion};
 
 /// A generated battlefield: its environment and every hex, row by row from the top left.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -27,6 +27,12 @@ pub struct HexMap {
     pub flags: Vec<MapFlag>,
     /// Hexes in row-major order: index `y * width + x`.
     pub hexes: Vec<Hex>,
+    /// Points of interest for scripts, such as one at each settlement's center.
+    #[serde(default)]
+    pub points_of_interest: Vec<MapPointOfInterest>,
+    /// Regions for scripts, such as one covering each settlement.
+    #[serde(default)]
+    pub regions: Vec<MapRegion>,
 }
 
 impl HexMap {
@@ -39,6 +45,8 @@ impl HexMap {
             temperature: 20,
             flags: Vec::new(),
             hexes: vec![Hex::at_level(0); usize::from(width) * usize::from(height)],
+            points_of_interest: Vec::new(),
+            regions: Vec::new(),
         }
     }
 
@@ -135,7 +143,8 @@ impl HexMap {
             visibility: None,
             wind: None,
             hexes: Arc::new(self.hexes.clone()),
-            points_of_interest: Vec::new(),
+            points_of_interest: self.points_of_interest.clone(),
+            regions: self.regions.clone(),
         })
     }
 

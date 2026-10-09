@@ -92,6 +92,9 @@ pub struct StoredMap {
     /// Scripted points of interest from the map file, in file order. Never shown to units.
     #[serde(default)]
     pub(crate) points_of_interest: Arc<Vec<super::MapPointOfInterest>>,
+    /// Scripted regions from the map file, in file order. Never shown to units.
+    #[serde(default)]
+    pub(crate) regions: Arc<Vec<super::MapRegion>>,
 }
 
 impl StoredMap {
@@ -182,6 +185,9 @@ impl StoredMap {
         self.validate_artillery()?;
         for point in self.points_of_interest.iter() {
             point.validate(self.width, self.height)?;
+        }
+        for region in self.regions.iter() {
+            region.validate(self.width, self.height)?;
         }
         ensure!(
             self.landing_exclusion_order.len() == self.landing_exclusions.len()
@@ -1103,6 +1109,7 @@ pub(super) fn map_from_asset(name: &str, asset: MapAsset) -> Result<StoredMap> {
         decorations: Default::default(),
         static_decorations: Default::default(),
         points_of_interest: Arc::new(asset.points_of_interest),
+        regions: Arc::new(asset.regions),
     };
     map.establish_terrain(asset.hexes)?;
     map.validate()?;

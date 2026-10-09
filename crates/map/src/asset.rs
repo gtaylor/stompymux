@@ -1,6 +1,6 @@
-//! Map assets: a battlefield's dimensions, environment, hexes and scripted points of
-//! interest, as read from and written to map files.
-use crate::{Hex, Light, Terrain, Wind};
+//! Map assets: a battlefield's dimensions, environment, hexes, and scripted points of
+//! interest and regions, as read from and written to map files.
+use crate::{Hex, Light, MapRegion, Terrain, Wind};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -24,6 +24,8 @@ pub struct MapAsset {
     pub hexes: Arc<Vec<Hex>>,
     /// Scripted points of interest in file order.
     pub points_of_interest: Vec<MapPointOfInterest>,
+    /// Scripted regions in file order.
+    pub regions: Vec<MapRegion>,
 }
 
 /// A scripted point of interest on a map. Points of interest are map metadata for scripts:
@@ -128,6 +130,7 @@ impl MapAsset {
             wind: None,
             hexes: Arc::new(hexes),
             points_of_interest: Vec::new(),
+            regions: Vec::new(),
         })
     }
 

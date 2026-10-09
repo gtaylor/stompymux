@@ -74,7 +74,7 @@ flow = '''
 '''
 foliage = '''
 .""....j
-.....``.
+`..`....
 '''
 route = '''
 ......##
@@ -83,6 +83,10 @@ route = '''
 condition = '''
 ++......
 .....-..
+'''
+overlay = '''
+..&.....
+...:....
 '''
 
 [[structures]]
@@ -104,6 +108,11 @@ name = "Comms Tower"
 x = 6
 y = 1
 elevation = 3
+
+[[regions]]
+type = "deployment"
+name = "West LZ"
+corners = [[0, 0], [2, 0], [2, 1], [0, 1]]
 ```
 
 ## Settings
@@ -242,6 +251,50 @@ Points keep the order they have in the file. Reloading a map replaces its
 points of interest with the file's. Resizing a map drops the points that fall
 off it.
 
+In Mappy, the **Points** tool (P) edits them. Click an empty hex to add a point
+there, click a point to select it (clicking again cycles through the points
+that share a hex), and drag to move it. The side panel edits the selected
+point's type, name and elevation, lists every point on the map, and deletes the
+selected point (or press Delete). Markers show every point over the map
+whichever tool is selected, and hovering a hex lists its points.
+
+## Regions
+
+Regions are named areas of hexes that scripts care about, such as deployment
+zones, objectives that cover several hexes, or areas units must hold. Like
+points of interest, units never see them and they do not change the terrain.
+
+A region is outlined by its corner hexes, listed in order. It holds every hex
+the outline passes through, tracing straight lines between the centers of
+consecutive corners and from the last corner back to the first, plus every hex
+whose center lies inside the outline. One corner makes a single-hex region and
+two make a line of hexes. Where an outline crosses itself, the areas it wraps
+around an even number of times are left out, though the outline itself always
+counts. A region never reaches past the rows and columns its corners span.
+
+Each `[[regions]]` entry has these keys:
+
+| Key | Required | Meaning |
+| --- | --- | --- |
+| `type` | yes | Category chosen by the map author. Any non-empty text; matching is case-sensitive. |
+| `name` | yes | Name chosen by the map author. Any non-empty text. |
+| `corners` | yes | One or more `[x, y]` corner hexes in outline order, counting from 0 at the top left. Each must be on the map. |
+
+Regions keep the order they have in the file, and each region keeps its
+corners in order. Reloading a map replaces its regions with the file's.
+Resizing a map drops the corners that fall off it, so the outline runs through
+the corners that remain, and drops a region that has none left.
+
+In Mappy, the **Regions** tool (G) edits them. With no region selected, click a
+region's hex to select it, or click anywhere else to start a new region there.
+With a region selected, click one of its corners to select that corner and drag
+to move it, or click anywhere else to add a corner after the selected one.
+Delete removes the selected corner, and the region with its last corner; Escape
+or **Done** lets go of the region. The side panel edits the selected region's
+name and type, lists its corners and every region on the map, and counts their
+hexes. Region hexes are tinted and outlined over the map whichever tool is
+selected, the selected region in its own color with numbered corners.
+
 ## Saving
 
 Fire and smoke are temporary conditions, not terrain. When a map is loaded,
@@ -250,5 +303,5 @@ hex's terrain that never burns out or drifts away.
 
 `SAVEMAP <name>` writes the current map to `<name>.toml` in this format.
 Permanent fire and smoke are saved in the `overlay` grid. Fire and smoke that will
-burn out or drift away are not saved; those hexes save only the terrain underneath. Damaged structures save their remaining CF. Points of interest are saved. Mine
+burn out or drift away are not saved; those hexes save only the terrain underneath. Damaged structures save their remaining CF. Points of interest and regions are saved. Mine
 fields, landing zones and other map objects are kept in the database, not in map files.
