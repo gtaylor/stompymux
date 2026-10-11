@@ -35,19 +35,23 @@ mod engine;
 mod engine_sink_override;
 mod equipment;
 mod fire_mode;
+mod gyro;
 mod inspection;
 mod loadout;
 mod mass;
 mod mech;
+mod mech_validation;
 mod metadata;
 mod part_forms;
 mod parts;
 mod parts_catalogue;
+mod radio_attributes;
 mod raw;
 mod registry;
 mod render;
 mod speed;
 mod technology;
+mod template_check;
 mod unit;
 mod vehicle;
 mod vehicle_engine;
@@ -73,6 +77,7 @@ pub use equipment::{
     RangeBracket, System, WaterRanges, Weapon, WeaponProfile, WeaponRange, strip_name_prefix,
 };
 pub use fire_mode::FireMode;
+pub use gyro::Gyro;
 pub use inspection::{
     InspectionArmor, InspectionCritical, InspectionPart, InspectionWeapon,
     inspect_raw_template_armor, inspect_raw_template_criticals, inspect_raw_template_engine,
@@ -96,6 +101,7 @@ pub use part_forms::{
     PartForm, PartNames, part_abbreviation, part_catalogue, part_names, part_short_name,
 };
 pub use parts::{AMMUNITION_PART_OFFSET, PART_ID_LIMIT, Part, PartKind, WEAPON_PART_IDS};
+pub use radio_attributes::validate_radio_attributes;
 pub use raw::{RawMovement, RawSectionCode, RawTemplate, RawUnitClass, raw_default_mech_criticals};
 pub use registry::{
     TemplateRegistryCache, finalize_raw_load_specials, read_resolved_raw_template,
@@ -104,6 +110,7 @@ pub use registry::{
 };
 pub use speed::{parse_template_speed, read_template_speed, write_template_speed};
 pub use technology::{DamageClass, Technology, flag_spells_technology, reflective_armor_slots};
+pub use template_check::{AmmunitionAdjustment, TemplateCheck, check_template};
 pub use unit::UnitTemplate;
 pub use vehicle::{VehicleMovement, VehicleSection, VehicleTemplate};
 pub use vehicle_engine::{VehicleEngine, VehiclePowerplant};

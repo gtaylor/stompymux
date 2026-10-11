@@ -5,10 +5,11 @@
 //! megamek-convert -o game/units mechs/*.mtf tanks/*.blk  # write <reference>.toml files
 //! ```
 //!
-//! Each unit is read into a draft template, then checked by the game itself: the draft must
-//! parse as a template and construct as a live unit, so anything stompymux cannot field is
-//! refused. Unsupported unit types, weapons, ammunition and construction technology are errors,
-//! never silent omissions. The written template is the game's own canonical rendering.
+//! Each unit is read into a draft template, then checked by the game's own construction rules:
+//! the draft must parse as a template and pass the checks a live unit is constructed under, so
+//! anything stompymux cannot field is refused. Unsupported unit types, weapons, ammunition and
+//! construction technology are errors, never silent omissions. The written template is the game's
+//! own canonical rendering.
 mod blk;
 mod draft;
 mod equipment;
@@ -20,7 +21,7 @@ use clap::Parser;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
-use stompymux_rs::{UnitTemplate, Vehicle, check_battle_template};
+use stompymux_unit_construction::{UnitTemplate, VehicleLoadout, check_template};
 
 /// Command-line options.
 #[derive(Parser)]
@@ -141,7 +142,7 @@ fn finish(reference: &str, draft: &draft::Draft) -> Result<String> {
         .context("stompymux rejected the converted template")?;
     let document = match template {
         UnitTemplate::Mech(mech) => {
-            let check = check_battle_template(&mech);
+            let check = check_template(&mech);
             if let Some(rejection) = check.rejection {
                 bail!("stompymux cannot construct this mech: {rejection}");
             }
@@ -153,7 +154,10 @@ fn finish(reference: &str, draft: &draft::Draft) -> Result<String> {
             mech.to_document()?
         }
         UnitTemplate::Vehicle(vehicle) => {
-            Vehicle::new(vehicle.clone()).context("stompymux cannot construct this vehicle")?;
+            vehicle
+                .validate_construction()
+                .and_then(|()| VehicleLoadout::resolve(&vehicle))
+                .context("stompymux cannot construct this vehicle")?;
             vehicle.to_document()?
         }
     };

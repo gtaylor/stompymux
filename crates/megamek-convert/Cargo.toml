@@ -1,0 +1,23 @@
+# The `megamek-convert` tool, which turns MegaMek unit files into stompymux templates. It
+# validates its output through `crates/unit-construction` alone and never links the server
+# crate, so an edit to the converter rebuilds in seconds instead of waiting on a server compile.
+[package]
+name = "stompymux-megamek-convert"
+version = "0.1.0"
+edition = "2024"
+description = "Convert MegaMek .mtf and .blk unit files into stompymux unit templates"
+publish = false
+
+[[bin]]
+name = "megamek-convert"
+path = "src/main.rs"
+
+# Versions and features match the root manifest.
+[dependencies]
+stompymux-unit-construction = { path = "../unit-construction" }
+anyhow = "1.0.104"
+clap = { version = "4.6.6", features = ["derive"] }
+toml = { version = "1.1.5", features = ["preserve_order"] }
+
+[dev-dependencies]
+tempfile = "3.27.0"

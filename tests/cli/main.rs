@@ -1,5 +1,5 @@
-//! Integration tests that run the server package's own executables, `stompymux-rs` and
-//! `megamek-convert`, as child processes.
+//! Integration tests that run the server package's own executable, `stompymux-rs`, as a child
+//! process.
 //!
 //! Cargo only defines `CARGO_BIN_EXE_<name>` for integration tests in the package that owns
 //! those binaries, so these tests live in the server package. Every other scenario runs from
@@ -7,7 +7,6 @@
 //! `stompymux-test-support`: as a dev-dependency of the server package it would hold the
 //! server library's unit-test build until the library itself finished compiling.
 
-mod btech_megamek_convert;
 mod configuration;
 mod foundation;
 mod persistence;

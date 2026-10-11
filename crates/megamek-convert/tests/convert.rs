@@ -1,13 +1,14 @@
 //! The megamek-convert tool turns MegaMek unit files into loadable templates and refuses units
 //! stompymux cannot field, without writing anything for them.
-use crate::repository_root;
 use std::path::PathBuf;
 use std::process::{Command, Output};
-use stompymux_rs::UnitTemplate;
+use stompymux_unit_construction::UnitTemplate;
 
 /// The hand-written MegaMek fixtures.
 fn fixture(name: &str) -> PathBuf {
-    repository_root().join("tests/fixtures/megamek").join(name)
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/fixtures")
+        .join(name)
 }
 
 /// Run the converter with arguments.

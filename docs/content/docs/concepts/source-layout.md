@@ -24,6 +24,7 @@ The implementation is organized by responsibility across modules.
 | `src/config/` | Configuration model, directives, and runtime administration |
 | `crates/map/` | Battlefield map data shared by the server and map tools: layered hexes, terrain, map flags, hex geometry, the [map file](../map-files/) format, and the `map-check` CLI |
 | `crates/unit-construction/` | BattleTech unit templates shared by the server and template tools: the [unit template](../unit-templates/) document format, the weapon and system catalogue, loadouts, construction rules, construction mass and cost |
+| `crates/megamek-convert/` | The `megamek-convert` CLI, which turns MegaMek `.mtf` and `.blk` unit files into templates and validates them through `crates/unit-construction` alone (see [Unit templates](../unit-templates/#converting-megamek-units)) |
 | `crates/mapgen/` | Procedural battlefield map generation library and the `mapgen` CLI; depends on `crates/map` but nothing in the server, so editors can embed it (see [Map generation](../map-generation/)) |
 | `crates/styled-text/` | Styled and Markdown documents, the bracket markup parser, OSC 8 links, inline images and the ANSI, MXP and HTML renderers; re-exported by the server as `stompymux_rs::text` |
 | `crates/telnet/` | Telnet option negotiation, line decoding, NEW-ENVIRON, MXP, MCCP2 output and protocol diagnostics; re-exported by the server as `stompymux_rs::telnet` |
