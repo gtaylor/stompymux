@@ -62,6 +62,7 @@ pub fn telnet(r: &mut Report, name: &str, player: i64, id: u64, d: &Decoder, t: 
         (super::GMCP, "GMCP", Side::Local),
         (super::MSSP, "MSSP", Side::Local),
         (super::MCCP2, "MCCP2", Side::Local),
+        (super::MXP, "MXP", Side::Local),
         (super::ECHO, "ECHO", Side::Local),
     ] {
         r.line(&format!("  {label}:"));
@@ -147,6 +148,35 @@ pub fn telnet(r: &mut Report, name: &str, player: i64, id: u64, d: &Decoder, t: 
                     }
                 ));
                 r.line(&format!("    Wire output bytes: {}", t.wire_output));
+            }
+            super::MXP => {
+                r.line(&format!(
+                    "    Client: \"{}\" version \"{}\"; MXP version \"{}\"",
+                    escape(d.mxp.name.as_bytes()),
+                    escape(d.mxp.version.as_bytes()),
+                    escape(d.mxp.mxp_version.as_bytes())
+                ));
+                r.line(&format!(
+                    "    Replies: version {}; supports {}",
+                    if d.mxp.version_received { "yes" } else { "no" },
+                    if d.mxp.supports_received { "yes" } else { "no" }
+                ));
+                r.line(&format!(
+                    "    Supported tags: {}",
+                    if d.mxp.supports.is_empty() {
+                        "(none)".to_owned()
+                    } else {
+                        escape(
+                            d.mxp
+                                .supports
+                                .iter()
+                                .map(String::as_str)
+                                .collect::<Vec<_>>()
+                                .join(" ")
+                                .as_bytes(),
+                        )
+                    }
+                ));
             }
             super::ECHO => r.line(&format!(
                 "    Client echo (requested): {}",

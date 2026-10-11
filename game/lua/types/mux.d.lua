@@ -1657,4 +1657,32 @@ function mux_names.callsigns(spec, count) end
 
 mux.names = mux_names
 
+---What a client reported through the MUD eXtension Protocol (MXP) after
+---the server's `<VERSION>` and `<SUPPORT>` queries.
+---@class TelnetMxpClient
+---@field name string Client name from its `<VERSION>` reply, or `""` before that reply.
+---@field version string Client version from its `<VERSION>` reply, or `""`.
+---@field mxp_version string MXP protocol version the client implements, or `""`.
+---@field registered boolean? Whether the client reported a registered copy, when it said.
+---@field supports string[] Lower-cased tag and `tag.attribute` names from its `<SUPPORTS>` reply.
+
+---Describes the MXP client on a live descriptor.
+---@param descriptor integer Live descriptor ID, normally `ctx.descriptor`.
+---@return TelnetMxpClient? client Reported client details, or nil when MXP is not negotiated.
+---
+---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking) or [`mux.error.codes.connection.invalid`](lua://mux.error.codes.connection.invalid).
+---@see mux.error.codes.unavailable.checking
+---@see mux.error.codes.connection.invalid
+function mux_telnet.mxp_client(descriptor) end
+
+---Tests whether a live descriptor's MXP client advertised a tag, such as `"image"`.
+---@param descriptor integer Live descriptor ID, normally `ctx.descriptor`.
+---@param tag string Case-insensitive MXP tag or `tag.attribute` name.
+---@return boolean supported False when MXP is not negotiated or the tag was not advertised.
+---
+---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking) or [`mux.error.codes.connection.invalid`](lua://mux.error.codes.connection.invalid).
+---@see mux.error.codes.unavailable.checking
+---@see mux.error.codes.connection.invalid
+function mux_telnet.mxp_supports(descriptor, tag) end
+
 return mux

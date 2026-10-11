@@ -28,7 +28,7 @@ async fn telnet_checks_descriptor_before_kind_and_name() {
     scripts
         .eval_callback::<()>(
             r#"
-        for _,name in ipairs({'environment_has','environment_get'}) do
+        for _,name in ipairs({'environment_has','environment_get','mxp_client','mxp_supports'}) do
             local fn=mux.telnet[name]
             local ok,err=mux.error.pcall(fn,'999999',false,false)
             assert(not ok and err.code=='mux.connection.invalid' and err.detail.argument==1)

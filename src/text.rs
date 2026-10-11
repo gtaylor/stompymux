@@ -1,5 +1,6 @@
 //! Explicit styled-text and Markdown documents, independent of output transport.
 mod colors;
+pub mod image;
 pub mod links;
 pub mod markdown;
 mod parser;
@@ -32,6 +33,9 @@ pub const OSC_CAPABILITIES: &[&str] = &[
     "COMPACT",
     "PRESETS",
 ];
+
+/// MXP tags the renderer can emit when a client advertises them.
+pub const MXP_TAGS: &[&str] = &["image"];
 
 /// Palette and validated OSC preset definitions, shared by all text consumers.
 #[derive(Clone, Debug, Default)]
@@ -156,6 +160,8 @@ pub struct Span {
     pub style: Style,
     /// Optional action associated with this visible run.
     pub link: Option<links::Link>,
+    /// Optional inline image; the text is its fallback for clients without image support.
+    pub image: Option<image::Image>,
 }
 
 /// Input format is explicit; Markdown is never inferred from an ordinary message.

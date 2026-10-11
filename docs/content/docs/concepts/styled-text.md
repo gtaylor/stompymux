@@ -41,6 +41,24 @@ UTF-8 text and are percent-encoded when rendered. Targets are double quoted;
 escape a quote as `\"` and a backslash as `\\`. Formatting may be nested
 inside a link, but links may not be nested.
 
+Inline images use the same scope, with the enclosed text as the required
+fallback for clients that cannot show pictures:
+
+```text
+[image="https://cdn.example.com/mechs/atlas.png"]An Atlas AS7-D[/]
+[image="https://cdn.example.com/maps/sector7.png" width=320 height=200 align=right]Sector 7[/]
+```
+
+The quoted source follows the `[link]` URL policy, must end in a file name,
+and may not carry a query string or fragment. `width` and `height` are pixel
+counts from 1 through 4096; `align` is `left`, `right`, `top`, `middle`, or
+`bottom`. Formatting may be nested inside an image, but images and links may
+not contain each other. Markdown documents use `![alt](URL)`; an empty alt
+text falls back to the file name. Clients that negotiated MXP and advertised
+`+image` receive a secure `<IMAGE>` tag in place of the fallback text. Clients
+with OSC 8 web links see the fallback text as a link to the picture, and
+Markdown output without link support appends the URL in parentheses.
+
 Link-local visual properties share the opening link tag. The base properties
 are `color`/`fg`, `bg`, `bold`, `italic`, `underline`, `overline`,
 `strikethrough`, and `text-decoration-color`. Boolean values may be bare or
@@ -256,6 +274,11 @@ the global definitions once per connection before the first subsequent normal
 output, then links carry `preset=NAME` plus only their overrides. Definitions
 and overrides use the same compact or full-name representation. An advertised
 preset capability reserves an existing web `preset` query parameter.
+
+MXP image support is likewise connection-specific and independent of color.
+The renderer emits `<IMAGE>` tags only after the client accepted Telnet option
+91 and listed `+image` in its `<SUPPORTS>` reply; see the Telnet negotiation
+documentation for the handshake and mode handling.
 
 The `color` command displays or overrides the current connection's selection.
 Use `color auto` for negotiation, `color off` for plain text, or `color 16`,

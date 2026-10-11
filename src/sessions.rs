@@ -128,9 +128,25 @@ impl Session {
                 }
             })
             .collect();
+        let mxp = if self
+            .decoder
+            .option_state(crate::telnet::MXP, crate::telnet::q::Side::Local)
+            .enabled()
+        {
+            self.decoder
+                .mxp
+                .supports
+                .iter()
+                .filter(|tag| crate::text::MXP_TAGS.contains(&tag.as_str()))
+                .cloned()
+                .collect()
+        } else {
+            Default::default()
+        };
         crate::text::RenderOptions {
             color,
             capabilities,
+            mxp,
             width: usize::from(self.decoder.width).max(1),
         }
     }

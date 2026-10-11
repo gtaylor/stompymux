@@ -13,3 +13,5 @@ no_list: true
 
 - [`environment_get`](environment-get/)
 - [`environment_has`](environment-has/)
+- [`mxp_client`](mxp-client/)
+- [`mxp_supports`](mxp-supports/)

@@ -2,6 +2,7 @@
 use anyhow::{Result, bail};
 pub mod diagnostics;
 pub mod environment;
+pub mod mxp;
 pub mod q;
 pub mod transport;
 use q::{Negotiator, Side, Verb};
@@ -12,6 +13,7 @@ pub const CHARSET: u8 = 42;
 pub const NEW_ENVIRON: u8 = 39;
 pub const MSSP: u8 = 70;
 pub const MCCP2: u8 = 86;
+pub const MXP: u8 = mxp::OPTION;
 pub const GMCP: u8 = 201;
 const SB: u8 = 250;
 const SE: u8 = 240;
@@ -24,6 +26,7 @@ const OPTIONS: &[(u8, Side)] = &[
     (MCCP2, Side::Local),
     (CHARSET, Side::Local),
     (GMCP, Side::Local),
+    (MXP, Side::Local),
 ];
 pub const IAC: u8 = 255;
 pub const ECHO: u8 = 1;
@@ -68,6 +71,8 @@ pub struct Decoder {
     pub echo_suppressed: bool,
     /// Result of CHARSET negotiation; input remains UTF-8 regardless.
     pub charset_utf8: bool,
+    /// What the client reported through MXP once that option was enabled.
+    pub mxp: mxp::Client,
     line: Vec<u8>,
     discarded: u64,
     after_cr: bool,
@@ -100,6 +105,7 @@ impl Decoder {
             screen_reader: false,
             echo_suppressed: false,
             charset_utf8: true,
+            mxp: Default::default(),
             line: Vec::new(),
             discarded: 0,
             after_cr: false,
@@ -164,10 +170,15 @@ impl Decoder {
                                 self.charset_pending = true;
                                 out.push(Self::sub_reply(CHARSET, b"\x01;UTF-8"));
                             }
+                            (MXP, Side::Local) => {
+                                self.mxp = Default::default();
+                                out.push(Input::Reply(mxp::activation()));
+                            }
                             _ => {}
                         }
                     } else if !change.after.enabled() {
                         match (change.option, change.side) {
+                            (MXP, Side::Local) => self.mxp = Default::default(),
                             (TTYPE, Side::Remote) => {
                                 self.terminal = "vt100".into();
                                 self.terminal_raw = b"vt100".to_vec();
@@ -295,14 +306,24 @@ impl Decoder {
         match b {
             b'\r' | b'\n' => {
                 let line = std::mem::take(&mut self.line);
-                out.push(match String::from_utf8(line) {
-                    Ok(s) => Input::Line(s),
+                self.after_cr = b == b'\r';
+                let line = match String::from_utf8(line) {
+                    Ok(s) => s,
                     Err(e) => {
                         self.discarded += e.as_bytes().len() as u64;
-                        Input::InvalidUtf8
+                        out.push(Input::InvalidUtf8);
+                        return Ok(());
                     }
-                });
-                self.after_cr = b == b'\r';
+                };
+                // MXP clients answer <VERSION> and <SUPPORT> on a secure line;
+                // those replies are protocol data, never commands.
+                if self.option_state(MXP, Side::Local).enabled()
+                    && let Some(body) = mxp::reply_body(&line)
+                {
+                    self.mxp.receive(body);
+                    return Ok(());
+                }
+                out.push(Input::Line(line));
             }
             8 | 127 => {
                 self.erase_character();

@@ -39,7 +39,8 @@ everything opened by that tag. `[reset]` closes all active styles. Write `[[`
 to display a literal `[` character.
 
 Styled text also supports capability-aware command and web links. See
-`help osc8` for `[send]`, `[prompt]`, and `[link]`.
+`help osc8` for `[send]`, `[prompt]`, and `[link]`. See `help mxp` for
+`[image]`, which shows a picture inline in clients that support MXP.
 
 Markup must be correctly nested. Unknown colors, unknown tags, raw terminal
 escape sequences, unmatched `[/]`, and unclosed styles are rejected.

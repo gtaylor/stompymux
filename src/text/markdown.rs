@@ -1,6 +1,7 @@
 //! CommonMark parsing delegated to pulldown-cmark; only layout is application-owned.
 use super::{
     Span, Style,
+    image::Image,
     links::{self, Link, LinkConfig},
 };
 use pulldown_cmark::{Event, Options, Parser, Tag, TagEnd};
@@ -222,6 +223,9 @@ pub fn spans_at(source: &str, options: &super::RenderOptions, article: Option<&s
     let mut style = Style::default();
     let mut stack = Vec::new();
     let mut active_link = None;
+    let mut active_image: Option<Image> = None;
+    // Whether the open image has produced alternative text yet.
+    let mut image_text = false;
     let mut code = false;
     let mut lists = Vec::new();
     let mut table: Option<Vec<Vec<Vec<Span>>>> = None;
@@ -356,13 +360,40 @@ pub fn spans_at(source: &str, options: &super::RenderOptions, article: Option<&s
                     text = Some(format!(" ({})", link.target));
                 }
             }
+            Event::Start(Tag::Image { dest_url, .. }) => {
+                active_image = Image::from_url(&dest_url).ok();
+                image_text = false;
+            }
+            Event::End(TagEnd::Image) => {
+                if let Some(image) = active_image.take() {
+                    // Without alternative text the file name stands in for the picture.
+                    if !image_text {
+                        let span = Span {
+                            text: image.file_name().to_owned(),
+                            style: style.clone(),
+                            link: active_link.clone(),
+                            image: Some(image.clone()),
+                        };
+                        if in_cell {
+                            cell.push(span)
+                        } else {
+                            block.push(span)
+                        }
+                    }
+                    if !options.mxp("image") && !options.link_enabled("url") {
+                        text = Some(format!(" ({})", image.source));
+                    }
+                }
+            }
             Event::Text(s) => text = Some(super::parser::strip_controls(&s)),
             Event::Code(s) => {
                 let span = Span {
                     text: super::parser::strip_controls(&s),
                     style: Style::default(),
                     link: None,
+                    image: active_image.clone(),
                 };
+                image_text |= active_image.is_some();
                 if in_cell {
                     cell.push(span)
                 } else {
@@ -378,10 +409,12 @@ pub fn spans_at(source: &str, options: &super::RenderOptions, article: Option<&s
             _ => {}
         }
         if let Some(text) = text {
+            image_text |= active_image.is_some();
             let span = Span {
                 text,
                 style: style.clone(),
                 link: active_link.clone(),
+                image: active_image.clone(),
             };
             if in_cell {
                 cell.push(span)
@@ -429,7 +462,7 @@ fn table_spans(
                         bold: true,
                         ..Style::default()
                     },
-                    link: None,
+                    ..Span::default()
                 });
             }
             let used = UnicodeWidthStr::width(
@@ -476,6 +509,7 @@ pub fn html(source: &str) -> String {
 /// HTML and Telnet use the same article-relative link policy.
 pub fn html_at(source: &str, article: Option<&str>) -> String {
     let mut link_stack = Vec::new();
+    let mut image_stack = Vec::new();
     let events = parse(source).filter_map(|e| match e {
         Event::Html(_) | Event::InlineHtml(_) => None,
         Event::Start(Tag::Link { dest_url, .. }) => {
@@ -504,7 +538,13 @@ pub fn html_at(source: &str, article: Option<&str>) -> String {
             }
             .into(),
         )),
-        Event::Start(Tag::Image { .. }) | Event::End(TagEnd::Image) => None,
+        // Only images that pass the shared source policy become <img> elements.
+        Event::Start(Tag::Image { ref dest_url, .. }) => {
+            let valid = Image::from_url(dest_url).is_ok();
+            image_stack.push(valid);
+            valid.then_some(e)
+        }
+        Event::End(TagEnd::Image) => image_stack.pop().unwrap_or(false).then_some(e),
         Event::Text(s) => Some(Event::Text(super::parser::strip_controls(&s).into())),
         Event::Code(s) => Some(Event::Code(super::parser::strip_controls(&s).into())),
         _ => Some(e),

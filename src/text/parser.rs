@@ -1,6 +1,7 @@
 //! Bounded bracket lexer and semantic parser, with strict and display modes.
 use super::{
     Palette, Span, Style,
+    image::Image,
     links::{Link, LinkConfig},
 };
 use anyhow::{Result, ensure};
@@ -333,7 +334,7 @@ pub(crate) fn native_events(p: &Palette, source: &str) -> Vec<NativeEvent> {
                     if directives.is_empty()
                         || matches!(
                             directives[0].name.as_str(),
-                            "url" | "link" | "send" | "prompt"
+                            "url" | "link" | "send" | "prompt" | "image"
                         )
                     {
                         return None;
@@ -374,7 +375,9 @@ pub fn parse(p: &Palette, source: &str, strict: bool) -> Result<Vec<Span>> {
     );
     let mut spans = Vec::new();
     let mut current = Span::default();
-    let mut stack = Vec::new();
+    let mut stack: Vec<(Style, Option<Link>, Option<Image>)> = Vec::new();
+    // Whether the open image scope has produced any fallback text yet.
+    let mut image_text = false;
     let mut rest = source;
     while !rest.is_empty() {
         if rest.starts_with('\x1b') {
@@ -392,6 +395,9 @@ pub fn parse(p: &Palette, source: &str, strict: bool) -> Result<Vec<Span>> {
         }
         if rest.starts_with("[[") {
             current.text.push('[');
+            if current.image.is_some() {
+                image_text = true;
+            }
             rest = &rest[2..];
             continue;
         }
@@ -424,19 +430,24 @@ pub fn parse(p: &Palette, source: &str, strict: bool) -> Result<Vec<Span>> {
                     break;
                 }
             }
-            let tag_result = (|| -> Result<(Style, Option<Link>, bool, bool)> {
+            type Opened = (Style, Option<Link>, Option<Image>, bool, bool);
+            let tag_result = (|| -> Result<Opened> {
                 let end = end.ok_or_else(|| anyhow::anyhow!("style tag is not closed"))?;
                 ensure!(end < super::OSC8_URI_LIMIT + 32, "oversized style tag");
                 let tag = rest[1..end].trim();
                 if tag == "/" {
-                    let (s, l) = stack
+                    let (s, l, i) = stack
                         .last()
                         .cloned()
                         .ok_or_else(|| anyhow::anyhow!("unmatched close tag"))?;
-                    return Ok((s, l, true, false));
+                    ensure!(
+                        !strict || i.is_some() || current.image.is_none() || image_text,
+                        "image requires fallback text"
+                    );
+                    return Ok((s, l, i, true, false));
                 }
                 if tag.eq_ignore_ascii_case("reset") {
-                    return Ok((Style::default(), None, false, true));
+                    return Ok((Style::default(), None, None, false, true));
                 }
                 ensure!(
                     stack.len() < super::MAX_NESTING,
@@ -446,8 +457,16 @@ pub fn parse(p: &Palette, source: &str, strict: bool) -> Result<Vec<Span>> {
                 ensure!(!ds.is_empty(), "empty style tag");
                 let mut style = current.style.clone();
                 let mut link = current.link.clone();
-                if matches!(ds[0].name.as_str(), "url" | "link" | "send" | "prompt") {
+                let mut image = current.image.clone();
+                if ds[0].name == "image" {
+                    ensure!(
+                        link.is_none() && image.is_none(),
+                        "images cannot be nested in links or images"
+                    );
+                    image = Some(Image::parse(&ds)?);
+                } else if matches!(ds[0].name.as_str(), "url" | "link" | "send" | "prompt") {
                     ensure!(link.is_none(), "nested links are not allowed");
+                    ensure!(image.is_none(), "links cannot be nested in images");
                     let target = ds[0]
                         .value
                         .clone()
@@ -508,10 +527,10 @@ pub fn parse(p: &Palette, source: &str, strict: bool) -> Result<Vec<Span>> {
                         apply_style(p, &mut style, &d)?;
                     }
                 }
-                Ok((style, link, false, false))
+                Ok((style, link, image, false, false))
             })();
             match tag_result {
-                Ok((style, link, pop, reset)) => {
+                Ok((style, link, image, pop, reset)) => {
                     if !current.text.is_empty() {
                         spans.push(current.clone());
                         current.text.clear();
@@ -521,10 +540,18 @@ pub fn parse(p: &Palette, source: &str, strict: bool) -> Result<Vec<Span>> {
                     } else if reset {
                         stack.clear();
                     } else {
-                        stack.push((current.style.clone(), current.link.clone()));
+                        stack.push((
+                            current.style.clone(),
+                            current.link.clone(),
+                            current.image.clone(),
+                        ));
+                        if image.is_some() && current.image.is_none() {
+                            image_text = false;
+                        }
                     }
                     current.style = style;
                     current.link = link;
+                    current.image = image;
                     rest = &rest[end.unwrap() + 1..];
                     continue;
                 }
@@ -535,6 +562,9 @@ pub fn parse(p: &Palette, source: &str, strict: bool) -> Result<Vec<Span>> {
         let c = rest.chars().next().unwrap();
         if !c.is_control() || matches!(c, '\n' | '\r' | '\t') {
             current.text.push(c);
+            if current.image.is_some() {
+                image_text = true;
+            }
         }
         rest = &rest[c.len_utf8()..];
     }

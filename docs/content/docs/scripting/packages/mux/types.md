@@ -554,3 +554,11 @@ Alias: `CreateRoomOptions|CreateThingOptions|CreateExitOptions`
 
 - `cultures`: `NameCultureNamespace` — Immutable namespace of naming-culture constants.
 - `flavors`: `NameFlavorNamespace` — Immutable namespace of outfit-flavor constants.
+
+## TelnetMxpClient
+
+- `name`: `string` — Client name from its `<VERSION>` reply, or `""` before that reply.
+- `version`: `string` — Client version from its `<VERSION>` reply, or `""`.
+- `mxp_version`: `string` — MXP protocol version the client implements, or `""`.
+- `registered`: `boolean?` — Whether the client reported a registered copy, when it said.
+- `supports`: `string[]` — Lower-cased tag and `tag.attribute` names from its `<SUPPORTS>` reply.

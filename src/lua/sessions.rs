@@ -16,6 +16,8 @@ pub(crate) struct Sessions {
     pub record: i64,
     pub maximum: Option<i64>,
     pub environments: BTreeMap<u64, crate::telnet::environment::Environment>,
+    /// MXP client reports, present only for descriptors with MXP negotiated.
+    pub mxp: BTreeMap<u64, crate::telnet::mxp::Client>,
 }
 /// Read a fresh Lua value; editing it cannot corrupt the host's snapshot.
 pub(crate) fn players(lua: &Lua) -> mlua::Result<Table> {

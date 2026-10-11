@@ -7,8 +7,8 @@ weight: 37
 
 The Rust decoder in `src/telnet.rs` handles Telnet command framing and option
 negotiation. A new connection negotiates terminal type (TTYPE), window size (NAWS), UTF-8
-character set, server status (MSSP), output compression (MCCP2), GMCP, and the
-RFC 1572 NEW-ENVIRON option.
+character set, server status (MSSP), output compression (MCCP2), GMCP, the MUD
+eXtension Protocol (MXP), and the RFC 1572 NEW-ENVIRON option.
 
 ## TTYPE and MTTS
 
@@ -103,6 +103,45 @@ negotiated state with `@telnet <player>`; non-printable bytes are escaped in
 its output. The diagnostic groups each value beneath the Telnet option that
 supplied it.
 
+## MXP
+
+The server offers the [MUD eXtension Protocol (MXP)][mxp] as Telnet option 91.
+MXP tags look like HTML and travel in the ordinary text stream, so the server
+treats the client's parsing mode as a safety boundary. As soon as a client
+accepts the option, the server sends the *lock locked* mode switch
+(`ESC[7z`), under which `<`, `>` and `&` in game text are literal, and then
+queries the client with one-shot secure `<VERSION>` and `<SUPPORT>` tags.
+Every tag the server emits later is prefixed the same way with the *temp
+secure* switch (`ESC[4z`), which parses exactly that tag and returns the
+client to locked mode. Ordinary output therefore needs no entity escaping,
+and a client that never reports its capabilities is never sent a tag.
+
+Clients answer on a secure line: a command line beginning with `ESC[1z<`. While
+MXP is enabled the decoder consumes such lines as protocol data rather than
+commands. `<VERSION>` replies supply the client name, its version, the MXP
+version it implements and whether it is registered. `<SUPPORTS>` replies list
+`+tag` and `+tag.attribute` names, which are stored lower-cased; at most 256
+names of up to 63 bytes are kept, and `-tag` entries remove a name. Disabling
+the option discards everything the client reported, and re-enabling it repeats
+the handshake. The implementation is in `src/telnet/mxp.rs`.
+
+The only tag the renderer currently emits is `<IMAGE>`, and only to clients
+whose `<SUPPORTS>` reply included `+image`. See the styled-text documentation
+for the `[image]` markup and the Markdown image form. The tag names the file
+and its download directory separately, as MXP's image cache expects:
+
+```text
+ESC[4z<IMAGE atlas.png URL="https://cdn.example.com/mechs/" W=200 H=150 ALIGN=right>
+```
+
+Attribute values are double quoted with `"`, `<` and `>` entity-encoded; `&`
+is left as written because the image URL policy already excludes query
+strings and clients differ in whether they decode entities inside attributes.
+
+Lua code can read the report through `mux.telnet.mxp_client(descriptor)` and
+`mux.telnet.mxp_supports(descriptor, tag)`. `@telnet <player>` lists the
+client, its replies and the advertised tags.
+
 ## ECHO
 
 [Telnet ECHO][echo] is negotiated dynamically rather than during initial
@@ -175,6 +214,7 @@ capability receive the link's visible text as a plain fallback.
 [mccp2]: https://mudstandards.org/mud/mccp2/
 [mssp]: https://mudstandards.org/mud/mssp/
 [mtts]: https://mudstandards.org/mud/mtts/
+[mxp]: https://www.zuggsoft.com/zmud/mxp.htm
 [naws]: https://www.rfc-editor.org/rfc/rfc1073
 [new-environ]: https://www.rfc-editor.org/rfc/rfc1572
 [ttype]: https://www.rfc-editor.org/rfc/rfc1091
