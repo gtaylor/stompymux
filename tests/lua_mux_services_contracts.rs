@@ -230,3 +230,57 @@ async fn top_level_and_config_edges_match_c() {
         )
         .unwrap();
 }
+
+#[tokio::test(flavor = "current_thread")]
+async fn names_are_seeded_typed_and_validated() {
+    let (_directory, _config, scripts) = isolated_scripts().await;
+    scripts.eval_callback::<()>(r#"
+        local names=mux.names
+        local spec={seed=42,culture=names.cultures.SLAVIC,flavor=names.flavors.PIRATE}
+        local outfit=names.outfit(spec)
+        assert(type(outfit.text)=='string' and #outfit.text>0,outfit.text)
+        assert(outfit.text==names.outfit(spec).text,'outfit names repeat for one spec')
+        assert(outfit.seed==42 and outfit.culture==names.cultures.SLAVIC and outfit.flavor==names.flavors.PIRATE)
+        assert(tostring(outfit.culture)=='slavic' and tostring(outfit.flavor)=='pirate')
+        assert(outfit.pattern:find('{suffix}',1,true),outfit.pattern)
+        -- Fixing the culture leaves the seed's own flavor alone.
+        local bare=names.outfit({seed=42})
+        assert(names.outfit({seed=42,culture=names.cultures.ARABIC}).flavor==bare.flavor)
+        -- Omitted seeds resolve to a reproducible integer.
+        local fresh=names.outfit()
+        assert(fresh.seed==math.floor(fresh.seed) and fresh.seed>=0)
+        assert(names.outfit({seed=fresh.seed}).text==fresh.text)
+        -- People and rosters.
+        local person=names.person(spec)
+        assert(person.full==person.given..' '..person.family and person.culture==names.cultures.SLAVIC)
+        local roster=names.roster(spec,8)
+        assert(#roster==8)
+        local families={}
+        for _,member in ipairs(roster) do
+            assert(not families[member.family],'family repeated: '..member.family)
+            families[member.family]=true
+            assert(member.culture==names.cultures.SLAVIC)
+        end
+        -- Callsigns.
+        assert(type(names.callsign(spec))=='string')
+        local callsigns=names.callsigns(spec,12)
+        assert(#callsigns==12 and type(callsigns[1])=='string')
+        -- Constants are immutable, spelled exactly, and the only accepted spec values.
+        local ok,err=mux.error.pcall(function() return names.cultures.Slavic end)
+        assert(not ok and err.code=='mux.arg.invalid' and err.message:find("unknown culture constant 'Slavic'",1,true),tostring(err))
+        ok,err=mux.error.pcall(function() names.flavors.HOUSE=1 end)
+        assert(not ok and err.code=='mux.arg.invalid',tostring(err))
+        ok,err=mux.error.pcall(names.outfit,{culture='slavic'})
+        assert(not ok and err.code=='mux.arg.invalid' and err.detail.argument==1 and err.message:find('mux.names.cultures',1,true),tostring(err))
+        ok,err=mux.error.pcall(names.outfit,{seed=-1})
+        assert(not ok and err.code=='mux.arg.invalid' and err.message:find('seed must be an integer',1,true),tostring(err))
+        ok,err=mux.error.pcall(names.outfit,{bogus=1})
+        assert(not ok and err.code=='mux.arg.invalid' and err.message:find("unknown name spec field 'bogus'",1,true),tostring(err))
+        ok,err=mux.error.pcall(names.outfit,'pirate')
+        assert(not ok and err.code=='mux.arg.invalid' and err.message:find('must be a table or nil',1,true),tostring(err))
+        ok,err=mux.error.pcall(names.roster,spec,0)
+        assert(not ok and err.code=='mux.arg.invalid' and err.detail.argument==2,tostring(err))
+        ok,err=mux.error.pcall(names.callsigns,spec,501)
+        assert(not ok and err.code=='mux.arg.invalid' and err.message:find('count must be from 1 to 500',1,true),tostring(err))
+    "#).unwrap();
+}

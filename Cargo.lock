@@ -3925,6 +3925,8 @@ dependencies = [
  "sha2 0.11.0",
  "sqlx",
  "stompymux-map",
+ "stompymux-namegen",
+ "stompymux-seeded-rng",
  "stompymux-unit-construction",
  "tempfile",
  "tokio",

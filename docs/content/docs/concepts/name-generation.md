@@ -74,4 +74,26 @@ generation itself can never fail.
 The embedded lists can be overridden from a directory with
 `--lists DIR` (or `Lists::from_dir` in code). Only the files present in the
 directory are replaced, matched by relative path such as `people/anglo.toml`.
-Keep every entry original; do not add named units from published fiction.
+The server reads overrides from `data/names` under the game directory when
+that directory exists. Keep every entry original; do not add named units from
+published fiction.
+
+## From Lua
+
+Game modules reach the generator through the `mux.names` package, which is
+pure and stays available during `@lua/check`. Cultures and flavors are typed
+constants rather than strings:
+
+```lua
+local names = mux.names
+local spec = { seed = 42, culture = names.cultures.SLAVIC, flavor = names.flavors.PIRATE }
+local outfit = names.outfit(spec)        -- outfit.text, outfit.pattern, outfit.seed, ...
+local commander = names.person(spec)     -- commander.full, .given, .family, .culture
+local pilots = names.roster(spec, 8)     -- distinct family names
+local handles = names.callsigns(spec, 8) -- distinct callsigns
+```
+
+Every field of the spec is optional. A result carries the seed it used, so a
+module can store that integer and reproduce the same names later. Seeds are
+limited to 2^53 - 1 so Lua numbers hold them exactly. The full reference is
+under [`mux.names`](../../scripting/packages/mux/names/).
