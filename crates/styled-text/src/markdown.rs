@@ -88,7 +88,7 @@ fn link(url: &str, article: Option<&str>) -> Option<Link> {
 }
 
 /// Keep Unicode word boundaries when possible, then split oversized words by grapheme.
-pub(crate) fn wrap(spans: Vec<Span>, width: usize) -> Vec<Span> {
+pub fn wrap(spans: Vec<Span>, width: usize) -> Vec<Span> {
     let plain: String = spans.iter().map(|s| s.text.as_str()).collect();
     let mut breaks = std::collections::BTreeSet::new();
     let mut omitted = std::collections::BTreeSet::new();

@@ -3927,6 +3927,8 @@ dependencies = [
  "stompymux-map",
  "stompymux-namegen",
  "stompymux-seeded-rng",
+ "stompymux-styled-text",
+ "stompymux-telnet",
  "stompymux-unit-construction",
  "tempfile",
  "tokio",
@@ -3942,6 +3944,18 @@ dependencies = [
 [[package]]
 name = "stompymux-seeded-rng"
 version = "0.1.0"
+
+[[package]]
+name = "stompymux-styled-text"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "pulldown-cmark",
+ "serde_json",
+ "stompymux-telnet",
+ "unicode-segmentation",
+ "unicode-width",
+]
 
 [[package]]
 name = "stompymux-suites"
@@ -3961,6 +3975,15 @@ dependencies = [
  "toml",
  "tracing",
  "unicode-width",
+]
+
+[[package]]
+name = "stompymux-telnet"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "flate2",
+ "tokio",
 ]
 
 [[package]]

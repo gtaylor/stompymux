@@ -123,8 +123,10 @@ pub mod persistence;
 pub mod server;
 pub use server::{ShutdownRequest, prepare as prepare_server, serve};
 pub mod sessions;
-pub mod telnet;
-pub mod text;
+/// Styled-text and Markdown documents live in `crates/styled-text`.
+pub use stompymux_styled_text as text;
+/// Telnet negotiation, decoding and transport live in `crates/telnet`.
+pub use stompymux_telnet as telnet;
 pub use text::{ColorDepth, Document, Palette, RenderOptions};
 mod world;
 pub use world::{CreationContext, Kind, LinkSlots, Links, Object, ObjectId, SharedMap, World};

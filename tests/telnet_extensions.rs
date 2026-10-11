@@ -186,11 +186,10 @@ fn diagnostics_escape_and_bound_hostile_environment() {
 
 #[test]
 fn oversized_environment_drains_without_replacing_state() {
-    let config = stompymux_rs::config::RuntimeConfig {
-        telnet_subnegotiation_limit: 6,
+    let mut d = Decoder::new(stompymux_rs::telnet::Limits {
+        subnegotiation: 6,
         ..Default::default()
-    };
-    let mut d = Decoder::new(&config);
+    });
     d.feed(&[255, 251, 39]).unwrap();
     d.feed(&sub(39, b"\x00\x00X\x01Y")).unwrap();
     let saved = d.environment.0.clone();

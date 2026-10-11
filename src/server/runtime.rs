@@ -148,7 +148,7 @@ pub async fn run_with_clocks(
                 server.sessions.insert(id,Session { retry_remaining: server.config.mux.retry_limit,
                     palette:server.scripts.palette.clone(), color_override:Default::default(), presets_emitted:Default::default(),
                     stats:stats.clone(),output, site, peer:peer.ip(), player:None, flow:LoginFlow::Name,
-                    connected:now, active:now, decoder:telnet::Decoder::new(&server.config.runtime),
+                    connected:now, active:now, decoder:telnet::Decoder::new(server.config.runtime.telnet_limits()),
                     output_message_limit:server.config.runtime.output_message_limit,
                     quota:server.config.mux.command_quota_increment.min(server.config.mux.command_quota_max),
                     quota_at:now, failed:Default::default(),

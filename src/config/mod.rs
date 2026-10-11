@@ -83,7 +83,7 @@ impl Config {
         };
         config.compile_directive_permissions()?;
         config.validate()?;
-        crate::text::Palette::from_config(&config).with_context(|| {
+        config.palette().with_context(|| {
             let origins = config
                 .origins
                 .iter()
@@ -198,6 +198,10 @@ impl Config {
             );
         }
         Ok(())
+    }
+    /// Build the text palette from the configured `colors` and `osc8.presets` tables.
+    pub fn palette(&self) -> Result<crate::text::Palette> {
+        crate::text::Palette::new(&self.colors, &self.osc8.presets)
     }
     /// Reject policies the server cannot enforce before any serving side effects.
     pub fn validate_for_serve(&self) -> Result<()> {

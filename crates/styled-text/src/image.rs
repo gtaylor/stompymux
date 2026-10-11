@@ -140,7 +140,7 @@ impl Image {
         let mut tag = format!(
             "<IMAGE {} URL={}",
             self.file_name(),
-            crate::telnet::mxp::quote(self.base_url())
+            stompymux_telnet::mxp::quote(self.base_url())
         );
         if let Some(width) = self.width {
             tag.push_str(&format!(" W={width}"));
@@ -152,7 +152,7 @@ impl Image {
             tag.push_str(&format!(" ALIGN={}", align.name()));
         }
         tag.push('>');
-        crate::telnet::mxp::secure_tag(&tag)
+        stompymux_telnet::mxp::secure_tag(&tag)
     }
 
     /// An escaped HTML `<img>` element with the span text as its alternative text.

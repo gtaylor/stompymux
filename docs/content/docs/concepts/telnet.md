@@ -5,7 +5,7 @@ type: docs
 weight: 37
 ---
 
-The Rust decoder in `src/telnet.rs` handles Telnet command framing and option
+The Rust decoder in `crates/telnet/` handles Telnet command framing and option
 negotiation. A new connection negotiates terminal type (TTYPE), window size (NAWS), UTF-8
 character set, server status (MSSP), output compression (MCCP2), GMCP, the MUD
 eXtension Protocol (MXP), and the RFC 1572 NEW-ENVIRON option.
@@ -94,7 +94,7 @@ absent value. Storage is limited to 64 entries, 256 bytes per name, 4096 bytes
 per value, and 65536 bytes total per connection. Malformed or oversized
 messages are rejected atomically.
 
-The per-connection `Environment` in `src/telnet/environment.rs` stores
+The per-connection `Environment` in `crates/telnet/src/environment.rs` stores
 length-delimited names and values, preserving escaped protocol bytes and empty
 values. Lua code can query the live descriptor through
 `mux.telnet.environment_has(descriptor, kind, name)` and
@@ -123,7 +123,7 @@ version it implements and whether it is registered. `<SUPPORTS>` replies list
 `+tag` and `+tag.attribute` names, which are stored lower-cased; at most 256
 names of up to 63 bytes are kept, and `-tag` entries remove a name. Disabling
 the option discards everything the client reported, and re-enabling it repeats
-the handshake. The implementation is in `src/telnet/mxp.rs`.
+the handshake. The implementation is in `crates/telnet/src/mxp.rs`.
 
 The only tag the renderer currently emits is `<IMAGE>`, and only to clients
 whose `<SUPPORTS>` reply included `+image`. See the styled-text documentation

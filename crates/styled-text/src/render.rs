@@ -211,7 +211,7 @@ pub(crate) fn native_telnet(
     for event in events {
         match event {
             super::parser::NativeEvent::Style(style) => {
-                let encoded = crate::telnet::encode(&ansi(style, o.color));
+                let encoded = stompymux_telnet::encode(&ansi(style, o.color));
                 let next_styled = styled || o.color != ColorDepth::None;
                 let reserve = usize::from(next_styled) * 4;
                 if out.len() + encoded.len() + reserve > limit {
@@ -222,7 +222,7 @@ pub(crate) fn native_telnet(
             }
             super::parser::NativeEvent::Text(text) => {
                 for grapheme in text.graphemes(true) {
-                    let encoded = crate::telnet::encode(grapheme);
+                    let encoded = stompymux_telnet::encode(grapheme);
                     let reserve = usize::from(styled) * 4;
                     if out.len() + encoded.len() + reserve > limit {
                         close(&mut out, false, styled);
@@ -366,7 +366,7 @@ fn render_chunks(
             offset += n;
             remaining -= n;
         }
-        let encoded = crate::telnet::encode(&candidate);
+        let encoded = stompymux_telnet::encode(&candidate);
         let reserve = usize::from(next_link.is_some()) * super::OSC8_CLOSE.len()
             + usize::from(next_styled) * 4;
         if out.len() + encoded.len() + reserve > limit {
