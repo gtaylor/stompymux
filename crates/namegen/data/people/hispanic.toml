@@ -1,0 +1,13 @@
+given = [
+    "Alejo", "Belen", "Cristobal", "Dolores", "Esteban", "Fermina", "Gaspar", "Ines", "Joaquin",
+    "Lucia", "Mateo", "Nerea", "Octavio", "Paloma", "Rafael", "Soledad", "Tomas", "Valeria",
+    "Ximena", "Yago", "Zoraida", "Amaro", "Catalina", "Dario", "Elvira", "Fausto", "Graciela",
+    "Hugo", "Isidora", "Lazaro", "Marisol", "Nicanor", "Pilar", "Rodrigo", "Teodora", "Vicente",
+]
+family = [
+    "Reyes", "Alcantara", "Benavides", "Carvajal", "Delgado", "Escobar", "Fuentes", "Galindo",
+    "Herrera", "Ibarra", "Jurado", "Lozano", "Montalvo", "Navarro", "Ocampo", "Paredes",
+    "Quintero", "Rosales", "Salazar", "Tapia", "Urrutia", "Valdes", "Zamora", "Aranda",
+    "Bustos", "Cordero", "Echeverria", "Figueroa", "Guzman", "Lara", "Mendieta", "Orozco",
+    "Pizarro", "Ruelas", "Sandoval", "Toledo", "Villalobos", "Yanez",
+]

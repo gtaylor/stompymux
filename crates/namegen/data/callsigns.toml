@@ -1,0 +1,24 @@
+# Pilot callsigns. A callsign is one word, with a small chance of a prefix such as "Old".
+# Entries must be unique and free of surrounding whitespace.
+
+words = [
+    "Specter", "Switchback", "Kestrel", "Caliper", "Stitch", "Ironside", "Nomad", "Tinker",
+    "Wrench", "Saint", "Deacon", "Preacher", "Judge", "Warden", "Sheriff", "Rook", "Bishop",
+    "Knight", "Pawn", "Gambit", "Ace", "Deuce", "Trey", "Jackpot", "Wager", "Longshot",
+    "Ricochet", "Backfire", "Misfire", "Kickback", "Deadbolt", "Lockjaw", "Hatchet", "Mallet",
+    "Chisel", "Anvil", "Rivet", "Solder", "Fuse", "Breaker", "Surge", "Flux", "Static", "Echo",
+    "Whisper", "Mumble", "Shout", "Siren", "Banshee", "Wraith", "Haunt", "Shade", "Dusk",
+    "Dawn", "Noon", "Twilight", "Comet", "Nova", "Pulsar", "Quasar", "Zenith", "Nadir",
+    "Apex", "Vertex", "Tangent", "Vector", "Scalar", "Fraction", "Quotient", "Remainder",
+    "Cipher", "Riddle", "Puzzle", "Enigma", "Omen", "Augur", "Oracle", "Prophet", "Doubt",
+    "Hazard", "Jinx", "Hex", "Charm", "Lucky", "Penny", "Nickel", "Dime", "Quarter", "Buck",
+    "Rust", "Tarnish", "Polish", "Gloss", "Matte", "Grit", "Gravel", "Boulder", "Pebble",
+    "Mudlark", "Puddle", "Drizzle", "Monsoon", "Squall", "Gale", "Zephyr", "Sirocco",
+    "Mongoose", "Badger", "Wolverine", "Ferret", "Weasel", "Stoat", "Marten", "Otter",
+    "Heron", "Egret", "Crane", "Stork", "Ibis", "Plover", "Curlew", "Snipe", "Lapwing",
+    "Hornet", "Wasp", "Mantis", "Locust", "Cricket", "Cicada", "Beetle", "Weevil", "Grub",
+    "Tallboy", "Shorty", "Slim", "Stretch", "Tiny", "Moose", "Bull", "Ox", "Mule", "Burro",
+    "Pickle", "Biscuit", "Waffle", "Noodle", "Dumpling", "Pretzel", "Cobbler", "Fritter",
+]
+
+prefixes = ["Old", "Big", "Little", "Mad", "Doc", "Pappy", "Mother", "Uncle", "Auntie", "Saint"]

@@ -11,12 +11,12 @@ use crate::Params;
 use crate::map::HexMap;
 use crate::path::find_path;
 use crate::report::RoadReport;
-use crate::rng::Rng;
 use crate::settlement::Settlement;
 use crate::spec::{SettlementKind, SettlementSize};
 use stompymux_map::{
     ConstructionClass, Foliage, Ground, HexCoordinate, Route, Structure, StructureKind,
 };
+use stompymux_seeded_rng::Rng;
 
 /// Cheapest possible step cost, which keeps the routing heuristic admissible.
 const ROAD_STEP: u32 = 3;

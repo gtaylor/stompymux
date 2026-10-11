@@ -187,6 +187,7 @@ fn index_weight(path: &str) -> Option<i32> {
         "mux/comsys" => Some(14),
         "mux/session" => Some(-35),
         "mux/telnet" => Some(-40),
+        "mux/names" => Some(-25),
         "mux/text" => Some(-30),
         "mux/world/type-powers" => Some(40),
         "mux/world/type-state" => Some(50),
@@ -203,6 +204,7 @@ fn subpackage_description(path: &str) -> Option<&'static str> {
         "mux/error" => Some("Structured errors, checked error codes, and error-handling helpers."),
         "mux/session" => Some("Interactive flows and active player-session information."),
         "mux/telnet" => Some("Telnet protocol state and capabilities."),
+        "mux/names" => Some("Seeded mercenary outfit, person, and callsign names."),
         "mux/text" => Some("Styled-text validation, formatting, and measurement helpers."),
         "mux/world" => Some("Database objects and their persistent state."),
         "btech/autopilot" => Some("Lua control of unit-attached ground autopilots."),
@@ -251,6 +253,8 @@ fn mux_namespace(class: &str) -> Option<&'static str> {
         "ObjectTypeNamespace" => Some("mux/world/types"),
         "MacroFlagConstants" => Some("mux/macro/flags"),
         "ChannelFlagNamespace" => Some("mux/comsys/flags"),
+        "NameCultureNamespace" => Some("mux/names/cultures"),
+        "NameFlavorNamespace" => Some("mux/names/flavors"),
         _ => None,
     }
 }

@@ -596,6 +596,7 @@
 //|---The native MUX host API.
 //|---@class MuxPackage
 //|---@field macro MuxMacroPackage Trusted macro administration.
+//|---@field names MuxNamesPackage Seeded mercenary outfit, person and callsign names.
 //|---@field comsys MuxComsysPackage Trusted live communication-channel administration.
 //|---@field config MuxConfigPackage Read-only scalar server configuration.
 //|---@field error MuxErrorPackage Structured errors and checked code nodes.
@@ -687,7 +688,7 @@
 //|mux.world = mux_world
 // lua-types-end
 
-// lua-types-begin mux 00173
+// lua-types-begin mux 00199
 //|return mux
 // lua-types-end
 

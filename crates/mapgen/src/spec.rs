@@ -668,7 +668,7 @@ impl MapSpec {
         let environment = self.environment.clone().unwrap_or_default();
         let roads = self.roads.clone().unwrap_or_default();
         Ok(Self {
-            seed: Some(self.seed.unwrap_or_else(random_seed)),
+            seed: Some(self.seed.unwrap_or_else(stompymux_seeded_rng::random_seed)),
             biome: Some(biome),
             size: None,
             width: Some(width),
@@ -697,14 +697,6 @@ impl MapSpec {
             }),
         })
     }
-}
-
-/// A seed from the clock and process, for specs that leave the seed out.
-fn random_seed() -> u64 {
-    let nanos = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map_or(0, |elapsed| elapsed.as_nanos() as u64);
-    crate::rng::mix(nanos ^ u64::from(std::process::id()).rotate_left(32))
 }
 
 /// Parse the compact settlement notation used on the command line:

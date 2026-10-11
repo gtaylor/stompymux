@@ -1,0 +1,14 @@
+given = [
+    "Alder", "Bram", "Cora", "Dell", "Edith", "Finn", "Greer", "Harlan", "Iris", "Jory",
+    "Kit", "Lowri", "Mabel", "Ned", "Orla", "Pike", "Quinn", "Rhys", "Sable", "Tam",
+    "Una", "Vance", "Wren", "Yancy", "Zadie", "Ambrose", "Beatrix", "Cassius", "Delia",
+    "Everett", "Flora", "Gideon", "Hattie", "Ivo", "Juno", "Lachlan", "Maude", "Oswin",
+    "Perrin", "Rosalind", "Silas", "Tamsin", "Wyatt",
+]
+family = [
+    "Halloran", "Ashby", "Brightwater", "Caldwell", "Dunmore", "Ellery", "Fenwick", "Garrick",
+    "Hale", "Ingram", "Jessop", "Kemble", "Lockwood", "Marlow", "Netherby", "Orme", "Pennock",
+    "Quill", "Ravenscroft", "Stroud", "Thorne", "Underhill", "Vane", "Whitlock", "Yardley",
+    "Blackwood", "Carrow", "Dunstan", "Fairweather", "Greaves", "Hollis", "Kendrick", "Lydgate",
+    "Mercer", "Oakes", "Pettigrew", "Rutherford", "Sallow", "Tennant", "Wakefield",
+]

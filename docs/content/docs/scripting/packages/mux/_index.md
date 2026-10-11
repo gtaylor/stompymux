@@ -17,6 +17,7 @@ no_list: true
 | [`mux.config`](config/) | Read-only access to scalar server configuration. |
 | [`mux.error`](error/) | Structured errors, checked error codes, and error-handling helpers. |
 | [`mux.macro`](macro/) | Trusted macro-set management, permissions, and player attachments. |
+| [`mux.names`](names/) | Seeded mercenary outfit, person, and callsign names. |
 | [`mux.session`](session/) | Interactive flows and active player-session information. |
 | [`mux.telnet`](telnet/) | Telnet protocol state and capabilities. |
 | [`mux.text`](text/) | Styled-text validation, formatting, and measurement helpers. |

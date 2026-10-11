@@ -1,0 +1,122 @@
+# Outfit name grammar and word lists.
+#
+# A pattern is literal text with {slot} placeholders. Slots backed by lists below are
+# adjective, noun, suffix, color and place. Two slots are derived: ordinal gives a regiment
+# number ("21st") and possessive gives a commander's family name from the chosen culture
+# ("Reyes'"). A pattern with no `flavors` is open to every flavor.
+#
+# Each word list has a `common` core that every flavor draws from, plus optional `house`,
+# `periphery` and `pirate` additions. Entries must be unique within a list and free of
+# surrounding whitespace. Keep every entry original: do not add named units from published
+# fiction.
+
+# Fragments that must never appear in a generated name, compared ignoring case. These keep
+# accidental collisions with well-known fictional units out of the output.
+blocked = [
+    "Grey Death",
+    "Gray Death",
+    "Light Horse",
+    "Highlanders",
+    "Dragoons of",
+    "Kell",
+    "Wolf's",
+    "Wolfs",
+]
+
+[[patterns]]
+template = "{adjective} {noun} {suffix}"
+weight = 28
+
+[[patterns]]
+template = "{possessive} {suffix}"
+weight = 20
+
+[[patterns]]
+template = "{ordinal} {place} {suffix}"
+weight = 16
+flavors = ["house", "periphery"]
+
+[[patterns]]
+template = "{noun} {suffix}"
+weight = 14
+
+[[patterns]]
+template = "{color} {suffix}"
+weight = 10
+
+[[patterns]]
+template = "{place} {suffix}"
+weight = 10
+
+[[patterns]]
+template = "{adjective} {suffix}"
+weight = 8
+
+[[patterns]]
+template = "{possessive} {adjective} {suffix}"
+weight = 8
+flavors = ["pirate", "periphery"]
+
+[[patterns]]
+template = "{ordinal} {adjective} {suffix}"
+weight = 6
+flavors = ["house"]
+
+[[patterns]]
+template = "{color} {noun} {suffix}"
+weight = 6
+
+[adjectives]
+common = [
+    "Iron", "Steel", "Silent", "Burning", "Broken", "Wandering", "Grim", "Bold", "Hollow",
+    "Restless", "Ragged", "Stormborn", "Lost", "Crooked", "Howling", "Thundering", "Shattered",
+    "Faithful", "Bitter", "Northern", "Southern", "Eastern", "Western", "Final", "Stubborn",
+    "Winter", "Dawn", "Twilight", "Rogue", "Quiet", "Last", "Patient", "Fallen", "Rising",
+    "Hungry", "Wild", "Ashen", "Molten", "Frozen", "Boreal", "Horizon", "Vanguard",
+]
+house = ["Royal", "Loyal", "Honored", "Steadfast", "Veteran", "Elite", "Noble", "Resolute"]
+periphery = ["Dusty", "Backwater", "Homestead", "Hardscrabble", "Outland", "Rimward", "Free"]
+pirate = ["Bloody", "Savage", "Cutthroat", "Vicious", "Lawless", "Sinister", "Feral", "Reaver"]
+
+[nouns]
+common = [
+    "Hawk", "Anvil", "Hammer", "Raven", "Lion", "Serpent", "Thorn", "Lantern", "Tempest",
+    "Ember", "Cinder", "Falcon", "Viper", "Hound", "Boar", "Stag", "Bear", "Jackal", "Mantis",
+    "Scorpion", "Titan", "Giant", "Comet", "Meteor", "Shield", "Spear", "Saber", "Dagger",
+    "Gauntlet", "Helm", "Banner", "Bastion", "Rampart", "Beacon", "Furnace", "Forge", "Oath",
+    "Vow", "Crown", "Talon", "Fang", "Claw", "Wing", "Storm", "Thunder", "Lightning", "Frost",
+    "Blizzard", "Drake", "Wyvern", "Griffin", "Basilisk", "Kraken", "Leviathan", "Phoenix",
+    "Harrier", "Osprey", "Condor", "Vulture", "Wolfhound", "Mastiff", "Ridgeback", "Sentinel",
+]
+house = ["Sovereign", "Scepter", "Regent", "Herald", "Standard", "Lance"]
+periphery = ["Prairie", "Canyon", "Mesa", "Badland", "Tumbleweed", "Mustang", "Longhorn", "Coyote"]
+pirate = ["Skull", "Cutlass", "Gallows", "Plunder", "Marauder", "Corsair", "Wrecker", "Ghoul"]
+
+[suffixes]
+common = [
+    "Irregulars", "Lancers", "Dragoons", "Fusiliers", "Grenadiers", "Rangers", "Guard",
+    "Company", "Legion", "Brigade", "Cavalry", "Hussars", "Jaegers", "Riders", "Raiders",
+    "Vanguard", "Battalion", "Regiment", "Chasseurs", "Cuirassiers", "Carabiniers", "Pathfinders",
+    "Outriders", "Wardens", "Watch",
+]
+house = ["Regulars", "Household Guard", "Line Infantry", "Heavy Horse", "Armored Corps"]
+periphery = ["Militia", "Volunteers", "Posse", "Rough Riders", "Freeholders", "Rangers Auxiliary"]
+pirate = ["Reavers", "Marauders", "Wreckers", "Cutthroats", "Buccaneers", "Freebooters", "Jackals"]
+
+[colors]
+common = [
+    "Crimson", "Scarlet", "Black", "White", "Ivory", "Silver", "Gold", "Amber", "Cobalt",
+    "Azure", "Emerald", "Viridian", "Umber", "Ochre", "Slate", "Ashgrey", "Violet", "Vermilion",
+    "Bronze", "Copper", "Onyx", "Obsidian",
+]
+
+[places]
+common = [
+    "Tarsus", "Ashkar", "Meridian", "Caldera", "Vesper", "Halden", "Ostrava Reach", "Kerrigan",
+    "Solenne", "Brightwater", "Dunmore", "Carrow", "Thessaly Prime", "Ironmarch", "Lowell",
+    "Harrow", "Marrick", "Castellan", "Verdance", "Nightfall", "Elandra", "Cassius", "Tremont",
+    "Kestrel Point", "Stonebridge", "Varangia", "Oakhaven", "Redoubt", "Sable", "Windward",
+]
+house = ["Capellan Reach", "Draconis Verge", "Lyran March", "Davion Verge", "Marik Reach", "Crucis Verge"]
+periphery = ["Outreach Rim", "Deep Verge", "Far Shore", "Rimward Drift", "Lastlight", "Dustfall"]
+pirate = ["Gallows Rock", "Smuggler's Reach", "Dead Drift", "Carrion Belt", "Wreck Point"]

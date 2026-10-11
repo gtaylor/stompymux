@@ -1,0 +1,13 @@
+given = [
+    "Lidiya", "Bogdan", "Danica", "Emil", "Fedor", "Galina", "Igor", "Jelena", "Kazimir",
+    "Ludmila", "Marek", "Nadia", "Oleg", "Petra", "Radomir", "Sasha", "Tatiana", "Vadim",
+    "Yaroslav", "Zoya", "Anton", "Bronislava", "Dmitri", "Ekaterina", "Grigori", "Irina",
+    "Konstantin", "Milena", "Nikolai", "Oksana", "Pavel", "Ruslana", "Stanislav", "Vera",
+]
+family = [
+    "Fedorova", "Nazarov", "Belikov", "Chernova", "Dragunov", "Golubev", "Horvat", "Ivashko",
+    "Jankovic", "Kowalczyk", "Lisenko", "Morozov", "Novak", "Orlova", "Petrenko", "Radic",
+    "Sokolov", "Tomic", "Ulanova", "Volkov", "Zelenko", "Antonova", "Bykov", "Dudek",
+    "Gavrilov", "Kuznets", "Lebedeva", "Malinowski", "Ostrowski", "Rybak", "Savin", "Vukovic",
+    "Wisniewski", "Yefimov", "Zhukova",
+]

@@ -1,0 +1,12 @@
+given = [
+    "Kwame", "Ama", "Kofi", "Abena", "Yaw", "Efua", "Chidi", "Ngozi", "Emeka", "Adaeze",
+    "Tunde", "Folake", "Sekou", "Aminata", "Mamadou", "Fatou", "Ousmane", "Awa", "Ibrahima",
+    "Kadiatou", "Obi", "Ifeoma", "Nnamdi", "Chiamaka", "Kehinde", "Yetunde", "Baba", "Mariama",
+    "Lamine", "Binta", "Oumar", "Rokia", "Nana", "Esi",
+]
+family = [
+    "Mensah", "Boateng", "Asante", "Owusu", "Darko", "Okafor", "Nwosu", "Eze", "Adeyemi",
+    "Balogun", "Okonkwo", "Adichie", "Diallo", "Toure", "Keita", "Camara", "Sow", "Cisse",
+    "Konate", "Traore", "Ndiaye", "Sarr", "Ba", "Diop", "Faye", "Sylla", "Dossou", "Agbaje",
+    "Oyelaran", "Quartey",
+]

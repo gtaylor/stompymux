@@ -1,0 +1,12 @@
+given = [
+    "Arjun", "Priya", "Devika", "Kiran", "Rohan", "Anjali", "Vikram", "Meera", "Sanjay",
+    "Lakshmi", "Nikhil", "Tara", "Rahul", "Divya", "Aditya", "Kavya", "Ishaan", "Nisha",
+    "Varun", "Pooja", "Siddharth", "Ananya", "Manish", "Rekha", "Dhruv", "Sunita", "Harish",
+    "Leela", "Yash", "Mohini", "Farhan", "Zainab", "Imtiaz", "Shabnam",
+]
+family = [
+    "Rao", "Menon", "Iyer", "Chandra", "Kapoor", "Banerjee", "Nair", "Pillai", "Reddy",
+    "Varma", "Bhatt", "Desai", "Joshi", "Mehta", "Patil", "Saxena", "Trivedi", "Verghese",
+    "Kulkarni", "Deshmukh", "Chaudhry", "Haque", "Siddiqui", "Mirza", "Rahman", "Ahuja",
+    "Bedi", "Dutta", "Gill", "Khanna", "Malhotra", "Sethi",
+]

@@ -1,0 +1,12 @@
+given = [
+    "Mariam", "Tariq", "Layla", "Idris", "Nour", "Samir", "Rania", "Faris", "Dalia", "Yusuf",
+    "Hind", "Karim", "Salma", "Omar", "Zahra", "Bilal", "Amira", "Hamza", "Leila", "Rashid",
+    "Farida", "Nabil", "Yasmin", "Adil", "Hala", "Jamal", "Nadia", "Qasim", "Rima", "Walid",
+    "Suhail", "Lamia", "Imran", "Basma",
+]
+family = [
+    "Nasr", "Haddad", "Barakat", "Darwish", "Farhat", "Ghanem", "Hamdan", "Issa", "Jaber",
+    "Khoury", "Mansour", "Najjar", "Qasimi", "Rahal", "Saleh", "Tahan", "Wahbi", "Yacoub",
+    "Zayed", "Antar", "Bishara", "Dagher", "Fakhoury", "Habib", "Karam", "Maalouf", "Nassar",
+    "Rizk", "Sarraf", "Tabet", "Zaki",
+]

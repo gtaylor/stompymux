@@ -5,6 +5,7 @@ mod config;
 pub(crate) mod error;
 mod logging;
 mod macros;
+mod names;
 mod session;
 mod telnet;
 mod text;
@@ -47,6 +48,7 @@ pub(super) fn register_native(
     macros::register(lua, &api, world).map_err(|e| anyhow::anyhow!("{e}"))?;
     comsys::register(lua, &api, config, world, outbox, effects)?;
     text::register(lua, &api, config, palette)?;
+    names::register(lua, &api, config)?;
     logging::register(lua, &api).map_err(|e| anyhow::anyhow!("{e}"))?;
     btech::register(lua, &api, world).map_err(|e| anyhow::anyhow!("{e}"))?;
     Ok(api)
@@ -84,6 +86,7 @@ pub(super) fn install_facades(lua: &Lua, api: Table) -> Result<()> {
         telnet::install(lua, &mux)?;
         config::install(lua, &api, &mux, &id)?;
         text::install(lua, &api, &mux, &id)?;
+        names::install(lua, &api, &mux)?;
         comsys::install(lua, &api, &mux, &id)?;
         logging::install(lua, &api, &mux)?;
         error::protected_calls(lua)?;
@@ -117,8 +120,9 @@ pub(super) fn restrict_checking(lua: &Lua, api: &Table) -> Result<()> {
             "pemit",
             "pemit_accepts",
         ];
-        // These packages enforce checking-mode availability at their own API boundaries.
-        let self_guarding = ["comsys", "macro", "log", "check_db"];
+        // These packages enforce checking-mode availability at their own API boundaries,
+        // and `names` is pure so it stays available while checking.
+        let self_guarding = ["comsys", "macro", "log", "check_db", "names"];
         // C btech entries raise per-entry "btech.<qualified_name> is unavailable
         // during @lua/check" (btech_package.c btech_lua_invoke_native); qualified
         // spellings come from the facade table and contract bindings.

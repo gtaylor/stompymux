@@ -459,6 +459,7 @@ Alias: `CreateRoomOptions|CreateThingOptions|CreateExitOptions`
 ## MuxPackage
 
 - `macro`: `MuxMacroPackage` — Trusted macro administration.
+- `names`: `MuxNamesPackage` — Seeded mercenary outfit, person and callsign names.
 - `comsys`: `MuxComsysPackage` — Trusted live communication-channel administration.
 - `config`: `MuxConfigPackage` — Read-only scalar server configuration.
 - `error`: `MuxErrorPackage` — Structured errors and checked code nodes.
@@ -510,3 +511,46 @@ Alias: `CreateRoomOptions|CreateThingOptions|CreateExitOptions`
 - `permission`: `'everyone'|'wizard'|'god'` — Required actor authority; restricted entries are skipped.
 - `pattern`: `string` — Lua string.find pattern.
 - `handler`: `fun(ctx: table, ...):` — boolean? True consumes the input; false/nil continues dispatch.
+
+## NameCultureNamespace
+
+- `ANGLO`: `NameCulture` — English-speaking naming tradition.
+- `HISPANIC`: `NameCulture` — Spanish and Latin American naming tradition.
+- `EAST_ASIAN`: `NameCulture` — Japanese, Chinese, Korean and Vietnamese naming tradition.
+- `SLAVIC`: `NameCulture` — Russian, Polish and South Slavic naming tradition.
+- `GERMANIC`: `NameCulture` — German and Scandinavian naming tradition.
+- `ARABIC`: `NameCulture` — Arabic and Levantine naming tradition.
+- `SOUTH_ASIAN`: `NameCulture` — Indian, Pakistani and Bangladeshi naming tradition.
+- `WEST_AFRICAN`: `NameCulture` — Ghanaian, Nigerian and Sahelian naming tradition.
+
+## NameFlavorNamespace
+
+- `HOUSE`: `NameFlavor` — Former house regulars: numbered regiments, places, formal unit types.
+- `PERIPHERY`: `NameFlavor` — Frontier militia turned professional: homespun, rugged, place-bound.
+- `PIRATE`: `NameFlavor` — Raiders and bandits: menacing, boastful, a commander's name up front.
+
+## NameSpec
+
+- `seed`: `integer` — Random seed from 0 to 2^53 - 1.
+- `culture`: `NameCulture` — Naming tradition for people and possessive outfit names.
+- `flavor`: `NameFlavor` — Outfit naming style.
+
+## OutfitName
+
+- `text`: `string` — The name, such as `Ragged Kraken Rangers`.
+- `pattern`: `string` — The grammar template the name was built from, such as `{adjective} {noun} {suffix}`.
+- `seed`: `integer` — The seed used.
+- `culture`: `NameCulture` — The culture used.
+- `flavor`: `NameFlavor` — The flavor used.
+
+## PersonName
+
+- `given`: `string` — Given name.
+- `family`: `string` — Family name.
+- `full`: `string` — Given name then family name.
+- `culture`: `NameCulture` — The culture the name came from.
+
+## MuxNamesPackage
+
+- `cultures`: `NameCultureNamespace` — Immutable namespace of naming-culture constants.
+- `flavors`: `NameFlavorNamespace` — Immutable namespace of outfit-flavor constants.

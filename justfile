@@ -104,6 +104,10 @@ docsite-serve:
 mapgen *args:
     cargo run --quiet -p stompymux-mapgen --bin mapgen -- {{args}}
 
+# Print seeded mercenary names, e.g. `just namegen outfit -n 20 --flavor pirate`.
+namegen *args:
+    cargo run --quiet -p stompymux-namegen --bin namegen -- {{args}}
+
 # Fail when any map file in game/maps would not load.
 check-maps:
     cargo run --quiet -p stompymux-map --bin map-check -- game/maps
