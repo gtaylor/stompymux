@@ -38,7 +38,7 @@ fn c_startup_directions_and_unsupported_options() {
         wire(d.initial()),
         [
             255, 253, 24, 255, 253, 31, 255, 253, 39, 255, 251, 70, 255, 251, 86, 255, 251, 42,
-            255, 251, 201
+            255, 251, 201, 255, 251, 91
         ]
     );
     assert!(d.initial().is_empty());

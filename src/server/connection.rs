@@ -108,6 +108,16 @@ impl Server {
                 .iter()
                 .map(|(id, s)| (id.0, s.decoder.environment.clone()))
                 .collect(),
+            mxp: self
+                .sessions
+                .iter()
+                .filter(|(_, s)| {
+                    s.decoder
+                        .option_state(telnet::MXP, telnet::q::Side::Local)
+                        .enabled()
+                })
+                .map(|(id, s)| (id.0, s.decoder.mxp.clone()))
+                .collect(),
         });
         Ok(())
     }

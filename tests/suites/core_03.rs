@@ -47,6 +47,9 @@ mod lua_differential_probes;
 #[path = "../macros.rs"]
 mod macros;
 
+#[path = "../mxp.rs"]
+mod mxp;
+
 #[path = "../operations.rs"]
 mod operations;
 

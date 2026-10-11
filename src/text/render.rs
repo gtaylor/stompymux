@@ -40,6 +40,8 @@ impl ColorDepth {
 pub struct RenderOptions {
     pub color: ColorDepth,
     pub capabilities: BTreeSet<String>,
+    /// Lower-cased MXP tag names the client advertised; empty without MXP.
+    pub mxp: BTreeSet<String>,
     pub width: usize,
 }
 
@@ -48,6 +50,7 @@ impl Default for RenderOptions {
         Self {
             color: ColorDepth::None,
             capabilities: BTreeSet::new(),
+            mxp: BTreeSet::new(),
             width: 80,
         }
     }
@@ -61,6 +64,7 @@ impl RenderOptions {
                 .iter()
                 .map(|s| s.to_string())
                 .collect(),
+            mxp: super::MXP_TAGS.iter().map(|s| s.to_string()).collect(),
             color: ColorDepth::Truecolor,
             width: 80,
         }
@@ -69,6 +73,11 @@ impl RenderOptions {
     /// Test an exact capability suffix from the negotiated environment.
     pub fn has(&self, s: &str) -> bool {
         self.capabilities.contains(s)
+    }
+
+    /// Whether the client advertised an MXP tag in its `<SUPPORTS>` reply.
+    pub fn mxp(&self, tag: &str) -> bool {
+        self.mxp.contains(tag)
     }
 
     /// Check support for the requested link action.
@@ -258,18 +267,49 @@ fn render_chunks(
     total_limit: usize,
     complete: bool,
 ) -> anyhow::Result<Vec<Vec<u8>>> {
+    /// How one span's text is replaced when its image is shown as a picture.
+    #[derive(Clone)]
+    enum Picture {
+        /// No picture: the text is rendered.
+        Text,
+        /// First span of an image scope: the tag stands in for the whole scope.
+        Tag(String),
+        /// Later span of the same scope: its fallback text is omitted.
+        Continued,
+    }
     let visible: String = spans.iter().map(|s| s.text.as_str()).collect();
     let prepared: Vec<_> = spans
         .iter()
-        .map(|span| {
+        .enumerate()
+        .map(|(index, span)| {
             let mut style = span.style.clone();
-            let uri = span.link.as_ref().and_then(|link| link.uri(p, o));
+            let mut uri = span.link.as_ref().and_then(|link| link.uri(p, o));
             if let Some(link) = &span.link
                 && (!o.has("STYLE_BASIC") || uri.is_none())
             {
                 link.config.fallback(p, &mut style);
             }
-            (style, uri)
+            // An MXP client sees the picture in place of the fallback text; a
+            // hyperlink-capable terminal gets the text as a link to the picture.
+            let picture = match span
+                .image
+                .as_ref()
+                .filter(|image| image.validate().is_ok() && o.mxp("image"))
+            {
+                None => Picture::Text,
+                Some(_) if continues_image(spans, index) => Picture::Continued,
+                Some(image) => Picture::Tag(image.mxp_tag()),
+            };
+            if let Some(image) = &span.image
+                && image.validate().is_ok()
+                && uri.is_none()
+                && span.link.is_none()
+                && !o.mxp("image")
+                && o.link_enabled("url")
+            {
+                uri = Some(image.source.clone());
+            }
+            (style, uri, picture)
         })
         .collect();
     let mut out = Vec::new();
@@ -298,7 +338,7 @@ fn render_chunks(
             }
             let span = &spans[span_index];
             let n = remaining.min(span.text.len() - offset);
-            let (s, l) = prepared[span_index].clone();
+            let (s, l, picture) = prepared[span_index].clone();
             if l != next_link {
                 if next_link.is_some() {
                     candidate.push_str("\x1b]8;;\x1b\\");
@@ -313,7 +353,16 @@ fn render_chunks(
                 next_style = s;
                 next_styled = o.color != ColorDepth::None;
             }
-            candidate.push_str(&span.text[offset..offset + n]);
+            match picture {
+                Picture::Text => candidate.push_str(&span.text[offset..offset + n]),
+                // The tag replaces the whole fallback text, so it goes out once at the start.
+                Picture::Tag(tag) => {
+                    if offset == 0 {
+                        candidate.push_str(&tag);
+                    }
+                }
+                Picture::Continued => {}
+            }
             offset += n;
             remaining -= n;
         }
@@ -348,6 +397,20 @@ fn render_chunks(
         chunks.push(out);
     }
     Ok(chunks)
+}
+
+/// Whether the span at `index` continues the image scope of the span before it.
+fn continues_image(spans: &[Span], index: usize) -> bool {
+    index > 0 && spans[index].image.is_some() && spans[index - 1].image == spans[index].image
+}
+
+/// The fallback text of the whole image scope starting at `index`.
+fn image_alt(spans: &[Span], index: usize) -> String {
+    spans[index..]
+        .iter()
+        .take_while(|span| span.image == spans[index].image)
+        .map(|span| span.text.as_str())
+        .collect()
 }
 
 /// Escape text and attribute values for HTML fragments.
@@ -391,8 +454,15 @@ pub fn css(s: &Style) -> String {
 
 pub fn html(spans: &[Span], palette: &Palette) -> String {
     let mut out = String::new();
-    for span in spans {
-        let mut s = html_escape(&span.text);
+    for (index, span) in spans.iter().enumerate() {
+        let image = span.image.as_ref().filter(|image| image.validate().is_ok());
+        if image.is_some() && continues_image(spans, index) {
+            continue;
+        }
+        let mut s = match image {
+            Some(image) => image.html(&image_alt(spans, index)),
+            None => html_escape(&span.text),
+        };
         let mut style = span.style.clone();
         if let Some(link) = &span.link {
             link.config.fallback(palette, &mut style);
@@ -500,6 +570,9 @@ pub fn to_markup(span: &Span) -> String {
     } else {
         format!("[{}]{text}[/]", tags.join(" "))
     };
+    if let Some(image) = &span.image {
+        result = format!("[{}]{result}[/]", image.markup());
+    }
     if let Some(l) = &span.link {
         let mut ds = Vec::new();
         if let Some(p) = &l.config.preset {

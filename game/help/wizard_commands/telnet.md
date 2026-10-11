@@ -12,7 +12,7 @@ wizard_only = true
 negotiated Telnet options, terminal capabilities, and RFC 1572 NEW-ENVIRON
 variables for every active connection belonging to the named player.
 Values are grouped under the protocol that supplied them: TTYPE/MTTS, NAWS,
-CHARSET, NEW-ENVIRON, GMCP, MSSP, MCCP2, or ECHO.
+CHARSET, NEW-ENVIRON, GMCP, MSSP, MCCP2, MXP, or ECHO.
 
 ```text
 @telnet Alex
@@ -26,7 +26,10 @@ Names, account aliases and dbrefs such as `#2` are accepted. Each connection has
 separate block identified by its Rust session ID. Local/remote Q states show
 pending negotiations and queued reversals; only YES means negotiated. MCCP2's
 starting/active transport state is displayed separately: once started, compression
-continues until disconnect even if negotiation later changes to NO. ECHO shows the
+continues until disconnect even if negotiation later changes to NO. MXP shows the
+client name and version from its `<VERSION>` reply, whether each handshake reply
+has arrived, and the tags its `<SUPPORTS>` reply advertised; `image` among them
+means the client receives inline pictures (see `help mxp`). ECHO shows the
 requested client behavior, not a guarantee that the client hides input.
 
 Output is private to your invoking session and explicitly marks truncation when
