@@ -42,7 +42,6 @@ mod map;
 mod noise;
 mod path;
 mod report;
-mod rng;
 mod roads;
 mod settlement;
 mod spec;

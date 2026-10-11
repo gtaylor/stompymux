@@ -1,0 +1,8 @@
+[package]
+name = "stompymux-seeded-rng"
+version = "0.1.0"
+edition = "2024"
+description = "A pinned, dependency-free random number generator for reproducible procedural generation"
+publish = false
+
+[dependencies]

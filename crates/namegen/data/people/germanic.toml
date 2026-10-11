@@ -1,0 +1,13 @@
+given = [
+    "Jarl", "Anneliese", "Bastian", "Clara", "Dietrich", "Elke", "Friedrich", "Greta", "Hanno",
+    "Ilse", "Jochen", "Katrin", "Lorenz", "Margit", "Niklas", "Ottilie", "Rainer", "Sigrid",
+    "Till", "Ulrike", "Volker", "Wiebke", "Axel", "Birgit", "Caspar", "Dagmar", "Erich",
+    "Frauke", "Gunnar", "Hedda", "Ingmar", "Leni", "Matthias", "Ragnhild", "Soren", "Thea",
+]
+family = [
+    "Schreiber", "Voss", "Adler", "Brandt", "Dahlke", "Ebner", "Falk", "Gerlach", "Hartmann",
+    "Jaeger", "Kessler", "Lindqvist", "Mohr", "Nygaard", "Oster", "Pfeiffer", "Rasmussen",
+    "Sandberg", "Thalberg", "Ulrich", "Vogel", "Winter", "Ziegler", "Bergstrom", "Dreyer",
+    "Eriksen", "Fromm", "Hollweg", "Kraus", "Lundgren", "Metzger", "Nordahl", "Reinholt",
+    "Steiner", "Tessmer", "Wendt",
+]

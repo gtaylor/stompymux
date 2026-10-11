@@ -15,13 +15,13 @@ use crate::Params;
 use crate::map::HexMap;
 use crate::noise::Noise;
 use crate::report::SettlementReport;
-use crate::rng::Rng;
 use crate::spec::{SettlementKind, SettlementLayout, SettlementSize, SettlementSpec};
 use std::collections::VecDeque;
 use stompymux_map::{
     ConstructionClass, DecorationKind, Density, Foliage, Ground, Hex, HexCoordinate, Point, Route,
     Structure, StructureKind,
 };
+use stompymux_seeded_rng::Rng;
 
 /// A settlement as built, for routing roads and reporting.
 #[derive(Debug, Clone)]

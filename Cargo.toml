@@ -5,8 +5,8 @@ edition = "2024"
 autotests = false
 
 [workspace]
-members = ["crates/lua-tools", "crates/map", "crates/mapgen", "crates/mappy", "crates/unit-construction", "tests/suites", "tests/support"]
-default-members = [".", "crates/lua-tools", "crates/map", "crates/mapgen", "crates/unit-construction", "tests/suites"]
+members = ["crates/lua-tools", "crates/map", "crates/mapgen", "crates/mappy", "crates/namegen", "crates/seeded-rng", "crates/unit-construction", "tests/suites", "tests/support"]
+default-members = [".", "crates/lua-tools", "crates/map", "crates/mapgen", "crates/namegen", "crates/seeded-rng", "crates/unit-construction", "tests/suites"]
 
 [[bin]]
 name = "autopilot-bench"

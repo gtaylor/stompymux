@@ -9,11 +9,11 @@ use crate::biome::Landform;
 use crate::map::HexMap;
 use crate::noise::Noise;
 use crate::path::find_path;
-use crate::rng::Rng;
 use crate::spec::Relief;
 use stompymux_map::{
     Condition, DecorationKind, Density, Flow, Ground, Hex, HexCoordinate, Point, Water,
 };
+use stompymux_seeded_rng::Rng;
 
 /// Size in hexes of the largest hills and valleys.
 const FEATURE_SCALE: f64 = 16.0;

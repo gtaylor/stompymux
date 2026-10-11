@@ -1,0 +1,12 @@
+given = [
+    "Haruki", "Mei", "Jun", "Sora", "Kenji", "Yuna", "Daichi", "Lien", "Minh", "Akira",
+    "Hana", "Ryo", "Suki", "Tae", "Wei", "Xiu", "Yong", "Zhen", "Bao", "Chihiro",
+    "Eun", "Feng", "Hiro", "Jia", "Kaito", "Lan", "Mika", "Nari", "Ping", "Ren",
+    "Shin", "Tomo", "Ume", "Yuki", "Zhi",
+]
+family = [
+    "Tanaka", "Nakamura", "Hayashi", "Kobayashi", "Matsuda", "Ishikawa", "Okada", "Fujiwara",
+    "Pham", "Nguyen", "Tran", "Vo", "Dang", "Bui", "Zhao", "Qian", "Sun", "Zhou", "Wu", "Zheng",
+    "Feng", "Chen", "Chu", "Wei", "Jiang", "Shen", "Han", "Yang", "Zhu", "Qin", "Park", "Choi",
+    "Jung", "Kang", "Yoon", "Jang", "Lim", "Shin", "Song", "Hwang",
+]

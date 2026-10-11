@@ -3876,6 +3876,7 @@ dependencies = [
  "serde",
  "serde_json",
  "stompymux-map",
+ "stompymux-seeded-rng",
  "toml",
 ]
 
@@ -3888,6 +3889,18 @@ dependencies = [
  "stompymux-map",
  "stompymux-mapgen",
  "tempfile",
+]
+
+[[package]]
+name = "stompymux-namegen"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "serde",
+ "serde_json",
+ "stompymux-seeded-rng",
+ "toml",
 ]
 
 [[package]]
@@ -3923,6 +3936,10 @@ dependencies = [
  "unicode-width",
  "zeroize",
 ]
+
+[[package]]
+name = "stompymux-seeded-rng"
+version = "0.1.0"
 
 [[package]]
 name = "stompymux-suites"

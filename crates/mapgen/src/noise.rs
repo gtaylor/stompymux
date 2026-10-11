@@ -1,6 +1,6 @@
 //! Seeded value noise and fractal sums of it, sampled at hex centers to shape elevation,
 //! moisture and other smooth fields.
-use crate::rng::mix;
+use stompymux_seeded_rng::mix;
 
 /// Smooth 2D value noise with a fixed seed.
 #[derive(Debug, Clone, Copy)]
@@ -11,7 +11,7 @@ pub(crate) struct Noise {
 impl Noise {
     /// Noise derived from a map seed and a field label.
     pub(crate) fn new(seed: u64, label: &str) -> Self {
-        let mut rng = crate::rng::Rng::stream(seed, label);
+        let mut rng = stompymux_seeded_rng::Rng::stream(seed, label);
         Self {
             seed: rng.next_u64(),
         }
