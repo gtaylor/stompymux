@@ -68,9 +68,8 @@ pub(crate) mod unjam;
 pub use unjam::{Unjam, advance_unjamming, advance_unjamming_action, begin_unjam};
 mod weapon_jam;
 pub use artemis::ArtemisController;
-mod gyro;
-pub use gyro::Gyro;
 mod engine;
+mod gyro;
 mod mass;
 pub use mass::Mass;
 mod stacking;
@@ -142,9 +141,7 @@ pub use ground_proposal::{
     GroundMotionProposal, propose_mech_ground_motion, propose_vehicle_ground_motion,
 };
 mod movement_report;
-mod template_check;
 pub use mobility::Mobility;
-pub use template_check::{AmmunitionAdjustment, TemplateCheck, check_template};
 mod pilot_health;
 mod pilot_injury;
 mod placement;
@@ -262,32 +259,34 @@ pub use geometry::{Range, unit_elevation, unit_range};
 pub use stompymux_map::{HexCoordinate, Point};
 
 pub use stompymux_unit_construction::{
-    AMMUNITION_PART_OFFSET, AmmunitionBin, AmmunitionMode, CriticalDefinition, CriticalLocation,
-    DamageClass, Engine, FireMode, InspectionArmor, InspectionCritical, InspectionPart,
-    InspectionWeapon, MechChassis, MechLoadout, MechSection, MechTemplate, PART_ID_LIMIT,
-    ParsedTemplate, Part, PartForm, PartKind, PartNames, PartPrices, RangeBracket, RawMovement,
-    RawSectionCode, RawTemplate, RawUnitClass, ResolvedLoadout, SectionDefinition, System,
-    SystemCritical, Technology, TemplateRegistryCache, UnitTemplate, VehicleCriticalLocation,
-    VehicleEngine, VehicleLoadout, VehicleMass, VehicleMaterial, VehicleMovement,
-    VehiclePowerplant, VehicleSection, VehicleTemplate, WEAPON_PART_IDS, WaterRanges, Weapon,
-    WeaponMount, WeaponProfile, WeaponRange, administrative_technology,
-    administrative_template_movement, administrative_template_tonnage, armor_mass,
-    cargo_space_mass, edit_special, engine_mass, finalize_raw_load_specials,
-    flag_spells_technology, half_ton, inspect_raw_template_armor, inspect_raw_template_criticals,
-    inspect_raw_template_engine, inspect_raw_template_weapons, inspection_ammunition_modes,
-    inspection_canonical_mech_internal, inspection_compatible_template,
-    inspection_compatible_vehicle_template, inspection_configured_technology,
-    inspection_configured_technology_attributes, inspection_engine_rating, inspection_fire_modes,
-    inspection_normalized_jump_speed, inspection_raw_part, inspection_template_part,
-    inspection_vehicle_engine_rating, inspection_vehicle_engine_values, mixed_technology_flag,
-    one_shot_mass, parse_engine_sink_override, parse_template_speed, part_abbreviation,
-    part_catalogue, part_names, part_price, part_short_name, power_amplifier_mass, rated_output,
+    AMMUNITION_PART_OFFSET, AmmunitionAdjustment, AmmunitionBin, AmmunitionMode,
+    CriticalDefinition, CriticalLocation, DamageClass, Engine, FireMode, Gyro, InspectionArmor,
+    InspectionCritical, InspectionPart, InspectionWeapon, MechChassis, MechLoadout, MechSection,
+    MechTemplate, PART_ID_LIMIT, ParsedTemplate, Part, PartForm, PartKind, PartNames, PartPrices,
+    RangeBracket, RawMovement, RawSectionCode, RawTemplate, RawUnitClass, ResolvedLoadout,
+    SectionDefinition, System, SystemCritical, Technology, TemplateCheck, TemplateRegistryCache,
+    UnitTemplate, VehicleCriticalLocation, VehicleEngine, VehicleLoadout, VehicleMass,
+    VehicleMaterial, VehicleMovement, VehiclePowerplant, VehicleSection, VehicleTemplate,
+    WEAPON_PART_IDS, WaterRanges, Weapon, WeaponMount, WeaponProfile, WeaponRange,
+    administrative_technology, administrative_template_movement, administrative_template_tonnage,
+    armor_mass, cargo_space_mass, check_template, edit_special, engine_mass,
+    finalize_raw_load_specials, flag_spells_technology, half_ton, inspect_raw_template_armor,
+    inspect_raw_template_criticals, inspect_raw_template_engine, inspect_raw_template_weapons,
+    inspection_ammunition_modes, inspection_canonical_mech_internal,
+    inspection_compatible_template, inspection_compatible_vehicle_template,
+    inspection_configured_technology, inspection_configured_technology_attributes,
+    inspection_engine_rating, inspection_fire_modes, inspection_normalized_jump_speed,
+    inspection_raw_part, inspection_template_part, inspection_vehicle_engine_rating,
+    inspection_vehicle_engine_values, mixed_technology_flag, one_shot_mass,
+    parse_engine_sink_override, parse_template_speed, part_abbreviation, part_catalogue,
+    part_names, part_price, part_short_name, power_amplifier_mass, rated_output,
     raw_default_mech_criticals, raw_template_base_cost, read_engine_sink_override,
     read_resolved_raw_template, read_resolved_template, read_template_document,
     read_template_speed, reflective_armor_slots, resolve_template_path,
     resolve_template_path_bytes_cached, resolve_template_path_cached, strip_name_prefix,
-    structure_mass, system_slot_mass, template_base_cost, unit_metadata, validate_unit_metadata,
-    vehicle_template_base_cost, write_engine_sink_override, write_template, write_template_speed,
+    structure_mass, system_slot_mass, template_base_cost, unit_metadata, validate_radio_attributes,
+    validate_unit_metadata, vehicle_template_base_cost, write_engine_sink_override, write_template,
+    write_template_speed,
 };
 
 pub(crate) use motion::set_speed_autopilot;

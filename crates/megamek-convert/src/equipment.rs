@@ -7,7 +7,7 @@
 //! technology prefix. MegaMek writes Clan equipment with a `CL` or `Clan` prefix; unprefixed
 //! weapons are its Inner Sphere (or shared) versions.
 use anyhow::{Context, Result, bail, ensure};
-use stompymux_rs::{AmmunitionMode, Weapon};
+use stompymux_unit_construction::{AmmunitionMode, Weapon};
 
 /// Technology base of a chassis or a piece of equipment.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

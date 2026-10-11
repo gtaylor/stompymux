@@ -380,7 +380,8 @@ fn feed_other_tech_launchers(criticals: &mut [Vec<Critical>]) {
             continue;
         };
         let other = if namespace == "IS" { "CL" } else { "IS" };
-        let Ok(fed) = stompymux_rs::Weapon::parse(&format!("{other}.{label}")) else {
+        let Ok(fed) = stompymux_unit_construction::Weapon::parse(&format!("{other}.{label}"))
+        else {
             continue;
         };
         if !launchers.contains(&fed) {
@@ -696,7 +697,7 @@ mod tests {
     use super::*;
 
     /// A complete standard Inner Sphere biped.
-    const ATLAS: &str = include_str!("../../../tests/fixtures/megamek/Atlas AS7-D.mtf");
+    const ATLAS: &str = include_str!("../tests/fixtures/Atlas AS7-D.mtf");
 
     /// Convert and validate an `.mtf` source, returning the reference and template.
     fn template(source: &str) -> Result<(String, String)> {
@@ -822,18 +823,24 @@ mod tests {
             rounds: 6,
         };
         let mut criticals = vec![vec![
-            narc(stompymux_rs::Weapon::ClanNarcBeacon),
-            pods(stompymux_rs::Weapon::NarcBeacon),
+            narc(stompymux_unit_construction::Weapon::ClanNarcBeacon),
+            pods(stompymux_unit_construction::Weapon::NarcBeacon),
         ]];
         feed_other_tech_launchers(&mut criticals);
-        assert_eq!(criticals[0][1], pods(stompymux_rs::Weapon::ClanNarcBeacon));
+        assert_eq!(
+            criticals[0][1],
+            pods(stompymux_unit_construction::Weapon::ClanNarcBeacon)
+        );
         // Ammunition for a launcher the unit carries is left alone.
         let mut matched = vec![vec![
-            narc(stompymux_rs::Weapon::NarcBeacon),
-            pods(stompymux_rs::Weapon::NarcBeacon),
+            narc(stompymux_unit_construction::Weapon::NarcBeacon),
+            pods(stompymux_unit_construction::Weapon::NarcBeacon),
         ]];
         feed_other_tech_launchers(&mut matched);
-        assert_eq!(matched[0][1], pods(stompymux_rs::Weapon::NarcBeacon));
+        assert_eq!(
+            matched[0][1],
+            pods(stompymux_unit_construction::Weapon::NarcBeacon)
+        );
     }
 
     /// The full error chain from converting an `.mtf` source.

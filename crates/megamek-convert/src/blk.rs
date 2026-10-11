@@ -376,7 +376,7 @@ mod tests {
     use super::*;
 
     /// A tracked tank with a turret and body ammunition.
-    const BULLDOG: &str = include_str!("../../../tests/fixtures/megamek/Bulldog Medium Tank.blk");
+    const BULLDOG: &str = include_str!("../tests/fixtures/Bulldog Medium Tank.blk");
 
     /// Convert and validate a `.blk` source, returning the reference and template.
     fn template(source: &str) -> Result<(String, String)> {

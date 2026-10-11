@@ -133,6 +133,28 @@ impl VehicleTemplate {
             .is_some_and(|kind| kind.eq_ignore_ascii_case("VTOL"))
     }
 
+    /// Authored VTOL fuel capacity, or the common default when the template omits it.
+    pub fn vtol_fuel_capacity(&self) -> Result<u32> {
+        self.attributes
+            .get("fuel")
+            .map(|value| value.parse::<u32>().context("Invalid VTOL fuel capacity"))
+            .transpose()
+            .map(|capacity| capacity.unwrap_or(4000))
+    }
+
+    /// Every template-level check construction makes before resolving the loadout: anatomy,
+    /// radio ratings, construction mass and, for VTOLs, the fuel capacity. A template that
+    /// passes this and resolves a [`super::VehicleLoadout`] is one the game would construct.
+    pub fn validate_construction(&self) -> Result<()> {
+        self.validate_anatomy()?;
+        super::validate_radio_attributes(&self.attributes)?;
+        self.mass()?;
+        if self.is_vtol() {
+            self.vtol_fuel_capacity()?;
+        }
+        Ok(())
+    }
+
     /// Enforce chassis identity for parsed assets and directly edited construction definitions.
     pub fn validate_anatomy(&self) -> Result<()> {
         ensure!(self.tons > 0, "Vehicle tonnage must be positive");

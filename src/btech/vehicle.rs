@@ -800,10 +800,11 @@ impl Vehicle {
         // (vehicle_int_check) is forced while the template file is read;
         // construction and saved-definition restore keep the stored internals
         // verbatim.
-        definition.validate_anatomy()?;
-        super::radio::validate_attributes(&definition.attributes)?;
-        if !contract_loadout {
-            definition.mass()?;
+        if contract_loadout {
+            definition.validate_anatomy()?;
+            super::validate_radio_attributes(&definition.attributes)?;
+        } else {
+            definition.validate_construction()?;
         }
         let loadout = if contract_loadout {
             VehicleLoadout::resolve_contract(&definition)?
@@ -1741,7 +1742,7 @@ impl Vehicle {
     pub(crate) fn validate(&self) -> Result<()> {
         let _measurement = super::autopilot::diagnostics::combat("validation_unit");
         self.definition.validate_anatomy()?;
-        super::radio::validate_attributes(&self.definition.attributes)?;
+        super::validate_radio_attributes(&self.definition.attributes)?;
         if !self.contract_loadout {
             self.definition.mass()?;
         }
@@ -2082,7 +2083,7 @@ impl Vehicle {
         );
         self.brief.validate()?;
         super::radio::validate_channels(&self.radio)?;
-        super::radio::validate_attributes(&self.definition().attributes)?;
+        super::validate_radio_attributes(&self.definition().attributes)?;
         ensure!(
             self.radio_experience_remaining <= 61,
             "Invalid radio experience countdown"

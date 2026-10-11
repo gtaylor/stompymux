@@ -75,7 +75,7 @@ impl Mech {
     /// Validate persisted settings, including slots currently hidden by the installed hardware.
     pub(super) fn validate_radio(&self) -> Result<()> {
         validate_channels(&self.radio)?;
-        validate_attributes(&self.definition().attributes)
+        super::validate_radio_attributes(&self.definition().attributes)
     }
 }
 
@@ -542,25 +542,4 @@ pub(super) fn startup_skill(world: &World, pilot: Option<ObjectId>) -> i16 {
             )
             .expect("validated player")
         })
-}
-
-/// Reject malformed hardware ratings before either chassis becomes live.
-pub(super) fn validate_attributes(
-    attributes: &std::collections::BTreeMap<String, String>,
-) -> Result<()> {
-    for (field, value) in attributes {
-        match field.as_str() {
-            "radio_range" => ensure!(
-                value.parse::<u16>().is_ok_and(|value| value <= 32767),
-                "Invalid radio range"
-            ),
-            "radiotype" => ensure!(value.parse::<u8>().is_ok(), "Invalid radio configuration"),
-            "radio" => ensure!(
-                value.parse::<u8>().is_ok_and(|value| value <= 5),
-                "Invalid radio quality"
-            ),
-            _ => {}
-        }
-    }
-    Ok(())
 }

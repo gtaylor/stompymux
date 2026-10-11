@@ -14,12 +14,7 @@ pub struct VtolFuel {
 impl VtolFuel {
     /// Authored capacity, or the common VTOL default when omitted.
     pub(super) fn from_template(template: &VehicleTemplate) -> Result<Self> {
-        let capacity = template
-            .attributes
-            .get("fuel")
-            .map(|value| value.parse::<u32>().context("Invalid VTOL fuel capacity"))
-            .transpose()?
-            .unwrap_or(4000);
+        let capacity = template.vtol_fuel_capacity()?;
         Ok(Self {
             capacity,
             remaining: i64::from(capacity),

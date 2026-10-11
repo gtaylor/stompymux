@@ -3892,6 +3892,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "stompymux-megamek-convert"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "stompymux-unit-construction",
+ "tempfile",
+ "toml",
+]
+
+[[package]]
 name = "stompymux-namegen"
 version = "0.1.0"
 dependencies = [

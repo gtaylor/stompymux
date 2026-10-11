@@ -108,6 +108,10 @@ mapgen *args:
 namegen *args:
     cargo run --quiet -p stompymux-namegen --bin namegen -- {{args}}
 
+# Convert MegaMek unit files into templates, e.g. `just megamek-convert -o game/units units/*.mtf`.
+megamek-convert *args:
+    cargo run --quiet -p stompymux-megamek-convert --bin megamek-convert -- {{args}}
+
 # Fail when any map file in game/maps would not load.
 check-maps:
     cargo run --quiet -p stompymux-map --bin map-check -- game/maps

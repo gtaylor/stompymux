@@ -182,15 +182,16 @@ slots across both placements must add up to the weapon's size.
 
 ## Converting MegaMek units
 
-The `megamek-convert` tool turns MegaMek BattleMech (`.mtf`) and combat vehicle
-(`.blk`) files into templates:
+The `megamek-convert` tool, in `crates/megamek-convert`, turns MegaMek BattleMech
+(`.mtf`) and combat vehicle (`.blk`) files into templates. It validates its output
+through `crates/unit-construction` alone, so it builds without the server:
 
 ```sh
 # Print one template.
-cargo run --bin megamek-convert -- "Atlas AS7-D.mtf"
+just megamek-convert "Atlas AS7-D.mtf"
 
 # Write <reference>.toml files; --force replaces existing ones.
-cargo run --bin megamek-convert -- --output-dir game/units units/*.mtf units/*.blk
+just megamek-convert --output-dir game/units units/*.mtf units/*.blk
 ```
 
 The reference is the mech's model when that is a designation such as `AS7-D`,
