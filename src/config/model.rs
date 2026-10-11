@@ -676,14 +676,24 @@ pub struct RuntimeConfig {
     /// Configuration value for `maintenance_interval_ms`; defaults are centralized below.
     pub maintenance_interval_ms: u64,
 }
+impl RuntimeConfig {
+    /// The Telnet decoder budgets these settings configure.
+    pub fn telnet_limits(&self) -> stompymux_telnet::Limits {
+        stompymux_telnet::Limits {
+            input_line: self.input_line_limit,
+            subnegotiation: self.telnet_subnegotiation_limit,
+        }
+    }
+}
+
 impl Default for RuntimeConfig {
     fn default() -> Self {
         Self {
             max_connections: 1024,
             event_queue_capacity: 256,
             session_output_queue_capacity: 128,
-            input_line_limit: 8192,
-            telnet_subnegotiation_limit: 8192,
+            input_line_limit: stompymux_telnet::Limits::default().input_line,
+            telnet_subnegotiation_limit: stompymux_telnet::Limits::default().subnegotiation,
             output_message_limit: 65536,
             write_timeout_ms: 5000,
             shutdown_timeout_ms: 5000,

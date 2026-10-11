@@ -1,4 +1,11 @@
-//! Incremental Telnet decoding. Negotiation never enters the command stream.
+//! Incremental Telnet decoding and option negotiation. Negotiation never
+//! enters the command stream.
+//!
+//! This crate owns the wire-level pieces of a Telnet connection: the RFC 1143
+//! option state machine ([`q`]), NEW-ENVIRON storage ([`environment`]), the
+//! MXP handshake and secure tags ([`mxp`]), MCCP2 output and transport
+//! accounting ([`transport`]) and escaped protocol diagnostics
+//! ([`diagnostics`]). It knows nothing about sessions, players or game text.
 use anyhow::{Result, bail};
 pub mod diagnostics;
 pub mod environment;
@@ -85,13 +92,33 @@ pub struct Decoder {
     /// Exact bounded C-string bytes retained for escaped diagnostics.
     pub terminal_raw: Vec<u8>,
 }
+/// Byte budgets that bound what one connection may buffer before a line or
+/// subnegotiation completes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Limits {
+    /// Longest input line accepted, in bytes, before the decoder fails.
+    pub input_line: usize,
+    /// Longest subnegotiation payload retained, in bytes.
+    pub subnegotiation: usize,
+}
+
+impl Default for Limits {
+    fn default() -> Self {
+        Self {
+            input_line: 8192,
+            subnegotiation: 8192,
+        }
+    }
+}
+
 impl Default for Decoder {
     fn default() -> Self {
-        Self::new(&crate::config::RuntimeConfig::default())
+        Self::new(Limits::default())
     }
 }
 impl Decoder {
-    pub fn new(config: &crate::config::RuntimeConfig) -> Self {
+    /// Start a connection's decoder with the given byte budgets.
+    pub fn new(limits: Limits) -> Self {
         Self {
             state: State::Data,
             negotiation: Negotiator::default(),
@@ -114,8 +141,8 @@ impl Decoder {
             ansi: true,
             terminal: "vt100".into(),
             terminal_raw: b"vt100".to_vec(),
-            input_line_limit: config.input_line_limit,
-            subnegotiation_limit: config.telnet_subnegotiation_limit,
+            input_line_limit: limits.input_line,
+            subnegotiation_limit: limits.subnegotiation,
         }
     }
     /// Begin supported negotiations once, using the C server's option directions.

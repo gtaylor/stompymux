@@ -1,5 +1,5 @@
-//! Wire fixtures based on mux/network/telnet_handler.c and third_party/libtelnet's RFC 1143 handling.
-use stompymux_rs::telnet::{
+//! Telnet decoder, negotiation and diagnostics behavior against the C server.
+use stompymux_telnet::{
     CHARSET, Decoder, ECHO, Input, NAWS, TTYPE,
     q::{QState, Side},
 };
@@ -180,8 +180,8 @@ fn mtts_matches_c_strtol_and_preserves_invalid_bytes() {
 
     let decoder = discovered(b"bad\xFFtype");
     assert_eq!(decoder.terminal_raw, b"bad\xFFtype");
-    let mut report = stompymux_rs::telnet::diagnostics::Report::new(8192);
-    stompymux_rs::telnet::diagnostics::telnet(
+    let mut report = stompymux_telnet::diagnostics::Report::new(8192);
+    stompymux_telnet::diagnostics::telnet(
         &mut report,
         "viewer",
         1,
@@ -250,10 +250,9 @@ fn charset_pending_collisions_and_utf8_only_policy() {
 }
 #[test]
 fn inactive_subnegotiation_still_has_a_payload_limit() {
-    let c = stompymux_rs::config::RuntimeConfig {
-        telnet_subnegotiation_limit: 2,
+    let mut d = Decoder::new(stompymux_telnet::Limits {
+        subnegotiation: 2,
         ..Default::default()
-    };
-    let mut d = Decoder::new(&c);
+    });
     assert!(d.feed(&[255, 250, 99, 1, 2, 3]).is_err());
 }

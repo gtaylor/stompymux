@@ -20,12 +20,13 @@ The implementation is organized by responsibility across modules.
 | `src/lua/` | Lua runtime, sandbox, scripts, flows, and package bindings |
 | `src/runtime/` | Transaction checkpoints and staged effects shared by native and Lua operations |
 | `src/persistence/` | SQLite loading, validation, and selective writes |
-| `src/text/`, `src/telnet/` | Styled and Markdown documents, terminal rendering, Telnet negotiation, and transport |
 | `src/help/` | In-game help indexing and rendering (see [Help system](../help-system/)) |
 | `src/config/` | Configuration model, directives, and runtime administration |
 | `crates/map/` | Battlefield map data shared by the server and map tools: layered hexes, terrain, map flags, hex geometry, the [map file](../map-files/) format, and the `map-check` CLI |
 | `crates/unit-construction/` | BattleTech unit templates shared by the server and template tools: the [unit template](../unit-templates/) document format, the weapon and system catalogue, loadouts, construction rules, construction mass and cost |
 | `crates/mapgen/` | Procedural battlefield map generation library and the `mapgen` CLI; depends on `crates/map` but nothing in the server, so editors can embed it (see [Map generation](../map-generation/)) |
+| `crates/styled-text/` | Styled and Markdown documents, the bracket markup parser, OSC 8 links, inline images and the ANSI, MXP and HTML renderers; re-exported by the server as `stompymux_rs::text` |
+| `crates/telnet/` | Telnet option negotiation, line decoding, NEW-ENVIRON, MXP, MCCP2 output and protocol diagnostics; re-exported by the server as `stompymux_rs::telnet` |
 | `crates/seeded-rng/` | The pinned random number generator shared by every seeded generator, so a saved seed reproduces its output forever |
 | `crates/namegen/` | Seeded mercenary outfit, person and callsign names and the `namegen` CLI; embeds its TOML word lists and depends on nothing in the server (see [Name generation](../name-generation/)) |
 | `crates/mappy/` | The Mappy desktop map editor, built on `crates/map`, `crates/mapgen` and iced (`just mappy`) |
@@ -45,6 +46,6 @@ keeps those effects and nested savepoints independent of Lua values.
 New behavior belongs in the module that owns its invariant. Add a typed domain
 operation there, then adapt it at command, Lua, or server entry points as
 needed. Add durable fields to the model and persistence adapter together.
-Keep protocol conversion in `src/telnet/` or `src/text/`, rather than in domain
-rules. The [BattleTech architecture](../btech-architecture/) article describes
+Keep protocol conversion in `crates/telnet/` or `crates/styled-text/`, rather than
+in domain rules. The [BattleTech architecture](../btech-architecture/) article describes
 that subsystem in more detail.

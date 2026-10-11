@@ -3,7 +3,6 @@ use super::{Scripts, packages, sandbox};
 use crate::{
     config::Config,
     runtime::{Effects, Outbox, SharedWorld},
-    text,
 };
 use anyhow::Result;
 use std::{collections::BTreeMap, sync::Arc};
@@ -53,7 +52,7 @@ impl Scripts {
         mode: RuntimeMode,
         setup: impl FnOnce(&Scripts) -> Result<()>,
     ) -> Result<Self> {
-        let palette = std::sync::Arc::new(text::Palette::from_config(config)?);
+        let palette = std::sync::Arc::new(config.palette()?);
         world.borrow_mut().palette = palette.clone();
         let (lua, budget) = sandbox::create(config)?;
         lua.set_app_data(std::sync::Arc::new(config.clone()));

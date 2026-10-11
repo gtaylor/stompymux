@@ -63,7 +63,7 @@ else reports `Unable to render default help article`.
 
 ## Rendering
 
-Article bodies use the Rust Markdown renderer in `src/text/markdown.rs`.
+Article bodies use the Rust Markdown renderer in `crates/styled-text/src/markdown.rs`.
 External `http:`, `https:`, and `ftp:` links can become capability-aware
 OSC 8 links. Clients without OSC 8 support still receive the visible text.
 Index entries are rendered as actions that send `help <topic>` when the client

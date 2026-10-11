@@ -1,0 +1,14 @@
+[package]
+name = "stompymux-styled-text"
+version = "0.1.0"
+edition = "2024"
+description = "Styled-text and Markdown documents with ANSI, OSC 8, MXP and HTML rendering"
+publish = false
+
+[dependencies]
+stompymux-telnet = { path = "../telnet" }
+anyhow = "1.0.104"
+pulldown-cmark = { version = "0.13.4", default-features = false, features = ["html"] }
+serde_json = { version = "1.0.151", features = ["float_roundtrip"] }
+unicode-segmentation = "1.13.3"
+unicode-width = "0.2.2"

@@ -7,7 +7,7 @@ weight: 30
 ---
 
 Object names, descriptions, and inside descriptions support a small,
-declarative markup language. The Rust text parser in `src/text/` turns it into
+declarative markup language. The Rust text parser in `crates/styled-text/` turns it into
 styled documents; OSC link actions occur only when a user activates a
 rendered link.
 

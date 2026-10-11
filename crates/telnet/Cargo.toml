@@ -1,0 +1,11 @@
+[package]
+name = "stompymux-telnet"
+version = "0.1.0"
+edition = "2024"
+description = "Telnet option negotiation, line decoding, MXP, MCCP2 output and protocol diagnostics"
+publish = false
+
+[dependencies]
+anyhow = "1.0.104"
+flate2 = { version = "1.1.10", default-features = false, features = ["rust_backend"] }
+tokio = { version = "1.53.1", features = ["io-util"] }

@@ -61,6 +61,3 @@ mod speech;
 
 #[path = "../state.rs"]
 mod state;
-
-#[path = "../telnet.rs"]
-mod telnet;

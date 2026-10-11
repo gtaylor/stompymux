@@ -281,10 +281,10 @@ async fn configured_decoding_hashing_and_sqlite_timeouts_take_effect() {
     let (_d, c) = config(
         "runtime.input_line_limit=4\nruntime.telnet_subnegotiation_limit=2\nsecurity.password_hash_opslimit=1\nsecurity.password_hash_memlimit=1048576\ndatabase.busy_timeout_ms=1",
     );
-    let mut decoder = Decoder::new(&c.runtime);
+    let mut decoder = Decoder::new(c.runtime.telnet_limits());
     assert!(matches!(&decoder.feed(b"test\n").unwrap()[0],Input::Line(s) if s=="test"));
     assert!(decoder.feed(b"12345").is_err());
-    let mut decoder = Decoder::new(&c.runtime);
+    let mut decoder = Decoder::new(c.runtime.telnet_limits());
     assert!(decoder.feed(&[255, 250, 24, 0, 65, 66]).is_err());
     let hash = accounts::hash("secret", &c).unwrap();
     assert!(hash.contains("m=1024,t=1,p=1"));

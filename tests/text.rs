@@ -13,11 +13,10 @@ struct Fixture {
 }
 
 fn palette() -> Palette {
-    Palette::from_config(
-        &stompymux_rs::Config::load(crate::support::repository_root().join("tests/fixtures/game"))
-            .unwrap(),
-    )
-    .unwrap()
+    stompymux_rs::Config::load(crate::support::repository_root().join("tests/fixtures/game"))
+        .unwrap()
+        .palette()
+        .unwrap()
 }
 
 #[test]

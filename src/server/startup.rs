@@ -9,7 +9,7 @@ pub async fn prepare(c: &Config) -> Result<Scripts> {
         let path = c.database();
         let timeout = c.database.busy_timeout_ms;
         let mut loaded = persistence::load_with_timeout(&path, timeout).await?;
-        loaded.palette = std::sync::Arc::new(crate::text::Palette::from_config(c)?);
+        loaded.palette = std::sync::Arc::new(c.palette()?);
         loaded.validate(c)?;
         persistence::validate_lists(&path, &loaded, timeout).await?;
         loaded

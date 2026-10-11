@@ -1,4 +1,11 @@
 //! Explicit styled-text and Markdown documents, independent of output transport.
+//!
+//! A [`Document`] is parsed into semantic [`Span`]s against a [`Palette`] and
+//! rendered for a particular recipient through [`RenderOptions`]: ANSI colors
+//! at a chosen depth, OSC 8 actions filtered by advertised capabilities, MXP
+//! tags for clients that support them, or an escaped HTML fragment. The
+//! `mux_*` functions reproduce the C server's byte-level markup handling for
+//! compatibility reports.
 mod colors;
 pub mod image;
 pub mod links;
@@ -7,7 +14,7 @@ mod parser;
 mod render;
 
 use anyhow::{Result, ensure};
-pub(crate) use render::html as spans_html;
+pub use render::html as spans_html;
 pub use render::{ColorDepth, RenderOptions, preset, telnet_chunks};
 use std::collections::BTreeMap;
 use unicode_segmentation::UnicodeSegmentation;
@@ -48,9 +55,17 @@ pub struct Palette {
 
 impl Palette {
     /// Build configuration-dependent catalogs before starting a server.
-    pub fn from_config(config: &crate::config::Config) -> Result<Self> {
+    ///
+    /// `colors` adds named RGB colors, which may not shadow a built-in CSS/X11
+    /// name; `presets` maps preset names to the directive lists they stand
+    /// for. Error messages name the offending `colors.*` or `osc8.presets.*`
+    /// entry.
+    pub fn new(
+        colors: &BTreeMap<String, [u8; 3]>,
+        presets: &BTreeMap<String, String>,
+    ) -> Result<Self> {
         let mut palette = Self::default();
-        for (name, rgb) in &config.colors {
+        for (name, rgb) in colors {
             ensure!(
                 !colors::COLORS
                     .iter()
@@ -59,7 +74,7 @@ impl Palette {
             );
             palette.colors.insert(name.to_ascii_lowercase(), *rgb);
         }
-        for (name, value) in &config.osc8.presets {
+        for (name, value) in presets {
             ensure!(
                 name.len() <= 60
                     && name
