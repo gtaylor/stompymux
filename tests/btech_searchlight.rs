@@ -39,7 +39,7 @@ async fn fixture() -> (
     support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, ids[0], ObjectId(1), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     (dir, config, world, ids[0], ids[1], map)
 }
@@ -397,6 +397,8 @@ async fn terrain_beams_reach_beyond_unit_illumination_and_stop_at_obstructions()
     let restored = persistence::load(&config.database()).await.unwrap();
     assert!(battle_hex_visible(&restored, lamp, distant).unwrap());
     assert_eq!(world.btech, before);
+    // Light smoke alone obscures like light woods and lets the beam through; heavy smoke
+    // behind it adds up to three points and stops it.
     set_map_decoration(
         &mut world,
         map,
@@ -404,8 +406,17 @@ async fn terrain_beams_reach_beyond_unit_illumination_and_stop_at_obstructions()
         Some(Decoration::new(DecorationKind::Smoke, 30, None)),
     )
     .unwrap();
+    assert!(battle_hex_illuminated(&world, map, distant).unwrap());
+    set_map_decoration(
+        &mut world,
+        map,
+        HexCoordinate { x: 2, y: 21 },
+        Some(Decoration::new(DecorationKind::HeavySmoke, 30, None)),
+    )
+    .unwrap();
     assert!(!battle_hex_illuminated(&world, map, distant).unwrap());
     set_map_decoration(&mut world, map, HexCoordinate { x: 2, y: 20 }, None).unwrap();
+    set_map_decoration(&mut world, map, HexCoordinate { x: 2, y: 21 }, None).unwrap();
     world
         .objects
         .get_mut(&lamp)
@@ -487,10 +498,10 @@ async fn automatic_lamps_follow_map_light_changes_and_transfers() {
     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, lamp, ObjectId(1), true).unwrap();
     for _ in 0..4 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     assert_eq!(lamp_state(&world, lamp).remaining, 0);
-    advance_battle_units(&mut world, 0);
+    advance_battle_units(&mut world, 0, true);
     assert_eq!(lamp_state(&world, lamp).remaining, 5);
     persistence::save(&config.database(), &world).await.unwrap();
     assert_eq!(

@@ -213,6 +213,23 @@ fn charge_profile_for(
         motion.speed >= 10.75,
         "You aren't moving fast enough to charge."
     );
+    if let (Some(position), Some(target_position)) = (source.position(), victim.position())
+        && position.map == target_position.map
+        && let Some(map) = world.btech.maps().get(&position.map)
+    {
+        let tile = map.base_hex(i64::from(position.x), i64::from(position.y))?;
+        let target_tile =
+            map.base_hex(i64::from(target_position.x), i64::from(target_position.y))?;
+        ensure!(
+            !(tile.immerses(source.elevation_level(tile))
+                && super::physical::submerged(
+                    victim,
+                    target_tile,
+                    victim.elevation_level(target_tile)
+                )),
+            "You cannot reach a target under the water from where you stand."
+        );
+    }
     let range = unit_range(world, attacker, target)?;
     ensure!(
         range.spatial < 0.6,

@@ -1,7 +1,7 @@
 //! Building traversal shares host movement policy, callbacks, rollback and arrival publication.
 use super::*;
 use crate::{LockInvocation, LockType, ObjectId, Scripts};
-use anyhow::{Result, ensure};
+use anyhow::{Context, Result, ensure};
 
 /// A committed arrival awaits the tick's normal sensor pass before observer publication.
 #[derive(Debug, Clone)]
@@ -153,8 +153,11 @@ pub fn building_entries_pending(world: &crate::World) -> bool {
 
 /// Advance entry events once, rechecking current routes and locks before ordinary teleport movement.
 /// Invalid eligibility consumes the event; callback errors restore the entire entry step for retry.
-pub fn advance_building_entries_action(scripts: &Scripts) -> Result<Vec<BuildingArrival>> {
-    transaction(scripts, || {
+pub fn advance_building_entries_action(
+    scripts: &Scripts,
+    config: &crate::Config,
+) -> Result<Vec<BuildingArrival>> {
+    scripts.atomic(|before| {
         let mut arrivals = Vec::new();
         let ids: Vec<_> = {
             let world = scripts.world();
@@ -212,6 +215,34 @@ pub fn advance_building_entries_action(scripts: &Scripts) -> Result<Vec<Building
                 )?;
                 continue;
             }
+            let hazard = super::building_entry::resolve_entry_hazard(
+                &mut scripts.world_mut(),
+                id,
+                destination.map,
+                FallRules::configured(config),
+                true,
+            )?;
+            super::piloting::publish_ordered_notices(
+                scripts,
+                &hazard.notices,
+                &hazard.pilot_notices,
+            )?;
+            super::diagnostics::publish(scripts, &hazard.experience_messages);
+            for impact in &hazard.impacts {
+                if let super::blast_damage::BlastImpact::Mech(impact) = impact {
+                    super::evacuation::publish_impact_consequences(scripts, config, impact)?;
+                }
+            }
+            let destroyed = {
+                let world = scripts.world();
+                super::with_unit!(
+                    world.btech.unit(id).context("Unit is unavailable")?,
+                    |unit| { unit.is_destroyed() }
+                )
+            };
+            if destroyed {
+                continue;
+            }
             if let Some(arrival) = transfer_building(
                 scripts,
                 id,
@@ -224,6 +255,7 @@ pub fn advance_building_entries_action(scripts: &Scripts) -> Result<Vec<Building
                 arrivals.push(arrival);
             }
         }
+        super::evacuation::publish_new_casualties(scripts, config, before)?;
         Ok(arrivals)
     })
 }

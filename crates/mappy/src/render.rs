@@ -64,7 +64,7 @@ impl Uniforms {
 /// constants (`FOLIAGE`, `ROUTE` and so on). Each block lists its layer's values in that
 /// layer's `ALL` order: [`Ground::ALL`], [`Foliage::ALL`], [`Route::ALL`], the one water color,
 /// [`Condition::ALL`], [`StructureKind::ALL`] (light construction; the shader darkens stronger
-/// classes), then fire and smoke. The label ink threshold follows in the red channel of
+/// classes), then [`DecorationKind::ALL`]. The label ink threshold follows in the red channel of
 /// [`PALETTE_INK`].
 pub const PALETTE_GROUND: usize = 0;
 pub const PALETTE_FOLIAGE: usize = PALETTE_GROUND + Ground::ALL.len();
@@ -73,7 +73,7 @@ pub const PALETTE_WATER: usize = PALETTE_ROUTE + Route::ALL.len();
 pub const PALETTE_CONDITION: usize = PALETTE_WATER + 1;
 pub const PALETTE_STRUCTURE: usize = PALETTE_CONDITION + Condition::ALL.len();
 pub const PALETTE_OVERLAY: usize = PALETTE_STRUCTURE + StructureKind::ALL.len();
-pub const PALETTE_INK: usize = PALETTE_OVERLAY + 2;
+pub const PALETTE_INK: usize = PALETTE_OVERLAY + DecorationKind::ALL.len();
 /// Palette entries, the ink threshold included.
 pub const PALETTE_LEN: usize = PALETTE_INK + 1;
 
@@ -105,9 +105,7 @@ pub fn palette_colors() -> [Color; PALETTE_INK] {
     );
     fill(
         PALETTE_OVERLAY,
-        &mut [DecorationKind::Fire, DecorationKind::Smoke]
-            .into_iter()
-            .map(overlay_color),
+        &mut DecorationKind::ALL.into_iter().map(overlay_color),
     );
     colors
 }
@@ -131,7 +129,7 @@ const TEXEL_BYTES: u32 = 8;
 ///
 /// - red: ground position in [`Ground::ALL`] (bits 0-3), then one plus the position in its
 ///   `ALL` list, or zero for none, of foliage (bits 4-6), route (bits 7-9) and condition
-///   (bits 10-12), and the overlay (bits 13-14: none, fire, smoke);
+///   (bits 10-12), and the overlay (bits 13-14: none, fire, smoke, heavy smoke);
 /// - green: ground level (bits 0-7), water depth plus one or zero for none (bits 8-11) and
 ///   its flow (bits 12-13: still, rapids, torrent);
 /// - blue: one plus the structure kind or zero for none (bits 0-1), its construction class
@@ -142,10 +140,7 @@ pub fn hex_texel(hex: Hex) -> [u16; 4] {
     let foliage = optional(&Foliage::ALL, hex.foliage());
     let route = optional(&Route::ALL, hex.route());
     let condition = optional(&Condition::ALL, hex.condition());
-    let overlay = optional(
-        &[DecorationKind::Fire, DecorationKind::Smoke],
-        hex.overlay(),
-    );
+    let overlay = optional(&DecorationKind::ALL, hex.overlay());
     let water = hex.water().map_or(0, |water| {
         (u16::from(water.depth.min(14)) + 1) | position(&Flow::ALL, water.flow) << 4
     });

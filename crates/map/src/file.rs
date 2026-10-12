@@ -260,8 +260,11 @@ impl LayerSymbol for Condition {
 
 impl LayerSymbol for DecorationKind {
     const GRID: &'static str = "overlay";
-    const SYMBOLS: &'static [(Self, char)] =
-        &[(DecorationKind::Fire, '&'), (DecorationKind::Smoke, ':')];
+    const SYMBOLS: &'static [(Self, char)] = &[
+        (DecorationKind::Fire, '&'),
+        (DecorationKind::Smoke, ':'),
+        (DecorationKind::HeavySmoke, '?'),
+    ];
 }
 
 /// Decode a layer-grid character: `.` for none, otherwise one of the layer's symbols.

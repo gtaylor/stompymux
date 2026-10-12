@@ -35,7 +35,9 @@ pub fn add_map_decoration_action(
         {
             let remaining = match (kind, duration) {
                 (_, 0) => 0,
-                (DecorationKind::Smoke, seconds) => i64::from(seconds.max(1)),
+                (DecorationKind::Smoke | DecorationKind::HeavySmoke, seconds) => {
+                    i64::from(seconds.max(1))
+                }
                 (DecorationKind::Fire, seconds) => {
                     // The first spread is scheduled independently of this budget.
                     i64::from(seconds.clamp(i32::from(i16::MIN), i32::from(i16::MAX)))
@@ -50,10 +52,7 @@ pub fn add_map_decoration_action(
                 duration.clamp(i32::from(i16::MIN), i32::from(i16::MAX)) as i16;
             super::set_map_decoration(&mut scripts.world_mut(), map, coordinate, Some(effect))?;
         }
-        let label = match kind {
-            DecorationKind::Fire => "Fire",
-            DecorationKind::Smoke => "Smoke",
-        };
+        let label = kind.label();
         super::notify_message(
             scripts,
             super::MessageTarget::Player(actor),
@@ -103,7 +102,7 @@ pub(crate) fn command(
 fn parse(arguments: &str, kind: DecorationKind) -> Result<(HexCoordinate, i32)> {
     let name = match kind {
         DecorationKind::Fire => "addfire",
-        DecorationKind::Smoke => "addsmoke",
+        DecorationKind::Smoke | DecorationKind::HeavySmoke => "addsmoke",
     };
     let args: Vec<_> = arguments
         .split([' ', '\t'])

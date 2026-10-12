@@ -47,7 +47,10 @@ impl StaticDecoration {
     pub(crate) fn validate(self, kind: StaticDecorationKind) -> anyhow::Result<()> {
         match (kind, self.restored_terrain) {
             (StaticDecorationKind::Decoration, Some(terrain)) => anyhow::ensure!(
-                !matches!(terrain, Terrain::Fire | Terrain::Smoke),
+                !matches!(
+                    terrain,
+                    Terrain::Fire | Terrain::Smoke | Terrain::HeavySmoke
+                ),
                 "Decorations cannot restore fire or smoke"
             ),
             (StaticDecorationKind::Decoration, None) => {

@@ -278,7 +278,7 @@ async fn ultra_rubble_takes_a_roll_to_enter() {
     let texts: Vec<_> = output.iter().map(|(_, text)| text.source()).collect();
     let warning = texts
         .iter()
-        .position(|text| *text == "You pick your way across the shattered rubble.")
+        .position(|text| *text == "You pick your way across the rubble.")
         .expect("ultra rubble warning");
     assert_eq!(texts[warning + 1], "You make a piloting skill roll!");
     support::drain_traces(&scripts, logging::TraceTopic::PilotingRolls);

@@ -234,7 +234,9 @@ fn layers_argument(words: &[&str]) -> Result<Hex> {
                 cf = Some(number(super::MAX_CONSTRUCTION_FACTOR, 1)?);
                 hex
             }
-            "fire" | "smoke" => bail!("Fire and smoke are not terrain; use ADDFIRE or ADDSMOKE"),
+            "fire" | "smoke" | "heavy_smoke" => {
+                bail!("Fire and smoke are not terrain; use ADDFIRE or ADDSMOKE")
+            }
             _ => bail!(
                 "Unknown layer {layer:?}; use level, ground, water, flow, foliage, route, \
                  condition, bridge, building, wall, class or cf"

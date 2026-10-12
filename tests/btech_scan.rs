@@ -56,7 +56,7 @@ async fn fixture_with_ranges(
     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, source, ObjectId(1), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     acquire(&mut world, source, target);
     (dir, config, world, map, source, target)
@@ -250,7 +250,7 @@ async fn scan_warnings_follow_target_visibility_and_rollback_with_lua() {
     support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, target, ObjectId(2), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     for identified in [false, true] {
         if identified {
@@ -936,7 +936,7 @@ async fn brief_reports_are_silent_and_do_not_use_detailed_scan_range() {
     support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, target, ObjectId(2), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     let _ = select_battle_target(&mut world, source, ObjectId(1), Some(target)).unwrap();
     let before = world.btech.clone();
@@ -1376,7 +1376,7 @@ async fn long_range_stacked_markers_share_native_lua_and_restart_order() {
         support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, source, ObjectId(1), true).unwrap();
         for _ in 0..5 {
-            advance_battle_units(&mut world, 0);
+            advance_battle_units(&mut world, 0, true);
         }
         place_battle_unit(&mut world, target, map, 1, 20).unwrap();
         let earlier = world.create(&config, "Earlier hex".into(), Kind::Thing);
@@ -1541,7 +1541,7 @@ async fn long_range_elevation_rows_preserve_zero_space_and_water_depth() {
     place_battle_unit(&mut world, source, map, 1, 1).unwrap();
     start_battle_unit(&mut world, source, ObjectId(1), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     let report = battle_long_range_map(
         &world,
@@ -1988,7 +1988,7 @@ async fn tactical_clipping_preserves_global_hex_parity_and_elevation() {
     place_battle_unit(&mut world, target, map, 6, 1).unwrap();
     start_battle_unit(&mut world, source, ObjectId(1), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     acquire(&mut world, source, target);
     let report = battle_tactical_map(
@@ -2052,7 +2052,7 @@ async fn tactical_cliffs_use_signed_depth_thresholds_and_share_native_lua_output
     place_battle_unit(&mut world, target, map, 2, 1).unwrap();
     start_battle_unit(&mut world, source, ObjectId(1), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     acquire(&mut world, source, target);
     world
@@ -2592,7 +2592,7 @@ async fn navigation_keeps_even_center_on_single_hex_maps_with_off_map_surroundin
     place_battle_unit(&mut world, source, map, 0, 0).unwrap();
     start_battle_unit(&mut world, source, ObjectId(1), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     let report = battle_navigate(&world, source, ObjectId(1), "").unwrap();
     assert_eq!(report.center, HexCoordinate { x: 0, y: 0 });
@@ -3936,7 +3936,7 @@ async fn probe_contacts_through_terrain_hide_identity_and_friendly_categories() 
     support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, target, ObjectId(2), true).unwrap();
     for _ in 0..5 {
-        let _ = advance_battle_units(&mut world, 0);
+        let _ = advance_battle_units(&mut world, 0, true);
     }
     world
         .btech
@@ -4456,7 +4456,7 @@ async fn lateral_changes_delay_cancel_persist_and_move_without_turning_weapons()
         6
     );
     for _ in 0..3 {
-        let _ = advance_battle_units(&mut shared.borrow_mut(), 0);
+        let _ = advance_battle_units(&mut shared.borrow_mut(), 0, true);
     }
     let saved = scripts.world().clone();
     persistence::save(&config.database(), &saved).await.unwrap();
@@ -4469,7 +4469,7 @@ async fn lateral_changes_delay_cancel_persist_and_move_without_turning_weapons()
     );
     *shared.borrow_mut() = restored;
     for _ in 0..2 {
-        let _ = advance_battle_units(&mut shared.borrow_mut(), 0);
+        let _ = advance_battle_units(&mut shared.borrow_mut(), 0, true);
     }
     assert_eq!(
         scripts.world().btech.constructed_units()[&source]
@@ -4477,7 +4477,7 @@ async fn lateral_changes_delay_cancel_persist_and_move_without_turning_weapons()
             .active,
         LateralMode::None
     );
-    let notices = advance_battle_units(&mut shared.borrow_mut(), 0);
+    let notices = advance_battle_units(&mut shared.borrow_mut(), 0, true);
     assert!(notices.iter().any(|notice| notice.text
         == "Lateral movement mode change to Front/Right (60 offset) completed."));
     assert_eq!(
@@ -4578,7 +4578,7 @@ async fn lateral_changes_delay_cancel_persist_and_move_without_turning_weapons()
         })
         .unwrap();
     for _ in 0..5 {
-        let _ = advance_battle_units(&mut stopped, 0);
+        let _ = advance_battle_units(&mut stopped, 0, true);
     }
     assert_eq!(
         stopped.btech.constructed_units()[&source]
@@ -4586,7 +4586,7 @@ async fn lateral_changes_delay_cancel_persist_and_move_without_turning_weapons()
             .remaining,
         1
     );
-    assert!(advance_battle_units(&mut stopped, 0).is_empty());
+    assert!(advance_battle_units(&mut stopped, 0, true).is_empty());
     assert_eq!(
         stopped.btech.constructed_units()[&source].lateral().active,
         LateralMode::FrontRight
@@ -4628,7 +4628,7 @@ async fn cockpit_status_reports_quad_lateral_travel() {
             .contains("moving laterally")
     );
     for _ in 0..6 {
-        let _ = advance_battle_units(&mut shared.borrow_mut(), 0);
+        let _ = advance_battle_units(&mut shared.borrow_mut(), 0, true);
     }
     let _ = scripts.drain_outbox();
     let before = scripts.world().btech.clone();
@@ -5651,7 +5651,7 @@ async fn ammunition_dump_low_capacity_bins_preserve_cadence_and_shutdown_cancels
     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     let loadout = world.btech.constructed_units()[&id].loadout().unwrap();
     let (index, bin) = loadout

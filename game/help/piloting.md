@@ -26,24 +26,51 @@ Startup progress survives restart. It pauses while the server is offline or
 unable to save progress. A running unit accepts `heading <degrees>` and
 `speed <kph|stop|walk|run|back>`. Turns and speed changes are gradual. Shutting down above 10.75 kph forward
 causes a fall and can cause crowding collisions. Reverse or slower motion stops
-without that shutdown fall. Each hex costs movement for its ground, foliage, route, water flow and any ice,
-snow or mud, and your speed is divided by that cost. A road or rail line replaces the
+without that shutdown fall. Each hex costs movement for its ground, foliage, route, water and any ice,
+snow or mud, and your speed is divided by that cost, following the Total Warfare and
+Tactical Operations movement cost tables. A road or rail line replaces the
 ground and foliage it crosses. Rough ground, rubble, light woods and rail cost one
 extra; ultra rough ground, ultra rubble and heavy woods two; ultra-heavy woods three.
 Jungle costs one more than woods of the same density. Swamp costs Mechs one extra,
 hovercraft nothing, and other vehicles two. Magma costs one extra, and heavy industrial
 ground one extra for Mechs. Sand and thin snow slow only wheeled
-vehicles. Deep snow, mud and ice cost one extra, except for hovercraft. Rapids add
-one and torrents two. Fire and smoke slow every ground unit at least as much as rough
-ground. Standing in flames adds five to a Mech's heat production,
-unless it is under the water or beneath the bridge deck the fire burns on. Forward steps reduce
-speed by 10.75 kph per level while preserving your requested throttle. Backing
-across a step normally requires a piloting check: failure causes a fall, with an
-uphill fall returning you to the previous position. When reverse-step checks are
-disabled, backing uses the same speed costs as forward movement. Map edges and
-unresolved altitude transitions stop the unit. Buildings and walls use their mapped heights. At a steeper cliff, a successful piloting check stops you before the edge or wall.
-Failure causes a fall; downhill fall damage scales with the drop. Speed affects
-the check, and the server can select alternate skid rules.
+vehicles. Deep snow, mud and ice cost one extra, except for hovercraft, and ice costs
+that over water as on land. Water one level deep costs one extra and deeper water
+three; rapids add one more and torrents two. Fire slows every ground unit at least as
+much as rough ground; smoke does not. Standing in flames adds five to a Mech's heat
+production, unless it is under the water or beneath the bridge deck the fire burns on.
+Forward steps reduce speed by 10.75 kph per level while preserving your requested
+throttle. Backing across a step normally requires a piloting check: failure causes a
+fall, with an uphill fall returning you to the previous position. When reverse-step
+checks are disabled, backing uses the same speed costs as forward movement. Map edges
+and unresolved altitude transitions stop the unit. Buildings and walls use their
+mapped heights.
+
+Some terrain cannot be entered at all, and a unit that reaches its edge simply
+stops there. Mechs may change at most two levels between hexes and vehicles one; a
+steeper slope is impassable. Mechs cannot push into ultra-heavy woods or jungle.
+Wheeled vehicles keep out of rough ground, rubble, ultra rubble, woods, deep snow and
+magma crust; no vehicle enters heavy or ultra-heavy woods, any jungle, ultra rough ground
+or liquid magma; hovercraft also avoid light woods; and nothing but a hovercraft or an
+amphibious vehicle crosses water a level or more deep. A road or bridge carries a
+unit through terrain it could not otherwise enter, and buildings and walls are
+climbed onto rather than entered.
+
+Running or flanking across pavement, a road or a bridge deck, or crossing ice at
+any speed, risks a skid: change facing on such a hex and then move on, and you
+roll against your piloting or driving skill, harder the farther you have moved
+this turn. Failure drops a Mech and slides it along its old course for half the
+hexes it had moved, taking half a fall's damage in every hex it slides through,
+stopping against higher ground or another unit and tumbling over any drop too
+steep to walk down. A vehicle slides the same way and rolls once for motive
+system damage; a hovercraft sideslips instead, drifting one hex for every point
+it missed by, without damage unless it drifts into something.
+
+Swamp, mud, deep snow, tundra and sand can bog you down. Entering such a hex
+takes a piloting or driving roll, one easier on tundra, deep snow and mud, and a
+Mech that falls in one, or jumps into a swamp, is stuck at once. A stuck unit
+cannot move or turn, is two easier to hit, and rolls again to pull free at the
+start of every turn. Jumping out always works. Hovercraft never bog down.
 
 Crowded hexes can cause collisions when you enter them. More than two friendly
 units, or more than six total units, can trigger the configured collision rules.
@@ -52,22 +79,24 @@ stop you or cause a fall. Landing among three friendly ground units can also
 trigger crowding; landing impacts use current mass and remaining jump thrust.
 Maps with the `no_stacking` flag have no crowding collisions.
 
-Water depth affects piloting checks. Entering a submerged hex requires a
-piloting check; running into water makes the check
-harder and limits forward throttle to walking speed. Slipping causes a fall.
-Water can flood breached sections, disable equipment and cause loss of balance.
-Running commands are rejected while submerged or in high-water terrain. High
-water uses its mapped height and a -2 entry modifier; slipping there causes wet
-fall damage.
+Water depth affects piloting checks. Entering water a level or more deep requires a
+piloting check, one easier at depth one, unmodified at depth two and one harder
+beyond; slipping causes a fall. A running Mech stops at the water's edge, and
+entering limits forward throttle to walking speed. Water can flood breached
+sections, disable equipment and cause loss of balance. Running commands are
+rejected while in the water.
 Bridge travel selects the deck or a lower surface at elevation -1 according to
-your current height. Beneath a bridge, water checks still apply; mapped terrain
-heights determine step and cliff checks.
+your current height. Beneath a bridge you stand on the river bed: water checks
+still apply, and the deck overhead plays no part in slope checks.
 
-On ice, each new hex entered from elevation zero has a one-in-six chance of
-breaking. A break can drop everyone on that hex into the water. Below intact ice,
-you follow the bottom and make water checks; falls and standing keep you below it.
-Moving from elevation -1 into depth-one ice brings you onto its surface without
-a fracture roll on that entry.
+Stepping onto ice, over water or on land, takes a piloting or driving roll at +0
+for everything but a hovercraft; a Mech that fails falls, and a vehicle slews to a
+halt and rolls for motive damage. Each new hex of frozen water entered from
+elevation zero also has a one-in-six chance of breaking, and landing a jump on it
+breaks it half the time. A break can drop everyone on that hex into the water.
+Below intact ice, you follow the bottom and make water checks; falls and standing
+keep you below it. Moving from elevation -1 into depth-one ice brings you onto its
+surface without a fracture roll on that entry.
 
 Terrain and weather make every piloting check you take there harder. Sand, tundra,
 magma crust, heavy industrial ground, deep snow and mud each add one, and so does thin
@@ -75,13 +104,14 @@ snow for wheeled vehicles. Light, heavy and ultra-heavy jungle add one, two and 
 and swamp adds one for Mechs and two for tracked and wheeled vehicles. Ice adds four,
 rapids two, torrents three and liquid magma four. Hovercraft ignore the swamp, ice, snow,
 mud and fast-water penalties. A strong gale adds one for Mechs and two for hovercraft and
-VTOLs, a storm three, a tornado three for everyone and an F4 tornado five. Entering
-ultra rubble takes a piloting check; failure is a fall.
+VTOLs, a storm three, a tornado three for everyone and an F4 tornado five. A Mech
+entering rubble takes a piloting check, at +1 for ultra rubble; failure is a fall.
 
 Magma crust can crack under you: each crust hex you walk or drive into breaks into
 liquid magma on a one-in-six chance, and landing a jump on it breaks it half the time.
-Crust adds five to a Mech's heat, liquid magma ten, and unlike flames that heat has no
-cap. Liquid magma burns a Mech's legs for 2D6 each when it enters, and again at the start
+Crust adds five to a Mech's heat each turn it stands there and two more as it steps on,
+liquid magma ten and five, and unlike flames that heat has no cap. Liquid magma burns a
+Mech's legs for 2D6 each when it enters, and again at the start
 of every turn it stays there; a fallen Mech burns everywhere. Any vehicle that enters liquid
 magma is destroyed. Deep snow draws one point of heat a turn from a Mech with heat sinks
 in its legs. Beyond -30 or 50 degrees, vehicles lose a cruising MP for every started ten
@@ -92,11 +122,11 @@ strong gale two to missiles and one to ballistic weapons; a storm three and two.
 tornado missiles cannot fire, ballistic weapons take three and energy weapons two; an F4
 tornado leaves only energy weapons, at three. Missiles and ballistic weapons also take one
 for every full 0.2 G the gravity differs from normal.
-Use `unitprefs` to inspect AutoFall. `unitprefs AutoFall ON` skips the stop check
-at downhill cliffs; `OFF` restores it. `unitprefs AutoFall` toggles the setting.
-The setting stays with the unit through shutdown and restart. The assigned pilot
-can change it with the engine off. Uphill checks and falls still work normally.
-Only AutoFall is currently supported by `unitprefs`.
+Use `unitprefs` to inspect AutoFall. `unitprefs AutoFall ON` and `OFF` set the
+preference and `unitprefs AutoFall` toggles it. The setting stays with the unit
+through shutdown and restart, and the assigned pilot can change it with the engine
+off, but it changes nothing in play: a drop too steep to walk down cannot be
+entered, so there is no cliff to fall off. Only AutoFall is supported by `unitprefs`.
 
 `pilot`, `unpilot` and `shutdown` take no arguments; these commands take no switches.
 
@@ -135,10 +165,14 @@ Crossing ice during a jump can break it and drop other units standing on that he
 Breaking downward can end your jump in a fall; breaking upward preserves your flight.
 A hill taller than your current jump height can force an early landing or crash.
 Water crossings use your current altitude. Submerging can flood breached sections
-and improve cooling; takeoff is limited to water one level deep. Intact ice is
-at surface level. Landing or falling onto it has a one-in-six chance of breaking
-it, dropping units on that tile into the water. Buildings and walls block jumps
-that are too low to clear them. DFA remains unavailable.
+and improve cooling; takeoff is limited to water one level deep. Landing in water a
+level or more deep takes a piloting check; failure tumbles you to the bottom for
+a fall as many levels as the water is deep, at half damage. Intact ice is at
+surface level. Landing on it breaks it half the time, dropping units on that tile
+into the water, and ice that holds takes a piloting check to keep your feet.
+Landing in a swamp sticks you fast, and landing in liquid magma or other soft
+ground rolls against getting stuck. Buildings and walls block jumps that are too
+low to clear them. DFA remains unavailable.
 Accumulated damage does not block takeoff. Rolling stagger checks continue
 during flight and can still cause a fall.
 
@@ -285,9 +319,11 @@ weapon malfunctions remain unfinished.
 
 
 Submerged mounts can fire weapons with underwater range bands, including most
-lasers and PPCs. Other weapons report `This weapon may not be fired underwater.`
-In depth-one water, standing Mechs submerge their leg weapons, including quad
-front legs; prone Mechs submerge every mount. Deeper water submerges all mounts.
+lasers and PPCs, and only at targets in the water. Other weapons report `This weapon
+may not be fired underwater.` In depth-one water, standing Mechs submerge their leg
+weapons, including quad front legs, while their arm, torso and head weapons fire
+normally at targets above the surface; prone Mechs submerge every mount. Deeper
+water submerges all mounts. Standing in water adds nothing to your own shots.
 `sight` and firing use the water ranges, while normal visibility still prevents
 shots across a blocked waterline. C3 improves the aiming band without extending
 the weapon's physical underwater reach. If range-based energy damage is enabled,
@@ -1132,7 +1168,11 @@ At a building entrance, use `enterbase [direction]`. The unit must be running an
 moving slowly; Mechs must be standing, and VTOLs must be landed with fuel. An
 omitted direction uses the first arrival point. The doors take eighteen seconds to
 open. Your current route, movement condition and building lock are checked again
-when that delay expires. Moving away or losing eligibility cancels entry.
+when that delay expires. Moving away or losing eligibility cancels entry. Pushing
+through the walls is a Total Warfare hazard: you roll against the entrance's
+construction class, at +0 for light, +1 medium, +2 heavy and +3 hardened, and a
+failure costs you a tenth of the building's remaining integrity in damage from
+the front. The building loses a tenth of your tonnage either way.
 
 Entry also follows teleport policies. A damaged building permits forcing its enter
 lock only when it is unsafe and below half its maximum integrity.
@@ -1165,11 +1205,13 @@ Cover makes the vehicle harder to hit from its elevation or below, according to
 the configured cover bonus and front-only setting. Hits are more likely to strike
 the turret. These rules apply to attacks from both Mechs and vehicles.
 
-Quad pilots can use `hulldown` to lower the chassis, `hulldown -` to raise it,
-and `hulldown stop` to cancel a pending change. Transition time depends on current
-maximum chassis speed. Finish standing or jump stabilization first. Lowering
-requests a stop. Speed, heading, standing and jumping controls are blocked while
-lowered or changing posture.
+Mech pilots can use `hulldown` to lower the chassis, `hulldown -` to raise it,
+and `hulldown stop` to cancel a pending change. A quad squats; a biped takes a
+knee, and must pass a piloting roll to get it off the ground again, otherwise it
+stays down with the time spent and may try again. Transition time depends on
+current maximum chassis speed. Finish standing or jump stabilization first.
+Lowering requests a stop. Speed, heading, standing and jumping controls are
+blocked while lowered or changing posture.
 
 Hull-down adds protection when terrain already gives partial cover: aiming at a
 hull-down unit behind partial cover costs an extra +2, however it is perceived. Shutdown cancels a pending change

@@ -46,7 +46,7 @@ async fn startup_emits_six_stages_and_resumes_only_committed_seconds() {
     assert!(start_battle_unit(&mut world, id, ObjectId(1), false).is_err());
     let mut messages = Vec::new();
     for second in 1..=30 {
-        let notices = advance_battle_units(&mut world, 0);
+        let notices = advance_battle_units(&mut world, 0, true);
         assert_eq!(notices.len(), usize::from(second % 5 == 0));
         messages.extend(notices.into_iter().map(|notice| notice.text));
         if second == 12 {
@@ -70,7 +70,7 @@ async fn startup_emits_six_stages_and_resumes_only_committed_seconds() {
         ]
     );
     assert_eq!(world.btech.constructed_units()[&id].power(), Power::Running);
-    assert!(advance_battle_units(&mut world, 0).is_empty());
+    assert!(advance_battle_units(&mut world, 0, true).is_empty());
     assert!(remove_battle_unit(&mut world, id, ObjectId(config.start())).is_err());
     stop_battle_unit(
         &mut world,
@@ -85,10 +85,10 @@ async fn startup_emits_six_stages_and_resumes_only_committed_seconds() {
     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..4 {
-        assert!(advance_battle_units(&mut world, 0).is_empty());
+        assert!(advance_battle_units(&mut world, 0, true).is_empty());
     }
     assert_eq!(
-        advance_battle_units(&mut world, 0)[0].text,
+        advance_battle_units(&mut world, 0, true)[0].text,
         "All systems operational!"
     );
 }
@@ -110,7 +110,7 @@ async fn abort_and_lua_rollback_cancel_pending_startup_and_output() {
     let text = support::run_text(&scripts, &config, ObjectId(1), 1, "shutdown");
     assert!(text.contains("aborted"), "{text}");
     for _ in 0..31 {
-        assert!(advance_battle_units(&mut scripts.world_mut(), 0).is_empty());
+        assert!(advance_battle_units(&mut scripts.world_mut(), 0, true).is_empty());
     }
     assert_eq!(
         scripts.world().btech.constructed_units()[&id].power(),
@@ -227,7 +227,7 @@ async fn startup_heat_limit_is_strict_durable_and_cannot_be_overridden() {
             if excess > 30.0 {
                 assert!(result.unwrap_err().to_string().contains("too hot"));
                 assert_eq!(world.btech, before);
-                assert!(advance_battle_units(&mut world, 0).is_empty());
+                assert!(advance_battle_units(&mut world, 0, true).is_empty());
                 for _ in 0..12 {
                     stompymux_rs::advance_battle_heat(&mut world);
                 }
@@ -242,7 +242,7 @@ async fn startup_heat_limit_is_strict_durable_and_cannot_be_overridden() {
                     remaining: if fast { 5 } else { 30 }
                 }
             );
-            advance_battle_units(&mut world, 0);
+            advance_battle_units(&mut world, 0, true);
             persistence::save(&config.database(), &world).await.unwrap();
             assert_eq!(
                 persistence::load(&config.database()).await.unwrap().btech,
@@ -281,7 +281,7 @@ async fn idle_map_smoke_ticks_retry_failed_saves_and_expire() {
 }
 
 #[tokio::test]
-async fn idle_map_fire_burnout_retries_random_state_save_failure() {
+async fn idle_map_fire_burnout_retries_decoration_save_failure() {
     use stompymux_rs::{Decoration, DecorationKind, HexCoordinate, Terrain, set_map_decoration};
     tokio::task::LocalSet::new().run_until(async {
         let (_dir, config, mut world) = support::isolated_world().await;
@@ -300,13 +300,18 @@ async fn idle_map_fire_burnout_retries_random_state_save_failure() {
         persistence::save(&config.database(), &world).await.unwrap();
         let expected = world.btech.clone();
         let mut sql = SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database()).foreign_keys(false)).await.unwrap();
-        sqlx::raw_sql("CREATE TRIGGER deny_fire_random BEFORE UPDATE ON btech_map_random BEGIN SELECT RAISE(ABORT,'fire random failure'); END;").execute(&mut sql).await.unwrap();
+        sqlx::raw_sql("CREATE TRIGGER deny_fire_delete BEFORE DELETE ON btech_map_decorations BEGIN SELECT RAISE(ABORT,'fire delete failure'); END;").execute(&mut sql).await.unwrap();
         let (_addr, shutdown, task, _lua, mut heartbeats) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
         heartbeats.attempt().await; heartbeats.attempt().await;
-        assert_eq!(persistence::load(&config.database()).await.unwrap().btech, expected);
-        sqlx::query("DROP TRIGGER deny_fire_random").execute(&mut sql).await.unwrap();
+        // Burnout changes the terrain and removes the fire together; while the removal cannot
+        // be saved, the saved game keeps the fire and the woods it has not yet consumed.
+        let held = persistence::load(&config.database()).await.unwrap().btech;
+        assert_eq!(held.maps()[&map].decoration(coordinate).unwrap(), expected.maps()[&map].decoration(coordinate).unwrap());
+        assert_eq!(held.maps()[&map].hex(0, 0).unwrap().terrain(), Terrain::Fire);
+        sqlx::query("DROP TRIGGER deny_fire_delete").execute(&mut sql).await.unwrap();
         let loaded = heartbeats.until_saved(&config, 20, |loaded| loaded.btech.maps()[&map].decoration(coordinate).unwrap().is_none()).await;
-        assert!(matches!(loaded.btech.maps()[&map].hex(0, 0).unwrap().terrain(), Terrain::Rough | Terrain::Clear));
+        // Burnt light woods fall to rough ground.
+        assert_eq!(loaded.btech.maps()[&map].hex(0, 0).unwrap().terrain(), Terrain::Rough);
         shutdown.send(ShutdownRequest::Sigterm).unwrap();
         task.await.unwrap().unwrap();
     }).await;

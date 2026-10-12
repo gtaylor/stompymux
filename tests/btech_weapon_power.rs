@@ -96,7 +96,7 @@ async fn gauss_power_down_adapters_state_and_restart() {
             support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
             start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
             for _ in 0..70 {
-                advance_battle_units(&mut world, 0);
+                advance_battle_units(&mut world, 0, true);
             }
             assert!(!readiness(&world, id, index).ready);
             persistence::save(&config.database(), &world).await.unwrap();

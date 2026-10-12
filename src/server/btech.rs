@@ -123,6 +123,7 @@ impl Server {
         }
         let mut building_arrivals = match crate::advance_battle_building_entries_action(
             &self.scripts,
+            &self.config,
         ) {
             Ok(arrivals) => arrivals,
             Err(error) => {
@@ -172,7 +173,11 @@ impl Server {
         }
         let magma_before = crate::battle_magma_snapshot(&self.scripts.world.borrow());
         crate::clear_battle_recent_fire(&mut self.scripts.world.borrow_mut());
-        let mut notices = crate::advance_battle_units(&mut self.scripts.world.borrow_mut(), now);
+        let mut notices = crate::advance_battle_units(
+            &mut self.scripts.world.borrow_mut(),
+            now,
+            self.config.battletech.extended_piloting != 0,
+        );
         notices.extend(crate::advance_battle_standing(
             &mut self.scripts.world.borrow_mut(),
         ));
@@ -211,7 +216,6 @@ impl Server {
                 free_fusion_vtol_fuel: self.config.battletech.nofusionvtolfuel != 0,
                 tsm_tow_bonus: self.config.battletech.tsm_tow_bonus != 0,
                 physical_pilot_skill: self.config.battletech.phys_use_pskill != 0,
-                new_terrain: self.config.battletech.newterrain != 0,
                 charge: crate::ChargePolicy {
                     new_rules: self.config.battletech.newcharge != 0,
                     technology_level_three: self.config.battletech.tl3_charge != 0,
@@ -221,7 +225,6 @@ impl Server {
                 fasa_turning: self.config.battletech.fasaturn != 0,
                 slowdown: self.config.battletech.slowdown,
                 roll_on_backwalk: self.config.battletech.roll_on_backwalk != 0,
-                skid_cliff: self.config.battletech.skidcliff != 0,
                 fall: crate::FallRules {
                     vehicle_impact: crate::VehicleImpactRules::configured(
                         &self.config.battletech,
@@ -269,6 +272,18 @@ impl Server {
             crate::advance_battle_magma_action(&self.scripts, &self.config, &magma_before)
         {
             tracing::error!(system = "magma", error = %format_args!("{error:#}"), "BattleTech update failed");
+            *self.scripts.world.borrow_mut() = before;
+            self.scripts
+                .world
+                .borrow_mut()
+                .btech
+                .autopilot_plans
+                .clear();
+            self.scripts.effects.rollback();
+            return false;
+        }
+        if let Err(error) = crate::advance_battle_bog_down_action(&self.scripts, &self.config) {
+            tracing::error!(system = "bog_down", error = %format_args!("{error:#}"), "BattleTech update failed");
             *self.scripts.world.borrow_mut() = before;
             self.scripts
                 .world
@@ -368,7 +383,6 @@ impl Server {
                 free_fusion_vtol_fuel: self.config.battletech.nofusionvtolfuel != 0,
                 tsm_tow_bonus: self.config.battletech.tsm_tow_bonus != 0,
                 physical_pilot_skill: self.config.battletech.phys_use_pskill != 0,
-                new_terrain: self.config.battletech.newterrain != 0,
                 fall: crate::FallRules {
                     vehicle_impact: crate::VehicleImpactRules::configured(
                         &self.config.battletech,

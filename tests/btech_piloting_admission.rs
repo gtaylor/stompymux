@@ -46,7 +46,7 @@ async fn control_gates_share_no_roll_policy_and_resume_after_recovery() {
                 assert!(check.roll.is_some());
             }
             for _ in 0..30 {
-                advance_battle_units(&mut world, 0);
+                advance_battle_units(&mut world, 0, true);
             }
             let recovered = roll_battle_piloting(&mut world, unit, -100, false).unwrap();
             assert!(recovered.success);

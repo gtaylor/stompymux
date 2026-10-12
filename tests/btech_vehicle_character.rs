@@ -70,7 +70,7 @@ async fn fixture_on_surface(
     assign_battle_pilot(&mut world, id, ObjectId(2)).unwrap();
     start_battle_unit(&mut world, id, ObjectId(2), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     let passenger = world.create(&config, "Passenger".into(), Kind::Thing);
     world.objects.get_mut(&passenger).unwrap().home = Some(ObjectId(config.home()));

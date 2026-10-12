@@ -64,7 +64,7 @@ async fn fixture(source: &str) -> (tempfile::TempDir, Config, World, ObjectId, O
     support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, unit, ObjectId(1), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     set_battle_inventory_named(&mut world, ObjectId(1), map, "Gold", 20).unwrap();
     (dir, config, world, map, unit)

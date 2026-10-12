@@ -188,7 +188,7 @@ async fn unpowered_vtol_insertion_waits_for_startup_with_saved_controls() {
     for world in [&mut waiting, &mut restored] {
         start_battle_unit(world, unit, ObjectId(1), true).unwrap();
         for _ in 0..5 {
-            advance_battle_units(world, 0);
+            advance_battle_units(world, 0, true);
         }
         advance_battle_motion(world, MovementRules::STANDARD).unwrap();
         world.validate(&config).unwrap();

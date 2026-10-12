@@ -123,12 +123,8 @@ phys_use_pskill = 1
 slowdown = 2
 # Apply FASA turning rules and their associated to-hit modifier.
 fasaturn = 0
-# Enable additional terrain movement restrictions and checks.
-newterrain = 0
 # Use the newer charge movement, damage, and distance rules.
 newcharge = 1
-# Use skid-based piloting checks when colliding with cliffs or drops.
-skidcliff = 1
 # Require units to be stalled before non-wizard players can perform serious repairs.
 limitedrepairs = 1
 # Database object that stores destroyed units.

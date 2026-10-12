@@ -46,4 +46,4 @@ pub use layers::{
 };
 pub use region::MapRegion;
 pub use terrain::Terrain;
-pub use terrain_rules::GroundMovement;
+pub use terrain_rules::{GroundMovement, Prohibition};

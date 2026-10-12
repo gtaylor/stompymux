@@ -57,7 +57,7 @@ fn overlay(world: &World, map: ObjectId, x: i32, y: i32) -> Option<Decoration> {
 
 /// Light woods over sand burn away to the sand, not to clear or rough ground.
 #[tokio::test]
-async fn burnt_out_woods_leave_the_ground_they_grew_on() {
+async fn burnt_out_light_woods_fall_to_rough_ground() {
     let (_dir, _config, mut world, map) = field("1 1\n}2\n", |hex| {
         hex.with_foliage(Some(Foliage::LightWoods))
     })
@@ -75,7 +75,11 @@ async fn burnt_out_woods_leave_the_ground_they_grew_on() {
         }
     }
     assert_eq!(overlay(&world, map, 0, 0), None);
-    assert_eq!(world.btech.maps()[&map].base_hex(0, 0).unwrap(), sand);
+    // Felled trees leave rough ground whatever they grew on (Total Warfare p. 112).
+    assert_eq!(
+        world.btech.maps()[&map].base_hex(0, 0).unwrap(),
+        Hex::new(Terrain::Rough, 2)
+    );
 }
 
 /// A fire spreading into woods that are already burning leaves that fire's own record and

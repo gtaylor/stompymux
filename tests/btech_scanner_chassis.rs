@@ -647,15 +647,6 @@ async fn gatling_attack_order_replays_across_chassis() {
                 (result.0, result.1, result.2),
                 (roll, damage, perception.aim_modifier)
             );
-            if result.3 {
-                // Incidental misses draw ignition and clearing even on grass;
-                // the low ignition branch then makes another ignition check.
-                let ignition = expected.two_d6();
-                expected.two_d6();
-                if ignition <= 3 {
-                    expected.two_d6();
-                }
-            }
             let text = support::run_text(
                 &native,
                 &config,

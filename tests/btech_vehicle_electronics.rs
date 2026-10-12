@@ -53,7 +53,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, [ObjectId; 3]) {
             assign_battle_pilot(&mut world, id, pilot).unwrap();
             start_battle_unit(&mut world, id, pilot, true).unwrap();
             for _ in 0..5 {
-                advance_battle_units(&mut world, 0);
+                advance_battle_units(&mut world, 0, true);
             }
         }
         ids.push(id);

@@ -85,6 +85,12 @@ pub struct Mech {
     pub(super) lateral: super::LateralState,
     #[serde(default)]
     pub(super) hull_down: super::HullDownState,
+    /// Stuck in soft ground until a piloting roll at the start of a turn frees it.
+    #[serde(default)]
+    pub(super) bogged_down: bool,
+    /// Heading held on the pavement or ice the unit is crossing, for the skid rule.
+    #[serde(default)]
+    pub(super) slick: super::SlickTrack,
     #[serde(default)]
     pub(super) masc: super::BoosterState,
     /// Shared identity of a C3i network; peers are derived from world membership.
@@ -337,6 +343,8 @@ super::saved_parts::saved_parts!(Mech {
         tics,
         lateral,
         hull_down,
+        bogged_down,
+        slick,
         c3i_network,
         c3_network,
         network_automation,
@@ -888,6 +896,8 @@ impl Mech {
             tics: Default::default(),
             lateral: Default::default(),
             hull_down: Default::default(),
+            bogged_down: false,
+            slick: Default::default(),
             masc: Default::default(),
             c3i_network: None,
             c3_network: None,
@@ -1130,6 +1140,7 @@ impl Mech {
             "Only quads can use lateral movement"
         );
         self.validate_hull_down()?;
+        self.slick.validate()?;
         ensure!(
             self.position().is_some() == self.map_slot.is_some(),
             "Battlefield placement and slot must coexist"

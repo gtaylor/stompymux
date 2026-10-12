@@ -810,25 +810,31 @@ fn resolve_salvo_with_effects(
                 through_armor_critical: false,
                 crew_stun: false,
             }
-        } else if partial_cover {
-            let section = super::HitTable::Punch.location(unit.chassis(), arc, dice.d6())?;
-            Hit {
-                section,
-                rear_armor: arc == HitArc::Rear
-                    && matches!(
-                        section,
-                        super::MechSection::LeftTorso
-                            | super::MechSection::RightTorso
-                            | super::MechSection::CenterTorso
-                    ),
-                through_armor_critical: false,
-                crew_stun: false,
-            }
         } else {
             let roll = dice.generic_roll();
             rules.resolve(unit, arc, roll, &mut dice)?
         };
+        let covered_legs = partial_cover && unit.chassis().is_leg(hit.section);
         world.btech.constructed.get_mut(&target).unwrap().dice = dice;
+        if covered_legs {
+            // Partial cover: a hit on the legs strikes the terrain in front of them instead
+            // (Total Warfare p. 107).
+            report.experience.push(None);
+            report.groups.push(SalvoGroup {
+                damage,
+                hit,
+                impact: super::impact::ImpactReport::default(),
+                pilot_injuries: Vec::new(),
+                pilot_notices: Vec::new(),
+                notices: vec![super::Notice {
+                    unit: target,
+                    text: "The shot strikes the cover in front of your legs!".into(),
+                }],
+                balance: Vec::new(),
+                flooding: Vec::new(),
+            });
+            continue;
+        }
         let experience = if let SalvoEffects::Character {
             experience: Some(request),
             ..

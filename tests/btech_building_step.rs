@@ -237,18 +237,13 @@ async fn interrupted_ground_steps_report_only_accepted_surface_entries() {
                     .any(|n| n.text.contains(if downhill { "drop" } else { "steep" })),
                 "Movement must reach the cliff"
             );
+            // A three-level change is impassable either way, so the roof is never reached.
             let cf: Vec<_> = messages
                 .iter()
                 .filter(|n| n.text.contains(" has CF of "))
                 .collect();
-            assert_eq!(
-                cf.len(),
-                usize::from(downhill),
-                "{source}; downhill={downhill}"
-            );
-            if downhill {
-                assert_eq!(cf[0].text, "THE CLIFF SHELTER has CF of 0.");
-            }
+            assert!(cf.is_empty(), "{source}; downhill={downhill}");
+            if false {}
         }
     }
 }

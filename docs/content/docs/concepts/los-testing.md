@@ -5,7 +5,7 @@ weight = 35
 
 BattleTech line-of-sight (LOS) behavior is tested with Rust unit and
 integration tests. `src/btech/los.rs` traces terrain at unit eye heights and
-reports blocking terrain, woods, water, smoke, fire, and partial cover. The
+reports blocking terrain, woods, smoke, crops, water and partial cover. The
 perception module (`src/btech/perception/`) then applies the clear-line rule,
 the sensor band, sight, active probes and radar to that trace to decide what a
 unit can detect.

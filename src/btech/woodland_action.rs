@@ -64,11 +64,28 @@ pub fn resolve_woodland_attack(
     let record = world.btech.maps().get(&map).context("Map not found")?;
     record.validate()?;
     let tile = record.hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
+    let index = record.tile_index(coordinate)?;
+    let terrain_damage = record.terrain_damage.get(&index).copied().unwrap_or(0);
     let mut candidate = world.clone();
     let dice = super::dice::unit_dice_mut(&mut candidate, shooter)?;
-    let effect = super::resolve_woodland_effect(tile, weapon, ammunition, damage, intent, dice);
+    let effect = super::resolve_woodland_effect(
+        tile,
+        weapon,
+        ammunition,
+        damage,
+        intent,
+        terrain_damage,
+        dice,
+    );
     let verb = match effect {
         WoodlandEffect::None => None,
+        WoodlandEffect::Damage { total } => {
+            std::sync::Arc::make_mut(
+                &mut candidate.btech.maps.get_mut(&map).unwrap().terrain_damage,
+            )
+            .insert(index, total);
+            None
+        }
         WoodlandEffect::Clear { clearing } => {
             let _change =
                 super::apply_woodland_clearing(&mut candidate, map, coordinate, tile, clearing)?;

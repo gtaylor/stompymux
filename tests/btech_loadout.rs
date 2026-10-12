@@ -569,7 +569,7 @@ async fn locust_machine_guns_and_case_insensitive_arm_flipping_survive_restart()
     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     flip_battle_arms(&mut world, id, ObjectId(1)).unwrap();
     assert!(world.btech.constructed_units()[&id].facing().arms_flipped);

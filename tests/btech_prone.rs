@@ -41,7 +41,7 @@ async fn fixture(quad: bool, tile: &str) -> (tempfile::TempDir, Config, World, O
     support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     (dir, config, world, id, map)
 }

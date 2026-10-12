@@ -27,7 +27,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
     support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     (dir, config, world, id)
 }
@@ -101,7 +101,7 @@ async fn critical_jams_select_unaffected_weapons_and_replay_powered_recovery() {
     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     let mut notices = Vec::new();
     for _ in 0..120 {

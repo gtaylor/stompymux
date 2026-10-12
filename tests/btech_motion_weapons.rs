@@ -5,10 +5,10 @@
 //! and trip attacks.
 
 use crate::btech_motion_common::{
-    balance_hit, balance_skill, computer_skill, configured_shot_rules, expected_grass_miss_rolls,
-    fall_rules, fixture, fixture_assets, kick_fixture, kick_rules, lock_fixture, optical_aim_rules,
-    overheat_due, overheat_rules, shot_fixture, shot_rules, shot_seed, shot_skill,
-    single_critical_seed, stagger_rules, stand_fixture, water_fixture,
+    balance_hit, balance_skill, computer_skill, configured_shot_rules, fall_rules, fixture,
+    fixture_assets, kick_fixture, kick_rules, lock_fixture, optical_aim_rules, overheat_due,
+    overheat_rules, shot_fixture, shot_rules, shot_seed, shot_skill, single_critical_seed,
+    stagger_rules, stand_fixture, water_fixture,
 };
 use crate::support;
 use crate::support::{install, restore_database, snapshot_database};
@@ -3445,14 +3445,6 @@ async fn gatling_matrix(weapons: &[stompymux_rs::Weapon]) {
                         .sum::<u8>(),
                     report.roll
                 );
-                if report.missed_terrain.is_some() {
-                    expected_grass_miss_rolls(|| {
-                        roll_unit_dice(&mut spent_world, id, 2)
-                            .unwrap()
-                            .iter()
-                            .sum()
-                    });
-                }
                 // Gatling consumes multiple rounds but records exactly one directed attack.
                 spent_world.btech
                     .rewrite_unit_record(id, |record| {
@@ -4854,18 +4846,18 @@ async fn power_observers_receive_completion_and_moving_shutdown_only() {
         let mut abort = world.clone();
         let notices = stop_battle_unit(&mut abort, subject, ObjectId(1), fall_rules()).unwrap();
         assert!(notices.iter().all(|notice| notice.unit == subject));
-        assert!(advance_battle_units(&mut abort, 0).is_empty());
+        assert!(advance_battle_units(&mut abort, 0, true).is_empty());
         for _ in 1..remaining {
             assert!(
-                advance_battle_units(&mut world, 0)
+                advance_battle_units(&mut world, 0, true)
                     .iter()
                     .all(|notice| notice.unit == subject)
             );
         }
         persistence::save(&config.database(), &world).await.unwrap();
         let mut restored = persistence::load(&config.database()).await.unwrap();
-        let notices = advance_battle_units(&mut world, 0);
-        assert_eq!(advance_battle_units(&mut restored, 0), notices);
+        let notices = advance_battle_units(&mut world, 0, true);
+        assert_eq!(advance_battle_units(&mut restored, 0, true), notices);
         assert_eq!(restored.btech, world.btech);
         let observed: Vec<_> = notices
             .iter()
@@ -4873,7 +4865,7 @@ async fn power_observers_receive_completion_and_moving_shutdown_only() {
             .collect();
         assert_eq!(observed.len(), 1);
         assert!(observed[0].text.ends_with("powers up!"));
-        assert!(advance_battle_units(&mut world, 0).is_empty());
+        assert!(advance_battle_units(&mut world, 0, true).is_empty());
     }
     for speed in [0.0, 10.75, 10.7501, -20.0] {
         let mut state = serde_json::to_value(&base.btech).unwrap();

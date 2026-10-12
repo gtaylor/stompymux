@@ -150,12 +150,8 @@ pub struct MovementRules {
     /// Charge tracking and collision options for each committed movement update.
     pub charge: super::ChargePolicy,
     pub slowdown: i64,
-    /// Enable tracked/wheeled tree and rock avoidance checks. Hovercraft tree checks always apply.
-    pub new_terrain: bool,
     /// Require a control check when backing across an elevation change.
     pub roll_on_backwalk: bool,
-    /// Use the skid speed bands for cliff avoidance and a one-level uphill fall.
-    pub skid_cliff: bool,
     /// Damage and pilot protection rules for failed movement checks.
     pub fall: super::FallRules,
 }
@@ -181,9 +177,7 @@ impl MovementRules {
         fasa_turning: false,
         charge: super::ChargePolicy::STANDARD,
         slowdown: 2,
-        new_terrain: false,
         roll_on_backwalk: true,
-        skid_cliff: false,
         fall: super::FallRules {
             vehicle_impact: crate::VehicleImpactRules::STANDARD,
             stacking: crate::StackingRules::STANDARD,
@@ -207,6 +201,9 @@ struct GroundStep {
     elevation: Option<f64>,
     old_elevation: Option<f64>,
     ice_check: bool,
+    /// Why the unit must stop at this hex's edge instead of entering it: terrain it cannot
+    /// enter, a slope too steep to climb or descend, or water it is running at.
+    stop: Option<String>,
 }
 
 /// Set desired speed in kilometers per hour with standard enabled myomer towing assistance.
@@ -256,6 +253,7 @@ fn set_speed_by_actor(
     }
     super::power::controlled_unit_by_actor(world, id, actor)?;
     super::fortification::require_mobile(world, id)?;
+    super::bog_down::require_free(world, id)?;
     ensure!(
         !world.btech.constructed_units()[&id].airborne(),
         "Land before changing ground speed"
@@ -377,6 +375,7 @@ fn set_heading_by_actor(
     }
     super::power::controlled_unit_by_actor(world, id, actor)?;
     super::fortification::require_mobile(world, id)?;
+    super::bog_down::require_free(world, id)?;
     let unit = &world.btech.constructed_units()[&id];
     ensure!(unit.power() == Power::Running, "Start the unit first");
     unit.hull_down.require_mobile()?;
@@ -599,6 +598,44 @@ fn advance_motion_inner(
             continue;
         }
         let proposed = proposal.destination;
+        // A unit that turned on pavement or ice must keep its footing before it moves on.
+        let current = map.base_hex(i64::from(position.x), i64::from(position.y))?;
+        let walking_ceiling = world.btech.constructed_units()[&id].movement_maximum_speed();
+        let leaving = proposed.containing_hex().ok()
+            != Some(super::HexCoordinate {
+                x: i32::from(position.x),
+                y: i32::from(position.y),
+            });
+        let unit = world.btech.constructed.get_mut(&id).unwrap();
+        unit.motion = Some(motion);
+        unit.slick
+            .observe(current.is_slick(), motion.speed != 0.0, motion.heading);
+        let held = unit.slick.heading;
+        if leaving
+            && unit.slick.turned
+            && super::skid::risks_skid(current, motion.speed, walking_ceiling)
+        {
+            unit.slick.reset();
+            let skid = super::skid::resolve_mech(
+                world,
+                id,
+                held.unwrap_or(motion.heading),
+                motion.speed,
+                rules.fall,
+                character,
+            )?;
+            super::piloting::append_feedback(&mut pilot_notices, skid.pilot_notices, notices.len());
+            notices.extend(skid.notices);
+            experience_messages.extend(skid.experience_messages);
+            vehicle_falls.extend(skid.vehicle_falls);
+            if character {
+                falls.extend(skid.falls);
+            }
+            if skid.skidded {
+                continue;
+            }
+            motion = world.btech.constructed_units()[&id].motion().unwrap();
+        }
         notices.extend(super::charge_tracking::begin_update(
             world,
             id,
@@ -623,6 +660,10 @@ fn advance_motion_inner(
         let (notice, experience) = super::building_step::entered(world, id, position)?;
         notices.extend(notice);
         experience_messages.extend(experience);
+        let unit = world.btech.constructed.get_mut(&id).unwrap();
+        if unit.position() != Some(position) {
+            unit.slick.reset();
+        }
         let unit = &world.btech.constructed_units()[&id];
         if character && unit.position() != Some(position) && !unit.hex_sync_pending() {
             experience_messages.extend(super::movement_experience::record_entry(
@@ -762,6 +803,7 @@ fn resolve_ground_segment(
     let map = &world.btech.maps()[&position.map];
     let current = map.base_hex(i64::from(position.x), i64::from(position.y))?;
     let traversed = trace_start.trace_positions(proposed)?;
+    let walking = unit.movement_maximum_speed() * 2.0 / 3.0 + 0.1;
     let mut destination = proposed.containing_hex().ok();
     let mut previous_height = current.surface_height();
     let mut previous_tile = current;
@@ -815,24 +857,58 @@ fn resolve_ground_segment(
             };
             let next_elevation =
                 (next_height != tile.standing_height()).then_some(f64::from(next_height));
-            let last_surface =
-                if previous_tile.is_ice() && next_height >= previous_tile.water_line() {
-                    previous_tile.water_line()
-                } else {
-                    previous_height
-                };
+            let last_surface = if previous_tile.is_ice()
+                && next_height >= previous_tile.water_line()
+            {
+                previous_tile.water_line()
+            } else if previous_tile.has_bridge() && actual_height < previous_tile.standing_height()
+            {
+                // Under a bridge the deck is not the surface the unit stands on.
+                actual_height
+            } else {
+                previous_height
+            };
             let collision_height = if tile.is_ice() && last_surface >= tile.water_line() {
                 tile.water_line()
+            } else if tile.has_bridge() && next_height < tile.water_line() {
+                // Passing beneath the span, the unit stays on the river bed.
+                next_height
             } else {
                 tile.surface_height()
             };
             let change = collision_height - last_surface;
-            let checked_height =
-                change.abs() > 2 || (change != 0 && motion.speed < 0.0 && rules.roll_on_backwalk);
             let enters_water =
                 tile.is_open_water() || (tile.has_bridge() && next_height < tile.water_line());
-            let hazardous_ground = tile.entry_piloting_modifier().is_some()
-                || tile.on_magma_crust(i32::from(next_height));
+            // Terrain the unit cannot enter, a change of more than two levels and water it is
+            // running at all stop it at the hex's edge (Total Warfare pp. 48 and 52).
+            let stop = if let Some(reason) = tile.prohibition(super::GroundMovement::Legged) {
+                Some(reason.describe())
+            } else if change.abs() > 2 {
+                Some(
+                    if change > 0 {
+                        "The slope ahead is too steep to climb."
+                    } else {
+                        "The drop ahead is too steep to walk down."
+                    }
+                    .to_owned(),
+                )
+            } else if tile.is_open_water()
+                && tile.water_depth() >= 1
+                && motion.speed.abs() > walking
+            {
+                Some("You cannot run into the water!".to_owned())
+            } else {
+                None
+            };
+            let checked_height =
+                stop.is_some() || (change != 0 && motion.speed < 0.0 && rules.roll_on_backwalk);
+            let hazardous_ground = tile
+                .entry_piloting_modifier(super::GroundMovement::Legged)
+                .is_some()
+                || tile.on_magma_crust(i32::from(next_height))
+                || tile.can_bog_down(super::GroundMovement::Legged, i32::from(next_height))
+                || tile.ground_heat(i32::from(next_height)) > 0;
+            let stopping = stop.is_some();
             if checked_height
                 || enters_water
                 || tile.is_ice()
@@ -847,6 +923,7 @@ fn resolve_ground_segment(
                     elevation: next_elevation,
                     old_elevation: ground_elevation,
                     ice_check,
+                    stop,
                 });
             }
             if !checked_height && next_height == tile.surface_height() {
@@ -855,8 +932,8 @@ fn resolve_ground_segment(
             }
             actual_height = next_height;
             ground_elevation = next_elevation;
-            if change.abs() > 2 {
-                // A cliff ends this tick at the first hazardous crossing.
+            if stopping {
+                // The unit halts at this edge once its other hazards have been resolved.
                 if destination != Some(hex) {
                     proposed = hex.center();
                 }
@@ -924,6 +1001,7 @@ fn resolve_ground_segment(
         elevation,
         old_elevation,
         ice_check,
+        stop,
     } in checked_steps
     {
         let unit = world.btech.constructed.get_mut(&id).unwrap();
@@ -967,59 +1045,12 @@ fn resolve_ground_segment(
             continue;
         }
         let unit = world.btech.constructed.get_mut(&id).unwrap();
-        if change.abs() > 2 {
-            if change > 0 {
-                restore_ground_position(unit, old_position, old_point, old_elevation);
-            }
-            notices.push(Notice {
-                unit: id,
-                text: (if change > 0 {
-                    "You attempt to climb a hill too steep for you."
-                } else {
-                    "You notice a large drop in front of you"
-                })
-                .to_owned(),
-            });
-            let control = super::cliff::avoids(world, id, change, motion.speed, rules)?;
-            control.capture_feedback(id, &mut notices, &mut pilot_notices);
-            let success = control.success;
-            if success {
-                notices.push(Notice {
-                    unit: id,
-                    text: (if change > 0 {
-                        "You manage to stop before crashing."
-                    } else {
-                        "You manage to stop before falling off."
-                    })
-                    .to_owned(),
-                });
-                let unit = world.btech.constructed.get_mut(&id).unwrap();
-                restore_ground_position(unit, old_position, old_point, old_elevation);
-            } else {
-                notices.push(Notice {
-                    unit: id,
-                    text: (if change > 0 {
-                        "You run headlong into the cliff and fall down!"
-                    } else {
-                        "You run off the cliff and fall to the ground below."
-                    })
-                    .to_owned(),
-                });
-                let levels = if change < 0 {
-                    -change
-                } else {
-                    cliff_fall_levels(motion.speed, rules.skid_cliff)
-                };
-                let report = resolve_segment_fall(world, id, levels, fall_rules, falls.is_some())?;
-                report.append_notices(id, &mut notices, &mut pilot_notices);
-                if let Some(falls) = falls.as_deref_mut() {
-                    falls.push(report);
-                }
-            }
-            let unit = world.btech.constructed.get_mut(&id).unwrap();
+        if let Some(text) = stop {
+            restore_ground_position(unit, old_position, old_point, old_elevation);
             let motion = unit.motion.as_mut().unwrap();
             motion.speed = 0.0;
             motion.desired_speed = 0.0;
+            notices.push(Notice { unit: id, text });
             stopped = true;
             break;
         }
@@ -1182,14 +1213,6 @@ fn resolve_segment_fall(
     super::fall::resolve_signed_fall(world, id, levels, rules)
 }
 
-/// Ordinary uphill crash damage uses signed speed and truncates before dividing.
-fn cliff_fall_levels(speed: f64, skid: bool) -> i16 {
-    if skid {
-        return 1;
-    }
-    (1.0 + speed / 10.75) as i16 / 4
-}
-
 /// Rollback can restore an interrupted bridge hex update; retain its explicit marker.
 fn restore_ground_position(
     unit: &mut super::Mech,
@@ -1208,30 +1231,5 @@ fn restore_ground_position(
     motion.point = point;
     if unit.hex_sync_pending {
         motion.speed = 0.0;
-    }
-}
-
-#[cfg(test)]
-mod cliff_tests {
-    use super::*;
-
-    #[test]
-    fn cliff_speed_thresholds_preserve_reverse_asymmetry_and_truncation() {
-        for (mp, ordinary, skid, levels) in [
-            (0.0, 0, -1, 0),
-            (2.0, 1, -1, 0),
-            (2.1, 1, 0, 0),
-            (3.0, 1, 0, 1),
-            (4.1, 1, 1, 1),
-            (7.1, 2, 2, 2),
-            (10.1, 3, 4, 2),
-            (-2.0, 0, -1, 0),
-            (-5.0, 1, 1, -1),
-        ] {
-            assert_eq!(super::super::cliff::modifier(mp * 10.75, false), ordinary);
-            assert_eq!(super::super::cliff::modifier(mp * 10.75, true), skid);
-            assert_eq!(cliff_fall_levels(mp * 10.75, false), levels);
-            assert_eq!(cliff_fall_levels(mp * 10.75, true), 1);
-        }
     }
 }

@@ -62,20 +62,20 @@ async fn safety_controls_share_state_and_startup_resets_only_the_safety_bit() {
         assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
         support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
-        advance_battle_units(&mut world, 100);
+        advance_battle_units(&mut world, 100, true);
         stop_battle_unit(&mut world, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
         assert!(!safety(&world));
         assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
         support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
         for now in 101..105 {
-            advance_battle_units(&mut world, now);
+            advance_battle_units(&mut world, now, true);
             assert!(!safety(&world));
         }
         persistence::save(&config.database(), &world).await.unwrap();
         world = persistence::load(&config.database()).await.unwrap();
         assert!(!safety(&world));
-        advance_battle_units(&mut world, 105);
+        advance_battle_units(&mut world, 105, true);
         assert!(safety(&world));
         persistence::save(&config.database(), &world).await.unwrap();
         let loaded = persistence::load(&config.database()).await.unwrap();

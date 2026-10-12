@@ -40,7 +40,7 @@ async fn fixture_with_flags(
     support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, ids[0], ObjectId(1), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     let mut state = serde_json::to_value(&world.btech).unwrap();
     let running = state["constructed"][ids[0].0.to_string()]["power"].clone();

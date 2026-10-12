@@ -400,7 +400,7 @@ end}}
         assert_eq!(after["sections"], before["sections"]);
         assert_eq!(after["detached"], true);
         scripts.world().validate(&config).unwrap();
-        advance_battle_units(&mut scripts.world_mut(), 0);
+        advance_battle_units(&mut scripts.world_mut(), 0, true);
         assert!(saved_unit(&scripts.world(), unit)["orbital_drop"].is_null());
         scripts.world().validate(&config).unwrap();
     }

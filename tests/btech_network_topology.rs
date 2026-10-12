@@ -67,7 +67,7 @@ async fn field(
     }
     support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     // Everyone already sees everyone, so manual joins have a visible target.
     let mut encoded = serde_json::to_value(&world.btech).unwrap();

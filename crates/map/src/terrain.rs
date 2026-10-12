@@ -39,11 +39,12 @@ pub enum Terrain {
     Wall,
     Fire,
     Smoke,
+    HeavySmoke,
 }
 
 impl Terrain {
     /// Every terrain, in glyph-table order.
-    pub const ALL: [Self; 31] = [
+    pub const ALL: [Self; 32] = [
         Self::Clear,
         Self::Pavement,
         Self::Road,
@@ -75,6 +76,7 @@ impl Terrain {
         Self::Wall,
         Self::Fire,
         Self::Smoke,
+        Self::HeavySmoke,
     ];
 
     /// Snake_case name shared by serialization, Lua reports and Lua arguments.
@@ -111,6 +113,7 @@ impl Terrain {
             Self::Wall => "wall",
             Self::Fire => "fire",
             Self::Smoke => "smoke",
+            Self::HeavySmoke => "heavy_smoke",
         }
     }
 
@@ -148,6 +151,7 @@ impl Terrain {
             Self::Wall => "Wall",
             Self::Fire => "Fire",
             Self::Smoke => "Smoke",
+            Self::HeavySmoke => "Heavy Smoke",
         }
     }
 
@@ -201,6 +205,7 @@ impl Terrain {
             Self::Wall => '=',
             Self::Fire => '&',
             Self::Smoke => ':',
+            Self::HeavySmoke => '?',
         }
     }
 }

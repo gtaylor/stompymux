@@ -31,7 +31,7 @@ struct Uniforms {
 @group(0) @binding(0) var<uniform> u: Uniforms;
 // Layer colors in the order of `palette_colors` in render.rs, then the ink threshold in the
 // last entry's red.
-@group(0) @binding(1) var<uniform> palette: array<vec4<f32>, 34>;
+@group(0) @binding(1) var<uniform> palette: array<vec4<f32>, 35>;
 // One texel of packed layers per hex, indexed by hex coordinate; see `hex_texel` in render.rs.
 @group(0) @binding(2) var hexes: texture_2d<u32>;
 // One byte per hex marking region membership; see `RegionMask` in render.rs.
@@ -50,7 +50,7 @@ const WATER: u32 = 23u;
 const CONDITION: u32 = 24u;
 const STRUCTURE: u32 = 28u;
 const OVERLAY: u32 = 31u;
-const INK_THRESHOLD: u32 = 33u;
+const INK_THRESHOLD: u32 = 34u;
 
 // Positions within their layers, matching each layer's `ALL` order.
 const ROUGH: u32 = 2u;

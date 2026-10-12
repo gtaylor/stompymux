@@ -9,7 +9,9 @@ struct VehicleStep {
     point: super::Point,
     under_bridge: bool,
     change: i32,
-    water_check: bool,
+    /// Why the vehicle must stop at this hex's edge: terrain its drive cannot enter, water
+    /// it would sink in, or a slope of more than one level.
+    stop: Option<String>,
     bridge_collision: bool,
     support_height: i16,
     ice_check: bool,
@@ -70,6 +72,7 @@ pub(crate) fn set_control_by_actor(
 ) -> Result<Notice> {
     super::vehicle_power::controlled_by_actor(world, id, actor)?;
     super::fortification::require_mobile(world, id)?;
+    super::bog_down::require_free(world, id)?;
     let mut motion = readout_by_actor(world, id, actor)?;
     let vehicle = &world.btech.vehicles()[&id];
     ensure!(
@@ -189,6 +192,53 @@ pub(super) fn advance(
             },
             rules,
         )?;
+        // A vehicle that turned on pavement or ice must hold its line before it moves on.
+        let leaving = next.point.containing_hex().ok()
+            != Some(super::HexCoordinate {
+                x: i32::from(position.x),
+                y: i32::from(position.y),
+            });
+        let flank_ceiling = vehicle.maximum_speed();
+        let movement = vehicle.definition().movement;
+        let ground = super::vehicle_motion::ground_movement(movement);
+        let waterproof = vehicle.definition().has_special("Waterproof_Tech");
+        let vehicle = world.btech.vehicles.get_mut(&id).unwrap();
+        vehicle
+            .slick
+            .observe(current.is_slick(), next.speed != 0.0, next.heading);
+        let held = vehicle.slick.heading;
+        if leaving
+            && vehicle.slick.turned
+            && super::skid::risks_skid(current, next.speed, flank_ceiling)
+        {
+            vehicle.slick.reset();
+            let skid = super::skid::resolve_vehicle(
+                world,
+                id,
+                held.unwrap_or(next.heading),
+                next.speed,
+                rules.fall,
+                character,
+            )?;
+            super::piloting::append_feedback(
+                &mut report.pilot_notices,
+                skid.pilot_notices,
+                report.notices.len(),
+            );
+            report.notices.extend(skid.notices);
+            report.experience_messages.extend(skid.experience_messages);
+            report.vehicle_falls.extend(skid.vehicle_falls);
+            report.character_injuries.extend(skid.character_injuries);
+            if skid.skidded {
+                continue;
+            }
+        }
+        let vehicle = &world.btech.vehicles()[&id];
+        let map = world
+            .btech
+            .maps()
+            .get(&position.map)
+            .context("Vehicle map is missing")?;
         let mut blocked = None;
         let mut edge = false;
         let mut previous_height = vehicle.elevation_level(current);
@@ -223,18 +273,33 @@ pub(super) fn advance(
             };
             let ice_check = tile.is_ice() && previous_height == i32::from(tile.water_line());
             let change = height - previous_height;
-            let water_check = super::vehicle_water::requires_check(vehicle, tile, height);
+            // Terrain the drive cannot enter and slopes of more than one level stop the
+            // vehicle at the hex's edge (Total Warfare pp. 48 and 52).
+            let stop = match tile.prohibition(ground) {
+                Some(super::Prohibition::Water) if waterproof || next_under => None,
+                Some(reason) => Some(reason.describe()),
+                None if change.abs() > 1 => Some(
+                    if change > 0 {
+                        "The slope ahead is too steep to drive up."
+                    } else {
+                        "The drop ahead is too steep to drive down."
+                    }
+                    .to_owned(),
+                ),
+                None => None,
+            };
+            let stopping = stop.is_some();
             entries.push(VehicleStep {
                 coordinate: hex,
                 point,
                 under_bridge: next_under,
                 change,
-                water_check,
+                stop,
                 bridge_collision,
                 support_height: i16::try_from(height)?,
                 ice_check,
             });
-            if change.abs() > 1 || bridge_collision {
+            if stopping || bridge_collision {
                 break;
             }
             previous_height = height;
@@ -248,7 +313,7 @@ pub(super) fn advance(
             point,
             under_bridge: entry_under,
             change,
-            water_check,
+            stop,
             bridge_collision,
             support_height,
             ice_check,
@@ -322,7 +387,7 @@ pub(super) fn advance(
                 let control = super::terrain_control::check(
                     world,
                     id,
-                    super::cliff::modifier(entry_motion.speed, rules.skid_cliff),
+                    super::skid::modifier(entry_motion.speed),
                     rules.fall.extended_piloting,
                     character,
                 )?;
@@ -377,43 +442,45 @@ pub(super) fn advance(
                 interrupted = true;
                 break;
             }
-            let cliff = change.abs() > 1;
-            if cliff || (change != 0 && reverse_checks) {
-                let success = if cliff {
-                    let (success, movement) =
-                        super::vehicle_cliff::check(world, id, change, entry_motion.speed, rules)?;
-                    report.extend(movement);
-                    success
-                } else {
-                    let control = super::reverse_slope::check(
+            if let Some(text) = stop {
+                let unit = world.btech.vehicles.get_mut(&id).unwrap();
+                unit.restore_ground_position(
+                    previous_position,
+                    previous_point,
+                    i16::try_from(previous_height)?,
+                    previous_under,
+                );
+                unit.halt();
+                report.notices.push(Notice { unit: id, text });
+                next = unit.motion().unwrap();
+                under_bridge = unit.under_bridge();
+                interrupted = true;
+                break;
+            }
+            if change != 0 && reverse_checks {
+                let control = super::reverse_slope::check(
+                    world,
+                    id,
+                    i16::try_from(change)?,
+                    rules.fall.extended_piloting,
+                    character,
+                )?;
+                super::piloting::append_feedback(
+                    &mut report.pilot_notices,
+                    control.pilot_notices,
+                    report.notices.len(),
+                );
+                report.notices.extend(control.notices);
+                report
+                    .experience_messages
+                    .extend(control.experience_messages);
+                if !control.success {
+                    let fall = super::vehicle_fall::resolve_in_candidate(
                         world,
                         id,
-                        i16::try_from(change)?,
-                        rules.fall.extended_piloting,
+                        u8::try_from(change.abs())?,
+                        fall_rules,
                         character,
-                    )?;
-                    super::piloting::append_feedback(
-                        &mut report.pilot_notices,
-                        control.pilot_notices,
-                        report.notices.len(),
-                    );
-                    report.notices.extend(control.notices);
-                    report
-                        .experience_messages
-                        .extend(control.experience_messages);
-                    control.success
-                };
-                if success && !cliff {
-                    continue;
-                }
-                if !success {
-                    let levels = if cliff && change > 0 {
-                        super::cliff::vehicle_levels(entry_motion.speed, rules.skid_cliff)
-                    } else {
-                        u8::try_from(change.abs())?
-                    };
-                    let fall = super::vehicle_fall::resolve_in_candidate(
-                        world, id, levels, fall_rules, character,
                     )?;
                     super::piloting::append_feedback(
                         &mut report.pilot_notices,
@@ -422,72 +489,48 @@ pub(super) fn advance(
                     );
                     report.notices.extend(fall.feedback.notices.iter().cloned());
                     report.vehicle_falls.push(fall);
-                    let tile = world.btech.maps()[&position.map]
-                        .base_hex(i64::from(hex.x), i64::from(hex.y))?;
-                    let unit = &world.btech.vehicles()[&id];
-                    if cliff
-                        && change < 0
-                        && tile.is_open_water()
-                        && unit.definition().movement != VehicleMovement::Hover
-                        && !unit.definition().has_special("Waterproof_Tech")
-                    {
-                        report
-                            .notices
-                            .push(super::vehicle_water::flood(world, id, character)?);
+                    let unit = world.btech.vehicles.get_mut(&id).unwrap();
+                    if change > 0 {
+                        unit.restore_ground_position(
+                            previous_position,
+                            previous_point,
+                            i16::try_from(previous_height)?,
+                            previous_under,
+                        );
                     }
+                    unit.halt();
+                    next = unit.motion().unwrap();
+                    under_bridge = unit.under_bridge();
+                    interrupted = true;
+                    break;
                 }
-                let unit = world.btech.vehicles.get_mut(&id).unwrap();
-                if change > 0 || success {
-                    unit.restore_ground_position(
-                        previous_position,
-                        previous_point,
-                        i16::try_from(previous_height)?,
-                        previous_under,
-                    );
-                }
-                unit.halt();
-                next = unit.motion().unwrap();
-                under_bridge = unit.under_bridge();
-                interrupted = true;
-                break;
-            }
-            if water_check {
-                let entry = super::vehicle_water::enter(
-                    world,
-                    id,
-                    entry_motion.speed,
-                    rules.fall,
-                    character,
-                )?;
-                report.extend(entry.movement);
-                let unit = world.btech.vehicles.get_mut(&id).unwrap();
-                if entry.restore {
-                    unit.restore_ground_position(
-                        previous_position,
-                        previous_point,
-                        i16::try_from(previous_height)?,
-                        previous_under,
-                    );
-                }
-                unit.halt();
-                next = unit.motion().unwrap();
-                under_bridge = unit.under_bridge();
-                interrupted = true;
-                break;
+                continue;
             }
             let tile =
                 world.btech.maps()[&position.map].base_hex(i64::from(hex.x), i64::from(hex.y))?;
-            let obstacle = super::vehicle_obstacle::resolve(
-                world,
-                id,
-                tile,
-                MovementRules {
-                    fall: fall_rules,
-                    ..rules
-                },
-                character,
-            )?;
-            report.extend(obstacle);
+            // Stepping onto ice takes a driving roll; failure is a loss of control.
+            if let Some(modifier) = tile.entry_piloting_modifier(ground)
+                && i32::from(support_height) >= i32::from(tile.water_line())
+            {
+                let entry = super::skid::vehicle_entry_check(
+                    world, id, tile, modifier, rules.fall, character,
+                )?;
+                super::piloting::append_feedback(
+                    &mut report.pilot_notices,
+                    entry.pilot_notices,
+                    report.notices.len(),
+                );
+                report.notices.extend(entry.notices);
+                report.experience_messages.extend(entry.experience_messages);
+                report.character_injuries.extend(entry.character_injuries);
+                if entry.skidded {
+                    let unit = &world.btech.vehicles()[&id];
+                    next = unit.motion().unwrap();
+                    under_bridge = unit.under_bridge();
+                    interrupted = true;
+                    break;
+                }
+            }
             if change.abs() == 1 {
                 let motion = world
                     .btech
@@ -560,6 +603,17 @@ pub(super) fn advance(
             report
                 .notices
                 .extend(super::magma::engulf_if_molten(world, id, character)?);
+            if let Some(bog) =
+                super::bog_down::enter(world, id, rules.fall.extended_piloting, character, false)?
+            {
+                super::piloting::append_feedback(
+                    &mut report.pilot_notices,
+                    bog.pilot_notices,
+                    report.notices.len(),
+                );
+                report.notices.extend(bog.notices);
+                report.experience_messages.extend(bog.experience_messages);
+            }
             let unit = &world.btech.vehicles()[&id];
             let changed = unit.motion().unwrap();
             next.speed = changed.speed;
@@ -605,6 +659,9 @@ pub(super) fn advance(
             },
             under_bridge,
         );
+        if vehicle.position() != Some(position) {
+            vehicle.slick.reset();
+        }
         let (notice, experience) = super::building_step::entered(world, id, position)?;
         report.notices.extend(notice);
         report.experience_messages.extend(experience);

@@ -50,7 +50,9 @@ fn running(world: &mut World, ids: &[ObjectId]) {
     }
 }
 
-/// Low vehicles lose sight over a one-level ridge that Mechs and tall installations see across.
+/// Low vehicles lose sight of each other over a one-level ridge midway that Mechs and tall
+/// installations see across; a Mech also sees a vehicle over that ridge, because the ridge is
+/// below the Mech and next to neither unit (Total Warfare p. 100).
 #[tokio::test]
 async fn vehicle_eye_height_changes_ridge_visibility_and_stationary_units_remain_tall() {
     for (template, tall) in [
@@ -76,10 +78,7 @@ async fn vehicle_eye_height_changes_ridge_visibility_and_stationary_units_remain
             (vehicle_b, mech_a),
             (vehicle_a, mech_b),
         ] {
-            assert_eq!(
-                battle_unit_terrain_los(&world, a, b).unwrap().blocked,
-                !tall
-            );
+            assert!(!battle_unit_terrain_los(&world, a, b).unwrap().blocked);
         }
         assert_eq!(world.btech, before);
         persistence::save(&config.database(), &world).await.unwrap();
@@ -169,7 +168,7 @@ async fn mech_searchlights_illuminate_vehicle_targets_and_replay_perception() {
     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, lamp, ObjectId(1), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     toggle_battle_searchlight(&mut world, lamp, ObjectId(1)).unwrap();
     for _ in 0..5 {
@@ -381,16 +380,17 @@ async fn vehicle_acquisition_rolls_only_for_hidden_hostiles_beyond_automatic_ran
     );
 }
 
-/// Burrowing lowers a moving chassis enough for a shallow intervening ridge to hide it.
+/// Digging in does not change terrain line of sight: a one-level ridge next to a vehicle hides
+/// it whether or not it is dug in, and the saved dig state survives a restart.
 #[tokio::test]
-async fn dug_in_eye_height_changes_live_los_and_survives_restart() {
+async fn dug_in_eye_height_leaves_terrain_los_alone_and_survives_restart() {
     let (_dir, config, mut world, _map, [observer, _, _, target]) = fixture(
         ".0\n.1\n.0\n.0\n.2\n",
         include_str!("../game/units/Demolisher.toml"),
     )
     .await;
     assert!(
-        !battle_unit_terrain_los(&world, observer, target)
+        battle_unit_terrain_los(&world, observer, target)
             .unwrap()
             .blocked
     );
@@ -407,6 +407,7 @@ async fn dug_in_eye_height_changes_live_los_and_survives_restart() {
     assert_eq!(world.btech, before);
     persistence::save(&config.database(), &world).await.unwrap();
     let loaded = persistence::load(&config.database()).await.unwrap();
+    assert!(loaded.btech.vehicles()[&target].dig_state().dug_in);
     assert!(
         battle_unit_terrain_los(&loaded, observer, target)
             .unwrap()

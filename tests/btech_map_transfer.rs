@@ -49,7 +49,7 @@ async fn transfer_preserves_running_controls_and_crew_across_all_admitted_chassi
         support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
         for _ in 0..5 {
-            advance_battle_units(&mut world, 0);
+            advance_battle_units(&mut world, 0, true);
         }
         let _ = select_battle_hex_target(
             &mut world,

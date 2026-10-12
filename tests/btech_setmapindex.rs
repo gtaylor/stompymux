@@ -52,13 +52,13 @@ async fn removal_reentry_and_update_are_durable_for_all_chassis() {
         );
         let mut replay = removed.clone();
         restored = removed.clone();
-        let notices = advance_battle_units(&mut restored, 0);
+        let notices = advance_battle_units(&mut restored, 0, true);
         assert!(
             notices
                 .iter()
                 .any(|notice| notice.unit == unit && notice.text.contains("invalid map"))
         );
-        assert_eq!(notices, advance_battle_units(&mut replay, 0));
+        assert_eq!(notices, advance_battle_units(&mut replay, 0, true));
         assert_eq!(restored.btech, replay.btech);
         advance_battle_motion(&mut restored, MovementRules::STANDARD).unwrap();
         restored.validate(&config).unwrap();
@@ -107,8 +107,8 @@ async fn airborne_removal_replays_and_can_resume_before_update() {
                 before.vehicles()[&unit].vtol_flight()
             );
         }
-        advance_battle_units(&mut world, 0);
-        advance_battle_units(&mut restored, 0);
+        advance_battle_units(&mut world, 0, true);
+        advance_battle_units(&mut restored, 0, true);
         assert_eq!(restored.btech, world.btech);
         advance_battle_motion(&mut restored, MovementRules::STANDARD).unwrap();
         advance_battle_jumps(&mut restored, MovementRules::STANDARD).unwrap();
@@ -175,7 +175,7 @@ async fn detached_vehicle_keeps_the_scheduler_awake() {
     let (_dir, config, mut world, unit, other, _) =
         firing::fixture_with_target(source, None, source).await;
     remove_battle_map_membership(&mut world, other).unwrap();
-    advance_battle_units(&mut world, 0);
+    advance_battle_units(&mut world, 0, true);
     for _ in 0..31 {
         advance_battle_reactor_windows(&mut world);
     }
@@ -183,7 +183,7 @@ async fn detached_vehicle_keeps_the_scheduler_awake() {
     let stats = battle_runtime_stats(&world, &config, ObjectId(1)).unwrap();
     assert_eq!(stats.scanner_observers, 0);
     assert!(stats.simulation_pending);
-    advance_battle_units(&mut world, 0);
+    advance_battle_units(&mut world, 0, true);
     assert!(
         !battle_runtime_stats(&world, &config, ObjectId(1))
             .unwrap()
@@ -237,7 +237,7 @@ async fn removal_handles_starting_stopped_and_unplaced_units() {
             let removed = world.btech.clone();
             remove_battle_map_membership(&mut world, unit).unwrap();
             assert_eq!(removed, world.btech);
-            let notices = advance_battle_units(&mut world, 0);
+            let notices = advance_battle_units(&mut world, 0, true);
             assert_eq!(
                 notices.iter().any(|notice| notice.unit == unit
                     && notice.text.contains("startup sequence has been aborted")),
@@ -267,7 +267,7 @@ async fn detached_pose_survives_former_map_purge() {
             firing::fixture_with_target(source, None, source).await;
         let former = world.objects[&unit].location.unwrap();
         remove_battle_map_membership(&mut world, unit).unwrap();
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
         world
             .objects
             .get_mut(&former)

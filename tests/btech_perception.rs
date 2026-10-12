@@ -153,15 +153,18 @@ fn set_power(world: &mut World, id: ObjectId, power: Power) {
         .unwrap();
 }
 
-/// Drift permanent smoke over row two of the lane.
+/// Drift permanent smoke over rows two and three of the lane: heavy smoke and light smoke
+/// together count three points, like a heavy and a light woods hex.
 fn add_smoke(lane: &mut Lane) {
-    set_map_decoration(
-        &mut lane.world,
-        lane.map,
-        HexCoordinate { x: 0, y: 2 },
-        Some(Decoration::new(DecorationKind::Smoke, 0, None)),
-    )
-    .unwrap();
+    for (y, kind) in [(2, DecorationKind::HeavySmoke), (3, DecorationKind::Smoke)] {
+        set_map_decoration(
+            &mut lane.world,
+            lane.map,
+            HexCoordinate { x: 0, y },
+            Some(Decoration::new(kind, 0, None)),
+        )
+        .unwrap();
+    }
 }
 
 /// Neutral aim rules for inspecting the perception term of a weapon's aim.

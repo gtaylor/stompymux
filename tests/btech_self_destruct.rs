@@ -83,7 +83,7 @@ async fn fixture_on(chassis: &str, tile: &str) -> (tempfile::TempDir, Config, Wo
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     // A failed initial crew check followed by a successful recovery makes terminal replay observable.
     let seed = (0..=255)
@@ -247,7 +247,7 @@ async fn self_destruct_cross_chassis_native_lua_and_restart() {
         let mut restored = persistence::load(&config.database()).await.unwrap();
         assert_eq!(restored.btech, after.btech);
         for _ in 0..30 {
-            advance_battle_units(&mut restored, 0);
+            advance_battle_units(&mut restored, 0, true);
         }
         let remaining = restored
             .btech
@@ -433,7 +433,7 @@ async fn self_destruct_order_and_failed_tick_replay() {
     support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, second, pilot, true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     // Reverse identifier order; cancellation outcomes make order observable without mutual blast damage.

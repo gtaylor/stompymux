@@ -27,7 +27,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
     support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     (dir, config, world, id)
 }
@@ -207,7 +207,7 @@ async fn crew_stun_limits_controls_restarts_and_recovers_after_shutdown() {
     set_battle_turret(&mut world, id, pilot, 90.0).unwrap();
     set_battle_speed(&mut world, id, pilot, -maximum * 2.0 / 3.0).unwrap();
     for _ in 0..59 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     assert_eq!(world.btech.vehicles()[&id].crew_stun_remaining(), 1);
     damage_battle_vehicle_controls(&mut world, id, VehicleControlHit::CrewStun).unwrap();
@@ -220,15 +220,15 @@ async fn crew_stun_limits_controls_restarts_and_recovers_after_shutdown() {
     let mut loaded = persistence::load(&config.database()).await.unwrap();
     let mut recovery_notices = Vec::new();
     for _ in 0..60 {
-        let notices = advance_battle_units(&mut world, 0);
-        assert_eq!(notices, advance_battle_units(&mut loaded, 0));
+        let notices = advance_battle_units(&mut world, 0, true);
+        assert_eq!(notices, advance_battle_units(&mut loaded, 0, true));
         recovery_notices.extend(notices);
     }
     assert_eq!(recovery_notices.len(), 1);
     assert!(recovery_notices[0].text.contains("Your head clears"));
     assert_eq!(world.btech, loaded.btech);
     assert_eq!(world.btech.vehicles()[&id].crew_stun_remaining(), 0);
-    assert!(advance_battle_units(&mut world, 0).is_empty());
+    assert!(advance_battle_units(&mut world, 0, true).is_empty());
     let mut bad = serde_json::to_value(&world.btech.vehicles()[&id]).unwrap();
     bad["crew_stun_remaining"] = serde_json::json!(61);
     assert!(serde_json::from_value::<Vehicle>(bad).is_err());
@@ -241,7 +241,7 @@ async fn powered_off_crew_recovery_retries_failed_server_ticks() {
         let (_dir,config,mut world,id)=fixture(include_str!("../game/units/Demolisher.toml")).await;
         damage_battle_vehicle_controls(&mut world,id,VehicleControlHit::CrewStun).unwrap();
         stop_battle_unit(&mut world,id,ObjectId(1),MovementRules::STANDARD.fall).unwrap();
-        for _ in 0..58 {advance_battle_units(&mut world, 0);}
+        for _ in 0..58 {advance_battle_units(&mut world, 0, true);}
         persistence::save(&config.database(),&world).await.unwrap();
         let mut sql=sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         // A running countdown keeps its timer row still; refuse the commit at the snapshot stamp.
@@ -270,7 +270,7 @@ async fn hull_destruction_cancels_crew_recovery() {
     )
     .unwrap();
     assert_eq!(world.btech.vehicles()[&id].crew_stun_remaining(), 0);
-    assert!(advance_battle_units(&mut world, 0).is_empty());
+    assert!(advance_battle_units(&mut world, 0, true).is_empty());
     let mut bad = serde_json::to_value(&world.btech.vehicles()[&id]).unwrap();
     bad["crew_stun_remaining"] = serde_json::json!(1);
     assert!(serde_json::from_value::<Vehicle>(bad).is_err());

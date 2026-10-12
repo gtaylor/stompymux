@@ -71,16 +71,8 @@ pub fn damage_action(
                 .is_some_and(|values| super::advantages::enabled(values, "Toughness"));
             rules.vehicle_impact.criticals.toughness = rules.toughness;
             rules.vehicle_impact.criticals.combat_safe = super::combat_safe(&world, unit)?;
-            // Self-hits sample their own current sightline instead of another observer's cached cover.
-            let placed = super::scanner::scanner_unit(&world, unit)
-                .unwrap()
-                .position
-                .is_some();
-            let table = if placed && super::unit_terrain_los(&world, unit, unit)?.partial_cover {
-                HitTable::Punch
-            } else {
-                HitTable::Weapon
-            };
+            // Self-inflicted damage has no attacker to be covered from.
+            let table = HitTable::Weapon;
             let (impact, messages) = super::blast_damage::resolve_packet(
                 &mut world,
                 unit,

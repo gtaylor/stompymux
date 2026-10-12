@@ -37,9 +37,9 @@ fn add_slot(source: &str, section: &str, entry: &str) -> String {
     format!("{}    {entry},\n{}", &source[..offset], &source[offset..])
 }
 
-/// Both adapters use signed attacker elevation; shallow-water Mechs can fire their torso lasers.
+/// Standing in water adds nothing to a shot at a target on land (Total Warfare p. 107).
 #[tokio::test]
-async fn water_modifier_is_attacker_owned_and_shared_by_supported_chassis() {
+async fn firing_from_water_carries_no_penalty_of_its_own() {
     for source in firing::templates() {
         let (_dir, config, base, shooter, target, index) = firing::fixture_with_target(
             &source,
@@ -47,8 +47,13 @@ async fn water_modifier_is_attacker_owned_and_shared_by_supported_chassis() {
             include_str!("../game/units/JR7-D.toml"),
         )
         .await;
-        for (shooter_tile, target_tile) in [(".0", ".0"), ("~0", ".0"), ("~1", ".0"), (".0", "~1")]
-        {
+        let mut dry_subtotal = None;
+        // Only a 'Mech can stand in water a level deep; a vehicle there would be sunk.
+        let wading = base.btech.constructed_units().contains_key(&shooter);
+        for (shooter_tile, target_tile) in [(".0", ".0"), ("~0", ".0"), ("~1", ".0")] {
+            if shooter_tile == "~1" && !wading {
+                continue;
+            }
             let mut world = base.clone();
             let map = world.create(&config, "Water lane".into(), Kind::Room);
             create_battle_map(
@@ -73,35 +78,28 @@ async fn water_modifier_is_attacker_owned_and_shared_by_supported_chassis() {
                 });
             }
             refresh_battle_contacts(&mut world, &[shooter]).unwrap();
-            let expected = u8::from(
-                shooter_tile == "~1"
-                    && battle_unit_elevation(&world, shooter).unwrap().unwrap() < 0,
-            );
             let before = world.btech.clone();
             let aim =
                 battle_pilot_aim_modifiers(&world, shooter, target, index, false, rules()).unwrap();
-            assert_eq!(aim.attacker_water, expected, "{source}: {shooter_tile}");
-            let mut without_water = aim.clone();
-            without_water.attacker_water = 0;
-            assert_eq!(
-                aim.subtotal(),
-                without_water
-                    .subtotal()
-                    .map(|value| value + i32::from(expected))
-            );
+            if shooter_tile == ".0" {
+                dry_subtotal = aim.subtotal();
+            }
+            // Firing from the water carries no penalty of its own; only the target's cover
+            // and the range bands change, and against a target on dry land they do not.
+            assert_eq!(aim.subtotal(), dry_subtotal, "{source}: {shooter_tile}");
             assert_eq!(world.btech, before);
             world.validate(&config).unwrap();
             if world.btech.constructed_units().contains_key(&shooter) {
                 let scripts =
                     Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world)))
                         .unwrap();
-                let actual: u8 = scripts
+                let absent: bool = scripts
                     .eval_callback(&format!(
-                        "return btech.unit.fire({},1,{},{}).aim.attacker_water",
+                        "return btech.unit.fire({},1,{},{}).aim.attacker_water == nil",
                         shooter.0, index, target.0
                     ))
                     .unwrap();
-                assert_eq!(actual, expected);
+                assert!(absent);
             }
         }
     }

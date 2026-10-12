@@ -1,12 +1,13 @@
 //! Shared terrain rule lookups on a hex's layers: open ground, foliage density, water, ground
-//! movement cost, piloting modifiers and the heat the ground gives off.
+//! movement cost, piloting modifiers, prohibited terrain, bog-down and the heat the ground
+//! gives off.
 //!
 //! Combat, movement and sensor code ask these questions of a [`Hex`] instead of matching on
-//! layers locally, so a rule changes in exactly one place. Movement costs and piloting
-//! modifiers follow Tactical Operations' expanded movement costs and planetary conditions
-//! tables: each hex costs one point plus what its terrain adds, and the realtime game divides a
-//! unit's speed by that total.
-use crate::{Condition, Density, Flow, Foliage, Ground, Hex, Route};
+//! layers locally, so a rule changes in exactly one place. Movement costs, prohibitions and
+//! piloting modifiers follow Total Warfare's movement cost table and Tactical Operations'
+//! expanded movement costs and planetary conditions tables: each hex costs one point plus what
+//! its terrain adds, and the realtime game divides a unit's speed by that total.
+use crate::{Condition, Density, Flow, Foliage, Ground, Hex, Route, Water};
 use serde::{Deserialize, Serialize};
 
 /// How a ground unit moves, which decides what terrain slows it.
@@ -104,38 +105,50 @@ impl Hex {
     }
 
     /// What this hex's ice, snow or mud adds to a ground unit's cost; hovercraft skim over all
-    /// of them.
+    /// of them. Ice costs one more wherever it lies, over water or dry ground.
     fn condition_cost(self, movement: GroundMovement) -> u8 {
         if movement == GroundMovement::Hover {
             return 0;
         }
         match self.condition() {
-            // Frozen water is crossed on the ice sheet or walked beneath; only ice-coated
-            // ground slows a unit.
-            Some(Condition::Ice) if self.holds_water() => 0,
             Some(Condition::Ice | Condition::DeepSnow | Condition::Mud) => 1,
             Some(Condition::ThinSnow) if movement == GroundMovement::Wheeled => 1,
             _ => 0,
         }
     }
 
-    /// Movement points a ground unit spends to enter this hex, before any change of level:
-    /// one, plus what the terrain and its weather condition add. Water costs only what its
-    /// current adds; wading and swimming are governed by the water rules. Structures are
-    /// crossed on their roofs or decks like roads. Fire and smoke make any hex cost at least two.
-    pub fn movement_cost(self, movement: GroundMovement) -> u8 {
-        let terrain = match (self.structure(), self.water()) {
-            (Some(_), _) => 0,
-            (None, Some(water)) if movement != GroundMovement::Hover => match water.flow {
+    /// What wading or walking the bed of this hex's water adds, from Total Warfare's movement
+    /// cost table: one point at depth 1 and three at depth 2 or more, plus what rapids or a
+    /// torrent add. Hovercraft skim the surface for nothing.
+    fn water_cost(self, water: Water, movement: GroundMovement) -> u8 {
+        if movement == GroundMovement::Hover {
+            return 0;
+        }
+        let depth = match water.depth {
+            0 => 0,
+            1 => 1,
+            _ => 3,
+        };
+        depth
+            + match water.flow {
                 Flow::Still => 0,
                 Flow::Rapids => 1,
                 Flow::Torrent => 2,
-            },
-            (None, Some(_)) => 0,
+            }
+    }
+
+    /// Movement points a ground unit spends to enter this hex, before any change of level:
+    /// one, plus what the terrain and its weather condition add. Water costs by its depth and
+    /// current. Structures are crossed on their roofs or decks like roads. Fire makes any hex
+    /// cost at least two.
+    pub fn movement_cost(self, movement: GroundMovement) -> u8 {
+        let terrain = match (self.structure(), self.water()) {
+            (Some(_), _) => 0,
+            (None, Some(water)) => self.water_cost(water, movement),
             (None, None) => self.terrain_cost(movement),
         };
         let cost = 1 + terrain + self.condition_cost(movement);
-        if self.overlay().is_some() {
+        if self.is_burning() {
             return cost.max(2);
         }
         cost
@@ -243,18 +256,149 @@ impl Hex {
         terrain + condition
     }
 
-    /// Modifier for the piloting roll a ground unit must make just to enter this hex, or
-    /// `None` when entering takes no roll. Ultra rubble is the only such terrain: shattered
-    /// hardened construction takes a +1 roll to cross unless a road has been cleared through.
-    pub fn entry_piloting_modifier(self) -> Option<i16> {
-        (self.ground() == Ground::UltraRubble && self.is_bare() && !self.is_road()).then_some(1)
+    /// Modifier for the piloting or driving roll a ground unit must make just to enter this
+    /// hex, or `None` when entering takes no roll. 'Mechs roll at +0 to cross rubble and at +1
+    /// to cross ultra rubble (Total Warfare p. 52, Tactical Operations p. 32). Every ground
+    /// unit but a hovercraft rolls at +0 when it steps onto ice (Tactical Operations p. 48);
+    /// that roll does not take the +4 ice gives rolls forced in the hex. A road cleared through
+    /// the terrain takes no roll, and neither does a structure crossed on its roof or deck.
+    pub fn entry_piloting_modifier(self, movement: GroundMovement) -> Option<i16> {
+        if self.is_road() || self.structure().is_some() {
+            return None;
+        }
+        if self.is_icy() {
+            return (movement != GroundMovement::Hover).then_some(0);
+        }
+        if movement != GroundMovement::Legged || !self.is_bare() {
+            return None;
+        }
+        match self.ground() {
+            Ground::Rubble => Some(0),
+            Ground::UltraRubble => Some(1),
+            _ => None,
+        }
+    }
+
+    /// Why a ground unit may not enter this hex at all, or `None` when it may. From the
+    /// prohibited-units columns of Total Warfare's and Tactical Operations' movement cost
+    /// tables: wheels stay out of rough ground, rubble and ultra rubble (which inherits
+    /// rubble's restrictions, Tactical Operations p. 32), woods, deep snow and magma crust; no
+    /// vehicle enters heavy or ultra-heavy woods, jungle, ultra rough ground or liquid magma;
+    /// hovercraft also avoid light woods; and nothing but a hovercraft crosses water a level or
+    /// more deep (callers exempt amphibious vehicles). 'Mechs cannot push through ultra-heavy
+    /// woods or jungle. A road or bridge carries a unit through terrain it could not otherwise
+    /// enter, and a building or wall is climbed onto rather than entered.
+    pub fn prohibition(self, movement: GroundMovement) -> Option<Prohibition> {
+        if self.is_road() || self.structure().is_some() {
+            return None;
+        }
+        let vehicle = movement != GroundMovement::Legged;
+        if let Some(water) = self.water() {
+            // Frozen water is crossed on the ice sheet, which may break (Tactical Operations
+            // p. 48); open water a level or more deep sinks tracks and wheels.
+            return (!self.is_frozen()
+                && vehicle
+                && movement != GroundMovement::Hover
+                && water.depth >= 1)
+                .then_some(Prohibition::Water);
+        }
+        if let Some(foliage) = self.foliage()
+            && let Some(density) = foliage.density()
+        {
+            let banned = match density {
+                Density::UltraHeavy => true,
+                Density::Heavy => vehicle,
+                Density::Light => {
+                    foliage.is_jungle() && vehicle
+                        || matches!(movement, GroundMovement::Wheeled | GroundMovement::Hover)
+                }
+            };
+            if banned {
+                return Some(Prohibition::Terrain(foliage.label()));
+            }
+        }
+        let ground = match (self.ground(), movement) {
+            (Ground::Magma, _) if vehicle => true,
+            (Ground::UltraRough, _) if vehicle => true,
+            (
+                Ground::Rough | Ground::Rubble | Ground::UltraRubble | Ground::MagmaCrust,
+                GroundMovement::Wheeled,
+            ) => true,
+            _ => false,
+        };
+        if ground {
+            return Some(Prohibition::Terrain(self.ground().label()));
+        }
+        if self.condition() == Some(Condition::DeepSnow) && movement == GroundMovement::Wheeled {
+            return Some(Prohibition::Terrain(Condition::DeepSnow.label()));
+        }
+        None
+    }
+
+    /// Modifier for the piloting or driving roll a ground unit makes against getting stuck as
+    /// it enters this hex, or `None` when the ground cannot bog it down. Swamp, mud, deep snow,
+    /// tundra and sand can all trap a unit (Tactical Operations p. 60); tundra, deep snow and
+    /// mud make the roll one easier. Hovercraft never bog down, and a road, a structure or
+    /// water keeps a unit off the soft ground.
+    pub fn bog_down_modifier(self, movement: GroundMovement) -> Option<i16> {
+        if movement == GroundMovement::Hover
+            || self.is_road()
+            || self.structure().is_some()
+            || self.holds_water()
+        {
+            return None;
+        }
+        match self.condition() {
+            Some(Condition::DeepSnow | Condition::Mud) => return Some(-1),
+            Some(_) => return None,
+            None => {}
+        }
+        match self.ground() {
+            Ground::Swamp | Ground::Sand => Some(0),
+            Ground::Tundra => Some(-1),
+            _ => None,
+        }
+    }
+
+    /// Whether the terrain under a ground unit at `level` in this hex can bog it down: soft
+    /// ground it stands on with nothing built or frozen over it.
+    pub fn can_bog_down(self, movement: GroundMovement, level: i32) -> bool {
+        self.bog_down_modifier(movement).is_some() && self.touches_ground(level)
+    }
+
+    /// Whether running or turning on this hex risks a skid: pavement, a road or a bridge deck
+    /// (Total Warfare p. 62), or ice over anything (Tactical Operations p. 48).
+    pub fn is_slick(self) -> bool {
+        self.is_icy() || self.is_road() || self.has_bridge() || self.ground() == Ground::Pavement
+    }
+}
+
+/// Why a ground unit cannot enter a hex.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Prohibition {
+    /// Water a level or more deep, which only hovercraft and amphibious vehicles cross.
+    Water,
+    /// Terrain the unit's movement type cannot push through, named for the report.
+    Terrain(&'static str),
+}
+
+impl Prohibition {
+    /// What the unit is told when it stops at the hex's edge.
+    pub fn describe(self) -> String {
+        match self {
+            Self::Water => "Your vehicle cannot cross water that deep.".into(),
+            Self::Terrain(label) => {
+                format!("You cannot enter {}.", label.to_ascii_lowercase())
+            }
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{DecorationKind, Structure, Terrain, Water};
+    use crate::{DecorationKind, Prohibition, Structure, Terrain, Water};
     use GroundMovement::{Hover, Legged, Tracked, Wheeled};
 
     #[test]
@@ -301,7 +445,8 @@ mod tests {
             assert_eq!(cost(Terrain::Bridge, movement), 1);
             assert_eq!(cost(Terrain::DeepSnow, movement), 2);
             assert_eq!(cost(Terrain::Mud, movement), 2);
-            assert_eq!(cost(Terrain::Ice, movement), 1);
+            // Ice costs one more over water as on land, and frozen water is crossed on top.
+            assert_eq!(cost(Terrain::Ice, movement), 2);
             let icy_field = Hex::new(Terrain::Clear, 0).with_condition(Some(Condition::Ice));
             assert_eq!(icy_field.movement_cost(movement), 2);
         }
@@ -330,28 +475,36 @@ mod tests {
         assert_eq!(rail.movement_cost(Hover), 2);
     }
 
+    /// Water costs by depth as in Total Warfare, plus what its current adds.
     #[test]
-    fn running_water_costs_more_except_for_hovercraft() {
-        let river = |flow| Hex::at_level(0).with_water(Some(Water { depth: 2, flow }));
-        assert_eq!(river(Flow::Still).movement_cost(Legged), 1);
-        assert_eq!(river(Flow::Rapids).movement_cost(Legged), 2);
-        assert_eq!(river(Flow::Torrent).movement_cost(Tracked), 3);
-        assert_eq!(river(Flow::Torrent).movement_cost(Hover), 1);
+    fn water_costs_by_depth_and_current_except_for_hovercraft() {
+        let water = |depth, flow| Hex::at_level(0).with_water(Some(Water { depth, flow }));
+        assert_eq!(water(0, Flow::Still).movement_cost(Legged), 1);
+        assert_eq!(water(1, Flow::Still).movement_cost(Legged), 2);
+        assert_eq!(water(2, Flow::Still).movement_cost(Legged), 4);
+        assert_eq!(water(5, Flow::Still).movement_cost(Tracked), 4);
+        assert_eq!(water(1, Flow::Rapids).movement_cost(Legged), 3);
+        assert_eq!(water(2, Flow::Torrent).movement_cost(Tracked), 6);
+        assert_eq!(water(2, Flow::Torrent).movement_cost(Hover), 1);
+        assert_eq!(Hex::new(Terrain::Bridge, 2).movement_cost(Wheeled), 1);
     }
 
+    /// Fire slows a unit picking its way through the flames; smoke does not.
     #[test]
-    fn fire_and_smoke_cost_at_least_two() {
-        for kind in [DecorationKind::Fire, DecorationKind::Smoke] {
-            let covered = |terrain| Hex::new(terrain, 1).with_overlay(Some(kind));
-            for movement in [Legged, Wheeled] {
-                assert_eq!(covered(Terrain::Clear).ground_speed_divisor(movement), 2.0);
-                assert_eq!(covered(Terrain::Road).ground_speed_divisor(movement), 2.0);
-                assert_eq!(covered(Terrain::Water).ground_speed_divisor(movement), 2.0);
-                assert_eq!(covered(Terrain::Bridge).ground_speed_divisor(movement), 2.0);
-                assert_eq!(
-                    covered(Terrain::HeavyWoods).ground_speed_divisor(movement),
-                    3.0
-                );
+    fn fire_costs_at_least_two_and_smoke_costs_nothing() {
+        let burning = |terrain| Hex::new(terrain, 1).with_overlay(Some(DecorationKind::Fire));
+        for movement in [Legged, Wheeled] {
+            assert_eq!(burning(Terrain::Clear).ground_speed_divisor(movement), 2.0);
+            assert_eq!(burning(Terrain::Road).ground_speed_divisor(movement), 2.0);
+            assert_eq!(burning(Terrain::Water).ground_speed_divisor(movement), 2.0);
+            assert_eq!(burning(Terrain::Bridge).ground_speed_divisor(movement), 2.0);
+            assert_eq!(
+                burning(Terrain::HeavyWoods).ground_speed_divisor(movement),
+                3.0
+            );
+            for kind in [DecorationKind::Smoke, DecorationKind::HeavySmoke] {
+                let smoky = Hex::new(Terrain::Clear, 1).with_overlay(Some(kind));
+                assert_eq!(smoky.ground_speed_divisor(movement), 1.0);
             }
         }
     }
@@ -439,19 +592,147 @@ mod tests {
         assert_eq!(snowy_road.piloting_modifier(Tracked, 0), 1);
     }
 
-    /// Ultra rubble alone takes a roll to enter, unless a road crosses it.
+    /// 'Mechs roll to cross rubble and ultra rubble, everything but a hovercraft rolls to step
+    /// onto ice, and a road or structure takes no roll.
     #[test]
-    fn only_ultra_rubble_takes_an_entry_roll() {
+    fn rubble_and_ice_take_entry_rolls() {
         for terrain in Terrain::ALL {
-            let expected = (terrain == Terrain::UltraRubble).then_some(1);
+            let expected = match terrain {
+                Terrain::Rubble | Terrain::Ice => Some(0),
+                Terrain::UltraRubble => Some(1),
+                _ => None,
+            };
             assert_eq!(
-                Hex::new(terrain, 0).entry_piloting_modifier(),
+                Hex::new(terrain, 0).entry_piloting_modifier(Legged),
                 expected,
+                "{terrain:?}"
+            );
+            let vehicle = (terrain == Terrain::Ice).then_some(0);
+            assert_eq!(
+                Hex::new(terrain, 0).entry_piloting_modifier(Tracked),
+                vehicle,
+                "{terrain:?}"
+            );
+            assert_eq!(
+                Hex::new(terrain, 0).entry_piloting_modifier(Hover),
+                None,
                 "{terrain:?}"
             );
         }
         let cleared = Hex::new(Terrain::UltraRubble, 0).with_route(Some(Route::PavedRoad));
-        assert_eq!(cleared.entry_piloting_modifier(), None);
+        assert_eq!(cleared.entry_piloting_modifier(Legged), None);
+        let icy_field = Hex::new(Terrain::Clear, 0).with_condition(Some(Condition::Ice));
+        assert_eq!(icy_field.entry_piloting_modifier(Wheeled), Some(0));
+        let icy_road = icy_field.with_route(Some(Route::DirtRoad));
+        assert_eq!(icy_road.entry_piloting_modifier(Wheeled), None);
+    }
+
+    /// The prohibited-units columns of the movement cost tables.
+    #[test]
+    fn prohibitions_follow_the_movement_cost_tables() {
+        let banned = |terrain, movement| Hex::new(terrain, 0).prohibition(movement).is_some();
+        for terrain in Terrain::ALL {
+            let mech = matches!(
+                terrain,
+                Terrain::UltraHeavyWoods | Terrain::UltraHeavyJungle
+            );
+            assert_eq!(banned(terrain, Legged), mech, "{terrain:?}");
+            let wheeled = matches!(
+                terrain,
+                Terrain::Rough
+                    | Terrain::UltraRough
+                    | Terrain::Rubble
+                    | Terrain::UltraRubble
+                    | Terrain::LightWoods
+                    | Terrain::HeavyWoods
+                    | Terrain::UltraHeavyWoods
+                    | Terrain::LightJungle
+                    | Terrain::HeavyJungle
+                    | Terrain::UltraHeavyJungle
+                    | Terrain::DeepSnow
+                    | Terrain::MagmaCrust
+                    | Terrain::Magma
+            );
+            // `Hex::new` gives water and ice no depth, so they are open to everything here.
+            assert_eq!(banned(terrain, Wheeled), wheeled, "{terrain:?}");
+            let tracked = matches!(
+                terrain,
+                Terrain::UltraRough
+                    | Terrain::HeavyWoods
+                    | Terrain::UltraHeavyWoods
+                    | Terrain::LightJungle
+                    | Terrain::HeavyJungle
+                    | Terrain::UltraHeavyJungle
+                    | Terrain::Magma
+            );
+            assert_eq!(banned(terrain, Tracked), tracked, "{terrain:?}");
+            let hover = matches!(
+                terrain,
+                Terrain::UltraRough
+                    | Terrain::LightWoods
+                    | Terrain::HeavyWoods
+                    | Terrain::UltraHeavyWoods
+                    | Terrain::LightJungle
+                    | Terrain::HeavyJungle
+                    | Terrain::UltraHeavyJungle
+                    | Terrain::Magma
+            );
+            assert_eq!(banned(terrain, Hover), hover, "{terrain:?}");
+        }
+        // The notation's digit is water depth: ankle-deep water is open to everything, and an
+        // ice sheet carries vehicles over any depth.
+        for movement in [Tracked, Wheeled] {
+            assert_eq!(
+                Hex::new(Terrain::Water, 1).prohibition(movement),
+                Some(Prohibition::Water)
+            );
+            assert_eq!(Hex::new(Terrain::Ice, 3).prohibition(movement), None);
+            assert_eq!(Hex::new(Terrain::Water, 0).prohibition(movement), None);
+        }
+        assert_eq!(Hex::new(Terrain::Water, 4).prohibition(Hover), None);
+        assert_eq!(Hex::new(Terrain::Bridge, 1).prohibition(Wheeled), None);
+        let forest_road = Hex::new(Terrain::HeavyJungle, 0).with_route(Some(Route::DirtRoad));
+        assert_eq!(forest_road.prohibition(Wheeled), None);
+        assert_eq!(
+            Hex::new(Terrain::HeavyWoods, 0).prohibition(Tracked),
+            Some(Prohibition::Terrain("Heavy woods"))
+        );
+    }
+
+    /// Soft ground bogs units down; hovercraft, roads and structures are exempt.
+    #[test]
+    fn soft_ground_bogs_down_everything_but_hovercraft() {
+        for terrain in Terrain::ALL {
+            let expected = match terrain {
+                Terrain::Swamp | Terrain::Sand => Some(0),
+                Terrain::Tundra | Terrain::DeepSnow | Terrain::Mud => Some(-1),
+                _ => None,
+            };
+            let hex = Hex::new(terrain, 0);
+            assert_eq!(hex.bog_down_modifier(Legged), expected, "{terrain:?}");
+            assert_eq!(hex.bog_down_modifier(Tracked), expected, "{terrain:?}");
+            assert_eq!(hex.bog_down_modifier(Hover), None, "{terrain:?}");
+            assert_eq!(hex.can_bog_down(Legged, 0), expected.is_some());
+            assert!(!hex.can_bog_down(Legged, 1), "{terrain:?}");
+        }
+        let snowy_swamp = Hex::new(Terrain::Swamp, 0).with_condition(Some(Condition::DeepSnow));
+        assert_eq!(snowy_swamp.bog_down_modifier(Wheeled), Some(-1));
+        let road = Hex::new(Terrain::Swamp, 0).with_route(Some(Route::GravelRoad));
+        assert_eq!(road.bog_down_modifier(Legged), None);
+    }
+
+    /// Pavement, roads, bridge decks and ice are where units skid.
+    #[test]
+    fn slick_surfaces_are_pavement_roads_decks_and_ice() {
+        for terrain in Terrain::ALL {
+            let expected = matches!(
+                terrain,
+                Terrain::Pavement | Terrain::Road | Terrain::Bridge | Terrain::Ice
+            );
+            assert_eq!(Hex::new(terrain, 0).is_slick(), expected, "{terrain:?}");
+        }
+        let icy_field = Hex::new(Terrain::Clear, 0).with_condition(Some(Condition::Ice));
+        assert!(icy_field.is_slick());
     }
 
     /// Magma heats only units standing on it; deep snow chills them.

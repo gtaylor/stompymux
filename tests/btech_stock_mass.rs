@@ -253,7 +253,7 @@ async fn carried_stock_affects_live_movement_and_adds_to_tow_load() {
         support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
         for _ in 0..5 {
-            advance_battle_units(&mut world, 0);
+            advance_battle_units(&mut world, 0, true);
         }
         let maximum = battle_throttle_maximum(&world, id, true).unwrap();
         let mut encoded = serde_json::to_value(&world.btech).unwrap();

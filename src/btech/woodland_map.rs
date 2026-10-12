@@ -43,11 +43,10 @@ pub fn apply_woodland_clearing(
         .apply(before.with_overlay(None))
         .context("Invalid woodland reduction")?;
     world.attempt(|world| {
-        world.btech.maps.get_mut(&map).unwrap().write_hex(
-            i64::from(coordinate.x),
-            i64::from(coordinate.y),
-            after,
-        )?;
+        let record = world.btech.maps.get_mut(&map).unwrap();
+        record.write_hex(i64::from(coordinate.x), i64::from(coordinate.y), after)?;
+        let index = record.tile_index(coordinate)?;
+        std::sync::Arc::make_mut(&mut record.terrain_damage).remove(&index);
         world.btech.validate(world)?;
         Ok(WoodlandChange {
             map,

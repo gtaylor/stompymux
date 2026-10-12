@@ -48,7 +48,7 @@ async fn targeted_radio_mixed_pairs_share_visibility_delivery_and_restart() {
                 ids.push(id);
             }
             for _ in 0..5 {
-                advance_battle_units(&mut world, 0);
+                advance_battle_units(&mut world, 0, true);
             }
             let (sender, target) = (ids[0], ids[1]);
             assert!(resolve_targeted_radio(&world, sender, ObjectId(1), target, "unseen").is_err());
@@ -222,7 +222,7 @@ async fn channel_radio_rotates_mixed_transmitters_relays_and_receivers() {
             pilots.push(pilot);
         }
         for _ in 0..5 {
-            advance_battle_units(&mut world, 0);
+            advance_battle_units(&mut world, 0, true);
         }
         for &id in &ids {
             let key = if world.btech.vehicles().contains_key(&id) {
@@ -364,7 +364,7 @@ async fn channel_radio_rotates_mixed_transmitters_relays_and_receivers() {
             61
         );
         for _ in 0..61 {
-            advance_battle_units(&mut world, 0);
+            advance_battle_units(&mut world, 0, true);
         }
         assert_eq!(
             serde_json::to_value(&world.btech).unwrap()[key][receiver.0.to_string()]["radio_experience_remaining"],

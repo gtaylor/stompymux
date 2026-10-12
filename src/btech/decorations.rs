@@ -114,10 +114,12 @@ pub(super) fn install_decoration(
     index: u32,
     mut effect: Decoration,
 ) -> Result<()> {
+    // Fire and smoke keep separate creation orders; light and heavy smoke share one.
+    let fire = effect.kind == DecorationKind::Fire;
     effect.order = map
         .decorations
         .values()
-        .filter(|existing| existing.kind == effect.kind)
+        .filter(|existing| (existing.kind == DecorationKind::Fire) == fire)
         .map(|existing| existing.order)
         .min()
         .unwrap_or(0)

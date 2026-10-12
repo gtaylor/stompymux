@@ -33,7 +33,7 @@ model of a base terrain plus terrain modifications:
 | Route | A paved, gravel or dirt road, or a rail line, laid through the hex. | `route` |
 | Structure | A building, wall or bridge, with a construction class and construction factor (CF). | `[[structures]]` |
 | Condition | Ice, thin snow, deep snow or mud lying over the hex. | `condition` |
-| Overlay | Fire or smoke. | `overlay` |
+| Overlay | Fire, or light or heavy smoke. | `overlay` |
 
 Layers combine wherever the manuals allow it: woods on sand, a road through
 heavy jungle, ice over a road or over a river, deep snow on rough ground, or a
@@ -191,7 +191,7 @@ means the hex has nothing in that layer.
 | `foliage` | `` ` `` light woods, `"` heavy woods, `W` ultra-heavy woods, `j` light jungle, `J` heavy jungle, `U` ultra-heavy jungle, `f` planted fields. |
 | `route` | `#` paved road, `g` gravel road, `d` dirt road, `\|` rail. |
 | `condition` | `-` ice, `*` thin snow, `+` deep snow, `,` mud. |
-| `overlay` | Permanent fire (`&`) or smoke (`:`) over the hex. |
+| `overlay` | Permanent fire (`&`), light smoke (`:`) or heavy smoke (`?`) over the hex. Light smoke obscures like light woods and heavy smoke like heavy woods. |
 
 | Symbol | Ground |
 | --- | --- |
@@ -298,7 +298,7 @@ selected, the selected region in its own color with numbered corners.
 ## Saving
 
 Fire and smoke are temporary conditions, not terrain. When a map is loaded,
-each `&` and `:` in the `overlay` grid becomes a fire or smoke effect over that
+each `&`, `:` and `?` in the `overlay` grid becomes a fire or smoke effect over that
 hex's terrain that never burns out or drifts away.
 
 `SAVEMAP <name>` writes the current map to `<name>.toml` in this format.

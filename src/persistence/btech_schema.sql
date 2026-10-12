@@ -69,6 +69,13 @@ CREATE TABLE btech_map_terrain_codes (
     PRIMARY KEY (map_dbref, code),
     UNIQUE (map_dbref, hex)
 ) WITHOUT ROWID;
+-- Terrain factor damage a hex's woods, jungle or crops have taken, by row-major tile.
+CREATE TABLE btech_map_terrain_damage (
+    map_dbref INTEGER NOT NULL REFERENCES btech_map_terrain(map_dbref) ON DELETE CASCADE,
+    tile INTEGER NOT NULL CHECK (tile >= 0 AND tile < 1000000),
+    damage INTEGER NOT NULL CHECK (damage BETWEEN 1 AND 65535),
+    PRIMARY KEY (map_dbref, tile)
+) WITHOUT ROWID;
 
 -- btech_object_order.rs: explicit traversal order of a map's mines and landing exclusions.
 CREATE TABLE btech_mine_order (
@@ -93,7 +100,7 @@ CREATE TABLE btech_landing_order (
 CREATE TABLE btech_map_decorations (
     map_dbref INTEGER NOT NULL REFERENCES objects(dbref) ON DELETE CASCADE,
     tile INTEGER NOT NULL CHECK (tile >= 0 AND tile < 1000000),
-    kind TEXT NOT NULL CHECK (kind IN ('fire', 'smoke')),
+    kind TEXT NOT NULL CHECK (kind IN ('fire', 'smoke', 'heavy_smoke')),
     remaining INTEGER CHECK (remaining >= -32768 AND remaining <= 4294967295),
     expires_at INTEGER CHECK (expires_at > 0),
     object_duration INTEGER NOT NULL CHECK (object_duration BETWEEN -32768 AND 32767),

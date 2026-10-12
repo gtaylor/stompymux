@@ -859,10 +859,10 @@
 //|---@field network_range {kind: "c3"|"c3i", distance: number, source: integer|nil}|nil Active command-network range; physical limits and firing visibility remain separate.
 //|---@field range {bracket: string, modifier: integer}|nil
 //|---@field attacker_movement integer
-//|---@field attacker_water integer Plus one when firing at a unit from below the water surface.
 //|---@field woods_cover integer Configured occupied-forest accuracy credit: zero, minus one or minus two.
 //|---@field target_movement integer Movement contribution, including +1 for a VTOL with nonzero horizontal or vertical speed.
 //|---@field dug_in integer Configured cover modifier, shared by Mech and vehicle attackers.
+//|---@field bogged_down integer Minus two against a target stuck in soft ground.
 //|---@field orbital_drop integer Minus two while the target has an intact cocoon; zero after a breach.
 //|---@field light integer Darkness on the target's map, less what searchlights and target heat offset.
 //|---@field environment integer|nil Wind and gravity on the shooter's map for this weapon class; nil when the wind keeps the weapon from firing.
@@ -941,7 +941,7 @@
 //|---@class WoodlandImpact
 //|---@field map integer
 //|---@field coordinate HexCoordinate
-//|---@field effect {effect: "none"}|{effect: "ignite", seconds: integer}|{effect: "clear", clearing: "thin"|"cut_to_clear"|"cut_to_rough"} What the attack did to the woods.
+//|---@field effect {effect: "none"}|{effect: "ignite", seconds: integer}|{effect: "clear", clearing: "thin"|"cut_to_clear"|"cut_to_rough"}|{effect: "damage", total: integer} What the attack did to the woods; damage is the terrain factor spent so far.
 //|---@field notices Notice[]
 // lua-types-end
 

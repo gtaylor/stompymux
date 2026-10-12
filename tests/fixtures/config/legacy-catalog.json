@@ -283,13 +283,6 @@
     "default": 0
   },
   {
-    "path": "battletech.newterrain",
-    "legacy_name": "btech_newterrain",
-    "registry_type": "cf_int",
-    "rust_type": "i64",
-    "default": 0
-  },
-  {
     "path": "battletech.xploss",
     "legacy_name": "btech_xploss",
     "registry_type": "cf_int",
@@ -323,13 +316,6 @@
     "registry_type": "cf_int",
     "rust_type": "i64",
     "default": 5
-  },
-  {
-    "path": "battletech.skidcliff",
-    "legacy_name": "btech_skidcliff",
-    "registry_type": "cf_int",
-    "rust_type": "i64",
-    "default": 0
   },
   {
     "path": "battletech.extendedmovemod",

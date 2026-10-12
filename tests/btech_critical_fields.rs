@@ -922,7 +922,7 @@ async fn vehicle_critical_edits_share_conditions_and_preserve_timers() {
             .unwrap();
         let mut world = lua.world().clone();
         for _ in 0..65 {
-            advance_battle_units(&mut world, 0);
+            advance_battle_units(&mut world, 0, true);
         }
         assert!(world.btech.vehicles()[&id].crew_stunned());
         assert_eq!(world.btech.vehicles()[&id].crew_stun_remaining(), 0);
@@ -946,7 +946,7 @@ async fn vehicle_critical_edits_share_conditions_and_preserve_timers() {
             scripts.world().btech.vehicles()[&id].crew_stun_remaining(),
             3
         );
-        advance_battle_units(&mut scripts.world_mut(), 0);
+        advance_battle_units(&mut scripts.world_mut(), 0, true);
         set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "tankcritstatus", bits)
             .unwrap();
         let saved = scripts.world().clone();
@@ -954,7 +954,7 @@ async fn vehicle_critical_edits_share_conditions_and_preserve_timers() {
         let mut loaded = persistence::load(&config.database()).await.unwrap();
         assert_eq!(loaded.btech, saved.btech);
         for _ in 0..2 {
-            advance_battle_units(&mut loaded, 0);
+            advance_battle_units(&mut loaded, 0, true);
         }
         assert!(!loaded.btech.vehicles()[&id].crew_stunned());
         assert_eq!(loaded.btech.vehicles()[&id].crew_stun_remaining(), 0);

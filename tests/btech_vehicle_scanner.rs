@@ -218,7 +218,7 @@ async fn vehicle_scan_admission_skips_startup_and_acquires_mixed_contacts() {
         .insert(Flag::InCharacter);
     let observers = battle_contact_observers(&world);
     assert_eq!(observers, [a, b, d]);
-    advance_battle_units(&mut world, 0);
+    advance_battle_units(&mut world, 0, true);
     refresh_battle_contacts(&mut world, &observers).unwrap();
     assert!(world.btech.vehicles()[&c].contacts().is_empty());
     assert!(battle_contact_observers(&world).contains(&c));

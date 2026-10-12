@@ -179,7 +179,7 @@ fn terrain_effect(
             weapon,
             ammunition: mode,
             damage,
-            intent: WoodlandIntent::Clear,
+            intent: WoodlandIntent::Absorb,
         },
     )
 }

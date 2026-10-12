@@ -63,7 +63,7 @@ async fn fixture(
     support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     (_dir, config, world, id, exterior, interior)
 }
@@ -98,12 +98,12 @@ async fn delayed_entry_moves_all_chassis_and_rolls_back_arrival_failure() {
         assert!(battle_building_entries_pending(&scripts.world()));
         scripts.drain_outbox();
         for _ in 0..17 {
-            advance_battle_building_entries_action(&scripts).unwrap();
+            advance_battle_building_entries_action(&scripts, &config).unwrap();
         }
         assert_eq!(scripts.world().objects[&id].location, Some(exterior));
         let before = scripts.world().clone();
         scripts.inspect_lua().load("_parents['default_thing.lua'].events={on_move=function(ctx) mux.world.object(ctx.object):set_description('leak'); error('arrival failed') end}").exec().unwrap();
-        assert!(advance_battle_building_entries_action(&scripts).is_err());
+        assert!(advance_battle_building_entries_action(&scripts, &config).is_err());
         assert_eq!(scripts.world().btech, before.btech);
         assert_eq!(
             scripts.world().objects[&id].location,
@@ -119,7 +119,7 @@ async fn delayed_entry_moves_all_chassis_and_rolls_back_arrival_failure() {
             .load("_parents['default_thing.lua'].events={}")
             .exec()
             .unwrap();
-        advance_battle_building_entries_action(&scripts).unwrap();
+        advance_battle_building_entries_action(&scripts, &config).unwrap();
         assert_eq!(scripts.world().objects[&id].location, Some(interior));
         assert_eq!(scripts.world().objects[&ObjectId(1)].location, Some(id));
         assert!(!battle_building_entries_pending(&scripts.world()));
@@ -147,7 +147,7 @@ async fn changed_enter_lock_consumes_event_without_moving() {
         .exec()
         .unwrap();
     for _ in 0..18 {
-        advance_battle_building_entries_action(&scripts).unwrap();
+        advance_battle_building_entries_action(&scripts, &config).unwrap();
     }
     assert_eq!(scripts.world().objects[&id].location, Some(exterior));
     assert!(!battle_building_entries_pending(&scripts.world()));
@@ -241,7 +241,7 @@ async fn entry_feedback_uses_hex_visibility_and_captured_contacts() {
         support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, observer, ObjectId(2), true).unwrap();
         for _ in 0..5 {
-            advance_battle_units(&mut world, 0);
+            advance_battle_units(&mut world, 0, true);
         }
         for acquired in [false, true] {
             let mut observed = world.clone();
@@ -266,7 +266,7 @@ async fn entry_feedback_uses_hex_visibility_and_captured_contacts() {
                 )
             );
             for _ in 0..18 {
-                advance_battle_building_entries_action(&scripts).unwrap();
+                advance_battle_building_entries_action(&scripts, &config).unwrap();
             }
             let messages = scripts.drain_outbox();
             assert!(messages.iter().any(|(who, text)| *who == ObjectId(1)
@@ -310,7 +310,7 @@ async fn interior_arrival_uses_normal_acquisition_without_extra_dice() {
         support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, observer, ObjectId(2), true).unwrap();
         for _ in 0..5 {
-            advance_battle_units(&mut world, 0);
+            advance_battle_units(&mut world, 0, true);
         }
         assert!(!battle_contact_observers(&world).contains(&observer));
         let scripts = host(&config, world);
@@ -318,12 +318,12 @@ async fn interior_arrival_uses_normal_acquisition_without_extra_dice() {
         scripts.drain_outbox();
         for _ in 0..17 {
             assert!(
-                advance_battle_building_entries_action(&scripts)
+                advance_battle_building_entries_action(&scripts, &config)
                     .unwrap()
                     .is_empty()
             );
         }
-        let arrivals = advance_battle_building_entries_action(&scripts).unwrap();
+        let arrivals = advance_battle_building_entries_action(&scripts, &config).unwrap();
         assert_eq!(arrivals.len(), 1);
         scripts.drain_outbox();
         let placed = scripts.world().btech.clone();
@@ -539,7 +539,7 @@ async fn host_exits_share_teleport_policy_and_callback_rollback() {
         support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, observer, ObjectId(2), true).unwrap();
         for _ in 0..5 {
-            advance_battle_units(&mut world, 0);
+            advance_battle_units(&mut world, 0, true);
         }
         let scripts = host(&config, world.clone());
         scripts
@@ -946,7 +946,7 @@ async fn towing_pairs_enter_and_exit_together_across_all_chassis_and_restart() {
                 );
             }
             for _ in 0..18 {
-                advance_battle_building_entries_action(&scripts).unwrap();
+                advance_battle_building_entries_action(&scripts, &config).unwrap();
             }
             for unit in [carrier, target] {
                 assert_eq!(scripts.world().objects[&unit].location, Some(interior));
@@ -1168,7 +1168,7 @@ async fn building_speed_limits_include_tow_load_at_admission_recheck_and_exit() 
             );
             actual_speed(&mut scripts.world_mut(), id, sign * maximum / 5.0);
             for _ in 0..18 {
-                advance_battle_building_entries_action(&scripts).unwrap();
+                advance_battle_building_entries_action(&scripts, &config).unwrap();
             }
             assert_eq!(scripts.world().objects[&id].location, Some(exterior));
             assert!(!battle_building_entries_pending(&scripts.world()));
@@ -1290,7 +1290,7 @@ async fn building_host_honors_configured_hot_myomer_load_assistance() {
         assert_eq!(result.is_ok(), bonus);
         if bonus {
             for _ in 0..18 {
-                advance_battle_building_entries_action(&scripts).unwrap();
+                advance_battle_building_entries_action(&scripts, &config).unwrap();
             }
             assert_eq!(scripts.world().objects[&id].location, Some(interior));
         } else {
@@ -1387,7 +1387,7 @@ async fn cover_distinguishes_entry_and_tow_mirroring_from_edge_movement() {
             let scripts = host(&config, world);
             begin_battle_building_entry_action(&scripts, carrier, ObjectId(1), Some(b'n')).unwrap();
             for _ in 0..18 {
-                advance_battle_building_entries_action(&scripts).unwrap();
+                advance_battle_building_entries_action(&scripts, &config).unwrap();
             }
             for id in [carrier, target] {
                 assert_eq!(scripts.world().objects[&id].location, Some(interior));

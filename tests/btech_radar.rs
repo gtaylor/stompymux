@@ -32,7 +32,7 @@ fn radar_altitude_and_range_boundaries() {
     }
 }
 
-/// Only terrain blockage rejects an otherwise elevated target; smoke, fire and water do not.
+/// Only terrain blockage rejects an otherwise elevated target; smoke, crops and water do not.
 #[test]
 fn radar_obscurants_signed_aim_and_invalid_inputs() {
     let target = RadarTarget {
@@ -44,12 +44,12 @@ fn radar_obscurants_signed_aim_and_invalid_inputs() {
         woods: 8,
         target_woods: 2,
         water: 7,
-        smoke: true,
-        fire: true,
+        smoke: 3,
+        fields: 6,
         partial_cover: true,
         ..Default::default()
     };
-    assert_eq!(target.evaluate(terrain, 5.0, RADAR_RANGE).unwrap(), Some(9));
+    assert_eq!(target.evaluate(terrain, 5.0, RADAR_RANGE).unwrap(), Some(8));
     assert_eq!(
         target
             .evaluate(Default::default(), 5.0, RADAR_RANGE)

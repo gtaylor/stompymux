@@ -207,7 +207,7 @@ async fn towing_follows_position_facing_and_height_for_every_chassis_pair() {
             support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
             start_battle_unit(&mut world, a, ObjectId(1), true).unwrap();
             for _ in 0..5 {
-                advance_battle_units(&mut world, 0);
+                advance_battle_units(&mut world, 0, true);
             }
             let mut encoded = serde_json::to_value(&world.btech).unwrap();
             let key = if carrier_type == 0 {
@@ -290,7 +290,7 @@ async fn external_speed_exceeds_disabled_target_limits_but_requires_a_tow() {
         support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, a, ObjectId(1), true).unwrap();
         for _ in 0..5 {
-            advance_battle_units(&mut world, 0);
+            advance_battle_units(&mut world, 0, true);
         }
         let mut encoded = serde_json::to_value(&world.btech).unwrap();
         let source = &mut encoded["vehicles"][a.0.to_string()];
@@ -408,7 +408,7 @@ async fn hot_myomer_tow_discount_requires_hardware_heat_and_configuration() {
     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, carrier, ObjectId(1), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
 
     let observer = world.create(&config, "Observer".into(), Kind::Thing);
@@ -425,7 +425,7 @@ async fn hot_myomer_tow_discount_requires_hardware_heat_and_configuration() {
     support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, observer, ObjectId(2), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     set_battle_observer(&mut world, observer, true).unwrap();
     world
@@ -527,7 +527,7 @@ async fn loaded_acceleration_and_reverse_motion_use_the_same_ceiling_for_all_cha
             support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
             start_battle_unit(&mut world, a, ObjectId(1), true).unwrap();
             for _ in 0..5 {
-                advance_battle_units(&mut world, 0);
+                advance_battle_units(&mut world, 0, true);
             }
             let unloaded = if let Some(unit) = world.btech.vehicles().get(&a) {
                 unit.maximum_speed()
@@ -602,7 +602,7 @@ async fn native_and_lua_tow_speed_limits_and_reports_agree() {
         support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, a, ObjectId(1), true).unwrap();
         for _ in 0..5 {
-            advance_battle_units(&mut world, 0);
+            advance_battle_units(&mut world, 0, true);
         }
         if index == 2 {
             world
@@ -710,7 +710,7 @@ async fn reverse_towing_guard_is_shared_by_native_lua_and_direct_controls() {
         support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, carrier, ObjectId(1), true).unwrap();
         for _ in 0..5 {
-            advance_battle_units(&mut world, 0);
+            advance_battle_units(&mut world, 0, true);
         }
         if world
             .btech
@@ -810,7 +810,7 @@ async fn vertical_commands_share_loaded_budget_and_atomic_native_lua_behavior() 
         support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, a, ObjectId(1), true).unwrap();
         for _ in 0..5 {
-            advance_battle_units(&mut world, 0);
+            advance_battle_units(&mut world, 0, true);
         }
         world
             .btech
@@ -933,7 +933,7 @@ fn prepare_pickup(world: &mut World, carrier: ObjectId, target: ObjectId) {
     support::seed_object_dice(world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(world, carrier, ObjectId(1), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(world, 0);
+        advance_battle_units(world, 0, true);
     }
     set_battle_towable(world, target, true).unwrap();
     let mut saved = serde_json::to_value(&world.btech).unwrap();
@@ -2046,7 +2046,7 @@ async fn vtol_vertical_towing_preserves_continuous_height_each_tick() {
         support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, carrier, ObjectId(1), true).unwrap();
         for _ in 0..5 {
-            advance_battle_units(&mut world, 0);
+            advance_battle_units(&mut world, 0, true);
         }
         world
             .btech

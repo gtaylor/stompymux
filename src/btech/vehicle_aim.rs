@@ -47,12 +47,12 @@ pub(super) fn modifiers(
     )?;
     let mut aim = weapon_modifiers(attacker, weapon_index, distance, gunnery, rules)?;
     super::aimed_target::apply_aim(world, shooter, target, mount.weapon, &mut aim)?;
-    aim.attacker_water = super::aim::water_modifier(world, shooter)?;
     aim.self_target = shooter == target && mount.weapon == super::Weapon::CoolantGun;
     aim.indirect = indirect;
     aim.ammunition_accuracy += target_terms.ammunition_accuracy;
     aim.target_movement = target_terms.movement;
     aim.dug_in = target_terms.dug_in;
+    aim.bogged_down = target_terms.bogged_down;
     aim.woods_cover = target_terms.woods_cover;
     aim.orbital_drop = target_terms.orbital_drop;
     aim.light = target_terms.light;

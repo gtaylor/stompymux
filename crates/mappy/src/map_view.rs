@@ -204,6 +204,7 @@ pub fn overlay_color(overlay: DecorationKind) -> Color {
     rgb(match overlay {
         DecorationKind::Fire => (0.96, 0.52, 0.10),
         DecorationKind::Smoke => (0.6, 0.59, 0.56),
+        DecorationKind::HeavySmoke => (0.38, 0.37, 0.35),
     })
 }
 

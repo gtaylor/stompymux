@@ -167,8 +167,6 @@ pub struct BattleTechConfig {
     pub newcharge: i64,
     /// Configuration value for `tl3_charge`; defaults are centralized below.
     pub tl3_charge: i64,
-    /// Configuration value for `newterrain`; defaults are centralized below.
-    pub newterrain: i64,
     /// Configuration value for `xploss`; defaults are centralized below.
     pub xploss: i64,
     /// Configuration value for `critlevel`; defaults are centralized below.
@@ -179,8 +177,6 @@ pub struct BattleTechConfig {
     pub newstaggertons: i64,
     /// Configuration value for `newstaggertime`; defaults are centralized below.
     pub newstaggertime: i64,
-    /// Configuration value for `skidcliff`; defaults are centralized below.
-    pub skidcliff: i64,
     /// Configuration value for `extendedmovemod`; defaults are centralized below.
     pub extendedmovemod: i64,
     /// Configuration value for `stacking`; defaults are centralized below.
@@ -279,13 +275,11 @@ impl Default for BattleTechConfig {
             nofusionvtolfuel: 0,
             newcharge: 0,
             tl3_charge: 0,
-            newterrain: 0,
             xploss: 666,
             critlevel: 100,
             newstagger: 1,
             newstaggertons: 1,
             newstaggertime: 5,
-            skidcliff: 0,
             extendedmovemod: 1,
             stacking: 2,
             stackdamage: 100,

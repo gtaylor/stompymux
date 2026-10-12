@@ -119,7 +119,7 @@ async fn reassignment_preserves_drops_and_detached_update_retires_them() {
         let saved = serde_json::to_value(&world.btech).unwrap();
         world.btech = serde_json::from_value(saved).unwrap();
         assert!(drop_state(&world, unit).is_some());
-        let notices = advance_battle_units(&mut world, 0);
+        let notices = advance_battle_units(&mut world, 0, true);
         assert!(
             notices
                 .iter()

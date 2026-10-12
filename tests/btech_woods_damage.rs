@@ -34,6 +34,20 @@ fn prepare(world: &mut World, shooter: ObjectId, target: ObjectId, terrain: Terr
     refresh_battle_contacts(world, &[shooter]).unwrap();
 }
 
+/// Spend most of the woods' terrain factor on the target hex so the next shot aimed at it,
+/// or absorbed by it, fells a density; `remaining` is the factor left standing.
+fn wear_woods(world: &mut World, target: ObjectId, remaining: u16) {
+    let map = world.btech.units()[&target].map.unwrap();
+    world
+        .btech
+        .rewrite_map_record(map, |record| {
+            let hex: Hex = serde_json::from_value(record["terrain"][10].clone()).unwrap();
+            let factor = hex.foliage().unwrap().terrain_factor();
+            record["terrain_damage"] = serde_json::json!({ "10": factor - remaining });
+        })
+        .unwrap();
+}
+
 /// Place authored woods and install an explicit dice stream, skipping the roll
 /// search `prepare` performs when the caller already owns the seed.
 fn prepare_seeded(
@@ -298,6 +312,9 @@ async fn missile_ammunition_controls_woods_payload_and_inferno_bypass() {
                 missile_lane(&mut fixture, shooter, target);
             }
             prepare(&mut fixture, shooter, target, Terrain::HeavyWoods, 12);
+            if weapon == Weapon::Thunderbolt20 {
+                wear_woods(&mut fixture, target, 20);
+            }
             let mut outcomes = Vec::new();
             for (&enabled, pair) in [false, true].iter().zip(&pairs) {
                 pair.install(fixture.clone());
@@ -564,6 +581,7 @@ async fn woodland_clearing_uses_damage_before_absorption() {
     .await;
     let config = configured(&dir, true, false);
     prepare(&mut world, shooter, target, Terrain::HeavyWoods, 12);
+    wear_woods(&mut world, target, 10);
     let seed = (0..=255)
         .find(|&seed| {
             let mut dice = Dice::seeded([seed; 32]);
@@ -920,6 +938,9 @@ async fn pellet_matrix(
                             probed = true;
                             let mut world = fixture.clone();
                             prepare_seeded(&mut world, shooter, target, terrain, [seed; 32]);
+                            // Twenty points of terrain factor remain: a twenty-point shell
+                            // fells a density while a two-point shell never does.
+                            wear_woods(&mut world, target, 20);
                             let before = first.then(|| world.btech.clone());
                             pair.install(world);
                             if let Some(before) = before {
@@ -1074,10 +1095,10 @@ async fn pellet_woods_two_stage_terrain_mech_v_vehicle_lbx20() {
         &[Terrain::LightWoods, Terrain::HeavyWoods],
     )
     .await;
-    // Twenty-rack pellets always survive the woods reduction, but the
-    // heavy shell sometimes thins the forest before pellet absorption.
-    assert!(thinned, "woods must sometimes thin instead of clearing");
-    assert!(cleared, "woods must sometimes clear outright");
+    // Twenty-rack pellets always survive the woods reduction; the heavy shell thins worn
+    // heavy woods and clears worn light woods before pellet absorption.
+    assert!(thinned, "worn heavy woods must thin instead of clearing");
+    assert!(cleared, "worn light woods must clear outright");
 }
 
 #[tokio::test]
@@ -1141,10 +1162,10 @@ async fn pellet_woods_two_stage_terrain_vehicle_v_vehicle_lbx20() {
         &[Terrain::LightWoods, Terrain::HeavyWoods],
     )
     .await;
-    // Twenty-rack pellets always survive the woods reduction, but the
-    // heavy shell sometimes thins the forest before pellet absorption.
-    assert!(thinned, "woods must sometimes thin instead of clearing");
-    assert!(cleared, "woods must sometimes clear outright");
+    // Twenty-rack pellets always survive the woods reduction; the heavy shell thins worn
+    // heavy woods and clears worn light woods before pellet absorption.
+    assert!(thinned, "worn heavy woods must thin instead of clearing");
+    assert!(cleared, "worn light woods must clear outright");
 }
 
 /// A missed direct shot may affect terrain, but never the target's material, heat or damage dice.
@@ -1164,25 +1185,24 @@ async fn missed_direct_shots_share_incidental_terrain_and_preserve_targets() {
             AmmunitionMode::Normal,
             3,
             WoodlandIntent::Incidental,
+            0,
             &mut dice,
         );
         let kind = match effect {
             WoodlandEffect::None => 0,
-            WoodlandEffect::Clear { .. } => 1,
-            WoodlandEffect::Ignite { .. } => 2,
+            WoodlandEffect::Ignite { .. } => 1,
+            WoodlandEffect::Clear { .. } | WoodlandEffect::Damage { .. } => {
+                panic!("a stray shot never wears the woods")
+            }
         };
         seeds.entry(kind).or_insert(seed);
-        if seeds.len() == 3 {
+        if seeds.len() == 2 {
             break;
         }
     }
-    assert_eq!(
-        seeds.len(),
-        3,
-        "Need quiet, clearing and ignition miss streams"
-    );
+    assert_eq!(seeds.len(), 2, "Need quiet and ignition miss streams");
     let seeds: Vec<_> = seeds.into_values().collect();
-    let mut cleared = false;
+    let mut quiet = false;
     let mut ignited = false;
     let (dir, fixture_config, base) = support::isolated_world().await;
     let configs = [false, true].map(|enabled| configured(&dir, enabled, false));
@@ -1242,7 +1262,7 @@ async fn missed_direct_shots_share_incidental_terrain_and_preserve_targets() {
                             },
                         )
                         .unwrap();
-                        cleared |= matches!(terrain.effect, WoodlandEffect::Clear { .. });
+                        quiet |= terrain.effect == WoodlandEffect::None;
                         ignited |= matches!(terrain.effect, WoodlandEffect::Ignite { .. });
                         pair.install(world);
                         assert!(
@@ -1307,5 +1327,5 @@ async fn missed_direct_shots_share_incidental_terrain_and_preserve_targets() {
             }
         }
     }
-    assert!(cleared && ignited);
+    assert!(quiet && ignited);
 }

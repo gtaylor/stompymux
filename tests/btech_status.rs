@@ -24,7 +24,7 @@ async fn electronic_status_colors_follow_countering_without_refreshing_the_field
         let (_dir, config, mut world, id, _) = fixture(&source).await;
         start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
         for _ in 0..30 {
-            advance_battle_units(&mut world, 0);
+            advance_battle_units(&mut world, 0, true);
         }
         for (mode, countered, expected) in [
             (ElectronicMode::Off, false, "[fg=green]Off[reset]"),
@@ -193,7 +193,7 @@ async fn coordinate_target_labels_keep_reference_spacing() {
         let (_dir, _config, mut world, id, _) = fixture(template).await;
         start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
         for _ in 0..5 {
-            advance_battle_units(&mut world, 0);
+            advance_battle_units(&mut world, 0, true);
         }
         for (mode, expected) in [
             (HexTargetMode::UnitAtHex, "Target: 1 0"),
@@ -355,7 +355,7 @@ async fn named_fixture(
     support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, observer, ObjectId(2), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     set_battle_observer(&mut world, observer, true).unwrap();
     world
@@ -504,7 +504,7 @@ async fn vehicle_status_tracks_live_load_damage_ammunition_and_flight() {
     set_battle_tow(&mut world, id, Some(target)).unwrap();
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     world
         .btech

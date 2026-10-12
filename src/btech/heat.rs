@@ -163,13 +163,21 @@ impl Mech {
         rates.production +=
             outside_heat.min(MAX_OUTSIDE_HEAT) + f64::from(tile.ground_heat(elevation));
         if tile.immerses(elevation) {
+            // Heat sinks under water dissipate twice as much, up to six extra points a turn
+            // (Total Warfare p. 159). Wading puts only the leg sinks under; deeper water, or
+            // lying in it, puts them all under.
             let wading = elevation == i32::from(tile.water_line()) - 1;
-            let bonus = if wading && self.posture() != super::Posture::Prone {
-                self.leg_heat_sinks().min(4) as f64
+            let points_each = if self.definition().has_double_heat_sinks() {
+                2.0
             } else {
-                6.0
+                1.0
             };
-            rates.dissipation = (rates.dissipation + bonus).min(rates.dissipation * 2.0);
+            let submerged_points = if wading && self.posture() != super::Posture::Prone {
+                self.leg_heat_sinks() as f64 * points_each
+            } else {
+                rates.dissipation
+            };
+            rates.dissipation += submerged_points.clamp(0.0, 6.0);
         }
         if tile.chills(elevation) && self.leg_heat_sinks() > 0 {
             rates.dissipation += 1.0;

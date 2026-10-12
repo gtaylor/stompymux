@@ -12,11 +12,27 @@ pick; `sensor` shows how far and by what means you can currently perceive.
 
 ## A clear line
 
-Everything starts with a clear line between you and the target. Hills and
-buildings, fire, smoke, three or more points of woods (light woods count one,
-heavy woods two, not counting the target's own hex) and the cloud base all break
-it. A target under water is visible through fewer than six water hexes. The map
-also has a maximum visibility beyond which nothing is seen.
+Everything starts with a clear line between you and the target, drawn by the
+Total Warfare intervening terrain rule. A standing Mech sees from two levels above
+its ground and a vehicle or prone Mech from one. Terrain along the line intervenes
+when it is at least as high as both of you, or when it is next to one of you and at
+least as high as that unit. Intervening hills, buildings and walls break the line;
+bridges never do. Woods and smoke pile up instead: light woods and light smoke
+count one, heavy woods and heavy smoke two and ultra-heavy woods three, and three
+or more points break the line. Planted fields rise one level, so they intervene
+only against low units; every two intervening hexes of crops cost one to hit and
+six break the line. The target's own hex never intervenes, but woods or smoke in
+it still cost their points to hit. Fire itself hides nothing; the smoke it gives
+off does. A target under water is visible through fewer than six water hexes. The
+map also has a maximum visibility beyond which nothing is seen.
+
+## Partial cover
+
+A standing Mech next to a hex one level above its own ground, lying along the
+line to the attacker, has partial cover when the attacker is no higher than it
+is. A Mech standing in water one level deep has partial cover from any height.
+Partial cover costs one to hit and protects the legs: a hit rolled on a leg
+strikes the cover instead. Hull-down units behind partial cover cost two more.
 
 ## Sensors and sight
 
@@ -65,9 +81,10 @@ them.
 - A damaged sensor system halves your sensor range; a destroyed one leaves you
   with sight alone.
 
-Aim at a perceived target includes woods between you and in its hex, partial
-cover, and the darkness penalty when it applies. Aiming through a probe ignores
-woods and darkness; radar gives a bonus against aircraft.
+Aim at a perceived target includes woods and smoke between you and in its hex,
+crops along the line, partial cover, and the darkness penalty when it applies.
+Aiming through a probe ignores woods, smoke and darkness; radar sees through
+smoke and crops and gives a bonus against aircraft.
 
 ## Ice
 

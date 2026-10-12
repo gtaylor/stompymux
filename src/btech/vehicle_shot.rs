@@ -95,12 +95,10 @@ pub(super) fn check_with_dice(
         ensure!(!unit.destroyed, "Unit is destroyed");
         super::unit_elevation(world, id)?.context("Unit is not placed")?;
     }
-    super::weapon_geometry::check_water(
-        mount.weapon,
-        super::weapon_geometry::submerged(world, shooter, weapon_index)?,
-    )?;
+    let submerged = super::weapon_geometry::submerged(world, shooter, weapon_index)?;
+    super::weapon_geometry::check_water(mount.weapon, submerged)?;
     super::planetary_conditions::check_wind(world, shooter, mount.weapon)?;
-    super::torpedo::check_target(world, mount.weapon, target)?;
+    super::torpedo::check_target(world, mount.weapon, target, submerged)?;
     if indirect.is_some() {
         super::spotter::check_indirect_water(world, shooter, target)?;
     }

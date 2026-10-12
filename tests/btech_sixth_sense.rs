@@ -254,10 +254,10 @@ async fn startup_captures_the_current_pilots_advantage() {
         support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, source, ObjectId(1), true).unwrap();
         for _ in 0..4 {
-            advance_battle_units(&mut world, 0);
+            advance_battle_units(&mut world, 0, true);
         }
         assert_eq!(state(&world, source)["sixth_sense"]["enabled"], false);
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
         assert_eq!(state(&world, source)["sixth_sense"]["enabled"], true);
         set_battle_character_value(
             &mut world,
@@ -270,7 +270,7 @@ async fn startup_captures_the_current_pilots_advantage() {
             },
         )
         .unwrap();
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
         assert_eq!(state(&world, source)["sixth_sense"]["enabled"], true);
         stop_battle_unit(
             &mut world,
@@ -283,7 +283,7 @@ async fn startup_captures_the_current_pilots_advantage() {
         support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, source, ObjectId(1), true).unwrap();
         for _ in 0..5 {
-            advance_battle_units(&mut world, 0);
+            advance_battle_units(&mut world, 0, true);
         }
         assert_eq!(state(&world, source)["sixth_sense"]["enabled"], false);
     }

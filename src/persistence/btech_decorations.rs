@@ -35,6 +35,7 @@ pub(super) async fn load(
         let kind = match row.try_get::<String, _>("kind")?.as_str() {
             "fire" => DecorationKind::Fire,
             "smoke" => DecorationKind::Smoke,
+            "heavy_smoke" => DecorationKind::HeavySmoke,
             _ => bail!("Invalid decoration kind"),
         };
         let remaining = match row.try_get::<Option<i64>, _>("expires_at")? {
@@ -131,7 +132,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
 /// Whether the marker's lifetime is counting down each second rather than held still.
 fn lifetime_running(effect: Decoration) -> bool {
     match effect.kind {
-        DecorationKind::Smoke => effect.remaining > 0,
+        DecorationKind::Smoke | DecorationKind::HeavySmoke => effect.remaining > 0,
         DecorationKind::Fire => effect.remaining != 0 && effect.next_spread.is_none(),
     }
 }
@@ -147,6 +148,7 @@ fn values(effect: Decoration, clock: Clock) -> Fields {
                 match effect.kind {
                     DecorationKind::Fire => "fire",
                     DecorationKind::Smoke => "smoke",
+                    DecorationKind::HeavySmoke => "heavy_smoke",
                 }
                 .into(),
             ),

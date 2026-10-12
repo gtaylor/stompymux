@@ -40,3 +40,4 @@ The numbers below are native identifiers; pass the typed constants to Lua APIs.
 | `btech.map.terrain_types.WALL` | `"wall"` |  |
 | `btech.map.terrain_types.FIRE` | `"fire"` |  |
 | `btech.map.terrain_types.SMOKE` | `"smoke"` |  |
+| `btech.map.terrain_types.HEAVY_SMOKE` | `"heavy_smoke"` |  |
