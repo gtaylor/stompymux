@@ -78,44 +78,49 @@ pub(super) fn check_wind(world: &World, shooter: ObjectId, weapon: Weapon) -> Re
     Ok(())
 }
 
-/// What the terrain under a unit and the wind add to every piloting or driving roll it makes:
-/// the hex's Tactical Operations PSR modifier for where the unit stands, plus gale and storm
-/// penalties. Unplaced units take none.
-pub(super) fn piloting_modifier(world: &World, id: ObjectId) -> i16 {
-    let (tile, level, terrain, wind) = if let Some(unit) = world.btech.constructed_units().get(&id)
-    {
-        let Some(position) = unit.position() else {
-            return 0;
-        };
-        let Some(map) = world.btech.maps().get(&position.map) else {
-            return 0;
-        };
-        let Ok(tile) = map.base_hex(i64::from(position.x), i64::from(position.y)) else {
-            return 0;
-        };
-        (
+/// The hex a placed unit stands in, its level there and how it moves over the ground, plus the
+/// map's wind; `None` for an unplaced unit.
+fn footing(world: &World, id: ObjectId) -> Option<(super::Hex, i32, GroundMovement, Wind)> {
+    if let Some(unit) = world.btech.constructed_units().get(&id) {
+        let position = unit.position()?;
+        let map = world.btech.maps().get(&position.map)?;
+        let tile = map
+            .base_hex(i64::from(position.x), i64::from(position.y))
+            .ok()?;
+        return Some((
             tile,
             unit.elevation_level(tile),
             GroundMovement::Legged,
             map.wind(),
-        )
-    } else if let Some(vehicle) = world.btech.vehicles().get(&id) {
-        let Some(position) = vehicle.position() else {
-            return 0;
-        };
-        let Some(map) = world.btech.maps().get(&position.map) else {
-            return 0;
-        };
-        let Ok(tile) = map.base_hex(i64::from(position.x), i64::from(position.y)) else {
-            return 0;
-        };
-        (
-            tile,
-            vehicle.elevation_level(tile),
-            super::vehicle_motion::ground_movement(vehicle.definition().movement),
-            map.wind(),
-        )
-    } else {
+        ));
+    }
+    let vehicle = world.btech.vehicles().get(&id)?;
+    let position = vehicle.position()?;
+    let map = world.btech.maps().get(&position.map)?;
+    let tile = map
+        .base_hex(i64::from(position.x), i64::from(position.y))
+        .ok()?;
+    Some((
+        tile,
+        vehicle.elevation_level(tile),
+        super::vehicle_motion::ground_movement(vehicle.definition().movement),
+        map.wind(),
+    ))
+}
+
+/// What the terrain under a unit adds to every piloting or driving roll it makes: the hex's
+/// Tactical Operations PSR modifier for where the unit stands. Unplaced units take none.
+pub(super) fn terrain_piloting_modifier(world: &World, id: ObjectId) -> i16 {
+    footing(world, id).map_or(0, |(tile, level, movement, _)| {
+        tile.piloting_modifier(movement, level)
+    })
+}
+
+/// What the terrain under a unit and the wind add to every piloting or driving roll it makes:
+/// the hex's Tactical Operations PSR modifier for where the unit stands, plus gale and storm
+/// penalties. Unplaced units take none.
+pub(super) fn piloting_modifier(world: &World, id: ObjectId) -> i16 {
+    let Some((tile, level, terrain, wind)) = footing(world, id) else {
         return 0;
     };
     // Rotorcraft catch the wind like hovercraft do.

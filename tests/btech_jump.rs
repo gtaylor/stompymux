@@ -124,7 +124,7 @@ async fn runtime_fixture() -> (
     support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     (dir, config, world, id)
 }
@@ -383,8 +383,11 @@ async fn connected_jump_domain_updates_height_heat_landing_and_stabilization_aft
     assert!((sample.elevation - 5.0).abs() < 1e-10);
     let range = battle_unit_range(&world, observer, id).unwrap();
     assert!((range.spatial.powi(2) - range.horizontal.powi(2) - 1.0).abs() < 1e-10);
+    // The level-three hill next to the observer reaches its line-of-sight level, so it
+    // intervenes against the jumper too (Total Warfare p. 100); from farther back the jumper
+    // is above the hill and in sight.
     assert!(
-        !battle_unit_terrain_los(&world, observer, id)
+        battle_unit_terrain_los(&world, observer, id)
             .unwrap()
             .blocked
     );
@@ -397,6 +400,13 @@ async fn connected_jump_domain_updates_height_heat_landing_and_stabilization_aft
         .unwrap()
         .blocked
     );
+    place_battle_unit(&mut world, observer, map, 1, 4).unwrap();
+    assert!(
+        !battle_unit_terrain_los(&world, observer, id)
+            .unwrap()
+            .blocked
+    );
+    place_battle_unit(&mut world, observer, map, 3, 4).unwrap();
     let before = world.btech.clone();
     assert!(set_battle_speed(&mut world, id, ObjectId(1), 1.0).is_err());
     assert!(set_battle_heading(&mut world, id, ObjectId(2), 90.0).is_err());
@@ -1580,7 +1590,7 @@ async fn airborne_fire_uses_shared_native_lua_transactions_and_saved_trajectorie
     support::seed_object_dice(&mut base, ObjectId(2), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut base, target, ObjectId(2), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut base, 0);
+        advance_battle_units(&mut base, 0, true);
     }
     base.objects
         .get_mut(&ObjectId(1))
@@ -2072,7 +2082,7 @@ fn jump_hills(
     support::seed_object_dice(world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(world, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(world, 0);
+        advance_battle_units(world, 0, true);
     }
 }
 
@@ -2283,7 +2293,7 @@ async fn dry_terrain_jump_routes_share_adapters_heat_and_restartable_landing() {
         support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
         for _ in 0..5 {
-            advance_battle_units(&mut world, 0);
+            advance_battle_units(&mut world, 0, true);
         }
         let before = serde_json::to_value(&world.btech.constructed_units()[&id]).unwrap();
         let native = Scripts::new(
@@ -2357,7 +2367,15 @@ async fn dry_terrain_jump_routes_share_adapters_heat_and_restartable_landing() {
         assert!(unit.flight().is_none());
         assert_eq!(unit.position().unwrap().y, 3);
         assert_eq!(unit.posture(), Posture::Standing);
-        assert_eq!(serde_json::to_value(unit).unwrap()["dice"], before["dice"]);
+        // Landing in deep snow rolls against bogging down; nothing else here draws dice.
+        let mut expected: Dice = serde_json::from_value(before["dice"].clone()).unwrap();
+        if terrain == Terrain::DeepSnow {
+            expected.two_d6();
+        }
+        assert_eq!(
+            serde_json::to_value(unit).unwrap()["dice"],
+            serde_json::to_value(expected).unwrap()
+        );
         assert_eq!(
             unit.heat_rates(&flight_world).production,
             if terrain == Terrain::Fire { 5.0 } else { 0.0 }
@@ -2411,7 +2429,7 @@ async fn water_jump_fixture(
     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     (dir, config, world, id)
 }
@@ -2796,7 +2814,7 @@ async fn free_fall_surface_contact_and_engine_restart_keep_the_event_cadence() {
         support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
         for second in 1..=impact_second {
-            advance_battle_units(&mut world, 0);
+            advance_battle_units(&mut world, 0, true);
             if second == 5 {
                 assert_eq!(world.btech.constructed_units()[&id].power(), Power::Running);
                 assert!(world.btech.constructed_units()[&id].airborne());
@@ -2869,7 +2887,7 @@ async fn restarted_free_fall_can_land_and_retains_its_pending_impact() {
         assert_eq!(world.btech, before);
         start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
         for _ in 0..5 {
-            advance_battle_units(&mut world, 0);
+            advance_battle_units(&mut world, 0, true);
             advance_battle_jumps(
                 &mut world,
                 stompymux_rs::MovementRules {
@@ -3008,7 +3026,7 @@ async fn powered_off_free_fall_stabilization_counts_down_through_restart() {
     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
         assert!(
             advance_battle_jumps(
                 &mut world,

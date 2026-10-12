@@ -311,13 +311,14 @@ pub(super) fn finish_shutdown(
     dropped
 }
 
-/// Advance one simulation second at the supplied Unix time. The caller commits state and notices atomically.
-pub fn advance_units(world: &mut World, now: i64) -> Vec<Notice> {
+/// Advance one simulation second at the supplied Unix time. The caller commits state and notices
+/// atomically. `extended_piloting` selects the piloting skill rolls made by posture changes.
+pub fn advance_units(world: &mut World, now: i64, extended_piloting: bool) -> Vec<Notice> {
     super::radio_experience::advance(world);
     let mut notices = super::scenario_map::advance_detached(world);
     notices.extend(super::vehicle_power::advance(world, now));
     notices.extend(super::dig::advance(world));
-    notices.extend(super::hull_down::advance(world));
+    notices.extend(super::hull_down::advance(world, extended_piloting));
     notices.extend(super::vehicle_pods::advance(world));
     notices.extend(super::crew_recovery::advance(world));
     notices.extend(super::vehicle_control_damage::advance(world));

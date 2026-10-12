@@ -32,7 +32,7 @@ async fn fixture(
     support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, target, ObjectId(1), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     world
         .btech
@@ -47,7 +47,7 @@ async fn fixture(
 fn complete(world: &mut World, id: ObjectId) {
     dig_battle_unit(world, id, ObjectId(1)).unwrap();
     for _ in 0..20 {
-        advance_battle_units(world, 0);
+        advance_battle_units(world, 0, true);
     }
     assert_eq!(world.btech.vehicles()[&id].dig_state(), DigState::covered());
 }
@@ -85,7 +85,7 @@ async fn dig_timer_native_lua_controls_shutdown_and_persistence_share_state() {
             .unwrap();
         assert_eq!(native.world().btech, lua.world().btech);
         for _ in 0..19 {
-            advance_battle_units(&mut lua.world_mut(), 0);
+            advance_battle_units(&mut lua.world_mut(), 0, true);
         }
         assert_eq!(
             lua.world().btech.vehicles()[&id].dig_state(),
@@ -97,8 +97,8 @@ async fn dig_timer_native_lua_controls_shutdown_and_persistence_share_state() {
             .unwrap();
         let mut restarted = persistence::load(&config.database()).await.unwrap();
         assert_eq!(
-            advance_battle_units(&mut lua.world_mut(), 0),
-            advance_battle_units(&mut restarted, 0)
+            advance_battle_units(&mut lua.world_mut(), 0, true),
+            advance_battle_units(&mut restarted, 0, true)
         );
         assert_eq!(lua.world().btech, restarted.btech);
         assert!(
@@ -393,7 +393,7 @@ async fn pickup_clears_completed_cover_but_shutdown_preserves_it() {
     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, carrier, ObjectId(1), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     set_battle_towable(&mut world, target, true).unwrap();
     // Administrative placement clears acquired contacts; restore the carrier's explicit acquisition.
@@ -468,7 +468,7 @@ async fn raw_dig_flags_preserve_overlapping_completion_deadlines() {
         let (_dir, config, mut world, id, _) = fixture(&source, MECH).await;
         dig_battle_unit(&mut world, id, ObjectId(1)).unwrap();
         for _ in 0..3 {
-            advance_battle_units(&mut world, 0);
+            advance_battle_units(&mut world, 0, true);
         }
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "tankcritstatus", "-")
@@ -489,7 +489,7 @@ async fn raw_dig_flags_preserve_overlapping_completion_deadlines() {
         let mut loaded = persistence::load(&config.database()).await.unwrap();
         assert_eq!(loaded.btech, saved.btech);
         for _ in 0..17 {
-            advance_battle_units(&mut loaded, 0);
+            advance_battle_units(&mut loaded, 0, true);
         }
         let dig = loaded.btech.vehicles()[&id].dig_state();
         assert!(dig.dug_in && !dig.digging);
@@ -498,7 +498,7 @@ async fn raw_dig_flags_preserve_overlapping_completion_deadlines() {
         set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "tankcritstatus", "d")
             .unwrap();
         for _ in 0..3 {
-            advance_battle_units(&mut scripts.world_mut(), 0);
+            advance_battle_units(&mut scripts.world_mut(), 0, true);
         }
         assert_eq!(
             scripts.world().btech.vehicles()[&id].dig_state(),

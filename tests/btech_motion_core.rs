@@ -4,11 +4,10 @@
 //! weapon parity through heavy gauss recoil.
 
 use crate::btech_motion_common::{
-    RULES, balance_hit, balance_skill, computer_skill, configured_shot_rules,
-    expected_grass_miss_rolls, fall_rules, fixture, fixture_assets, fixture_source, lock_fixture,
-    optical_aim_rules, overheat_due, overheat_rules, shot_fixture, shot_rules, shot_seed,
-    shot_skill, single_critical_seed, stagger_fixture, stagger_hit, stagger_rules, stand_fixture,
-    water_fall_seed, water_fixture,
+    RULES, balance_hit, balance_skill, computer_skill, configured_shot_rules, fall_rules, fixture,
+    fixture_assets, fixture_source, lock_fixture, optical_aim_rules, overheat_due, overheat_rules,
+    shot_fixture, shot_rules, shot_seed, shot_skill, single_critical_seed, stagger_fixture,
+    stagger_hit, stagger_rules, stand_fixture, water_fall_seed, water_fixture,
 };
 use crate::support;
 use crate::support::{install, restore_database, snapshot_database};
@@ -352,7 +351,7 @@ async fn weapon_expenditure_is_atomic_and_recycle_pauses_through_shutdown_and_re
     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     for _ in 0..14 {
         assert!(advance_battle_recycle(&mut world).is_empty());
@@ -1757,7 +1756,7 @@ async fn tactical_scanners_use_saved_signatures_and_startup_perception() {
     );
     assert_eq!(world.btech, before);
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     assert_eq!(world.btech.constructed_units()[&id].scanner_perception(), 6);
     set_battle_unit_signature(
@@ -2304,7 +2303,7 @@ async fn perception_aim_chooses_the_best_channel_and_never_uses_stale_contacts()
 /// Perception aim includes woods in the target hex and partial cover from shallow water.
 #[tokio::test]
 async fn perception_aim_includes_target_woods_and_shallow_water_cover() {
-    for (tile, target_y, expected) in [("`0", 6, 1), ("~1", 6, 0), ("~1", 7, 3)] {
+    for (tile, target_y, expected) in [("`0", 6, 1), ("~1", 6, 0), ("~1", 7, 1)] {
         let source = format!(
             "12 12\n{}",
             (0..12)
@@ -2335,11 +2334,11 @@ async fn perception_aim_includes_target_woods_and_shallow_water_cover() {
         .unwrap();
         stompymux_rs::refresh_battle_contacts(&mut world, &[id]).unwrap();
         let terrain = stompymux_rs::battle_unit_terrain_los(&world, id, target).unwrap();
-        // Sensor-band cover: path woods, target woods and three for partial cover.
+        // Sensor-band cover: path woods, target woods and one for partial cover.
         assert_eq!(
             i16::from(terrain.woods)
                 + i16::from(terrain.target_woods)
-                + if terrain.partial_cover { 3 } else { 0 },
+                + if terrain.partial_cover { 1 } else { 0 },
             expected,
             "{tile}"
         );
@@ -2537,11 +2536,6 @@ async fn direct_shot_hit_threshold_and_expenditure_match_manual_composition() {
             )
             .unwrap()
         });
-        if !hit {
-            expected_grass_miss_rolls(|| {
-                roll_unit_dice(&mut expected, id, 2).unwrap().iter().sum()
-            });
-        }
         let report =
             resolve_battle_shot(&mut world, id, ObjectId(1), target, 0, shot_rules()).unwrap();
         assert_eq!(report.roll, roll);
@@ -2670,28 +2664,48 @@ async fn direct_shot_partial_cover_uses_one_upper_body_die_per_group() {
         .flags
         .insert(stompymux_rs::Flag::Connected);
     shot_skill(&mut world, 20);
-    let mut dice = stompymux_rs::Dice::seeded([19; 32]);
-    let location = stompymux_rs::HitTable::Punch
-        .location(
-            stompymux_rs::MechChassis::Biped,
-            stompymux_rs::HitArc::Rear,
-            dice.d6(),
-        )
-        .unwrap();
-    shot_seed(&mut world, target, 19);
-    let report =
-        stompymux_rs::resolve_battle_shot(&mut world, id, ObjectId(1), target, 0, shot_rules())
+    // Partial cover costs one to hit and keeps the standard hit table; a leg hit strikes the
+    // cover instead of the target (Total Warfare p. 107).
+    let mut covered_legs = false;
+    let mut struck_body = false;
+    for seed in 0..=40u8 {
+        let mut world = world.clone();
+        let mut dice = stompymux_rs::Dice::seeded([seed; 32]);
+        let location = stompymux_rs::HitTable::Weapon
+            .location(
+                stompymux_rs::MechChassis::Biped,
+                stompymux_rs::HitArc::Rear,
+                dice.two_d6(),
+            )
             .unwrap();
-    assert_eq!(report.aim.perception.unwrap().modifier, 3);
-    let salvo = report.salvo.unwrap().into_mech().unwrap();
-    assert_eq!(salvo.groups.len(), 1);
-    assert_eq!(salvo.groups[0].hit.section, location);
-    assert!(!salvo.groups[0].hit.through_armor_critical);
-    assert!(!salvo.groups[0].hit.crew_stun);
-    assert!(!matches!(
-        location,
-        stompymux_rs::MechSection::LeftLeg | stompymux_rs::MechSection::RightLeg
-    ));
+        shot_seed(&mut world, target, seed);
+        let before = world.btech.constructed_units()[&target].sections().clone();
+        let report =
+            stompymux_rs::resolve_battle_shot(&mut world, id, ObjectId(1), target, 0, shot_rules())
+                .unwrap();
+        assert_eq!(report.aim.perception.unwrap().modifier, 1);
+        let salvo = report.salvo.unwrap().into_mech().unwrap();
+        assert_eq!(salvo.groups.len(), 1);
+        assert_eq!(salvo.groups[0].hit.section, location);
+        assert!(!salvo.groups[0].hit.through_armor_critical);
+        assert!(!salvo.groups[0].hit.crew_stun);
+        let leg = matches!(
+            location,
+            stompymux_rs::MechSection::LeftLeg | stompymux_rs::MechSection::RightLeg
+        );
+        let unchanged = world.btech.constructed_units()[&target].sections() == &before;
+        assert_eq!(unchanged, leg, "seed {seed}: {location:?}");
+        assert_eq!(
+            salvo.groups[0]
+                .notices
+                .iter()
+                .any(|notice| notice.text == "The shot strikes the cover in front of your legs!"),
+            leg
+        );
+        covered_legs |= leg;
+        struck_body |= !leg;
+    }
+    assert!(covered_legs && struck_body);
 }
 
 #[tokio::test]
@@ -4340,7 +4354,7 @@ async fn prone_fire_cannot_cross_the_waterline_before_expenditure() {
     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     assert!(
         stompymux_rs::battle_unit_terrain_los(&world, id, target)
@@ -6840,7 +6854,7 @@ async fn snub_ppc_range_damage_native_lua_and_restart() {
     support::seed_object_dice(&mut base, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut base, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut base, 0);
+        advance_battle_units(&mut base, 0, true);
     }
     let mut definition = base.btech.constructed_units()[&id].definition().clone();
     let arm = definition.sections.get_mut(&MechSection::LeftArm).unwrap();
@@ -7721,9 +7735,6 @@ async fn heavy_gauss_recoil_matrix(classes: &[(u16, i32)]) {
                         .find(|seed| {
                             let mut dice = Dice::seeded([*seed; 32]);
                             let attack = dice.two_d6();
-                            if !hits {
-                                expected_grass_miss_rolls(|| dice.two_d6());
-                            }
                             attack < 10 && dice.two_d6() == 2
                         })
                         .unwrap();
@@ -7769,9 +7780,6 @@ async fn heavy_gauss_recoil_matrix(classes: &[(u16, i32)]) {
                     if speed == 0.0 {
                         let mut expected = Dice::seeded([seed; 32]);
                         expected.two_d6();
-                        if !hits {
-                            expected_grass_miss_rolls(|| expected.two_d6());
-                        }
                         assert_eq!(
                             serde_json::to_value(unit).unwrap()["dice"],
                             serde_json::to_value(expected).unwrap()
@@ -7917,7 +7925,7 @@ async fn heavy_gauss_range_damage_native_lua_and_restart() {
     support::seed_object_dice(&mut base, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut base, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut base, 0);
+        advance_battle_units(&mut base, 0, true);
     }
     let mut definition = base.btech.constructed_units()[&id].definition().clone();
     let torso = definition

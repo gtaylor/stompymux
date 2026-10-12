@@ -91,7 +91,7 @@ async fn core_damage_survives_restart_and_rejects_invalid_phase_targets_atomical
     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     stompymux_rs::start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
-        stompymux_rs::advance_battle_units(&mut world, 0);
+        stompymux_rs::advance_battle_units(&mut world, 0, true);
     }
     stompymux_rs::set_battle_speed(&mut world, id, ObjectId(1), 10.0).unwrap();
     stompymux_rs::advance_battle_motion(

@@ -76,6 +76,8 @@ pub struct FallReport<G, F> {
 pub struct MechFallFeedback {
     pub flooding: Vec<super::SectionExposureReport>,
     pub inferno_notices: Vec<super::Notice>,
+    /// The 'Mech came down in soft ground and is stuck there.
+    pub bogged_down: Option<super::Notice>,
 }
 
 /// A BattleMech's fall.
@@ -324,6 +326,7 @@ fn resolve_material_with_tonnage(
         } else {
             Vec::new()
         };
+        let bogged_down = super::bog_down::stick_after_fall(world, id);
         let unit = world.btech.constructed.get_mut(&id).unwrap();
         let direction_roll = unit.dice.d6();
         let (arc, offset) = super::fall_profile::direction(direction_roll)?;
@@ -400,6 +403,7 @@ fn resolve_material_with_tonnage(
             feedback: MechFallFeedback {
                 flooding,
                 inferno_notices,
+                bogged_down,
             },
         })
     })
@@ -431,6 +435,7 @@ impl MechFallReport {
             notices.push(notice);
         }
         notices.extend(self.feedback.inferno_notices.clone());
+        notices.extend(self.feedback.bogged_down.clone());
         if let Some(fracture) = &self.ice_break {
             super::piloting::append_feedback(
                 private,

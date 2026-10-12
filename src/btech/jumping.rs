@@ -414,6 +414,9 @@ fn launch(
     unit.ground_elevation = None;
     unit.flight = Some(flight);
     unit.last_jump = last_jump;
+    // Jump jets lift a 'Mech clear of any ground it was stuck in.
+    unit.bogged_down = false;
+    unit.slick.reset();
     notices.push(Notice {
         unit: id,
         text: if dfa {
@@ -1221,24 +1224,71 @@ fn finish_landing_inner(
         });
     }
 
-    let check_ice = if character {
-        super::surface_break::check_ice_landing_in_action
-    } else {
-        super::surface_break::check_ice_landing
-    };
+    let mut ice_broke = false;
     if !lost_thrust
         && !uncontrolled
-        && let Some(fracture) = check_ice(world, id, rules)?
+        && let Some(fracture) =
+            super::surface_break::check_ice_jump_landing(world, id, rules, character)?
     {
+        ice_broke = true;
         falls.extend(fracture.falls.into_iter().map(|(_, fall)| fall));
         vehicle_falls.extend(fracture.vehicle_falls.into_iter().map(|(_, fall)| fall));
         super::piloting::append_feedback(&mut pilot_notices, fracture.pilot_notices, notices.len());
         notices.extend(fracture.notices);
     }
     let mut fall = lost_thrust || uncontrolled;
+    let mut fall_levels: u8 = 1;
     let mut landing_failure = None;
     let mut stagger_failed = false;
-    if !lost_thrust && !uncontrolled && action_stagger {
+    // Ice that holds and water both test a 'Mech's footing as it comes down: ice at the +4 it
+    // gives every roll on it (Tactical Operations p. 48), water with an ordinary roll whose
+    // failure tumbles the 'Mech to the bottom (Total Warfare p. 53).
+    if !lost_thrust && !uncontrolled && !ice_broke && !dfa {
+        let unit = &world.btech.constructed_units()[&id];
+        let position = unit.position().context("Landing unit is not placed")?;
+        let tile = world.btech.maps()[&position.map]
+            .base_hex(i64::from(position.x), i64::from(position.y))?;
+        let level = unit.elevation_level(tile);
+        let footing = if tile.is_ice() && level >= i32::from(tile.water_line()) {
+            Some((
+                "You come down on the ice and fight for your footing.",
+                "Your feet go out from under you on the ice!",
+                "lands on the ice and goes down!",
+                1,
+            ))
+        } else if tile.is_open_water() && tile.water_depth() >= 1 {
+            Some((
+                "You come down in the water and fight for your footing.",
+                "You tumble to the bottom!",
+                "lands in the water and tumbles to the bottom!",
+                tile.water_depth(),
+            ))
+        } else {
+            None
+        };
+        if let Some((warning, failure, observed, levels)) = footing {
+            notices.push(Notice {
+                unit: id,
+                text: warning.into(),
+            });
+            let mut check = super::roll_piloting(world, id, 0, rules.extended_piloting)?;
+            super::piloting::capture_feedback(id, pilot, &check, &mut notices, &mut pilot_notices);
+            if character {
+                experience_messages.extend(super::piloting::award_control_check(
+                    world,
+                    id,
+                    &mut check,
+                    rules.extended_piloting,
+                )?);
+            }
+            if !check.success {
+                fall = true;
+                fall_levels = levels;
+                landing_failure = Some((failure, observed));
+            }
+        }
+    }
+    if !lost_thrust && !uncontrolled && !fall && action_stagger {
         notices.push(Notice {
             unit: id,
             text: "The damage you've taken makes the landing a bit harder...".into(),
@@ -1317,9 +1367,9 @@ fn finish_landing_inner(
             notices.extend(super::broadcast::observer_notices(world, id, observed));
         }
         let report = if character && world.objects[&id].flags.contains(Flag::InCharacter) {
-            super::fall::resolve_character_fall(world, id, 1, rules)?
+            super::fall::resolve_character_fall(world, id, fall_levels, rules)?
         } else {
-            super::resolve_fall(world, id, 1, rules)?
+            super::resolve_fall(world, id, fall_levels, rules)?
         };
         report.append_notices(id, &mut notices, &mut pilot_notices);
         falls.push(report);
@@ -1382,6 +1432,33 @@ fn finish_landing_inner(
             id,
             super::magma::MagmaEntry::JumpLanding,
         )?);
+    }
+    // Jumping into a swamp sticks a 'Mech at once, liquid magma may hold it, and other soft
+    // ground takes its ordinary bog-down roll (Tactical Operations pp. 34, 49 and 60).
+    let unit = &world.btech.constructed_units()[&id];
+    if !dfa && !unit.is_destroyed() {
+        let position = unit.position().context("Landing unit is not placed")?;
+        let tile = world.btech.maps()[&position.map]
+            .base_hex(i64::from(position.x), i64::from(position.y))?;
+        let level = unit.elevation_level(tile);
+        let bog = if tile.in_liquid_magma(level) {
+            Some(super::bog_down::roll_to_stick(
+                world,
+                id,
+                0,
+                "magma",
+                rules.extended_piloting,
+                character,
+            )?)
+        } else {
+            let swamp = tile.ground() == super::Ground::Swamp;
+            super::bog_down::enter(world, id, rules.extended_piloting, character, swamp)?
+        };
+        if let Some(bog) = bog {
+            super::piloting::append_feedback(&mut pilot_notices, bog.pilot_notices, notices.len());
+            notices.extend(bog.notices);
+            experience_messages.extend(bog.experience_messages);
+        }
     }
     if !world.btech.constructed_units()[&id].is_destroyed() {
         notices.extend(flood_after_jump(world, id, rules, character, falls)?);

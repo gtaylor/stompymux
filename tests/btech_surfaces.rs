@@ -50,7 +50,7 @@ async fn fixture_asset(
         assign_battle_pilot(&mut world, id, pilot).unwrap();
         start_battle_unit(&mut world, id, pilot, true).unwrap();
         for _ in 0..5 {
-            advance_battle_units(&mut world, 0);
+            advance_battle_units(&mut world, 0, true);
         }
         let mut state = serde_json::to_value(&world.btech).unwrap();
         let unit = &mut state["constructed"][id.0.to_string()];
@@ -197,7 +197,23 @@ fn ice_seed(world: &mut World, id: ObjectId, fracture: bool, avoidance_first: bo
             if avoidance_first {
                 dice.two_d6();
             }
-            (dice.d6() == 1) == fracture
+            // Ice that holds is followed by a +0 footing roll, which these seeds pass.
+            (dice.d6() == 1) == fracture && (fracture || dice.two_d6() >= 11)
+        })
+        .unwrap();
+    world
+        .btech
+        .set_unit_dice(id, Dice::seeded([seed; 32]))
+        .unwrap();
+}
+
+/// Seed the dice for a jump landing on ice: the sheet breaks on a four or better, and ice that
+/// holds is followed by a +4 footing roll these seeds pass.
+fn ice_landing_seed(world: &mut World, id: ObjectId, fracture: bool) {
+    let seed = (0..=255)
+        .find(|seed| {
+            let mut dice = Dice::seeded([*seed; 32]);
+            (dice.d6() <= 3) == fracture && (fracture || dice.two_d6() >= 11)
         })
         .unwrap();
     world
@@ -218,7 +234,7 @@ async fn jump_onto_ice_uses_surface_height_and_commits_seeded_landing_after_rest
             .path();
         assert_eq!(path.sample(0.0, 5).unwrap().elevation, 0.0);
         assert_eq!(path.sample(1.0, 5).unwrap().elevation, 0.0);
-        ice_seed(&mut world, id, fracture, false);
+        ice_landing_seed(&mut world, id, fracture);
         for _ in 0..11 {
             advance_battle_jumps(
                 &mut world,
@@ -848,8 +864,8 @@ async fn ice_standing_native_lua_and_restart_cover_success_failure_and_fracture(
 /// using the retained altitude before and after a restart.
 #[tokio::test]
 async fn optical_water_attenuation_uses_retained_altitude_after_restart() {
-    let (_dir, config, mut world, map, units) = fixture_field(Terrain::Water, 1, 7).await;
-    for (pilot, id, y) in [(ObjectId(1), units[0], 0), (ObjectId(2), units[1], 6)] {
+    let (_dir, config, mut world, map, units) = fixture_field(Terrain::Water, 1, 8).await;
+    for (pilot, id, y) in [(ObjectId(1), units[0], 0), (ObjectId(2), units[1], 7)] {
         stop_battle_unit(
             &mut world,
             id,
@@ -881,7 +897,7 @@ async fn optical_water_attenuation_uses_retained_altitude_after_restart() {
     check(&world, true);
     check(&loaded, true);
     // Administrative placement settles both prone units onto the water bottom.
-    for (id, y) in [(units[0], 0), (units[1], 6)] {
+    for (id, y) in [(units[0], 0), (units[1], 7)] {
         place_battle_unit(&mut loaded, id, map, 1, y).unwrap();
     }
     check(&loaded, false);
@@ -2202,8 +2218,9 @@ async fn unpiloted_reverse_step_bypasses_control_dice_and_preserves_speed() {
     world.validate(&config).unwrap();
 }
 
-/// One shard per terrain symbol and slope direction owns a single fixture; the
-/// skid/speed/success combinations clone it and keep the lockstep replay twin.
+/// One shard per terrain symbol and slope direction owns a single fixture; every speed clones
+/// it and keeps the lockstep replay twin. A change of more than two levels is prohibited
+/// terrain (Total Warfare p. 48): the 'Mech stops at the edge without a roll.
 async fn cliffs_apply_speed_checks_matrix(symbol: char, downhill: bool) {
     let (old, new) = if downhill { (3, 0) } else { (0, 3) };
     let row = format!("{symbol}{new}").repeat(3);
@@ -2212,120 +2229,68 @@ async fn cliffs_apply_speed_checks_matrix(symbol: char, downhill: bool) {
     let (_dir, config, base, _, units) =
         fixture_asset(MapAsset::from_cells(&source).unwrap()).await;
     let id = units[0];
-    let mut probed_fidelity = [false; 2];
-    for skid in [false, true] {
-        for speed in [-53.75f64, -21.5, 21.5, 53.75] {
-            for success in [false, true] {
-                let mut world = base.clone();
-                let modifier = if skid {
-                    if speed.abs() < 30.0 { -1 } else { 1 }
+    let mut probed_fidelity = false;
+    for speed in [-53.75f64, -21.5, 21.5, 53.75] {
+        let mut world = base.clone();
+        prepare_reverse_step(&mut world, id, 12);
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                let motion = &mut record["motion"];
+                motion["speed"] = serde_json::json!(speed);
+                motion["desired_speed"] = serde_json::json!(speed);
+                motion["heading"] = serde_json::json!(if speed > 0.0 { 180.0 } else { 0.0 });
+                motion["desired_heading"] = motion["heading"].clone();
+            })
+            .unwrap();
+        world.validate(&config).unwrap();
+        let before = world.clone();
+        persistence::save(&config.database(), &world).await.unwrap();
+        let mut loaded = persistence::load(&config.database()).await.unwrap();
+        let notices = advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
+        assert_eq!(
+            notices,
+            advance_battle_motion(&mut loaded, MovementRules::STANDARD).unwrap()
+        );
+        assert_eq!(world.btech, loaded.btech);
+        let unit = &world.btech.constructed_units()[&id];
+        assert!(
+            notices.iter().any(|notice| notice.text
+                == if downhill {
+                    "The drop ahead is too steep to walk down."
                 } else {
-                    ((speed + 10.75).abs() / 10.75) as i16 / 3
-                };
-                let target = 6i16 + modifier;
-                prepare_reverse_step(&mut world, id, (target - i16::from(!success)) as u8);
-                world
-                    .btech
-                    .rewrite_unit_record(id, |record| {
-                        let motion = &mut record["motion"];
-                        motion["speed"] = serde_json::json!(speed);
-                        motion["desired_speed"] = serde_json::json!(speed);
-                        motion["heading"] =
-                            serde_json::json!(if speed > 0.0 { 180.0 } else { 0.0 });
-                        motion["desired_heading"] = motion["heading"].clone();
-                    })
-                    .unwrap();
-                world.validate(&config).unwrap();
-                let before = world.clone();
-                persistence::save(&config.database(), &world).await.unwrap();
-                let mut loaded = persistence::load(&config.database()).await.unwrap();
-                let movement = MovementRules {
-                    skid_cliff: skid,
-                    ..MovementRules::STANDARD
-                };
-                let notices = advance_battle_motion(&mut world, movement).unwrap();
-                assert_eq!(
-                    notices,
-                    advance_battle_motion(&mut loaded, movement).unwrap()
-                );
-                assert_eq!(world.btech, loaded.btech);
-                let unit = &world.btech.constructed_units()[&id];
-                assert_eq!(unit.motion().unwrap().speed, 0.0);
-                assert_eq!(unit.motion().unwrap().desired_speed, 0.0);
-                assert_eq!(
-                    unit.posture(),
-                    if success {
-                        Posture::Standing
-                    } else {
-                        Posture::Prone
-                    }
-                );
-                let stayed = success || !downhill;
-                assert_eq!(unit.position().unwrap().y, if stayed { 1 } else { 2 });
-                assert_eq!(
-                    battle_unit_elevation(&world, id).unwrap(),
-                    Some(if stayed { old } else { new })
-                );
-                if stayed {
-                    assert_eq!(
-                        unit.motion().unwrap().point,
-                        before.btech.constructed_units()[&id]
-                            .motion()
-                            .unwrap()
-                            .point
-                    );
-                }
-                if success {
-                    assert!(
-                        notices
-                            .iter()
-                            .any(|notice| { notice.text.starts_with("You manage to stop before") })
-                    );
-                    let mut expected = before.clone();
-                    assert!(
-                        roll_battle_piloting(&mut expected, id, modifier, true)
-                            .unwrap()
-                            .success
-                    );
-                    assert_eq!(
-                        serde_json::to_value(unit).unwrap()["dice"],
-                        serde_json::to_value(&expected.btech.constructed_units()[&id]).unwrap()["dice"]
-                    );
-                } else {
-                    let protection = |unit: &Mech| {
-                        unit.sections()
-                            .values()
-                            .map(|section| {
-                                u32::from(section.armor)
-                                    + u32::from(section.internal)
-                                    + u32::from(section.rear)
-                            })
-                            .sum::<u32>()
-                    };
-                    let lost =
-                        protection(&before.btech.constructed_units()[&id]) - protection(unit);
-                    let levels = if downhill {
-                        3
-                    } else if skid {
-                        1
-                    } else {
-                        ((1.0 + speed / 10.75) as i16 / 4).max(0)
-                    };
-                    assert_eq!(lost, levels as u32 * 4);
-                }
-                world.validate(&config).unwrap();
-                // Final-state fidelity probe once per outcome shape; the lockstep
-                // replay above stays per combination.
-                let shape = usize::from(success);
-                if !probed_fidelity[shape] {
-                    probed_fidelity[shape] = true;
-                    persistence::save(&config.database(), &world).await.unwrap();
-                    assert_eq!(
-                        persistence::load(&config.database()).await.unwrap().btech,
-                        world.btech
-                    );
-                }
-            }
+                    "The slope ahead is too steep to climb."
+                }),
+            "{symbol}{new} downhill={downhill} speed={speed}: {notices:?}"
+        );
+        assert_eq!(unit.posture(), Posture::Standing);
+        assert_eq!(unit.position().unwrap().y, 1);
+        assert_eq!(battle_unit_elevation(&world, id).unwrap(), Some(old));
+        assert_eq!(
+            unit.motion().unwrap().point,
+            before.btech.constructed_units()[&id]
+                .motion()
+                .unwrap()
+                .point
+        );
+        assert_eq!(unit.motion().unwrap().speed, 0.0);
+        assert_eq!(unit.motion().unwrap().desired_speed, 0.0);
+        assert_eq!(
+            serde_json::to_value(unit).unwrap()["dice"],
+            serde_json::to_value(&before.btech.constructed_units()[&id]).unwrap()["dice"]
+        );
+        assert_eq!(
+            unit.sections(),
+            before.btech.constructed_units()[&id].sections()
+        );
+        world.validate(&config).unwrap();
+        if !probed_fidelity {
+            probed_fidelity = true;
+            persistence::save(&config.database(), &world).await.unwrap();
+            assert_eq!(
+                persistence::load(&config.database()).await.unwrap().btech,
+                world.btech
+            );
         }
     }
 }
@@ -2345,9 +2310,52 @@ async fn cliffs_apply_speed_checks_stop_or_fall_and_replay_after_restart_slash_d
     cliffs_apply_speed_checks_matrix('/', true).await;
 }
 
+/// A span three levels overhead is not a cliff: a 'Mech on the bank walks beneath it onto
+/// the river bed one level down, taking the water check, or the reverse-slope check when it
+/// backs in.
 #[tokio::test]
-async fn cliffs_apply_speed_checks_stop_or_fall_and_replay_after_restart_slash_up() {
-    cliffs_apply_speed_checks_matrix('/', false).await;
+async fn tall_bridge_approached_from_the_bank_is_an_underpass_not_a_cliff() {
+    let source = "3 4\n.0.0.0\n.0.0.0\n/3/3/3\n/3/3/3\n";
+    let (_dir, config, base, _, units) = fixture_asset(MapAsset::from_cells(source).unwrap()).await;
+    let id = units[0];
+    for speed in [-53.75f64, -21.5, 21.5, 53.75] {
+        let mut world = base.clone();
+        prepare_reverse_step(&mut world, id, 12);
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                let motion = &mut record["motion"];
+                motion["speed"] = serde_json::json!(speed);
+                motion["desired_speed"] = serde_json::json!(speed);
+                motion["heading"] = serde_json::json!(if speed > 0.0 { 180.0 } else { 0.0 });
+                motion["desired_heading"] = motion["heading"].clone();
+            })
+            .unwrap();
+        world.validate(&config).unwrap();
+        persistence::save(&config.database(), &world).await.unwrap();
+        let mut loaded = persistence::load(&config.database()).await.unwrap();
+        let notices = advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
+        assert_eq!(
+            notices,
+            advance_battle_motion(&mut loaded, MovementRules::STANDARD).unwrap()
+        );
+        assert_eq!(world.btech, loaded.btech);
+        let expected = if speed < 0.0 {
+            "You manage to overcome the obstacle."
+        } else {
+            "You use your piloting skill to maneuver through the water."
+        };
+        assert!(
+            notices.iter().any(|notice| notice.text == expected),
+            "speed={speed}: {notices:?}"
+        );
+        let unit = &world.btech.constructed_units()[&id];
+        assert_eq!(unit.position().unwrap().y, 2, "speed={speed}");
+        assert_eq!(battle_unit_elevation(&world, id).unwrap(), Some(-1));
+        assert_eq!(unit.posture(), Posture::Standing);
+        assert_eq!(unit.motion().unwrap().speed, speed);
+        world.validate(&config).unwrap();
+    }
 }
 
 #[tokio::test]
@@ -2407,7 +2415,7 @@ async fn first_cliff_stops_unpiloted_fast_motion_without_consuming_dice() {
         assert!(
             notices
                 .iter()
-                .any(|notice| notice.text.starts_with("You manage to stop before"))
+                .any(|notice| notice.text.contains("too steep"))
         );
         world.validate(&config).unwrap();
     }
@@ -2497,7 +2505,7 @@ async fn autofall_native_lua_controls_are_atomic_and_survive_restart_and_shutdow
 }
 
 #[tokio::test]
-async fn autofall_skips_only_the_piloted_downhill_avoidance_roll() {
+async fn autofall_changes_nothing_at_a_slope_too_steep_to_enter() {
     for downhill in [false, true] {
         for piloted in [false, true] {
             let (old, new) = if downhill { (3, 0) } else { (0, 3) };
@@ -2519,39 +2527,21 @@ async fn autofall_skips_only_the_piloted_downhill_avoidance_roll() {
             }
             persistence::save(&config.database(), &world).await.unwrap();
             let mut loaded = persistence::load(&config.database()).await.unwrap();
+            // With the preference off the outcome is the same: a stop at the edge.
             let mut expected = world.clone();
-            if downhill && piloted {
-                expected
-                    .btech
-                    .rewrite_unit_record(id, |record| {
-                        let unit = record;
-                        unit["position"]["y"] = serde_json::json!(2);
-                        let point = world.btech.constructed_units()[&id]
-                            .motion()
-                            .unwrap()
-                            .point
-                            .project(180.0, 21.5 / 645.0)
-                            .unwrap();
-                        unit["motion"]["point"] = serde_json::to_value(point).unwrap();
-                    })
-                    .unwrap();
-                let report = resolve_battle_fall(&mut expected, id, 3, rules()).unwrap();
-                assert_eq!(report.avoidance.unwrap().roll, Some(12));
-            } else {
-                expected
-                    .btech
-                    .rewrite_unit_record(id, |record| {
-                        record["auto_fall"] = serde_json::json!(false);
-                    })
-                    .unwrap();
-                advance_battle_motion(&mut expected, MovementRules::STANDARD).unwrap();
-                expected
-                    .btech
-                    .rewrite_unit_record(id, |record| {
-                        record["auto_fall"] = serde_json::json!(true);
-                    })
-                    .unwrap();
-            }
+            expected
+                .btech
+                .rewrite_unit_record(id, |record| {
+                    record["auto_fall"] = serde_json::json!(false);
+                })
+                .unwrap();
+            advance_battle_motion(&mut expected, MovementRules::STANDARD).unwrap();
+            expected
+                .btech
+                .rewrite_unit_record(id, |record| {
+                    record["auto_fall"] = serde_json::json!(true);
+                })
+                .unwrap();
             let notices = advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
             assert_eq!(
                 notices,
@@ -2559,6 +2549,9 @@ async fn autofall_skips_only_the_piloted_downhill_avoidance_roll() {
             );
             assert_eq!(world.btech, loaded.btech);
             assert_eq!(world.btech, expected.btech);
+            let unit = &world.btech.constructed_units()[&id];
+            assert_eq!(unit.posture(), Posture::Standing);
+            assert_eq!(unit.position().unwrap().y, 1);
             world.validate(&config).unwrap();
         }
     }
@@ -2640,7 +2633,7 @@ async fn water_hex_entry_uses_depth_checks_and_replays_success_and_falls() {
 }
 
 #[tokio::test]
-async fn running_into_water_caps_throttle_and_adds_two_to_the_control_check() {
+async fn running_into_water_stops_at_the_edge() {
     for depth in [1, 2] {
         let row = format!("~{depth}").repeat(3);
         let source = format!("3 4\n.0.0.0\n.0.0.0\n{row}\n{row}\n");
@@ -2663,27 +2656,20 @@ async fn running_into_water_caps_throttle_and_adds_two_to_the_control_check() {
             .unwrap();
         let before = world.clone();
         let notices = advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
+        // A running 'Mech may not enter water (Total Warfare p. 54); it stops at the bank.
         assert!(
             notices
                 .iter()
-                .any(|notice| notice.text.contains("run into the water"))
+                .any(|notice| notice.text == "You cannot run into the water!")
         );
         let unit = &world.btech.constructed_units()[&id];
         assert_eq!(unit.posture(), Posture::Standing);
-        assert_eq!(
-            unit.motion().unwrap().speed,
-            maximum - f64::from(depth) * 10.75
-        );
-        assert_eq!(unit.motion().unwrap().desired_speed, maximum * 2.0 / 3.0);
-        let mut expected = before;
-        assert!(
-            roll_battle_piloting(&mut expected, id, i16::from(depth), true)
-                .unwrap()
-                .success
-        );
+        assert_eq!(unit.position().unwrap().y, 1);
+        assert_eq!(unit.motion().unwrap().speed, 0.0);
+        assert_eq!(unit.motion().unwrap().desired_speed, 0.0);
         assert_eq!(
             serde_json::to_value(unit).unwrap()["dice"],
-            serde_json::to_value(&expected.btech.constructed_units()[&id]).unwrap()["dice"]
+            serde_json::to_value(&before.btech.constructed_units()[&id]).unwrap()["dice"]
         );
         world.validate(&config).unwrap();
     }
@@ -2739,7 +2725,13 @@ async fn water_map_depth_preserves_requested_speed_before_a_hex_entry() {
                 );
             }
             let unit = &world.btech.constructed_units()[&id];
-            assert_eq!(unit.motion().unwrap().speed, speed);
+            // Water a level deep costs one extra movement point and deeper water three.
+            let cost = match depth {
+                0 => 1.0,
+                1 => 2.0,
+                _ => 4.0,
+            };
+            assert_eq!(unit.motion().unwrap().speed, speed / cost);
             assert_eq!(unit.motion().unwrap().desired_speed, speed);
             assert_eq!(serde_json::to_value(unit).unwrap()["dice"], dice);
             world.validate(&config).unwrap();
@@ -2791,7 +2783,18 @@ async fn leaving_shallow_water_restores_land_height_and_charges_the_upward_step(
     assert_eq!(unit.position().unwrap().y, 2);
     assert_eq!(battle_unit_elevation(&world, id).unwrap(), Some(0));
     assert_eq!(unit.motion().unwrap().desired_speed, 21.5);
-    assert!((unit.motion().unwrap().speed - (21.5 - 10.75)).abs() < 1e-10);
+    // The water hex's cost slows the step and the climb out costs a level.
+    let proposed = propose_battle_mech_ground_motion(
+        &before,
+        id,
+        before.btech.constructed_units()[&id].motion().unwrap(),
+        HexCoordinate { x: 1, y: 1 },
+        MovementRules::STANDARD,
+    )
+    .unwrap();
+    assert!(
+        (unit.motion().unwrap().speed - (proposed.motion.speed - 10.75).max(0.0)).abs() < 1e-10
+    );
     assert_eq!(
         serde_json::to_value(unit).unwrap()["dice"],
         serde_json::to_value(&before.btech.constructed_units()[&id]).unwrap()["dice"]
@@ -2843,16 +2846,23 @@ async fn bridge_ground_routes_select_lower_or_deck_surface_and_replay() {
                 advance_battle_motion(&mut loaded, MovementRules::STANDARD).unwrap()
             );
             assert_eq!(world.btech, loaded.btech);
+            let row = format!("{reverse} {old_deck} {old_height} {terrain:?} {new_deck} {height}");
             let unit = &world.btech.constructed_units()[&id];
-            assert_eq!(unit.position().unwrap().y, 2);
-            assert_eq!(battle_unit_elevation(&world, id).unwrap(), Some(height));
-            assert_eq!(unit.posture(), Posture::Standing);
+            assert_eq!(unit.position().unwrap().y, 2, "{row}: {notices:?}");
+            assert_eq!(
+                battle_unit_elevation(&world, id).unwrap(),
+                Some(height),
+                "{row}"
+            );
+            assert_eq!(unit.posture(), Posture::Standing, "{row}");
             let map_height = if terrain == Terrain::Water {
                 -new_deck
             } else {
                 new_deck
             };
-            let change: i32 = map_height - old_deck;
+            // Beneath a span the unit stands on the river bed, so the change is measured
+            // between the heights it stands at, not between the decks overhead.
+            let change: i32 = height - old_height;
             let reverse_check = reverse && change != 0;
             let water_check = height < 0 && !reverse_check;
             let mut expected = before.clone();
@@ -2877,7 +2887,11 @@ async fn bridge_ground_routes_select_lower_or_deck_surface_and_replay() {
             } else {
                 0.0
             };
-            assert_eq!(unit.motion().unwrap().speed.abs(), (21.5 - cost).max(0.0));
+            assert_eq!(
+                unit.motion().unwrap().speed.abs(),
+                (21.5 - cost).max(0.0),
+                "{row}"
+            );
             world.validate(&config).unwrap();
             persistence::save(&config.database(), &world).await.unwrap();
             assert_eq!(
@@ -2921,54 +2935,48 @@ async fn below_bridge_water_check_failure_falls_on_the_lower_surface() {
 }
 
 #[tokio::test]
-async fn exiting_below_bridge_retains_mapped_cliff_checks_and_lower_rollback() {
-    for success in [false, true] {
-        let source = "3 4\n/3/3/3\n/3/3/3\n~1~1~1\n~1~1~1\n";
-        let (_dir, config, mut world, _, units) =
-            fixture_asset(MapAsset::from_cells(source).unwrap()).await;
-        let id = units[0];
-        prepare_reverse_step(&mut world, id, if success { 6 } else { 5 });
-        world
-            .btech
-            .rewrite_unit_record(id, |record| {
-                record["ground_elevation"] = serde_json::json!(-1);
-            })
-            .unwrap();
-        let before = world.clone();
-        let notices = advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
-        let unit = &world.btech.constructed_units()[&id];
-        assert_eq!(unit.position().unwrap().y, if success { 1 } else { 2 });
-        assert_eq!(
-            unit.posture(),
-            if success {
-                Posture::Standing
-            } else {
-                Posture::Prone
-            }
-        );
-        assert_eq!(battle_unit_elevation(&world, id).unwrap(), Some(-1));
-        assert_eq!(unit.motion().unwrap().speed, 0.0);
-        if success {
-            assert_eq!(
-                unit.motion().unwrap().point,
-                before.btech.constructed_units()[&id]
-                    .motion()
-                    .unwrap()
-                    .point
-            );
-        }
-        assert!(
-            notices
-                .iter()
-                .any(|notice| notice.text == "You notice a large drop in front of you")
-        );
-        world.validate(&config).unwrap();
-        persistence::save(&config.database(), &world).await.unwrap();
-        assert_eq!(
-            persistence::load(&config.database()).await.unwrap().btech,
-            world.btech
-        );
-    }
+async fn exiting_below_bridge_into_water_of_the_same_depth_takes_only_the_water_check() {
+    let source = "3 4\n/3/3/3\n/3/3/3\n~1~1~1\n~1~1~1\n";
+    let (_dir, config, mut world, _, units) =
+        fixture_asset(MapAsset::from_cells(source).unwrap()).await;
+    let id = units[0];
+    prepare_reverse_step(&mut world, id, 12);
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["ground_elevation"] = serde_json::json!(-1);
+        })
+        .unwrap();
+    let before = world.clone();
+    let notices = advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
+    // The deck above is not the surface the unit stands on, so leaving the span is level
+    // ground and only the water it enters is checked.
+    let unit = &world.btech.constructed_units()[&id];
+    assert_eq!(unit.position().unwrap().y, 2);
+    assert_eq!(unit.posture(), Posture::Standing);
+    assert_eq!(battle_unit_elevation(&world, id).unwrap(), Some(-1));
+    assert!(
+        notices
+            .iter()
+            .any(|notice| notice.text
+                == "You use your piloting skill to maneuver through the water.")
+    );
+    assert!(
+        !notices
+            .iter()
+            .any(|notice| notice.text.contains("behind you"))
+    );
+    let mut expected = before;
+    assert!(
+        roll_battle_piloting(&mut expected, id, -1, true)
+            .unwrap()
+            .success
+    );
+    assert_eq!(
+        serde_json::to_value(unit).unwrap()["dice"],
+        serde_json::to_value(&expected.btech.constructed_units()[&id]).unwrap()["dice"]
+    );
+    world.validate(&config).unwrap();
 }
 
 #[tokio::test]
@@ -3036,6 +3044,10 @@ async fn ground_ice_entry_fractures_neighbors_and_replays_without_repeated_check
                 if !fracture || depth == 0 {
                     let mut dice: Dice = serde_json::from_value(serde_json::to_value(&before.btech.constructed_units()[&id]).unwrap()["dice"].clone()).unwrap();
                     assert_eq!(dice.d6() == 1, fracture);
+                    if !fracture {
+                        // The ice held, so the 'Mech rolled at +0 to keep its feet on it.
+                        dice.two_d6();
+                    }
                     assert_eq!(
                         serde_json::to_value(&world.btech.constructed_units()[&id]).unwrap()["dice"],
                         serde_json::to_value(&dice).unwrap()
@@ -3104,9 +3116,25 @@ async fn submerged_ice_routes_use_bottom_depth_and_depth_one_surface_transition(
             new_terrain
         );
         assert_eq!(battle_unit_elevation(&world, id).unwrap(), Some(height));
-        assert_eq!(
-            world.btech.constructed_units()[&id].motion().unwrap().speed,
-            speed
+        // Ice and deep water cost movement now; the climb between beds costs a level.
+        let proposed = propose_battle_mech_ground_motion(
+            &before,
+            id,
+            before.btech.constructed_units()[&id].motion().unwrap(),
+            HexCoordinate { x: 1, y: 1 },
+            MovementRules::STANDARD,
+        )
+        .unwrap();
+        // The speed column holds the level cost alone; ice and water costs come from the
+        // proposal.
+        let level_cost = 21.5 - speed;
+        let tile = world.btech.maps()[&map].base_hex(1, 2).unwrap();
+        assert!(
+            (world.btech.constructed_units()[&id].motion().unwrap().speed
+                - (proposed.motion.speed - level_cost).max(0.0))
+            .abs()
+                < 1e-10,
+            "{old_terrain:?}{old_depth} -> {new_terrain:?}{new_depth}"
         );
         let mut expected = before;
         if let Some(modifier) = modifier {
@@ -3115,6 +3143,10 @@ async fn submerged_ice_routes_use_bottom_depth_and_depth_one_surface_transition(
                     .unwrap()
                     .success
             );
+        }
+        if height >= i32::from(tile.water_line()) && tile.is_ice() {
+            // Stepping onto the ice sheet rolls at +0 against slipping.
+            let _footing = roll_battle_piloting(&mut expected, id, 0, true).unwrap();
         }
         assert_eq!(
             serde_json::to_value(&world.btech.constructed_units()[&id]).unwrap()["dice"],
@@ -3474,7 +3506,7 @@ async fn landing_in_existing_ice_precedes_the_final_upward_breakout() {
                 record["movement_modifier"] = serde_json::json!(1000);
             })
             .unwrap();
-        ice_seed(&mut world, id, fracture, false);
+        ice_landing_seed(&mut world, id, fracture);
         // Keep the neighbor's fall reproducible: a random reactor breach can add steam
         // and change the jumper's landing damage, independently of ice-break ordering.
         world
@@ -3558,7 +3590,9 @@ async fn landing_in_existing_ice_precedes_the_final_upward_breakout() {
                     .clone(),
             )
             .unwrap();
-            assert_ne!(dice.d6(), 1);
+            // A landing breaks ice on a four or better; ice that holds takes a footing roll.
+            assert!(dice.d6() > 3);
+            dice.two_d6();
             assert_eq!(
                 serde_json::to_value(unit).unwrap()["dice"],
                 serde_json::to_value(dice).unwrap()
@@ -5212,18 +5246,20 @@ async fn woodland_impacts_commit_dice_terrain_and_notices_with_restart_replay() 
     for intent in [
         WoodlandIntent::Ignite,
         WoodlandIntent::Clear,
+        WoodlandIntent::Absorb,
         WoodlandIntent::Incidental,
     ] {
         let (_dir, config, mut world, map, units) = fixture_field(Terrain::HeavyWoods, 2, 3).await;
         let shooter = units[0];
         let seed = (0..=255)
-            .find(|seed| {
-                let roll = Dice::seeded([*seed; 32]).two_d6();
-                if intent == WoodlandIntent::Ignite {
-                    roll >= 4
-                } else {
-                    roll > 5
-                }
+            .find(|seed| Dice::seeded([*seed; 32]).two_d6() >= 4)
+            .unwrap();
+        // Heavy woods have a terrain factor of ninety; most of it is already spent, so one
+        // fifteen-point slug aimed at the hex fells a density.
+        world
+            .btech
+            .rewrite_map_record(map, |record| {
+                record["terrain_damage"] = serde_json::json!({ "1": 80 });
             })
             .unwrap();
         world
@@ -5264,21 +5300,26 @@ async fn woodland_impacts_commit_dice_terrain_and_notices_with_restart_replay() 
         );
         assert_eq!(world.btech, replay.btech);
         assert_eq!(report.map, map);
-        let expected = if intent == WoodlandIntent::Ignite {
-            Terrain::Fire
-        } else {
-            Terrain::LightWoods
+        // A stray slug neither clears nor, from a Gauss rifle, ignites anything.
+        let expected = match intent {
+            WoodlandIntent::Ignite => Terrain::Fire,
+            WoodlandIntent::Clear | WoodlandIntent::Absorb => Terrain::LightWoods,
+            WoodlandIntent::Incidental => Terrain::HeavyWoods,
         };
         assert_eq!(
             world.btech.maps()[&map].hex(1, 0).unwrap().terrain(),
             expected
         );
-        let text = match intent {
-            WoodlandIntent::Ignite => "You ignite 1,0.",
-            WoodlandIntent::Clear => "You clear 1,0.",
-            WoodlandIntent::Incidental => "You accidentally clear 1,0!",
-        };
-        assert_eq!(report.notices[0].text, text);
+        match intent {
+            WoodlandIntent::Ignite => assert_eq!(report.notices[0].text, "You ignite 1,0."),
+            WoodlandIntent::Clear | WoodlandIntent::Absorb => {
+                assert_eq!(report.notices[0].text, "You clear 1,0.")
+            }
+            WoodlandIntent::Incidental => {
+                assert_eq!(report.effect, WoodlandEffect::None);
+                assert!(report.notices.is_empty());
+            }
+        }
         let mut expected_unit =
             serde_json::to_value(&original.btech.constructed_units()[&shooter]).unwrap();
         let actual_unit = serde_json::to_value(&world.btech.constructed_units()[&shooter]).unwrap();
@@ -5631,6 +5672,13 @@ async fn minefields_persist_all_kinds_and_survive_woodland_clearing() {
             .btech
             .rewrite_unit_record(units[0], |record| {
                 record["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
+            })
+            .unwrap();
+        candidate
+            .btech
+            .rewrite_map_record(map, |record| {
+                let index = (record["width"].as_i64().unwrap() + 1).to_string();
+                record["terrain_damage"] = serde_json::json!({ index: 80 });
             })
             .unwrap();
         let report = resolve_woodland_attack(

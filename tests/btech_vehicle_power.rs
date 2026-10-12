@@ -47,7 +47,7 @@ async fn startup_emits_six_stages_and_resumes_only_committed_seconds() {
     assert!(start_battle_unit(&mut world, id, ObjectId(1), false).is_err());
     let mut messages = Vec::new();
     for second in 1..=30 {
-        let notices = advance_battle_units(&mut world, 0);
+        let notices = advance_battle_units(&mut world, 0, true);
         assert_eq!(notices.len(), usize::from(second % 5 == 0));
         messages.extend(notices.into_iter().map(|notice| notice.text));
         if second == 12 {
@@ -71,7 +71,7 @@ async fn startup_emits_six_stages_and_resumes_only_committed_seconds() {
         ]
     );
     assert_eq!(world.btech.vehicles()[&id].power(), Power::Running);
-    assert!(advance_battle_units(&mut world, 0).is_empty());
+    assert!(advance_battle_units(&mut world, 0, true).is_empty());
     assert!(remove_battle_unit(&mut world, id, ObjectId(config.start())).is_err());
     stop_battle_unit(
         &mut world,
@@ -86,10 +86,10 @@ async fn startup_emits_six_stages_and_resumes_only_committed_seconds() {
     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..4 {
-        assert!(advance_battle_units(&mut world, 0).is_empty());
+        assert!(advance_battle_units(&mut world, 0, true).is_empty());
     }
     assert_eq!(
-        advance_battle_units(&mut world, 0)[0].text,
+        advance_battle_units(&mut world, 0, true)[0].text,
         "All systems operational!"
     );
 }
@@ -111,7 +111,7 @@ async fn abort_and_lua_rollback_cancel_pending_startup_and_output() {
     let text = support::run_text(&scripts, &config, ObjectId(1), 1, "shutdown");
     assert!(text.contains("aborted"), "{text}");
     for _ in 0..31 {
-        assert!(advance_battle_units(&mut scripts.world_mut(), 0).is_empty());
+        assert!(advance_battle_units(&mut scripts.world_mut(), 0, true).is_empty());
     }
     assert_eq!(scripts.world().btech.vehicles()[&id].power(), Power::Off);
     assert_eq!(scripts.world().btech.vehicles()[&id].pilot(), None);
@@ -212,7 +212,7 @@ async fn native_vehicle_pilot_departure_and_hull_destruction_reconcile_state() {
     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     stompymux_rs::damage_battle_vehicle_phase(
         &mut world,

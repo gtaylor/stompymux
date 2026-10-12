@@ -41,7 +41,7 @@ async fn jump_heading_rates_preserve_trajectory_and_replay_across_chassis() {
                 support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
                 start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
                 for _ in 0..5 {
-                    advance_battle_units(&mut world, 0);
+                    advance_battle_units(&mut world, 0, true);
                 }
                 let mut saved = serde_json::to_value(&world.btech).unwrap();
                 saved["maps"][map.0.to_string()]["gravity"] = serde_json::json!(gravity);

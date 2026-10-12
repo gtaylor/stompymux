@@ -69,7 +69,7 @@ pub fn hex_illuminated(world: &World, map: ObjectId, target: HexCoordinate) -> R
             continue;
         }
         let (los, distance) = super::los::unit_hex_los(world, id, target)?;
-        if distance < 60.0 && !los.blocked && los.woods <= 2 && los.water == 0 && !los.smoke {
+        if distance < 60.0 && !los.blocked && los.obscuring_points() <= 2 && los.water == 0 {
             return Ok(true);
         }
     }

@@ -1,5 +1,11 @@
 //! Shared delayed building admission; the host evaluates locks and commits movement callbacks.
-use super::{HexCoordinate, Position, Posture};
+//! Entering a building below its roof is also a Total Warfare hazard (p. 167): the crew rolls
+//! against the building's class to come through unscathed, and the structure takes the unit's
+//! weight either way.
+use super::{
+    ConstructionClass, FallRules, HexCoordinate, HitArc, HitTable, Notice, PilotNotice, Position,
+    Posture,
+};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -199,4 +205,129 @@ pub fn advance_building_entry(world: &mut World, id: ObjectId) -> Result<Option<
 pub fn clear_building_entry(world: &mut World, id: ObjectId) -> Result<()> {
     *slot(world, id)? = None;
     Ok(())
+}
+
+/// What crossing a building's threshold did to the unit and the building.
+#[derive(Default)]
+pub(super) struct EntryHazard {
+    pub notices: Vec<Notice>,
+    pub pilot_notices: Vec<PilotNotice>,
+    pub experience_messages: Vec<super::DiagnosticMessage>,
+    pub impacts: Vec<super::blast_damage::BlastImpact>,
+}
+
+/// The driving or piloting modifier a building class adds to the roll to enter it unharmed.
+fn class_modifier(class: ConstructionClass) -> i16 {
+    match class {
+        ConstructionClass::Light => 0,
+        ConstructionClass::Medium => 1,
+        ConstructionClass::Heavy => 2,
+        ConstructionClass::Hardened => 3,
+    }
+}
+
+/// Resolve the hazard of `id` pushing through the entrance it stands on into `interior`. The
+/// building loses a tenth of the unit's tonnage from its integrity; on a failed roll the unit
+/// takes a tenth of the building's remaining integrity from the front.
+pub(super) fn resolve_entry_hazard(
+    world: &mut World,
+    id: ObjectId,
+    interior: ObjectId,
+    rules: FallRules,
+    character: bool,
+) -> Result<EntryHazard> {
+    let mut hazard = EntryHazard::default();
+    let (position, tons) = super::with_unit!(
+        world.btech.unit(id).context("Unit is unavailable")?,
+        |unit| { (unit.position(), u32::from(unit.definition().tons)) }
+    );
+    let position = position.context("Unit is not placed")?;
+    let class = world
+        .btech
+        .maps()
+        .get(&position.map)
+        .context("Map not found")?
+        .base_hex(i64::from(position.x), i64::from(position.y))?
+        .construction_class()
+        .unwrap_or(ConstructionClass::Light);
+    let Some(building) = world.btech.maps().get(&interior).map(|map| map.building) else {
+        return Ok(hazard);
+    };
+    if building.maximum_integrity == 0 {
+        return Ok(hazard);
+    }
+    let name = super::building_entrance::structure_name(world, interior)?;
+    hazard.notices.push(Notice {
+        unit: id,
+        text: format!(
+            "You push through the walls of {name}, a {} structure.",
+            class.label().to_ascii_lowercase()
+        ),
+    });
+    let control = super::terrain_control::check(
+        world,
+        id,
+        class_modifier(class),
+        rules.extended_piloting,
+        character,
+    )?;
+    control.capture_feedback(id, &mut hazard.notices, &mut hazard.pilot_notices);
+    hazard
+        .experience_messages
+        .extend(control.experience_messages);
+    if !control.success && building.integrity > 0 {
+        let damage = u32::try_from((building.integrity + 9) / 10).unwrap_or(u32::MAX);
+        hazard.notices.push(Notice {
+            unit: id,
+            text: format!(
+                "The structure batters you for {damage} points as you force your way in!"
+            ),
+        });
+        let mut remaining = damage;
+        while remaining > 0 {
+            let destroyed =
+                super::with_unit!(world.btech.unit(id).unwrap(), |unit| unit.is_destroyed());
+            if destroyed {
+                break;
+            }
+            let group = remaining.min(5);
+            remaining -= group;
+            let (impact, notices) = super::blast_damage::resolve_packet(
+                world,
+                id,
+                super::blast_damage::MaterialPacket {
+                    amount: group as u16,
+                    table: HitTable::Weapon,
+                    arc: HitArc::Front,
+                    character,
+                    attacker: None,
+                    class: super::DamageClass::Ordinary,
+                },
+                false,
+                rules,
+            )?;
+            impact.append_feedback(&mut hazard.pilot_notices, hazard.notices.len());
+            hazard.notices.extend(notices);
+            hazard.impacts.push(impact);
+        }
+    }
+    let weight = i64::from(tons.div_ceil(10));
+    let record = world.btech.maps.get_mut(&interior).unwrap();
+    let before = record.building.integrity;
+    record.building.integrity = (before - weight).max(0);
+    if record.building.integrity > 0 && before == record.building.maximum_integrity {
+        record.building_repair = record.building.repair_delay();
+    }
+    hazard.notices.push(Notice {
+        unit: id,
+        text: format!(
+            "Your weight costs {name} {weight} points of integrity{}",
+            if record.building.integrity == 0 {
+                ", and it gives way!"
+            } else {
+                "."
+            }
+        ),
+    });
+    Ok(hazard)
 }

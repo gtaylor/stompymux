@@ -81,7 +81,7 @@ pub(crate) async fn fixture_assets(
     shot_seed(&mut world, id, FIXTURE_UNIT_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     (dir, config, world, id)
 }
@@ -172,16 +172,6 @@ pub(crate) async fn shot_fixture() -> (
         .flags
         .insert(stompymux_rs::Flag::Connected);
     (dir, config, world, id, target)
-}
-
-/// Reference incidental misses draw ignition and clearing checks even on grass.
-/// The low ignition branch performs one additional roll before checking terrain.
-pub(crate) fn expected_grass_miss_rolls(mut roll: impl FnMut() -> u8) {
-    let ignition = roll();
-    roll();
-    if ignition <= 3 {
-        roll();
-    }
 }
 
 /// Seed a unit's persisted stream for a reproducible shot scenario.

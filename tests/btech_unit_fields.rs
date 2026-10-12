@@ -1135,11 +1135,11 @@ async fn startup_history_uses_supplied_completion_time_and_preserves_aborted_his
         support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
         for now in [100, 101] {
-            advance_battle_units(&mut world, now);
+            advance_battle_units(&mut world, now, true);
         }
         assert_eq!(history(&world), -50);
         stop_battle_unit(&mut world, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
-        advance_battle_units(&mut world, 102);
+        advance_battle_units(&mut world, 102, true);
         assert_eq!(history(&world), -50);
         for (fast, duration, start) in [(true, 5, 1_800_000_000_i64), (false, 30, 1_900_000_000)] {
             assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
@@ -1147,7 +1147,7 @@ async fn startup_history_uses_supplied_completion_time_and_preserves_aborted_his
             start_battle_unit(&mut world, id, ObjectId(1), fast).unwrap();
             let previous = history(&world);
             for second in 1..=duration {
-                advance_battle_units(&mut world, start + second);
+                advance_battle_units(&mut world, start + second, true);
                 assert_eq!(
                     history(&world),
                     if second == duration {
@@ -1163,7 +1163,7 @@ async fn startup_history_uses_supplied_completion_time_and_preserves_aborted_his
                     world = loaded;
                 }
             }
-            advance_battle_units(&mut world, start + 100);
+            advance_battle_units(&mut world, start + 100, true);
             assert_eq!(history(&world), start + duration);
             stop_battle_unit(&mut world, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
         }
@@ -3164,41 +3164,29 @@ async fn movement_field_rejects_overfilled_quad_limbs_atomically_scenario(f: &Un
     assert_eq!(scripts.world().btech, before);
 }
 
-/// A construction edit cannot strand chassis-specific posture or a pending event.
+/// A construction edit cannot strand a pending event the new movement cannot perform: a
+/// tracked vehicle digging in cannot become a hovercraft.
 async fn movement_field_rejects_incompatible_live_conditions_scenario(f: &UnitFields) {
     let config = &f.config;
     let templates = firing::templates();
-    for (source, movement, expected) in [
-        (&templates[1], "Biped", "Invalid hull-down posture"),
-        (&templates[2], "Hover", "Digging requires"),
-    ] {
-        let (mut world, id, _, _) = f.pair(source, source);
-        let mech = world.btech.constructed_units().contains_key(&id);
-        firing::edit(&mut world, id, |state| {
-            if mech {
-                state["hull_down"] = serde_json::json!({
-                    "active": false, "pending": true, "remaining": 7
-                });
-            } else {
-                state["dig"] = serde_json::to_value(DigState::preparing(7)).unwrap();
-            }
-        });
-        world.validate(config).unwrap();
-        let scripts = &f.native;
-        support::install(scripts, world.clone());
-        let before = scripts.world().btech.clone();
-        let error = set_battle_unit_field_action(
-            scripts,
-            config,
-            ObjectId(1),
-            id,
-            "unitmovetype",
-            movement,
-        )
-        .unwrap_err();
-        assert!(format!("{error:#}").contains(expected), "{error:#}");
-        assert_eq!(scripts.world().btech, before);
-    }
+    let source = &templates[2];
+    let (mut world, id, _, _) = f.pair(source, source);
+    assert!(world.btech.vehicles().contains_key(&id));
+    firing::edit(&mut world, id, |state| {
+        state["dig"] = serde_json::to_value(DigState::preparing(7)).unwrap();
+    });
+    world.validate(config).unwrap();
+    let scripts = &f.native;
+    support::install(scripts, world.clone());
+    let before = scripts.world().btech.clone();
+    let error =
+        set_battle_unit_field_action(scripts, config, ObjectId(1), id, "unitmovetype", "Hover")
+            .unwrap_err();
+    assert!(
+        format!("{error:#}").contains("Digging requires"),
+        "{error:#}"
+    );
+    assert_eq!(scripts.world().btech, before);
 }
 
 /// Vehicles expose no conventional jump course and must not acquire a fabricated flight.

@@ -769,6 +769,13 @@ fn attack_profile_inner(
         (elevation - target_elevation).abs() <= 1,
         "You can't attack, the elevation difference is too large."
     );
+    // A 'Mech wading in water cannot reach a target under the surface, unless the whole attack
+    // happens underwater, as a kick does (Total Warfare p. 145).
+    ensure!(
+        attack.uses_leg()
+            || !(tile.immerses(elevation) && submerged(victim, target_tile, target_elevation)),
+        "You cannot reach a target under the water from where you stand."
+    );
     if attack.uses_leg() {
         ensure!(
             elevation >= target_elevation,
@@ -872,11 +879,9 @@ fn attack_profile_inner(
     };
     let target_movement =
         super::aim::ground_physical_target_modifier(world, victim, rules.extended_movement);
-    // Smoke over the target's tile obscures it like heavy woods.
-    let terrain = match target_tile.overlay() {
-        Some(super::DecorationKind::Smoke) => 2,
-        _ => target_tile.woods_density(),
-    };
+    // Woods and smoke over the target's hex obscure it, light counting one and heavy two.
+    let obscured = map.hex(i64::from(target_position.x), i64::from(target_position.y))?;
+    let terrain = obscured.woods_density() + obscured.smoke_density();
     let light = super::light_aim::modifier(world, target, true)?;
     let tons = source.definition().tons;
     let mut damage = match attack {
@@ -937,6 +942,17 @@ fn attack_profile_inner(
             .then_some(MechSection::LeftArm),
         hit_arc,
     })
+}
+
+/// Whether a 'Mech at `elevation` in `tile` is under the water: standing in water two or more
+/// levels deep, or lying in water at all.
+pub(super) fn submerged(unit: &Mech, tile: Hex, elevation: i32) -> bool {
+    let reach = if unit.posture() == Posture::Prone {
+        0
+    } else {
+        1
+    };
+    tile.holds_water() && elevation + reach < i32::from(tile.water_line())
 }
 
 /// Derive the affected pilot's protection while preserving explicitly supplied fall policy.

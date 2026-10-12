@@ -150,11 +150,6 @@ pub const DIRECTIVES: &[Directive] = &[
         permission: P::GOD,
     },
     Directive {
-        name: "btech_newterrain",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
         name: "btech_xploss",
         parser: "cf_int",
         permission: P::GOD,
@@ -181,11 +176,6 @@ pub const DIRECTIVES: &[Directive] = &[
     },
     Directive {
         name: "allow_chanlurking",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "btech_skidcliff",
         parser: "cf_int",
         permission: P::GOD,
     },

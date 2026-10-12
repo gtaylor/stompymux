@@ -35,6 +35,8 @@ pub(super) fn enter_water(
     let mut pilot_notices = Vec::new();
     let mut experience_messages = Vec::new();
     if check && depth > 0 {
+        // A 'Mech may not run into water (Total Warfare p. 54); movement stops a runner at the
+        // edge, so entering only has to hold its throttle to a walk.
         let walking = unit.movement_maximum_speed() * 2.0 / 3.0;
         let unit = world.btech.constructed.get_mut(&id).unwrap();
         let motion = unit
@@ -42,18 +44,12 @@ pub(super) fn enter_water(
             .as_mut()
             .context("Water entry requires motion")?;
         motion.desired_speed = motion.desired_speed.min(walking);
-        let running = motion.speed > walking + 0.1;
         notices.push(Notice {
             unit: id,
-            text: (if running {
-                "You struggle to keep control as you run into the water!"
-            } else {
-                "You use your piloting skill to maneuver through the water."
-            })
-            .to_owned(),
+            text: "You use your piloting skill to maneuver through the water.".to_owned(),
         });
-        let modifier =
-            if depth > 3 { 1 } else { i16::from(depth) - 2 } + if running { 2 } else { 0 };
+        // Depth 1 is one easier, depth 2 unmodified, depth 3 or more one harder (p. 60).
+        let modifier = if depth > 3 { 1 } else { i16::from(depth) - 2 };
         let mut control = super::roll_piloting(world, id, modifier, rules.extended_piloting)?;
         super::piloting::capture_feedback(id, pilot, &control, &mut notices, &mut pilot_notices);
         if falls.is_some() {

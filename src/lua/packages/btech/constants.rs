@@ -1217,6 +1217,10 @@ pub(super) static TERRAIN_TYPES: StringCatalog = StringCatalog {
             name: "SMOKE",
             value: "smoke",
         },
+        StringEntry {
+            name: "HEAVY_SMOKE",
+            value: "heavy_smoke",
+        },
     ],
 };
 

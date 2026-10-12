@@ -489,7 +489,7 @@ pub(super) fn check_ice_landing(
     id: ObjectId,
     rules: FallRules,
 ) -> Result<Option<SurfaceBreak>> {
-    check_ice_landing_inner(world, id, rules, false)
+    check_ice_landing_inner(world, id, rules, false, false)
 }
 
 /// Character-enabled fracture check inside an action that owns secondary casualties.
@@ -498,15 +498,27 @@ pub(super) fn check_ice_landing_in_action(
     id: ObjectId,
     rules: FallRules,
 ) -> Result<Option<SurfaceBreak>> {
-    check_ice_landing_inner(world, id, rules, true)
+    check_ice_landing_inner(world, id, rules, true, false)
 }
 
-/// Use the same probability and triggering-unit order for either publication mode.
+/// A 'Mech coming down from a jump breaks ice on a four or better (Tactical Operations p. 48).
+pub(super) fn check_ice_jump_landing(
+    world: &mut World,
+    id: ObjectId,
+    rules: FallRules,
+    character: bool,
+) -> Result<Option<SurfaceBreak>> {
+    check_ice_landing_inner(world, id, rules, character, true)
+}
+
+/// Use the same probability and triggering-unit order for either publication mode. Walking
+/// onto ice breaks it one time in six; a jump landing, half the time.
 fn check_ice_landing_inner(
     world: &mut World,
     id: ObjectId,
     rules: FallRules,
     character: bool,
+    jump_landing: bool,
 ) -> Result<Option<SurfaceBreak>> {
     let unit = super::scanner::scanner_unit(world, id).context("Unit not found")?;
     if unit.destroyed {
@@ -529,7 +541,8 @@ fn check_ice_landing_inner(
     if !tile.is_ice() || height < i32::from(tile.water_line()) || hover {
         return Ok(None);
     }
-    if super::dice::unit_dice_mut(world, id)?.d6() != 1 {
+    let roll = super::dice::unit_dice_mut(world, id)?.d6();
+    if roll != 1 && !(jump_landing && roll <= 3) {
         return Ok(None);
     }
     break_surface(

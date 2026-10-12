@@ -384,7 +384,7 @@ fn resolve_shot_inner(
     let submerged = super::weapon_geometry::submerged(world, shooter, weapon_index)?;
     super::weapon_geometry::check_water(selected_weapon, submerged)?;
     super::planetary_conditions::check_wind(world, shooter, selected_weapon)?;
-    super::torpedo::check_target(world, selected_weapon, target)?;
+    super::torpedo::check_target(world, selected_weapon, target, submerged)?;
     if indirect.is_some() {
         super::spotter::check_indirect_water(world, shooter, target)?;
     }
@@ -403,16 +403,6 @@ fn resolve_shot_inner(
         "Weapon is not ready"
     );
     let mount = &loadout.weapons[weapon_index];
-    let position = attacker.position().unwrap();
-    let tile =
-        world.btech.maps()[&position.map].base_hex(i64::from(position.x), i64::from(position.y))?;
-    // Torpedo launchers are built to fire from a submerged leg.
-    ensure!(
-        mount.weapon.is_torpedo()
-            || !(tile.immerses(attacker.elevation_level(tile))
-                && attacker.chassis().is_leg(mount.criticals[0].section)),
-        "Submerged weapon firing requires underwater combat rules"
-    );
     ensure!(
         self_cooling
             || indirect.is_some()

@@ -274,7 +274,7 @@ async fn relay_fixture() -> (tempfile::TempDir, Config, World, ObjectId, Vec<Obj
         set_radio_mode(&mut world, id, ObjectId(1), 0, mode).unwrap();
         start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
         for _ in 0..5 {
-            advance_battle_units(&mut world, 0);
+            advance_battle_units(&mut world, 0, true);
         }
         radio_fact(&mut world, id, |u| u["pilot"] = serde_json::Value::Null);
         units.push(id);
@@ -660,7 +660,7 @@ async fn radio_communication_skill_is_captured_only_on_startup_completion() {
     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, unit, ObjectId(1), true).unwrap();
     for _ in 0..4 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     assert_eq!(world.btech.constructed_units()[&unit].radio_skill(), 6);
     set_battle_character_value(
@@ -673,7 +673,7 @@ async fn radio_communication_skill_is_captured_only_on_startup_completion() {
         },
     )
     .unwrap();
-    advance_battle_units(&mut world, 0);
+    advance_battle_units(&mut world, 0, true);
     assert_eq!(world.btech.constructed_units()[&unit].radio_skill(), 8);
     set_battle_character_value(
         &mut world,
@@ -685,14 +685,14 @@ async fn radio_communication_skill_is_captured_only_on_startup_completion() {
         },
     )
     .unwrap();
-    advance_battle_units(&mut world, 0);
+    advance_battle_units(&mut world, 0, true);
     assert_eq!(world.btech.constructed_units()[&unit].radio_skill(), 8);
     radio_fact(&mut world, unit, |u| {
         u["power"] = serde_json::to_value(Power::Off).unwrap()
     });
     start_battle_unit(&mut world, unit, ObjectId(1), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     assert_eq!(world.btech.constructed_units()[&unit].radio_skill(), 7);
 }
@@ -1067,7 +1067,7 @@ async fn radio_xp_strict_interval_restart_and_shutdown_countdown() {
             .is_empty()
     );
     for _ in 0..60 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     assert_eq!(
         world.btech.constructed_units()[&receiver].radio_experience_remaining(),
@@ -1087,7 +1087,7 @@ async fn radio_xp_strict_interval_restart_and_shutdown_countdown() {
         .unwrap()
         .flags
         .insert(Flag::Connected);
-    advance_battle_units(&mut restored, 0);
+    advance_battle_units(&mut restored, 0, true);
     assert_eq!(
         award_radio_experience(&mut restored, &report, 1061)
             .unwrap()
@@ -1100,7 +1100,7 @@ async fn radio_xp_strict_interval_restart_and_shutdown_countdown() {
     );
     // The ordinary skill interval remains independent of the simulation countdown.
     for _ in 0..61 {
-        advance_battle_units(&mut restored, 0);
+        advance_battle_units(&mut restored, 0, true);
     }
     assert!(
         award_radio_experience(&mut restored, &report, 1062)

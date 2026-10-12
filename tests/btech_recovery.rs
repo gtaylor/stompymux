@@ -67,7 +67,7 @@ async fn recovery_preserves_dice_and_timer_across_injury_restart_and_cockpit_rel
     stompymux_rs::assign_battle_pilot(&mut world, unit, ObjectId(1)).unwrap();
     stompymux_rs::start_battle_unit(&mut world, unit, ObjectId(1), true).unwrap();
     for _ in 0..5 {
-        stompymux_rs::advance_battle_units(&mut world, 0);
+        stompymux_rs::advance_battle_units(&mut world, 0, true);
     }
     assert_eq!(
         world.btech.constructed_units()[&unit].power(),

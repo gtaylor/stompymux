@@ -824,7 +824,7 @@ async fn command_blast_feedback_is_private_ordered_and_replayable() {
     support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, ids[1], pilot, true).unwrap();
     for _ in 0..30 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     let passenger = world.create(&config, "Passenger".into(), Kind::Player);
     world.objects.get_mut(&passenger).unwrap().location = Some(ids[1]);

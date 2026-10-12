@@ -3,14 +3,19 @@ use super::DetectionChannel;
 use crate::btech::{Light, TerrainLos};
 use anyhow::Result;
 
-/// Woods points on the path at which the line is no longer clear.
+/// Woods and smoke points on the path at which the line is no longer clear (Total Warfare
+/// p. 100: three light woods, or a light and a heavy, block line of sight).
 pub(super) const WOODS_LIMIT: u8 = 3;
+
+/// Intervening hexes of planted fields at which the line is no longer clear (Tactical
+/// Operations p. 38).
+pub(super) const FIELDS_LIMIT: u8 = 6;
 
 /// Water hexes between an observer and an underwater target at which the line is no longer clear.
 pub(super) const WATER_LIMIT: u8 = 6;
 
-/// Partial cover adds this to a shot that must clear a ridge line.
-pub(super) const PARTIAL_COVER: i16 = 3;
+/// Partial cover adds this to a shot that must clear a ridge line (Total Warfare p. 107).
+pub(super) const PARTIAL_COVER: i16 = 1;
 
 /// One observation's terrain trace and the observer's current reach, gathered once per pair.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -33,22 +38,26 @@ pub(super) struct SightFacts {
 }
 
 impl SightFacts {
-    /// Hills, buildings, fire, smoke, dense woods and the cloud boundary all break the line.
+    /// Hills, buildings, dense woods or smoke, deep crops and the cloud boundary all break the
+    /// line.
     pub(super) fn clear_line(&self) -> bool {
         let terrain = self.terrain;
         !terrain.blocked
-            && !terrain.fire
-            && !terrain.smoke
-            && terrain.woods < WOODS_LIMIT
+            && terrain.obscuring_points() < WOODS_LIMIT
+            && terrain.fields < FIELDS_LIMIT
             && !self.crosses_clouds
             && (!self.target_underwater || terrain.water < WATER_LIMIT)
             && self.distance <= f64::from(self.ceiling)
     }
 
-    /// Concealment and cover contribute to aim regardless of how the target is perceived.
+    /// Concealment and cover contribute to aim regardless of how the target is perceived:
+    /// woods and smoke on the way and in the target's hex, one for every two hexes of crops,
+    /// and partial cover.
     pub(super) fn cover(&self) -> i16 {
-        i16::from(self.terrain.woods)
+        i16::from(self.terrain.obscuring_points())
             + i16::from(self.terrain.target_woods)
+            + i16::from(self.terrain.target_smoke)
+            + i16::from(self.terrain.fields / 2)
             + partial_cover(self.terrain, self.hull_down)
     }
 }
@@ -179,15 +188,20 @@ mod tests {
                 ..Default::default()
             },
             TerrainLos {
-                fire: true,
+                smoke: WOODS_LIMIT,
                 ..Default::default()
             },
             TerrainLos {
-                smoke: true,
+                woods: 2,
+                smoke: 1,
                 ..Default::default()
             },
             TerrainLos {
                 woods: WOODS_LIMIT,
+                ..Default::default()
+            },
+            TerrainLos {
+                fields: FIELDS_LIMIT,
                 ..Default::default()
             },
         ];
@@ -235,12 +249,16 @@ mod tests {
         );
     }
 
-    /// Woods on the path and in the target hex, partial cover and hull-down all add to aim.
+    /// Woods and smoke on the path and in the target hex, crops, partial cover and hull-down
+    /// all add to aim.
     #[test]
-    fn cover_accumulates_woods_partial_cover_and_hull_down() {
+    fn cover_accumulates_woods_smoke_crops_partial_cover_and_hull_down() {
         let terrain = TerrainLos {
-            woods: 2,
+            woods: 1,
+            smoke: 1,
+            fields: 5,
             target_woods: 1,
+            target_smoke: 2,
             partial_cover: true,
             ..Default::default()
         };
@@ -253,9 +271,9 @@ mod tests {
                 },
                 false
             ),
-            Some((Sensors, 8))
+            Some((Sensors, 10))
         );
-        assert_eq!(partial_cover(terrain, 2), 5);
+        assert_eq!(partial_cover(terrain, 2), 3);
         assert_eq!(
             partial_cover(
                 TerrainLos {

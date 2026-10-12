@@ -384,12 +384,8 @@ impl BrushPanel {
             selected: weather && self.condition == condition,
             edit: BrushEdit::Weather(condition),
         }));
-        let overlays = [
-            Some(DecorationKind::Fire),
-            Some(DecorationKind::Smoke),
-            None,
-        ];
-        let overlays = choices(overlays.into_iter().map(|overlay| Choice {
+        let overlays = DecorationKind::ALL.into_iter().map(Some).chain([None]);
+        let overlays = choices(overlays.map(|overlay| Choice {
             label: overlay.map_or("None", |overlay| overlay.terrain().label()),
             fill: overlay.map(overlay_color),
             selected: !weather && self.overlay == overlay,

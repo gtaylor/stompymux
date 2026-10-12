@@ -41,7 +41,11 @@ impl RadarTarget {
         Ok(Some(
             i16::from(terrain.woods)
                 + i16::from(terrain.target_woods)
-                + if terrain.partial_cover { 2 } else { 0 }
+                + if terrain.partial_cover {
+                    super::sight::PARTIAL_COVER
+                } else {
+                    0
+                }
                 - tracking,
         ))
     }
@@ -141,15 +145,18 @@ mod tests {
             ..Default::default()
         };
         assert_eq!(target(20, true).evaluate(blocked, 1.0, 180).unwrap(), None);
+        // Radar sees through smoke and crops; woods and partial cover still count.
         let covered = TerrainLos {
             woods: 1,
+            smoke: 2,
+            fields: 4,
             target_woods: 2,
             partial_cover: true,
             ..Default::default()
         };
         assert_eq!(
             target(20, false).evaluate(covered, 1.0, 180).unwrap(),
-            Some(2)
+            Some(1)
         );
     }
 }

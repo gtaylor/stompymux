@@ -74,7 +74,7 @@ fn inferno_ammunition_ignites_small_missiles_without_offering_armor_packets() {
     );
     assert_eq!(
         Weapon::Srm2.terrain_ignition_target(AmmunitionMode::Inferno),
-        Some(5)
+        Some(0)
     );
     assert!(
         Weapon::Srm4
@@ -90,6 +90,7 @@ fn inferno_ammunition_ignites_small_missiles_without_offering_armor_packets() {
             AmmunitionMode::Inferno,
             0,
             WoodlandIntent::Ignite,
+            0,
             &mut dice,
         );
         ignited |= matches!(effect, WoodlandEffect::Ignite { .. });

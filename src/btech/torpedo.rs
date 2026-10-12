@@ -35,15 +35,27 @@ pub(super) fn target_in_water(world: &World, target: ObjectId) -> Result<bool> {
     Ok(elevation <= i32::from(tile.water_line()))
 }
 
-/// Torpedoes need a target in the water; other weapons are unaffected.
-pub(super) fn check_target(world: &World, weapon: Weapon, target: ObjectId) -> Result<()> {
-    if !weapon.is_torpedo() {
+/// Torpedoes need a target in the water, and so does any other weapon fired from a submerged
+/// mount: an underwater attack cannot leave the water (Total Warfare p. 107).
+pub(super) fn check_target(
+    world: &World,
+    weapon: Weapon,
+    target: ObjectId,
+    submerged: bool,
+) -> Result<()> {
+    if weapon.is_torpedo() {
+        ensure!(
+            target_in_water(world, target)?,
+            "Torpedoes can only strike targets in the water!"
+        );
         return Ok(());
     }
-    ensure!(
-        target_in_water(world, target)?,
-        "Torpedoes can only strike targets in the water!"
-    );
+    if submerged {
+        ensure!(
+            target_in_water(world, target)?,
+            "Submerged weapons can only strike targets in the water!"
+        );
+    }
     Ok(())
 }
 

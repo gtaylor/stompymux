@@ -177,7 +177,7 @@ async fn operator_inspection_reports_mech_ground_and_vtol_state_without_mutation
         support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, id, ObjectId(2), false).unwrap();
         for _ in 0..30 {
-            advance_battle_units(&mut world, 0);
+            advance_battle_units(&mut world, 0, true);
         }
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         let before = scripts.world().btech.clone();

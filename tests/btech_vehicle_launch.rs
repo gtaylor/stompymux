@@ -27,7 +27,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
     support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     (dir, config, world, id)
 }
@@ -412,8 +412,8 @@ async fn vehicle_feed_jams_follow_burst_thresholds_and_survive_ticks_and_reload(
             replay.btech = serde_json::from_value(saved.clone()).unwrap();
             for _ in 0..130 {
                 assert_eq!(
-                    advance_battle_units(&mut world, 0),
-                    advance_battle_units(&mut replay, 0)
+                    advance_battle_units(&mut world, 0, true),
+                    advance_battle_units(&mut replay, 0, true)
                 );
             }
             assert_eq!(world.btech, replay.btech);

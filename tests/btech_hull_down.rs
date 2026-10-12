@@ -33,7 +33,7 @@ async fn fixture(
     support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     (dir, config, world, id, shooter)
 }
@@ -42,7 +42,7 @@ async fn fixture(
 fn lower(world: &mut World, id: ObjectId) {
     set_battle_hull_down(world, id, ObjectId(1), "").unwrap();
     for _ in 0..3 {
-        advance_battle_units(world, 0);
+        advance_battle_units(world, 0, true);
     }
     assert!(world.btech.constructed_units()[&id].hull_down().active);
 }
@@ -85,14 +85,14 @@ async fn native_lua_transitions_cancel_rollback_and_resume_after_restart() {
     );
     assert_eq!(lua.world().btech, before);
     assert!(lua.drain_outbox().is_empty());
-    advance_battle_units(&mut lua.world_mut(), 0);
+    advance_battle_units(&mut lua.world_mut(), 0, true);
     let saved = lua.world().clone();
     persistence::save(&config.database(), &saved).await.unwrap();
     let mut replay = persistence::load(&config.database()).await.unwrap();
     for _ in 0..2 {
         assert_eq!(
-            advance_battle_units(&mut lua.world_mut(), 0),
-            advance_battle_units(&mut replay, 0)
+            advance_battle_units(&mut lua.world_mut(), 0, true),
+            advance_battle_units(&mut replay, 0, true)
         );
     }
     assert_eq!(lua.world().btech, replay.btech);
@@ -130,7 +130,7 @@ async fn native_lua_transitions_cancel_rollback_and_resume_after_restart() {
     lua.eval_callback::<()>(&format!("btech.unit.hulldown({},1,'-')", id.0))
         .unwrap();
     for _ in 0..3 {
-        advance_battle_units(&mut lua.world_mut(), 0);
+        advance_battle_units(&mut lua.world_mut(), 0, true);
     }
     assert!(
         !lua.world().btech.constructed_units()[&id]
@@ -149,7 +149,7 @@ async fn shutdown_cancels_changes_preserves_completed_posture_and_falls_clear_it
         set_battle_hull_down(&mut world, id, ObjectId(1), "").unwrap();
         if complete {
             for _ in 0..3 {
-                advance_battle_units(&mut world, 0);
+                advance_battle_units(&mut world, 0, true);
             }
         }
         stop_battle_unit(&mut world, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
@@ -174,14 +174,20 @@ async fn shutdown_cancels_changes_preserves_completed_posture_and_falls_clear_it
     }
 }
 
-/// Only quads may lower; speed sets the countdown and invalid saved states fail validation.
+/// Quads and bipeds may lower but vehicles may not; speed sets the countdown and invalid
+/// saved states fail validation.
 #[tokio::test]
 async fn chassis_admission_countdown_bounds_and_invalid_saved_states() {
-    for source in [MECH, VEHICLE] {
-        let (_dir, _, mut world, id, _) = fixture(source, MECH).await;
+    {
+        let (_dir, _, mut world, id, _) = fixture(VEHICLE, MECH).await;
         let before = world.btech.clone();
         assert!(set_battle_hull_down(&mut world, id, ObjectId(1), "").is_err());
         assert_eq!(world.btech, before);
+    }
+    {
+        let (_dir, _, mut world, id, _) = fixture(MECH, MECH).await;
+        set_battle_hull_down(&mut world, id, ObjectId(1), "").unwrap();
+        assert!(world.btech.constructed_units()[&id].hull_down().pending == Some(true));
     }
     let (_dir, config, mut world, id, _) = fixture(QUAD, MECH).await;
     for (speed, delay) in [(0.0, 30), (10.75, 30), (64.5, 5), (96.75, 3), (400.0, 1)] {
@@ -241,7 +247,7 @@ async fn hull_down_cover_is_shared_between_attackers_by_sensors_and_sight() {
             .unwrap();
         let terrain = battle_unit_terrain_los(&world, shooter, id).unwrap();
         assert!(terrain.partial_cover);
-        let cover = i16::from(terrain.woods) + i16::from(terrain.target_woods) + 3;
+        let cover = i16::from(terrain.woods) + i16::from(terrain.target_woods) + 1;
         // The sensor band reaches first; with it switched off, sight carries the same cover.
         for (sensors, channel) in [
             (true, DetectionChannel::Sensors),
@@ -260,7 +266,7 @@ async fn hull_down_cover_is_shared_between_attackers_by_sensors_and_sight() {
             );
             set_battle_hull_down(&mut world, id, ObjectId(1), "-").unwrap();
             for _ in 0..3 {
-                advance_battle_units(&mut world, 0);
+                advance_battle_units(&mut world, 0, true);
             }
         }
         set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, true).unwrap();
@@ -310,7 +316,7 @@ async fn pickup_clears_completed_quad_cover() {
     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, carrier, ObjectId(1), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     set_battle_towable(&mut world, id, true).unwrap();
     world

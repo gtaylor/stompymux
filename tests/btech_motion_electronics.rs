@@ -98,7 +98,7 @@ async fn ams_interception_matrix(entries: &[(stompymux_rs::Weapon, bool, f64, u1
             support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
             start_battle_unit(&mut world, target, ObjectId(2), true).unwrap();
             for _ in 0..5 {
-                advance_battle_units(&mut world, 0);
+                advance_battle_units(&mut world, 0, true);
             }
             set_battle_ams(&mut world, target, ObjectId(2), true).unwrap();
             shot_skill(&mut world, if case == "miss" { 0 } else { 30 });
@@ -324,7 +324,7 @@ async fn ams_native_lua_controls_fire_and_rollback() {
         support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, target, ObjectId(2), true).unwrap();
         for _ in 0..5 {
-            advance_battle_units(&mut world, 0);
+            advance_battle_units(&mut world, 0, true);
         }
         set_battle_ams(&mut world, target, ObjectId(2), true).unwrap();
         shot_skill(&mut world, 30);
@@ -435,7 +435,7 @@ async fn ams_cluster_packets_and_streak_lock() {
         support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, target, ObjectId(2), true).unwrap();
         for _ in 0..5 {
-            advance_battle_units(&mut world, 0);
+            advance_battle_units(&mut world, 0, true);
         }
         set_battle_ams(&mut world, target, ObjectId(2), true).unwrap();
         let mut definition = world.btech.constructed_units()[&id].definition().clone();
@@ -554,7 +554,7 @@ async fn ams_multiple_mount_selection_and_capability_loss() {
         support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, target, ObjectId(2), true).unwrap();
         for _ in 0..5 {
-            advance_battle_units(&mut world, 0);
+            advance_battle_units(&mut world, 0, true);
         }
         set_battle_ams(&mut world, target, ObjectId(2), true).unwrap();
         shot_skill(&mut world, 30);
@@ -747,7 +747,7 @@ async fn narc_pod_outcomes_and_restart() {
                 support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
                 start_battle_unit(&mut world, target, ObjectId(2), true).unwrap();
                 for _ in 0..5 {
-                    advance_battle_units(&mut world, 0);
+                    advance_battle_units(&mut world, 0, true);
                 }
                 set_battle_ams(&mut world, target, ObjectId(2), true).unwrap();
             }
@@ -1276,7 +1276,7 @@ async fn electronics_suppress_narc_and_artemis_guidance() {
                 support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
                 start_battle_unit(&mut world, target, ObjectId(2), true).unwrap();
                 for _ in 0..5 {
-                    advance_battle_units(&mut world, 0);
+                    advance_battle_units(&mut world, 0, true);
                 }
                 shot_skill(&mut world, 30);
                 set_battle_character_value(
@@ -1430,7 +1430,7 @@ async fn electronics_angel_disables_streak_homing() {
                 support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
                 start_battle_unit(&mut world, target, ObjectId(2), true).unwrap();
                 for _ in 0..5 {
-                    advance_battle_units(&mut world, 0);
+                    advance_battle_units(&mut world, 0, true);
                 }
                 toggle_battle_electronics(
                     &mut world,
@@ -1818,7 +1818,7 @@ async fn inarc_outcomes_supply_and_restart() {
                 support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
                 start_battle_unit(&mut world, target, ObjectId(2), true).unwrap();
                 for _ in 0..5 {
-                    advance_battle_units(&mut world, 0);
+                    advance_battle_units(&mut world, 0, true);
                 }
                 set_battle_ams(&mut world, target, ObjectId(2), true).unwrap();
             }
@@ -3805,7 +3805,7 @@ async fn tag_takeover_and_rejected_targets() {
     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, other, ObjectId(1), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     refresh_battle_contacts(&mut world, &[other]).unwrap();
     for rejected in [other, id, ObjectId(999999)] {
@@ -3901,7 +3901,7 @@ async fn semiguided_fixture() -> (
     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, shooter, ObjectId(1), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     refresh_battle_contacts(&mut world, &[shooter]).unwrap();
     let index = world.btech.constructed_units()[&shooter]
@@ -5139,6 +5139,10 @@ async fn direct_hex_shots_commit_launch_terrain_and_restart_replay() {
             &mut encoded["maps"][map.0.to_string()]["terrain"][3 * width + 5],
             stompymux_rs::Terrain::HeavyWoods,
         );
+        // Heavy woods have a terrain factor of ninety; spend most of it so one laser hit
+        // aimed at the hex thins them.
+        encoded["maps"][map.0.to_string()]["terrain_damage"] =
+            serde_json::json!({ (3 * width + 5).to_string(): 85 });
         world.btech = serde_json::from_value(encoded).unwrap();
         shot_skill(&mut world, if hit { 20 } else { 0 });
         select_battle_hex_target(&mut world, shooter, ObjectId(1), coordinate, mode).unwrap();
@@ -5213,6 +5217,8 @@ async fn direct_hex_shots_commit_launch_terrain_and_restart_replay() {
             before.btech.maps()[&map].hex(5, 3).unwrap().terrain(),
             Terrain::HeavyWoods
         );
+        // Heavy woods take ninety points before thinning (Total Warfare p. 112); the terrain
+        // factor already spent plus this shot carries them past it.
         assert_ne!(
             world.btech.maps()[&map].hex(5, 3).unwrap().terrain(),
             Terrain::HeavyWoods
@@ -6614,7 +6620,7 @@ async fn inferno_ammunition_interception_and_overflow_preserve_firing_transactio
     support::seed_object_dice(&mut base, ObjectId(2), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut base, target, ObjectId(2), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut base, 0);
+        advance_battle_units(&mut base, 0, true);
     }
     set_battle_ams(&mut base, target, ObjectId(2), true).unwrap();
     let mut all = false;
@@ -7274,7 +7280,7 @@ async fn stinger_airborne_admission_and_shot_replay() {
     support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, target, ObjectId(2), false).unwrap();
     for _ in 0..30 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     launch_battle_jump(&mut world, target, ObjectId(2), 0, 2.0).unwrap();
     refresh_battle_contacts(&mut world, &[id]).unwrap();

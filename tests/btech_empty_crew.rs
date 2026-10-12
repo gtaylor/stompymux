@@ -77,7 +77,7 @@ async fn empty_crew_injury_recovery_and_restart_share_player_rules() {
             -4
         );
         for _ in 0..3 {
-            advance_battle_units(&mut world, 0);
+            advance_battle_units(&mut world, 0, true);
         }
         let dice = serde_json::to_value(recovery(&world, id)).unwrap()["dice"].clone();
         let injury = injure_battle_tactical_pilot(&mut world, id, 1, false).unwrap();
@@ -91,12 +91,12 @@ async fn empty_crew_injury_recovery_and_restart_share_player_rules() {
         let mut restored = persistence::load(&config.database()).await.unwrap();
         for _ in 0..26 {
             assert_eq!(
-                advance_battle_units(&mut world, 0),
-                advance_battle_units(&mut restored, 0)
+                advance_battle_units(&mut world, 0, true),
+                advance_battle_units(&mut restored, 0, true)
             );
         }
-        let notices = advance_battle_units(&mut world, 0);
-        assert_eq!(notices, advance_battle_units(&mut restored, 0));
+        let notices = advance_battle_units(&mut world, 0, true);
+        assert_eq!(notices, advance_battle_units(&mut restored, 0, true));
         assert!(
             notices.iter().any(
                 |notice| notice.unit == id && notice.text == "The pilot regains consciousness!"
@@ -115,7 +115,7 @@ async fn cockpit_assignment_transfers_pending_recovery_and_death_clears_empty_cr
         let (_dir, config, mut world, id, _) = fixture(vehicle).await;
         injure_battle_tactical_pilot(&mut world, id, 3, false).unwrap();
         for _ in 0..3 {
-            advance_battle_units(&mut world, 0);
+            advance_battle_units(&mut world, 0, true);
         }
         let mut destroyed = world.clone();
         let death = injure_battle_tactical_pilot(&mut destroyed, id, 6, false).unwrap();
@@ -138,7 +138,7 @@ async fn cockpit_assignment_transfers_pending_recovery_and_death_clears_empty_cr
         assert_eq!(recovery(&world, id).mode, RecoveryMode::Ready);
         assert!(world.btech.unconscious(ObjectId(1)));
         assert!(set_battle_speed(&mut world, id, ObjectId(1), 1.0).is_err());
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
         assert_eq!(world.btech.recoveries()[&ObjectId(1)].remaining, 27);
         for _ in 0..27 {
             advance_battle_recovery(&mut world);
@@ -206,7 +206,7 @@ async fn empty_crew_server_recovery_retries_without_spending_unsaved_dice() {
         assert!(battle_contact_observers(&world).is_empty());
         let before = recovery(&world,id).clone();
         let mut expected = world.clone();
-        advance_battle_units(&mut expected, 0);
+        advance_battle_units(&mut expected, 0, true);
         assert_eq!(recovery(&expected,id).remaining,0);
         persistence::save(&config.database(), &world).await.unwrap();
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();

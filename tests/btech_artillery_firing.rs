@@ -66,7 +66,7 @@ async fn fixture_source(
         assign_battle_pilot(&mut world, id, pilot).unwrap();
         start_battle_unit(&mut world, id, pilot, true).unwrap();
         for _ in 0..5 {
-            advance_battle_units(&mut world, 0);
+            advance_battle_units(&mut world, 0, true);
         }
         ids.push(id);
     }
@@ -668,7 +668,7 @@ async fn artillery_observed_launch_and_link_revalidation() {
                     support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
                     start_battle_unit(&mut world, unit, pilot, true).unwrap();
                     for _ in 0..5 {
-                        advance_battle_units(&mut world, 0);
+                        advance_battle_units(&mut world, 0, true);
                     }
                 }
                 select_battle_hex_target(
@@ -698,7 +698,7 @@ async fn artillery_observed_launch_and_link_revalidation() {
                 support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
                 start_battle_unit(&mut world, observer, ObjectId(2), true).unwrap();
                 for _ in 0..5 {
-                    advance_battle_units(&mut world, 0);
+                    advance_battle_units(&mut world, 0, true);
                 }
                 "another battlefield"
             }
@@ -862,7 +862,7 @@ async fn mech_artillery_uses_vehicle_observers_in_slot_order() {
         support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, observer, ObjectId(2), true).unwrap();
         for _ in 0..5 {
-            advance_battle_units(&mut world, 0);
+            advance_battle_units(&mut world, 0, true);
         }
         let scripts =
             Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();

@@ -2,10 +2,10 @@
 //! casualties from battle actions, and pilot experience awards.
 
 use crate::btech_motion_common::{
-    RULES, balance_hit, balance_skill, expected_grass_miss_rolls, fall_rules, fixture,
-    fixture_source, kick_fixture, kick_rules, overheat_due, overheat_rules, prepare_test_charge,
-    shot_fixture, shot_rules, shot_seed, shot_skill, single_critical_seed, stagger_fixture,
-    stagger_hit, stagger_rules, stand_fixture, water_fixture, without_xp_timestamps,
+    RULES, balance_hit, balance_skill, fall_rules, fixture, fixture_source, kick_fixture,
+    kick_rules, overheat_due, overheat_rules, prepare_test_charge, shot_fixture, shot_rules,
+    shot_seed, shot_skill, single_critical_seed, stagger_fixture, stagger_hit, stagger_rules,
+    stand_fixture, water_fixture, without_xp_timestamps,
 };
 use crate::support;
 use crate::support::{install, restore_database, snapshot_database};
@@ -7021,7 +7021,6 @@ async fn character_shot_xp_scaling_and_ineligible_hits() {
         assert_eq!(expected.two_d6(), report.roll);
         if miss {
             assert!(report.salvo.is_none());
-            expected_grass_miss_rolls(|| expected.two_d6());
         } else {
             let salvo = report.salvo.unwrap().into_mech().unwrap();
             assert_eq!(salvo.experience.len(), 1);
@@ -7242,7 +7241,7 @@ async fn movement_experience_cadence_and_restart() {
         support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
         for _ in 0..5 {
-            advance_battle_units(&mut world, 0);
+            advance_battle_units(&mut world, 0, true);
         }
         world
             .objects
@@ -7472,7 +7471,7 @@ async fn physical_control_experience_policy_and_lua_parity() {
             support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
             start_battle_unit(&mut world, target, pilot, true).unwrap();
             for _ in 0..5 {
-                advance_battle_units(&mut world, 0);
+                advance_battle_units(&mut world, 0, true);
             }
             if case != "tactical" {
                 world
@@ -7963,7 +7962,7 @@ async fn nested_trip_fall_protection_experience_traced_once() {
     support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, target, pilot, true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     world
         .objects
@@ -8753,7 +8752,6 @@ async fn heavy_gauss_recoil_experience_policy() {
                 .find(|seed| {
                     let mut dice = Dice::seeded(*seed);
                     let attack = dice.two_d6();
-                    expected_grass_miss_rolls(|| dice.two_d6());
                     attack == 2 && dice.two_d6() == 12
                 })
                 .unwrap();

@@ -28,7 +28,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
     support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     (dir, config, world, id)
 }
@@ -160,15 +160,15 @@ async fn jammed_turret_repairs_replay_and_block_fire_until_all_attempts_finish()
     );
     assert_eq!(before, world.btech);
     for _ in 0..10 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     begin_battle_turret_repair(&mut world, id, ObjectId(1)).unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
     let mut loaded = persistence::load(&config.database()).await.unwrap();
     let mut notices = Vec::new();
     for _ in 0..50 {
-        let step = advance_battle_units(&mut world, 0);
-        assert_eq!(step, advance_battle_units(&mut loaded, 0));
+        let step = advance_battle_units(&mut world, 0, true);
+        assert_eq!(step, advance_battle_units(&mut loaded, 0, true));
         notices.extend(step);
     }
     assert_eq!(notices.len(), 1);
@@ -181,8 +181,8 @@ async fn jammed_turret_repairs_replay_and_block_fire_until_all_attempts_finish()
             .ready
     );
     for _ in 0..10 {
-        let step = advance_battle_units(&mut world, 0);
-        assert_eq!(step, advance_battle_units(&mut loaded, 0));
+        let step = advance_battle_units(&mut world, 0, true);
+        assert_eq!(step, advance_battle_units(&mut loaded, 0, true));
         notices.extend(step);
     }
     assert_eq!(notices.len(), 2);
@@ -203,7 +203,7 @@ async fn turret_repair_expires_offline_and_cannot_clear_a_second_hit_lock() {
     begin_battle_turret_repair(&mut world, id, ObjectId(1)).unwrap();
     stop_battle_unit(&mut world, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
     for _ in 0..60 {
-        assert!(advance_battle_units(&mut world, 0).is_empty());
+        assert!(advance_battle_units(&mut world, 0, true).is_empty());
     }
     assert!(world.btech.vehicles()[&id].turret_jammed());
     assert!(world.btech.vehicles()[&id].turret_repairs().is_empty());
@@ -211,7 +211,7 @@ async fn turret_repair_expires_offline_and_cannot_clear_a_second_hit_lock() {
     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     begin_battle_turret_repair(&mut world, id, ObjectId(1)).unwrap();
     jam_battle_vehicle_turret(&mut world, id).unwrap();
@@ -222,7 +222,7 @@ async fn turret_repair_expires_offline_and_cannot_clear_a_second_hit_lock() {
     assert_eq!(world.btech, checkpoint);
     let mut notices = Vec::new();
     for _ in 0..60 {
-        notices.extend(advance_battle_units(&mut world, 0));
+        notices.extend(advance_battle_units(&mut world, 0, true));
     }
     assert_eq!(notices.len(), 1);
     assert_eq!(notices[0].text, "You are unable to unjam the turret!");
@@ -297,7 +297,7 @@ async fn powered_off_turret_repair_retries_failed_server_ticks() {
         jam_battle_vehicle_turret(&mut world,id).unwrap();
         begin_battle_turret_repair(&mut world,id,ObjectId(1)).unwrap();
         stop_battle_unit(&mut world,id,ObjectId(1),MovementRules::STANDARD.fall).unwrap();
-        for _ in 0..58 {advance_battle_units(&mut world, 0);}
+        for _ in 0..58 {advance_battle_units(&mut world, 0, true);}
         persistence::save(&config.database(),&world).await.unwrap();
         let mut sql=sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         // A running countdown keeps its timer row still; refuse the commit at the snapshot stamp.
@@ -440,7 +440,7 @@ async fn automatic_turret_tracks_moving_units_and_hexes() {
     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     let target = world.create(&config, "Tracking target".into(), Kind::Thing);
     world.objects.get_mut(&target).unwrap().home = Some(ObjectId(config.home()));
@@ -542,7 +542,7 @@ async fn automatic_tracking_is_shared_by_ground_and_rotorcraft() {
         toggle_battle_automatic_turret(&mut world, id, ObjectId(1)).unwrap();
         start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
         for _ in 0..5 {
-            advance_battle_units(&mut world, 0);
+            advance_battle_units(&mut world, 0, true);
         }
         select_battle_hex_target(
             &mut world,

@@ -83,6 +83,10 @@ pub struct StoredMap {
     /// Absent until the terrain dictionary has been explicitly established.
     #[serde(default)]
     pub(crate) terrain: Option<Arc<Vec<Hex>>>,
+    /// Damage each hex's woods, jungle or crops have taken toward their terrain factor, by
+    /// row-major tile position. Like cleared woods, it lasts as long as the loaded terrain.
+    #[serde(default)]
+    pub(crate) terrain_damage: Arc<BTreeMap<u32, u16>>,
     /// Sparse overlays indexed by row-major tile position, independent of source terrain.
     #[serde(default)]
     pub(crate) decorations: Arc<BTreeMap<u32, super::Decoration>>,
@@ -108,6 +112,12 @@ impl StoredMap {
         self.terrain.is_some()
     }
 
+    /// Row-major position of `coordinate` in this map's grids.
+    pub(crate) fn tile_index(&self, coordinate: super::HexCoordinate) -> Result<u32> {
+        self.base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
+        Ok((i64::from(coordinate.y) * self.width + i64::from(coordinate.x)) as u32)
+    }
+
     /// Inspect a decoded tile, rejecting ambiguous maps and invalid coordinates.
     pub fn hex(&self, x: i64, y: i64) -> Result<Hex> {
         let hex = self.base_hex(x, y)?;
@@ -122,6 +132,7 @@ impl StoredMap {
     /// decorations so the terrain grid holds only the ground beneath them.
     pub(crate) fn establish_terrain(&mut self, hexes: Arc<Vec<Hex>>) -> Result<()> {
         self.decorations = Default::default();
+        self.terrain_damage = Default::default();
         if hexes.iter().all(|hex| hex.overlay().is_none()) {
             self.terrain = Some(hexes);
             return Ok(());
@@ -136,7 +147,10 @@ impl StoredMap {
             let order = self
                 .decorations
                 .values()
-                .filter(|effect| effect.kind == kind)
+                .filter(|effect| {
+                    (effect.kind == super::DecorationKind::Fire)
+                        == (kind == super::DecorationKind::Fire)
+                })
                 .count();
             let mut effect = super::Decoration::new(kind, 0, None);
             effect.order = -1 - i64::try_from(order)?;
@@ -1106,6 +1120,7 @@ pub(super) fn map_from_asset(name: &str, asset: MapAsset) -> Result<StoredMap> {
         wind_speed: asset.wind.map_or(0, |wind| i64::from(wind.speed)),
         fire_dice: Some(super::Dice::fresh()),
         terrain: None,
+        terrain_damage: Default::default(),
         decorations: Default::default(),
         static_decorations: Default::default(),
         points_of_interest: Arc::new(asset.points_of_interest),

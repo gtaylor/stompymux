@@ -1179,8 +1179,8 @@ pub use btech::{
 };
 
 pub use btech::{
-    MagmaSnapshot, advance_magma_action as advance_battle_magma_action,
-    magma_snapshot as battle_magma_snapshot,
+    MagmaSnapshot, advance_bog_down_action as advance_battle_bog_down_action,
+    advance_magma_action as advance_battle_magma_action, magma_snapshot as battle_magma_snapshot,
 };
 
 /// Typed advantage names and interpretation, shared with gameplay and Lua inspection.

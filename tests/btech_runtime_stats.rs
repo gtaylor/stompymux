@@ -109,7 +109,7 @@ async fn digging_alone_keeps_simulation_pending_until_completion() {
         support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
         for _ in 0..5 {
-            advance_battle_units(&mut world, 0);
+            advance_battle_units(&mut world, 0, true);
         }
         assert!(battle_contact_observers(&world).is_empty());
         assert!(
@@ -131,7 +131,7 @@ async fn digging_alone_keeps_simulation_pending_until_completion() {
                 assert_eq!(loaded.btech, world.btech);
                 world = loaded;
             }
-            advance_battle_units(&mut world, 0);
+            advance_battle_units(&mut world, 0, true);
         }
         assert_eq!(world.btech.vehicles()[&id].dig_state(), DigState::covered());
         assert!(

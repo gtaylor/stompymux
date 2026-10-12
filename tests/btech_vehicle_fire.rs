@@ -1640,7 +1640,7 @@ async fn vehicle_pod_inspection_and_removal_share_controls_and_saved_countdown()
     assert_eq!(world.btech, pending);
     for _ in 0..59 {
         assert!(
-            !advance_battle_units(&mut world, 0)
+            !advance_battle_units(&mut world, 0, true)
                 .iter()
                 .any(|notice| notice.text.contains("remove all the iNARC"))
         );
@@ -1648,8 +1648,8 @@ async fn vehicle_pod_inspection_and_removal_share_controls_and_saved_countdown()
     assert_eq!(world.btech.vehicles()[&shooter].pod_removal(), Some(1));
     persistence::save(&config.database(), &world).await.unwrap();
     let mut replay = persistence::load(&config.database()).await.unwrap();
-    let notices = advance_battle_units(&mut world, 0);
-    assert_eq!(notices, advance_battle_units(&mut replay, 0));
+    let notices = advance_battle_units(&mut world, 0, true);
+    assert_eq!(notices, advance_battle_units(&mut replay, 0, true));
     assert_eq!(world.btech, replay.btech);
     assert!(
         notices
@@ -1745,7 +1745,7 @@ async fn vehicle_pod_removal_guards_shutdown_and_destruction_preserve_action_bou
                 record["pod_removal"] = 1.into();
             })
             .unwrap();
-        let notices = advance_battle_units(&mut world, 0);
+        let notices = advance_battle_units(&mut world, 0, true);
         assert_eq!(world.btech.vehicles()[&shooter].pod_removal(), None);
         assert_eq!(
             notices.iter().any(
@@ -2408,7 +2408,7 @@ async fn thermal_vehicle_targets_share_replay_feedback_and_rollback() {
                 assert_eq!(native.world().btech, world.btech);
                 assert_eq!(lua.world().btech, world.btech);
                 for _ in 0..60 {
-                    let _ = advance_battle_units(&mut world, 0);
+                    let _ = advance_battle_units(&mut world, 0, true);
                     let _ = advance_battle_heat(&mut world);
                 }
                 assert_eq!(world.btech.vehicles()[&target].weapon_heat(), 1.5 + delta);

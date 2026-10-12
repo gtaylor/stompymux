@@ -30,7 +30,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
     support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(2), false).unwrap();
     for _ in 0..30 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     world.validate(&config).unwrap();
     (dir, config, world, id)
@@ -57,7 +57,7 @@ async fn obstacle_fixture(source: &str) -> (tempfile::TempDir, Config, World, Ob
     support::seed_object_dice(&mut base, ObjectId(2), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut base, id, ObjectId(2), false).unwrap();
     for _ in 0..30 {
-        advance_battle_units(&mut base, 0);
+        advance_battle_units(&mut base, 0, true);
     }
     begin_battle_vtol_takeoff(&mut base, id, ObjectId(2), 0, false).unwrap();
     advance_battle_motion(&mut base, MovementRules::STANDARD).unwrap();

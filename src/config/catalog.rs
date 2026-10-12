@@ -226,12 +226,6 @@ pub const KEYS: &[KeySpec] = &[
         bounds: Some((-2147483648.0, 2147483647.0)),
     },
     KeySpec {
-        path: "battletech.newterrain",
-        legacy: "btech_newterrain",
-        kind: "i64",
-        bounds: Some((-2147483648.0, 2147483647.0)),
-    },
-    KeySpec {
         path: "battletech.xploss",
         legacy: "btech_xploss",
         kind: "i64",
@@ -258,12 +252,6 @@ pub const KEYS: &[KeySpec] = &[
     KeySpec {
         path: "battletech.newstaggertime",
         legacy: "btech_newstaggertime",
-        kind: "i64",
-        bounds: Some((-2147483648.0, 2147483647.0)),
-    },
-    KeySpec {
-        path: "battletech.skidcliff",
-        legacy: "btech_skidcliff",
         kind: "i64",
         bounds: Some((-2147483648.0, 2147483647.0)),
     },

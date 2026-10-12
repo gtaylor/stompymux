@@ -59,6 +59,12 @@ pub struct Vehicle {
     #[serde(default)]
     pub(super) visibility: super::Visibility,
     pub(super) dig: super::DigState,
+    /// Stuck in soft ground until a driving roll at the start of a turn frees it.
+    #[serde(default)]
+    pub(super) bogged_down: bool,
+    /// Heading held on the pavement or ice the vehicle is crossing, for the skid rule.
+    #[serde(default)]
+    pub(super) slick: super::SlickTrack,
     #[serde(default)]
     contract_loadout: bool,
     #[serde(default)]
@@ -238,6 +244,10 @@ struct VehicleRecord {
     visibility: super::Visibility,
     #[serde(default)]
     dig: super::DigState,
+    #[serde(default)]
+    bogged_down: bool,
+    #[serde(default)]
+    slick: super::SlickTrack,
     definition: VehicleTemplate,
     sections: BTreeMap<VehicleSection, SectionState>,
     ammunition: Vec<u16>,
@@ -470,6 +480,8 @@ super::saved_parts::saved_parts!(Vehicle {
         ground_elevation,
         hide_elapsed,
         dig,
+        bogged_down,
+        slick,
         inferno_remaining,
         extinguishing,
         unjam,
@@ -933,6 +945,8 @@ impl Vehicle {
             combat_safe: false,
             visibility: super::Visibility::default(),
             dig: super::DigState::default(),
+            bogged_down: false,
+            slick: Default::default(),
             experience: Default::default(),
             friendly_fire_safety: false,
             auto_fall: false,
@@ -1616,6 +1630,8 @@ impl Vehicle {
             combat_safe: record.combat_safe,
             visibility: record.visibility,
             dig: record.dig,
+            bogged_down: record.bogged_down,
+            slick: record.slick,
             definition: record.definition,
             sections: record.sections,
             ammunition: record.ammunition,

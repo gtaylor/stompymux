@@ -21,7 +21,11 @@ pub(super) fn terrain(hex: Hex) -> &'static str {
         | Terrain::Ice
         | Terrain::ThinSnow
         | Terrain::DeepSnow => "[fg=white bold]",
-        Terrain::Road | Terrain::Pavement | Terrain::Rail | Terrain::Smoke => "[fg=black bold]",
+        Terrain::Road
+        | Terrain::Pavement
+        | Terrain::Rail
+        | Terrain::Smoke
+        | Terrain::HeavySmoke => "[fg=black bold]",
         Terrain::Rough | Terrain::Rubble | Terrain::Sand => "[fg=yellow bold]",
         Terrain::UltraRough | Terrain::UltraRubble | Terrain::Mud | Terrain::Tundra => {
             "[fg=yellow]"

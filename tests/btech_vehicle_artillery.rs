@@ -214,7 +214,7 @@ async fn vehicle_observers_receive_visible_artillery_arrival_notices() {
     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, ids[0], ObjectId(1), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     let mut flight = approaching(&mut world, map, ArtilleryMode::Standard);
     let report = advance_artillery_flight(&mut world, map, &mut flight, rules())

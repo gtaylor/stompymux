@@ -42,7 +42,7 @@ async fn fixture_template(
     support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, shooter, ObjectId(1), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     select_battle_hex_target(
         &mut world,
@@ -248,7 +248,7 @@ async fn vehicle_artillery_correction_uses_mixed_observers_and_replays_aim() {
                 support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
                 start_battle_unit(&mut world, observer, ObjectId(2), true).unwrap();
                 for _ in 0..5 {
-                    advance_battle_units(&mut world, 0);
+                    advance_battle_units(&mut world, 0, true);
                 }
             }
             if !friendly {
@@ -357,7 +357,7 @@ async fn vehicle_artillery_explicit_mixed_spotters_share_targets_and_correction_
         support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, observer, ObjectId(2), true).unwrap();
         for _ in 0..5 {
-            advance_battle_units(&mut world, 0);
+            advance_battle_units(&mut world, 0, true);
         }
         for _ in 0..10 {
             refresh_battle_contacts(&mut world, &[shooter, observer]).unwrap();

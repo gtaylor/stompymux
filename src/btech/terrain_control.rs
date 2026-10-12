@@ -22,6 +22,16 @@ impl TerrainControl {
         }
     }
 
+    /// How far the roll fell short of its target, or zero when it succeeded or was not rolled.
+    pub fn margin_of_failure(&self) -> u8 {
+        match &self.roll {
+            Some(check) if !check.success => check.roll.map_or(0, |roll| {
+                (check.target - i32::from(roll)).clamp(0, 255) as u8
+            }),
+            _ => 0,
+        }
+    }
+
     /// Insert deferred roll feedback after the caller's terrain warning.
     pub fn capture_feedback(
         &self,
@@ -33,6 +43,20 @@ impl TerrainControl {
             super::piloting::capture_feedback(id, self.pilot, check, notices, private);
         }
     }
+}
+
+/// A roll made to step onto a hex, which takes the hex's entry modifier instead of the modifier
+/// the hex adds to rolls forced on units already in it: ice is +0 to step onto and +4 to keep
+/// your feet on (Tactical Operations p. 48).
+pub(super) fn check_entry(
+    world: &mut World,
+    id: ObjectId,
+    modifier: i16,
+    extended: bool,
+    character: bool,
+) -> Result<TerrainControl> {
+    let standing = super::planetary_conditions::terrain_piloting_modifier(world, id);
+    check(world, id, modifier - standing, extended, character)
 }
 
 /// Terrain avoidance succeeds without dice when no pilot is assigned.

@@ -140,11 +140,6 @@
     "permission": "CA_GOD"
   },
   {
-    "name": "btech_newterrain",
-    "parser": "cf_int",
-    "permission": "CA_GOD"
-  },
-  {
     "name": "btech_xploss",
     "parser": "cf_int",
     "permission": "CA_GOD"
@@ -171,11 +166,6 @@
   },
   {
     "name": "allow_chanlurking",
-    "parser": "cf_int",
-    "permission": "CA_GOD"
-  },
-  {
-    "name": "btech_skidcliff",
     "parser": "cf_int",
     "permission": "CA_GOD"
   },

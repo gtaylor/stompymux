@@ -1,4 +1,6 @@
-//! Quad hull-down transitions, shared movement admission, and terrain-cover contributions.
+//! Hull-down transitions, shared movement admission, and terrain-cover contributions. A quad
+//! squats behind its cover; a biped takes a knee and must make a piloting roll to stand again
+//! (Tactical Operations p. 19).
 use super::*;
 use crate::{Flag, ObjectId, Scripts, World};
 use anyhow::{Context, Result, ensure};
@@ -57,8 +59,7 @@ impl Mech {
             return Ok(());
         }
         ensure!(
-            self.chassis() == MechChassis::Quad
-                && self.position().is_some()
+            self.position().is_some()
                 && self.posture() == Posture::Standing
                 && !self.airborne()
                 && self.free_fall().is_none()
@@ -86,11 +87,7 @@ pub fn set_hull_down(
         .btech
         .constructed_units()
         .get(&id)
-        .context("Only quads can go hull-down")?;
-    ensure!(
-        unit.chassis() == MechChassis::Quad,
-        "Only quads can go hull-down"
-    );
+        .context("Only 'Mechs can go hull-down")?;
     ensure!(unit.crew_recovery().remaining == 0, "You are unconscious");
     ensure!(
         unit.posture() == Posture::Standing,
@@ -184,7 +181,9 @@ fn notices(world: &World, id: ObjectId, active: bool, complete: bool) -> Vec<Not
 }
 
 /// Advance through the ordinary committed heartbeat, preserving completed posture on cancellation.
-pub(super) fn advance(world: &mut World) -> Vec<Notice> {
+/// A biped rising from its knee rolls against its piloting skill; failure leaves it down with
+/// the time spent, free to try again.
+pub(super) fn advance(world: &mut World, extended_piloting: bool) -> Vec<Notice> {
     let mut completed = Vec::new();
     for (&id, unit) in &mut world.btech.constructed {
         let Some(active) = unit.hull_down.pending else {
@@ -206,13 +205,39 @@ pub(super) fn advance(world: &mut World) -> Vec<Notice> {
             continue;
         }
         unit.hull_down.pending = None;
-        unit.hull_down.active = active;
-        completed.push((id, active));
+        completed.push((id, active, unit.chassis() != MechChassis::Quad));
     }
-    completed
-        .into_iter()
-        .flat_map(|(id, active)| notices(world, id, active, true))
-        .collect()
+    let mut published = Vec::new();
+    for (id, active, biped) in completed {
+        if !active && biped {
+            let Ok(check) = super::roll_piloting(world, id, 0, extended_piloting) else {
+                continue;
+            };
+            published.extend(
+                check
+                    .messages()
+                    .into_iter()
+                    .flatten()
+                    .map(|text| Notice { unit: id, text }),
+            );
+            if !check.success {
+                published.push(Notice {
+                    unit: id,
+                    text: "You cannot get your knee off the ground.".into(),
+                });
+                continue;
+            }
+        }
+        world
+            .btech
+            .constructed
+            .get_mut(&id)
+            .unwrap()
+            .hull_down
+            .active = active;
+        published.extend(notices(world, id, active, true));
+    }
+    published
 }
 
 /// Hull-down adds two to any aim that must clear existing partial cover.

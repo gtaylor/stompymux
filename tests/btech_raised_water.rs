@@ -48,7 +48,7 @@ async fn field(asset: MapAsset) -> (tempfile::TempDir, World, [ObjectId; 2]) {
         assign_battle_pilot(&mut world, id, pilot).unwrap();
         start_battle_unit(&mut world, id, pilot, true).unwrap();
         for _ in 0..5 {
-            advance_battle_units(&mut world, 0);
+            advance_battle_units(&mut world, 0, true);
         }
         let mut state = serde_json::to_value(&world.btech).unwrap();
         let unit = &mut state["constructed"][id.0.to_string()];
@@ -97,7 +97,7 @@ async fn lifting_a_map_lifts_units_without_changing_what_happens() {
     let (_high_dir, mut high_world, high_units) = field(high).await;
     assert_eq!(units, high_units);
     let mut deepest = 0;
-    for tick in 0..240 {
+    for tick in 0..600 {
         let low_report = advance_battle_motion(&mut low_world, MovementRules::STANDARD);
         let high_report = advance_battle_motion(&mut high_world, MovementRules::STANDARD);
         assert_eq!(
@@ -105,8 +105,8 @@ async fn lifting_a_map_lifts_units_without_changing_what_happens() {
             format!("{high_report:?}"),
             "tick {tick}"
         );
-        advance_battle_units(&mut low_world, 0);
-        advance_battle_units(&mut high_world, 0);
+        advance_battle_units(&mut low_world, 0, true);
+        advance_battle_units(&mut high_world, 0, true);
         for id in units {
             let differing = differing(&outcome(&low_world, id), &outcome(&high_world, id));
             assert!(differing.is_empty(), "tick {tick}: {differing:#?}");
@@ -181,7 +181,7 @@ async fn vehicle_field(
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     let mut state = serde_json::to_value(&world.btech).unwrap();
     let unit = &mut state["vehicles"][id.0.to_string()];
@@ -223,8 +223,8 @@ async fn lifting_a_map_lifts_vehicles_without_changing_what_happens() {
                 format!("{high_report:?}"),
                 "{row} tick {tick}"
             );
-            advance_battle_units(&mut low, 0);
-            advance_battle_units(&mut high, 0);
+            advance_battle_units(&mut low, 0, true);
+            advance_battle_units(&mut high, 0, true);
             let state = |world: &World| {
                 let mut unit = serde_json::to_value(&world.btech.vehicles()[&id]).unwrap();
                 unit.as_object_mut().unwrap().remove("ground_elevation");
@@ -306,7 +306,7 @@ async fn duel(
         assign_battle_pilot(&mut world, id, pilot).unwrap();
         start_battle_unit(&mut world, id, pilot, true).unwrap();
         for _ in 0..5 {
-            advance_battle_units(&mut world, 0);
+            advance_battle_units(&mut world, 0, true);
         }
         let mut state = serde_json::to_value(&world.btech).unwrap();
         let unit = &mut state["constructed"][id.0.to_string()];
@@ -416,8 +416,8 @@ async fn lifting_a_map_keeps_combat_in_water_unchanged() {
             "{context}"
         );
         for _ in 0..30 {
-            advance_battle_units(&mut low, 0);
-            advance_battle_units(&mut high, 0);
+            advance_battle_units(&mut low, 0, true);
+            advance_battle_units(&mut high, 0, true);
         }
         for id in units {
             let differing = differing(&outcome(&low, id), &outcome(&high, id));

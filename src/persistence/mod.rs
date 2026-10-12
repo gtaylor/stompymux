@@ -63,6 +63,7 @@ const TABLES: &[&str] = &[
     "btech_vehicle_timers",
     "btech_map_terrain",
     "btech_map_terrain_codes",
+    "btech_map_terrain_damage",
     "btech_mine_order",
     "btech_landing_order",
     "btech_map_decorations",

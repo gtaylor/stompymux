@@ -126,12 +126,9 @@ impl VehicleTemplateMotion for VehicleTemplate {
             motion.turn_toward(maximum, rules.fasa_turning, 1.0);
         }
         let mut target = motion.desired_speed.abs() / terrain_divisor(hex, self.movement);
-        if (hex.is_road() || hex.has_bridge())
-            && matches!(
-                self.movement,
-                VehicleMovement::Tracked | VehicleMovement::Wheeled
-            )
-        {
+        // Ground vehicles on pavement, a road or a bridge deck gain a point of movement
+        // (Total Warfare p. 61).
+        if hex.is_paved() && self.movement != VehicleMovement::Vtol {
             target *= (maximum + 10.75) / maximum;
         }
         if motion.heading != old_heading {

@@ -40,7 +40,7 @@ async fn fixture(hover: bool) -> (tempfile::TempDir, Config, World, ObjectId, Ob
     support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     set_battle_heading(&mut world, id, ObjectId(1), 90.0).unwrap();
     for _ in 0..10 {
@@ -156,7 +156,7 @@ async fn low_spans_stop_hovercraft_and_inconsistent_saved_underpass_state_is_rej
 
 #[tokio::test]
 async fn low_spans_resolve_control_or_impact_before_restoring_hovercraft_position() {
-    for (success, skid, piloted) in [
+    for (success, _skid, piloted) in [
         (true, false, true),
         (false, false, true),
         (false, true, true),
@@ -181,7 +181,6 @@ async fn low_spans_resolve_control_or_impact_before_restoring_hovercraft_positio
         }
         world.btech = serde_json::from_value(saved).unwrap();
         let rules = MovementRules {
-            skid_cliff: skid,
             ..MovementRules::STANDARD
         };
         let mut collided = false;

@@ -183,8 +183,8 @@ pub use state::{
 pub use stompymux_map::{
     AttackKind, Condition, ConstructionClass, DecorationKind, Density, Flow, Foliage, Ground,
     GroundMovement, Hex, MAX_CONSTRUCTION_FACTOR, MAX_DEPTH, MAX_HEIGHT, MAX_VISIBILITY, MapAsset,
-    MapPointOfInterest, MapRegion, Route, Structure, StructureKind, Terrain, Water, Wind,
-    WindStrength, extreme_temperature_steps, gravity_aim_modifier,
+    MapPointOfInterest, MapRegion, Prohibition, Route, Structure, StructureKind, Terrain, Water,
+    Wind, WindStrength, extreme_temperature_steps, gravity_aim_modifier,
 };
 pub use unit_template::UnitTemplateExt;
 mod vehicle;
@@ -994,14 +994,15 @@ pub use vehicle_fall::{VehicleFallFeedback, VehicleFallReport, resolve_vehicle_f
 
 mod reverse_slope;
 
-mod cliff;
-mod vehicle_cliff;
+mod skid;
+pub use skid::SlickTrack;
+
+mod bog_down;
+pub use bog_down::advance_bog_down_action;
 
 mod vehicle_water;
 
 mod terrain_control;
-
-mod vehicle_obstacle;
 
 mod transport_loss;
 

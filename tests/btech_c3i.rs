@@ -148,7 +148,7 @@ async fn field_with_equipment(
     }
     support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     for _ in 0..5 {
-        advance_battle_units(&mut world, 0);
+        advance_battle_units(&mut world, 0, true);
     }
     let mut encoded = serde_json::to_value(&world.btech).unwrap();
     for &(id, _) in &units {

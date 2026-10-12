@@ -84,11 +84,11 @@ pub struct AimModifiers {
     pub network_range: Option<super::NetworkRange>,
     pub range: Option<WeaponRange>,
     pub attacker_movement: u8,
-    /// Firing at a unit while below the surface in water.
-    pub attacker_water: u8,
     pub target_movement: i8,
     /// Cover from a dug-in target, shared across shooter classes.
     pub dug_in: i16,
+    /// Minus two against a target stuck in soft ground.
+    pub bogged_down: i8,
     /// Accuracy credit for a target within occupied woods under the damage-cover option.
     pub woods_cover: i8,
     /// An intact orbital cocoon makes the target easier to hit.
@@ -139,9 +139,9 @@ impl AimModifiers {
             i32::from(self.gunnery)
                 + i32::from(self.range?.modifier)
                 + i32::from(self.attacker_movement)
-                + i32::from(self.attacker_water)
                 + i32::from(self.target_movement)
                 + i32::from(self.dug_in)
+                + i32::from(self.bogged_down)
                 + i32::from(self.woods_cover)
                 + i32::from(self.orbital_drop)
                 + i32::from(self.light)
@@ -495,7 +495,6 @@ pub(super) fn aim_modifiers_for_source(
         .weapon_damage_effects(weapon_index)?
         .accuracy(modifiers.range.map(|range| range.bracket));
     super::aimed_target::apply_aim(world, shooter, target, mount.weapon, &mut modifiers)?;
-    modifiers.attacker_water = water_modifier(world, shooter)?;
     modifiers.self_target = shooter == target && mount.weapon == Weapon::CoolantGun;
     modifiers.indirect = indirect;
     modifiers.range = modifiers
@@ -504,6 +503,7 @@ pub(super) fn aim_modifiers_for_source(
     modifiers.ammunition_accuracy += target_terms.ammunition_accuracy;
     modifiers.target_movement = target_terms.movement;
     modifiers.dug_in = target_terms.dug_in;
+    modifiers.bogged_down = target_terms.bogged_down;
     modifiers.woods_cover = target_terms.woods_cover;
     modifiers.orbital_drop = target_terms.orbital_drop;
     modifiers.light = target_terms.light;
@@ -598,9 +598,9 @@ pub(super) fn weapon_base(
             ammunition,
         )?,
         attacker_movement: 0,
-        attacker_water: 0,
         target_movement: 0,
         dug_in: 0,
+        bogged_down: 0,
         woods_cover: 0,
         orbital_drop: 0,
         light: 0,
@@ -652,30 +652,13 @@ pub(super) fn ground_physical_target_modifier(world: &World, target: &Mech, exte
         }
 }
 
-/// The water term depends on the attacker's actual terrain and signed elevation, not its target.
-/// Coordinate-only attacks retain their independent base calculation.
-pub(super) fn water_modifier(world: &World, shooter: ObjectId) -> Result<u8> {
-    let position = super::scanner::scanner_unit(world, shooter)
-        .and_then(|unit| unit.position)
-        .context("Shooter is not placed")?;
-    let tile = world
-        .btech
-        .maps()
-        .get(&position.map)
-        .context("Map not found")?
-        .base_hex(i64::from(position.x), i64::from(position.y))?;
-    Ok(u8::from(
-        tile.is_open_water()
-            && super::unit_elevation(world, shooter)?
-                .is_some_and(|z| z < i32::from(tile.water_line())),
-    ))
-}
-
 /// Target-owned aim contributions, independent of the firing unit's construction.
 pub(super) struct TargetAimModifiers {
     /// Target-specific ammunition adjustment added to the weapon base.
     pub ammunition_accuracy: i8,
     pub dug_in: i16,
+    /// Minus two against a target stuck in soft ground.
+    pub bogged_down: i8,
     pub woods_cover: i8,
     /// An intact orbital cocoon makes the target easier to hit.
     pub orbital_drop: i16,
@@ -738,6 +721,7 @@ pub(super) fn target_modifiers(
             cocoon,
         ),
         dug_in: super::dig::cover_modifier(world, shooter, target, rules)?,
+        bogged_down: super::bog_down::target_modifier(world, target),
         woods_cover: if rules.woods_damage {
             -occupied_woods(world, target)?
         } else {
@@ -758,7 +742,7 @@ pub(super) fn target_modifiers(
     })
 }
 
-/// Underlying forest protects targets up to and including two elevation levels above its ground.
+/// Underlying forest protects targets standing within its canopy.
 /// Smoke and fire overlays do not replace the source terrain used by this rule.
 pub(super) fn occupied_woods(world: &World, target: ObjectId) -> Result<i8> {
     let position = super::scanner::scanner_unit(world, target)
@@ -771,7 +755,7 @@ pub(super) fn occupied_woods(world: &World, target: ObjectId) -> Result<i8> {
         .context("Map not found")?;
     let tile = map.base_hex(i64::from(position.x), i64::from(position.y))?;
     let elevation = super::unit_elevation(world, target)?.context("Target is not placed")?;
-    if elevation > i32::from(tile.level()) + 2 {
+    if elevation > i32::from(tile.level()) + i32::from(tile.foliage_height()) {
         return Ok(0);
     }
     Ok(tile.woods_density() as i8)

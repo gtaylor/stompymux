@@ -233,6 +233,21 @@ impl Foliage {
         }
     }
 
+    /// Terrain factor: the damage this foliage takes before weapons fire reduces it, from
+    /// Tactical Operations' terrain factor table. Heavy and ultra-heavy growth thins one density,
+    /// light woods and jungle fall to rough ground, and planted fields are flattened to clear.
+    pub const fn terrain_factor(self) -> u16 {
+        match self {
+            Self::LightWoods => 50,
+            Self::HeavyWoods => 90,
+            Self::UltraHeavyWoods => 120,
+            Self::LightJungle => 60,
+            Self::HeavyJungle => 100,
+            Self::UltraHeavyJungle => 130,
+            Self::PlantedFields => 30,
+        }
+    }
+
     /// This foliage cut back one density, or `None` when it is cleared entirely.
     pub const fn thinned(self) -> Option<Self> {
         let Some(density) = self.density() else {
@@ -371,20 +386,52 @@ impl Condition {
     }
 }
 
-/// Visible fire or smoke laid over a hex.
+/// Visible fire or smoke laid over a hex. Smoke comes in two densities, after Tactical
+/// Operations: light smoke, which most fires give off and which obscures like light woods, and
+/// heavy smoke from smoke rounds, infernos and burning heavy buildings, which obscures like
+/// heavy woods.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum DecorationKind {
     Fire,
     Smoke,
+    HeavySmoke,
 }
 
 impl DecorationKind {
+    /// Every kind, in palette order.
+    pub const ALL: [Self; 3] = [Self::Fire, Self::Smoke, Self::HeavySmoke];
+
     /// Terrain identity used by movement, visibility and map inspection.
-    pub fn terrain(self) -> crate::Terrain {
+    pub const fn terrain(self) -> crate::Terrain {
         match self {
             Self::Fire => crate::Terrain::Fire,
             Self::Smoke => crate::Terrain::Smoke,
+            Self::HeavySmoke => crate::Terrain::HeavySmoke,
+        }
+    }
+
+    /// Whether this is smoke of either density.
+    pub const fn is_smoke(self) -> bool {
+        matches!(self, Self::Smoke | Self::HeavySmoke)
+    }
+
+    /// Line-of-sight and to-hit points this overlay adds, counted like woods: light smoke
+    /// one, heavy smoke two. Fire itself does not obscure; the smoke it gives off does.
+    pub const fn density(self) -> u8 {
+        match self {
+            Self::Fire => 0,
+            Self::Smoke => 1,
+            Self::HeavySmoke => 2,
+        }
+    }
+
+    /// Display name for editors and reports.
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Fire => "Fire",
+            Self::Smoke => "Smoke",
+            Self::HeavySmoke => "Heavy smoke",
         }
     }
 }

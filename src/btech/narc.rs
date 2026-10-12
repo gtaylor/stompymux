@@ -1,5 +1,5 @@
 //! Narc beacon attachment, surviving-section transfer and compatible missile controls.
-use super::{AmmunitionMode, HitArc, HitRules, HitTable, Mech, MechSection, Notice, Weapon};
+use super::{AmmunitionMode, HitArc, HitRules, Mech, MechSection, Notice, Weapon};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -115,17 +115,11 @@ pub(super) fn attach(
     )?;
     let partial_cover = super::unit_terrain_los(world, shooter, target)?.partial_cover;
     let mut dice = unit.dice.clone();
-    let (location, crew_stun) = if partial_cover {
-        (
-            HitTable::Punch.location(unit.chassis(), arc, dice.d6())?,
-            false,
-        )
-    } else {
-        let roll = dice.generic_roll();
-        let hit = rules.resolve(unit, arc, roll, &mut dice)?;
-        (hit.section, hit.crew_stun)
-    };
-    let mut section = Some(location);
+    let roll = dice.generic_roll();
+    let hit = rules.resolve(unit, arc, roll, &mut dice)?;
+    let (location, crew_stun) = (hit.section, hit.crew_stun);
+    // A pod aimed at legs behind partial cover sticks to the cover instead.
+    let mut section = (!(partial_cover && unit.chassis().is_leg(location))).then_some(location);
     while let Some(current) = section {
         if unit.sections()[&current].internal > 0 {
             break;

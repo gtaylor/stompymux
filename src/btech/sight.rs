@@ -343,7 +343,12 @@ fn check_unit_target(
             "Stinger missiles can only engage airborne targets!"
         );
     }
-    super::torpedo::check_target(world, weapon, target)?;
+    super::torpedo::check_target(
+        world,
+        weapon,
+        target,
+        super::weapon_geometry::submerged(world, shooter, index)?,
+    )?;
     let indirect = super::spotter::indirect_target_for_source(world, targeting, index)?;
     if indirect.is_some() {
         super::spotter::check_indirect_water(world, shooter, target)?;

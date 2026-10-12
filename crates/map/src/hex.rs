@@ -93,6 +93,7 @@ impl Hex {
             Terrain::Wall => Self::at_level(0).with_structure(Some(Structure::wall(digit))),
             Terrain::Fire => dry.with_overlay(Some(DecorationKind::Fire)),
             Terrain::Smoke => dry.with_overlay(Some(DecorationKind::Smoke)),
+            Terrain::HeavySmoke => dry.with_overlay(Some(DecorationKind::HeavySmoke)),
         }
     }
 
@@ -265,10 +266,8 @@ impl Hex {
     /// or ice over it, then a road or rail line (which sets the hex's movement cost), then
     /// foliage, then ice, snow or mud, then the ground. Rules ask the layers instead.
     pub const fn terrain(self) -> Terrain {
-        match self.overlay {
-            Some(DecorationKind::Fire) => return Terrain::Fire,
-            Some(DecorationKind::Smoke) => return Terrain::Smoke,
-            None => {}
+        if let Some(kind) = self.overlay {
+            return kind.terrain();
         }
         if let Some(structure) = self.structure {
             return match structure.kind {
@@ -351,11 +350,30 @@ impl Hex {
         matches!(self.overlay, Some(DecorationKind::Fire))
     }
 
+    /// Whether smoke of either density lies over this hex.
+    pub const fn is_smoky(self) -> bool {
+        matches!(self.overlay, Some(kind) if kind.is_smoke())
+    }
+
+    /// Line-of-sight and to-hit points of the smoke over this hex: light smoke one, heavy
+    /// smoke two, otherwise zero. Smoke rises two levels above the ground beneath it.
+    pub const fn smoke_density(self) -> u8 {
+        match self.overlay {
+            Some(kind) => kind.density(),
+            None => 0,
+        }
+    }
+
     /// Whether a road of any surface runs through this hex with nothing built over it.
     pub const fn is_road(self) -> bool {
         matches!(self.route, Some(route) if route.is_road())
             && self.water.is_none()
             && self.structure.is_none()
+    }
+
+    /// Whether a unit here travels on a paved surface: pavement, a road or a bridge deck.
+    pub const fn is_paved(self) -> bool {
+        self.is_road() || self.has_bridge() || matches!(self.ground, Ground::Pavement)
     }
 
     /// Whether a bridge spans this hex.

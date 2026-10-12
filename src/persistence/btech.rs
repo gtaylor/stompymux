@@ -61,6 +61,7 @@ pub(super) async fn load(c: &mut SqliteConnection) -> Result<BtechState> {
                 wind_direction: row.try_get("wind_direction")?,
                 wind_speed: row.try_get("wind_speed")?,
             fire_dice: None,
+            terrain_damage: Default::default(),
             decorations: Default::default(),
             static_decorations: Default::default(),
             points_of_interest: Default::default(),
@@ -393,6 +394,9 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
                 &values,
             )
             .await?;
+            if previous.is_some_and(|old| old.terrain_damage != map.terrain_damage) {
+                super::btech_terrain::save_damage(c, *id, map).await?;
+            }
             sqlx::query("DELETE FROM btech_map_los WHERE map_dbref=?")
                 .bind(id.0)
                 .execute(&mut *c)
@@ -432,6 +436,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
             .await?;
         }
         super::btech_terrain::save(c, *id, map).await?;
+        super::btech_terrain::save_damage(c, *id, map).await?;
         sqlx::query("DELETE FROM btech_map_los WHERE map_dbref=?")
             .bind(id.0)
             .execute(&mut *c)

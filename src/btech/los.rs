@@ -1,4 +1,13 @@
 //! Terrain line-of-sight reports at live unit eye heights, independent of sensor acquisition.
+//!
+//! Terrain between two units follows Total Warfare's intervening terrain rule (p. 100): a
+//! feature with a height, such as a hill, building, stand of woods or cloud of smoke,
+//! intervenes when it is at least as high as both units' line-of-sight heights, or when it is
+//! adjacent to one unit and at least as high as that unit. A unit's line-of-sight height is its
+//! ground plus its eye height: one and a half levels for a standing 'Mech, half a level for a
+//! vehicle or a prone 'Mech, so an integer feature height intervenes exactly when it reaches the
+//! level the rulebook gives the unit. Intervening hills and buildings block the line; woods,
+//! jungle, smoke and planted fields add up until they block it (see the perception module).
 use super::{HexCoordinate, StoredMap};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
@@ -7,15 +16,34 @@ use serde::Serialize;
 /// Terrain observations; perception applies range, lighting and equipment to decide visibility.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct TerrainLos {
+    /// An intervening hill, building or wall, or water the line cannot pass, blocks the line.
     pub blocked: bool,
     /// Intervening woods or jungle the line passes through below the canopy: light counts once,
     /// heavy twice and ultra-heavy three times. Target woods are separate.
     pub woods: u8,
+    /// Intervening smoke the line passes through: light smoke counts once, heavy smoke twice.
+    /// Smoke obscures like woods but radar sees through it.
+    pub smoke: u8,
+    /// Intervening hexes of planted fields the line passes through at crop height: every two
+    /// add one to hit, and six block the line.
+    pub fields: u8,
+    /// Woods or jungle in the target's own hex, when the target stands within the canopy.
     pub target_woods: u8,
+    /// Smoke over the target's own hex, when the target stands within it.
+    pub target_smoke: u8,
+    /// Water the line crosses between the two hexes: hexes an underwater line runs through,
+    /// or surface water the line passes close over. Neither end hex counts.
     pub water: u8,
-    pub smoke: bool,
-    pub fire: bool,
+    /// A standing 'Mech behind a hex one level above its own ground, or standing in water one
+    /// level deep, so that only its upper body can be hit (Total Warfare p. 102).
     pub partial_cover: bool,
+}
+
+impl TerrainLos {
+    /// Woods and smoke points together; three or more block the line.
+    pub fn obscuring_points(self) -> u8 {
+        self.woods.saturating_add(self.smoke)
+    }
 }
 
 /// Trace hex centers at standing-mech eye height, excluding the observer's own hex.
@@ -49,25 +77,23 @@ fn ground_posture_los(
     )
 }
 
+/// Whether a feature `height` levels high at the `index`th of `steps` cells intervenes between
+/// line-of-sight heights `start` and `end`: it reaches both, or it reaches the unit it is
+/// adjacent to.
+fn intervenes(height: f64, index: usize, steps: usize, start: f64, end: f64) -> bool {
+    (height >= start && height >= end)
+        || (index == 1 && height >= start)
+        || (index + 1 == steps && height >= end)
+}
+
 /// Trace with explicit eye offsets so empty hexes do not acquire a standing unit's height.
+/// Airborne heights replace the ground under either endpoint.
 fn terrain_los_at_heights(
     map: &StoredMap,
     observer: HexCoordinate,
     target: HexCoordinate,
     eyes: (f64, f64),
     airborne: (Option<f64>, Option<f64>),
-) -> Result<TerrainLos> {
-    terrain_los_with_endpoint(map, observer, target, eyes, airborne, false)
-}
-
-/// Coordinate fire at the ice surface permits the final cell to meet the sightline.
-fn terrain_los_with_endpoint(
-    map: &StoredMap,
-    observer: HexCoordinate,
-    target: HexCoordinate,
-    eyes: (f64, f64),
-    airborne: (Option<f64>, Option<f64>),
-    ice_surface: bool,
 ) -> Result<TerrainLos> {
     let hex = |point: HexCoordinate| map.hex(i64::from(point.x), i64::from(point.y));
     let base = |point: HexCoordinate| map.base_hex(i64::from(point.x), i64::from(point.y));
@@ -82,10 +108,10 @@ fn terrain_los_with_endpoint(
     let surface = |hex: super::Hex| f64::from(hex.level());
     let underwater = source.holds_water() && start_height < surface(source);
     let target_underwater = destination.holds_water() && end_height < surface(destination);
-    let both_worlds = source.holds_water() && start_ground == surface(source) - 1.0;
     let target_both_worlds = destination.holds_water() && end_ground == surface(destination) - 1.0;
     let mut report = TerrainLos {
         target_woods: visible_destination.woods_density(),
+        target_smoke: visible_destination.smoke_density(),
         ..TerrainLos::default()
     };
     if start_height > 10.0 && end_height > 10.0 {
@@ -100,14 +126,18 @@ fn terrain_los_with_endpoint(
     }
     let cells = super::los_trace::center_trace(observer, target)?;
     let steps = cells.len() - 1;
-    let mut submerged = 0;
     for (index, &point) in cells.iter().enumerate().skip(1) {
+        if index == steps {
+            // The target's own hex never intervenes.
+            break;
+        }
         let tile = hex(point)?;
         let ground = base(point)?;
-        let height = f64::from(ground.surface_height());
-        let sight_height = start_height + (end_height - start_height) * index as f64 / steps as f64;
-        let intervening = index < steps;
         if underwater {
+            // An underwater line follows the water, under any bed and below the surface.
+            let height = f64::from(ground.surface_height());
+            let sight_height =
+                start_height + (end_height - start_height) * index as f64 / steps as f64;
             if !ground.holds_water()
                 || (!ground.has_bridge() && height >= sight_height)
                 || (!target_both_worlds && sight_height > surface(ground))
@@ -115,46 +145,52 @@ fn terrain_los_with_endpoint(
                 report.blocked = true;
                 return Ok(report);
             }
-            submerged += usize::from(sight_height <= surface(ground));
             report.water = report.water.saturating_add(1).min(7);
             continue;
         }
-        if sight_height < height + 2.0 {
-            if ground.is_water_surface() {
-                if sight_height < surface(ground)
-                    && (ground.is_ice() || (ground.is_open_water() && !both_worlds))
-                {
-                    report.blocked = true;
-                    return Ok(report);
-                }
-                if ground.is_open_water() && sight_height < surface(ground) {
-                    submerged += 1;
-                }
+        let level = f64::from(ground.level());
+        if ground.is_water_surface() {
+            if intervenes(level, index, steps, start_height, end_height) {
+                report.blocked = true;
+                return Ok(report);
+            }
+            if level + 2.0 > start_height.min(end_height) {
                 report.water = report.water.saturating_add(1).min(7);
             }
-            if intervening {
-                if sight_height < height + f64::from(tile.foliage_height()) {
-                    report.woods = (report.woods + tile.woods_density()).min(15);
-                }
-                match tile.overlay() {
-                    Some(super::DecorationKind::Smoke) => report.smoke = true,
-                    Some(super::DecorationKind::Fire) => report.fire = true,
-                    None => {}
-                }
-            }
-        }
-        if height >= sight_height && !ground.has_bridge() && !(ice_surface && !intervening) {
+        } else if !ground.has_bridge()
+            && intervenes(
+                f64::from(ground.surface_height()),
+                index,
+                steps,
+                start_height,
+                end_height,
+            )
+        {
             report.blocked = true;
             return Ok(report);
+        }
+        let canopy = level + f64::from(tile.foliage_height());
+        if tile.foliage().is_some() && intervenes(canopy, index, steps, start_height, end_height) {
+            if tile.is_woods() {
+                report.woods = report.woods.saturating_add(tile.woods_density()).min(15);
+            } else {
+                report.fields = report.fields.saturating_add(1).min(15);
+            }
+        }
+        if tile.is_smoky() && intervenes(level + 2.0, index, steps, start_height, end_height) {
+            report.smoke = report.smoke.saturating_add(tile.smoke_density()).min(15);
         }
     }
     if steps >= 2 && eyes.1 == 1.5 && airborne.1.is_none() {
         let preceding = base(cells[cells.len() - 2])?;
-        report.partial_cover = (end_ground >= start_ground
-            && f64::from(preceding.surface_height()) == end_ground + 1.0)
-            || (destination.is_open_water() && end_ground == surface(destination) - 1.0);
+        // A hill or building one level up gives cover only to a target the attacker does not
+        // look down on; water around the legs covers them from any height.
+        let ridge = start_height <= end_height
+            && !preceding.has_bridge()
+            && f64::from(preceding.surface_height()) == end_ground + 1.0;
+        report.partial_cover =
+            ridge || (destination.is_open_water() && end_ground == surface(destination) - 1.0);
     }
-    report.fire |= submerged > 6;
     Ok(report)
 }
 
@@ -320,6 +356,9 @@ pub(super) fn unit_terrain_geometry(
     if target.level > i32::from(tile.level()) + i32::from(tile.foliage_height()) {
         report.target_woods = 0;
     }
+    if target.level > i32::from(tile.level()) + 2 {
+        report.target_smoke = 0;
+    }
     Ok((report, range))
 }
 
@@ -352,15 +391,13 @@ pub(super) fn unit_hex_los(
             distance,
         ));
     }
-    let on_ice = tile.is_ice() && altitude + unit.eye >= f64::from(tile.level());
-    let target_eye = if on_ice { 0.0 } else { 0.1 };
-    let report = terrain_los_with_endpoint(
+    // A hex is sighted just above its surface, so its own ground never intervenes.
+    let report = terrain_los_at_heights(
         map,
         source,
         target,
-        (unit.eye, target_eye),
+        (unit.eye, 0.1),
         (Some(altitude), Some(target_height)),
-        on_ice,
     )?;
     Ok((report, distance))
 }
@@ -447,6 +484,7 @@ mod tests {
             wind_direction: 0,
             wind_speed: 0,
             fire_dice: None,
+            terrain_damage: Default::default(),
             decorations: Default::default(),
             static_decorations: Default::default(),
             points_of_interest: Default::default(),
@@ -502,46 +540,144 @@ mod tests {
         );
     }
 
+    /// Woods, jungle and smoke on the way count their density; the endpoints' own hexes count
+    /// only for the target, and fire itself hides nothing.
     #[test]
-    fn woods_and_obscurants_exclude_endpoints() {
+    fn woods_and_smoke_exclude_endpoints() {
         use Terrain::*;
         let report = sight(&[
             (HeavyWoods, 0),
             (LightWoods, 0),
             (HeavyWoods, 0),
             (Smoke, 0),
+            (HeavySmoke, 0),
             (Fire, 0),
             (UltraRough, 0),
             (HeavyWoods, 0),
         ]);
         assert_eq!(report.woods, 3);
+        assert_eq!(report.smoke, 3);
+        assert_eq!(report.obscuring_points(), 6);
         assert_eq!(report.target_woods, 2);
-        assert!(report.smoke && report.fire);
+        assert_eq!(report.target_smoke, 0);
         assert!(!report.blocked);
-        let report = sight(&[(Fire, 0), (Clear, 0), (Smoke, 0)]);
-        assert!(!report.fire && !report.smoke);
+        let report = sight(&[(Fire, 0), (Clear, 0), (HeavySmoke, 0)]);
+        assert_eq!(report.smoke, 0);
+        assert_eq!(report.target_smoke, 2);
         assert_eq!(report.woods, 0);
+        assert_eq!(
+            sight(&[(Clear, 0), (Fire, 0), (Clear, 0)]).obscuring_points(),
+            0
+        );
     }
 
+    /// Planted fields rise one level and are counted by the hex: they intervene between low
+    /// units such as vehicles and prone 'Mechs, never between standing 'Mechs on the same
+    /// ground.
     #[test]
-    fn ridges_block_or_cover_and_high_sight_clears_woods() {
+    fn planted_fields_count_by_the_hex_at_crop_height() {
+        use Terrain::*;
+        let map = lane(&[
+            (Clear, 0),
+            (PlantedFields, 0),
+            (PlantedFields, 0),
+            (Clear, 0),
+        ]);
+        let from = HexCoordinate { x: 1, y: 0 };
+        let to = HexCoordinate { x: 1, y: 3 };
+        let low = ground_posture_los(&map, from, to, true, true, (None, None)).unwrap();
+        assert_eq!(low.fields, 2);
+        assert_eq!(low.woods, 0);
+        assert_eq!(low.target_woods, 0);
+        assert!(!low.blocked);
+        let standing = ground_posture_los(&map, from, to, false, false, (None, None)).unwrap();
+        assert_eq!(standing.fields, 0);
+        // Crops next to a low target reach it even when the attacker stands tall.
+        let mixed = ground_posture_los(&map, from, to, false, true, (None, None)).unwrap();
+        assert_eq!(mixed.fields, 1);
+    }
+
+    /// Terrain intervenes when it reaches both units, or the unit it stands next to.
+    #[test]
+    fn terrain_intervenes_by_the_rulebook_level_test() {
         use Terrain::*;
         assert!(sight(&[(Clear, 0), (Clear, 2), (Clear, 0)]).blocked);
         let report = sight(&[(Clear, 0), (Clear, 1), (Clear, 0)]);
         assert!(!report.blocked);
         assert!(report.partial_cover);
+        // Woods below both units never intervene.
         assert_eq!(sight(&[(Clear, 3), (HeavyWoods, 0), (Clear, 3)]).woods, 0);
-        // Equality with terrain blocks: the halfway eye height is exactly three.
-        assert!(sight(&[(Clear, 0), (Clear, 3), (Clear, 3)]).blocked);
+        // A hill next to the attacker intervenes at the attacker's level even when the target
+        // stands higher; the same hill in the middle does not.
+        assert!(sight(&[(Clear, 0), (Clear, 2), (Clear, 3), (Clear, 3)]).blocked);
+        assert!(!sight(&[(Clear, 0), (Clear, 0), (Clear, 2), (Clear, 3), (Clear, 3)]).blocked);
+        // A hill next to the target intervenes at the target's level.
+        assert!(sight(&[(Clear, 3), (Clear, 3), (Clear, 2), (Clear, 0)]).blocked);
+        // Woods next to the target at the target's level intervene; two levels below neither.
+        assert_eq!(
+            sight(&[(Clear, 3), (Clear, 3), (LightWoods, 1), (Clear, 1)]).woods,
+            1
+        );
+        assert_eq!(
+            sight(&[(Clear, 3), (Clear, 3), (LightWoods, 0), (Clear, 3)]).woods,
+            0
+        );
+    }
+
+    /// A one-level ridge midway hides vehicles from each other but not from 'Mechs, and a
+    /// vehicle next to the ridge is hidden from a 'Mech beyond it.
+    #[test]
+    fn low_units_lose_sight_over_a_ridge_tall_units_see_across() {
+        use Terrain::*;
+        let map = lane(&[(Clear, 0), (Clear, 0), (Clear, 1), (Clear, 0), (Clear, 0)]);
+        let from = HexCoordinate { x: 1, y: 0 };
+        let to = HexCoordinate { x: 1, y: 4 };
+        let los = |eyes: (f64, f64)| {
+            terrain_los_at_heights(&map, from, to, eyes, (None, None))
+                .unwrap()
+                .blocked
+        };
+        assert!(!los((1.5, 1.5)));
+        assert!(los((0.5, 0.5)));
+        // A ridge in the middle is lower than the 'Mech, so it does not intervene for either.
+        assert!(!los((1.5, 0.5)));
+        assert!(!los((0.5, 1.5)));
+        // Next to the vehicle it reaches the vehicle's level and hides it from the 'Mech.
+        let near = lane(&[(Clear, 0), (Clear, 0), (Clear, 0), (Clear, 1), (Clear, 0)]);
+        assert!(
+            terrain_los_at_heights(&near, from, to, (1.5, 0.5), (None, None))
+                .unwrap()
+                .blocked
+        );
+        assert!(
+            terrain_los_at_heights(&map, from, to, (0.5, 0.5), (Some(0.0), Some(0.0)))
+                .unwrap()
+                .blocked
+        );
+    }
+
+    /// Partial cover needs an attacker no higher than the target, or water around the legs.
+    #[test]
+    fn partial_cover_is_negated_from_above_except_in_water() {
+        use Terrain::*;
+        assert!(sight(&[(Clear, 0), (Clear, 0), (Clear, 1), (Clear, 0)]).partial_cover);
+        assert!(!sight(&[(Clear, 2), (Clear, 1), (Clear, 1), (Clear, 0)]).partial_cover);
+        assert!(sight(&[(Clear, 0), (Clear, 1), (Clear, 1), (Clear, 0)]).partial_cover);
+        // A bridge deck one level up gives no cover; a building does.
+        assert!(!sight(&[(Clear, 0), (Clear, 0), (Bridge, 1), (Clear, 0)]).partial_cover);
+        assert!(sight(&[(Clear, 0), (Clear, 0), (Building, 1), (Clear, 0)]).partial_cover);
+        let wading = sight(&[(Clear, 5), (Clear, 5), (Water, 1), (Water, 1)]);
+        assert!(!wading.blocked);
+        assert!(wading.partial_cover);
     }
 
     #[test]
     fn underwater_paths_count_depth_and_reject_air_or_seafloor() {
         use Terrain::*;
+        // Six hexes lie between the ends of an eight-hex lane; neither end counts.
         let report = sight(&[(Water, 3); 8]);
         assert!(!report.blocked);
-        assert_eq!(report.water, 7);
-        assert!(report.fire);
+        assert_eq!(report.water, 6);
         assert!(!sight(&[(Water, 3), (Ice, 3), (Water, 3)]).blocked);
         assert!(sight(&[(Water, 3), (Clear, 0), (Water, 3)]).blocked);
         assert!(sight(&[(Water, 3), (Water, 1), (Water, 3)]).blocked);
@@ -551,6 +687,7 @@ mod tests {
         assert!(report.partial_cover);
     }
 
+    /// A hex on an ice sheet is seen just above the ice; intervening ground still blocks.
     #[test]
     fn coordinate_ice_endpoint_is_visible_without_ignoring_intervening_ground() {
         let from = HexCoordinate { x: 1, y: 0 };
@@ -558,18 +695,13 @@ mod tests {
         for eye in [0.5, 1.5] {
             let clear = lane(&[(Terrain::Clear, 0), (Terrain::Clear, 0), (Terrain::Ice, 0)]);
             assert!(
-                !terrain_los_with_endpoint(&clear, from, to, (eye, 0.0), (None, None), true)
-                    .unwrap()
-                    .blocked
-            );
-            assert!(
-                terrain_los_at_heights(&clear, from, to, (eye, 0.0), (None, None))
+                !terrain_los_at_heights(&clear, from, to, (eye, 0.1), (None, None))
                     .unwrap()
                     .blocked
             );
             let ridge = lane(&[(Terrain::Clear, 0), (Terrain::Clear, 2), (Terrain::Ice, 0)]);
             assert!(
-                terrain_los_with_endpoint(&ridge, from, to, (eye, 0.0), (None, None), true)
+                terrain_los_at_heights(&ridge, from, to, (eye, 0.1), (None, None))
                     .unwrap()
                     .blocked
             );
@@ -612,7 +744,7 @@ mod tests {
             ground_posture_los(&map, source, target, false, false, (Some(-3.0), Some(-3.0)))
                 .unwrap();
         assert!(!submerged.blocked);
-        assert_eq!(submerged.water, 2);
+        assert_eq!(submerged.water, 1);
         assert!(
             ground_posture_los(&map, source, target, false, false, (Some(-3.0), None))
                 .unwrap()

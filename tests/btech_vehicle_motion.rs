@@ -109,6 +109,8 @@ fn vehicle_motion_handles_road_turning_hover_advantage_and_map_rate() {
     motion.heading = 0.0;
     motion.desired_heading = 0.0;
     motion.speed = template.max_speed;
+    // Every ground vehicle gains a movement point on pavement (Total Warfare p. 61), so a
+    // hovercraft at its ceiling still accelerates on a road.
     assert_eq!(
         template
             .ground_motion_step(
@@ -118,7 +120,7 @@ fn vehicle_motion_handles_road_turning_hover_advantage_and_map_rate() {
             )
             .unwrap()
             .speed,
-        template.max_speed
+        template.max_speed + template.max_speed / 20.0
     );
     // Retained throttle may exceed today's ceiling after gravity or mode changes.
     motion.desired_speed = template.max_speed + 1.0;

@@ -1,4 +1,5 @@
-//! Per-map versioned terrain dictionaries and atomic, selective grid writes.
+//! Per-map versioned terrain dictionaries and atomic, selective grid writes, plus the terrain
+//! factor damage each hex's growth carries.
 //!
 //! Each map keeps a dictionary from small integer codes to the distinct hexes it uses, stored as
 //! the JSON of their layers, and a grid of codes.
@@ -91,7 +92,68 @@ pub(super) async fn load(
             .map(|tile| tile.context("Incomplete terrain grid"))
             .collect::<Result<Vec<_>>>()?;
         map.terrain = Some(std::sync::Arc::new(tiles));
+        let mut damage = BTreeMap::new();
+        for entry in
+            sqlx::query("SELECT tile,damage FROM btech_map_terrain_damage WHERE map_dbref=?")
+                .bind(id.0)
+                .fetch_all(&mut *c)
+                .await?
+        {
+            let tile: i64 = entry.try_get("tile")?;
+            let points: i64 = entry.try_get("damage")?;
+            ensure!(
+                tile >= 0 && tile < map.width * map.height,
+                "Out-of-bounds terrain damage for map #{}",
+                id.0
+            );
+            damage.insert(
+                u32::try_from(tile)?,
+                u16::try_from(points).context("Invalid terrain damage")?,
+            );
+        }
+        map.terrain_damage = std::sync::Arc::new(damage);
         map.validate()?;
+    }
+    Ok(())
+}
+
+/// Write the terrain factor damage of a map's hexes, touching only the tiles that changed.
+pub(super) async fn save_damage(
+    c: &mut SqliteConnection,
+    id: ObjectId,
+    map: &StoredMap,
+) -> Result<()> {
+    let mut previous = BTreeMap::new();
+    for entry in sqlx::query("SELECT tile,damage FROM btech_map_terrain_damage WHERE map_dbref=?")
+        .bind(id.0)
+        .fetch_all(&mut *c)
+        .await?
+    {
+        let tile: i64 = entry.try_get("tile")?;
+        previous.insert(tile, entry.try_get::<i64, _>("damage")?);
+    }
+    for (&tile, &damage) in map.terrain_damage.iter() {
+        let old = previous
+            .remove(&i64::from(tile))
+            .map(|damage| Fields::from([("damage", Cell::Integer(damage))]));
+        row(
+            c,
+            "btech_map_terrain_damage",
+            Fields::from([
+                ("map_dbref", Cell::Integer(id.0)),
+                ("tile", Cell::Integer(i64::from(tile))),
+            ]),
+            old.as_ref(),
+            &Fields::from([("damage", Cell::Integer(i64::from(damage)))]),
+        )
+        .await?;
+    }
+    for tile in previous.into_keys() {
+        sqlx::query("DELETE FROM btech_map_terrain_damage WHERE map_dbref=? AND tile=?")
+            .bind(id.0)
+            .bind(tile)
+            .execute(&mut *c)
+            .await?;
     }
     Ok(())
 }
@@ -199,6 +261,7 @@ pub(super) async fn save(c: &mut SqliteConnection, id: ObjectId, map: &StoredMap
 
 /// Remove dictionary-owned children during the same transaction that purges their maps.
 pub(super) async fn purge(c: &mut SqliteConnection, ids: &BTreeSet<ObjectId>) -> Result<()> {
+    purge_rows(c, "btech_map_terrain_damage", "map_dbref", ids).await?;
     purge_rows(c, "btech_map_terrain_codes", "map_dbref", ids).await?;
     purge_rows(c, "btech_map_terrain", "map_dbref", ids).await
 }

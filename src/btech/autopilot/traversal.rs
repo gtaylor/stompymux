@@ -306,8 +306,8 @@ fn in_bounds(width: i64, height: i64, x: u16, y: u16) -> bool {
     i64::from(x) < width && i64::from(y) < height
 }
 
-/// Relative route cost of entering a tile, or `None` when the tile is impassable. Liquid
-/// magma destroys any vehicle that enters it, so vehicles never route through it.
+/// Relative route cost of entering a tile, or `None` when the tile is impassable: a wall, or
+/// terrain the unit's movement type may not enter.
 fn terrain_cost(hex: Hex, kind: GroundUnitKind) -> Option<u32> {
     if hex
         .structure()
@@ -315,7 +315,7 @@ fn terrain_cost(hex: Hex, kind: GroundUnitKind) -> Option<u32> {
     {
         return None;
     }
-    if kind != GroundUnitKind::Mech && hex.in_liquid_magma(i32::from(hex.level())) {
+    if hex.prohibition(kind.ground_movement()).is_some() {
         return None;
     }
     Some(if hex.is_water_surface() {
